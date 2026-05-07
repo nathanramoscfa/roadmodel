@@ -1,0 +1,192 @@
+name: Auto-remediate test failures
+
+# Fires when the daily Tests workflow fails on main (typically due to
+# upstream source breakage). Claude Code reads the failure logs,
+# proposes a minimal fix within a tight scope (sources.json + parser
+# helpers only), and opens a PR for human review. Never auto-merges.
+
+on:
+  workflow_run:
+    workflows: ["Tests"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: auto-remediate
+  cancel-in-progress: false
+
+jobs:
+  remediate:
+    # Loop prevention + scope filter:
+    #  - only react to failures (not successes)
+    #  - only react to runs on main (not PR runs of remediation branches)
+    #  - only react to scheduled runs (not push runs we trigger by editing)
+    #  - explicitly skip remediation branches as a belt-and-suspenders guard
+    if: |
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.event == 'schedule' &&
+      !startsWith(github.event.workflow_run.head_branch, 'auto-remediate/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            update/requirements.txt
+            tests/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          pip install -r update/requirements.txt
+          pip install -r tests/requirements.txt
+
+      - name: Configure git
+        run: |
+          git config --global user.email "claude-remediate-bot@users.noreply.github.com"
+          git config --global user.name "claude-remediate-bot"
+
+      - name: Create remediation branch
+        id: branch
+        env:
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          BRANCH="auto-remediate/run-${RUN_ID}"
+          git checkout -b "$BRANCH"
+          echo "branch_name=$BRANCH" >> "$GITHUB_OUTPUT"
+
+      - name: Collect failure logs
+        id: failure_details
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const jobs = await github.rest.actions.listJobsForWorkflowRun({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: ${{ github.event.workflow_run.id }}
+            });
+            const failedJobs = jobs.data.jobs.filter(j => j.conclusion === 'failure');
+            const logs = [];
+            for (const job of failedJobs) {
+              const r = await github.rest.actions.downloadJobLogsForWorkflowRun({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                job_id: job.id
+              });
+              logs.push({jobName: job.name, logs: r.data});
+            }
+            return {
+              runUrl: `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${{ github.event.workflow_run.id }}`,
+              failedJobs: failedJobs.map(j => j.name),
+              errorLogs: logs,
+            };
+
+      - name: Run Claude to propose a fix
+        uses: anthropics/claude-code-action@v1.0.99
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_args: "--model claude-sonnet-4-6 --allowedTools 'Edit,MultiEdit,Write,Read,Glob,Grep,Bash(git:*),Bash(gh:*),Bash(pytest:*),Bash(python:*),Bash(pip:*)'"
+          prompt: |
+            You are remediating a failing daily test run for the model-selector
+            project. The Tests workflow failed on main, which likely indicates
+            an upstream source (in update/sources.json) changed shape, moved,
+            or stopped serving expected data. Your job: diagnose the root
+            cause and propose a minimal, correct fix as a pull request. NEVER
+            auto-merge.
+
+            ## Read FIRST before changing anything
+
+            - tests/test_sources_live.py — what each live source test asserts
+            - tests/test_doc_schema.py — what each schema test asserts
+            - tests/test_freshness.py
+            - update/sources.json — the source list and per-source validation
+            - update/update_models.py — fetch + strip + validate pipeline
+            - update/prompt.md (READ ONLY for context — do NOT edit)
+            - README.md — project context
+
+            ## Failure context
+
+            - Workflow run: ${{ fromJSON(steps.failure_details.outputs.result).runUrl }}
+            - Failed jobs: ${{ join(fromJSON(steps.failure_details.outputs.result).failedJobs, ', ') }}
+            - The error logs from each failed job are attached below.
+
+            ## Allowed scope (you MAY edit these files)
+
+            - update/sources.json — URLs, validate rules, max_bytes
+            - update/update_models.py — ONLY these helpers: fetch,
+              normalize_content, strip_html, looks_like_html,
+              validate_content. DO NOT touch main(), call_opus(),
+              build_user_message(), gather_sources()'s control flow,
+              or anything else outside those helpers.
+
+            ## Out of scope — DO NOT modify these under any circumstances
+
+            - update/prompt.md
+            - docs/* (auto-maintained by Opus + curated by humans)
+            - tests/* (loosening a test is FORBIDDEN — if a test seems wrong,
+              open the PR with no code change and explain in the PR body why
+              human attention is needed)
+            - .github/workflows/*
+            - README.md, requirements files
+
+            ## Diagnostic discipline
+
+            1. Identify the failing test(s) and the INTENT of each assertion,
+               not just the literal error message.
+            2. If the failure looks transient (a single 5xx, DNS hiccup, or
+               a passing-on-retry pattern), open a PR with NO code changes
+               and a body explaining the suspicion. Do not edit anything.
+            3. If the failure represents a real upstream change (URL moved,
+               table schema changed, content shape shifted), propose the
+               SMALLEST change to sources.json or a helper that addresses the
+               root cause.
+            4. NEVER loosen a test, lower a min_bytes threshold below what
+               makes sense, or remove a must_contain_all marker as a "fix".
+               If the only way to make a test pass is loosening it, that's
+               a sign the test is doing its job and a human needs to
+               investigate the upstream change.
+
+            ## Verification
+
+            After making any changes, run `pytest tests/ -v` and confirm:
+              - The previously-failing test now passes.
+              - No previously-passing test has regressed.
+            If your fix doesn't pass clean, do NOT iterate further. Commit
+            what you have and open the PR flagged for human review.
+
+            ## Delivery
+
+            You are already on branch `${{ steps.branch.outputs.branch_name }}`
+            checked out from main. To deliver:
+
+            1. Commit your changes to this branch with a clear message.
+            2. Push the branch: `git push -u origin ${{ steps.branch.outputs.branch_name }}`
+            3. Open a PR with `gh pr create --base main --head ${{ steps.branch.outputs.branch_name }}`
+               using:
+               - Title: "Auto-remediate: <one-line summary of the fix>"
+               - Body sections (in order):
+                 1. **Failing test:** test name + link to the failing run
+                 2. **Hypothesized root cause:** 1-2 sentences
+                 3. **Files changed and why:** brief per-file rationale
+                 4. **Local pytest result:** pass / fail / not run, with output
+                 5. **⚠️ Review carefully — do not blind-merge.**
+
+            Do NOT approve the PR. Do NOT enable auto-merge.
+
+            ## Error logs
+
+            ```
+            ${{ toJSON(fromJSON(steps.failure_details.outputs.result).errorLogs) }}
+            ```

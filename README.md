@@ -128,6 +128,30 @@ pip install -r tests/requirements.txt
 pytest tests/ -v
 ```
 
+## Auto-remediation
+
+When the **scheduled** daily Tests run on `main` fails, a separate
+workflow ([.github/workflows/auto-remediate.yml](.github/workflows/auto-remediate.yml))
+fires. It uses [`anthropics/claude-code-action`](https://github.com/anthropics/claude-code-action)
+to invoke Claude Sonnet 4.6 with the failure logs and a tightly-scoped
+remediation prompt:
+
+- **In scope to edit**: `update/sources.json`, plus the fetch/strip/validate
+  helpers in `update/update_models.py`.
+- **Out of scope**: `update/prompt.md`, anything in `docs/`, the test
+  files, the workflow files, the README. Loosening a test as a "fix" is
+  explicitly forbidden.
+
+Claude diagnoses, runs `pytest tests/ -v` to verify the fix, commits to
+`auto-remediate/run-<id>`, and opens a PR for human review. Never
+auto-merges. If the fix doesn't pass cleanly the PR opens anyway,
+flagged for human attention.
+
+Concurrency and trigger filters prevent loops: only fires on scheduled
+runs of the Tests workflow on `main`, never on push or PR runs (so
+Claude's own remediation PR running tests can't trigger another
+remediation cycle).
+
 ## Repo layout
 
 ```
@@ -147,7 +171,8 @@ pytest tests/ -v
 │   └── requirements.txt            # pytest, pyyaml
 ├── .github/workflows/
 │   ├── update-models.yml           # weekly refresh (Mondays 16:00 UTC)
-│   └── tests.yml                   # daily tests + on push/PR
+│   ├── tests.yml                   # daily tests + on push/PR
+│   └── auto-remediate.yml          # opens PR when daily tests fail
 ├── .gitignore
 └── README.md
 ```
