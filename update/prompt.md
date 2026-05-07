@@ -55,15 +55,43 @@ Source of truth: the Cursor pricing page.
 Source of truth: the named leaderboards in `<benchmark-sources>` of
 `model-selector.txt`.
 
-- For each `<model …/>` in `<model-options>`, refresh the
-  `headline-benchmarks` attribute with current numbers grounded in the
-  named leaderboards. Cite the leaderboard by name as the existing values
-  do (e.g. "SWE-bench Verified 87.6%; AA Intelligence Index 57.3").
-- Only update a number when you can locate it in the fetched leaderboard
-  content. If a model is not on a leaderboard, leave its existing benchmark
-  string alone.
-- Never invent numbers. If a benchmark source failed to fetch or the model
-  is not present, skip that update and add a warning.
+The `headline-benchmarks` attribute is a semicolon-separated list of
+discrete claims. Treat it as a STRING TO PRESERVE BY DEFAULT and modify
+only the individual numeric values you can directly re-verify against
+this run's fetched `<source>` blocks. Hard rules:
+
+- A claim is a single semicolon-delimited fact. Examples of claims:
+  "SWE-bench Verified 87.6%", "AA Intelligence Index 57.3",
+  "1M-token context", "lowest hallucination rate among frontier
+  models (~36%)", "top-ranked tool-calling globally".
+- For each claim, identify its citing source. If that source is in the
+  fetched blocks AND the model is present AND the number has changed,
+  update ONLY the number, leaving the rest of the claim verbatim. If
+  unchanged, keep the claim verbatim.
+- If the source for a claim is NOT in the fetched blocks this run
+  (failed to fetch, was excluded, or was never requested), KEEP THE
+  CLAIM VERBATIM and add a warning of the form
+  "kept stale-by-default: <model>: <claim> (source <name> not fetched)".
+- NEVER substitute a claim citing source A with a claim citing source
+  B just because A failed and B succeeded. The two are different
+  facts about different things; swapping them silently destroys
+  information.
+- NEVER delete a claim. Non-numeric claims (context window size,
+  qualitative descriptors like "native multimodal", "lowest
+  hallucination rate", "top-ranked tool-calling") are facts about the
+  model and must be preserved verbatim across runs unless a fetched
+  source directly invalidates them.
+- NEVER add a new claim. If a leaderboard shows the model with a
+  strong number not already cited in `headline-benchmarks`, leave it
+  out — adding claims is editorial work outside this automation's
+  scope.
+- NEVER reorder claims. Preserve their original sequence.
+
+The only acceptable mutation to a `headline-benchmarks` string is
+in-place replacement of a numeric value within an existing claim. For
+example: "AA Intelligence Index 57.3" → "AA Intelligence Index 58.1"
+is acceptable; "AA Intelligence Index 57.3" → "LMArena Elo 1503" is
+not, even if the AA source is unavailable.
 
 ## What NOT to change
 
