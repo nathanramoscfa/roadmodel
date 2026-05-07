@@ -46,24 +46,6 @@
       }
     },
     {
-      "name": "LiveBench",
-      "url": "https://livebench.ai/",
-      "purpose": "Contamination-resistant multi-domain benchmark.",
-      "validate": {
-        "min_bytes": 3000,
-        "must_contain_all": ["LiveBench", "Claude"]
-      }
-    },
-    {
-      "name": "Terminal-Bench",
-      "url": "https://www.tbench.ai/leaderboard",
-      "purpose": "Terminal and agent task execution (Terminal-Bench 2.0).",
-      "validate": {
-        "min_bytes": 3000,
-        "must_contain_all": ["Terminal-Bench", "Claude"]
-      }
-    },
-    {
       "name": "MMMU",
       "url": "https://mmmu-benchmark.github.io/",
       "purpose": "Multimodal university-level understanding.",
