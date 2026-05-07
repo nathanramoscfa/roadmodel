@@ -1,11 +1,11 @@
 {
   "pricing": {
-    "name": "Cursor models and pricing",
-    "url": "https://cursor.com/docs/models-and-pricing",
-    "purpose": "Authoritative source for per-model input / cache write / cache read / output prices and the canonical model list.",
+    "name": "Cursor models and pricing (markdown)",
+    "url": "https://cursor.com/docs/models-and-pricing.md",
+    "purpose": "Authoritative source for per-model input / cache write / cache read / output prices and the canonical model list. Mintlify exposes the raw Markdown source at the .md URL — immune to frontend rebuilds and trivially parseable.",
     "validate": {
-      "min_bytes": 20000,
-      "must_contain_all": ["$", "Composer", "Opus"]
+      "min_bytes": 10000,
+      "must_contain_all": ["Models & Pricing", "Anthropic", "Composer 2", "$25"]
     }
   },
   "benchmarks": [
