@@ -38,7 +38,7 @@
     },
     {
       "name": "Aider polyglot (raw YAML)",
-      "url": "https://raw.githubusercontent.com/Aider-AI/aider/main/aider/website/_data/polyglot_leaderboard.yml",
+      "url": "https://raw.githubusercontent.com/Aider-AI/aider/main/aider/website/_data/polyglot_leaderboard_DOES_NOT_EXIST.yml",
       "purpose": "Coding leaderboard across C++, Go, Java, JavaScript, Python, Rust. Authoritative YAML maintained in the aider repo, free of SPA hydration.",
       "validate": {
         "min_bytes": 5000,
