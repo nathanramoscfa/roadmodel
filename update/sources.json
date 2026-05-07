@@ -1,0 +1,49 @@
+{
+  "pricing": {
+    "name": "Cursor models and pricing",
+    "url": "https://cursor.com/docs/models-and-pricing",
+    "purpose": "Authoritative source for per-model input / cache write / cache read / output prices and the canonical model list."
+  },
+  "benchmarks": [
+    {
+      "name": "Artificial Analysis Intelligence Index",
+      "url": "https://artificialanalysis.ai/",
+      "purpose": "Composite of 10 evaluations including GPQA Diamond, Humanity's Last Exam, SciCode, Terminal-Bench Hard, AA-Omniscience."
+    },
+    {
+      "name": "LMArena",
+      "url": "https://lmarena.ai/leaderboard",
+      "purpose": "Human-preference Elo across general chat."
+    },
+    {
+      "name": "SWE-bench",
+      "url": "https://www.swebench.com/",
+      "purpose": "Real GitHub issues; SWE-bench Verified is the 500-instance human-filtered subset."
+    },
+    {
+      "name": "Aider polyglot",
+      "url": "https://aider.chat/docs/leaderboards/",
+      "purpose": "Coding leaderboard across C++, Go, Java, JavaScript, Python, Rust."
+    },
+    {
+      "name": "LiveBench",
+      "url": "https://livebench.ai/",
+      "purpose": "Contamination-resistant multi-domain benchmark."
+    },
+    {
+      "name": "Terminal-Bench",
+      "url": "https://www.tbench.ai/leaderboard",
+      "purpose": "Terminal and agent task execution (Terminal-Bench 2.0)."
+    },
+    {
+      "name": "MMMU",
+      "url": "https://mmmu-benchmark.github.io/",
+      "purpose": "Multimodal university-level understanding."
+    },
+    {
+      "name": "Humanity's Last Exam",
+      "url": "https://lastexam.ai/",
+      "purpose": "HLE — frontier-difficulty general intelligence."
+    }
+  ]
+}

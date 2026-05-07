@@ -1,0 +1,52 @@
+name: Update model docs
+
+on:
+  schedule:
+    - cron: "0 16 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-models
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: update/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r update/requirements.txt
+
+      - name: Refresh model docs
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python update/update_models.py
+
+      - name: Commit and push if changed
+        run: |
+          set -euo pipefail
+          git config user.name "model-selector-bot"
+          git config user.email "model-selector-bot@users.noreply.github.com"
+          if git diff --quiet -- docs/; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          summary="$(cat update/.last-summary.txt 2>/dev/null || echo 'Refresh model docs')"
+          warnings=""
+          if [ -f update/.last-warnings.txt ]; then
+            warnings="$(printf '\n\nWarnings:\n')$(sed 's/^/  - /' update/.last-warnings.txt)"
+          fi
+          git add docs/model-selector.txt docs/model-tier-cost-scale.md
+          git commit -m "Automated refresh: $(date -u +%Y-%m-%d)" -m "${summary}${warnings}"
+          git push

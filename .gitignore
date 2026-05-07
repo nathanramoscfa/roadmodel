@@ -1,0 +1,7 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+update/.last-summary.txt
+update/.last-warnings.txt
+update/.cache/

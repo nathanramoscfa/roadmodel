@@ -1,0 +1,345 @@
+<model-selector>
+  <instruction>
+    When this file is referenced with @model-selector.txt, you MUST:
+    1. Execute the requested task in full — write the roadmap, plan, or
+       whatever the user asked for
+    2. For every prompt or step you write as part of that task, append a
+       model selection block immediately before it using the criteria in this
+       file (objective, pricing, Max Mode, benchmark sources, task categories,
+       model options, selection algorithm, and conversation principles)
+    3. The selection block is part of the task output, not a replacement for it
+  </instruction>
+
+  <usage>
+    Reference this file alongside any task. The AI performs the task and
+    annotates each prompt it writes with the appropriate model selection
+    block drawn from the criteria in this file.
+  </usage>
+
+  <objective>
+    PRIMARY: Maximize quality. Recommend the highest-quality model whose
+    strengths match the prompt's task type, regardless of cost. If Opus 4.7
+    in Max Mode is the most appropriate fit for a given prompt, recommend
+    Opus 4.7 in Max Mode.
+
+    SECONDARY (tie-breaker only): When two or more models are tied in
+    expected quality for the prompt's task type, recommend the one with the
+    lower output price per 1M tokens.
+
+    Quality always wins. Cost only resolves true ties — never near-ties,
+    never "close enough." The user is paying for access to every tier and
+    expects the best outcome for each prompt.
+  </objective>
+
+  <pricing-context>
+    All prices below are per 1M tokens, sourced from Cursor's published API
+    pricing. Use these prices solely as a tie-breaker after the quality
+    decision is made.
+
+    Cost interpretation:
+    - Output price is the dominant cost driver for code generation, full
+      implementations, comprehensive plans, and any long-form response.
+    - Input price matters most when feeding large context — long files,
+      repo-wide search results, multimodal payloads, or sprawling document
+      corpora.
+    - Cache-read price (typically ~10% of input) only matters for sustained
+      sessions with reusable system prompts or persistent context.
+    - Tier placement is based solely on output price per 1M tokens:
+      Low &lt; $10, Medium $10–$14.99, High $15–$24.99, Very High ≥ $25.
+
+    Routing models (`premium`, `auto`) have variable cost — `auto` draws
+    from the Auto + Composer pool at ~$6.00/M output; `premium` routes to
+    the strongest available model and bills at that model's API rate.
+  </pricing-context>
+
+  <max-mode-context>
+    Max Mode extends a model's context window to the maximum it supports,
+    giving the model deeper codebase understanding and producing better
+    results on complex tasks.
+
+    Billing:
+    - Token-based pricing at the model's API rate; consumes usage faster
+      than the default context window.
+    - Individual plans: billed at the model's API rate (no surcharge).
+    - Teams plans: non-Auto requests include the Cursor Token Rate.
+    - Legacy request-based plans: Max Mode adds a 20% surcharge.
+
+    Enable Max Mode when ANY of the following hold:
+    - Complexity is High on the selection-algorithm scoring.
+    - Primary or secondary task category is `long-context` (large repo,
+      multi-file ingestion, full-codebase reasoning).
+    - Task is a `planning` prompt with many interacting concerns or
+      cross-cutting architectural decisions.
+    - Prompt explicitly requires extended reasoning, deep multi-step
+      analysis, or chain-of-thought across many files.
+
+    Disable Max Mode for direct, bounded prompts — single-file edits,
+    isolated bug fixes, well-defined refactors, simple questions, or any
+    task where default context comfortably fits the inputs.
+  </max-mode-context>
+
+  <benchmark-sources>
+    Authoritative LLM leaderboards the AI may cite when justifying a model
+    recommendation. When reasoning about a model's strength in a task
+    category, ground the rationale in one of these sources by name.
+
+    - LMArena — human-preference Elo across general chat (chatbot-arena.com)
+    - Artificial Analysis Intelligence Index — composite of 10 evaluations
+      including GPQA Diamond, Humanity's Last Exam, SciCode,
+      Terminal-Bench Hard, and AA-Omniscience
+    - Aider polyglot — coding across C++, Go, Java, JavaScript, Python, Rust
+    - SWE-bench Verified — real GitHub issues, 500-instance human-filtered
+      subset; gold standard for software-engineering capability
+    - LiveBench — contamination-resistant multi-domain benchmark
+    - Terminal-Bench 2.0 — terminal and agent task execution
+    - GPQA Diamond — graduate-level science reasoning
+    - AIME — advanced math olympiad problems
+    - MMMU — multimodal university-level understanding
+    - HLE (Humanity's Last Exam) — frontier-difficulty general intelligence
+    - CursorBench — Cursor's proprietary benchmark built from real coding
+      sessions with terse prompts and multi-file solutions
+  </benchmark-sources>
+
+  <task-categories>
+    Classify every prompt into one primary category from this list. If the
+    prompt spans two categories, list both and use the more demanding one
+    as primary; the other becomes the secondary category for tie-breaking.
+
+    - coding — implementation, debugging, refactoring, multi-file edits,
+      writing tests, fixing build/lint errors
+    - planning — architecture decisions, design docs, multi-step plans,
+      ambiguity resolution, trade-off analysis, roadmap construction
+    - agentic — autonomous tool use, terminal commands, long-running
+      multi-step execution, end-to-end agent loops
+    - multimodal — image, video, audio, or screenshot understanding
+      alongside text or code
+    - long-context — large repo or file ingestion, codebase-wide reasoning,
+      multi-document synthesis, sustained sessions with persistent context
+    - knowledge — domain expertise, factual recall, cross-domain accuracy,
+      grounded research, low-hallucination requirements
+    - speed — latency-sensitive completions, high-volume routine work,
+      autocomplete-style tasks where wall-clock time dominates utility
+  </task-categories>
+
+  <model-options>
+    Each model entry carries: pricing, S/A/B/C/D tier ratings across the
+    seven task categories, headline benchmark numbers grounded in the
+    sources above, and a free-text best-for description.
+
+    Tier ratings:
+    - S — top-1 or top-2 globally in this category
+    - A — strong, reliable, near-frontier
+    - B — competent for the category
+    - C — limited; usable only for trivial work in the category
+    - D — not suited; do not select for this category
+
+    <tier cost="very-high">
+      <model id="opus-4.7" name="Opus 4.7"
+             input-price-per-1m="$5.00" output-price-per-1m="$25.00"
+             tier-coding="S" tier-planning="S" tier-agentic="A"
+             tier-multimodal="A" tier-long-context="S" tier-knowledge="S"
+             tier-speed="D"
+             headline-benchmarks="SWE-bench Verified 87.6%; AA Intelligence Index 57.3; 1M-token context; lowest hallucination rate among frontier models (~36%)"
+             best-for="Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching" />
+      <model id="gpt-5.5" name="GPT-5.5"
+             input-price-per-1m="$5.00" output-price-per-1m="$30.00"
+             tier-coding="S" tier-planning="S" tier-agentic="S"
+             tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
+             tier-speed="D"
+             headline-benchmarks="SWE-bench Verified 88.7% (#1); Terminal-Bench 2.0 82.7% (#1); AA Intelligence Index 60.2 (#1); higher hallucination rate (~86%)"
+             best-for="OpenAI's most capable frontier model and highest-cost GPT offering, best suited for the most demanding reasoning, long-horizon planning, and tasks where maximum intelligence is required regardless of cost — strongest single model for hard coding, agentic execution, and reasoning, but verify factual claims due to elevated hallucination" />
+    </tier>
+    <tier cost="high">
+      <model id="sonnet-4.6" name="Sonnet 4.6"
+             input-price-per-1m="$3.00" output-price-per-1m="$15.00"
+             tier-coding="A" tier-planning="A" tier-agentic="S"
+             tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
+             tier-speed="B"
+             headline-benchmarks="SWE-bench Verified 79.6%; top-ranked tool-calling globally; Anthropic-lineage coding leadership on LMArena coding category"
+             best-for="Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation" />
+      <model id="gpt-5.4" name="GPT-5.4"
+             input-price-per-1m="$2.50" output-price-per-1m="$15.00"
+             tier-coding="A" tier-planning="A" tier-agentic="S"
+             tier-multimodal="A" tier-long-context="A" tier-knowledge="S"
+             tier-speed="B"
+             headline-benchmarks="Terminal-Bench 2.0 75.1%; outperforms human specialists in 83% of occupations; lowest factual error rate among GPT models"
+             best-for="Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding" />
+    </tier>
+    <tier cost="medium">
+      <model id="gpt-5.3-codex" name="GPT-5.3 Codex"
+             input-price-per-1m="$1.75" output-price-per-1m="$14.00"
+             tier-coding="S" tier-planning="B" tier-agentic="S"
+             tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
+             tier-speed="B"
+             headline-benchmarks="SWE-bench Verified 85.0%; Terminal-Bench 2.0 77.3%; most token-efficient autonomous coding model"
+             best-for="Highest terminal and tool-use proficiency at the medium tier, most token-efficient autonomous coding, excels at long-running agentic sessions spanning debugging through deployment, and hard algorithmic problems requiring sustained code reasoning across languages — the cost-efficient pick for pure coding and agentic execution when an S-tier coding rating is needed" />
+      <model id="gemini-3.1-pro" name="Gemini 3.1 Pro"
+             input-price-per-1m="$2.00" output-price-per-1m="$12.00"
+             tier-coding="A" tier-planning="A" tier-agentic="A"
+             tier-multimodal="S" tier-long-context="S" tier-knowledge="A"
+             tier-speed="B"
+             headline-benchmarks="SWE-bench Verified 80.6%; AA Intelligence Index 57.2; native multimodal understanding (text/image/video/audio in single pass); 1M-token context"
+             best-for="True native multimodal understanding (text, image, video, audio, and code in a single pass), 1M-token context optimized for heterogeneous inputs, strong agentic multi-step tool use, and synthesizing insights across large mixed-media datasets or sprawling document corpora — the obvious choice whenever multimodal or long-context is the primary category" />
+      <model id="premium" name="Premium (Intelligence)"
+             input-price-per-1m="varies (routes to top-tier model)"
+             output-price-per-1m="varies (routes to top-tier model)"
+             tier-coding="inherit" tier-planning="inherit" tier-agentic="inherit"
+             tier-multimodal="inherit" tier-long-context="inherit"
+             tier-knowledge="inherit" tier-speed="inherit"
+             headline-benchmarks="Inherits the routed model's benchmarks"
+             best-for="Cursor auto-selects the strongest available model; best when the task is clearly high-complexity but does not map to one specific model's niche advantage, or when you are uncertain which frontier model's strengths best apply" />
+    </tier>
+    <tier cost="low">
+      <model id="composer-2" name="Composer 2 (Fast)"
+             input-price-per-1m="$0.50" output-price-per-1m="$2.50"
+             tier-coding="A" tier-planning="B" tier-agentic="A"
+             tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
+             tier-speed="S"
+             headline-benchmarks="CursorBench 61.3 (+37% over Composer 1.5); SWE-bench Multilingual 73.7; Terminal-Bench 2.0 61.7 (above Opus 4.6's 58.0)"
+             best-for="Cursor's enforced default Composer model — purpose-built for multi-file agentic editing, fine-tuned on real developer sessions, self-summarizing 200K context for sustained long tasks, and frontier-level coding quality with speed-optimized inference at the lowest output price ($2.50/M) — the default choice for standard implementation, multi-file changes, and roadmap execution where coding-A is sufficient" />
+      <model id="grok-4.3" name="Grok 4.3"
+             input-price-per-1m="$1.25" output-price-per-1m="$2.50"
+             tier-coding="B" tier-planning="A" tier-agentic="S"
+             tier-multimodal="B" tier-long-context="S" tier-knowledge="A"
+             tier-speed="B"
+             headline-benchmarks="AA Intelligence Index 53; GDPval-AA Agentic Elo 1500 (+321 over Grok 4.20); GPQA Diamond 90.1%; τ²-Bench Telecom 98%; 2M-token context"
+             best-for="Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding — leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist" />
+      <model id="auto" name="Auto (Efficiency)"
+             input-price-per-1m="~$1.25 (Auto + Composer pool)"
+             output-price-per-1m="~$6.00 (Auto + Composer pool)"
+             tier-coding="B" tier-planning="C" tier-agentic="B"
+             tier-multimodal="C" tier-long-context="C" tier-knowledge="C"
+             tier-speed="A"
+             headline-benchmarks="No fixed benchmarks — Cursor routes to a balanced model per request"
+             best-for="Simple, well-defined, bounded tasks — routine edits, boilerplate generation, direct questions, and standard refactors where any competent model suffices and manual model selection adds no value" />
+      <model id="claude-4.5-haiku" name="Claude 4.5 Haiku"
+             input-price-per-1m="$1.00" output-price-per-1m="$5.00"
+             tier-coding="B" tier-planning="B" tier-agentic="B"
+             tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
+             tier-speed="S"
+             headline-benchmarks="Speed-optimized Anthropic lineage; latency leader among Claude family"
+             best-for="Speed-optimized lowest-cost Claude model, ideal for simple completions, high-volume repetitive tasks, and latency-sensitive workflows where a lightweight capable response matters more than deep reasoning" />
+      <model id="gpt-5.4-mini" name="GPT-5.4 Mini"
+             input-price-per-1m="$0.75" output-price-per-1m="$4.50"
+             tier-coding="B" tier-planning="C" tier-agentic="C"
+             tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
+             tier-speed="A"
+             headline-benchmarks="Distilled from GPT-5.4 lineage; retains broad knowledge breadth at fraction of flagship cost"
+             best-for="Lightweight GPT-5.4 variant balancing quality and cost, well-suited for straightforward coding, short-form generation, and high-throughput workloads needing solid GPT reasoning at a fraction of the flagship price" />
+      <model id="gpt-5.4-nano" name="GPT-5.4 Nano"
+             input-price-per-1m="$0.20" output-price-per-1m="$1.25"
+             tier-coding="C" tier-planning="D" tier-agentic="D"
+             tier-multimodal="C" tier-long-context="C" tier-knowledge="C"
+             tier-speed="S"
+             headline-benchmarks="Cheapest GPT-5 family variant; throughput-optimized inference"
+             best-for="Ultra-low-cost GPT variant for trivial text tasks, simple lookups, rapid classification, and extreme-throughput pipelines where cost efficiency is the sole constraint and task complexity is minimal" />
+    </tier>
+  </model-options>
+
+  <selection-algorithm>
+    Run this procedure for every prompt that needs a model recommendation.
+    Quality wins at every step; cost only enters at step 5.
+
+    Step 1 — Classify the prompt's task category.
+      Pick exactly one PRIMARY category from `<task-categories>`. If the
+      prompt clearly spans two, also pick a SECONDARY category and use the
+      more demanding one as PRIMARY. Examples:
+        - "Implement a multi-file refactor" → PRIMARY coding
+        - "Design the auth architecture for our app" → PRIMARY planning
+        - "Investigate the screenshot and fix the layout bug" → PRIMARY
+          multimodal, SECONDARY coding
+        - "Audit the entire repo for race conditions" → PRIMARY
+          long-context, SECONDARY coding
+
+    Step 2 — Score complexity dimensions.
+      Rate each dimension Low / Medium / High:
+        - Complexity (how many interacting concerns)
+        - Ambiguity (judgment calls or trade-offs needed)
+        - Scope (localized vs cross-cutting)
+        - Novelty (known pattern vs creative problem-solving)
+      Take the maximum of the four ratings as the overall complexity level.
+
+    Step 3 — Set the minimum acceptable tier rating in PRIMARY.
+        - Overall complexity High → require S in the PRIMARY category
+        - Overall complexity Medium → require A or better
+        - Overall complexity Low → B or better is acceptable
+
+    Step 4 — Filter and rank candidates by quality.
+      Filter the model list to those meeting the minimum rating in PRIMARY.
+      Among survivors, prefer the model with the highest tier rating in
+      PRIMARY. If multiple models tie at the top of PRIMARY, break the tie
+      by rating in SECONDARY. If still tied, break by overall coverage —
+      number of S/A ratings across the seven categories.
+
+    Step 5 — Apply the cost tie-breaker.
+      Only if step 4 produced two or more models with identical PRIMARY
+      and SECONDARY ratings, recommend the one with the lower
+      `output-price-per-1m`. Never use cost to demote a higher-quality
+      model.
+
+    Step 6 — Decide Max Mode.
+      Enable Max Mode iff any of these hold:
+        - Overall complexity is High
+        - PRIMARY or SECONDARY is `long-context`
+        - PRIMARY is `planning` with cross-cutting scope
+        - Prompt explicitly requires extended reasoning across many files
+      Otherwise leave Max Mode Off.
+
+    Guardrails:
+      - Never sacrifice quality to save cost — the cost step is a true-tie
+        resolver, not a downgrade trigger.
+      - For PRIMARY = `multimodal`, only consider models with tier-multimodal
+        of S or A (currently: gemini-3.1-pro at S; opus-4.7, gpt-5.5,
+        sonnet-4.6, gpt-5.4 at A).
+      - For PRIMARY = `long-context`, prefer models with native large
+        context (opus-4.7 1M, gemini-3.1-pro 1M, grok-4.3 2M) over forcing
+        a smaller-context model into Max Mode truncation.
+      - For PRIMARY = `coding` at S-tier requirement, the candidate set is
+        gpt-5.5, opus-4.7, gpt-5.3-codex; cost tie-breaker favors
+        gpt-5.3-codex when the ratings are equivalent for the prompt.
+      - Default to composer-2 for routine multi-file implementation when a
+        coding-A rating suffices; escalate only on a concrete capability
+        gap.
+  </selection-algorithm>
+
+  <conversation-principles>
+    <principle>Start a New conversation when the prompt is self-contained and carries no dependency on prior turns, when switching to a significantly different domain or task type, or when accumulated context from earlier steps would add noise and increase cost without improving output quality.</principle>
+    <principle>Continue the current conversation when the prompt explicitly builds on decisions, outputs, or context established in immediately prior steps — for example, iterating on a file just created, referencing a plan just written, or following up on an error just encountered.</principle>
+    <principle>In roadmap annotation, treat each phase or major feature boundary as a natural New conversation break unless sequential steps within that phase share tight context dependencies.</principle>
+    <principle>When in doubt, prefer New. A clean context produces more focused, higher-quality results than a bloated one — and input cost scales linearly with context size.</principle>
+  </conversation-principles>
+
+  <output-format>
+    CRITICAL: Respond in EXACTLY this format and ABSOLUTELY NOTHING ELSE.
+    Do not add any preamble, explanation, or perform any actions.
+
+    Single-prompt mode — output one block:
+
+    MODEL: [Model Name]
+    MAX MODE: [On/Off]
+    CONVERSATION: [New/Continue]
+    RATIONALE: [1-2 sentences that MUST name (a) the prompt's PRIMARY task
+                category, (b) the recommended model's tier rating in that
+                category, (c) at least one headline benchmark or named
+                leaderboard from <benchmark-sources> supporting the choice,
+                and (d) the cost tie-breaker outcome if step 5 of the
+                selection-algorithm applied. Also note the conversation
+                handling decision.]
+
+    Roadmap annotation mode — output one block per prompt, preceded by the
+    prompt identifier or a brief label, in order:
+
+    MODEL: [Model Name]
+    MAX MODE: [On/Off]
+    CONVERSATION: [New/Continue]
+    RATIONALE: [1-2 sentences that MUST name (a) the prompt's PRIMARY task
+                category, (b) the recommended model's tier rating in that
+                category, (c) at least one headline benchmark or named
+                leaderboard from <benchmark-sources> supporting the choice,
+                and (d) the cost tie-breaker outcome if step 5 of the
+                selection-algorithm applied. Also note the conversation
+                handling decision.]
+    PROMPT: [Prompt # or short label]
+  </output-format>
+
+</model-selector>
