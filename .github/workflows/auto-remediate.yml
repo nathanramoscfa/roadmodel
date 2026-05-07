@@ -2,8 +2,27 @@ name: Auto-remediate test failures
 
 # Fires when the daily Tests workflow fails on main (typically due to
 # upstream source breakage). Claude Code reads the failure logs,
-# proposes a minimal fix within a tight scope (sources.json + parser
-# helpers only), and opens a PR for human review. Never auto-merges.
+# proposes a fix within a tight scope (sources.json + parser helpers
+# only), and either merges directly or opens a PR for review depending
+# on AUTO_REMEDIATE_MODE.
+
+# ─────────────────────────────────────────────────────────────────────
+# CONFIGURATION — edit this single line to control behavior:
+#
+#   "auto-merge" (default):
+#     Claude iterates up to 3 attempts. On the first passing pytest run,
+#     it opens a PR and immediately squash-merges. If all 3 attempts
+#     fail, it opens a GitHub Issue instead of a PR — labeled
+#     "needs-attention" — describing what was tried and why a human
+#     needs to decide (e.g. find an alternate source, drop the
+#     benchmark).
+#
+#   "pr-only":
+#     Claude makes ONE attempt and opens a PR for human review. Never
+#     merges. Use this if you want to inspect every fix before it lands.
+# ─────────────────────────────────────────────────────────────────────
+env:
+  AUTO_REMEDIATE_MODE: "auto-merge"
 
 on:
   workflow_run:
@@ -13,6 +32,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  issues: write
   actions: read
 
 concurrency:
@@ -21,18 +41,13 @@ concurrency:
 
 jobs:
   remediate:
-    # Loop prevention + scope filter:
-    #  - only react to failures (not successes)
-    #  - only react to runs on main (not PR runs of remediation branches)
-    #  - only react to scheduled runs (not push runs we trigger by editing)
-    #  - explicitly skip remediation branches as a belt-and-suspenders guard
     if: |
       github.event.workflow_run.conclusion == 'failure' &&
       github.event.workflow_run.head_branch == 'main' &&
       github.event.workflow_run.event == 'schedule' &&
       !startsWith(github.event.workflow_run.head_branch, 'auto-remediate/')
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -93,7 +108,7 @@ jobs:
               errorLogs: logs,
             };
 
-      - name: Run Claude to propose a fix
+      - name: Run Claude to diagnose and remediate
         uses: anthropics/claude-code-action@v1.0.99
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -103,8 +118,59 @@ jobs:
             project. The Tests workflow failed on main, which likely indicates
             an upstream source (in update/sources.json) changed shape, moved,
             or stopped serving expected data. Your job: diagnose the root
-            cause and propose a minimal, correct fix as a pull request. NEVER
-            auto-merge.
+            cause and either fix it (and merge) or escalate to a human.
+
+            ## Operating mode
+
+            AUTO_REMEDIATE_MODE = "${{ env.AUTO_REMEDIATE_MODE }}".
+
+            ### If "auto-merge"
+
+            - Iterate up to **3 attempts**. Each attempt MUST propose a
+              **distinct root-cause hypothesis** — if attempt 1 was "the URL
+              moved", attempt 2 must NOT be "let me try a different URL"
+              unless you have a new specific reason to believe a different
+              URL is the real fix. Different attempts = different theories
+              about what's actually broken.
+            - On the first attempt that produces a clean `pytest tests/ -v`
+              (previously-failing test passes, no regressions), deliver via:
+                  git add -A
+                  git commit -m "Auto-remediate: <one-line summary>"
+                  git push -u origin ${{ steps.branch.outputs.branch_name }}
+                  gh pr create --base main --head ${{ steps.branch.outputs.branch_name }} \
+                    --title "Auto-remediate: <one-line summary>" \
+                    --body "<body using the template below>"
+                  gh pr merge --squash --delete-branch ${{ steps.branch.outputs.branch_name }}
+              The squash-merge lands immediately. The user has explicitly
+              opted into this — do not second-guess it when your fix
+              passes pytest cleanly.
+            - If you exhaust all 3 attempts WITHOUT a passing fix, do NOT
+              open a PR. Open a GitHub Issue:
+                  gh issue create \
+                    --title "[BROKEN_SOURCE] <source_name> needs human attention" \
+                    --label "auto-remediate,needs-attention" \
+                    --body "<body using the issue template below>"
+              The issue body MUST contain:
+                1. Failing test name + link to the failing run
+                2. A numbered list of each attempt: what hypothesis you
+                   tested, what you changed, why pytest still failed
+                3. Your final hypothesis about the root cause (e.g. "the
+                   benchmark appears discontinued", "the API now requires
+                   authentication", "the page format changed in a way
+                   that requires architectural rework, not a config tweak")
+                4. Concrete suggested next steps for the human (e.g.
+                   "consider replacing this source with X", "this benchmark
+                   may need to be dropped from automation entirely",
+                   "add a Playwright fetch path"). Look broadly — if a
+                   benchmark went dark, suggest specific alternates that
+                   measure the same capability.
+
+            ### If "pr-only"
+
+            - Make exactly ONE attempt.
+            - After your edit, run pytest. Whether it passes or fails,
+              push the branch and open a PR via gh pr create. Do NOT call
+              gh pr merge. Do NOT enable auto-merge.
 
             ## Read FIRST before changing anything
 
@@ -120,70 +186,85 @@ jobs:
 
             - Workflow run: ${{ fromJSON(steps.failure_details.outputs.result).runUrl }}
             - Failed jobs: ${{ join(fromJSON(steps.failure_details.outputs.result).failedJobs, ', ') }}
-            - The error logs from each failed job are attached below.
+            - The error logs from each failed job are at the bottom of this prompt.
 
-            ## Allowed scope (you MAY edit these files)
+            ## In-scope files (you MAY edit these)
 
             - update/sources.json — URLs, validate rules, max_bytes
             - update/update_models.py — ONLY these helpers: fetch,
               normalize_content, strip_html, looks_like_html,
               validate_content. DO NOT touch main(), call_opus(),
-              build_user_message(), gather_sources()'s control flow,
-              or anything else outside those helpers.
+              build_user_message(), or gather_sources()'s control flow.
 
-            ## Out of scope — DO NOT modify these under any circumstances
+            ## Out-of-scope files (NEVER modify these — applies to BOTH modes)
 
             - update/prompt.md
-            - docs/* (auto-maintained by Opus + curated by humans)
-            - tests/* (loosening a test is FORBIDDEN — if a test seems wrong,
-              open the PR with no code change and explain in the PR body why
-              human attention is needed)
+            - docs/* — auto-maintained by Opus + curated by humans
+            - tests/* — loosening a test is FORBIDDEN. If a test seems
+              wrong, that's a signal for a human, not a fix to apply.
+              In auto-merge mode → open the issue. In pr-only mode →
+              open the PR with no test changes and explain in the body.
             - .github/workflows/*
             - README.md, requirements files
 
-            ## Diagnostic discipline
+            ## Hard rules (apply in BOTH modes)
 
-            1. Identify the failing test(s) and the INTENT of each assertion,
-               not just the literal error message.
-            2. If the failure looks transient (a single 5xx, DNS hiccup, or
-               a passing-on-retry pattern), open a PR with NO code changes
-               and a body explaining the suspicion. Do not edit anything.
-            3. If the failure represents a real upstream change (URL moved,
-               table schema changed, content shape shifted), propose the
-               SMALLEST change to sources.json or a helper that addresses the
-               root cause.
-            4. NEVER loosen a test, lower a min_bytes threshold below what
-               makes sense, or remove a must_contain_all marker as a "fix".
-               If the only way to make a test pass is loosening it, that's
-               a sign the test is doing its job and a human needs to
-               investigate the upstream change.
+            1. NEVER loosen a test, drop min_bytes below 500, or remove a
+               must_contain_all marker as a "fix". You may UPDATE
+               must_contain_all markers to reflect a renamed-but-equivalent
+               upstream string (e.g., "Intelligence Index" → "Intelligence
+               Score" if the upstream provider literally renamed it). You
+               may NOT remove the marker entirely.
+            2. NEVER remove a source entirely — that's an editorial
+               decision. If a source is truly dead, escalate via the
+               issue path (auto-merge mode) or PR-with-explanation
+               (pr-only mode).
+            3. If the failing test is test_freshness, do NOT try to fix
+               it — that test detects a stuck cron, not an upstream
+               change. Open an issue saying the cron needs investigation.
 
-            ## Verification
+            ## PR body template (when opening a PR)
 
-            After making any changes, run `pytest tests/ -v` and confirm:
-              - The previously-failing test now passes.
-              - No previously-passing test has regressed.
-            If your fix doesn't pass clean, do NOT iterate further. Commit
-            what you have and open the PR flagged for human review.
+            ```
+            ## Failing test
+            <test name> — see [failing run](<run url>)
 
-            ## Delivery
+            ## Hypothesized root cause
+            <1-2 sentences>
 
-            You are already on branch `${{ steps.branch.outputs.branch_name }}`
-            checked out from main. To deliver:
+            ## Files changed and why
+            - `<path>`: <brief rationale>
 
-            1. Commit your changes to this branch with a clear message.
-            2. Push the branch: `git push -u origin ${{ steps.branch.outputs.branch_name }}`
-            3. Open a PR with `gh pr create --base main --head ${{ steps.branch.outputs.branch_name }}`
-               using:
-               - Title: "Auto-remediate: <one-line summary of the fix>"
-               - Body sections (in order):
-                 1. **Failing test:** test name + link to the failing run
-                 2. **Hypothesized root cause:** 1-2 sentences
-                 3. **Files changed and why:** brief per-file rationale
-                 4. **Local pytest result:** pass / fail / not run, with output
-                 5. **⚠️ Review carefully — do not blind-merge.**
+            ## Local pytest result
+            <pass | fail | not run, with relevant output>
 
-            Do NOT approve the PR. Do NOT enable auto-merge.
+            ## Mode
+            ${{ env.AUTO_REMEDIATE_MODE }} — <will auto-merge if checks pass | requires human review>
+            ```
+
+            ## Issue body template (when opening an issue, auto-merge only)
+
+            ```
+            ## Failing test
+            <test name> — see [failing run](<run url>)
+
+            ## Attempts tried (exhausted 3/3)
+
+            ### Attempt 1: <hypothesis>
+            <what was changed; why pytest still failed>
+
+            ### Attempt 2: <different hypothesis>
+            <what was changed; why pytest still failed>
+
+            ### Attempt 3: <yet another hypothesis>
+            <what was changed; why pytest still failed>
+
+            ## Final hypothesis
+            <best guess about the actual root cause>
+
+            ## Suggested next steps
+            - <specific actionable suggestions for the human>
+            ```
 
             ## Error logs
 

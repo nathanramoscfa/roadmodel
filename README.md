@@ -134,23 +134,41 @@ When the **scheduled** daily Tests run on `main` fails, a separate
 workflow ([.github/workflows/auto-remediate.yml](.github/workflows/auto-remediate.yml))
 fires. It uses [`anthropics/claude-code-action`](https://github.com/anthropics/claude-code-action)
 to invoke Claude Sonnet 4.6 with the failure logs and a tightly-scoped
-remediation prompt:
+remediation prompt.
 
-- **In scope to edit**: `update/sources.json`, plus the fetch/strip/validate
-  helpers in `update/update_models.py`.
-- **Out of scope**: `update/prompt.md`, anything in `docs/`, the test
-  files, the workflow files, the README. Loosening a test as a "fix" is
-  explicitly forbidden.
+### Modes
 
-Claude diagnoses, runs `pytest tests/ -v` to verify the fix, commits to
-`auto-remediate/run-<id>`, and opens a PR for human review. Never
-auto-merges. If the fix doesn't pass cleanly the PR opens anyway,
-flagged for human attention.
+The workflow has two modes, controlled by the `AUTO_REMEDIATE_MODE`
+env var at the top of the workflow file. Edit the single line to flip:
 
-Concurrency and trigger filters prevent loops: only fires on scheduled
-runs of the Tests workflow on `main`, never on push or PR runs (so
-Claude's own remediation PR running tests can't trigger another
-remediation cycle).
+- **`auto-merge` (default)**: Claude iterates up to 3 attempts. The
+  first attempt that produces a clean `pytest tests/ -v` opens a PR
+  and squash-merges it immediately. If all 3 attempts fail, Claude
+  opens a **GitHub Issue** instead — labeled `needs-attention` —
+  detailing what was tried, why each attempt failed, and concrete
+  next-step suggestions for you (e.g. "consider replacing this
+  source with X", "this benchmark may need to be dropped").
+- **`pr-only`**: Claude makes one attempt and opens a PR for human
+  review. Never merges. Use this if you want eyes on every fix.
+
+### Scope
+
+- **In scope to edit**: `update/sources.json` (URLs, validate rules,
+  max_bytes), and the fetch/strip/validate helpers in
+  `update/update_models.py` (`fetch`, `normalize_content`,
+  `strip_html`, `looks_like_html`, `validate_content`).
+- **Out of scope, in BOTH modes**: `update/prompt.md`, anything in
+  `docs/`, test files, workflow files, README, requirements files.
+  Loosening a test as a "fix" is forbidden. Removing a source
+  entirely is forbidden — that's an editorial decision and goes via
+  the issue path.
+
+### Loop prevention
+
+Trigger is filtered to scheduled workflow_run failures on `main` only.
+Push and PR runs of remediation branches running their own tests
+cannot re-trigger remediation. A concurrency group also prevents
+pile-up.
 
 ## Repo layout
 
