@@ -2,48 +2,84 @@
   "pricing": {
     "name": "Cursor models and pricing",
     "url": "https://cursor.com/docs/models-and-pricing",
-    "purpose": "Authoritative source for per-model input / cache write / cache read / output prices and the canonical model list."
+    "purpose": "Authoritative source for per-model input / cache write / cache read / output prices and the canonical model list.",
+    "validate": {
+      "min_bytes": 20000,
+      "must_contain_all": ["$", "Composer", "Opus"]
+    }
   },
   "benchmarks": [
     {
       "name": "Artificial Analysis Intelligence Index",
       "url": "https://artificialanalysis.ai/",
-      "purpose": "Composite of 10 evaluations including GPQA Diamond, Humanity's Last Exam, SciCode, Terminal-Bench Hard, AA-Omniscience."
+      "purpose": "Composite of 10 evaluations including GPQA Diamond, Humanity's Last Exam, SciCode, Terminal-Bench Hard, AA-Omniscience.",
+      "validate": {
+        "min_bytes": 50000,
+        "must_contain_all": ["Intelligence Index", "GPT", "Claude"]
+      }
     },
     {
       "name": "LMArena",
       "url": "https://lmarena.ai/leaderboard",
-      "purpose": "Human-preference Elo across general chat."
+      "purpose": "Human-preference Elo across general chat.",
+      "validate": {
+        "min_bytes": 50000,
+        "must_contain_all": ["Arena", "Claude", "GPT"]
+      }
     },
     {
       "name": "SWE-bench",
       "url": "https://www.swebench.com/",
-      "purpose": "Real GitHub issues; SWE-bench Verified is the 500-instance human-filtered subset."
+      "purpose": "Real GitHub issues; SWE-bench Verified is the 500-instance human-filtered subset.",
+      "validate": {
+        "min_bytes": 50000,
+        "must_contain_all": ["SWE-bench", "Claude", "Verified"]
+      }
     },
     {
-      "name": "Aider polyglot",
-      "url": "https://aider.chat/docs/leaderboards/",
-      "purpose": "Coding leaderboard across C++, Go, Java, JavaScript, Python, Rust."
+      "name": "Aider polyglot (raw YAML)",
+      "url": "https://raw.githubusercontent.com/Aider-AI/aider/main/aider/website/_data/polyglot_leaderboard.yml",
+      "purpose": "Coding leaderboard across C++, Go, Java, JavaScript, Python, Rust. Authoritative YAML maintained in the aider repo, free of SPA hydration.",
+      "validate": {
+        "min_bytes": 5000,
+        "must_contain_all": ["model:", "pass_rate"]
+      }
     },
     {
       "name": "LiveBench",
       "url": "https://livebench.ai/",
-      "purpose": "Contamination-resistant multi-domain benchmark."
+      "purpose": "Contamination-resistant multi-domain benchmark.",
+      "validate": {
+        "min_bytes": 30000,
+        "must_contain_all": ["LiveBench", "Claude"]
+      }
     },
     {
       "name": "Terminal-Bench",
       "url": "https://www.tbench.ai/leaderboard",
-      "purpose": "Terminal and agent task execution (Terminal-Bench 2.0)."
+      "purpose": "Terminal and agent task execution (Terminal-Bench 2.0).",
+      "validate": {
+        "min_bytes": 30000,
+        "must_contain_all": ["Terminal-Bench", "Claude"]
+      }
     },
     {
       "name": "MMMU",
       "url": "https://mmmu-benchmark.github.io/",
-      "purpose": "Multimodal university-level understanding."
+      "purpose": "Multimodal university-level understanding.",
+      "validate": {
+        "min_bytes": 10000,
+        "must_contain_all": ["MMMU"]
+      }
     },
     {
       "name": "Humanity's Last Exam",
       "url": "https://lastexam.ai/",
-      "purpose": "HLE — frontier-difficulty general intelligence."
+      "purpose": "HLE — frontier-difficulty general intelligence.",
+      "validate": {
+        "min_bytes": 30000,
+        "must_contain_all": ["Humanity"]
+      }
     }
   ]
 }

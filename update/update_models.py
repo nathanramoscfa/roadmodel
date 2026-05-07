@@ -43,36 +43,53 @@ def fetch(url: str) -> str:
     return response.text
 
 
+def validate_content(content: str, rules: dict[str, Any] | None) -> str | None:
+    """Return None if content passes the rules, else a short failure reason.
+
+    Guards against silently feeding empty SPA shells to Opus. A source whose
+    fetched body is too small or missing expected markers is treated as a
+    fetch failure rather than valid input.
+    """
+    if not rules:
+        return None
+    min_bytes = rules.get("min_bytes")
+    if min_bytes is not None and len(content) < min_bytes:
+        return f"content too small ({len(content)} bytes < {min_bytes})"
+    must_contain = rules.get("must_contain_all") or []
+    haystack = content.lower()
+    missing = [m for m in must_contain if m.lower() not in haystack]
+    if missing:
+        return f"missing expected markers: {missing}"
+    return None
+
+
 def gather_sources() -> tuple[list[dict[str, str]], list[str]]:
     sources_config = json.loads((UPDATE_DIR / "sources.json").read_text())
     fetched: list[dict[str, str]] = []
     errors: list[str] = []
 
-    pricing = sources_config["pricing"]
-    try:
+    def try_fetch(kind: str, src: dict[str, Any]) -> None:
+        try:
+            content = fetch(src["url"])
+        except Exception as exc:
+            errors.append(f"{src['url']}: fetch failed: {exc}")
+            return
+        reason = validate_content(content, src.get("validate"))
+        if reason is not None:
+            errors.append(f"{src['url']}: validation failed: {reason}")
+            return
         fetched.append(
             {
-                "type": "pricing",
-                "name": pricing["name"],
-                "url": pricing["url"],
-                "content": fetch(pricing["url"]),
+                "type": kind,
+                "name": src["name"],
+                "url": src["url"],
+                "content": content,
             }
         )
-    except Exception as exc:
-        errors.append(f"{pricing['url']}: {exc}")
 
+    try_fetch("pricing", sources_config["pricing"])
     for src in sources_config["benchmarks"]:
-        try:
-            fetched.append(
-                {
-                    "type": "benchmark",
-                    "name": src["name"],
-                    "url": src["url"],
-                    "content": fetch(src["url"]),
-                }
-            )
-        except Exception as exc:
-            errors.append(f"{src['url']}: {exc}")
+        try_fetch("benchmark", src)
 
     return fetched, errors
 
@@ -99,19 +116,23 @@ def build_user_message(
 
 
 def call_opus(system_prompt: str, user_message: str, api_key: str) -> str:
+    """Return assistant text from Opus via streaming (long-request policy)."""
     client = Anthropic(api_key=api_key)
-    response = client.messages.create(
+    system_blocks = [
+        {
+            "type": "text",
+            "text": system_prompt,
+            "cache_control": {"type": "ephemeral"},
+        }
+    ]
+    user_blocks = [{"role": "user", "content": user_message}]
+    with client.messages.stream(
         model=MODEL_ID,
         max_tokens=MAX_TOKENS,
-        system=[
-            {
-                "type": "text",
-                "text": system_prompt,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=[{"role": "user", "content": user_message}],
-    )
+        system=system_blocks,
+        messages=user_blocks,
+    ) as stream:
+        response = stream.get_final_message()
     return "".join(
         block.text
         for block in response.content
