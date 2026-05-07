@@ -31,7 +31,6 @@ All prices are per 1M tokens.
 | Model             | Input | Cache Write | Cache Read | Output | Tier |
 | ----------------- | ----- | ----------- | ---------- | ------ | ---- |
 | Composer 2        | $0.50 | –           | $0.20      | $2.50  | Low  |
-| Composer 2 (Fast) | $1.50 | –           | $0.35      | $7.50  | Low  |
 | Auto (pool rate)  | $1.25 | $1.25       | $0.25      | $6.00  | Low  |
 
 

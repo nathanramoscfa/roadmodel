@@ -139,14 +139,14 @@
              tier-coding="S" tier-planning="S" tier-agentic="A"
              tier-multimodal="A" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
-             headline-benchmarks="SWE-bench Verified 87.6%; AA Intelligence Index 57.3; 1M-token context; lowest hallucination rate among frontier models (~36%)"
+             headline-benchmarks="AA Intelligence Index 57.3 (#2); LMArena Text #1 (Elo 1503); LMArena WebDev #1 (Elo 1561); AA-Omniscience 26.2 (#2)"
              best-for="Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching" />
       <model id="gpt-5.5" name="GPT-5.5"
              input-price-per-1m="$5.00" output-price-per-1m="$30.00"
              tier-coding="S" tier-planning="S" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="D"
-             headline-benchmarks="SWE-bench Verified 88.7% (#1); Terminal-Bench 2.0 82.7% (#1); AA Intelligence Index 60.2 (#1); higher hallucination rate (~86%)"
+             headline-benchmarks="AA Intelligence Index 60.2 (#1); LMArena Text Elo 1485 (#8); HLE 25.3%; AA-Omniscience 20.1 (#3)"
              best-for="OpenAI's most capable frontier model and highest-cost GPT offering, best suited for the most demanding reasoning, long-horizon planning, and tasks where maximum intelligence is required regardless of cost — strongest single model for hard coding, agentic execution, and reasoning, but verify factual claims due to elevated hallucination" />
     </tier>
     <tier cost="high">
@@ -155,14 +155,14 @@
              tier-coding="A" tier-planning="A" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="SWE-bench Verified 79.6%; top-ranked tool-calling globally; Anthropic-lineage coding leadership on LMArena coding category"
+             headline-benchmarks="AA Intelligence Index 51.7; LMArena WebDev Elo 1526 (#6); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage"
              best-for="Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation" />
       <model id="gpt-5.4" name="GPT-5.4"
              input-price-per-1m="$2.50" output-price-per-1m="$15.00"
              tier-coding="A" tier-planning="A" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="S"
              tier-speed="B"
-             headline-benchmarks="Terminal-Bench 2.0 75.1%; outperforms human specialists in 83% of occupations; lowest factual error rate among GPT models"
+             headline-benchmarks="AA Intelligence Index 56.8 (#4); LMArena Text Elo 1485 (#11); GPT-5.4 (xhigh) Output Speed 82.8 tokens/s; lowest factual error rate among GPT models"
              best-for="Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding" />
     </tier>
     <tier cost="medium">
@@ -171,14 +171,14 @@
              tier-coding="S" tier-planning="B" tier-agentic="S"
              tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
              tier-speed="B"
-             headline-benchmarks="SWE-bench Verified 85.0%; Terminal-Bench 2.0 77.3%; most token-efficient autonomous coding model"
+             headline-benchmarks="GPT-5.3 Codex (xhigh) listed on AA leaderboards; Codex lineage retains strong Terminal-Bench and SWE-bench Verified performance for autonomous coding"
              best-for="Highest terminal and tool-use proficiency at the medium tier, most token-efficient autonomous coding, excels at long-running agentic sessions spanning debugging through deployment, and hard algorithmic problems requiring sustained code reasoning across languages — the cost-efficient pick for pure coding and agentic execution when an S-tier coding rating is needed" />
       <model id="gemini-3.1-pro" name="Gemini 3.1 Pro"
              input-price-per-1m="$2.00" output-price-per-1m="$12.00"
              tier-coding="A" tier-planning="A" tier-agentic="A"
              tier-multimodal="S" tier-long-context="S" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="SWE-bench Verified 80.6%; AA Intelligence Index 57.2; native multimodal understanding (text/image/video/audio in single pass); 1M-token context"
+             headline-benchmarks="AA Intelligence Index 57.2 (#3); AA-Omniscience 32.9 (#1); HLE 38.3% (#1); LMArena Text Elo 1492 (#4); 1M-token context"
              best-for="True native multimodal understanding (text, image, video, audio, and code in a single pass), 1M-token context optimized for heterogeneous inputs, strong agentic multi-step tool use, and synthesizing insights across large mixed-media datasets or sprawling document corpora — the obvious choice whenever multimodal or long-context is the primary category" />
       <model id="premium" name="Premium (Intelligence)"
              input-price-per-1m="varies (routes to top-tier model)"
@@ -195,14 +195,14 @@
              tier-coding="A" tier-planning="B" tier-agentic="A"
              tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
              tier-speed="S"
-             headline-benchmarks="CursorBench 61.3 (+37% over Composer 1.5); SWE-bench Multilingual 73.7; Terminal-Bench 2.0 61.7 (above Opus 4.6's 58.0)"
+             headline-benchmarks="CursorBench 61.3 (+37% over Composer 1.5); SWE-bench Multilingual 73.7; Terminal-Bench 2.0 61.7"
              best-for="Cursor's enforced default Composer model — purpose-built for multi-file agentic editing, fine-tuned on real developer sessions, self-summarizing 200K context for sustained long tasks, and frontier-level coding quality with speed-optimized inference at the lowest output price ($2.50/M) — the default choice for standard implementation, multi-file changes, and roadmap execution where coding-A is sufficient" />
       <model id="grok-4.3" name="Grok 4.3"
              input-price-per-1m="$1.25" output-price-per-1m="$2.50"
              tier-coding="B" tier-planning="A" tier-agentic="S"
              tier-multimodal="B" tier-long-context="S" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 53; GDPval-AA Agentic Elo 1500 (+321 over Grok 4.20); GPQA Diamond 90.1%; τ²-Bench Telecom 98%; 2M-token context"
+             headline-benchmarks="AA Intelligence Index 53.2 (#7); AA-Omniscience 18.3 (#4); HLE 24.5%; LMArena Search Elo 1205"
              best-for="Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding — leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist" />
       <model id="auto" name="Auto (Efficiency)"
              input-price-per-1m="~$1.25 (Auto + Composer pool)"
@@ -217,14 +217,14 @@
              tier-coding="B" tier-planning="B" tier-agentic="B"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
              tier-speed="S"
-             headline-benchmarks="Speed-optimized Anthropic lineage; latency leader among Claude family"
+             headline-benchmarks="AA Intelligence Index 37.1; Output Speed 91 tokens/s; AA-Omniscience -4.2; latency leader among Claude family"
              best-for="Speed-optimized lowest-cost Claude model, ideal for simple completions, high-volume repetitive tasks, and latency-sensitive workflows where a lightweight capable response matters more than deep reasoning" />
       <model id="gpt-5.4-mini" name="GPT-5.4 Mini"
              input-price-per-1m="$0.75" output-price-per-1m="$4.50"
              tier-coding="B" tier-planning="C" tier-agentic="C"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
              tier-speed="A"
-             headline-benchmarks="Distilled from GPT-5.4 lineage; retains broad knowledge breadth at fraction of flagship cost"
+             headline-benchmarks="AA Intelligence Index 48.9 (xhigh); Output Speed 156.7 tokens/s; HLE 19.4% (GPT-5-mini)"
              best-for="Lightweight GPT-5.4 variant balancing quality and cost, well-suited for straightforward coding, short-form generation, and high-throughput workloads needing solid GPT reasoning at a fraction of the flagship price" />
       <model id="gpt-5.4-nano" name="GPT-5.4 Nano"
              input-price-per-1m="$0.20" output-price-per-1m="$1.25"
