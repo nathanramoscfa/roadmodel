@@ -10,8 +10,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import re
+
 import requests
 from anthropic import Anthropic
+from bs4 import BeautifulSoup
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = REPO_ROOT / "docs"
@@ -27,6 +30,8 @@ USER_AGENT = (
     "(+https://github.com/nathanramoscfa/model-selector)"
 )
 FETCH_TIMEOUT = 30
+DEFAULT_MAX_BYTES = 150_000
+HTML_SNIFF_BYTES = 1024
 
 
 def fetch(url: str) -> str:
@@ -41,6 +46,41 @@ def fetch(url: str) -> str:
     )
     response.raise_for_status()
     return response.text
+
+
+def looks_like_html(content: str) -> bool:
+    head = content[:HTML_SNIFF_BYTES].lower()
+    return "<!doctype html" in head or "<html" in head
+
+
+def strip_html(content: str) -> str:
+    """Reduce HTML to visible text plus inline-script contents.
+
+    SPA leaderboards frequently inline benchmark data as JSON inside
+    <script> tags (e.g. SWE-bench's per-instance results). BeautifulSoup's
+    get_text() excludes script bodies, so we extract data-bearing scripts
+    separately and append them, letting downstream truncation cap the size.
+    Style/link/meta/noscript/svg carry no data and are dropped.
+    """
+    soup = BeautifulSoup(content, "html.parser")
+    data_scripts: list[str] = []
+    for s in soup.find_all("script"):
+        body = s.string or s.get_text() or ""
+        if len(body) > 500 and ("{" in body or "[" in body):
+            data_scripts.append(body)
+    for tag in soup(["style", "noscript", "svg", "link", "meta", "script"]):
+        tag.decompose()
+    visible = soup.get_text(separator=" ", strip=True)
+    combined = visible + " " + " ".join(data_scripts)
+    return re.sub(r"\s+", " ", combined).strip()
+
+
+def normalize_content(content: str, max_bytes: int) -> str:
+    if looks_like_html(content):
+        content = strip_html(content)
+    if len(content) > max_bytes:
+        content = content[:max_bytes]
+    return content
 
 
 def validate_content(content: str, rules: dict[str, Any] | None) -> str | None:
@@ -70,10 +110,12 @@ def gather_sources() -> tuple[list[dict[str, str]], list[str]]:
 
     def try_fetch(kind: str, src: dict[str, Any]) -> None:
         try:
-            content = fetch(src["url"])
+            raw = fetch(src["url"])
         except Exception as exc:
             errors.append(f"{src['url']}: fetch failed: {exc}")
             return
+        max_bytes = src.get("max_bytes", DEFAULT_MAX_BYTES)
+        content = normalize_content(raw, max_bytes)
         reason = validate_content(content, src.get("validate"))
         if reason is not None:
             errors.append(f"{src['url']}: validation failed: {reason}")
