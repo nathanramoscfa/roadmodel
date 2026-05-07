@@ -111,7 +111,7 @@ jobs:
       - name: Run Claude to diagnose and remediate
         uses: anthropics/claude-code-action@v1.0.99
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: "--model claude-sonnet-4-6 --allowedTools 'Edit,MultiEdit,Write,Read,Glob,Grep,Bash(git:*),Bash(gh:*),Bash(pytest:*),Bash(python:*),Bash(pip:*)'"
           prompt: |
             You are remediating a failing daily test run for the model-selector
