@@ -99,6 +99,35 @@ The script writes back into `docs/`. Inspect the diff with `git diff docs/`.
 A successful run also writes `update/.last-summary.txt` and (if any)
 `update/.last-warnings.txt` — both gitignored.
 
+## Tests
+
+A separate workflow ([.github/workflows/tests.yml](.github/workflows/tests.yml))
+runs daily at 12:00 UTC, on every push to `main`, on every PR, and on
+`workflow_dispatch`. The suite has three tiers (see [tests/](tests/)):
+
+- **Live source health** ([tests/test_sources_live.py](tests/test_sources_live.py))
+  — actually fetches every URL in `sources.json`, runs the same fetch /
+  normalize / validate pipeline the Monday refresh runs, and asserts
+  source-specific facts (Cursor `.md` has the Opus 4.7 row at $5, the
+  Notes column is populated, ≥30 model rows present, Aider YAML parses
+  with ≥50 entries). Catches upstream regressions *before* the Monday
+  refresh hits them.
+- **Schema and cross-doc consistency** ([tests/test_doc_schema.py](tests/test_doc_schema.py))
+  — every `<model>` element has all 14 required attributes; every
+  cost-scale table has the 7-column header; prices and pricing-notes
+  match byte-for-byte across the two docs; tier-cost groupings match
+  output prices. Catches bot drift.
+- **Freshness** ([tests/test_freshness.py](tests/test_freshness.py)) —
+  fails if the most recent `model-selector-bot` commit is older than
+  14 days, signalling a stuck cron.
+
+Run locally:
+
+```sh
+pip install -r tests/requirements.txt
+pytest tests/ -v
+```
+
 ## Repo layout
 
 ```
@@ -111,8 +140,14 @@ A successful run also writes `update/.last-summary.txt` and (if any)
 │   ├── prompt.md                   # system prompt (the rules Opus follows)
 │   ├── sources.json                # upstream URLs + per-source validation
 │   └── requirements.txt            # anthropic, beautifulsoup4, requests
+├── tests/
+│   ├── test_sources_live.py        # live upstream-health checks
+│   ├── test_doc_schema.py          # schema + cross-doc consistency
+│   ├── test_freshness.py           # cron-heartbeat check
+│   └── requirements.txt            # pytest, pyyaml
 ├── .github/workflows/
-│   └── update-models.yml           # weekly cron + workflow_dispatch
+│   ├── update-models.yml           # weekly refresh (Mondays 16:00 UTC)
+│   └── tests.yml                   # daily tests + on push/PR
 ├── .gitignore
 └── README.md
 ```
