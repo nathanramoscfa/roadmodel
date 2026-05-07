@@ -50,6 +50,31 @@ Source of truth: the Cursor pricing page.
   tier assignments. Set the Status column to ✓ when Correct Tier matches
   Current Tier, ✗ otherwise.
 
+## Pricing notes (hovertext)
+
+Source of truth: the rightmost cell of each row in Cursor's
+`models-and-pricing` Markdown — these are the IDE hovertext annotations
+about cost structure, availability, and capability constraints (e.g.
+"Hidden by default", "Requires Max Mode on request-based plans", "The
+cost is 2x when the input exceeds 200k tokens", "90% discount on cached
+input tokens"). They surface material decision-relevant information.
+
+- For every row in the price tables of `model-tier-cost-scale.md`,
+  copy the corresponding Cursor notes cell verbatim into the `Notes`
+  column. Multi-clause notes are semicolon-separated; preserve that
+  format exactly.
+- For models in `<model-options>` of `model-selector.txt`, copy the
+  same notes verbatim into the `pricing-notes="…"` attribute on the
+  `<model …/>` element.
+- If a model's notes cell is `-` (or blank) on the Cursor page, write
+  `-` in both destinations.
+- If the Cursor pricing source failed to fetch this run, KEEP every
+  existing `Notes` cell and `pricing-notes` attribute verbatim and
+  add a warning. Never invent or paraphrase notes.
+- For `premium` and `auto` (Cursor-managed routing modes that have no
+  direct Cursor pricing row), preserve their existing `pricing-notes`
+  verbatim — they describe routing behavior, not API rates.
+
 ## Headline benchmarks
 
 Source of truth: the named leaderboards in `<benchmark-sources>` of
@@ -103,6 +128,13 @@ not, even if the AA source is unavailable.
   judgments outside the scope of this automation.
 - The structure or schema of either document. Update values inside the
   existing schema; do not add or remove sections, attributes, or columns.
+  The current schema for cost-scale tables is
+  `Model | Input | Cache Write | Cache Read | Output | Tier | Notes`.
+  The current schema for `<model>` elements in `<model-options>` is
+  `id, name, input-price-per-1m, output-price-per-1m, tier-coding,
+  tier-planning, tier-agentic, tier-multimodal, tier-long-context,
+  tier-knowledge, tier-speed, headline-benchmarks, pricing-notes,
+  best-for`.
 - The `best-for` free-text descriptions on each model.
 - Any fields in `<benchmark-sources>` of `model-selector.txt`.
 - The "Tier Boundaries" table in `model-tier-cost-scale.md`.
