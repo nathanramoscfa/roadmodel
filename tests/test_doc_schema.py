@@ -18,10 +18,12 @@ regex rather than ElementTree to handle this without rewriting the doc.
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SELECTOR_PATH = REPO_ROOT / "docs" / "model-selector.txt"
+SELECTOR_MD_PATH = REPO_ROOT / "docs" / "model-selector.md"
 COST_SCALE_PATH = REPO_ROOT / "docs" / "model-tier-cost-scale.md"
 
 REQUIRED_MODEL_ATTRS = (
@@ -216,6 +218,27 @@ def test_selector_pricing_notes_match_cost_scale_notes() -> None:
     assert not mismatches, (
         "Cross-doc pricing-notes mismatches (these should be byte-identical):\n  "
         + "\n  ".join(mismatches)
+    )
+
+
+def test_selector_md_is_in_sync_with_selector_txt() -> None:
+    """docs/model-selector.md is auto-generated from docs/model-selector.txt
+    by update/render_md.py. Fail if the committed .md does not match what
+    the renderer would produce from the current .txt.
+
+    Catches: a hand-edit to the .md, or a .txt change that wasn't followed
+    by `python update/render_md.py`.
+    """
+    sys.path.insert(0, str(REPO_ROOT / "update"))
+    try:
+        from render_md import render
+    finally:
+        sys.path.pop(0)
+    expected = render(SELECTOR_PATH.read_text())
+    actual = SELECTOR_MD_PATH.read_text()
+    assert actual == expected, (
+        "docs/model-selector.md is out of sync with docs/model-selector.txt. "
+        "Regenerate with: python update/render_md.py"
     )
 
 

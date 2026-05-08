@@ -47,6 +47,6 @@ jobs:
           if [ -f update/.last-warnings.txt ]; then
             warnings="$(printf '\n\nWarnings:\n')$(sed 's/^/  - /' update/.last-warnings.txt)"
           fi
-          git add docs/model-selector.txt docs/model-tier-cost-scale.md
+          git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md
           git commit -m "Automated refresh: $(date -u +%Y-%m-%d)" -m "${summary}${warnings}"
           git push
