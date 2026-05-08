@@ -76,22 +76,29 @@ cite them stay frozen at hand-set values per the prompt's preserve-verbatim rule
 - The Notes column in `model-tier-cost-scale.md`
 - The `pricing-notes="…"` attribute on each `<model>` in `model-selector.txt`
 - The full Cursor catalog in `model-tier-cost-scale.md` (additions and removals follow Cursor's `.md`)
+- The set of `<model …/>` entries in `<model-options>` of `model-selector.txt`. New entries are added when Cursor lists a new model (auto-assigned tier ratings grounded in fetched benchmarks, defaulting to `B` where signal is absent; 2–4 cited headline benchmarks; one factual `best-for` sentence — never invented). An entry is removed only when Cursor discontinues it OR a same-series successor exists at ≤ output price. Costlier successors do NOT displace predecessors. See [update/prompt.md](update/prompt.md) "Model lifecycle in `<model-options>`" for the rules and `same-series` definition.
+- The `(currently: …)` enumeration in the multimodal guardrail and the coding S-tier candidate-set enumeration inside `<selection-algorithm>` — kept in sync with `<model-options>` membership when models are added/removed
 - Headline benchmark **numbers** — in-place numeric replacement within existing claims only; no claim swapping, no claim deletion, no new claims (see prompt section "Headline benchmarks")
 - The "Existing model-selector.txt Classification Audit" and "Recently Added" tables
 
 **Editorial — never auto-changed**:
 
-- Which models appear in `<model-options>` of `model-selector.txt`
-- The S/A/B/C/D `tier-*` ratings on each model
-- The `best-for` description on each model
-- `<benchmark-sources>`, `<task-categories>`, `<selection-algorithm>`, `<conversation-principles>`, `<output-format>`, and the rest of the `model-selector.txt` framing
+- The S/A/B/C/D `tier-*` ratings on **existing** `<model …/>` elements (newly added models receive auto-assigned ratings, but ratings on already-present models are preserved verbatim — override at any time and subsequent refreshes will respect your edit)
+- The `best-for` description on **existing** `<model …/>` elements (same protection — auto-generated only on first add)
+- The long-context guardrail and the `Default to composer-2 …` guardrail inside `<selection-algorithm>` (context-window sizes and editorial defaults — not auto-derivable from `<model-options>`)
+- `<benchmark-sources>`, `<task-categories>`, `<conversation-principles>`, `<output-format>`, and the rest of the `model-selector.txt` framing
 - The "Tier Boundaries" table
 
-When Cursor ships a new model and you want it recommendable, hand-add a
-`<model …/>` element to `<model-options>` with your editorial tier ratings,
-headline benchmarks, pricing-notes (copy from cost-scale doc), and best-for
-description. The bot will keep its prices fresh from then on but will never
-add it for you.
+When Cursor ships a new model, the Monday refresh adds a `<model …/>` element
+to `<model-options>` automatically and flags it in the commit's `warnings`
+list as "review recommended". You can override the auto-assigned tier ratings
+or `best-for` in a follow-up commit; subsequent refreshes preserve your edits
+verbatim. To preview what the next refresh would change without committing,
+run `python update/update_models.py --dry-run` (prints diff + warnings to
+stdout). To exercise the lifecycle rules against a synthetic Cursor pricing
+payload (e.g. "what happens if a hypothetical GPT-5.6 launches at $40/M
+output?"), pass `--fixture path/to/sources.json` — see the script's `--help`
+for the fixture shape.
 
 ## Local run
 
@@ -106,6 +113,48 @@ python update/update_models.py
 The script writes back into `docs/`. Inspect the diff with `git diff docs/`.
 A successful run also writes `update/.last-summary.txt` and (if any)
 `update/.last-warnings.txt` — both gitignored.
+
+### Preview a refresh without committing (`--dry-run`)
+
+Run with `--dry-run` to print the diff + warnings stdout-only, no
+file writes:
+
+```sh
+python update/update_models.py --dry-run
+```
+
+### Smoke-test the lifecycle rules (`--fixture`)
+
+The Model lifecycle rules in [update/prompt.md](update/prompt.md)
+(don't drop a model when a costlier same-series successor appears;
+auto-add new models with B-default tier ratings; keep
+`<selection-algorithm>` guardrail enumerations in sync) only fire
+when Cursor ships a new model. To exercise them on demand against
+synthetic pricing:
+
+```sh
+# Build a fixture: live upstream sources + an injected synthetic row
+python update/build_fixture.py costlier-successor \
+    --output tests/fixtures/costlier_successor.json
+
+# Preview what the LLM would do (one Opus call, ~$0.50-1.00)
+python update/update_models.py --dry-run \
+    --fixture tests/fixtures/costlier_successor.json
+```
+
+Two scenarios ship in [update/build_fixture.py](update/build_fixture.py):
+
+- `costlier-successor` — injects GPT-5.6 at $40/M output. Expected:
+  add `gpt-5.6`, **keep** `gpt-5.5` and `gpt-5.4` (no supersession).
+- `cheaper-successor` — injects GPT-5.6 at $25/M output. Expected:
+  add `gpt-5.6`, **remove** `gpt-5.5` (superseded, $25 ≤ $30),
+  **keep** `gpt-5.4` ($25 > $15).
+
+Generated fixtures land in `tests/fixtures/` and are gitignored —
+the generator is the durable artifact, since committed fixtures
+freeze the benchmark and pricing snapshots the LLM sees, which
+ages quickly. Re-run the generator whenever you want a fresh
+smoke test against current upstream data.
 
 ## Tests
 

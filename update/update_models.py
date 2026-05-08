@@ -4,6 +4,8 @@ upstream pricing and benchmark sources using Opus 4.7."""
 
 from __future__ import annotations
 
+import argparse
+import difflib
 import json
 import os
 import sys
@@ -192,7 +194,84 @@ def parse_result(raw: str) -> dict[str, Any]:
     return json.loads(text)
 
 
+def load_fixture(path: Path) -> tuple[list[dict[str, str]], list[str]]:
+    """Read a pre-fetched-sources fixture, bypassing network I/O.
+
+    Shape: {"fetched": [{type, name, url, content}, ...],
+            "fetch_errors": ["...", ...]}.
+    Used by --fixture to exercise the lifecycle rules in update/prompt.md
+    against synthetic Cursor pricing payloads (e.g. "what happens when
+    GPT-5.6 appears at $40/M output?") without waiting for upstream
+    changes.
+    """
+    payload = json.loads(path.read_text())
+    fetched = payload.get("fetched", [])
+    fetch_errors = payload.get("fetch_errors", [])
+    return fetched, fetch_errors
+
+
+def write_dry_run_report(
+    selector_before: str,
+    selector_after: str,
+    cost_scale_before: str,
+    cost_scale_after: str,
+    summary: str,
+    warnings: list[str],
+) -> None:
+    print(f"=== Summary ===\n{summary}\n")
+    if warnings:
+        print("=== Warnings ===")
+        for w in warnings:
+            print(f"  - {w}")
+        print()
+    print("=== Diff: docs/model-selector.txt ===")
+    sys.stdout.writelines(
+        difflib.unified_diff(
+            selector_before.splitlines(keepends=True),
+            selector_after.splitlines(keepends=True),
+            fromfile="current/model-selector.txt",
+            tofile="proposed/model-selector.txt",
+        )
+    )
+    print("\n=== Diff: docs/model-tier-cost-scale.md ===")
+    sys.stdout.writelines(
+        difflib.unified_diff(
+            cost_scale_before.splitlines(keepends=True),
+            cost_scale_after.splitlines(keepends=True),
+            fromfile="current/model-tier-cost-scale.md",
+            tofile="proposed/model-tier-cost-scale.md",
+        )
+    )
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "Don't write to disk or update .last-summary.txt / "
+            ".last-warnings.txt. Print the proposed diff against the "
+            "current docs plus the summary and warnings. Useful for "
+            "previewing what the next refresh would change."
+        ),
+    )
+    parser.add_argument(
+        "--fixture",
+        type=Path,
+        default=None,
+        help=(
+            "Path to a JSON file with pre-fetched source content "
+            "(skips network fetching). Shape: "
+            '{"fetched": [{"type": ..., "name": ..., "url": ..., '
+            '"content": ...}, ...], "fetch_errors": [...]}. Useful for '
+            "exercising Model lifecycle rules with synthetic pricing "
+            "inputs (e.g. test that a hypothetical costlier successor "
+            "does not displace the predecessor)."
+        ),
+    )
+    args = parser.parse_args()
+
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         sys.stderr.write("ANTHROPIC_API_KEY is not set\n")
@@ -202,7 +281,10 @@ def main() -> int:
     selector_text = SELECTOR_PATH.read_text()
     cost_scale_text = COST_SCALE_PATH.read_text()
 
-    fetched, fetch_errors = gather_sources()
+    if args.fixture is not None:
+        fetched, fetch_errors = load_fixture(args.fixture)
+    else:
+        fetched, fetch_errors = gather_sources()
     if not fetched:
         sys.stderr.write(
             "All source fetches failed; refusing to call Opus.\n"
@@ -224,8 +306,23 @@ def main() -> int:
         sys.stderr.write("\n")
         return 2
 
-    SELECTOR_PATH.write_text(result["model_selector_txt"])
-    COST_SCALE_PATH.write_text(result["model_tier_cost_scale_md"])
+    new_selector = result["model_selector_txt"]
+    new_cost_scale = result["model_tier_cost_scale_md"]
+    summary = result.get("summary") or "Refresh model docs"
+    warnings = list(result.get("warnings") or [])
+    if fetch_errors:
+        warnings.extend(f"Fetch error: {err}" for err in fetch_errors)
+
+    if args.dry_run:
+        write_dry_run_report(
+            selector_text, new_selector,
+            cost_scale_text, new_cost_scale,
+            summary, warnings,
+        )
+        return 0
+
+    SELECTOR_PATH.write_text(new_selector)
+    COST_SCALE_PATH.write_text(new_cost_scale)
 
     # Regenerate the human-readable mirror from the updated .txt so the two
     # files commit together. render_md.py imports without side effects.
@@ -233,12 +330,7 @@ def main() -> int:
 
     SELECTOR_MD.write_text(render(SELECTOR_PATH.read_text()))
 
-    summary = result.get("summary") or "Refresh model docs"
     (UPDATE_DIR / ".last-summary.txt").write_text(summary)
-
-    warnings = list(result.get("warnings") or [])
-    if fetch_errors:
-        warnings.extend(f"Fetch error: {err}" for err in fetch_errors)
     if warnings:
         (UPDATE_DIR / ".last-warnings.txt").write_text("\n".join(warnings))
 

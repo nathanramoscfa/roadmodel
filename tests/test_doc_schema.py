@@ -25,6 +25,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 SELECTOR_PATH = REPO_ROOT / "docs" / "model-selector.txt"
 SELECTOR_MD_PATH = REPO_ROOT / "docs" / "model-selector.md"
 COST_SCALE_PATH = REPO_ROOT / "docs" / "model-tier-cost-scale.md"
+PROMPT_PATH = REPO_ROOT / "update" / "prompt.md"
 
 REQUIRED_MODEL_ATTRS = (
     "id",
@@ -145,6 +146,35 @@ def test_tier_groupings_use_known_cost_values() -> None:
     unknown = seen_costs - VALID_TIER_COSTS
     assert not unknown, (
         f"Unknown <tier cost='...'> values: {unknown}; expected subset of {VALID_TIER_COSTS}"
+    )
+
+
+def test_prompt_has_lifecycle_rules() -> None:
+    """update/prompt.md must contain the Model lifecycle rules. Without
+    them, a future refresh could silently remove a model when a costlier
+    successor in the same series appears (e.g. drop GPT-5.4 because
+    GPT-5.5 launched at 2x the price). This test guards against
+    accidental deletion of those rules from the prompt.
+
+    Sentinel phrases below are intentionally distinctive — they are
+    headers and warning patterns that are unlikely to be reworded
+    without an explicit rule rewrite.
+    """
+    prompt = PROMPT_PATH.read_text()
+    required = [
+        "Model lifecycle in",
+        "Adding new models",
+        "Removing models",
+        "Same series",
+        "Selection-algorithm guardrail sync",
+        "superseded:",
+        "discontinued by Cursor:",
+    ]
+    missing = [phrase for phrase in required if phrase not in prompt]
+    assert not missing, (
+        "update/prompt.md is missing Model lifecycle phrases: "
+        f"{missing}. Restore them or this automation may silently drop "
+        "a model when a costlier successor appears."
     )
 
 
