@@ -18,6 +18,13 @@ benchmark numbers fresh against upstream sources.
   (Low / Medium / High / Very High by output price), and Notes (the
   hovertext column from Cursor's pricing page).
 
+A third file, **[docs/model-selector.md](docs/model-selector.md)**, is a
+human-readable Markdown rendering of `model-selector.txt`. It is auto-generated
+from the `.txt` by [update/render_md.py](update/render_md.py); never hand-edit
+it. The Monday refresh regenerates it after Opus updates the `.txt`, and a
+schema test (`test_selector_md_is_in_sync_with_selector_txt`) fails CI if the
+two drift.
+
 `~/Documents/model-selector.txt` and `~/Documents/model-tier-cost-scale.md`
 symlink here so existing references in other projects keep working.
 
@@ -40,7 +47,8 @@ fetch upstream sources (sources.json)
   → cap each source at 150KB
   → send everything + both current docs + prompt.md to Opus 4.7 (streaming)
   → Opus returns updated docs + summary + warnings as JSON
-  → workflow commits to main if anything changed
+  → render_md.py regenerates docs/model-selector.md from the updated .txt
+  → workflow commits all three docs to main if anything changed
 ```
 
 Sources used (see [update/sources.json](update/sources.json)):
@@ -175,10 +183,12 @@ pile-up.
 ```
 .
 ├── docs/
-│   ├── model-selector.txt          # the recommender doc
+│   ├── model-selector.txt          # the recommender doc (source of truth)
+│   ├── model-selector.md           # human-readable mirror, auto-generated
 │   └── model-tier-cost-scale.md    # the price/tier reference
 ├── update/
 │   ├── update_models.py            # fetch + strip + validate + call Opus
+│   ├── render_md.py                # render model-selector.txt → .md
 │   ├── prompt.md                   # system prompt (the rules Opus follows)
 │   ├── sources.json                # upstream URLs + per-source validation
 │   └── requirements.txt            # anthropic, beautifulsoup4, requests

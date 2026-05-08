@@ -227,6 +227,12 @@ def main() -> int:
     SELECTOR_PATH.write_text(result["model_selector_txt"])
     COST_SCALE_PATH.write_text(result["model_tier_cost_scale_md"])
 
+    # Regenerate the human-readable mirror from the updated .txt so the two
+    # files commit together. render_md.py imports without side effects.
+    from render_md import render, SELECTOR_MD
+
+    SELECTOR_MD.write_text(render(SELECTOR_PATH.read_text()))
+
     summary = result.get("summary") or "Refresh model docs"
     (UPDATE_DIR / ".last-summary.txt").write_text(summary)
 
