@@ -76,7 +76,7 @@ cite them stay frozen at hand-set values per the prompt's preserve-verbatim rule
 - The Notes column in `model-tier-cost-scale.md`
 - The `pricing-notes="…"` attribute on each `<model>` in `model-selector.txt`
 - The full Cursor catalog in `model-tier-cost-scale.md` (additions and removals follow Cursor's `.md`)
-- The set of `<model …/>` entries in `<model-options>` of `model-selector.txt`. New entries are added when Cursor lists a new model (auto-assigned tier ratings grounded in fetched benchmarks, defaulting to `B` where signal is absent; 2–4 cited headline benchmarks; one factual `best-for` sentence — never invented). An entry is removed only when Cursor discontinues it OR a same-series successor exists at ≤ output price. Costlier successors do NOT displace predecessors. See [update/prompt.md](update/prompt.md) "Model lifecycle in `<model-options>`" for the rules and `same-series` definition.
+- The set of `<model …/>` entries in `<model-options>` of `model-selector.txt`. **Add is two-phased**: Cursor's pricing-table row lands in `model-tier-cost-scale.md` immediately; the `<model …/>` element in `<model-options>` is added on the first refresh where fetched benchmark sources contain ≥2 verifiable numeric facts about the model (otherwise deferred with a warning — Cursor typically lists models before third-party leaderboards index them). **Remove** only when Cursor discontinues the model OR a same-series successor exists at ≤ output price. Costlier successors do NOT displace predecessors. See [update/prompt.md](update/prompt.md) "Model lifecycle in `<model-options>`" for the rules and `same-series` definition.
 - The `(currently: …)` enumeration in the multimodal guardrail and the coding S-tier candidate-set enumeration inside `<selection-algorithm>` — kept in sync with `<model-options>` membership when models are added/removed
 - Headline benchmark **numbers** — in-place numeric replacement within existing claims only; no claim swapping, no claim deletion, no new claims (see prompt section "Headline benchmarks")
 - The "Existing model-selector.txt Classification Audit" and "Recently Added" tables
@@ -89,16 +89,20 @@ cite them stay frozen at hand-set values per the prompt's preserve-verbatim rule
 - `<benchmark-sources>`, `<task-categories>`, `<conversation-principles>`, `<output-format>`, and the rest of the `model-selector.txt` framing
 - The "Tier Boundaries" table
 
-When Cursor ships a new model, the Monday refresh adds a `<model …/>` element
-to `<model-options>` automatically and flags it in the commit's `warnings`
-list as "review recommended". You can override the auto-assigned tier ratings
-or `best-for` in a follow-up commit; subsequent refreshes preserve your edits
-verbatim. To preview what the next refresh would change without committing,
-run `python update/update_models.py --dry-run` (prints diff + warnings to
-stdout). To exercise the lifecycle rules against a synthetic Cursor pricing
-payload (e.g. "what happens if a hypothetical GPT-5.6 launches at $40/M
-output?"), pass `--fixture path/to/sources.json` — see the script's `--help`
-for the fixture shape.
+When Cursor ships a new model, the Monday refresh adds the row to
+`model-tier-cost-scale.md` immediately and emits a warning. The
+`<model …/>` element in `<model-options>` is added on the first refresh
+where fetched benchmark sources have ≥2 verifiable numeric facts about
+the model — typically days to weeks after Cursor lists it, since
+leaderboards index new models on a lag. Both phases emit warnings for
+visibility. After the entry lands, you can override the auto-assigned
+tier ratings or `best-for` in a follow-up commit; subsequent refreshes
+preserve your edits verbatim. To preview what the next refresh would
+change without committing, run `python update/update_models.py --dry-run`
+(prints diff + warnings to stdout). To exercise the lifecycle rules
+against a synthetic Cursor pricing payload, pass
+`--fixture path/to/sources.json` — see the script's `--help` for the
+fixture shape.
 
 ## Local run
 

@@ -52,11 +52,18 @@ SCENARIOS: dict[str, dict[str, str]] = {
             "since the successor is costlier than both. Emit a 'new "
             "model added' warning."
         ),
+        # Notes intentionally indistinguishable from a real Cursor row —
+        # if we mark this as a fixture, the LLM (correctly) refuses to
+        # add it to <model-options>, which prevents the auto-add path
+        # from being exercised. Compensate with realistic-looking notes.
         "synthetic_row": (
             "| [GPT-5.6](https://developers.openai.com/api/docs/models/gpt-5.6) "
             "| OpenAI    | $7    | -           | $0.7       | $40    "
-            "| Requires Max Mode on request-based plans; SYNTHETIC "
-            "FIXTURE ROW for lifecycle smoke test (not a real model) |\n"
+            "| Requires Max Mode on request-based plans; Agentic and "
+            "reasoning capabilities; Successor to GPT-5.5 with extended "
+            "reasoning depth; Fast mode is available at higher rates; "
+            "Long context (Max Mode) supports up to 1M tokens with 2x "
+            "input pricing |\n"
         ),
     },
     "cheaper-successor": {
@@ -69,11 +76,15 @@ SCENARIOS: dict[str, dict[str, str]] = {
             "reflect the swap. Emit 'superseded' and 'new model added' "
             "warnings."
         ),
+        # Same rationale as costlier-successor: notes look real so the
+        # LLM exercises the full lifecycle path.
         "synthetic_row": (
             "| [GPT-5.6](https://developers.openai.com/api/docs/models/gpt-5.6) "
             "| OpenAI    | $4    | -           | $0.4       | $25    "
-            "| Requires Max Mode on request-based plans; SYNTHETIC "
-            "FIXTURE ROW for lifecycle smoke test (not a real model) |\n"
+            "| Requires Max Mode on request-based plans; Agentic and "
+            "reasoning capabilities; More token-efficient than GPT-5.5; "
+            "Fast mode is available at higher rates; Long context (Max "
+            "Mode) supports up to 1M tokens with 2x input pricing |\n"
         ),
     },
 }
