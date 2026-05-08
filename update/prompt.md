@@ -118,14 +118,148 @@ example: "AA Intelligence Index 57.3" → "AA Intelligence Index 58.1"
 is acceptable; "AA Intelligence Index 57.3" → "LMArena Elo 1503" is
 not, even if the AA source is unavailable.
 
+## Model lifecycle in `<model-options>`
+
+This section governs ADD and REMOVE operations on `<model …/>`
+elements in `<model-options>` of `model-selector.txt`. Defaults:
+PRESERVE every existing element; mutations to `id`, `name`, tier
+ratings, and `best-for` on existing elements remain forbidden by
+"What NOT to change" below. The carve-outs below apply only to
+elements being newly created, never to elements that already exist.
+
+### Adding new models
+
+When a model appears on the Cursor pricing page that is not in
+`<model-options>`, ADD a new `<model …/>` element to the appropriate
+`<tier cost="…">` group based on its output price (Low / Medium /
+High / Very High per the boundaries in `<pricing-context>` of
+`model-selector.txt`). Required attributes:
+
+- `id`, `name` — derived from Cursor's pricing page (canonical
+  display name; lowercase id with version suffix).
+- `input-price-per-1m`, `output-price-per-1m` — copied verbatim from
+  the Cursor pricing page.
+- `pricing-notes` — copied verbatim from the Cursor row's notes
+  cell per the Pricing notes rules above (`-` if blank).
+- `tier-coding`, `tier-planning`, `tier-agentic`, `tier-multimodal`,
+  `tier-long-context`, `tier-knowledge`, `tier-speed` — each MUST
+  be one of `S`, `A`, `B`, `C`, `D`. Assign by best-effort grounding
+  in this run's fetched `<source>` blocks for this model. If a
+  category has no signal in the fetched sources, default that one
+  category to `B` (neutral). Never use `?`, `inherit`, or any value
+  outside the discrete set — the selection-algorithm requires a
+  resolvable rating.
+- `headline-benchmarks` — semicolon-separated list of 2–4 numeric
+  facts about this model from the fetched `<source>` blocks, each
+  citing its source by name (e.g. `AA Intelligence Index 54.2`;
+  `LMArena Text Elo 1432`). NEVER invent numbers. If fewer than 2
+  numeric facts are available for this model, set the value to
+  `Newly added; benchmarks pending` and add a warning.
+- `best-for` — one factual sentence positioning the model, derived
+  from its Cursor `pricing-notes` and any vendor description present
+  in the fetched sources. Do NOT invent capability claims. If
+  insufficient information is available, set the value to
+  `Newly added; positioning pending review` and add a warning.
+
+For every new model added, emit a warning of the form `new model
+added: <id> in <tier>-cost tier (output $<n>/M) — auto-assigned tier
+ratings and best-for from <sources>; review recommended`.
+
+### Removing models
+
+A `<model …/>` element MAY be removed only when one of these strict
+conditions holds:
+
+  1. The model is no longer present on the Cursor pricing page
+     (Cursor discontinued it). Emit a warning of the form
+     `discontinued by Cursor: <id> removed from model-selector.txt`.
+  2. A newer version IN THE SAME SERIES exists in `<model-options>`
+     AND its `output-price-per-1m` is less than or equal to the
+     older version's `output-price-per-1m`. Emit a warning of the
+     form `superseded: <old-id> removed in favor of <new-id> (output
+     $<old>/M → $<new>/M, same series)`.
+
+A costlier successor does NOT displace its predecessor — both must
+be kept so the predecessor remains available on the cost/quality
+frontier. The model-selector.txt entry list reflects that frontier,
+not just the latest release in each series.
+
+### "Same series" definition
+
+Same series = same vendor family AND same variant tier. Variant
+tiers currently in use: `flagship`, `mini`, `nano`, `codex`, `haiku`,
+`sonnet`, `opus`, `pro`, `fast`. Worked examples:
+
+- `gpt-5.4` and `gpt-5.5` — same series (both OpenAI flagship); newer
+  supersedes only if its output price ≤ the older's.
+- `gpt-5.4` and `gpt-5.5-mini` — different series (mini variant never
+  supersedes flagship); both kept.
+- `sonnet-4.6` and `opus-4.7` — different series (different Anthropic
+  variant tiers); both kept.
+- `opus-4.6` and `opus-4.7` — same series (both Anthropic opus);
+  newer supersedes only if its output price ≤ the older's.
+- `gpt-5.3-codex` and a future `gpt-5.4-codex` — same series (both
+  OpenAI codex); a non-codex flagship never supersedes a codex.
+
+Routing models (`premium`, `auto`) are not real models and are never
+subject to series supersession — preserve them unless they disappear
+from the Cursor pricing page.
+
+If the series relationship is ambiguous (a brand-new variant tier,
+unclear vendor lineage, or the predecessor exists at a different
+variant tier than the candidate successor), do NOT remove. Emit a
+warning describing the ambiguity.
+
+### Selection-algorithm guardrail sync
+
+When `<model-options>` changes (model added, removed, or its
+`tier-multimodal` / `tier-coding` rating changes via the rules
+above), specific parenthetical enumerations inside
+`<selection-algorithm>` MUST be regenerated to stay consistent.
+These are the ONLY mutations authorized to `<selection-algorithm>` —
+the rest of that section is protected by "What NOT to change" below.
+
+Authorized regenerations:
+
+- Multimodal guardrail: the parenthetical `(currently: <S-tier
+  multimodal models> at S; <A-tier multimodal models> at A)`. Models
+  within each group are listed in order of ascending output price.
+  Source: scan `<model-options>` for every `<model …/>` whose
+  `tier-multimodal` is `S` or `A`.
+- Coding S-tier guardrail: the enumeration `the candidate set is
+  <comma-separated models with tier-coding="S">; cost tie-breaker
+  favors <model with the lowest output-price-per-1m among them>
+  when the ratings are equivalent for the prompt`. Source: scan
+  `<model-options>` for every `<model …/>` whose `tier-coding="S"`,
+  sorted by output price ascending.
+
+NOT authorized for regeneration (leave verbatim):
+
+- The long-context guardrail's parenthetical (`opus-4.7 1M,
+  gemini-3.1-pro 1M, grok-4.3 2M`) — context-window sizes are not
+  attributes of `<model …/>` elements and cannot be derived from
+  `<model-options>` automatically. If a new model with potential
+  native large context is added, emit a warning of the form
+  `long-context guardrail may be stale: <id> added — manual review
+  needed for context-window enumeration`.
+- The `Default to composer-2 …` guardrail — this names a specific
+  model as an editorial default. Only modify it if `composer-2` is
+  itself removed from `<model-options>`, in which case substitute
+  the lowest-output-price model with `tier-coding` of `A` or better
+  and emit a warning.
+
 ## What NOT to change
 
 - The `<instruction>`, `<usage>`, `<objective>`, `<pricing-context>`,
-  `<max-mode-context>`, `<task-categories>`, `<selection-algorithm>`,
+  `<max-mode-context>`, `<task-categories>`,
   `<conversation-principles>`, and `<output-format>` sections of
-  `model-selector.txt`.
-- The S/A/B/C/D `tier-*` ratings on each model — those are editorial
-  judgments outside the scope of this automation.
+  `model-selector.txt`. Also `<selection-algorithm>` EXCEPT for the
+  specific guardrail enumerations covered by "Selection-algorithm
+  guardrail sync" in the Model lifecycle section above.
+- The S/A/B/C/D `tier-*` ratings on EXISTING `<model …/>` elements —
+  those are editorial judgments outside the scope of this automation.
+  (Newly added models receive auto-assigned tier ratings per the
+  Model lifecycle rules above; existing ratings are never modified.)
 - The structure or schema of either document. Update values inside the
   existing schema; do not add or remove sections, attributes, or columns.
   The current schema for cost-scale tables is
@@ -135,7 +269,10 @@ not, even if the AA source is unavailable.
   tier-planning, tier-agentic, tier-multimodal, tier-long-context,
   tier-knowledge, tier-speed, headline-benchmarks, pricing-notes,
   best-for`.
-- The `best-for` free-text descriptions on each model.
+- The `best-for` free-text descriptions on EXISTING `<model …/>`
+  elements. (Newly added models receive an auto-generated `best-for`
+  per the Model lifecycle rules above; existing descriptions are
+  never modified.)
 - Any fields in `<benchmark-sources>` of `model-selector.txt`.
 - The "Tier Boundaries" table in `model-tier-cost-scale.md`.
 
