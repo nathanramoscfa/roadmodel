@@ -130,10 +130,29 @@ elements being newly created, never to elements that already exist.
 ### Adding new models
 
 When a model appears on the Cursor pricing page that is not in
-`<model-options>`, ADD a new `<model …/>` element to the appropriate
-`<tier cost="…">` group based on its output price (Low / Medium /
-High / Very High per the boundaries in `<pricing-context>` of
-`model-selector.txt`). Required attributes:
+`<model-options>`, the lifecycle has TWO phases. The cost-scale add
+runs unconditionally (governed by the Pricing rules above); the
+`<model-options>` add is GATED on benchmark availability:
+
+- Cost-scale (always): add the new row to
+  `model-tier-cost-scale.md` per the Pricing rules above.
+- `<model-options>` (gated): ADD a new `<model …/>` element ONLY
+  when this run's fetched benchmark sources contain at least 2
+  verifiable numeric facts about the model. Otherwise do NOT add
+  the element this run; emit a warning of the form `new model
+  awaiting leaderboard data: <id> at $<n>/M output added to cost-
+  scale only — <model-options> entry deferred until benchmark
+  sources index it`. The next refresh that finds ≥2 facts will
+  add the element.
+
+This two-phase pattern reflects realistic timing: Cursor lists new
+models before third-party leaderboards index them. Adding a
+`<model …/>` element with no grounded ratings or benchmarks would
+produce a placeholder a maintainer would override anyway; the
+warning surfaces exactly the action needed when benchmarks land.
+
+When the gate IS met (≥2 verifiable facts in the fetched
+`<source>` blocks), add the element with these attributes:
 
 - `id`, `name` — derived from Cursor's pricing page (canonical
   display name; lowercase id with version suffix).
@@ -144,26 +163,22 @@ High / Very High per the boundaries in `<pricing-context>` of
 - `tier-coding`, `tier-planning`, `tier-agentic`, `tier-multimodal`,
   `tier-long-context`, `tier-knowledge`, `tier-speed` — each MUST
   be one of `S`, `A`, `B`, `C`, `D`. Assign by best-effort grounding
-  in this run's fetched `<source>` blocks for this model. If a
-  category has no signal in the fetched sources, default that one
-  category to `B` (neutral). Never use `?`, `inherit`, or any value
-  outside the discrete set — the selection-algorithm requires a
-  resolvable rating.
+  in the fetched `<source>` blocks for this model. If a category
+  has no signal, default that one category to `B` (neutral). Never
+  use `?`, `inherit`, or any value outside the discrete set — the
+  selection-algorithm requires a resolvable rating.
 - `headline-benchmarks` — semicolon-separated list of 2–4 numeric
   facts about this model from the fetched `<source>` blocks, each
   citing its source by name (e.g. `AA Intelligence Index 54.2`;
-  `LMArena Text Elo 1432`). NEVER invent numbers. If fewer than 2
-  numeric facts are available for this model, set the value to
-  `Newly added; benchmarks pending` and add a warning.
+  `LMArena Text Elo 1432`). NEVER invent numbers.
 - `best-for` — one factual sentence positioning the model, derived
   from its Cursor `pricing-notes` and any vendor description present
-  in the fetched sources. Do NOT invent capability claims. If
-  insufficient information is available, set the value to
-  `Newly added; positioning pending review` and add a warning.
+  in the fetched sources. Do NOT invent capability claims.
 
-For every new model added, emit a warning of the form `new model
-added: <id> in <tier>-cost tier (output $<n>/M) — auto-assigned tier
-ratings and best-for from <sources>; review recommended`.
+For every `<model …/>` element added, emit a warning of the form
+`new model added to <model-options>: <id> in <tier>-cost tier
+(output $<n>/M) — auto-assigned tier ratings from <sources>; review
+recommended`.
 
 ### Removing models
 
