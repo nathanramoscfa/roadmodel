@@ -174,6 +174,98 @@ def _transform_aa_api(url: str) -> str:
     return json.dumps(compact, indent=None)
 
 
+def _transform_tau2_bench(url: str) -> str:
+    """Aggregate τ²-bench submissions from the sierra-research repo.
+
+    The configured `url` is the manifest.json that lists submission
+    folders. For each entry we fetch the matching submission.json and
+    keep model identifiers, results-by-domain, and methodology metadata
+    so the prompt can verify claims like "τ²-bench airline pass^1 84.0".
+    `voice_submissions` and `legacy_submissions` are kept too so claims
+    about prior models stay verifiable; trim by dropping older runs if
+    payload growth becomes a concern.
+    """
+    base, _, _ = url.rpartition("/manifest.json")
+    raw = fetch(url)
+    manifest = json.loads(raw)
+    out: dict[str, list[dict[str, Any]]] = {}
+    for bucket, ids in manifest.items():
+        bucket_results: list[dict[str, Any]] = []
+        for sid in ids or []:
+            sub_url = f"{base}/{sid}/submission.json"
+            try:
+                sub_raw = fetch(sub_url)
+            except Exception:
+                continue
+            sub = json.loads(sub_raw)
+            bucket_results.append(
+                {
+                    "id": sid,
+                    "model_name": sub.get("model_name"),
+                    "model_organization": sub.get("model_organization"),
+                    "submission_date": sub.get("submission_date"),
+                    "reasoning_effort": sub.get("reasoning_effort"),
+                    "results": sub.get("results"),
+                }
+            )
+        out[bucket] = bucket_results
+    return json.dumps(out, indent=None)
+
+
+def _transform_livecodebench(url: str) -> str:
+    """Aggregate LiveCodeBench's per-question performance JSON.
+
+    The upstream `performances_generation.json` is ~7 MB of per-
+    (model, question) rows; the public livecodebench.github.io
+    leaderboard computes per-model pass@1 averages client-side. We
+    replicate that aggregation here and emit one row per model with
+    overall and by-difficulty scores plus question count, so the
+    prompt receives a compact leaderboard rather than raw rows.
+    """
+    raw = fetch(url)
+    data = json.loads(raw)
+    perfs = data.get("performances") or []
+    models = data.get("models") or []
+
+    by_model: dict[str, dict[str, list[float]]] = {}
+    for p in perfs:
+        m = p.get("model")
+        if not m:
+            continue
+        bucket = by_model.setdefault(m, {"all": [], "easy": [], "medium": [], "hard": []})
+        score = p.get("pass@1")
+        if score is None:
+            continue
+        bucket["all"].append(score)
+        diff = p.get("difficulty")
+        if diff in bucket:
+            bucket[diff].append(score)
+
+    def avg(xs: list[float]) -> float | None:
+        return round(sum(xs) / len(xs), 1) if xs else None
+
+    out: list[dict[str, Any]] = []
+    for info in models:
+        repr_name = info.get("model_repr")
+        scores = by_model.get(repr_name)
+        if not scores or not scores["all"]:
+            continue
+        out.append(
+            {
+                "model": repr_name,
+                "model_name": info.get("model_name"),
+                "release_date": info.get("release_date"),
+                "pass1_overall": avg(scores["all"]),
+                "pass1_easy": avg(scores["easy"]),
+                "pass1_medium": avg(scores["medium"]),
+                "pass1_hard": avg(scores["hard"]),
+                "questions": len(scores["all"]),
+            }
+        )
+    out.sort(key=lambda x: (x["pass1_overall"] or 0), reverse=True)
+    return json.dumps(out, indent=None)
+
+
 def _transform_swebench(url: str) -> str:
     """Filter SWE-bench leaderboards.json to Verified + Multilingual splits.
 
@@ -271,8 +363,10 @@ def _transform_lmarena(url: str) -> str:
 
 TRANSFORMS = {
     "aa_api": _transform_aa_api,
-    "swebench_leaderboards": _transform_swebench,
     "lmarena_parquet": _transform_lmarena,
+    "livecodebench_aggregate": _transform_livecodebench,
+    "swebench_leaderboards": _transform_swebench,
+    "tau2_bench_manifest": _transform_tau2_bench,
 }
 
 

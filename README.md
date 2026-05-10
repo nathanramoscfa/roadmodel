@@ -59,14 +59,17 @@ Sources used (see [update/sources.json](update/sources.json)):
 | Artificial Analysis | JSON API (`AA_API_KEY` required) | AA Intelligence Index, AA-Omniscience, HLE, GPQA, AIME, MATH-500, output speed |
 | LMArena | Parquet on HuggingFace Datasets | Elo across text / webdev / search subsets |
 | SWE-bench | Raw JSON on GitHub | Coding agent leaderboard (Verified + Multilingual splits) |
+| LiveCodeBench | Raw JSON on `livecodebench.github.io` | Contamination-free coding (per-model pass@1, aggregated by transform) |
 | Aider polyglot | Raw YAML on GitHub | Per-model coding pass-rate |
 | MMMU | Raw JSON on GitHub | Multimodal university-level scores |
+| τ²-bench | Per-submission JSON on GitHub | Agentic / tool-use across airline, retail, banking |
 
 The Artificial Analysis source replaced two previous scrapes — the AA SPA
 and lastexam.ai — because AA's per-model evaluations payload includes the
-HLE column. LiveBench and Terminal-Bench 2.0 remain not in the source list
-because neither has a machine-readable feed; existing claims that cite them
-stay frozen at hand-set values per the prompt's preserve-verbatim rule.
+HLE column. LiveBench, Terminal-Bench 2.0, and MathArena remain not in the
+source list because none has a machine-readable aggregate feed (MathArena
+exposes only HTML competition tables); existing claims that cite them stay
+frozen at hand-set values per the prompt's preserve-verbatim rule.
 
 ## What auto-maintains vs what's editorial
 

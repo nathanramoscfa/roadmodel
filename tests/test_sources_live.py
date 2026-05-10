@@ -229,3 +229,53 @@ def test_lmarena_transform_produces_overall_and_siblings() -> None:
     pairs = {(r["subset"], r["category"]) for r in rows}
     for required in (("text", "overall"), ("webdev", "overall"), ("search", "overall")):
         assert required in pairs, f"LMArena transform missing {required}"
+
+
+def test_tau2_manifest_has_active_submissions() -> None:
+    """τ²-bench manifest must list submissions in the expected
+    bucket names. Catches an upstream rename of submission folders or
+    a path change to /web/leaderboard/public/submissions/.
+    """
+    src = next(s for s in SOURCES["benchmarks"] if "Sierra" in s["name"])
+    manifest = json.loads(_retry_fetch(src["url"]))
+    assert "submissions" in manifest, f"manifest missing 'submissions': {list(manifest)}"
+    assert len(manifest["submissions"]) >= 5, (
+        f"Expected ≥5 active τ²-bench submissions, got {len(manifest['submissions'])}"
+    )
+
+
+def test_tau2_transform_produces_scored_submissions() -> None:
+    """End-to-end smoke of the τ²-bench transform: each submission in
+    the active bucket must include results with at least one of
+    airline / retail / banking_knowledge populated.
+    """
+    src = next(s for s in SOURCES["benchmarks"] if "Sierra" in s["name"])
+    payload = json.loads(um.TRANSFORMS[src["transform"]](src["url"]))
+    subs = payload.get("submissions") or []
+    assert subs, "τ²-bench transform produced no submissions"
+    domains_seen: set[str] = set()
+    for sub in subs:
+        results = sub.get("results") or {}
+        domains_seen.update(results.keys())
+    expected = {"airline", "retail"}
+    missing = expected - domains_seen
+    assert not missing, (
+        f"τ²-bench transform never saw domains {missing}; saw: {domains_seen}"
+    )
+
+
+def test_livecodebench_aggregate_ranks_models() -> None:
+    """End-to-end smoke of the LiveCodeBench transform: must produce
+    ≥10 ranked models, each with a numeric pass1_overall.
+    """
+    src = next(s for s in SOURCES["benchmarks"] if "LiveCodeBench" in s["name"])
+    rows = json.loads(um.TRANSFORMS[src["transform"]](src["url"]))
+    assert len(rows) >= 10, f"Expected ≥10 ranked models, got {len(rows)}"
+    for row in rows:
+        assert isinstance(row.get("pass1_overall"), (int, float)), (
+            f"pass1_overall not numeric: {row}"
+        )
+    overalls = [r["pass1_overall"] for r in rows]
+    assert overalls == sorted(overalls, reverse=True), (
+        "LiveCodeBench rows are not sorted by pass1_overall descending"
+    )

@@ -136,10 +136,11 @@ existing model MAY move when ALL of these hold:
   run's fetched `<source>` blocks AND shows a concrete numeric
   result for that model in the relevant capability. Source-to-
   category mapping (use judgment on overlap): SWE-bench Verified /
-  Aider polyglot / CursorBench → `tier-coding`; Terminal-Bench /
-  SWE-bench → `tier-agentic`; MMMU → `tier-multimodal`; HLE / GPQA
-  Diamond / AA-Omniscience → `tier-knowledge`; LMArena Elo →
-  `tier-planning`; output tokens/sec → `tier-speed`.
+  Aider polyglot / LiveCodeBench / CursorBench → `tier-coding`;
+  Terminal-Bench / SWE-bench / τ²-bench → `tier-agentic`; MMMU →
+  `tier-multimodal`; HLE / GPQA Diamond / AA-Omniscience →
+  `tier-knowledge`; LMArena Elo → `tier-planning`; output tokens/sec
+  → `tier-speed`.
 - The shift is large enough to cross the S/A/B/C/D boundaries
   defined in `<model-options>` (S = top-1 or top-2 globally;
   A = strong near-frontier; B = competent; C = limited; D = not
