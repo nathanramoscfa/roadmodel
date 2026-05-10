@@ -185,13 +185,27 @@ def call_opus(system_prompt: str, user_message: str, api_key: str) -> str:
 
 
 def parse_result(raw: str) -> dict[str, Any]:
+    """Parse the model's JSON response, tolerating prose preamble/epilogue.
+
+    The system prompt asks for a single JSON object with no surrounding
+    text, but the model occasionally emits reasoning before the object.
+    Try a strict parse first; on failure, fall back to extracting from the
+    first `{` to the last `}`.
+    """
     text = raw.strip()
     if text.startswith("```"):
         first_nl = text.find("\n")
         text = text[first_nl + 1 :] if first_nl != -1 else text
         if text.endswith("```"):
             text = text[: -len("```")].rstrip()
-    return json.loads(text)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        start = text.find("{")
+        end = text.rfind("}")
+        if start < 0 or end <= start:
+            raise
+        return json.loads(text[start : end + 1])
 
 
 def load_fixture(path: Path) -> tuple[list[dict[str, str]], list[str]]:
