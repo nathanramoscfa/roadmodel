@@ -12,11 +12,16 @@
     {
       "name": "Artificial Analysis Intelligence Index (API)",
       "url": "https://artificialanalysis.ai/api/v2/data/llms/models",
-      "purpose": "Composite of ~10 evaluations including GPQA Diamond, Humanity's Last Exam (HLE), SciCode, Terminal-Bench Hard, AA-Omniscience, AIME, MATH-500. Reads the official AA Insights API instead of scraping the SPA. Requires AA_API_KEY in environment (free tier: 1000 req/day; sign up at https://artificialanalysis.ai/login). The transform also serves as the HLE source — AA's per-model evaluations include the HLE column, replacing the previous lastexam.ai scrape.",
+      "purpose": "Composite of ~15 per-model evaluations including AA Intelligence Index, AA-Omniscience, GPQA, AIME, MATH-500, MMLU-Pro, Humanity's Last Exam (HLE), LiveCodeBench, τ²-bench, Terminal-Bench Hard, SciCode, IFBench. Reads the official AA Insights API and filters to models present in Cursor's pricing catalog (intersection ~60 KB instead of the full ~300 KB). Requires AA_API_KEY in environment (free tier: 1000 req/day; sign up at https://artificialanalysis.ai/login). The transform also serves as the HLE source — AA's per-model evaluations include the HLE column, replacing the previous lastexam.ai scrape.",
       "transform": "aa_api",
       "validate": {
         "min_bytes": 5000,
-        "must_contain_all": ["evaluations", "intelligence_index", "creator"]
+        "must_contain_all": [
+          "evaluations",
+          "artificial_analysis_intelligence_index",
+          "hle",
+          "creator"
+        ]
       }
     },
     {

@@ -116,13 +116,60 @@ def validate_content(content: str, rules: dict[str, Any] | None) -> str | None:
     return None
 
 
+_CURSOR_PROVIDERS_PATTERN = (
+    r"(?:Anthropic|OpenAI|Google|xAI|Cursor|Moonshot|Z\s*AI|DeepSeek)"
+)
+
+
+def _name_tokens(s: str | None) -> set[str]:
+    """Tokenize a model display name for fuzzy cross-source matching.
+
+    Lowercase, normalize digit-dash-digit (`claude-opus-4-7`) to
+    digit-dot-digit (`claude-opus-4.7`) so versioned variants share
+    tokens regardless of formatting, then extract dotted-number runs,
+    bare integers, and alphabetic runs. Examples:
+
+      "Claude 4.7 Opus"          → {claude, 4.7, opus}
+      "claude-opus-4-7"          → {claude, opus, 4.7}
+      "GPT-5.5 (xhigh)"          → {gpt, 5.5, xhigh}
+      "Kimi K2.5 (Reasoning)"    → {kimi, k, 2.5, reasoning}
+    """
+    if not s:
+        return set()
+    s = re.sub(r"(\d)-(\d)", r"\1.\2", s.lower())
+    return set(re.findall(r"\d+(?:\.\d+)+|[a-z]+|\d+", s))
+
+
+def _cursor_model_token_sets() -> list[set[str]]:
+    """Extract a token set per Cursor pricing-table row.
+
+    Anchors on the provider column (column 2) so we capture both
+    linked rows (`| [Claude 4.7 Opus](...) | Anthropic | ...`) and
+    bare-name rows (`| Kimi K2.5 | Moonshot | ...`). The Cursor URL
+    is read from sources.json so this stays in sync with the
+    canonical source list.
+    """
+    cursor_url = json.loads(
+        (UPDATE_DIR / "sources.json").read_text()
+    )["pricing"]["url"]
+    md = fetch(cursor_url)
+    rows = re.findall(
+        rf"^\|\s*([^|]+?)\s*\|\s*{_CURSOR_PROVIDERS_PATTERN}\s*\|",
+        md,
+        re.MULTILINE,
+    )
+    names = [re.sub(r"^\[([^\]]+)\]\([^)]*\)$", r"\1", n) for n in rows]
+    return [_name_tokens(n) for n in names if n]
+
+
 def _transform_aa_api(url: str) -> str:
     """Fetch the Artificial Analysis Insights API model dataset.
 
     Replaces the artificialanalysis.ai SPA scrape AND the lastexam.ai
     HLE scrape — AA's `/api/v2/data/llms/models` response includes the
     HLE column alongside the Intelligence Index, AA-Omniscience, GPQA,
-    AIME, and other evaluations the prompt cites.
+    AIME, terminalbench_hard, livecodebench, tau2, ifbench, and other
+    evaluations the prompt cites.
 
     Requires `AA_API_KEY` in the environment. The free tier (1000
     req/day) is plenty for a weekly cron. Per AA's TOS, attribution to
@@ -130,6 +177,16 @@ def _transform_aa_api(url: str) -> str:
     surfaced — model-selector.txt's <benchmark-sources> already names
     Artificial Analysis Intelligence Index as the source for those
     claims.
+
+    The raw API response carries 500+ models, most of which are
+    open-weight or legacy entries that aren't in Cursor's pricing
+    catalog (and therefore can't appear in <model-options>). We
+    intersect the AA list with Cursor's catalog by token-set match
+    so the prompt receives only models that could plausibly be
+    referenced in the docs. If the Cursor fetch fails for any
+    reason, we fall through to the unfiltered payload so the AA
+    fetch itself doesn't degrade — better to ship 300 KB than to
+    skip AA entirely and lose HLE / Intelligence Index re-checks.
     """
     api_key = os.environ.get("AA_API_KEY")
     if not api_key:
@@ -150,11 +207,28 @@ def _transform_aa_api(url: str) -> str:
     )
     response.raise_for_status()
     payload = response.json()
-    # The API returns the full catalog; trim each model to the
-    # evaluation fields the prompt cites plus identifiers and pricing
-    # so the payload stays under the 150 KB prompt budget regardless
-    # of catalog growth.
     models = payload.get("data") or []
+
+    try:
+        cursor_token_sets = _cursor_model_token_sets()
+    except Exception:
+        cursor_token_sets = []
+
+    if cursor_token_sets:
+        kept = [
+            m
+            for m in models
+            if any(
+                cs <= (_name_tokens(m.get("name")) | _name_tokens(m.get("slug")))
+                for cs in cursor_token_sets
+            )
+        ]
+        # Sanity guard: if the filter dropped everything (e.g. Cursor
+        # markdown shape changed), fall back to the full list rather
+        # than silently sending an empty payload to Opus.
+        if kept:
+            models = kept
+
     compact = [
         {
             "id": m.get("id"),

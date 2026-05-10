@@ -231,6 +231,44 @@ def test_lmarena_transform_produces_overall_and_siblings() -> None:
         assert required in pairs, f"LMArena transform missing {required}"
 
 
+@pytest.mark.skipif(
+    not os.environ.get("AA_API_KEY"),
+    reason="AA_API_KEY not set; skipping AA-specific live checks.",
+)
+def test_aa_filtered_payload_intersects_cursor_catalog() -> None:
+    """The AA transform intersects the API response with Cursor's
+    pricing catalog. Verify it (a) keeps the headline current models
+    we track, (b) drops obviously off-catalog entries (Llama, Gemma,
+    open-weight families), and (c) stays well under the prompt
+    budget. Catches a regression in the Cursor markdown row regex
+    (e.g. a row format change) or in _name_tokens drift.
+    """
+    src = next(s for s in SOURCES["benchmarks"] if "Artificial" in s["name"])
+    content = um.TRANSFORMS[src["transform"]](src["url"])
+    payload = json.loads(content)
+    assert isinstance(payload, list) and len(payload) >= 30, (
+        f"Expected ≥30 filtered AA models, got {len(payload) if hasattr(payload, '__len__') else '?'}"
+    )
+    assert len(content) < 200_000, (
+        f"Filtered AA payload is {len(content)} bytes; expected <200 KB. "
+        "If this fires, the Cursor-intersect filter likely stopped working."
+    )
+    slugs = {(m.get("slug") or "").lower() for m in payload}
+    names = {(m.get("name") or "").lower() for m in payload}
+    # At least one variant of each headline frontier model must survive.
+    for needle in ("claude-opus-4-7", "gpt-5-5", "gemini-3-1-pro"):
+        assert any(needle in s for s in slugs), (
+            f"Filtered AA payload is missing any '{needle}' variant"
+        )
+    # Open-weight families that aren't in Cursor pricing must NOT survive.
+    for excluded in ("llama-3", "llama-4", "gemma-", "gpt-oss-"):
+        assert not any(excluded in s for s in slugs), (
+            f"Filtered AA payload still contains '{excluded}' models — "
+            "filter is letting non-Cursor models through"
+        )
+    del names  # silence ruff if needed; kept for future probes
+
+
 def test_tau2_manifest_has_active_submissions() -> None:
     """τ²-bench manifest must list submissions in the expected
     bucket names. Catches an upstream rename of submission folders or
