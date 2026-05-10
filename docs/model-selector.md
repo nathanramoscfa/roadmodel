@@ -151,7 +151,7 @@ Tier ratings:
 
 - **Pricing:** Input $5.00/M · Output $25.00/M
 - **Tier ratings:** Coding **S** · Planning **S** · Agentic **A** · Multimodal **A** · Long-context **S** · Knowledge **S** · Speed **D**
-- **Headline benchmarks:** AA Intelligence Index 57.3 (#2); LMArena Text #1 (Elo 1503); LMArena WebDev #1 (Elo 1561); AA-Omniscience 26.2 (#2)
+- **Headline benchmarks:** AA Intelligence Index 57.3 (#2); LMArena Text #1 (Elo 1503); LMArena WebDev #1 (Elo 1570); AA-Omniscience 26.2 (#2)
 - **Pricing notes:** Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)
 - **Best for:** Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching
 
@@ -159,7 +159,7 @@ Tier ratings:
 
 - **Pricing:** Input $5.00/M · Output $30.00/M
 - **Tier ratings:** Coding **S** · Planning **S** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **D**
-- **Headline benchmarks:** AA Intelligence Index 60.2 (#1); LMArena Text Elo 1485 (#8); HLE 25.3%; AA-Omniscience 20.1 (#3)
+- **Headline benchmarks:** AA Intelligence Index 60.2 (#1); LMArena Text Elo 1484 (#8); HLE 25.3%; AA-Omniscience 20.1 (#3)
 - **Pricing notes:** Requires Max Mode on request-based plans; Agentic and reasoning capabilities; More token-efficient than GPT-5.4 on comparable tasks; Improved persistence on long-running tasks; Fast mode is available at higher rates; Long context (Max Mode) supports up to 1M tokens with 2x input pricing
 - **Best for:** OpenAI's most capable frontier model and highest-cost GPT offering, best suited for the most demanding reasoning, long-horizon planning, and tasks where maximum intelligence is required regardless of cost — strongest single model for hard coding, agentic execution, and reasoning, but verify factual claims due to elevated hallucination
 
@@ -169,7 +169,7 @@ Tier ratings:
 
 - **Pricing:** Input $3.00/M · Output $15.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 51.7; LMArena WebDev Elo 1526 (#6); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage
+- **Headline benchmarks:** AA Intelligence Index 51.7; LMArena WebDev Elo 1524 (#6); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage
 - **Pricing notes:** Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)
 - **Best for:** Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation
 
@@ -177,7 +177,7 @@ Tier ratings:
 
 - **Pricing:** Input $2.50/M · Output $15.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **S** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 56.8 (#4); LMArena Text Elo 1485 (#11); GPT-5.4 (xhigh) Output Speed 82.8 tokens/s; lowest factual error rate among GPT models
+- **Headline benchmarks:** AA Intelligence Index 56.8 (#4); LMArena Text Elo 1485 (#11); GPT-5.4 (xhigh) Output Speed 80.9 tokens/s; lowest factual error rate among GPT models
 - **Pricing notes:** Hidden by default; Requires Max Mode on request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context (Max Mode) supports up to 1M tokens with 2x input pricing
 - **Best for:** Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding
 
@@ -237,7 +237,7 @@ Tier ratings:
 
 - **Pricing:** Input $1.00/M · Output $5.00/M
 - **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **B** · Long-context **B** · Knowledge **B** · Speed **S**
-- **Headline benchmarks:** AA Intelligence Index 37.1; Output Speed 91 tokens/s; AA-Omniscience -4.2; latency leader among Claude family
+- **Headline benchmarks:** AA Intelligence Index 37.1; Output Speed 100.2 tokens/s; AA-Omniscience -4.2; latency leader among Claude family
 - **Pricing notes:** Hidden by default; Bedrock/Vertex: regional endpoints +10% surcharge; Cache: writes 1.25x, reads 0.1x
 - **Best for:** Speed-optimized lowest-cost Claude model, ideal for simple completions, high-volume repetitive tasks, and latency-sensitive workflows where a lightweight capable response matters more than deep reasoning
 
@@ -245,7 +245,7 @@ Tier ratings:
 
 - **Pricing:** Input $0.75/M · Output $4.50/M
 - **Tier ratings:** Coding **B** · Planning **C** · Agentic **C** · Multimodal **B** · Long-context **B** · Knowledge **B** · Speed **A**
-- **Headline benchmarks:** AA Intelligence Index 48.9 (xhigh); Output Speed 156.7 tokens/s; HLE 19.4% (GPT-5-mini)
+- **Headline benchmarks:** AA Intelligence Index 48.9 (xhigh); Output Speed 154.9 tokens/s; HLE 19.4% (GPT-5-mini)
 - **Pricing notes:** Hidden by default; Smaller, faster variant of GPT-5.4; 90% discount on cached input tokens
 - **Best for:** Lightweight GPT-5.4 variant balancing quality and cost, well-suited for straightforward coding, short-form generation, and high-throughput workloads needing solid GPT reasoning at a fraction of the flagship price
 
@@ -311,13 +311,13 @@ Guardrails:
   - Never sacrifice quality to save cost — the cost step is a true-tie
     resolver, not a downgrade trigger.
   - For PRIMARY = `multimodal`, only consider models with tier-multimodal
-    of S or A (currently: gemini-3.1-pro at S; opus-4.7, gpt-5.5,
-    sonnet-4.6, gpt-5.4 at A).
+    of S or A (currently: gemini-3.1-pro at S; gpt-5.4, sonnet-4.6,
+    opus-4.7, gpt-5.5 at A).
   - For PRIMARY = `long-context`, prefer models with native large
     context (opus-4.7 1M, gemini-3.1-pro 1M, grok-4.3 2M) over forcing
     a smaller-context model into Max Mode truncation.
   - For PRIMARY = `coding` at S-tier requirement, the candidate set is
-    gpt-5.5, opus-4.7, gpt-5.3-codex; cost tie-breaker favors
+    gpt-5.3-codex, opus-4.7, gpt-5.5; cost tie-breaker favors
     gpt-5.3-codex when the ratings are equivalent for the prompt.
   - Default to composer-2 for routine multi-file implementation when a
     coding-A rating suffices; escalate only on a concrete capability
