@@ -90,6 +90,12 @@
     - Aider polyglot — coding across C++, Go, Java, JavaScript, Python, Rust
     - SWE-bench Verified — real GitHub issues, 500-instance human-filtered
       subset; gold standard for software-engineering capability
+    - LiveCodeBench — contamination-free coding benchmark with rolling
+      problems from LeetCode / AtCoder / Codeforces; complements
+      SWE-bench by measuring algorithmic problem-solving on items the
+      models could not have trained on
+    - τ²-bench — agentic / tool-use benchmark with a real tool–agent–user
+      loop across airline, retail, and banking domains (Sierra Research)
     - LiveBench — contamination-resistant multi-domain benchmark
     - Terminal-Bench 2.0 — terminal and agent task execution
     - GPQA Diamond — graduate-level science reasoning

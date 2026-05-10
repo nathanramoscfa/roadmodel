@@ -56,6 +56,26 @@
         "min_bytes": 10000,
         "must_contain_all": ["leaderboardData", "validation", "overall", "pro"]
       }
+    },
+    {
+      "name": "τ²-bench (Sierra Research)",
+      "url": "https://raw.githubusercontent.com/sierra-research/tau2-bench/main/web/leaderboard/public/submissions/manifest.json",
+      "purpose": "Agentic / tool-use benchmark with a real tool–agent–user loop across airline, retail, and banking domains. The transform reads the submission manifest, then fetches each per-submission JSON to get model identifiers + per-domain pass@k scores. Fills a gap in the source list — no other current source measures multi-turn tool-use directly.",
+      "transform": "tau2_bench_manifest",
+      "validate": {
+        "min_bytes": 5000,
+        "must_contain_all": ["submissions", "model_name", "results", "pass_1"]
+      }
+    },
+    {
+      "name": "LiveCodeBench (raw JSON)",
+      "url": "https://livecodebench.github.io/performances_generation.json",
+      "purpose": "Contamination-free coding benchmark with rolling problem updates from LeetCode / AtCoder / Codeforces. Complements SWE-bench Verified (which measures repo-level fixes) by measuring algorithmic problem-solving on problems the models could not have trained on. The transform aggregates the upstream per-question rows into per-model pass@1 averages by difficulty, mirroring what livecodebench.github.io computes client-side.",
+      "transform": "livecodebench_aggregate",
+      "validate": {
+        "min_bytes": 2000,
+        "must_contain_all": ["model", "pass1_overall", "questions", "release_date"]
+      }
     }
   ]
 }
