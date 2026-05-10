@@ -19,21 +19,23 @@
       }
     },
     {
-      "name": "LMArena",
-      "url": "https://lmarena.ai/leaderboard",
-      "purpose": "Human-preference Elo across general chat.",
+      "name": "LMArena (HuggingFace parquet)",
+      "url": "https://huggingface.co/datasets/lmarena-ai/leaderboard-dataset/resolve/main/text/latest-00000-of-00001.parquet",
+      "purpose": "Human-preference Elo across general chat, coding, search, and webdev. Authoritative parquet snapshot maintained by the LMArena team on HuggingFace Datasets — bypasses the SPA leaderboard at lmarena.ai. The transform also fetches the webdev and search sibling subsets so claims like 'LMArena WebDev Elo X' and 'LMArena Search Elo Y' can be re-verified.",
+      "transform": "lmarena_parquet",
       "validate": {
-        "min_bytes": 3000,
-        "must_contain_all": ["Arena", "Claude", "GPT"]
+        "min_bytes": 5000,
+        "must_contain_all": ["leaderboard", "snapshot_dates", "rating", "overall", "webdev", "search"]
       }
     },
     {
-      "name": "SWE-bench",
-      "url": "https://www.swebench.com/",
-      "purpose": "Real GitHub issues; SWE-bench Verified is the 500-instance human-filtered subset.",
+      "name": "SWE-bench (raw JSON)",
+      "url": "https://raw.githubusercontent.com/SWE-bench/swe-bench.github.io/master/data/leaderboards.json",
+      "purpose": "Real GitHub issues; SWE-bench Verified is the 500-instance human-filtered subset. Authoritative JSON file maintained in the swebench.github.io repo (master branch) — this is the data file the public leaderboard renders from. The transform filters to the Verified and Multilingual splits and trims per-submission fields to keep the payload under the prompt budget.",
+      "transform": "swebench_leaderboards",
       "validate": {
-        "min_bytes": 3000,
-        "must_contain_all": ["SWE-bench", "Claude", "Verified"]
+        "min_bytes": 5000,
+        "must_contain_all": ["leaderboards", "Verified", "Multilingual", "resolved", "tags"]
       }
     },
     {
@@ -46,12 +48,12 @@
       }
     },
     {
-      "name": "MMMU",
-      "url": "https://mmmu-benchmark.github.io/",
-      "purpose": "Multimodal university-level understanding.",
+      "name": "MMMU (raw JSON)",
+      "url": "https://raw.githubusercontent.com/MMMU-Benchmark/mmmu-benchmark.github.io/main/leaderboard_data.json",
+      "purpose": "Multimodal university-level understanding. Authoritative leaderboard JSON maintained in the github.io repo — this is the data file the public leaderboard renders from. ~90 KB, fits under the prompt budget without filtering.",
       "validate": {
-        "min_bytes": 3000,
-        "must_contain_all": ["MMMU"]
+        "min_bytes": 10000,
+        "must_contain_all": ["leaderboardData", "validation", "overall", "pro"]
       }
     },
     {

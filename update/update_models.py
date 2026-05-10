@@ -50,6 +50,17 @@ def fetch(url: str) -> str:
     return response.text
 
 
+def fetch_bytes(url: str) -> bytes:
+    response = requests.get(
+        url,
+        headers={"User-Agent": USER_AGENT},
+        timeout=FETCH_TIMEOUT,
+        allow_redirects=True,
+    )
+    response.raise_for_status()
+    return response.content
+
+
 def looks_like_html(content: str) -> bool:
     head = content[:HTML_SNIFF_BYTES].lower()
     return "<!doctype html" in head or "<html" in head
@@ -105,19 +116,124 @@ def validate_content(content: str, rules: dict[str, Any] | None) -> str | None:
     return None
 
 
+def _transform_swebench(url: str) -> str:
+    """Filter SWE-bench leaderboards.json to Verified + Multilingual splits.
+
+    The full file is ~7 MB (180+ submissions × ~17 fields each, including
+    full trajectory URLs and per-instance logs). We keep only the splits
+    actually cited in headline-benchmarks and trim each result to the
+    fields the prompt cares about — model name, score, date, tags.
+    """
+    raw = fetch(url)
+    data = json.loads(raw)
+    keep_splits = {"Verified", "Multilingual"}
+    out = {"leaderboards": []}
+    for lb in data.get("leaderboards", []):
+        if lb.get("name") not in keep_splits:
+            continue
+        results = [
+            {
+                "name": r.get("name"),
+                "resolved": r.get("resolved"),
+                "date": r.get("date"),
+                "tags": r.get("tags"),
+            }
+            for r in lb.get("results", [])
+        ]
+        out["leaderboards"].append({"name": lb["name"], "results": results})
+    return json.dumps(out, indent=None)
+
+
+def _transform_lmarena(url: str) -> str:
+    """Read LMArena parquet snapshots and return a compact JSON view.
+
+    The configured `url` points at the `text` subset; we additionally
+    pull `webdev` and `search` from sibling paths because the existing
+    `headline-benchmarks` strings cite all three (e.g. "LMArena Text Elo
+    1503", "LMArena WebDev Elo 1570", "LMArena Search Elo 1205"). For
+    each (subset, category) pair we keep the latest publish date and
+    the top N models by rank — that covers the entire frontier cited
+    in prompts while staying well under the prompt budget. pyarrow is
+    lazy-imported so the rest of the pipeline doesn't pay the import
+    cost when LMArena isn't being fetched.
+    """
+    import io
+
+    import pyarrow.parquet as pq
+
+    # (subset, category) → top-N to keep. Categories chosen to match
+    # claims actually cited in headline-benchmarks; expand if a new
+    # claim type appears (e.g. "LMArena Vision Elo X").
+    keep: dict[tuple[str, str], int] = {
+        ("text", "overall"): 60,
+        ("text", "coding"): 40,
+        ("webdev", "overall"): 40,
+        ("search", "overall"): 30,
+    }
+
+    base, _, _ = url.rpartition("/text/")
+    subset_urls = {
+        "text": url,
+        "webdev": f"{base}/webdev/latest-00000-of-00001.parquet",
+        "search": f"{base}/search/latest-00000-of-00001.parquet",
+    }
+
+    snapshot: dict[str, str] = {}
+    combined: list[dict[str, Any]] = []
+    for subset_label, subset_url in subset_urls.items():
+        body = fetch_bytes(subset_url)
+        table = pq.read_table(io.BytesIO(body))
+        rows = table.to_pylist()
+        if not rows:
+            continue
+        latest_date = max(r["leaderboard_publish_date"] for r in rows)
+        snapshot[subset_label] = latest_date
+        for r in rows:
+            if r["leaderboard_publish_date"] != latest_date:
+                continue
+            limit = keep.get((subset_label, r["category"]))
+            if limit is None or int(r["rank"]) > limit:
+                continue
+            combined.append(
+                {
+                    "subset": subset_label,
+                    "category": r["category"],
+                    "rank": int(r["rank"]),
+                    "model": r["model_name"],
+                    "rating": round(r["rating"], 1),
+                    "votes": int(r["vote_count"]),
+                }
+            )
+    combined.sort(key=lambda x: (x["subset"], x["category"], x["rank"]))
+    return json.dumps(
+        {"snapshot_dates": snapshot, "leaderboard": combined},
+        indent=None,
+    )
+
+
+TRANSFORMS = {
+    "swebench_leaderboards": _transform_swebench,
+    "lmarena_parquet": _transform_lmarena,
+}
+
+
 def gather_sources() -> tuple[list[dict[str, str]], list[str]]:
     sources_config = json.loads((UPDATE_DIR / "sources.json").read_text())
     fetched: list[dict[str, str]] = []
     errors: list[str] = []
 
     def try_fetch(kind: str, src: dict[str, Any]) -> None:
+        transform_name = src.get("transform")
         try:
-            raw = fetch(src["url"])
+            if transform_name:
+                content = TRANSFORMS[transform_name](src["url"])
+            else:
+                raw = fetch(src["url"])
+                max_bytes = src.get("max_bytes", DEFAULT_MAX_BYTES)
+                content = normalize_content(raw, max_bytes)
         except Exception as exc:
             errors.append(f"{src['url']}: fetch failed: {exc}")
             return
-        max_bytes = src.get("max_bytes", DEFAULT_MAX_BYTES)
-        content = normalize_content(raw, max_bytes)
         reason = validate_content(content, src.get("validate"))
         if reason is not None:
             errors.append(f"{src['url']}: validation failed: {reason}")
