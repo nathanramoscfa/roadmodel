@@ -118,6 +118,70 @@ example: "AA Intelligence Index 57.3" → "AA Intelligence Index 58.1"
 is acceptable; "AA Intelligence Index 57.3" → "LMArena Elo 1503" is
 not, even if the AA source is unavailable.
 
+## Editorial updates to existing models
+
+The `tier-*` ratings and `best-for` descriptions on EXISTING
+`<model …/>` elements MAY be updated, but ONLY when justified by
+concrete evidence in this run's fetched `<source>` blocks. Default
+posture: PRESERVE verbatim. Edit only when the evidence is
+cite-able and the change is conservative.
+
+### Tier rating updates
+
+A `tier-coding`, `tier-planning`, `tier-agentic`, `tier-multimodal`,
+`tier-long-context`, `tier-knowledge`, or `tier-speed` rating on an
+existing model MAY move when ALL of these hold:
+
+- A leaderboard named in `<benchmark-sources>` is present in this
+  run's fetched `<source>` blocks AND shows a concrete numeric
+  result for that model in the relevant capability. Source-to-
+  category mapping (use judgment on overlap): SWE-bench Verified /
+  Aider polyglot / CursorBench → `tier-coding`; Terminal-Bench /
+  SWE-bench → `tier-agentic`; MMMU → `tier-multimodal`; HLE / GPQA
+  Diamond / AA-Omniscience → `tier-knowledge`; LMArena Elo →
+  `tier-planning`; output tokens/sec → `tier-speed`.
+- The shift is large enough to cross the S/A/B/C/D boundaries
+  defined in `<model-options>` (S = top-1 or top-2 globally;
+  A = strong near-frontier; B = competent; C = limited; D = not
+  suited). A change within the same tier band is NOT grounds to
+  edit.
+- The change is at most ONE step (S↔A, A↔B, B↔C, C↔D). Multi-step
+  jumps are NOT authorized — emit a warning recommending human
+  review instead and leave the rating unchanged.
+
+For every tier rating update, emit a warning of the form:
+`tier rating updated: <id> tier-<category> <old>→<new> — <source
+name> shows <numeric evidence supporting the new tier>`.
+
+If the evidence cannot be stated cleanly in that warning sentence
+from this run's fetched sources, leave the rating verbatim. NEVER
+update a tier rating based on general reputation, vendor marketing,
+pricing changes, sources outside `<benchmark-sources>`, or
+aggregation across runs.
+
+### `best-for` updates
+
+The `best-for` free-text on an existing `<model …/>` element MAY be
+rewritten when ALL of these hold:
+
+- This run's fetched sources surface a new concrete capability claim
+  or materially different positioning fact — for example, the
+  Cursor `pricing-notes` cell now lists a new capability (extended
+  context, multi-agent self-verification, native tool use), or a
+  fetched leaderboard reveals a category where the model now
+  clearly leads.
+- The new fact is not already stated in the existing `best-for`.
+- The rewrite preserves the existing one-sentence factual structure
+  — same voice, no marketing tone, no editorial flourish.
+
+For every `best-for` update, emit a warning of the form:
+`best-for updated: <id> — <new fact or repositioning reason>`.
+
+If the rewrite cannot be justified by a concrete new fact from this
+run's fetched sources, leave the `best-for` verbatim. NEVER rewrite
+`best-for` for stylistic preference, paraphrasing, mere reordering
+of existing claims, or vendor-marketing-only signal.
+
 ## Model lifecycle in `<model-options>`
 
 This section governs ADD and REMOVE operations on `<model …/>`
@@ -271,10 +335,6 @@ NOT authorized for regeneration (leave verbatim):
   `model-selector.txt`. Also `<selection-algorithm>` EXCEPT for the
   specific guardrail enumerations covered by "Selection-algorithm
   guardrail sync" in the Model lifecycle section above.
-- The S/A/B/C/D `tier-*` ratings on EXISTING `<model …/>` elements —
-  those are editorial judgments outside the scope of this automation.
-  (Newly added models receive auto-assigned tier ratings per the
-  Model lifecycle rules above; existing ratings are never modified.)
 - The structure or schema of either document. Update values inside the
   existing schema; do not add or remove sections, attributes, or columns.
   The current schema for cost-scale tables is
@@ -284,10 +344,6 @@ NOT authorized for regeneration (leave verbatim):
   tier-planning, tier-agentic, tier-multimodal, tier-long-context,
   tier-knowledge, tier-speed, headline-benchmarks, pricing-notes,
   best-for`.
-- The `best-for` free-text descriptions on EXISTING `<model …/>`
-  elements. (Newly added models receive an auto-generated `best-for`
-  per the Model lifecycle rules above; existing descriptions are
-  never modified.)
 - Any fields in `<benchmark-sources>` of `model-selector.txt`.
 - The "Tier Boundaries" table in `model-tier-cost-scale.md`.
 
