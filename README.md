@@ -71,6 +71,43 @@ source list because none has a machine-readable aggregate feed (MathArena
 exposes only HTML competition tables); existing claims that cite them stay
 frozen at hand-set values per the prompt's preserve-verbatim rule.
 
+### Why both Artificial Analysis AND dedicated sources for some benchmarks
+
+AA's `evaluations` field covers 15+ benchmarks per model — including
+`livecodebench` and `tau2` — so there is overlap with the dedicated
+LiveCodeBench and τ²-bench sources. The dedicated sources are kept on
+purpose. Two reasons:
+
+1. **Detail.** AA exposes one number per benchmark per model. The
+   dedicated sources expose breakdowns AA does not — LiveCodeBench by
+   problem difficulty (easy / medium / hard), τ²-bench by domain
+   (airline / retail / banking) and pass^k. Future claims like
+   "τ²-bench airline pass^1 84.0" need the dedicated feed.
+2. **Vendor risk hedging.** AA is a commercial service. If they change
+   the free-tier terms, alter the schema, or shut down, the dedicated
+   raw-data sources keep working — they live in public GitHub repos
+   and HuggingFace Datasets. This is consistent with the project's
+   broader "raw data over scrape, multiple paths over one" stance.
+
+In practice: AA is the **breadth** source (one fetch, many headline
+numbers). Dedicated sources (LCB, τ²-bench, SWE-bench, Aider, MMMU,
+LMArena) are **depth** sources for the capabilities they specialize
+in. The prompt cites them by name; the cron just keeps them all
+flowing.
+
+### AA payload is filtered to Cursor's catalog
+
+The AA API returns 500+ models, most of which are open-weight or
+legacy entries that aren't in Cursor's pricing table and therefore
+can't appear in `<model-options>`. The `aa_api` transform reads
+Cursor's pricing markdown and intersects the AA list with it via a
+token-set match (handles Cursor "Claude 4.7 Opus" ↔ AA "Claude Opus
+4.7" / `claude-opus-4-7` and reasoning-effort variants in one shot).
+Net payload: ~60 KB instead of ~300 KB. If the Cursor fetch fails or
+the filter would drop everything, the transform falls through to the
+unfiltered list rather than starve Opus of HLE / Intelligence Index
+data.
+
 ## What auto-maintains vs what's editorial
 
 **Auto-maintained on each run** (driven by [update/prompt.md](update/prompt.md)):
