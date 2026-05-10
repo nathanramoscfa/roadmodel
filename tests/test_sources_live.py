@@ -61,16 +61,22 @@ def aider_yaml_raw() -> str:
     ids=[src["name"] for _, src in SOURCE_LIST],
 )
 def test_source_passes_full_pipeline(kind: str, src: dict) -> None:
-    """Each source must fetch, normalize, and pass its validate rules.
+    """Each source must fetch, normalize/transform, and pass its
+    validate rules.
 
     This is the canonical "is the data being obtained" check — it runs
-    the exact same pipeline the weekly refresh runs, so a pass here
+    the exact same pipeline the weekly refresh runs (including any
+    `transform` registered in update_models.TRANSFORMS), so a pass here
     means Monday's refresh will receive non-empty content for this
     source.
     """
-    raw = _retry_fetch(src["url"])
-    max_bytes = src.get("max_bytes", um.DEFAULT_MAX_BYTES)
-    content = um.normalize_content(raw, max_bytes)
+    transform_name = src.get("transform")
+    if transform_name:
+        content = um.TRANSFORMS[transform_name](src["url"])
+    else:
+        raw = _retry_fetch(src["url"])
+        max_bytes = src.get("max_bytes", um.DEFAULT_MAX_BYTES)
+        content = um.normalize_content(raw, max_bytes)
     reason = um.validate_content(content, src.get("validate"))
     assert reason is None, f"{src['name']} failed validation: {reason}"
     assert content.strip(), f"{src['name']} normalized to empty content"
@@ -124,3 +130,95 @@ def test_aider_yaml_loads_with_recent_entries(aider_yaml_raw: str) -> None:
     sample = data[0]
     for required in ("model", "pass_rate_2"):
         assert required in sample, f"Aider entry missing required key '{required}': {sample}"
+
+
+# ---------------------------------------------------------------------------
+# Anchor assertions for raw-data benchmark sources. These mirror the depth
+# of the Cursor/Aider checks above: not just "did the URL respond" but "is
+# the data shape we depend on still present." A failure here means the
+# upstream file moved, was renamed, or had its schema changed — adjust the
+# corresponding entry in update/sources.json or the matching transform in
+# update/update_models.py.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def mmmu_json() -> dict:
+    src = next(s for s in SOURCES["benchmarks"] if "MMMU" in s["name"])
+    return json.loads(_retry_fetch(src["url"]))
+
+
+@pytest.fixture(scope="module")
+def swebench_json() -> dict:
+    src = next(s for s in SOURCES["benchmarks"] if "SWE-bench" in s["name"])
+    return json.loads(_retry_fetch(src["url"]))
+
+
+def test_mmmu_has_validation_overall_scores(mmmu_json: dict) -> None:
+    """MMMU JSON must keep the `validation.overall` shape we read.
+    Catches a schema rename or split rename in the github.io repo.
+    """
+    entries = mmmu_json.get("leaderboardData")
+    assert isinstance(entries, list) and len(entries) >= 30, (
+        f"Expected ≥30 leaderboard entries, got {len(entries) if entries else 0}"
+    )
+    sample = entries[0]
+    assert "info" in sample and "validation" in sample, (
+        f"Entry missing required keys (info/validation): {sample}"
+    )
+    assert "overall" in sample["validation"], (
+        f"Entry validation missing 'overall' score: {sample['validation']}"
+    )
+
+
+def test_swebench_has_verified_split_with_resolved_field(swebench_json: dict) -> None:
+    """SWE-bench's data file must keep the Verified split with `resolved`
+    as the score field. Catches split renames or score-field renames.
+    """
+    boards = swebench_json.get("leaderboards")
+    assert isinstance(boards, list), "Expected leaderboards list at top level"
+    names = {lb.get("name") for lb in boards}
+    assert "Verified" in names, f"'Verified' split missing; saw: {names}"
+    verified = next(lb for lb in boards if lb["name"] == "Verified")
+    results = verified.get("results", [])
+    assert len(results) >= 50, f"Verified has only {len(results)} results"
+    assert "resolved" in results[0], (
+        f"Verified result missing 'resolved' field: {list(results[0].keys())}"
+    )
+
+
+def test_lmarena_parquet_loads_with_expected_schema() -> None:
+    """LMArena's HF parquet must keep the columns we read in the
+    transform. Catches a schema change in the dataset (e.g. rename of
+    `model_name` or `rating`).
+    """
+    pq = pytest.importorskip("pyarrow.parquet")
+    src = next(s for s in SOURCES["benchmarks"] if "LMArena" in s["name"])
+    body = um.fetch_bytes(src["url"])
+    table = pq.read_table(__import__("io").BytesIO(body))
+    required = {
+        "model_name",
+        "organization",
+        "rating",
+        "rank",
+        "category",
+        "leaderboard_publish_date",
+    }
+    missing = required - set(table.column_names)
+    assert not missing, f"LMArena parquet missing columns: {missing}"
+    assert table.num_rows >= 100, f"LMArena parquet has only {table.num_rows} rows"
+
+
+def test_lmarena_transform_produces_overall_and_siblings() -> None:
+    """End-to-end smoke of the LMArena transform: text/overall,
+    webdev/overall, and search/overall must all be present in the
+    output. Catches a sibling-subset URL going 404.
+    """
+    src = next(s for s in SOURCES["benchmarks"] if "LMArena" in s["name"])
+    content = um.TRANSFORMS[src["transform"]](src["url"])
+    payload = json.loads(content)
+    rows = payload.get("leaderboard", [])
+    assert rows, "LMArena transform produced no leaderboard rows"
+    pairs = {(r["subset"], r["category"]) for r in rows}
+    for required in (("text", "overall"), ("webdev", "overall"), ("search", "overall")):
+        assert required in pairs, f"LMArena transform missing {required}"
