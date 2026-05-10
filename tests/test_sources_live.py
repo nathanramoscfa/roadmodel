@@ -13,6 +13,7 @@ are hard fails because they represent real shape changes.
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import time
@@ -70,6 +71,12 @@ def test_source_passes_full_pipeline(kind: str, src: dict) -> None:
     means Monday's refresh will receive non-empty content for this
     source.
     """
+    if src.get("transform") == "aa_api" and not os.environ.get("AA_API_KEY"):
+        pytest.skip(
+            "AA_API_KEY not set; skipping live AA API check. The weekly "
+            "cron must have AA_API_KEY in its environment for this "
+            "source to fetch."
+        )
     transform_name = src.get("transform")
     if transform_name:
         content = um.TRANSFORMS[transform_name](src["url"])

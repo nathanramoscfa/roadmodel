@@ -116,6 +116,64 @@ def validate_content(content: str, rules: dict[str, Any] | None) -> str | None:
     return None
 
 
+def _transform_aa_api(url: str) -> str:
+    """Fetch the Artificial Analysis Insights API model dataset.
+
+    Replaces the artificialanalysis.ai SPA scrape AND the lastexam.ai
+    HLE scrape — AA's `/api/v2/data/llms/models` response includes the
+    HLE column alongside the Intelligence Index, AA-Omniscience, GPQA,
+    AIME, and other evaluations the prompt cites.
+
+    Requires `AA_API_KEY` in the environment. The free tier (1000
+    req/day) is plenty for a weekly cron. Per AA's TOS, attribution to
+    https://artificialanalysis.ai/ is required wherever this data is
+    surfaced — model-selector.txt's <benchmark-sources> already names
+    Artificial Analysis Intelligence Index as the source for those
+    claims.
+    """
+    api_key = os.environ.get("AA_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "AA_API_KEY is not set. Sign up at "
+            "https://artificialanalysis.ai/login and add the key to "
+            "this environment (and to GitHub Actions secrets for the "
+            "weekly cron)."
+        )
+    response = requests.get(
+        url,
+        headers={
+            "x-api-key": api_key,
+            "User-Agent": USER_AGENT,
+            "Accept": "application/json",
+        },
+        timeout=FETCH_TIMEOUT,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    # The API returns the full catalog; trim each model to the
+    # evaluation fields the prompt cites plus identifiers and pricing
+    # so the payload stays under the 150 KB prompt budget regardless
+    # of catalog growth.
+    models = payload.get("data") or []
+    compact = [
+        {
+            "id": m.get("id"),
+            "name": m.get("name"),
+            "slug": m.get("slug"),
+            "creator": (m.get("model_creator") or {}).get("name"),
+            "evaluations": m.get("evaluations"),
+            "median_output_tokens_per_second": m.get(
+                "median_output_tokens_per_second"
+            ),
+            "median_time_to_first_token_seconds": m.get(
+                "median_time_to_first_token_seconds"
+            ),
+        }
+        for m in models
+    ]
+    return json.dumps(compact, indent=None)
+
+
 def _transform_swebench(url: str) -> str:
     """Filter SWE-bench leaderboards.json to Verified + Multilingual splits.
 
@@ -212,6 +270,7 @@ def _transform_lmarena(url: str) -> str:
 
 
 TRANSFORMS = {
+    "aa_api": _transform_aa_api,
     "swebench_leaderboards": _transform_swebench,
     "lmarena_parquet": _transform_lmarena,
 }

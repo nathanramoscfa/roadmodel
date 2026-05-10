@@ -31,6 +31,7 @@ jobs:
       - name: Refresh model docs
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AA_API_KEY: ${{ secrets.AA_API_KEY }}
         run: python update/update_models.py
 
       - name: Commit and push if changed
