@@ -10,12 +10,13 @@
   },
   "benchmarks": [
     {
-      "name": "Artificial Analysis Intelligence Index",
-      "url": "https://artificialanalysis.ai/",
-      "purpose": "Composite of 10 evaluations including GPQA Diamond, Humanity's Last Exam, SciCode, Terminal-Bench Hard, AA-Omniscience.",
+      "name": "Artificial Analysis Intelligence Index (API)",
+      "url": "https://artificialanalysis.ai/api/v2/data/llms/models",
+      "purpose": "Composite of ~10 evaluations including GPQA Diamond, Humanity's Last Exam (HLE), SciCode, Terminal-Bench Hard, AA-Omniscience, AIME, MATH-500. Reads the official AA Insights API instead of scraping the SPA. Requires AA_API_KEY in environment (free tier: 1000 req/day; sign up at https://artificialanalysis.ai/login). The transform also serves as the HLE source — AA's per-model evaluations include the HLE column, replacing the previous lastexam.ai scrape.",
+      "transform": "aa_api",
       "validate": {
-        "min_bytes": 3000,
-        "must_contain_all": ["Intelligence Index", "GPT", "Claude"]
+        "min_bytes": 5000,
+        "must_contain_all": ["evaluations", "intelligence_index", "creator"]
       }
     },
     {
@@ -54,15 +55,6 @@
       "validate": {
         "min_bytes": 10000,
         "must_contain_all": ["leaderboardData", "validation", "overall", "pro"]
-      }
-    },
-    {
-      "name": "Humanity's Last Exam",
-      "url": "https://lastexam.ai/",
-      "purpose": "HLE — frontier-difficulty general intelligence.",
-      "validate": {
-        "min_bytes": 3000,
-        "must_contain_all": ["Humanity"]
       }
     }
   ]

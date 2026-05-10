@@ -56,16 +56,17 @@ Sources used (see [update/sources.json](update/sources.json)):
 | Source | Form | Purpose |
 | --- | --- | --- |
 | `cursor.com/docs/models-and-pricing.md` | Markdown (Mintlify exposes raw `.md`) | Pricing + the Notes column |
-| Artificial Analysis | HTML strip | AA Intelligence Index, AA-Omniscience |
-| LMArena | HTML strip | Elo across categories |
-| SWE-bench | HTML strip | Coding benchmark presence |
+| Artificial Analysis | JSON API (`AA_API_KEY` required) | AA Intelligence Index, AA-Omniscience, HLE, GPQA, AIME, MATH-500, output speed |
+| LMArena | Parquet on HuggingFace Datasets | Elo across text / webdev / search subsets |
+| SWE-bench | Raw JSON on GitHub | Coding agent leaderboard (Verified + Multilingual splits) |
 | Aider polyglot | Raw YAML on GitHub | Per-model coding pass-rate |
-| MMMU | Static HTML | Multimodal university-level scores |
-| Humanity's Last Exam | HTML strip | Frontier-difficulty scores |
+| MMMU | Raw JSON on GitHub | Multimodal university-level scores |
 
-LiveBench and Terminal-Bench 2.0 are intentionally not in the source list —
-both are JS-rendered SPAs with no machine-readable feed. Existing claims that
-cite them stay frozen at hand-set values per the prompt's preserve-verbatim rule.
+The Artificial Analysis source replaced two previous scrapes — the AA SPA
+and lastexam.ai — because AA's per-model evaluations payload includes the
+HLE column. LiveBench and Terminal-Bench 2.0 remain not in the source list
+because neither has a machine-readable feed; existing claims that cite them
+stay frozen at hand-set values per the prompt's preserve-verbatim rule.
 
 ## What auto-maintains vs what's editorial
 
@@ -110,7 +111,7 @@ fixture shape.
 conda create -n model-selector python=3.12 -y
 conda activate model-selector
 pip install -r update/requirements.txt
-set -a; [ -f .env ] && . .env; set +a   # exports ANTHROPIC_API_KEY
+set -a; [ -f .env ] && . .env; set +a   # exports ANTHROPIC_API_KEY, AA_API_KEY
 python update/update_models.py
 ```
 
@@ -266,6 +267,14 @@ pile-up.
   drop it if it has no machine-readable form.
 - **`anthropic.APIError: 401`** — `ANTHROPIC_API_KEY` is missing or wrong.
   Repo secret is set via `gh secret set ANTHROPIC_API_KEY --repo …`.
+- **`AA_API_KEY is not set`** during fetch — the Artificial Analysis
+  source needs a free API key. Sign up at
+  https://artificialanalysis.ai/login (1000 req/day free tier),
+  generate a key, and add it to the environment locally and to GitHub
+  Actions secrets via `gh secret set AA_API_KEY --repo …`. Without it,
+  the AA + HLE column data is missing from the run; per the prompt's
+  "kept stale-by-default" rule, claims citing those sources stay
+  verbatim, but they won't be re-verified until the key is set.
 - **Validation failure on a source** — log line shows
   `<url>: validation failed: <reason>`. Either upstream changed shape
   (update `must_contain_all` / `min_bytes`) or the page is genuinely
