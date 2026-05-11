@@ -28,8 +28,8 @@ COST_SCALE_PATH = DOCS_DIR / "model-tier-cost-scale.md"
 MODEL_ID = "claude-opus-4-7"
 MAX_TOKENS = 64000
 USER_AGENT = (
-    "model-selector-updater/1.0 "
-    "(+https://github.com/nathanramoscfa/model-selector)"
+    "roadmodel-updater/1.0 "
+    "(+https://github.com/nathanramoscfa/roadmodel)"
 )
 FETCH_TIMEOUT = 30
 DEFAULT_MAX_BYTES = 150_000
