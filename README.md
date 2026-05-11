@@ -1,4 +1,4 @@
-# model-selector
+# roadmodel
 
 Two source-of-truth documents that drive an AI-assisted "which model should I
 use?" recommendation workflow, plus a weekly automation that keeps prices and
@@ -148,8 +148,8 @@ fixture shape.
 ## Local run
 
 ```sh
-conda create -n model-selector python=3.12 -y
-conda activate model-selector
+conda create -n roadmodel python=3.12 -y
+conda activate roadmodel
 pip install -r update/requirements.txt
 set -a; [ -f .env ] && . .env; set +a   # exports ANTHROPIC_API_KEY, AA_API_KEY
 python update/update_models.py
