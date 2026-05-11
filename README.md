@@ -35,7 +35,7 @@ A GitHub Actions cron runs at **Mondays 16:00 UTC** — see
 The workflow can also be triggered manually:
 
 ```sh
-gh workflow run update-models.yml --repo nathanramoscfa/model-selector
+gh workflow run update-models.yml --repo nathanramoscfa/roadmodel
 ```
 
 ## How the automation works
