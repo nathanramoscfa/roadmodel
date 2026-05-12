@@ -3,17 +3,29 @@
     When this file is referenced with @model-selector.txt, you MUST:
     1. Execute the requested task in full — write the roadmap, plan, or
        whatever the user asked for
-    2. For every prompt or step you write as part of that task, append a
-       model selection block immediately before it using the criteria in this
-       file (objective, pricing, Max Mode, benchmark sources, task categories,
-       model options, selection algorithm, and conversation principles)
-    3. The selection block is part of the task output, not a replacement for it
+    2. Read docs/user-context.md to learn the user-specific subscription
+       state, API keys, and platform preference order. These are the
+       inputs the access-selection step consumes; without them the
+       PLATFORM and THINKING fields in the output cannot be filled
+       truthfully
+    3. For every prompt or step you write as part of that task, append a
+       model selection block immediately before it using the criteria in
+       this file (objective, pricing, Max Mode, thinking, benchmark
+       sources, task categories, model options, access methods,
+       selection algorithm, access selection, and conversation
+       principles)
+    4. The selection block is part of the task output, not a replacement
+       for it
   </instruction>
 
   <usage>
     Reference this file alongside any task. The AI performs the task and
     annotates each prompt it writes with the appropriate model selection
-    block drawn from the criteria in this file.
+    block drawn from the criteria in this file. Each block reports
+    MODEL, PLATFORM, MAX MODE, THINKING, CONVERSATION, and RATIONALE —
+    model choice from `<selection-algorithm>`, platform (access method)
+    choice from `<access-selection>`, with the user-specific subscription
+    and API-key state read from docs/user-context.md.
   </usage>
 
   <objective>
@@ -50,6 +62,17 @@
     Routing models (`premium`, `auto`) have variable cost — `auto` draws
     from the Auto + Composer pool at ~$6.00/M output; `premium` routes to
     the strongest available model and bills at that model's API rate.
+
+    The per-token rates above are only one dimension of cost. Access
+    methods (see `<access-methods>`) bundle the same models behind
+    subscriptions and shared token pools where the marginal cost per
+    call is effectively $0 until the subscription budget is exhausted.
+    docs/model-tier-cost-scale.md carries a "Subscription Tiers" section
+    covering Cursor Pro/Ultra, claude.ai Max, ChatGPT Plus/Pro, Gemini
+    Advanced, and similar flat-monthly plans. The `<access-selection>`
+    step picks the cheapest effective path for the user's specific
+    subscription state — burning sunk-cost subscription budget before
+    pay-per-token spend is the default posture.
   </pricing-context>
 
   <max-mode-context>
@@ -76,7 +99,73 @@
     Disable Max Mode for direct, bounded prompts — single-file edits,
     isolated bug fixes, well-defined refactors, simple questions, or any
     task where default context comfortably fits the inputs.
+
+    Max Mode is a Cursor-surface concept. Access methods outside Cursor
+    (Anthropic API, Claude Code, Codex CLI, Google API, Gemini CLI,
+    direct provider APIs) do not expose a Max Mode toggle; they either
+    accept the model's full native context window by default or expose
+    a different long-context surface. When the chosen PLATFORM is not
+    a Cursor surface, MAX MODE in the output should read `Off` (or
+    `N/A` if the model offers no equivalent extended-context mode).
   </max-mode-context>
+
+  <thinking-context>
+    Thinking (also called extended thinking, reasoning effort, or
+    thinking budget) lets a model spend internal reasoning tokens before
+    producing its visible response. Providers expose the toggle
+    differently:
+
+    - Claude (Anthropic API, Claude Code, claude.ai): "Extended
+      thinking" on/off with a configurable thinking-token budget. Off
+      by default for chat; On for hard reasoning tasks.
+    - OpenAI (Codex CLI, OpenAI API, ChatGPT advanced controls):
+      reasoning-effort knob — `minimal`, `low`, `medium`, `high`.
+      Higher effort spends more reasoning tokens before visible
+      output.
+    - Gemini (Google API, Gemini CLI): thinking-budget setting in
+      tokens.
+    - Cursor Composer / Chat: usually inherits the underlying model's
+      thinking behavior but does not expose the toggle in the IDE
+      surface.
+
+    Output mapping (the THINKING field of the output format):
+    `Off` / `Low` / `Medium` / `High` / `XHigh` / `N/A`. Map
+    provider-native scales onto this 6-state field:
+
+    - Claude extended thinking Off → `Off`; On with a small/medium
+      budget → `Medium`; On with a large budget → `High`; On with a
+      very large budget → `XHigh`.
+    - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
+      `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
+      Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
+    - Gemini thinking-budget 0 → `Off`; small → `Low`; medium →
+      `Medium`; large → `High`; very large → `XHigh`.
+    - `N/A` when the chosen access method does not expose a thinking
+      toggle (e.g. Cursor Composer / Cursor Chat), regardless of
+      whether the underlying model supports one.
+
+    Decision rule (applied during `<access-selection>` Step E):
+    - Overall complexity from `<selection-algorithm>` Step 2 Low →
+      THINKING `Off`.
+    - Overall complexity Medium → THINKING `Medium`.
+    - Overall complexity High → THINKING `High`.
+    - High complexity AND the prompt involves novel problem-solving,
+      multi-step proof / verification, or chain-of-thought across
+      many files (i.e., the conditions that would push
+      `<selection-algorithm>` Step 3 to require S-tier in PRIMARY) →
+      THINKING `XHigh`.
+    - PRIMARY task category `planning` or `knowledge` with
+      cross-cutting scope → bump THINKING up at least one level
+      (`Off` → `Low`, `Low` → `Medium`, `Medium` → `High`, `High` →
+      `XHigh`).
+    - Chosen access method's `exposes-thinking` attribute is `no` →
+      THINKING `N/A`, overriding the above.
+
+    Thinking and Max Mode are orthogonal: a Cursor Chat call may have
+    Max Mode On and THINKING `N/A` (Cursor does not expose the toggle);
+    a Claude Code call may have Max Mode Off and THINKING `High`
+    (Anthropic's surface exposes thinking, not Max Mode).
+  </thinking-context>
 
   <benchmark-sources>
     Authoritative LLM leaderboards the AI may cite when justifying a model
@@ -255,6 +344,103 @@
     </tier>
   </model-options>
 
+  <access-methods>
+    Each access method is a way to run one or more models from
+    `<model-options>`. Methods differ in (a) which models they expose,
+    (b) how billing works (per-token, subscription-included,
+    subscription-pool, subscription-or-key), (c) which capability
+    toggles (Max Mode, thinking) they expose, and (d) what credentials
+    the user must hold.
+
+    The `<access-selection>` algorithm consumes this list together with
+    the user-specific state in docs/user-context.md to pick a PLATFORM
+    for the chosen model.
+
+    Billing types:
+    - subscription-included — a flat-monthly plan with a usage budget
+      pool that the call draws from at $0 marginal cost until the
+      budget is exhausted (e.g. claude.ai Max, ChatGPT Plus).
+    - subscription-pool — a flat-monthly plan with a shared token pool
+      consumed across many models (e.g. Cursor Ultra). $0 marginal
+      cost until the pool is exhausted.
+    - subscription-or-key — surface accepts either a subscription OR a
+      direct API key; if a subscription is active, prefer it.
+    - per-token — pay-per-token at the provider's published API rate.
+
+    <method id="anthropic-api" name="Anthropic API"
+            provider="anthropic" billing="per-token"
+            requires="anthropic-api-key"
+            supports-models="opus-4.7,sonnet-4.6,claude-4.5-haiku"
+            exposes-max-mode="no" exposes-thinking="yes"
+            best-for="Programmatic / scripted Claude use outside Claude Code — raw API headers, batch endpoints, or features not surfaced by Claude Code. Falls back here when claude.ai Max budget is exhausted." />
+    <method id="claude-code" name="Claude Code"
+            provider="anthropic" billing="subscription-or-key"
+            requires="claude-max-subscription OR anthropic-api-key"
+            supports-models="opus-4.7,sonnet-4.6,claude-4.5-haiku"
+            exposes-max-mode="no" exposes-thinking="yes"
+            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI and as an IDE extension inside Cursor. Heavy Opus usage that would cost over $1,000/mo on per-token API is fully covered by a $100/mo Max plan." />
+    <method id="claude-web" name="claude.ai web / desktop"
+            provider="anthropic" billing="subscription-included"
+            requires="claude-max-subscription"
+            supports-models="opus-4.7,sonnet-4.6,claude-4.5-haiku"
+            exposes-max-mode="no" exposes-thinking="yes"
+            best-for="Chat-driven Claude use (no terminal, no codebase tool use) under the same Max budget that funds Claude Code — pick when the task is conversational rather than code-editing." />
+    <method id="openai-api" name="OpenAI API"
+            provider="openai" billing="per-token"
+            requires="openai-api-key"
+            supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.4-mini,gpt-5.4-nano"
+            exposes-max-mode="no" exposes-thinking="yes"
+            best-for="Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates." />
+    <method id="codex-cli" name="Codex CLI"
+            provider="openai" billing="subscription-or-key"
+            requires="chatgpt-subscription OR openai-api-key"
+            supports-models="gpt-5.3-codex,gpt-5.4,gpt-5.4-mini"
+            exposes-max-mode="no" exposes-thinking="yes"
+            best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex on long-running terminal / agentic work." />
+    <method id="chatgpt-app" name="ChatGPT (web / desktop)"
+            provider="openai" billing="subscription-included"
+            requires="chatgpt-subscription"
+            supports-models="gpt-5.5,gpt-5.4,gpt-5.4-mini"
+            exposes-max-mode="no" exposes-thinking="yes"
+            best-for="Chat-driven GPT use without terminal or IDE integration; subscription-funded so marginal cost is $0 until ChatGPT's usage limits kick in." />
+    <method id="google-api" name="Google AI Studio API"
+            provider="google" billing="per-token"
+            requires="google-api-key"
+            supports-models="gemini-3.1-pro"
+            exposes-max-mode="no" exposes-thinking="yes"
+            best-for="Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates." />
+    <method id="gemini-cli" name="Gemini CLI"
+            provider="google" billing="subscription-or-key"
+            requires="gemini-advanced-subscription OR google-api-key"
+            supports-models="gemini-3.1-pro"
+            exposes-max-mode="no" exposes-thinking="yes"
+            best-for="Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool." />
+    <method id="gemini-app" name="Gemini (web / app)"
+            provider="google" billing="subscription-included"
+            requires="gemini-advanced-subscription"
+            supports-models="gemini-3.1-pro"
+            exposes-max-mode="no" exposes-thinking="yes"
+            best-for="Chat-driven Gemini use under the Gemini Advanced subscription budget." />
+    <method id="xai-api" name="xAI API"
+            provider="xai" billing="per-token"
+            requires="xai-api-key"
+            supports-models="grok-4.3"
+            exposes-max-mode="no" exposes-thinking="no"
+            best-for="Direct Grok API access for 2M-context or hallucination-resistant tasks; pay-per-token at xAI's published rates." />
+    <method id="cursor-composer" name="Cursor Composer"
+            provider="cursor" billing="subscription-pool"
+            requires="cursor-pro-or-ultra-subscription"
+            supports-models="composer-2,auto,premium"
+            exposes-max-mode="yes" exposes-thinking="no"
+            best-for="Cursor's multi-file editing agent. Composer-family models (composer-2 default) at $0 marginal cost from the Cursor pool. Default for routine roadmap-execution coding when coding-A is sufficient." />
+    <method id="cursor-chat" name="Cursor Chat"
+            provider="cursor" billing="subscription-pool"
+            requires="cursor-pro-or-ultra-subscription"
+            supports-models="opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gemini-3.1-pro,premium,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano"
+            exposes-max-mode="yes" exposes-thinking="no"
+            best-for="Cursor's IDE Chat surface for frontier-model use against the Cursor pool. Pick over the per-token APIs when Cursor Pro/Ultra is active — but defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)." />
+  </access-methods>
+
   <selection-algorithm>
     Run this procedure for every prompt that needs a model recommendation.
     Quality wins at every step; cost only enters at step 5.
@@ -321,6 +507,91 @@
         gap.
   </selection-algorithm>
 
+  <access-selection>
+    After `<selection-algorithm>` picks a MODEL and a Max Mode setting,
+    run this procedure to pick a PLATFORM (access method) and a
+    THINKING level. Read docs/user-context.md first to learn the user's
+    subscription state, API keys, and platform preference order — the
+    PLATFORM choice is meaningless without that input.
+
+    Step A — Filter access methods by model support.
+      Reduce `<access-methods>` to those whose `supports-models`
+      attribute lists the chosen model id. The result is the candidate
+      set of platforms.
+
+    Step B — Filter by credential availability.
+      Reduce the candidate set to access methods whose `requires`
+      clause is satisfied by the user's active subscriptions or API
+      keys per docs/user-context.md. Drop any method whose credential
+      the user does not have.
+
+    Step C — Rank by effective marginal cost.
+      Order survivors lowest-cost first:
+        1. `subscription-included` and `subscription-or-key` methods
+           backed by an active subscription (marginal cost $0 until
+           the subscription's usage budget is exhausted).
+        2. `subscription-pool` methods backed by an active pool
+           (marginal cost $0 until the pool is exhausted).
+        3. `subscription-or-key` methods backed only by an API key,
+           and `per-token` methods (real dollars per call).
+      Within a tier, prefer the access method whose surface matches
+      the task — Claude Code over claude.ai web for coding,
+      cursor-composer over cursor-chat for routine multi-file editing,
+      Codex CLI over ChatGPT app for autonomous coding sessions.
+
+    Step D — Apply user-context.md preference overrides.
+      docs/user-context.md may set a preferred platform order. When
+      the user's preference puts a method ahead of a cheaper-on-paper
+      one, honor the preference — it reflects subscription-utilization
+      economics the catalog cannot see (e.g. burning Max budget that
+      would otherwise expire vs preserving Cursor pool tokens for
+      OpenAI / Google calls that have no other paid path on this
+      account).
+
+    Step E — Determine the THINKING level.
+      Apply the decision rule in `<thinking-context>` against the
+      overall complexity from `<selection-algorithm>` Step 2. If the
+      chosen access method's `exposes-thinking` attribute is `no`,
+      set THINKING `N/A` regardless of complexity.
+
+    Step F — Resolve MAX MODE against the chosen PLATFORM.
+      Max Mode is a Cursor-surface concept. If the chosen access
+      method's `exposes-max-mode` attribute is `no`, set MAX MODE
+      `Off` in the output even when `<selection-algorithm>` Step 6
+      enabled it — Max Mode does not apply outside Cursor. The
+      `<selection-algorithm>` rationale for enabling Max Mode (long
+      context, cross-cutting reasoning) still holds; it just manifests
+      as native context-window use on non-Cursor surfaces.
+
+    Step G — Emit PLATFORM, THINKING, and MAX MODE in the output.
+      The PLATFORM field is the `name` attribute of the chosen access
+      method. The RATIONALE must name (a) the subscription or API key
+      that pays for the call (or note the lack thereof), and (b) why
+      the THINKING level was chosen (or why it is `N/A`).
+
+    Guardrails:
+    - Never recommend an access method whose credential the user does
+      not have. If the candidate set in Step B is empty, the model
+      chosen in `<selection-algorithm>` is unreachable for this user;
+      fall back to the next-best model whose access methods ARE
+      reachable, and add a rationale clause noting the substitution
+      and why the first-choice model was unreachable.
+    - Never burn pay-per-token spend when a subscription that is
+      already paid can serve the call. Subscriptions are sunk cost;
+      a per-token call is real cash out.
+    - When the chosen model is a Cursor-only model (composer-2, auto,
+      premium), the only valid access methods are cursor-composer and
+      cursor-chat. `premium` always uses cursor-chat (it is a
+      Cursor-managed routing mode).
+    - When the chosen model is Claude (opus-4.7, sonnet-4.6, claude-
+      4.5-haiku) AND the user has both claude-max-subscription and
+      cursor-pro-or-ultra-subscription active, prefer claude-code (or
+      claude-web for non-coding tasks) over cursor-chat — the Max
+      subscription is dedicated Claude budget that the Cursor pool
+      cannot substitute for, while the Cursor pool can absorb OpenAI /
+      Google / xAI calls that have no other paid path.
+  </access-selection>
+
   <conversation-principles>
     <principle>Start a New conversation when the prompt is self-contained and carries no dependency on prior turns, when switching to a significantly different domain or task type, or when accumulated context from earlier steps would add noise and increase cost without improving output quality.</principle>
     <principle>Continue the current conversation when the prompt explicitly builds on decisions, outputs, or context established in immediately prior steps — for example, iterating on a file just created, referencing a plan just written, or following up on an error just encountered.</principle>
@@ -335,28 +606,38 @@
     Single-prompt mode — output one block:
 
     MODEL: [Model Name]
+    PLATFORM: [Access Method Name]
     MAX MODE: [On/Off]
+    THINKING: [Off/Low/Medium/High/XHigh/N/A]
     CONVERSATION: [New/Continue]
-    RATIONALE: [1-2 sentences that MUST name (a) the prompt's PRIMARY task
+    RATIONALE: [2-3 sentences that MUST name (a) the prompt's PRIMARY task
                 category, (b) the recommended model's tier rating in that
                 category, (c) at least one headline benchmark or named
                 leaderboard from <benchmark-sources> supporting the choice,
-                and (d) the cost tie-breaker outcome if step 5 of the
-                selection-algorithm applied. Also note the conversation
+                (d) the cost tie-breaker outcome if step 5 of the
+                selection-algorithm applied, (e) the subscription or API
+                key that pays for the chosen PLATFORM (or note its
+                absence), and (f) why the THINKING level was set as
+                stated (or why it is N/A). Also note the conversation
                 handling decision.]
 
     Roadmap annotation mode — output one block per prompt, preceded by the
     prompt identifier or a brief label, in order:
 
     MODEL: [Model Name]
+    PLATFORM: [Access Method Name]
     MAX MODE: [On/Off]
+    THINKING: [Off/Low/Medium/High/XHigh/N/A]
     CONVERSATION: [New/Continue]
-    RATIONALE: [1-2 sentences that MUST name (a) the prompt's PRIMARY task
+    RATIONALE: [2-3 sentences that MUST name (a) the prompt's PRIMARY task
                 category, (b) the recommended model's tier rating in that
                 category, (c) at least one headline benchmark or named
                 leaderboard from <benchmark-sources> supporting the choice,
-                and (d) the cost tie-breaker outcome if step 5 of the
-                selection-algorithm applied. Also note the conversation
+                (d) the cost tie-breaker outcome if step 5 of the
+                selection-algorithm applied, (e) the subscription or API
+                key that pays for the chosen PLATFORM (or note its
+                absence), and (f) why the THINKING level was set as
+                stated (or why it is N/A). Also note the conversation
                 handling decision.]
     PROMPT: [Prompt # or short label]
   </output-format>

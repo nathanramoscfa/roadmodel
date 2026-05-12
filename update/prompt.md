@@ -4,12 +4,18 @@ workflow:
 1. `docs/model-selector.txt` — selection criteria with per-model pricing,
    tier ratings, and headline benchmark numbers.
 2. `docs/model-tier-cost-scale.md` — the output-price-tier classification
-   reference.
+   reference plus the Subscription Tiers and Access Methods table.
 
 You are running unattended on a weekly cron. Your output will be written
 back to disk and committed directly to `main`. There is no human review
 step. Be conservative: never invent numbers, never restructure documents,
 and prefer leaving values unchanged over guessing.
+
+You have access to a `web_search` server-side tool. Use it ONLY for the
+Subscription tiers refresh procedure below (per-token pricing and
+benchmark refreshes consume the fetched `<source>` blocks in the user
+message, not web search). Treat search results conservatively per the
+rules in that section.
 
 # Inputs you will receive
 
@@ -49,6 +55,183 @@ Source of truth: the Cursor pricing page.
   in `model-tier-cost-scale.md` so it reflects the updated pricing and
   tier assignments. Set the Status column to ✓ when Correct Tier matches
   Current Tier, ✗ otherwise.
+
+## Subscription tiers
+
+Source of truth: each provider's official pricing page, discovered via
+the `web_search` server-side tool during this run. The "Subscription
+Tiers and Access Methods" table in `docs/model-tier-cost-scale.md` is a
+DERIVED VIEW of those pages — this automation REBUILDS the table on
+every run by walking each provider's pricing page and emitting one row
+per discovered subscription tier. Manual edits to the table will be
+overwritten on the next run.
+
+Each row has the schema
+`Subscription | Monthly | Provider | Access methods unlocked | Coverage`.
+
+### Provider → access-methods mapping (hardcoded)
+
+The `Access methods unlocked` column does NOT come from web_search —
+it is a fixed mapping from each `provider` value enumerated in
+`<access-methods>` of `model-selector.txt` to the comma-separated
+list of `method id` values for that provider. Use this mapping
+verbatim:
+
+- `anthropic` → `claude-code, claude-web`
+- `openai` → `codex-cli, chatgpt-app`
+- `google` → `gemini-cli, gemini-app`
+- `cursor` → `cursor-composer, cursor-chat`
+- `xai` → (no consumer-facing subscription access methods enumerated
+  in `<access-methods>`; xai tiers MUST be skipped this run — see
+  unmappable-tier rule below)
+
+If `<access-methods>` in this run's `<current_file path="docs/model-selector.txt">`
+contains a `<method>` element for a provider not listed above, treat
+that provider's access-method id list as the union of the matching
+`id` attributes. This automation never edits `<access-methods>`;
+adding a new `<method>` element remains editorial work outside this
+automation.
+
+### Rebuild procedure (per provider)
+
+For each provider P in {anthropic, openai, google, cursor} (xai
+skipped per the mapping above):
+
+1. Issue `web_search` queries to locate P's canonical consumer
+   subscription pricing page. Example queries:
+   `Anthropic claude.ai subscription pricing`,
+   `OpenAI ChatGPT subscription plans pricing`,
+   `Google Gemini Advanced subscription pricing`,
+   `Cursor pricing plans subscription`.
+   Prefer official provider domains: `anthropic.com`, `openai.com`,
+   `gemini.google.com` / `one.google.com`, `cursor.com`.
+
+2. From the search results, identify the canonical pricing page (a
+   single URL on P's official domain that lists the consumer-facing
+   subscription tiers).
+
+3. From that page, enumerate every consumer subscription tier shown.
+   For each tier capture:
+   - **Plan name** as displayed verbatim on the official page (e.g.,
+     "Cursor Ultra", "claude.ai Max ($100)", "ChatGPT Plus",
+     "Google AI Pro"). Preserve punctuation and capitalization.
+   - **Monthly price** as `$<N>` (e.g., `$200`), or `usage-based` if
+     the plan is purely consumption-based with no flat-monthly fee,
+     or `$<N> + usage` if the plan combines a flat fee with metered
+     usage.
+   - **One-sentence Coverage description** drawn from the official
+     page's tier description. Factual, no marketing voice; describe
+     the budget / token pool / model coverage. Examples:
+       - "Shared token pool across every model in Cursor's catalog;
+         token-based billing (no Max Mode surcharge)."
+       - "Opus 4.7, Sonnet 4.6, Claude 4.5 Haiku on web / desktop and
+         inside Claude Code under a shared monthly budget."
+   - **Access methods unlocked** from the hardcoded mapping above
+     for provider P.
+   - **Provider** = canonical provider name as displayed in
+     prose elsewhere in `model-tier-cost-scale.md`: `Cursor`,
+     `Anthropic`, `OpenAI`, `Google`, `xAI`.
+
+4. Build P's new row set from those tiers.
+
+5. Skip-and-warn for unmappable tiers: if the discovered tier
+   description references an access surface (CLI, IDE extension,
+   web app) that is NOT in P's hardcoded access-methods mapping,
+   include the row anyway using the hardcoded mapping verbatim AND
+   emit a warning of the form
+   `subscription tier discovered with unmapped access surface (manual review required): <provider>: <tier name> at <price>/mo references surface "<surface>" not enumerated in <access-methods>; consider adding a <method> element before the next run`.
+
+### Sanity guards (per provider, applied before commit)
+
+Apply these guards BEFORE overwriting P's existing rows with the new
+rebuild. Failing any guard causes P's rebuild to be discarded for
+this run and P's existing rows to be retained verbatim:
+
+- **No canonical page found:** if web_search returns no clear official
+  pricing page for P, retain P's existing rows and emit
+  `subscription tier refresh skipped for <provider>: official pricing page not found in this run's searches`.
+
+- **Zero tiers parsed:** if the rebuild produces zero rows for P
+  (almost certainly a parse failure), retain P's existing rows and
+  emit
+  `subscription tier refresh skipped for <provider>: zero tiers parsed (likely page redesign)`.
+
+- **Catastrophic row delta:** if the rebuild's row count for P
+  differs from the existing row count for P by 3 or more, retain P's
+  existing rows and emit
+  `subscription tier refresh halted for <provider>: row delta exceeds sanity guard (<old count>→<new count>), likely page redesign`.
+
+- **Source recency:** every tier in the rebuild MUST be backed by a
+  search result on P's official domain dated within the last 180
+  days. Tiers backed only by older or off-domain results are
+  dropped from the rebuild AND the entire rebuild is discarded
+  (since incomplete rebuilds risk silently deleting still-current
+  tiers). Emit
+  `subscription tier refresh skipped for <provider>: insufficient recent official-source evidence for <missing tier name>`.
+
+### Replace-and-sort
+
+After all providers have been processed:
+
+1. Concatenate the row sets in this order: anthropic, openai, google,
+   xai (skipped, no rows), cursor.
+2. Within a provider group, sort rows by `Monthly` price ascending,
+   placing `usage-based` rows at the end of their provider group.
+3. Replace the body of the Subscription Tiers table with the
+   concatenated, sorted row set. Preserve the table header row, the
+   section header, the explanatory prose, and the freshness marker
+   verbatim — only the table BODY rows are replaced.
+
+### Surfacing visible changes
+
+For every row that changed between the existing table and the
+rebuild, emit a typed warning so the diff is auditable from the
+commit body. Use the most specific applicable form:
+
+- New row not previously present:
+  `subscription tier added: <provider>: <tier name> at <price>/mo — discovered on <provider domain>`.
+- Existing row no longer present in the rebuild:
+  `subscription tier removed: <provider>: <tier name> — no longer listed on <provider domain>`.
+- Monthly price change:
+  `subscription price updated: <tier name>: $<old> → $<new> (source: <provider domain>)`.
+- Coverage description change (substantive, not just wording):
+  `subscription coverage updated: <tier name>: <one-line description of the change> (source: <provider domain>)`.
+
+### Marker update rule
+
+Update the `<!-- subscription-tiers-reviewed: YYYY-MM-DD -->` marker
+immediately above the section header to today's date in YYYY-MM-DD
+format IF AND ONLY IF every in-scope provider's rebuild completed
+without tripping any sanity guard this run (no
+`subscription tier refresh skipped for` or `subscription tier refresh halted for`
+warnings). Otherwise leave the marker verbatim — the freshness
+watchdog in `tests/test_subscription_freshness.py` will trip after
+180 days, surfacing persistent rebuild failure for human review.
+
+### Hard-forbidden mutations
+
+NEVER edit the section header, the explanatory prose around the
+table, or the table header row. NEVER add rows for tiers not found
+on the provider's official pricing page in this run (no inferring
+from blog posts, third-party comparisons, vendor marketing, or
+training-data recall). NEVER add or remove `<method>` elements in
+`<access-methods>` of `model-selector.txt` — that section is
+editorial and remains protected by the existing "What NOT to change"
+rules. NEVER write tiers for providers not enumerated in
+`<access-methods>`.
+
+### web_search failure
+
+If the `web_search` tool errors out entirely or hits its `max_uses`
+budget before covering ANY provider: KEEP the entire Subscription
+Tiers section verbatim INCLUDING the marker. Emit a warning of the
+form
+`subscription tier refresh skipped: web_search unavailable (<reason>)`.
+
+If web_search covers some providers but is exhausted before covering
+all of them, retain unprocessed providers' existing rows and emit one
+`subscription tier refresh skipped for <provider>: web_search budget exhausted`
+warning per skipped provider.
 
 ## Pricing notes (hovertext)
 
@@ -331,20 +514,39 @@ NOT authorized for regeneration (leave verbatim):
 ## What NOT to change
 
 - The `<instruction>`, `<usage>`, `<objective>`, `<pricing-context>`,
-  `<max-mode-context>`, `<task-categories>`,
-  `<conversation-principles>`, and `<output-format>` sections of
-  `model-selector.txt`. Also `<selection-algorithm>` EXCEPT for the
-  specific guardrail enumerations covered by "Selection-algorithm
-  guardrail sync" in the Model lifecycle section above.
+  `<max-mode-context>`, `<thinking-context>`, `<task-categories>`,
+  `<access-methods>`, `<access-selection>`, `<conversation-principles>`,
+  and `<output-format>` sections of `model-selector.txt`. Also
+  `<selection-algorithm>` EXCEPT for the specific guardrail
+  enumerations covered by "Selection-algorithm guardrail sync" in the
+  Model lifecycle section above.
 - The structure or schema of either document. Update values inside the
   existing schema; do not add or remove sections, attributes, or columns.
-  The current schema for cost-scale tables is
+  The current schema for cost-scale per-token tables is
   `Model | Input | Cache Write | Cache Read | Output | Tier | Notes`.
   The current schema for `<model>` elements in `<model-options>` is
   `id, name, input-price-per-1m, output-price-per-1m, tier-coding,
   tier-planning, tier-agentic, tier-multimodal, tier-long-context,
   tier-knowledge, tier-speed, headline-benchmarks, pricing-notes,
-  best-for`.
+  best-for`. The current schema for `<method>` elements in
+  `<access-methods>` is `id, name, provider, billing, requires,
+  supports-models, exposes-max-mode, exposes-thinking, best-for` —
+  preserved verbatim by this automation; do not edit `<method>`
+  elements, add new methods, or remove existing ones.
+- The "Subscription Tiers and Access Methods" section of
+  `model-tier-cost-scale.md` EXCEPT for the table BODY rows (every
+  cell in every row beneath the header row) and the
+  `<!-- subscription-tiers-reviewed: YYYY-MM-DD -->` marker. The
+  "Subscription tiers" section above governs how the table body is
+  fully rebuilt each run via `web_search` against each provider's
+  official pricing page. The section header, the explanatory prose,
+  the table header row, and the column set are NOT in scope and must
+  remain verbatim.
+- `docs/user-context.md` is NOT an input to this run and MUST NOT be
+  read, modified, or referenced. It captures user-specific subscription
+  state and API-key availability that the selector's
+  `<access-selection>` step consumes at recommendation time, and is
+  hand-edited outside the weekly refresh cycle.
 - Any fields in `<benchmark-sources>` of `model-selector.txt`.
 - The "Tier Boundaries" table in `model-tier-cost-scale.md`.
 

@@ -42,8 +42,17 @@ RATING_FIELDS = [
     ("tier-speed", "Speed"),
 ]
 
+PROVIDER_LABELS = {
+    "anthropic": "Anthropic",
+    "openai": "OpenAI",
+    "google": "Google",
+    "xai": "xAI",
+    "cursor": "Cursor",
+}
+
 _TIER_RE = re.compile(r'<tier\s+cost="([^"]+)"\s*>(.*?)</tier>', re.DOTALL)
 _MODEL_RE = re.compile(r"<model\s+([^>]+?)\s*/>", re.DOTALL)
+_METHOD_RE = re.compile(r"<method\s+([^>]+?)\s*/>", re.DOTALL)
 _ATTR_RE = re.compile(r'([\w-]+)="([^"]*)"')
 _PRINCIPLE_RE = re.compile(r"<principle>(.*?)</principle>", re.DOTALL)
 
@@ -106,6 +115,11 @@ def render_pricing_context(content: str) -> str:
 def render_max_mode(content: str) -> str:
     body = _section(content, "max-mode-context")
     return f"## Max Mode Context\n\n{body}\n"
+
+
+def render_thinking_context(content: str) -> str:
+    body = _section(content, "thinking-context")
+    return f"## Thinking Context\n\n{body}\n"
 
 
 def render_benchmark_sources(content: str) -> str:
@@ -183,9 +197,61 @@ def render_model_options(content: str) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def _render_method_card(attrs: dict[str, str]) -> str:
+    name = attrs["name"]
+    mid = attrs["id"]
+    billing = attrs.get("billing", "-")
+    requires = attrs.get("requires", "-")
+    supports = attrs.get("supports-models", "-")
+    max_mode = attrs.get("exposes-max-mode", "?")
+    thinking = attrs.get("exposes-thinking", "?")
+    best_for = attrs.get("best-for", "").strip()
+
+    return "\n".join(
+        [
+            f"#### {name} — `{mid}`",
+            "",
+            f"- **Billing:** {billing} (requires {requires})",
+            f"- **Supports models:** {supports}",
+            f"- **Toggles:** Max Mode — {max_mode} · Thinking — {thinking}",
+            f"- **Best for:** {best_for}",
+        ]
+    )
+
+
+def render_access_methods(content: str) -> str:
+    block = _section(content, "access-methods")
+    first_idx = block.find("<method")
+    preamble = block[:first_idx].strip() if first_idx != -1 else ""
+
+    lines: list[str] = ["## Access Methods", ""]
+    if preamble:
+        lines.append(preamble)
+        lines.append("")
+
+    current_provider: str | None = None
+    for match in _METHOD_RE.finditer(block):
+        attrs = _parse_attrs(match.group(1))
+        provider = attrs.get("provider", "")
+        if provider != current_provider:
+            current_provider = provider
+            label = PROVIDER_LABELS.get(provider, provider.title() or "Other")
+            lines.append(f"### {label}")
+            lines.append("")
+        lines.append(_render_method_card(attrs))
+        lines.append("")
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def render_selection_algorithm(content: str) -> str:
     body = _section(content, "selection-algorithm")
     return f"## Selection Algorithm\n\n{body}\n"
+
+
+def render_access_selection(content: str) -> str:
+    body = _section(content, "access-selection")
+    return f"## Access Selection\n\n{body}\n"
 
 
 def render_conversation_principles(content: str) -> str:
@@ -208,10 +274,13 @@ def render(source_text: str) -> str:
         render_objective(source_text),
         render_pricing_context(source_text),
         render_max_mode(source_text),
+        render_thinking_context(source_text),
         render_benchmark_sources(source_text),
         render_task_categories(source_text),
         render_model_options(source_text),
+        render_access_methods(source_text),
         render_selection_algorithm(source_text),
+        render_access_selection(source_text),
         render_conversation_principles(source_text),
         render_output_format(source_text),
     ]
