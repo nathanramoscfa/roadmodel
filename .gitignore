@@ -12,4 +12,3 @@ tests/fixtures/*.json
 # Private planning docs (kept local; never to be committed)
 /PRO_FORMA.md
 /ROADMAP.md
-/docs/PRO-FORMA.md
