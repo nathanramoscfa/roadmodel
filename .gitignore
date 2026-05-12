@@ -1,14 +1,28 @@
+# Environment + virtualenv
 .env
 .venv/
+
+# Editor / OS
 .vscode/
+**/.DS_Store
+
+# Python build artifacts
 __pycache__/
 *.pyc
-.DS_Store
+.pytest_cache/
+
+# Update run artifacts (transient outputs of update_models.py)
 update/.last-summary.txt
 update/.last-warnings.txt
 update/.cache/
+
+# Test fixtures (regenerated from update/build_fixture.py; never committed)
 tests/fixtures/*.json
 
+# Local user-specific selector config (real subscription values, API-key state).
+# The committed template is docs/user-context.example.md — copy it to
+# docs/user-context.md and fill in your values.
+/docs/user-context.md
+
 # Private planning docs (kept local; never to be committed)
-/PRO_FORMA.md
-/ROADMAP.md
+/private/

@@ -31,11 +31,18 @@ pool → subscription-included → per-token API → pay-as-you-go).
 
 ## Active subscriptions
 
+> **This file is the public template.** Copy it to `docs/user-context.md`
+> (gitignored) and replace the placeholder values below with your own real
+> monthly subscription amounts and API-key state. The selector reads
+> `docs/user-context.md` at runtime — this `.example.md` exists only to
+> show the schema and is never read by the selector. Phase 1.2 will swap
+> both files for a `roadmodel.toml` config.
+
 | Subscription      | Monthly | Provider  | What it pays for                                                            |
 | ----------------- | ------- | --------- | --------------------------------------------------------------------------- |
-| Cursor Ultra      | $200    | Cursor    | Token-pool budget across every model in Cursor's catalog; no Max Mode surcharge (token-based plan, not legacy request-based). |
-| claude.ai Max     | $100    | Anthropic | Opus / Sonnet / Haiku usage on claude.ai web, the Claude desktop apps, and Claude Code (CLI + IDE extension) under a shared monthly Max usage budget. Funds ~90% of total token volume. |
-| ChatGPT Plus      | $20     | OpenAI    | GPT model usage on the ChatGPT app (web / desktop) and Codex CLI under per-model usage caps. Funds ~9% of total token volume. |
+| Cursor Ultra      | $XXX    | Cursor    | Token-pool budget across every model in Cursor's catalog; no Max Mode surcharge (token-based plan, not legacy request-based). |
+| claude.ai Max     | $XXX    | Anthropic | Opus / Sonnet / Haiku usage on claude.ai web, the Claude desktop apps, and Claude Code (CLI + IDE extension) under a shared monthly Max usage budget. Funds ~90% of total token volume. |
+| ChatGPT Plus      | $XXX    | OpenAI    | GPT model usage on the ChatGPT app (web / desktop) and Codex CLI under per-model usage caps. Funds ~9% of total token volume. |
 
 ## Active API keys
 
@@ -71,12 +78,12 @@ of token volume is Claude, ~9% is GPT (mostly Codex-style coding),
 two heavy-use providers and Cursor's pool absorbs the rest.
 
 1. **Claude Code (CLI / IDE extension)** for any Claude model — funded
-   by the $100/mo claude.ai Max subscription. Marginal cost per call is
+   by the $XXX/mo claude.ai Max subscription. Marginal cost per call is
    $0 until the Max usage budget is exhausted. This is the primary
    surface for ~90% of total work; via Cursor's pool the same Claude
    usage would cost multiples of the Max plan.
 2. **Codex CLI** for any GPT model when the task is coding or
-   terminal-driven — funded by the $20/mo ChatGPT Plus subscription.
+   terminal-driven — funded by the $XXX/mo ChatGPT Plus subscription.
    Marginal cost per call is $0 until the per-model usage caps are
    hit. Primary GPT surface; exposes reasoning-effort toggle (medium /
    high / xhigh).
@@ -86,7 +93,7 @@ two heavy-use providers and Cursor's pool absorbs the rest.
    coding) — same Max budget as Claude Code.
 5. **Cursor Ultra pool** for Google and xAI models (no dedicated
    subscription paths exist) and as a fallback for Claude / GPT models
-   when the dedicated subscriptions are near exhaustion. Flat $200/mo
+   when the dedicated subscriptions are near exhaustion. Flat $XXX/mo
    already paid; $0 marginal cost until the pool is exhausted.
 6. **Anthropic API direct** as pay-as-you-go fallback for Claude when
    (a) the call is programmatic / scripted outside Claude Code, (b)
