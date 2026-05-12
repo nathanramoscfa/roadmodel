@@ -108,6 +108,65 @@ table and surface material cost / availability / capability constraints.
 
 ---
 
+<!-- subscription-tiers-reviewed: 2026-05-12 -->
+
+## Subscription Tiers and Access Methods
+
+The per-token tables above are one dimension of cost. Many of the same
+models are reachable through flat-monthly subscription plans whose
+marginal cost per call is effectively $0 until the subscription's usage
+budget or token pool is exhausted. The selector's `<access-selection>`
+step uses this table to rank platforms; the user-specific subscription
+state lives in [`docs/user-context.md`](user-context.md).
+
+This table is a DERIVED VIEW of each provider's official pricing page,
+rebuilt weekly by [`update/update_models.py`](../update/update_models.py)
+using Anthropic's `web_search` server-side tool per the rules in
+[`update/prompt.md`](../update/prompt.md) § "Subscription tiers". Each
+run discovers the canonical pricing page for every provider enumerated
+in `<access-methods>` of [`docs/model-selector.txt`](model-selector.txt),
+enumerates the consumer tiers shown, and writes the resulting row set
+into this table. Manual edits to the table body will be overwritten on
+the next run. To change which providers are in scope, edit
+`<access-methods>` (which is editorial and remains protected by the
+existing model-lifecycle rules); the next cron run picks up the new
+provider automatically.
+
+`tests/test_subscription_freshness.py` watches the
+`<!-- subscription-tiers-reviewed: YYYY-MM-DD -->` marker above. The
+cron bumps the marker to today's date only when every in-scope
+provider's rebuild completed without tripping a sanity guard; a stale
+marker (>180 days) therefore means the cron has been running but
+subscription rebuild has been persistently failing — most likely a
+provider has redesigned its pricing page in a way the AI can no longer
+parse cleanly. When that happens, eyeball the failing provider's page
+and adjust the rebuild rules in [`update/prompt.md`](../update/prompt.md).
+
+
+| Subscription         | Monthly | Provider  | Access methods unlocked      | Coverage                                                                                                  |
+| -------------------- | ------- | --------- | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Cursor Pro           | $20     | Cursor    | cursor-composer, cursor-chat | Shared token pool across every model in Cursor's catalog; token-based billing (no Max Mode surcharge).    |
+| Cursor Ultra         | $200    | Cursor    | cursor-composer, cursor-chat | Same model coverage as Pro at roughly 20x the token-pool budget.                                          |
+| claude.ai Max ($100) | $100    | Anthropic | claude-code, claude-web      | Opus 4.7, Sonnet 4.6, Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE) under a shared monthly budget. |
+| claude.ai Max ($200) | $200    | Anthropic | claude-code, claude-web      | Same model coverage as the $100 plan with a roughly 5x larger monthly budget.                             |
+| ChatGPT Plus         | $20     | OpenAI    | chatgpt-app, codex-cli       | GPT-5.4, GPT-5.4 Mini, and selected reasoning models with per-model usage caps.                           |
+| ChatGPT Pro          | $200    | OpenAI    | chatgpt-app, codex-cli       | Same coverage as Plus with much higher caps and access to GPT-5.5.                                        |
+| Gemini Advanced      | $20     | Google    | gemini-app, gemini-cli       | Gemini 3.1 Pro and supporting multimodal features.                                                        |
+
+
+The "Access methods unlocked" column references method ids enumerated in
+the `<access-methods>` block of
+[`docs/model-selector.txt`](model-selector.txt). The dollar values are
+list prices at time of writing; verify against each provider's billing
+page before publishing.
+
+Subscriptions whose surface is web-chat-only (no CLI / IDE / API path
+beyond a chat box) are intentionally omitted — only subscriptions that
+unlock at least one access method enumerated in `<access-methods>`
+appear here.
+
+---
+
 ## Existing model-selector.txt Classification Audit
 
 

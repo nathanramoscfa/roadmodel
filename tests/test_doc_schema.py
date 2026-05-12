@@ -178,6 +178,37 @@ def test_prompt_has_lifecycle_rules() -> None:
     )
 
 
+def test_prompt_has_subscription_refresh_rules() -> None:
+    """update/prompt.md must contain the Subscription tiers rebuild rules.
+    Without them, the cron could rebuild the table without per-provider
+    sanity guards, silently delete current tiers on a transient parse
+    failure, or refresh the marker without evidence. This test guards
+    against accidental deletion of those rules.
+    """
+    prompt = PROMPT_PATH.read_text()
+    required = [
+        "Subscription tiers",
+        "web_search",
+        "Provider → access-methods mapping",
+        "Rebuild procedure (per provider)",
+        "Sanity guards",
+        "subscription tier added:",
+        "subscription tier removed:",
+        "subscription price updated:",
+        "subscription coverage updated:",
+        "subscription tier refresh skipped",
+        "subscription tier refresh halted",
+        "subscription tier discovered with unmapped access surface (manual review required):",
+        "subscription-tiers-reviewed:",
+    ]
+    missing = [phrase for phrase in required if phrase not in prompt]
+    assert not missing, (
+        "update/prompt.md is missing Subscription tiers rebuild phrases: "
+        f"{missing}. Restore them or the cron may rebuild the table "
+        "without sanity guards or refresh the marker without evidence."
+    )
+
+
 def test_cost_scale_provider_tables_have_required_columns() -> None:
     text = COST_SCALE_PATH.read_text()
     headers_found = re.findall(r"^\|\s*Model\s*\|.*\|\s*Notes\s*\|", text, re.MULTILINE)

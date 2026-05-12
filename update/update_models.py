@@ -27,6 +27,7 @@ COST_SCALE_PATH = DOCS_DIR / "model-tier-cost-scale.md"
 
 MODEL_ID = "claude-opus-4-7"
 MAX_TOKENS = 64000
+WEB_SEARCH_MAX_USES = 30
 USER_AGENT = (
     "roadmodel-updater/1.0 "
     "(+https://github.com/nathanramoscfa/roadmodel)"
@@ -503,7 +504,16 @@ def build_user_message(
 
 
 def call_opus(system_prompt: str, user_message: str, api_key: str) -> str:
-    """Return assistant text from Opus via streaming (long-request policy)."""
+    """Return assistant text from Opus via streaming (long-request policy).
+
+    The web_search server-side tool is enabled so Opus can adaptively
+    look up subscription pricing for the "Subscription Tiers and Access
+    Methods" section of model-tier-cost-scale.md. The tool runs entirely
+    server-side; the SDK returns interleaved text + server_tool_use +
+    web_search_tool_result blocks. We concatenate only the text blocks
+    — the final JSON response Opus emits per `# Output format` in
+    prompt.md.
+    """
     client = Anthropic(api_key=api_key)
     system_blocks = [
         {
@@ -513,11 +523,19 @@ def call_opus(system_prompt: str, user_message: str, api_key: str) -> str:
         }
     ]
     user_blocks = [{"role": "user", "content": user_message}]
+    tools = [
+        {
+            "type": "web_search_20250305",
+            "name": "web_search",
+            "max_uses": WEB_SEARCH_MAX_USES,
+        }
+    ]
     with client.messages.stream(
         model=MODEL_ID,
         max_tokens=MAX_TOKENS,
         system=system_blocks,
         messages=user_blocks,
+        tools=tools,
     ) as stream:
         response = stream.get_final_message()
     return "".join(
