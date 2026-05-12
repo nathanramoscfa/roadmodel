@@ -25,6 +25,13 @@ it. The Monday refresh regenerates it after Opus updates the `.txt`, and a
 schema test (`test_selector_md_is_in_sync_with_selector_txt`) fails CI if the
 two drift.
 
+A fourth file, **`docs/user-context.md`**, is a per-user config that tells
+the selector which subscriptions and API keys you have so it can pick a
+**platform** alongside a model. It is gitignored. The committed template
+[`docs/user-context.example.md`](docs/user-context.example.md) shows the
+schema; see [Local setup](#local-setup) below to wire up your own copy. The
+selector falls back to a generic default if the file is absent.
+
 `~/Documents/model-selector.txt` and `~/Documents/model-tier-cost-scale.md`
 symlink here so existing references in other projects keep working.
 
@@ -144,6 +151,28 @@ change without committing, run `python update/update_models.py --dry-run`
 against a synthetic Cursor pricing payload, pass
 `--fixture path/to/sources.json` — see the script's `--help` for the
 fixture shape.
+
+## Local setup
+
+The recommender needs to know which subscriptions and API keys you have
+to recommend a **platform** alongside a model. On first checkout, copy
+the committed template to a local-only file and fill in your real values:
+
+```sh
+cp docs/user-context.example.md docs/user-context.md
+$EDITOR docs/user-context.md
+```
+
+`docs/user-context.md` is **gitignored** — it never appears in `git
+status`, never gets committed, and never goes to GitHub. The template
+ships with `$XXX` placeholders for dollar amounts and `Yes/No`
+placeholders for API-key state; replace them with your real values. If
+you skip this step entirely, the selector falls back to a generic
+default platform preference order.
+
+Phase 1.2 of [the public roadmap](#repo-layout) will swap this
+markdown-file pattern for a `roadmodel.toml` config; the example /
+real split remains.
 
 ## Local run
 
@@ -277,24 +306,34 @@ pile-up.
 ```
 .
 ├── docs/
-│   ├── model-selector.txt          # the recommender doc (source of truth)
-│   ├── model-selector.md           # human-readable mirror, auto-generated
-│   └── model-tier-cost-scale.md    # the price/tier reference
+│   ├── model-selector.txt              # the recommender doc (source of truth)
+│   ├── model-selector.md               # human-readable mirror, auto-generated
+│   ├── model-tier-cost-scale.md        # the price/tier reference
+│   ├── user-context.example.md         # public template for per-user selector config
+│   ├── user-context.md                 # local, gitignored: real subscription/API-key state
+│   ├── templates/
+│   │   ├── project-roadmap-template.md # roadmap builder: project-level template
+│   │   └── phase-roadmap-template.md   # roadmap builder: phase-level template
+│   └── archive/
+│       └── roadmap-v1.md               # historical roadmap (frozen)
 ├── update/
-│   ├── update_models.py            # fetch + strip + validate + call Opus
-│   ├── render_md.py                # render model-selector.txt → .md
-│   ├── prompt.md                   # system prompt (the rules Opus follows)
-│   ├── sources.json                # upstream URLs + per-source validation
-│   └── requirements.txt            # anthropic, beautifulsoup4, requests
+│   ├── update_models.py                # fetch + strip + validate + call Opus
+│   ├── render_md.py                    # render model-selector.txt → .md
+│   ├── build_fixture.py                # synthesize sources.json fixtures for lifecycle tests
+│   ├── prompt.md                       # system prompt (the rules Opus follows)
+│   ├── sources.json                    # upstream URLs + per-source validation
+│   └── requirements.txt                # anthropic, beautifulsoup4, requests
 ├── tests/
-│   ├── test_sources_live.py        # live upstream-health checks
-│   ├── test_doc_schema.py          # schema + cross-doc consistency
-│   ├── test_freshness.py           # cron-heartbeat check
-│   └── requirements.txt            # pytest, pyyaml
+│   ├── test_sources_live.py            # live upstream-health checks
+│   ├── test_doc_schema.py              # schema + cross-doc consistency
+│   ├── test_subscription_freshness.py  # user-context.md staleness check
+│   ├── test_freshness.py               # cron-heartbeat check
+│   └── requirements.txt                # pytest, pyyaml
 ├── .github/workflows/
-│   ├── update-models.yml           # weekly refresh (Mondays 16:00 UTC)
-│   ├── tests.yml                   # daily tests + on push/PR
-│   └── auto-remediate.yml          # opens PR when daily tests fail
+│   ├── update-models.yml               # weekly refresh (Mondays 16:00 UTC)
+│   ├── tests.yml                       # daily tests + on push/PR
+│   ├── auto-remediate.yml              # opens PR when daily tests fail
+│   └── claude.yml                      # on-demand Claude Code action
 ├── .gitignore
 └── README.md
 ```
