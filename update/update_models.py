@@ -545,31 +545,57 @@ def call_opus(system_prompt: str, user_message: str, api_key: str) -> str:
     )
 
 
-# TODO(#5): fallback span breaks when Opus emits a fenced JSON template
-# (placeholder values) before the real object — first `{` lands inside the
-# template, last `}` in the real object, intervening prose is not JSON.
+_FENCED_BLOCK_RE = re.compile(r"```[a-zA-Z]*\n.*?\n```", re.DOTALL)
+
+
 def parse_result(raw: str) -> dict[str, Any]:
     """Parse the model's JSON response, tolerating prose preamble/epilogue.
 
     The system prompt asks for a single JSON object with no surrounding
-    text, but the model occasionally emits reasoning before the object.
-    Try a strict parse first; on failure, fall back to extracting from the
-    first `{` to the last `}`.
+    text, but the model occasionally emits reasoning, sample templates,
+    or fenced placeholders before the real object. Strategy:
+
+    1. Strict parse first (clean output is the happy path).
+    2. If a markdown fence wraps the entire response (starts AND ends
+       with ```), strip the outermost fence and retry.
+    3. Strip any embedded fenced code blocks (sample/template JSON the
+       model sometimes emits as preamble) and retry.
+    4. Fall back to first `{` to last `}` in the (possibly de-fenced)
+       text.
+
+    Step 3 fixes the TODO(#5) failure mode where Opus emits a
+    ```json … ``` template ahead of the real JSON: the legacy fallback
+    would land on the template's first `{` and try to parse placeholder
+    values like `"...full file..."` as real content.
     """
     text = raw.strip()
-    if text.startswith("```"):
-        first_nl = text.find("\n")
-        text = text[first_nl + 1 :] if first_nl != -1 else text
-        if text.endswith("```"):
-            text = text[: -len("```")].rstrip()
+
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        start = text.find("{")
-        end = text.rfind("}")
-        if start < 0 or end <= start:
-            raise
-        return json.loads(text[start : end + 1])
+        pass
+
+    if text.startswith("```") and text.endswith("```"):
+        first_nl = text.find("\n")
+        if first_nl != -1:
+            inner = text[first_nl + 1 : -3].rstrip()
+            try:
+                return json.loads(inner)
+            except json.JSONDecodeError:
+                text = inner
+
+    text_no_fences = _FENCED_BLOCK_RE.sub("", text).strip()
+    if text_no_fences and text_no_fences != text:
+        try:
+            return json.loads(text_no_fences)
+        except json.JSONDecodeError:
+            text = text_no_fences
+
+    start = text.find("{")
+    end = text.rfind("}")
+    if start < 0 or end <= start:
+        raise json.JSONDecodeError("could not extract JSON object from model output", text, 0)
+    return json.loads(text[start : end + 1])
 
 
 def load_fixture(path: Path) -> tuple[list[dict[str, str]], list[str]]:
