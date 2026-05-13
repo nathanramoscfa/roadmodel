@@ -31,7 +31,7 @@ A third file, **[docs/model-selector.md](docs/model-selector.md)**, is a
 human-readable Markdown rendering of `model-selector.txt`. It is auto-generated
 from the `.txt` by [update/render_md.py](update/render_md.py); never hand-edit
 it. The Monday refresh regenerates it after Opus updates the `.txt`, and a
-schema test (`test_selector_md_is_in_sync_with_selector_txt`) fails CI if the
+schema test (`test_roadmodel_catalog_md_in_sync_with_bundled_txt`) fails CI if the
 two drift.
 
 A fourth file, **`docs/user-context.md`**, is a per-user config that tells
@@ -258,7 +258,7 @@ runs daily at 12:00 UTC, on every push to `main`, on every PR, and on
   match byte-for-byte across the two docs; tier-cost groupings match
   output prices. Catches bot drift.
 - **Freshness** ([tests/test_freshness.py](tests/test_freshness.py)) —
-  fails if the most recent `model-selector-bot` commit is older than
+  fails if the most recent `roadmodel-bot` commit is older than
   14 days, signalling a stuck cron.
 
 Run locally:
@@ -327,7 +327,7 @@ pile-up.
 │       └── roadmap-v1.md               # historical roadmap (frozen)
 ├── update/
 │   ├── update_models.py                # fetch + strip + validate + call Opus
-│   ├── render_md.py                    # render model-selector.txt → .md
+│   ├── render_md.py                    # render bundled .txt → .md
 │   ├── build_fixture.py                # synthesize sources.json fixtures for lifecycle tests
 │   ├── prompt.md                       # system prompt (the rules Opus follows)
 │   ├── sources.json                    # upstream URLs + per-source validation

@@ -10,7 +10,7 @@ Catches: bot drift (e.g., dropping pricing-notes attribute), one-doc
 updates that miss the other, and any schema change that wasn't
 intentional.
 
-Note: model-selector.txt is XML-shaped but not strict XML — its body
+Note: ``docs/model-selector.txt`` is XML-shaped but not strict XML — its body
 text legitimately contains backticked references to its own tag names
 (e.g., `<task-categories>` in the selection-algorithm). We parse with
 regex rather than ElementTree to handle this without rewriting the doc.
@@ -282,8 +282,8 @@ def test_selector_pricing_notes_match_cost_scale_notes() -> None:
     )
 
 
-def test_selector_md_is_in_sync_with_selector_txt() -> None:
-    """docs/model-selector.md is auto-generated from docs/model-selector.txt
+def test_roadmodel_catalog_md_in_sync_with_bundled_txt() -> None:
+    """``docs/model-selector.md`` is auto-generated from ``docs/model-selector.txt``
     by update/render_md.py. Fail if the committed .md does not match what
     the renderer would produce from the current .txt.
 

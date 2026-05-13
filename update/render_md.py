@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render docs/model-selector.txt -> docs/model-selector.md.
+"""Render ``docs/model-selector.txt`` -> ``docs/model-selector.md``.
 
 The .txt is the single source of truth (XML-shaped spec consumed by AI
 assistants via @model-selector.txt). The .md is a human-readable mirror
@@ -74,7 +74,7 @@ def render_header() -> str:
         "Source of truth: docs/model-selector.txt\n"
         "Regenerate with: python update/render_md.py\n"
         "-->\n\n"
-        "# Model Selector\n\n"
+        "# roadmodel\n\n"
         "Human-readable rendering of "
         "[`docs/model-selector.txt`](model-selector.txt). The `.txt` is the\n"
         "single source of truth; this file is regenerated from it by\n"

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Refresh docs/model-selector.txt and docs/model-tier-cost-scale.md from
-upstream pricing and benchmark sources using Opus 4.7."""
+"""Refresh ``docs/model-selector.txt`` and ``docs/model-tier-cost-scale.md``
+for roadmodel from upstream pricing and benchmark sources using Opus 4.7."""
 
 from __future__ import annotations
 
@@ -604,8 +604,8 @@ def write_dry_run_report(
         difflib.unified_diff(
             selector_before.splitlines(keepends=True),
             selector_after.splitlines(keepends=True),
-            fromfile="current/model-selector.txt",
-            tofile="proposed/model-selector.txt",
+            fromfile="current/docs/model-selector.txt",
+            tofile="proposed/docs/model-selector.txt",
         )
     )
     print("\n=== Diff: docs/model-tier-cost-scale.md ===")
@@ -681,9 +681,9 @@ def main() -> int:
         sys.stderr.write("\n")
         return 2
 
-    new_selector = result["model_selector_txt"]
+    new_selector = result["roadmodel_txt"]
     new_cost_scale = result["model_tier_cost_scale_md"]
-    summary = result.get("summary") or "Refresh model docs"
+    summary = result.get("summary") or "Refresh roadmodel catalog"
     warnings = list(result.get("warnings") or [])
     if fetch_errors:
         warnings.extend(f"Fetch error: {err}" for err in fetch_errors)

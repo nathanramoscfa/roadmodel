@@ -557,7 +557,7 @@ commentary outside the object:
 
 ```
 {
-  "model_selector_txt": "<full updated content of docs/model-selector.txt>",
+  "roadmodel_txt": "<full updated content of docs/model-selector.txt>",
   "model_tier_cost_scale_md": "<full updated content of docs/model-tier-cost-scale.md>",
   "summary": "<3-8 line plain-text summary of what changed; this becomes the commit message body>",
   "warnings": ["<any caveats, missing data, sources you skipped, or judgments worth flagging>"]

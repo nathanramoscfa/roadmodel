@@ -12,7 +12,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 STALE_DAYS_THRESHOLD = 14
-BOT_AUTHOR = "model-selector-bot"
+BOT_AUTHOR = "roadmodel-bot"
 
 
 def _last_bot_commit_timestamp() -> dt.datetime | None:

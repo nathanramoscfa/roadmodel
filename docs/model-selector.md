@@ -3,7 +3,7 @@ Source of truth: docs/model-selector.txt
 Regenerate with: python update/render_md.py
 -->
 
-# Model Selector
+# roadmodel
 
 Human-readable rendering of [`docs/model-selector.txt`](model-selector.txt). The `.txt` is the
 single source of truth; this file is regenerated from it by
