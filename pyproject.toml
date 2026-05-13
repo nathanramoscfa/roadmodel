@@ -1,0 +1,83 @@
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "roadmodel"
+version = "0.1.0"
+description = "BYO-key CLI that recommends the right AI model, platform, and settings for a prompt."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Nathan Ramos", email = "nathan.ramos.github@gmail.com" }]
+keywords = ["ai", "llm", "model-selection", "anthropic", "openai", "gemini", "cli"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "anthropic>=0.97.0",
+    "openai>=2.33.0",
+    "google-genai>=1.74.0",
+    "click>=8.3.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "build>=1.2",
+    "twine>=5.1",
+]
+
+[project.scripts]
+roadmodel = "roadmodel.cli:main"
+
+[project.urls]
+Homepage = "https://roadmodel.ai"
+Repository = "https://github.com/nathanramoscfa/roadmodel"
+Issues = "https://github.com/nathanramoscfa/roadmodel/issues"
+
+[tool.hatch.build.targets.wheel]
+sources = ["src"]
+packages = ["src/roadmodel"]
+include = ["src/roadmodel/data/*"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/roadmodel/**",
+    "docs/model-selector.txt",
+    "docs/model-tier-cost-scale.md",
+    "docs/user-context.example.md",
+    "hatch_build.py",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+]
+
+[tool.hatch.build.hooks.custom]
+path = "hatch_build.py"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["google.genai.*"]
+ignore_missing_imports = true
