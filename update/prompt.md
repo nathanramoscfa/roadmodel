@@ -88,9 +88,13 @@ verbatim:
 If `<access-methods>` in this run's `<current_file path="docs/model-selector.txt">`
 contains a `<method>` element for a provider not listed above, treat
 that provider's access-method id list as the union of the matching
-`id` attributes. This automation never edits `<access-methods>`;
-adding a new `<method>` element remains editorial work outside this
-automation.
+`id` attributes. This automation never adds, removes, or renames
+`<method>` elements — those structural changes remain editorial. It
+DOES refresh each `<method>`'s `supports-models` attribute per the
+"Supports-models refresh in `<access-methods>`" section below
+(additive-only, sanity-guarded). All other `<method>` attributes
+(id, name, provider, billing, requires, exposes-max-mode,
+exposes-thinking, best-for) remain preserved verbatim.
 
 ### Rebuild procedure (per provider)
 
@@ -215,10 +219,14 @@ table, or the table header row. NEVER add rows for tiers not found
 on the provider's official pricing page in this run (no inferring
 from blog posts, third-party comparisons, vendor marketing, or
 training-data recall). NEVER add or remove `<method>` elements in
-`<access-methods>` of `model-selector.txt` — that section is
-editorial and remains protected by the existing "What NOT to change"
-rules. NEVER write tiers for providers not enumerated in
-`<access-methods>`.
+`<access-methods>` of `model-selector.txt`, NEVER rename their `id`
+or `name` attributes, and NEVER edit their `provider`, `billing`,
+`requires`, `exposes-max-mode`, `exposes-thinking`, or `best-for`
+attributes — those structural fields are editorial. The
+`supports-models` attribute IS refreshed each run per the
+"Supports-models refresh in `<access-methods>`" section below
+(additive-only, sanity-guarded). NEVER write tiers for providers
+not enumerated in `<access-methods>`.
 
 ### web_search failure
 
@@ -511,6 +519,121 @@ NOT authorized for regeneration (leave verbatim):
   the lowest-output-price model with `tier-coding` of `A` or better
   and emit a warning.
 
+## Supports-models refresh in `<access-methods>`
+
+Each `<method>` element in `model-selector.txt`'s `<access-methods>`
+carries a `supports-models` attribute — a comma-separated list of
+`<model>` ids the surface actually exposes. These lists drift as
+providers add or curate models in their UIs (e.g. OpenAI exposed
+`gpt-5.5` in the Codex panel without changing the CLI command
+surface). After `<model-options>` has been refreshed in this run,
+walk each `<method>` and refresh its `supports-models` per the
+procedure below.
+
+This refresh is ADDITIVE-ONLY with strict sanity guards. The
+`<method>` element's other attributes (id, name, provider, billing,
+requires, exposes-max-mode, exposes-thinking, best-for) remain
+preserved verbatim — `<method>` elements are never added, removed,
+or renamed by this automation. Only the `supports-models` value
+changes.
+
+### Per-method refresh procedure
+
+For each `<method>` element M in `<access-methods>`:
+
+1. Issue `web_search` queries to locate M's provider's currently
+   advertised model availability on M's specific surface. Example
+   queries keyed by method id:
+   - `claude-code` → `"Claude Code" supported models site:anthropic.com`
+   - `claude-web` → `"claude.ai" available models site:anthropic.com`
+   - `anthropic-api` → `Anthropic API models reference site:anthropic.com`
+   - `codex-cli` → `"Codex" available models OpenAI site:openai.com`
+   - `chatgpt-app` → `ChatGPT subscription model availability site:openai.com`
+   - `openai-api` → `OpenAI API models reference site:openai.com`
+   - `gemini-cli` → `"Gemini CLI" supported models site:gemini.google.com`
+   - `gemini-app` → `Gemini Advanced models site:gemini.google.com`
+   - `google-api` → `Google AI Studio API models site:ai.google.dev`
+   - `cursor-chat` / `cursor-composer` → `Cursor models catalog site:cursor.com`
+   - `xai-api` → `xAI API Grok models site:x.ai`
+   Prefer the provider's official docs, changelogs, or release
+   notes. Skip third-party comparisons, blog posts, vendor marketing,
+   and training-data recall.
+
+2. From the search results, build a CANDIDATE list of model names
+   actually exposed on M.
+
+3. INTERSECT the candidate list against the current `<model-options>`
+   ids — only catalog-tracked models can appear in `supports-models`.
+   Any candidate that's not in `<model-options>` is dropped from the
+   intersection AND emits a warning of the form
+   `supports-models candidate <method-id> exposes <candidate-name> but it is missing from <model-options>; consider adding the model in next editorial pass`.
+
+4. Compute the delta vs M's current supports-models:
+   - `new_in_candidate` = intersection − existing
+   - `missing_in_candidate` = existing − intersection
+
+5. Apply changes:
+   - For each model in `new_in_candidate`: ADD to M's supports-models,
+     placing the new entry per the Ordering rule below.
+   - For each model in `missing_in_candidate`: KEEP in M's
+     supports-models verbatim AND emit warning of the form
+     `supports-models existing entry <model-id> on <method-id> not detected in this run's search; retained pending manual review (possible search miss or actual removal)`.
+   This is the additive-only guarantee — the cron only ever ADDS
+   models to supports-models, never removes. Removals are editorial.
+
+### Sanity guards (per `<method>`, applied before commit)
+
+Apply these guards BEFORE rewriting M's supports-models. Failing any
+guard causes M's supports-models to be retained verbatim for this
+run:
+
+- **No candidate models found:** if `web_search` returns no clear
+  authoritative source for M, retain M's existing supports-models
+  verbatim and emit
+  `supports-models refresh skipped for <method-id>: official model list not found in this run's searches`.
+
+- **Empty intersection:** if the candidate intersection (after
+  filtering against `<model-options>`) is empty, retain M's existing
+  supports-models verbatim and emit
+  `supports-models refresh halted for <method-id>: candidate intersection is empty (existing list <N> entries → 0), likely search failure or page redesign`.
+
+- **Catastrophic addition delta:** if `len(new_in_candidate) >= 3`
+  (three or more new models in one run), retain M's existing
+  supports-models verbatim and emit
+  `supports-models refresh halted for <method-id>: new-model delta exceeds sanity guard (<N> new entries proposed), likely false positives — manual review required`.
+
+- **Source recency:** every model in the candidate set MUST be
+  backed by a search result on the provider's official domain dated
+  within the last 90 days. Candidates backed only by older or
+  off-domain results are dropped from the intersection AND a warning
+  is emitted (one per dropped candidate).
+
+### Ordering rule
+
+When constructing the final supports-models comma-separated list,
+maintain newest-first ordering within each model family:
+
+- Larger version numbers come first (`gpt-5.5` before `gpt-5.4`
+  before `gpt-5.3-codex`).
+- Variants of the same base model (`-mini`, `-nano`,
+  `-codex-spark`) come after the base model, in the order
+  introduced by the existing list when present.
+- Cross-family ordering follows the existing list's convention
+  (typically flagship → mini → nano).
+
+### web_search failure
+
+If `web_search` errors out entirely during the supports-models
+refresh phase, retain ALL `<method>` supports-models verbatim and
+emit
+`supports-models refresh skipped: web_search unavailable (<reason>)`.
+
+If web_search covers some methods but is exhausted before covering
+all of them, retain unprocessed methods' existing supports-models
+verbatim and emit one
+`supports-models refresh skipped for <method-id>: web_search budget exhausted`
+warning per skipped method.
+
 ## What NOT to change
 
 - The `<instruction>`, `<usage>`, `<objective>`, `<pricing-context>`,
@@ -530,9 +653,14 @@ NOT authorized for regeneration (leave verbatim):
   tier-knowledge, tier-speed, headline-benchmarks, pricing-notes,
   best-for`. The current schema for `<method>` elements in
   `<access-methods>` is `id, name, provider, billing, requires,
-  supports-models, exposes-max-mode, exposes-thinking, best-for` —
-  preserved verbatim by this automation; do not edit `<method>`
-  elements, add new methods, or remove existing ones.
+  supports-models, exposes-max-mode, exposes-thinking, best-for`.
+  The `supports-models` attribute is refreshed each run per the
+  "Supports-models refresh in `<access-methods>`" section above
+  (additive-only with sanity guards). Every OTHER attribute (id,
+  name, provider, billing, requires, exposes-max-mode,
+  exposes-thinking, best-for) is preserved verbatim; `<method>`
+  elements may not be added, removed, or renamed by this
+  automation.
 - The "Subscription Tiers and Access Methods" section of
   `model-tier-cost-scale.md` EXCEPT for the table BODY rows (every
   cell in every row beneath the header row) and the
