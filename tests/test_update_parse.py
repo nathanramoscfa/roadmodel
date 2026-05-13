@@ -70,10 +70,35 @@ def test_multiple_sample_fences_then_real_json() -> None:
         "```python\nprint('not JSON')\n```\n"
         "```json\n{\"sample\": true}\n```\n"
         "Here's the real output:\n"
-        '{"roadmodel_txt": "real", "model_tier_cost_scale_md": "real"}'
+        '{"roadmodel_txt": "real_content_long_enough", "model_tier_cost_scale_md": "real"}'
     )
     parsed = parse_result(raw)
-    assert parsed["roadmodel_txt"] == "real"
+    assert parsed["roadmodel_txt"] == "real_content_long_enough"
+
+
+def test_real_json_inside_second_fence() -> None:
+    """The cron's actual failure mode in run 25820779529: Opus emits
+    a sample fence with placeholder values ("..."), then prose, then
+    wraps the REAL JSON in another fence. Both blocks parse as JSON,
+    so the discriminator is `roadmodel_txt` length — placeholder is
+    short ("..."), real is the entire selector.txt (KB-scale).
+    """
+    real_content = "<model-selector>" + "x" * 500 + "</model-selector>"
+    raw = (
+        "Now I'll write the final output:\n\n"
+        "```json\n"
+        '{"roadmodel_txt": "...", "model_tier_cost_scale_md": "...", "summary": "...", "warnings": []}\n'
+        "```\n"
+        "\n"
+        "Building the real files:\n\n"
+        "```json\n"
+        '{"roadmodel_txt": "' + real_content + '", "model_tier_cost_scale_md": "real-content-2", "summary": "Refreshed", "warnings": []}\n'
+        "```"
+    )
+    parsed = parse_result(raw)
+    assert parsed["summary"] == "Refreshed"
+    assert parsed["roadmodel_txt"] == real_content
+    assert "<model-selector>" in parsed["roadmodel_txt"]
 
 
 def test_malformed_raises_json_decode_error() -> None:
