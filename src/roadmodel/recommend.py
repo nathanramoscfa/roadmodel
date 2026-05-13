@@ -1,4 +1,119 @@
 # src/roadmodel/recommend.py
-# TODO(Step 4): load the three bundled docs via importlib.resources, build the
-# system prompt, dispatch to the resolved provider, and parse the six-field
-# MODEL / PLATFORM / MAX MODE / THINKING / CONVERSATION / RATIONALE block.
+from __future__ import annotations
+
+import json
+import re
+from importlib import resources
+from importlib.resources.abc import Traversable
+from typing import Final
+
+from roadmodel.config import Config
+from roadmodel.errors import BundledDocNotFoundError, MalformedResponseError
+from roadmodel.providers import ProviderAdapter
+from roadmodel.providers import anthropic as anthropic_provider
+from roadmodel.providers import google as google_provider
+from roadmodel.providers import openai as openai_provider
+from roadmodel import user_context
+
+BUNDLED_SELECTOR_PATH: Traversable = resources.files("roadmodel.data") / "model-selector.txt"
+BUNDLED_TIER_COST_PATH: Traversable = resources.files("roadmodel.data") / "model-tier-cost-scale.md"
+BUNDLED_USER_CONTEXT_TEMPLATE_PATH: Traversable = (
+    resources.files("roadmodel.data") / "user-context.example.md"
+)
+
+_REQUIRED_KEYS: Final = ("model", "platform", "max_mode", "thinking", "conversation", "rationale")
+
+_RESPONSE_BLOCK_RE: Final = re.compile(
+    r"(?:^\s*PROMPT:\s*[^\n]*\n\s*)*"
+    r"MODEL:\s*(?P<model>[^\n]+)\s*\n"
+    r"PLATFORM:\s*(?P<platform>[^\n]+)\s*\n"
+    r"MAX\s+MODE:\s*(?P<max_mode>[^\n]+)\s*\n"
+    r"THINKING:\s*(?P<thinking>[^\n]+)\s*\n"
+    r"CONVERSATION:\s*(?P<conversation>[^\n]+)\s*\n"
+    r"RATIONALE:\s*(?P<rationale>.+?)(?=\n\s*(?:PROMPT:|MODEL:)|\Z)",
+    flags=re.IGNORECASE | re.MULTILINE | re.DOTALL,
+)
+
+PROVIDER_ADAPTERS: dict[str, ProviderAdapter] = {
+    "anthropic": anthropic_provider,
+    "openai": openai_provider,
+    "google": google_provider,
+}
+
+
+def _read_bundled_doc(path: Traversable, filename: str) -> str:
+    try:
+        return path.read_text(encoding="utf-8")
+    except FileNotFoundError as exc:
+        raise BundledDocNotFoundError(filename) from exc
+
+
+def build_prompt(user_prompt: str, *, user_context_text: str) -> tuple[str, str]:
+    selector_text = _read_bundled_doc(BUNDLED_SELECTOR_PATH, "model-selector.txt")
+    tier_cost_text = _read_bundled_doc(BUNDLED_TIER_COST_PATH, "model-tier-cost-scale.md")
+    _ = _read_bundled_doc(BUNDLED_USER_CONTEXT_TEMPLATE_PATH, "user-context.example.md")
+
+    header = (
+        "You are roadmodel. Follow the selector algorithm and return exactly one six-field block:\n"
+        "MODEL / PLATFORM / MAX MODE / THINKING / CONVERSATION / RATIONALE.\n"
+        "Do not emit extra sections or commentary.\n"
+    )
+    system = "\n\n".join(
+        [
+            header,
+            selector_text,
+            tier_cost_text,
+            user_context_text,
+        ]
+    )
+    return system, user_prompt
+
+
+def _normalize_dict_payload(payload: dict[str, object]) -> dict[str, str]:
+    normalized: dict[str, str] = {}
+    for key, value in payload.items():
+        normalized_key = key.strip().lower().replace(" ", "_")
+        if normalized_key not in _REQUIRED_KEYS:
+            continue
+        if isinstance(value, str):
+            normalized[normalized_key] = value.strip()
+        else:
+            normalized[normalized_key] = str(value).strip()
+    if all(normalized.get(key) for key in _REQUIRED_KEYS):
+        return {key: normalized[key] for key in _REQUIRED_KEYS}
+    raise ValueError("JSON payload missing required keys.")
+
+
+def parse_response(text: str) -> dict[str, str]:
+    stripped = text.strip()
+
+    try:
+        parsed = json.loads(stripped)
+    except json.JSONDecodeError:
+        parsed = None
+    if isinstance(parsed, dict):
+        try:
+            return _normalize_dict_payload(parsed)
+        except ValueError:
+            pass
+
+    regex_match = _RESPONSE_BLOCK_RE.search(text)
+    if regex_match:
+        parsed_block = {key: value.strip() for key, value in regex_match.groupdict().items()}
+        if all(parsed_block.get(key) for key in _REQUIRED_KEYS):
+            return parsed_block
+
+    raise MalformedResponseError(text)
+
+
+def recommend(prompt: str, config: Config) -> dict[str, str]:
+    user_context_text = user_context.read(config.user_context_path)
+    system_prompt, user_prompt = build_prompt(prompt, user_context_text=user_context_text)
+    adapter = PROVIDER_ADAPTERS[config.provider]
+    raw_response = adapter.recommend(
+        user_prompt,
+        system_prompt,
+        model=config.model,
+        api_key=config.api_key,
+    )
+    return parse_response(raw_response)
