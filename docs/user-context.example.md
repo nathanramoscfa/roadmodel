@@ -42,14 +42,14 @@ pool → subscription-included → per-token API → pay-as-you-go).
 | ----------------- | ------- | --------- | --------------------------------------------------------------------------- |
 | Cursor Ultra      | $XXX    | Cursor    | Token-pool budget across every model in Cursor's catalog; no Max Mode surcharge (token-based plan, not legacy request-based). |
 | claude.ai Max     | $XXX    | Anthropic | Opus / Sonnet / Haiku usage on claude.ai web, the Claude desktop apps, and Claude Code (CLI + IDE extension) under a shared monthly Max usage budget. Funds ~90% of total token volume. |
-| ChatGPT Pro       | $XXX    | OpenAI    | GPT model usage on the ChatGPT app (web / desktop) and Codex CLI under per-model usage caps. Funds ~9% of total token volume. |
+| ChatGPT Pro       | $XXX    | OpenAI    | GPT/Codex model usage via Codex (CLI binary and Cursor IDE extension) under per-model usage caps. Funds ~9% of total token volume. |
 
 ## Active API keys
 
 | Provider  | Key present | Notes                                                              |
 | --------- | ----------- | ------------------------------------------------------------------ |
 | Anthropic | Yes         | Direct API key for pay-as-you-go fallback when Max budget is spent or when a script needs programmatic access outside Claude Code. |
-| OpenAI    | Yes         | Direct API key for pay-as-you-go fallback when ChatGPT Pro caps are hit or when a script needs programmatic access outside Codex CLI. |
+| OpenAI    | Yes         | Direct API key for pay-as-you-go fallback when ChatGPT Pro caps are hit or when a script needs programmatic access outside Codex. |
 | Google    | No          | No paid Gemini Advanced; no Google AI Studio API key configured. Gemini accounts for ~1% of usage and runs via Cursor's pool only. |
 | xAI       | No          | No direct API key. Grok usage is negligible; Cursor's pool covers it if needed. |
 
@@ -82,15 +82,16 @@ two heavy-use providers and Cursor's pool absorbs the rest.
    $0 until the Max usage budget is exhausted. This is the primary
    surface for ~90% of total work; via Cursor's pool the same Claude
    usage would cost multiples of the Max plan.
-2. **Codex (Cursor extension or CLI)** for any GPT or Codex model
-   — funded by the $XXX/mo ChatGPT Pro subscription. Marginal cost
-   per call is $0 until per-model caps are hit. The Cursor-embedded
-   Codex chat panel is the primary UI for interactive multi-file
-   editing; Codex CLI is the same engine for terminal / autonomous-
-   loop work. Exposes Intelligence as the only reasoning dial (Low
-   / Medium / High / Extra High); no Max Mode or Thinking field on
-   this surface. Primary GPT surface, accounting for ~9% of total
-   token volume.
+2. **Codex** for any GPT or Codex model — funded by the $XXX/mo
+   ChatGPT Pro subscription. Marginal cost per call is $0 until
+   per-model caps are hit. Available as a CLI binary (pip-installed,
+   terminal-driven) and as a Cursor IDE extension (chat panel inside
+   Cursor with inline diff accept/reject); operator picks whichever
+   surface fits the task — same engine, same dials, same funding.
+   Exposes Intelligence as the only reasoning dial (Low / Medium /
+   High / Extra High); no Max Mode or Thinking field on this
+   surface. Primary GPT surface, accounting for ~9% of total token
+   volume.
 3. **Cursor Chat** with a GPT or Codex model selected — funded by
    the $XXX/mo Cursor Ultra token pool. Use when Cursor-native
    features (Max Mode for cross-file reasoning, inline file refs,
@@ -135,7 +136,7 @@ two heavy-use providers and Cursor's pool absorbs the rest.
   chain-of-thought across many files is required. The rationale
   paragraph must name whether thinking is on and at what level.
 - **GPT reasoning effort** — when a GPT model is selected and the
-  access method exposes the toggle (Codex CLI / OpenAI API / ChatGPT
+  access method exposes the toggle (Codex / OpenAI API / ChatGPT
   app advanced controls), default to `medium`; escalate to `high` for
   any High-complexity prompt; escalate further to `xhigh` /
   `extra-high` (mapped to THINKING `XHigh` in the output format) for

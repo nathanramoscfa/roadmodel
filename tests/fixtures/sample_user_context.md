@@ -6,7 +6,7 @@
 | ------------- | ------- | --------- | ---------------- |
 | Cursor Ultra  | $200    | Cursor    | Shared token pool across Cursor models. |
 | claude.ai Max | $100    | Anthropic | Claude models in Claude Code and claude.ai. |
-| ChatGPT Plus  | $20     | OpenAI    | GPT models in ChatGPT and Codex CLI. |
+| ChatGPT Plus  | $20     | OpenAI    | GPT models in ChatGPT and Codex. |
 
 ## Active API keys
 
@@ -20,7 +20,7 @@
 ## Platform preference order
 
 1. Claude Code
-2. Codex CLI
+2. Codex
 3. ChatGPT app
 4. Cursor Ultra pool
 5. Anthropic API direct
