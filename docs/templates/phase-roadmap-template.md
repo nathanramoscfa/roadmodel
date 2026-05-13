@@ -40,16 +40,25 @@ STYLE RULES (the AI MUST follow)
     and for the XML <task> prompts handed to coding agents.
   - Numbered steps (## Step N — Title). Each step is a
     self-contained Cursor / Claude Code session.
-  - Every step carries: Goal blockquote, Settings table
-    (Model / Platform / Max Mode / Thinking / Conversation),
+  - Every step carries: Goal blockquote, Settings table,
     Model rationale paragraph, XML <task> prompt, and an
-    Acceptance Criteria bullet list. The Settings table MUST
-    include Platform (the access method picked by
-    `<access-selection>` in docs/model-selector.txt against
-    docs/user-context.md) and Thinking (Off/Low/Medium/High
-    /N/A per `<thinking-context>`); the rationale paragraph
-    MUST name the subscription or API key that pays for the
-    chosen Platform.
+    Acceptance Criteria bullet list. The Settings table is
+    PLATFORM-specific so it mirrors the actual surface the
+    operator will see:
+      • Claude Code: Model / Platform / Effort / Thinking
+        (On/Off) / Conversation. Effort values are Low /
+        Medium / High / Extra High. There is no Max Mode
+        dial on this surface.
+      • Cursor / Codex / ChatGPT / API: Model / Platform /
+        Max Mode / Thinking (Off/Low/Medium/High/XHigh/N/A)
+        / Conversation.
+    Every Settings table MUST include Platform (the access
+    method picked by `<access-selection>` in
+    docs/model-selector.txt against docs/user-context.md);
+    the rationale paragraph MUST name the subscription or
+    API key that pays for the chosen Platform AND justify
+    each dial value using the surface's native vocabulary
+    (Effort vs Max Mode, On/Off vs reasoning level).
   - End the document with a Post-Implementation Verification
     section (V1-Vn check tables), a Summary Table, optional
     Model-selection blocks, and a Not-in-scope section.
@@ -317,15 +326,42 @@ arrows:
      "Sonnet 4.6 via Claude Code" reads very differently
      from "Sonnet 4.6 via Anthropic API" on the cost line.
 
-     THINKING is the extended-thinking / reasoning-effort
-     level: Off / Low / Medium / High / XHigh / N/A. N/A
-     applies when PLATFORM is a surface that does not expose
-     the toggle (e.g. Cursor Composer, Cursor Chat). Map
-     from overall complexity per `<thinking-context>`:
-     Low → Off, Medium → Medium, High → High, High with
-     novel problem-solving or cross-file multi-step proof →
-     XHigh; bump up one level for planning / knowledge
-     prompts with cross-cutting scope. -->
+     SETTINGS TABLE SHAPE IS PLATFORM-SPECIFIC. Each
+     surface exposes a different tuning UI, and the table
+     MUST mirror what the operator will actually see in
+     that surface so reviewers can audit the choice
+     1:1 against the panel.
+
+     CLAUDE CODE variant (use when PLATFORM is "Claude
+     Code"). The Settings panel exposes Model, Effort, and
+     a Thinking on/off toggle — there is NO Max Mode dial
+     on this surface. Table rows: Model / Platform /
+     Effort / Thinking / Conversation. EFFORT values: Low
+     / Medium / High / Extra High. Map from overall
+     complexity per `<thinking-context>`: Low → Low,
+     Medium → Medium, High → High, High with novel
+     problem-solving or cross-file multi-step proof →
+     Extra High; bump up one level for planning /
+     knowledge prompts with cross-cutting scope. THINKING
+     values: On / Off. Default On for any step where
+     extended reasoning is desirable; Off only when the
+     step is purely mechanical and latency matters.
+
+     CURSOR / CODEX / CHATGPT / API variant (use for every
+     other PLATFORM). Table rows: Model / Platform /
+     Max Mode / Thinking / Conversation. MAX MODE values:
+     ON / OFF (Cursor-specific dial; on non-Cursor
+     surfaces resolve to ON when the rationale calls for
+     extended cross-file reasoning, OFF otherwise — the
+     value still documents intent even when the surface
+     lacks the literal toggle). THINKING values: Off / Low
+     / Medium / High / XHigh / N/A. N/A applies when the
+     PLATFORM does not expose the toggle (e.g. Cursor
+     Composer, Cursor Chat). -->
+
+Settings table — Cursor / Codex / ChatGPT / API variant
+({{use this shape when PLATFORM is anything OTHER than
+"Claude Code"}}):
 
 | Setting      | Value                       |
 | ------------ | --------------------------- |
@@ -334,6 +370,19 @@ arrows:
 | Max Mode     | {{ON or OFF}}               |
 | Thinking     | {{Off/Low/Medium/High/XHigh/N/A}} |
 | Conversation | **{{New or Continue}}**     |
+
+Settings table — Claude Code variant ({{use this shape
+when PLATFORM is "Claude Code"; the Claude Code Settings
+panel exposes Effort + Thinking toggle, not Max Mode +
+Thinking levels}}):
+
+| Setting      | Value                          |
+| ------------ | ------------------------------ |
+| Model        | {{Model name}}                 |
+| Platform     | Claude Code                    |
+| Effort       | {{Low/Medium/High/Extra High}} |
+| Thinking     | {{On or Off}}                  |
+| Conversation | **{{New or Continue}}**        |
 
 **Model rationale:** {{3-5 sentences explaining the choice.
 Lead with the task characteristics (long-running agentic
@@ -345,11 +394,14 @@ for it (claude.ai Max funding Claude Code, Cursor Ultra pool
 funding Cursor Composer, Anthropic API direct as
 pay-per-token fallback, etc.) — this is the line that
 distinguishes "Sonnet 4.6 on a flat $100/mo Max plan" from
-"Sonnet 4.6 burning $15/M output tokens." Note why Max Mode
-is on or off, why THINKING is at the stated level (or N/A
-because the PLATFORM does not expose the toggle), and why
-the conversation is new or continued (almost always "New
-per phase-boundary hygiene").}}
+"Sonnet 4.6 burning $15/M output tokens." Note the tuning
+choices in the language of the actual surface: for Claude
+Code, why EFFORT is at the stated level and why THINKING is
+on or off; for every other PLATFORM, why MAX MODE is on or
+off and why THINKING is at the stated level (or N/A because
+the surface does not expose the toggle). Close with why the
+conversation is new or continued (almost always "New per
+phase-boundary hygiene").}}
 
 ```xml
 <task>
@@ -447,6 +499,12 @@ per phase-boundary hygiene").}}
 
 > **Goal:** One paragraph.
 
+{{Settings table — pick the variant that matches PLATFORM
+per the Step 1 guidance. Cursor / Codex / ChatGPT / API
+variant uses Model / Platform / Max Mode / Thinking /
+Conversation. Claude Code variant uses Model / Platform /
+Effort / Thinking / Conversation.}}
+
 | Setting      | Value                       |
 | ------------ | --------------------------- |
 | Model        | {{Model name}}              |
@@ -456,9 +514,12 @@ per phase-boundary hygiene").}}
 | Conversation | **{{New or Continue}}**     |
 
 **Model rationale:** 3-5 sentences. Name the PLATFORM and
-the subscription or API key that pays for it. State why
-THINKING is at the stated level (or N/A because the PLATFORM
-does not expose the toggle).
+the subscription or API key that pays for it. For Claude
+Code, state why EFFORT is at the stated level and why
+THINKING is on or off. For every other PLATFORM, state why
+MAX MODE is on or off and why THINKING is at the stated
+level (or N/A because the surface does not expose the
+toggle).
 
 ```xml
 <task>
@@ -523,6 +584,11 @@ step is ALWAYS "QA + verify-phaseN.sh".
 > checks (Lighthouse CI, regression sweep, day-completeness
 > validator, readiness report consolidator, etc.).
 
+{{Settings table — pick the variant that matches PLATFORM
+per the Step 1 guidance. The Claude Code variant uses
+Effort + Thinking-toggle in place of Max Mode + Thinking-
+levels.}}
+
 | Setting      | Value                       |
 | ------------ | --------------------------- |
 | Model        | {{Model}}                   |
@@ -534,9 +600,11 @@ step is ALWAYS "QA + verify-phaseN.sh".
 **Model rationale:** Why this model fits the mechanical
 translation of the prior verify-script template into this
 phase's deliverables. Name the PLATFORM and the subscription
-or API key that pays for it. State why THINKING is at the
-stated level (or N/A because the PLATFORM does not expose
-the toggle).
+or API key that pays for it. For Claude Code, state why
+EFFORT is at the stated level and why THINKING is on or off.
+For every other PLATFORM, state why MAX MODE is on or off
+and why THINKING is at the stated level (or N/A because the
+surface does not expose the toggle).
 
 ```xml
 <task>
@@ -903,16 +971,26 @@ corresponding row below.
 
 ## Summary Table
 
-| Step    | Scope                     | Model       | Platform     | Max | Thinking      | Conv |
-| ------- | ------------------------- | ----------- | ------------ | --- | ------------- | ---- |
-| 1       | {{Step 1 short scope}}    | {{Model}}   | {{Platform}} | ON  | {{level/N/A}} | New  |
-| 2       | {{Step 2 short scope}}    | {{Model}}   | {{Platform}} | ON  | {{level/N/A}} | New  |
-| ...     | ...                       | ...         | ...          | ... | ...           | ...  |
-| {{N}}   | QA + verify-phase{{N}}.sh | {{Model}}   | {{Platform}} | ON  | {{level/N/A}} | New  |
-| V1      | {{Step 1 scope}}          | CI: {{wf}}  | --           | --  | --            | --   |
-| V2      | {{Step 2 scope}}          | CI: {{wf}}  | --           | --  | --            | --   |
-| ...     | ...                       | ...         | --           | --  | --            | --   |
-| V{{N}}  | CI integration            | CI: phase-verify.yml | -- | -- | --            | --   |
+<!-- Summary Table column "Max/Effort" carries whichever
+     dial the step's PLATFORM exposes. For Claude Code
+     rows, write "Effort {{Low/Med/High/XHigh}}". For
+     every other PLATFORM, write "Max ON" or "Max OFF".
+     The "Thinking" column carries the platform-native
+     value: On/Off for Claude Code, Off/Low/Medium/High/
+     XHigh/N/A for every other PLATFORM. Mirroring the
+     surface here lets reviewers audit each row 1:1
+     against the panel the operator will actually see. -->
+
+| Step    | Scope                     | Model       | Platform     | Max/Effort      | Thinking         | Conv |
+| ------- | ------------------------- | ----------- | ------------ | --------------- | ---------------- | ---- |
+| 1       | {{Step 1 short scope}}    | {{Model}}   | {{Platform}} | {{Max ON/OFF or Effort Low/Med/High/XHigh}} | {{level / On / Off / N/A}} | New  |
+| 2       | {{Step 2 short scope}}    | {{Model}}   | {{Platform}} | {{Max ON/OFF or Effort Low/Med/High/XHigh}} | {{level / On / Off / N/A}} | New  |
+| ...     | ...                       | ...         | ...          | ...             | ...              | ...  |
+| {{N}}   | QA + verify-phase{{N}}.sh | {{Model}}   | {{Platform}} | {{Max ON/OFF or Effort Low/Med/High/XHigh}} | {{level / On / Off / N/A}} | New  |
+| V1      | {{Step 1 scope}}          | CI: {{wf}}  | --           | --              | --               | --   |
+| V2      | {{Step 2 scope}}          | CI: {{wf}}  | --           | --              | --               | --   |
+| ...     | ...                       | ...         | --           | --              | --               | --   |
+| V{{N}}  | CI integration            | CI: phase-verify.yml | --  | --              | --               | --   |
 
 ---
 
@@ -932,10 +1010,23 @@ Include this section if your project has a roadmodel
 audit tool that consumes the text format. Skip it if not.
 -->
 
+<!-- Block field shape is platform-specific, mirroring the
+     per-step Settings tables. For Claude Code, replace the
+     "MAX MODE" line with "EFFORT: {{Low/Medium/High/Extra
+     High}}" and write "THINKING: On" or "THINKING: Off".
+     For every other PLATFORM, keep "MAX MODE: {{On or Off}}"
+     and write "THINKING: {{Off/Low/Medium/High/XHigh/N/A}}".
+     The roadmodel audit tool keys on the PLATFORM line to
+     decide which dial-name to expect. -->
+
 ```text
 PROMPT: Step 1 — {{step title}}
 MODEL: {{model}}
 PLATFORM: {{access method name}}
+{{For Claude Code:}}
+EFFORT: {{Low/Medium/High/Extra High}}
+THINKING: {{On or Off}}
+{{For every other PLATFORM:}}
 MAX MODE: {{On or Off}}
 THINKING: {{Off/Low/Medium/High/XHigh/N/A}}
 CONVERSATION: {{New or Continue}}
@@ -944,33 +1035,35 @@ Model-rationale paragraph, condensed for audit. Lead with
 the task characteristic (e.g. "Long-running autonomous
 coding session spanning X + Y + Z"), name the model's
 strength that fits, name the subscription or API key that
-pays for the PLATFORM, state why THINKING is at the chosen
-level (or N/A and why), and close with "New per phase-
+pays for the PLATFORM, state why EFFORT/MAX MODE and
+THINKING are at the chosen values (use the dial names of
+the actual surface), and close with "New per phase-
 boundary hygiene." Keep to 3-5 sentences.}}
 
 PROMPT: Step 2 — {{step title}}
 MODEL: {{model}}
 PLATFORM: {{access method name}}
-MAX MODE: {{On or Off}}
-THINKING: {{Off/Low/Medium/High/XHigh/N/A}}
+{{Claude Code → EFFORT + THINKING(On/Off);
+every other PLATFORM → MAX MODE + THINKING(level/N/A)}}
 CONVERSATION: {{New or Continue}}
 RATIONALE: {{Same shape as Step 1 — task characteristic,
-model strength, PLATFORM funding source, THINKING justification,
-hygiene note.}}
+model strength, PLATFORM funding source, dial-value
+justification in the surface's native vocabulary, hygiene
+note.}}
 
 PROMPT: Step 3 — {{step title}}
 MODEL: {{model}}
 PLATFORM: {{access method name}}
-MAX MODE: {{On or Off}}
-THINKING: {{Off/Low/Medium/High/XHigh/N/A}}
+{{Claude Code → EFFORT + THINKING(On/Off);
+every other PLATFORM → MAX MODE + THINKING(level/N/A)}}
 CONVERSATION: {{New or Continue}}
 RATIONALE: {{...}}
 
 PROMPT: Step {{N}} — QA + verify-phase{{N}}.sh
 MODEL: {{model}}
 PLATFORM: {{access method name}}
-MAX MODE: {{On or Off}}
-THINKING: {{Off/Low/Medium/High/XHigh/N/A}}
+{{Claude Code → EFFORT + THINKING(On/Off);
+every other PLATFORM → MAX MODE + THINKING(level/N/A)}}
 CONVERSATION: {{New or Continue}}
 RATIONALE: {{Mechanical translation of the prior verify-
 script template into this phase's deliverables; known
