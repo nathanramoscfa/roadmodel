@@ -136,9 +136,9 @@ differently:
   output.
 - Gemini (Google API, Gemini CLI): thinking-budget setting in
   tokens.
-- Cursor Composer / Chat: usually inherits the underlying model's
-  thinking behavior but does not expose the toggle in the IDE
-  surface.
+- Cursor: usually inherits the underlying model's thinking
+  behavior but does not expose the toggle in the IDE surface
+  (true in both Composer mode and Chat mode).
 
 Output mapping (the THINKING field of the output format):
 `Off` / `Low` / `Medium` / `High` / `XHigh` / `N/A`. Map
@@ -153,8 +153,9 @@ provider-native scales onto this 6-state field:
 - Gemini thinking-budget 0 → `Off`; small → `Low`; medium →
   `Medium`; large → `High`; very large → `XHigh`.
 - `N/A` when the chosen access method does not expose a thinking
-  toggle (e.g. Cursor Composer / Cursor Chat), regardless of
-  whether the underlying model supports one.
+  toggle (e.g. Cursor — neither its Composer mode nor its Chat
+  mode surfaces the dial), regardless of whether the underlying
+  model supports one.
 
 Decision rule (applied during `<access-selection>` Step E):
 - Overall complexity from `<selection-algorithm>` Step 2 Low →
@@ -173,10 +174,11 @@ Decision rule (applied during `<access-selection>` Step E):
 - Chosen access method's `exposes-thinking` attribute is `no` →
   THINKING `N/A`, overriding the above.
 
-Thinking and Max Mode are orthogonal: a Cursor Chat call may have
-Max Mode On and THINKING `N/A` (Cursor does not expose the toggle);
-a Claude Code call may have Max Mode Off and THINKING `High`
-(Anthropic's surface exposes thinking, not Max Mode).
+Thinking and Max Mode are orthogonal: a Cursor call may have
+Max Mode On and THINKING `N/A` (Cursor does not expose the
+thinking toggle); a Claude Code call may have Max Mode Off and
+THINKING `High` (Anthropic's surface exposes thinking, not Max
+Mode).
 
 ## Benchmark Sources
 
@@ -414,9 +416,9 @@ Tier ratings:
       output.
     - Gemini (Google API, Gemini CLI): thinking-budget setting in
       tokens.
-    - Cursor Composer / Chat: usually inherits the underlying model's
-      thinking behavior but does not expose the toggle in the IDE
-      surface.
+    - Cursor: usually inherits the underlying model's thinking
+      behavior but does not expose the toggle in the IDE surface
+      (true in both Composer mode and Chat mode).
 
     Output mapping (the THINKING field of the output format):
     `Off` / `Low` / `Medium` / `High` / `XHigh` / `N/A`. Map
@@ -431,8 +433,9 @@ Tier ratings:
     - Gemini thinking-budget 0 → `Off`; small → `Low`; medium →
       `Medium`; large → `High`; very large → `XHigh`.
     - `N/A` when the chosen access method does not expose a thinking
-      toggle (e.g. Cursor Composer / Cursor Chat), regardless of
-      whether the underlying model supports one.
+      toggle (e.g. Cursor — neither its Composer mode nor its Chat
+      mode surfaces the dial), regardless of whether the underlying
+      model supports one.
 
     Decision rule (applied during `<access-selection>` Step E):
     - Overall complexity from `<selection-algorithm>` Step 2 Low →
@@ -451,10 +454,11 @@ Tier ratings:
     - Chosen access method's `exposes-thinking` attribute is `no` →
       THINKING `N/A`, overriding the above.
 
-    Thinking and Max Mode are orthogonal: a Cursor Chat call may have
-    Max Mode On and THINKING `N/A` (Cursor does not expose the toggle);
-    a Claude Code call may have Max Mode Off and THINKING `High`
-    (Anthropic's surface exposes thinking, not Max Mode).
+    Thinking and Max Mode are orthogonal: a Cursor call may have
+    Max Mode On and THINKING `N/A` (Cursor does not expose the
+    thinking toggle); a Claude Code call may have Max Mode Off and
+    THINKING `High` (Anthropic's surface exposes thinking, not Max
+    Mode).
   </thinking-context>
 
   <benchmark-sources>
@@ -737,19 +741,12 @@ Tier ratings:
 
 ### Cursor
 
-#### Cursor Composer — `cursor-composer`
+#### Cursor — `cursor`
 
 - **Billing:** subscription-pool (requires cursor-pro-or-ultra-subscription)
-- **Supports models:** composer-2,auto,premium
+- **Supports models:** opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gemini-3.1-pro,premium,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,auto
 - **Toggles:** Max Mode — yes · Thinking — no
-- **Best for:** Cursor's multi-file editing agent. Composer-family models (composer-2 default) at $0 marginal cost from the Cursor pool. Default for routine roadmap-execution coding when coding-A is sufficient.
-
-#### Cursor Chat — `cursor-chat`
-
-- **Billing:** subscription-pool (requires cursor-pro-or-ultra-subscription)
-- **Supports models:** opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gemini-3.1-pro,premium,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano
-- **Toggles:** Max Mode — yes · Thinking — no
-- **Best for:** Cursor's IDE Chat surface for frontier-model use against the Cursor pool. Pick over the per-token APIs when Cursor Pro/Ultra is active — but defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path).
+- **Best for:** Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / auto / premium imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path).
 
 ## Selection Algorithm
 
@@ -854,9 +851,9 @@ Tier ratings:
       output.
     - Gemini (Google API, Gemini CLI): thinking-budget setting in
       tokens.
-    - Cursor Composer / Chat: usually inherits the underlying model's
-      thinking behavior but does not expose the toggle in the IDE
-      surface.
+    - Cursor: usually inherits the underlying model's thinking
+      behavior but does not expose the toggle in the IDE surface
+      (true in both Composer mode and Chat mode).
 
     Output mapping (the THINKING field of the output format):
     `Off` / `Low` / `Medium` / `High` / `XHigh` / `N/A`. Map
@@ -871,8 +868,9 @@ Tier ratings:
     - Gemini thinking-budget 0 → `Off`; small → `Low`; medium →
       `Medium`; large → `High`; very large → `XHigh`.
     - `N/A` when the chosen access method does not expose a thinking
-      toggle (e.g. Cursor Composer / Cursor Chat), regardless of
-      whether the underlying model supports one.
+      toggle (e.g. Cursor — neither its Composer mode nor its Chat
+      mode surfaces the dial), regardless of whether the underlying
+      model supports one.
 
     Decision rule (applied during `<access-selection>` Step E):
     - Overall complexity from `<selection-algorithm>` Step 2 Low →
@@ -891,10 +889,11 @@ Tier ratings:
     - Chosen access method's `exposes-thinking` attribute is `no` →
       THINKING `N/A`, overriding the above.
 
-    Thinking and Max Mode are orthogonal: a Cursor Chat call may have
-    Max Mode On and THINKING `N/A` (Cursor does not expose the toggle);
-    a Claude Code call may have Max Mode Off and THINKING `High`
-    (Anthropic's surface exposes thinking, not Max Mode).
+    Thinking and Max Mode are orthogonal: a Cursor call may have
+    Max Mode On and THINKING `N/A` (Cursor does not expose the
+    thinking toggle); a Claude Code call may have Max Mode Off and
+    THINKING `High` (Anthropic's surface exposes thinking, not Max
+    Mode).
   </thinking-context>
 
   <benchmark-sources>
@@ -1157,18 +1156,12 @@ Tier ratings:
             supports-models="grok-4.3"
             exposes-max-mode="no" exposes-thinking="no"
             best-for="Direct Grok API access for 2M-context or hallucination-resistant tasks; pay-per-token at xAI's published rates." />
-    <method id="cursor-composer" name="Cursor Composer"
+    <method id="cursor" name="Cursor"
             provider="cursor" billing="subscription-pool"
             requires="cursor-pro-or-ultra-subscription"
-            supports-models="composer-2,auto,premium"
+            supports-models="opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gemini-3.1-pro,premium,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,auto"
             exposes-max-mode="yes" exposes-thinking="no"
-            best-for="Cursor's multi-file editing agent. Composer-family models (composer-2 default) at $0 marginal cost from the Cursor pool. Default for routine roadmap-execution coding when coding-A is sufficient." />
-    <method id="cursor-chat" name="Cursor Chat"
-            provider="cursor" billing="subscription-pool"
-            requires="cursor-pro-or-ultra-subscription"
-            supports-models="opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gemini-3.1-pro,premium,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano"
-            exposes-max-mode="yes" exposes-thinking="no"
-            best-for="Cursor's IDE Chat surface for frontier-model use against the Cursor pool. Pick over the per-token APIs when Cursor Pro/Ultra is active — but defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)." />
+            best-for="Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / auto / premium imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)." />
   </access-methods>
 
   <selection-algorithm>
@@ -1338,9 +1331,9 @@ Tier ratings:
       output.
     - Gemini (Google API, Gemini CLI): thinking-budget setting in
       tokens.
-    - Cursor Composer / Chat: usually inherits the underlying model's
-      thinking behavior but does not expose the toggle in the IDE
-      surface.
+    - Cursor: usually inherits the underlying model's thinking
+      behavior but does not expose the toggle in the IDE surface
+      (true in both Composer mode and Chat mode).
 
     Output mapping (the THINKING field of the output format):
     `Off` / `Low` / `Medium` / `High` / `XHigh` / `N/A`. Map
@@ -1355,8 +1348,9 @@ Tier ratings:
     - Gemini thinking-budget 0 → `Off`; small → `Low`; medium →
       `Medium`; large → `High`; very large → `XHigh`.
     - `N/A` when the chosen access method does not expose a thinking
-      toggle (e.g. Cursor Composer / Cursor Chat), regardless of
-      whether the underlying model supports one.
+      toggle (e.g. Cursor — neither its Composer mode nor its Chat
+      mode surfaces the dial), regardless of whether the underlying
+      model supports one.
 
     Decision rule (applied during `<access-selection>` Step E):
     - Overall complexity from `<selection-algorithm>` Step 2 Low →
@@ -1375,10 +1369,11 @@ Tier ratings:
     - Chosen access method's `exposes-thinking` attribute is `no` →
       THINKING `N/A`, overriding the above.
 
-    Thinking and Max Mode are orthogonal: a Cursor Chat call may have
-    Max Mode On and THINKING `N/A` (Cursor does not expose the toggle);
-    a Claude Code call may have Max Mode Off and THINKING `High`
-    (Anthropic's surface exposes thinking, not Max Mode).
+    Thinking and Max Mode are orthogonal: a Cursor call may have
+    Max Mode On and THINKING `N/A` (Cursor does not expose the
+    thinking toggle); a Claude Code call may have Max Mode Off and
+    THINKING `High` (Anthropic's surface exposes thinking, not Max
+    Mode).
   </thinking-context>
 
   <benchmark-sources>
@@ -1641,18 +1636,12 @@ Tier ratings:
             supports-models="grok-4.3"
             exposes-max-mode="no" exposes-thinking="no"
             best-for="Direct Grok API access for 2M-context or hallucination-resistant tasks; pay-per-token at xAI's published rates." />
-    <method id="cursor-composer" name="Cursor Composer"
+    <method id="cursor" name="Cursor"
             provider="cursor" billing="subscription-pool"
             requires="cursor-pro-or-ultra-subscription"
-            supports-models="composer-2,auto,premium"
+            supports-models="opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gemini-3.1-pro,premium,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,auto"
             exposes-max-mode="yes" exposes-thinking="no"
-            best-for="Cursor's multi-file editing agent. Composer-family models (composer-2 default) at $0 marginal cost from the Cursor pool. Default for routine roadmap-execution coding when coding-A is sufficient." />
-    <method id="cursor-chat" name="Cursor Chat"
-            provider="cursor" billing="subscription-pool"
-            requires="cursor-pro-or-ultra-subscription"
-            supports-models="opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gemini-3.1-pro,premium,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano"
-            exposes-max-mode="yes" exposes-thinking="no"
-            best-for="Cursor's IDE Chat surface for frontier-model use against the Cursor pool. Pick over the per-token APIs when Cursor Pro/Ultra is active — but defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)." />
+            best-for="Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / auto / premium imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)." />
   </access-methods>
 
   <selection-algorithm>
@@ -1749,9 +1738,12 @@ Tier ratings:
         3. `subscription-or-key` methods backed only by an API key,
            and `per-token` methods (real dollars per call).
       Within a tier, prefer the access method whose surface matches
-      the task — Claude Code over claude.ai web for coding,
-      cursor-composer over cursor-chat for routine multi-file editing,
-      Codex over ChatGPT app for autonomous coding sessions.
+      the task — Claude Code over claude.ai web for coding, Codex
+      over ChatGPT app for autonomous coding sessions. Cursor's
+      Composer vs Chat UI modes are both reached via the single
+      `cursor` access method — the operator picks the mode at task
+      time based on the chosen Model (composer-2 / auto / premium
+      imply Composer mode; frontier models imply Chat mode).
 
     Step D — Apply user-context.md preference overrides.
       docs/user-context.md may set a preferred platform order. When
@@ -1794,13 +1786,14 @@ Tier ratings:
       already paid can serve the call. Subscriptions are sunk cost;
       a per-token call is real cash out.
     - When the chosen model is a Cursor-only model (composer-2, auto,
-      premium), the only valid access methods are cursor-composer and
-      cursor-chat. `premium` always uses cursor-chat (it is a
-      Cursor-managed routing mode).
+      premium), the only valid access method is `cursor` (the
+      operator uses Composer mode for composer-2 / auto and Chat
+      mode for premium — `premium` is a Cursor-managed routing
+      label inside Chat).
     - When the chosen model is Claude (opus-4.7, sonnet-4.6, claude-
       4.5-haiku) AND the user has both claude-max-subscription and
       cursor-pro-or-ultra-subscription active, prefer claude-code (or
-      claude-web for non-coding tasks) over cursor-chat — the Max
+      claude-web for non-coding tasks) over `cursor` — the Max
       subscription is dedicated Claude budget that the Cursor pool
       cannot substitute for, while the Cursor pool can absorb OpenAI /
       Google / xAI calls that have no other paid path.
