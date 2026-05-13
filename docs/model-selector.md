@@ -288,6 +288,14 @@ Tier ratings:
 - **Pricing notes:** Requires Max Mode on request-based plans; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.3-codex-high
 - **Best for:** Highest terminal and tool-use proficiency at the medium tier, most token-efficient autonomous coding, excels at long-running agentic sessions spanning debugging through deployment, and hard algorithmic problems requiring sustained code reasoning across languages — the cost-efficient pick for pure coding and agentic execution when an S-tier coding rating is needed
 
+#### GPT-5.2 — `gpt-5.2`
+
+- **Pricing:** Input $1.75/M · Output $14.00/M
+- **Tier ratings:** Coding **B** · Planning **A** · Agentic **B** · Multimodal **C** · Long-context **A** · Knowledge **A** · Speed **B**
+- **Headline benchmarks:** MMLU Pro 81.4; GPQA 71.2; LiveCodeBench 66.9; 400K-token context; output speed 68 tokens/s; released 2025-12-10
+- **Pricing notes:** Hidden by default; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.2-high
+- **Best for:** Earlier-flagship GPT reasoning model (December 2025) with 400K context and broad knowledge coverage (GPQA 71.2, MMLU Pro 81.4); same medium-tier pricing as GPT-5.3 Codex but lacks Codex's autonomous-coding specialization — pick gpt-5.3-codex over gpt-5.2 for coding/agentic tasks; gpt-5.2 fits when broad reasoning at A-tier knowledge and a 400K context window are the primary need at the medium price tier
+
 #### Gemini 3.1 Pro — `gemini-3.1-pro`
 
 - **Pricing:** Input $2.00/M · Output $12.00/M
@@ -567,6 +575,14 @@ Tier ratings:
              headline-benchmarks="GPT-5.3 Codex (xhigh) listed on AA leaderboards; Codex lineage retains strong Terminal-Bench and SWE-bench Verified performance for autonomous coding"
              pricing-notes="Requires Max Mode on request-based plans; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.3-codex-high"
              best-for="Highest terminal and tool-use proficiency at the medium tier, most token-efficient autonomous coding, excels at long-running agentic sessions spanning debugging through deployment, and hard algorithmic problems requiring sustained code reasoning across languages — the cost-efficient pick for pure coding and agentic execution when an S-tier coding rating is needed" />
+      <model id="gpt-5.2" name="GPT-5.2"
+             input-price-per-1m="$1.75" output-price-per-1m="$14.00"
+             tier-coding="B" tier-planning="A" tier-agentic="B"
+             tier-multimodal="C" tier-long-context="A" tier-knowledge="A"
+             tier-speed="B"
+             headline-benchmarks="MMLU Pro 81.4; GPQA 71.2; LiveCodeBench 66.9; 400K-token context; output speed 68 tokens/s; released 2025-12-10"
+             pricing-notes="Hidden by default; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.2-high"
+             best-for="Earlier-flagship GPT reasoning model (December 2025) with 400K context and broad knowledge coverage (GPQA 71.2, MMLU Pro 81.4); same medium-tier pricing as GPT-5.3 Codex but lacks Codex's autonomous-coding specialization — pick gpt-5.3-codex over gpt-5.2 for coding/agentic tasks; gpt-5.2 fits when broad reasoning at A-tier knowledge and a 400K context window are the primary need at the medium price tier" />
       <model id="gemini-3.1-pro" name="Gemini 3.1 Pro"
              input-price-per-1m="$2.00" output-price-per-1m="$12.00"
              tier-coding="A" tier-planning="A" tier-agentic="A"
@@ -696,7 +712,7 @@ Tier ratings:
 #### Codex — `codex-cli`
 
 - **Billing:** subscription-or-key (requires chatgpt-subscription OR openai-api-key)
-- **Supports models:** gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.4-mini
+- **Supports models:** gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.4-mini
 - **Toggles:** Max Mode — no · Thinking — yes
 - **Best for:** Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex on long-running terminal / agentic work.
 
@@ -1002,6 +1018,14 @@ Tier ratings:
              headline-benchmarks="GPT-5.3 Codex (xhigh) listed on AA leaderboards; Codex lineage retains strong Terminal-Bench and SWE-bench Verified performance for autonomous coding"
              pricing-notes="Requires Max Mode on request-based plans; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.3-codex-high"
              best-for="Highest terminal and tool-use proficiency at the medium tier, most token-efficient autonomous coding, excels at long-running agentic sessions spanning debugging through deployment, and hard algorithmic problems requiring sustained code reasoning across languages — the cost-efficient pick for pure coding and agentic execution when an S-tier coding rating is needed" />
+      <model id="gpt-5.2" name="GPT-5.2"
+             input-price-per-1m="$1.75" output-price-per-1m="$14.00"
+             tier-coding="B" tier-planning="A" tier-agentic="B"
+             tier-multimodal="C" tier-long-context="A" tier-knowledge="A"
+             tier-speed="B"
+             headline-benchmarks="MMLU Pro 81.4; GPQA 71.2; LiveCodeBench 66.9; 400K-token context; output speed 68 tokens/s; released 2025-12-10"
+             pricing-notes="Hidden by default; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.2-high"
+             best-for="Earlier-flagship GPT reasoning model (December 2025) with 400K context and broad knowledge coverage (GPQA 71.2, MMLU Pro 81.4); same medium-tier pricing as GPT-5.3 Codex but lacks Codex's autonomous-coding specialization — pick gpt-5.3-codex over gpt-5.2 for coding/agentic tasks; gpt-5.2 fits when broad reasoning at A-tier knowledge and a 400K context window are the primary need at the medium price tier" />
       <model id="gemini-3.1-pro" name="Gemini 3.1 Pro"
              input-price-per-1m="$2.00" output-price-per-1m="$12.00"
              tier-coding="A" tier-planning="A" tier-agentic="A"
@@ -1123,7 +1147,7 @@ Tier ratings:
     <method id="codex-cli" name="Codex"
             provider="openai" billing="subscription-or-key"
             requires="chatgpt-subscription OR openai-api-key"
-            supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.4-mini"
+            supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.4-mini"
             exposes-max-mode="no" exposes-thinking="yes"
             best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex on long-running terminal / agentic work." />
     <method id="chatgpt-app" name="ChatGPT (web / desktop)"
@@ -1482,6 +1506,14 @@ Tier ratings:
              headline-benchmarks="GPT-5.3 Codex (xhigh) listed on AA leaderboards; Codex lineage retains strong Terminal-Bench and SWE-bench Verified performance for autonomous coding"
              pricing-notes="Requires Max Mode on request-based plans; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.3-codex-high"
              best-for="Highest terminal and tool-use proficiency at the medium tier, most token-efficient autonomous coding, excels at long-running agentic sessions spanning debugging through deployment, and hard algorithmic problems requiring sustained code reasoning across languages — the cost-efficient pick for pure coding and agentic execution when an S-tier coding rating is needed" />
+      <model id="gpt-5.2" name="GPT-5.2"
+             input-price-per-1m="$1.75" output-price-per-1m="$14.00"
+             tier-coding="B" tier-planning="A" tier-agentic="B"
+             tier-multimodal="C" tier-long-context="A" tier-knowledge="A"
+             tier-speed="B"
+             headline-benchmarks="MMLU Pro 81.4; GPQA 71.2; LiveCodeBench 66.9; 400K-token context; output speed 68 tokens/s; released 2025-12-10"
+             pricing-notes="Hidden by default; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.2-high"
+             best-for="Earlier-flagship GPT reasoning model (December 2025) with 400K context and broad knowledge coverage (GPQA 71.2, MMLU Pro 81.4); same medium-tier pricing as GPT-5.3 Codex but lacks Codex's autonomous-coding specialization — pick gpt-5.3-codex over gpt-5.2 for coding/agentic tasks; gpt-5.2 fits when broad reasoning at A-tier knowledge and a 400K context window are the primary need at the medium price tier" />
       <model id="gemini-3.1-pro" name="Gemini 3.1 Pro"
              input-price-per-1m="$2.00" output-price-per-1m="$12.00"
              tier-coding="A" tier-planning="A" tier-agentic="A"
@@ -1603,7 +1635,7 @@ Tier ratings:
     <method id="codex-cli" name="Codex"
             provider="openai" billing="subscription-or-key"
             requires="chatgpt-subscription OR openai-api-key"
-            supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.4-mini"
+            supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.4-mini"
             exposes-max-mode="no" exposes-thinking="yes"
             best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex on long-running terminal / agentic work." />
     <method id="chatgpt-app" name="ChatGPT (web / desktop)"
