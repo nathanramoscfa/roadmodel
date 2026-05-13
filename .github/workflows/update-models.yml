@@ -19,6 +19,14 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Use the maintainer's PAT so subsequent git push + gh pr create
+          # are attributed to a user, not the github-actions bot. PRs opened
+          # by the default GITHUB_TOKEN do not trigger workflows (a GitHub
+          # security feature against recursive runs), which left every cron
+          # PR sitting in mergeStateStatus=BLOCKED with no `test` check ever
+          # firing. Authenticating as the maintainer fixes that.
+          token: ${{ secrets.BOT_PAT }}
 
       - uses: actions/setup-python@v5
         with:
@@ -37,7 +45,7 @@ jobs:
 
       - name: Open PR if catalog changed
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.BOT_PAT }}
         run: |
           set -euo pipefail
           if git diff --quiet -- docs/; then
