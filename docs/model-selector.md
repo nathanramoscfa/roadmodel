@@ -692,7 +692,7 @@ Tier ratings:
 #### Codex — `codex-cli`
 
 - **Billing:** subscription-or-key (requires chatgpt-subscription OR openai-api-key)
-- **Supports models:** gpt-5.3-codex,gpt-5.4,gpt-5.4-mini
+- **Supports models:** gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.4-mini
 - **Toggles:** Max Mode — no · Thinking — yes
 - **Best for:** Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex on long-running terminal / agentic work.
 
@@ -1124,7 +1124,7 @@ Tier ratings:
     <method id="codex-cli" name="Codex"
             provider="openai" billing="subscription-or-key"
             requires="chatgpt-subscription OR openai-api-key"
-            supports-models="gpt-5.3-codex,gpt-5.4,gpt-5.4-mini"
+            supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.4-mini"
             exposes-max-mode="no" exposes-thinking="yes"
             best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex on long-running terminal / agentic work." />
     <method id="chatgpt-app" name="ChatGPT (web / desktop)"
@@ -1608,7 +1608,7 @@ Tier ratings:
     <method id="codex-cli" name="Codex"
             provider="openai" billing="subscription-or-key"
             requires="chatgpt-subscription OR openai-api-key"
-            supports-models="gpt-5.3-codex,gpt-5.4,gpt-5.4-mini"
+            supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.4-mini"
             exposes-max-mode="no" exposes-thinking="yes"
             best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex on long-running terminal / agentic work." />
     <method id="chatgpt-app" name="ChatGPT (web / desktop)"
