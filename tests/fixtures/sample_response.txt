@@ -1,0 +1,6 @@
+MODEL: GPT-5.3 Codex
+PLATFORM: Codex CLI
+MAX MODE: Off
+THINKING: High
+CONVERSATION: New
+RATIONALE: PRIMARY task category is coding with S-tier demand, so GPT-5.3 Codex is selected. CursorBench and SWE-bench evidence support the choice, and Codex CLI is funded by subscription before per-token API fallback.
