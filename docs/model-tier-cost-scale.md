@@ -51,6 +51,7 @@ table and surface material cost / availability / capability constraints.
 | Claude 4.6 Opus (Fast mode) | $30.00 | $37.50      | $3.00      | $150.00 | Very High | Hidden by default; Requires Max Mode on request-based plans; Limited research preview; Up to 1M tokens in Max Mode at the same per-token rates as shorter context |
 | Claude 4.6 Sonnet           | $3.00  | $3.75       | $0.30      | $15.00  | High      | Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
 | Claude 4.7 Opus             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
+| Claude Opus 4.7 (fast mode) | $30.00 | $37.50      | $3.00      | $150.00 | Very High | Hidden by default; Requires Max Mode on request-based plans; Limited research preview; Up to 1M tokens in Max Mode at the same per-token rates as shorter context |
 
 
 ### API Pool — Cursor Composer
@@ -108,7 +109,7 @@ table and surface material cost / availability / capability constraints.
 
 ---
 
-<!-- subscription-tiers-reviewed: 2026-05-12 -->
+<!-- subscription-tiers-reviewed: 2026-05-13 -->
 
 ## Subscription Tiers and Access Methods
 
@@ -145,13 +146,16 @@ and adjust the rebuild rules in [`update/prompt.md`](../update/prompt.md).
 
 | Subscription         | Monthly | Provider  | Access methods unlocked      | Coverage                                                                                                  |
 | -------------------- | ------- | --------- | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Cursor Pro           | $20     | Cursor    | cursor-composer, cursor-chat | Shared token pool across every model in Cursor's catalog; token-based billing (no Max Mode surcharge).    |
-| Cursor Ultra         | $200    | Cursor    | cursor-composer, cursor-chat | Same model coverage as Pro at roughly 20x the token-pool budget.                                          |
-| claude.ai Max ($100) | $100    | Anthropic | claude-code, claude-web      | Opus 4.7, Sonnet 4.6, Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE) under a shared monthly budget. |
-| claude.ai Max ($200) | $200    | Anthropic | claude-code, claude-web      | Same model coverage as the $100 plan with a roughly 5x larger monthly budget.                             |
-| ChatGPT Plus         | $20     | OpenAI    | chatgpt-app, codex-cli       | GPT-5.4, GPT-5.4 Mini, and selected reasoning models with per-model usage caps.                           |
-| ChatGPT Pro          | $200    | OpenAI    | chatgpt-app, codex-cli       | Same coverage as Plus with much higher caps and access to GPT-5.5.                                        |
-| Gemini Advanced      | $20     | Google    | gemini-app, gemini-cli       | Gemini 3.1 Pro and supporting multimodal features.                                                        |
+| Claude Pro           | $20     | Anthropic | claude-code, claude-web      | Opus 4.7, Sonnet 4.6, and Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE), with roughly 5x the usage of the Free tier. |
+| claude.ai Max ($100) | $100    | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 5x the Pro usage budget; priority access during peak traffic.       |
+| claude.ai Max ($200) | $200    | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 20x the Pro usage budget; highest consumer-tier Claude budget.      |
+| ChatGPT Plus         | $20     | OpenAI    | chatgpt-app, codex-cli       | GPT-5.4, GPT-5.4 Mini, and selected reasoning models with per-model usage caps; Codex access included.    |
+| ChatGPT Pro          | $200    | OpenAI    | chatgpt-app, codex-cli       | Same coverage as Plus with much higher caps and access to GPT-5.5 and GPT-5.5 Pro.                        |
+| Google AI Pro        | $20     | Google    | gemini-app, gemini-cli       | Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus 2 TB of Google One storage. |
+| Google AI Ultra      | $250    | Google    | gemini-app, gemini-cli       | Highest access to Gemini 3.1 Pro and Deep Think (where available), Veo video generation, Agent Mode previews, and 30 TB of Google One storage. |
+| Cursor Pro           | $20     | Cursor    | cursor                       | $20 monthly model-usage credit pool across every model in Cursor's catalog; on-demand overage billed at API rates. |
+| Cursor Pro+          | $60     | Cursor    | cursor                       | Same model coverage as Pro at roughly 3x the OpenAI / Claude / Gemini usage budget.                       |
+| Cursor Ultra         | $200    | Cursor    | cursor                       | Same model coverage as Pro at roughly 20x the OpenAI / Claude / Gemini usage budget; priority access to new features. |
 
 
 The "Access methods unlocked" column references method ids enumerated in
