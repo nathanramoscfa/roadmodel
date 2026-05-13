@@ -63,10 +63,11 @@ STYLE RULES (the AI MUST follow)
       • Cursor / ChatGPT / API: Model / Platform / Max
         Mode / Thinking (Off/Low/Medium/High/XHigh/N/A) /
         Conversation. Max Mode is a Cursor-surface dial
-        (Cursor Chat and Cursor Composer); on ChatGPT /
-        API surfaces it documents intent ("ON" when the
-        rationale calls for extended cross-file reasoning)
-        even though the literal toggle is absent.
+        (exposed in both of Cursor's UI modes — Composer
+        and Chat); on ChatGPT / API surfaces it documents
+        intent ("ON" when the rationale calls for extended
+        cross-file reasoning) even though the literal
+        toggle is absent.
     Every Settings table MUST include Platform (the access
     method picked by `<access-selection>` in
     docs/model-selector.txt against docs/user-context.md);
@@ -346,14 +347,16 @@ arrows:
      `<access-selection>` in docs/model-selector.txt against
      the user-specific state in docs/user-context.md.
      Typical values: Claude Code (Claude models when
-     claude.ai Max is active), Cursor Composer (routine
-     multi-file editing on Cursor Pro/Ultra), Cursor Chat
-     (frontier-model use against the Cursor pool), Codex
-     (GPT/Codex models on a ChatGPT subscription; covers
-     both the CLI binary and the Cursor IDE extension as a
-     single Platform — operator picks the surface),
-     Anthropic API / OpenAI API / Google API (pay-per-token
-     fallback when no subscription path applies). The
+     claude.ai Max is active), Cursor (single Platform
+     covering Cursor's Composer mode for routine multi-file
+     editing AND Chat mode for frontier-model picks against
+     the Cursor pool; operator picks the mode at task time
+     based on the chosen Model), Codex (GPT/Codex models on
+     a ChatGPT subscription; single Platform covering both
+     the CLI binary and the Cursor IDE extension — operator
+     picks the surface), Anthropic API / OpenAI API /
+     Google API (pay-per-token fallback when no subscription
+     path applies). The
      Settings table MUST name PLATFORM so reviewers can see
      which subscription pays for the step — a step's
      "Sonnet 4.6 via Claude Code" reads very differently
@@ -393,19 +396,20 @@ arrows:
      / cross-file multi-step proof → Extra High.
 
      CURSOR / CHATGPT / API variant (use for every other
-     PLATFORM — Cursor Composer, Cursor Chat, ChatGPT app,
-     claude.ai web, Anthropic API, OpenAI API, Google API,
-     etc.). Table rows: Model / Platform / Max Mode /
-     Thinking / Conversation. MAX MODE values: ON / OFF
-     (Cursor-surface dial; on non-Cursor surfaces resolve
-     to ON when the rationale calls for extended
-     cross-file reasoning, OFF otherwise — the value still
-     documents intent even when the literal toggle is
-     absent). THINKING values: Off / Low / Medium / High /
-     XHigh / N/A. N/A applies when the PLATFORM does not
-     expose a reasoning-level dropdown (e.g. Cursor
-     Composer, Cursor Chat — the Composer 2 / Auto pool
-     does not surface the toggle). -->
+     PLATFORM — Cursor (single Platform covering both
+     Composer mode and Chat mode), ChatGPT app, claude.ai
+     web, Anthropic API, OpenAI API, Google API, etc.).
+     Table rows: Model / Platform / Max Mode / Thinking /
+     Conversation. MAX MODE values: ON / OFF (Cursor-
+     surface dial; on non-Cursor surfaces resolve to ON
+     when the rationale calls for extended cross-file
+     reasoning, OFF otherwise — the value still documents
+     intent even when the literal toggle is absent).
+     THINKING values: Off / Low / Medium / High / XHigh /
+     N/A. N/A applies when the PLATFORM does not expose a
+     reasoning-level dropdown (e.g. Cursor — neither its
+     Composer mode nor its Chat mode surfaces the toggle).
+     -->
 
 Settings table — Claude Code variant ({{use this shape
 when PLATFORM is "Claude Code"; the Claude Code Settings
@@ -457,7 +461,7 @@ correctness-sensitive reasoning / mechanical translation)
 and map them to the model's documented strengths. Name the
 PLATFORM and identify the subscription or API key that pays
 for it (claude.ai Max funding Claude Code, Cursor Ultra pool
-funding Cursor Composer, ChatGPT Pro funding Codex,
+funding Cursor, ChatGPT Pro funding Codex,
 Anthropic API direct as pay-per-token fallback, etc.) —
 this is the line that distinguishes "Sonnet 4.6 on a flat
 $100/mo Max plan" from "Sonnet 4.6 burning $15/M output

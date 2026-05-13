@@ -92,33 +92,30 @@ two heavy-use providers and Cursor's pool absorbs the rest.
    High / Extra High); no Max Mode or Thinking field on this
    surface. Primary GPT surface, accounting for ~9% of total token
    volume.
-3. **Cursor Chat** with a GPT or Codex model selected — funded by
-   the $XXX/mo Cursor Ultra token pool. Use when Cursor-native
-   features (Max Mode for cross-file reasoning, inline file refs,
-   the wider Cursor model catalog) fit the task better than the
-   Codex chat panel. Marginal cost is per-token from the Cursor
-   pool rather than the ChatGPT Pro flat-fee budget, so prefer
-   Codex (#2) when ChatGPT Pro capacity remains.
+3. **Cursor** for any model in Cursor's catalog (frontier models
+   for IDE-interactive use; composer-2 / auto for routine multi-
+   file editing; Google / xAI models since no other paid path is
+   active) — funded by the $XXX/mo Cursor Ultra token pool, flat
+   $0 marginal until the pool is exhausted. Single Platform
+   covering both Cursor UI modes: Composer mode is implied when
+   the chosen model is composer-2 / auto / premium (multi-file
+   autonomous editing); Chat mode is implied for frontier-model
+   picks (interactive sidebar with inline file refs and Max Mode).
+   Prefer Codex (#2) over Cursor for GPT/Codex calls when ChatGPT
+   Pro capacity remains, since Cursor's pool spends tokens while
+   ChatGPT Pro is flat-fee sunk cost.
 4. **claude.ai web / desktop** for Claude chat-driven tasks (non-
    coding) — same Max budget as Claude Code.
-5. **Cursor Ultra pool** for Google and xAI models (no dedicated
-   subscription paths exist) and as a fallback for Claude / GPT models
-   when the dedicated subscriptions are near exhaustion. Flat $XXX/mo
-   already paid; $0 marginal cost until the pool is exhausted.
-6. **Anthropic API direct** as pay-as-you-go fallback for Claude when
+5. **Anthropic API direct** as pay-as-you-go fallback for Claude when
    (a) the call is programmatic / scripted outside Claude Code, (b)
    Max budget is exhausted, or (c) the workflow requires headers or
    features not exposed by Claude Code.
-7. **OpenAI API direct** as pay-as-you-go fallback for GPT when (a)
+6. **OpenAI API direct** as pay-as-you-go fallback for GPT when (a)
    the call is programmatic / scripted outside Codex, (b) ChatGPT
-   Pro caps are hit and Cursor Chat is also unavailable, or (c) the
+   Pro caps are hit and Cursor is also unavailable, or (c) the
    workflow requires headers or features not exposed by either
-   Codex surface or Cursor Chat.
-8. **Cursor Composer (Composer 2 default)** for routine multi-file
-   editing tasks where Composer 2 at coding-A is sufficient. Cheapest
-   output tier ($2.50/M) and the model is purpose-built for the
-   Cursor surface.
-9. **Google / xAI direct API.** Not applicable — no key present. The
+   Codex or Cursor.
+7. **Google / xAI direct API.** Not applicable — no key present. The
    selector should not recommend these access methods while this
    section says no.
 

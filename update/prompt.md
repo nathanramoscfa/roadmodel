@@ -80,7 +80,7 @@ verbatim:
 - `anthropic` → `claude-code, claude-web`
 - `openai` → `codex-cli, chatgpt-app`
 - `google` → `gemini-cli, gemini-app`
-- `cursor` → `cursor-composer, cursor-chat`
+- `cursor` → `cursor`
 - `xai` → (no consumer-facing subscription access methods enumerated
   in `<access-methods>`; xai tiers MUST be skipped this run — see
   unmappable-tier rule below)
