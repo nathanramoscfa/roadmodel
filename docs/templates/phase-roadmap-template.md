@@ -40,8 +40,10 @@ STYLE RULES (the AI MUST follow)
     and for the XML <task> prompts handed to coding agents.
   - Numbered steps (## Step N — Title). Each step is a
     self-contained Cursor / Claude Code session.
-  - Every step carries: Goal blockquote, Settings table,
-    Model rationale paragraph, XML <task> prompt, and an
+  - Every step carries: Goal blockquote, Branch line
+    (`feature/phaseNN-stepM-<slug>` — see the Overview
+    "Branch strategy" paragraph), Settings table, Model
+    rationale paragraph, XML <task> prompt, and an
     Acceptance Criteria bullet list. The Settings table is
     PLATFORM-specific so it mirrors the actual surface the
     operator will see — each surface exposes a different
@@ -154,6 +156,19 @@ a build-vs-buy call, a synthetic-vs-real trade-off, an
 ephemeral-vs-persistent pattern, etc. One or two
 paragraphs. Drop the whole subsection if the design is
 self-evident from the Overview.}}
+
+**Branch strategy.** Every step in this phase lands on its own
+short-lived feature branch
+(`feature/phase{{N}}-step{{M}}-<slug>`), opens a pull request
+against `main`, waits for the project's CI workflow to go green,
+and squash-merges with a Conventional Commits subject line.
+Direct pushes to `main` are blocked by branch protection. See
+the parent project's ROADMAP "Branch management strategy"
+section for the canonical naming convention, PR rules, and
+release tagging — this paragraph confirms those rules apply
+unchanged within this phase. Per-step branches are listed on
+each step header below as `**Branch:**` so reviewers can map
+commits 1:1 to the step they implement.
 
 ---
 
@@ -314,6 +329,8 @@ arrows:
 > builds." Use semicolons to chain deliverables in one long
 > sentence rather than splitting into multiple short
 > sentences.}}
+
+**Branch:** `feature/phase{{N}}-step1-{{slug}}`
 
 <!-- Typical model values: GPT-5.3 Codex (long-running
      autonomous agentic sessions), GPT-5.4 (knowledge
@@ -545,6 +562,8 @@ always "New per phase-boundary hygiene").}}
 
 > **Goal:** One paragraph.
 
+**Branch:** `feature/phase{{N}}-step2-{{slug}}`
+
 {{Settings table — pick the variant that matches PLATFORM
 per the Step 1 guidance. Claude Code variant uses Model /
 Platform / Effort / Thinking / Conversation. Codex variant
@@ -633,6 +652,8 @@ step is ALWAYS "QA + verify-phaseN.sh".
 > modes; the `--post` mode invokes any phase-specific post
 > checks (Lighthouse CI, regression sweep, day-completeness
 > validator, readiness report consolidator, etc.).
+
+**Branch:** `feature/phase{{N}}-step{{N}}-verify`
 
 {{Settings table — pick the variant that matches PLATFORM
 per the Step 1 guidance. The Claude Code variant uses
