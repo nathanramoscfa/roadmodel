@@ -44,21 +44,34 @@ STYLE RULES (the AI MUST follow)
     Model rationale paragraph, XML <task> prompt, and an
     Acceptance Criteria bullet list. The Settings table is
     PLATFORM-specific so it mirrors the actual surface the
-    operator will see:
+    operator will see — each surface exposes a different
+    dial, and the table rows must match the panel labels
+    exactly:
       • Claude Code: Model / Platform / Effort / Thinking
         (On/Off) / Conversation. Effort values are Low /
-        Medium / High / Extra High. There is no Max Mode
-        dial on this surface.
-      • Cursor / Codex / ChatGPT / API: Model / Platform /
-        Max Mode / Thinking (Off/Low/Medium/High/XHigh/N/A)
-        / Conversation.
+        Medium / High / Extra High. The Thinking toggle is
+        a Claude-Code-only label; no Max Mode dial.
+      • Codex (Codex CLI, or the Codex chat panel inside
+        Cursor): Model / Platform / Intelligence /
+        Conversation. Intelligence values are Low / Medium
+        / High / Extra High. The Codex panel exposes NO
+        Max Mode and NO Thinking field — Intelligence is
+        the only reasoning dial.
+      • Cursor / ChatGPT / API: Model / Platform / Max
+        Mode / Thinking (Off/Low/Medium/High/XHigh/N/A) /
+        Conversation. Max Mode is a Cursor-surface dial
+        (Cursor Chat and Cursor Composer); on ChatGPT /
+        API surfaces it documents intent ("ON" when the
+        rationale calls for extended cross-file reasoning)
+        even though the literal toggle is absent.
     Every Settings table MUST include Platform (the access
     method picked by `<access-selection>` in
     docs/model-selector.txt against docs/user-context.md);
     the rationale paragraph MUST name the subscription or
     API key that pays for the chosen Platform AND justify
     each dial value using the surface's native vocabulary
-    (Effort vs Max Mode, On/Off vs reasoning level).
+    (Effort vs Intelligence vs Max Mode; On/Off vs
+    Low/Medium/High/Extra High vs reasoning level).
   - End the document with a Post-Implementation Verification
     section (V1-Vn check tables), a Summary Table, optional
     Model-selection blocks, and a Not-in-scope section.
@@ -330,16 +343,16 @@ arrows:
      surface exposes a different tuning UI, and the table
      MUST mirror what the operator will actually see in
      that surface so reviewers can audit the choice
-     1:1 against the panel.
+     1:1 against the panel. Three variants exist:
 
      CLAUDE CODE variant (use when PLATFORM is "Claude
      Code"). The Settings panel exposes Model, Effort, and
      a Thinking on/off toggle — there is NO Max Mode dial
-     on this surface. Table rows: Model / Platform /
-     Effort / Thinking / Conversation. EFFORT values: Low
-     / Medium / High / Extra High. Map from overall
-     complexity per `<thinking-context>`: Low → Low,
-     Medium → Medium, High → High, High with novel
+     and NO Intelligence dial on this surface. Table rows:
+     Model / Platform / Effort / Thinking / Conversation.
+     EFFORT values: Low / Medium / High / Extra High. Map
+     from overall complexity per `<thinking-context>`: Low
+     → Low, Medium → Medium, High → High, High with novel
      problem-solving or cross-file multi-step proof →
      Extra High; bump up one level for planning /
      knowledge prompts with cross-cutting scope. THINKING
@@ -347,34 +360,36 @@ arrows:
      extended reasoning is desirable; Off only when the
      step is purely mechanical and latency matters.
 
-     CURSOR / CODEX / CHATGPT / API variant (use for every
-     other PLATFORM). Table rows: Model / Platform /
-     Max Mode / Thinking / Conversation. MAX MODE values:
-     ON / OFF (Cursor-specific dial; on non-Cursor
-     surfaces resolve to ON when the rationale calls for
-     extended cross-file reasoning, OFF otherwise — the
-     value still documents intent even when the surface
-     lacks the literal toggle). THINKING values: Off / Low
-     / Medium / High / XHigh / N/A. N/A applies when the
-     PLATFORM does not expose the toggle (e.g. Cursor
-     Composer, Cursor Chat). -->
+     CODEX variant (use when PLATFORM is "Codex CLI" or
+     the Codex chat panel inside Cursor). The Codex panel
+     exposes Model + Intelligence + Speed — there is NO
+     Max Mode dial and NO Thinking field on this surface,
+     so the table omits both. Table rows: Model / Platform
+     / Intelligence / Conversation. INTELLIGENCE values:
+     Low / Medium / High / Extra High. Map from overall
+     complexity per `<thinking-context>`: Low → Low,
+     Medium → Medium, High → High, S-tier coding /
+     cross-file multi-step proof → Extra High.
 
-Settings table — Cursor / Codex / ChatGPT / API variant
-({{use this shape when PLATFORM is anything OTHER than
-"Claude Code"}}):
-
-| Setting      | Value                       |
-| ------------ | --------------------------- |
-| Model        | {{Model name}}              |
-| Platform     | {{Access method name}}      |
-| Max Mode     | {{ON or OFF}}               |
-| Thinking     | {{Off/Low/Medium/High/XHigh/N/A}} |
-| Conversation | **{{New or Continue}}**     |
+     CURSOR / CHATGPT / API variant (use for every other
+     PLATFORM — Cursor Composer, Cursor Chat, ChatGPT app,
+     claude.ai web, Anthropic API, OpenAI API, Google API,
+     etc.). Table rows: Model / Platform / Max Mode /
+     Thinking / Conversation. MAX MODE values: ON / OFF
+     (Cursor-surface dial; on non-Cursor surfaces resolve
+     to ON when the rationale calls for extended
+     cross-file reasoning, OFF otherwise — the value still
+     documents intent even when the literal toggle is
+     absent). THINKING values: Off / Low / Medium / High /
+     XHigh / N/A. N/A applies when the PLATFORM does not
+     expose a reasoning-level dropdown (e.g. Cursor
+     Composer, Cursor Chat — the Composer 2 / Auto pool
+     does not surface the toggle). -->
 
 Settings table — Claude Code variant ({{use this shape
 when PLATFORM is "Claude Code"; the Claude Code Settings
-panel exposes Effort + Thinking toggle, not Max Mode +
-Thinking levels}}):
+panel exposes Effort + Thinking toggle, never Max Mode
+and never Intelligence}}):
 
 | Setting      | Value                          |
 | ------------ | ------------------------------ |
@@ -384,6 +399,35 @@ Thinking levels}}):
 | Thinking     | {{On or Off}}                  |
 | Conversation | **{{New or Continue}}**        |
 
+Settings table — Codex variant ({{use this shape when
+PLATFORM is "Codex CLI" or the Codex chat panel inside
+Cursor; the Codex panel exposes Intelligence as its only
+reasoning dial — there is NO Max Mode and NO Thinking
+field, so the table omits both rows}}):
+
+| Setting      | Value                          |
+| ------------ | ------------------------------ |
+| Model        | {{Model name}}                 |
+| Platform     | {{Codex CLI or Codex chat}}    |
+| Intelligence | {{Low/Medium/High/Extra High}} |
+| Conversation | **{{New or Continue}}**        |
+
+Settings table — Cursor / ChatGPT / API variant ({{use
+this shape when PLATFORM is a Cursor surface (Composer,
+Chat) or any non-Codex, non-Claude-Code surface
+(ChatGPT app, claude.ai web, Anthropic API, OpenAI API,
+Google API). Max Mode is a Cursor-native dial; on
+non-Cursor surfaces the value still documents intent
+even though the literal toggle is absent}}):
+
+| Setting      | Value                       |
+| ------------ | --------------------------- |
+| Model        | {{Model name}}              |
+| Platform     | {{Access method name}}      |
+| Max Mode     | {{ON or OFF}}               |
+| Thinking     | {{Off/Low/Medium/High/XHigh/N/A}} |
+| Conversation | **{{New or Continue}}**     |
+
 **Model rationale:** {{3-5 sentences explaining the choice.
 Lead with the task characteristics (long-running agentic
 session / multi-file editing / multimodal visual analysis /
@@ -391,17 +435,19 @@ correctness-sensitive reasoning / mechanical translation)
 and map them to the model's documented strengths. Name the
 PLATFORM and identify the subscription or API key that pays
 for it (claude.ai Max funding Claude Code, Cursor Ultra pool
-funding Cursor Composer, Anthropic API direct as
-pay-per-token fallback, etc.) — this is the line that
-distinguishes "Sonnet 4.6 on a flat $100/mo Max plan" from
-"Sonnet 4.6 burning $15/M output tokens." Note the tuning
-choices in the language of the actual surface: for Claude
-Code, why EFFORT is at the stated level and why THINKING is
-on or off; for every other PLATFORM, why MAX MODE is on or
-off and why THINKING is at the stated level (or N/A because
-the surface does not expose the toggle). Close with why the
-conversation is new or continued (almost always "New per
-phase-boundary hygiene").}}
+funding Cursor Composer, ChatGPT Plus funding Codex CLI,
+Anthropic API direct as pay-per-token fallback, etc.) —
+this is the line that distinguishes "Sonnet 4.6 on a flat
+$100/mo Max plan" from "Sonnet 4.6 burning $15/M output
+tokens." Note the tuning choices in the language of the
+actual surface: for Claude Code, why EFFORT is at the
+stated level and why THINKING is on or off; for Codex, why
+INTELLIGENCE is at the stated level (the surface exposes
+no other dial); for every other PLATFORM, why MAX MODE is
+on or off and why THINKING is at the stated level (or N/A
+because the surface does not expose the toggle). Close
+with why the conversation is new or continued (almost
+always "New per phase-boundary hygiene").}}
 
 ```xml
 <task>
@@ -500,10 +546,12 @@ phase-boundary hygiene").}}
 > **Goal:** One paragraph.
 
 {{Settings table — pick the variant that matches PLATFORM
-per the Step 1 guidance. Cursor / Codex / ChatGPT / API
+per the Step 1 guidance. Claude Code variant uses Model /
+Platform / Effort / Thinking / Conversation. Codex variant
+uses Model / Platform / Intelligence / Conversation
+(no Max Mode, no Thinking row). Cursor / ChatGPT / API
 variant uses Model / Platform / Max Mode / Thinking /
-Conversation. Claude Code variant uses Model / Platform /
-Effort / Thinking / Conversation.}}
+Conversation.}}
 
 | Setting      | Value                       |
 | ------------ | --------------------------- |
@@ -516,7 +564,9 @@ Effort / Thinking / Conversation.}}
 **Model rationale:** 3-5 sentences. Name the PLATFORM and
 the subscription or API key that pays for it. For Claude
 Code, state why EFFORT is at the stated level and why
-THINKING is on or off. For every other PLATFORM, state why
+THINKING is on or off. For Codex, state why INTELLIGENCE
+is at the stated level (the surface exposes no other
+reasoning dial). For every other PLATFORM, state why
 MAX MODE is on or off and why THINKING is at the stated
 level (or N/A because the surface does not expose the
 toggle).
@@ -586,8 +636,10 @@ step is ALWAYS "QA + verify-phaseN.sh".
 
 {{Settings table — pick the variant that matches PLATFORM
 per the Step 1 guidance. The Claude Code variant uses
-Effort + Thinking-toggle in place of Max Mode + Thinking-
-levels.}}
+Effort + Thinking-toggle, the Codex variant uses
+Intelligence (no Max Mode, no Thinking row), and the
+Cursor / ChatGPT / API variant uses Max Mode +
+Thinking-levels.}}
 
 | Setting      | Value                       |
 | ------------ | --------------------------- |
@@ -602,9 +654,11 @@ translation of the prior verify-script template into this
 phase's deliverables. Name the PLATFORM and the subscription
 or API key that pays for it. For Claude Code, state why
 EFFORT is at the stated level and why THINKING is on or off.
-For every other PLATFORM, state why MAX MODE is on or off
-and why THINKING is at the stated level (or N/A because the
-surface does not expose the toggle).
+For Codex, state why INTELLIGENCE is at the stated level
+(the surface exposes no other reasoning dial). For every
+other PLATFORM, state why MAX MODE is on or off and why
+THINKING is at the stated level (or N/A because the surface
+does not expose the toggle).
 
 ```xml
 <task>
@@ -971,22 +1025,26 @@ corresponding row below.
 
 ## Summary Table
 
-<!-- Summary Table column "Max/Effort" carries whichever
-     dial the step's PLATFORM exposes. For Claude Code
-     rows, write "Effort {{Low/Med/High/XHigh}}". For
-     every other PLATFORM, write "Max ON" or "Max OFF".
-     The "Thinking" column carries the platform-native
-     value: On/Off for Claude Code, Off/Low/Medium/High/
-     XHigh/N/A for every other PLATFORM. Mirroring the
-     surface here lets reviewers audit each row 1:1
-     against the panel the operator will actually see. -->
+<!-- Summary Table column "Reasoning dial" carries
+     whichever dial the step's PLATFORM exposes, written
+     in the surface's native vocabulary so reviewers can
+     audit each row 1:1 against the panel:
+       • Claude Code → "Effort {{Low/Med/High/XHigh}}"
+         (and the Thinking column carries "On" or "Off").
+       • Codex CLI / Codex chat → "Intelligence
+         {{Low/Med/High/XHigh}}" (the Thinking column is
+         "--" because the surface exposes no Thinking
+         field).
+       • Cursor / ChatGPT / API → "Max ON" or "Max OFF"
+         (and the Thinking column carries the level or
+         N/A). -->
 
-| Step    | Scope                     | Model       | Platform     | Max/Effort      | Thinking         | Conv |
+| Step    | Scope                     | Model       | Platform     | Reasoning dial  | Thinking         | Conv |
 | ------- | ------------------------- | ----------- | ------------ | --------------- | ---------------- | ---- |
-| 1       | {{Step 1 short scope}}    | {{Model}}   | {{Platform}} | {{Max ON/OFF or Effort Low/Med/High/XHigh}} | {{level / On / Off / N/A}} | New  |
-| 2       | {{Step 2 short scope}}    | {{Model}}   | {{Platform}} | {{Max ON/OFF or Effort Low/Med/High/XHigh}} | {{level / On / Off / N/A}} | New  |
+| 1       | {{Step 1 short scope}}    | {{Model}}   | {{Platform}} | {{Effort/Intelligence Low/Med/High/XHigh or Max ON/OFF}} | {{level / On / Off / N/A / --}} | New  |
+| 2       | {{Step 2 short scope}}    | {{Model}}   | {{Platform}} | {{Effort/Intelligence Low/Med/High/XHigh or Max ON/OFF}} | {{level / On / Off / N/A / --}} | New  |
 | ...     | ...                       | ...         | ...          | ...             | ...              | ...  |
-| {{N}}   | QA + verify-phase{{N}}.sh | {{Model}}   | {{Platform}} | {{Max ON/OFF or Effort Low/Med/High/XHigh}} | {{level / On / Off / N/A}} | New  |
+| {{N}}   | QA + verify-phase{{N}}.sh | {{Model}}   | {{Platform}} | {{Effort/Intelligence Low/Med/High/XHigh or Max ON/OFF}} | {{level / On / Off / N/A / --}} | New  |
 | V1      | {{Step 1 scope}}          | CI: {{wf}}  | --           | --              | --               | --   |
 | V2      | {{Step 2 scope}}          | CI: {{wf}}  | --           | --              | --               | --   |
 | ...     | ...                       | ...         | --           | --              | --               | --   |
@@ -1011,13 +1069,18 @@ audit tool that consumes the text format. Skip it if not.
 -->
 
 <!-- Block field shape is platform-specific, mirroring the
-     per-step Settings tables. For Claude Code, replace the
-     "MAX MODE" line with "EFFORT: {{Low/Medium/High/Extra
-     High}}" and write "THINKING: On" or "THINKING: Off".
-     For every other PLATFORM, keep "MAX MODE: {{On or Off}}"
-     and write "THINKING: {{Off/Low/Medium/High/XHigh/N/A}}".
-     The roadmodel audit tool keys on the PLATFORM line to
-     decide which dial-name to expect. -->
+     per-step Settings tables. Three variants:
+       • Claude Code → "EFFORT: {{Low/Medium/High/Extra
+         High}}" + "THINKING: {{On or Off}}".
+       • Codex (Codex CLI or Codex chat in Cursor) →
+         "INTELLIGENCE: {{Low/Medium/High/Extra High}}"
+         only; no MAX MODE line and no THINKING line,
+         because the Codex panel exposes neither dial.
+       • Cursor / ChatGPT / API → "MAX MODE: {{On or
+         Off}}" + "THINKING: {{Off/Low/Medium/High/XHigh
+         /N/A}}".
+     The roadmodel audit tool keys on the PLATFORM line
+     to decide which dial-name to expect. -->
 
 ```text
 PROMPT: Step 1 — {{step title}}
@@ -1026,7 +1089,9 @@ PLATFORM: {{access method name}}
 {{For Claude Code:}}
 EFFORT: {{Low/Medium/High/Extra High}}
 THINKING: {{On or Off}}
-{{For every other PLATFORM:}}
+{{For Codex (Codex CLI or Codex chat in Cursor):}}
+INTELLIGENCE: {{Low/Medium/High/Extra High}}
+{{For Cursor / ChatGPT / API:}}
 MAX MODE: {{On or Off}}
 THINKING: {{Off/Low/Medium/High/XHigh/N/A}}
 CONVERSATION: {{New or Continue}}
@@ -1035,16 +1100,18 @@ Model-rationale paragraph, condensed for audit. Lead with
 the task characteristic (e.g. "Long-running autonomous
 coding session spanning X + Y + Z"), name the model's
 strength that fits, name the subscription or API key that
-pays for the PLATFORM, state why EFFORT/MAX MODE and
-THINKING are at the chosen values (use the dial names of
-the actual surface), and close with "New per phase-
-boundary hygiene." Keep to 3-5 sentences.}}
+pays for the PLATFORM, state why the surface's dial
+(EFFORT, INTELLIGENCE, or MAX MODE + THINKING) is at the
+chosen value (use the dial name of the actual surface),
+and close with "New per phase-boundary hygiene." Keep to
+3-5 sentences.}}
 
 PROMPT: Step 2 — {{step title}}
 MODEL: {{model}}
 PLATFORM: {{access method name}}
 {{Claude Code → EFFORT + THINKING(On/Off);
-every other PLATFORM → MAX MODE + THINKING(level/N/A)}}
+Codex → INTELLIGENCE only;
+Cursor / ChatGPT / API → MAX MODE + THINKING(level/N/A)}}
 CONVERSATION: {{New or Continue}}
 RATIONALE: {{Same shape as Step 1 — task characteristic,
 model strength, PLATFORM funding source, dial-value
@@ -1055,7 +1122,8 @@ PROMPT: Step 3 — {{step title}}
 MODEL: {{model}}
 PLATFORM: {{access method name}}
 {{Claude Code → EFFORT + THINKING(On/Off);
-every other PLATFORM → MAX MODE + THINKING(level/N/A)}}
+Codex → INTELLIGENCE only;
+Cursor / ChatGPT / API → MAX MODE + THINKING(level/N/A)}}
 CONVERSATION: {{New or Continue}}
 RATIONALE: {{...}}
 
@@ -1063,7 +1131,8 @@ PROMPT: Step {{N}} — QA + verify-phase{{N}}.sh
 MODEL: {{model}}
 PLATFORM: {{access method name}}
 {{Claude Code → EFFORT + THINKING(On/Off);
-every other PLATFORM → MAX MODE + THINKING(level/N/A)}}
+Codex → INTELLIGENCE only;
+Cursor / ChatGPT / API → MAX MODE + THINKING(level/N/A)}}
 CONVERSATION: {{New or Continue}}
 RATIONALE: {{Mechanical translation of the prior verify-
 script template into this phase's deliverables; known
