@@ -24,5 +24,9 @@ tests/fixtures/*.json
 # docs/user-context.md and fill in your values.
 /docs/user-context.md
 
-# Private planning docs (kept local; never to be committed)
-/private/
+# NOTE: /private/ (local-only planning docs) is excluded via .git/info/exclude
+# rather than .gitignore so editor tooling (Cursor / VSCode @-pickers,
+# fuzzy-find) still indexes the files locally while git continues to ignore
+# them. The directory has already been scrubbed from history (commit 1b60bfb)
+# and exists only on the maintainer's machine, so the per-clone exclude is
+# sufficient.
