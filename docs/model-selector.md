@@ -113,7 +113,7 @@ isolated bug fixes, well-defined refactors, simple questions, or any
 task where default context comfortably fits the inputs.
 
 Max Mode is a Cursor-surface concept. Access methods outside Cursor
-(Anthropic API, Claude Code, Codex CLI, Google API, Gemini CLI,
+(Anthropic API, Claude Code, Codex, Google API, Gemini CLI,
 direct provider APIs) do not expose a Max Mode toggle; they either
 accept the model's full native context window by default or expose
 a different long-context surface. When the chosen PLATFORM is not
@@ -130,7 +130,7 @@ differently:
 - Claude (Anthropic API, Claude Code, claude.ai): "Extended
   thinking" on/off with a configurable thinking-token budget. Off
   by default for chat; On for hard reasoning tasks.
-- OpenAI (Codex CLI, OpenAI API, ChatGPT advanced controls):
+- OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
   reasoning-effort knob — `minimal`, `low`, `medium`, `high`.
   Higher effort spends more reasoning tokens before visible
   output.
@@ -391,7 +391,7 @@ Tier ratings:
     task where default context comfortably fits the inputs.
 
     Max Mode is a Cursor-surface concept. Access methods outside Cursor
-    (Anthropic API, Claude Code, Codex CLI, Google API, Gemini CLI,
+    (Anthropic API, Claude Code, Codex, Google API, Gemini CLI,
     direct provider APIs) do not expose a Max Mode toggle; they either
     accept the model's full native context window by default or expose
     a different long-context surface. When the chosen PLATFORM is not
@@ -408,7 +408,7 @@ Tier ratings:
     - Claude (Anthropic API, Claude Code, claude.ai): "Extended
       thinking" on/off with a configurable thinking-token budget. Off
       by default for chat; On for hard reasoning tasks.
-    - OpenAI (Codex CLI, OpenAI API, ChatGPT advanced controls):
+    - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`.
       Higher effort spends more reasoning tokens before visible
       output.
@@ -689,7 +689,7 @@ Tier ratings:
 - **Toggles:** Max Mode — no · Thinking — yes
 - **Best for:** Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates.
 
-#### Codex CLI — `codex-cli`
+#### Codex — `codex-cli`
 
 - **Billing:** subscription-or-key (requires chatgpt-subscription OR openai-api-key)
 - **Supports models:** gpt-5.3-codex,gpt-5.4,gpt-5.4-mini
@@ -831,7 +831,7 @@ Tier ratings:
     task where default context comfortably fits the inputs.
 
     Max Mode is a Cursor-surface concept. Access methods outside Cursor
-    (Anthropic API, Claude Code, Codex CLI, Google API, Gemini CLI,
+    (Anthropic API, Claude Code, Codex, Google API, Gemini CLI,
     direct provider APIs) do not expose a Max Mode toggle; they either
     accept the model's full native context window by default or expose
     a different long-context surface. When the chosen PLATFORM is not
@@ -848,7 +848,7 @@ Tier ratings:
     - Claude (Anthropic API, Claude Code, claude.ai): "Extended
       thinking" on/off with a configurable thinking-token budget. Off
       by default for chat; On for hard reasoning tasks.
-    - OpenAI (Codex CLI, OpenAI API, ChatGPT advanced controls):
+    - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`.
       Higher effort spends more reasoning tokens before visible
       output.
@@ -1121,7 +1121,7 @@ Tier ratings:
             supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.4-mini,gpt-5.4-nano"
             exposes-max-mode="no" exposes-thinking="yes"
             best-for="Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates." />
-    <method id="codex-cli" name="Codex CLI"
+    <method id="codex-cli" name="Codex"
             provider="openai" billing="subscription-or-key"
             requires="chatgpt-subscription OR openai-api-key"
             supports-models="gpt-5.3-codex,gpt-5.4,gpt-5.4-mini"
@@ -1315,7 +1315,7 @@ Tier ratings:
     task where default context comfortably fits the inputs.
 
     Max Mode is a Cursor-surface concept. Access methods outside Cursor
-    (Anthropic API, Claude Code, Codex CLI, Google API, Gemini CLI,
+    (Anthropic API, Claude Code, Codex, Google API, Gemini CLI,
     direct provider APIs) do not expose a Max Mode toggle; they either
     accept the model's full native context window by default or expose
     a different long-context surface. When the chosen PLATFORM is not
@@ -1332,7 +1332,7 @@ Tier ratings:
     - Claude (Anthropic API, Claude Code, claude.ai): "Extended
       thinking" on/off with a configurable thinking-token budget. Off
       by default for chat; On for hard reasoning tasks.
-    - OpenAI (Codex CLI, OpenAI API, ChatGPT advanced controls):
+    - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`.
       Higher effort spends more reasoning tokens before visible
       output.
@@ -1605,7 +1605,7 @@ Tier ratings:
             supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.4-mini,gpt-5.4-nano"
             exposes-max-mode="no" exposes-thinking="yes"
             best-for="Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates." />
-    <method id="codex-cli" name="Codex CLI"
+    <method id="codex-cli" name="Codex"
             provider="openai" billing="subscription-or-key"
             requires="chatgpt-subscription OR openai-api-key"
             supports-models="gpt-5.3-codex,gpt-5.4,gpt-5.4-mini"
@@ -1751,7 +1751,7 @@ Tier ratings:
       Within a tier, prefer the access method whose surface matches
       the task — Claude Code over claude.ai web for coding,
       cursor-composer over cursor-chat for routine multi-file editing,
-      Codex CLI over ChatGPT app for autonomous coding sessions.
+      Codex over ChatGPT app for autonomous coding sessions.
 
     Step D — Apply user-context.md preference overrides.
       docs/user-context.md may set a preferred platform order. When
