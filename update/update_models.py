@@ -545,6 +545,9 @@ def call_opus(system_prompt: str, user_message: str, api_key: str) -> str:
     )
 
 
+# TODO(#5): fallback span breaks when Opus emits a fenced JSON template
+# (placeholder values) before the real object — first `{` lands inside the
+# template, last `}` in the real object, intervening prose is not JSON.
 def parse_result(raw: str) -> dict[str, Any]:
     """Parse the model's JSON response, tolerating prose preamble/epilogue.
 
