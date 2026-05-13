@@ -926,9 +926,9 @@ above carry the canonical Model / Max Mode / Conversation
 values; the rationale paragraphs map task characteristics
 to model strengths. The text block below restates the same
 selections in a roadmap-annotation output format for ease
-of audit by a model-selector script.
+of audit by a roadmodel script.
 
-Include this section if your project has a model-selector
+Include this section if your project has a roadmodel
 audit tool that consumes the text format. Skip it if not.
 -->
 
@@ -974,7 +974,7 @@ THINKING: {{Off/Low/Medium/High/XHigh/N/A}}
 CONVERSATION: {{New or Continue}}
 RATIONALE: {{Mechanical translation of the prior verify-
 script template into this phase's deliverables; known
-pattern, no novel reasoning — the model-selector's
+pattern, no novel reasoning — roadmodel's
 "standard implementation, multi-file changes, and
 roadmap execution" default. New per phase-boundary
 hygiene.}}
