@@ -47,8 +47,8 @@ roadmodel = "roadmodel.cli:main"
 
 [project.urls]
 Homepage = "https://roadmodel.ai"
-Repository = "https://github.com/nathanramos/roadmodel"
-Issues = "https://github.com/nathanramos/roadmodel/issues"
+Repository = "https://github.com/nathanramoscfa/roadmodel"
+Issues = "https://github.com/nathanramoscfa/roadmodel/issues"
 
 [tool.hatch.build.targets.wheel]
 sources = ["src"]
