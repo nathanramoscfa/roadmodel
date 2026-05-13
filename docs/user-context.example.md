@@ -82,13 +82,22 @@ two heavy-use providers and Cursor's pool absorbs the rest.
    $0 until the Max usage budget is exhausted. This is the primary
    surface for ~90% of total work; via Cursor's pool the same Claude
    usage would cost multiples of the Max plan.
-2. **Codex CLI** for any GPT model when the task is coding or
-   terminal-driven — funded by the $XXX/mo ChatGPT Pro subscription.
-   Marginal cost per call is $0 until the per-model usage caps are
-   hit. Primary GPT surface; exposes reasoning-effort toggle (medium /
-   high / xhigh).
-3. **ChatGPT app (web / desktop)** for GPT chat-driven tasks (non-
-   terminal) — same ChatGPT Pro budget as Codex CLI.
+2. **Codex (Cursor extension or CLI)** for any GPT or Codex model
+   — funded by the $XXX/mo ChatGPT Pro subscription. Marginal cost
+   per call is $0 until per-model caps are hit. The Cursor-embedded
+   Codex chat panel is the primary UI for interactive multi-file
+   editing; Codex CLI is the same engine for terminal / autonomous-
+   loop work. Exposes Intelligence as the only reasoning dial (Low
+   / Medium / High / Extra High); no Max Mode or Thinking field on
+   this surface. Primary GPT surface, accounting for ~9% of total
+   token volume.
+3. **Cursor Chat** with a GPT or Codex model selected — funded by
+   the $XXX/mo Cursor Ultra token pool. Use when Cursor-native
+   features (Max Mode for cross-file reasoning, inline file refs,
+   the wider Cursor model catalog) fit the task better than the
+   Codex chat panel. Marginal cost is per-token from the Cursor
+   pool rather than the ChatGPT Pro flat-fee budget, so prefer
+   Codex (#2) when ChatGPT Pro capacity remains.
 4. **claude.ai web / desktop** for Claude chat-driven tasks (non-
    coding) — same Max budget as Claude Code.
 5. **Cursor Ultra pool** for Google and xAI models (no dedicated
@@ -100,9 +109,10 @@ two heavy-use providers and Cursor's pool absorbs the rest.
    Max budget is exhausted, or (c) the workflow requires headers or
    features not exposed by Claude Code.
 7. **OpenAI API direct** as pay-as-you-go fallback for GPT when (a)
-   the call is programmatic / scripted outside Codex CLI, (b) ChatGPT
-   Pro caps are hit, or (c) the workflow requires features not
-   exposed by Codex CLI.
+   the call is programmatic / scripted outside Codex, (b) ChatGPT
+   Pro caps are hit and Cursor Chat is also unavailable, or (c) the
+   workflow requires headers or features not exposed by either
+   Codex surface or Cursor Chat.
 8. **Cursor Composer (Composer 2 default)** for routine multi-file
    editing tasks where Composer 2 at coding-A is sufficient. Cheapest
    output tier ($2.50/M) and the model is purpose-built for the
