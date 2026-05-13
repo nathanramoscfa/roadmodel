@@ -59,8 +59,14 @@ jobs:
           git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md
           git commit -m "Automated catalog refresh: ${DATE}" -m "${summary}${warnings}"
           git push -u origin "$BRANCH"
-          gh pr create \
+          PR_URL="$(gh pr create \
             --base main \
             --head "$BRANCH" \
             --title "Automated catalog refresh: ${DATE}" \
-            --body "$(printf '## Summary\n\n%s%s\n\n---\n\nThis PR was opened automatically by the weekly catalog-refresh cron in `.github/workflows/update-models.yml`. Review the diff against the previous catalog state; merge when satisfied. `test` status check must pass before merge per branch protection.' "$summary" "$warnings")"
+            --body "$(printf '## Summary\n\n%s%s\n\n---\n\nThis PR was opened automatically by the weekly catalog-refresh cron in `.github/workflows/update-models.yml`. Auto-merge is enabled: GitHub will squash-merge this PR once the `test` status check passes. If `test` fails or warnings above warrant manual review, disable auto-merge (`gh pr merge --disable-auto`) before the check resolves.' "$summary" "$warnings")")"
+          echo "Opened: $PR_URL"
+          # Enable auto-merge: GitHub squash-merges as soon as the required
+          # status check (`test`) reports SUCCESS. If the diff is suspicious
+          # (warnings, large delta), the maintainer can disable via
+          # `gh pr merge --disable-auto <PR>` before the check resolves.
+          gh pr merge --auto --squash --delete-branch "$PR_URL"
