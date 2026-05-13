@@ -42,22 +42,22 @@ pool → subscription-included → per-token API → pay-as-you-go).
 | ----------------- | ------- | --------- | --------------------------------------------------------------------------- |
 | Cursor Ultra      | $XXX    | Cursor    | Token-pool budget across every model in Cursor's catalog; no Max Mode surcharge (token-based plan, not legacy request-based). |
 | claude.ai Max     | $XXX    | Anthropic | Opus / Sonnet / Haiku usage on claude.ai web, the Claude desktop apps, and Claude Code (CLI + IDE extension) under a shared monthly Max usage budget. Funds ~90% of total token volume. |
-| ChatGPT Plus      | $XXX    | OpenAI    | GPT model usage on the ChatGPT app (web / desktop) and Codex CLI under per-model usage caps. Funds ~9% of total token volume. |
+| ChatGPT Pro       | $XXX    | OpenAI    | GPT model usage on the ChatGPT app (web / desktop) and Codex CLI under per-model usage caps. Funds ~9% of total token volume. |
 
 ## Active API keys
 
 | Provider  | Key present | Notes                                                              |
 | --------- | ----------- | ------------------------------------------------------------------ |
 | Anthropic | Yes         | Direct API key for pay-as-you-go fallback when Max budget is spent or when a script needs programmatic access outside Claude Code. |
-| OpenAI    | Yes         | Direct API key for pay-as-you-go fallback when ChatGPT Plus caps are hit or when a script needs programmatic access outside Codex CLI. |
+| OpenAI    | Yes         | Direct API key for pay-as-you-go fallback when ChatGPT Pro caps are hit or when a script needs programmatic access outside Codex CLI. |
 | Google    | No          | No paid Gemini Advanced; no Google AI Studio API key configured. Gemini accounts for ~1% of usage and runs via Cursor's pool only. |
 | xAI       | No          | No direct API key. Grok usage is negligible; Cursor's pool covers it if needed. |
 
 ## Inactive / not subscribed
 
-- **ChatGPT Pro / Team.** Plus is active; Pro and Team are not — the
-  higher caps and team-collab features aren't justified for current
-  usage volume.
+- **ChatGPT Team / Enterprise.** Pro is active; Team and Enterprise
+  are not — team-collab and enterprise admin features aren't relevant
+  for solo work.
 - **Gemini Advanced.** Not subscribed; Google models reachable only via
   Cursor's pool at Cursor's per-token rates. Usage volume (~1%) doesn't
   justify a dedicated subscription.
@@ -83,12 +83,12 @@ two heavy-use providers and Cursor's pool absorbs the rest.
    surface for ~90% of total work; via Cursor's pool the same Claude
    usage would cost multiples of the Max plan.
 2. **Codex CLI** for any GPT model when the task is coding or
-   terminal-driven — funded by the $XXX/mo ChatGPT Plus subscription.
+   terminal-driven — funded by the $XXX/mo ChatGPT Pro subscription.
    Marginal cost per call is $0 until the per-model usage caps are
    hit. Primary GPT surface; exposes reasoning-effort toggle (medium /
    high / xhigh).
 3. **ChatGPT app (web / desktop)** for GPT chat-driven tasks (non-
-   terminal) — same ChatGPT Plus budget as Codex CLI.
+   terminal) — same ChatGPT Pro budget as Codex CLI.
 4. **claude.ai web / desktop** for Claude chat-driven tasks (non-
    coding) — same Max budget as Claude Code.
 5. **Cursor Ultra pool** for Google and xAI models (no dedicated
@@ -101,7 +101,7 @@ two heavy-use providers and Cursor's pool absorbs the rest.
    features not exposed by Claude Code.
 7. **OpenAI API direct** as pay-as-you-go fallback for GPT when (a)
    the call is programmatic / scripted outside Codex CLI, (b) ChatGPT
-   Plus caps are hit, or (c) the workflow requires features not
+   Pro caps are hit, or (c) the workflow requires features not
    exposed by Codex CLI.
 8. **Cursor Composer (Composer 2 default)** for routine multi-file
    editing tasks where Composer 2 at coding-A is sufficient. Cheapest
@@ -148,7 +148,7 @@ two heavy-use providers and Cursor's pool absorbs the rest.
 **Budget priority:** `balanced` — quality wins per `<objective>`, but
 never burn pay-as-you-go spend when a subscription that is already
 paid can serve the call. The selector should treat Cursor Ultra,
-claude.ai Max, and ChatGPT Plus as sunk cost when ranking access
+claude.ai Max, and ChatGPT Pro as sunk cost when ranking access
 methods.
 
 **Speed posture:** speed is NOT a valued dimension — workflows are
