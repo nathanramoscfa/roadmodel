@@ -545,7 +545,7 @@ def call_opus(system_prompt: str, user_message: str, api_key: str) -> str:
     )
 
 
-_FENCED_BLOCK_RE = re.compile(r"```[a-zA-Z]*\n.*?\n```", re.DOTALL)
+_FENCED_BLOCK_RE = re.compile(r"```[a-zA-Z]*\n(.*?)\n```", re.DOTALL)
 
 
 def parse_result(raw: str) -> dict[str, Any]:
@@ -553,20 +553,25 @@ def parse_result(raw: str) -> dict[str, Any]:
 
     The system prompt asks for a single JSON object with no surrounding
     text, but the model occasionally emits reasoning, sample templates,
-    or fenced placeholders before the real object. Strategy:
+    fenced placeholders, AND the real JSON in a separate fence. Strategy:
 
     1. Strict parse first (clean output is the happy path).
     2. If a markdown fence wraps the entire response (starts AND ends
        with ```), strip the outermost fence and retry.
-    3. Strip any embedded fenced code blocks (sample/template JSON the
-       model sometimes emits as preamble) and retry.
-    4. Fall back to first `{` to last `}` in the (possibly de-fenced)
-       text.
+    3. Scan all embedded fenced code blocks; if any of them parses as
+       JSON, return the one with the longest `roadmodel_txt` value.
+       This discriminates the real payload (entire selector.txt) from
+       sample/template fences (placeholder strings like "...full
+       file...").
+    4. Strip all fenced blocks and try parsing what remains, then fall
+       back to first `{` to last `}`.
 
-    Step 3 fixes the TODO(#5) failure mode where Opus emits a
-    ```json … ``` template ahead of the real JSON: the legacy fallback
-    would land on the template's first `{` and try to parse placeholder
-    values like `"...full file..."` as real content.
+    Step 3 fixes the multi-fence failure mode (TODO #5 plus the
+    sibling case where the real JSON is itself fenced, observed in
+    cron runs 25820190303 and 25820779529): Opus sometimes emits a
+    sample fence as preamble AND wraps the real JSON in its own
+    fence. The legacy code stripped both, leaving nothing parseable;
+    the previous fix stripped both regardless of content.
     """
     text = raw.strip()
 
@@ -582,14 +587,34 @@ def parse_result(raw: str) -> dict[str, Any]:
             try:
                 return json.loads(inner)
             except json.JSONDecodeError:
-                text = inner
+                pass
+
+    candidates: list[tuple[int, dict[str, Any]]] = []
+
+    def _try_add(candidate_text: str) -> None:
+        try:
+            parsed = json.loads(candidate_text.strip())
+        except json.JSONDecodeError:
+            return
+        if isinstance(parsed, dict):
+            roadmodel_txt = parsed.get("roadmodel_txt", "")
+            length = len(roadmodel_txt) if isinstance(roadmodel_txt, str) else 0
+            candidates.append((length, parsed))
+
+    for block in _FENCED_BLOCK_RE.findall(text):
+        _try_add(block)
 
     text_no_fences = _FENCED_BLOCK_RE.sub("", text).strip()
-    if text_no_fences and text_no_fences != text:
-        try:
-            return json.loads(text_no_fences)
-        except json.JSONDecodeError:
-            text = text_no_fences
+    if text_no_fences:
+        _try_add(text_no_fences)
+        start = text_no_fences.find("{")
+        end = text_no_fences.rfind("}")
+        if 0 <= start < end:
+            _try_add(text_no_fences[start : end + 1])
+
+    if candidates:
+        candidates.sort(key=lambda pair: pair[0], reverse=True)
+        return candidates[0][1]
 
     start = text.find("{")
     end = text.rfind("}")
