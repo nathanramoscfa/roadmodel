@@ -53,8 +53,9 @@ STYLE RULES (the AI MUST follow)
         (On/Off) / Conversation. Effort values are Low /
         Medium / High / Extra High. The Thinking toggle is
         a Claude-Code-only label; no Max Mode dial.
-      • Codex (Codex CLI, or the Codex chat panel inside
-        Cursor): Model / Platform / Intelligence /
+      • Codex (single Platform covering both the CLI binary
+        and the Cursor IDE extension — operator picks the
+        surface): Model / Platform / Intelligence /
         Conversation. Intelligence values are Low / Medium
         / High / Extra High. The Codex panel exposes NO
         Max Mode and NO Thinking field — Intelligence is
@@ -347,8 +348,10 @@ arrows:
      Typical values: Claude Code (Claude models when
      claude.ai Max is active), Cursor Composer (routine
      multi-file editing on Cursor Pro/Ultra), Cursor Chat
-     (frontier-model use against the Cursor pool), Codex CLI
-     (GPT autonomous coding on a ChatGPT subscription),
+     (frontier-model use against the Cursor pool), Codex
+     (GPT/Codex models on a ChatGPT subscription; covers
+     both the CLI binary and the Cursor IDE extension as a
+     single Platform — operator picks the surface),
      Anthropic API / OpenAI API / Google API (pay-per-token
      fallback when no subscription path applies). The
      Settings table MUST name PLATFORM so reviewers can see
@@ -377,16 +380,17 @@ arrows:
      extended reasoning is desirable; Off only when the
      step is purely mechanical and latency matters.
 
-     CODEX variant (use when PLATFORM is "Codex CLI" or
-     the Codex chat panel inside Cursor). The Codex panel
-     exposes Model + Intelligence + Speed — there is NO
-     Max Mode dial and NO Thinking field on this surface,
-     so the table omits both. Table rows: Model / Platform
-     / Intelligence / Conversation. INTELLIGENCE values:
-     Low / Medium / High / Extra High. Map from overall
-     complexity per `<thinking-context>`: Low → Low,
-     Medium → Medium, High → High, S-tier coding /
-     cross-file multi-step proof → Extra High.
+     CODEX variant (use when PLATFORM is "Codex" — covers
+     both the CLI binary and the Cursor IDE extension as a
+     single Platform; operator picks the surface at task
+     time). The Codex panel exposes Model + Intelligence +
+     Speed — there is NO Max Mode dial and NO Thinking
+     field on this surface, so the table omits both. Table
+     rows: Model / Platform / Intelligence / Conversation.
+     INTELLIGENCE values: Low / Medium / High / Extra High.
+     Map from overall complexity per `<thinking-context>`:
+     Low → Low, Medium → Medium, High → High, S-tier coding
+     / cross-file multi-step proof → Extra High.
 
      CURSOR / CHATGPT / API variant (use for every other
      PLATFORM — Cursor Composer, Cursor Chat, ChatGPT app,
@@ -417,15 +421,16 @@ and never Intelligence}}):
 | Conversation | **{{New or Continue}}**        |
 
 Settings table — Codex variant ({{use this shape when
-PLATFORM is "Codex CLI" or the Codex chat panel inside
-Cursor; the Codex panel exposes Intelligence as its only
-reasoning dial — there is NO Max Mode and NO Thinking
-field, so the table omits both rows}}):
+PLATFORM is "Codex" — covers both the CLI binary and the
+Cursor IDE extension as a single Platform; the Codex panel
+exposes Intelligence as its only reasoning dial — there is
+NO Max Mode and NO Thinking field, so the table omits both
+rows}}):
 
 | Setting      | Value                          |
 | ------------ | ------------------------------ |
 | Model        | {{Model name}}                 |
-| Platform     | {{Codex CLI or Codex chat}}    |
+| Platform     | Codex                          |
 | Intelligence | {{Low/Medium/High/Extra High}} |
 | Conversation | **{{New or Continue}}**        |
 
@@ -452,7 +457,7 @@ correctness-sensitive reasoning / mechanical translation)
 and map them to the model's documented strengths. Name the
 PLATFORM and identify the subscription or API key that pays
 for it (claude.ai Max funding Claude Code, Cursor Ultra pool
-funding Cursor Composer, ChatGPT Plus funding Codex CLI,
+funding Cursor Composer, ChatGPT Pro funding Codex,
 Anthropic API direct as pay-per-token fallback, etc.) —
 this is the line that distinguishes "Sonnet 4.6 on a flat
 $100/mo Max plan" from "Sonnet 4.6 burning $15/M output
@@ -1052,10 +1057,11 @@ corresponding row below.
      audit each row 1:1 against the panel:
        • Claude Code → "Effort {{Low/Med/High/XHigh}}"
          (and the Thinking column carries "On" or "Off").
-       • Codex CLI / Codex chat → "Intelligence
-         {{Low/Med/High/XHigh}}" (the Thinking column is
-         "--" because the surface exposes no Thinking
-         field).
+       • Codex → "Intelligence {{Low/Med/High/XHigh}}"
+         (the Thinking column is "--" because the surface
+         exposes no Thinking field; Codex covers both the
+         CLI binary and the Cursor IDE extension as a
+         single Platform).
        • Cursor / ChatGPT / API → "Max ON" or "Max OFF"
          (and the Thinking column carries the level or
          N/A). -->
@@ -1093,10 +1099,11 @@ audit tool that consumes the text format. Skip it if not.
      per-step Settings tables. Three variants:
        • Claude Code → "EFFORT: {{Low/Medium/High/Extra
          High}}" + "THINKING: {{On or Off}}".
-       • Codex (Codex CLI or Codex chat in Cursor) →
-         "INTELLIGENCE: {{Low/Medium/High/Extra High}}"
-         only; no MAX MODE line and no THINKING line,
-         because the Codex panel exposes neither dial.
+       • Codex → "INTELLIGENCE: {{Low/Medium/High/Extra
+         High}}" only; no MAX MODE line and no THINKING
+         line, because the Codex panel exposes neither
+         dial. Covers both the CLI binary and the Cursor
+         IDE extension as a single Platform.
        • Cursor / ChatGPT / API → "MAX MODE: {{On or
          Off}}" + "THINKING: {{Off/Low/Medium/High/XHigh
          /N/A}}".
@@ -1110,7 +1117,7 @@ PLATFORM: {{access method name}}
 {{For Claude Code:}}
 EFFORT: {{Low/Medium/High/Extra High}}
 THINKING: {{On or Off}}
-{{For Codex (Codex CLI or Codex chat in Cursor):}}
+{{For Codex (single Platform; operator picks CLI binary or Cursor IDE extension at task time):}}
 INTELLIGENCE: {{Low/Medium/High/Extra High}}
 {{For Cursor / ChatGPT / API:}}
 MAX MODE: {{On or Off}}
