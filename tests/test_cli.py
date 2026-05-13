@@ -190,7 +190,7 @@ def test_parse_response_json_path() -> None:
     payload = json.dumps(
         {
             "model": "GPT-5.3 Codex",
-            "platform": "Codex CLI",
+            "platform": "Codex",
             "max_mode": "Off",
             "thinking": "High",
             "conversation": "New",
@@ -199,14 +199,14 @@ def test_parse_response_json_path() -> None:
     )
     parsed = recommend_module.parse_response(payload)
     assert parsed["model"] == "GPT-5.3 Codex"
-    assert parsed["platform"] == "Codex CLI"
+    assert parsed["platform"] == "Codex"
 
 
 def test_parse_response_regex_path() -> None:
     text = FIXTURE_RESPONSE_PATH.read_text(encoding="utf-8")
     parsed = recommend_module.parse_response(text)
     assert parsed["model"] == "GPT-5.3 Codex"
-    assert parsed["platform"] == "Codex CLI"
+    assert parsed["platform"] == "Codex"
 
 
 def test_parse_response_regex_with_prompt_label() -> None:
