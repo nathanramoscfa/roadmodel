@@ -60,6 +60,7 @@ SELECTOR_TO_COST_SCALE_NAME = {
     "sonnet-4.6": "Claude 4.6 Sonnet",
     "gpt-5.4": "GPT-5.4",
     "gpt-5.3-codex": "GPT-5.3 Codex",
+    "gpt-5.2": "GPT-5.2",
     "gemini-3.1-pro": "Gemini 3.1 Pro",
     "composer-2": "Composer 2",
     "grok-4.3": "Grok 4.3",
