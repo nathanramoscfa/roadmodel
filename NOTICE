@@ -1,0 +1,16 @@
+roadmodel
+Copyright 2026 Nathan Ramos
+
+Third-party data attributions
+
+  * Artificial Analysis — benchmark index data and related factual
+    benchmark numbers cited in docs/model-selector.txt under fair use
+    as factual benchmark numbers.
+
+  * Cursor — pricing tier and list-price data cited in
+    docs/model-tier-cost-scale.md as factual list prices from Cursor's
+    published pricing materials.
+
+Third-party Python dependencies
+
+  see pyproject.toml [project] dependencies and PyPI for upstream licenses.

@@ -4,6 +4,15 @@ Two source-of-truth documents that drive an AI-assisted "which model should I
 use?" recommendation workflow, plus a weekly automation that keeps prices and
 benchmark numbers fresh against upstream sources.
 
+## Legal and community
+
+Licensed under [Apache-2.0](LICENSE) (Apache License, Version 2.0).
+Third-party and bundled attributions are listed in [NOTICE](NOTICE). See
+[CONTRIBUTING.md](CONTRIBUTING.md) for branch naming, pull request scope,
+and how to propose catalog edits; the [Code of Conduct](CODE_OF_CONDUCT.md)
+applies in community spaces. Report security issues privately per
+[SECURITY.md](SECURITY.md).
+
 ## The two documents
 
 - **[docs/model-selector.txt](docs/model-selector.txt)** — the recommender.
