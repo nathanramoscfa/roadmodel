@@ -10,6 +10,14 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+build/
+dist/
+*.egg-info/
+
+# Bundled docs copied from docs/ by hatch_build.py at build time.
+# This directory is build output; committing it would create a second
+# source of truth alongside docs/.
+/src/roadmodel/data/
 
 # Update run artifacts (transient outputs of update_models.py)
 update/.last-summary.txt
