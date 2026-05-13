@@ -72,6 +72,8 @@ _OPTIONS_RE = re.compile(r"<model-options>(.*?)</model-options>", re.DOTALL)
 _TIER_RE = re.compile(r'<tier\s+cost="([^"]+)"\s*>(.*?)</tier>', re.DOTALL)
 _MODEL_RE = re.compile(r"<model\s+([^>]+?)\s*/>", re.DOTALL)
 _ATTR_RE = re.compile(r'([\w-]+)="([^"]*)"')
+_METHOD_RE = re.compile(r"<method\s+([^>]+?)\s*/>", re.DOTALL)
+_ACCESS_METHODS_RE = re.compile(r"<access-methods>(.*?)</access-methods>", re.DOTALL)
 
 
 def _parse_models() -> list[tuple[str, dict[str, str]]]:
@@ -147,6 +149,28 @@ def test_tier_groupings_use_known_cost_values() -> None:
     assert not unknown, (
         f"Unknown <tier cost='...'> values: {unknown}; expected subset of {VALID_TIER_COSTS}"
     )
+
+
+def test_every_method_supports_models_references_valid_models() -> None:
+    """Every model id in a <method> supports-models attribute must exist
+    in <model-options>. Catches drift where the weekly cron's
+    supports-models refresh adds a model that isn't catalog-tracked,
+    or where editorial changes to <model-options> orphan a reference.
+    """
+    text = SELECTOR_PATH.read_text()
+    access_match = _ACCESS_METHODS_RE.search(text)
+    assert access_match, "<access-methods>...</access-methods> block not found"
+    catalog_ids = {attrs.get("id", "") for _, attrs in _parse_models()}
+    catalog_ids.discard("")
+    failures: list[str] = []
+    for method_m in _METHOD_RE.finditer(access_match.group(1)):
+        attrs = dict(_ATTR_RE.findall(method_m.group(1)))
+        method_id = attrs.get("id", "<unknown>")
+        supports = [s.strip() for s in attrs.get("supports-models", "").split(",") if s.strip()]
+        for model_id in supports:
+            if model_id not in catalog_ids:
+                failures.append(f"<method id='{method_id}'> supports-models references unknown model '{model_id}'")
+    assert not failures, "supports-models referential integrity broken:\n  " + "\n  ".join(failures)
 
 
 def test_prompt_has_lifecycle_rules() -> None:

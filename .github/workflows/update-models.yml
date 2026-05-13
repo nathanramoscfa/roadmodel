@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: update-models
@@ -34,20 +35,32 @@ jobs:
           AA_API_KEY: ${{ secrets.AA_API_KEY }}
         run: python update/update_models.py
 
-      - name: Commit catalog docs and push if changed
+      - name: Open PR if catalog changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          git config user.name "roadmodel-bot"
-          git config user.email "roadmodel-bot@users.noreply.github.com"
           if git diff --quiet -- docs/; then
             echo "No changes to commit."
             exit 0
           fi
-          summary="$(cat update/.last-summary.txt 2>/dev/null || echo 'Refresh roadmodel catalog')"
+          git config user.name "roadmodel-bot"
+          git config user.email "roadmodel-bot@users.noreply.github.com"
+          DATE="$(date -u +%Y-%m-%d)"
+          BRANCH="chore/catalog-refresh-${DATE}"
+          # If a branch from a prior same-day run exists locally, drop it.
+          git branch -D "$BRANCH" 2>/dev/null || true
+          git checkout -b "$BRANCH"
+          summary="$(cat update/.last-summary.txt 2>/dev/null || echo 'Automated catalog refresh.')"
           warnings=""
-          if [ -f update/.last-warnings.txt ]; then
-            warnings="$(printf '\n\nWarnings:\n')$(sed 's/^/  - /' update/.last-warnings.txt)"
+          if [ -f update/.last-warnings.txt ] && [ -s update/.last-warnings.txt ]; then
+            warnings="$(printf '\n\n## Warnings\n')$(sed 's/^/- /' update/.last-warnings.txt)"
           fi
           git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md
-          git commit -m "Automated refresh: $(date -u +%Y-%m-%d)" -m "${summary}${warnings}"
-          git push
+          git commit -m "Automated catalog refresh: ${DATE}" -m "${summary}${warnings}"
+          git push -u origin "$BRANCH"
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "Automated catalog refresh: ${DATE}" \
+            --body "$(printf '## Summary\n\n%s%s\n\n---\n\nThis PR was opened automatically by the weekly catalog-refresh cron in `.github/workflows/update-models.yml`. Review the diff against the previous catalog state; merge when satisfied. `test` status check must pass before merge per branch protection.' "$summary" "$warnings")"
