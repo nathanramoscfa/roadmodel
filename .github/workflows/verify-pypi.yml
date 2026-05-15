@@ -8,14 +8,6 @@ on:
         description: "roadmodel version to verify from PyPI (e.g. 0.1.0)"
         required: true
         type: string
-  # Temporary push trigger so this workflow runs once on the feature branch
-  # before it lands on main (workflow_dispatch needs the file on the default
-  # branch to be dispatchable). Removed before the PR merges.
-  push:
-    branches:
-      - feature/phase01-step06-finish-acceptance
-    paths:
-      - .github/workflows/verify-pypi.yml
 
 permissions:
   contents: read

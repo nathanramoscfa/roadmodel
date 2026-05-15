@@ -41,13 +41,20 @@ To re-run on demand:
 gh workflow run verify-pypi.yml -f version=0.1.0
 ```
 
-- Workflow run: see the most recent successful
-  [`Verify PyPI install`](https://github.com/nathanramoscfa/roadmodel/actions/workflows/verify-pypi.yml)
-  run for `version=0.1.0`. Each matrix leg installs `roadmodel==0.1.0`
-  from PyPI into a clean venv on `ubuntu-latest` and asserts that
+- Workflow run: [25900737794](https://github.com/nathanramoscfa/roadmodel/actions/runs/25900737794)
+  on 2026-05-15 against `roadmodel==0.1.0`. Each matrix leg installs
+  from PyPI into a clean venv on `ubuntu-latest` and asserts
   `roadmodel --help` exits 0 and `roadmodel.__version__ == "0.1.0"`.
-- Result will be recorded here once the run completes; matrix legs are
-  expected to be `3.11`, `3.12`, `3.13`, all green.
+- Result: **all three legs green**.
+  - `install-smoke (3.11)` — Python 3.11.15 on
+    `Linux-6.17.0-1010-azure-x86_64-with-glibc2.39`, 21s.
+  - `install-smoke (3.12)` — 17s.
+  - `install-smoke (3.13)` — 20s.
+- Smoke output (3.11, representative):
+  - `which roadmodel` → `/home/runner/work/roadmodel/roadmodel/.venv-verify/bin/roadmodel`
+  - `roadmodel --help` exited 0 and printed the same `Usage`/`Commands`
+    block recorded in the macOS run.
+  - `roadmodel.__version__` reported `0.1.0`.
 
 ## Cybersecurity Audit Summary (0.1.0)
 
