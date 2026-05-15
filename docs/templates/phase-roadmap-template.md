@@ -42,9 +42,11 @@ STYLE RULES (the AI MUST follow)
     self-contained Cursor / Claude Code session.
   - Every step carries: Goal blockquote, Branch line
     (`feature/phaseNN-stepM-<slug>` — see the Overview
-    "Branch strategy" paragraph), Settings table, Model
-    rationale paragraph, XML <task> prompt, and an
-    Acceptance Criteria bullet list. The Settings table is
+    "Branch strategy" and "Branch-first execution rule"
+    paragraphs; the operator runs `git checkout -b <branch>`
+    BEFORE reading files or editing anything in the step),
+    Settings table, Model rationale paragraph, XML <task>
+    prompt, and an Acceptance Criteria bullet list. The Settings table is
     PLATFORM-specific so it mirrors the actual surface the
     operator will see — each surface exposes a different
     dial, and the table rows must match the panel labels
@@ -171,6 +173,25 @@ release tagging — this paragraph confirms those rules apply
 unchanged within this phase. Per-step branches are listed on
 each step header below as `**Branch:**` so reviewers can map
 commits 1:1 to the step they implement.
+
+**Branch-first execution rule.** The very first action of every
+step — before reading any files, before running any tool, before
+drafting any change — is to check out the branch named in that
+step's `**Branch:**` line:
+
+```sh
+git checkout -b feature/phase{{N}}-step{{M}}-<slug>
+```
+
+This is non-negotiable. `main` is protected with
+`enforce_admins: true`, so a commit on `main` cannot be pushed and
+must be rewound or rebased onto the feature branch before the PR
+can open — an avoidable round-trip. If you discover mid-step that
+you started on `main`, recover by running the same
+`git checkout -b` command immediately (uncommitted changes carry
+over to the new branch), then continue. AI coding agents executing
+a step from this roadmap must treat the branch checkout as Step 0
+of every step.
 
 ---
 
