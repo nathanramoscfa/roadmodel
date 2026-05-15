@@ -3,10 +3,9 @@ from __future__ import annotations
 
 import os
 import stat
+from importlib import resources
 from pathlib import Path
 from typing import Final
-
-from importlib import resources
 
 from roadmodel.errors import BundledDocNotFoundError, UserContextNotFoundError
 

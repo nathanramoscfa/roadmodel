@@ -12,7 +12,8 @@ from typing import Any, Callable, TypeVar, cast
 
 import click
 
-from roadmodel import __version__, recommend as recommender, user_context
+from roadmodel import __version__, user_context
+from roadmodel import recommend as recommender
 from roadmodel.config import load_config
 from roadmodel.errors import (
     BundledDocNotFoundError,
@@ -134,9 +135,10 @@ def recommend(
         raise click.UsageError("Provide PROMPT or --file PATH.")
     if prompt is not None:
         prompt_text = prompt
-    else:
-        assert prompt_file is not None
+    elif prompt_file is not None:
         prompt_text = prompt_file.read_text(encoding="utf-8")
+    else:
+        raise click.UsageError("Provide PROMPT or --file PATH.")
     config = load_config(
         cli_provider=provider,
         cli_model=model,
