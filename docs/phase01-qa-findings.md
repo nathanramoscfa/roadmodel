@@ -1,6 +1,73 @@
 # Phase 1 QA Findings
 
-## Step 6 Release Verification
+This document rolls up Phase 1 verification: static checks
+`scripts/verify-phase01.sh` (checks 1–33), targeted pytest surfaces,
+and manual install evidence. Automation mapping follows
+`private/phase01-roadmap.md` (V1–V7).
+
+## Per-step verification rollup
+
+### Step 1 — Licensing and repo hygiene
+
+- **Static checks:** 1–7 (LICENSE, NOTICE, CONTRIBUTING, COC, SECURITY,
+  GitHub templates).
+- **Pytest:** none specific to this step.
+- **Manual result:** **PASS** — files present; `LICENSE` matches the
+  Apache 2.0 header pattern enforced by check 2.
+
+### Step 2 — Rename sweep (previous package name → `roadmodel`)
+
+- **Static checks:** 8–9 (git grep contract for `model[-_]selector`;
+  schema/freshness modules compile).
+- **Pytest:** `tests/test_doc_schema.py`, `tests/test_freshness.py`
+  (also exercised under `--py` / `--post` as V2.2).
+- **Manual result:** **PASS** — check 8 allowlists the three canonical
+  bundled-doc paths plus filename / narration references; no stray
+  legacy project slug hits.
+
+### Step 3 — Packaging scaffold
+
+- **Static checks:** 10–15 (`pyproject.toml`, `hatch_build.py`,
+  `__version__`, `.gitignore` data dir, bundled doc list).
+- **Pytest:** `tests/test_packaging.py` under the main CI matrix
+  (wheel layout).
+- **Manual result:** **PASS** — `python -m build` produces a wheel
+  whose version matches `pyproject.toml` (V3.2 / `--cli`).
+
+### Step 4 — CLI implementation
+
+- **Static checks:** 16–22 (module tree, fixtures, Click wiring,
+  `parse_response` keys).
+- **Pytest:** `tests/test_cli.py` (V4.2 under `--post`).
+- **Manual result:** **PASS** — `--cli` / `--post` smoke runs
+  `roadmodel --help` and `context init` + `context path` under an
+  isolated `HOME`.
+
+### Step 5 — Public documentation
+
+- **Static checks:** 23–26 (README install line, CHANGELOG 0.1.0
+  section, BYO key doc env vars, user-context default path + override).
+- **Pytest:** none specific.
+- **Manual result:** **PASS** — strings verified by static checks.
+
+### Step 6 — CI and release
+
+- **Static checks:** 27–29 (`release.yml` Sigstore hook, `tests.yml`
+  ruff/mypy text, `tests/test_ci_smoke.py`).
+- **Pytest:** `tests/test_ci_smoke.py` (YAML smoke in CI).
+- **Manual result:** **PASS** — Sigstore action id present; full lint
+  matrix lives in `tests.yml`.
+
+### Step 7 — QA + verification script
+
+- **Static checks:** 30–33 (this script + executable bit, this doc,
+  `private/phase01-roadmap.md`, `phase-verify.yml` matrix entry `1`).
+- **Pytest:** none beyond the default suite invoked by
+  `./scripts/verify-phase01.sh` (static + `pytest -x tests/`).
+- **Manual result:** **PASS** — canonical `verify-phase01.sh` template
+  landed; CI runs `--fast` only (under 30 seconds on Ubuntu).
+
+## Manual macOS + Linux TestPyPI installation verification
 
 Status: **PASS** for both `roadmodel==0.1.0` and `roadmodel==0.1.1` on
 PyPI. `0.1.1` is the security-hardened follow-up to `0.1.0` (drops the
@@ -123,10 +190,31 @@ Hardening items deferred to `0.1.1`:
 - L6 — narrow `auto-remediate.yml` `--allowedTools` and switch from
   auto-merge to PR-only.
 
+## Pre-ship items
+
+- **Doc-bundled recommender:** v0.1.x ships the Anthropic/OpenAI/Google
+  BYO-key path against the bundled selector docs. **Phase 2** will add
+  the Python scoring engine, platform-aware cost comparison, and MCP;
+  the BYO-key flow remains through **Phase 3** per the product roadmap.
+- **Private planning paths:** `private/phase01-roadmap.md` is maintained
+  locally (gitignored from the public tree). Check 32 records **PASS**
+  on GitHub Actions when the file is absent because CI cannot materialise
+  gitignored paths; local maintainer clones should still carry the file
+  for human review of the V1–V7 spec.
+- **`gitleaks` (V1.2):** optional in `--post`; Ubuntu CI images may or
+  may not ship the binary — the script logs `[SKIP]` when absent.
+- **`gh pr checks` (post):** optional; requires an authenticated `gh`
+  session and an open PR for the current branch.
+- **Interpreter selection:** `scripts/verify-phase01.sh` prefers, in
+  order: `ROADMODEL_VERIFY_PYTHON`, `./.venv/bin/python`, `python3.11`,
+  then `python3`. `requires-python >= 3.11` means plain `python3` on
+  older macOS/Xcode installs is unsuitable for wheel install smoke.
+
 ## Notes
 
 - `0.0.0` exists intentionally on PyPI as a placeholder release used only
   to claim the `roadmodel` project name before publishing `0.1.0`.
-- Step 7 will consume this document via `scripts/verify-phase01.sh
-  --post` to assert that macOS and Linux PyPI install evidence is
-  recorded here.
+- CI: [.github/workflows/phase-verify.yml](../.github/workflows/phase-verify.yml)
+  runs `bash scripts/verify-phase${{ matrix.phase }}.sh --fast` on every
+  push and pull request to `main` (matrix starts at `phase: [1]` for
+  forward-compatible expansion).
