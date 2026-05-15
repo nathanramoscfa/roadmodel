@@ -15,6 +15,7 @@ to "what should I use for this?" instead of guessing.
 [![Python versions](https://img.shields.io/pypi/pyversions/roadmodel.svg)](https://pypi.org/project/roadmodel/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![CI](https://github.com/nathanramoscfa/roadmodel/actions/workflows/tests.yml/badge.svg)](https://github.com/nathanramoscfa/roadmodel/actions/workflows/tests.yml)
+[![Phase verify](https://github.com/nathanramoscfa/roadmodel/actions/workflows/phase-verify.yml/badge.svg)](https://github.com/nathanramoscfa/roadmodel/actions/workflows/phase-verify.yml)
 
 ## Install
 
