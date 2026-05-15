@@ -7,13 +7,13 @@ from importlib import resources
 from importlib.resources.abc import Traversable
 from typing import Final
 
+from roadmodel import user_context
 from roadmodel.config import Config
 from roadmodel.errors import BundledDocNotFoundError, MalformedResponseError
 from roadmodel.providers import ProviderAdapter
 from roadmodel.providers import anthropic as anthropic_provider
 from roadmodel.providers import google as google_provider
 from roadmodel.providers import openai as openai_provider
-from roadmodel import user_context
 
 BUNDLED_SELECTOR_PATH: Traversable = resources.files("roadmodel.data") / "model-selector.txt"
 BUNDLED_TIER_COST_PATH: Traversable = resources.files("roadmodel.data") / "model-tier-cost-scale.md"

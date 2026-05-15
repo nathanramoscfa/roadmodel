@@ -127,6 +127,29 @@ jobs:
           pip install dist/*.whl
           roadmodel --help
 
+  security-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-py3.12-security-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-py3.12-security-
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Bandit static analysis
+        run: bandit -r src/
+      - name: pip-audit (runtime + dev dependencies)
+        run: pip-audit --strict
+
   test:
     if: ${{ always() }}
     needs:
@@ -134,6 +157,7 @@ jobs:
       - type-check
       - test-matrix
       - package-smoke
+      - security-scan
     runs-on: ubuntu-latest
     steps:
       - name: Enforce aggregate test gate
@@ -142,10 +166,12 @@ jobs:
           echo "type-check=${{ needs.type-check.result }}"
           echo "test-matrix=${{ needs.test-matrix.result }}"
           echo "package-smoke=${{ needs.package-smoke.result }}"
+          echo "security-scan=${{ needs.security-scan.result }}"
           if [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.type-check.result }}" != "success" ] || \
              [ "${{ needs.test-matrix.result }}" != "success" ] || \
-             [ "${{ needs.package-smoke.result }}" != "success" ]; then
+             [ "${{ needs.package-smoke.result }}" != "success" ] || \
+             [ "${{ needs.security-scan.result }}" != "success" ]; then
             echo "One or more CI jobs failed."
             exit 1
           fi

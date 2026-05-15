@@ -8,7 +8,7 @@ DEFAULT_MODEL = "claude-sonnet-4-6"
 
 def recommend(prompt: str, system: str, *, model: str | None = None, api_key: str) -> str:
     try:
-        from anthropic import APIError, Anthropic
+        from anthropic import Anthropic, APIError
     except Exception as exc:  # pragma: no cover - dependency/runtime guard
         raise ProviderCallError(
             "Anthropic SDK is unavailable; install the 'anthropic' package."

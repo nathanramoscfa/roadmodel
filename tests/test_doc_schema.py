@@ -123,7 +123,7 @@ def _parse_cost_scale_models() -> dict[str, dict[str, str]]:
             continue
         if len(cells) != len(header_cells):
             continue
-        row = dict(zip(header_cells, cells))
+        row = dict(zip(header_cells, cells, strict=True))
         out[row["Model"]] = row
     return out
 
