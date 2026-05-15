@@ -3,6 +3,17 @@
 This runbook covers the release flow for `roadmodel` introduced in
 Phase 1 Step 6 and updated in the CI hardening pass.
 
+## Phase 1 acceptance (automation parity)
+
+The Phase 1 **Acceptance criteria** block in `private/ROADMAP.md` now
+includes the V1–V7 verification contract: `.github/workflows/
+phase-verify.yml` runs `scripts/verify-phase01.sh --fast` on every push
+and pull request to `main` (static checks 1–33 plus the V1.1–V7.3
+rollup). Maintainers run `./scripts/verify-phase01.sh --post` before
+release tags for the full matrix (optional `gitleaks`, live `recommend`
+when `ANTHROPIC_API_KEY` is set, and `gh pr checks` when logged in).
+Evidence lives in `docs/phase01-qa-findings.md`.
+
 ## Required GitHub Secrets
 
 - `TEST_PYPI_TOKEN`
