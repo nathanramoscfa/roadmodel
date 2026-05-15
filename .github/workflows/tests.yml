@@ -70,7 +70,7 @@ jobs:
       - name: Mypy strict
         run: mypy --strict src
 
-  test:
+  test-matrix:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -129,3 +129,26 @@ jobs:
           python -m pip install --upgrade pip
           pip install dist/*.whl
           roadmodel --help
+
+  test:
+    if: ${{ always() }}
+    needs:
+      - lint
+      - type-check
+      - test-matrix
+      - package-smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce aggregate test gate
+        run: |
+          echo "lint=${{ needs.lint.result }}"
+          echo "type-check=${{ needs.type-check.result }}"
+          echo "test-matrix=${{ needs.test-matrix.result }}"
+          echo "package-smoke=${{ needs.package-smoke.result }}"
+          if [ "${{ needs.lint.result }}" != "success" ] || \
+             [ "${{ needs.type-check.result }}" != "success" ] || \
+             [ "${{ needs.test-matrix.result }}" != "success" ] || \
+             [ "${{ needs.package-smoke.result }}" != "success" ]; then
+            echo "One or more CI jobs failed."
+            exit 1
+          fi
