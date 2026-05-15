@@ -84,6 +84,10 @@ jobs:
     if: ${{ github.event_name == 'push' && !contains(github.ref_name, '-phase-') }}
     permissions:
       contents: read
+      # OIDC trusted publishing: the action exchanges this GitHub
+      # OIDC token for a short-lived TestPyPI API token. No long-lived
+      # secret needed.
+      id-token: write
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -95,8 +99,6 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
         with:
           repository-url: https://test.pypi.org/legacy/
-          user: __token__
-          password: ${{ secrets.TEST_PYPI_TOKEN }}
           packages-dir: dist/
 
   pypi-upload:
@@ -108,9 +110,15 @@ jobs:
     # `pypi-production` environment is declared for defense-in-depth so
     # that when the repo's billing plan supports required-reviewer rules,
     # they automatically apply to this job without further code changes.
+    # It also matches the environment name configured at PyPI's Trusted
+    # Publisher settings, scoping the OIDC exchange to this gated job.
     environment: pypi-production
     permissions:
       contents: read
+      # OIDC trusted publishing: the action exchanges this GitHub
+      # OIDC token for a short-lived PyPI API token. No long-lived
+      # secret needed.
+      id-token: write
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -118,8 +126,6 @@ jobs:
           path: dist
       - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
         with:
-          user: __token__
-          password: ${{ secrets.PYPI_TOKEN }}
           packages-dir: dist/
 
   github-release:
