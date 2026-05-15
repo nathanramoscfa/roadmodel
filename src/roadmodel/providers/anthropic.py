@@ -36,4 +36,4 @@ def recommend(prompt: str, system: str, *, model: str | None = None, api_key: st
     except APIError as exc:
         raise ProviderCallError(f"Anthropic API call failed: {exc}") from exc
     except Exception as exc:  # pragma: no cover - defensive adapter guard
-        raise ProviderCallError(f"Anthropic API call failed: {exc}") from exc
+        raise ProviderCallError(f"Anthropic API call failed ({type(exc).__name__}).") from exc
