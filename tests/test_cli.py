@@ -43,7 +43,9 @@ def _set_isolated_home(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("HOME", str(tmp_path / "home"))
 
 
-def test_recommend_invokes_build_prompt_and_parser(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_recommend_invokes_build_prompt_and_parser(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     sample_response = FIXTURE_RESPONSE_PATH.read_text(encoding="utf-8")
     user_context_text = FIXTURE_USER_CONTEXT_PATH.read_text(encoding="utf-8")
     context_path = tmp_path / "user-context.md"
@@ -56,7 +58,9 @@ def test_recommend_invokes_build_prompt_and_parser(monkeypatch: pytest.MonkeyPat
         def recommend(
             self, prompt: str, system: str, *, model: str | None = None, api_key: str
         ) -> str:
-            self.calls.append({"prompt": prompt, "system": system, "model": model, "api_key": api_key})
+            self.calls.append(
+                {"prompt": prompt, "system": system, "model": model, "api_key": api_key}
+            )
             return sample_response
 
     adapter = FakeAdapter()
@@ -104,7 +108,9 @@ def test_recommend_first_run_bootstraps_user_context(
     default_path = tmp_path / "xdg" / "roadmodel" / "user-context.md"
 
     class FailingAdapter:
-        def recommend(self, prompt: str, system: str, *, model: str | None = None, api_key: str) -> str:
+        def recommend(
+            self, prompt: str, system: str, *, model: str | None = None, api_key: str
+        ) -> str:
             raise AssertionError("Provider must not be called before first-run bootstrap.")
 
     monkeypatch.setitem(recommend_module.PROVIDER_ADAPTERS, "anthropic", FailingAdapter())
@@ -125,12 +131,16 @@ def test_recommend_unedited_user_context_warns_but_proceeds(
 
     context_path = tmp_path / "xdg" / "roadmodel" / "user-context.md"
     context_path.parent.mkdir(parents=True, exist_ok=True)
-    context_path.write_text((REPO_ROOT / "docs" / "user-context.example.md").read_text(), encoding="utf-8")
+    context_path.write_text(
+        (REPO_ROOT / "docs" / "user-context.example.md").read_text(), encoding="utf-8"
+    )
 
     sample_response = FIXTURE_RESPONSE_PATH.read_text(encoding="utf-8")
 
     class StaticAdapter:
-        def recommend(self, prompt: str, system: str, *, model: str | None = None, api_key: str) -> str:
+        def recommend(
+            self, prompt: str, system: str, *, model: str | None = None, api_key: str
+        ) -> str:
             return sample_response
 
     monkeypatch.setitem(recommend_module.PROVIDER_ADAPTERS, "anthropic", StaticAdapter())
@@ -234,7 +244,11 @@ def test_parse_response_malformed() -> None:
         (
             "env_provider",
             None,
-            {"ROADMODEL_PROVIDER": "google", "GOOGLE_API_KEY": "google-env", "ANTHROPIC_API_KEY": "a"},
+            {
+                "ROADMODEL_PROVIDER": "google",
+                "GOOGLE_API_KEY": "google-env",
+                "ANTHROPIC_API_KEY": "a",
+            },
             "",
             "google",
             "google-env",

@@ -108,7 +108,9 @@ def cli() -> None:
     type=click.Choice(["anthropic", "openai", "google"], case_sensitive=False),
     help="Provider override (anthropic/openai/google).",
 )
-@click.option("--model", type=str, help="Optional explicit model id override for the selected provider.")
+@click.option(
+    "--model", type=str, help="Optional explicit model id override for the selected provider."
+)
 @click.option(
     "--user-context",
     "user_context_path",
