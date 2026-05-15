@@ -53,8 +53,9 @@ STYLE RULES (the AI MUST follow)
     exactly:
       • Claude Code: Model / Platform / Effort / Thinking
         (On/Off) / Conversation. Effort values are Low /
-        Medium / High / Extra High. The Thinking toggle is
-        a Claude-Code-only label; no Max Mode dial.
+        Medium / High / Extra High / Max. The Thinking
+        toggle is a Claude-Code-only label; no Max Mode
+        dial.
       • Codex (single Platform covering both the CLI binary
         and the Cursor IDE extension — operator picks the
         surface): Model / Platform / Intelligence /
@@ -77,7 +78,7 @@ STYLE RULES (the AI MUST follow)
     API key that pays for the chosen Platform AND justify
     each dial value using the surface's native vocabulary
     (Effort vs Intelligence vs Max Mode; On/Off vs
-    Low/Medium/High/Extra High vs reasoning level).
+    Low/Medium/High/Extra High/Max vs reasoning level).
   - End the document with a Post-Implementation Verification
     section (V1-Vn check tables), a Summary Table, optional
     Model-selection blocks, and a Not-in-scope section.
@@ -394,15 +395,17 @@ arrows:
      a Thinking on/off toggle — there is NO Max Mode dial
      and NO Intelligence dial on this surface. Table rows:
      Model / Platform / Effort / Thinking / Conversation.
-     EFFORT values: Low / Medium / High / Extra High. Map
-     from overall complexity per `<thinking-context>`: Low
-     → Low, Medium → Medium, High → High, High with novel
-     problem-solving or cross-file multi-step proof →
-     Extra High; bump up one level for planning /
-     knowledge prompts with cross-cutting scope. THINKING
-     values: On / Off. Default On for any step where
-     extended reasoning is desirable; Off only when the
-     step is purely mechanical and latency matters.
+     EFFORT values: Low / Medium / High / Extra High / Max.
+     Map from overall complexity per `<thinking-context>`:
+     Low → Low, Medium → Medium, High → High, High with
+     novel problem-solving or cross-file multi-step proof
+     → Extra High, ceiling-class tasks demanding the
+     highest available reasoning budget → Max; bump up
+     one level for planning / knowledge prompts with
+     cross-cutting scope. THINKING values: On / Off.
+     Default On for any step where extended reasoning is
+     desirable; Off only when the step is purely
+     mechanical and latency matters.
 
      CODEX variant (use when PLATFORM is "Codex" — covers
      both the CLI binary and the Cursor IDE extension as a
@@ -441,7 +444,7 @@ and never Intelligence}}):
 | ------------ | ------------------------------ |
 | Model        | {{Model name}}                 |
 | Platform     | Claude Code                    |
-| Effort       | {{Low/Medium/High/Extra High}} |
+| Effort       | {{Low/Medium/High/Extra High/Max}} |
 | Thinking     | {{On or Off}}                  |
 | Conversation | **{{New or Continue}}**        |
 
@@ -1080,7 +1083,7 @@ corresponding row below.
      whichever dial the step's PLATFORM exposes, written
      in the surface's native vocabulary so reviewers can
      audit each row 1:1 against the panel:
-       • Claude Code → "Effort {{Low/Med/High/XHigh}}"
+       • Claude Code → "Effort {{Low/Med/High/XHigh/Max}}"
          (and the Thinking column carries "On" or "Off").
        • Codex → "Intelligence {{Low/Med/High/XHigh}}"
          (the Thinking column is "--" because the surface
@@ -1093,10 +1096,10 @@ corresponding row below.
 
 | Step    | Scope                     | Model       | Platform     | Reasoning dial  | Thinking         | Conv |
 | ------- | ------------------------- | ----------- | ------------ | --------------- | ---------------- | ---- |
-| 1       | {{Step 1 short scope}}    | {{Model}}   | {{Platform}} | {{Effort/Intelligence Low/Med/High/XHigh or Max ON/OFF}} | {{level / On / Off / N/A / --}} | New  |
-| 2       | {{Step 2 short scope}}    | {{Model}}   | {{Platform}} | {{Effort/Intelligence Low/Med/High/XHigh or Max ON/OFF}} | {{level / On / Off / N/A / --}} | New  |
+| 1       | {{Step 1 short scope}}    | {{Model}}   | {{Platform}} | {{Effort Low/Med/High/XHigh/Max or Intelligence Low/Med/High/XHigh or Max ON/OFF}} | {{level / On / Off / N/A / --}} | New  |
+| 2       | {{Step 2 short scope}}    | {{Model}}   | {{Platform}} | {{Effort Low/Med/High/XHigh/Max or Intelligence Low/Med/High/XHigh or Max ON/OFF}} | {{level / On / Off / N/A / --}} | New  |
 | ...     | ...                       | ...         | ...          | ...             | ...              | ...  |
-| {{N}}   | QA + verify-phase{{N}}.sh | {{Model}}   | {{Platform}} | {{Effort/Intelligence Low/Med/High/XHigh or Max ON/OFF}} | {{level / On / Off / N/A / --}} | New  |
+| {{N}}   | QA + verify-phase{{N}}.sh | {{Model}}   | {{Platform}} | {{Effort Low/Med/High/XHigh/Max or Intelligence Low/Med/High/XHigh or Max ON/OFF}} | {{level / On / Off / N/A / --}} | New  |
 | V1      | {{Step 1 scope}}          | CI: {{wf}}  | --           | --              | --               | --   |
 | V2      | {{Step 2 scope}}          | CI: {{wf}}  | --           | --              | --               | --   |
 | ...     | ...                       | ...         | --           | --              | --               | --   |
@@ -1123,7 +1126,7 @@ audit tool that consumes the text format. Skip it if not.
 <!-- Block field shape is platform-specific, mirroring the
      per-step Settings tables. Three variants:
        • Claude Code → "EFFORT: {{Low/Medium/High/Extra
-         High}}" + "THINKING: {{On or Off}}".
+         High/Max}}" + "THINKING: {{On or Off}}".
        • Codex → "INTELLIGENCE: {{Low/Medium/High/Extra
          High}}" only; no MAX MODE line and no THINKING
          line, because the Codex panel exposes neither
@@ -1140,7 +1143,7 @@ PROMPT: Step 1 — {{step title}}
 MODEL: {{model}}
 PLATFORM: {{access method name}}
 {{For Claude Code:}}
-EFFORT: {{Low/Medium/High/Extra High}}
+EFFORT: {{Low/Medium/High/Extra High/Max}}
 THINKING: {{On or Off}}
 {{For Codex (single Platform; operator picks CLI binary or Cursor IDE extension at task time):}}
 INTELLIGENCE: {{Low/Medium/High/Extra High}}
