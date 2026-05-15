@@ -9,6 +9,7 @@ Covers the pathological output shapes Opus emits in production:
   6224d29 "Flag parse_result fenced-template flake").
 - Prose preamble or epilogue around the JSON.
 """
+
 from __future__ import annotations
 
 import json
@@ -39,8 +40,7 @@ def test_outer_fence_only() -> None:
 
 def test_prose_preamble_then_json() -> None:
     raw = (
-        "I'll produce the JSON now:\n\n"
-        '{"roadmodel_txt": "abc", "model_tier_cost_scale_md": "def"}'
+        'I\'ll produce the JSON now:\n\n{"roadmodel_txt": "abc", "model_tier_cost_scale_md": "def"}'
     )
     parsed = parse_result(raw)
     assert parsed["roadmodel_txt"] == "abc"
@@ -68,7 +68,7 @@ def test_sample_fenced_template_then_real_json() -> None:
 def test_multiple_sample_fences_then_real_json() -> None:
     raw = (
         "```python\nprint('not JSON')\n```\n"
-        "```json\n{\"sample\": true}\n```\n"
+        '```json\n{"sample": true}\n```\n'
         "Here's the real output:\n"
         '{"roadmodel_txt": "real_content_long_enough", "model_tier_cost_scale_md": "real"}'
     )
@@ -92,7 +92,9 @@ def test_real_json_inside_second_fence() -> None:
         "\n"
         "Building the real files:\n\n"
         "```json\n"
-        '{"roadmodel_txt": "' + real_content + '", "model_tier_cost_scale_md": "real-content-2", "summary": "Refreshed", "warnings": []}\n'
+        '{"roadmodel_txt": "'
+        + real_content
+        + '", "model_tier_cost_scale_md": "real-content-2", "summary": "Refreshed", "warnings": []}\n'
         "```"
     )
     parsed = parse_result(raw)

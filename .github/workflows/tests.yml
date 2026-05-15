@@ -39,10 +39,7 @@ jobs:
           pip install -e ".[dev]"
       - name: Ruff lint
         run: ruff check src tests
-      - name: Ruff format check (baseline)
-        # Keep visibility on format drift without failing CI until a
-        # dedicated repo-wide formatting pass is approved.
-        continue-on-error: true
+      - name: Ruff format check
         run: ruff format --check src tests
 
   type-check:

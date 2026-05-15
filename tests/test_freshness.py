@@ -2,6 +2,7 @@
 in too long. The weekly cron is the project's heartbeat; this test
 catches a stuck or disabled workflow before silent doc rot.
 """
+
 from __future__ import annotations
 
 import datetime as dt
