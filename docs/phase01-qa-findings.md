@@ -2,13 +2,45 @@
 
 ## Step 6 Release Verification
 
-Status: **PASS** for `roadmodel==0.1.0` on PyPI.
+Status: **PASS** for both `roadmodel==0.1.0` and `roadmodel==0.1.1` on
+PyPI. `0.1.1` is the security-hardened follow-up to `0.1.0` (drops the
+repo-walk fallback, masks the api_key in `Config.__repr__`, atomically
+creates user-context.md with `0o600`, sanitizes provider fallback
+error strings); see the
+[v0.1.1 GitHub Release](https://github.com/nathanramoscfa/roadmodel/releases/tag/v0.1.1-pypi)
+for the full notes.
 
-### macOS (Python 3.11 clean venv)
+### 0.1.1 — macOS (Python 3.11)
 
 - Date: 2026-05-15
 - Host: macOS-26.5-arm64 (Apple Silicon)
 - Python: 3.11.15 (Homebrew `python@3.11`)
+- TestPyPI install (post tag-push, before manual dispatch to PyPI):
+  `pip install --index-url https://test.pypi.org/simple/
+  --extra-index-url https://pypi.org/simple/ roadmodel==0.1.1` — green,
+  `roadmodel --help` exit 0, `__version__ == "0.1.1"`.
+- PyPI install (post manual dispatch): `pip install roadmodel==0.1.1` —
+  green, same smoke output.
+
+### 0.1.1 — Linux (Python 3.11 + 3.12 + 3.13, ubuntu-latest)
+
+- Workflow run:
+  [25901738047](https://github.com/nathanramoscfa/roadmodel/actions/runs/25901738047)
+  on 2026-05-15. All three matrix legs green; `roadmodel --help`
+  exit 0 and `__version__ == "0.1.1"` on each.
+- Re-run rationale: an earlier dispatch
+  ([25901715925](https://github.com/nathanramoscfa/roadmodel/actions/runs/25901715925))
+  succeeded on 3.11 and 3.13 but failed on 3.12 because the install ran
+  during the PyPI index propagation window (~minutes after upload).
+  Re-dispatched after the propagation completed; all legs green.
+
+### 0.1.0 — macOS (Python 3.11 clean venv)
+
+- Date: 2026-05-15
+- Host: macOS-26.5-arm64 (Apple Silicon)
+- Python: 3.11.15 (Homebrew `python@3.11`)
+- Note: pre-hardening release. The audit summary further down records
+  why it remained safe to leave live alongside 0.1.1.
 - Steps run:
 
   ```bash
@@ -30,12 +62,12 @@ Status: **PASS** for `roadmodel==0.1.0` on PyPI.
   - Installed dependency set matched the resolver output expected from
     `pyproject.toml` (`anthropic`, `click`, `google-genai`, `openai` + transitive).
 
-### Linux (Python 3.11 + 3.12 + 3.13 clean venv, ubuntu-latest)
+### 0.1.0 — Linux (Python 3.11 + 3.12 + 3.13 clean venv, ubuntu-latest)
 
 Verification is performed via the dispatchable workflow at
 [.github/workflows/verify-pypi.yml](../.github/workflows/verify-pypi.yml).
 
-To re-run on demand:
+To re-run on demand for any version:
 
 ```bash
 gh workflow run verify-pypi.yml -f version=0.1.0
