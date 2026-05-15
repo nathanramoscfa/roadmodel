@@ -9,20 +9,21 @@ name: Auto-remediate test failures
 # ─────────────────────────────────────────────────────────────────────
 # CONFIGURATION — edit this single line to control behavior:
 #
-#   "auto-merge" (default):
+#   "pr-only" (default, security-recommended):
+#     Claude makes ONE attempt and opens a PR for human review. Never
+#     merges. The maintainer reviews each remediation before it lands
+#     on main, which is the audit-recommended posture for an LLM-driven
+#     code-change workflow.
+#
+#   "auto-merge":
 #     Claude iterates up to 3 attempts. On the first passing pytest run,
 #     it opens a PR and immediately squash-merges. If all 3 attempts
-#     fail, it opens a GitHub Issue instead of a PR — labeled
-#     "needs-attention" — describing what was tried and why a human
-#     needs to decide (e.g. find an alternate source, drop the
-#     benchmark).
-#
-#   "pr-only":
-#     Claude makes ONE attempt and opens a PR for human review. Never
-#     merges. Use this if you want to inspect every fix before it lands.
+#     fail, it opens a GitHub Issue labeled "needs-attention". Use this
+#     mode only after the prompt + allowedTools constraints have been
+#     reviewed and you are comfortable with the trust boundary.
 # ─────────────────────────────────────────────────────────────────────
 env:
-  AUTO_REMEDIATE_MODE: "auto-merge"
+  AUTO_REMEDIATE_MODE: "pr-only"
 
 on:
   workflow_run:
@@ -112,7 +113,18 @@ jobs:
         uses: anthropics/claude-code-action@v1.0.99
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: "--model claude-sonnet-4-6 --allowedTools 'Edit,MultiEdit,Write,Read,Glob,Grep,Bash(git:*),Bash(gh:*),Bash(pytest:*),Bash(python:*),Bash(pip:*)'"
+          # allowedTools intentionally narrowed:
+          # - Edit/Read/Glob/Grep cover the in-scope file edits and
+          #   exploratory reads the remediation needs.
+          # - Write/MultiEdit dropped: a remediation should not create
+          #   new files in this scope.
+          # - Bash(git:*) + Bash(gh:*) needed for branch/commit/push/PR.
+          # - Bash(pytest:*) needed to verify the fix.
+          # - Bash(pip:*)/Bash(python:*) dropped: pip install or arbitrary
+          #   python execution is not required for an upstream-source
+          #   remediation and broadens the blast radius of any prompt
+          #   injection from the failure logs.
+          claude_args: "--model claude-sonnet-4-6 --allowedTools 'Edit,Read,Glob,Grep,Bash(git:*),Bash(gh:*),Bash(pytest:*)'"
           prompt: |
             You are remediating a failing daily test run for the roadmodel
             project. The Tests workflow failed on main, which likely indicates
