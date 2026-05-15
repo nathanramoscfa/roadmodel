@@ -148,7 +148,11 @@ jobs:
       - name: Bandit static analysis
         run: bandit -r src/
       - name: pip-audit (runtime + dev dependencies)
-        run: pip-audit --strict
+        # --skip-editable so roadmodel itself (installed editable for
+        # CI) is not audited against PyPI; only third-party deps are.
+        # --strict cannot combine with --skip-editable because the skip
+        # is itself treated as a strict-mode error.
+        run: pip-audit --skip-editable
 
   test:
     if: ${{ always() }}
