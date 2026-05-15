@@ -312,7 +312,7 @@ def test_config_provider_precedence(
         ("env_overrides", "env"),
         ("xdg_home", "xdg"),
         ("standard_home", "home"),
-        ("repo_fallback", "repo"),
+        ("no_repo_walk_fallback", "no_repo_walk"),
     ],
 )
 def test_user_context_resolve_precedence(
@@ -368,4 +368,42 @@ def test_user_context_resolve_precedence(
     work_dir.mkdir(parents=True)
     monkeypatch.chdir(work_dir)
     resolved = user_context_module.resolve(cli_path=None)
-    assert resolved == repo_context_path
+    assert resolved == home_path
+    assert resolved != repo_context_path
+
+
+def test_config_repr_masks_api_key() -> None:
+    config = Config(
+        provider="anthropic",
+        model=None,
+        api_key="sk-ant-very-secret-token-abcdef123456",
+        user_context_path=Path("/tmp/uc.md"),
+    )
+    rendered = repr(config)
+    assert "sk-ant-very-secret-token-abcdef123456" not in rendered
+    assert "sk-a***" in rendered
+
+    empty_config = Config(
+        provider="anthropic",
+        model=None,
+        api_key="",
+        user_context_path=Path("/tmp/uc.md"),
+    )
+    assert "<empty>" in repr(empty_config)
+
+
+def test_user_context_bootstrap_creates_0o600(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    target = tmp_path / "config" / "roadmodel" / "user-context.md"
+    user_context_module.bootstrap(target)
+    assert target.exists()
+    mode = target.stat().st_mode & 0o777
+    assert mode == 0o600, f"expected 0o600, got {oct(mode)}"
+    parent_mode = target.parent.stat().st_mode & 0o777
+    assert parent_mode == 0o700, f"expected parent 0o700, got {oct(parent_mode)}"
+
+    target.chmod(0o644)
+    user_context_module.bootstrap(target)
+    overwrite_mode = target.stat().st_mode & 0o777
+    assert overwrite_mode == 0o600, f"expected 0o600 after overwrite, got {oct(overwrite_mode)}"

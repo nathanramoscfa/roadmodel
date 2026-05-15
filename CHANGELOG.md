@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] — 2026-05-15
+
+### Security
+
+- Drop the implicit repo-walk fallback in `user_context.resolve()`. The
+  prior behavior walked up to the nearest `.git` and treated
+  `docs/user-context.md` from that repo as a fallback candidate, which
+  meant a user running `roadmodel` inside an attacker-controlled repo
+  before bootstrapping their own user-context could have had that
+  repo's file sent to their provider. The supported overrides
+  (`--user-context`, `ROADMODEL_USER_CONTEXT`, the XDG default path)
+  are unchanged.
+- Mask `api_key` in `Config.__repr__` so traceback formatters that
+  render local variables cannot inadvertently expose the key.
+- Bootstrap `user-context.md` atomically with `0o600` via `os.open`
+  (no write-then-chmod race window) and tighten the parent directory
+  to `0o700` when newly created.
+- Replace `f"... failed: {exc}"` with `f"... failed ({type(exc).__name__})."`
+  in the provider bare-`except` fallbacks so future SDK exception
+  messages cannot accidentally leak request metadata via error
+  strings.
+
 ## [0.1.0] — 2026-05-15
 
 ### Added

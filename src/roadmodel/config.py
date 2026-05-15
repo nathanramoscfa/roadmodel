@@ -25,12 +25,19 @@ _MISSING_KEY_REMEDIATION = (
 )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, repr=False)
 class Config:
     provider: ProviderName
     model: str | None
     api_key: str
     user_context_path: Path
+
+    def __repr__(self) -> str:
+        masked = f"{self.api_key[:4]}***" if self.api_key else "<empty>"
+        return (
+            f"Config(provider={self.provider!r}, model={self.model!r}, "
+            f"api_key={masked!r}, user_context_path={self.user_context_path!r})"
+        )
 
 
 def _config_home() -> Path:

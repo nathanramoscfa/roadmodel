@@ -26,14 +26,6 @@ def default_user_context_home() -> Path:
     )
 
 
-def _repo_user_context_candidate() -> Path | None:
-    cwd = Path.cwd()
-    for root in (cwd, *cwd.parents):
-        if (root / ".git").exists():
-            return root / "docs" / "user-context.md"
-    return None
-
-
 def resolve(*, cli_path: Path | None) -> Path:
     candidates: list[Path] = []
     if cli_path is not None:
@@ -45,10 +37,6 @@ def resolve(*, cli_path: Path | None) -> Path:
 
     default_path = default_user_context_home()
     candidates.append(default_path)
-
-    repo_path = _repo_user_context_candidate()
-    if repo_path is not None:
-        candidates.append(repo_path)
 
     for candidate in candidates:
         if candidate.exists():
@@ -63,9 +51,19 @@ def bootstrap(target: Path) -> None:
         template_text = template_path.read_text(encoding="utf-8")
     except FileNotFoundError as exc:
         raise BundledDocNotFoundError(_USER_CONTEXT_TEMPLATE) from exc
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(template_text, encoding="utf-8")
-    target.chmod(stat.S_IRUSR | stat.S_IWUSR)
+    parent = target.parent
+    parent_existed = parent.exists()
+    parent.mkdir(parents=True, exist_ok=True)
+    if not parent_existed:
+        parent.chmod(stat.S_IRWXU)
+    fd = os.open(
+        str(target),
+        os.O_CREAT | os.O_WRONLY | os.O_TRUNC,
+        stat.S_IRUSR | stat.S_IWUSR,
+    )
+    os.fchmod(fd, stat.S_IRUSR | stat.S_IWUSR)
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(template_text)
 
 
 def read(path: Path) -> str:
