@@ -346,7 +346,7 @@ run_static_checks() {
   fi
 
   if [[ -f .github/workflows/phase-verify.yml ]] &&
-    grep -Eq 'phase:[[:space:]]*\[[[:space:]]*1[[:space:]]*\]' .github/workflows/phase-verify.yml; then
+    grep -Eq 'phase:[[:space:]]*\[[[:space:]]*"?0*1"?[[:space:]]*(,|\])' .github/workflows/phase-verify.yml; then
     record_pass 33 "phase-verify.yml exists with matrix phase list including 1"
   else
     record_fail 33 "phase-verify.yml exists with matrix phase list including 1" \
@@ -398,7 +398,7 @@ rollup_v_fast() {
     V_AGG_FAIL+=1
   fi
   if [[ "${STATIC_FAIL}" -eq 0 ]] &&
-    grep -Eq 'phase:[[:space:]]*\[[[:space:]]*1[[:space:]]*\]' .github/workflows/phase-verify.yml; then
+    grep -Eq 'phase:[[:space:]]*\[[[:space:]]*"?0*1"?[[:space:]]*(,|\])' .github/workflows/phase-verify.yml; then
     printf '[PASS] V7.2: phase-verify.yml matrix includes phase 1\n'
     V_AGG_PASS+=1
   else
