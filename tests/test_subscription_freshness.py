@@ -20,6 +20,7 @@ marker. After confirming the four provider pricing pages, bump the
 `<!-- subscription-tiers-reviewed: YYYY-MM-DD -->` line in
 docs/model-tier-cost-scale.md to today's date.
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -29,9 +30,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 COST_SCALE_PATH = REPO_ROOT / "docs" / "model-tier-cost-scale.md"
 STALE_DAYS_THRESHOLD = 180
-MARKER_RE = re.compile(
-    r"<!--\s*subscription-tiers-reviewed:\s*(\d{4}-\d{2}-\d{2})\s*-->"
-)
+MARKER_RE = re.compile(r"<!--\s*subscription-tiers-reviewed:\s*(\d{4}-\d{2}-\d{2})\s*-->")
 
 
 def test_subscription_tiers_recently_reviewed() -> None:

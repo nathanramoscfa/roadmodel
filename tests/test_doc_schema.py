@@ -15,6 +15,7 @@ text legitimately contains backticked references to its own tag names
 (e.g., `<task-categories>` in the selection-algorithm). We parse with
 regex rather than ElementTree to handle this without rewriting the doc.
 """
+
 from __future__ import annotations
 
 import re
@@ -170,7 +171,9 @@ def test_every_method_supports_models_references_valid_models() -> None:
         supports = [s.strip() for s in attrs.get("supports-models", "").split(",") if s.strip()]
         for model_id in supports:
             if model_id not in catalog_ids:
-                failures.append(f"<method id='{method_id}'> supports-models references unknown model '{model_id}'")
+                failures.append(
+                    f"<method id='{method_id}'> supports-models references unknown model '{model_id}'"
+                )
     assert not failures, "supports-models referential integrity broken:\n  " + "\n  ".join(failures)
 
 

@@ -10,6 +10,7 @@ helper.
 Network blips are absorbed by retry-with-backoff. Validation failures
 are hard fails because they represent real shape changes.
 """
+
 from __future__ import annotations
 
 import json
@@ -297,9 +298,7 @@ def test_tau2_transform_produces_scored_submissions() -> None:
         domains_seen.update(results.keys())
     expected = {"airline", "retail"}
     missing = expected - domains_seen
-    assert not missing, (
-        f"τ²-bench transform never saw domains {missing}; saw: {domains_seen}"
-    )
+    assert not missing, f"τ²-bench transform never saw domains {missing}; saw: {domains_seen}"
 
 
 def test_livecodebench_aggregate_ranks_models() -> None:

@@ -6,6 +6,7 @@ Tier 2: a freshly built wheel contains the three bundled docs at the
 Tier 3: src/roadmodel/data/ is gitignored (it is build output; committing
         would create a second source of truth alongside docs/).
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -73,6 +74,5 @@ def test_data_dir_not_in_git() -> None:
         check=True,
     )
     assert tracked.stdout.strip() == "", (
-        f"src/roadmodel/data/ has tracked files (should be empty build output): "
-        f"{tracked.stdout!r}"
+        f"src/roadmodel/data/ has tracked files (should be empty build output): {tracked.stdout!r}"
     )

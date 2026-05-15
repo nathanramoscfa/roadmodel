@@ -12,5 +12,4 @@ class ProviderAdapter(Protocol):
         *,
         model: str | None = None,
         api_key: str,
-    ) -> str:
-        ...
+    ) -> str: ...

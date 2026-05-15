@@ -10,7 +10,9 @@ def recommend(prompt: str, system: str, *, model: str | None = None, api_key: st
     try:
         from anthropic import APIError, Anthropic
     except Exception as exc:  # pragma: no cover - dependency/runtime guard
-        raise ProviderCallError("Anthropic SDK is unavailable; install the 'anthropic' package.") from exc
+        raise ProviderCallError(
+            "Anthropic SDK is unavailable; install the 'anthropic' package."
+        ) from exc
 
     try:
         client = Anthropic(api_key=api_key)

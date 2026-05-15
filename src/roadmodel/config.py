@@ -120,11 +120,7 @@ def load_config(
         raise MissingProviderKeyError(_MISSING_KEY_REMEDIATION)
 
     resolved_cli_path = cli_user_context
-    if (
-        resolved_cli_path is None
-        and not os.environ.get("ROADMODEL_USER_CONTEXT")
-        and config_data
-    ):
+    if resolved_cli_path is None and not os.environ.get("ROADMODEL_USER_CONTEXT") and config_data:
         resolved_cli_path = _config_user_context_override(config_data)
 
     resolved_path = user_context.resolve(cli_path=resolved_cli_path)
