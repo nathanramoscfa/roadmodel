@@ -37,12 +37,13 @@ pip install roadmodel==0.0.0
 
 ```bash
 git tag -a v0.1.0-phase-1 -m "Phase 1: OSS CLI on PyPI"
-git tag -a v0.1.0 -m "v0.1.0"
-git push origin main v0.1.0-phase-1 v0.1.0
+git tag -a v0.1.0-pypi -m "v0.1.0 PyPI publish"
+git push origin main v0.1.0-phase-1 v0.1.0-pypi
 ```
 
 Note: `release.yml` skips publish/release jobs for `*-phase-*` tags, so
-`v0.1.0-phase-1` is a milestone marker and `v0.1.0` is the publishing tag.
+`v0.1.0-phase-1` is a milestone marker and `v0.1.0-pypi` is the publishing
+tag when `v0.1.0` already exists historically.
 
 4. Monitor `.github/workflows/release.yml`.
 5. Approve `pypi-production` after `testpypi-upload` succeeds.
