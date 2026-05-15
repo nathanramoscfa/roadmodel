@@ -1,3 +1,4 @@
+# .github/workflows/tests.yml
 name: Tests
 
 on:
@@ -5,9 +6,6 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  schedule:
-    - cron: "0 12 * * *"
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,27 +15,140 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('pyproject.toml', 'tests/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ matrix.python-version }}-pip-
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Ruff lint
+        run: ruff check src tests
+      - name: Ruff format check (baseline)
+        # Keep visibility on format drift without failing CI until a
+        # dedicated repo-wide formatting pass is approved.
+        continue-on-error: true
+        run: ruff format --check src tests
+
+  type-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ matrix.python-version }}-pip-
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Mypy strict
+        run: mypy --strict src
+
+  test-matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: |
-            update/requirements.txt
-            tests/requirements.txt
-
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('pyproject.toml', 'tests/requirements.txt', 'update/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ matrix.python-version }}-pip-
       - name: Install dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install -r update/requirements.txt
           pip install -r tests/requirements.txt
-          pip install -e .
+          pip install -e ".[dev]"
+      - name: Pytest
+        run: pytest -x --cov=roadmodel tests/
 
-      - name: Run tests
-        run: pytest tests/ -v --tb=short
+  package-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ matrix.python-version }}-pip-
+      - name: Build distribution
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+          python -m build
+      - name: Install wheel in a fresh venv
+        run: |
+          python -m venv .pkg-smoke-venv
+          . .pkg-smoke-venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install dist/*.whl
+          roadmodel --help
+
+  test:
+    if: ${{ always() }}
+    needs:
+      - lint
+      - type-check
+      - test-matrix
+      - package-smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enforce aggregate test gate
+        run: |
+          echo "lint=${{ needs.lint.result }}"
+          echo "type-check=${{ needs.type-check.result }}"
+          echo "test-matrix=${{ needs.test-matrix.result }}"
+          echo "package-smoke=${{ needs.package-smoke.result }}"
+          if [ "${{ needs.lint.result }}" != "success" ] || \
+             [ "${{ needs.type-check.result }}" != "success" ] || \
+             [ "${{ needs.test-matrix.result }}" != "success" ] || \
+             [ "${{ needs.package-smoke.result }}" != "success" ]; then
+            echo "One or more CI jobs failed."
+            exit 1
+          fi
