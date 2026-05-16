@@ -450,9 +450,7 @@ def _cost_fixture_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ROADMODEL_USER_CONTEXT", str(FIXTURE_COST_USER_CONTEXT_PATH))
 
 
-def test_recommend_structured_output(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_recommend_structured_output(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     _clear_provider_env(monkeypatch)
     _set_isolated_home(monkeypatch, tmp_path)
     monkeypatch.chdir(tmp_path)

@@ -134,11 +134,7 @@ def _ascii_cost_table(rows: list[dict[str, Any]]) -> str:
     widths = [max(len(r[i]) for r in table) for i in range(3)]
 
     def bar(sep_char: str) -> str:
-        return (
-            "+"
-            + "+".join(sep_char * (widths[i] + 2) for i in range(3))
-            + "+"
-        )
+        return "+" + "+".join(sep_char * (widths[i] + 2) for i in range(3)) + "+"
 
     def fmt_row(cells: list[str]) -> str:
         padded = [cells[i].ljust(widths[i]) for i in range(3)]
