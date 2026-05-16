@@ -24,7 +24,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
         phase: ["01"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
@@ -42,7 +42,7 @@ jobs:
     steps:
       # fetch-depth: 0 so gitleaks detect can scan the full git history,
       # not just the latest commit.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - uses: actions/setup-python@v6
