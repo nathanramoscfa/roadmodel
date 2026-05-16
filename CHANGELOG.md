@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] — 2026-05-16
+
+### Added
+
+- Structured output schema on `roadmodel recommend` (model, platform,
+  per-surface `settings`, rationale, conversation, and optional cost
+  fields). Use `--legacy` to keep the v0.1.x six-field block; use
+  `--output json` (or `--json`) for JSON with 2-space indent.
+- `roadmodel cost` subcommand for ad-hoc session cost estimates from
+  the bundled catalog (`--model`, `--platform`, token counts,
+  optional `--max-mode`, `--output text|json`).
+- Bundled `catalog.json` with machine-readable per-model pricing,
+  tier ratings, access methods, Max Mode rules, and subscription tiers
+  (see Step 1 of the phase roadmap).
+- `roadmodel-mcp` MCP server entry point and `roadmodel[mcp]` install
+  extra (see Step 4 of the phase roadmap).
+- `docs/mcp-setup.md`, `docs/mcp-tools.md`, and `docs/catalog-refresh.md`
+  (see Steps 1 and 5 of the phase roadmap).
+
 ## [0.1.2] — 2026-05-15
 
 ### Fixed
