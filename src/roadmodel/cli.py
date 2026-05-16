@@ -100,7 +100,7 @@ def cli() -> None:
 @click.option(
     "--file",
     "prompt_file",
-    type=click.Path(path_type=Path, dir_okay=False, resolve_path=False),
+    type=click.Path(path_type=Path, dir_okay=False, exists=True, resolve_path=False),
     help="Read the recommendation prompt from a file.",
 )
 @click.option("--json", "emit_json", is_flag=True, help="Emit parsed structured output as JSON.")
