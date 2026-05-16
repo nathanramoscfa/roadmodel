@@ -19,6 +19,7 @@ Behaviour:
     update/build_catalog.py to generate it so the wheel always ships a
     catalog.
 """
+
 from __future__ import annotations
 
 import shutil
@@ -29,12 +30,13 @@ from typing import Any
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
-BUNDLED_DOCS = (
-    "model-selector.txt",
-    "model-tier-cost-scale.md",
-    "user-context.example.md",
-    "catalog.json",
-)
+BUNDLED_DOCS: dict[str, str] = {
+    "model-selector.txt": "model-selector.txt",
+    "model-tier-cost-scale.md": "model-tier-cost-scale.md",
+    "user-context.example.md": "user-context.example.md",
+    "catalog.json": "catalog.json",
+    "templates/phase-roadmap-template.md": "phase-roadmap-template.md",
+}
 
 
 class BundleDocsHook(BuildHookInterface):  # type: ignore[misc]
@@ -55,13 +57,13 @@ class BundleDocsHook(BuildHookInterface):  # type: ignore[misc]
             )
 
         force_include = build_data.setdefault("force_include", {})
-        for name in BUNDLED_DOCS:
-            src = src_dir / name
-            dest = dest_dir / name
+        for source_relpath, dest_name in BUNDLED_DOCS.items():
+            src = src_dir / source_relpath
+            dest = dest_dir / dest_name
             if not src.is_file():
                 raise FileNotFoundError(
                     f"hatch_build.py: required source doc missing at {src}; "
                     "the bundled data files must exist in docs/ before building."
                 )
             shutil.copy2(src, dest)
-            force_include[str(dest)] = f"roadmodel/data/{name}"
+            force_include[str(dest)] = f"roadmodel/data/{dest_name}"

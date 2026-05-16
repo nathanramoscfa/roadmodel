@@ -43,9 +43,11 @@ dev = [
     "bandit>=1.7",
     "pip-audit>=2.7",
 ]
+mcp = ["mcp>=1.0"]
 
 [project.scripts]
 roadmodel = "roadmodel.cli:main"
+roadmodel-mcp = "roadmodel.mcp_server:main"
 
 [project.urls]
 Homepage = "https://roadmodel.ai"
@@ -65,6 +67,7 @@ include = [
     "src/roadmodel/**",
     "docs/model-selector.txt",
     "docs/model-tier-cost-scale.md",
+    "docs/templates/phase-roadmap-template.md",
     "docs/user-context.example.md",
     "docs/catalog.json",
     "hatch_build.py",
