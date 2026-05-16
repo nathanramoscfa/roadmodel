@@ -12,6 +12,7 @@ No network, no provider calls; the module is pure. All paths can be
 overridden by env vars (`ROADMODEL_CATALOG_PATH`, `ROADMODEL_USER_CONTEXT`)
 so tests can drive every billing branch off fixture catalogs.
 """
+
 from __future__ import annotations
 
 import json
@@ -258,9 +259,7 @@ def _resolve_funding(
     if billing == "per-token":
         return "per-token", None
 
-    funding_tiers = _tiers_funding_surface(
-        catalog.get("subscription_tiers", []), str(method["id"])
-    )
+    funding_tiers = _tiers_funding_surface(catalog.get("subscription_tiers", []), str(method["id"]))
     active_subscriptions = _parse_active_subscriptions(user_context_text)
     active_tier = _match_active_tier(funding_tiers, active_subscriptions)
 
@@ -280,9 +279,7 @@ def _resolve_funding(
     return "per-token", None
 
 
-def _tiers_funding_surface(
-    subscription_tiers: list[Any], surface_id: str
-) -> list[dict[str, Any]]:
+def _tiers_funding_surface(subscription_tiers: list[Any], surface_id: str) -> list[dict[str, Any]]:
     tiers: list[dict[str, Any]] = []
     for tier in subscription_tiers:
         if not isinstance(tier, dict):
