@@ -107,11 +107,10 @@ def _config_user_context_override(config_data: dict[str, Any]) -> Path | None:
 def load_config(
     *, cli_provider: str | None, cli_model: str | None, cli_user_context: Path | None
 ) -> Config:
-    provider = (
-        _normalize_provider(cli_provider)
-        or _normalize_provider(os.environ.get("ROADMODEL_PROVIDER"))
-        or _first_present_env_provider()
+    explicit_provider = _normalize_provider(cli_provider) or _normalize_provider(
+        os.environ.get("ROADMODEL_PROVIDER")
     )
+    provider = explicit_provider or _first_present_env_provider()
     if provider is None:
         raise MissingProviderKeyError(_MISSING_KEY_REMEDIATION)
 
@@ -124,6 +123,11 @@ def load_config(
         config_data = _read_config_toml()
         api_key = _config_api_key(config_data, provider) or ""
     if not api_key:
+        if explicit_provider is not None:
+            raise MissingProviderKeyError(
+                f"Provider {provider!r} selected but {key_env_name} is not set. "
+                f"Try: export {key_env_name}=..."
+            )
         raise MissingProviderKeyError(_MISSING_KEY_REMEDIATION)
 
     resolved_cli_path = cli_user_context

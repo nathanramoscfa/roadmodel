@@ -98,6 +98,31 @@ def test_recommend_no_key_exits_nonzero(monkeypatch: pytest.MonkeyPatch, tmp_pat
     assert "GOOGLE_API_KEY" in result.stderr
 
 
+def test_recommend_explicit_provider_missing_key_names_provider(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _clear_provider_env(monkeypatch)
+    _set_isolated_home(monkeypatch, tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-test")
+
+    result = _runner().invoke(cli, ["recommend", "--provider", "openai", "build a SQL agent"])
+    assert result.exit_code == 2
+    assert "OPENAI_API_KEY" in result.stderr
+    assert "'openai'" in result.stderr
+    assert "ANTHROPIC_API_KEY" not in result.stderr
+    assert "GOOGLE_API_KEY" not in result.stderr
+
+
+def test_recommend_missing_file_exits_2_with_path(tmp_path: Path) -> None:
+    missing = tmp_path / "does-not-exist.txt"
+    result = _runner().invoke(cli, ["recommend", "--file", str(missing)])
+    assert result.exit_code == 2
+    assert "Unexpected error" not in result.stderr
+    assert "does not exist" in result.stderr
+    assert str(missing) in result.stderr
+
+
 def test_recommend_first_run_bootstraps_user_context(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
