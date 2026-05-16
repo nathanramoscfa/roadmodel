@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "roadmodel version to verify (with or without leading v, e.g. 0.1.0 or v0.1.0)"
+        description: "roadmodel version to verify. Accepts a bare PEP 440 version (0.1.0), a leading-v tag (v0.1.0), or a release tag with `-pypi` suffix (v0.1.0-pypi)."
         required: true
         type: string
       source:
@@ -19,7 +19,7 @@ on:
   workflow_call:
     inputs:
       version:
-        description: "roadmodel version to verify (with or without leading v)"
+        description: "roadmodel version. Accepts 0.1.0, v0.1.0, or v0.1.0-pypi."
         required: true
         type: string
       source:
@@ -49,6 +49,7 @@ jobs:
           set -euo pipefail
           VERSION="${{ inputs.version }}"
           VERSION="${VERSION#v}"
+          VERSION="${VERSION%-pypi}"
           SOURCE="${{ inputs.source }}"
           python -m venv .venv-verify
           # shellcheck disable=SC1091
