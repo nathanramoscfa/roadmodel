@@ -30,19 +30,21 @@ def test_pyproject_parses() -> None:
         data = tomllib.load(f)
     project = data["project"]
     assert project["name"] == "roadmodel"
-    assert project["version"] == "0.1.2"
+    assert project["version"] == "0.2.0"
     assert project["requires-python"] == ">=3.11"
     assert project["scripts"]["roadmodel"] == "roadmodel.cli:main"
 
 
 def test_data_dir_in_wheel(tmp_path: Path) -> None:
+    with PYPROJECT_PATH.open("rb") as f:
+        version = tomllib.load(f)["project"]["version"]
     outdir = tmp_path / "dist"
     subprocess.run(
         [sys.executable, "-m", "build", "--wheel", "--outdir", str(outdir)],
         cwd=REPO_ROOT,
         check=True,
     )
-    wheels = list(outdir.glob("roadmodel-0.1.2-*.whl"))
+    wheels = list(outdir.glob(f"roadmodel-{version}-*.whl"))
     assert len(wheels) == 1, f"Expected exactly one wheel; got {wheels}"
     with zipfile.ZipFile(wheels[0]) as zf:
         members = set(zf.namelist())

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "roadmodel"
-version = "0.1.2"
+version = "0.2.0"
 description = "BYO-key CLI that recommends the right AI model, platform, and settings for a prompt."
 readme = "README.md"
 requires-python = ">=3.11"

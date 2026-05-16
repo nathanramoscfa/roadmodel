@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import asdict
 from importlib import resources
 from importlib.resources.abc import Traversable
-from typing import Final
+from typing import Any, Final
 
-from roadmodel import user_context
+from roadmodel import cost, user_context
 from roadmodel.config import Config
 from roadmodel.errors import BundledDocNotFoundError, MalformedResponseError
 from roadmodel.providers import ProviderAdapter
@@ -117,3 +118,66 @@ def recommend(prompt: str, config: Config) -> dict[str, str]:
         api_key=config.api_key,
     )
     return parse_response(raw_response)
+
+
+def _structured_settings(base: dict[str, str]) -> dict[str, str]:
+    """Map the six-field block to per-surface settings (phase roadmap table)."""
+    plat = base["platform"].strip().lower()
+    max_mode_raw = base["max_mode"].strip()
+    thinking_raw = base["thinking"].strip()
+
+    def max_mode_on() -> bool:
+        lowered = max_mode_raw.lower()
+        return lowered in {"on", "yes", "true", "enabled"}
+
+    if "claude code" in plat.replace("_", " "):
+        offish = {"off", "n/a", "none", "no"}
+        if thinking_raw.lower() in offish:
+            return {"effort": "Low", "thinking": "Off"}
+        return {"effort": thinking_raw, "thinking": "On"}
+
+    if plat == "codex" or plat.endswith(" codex"):
+        return {"intelligence": thinking_raw}
+
+    max_label = "ON" if max_mode_on() else "OFF"
+    return {"max_mode": max_label, "thinking": thinking_raw}
+
+
+def recommend_structured(
+    prompt: str,
+    config: Config,
+    *,
+    input_tokens: int | None = None,
+    output_tokens: int | None = None,
+    max_mode: bool = False,
+) -> dict[str, Any]:
+    """Return roadmap-style structured output plus optional cost estimates."""
+    base = recommend(prompt, config)
+    payload: dict[str, Any] = {
+        "model": base["model"],
+        "platform": base["platform"],
+        "settings": _structured_settings(base),
+        "rationale": base["rationale"],
+        "conversation": base["conversation"],
+        "session_cost_estimate": None,
+        "comparison_table": None,
+    }
+    if input_tokens is None or output_tokens is None:
+        return payload
+
+    primary = cost.estimate_session_cost(
+        base["model"],
+        base["platform"],
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        max_mode=max_mode,
+    )
+    payload["session_cost_estimate"] = asdict(primary)
+    ranked = cost.compare_alternatives_funding_rank(
+        base["model"],
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        max_mode=max_mode,
+    )
+    payload["comparison_table"] = [asdict(est) for est in ranked]
+    return payload
