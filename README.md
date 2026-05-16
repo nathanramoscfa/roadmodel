@@ -149,10 +149,9 @@ API-key state declared in your `user-context.md`.
 
 ## Project status
 
-roadmodel is in **Phase 1** of the public
-[ROADMAP.md](ROADMAP.md) — the open-source CLI release. Phase 2 adds
-an MCP server alongside the CLI; later phases add a hosted SaaS at
-`roadmodel.ai`. The project was previously named `model-selector`
+roadmodel is in **Phase 1** — the open-source CLI release. Phase 2
+adds an MCP server alongside the CLI; later phases add a hosted
+SaaS at `roadmodel.ai`. The project was previously named `model-selector`
 and was renamed to `roadmodel` ahead of the public release; the
 canonical bundled-doc filename `model-selector.txt` is preserved so
 existing references in other projects keep working. Until v1.0.0,
