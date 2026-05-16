@@ -1,0 +1,211 @@
+{
+  "schema_version": "2",
+  "generated_at_utc": "2026-05-16T00:00:00Z",
+  "source_doc_sha256": {
+    "model-selector.txt": "0000000000000000000000000000000000000000000000000000000000000000",
+    "model-tier-cost-scale.md": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "models": [
+    {
+      "id": "opus-test",
+      "name": "Opus Test",
+      "input_price_per_1m": 10.0,
+      "output_price_per_1m": 50.0,
+      "cache_read_per_1m": 1.0,
+      "tier_cost": "high",
+      "tiers": {
+        "coding": "S",
+        "planning": "S",
+        "agentic": "S",
+        "multimodal": "A",
+        "long-context": "S",
+        "knowledge": "S",
+        "speed": "B"
+      },
+      "headline_benchmarks": "Synthetic fixture model for cost-estimator tests",
+      "pricing_notes": "fixture",
+      "best_for": "Test fixture only"
+    },
+    {
+      "id": "gpt-test",
+      "name": "GPT Test",
+      "input_price_per_1m": 2.0,
+      "output_price_per_1m": 10.0,
+      "cache_read_per_1m": 0.2,
+      "tier_cost": "medium",
+      "tiers": {
+        "coding": "A",
+        "planning": "A",
+        "agentic": "A",
+        "multimodal": "B",
+        "long-context": "A",
+        "knowledge": "A",
+        "speed": "A"
+      },
+      "headline_benchmarks": "Synthetic fixture model for cost-estimator tests",
+      "pricing_notes": "fixture",
+      "best_for": "Test fixture only"
+    },
+    {
+      "id": "haiku-test",
+      "name": "Haiku Test",
+      "input_price_per_1m": 1.0,
+      "output_price_per_1m": 5.0,
+      "cache_read_per_1m": 0.1,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "B",
+        "agentic": "B",
+        "multimodal": "B",
+        "long-context": "B",
+        "knowledge": "B",
+        "speed": "S"
+      },
+      "headline_benchmarks": "Synthetic fixture model for cost-estimator tests",
+      "pricing_notes": "fixture",
+      "best_for": "Test fixture only"
+    },
+    {
+      "id": "grok-test",
+      "name": "Grok Test",
+      "input_price_per_1m": 3.0,
+      "output_price_per_1m": 15.0,
+      "cache_read_per_1m": null,
+      "tier_cost": "medium",
+      "tiers": {
+        "coding": "B",
+        "planning": "B",
+        "agentic": "B",
+        "multimodal": "C",
+        "long-context": "S",
+        "knowledge": "B",
+        "speed": "A"
+      },
+      "headline_benchmarks": "Synthetic fixture model for cost-estimator tests",
+      "pricing_notes": "fixture",
+      "best_for": "Test fixture only"
+    }
+  ],
+  "access_methods": [
+    {
+      "id": "claude-code-test",
+      "name": "Claude Code",
+      "provider": "anthropic",
+      "billing": "subscription-included",
+      "requires": "claude-max-subscription",
+      "supports_models": [
+        "opus-test",
+        "haiku-test"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "best_for": "Test fixture only"
+    },
+    {
+      "id": "cursor-test",
+      "name": "Cursor",
+      "provider": "cursor",
+      "billing": "subscription-pool",
+      "requires": "cursor-subscription",
+      "supports_models": [
+        "opus-test",
+        "gpt-test",
+        "haiku-test"
+      ],
+      "exposes_max_mode": "yes",
+      "exposes_thinking": "no",
+      "best_for": "Test fixture only"
+    },
+    {
+      "id": "codex-test",
+      "name": "Codex",
+      "provider": "openai",
+      "billing": "subscription-or-key",
+      "requires": "chatgpt-subscription OR openai-api-key",
+      "supports_models": [
+        "gpt-test"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "best_for": "Test fixture only"
+    },
+    {
+      "id": "anthropic-api-test",
+      "name": "Anthropic API",
+      "provider": "anthropic",
+      "billing": "per-token",
+      "requires": "anthropic-api-key",
+      "supports_models": [
+        "opus-test",
+        "haiku-test"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "best_for": "Test fixture only"
+    },
+    {
+      "id": "openai-api-test",
+      "name": "OpenAI API",
+      "provider": "openai",
+      "billing": "per-token",
+      "requires": "openai-api-key",
+      "supports_models": [
+        "gpt-test"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "best_for": "Test fixture only"
+    },
+    {
+      "id": "xai-api-test",
+      "name": "xAI API",
+      "provider": "xai",
+      "billing": "per-token",
+      "requires": "xai-api-key",
+      "supports_models": [
+        "grok-test"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "no",
+      "best_for": "Test fixture only"
+    }
+  ],
+  "max_mode_rules": {
+    "cursor_2x_input": {
+      "applies_to_models": [
+        "gpt-test"
+      ],
+      "rule": "Long context (Max Mode) supports up to 1M tokens with 2x input pricing"
+    }
+  },
+  "subscription_tiers": [
+    {
+      "provider": "Anthropic",
+      "tier": "claude.ai Max ($100)",
+      "monthly_usd": 100.0,
+      "surface_funded": [
+        "claude-code-test"
+      ],
+      "notes": "Funds Claude Code in fixture catalog."
+    },
+    {
+      "provider": "Cursor",
+      "tier": "Cursor Ultra",
+      "monthly_usd": 200.0,
+      "surface_funded": [
+        "cursor-test"
+      ],
+      "notes": "Funds Cursor in fixture catalog."
+    },
+    {
+      "provider": "OpenAI",
+      "tier": "ChatGPT Pro",
+      "monthly_usd": 200.0,
+      "surface_funded": [
+        "codex-test"
+      ],
+      "notes": "Funds Codex in fixture catalog."
+    }
+  ]
+}

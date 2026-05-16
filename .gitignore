@@ -24,8 +24,10 @@ update/.last-summary.txt
 update/.last-warnings.txt
 update/.cache/
 
-# Test fixtures (regenerated from update/build_fixture.py; never committed)
+# Test fixtures regenerated from update/build_fixture.py (never committed).
+# Hand-authored fixtures (cost_catalog.json) are whitelisted below.
 tests/fixtures/*.json
+!tests/fixtures/cost_catalog.json
 
 # Local user-specific selector config (real subscription values, API-key state).
 # The committed template is docs/user-context.example.md — copy it to
