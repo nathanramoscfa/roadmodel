@@ -1,3 +1,4 @@
+# .github/workflows/update-models.yml
 name: Update roadmodel catalog docs
 
 on:
@@ -43,6 +44,18 @@ jobs:
           AA_API_KEY: ${{ secrets.AA_API_KEY }}
         run: python update/update_models.py
 
+      - name: Rebuild docs/catalog.json (deterministic)
+        run: |
+          set -euo pipefail
+          python update/build_catalog.py
+          cp docs/catalog.json /tmp/catalog-run1.json
+          python update/build_catalog.py
+          if ! diff -q /tmp/catalog-run1.json docs/catalog.json >/dev/null; then
+            echo "::error::build_catalog.py is not deterministic — outputs differ across consecutive runs."
+            diff /tmp/catalog-run1.json docs/catalog.json || true
+            exit 1
+          fi
+
       - name: Open PR if catalog changed
         env:
           GH_TOKEN: ${{ secrets.BOT_PAT }}
@@ -64,7 +77,7 @@ jobs:
           if [ -f update/.last-warnings.txt ] && [ -s update/.last-warnings.txt ]; then
             warnings="$(printf '\n\n## Warnings\n')$(sed 's/^/- /' update/.last-warnings.txt)"
           fi
-          git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md
+          git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json
           git commit -m "Automated catalog refresh: ${DATE}" -m "${summary}${warnings}"
           git push -u origin "$BRANCH"
           PR_URL="$(gh pr create \

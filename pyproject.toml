@@ -55,7 +55,10 @@ Issues = "https://github.com/nathanramoscfa/roadmodel/issues"
 [tool.hatch.build.targets.wheel]
 sources = ["src"]
 packages = ["src/roadmodel"]
-include = ["src/roadmodel/data/*"]
+include = [
+    "src/roadmodel/data/*",
+    "src/roadmodel/data/catalog.json",
+]
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -63,6 +66,7 @@ include = [
     "docs/model-selector.txt",
     "docs/model-tier-cost-scale.md",
     "docs/user-context.example.md",
+    "docs/catalog.json",
     "hatch_build.py",
     "README.md",
     "LICENSE",
