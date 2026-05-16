@@ -38,3 +38,15 @@ class MalformedResponseError(RoadmodelError):
     def __init__(self, raw_text: str) -> None:
         self.raw_text = raw_text[:2048]
         super().__init__("Provider response did not match the expected six-field format.")
+
+
+class AlternativeRejectedError(RoadmodelError):
+    """A model alternative was rejected per user-context.md selection rules."""
+
+    def __init__(self, model_id: str, standard_id: str) -> None:
+        self.model_id = model_id
+        self.standard_id = standard_id
+        super().__init__(
+            f"Fast variant {model_id!r} rejected — use {standard_id!r} instead per "
+            "user-context.md Speed posture (Fast variants charge 2x for marginal speed)."
+        )
