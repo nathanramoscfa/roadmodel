@@ -282,6 +282,59 @@ pull request. `main` must always be:
    clean commit.
 6. **Conventional Commits** on the squash message.
 
+#### Step lifecycle
+
+Every step / sub-section of every phase follows the same
+six-stage lifecycle, in order, with no exceptions. Each stage
+is a hard checkpoint — if any stage is skipped, branch
+protection or the next step's Stage 1 will fail loudly, and
+that is the safety net. AI coding agents executing a step MUST
+complete all six stages before declaring the step done.
+
+1. **Create the branch.** Before any Read / Edit / Bash, run
+   `git checkout -b <prefix>/<slug>` from a clean,
+   up-to-date `main` (e.g. `feature/phase-2-cost-estimator`).
+   The branch name comes from the roadmap step's `**Branch:**`
+   line, or from the naming convention above for ad-hoc work.
+
+2. **Work on the branch.** All commits land here. Never push
+   to `main` directly — branch protection rejects it.
+
+3. **Open the PR.** `gh pr create --base main --head <branch>`
+   with a Conventional Commits title and a body referencing the
+   roadmap step and its acceptance criteria. One PR per step.
+
+4. **Wait for green checks, then squash-merge.** Every required
+   status check must report success. If the PR goes BEHIND
+   main, refresh with `gh pr update-branch --rebase` — never
+   merge `main` into the branch when the repo enforces linear
+   history. Once green:
+
+   ```sh
+   gh pr merge <PR_NUMBER> --squash --delete-branch
+   ```
+
+5. **Retire the branch (remote + local).** The
+   `--delete-branch` flag and the repo's
+   `delete_branch_on_merge: true` setting retire the remote
+   automatically. Sync local state and prune the merged branch
+   plus any other `[gone]` labels:
+
+   ```sh
+   git switch main
+   git pull --ff-only origin main
+   git fetch --prune origin
+   git branch -vv | grep ': gone]' | awk '{print $1}' \
+     | xargs -r git branch -D
+   ```
+
+6. **New conversation, next step.** Phase-boundary hygiene:
+   close the current Claude Code / Cursor / Codex session and
+   open a fresh one before starting the next step. The new
+   conversation begins again at Stage 1 with the next step's
+   `**Branch:**` line driving the `git checkout -b` command.
+   No work straddles two steps.
+
 #### Release & tagging
 
 | Milestone tag           | Marker                                |
