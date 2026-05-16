@@ -5,8 +5,27 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "roadmodel version to verify from PyPI (e.g. 0.1.0)"
+        description: "roadmodel version to verify (with or without leading v, e.g. 0.1.0 or v0.1.0)"
         required: true
+        type: string
+      source:
+        description: "Package index: pypi (production) or testpypi"
+        required: false
+        default: pypi
+        type: choice
+        options:
+          - pypi
+          - testpypi
+  workflow_call:
+    inputs:
+      version:
+        description: "roadmodel version to verify (with or without leading v)"
+        required: true
+        type: string
+      source:
+        description: "pypi or testpypi"
+        required: false
+        default: pypi
         type: string
 
 permissions:
@@ -14,24 +33,55 @@ permissions:
 
 jobs:
   install-smoke:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, macos-latest]
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install roadmodel from PyPI in a clean venv
+      - name: Install roadmodel
         run: |
+          set -euo pipefail
+          VERSION="${{ inputs.version }}"
+          VERSION="${VERSION#v}"
+          SOURCE="${{ inputs.source }}"
           python -m venv .venv-verify
+          # shellcheck disable=SC1091
           . .venv-verify/bin/activate
           python -m pip install --upgrade pip
-          pip install "roadmodel==${{ inputs.version || '0.1.0' }}"
+          if [ "${SOURCE}" = "testpypi" ]; then
+            # TestPyPI's CDN can lag a few seconds behind a fresh
+            # upload, so retry up to 3 times with a 10s gap.
+            # --extra-index-url so runtime deps (anthropic, openai, ...)
+            # resolve from production PyPI; TestPyPI only carries
+            # roadmodel itself.
+            attempts=3
+            for attempt in $(seq 1 $attempts); do
+              if pip install \
+                --index-url https://test.pypi.org/simple/ \
+                --extra-index-url https://pypi.org/simple/ \
+                "roadmodel==${VERSION}"; then
+                exit 0
+              fi
+              if [ "$attempt" -lt "$attempts" ]; then
+                echo "TestPyPI install attempt ${attempt}/${attempts} failed; retry in 10s..."
+                sleep 10
+              fi
+            done
+            echo "TestPyPI install failed after ${attempts} attempts" >&2
+            exit 1
+          else
+            pip install "roadmodel==${VERSION}"
+          fi
       - name: Smoke test
         run: |
+          set -euo pipefail
+          # shellcheck disable=SC1091
           . .venv-verify/bin/activate
           which roadmodel
           roadmodel --help
