@@ -25,6 +25,13 @@ pip install roadmodel
 
 Python 3.11 or newer.
 
+## MCP server
+
+Install the MCP runtime with `pip install "roadmodel[mcp]"` to enable the
+`roadmodel-mcp` stdio server entrypoint; plain `pip install roadmodel` keeps
+the SDK optional and does not install `mcp`. Setup and registration details
+live in [docs/mcp-setup.md](docs/mcp-setup.md).
+
 ## Quickstart
 
 Three steps from a fresh install to a parsed recommendation block.
