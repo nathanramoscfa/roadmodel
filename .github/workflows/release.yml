@@ -101,6 +101,19 @@ jobs:
           repository-url: https://test.pypi.org/legacy/
           packages-dir: dist/
 
+  # Automated V6.2 — fresh-venv install from TestPyPI on Ubuntu + macOS
+  # across Python 3.11/3.12/3.13. Replaces the wall-clock operator run
+  # the roadmap previously required before tagging v0.1.0.
+  verify-testpypi:
+    needs: testpypi-upload
+    if: ${{ github.event_name == 'push' && !contains(github.ref_name, '-phase-') }}
+    permissions:
+      contents: read
+    uses: ./.github/workflows/verify-pypi.yml
+    with:
+      version: ${{ github.ref_name }}
+      source: testpypi
+
   pypi-upload:
     runs-on: ubuntu-latest
     needs: sign
