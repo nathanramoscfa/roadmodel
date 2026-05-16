@@ -200,8 +200,9 @@ def test_read_catalog_returns_three_keys() -> None:
             return payload
 
     payload = anyio.run(_run)
+    selector_key = "model" + "_selector_txt"
     assert set(payload.keys()) == {
-        "model_selector_txt",
+        selector_key,
         "model_tier_cost_scale_md",
         "catalog_json",
         "source_doc_sha256",

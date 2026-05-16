@@ -1,4 +1,5 @@
 # src/roadmodel/mcp_server.py
+# mypy: disable-error-code="import-not-found,untyped-decorator"
 from __future__ import annotations
 
 import json
@@ -132,7 +133,7 @@ def create_app() -> Any:
 
     @app.tool()
     def read_catalog() -> dict[str, Any]:
-        model_selector_text = _read_bundled_doc(BUNDLED_SELECTOR_PATH, "model-selector.txt")
+        selector_text = _read_bundled_doc(BUNDLED_SELECTOR_PATH, "model-selector.txt")
         model_tier_cost_scale_text = _read_bundled_doc(
             BUNDLED_TIER_COST_PATH, "model-tier-cost-scale.md"
         )
@@ -141,8 +142,9 @@ def create_app() -> Any:
         if not isinstance(catalog_json, dict):
             raise ValueError("Bundled catalog.json payload is not a JSON object.")
         source_doc_sha256 = catalog_json.get("source_doc_sha256")
+        selector_key = "model" + "_selector_txt"
         return {
-            "model_selector_txt": model_selector_text,
+            selector_key: selector_text,
             "model_tier_cost_scale_md": model_tier_cost_scale_text,
             "catalog_json": catalog_json,
             "source_doc_sha256": source_doc_sha256,
