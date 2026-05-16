@@ -42,11 +42,13 @@ STYLE RULES (the AI MUST follow)
     self-contained Cursor / Claude Code session.
   - Every step carries: Goal blockquote, Branch line
     (`feature/phaseNN-stepM-<slug>` — see the Overview
-    "Branch strategy" and "Branch-first execution rule"
-    paragraphs; the operator runs `git checkout -b <branch>`
-    BEFORE reading files or editing anything in the step),
-    Settings table, Model rationale paragraph, XML <task>
-    prompt, and an Acceptance Criteria bullet list. The Settings table is
+    "Branch strategy", "Branch-first execution rule", and
+    "Step lifecycle" paragraphs; the operator runs
+    `git checkout -b <branch>` BEFORE reading files or editing
+    anything in the step, follows the six-stage lifecycle for
+    the rest of the step, and starts the next step in a fresh
+    conversation), Settings table, Model rationale paragraph,
+    XML <task> prompt, and an Acceptance Criteria bullet list. The Settings table is
     PLATFORM-specific so it mirrors the actual surface the
     operator will see — each surface exposes a different
     dial, and the table rows must match the panel labels
@@ -193,6 +195,64 @@ you started on `main`, recover by running the same
 over to the new branch), then continue. AI coding agents executing
 a step from this roadmap must treat the branch checkout as Step 0
 of every step.
+
+**Step lifecycle.** Every step in this phase follows the exact
+same six-stage lifecycle, in order, with no exceptions. Each
+stage is a hard checkpoint — if a stage is skipped, branch
+protection or the next step's Stage 1 will fail loudly, and that
+is the safety net. AI coding agents MUST execute all six stages
+before declaring a step complete.
+
+1. **Create the branch.** Before any Read / Edit / Bash, run
+   `git checkout -b feature/phase{{N}}-step{{M}}-<slug>` from a
+   clean, up-to-date `main`. The exact branch name comes from
+   this step's `**Branch:**` line.
+
+2. **Work on the branch.** All commits land here. Never push to
+   `main` directly — branch protection (`enforce_admins: true`)
+   rejects it.
+
+3. **Open the PR.** `gh pr create --base main --head <branch>`
+   with a Conventional Commits title and a body that references
+   this roadmap step and its acceptance criteria. One PR per
+   step; never bundle two steps into one PR.
+
+4. **Wait for green checks, then squash-merge.** Every required
+   status check (lint, type-check, test-matrix, package-smoke,
+   security-scan, the aggregate `test` gate, and the
+   `phase-verify.yml` matrix entry for this phase) must report
+   success. If the PR goes BEHIND main while waiting, refresh
+   with `gh pr update-branch --rebase` — never merge `main` into
+   the branch; `required_linear_history: true` enforces rebase.
+   Once every check is green:
+
+   ```sh
+   gh pr merge <PR_NUMBER> --squash --delete-branch
+   ```
+
+5. **Retire the branch (remote + local).** The
+   `--delete-branch` flag plus the repo's
+   `delete_branch_on_merge: true` setting retire the remote
+   automatically. Sync local state and prune the merged branch
+   plus any other `[gone]` labels left over from prior PRs:
+
+   ```sh
+   git switch main
+   git pull --ff-only origin main
+   git fetch --prune origin
+   git branch -vv | grep ': gone]' | awk '{print $1}' \
+     | xargs -r git branch -D
+   ```
+
+   Confirm with `git branch -vv` that only `main` and any
+   intentional long-lived branches remain locally.
+
+6. **New conversation, next step.** Phase-boundary hygiene:
+   close this Claude Code / Cursor / Codex session and open a
+   fresh one before starting Step {{M+1}}. The new conversation
+   begins again at Stage 1 of this lifecycle, with the next
+   step's `**Branch:**` line driving the `git checkout -b`
+   command. No work straddles two steps.
 
 ---
 
