@@ -20,6 +20,26 @@ pull request. Prefix branches by intent:
 
 `main` must stay green on CI and deployable. Do not force-push to `main`.
 
+## Local hooks (one-time setup)
+
+After cloning, point Git at the in-repo hooks directory so the
+`pre-commit` branch guard runs:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+The hook refuses commits directly on `main` (or `master`) and points
+you at the recovery steps. This complements GitHub's server-side
+branch protection (`enforce_admins: true`) by catching the mistake at
+commit time, before work strands on the wrong branch. The setting is
+per-clone, so re-run it after a fresh `git clone`. AI coding agents
+operating in this repo MUST set `core.hooksPath` before their first
+commit.
+
+Emergency bypass (reserved for incident recovery):
+`ROADMODEL_ALLOW_MAIN_COMMIT=1 git commit ...`.
+
 ## Pull request scope
 
 Keep each pull request scoped to **one phase sub-section** (one numbered
