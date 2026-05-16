@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit
+# Reject commits on protected branches. Roadmodel uses GitHub branch
+# protection with enforce_admins: true on main, so a direct push would
+# be rejected at the server anyway — but commits made locally on main
+# silently strand work and break the phase-roadmap six-stage lifecycle
+# (Stage 1: `git checkout -b feature/phaseNN-stepNN-<slug>` BEFORE any
+# edit). This hook catches the mistake at commit time, before the work
+# becomes hard to recover.
+#
+# Install (one-time per clone):
+#   git config core.hooksPath .githooks
+#
+# Bypass (NOT recommended; reserved for emergency):
+#   ROADMODEL_ALLOW_MAIN_COMMIT=1 git commit ...
+
+set -euo pipefail
+
+protected_branches=(main master)
+
+current_branch="$(git symbolic-ref --short HEAD 2>/dev/null || echo "DETACHED")"
+
+if [[ "${ROADMODEL_ALLOW_MAIN_COMMIT:-0}" == "1" ]]; then
+  exit 0
+fi
+
+for protected in "${protected_branches[@]}"; do
+  if [[ "$current_branch" == "$protected" ]]; then
+    cat >&2 <<EOF
+================================================================
+  REFUSED: cannot commit directly to '$current_branch'.
+================================================================
+
+  Roadmodel's branch protection rejects direct pushes to
+  '$current_branch' (enforce_admins: true). The phase-roadmap
+  six-stage lifecycle requires Stage 1 (branch checkout) BEFORE
+  any commit lands.
+
+  Recover:
+    1. Save current changes:
+         git stash push -u -m "wip"
+    2. Switch to a feature branch (use the step's **Branch:**
+       line from the phase roadmap, or invent one):
+         git checkout -b feature/phaseNN-stepNN-<slug>
+    3. Restore changes and commit:
+         git stash pop
+         git add ... && git commit ...
+
+  Emergency bypass (use only if you know why):
+    ROADMODEL_ALLOW_MAIN_COMMIT=1 git commit ...
+
+EOF
+    exit 1
+  fi
+done
+
+exit 0

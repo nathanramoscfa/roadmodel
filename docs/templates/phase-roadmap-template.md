@@ -561,6 +561,64 @@ always "New per phase-boundary hygiene").}}
 
 ```xml
 <task>
+  <lifecycle>
+    This step MUST follow all six
+    stages, in order. Stages 1, 3,
+    4, 5 are AS BINDING as any
+    `<requirement>` below. Do not
+    declare the step complete
+    until Stage 5 finishes.
+
+    1. CREATE THE BRANCH. Before
+       any Read / Edit / Bash, run
+       `git checkout -b
+       feature/phase{{N}}-step{{M}}-<slug>`
+       from a clean, up-to-date
+       `main`. The exact branch
+       name is in this step's
+       `**Branch:**` line above.
+
+    2. WORK ON THE BRANCH. All
+       commits land here. `main`
+       is protected with
+       `enforce_admins: true` —
+       direct pushes will be
+       rejected.
+
+    3. OPEN THE PR. `gh pr create
+       --base main --head <branch>`
+       with a Conventional Commits
+       title and a body that
+       references this roadmap step
+       and its acceptance criteria.
+       One PR per step.
+
+    4. WAIT FOR GREEN CHECKS, THEN
+       SQUASH-MERGE. Every required
+       check must pass. If the PR
+       falls behind main, refresh
+       with `gh pr update-branch
+       --rebase` — never merge main
+       into the branch
+       (`required_linear_history:
+       true`). Once green:
+       `gh pr merge <PR> --squash
+       --delete-branch`.
+
+    5. RETIRE THE BRANCH. Sync
+       local: `git switch main &&
+       git pull --ff-only origin
+       main && git fetch --prune
+       origin`. Prune any local
+       `[gone]` branches.
+
+    6. NEW CONVERSATION, NEXT
+       STEP. Phase-boundary
+       hygiene: close this session
+       and open a fresh one before
+       Step {{M+1}}.
+  </lifecycle>
+
   <context>
     {{Project name}}. Phase {{N}}.
     Step 1: {{step title}}.
