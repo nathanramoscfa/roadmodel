@@ -69,13 +69,85 @@ and manual install evidence. Automation mapping follows
 
 ## Manual macOS + Linux TestPyPI installation verification
 
-Status: **PASS** for both `roadmodel==0.1.0` and `roadmodel==0.1.1` on
-PyPI. `0.1.1` is the security-hardened follow-up to `0.1.0` (drops the
-repo-walk fallback, masks the api_key in `Config.__repr__`, atomically
-creates user-context.md with `0o600`, sanitizes provider fallback
-error strings); see the
+Status: **PASS** for `roadmodel==0.1.0`, `roadmodel==0.1.1`, and
+`roadmodel==0.1.2` on PyPI. `0.1.1` is the security-hardened follow-up
+to `0.1.0` (drops the repo-walk fallback, masks the api_key in
+`Config.__repr__`, atomically creates user-context.md with `0o600`,
+sanitizes provider fallback error strings); `0.1.2` is a small
+CLI-error-UX patch on top of `0.1.1` (see the
+[v0.1.2 GitHub Release](https://github.com/nathanramoscfa/roadmodel/releases/tag/v0.1.2-pypi)
+for full notes; the
 [v0.1.1 GitHub Release](https://github.com/nathanramoscfa/roadmodel/releases/tag/v0.1.1-pypi)
-for the full notes.
+covers the security set).
+
+### 0.1.2 — macOS (Python 3.12)
+
+- Date: 2026-05-16
+- Host: macOS-25.5-arm64 (Apple Silicon)
+- Python: 3.12.13 (Homebrew `python@3.12`)
+- TestPyPI install: `pip install --index-url
+  https://test.pypi.org/simple/ --extra-index-url
+  https://pypi.org/simple/ roadmodel==0.1.2` — green, `roadmodel
+  version` returned `0.1.2`, `roadmodel --help` exited 0, and the
+  two new error paths both fired:
+  - `roadmodel recommend --file /tmp/does-not-exist.txt` →
+    `Error: Invalid value for '--file': File '/tmp/does-not-exist.txt'
+    does not exist.` (exit 2).
+  - `ANTHROPIC_API_KEY=fake roadmodel recommend --provider openai
+    "test"` → `Provider 'openai' selected but OPENAI_API_KEY is not
+    set. Try: export OPENAI_API_KEY=...` (exit 2).
+- PyPI install (post manual dispatch): `pip install --no-cache-dir
+  roadmodel==0.1.2` — green, same smoke output. Initial install
+  attempt without `--no-cache-dir` resolved to `0.1.1` because pip
+  had a stale simple-index view in the first minute after publish;
+  retry with `--no-cache-dir` resolved cleanly.
+
+### 0.1.2 — Linux + macOS install matrix via verify-pypi.yml
+
+- Workflow run:
+  [25952069688](https://github.com/nathanramoscfa/roadmodel/actions/runs/25952069688)
+  on 2026-05-16, `version=0.1.2`, `source=pypi`. All six matrix cells
+  green (Ubuntu + macOS × Python 3.11/3.12/3.13). `roadmodel --help`
+  exited 0 and `roadmodel.__version__ == "0.1.2"` on each.
+
+### 0.1.2 — auto-verify regression caught and fixed
+
+The auto-verify path added in `3c0c941` (`verify-testpypi` job in
+`.github/workflows/release.yml`, calling `verify-pypi.yml` with
+`version: ${{ github.ref_name }}`) was first exercised by the
+`v0.1.2-pypi` tag push. All six install-smoke cells failed
+identically with `Invalid requirement: 'roadmodel==0.1.2-pypi'`:
+`verify-pypi.yml` stripped the leading `v` but not the trailing
+`-pypi` suffix, so it tried to install a non-PEP-440 spec.
+
+The testpypi-upload itself succeeded; only the verification job was
+broken. Fixed in
+[PR #42](https://github.com/nathanramoscfa/roadmodel/pull/42)
+(squash-merged as `c737ad0`): one additional bash expansion
+`VERSION="${VERSION%-pypi}"` in
+[.github/workflows/verify-pypi.yml](../.github/workflows/verify-pypi.yml),
+plus an input-description update advertising the accepted forms.
+The fix landed *after* the v0.1.2 tag push, so the v0.1.2 evidence
+above was gathered via the manual TestPyPI install command in lieu
+of the auto-verify job. The next tag push will exercise the fix.
+
+### 0.1.2 — OIDC migration gotcha
+
+The publish workflow flipped from `PYPI_TOKEN` to OIDC Trusted
+Publishing in commit `9f42bb3` ("security: switch PyPI publish to
+OIDC trusted publishing (M2)"). `v0.1.0` and `v0.1.1` published via
+the token path before the flip; `v0.1.2` was the first OIDC attempt
+and failed with `invalid-publisher: valid token, but no
+corresponding publisher` because the Trusted Publisher had never
+been registered on the PyPI side.
+
+Resolution: registered the Trusted Publisher at
+https://pypi.org/manage/project/roadmodel/settings/publishing/ with
+Owner `nathanramoscfa`, Repository `roadmodel`, Workflow
+`release.yml`, Environment `pypi-production`. Re-dispatched
+`release.yml -f tag=v0.1.2-pypi` (run
+[25951876312](https://github.com/nathanramoscfa/roadmodel/actions/runs/25951876312));
+`build → sign → pypi-upload → github-release` all green.
 
 ### 0.1.1 — macOS (Python 3.11)
 
