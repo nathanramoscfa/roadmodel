@@ -38,9 +38,7 @@ EXPECTED_TOP_LEVEL_KEYS = {
 _OPTIONS_RE = re.compile(r"<model-options>(.*?)</model-options>", re.DOTALL)
 _MODEL_RE = re.compile(r"<model\s+([^>]+?)\s*/>", re.DOTALL)
 _METHOD_RE = re.compile(r"<method\s+([^>]+?)\s*/>", re.DOTALL)
-_ACCESS_METHODS_RE = re.compile(
-    r"<access-methods>(.*?)</access-methods>", re.DOTALL
-)
+_ACCESS_METHODS_RE = re.compile(r"<access-methods>(.*?)</access-methods>", re.DOTALL)
 _ATTR_RE = re.compile(r'([\w-]+)="([^"]*)"')
 _LEADING_DOLLAR_RE = re.compile(r"\$\s*(\d+(?:\.\d+)?)")
 
@@ -53,20 +51,14 @@ def _parse_selector_models() -> list[dict[str, str]]:
     text = SELECTOR_PATH.read_text()
     options_match = _OPTIONS_RE.search(text)
     assert options_match, "<model-options> not found"
-    return [
-        dict(_ATTR_RE.findall(m.group(1)))
-        for m in _MODEL_RE.finditer(options_match.group(1))
-    ]
+    return [dict(_ATTR_RE.findall(m.group(1))) for m in _MODEL_RE.finditer(options_match.group(1))]
 
 
 def _parse_selector_methods() -> list[dict[str, str]]:
     text = SELECTOR_PATH.read_text()
     access_match = _ACCESS_METHODS_RE.search(text)
     assert access_match, "<access-methods> not found"
-    return [
-        dict(_ATTR_RE.findall(m.group(1)))
-        for m in _METHOD_RE.finditer(access_match.group(1))
-    ]
+    return [dict(_ATTR_RE.findall(m.group(1))) for m in _METHOD_RE.finditer(access_match.group(1))]
 
 
 def _parse_subscription_section_rows() -> list[dict[str, str]]:
@@ -196,8 +188,7 @@ def test_access_methods_round_trip() -> None:
         ):
             if sel.get(sel_attr, "") != cat[cat_key]:
                 mismatches.append(
-                    f"{mid} {sel_attr}: selector={sel.get(sel_attr, '')!r} "
-                    f"catalog={cat[cat_key]!r}"
+                    f"{mid} {sel_attr}: selector={sel.get(sel_attr, '')!r} catalog={cat[cat_key]!r}"
                 )
     assert not mismatches, "Access-method mismatches:\n  " + "\n  ".join(mismatches)
 
@@ -210,8 +201,7 @@ def test_subscription_tiers_match_tier_cost_scale() -> None:
     catalog_tiers = _load_catalog()["subscription_tiers"]
     assert rows, "No subscription rows parsed from model-tier-cost-scale.md"
     assert len(rows) == len(catalog_tiers), (
-        f"Subscription row count mismatch: cost-scale={len(rows)} "
-        f"catalog={len(catalog_tiers)}"
+        f"Subscription row count mismatch: cost-scale={len(rows)} catalog={len(catalog_tiers)}"
     )
     catalog_by_key = {(t["provider"], t["tier"]): t for t in catalog_tiers}
     mismatches: list[str] = []
@@ -231,9 +221,7 @@ def test_subscription_tiers_match_tier_cost_scale() -> None:
                 f"{key} monthly: cost-scale={expected_monthly} catalog={cat['monthly_usd']}"
             )
         expected_surfaces = sorted(
-            s.strip()
-            for s in row.get("Access methods unlocked", "").split(",")
-            if s.strip()
+            s.strip() for s in row.get("Access methods unlocked", "").split(",") if s.strip()
         )
         if cat["surface_funded"] != expected_surfaces:
             mismatches.append(
