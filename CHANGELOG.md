@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] — 2026-05-15
+
+### Fixed
+
+- `roadmodel recommend --file <path>` now validates that the file
+  exists at argument-parse time and exits 2 with
+  `Invalid value for '--file': File '<path>' does not exist.` —
+  consistent with the other Click-validated usage errors. Previously
+  a missing path surfaced the raw `FileNotFoundError` as
+  `Unexpected error: [Errno 2] No such file or directory: '<path>'`
+  with exit 1.
+- `roadmodel recommend --provider <X>` with no matching
+  `<X>_API_KEY` now reports the specific provider and env var:
+  `Provider '<X>' selected but <X>_API_KEY is not set. Try: export <X>_API_KEY=...`.
+  Previously the CLI emitted the generic three-key message even when
+  the user had explicitly selected a single provider, which obscured
+  the actual problem. The implicit-fallback path (no `--provider`
+  and no `ROADMODEL_PROVIDER`) still emits the original three-key
+  message.
+
 ## [0.1.1] — 2026-05-15
 
 ### Security
