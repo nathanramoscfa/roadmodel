@@ -106,9 +106,7 @@ def test_recommend_explicit_provider_missing_key_names_provider(
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-test")
 
-    result = _runner().invoke(
-        cli, ["recommend", "--provider", "openai", "build a SQL agent"]
-    )
+    result = _runner().invoke(cli, ["recommend", "--provider", "openai", "build a SQL agent"])
     assert result.exit_code == 2
     assert "OPENAI_API_KEY" in result.stderr
     assert "'openai'" in result.stderr
