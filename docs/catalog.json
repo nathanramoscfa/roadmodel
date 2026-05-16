@@ -1,0 +1,571 @@
+{
+  "schema_version": "2",
+  "generated_at_utc": "2026-05-13T22:54:33Z",
+  "source_doc_sha256": {
+    "model-selector.txt": "325ac7cca4ac31c85d52a27461f230a8dcdbe6a86dbd72596bba7e52daeb6413",
+    "model-tier-cost-scale.md": "1a337c6d958e94cfbd184663fb40b2801f21590c28c855362e93de9e2966f7ac"
+  },
+  "models": [
+    {
+      "id": "auto",
+      "name": "Auto (Efficiency)",
+      "input_price_per_1m": 1.25,
+      "output_price_per_1m": 6.0,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "C",
+        "agentic": "B",
+        "multimodal": "C",
+        "long-context": "C",
+        "knowledge": "C",
+        "speed": "A"
+      },
+      "headline_benchmarks": "No fixed benchmarks \u2014 Cursor routes to a balanced model per request",
+      "pricing_notes": "Cursor-managed routing across the Auto + Composer pool; not a fixed model",
+      "best_for": "Simple, well-defined, bounded tasks \u2014 routine edits, boilerplate generation, direct questions, and standard refactors where any competent model suffices and manual model selection adds no value"
+    },
+    {
+      "id": "claude-4.5-haiku",
+      "name": "Claude 4.5 Haiku",
+      "input_price_per_1m": 1.0,
+      "output_price_per_1m": 5.0,
+      "cache_read_per_1m": 0.1,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "B",
+        "agentic": "B",
+        "multimodal": "B",
+        "long-context": "B",
+        "knowledge": "B",
+        "speed": "S"
+      },
+      "headline_benchmarks": "AA Intelligence Index 37.1; Output Speed 138.4 tokens/s; AA-Omniscience -4.2; latency leader among Claude family",
+      "pricing_notes": "Hidden by default; Bedrock/Vertex: regional endpoints +10% surcharge; Cache: writes 1.25x, reads 0.1x",
+      "best_for": "Speed-optimized lowest-cost Claude model, ideal for simple completions, high-volume repetitive tasks, and latency-sensitive workflows where a lightweight capable response matters more than deep reasoning"
+    },
+    {
+      "id": "composer-2",
+      "name": "Composer 2 (Fast)",
+      "input_price_per_1m": 0.5,
+      "output_price_per_1m": 2.5,
+      "cache_read_per_1m": 0.2,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "A",
+        "planning": "B",
+        "agentic": "A",
+        "multimodal": "D",
+        "long-context": "B",
+        "knowledge": "B",
+        "speed": "S"
+      },
+      "headline_benchmarks": "CursorBench 61.3 (+37% over Composer 1.5); SWE-bench Multilingual 73.7; Terminal-Bench 2.0 61.7",
+      "pricing_notes": "-",
+      "best_for": "Cursor's enforced default Composer model \u2014 purpose-built for multi-file agentic editing, fine-tuned on real developer sessions, self-summarizing 200K context for sustained long tasks, and frontier-level coding quality with speed-optimized inference at the lowest output price ($2.50/M) \u2014 the default choice for standard implementation, multi-file changes, and roadmap execution where coding-A is sufficient"
+    },
+    {
+      "id": "gemini-3.1-pro",
+      "name": "Gemini 3.1 Pro",
+      "input_price_per_1m": 2.0,
+      "output_price_per_1m": 12.0,
+      "cache_read_per_1m": 0.2,
+      "tier_cost": "medium",
+      "tiers": {
+        "coding": "A",
+        "planning": "A",
+        "agentic": "A",
+        "multimodal": "S",
+        "long-context": "S",
+        "knowledge": "A",
+        "speed": "B"
+      },
+      "headline_benchmarks": "AA Intelligence Index 57.2 (#3); AA-Omniscience 32.9 (#1); HLE 44.7% (#1); LMArena Text Elo 1486 (#4); 1M-token context",
+      "pricing_notes": "-",
+      "best_for": "True native multimodal understanding (text, image, video, audio, and code in a single pass), 1M-token context optimized for heterogeneous inputs, strong agentic multi-step tool use, and synthesizing insights across large mixed-media datasets or sprawling document corpora \u2014 the obvious choice whenever multimodal or long-context is the primary category"
+    },
+    {
+      "id": "gpt-5.2",
+      "name": "GPT-5.2",
+      "input_price_per_1m": 1.75,
+      "output_price_per_1m": 14.0,
+      "cache_read_per_1m": 0.175,
+      "tier_cost": "medium",
+      "tiers": {
+        "coding": "B",
+        "planning": "A",
+        "agentic": "B",
+        "multimodal": "C",
+        "long-context": "A",
+        "knowledge": "A",
+        "speed": "B"
+      },
+      "headline_benchmarks": "MMLU Pro 81.4; GPQA 71.2; LiveCodeBench 66.9; 400K-token context; output speed 68 tokens/s; released 2025-12-10",
+      "pricing_notes": "Hidden by default; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.2-high",
+      "best_for": "Earlier-flagship GPT reasoning model (December 2025) with 400K context and broad knowledge coverage (GPQA 71.2, MMLU Pro 81.4); same medium-tier pricing as GPT-5.3 Codex but lacks Codex's autonomous-coding specialization \u2014 pick gpt-5.3-codex over gpt-5.2 for coding/agentic tasks; gpt-5.2 fits when broad reasoning at A-tier knowledge and a 400K context window are the primary need at the medium price tier"
+    },
+    {
+      "id": "gpt-5.3-codex",
+      "name": "GPT-5.3 Codex",
+      "input_price_per_1m": 1.75,
+      "output_price_per_1m": 14.0,
+      "cache_read_per_1m": 0.175,
+      "tier_cost": "medium",
+      "tiers": {
+        "coding": "S",
+        "planning": "B",
+        "agentic": "S",
+        "multimodal": "D",
+        "long-context": "B",
+        "knowledge": "B",
+        "speed": "B"
+      },
+      "headline_benchmarks": "GPT-5.3 Codex (xhigh) listed on AA leaderboards; Codex lineage retains strong Terminal-Bench and SWE-bench Verified performance for autonomous coding",
+      "pricing_notes": "Requires Max Mode on request-based plans; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.3-codex-high",
+      "best_for": "Highest terminal and tool-use proficiency at the medium tier, most token-efficient autonomous coding, excels at long-running agentic sessions spanning debugging through deployment, and hard algorithmic problems requiring sustained code reasoning across languages \u2014 the cost-efficient pick for pure coding and agentic execution when an S-tier coding rating is needed"
+    },
+    {
+      "id": "gpt-5.4",
+      "name": "GPT-5.4",
+      "input_price_per_1m": 2.5,
+      "output_price_per_1m": 15.0,
+      "cache_read_per_1m": 0.25,
+      "tier_cost": "high",
+      "tiers": {
+        "coding": "A",
+        "planning": "A",
+        "agentic": "S",
+        "multimodal": "A",
+        "long-context": "A",
+        "knowledge": "S",
+        "speed": "B"
+      },
+      "headline_benchmarks": "AA Intelligence Index 56.8 (#4); LMArena Text Elo 1454 (#19); GPT-5.4 (xhigh) Output Speed 83.2 tokens/s; lowest factual error rate among GPT models",
+      "pricing_notes": "Hidden by default; Requires Max Mode on request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context (Max Mode) supports up to 1M tokens with 2x input pricing",
+      "best_for": "Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding"
+    },
+    {
+      "id": "gpt-5.4-mini",
+      "name": "GPT-5.4 Mini",
+      "input_price_per_1m": 0.75,
+      "output_price_per_1m": 4.5,
+      "cache_read_per_1m": 0.075,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "C",
+        "agentic": "C",
+        "multimodal": "B",
+        "long-context": "B",
+        "knowledge": "B",
+        "speed": "A"
+      },
+      "headline_benchmarks": "AA Intelligence Index 48.9 (xhigh); Output Speed 171.4 tokens/s; HLE 19.4% (GPT-5-mini)",
+      "pricing_notes": "Hidden by default; Smaller, faster variant of GPT-5.4; 90% discount on cached input tokens",
+      "best_for": "Lightweight GPT-5.4 variant balancing quality and cost, well-suited for straightforward coding, short-form generation, and high-throughput workloads needing solid GPT reasoning at a fraction of the flagship price"
+    },
+    {
+      "id": "gpt-5.4-nano",
+      "name": "GPT-5.4 Nano",
+      "input_price_per_1m": 0.2,
+      "output_price_per_1m": 1.25,
+      "cache_read_per_1m": 0.02,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "C",
+        "planning": "D",
+        "agentic": "D",
+        "multimodal": "C",
+        "long-context": "C",
+        "knowledge": "C",
+        "speed": "S"
+      },
+      "headline_benchmarks": "Cheapest GPT-5 family variant; throughput-optimized inference",
+      "pricing_notes": "Hidden by default; Smallest GPT-5.4 variant, optimized for cost; 90% discount on cached input tokens",
+      "best_for": "Ultra-low-cost GPT variant for trivial text tasks, simple lookups, rapid classification, and extreme-throughput pipelines where cost efficiency is the sole constraint and task complexity is minimal"
+    },
+    {
+      "id": "gpt-5.5",
+      "name": "GPT-5.5",
+      "input_price_per_1m": 5.0,
+      "output_price_per_1m": 30.0,
+      "cache_read_per_1m": 0.5,
+      "tier_cost": "very-high",
+      "tiers": {
+        "coding": "S",
+        "planning": "S",
+        "agentic": "S",
+        "multimodal": "A",
+        "long-context": "A",
+        "knowledge": "A",
+        "speed": "D"
+      },
+      "headline_benchmarks": "AA Intelligence Index 60.2 (#1); LMArena Text Elo 1461 (#14); HLE 44.3%; AA-Omniscience 20.1 (#3)",
+      "pricing_notes": "Requires Max Mode on request-based plans; Agentic and reasoning capabilities; More token-efficient than GPT-5.4 on comparable tasks; Improved persistence on long-running tasks; Fast mode is available at higher rates; Long context (Max Mode) supports up to 1M tokens with 2x input pricing",
+      "best_for": "OpenAI's most capable frontier model and highest-cost GPT offering, best suited for the most demanding reasoning, long-horizon planning, and tasks where maximum intelligence is required regardless of cost \u2014 strongest single model for hard coding, agentic execution, and reasoning, but verify factual claims due to elevated hallucination"
+    },
+    {
+      "id": "grok-4.3",
+      "name": "Grok 4.3",
+      "input_price_per_1m": 1.25,
+      "output_price_per_1m": 2.5,
+      "cache_read_per_1m": 0.2,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "A",
+        "agentic": "S",
+        "multimodal": "B",
+        "long-context": "S",
+        "knowledge": "A",
+        "speed": "B"
+      },
+      "headline_benchmarks": "AA Intelligence Index 53.2 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1199",
+      "pricing_notes": "Requires Max Mode on request-based plans",
+      "best_for": "Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding \u2014 leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist"
+    },
+    {
+      "id": "opus-4.7",
+      "name": "Opus 4.7",
+      "input_price_per_1m": 5.0,
+      "output_price_per_1m": 25.0,
+      "cache_read_per_1m": 0.5,
+      "tier_cost": "very-high",
+      "tiers": {
+        "coding": "S",
+        "planning": "S",
+        "agentic": "A",
+        "multimodal": "A",
+        "long-context": "S",
+        "knowledge": "S",
+        "speed": "D"
+      },
+      "headline_benchmarks": "AA Intelligence Index 57.3 (#2); LMArena Text #3 (Elo 1487); LMArena WebDev #1 (Elo 1570); AA-Omniscience 26.2 (#2)",
+      "pricing_notes": "Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)",
+      "best_for": "Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching"
+    },
+    {
+      "id": "premium",
+      "name": "Premium (Intelligence)",
+      "input_price_per_1m": null,
+      "output_price_per_1m": null,
+      "cache_read_per_1m": null,
+      "tier_cost": "medium",
+      "tiers": {
+        "coding": "inherit",
+        "planning": "inherit",
+        "agentic": "inherit",
+        "multimodal": "inherit",
+        "long-context": "inherit",
+        "knowledge": "inherit",
+        "speed": "inherit"
+      },
+      "headline_benchmarks": "Inherits the routed model's benchmarks",
+      "pricing_notes": "Cursor-managed routing mode; bills at the routed model's API rate; carries that model's pricing-notes for the duration of the request",
+      "best_for": "Cursor auto-selects the strongest available model; best when the task is clearly high-complexity but does not map to one specific model's niche advantage, or when you are uncertain which frontier model's strengths best apply"
+    },
+    {
+      "id": "sonnet-4.6",
+      "name": "Sonnet 4.6",
+      "input_price_per_1m": 3.0,
+      "output_price_per_1m": 15.0,
+      "cache_read_per_1m": 0.3,
+      "tier_cost": "high",
+      "tiers": {
+        "coding": "A",
+        "planning": "A",
+        "agentic": "S",
+        "multimodal": "A",
+        "long-context": "A",
+        "knowledge": "A",
+        "speed": "B"
+      },
+      "headline_benchmarks": "AA Intelligence Index 51.7; LMArena WebDev Elo 1524 (#6); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage",
+      "pricing_notes": "Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)",
+      "best_for": "Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation"
+    }
+  ],
+  "access_methods": [
+    {
+      "id": "anthropic-api",
+      "name": "Anthropic API",
+      "provider": "anthropic",
+      "billing": "per-token",
+      "requires": "anthropic-api-key",
+      "supports_models": [
+        "claude-4.5-haiku",
+        "opus-4.7",
+        "sonnet-4.6"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "best_for": "Programmatic / scripted Claude use outside Claude Code \u2014 raw API headers, batch endpoints, or features not surfaced by Claude Code. Falls back here when claude.ai Max budget is exhausted."
+    },
+    {
+      "id": "chatgpt-app",
+      "name": "ChatGPT (web / desktop)",
+      "provider": "openai",
+      "billing": "subscription-included",
+      "requires": "chatgpt-subscription",
+      "supports_models": [
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "gpt-5.5"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "best_for": "Chat-driven GPT use without terminal or IDE integration; subscription-funded so marginal cost is $0 until ChatGPT's usage limits kick in."
+    },
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "provider": "anthropic",
+      "billing": "subscription-or-key",
+      "requires": "claude-max-subscription OR anthropic-api-key",
+      "supports_models": [
+        "claude-4.5-haiku",
+        "opus-4.7",
+        "sonnet-4.6"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "best_for": "Default for Claude coding or terminal tasks when a claude.ai Max subscription is active \u2014 $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI and as an IDE extension inside Cursor. Heavy Opus usage that would cost over $1,000/mo on per-token API is fully covered by a $100/mo Max plan."
+    },
+    {
+      "id": "claude-web",
+      "name": "claude.ai web / desktop",
+      "provider": "anthropic",
+      "billing": "subscription-included",
+      "requires": "claude-max-subscription",
+      "supports_models": [
+        "claude-4.5-haiku",
+        "opus-4.7",
+        "sonnet-4.6"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "best_for": "Chat-driven Claude use (no terminal, no codebase tool use) under the same Max budget that funds Claude Code \u2014 pick when the task is conversational rather than code-editing."
+    },
+    {
+      "id": "codex-cli",
+      "name": "Codex",
+      "provider": "openai",
+      "billing": "subscription-or-key",
+      "requires": "chatgpt-subscription OR openai-api-key",
+      "supports_models": [
+        "gpt-5.2",
+        "gpt-5.3-codex",
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "gpt-5.5"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "best_for": "Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active \u2014 pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex on long-running terminal / agentic work."
+    },
+    {
+      "id": "cursor",
+      "name": "Cursor",
+      "provider": "cursor",
+      "billing": "subscription-pool",
+      "requires": "cursor-pro-or-ultra-subscription",
+      "supports_models": [
+        "auto",
+        "claude-4.5-haiku",
+        "composer-2",
+        "gemini-3.1-pro",
+        "gpt-5.3-codex",
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "gpt-5.4-nano",
+        "gpt-5.5",
+        "grok-4.3",
+        "opus-4.7",
+        "premium",
+        "sonnet-4.6"
+      ],
+      "exposes_max_mode": "yes",
+      "exposes_thinking": "no",
+      "best_for": "Cursor IDE \u2014 single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / auto / premium imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)."
+    },
+    {
+      "id": "gemini-app",
+      "name": "Gemini (web / app)",
+      "provider": "google",
+      "billing": "subscription-included",
+      "requires": "gemini-advanced-subscription",
+      "supports_models": [
+        "gemini-3.1-pro"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "best_for": "Chat-driven Gemini use under the Gemini Advanced subscription budget."
+    },
+    {
+      "id": "gemini-cli",
+      "name": "Gemini CLI",
+      "provider": "google",
+      "billing": "subscription-or-key",
+      "requires": "gemini-advanced-subscription OR google-api-key",
+      "supports_models": [
+        "gemini-3.1-pro"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "best_for": "Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool."
+    },
+    {
+      "id": "google-api",
+      "name": "Google AI Studio API",
+      "provider": "google",
+      "billing": "per-token",
+      "requires": "google-api-key",
+      "supports_models": [
+        "gemini-3.1-pro"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "best_for": "Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates."
+    },
+    {
+      "id": "openai-api",
+      "name": "OpenAI API",
+      "provider": "openai",
+      "billing": "per-token",
+      "requires": "openai-api-key",
+      "supports_models": [
+        "gpt-5.3-codex",
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "gpt-5.4-nano",
+        "gpt-5.5"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "best_for": "Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates."
+    },
+    {
+      "id": "xai-api",
+      "name": "xAI API",
+      "provider": "xai",
+      "billing": "per-token",
+      "requires": "xai-api-key",
+      "supports_models": [
+        "grok-4.3"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "no",
+      "best_for": "Direct Grok API access for 2M-context or hallucination-resistant tasks; pay-per-token at xAI's published rates."
+    }
+  ],
+  "max_mode_rules": {
+    "cursor_2x_input": {
+      "applies_to_models": [
+        "gpt-5.4",
+        "gpt-5.5"
+      ],
+      "rule": "Long context (Max Mode) supports up to 1M tokens with 2x input pricing"
+    }
+  },
+  "subscription_tiers": [
+    {
+      "provider": "Anthropic",
+      "tier": "Claude Pro",
+      "monthly_usd": 20.0,
+      "surface_funded": [
+        "claude-code",
+        "claude-web"
+      ],
+      "notes": "Opus 4.7, Sonnet 4.6, and Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE), with roughly 5x the usage of the Free tier."
+    },
+    {
+      "provider": "Anthropic",
+      "tier": "claude.ai Max ($100)",
+      "monthly_usd": 100.0,
+      "surface_funded": [
+        "claude-code",
+        "claude-web"
+      ],
+      "notes": "Same model coverage as Pro at roughly 5x the Pro usage budget; priority access during peak traffic."
+    },
+    {
+      "provider": "Anthropic",
+      "tier": "claude.ai Max ($200)",
+      "monthly_usd": 200.0,
+      "surface_funded": [
+        "claude-code",
+        "claude-web"
+      ],
+      "notes": "Same model coverage as Pro at roughly 20x the Pro usage budget; highest consumer-tier Claude budget."
+    },
+    {
+      "provider": "Cursor",
+      "tier": "Cursor Pro",
+      "monthly_usd": 20.0,
+      "surface_funded": [
+        "cursor"
+      ],
+      "notes": "$20 monthly model-usage credit pool across every model in Cursor's catalog; on-demand overage billed at API rates."
+    },
+    {
+      "provider": "Cursor",
+      "tier": "Cursor Pro+",
+      "monthly_usd": 60.0,
+      "surface_funded": [
+        "cursor"
+      ],
+      "notes": "Same model coverage as Pro at roughly 3x the OpenAI / Claude / Gemini usage budget."
+    },
+    {
+      "provider": "Cursor",
+      "tier": "Cursor Ultra",
+      "monthly_usd": 200.0,
+      "surface_funded": [
+        "cursor"
+      ],
+      "notes": "Same model coverage as Pro at roughly 20x the OpenAI / Claude / Gemini usage budget; priority access to new features."
+    },
+    {
+      "provider": "Google",
+      "tier": "Google AI Pro",
+      "monthly_usd": 20.0,
+      "surface_funded": [
+        "gemini-app",
+        "gemini-cli"
+      ],
+      "notes": "Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus 2 TB of Google One storage."
+    },
+    {
+      "provider": "Google",
+      "tier": "Google AI Ultra",
+      "monthly_usd": 250.0,
+      "surface_funded": [
+        "gemini-app",
+        "gemini-cli"
+      ],
+      "notes": "Highest access to Gemini 3.1 Pro and Deep Think (where available), Veo video generation, Agent Mode previews, and 30 TB of Google One storage."
+    },
+    {
+      "provider": "OpenAI",
+      "tier": "ChatGPT Plus",
+      "monthly_usd": 20.0,
+      "surface_funded": [
+        "chatgpt-app",
+        "codex-cli"
+      ],
+      "notes": "GPT-5.4, GPT-5.4 Mini, and selected reasoning models with per-model usage caps; Codex access included."
+    },
+    {
+      "provider": "OpenAI",
+      "tier": "ChatGPT Pro",
+      "monthly_usd": 200.0,
+      "surface_funded": [
+        "chatgpt-app",
+        "codex-cli"
+      ],
+      "notes": "Same coverage as Plus with much higher caps and access to GPT-5.5 and GPT-5.5 Pro."
+    }
+  ]
+}
