@@ -21,6 +21,17 @@ from roadmodel.errors import MalformedResponseError  # noqa: E402
 
 FIXTURE_RESPONSE_PATH = REPO_ROOT / "tests" / "fixtures" / "sample_response.txt"
 FIXTURE_USER_CONTEXT_PATH = REPO_ROOT / "tests" / "fixtures" / "sample_user_context.md"
+FIXTURE_CATALOG_PATH = REPO_ROOT / "tests" / "fixtures" / "cost_catalog.json"
+FIXTURE_COST_USER_CONTEXT_PATH = REPO_ROOT / "tests" / "fixtures" / "cost_user_context.md"
+
+RESPONSE_GPT_TEST_CODEX = (
+    "MODEL: GPT Test\n"
+    "PLATFORM: Codex\n"
+    "MAX MODE: Off\n"
+    "THINKING: High\n"
+    "CONVERSATION: New\n"
+    "RATIONALE: Fixture rationale for structured CLI tests.\n"
+)
 
 
 def _runner() -> CliRunner:
@@ -173,7 +184,7 @@ def test_recommend_unedited_user_context_warns_but_proceeds(
     result = _runner().invoke(cli, ["recommend", "build a SQL agent"])
     assert result.exit_code == 0
     assert "placeholder" in result.stderr.lower()
-    assert "MODEL:" in result.stdout
+    assert "GPT-5.3 Codex" in result.stdout
 
 
 def test_catalog_show_bytes_match_source() -> None:
@@ -432,3 +443,214 @@ def test_user_context_bootstrap_creates_0o600(
     user_context_module.bootstrap(target)
     overwrite_mode = target.stat().st_mode & 0o777
     assert overwrite_mode == 0o600, f"expected 0o600 after overwrite, got {oct(overwrite_mode)}"
+
+
+def _cost_fixture_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ROADMODEL_CATALOG_PATH", str(FIXTURE_CATALOG_PATH))
+    monkeypatch.setenv("ROADMODEL_USER_CONTEXT", str(FIXTURE_COST_USER_CONTEXT_PATH))
+
+
+def test_recommend_structured_output(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _clear_provider_env(monkeypatch)
+    _set_isolated_home(monkeypatch, tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-test")
+    _cost_fixture_env(monkeypatch)
+
+    context_path = tmp_path / "xdg" / "roadmodel" / "user-context.md"
+    context_path.parent.mkdir(parents=True, exist_ok=True)
+    context_path.write_text(
+        FIXTURE_COST_USER_CONTEXT_PATH.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    class StaticAdapter:
+        def recommend(
+            self, prompt: str, system: str, *, model: str | None = None, api_key: str
+        ) -> str:
+            return RESPONSE_GPT_TEST_CODEX
+
+    monkeypatch.setitem(recommend_module.PROVIDER_ADAPTERS, "anthropic", StaticAdapter())
+
+    result = _runner().invoke(
+        cli,
+        ["recommend", "--output", "json", "build a SQL agent"],
+    )
+    assert result.exit_code == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert set(payload.keys()) == {
+        "model",
+        "platform",
+        "settings",
+        "rationale",
+        "conversation",
+        "session_cost_estimate",
+        "comparison_table",
+    }
+    assert payload["session_cost_estimate"] is None
+    assert payload["comparison_table"] is None
+    assert payload["settings"] == {"intelligence": "High"}
+
+    with_tokens = _runner().invoke(
+        cli,
+        [
+            "recommend",
+            "--output",
+            "json",
+            "--input-tokens",
+            "1000000",
+            "--output-tokens",
+            "500000",
+            "build a SQL agent",
+        ],
+    )
+    assert with_tokens.exit_code == 0, with_tokens.stderr
+    full = json.loads(with_tokens.stdout)
+    assert full["session_cost_estimate"] is not None
+    assert full["session_cost_estimate"]["total_usd"] == 7.0
+    assert full["comparison_table"] is not None
+    assert len(full["comparison_table"]) == 3
+
+
+def test_recommend_legacy_flag(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _clear_provider_env(monkeypatch)
+    _set_isolated_home(monkeypatch, tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-test")
+
+    context_path = tmp_path / "xdg" / "roadmodel" / "user-context.md"
+    context_path.parent.mkdir(parents=True, exist_ok=True)
+    context_path.write_text(
+        FIXTURE_USER_CONTEXT_PATH.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    class StaticAdapter:
+        def recommend(
+            self, prompt: str, system: str, *, model: str | None = None, api_key: str
+        ) -> str:
+            return RESPONSE_GPT_TEST_CODEX
+
+    monkeypatch.setitem(recommend_module.PROVIDER_ADAPTERS, "anthropic", StaticAdapter())
+
+    result = _runner().invoke(cli, ["recommend", "--legacy", "build a SQL agent"])
+    assert result.exit_code == 0
+    assert result.stdout.strip() == RESPONSE_GPT_TEST_CODEX.strip()
+
+
+def test_recommend_json_output(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _clear_provider_env(monkeypatch)
+    _set_isolated_home(monkeypatch, tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-test")
+
+    context_path = tmp_path / "xdg" / "roadmodel" / "user-context.md"
+    context_path.parent.mkdir(parents=True, exist_ok=True)
+    context_path.write_text(
+        FIXTURE_USER_CONTEXT_PATH.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    class StaticAdapter:
+        def recommend(
+            self, prompt: str, system: str, *, model: str | None = None, api_key: str
+        ) -> str:
+            return RESPONSE_GPT_TEST_CODEX
+
+    monkeypatch.setitem(recommend_module.PROVIDER_ADAPTERS, "anthropic", StaticAdapter())
+
+    result = _runner().invoke(
+        cli,
+        ["recommend", "--output", "json", "build a SQL agent"],
+    )
+    assert result.exit_code == 0
+    parsed = json.loads(result.stdout)
+    assert parsed["model"] == "GPT Test"
+
+
+def test_cost_subcommand_text(monkeypatch: pytest.MonkeyPatch) -> None:
+    _cost_fixture_env(monkeypatch)
+    result = _runner().invoke(
+        cli,
+        [
+            "cost",
+            "--model",
+            "gpt-test",
+            "--platform",
+            "codex-test",
+            "--input-tokens",
+            "1000000",
+            "--output-tokens",
+            "1000000",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "$12.00" in result.stdout
+    assert "subscription" in result.stdout.lower()
+
+
+def test_cost_subcommand_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    _cost_fixture_env(monkeypatch)
+    result = _runner().invoke(
+        cli,
+        [
+            "cost",
+            "--model",
+            "gpt-test",
+            "--platform",
+            "codex-test",
+            "--input-tokens",
+            "500000",
+            "--output-tokens",
+            "250000",
+            "--output",
+            "json",
+        ],
+    )
+    assert result.exit_code == 0
+    data = json.loads(result.stdout)
+    assert data["model_id"] == "gpt-test"
+    assert data["platform_id"] == "codex-test"
+    assert data["total_usd"] == 3.5
+
+
+def test_cost_unknown_model_exit_4(monkeypatch: pytest.MonkeyPatch) -> None:
+    _cost_fixture_env(monkeypatch)
+    result = _runner().invoke(
+        cli,
+        [
+            "cost",
+            "--model",
+            "no-such-model",
+            "--platform",
+            "codex-test",
+            "--input-tokens",
+            "1",
+            "--output-tokens",
+            "1",
+        ],
+    )
+    assert result.exit_code == 4
+    assert "no-such-model" in result.stderr
+
+
+def test_cost_fast_variant_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    _cost_fixture_env(monkeypatch)
+    result = _runner().invoke(
+        cli,
+        [
+            "cost",
+            "--model",
+            "Opus Test Fast",
+            "--platform",
+            "claude-code-test",
+            "--input-tokens",
+            "1000",
+            "--output-tokens",
+            "1000",
+        ],
+    )
+    assert result.exit_code == 4
+    assert "Opus Test" in result.stderr

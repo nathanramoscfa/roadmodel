@@ -121,6 +121,7 @@ def compare_alternatives(
     input_tokens: int,
     output_tokens: int,
     alternatives: list[str] | None = None,
+    max_mode: bool = False,
 ) -> list[SessionCostEstimate]:
     """Compare a model across access methods, cheapest-first."""
     catalog = _load_catalog()
@@ -134,6 +135,7 @@ def compare_alternatives(
             catalog,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            max_mode=max_mode,
         )
         estimates.sort(
             key=lambda est: (est.total_usd, _FUNDING_PRIORITY.get(est.funding_source, 99))
@@ -146,6 +148,7 @@ def compare_alternatives(
             platform_id,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            max_mode=max_mode,
         )
         for platform_id in alternatives
     ]
@@ -157,6 +160,7 @@ def _default_alternative_estimates(
     *,
     input_tokens: int,
     output_tokens: int,
+    max_mode: bool = False,
 ) -> list[SessionCostEstimate]:
     user_context_text = _load_user_context_text()
     candidates: list[tuple[dict[str, Any], str]] = []
@@ -178,9 +182,31 @@ def _default_alternative_estimates(
             str(method["id"]),
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            max_mode=max_mode,
         )
         for method, _ in top_three
     ]
+
+
+def compare_alternatives_funding_rank(
+    model_id: str,
+    *,
+    input_tokens: int,
+    output_tokens: int,
+    max_mode: bool = False,
+) -> list[SessionCostEstimate]:
+    """Return up to three estimates for *model_id* in funding-priority order."""
+    catalog = _load_catalog()
+    _reject_fast_variant(model_id, catalog)
+    model = _resolve_model(model_id, catalog)
+    resolved_model_id = str(model["id"])
+    return _default_alternative_estimates(
+        resolved_model_id,
+        catalog,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        max_mode=max_mode,
+    )
 
 
 def _load_catalog() -> dict[str, Any]:

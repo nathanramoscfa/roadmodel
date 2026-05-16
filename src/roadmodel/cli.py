@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import json
 import os
+import textwrap
 import traceback
+from dataclasses import asdict
 from functools import wraps
 from importlib import resources
 from importlib.resources.abc import Traversable
@@ -12,10 +14,11 @@ from typing import Any, Callable, TypeVar, cast
 
 import click
 
-from roadmodel import __version__, user_context
+from roadmodel import __version__, cost, user_context
 from roadmodel import recommend as recommender
 from roadmodel.config import load_config
 from roadmodel.errors import (
+    AlternativeRejectedError,
     BundledDocNotFoundError,
     MalformedResponseError,
     MissingProviderKeyError,
@@ -90,6 +93,110 @@ def _catalog_doc_path(doc: str) -> Path:
         raise BundledDocNotFoundError(filename) from exc
 
 
+def _settings_text_lines(settings: dict[str, str]) -> list[str]:
+    if "effort" in settings and "thinking" in settings:
+        return [
+            f"  effort: {settings['effort']}",
+            f"  thinking: {settings['thinking']}",
+        ]
+    if "intelligence" in settings:
+        return [f"  intelligence: {settings['intelligence']}"]
+    lines = []
+    if "max_mode" in settings:
+        lines.append(f"  max_mode: {settings['max_mode']}")
+    if "thinking" in settings:
+        lines.append(f"  thinking: {settings['thinking']}")
+    if lines:
+        return lines
+    return [f"  {key}: {value}" for key, value in settings.items()]
+
+
+def _session_cost_estimate_line(estimate: dict[str, Any]) -> str:
+    total = float(estimate["total_usd"])
+    fund = str(estimate["funding_source"]).replace("-", " ")
+    sub = estimate.get("subscription_label")
+    if sub:
+        return f"Session cost estimate: ${total:.2f} ({fund}, {sub})"
+    return f"Session cost estimate: ${total:.2f} ({fund})"
+
+
+def _ascii_cost_table(rows: list[dict[str, Any]]) -> str:
+    header = ["Platform", "Total", "Funding"]
+    body: list[list[str]] = [
+        [
+            str(row["platform_name"]),
+            f"${float(row['total_usd']):.2f}",
+            str(row["funding_source"]),
+        ]
+        for row in rows
+    ]
+    table = [header] + body
+    widths = [max(len(r[i]) for r in table) for i in range(3)]
+
+    def bar(sep_char: str) -> str:
+        return (
+            "+"
+            + "+".join(sep_char * (widths[i] + 2) for i in range(3))
+            + "+"
+        )
+
+    def fmt_row(cells: list[str]) -> str:
+        padded = [cells[i].ljust(widths[i]) for i in range(3)]
+        return "| " + " | ".join(padded) + " |"
+
+    lines = [
+        bar("-"),
+        fmt_row(header),
+        bar("="),
+        *[fmt_row(r) for r in body],
+        bar("-"),
+    ]
+    return "\n".join(lines)
+
+
+def _format_structured_text(payload: dict[str, Any]) -> str:
+    lines: list[str] = [f"{payload['model']} — {payload['platform']}"]
+    lines.extend(_settings_text_lines(dict(payload["settings"])))
+    lines.append("")
+    lines.append(textwrap.fill(str(payload["rationale"]), width=80))
+    session_est = payload.get("session_cost_estimate")
+    if session_est:
+        lines.append("")
+        lines.append(_session_cost_estimate_line(dict(session_est)))
+    comparison = payload.get("comparison_table")
+    if comparison:
+        lines.append("")
+        lines.append(_ascii_cost_table([dict(r) for r in comparison]))
+    return "\n".join(lines).strip() + "\n"
+
+
+def _legacy_six_field_block(result: dict[str, str]) -> str:
+    return "\n".join(
+        [
+            f"MODEL: {result['model']}",
+            f"PLATFORM: {result['platform']}",
+            f"MAX MODE: {result['max_mode']}",
+            f"THINKING: {result['thinking']}",
+            f"CONVERSATION: {result['conversation']}",
+            f"RATIONALE: {result['rationale']}",
+        ]
+    )
+
+
+def _format_cost_command_text(est: cost.SessionCostEstimate) -> str:
+    meta = [est.funding_source.replace("-", " ")]
+    if est.subscription_label:
+        meta.append(est.subscription_label)
+    tail = "; ".join(est.notes) if est.notes else ""
+    base = f"Total ${est.total_usd:.2f} ({', '.join(meta)})"
+    return f"{base} {tail}".strip() if tail else base
+
+
+def _emit_recommend_cost_error(exc: Exception) -> None:
+    click.echo(str(exc), err=True)
+    raise click.exceptions.Exit(4) from exc
+
+
 @click.group(help=None)
 def cli() -> None:
     """Recommend AI models and access paths from the bundled roadmodel catalog."""
@@ -103,7 +210,37 @@ def cli() -> None:
     type=click.Path(path_type=Path, dir_okay=False, exists=True, resolve_path=False),
     help="Read the recommendation prompt from a file.",
 )
-@click.option("--json", "emit_json", is_flag=True, help="Emit parsed structured output as JSON.")
+@click.option(
+    "--json",
+    "emit_json",
+    is_flag=True,
+    help="(Deprecated: use --output json.) Emit JSON instead of text.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["text", "json"], case_sensitive=False),
+    default="text",
+    show_default=True,
+    help="Text block or JSON (2-space indent).",
+)
+@click.option(
+    "--legacy",
+    is_flag=True,
+    help="Emit the v0.1.x six-field MODEL/…/RATIONALE block.",
+)
+@click.option("--input-tokens", type=int, default=None, help="Input tokens for cost fields.")
+@click.option(
+    "--output-tokens",
+    type=int,
+    default=None,
+    help="Output tokens for cost fields.",
+)
+@click.option(
+    "--max-mode",
+    is_flag=True,
+    default=False,
+    help="Apply Max Mode pricing when both token counts are set.",
+)
 @click.option(
     "--provider",
     type=click.Choice(["anthropic", "openai", "google"], case_sensitive=False),
@@ -123,11 +260,16 @@ def recommend(
     prompt: str | None,
     prompt_file: Path | None,
     emit_json: bool,
+    output: str,
+    legacy: bool,
+    input_tokens: int | None,
+    output_tokens: int | None,
+    max_mode: bool,
     provider: str | None,
     model: str | None,
     user_context_path: Path | None,
 ) -> None:
-    """Recommend MODEL/PLATFORM/MAX MODE/THINKING/CONVERSATION/RATIONALE for a prompt."""
+    """Recommend model, platform, settings, and rationale for a prompt."""
 
     if prompt and prompt_file:
         raise click.UsageError("Use either PROMPT or --file, not both.")
@@ -139,6 +281,12 @@ def recommend(
         prompt_text = prompt_file.read_text(encoding="utf-8")
     else:
         raise click.UsageError("Provide PROMPT or --file PATH.")
+
+    if (input_tokens is None) ^ (output_tokens is None):
+        raise click.UsageError(
+            "Use both --input-tokens and --output-tokens together, or omit both."
+        )
+
     config = load_config(
         cli_provider=provider,
         cli_model=model,
@@ -171,22 +319,71 @@ def recommend(
             err=True,
         )
 
-    result = recommender.recommend(prompt_text, config)
-    if emit_json:
-        click.echo(json.dumps(result))
+    want_json = emit_json or output.lower() == "json"
+
+    if legacy:
+        result = recommender.recommend(prompt_text, config)
+        if want_json:
+            click.echo(json.dumps(result, indent=2))
+        else:
+            click.echo(_legacy_six_field_block(result))
         return
-    click.echo(
-        "\n".join(
-            [
-                f"MODEL: {result['model']}",
-                f"PLATFORM: {result['platform']}",
-                f"MAX MODE: {result['max_mode']}",
-                f"THINKING: {result['thinking']}",
-                f"CONVERSATION: {result['conversation']}",
-                f"RATIONALE: {result['rationale']}",
-            ]
+
+    try:
+        structured = recommender.recommend_structured(
+            prompt_text,
+            config,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            max_mode=max_mode,
         )
-    )
+    except (ValueError, AlternativeRejectedError) as exc:
+        _emit_recommend_cost_error(exc)
+
+    if want_json:
+        click.echo(json.dumps(structured, indent=2))
+        return
+    click.echo(_format_structured_text(structured), nl=False)
+
+
+@cli.command("cost")
+@click.option("--model", required=True, help="Catalog model id or display name.")
+@click.option("--platform", required=True, help="Access method id or display name.")
+@click.option("--input-tokens", type=int, required=True)
+@click.option("--output-tokens", type=int, required=True)
+@click.option("--max-mode", is_flag=True, default=False)
+@click.option(
+    "--output",
+    type=click.Choice(["text", "json"], case_sensitive=False),
+    default="text",
+    show_default=True,
+)
+def cost_command(
+    model: str,
+    platform: str,
+    input_tokens: int,
+    output_tokens: int,
+    max_mode: bool,
+    output: str,
+) -> None:
+    """Estimate session cost for a model and access method."""
+
+    try:
+        estimate = cost.estimate_session_cost(
+            model,
+            platform,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            max_mode=max_mode,
+        )
+    except (ValueError, AlternativeRejectedError) as exc:
+        click.echo(str(exc), err=True)
+        raise click.exceptions.Exit(4) from exc
+
+    if output.lower() == "json":
+        click.echo(json.dumps(asdict(estimate), indent=2))
+        return
+    click.echo(_format_cost_command_text(estimate))
 
 
 @cli.group()
