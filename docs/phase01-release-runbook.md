@@ -114,3 +114,11 @@ sequence used was:
 
 The stub remains live on PyPI and is intentionally lightweight; the
 real release is `0.1.0` and later.
+
+## Successor releases
+
+This runbook documents the v0.1.x flow only. Starting with v0.2.0
+(Phase 2), the release flow consolidates to a single signed tag with
+OIDC end-to-end and an inline verify-pypi matrix; see
+[docs/phase02-release-runbook.md](phase02-release-runbook.md) for the
+0.2.x flow and the v0.2.0 release record.
