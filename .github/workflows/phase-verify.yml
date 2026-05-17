@@ -22,7 +22,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        phase: ["01"]
+        phase: ["01", "02"]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -38,7 +38,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        phase: ["01"]
+        phase: ["01", "02"]
     steps:
       # fetch-depth: 0 so gitleaks detect can scan the full git history,
       # not just the latest commit.
