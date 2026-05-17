@@ -169,6 +169,8 @@ canonical bundled-doc filename `model-selector.txt` is preserved so
 existing references in other projects keep working. Until v1.0.0,
 expect breaking changes to the CLI surface as Phase 2 lands.
 
+See [ROADMAP.md](ROADMAP.md) for the phase plan and shipping order.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for branch naming, pull
