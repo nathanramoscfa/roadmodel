@@ -34,7 +34,7 @@ this baseline.
 
 | Project           | Vendor   | Project ID                     | Dashboard URL                                                    | Staging URL                              | Production URL          | Provisioned    |
 | ----------------- | -------- | ------------------------------ | ---------------------------------------------------------------- | ---------------------------------------- | ----------------------- | -------------- |
-| `roadmodel-web`   | Vercel   | TBD (fill in after step 1)     | `https://vercel.com/<team-slug>/roadmodel-web` (TBD)             | `https://staging.roadmodel.ai`           | TBD (cut in Step 7)     | TBD (date UTC) |
+| `roadmodel-web`   | Vercel   | `prj_1emPjG8EamGB5G942ipNjjeqh8NX` (team `team_5uU81P0Gl4i22rBjMSwDRsLR`, slug `roadmodel`) | `https://vercel.com/roadmodel/roadmodel-web` | `https://staging.roadmodel.ai` | TBD (cut in Step 7) | 2026-05-17 |
 | `roadmodel-service` | Railway | TBD (fill in after step 2)     | `https://railway.app/project/<project-id>` (TBD)                 | Railway-issued PR preview URL (per-PR)   | TBD (cut in Step 7)     | TBD (date UTC) |
 | `roadmodel-data`  | Supabase | TBD (fill in after step 3)     | `https://supabase.com/dashboard/project/<project-ref>` (TBD)     | Same dashboard, `staging` schema         | Same dashboard, `prod`  | TBD (date UTC) |
 
