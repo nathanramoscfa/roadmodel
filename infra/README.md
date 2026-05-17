@@ -36,7 +36,7 @@ this baseline.
 | ----------------- | -------- | ------------------------------ | ---------------------------------------------------------------- | ---------------------------------------- | ----------------------- | -------------- |
 | `roadmodel-web`   | Vercel   | `prj_1emPjG8EamGB5G942ipNjjeqh8NX` (team `team_5uU81P0Gl4i22rBjMSwDRsLR`, slug `roadmodel`) | `https://vercel.com/roadmodel/roadmodel-web` | `https://staging.roadmodel.ai` | TBD (cut in Step 7) | 2026-05-17 |
 | `roadmodel-service` | Railway | `09b49af8-35b0-4cbd-8c6b-803960ebfe6a` (service `75adcf42-a1ee-44d4-8c8e-b2c576fc6515`, env-prod `651137a1-2331-4991-bf66-c0456163a48d`, env-staging `d79822c4-9676-4910-8606-ea5e98099ed3`) | `https://railway.com/project/09b49af8-35b0-4cbd-8c6b-803960ebfe6a` | Railway-issued default domain (generated in Phase 3 Step 3 when FastAPI ships) | TBD (cut in Step 7) | 2026-05-17 |
-| `roadmodel-data`  | Supabase | TBD (fill in after step 3)     | `https://supabase.com/dashboard/project/<project-ref>` (TBD)     | Same dashboard, `staging` schema         | Same dashboard, `prod`  | TBD (date UTC) |
+| `roadmodel-data`  | Supabase | `nbxzpqnmafcayeqnfvcv` (org `mkvjpvgvuhhzkzfyhvsp`, region `us-east-1`) | `https://supabase.com/dashboard/project/nbxzpqnmafcayeqnfvcv` | Same dashboard, `staging` schema | Same dashboard, `prod` | 2026-05-17 |
 
 Vendor rationale (frozen by Step 2; revisit only on a documented
 incident):
