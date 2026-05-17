@@ -1,0 +1,61 @@
+# docs/templates/public-roadmap-deny-list.txt
+#
+# Regex patterns the public ROADMAP.md MUST NOT contain.
+# One regex per line. Lines starting with `#` are comments.
+# Blank lines are ignored. Patterns are matched case-sensitively
+# against each line of the public roadmap; the CI roadmap-sync
+# job fails the build on any hit.
+#
+# Coverage notes:
+#   - Pricing & unit economics: keep dollar amounts, margin math,
+#     and revenue-projection vocabulary in private/PRO_FORMA.md.
+#   - Vendor specifics: the public file talks about the SaaS in
+#     provider-agnostic terms ("managed Next.js host", etc.) so
+#     the architecture is portable and the vendor mix can change
+#     without a public-doc churn.
+#   - Hardening internals: the public file commits to outcomes
+#     (cost ceilings, WAF, security audit) without leaking the
+#     specific vendors, kill-switch wiring, or fraud-rule
+#     thresholds an attacker could probe.
+#   - Internal-doc refs: private/ROADMAP.md, PRO_FORMA.md, and
+#     the per-phase planning/QA docs are git-excluded; the
+#     public file must not link to or name them.
+
+# Pricing & unit economics
+\$[0-9]
+PRO_FORMA
+unit economics
+margin
+ARR
+MRR
+LTV
+CAC
+
+# Vendor specifics
+Vercel
+Railway
+Supabase
+Stripe
+Cloudflare
+Anthropic console
+OpenAI console
+Upstash
+Doppler
+Sentry
+PagerDuty
+HaveIBeenPwned
+
+# Hardening internals
+pen-test
+penetration test
+kill-switch
+Cloudflare WAF
+Stripe Radar
+Turnstile
+24-hour hold
+
+# Internal-doc refs
+private/
+PRO_FORMA.md
+phase[0-9]{2}-roadmap.md
+phase[0-9]{2}-qa-findings.md
