@@ -69,8 +69,7 @@ phases 1 and 2 require zero cloud spend.
 - CLI ranks AI models for a given prompt using AA benchmark data,
   Cursor's catalog, and supplementary raw-data sources
   (τ²-bench, LiveCodeBench).
-- Project rename from `model-selector` to `roadmodel` is complete
-  on GitHub.
+- Project renamed from `model-selector` to `roadmodel` on GitHub.
 - [project-roadmap-template.md](docs/templates/project-roadmap-template.md)
   and [phase-roadmap-template.md](docs/templates/phase-roadmap-template.md)
   exist and produce usable structured roadmaps when paired with a
@@ -170,8 +169,8 @@ own API keys.
 - Issue and PR templates under `.github/`.
 
 #### 1.2 CLI polish for public consumption
-- Audit all internal references and rename remaining
-  `model-selector` artifacts to `roadmodel`.
+- Audit all internal references and complete the rename to
+  `roadmodel` (renamed from `model-selector`).
 - Replace local-only paths with config-driven equivalents.
 - Add `--help` text and error messages for every command.
 - Document BYO API key setup for Anthropic, OpenAI, Google.
