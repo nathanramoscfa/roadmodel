@@ -34,9 +34,9 @@ this baseline.
 
 | Project           | Vendor   | Project ID                     | Dashboard URL                                                    | Staging URL                              | Production URL          | Provisioned    |
 | ----------------- | -------- | ------------------------------ | ---------------------------------------------------------------- | ---------------------------------------- | ----------------------- | -------------- |
-| `roadmodel-web`   | Vercel   | TBD (fill in after step 1)     | `https://vercel.com/<team-slug>/roadmodel-web` (TBD)             | `https://staging.roadmodel.ai`           | TBD (cut in Step 7)     | TBD (date UTC) |
-| `roadmodel-service` | Railway | TBD (fill in after step 2)     | `https://railway.app/project/<project-id>` (TBD)                 | Railway-issued PR preview URL (per-PR)   | TBD (cut in Step 7)     | TBD (date UTC) |
-| `roadmodel-data`  | Supabase | TBD (fill in after step 3)     | `https://supabase.com/dashboard/project/<project-ref>` (TBD)     | Same dashboard, `staging` schema         | Same dashboard, `prod`  | TBD (date UTC) |
+| `roadmodel-web`   | Vercel   | `prj_1emPjG8EamGB5G942ipNjjeqh8NX` (team `team_5uU81P0Gl4i22rBjMSwDRsLR`, slug `roadmodel`) | `https://vercel.com/roadmodel/roadmodel-web` | `https://staging.roadmodel.ai` | TBD (cut in Step 7) | 2026-05-17 |
+| `roadmodel-service` | Railway | `09b49af8-35b0-4cbd-8c6b-803960ebfe6a` (service `75adcf42-a1ee-44d4-8c8e-b2c576fc6515`, env-prod `651137a1-2331-4991-bf66-c0456163a48d`, env-staging `d79822c4-9676-4910-8606-ea5e98099ed3`) | `https://railway.com/project/09b49af8-35b0-4cbd-8c6b-803960ebfe6a` | Railway-issued default domain (generated in Phase 3 Step 3 when FastAPI ships) | TBD (cut in Step 7) | 2026-05-17 |
+| `roadmodel-data`  | Supabase | `nbxzpqnmafcayeqnfvcv` (org `mkvjpvgvuhhzkzfyhvsp`, region `us-east-1`) | `https://supabase.com/dashboard/project/nbxzpqnmafcayeqnfvcv` | Same dashboard, `staging` schema | Same dashboard, `prod` | 2026-05-17 |
 
 Vendor rationale (frozen by Step 2; revisit only on a documented
 incident):
@@ -104,8 +104,8 @@ the [Provisioning sequence](#provisioning-sequence)).
 
 | Host                      | Type   | Value                                       | TTL   | Notes                                                  |
 | ------------------------- | ------ | ------------------------------------------- | ----- | ------------------------------------------------------ |
-| `staging.roadmodel.ai`    | CNAME  | `cname.vercel-dns.com`                      | 300   | Vercel target; cut in Step 2.                          |
-| `roadmodel.ai` (apex)     | ALIAS  | TBD (Vercel-issued apex target)             | 300   | **Not cut until Step 7** — public launch only.         |
+| `staging.roadmodel.ai`    | CNAME  | `6414f72d9e02a5d3.vercel-dns-016.com`       | Auto  | Cut 2026-05-17. Project-scoped Vercel target; `cname.vercel-dns.com` is the documented universal fallback per Vercel's IP-range migration banner. |
+| `roadmodel.ai` (apex)     | ALIAS  | TBD (Vercel-issued apex target)             | 300   | **Not cut until Step 7** — public launch only. Namecheap currently has a parked-page `URL Redirect Record` for the apex → `http://www.roadmodel.ai/`; leave it until Step 7. |
 | `www.roadmodel.ai`        | CNAME  | TBD (Vercel-issued `www` target)            | 300   | **Not cut until Step 7**.                              |
 
 Step 2 cuts only the `staging` row. The apex + `www` rows stay
@@ -147,9 +147,9 @@ changes here, Step 6's doc must be re-synced.
 
 | Provider   | Monthly cap (USD) | Alert thresholds       | Console URL                                                                       |
 | ---------- | ----------------- | ---------------------- | --------------------------------------------------------------------------------- |
-| Anthropic  | $200              | 50% / 75% / 90% email  | `https://console.anthropic.com/settings/limits`                                   |
-| OpenAI     | $200 hard, $150 soft | 50% / 75% / 90% email  | `https://platform.openai.com/account/limits`                                      |
-| Google     | $50               | 50% / 75% / 90% email  | `https://console.cloud.google.com/billing/<billing-account-id>/budgets` (TBD)     |
+| Anthropic  | $200              | 50% / 75% / 90% email ($100 / $150 / $180) | `https://platform.claude.com/settings/limits` (was `console.anthropic.com`; Anthropic rebranded the console late 2025) |
+| OpenAI     | $200 (org budget; hard cap) | 50% / 75% / 90% email ($100 / $150 / $180) | `https://platform.openai.com/settings/organization/limits` (was `/account/limits`; OpenAI 2025 redesign collapsed the legacy soft/hard distinction into a single budget + percentage alerts — the 75% alert is the functional successor to the old "soft limit") |
+| Google     | $50               | 50% / 75% / 90% email ($25 / $37.50 / $45) | `https://console.cloud.google.com/billing/010548-2423B0-E0B624/budgets` (project `roadmodel-saas`, budget `roadmodel Gemini API monthly`, scoped to Generative Language API service) |
 
 Cap-sizing rationale (frozen here so Phase 7 doesn't relitigate):
 
@@ -163,26 +163,85 @@ Cap-sizing rationale (frozen here so Phase 7 doesn't relitigate):
   depending on the cheap-model availability at the time of each
   call (Haiku 4.5 vs Flash); the routing decision is finalized
   in Step 5.
-- Google's cap is smaller ($50) because Gemini is only the
-  fallback cheap model — primary cheap-model load goes to Haiku
-  per
-  [docs/user-context.md](../docs/user-context.md).
+- Google's cap is the smallest ($50) — but see
+  [Model routing](#model-routing-phase-3) below; in Phase 3 the
+  Gemini API is actually the **primary** free-tier provider, not
+  the fallback. The $50 cap is sized small not because Gemini
+  carries the least load, but because Gemini 2.5 Flash is so
+  cheap per call that $50 covers ~500,000 recommend calls — well
+  past any realistic pilot-scale traffic.
 - All three alert ladders (50% / 75% / 90%) match by design so
   the maintainer sees a consistent breach signal across vendors.
+
+### Model routing (Phase 3)
+
+Frozen decision for the free-tier cheap-model selection. Phase 3
+Step 5 (the FastAPI service) implements this; Step 5 should NOT
+relitigate the choice unless one of the trigger conditions below
+fires.
+
+| Tier                 | Primary model       | Fallback (on cap or outage) | Why                                                  |
+| -------------------- | ------------------- | --------------------------- | ---------------------------------------------------- |
+| Anonymous web        | Gemini 2.5 Flash    | Claude Haiku 4.5            | Flash is ~15× cheaper per call than Haiku, US-based provider, comparable quality at this complexity tier. |
+| Free signed-in (rec) | Gemini 2.5 Flash    | Claude Haiku 4.5            | Same call profile as anonymous.                      |
+| Free signed-in (roadmap) | Claude Haiku 4.5 (long-form) | Gemini 2.5 Flash | Roadmap synthesis benefits from Claude's longer-context coherence; Flash falls back if cap fires. |
+
+Rationale (frozen):
+
+- **Cost.** Gemini 2.5 Flash at ~$0.0001/call vs Haiku 4.5 at
+  ~$0.0015/call. The $50 Google cap covers ~500,000 calls/month;
+  Anthropic's $200 cap covers ~133,000 calls/month of Haiku at
+  the same call profile. Flash is the strictly cheaper primary.
+- **Geopolitics + brand.** DeepSeek considered and rejected:
+  cheaper than Haiku but more expensive than Flash, plus
+  China-jurisdiction privacy exposure, US-China API-restriction
+  risk, and brand mismatch with roadmodel's positioning (we
+  recommend Claude/Cursor/Codex; running our own surface on a
+  model we don't recommend undermines us). Not worth $15-30/mo
+  expected savings vs Haiku for solo-maintainer ops tax of a 4th
+  provider.
+- **Fallback design.** When Gemini's $50 cap fires (or Gemini
+  has an outage), traffic flips to Haiku on Anthropic. Anthropic's
+  $200 cap easily absorbs this — at Haiku rates it covers another
+  ~133K calls of overflow. OpenAI's $200 is the third-tier
+  fallback if both Google and Anthropic are unavailable.
+
+Trigger conditions to revisit this routing:
+
+- Phase 5 monetization ships and paid-tier revenue funds AI cost
+  — at that point, default frontier (Sonnet 4.6) takes over for
+  paid surfaces and this cheap-tier discussion becomes academic
+  for paying users.
+- Google deprecates Flash or raises Flash pricing by >5×.
+- Anthropic drops Haiku pricing below Flash.
+- A non-trivial cohort of users complains about Flash quality
+  for recommend-tier prompts.
 
 ## UptimeRobot monitors
 
 Free-tier UptimeRobot account; one monitor in Step 2, more added
 in Step 7 when the production URL is cut.
 
-| Monitor ID                   | Target URL                          | Interval   | Alert channel                |
-| ---------------------------- | ----------------------------------- | ---------- | ---------------------------- |
-| TBD (fill in after step 6)   | `https://staging.roadmodel.ai`      | 5 minutes  | maintainer's email on file   |
+| Monitor ID                                                                     | Target URL                          | Interval   | Alert channel                |
+| ------------------------------------------------------------------------------ | ----------------------------------- | ---------- | ---------------------------- |
+| `803092893` (paused 2026-05-17; resume in Phase 3 Step 4 when staging returns 2xx) | `https://staging.roadmodel.ai`      | 5 minutes  | maintainer's email on file   |
 
 UptimeRobot's free tier allows 50 monitors at a 5-minute floor.
 That's the right granularity for Step 2 — finer-grained polling
 adds no signal at this stage and burns the free-tier quota faster
 than necessary.
+
+**Note on the paused state.** UptimeRobot's free tier treats HTTP
+4xx as Down (the "Up HTTP status codes" override that would let
+404 count as Up is gated behind the Solo plan, $7/mo). Until
+Phase 3 Step 4 lands the Next.js scaffold and staging starts
+responding 2xx, the monitor would page-spam the maintainer on
+every 5-minute probe. The monitor is therefore **paused** at the
+end of Step 2 — provisioned, configured correctly, but not
+actively probing. Resume it from the UptimeRobot dashboard the
+moment the Phase 3 Step 4 staging deploy goes green; V2.5
+acceptance ("monitor reports `up`") gates on that resumption,
+not on Step 2 alone.
 
 ## Provisioning sequence
 
@@ -198,12 +257,26 @@ named in it; do not move to step N+1 until step N's check passes.
    the [Cloud projects](#cloud-projects) table.
 
 2. **Railway.** Create the `roadmodel-service` project under the
-   maintainer's Railway workspace. Add two services under it:
-   `roadmodel-service-staging` (deploy on PR) and
-   `roadmodel-service-production` (deploy on push to `main`).
-   Connect the GitHub repo (each service → Settings → Source →
-   GitHub repo). Record the project ID + both service IDs into
-   the [Cloud projects](#cloud-projects) table.
+   maintainer's Railway workspace on the **Hobby plan** ($5/mo —
+   the Trial credit auto-suspends after 30 days otherwise). When
+   you import `nathanramoscfa/roadmodel` as the project source,
+   Railway auto-creates one service inside a default `production`
+   environment. Railway models staging/production as **two
+   environments around a single service**, NOT as two separate
+   services — confirmed against Railway's UX 2026-05. Add the
+   second environment: top breadcrumb → environment dropdown →
+   **+ New Environment** → name `staging`, copy from
+   `production` so the service config carries over. Inside the
+   new `staging` environment, switch the service's source branch
+   from `main` to `staging`. The `staging` branch must exist on
+   origin first — if it doesn't, run `git push origin
+   main:refs/heads/staging` from a local clone (no commits to
+   `main` required; this just creates a remote pointer at main's
+   tip). Optionally enable "PR Deploys" (Railway moves this
+   toggle around — not blocking; revisit in Phase 3 Step 4 if
+   not exposed). Record the project ID, service ID, and **both**
+   environment IDs into the [Cloud projects](#cloud-projects)
+   table.
 
 3. **Supabase.** Create the `roadmodel-data` project on the
    **Pro** plan — not Free; Free's row caps and lack of daily
@@ -254,9 +327,23 @@ named in it; do not move to step N+1 until step N's check passes.
    - **OpenAI.** `platform.openai.com` → Billing → Usage
      limits → set hard limit $200, soft limit $150, alerts at
      50%, 75%, 90%.
-   - **Google.** `console.cloud.google.com` → Billing →
-     Budgets & alerts → create a $50/mo budget on the
-     Gemini API service, alerts at 50%, 75%, 90%.
+   - **Google.** Create a new GCP project (`roadmodel-saas`),
+     link the existing billing account, enable the
+     **Generative Language API** (Gemini). For the API key,
+     **use Google AI Studio (https://aistudio.google.com), NOT
+     Cloud Console → Credentials.** AI Studio creates a plain
+     API key (no service account binding required) and lets you
+     pick `roadmodel-saas` as the billing project so usage hits
+     the GCP budget. The Cloud Console "Create credentials → API
+     key" flow now (2025+ policy) demands service-account binding
+     and a Vertex-scoped role, which is overkill for a simple
+     `x-goog-api-key`-header use case and surfaces a chain of
+     IAM/role obstacles. Then `console.cloud.google.com` →
+     Billing → Budgets & alerts → create a $50/mo budget scoped
+     to the `roadmodel-saas` project + filtered to the
+     Generative Language API service, alerts at 50%, 75%, 90%.
+     Google budgets are **email-only**, not hard cutoffs —
+     Phase 7 application ledger adds the hard stop layer.
 
    Record the Google billing-account-specific console URL into
    the [Provider cost ceilings](#provider-cost-ceilings) table
