@@ -163,12 +163,59 @@ Cap-sizing rationale (frozen here so Phase 7 doesn't relitigate):
   depending on the cheap-model availability at the time of each
   call (Haiku 4.5 vs Flash); the routing decision is finalized
   in Step 5.
-- Google's cap is smaller ($50) because Gemini is only the
-  fallback cheap model — primary cheap-model load goes to Haiku
-  per
-  [docs/user-context.md](../docs/user-context.md).
+- Google's cap is the smallest ($50) — but see
+  [Model routing](#model-routing-phase-3) below; in Phase 3 the
+  Gemini API is actually the **primary** free-tier provider, not
+  the fallback. The $50 cap is sized small not because Gemini
+  carries the least load, but because Gemini 2.5 Flash is so
+  cheap per call that $50 covers ~500,000 recommend calls — well
+  past any realistic pilot-scale traffic.
 - All three alert ladders (50% / 75% / 90%) match by design so
   the maintainer sees a consistent breach signal across vendors.
+
+### Model routing (Phase 3)
+
+Frozen decision for the free-tier cheap-model selection. Phase 3
+Step 5 (the FastAPI service) implements this; Step 5 should NOT
+relitigate the choice unless one of the trigger conditions below
+fires.
+
+| Tier                 | Primary model       | Fallback (on cap or outage) | Why                                                  |
+| -------------------- | ------------------- | --------------------------- | ---------------------------------------------------- |
+| Anonymous web        | Gemini 2.5 Flash    | Claude Haiku 4.5            | Flash is ~15× cheaper per call than Haiku, US-based provider, comparable quality at this complexity tier. |
+| Free signed-in (rec) | Gemini 2.5 Flash    | Claude Haiku 4.5            | Same call profile as anonymous.                      |
+| Free signed-in (roadmap) | Claude Haiku 4.5 (long-form) | Gemini 2.5 Flash | Roadmap synthesis benefits from Claude's longer-context coherence; Flash falls back if cap fires. |
+
+Rationale (frozen):
+
+- **Cost.** Gemini 2.5 Flash at ~$0.0001/call vs Haiku 4.5 at
+  ~$0.0015/call. The $50 Google cap covers ~500,000 calls/month;
+  Anthropic's $200 cap covers ~133,000 calls/month of Haiku at
+  the same call profile. Flash is the strictly cheaper primary.
+- **Geopolitics + brand.** DeepSeek considered and rejected:
+  cheaper than Haiku but more expensive than Flash, plus
+  China-jurisdiction privacy exposure, US-China API-restriction
+  risk, and brand mismatch with roadmodel's positioning (we
+  recommend Claude/Cursor/Codex; running our own surface on a
+  model we don't recommend undermines us). Not worth $15-30/mo
+  expected savings vs Haiku for solo-maintainer ops tax of a 4th
+  provider.
+- **Fallback design.** When Gemini's $50 cap fires (or Gemini
+  has an outage), traffic flips to Haiku on Anthropic. Anthropic's
+  $200 cap easily absorbs this — at Haiku rates it covers another
+  ~133K calls of overflow. OpenAI's $200 is the third-tier
+  fallback if both Google and Anthropic are unavailable.
+
+Trigger conditions to revisit this routing:
+
+- Phase 5 monetization ships and paid-tier revenue funds AI cost
+  — at that point, default frontier (Sonnet 4.6) takes over for
+  paid surfaces and this cheap-tier discussion becomes academic
+  for paying users.
+- Google deprecates Flash or raises Flash pricing by >5×.
+- Anthropic drops Haiku pricing below Flash.
+- A non-trivial cohort of users complains about Flash quality
+  for recommend-tier prompts.
 
 ## UptimeRobot monitors
 
