@@ -125,11 +125,18 @@ run_static_checks() {
     record_fail 2 "docs/catalog.json exists and parses as JSON" "missing or invalid JSON"
   fi
 
-  # 3
-  if [[ -f src/roadmodel/data/catalog.json ]]; then
-    record_pass 3 "src/roadmodel/data/catalog.json exists (bundled by hatch_build.py)"
+  # 3 — bundling mechanism check. src/roadmodel/data/ is gitignored
+  # (Phase 1 check 14); hatch_build.py copies docs/catalog.json into
+  # src/roadmodel/data/catalog.json at wheel-build time. On a fresh
+  # clone (incl. CI) the file isn't there yet — so we assert the
+  # bundling contract: hatch_build.py declares catalog.json in its
+  # BUNDLED_DOCS map. The materialized file is verified inside the
+  # wheel under --cli / --post (V3.3) and the actual install matrix.
+  if grep -Fq '"catalog.json": "catalog.json"' hatch_build.py; then
+    record_pass 3 "hatch_build.py bundles docs/catalog.json into src/roadmodel/data/catalog.json"
   else
-    record_fail 3 "src/roadmodel/data/catalog.json exists (bundled by hatch_build.py)" "missing"
+    record_fail 3 "hatch_build.py bundles docs/catalog.json into src/roadmodel/data/catalog.json" \
+      "BUNDLED_DOCS entry missing in hatch_build.py"
   fi
 
   # 4 — four documented sections
