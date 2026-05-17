@@ -104,8 +104,8 @@ the [Provisioning sequence](#provisioning-sequence)).
 
 | Host                      | Type   | Value                                       | TTL   | Notes                                                  |
 | ------------------------- | ------ | ------------------------------------------- | ----- | ------------------------------------------------------ |
-| `staging.roadmodel.ai`    | CNAME  | `cname.vercel-dns.com`                      | 300   | Vercel target; cut in Step 2.                          |
-| `roadmodel.ai` (apex)     | ALIAS  | TBD (Vercel-issued apex target)             | 300   | **Not cut until Step 7** — public launch only.         |
+| `staging.roadmodel.ai`    | CNAME  | `6414f72d9e02a5d3.vercel-dns-016.com`       | Auto  | Cut 2026-05-17. Project-scoped Vercel target; `cname.vercel-dns.com` is the documented universal fallback per Vercel's IP-range migration banner. |
+| `roadmodel.ai` (apex)     | ALIAS  | TBD (Vercel-issued apex target)             | 300   | **Not cut until Step 7** — public launch only. Namecheap currently has a parked-page `URL Redirect Record` for the apex → `http://www.roadmodel.ai/`; leave it until Step 7. |
 | `www.roadmodel.ai`        | CNAME  | TBD (Vercel-issued `www` target)            | 300   | **Not cut until Step 7**.                              |
 
 Step 2 cuts only the `staging` row. The apex + `www` rows stay
