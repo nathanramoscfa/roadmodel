@@ -35,7 +35,7 @@ this baseline.
 | Project           | Vendor   | Project ID                     | Dashboard URL                                                    | Staging URL                              | Production URL          | Provisioned    |
 | ----------------- | -------- | ------------------------------ | ---------------------------------------------------------------- | ---------------------------------------- | ----------------------- | -------------- |
 | `roadmodel-web`   | Vercel   | `prj_1emPjG8EamGB5G942ipNjjeqh8NX` (team `team_5uU81P0Gl4i22rBjMSwDRsLR`, slug `roadmodel`) | `https://vercel.com/roadmodel/roadmodel-web` | `https://staging.roadmodel.ai` | TBD (cut in Step 7) | 2026-05-17 |
-| `roadmodel-service` | Railway | TBD (fill in after step 2)     | `https://railway.app/project/<project-id>` (TBD)                 | Railway-issued PR preview URL (per-PR)   | TBD (cut in Step 7)     | TBD (date UTC) |
+| `roadmodel-service` | Railway | `09b49af8-35b0-4cbd-8c6b-803960ebfe6a` (service `75adcf42-a1ee-44d4-8c8e-b2c576fc6515`, env-prod `651137a1-2331-4991-bf66-c0456163a48d`, env-staging `d79822c4-9676-4910-8606-ea5e98099ed3`) | `https://railway.com/project/09b49af8-35b0-4cbd-8c6b-803960ebfe6a` | Railway-issued default domain (generated in Phase 3 Step 3 when FastAPI ships) | TBD (cut in Step 7) | 2026-05-17 |
 | `roadmodel-data`  | Supabase | TBD (fill in after step 3)     | `https://supabase.com/dashboard/project/<project-ref>` (TBD)     | Same dashboard, `staging` schema         | Same dashboard, `prod`  | TBD (date UTC) |
 
 Vendor rationale (frozen by Step 2; revisit only on a documented
@@ -198,12 +198,26 @@ named in it; do not move to step N+1 until step N's check passes.
    the [Cloud projects](#cloud-projects) table.
 
 2. **Railway.** Create the `roadmodel-service` project under the
-   maintainer's Railway workspace. Add two services under it:
-   `roadmodel-service-staging` (deploy on PR) and
-   `roadmodel-service-production` (deploy on push to `main`).
-   Connect the GitHub repo (each service → Settings → Source →
-   GitHub repo). Record the project ID + both service IDs into
-   the [Cloud projects](#cloud-projects) table.
+   maintainer's Railway workspace on the **Hobby plan** ($5/mo —
+   the Trial credit auto-suspends after 30 days otherwise). When
+   you import `nathanramoscfa/roadmodel` as the project source,
+   Railway auto-creates one service inside a default `production`
+   environment. Railway models staging/production as **two
+   environments around a single service**, NOT as two separate
+   services — confirmed against Railway's UX 2026-05. Add the
+   second environment: top breadcrumb → environment dropdown →
+   **+ New Environment** → name `staging`, copy from
+   `production` so the service config carries over. Inside the
+   new `staging` environment, switch the service's source branch
+   from `main` to `staging`. The `staging` branch must exist on
+   origin first — if it doesn't, run `git push origin
+   main:refs/heads/staging` from a local clone (no commits to
+   `main` required; this just creates a remote pointer at main's
+   tip). Optionally enable "PR Deploys" (Railway moves this
+   toggle around — not blocking; revisit in Phase 3 Step 4 if
+   not exposed). Record the project ID, service ID, and **both**
+   environment IDs into the [Cloud projects](#cloud-projects)
+   table.
 
 3. **Supabase.** Create the `roadmodel-data` project on the
    **Pro** plan — not Free; Free's row caps and lack of daily
