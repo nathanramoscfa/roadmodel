@@ -2,6 +2,12 @@
 .env
 .venv/
 
+# Infra console screenshots — the maintainer captures these per
+# provisioning step for personal runbook trail; the committed
+# infra/README.md carries every URL + ID + cap value the next
+# maintainer needs, so screenshots stay local.
+infra/screenshots/
+
 # Editor / OS
 .vscode/
 **/.DS_Store
