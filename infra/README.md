@@ -149,7 +149,7 @@ changes here, Step 6's doc must be re-synced.
 | ---------- | ----------------- | ---------------------- | --------------------------------------------------------------------------------- |
 | Anthropic  | $200              | 50% / 75% / 90% email ($100 / $150 / $180) | `https://platform.claude.com/settings/limits` (was `console.anthropic.com`; Anthropic rebranded the console late 2025) |
 | OpenAI     | $200 (org budget; hard cap) | 50% / 75% / 90% email ($100 / $150 / $180) | `https://platform.openai.com/settings/organization/limits` (was `/account/limits`; OpenAI 2025 redesign collapsed the legacy soft/hard distinction into a single budget + percentage alerts — the 75% alert is the functional successor to the old "soft limit") |
-| Google     | $50               | 50% / 75% / 90% email  | `https://console.cloud.google.com/billing/<billing-account-id>/budgets` (TBD)     |
+| Google     | $50               | 50% / 75% / 90% email ($25 / $37.50 / $45) | `https://console.cloud.google.com/billing/010548-2423B0-E0B624/budgets` (project `roadmodel-saas`, budget `roadmodel Gemini API monthly`, scoped to Generative Language API service) |
 
 Cap-sizing rationale (frozen here so Phase 7 doesn't relitigate):
 
@@ -327,9 +327,23 @@ named in it; do not move to step N+1 until step N's check passes.
    - **OpenAI.** `platform.openai.com` → Billing → Usage
      limits → set hard limit $200, soft limit $150, alerts at
      50%, 75%, 90%.
-   - **Google.** `console.cloud.google.com` → Billing →
-     Budgets & alerts → create a $50/mo budget on the
-     Gemini API service, alerts at 50%, 75%, 90%.
+   - **Google.** Create a new GCP project (`roadmodel-saas`),
+     link the existing billing account, enable the
+     **Generative Language API** (Gemini). For the API key,
+     **use Google AI Studio (https://aistudio.google.com), NOT
+     Cloud Console → Credentials.** AI Studio creates a plain
+     API key (no service account binding required) and lets you
+     pick `roadmodel-saas` as the billing project so usage hits
+     the GCP budget. The Cloud Console "Create credentials → API
+     key" flow now (2025+ policy) demands service-account binding
+     and a Vertex-scoped role, which is overkill for a simple
+     `x-goog-api-key`-header use case and surfaces a chain of
+     IAM/role obstacles. Then `console.cloud.google.com` →
+     Billing → Budgets & alerts → create a $50/mo budget scoped
+     to the `roadmodel-saas` project + filtered to the
+     Generative Language API service, alerts at 50%, 75%, 90%.
+     Google budgets are **email-only**, not hard cutoffs —
+     Phase 7 application ledger adds the hard stop layer.
 
    Record the Google billing-account-specific console URL into
    the [Provider cost ceilings](#provider-cost-ceilings) table
