@@ -154,6 +154,17 @@ jobs:
         # is itself treated as a strict-mode error.
         run: pip-audit --skip-editable
 
+  roadmap-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Lint public ROADMAP.md against deny-list
+        run: python update/sync_public_roadmap.py --check
+
   test:
     if: ${{ always() }}
     needs:
@@ -162,6 +173,7 @@ jobs:
       - test-matrix
       - package-smoke
       - security-scan
+      - roadmap-sync
     runs-on: ubuntu-latest
     steps:
       - name: Enforce aggregate test gate
@@ -171,11 +183,13 @@ jobs:
           echo "test-matrix=${{ needs.test-matrix.result }}"
           echo "package-smoke=${{ needs.package-smoke.result }}"
           echo "security-scan=${{ needs.security-scan.result }}"
+          echo "roadmap-sync=${{ needs.roadmap-sync.result }}"
           if [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.type-check.result }}" != "success" ] || \
              [ "${{ needs.test-matrix.result }}" != "success" ] || \
              [ "${{ needs.package-smoke.result }}" != "success" ] || \
-             [ "${{ needs.security-scan.result }}" != "success" ]; then
+             [ "${{ needs.security-scan.result }}" != "success" ] || \
+             [ "${{ needs.roadmap-sync.result }}" != "success" ]; then
             echo "One or more CI jobs failed."
             exit 1
           fi
