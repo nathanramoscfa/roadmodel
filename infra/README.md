@@ -147,7 +147,7 @@ changes here, Step 6's doc must be re-synced.
 
 | Provider   | Monthly cap (USD) | Alert thresholds       | Console URL                                                                       |
 | ---------- | ----------------- | ---------------------- | --------------------------------------------------------------------------------- |
-| Anthropic  | $200              | 50% / 75% / 90% email  | `https://console.anthropic.com/settings/limits`                                   |
+| Anthropic  | $200              | 50% / 75% / 90% email ($100 / $150 / $180) | `https://platform.claude.com/settings/limits` (was `console.anthropic.com`; Anthropic rebranded the console late 2025) |
 | OpenAI     | $200 hard, $150 soft | 50% / 75% / 90% email  | `https://platform.openai.com/account/limits`                                      |
 | Google     | $50               | 50% / 75% / 90% email  | `https://console.cloud.google.com/billing/<billing-account-id>/budgets` (TBD)     |
 
