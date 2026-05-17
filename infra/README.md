@@ -148,7 +148,7 @@ changes here, Step 6's doc must be re-synced.
 | Provider   | Monthly cap (USD) | Alert thresholds       | Console URL                                                                       |
 | ---------- | ----------------- | ---------------------- | --------------------------------------------------------------------------------- |
 | Anthropic  | $200              | 50% / 75% / 90% email ($100 / $150 / $180) | `https://platform.claude.com/settings/limits` (was `console.anthropic.com`; Anthropic rebranded the console late 2025) |
-| OpenAI     | $200 hard, $150 soft | 50% / 75% / 90% email  | `https://platform.openai.com/account/limits`                                      |
+| OpenAI     | $200 (org budget; hard cap) | 50% / 75% / 90% email ($100 / $150 / $180) | `https://platform.openai.com/settings/organization/limits` (was `/account/limits`; OpenAI 2025 redesign collapsed the legacy soft/hard distinction into a single budget + percentage alerts — the 75% alert is the functional successor to the old "soft limit") |
 | Google     | $50               | 50% / 75% / 90% email  | `https://console.cloud.google.com/billing/<billing-account-id>/budgets` (TBD)     |
 
 Cap-sizing rationale (frozen here so Phase 7 doesn't relitigate):
