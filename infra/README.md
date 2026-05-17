@@ -175,14 +175,26 @@ Cap-sizing rationale (frozen here so Phase 7 doesn't relitigate):
 Free-tier UptimeRobot account; one monitor in Step 2, more added
 in Step 7 when the production URL is cut.
 
-| Monitor ID                   | Target URL                          | Interval   | Alert channel                |
-| ---------------------------- | ----------------------------------- | ---------- | ---------------------------- |
-| TBD (fill in after step 6)   | `https://staging.roadmodel.ai`      | 5 minutes  | maintainer's email on file   |
+| Monitor ID                                                                     | Target URL                          | Interval   | Alert channel                |
+| ------------------------------------------------------------------------------ | ----------------------------------- | ---------- | ---------------------------- |
+| `803092893` (paused 2026-05-17; resume in Phase 3 Step 4 when staging returns 2xx) | `https://staging.roadmodel.ai`      | 5 minutes  | maintainer's email on file   |
 
 UptimeRobot's free tier allows 50 monitors at a 5-minute floor.
 That's the right granularity for Step 2 — finer-grained polling
 adds no signal at this stage and burns the free-tier quota faster
 than necessary.
+
+**Note on the paused state.** UptimeRobot's free tier treats HTTP
+4xx as Down (the "Up HTTP status codes" override that would let
+404 count as Up is gated behind the Solo plan, $7/mo). Until
+Phase 3 Step 4 lands the Next.js scaffold and staging starts
+responding 2xx, the monitor would page-spam the maintainer on
+every 5-minute probe. The monitor is therefore **paused** at the
+end of Step 2 — provisioned, configured correctly, but not
+actively probing. Resume it from the UptimeRobot dashboard the
+moment the Phase 3 Step 4 staging deploy goes green; V2.5
+acceptance ("monitor reports `up`") gates on that resumption,
+not on Step 2 alone.
 
 ## Provisioning sequence
 
