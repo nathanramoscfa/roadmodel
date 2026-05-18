@@ -165,6 +165,25 @@ jobs:
       - name: Lint public ROADMAP.md against deny-list
         run: python update/sync_public_roadmap.py --check
 
+  service-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install service dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e "service[dev]"
+      - name: Ruff lint (service)
+        run: ruff check service/
+      - name: Mypy strict (service)
+        run: mypy --strict service/
+      - name: Pytest (service)
+        run: pytest service/tests/ -x
+
   test:
     if: ${{ always() }}
     needs:
@@ -174,6 +193,7 @@ jobs:
       - package-smoke
       - security-scan
       - roadmap-sync
+      - service-tests
     runs-on: ubuntu-latest
     steps:
       - name: Enforce aggregate test gate
@@ -184,12 +204,14 @@ jobs:
           echo "package-smoke=${{ needs.package-smoke.result }}"
           echo "security-scan=${{ needs.security-scan.result }}"
           echo "roadmap-sync=${{ needs.roadmap-sync.result }}"
+          echo "service-tests=${{ needs.service-tests.result }}"
           if [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.type-check.result }}" != "success" ] || \
              [ "${{ needs.test-matrix.result }}" != "success" ] || \
              [ "${{ needs.package-smoke.result }}" != "success" ] || \
              [ "${{ needs.security-scan.result }}" != "success" ] || \
-             [ "${{ needs.roadmap-sync.result }}" != "success" ]; then
+             [ "${{ needs.roadmap-sync.result }}" != "success" ] || \
+             [ "${{ needs.service-tests.result }}" != "success" ]; then
             echo "One or more CI jobs failed."
             exit 1
           fi
