@@ -1,9 +1,9 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-05-13T22:54:33Z",
+  "generated_at_utc": "2026-05-18T17:06:57Z",
   "source_doc_sha256": {
-    "model-selector.txt": "325ac7cca4ac31c85d52a27461f230a8dcdbe6a86dbd72596bba7e52daeb6413",
-    "model-tier-cost-scale.md": "1a337c6d958e94cfbd184663fb40b2801f21590c28c855362e93de9e2966f7ac"
+    "model-selector.txt": "9c5add5a696472be23e8930de56216b630257af34f8d1c2082615e4c2b3b52d8",
+    "model-tier-cost-scale.md": "932ff2d0a047da73d9569941f3cad6ad4d6f48331a4020ddf009e97f72afc86d"
   },
   "models": [
     {
@@ -82,7 +82,7 @@
         "knowledge": "A",
         "speed": "B"
       },
-      "headline_benchmarks": "AA Intelligence Index 57.2 (#3); AA-Omniscience 32.9 (#1); HLE 44.7% (#1); LMArena Text Elo 1486 (#4); 1M-token context",
+      "headline_benchmarks": "AA Intelligence Index 57.2 (#3); AA-Omniscience 32.9 (#1); HLE 44.7% (#1); LMArena Text Elo 1483.6 (#4); 1M-token context",
       "pricing_notes": "-",
       "best_for": "True native multimodal understanding (text, image, video, audio, and code in a single pass), 1M-token context optimized for heterogeneous inputs, strong agentic multi-step tool use, and synthesizing insights across large mixed-media datasets or sprawling document corpora \u2014 the obvious choice whenever multimodal or long-context is the primary category"
     },
@@ -142,7 +142,7 @@
         "knowledge": "S",
         "speed": "B"
       },
-      "headline_benchmarks": "AA Intelligence Index 56.8 (#4); LMArena Text Elo 1454 (#19); GPT-5.4 (xhigh) Output Speed 83.2 tokens/s; lowest factual error rate among GPT models",
+      "headline_benchmarks": "AA Intelligence Index 56.8 (#4); LMArena Text Elo 1454.1 (#18); GPT-5.4 (xhigh) Output Speed 83.2 tokens/s; lowest factual error rate among GPT models",
       "pricing_notes": "Hidden by default; Requires Max Mode on request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context (Max Mode) supports up to 1M tokens with 2x input pricing",
       "best_for": "Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding"
     },
@@ -202,7 +202,7 @@
         "knowledge": "A",
         "speed": "D"
       },
-      "headline_benchmarks": "AA Intelligence Index 60.2 (#1); LMArena Text Elo 1461 (#14); HLE 44.3%; AA-Omniscience 20.1 (#3)",
+      "headline_benchmarks": "AA Intelligence Index 60.2 (#1); LMArena Text Elo 1462.5 (#14); HLE 44.3%; AA-Omniscience 20.1 (#3)",
       "pricing_notes": "Requires Max Mode on request-based plans; Agentic and reasoning capabilities; More token-efficient than GPT-5.4 on comparable tasks; Improved persistence on long-running tasks; Fast mode is available at higher rates; Long context (Max Mode) supports up to 1M tokens with 2x input pricing",
       "best_for": "OpenAI's most capable frontier model and highest-cost GPT offering, best suited for the most demanding reasoning, long-horizon planning, and tasks where maximum intelligence is required regardless of cost \u2014 strongest single model for hard coding, agentic execution, and reasoning, but verify factual claims due to elevated hallucination"
     },
@@ -242,7 +242,7 @@
         "knowledge": "S",
         "speed": "D"
       },
-      "headline_benchmarks": "AA Intelligence Index 57.3 (#2); LMArena Text #3 (Elo 1487); LMArena WebDev #1 (Elo 1570); AA-Omniscience 26.2 (#2)",
+      "headline_benchmarks": "AA Intelligence Index 57.3 (#2); LMArena Text #6 (Elo 1478.7); LMArena WebDev #2 (Elo 1559.3); AA-Omniscience 26.2 (#2)",
       "pricing_notes": "Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)",
       "best_for": "Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching"
     },
@@ -282,7 +282,7 @@
         "knowledge": "A",
         "speed": "B"
       },
-      "headline_benchmarks": "AA Intelligence Index 51.7; LMArena WebDev Elo 1524 (#6); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage",
+      "headline_benchmarks": "AA Intelligence Index 51.7; LMArena WebDev Elo 1523.6 (#6); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage",
       "pricing_notes": "Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)",
       "best_for": "Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation"
     }
@@ -555,17 +555,27 @@
         "chatgpt-app",
         "codex-cli"
       ],
-      "notes": "GPT-5.4, GPT-5.4 Mini, and selected reasoning models with per-model usage caps; Codex access included."
+      "notes": "GPT-5.5 Instant and Thinking with per-model usage caps; Codex access included; GPT-5.4 and GPT-5.4 Mini also available."
     },
     {
       "provider": "OpenAI",
-      "tier": "ChatGPT Pro",
+      "tier": "ChatGPT Pro ($100)",
+      "monthly_usd": 100.0,
+      "surface_funded": [
+        "chatgpt-app",
+        "codex-cli"
+      ],
+      "notes": "Same model suite as Pro $200 (GPT-5.5, GPT-5.5 Pro, o1 Pro mode) at 5x Plus usage limits; Codex access included with promotional 10x multiplier through May 31, 2026."
+    },
+    {
+      "provider": "OpenAI",
+      "tier": "ChatGPT Pro ($200)",
       "monthly_usd": 200.0,
       "surface_funded": [
         "chatgpt-app",
         "codex-cli"
       ],
-      "notes": "Same coverage as Plus with much higher caps and access to GPT-5.5 and GPT-5.5 Pro."
+      "notes": "Same coverage as Pro $100 with much higher caps (20x Plus limits) and access to GPT-5.5 and GPT-5.5 Pro."
     }
   ]
 }
