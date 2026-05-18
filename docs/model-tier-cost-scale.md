@@ -62,6 +62,7 @@ table and surface material cost / availability / capability constraints.
 | Composer 1   | $1.25 | –           | $0.125     | $10.00 | Medium | Hidden by default |
 | Composer 1.5 | $3.50 | –           | $0.35      | $17.50 | High   | Hidden by default |
 | Composer 2   | $0.50 | –           | $0.20      | $2.50  | Low    | -                 |
+| Composer 2.5 | $0.50 | –           | $0.20      | $2.50  | Low    | -                 |
 
 
 ### API Pool — Google (Gemini)
@@ -109,7 +110,7 @@ table and surface material cost / availability / capability constraints.
 
 ---
 
-<!-- subscription-tiers-reviewed: 2026-05-13 -->
+<!-- subscription-tiers-reviewed: 2026-05-18 -->
 
 ## Subscription Tiers and Access Methods
 
@@ -149,8 +150,9 @@ and adjust the rebuild rules in [`update/prompt.md`](../update/prompt.md).
 | Claude Pro           | $20     | Anthropic | claude-code, claude-web      | Opus 4.7, Sonnet 4.6, and Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE), with roughly 5x the usage of the Free tier. |
 | claude.ai Max ($100) | $100    | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 5x the Pro usage budget; priority access during peak traffic.       |
 | claude.ai Max ($200) | $200    | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 20x the Pro usage budget; highest consumer-tier Claude budget.      |
-| ChatGPT Plus         | $20     | OpenAI    | chatgpt-app, codex-cli       | GPT-5.4, GPT-5.4 Mini, and selected reasoning models with per-model usage caps; Codex access included.    |
-| ChatGPT Pro          | $200    | OpenAI    | chatgpt-app, codex-cli       | Same coverage as Plus with much higher caps and access to GPT-5.5 and GPT-5.5 Pro.                        |
+| ChatGPT Plus         | $20     | OpenAI    | chatgpt-app, codex-cli       | GPT-5.5 Instant and Thinking with per-model usage caps; Codex access included; GPT-5.4 and GPT-5.4 Mini also available. |
+| ChatGPT Pro ($100)   | $100    | OpenAI    | chatgpt-app, codex-cli       | Same model suite as Pro $200 (GPT-5.5, GPT-5.5 Pro, o1 Pro mode) at 5x Plus usage limits; Codex access included with promotional 10x multiplier through May 31, 2026. |
+| ChatGPT Pro ($200)   | $200    | OpenAI    | chatgpt-app, codex-cli       | Same coverage as Pro $100 with much higher caps (20x Plus limits) and access to GPT-5.5 and GPT-5.5 Pro.  |
 | Google AI Pro        | $20     | Google    | gemini-app, gemini-cli       | Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus 2 TB of Google One storage. |
 | Google AI Ultra      | $250    | Google    | gemini-app, gemini-cli       | Highest access to Gemini 3.1 Pro and Deep Think (where available), Veo video generation, Agent Mode previews, and 30 TB of Google One storage. |
 | Cursor Pro           | $20     | Cursor    | cursor                       | $20 monthly model-usage credit pool across every model in Cursor's catalog; on-demand overage billed at API rates. |
@@ -181,6 +183,7 @@ appear here.
 | sonnet-4.6       | $15.00  | High         | High         | ✓      |
 | gpt-5.4          | $15.00  | High         | High         | ✓      |
 | gpt-5.3-codex    | $14.00  | Medium       | Medium       | ✓      |
+| gpt-5.2          | $14.00  | Medium       | Medium       | ✓      |
 | gemini-3.1-pro   | $12.00  | Medium       | Medium       | ✓      |
 | premium          | N/A*    | Medium       | Medium       | ✓      |
 | composer-2       | $2.50   | Low          | Low          | ✓      |
