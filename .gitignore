@@ -85,3 +85,4 @@ logs/
 # them. The directory has already been scrubbed from history (commit 1b60bfb)
 # and exists only on the maintainer's machine, so the per-clone exclude is
 # sufficient.
+.vercel
