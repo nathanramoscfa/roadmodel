@@ -1,0 +1,8 @@
+# web/.gitignore
+node_modules/
+.next/
+out/
+.env*.local
+playwright-report/
+test-results/
+tsconfig.tsbuildinfo

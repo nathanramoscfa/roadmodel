@@ -34,7 +34,7 @@ this baseline.
 
 | Project           | Vendor   | Project ID                     | Dashboard URL                                                    | Staging URL                              | Production URL          | Provisioned    |
 | ----------------- | -------- | ------------------------------ | ---------------------------------------------------------------- | ---------------------------------------- | ----------------------- | -------------- |
-| `roadmodel-web`   | Vercel   | `prj_1emPjG8EamGB5G942ipNjjeqh8NX` (team `team_5uU81P0Gl4i22rBjMSwDRsLR`, slug `roadmodel`) — GitHub preview deployments paused 2026-05-19; resume in Phase 3 Step 4 when Next.js scaffold lands | `https://vercel.com/roadmodel/roadmodel-web` | `https://staging.roadmodel.ai` | TBD (cut in Step 7) | 2026-05-17 |
+| `roadmodel-web`   | Vercel   | `prj_1emPjG8EamGB5G942ipNjjeqh8NX` (team `team_5uU81P0Gl4i22rBjMSwDRsLR`, slug `roadmodel`) — root `web/`, previews resume Phase 3 Step 4 | `https://vercel.com/roadmodel/roadmodel-web` | `https://staging.roadmodel.ai` | TBD (cut in Step 7) | 2026-05-17 |
 | `roadmodel-service` | Railway | `09b49af8-35b0-4cbd-8c6b-803960ebfe6a` (service `75adcf42-a1ee-44d4-8c8e-b2c576fc6515`, env-prod `651137a1-2331-4991-bf66-c0456163a48d`, env-staging `d79822c4-9676-4910-8606-ea5e98099ed3`) | `https://railway.com/project/09b49af8-35b0-4cbd-8c6b-803960ebfe6a` | Railway-issued default domain (generated in Phase 3 Step 3 when FastAPI ships) | TBD (cut in Step 7) | 2026-05-17 |
 | `roadmodel-data`  | Supabase | `nbxzpqnmafcayeqnfvcv` (org `mkvjpvgvuhhzkzfyhvsp`, region `us-east-1`) | `https://supabase.com/dashboard/project/nbxzpqnmafcayeqnfvcv` | Same dashboard, `staging` schema | Same dashboard, `prod` | 2026-05-17 |
 
@@ -47,22 +47,11 @@ incident):
   there. Cost at pilot scale (`Pro` plan) is the bottom of the
   range projected in `private/ROADMAP.md` §5.
 
-  > **Status (2026-05-19):** GitHub preview deployments are
-  > **paused**. Vercel is configured to watch
-  > `nathanramoscfa/roadmodel` per the Step 1 provisioning recipe
-  > below, but no Next.js code lands until Phase 3 Step 4, so
-  > every PR before Step 4 triggers a doomed-to-fail build (the
-  > repo has no `package.json`, `next.config.*`, or `tsconfig.json`
-  > for Vercel's framework auto-detection to pick up). This is
-  > the same "provisioned but muted" pattern used for the
-  > [UptimeRobot monitor](#uptimerobot-monitors) at the end of
-  > Step 2 — the integration is correct, just ahead of its
-  > consumer. Resume previews from the Vercel dashboard
-  > (Settings → Git → "Deploy Hooks" / "Ignored Build Step"
-  > toggles, or just disconnect and reconnect the GitHub repo)
-  > the moment the Phase 3 Step 4 Next.js scaffold lands. The
-  > [Vercel preview check failure on PR #71+](https://github.com/nathanramoscfa/roadmodel/pull/71)
-  > is the canonical example of what this avoids.
+  > **Status (Phase 3 Step 4):** The Next.js scaffold lives under
+  > `web/` with root-directory wiring documented in
+  > [Vercel project configuration](#vercel-project-configuration).
+  > Re-enable GitHub preview deployments if they were paused during
+  > Step 2–3 (see resume checklist there).
 - **Railway for the Python FastAPI recommender service.** A managed
   Python runtime with deploy-on-push, per-PR ephemeral services,
   and zero-config TLS on the Railway-issued domain. Fly.io was
@@ -75,6 +64,41 @@ incident):
   daily backups. Self-hosted Postgres was considered and rejected:
   Auth + Storage would have to be glued back together separately,
   and the maintainer's bandwidth doesn't cover ops at this stage.
+
+## Vercel project configuration
+
+Captured from the `roadmodel-web` project after Phase 3 Step 4
+lands the Next.js scaffold. Reconcile against the Vercel dashboard
+(Settings) if any value drifts.
+
+| Setting              | Value                                                                 |
+| -------------------- | --------------------------------------------------------------------- |
+| Project name         | `roadmodel-web`                                                       |
+| Root directory       | `web` (Vercel runs `npm install` / `npm run build` inside `web/`)   |
+| Framework preset     | Next.js (auto-detected from `web/package.json`)                       |
+| Production branch    | `main` (production deploys on push to `main`)                         |
+| Preview deployments  | Enabled — bot posts preview URLs on every PR                          |
+| Build command        | `npm run build` (default; runs in `web/`)                             |
+| Output directory     | `.next` (Next.js default; relative to `web/`)                         |
+| Install command      | `npm install` (default; runs in `web/`)                               |
+
+**Environments.** Set the web-tier variables from
+[Environment variables](#environment-variables) (plus
+`NEXT_PUBLIC_SITE_URL` and `ROADMODEL_SERVICE_URL` documented in
+[web/.env.example](../web/.env.example)) on **both** Preview
+(staging) and Production in Vercel → Settings → Environment
+Variables. Preview uses `https://staging.roadmodel.ai` for
+`NEXT_PUBLIC_SITE_URL`; production leaves the apex URL TBD until
+Step 7. `ROADMODEL_SERVICE_URL` points at the Railway staging
+service URL for Preview and the production Railway URL when cut.
+
+**Resume checklist (Step 4).** After the scaffold merges to
+`main`, re-enable GitHub-connected preview deployments (they were
+paused 2026-05-19 to avoid doomed builds — see the
+[Cloud projects](#cloud-projects) status note), confirm a green
+preview on the Step 4 PR, and resume the
+[UptimeRobot monitor](#uptimerobot-monitors) once
+`https://staging.roadmodel.ai` returns 2xx.
 
 ## Environment variables
 
@@ -100,11 +124,13 @@ is deliberate — Step 6 should not relitigate the Upstash decision.
 | `ANTHROPIC_API_KEY`            | Railway env vars            | FastAPI service (Step 3)          | staging + prod    |
 | `OPENAI_API_KEY`               | Railway env vars            | FastAPI service (Step 3)          | staging + prod    |
 | `GOOGLE_API_KEY`               | Railway env vars            | FastAPI service (Step 3)          | staging + prod    |
+| `NEXT_PUBLIC_SITE_URL`         | Vercel env vars             | Next.js metadata + absolute links (Step 4) | staging + prod    |
+| `ROADMODEL_SERVICE_URL`        | Vercel env vars             | Next.js server routes → Railway (Step 5) | staging + prod    |
 | `ROADMODEL_INTERNAL_TOKEN`     | Vercel env vars + Railway env vars | Next.js routes (Step 5 send), FastAPI middleware (Step 3 verify) | staging + prod    |
-| `SUPABASE_URL`                 | Vercel env vars + Railway env vars | Next.js (Step 4) + FastAPI (Step 3) | staging + prod    |
-| `SUPABASE_SERVICE_ROLE_KEY`    | Supabase dashboard → Railway env vars | FastAPI service only (never browser-exposed) | staging + prod    |
-| `UPSTASH_REDIS_URL`            | Railway env vars            | FastAPI rate limiter (Step 6)     | staging + prod    |
-| `UPSTASH_REDIS_TOKEN`          | Railway env vars            | FastAPI rate limiter (Step 6)     | staging + prod    |
+| `SUPABASE_URL`                 | Vercel env vars + Railway env vars | Next.js audit log (Step 6) + FastAPI (Step 3) | staging + prod    |
+| `SUPABASE_SERVICE_ROLE_KEY`    | Vercel env vars + Supabase dashboard → Railway env vars | Next.js audit log (Step 6); Railway service (never browser-exposed) | staging + prod    |
+| `UPSTASH_REDIS_URL`            | Vercel env vars + Railway env vars | Next.js rate limiter (Step 6); FastAPI (Step 6) | staging + prod    |
+| `UPSTASH_REDIS_TOKEN`          | Vercel env vars + Railway env vars | Next.js rate limiter (Step 6); FastAPI (Step 6) | staging + prod    |
 
 Rules:
 

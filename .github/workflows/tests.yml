@@ -165,6 +165,76 @@ jobs:
       - name: Lint public ROADMAP.md against deny-list
         run: python update/sync_public_roadmap.py --check
 
+  web-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Read Node version
+        id: node-version
+        run: echo "version=$(cat web/.nvmrc)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.node-version.outputs.version }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install web dependencies
+        run: npm ci --prefix web
+      - name: Lint web
+        run: npm --prefix web run lint
+      - name: Typecheck web
+        run: npm --prefix web run typecheck
+      - name: Build web
+        env:
+          NEXT_PUBLIC_SITE_URL: https://staging.roadmodel.ai
+          ROADMODEL_SERVICE_URL: https://ci-placeholder.railway.app
+          ROADMODEL_INTERNAL_TOKEN: ci-placeholder-internal-token
+          SUPABASE_URL: https://ci-placeholder.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-service-role-key
+          UPSTASH_REDIS_URL: https://ci-placeholder.upstash.io
+          UPSTASH_REDIS_TOKEN: ci-placeholder-redis-token
+        run: npm --prefix web run build
+
+  web-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [web-build]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Read Node version
+        id: node-version
+        run: echo "version=$(cat web/.nvmrc)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.node-version.outputs.version }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install web dependencies
+        run: npm ci --prefix web
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: web
+      - name: Build web
+        env:
+          NEXT_PUBLIC_SITE_URL: https://staging.roadmodel.ai
+          ROADMODEL_SERVICE_URL: https://ci-placeholder.railway.app
+          ROADMODEL_INTERNAL_TOKEN: ci-placeholder-internal-token
+          SUPABASE_URL: https://ci-placeholder.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-service-role-key
+          UPSTASH_REDIS_URL: https://ci-placeholder.upstash.io
+          UPSTASH_REDIS_TOKEN: ci-placeholder-redis-token
+        run: npm --prefix web run build
+      - name: Run Playwright tests
+        env:
+          NEXT_PUBLIC_SITE_URL: https://staging.roadmodel.ai
+          ROADMODEL_SERVICE_URL: https://ci-placeholder.railway.app
+          ROADMODEL_INTERNAL_TOKEN: ci-placeholder-internal-token
+          SUPABASE_URL: https://ci-placeholder.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-service-role-key
+          UPSTASH_REDIS_URL: https://ci-placeholder.upstash.io
+          UPSTASH_REDIS_TOKEN: ci-placeholder-redis-token
+        run: npm --prefix web run test
+
   service-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -194,6 +264,8 @@ jobs:
       - security-scan
       - roadmap-sync
       - service-tests
+      - web-build
+      - web-test
     runs-on: ubuntu-latest
     steps:
       - name: Enforce aggregate test gate
@@ -205,13 +277,17 @@ jobs:
           echo "security-scan=${{ needs.security-scan.result }}"
           echo "roadmap-sync=${{ needs.roadmap-sync.result }}"
           echo "service-tests=${{ needs.service-tests.result }}"
+          echo "web-build=${{ needs.web-build.result }}"
+          echo "web-test=${{ needs.web-test.result }}"
           if [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.type-check.result }}" != "success" ] || \
              [ "${{ needs.test-matrix.result }}" != "success" ] || \
              [ "${{ needs.package-smoke.result }}" != "success" ] || \
              [ "${{ needs.security-scan.result }}" != "success" ] || \
              [ "${{ needs.roadmap-sync.result }}" != "success" ] || \
-             [ "${{ needs.service-tests.result }}" != "success" ]; then
+             [ "${{ needs.service-tests.result }}" != "success" ] || \
+             [ "${{ needs.web-build.result }}" != "success" ] || \
+             [ "${{ needs.web-test.result }}" != "success" ]; then
             echo "One or more CI jobs failed."
             exit 1
           fi
