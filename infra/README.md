@@ -122,6 +122,42 @@ three env scopes:
   2026-05-19 after disabling SSO protection.
 - [x] [UptimeRobot monitor 803092893](#uptimerobot-monitors) resumed.
 
+**Resume checklist (Step 5) — closed 2026-05-19 with one
+deferred item.** Step 5 shipped via PR #84 (`/recommend` page +
+`/api/recommend` Route Handler + service `force_provider` support)
+and PR #85 (production-build hotfix relaxing
+`ROADMODEL_SERVICE_URL` / `ROADMODEL_INTERNAL_TOKEN` to `.optional()`
+in [web/lib/env.ts](../web/lib/env.ts) so production builds don't
+fail at "Collecting page data" while the production Railway
+service is deferred to Step 7).
+
+- [x] Production deploy green on `main` after the PR #85 hotfix —
+  deployment `roadmodel-n9clqlarq` Ready in 26s; the post-merge
+  build of `17b5d62` had errored on the unset
+  `ROADMODEL_SERVICE_URL` and `roadmodel-web-roadmodel.vercel.app`
+  was serving the pre-Step-5 build until the hotfix landed.
+- [x] Staging promoted to the Step 5 build via
+  `vercel redeploy roadmodel-n9clqlarq-roadmodel.vercel.app
+  --target staging --scope roadmodel` → deployment
+  `roadmodel-608iaojr2`, target=`staging`, Ready in 47s.
+- [x] `staging.roadmodel.ai/recommend` returns 200 with the new
+  two-column layout served by the Step 5 deployment.
+- [ ] Live `POST /api/recommend` returns a Haiku 4.5
+  recommendation in <5s. **Deferred to [issue #86](https://github.com/nathanramoscfa/roadmodel/issues/86)** —
+  attempted during close-out and reproduced HTTP 502 because
+  Railway returned `401 invalid_or_missing_bearer`. Root cause
+  is `ROADMODEL_INTERNAL_TOKEN` divergence between Vercel (preview
+  + `staging` + production) and Railway (staging). Token has never
+  been validated end-to-end — Step 3 healthz is unauthenticated and
+  Step 4 shipped no authenticated calls. Resolution blocked at
+  close-out by a Railway control-plane outage (CLI, MCP, GraphQL,
+  and all `railway.com` / `railway.app` HTTP endpoints unreachable).
+  See issue #86 for the full repro + resolution one-liners.
+- [ ] Browser submit from `/recommend` populates the output column
+  end-to-end. **Deferred to [issue #86](https://github.com/nathanramoscfa/roadmodel/issues/86)** —
+  blocked on the same token + Railway availability gate as the
+  POST verification above.
+
 ## Environment variables
 
 The full env var schema both tiers read. Step 3 wires the FastAPI
