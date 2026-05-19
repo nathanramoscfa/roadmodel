@@ -14,6 +14,13 @@ export async function recommendOnServer(
   taskDescription: string,
   context?: Record<string, unknown>,
 ): Promise<RecommendResponse> {
+  // ROADMODEL_SERVICE_URL / ROADMODEL_INTERNAL_TOKEN are unset on the
+  // production env until Phase 3 Step 7 provisions the production Railway
+  // service. Fail at request time so the /api/recommend handler returns 502
+  // instead of crashing the build during Next.js page-data collection.
+  if (!env.ROADMODEL_SERVICE_URL || !env.ROADMODEL_INTERNAL_TOKEN) {
+    throw new Error("recommender_not_configured");
+  }
   const res = await fetch(`${env.ROADMODEL_SERVICE_URL}/v1/recommend`, {
     method: "POST",
     headers: {
