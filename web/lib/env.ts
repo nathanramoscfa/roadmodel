@@ -13,8 +13,10 @@ const envSchema = z.object({
   ROADMODEL_INTERNAL_TOKEN: z.string().min(1),
   SUPABASE_URL: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-  UPSTASH_REDIS_URL: z.string().min(1),
-  UPSTASH_REDIS_TOKEN: z.string().min(1),
+  // Upstash vars stay optional until Phase 3 Step 6 provisions Upstash and
+  // ships the rate limiter; Step 6 must flip these to .min(1) when it lands.
+  UPSTASH_REDIS_URL: z.string().optional(),
+  UPSTASH_REDIS_TOKEN: z.string().optional(),
 });
 
 function requireVar(name: string): string {
@@ -34,6 +36,6 @@ export const env = envSchema.parse({
   ROADMODEL_INTERNAL_TOKEN: requireVar("ROADMODEL_INTERNAL_TOKEN"),
   SUPABASE_URL: requireVar("SUPABASE_URL"),
   SUPABASE_SERVICE_ROLE_KEY: requireVar("SUPABASE_SERVICE_ROLE_KEY"),
-  UPSTASH_REDIS_URL: requireVar("UPSTASH_REDIS_URL"),
-  UPSTASH_REDIS_TOKEN: requireVar("UPSTASH_REDIS_TOKEN"),
+  UPSTASH_REDIS_URL: process.env.UPSTASH_REDIS_URL,
+  UPSTASH_REDIS_TOKEN: process.env.UPSTASH_REDIS_TOKEN,
 });
