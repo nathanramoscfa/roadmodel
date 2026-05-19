@@ -3,7 +3,14 @@ name: Update roadmodel catalog docs
 
 on:
   schedule:
-    - cron: "0 16 * * 1"
+    # Daily at 16:00 UTC. The first step hashes Cursor's pricing page —
+    # the strongest signal for "new model released" — and skips the rest
+    # of the pipeline (most importantly the ~$5 Opus call) on days the
+    # page hasn't changed. See `update/check_sources.py` for the rationale
+    # on why only pricing.md and not every benchmark source. Cron firing
+    # daily keeps the latency between an upstream model release and the
+    # catalog reflecting it under ~24h instead of ~7 days.
+    - cron: "0 16 * * *"
   workflow_dispatch:
 
 permissions:
@@ -38,13 +45,36 @@ jobs:
       - name: Install dependencies
         run: pip install -r update/requirements.txt
 
+      - name: Restore source-hash cache
+        # The hash signature from the previous successful run lives in
+        # GitHub Actions Cache. Restore looks for the exact key (always a
+        # miss because we include run_id) then falls back to the prefix,
+        # picking up whichever run last saved a signature. The save (post
+        # step from this action) writes back under the unique run_id key.
+        uses: actions/cache@v4
+        with:
+          path: update/.cache/sources-hash
+          key: catalog-sources-hash-${{ github.run_id }}
+          restore-keys: |
+            catalog-sources-hash-
+
+      - name: Check for upstream source changes
+        id: gate
+        run: python update/check_sources.py
+
       - name: Refresh roadmodel catalog (Opus)
+        # Skip on scheduled runs when no upstream source changed. Manual
+        # workflow_dispatch always runs — the operator triggered it for
+        # a reason. A check_sources fetch error sets changed=true so the
+        # gate fails open rather than silently skipping a real refresh.
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           AA_API_KEY: ${{ secrets.AA_API_KEY }}
         run: python update/update_models.py
 
       - name: Rebuild docs/catalog.json (deterministic)
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
         run: |
           set -euo pipefail
           python update/build_catalog.py
@@ -57,6 +87,7 @@ jobs:
           fi
 
       - name: Open PR if catalog changed
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.BOT_PAT }}
         run: |
@@ -84,10 +115,27 @@ jobs:
             --base main \
             --head "$BRANCH" \
             --title "Automated catalog refresh: ${DATE}" \
-            --body "$(printf '## Summary\n\n%s%s\n\n---\n\nThis PR was opened automatically by the weekly catalog-refresh cron in `.github/workflows/update-models.yml`. Auto-merge is enabled: GitHub will squash-merge this PR once the `test` status check passes. If `test` fails or warnings above warrant manual review, disable auto-merge (`gh pr merge --disable-auto`) before the check resolves.' "$summary" "$warnings")")"
+            --body "$(printf '## Summary\n\n%s%s\n\n---\n\nThis PR was opened automatically by the daily catalog-refresh cron in `.github/workflows/update-models.yml`. Auto-merge is enabled: GitHub will squash-merge this PR once the `test` status check passes. If `test` fails or warnings above warrant manual review, disable auto-merge (`gh pr merge --disable-auto`) before the check resolves.' "$summary" "$warnings")")"
           echo "Opened: $PR_URL"
           # Enable auto-merge: GitHub squash-merges as soon as the required
           # status check (`test`) reports SUCCESS. If the diff is suspicious
           # (warnings, large delta), the maintainer can disable via
           # `gh pr merge --disable-auto <PR>` before the check resolves.
           gh pr merge --auto --squash --delete-branch "$PR_URL"
+
+      - name: Promote source-hash for next run
+        # Only promote staged hash → canonical if every prior step
+        # succeeded. A transient Opus failure must NOT swallow a real
+        # upstream change: leave the old hash in place so tomorrow's
+        # gate sees the same diff and retries. `success()` is true even
+        # when the Opus/rebuild/PR steps were skipped via the `if:`
+        # condition, so unchanged-source days promote correctly too.
+        if: success()
+        run: |
+          set -euo pipefail
+          if [ -f update/.cache/sources-hash.new ]; then
+            mv update/.cache/sources-hash.new update/.cache/sources-hash
+            echo "Promoted source-hash for next-run comparison."
+          else
+            echo "No staged hash to promote (check_sources.py did not run)."
+          fi
