@@ -326,7 +326,7 @@ Tier ratings:
 
 - **Pricing:** Input $1.25/M · Output $2.50/M
 - **Tier ratings:** Coding **B** · Planning **A** · Agentic **S** · Multimodal **B** · Long-context **S** · Knowledge **A** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 53.2 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1199
+- **Headline benchmarks:** AA Intelligence Index 53.2 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1189
 - **Pricing notes:** Requires Max Mode on request-based plans
 - **Best for:** Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding — leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist
 
@@ -615,7 +615,7 @@ Tier ratings:
              tier-coding="B" tier-planning="A" tier-agentic="S"
              tier-multimodal="B" tier-long-context="S" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 53.2 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1199"
+             headline-benchmarks="AA Intelligence Index 53.2 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1189"
              pricing-notes="Requires Max Mode on request-based plans"
              best-for="Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding — leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist" />
       <model id="auto" name="Auto (Efficiency)"
@@ -1058,7 +1058,7 @@ Tier ratings:
              tier-coding="B" tier-planning="A" tier-agentic="S"
              tier-multimodal="B" tier-long-context="S" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 53.2 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1199"
+             headline-benchmarks="AA Intelligence Index 53.2 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1189"
              pricing-notes="Requires Max Mode on request-based plans"
              best-for="Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding — leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist" />
       <model id="auto" name="Auto (Efficiency)"
@@ -1546,7 +1546,7 @@ Tier ratings:
              tier-coding="B" tier-planning="A" tier-agentic="S"
              tier-multimodal="B" tier-long-context="S" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 53.2 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1199"
+             headline-benchmarks="AA Intelligence Index 53.2 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1189"
              pricing-notes="Requires Max Mode on request-based plans"
              best-for="Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding — leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist" />
       <model id="auto" name="Auto (Efficiency)"
