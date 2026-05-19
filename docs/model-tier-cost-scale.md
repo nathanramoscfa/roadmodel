@@ -61,7 +61,7 @@ table and surface material cost / availability / capability constraints.
 | ------------ | ----- | ----------- | ---------- | ------ | ------ | ----------------- |
 | Composer 1   | $1.25 | –           | $0.125     | $10.00 | Medium | Hidden by default |
 | Composer 1.5 | $3.50 | –           | $0.35      | $17.50 | High   | Hidden by default |
-| Composer 2   | $0.50 | –           | $0.20      | $2.50  | Low    | -                 |
+| Composer 2   | $0.50 | –           | $0.20      | $2.50  | Low    | Hidden by default |
 | Composer 2.5 | $0.50 | –           | $0.20      | $2.50  | Low    | -                 |
 
 
@@ -110,7 +110,7 @@ table and surface material cost / availability / capability constraints.
 
 ---
 
-<!-- subscription-tiers-reviewed: 2026-05-18 -->
+<!-- subscription-tiers-reviewed: 2026-05-19 -->
 
 ## Subscription Tiers and Access Methods
 
@@ -150,6 +150,7 @@ and adjust the rebuild rules in [`update/prompt.md`](../update/prompt.md).
 | Claude Pro           | $20     | Anthropic | claude-code, claude-web      | Opus 4.7, Sonnet 4.6, and Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE), with roughly 5x the usage of the Free tier. |
 | claude.ai Max ($100) | $100    | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 5x the Pro usage budget; priority access during peak traffic.       |
 | claude.ai Max ($200) | $200    | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 20x the Pro usage budget; highest consumer-tier Claude budget.      |
+| ChatGPT Go           | $8      | OpenAI    | chatgpt-app, codex-cli       | Budget tier with GPT-5.3 access and higher message volume than Free; lacks GPT-5.5, Codex, Sora, Deep Research, and Agent Mode features unlocked at Plus and above. |
 | ChatGPT Plus         | $20     | OpenAI    | chatgpt-app, codex-cli       | GPT-5.5 Instant and Thinking with per-model usage caps; Codex access included; GPT-5.4 and GPT-5.4 Mini also available. |
 | ChatGPT Pro ($100)   | $100    | OpenAI    | chatgpt-app, codex-cli       | Same model suite as Pro $200 (GPT-5.5, GPT-5.5 Pro, o1 Pro mode) at 5x Plus usage limits; Codex access included with promotional 10x multiplier through May 31, 2026. |
 | ChatGPT Pro ($200)   | $200    | OpenAI    | chatgpt-app, codex-cli       | Same coverage as Pro $100 with much higher caps (20x Plus limits) and access to GPT-5.5 and GPT-5.5 Pro.  |
@@ -205,3 +206,4 @@ rate of $6.00/M output).
 | Model id  | Output | Tier | Change                                      |
 | --------- | ------ | ---- | ------------------------------------------- |
 | grok-4.3  | $2.50  | Low  | New — supersedes grok-4.20 in selector list |
+

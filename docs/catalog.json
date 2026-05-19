@@ -1,9 +1,9 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-05-18T17:06:57Z",
+  "generated_at_utc": "2026-05-19T04:30:31Z",
   "source_doc_sha256": {
     "model-selector.txt": "9c5add5a696472be23e8930de56216b630257af34f8d1c2082615e4c2b3b52d8",
-    "model-tier-cost-scale.md": "932ff2d0a047da73d9569941f3cad6ad4d6f48331a4020ddf009e97f72afc86d"
+    "model-tier-cost-scale.md": "507ec6a5e5e8b38b886d1be10e48dc19a40385b832a84c441dae699b9a96980d"
   },
   "models": [
     {
@@ -546,6 +546,16 @@
         "gemini-cli"
       ],
       "notes": "Highest access to Gemini 3.1 Pro and Deep Think (where available), Veo video generation, Agent Mode previews, and 30 TB of Google One storage."
+    },
+    {
+      "provider": "OpenAI",
+      "tier": "ChatGPT Go",
+      "monthly_usd": 8.0,
+      "surface_funded": [
+        "chatgpt-app",
+        "codex-cli"
+      ],
+      "notes": "Budget tier with GPT-5.3 access and higher message volume than Free; lacks GPT-5.5, Codex, Sora, Deep Research, and Agent Mode features unlocked at Plus and above."
     },
     {
       "provider": "OpenAI",
