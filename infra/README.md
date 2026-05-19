@@ -92,19 +92,23 @@ three env scopes:
   `ROADMODEL_INTERNAL_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`.
 - **`staging`** (custom env, mapped to `staging.roadmodel.ai`):
   same 5 vars set.
-- **`production`** (built-in, tracks `main`): 3 of 5 set
-  (`SUPABASE_URL`, `ROADMODEL_INTERNAL_TOKEN`,
-  `SUPABASE_SERVICE_ROLE_KEY`). `NEXT_PUBLIC_SITE_URL` and
-  `ROADMODEL_SERVICE_URL` are intentionally **deferred to Step 7**:
-  the apex URL and the Railway production service URL don't exist
-  until the production cut.
+- **`production`** (built-in, tracks `main`): only `SUPABASE_URL`,
+  `ROADMODEL_INTERNAL_TOKEN` (Vercel→Railway shared secret, still
+  set so Step 6 can reuse it), and `SUPABASE_SERVICE_ROLE_KEY` are
+  set. `NEXT_PUBLIC_SITE_URL` and `ROADMODEL_SERVICE_URL` are
+  intentionally **deferred to Step 7**: the apex URL and the
+  Railway production service URL don't exist until the production
+  cut. [web/lib/env.ts](../web/lib/env.ts) marks the two Railway
+  vars `.optional()` so production builds don't fail during
+  Next.js page-data collection;
+  [`recommendOnServer`](../web/lib/api.ts) throws
+  `recommender_not_configured` at request time when either is
+  missing, and `/api/recommend` maps that to HTTP 502.
 - `UPSTASH_REDIS_URL` and `UPSTASH_REDIS_TOKEN` are **not yet set
   on any Vercel env** — Upstash is provisioned in Phase 3 Step 6.
-  Note that [web/lib/env.ts](../web/lib/env.ts) currently declares
-  them required at module load; Step 6 should either provision
-  Upstash *before* a route imports `env`, or relax env.ts to mark
-  them optional until the rate limiter ships. Tracked as a
-  follow-up.
+  `web/lib/env.ts` already marks them `.optional()` (PR #83);
+  Step 6 must flip them back to `.min(1)` when the rate limiter
+  lands.
 
 **Resume checklist (Step 4) — closed 2026-05-19.**
 
