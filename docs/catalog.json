@@ -1,9 +1,9 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-05-19T05:05:11Z",
+  "generated_at_utc": "2026-05-19T05:09:47Z",
   "source_doc_sha256": {
-    "model-selector.txt": "1d1296fef499053fdfd3a5cd7b51ed403ef2047e0c02244e1469268ffdc968ff",
-    "model-tier-cost-scale.md": "93d60e504f68071d5cf84bca11bffb809406a24aa5f3df2eecbb1ba11f3fe8c7"
+    "model-selector.txt": "b0098feb45f1c7364c3f482651a90306054ddf0907651323164d708f76443a51",
+    "model-tier-cost-scale.md": "8590d1f0883ea1415cf5598550564e93fdbb201659433d90acd149e979d702d4"
   },
   "models": [
     {
@@ -63,7 +63,7 @@
         "speed": "S"
       },
       "headline_benchmarks": "CursorBench 61.3 (+37% over Composer 1.5); SWE-bench Multilingual 73.7; Terminal-Bench 2.0 61.7",
-      "pricing_notes": "-",
+      "pricing_notes": "Hidden by default",
       "best_for": "Cursor's enforced default Composer model \u2014 purpose-built for multi-file agentic editing, fine-tuned on real developer sessions, self-summarizing 200K context for sustained long tasks, and frontier-level coding quality with speed-optimized inference at the lowest output price ($2.50/M) \u2014 the default choice for standard implementation, multi-file changes, and roadmap execution where coding-A is sufficient"
     },
     {

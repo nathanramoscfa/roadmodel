@@ -319,7 +319,7 @@ Tier ratings:
 - **Pricing:** Input $0.50/M · Output $2.50/M
 - **Tier ratings:** Coding **A** · Planning **B** · Agentic **A** · Multimodal **D** · Long-context **B** · Knowledge **B** · Speed **S**
 - **Headline benchmarks:** CursorBench 61.3 (+37% over Composer 1.5); SWE-bench Multilingual 73.7; Terminal-Bench 2.0 61.7
-- **Pricing notes:** -
+- **Pricing notes:** Hidden by default
 - **Best for:** Cursor's enforced default Composer model — purpose-built for multi-file agentic editing, fine-tuned on real developer sessions, self-summarizing 200K context for sustained long tasks, and frontier-level coding quality with speed-optimized inference at the lowest output price ($2.50/M) — the default choice for standard implementation, multi-file changes, and roadmap execution where coding-A is sufficient
 
 #### Grok 4.3 — `grok-4.3`
@@ -608,7 +608,7 @@ Tier ratings:
              tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
              tier-speed="S"
              headline-benchmarks="CursorBench 61.3 (+37% over Composer 1.5); SWE-bench Multilingual 73.7; Terminal-Bench 2.0 61.7"
-             pricing-notes="-"
+             pricing-notes="Hidden by default"
              best-for="Cursor's enforced default Composer model — purpose-built for multi-file agentic editing, fine-tuned on real developer sessions, self-summarizing 200K context for sustained long tasks, and frontier-level coding quality with speed-optimized inference at the lowest output price ($2.50/M) — the default choice for standard implementation, multi-file changes, and roadmap execution where coding-A is sufficient" />
       <model id="grok-4.3" name="Grok 4.3"
              input-price-per-1m="$1.25" output-price-per-1m="$2.50"
@@ -1051,7 +1051,7 @@ Tier ratings:
              tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
              tier-speed="S"
              headline-benchmarks="CursorBench 61.3 (+37% over Composer 1.5); SWE-bench Multilingual 73.7; Terminal-Bench 2.0 61.7"
-             pricing-notes="-"
+             pricing-notes="Hidden by default"
              best-for="Cursor's enforced default Composer model — purpose-built for multi-file agentic editing, fine-tuned on real developer sessions, self-summarizing 200K context for sustained long tasks, and frontier-level coding quality with speed-optimized inference at the lowest output price ($2.50/M) — the default choice for standard implementation, multi-file changes, and roadmap execution where coding-A is sufficient" />
       <model id="grok-4.3" name="Grok 4.3"
              input-price-per-1m="$1.25" output-price-per-1m="$2.50"
@@ -1539,7 +1539,7 @@ Tier ratings:
              tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
              tier-speed="S"
              headline-benchmarks="CursorBench 61.3 (+37% over Composer 1.5); SWE-bench Multilingual 73.7; Terminal-Bench 2.0 61.7"
-             pricing-notes="-"
+             pricing-notes="Hidden by default"
              best-for="Cursor's enforced default Composer model — purpose-built for multi-file agentic editing, fine-tuned on real developer sessions, self-summarizing 200K context for sustained long tasks, and frontier-level coding quality with speed-optimized inference at the lowest output price ($2.50/M) — the default choice for standard implementation, multi-file changes, and roadmap execution where coding-A is sufficient" />
       <model id="grok-4.3" name="Grok 4.3"
              input-price-per-1m="$1.25" output-price-per-1m="$2.50"
