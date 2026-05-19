@@ -110,7 +110,7 @@ table and surface material cost / availability / capability constraints.
 
 ---
 
-<!-- subscription-tiers-reviewed: 2026-05-18 -->
+<!-- subscription-tiers-reviewed: 2026-05-19 -->
 
 ## Subscription Tiers and Access Methods
 
