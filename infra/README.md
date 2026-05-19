@@ -34,7 +34,7 @@ this baseline.
 
 | Project           | Vendor   | Project ID                     | Dashboard URL                                                    | Staging URL                              | Production URL          | Provisioned    |
 | ----------------- | -------- | ------------------------------ | ---------------------------------------------------------------- | ---------------------------------------- | ----------------------- | -------------- |
-| `roadmodel-web`   | Vercel   | `prj_1emPjG8EamGB5G942ipNjjeqh8NX` (team `team_5uU81P0Gl4i22rBjMSwDRsLR`, slug `roadmodel`) | `https://vercel.com/roadmodel/roadmodel-web` | `https://staging.roadmodel.ai` | TBD (cut in Step 7) | 2026-05-17 |
+| `roadmodel-web`   | Vercel   | `prj_1emPjG8EamGB5G942ipNjjeqh8NX` (team `team_5uU81P0Gl4i22rBjMSwDRsLR`, slug `roadmodel`) — GitHub preview deployments paused 2026-05-19; resume in Phase 3 Step 4 when Next.js scaffold lands | `https://vercel.com/roadmodel/roadmodel-web` | `https://staging.roadmodel.ai` | TBD (cut in Step 7) | 2026-05-17 |
 | `roadmodel-service` | Railway | `09b49af8-35b0-4cbd-8c6b-803960ebfe6a` (service `75adcf42-a1ee-44d4-8c8e-b2c576fc6515`, env-prod `651137a1-2331-4991-bf66-c0456163a48d`, env-staging `d79822c4-9676-4910-8606-ea5e98099ed3`) | `https://railway.com/project/09b49af8-35b0-4cbd-8c6b-803960ebfe6a` | Railway-issued default domain (generated in Phase 3 Step 3 when FastAPI ships) | TBD (cut in Step 7) | 2026-05-17 |
 | `roadmodel-data`  | Supabase | `nbxzpqnmafcayeqnfvcv` (org `mkvjpvgvuhhzkzfyhvsp`, region `us-east-1`) | `https://supabase.com/dashboard/project/nbxzpqnmafcayeqnfvcv` | Same dashboard, `staging` schema | Same dashboard, `prod` | 2026-05-17 |
 
@@ -46,6 +46,23 @@ incident):
   out of the box, and the App-Router toolchain is first-party
   there. Cost at pilot scale (`Pro` plan) is the bottom of the
   range projected in `private/ROADMAP.md` §5.
+
+  > **Status (2026-05-19):** GitHub preview deployments are
+  > **paused**. Vercel is configured to watch
+  > `nathanramoscfa/roadmodel` per the Step 1 provisioning recipe
+  > below, but no Next.js code lands until Phase 3 Step 4, so
+  > every PR before Step 4 triggers a doomed-to-fail build (the
+  > repo has no `package.json`, `next.config.*`, or `tsconfig.json`
+  > for Vercel's framework auto-detection to pick up). This is
+  > the same "provisioned but muted" pattern used for the
+  > [UptimeRobot monitor](#uptimerobot-monitors) at the end of
+  > Step 2 — the integration is correct, just ahead of its
+  > consumer. Resume previews from the Vercel dashboard
+  > (Settings → Git → "Deploy Hooks" / "Ignored Build Step"
+  > toggles, or just disconnect and reconnect the GitHub repo)
+  > the moment the Phase 3 Step 4 Next.js scaffold lands. The
+  > [Vercel preview check failure on PR #71+](https://github.com/nathanramoscfa/roadmodel/pull/71)
+  > is the canonical example of what this avoids.
 - **Railway for the Python FastAPI recommender service.** A managed
   Python runtime with deploy-on-push, per-PR ephemeral services,
   and zero-config TLS on the Railway-issued domain. Fly.io was
