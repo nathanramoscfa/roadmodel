@@ -33,7 +33,7 @@ table and surface material cost / availability / capability constraints.
 
 | Model            | Input | Cache Write | Cache Read | Output | Tier | Notes |
 | ---------------- | ----- | ----------- | ---------- | ------ | ---- | ----- |
-| Composer 2       | $0.50 | –           | $0.20      | $2.50  | Low  | -     |
+| Composer 2       | $0.50 | –           | $0.20      | $2.50  | Low  | Hidden by default |
 | Auto (pool rate) | $1.25 | $1.25       | $0.25      | $6.00  | Low  | Cursor-managed routing across the Auto + Composer pool; not a fixed model |
 
 
@@ -61,7 +61,7 @@ table and surface material cost / availability / capability constraints.
 | ------------ | ----- | ----------- | ---------- | ------ | ------ | ----------------- |
 | Composer 1   | $1.25 | –           | $0.125     | $10.00 | Medium | Hidden by default |
 | Composer 1.5 | $3.50 | –           | $0.35      | $17.50 | High   | Hidden by default |
-| Composer 2   | $0.50 | –           | $0.20      | $2.50  | Low    | -                 |
+| Composer 2   | $0.50 | –           | $0.20      | $2.50  | Low    | Hidden by default |
 | Composer 2.5 | $0.50 | –           | $0.20      | $2.50  | Low    | -                 |
 
 
@@ -110,7 +110,7 @@ table and surface material cost / availability / capability constraints.
 
 ---
 
-<!-- subscription-tiers-reviewed: 2026-05-18 -->
+<!-- subscription-tiers-reviewed: 2026-05-19 -->
 
 ## Subscription Tiers and Access Methods
 
