@@ -16,46 +16,15 @@ _MODULES_TO_RESET = (
 )
 _AUTH_BEARER = "internal-test-secret"
 
-
-class _FakeEstimate:
-    def __init__(self, payload: dict[str, Any]) -> None:
-        self._payload = payload
-
-    def model_dump(self) -> dict[str, Any]:
-        return dict(self._payload)
-
-
-class _FakeStructuredRecommendation:
-    def __init__(self) -> None:
-        self.model = "Claude Sonnet 4.6"
-        self.platform = "Claude Code"
-        self.settings = {"effort": "High", "thinking": "On"}
-        self.session_cost_estimate = _FakeEstimate(
-            {
-                "model_id": "claude-sonnet-4-6",
-                "platform_id": "claude-code",
-                "total_usd": 0.00123,
-                "funding_source": "per-token",
-            }
-        )
-        self.comparison_table = [
-            _FakeEstimate(
-                {
-                    "model_id": "claude-sonnet-4-6",
-                    "platform_id": "claude-code",
-                    "total_usd": 0.00123,
-                    "funding_source": "per-token",
-                }
-            ),
-            _FakeEstimate(
-                {
-                    "model_id": "gpt-5-3-codex",
-                    "platform_id": "codex",
-                    "total_usd": 0.00198,
-                    "funding_source": "per-token",
-                }
-            ),
-        ]
+_RECOMMEND_DICT: dict[str, Any] = {
+    "model": "Claude Sonnet 4.6",
+    "platform": "Claude Code",
+    "settings": {"effort": "High", "thinking": "On"},
+    "rationale": "Best for coding tasks.",
+    "conversation": "New",
+    "session_cost_estimate": None,
+    "comparison_table": None,
+}
 
 
 def _load_main_module(
@@ -63,6 +32,7 @@ def _load_main_module(
     token: str = _AUTH_BEARER,
 ) -> ModuleType:
     monkeypatch.setenv("ROADMODEL_INTERNAL_TOKEN", token)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
     for module_name in _MODULES_TO_RESET:
         sys.modules.pop(module_name, None)
     return importlib.import_module("app.main")
@@ -75,10 +45,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
 
 def _request_payload(task_description: str = "pick a model") -> dict[str, Any]:
-    return {
-        "task_description": task_description,
-        "context": {"team": "platform", "deadline": "today"},
-    }
+    return {"task_description": task_description}
 
 
 def _auth_headers(token: str) -> dict[str, str]:
@@ -123,13 +90,19 @@ def test_recommend_accepts_good_bearer(
     call_args: dict[str, Any] = {}
 
     def _fake_recommend_structured(
-        task_description: str,
+        prompt: str,
+        config: Any,
         *,
-        context: dict[str, Any] | None = None,
-    ) -> _FakeStructuredRecommendation:
-        call_args["task_description"] = task_description
-        call_args["context"] = context
-        return _FakeStructuredRecommendation()
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        max_mode: bool = False,
+    ) -> dict[str, Any]:
+        call_args["prompt"] = prompt
+        call_args["config_provider"] = config.provider
+        call_args["input_tokens"] = input_tokens
+        call_args["output_tokens"] = output_tokens
+        call_args["max_mode"] = max_mode
+        return dict(_RECOMMEND_DICT)
 
     monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
 
@@ -142,33 +115,18 @@ def test_recommend_accepts_good_bearer(
     assert response.status_code == 200
     body = response.json()
     assert call_args == {
-        "task_description": "pick a model",
-        "context": {"team": "platform", "deadline": "today"},
+        "prompt": "pick a model",
+        "config_provider": "anthropic",
+        "input_tokens": None,
+        "output_tokens": None,
+        "max_mode": False,
     }
     assert body == {
         "model": "Claude Sonnet 4.6",
         "platform": "Claude Code",
         "settings": {"effort": "High", "thinking": "On"},
-        "session_cost_estimate": {
-            "model_id": "claude-sonnet-4-6",
-            "platform_id": "claude-code",
-            "total_usd": 0.00123,
-            "funding_source": "per-token",
-        },
-        "comparison_table": [
-            {
-                "model_id": "claude-sonnet-4-6",
-                "platform_id": "claude-code",
-                "total_usd": 0.00123,
-                "funding_source": "per-token",
-            },
-            {
-                "model_id": "gpt-5-3-codex",
-                "platform_id": "codex",
-                "total_usd": 0.00198,
-                "funding_source": "per-token",
-            },
-        ],
+        "session_cost_estimate": None,
+        "comparison_table": [],
         "free_tier_label": None,
     }
 
@@ -190,12 +148,15 @@ def test_response_schema_matches_phase2_contract(
     recommend_module = importlib.import_module("app.recommend")
 
     def _fake_recommend_structured(
-        task_description: str,
+        prompt: str,
+        config: Any,
         *,
-        context: dict[str, Any] | None = None,
-    ) -> _FakeStructuredRecommendation:
-        del task_description, context
-        return _FakeStructuredRecommendation()
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        max_mode: bool = False,
+    ) -> dict[str, Any]:
+        del prompt, config, input_tokens, output_tokens, max_mode
+        return dict(_RECOMMEND_DICT)
 
     monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
 
