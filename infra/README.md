@@ -67,7 +67,18 @@ consumers, Step 4 wires the Next.js consumers, Step 5 sends the
 the Upstash pair for the rate limiter. Documenting them all here
 is deliberate — Step 6 should not relitigate the Upstash decision.
 
-| Variable                       | Value source                | Consumed by                       | Required in       |
+> **Status (2026-05-18):** None of the application env vars below
+> are set on Railway staging or production yet — verify with
+> `railway variables --environment <staging|production>` before
+> assuming. The Phase 3 Step 3 deploy verification surfaced that
+> Step 2's claim of "set on both envs" was wrong. The first
+> staging deploy that needs them ([Step 3 healthz](#)) requires
+> at minimum `ROADMODEL_INTERNAL_TOKEN`, `ANTHROPIC_API_KEY`,
+> `OPENAI_API_KEY`, and `GOOGLE_API_KEY` to be set via Railway
+> dashboard → Variables tab on each environment (sourced from
+> Google Password Manager entries `roadmodel <VAR_NAME>`).
+
+| Variable                       | Value source                | Consumed by                       | Must be set in    |
 | ------------------------------ | --------------------------- | --------------------------------- | ----------------- |
 | `ANTHROPIC_API_KEY`            | Railway env vars            | FastAPI service (Step 3)          | staging + prod    |
 | `OPENAI_API_KEY`               | Railway env vars            | FastAPI service (Step 3)          | staging + prod    |

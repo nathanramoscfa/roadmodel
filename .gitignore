@@ -1,6 +1,10 @@
 # Environment + virtualenv
 .env
+.env.local
+.env.*.local
 .venv/
+venv/
+env/
 
 # Infra console screenshots — the maintainer captures these per
 # provisioning step for personal runbook trail; the committed
@@ -10,15 +14,32 @@ infra/screenshots/
 
 # Editor / OS
 .vscode/
+.idea/
+.cursor/
+*.swp
+*.swo
+*~
 **/.DS_Store
+Thumbs.db
+desktop.ini
 
 # Python build artifacts
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
 build/
 dist/
 *.egg-info/
+pip-wheel-metadata/
 
 # Bundled docs copied from docs/ by hatch_build.py at build time.
 # This directory is build output; committing it would create a second
@@ -39,6 +60,24 @@ tests/fixtures/*.json
 # The committed template is docs/user-context.example.md — copy it to
 # docs/user-context.md and fill in your values.
 /docs/user-context.md
+
+# Deploy CLI artifacts (link state, local config)
+.railway/
+.vercel/
+
+# Node / Next.js (Phase 3 Step 4 onward, in web/)
+node_modules/
+.next/
+out/
+.turbo/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Logs
+*.log
+logs/
 
 # NOTE: /private/ (local-only planning docs) is excluded via .git/info/exclude
 # rather than .gitignore so editor tooling (Cursor / VSCode @-pickers,
