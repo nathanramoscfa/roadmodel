@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class RecommendRequest(BaseModel):
     task_description: str = Field(min_length=1, max_length=20000)
+    context: dict[str, Any] | None = None
 
     model_config = ConfigDict(extra="forbid")
 
