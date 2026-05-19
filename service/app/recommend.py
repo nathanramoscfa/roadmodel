@@ -1,8 +1,8 @@
 # service/app/recommend.py
 from __future__ import annotations
 
-from roadmodel.config import load_config
-from roadmodel.recommend import recommend_structured
+from roadmodel.config import load_config  # type: ignore[import-untyped]
+from roadmodel.recommend import recommend_structured  # type: ignore[import-untyped]
 
 from .models import RecommendRequest, RecommendResponse
 
