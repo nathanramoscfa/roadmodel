@@ -266,6 +266,36 @@ input tokens"). They surface material decision-relevant information.
   direct Cursor pricing row), preserve their existing `pricing-notes`
   verbatim — they describe routing behavior, not API rates.
 
+### Final-pass invariant: cost-scale `Notes` ≡ selector `pricing-notes`
+
+A CI test (`tests/test_doc_schema.py::test_selector_pricing_notes_match_cost_scale_notes`)
+enforces byte-identical equality between `Notes` (cost-scale.md) and
+`pricing-notes` (selector.txt) for every model present in both. A
+mismatch fails CI and blocks the catalog refresh PR.
+
+Before emitting your output, do a final reconciliation pass:
+
+1. For every `<model …/>` element in `<model-options>` of
+   `model-selector.txt`, look up the same model id in the price
+   tables of `model-tier-cost-scale.md`.
+2. If the model exists in both, verify that the `pricing-notes` attribute
+   value EQUALS the `Notes` column value, byte-for-byte, no
+   whitespace or punctuation differences.
+3. If they differ — typically because you updated one document's notes
+   for a Cursor `Hidden by default` flip but missed the other — update
+   `pricing-notes` in `model-selector.txt` to match the `Notes` value
+   in `model-tier-cost-scale.md`. (Cost-scale `Notes` is the closer
+   mirror of Cursor's pricing.md rightmost cell, so use it as the
+   source of truth when reconciling.)
+4. If a model is in `<model-options>` but missing from cost-scale (or
+   vice versa), emit a warning rather than inventing data.
+
+This invariant is the single most common cross-doc drift mode. A
+historic refresh (2026-05-19) had to be re-run because Cursor flipped
+Composer 2 to "Hidden by default" and the refresh updated only the
+cost-scale row, leaving selector's `pricing-notes` at `-`. The final
+pass exists to catch exactly that.
+
 ## Headline benchmarks
 
 Source of truth: the named leaderboards in `<benchmark-sources>` of
