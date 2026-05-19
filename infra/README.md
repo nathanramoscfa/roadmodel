@@ -34,7 +34,7 @@ this baseline.
 
 | Project           | Vendor   | Project ID                     | Dashboard URL                                                    | Staging URL                              | Production URL          | Provisioned    |
 | ----------------- | -------- | ------------------------------ | ---------------------------------------------------------------- | ---------------------------------------- | ----------------------- | -------------- |
-| `roadmodel-web`   | Vercel   | `prj_1emPjG8EamGB5G942ipNjjeqh8NX` (team `team_5uU81P0Gl4i22rBjMSwDRsLR`, slug `roadmodel`) — root `web/`, previews resume Phase 3 Step 4 | `https://vercel.com/roadmodel/roadmodel-web` | `https://staging.roadmodel.ai` | TBD (cut in Step 7) | 2026-05-17 |
+| `roadmodel-web`   | Vercel   | `prj_1emPjG8EamGB5G942ipNjjeqh8NX` (team `team_5uU81P0Gl4i22rBjMSwDRsLR`, slug `roadmodel`) — root `web/`, previews live | `https://vercel.com/roadmodel/roadmodel-web` | `https://staging.roadmodel.ai` — Up 2026-05-19 | TBD (cut in Step 7) | 2026-05-17 |
 | `roadmodel-service` | Railway | `09b49af8-35b0-4cbd-8c6b-803960ebfe6a` (service `75adcf42-a1ee-44d4-8c8e-b2c576fc6515`, env-prod `651137a1-2331-4991-bf66-c0456163a48d`, env-staging `d79822c4-9676-4910-8606-ea5e98099ed3`) | `https://railway.com/project/09b49af8-35b0-4cbd-8c6b-803960ebfe6a` | Railway-issued default domain (generated in Phase 3 Step 3 when FastAPI ships) | TBD (cut in Step 7) | 2026-05-17 |
 | `roadmodel-data`  | Supabase | `nbxzpqnmafcayeqnfvcv` (org `mkvjpvgvuhhzkzfyhvsp`, region `us-east-1`) | `https://supabase.com/dashboard/project/nbxzpqnmafcayeqnfvcv` | Same dashboard, `staging` schema | Same dashboard, `prod` | 2026-05-17 |
 
@@ -47,11 +47,11 @@ incident):
   there. Cost at pilot scale (`Pro` plan) is the bottom of the
   range projected in `private/ROADMAP.md` §5.
 
-  > **Status (Phase 3 Step 4):** The Next.js scaffold lives under
-  > `web/` with root-directory wiring documented in
-  > [Vercel project configuration](#vercel-project-configuration).
-  > Re-enable GitHub preview deployments if they were paused during
-  > Step 2–3 (see resume checklist there).
+  > **Status (Phase 3 Step 4 — closed 2026-05-19):** The Next.js
+  > scaffold lives under `web/`, root-directory wiring in
+  > [Vercel project configuration](#vercel-project-configuration),
+  > `staging.roadmodel.ai` serves the marketing home (2xx, public).
+  > See the Step 4 resume checklist there for closure log.
 - **Railway for the Python FastAPI recommender service.** A managed
   Python runtime with deploy-on-push, per-PR ephemeral services,
   and zero-config TLS on the Railway-issued domain. Fly.io was
@@ -77,28 +77,46 @@ lands the Next.js scaffold. Reconcile against the Vercel dashboard
 | Root directory       | `web` (Vercel runs `npm install` / `npm run build` inside `web/`)   |
 | Framework preset     | Next.js (auto-detected from `web/package.json`)                       |
 | Production branch    | `main` (production deploys on push to `main`)                         |
-| Preview deployments  | Enabled — bot posts preview URLs on every PR                          |
+| Preview deployments  | Enabled — Vercel bot posts preview URLs on every PR                   |
+| Custom environments  | `staging` (id `env_nlbUWVIOslQOHcmNUftnMvlqeSJj`, type `preview`, `branchMatcher: equals "staging"`) → serves `staging.roadmodel.ai` |
+| Deployment Protection| **Disabled** (was `all_except_custom_domains` until 2026-05-19; that setting only exempts *production* custom domains, so `staging.roadmodel.ai` was being SSO-gated. `robots.txt Disallow: /` already prevents indexing pre-launch.) |
 | Build command        | `npm run build` (default; runs in `web/`)                             |
 | Output directory     | `.next` (Next.js default; relative to `web/`)                         |
 | Install command      | `npm install` (default; runs in `web/`)                               |
 
-**Environments.** Set the web-tier variables from
-[Environment variables](#environment-variables) (plus
-`NEXT_PUBLIC_SITE_URL` and `ROADMODEL_SERVICE_URL` documented in
-[web/.env.example](../web/.env.example)) on **both** Preview
-(staging) and Production in Vercel → Settings → Environment
-Variables. Preview uses `https://staging.roadmodel.ai` for
-`NEXT_PUBLIC_SITE_URL`; production leaves the apex URL TBD until
-Step 7. `ROADMODEL_SERVICE_URL` points at the Railway staging
-service URL for Preview and the production Railway URL when cut.
+**Environments.** As of 2026-05-19, `roadmodel-web` is wired across
+three env scopes:
 
-**Resume checklist (Step 4).** After the scaffold merges to
-`main`, re-enable GitHub-connected preview deployments (they were
-paused 2026-05-19 to avoid doomed builds — see the
-[Cloud projects](#cloud-projects) status note), confirm a green
-preview on the Step 4 PR, and resume the
-[UptimeRobot monitor](#uptimerobot-monitors) once
-`https://staging.roadmodel.ai` returns 2xx.
+- **`preview`** (built-in; per-PR previews): all 5 web-tier vars set
+  — `NEXT_PUBLIC_SITE_URL`, `ROADMODEL_SERVICE_URL`, `SUPABASE_URL`,
+  `ROADMODEL_INTERNAL_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`.
+- **`staging`** (custom env, mapped to `staging.roadmodel.ai`):
+  same 5 vars set.
+- **`production`** (built-in, tracks `main`): 3 of 5 set
+  (`SUPABASE_URL`, `ROADMODEL_INTERNAL_TOKEN`,
+  `SUPABASE_SERVICE_ROLE_KEY`). `NEXT_PUBLIC_SITE_URL` and
+  `ROADMODEL_SERVICE_URL` are intentionally **deferred to Step 7**:
+  the apex URL and the Railway production service URL don't exist
+  until the production cut.
+- `UPSTASH_REDIS_URL` and `UPSTASH_REDIS_TOKEN` are **not yet set
+  on any Vercel env** — Upstash is provisioned in Phase 3 Step 6.
+  Note that [web/lib/env.ts](../web/lib/env.ts) currently declares
+  them required at module load; Step 6 should either provision
+  Upstash *before* a route imports `env`, or relax env.ts to mark
+  them optional until the rate limiter ships. Tracked as a
+  follow-up.
+
+**Resume checklist (Step 4) — closed 2026-05-19.**
+
+- [x] GitHub-connected preview deployments re-enabled (they were
+  paused 2026-05-19 to avoid doomed Python-detection builds — fixed
+  by setting Root Directory to `web/`).
+- [x] Green preview on the Step 4 PR — PR #76 deploy
+  `dpl_8XxotwPuwcTegDZPG26pFcfSP9NW` succeeded; promoted to the
+  `staging` custom env via `vercel redeploy --target staging`.
+- [x] `staging.roadmodel.ai` returns 2xx — first 200 at 16:24 UTC
+  2026-05-19 after disabling SSO protection.
+- [x] [UptimeRobot monitor 803092893](#uptimerobot-monitors) resumed.
 
 ## Environment variables
 
@@ -278,24 +296,21 @@ in Step 7 when the production URL is cut.
 
 | Monitor ID                                                                     | Target URL                          | Interval   | Alert channel                |
 | ------------------------------------------------------------------------------ | ----------------------------------- | ---------- | ---------------------------- |
-| `803092893` (paused 2026-05-17; resume in Phase 3 Step 4 when staging returns 2xx) | `https://staging.roadmodel.ai`      | 5 minutes  | maintainer's email on file   |
+| `803092893` (paused 2026-05-17; resumed 2026-05-19 after Step 4 deploy went live — `Up` per dashboard) | `https://staging.roadmodel.ai`      | 5 minutes  | maintainer's email on file   |
 
 UptimeRobot's free tier allows 50 monitors at a 5-minute floor.
 That's the right granularity for Step 2 — finer-grained polling
 adds no signal at this stage and burns the free-tier quota faster
 than necessary.
 
-**Note on the paused state.** UptimeRobot's free tier treats HTTP
-4xx as Down (the "Up HTTP status codes" override that would let
-404 count as Up is gated behind the Solo plan, $7/mo). Until
-Phase 3 Step 4 lands the Next.js scaffold and staging starts
-responding 2xx, the monitor would page-spam the maintainer on
-every 5-minute probe. The monitor is therefore **paused** at the
-end of Step 2 — provisioned, configured correctly, but not
-actively probing. Resume it from the UptimeRobot dashboard the
-moment the Phase 3 Step 4 staging deploy goes green; V2.5
-acceptance ("monitor reports `up`") gates on that resumption,
-not on Step 2 alone.
+**Pause/resume history.** Free-tier UptimeRobot treats HTTP 4xx as
+Down (the "Up HTTP status codes" override is gated behind the Solo
+plan, $7/mo). Between Step 2 (DNS cut) and Step 4 (Next.js scaffold
+live), `staging.roadmodel.ai` responded 404 / `DEPLOYMENT_NOT_FOUND`
+because no deployment was aliased to it — so the monitor was
+**paused** at the end of Step 2 to avoid page-spam, and **resumed
+2026-05-19** after Step 4 brought staging to 2xx. Current state:
+`Up`, 100% uptime in the polling window.
 
 ## Provisioning sequence
 
