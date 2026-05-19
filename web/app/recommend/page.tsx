@@ -1,21 +1,25 @@
 // web/app/recommend/page.tsx
-import { Loader2 } from "lucide-react";
+import { RecommendWorkspace } from "@/components/RecommendWorkspace";
 
-export default function RecommendPlaceholderPage() {
+export default function RecommendPage() {
   return (
-    <div className="flex min-h-[60vh] items-center justify-center px-6">
-      <div className="max-w-md rounded-xl border border-brand-slate-200 bg-white p-10 text-center shadow-sm">
-        <Loader2
-          className="mx-auto h-8 w-8 animate-spin text-brand-accent"
-          aria-hidden="true"
-        />
-        <h1 className="mt-4 text-xl font-semibold text-brand-slate-900">
-          Coming in the next deploy
-        </h1>
-        <p className="mt-2 text-sm text-brand-slate-600">
-          The full recommendation experience ships in Phase 3 Step 5.
+    <section className="mx-auto max-w-6xl px-6 py-12 sm:py-16">
+      <header className="max-w-2xl">
+        <p className="text-sm font-semibold uppercase tracking-wide text-brand-accent">
+          roadmodel
         </p>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-brand-slate-900 sm:text-4xl">
+          Get a model recommendation
+        </h1>
+        <p className="mt-3 text-brand-slate-600">
+          Describe your task and we will suggest a model, platform, settings,
+          and cost context.
+        </p>
+      </header>
+
+      <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-12">
+        <RecommendWorkspace />
       </div>
-    </div>
+    </section>
   );
 }
