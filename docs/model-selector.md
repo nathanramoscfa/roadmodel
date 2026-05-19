@@ -274,7 +274,7 @@ Tier ratings:
 
 - **Pricing:** Input $2.50/M · Output $15.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **S** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 56.8 (#4); LMArena Text Elo 1454.1 (#18); GPT-5.4 (xhigh) Output Speed 83.2 tokens/s; lowest factual error rate among GPT models
+- **Headline benchmarks:** AA Intelligence Index 56.8 (#4); LMArena Text Elo 1454.1 (#18); GPT-5.4 (xhigh) Output Speed 80.5 tokens/s; lowest factual error rate among GPT models
 - **Pricing notes:** Hidden by default; Requires Max Mode on request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context (Max Mode) supports up to 1M tokens with 2x input pricing
 - **Best for:** Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding
 
@@ -350,7 +350,7 @@ Tier ratings:
 
 - **Pricing:** Input $0.75/M · Output $4.50/M
 - **Tier ratings:** Coding **B** · Planning **C** · Agentic **C** · Multimodal **B** · Long-context **B** · Knowledge **B** · Speed **A**
-- **Headline benchmarks:** AA Intelligence Index 48.9 (xhigh); Output Speed 171.4 tokens/s; HLE 19.4% (GPT-5-mini)
+- **Headline benchmarks:** AA Intelligence Index 48.9 (xhigh); Output Speed 162.9 tokens/s; HLE 19.4% (GPT-5-mini)
 - **Pricing notes:** Hidden by default; Smaller, faster variant of GPT-5.4; 90% discount on cached input tokens
 - **Best for:** Lightweight GPT-5.4 variant balancing quality and cost, well-suited for straightforward coding, short-form generation, and high-throughput workloads needing solid GPT reasoning at a fraction of the flagship price
 
@@ -562,7 +562,7 @@ Tier ratings:
              tier-coding="A" tier-planning="A" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="S"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 56.8 (#4); LMArena Text Elo 1454.1 (#18); GPT-5.4 (xhigh) Output Speed 83.2 tokens/s; lowest factual error rate among GPT models"
+             headline-benchmarks="AA Intelligence Index 56.8 (#4); LMArena Text Elo 1454.1 (#18); GPT-5.4 (xhigh) Output Speed 80.5 tokens/s; lowest factual error rate among GPT models"
              pricing-notes="Hidden by default; Requires Max Mode on request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context (Max Mode) supports up to 1M tokens with 2x input pricing"
              best-for="Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding" />
     </tier>
@@ -640,7 +640,7 @@ Tier ratings:
              tier-coding="B" tier-planning="C" tier-agentic="C"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
              tier-speed="A"
-             headline-benchmarks="AA Intelligence Index 48.9 (xhigh); Output Speed 171.4 tokens/s; HLE 19.4% (GPT-5-mini)"
+             headline-benchmarks="AA Intelligence Index 48.9 (xhigh); Output Speed 162.9 tokens/s; HLE 19.4% (GPT-5-mini)"
              pricing-notes="Hidden by default; Smaller, faster variant of GPT-5.4; 90% discount on cached input tokens"
              best-for="Lightweight GPT-5.4 variant balancing quality and cost, well-suited for straightforward coding, short-form generation, and high-throughput workloads needing solid GPT reasoning at a fraction of the flagship price" />
       <model id="gpt-5.4-nano" name="GPT-5.4 Nano"
@@ -1005,7 +1005,7 @@ Tier ratings:
              tier-coding="A" tier-planning="A" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="S"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 56.8 (#4); LMArena Text Elo 1454.1 (#18); GPT-5.4 (xhigh) Output Speed 83.2 tokens/s; lowest factual error rate among GPT models"
+             headline-benchmarks="AA Intelligence Index 56.8 (#4); LMArena Text Elo 1454.1 (#18); GPT-5.4 (xhigh) Output Speed 80.5 tokens/s; lowest factual error rate among GPT models"
              pricing-notes="Hidden by default; Requires Max Mode on request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context (Max Mode) supports up to 1M tokens with 2x input pricing"
              best-for="Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding" />
     </tier>
@@ -1083,7 +1083,7 @@ Tier ratings:
              tier-coding="B" tier-planning="C" tier-agentic="C"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
              tier-speed="A"
-             headline-benchmarks="AA Intelligence Index 48.9 (xhigh); Output Speed 171.4 tokens/s; HLE 19.4% (GPT-5-mini)"
+             headline-benchmarks="AA Intelligence Index 48.9 (xhigh); Output Speed 162.9 tokens/s; HLE 19.4% (GPT-5-mini)"
              pricing-notes="Hidden by default; Smaller, faster variant of GPT-5.4; 90% discount on cached input tokens"
              best-for="Lightweight GPT-5.4 variant balancing quality and cost, well-suited for straightforward coding, short-form generation, and high-throughput workloads needing solid GPT reasoning at a fraction of the flagship price" />
       <model id="gpt-5.4-nano" name="GPT-5.4 Nano"
@@ -1493,7 +1493,7 @@ Tier ratings:
              tier-coding="A" tier-planning="A" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="S"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 56.8 (#4); LMArena Text Elo 1454.1 (#18); GPT-5.4 (xhigh) Output Speed 83.2 tokens/s; lowest factual error rate among GPT models"
+             headline-benchmarks="AA Intelligence Index 56.8 (#4); LMArena Text Elo 1454.1 (#18); GPT-5.4 (xhigh) Output Speed 80.5 tokens/s; lowest factual error rate among GPT models"
              pricing-notes="Hidden by default; Requires Max Mode on request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context (Max Mode) supports up to 1M tokens with 2x input pricing"
              best-for="Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding" />
     </tier>
@@ -1571,7 +1571,7 @@ Tier ratings:
              tier-coding="B" tier-planning="C" tier-agentic="C"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
              tier-speed="A"
-             headline-benchmarks="AA Intelligence Index 48.9 (xhigh); Output Speed 171.4 tokens/s; HLE 19.4% (GPT-5-mini)"
+             headline-benchmarks="AA Intelligence Index 48.9 (xhigh); Output Speed 162.9 tokens/s; HLE 19.4% (GPT-5-mini)"
              pricing-notes="Hidden by default; Smaller, faster variant of GPT-5.4; 90% discount on cached input tokens"
              best-for="Lightweight GPT-5.4 variant balancing quality and cost, well-suited for straightforward coding, short-form generation, and high-throughput workloads needing solid GPT reasoning at a fraction of the flagship price" />
       <model id="gpt-5.4-nano" name="GPT-5.4 Nano"
