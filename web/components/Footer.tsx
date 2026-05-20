@@ -2,6 +2,7 @@
 import Link from "next/link";
 
 const GITHUB_URL = "https://github.com/nathanramoscfa/roadmodel";
+const ARCFORGE_URL = "https://arcforgelabs.io";
 
 export function Footer() {
   return (
@@ -23,7 +24,17 @@ export function Footer() {
             Terms
           </Link>
         </nav>
-        <p className="text-sm">© 2026 Nathan Ramos</p>
+        <p className="text-sm">
+          © 2026{" "}
+          <Link
+            href={ARCFORGE_URL}
+            className="hover:text-white"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Arcforge Digital Labs LLC
+          </Link>
+        </p>
       </div>
     </footer>
   );
