@@ -43,10 +43,12 @@ to the next; verification commands are in
      ```
 
 1. **Add apex DNS at Namecheap.** In Advanced DNS for `roadmodel.ai`,
-   delete the parked-page `URL Redirect Record` on the apex. Add an
-   **ALIAS** (or ANAME / CNAME-flattening) record:
+   delete any parked-page `URL Redirect Record` on the apex if present
+   (Step 7 cut on 2026-05-20 found none — only a `staging` CNAME and a
+   locked SPF TXT existed). Add an **A Record** (Namecheap's apex-IP
+   record type — ALIAS at Namecheap expects a hostname, not an IP):
    - Host: `@`
-   - Type: ALIAS Record (Namecheap label)
+   - Type: A Record
    - Value: `76.76.21.21` (Vercel documented apex IP)
    - TTL: Automatic / 300
 
@@ -105,11 +107,33 @@ curl: (6) Could not resolve host: roadmodel.ai
 
 ```text
 $ dig A roadmodel.ai +short
-TBD — re-run after Namecheap ALIAS propagates
+76.76.21.21
 
 $ curl -sSI https://roadmodel.ai | head -1
-TBD — expected HTTP/2 200
+HTTP/2 200
 ```
+
+TLS cert auto-issue did **not** fire on its own after the A record
+propagated (Vercel's initial verify happened ~1h before DNS was set,
+and the retry cadence was longer than the cut window). Manual nudge:
+
+```text
+$ vercel certs issue roadmodel.ai
+Issuing a certificate for roadmodel.ai
+> Success! Certificate entry for roadmodel.ai created [8s]
+
+$ echo | openssl s_client -servername roadmodel.ai \
+    -connect 76.76.21.21:443 2>/dev/null \
+    | openssl x509 -noout -subject -issuer -dates
+subject=CN=roadmodel.ai
+issuer=C=US, O=Let's Encrypt, CN=R12
+notBefore=May 20 03:32:32 2026 GMT
+notAfter=Aug 18 03:32:31 2026 GMT
+```
+
+For future apex cuts where DNS is set *after* the domain is attached,
+run `vercel certs issue <domain>` immediately rather than waiting for
+the auto-retry.
 
 ### Staging reference (stack healthy pre-apex cut)
 
@@ -135,10 +159,12 @@ $ PLAYWRIGHT_BASE_URL=https://staging.roadmodel.ai npx playwright test --grep "r
 ```text
 $ cd web
 $ PLAYWRIGHT_BASE_URL=https://roadmodel.ai npx playwright test --grep "home page"
-TBD — run after apex DNS + TLS green
+  ✓  1 [chromium] › tests/home.spec.ts:4:5 › home page renders hero + CTA (109ms)
+  1 passed (2.6s)
 
 $ PLAYWRIGHT_BASE_URL=https://roadmodel.ai npx playwright test --grep "renders form"
-TBD — run after apex DNS + TLS green
+  ✓  1 [chromium] › tests/recommend.spec.ts:4:5 › /recommend renders form + empty output (94ms)
+  1 passed (1.2s)
 ```
 
 ### Functional `/api/recommend` smoke
@@ -148,9 +174,16 @@ First request (expected HTTP 200, recommender wire schema):
 ```text
 $ curl -X POST https://roadmodel.ai/api/recommend \
     -H "Content-Type: application/json" \
-    -d '{"task_description": "build a SQL agent"}' | jq .
-TBD
+    -d '{"task_description": "build a SQL agent"}'
+{"model":"Composer 2","platform":"Cursor","settings":{"max_mode":"OFF","thinking":"N/A"},"session_cost_estimate":null,"comparison_table":[]}
+HTTP 200 time=6.612247s
 ```
+
+Note on cold starts: the upstream Python FastAPI service
+(`roadmodel-api.vercel.app/v1/recommend`) can take 27–30 s on a fully
+cold start, which exceeds the Next Route Handler default timeout. Warm
+calls complete in 6–7 s. Tracked as a Phase 4 perf item (provision a
+cron warm-up or migrate off cold-start runtime).
 
 Note: the FastAPI wire schema returns `model`, `platform`, `settings`,
 `session_cost_estimate`, and `comparison_table`. The UI renders the
@@ -161,17 +194,30 @@ a field on the JSON payload today.
 Rate-limit sequence (requires Upstash seeded on production — Step 0):
 
 ```text
-# requests 2–4: same curl as above
-$ curl -X POST https://roadmodel.ai/api/recommend ...  # 2nd → 200
-$ curl -X POST https://roadmodel.ai/api/recommend ...  # 3rd → 200
-$ curl -X POST https://roadmodel.ai/api/recommend ...  # 4th → 429
+# Sequence captured 2026-05-20 from a single source IP+UA.
+# Limit: 3/day per salted IP+UA hash (also 10/min burst).
+# Note: a curl --max-time 20 abort still counts at the Upstash
+# increment (which happens before the upstream Python call).
 
-$ curl -X POST https://roadmodel.ai/api/recommend \
-    -H "Content-Type: application/json" \
-    -d '{"task_description": "build a SQL agent"}'  # 4th from same IP
-{"error":"rate_limited"}
-TBD — HTTP 429 on 4th request when Upstash is live
+# Request 1 — server completed (Python cold start ~27 s), curl gave up
+HTTP 000 time=20s (timed out; counted as 1)
+
+# Request 2 — likewise a slow upstream, curl gave up at 30 s
+HTTP 000 time=30s (timed out; counted as 2)
+
+# Request 3 — rate-limit decision: window already exhausted
+$ curl -X POST https://roadmodel.ai/api/recommend ...
+{"error":"rate_limited","retry_after":31615}
+HTTP 429 time=0.368s
+
+# Request 4 — same
+{"error":"rate_limited","retry_after":31615}
+HTTP 429 time=0.244s
 ```
+
+The `retry_after` ~31 615 s ≈ 8.8 h aligns with the daily window. Live
+rate limiting is now **enforced** (previously fail-open across all
+scopes per the [Step 6.1 carry-over](../private/ROADMAP.md)).
 
 ## release.yml pattern check
 

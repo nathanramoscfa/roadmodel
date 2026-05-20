@@ -383,16 +383,24 @@ and tags `v0.3.0-phase-3` (milestone marker — no PyPI republish).
   (Domains tab; apex target `76.76.21.21`).
 - [x] `NEXT_PUBLIC_SITE_URL=https://roadmodel.ai` seeded on
   `roadmodel-web` production scope; production redeployed.
-- [ ] Namecheap apex ALIAS → `76.76.21.21` (delete parked-page
-  redirect first). Verify `dig A roadmodel.ai +short`.
-- [ ] TLS green: `curl -sSI https://roadmodel.ai | head -1` →
-  `HTTP/2 200`.
-- [ ] UptimeRobot monitor for `https://roadmodel.ai` created;
-  monitor ID recorded in [UptimeRobot monitors](#uptimerobot-monitors).
-- [ ] Upstash trio seeded on production (Step 6.1 carry-over) so
-  live 429 rate-limit smoke passes.
-- [ ] Playwright + functional curl evidence captured in
+- [x] Namecheap apex **A Record** → `76.76.21.21` (no parked-page
+  redirect existed at cut time). `dig A roadmodel.ai +short` →
+  `76.76.21.21`.
+- [x] TLS green via manual `vercel certs issue roadmodel.ai`:
+  `curl -sSI https://roadmodel.ai` → `HTTP/2 200`, Let's Encrypt
+  R12 cert valid May 20 → Aug 18 2026.
+- [x] UptimeRobot monitor `803118024` for `https://roadmodel.ai`
+  created 2026-05-20; recorded in
+  [UptimeRobot monitors](#uptimerobot-monitors).
+- [x] Upstash trio seeded on **production + development** via the
+  Vercel Marketplace Upstash integration (injects `KV_REST_API_*`
+  legacy names) plus `UPSTASH_REDIS_URL` / `UPSTASH_REDIS_TOKEN`
+  aliases. Preview-scope seeding deferred (CLI 54.1.0 "all preview
+  branches" non-interactive bug — use dashboard or post-CLI-upgrade).
+- [x] Playwright (`home page`, `renders form`) + functional `curl`
+  smoke + 4-request rate-limit sequence captured in
   [docs/phase03-release-runbook.md](../docs/phase03-release-runbook.md).
+  Live 429 confirmed: `{"error":"rate_limited","retry_after":31615}`.
 - [ ] Signed tag `v0.3.0-phase-3` pushed from `main`; GitHub Release
   created (see runbook — tag push runs `build` + `sign` only).
 
@@ -453,7 +461,7 @@ the [Provisioning sequence](#provisioning-sequence)).
 | Host                      | Type   | Value                                       | TTL   | Notes                                                  |
 | ------------------------- | ------ | ------------------------------------------- | ----- | ------------------------------------------------------ |
 | `staging.roadmodel.ai`    | CNAME  | `6414f72d9e02a5d3.vercel-dns-016.com`       | Auto  | Cut 2026-05-17. Project-scoped Vercel target; `cname.vercel-dns.com` is the documented universal fallback per Vercel's IP-range migration banner. |
-| `roadmodel.ai` (apex)     | ALIAS  | `76.76.21.21` (Vercel documented apex IP)   | 300   | Step 7 target (2026-05-20). Namecheap Advanced DNS → ALIAS Record, host `@`; delete parked-page redirect first. Verify: `dig A roadmodel.ai +short`. |
+| `roadmodel.ai` (apex)     | A      | `76.76.21.21` (Vercel documented apex IP)   | Auto  | Cut 2026-05-20 (Step 7). Namecheap Advanced DNS → **A Record**, host `@` (Namecheap's ALIAS type expects a hostname; an IP must use A). No parked-page redirect existed at cut time. `dig A roadmodel.ai +short` → `76.76.21.21`. |
 | `www.roadmodel.ai`        | CNAME  | TBD (Vercel-issued `www` target)            | 300   | **Not cut in Step 7** — apex-only launch; `www` redirects deferred. |
 
 Step 2 cut only the `staging` row. Step 7 cut the apex row above;
@@ -572,7 +580,7 @@ monitor added in Step 7 when the apex URL is cut.
 | Monitor ID                                                                     | Target URL                          | Interval   | Alert channel                |
 | ------------------------------------------------------------------------------ | ----------------------------------- | ---------- | ---------------------------- |
 | `803092893` (paused 2026-05-17; resumed 2026-05-19 after Step 4 deploy went live — `Up` per dashboard) | `https://staging.roadmodel.ai`      | 5 minutes  | maintainer's email on file   |
-| TBD (provision during Step 7 cut — record ID after dashboard create)           | `https://roadmodel.ai`              | 5 minutes  | maintainer's email on file   |
+| `803118024` (created 2026-05-20 Step 7; Up since creation — 100% / 24h, 36 ms avg) | `https://roadmodel.ai`              | 5 minutes  | maintainer's email on file   |
 
 UptimeRobot's free tier allows 50 monitors at a 5-minute floor.
 That's the right granularity for Step 2 — finer-grained polling
