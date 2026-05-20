@@ -187,12 +187,11 @@ jobs:
       - name: Build web
         env:
           NEXT_PUBLIC_SITE_URL: https://staging.roadmodel.ai
-          ROADMODEL_SERVICE_URL: https://ci-placeholder.railway.app
-          ROADMODEL_INTERNAL_TOKEN: ci-placeholder-internal-token
           SUPABASE_URL: https://ci-placeholder.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-service-role-key
           UPSTASH_REDIS_URL: https://ci-placeholder.upstash.io
           UPSTASH_REDIS_TOKEN: ci-placeholder-redis-token
+          ROADMODEL_IP_SALT: ci-placeholder-ip-salt
         run: npm --prefix web run build
 
   web-test:
@@ -217,22 +216,20 @@ jobs:
       - name: Build web
         env:
           NEXT_PUBLIC_SITE_URL: https://staging.roadmodel.ai
-          ROADMODEL_SERVICE_URL: https://ci-placeholder.railway.app
-          ROADMODEL_INTERNAL_TOKEN: ci-placeholder-internal-token
           SUPABASE_URL: https://ci-placeholder.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-service-role-key
           UPSTASH_REDIS_URL: https://ci-placeholder.upstash.io
           UPSTASH_REDIS_TOKEN: ci-placeholder-redis-token
+          ROADMODEL_IP_SALT: ci-placeholder-ip-salt
         run: npm --prefix web run build
       - name: Run Playwright tests
         env:
           NEXT_PUBLIC_SITE_URL: https://staging.roadmodel.ai
-          ROADMODEL_SERVICE_URL: https://ci-placeholder.railway.app
-          ROADMODEL_INTERNAL_TOKEN: ci-placeholder-internal-token
           SUPABASE_URL: https://ci-placeholder.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-service-role-key
           UPSTASH_REDIS_URL: https://ci-placeholder.upstash.io
           UPSTASH_REDIS_TOKEN: ci-placeholder-redis-token
+          ROADMODEL_IP_SALT: ci-placeholder-ip-salt
         run: npm --prefix web run test
 
   service-tests:
