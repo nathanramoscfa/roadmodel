@@ -23,6 +23,12 @@ dev = [
     "mypy>=1.8",
 ]
 
+[tool.vercel]
+# Vercel Python runtime entrypoint. Resolves to service/app/main.py:app
+# when the Vercel project's Root Directory is set to service/. See
+# https://vercel.com/docs/functions/runtimes/python.
+entrypoint = "app.main:app"
+
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
 
