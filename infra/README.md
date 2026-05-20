@@ -130,24 +130,28 @@ is wired across three env scopes:
   production scopes on `roadmodel-web`, plus 1×
   `ROADMODEL_INTERNAL_TOKEN` on `roadmodel-api`) were deleted via
   the Vercel API during Step 5.5b close-out (2026-05-19).
-- `UPSTASH_REDIS_URL` and `UPSTASH_REDIS_TOKEN` are set on
-  `roadmodel-web` (preview + staging + production) as of
-  Phase 3 Step 6; `web/lib/env.ts` requires both via `.min(1)`
-  (the `.optional()` placeholders from PR #83 were removed in
-  Step 6). The `roadmodel-api` Vercel project does **not** yet
-  carry them — the FastAPI side never invokes the rate limiter
-  (browser traffic terminates at the Next.js handler), and
-  wiring them there is a no-op until Phase 4 introduces a
-  separate signed-in surface that hits the FastAPI directly.
+- `UPSTASH_REDIS_URL` and `UPSTASH_REDIS_TOKEN` are **not yet
+  seeded on any Vercel project** as of the Step 6 PR merge.
+  `web/lib/env.ts` keeps them `.optional()` and
+  `web/lib/ratelimit.ts` fails open with a `console.warn` when
+  unset — the rate-limit *code path* is fully wired, but the
+  defense is inert until the maintainer seeds the values. The
+  follow-up Step 6.1 PR flips env.ts to `.min(1)` once the
+  values land. Target: `roadmodel-web` preview + staging +
+  production scopes. The `roadmodel-api` Vercel project does
+  **not** need them — the FastAPI side never invokes the rate
+  limiter (browser traffic terminates at the Next.js handler).
 - `ROADMODEL_IP_SALT` is the daily-rotation salt the Next.js
   rate limiter hashes the client IP + UA with before keying
-  Upstash. Set on `roadmodel-web` (preview + staging +
-  production); rotation cadence is **quarterly** per the
-  Phase 7 secrets-rotation policy. Defaults to a placeholder if
-  unset so local dev still builds; production builds without
-  the override silently bucket every IP under the same key, so
-  the var **must** be set in every Vercel scope serving real
-  traffic.
+  Upstash. Same maintainer-seed dependency as the Upstash pair
+  above — when Step 6.1 lands the Upstash values, seed this
+  alongside (`openssl rand -hex 32` for a fresh value).
+  Rotation cadence is **quarterly** per the Phase 7
+  secrets-rotation policy. Defaults to a placeholder in
+  `web/lib/withRateLimit.ts` so local + CI builds work without
+  override, but production builds without the override silently
+  bucket every IP under the same key, so the var **must** be
+  set in every Vercel scope serving real traffic.
 
 **`roadmodel-api` environments.** As of 2026-05-19 (post Step 5.5b
 close-out), `roadmodel-api` carries **only the three AI provider
@@ -335,22 +339,40 @@ Supabase audit-log write.
   remains the
   [Provider cost ceilings](#provider-cost-ceilings) table
   below; the public doc derives from it.
+- [ ] **Deferred to Step 6.1:** seed `UPSTASH_REDIS_URL`,
+  `UPSTASH_REDIS_TOKEN`, and `ROADMODEL_IP_SALT` on
+  `roadmodel-web` Vercel env vars (preview + staging +
+  production). Step 6 surfaced that the Step 5.5b close-out's
+  "Upstash provisioned + env vars set in Vercel" claim was
+  inaccurate — UPSTASH_REDIS_URL was missing on every scope,
+  which broke the Step 6 preview deploy. The Step 6 PR
+  responded by keeping `web/lib/env.ts` `.optional()` and
+  shipping `web/lib/ratelimit.ts` in **fail-open mode** so the
+  build succeeds; the rate-limit defense is inert until the
+  values land. Step 6.1 is a small follow-up PR that flips
+  env.ts to `.min(1)`, removes the fail-open path in
+  `ratelimit.ts`, and verifies a real 429 from
+  `staging.roadmodel.ai/api/recommend` after the maintainer
+  seeds the values.
 
-Vercel env-var seed for Step 6 (from Google Password Manager
-entries `roadmodel UPSTASH_REDIS_URL`,
-`roadmodel UPSTASH_REDIS_TOKEN`, `roadmodel ROADMODEL_IP_SALT`):
+Vercel env-var seed (do this before Step 6.1 PR can ship):
 
 ```bash
-cd web && \
+cd web
+# UPSTASH_REDIS_URL — from the Upstash console
+for SCOPE in preview staging production; do
   pbpaste | tr -d '\r\n' \
-    | vercel env add UPSTASH_REDIS_URL preview --force --yes
-# repeat for the `staging` and `production` scopes,
-# then again for UPSTASH_REDIS_TOKEN and ROADMODEL_IP_SALT
+    | vercel env add UPSTASH_REDIS_URL $SCOPE --force --yes
+done
+# repeat the loop for UPSTASH_REDIS_TOKEN (Upstash console)
+# and ROADMODEL_IP_SALT (fresh value: openssl rand -hex 32)
 ```
 
-`ROADMODEL_IP_SALT` is a fresh random value (e.g.,
-`openssl rand -hex 32`); rotate quarterly per the
-[Environment variables](#environment-variables) rules.
+Save the values to Google Password Manager under entries
+`roadmodel UPSTASH_REDIS_URL`, `roadmodel UPSTASH_REDIS_TOKEN`,
+and `roadmodel ROADMODEL_IP_SALT` for the quarterly-rotation
+runbook in
+[docs/cost-ceilings.md](../docs/cost-ceilings.md#cap-breach-response-runbook).
 
 ## Environment variables
 
@@ -375,9 +397,9 @@ deliberate — Step 6 should not relitigate the Upstash decision.
 | `NEXT_PUBLIC_SITE_URL`         | `roadmodel-web` Vercel env vars                              | Next.js metadata + absolute links (Step 4)                                   | web: preview + staging                                   | web: preview + staging + production (Step 7) |
 | `SUPABASE_URL`                 | Both Vercel projects' env vars                               | Next.js audit log (Step 6) + FastAPI (Step 6 — currently unused)             | web: preview + staging + production; api: **not set**    | both projects, all scopes (Step 6) |
 | `SUPABASE_SERVICE_ROLE_KEY`    | Both Vercel projects' env vars (Supabase dashboard → Vercel) | Next.js audit log (Step 6) + FastAPI (Step 6 — currently unused)             | web: preview + staging + production; api: **not set**    | both projects, all scopes (Step 6) |
-| `UPSTASH_REDIS_URL`            | `roadmodel-web` Vercel env vars                              | Next.js rate limiter (Step 6)                                                | web: preview + staging + production                      | web: preview + staging + production |
-| `UPSTASH_REDIS_TOKEN`          | `roadmodel-web` Vercel env vars                              | Next.js rate limiter (Step 6)                                                | web: preview + staging + production                      | web: preview + staging + production |
-| `ROADMODEL_IP_SALT`            | `roadmodel-web` Vercel env vars                              | Next.js rate limiter daily IP+UA hashing salt (Step 6); rotate quarterly     | web: preview + staging + production                      | web: preview + staging + production |
+| `UPSTASH_REDIS_URL`            | `roadmodel-web` Vercel env vars                              | Next.js rate limiter (Step 6 — inert until seeded)                           | **not set anywhere**                                     | web: preview + staging + production (Step 6.1) |
+| `UPSTASH_REDIS_TOKEN`          | `roadmodel-web` Vercel env vars                              | Next.js rate limiter (Step 6 — inert until seeded)                           | **not set anywhere**                                     | web: preview + staging + production (Step 6.1) |
+| `ROADMODEL_IP_SALT`            | `roadmodel-web` Vercel env vars                              | Next.js rate limiter daily IP+UA hashing salt (Step 6); rotate quarterly     | **not set anywhere**                                     | web: preview + staging + production (Step 6.1) |
 
 Rules:
 

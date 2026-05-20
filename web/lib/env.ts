@@ -11,9 +11,13 @@ const envSchema = z.object({
     .default("https://staging.roadmodel.ai"),
   SUPABASE_URL: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-  // Required as of Phase 3 Step 6 (rate limiter ships).
-  UPSTASH_REDIS_URL: z.string().min(1),
-  UPSTASH_REDIS_TOKEN: z.string().min(1),
+  // Optional until the maintainer seeds them on roadmodel-web Vercel
+  // env vars (preview + staging + production). When unset, the
+  // Step 6 rate limiter fails open with a startup warning — see
+  // web/lib/ratelimit.ts. Flip to .min(1) in the follow-up PR that
+  // lands the seeded values; same for ROADMODEL_IP_SALT.
+  UPSTASH_REDIS_URL: z.string().optional(),
+  UPSTASH_REDIS_TOKEN: z.string().optional(),
 });
 
 function requireVar(name: string): string {
@@ -31,6 +35,6 @@ export const env = envSchema.parse({
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://staging.roadmodel.ai",
   SUPABASE_URL: requireVar("SUPABASE_URL"),
   SUPABASE_SERVICE_ROLE_KEY: requireVar("SUPABASE_SERVICE_ROLE_KEY"),
-  UPSTASH_REDIS_URL: requireVar("UPSTASH_REDIS_URL"),
-  UPSTASH_REDIS_TOKEN: requireVar("UPSTASH_REDIS_TOKEN"),
+  UPSTASH_REDIS_URL: process.env.UPSTASH_REDIS_URL,
+  UPSTASH_REDIS_TOKEN: process.env.UPSTASH_REDIS_TOKEN,
 });
