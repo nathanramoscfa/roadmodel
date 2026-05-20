@@ -22,13 +22,15 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        phase: ["01", "02"]
+        phase: ["01", "02", "03"]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.phase == '03' && '3.12' || '3.11' }}
       - name: Run phase verify script (--fast)
+        env:
+          ROADMODEL_VERIFY_PYTHON: python
         run: bash "scripts/verify-phase${{ matrix.phase }}.sh" --fast
 
   post:
@@ -38,7 +40,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        phase: ["01", "02"]
+        phase: ["01", "02", "03"]
     steps:
       # fetch-depth: 0 so gitleaks detect can scan the full git history,
       # not just the latest commit.
@@ -47,7 +49,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.phase == '03' && '3.12' || '3.11' }}
           # setup-python's built-in pip cache handles macOS
           # (~/Library/Caches/pip) and Linux (~/.cache/pip) paths
           # automatically — cleaner than a hand-rolled actions/cache.
@@ -102,7 +104,26 @@ jobs:
           pip install -r update/requirements.txt
           pip install -r tests/requirements.txt
           pip install -e ".[dev]"
+      - name: Read Node version (Phase 3 post)
+        if: matrix.phase == '03'
+        id: node-version
+        run: echo "version=$(cat web/.nvmrc)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
+        if: matrix.phase == '03'
+        with:
+          node-version: ${{ steps.node-version.outputs.version }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install web dependencies (Phase 3 post)
+        if: matrix.phase == '03'
+        run: npm ci --prefix web
+      - name: Install Playwright Chromium (Phase 3 post)
+        if: matrix.phase == '03'
+        run: npx playwright install --with-deps chromium
+        working-directory: web
       - name: Run phase verify script (--post)
+        env:
+          ROADMODEL_VERIFY_PYTHON: python
         # `gh pr checks` inside --post requires gh auth, which is not
         # configured here (we deliberately don't export GH_TOKEN), so the
         # script skips it. Live recommend smoke is also skipped because

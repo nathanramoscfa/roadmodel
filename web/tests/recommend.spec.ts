@@ -83,7 +83,7 @@ test("502 error renders friendly message", async ({ page }) => {
 // human-readable message. The server-side rate-limit decision is
 // covered by the @upstash/ratelimit library's own tests.
 
-test("burst-drop 429 renders slow-down message", async ({ page }) => {
+test("burst_limit burst-drop 429 renders slow-down message", async ({ page }) => {
   await page.route("**/api/recommend", (route) =>
     route.fulfill({
       status: 429,
@@ -101,7 +101,7 @@ test("burst-drop 429 renders slow-down message", async ({ page }) => {
   await expect(page.getByText(/Slow down/i)).toBeVisible();
 });
 
-test("daily-limit 429 renders daily-cap message", async ({ page }) => {
+test("daily_limit daily-cap 429 renders daily-cap message", async ({ page }) => {
   await page.route("**/api/recommend", (route) =>
     route.fulfill({
       status: 429,

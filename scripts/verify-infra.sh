@@ -137,9 +137,9 @@ else
   if [[ -z "${SECTION}" ]]; then
     fail "4 Schema: could not extract \"## Environment variables\" section from ${README}"
   else
-    # Pull every backtick-wrapped UPPER_SNAKE_CASE token from the section.
-    # These are the variable names in the table's first column.
-    DOCUMENTED_VARS="$(echo "${SECTION}" | grep -oE '`[A-Z][A-Z0-9_]+`' | tr -d '`' | sort -u)"
+    # Pull UPPER_SNAKE_CASE tokens from the env-var table's first column
+    # only (ignore retired names mentioned in the Rules prose below).
+    DOCUMENTED_VARS="$(echo "${SECTION}" | grep -E '^\|[[:space:]]*`[A-Z]' | grep -oE '`[A-Z][A-Z0-9_]+`' | tr -d '`' | sort -u)"
 
     if [[ -z "${DOCUMENTED_VARS}" ]]; then
       fail "4 Schema: no env vars extracted from \"## Environment variables\" section"
