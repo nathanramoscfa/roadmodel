@@ -34,7 +34,7 @@ this baseline.
 
 | Project           | Vendor   | Project ID                     | Dashboard URL                                                    | Staging URL                              | Production URL          | Provisioned    |
 | ----------------- | -------- | ------------------------------ | ---------------------------------------------------------------- | ---------------------------------------- | ----------------------- | -------------- |
-| `roadmodel-web`   | Vercel   | `prj_1emPjG8EamGB5G942ipNjjeqh8NX` (team `team_5uU81P0Gl4i22rBjMSwDRsLR`, slug `roadmodel`) — root `web/`, previews live | `https://vercel.com/roadmodel/roadmodel-web` | `https://staging.roadmodel.ai` — Up 2026-05-19 | TBD (cut in Step 7) | 2026-05-17 |
+| `roadmodel-web`   | Vercel   | `prj_1emPjG8EamGB5G942ipNjjeqh8NX` (team `team_5uU81P0Gl4i22rBjMSwDRsLR`, slug `roadmodel`) — root `web/`, previews live | `https://vercel.com/roadmodel/roadmodel-web` | `https://staging.roadmodel.ai` — Up 2026-05-19 | `https://roadmodel.ai` (Step 7 target — pending apex DNS verify) | 2026-05-17 |
 | `roadmodel-api`   | Vercel   | `prj_GLyJj2J4Ch7Yr6TruBr6aD8jeD5E` (team `team_5uU81P0Gl4i22rBjMSwDRsLR`, slug `roadmodel`) — root `service/`, Python 3.12 / Fluid Compute, framework `fastapi` (auto-detected from `service/pyproject.toml`) | `https://vercel.com/roadmodel/roadmodel-api` | `https://roadmodel-api.vercel.app/v1/recommend` (production alias; called server-side by the Next.js `/api/recommend` route handler — see [Step 6 resume checklist](#resume-checklist-step-6--phase-3-step-6)) | TBD (cut in Step 7) | 2026-05-19 (Step 5.5a) |
 | `roadmodel-data`  | Supabase | `nbxzpqnmafcayeqnfvcv` (org `mkvjpvgvuhhzkzfyhvsp`, region `us-east-1`) | `https://supabase.com/dashboard/project/nbxzpqnmafcayeqnfvcv` | Same dashboard, `staging` schema | Same dashboard, `prod` | 2026-05-17 |
 
@@ -117,9 +117,8 @@ is wired across three env scopes:
 - **`staging`** (custom env, mapped to `staging.roadmodel.ai`):
   same three vars set.
 - **`production`** (built-in, tracks `main`): `SUPABASE_URL`,
-  `SUPABASE_SERVICE_ROLE_KEY`. `NEXT_PUBLIC_SITE_URL` is
-  intentionally **deferred to Step 7** (apex URL doesn't exist
-  until the production cut).
+  `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SITE_URL`
+  (`https://roadmodel.ai`, seeded Step 7 2026-05-20).
 - `ROADMODEL_SERVICE_URL` and `ROADMODEL_INTERNAL_TOKEN` were
   **removed entirely in Step 5.5b** — the rewrite from
   `staging.roadmodel.ai/api/recommend` to
@@ -374,6 +373,29 @@ and `roadmodel ROADMODEL_IP_SALT` for the quarterly-rotation
 runbook in
 [docs/cost-ceilings.md](../docs/cost-ceilings.md#cap-breach-response-runbook).
 
+**Resume checklist (Step 7 — Phase 3 Step 7).** Phase 3 Step 7 cuts
+the production apex DNS, verifies TLS + monitoring + end-to-end
+smoke against `https://roadmodel.ai`, publishes
+[docs/phase03-release-runbook.md](../docs/phase03-release-runbook.md),
+and tags `v0.3.0-phase-3` (milestone marker — no PyPI republish).
+
+- [x] `roadmodel.ai` attached to `roadmodel-web` Vercel project
+  (Domains tab; apex target `76.76.21.21`).
+- [x] `NEXT_PUBLIC_SITE_URL=https://roadmodel.ai` seeded on
+  `roadmodel-web` production scope; production redeployed.
+- [ ] Namecheap apex ALIAS → `76.76.21.21` (delete parked-page
+  redirect first). Verify `dig A roadmodel.ai +short`.
+- [ ] TLS green: `curl -sSI https://roadmodel.ai | head -1` →
+  `HTTP/2 200`.
+- [ ] UptimeRobot monitor for `https://roadmodel.ai` created;
+  monitor ID recorded in [UptimeRobot monitors](#uptimerobot-monitors).
+- [ ] Upstash trio seeded on production (Step 6.1 carry-over) so
+  live 429 rate-limit smoke passes.
+- [ ] Playwright + functional curl evidence captured in
+  [docs/phase03-release-runbook.md](../docs/phase03-release-runbook.md).
+- [ ] Signed tag `v0.3.0-phase-3` pushed from `main`; GitHub Release
+  created (see runbook — tag push runs `build` + `sign` only).
+
 ## Environment variables
 
 The full env var schema both Vercel projects read. Step 4 wires the
@@ -394,7 +416,7 @@ deliberate — Step 6 should not relitigate the Upstash decision.
 | `ANTHROPIC_API_KEY`            | `roadmodel-api` Vercel env vars                              | FastAPI service (Step 5.5a)                                                  | api: production + preview                                | api: production + preview + staging (Step 7) |
 | `OPENAI_API_KEY`               | `roadmodel-api` Vercel env vars                              | FastAPI service (Step 5.5a)                                                  | api: production + preview                                | api: production + preview + staging (Step 7) |
 | `GOOGLE_API_KEY`               | `roadmodel-api` Vercel env vars                              | FastAPI service (Step 5.5a)                                                  | api: production + preview                                | api: production + preview + staging (Step 7) |
-| `NEXT_PUBLIC_SITE_URL`         | `roadmodel-web` Vercel env vars                              | Next.js metadata + absolute links (Step 4)                                   | web: preview + staging                                   | web: preview + staging + production (Step 7) |
+| `NEXT_PUBLIC_SITE_URL`         | `roadmodel-web` Vercel env vars                              | Next.js metadata + absolute links (Step 4)                                   | web: preview + staging + production                      | web: preview + staging + production |
 | `SUPABASE_URL`                 | Both Vercel projects' env vars                               | Next.js audit log (Step 6) + FastAPI (Step 6 — currently unused)             | web: preview + staging + production; api: **not set**    | both projects, all scopes (Step 6) |
 | `SUPABASE_SERVICE_ROLE_KEY`    | Both Vercel projects' env vars (Supabase dashboard → Vercel) | Next.js audit log (Step 6) + FastAPI (Step 6 — currently unused)             | web: preview + staging + production; api: **not set**    | both projects, all scopes (Step 6) |
 | `UPSTASH_REDIS_URL`            | `roadmodel-web` Vercel env vars                              | Next.js rate limiter (Step 6 — inert until seeded)                           | **not set anywhere**                                     | web: preview + staging + production (Step 6.1) |
@@ -431,12 +453,12 @@ the [Provisioning sequence](#provisioning-sequence)).
 | Host                      | Type   | Value                                       | TTL   | Notes                                                  |
 | ------------------------- | ------ | ------------------------------------------- | ----- | ------------------------------------------------------ |
 | `staging.roadmodel.ai`    | CNAME  | `6414f72d9e02a5d3.vercel-dns-016.com`       | Auto  | Cut 2026-05-17. Project-scoped Vercel target; `cname.vercel-dns.com` is the documented universal fallback per Vercel's IP-range migration banner. |
-| `roadmodel.ai` (apex)     | ALIAS  | TBD (Vercel-issued apex target)             | 300   | **Not cut until Step 7** — public launch only. Namecheap currently has a parked-page `URL Redirect Record` for the apex → `http://www.roadmodel.ai/`; leave it until Step 7. |
-| `www.roadmodel.ai`        | CNAME  | TBD (Vercel-issued `www` target)            | 300   | **Not cut until Step 7**.                              |
+| `roadmodel.ai` (apex)     | ALIAS  | `76.76.21.21` (Vercel documented apex IP)   | 300   | Step 7 target (2026-05-20). Namecheap Advanced DNS → ALIAS Record, host `@`; delete parked-page redirect first. Verify: `dig A roadmodel.ai +short`. |
+| `www.roadmodel.ai`        | CNAME  | TBD (Vercel-issued `www` target)            | 300   | **Not cut in Step 7** — apex-only launch; `www` redirects deferred. |
 
-Step 2 cuts only the `staging` row. The apex + `www` rows stay
-TBD until Step 7 — cutting them earlier would expose an
-unfinished site to the open web.
+Step 2 cut only the `staging` row. Step 7 cut the apex row above;
+`www` stays TBD until a follow-up DNS PR adds the Vercel `www`
+target and redirect policy.
 
 ## TLS posture
 
@@ -544,12 +566,13 @@ Trigger conditions to revisit this routing:
 
 ## UptimeRobot monitors
 
-Free-tier UptimeRobot account; one monitor in Step 2, more added
-in Step 7 when the production URL is cut.
+Free-tier UptimeRobot account; staging monitor in Step 2, production
+monitor added in Step 7 when the apex URL is cut.
 
 | Monitor ID                                                                     | Target URL                          | Interval   | Alert channel                |
 | ------------------------------------------------------------------------------ | ----------------------------------- | ---------- | ---------------------------- |
 | `803092893` (paused 2026-05-17; resumed 2026-05-19 after Step 4 deploy went live — `Up` per dashboard) | `https://staging.roadmodel.ai`      | 5 minutes  | maintainer's email on file   |
+| TBD (provision during Step 7 cut — record ID after dashboard create)           | `https://roadmodel.ai`              | 5 minutes  | maintainer's email on file   |
 
 UptimeRobot's free tier allows 50 monitors at a 5-minute floor.
 That's the right granularity for Step 2 — finer-grained polling
