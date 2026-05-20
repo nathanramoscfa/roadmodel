@@ -49,12 +49,10 @@ this baseline.
 > Python/FastAPI support + eliminating the
 > `ROADMODEL_INTERNAL_TOKEN` / `ROADMODEL_SERVICE_URL` shared-secret
 > boundary. The Railway-era files (`service/Dockerfile` and
-> `service/railway.json`) were removed from the repo in Step 5.5b.
-> Deletion of the Railway project itself is **pending the
-> resolution of Railway's 2026-05-19 control-plane outage** — the
-> service no longer receives traffic (the `web/vercel.json`
-> rewrite points at `roadmodel-api.vercel.app`), so the only
-> remaining impact is the Hobby plan billing line. The
+> `service/railway.json`) were removed from the repo in Step 5.5b;
+> the Railway project itself was deleted via dashboard on
+> 2026-05-20 once the post-Step-5.5b outage subsided (confirmed
+> via HTTP 404 on the previous `*.up.railway.app` hostnames). The
 > [project_railway_setup_gaps] memory is **historical** as of this
 > step — no future provisioning step targets Railway.
 
@@ -258,14 +256,15 @@ The Step 5 deferred items above resolve here.
 - [x] Step 5.5b: `service/railway.json` and `service/Dockerfile`
   removed from the repo; [project_railway_setup_gaps] memory
   marked historical.
-- [ ] Step 5.5b: Railway project `roadmodel-service` deletion is
-  **pending Railway control-plane recovery** (active major outage
-  2026-05-19 — Google Cloud blocked Railway's account; CLI, MCP,
-  GraphQL, `railway.com` all unreachable). No functional impact:
-  the rewrite points at `roadmodel-api.vercel.app` and Railway
-  receives no traffic. When the control plane returns, run
-  `railway service delete roadmodel-service` (or delete via
-  dashboard) to stop the Hobby plan billing line.
+- [x] Step 5.5b: Railway project `roadmodel-service` deleted via
+  dashboard 2026-05-20 once the control plane returned (CLI / MCP
+  re-auth would have required an interactive `railway login` that
+  the agent couldn't drive; dashboard delete was the faster path).
+  Confirmed cut-over post-delete: `https://roadmodel-service-staging.up.railway.app/healthz`
+  and `https://roadmodel-service-production.up.railway.app/healthz`
+  both return HTTP 404 (Railway edge resolves but has no service to
+  route to). The $5/mo Hobby plan billing on the workspace stops
+  with the project delete.
 - [x] Step 5.5b: issue [#86](https://github.com/nathanramoscfa/roadmodel/issues/86)
   closed with the verification evidence.
 
