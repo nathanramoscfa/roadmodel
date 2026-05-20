@@ -37,8 +37,6 @@ test(
               total_usd: 0.0042,
             },
           ],
-          free_tier_label:
-            "Free tier (Haiku 4.5) — upgrade for frontier models",
         }),
       }),
     );

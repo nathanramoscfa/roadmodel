@@ -1,13 +1,12 @@
 # service/app/main.py
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 
-from .auth import require_bearer
 from .models import RecommendRequest, RecommendResponse
 from .recommend import recommend
 
 app = FastAPI(
     title="roadmodel-service",
-    version="0.3.0",
+    version="0.4.0",
 )
 
 
@@ -21,10 +20,6 @@ def healthz() -> dict[str, str]:
     }
 
 
-@app.post(
-    "/v1/recommend",
-    response_model=RecommendResponse,
-    dependencies=[Depends(require_bearer)],
-)
+@app.post("/v1/recommend", response_model=RecommendResponse)
 def recommend_endpoint(req: RecommendRequest) -> RecommendResponse:
     return recommend(req)

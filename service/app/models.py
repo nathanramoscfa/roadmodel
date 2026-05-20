@@ -19,6 +19,5 @@ class RecommendResponse(BaseModel):
     settings: dict[str, Any]
     session_cost_estimate: dict[str, Any] | None = None
     comparison_table: list[dict[str, Any]] = Field(default_factory=list)
-    free_tier_label: str | None = None
 
     model_config = ConfigDict(extra="forbid")

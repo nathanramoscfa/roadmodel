@@ -35,8 +35,23 @@ this baseline.
 | Project           | Vendor   | Project ID                     | Dashboard URL                                                    | Staging URL                              | Production URL          | Provisioned    |
 | ----------------- | -------- | ------------------------------ | ---------------------------------------------------------------- | ---------------------------------------- | ----------------------- | -------------- |
 | `roadmodel-web`   | Vercel   | `prj_1emPjG8EamGB5G942ipNjjeqh8NX` (team `team_5uU81P0Gl4i22rBjMSwDRsLR`, slug `roadmodel`) — root `web/`, previews live | `https://vercel.com/roadmodel/roadmodel-web` | `https://staging.roadmodel.ai` — Up 2026-05-19 | TBD (cut in Step 7) | 2026-05-17 |
-| `roadmodel-service` | Railway | `09b49af8-35b0-4cbd-8c6b-803960ebfe6a` (service `75adcf42-a1ee-44d4-8c8e-b2c576fc6515`, env-prod `651137a1-2331-4991-bf66-c0456163a48d`, env-staging `d79822c4-9676-4910-8606-ea5e98099ed3`) | `https://railway.com/project/09b49af8-35b0-4cbd-8c6b-803960ebfe6a` | Railway-issued default domain (generated in Phase 3 Step 3 when FastAPI ships) | TBD (cut in Step 7) | 2026-05-17 |
+| `roadmodel-api`   | Vercel   | `prj_GLyJj2J4Ch7Yr6TruBr6aD8jeD5E` (team `team_5uU81P0Gl4i22rBjMSwDRsLR`, slug `roadmodel`) — root `service/`, Python 3.12 / Fluid Compute, framework `fastapi` (auto-detected from `service/pyproject.toml`) | `https://vercel.com/roadmodel/roadmodel-api` | `https://roadmodel-api.vercel.app/v1/recommend` (production alias; rewritten from `staging.roadmodel.ai/api/recommend` until Step 7 splits prod) | TBD (cut in Step 7) | 2026-05-19 (Step 5.5a) |
 | `roadmodel-data`  | Supabase | `nbxzpqnmafcayeqnfvcv` (org `mkvjpvgvuhhzkzfyhvsp`, region `us-east-1`) | `https://supabase.com/dashboard/project/nbxzpqnmafcayeqnfvcv` | Same dashboard, `staging` schema | Same dashboard, `prod` | 2026-05-17 |
+
+> **Historical — Railway (retired 2026-05-19, Step 5.5b).** The
+> FastAPI recommender originally ran on Railway as project
+> `roadmodel-service` (id `09b49af8-35b0-4cbd-8c6b-803960ebfe6a`).
+> Phase 3 Step 5.5 consolidated it onto Vercel after a multi-hour
+> Railway control-plane outage on 2026-05-19 coincided with Step 5
+> close-out's [issue #86](https://github.com/nathanramoscfa/roadmodel/issues/86)
+> token-alignment surfacing the [project_railway_setup_gaps] memory.
+> Driver triad: outage signal + Vercel's 2026 first-class
+> Python/FastAPI support + eliminating the
+> `ROADMODEL_INTERNAL_TOKEN` / `ROADMODEL_SERVICE_URL` shared-secret
+> boundary. The Railway service was deleted in Step 5.5b alongside
+> `service/Dockerfile` and `service/railway.json`. The
+> [project_railway_setup_gaps] memory is **historical** as of this
+> step — no future provisioning step targets Railway.
 
 Vendor rationale (frozen by Step 2; revisit only on a documented
 incident):
@@ -52,12 +67,19 @@ incident):
   > [Vercel project configuration](#vercel-project-configuration),
   > `staging.roadmodel.ai` serves the marketing home (2xx, public).
   > See the Step 4 resume checklist there for closure log.
-- **Railway for the Python FastAPI recommender service.** A managed
-  Python runtime with deploy-on-push, per-PR ephemeral services,
-  and zero-config TLS on the Railway-issued domain. Fly.io was
-  considered and rejected: Fly's stronger primitives (multi-region,
-  Machines API) aren't needed at pilot scale, and Railway's
-  GitHub-native deploy flow halves the per-step glue at this stage.
+- **Vercel for the Python FastAPI recommender service** (since
+  Phase 3 Step 5.5, 2026-05-19). The `roadmodel-api` project runs
+  the same `app.main:app` ASGI handler on Fluid Compute, with
+  deploy-on-push and the same Let's Encrypt TLS posture as the web
+  tier. Replaced Railway after Railway's 2026-05-19 control-plane
+  outage coincided with [issue #86](https://github.com/nathanramoscfa/roadmodel/issues/86)'s
+  `ROADMODEL_INTERNAL_TOKEN` drift surfacing the
+  [project_railway_setup_gaps] surface. Consolidating onto Vercel
+  eliminates the cross-vendor shared-secret boundary entirely —
+  `staging.roadmodel.ai/api/recommend` is a Vercel rewrite to
+  `roadmodel-api.vercel.app/v1/recommend`; no bearer is sent because
+  no bearer is enforced server-side (Step 6 ships rate limiting +
+  Origin checks as the replacement defense).
 - **Supabase Pro for Postgres + Auth + Storage.** Pro tier — not
   Free — because Phase 4's audit log needs the row-count headroom
   and Phase 7's disaster-recovery posture relies on Supabase Pro's
@@ -84,31 +106,39 @@ lands the Next.js scaffold. Reconcile against the Vercel dashboard
 | Output directory     | `.next` (Next.js default; relative to `web/`)                         |
 | Install command      | `npm install` (default; runs in `web/`)                               |
 
-**Environments.** As of 2026-05-19, `roadmodel-web` is wired across
-three env scopes:
+**Environments.** As of 2026-05-19 (Step 5.5b cutover), `roadmodel-web`
+is wired across three env scopes:
 
-- **`preview`** (built-in; per-PR previews): all 5 web-tier vars set
-  — `NEXT_PUBLIC_SITE_URL`, `ROADMODEL_SERVICE_URL`, `SUPABASE_URL`,
-  `ROADMODEL_INTERNAL_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`.
+- **`preview`** (built-in; per-PR previews): `NEXT_PUBLIC_SITE_URL`,
+  `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
 - **`staging`** (custom env, mapped to `staging.roadmodel.ai`):
-  same 5 vars set.
-- **`production`** (built-in, tracks `main`): only `SUPABASE_URL`,
-  `ROADMODEL_INTERNAL_TOKEN` (Vercel→Railway shared secret, still
-  set so Step 6 can reuse it), and `SUPABASE_SERVICE_ROLE_KEY` are
-  set. `NEXT_PUBLIC_SITE_URL` and `ROADMODEL_SERVICE_URL` are
-  intentionally **deferred to Step 7**: the apex URL and the
-  Railway production service URL don't exist until the production
-  cut. [web/lib/env.ts](../web/lib/env.ts) marks the two Railway
-  vars `.optional()` so production builds don't fail during
-  Next.js page-data collection;
-  [`recommendOnServer`](../web/lib/api.ts) throws
-  `recommender_not_configured` at request time when either is
-  missing, and `/api/recommend` maps that to HTTP 502.
+  same three vars set.
+- **`production`** (built-in, tracks `main`): `SUPABASE_URL`,
+  `SUPABASE_SERVICE_ROLE_KEY`. `NEXT_PUBLIC_SITE_URL` is
+  intentionally **deferred to Step 7** (apex URL doesn't exist
+  until the production cut).
+- `ROADMODEL_SERVICE_URL` and `ROADMODEL_INTERNAL_TOKEN` were
+  **removed entirely in Step 5.5b** — the rewrite from
+  `staging.roadmodel.ai/api/recommend` to
+  `roadmodel-api.vercel.app/v1/recommend` is configured in
+  [web/vercel.json](../web/vercel.json) and needs no shared
+  secret. The `ROADMODEL_INTERNAL_TOKEN` entries still sitting on
+  `roadmodel-web` and `roadmodel-api` Vercel scopes can be deleted
+  out-of-band (`vercel env rm ROADMODEL_INTERNAL_TOKEN <env>`); the
+  code on both sides ignores them as of this commit.
 - `UPSTASH_REDIS_URL` and `UPSTASH_REDIS_TOKEN` are **not yet set
   on any Vercel env** — Upstash is provisioned in Phase 3 Step 6.
   `web/lib/env.ts` already marks them `.optional()` (PR #83);
   Step 6 must flip them back to `.min(1)` when the rate limiter
   lands.
+
+**`roadmodel-api` environments.** As of 2026-05-19, the Python
+project is wired across the standard three env scopes with five
+vars apiece: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
+`GOOGLE_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. The
+`ROADMODEL_INTERNAL_TOKEN` entry seeded in Step 5.5a is dead weight
+post-Step-5.5b — delete it out-of-band. Upstash vars get added in
+Step 6.
 
 **Resume checklist (Step 4) — closed 2026-05-19.**
 
@@ -129,7 +159,9 @@ and PR #85 (production-build hotfix relaxing
 `ROADMODEL_SERVICE_URL` / `ROADMODEL_INTERNAL_TOKEN` to `.optional()`
 in [web/lib/env.ts](../web/lib/env.ts) so production builds don't
 fail at "Collecting page data" while the production Railway
-service is deferred to Step 7).
+service is deferred to Step 7). The two deferred items below are
+**superseded by Step 5.5b** — see the [Step 5.5 resume
+checklist](#resume-checklist-step-55--closed-2026-05-19) below.
 
 - [x] Production deploy green on `main` after the PR #85 hotfix —
   deployment `roadmodel-n9clqlarq` Ready in 26s; the post-merge
@@ -142,68 +174,101 @@ service is deferred to Step 7).
   `roadmodel-608iaojr2`, target=`staging`, Ready in 47s.
 - [x] `staging.roadmodel.ai/recommend` returns 200 with the new
   two-column layout served by the Step 5 deployment.
-- [ ] Live `POST /api/recommend` returns a Haiku 4.5
-  recommendation in <5s. **Deferred to [issue #86](https://github.com/nathanramoscfa/roadmodel/issues/86)** —
-  attempted during close-out and reproduced HTTP 502 because
-  Railway returned `401 invalid_or_missing_bearer`. Root cause
-  is `ROADMODEL_INTERNAL_TOKEN` divergence between Vercel (preview
-  + `staging` + production) and Railway (staging). Token has never
-  been validated end-to-end — Step 3 healthz is unauthenticated and
-  Step 4 shipped no authenticated calls. Resolution blocked at
-  close-out by a Railway control-plane outage (CLI, MCP, GraphQL,
-  and all `railway.com` / `railway.app` HTTP endpoints unreachable).
-  See issue #86 for the full repro + resolution one-liners.
-- [ ] Browser submit from `/recommend` populates the output column
-  end-to-end. **Deferred to [issue #86](https://github.com/nathanramoscfa/roadmodel/issues/86)** —
-  blocked on the same token + Railway availability gate as the
-  POST verification above.
+- [x] Live `POST /api/recommend` returns a Haiku 4.5
+  recommendation. **Superseded by Step 5.5b** — instead of fixing
+  the Vercel↔Railway token alignment that broke at Step 5 close,
+  Step 5.5 retired the boundary entirely by moving FastAPI onto
+  Vercel. Live-POST evidence captured below in the [Step 5.5
+  resume checklist](#resume-checklist-step-55--closed-2026-05-19).
+- [x] Browser submit from `/recommend` populates the output column
+  end-to-end. **Superseded by Step 5.5b** — same supersession path.
+
+**Resume checklist (Step 5.5) — closed 2026-05-19.** Phase 3
+Step 5.5 consolidated the FastAPI recommender onto Vercel in two
+PRs: Step 5.5a (PR #88) added a new `roadmodel-api` Vercel project
+deploying `service/` on Fluid Compute alongside Railway; Step 5.5b
+(this PR) cut `staging.roadmodel.ai/api/recommend` over via a
+Vercel rewrite, deleted the Next.js proxy, dropped the
+`ROADMODEL_INTERNAL_TOKEN` shared secret, and tore Railway down.
+The Step 5 deferred items above resolve here.
+
+- [x] Step 5.5a: `roadmodel-api` Vercel project (id
+  `prj_GLyJj2J4Ch7Yr6TruBr6aD8jeD5E`) created with Root Directory
+  `service/`, framework `fastapi`, Python 3.12 / Fluid Compute.
+  `[tool.vercel] entrypoint = "app.main:app"` in
+  [service/pyproject.toml](../service/pyproject.toml).
+- [x] Step 5.5a: `roadmodel-api.vercel.app` returns 200 on
+  `POST /v1/recommend` with the `ROADMODEL_INTERNAL_TOKEN` bearer —
+  Claude Haiku 4.5 in ~20s (Anthropic-API bound, same shape as
+  Railway).
+- [x] Step 5.5b: [web/vercel.json](../web/vercel.json) rewrites
+  `/api/recommend` → `https://roadmodel-api.vercel.app/v1/recommend`.
+- [x] Step 5.5b: Next.js proxy `web/app/api/recommend/route.ts`,
+  `recommendOnServer` in [web/lib/api.ts](../web/lib/api.ts),
+  `ROADMODEL_SERVICE_URL` + `ROADMODEL_INTERNAL_TOKEN` fields in
+  [web/lib/env.ts](../web/lib/env.ts) — all removed.
+- [x] Step 5.5b: bearer auth dropped from FastAPI
+  ([service/app/main.py](../service/app/main.py) — `require_bearer`
+  dependency removed; `service/app/auth.py` deleted). The Vercel
+  rewrite can't inject headers, so the bearer would have 401'd every
+  browser POST; consolidating onto Vercel made the shared secret
+  redundant anyway (driver 3 of Step 5.5). Step 6 ships rate
+  limiting as the replacement defense.
+- [x] Step 5.5b: live `POST staging.roadmodel.ai/api/recommend`
+  returns Haiku 4.5 (evidence + screenshot pasted into issue #86
+  before close).
+- [x] Step 5.5b: browser submit from `/recommend` populates the
+  output column end-to-end against the live Vercel-API.
+- [x] Step 5.5b: Railway project `roadmodel-service` deleted;
+  `service/railway.json` and `service/Dockerfile` removed from the
+  repo; [project_railway_setup_gaps] memory marked historical.
+- [x] Step 5.5b: issue [#86](https://github.com/nathanramoscfa/roadmodel/issues/86)
+  closed with the verification evidence.
 
 ## Environment variables
 
-The full env var schema both tiers read. Step 3 wires the FastAPI
-consumers, Step 4 wires the Next.js consumers, Step 5 sends the
-`ROADMODEL_INTERNAL_TOKEN` from Next.js → FastAPI, Step 6 consumes
-the Upstash pair for the rate limiter. Documenting them all here
-is deliberate — Step 6 should not relitigate the Upstash decision.
+The full env var schema both Vercel projects read. Step 4 wires the
+Next.js consumers, Step 5.5 stands up the `roadmodel-api` Vercel
+project that consumes the AI provider keys, Step 6 consumes the
+Upstash pair for the rate limiter. Documenting them all here is
+deliberate — Step 6 should not relitigate the Upstash decision.
 
-> **Status (2026-05-18):** None of the application env vars below
-> are set on Railway staging or production yet — verify with
-> `railway variables --environment <staging|production>` before
-> assuming. The Phase 3 Step 3 deploy verification surfaced that
-> Step 2's claim of "set on both envs" was wrong. The first
-> staging deploy that needs them ([Step 3 healthz](#)) requires
-> at minimum `ROADMODEL_INTERNAL_TOKEN`, `ANTHROPIC_API_KEY`,
-> `OPENAI_API_KEY`, and `GOOGLE_API_KEY` to be set via Railway
-> dashboard → Variables tab on each environment (sourced from
-> Google Password Manager entries `roadmodel <VAR_NAME>`).
+> **Status (2026-05-19, post Step 5.5b):** `roadmodel-api` carries
+> the five AI/Supabase vars across preview + staging + production
+> scopes (seeded out-of-band during Step 5.5a from Google Password
+> Manager). `ROADMODEL_INTERNAL_TOKEN` was retired from both
+> projects' code in Step 5.5b — any leftover env entry can be
+> deleted out-of-band via `vercel env rm ROADMODEL_INTERNAL_TOKEN
+> <env>`.
 
-| Variable                       | Value source                | Consumed by                       | Must be set in    |
-| ------------------------------ | --------------------------- | --------------------------------- | ----------------- |
-| `ANTHROPIC_API_KEY`            | Railway env vars            | FastAPI service (Step 3)          | staging + prod    |
-| `OPENAI_API_KEY`               | Railway env vars            | FastAPI service (Step 3)          | staging + prod    |
-| `GOOGLE_API_KEY`               | Railway env vars            | FastAPI service (Step 3)          | staging + prod    |
-| `NEXT_PUBLIC_SITE_URL`         | Vercel env vars             | Next.js metadata + absolute links (Step 4) | staging + prod    |
-| `ROADMODEL_SERVICE_URL`        | Vercel env vars             | Next.js server routes → Railway (Step 5) | staging + prod    |
-| `ROADMODEL_INTERNAL_TOKEN`     | Vercel env vars + Railway env vars | Next.js routes (Step 5 send), FastAPI middleware (Step 3 verify) | staging + prod    |
-| `SUPABASE_URL`                 | Vercel env vars + Railway env vars | Next.js audit log (Step 6) + FastAPI (Step 3) | staging + prod    |
-| `SUPABASE_SERVICE_ROLE_KEY`    | Vercel env vars + Supabase dashboard → Railway env vars | Next.js audit log (Step 6); Railway service (never browser-exposed) | staging + prod    |
-| `UPSTASH_REDIS_URL`            | Vercel env vars + Railway env vars | Next.js rate limiter (Step 6); FastAPI (Step 6) | staging + prod    |
-| `UPSTASH_REDIS_TOKEN`          | Vercel env vars + Railway env vars | Next.js rate limiter (Step 6); FastAPI (Step 6) | staging + prod    |
+| Variable                       | Value source                          | Consumed by                                                   | Must be set in    |
+| ------------------------------ | ------------------------------------- | ------------------------------------------------------------- | ----------------- |
+| `ANTHROPIC_API_KEY`            | `roadmodel-api` Vercel env vars       | FastAPI service (Step 5.5a)                                   | preview + staging + prod |
+| `OPENAI_API_KEY`               | `roadmodel-api` Vercel env vars       | FastAPI service (Step 5.5a)                                   | preview + staging + prod |
+| `GOOGLE_API_KEY`               | `roadmodel-api` Vercel env vars       | FastAPI service (Step 5.5a)                                   | preview + staging + prod |
+| `NEXT_PUBLIC_SITE_URL`         | `roadmodel-web` Vercel env vars       | Next.js metadata + absolute links (Step 4)                    | staging + prod    |
+| `SUPABASE_URL`                 | Both Vercel projects' env vars        | Next.js audit log (Step 6) + FastAPI (Step 5.5a)              | preview + staging + prod |
+| `SUPABASE_SERVICE_ROLE_KEY`    | Both Vercel projects' env vars (Supabase dashboard → Vercel) | Next.js audit log (Step 6); FastAPI (Step 5.5a) | preview + staging + prod |
+| `UPSTASH_REDIS_URL`            | Both Vercel projects' env vars        | Next.js rate limiter + FastAPI rate limiter (Step 6)          | preview + staging + prod |
+| `UPSTASH_REDIS_TOKEN`          | Both Vercel projects' env vars        | Next.js rate limiter + FastAPI rate limiter (Step 6)          | preview + staging + prod |
 
 Rules:
 
-- The `SUPABASE_SERVICE_ROLE_KEY` is sensitive enough to bypass
-  RLS; it lives ONLY in the Railway service env (and the Supabase
-  dashboard itself). Never expose it to the Vercel web tier — the
+- The `SUPABASE_SERVICE_ROLE_KEY` bypasses RLS. It's set on both
+  Vercel projects' env-var scopes (server-side only) and the
+  Supabase dashboard itself. It must never appear in any
+  `NEXT_PUBLIC_*` var, browser bundle, or client-side render — the
   browser-facing public `anon` key handles client-side reads.
-- The `ROADMODEL_INTERNAL_TOKEN` is a shared secret between the
-  Next.js API routes and the FastAPI service so the FastAPI tier
-  can reject calls that didn't transit Next.js. Rotate it on
-  every Vercel ↔ Railway connectivity incident.
-- `*_API_KEY` values are committed to Railway env vars and the
-  local shell ONLY. They never appear in Vercel env vars — the
-  browser must never see provider keys, per
-  [private/ROADMAP.md](../private/ROADMAP.md) §3.
+- `*_API_KEY` values live ONLY on `roadmodel-api` Vercel env vars
+  and the maintainer's local shell. They never appear on
+  `roadmodel-web` env vars — the browser must never see provider
+  keys, per [private/ROADMAP.md](../private/ROADMAP.md) §3.
+- `ROADMODEL_INTERNAL_TOKEN` / `ROADMODEL_SERVICE_URL` were
+  **retired in Step 5.5b**. The cross-project boundary that used
+  to need them is now a Vercel rewrite — no shared secret, no
+  cross-vendor coordination. See the [Step 5.5 resume
+  checklist](#resume-checklist-step-55--closed-2026-05-19) for the
+  full cut-over evidence.
 - Local development reads the same schema from a gitignored
   `.env` at the repo root; [infra/.env.example](.env.example) is
   the template.
@@ -242,10 +307,9 @@ Failure modes the maintainer should watch for:
 - **Renewal failure.** Vercel emails the project owner; the
   manual fix is to re-issue from `Domains → Refresh certificate`.
 
-For the Railway and Supabase tiers the same auto-issue posture
-applies: Railway issues per-service certificates on its `*.up.railway.app`
-domain and on any custom domain configured; Supabase fronts all
-project URLs with its own managed TLS. No manual cert handling
+The same auto-issue posture applies to `roadmodel-api`
+(`*.vercel.app` and any custom domain configured) and Supabase
+(managed TLS in front of project URLs). No manual cert handling
 is required at this stage.
 
 ## Provider cost ceilings
@@ -365,27 +429,35 @@ named in it; do not move to step N+1 until step N's check passes.
    Deployments enabled. Record the project ID and team ID into
    the [Cloud projects](#cloud-projects) table.
 
-2. **Railway.** Create the `roadmodel-service` project under the
-   maintainer's Railway workspace on the **Hobby plan** ($5/mo —
-   the Trial credit auto-suspends after 30 days otherwise). When
-   you import `nathanramoscfa/roadmodel` as the project source,
-   Railway auto-creates one service inside a default `production`
-   environment. Railway models staging/production as **two
-   environments around a single service**, NOT as two separate
-   services — confirmed against Railway's UX 2026-05. Add the
-   second environment: top breadcrumb → environment dropdown →
-   **+ New Environment** → name `staging`, copy from
-   `production` so the service config carries over. Inside the
-   new `staging` environment, switch the service's source branch
-   from `main` to `staging`. The `staging` branch must exist on
-   origin first — if it doesn't, run `git push origin
-   main:refs/heads/staging` from a local clone (no commits to
-   `main` required; this just creates a remote pointer at main's
-   tip). Optionally enable "PR Deploys" (Railway moves this
-   toggle around — not blocking; revisit in Phase 3 Step 4 if
-   not exposed). Record the project ID, service ID, and **both**
-   environment IDs into the [Cloud projects](#cloud-projects)
-   table.
+2. **Vercel (roadmodel-api).** Create a second Vercel project
+   for the FastAPI recommender under the same team as
+   `roadmodel-web`. From the repo's `service/` directory:
+
+   ```bash
+   cd service && vercel link --yes --project roadmodel-api
+   ```
+
+   Set Root Directory = `service/`, framework = `fastapi`
+   (auto-detected from `service/pyproject.toml`), runtime = Python
+   3.12 / Fluid Compute (auto). The `[tool.vercel] entrypoint =
+   "app.main:app"` declaration in `service/pyproject.toml`
+   resolves to the ASGI handler. Add `staging` and `production`
+   custom environments (Settings → Environments) so this project
+   mirrors `roadmodel-web`'s scope layout. Seed env vars per
+   [Environment variables](#environment-variables) from Google
+   Password Manager entries `roadmodel <VAR_NAME>` via:
+
+   ```bash
+   pbpaste | tr -d '\r\n' | vercel env add VAR <env> --force --yes
+   ```
+
+   Record the project ID into the
+   [Cloud projects](#cloud-projects) table.
+
+   > **Historical:** Steps 5.5a / 5.5b superseded the original
+   > Railway provisioning step here. The Railway-era recipe lived
+   > in commits prior to Step 5.5b; consult git history if you
+   > need it for a forensic reason.
 
 3. **Supabase.** Create the `roadmodel-data` project on the
    **Pro** plan — not Free; Free's row caps and lack of daily
@@ -394,7 +466,7 @@ named in it; do not move to step N+1 until step N's check passes.
    key (Settings → API → service_role) into the
    [Cloud projects](#cloud-projects) table. **Do NOT commit the
    service-role key value itself anywhere** — it lives only in
-   Railway env vars and the Supabase dashboard.
+   the two Vercel projects' env vars and the Supabase dashboard.
 
 4. **DNS.** At the registrar (Namecheap), add a CNAME record
    for `staging.roadmodel.ai` pointing at Vercel's
@@ -484,8 +556,10 @@ Recovery steps the maintainer follows when a cap fires:
    surface)?
 3. For anomalous spend, the maintainer revokes the affected
    provider API key in the provider console, rotates a fresh
-   key into Railway env vars, redeploys the FastAPI service,
-   and files an incident note under
+   key onto `roadmodel-api` Vercel env vars (`vercel env add
+   <KEY> production --force --yes` from `service/`), redeploys
+   the FastAPI service (`vercel deploy --prod` from `service/`
+   or push to `main`), and files an incident note under
    `private/incidents/<UTC-date>-<provider>.md` for the
    post-mortem trail.
 4. For organic spend, the maintainer raises the cap **only
