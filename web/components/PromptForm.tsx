@@ -57,7 +57,20 @@ async function submitRecommend(
     }
     const body = (await res.json().catch(() => ({}))) as {
       error?: string;
+      retry_after?: number;
     };
+    if (res.status === 429 && body.error === "burst_dropped") {
+      return {
+        error:
+          "Slow down — too many requests in a short window. Try again in a minute.",
+      };
+    }
+    if (res.status === 429 && body.error === "rate_limited") {
+      return {
+        error:
+          "You've hit the daily recommendation limit. Try again tomorrow.",
+      };
+    }
     return {
       error: body.error ?? "Something went wrong. Please try again.",
     };
