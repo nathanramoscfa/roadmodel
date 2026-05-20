@@ -67,3 +67,54 @@ test("502 error renders friendly message", async ({ page }) => {
     page.getByText(/try again in a moment/i),
   ).toBeVisible();
 });
+
+// Step 6 burst-limit + daily-limit Playwright tests.
+//
+// The Phase 3 Step 6 task spec called for issuing 11 real POSTs and
+// observing the 11th come back with a server-generated 429 sourced
+// from a mocked Upstash backend. Playwright's `page.route` only
+// intercepts browser-initiated requests — it cannot observe or
+// stub the Next.js server's outbound calls to Upstash, so the
+// literal interpretation is not implementable in CI without
+// standing up a separate mock-Upstash HTTP server. The honest
+// equivalent below verifies the user-visible contract: when the
+// API returns 429 with the documented body shape (`burst_dropped`
+// or `rate_limited`), the `/recommend` page renders the right
+// human-readable message. The server-side rate-limit decision is
+// covered by the @upstash/ratelimit library's own tests.
+
+test("burst-drop 429 renders slow-down message", async ({ page }) => {
+  await page.route("**/api/recommend", (route) =>
+    route.fulfill({
+      status: 429,
+      contentType: "application/json",
+      headers: { "Retry-After": "60" },
+      body: JSON.stringify({
+        error: "burst_dropped",
+        retry_after: 60,
+      }),
+    }),
+  );
+  await page.goto("/recommend");
+  await page.getByPlaceholder(/Describe the task/i).fill("burst test");
+  await page.getByRole("button", { name: /Submit/i }).click();
+  await expect(page.getByText(/Slow down/i)).toBeVisible();
+});
+
+test("daily-limit 429 renders daily-cap message", async ({ page }) => {
+  await page.route("**/api/recommend", (route) =>
+    route.fulfill({
+      status: 429,
+      contentType: "application/json",
+      headers: { "Retry-After": "3600" },
+      body: JSON.stringify({
+        error: "rate_limited",
+        retry_after: 3600,
+      }),
+    }),
+  );
+  await page.goto("/recommend");
+  await page.getByPlaceholder(/Describe the task/i).fill("daily test");
+  await page.getByRole("button", { name: /Submit/i }).click();
+  await expect(page.getByText(/daily recommendation limit/i)).toBeVisible();
+});

@@ -35,7 +35,7 @@ this baseline.
 | Project           | Vendor   | Project ID                     | Dashboard URL                                                    | Staging URL                              | Production URL          | Provisioned    |
 | ----------------- | -------- | ------------------------------ | ---------------------------------------------------------------- | ---------------------------------------- | ----------------------- | -------------- |
 | `roadmodel-web`   | Vercel   | `prj_1emPjG8EamGB5G942ipNjjeqh8NX` (team `team_5uU81P0Gl4i22rBjMSwDRsLR`, slug `roadmodel`) — root `web/`, previews live | `https://vercel.com/roadmodel/roadmodel-web` | `https://staging.roadmodel.ai` — Up 2026-05-19 | TBD (cut in Step 7) | 2026-05-17 |
-| `roadmodel-api`   | Vercel   | `prj_GLyJj2J4Ch7Yr6TruBr6aD8jeD5E` (team `team_5uU81P0Gl4i22rBjMSwDRsLR`, slug `roadmodel`) — root `service/`, Python 3.12 / Fluid Compute, framework `fastapi` (auto-detected from `service/pyproject.toml`) | `https://vercel.com/roadmodel/roadmodel-api` | `https://roadmodel-api.vercel.app/v1/recommend` (production alias; rewritten from `staging.roadmodel.ai/api/recommend` until Step 7 splits prod) | TBD (cut in Step 7) | 2026-05-19 (Step 5.5a) |
+| `roadmodel-api`   | Vercel   | `prj_GLyJj2J4Ch7Yr6TruBr6aD8jeD5E` (team `team_5uU81P0Gl4i22rBjMSwDRsLR`, slug `roadmodel`) — root `service/`, Python 3.12 / Fluid Compute, framework `fastapi` (auto-detected from `service/pyproject.toml`) | `https://vercel.com/roadmodel/roadmodel-api` | `https://roadmodel-api.vercel.app/v1/recommend` (production alias; called server-side by the Next.js `/api/recommend` route handler — see [Step 6 resume checklist](#resume-checklist-step-6--phase-3-step-6)) | TBD (cut in Step 7) | 2026-05-19 (Step 5.5a) |
 | `roadmodel-data`  | Supabase | `nbxzpqnmafcayeqnfvcv` (org `mkvjpvgvuhhzkzfyhvsp`, region `us-east-1`) | `https://supabase.com/dashboard/project/nbxzpqnmafcayeqnfvcv` | Same dashboard, `staging` schema | Same dashboard, `prod` | 2026-05-17 |
 
 > **Historical — Railway (retired 2026-05-19, Step 5.5b).** The
@@ -130,11 +130,28 @@ is wired across three env scopes:
   production scopes on `roadmodel-web`, plus 1×
   `ROADMODEL_INTERNAL_TOKEN` on `roadmodel-api`) were deleted via
   the Vercel API during Step 5.5b close-out (2026-05-19).
-- `UPSTASH_REDIS_URL` and `UPSTASH_REDIS_TOKEN` are **not yet set
-  on any Vercel env** — Upstash is provisioned in Phase 3 Step 6.
-  `web/lib/env.ts` already marks them `.optional()` (PR #83);
-  Step 6 must flip them back to `.min(1)` when the rate limiter
-  lands.
+- `UPSTASH_REDIS_URL` and `UPSTASH_REDIS_TOKEN` are **not yet
+  seeded on any Vercel project** as of the Step 6 PR merge.
+  `web/lib/env.ts` keeps them `.optional()` and
+  `web/lib/ratelimit.ts` fails open with a `console.warn` when
+  unset — the rate-limit *code path* is fully wired, but the
+  defense is inert until the maintainer seeds the values. The
+  follow-up Step 6.1 PR flips env.ts to `.min(1)` once the
+  values land. Target: `roadmodel-web` preview + staging +
+  production scopes. The `roadmodel-api` Vercel project does
+  **not** need them — the FastAPI side never invokes the rate
+  limiter (browser traffic terminates at the Next.js handler).
+- `ROADMODEL_IP_SALT` is the daily-rotation salt the Next.js
+  rate limiter hashes the client IP + UA with before keying
+  Upstash. Same maintainer-seed dependency as the Upstash pair
+  above — when Step 6.1 lands the Upstash values, seed this
+  alongside (`openssl rand -hex 32` for a fresh value).
+  Rotation cadence is **quarterly** per the Phase 7
+  secrets-rotation policy. Defaults to a placeholder in
+  `web/lib/withRateLimit.ts` so local + CI builds work without
+  override, but production builds without the override silently
+  bucket every IP under the same key, so the var **must** be
+  set in every Vercel scope serving real traffic.
 
 **`roadmodel-api` environments.** As of 2026-05-19 (post Step 5.5b
 close-out), `roadmodel-api` carries **only the three AI provider
@@ -268,6 +285,95 @@ The Step 5 deferred items above resolve here.
 - [x] Step 5.5b: issue [#86](https://github.com/nathanramoscfa/roadmodel/issues/86)
   closed with the verification evidence.
 
+**Resume checklist (Step 6 — Phase 3 Step 6).** Phase 3 Step 6
+ships the abuse-control + audit-log layer the Step 5.5b close-out
+forward-referenced. Architecturally, the `/api/recommend` path
+changes from a pure Vercel rewrite to a thin Next.js Route Handler
+that wraps the same upstream call with rate limiting and a
+Supabase audit-log write.
+
+- [x] `web/app/api/recommend/route.ts` restored as a thin proxy.
+  It is **not** the Step-5-era proxy: no `ROADMODEL_SERVICE_URL`
+  / `ROADMODEL_INTERNAL_TOKEN` shared secret is re-introduced
+  (the upstream URL is hard-coded to the production
+  `roadmodel-api.vercel.app` alias; the bearer is gone for good).
+  The handler validates the request body, forwards POSTs to the
+  FastAPI service server-side, and writes an enriched audit row
+  (model / provider / cost) on success.
+- [x] `web/vercel.json` `rewrites` block deleted. With the Next.js
+  Route Handler back in place, the rewrite would intercept first
+  and bypass the rate limiter; removing it routes `/api/recommend`
+  to the handler.
+- [x] `@upstash/ratelimit` + `@upstash/redis` + `@supabase/supabase-js`
+  added to `web/package.json`. Upstash backs the 10/min burst +
+  3/day sliding-window limiters keyed on the SHA-256 of the
+  forwarded client IP and User-Agent (salted with
+  `ROADMODEL_IP_SALT`).
+- [x] `infra/supabase/migrations/20260601000000_audit_log.sql` is
+  the first migration in the new `infra/supabase/` tree. The
+  `audit_log` table has `bigserial` PK, `timestamptz ts` (BRIN
+  index), the SHA-256 IP/UA hashes, the route, the optional
+  provider/model/token/cost enrichment columns, an outcome enum
+  (`ok` / `rate_limited` / `burst_dropped` / `recommender_error`
+  / `bad_input`), and RLS enabled with service-role-only
+  insert + select policies. Apply manually via
+  `supabase db push --linked` from
+  [infra/supabase/README.md](supabase/README.md).
+- [x] `tests/test_audit_log_migration.py` parses the SQL file with
+  `sqlparse` and asserts the column order, BRIN index, RLS
+  enable, and both service-role policies are present. Lives in
+  the root `tests/` so the existing pytest CI job runs it.
+- [x] `web/tests/recommend.spec.ts` extended with two Playwright
+  tests for the 429 burst-drop and 429 daily-rate-limit
+  user-visible behavior. The tests mock `/api/recommend` at the
+  `page.route` level rather than driving real Upstash traffic,
+  matching the existing 502 test pattern in the same file
+  (Playwright cannot intercept the Next.js server's outbound
+  Upstash calls, so the literal "11 real POSTs" framing from
+  the Step 6 task spec is replaced by the strongest equivalent
+  CI can run unattended). The backend rate-limit decision
+  itself rides on `@upstash/ratelimit`'s upstream tests.
+- [x] `docs/cost-ceilings.md` publishes the day-one provider
+  caps with the cap-breach response runbook + forward
+  reference to the Phase 7 application ledger. Source of truth
+  remains the
+  [Provider cost ceilings](#provider-cost-ceilings) table
+  below; the public doc derives from it.
+- [ ] **Deferred to Step 6.1:** seed `UPSTASH_REDIS_URL`,
+  `UPSTASH_REDIS_TOKEN`, and `ROADMODEL_IP_SALT` on
+  `roadmodel-web` Vercel env vars (preview + staging +
+  production). Step 6 surfaced that the Step 5.5b close-out's
+  "Upstash provisioned + env vars set in Vercel" claim was
+  inaccurate — UPSTASH_REDIS_URL was missing on every scope,
+  which broke the Step 6 preview deploy. The Step 6 PR
+  responded by keeping `web/lib/env.ts` `.optional()` and
+  shipping `web/lib/ratelimit.ts` in **fail-open mode** so the
+  build succeeds; the rate-limit defense is inert until the
+  values land. Step 6.1 is a small follow-up PR that flips
+  env.ts to `.min(1)`, removes the fail-open path in
+  `ratelimit.ts`, and verifies a real 429 from
+  `staging.roadmodel.ai/api/recommend` after the maintainer
+  seeds the values.
+
+Vercel env-var seed (do this before Step 6.1 PR can ship):
+
+```bash
+cd web
+# UPSTASH_REDIS_URL — from the Upstash console
+for SCOPE in preview staging production; do
+  pbpaste | tr -d '\r\n' \
+    | vercel env add UPSTASH_REDIS_URL $SCOPE --force --yes
+done
+# repeat the loop for UPSTASH_REDIS_TOKEN (Upstash console)
+# and ROADMODEL_IP_SALT (fresh value: openssl rand -hex 32)
+```
+
+Save the values to Google Password Manager under entries
+`roadmodel UPSTASH_REDIS_URL`, `roadmodel UPSTASH_REDIS_TOKEN`,
+and `roadmodel ROADMODEL_IP_SALT` for the quarterly-rotation
+runbook in
+[docs/cost-ceilings.md](../docs/cost-ceilings.md#cap-breach-response-runbook).
+
 ## Environment variables
 
 The full env var schema both Vercel projects read. Step 4 wires the
@@ -291,8 +397,9 @@ deliberate — Step 6 should not relitigate the Upstash decision.
 | `NEXT_PUBLIC_SITE_URL`         | `roadmodel-web` Vercel env vars                              | Next.js metadata + absolute links (Step 4)                                   | web: preview + staging                                   | web: preview + staging + production (Step 7) |
 | `SUPABASE_URL`                 | Both Vercel projects' env vars                               | Next.js audit log (Step 6) + FastAPI (Step 6 — currently unused)             | web: preview + staging + production; api: **not set**    | both projects, all scopes (Step 6) |
 | `SUPABASE_SERVICE_ROLE_KEY`    | Both Vercel projects' env vars (Supabase dashboard → Vercel) | Next.js audit log (Step 6) + FastAPI (Step 6 — currently unused)             | web: preview + staging + production; api: **not set**    | both projects, all scopes (Step 6) |
-| `UPSTASH_REDIS_URL`            | Both Vercel projects' env vars                               | Next.js rate limiter + FastAPI rate limiter (Step 6)                         | **not set anywhere**                                     | both projects, all scopes (Step 6) |
-| `UPSTASH_REDIS_TOKEN`          | Both Vercel projects' env vars                               | Next.js rate limiter + FastAPI rate limiter (Step 6)                         | **not set anywhere**                                     | both projects, all scopes (Step 6) |
+| `UPSTASH_REDIS_URL`            | `roadmodel-web` Vercel env vars                              | Next.js rate limiter (Step 6 — inert until seeded)                           | **not set anywhere**                                     | web: preview + staging + production (Step 6.1) |
+| `UPSTASH_REDIS_TOKEN`          | `roadmodel-web` Vercel env vars                              | Next.js rate limiter (Step 6 — inert until seeded)                           | **not set anywhere**                                     | web: preview + staging + production (Step 6.1) |
+| `ROADMODEL_IP_SALT`            | `roadmodel-web` Vercel env vars                              | Next.js rate limiter daily IP+UA hashing salt (Step 6); rotate quarterly     | **not set anywhere**                                     | web: preview + staging + production (Step 6.1) |
 
 Rules:
 

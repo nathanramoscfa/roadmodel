@@ -11,8 +11,11 @@ const envSchema = z.object({
     .default("https://staging.roadmodel.ai"),
   SUPABASE_URL: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-  // Upstash vars stay optional until Phase 3 Step 6 provisions Upstash and
-  // ships the rate limiter; Step 6 must flip these to .min(1) when it lands.
+  // Optional until the maintainer seeds them on roadmodel-web Vercel
+  // env vars (preview + staging + production). When unset, the
+  // Step 6 rate limiter fails open with a startup warning — see
+  // web/lib/ratelimit.ts. Flip to .min(1) in the follow-up PR that
+  // lands the seeded values; same for ROADMODEL_IP_SALT.
   UPSTASH_REDIS_URL: z.string().optional(),
   UPSTASH_REDIS_TOKEN: z.string().optional(),
 });
