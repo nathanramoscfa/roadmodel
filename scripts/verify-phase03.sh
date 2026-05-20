@@ -773,7 +773,10 @@ run_post_matrix() {
   run_lighthouse || true
 
   if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
-    if gh pr checks; then
+    current_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || printf '')"
+    if [[ "${current_branch}" == "main" ]]; then
+      printf '[SKIP] Post: on main branch; gh pr checks only applies to feature branches with open PRs\n'
+    elif gh pr checks; then
       printf '[PASS] Post: gh pr checks succeeded for current branch\n'
       STEP_POST_PASS+=1
     else
