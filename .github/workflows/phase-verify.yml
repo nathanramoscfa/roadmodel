@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.phase == '03' && '3.12' || '3.11' }}
       - name: Run phase verify script (--fast)
         env:
           ROADMODEL_VERIFY_PYTHON: python
@@ -49,7 +49,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.phase == '03' && '3.12' || '3.11' }}
           # setup-python's built-in pip cache handles macOS
           # (~/Library/Caches/pip) and Linux (~/.cache/pip) paths
           # automatically — cleaner than a hand-rolled actions/cache.
