@@ -57,7 +57,7 @@ export function TryItNowTextarea() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-8 w-full max-w-xl">
+    <form onSubmit={handleSubmit} className="mx-auto mt-8 w-full max-w-xl text-left">
       <label htmlFor="try-task" className="sr-only">
         Describe your task
       </label>
