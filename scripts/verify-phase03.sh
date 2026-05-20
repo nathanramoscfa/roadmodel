@@ -87,6 +87,15 @@ declare -i STEP_POST_PASS=0 STEP_POST_FAIL=0
 declare -i V_AGG_PASS=0 V_AGG_FAIL=0
 FAILED_CHECKS=()
 
+web_ci_env() {
+  export NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-https://staging.roadmodel.ai}"
+  export SUPABASE_URL="${SUPABASE_URL:-https://ci-placeholder.supabase.co}"
+  export SUPABASE_SERVICE_ROLE_KEY="${SUPABASE_SERVICE_ROLE_KEY:-ci-placeholder-service-role-key}"
+  export UPSTASH_REDIS_URL="${UPSTASH_REDIS_URL:-https://ci-placeholder.upstash.io}"
+  export UPSTASH_REDIS_TOKEN="${UPSTASH_REDIS_TOKEN:-ci-placeholder-redis-token}"
+  export ROADMODEL_IP_SALT="${ROADMODEL_IP_SALT:-ci-placeholder-ip-salt}"
+}
+
 record_pass() {
   local n="$1"
   local desc="$2"
@@ -530,6 +539,7 @@ run_api_checks() {
 run_web_checks() {
   STEP_WEB_PASS=0
   STEP_WEB_FAIL=0
+  web_ci_env
   if npm --prefix web ci; then STEP_WEB_PASS+=1
   else STEP_WEB_FAIL+=1; fi
   if npm --prefix web run lint; then STEP_WEB_PASS+=1
@@ -543,6 +553,7 @@ run_web_checks() {
 run_ui_checks() {
   STEP_UI_PASS=0
   STEP_UI_FAIL=0
+  web_ci_env
   if npx --prefix web playwright install chromium; then STEP_UI_PASS+=1
   else STEP_UI_FAIL+=1; fi
   if npm --prefix web run test; then STEP_UI_PASS+=1
@@ -669,6 +680,7 @@ run_post_matrix() {
     printf '[SKIP] V3.3: ROADMODEL_SERVICE_URL unset; skipping live /healthz\n'
   fi
 
+  web_ci_env
   if npm --prefix web run build; then
     printf '[PASS] V4.2: npm --prefix web run build exited 0\n'
     STEP_POST_PASS+=1
@@ -677,6 +689,7 @@ run_post_matrix() {
     STEP_POST_FAIL+=1
   fi
 
+  web_ci_env
   if npx --prefix web playwright install chromium &&
     npm --prefix web run test; then
     printf '[PASS] V4.3: Playwright home suite passed\n'

@@ -29,6 +29,8 @@ jobs:
         with:
           python-version: "3.11"
       - name: Run phase verify script (--fast)
+        env:
+          ROADMODEL_VERIFY_PYTHON: python
         run: bash "scripts/verify-phase${{ matrix.phase }}.sh" --fast
 
   post:
@@ -120,6 +122,8 @@ jobs:
         run: npx playwright install --with-deps chromium
         working-directory: web
       - name: Run phase verify script (--post)
+        env:
+          ROADMODEL_VERIFY_PYTHON: python
         # `gh pr checks` inside --post requires gh auth, which is not
         # configured here (we deliberately don't export GH_TOKEN), so the
         # script skips it. Live recommend smoke is also skipped because
