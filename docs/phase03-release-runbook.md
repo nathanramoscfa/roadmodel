@@ -333,9 +333,18 @@ Release notes template (`/tmp/release-notes.md`):
 
 ## v0.3.0-phase-3 (Phase 3)
 
-- **Tag:** `v0.3.0-phase-3` — TBD after push (signed SSH).
-- **GitHub Release:** TBD
-- **Tag-push `release.yml` run:** TBD — expect `build` + `sign` only;
-  no TestPyPI / PyPI jobs (`-phase-` guard).
+- **Tag:** `v0.3.0-phase-3` — pushed 2026-05-20 from `main@80ecf6c`;
+  SSH-signed by maintainer.
+- **GitHub Release:**
+  [Phase 3 — roadmodel.ai live](https://github.com/nathanramoscfa/roadmodel/releases/tag/v0.3.0-phase-3)
+  (created 2026-05-20).
+- **Tag-push `release.yml` run:**
+  [Actions run 26173958719](https://github.com/nathanramoscfa/roadmodel/actions/runs/26173958719)
+  — `build` ✓, `sign` ✓; `testpypi-upload`, `verify-testpypi`,
+  `pypi-upload`, `github-release` all `skipped` as designed
+  (`-phase-` guard + `workflow_dispatch`-only gates). No PyPI
+  republish; OSS CLI `roadmodel` v0.2.0 unchanged.
 - **Production URL:** https://roadmodel.ai
-- **UptimeRobot production monitor:** TBD (record ID in infra README)
+- **UptimeRobot production monitor:** [`803118024`](https://dashboard.uptimerobot.com/monitors/803118024)
+  — `https://roadmodel.ai`, 5-min interval, maintainer email channel.
+  See [infra/README.md UptimeRobot monitors](../infra/README.md#uptimerobot-monitors).
