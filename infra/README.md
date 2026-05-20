@@ -48,8 +48,13 @@ this baseline.
 > Driver triad: outage signal + Vercel's 2026 first-class
 > Python/FastAPI support + eliminating the
 > `ROADMODEL_INTERNAL_TOKEN` / `ROADMODEL_SERVICE_URL` shared-secret
-> boundary. The Railway service was deleted in Step 5.5b alongside
-> `service/Dockerfile` and `service/railway.json`. The
+> boundary. The Railway-era files (`service/Dockerfile` and
+> `service/railway.json`) were removed from the repo in Step 5.5b.
+> Deletion of the Railway project itself is **pending the
+> resolution of Railway's 2026-05-19 control-plane outage** — the
+> service no longer receives traffic (the `web/vercel.json`
+> rewrite points at `roadmodel-api.vercel.app`), so the only
+> remaining impact is the Hobby plan billing line. The
 > [project_railway_setup_gaps] memory is **historical** as of this
 > step — no future provisioning step targets Railway.
 
@@ -122,23 +127,44 @@ is wired across three env scopes:
   `staging.roadmodel.ai/api/recommend` to
   `roadmodel-api.vercel.app/v1/recommend` is configured in
   [web/vercel.json](../web/vercel.json) and needs no shared
-  secret. The `ROADMODEL_INTERNAL_TOKEN` entries still sitting on
-  `roadmodel-web` and `roadmodel-api` Vercel scopes can be deleted
-  out-of-band (`vercel env rm ROADMODEL_INTERNAL_TOKEN <env>`); the
-  code on both sides ignores them as of this commit.
+  secret. All five stale entries (3× `ROADMODEL_INTERNAL_TOKEN` +
+  2× `ROADMODEL_SERVICE_URL` across the preview / staging /
+  production scopes on `roadmodel-web`, plus 1×
+  `ROADMODEL_INTERNAL_TOKEN` on `roadmodel-api`) were deleted via
+  the Vercel API during Step 5.5b close-out (2026-05-19).
 - `UPSTASH_REDIS_URL` and `UPSTASH_REDIS_TOKEN` are **not yet set
   on any Vercel env** — Upstash is provisioned in Phase 3 Step 6.
   `web/lib/env.ts` already marks them `.optional()` (PR #83);
   Step 6 must flip them back to `.min(1)` when the rate limiter
   lands.
 
-**`roadmodel-api` environments.** As of 2026-05-19, the Python
-project is wired across the standard three env scopes with five
-vars apiece: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
-`GOOGLE_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. The
-`ROADMODEL_INTERNAL_TOKEN` entry seeded in Step 5.5a is dead weight
-post-Step-5.5b — delete it out-of-band. Upstash vars get added in
-Step 6.
+**`roadmodel-api` environments.** As of 2026-05-19 (post Step 5.5b
+close-out), `roadmodel-api` carries **only the three AI provider
+keys** — `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY` —
+on the built-in `production` + `preview` scopes. **No `staging`
+custom environment exists on this project**; the
+`staging.roadmodel.ai/api/recommend` rewrite hits
+`roadmodel-api.vercel.app` (the production alias) regardless of
+which web-tier scope the request originated from. This works for
+Phase 3 because the FastAPI is environment-agnostic, but Step 7
+should re-evaluate when the production apex DNS cuts (likely by
+adding a `staging` custom env on `roadmodel-api` mirroring
+`roadmodel-web`'s setup, then updating
+[web/vercel.json](../web/vercel.json) to route per-env). Gaps the
+Phase 3 close-out documentation got ahead of reality on:
+
+- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are **not yet set
+  on `roadmodel-api`** — service/ doesn't read them today (no
+  `SUPABASE_*` references in `service/app/`). Step 6 wires them
+  when the rate limiter + audit log land on the FastAPI side.
+- Likewise `UPSTASH_REDIS_URL` / `UPSTASH_REDIS_TOKEN` are
+  Step-6-or-later additions on this project.
+- The `ROADMODEL_USER_CONTEXT` entry seeded during Step 5.5a's
+  Dockerfile-era provisioning (`/var/task/user-context.md`) was
+  also deleted in Step 5.5b close-out — `service/app/recommend.py`
+  bootstraps the user-context template to `/tmp` directly via
+  `_bootstrap_user_context()` and passes the path explicitly to
+  `load_config()`, so the env var was already inert.
 
 **Resume checklist (Step 4) — closed 2026-05-19.**
 
@@ -218,10 +244,28 @@ The Step 5 deferred items above resolve here.
   returns Haiku 4.5 (evidence + screenshot pasted into issue #86
   before close).
 - [x] Step 5.5b: browser submit from `/recommend` populates the
-  output column end-to-end against the live Vercel-API.
-- [x] Step 5.5b: Railway project `roadmodel-service` deleted;
-  `service/railway.json` and `service/Dockerfile` removed from the
-  repo; [project_railway_setup_gaps] memory marked historical.
+  output column end-to-end against the live Vercel-API (verified
+  via headless Chromium against `staging.roadmodel.ai/recommend`;
+  output column rendered model header + settings + free-tier
+  badge in 26.8s end-to-end).
+- [x] Step 5.5b: 6 stale Vercel env entries deleted via API
+  during close-out — 5 on `roadmodel-web` (3×
+  `ROADMODEL_INTERNAL_TOKEN`, 2× `ROADMODEL_SERVICE_URL`) + 1 on
+  `roadmodel-api` (`ROADMODEL_INTERNAL_TOKEN`). The Step 5.5a-era
+  `ROADMODEL_USER_CONTEXT` on `roadmodel-api` (Dockerfile-era,
+  superseded by `_bootstrap_user_context()` to `/tmp`) was also
+  pruned.
+- [x] Step 5.5b: `service/railway.json` and `service/Dockerfile`
+  removed from the repo; [project_railway_setup_gaps] memory
+  marked historical.
+- [ ] Step 5.5b: Railway project `roadmodel-service` deletion is
+  **pending Railway control-plane recovery** (active major outage
+  2026-05-19 — Google Cloud blocked Railway's account; CLI, MCP,
+  GraphQL, `railway.com` all unreachable). No functional impact:
+  the rewrite points at `roadmodel-api.vercel.app` and Railway
+  receives no traffic. When the control plane returns, run
+  `railway service delete roadmodel-service` (or delete via
+  dashboard) to stop the Hobby plan billing line.
 - [x] Step 5.5b: issue [#86](https://github.com/nathanramoscfa/roadmodel/issues/86)
   closed with the verification evidence.
 
@@ -233,24 +277,23 @@ project that consumes the AI provider keys, Step 6 consumes the
 Upstash pair for the rate limiter. Documenting them all here is
 deliberate — Step 6 should not relitigate the Upstash decision.
 
-> **Status (2026-05-19, post Step 5.5b):** `roadmodel-api` carries
-> the five AI/Supabase vars across preview + staging + production
-> scopes (seeded out-of-band during Step 5.5a from Google Password
-> Manager). `ROADMODEL_INTERNAL_TOKEN` was retired from both
-> projects' code in Step 5.5b — any leftover env entry can be
-> deleted out-of-band via `vercel env rm ROADMODEL_INTERNAL_TOKEN
-> <env>`.
+> **Status (2026-05-19, post Step 5.5b close-out):** The
+> `Set today` column below reflects the **actual** state of each
+> project's Vercel env vars, not the aspirational target. The
+> `Set today` and `Target scopes` columns will reconverge as
+> Step 6 wires Supabase + Upstash into the FastAPI tier and
+> Step 7 splits the `roadmodel-api` staging custom env.
 
-| Variable                       | Value source                          | Consumed by                                                   | Must be set in    |
-| ------------------------------ | ------------------------------------- | ------------------------------------------------------------- | ----------------- |
-| `ANTHROPIC_API_KEY`            | `roadmodel-api` Vercel env vars       | FastAPI service (Step 5.5a)                                   | preview + staging + prod |
-| `OPENAI_API_KEY`               | `roadmodel-api` Vercel env vars       | FastAPI service (Step 5.5a)                                   | preview + staging + prod |
-| `GOOGLE_API_KEY`               | `roadmodel-api` Vercel env vars       | FastAPI service (Step 5.5a)                                   | preview + staging + prod |
-| `NEXT_PUBLIC_SITE_URL`         | `roadmodel-web` Vercel env vars       | Next.js metadata + absolute links (Step 4)                    | staging + prod    |
-| `SUPABASE_URL`                 | Both Vercel projects' env vars        | Next.js audit log (Step 6) + FastAPI (Step 5.5a)              | preview + staging + prod |
-| `SUPABASE_SERVICE_ROLE_KEY`    | Both Vercel projects' env vars (Supabase dashboard → Vercel) | Next.js audit log (Step 6); FastAPI (Step 5.5a) | preview + staging + prod |
-| `UPSTASH_REDIS_URL`            | Both Vercel projects' env vars        | Next.js rate limiter + FastAPI rate limiter (Step 6)          | preview + staging + prod |
-| `UPSTASH_REDIS_TOKEN`          | Both Vercel projects' env vars        | Next.js rate limiter + FastAPI rate limiter (Step 6)          | preview + staging + prod |
+| Variable                       | Value source                                                 | Consumed by                                                                  | Set today                                                | Target scopes (when fully wired) |
+| ------------------------------ | ------------------------------------------------------------ | ---------------------------------------------------------------------------- | -------------------------------------------------------- | --------------------------------- |
+| `ANTHROPIC_API_KEY`            | `roadmodel-api` Vercel env vars                              | FastAPI service (Step 5.5a)                                                  | api: production + preview                                | api: production + preview + staging (Step 7) |
+| `OPENAI_API_KEY`               | `roadmodel-api` Vercel env vars                              | FastAPI service (Step 5.5a)                                                  | api: production + preview                                | api: production + preview + staging (Step 7) |
+| `GOOGLE_API_KEY`               | `roadmodel-api` Vercel env vars                              | FastAPI service (Step 5.5a)                                                  | api: production + preview                                | api: production + preview + staging (Step 7) |
+| `NEXT_PUBLIC_SITE_URL`         | `roadmodel-web` Vercel env vars                              | Next.js metadata + absolute links (Step 4)                                   | web: preview + staging                                   | web: preview + staging + production (Step 7) |
+| `SUPABASE_URL`                 | Both Vercel projects' env vars                               | Next.js audit log (Step 6) + FastAPI (Step 6 — currently unused)             | web: preview + staging + production; api: **not set**    | both projects, all scopes (Step 6) |
+| `SUPABASE_SERVICE_ROLE_KEY`    | Both Vercel projects' env vars (Supabase dashboard → Vercel) | Next.js audit log (Step 6) + FastAPI (Step 6 — currently unused)             | web: preview + staging + production; api: **not set**    | both projects, all scopes (Step 6) |
+| `UPSTASH_REDIS_URL`            | Both Vercel projects' env vars                               | Next.js rate limiter + FastAPI rate limiter (Step 6)                         | **not set anywhere**                                     | both projects, all scopes (Step 6) |
+| `UPSTASH_REDIS_TOKEN`          | Both Vercel projects' env vars                               | Next.js rate limiter + FastAPI rate limiter (Step 6)                         | **not set anywhere**                                     | both projects, all scopes (Step 6) |
 
 Rules:
 
