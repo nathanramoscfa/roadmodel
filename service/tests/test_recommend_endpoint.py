@@ -11,10 +11,8 @@ from fastapi.testclient import TestClient
 
 _MODULES_TO_RESET = (
     "app.main",
-    "app.auth",
     "app.recommend",
 )
-_AUTH_BEARER = "internal-test-secret"
 
 _RECOMMEND_DICT: dict[str, Any] = {
     "model": "Claude Sonnet 4.6",
@@ -27,11 +25,7 @@ _RECOMMEND_DICT: dict[str, Any] = {
 }
 
 
-def _load_main_module(
-    monkeypatch: pytest.MonkeyPatch,
-    token: str = _AUTH_BEARER,
-) -> ModuleType:
-    monkeypatch.setenv("ROADMODEL_INTERNAL_TOKEN", token)
+def _load_main_module(monkeypatch: pytest.MonkeyPatch) -> ModuleType:
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
     for module_name in _MODULES_TO_RESET:
         sys.modules.pop(module_name, None)
@@ -48,10 +42,6 @@ def _request_payload(task_description: str = "pick a model") -> dict[str, Any]:
     return {"task_description": task_description}
 
 
-def _auth_headers(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
-
-
 def test_healthz_returns_200(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("importlib.metadata.version", lambda _: "0.2.0")
 
@@ -64,25 +54,7 @@ def test_healthz_returns_200(client: TestClient, monkeypatch: pytest.MonkeyPatch
     assert body["roadmodel_version"] == "0.2.0"
 
 
-def test_recommend_requires_bearer(client: TestClient) -> None:
-    response = client.post("/v1/recommend", json=_request_payload())
-
-    assert response.status_code == 401
-    assert response.json()["detail"] == "invalid_or_missing_bearer"
-
-
-def test_recommend_rejects_bad_bearer(client: TestClient) -> None:
-    response = client.post(
-        "/v1/recommend",
-        json=_request_payload(),
-        headers=_auth_headers("wrong-token"),
-    )
-
-    assert response.status_code == 401
-    assert response.json()["detail"] == "invalid_or_missing_bearer"
-
-
-def test_recommend_accepts_good_bearer(
+def test_recommend_returns_200(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -106,11 +78,7 @@ def test_recommend_accepts_good_bearer(
 
     monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
 
-    response = client.post(
-        "/v1/recommend",
-        json=_request_payload(),
-        headers=_auth_headers(_AUTH_BEARER),
-    )
+    response = client.post("/v1/recommend", json=_request_payload())
 
     assert response.status_code == 200
     body = response.json()
@@ -127,7 +95,6 @@ def test_recommend_accepts_good_bearer(
         "settings": {"effort": "High", "thinking": "On"},
         "session_cost_estimate": None,
         "comparison_table": [],
-        "free_tier_label": None,
     }
 
 
@@ -135,7 +102,6 @@ def test_recommend_input_length_cap(client: TestClient) -> None:
     response = client.post(
         "/v1/recommend",
         json=_request_payload(task_description="a" * 20001),
-        headers=_auth_headers(_AUTH_BEARER),
     )
 
     assert response.status_code == 422
@@ -160,11 +126,7 @@ def test_response_schema_matches_phase2_contract(
 
     monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
 
-    response = client.post(
-        "/v1/recommend",
-        json=_request_payload(),
-        headers=_auth_headers(_AUTH_BEARER),
-    )
+    response = client.post("/v1/recommend", json=_request_payload())
 
     assert response.status_code == 200
     assert set(response.json().keys()) == {
@@ -173,5 +135,4 @@ def test_response_schema_matches_phase2_contract(
         "settings",
         "session_cost_estimate",
         "comparison_table",
-        "free_tier_label",
     }

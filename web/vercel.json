@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/api/recommend",
+      "destination": "https://roadmodel-api.vercel.app/v1/recommend"
+    }
+  ]
+}

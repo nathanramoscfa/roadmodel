@@ -9,12 +9,6 @@ const envSchema = z.object({
     .string()
     .min(1)
     .default("https://staging.roadmodel.ai"),
-  // Railway service vars stay optional until Phase 3 Step 7 provisions the
-  // production Railway service and cuts the apex DNS. recommendOnServer()
-  // throws at request time if either is missing, which the /api/recommend
-  // route maps to HTTP 502.
-  ROADMODEL_SERVICE_URL: z.string().optional(),
-  ROADMODEL_INTERNAL_TOKEN: z.string().optional(),
   SUPABASE_URL: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   // Upstash vars stay optional until Phase 3 Step 6 provisions Upstash and
@@ -36,8 +30,6 @@ function requireVar(name: string): string {
 export const env = envSchema.parse({
   NEXT_PUBLIC_SITE_URL:
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://staging.roadmodel.ai",
-  ROADMODEL_SERVICE_URL: process.env.ROADMODEL_SERVICE_URL,
-  ROADMODEL_INTERNAL_TOKEN: process.env.ROADMODEL_INTERNAL_TOKEN,
   SUPABASE_URL: requireVar("SUPABASE_URL"),
   SUPABASE_SERVICE_ROLE_KEY: requireVar("SUPABASE_SERVICE_ROLE_KEY"),
   UPSTASH_REDIS_URL: process.env.UPSTASH_REDIS_URL,
