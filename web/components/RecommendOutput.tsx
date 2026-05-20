@@ -36,9 +36,7 @@ export function RecommendOutput({ data }: RecommendOutputProps) {
       <SettingsList settings={data.settings} />
       <CostComparison comparisonTable={data.comparison_table} />
       <WhyDisclosure rationale={rationale} />
-      {data.free_tier_label ? (
-        <FreeTierLabel label={data.free_tier_label} />
-      ) : null}
+      <FreeTierLabel label="Free tier (Haiku 4.5) — upgrade for frontier models" />
     </div>
   );
 }
