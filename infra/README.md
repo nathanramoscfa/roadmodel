@@ -130,25 +130,26 @@ is wired across three env scopes:
   `ROADMODEL_INTERNAL_TOKEN` on `roadmodel-api`) were deleted via
   the Vercel API during Step 5.5b close-out (2026-05-19).
 - `UPSTASH_REDIS_URL` and `UPSTASH_REDIS_TOKEN` are seeded on
-  `roadmodel-web` **production + development + `staging` Custom
-  Environment** as of Step 7 close-out (2026-05-20) via the Vercel
-  Marketplace Upstash for Redis integration (which injects the
-  legacy `KV_REST_API_URL` / `KV_REST_API_TOKEN` pair) plus aliases
-  under the names `env.ts` and `ratelimit.ts` actually read.
-  `env.ts` still keeps them `.optional()`; a future small PR can
-  flip to `.min(1)` once the default `Preview` scope is also seeded.
-  Default `Preview` (ad-hoc PR branches) is **not yet seeded** — a
-  Vercel CLI bug in both 54.1.0 and 54.2.0 blocks non-interactive
-  CLI seeding of `preview` without a branch, and PR previews
-  fail-open via `.optional()`. The `roadmodel-api` Vercel project
+  `roadmodel-web` across **all four scopes** — Production, Preview,
+  Development, and the `staging` Custom Environment — as of Step 7
+  close-out (2026-05-20) via the Vercel Marketplace Upstash for
+  Redis integration (which injects the legacy `KV_REST_API_URL` /
+  `KV_REST_API_TOKEN` pair) plus aliases under the names `env.ts`
+  and `ratelimit.ts` actually read. Production + Development +
+  staging were seeded via `vercel env add`; default `Preview` was
+  seeded via the Vercel dashboard because the CLI bug in both
+  54.1.0 and 54.2.0 blocks `vercel env add NAME preview --value X
+  --yes --force` without a branch. With all four scopes populated,
+  a future small PR can flip `env.ts` from `.optional()` to
+  `.min(1)` for these vars. The `roadmodel-api` Vercel project
   does **not** need either var — the FastAPI side never invokes
   the rate limiter (browser traffic terminates at the Next.js
   handler).
 - `ROADMODEL_IP_SALT` is the daily-rotation salt the Next.js
   rate limiter hashes the client IP + UA with before keying
-  Upstash. Seeded alongside the Upstash pair on the same three
-  scopes (production + development + `staging` Custom Env) at
-  Step 7 close-out (`openssl rand -hex 32` value, stored in
+  Upstash. Seeded alongside the Upstash pair across all four
+  scopes (Production, Preview, Development, `staging` Custom Env)
+  at Step 7 close-out (`openssl rand -hex 32` value, stored in
   Google Password Manager as `roadmodel ROADMODEL_IP_SALT`).
   Rotation cadence is **quarterly** per the Phase 7
   secrets-rotation policy. Defaults to a placeholder in
@@ -397,15 +398,16 @@ and tags `v0.3.0-phase-3` (milestone marker — no PyPI republish).
 - [x] UptimeRobot monitor `803118024` for `https://roadmodel.ai`
   created 2026-05-20; recorded in
   [UptimeRobot monitors](#uptimerobot-monitors).
-- [x] Upstash trio seeded on **production + development + `staging`
-  Custom Environment** via the Vercel Marketplace Upstash integration
-  (which injects `KV_REST_API_*` legacy names) plus `UPSTASH_REDIS_URL`
-  / `UPSTASH_REDIS_TOKEN` aliases. Default `Preview` scope (ad-hoc PR
-  branches) remains unseeded — fail-opens via `env.ts` `.optional()`;
-  Vercel CLI bug in both 54.1.0 and 54.2.0 blocks non-interactive
-  CLI seeding of `preview` without a branch (see [project memory:
-  vercel-cli-preview-env-bug](../private/)). Use dashboard if full
-  parity becomes a requirement.
+- [x] Upstash trio seeded on **all four scopes** — Production,
+  Preview, Development, and `staging` Custom Environment — via the
+  Vercel Marketplace Upstash integration (which injects `KV_REST_API_*`
+  legacy names) plus `UPSTASH_REDIS_URL` / `UPSTASH_REDIS_TOKEN`
+  aliases. CLI seeded Production + Development + staging; the
+  default `Preview` scope was added via the Vercel dashboard
+  (Settings → Environment Variables → Edit existing row → also
+  check Preview) since the Vercel CLI bug in both 54.1.0 and
+  54.2.0 blocks non-interactive CLI seeding of `preview` without
+  a branch.
 - [x] Playwright (`home page`, `renders form`) + functional `curl`
   smoke + 4-request rate-limit sequence captured in
   [docs/phase03-release-runbook.md](../docs/phase03-release-runbook.md).
@@ -436,9 +438,9 @@ deliberate — Step 6 should not relitigate the Upstash decision.
 | `NEXT_PUBLIC_SITE_URL`         | `roadmodel-web` Vercel env vars                              | Next.js metadata + absolute links (Step 4)                                   | web: preview + staging + production                      | web: preview + staging + production |
 | `SUPABASE_URL`                 | Both Vercel projects' env vars                               | Next.js audit log (Step 6) + FastAPI (Step 6 — currently unused)             | web: preview + staging + production; api: **not set**    | both projects, all scopes (Step 6) |
 | `SUPABASE_SERVICE_ROLE_KEY`    | Both Vercel projects' env vars (Supabase dashboard → Vercel) | Next.js audit log (Step 6) + FastAPI (Step 6 — currently unused)             | web: preview + staging + production; api: **not set**    | both projects, all scopes (Step 6) |
-| `UPSTASH_REDIS_URL`            | `roadmodel-web` Vercel env vars (Marketplace Upstash + alias) | Next.js rate limiter (live since Step 7 close-out)                          | web: production + development + staging Custom Env (Step 7) | web: production + development + staging + default Preview (default Preview deferred — Vercel CLI bug) |
-| `UPSTASH_REDIS_TOKEN`          | `roadmodel-web` Vercel env vars (Marketplace Upstash + alias) | Next.js rate limiter (live since Step 7 close-out)                          | web: production + development + staging Custom Env (Step 7) | web: production + development + staging + default Preview (default Preview deferred — Vercel CLI bug) |
-| `ROADMODEL_IP_SALT`            | `roadmodel-web` Vercel env vars (generated `openssl rand -hex 32`) | Next.js rate limiter daily IP+UA hashing salt (live since Step 7 close-out); rotate quarterly | web: production + development + staging Custom Env (Step 7) | web: production + development + staging + default Preview (default Preview deferred — Vercel CLI bug) |
+| `UPSTASH_REDIS_URL`            | `roadmodel-web` Vercel env vars (Marketplace Upstash + alias) | Next.js rate limiter (live since Step 7 close-out)                          | web: production + preview + development + staging Custom Env (Step 7) | web: production + preview + development + staging |
+| `UPSTASH_REDIS_TOKEN`          | `roadmodel-web` Vercel env vars (Marketplace Upstash + alias) | Next.js rate limiter (live since Step 7 close-out)                          | web: production + preview + development + staging Custom Env (Step 7) | web: production + preview + development + staging |
+| `ROADMODEL_IP_SALT`            | `roadmodel-web` Vercel env vars (generated `openssl rand -hex 32`) | Next.js rate limiter daily IP+UA hashing salt (live since Step 7 close-out); rotate quarterly | web: production + preview + development + staging Custom Env (Step 7) | web: production + preview + development + staging |
 
 Rules:
 
