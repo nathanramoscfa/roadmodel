@@ -111,9 +111,7 @@ def test_migration_file_exists() -> None:
 def test_create_table_declares_all_columns_in_order() -> None:
     sql = _read_sql()
     statements = _statements(sql)
-    create_stmts = [
-        s for s in statements if re.match(r"(?i)^\s*create\s+table\b", s)
-    ]
+    create_stmts = [s for s in statements if re.match(r"(?i)^\s*create\s+table\b", s)]
     assert len(create_stmts) == 1, (
         f"expected exactly one create-table statement, found {len(create_stmts)}"
     )
