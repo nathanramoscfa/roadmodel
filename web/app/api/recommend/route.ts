@@ -44,12 +44,29 @@ const handler = async (req: Request): Promise<Response> => {
     return NextResponse.json({ error: "bad_input" }, { status: 400 });
   }
 
+  const taskDescription = (body as { task_description: string })
+    .task_description;
+  const incomingContext =
+    typeof body === "object" &&
+    body !== null &&
+    typeof (body as { context?: unknown }).context === "object" &&
+    (body as { context?: unknown }).context !== null
+      ? ((body as { context: Record<string, unknown> }).context ?? {})
+      : {};
+  const upstreamPayload = {
+    task_description: taskDescription,
+    context: {
+      ...incomingContext,
+      force_provider: "anthropic-haiku-4-5",
+    },
+  };
+
   let upstream: Response;
   try {
     upstream = await fetch(RECOMMENDER_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(upstreamPayload),
     });
   } catch (err) {
     auditFor(req, "recommender_error", {
