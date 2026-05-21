@@ -417,8 +417,8 @@ launch, not a side effect of any other step.
     `web/app/layout.tsx`.
   - Replaces `public/robots.txt` Disallow with the
     launch-mode policy (Allow `/`, Disallow `/api/*`).
-  - Removes the `SITE_PASSWORD` env var from all Vercel
-    scopes on `roadmodel-web`.
+  - Removes the `SITE_PASSWORD` env var from all hosting
+    environments.
   - Submits the sitemap to Google Search Console (and Bing
     Webmaster Tools if cost-free).
 - Post-lift monitoring (24 hours minimum):
@@ -452,10 +452,11 @@ launch, not a side effect of any other step.
 - The pre-launch site gate has been lifted via a deliberate
   Public-Readiness-Gate PR: middleware and noindex removed,
   `robots.txt` set to launch-mode policy, `SITE_PASSWORD`
-  env var purged from all Vercel scopes, sitemap submitted to
-  Search Console, attribution and copy audits complete, and at
-  least three external beta testers have validated the gated
-  experience end-to-end with no outstanding blockers.
+  env var purged from all hosting environments, sitemap
+  submitted to Search Console, attribution and copy audits
+  complete, and at least three external beta testers have
+  validated the gated experience end-to-end with no
+  outstanding blockers.
 
 ---
 
