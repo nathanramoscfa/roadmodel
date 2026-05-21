@@ -189,6 +189,41 @@ batch / asynchronous, not latency-sensitive. Apply these rules:
 
 ---
 
+## Allowed jurisdictions
+
+The `<jurisdiction-context>` block in
+[`model-selector.txt`](model-selector.txt) drives this filter — read
+its preamble first for the full rationale and the list of valid
+codes. Selector Step 0 (`<selection-algorithm>`) drops every model
+whose `jurisdiction` attribute is not in this allowed list before
+quality scoring; `<access-selection>` Step A0 mirrors the same
+filter on `<method>` `provider-jurisdiction` values.
+
+**Allowed jurisdictions (in this file's user, today):**
+
+`us, eu, uk, ca, au, jp, kr`
+
+This is the default "five eyes plus close-aligned democracies"
+baseline. Adjust by:
+
+- **Widening** — add additional region codes to allow more
+  providers (e.g., append `cn` to allow Moonshot's Kimi K2.5;
+  append `ru` if Russian-HQ providers ever appear on Cursor's
+  pricing page).
+- **Narrowing** — remove codes to restrict further (e.g., drop
+  `eu` if your compliance posture only allows US providers).
+
+Note: `unknown` is treated as forbidden under the default allowed
+list — newly-auto-added models receive `jurisdiction="unknown"`
+until the maintainer fills them in. If you explicitly want to
+allow unverified models, add `unknown` to the list above.
+
+When the filter eliminates the otherwise-best model, the selector's
+output MUST disclose the substitution in its RATIONALE — silent
+filters are worse than transparent ones.
+
+---
+
 ## How to update this file
 
 Hand-edit this file when a subscription is added, renewed at a different

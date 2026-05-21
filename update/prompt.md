@@ -71,6 +71,18 @@ Source of truth: the Cursor pricing page.
     - `pricing-notes`: copy verbatim from the cost-scale row's Notes
       column (the same invariant that the final-pass reconciliation
       enforces).
+    - `jurisdiction`: derive from the cost-scale "Provider
+      Jurisdictions" reference table by matching the model's
+      cost-scale-table-header provider (e.g., "API Pool — Anthropic
+      (Claude)" → `us`; "API Pool — Moonshot" → `cn`). When the
+      provider-header-to-jurisdiction mapping is unambiguous, set
+      `jurisdiction="<code>"`; when ambiguous (a combined header
+      like "API Pool — xAI / Moonshot" mentions multiple providers,
+      or a new provider HQ isn't in the Provider Jurisdictions
+      table yet), set `jurisdiction="unknown"` and emit a
+      `jurisdiction unknown: <id> (provider <name>; add to
+      Provider Jurisdictions table)` warning so the maintainer
+      can fill it in.
     - `best-for`: a one-sentence placeholder summarizing the price
       tier and provider, e.g. "Auto-added cheap-tier <provider>
       model; pending editorial best-for refinement." The maintainer
@@ -78,6 +90,17 @@ Source of truth: the Cursor pricing page.
   Emit a warning of the form
   `model auto-added to <model-options>: <id> (tier-* ratings need editorial review)`
   for every model added this way, so the PR description surfaces them.
+
+- Routing meta-models (Cursor's "Auto" / "Premium" modes; analogous
+  routers from other providers) are NOT recommendable engines in
+  this catalog — see `<jurisdiction-context>` in `model-selector.txt`
+  for the rationale. If a Cursor pricing-page row exists for a
+  routing meta-model, document it in `model-tier-cost-scale.md`'s
+  price tables for reference (the Auto + Composer Pool table is
+  the canonical home for Cursor's routing-pool billing rate), but
+  do NOT add the routing model id to `<model-options>` of
+  `model-selector.txt`. If the prior `<model-options>` snapshot
+  contains a routing model id (legacy state), remove it.
 - If a model is REMOVED from `model-tier-cost-scale.md` (per the
   removal rule above), also remove its `<model …/>` entry from
   `<model-options>` and its id from every `<method>` element's
@@ -293,9 +316,11 @@ input tokens"). They surface material decision-relevant information.
 - If the Cursor pricing source failed to fetch this run, KEEP every
   existing `Notes` cell and `pricing-notes` attribute verbatim and
   add a warning. Never invent or paraphrase notes.
-- For `premium` and `auto` (Cursor-managed routing modes that have no
-  direct Cursor pricing row), preserve their existing `pricing-notes`
-  verbatim — they describe routing behavior, not API rates.
+- Routing meta-models (`premium`, `auto`) are no longer enumerated in
+  `<model-options>` (see the "Routing meta-models" rule in the
+  Pricing section). The earlier preservation rule for their
+  `pricing-notes` is moot; if you encounter a `<model id="premium">`
+  or `<model id="auto">` element in a stale snapshot, remove it.
 
 ### Final-pass invariant: cost-scale `Notes` ≡ selector `pricing-notes`
 
@@ -533,9 +558,10 @@ tiers currently in use: `flagship`, `mini`, `nano`, `codex`, `haiku`,
 - `gpt-5.3-codex` and a future `gpt-5.4-codex` — same series (both
   OpenAI codex); a non-codex flagship never supersedes a codex.
 
-Routing models (`premium`, `auto`) are not real models and are never
-subject to series supersession — preserve them unless they disappear
-from the Cursor pricing page.
+Routing meta-models (`premium`, `auto`) are no longer enumerated
+in `<model-options>` — this supersession rule does not apply to
+them. If a stale snapshot contains them, remove per the routing-
+meta-model rule in the Pricing section.
 
 If the series relationship is ambiguous (a brand-new variant tier,
 unclear vendor lineage, or the predecessor exists at a different

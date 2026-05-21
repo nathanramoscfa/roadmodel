@@ -129,6 +129,7 @@ def _parse_models(selector_text: str) -> list[dict[str, Any]]:
                     "cache_read_per_1m": None,
                     "tier_cost": tier_cost,
                     "tiers": tiers,
+                    "jurisdiction": attrs.get("jurisdiction", "unknown"),
                     "headline_benchmarks": attrs.get("headline-benchmarks", ""),
                     "pricing_notes": attrs.get("pricing-notes", ""),
                     "best_for": attrs.get("best-for", ""),
@@ -154,6 +155,9 @@ def _parse_access_methods(selector_text: str) -> list[dict[str, Any]]:
                 "id": attrs.get("id", ""),
                 "name": attrs.get("name", ""),
                 "provider": attrs.get("provider", ""),
+                "provider_jurisdiction": attrs.get(
+                    "provider-jurisdiction", "unknown"
+                ),
                 "billing": attrs.get("billing", ""),
                 "requires": attrs.get("requires", ""),
                 "supports_models": sorted(supports),
