@@ -31,6 +31,7 @@ PROMPT_PATH = REPO_ROOT / "update" / "prompt.md"
 REQUIRED_MODEL_ATTRS = (
     "id",
     "name",
+    "jurisdiction",
     "input-price-per-1m",
     "output-price-per-1m",
     "tier-coding",
@@ -45,6 +46,18 @@ REQUIRED_MODEL_ATTRS = (
     "best-for",
 )
 VALID_TIER_COSTS = {"very-high", "high", "medium", "low"}
+VALID_JURISDICTIONS = {
+    "us",
+    "eu",
+    "uk",
+    "ca",
+    "au",
+    "jp",
+    "kr",
+    "cn",
+    "ru",
+    "unknown",
+}
 COST_SCALE_REQUIRED_COLUMNS = (
     "Model",
     "Input",
@@ -158,6 +171,58 @@ def test_tier_groupings_use_known_cost_values() -> None:
     unknown = seen_costs - VALID_TIER_COSTS
     assert not unknown, (
         f"Unknown <tier cost='...'> values: {unknown}; expected subset of {VALID_TIER_COSTS}"
+    )
+
+
+def test_every_model_jurisdiction_is_valid() -> None:
+    """Every <model> jurisdiction attribute must use a known code from
+    VALID_JURISDICTIONS. Catches typos and unmapped new providers that
+    slipped past the auto-fill rule in update/prompt.md.
+    """
+    failures: list[str] = []
+    for _, attrs in _parse_models():
+        sel_id = attrs.get("id", "<unknown>")
+        jurisdiction = attrs.get("jurisdiction", "")
+        if jurisdiction not in VALID_JURISDICTIONS:
+            failures.append(
+                f"<model id='{sel_id}'> jurisdiction='{jurisdiction}' "
+                f"not in {sorted(VALID_JURISDICTIONS)}"
+            )
+    assert not failures, "Jurisdiction code regressions:\n  " + "\n  ".join(failures)
+
+
+def test_every_method_provider_jurisdiction_is_valid() -> None:
+    """Every <method> provider-jurisdiction attribute must use a known
+    code. Mirrors test_every_model_jurisdiction_is_valid for the
+    access-methods block.
+    """
+    text = SELECTOR_PATH.read_text()
+    access_match = _ACCESS_METHODS_RE.search(text)
+    assert access_match, "<access-methods>...</access-methods> block not found"
+    failures: list[str] = []
+    for method_m in _METHOD_RE.finditer(access_match.group(1)):
+        attrs = dict(_ATTR_RE.findall(method_m.group(1)))
+        method_id = attrs.get("id", "<unknown>")
+        jurisdiction = attrs.get("provider-jurisdiction", "")
+        if jurisdiction not in VALID_JURISDICTIONS:
+            failures.append(
+                f"<method id='{method_id}'> provider-jurisdiction='{jurisdiction}' "
+                f"not in {sorted(VALID_JURISDICTIONS)}"
+            )
+    assert not failures, "Method jurisdiction code regressions:\n  " + "\n  ".join(failures)
+
+
+def test_no_routing_meta_models_in_options() -> None:
+    """Routing meta-models (auto, premium) are NOT enumerated in
+    <model-options> as of 2026-05-21 — see <jurisdiction-context>.
+    Catches accidental re-addition by an Opus auto-add or hand-edit.
+    """
+    forbidden = {"auto", "premium"}
+    ids = {attrs.get("id", "") for _, attrs in _parse_models()}
+    leaked = forbidden & ids
+    assert not leaked, (
+        f"Routing meta-models re-introduced into <model-options>: {leaked}. "
+        f"See update/prompt.md 'Routing meta-models' rule."
     )
 
 
