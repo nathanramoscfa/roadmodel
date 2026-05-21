@@ -98,13 +98,20 @@ table and surface material cost / availability / capability constraints.
 | GPT-5.5            | $5.00 | –           | $0.50      | $30.00 | Very High | Requires Max Mode on request-based plans; Agentic and reasoning capabilities; More token-efficient than GPT-5.4 on comparable tasks; Improved persistence on long-running tasks; Fast mode is available at higher rates; Long context (Max Mode) supports up to 1M tokens with 2x input pricing |
 
 
-### API Pool — xAI / Moonshot
+### API Pool — xAI
 
 
 | Model     | Input | Cache Write | Cache Read | Output | Tier | Notes |
 | --------- | ----- | ----------- | ---------- | ------ | ---- | ----- |
 | Grok 4.20 | $2.00 | –           | $0.20      | $6.00  | Low  | Hidden by default; The cost is 2x when the input exceeds 200k tokens |
 | Grok 4.3  | $1.25 | –           | $0.20      | $2.50  | Low  | Requires Max Mode on request-based plans |
+
+
+### API Pool — Moonshot
+
+
+| Model     | Input | Cache Write | Cache Read | Output | Tier | Notes |
+| --------- | ----- | ----------- | ---------- | ------ | ---- | ----- |
 | Kimi K2.5 | $0.60 | –           | $0.10      | $3.00  | Low  | Hidden by default |
 
 
@@ -188,24 +195,30 @@ appear here.
 | gemini-3-pro     | $12.00  | Medium       | Medium       | ✓      |
 | gpt-5            | $10.00  | Medium       | Medium       | ✓      |
 | gpt-5.1-codex    | $10.00  | Medium       | Medium       | ✓      |
-| premium          | N/A*    | Medium       | Medium       | ✓      |
 | composer-2       | $2.50   | Low          | Low          | ✓      |
 | composer-2.5     | $2.50   | Low          | Low          | ✓      |
 | gemini-2.5-flash | $2.50   | Low          | Low          | ✓      |
 | gemini-3-flash   | $3.00   | Low          | Low          | ✓      |
 | grok-4.3         | $2.50   | Low          | Low          | ✓      |
 | kimi-k2.5        | $3.00   | Low          | Low          | ✓      |
-| auto             | ~$6.00* | Low          | Low          | ✓      |
 | claude-4.5-haiku | $5.00   | Low          | Low          | ✓      |
 | gpt-5-mini       | $2.00   | Low          | Low          | ✓      |
 | gpt-5.4-mini     | $4.50   | Low          | Low          | ✓      |
 | gpt-5.4-nano     | $1.25   | Low          | Low          | ✓      |
 
 
-*`premium` and `auto` are Cursor-managed routing modes without a fixed output
-price. They are classified by their intended use position (premium = strongest
-available routing; auto = cost-efficient routing at the Auto + Composer pool
-rate of $6.00/M output).
+Routing meta-models (Cursor's "Auto" / "Premium" modes; analogous
+routers from other providers) are intentionally NOT enumerated in
+`docs/model-selector.txt` `<model-options>`. The catalog tracks fixed-
+engine models only — a routing model's benchmarks, jurisdiction, and
+cost are by construction unknowable in advance, which conflicts with
+the selector's per-model tier ratings and the jurisdiction filter
+(see `<jurisdiction-context>` in `docs/model-selector.txt` for the
+rationale). The "Auto + Composer Pool" table at the top of this
+document continues to document Cursor's billing-pool rate for
+reference, since that rate determines how Composer 2 / Composer 2.5
+calls bill against the pool — but the `auto` and `premium` model
+ids no longer appear as recommendable engines.
 
 ## Recently Added / Updated Models
 
@@ -221,3 +234,45 @@ rate of $6.00/M output).
 | gpt-5.1-codex    | $10.00 | Medium | New — added 2026-05-21; earlier-generation Codex variant at $10/M output                                                    |
 | composer-2.5     | $2.50  | Low    | New — added 2026-05-21; Composer 2 successor (same output price, equal-output-price replacement rule)                       |
 | kimi-k2.5        | $3.00  | Low    | New — added 2026-05-21; Moonshot's Kimi K2.5 (routed via Cursor pool; no direct Moonshot access method enumerated yet)      |
+| auto             | —      | —      | REMOVED 2026-05-21; Cursor-managed routing meta-model. Opaque routing conflicts with per-model tier ratings + jurisdiction filter |
+| premium          | —      | —      | REMOVED 2026-05-21; Cursor-managed routing meta-model. Same rationale as `auto` removal                                     |
+
+
+---
+
+## Provider Jurisdictions
+
+The selector's [`<jurisdiction-context>`](model-selector.txt) filter
+consumes this reference table when applying the user's allowed-
+jurisdictions list. Each row maps a provider HQ to an ISO-3166-1
+alpha-2-style code; the `jurisdiction` attribute on every
+`<model>` in `<model-options>` and the `provider-jurisdiction`
+attribute on every `<method>` in `<access-methods>` derive from
+this table.
+
+
+| Provider HQ name              | Jurisdiction code | Models in catalog                                                                                                       |
+| ----------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Anthropic (San Francisco, US) | `us`              | opus-4.7, sonnet-4.6, claude-4.5-haiku                                                                                  |
+| OpenAI (San Francisco, US)    | `us`              | gpt-5.5, gpt-5.4, gpt-5.3-codex, gpt-5.2, gpt-5.1-codex, gpt-5, gpt-5.4-mini, gpt-5.4-nano, gpt-5-mini                  |
+| Google (Mountain View, US)    | `us`              | gemini-3.1-pro, gemini-3-pro, gemini-3-flash, gemini-2.5-flash                                                          |
+| xAI (Palo Alto, US)           | `us`              | grok-4.3                                                                                                                |
+| Cursor (San Francisco, US)    | `us`              | composer-2, composer-2.5 — note: base weights for these Composer models derive from Moonshot's Kimi K2 series; Cursor's operator status determines the jurisdiction code per `<jurisdiction-context>` (data flow governed by Cursor's privacy policy and US law) |
+| Moonshot AI (Beijing, CN)     | `cn`              | kimi-k2.5                                                                                                               |
+
+
+Notes on the mapping:
+
+- The jurisdiction code reflects the **operator** — the entity whose
+  terms govern the data flow when a call is placed — not the base-
+  weight origin. Composer 2 / Composer 2.5 are `us` because Cursor
+  operates them; the Moonshot lineage is disclosed in the model's
+  `best-for` for users whose compliance posture cares about base-
+  weight origin.
+- Newly-detected providers default to `unknown` per
+  [`update/prompt.md`](../update/prompt.md)'s auto-add rule;
+  maintainer fills them in editorially after one refresh cycle.
+- This table is the source of truth — the per-model `jurisdiction`
+  attribute and the per-method `provider-jurisdiction` attribute
+  in `model-selector.txt` MUST match the codes in this table
+  byte-for-byte. CI tests enforce the cross-doc invariant.
