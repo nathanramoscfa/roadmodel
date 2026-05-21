@@ -57,7 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
     task_description: taskDescription,
     context: {
       ...incomingContext,
-      force_provider: "anthropic-haiku-4-5",
+      force_provider: "google-gemini-2.5-flash",
     },
   };
 
