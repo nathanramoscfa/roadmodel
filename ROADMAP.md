@@ -55,7 +55,7 @@ phases 1 and 2 require zero cloud spend.
 | Tier            | /recommend   | /roadmap          | Model class                                | Exports                       | History       |
 |-----------------|--------------|-------------------|--------------------------------------------|-------------------------------|---------------|
 | Anonymous web   | 3/day per IP | Soft sign-up wall | Cheap (Haiku 4.5 / Flash)                  | None                          | No            |
-| Free signed-in  | Capped       | Capped            | Cheap (rec) / mid (roadmap)                | MD                            | Yes (cloud)   |
+| Free signed-in  | Capped       | Capped            | Cheap throughout (rec + roadmap)           | MD                            | Yes (cloud)   |
 | Paid Pro hosted | Unlimited*   | Unlimited*        | Frontier (Sonnet 4.6 default; Opus opt-in) | MD / HTML / PDF / DOCX + deck | Yes (cloud)   |
 | OSS CLI + MCP   | Unlimited    | Repo-aware (MCP)  | Any (BYO API key)                          | MD                            | Local files   |
 
@@ -337,9 +337,19 @@ builder with live preview and markdown export.
 - Conversation and resulting roadmap saved to the user's history.
 
 #### 4.4 Model tiering scaffold
-- Free signed-in tier uses a mid-tier model (cost-aware).
+- Free signed-in tier uses a cheap-tier model (cost-aware) with
+  a minimum-tier relaxation from selector A to B for free-tier
+  deployment economics; the Step 4 dogfooding gate verifies
+  quality is acceptable at deployed scale, and FAIL escalates
+  to the planning-A selector-strict pick within the same
+  provider family.
 - Frontier model is feature-flagged off; payment gates it in
   Phase 5.
+- Jurisdiction filter applies by default: the recommender drops
+  models whose provider HQ is outside the user's allowed
+  jurisdictions list (default `[us, eu, uk, ca, au, jp, kr]`).
+  Users widen the list explicitly in onboarding or `/account`
+  to allow restricted-jurisdiction models.
 
 #### 4.5 First-session onboarding
 - After first sign-in, present a single optional screen capturing
@@ -350,8 +360,8 @@ builder with live preview and markdown export.
   preferences are absent.
 
 #### 4.6 Prompt caching (mandatory)
-- Enable Anthropic prompt caching on every roadmap-builder call
-  and every recommender call that carries a system prompt.
+- Enable provider-side context caching on every roadmap-builder
+  call and every recommender call that carries a system prompt.
 - Cache the system prompt (templates + scoring rules) and the
   rolling conversation history.
 - Target: 70%+ cache-hit rate on roadmap conversations after the
