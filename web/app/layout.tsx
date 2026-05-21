@@ -18,6 +18,10 @@ export const metadata: Metadata = {
   openGraph: {
     images: ["/og-image.png"],
   },
+  // Pre-launch posture: belt-and-suspenders with public/robots.txt
+  // Disallow. Remove both at real-launch time. See project memory
+  // `project_site_pre_launch_gate`.
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({
