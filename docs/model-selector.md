@@ -304,6 +304,30 @@ Tier ratings:
 - **Pricing notes:** -
 - **Best for:** True native multimodal understanding (text, image, video, audio, and code in a single pass), 1M-token context optimized for heterogeneous inputs, strong agentic multi-step tool use, and synthesizing insights across large mixed-media datasets or sprawling document corpora — the obvious choice whenever multimodal or long-context is the primary category
 
+#### Gemini 3 Pro — `gemini-3-pro`
+
+- **Pricing:** Input $2.00/M · Output $12.00/M
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **S** · Long-context **S** · Knowledge **A** · Speed **B**
+- **Headline benchmarks:** Gemini 3 generation Pro variant predating the 3.1 refresh; 1M-token context; native multimodal across text/image/video/audio/code
+- **Pricing notes:** Hidden by default
+- **Best for:** Gemini 3 family Pro model at the same medium-tier pricing as gemini-3.1-pro — pick gemini-3.1-pro over gemini-3-pro when both are available since 3.1 carries the updated benchmarks and is the canonical visible Gemini Pro; gemini-3-pro fits when reproducing earlier Gemini-3-generation outputs or when the 3.1 refresh's behavioral changes are undesirable for a specific workload
+
+#### GPT-5 — `gpt-5`
+
+- **Pricing:** Input $1.25/M · Output $10.00/M
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **B**
+- **Headline benchmarks:** Earlier flagship GPT-5 family entry with agentic and reasoning capabilities at medium-tier output pricing; specific AA / LMArena numbers pending benchmark refresh
+- **Pricing notes:** Hidden by default; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5-high
+- **Best for:** OpenAI's baseline GPT-5 family flagship — broad reasoning capability at medium-tier pricing ($10/M output), useful when a balanced GPT-5-class model is needed without the premium of GPT-5.4 / 5.5 and without the codex coding specialization; superseded by GPT-5.2 / 5.3 / 5.4 for most production use cases but available on Cursor's pool
+
+#### GPT-5.1 Codex — `gpt-5.1-codex`
+
+- **Pricing:** Input $1.25/M · Output $10.00/M
+- **Tier ratings:** Coding **S** · Planning **B** · Agentic **A** · Multimodal **D** · Long-context **B** · Knowledge **B** · Speed **B**
+- **Headline benchmarks:** Earlier-generation Codex specialization at medium-tier output pricing; strong terminal and tool-use proficiency carried forward from the Codex lineage
+- **Pricing notes:** Hidden by default; Agentic and reasoning capabilities
+- **Best for:** Earlier Codex generation at the same medium-tier pricing as gpt-5.3-codex but $10/M output (gpt-5.3-codex is $14/M) — the lowest-cost S-tier coding model on the medium tier; prefer gpt-5.3-codex when latest-generation Codex quality matters, prefer gpt-5.1-codex when reproducing earlier-Codex-generation outputs or when the slightly cheaper output price compounds against a high-volume coding workload
+
 #### Premium (Intelligence) — `premium`
 
 - **Pricing:** Input varies (routes to top-tier model) · Output varies (routes to top-tier model)
@@ -358,9 +382,49 @@ Tier ratings:
 
 - **Pricing:** Input $0.20/M · Output $1.25/M
 - **Tier ratings:** Coding **C** · Planning **D** · Agentic **D** · Multimodal **C** · Long-context **C** · Knowledge **C** · Speed **S**
-- **Headline benchmarks:** Cheapest GPT-5 family variant; throughput-optimized inference
+- **Headline benchmarks:** Cheapest GPT-5.4 family variant; throughput-optimized inference
 - **Pricing notes:** Hidden by default; Smallest GPT-5.4 variant, optimized for cost; 90% discount on cached input tokens
 - **Best for:** Ultra-low-cost GPT variant for trivial text tasks, simple lookups, rapid classification, and extreme-throughput pipelines where cost efficiency is the sole constraint and task complexity is minimal
+
+#### Composer 2.5 — `composer-2.5`
+
+- **Pricing:** Input $0.50/M · Output $2.50/M
+- **Tier ratings:** Coding **A** · Planning **B** · Agentic **A** · Multimodal **D** · Long-context **B** · Knowledge **B** · Speed **S**
+- **Headline benchmarks:** Composer 2 family successor at the same output price ($2.50/M); Cursor's release notes claim substantial intelligence + behavior improvements over Composer 2 trained on ~25x more synthetic tasks; specific benchmark numbers pending republish (CursorBench 61.3 + SWE-bench Multilingual 73.7 + Terminal-Bench 2.0 61.7 from Composer 2 carry forward as floors)
+- **Pricing notes:** -
+- **Best for:** Composer 2's successor at the same output price — Cursor's purpose-built multi-file agentic editor with frontier-level coding quality and speed-optimized inference; prefer over Composer 2 when both are available since 2.5 supersedes 2 within the same series per the equal-output-price replacement rule (Composer 2 is now Hidden by default on Cursor's pricing page)
+
+#### Gemini 2.5 Flash — `gemini-2.5-flash`
+
+- **Pricing:** Input $0.30/M · Output $2.50/M
+- **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **A** · Long-context **A** · Knowledge **B** · Speed **S**
+- **Headline benchmarks:** High-throughput Gemini Flash variant with native multimodal grounding; 1M-token context; designed for low-cost high-volume inference
+- **Pricing notes:** Hidden by default
+- **Best for:** Google's cheap, fast, multimodal Flash model at $0.30/M output — the cost-efficient pick for high-volume structured-output tasks (model recommendation, classification, light planning with strong system-prompt grounding) where multimodal capability matters and frontier-class reasoning does not; powers free-tier SaaS surfaces where per-call cost discipline is essential and the bundled templates do the structural heavy lifting
+
+#### Gemini 3 Flash — `gemini-3-flash`
+
+- **Pricing:** Input $0.50/M · Output $3.00/M
+- **Tier ratings:** Coding **B** · Planning **A** · Agentic **A** · Multimodal **S** · Long-context **S** · Knowledge **A** · Speed **S**
+- **Headline benchmarks:** Gemini 3 generation Flash variant; native multimodal across text/image/video/audio; 1M-token context; throughput-optimized inference
+- **Pricing notes:** Hidden by default
+- **Best for:** Gemini 3 generation's cheap-tier model — meaningfully stronger planning, agentic, knowledge ratings than 2.5 Flash at slightly higher cost ($3.00/M output vs $2.50/M), with native multimodal-S; pick over 2.5 Flash when the task benefits from Gemini 3 family improvements and per-call cost discipline still matters
+
+#### GPT-5 Mini — `gpt-5-mini`
+
+- **Pricing:** Input $0.25/M · Output $2.00/M
+- **Tier ratings:** Coding **B** · Planning **C** · Agentic **C** · Multimodal **B** · Long-context **B** · Knowledge **B** · Speed **S**
+- **Headline benchmarks:** Cheapest GPT-5 family variant at $2.00/M output; throughput-optimized inference
+- **Pricing notes:** Hidden by default
+- **Best for:** The cheapest GPT-5 family variant at $2.00/M output — well-suited for trivial text tasks, simple lookups, rapid classification, and high-throughput pipelines where the cost-per-call is the binding constraint; not appropriate for multi-step planning or autonomous agentic execution; competitive with Gemini 2.5 Flash on cost but lacks Gemini's native multimodal-A rating
+
+#### Kimi K2.5 — `kimi-k2.5`
+
+- **Pricing:** Input $0.60/M · Output $3.00/M
+- **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **C** · Long-context **B** · Knowledge **B** · Speed **B**
+- **Headline benchmarks:** Moonshot AI's Kimi K2 series successor at $3.00/M output; competitive cost positioning across general text tasks; specific benchmark numbers pending refresh
+- **Pricing notes:** Hidden by default
+- **Best for:** Moonshot's affordable mid-volume model — a non-Google / non-OpenAI / non-Anthropic option at low-tier pricing for cost-conscious code and text generation when provider diversity is desired (vendor-risk hedging, regional preferences); routed via Cursor's pool only — no direct Moonshot access method is currently enumerated in the access-methods block
 
 ## Access Methods
 
@@ -591,6 +655,30 @@ Tier ratings:
              headline-benchmarks="AA Intelligence Index 57.2 (#3); AA-Omniscience 32.9 (#1); HLE 44.7% (#1); LMArena Text Elo 1483.6 (#4); 1M-token context"
              pricing-notes="-"
              best-for="True native multimodal understanding (text, image, video, audio, and code in a single pass), 1M-token context optimized for heterogeneous inputs, strong agentic multi-step tool use, and synthesizing insights across large mixed-media datasets or sprawling document corpora — the obvious choice whenever multimodal or long-context is the primary category" />
+      <model id="gemini-3-pro" name="Gemini 3 Pro"
+             input-price-per-1m="$2.00" output-price-per-1m="$12.00"
+             tier-coding="A" tier-planning="A" tier-agentic="A"
+             tier-multimodal="S" tier-long-context="S" tier-knowledge="A"
+             tier-speed="B"
+             headline-benchmarks="Gemini 3 generation Pro variant predating the 3.1 refresh; 1M-token context; native multimodal across text/image/video/audio/code"
+             pricing-notes="Hidden by default"
+             best-for="Gemini 3 family Pro model at the same medium-tier pricing as gemini-3.1-pro — pick gemini-3.1-pro over gemini-3-pro when both are available since 3.1 carries the updated benchmarks and is the canonical visible Gemini Pro; gemini-3-pro fits when reproducing earlier Gemini-3-generation outputs or when the 3.1 refresh's behavioral changes are undesirable for a specific workload" />
+      <model id="gpt-5" name="GPT-5"
+             input-price-per-1m="$1.25" output-price-per-1m="$10.00"
+             tier-coding="A" tier-planning="A" tier-agentic="A"
+             tier-multimodal="B" tier-long-context="A" tier-knowledge="A"
+             tier-speed="B"
+             headline-benchmarks="Earlier flagship GPT-5 family entry with agentic and reasoning capabilities at medium-tier output pricing; specific AA / LMArena numbers pending benchmark refresh"
+             pricing-notes="Hidden by default; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5-high"
+             best-for="OpenAI's baseline GPT-5 family flagship — broad reasoning capability at medium-tier pricing ($10/M output), useful when a balanced GPT-5-class model is needed without the premium of GPT-5.4 / 5.5 and without the codex coding specialization; superseded by GPT-5.2 / 5.3 / 5.4 for most production use cases but available on Cursor's pool" />
+      <model id="gpt-5.1-codex" name="GPT-5.1 Codex"
+             input-price-per-1m="$1.25" output-price-per-1m="$10.00"
+             tier-coding="S" tier-planning="B" tier-agentic="A"
+             tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
+             tier-speed="B"
+             headline-benchmarks="Earlier-generation Codex specialization at medium-tier output pricing; strong terminal and tool-use proficiency carried forward from the Codex lineage"
+             pricing-notes="Hidden by default; Agentic and reasoning capabilities"
+             best-for="Earlier Codex generation at the same medium-tier pricing as gpt-5.3-codex but $10/M output (gpt-5.3-codex is $14/M) — the lowest-cost S-tier coding model on the medium tier; prefer gpt-5.3-codex when latest-generation Codex quality matters, prefer gpt-5.1-codex when reproducing earlier-Codex-generation outputs or when the slightly cheaper output price compounds against a high-volume coding workload" />
       <model id="premium" name="Premium (Intelligence)"
              input-price-per-1m="varies (routes to top-tier model)"
              output-price-per-1m="varies (routes to top-tier model)"
@@ -648,9 +736,49 @@ Tier ratings:
              tier-coding="C" tier-planning="D" tier-agentic="D"
              tier-multimodal="C" tier-long-context="C" tier-knowledge="C"
              tier-speed="S"
-             headline-benchmarks="Cheapest GPT-5 family variant; throughput-optimized inference"
+             headline-benchmarks="Cheapest GPT-5.4 family variant; throughput-optimized inference"
              pricing-notes="Hidden by default; Smallest GPT-5.4 variant, optimized for cost; 90% discount on cached input tokens"
              best-for="Ultra-low-cost GPT variant for trivial text tasks, simple lookups, rapid classification, and extreme-throughput pipelines where cost efficiency is the sole constraint and task complexity is minimal" />
+      <model id="composer-2.5" name="Composer 2.5"
+             input-price-per-1m="$0.50" output-price-per-1m="$2.50"
+             tier-coding="A" tier-planning="B" tier-agentic="A"
+             tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
+             tier-speed="S"
+             headline-benchmarks="Composer 2 family successor at the same output price ($2.50/M); Cursor's release notes claim substantial intelligence + behavior improvements over Composer 2 trained on ~25x more synthetic tasks; specific benchmark numbers pending republish (CursorBench 61.3 + SWE-bench Multilingual 73.7 + Terminal-Bench 2.0 61.7 from Composer 2 carry forward as floors)"
+             pricing-notes="-"
+             best-for="Composer 2's successor at the same output price — Cursor's purpose-built multi-file agentic editor with frontier-level coding quality and speed-optimized inference; prefer over Composer 2 when both are available since 2.5 supersedes 2 within the same series per the equal-output-price replacement rule (Composer 2 is now Hidden by default on Cursor's pricing page)" />
+      <model id="gemini-2.5-flash" name="Gemini 2.5 Flash"
+             input-price-per-1m="$0.30" output-price-per-1m="$2.50"
+             tier-coding="B" tier-planning="B" tier-agentic="B"
+             tier-multimodal="A" tier-long-context="A" tier-knowledge="B"
+             tier-speed="S"
+             headline-benchmarks="High-throughput Gemini Flash variant with native multimodal grounding; 1M-token context; designed for low-cost high-volume inference"
+             pricing-notes="Hidden by default"
+             best-for="Google's cheap, fast, multimodal Flash model at $0.30/M output — the cost-efficient pick for high-volume structured-output tasks (model recommendation, classification, light planning with strong system-prompt grounding) where multimodal capability matters and frontier-class reasoning does not; powers free-tier SaaS surfaces where per-call cost discipline is essential and the bundled templates do the structural heavy lifting" />
+      <model id="gemini-3-flash" name="Gemini 3 Flash"
+             input-price-per-1m="$0.50" output-price-per-1m="$3.00"
+             tier-coding="B" tier-planning="A" tier-agentic="A"
+             tier-multimodal="S" tier-long-context="S" tier-knowledge="A"
+             tier-speed="S"
+             headline-benchmarks="Gemini 3 generation Flash variant; native multimodal across text/image/video/audio; 1M-token context; throughput-optimized inference"
+             pricing-notes="Hidden by default"
+             best-for="Gemini 3 generation's cheap-tier model — meaningfully stronger planning, agentic, knowledge ratings than 2.5 Flash at slightly higher cost ($3.00/M output vs $2.50/M), with native multimodal-S; pick over 2.5 Flash when the task benefits from Gemini 3 family improvements and per-call cost discipline still matters" />
+      <model id="gpt-5-mini" name="GPT-5 Mini"
+             input-price-per-1m="$0.25" output-price-per-1m="$2.00"
+             tier-coding="B" tier-planning="C" tier-agentic="C"
+             tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
+             tier-speed="S"
+             headline-benchmarks="Cheapest GPT-5 family variant at $2.00/M output; throughput-optimized inference"
+             pricing-notes="Hidden by default"
+             best-for="The cheapest GPT-5 family variant at $2.00/M output — well-suited for trivial text tasks, simple lookups, rapid classification, and high-throughput pipelines where the cost-per-call is the binding constraint; not appropriate for multi-step planning or autonomous agentic execution; competitive with Gemini 2.5 Flash on cost but lacks Gemini's native multimodal-A rating" />
+      <model id="kimi-k2.5" name="Kimi K2.5"
+             input-price-per-1m="$0.60" output-price-per-1m="$3.00"
+             tier-coding="B" tier-planning="B" tier-agentic="B"
+             tier-multimodal="C" tier-long-context="B" tier-knowledge="B"
+             tier-speed="B"
+             headline-benchmarks="Moonshot AI's Kimi K2 series successor at $3.00/M output; competitive cost positioning across general text tasks; specific benchmark numbers pending refresh"
+             pricing-notes="Hidden by default"
+             best-for="Moonshot's affordable mid-volume model — a non-Google / non-OpenAI / non-Anthropic option at low-tier pricing for cost-conscious code and text generation when provider diversity is desired (vendor-risk hedging, regional preferences); routed via Cursor's pool only — no direct Moonshot access method is currently enumerated in the access-methods block" />
     </tier>
   </model-options>
 
@@ -705,21 +833,21 @@ Tier ratings:
 #### OpenAI API — `openai-api`
 
 - **Billing:** per-token (requires openai-api-key)
-- **Supports models:** gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.4-mini,gpt-5.4-nano
+- **Supports models:** gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.1-codex,gpt-5,gpt-5.4-mini,gpt-5.4-nano,gpt-5-mini
 - **Toggles:** Max Mode — no · Thinking — yes
 - **Best for:** Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates.
 
 #### Codex — `codex-cli`
 
 - **Billing:** subscription-or-key (requires chatgpt-subscription OR openai-api-key)
-- **Supports models:** gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.4-mini
+- **Supports models:** gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.1-codex,gpt-5,gpt-5.4-mini,gpt-5-mini
 - **Toggles:** Max Mode — no · Thinking — yes
-- **Best for:** Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex on long-running terminal / agentic work.
+- **Best for:** Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work.
 
 #### ChatGPT (web / desktop) — `chatgpt-app`
 
 - **Billing:** subscription-included (requires chatgpt-subscription)
-- **Supports models:** gpt-5.5,gpt-5.4,gpt-5.4-mini
+- **Supports models:** gpt-5.5,gpt-5.4,gpt-5,gpt-5.4-mini,gpt-5-mini
 - **Toggles:** Max Mode — no · Thinking — yes
 - **Best for:** Chat-driven GPT use without terminal or IDE integration; subscription-funded so marginal cost is $0 until ChatGPT's usage limits kick in.
 
@@ -728,21 +856,21 @@ Tier ratings:
 #### Google AI Studio API — `google-api`
 
 - **Billing:** per-token (requires google-api-key)
-- **Supports models:** gemini-3.1-pro
+- **Supports models:** gemini-3.1-pro,gemini-3-pro,gemini-3-flash,gemini-2.5-flash
 - **Toggles:** Max Mode — no · Thinking — yes
-- **Best for:** Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates.
+- **Best for:** Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation).
 
 #### Gemini CLI — `gemini-cli`
 
 - **Billing:** subscription-or-key (requires gemini-advanced-subscription OR google-api-key)
-- **Supports models:** gemini-3.1-pro
+- **Supports models:** gemini-3.1-pro,gemini-3-pro,gemini-3-flash,gemini-2.5-flash
 - **Toggles:** Max Mode — no · Thinking — yes
 - **Best for:** Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool.
 
 #### Gemini (web / app) — `gemini-app`
 
 - **Billing:** subscription-included (requires gemini-advanced-subscription)
-- **Supports models:** gemini-3.1-pro
+- **Supports models:** gemini-3.1-pro,gemini-3-pro,gemini-3-flash,gemini-2.5-flash
 - **Toggles:** Max Mode — no · Thinking — yes
 - **Best for:** Chat-driven Gemini use under the Gemini Advanced subscription budget.
 
@@ -760,7 +888,7 @@ Tier ratings:
 #### Cursor — `cursor`
 
 - **Billing:** subscription-pool (requires cursor-pro-or-ultra-subscription)
-- **Supports models:** opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gemini-3.1-pro,premium,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,auto
+- **Supports models:** opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gpt-5.2,gemini-3.1-pro,gemini-3-pro,gpt-5,gpt-5.1-codex,premium,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,composer-2.5,gemini-2.5-flash,gemini-3-flash,gpt-5-mini,kimi-k2.5,auto
 - **Toggles:** Max Mode — yes · Thinking — no
 - **Best for:** Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / auto / premium imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path).
 
@@ -1034,6 +1162,30 @@ Tier ratings:
              headline-benchmarks="AA Intelligence Index 57.2 (#3); AA-Omniscience 32.9 (#1); HLE 44.7% (#1); LMArena Text Elo 1483.6 (#4); 1M-token context"
              pricing-notes="-"
              best-for="True native multimodal understanding (text, image, video, audio, and code in a single pass), 1M-token context optimized for heterogeneous inputs, strong agentic multi-step tool use, and synthesizing insights across large mixed-media datasets or sprawling document corpora — the obvious choice whenever multimodal or long-context is the primary category" />
+      <model id="gemini-3-pro" name="Gemini 3 Pro"
+             input-price-per-1m="$2.00" output-price-per-1m="$12.00"
+             tier-coding="A" tier-planning="A" tier-agentic="A"
+             tier-multimodal="S" tier-long-context="S" tier-knowledge="A"
+             tier-speed="B"
+             headline-benchmarks="Gemini 3 generation Pro variant predating the 3.1 refresh; 1M-token context; native multimodal across text/image/video/audio/code"
+             pricing-notes="Hidden by default"
+             best-for="Gemini 3 family Pro model at the same medium-tier pricing as gemini-3.1-pro — pick gemini-3.1-pro over gemini-3-pro when both are available since 3.1 carries the updated benchmarks and is the canonical visible Gemini Pro; gemini-3-pro fits when reproducing earlier Gemini-3-generation outputs or when the 3.1 refresh's behavioral changes are undesirable for a specific workload" />
+      <model id="gpt-5" name="GPT-5"
+             input-price-per-1m="$1.25" output-price-per-1m="$10.00"
+             tier-coding="A" tier-planning="A" tier-agentic="A"
+             tier-multimodal="B" tier-long-context="A" tier-knowledge="A"
+             tier-speed="B"
+             headline-benchmarks="Earlier flagship GPT-5 family entry with agentic and reasoning capabilities at medium-tier output pricing; specific AA / LMArena numbers pending benchmark refresh"
+             pricing-notes="Hidden by default; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5-high"
+             best-for="OpenAI's baseline GPT-5 family flagship — broad reasoning capability at medium-tier pricing ($10/M output), useful when a balanced GPT-5-class model is needed without the premium of GPT-5.4 / 5.5 and without the codex coding specialization; superseded by GPT-5.2 / 5.3 / 5.4 for most production use cases but available on Cursor's pool" />
+      <model id="gpt-5.1-codex" name="GPT-5.1 Codex"
+             input-price-per-1m="$1.25" output-price-per-1m="$10.00"
+             tier-coding="S" tier-planning="B" tier-agentic="A"
+             tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
+             tier-speed="B"
+             headline-benchmarks="Earlier-generation Codex specialization at medium-tier output pricing; strong terminal and tool-use proficiency carried forward from the Codex lineage"
+             pricing-notes="Hidden by default; Agentic and reasoning capabilities"
+             best-for="Earlier Codex generation at the same medium-tier pricing as gpt-5.3-codex but $10/M output (gpt-5.3-codex is $14/M) — the lowest-cost S-tier coding model on the medium tier; prefer gpt-5.3-codex when latest-generation Codex quality matters, prefer gpt-5.1-codex when reproducing earlier-Codex-generation outputs or when the slightly cheaper output price compounds against a high-volume coding workload" />
       <model id="premium" name="Premium (Intelligence)"
              input-price-per-1m="varies (routes to top-tier model)"
              output-price-per-1m="varies (routes to top-tier model)"
@@ -1091,9 +1243,49 @@ Tier ratings:
              tier-coding="C" tier-planning="D" tier-agentic="D"
              tier-multimodal="C" tier-long-context="C" tier-knowledge="C"
              tier-speed="S"
-             headline-benchmarks="Cheapest GPT-5 family variant; throughput-optimized inference"
+             headline-benchmarks="Cheapest GPT-5.4 family variant; throughput-optimized inference"
              pricing-notes="Hidden by default; Smallest GPT-5.4 variant, optimized for cost; 90% discount on cached input tokens"
              best-for="Ultra-low-cost GPT variant for trivial text tasks, simple lookups, rapid classification, and extreme-throughput pipelines where cost efficiency is the sole constraint and task complexity is minimal" />
+      <model id="composer-2.5" name="Composer 2.5"
+             input-price-per-1m="$0.50" output-price-per-1m="$2.50"
+             tier-coding="A" tier-planning="B" tier-agentic="A"
+             tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
+             tier-speed="S"
+             headline-benchmarks="Composer 2 family successor at the same output price ($2.50/M); Cursor's release notes claim substantial intelligence + behavior improvements over Composer 2 trained on ~25x more synthetic tasks; specific benchmark numbers pending republish (CursorBench 61.3 + SWE-bench Multilingual 73.7 + Terminal-Bench 2.0 61.7 from Composer 2 carry forward as floors)"
+             pricing-notes="-"
+             best-for="Composer 2's successor at the same output price — Cursor's purpose-built multi-file agentic editor with frontier-level coding quality and speed-optimized inference; prefer over Composer 2 when both are available since 2.5 supersedes 2 within the same series per the equal-output-price replacement rule (Composer 2 is now Hidden by default on Cursor's pricing page)" />
+      <model id="gemini-2.5-flash" name="Gemini 2.5 Flash"
+             input-price-per-1m="$0.30" output-price-per-1m="$2.50"
+             tier-coding="B" tier-planning="B" tier-agentic="B"
+             tier-multimodal="A" tier-long-context="A" tier-knowledge="B"
+             tier-speed="S"
+             headline-benchmarks="High-throughput Gemini Flash variant with native multimodal grounding; 1M-token context; designed for low-cost high-volume inference"
+             pricing-notes="Hidden by default"
+             best-for="Google's cheap, fast, multimodal Flash model at $0.30/M output — the cost-efficient pick for high-volume structured-output tasks (model recommendation, classification, light planning with strong system-prompt grounding) where multimodal capability matters and frontier-class reasoning does not; powers free-tier SaaS surfaces where per-call cost discipline is essential and the bundled templates do the structural heavy lifting" />
+      <model id="gemini-3-flash" name="Gemini 3 Flash"
+             input-price-per-1m="$0.50" output-price-per-1m="$3.00"
+             tier-coding="B" tier-planning="A" tier-agentic="A"
+             tier-multimodal="S" tier-long-context="S" tier-knowledge="A"
+             tier-speed="S"
+             headline-benchmarks="Gemini 3 generation Flash variant; native multimodal across text/image/video/audio; 1M-token context; throughput-optimized inference"
+             pricing-notes="Hidden by default"
+             best-for="Gemini 3 generation's cheap-tier model — meaningfully stronger planning, agentic, knowledge ratings than 2.5 Flash at slightly higher cost ($3.00/M output vs $2.50/M), with native multimodal-S; pick over 2.5 Flash when the task benefits from Gemini 3 family improvements and per-call cost discipline still matters" />
+      <model id="gpt-5-mini" name="GPT-5 Mini"
+             input-price-per-1m="$0.25" output-price-per-1m="$2.00"
+             tier-coding="B" tier-planning="C" tier-agentic="C"
+             tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
+             tier-speed="S"
+             headline-benchmarks="Cheapest GPT-5 family variant at $2.00/M output; throughput-optimized inference"
+             pricing-notes="Hidden by default"
+             best-for="The cheapest GPT-5 family variant at $2.00/M output — well-suited for trivial text tasks, simple lookups, rapid classification, and high-throughput pipelines where the cost-per-call is the binding constraint; not appropriate for multi-step planning or autonomous agentic execution; competitive with Gemini 2.5 Flash on cost but lacks Gemini's native multimodal-A rating" />
+      <model id="kimi-k2.5" name="Kimi K2.5"
+             input-price-per-1m="$0.60" output-price-per-1m="$3.00"
+             tier-coding="B" tier-planning="B" tier-agentic="B"
+             tier-multimodal="C" tier-long-context="B" tier-knowledge="B"
+             tier-speed="B"
+             headline-benchmarks="Moonshot AI's Kimi K2 series successor at $3.00/M output; competitive cost positioning across general text tasks; specific benchmark numbers pending refresh"
+             pricing-notes="Hidden by default"
+             best-for="Moonshot's affordable mid-volume model — a non-Google / non-OpenAI / non-Anthropic option at low-tier pricing for cost-conscious code and text generation when provider diversity is desired (vendor-risk hedging, regional preferences); routed via Cursor's pool only — no direct Moonshot access method is currently enumerated in the access-methods block" />
     </tier>
   </model-options>
 
@@ -1141,37 +1333,37 @@ Tier ratings:
     <method id="openai-api" name="OpenAI API"
             provider="openai" billing="per-token"
             requires="openai-api-key"
-            supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.4-mini,gpt-5.4-nano"
+            supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.1-codex,gpt-5,gpt-5.4-mini,gpt-5.4-nano,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
             best-for="Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates." />
     <method id="codex-cli" name="Codex"
             provider="openai" billing="subscription-or-key"
             requires="chatgpt-subscription OR openai-api-key"
-            supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.4-mini"
+            supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.1-codex,gpt-5,gpt-5.4-mini,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
-            best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex on long-running terminal / agentic work." />
+            best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work." />
     <method id="chatgpt-app" name="ChatGPT (web / desktop)"
             provider="openai" billing="subscription-included"
             requires="chatgpt-subscription"
-            supports-models="gpt-5.5,gpt-5.4,gpt-5.4-mini"
+            supports-models="gpt-5.5,gpt-5.4,gpt-5,gpt-5.4-mini,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
             best-for="Chat-driven GPT use without terminal or IDE integration; subscription-funded so marginal cost is $0 until ChatGPT's usage limits kick in." />
     <method id="google-api" name="Google AI Studio API"
             provider="google" billing="per-token"
             requires="google-api-key"
-            supports-models="gemini-3.1-pro"
+            supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
-            best-for="Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates." />
+            best-for="Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)." />
     <method id="gemini-cli" name="Gemini CLI"
             provider="google" billing="subscription-or-key"
             requires="gemini-advanced-subscription OR google-api-key"
-            supports-models="gemini-3.1-pro"
+            supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
             best-for="Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool." />
     <method id="gemini-app" name="Gemini (web / app)"
             provider="google" billing="subscription-included"
             requires="gemini-advanced-subscription"
-            supports-models="gemini-3.1-pro"
+            supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
             best-for="Chat-driven Gemini use under the Gemini Advanced subscription budget." />
     <method id="xai-api" name="xAI API"
@@ -1183,7 +1375,7 @@ Tier ratings:
     <method id="cursor" name="Cursor"
             provider="cursor" billing="subscription-pool"
             requires="cursor-pro-or-ultra-subscription"
-            supports-models="opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gemini-3.1-pro,premium,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,auto"
+            supports-models="opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gpt-5.2,gemini-3.1-pro,gemini-3-pro,gpt-5,gpt-5.1-codex,premium,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,composer-2.5,gemini-2.5-flash,gemini-3-flash,gpt-5-mini,kimi-k2.5,auto"
             exposes-max-mode="yes" exposes-thinking="no"
             best-for="Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / auto / premium imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)." />
   </access-methods>
@@ -1522,6 +1714,30 @@ Tier ratings:
              headline-benchmarks="AA Intelligence Index 57.2 (#3); AA-Omniscience 32.9 (#1); HLE 44.7% (#1); LMArena Text Elo 1483.6 (#4); 1M-token context"
              pricing-notes="-"
              best-for="True native multimodal understanding (text, image, video, audio, and code in a single pass), 1M-token context optimized for heterogeneous inputs, strong agentic multi-step tool use, and synthesizing insights across large mixed-media datasets or sprawling document corpora — the obvious choice whenever multimodal or long-context is the primary category" />
+      <model id="gemini-3-pro" name="Gemini 3 Pro"
+             input-price-per-1m="$2.00" output-price-per-1m="$12.00"
+             tier-coding="A" tier-planning="A" tier-agentic="A"
+             tier-multimodal="S" tier-long-context="S" tier-knowledge="A"
+             tier-speed="B"
+             headline-benchmarks="Gemini 3 generation Pro variant predating the 3.1 refresh; 1M-token context; native multimodal across text/image/video/audio/code"
+             pricing-notes="Hidden by default"
+             best-for="Gemini 3 family Pro model at the same medium-tier pricing as gemini-3.1-pro — pick gemini-3.1-pro over gemini-3-pro when both are available since 3.1 carries the updated benchmarks and is the canonical visible Gemini Pro; gemini-3-pro fits when reproducing earlier Gemini-3-generation outputs or when the 3.1 refresh's behavioral changes are undesirable for a specific workload" />
+      <model id="gpt-5" name="GPT-5"
+             input-price-per-1m="$1.25" output-price-per-1m="$10.00"
+             tier-coding="A" tier-planning="A" tier-agentic="A"
+             tier-multimodal="B" tier-long-context="A" tier-knowledge="A"
+             tier-speed="B"
+             headline-benchmarks="Earlier flagship GPT-5 family entry with agentic and reasoning capabilities at medium-tier output pricing; specific AA / LMArena numbers pending benchmark refresh"
+             pricing-notes="Hidden by default; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5-high"
+             best-for="OpenAI's baseline GPT-5 family flagship — broad reasoning capability at medium-tier pricing ($10/M output), useful when a balanced GPT-5-class model is needed without the premium of GPT-5.4 / 5.5 and without the codex coding specialization; superseded by GPT-5.2 / 5.3 / 5.4 for most production use cases but available on Cursor's pool" />
+      <model id="gpt-5.1-codex" name="GPT-5.1 Codex"
+             input-price-per-1m="$1.25" output-price-per-1m="$10.00"
+             tier-coding="S" tier-planning="B" tier-agentic="A"
+             tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
+             tier-speed="B"
+             headline-benchmarks="Earlier-generation Codex specialization at medium-tier output pricing; strong terminal and tool-use proficiency carried forward from the Codex lineage"
+             pricing-notes="Hidden by default; Agentic and reasoning capabilities"
+             best-for="Earlier Codex generation at the same medium-tier pricing as gpt-5.3-codex but $10/M output (gpt-5.3-codex is $14/M) — the lowest-cost S-tier coding model on the medium tier; prefer gpt-5.3-codex when latest-generation Codex quality matters, prefer gpt-5.1-codex when reproducing earlier-Codex-generation outputs or when the slightly cheaper output price compounds against a high-volume coding workload" />
       <model id="premium" name="Premium (Intelligence)"
              input-price-per-1m="varies (routes to top-tier model)"
              output-price-per-1m="varies (routes to top-tier model)"
@@ -1579,9 +1795,49 @@ Tier ratings:
              tier-coding="C" tier-planning="D" tier-agentic="D"
              tier-multimodal="C" tier-long-context="C" tier-knowledge="C"
              tier-speed="S"
-             headline-benchmarks="Cheapest GPT-5 family variant; throughput-optimized inference"
+             headline-benchmarks="Cheapest GPT-5.4 family variant; throughput-optimized inference"
              pricing-notes="Hidden by default; Smallest GPT-5.4 variant, optimized for cost; 90% discount on cached input tokens"
              best-for="Ultra-low-cost GPT variant for trivial text tasks, simple lookups, rapid classification, and extreme-throughput pipelines where cost efficiency is the sole constraint and task complexity is minimal" />
+      <model id="composer-2.5" name="Composer 2.5"
+             input-price-per-1m="$0.50" output-price-per-1m="$2.50"
+             tier-coding="A" tier-planning="B" tier-agentic="A"
+             tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
+             tier-speed="S"
+             headline-benchmarks="Composer 2 family successor at the same output price ($2.50/M); Cursor's release notes claim substantial intelligence + behavior improvements over Composer 2 trained on ~25x more synthetic tasks; specific benchmark numbers pending republish (CursorBench 61.3 + SWE-bench Multilingual 73.7 + Terminal-Bench 2.0 61.7 from Composer 2 carry forward as floors)"
+             pricing-notes="-"
+             best-for="Composer 2's successor at the same output price — Cursor's purpose-built multi-file agentic editor with frontier-level coding quality and speed-optimized inference; prefer over Composer 2 when both are available since 2.5 supersedes 2 within the same series per the equal-output-price replacement rule (Composer 2 is now Hidden by default on Cursor's pricing page)" />
+      <model id="gemini-2.5-flash" name="Gemini 2.5 Flash"
+             input-price-per-1m="$0.30" output-price-per-1m="$2.50"
+             tier-coding="B" tier-planning="B" tier-agentic="B"
+             tier-multimodal="A" tier-long-context="A" tier-knowledge="B"
+             tier-speed="S"
+             headline-benchmarks="High-throughput Gemini Flash variant with native multimodal grounding; 1M-token context; designed for low-cost high-volume inference"
+             pricing-notes="Hidden by default"
+             best-for="Google's cheap, fast, multimodal Flash model at $0.30/M output — the cost-efficient pick for high-volume structured-output tasks (model recommendation, classification, light planning with strong system-prompt grounding) where multimodal capability matters and frontier-class reasoning does not; powers free-tier SaaS surfaces where per-call cost discipline is essential and the bundled templates do the structural heavy lifting" />
+      <model id="gemini-3-flash" name="Gemini 3 Flash"
+             input-price-per-1m="$0.50" output-price-per-1m="$3.00"
+             tier-coding="B" tier-planning="A" tier-agentic="A"
+             tier-multimodal="S" tier-long-context="S" tier-knowledge="A"
+             tier-speed="S"
+             headline-benchmarks="Gemini 3 generation Flash variant; native multimodal across text/image/video/audio; 1M-token context; throughput-optimized inference"
+             pricing-notes="Hidden by default"
+             best-for="Gemini 3 generation's cheap-tier model — meaningfully stronger planning, agentic, knowledge ratings than 2.5 Flash at slightly higher cost ($3.00/M output vs $2.50/M), with native multimodal-S; pick over 2.5 Flash when the task benefits from Gemini 3 family improvements and per-call cost discipline still matters" />
+      <model id="gpt-5-mini" name="GPT-5 Mini"
+             input-price-per-1m="$0.25" output-price-per-1m="$2.00"
+             tier-coding="B" tier-planning="C" tier-agentic="C"
+             tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
+             tier-speed="S"
+             headline-benchmarks="Cheapest GPT-5 family variant at $2.00/M output; throughput-optimized inference"
+             pricing-notes="Hidden by default"
+             best-for="The cheapest GPT-5 family variant at $2.00/M output — well-suited for trivial text tasks, simple lookups, rapid classification, and high-throughput pipelines where the cost-per-call is the binding constraint; not appropriate for multi-step planning or autonomous agentic execution; competitive with Gemini 2.5 Flash on cost but lacks Gemini's native multimodal-A rating" />
+      <model id="kimi-k2.5" name="Kimi K2.5"
+             input-price-per-1m="$0.60" output-price-per-1m="$3.00"
+             tier-coding="B" tier-planning="B" tier-agentic="B"
+             tier-multimodal="C" tier-long-context="B" tier-knowledge="B"
+             tier-speed="B"
+             headline-benchmarks="Moonshot AI's Kimi K2 series successor at $3.00/M output; competitive cost positioning across general text tasks; specific benchmark numbers pending refresh"
+             pricing-notes="Hidden by default"
+             best-for="Moonshot's affordable mid-volume model — a non-Google / non-OpenAI / non-Anthropic option at low-tier pricing for cost-conscious code and text generation when provider diversity is desired (vendor-risk hedging, regional preferences); routed via Cursor's pool only — no direct Moonshot access method is currently enumerated in the access-methods block" />
     </tier>
   </model-options>
 
@@ -1629,37 +1885,37 @@ Tier ratings:
     <method id="openai-api" name="OpenAI API"
             provider="openai" billing="per-token"
             requires="openai-api-key"
-            supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.4-mini,gpt-5.4-nano"
+            supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.1-codex,gpt-5,gpt-5.4-mini,gpt-5.4-nano,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
             best-for="Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates." />
     <method id="codex-cli" name="Codex"
             provider="openai" billing="subscription-or-key"
             requires="chatgpt-subscription OR openai-api-key"
-            supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.4-mini"
+            supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.1-codex,gpt-5,gpt-5.4-mini,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
-            best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex on long-running terminal / agentic work." />
+            best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work." />
     <method id="chatgpt-app" name="ChatGPT (web / desktop)"
             provider="openai" billing="subscription-included"
             requires="chatgpt-subscription"
-            supports-models="gpt-5.5,gpt-5.4,gpt-5.4-mini"
+            supports-models="gpt-5.5,gpt-5.4,gpt-5,gpt-5.4-mini,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
             best-for="Chat-driven GPT use without terminal or IDE integration; subscription-funded so marginal cost is $0 until ChatGPT's usage limits kick in." />
     <method id="google-api" name="Google AI Studio API"
             provider="google" billing="per-token"
             requires="google-api-key"
-            supports-models="gemini-3.1-pro"
+            supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
-            best-for="Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates." />
+            best-for="Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)." />
     <method id="gemini-cli" name="Gemini CLI"
             provider="google" billing="subscription-or-key"
             requires="gemini-advanced-subscription OR google-api-key"
-            supports-models="gemini-3.1-pro"
+            supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
             best-for="Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool." />
     <method id="gemini-app" name="Gemini (web / app)"
             provider="google" billing="subscription-included"
             requires="gemini-advanced-subscription"
-            supports-models="gemini-3.1-pro"
+            supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
             best-for="Chat-driven Gemini use under the Gemini Advanced subscription budget." />
     <method id="xai-api" name="xAI API"
@@ -1671,7 +1927,7 @@ Tier ratings:
     <method id="cursor" name="Cursor"
             provider="cursor" billing="subscription-pool"
             requires="cursor-pro-or-ultra-subscription"
-            supports-models="opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gemini-3.1-pro,premium,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,auto"
+            supports-models="opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gpt-5.2,gemini-3.1-pro,gemini-3-pro,gpt-5,gpt-5.1-codex,premium,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,composer-2.5,gemini-2.5-flash,gemini-3-flash,gpt-5-mini,kimi-k2.5,auto"
             exposes-max-mode="yes" exposes-thinking="no"
             best-for="Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / auto / premium imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)." />
   </access-methods>

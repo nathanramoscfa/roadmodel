@@ -185,11 +185,19 @@ appear here.
 | gpt-5.3-codex    | $14.00  | Medium       | Medium       | ✓      |
 | gpt-5.2          | $14.00  | Medium       | Medium       | ✓      |
 | gemini-3.1-pro   | $12.00  | Medium       | Medium       | ✓      |
+| gemini-3-pro     | $12.00  | Medium       | Medium       | ✓      |
+| gpt-5            | $10.00  | Medium       | Medium       | ✓      |
+| gpt-5.1-codex    | $10.00  | Medium       | Medium       | ✓      |
 | premium          | N/A*    | Medium       | Medium       | ✓      |
 | composer-2       | $2.50   | Low          | Low          | ✓      |
+| composer-2.5     | $2.50   | Low          | Low          | ✓      |
+| gemini-2.5-flash | $2.50   | Low          | Low          | ✓      |
+| gemini-3-flash   | $3.00   | Low          | Low          | ✓      |
 | grok-4.3         | $2.50   | Low          | Low          | ✓      |
+| kimi-k2.5        | $3.00   | Low          | Low          | ✓      |
 | auto             | ~$6.00* | Low          | Low          | ✓      |
 | claude-4.5-haiku | $5.00   | Low          | Low          | ✓      |
+| gpt-5-mini       | $2.00   | Low          | Low          | ✓      |
 | gpt-5.4-mini     | $4.50   | Low          | Low          | ✓      |
 | gpt-5.4-nano     | $1.25   | Low          | Low          | ✓      |
 
@@ -202,6 +210,14 @@ rate of $6.00/M output).
 ## Recently Added / Updated Models
 
 
-| Model id  | Output | Tier | Change                                      |
-| --------- | ------ | ---- | ------------------------------------------- |
-| grok-4.3  | $2.50  | Low  | New — supersedes grok-4.20 in selector list |
+| Model id         | Output | Tier   | Change                                                                                                                     |
+| ---------------- | ------ | ------ | -------------------------------------------------------------------------------------------------------------------------- |
+| grok-4.3         | $2.50  | Low    | New — supersedes grok-4.20 in selector list                                                                                |
+| gemini-2.5-flash | $2.50  | Low    | New — added 2026-05-21; cheap multimodal Flash model now visible in `<model-options>` for SaaS-backend free-tier picks      |
+| gemini-3-flash   | $3.00  | Low    | New — added 2026-05-21; Gemini 3 generation Flash variant; previously Hidden-by-default on Cursor's pricing page            |
+| gemini-3-pro     | $12.00 | Medium | New — added 2026-05-21; Gemini 3 generation Pro variant alongside gemini-3.1-pro                                            |
+| gpt-5            | $10.00 | Medium | New — added 2026-05-21; baseline GPT-5 family flagship                                                                      |
+| gpt-5-mini       | $2.00  | Low    | New — added 2026-05-21; cheapest GPT-5 family variant ($2.00/M output)                                                      |
+| gpt-5.1-codex    | $10.00 | Medium | New — added 2026-05-21; earlier-generation Codex variant at $10/M output                                                    |
+| composer-2.5     | $2.50  | Low    | New — added 2026-05-21; Composer 2 successor (same output price, equal-output-price replacement rule)                       |
+| kimi-k2.5        | $3.00  | Low    | New — added 2026-05-21; Moonshot's Kimi K2.5 (routed via Cursor pool; no direct Moonshot access method enumerated yet)      |
