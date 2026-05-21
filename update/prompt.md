@@ -51,6 +51,37 @@ Source of truth: the Cursor pricing page.
   `model-selector.txt`, update its `input-price-per-1m` and
   `output-price-per-1m` attributes. Move the `<model …/>` element into
   the correct `<tier cost="…">` group if its tier classification changed.
+- **`<model-options>` is comprehensive, not hand-curated.** If a model
+  appears in `model-tier-cost-scale.md`'s price tables but NOT in
+  `<model-options>` of `model-selector.txt`, ADD it to `<model-options>`
+  in the appropriate `<tier cost="…">` bucket (by Output price using
+  the documented thresholds). For each newly-added model, populate the
+  required attributes:
+    - `id`, `name`: derived from the cost-scale row's Model column
+      (lowercase id with `-` separators; verbatim name).
+    - `input-price-per-1m`, `output-price-per-1m`: verbatim from the
+      cost-scale row.
+    - Seven `tier-<category>` attributes (coding, planning, agentic,
+      multimodal, long-context, knowledge, speed): set to `B` for
+      unknown categories. EXCEPTION: when the model name contains
+      "Mini", "Flash", "Haiku", "Nano", or "Lite", set `tier-speed="S"`.
+      Mark newly-auto-added models with `headline-benchmarks="Auto-added
+      pending editorial tier review; specific benchmark numbers pending
+      next refresh"` so the maintainer can find and refine them.
+    - `pricing-notes`: copy verbatim from the cost-scale row's Notes
+      column (the same invariant that the final-pass reconciliation
+      enforces).
+    - `best-for`: a one-sentence placeholder summarizing the price
+      tier and provider, e.g. "Auto-added cheap-tier <provider>
+      model; pending editorial best-for refinement." The maintainer
+      will replace this editorially after the auto-add.
+  Emit a warning of the form
+  `model auto-added to <model-options>: <id> (tier-* ratings need editorial review)`
+  for every model added this way, so the PR description surfaces them.
+- If a model is REMOVED from `model-tier-cost-scale.md` (per the
+  removal rule above), also remove its `<model …/>` entry from
+  `<model-options>` and its id from every `<method>` element's
+  `supports-models` attribute in `<access-methods>`.
 - Regenerate the "Existing model-selector.txt Classification Audit" table
   in `model-tier-cost-scale.md` so it reflects the updated pricing and
   tier assignments. Set the Status column to ✓ when Correct Tier matches
