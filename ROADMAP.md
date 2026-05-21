@@ -2,7 +2,7 @@
 
 > **Status:** Phases 1 and 2 shipped on PyPI (`roadmodel` v0.1.x and
 > v0.2.0 — the latter adds the cost estimator, structured CLI output,
-> and the `roadmodel-mcp` MCP server); Phases 3–8 below remain the
+> and the `roadmodel-mcp` MCP server); Phases 3–9 below remain the
 > forward execution plan.
 > **Owner:** Nathan Ramos, founder and sole maintainer
 > **Target environment:** Local through Phase 2; managed cloud from
@@ -357,6 +357,81 @@ builder with live preview and markdown export.
 - Target: 70%+ cache-hit rate on roadmap conversations after the
   first user turn.
 
+#### 4.7 Performance and warm-path latency
+Phase 3 shipped at noticeably-slower-than-spec latency on the
+anonymous `/recommend` flow (warm-path acceptance budget is
+under 5 seconds). This sub-section closes that gap and
+establishes a measured latency budget that later phases inherit.
+
+- Instrument and profile the current `/recommend` warm-path
+  response (anonymous, cached catalog) end-to-end: API-tier
+  dispatch, scoring engine, AI provider call, and web-tier
+  render. Record pre-fix vs post-fix numbers in a phase-4
+  performance findings document.
+- Targets (warm path, anonymous `/recommend`): P50 ≤ 3 seconds,
+  P95 ≤ 5 seconds, measured over a representative request sample
+  on production.
+- Apply targeted fixes informed by profiling: prompt caching
+  (already required by §4.6), tightened model output-token caps,
+  parallel fan-out for the comparison-table call where the
+  scoring engine permits, and any easy wins surfaced by the
+  profiler.
+- Document the cold-start budget separately; do not let cold
+  starts eat the warm budget. Apply a warm-pool or keep-alive
+  mitigation if cold-start P95 exceeds 8 seconds.
+- Surface warm-path latency as a first-class metric so Phase 9
+  observability inherits the data without a retrofit.
+
+#### 4.8 Public Readiness Gate — deliberate launch
+roadmodel.ai has been behind a Routing Middleware password gate
+plus `noindex` posture since the 2026-05-20 hotfix that followed
+Phase 3 Step 7's DNS cut. Phase 4 closes the gate as a deliberate
+launch, not a side effect of any other step.
+
+- Run a public-readiness audit of every gated surface:
+  - Footer and any byline / attribution show
+    Arcforge Digital Labs LLC only — no personal names,
+    handles, or contributor credits.
+  - Open Graph image, Twitter card, and sitemap.xml are
+    present, correct, and reference the apex domain
+    (not `staging.`).
+  - Copy sweep removes placeholder strings, `TODO`s, and
+    pre-launch language ("staging", "preview", "beta") on
+    `/`, `/recommend`, `/privacy`, `/terms`, 404, and any
+    other public route.
+  - 404 and error pages render the production design.
+  - Lighthouse scores on `/` and `/recommend` clear the
+    Phase 3 SEO follow-up bar (issue #99): ≥ 0.9 for SEO
+    and Best Practices, ≥ 0.85 for Performance.
+- Stand up an internal beta tester loop before lifting:
+  - Hand the shared `SITE_PASSWORD` to at least three
+    external testers via a controlled channel.
+  - Collect one structured round of feedback covering the
+    recommend flow, copy, and any visible bugs.
+  - Resolve or explicitly defer every reported blocker
+    before scheduling the lift.
+- Lift the gate in a single PR that:
+  - Removes `web/middleware.ts`, `web/app/gate/`,
+    `web/app/api/gate/`, `web/lib/gate.ts`.
+  - Removes `robots: { index: false, follow: false }` from
+    `web/app/layout.tsx`.
+  - Replaces `public/robots.txt` Disallow with the
+    launch-mode policy (Allow `/`, Disallow `/api/*`).
+  - Removes the `SITE_PASSWORD` env var from all Vercel
+    scopes on `roadmodel-web`.
+  - Submits the sitemap to Google Search Console (and Bing
+    Webmaster Tools if cost-free).
+- Post-lift monitoring (24 hours minimum):
+  - Watch the audit log for unexpected traffic, elevated
+    error rates, and rate-limit hit volume.
+  - Hold a documented rollback recipe (revert the gate-lift
+    PR, not just the env vars) and use it if anomalies
+    appear.
+- Memory hygiene: archive
+  `project_site_pre_launch_gate` with the lift date; keep
+  `feedback_public_readiness_gate` as durable guidance for
+  future DNS-cut milestones.
+
 **Acceptance criteria**
 - A signed-in user can complete a full roadmap conversation, see
   the structured preview update live, and download a
@@ -370,6 +445,17 @@ builder with live preview and markdown export.
 - Prompt caching is live and achieves ≥70% cache-hit rate on
   roadmap conversations beyond the first turn, measured over a
   representative sample.
+- Warm-path P95 latency for the anonymous `/recommend` flow is
+  ≤ 5 seconds end-to-end, P50 ≤ 3 seconds, measured over a
+  representative sample on production with pre/post numbers
+  recorded.
+- The pre-launch site gate has been lifted via a deliberate
+  Public-Readiness-Gate PR: middleware and noindex removed,
+  `robots.txt` set to launch-mode policy, `SITE_PASSWORD`
+  env var purged from all Vercel scopes, sitemap submitted to
+  Search Console, attribution and copy audits complete, and at
+  least three external beta testers have validated the gated
+  experience end-to-end with no outstanding blockers.
 
 ---
 
@@ -455,7 +541,100 @@ DOCX roadmaps and a pitchdeck deliverable.
 
 ---
 
-### Phase 7 — Security Hardening and Cost Controls
+### Phase 7 — Product Polish and v2 Redesign
+
+**Goal:** Take v1 — the feature-complete proof of concept that
+emerges from Phases 3–6 — and polish it into a v2 product that
+looks and feels worthy of a paid SaaS. Iterate on visual design,
+UI/UX flow, microcopy, and component-level interactions using a
+screenshot-driven review loop until every surface meets a
+documented design bar. v1 is the stepping stone; v2 is the
+public-launch surface.
+
+#### 7.1 v1 → v2 surface inventory and design bar
+- Catalog every shipped surface as of end-of-Phase-6: marketing
+  home, `/recommend`, `/roadmap`, `/pricing`, `/account`,
+  `/history`, auth flows, export panels, onboarding, and the
+  full error / empty / loading-state set.
+- Capture v1 screenshot baselines (mobile, tablet, desktop) for
+  every surface into a phase-7 design folder.
+- Write a design bar covering: layout density, typographic
+  hierarchy, color usage, spacing scale, motion language,
+  illustration and iconography direction, and content tone. The
+  bar is the acceptance contract for the rest of the phase.
+
+#### 7.2 Visual system v2
+- Audit current design-token usage and component primitives;
+  redesign the type scale, color palette, spacing system, radii,
+  shadows, and primitives toward the §7.1 design bar.
+- Replace any placeholder copy, ad-hoc icons, or default
+  framework theming with intentional choices.
+- Update the marketing home above-the-fold so a first-time
+  visitor immediately understands what the product is, who it
+  is for, and how to try it — without scrolling.
+
+#### 7.3 Surface-by-surface redesign loop
+- Take one surface at a time through a screenshot → critique →
+  revise loop driven by an AI design reviewer.
+- Each pass updates the live page, captures fresh screenshots at
+  all three viewports, and re-checks against the §7.1 design bar.
+- Continue per surface until two consecutive review passes
+  surface no new defects above a documented severity threshold.
+- Order: marketing home → `/recommend` → `/roadmap` →
+  `/pricing` and `/account` → `/history` → auth and onboarding
+  → error / empty / loading states.
+
+#### 7.4 Interaction polish and microcopy
+- Loading skeletons and progressive-disclosure patterns on every
+  surface that hits the API tier; no spinners-on-blank-page.
+- Empty-state and error-state copy reviewed for clarity, tone,
+  and recovery affordance.
+- Microcopy pass on every CTA, label, tooltip, and inline help
+  string; align with the §7.1 tone.
+- Keyboard and focus-state polish: visible focus rings, logical
+  tab order, escape-key dismissals.
+- Motion: subtle, purposeful transitions; no gratuitous animation.
+
+#### 7.5 Cross-device and responsive verification
+- Capture v2 screenshots at three viewports (mobile, tablet,
+  desktop) per surface.
+- Resolve any responsive regressions from the v1 baseline.
+- Verify the chat-plus-preview tab-collapse pattern on narrow
+  viewports survives the v2 changes.
+
+#### 7.6 Accessibility re-audit at v2
+- Re-run a WCAG 2.1 AA audit on the v2 surfaces; the design bar
+  must not regress accessibility relative to v1.
+- Color-contrast checks on the new palette, focus-visible coverage
+  on every interactive element, ARIA labeling on new primitives,
+  reduced-motion preference respected.
+
+#### 7.7 First-impression user testing
+- Recruit at least five uninvolved testers; record a five-second
+  test on the marketing home and a first-task test on
+  `/recommend`.
+- Acceptance: ≥80% of testers correctly identify the product
+  category within five seconds; ≥80% complete a first
+  recommendation without prompted help.
+
+**Acceptance criteria**
+- Every shipped surface from Phases 3–6 has v1 baseline and v2
+  final screenshots committed under a phase-7 design folder,
+  with the v2 versions meeting the §7.1 design bar.
+- A first-time visitor can identify the product category, the
+  value proposition, and how to start using it within five
+  seconds of landing on the home page (verified per §7.7).
+- No design-bar defects above the documented severity threshold
+  remain open across two consecutive review passes on each
+  surface.
+- Accessibility audit shows no WCAG 2.1 AA regressions vs. v1.
+- Phase 4 warm-path latency targets (§4.7) still hold after the
+  v2 redesign ships — visual polish does not regress
+  performance.
+
+---
+
+### Phase 8 — Security Hardening and Cost Controls
 
 **Goal:** Make the platform safe to operate at scale before public
 launch: hard cost ceilings that hold under attack, abuse-resistant
@@ -467,7 +646,7 @@ and pre-launch security-audit findings — is maintained outside this
 public roadmap. The public commitments below are the externally
 visible guarantees the phase exists to deliver.
 
-#### 7.1 Hard global AI cost ceilings
+#### 8.1 Hard global AI cost ceilings
 - Daily and monthly spend ceilings per AI provider, enforced both
   at the provider billing layer and in the application before
   every model call.
@@ -475,26 +654,26 @@ visible guarantees the phase exists to deliver.
 - Per-account daily token and dollar cap enforced before any
   provider call.
 
-#### 7.2 Bot and anonymous abuse hardening
+#### 8.2 Bot and anonymous abuse hardening
 - WAF in front of every `roadmodel.ai` route.
 - CAPTCHA challenge triggered on burst patterns at `/recommend`
   and `/roadmap`.
 - IP reputation scoring and behavioural fingerprinting feed the
   rate-limit decision.
 
-#### 7.3 Account abuse and payment fraud
+#### 8.3 Account abuse and payment fraud
 - Email verification on signup; reject disposable email domains.
 - Payment-fraud screening with documented rules and review
   thresholds.
 - Velocity checks on signups per IP and per email domain.
 - Card-on-file required at signup for the paid tier.
 
-#### 7.4 Auth and session hardening
+#### 8.4 Auth and session hardening
 - 2FA via TOTP (optional at v1, encouraged in UI copy).
 - Session timeout and concurrent session caps.
 - Sign-in alerts on new device or geography.
 
-#### 7.5 Infrastructure and secrets
+#### 8.5 Infrastructure and secrets
 - All provider API keys in a managed secrets store — never in
   environment-variable plaintext.
 - Documented key rotation procedure.
@@ -506,7 +685,7 @@ visible guarantees the phase exists to deliver.
   compromise, database breach, payment fraud spike, denial of
   service, and AI ceiling breach.
 
-#### 7.6 Prompt and output safety
+#### 8.6 Prompt and output safety
 - Per-request hard caps on input and output tokens.
 - Output filtering blocks responses containing API key patterns
   or recognised credential formats before returning to the user.
@@ -515,9 +694,9 @@ visible guarantees the phase exists to deliver.
 - Sanitisation of user-uploaded files before AI processing
   (strip macros, executable content, oversized payloads).
 
-#### 7.7 Pre-launch security audit
+#### 8.7 Pre-launch security audit
 - Run an iterative security audit scoped against the OWASP Top 10
-  and the threat surfaces enumerated in 7.1–7.6.
+  and the threat surfaces enumerated in 8.1–8.6.
 - Iterate until two consecutive runs surface no new critical or
   high findings.
 - All critical and high findings remediated before public launch.
@@ -535,31 +714,31 @@ visible guarantees the phase exists to deliver.
 
 ---
 
-### Phase 8 — Production Launch and Observability
+### Phase 9 — Production Launch and Observability
 
 **Goal:** Reach a state where `roadmodel.ai` is safe to announce
 publicly and operate as a real paying-customer service.
 
-#### 8.1 Observability and error handling
+#### 9.1 Observability and error handling
 - Error tracking wired into the web and API tiers.
 - Conversion-funnel analytics (home → recommend → signup → paid).
 - Uptime monitoring with alerting to the maintainer.
 
-#### 8.2 Pricing-catalog automation
+#### 9.2 Pricing-catalog automation
 - Weekly automated job re-fetches public pricing pages, diffs
   against the catalog JSON, and surfaces flagged changes for
   manual review.
 - Manual approval merges the diff into the OSS repo and triggers
   a cache refresh in the SaaS.
 
-#### 8.3 Launch readiness
+#### 9.3 Launch readiness
 - Public docs site for the CLI on a dedicated subdomain or
   `/docs`.
 - Status page and incident response playbook.
 - Pre-arrange increased AI provider quotas with each provider in
   use for the launch week.
 
-#### 8.4 Public launch
+#### 9.4 Public launch
 - Announcement on HN, dev social, and relevant communities.
 - Founder availability for support during the first 72 hours.
 
@@ -619,7 +798,7 @@ Native mobile is out of scope (see §6).
 ### Sequencing and dependencies
 
 ```
-Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 ──▶ Phase 5 ──▶ Phase 6 ──▶ Phase 7 ──▶ Phase 8
+Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 ──▶ Phase 5 ──▶ Phase 6 ──▶ Phase 7 ──▶ Phase 8 ──▶ Phase 9
 ```
 
 - Phases 1 and 2 run entirely on the maintainer's laptop with zero
@@ -629,9 +808,14 @@ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 ──▶ Phase 5 
   caps go on at this point as the day-one cost ceiling.
 - Phase 5 is the monetization cutover; everything before it is
   free-with-rate-limit.
-- Phase 7 is the hardening gate; no public launch happens until
+- Phase 7 is the polish gate — v1 is feature-complete after
+  Phase 6, but the v2 redesign is what ships to the public. No
+  hardening or launch work runs in parallel; redesign defects
+  routinely surface flow bugs that change the surfaces Phase 8
+  has to harden.
+- Phase 8 is the hardening gate; no public launch happens until
   the cost ceilings and security-audit results are green.
-- Phase 8 is the irreversible "we are live" phase; the public
+- Phase 9 is the irreversible "we are live" phase; the public
   announcement makes scaling-back visible to early adopters.
 
 ### Branch management strategy
@@ -684,7 +868,8 @@ request. `main` must always be:
 | `v0.4.0-phase-4`   | Roadmap builder + auth + MD export                |
 | `v0.5.0-phase-5`   | Paid tier + caps                                  |
 | `v0.6.0-phase-6`   | Branded exports + pitchdeck                       |
-| `v0.7.0-phase-7`   | Security hardening + cost ceilings live           |
+| `v0.7.0-phase-7`   | Product polish + v2 redesign                      |
+| `v0.8.0-phase-8`   | Security hardening + cost ceilings live           |
 | `v1.0.0`           | Public launch                                     |
 
 ---
