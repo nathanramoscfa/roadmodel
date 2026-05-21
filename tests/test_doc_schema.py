@@ -47,8 +47,15 @@ REQUIRED_MODEL_ATTRS = (
 )
 VALID_TIER_COSTS = {"very-high", "high", "medium", "low"}
 VALID_JURISDICTIONS = {
-    "us", "eu", "uk", "ca", "au", "jp", "kr",
-    "cn", "ru",
+    "us",
+    "eu",
+    "uk",
+    "ca",
+    "au",
+    "jp",
+    "kr",
+    "cn",
+    "ru",
     "unknown",
 }
 COST_SCALE_REQUIRED_COLUMNS = (
