@@ -37,8 +37,8 @@ export default function PrivacyPage() {
           <ul className="mt-3 list-disc space-y-2 pl-6">
             <li>
               Your task description is sent in real time to AI providers
-              (currently Anthropic Haiku 4.5 and Google Gemini Flash) to
-              generate the recommendation.{" "}
+              (currently Google Gemini 2.5 Flash, with Anthropic Haiku 4.5 as
+              a fallback) to generate the recommendation.{" "}
               <strong>
                 We do not store task descriptions or recommendation outputs
               </strong>{" "}

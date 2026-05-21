@@ -20,7 +20,7 @@ export async function recommendOnServer(
     task_description: taskDescription,
     context: {
       ...(context ?? {}),
-      force_provider: "anthropic-haiku-4-5",
+      force_provider: "google-gemini-2.5-flash",
     },
   };
   const res = await fetch(url, {
