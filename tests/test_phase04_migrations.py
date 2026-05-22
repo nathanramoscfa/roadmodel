@@ -525,9 +525,9 @@ def test_messages_role_check_constraint(db_conn: "psycopg.Connection") -> None:
             """
         )
         defs = [row[0] for row in cur.fetchall()]
-    assert any(
-        "role" in d and "user" in d and "assistant" in d for d in defs
-    ), f"messages.role CHECK constraint missing or wrong: {defs}"
+    assert any("role" in d and "user" in d and "assistant" in d for d in defs), (
+        f"messages.role CHECK constraint missing or wrong: {defs}"
+    )
 
 
 def test_messages_btree_index(db_conn: "psycopg.Connection") -> None:
@@ -573,16 +573,12 @@ def test_messages_conversation_fk_cascade(db_conn: "psycopg.Connection") -> None
 
 def test_messages_bump_conversation_trigger(db_conn: "psycopg.Connection") -> None:
     with db_conn.cursor() as cur:
-        cur.execute(
-            "select 1 from pg_proc where proname = 'bump_conversation_updated_at'"
-        )
+        cur.execute("select 1 from pg_proc where proname = 'bump_conversation_updated_at'")
         assert cur.fetchone() is not None, "bump_conversation_updated_at function missing"
         cur.execute(
             "select 1 from pg_trigger where tgname = 'messages_bump_conversation_updated_at'"
         )
-        assert cur.fetchone() is not None, (
-            "messages_bump_conversation_updated_at trigger missing"
-        )
+        assert cur.fetchone() is not None, "messages_bump_conversation_updated_at trigger missing"
 
 
 def test_messages_authenticated_policies(db_conn: "psycopg.Connection") -> None:
@@ -659,9 +655,9 @@ def test_roadmaps_unique_conversation_id(db_conn: "psycopg.Connection") -> None:
             """
         )
         defs = [definition for _, definition in cur.fetchall()]
-    assert any(
-        "conversation_id" in d for d in defs
-    ), f"roadmaps UNIQUE(conversation_id) constraint missing: {defs}"
+    assert any("conversation_id" in d for d in defs), (
+        f"roadmaps UNIQUE(conversation_id) constraint missing: {defs}"
+    )
 
 
 def test_roadmaps_draft_title_index(db_conn: "psycopg.Connection") -> None:
