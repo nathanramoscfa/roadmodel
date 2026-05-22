@@ -95,6 +95,9 @@ web_ci_env() {
   export UPSTASH_REDIS_URL="${UPSTASH_REDIS_URL:-https://ci-placeholder.upstash.io}"
   export UPSTASH_REDIS_TOKEN="${UPSTASH_REDIS_TOKEN:-ci-placeholder-redis-token}"
   export ROADMODEL_IP_SALT="${ROADMODEL_IP_SALT:-ci-placeholder-ip-salt}"
+  # Phase 4 Step 4 added GOOGLE_API_KEY to web/lib/env.ts as
+  # .min(1); next build crashes at boot without it.
+  export GOOGLE_API_KEY="${GOOGLE_API_KEY:-ci-placeholder-google-api-key}"
 }
 
 record_pass() {
