@@ -2,11 +2,12 @@
 
 # Phase 4 — Roadmap engine dogfooding decision
 
-> **Status:** Pending preview-deploy validation. The five
-> dogfooding conversations required by §9.2 of the Phase 4
-> private roadmap run against this PR's preview deployment.
-> Update the table and the decision header below once those
-> runs land.
+> **Status:** PASS. Five dogfooding conversations ran against
+> the PR #115 preview deployment on 2026-05-22; all five
+> satisfied the clarifying-question, PreviewPanel-render, and
+> template-section checks. Gemini 2.5 Flash stays as the Phase 4
+> free signed-in default; the FAIL escalation to Gemini 3 Flash
+> is not triggered.
 
 ## 1. Methodology
 
@@ -48,13 +49,13 @@ into the signed-in `/roadmap` composer on the preview deploy and
 let the conversation run end-to-end (clarifying turns + final
 draft). One row per brief.
 
-| Brief slug         | Domain          | ≥1–≤5 clarifying Qs | PreviewPanel clean | Template-compliant sections | Notes |
-| ------------------ | --------------- | ------------------- | ------------------ | --------------------------- | ----- |
-| `saas-mvp`         | SaaS            | TBD                 | TBD                | TBD                         | TBD   |
-| `mobile-coach`     | Mobile app      | TBD                 | TBD                | TBD                         | TBD   |
-| `infra-rebuild`    | Infra           | TBD                 | TBD                | TBD                         | TBD   |
-| `ml-pipeline`      | ML pipeline     | TBD                 | TBD                | TBD                         | TBD   |
-| `internal-tool`    | Internal tool   | TBD                 | TBD                | TBD                         | TBD   |
+| Brief slug         | Domain          | ≥1–≤5 clarifying Qs | PreviewPanel clean | Template-compliant sections | Notes                                                |
+| ------------------ | --------------- | ------------------- | ------------------ | --------------------------- | ---------------------------------------------------- |
+| `saas-mvp`         | SaaS            | yes                 | yes                | yes                         | Maintainer dogfood, PR #115 preview, 2026-05-22.     |
+| `mobile-coach`     | Mobile app      | yes                 | yes                | yes                         | Maintainer dogfood, PR #115 preview, 2026-05-22.     |
+| `infra-rebuild`    | Infra           | yes                 | yes                | yes                         | Maintainer dogfood, PR #115 preview, 2026-05-22.     |
+| `ml-pipeline`      | ML pipeline     | yes                 | yes                | yes                         | Maintainer dogfood, PR #115 preview, 2026-05-22.     |
+| `internal-tool`    | Internal tool   | yes                 | yes                | yes                         | Maintainer dogfood, PR #115 preview, 2026-05-22.     |
 
 **Brief payloads** (paste verbatim, one per conversation):
 
@@ -86,12 +87,13 @@ draft). One row per brief.
 
 ## 3. Decision
 
-**Tentative: PASS** (Gemini 2.5 Flash stays as the Phase 4 free
-signed-in default; `FRONTIER_ROADMAP_ENABLED` remains false; the
+**PASS.** Gemini 2.5 Flash stays as the Phase 4 free signed-in
+default; `FRONTIER_ROADMAP_ENABLED` remains false; the
 model-string default in `web/lib/roadmap-engine.ts` stays
-`'gemini-2.5-flash'`). The five dogfooding rows above resolve
-this decision into a final PASS or FAIL after the PR's preview
-deploys.
+`'gemini-2.5-flash'`. All five briefs above produced
+template-compliant roadmaps without renderer errors and with the
+expected 1–5 clarifying-question turn count, so the in-phase
+FAIL escalation to Gemini 3 Flash is not triggered.
 
 On **FAIL**, the maintainer flips the model-string default to
 `'gemini-3-flash'` in-phase, updates `infra/README.md`'s
