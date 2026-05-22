@@ -25,6 +25,20 @@ const envSchema = z.object({
   // lands the seeded values; same for ROADMODEL_IP_SALT.
   UPSTASH_REDIS_URL: z.string().optional(),
   UPSTASH_REDIS_TOKEN: z.string().optional(),
+  // Google Generative AI key. One key, three call sites:
+  //   1. Gemini 2.5 Flash on /api/recommend  (Phase 3 — via the
+  //      roadmodel-api FastAPI service which carries its own copy of
+  //      this key in a separate Vercel project's env scope).
+  //   2. Gemini 2.5 Flash on /api/roadmap    (Phase 4 — this scope;
+  //      consumed by web/lib/gemini-client.ts).
+  //   3. Gemini 3 Flash on /api/roadmap      (Phase 4 FAIL escalation
+  //      — same SDK call, same caching API, same key, model-string
+  //      swap only).
+  // Single Google provider-side billing meter for all three (see
+  // docs/cost-ceilings.md). .min(1) so boot fails loudly if the key
+  // is missing on any roadmodel-web scope rather than discovering
+  // it via a 500 from the first roadmap turn in production.
+  GOOGLE_API_KEY: z.string().min(1),
 });
 
 function requireVar(name: string): string {
@@ -45,4 +59,5 @@ export const env = envSchema.parse({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: requireVar("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
   UPSTASH_REDIS_URL: process.env.UPSTASH_REDIS_URL,
   UPSTASH_REDIS_TOKEN: process.env.UPSTASH_REDIS_TOKEN,
+  GOOGLE_API_KEY: requireVar("GOOGLE_API_KEY"),
 });
