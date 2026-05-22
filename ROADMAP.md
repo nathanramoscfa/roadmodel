@@ -741,6 +741,24 @@ publicly and operate as a real paying-customer service.
   manual review.
 - Manual approval merges the diff into the OSS repo and triggers
   a cache refresh in the SaaS.
+- Engine re-derivation: after each catalog refresh, the same
+  cron re-applies the selector algorithm to each free-tier
+  surface (`/recommend`, `/roadmap`) to compute the cheapest
+  qualifying model under the current catalog + jurisdiction
+  filter + minimum-tier constraints. If the derived engine
+  flips relative to the previous catalog, the cron surfaces
+  the flip in the catalog-diff PR description for manual
+  review alongside the pricing changes.
+- Safety guardrails on engine flips: never drop below the
+  documented minimum tier per surface (cheap-tier knowledge-B
+  for recommend; cheap-tier planning-B for roadmap); inherit
+  the same default allowed-jurisdictions list the user's
+  profile would use; require that the new engine's observability
+  baselines (warm-path latency budget from Phase 4, cache-hit
+  rate target from Phase 4) have post-deploy data within seven
+  days of the flip, otherwise auto-rollback to the prior
+  engine via a small revert PR the cron opens on a deadline
+  trigger.
 
 #### 9.3 Launch readiness
 - Public docs site for the CLI on a dedicated subdomain or
