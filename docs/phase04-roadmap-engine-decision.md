@@ -43,6 +43,11 @@ tool.
 
 ## 2. Per-conversation assessment
 
+The five briefs below are the dogfooding payloads — paste each
+into the signed-in `/roadmap` composer on the preview deploy and
+let the conversation run end-to-end (clarifying turns + final
+draft). One row per brief.
+
 | Brief slug         | Domain          | ≥1–≤5 clarifying Qs | PreviewPanel clean | Template-compliant sections | Notes |
 | ------------------ | --------------- | ------------------- | ------------------ | --------------------------- | ----- |
 | `saas-mvp`         | SaaS            | TBD                 | TBD                | TBD                         | TBD   |
@@ -50,6 +55,34 @@ tool.
 | `infra-rebuild`    | Infra           | TBD                 | TBD                | TBD                         | TBD   |
 | `ml-pipeline`      | ML pipeline     | TBD                 | TBD                | TBD                         | TBD   |
 | `internal-tool`    | Internal tool   | TBD                 | TBD                | TBD                         | TBD   |
+
+**Brief payloads** (paste verbatim, one per conversation):
+
+- `saas-mvp` — "I want to ship a B2B SaaS MVP for small-team
+  expense reporting — receipt upload, OCR line-item extraction,
+  per-employee policy rules, weekly accounting export. Solo
+  founder, six-month runway, no infra team. Help me plan the
+  rollout."
+
+- `mobile-coach` — "A mobile-first habit-coaching app — daily
+  check-in prompt, streak tracking, weekly summary, a small set
+  of behaviorally-grounded nudges. iOS + Android, no web. Two
+  engineers, twelve weeks to TestFlight. What's the roadmap?"
+
+- `infra-rebuild` — "We're migrating an aging on-prem Kubernetes
+  cluster to a managed cloud Kubernetes service. Mix of stateful
+  + stateless workloads, ~40 microservices, regulated industry
+  with audit requirements. Plan the cutover."
+
+- `ml-pipeline` — "We need an offline-batch ML training pipeline
+  for a recommendation model — feature store, daily training,
+  versioned model artifacts, A/B-deploy hooks, drift monitoring.
+  Two ML engineers + one platform engineer. Roadmap?"
+
+- `internal-tool` — "Build an internal admin tool that lets our
+  CS team unblock account-suspension cases — read-only customer
+  search, audit-logged actions, role-based access, ticket-system
+  integration. One engineer, eight weeks. Plan it out."
 
 ## 3. Decision
 
