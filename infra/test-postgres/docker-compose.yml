@@ -1,0 +1,29 @@
+# infra/test-postgres/docker-compose.yml
+#
+# Vanilla Postgres 16 container for the `migration-tests` CI job in
+# .github/workflows/tests.yml. The init.sql sibling file stubs the
+# Supabase-managed objects the migrations reference (auth.users
+# table, anon/authenticated/service_role roles, auth.uid() helper)
+# so migrations under infra/supabase/migrations/ can be applied
+# against an unmodified Postgres image.
+#
+# Local use: `docker compose -f infra/test-postgres/docker-compose.yml up -d`
+# then `DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres
+# pytest tests/test_phase04_migrations.py`.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/00-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 15

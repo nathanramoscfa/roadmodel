@@ -11,6 +11,13 @@ const envSchema = z.object({
     .default("https://staging.roadmodel.ai"),
   SUPABASE_URL: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  // Supabase publishable (anon) key — shipped to the browser via
+  // the NEXT_PUBLIC_ prefix. .min(1) because Supabase treats an
+  // empty key as anonymous and silently degrades to anon mode;
+  // failing Zod validation at boot beats discovering it via a
+  // broken login flow in production. Seeded in Vercel scopes
+  // Production, Preview, and the staging Custom Env.
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   // Optional until the maintainer seeds them on roadmodel-web Vercel
   // env vars (preview + staging + production). When unset, the
   // Step 6 rate limiter fails open with a startup warning — see
@@ -35,6 +42,7 @@ export const env = envSchema.parse({
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://staging.roadmodel.ai",
   SUPABASE_URL: requireVar("SUPABASE_URL"),
   SUPABASE_SERVICE_ROLE_KEY: requireVar("SUPABASE_SERVICE_ROLE_KEY"),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: requireVar("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
   UPSTASH_REDIS_URL: process.env.UPSTASH_REDIS_URL,
   UPSTASH_REDIS_TOKEN: process.env.UPSTASH_REDIS_TOKEN,
 });

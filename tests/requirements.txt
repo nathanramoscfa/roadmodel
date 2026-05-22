@@ -3,3 +3,9 @@ pyyaml>=6.0
 build>=1.2
 mcp>=1.0
 sqlparse>=0.4
+# psycopg[binary] for tests/test_phase04_migrations.py — live-Postgres
+# migration tests run under the migration-tests CI job against the
+# infra/test-postgres/docker-compose.yml stack. Module-level skip
+# when DATABASE_URL is unset, so plain `pytest tests/` without the
+# Postgres up still passes.
+psycopg[binary]>=3.1

@@ -765,3 +765,104 @@ it is a defense-in-depth layer, not a replacement. Equally, the
 provider caps don't assume the application ledger will hold —
 they are the deterministic floor regardless of application
 state.
+
+## Authentication
+
+Phase 4 Step 1 (2026-05-21) stood up Supabase Auth on the
+`roadmodel-data` project. Sign-in flows: magic-link (email OTP)
+and GitHub OAuth. Sessions are HTTP-only cookies refreshed in
+`web/middleware.ts` on every request that traverses a protected
+route. The Phase 3 password gate (`SITE_PASSWORD`) sits **in
+front of** auth — see [web/middleware.ts](../web/middleware.ts):
+gate branch first, auth branch second. Step 8 of Phase 4 lifts
+the gate; Step 1 must not remove it.
+
+### Key separation rule
+
+Two distinct Supabase keys, two distinct trust boundaries:
+
+| Key                              | Env var                            | Where it can appear                                            | Role                                      |
+| -------------------------------- | ---------------------------------- | -------------------------------------------------------------- | ----------------------------------------- |
+| Publishable (formerly `anon` JWT) | `NEXT_PUBLIC_SUPABASE_ANON_KEY`    | Browser bundle (`NEXT_PUBLIC_`), server, middleware            | Anonymous reads, scoped by RLS            |
+| Secret (formerly `service_role`)  | `SUPABASE_SERVICE_ROLE_KEY`        | **Server-side only** — Vercel env vars, never browser-shipped  | Bypasses RLS (audit-log writer uses this) |
+
+Supabase renamed the keys in 2026; the env var names stay legacy
+for code-compat with the Phase 3 audit-log writer in
+[web/lib/audit.ts](../web/lib/audit.ts). The publishable key is
+public-safe by design (RLS enforces row access); the secret key
+must **never** appear in a `NEXT_PUBLIC_*` var, a browser bundle,
+a client component, or a server response body.
+
+### GitHub OAuth — provisioning + rotation
+
+The maintainer-side OAuth app lives at
+[github.com/settings/applications](https://github.com/settings/applications).
+Settings:
+
+- **Application name:** `roadmodel`
+- **Homepage URL:** `https://roadmodel.ai`
+- **Authorization callback URL:** `https://nbxzpqnmafcayeqnfvcv.supabase.co/auth/v1/callback`
+  (Supabase project ref — change if the project is re-provisioned)
+
+The Client ID + Client Secret are pasted into Supabase dashboard
+**Auth → Providers → GitHub** (toggle on). Both values are saved
+to Google Password Manager as
+`roadmodel github_oauth_client_id` and
+`roadmodel github_oauth_client_secret`.
+
+**Rotation procedure** (when the secret leaks or on the quarterly
+secrets-rotation cadence from Phase 7):
+
+1. GitHub OAuth app → Generate a new client secret. The old one
+   stays valid until you delete it; **do not delete yet**.
+2. Supabase dashboard → Auth → Providers → GitHub → Edit → paste
+   the new secret → Save. Supabase swaps the new value live.
+3. Smoke-test sign-in with GitHub against `staging.roadmodel.ai`.
+4. GitHub OAuth app → delete the old secret.
+5. Update the Google Password Manager entry.
+
+**The Client ID does not rotate** unless the OAuth app is
+re-created (which forces a new callback URL handshake — only do
+this on full re-provisioning).
+
+### Magic-link email template
+
+Configured at Supabase dashboard **Auth → Email Templates →
+Magic Link**. Phase 4 Step 1 uses the **Supabase default
+template** verbatim — the `{{ .ConfirmationURL }}` token in the
+body is what the magic-link handshake reads.
+
+If the template is ever overridden (custom branding, copy
+changes), the override MUST keep `{{ .ConfirmationURL }}` inside
+an `<a href="…">` tag, or magic-link sign-in silently fails (the
+email arrives without a clickable link). Verify after any edit:
+the Step 1 e2e tests (`web/tests/auth.spec.ts`) stub the OTP
+request at the network layer and don't catch this — only a real
+sign-in attempt against the live template does.
+
+### Audit log + user attribution
+
+Step 1's
+[20260602000000_audit_log_user_id.sql](supabase/migrations/20260602000000_audit_log_user_id.sql)
+migration adds a nullable `user_id uuid` column to `audit_log`
+referencing `auth.users(id) ON DELETE SET NULL`. The Phase 3
+anonymous `/api/recommend` audit writes keep `user_id` NULL;
+signed-in routes (Phase 4 Steps 4 / 5 forward) pass
+`session.user.id`. RLS:
+
+- `service_role` retains full SELECT + INSERT (Phase 3 policies
+  preserved).
+- `authenticated` gains a SELECT policy filtered by
+  `user_id = auth.uid()` — a signed-in user reads only their
+  own rows.
+- `anon` has no SELECT policy and so cannot read anything.
+
+The schema is verified live in CI by the `migration-tests` job
+in [.github/workflows/tests.yml](../.github/workflows/tests.yml),
+which stands up a vanilla Postgres 16 container from
+[infra/test-postgres/docker-compose.yml](test-postgres/docker-compose.yml),
+seeds the Supabase-managed `auth.users` table and the
+`anon` / `authenticated` / `service_role` roles via
+[init.sql](test-postgres/init.sql), applies every migration, and
+runs the pg-catalog assertions in
+[tests/test_phase04_migrations.py](../tests/test_phase04_migrations.py).
