@@ -48,10 +48,31 @@ test(
 );
 
 test(
-  "signed-in send passes through and stub draft renders after delay",
+  "signed-in send passes through without triggering the soft wall",
   async ({ page }) => {
     await resetE2eState(page);
     await setE2eSessionCookie(page);
+    // Mock /api/roadmap so the test doesn't depend on a live
+    // Gemini call. The full streaming + draft contract is
+    // covered by roadmap-flow.spec.ts; this test only asserts
+    // the signed-in pass-through behavior (no SoftSignupWall).
+    await page.route("**/api/roadmap", (route) =>
+      route.fulfill({
+        status: 200,
+        headers: {
+          "Content-Type": "text/event-stream; charset=utf-8",
+        },
+        body:
+          `data: ${JSON.stringify({
+            type: "message_delta",
+            delta: "Thanks — quick question first.",
+          })}\n\n` +
+          `data: ${JSON.stringify({
+            type: "message_complete",
+            content: "Thanks — quick question first.",
+          })}\n\n`,
+      }),
+    );
     await page.goto("/roadmap");
     await page
       .getByPlaceholder(COMPOSER_PLACEHOLDER)
@@ -59,11 +80,9 @@ test(
     await page.getByRole("button", { name: /Send/i }).click();
 
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(page.getByText(/Stub executive summary/i)).toBeVisible({
-      timeout: 5_000,
-    });
-    await expect(page.getByText(/Phase 1 — Foundation/i)).toBeVisible();
-    await expect(page.getByText(/All automated checks pass in CI\./i)).toBeVisible();
+    await expect(
+      page.getByText(/quick question first/i),
+    ).toBeVisible({ timeout: 5_000 });
   },
 );
 

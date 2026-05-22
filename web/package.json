@@ -12,6 +12,7 @@
     "test:install": "playwright install chromium"
   },
   "dependencies": {
+    "@google/genai": "^2.6.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.0",
     "@upstash/ratelimit": "^2.0.8",

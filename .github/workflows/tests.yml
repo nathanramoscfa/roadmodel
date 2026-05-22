@@ -193,6 +193,7 @@ jobs:
           UPSTASH_REDIS_URL: https://ci-placeholder.upstash.io
           UPSTASH_REDIS_TOKEN: ci-placeholder-redis-token
           ROADMODEL_IP_SALT: ci-placeholder-ip-salt
+          GOOGLE_API_KEY: ci-placeholder-google-api-key
         run: npm --prefix web run build
 
   web-test:
@@ -223,6 +224,7 @@ jobs:
           UPSTASH_REDIS_URL: https://ci-placeholder.upstash.io
           UPSTASH_REDIS_TOKEN: ci-placeholder-redis-token
           ROADMODEL_IP_SALT: ci-placeholder-ip-salt
+          GOOGLE_API_KEY: ci-placeholder-google-api-key
         run: npm --prefix web run build
       - name: Run Playwright tests
         env:
@@ -233,6 +235,7 @@ jobs:
           UPSTASH_REDIS_URL: https://ci-placeholder.upstash.io
           UPSTASH_REDIS_TOKEN: ci-placeholder-redis-token
           ROADMODEL_IP_SALT: ci-placeholder-ip-salt
+          GOOGLE_API_KEY: ci-placeholder-google-api-key
         run: npm --prefix web run test
 
   service-tests:

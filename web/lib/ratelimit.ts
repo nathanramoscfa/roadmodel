@@ -5,7 +5,10 @@ import { Redis } from "@upstash/redis";
 import { isE2eAuthEnabled } from "./e2e-mode";
 import { env } from "./env";
 
-export type RateLimitReason = "rate_limited" | "burst_dropped";
+export type RateLimitReason =
+  | "rate_limited"
+  | "burst_dropped"
+  | "roadmap_monthly_cap";
 
 export interface RateLimitResult {
   allowed: boolean;
@@ -16,6 +19,13 @@ export interface RateLimitResult {
 interface Limiters {
   daily: Ratelimit;
   burst: Ratelimit;
+  // Per-user monthly cap for /api/roadmap — 3 roadmaps / 30 days,
+  // keyed on the Supabase user_id rather than ip+ua. The IP-pool
+  // burst+daily limiters above are still active and run BEFORE
+  // this check inside withRateLimit; this layer is the per-user
+  // capability-matrix gate ROADMAP.md documents for the free
+  // signed-in tier.
+  roadmapMonthly: Ratelimit;
 }
 
 function buildLimiters(): Limiters | null {
@@ -42,6 +52,11 @@ function buildLimiters(): Limiters | null {
       redis,
       limiter: Ratelimit.slidingWindow(10, "1 m"),
       prefix: "rl:burst",
+    }),
+    roadmapMonthly: new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(3, "30 d"),
+      prefix: "rl:roadmap",
     }),
   };
 }
@@ -83,6 +98,40 @@ export async function checkLimits(key: string): Promise<RateLimitResult> {
     if (isE2eAuthEnabled()) {
       console.warn(
         "[ratelimit] Upstash unreachable in E2E mode — failing open",
+        err,
+      );
+      return { allowed: true };
+    }
+    throw err;
+  }
+}
+
+// Per-user 3-roadmaps-per-30-days cap for /api/roadmap. Invoked by
+// the route handler AFTER the IP-pool burst+daily limits pass, so
+// the user-visible 429 reason on this layer is always the per-user
+// monthly cap rather than an unrelated IP-pool exhaustion. When
+// Upstash is unseeded or unreachable, this layer fails open via
+// the same E2E-vs-prod policy as checkLimits().
+export async function checkRoadmapMonthlyLimit(
+  userId: string,
+): Promise<RateLimitResult> {
+  if (!limiters) {
+    return { allowed: true };
+  }
+  try {
+    const result = await limiters.roadmapMonthly.limit(`user:${userId}`);
+    if (!result.success) {
+      return {
+        allowed: false,
+        reason: "roadmap_monthly_cap",
+        retryAfter: Math.ceil((result.reset - Date.now()) / 1000),
+      };
+    }
+    return { allowed: true };
+  } catch (err) {
+    if (isE2eAuthEnabled()) {
+      console.warn(
+        "[ratelimit] Upstash unreachable in E2E mode (roadmap) — failing open",
         err,
       );
       return { allowed: true };

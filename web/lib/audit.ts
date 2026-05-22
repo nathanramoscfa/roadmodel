@@ -15,7 +15,11 @@ export type AuditOutcome =
   | "rate_limited"
   | "burst_dropped"
   | "recommender_error"
-  | "bad_input";
+  | "bad_input"
+  // Phase 4 Step 4 outcomes for /api/roadmap.
+  | "roadmap_monthly_cap"
+  | "roadmap_error"
+  | "unauthorized";
 
 export interface AuditEntry {
   ip_hash: string;
