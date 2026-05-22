@@ -7,12 +7,27 @@
 // SDK exposes streaming natively. Auth + rate-limit layering
 // mirrors /recommend, with one extension: a per-user 3-per-30-day
 // monthly cap on top of the existing IP-pool burst+daily limits.
+//
+// Phase 4 Step 5 extends the handler to persist conversations,
+// messages, and the latest RoadmapDraft to Supabase. The first
+// SSE event in a new conversation now carries the conversation_id
+// so the client can include it on subsequent POSTs. On stream
+// completion the route inserts the assistant message and upserts
+// the roadmap row (when a draft surfaced); a roadmap_persisted
+// SSE event delivers the roadmaps.id back to the client so the
+// export panel can link to /api/roadmaps/[id]/export.
 
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { writeAudit } from "@/lib/audit";
 import { AuthError, requireSession } from "@/lib/auth";
+import {
+  createConversation,
+  insertMessage,
+  updateConversationTitle,
+  upsertRoadmap,
+} from "@/lib/conversations";
 import { getProfile } from "@/lib/profile";
 import { checkRoadmapMonthlyLimit } from "@/lib/ratelimit";
 import {
@@ -20,6 +35,7 @@ import {
   DEFAULT_ROADMAP_MODEL,
   type RoadmapModel,
 } from "@/lib/roadmap-engine";
+import type { RoadmapDraft } from "@/lib/roadmap-types";
 import { identifyRequest, withRateLimit } from "@/lib/withRateLimit";
 
 const messageSchema = z.object({
@@ -131,8 +147,66 @@ const handler = async (req: Request): Promise<Response> => {
   const profile = await getProfile(userId);
   const model: RoadmapModel = DEFAULT_ROADMAP_MODEL;
 
+  // Resolve the conversation row up front. On a brand-new
+  // conversation the client omits conversation_id; we mint one
+  // here and surface it on the first SSE event. On subsequent
+  // turns the client echoes the id back so the persistence side
+  // appends to the existing thread instead of forking a new one.
+  let conversationId = parsed.data.conversation_id ?? null;
+  let conversationCreated = false;
+  if (!conversationId) {
+    try {
+      const created = await createConversation({ userId });
+      conversationId = created.id;
+      conversationCreated = true;
+    } catch (err) {
+      void writeAudit({
+        ip_hash: id.ipHash,
+        ua_hash: id.uaHash,
+        route: id.route,
+        outcome: "roadmap_error",
+        error_class: err instanceof Error ? err.name : "conversation_create_failed",
+        user_id: userId,
+      });
+      return NextResponse.json(
+        { error: "roadmap_unavailable" },
+        { status: 503 },
+      );
+    }
+  }
+
+  // Persist the new user message (the most recent payload entry
+  // with role === "user"). Earlier messages were persisted on
+  // prior POSTs; re-inserting them would create duplicate rows.
+  const incoming = parsed.data.messages;
+  const newestUser = [...incoming]
+    .reverse()
+    .find((m) => m.role === "user");
+  if (newestUser) {
+    await insertMessage({
+      conversationId,
+      userId,
+      role: "user",
+      content: newestUser.content,
+    });
+  }
+
+  const conversationIdFinal = conversationId;
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
+      // Echo the conversation_id first so the client can pin it
+      // to its in-memory state before any tokens stream in.
+      controller.enqueue(
+        sseLine({
+          type: "conversation",
+          conversation_id: conversationIdFinal,
+          created: conversationCreated,
+        }),
+      );
+
+      let assistantContent = "";
+      let latestDraft: RoadmapDraft | null = null;
+
       try {
         const events = createRoadmapStream({
           messages: parsed.data.messages,
@@ -143,11 +217,55 @@ const handler = async (req: Request): Promise<Response> => {
         let outputTokens: number | undefined;
         for await (const event of events) {
           controller.enqueue(sseLine(event));
-          if (event.type === "message_complete") {
+          if (event.type === "message_delta") {
+            assistantContent += event.delta;
+          } else if (event.type === "roadmap_draft") {
+            latestDraft = event.draft;
+          } else if (event.type === "message_complete") {
+            if (event.content) {
+              assistantContent = event.content;
+            }
             inputTokens = event.input_tokens;
             outputTokens = event.output_tokens;
           }
         }
+
+        // Persistence runs after the generator drains so a Gemini
+        // failure mid-stream leaves the conversation row in a
+        // clean "user message logged, no assistant reply" state
+        // rather than half-writing the assistant turn.
+        if (assistantContent.trim().length > 0) {
+          await insertMessage({
+            conversationId: conversationIdFinal,
+            userId,
+            role: "assistant",
+            content: assistantContent,
+          });
+        }
+        if (latestDraft) {
+          const upserted = await upsertRoadmap({
+            conversationId: conversationIdFinal,
+            userId,
+            draft: latestDraft,
+          });
+          if (upserted) {
+            controller.enqueue(
+              sseLine({
+                type: "roadmap_persisted",
+                roadmap_id: upserted.id,
+                conversation_id: conversationIdFinal,
+              }),
+            );
+          }
+          if (latestDraft.title) {
+            await updateConversationTitle({
+              conversationId: conversationIdFinal,
+              userId,
+              title: latestDraft.title,
+            });
+          }
+        }
+
         controller.close();
         void writeAudit({
           ip_hash: id.ipHash,
