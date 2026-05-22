@@ -24,6 +24,13 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     env: {
+      // Local devs who ran `vercel env pull` carry VERCEL=1 in
+      // web/.env.local; that flag flips isE2eAuthEnabled() to
+      // false, disabling the cookie-driven E2E bypass and making
+      // every signed-in test fail with a login redirect. Override
+      // to empty here so the local test webServer matches CI
+      // (where no .env.local exists and VERCEL is unset).
+      VERCEL: "",
       NEXT_PUBLIC_SITE_URL: "http://localhost:3000",
       SUPABASE_URL: "https://ci-placeholder.supabase.co",
       SUPABASE_SERVICE_ROLE_KEY: "ci-placeholder-service-role-key",
@@ -33,6 +40,12 @@ export default defineConfig({
       ROADMODEL_IP_SALT: "ci-placeholder-ip-salt",
       ROADMODEL_E2E_AUTH: "1",
       ROADMODEL_E2E_MOCK_RECOMMEND: "1",
+      // Phase 4 Step 4: env.ts validates GOOGLE_API_KEY via .min(1)
+      // so the dev server crashes at boot without a placeholder.
+      // The roadmap-flow.spec mocks the /api/roadmap endpoint at
+      // the Playwright route layer; no real Gemini call is made in
+      // CI.
+      GOOGLE_API_KEY: "ci-placeholder-google-api-key",
     },
   },
 });
