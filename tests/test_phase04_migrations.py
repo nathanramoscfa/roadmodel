@@ -57,7 +57,9 @@ def db_conn() -> "psycopg.Connection":
         with conn.cursor() as cur:
             # Reset the test database between module runs so reruns
             # don't trip "object already exists". The schema is owned
-            # by postgres; CASCADE removes audit_log, indexes, RLS.
+            # by postgres; CASCADE removes audit_log, profiles, indexes,
+            # RLS.
+            cur.execute("drop table if exists public.profiles cascade")
             cur.execute("drop table if exists public.audit_log cascade")
         conn.commit()
         for path in _migration_files():
@@ -72,8 +74,8 @@ def db_conn() -> "psycopg.Connection":
 
 def test_at_least_two_migrations_present() -> None:
     files = _migration_files()
-    assert len(files) >= 2, (
-        f"expected ≥ 2 timestamped migrations under {MIGRATIONS_DIR}; "
+    assert len(files) >= 3, (
+        f"expected ≥ 3 timestamped migrations under {MIGRATIONS_DIR}; "
         f"found {[f.name for f in files]}"
     )
 
@@ -217,3 +219,151 @@ def test_service_role_policies_preserved(db_conn: "psycopg.Connection") -> None:
     assert "service_role_only_select" in names, (
         f"service_role_only_select (Step 6) regressed; policies: {names}"
     )
+
+
+def test_profiles_table_exists(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select 1 from information_schema.tables "
+            "where table_schema = 'public' and table_name = 'profiles'"
+        )
+        assert cur.fetchone() is not None, "profiles table missing"
+
+
+def test_profiles_columns_and_defaults(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            """
+            select column_name, data_type, column_default
+            from information_schema.columns
+            where table_schema = 'public'
+              and table_name = 'profiles'
+            order by ordinal_position
+            """
+        )
+        rows = {name: (dtype, default) for name, dtype, default in cur.fetchall()}
+    expected = [
+        "user_id",
+        "subscriptions",
+        "budget_priority",
+        "allowed_jurisdictions",
+        "onboarded_at",
+        "created_at",
+        "updated_at",
+    ]
+    for column in expected:
+        assert column in rows, f"{column} column missing on profiles"
+    assert rows["subscriptions"][0] == "ARRAY"
+    assert rows["allowed_jurisdictions"][0] == "ARRAY"
+    assert "'balanced'" in (rows["budget_priority"][1] or "")
+    assert "'us'" in (rows["allowed_jurisdictions"][1] or "")
+
+
+def test_profiles_check_constraints(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            """
+            select conname, pg_get_constraintdef(oid)
+            from pg_constraint
+            where conrelid = 'public.profiles'::regclass
+              and contype = 'c'
+            """
+        )
+        defs = {name: definition for name, definition in cur.fetchall()}
+    assert any(
+        "budget_priority" in definition and "balanced" in definition
+        for definition in defs.values()
+    ), "budget_priority CHECK constraint missing"
+    assert any(
+        "allowed_jurisdictions" in definition and "<@" in definition
+        for definition in defs.values()
+    ), "allowed_jurisdictions subset CHECK constraint missing"
+
+
+def test_profiles_onboarded_at_partial_index(
+    db_conn: "psycopg.Connection",
+) -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select indexdef from pg_indexes "
+            "where schemaname = 'public' and tablename = 'profiles' "
+            "and indexname = 'profiles_onboarded_at_null_idx'"
+        )
+        row = cur.fetchone()
+    assert row is not None, "profiles_onboarded_at_null_idx index missing"
+    idx_def = row[0]
+    assert "onboarded_at" in idx_def
+    assert "IS NULL" in idx_def
+
+
+def test_profiles_authenticated_policies(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select polname from pg_policy pol "
+            "join pg_class c on c.oid = pol.polrelid "
+            "join pg_namespace n on n.oid = c.relnamespace "
+            "where n.nspname = 'public' and c.relname = 'profiles'"
+        )
+        names = {row[0] for row in cur.fetchall()}
+    for policy in (
+        "authenticated_select_own",
+        "authenticated_insert_own",
+        "authenticated_update_own",
+    ):
+        assert policy in names, f"{policy} missing on profiles"
+
+
+def test_profiles_service_role_policies(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select polname from pg_policy pol "
+            "join pg_class c on c.oid = pol.polrelid "
+            "join pg_namespace n on n.oid = c.relnamespace "
+            "where n.nspname = 'public' and c.relname = 'profiles'"
+        )
+        names = {row[0] for row in cur.fetchall()}
+    for policy in (
+        "service_role_select",
+        "service_role_insert",
+        "service_role_update",
+        "service_role_delete",
+    ):
+        assert policy in names, f"{policy} missing on profiles"
+
+
+def test_profiles_anon_has_no_policies(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute("select oid from pg_roles where rolname = 'anon'")
+        anon = cur.fetchone()
+        assert anon is not None, "anon role not provisioned by init.sql"
+        anon_oid = anon[0]
+        cur.execute(
+            "select count(*) from pg_policy pol "
+            "join pg_class c on c.oid = pol.polrelid "
+            "join pg_namespace n on n.oid = c.relnamespace "
+            "where n.nspname = 'public' "
+            "  and c.relname = 'profiles' "
+            "  and %s = any(pol.polroles)",
+            (anon_oid,),
+        )
+        row = cur.fetchone()
+    assert row is not None
+    assert row[0] == 0, f"anon role must have no profiles policies; found {row[0]}"
+
+
+def test_profiles_updated_at_trigger(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select 1 from pg_proc "
+            "where proname = 'set_profiles_updated_at'"
+        )
+        assert cur.fetchone() is not None, (
+            "set_profiles_updated_at function missing"
+        )
+        cur.execute(
+            "select 1 from pg_trigger "
+            "where tgname = 'profiles_set_updated_at'"
+        )
+        assert cur.fetchone() is not None, (
+            "profiles_set_updated_at trigger missing"
+        )
