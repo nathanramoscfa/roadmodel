@@ -28,6 +28,10 @@ export interface AuditEntry {
   cost_usd?: number;
   outcome: AuditOutcome;
   error_class?: string;
+  // Populated for signed-in requests (Phase 4 Step 1+). Anonymous
+  // routes (Phase 3 /api/recommend) keep this undefined; the column
+  // is nullable in 20260602000000_audit_log_user_id.sql.
+  user_id?: string;
 }
 
 export async function writeAudit(entry: AuditEntry): Promise<void> {

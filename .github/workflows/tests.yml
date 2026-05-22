@@ -189,6 +189,7 @@ jobs:
           NEXT_PUBLIC_SITE_URL: https://staging.roadmodel.ai
           SUPABASE_URL: https://ci-placeholder.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-service-role-key
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
           UPSTASH_REDIS_URL: https://ci-placeholder.upstash.io
           UPSTASH_REDIS_TOKEN: ci-placeholder-redis-token
           ROADMODEL_IP_SALT: ci-placeholder-ip-salt
@@ -218,6 +219,7 @@ jobs:
           NEXT_PUBLIC_SITE_URL: https://staging.roadmodel.ai
           SUPABASE_URL: https://ci-placeholder.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-service-role-key
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
           UPSTASH_REDIS_URL: https://ci-placeholder.upstash.io
           UPSTASH_REDIS_TOKEN: ci-placeholder-redis-token
           ROADMODEL_IP_SALT: ci-placeholder-ip-salt
@@ -227,6 +229,7 @@ jobs:
           NEXT_PUBLIC_SITE_URL: https://staging.roadmodel.ai
           SUPABASE_URL: https://ci-placeholder.supabase.co
           SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-service-role-key
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
           UPSTASH_REDIS_URL: https://ci-placeholder.upstash.io
           UPSTASH_REDIS_TOKEN: ci-placeholder-redis-token
           ROADMODEL_IP_SALT: ci-placeholder-ip-salt
@@ -251,6 +254,49 @@ jobs:
       - name: Pytest (service)
         run: pytest service/tests/ -x
 
+  migration-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v5
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-py3.12-migration-${{ hashFiles('tests/requirements.txt', 'pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-py3.12-migration-
+      - name: Start Postgres via docker compose
+        run: |
+          docker compose -f infra/test-postgres/docker-compose.yml up -d
+      - name: Wait for Postgres health
+        run: |
+          for i in $(seq 1 30); do
+            if docker compose -f infra/test-postgres/docker-compose.yml \
+                 exec -T postgres pg_isready -U postgres -d postgres; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Postgres did not become ready in 60s" >&2
+          docker compose -f infra/test-postgres/docker-compose.yml logs
+          exit 1
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r tests/requirements.txt
+          pip install -e ".[dev]"
+      - name: Run Phase 4 migration tests
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+        run: pytest tests/test_phase04_migrations.py -v
+      - name: Tear down Postgres
+        if: always()
+        run: |
+          docker compose -f infra/test-postgres/docker-compose.yml down -v
+
   test:
     if: ${{ always() }}
     needs:
@@ -263,6 +309,7 @@ jobs:
       - service-tests
       - web-build
       - web-test
+      - migration-tests
     runs-on: ubuntu-latest
     steps:
       - name: Enforce aggregate test gate
@@ -276,6 +323,7 @@ jobs:
           echo "service-tests=${{ needs.service-tests.result }}"
           echo "web-build=${{ needs.web-build.result }}"
           echo "web-test=${{ needs.web-test.result }}"
+          echo "migration-tests=${{ needs.migration-tests.result }}"
           if [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.type-check.result }}" != "success" ] || \
              [ "${{ needs.test-matrix.result }}" != "success" ] || \
@@ -284,7 +332,8 @@ jobs:
              [ "${{ needs.roadmap-sync.result }}" != "success" ] || \
              [ "${{ needs.service-tests.result }}" != "success" ] || \
              [ "${{ needs.web-build.result }}" != "success" ] || \
-             [ "${{ needs.web-test.result }}" != "success" ]; then
+             [ "${{ needs.web-test.result }}" != "success" ] || \
+             [ "${{ needs.migration-tests.result }}" != "success" ]; then
             echo "One or more CI jobs failed."
             exit 1
           fi
