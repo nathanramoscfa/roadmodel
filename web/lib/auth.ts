@@ -20,6 +20,14 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 import { env } from "./env";
 
+export const E2E_AUTH_COOKIE = "rm-e2e-uid";
+
+const E2E_TEST_USER_ID = "00000000-0000-4000-8000-000000000001";
+
+function isE2eAuthEnabled(): boolean {
+  return process.env.ROADMODEL_E2E_AUTH === "1";
+}
+
 export class AuthError extends Error {
   readonly status: number;
   constructor(message: string = "unauthorized", status: number = 401) {
@@ -57,12 +65,30 @@ export async function createSupabaseServerClient(): Promise<SupabaseClient> {
 }
 
 export async function getServerSession(): Promise<User | null> {
+  if (isE2eAuthEnabled()) {
+    const cookieStore = await cookies();
+    const e2eUid = cookieStore.get(E2E_AUTH_COOKIE)?.value;
+    if (e2eUid) {
+      return {
+        id: e2eUid,
+        app_metadata: {},
+        user_metadata: {},
+        aud: "authenticated",
+        created_at: new Date(0).toISOString(),
+      } as User;
+    }
+    return null;
+  }
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) {
     return null;
   }
   return data.user;
+}
+
+export function getE2eTestUserId(): string {
+  return E2E_TEST_USER_ID;
 }
 
 export async function requireSession(): Promise<User> {

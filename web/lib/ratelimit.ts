@@ -51,23 +51,31 @@ export async function checkLimits(key: string): Promise<RateLimitResult> {
     return { allowed: true };
   }
 
-  const burst = await limiters.burst.limit(key);
-  if (!burst.success) {
-    return {
-      allowed: false,
-      reason: "burst_dropped",
-      retryAfter: 60,
-    };
-  }
+  try {
+    const burst = await limiters.burst.limit(key);
+    if (!burst.success) {
+      return {
+        allowed: false,
+        reason: "burst_dropped",
+        retryAfter: 60,
+      };
+    }
 
-  const daily = await limiters.daily.limit(key);
-  if (!daily.success) {
-    return {
-      allowed: false,
-      reason: "rate_limited",
-      retryAfter: Math.ceil((daily.reset - Date.now()) / 1000),
-    };
-  }
+    const daily = await limiters.daily.limit(key);
+    if (!daily.success) {
+      return {
+        allowed: false,
+        reason: "rate_limited",
+        retryAfter: Math.ceil((daily.reset - Date.now()) / 1000),
+      };
+    }
 
-  return { allowed: true };
+    return { allowed: true };
+  } catch (err) {
+    console.warn(
+      "[ratelimit] Upstash unreachable — failing open for this request",
+      err,
+    );
+    return { allowed: true };
+  }
 }
