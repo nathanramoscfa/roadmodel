@@ -18,15 +18,12 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 
+import { isE2eAuthEnabled } from "./e2e-mode";
 import { env } from "./env";
 
 export const E2E_AUTH_COOKIE = "rm-e2e-uid";
 
 const E2E_TEST_USER_ID = "00000000-0000-4000-8000-000000000001";
-
-function isE2eAuthEnabled(): boolean {
-  return process.env.ROADMODEL_E2E_AUTH === "1";
-}
 
 export class AuthError extends Error {
   readonly status: number;

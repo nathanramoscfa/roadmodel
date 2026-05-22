@@ -1,6 +1,8 @@
 // web/lib/ratelimit.ts
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+
+import { isE2eAuthEnabled } from "./e2e-mode";
 import { env } from "./env";
 
 export type RateLimitReason = "rate_limited" | "burst_dropped";
@@ -72,10 +74,19 @@ export async function checkLimits(key: string): Promise<RateLimitResult> {
 
     return { allowed: true };
   } catch (err) {
-    console.warn(
-      "[ratelimit] Upstash unreachable — failing open for this request",
-      err,
-    );
-    return { allowed: true };
+    // In E2E mode the CI env injects placeholder Upstash creds that
+    // can't actually reach the network — fail open so tests don't
+    // wedge on the rate limiter. In every other runtime (Vercel
+    // Production / Preview / Development, local `vercel dev`), an
+    // Upstash outage must NOT silently disable the limiter, so let
+    // the exception propagate to the route handler.
+    if (isE2eAuthEnabled()) {
+      console.warn(
+        "[ratelimit] Upstash unreachable in E2E mode — failing open",
+        err,
+      );
+      return { allowed: true };
+    }
+    throw err;
   }
 }

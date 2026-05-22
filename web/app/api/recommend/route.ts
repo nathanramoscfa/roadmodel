@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { writeAudit, type AuditOutcome } from "@/lib/audit";
 import { getServerSession } from "@/lib/auth";
+import { isE2eAuthEnabled } from "@/lib/e2e-mode";
 import {
   DEFAULT_PROFILE,
   getAllowedJurisdictions,
@@ -15,7 +16,7 @@ const DEFAULT_RECOMMENDER_URL =
 
 function recommenderUrl(): string {
   if (
-    process.env.ROADMODEL_E2E_AUTH === "1" &&
+    isE2eAuthEnabled() &&
     process.env.ROADMODEL_E2E_MOCK_RECOMMEND === "1"
   ) {
     const site =

@@ -7,6 +7,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createSupabaseServerClient } from "./auth";
+import { isE2eAuthEnabled } from "./e2e-mode";
+
+export { isE2eAuthEnabled };
 
 export type SubscriptionId =
   | "claude-max"
@@ -60,10 +63,6 @@ export class ProfileMissingError extends Error {
 }
 
 const e2eProfiles = new Map<string, Profile>();
-
-export function isE2eAuthEnabled(): boolean {
-  return process.env.ROADMODEL_E2E_AUTH === "1";
-}
 
 export function e2eGetProfile(userId: string): Profile | null {
   return e2eProfiles.get(userId) ?? null;
