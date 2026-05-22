@@ -44,9 +44,7 @@ TIMESTAMP_RE = re.compile(r"^\d{14}_[a-z_]+\.sql$")
 
 
 def _migration_files() -> list[Path]:
-    return sorted(
-        f for f in MIGRATIONS_DIR.iterdir() if TIMESTAMP_RE.match(f.name)
-    )
+    return sorted(f for f in MIGRATIONS_DIR.iterdir() if TIMESTAMP_RE.match(f.name))
 
 
 @pytest.fixture(scope="module")
@@ -136,12 +134,9 @@ def test_user_id_fk_to_auth_users_set_null(db_conn: "psycopg.Connection") -> Non
         row = cur.fetchone()
     assert row is not None, "user_id foreign key to auth.users is missing"
     delete_rule, ref_schema, ref_table, ref_column = row
-    assert delete_rule == "SET NULL", (
-        f"user_id FK delete rule must be SET NULL, got {delete_rule}"
-    )
+    assert delete_rule == "SET NULL", f"user_id FK delete rule must be SET NULL, got {delete_rule}"
     assert (ref_schema, ref_table, ref_column) == ("auth", "users", "id"), (
-        f"user_id FK must reference auth.users(id); got "
-        f"{ref_schema}.{ref_table}({ref_column})"
+        f"user_id FK must reference auth.users(id); got {ref_schema}.{ref_table}({ref_column})"
     )
 
 
@@ -155,9 +150,7 @@ def test_user_id_brin_partial_index(db_conn: "psycopg.Connection") -> None:
         row = cur.fetchone()
     assert row is not None, "audit_log_user_id_brin index missing"
     idx_def = row[0]
-    assert "USING brin" in idx_def, (
-        f"index must use BRIN access method; got {idx_def}"
-    )
+    assert "USING brin" in idx_def, f"index must use BRIN access method; got {idx_def}"
     assert "user_id IS NOT NULL" in idx_def, (
         f"index must be partial WHERE user_id IS NOT NULL; got {idx_def}"
     )
@@ -179,14 +172,11 @@ def test_authenticated_select_policy_filters_by_auth_uid(
         row = cur.fetchone()
     assert row is not None, "authenticated_select_own policy missing"
     _name, qual, roles = row
-    assert "authenticated" in roles, (
-        f"policy must be scoped to authenticated role; got {roles}"
-    )
+    assert "authenticated" in roles, f"policy must be scoped to authenticated role; got {roles}"
     # qual is the USING expression, normalized by Postgres. Look for
     # the user_id = auth.uid() shape (whitespace/casing-tolerant).
     assert qual is not None and "user_id" in qual and "uid()" in qual, (
-        f"policy USING expression must compare user_id to auth.uid(); "
-        f"got {qual!r}"
+        f"policy USING expression must compare user_id to auth.uid(); got {qual!r}"
     )
 
 
@@ -207,9 +197,7 @@ def test_anon_has_no_select_policy(db_conn: "psycopg.Connection") -> None:
         )
         row = cur.fetchone()
     assert row is not None
-    assert row[0] == 0, (
-        f"anon role must have no audit_log policies; found {row[0]}"
-    )
+    assert row[0] == 0, f"anon role must have no audit_log policies; found {row[0]}"
 
 
 def test_service_role_policies_preserved(db_conn: "psycopg.Connection") -> None:

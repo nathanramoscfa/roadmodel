@@ -91,6 +91,7 @@ web_ci_env() {
   export NEXT_PUBLIC_SITE_URL="${NEXT_PUBLIC_SITE_URL:-https://staging.roadmodel.ai}"
   export SUPABASE_URL="${SUPABASE_URL:-https://ci-placeholder.supabase.co}"
   export SUPABASE_SERVICE_ROLE_KEY="${SUPABASE_SERVICE_ROLE_KEY:-ci-placeholder-service-role-key}"
+  export NEXT_PUBLIC_SUPABASE_ANON_KEY="${NEXT_PUBLIC_SUPABASE_ANON_KEY:-ci-placeholder-anon-key}"
   export UPSTASH_REDIS_URL="${UPSTASH_REDIS_URL:-https://ci-placeholder.upstash.io}"
   export UPSTASH_REDIS_TOKEN="${UPSTASH_REDIS_TOKEN:-ci-placeholder-redis-token}"
   export ROADMODEL_IP_SALT="${ROADMODEL_IP_SALT:-ci-placeholder-ip-salt}"
