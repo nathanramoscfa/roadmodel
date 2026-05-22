@@ -4,6 +4,7 @@
 import { useCallback, useState } from "react";
 import type { Message, RoadmapDraft } from "@/lib/roadmap-types";
 import { ChatPanel } from "./ChatPanel";
+import { ExportPanel } from "./ExportPanel";
 import { PreviewPanel } from "./PreviewPanel";
 import {
   RoadmapTabSwitcher,
@@ -12,6 +13,13 @@ import {
 
 interface RoadmapWorkspaceProps {
   isAnonymous: boolean;
+  // Hydration props for /roadmap/[conversation_id]. When omitted
+  // the workspace starts in fresh-conversation mode and the first
+  // POST mints a new conversation_id server-side.
+  initialMessages?: Message[];
+  initialDraft?: RoadmapDraft | null;
+  initialConversationId?: string | null;
+  initialRoadmapId?: string | null;
 }
 
 function createMessage(role: Message["role"], content: string): Message {
@@ -24,8 +32,10 @@ function createMessage(role: Message["role"], content: string): Message {
 }
 
 type StreamEvent =
+  | { type: "conversation"; conversation_id: string; created?: boolean }
   | { type: "message_delta"; delta: string }
   | { type: "roadmap_draft"; draft: RoadmapDraft }
+  | { type: "roadmap_persisted"; roadmap_id: string; conversation_id: string }
   | { type: "message_complete"; content?: string }
   | { type: "error"; error?: string; message?: string };
 
@@ -62,11 +72,26 @@ function parseSseEvents(buffer: string): {
   return { events, rest };
 }
 
-export function RoadmapWorkspace({ isAnonymous }: RoadmapWorkspaceProps) {
-  const [draft, setDraft] = useState<RoadmapDraft | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+export function RoadmapWorkspace({
+  isAnonymous,
+  initialMessages,
+  initialDraft,
+  initialConversationId,
+  initialRoadmapId,
+}: RoadmapWorkspaceProps) {
+  const [draft, setDraft] = useState<RoadmapDraft | null>(
+    initialDraft ?? null,
+  );
+  const [messages, setMessages] = useState<Message[]>(initialMessages ?? []);
+  const [conversationId, setConversationId] = useState<string | null>(
+    initialConversationId ?? null,
+  );
+  const [roadmapId, setRoadmapId] = useState<string | null>(
+    initialRoadmapId ?? null,
+  );
   const [activeTab, setActiveTab] = useState<RoadmapTab>("chat");
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const send = useCallback(
     async (text: string) => {
@@ -80,7 +105,10 @@ export function RoadmapWorkspace({ isAnonymous }: RoadmapWorkspaceProps) {
         response = await fetch("/api/roadmap", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: conversationSoFar }),
+          body: JSON.stringify({
+            messages: conversationSoFar,
+            ...(conversationId ? { conversation_id: conversationId } : {}),
+          }),
         });
       } catch {
         setMessages((prev) =>
@@ -133,7 +161,9 @@ export function RoadmapWorkspace({ isAnonymous }: RoadmapWorkspaceProps) {
           const { events, rest } = parseSseEvents(buffer);
           buffer = rest;
           for (const event of events) {
-            if (event.type === "message_delta") {
+            if (event.type === "conversation") {
+              setConversationId(event.conversation_id);
+            } else if (event.type === "message_delta") {
               setMessages((prev) =>
                 prev.map((m) =>
                   m.id === assistantMessage.id
@@ -143,6 +173,8 @@ export function RoadmapWorkspace({ isAnonymous }: RoadmapWorkspaceProps) {
               );
             } else if (event.type === "roadmap_draft") {
               setDraft(event.draft);
+            } else if (event.type === "roadmap_persisted") {
+              setRoadmapId(event.roadmap_id);
             } else if (event.type === "message_complete") {
               if (event.content) {
                 setMessages((prev) =>
@@ -184,7 +216,7 @@ export function RoadmapWorkspace({ isAnonymous }: RoadmapWorkspaceProps) {
         );
       }
     },
-    [messages],
+    [messages, conversationId],
   );
 
   const sendSync = useCallback(
@@ -206,6 +238,12 @@ export function RoadmapWorkspace({ isAnonymous }: RoadmapWorkspaceProps) {
   // also captures the user's draft text so they don't lose it.
   const effectiveAnonymous = isAnonymous || sessionExpired;
 
+  // The export affordance unlocks only when BOTH a draft exists
+  // AND a persisted roadmap_id is known. Pre-persistence (e.g.
+  // anonymous flow or first stream still in flight) we keep the
+  // button hidden so users don't get a 404 download.
+  const exportAvailable = draft !== null && roadmapId !== null;
+
   return (
     <div className="flex flex-col">
       <RoadmapTabSwitcher activeTab={activeTab} onChange={setActiveTab} />
@@ -221,6 +259,14 @@ export function RoadmapWorkspace({ isAnonymous }: RoadmapWorkspaceProps) {
           <PreviewPanel draft={draft} />
         </div>
       </div>
+      {exportAvailable && roadmapId ? (
+        <ExportPanel
+          open={exportOpen}
+          onOpen={() => setExportOpen(true)}
+          onClose={() => setExportOpen(false)}
+          roadmapId={roadmapId}
+        />
+      ) : null}
     </div>
   );
 }

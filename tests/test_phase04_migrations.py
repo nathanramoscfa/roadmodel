@@ -57,8 +57,11 @@ def db_conn() -> "psycopg.Connection":
         with conn.cursor() as cur:
             # Reset the test database between module runs so reruns
             # don't trip "object already exists". The schema is owned
-            # by postgres; CASCADE removes audit_log, profiles, indexes,
-            # RLS.
+            # by postgres; CASCADE removes audit_log, profiles,
+            # conversations, messages, roadmaps, indexes, RLS.
+            cur.execute("drop table if exists public.roadmaps cascade")
+            cur.execute("drop table if exists public.messages cascade")
+            cur.execute("drop table if exists public.conversations cascade")
             cur.execute("drop table if exists public.profiles cascade")
             cur.execute("drop table if exists public.audit_log cascade")
         conn.commit()
@@ -74,8 +77,8 @@ def db_conn() -> "psycopg.Connection":
 
 def test_at_least_two_migrations_present() -> None:
     files = _migration_files()
-    assert len(files) >= 3, (
-        f"expected ≥ 3 timestamped migrations under {MIGRATIONS_DIR}; "
+    assert len(files) >= 5, (
+        f"expected ≥ 5 timestamped migrations under {MIGRATIONS_DIR}; "
         f"found {[f.name for f in files]}"
     )
 
@@ -355,3 +358,356 @@ def test_profiles_updated_at_trigger(db_conn: "psycopg.Connection") -> None:
         assert cur.fetchone() is not None, "set_profiles_updated_at function missing"
         cur.execute("select 1 from pg_trigger where tgname = 'profiles_set_updated_at'")
         assert cur.fetchone() is not None, "profiles_set_updated_at trigger missing"
+
+
+# ---------------------------------------------------------------
+# Phase 4 Step 5 — conversations + messages + roadmaps
+# ---------------------------------------------------------------
+
+
+def test_conversations_table_exists(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select 1 from information_schema.tables "
+            "where table_schema = 'public' and table_name = 'conversations'"
+        )
+        assert cur.fetchone() is not None, "conversations table missing"
+
+
+def test_conversations_columns(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            """
+            select column_name, data_type
+            from information_schema.columns
+            where table_schema = 'public' and table_name = 'conversations'
+            order by ordinal_position
+            """
+        )
+        rows = {name: dtype for name, dtype in cur.fetchall()}
+    for column in ("id", "user_id", "title", "created_at", "updated_at"):
+        assert column in rows, f"{column} column missing on conversations"
+    assert rows["id"] == "uuid"
+    assert rows["user_id"] == "uuid"
+    assert rows["title"] == "text"
+
+
+def test_conversations_user_id_brin_index(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select indexdef from pg_indexes "
+            "where schemaname = 'public' and tablename = 'conversations' "
+            "and indexname = 'conversations_user_id_updated_at_brin'"
+        )
+        row = cur.fetchone()
+    assert row is not None, "conversations_user_id_updated_at_brin index missing"
+    idx_def = row[0]
+    assert "USING brin" in idx_def, f"index must use BRIN; got {idx_def}"
+    assert "user_id" in idx_def
+    assert "updated_at" in idx_def
+
+
+def test_conversations_user_id_fk_cascade(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            """
+            select rc.delete_rule, ccu.table_schema, ccu.table_name, ccu.column_name
+            from information_schema.table_constraints tc
+            join information_schema.key_column_usage kcu
+              on tc.constraint_name = kcu.constraint_name
+              and tc.table_schema = kcu.table_schema
+            join information_schema.referential_constraints rc
+              on tc.constraint_name = rc.constraint_name
+            join information_schema.constraint_column_usage ccu
+              on rc.unique_constraint_name = ccu.constraint_name
+            where tc.table_schema = 'public'
+              and tc.table_name = 'conversations'
+              and tc.constraint_type = 'FOREIGN KEY'
+              and kcu.column_name = 'user_id'
+            """
+        )
+        row = cur.fetchone()
+    assert row is not None, "conversations.user_id FK missing"
+    delete_rule, ref_schema, ref_table, ref_column = row
+    assert delete_rule == "CASCADE"
+    assert (ref_schema, ref_table, ref_column) == ("auth", "users", "id")
+
+
+def test_conversations_authenticated_policies(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select polname from pg_policy pol "
+            "join pg_class c on c.oid = pol.polrelid "
+            "join pg_namespace n on n.oid = c.relnamespace "
+            "where n.nspname = 'public' and c.relname = 'conversations'"
+        )
+        names = {row[0] for row in cur.fetchall()}
+    for policy in (
+        "authenticated_select_own",
+        "authenticated_insert_own",
+        "authenticated_update_own",
+        "authenticated_delete_own",
+    ):
+        assert policy in names, f"{policy} missing on conversations"
+
+
+def test_conversations_service_role_policies(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select polname from pg_policy pol "
+            "join pg_class c on c.oid = pol.polrelid "
+            "join pg_namespace n on n.oid = c.relnamespace "
+            "where n.nspname = 'public' and c.relname = 'conversations'"
+        )
+        names = {row[0] for row in cur.fetchall()}
+    for policy in (
+        "service_role_select",
+        "service_role_insert",
+        "service_role_update",
+        "service_role_delete",
+    ):
+        assert policy in names, f"{policy} missing on conversations"
+
+
+def test_conversations_anon_has_no_policies(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute("select oid from pg_roles where rolname = 'anon'")
+        anon = cur.fetchone()
+        assert anon is not None
+        anon_oid = anon[0]
+        cur.execute(
+            "select count(*) from pg_policy pol "
+            "join pg_class c on c.oid = pol.polrelid "
+            "join pg_namespace n on n.oid = c.relnamespace "
+            "where n.nspname = 'public' "
+            "  and c.relname = 'conversations' "
+            "  and %s = any(pol.polroles)",
+            (anon_oid,),
+        )
+        row = cur.fetchone()
+    assert row is not None
+    assert row[0] == 0, f"anon role must have no conversations policies; found {row[0]}"
+
+
+def test_messages_table_exists(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select 1 from information_schema.tables "
+            "where table_schema = 'public' and table_name = 'messages'"
+        )
+        assert cur.fetchone() is not None, "messages table missing"
+
+
+def test_messages_columns(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            """
+            select column_name, data_type
+            from information_schema.columns
+            where table_schema = 'public' and table_name = 'messages'
+            order by ordinal_position
+            """
+        )
+        rows = {name: dtype for name, dtype in cur.fetchall()}
+    for column in ("id", "conversation_id", "role", "content", "created_at"):
+        assert column in rows, f"{column} column missing on messages"
+    assert rows["id"] == "uuid"
+    assert rows["conversation_id"] == "uuid"
+
+
+def test_messages_role_check_constraint(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            """
+            select pg_get_constraintdef(oid)
+            from pg_constraint
+            where conrelid = 'public.messages'::regclass and contype = 'c'
+            """
+        )
+        defs = [row[0] for row in cur.fetchall()]
+    assert any("role" in d and "user" in d and "assistant" in d for d in defs), (
+        f"messages.role CHECK constraint missing or wrong: {defs}"
+    )
+
+
+def test_messages_btree_index(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select indexdef from pg_indexes "
+            "where schemaname = 'public' and tablename = 'messages' "
+            "and indexname = 'messages_conversation_id_created_at_btree'"
+        )
+        row = cur.fetchone()
+    assert row is not None, "messages_conversation_id_created_at_btree index missing"
+    idx_def = row[0]
+    assert "USING btree" in idx_def
+    assert "conversation_id" in idx_def
+    assert "created_at" in idx_def
+
+
+def test_messages_conversation_fk_cascade(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            """
+            select rc.delete_rule, ccu.table_schema, ccu.table_name, ccu.column_name
+            from information_schema.table_constraints tc
+            join information_schema.key_column_usage kcu
+              on tc.constraint_name = kcu.constraint_name
+              and tc.table_schema = kcu.table_schema
+            join information_schema.referential_constraints rc
+              on tc.constraint_name = rc.constraint_name
+            join information_schema.constraint_column_usage ccu
+              on rc.unique_constraint_name = ccu.constraint_name
+            where tc.table_schema = 'public'
+              and tc.table_name = 'messages'
+              and tc.constraint_type = 'FOREIGN KEY'
+              and kcu.column_name = 'conversation_id'
+            """
+        )
+        row = cur.fetchone()
+    assert row is not None, "messages.conversation_id FK missing"
+    delete_rule, ref_schema, ref_table, ref_column = row
+    assert delete_rule == "CASCADE"
+    assert (ref_schema, ref_table, ref_column) == ("public", "conversations", "id")
+
+
+def test_messages_bump_conversation_trigger(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute("select 1 from pg_proc where proname = 'bump_conversation_updated_at'")
+        assert cur.fetchone() is not None, "bump_conversation_updated_at function missing"
+        cur.execute(
+            "select 1 from pg_trigger where tgname = 'messages_bump_conversation_updated_at'"
+        )
+        assert cur.fetchone() is not None, "messages_bump_conversation_updated_at trigger missing"
+
+
+def test_messages_authenticated_policies(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select polname from pg_policy pol "
+            "join pg_class c on c.oid = pol.polrelid "
+            "join pg_namespace n on n.oid = c.relnamespace "
+            "where n.nspname = 'public' and c.relname = 'messages'"
+        )
+        names = {row[0] for row in cur.fetchall()}
+    for policy in (
+        "authenticated_select_own",
+        "authenticated_insert_own",
+        "authenticated_update_own",
+        "authenticated_delete_own",
+    ):
+        assert policy in names, f"{policy} missing on messages"
+
+
+def test_messages_anon_has_no_policies(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute("select oid from pg_roles where rolname = 'anon'")
+        anon = cur.fetchone()
+        assert anon is not None
+        anon_oid = anon[0]
+        cur.execute(
+            "select count(*) from pg_policy pol "
+            "join pg_class c on c.oid = pol.polrelid "
+            "join pg_namespace n on n.oid = c.relnamespace "
+            "where n.nspname = 'public' "
+            "  and c.relname = 'messages' "
+            "  and %s = any(pol.polroles)",
+            (anon_oid,),
+        )
+        row = cur.fetchone()
+    assert row is not None
+    assert row[0] == 0, f"anon role must have no messages policies; found {row[0]}"
+
+
+def test_roadmaps_table_exists(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select 1 from information_schema.tables "
+            "where table_schema = 'public' and table_name = 'roadmaps'"
+        )
+        assert cur.fetchone() is not None, "roadmaps table missing"
+
+
+def test_roadmaps_columns(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            """
+            select column_name, data_type
+            from information_schema.columns
+            where table_schema = 'public' and table_name = 'roadmaps'
+            order by ordinal_position
+            """
+        )
+        rows = {name: dtype for name, dtype in cur.fetchall()}
+    for column in ("id", "conversation_id", "user_id", "draft", "generated_at"):
+        assert column in rows, f"{column} column missing on roadmaps"
+    assert rows["draft"] == "jsonb"
+
+
+def test_roadmaps_unique_conversation_id(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            """
+            select conname, pg_get_constraintdef(oid)
+            from pg_constraint
+            where conrelid = 'public.roadmaps'::regclass
+              and contype = 'u'
+            """
+        )
+        defs = [definition for _, definition in cur.fetchall()]
+    assert any("conversation_id" in d for d in defs), (
+        f"roadmaps UNIQUE(conversation_id) constraint missing: {defs}"
+    )
+
+
+def test_roadmaps_draft_title_index(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select indexdef from pg_indexes "
+            "where schemaname = 'public' and tablename = 'roadmaps' "
+            "and indexname = 'roadmaps_draft_title_idx'"
+        )
+        row = cur.fetchone()
+    assert row is not None, "roadmaps_draft_title_idx index missing"
+    idx_def = row[0]
+    assert "draft" in idx_def and "title" in idx_def, (
+        f"roadmaps_draft_title_idx must index draft->>'title'; got {idx_def}"
+    )
+
+
+def test_roadmaps_authenticated_policies(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select polname from pg_policy pol "
+            "join pg_class c on c.oid = pol.polrelid "
+            "join pg_namespace n on n.oid = c.relnamespace "
+            "where n.nspname = 'public' and c.relname = 'roadmaps'"
+        )
+        names = {row[0] for row in cur.fetchall()}
+    for policy in (
+        "authenticated_select_own",
+        "authenticated_insert_own",
+        "authenticated_update_own",
+        "authenticated_delete_own",
+    ):
+        assert policy in names, f"{policy} missing on roadmaps"
+
+
+def test_roadmaps_anon_has_no_policies(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute("select oid from pg_roles where rolname = 'anon'")
+        anon = cur.fetchone()
+        assert anon is not None
+        anon_oid = anon[0]
+        cur.execute(
+            "select count(*) from pg_policy pol "
+            "join pg_class c on c.oid = pol.polrelid "
+            "join pg_namespace n on n.oid = c.relnamespace "
+            "where n.nspname = 'public' "
+            "  and c.relname = 'roadmaps' "
+            "  and %s = any(pol.polroles)",
+            (anon_oid,),
+        )
+        row = cur.fetchone()
+    assert row is not None
+    assert row[0] == 0, f"anon role must have no roadmaps policies; found {row[0]}"
