@@ -89,6 +89,11 @@ const EXECUTIVE_SUMMARY_RE = /(?:^|\n)#{1,3}\s+Executive Summary\s*\n+([\s\S]*?)
 const ACCEPTANCE_RE = /Acceptance criteria\s*\n+((?:[-*]\s+[^\n]+\n?)+)/i;
 const GLOSSARY_RE = /(?:^|\n)#{1,3}\s+Glossary\s*\n+([\s\S]*?)(?=\n#{1,3}\s|\n*$)/i;
 const TOP_HEADING_RE = /(?:^|\n)#\s+[^\n]+/;
+// Title capture mirrors TOP_HEADING_RE but in a capturing form so
+// the parsed draft carries the project name. Step 5 stores this
+// as a top-level field on roadmaps.draft so the /history search
+// can index by name without re-parsing the body on every query.
+const TITLE_CAPTURE_RE = /(?:^|\n)#\s+([^\n]+)/;
 
 function parseBulletList(block: string): string[] {
   return block
@@ -146,7 +151,11 @@ function parseRoadmapDraft(buffered: string): RoadmapDraft | null {
     }
   }
 
+  const titleMatch = buffered.match(TITLE_CAPTURE_RE);
+  const title = titleMatch ? titleMatch[1].trim() : undefined;
+
   return {
+    title,
     project_overview,
     phases,
     glossary,
@@ -223,6 +232,7 @@ export async function* createRoadmapStream(
     const draft = parseRoadmapDraft(buffered);
     if (draft) {
       const draftJson = JSON.stringify({
+        title: draft.title,
         project_overview: draft.project_overview,
         phases: draft.phases,
         glossary: draft.glossary,

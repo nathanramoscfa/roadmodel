@@ -87,8 +87,18 @@ export function e2eUpsertProfile(
   return profile;
 }
 
-export function e2eClearProfiles(): void {
-  e2eProfiles.clear();
+export function e2eClearProfiles(userId?: string): void {
+  // When no userId is passed, clear everything — preserves the
+  // original "wipe-all" behavior callers like the unauthenticated
+  // /api/test/e2e-reset rely on. With a userId, only that user's
+  // row is removed, which lets cross-spec resets stay scoped and
+  // avoid races on profiles seeded by a parallel Playwright
+  // worker.
+  if (!userId) {
+    e2eProfiles.clear();
+    return;
+  }
+  e2eProfiles.delete(userId);
 }
 
 function mapRow(row: Record<string, unknown>): Profile {
