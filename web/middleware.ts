@@ -20,6 +20,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
+import { E2E_AUTH_COOKIE } from "@/lib/auth";
+import { isE2eAuthEnabled } from "@/lib/profile";
 import { GATE_COOKIE, deriveGateToken } from "@/lib/gate";
 
 const GATE_ALLOWED_PATHS = new Set<string>([
@@ -99,6 +101,9 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   // Supabase rotates the access token; we propagate those updates
   // onto the response so the browser keeps the refreshed cookies.
   let supabaseResponse = NextResponse.next({ request: req });
+  if (isE2eAuthEnabled() && req.cookies.get(E2E_AUTH_COOKIE)?.value) {
+    return supabaseResponse;
+  }
   const supabase = createServerClient(
     process.env.SUPABASE_URL ?? "",
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",

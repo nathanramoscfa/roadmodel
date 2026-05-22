@@ -31,12 +31,17 @@ export function identifyRequest(req: Request): RequestIdentity {
 }
 
 type Handler = (req: Request) => Promise<Response>;
+type UserIdResolver = (req: Request) => Promise<string | undefined>;
 
-export function withRateLimit(handler: Handler): Handler {
+export function withRateLimit(
+  handler: Handler,
+  resolveUserId?: UserIdResolver,
+): Handler {
   return async (req: Request): Promise<Response> => {
     const id = identifyRequest(req);
     const key = `${id.ipHash}:${id.uaHash}`;
     const limit = await checkLimits(key);
+    const userId = resolveUserId ? await resolveUserId(req) : undefined;
 
     if (!limit.allowed) {
       void writeAudit({
@@ -44,6 +49,7 @@ export function withRateLimit(handler: Handler): Handler {
         ua_hash: id.uaHash,
         route: id.route,
         outcome: limit.reason!,
+        user_id: userId,
       });
       return NextResponse.json(
         { error: limit.reason, retry_after: limit.retryAfter },
