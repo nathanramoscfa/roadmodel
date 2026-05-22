@@ -271,12 +271,10 @@ def test_profiles_check_constraints(db_conn: "psycopg.Connection") -> None:
         )
         defs = {name: definition for name, definition in cur.fetchall()}
     assert any(
-        "budget_priority" in definition and "balanced" in definition
-        for definition in defs.values()
+        "budget_priority" in definition and "balanced" in definition for definition in defs.values()
     ), "budget_priority CHECK constraint missing"
     assert any(
-        "allowed_jurisdictions" in definition and "<@" in definition
-        for definition in defs.values()
+        "allowed_jurisdictions" in definition and "<@" in definition for definition in defs.values()
     ), "allowed_jurisdictions subset CHECK constraint missing"
 
 
@@ -353,17 +351,7 @@ def test_profiles_anon_has_no_policies(db_conn: "psycopg.Connection") -> None:
 
 def test_profiles_updated_at_trigger(db_conn: "psycopg.Connection") -> None:
     with db_conn.cursor() as cur:
-        cur.execute(
-            "select 1 from pg_proc "
-            "where proname = 'set_profiles_updated_at'"
-        )
-        assert cur.fetchone() is not None, (
-            "set_profiles_updated_at function missing"
-        )
-        cur.execute(
-            "select 1 from pg_trigger "
-            "where tgname = 'profiles_set_updated_at'"
-        )
-        assert cur.fetchone() is not None, (
-            "profiles_set_updated_at trigger missing"
-        )
+        cur.execute("select 1 from pg_proc where proname = 'set_profiles_updated_at'")
+        assert cur.fetchone() is not None, "set_profiles_updated_at function missing"
+        cur.execute("select 1 from pg_trigger where tgname = 'profiles_set_updated_at'")
+        assert cur.fetchone() is not None, "profiles_set_updated_at trigger missing"

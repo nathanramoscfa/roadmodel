@@ -18,7 +18,8 @@ function recommenderUrl(): string {
     process.env.ROADMODEL_E2E_AUTH === "1" &&
     process.env.ROADMODEL_E2E_MOCK_RECOMMEND === "1"
   ) {
-    const site = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+    const site =
+      process.env.ROADMODEL_E2E_SITE_URL ?? "http://127.0.0.1:3000";
     return new URL("/api/test/mock-recommend", site).toString();
   }
   return process.env.ROADMODEL_RECOMMEND_URL ?? DEFAULT_RECOMMENDER_URL;

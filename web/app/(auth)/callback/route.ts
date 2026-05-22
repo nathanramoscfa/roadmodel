@@ -13,11 +13,14 @@ import {
   getE2eTestUserId,
   getServerSession,
 } from "@/lib/auth";
-import { env } from "@/lib/env";
 import { getProfile, isE2eAuthEnabled, isOnboarded } from "@/lib/profile";
 
-function redirectToOnboarding(next: string): NextResponse {
-  const onboardingUrl = new URL("/onboarding", env.NEXT_PUBLIC_SITE_URL);
+function siteOrigin(req: NextRequest): string {
+  return new URL(req.url).origin;
+}
+
+function redirectToOnboarding(req: NextRequest, next: string): NextResponse {
+  const onboardingUrl = new URL("/onboarding", siteOrigin(req));
   if (next !== "/") {
     onboardingUrl.searchParams.set("next", next);
   }
@@ -31,7 +34,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const next = rawNext && rawNext.startsWith("/") ? rawNext : "/";
 
   if (!code) {
-    const loginUrl = new URL("/login", env.NEXT_PUBLIC_SITE_URL);
+    const loginUrl = new URL("/login", siteOrigin(req));
     loginUrl.searchParams.set("next", next);
     return NextResponse.redirect(loginUrl);
   }
@@ -41,8 +44,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const profile = await getProfile(userId);
     const response =
       profile == null || !isOnboarded(profile)
-        ? redirectToOnboarding(next)
-        : NextResponse.redirect(new URL(next, env.NEXT_PUBLIC_SITE_URL));
+        ? redirectToOnboarding(req, next)
+        : NextResponse.redirect(new URL(next, siteOrigin(req)));
     response.cookies.set(E2E_AUTH_COOKIE, userId, {
       httpOnly: true,
       sameSite: "lax",
@@ -54,7 +57,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
-    const errUrl = new URL("/login", env.NEXT_PUBLIC_SITE_URL);
+    const errUrl = new URL("/login", siteOrigin(req));
     errUrl.searchParams.set("error", error.message);
     errUrl.searchParams.set("next", next);
     return NextResponse.redirect(errUrl);
@@ -62,13 +65,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   const session = await getServerSession();
   if (!session) {
-    return NextResponse.redirect(new URL(next, env.NEXT_PUBLIC_SITE_URL));
+    return NextResponse.redirect(new URL(next, siteOrigin(req)));
   }
 
   const profile = await getProfile(session.id);
   if (profile == null || !isOnboarded(profile)) {
-    return redirectToOnboarding(next);
+    return redirectToOnboarding(req, next);
   }
 
-  return NextResponse.redirect(new URL(next, env.NEXT_PUBLIC_SITE_URL));
+  return NextResponse.redirect(new URL(next, siteOrigin(req)));
 }
