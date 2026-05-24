@@ -39,6 +39,13 @@ const envSchema = z.object({
   // is missing on any roadmodel-web scope rather than discovering
   // it via a 500 from the first roadmap turn in production.
   GOOGLE_API_KEY: z.string().min(1),
+  // Phase 5 paid-frontier rollout gate. Step 6 wires this in
+  // false-by-default; Phase 5 flips it on (per Vercel scope) to
+  // light up the Anthropic frontier branch. Defaulted false so a
+  // missing var on any scope behaves as a Phase 4 deployment.
+  // Reserved — DO NOT flip true in Phase 4 (the roadmap-engine
+  // wrapper throws "Phase 5 scope" on the frontier branch).
+  FRONTIER_ROADMAP_ENABLED: z.coerce.boolean().default(false),
 });
 
 function requireVar(name: string): string {
@@ -60,4 +67,5 @@ export const env = envSchema.parse({
   UPSTASH_REDIS_URL: process.env.UPSTASH_REDIS_URL,
   UPSTASH_REDIS_TOKEN: process.env.UPSTASH_REDIS_TOKEN,
   GOOGLE_API_KEY: requireVar("GOOGLE_API_KEY"),
+  FRONTIER_ROADMAP_ENABLED: process.env.FRONTIER_ROADMAP_ENABLED ?? "false",
 });

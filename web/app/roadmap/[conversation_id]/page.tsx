@@ -15,6 +15,9 @@ import { notFound, redirect } from "next/navigation";
 import { RoadmapWorkspace } from "@/components/RoadmapWorkspace";
 import { getServerSession } from "@/lib/auth";
 import { getConversationDetail } from "@/lib/conversations";
+import { env } from "@/lib/env";
+import { resolveRoadmapEngine } from "@/lib/model-routing";
+import { getProfile } from "@/lib/profile";
 
 interface PageProps {
   params: Promise<{ conversation_id: string }>;
@@ -35,6 +38,18 @@ export default async function HydratedRoadmapPage({ params }: PageProps) {
   const detail = await getConversationDetail(conversation_id, session.id);
   if (!detail) {
     notFound();
+  }
+
+  let engine: string | null = null;
+  try {
+    const profile = await getProfile(session.id);
+    const resolved = resolveRoadmapEngine({
+      profile,
+      envFrontierEnabled: env.FRONTIER_ROADMAP_ENABLED,
+    });
+    engine = resolved.engine;
+  } catch (err) {
+    console.warn("[/roadmap/:id] engine resolve failed", err);
   }
 
   return (
@@ -58,6 +73,7 @@ export default async function HydratedRoadmapPage({ params }: PageProps) {
           initialDraft={detail.draft}
           initialConversationId={detail.id}
           initialRoadmapId={detail.roadmap_id}
+          engine={engine}
         />
       </div>
     </section>

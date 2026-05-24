@@ -28,13 +28,12 @@ import {
   updateConversationTitle,
   upsertRoadmap,
 } from "@/lib/conversations";
+import { env } from "@/lib/env";
+import type { CacheStats } from "@/lib/llm-cache";
+import { resolveRoadmapEngine } from "@/lib/model-routing";
 import { getProfile } from "@/lib/profile";
 import { checkRoadmapMonthlyLimit } from "@/lib/ratelimit";
-import {
-  createRoadmapStream,
-  DEFAULT_ROADMAP_MODEL,
-  type RoadmapModel,
-} from "@/lib/roadmap-engine";
+import { createRoadmapStream } from "@/lib/roadmap-engine";
 import type { RoadmapDraft } from "@/lib/roadmap-types";
 import { identifyRequest, withRateLimit } from "@/lib/withRateLimit";
 
@@ -145,7 +144,13 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   const profile = await getProfile(userId);
-  const model: RoadmapModel = DEFAULT_ROADMAP_MODEL;
+  // Step 6 — engine is resolved server-side at request time so the
+  // resolver's frontier-branch gate sees both the env-var default
+  // and the per-user override before the stream opens. The Phase 5
+  // defensive throw inside createRoadmapStream catches any
+  // accidental routing to the Anthropic branch during Phase 4.
+  const envFrontierEnabled = env.FRONTIER_ROADMAP_ENABLED;
+  const engine = resolveRoadmapEngine({ profile, envFrontierEnabled });
 
   // Resolve the conversation row up front. On a brand-new
   // conversation the client omits conversation_id; we mint one
@@ -211,10 +216,12 @@ const handler = async (req: Request): Promise<Response> => {
         const events = createRoadmapStream({
           messages: parsed.data.messages,
           profile,
-          model,
+          envFrontierEnabled,
+          engine,
         });
         let inputTokens: number | undefined;
         let outputTokens: number | undefined;
+        let cacheStats: CacheStats | undefined;
         for await (const event of events) {
           controller.enqueue(sseLine(event));
           if (event.type === "message_delta") {
@@ -227,6 +234,7 @@ const handler = async (req: Request): Promise<Response> => {
             }
             inputTokens = event.input_tokens;
             outputTokens = event.output_tokens;
+            cacheStats = event.cache_stats;
           }
         }
 
@@ -272,11 +280,12 @@ const handler = async (req: Request): Promise<Response> => {
           ua_hash: id.uaHash,
           route: id.route,
           outcome: "ok",
-          provider: "google",
-          model,
+          provider: engine.provider,
+          model: engine.engine,
           input_tokens: inputTokens,
           output_tokens: outputTokens,
           user_id: userId,
+          cache_stats: cacheStats,
         });
       } catch (err) {
         controller.enqueue(
@@ -292,8 +301,8 @@ const handler = async (req: Request): Promise<Response> => {
           ua_hash: id.uaHash,
           route: id.route,
           outcome: "roadmap_error",
-          provider: "google",
-          model,
+          provider: engine.provider,
+          model: engine.engine,
           error_class: err instanceof Error ? err.name : "stream_failed",
           user_id: userId,
         });

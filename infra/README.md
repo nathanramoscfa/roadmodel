@@ -441,6 +441,7 @@ deliberate — Step 6 should not relitigate the Upstash decision.
 | `UPSTASH_REDIS_URL`            | `roadmodel-web` Vercel env vars (Marketplace Upstash + alias) | Next.js rate limiter (live since Step 7 close-out)                          | web: production + preview + development + staging Custom Env (Step 7) | web: production + preview + development + staging |
 | `UPSTASH_REDIS_TOKEN`          | `roadmodel-web` Vercel env vars (Marketplace Upstash + alias) | Next.js rate limiter (live since Step 7 close-out)                          | web: production + preview + development + staging Custom Env (Step 7) | web: production + preview + development + staging |
 | `ROADMODEL_IP_SALT`            | `roadmodel-web` Vercel env vars (generated `openssl rand -hex 32`) | Next.js rate limiter daily IP+UA hashing salt (live since Step 7 close-out); rotate quarterly | web: production + preview + development + staging Custom Env (Step 7) | web: production + preview + development + staging |
+| `FRONTIER_ROADMAP_ENABLED`     | `roadmodel-web` Vercel env vars (default `false`)            | Next.js model-routing resolver — gates the Phase 5 Anthropic frontier branch | **not set anywhere in Phase 4 (defaults false)**         | web: production + preview + staging (set true on the scope where Phase 5 rolls out) |
 
 Rules:
 
@@ -453,6 +454,15 @@ Rules:
   and the maintainer's local shell. They never appear on
   `roadmodel-web` env vars — the browser must never see provider
   keys, per [private/ROADMAP.md](../private/ROADMAP.md) §3.
+- `FRONTIER_ROADMAP_ENABLED` is **reserved for Phase 5
+  paid-frontier rollout** — do NOT flip it true in Phase 4. The
+  roadmap-engine wrapper throws "Phase 5 scope: anthropic engine
+  branch not yet wired" if the flag fires while Phase 4 code is
+  deployed. The Phase 4 Step 4 FAIL escalation stays inside
+  Google (FREE_ROADMAP_MIN_TIER flips from `'B'` to `'A'` in
+  `web/lib/engine-overrides.ts`, the catalog-derived
+  `pickFreeEngine` shifts to Gemini 3 Flash); the env var is
+  the gate Phase 5 flips, not Phase 4.
 - `ROADMODEL_INTERNAL_TOKEN` / `ROADMODEL_SERVICE_URL` were
   **retired in Step 5.5b**. The cross-project boundary that used
   to need them is now a Vercel rewrite — no shared secret, no
