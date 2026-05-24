@@ -75,6 +75,7 @@ table and surface material cost / availability / capability constraints.
 | Gemini 3 Pro               | $2.00 | –           | $0.20      | $12.00 | Medium | Hidden by default |
 | Gemini 3 Pro Image Preview | $2.00 | –           | $0.20      | $12.00 | Medium | Hidden by default; Native image generation model optimized for speed, flexibility, and contextual understanding; Text input and output priced the same as Gemini 3 Pro; Image output: $120/1M tokens (~$0.134 per 1K/2K image, ~$0.24 per 4K image); Preview models may change before becoming stable and have more restrictive rate limits |
 | Gemini 3.1 Pro             | $2.00 | –           | $0.20      | $12.00 | Medium | -                 |
+| Gemini 3.5 Flash           | $1.50 | –           | $0.15      | $9.00  | Low    | -                 |
 
 
 ### API Pool — OpenAI (GPT)
@@ -117,7 +118,7 @@ table and surface material cost / availability / capability constraints.
 
 ---
 
-<!-- subscription-tiers-reviewed: 2026-05-19 -->
+<!-- subscription-tiers-reviewed: 2026-05-24 -->
 
 ## Subscription Tiers and Access Methods
 
@@ -157,11 +158,13 @@ and adjust the rebuild rules in [`update/prompt.md`](../update/prompt.md).
 | Claude Pro           | $20     | Anthropic | claude-code, claude-web      | Opus 4.7, Sonnet 4.6, and Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE), with roughly 5x the usage of the Free tier. |
 | claude.ai Max ($100) | $100    | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 5x the Pro usage budget; priority access during peak traffic.       |
 | claude.ai Max ($200) | $200    | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 20x the Pro usage budget; highest consumer-tier Claude budget.      |
-| ChatGPT Plus         | $20     | OpenAI    | chatgpt-app, codex-cli       | GPT-5.5 Instant and Thinking with per-model usage caps; Codex access included; GPT-5.4 and GPT-5.4 Mini also available. |
+| ChatGPT Go           | $8      | OpenAI    | chatgpt-app, codex-cli       | Budget tier with GPT-5.3 Instant unlimited and GPT-5.3 quota, more uploads and image generation than Free; ads still shown; lacks advanced reasoning models, Sora, Codex full access, Agent Mode, and Deep Research. |
+| ChatGPT Plus         | $20     | OpenAI    | chatgpt-app, codex-cli       | GPT-5.5 default model with full feature suite — Deep Research (10 runs/mo), Sora video, Codex, Agent Mode; GPT-5.4 Thinking and GPT-5.4 Mini also available. |
 | ChatGPT Pro ($100)   | $100    | OpenAI    | chatgpt-app, codex-cli       | Same model suite as Pro $200 (GPT-5.5, GPT-5.5 Pro, o1 Pro mode) at 5x Plus usage limits; Codex access included with promotional 10x multiplier through May 31, 2026. |
-| ChatGPT Pro ($200)   | $200    | OpenAI    | chatgpt-app, codex-cli       | Same coverage as Pro $100 with much higher caps (20x Plus limits) and access to GPT-5.5 and GPT-5.5 Pro.  |
-| Google AI Pro        | $20     | Google    | gemini-app, gemini-cli       | Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus 2 TB of Google One storage. |
-| Google AI Ultra      | $250    | Google    | gemini-app, gemini-cli       | Highest access to Gemini 3.1 Pro and Deep Think (where available), Veo video generation, Agent Mode previews, and 30 TB of Google One storage. |
+| ChatGPT Pro ($200)   | $200    | OpenAI    | chatgpt-app, codex-cli       | Same coverage as Pro $100 with much higher caps (20x Plus limits), 1M-token context window, Sora access, and GPT-5.4 Pro / GPT-5.5 Pro priority. |
+| Google AI Pro        | $20     | Google    | gemini-app, gemini-cli       | Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus Deep Research, Nano Banana Pro, Veo 3.1 access, 1,000 monthly AI credits, and 2 TB of Google One storage; includes YouTube Premium Lite. |
+| Google AI Ultra ($100) | $100  | Google    | gemini-app, gemini-cli       | New developer-focused Ultra tier (May 2026): 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan. |
+| Google AI Ultra ($200) | $200  | Google    | gemini-app, gemini-cli       | Highest access to Gemini 3.1 Pro, Deep Think, Project Genie, Veo 3.1 with 25,000 monthly AI credits, $100/month Google Cloud credits, and 30 TB Google One storage (price reduced from $250 to $200). |
 | Cursor Pro           | $20     | Cursor    | cursor                       | $20 monthly model-usage credit pool across every model in Cursor's catalog; on-demand overage billed at API rates. |
 | Cursor Pro+          | $60     | Cursor    | cursor                       | Same model coverage as Pro at roughly 3x the OpenAI / Claude / Gemini usage budget.                       |
 | Cursor Ultra         | $200    | Cursor    | cursor                       | Same model coverage as Pro at roughly 20x the OpenAI / Claude / Gemini usage budget; priority access to new features. |
@@ -195,6 +198,7 @@ appear here.
 | gemini-3-pro     | $12.00  | Medium       | Medium       | ✓      |
 | gpt-5            | $10.00  | Medium       | Medium       | ✓      |
 | gpt-5.1-codex    | $10.00  | Medium       | Medium       | ✓      |
+| gemini-3.5-flash | $9.00   | Low          | Low          | ✓      |
 | composer-2       | $2.50   | Low          | Low          | ✓      |
 | composer-2.5     | $2.50   | Low          | Low          | ✓      |
 | gemini-2.5-flash | $2.50   | Low          | Low          | ✓      |
@@ -229,6 +233,7 @@ ids no longer appear as recommendable engines.
 | gemini-2.5-flash | $2.50  | Low    | New — added 2026-05-21; cheap multimodal Flash model now visible in `<model-options>` for SaaS-backend free-tier picks      |
 | gemini-3-flash   | $3.00  | Low    | New — added 2026-05-21; Gemini 3 generation Flash variant; previously Hidden-by-default on Cursor's pricing page            |
 | gemini-3-pro     | $12.00 | Medium | New — added 2026-05-21; Gemini 3 generation Pro variant alongside gemini-3.1-pro                                            |
+| gemini-3.5-flash | $9.00  | Low    | New — added 2026-05-24; Gemini 3.5 Flash visible (un-hidden) on Cursor's pricing page; AA Intelligence Index 55.3 (high reasoning) places it as the strongest Flash-tier Gemini |
 | gpt-5            | $10.00 | Medium | New — added 2026-05-21; baseline GPT-5 family flagship                                                                      |
 | gpt-5-mini       | $2.00  | Low    | New — added 2026-05-21; cheapest GPT-5 family variant ($2.00/M output)                                                      |
 | gpt-5.1-codex    | $10.00 | Medium | New — added 2026-05-21; earlier-generation Codex variant at $10/M output                                                    |
@@ -255,7 +260,7 @@ this table.
 | ----------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Anthropic (San Francisco, US) | `us`              | opus-4.7, sonnet-4.6, claude-4.5-haiku                                                                                  |
 | OpenAI (San Francisco, US)    | `us`              | gpt-5.5, gpt-5.4, gpt-5.3-codex, gpt-5.2, gpt-5.1-codex, gpt-5, gpt-5.4-mini, gpt-5.4-nano, gpt-5-mini                  |
-| Google (Mountain View, US)    | `us`              | gemini-3.1-pro, gemini-3-pro, gemini-3-flash, gemini-2.5-flash                                                          |
+| Google (Mountain View, US)    | `us`              | gemini-3.1-pro, gemini-3-pro, gemini-3.5-flash, gemini-3-flash, gemini-2.5-flash                                        |
 | xAI (Palo Alto, US)           | `us`              | grok-4.3                                                                                                                |
 | Cursor (San Francisco, US)    | `us`              | composer-2, composer-2.5 — note: base weights for these Composer models derive from Moonshot's Kimi K2 series; Cursor's operator status determines the jurisdiction code per `<jurisdiction-context>` (data flow governed by Cursor's privacy policy and US law) |
 | Moonshot AI (Beijing, CN)     | `cn`              | kimi-k2.5                                                                                                               |
