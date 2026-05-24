@@ -1,9 +1,9 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-05-21T19:59:39Z",
+  "generated_at_utc": "2026-05-24T16:30:01Z",
   "source_doc_sha256": {
-    "model-selector.txt": "61c0e5dc93ab86d0f396630c5cb93b1071e1f0f2066e7927fac1848ab16aaf79",
-    "model-tier-cost-scale.md": "2bf57e5842548ed945fc1a0e432bfd9d61e727e24a0e5ed9f50aa02cca532325"
+    "model-selector.txt": "00d2afa4f30a249c25d722c818aeb8af745b2a79dbe744fc859b66bcb031a9b5",
+    "model-tier-cost-scale.md": "b2e9667c8581963d1313eb7ae964f05beaf1828cc0d5946ed0c3b9a4ebf9e172"
   },
   "models": [
     {
@@ -149,9 +149,30 @@
         "speed": "B"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 57.2 (#3); AA-Omniscience 32.9 (#1); HLE 44.7% (#1); LMArena Text Elo 1483.6 (#4); 1M-token context",
+      "headline_benchmarks": "AA Intelligence Index 57.2 (#3); AA-Omniscience 32.9 (#1); HLE 44.7% (#1); LMArena Text Elo 1482.8 (#5); 1M-token context",
       "pricing_notes": "-",
       "best_for": "True native multimodal understanding (text, image, video, audio, and code in a single pass), 1M-token context optimized for heterogeneous inputs, strong agentic multi-step tool use, and synthesizing insights across large mixed-media datasets or sprawling document corpora \u2014 the obvious choice whenever multimodal or long-context is the primary category"
+    },
+    {
+      "id": "gemini-3.5-flash",
+      "name": "Gemini 3.5 Flash",
+      "input_price_per_1m": 1.5,
+      "output_price_per_1m": 9.0,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "A",
+        "agentic": "A",
+        "multimodal": "B",
+        "long-context": "B",
+        "knowledge": "A",
+        "speed": "S"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "AA Intelligence Index 55.3 (high reasoning); \u03c4\u00b2-bench retail pass_1 45.6 (Gemini 3.5 Flash); Output Speed 227.1 tokens/s",
+      "pricing_notes": "-",
+      "best_for": "Auto-added cheap-tier Google model; pending editorial best-for refinement."
     },
     {
       "id": "gpt-5",
@@ -275,7 +296,7 @@
         "speed": "B"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 56.8 (#4); LMArena Text Elo 1454.1 (#18); GPT-5.4 (xhigh) Output Speed 80.5 tokens/s; lowest factual error rate among GPT models",
+      "headline_benchmarks": "AA Intelligence Index 56.8 (#4); LMArena Text Elo 1454.5 (#20); GPT-5.4 (xhigh) Output Speed 80.5 tokens/s; lowest factual error rate among GPT models",
       "pricing_notes": "Hidden by default; Requires Max Mode on request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context (Max Mode) supports up to 1M tokens with 2x input pricing",
       "best_for": "Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding"
     },
@@ -296,7 +317,7 @@
         "speed": "A"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 48.9 (xhigh); Output Speed 162.9 tokens/s; HLE 19.4% (GPT-5-mini)",
+      "headline_benchmarks": "AA Intelligence Index 48.9 (xhigh); Output Speed 160.3 tokens/s; HLE 19.4% (GPT-5-mini)",
       "pricing_notes": "Hidden by default; Smaller, faster variant of GPT-5.4; 90% discount on cached input tokens",
       "best_for": "Lightweight GPT-5.4 variant balancing quality and cost, well-suited for straightforward coding, short-form generation, and high-throughput workloads needing solid GPT reasoning at a fraction of the flagship price"
     },
@@ -338,7 +359,7 @@
         "speed": "D"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 60.2 (#1); LMArena Text Elo 1462.5 (#14); HLE 44.3%; AA-Omniscience 20.1 (#3)",
+      "headline_benchmarks": "AA Intelligence Index 60.2 (#1); LMArena Text Elo 1464.9 (#16); HLE 44.3%; AA-Omniscience 20.1 (#3)",
       "pricing_notes": "Requires Max Mode on request-based plans; Agentic and reasoning capabilities; More token-efficient than GPT-5.4 on comparable tasks; Improved persistence on long-running tasks; Fast mode is available at higher rates; Long context (Max Mode) supports up to 1M tokens with 2x input pricing",
       "best_for": "OpenAI's most capable frontier model and highest-cost GPT offering, best suited for the most demanding reasoning, long-horizon planning, and tasks where maximum intelligence is required regardless of cost \u2014 strongest single model for hard coding, agentic execution, and reasoning, but verify factual claims due to elevated hallucination"
     },
@@ -359,7 +380,7 @@
         "speed": "B"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 53.2 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1189",
+      "headline_benchmarks": "AA Intelligence Index 53.2 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1189.2",
       "pricing_notes": "Requires Max Mode on request-based plans",
       "best_for": "Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding \u2014 leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist"
     },
@@ -401,7 +422,7 @@
         "speed": "D"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 57.3 (#2); LMArena Text #6 (Elo 1478.7); LMArena WebDev #2 (Elo 1559.3); AA-Omniscience 26.2 (#2)",
+      "headline_benchmarks": "AA Intelligence Index 57.3 (#2); LMArena Text #7 (Elo 1479.1); LMArena WebDev #2 (Elo 1559.8); AA-Omniscience 26.2 (#2)",
       "pricing_notes": "Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)",
       "best_for": "Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching"
     },
@@ -422,7 +443,7 @@
         "speed": "B"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 51.7; LMArena WebDev Elo 1523.6 (#6); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage",
+      "headline_benchmarks": "AA Intelligence Index 51.7; LMArena WebDev Elo 1523.7 (#6); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage",
       "pricing_notes": "Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)",
       "best_for": "Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation"
     }
@@ -530,6 +551,7 @@
         "gemini-3-flash",
         "gemini-3-pro",
         "gemini-3.1-pro",
+        "gemini-3.5-flash",
         "gpt-5",
         "gpt-5-mini",
         "gpt-5.1-codex",
@@ -711,17 +733,37 @@
         "gemini-app",
         "gemini-cli"
       ],
-      "notes": "Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus 2 TB of Google One storage."
+      "notes": "Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus Deep Research, Nano Banana Pro, Veo 3.1 access, 1,000 monthly AI credits, and 2 TB of Google One storage; includes YouTube Premium Lite."
     },
     {
       "provider": "Google",
-      "tier": "Google AI Ultra",
-      "monthly_usd": 250.0,
+      "tier": "Google AI Ultra ($100)",
+      "monthly_usd": 100.0,
       "surface_funded": [
         "gemini-app",
         "gemini-cli"
       ],
-      "notes": "Highest access to Gemini 3.1 Pro and Deep Think (where available), Veo video generation, Agent Mode previews, and 30 TB of Google One storage."
+      "notes": "New developer-focused Ultra tier (May 2026): 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan."
+    },
+    {
+      "provider": "Google",
+      "tier": "Google AI Ultra ($200)",
+      "monthly_usd": 200.0,
+      "surface_funded": [
+        "gemini-app",
+        "gemini-cli"
+      ],
+      "notes": "Highest access to Gemini 3.1 Pro, Deep Think, Project Genie, Veo 3.1 with 25,000 monthly AI credits, $100/month Google Cloud credits, and 30 TB Google One storage (price reduced from $250 to $200)."
+    },
+    {
+      "provider": "OpenAI",
+      "tier": "ChatGPT Go",
+      "monthly_usd": 8.0,
+      "surface_funded": [
+        "chatgpt-app",
+        "codex-cli"
+      ],
+      "notes": "Budget tier with GPT-5.3 Instant unlimited and GPT-5.3 quota, more uploads and image generation than Free; ads still shown; lacks advanced reasoning models, Sora, Codex full access, Agent Mode, and Deep Research."
     },
     {
       "provider": "OpenAI",
@@ -731,7 +773,7 @@
         "chatgpt-app",
         "codex-cli"
       ],
-      "notes": "GPT-5.5 Instant and Thinking with per-model usage caps; Codex access included; GPT-5.4 and GPT-5.4 Mini also available."
+      "notes": "GPT-5.5 default model with full feature suite \u2014 Deep Research (10 runs/mo), Sora video, Codex, Agent Mode; GPT-5.4 Thinking and GPT-5.4 Mini also available."
     },
     {
       "provider": "OpenAI",
@@ -751,7 +793,7 @@
         "chatgpt-app",
         "codex-cli"
       ],
-      "notes": "Same coverage as Pro $100 with much higher caps (20x Plus limits) and access to GPT-5.5 and GPT-5.5 Pro."
+      "notes": "Same coverage as Pro $100 with much higher caps (20x Plus limits), 1M-token context window, Sora access, and GPT-5.4 Pro / GPT-5.5 Pro priority."
     }
   ]
 }
