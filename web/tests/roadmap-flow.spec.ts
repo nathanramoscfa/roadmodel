@@ -206,6 +206,7 @@ test(
         onboarded_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        frontier_roadmap_override: null,
       },
     });
     const projectIdx = text.indexOf("PROJECT ROADMAP TEMPLATE");

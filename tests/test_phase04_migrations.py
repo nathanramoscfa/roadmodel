@@ -77,8 +77,8 @@ def db_conn() -> "psycopg.Connection":
 
 def test_at_least_two_migrations_present() -> None:
     files = _migration_files()
-    assert len(files) >= 5, (
-        f"expected ≥ 5 timestamped migrations under {MIGRATIONS_DIR}; "
+    assert len(files) >= 7, (
+        f"expected ≥ 7 timestamped migrations under {MIGRATIONS_DIR}; "
         f"found {[f.name for f in files]}"
     )
 
@@ -711,3 +711,114 @@ def test_roadmaps_anon_has_no_policies(db_conn: "psycopg.Connection") -> None:
         row = cur.fetchone()
     assert row is not None
     assert row[0] == 0, f"anon role must have no roadmaps policies; found {row[0]}"
+
+
+# ---------------------------------------------------------------
+# Phase 4 Step 6 — audit_log.cache_stats jsonb + profiles
+# .frontier_roadmap_override boolean
+# ---------------------------------------------------------------
+
+
+def test_audit_log_cache_stats_column(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select data_type, is_nullable from information_schema.columns "
+            "where table_schema = 'public' and table_name = 'audit_log' "
+            "and column_name = 'cache_stats'"
+        )
+        row = cur.fetchone()
+    assert row is not None, "audit_log.cache_stats column missing"
+    data_type, is_nullable = row
+    assert data_type == "jsonb", f"cache_stats must be jsonb, got {data_type}"
+    assert is_nullable == "YES", "cache_stats must be nullable (Phase 4 writes Google rows only)"
+
+
+def test_audit_log_cache_stats_accepts_google_shape(
+    db_conn: "psycopg.Connection",
+) -> None:
+    # Insert + read-back the Google-discriminated variant. The
+    # service_role inserts here because RLS would block anon;
+    # the test connection is the migrations runner (service_role-
+    # equivalent). Verifies the schema accepts the documented
+    # shape — the column comment documents the union but Postgres
+    # doesn't enforce it, so this row-write test is the closest
+    # we get to schema-shape coverage on a jsonb column.
+    with db_conn.cursor() as cur:
+        cur.execute(
+            """
+            insert into public.audit_log
+              (ts, ip_hash, ua_hash, route, outcome, cache_stats)
+            values (
+              now(), 'h1', 'h2', '/api/roadmap', 'ok',
+              %s::jsonb
+            )
+            returning cache_stats->>'provider'
+            """,
+            (
+                '{"provider":"google",'
+                '"promptTokenCount":4096,'
+                '"candidatesTokenCount":512,'
+                '"cachedContentTokenCount":3500,'
+                '"cachedContentTokenCountUsed":3500}',
+            ),
+        )
+        provider = cur.fetchone()
+    db_conn.rollback()
+    assert provider is not None and provider[0] == "google"
+
+
+def test_audit_log_cache_stats_accepts_anthropic_shape(
+    db_conn: "psycopg.Connection",
+) -> None:
+    # The Anthropic variant is documented in the migration column
+    # comment for Phase 5 to start writing. Verify Postgres
+    # accepts the shape so the Phase 5 PR is a code change, not
+    # a migration change.
+    with db_conn.cursor() as cur:
+        cur.execute(
+            """
+            insert into public.audit_log
+              (ts, ip_hash, ua_hash, route, outcome, cache_stats)
+            values (
+              now(), 'h1', 'h2', '/api/roadmap', 'ok',
+              %s::jsonb
+            )
+            returning cache_stats->>'provider'
+            """,
+            (
+                '{"provider":"anthropic",'
+                '"input_tokens":4096,'
+                '"output_tokens":512,'
+                '"cache_read_input_tokens":3500,'
+                '"cache_creation_input_tokens":0}',
+            ),
+        )
+        provider = cur.fetchone()
+    db_conn.rollback()
+    assert provider is not None and provider[0] == "anthropic"
+
+
+def test_profiles_frontier_roadmap_override_column(
+    db_conn: "psycopg.Connection",
+) -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select data_type, is_nullable, column_default "
+            "from information_schema.columns "
+            "where table_schema = 'public' and table_name = 'profiles' "
+            "and column_name = 'frontier_roadmap_override'"
+        )
+        row = cur.fetchone()
+    assert row is not None, "profiles.frontier_roadmap_override column missing"
+    data_type, is_nullable, column_default = row
+    assert data_type == "boolean", (
+        f"frontier_roadmap_override must be boolean, got {data_type}"
+    )
+    assert is_nullable == "YES", (
+        "frontier_roadmap_override must be nullable (tri-state semantics)"
+    )
+    assert column_default is None, (
+        "frontier_roadmap_override default must be NULL "
+        "(NULL = honor env var); got "
+        f"{column_default!r}"
+    )

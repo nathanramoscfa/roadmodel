@@ -4,6 +4,10 @@ import { writeAudit, type AuditOutcome } from "@/lib/audit";
 import { getServerSession } from "@/lib/auth";
 import { isE2eAuthEnabled } from "@/lib/e2e-mode";
 import {
+  NoEligibleEngineError,
+  resolveRecommenderEngine,
+} from "@/lib/model-routing";
+import {
   DEFAULT_PROFILE,
   getAllowedJurisdictions,
   getProfile,
@@ -126,13 +130,40 @@ const handler = async (req: Request): Promise<Response> => {
     ? await getAllowedJurisdictions(userId)
     : [...DEFAULT_PROFILE.allowed_jurisdictions];
 
+  // Step 6 — engine pin is catalog-derived rather than hard-coded.
+  // Today's catalog returns the cheapest Google knowledge-B
+  // model (Gemini 2.5 Flash); the Phase 9 §9.2 cron's daily
+  // catalog refresh shifts this automatically when a cheaper
+  // qualifying model lands. NoEligibleEngineError surfaces as a
+  // 503 so the client can show a readable error instead of the
+  // request silently hitting the upstream FastAPI service with a
+  // missing engine pin.
+  let recommenderEngine;
+  try {
+    recommenderEngine = resolveRecommenderEngine({ profile });
+  } catch (err) {
+    auditFor(req, "recommender_error", {
+      error_class:
+        err instanceof NoEligibleEngineError
+          ? "no_eligible_engine"
+          : err instanceof Error
+            ? err.name
+            : "engine_resolve_failed",
+      user_id: userId,
+    });
+    return NextResponse.json(
+      { error: "recommender_unavailable" },
+      { status: 503 },
+    );
+  }
+
   const upstreamPayload = {
     task_description: taskDescription,
     context: {
       ...incomingContext,
       budget_priority: budgetPriority,
       allowed_jurisdictions: allowedJurisdictions,
-      force_provider: "google-gemini-2.5-flash",
+      force_provider: recommenderEngine.force_provider,
     },
   };
 
