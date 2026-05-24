@@ -45,7 +45,7 @@ import {
 } from "./engine-overrides";
 import { DEFAULT_PROFILE, type JurisdictionCode, type Profile } from "./profile";
 
-// Tier ordering matches the model-selector's quality scale where S
+// Tier ordering matches the docs/model-selector.txt's quality scale where S
 // is best and D is worst. `tierRank` lets us compare candidates
 // against the surface's minTier with a simple `<=` check (lower
 // rank == higher quality).
@@ -61,7 +61,7 @@ const TIER_RANK: Record<TaskTier, number> = {
 export type EngineSurface = "recommend" | "roadmap";
 
 // Map a surface to its PRIMARY task category in the
-// model-selector's <task-categories> taxonomy. Surface-driven
+// docs/model-selector.txt's <task-categories> taxonomy. Surface-driven
 // rather than profile-driven because the surface determines what
 // the model is being asked to do; the profile influences only the
 // jurisdiction filter.

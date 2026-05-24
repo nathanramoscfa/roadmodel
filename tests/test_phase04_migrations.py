@@ -811,12 +811,8 @@ def test_profiles_frontier_roadmap_override_column(
         row = cur.fetchone()
     assert row is not None, "profiles.frontier_roadmap_override column missing"
     data_type, is_nullable, column_default = row
-    assert data_type == "boolean", (
-        f"frontier_roadmap_override must be boolean, got {data_type}"
-    )
-    assert is_nullable == "YES", (
-        "frontier_roadmap_override must be nullable (tri-state semantics)"
-    )
+    assert data_type == "boolean", f"frontier_roadmap_override must be boolean, got {data_type}"
+    assert is_nullable == "YES", "frontier_roadmap_override must be nullable (tri-state semantics)"
     assert column_default is None, (
         "frontier_roadmap_override default must be NULL "
         "(NULL = honor env var); got "
