@@ -1,18 +1,24 @@
 // web/lib/roadmap-engine.ts
 //
-// Engine-facing wrapper for the roadmap builder. Phase 4 default
-// engine is Gemini 2.5 Flash; the FAIL-escalation pick is Gemini 3
-// Flash. Both use the same @google/genai SDK call shape — only the
-// model string changes. A Phase 5 Anthropic adapter slots in by
-// adding an `if` branch on the model-string prefix; the public
-// signature (caller passes a `model` string, receives SSE events of
-// the documented shape) is engine-agnostic by construction.
+// Engine-facing wrapper for the roadmap builder. Phase 4 routes
+// every request through resolveRoadmapEngine() (web/lib/model-
+// routing.ts) so the model string + provider come from the
+// catalog-tracked resolver rather than a hard-coded literal. The
+// Phase 5 paid-frontier Anthropic branch is defended here: the
+// resolver returns a valid Anthropic configuration when the
+// FRONTIER_ROADMAP_ENABLED env var or the per-user override fires,
+// but this wrapper throws a documented "Phase 5 scope" error if
+// the branch is ever actually invoked during Phase 4.
 //
-// This file is the only place in Phase 4 that imports the
-// @google/genai SDK directly. Step 6 will wrap createRoadmapStream
-// with the Gemini cachedContent creation + reuse logic — the
-// systemInstruction assembly here is already structured to keep
-// segments 0–2 stable across users for that purpose.
+// Step 6 adds Google `cachedContent` integration via the
+// provider-agnostic facade in web/lib/llm-cache.ts. The
+// orientation + project + phase template segments form the
+// stable cache prefix; the per-user profile segment stays AFTER
+// the cached prefix so per-user variation does not invalidate
+// the shared cachedContent resource. On cache reuse, the SDK
+// reports `cachedContentTokenCountUsed > 0` on subsequent turns
+// — the 70 % cache-hit-rate target acceptance criterion checks
+// that signal across a representative sample.
 
 import type {
   GenerateContentParameters,
@@ -20,8 +26,18 @@ import type {
 } from "@google/genai";
 
 import { resolveGeminiClient, withGeminiRetry, GEMINI_MAX_OUTPUT_TOKENS } from "./gemini-client";
+import {
+  extractCacheStats,
+  getOrCreateCachedPrefix,
+  type CacheStats,
+  type GoogleCacheClient,
+} from "./llm-cache";
+import {
+  resolveRoadmapEngine,
+  type ResolvedEngine,
+} from "./model-routing";
 import type { Profile } from "./profile";
-import { loadSystemInstruction } from "./roadmap-prompts";
+import { getRoadmapPromptParts } from "./roadmap-prompts";
 import type {
   GlossaryEntry,
   Message,
@@ -34,6 +50,10 @@ export type RoadmapModel =
   | "gemini-3-flash"
   | (string & {});
 
+// Step 4 PASS default kept for backward compatibility with any
+// caller that still passes an explicit `model` literal; in Step 6
+// the route handler delegates to resolveRoadmapEngine() and lets
+// the resolver pick the catalog-tracked engine.
 export const DEFAULT_ROADMAP_MODEL: RoadmapModel = "gemini-2.5-flash";
 
 export interface MessageDeltaEvent {
@@ -51,6 +71,9 @@ export interface MessageCompleteEvent {
   content: string;
   input_tokens?: number;
   output_tokens?: number;
+  cache_stats?: CacheStats;
+  engine?: string;
+  provider?: string;
 }
 
 export type RoadmapStreamEvent =
@@ -61,6 +84,20 @@ export type RoadmapStreamEvent =
 interface CreateRoadmapStreamArgs {
   messages: Message[];
   profile: Profile | null;
+  // Step 6 onward callers pass envFrontierEnabled from the route
+  // handler so the resolver can gate the Phase 5 frontier branch.
+  // The route reads env.FRONTIER_ROADMAP_ENABLED at request time
+  // rather than at module-load so test fixtures can flip the flag
+  // between describe blocks.
+  envFrontierEnabled?: boolean;
+  // Pre-resolved engine override (used by tests and by callers
+  // that want to force a specific model). Production callers omit
+  // this and let resolveRoadmapEngine() compute it from the
+  // profile.
+  engine?: ResolvedEngine;
+  // Back-compat for any caller that still passes an explicit model
+  // string (e.g. legacy tests). When provided this wins over the
+  // resolver. Phase 5+ should remove this in favor of `engine`.
   model?: RoadmapModel;
 }
 
@@ -183,25 +220,143 @@ function chunkText(chunk: GenerateContentResponse): string {
     .join("");
 }
 
+// Build the GoogleCacheClient the llm-cache facade calls when no
+// memoized cachedContent name exists. Wraps the @google/genai
+// SDK's `ai.caches.create` so the facade stays decoupled from the
+// SDK type surface — every Phase 5 provider branch slots in
+// behind a similar adapter.
+function buildGoogleCacheClient(
+  client: ReturnType<typeof resolveGeminiClient>,
+): GoogleCacheClient {
+  return {
+    async create({ model, contents, systemInstruction, ttl_seconds }) {
+      const created = await client.caches.create({
+        model,
+        config: {
+          contents: contents.map((text) => ({
+            role: "user",
+            parts: [{ text }],
+          })),
+          systemInstruction: { role: "system", parts: [{ text: systemInstruction }] },
+          ttl: `${ttl_seconds}s`,
+        },
+      });
+      // The SDK's `name` field is nominally optional; in practice
+      // a successful create always returns it. Treat absence as a
+      // hard failure rather than silently falling back to a
+      // non-cached call — a missing name on success means the
+      // service contract changed and we want a loud signal.
+      if (!created.name) {
+        throw new Error(
+          "ai.caches.create returned no name; @google/genai contract changed",
+        );
+      }
+      return { name: created.name };
+    },
+  };
+}
+
 export async function* createRoadmapStream(
   args: CreateRoadmapStreamArgs,
 ): AsyncIterable<RoadmapStreamEvent> {
-  const model = args.model ?? DEFAULT_ROADMAP_MODEL;
-  const systemInstruction = await loadSystemInstruction({
-    profile: args.profile,
-    messages_so_far: args.messages,
-  });
+  const engine: ResolvedEngine =
+    args.engine ??
+    (args.model
+      ? {
+          engine: args.model,
+          provider: "google",
+          force_provider: `google-${args.model}`,
+          max_tokens: GEMINI_MAX_OUTPUT_TOKENS,
+          use_frontier: false,
+        }
+      : resolveRoadmapEngine({
+          profile: args.profile,
+          envFrontierEnabled: args.envFrontierEnabled ?? false,
+        }));
+
+  // Phase 5 frontier defensive gate. The resolver returns a valid
+  // Anthropic-shape ResolvedEngine when the env flag or per-user
+  // override fires; we refuse to execute it during Phase 4 because
+  // the @google/genai SDK is the only wrapper that ships this
+  // phase. Phase 5 will branch on engine.provider here and call
+  // the Anthropic SDK instead of throwing.
+  if (engine.use_frontier || engine.provider === "anthropic") {
+    throw new Error(
+      "Phase 5 scope: anthropic engine branch not yet wired",
+    );
+  }
+  if (engine.provider !== "google") {
+    throw new Error(
+      `Engine wrapper not implemented for provider=${engine.provider}`,
+    );
+  }
+
+  const promptParts = await getRoadmapPromptParts(args.profile);
+  const cachedContents = [
+    promptParts.projectTemplate,
+    promptParts.phaseTemplate,
+  ];
+
+  // Try to mount the Google cachedContent prefix. The facade
+  // returns null when the prefix is below Gemini's minimum size
+  // (e.g. tests with short fixture templates) — the wrapper
+  // gracefully falls back to a non-cached call rather than
+  // crashing the stream.
+  const client = resolveGeminiClient();
+  let cachedContentName: string | null = null;
+  try {
+    cachedContentName = await getOrCreateCachedPrefix({
+      provider: "google",
+      model: engine.engine,
+      segments: {
+        systemInstruction: promptParts.orientation,
+        contents: cachedContents,
+      },
+      client: buildGoogleCacheClient(client),
+    });
+  } catch (err) {
+    // A cache-create failure is non-fatal: log and continue with a
+    // non-cached call. The cache_stats row written below will
+    // carry zeros for the cached-content fields, which is the
+    // honest representation.
+    console.warn("[roadmap-engine] cachedContent setup failed", err);
+    cachedContentName = null;
+  }
+
   const contents = toGeminiContents(args.messages);
 
-  const client = resolveGeminiClient();
+  // systemInstruction passed on each call is the orientation +
+  // profile segment ONLY when cachedContent is used (the cached
+  // resource already carries the project + phase template
+  // segments). When the cache isn't mounted we send the full
+  // four-segment prompt verbatim, matching the Step 4 baseline.
+  const fullSystemInstruction = [
+    promptParts.orientation,
+    promptParts.projectTemplate,
+    promptParts.phaseTemplate,
+    promptParts.profile,
+  ].join("\n\n");
+  const trimmedSystemInstruction = [
+    promptParts.orientation,
+    promptParts.profile,
+  ].join("\n\n");
+  const systemInstruction = cachedContentName
+    ? trimmedSystemInstruction
+    : fullSystemInstruction;
+
+  const generateConfig: Record<string, unknown> = {
+    systemInstruction,
+    maxOutputTokens: engine.max_tokens ?? GEMINI_MAX_OUTPUT_TOKENS,
+  };
+  if (cachedContentName) {
+    generateConfig.cachedContent = cachedContentName;
+  }
+
   const stream = await withGeminiRetry(() =>
     client.models.generateContentStream({
-      model,
+      model: engine.engine,
       contents,
-      config: {
-        systemInstruction,
-        maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS,
-      },
+      config: generateConfig as Record<string, unknown>,
     }),
   );
 
@@ -209,8 +364,10 @@ export async function* createRoadmapStream(
   let lastDraftJson: string | null = null;
   let inputTokens: number | undefined;
   let outputTokens: number | undefined;
+  let lastChunk: GenerateContentResponse | null = null;
 
   for await (const chunk of stream) {
+    lastChunk = chunk;
     const delta = chunkText(chunk);
     if (delta) {
       buffered += delta;
@@ -244,10 +401,19 @@ export async function* createRoadmapStream(
     }
   }
 
+  // Pull the final usageMetadata off the last chunk so cache_stats
+  // captures the cachedContentTokenCount(Used) counters Gemini
+  // emits at stream end. extractCacheStats() coalesces missing
+  // counters to 0 so the audit row always carries a uniform shape.
+  const cache_stats = extractCacheStats("google", lastChunk);
+
   yield {
     type: "message_complete",
     content: buffered,
     input_tokens: inputTokens,
     output_tokens: outputTokens,
+    cache_stats,
+    engine: engine.engine,
+    provider: engine.provider,
   };
 }

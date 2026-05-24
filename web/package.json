@@ -3,11 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/sync-catalog.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/sync-catalog.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "pretypecheck": "node scripts/sync-catalog.mjs",
     "typecheck": "tsc --noEmit",
+    "pretest": "node scripts/sync-catalog.mjs",
     "test": "playwright test",
     "test:install": "playwright install chromium"
   },

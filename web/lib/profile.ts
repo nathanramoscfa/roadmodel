@@ -38,6 +38,10 @@ export interface Profile {
   onboarded_at: string | null;
   created_at: string;
   updated_at: string;
+  // Phase 4 Step 6 — per-user frontier-roadmap override. Tri-state:
+  // null honors env default, true forces frontier on, false forces
+  // frontier off. Phase 5 paid-frontier rollout populates this.
+  frontier_roadmap_override: boolean | null;
 }
 
 export const DEFAULT_PROFILE = {
@@ -70,7 +74,10 @@ export function e2eGetProfile(userId: string): Profile | null {
 
 export function e2eUpsertProfile(
   userId: string,
-  row: Omit<Profile, "user_id" | "created_at" | "updated_at">,
+  row: Omit<
+    Profile,
+    "user_id" | "created_at" | "updated_at" | "frontier_roadmap_override"
+  > & { frontier_roadmap_override?: boolean | null },
 ): Profile {
   const existing = e2eProfiles.get(userId);
   const now = new Date().toISOString();
@@ -82,6 +89,7 @@ export function e2eUpsertProfile(
     onboarded_at: row.onboarded_at,
     created_at: existing?.created_at ?? now,
     updated_at: now,
+    frontier_roadmap_override: row.frontier_roadmap_override ?? null,
   };
   e2eProfiles.set(userId, profile);
   return profile;
@@ -102,6 +110,7 @@ export function e2eClearProfiles(userId?: string): void {
 }
 
 function mapRow(row: Record<string, unknown>): Profile {
+  const override = row.frontier_roadmap_override;
   return {
     user_id: String(row.user_id),
     subscriptions: (row.subscriptions ?? []) as SubscriptionId[],
@@ -111,6 +120,8 @@ function mapRow(row: Record<string, unknown>): Profile {
     onboarded_at: (row.onboarded_at as string | null) ?? null,
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
+    frontier_roadmap_override:
+      typeof override === "boolean" ? override : null,
   };
 }
 

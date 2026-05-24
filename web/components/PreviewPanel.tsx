@@ -3,8 +3,14 @@
 
 import type { RoadmapDraft } from "@/lib/roadmap-types";
 
+import { FreeTierLabel } from "./FreeTierLabel";
+
 interface PreviewPanelProps {
   draft: RoadmapDraft | null;
+  // Step 6 — server-resolved engine string ("gemini-2.5-flash" /
+  // "gemini-3-flash") plumbed in from the /roadmap page so the
+  // FreeTierLabel can render the catalog-tracked model name.
+  engine?: string | null;
 }
 
 function SkeletonState() {
@@ -38,7 +44,7 @@ function SkeletonState() {
   );
 }
 
-export function PreviewPanel({ draft }: PreviewPanelProps) {
+export function PreviewPanel({ draft, engine }: PreviewPanelProps) {
   if (!draft) {
     return (
       <div
@@ -53,6 +59,11 @@ export function PreviewPanel({ draft }: PreviewPanelProps) {
         <div className="mt-6 flex-1">
           <SkeletonState />
         </div>
+        {engine ? (
+          <div className="mt-4">
+            <FreeTierLabel surface="roadmap" engine={engine} />
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -67,6 +78,11 @@ export function PreviewPanel({ draft }: PreviewPanelProps) {
       <h2 className="text-sm font-semibold uppercase tracking-wide text-brand-slate-500">
         Preview
       </h2>
+      {engine ? (
+        <div className="mt-2">
+          <FreeTierLabel surface="roadmap" engine={engine} />
+        </div>
+      ) : null}
       <div className="mt-6 flex-1 space-y-6 overflow-y-auto">
         <section>
           <h3 className="text-lg font-semibold text-brand-slate-900">

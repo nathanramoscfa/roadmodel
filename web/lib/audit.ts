@@ -1,6 +1,7 @@
 // web/lib/audit.ts
 import { createClient } from "@supabase/supabase-js";
 import { env } from "./env";
+import type { CacheStats } from "./llm-cache";
 
 const supabase = createClient(
   env.SUPABASE_URL,
@@ -36,6 +37,11 @@ export interface AuditEntry {
   // routes (Phase 3 /api/recommend) keep this undefined; the column
   // is nullable in 20260602000000_audit_log_user_id.sql.
   user_id?: string;
+  // Provider-discriminated context-caching stats. Phase 4 writes
+  // the Google variant only; Phase 5 paid-frontier starts writing
+  // the Anthropic variant against the same column. Schema lives
+  // in 20260606000000_audit_log_cache_stats.sql.
+  cache_stats?: CacheStats;
 }
 
 export async function writeAudit(entry: AuditEntry): Promise<void> {

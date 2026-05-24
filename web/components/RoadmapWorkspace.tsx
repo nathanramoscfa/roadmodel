@@ -20,6 +20,12 @@ interface RoadmapWorkspaceProps {
   initialDraft?: RoadmapDraft | null;
   initialConversationId?: string | null;
   initialRoadmapId?: string | null;
+  // Step 6 — server-resolved engine name passed down so the
+  // PreviewPanel can render the free-tier label with the
+  // catalog-tracked model name. Optional because the anonymous
+  // /roadmap page does not yet resolve a profile (anon traffic
+  // never reaches the engine wrapper).
+  engine?: string | null;
 }
 
 function createMessage(role: Message["role"], content: string): Message {
@@ -78,6 +84,7 @@ export function RoadmapWorkspace({
   initialDraft,
   initialConversationId,
   initialRoadmapId,
+  engine,
 }: RoadmapWorkspaceProps) {
   const [draft, setDraft] = useState<RoadmapDraft | null>(
     initialDraft ?? null,
@@ -256,7 +263,7 @@ export function RoadmapWorkspace({
           />
         </div>
         <div className={previewPanelClass}>
-          <PreviewPanel draft={draft} />
+          <PreviewPanel draft={draft} engine={engine ?? null} />
         </div>
       </div>
       {exportAvailable && roadmapId ? (
