@@ -4,6 +4,13 @@ import { writeAudit, type AuditOutcome } from "@/lib/audit";
 import { getServerSession } from "@/lib/auth";
 import { isE2eAuthEnabled } from "@/lib/e2e-mode";
 import {
+  getTimings,
+  ingestServiceTimings,
+  recordTotal,
+  runWithTimings,
+  withSpan,
+} from "@/lib/latency";
+import {
   NoEligibleEngineError,
   resolveRecommenderEngine,
 } from "@/lib/model-routing";
@@ -92,160 +99,260 @@ function auditFor(
   });
 }
 
-const handler = async (req: Request): Promise<Response> => {
-  let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    auditFor(req, "bad_input", { error_class: "invalid_json" });
-    return NextResponse.json({ error: "bad_input" }, { status: 400 });
-  }
+const handler = async (req: Request): Promise<Response> =>
+  runWithTimings(async () => {
+    // Phase 4 Step 7 — input parse + profile load + engine resolve
+    // are bundled into a single dispatch span. Anything that runs
+    // BEFORE the upstream fetch belongs here so provider_ms is
+    // strictly the time spent on the FastAPI hop.
+    let body: unknown;
+    let session: Awaited<ReturnType<typeof getServerSession>>;
+    let userId: string | undefined;
+    let allowedJurisdictions: JurisdictionCode[];
+    let budgetPriority: string;
+    let taskDescription: string;
+    let incomingContext: Record<string, unknown>;
+    let recommenderEngine: ReturnType<typeof resolveRecommenderEngine>;
 
-  if (
-    typeof body !== "object" ||
-    body === null ||
-    typeof (body as { task_description?: unknown }).task_description !==
-      "string"
-  ) {
-    auditFor(req, "bad_input", { error_class: "missing_task_description" });
-    return NextResponse.json({ error: "bad_input" }, { status: 400 });
-  }
+    try {
+      const dispatched = await withSpan("dispatch", async () => {
+        let parsedBody: unknown;
+        try {
+          parsedBody = await req.json();
+        } catch {
+          return { kind: "bad_input", error_class: "invalid_json" } as const;
+        }
+        if (
+          typeof parsedBody !== "object" ||
+          parsedBody === null ||
+          typeof (parsedBody as { task_description?: unknown })
+            .task_description !== "string"
+        ) {
+          return {
+            kind: "bad_input",
+            error_class: "missing_task_description",
+          } as const;
+        }
 
-  const taskDescription = (body as { task_description: string })
-    .task_description;
-  const incomingContext =
-    typeof body === "object" &&
-    body !== null &&
-    typeof (body as { context?: unknown }).context === "object" &&
-    (body as { context?: unknown }).context !== null
-      ? ((body as { context: Record<string, unknown> }).context ?? {})
-      : {};
+        const td = (parsedBody as { task_description: string })
+          .task_description;
+        const ctx =
+          typeof (parsedBody as { context?: unknown }).context === "object" &&
+          (parsedBody as { context?: unknown }).context !== null
+            ? ((parsedBody as { context: Record<string, unknown> }).context ??
+                {})
+            : {};
 
-  const session = await getServerSession();
-  const userId = session?.id;
-  const profile = userId ? await getProfile(userId) : null;
-  const budgetPriority =
-    profile?.budget_priority ?? DEFAULT_PROFILE.budget_priority;
-  const allowedJurisdictions = userId
-    ? await getAllowedJurisdictions(userId)
-    : [...DEFAULT_PROFILE.allowed_jurisdictions];
+        const localSession = await getServerSession();
+        const localUserId = localSession?.id;
+        const profile = localUserId ? await getProfile(localUserId) : null;
+        const localBudget =
+          profile?.budget_priority ?? DEFAULT_PROFILE.budget_priority;
+        const localJurisdictions = localUserId
+          ? await getAllowedJurisdictions(localUserId)
+          : [...DEFAULT_PROFILE.allowed_jurisdictions];
 
-  // Step 6 — engine pin is catalog-derived rather than hard-coded.
-  // Today's catalog returns the cheapest Google knowledge-B
-  // model (Gemini 2.5 Flash); the Phase 9 §9.2 cron's daily
-  // catalog refresh shifts this automatically when a cheaper
-  // qualifying model lands. NoEligibleEngineError surfaces as a
-  // 503 so the client can show a readable error instead of the
-  // request silently hitting the upstream FastAPI service with a
-  // missing engine pin.
-  let recommenderEngine;
-  try {
-    recommenderEngine = resolveRecommenderEngine({ profile });
-  } catch (err) {
-    auditFor(req, "recommender_error", {
-      error_class:
-        err instanceof NoEligibleEngineError
-          ? "no_eligible_engine"
-          : err instanceof Error
-            ? err.name
-            : "engine_resolve_failed",
-      user_id: userId,
-    });
-    return NextResponse.json(
-      { error: "recommender_unavailable" },
-      { status: 503 },
-    );
-  }
+        try {
+          const engine = resolveRecommenderEngine({ profile });
+          return {
+            kind: "ok",
+            body: parsedBody,
+            session: localSession,
+            userId: localUserId,
+            taskDescription: td,
+            incomingContext: ctx,
+            allowedJurisdictions: localJurisdictions,
+            budgetPriority: localBudget,
+            engine,
+          } as const;
+        } catch (err) {
+          return {
+            kind: "recommender_error",
+            error_class:
+              err instanceof NoEligibleEngineError
+                ? "no_eligible_engine"
+                : err instanceof Error
+                  ? err.name
+                  : "engine_resolve_failed",
+            userId: localUserId,
+          } as const;
+        }
+      });
 
-  const upstreamPayload = {
-    task_description: taskDescription,
-    context: {
-      ...incomingContext,
-      budget_priority: budgetPriority,
-      allowed_jurisdictions: allowedJurisdictions,
-      force_provider: recommenderEngine.force_provider,
-    },
-  };
+      if (dispatched.kind === "bad_input") {
+        recordTotal();
+        auditFor(req, "bad_input", {
+          error_class: dispatched.error_class,
+          latency_ms: getTimings(),
+        });
+        return NextResponse.json({ error: "bad_input" }, { status: 400 });
+      }
+      if (dispatched.kind === "recommender_error") {
+        recordTotal();
+        auditFor(req, "recommender_error", {
+          error_class: dispatched.error_class,
+          user_id: dispatched.userId,
+          latency_ms: getTimings(),
+        });
+        return NextResponse.json(
+          { error: "recommender_unavailable" },
+          { status: 503 },
+        );
+      }
 
-  let upstream: Response;
-  try {
-    upstream = await fetch(recommenderUrl(), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(upstreamPayload),
-    });
-  } catch (err) {
-    auditFor(req, "recommender_error", {
-      error_class: err instanceof Error ? err.name : "fetch_failed",
-      user_id: userId,
-    });
-    return NextResponse.json(
-      { error: "recommender_unavailable" },
-      { status: 502 },
-    );
-  }
+      body = dispatched.body;
+      session = dispatched.session;
+      userId = dispatched.userId;
+      taskDescription = dispatched.taskDescription;
+      incomingContext = dispatched.incomingContext;
+      allowedJurisdictions = dispatched.allowedJurisdictions;
+      budgetPriority = dispatched.budgetPriority;
+      recommenderEngine = dispatched.engine;
+    } catch (err) {
+      // Unexpected error inside the dispatch span — treat as a 500-
+      // class fetch failure so the caller sees a friendly error
+      // instead of an opaque 500. The audit row still carries the
+      // partial latency snapshot so post-mortem analysis isn't
+      // blind.
+      recordTotal();
+      auditFor(req, "recommender_error", {
+        error_class: err instanceof Error ? err.name : "dispatch_failed",
+        latency_ms: getTimings(),
+      });
+      return NextResponse.json(
+        { error: "recommender_unavailable" },
+        { status: 500 },
+      );
+    }
 
-  const upstreamBody = await upstream.text();
-  let parsed: RecommenderPayload | null = null;
-  try {
-    parsed = JSON.parse(upstreamBody) as RecommenderPayload;
-  } catch {
-    parsed = null;
-  }
+    // Silence the unused-vars lint for the body capture above;
+    // body/session are kept named for parity with the original
+    // handler shape and future Step 9 dashboards that may want
+    // to include the original payload in the audit row.
+    void body;
+    void session;
 
-  if (!upstream.ok) {
-    auditFor(req, "recommender_error", {
-      error_class: `upstream_${upstream.status}`,
-      user_id: userId,
-    });
-    return new NextResponse(upstreamBody, {
-      status: upstream.status,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  let responsePayload = parsed ?? {};
-  responsePayload = filterByJurisdiction(responsePayload, allowedJurisdictions);
-
-  if (budgetPriority && responsePayload.settings) {
-    responsePayload = {
-      ...responsePayload,
-      settings: {
-        ...responsePayload.settings,
+    const upstreamPayload = {
+      task_description: taskDescription,
+      context: {
+        ...incomingContext,
         budget_priority: budgetPriority,
+        allowed_jurisdictions: allowedJurisdictions,
+        force_provider: recommenderEngine.force_provider,
       },
     };
-  }
 
-  const rationale =
-    typeof responsePayload.settings?.rationale === "string"
-      ? responsePayload.settings.rationale
-      : "";
-  if (budgetPriority && !rationale.includes(budgetPriority)) {
-    responsePayload = {
-      ...responsePayload,
-      settings: {
-        ...(responsePayload.settings ?? {}),
-        rationale: rationale
-          ? `${rationale} Budget priority: ${budgetPriority}.`
-          : `Budget priority: ${budgetPriority}.`,
-        budget_priority: budgetPriority,
-      },
-    };
-  }
+    let upstream: Response;
+    try {
+      upstream = await withSpan("provider", async () =>
+        fetch(recommenderUrl(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(upstreamPayload),
+        }),
+      );
+    } catch (err) {
+      recordTotal();
+      auditFor(req, "recommender_error", {
+        error_class: err instanceof Error ? err.name : "fetch_failed",
+        user_id: userId,
+        latency_ms: getTimings(),
+      });
+      return NextResponse.json(
+        { error: "recommender_unavailable" },
+        { status: 502 },
+      );
+    }
 
-  auditFor(req, "ok", {
-    provider: responsePayload.platform,
-    model: responsePayload.model,
-    cost_usd: responsePayload.session_cost_estimate?.total_usd,
-    user_id: userId,
+    // Decompose the provider span into the upstream's
+    // service_scoring_ms + service_provider_ms via the
+    // X-Roadmodel-Timing header (Step 7 contract). When the
+    // upstream is older than Step 7 the header is missing and
+    // ingestServiceTimings is a no-op — provider_ms stays opaque
+    // for those rows.
+    ingestServiceTimings(upstream.headers.get("X-Roadmodel-Timing"));
+
+    const upstreamBody = await upstream.text();
+    let parsed: RecommenderPayload | null = null;
+    try {
+      parsed = JSON.parse(upstreamBody) as RecommenderPayload;
+    } catch {
+      parsed = null;
+    }
+
+    if (!upstream.ok) {
+      recordTotal();
+      auditFor(req, "recommender_error", {
+        error_class: `upstream_${upstream.status}`,
+        user_id: userId,
+        latency_ms: getTimings(),
+      });
+      return new NextResponse(upstreamBody, {
+        status: upstream.status,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const responsePayload = await withSpan("render", async () => {
+      let payload = parsed ?? {};
+      payload = filterByJurisdiction(payload, allowedJurisdictions);
+
+      if (budgetPriority && payload.settings) {
+        payload = {
+          ...payload,
+          settings: {
+            ...payload.settings,
+            budget_priority: budgetPriority,
+          },
+        };
+      }
+
+      const rationale =
+        typeof payload.settings?.rationale === "string"
+          ? payload.settings.rationale
+          : "";
+      if (budgetPriority && !rationale.includes(budgetPriority)) {
+        payload = {
+          ...payload,
+          settings: {
+            ...(payload.settings ?? {}),
+            rationale: rationale
+              ? `${rationale} Budget priority: ${budgetPriority}.`
+              : `Budget priority: ${budgetPriority}.`,
+            budget_priority: budgetPriority,
+          },
+        };
+      }
+      return payload;
+    });
+
+    // The scoring span is a thin wrapper around the audit-row
+    // assembly. It exists for symmetric naming so Phase 9
+    // dashboards can decompose the request into the same four
+    // span buckets regardless of which surface (recommend /
+    // roadmap) the row came from.
+    await withSpan("scoring", async () => {
+      // Intentional no-op body — the audit write itself happens
+      // AFTER recordTotal() below so the row carries the final
+      // latency_ms map. Keeping this span empty (rather than
+      // skipping it) preserves the four-span shape the audit
+      // contract documents.
+    });
+
+    recordTotal();
+    auditFor(req, "ok", {
+      provider: responsePayload.platform,
+      model: responsePayload.model,
+      cost_usd: responsePayload.session_cost_estimate?.total_usd,
+      user_id: userId,
+      latency_ms: getTimings(),
+    });
+
+    return new NextResponse(JSON.stringify(responsePayload), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   });
-
-  return new NextResponse(JSON.stringify(responsePayload), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
-};
 
 export const POST = withRateLimit(handler, async () => {
   const session = await getServerSession();

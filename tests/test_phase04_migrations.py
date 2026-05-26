@@ -77,8 +77,8 @@ def db_conn() -> "psycopg.Connection":
 
 def test_at_least_two_migrations_present() -> None:
     files = _migration_files()
-    assert len(files) >= 7, (
-        f"expected ≥ 7 timestamped migrations under {MIGRATIONS_DIR}; "
+    assert len(files) >= 8, (
+        f"expected ≥ 8 timestamped migrations under {MIGRATIONS_DIR}; "
         f"found {[f.name for f in files]}"
     )
 
@@ -818,3 +818,69 @@ def test_profiles_frontier_roadmap_override_column(
         "(NULL = honor env var); got "
         f"{column_default!r}"
     )
+
+
+# ---------------------------------------------------------------
+# Phase 4 Step 7 — audit_log.latency_ms jsonb
+# ---------------------------------------------------------------
+
+
+def test_audit_log_latency_ms_column(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select data_type, is_nullable from information_schema.columns "
+            "where table_schema = 'public' and table_name = 'audit_log' "
+            "and column_name = 'latency_ms'"
+        )
+        row = cur.fetchone()
+    assert row is not None, "audit_log.latency_ms column missing"
+    data_type, is_nullable = row
+    assert data_type == "jsonb", f"latency_ms must be jsonb, got {data_type}"
+    assert is_nullable == "YES", (
+        "latency_ms must be nullable — non-instrumented routes (Phase 4 "
+        "/api/roadmap, gate/auth audit rows) write rows with this column null"
+    )
+
+
+def test_audit_log_latency_ms_accepts_documented_shape(
+    db_conn: "psycopg.Connection",
+) -> None:
+    # Mirrors the per-request span bag the web tier and FastAPI
+    # service emit. Eight keys, all integer ms. The migration's
+    # column comment documents this shape; Postgres doesn't
+    # enforce it on a jsonb column, so this row-write test is the
+    # closest we get to schema-shape coverage.
+    with db_conn.cursor() as cur:
+        cur.execute(
+            """
+            insert into public.audit_log
+              (ts, ip_hash, ua_hash, route, outcome, latency_ms)
+            values (
+              now(), 'h1', 'h2', '/api/recommend', 'ok',
+              %s::jsonb
+            )
+            returning
+              (latency_ms->>'total_ms')::int,
+              (latency_ms->>'dispatch_ms')::int,
+              (latency_ms->>'scoring_ms')::int,
+              (latency_ms->>'provider_ms')::int,
+              (latency_ms->>'service_scoring_ms')::int,
+              (latency_ms->>'service_provider_ms')::int,
+              (latency_ms->>'render_ms')::int,
+              (latency_ms->>'cold_start_ms')::int
+            """,
+            (
+                '{"total_ms":4500,'
+                '"dispatch_ms":3,'
+                '"scoring_ms":1,'
+                '"provider_ms":4490,'
+                '"service_scoring_ms":12,'
+                '"service_provider_ms":4470,'
+                '"render_ms":6,'
+                '"cold_start_ms":0}',
+            ),
+        )
+        row = cur.fetchone()
+    db_conn.rollback()
+    assert row is not None
+    assert row == (4500, 3, 1, 4490, 12, 4470, 6, 0)
