@@ -46,6 +46,15 @@ const envSchema = z.object({
   // Reserved — DO NOT flip true in Phase 4 (the roadmap-engine
   // wrapper throws "Phase 5 scope" on the frontier branch).
   FRONTIER_ROADMAP_ENABLED: z.coerce.boolean().default(false),
+  // Phase 4 Step 7 — temporary env-gated bypass for the
+  // maintainer-run latency sweep. When SET and the inbound
+  // request carries an X-Roadmodel-Bypass header whose value
+  // matches via constant-time comparison, withRateLimit skips
+  // the Upstash check. When UNSET the header is ignored — there
+  // is no fail-open default. Removed (along with the env var,
+  // the withRateLimit branch, and the bypassed_rate_limit audit
+  // outcome) in PR 7c after the post-fix sweep lands.
+  ROADMODEL_LATENCY_BYPASS_TOKEN: z.string().optional(),
 });
 
 function requireVar(name: string): string {
@@ -68,4 +77,5 @@ export const env = envSchema.parse({
   UPSTASH_REDIS_TOKEN: process.env.UPSTASH_REDIS_TOKEN,
   GOOGLE_API_KEY: requireVar("GOOGLE_API_KEY"),
   FRONTIER_ROADMAP_ENABLED: process.env.FRONTIER_ROADMAP_ENABLED ?? "false",
+  ROADMODEL_LATENCY_BYPASS_TOKEN: process.env.ROADMODEL_LATENCY_BYPASS_TOKEN,
 });
