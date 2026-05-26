@@ -1,16 +1,29 @@
 // web/lib/audit.ts
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { env } from "./env";
 import type { LatencyTimings } from "./latency";
 import type { CacheStats } from "./llm-cache";
 
-const supabase = createClient(
-  env.SUPABASE_URL,
-  env.SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: { persistSession: false },
-  },
-);
+// Lazy-init the Supabase client so importing this module doesn't
+// trigger @supabase/realtime-js' WebSocket constructor lookup at
+// load time. Under CI Node 20 the lookup throws (no native
+// WebSocket; `ws` not installed), which breaks any test that
+// statically imports this module — e.g. web/tests/latency.spec.ts
+// installing the test sink. Production callers hit writeAudit
+// during a request anyway, so deferring init costs nothing.
+let supabaseClient: SupabaseClient | null = null;
+function getSupabase(): SupabaseClient {
+  if (!supabaseClient) {
+    supabaseClient = createClient(
+      env.SUPABASE_URL,
+      env.SUPABASE_SERVICE_ROLE_KEY,
+      {
+        auth: { persistSession: false },
+      },
+    );
+  }
+  return supabaseClient;
+}
 
 export type AuditOutcome =
   | "ok"
@@ -73,7 +86,7 @@ export async function writeAudit(entry: AuditEntry): Promise<void> {
     testSink(entry);
     return;
   }
-  const { error } = await supabase.from("audit_log").insert({
+  const { error } = await getSupabase().from("audit_log").insert({
     ts: new Date().toISOString(),
     ...entry,
   });
