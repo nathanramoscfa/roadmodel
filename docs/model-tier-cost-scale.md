@@ -52,6 +52,7 @@ table and surface material cost / availability / capability constraints.
 | Claude 4.6 Sonnet           | $3.00  | $3.75       | $0.30      | $15.00  | High      | Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
 | Claude 4.7 Opus             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
 | Claude Opus 4.7 (fast mode) | $30.00 | $37.50      | $3.00      | $150.00 | Very High | Hidden by default; Requires Max Mode on request-based plans; Limited research preview; Up to 1M tokens in Max Mode at the same per-token rates as shorter context |
+| Claude Opus 4.8             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Requires Max Mode on request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
 
 
 ### API Pool — Cursor Composer
@@ -102,10 +103,11 @@ table and surface material cost / availability / capability constraints.
 ### API Pool — xAI
 
 
-| Model     | Input | Cache Write | Cache Read | Output | Tier | Notes |
-| --------- | ----- | ----------- | ---------- | ------ | ---- | ----- |
-| Grok 4.20 | $2.00 | –           | $0.20      | $6.00  | Low  | Hidden by default; The cost is 2x when the input exceeds 200k tokens |
-| Grok 4.3  | $1.25 | –           | $0.20      | $2.50  | Low  | Requires Max Mode on request-based plans |
+| Model          | Input | Cache Write | Cache Read | Output | Tier | Notes |
+| -------------- | ----- | ----------- | ---------- | ------ | ---- | ----- |
+| Grok 4.20      | $2.00 | –           | $0.20      | $6.00  | Low  | Hidden by default; The cost is 2x when the input exceeds 200k tokens |
+| Grok 4.3       | $1.25 | –           | $0.20      | $2.50  | Low  | Requires Max Mode on request-based plans |
+| Grok Build 0.1 | $1.00 | –           | $0.20      | $2.00  | Low  | The cost is 2x when the input exceeds 200k tokens; No user-configurable reasoning effort |
 
 
 ### API Pool — Moonshot
@@ -118,7 +120,7 @@ table and surface material cost / availability / capability constraints.
 
 ---
 
-<!-- subscription-tiers-reviewed: 2026-05-24 -->
+<!-- subscription-tiers-reviewed: 2026-05-28 -->
 
 ## Subscription Tiers and Access Methods
 
@@ -153,21 +155,22 @@ parse cleanly. When that happens, eyeball the failing provider's page
 and adjust the rebuild rules in [`update/prompt.md`](../update/prompt.md).
 
 
-| Subscription         | Monthly | Provider  | Access methods unlocked      | Coverage                                                                                                  |
-| -------------------- | ------- | --------- | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Claude Pro           | $20     | Anthropic | claude-code, claude-web      | Opus 4.7, Sonnet 4.6, and Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE), with roughly 5x the usage of the Free tier. |
-| claude.ai Max ($100) | $100    | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 5x the Pro usage budget; priority access during peak traffic.       |
-| claude.ai Max ($200) | $200    | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 20x the Pro usage budget; highest consumer-tier Claude budget.      |
-| ChatGPT Go           | $8      | OpenAI    | chatgpt-app, codex-cli       | Budget tier with GPT-5.3 Instant unlimited and GPT-5.3 quota, more uploads and image generation than Free; ads still shown; lacks advanced reasoning models, Sora, Codex full access, Agent Mode, and Deep Research. |
-| ChatGPT Plus         | $20     | OpenAI    | chatgpt-app, codex-cli       | GPT-5.5 default model with full feature suite — Deep Research (10 runs/mo), Sora video, Codex, Agent Mode; GPT-5.4 Thinking and GPT-5.4 Mini also available. |
-| ChatGPT Pro ($100)   | $100    | OpenAI    | chatgpt-app, codex-cli       | Same model suite as Pro $200 (GPT-5.5, GPT-5.5 Pro, o1 Pro mode) at 5x Plus usage limits; Codex access included with promotional 10x multiplier through May 31, 2026. |
-| ChatGPT Pro ($200)   | $200    | OpenAI    | chatgpt-app, codex-cli       | Same coverage as Pro $100 with much higher caps (20x Plus limits), 1M-token context window, Sora access, and GPT-5.4 Pro / GPT-5.5 Pro priority. |
-| Google AI Pro        | $20     | Google    | gemini-app, gemini-cli       | Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus Deep Research, Nano Banana Pro, Veo 3.1 access, 1,000 monthly AI credits, and 2 TB of Google One storage; includes YouTube Premium Lite. |
-| Google AI Ultra ($100) | $100  | Google    | gemini-app, gemini-cli       | New developer-focused Ultra tier (May 2026): 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan. |
-| Google AI Ultra ($200) | $200  | Google    | gemini-app, gemini-cli       | Highest access to Gemini 3.1 Pro, Deep Think, Project Genie, Veo 3.1 with 25,000 monthly AI credits, $100/month Google Cloud credits, and 30 TB Google One storage (price reduced from $250 to $200). |
-| Cursor Pro           | $20     | Cursor    | cursor                       | $20 monthly model-usage credit pool across every model in Cursor's catalog; on-demand overage billed at API rates. |
-| Cursor Pro+          | $60     | Cursor    | cursor                       | Same model coverage as Pro at roughly 3x the OpenAI / Claude / Gemini usage budget.                       |
-| Cursor Ultra         | $200    | Cursor    | cursor                       | Same model coverage as Pro at roughly 20x the OpenAI / Claude / Gemini usage budget; priority access to new features. |
+| Subscription           | Monthly | Provider  | Access methods unlocked      | Coverage                                                                                                  |
+| ---------------------- | ------- | --------- | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Claude Pro             | $20     | Anthropic | claude-code, claude-web      | Opus 4.7, Sonnet 4.6, and Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE), with roughly 5x the usage of the Free tier. |
+| claude.ai Max ($100)   | $100    | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 5x the Pro usage budget; priority access during peak traffic.       |
+| claude.ai Max ($200)   | $200    | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 20x the Pro usage budget; highest consumer-tier Claude budget.      |
+| ChatGPT Go             | $8      | OpenAI    | chatgpt-app, codex-cli       | Budget tier with GPT-5.3 Instant unlimited and GPT-5.3 quota, more uploads and image generation than Free; ads still shown; lacks advanced reasoning models, Sora, Codex full access, Agent Mode, and Deep Research. |
+| ChatGPT Plus           | $20     | OpenAI    | chatgpt-app, codex-cli       | GPT-5.5 default model with full feature suite — Deep Research (10 runs/mo), Sora video, Codex, Agent Mode; GPT-5.4 Thinking and GPT-5.4 Mini also available. |
+| ChatGPT Pro ($100)     | $100    | OpenAI    | chatgpt-app, codex-cli       | Same model suite as Pro $200 (GPT-5.5, GPT-5.5 Pro, o1 Pro mode) at 5x Plus usage limits; Codex access included with promotional 10x multiplier through May 31, 2026. |
+| ChatGPT Pro ($200)     | $200    | OpenAI    | chatgpt-app, codex-cli       | Same coverage as Pro $100 with much higher caps (20x Plus limits), 1M-token context window, Sora access, and GPT-5.4 Pro / GPT-5.5 Pro priority. |
+| Google AI Plus         | $7.99   | Google    | gemini-app, gemini-cli       | Entry-paid Google AI tier with 2x higher usage limits than Free in the Gemini app, access to video generation and Daily Brief, 200 Google Flow Credits, and 200 GB of cloud storage. |
+| Google AI Pro          | $20     | Google    | gemini-app, gemini-cli       | Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus Deep Research, Nano Banana Pro, Veo 3.1 access, 1,000 monthly AI credits, and 2 TB of Google One storage; includes YouTube Premium Lite. |
+| Google AI Ultra ($100) | $100    | Google    | gemini-app, gemini-cli       | New developer-focused Ultra tier (May 2026): 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan. |
+| Google AI Ultra ($200) | $200    | Google    | gemini-app, gemini-cli       | Highest access to Gemini 3.1 Pro, Deep Think, Project Genie, Veo 3.1 with 25,000 monthly AI credits, $100/month Google Cloud credits, and 30 TB Google One storage (price reduced from $250 to $200). |
+| Cursor Pro             | $20     | Cursor    | cursor                       | $20 monthly model-usage credit pool across every model in Cursor's catalog; on-demand overage billed at API rates. |
+| Cursor Pro+            | $60     | Cursor    | cursor                       | Same model coverage as Pro at roughly 3x the OpenAI / Claude / Gemini usage budget.                       |
+| Cursor Ultra           | $200    | Cursor    | cursor                       | Same model coverage as Pro at roughly 20x the OpenAI / Claude / Gemini usage budget; priority access to new features. |
 
 
 The "Access methods unlocked" column references method ids enumerated in
@@ -227,20 +230,22 @@ ids no longer appear as recommendable engines.
 ## Recently Added / Updated Models
 
 
-| Model id         | Output | Tier   | Change                                                                                                                     |
-| ---------------- | ------ | ------ | -------------------------------------------------------------------------------------------------------------------------- |
-| grok-4.3         | $2.50  | Low    | New — supersedes grok-4.20 in selector list                                                                                |
-| gemini-2.5-flash | $2.50  | Low    | New — added 2026-05-21; cheap multimodal Flash model now visible in `<model-options>` for SaaS-backend free-tier picks      |
-| gemini-3-flash   | $3.00  | Low    | New — added 2026-05-21; Gemini 3 generation Flash variant; previously Hidden-by-default on Cursor's pricing page            |
-| gemini-3-pro     | $12.00 | Medium | New — added 2026-05-21; Gemini 3 generation Pro variant alongside gemini-3.1-pro                                            |
-| gemini-3.5-flash | $9.00  | Low    | New — added 2026-05-24; Gemini 3.5 Flash visible (un-hidden) on Cursor's pricing page; AA Intelligence Index 55.3 (high reasoning) places it as the strongest Flash-tier Gemini |
-| gpt-5            | $10.00 | Medium | New — added 2026-05-21; baseline GPT-5 family flagship                                                                      |
-| gpt-5-mini       | $2.00  | Low    | New — added 2026-05-21; cheapest GPT-5 family variant ($2.00/M output)                                                      |
-| gpt-5.1-codex    | $10.00 | Medium | New — added 2026-05-21; earlier-generation Codex variant at $10/M output                                                    |
-| composer-2.5     | $2.50  | Low    | New — added 2026-05-21; Composer 2 successor (same output price, equal-output-price replacement rule)                       |
-| kimi-k2.5        | $3.00  | Low    | New — added 2026-05-21; Moonshot's Kimi K2.5 (routed via Cursor pool; no direct Moonshot access method enumerated yet)      |
-| auto             | —      | —      | REMOVED 2026-05-21; Cursor-managed routing meta-model. Opaque routing conflicts with per-model tier ratings + jurisdiction filter |
-| premium          | —      | —      | REMOVED 2026-05-21; Cursor-managed routing meta-model. Same rationale as `auto` removal                                     |
+| Model id         | Output | Tier      | Change                                                                                                                     |
+| ---------------- | ------ | --------- | -------------------------------------------------------------------------------------------------------------------------- |
+| grok-4.3         | $2.50  | Low       | New — supersedes grok-4.20 in selector list                                                                                |
+| gemini-2.5-flash | $2.50  | Low       | New — added 2026-05-21; cheap multimodal Flash model now visible in `<model-options>` for SaaS-backend free-tier picks      |
+| gemini-3-flash   | $3.00  | Low       | New — added 2026-05-21; Gemini 3 generation Flash variant; previously Hidden-by-default on Cursor's pricing page            |
+| gemini-3-pro     | $12.00 | Medium    | New — added 2026-05-21; Gemini 3 generation Pro variant alongside gemini-3.1-pro                                            |
+| gemini-3.5-flash | $9.00  | Low       | New — added 2026-05-24; Gemini 3.5 Flash visible (un-hidden) on Cursor's pricing page; AA Intelligence Index 55.3 (high reasoning) places it as the strongest Flash-tier Gemini |
+| gpt-5            | $10.00 | Medium    | New — added 2026-05-21; baseline GPT-5 family flagship                                                                      |
+| gpt-5-mini       | $2.00  | Low       | New — added 2026-05-21; cheapest GPT-5 family variant ($2.00/M output)                                                      |
+| gpt-5.1-codex    | $10.00 | Medium    | New — added 2026-05-21; earlier-generation Codex variant at $10/M output                                                    |
+| composer-2.5     | $2.50  | Low       | New — added 2026-05-21; Composer 2 successor (same output price, equal-output-price replacement rule)                       |
+| kimi-k2.5        | $3.00  | Low       | New — added 2026-05-21; Moonshot's Kimi K2.5 (routed via Cursor pool; no direct Moonshot access method enumerated yet)      |
+| claude-opus-4.8  | $25.00 | Very High | New 2026-05-28 in cost-scale — Anthropic's Claude Opus 4.8 visible on Cursor pricing page; `<model-options>` entry deferred until benchmark sources index it (AA evals currently null) |
+| grok-build-0.1   | $2.00  | Low       | New 2026-05-28 in cost-scale — xAI's Grok Build 0.1 visible on Cursor pricing page; `<model-options>` entry deferred until benchmark sources index it (no published benchmarks yet) |
+| auto             | —      | —         | REMOVED 2026-05-21; Cursor-managed routing meta-model. Opaque routing conflicts with per-model tier ratings + jurisdiction filter |
+| premium          | —      | —         | REMOVED 2026-05-21; Cursor-managed routing meta-model. Same rationale as `auto` removal                                     |
 
 
 ---
