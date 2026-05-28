@@ -475,7 +475,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 
 - **Pricing:** Input $5.00/M · Output $25.00/M
 - **Tier ratings:** Coding **S** · Planning **S** · Agentic **A** · Multimodal **A** · Long-context **S** · Knowledge **S** · Speed **D**
-- **Headline benchmarks:** AA Intelligence Index 57.3 (#2); LMArena Text #7 (Elo 1479.1); LMArena WebDev #2 (Elo 1559.8); AA-Omniscience 26.2 (#2)
+- **Headline benchmarks:** AA Intelligence Index 57.3 (#2); LMArena Text #7 (Elo 1479.1); LMArena WebDev #2 (Elo 1562.4); AA-Omniscience 26.2 (#2)
 - **Pricing notes:** Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)
 - **Best for:** Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching
 
@@ -493,7 +493,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 
 - **Pricing:** Input $3.00/M · Output $15.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 51.7; LMArena WebDev Elo 1523.7 (#6); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage
+- **Headline benchmarks:** AA Intelligence Index 51.7; LMArena WebDev Elo 1522.9 (#7); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage
 - **Pricing notes:** Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)
 - **Best for:** Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation
 
@@ -1127,7 +1127,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="S" tier-planning="S" tier-agentic="A"
              tier-multimodal="A" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 57.3 (#2); LMArena Text #7 (Elo 1479.1); LMArena WebDev #2 (Elo 1559.8); AA-Omniscience 26.2 (#2)"
+             headline-benchmarks="AA Intelligence Index 57.3 (#2); LMArena Text #7 (Elo 1479.1); LMArena WebDev #2 (Elo 1562.4); AA-Omniscience 26.2 (#2)"
              pricing-notes="Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)"
              best-for="Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching" />
       <model id="gpt-5.5" name="GPT-5.5"
@@ -1147,7 +1147,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="A" tier-planning="A" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 51.7; LMArena WebDev Elo 1523.7 (#6); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage"
+             headline-benchmarks="AA Intelligence Index 51.7; LMArena WebDev Elo 1522.9 (#7); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage"
              pricing-notes="Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)"
              best-for="Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation" />
       <model id="gpt-5.4" name="GPT-5.4"
@@ -1793,7 +1793,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="S" tier-planning="S" tier-agentic="A"
              tier-multimodal="A" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 57.3 (#2); LMArena Text #7 (Elo 1479.1); LMArena WebDev #2 (Elo 1559.8); AA-Omniscience 26.2 (#2)"
+             headline-benchmarks="AA Intelligence Index 57.3 (#2); LMArena Text #7 (Elo 1479.1); LMArena WebDev #2 (Elo 1562.4); AA-Omniscience 26.2 (#2)"
              pricing-notes="Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)"
              best-for="Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching" />
       <model id="gpt-5.5" name="GPT-5.5"
@@ -1813,7 +1813,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="A" tier-planning="A" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 51.7; LMArena WebDev Elo 1523.7 (#6); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage"
+             headline-benchmarks="AA Intelligence Index 51.7; LMArena WebDev Elo 1522.9 (#7); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage"
              pricing-notes="Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)"
              best-for="Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation" />
       <model id="gpt-5.4" name="GPT-5.4"

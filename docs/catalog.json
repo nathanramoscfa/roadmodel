@@ -1,9 +1,9 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-05-24T16:30:01Z",
+  "generated_at_utc": "2026-05-28T17:24:33Z",
   "source_doc_sha256": {
-    "model-selector.txt": "00d2afa4f30a249c25d722c818aeb8af745b2a79dbe744fc859b66bcb031a9b5",
-    "model-tier-cost-scale.md": "b2e9667c8581963d1313eb7ae964f05beaf1828cc0d5946ed0c3b9a4ebf9e172"
+    "model-selector.txt": "469795cd500e0ca2dfe1229484ecb616e442cc5b57578d20918bd698c7327004",
+    "model-tier-cost-scale.md": "7adc8746aca0eec26aa325b54e9201987f19b018f9b06d2c4f99c70fbe9caff4"
   },
   "models": [
     {
@@ -422,7 +422,7 @@
         "speed": "D"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 57.3 (#2); LMArena Text #7 (Elo 1479.1); LMArena WebDev #2 (Elo 1559.8); AA-Omniscience 26.2 (#2)",
+      "headline_benchmarks": "AA Intelligence Index 57.3 (#2); LMArena Text #7 (Elo 1479.1); LMArena WebDev #2 (Elo 1562.4); AA-Omniscience 26.2 (#2)",
       "pricing_notes": "Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)",
       "best_for": "Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching"
     },
@@ -443,7 +443,7 @@
         "speed": "B"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 51.7; LMArena WebDev Elo 1523.7 (#6); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage",
+      "headline_benchmarks": "AA Intelligence Index 51.7; LMArena WebDev Elo 1522.9 (#7); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage",
       "pricing_notes": "Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)",
       "best_for": "Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation"
     }
@@ -724,6 +724,16 @@
         "cursor"
       ],
       "notes": "Same model coverage as Pro at roughly 20x the OpenAI / Claude / Gemini usage budget; priority access to new features."
+    },
+    {
+      "provider": "Google",
+      "tier": "Google AI Plus",
+      "monthly_usd": 7.99,
+      "surface_funded": [
+        "gemini-app",
+        "gemini-cli"
+      ],
+      "notes": "Entry-paid Google AI tier with 2x higher usage limits than Free in the Gemini app, access to video generation and Daily Brief, 200 Google Flow Credits, and 200 GB of cloud storage."
     },
     {
       "provider": "Google",
