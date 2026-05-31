@@ -1,6 +1,8 @@
 # src/roadmodel/providers/openai.py
 from __future__ import annotations
 
+from typing import Any
+
 from roadmodel.errors import ProviderCallError
 
 DEFAULT_MODEL = "gpt-5.4"
@@ -22,7 +24,14 @@ def _extract_output_text(response: object) -> str | None:
     return None
 
 
-def recommend(prompt: str, system: str, *, model: str | None = None, api_key: str) -> str:
+def recommend(
+    prompt: str,
+    system: str,
+    *,
+    model: str | None = None,
+    api_key: str,
+    max_output_tokens: int | None = None,
+) -> str:
     try:
         from openai import APIError, OpenAI
     except Exception as exc:  # pragma: no cover - dependency/runtime guard
@@ -30,13 +39,19 @@ def recommend(prompt: str, system: str, *, model: str | None = None, api_key: st
 
     try:
         client = OpenAI(api_key=api_key)
-        response = client.responses.create(
-            model=model or DEFAULT_MODEL,
-            input=[
+        # `kwargs` is typed `Any` so mypy strict doesn't reject the
+        # mixed-value-type dict against the SDK's overloaded `create`
+        # signature; the runtime call accepts plain dicts identically.
+        kwargs: Any = {
+            "model": model or DEFAULT_MODEL,
+            "input": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": prompt},
             ],
-        )
+        }
+        if max_output_tokens is not None:
+            kwargs["max_output_tokens"] = max_output_tokens
+        response = client.responses.create(**kwargs)
         text = _extract_output_text(response)
         if text:
             return text

@@ -6,7 +6,14 @@ from roadmodel.errors import ProviderCallError
 DEFAULT_MODEL = "claude-sonnet-4-6"
 
 
-def recommend(prompt: str, system: str, *, model: str | None = None, api_key: str) -> str:
+def recommend(
+    prompt: str,
+    system: str,
+    *,
+    model: str | None = None,
+    api_key: str,
+    max_output_tokens: int | None = None,
+) -> str:
     try:
         from anthropic import Anthropic, APIError
     except Exception as exc:  # pragma: no cover - dependency/runtime guard
@@ -18,7 +25,7 @@ def recommend(prompt: str, system: str, *, model: str | None = None, api_key: st
         client = Anthropic(api_key=api_key)
         response = client.messages.create(
             model=model or DEFAULT_MODEL,
-            max_tokens=4096,
+            max_tokens=max_output_tokens if max_output_tokens is not None else 4096,
             system=system,
             messages=[{"role": "user", "content": prompt}],
         )
