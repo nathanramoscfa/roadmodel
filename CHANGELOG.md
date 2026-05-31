@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] — 2026-05-31
+
+### Fixed
+
+- **Production hotfix:** `roadmodel.recommend.parse_response` now
+  accepts responses that include the optional `ORCHESTRATION` row
+  introduced by the selector's Ultracode dimension (added to the
+  bundled `model-selector.txt` via the SaaS-facing PR that
+  documents Claude Code's Ultracode effort level). Without this
+  fix, both Gemini 2.5 Flash and Anthropic Haiku 4.5 emit
+  responses matching the new schema (a six-field block plus an
+  ORCHESTRATION line between THINKING and CONVERSATION), and the
+  parser rejected every one as `MalformedResponseError`. Every
+  `/api/recommend` call from `roadmodel-service` returned 500.
+  The fix wraps the new line in a non-capturing optional regex
+  group so both old (no ORCHESTRATION) and new (with
+  ORCHESTRATION) responses parse. The captured value is consumed
+  silently — surfacing it via `recommend_structured` is a
+  separate change.
+
 ## [0.2.1] — 2026-05-31
 
 ### Added
