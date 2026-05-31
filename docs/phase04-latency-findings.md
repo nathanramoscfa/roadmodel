@@ -166,7 +166,7 @@ Applying the Step 7 rubric to the 2026-05-31 baseline:
 
 | Candidate fix          | Trigger condition                                                              | Baseline               | Verdict      |
 | ---------------------- | ------------------------------------------------------------------------------ | ---------------------- | ------------ |
-| **Token cap (1024)**   | `service_provider_ms` P50 > 2,000 ms                                           | 17,014 ms (8.5× over) | **APPLY**    |
+| **Token cap (1024)**   | `service_provider_ms` P50 > 2,000 ms                                           | 17,014 ms (8.5× over) | **~~APPLY~~ SUPERSEDED — see correction below; the lever is the thinking budget, not the token cap (#132)** |
 | **Parallel fan-out**   | `service_scoring_ms` P50 > 500 ms AND per-row I/O in the comparison loop       | 0 ms                   | **DEFER**    |
 | **Keep-alive cron**    | `cold_start_ms` P95 > 8,000 ms                                                 | 0 ms (P99: 40 ms)      | **DEFER**    |
 
@@ -183,13 +183,26 @@ cold-start cost).
 
 **Why the dominant span is the Gemini call.** Phase 3 Step 5.5b
 swapped the recommender to Gemini 2.5 Flash for cost discipline, but
-the call site at `src/roadmodel/providers/google.py:20` passes no
-`max_output_tokens` so the SDK default of 8,192 applies. Real
-recommender responses (the six-field block plus rationale) fit well
-under 1,024 tokens in practice. The provider is generating ~8× the
-output it needs to, and decode-time dominates the wall clock at this
-output ratio. This is exactly the failure mode the original Step 7
-spec called out as candidate fix #1.
+the call site at `src/roadmodel/providers/google.py` passes no
+`max_output_tokens` so the SDK default applies. The provider is
+spending most of its decode time on **reasoning tokens**, not the
+visible answer — see the correction below.
+
+> **Correction (2026-05-31, issue #132).** The premise in the
+> original draft of this section — that "real recommender responses
+> fit well under 1,024 tokens, so a 1,024 cap reclaims ~8× of wasted
+> output" — was **wrong**, and acting on it caused a ~4-hour
+> production outage (every `/api/recommend` 500'd; see
+> [[project-parser-selector-drift-incident]] and the package-level
+> root cause in [[project-gemini-flash-thinking-budget]]). The real
+> mechanism: **Gemini 2.5 Flash has thinking ON by default, and
+> `max_output_tokens` is a _combined_ cap (thinking tokens + visible
+> response).** Thinking is decoded first. At cap=1,024 roughly 980
+> tokens were spent on thinking and only ~40 were left for the
+> visible block, so the response truncated below the parser threshold
+> and raised `MalformedResponseError`. The cap *value* was never the
+> fix; **the thinking budget is the lever.** The diagnosis table's
+> "Token cap (1024) → APPLY" verdict is superseded accordingly.
 
 ## Fixes applied
 
@@ -238,13 +251,18 @@ The fix requires a chicken-and-egg-aware split:
   Vercel `roadmodel-api` deploy could install 0.2.1 (the chicken-
   and-egg the split was designed around).
 
-**Expected impact.** Capping output at 1,024 tokens should reduce
-the dominant span (`service_provider_ms`) by roughly the same
-ratio as the over-allocation — 8,192 / 1,024 = 8×. If decode-time
-scales linearly with output budget allocation, P50 could drop from
-~17,000 ms to ~2,000–3,000 ms, putting the warm path inside or
-near budget. Empirical post-fix sweep numbers land in PR 7c after
-PR 7b-b deploys to production.
+**Expected impact (as predicted at PR 7b — SUPERSEDED).** Capping
+output at 1,024 tokens should reduce the dominant span
+(`service_provider_ms`) by roughly the same ratio as the
+over-allocation — 8,192 / 1,024 = 8×. If decode-time scales linearly
+with output budget allocation, P50 could drop from ~17,000 ms to
+~2,000–3,000 ms, putting the warm path inside or near budget.
+
+> This prediction was **wrong** and the cap was reverted the same day.
+> It assumed `max_output_tokens` bounded only the visible response;
+> in fact it is a combined thinking + response cap and the prediction
+> ignored Gemini's default thinking budget entirely. See the
+> correction under Diagnosis and the Post-fix diagnostic sweep (#132).
 
 ## Fixes deferred
 
@@ -285,7 +303,68 @@ long-tail of cold instances during off-peak hours.
 > `phase04-step7d-latency-followup` and file PR 7d as a
 > follow-up step.
 
-<!-- TODO(PR 7c): paste sweep output -->
+**No post-fix production sweep exists yet — the token cap was
+reverted, not shipped.** The 1,024 cap (PR #127) was rolled back the
+same day (PR #129) because it broke parsing; no cap is in production.
+The warm path remains at the ~17 s baseline. Closing this section
+requires a *new* fix (thinking-budget control, below) and a fresh
+production sweep, both tracked by **issue #132**.
+
+### Diagnostic sweep (2026-05-31, issue #132 — local, exploratory)
+
+Run from a laptop (not production) against the live Gemini 2.5 Flash
+API with the real recommender system prompt, to find why the cap
+broke and what actually controls latency. 66 calls total. **These are
+exploratory numbers over home-internet RTT, not a production budget
+measurement** — treat the *relative* findings as solid and the
+*absolute* milliseconds as indicative only.
+
+`max_output_tokens` is a **combined** cap (thinking + visible
+response); thinking decodes first:
+
+| `max_output_tokens` (thinking on) | parse | thinking tok | response tok | finish reason |
+| --------------------------------- | ----- | ------------ | ------------ | ------------- |
+| 1024 | **0/6 FAIL** | ~980 | ~40 | MAX_TOKENS |
+| 1536 | 6/6 | ~1473 | ~59 | MAX_TOKENS |
+| 2048 | 6/6 | ~1962 | ~80 | MAX_TOKENS |
+| 4096 | 6/6 | 1563–3002 | 147–1941 | STOP |
+| none | 6/6 | 1580–2487 | 207–23363 | STOP |
+
+This reproduces the incident exactly: at 1,024, thinking consumed the
+budget and the visible block truncated → `MalformedResponseError`.
+
+Latency by thinking budget (p50 over 9 samples each, **laptop RTT**):
+
+| config | p50 (ms) | min (ms) | max (ms) | meets P50 ≤ 3,000? |
+| ------ | -------- | -------- | -------- | ------------------ |
+| thinking ON / no cap (≈ today) | 13,584 | 7,978 | 40,979 | ❌ |
+| thinking 512 / cap 2048 | 7,806 | 3,847 | 12,430 | ❌ |
+| thinking **OFF** / cap 2048 | 6,817 | 1,538 | 10,807 | ❌ (but ~2× faster) |
+
+**No configuration met the 3 s P50 from a laptop.** Thinking-off is
+~2× faster but still ~6.8 s p50 here; the absolute budget verdict can
+only come from a production-side sweep (Vercel → Gemini). The robust
+finding is directional: **disabling Gemini's default thinking is the
+dominant lever** (≈ 2×), far more than any `max_output_tokens` value.
+
+**Quality caveat — thinking changes the recommendation.** Picks were
+stable *within* a config but differed *between* thinking-on and
+-off on every test prompt (e.g. planning GPT-5.5 → Opus 4.8; creative
+Opus 4.8 → Haiku 4.5). All picks were defensible with full, cited
+rationales and zero parse failures, but they are **not identical**.
+For a model *selector*, reasoning quality is part of the product, so
+disabling thinking is a deliberate **quality ↔ latency tradeoff**, not
+a free mechanical win.
+
+**Not a provider-chain bug.** `service/app/recommend.py`'s
+`_FALLBACK_CHAIN` lists Haiku first, but the web route forces the
+Gemini provider via `context.force_provider`
+(`web/app/api/recommend/route.ts` → `resolveRecommenderEngine` →
+`pickFreeEngine`, pinned to `google-gemini-2.5-flash`), and the
+service's `_provider_chain()` reorders to put the forced provider
+first. Production is served by Gemini **by design**; Haiku-primary is
+only the default for an *unforced* direct service call.
+`ANTHROPIC_API_KEY` is set in production, consistent with that.
 
 ## Cold-start budget
 
@@ -310,4 +389,32 @@ sweep.
 > deferred (with the issue link), plus any new findings the
 > sweep surfaced that aren't in scope for Phase 4 Step 7.
 
-<!-- TODO(PR 7c): future-work log -->
+**Remaining work to close the warm-path budget (issue #132):**
+
+1. **Re-measure from production**, not a laptop. Run the documented
+   50-request sweep (Methodology section) against `https://roadmodel.ai`
+   with thinking still on, to get the true production baseline p50/p95
+   for `service_provider_ms`.
+2. **Decide the quality ↔ latency tradeoff.** If thinking-off is
+   acceptable for the free-tier recommender (given the pick-stability
+   data above), it is the highest-leverage change. If not, the warm
+   path stays at baseline and the budget target is renegotiated.
+3. **If proceeding with thinking-off:** expose `thinking_config` in
+   `roadmodel.providers.google.recommend` (it currently exposes only
+   `max_output_tokens`), release as `roadmodel` 0.2.3 via the OIDC
+   path ([[project-pypi-publish-oidc]]), bump the service pin, and
+   apply it **Gemini-only** (never the Anthropic fallback, per PR #128).
+   A `max_output_tokens` of ~2,048 is a safe companion cap *only* with
+   thinking off (it must not be set with thinking on — that is the
+   incident). Then run the production post-fix sweep and paste it into
+   the Post-fix section above.
+
+The PyPI publish in step 3 requires explicit maintainer authorization
+(same gate as 0.2.1 / 0.2.2). Until then, production runs uncapped
+(SDK default) with thinking on — the known ~17 s warm-path regression,
+which is a far smaller blast radius than 500s on every call.
+
+**Deferred candidates (unchanged from the Diagnosis rubric):** parallel
+fan-out (N/A for the static Phase 4 catalog — no per-row I/O) and the
+keep-alive cron (cold-start P95 is ~0 ms; Fluid Compute warm-reuse
+already covers it).
