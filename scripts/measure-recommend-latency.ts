@@ -7,16 +7,20 @@
 // every span plus a markdown table copy-pastable into
 // docs/phase04-latency-findings.md.
 //
-// Usage (the cd into web/ picks up @supabase/supabase-js, which
-// lives in web/node_modules — there is no root package.json):
+// Usage (the wrapper fetches required secrets from the macOS login
+// keychain — see scripts/with-prod-secrets.sh for the one-time seed
+// commands; web/node_modules supplies @supabase/supabase-js and tsx
+// since there is no root package.json):
 //
 //   cd web
-//   ROADMODEL_LATENCY_BYPASS_TOKEN=<token from Vercel env>          \
-//   SITE_PASSWORD=<pre-launch gate password>                        \
-//   SUPABASE_URL=<prod url> SUPABASE_SERVICE_ROLE_KEY=<key>         \
-//   pnpm tsx ../scripts/measure-recommend-latency.ts                \
-//       --target https://roadmodel.ai                               \
+//   ../scripts/with-prod-secrets.sh node node_modules/.bin/tsx \
+//       ../scripts/measure-recommend-latency.ts                \
+//       --target https://roadmodel.ai                          \
 //       --requests 50 --window-seconds 600
+//
+// Required env vars (the wrapper exports them all; this script
+// reads four): ROADMODEL_LATENCY_BYPASS_TOKEN, SITE_PASSWORD,
+// SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
 //
 // Exits non-zero on the first failed request so upstream errors
 // surface immediately rather than getting buried in the markdown
