@@ -82,7 +82,13 @@ def test_recommend_model_calls_recommend_structured(
             self.calls: list[dict[str, str | None]] = []
 
         def recommend(
-            self, prompt: str, system: str, *, model: str | None = None, api_key: str
+            self,
+            prompt: str,
+            system: str,
+            *,
+            model: str | None = None,
+            api_key: str,
+            max_output_tokens: int | None = None,
         ) -> str:
             self.calls.append(
                 {"prompt": prompt, "system": system, "model": model, "api_key": api_key}
@@ -122,7 +128,13 @@ def test_recommend_model_with_context(monkeypatch: pytest.MonkeyPatch, tmp_path:
             self.calls: list[dict[str, str | None]] = []
 
         def recommend(
-            self, prompt: str, system: str, *, model: str | None = None, api_key: str
+            self,
+            prompt: str,
+            system: str,
+            *,
+            model: str | None = None,
+            api_key: str,
+            max_output_tokens: int | None = None,
         ) -> str:
             self.calls.append(
                 {"prompt": prompt, "system": system, "model": model, "api_key": api_key}
@@ -158,7 +170,13 @@ def test_generate_phase_roadmap_uses_template(
             self.calls: list[dict[str, str | None]] = []
 
         def recommend(
-            self, prompt: str, system: str, *, model: str | None = None, api_key: str
+            self,
+            prompt: str,
+            system: str,
+            *,
+            model: str | None = None,
+            api_key: str,
+            max_output_tokens: int | None = None,
         ) -> str:
             self.calls.append(
                 {"prompt": prompt, "system": system, "model": model, "api_key": api_key}

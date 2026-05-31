@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] — 2026-05-31
+
+### Added
+
+- Optional `max_output_tokens: int | None` keyword on
+  `roadmodel.recommend.recommend` and
+  `roadmodel.recommend.recommend_structured`, threaded through every
+  bundled provider adapter (`providers.google`,
+  `providers.anthropic`, `providers.openai`) and the
+  `ProviderAdapter` Protocol. When unset, each provider keeps its
+  prior default (Google: SDK default 8192, Anthropic: 4096, OpenAI:
+  SDK default). When set, it is forwarded as
+  `config.max_output_tokens` to Gemini, `max_tokens` to Anthropic,
+  and `max_output_tokens` to the OpenAI Responses API.
+
+### Changed
+
+- `roadmodel-service` (Phase 4 Step 7b) now passes
+  `max_output_tokens=1024` to the recommender call. Baseline
+  measurement of warm-path `/api/recommend` showed
+  `service_provider_ms` P50 = 17,014 ms (5.7× over the ≤ 3000 ms
+  budget); the SDK default of 8192 was over-allocated for a
+  recommender response that fits well under 1024 in practice. See
+  `docs/phase04-latency-findings.md` for the rubric trigger and
+  decision rationale.
+
 ## [0.2.0] — 2026-05-17
 
 ### Added

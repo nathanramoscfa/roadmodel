@@ -12,4 +12,5 @@ class ProviderAdapter(Protocol):
         *,
         model: str | None = None,
         api_key: str,
+        max_output_tokens: int | None = None,
     ) -> str: ...
