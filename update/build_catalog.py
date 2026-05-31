@@ -47,6 +47,7 @@ TASK_CATEGORIES = (
 # values can be cross-referenced. Mirrors tests/test_doc_schema.py.
 SELECTOR_TO_COST_SCALE_NAME = {
     "opus-4.7": "Claude 4.7 Opus",
+    "opus-4.8": "Claude Opus 4.8",
     "gpt-5.5": "GPT-5.5",
     "sonnet-4.6": "Claude 4.6 Sonnet",
     "gpt-5.4": "GPT-5.4",

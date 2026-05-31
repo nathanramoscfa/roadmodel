@@ -50,7 +50,7 @@ table and surface material cost / availability / capability constraints.
 | Claude 4.6 Opus             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Hidden by default; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
 | Claude 4.6 Opus (Fast mode) | $30.00 | $37.50      | $3.00      | $150.00 | Very High | Hidden by default; Requires Max Mode on request-based plans; Limited research preview; Up to 1M tokens in Max Mode at the same per-token rates as shorter context |
 | Claude 4.6 Sonnet           | $3.00  | $3.75       | $0.30      | $15.00  | High      | Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
-| Claude 4.7 Opus             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
+| Claude 4.7 Opus             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Hidden by default; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
 | Claude Opus 4.7 (fast mode) | $30.00 | $37.50      | $3.00      | $150.00 | Very High | Hidden by default; Requires Max Mode on request-based plans; Limited research preview; Up to 1M tokens in Max Mode at the same per-token rates as shorter context |
 | Claude Opus 4.8             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Requires Max Mode on request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
 
@@ -192,6 +192,7 @@ appear here.
 | Model (file id)  | Output  | Correct Tier | Current Tier | Status |
 | ---------------- | ------- | ------------ | ------------ | ------ |
 | opus-4.7         | $25.00  | Very High    | Very High    | ✓      |
+| opus-4.8         | $25.00  | Very High    | Very High    | ✓      |
 | gpt-5.5          | $30.00  | Very High    | Very High    | ✓      |
 | sonnet-4.6       | $15.00  | High         | High         | ✓      |
 | gpt-5.4          | $15.00  | High         | High         | ✓      |
@@ -242,7 +243,7 @@ ids no longer appear as recommendable engines.
 | gpt-5.1-codex    | $10.00 | Medium    | New — added 2026-05-21; earlier-generation Codex variant at $10/M output                                                    |
 | composer-2.5     | $2.50  | Low       | New — added 2026-05-21; Composer 2 successor (same output price, equal-output-price replacement rule)                       |
 | kimi-k2.5        | $3.00  | Low       | New — added 2026-05-21; Moonshot's Kimi K2.5 (routed via Cursor pool; no direct Moonshot access method enumerated yet)      |
-| claude-opus-4.8  | $25.00 | Very High | New 2026-05-28 in cost-scale — Anthropic's Claude Opus 4.8 visible on Cursor pricing page; `<model-options>` entry deferred until benchmark sources index it (AA evals currently null) |
+| opus-4.8         | $25.00 | Very High | New 2026-05-30 — Anthropic's Claude Opus 4.8 added to `<model-options>` alongside cost-scale on the same run; placeholder tier ratings inherited from opus-4.7 (same series successor at same per-token pricing) pending benchmark coverage on next refresh; opus-4.7 simultaneously flipped to Hidden by default on Cursor's pricing page |
 | grok-build-0.1   | $2.00  | Low       | New 2026-05-28 in cost-scale — xAI's Grok Build 0.1 visible on Cursor pricing page; `<model-options>` entry deferred until benchmark sources index it (no published benchmarks yet) |
 | auto             | —      | —         | REMOVED 2026-05-21; Cursor-managed routing meta-model. Opaque routing conflicts with per-model tier ratings + jurisdiction filter |
 | premium          | —      | —         | REMOVED 2026-05-21; Cursor-managed routing meta-model. Same rationale as `auto` removal                                     |
@@ -263,7 +264,7 @@ this table.
 
 | Provider HQ name              | Jurisdiction code | Models in catalog                                                                                                       |
 | ----------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Anthropic (San Francisco, US) | `us`              | opus-4.7, sonnet-4.6, claude-4.5-haiku                                                                                  |
+| Anthropic (San Francisco, US) | `us`              | opus-4.8, opus-4.7, sonnet-4.6, claude-4.5-haiku                                                                        |
 | OpenAI (San Francisco, US)    | `us`              | gpt-5.5, gpt-5.4, gpt-5.3-codex, gpt-5.2, gpt-5.1-codex, gpt-5, gpt-5.4-mini, gpt-5.4-nano, gpt-5-mini                  |
 | Google (Mountain View, US)    | `us`              | gemini-3.1-pro, gemini-3-pro, gemini-3.5-flash, gemini-3-flash, gemini-2.5-flash                                        |
 | xAI (Palo Alto, US)           | `us`              | grok-4.3                                                                                                                |

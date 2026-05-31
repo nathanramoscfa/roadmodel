@@ -1,9 +1,9 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-05-28T17:24:33Z",
+  "generated_at_utc": "2026-05-31T03:03:01Z",
   "source_doc_sha256": {
-    "model-selector.txt": "469795cd500e0ca2dfe1229484ecb616e442cc5b57578d20918bd698c7327004",
-    "model-tier-cost-scale.md": "7adc8746aca0eec26aa325b54e9201987f19b018f9b06d2c4f99c70fbe9caff4"
+    "model-selector.txt": "923eedff960d815b250a2b7c8489b485d9c8ae44735fcb60d115a44c50a1b65b",
+    "model-tier-cost-scale.md": "22b5d44214a26a2f7be1ae6ccec0d0bcefcd7ed987ace4b385da8db3e5e2c6c9"
   },
   "models": [
     {
@@ -423,8 +423,29 @@
       },
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 57.3 (#2); LMArena Text #7 (Elo 1479.1); LMArena WebDev #2 (Elo 1562.4); AA-Omniscience 26.2 (#2)",
-      "pricing_notes": "Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)",
+      "pricing_notes": "Hidden by default; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)",
       "best_for": "Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching"
+    },
+    {
+      "id": "opus-4.8",
+      "name": "Opus 4.8",
+      "input_price_per_1m": 5.0,
+      "output_price_per_1m": 25.0,
+      "cache_read_per_1m": 0.5,
+      "tier_cost": "very-high",
+      "tiers": {
+        "coding": "S",
+        "planning": "S",
+        "agentic": "A",
+        "multimodal": "A",
+        "long-context": "S",
+        "knowledge": "S",
+        "speed": "D"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "Auto-added pending editorial tier review; specific benchmark numbers pending next refresh",
+      "pricing_notes": "Requires Max Mode on request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)",
+      "best_for": "Anthropic's Opus 4.7 successor at the same very-high tier pricing \u2014 placeholder tier ratings inherited from opus-4.7 pending benchmark coverage; the 3x cheaper fast-mode per-token rate (vs opus-4.7 fast mode) is the headline cost-structure change to surface in the next editorial pass"
     },
     {
       "id": "sonnet-4.6",
@@ -459,6 +480,7 @@
       "supports_models": [
         "claude-4.5-haiku",
         "opus-4.7",
+        "opus-4.8",
         "sonnet-4.6"
       ],
       "exposes_max_mode": "no",
@@ -493,6 +515,7 @@
       "supports_models": [
         "claude-4.5-haiku",
         "opus-4.7",
+        "opus-4.8",
         "sonnet-4.6"
       ],
       "exposes_max_mode": "no",
@@ -509,6 +532,7 @@
       "supports_models": [
         "claude-4.5-haiku",
         "opus-4.7",
+        "opus-4.8",
         "sonnet-4.6"
       ],
       "exposes_max_mode": "no",
@@ -564,6 +588,7 @@
         "grok-4.3",
         "kimi-k2.5",
         "opus-4.7",
+        "opus-4.8",
         "sonnet-4.6"
       ],
       "exposes_max_mode": "yes",

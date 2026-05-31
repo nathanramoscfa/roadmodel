@@ -472,55 +472,95 @@ elements being newly created, never to elements that already exist.
 ### Adding new models
 
 When a model appears on the Cursor pricing page that is not in
-`<model-options>`, the lifecycle has TWO phases. The cost-scale add
-runs unconditionally (governed by the Pricing rules above); the
-`<model-options>` add is GATED on benchmark availability:
+`<model-options>`, ADD it to BOTH `model-tier-cost-scale.md` AND
+`<model-options>` of `model-selector.txt` ON THE SAME RUN —
+UNCONDITIONALLY, regardless of whether this run's benchmark sources
+have indexed the model yet.
 
-- Cost-scale (always): add the new row to
-  `model-tier-cost-scale.md` per the Pricing rules above.
-- `<model-options>` (gated): ADD a new `<model …/>` element ONLY
-  when this run's fetched benchmark sources contain at least 2
-  verifiable numeric facts about the model. Otherwise do NOT add
-  the element this run; emit a warning of the form `new model
-  awaiting leaderboard data: <id> at $<n>/M output added to cost-
-  scale only — <model-options> entry deferred until benchmark
-  sources index it`. The next refresh that finds ≥2 facts will
-  add the element.
+There is NO benchmark-availability gate. Earlier versions of this
+prompt deferred the `<model-options>` add until ≥2 verifiable
+benchmark facts were fetched; that gate was REMOVED because the
+roadmodel SaaS selector consumes `<model-options>` as its candidate
+pool and a Cursor-visible model that's absent from
+`<model-options>` is simply unavailable for recommendation —
+worse than a placeholder-rated entry the maintainer can refine.
+Cursor lists new models days-to-weeks before third-party
+leaderboards index them; the placeholder-tier-first pattern
+matches the realistic timing.
 
-This two-phase pattern reflects realistic timing: Cursor lists new
-models before third-party leaderboards index them. Adding a
-`<model …/>` element with no grounded ratings or benchmarks would
-produce a placeholder a maintainer would override anyway; the
-warning surfaces exactly the action needed when benchmarks land.
+For every newly-added `<model …/>` element, populate the attributes
+as follows. These rules are aligned with — and supersede — the
+auto-add rule in the Pricing section above:
 
-When the gate IS met (≥2 verifiable facts in the fetched
-`<source>` blocks), add the element with these attributes:
-
-- `id`, `name` — derived from Cursor's pricing page (canonical
-  display name; lowercase id with version suffix).
-- `input-price-per-1m`, `output-price-per-1m` — copied verbatim from
-  the Cursor pricing page.
+- `id`, `name` — derived from Cursor's pricing page (lowercase id
+  with `-` separators and version suffix; canonical display name
+  verbatim, but normalize to the project's existing series
+  convention when an established family uses a shorter id form
+  — e.g. `opus-4.8` / `Opus 4.8` to match `opus-4.7` / `Opus 4.7`
+  rather than `claude-opus-4.8` / `Claude Opus 4.8`).
+- `input-price-per-1m`, `output-price-per-1m` — copied verbatim
+  from the Cursor pricing page (and from the cost-scale row added
+  on the same run).
 - `pricing-notes` — copied verbatim from the Cursor row's notes
-  cell per the Pricing notes rules above (`-` if blank).
+  cell per the Pricing notes rules above (`-` if blank). MUST be
+  byte-identical to the cost-scale `Notes` column for this model
+  (enforced by the final-pass invariant).
+- `jurisdiction` — derive from the Provider Jurisdictions table
+  in `model-tier-cost-scale.md` by matching the cost-scale
+  provider header. When ambiguous, set `jurisdiction="unknown"`
+  and emit a `jurisdiction unknown:` warning.
 - `tier-coding`, `tier-planning`, `tier-agentic`, `tier-multimodal`,
   `tier-long-context`, `tier-knowledge`, `tier-speed` — each MUST
-  be one of `S`, `A`, `B`, `C`, `D`. Assign by best-effort grounding
-  in the fetched `<source>` blocks for this model. If a category
-  has no signal, default that one category to `B` (neutral). Never
-  use `?`, `inherit`, or any value outside the discrete set — the
-  selection-algorithm requires a resolvable rating.
+  be one of `S`, `A`, `B`, `C`, `D`. Assignment strategy, in
+  priority order:
+    1. **Same-series inheritance (placeholder).** If the new model
+       is a successor in an existing series (e.g. `opus-4.8` after
+       `opus-4.7`; `gpt-5.6` after `gpt-5.5`; `composer-3` after
+       `composer-2.5`) AND this run's fetched benchmark sources
+       contain no concrete numeric result for the new model, copy
+       the predecessor's tier ratings verbatim as placeholders.
+       This is conservative: a same-series successor is presumed
+       no-worse than its predecessor until benchmarks prove
+       otherwise; the maintainer can refine editorially. Emit a
+       `placeholder tiers inherited from <predecessor>: <id>` warning.
+    2. **Benchmark-grounded ratings.** If the fetched sources DO
+       contain concrete numeric results for the model, assign each
+       category's rating from that evidence per the same boundaries
+       that govern tier rating updates (S = top-1 or top-2 globally;
+       A = strong near-frontier; B = competent; C = limited; D =
+       not suited). Override the same-series placeholder for any
+       category with benchmark evidence; leave the other categories
+       at the placeholder value.
+    3. **Default-B placeholders (no series, no benchmarks).** If
+       neither (1) nor (2) applies — new vendor / new variant tier
+       with no predecessor AND no benchmark coverage this run —
+       default every tier to `B` (neutral), EXCEPT set
+       `tier-speed="S"` when the model name contains `Mini`,
+       `Flash`, `Haiku`, `Nano`, or `Lite`. Never use `?`,
+       `inherit`, or any value outside the discrete set — the
+       selection-algorithm requires a resolvable rating.
 - `headline-benchmarks` — semicolon-separated list of 2–4 numeric
   facts about this model from the fetched `<source>` blocks, each
-  citing its source by name (e.g. `AA Intelligence Index 54.2`;
-  `LMArena Text Elo 1432`). NEVER invent numbers.
+  citing its source by name. NEVER invent numbers. If no fetched
+  source covers this model, set `headline-benchmarks="Auto-added
+  pending editorial tier review; specific benchmark numbers
+  pending next refresh"` so the maintainer can find and refine
+  the entry.
 - `best-for` — one factual sentence positioning the model, derived
-  from its Cursor `pricing-notes` and any vendor description present
-  in the fetched sources. Do NOT invent capability claims.
+  from its Cursor `pricing-notes`, the predecessor's `best-for`
+  (when inheriting from a series), and any vendor description
+  present in the fetched sources. Do NOT invent capability
+  claims. Acceptable fallback for a brand-new entry without rich
+  context: `"Auto-added <tier>-cost <provider> model; pending
+  editorial best-for refinement."`
 
 For every `<model …/>` element added, emit a warning of the form
 `new model added to <model-options>: <id> in <tier>-cost tier
-(output $<n>/M) — auto-assigned tier ratings from <sources>; review
-recommended`.
+(output $<n>/M) — placeholder tiers <inherited from <predecessor>
+| defaulted to B/S>; editorial review recommended`. The PR
+description surfaces these warnings so the maintainer can refine
+ratings + best-for the same week the model lands rather than
+discovering the gap weeks later.
 
 ### Removing models
 
