@@ -43,6 +43,14 @@ _FALLBACK_CHAIN: tuple[str, ...] = (
     "google-gemini-2.5-flash",
 )
 
+# Phase 4 Step 7b — cap recommender output. Baseline P50 service-tier
+# Gemini call was 17,014 ms (5.7x over the P50 ≤ 3000 ms budget).
+# Gemini 2.5 Flash defaults to 8192 max output tokens; real recommender
+# responses fit well under 1024 in practice. Capping reduces both
+# generation wall-clock and provider cost. See
+# docs/phase04-latency-findings.md for the rubric trigger.
+_RECOMMENDER_MAX_OUTPUT_TOKENS = 1024
+
 
 def _config_for_hint(hint: str) -> Any:
     provider, model = _PROVIDER_HINTS[hint]
@@ -69,7 +77,11 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
     for hint in _provider_chain(req.context):
         config = _config_for_hint(hint)
         try:
-            result = recommend_structured(req.task_description, config)
+            result = recommend_structured(
+                req.task_description,
+                config,
+                max_output_tokens=_RECOMMENDER_MAX_OUTPUT_TOKENS,
+            )
             return RecommendResponse(
                 model=result["model"],
                 platform=result["platform"],

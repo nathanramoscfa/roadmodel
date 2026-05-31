@@ -229,21 +229,19 @@ The fix requires a chicken-and-egg-aware split:
   ([[project-pypi-publish-oidc]]) — `git tag -s v0.2.1` from `main`
   after this PR squash-merges; `release.yml` handles the upload.
 
-- *PR 7b-b (follow-up)* bumps `service/pyproject.toml` pin to
+- *PR 7b-b (this PR)* bumps `service/pyproject.toml` pin to
   `roadmodel>=0.2.1,<0.3` and passes `max_output_tokens=1024` from
-  `service/app/recommend.py` to the recommender call. Cannot land
-  in this PR because the Vercel `roadmodel-api` deploy installs
-  from PyPI and 0.2.1 doesn't exist there until v0.2.1's tag-push
-  triggers the OIDC publish on `main`. CI's `service-tests` job is
-  fine (it installs the in-repo roadmodel editable via this PR's
-  `pip install -e .` addition to `tests.yml`), but the Vercel build
-  has no equivalent escape hatch.
+  `service/app/recommend.py` via a module-level constant
+  (`_RECOMMENDER_MAX_OUTPUT_TOKENS = 1024`) with an inline comment
+  citing the baseline P50 of 17,014 ms. Required the prior 7b-a
+  PR's tag-push to complete the OIDC publish to PyPI before the
+  Vercel `roadmodel-api` deploy could install 0.2.1 (the chicken-
+  and-egg the split was designed around).
 
-**Expected impact.** Capping output at 1,024 tokens (which the
-service uptake PR 7b-b will configure) should reduce the dominant
-span (`service_provider_ms`) by roughly the same ratio as the
-over-allocation — 8,192 / 1,024 = 8×. If decode-time scales
-linearly with output budget allocation, P50 could drop from
+**Expected impact.** Capping output at 1,024 tokens should reduce
+the dominant span (`service_provider_ms`) by roughly the same
+ratio as the over-allocation — 8,192 / 1,024 = 8×. If decode-time
+scales linearly with output budget allocation, P50 could drop from
 ~17,000 ms to ~2,000–3,000 ms, putting the warm path inside or
 near budget. Empirical post-fix sweep numbers land in PR 7c after
 PR 7b-b deploys to production.
