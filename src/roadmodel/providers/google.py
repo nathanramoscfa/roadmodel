@@ -1,6 +1,8 @@
 # src/roadmodel/providers/google.py
 from __future__ import annotations
 
+from typing import Any
+
 from roadmodel.errors import ProviderCallError
 
 DEFAULT_MODEL = "gemini-3.1-pro"
@@ -24,7 +26,10 @@ def recommend(
 
     try:
         client = genai.Client(api_key=api_key)
-        config: dict[str, object] = {"system_instruction": system}
+        # `config` is typed `Any` so mypy strict doesn't reject a mixed
+        # str|int dict literal against the SDK's `GenerateContentConfigDict`
+        # TypedDict; the runtime SDK accepts plain dicts identically.
+        config: Any = {"system_instruction": system}
         if max_output_tokens is not None:
             config["max_output_tokens"] = max_output_tokens
         response = client.models.generate_content(

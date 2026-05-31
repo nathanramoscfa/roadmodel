@@ -28,12 +28,7 @@ from roadmodel.providers import google as google_provider
 from roadmodel.providers import openai as openai_provider
 
 _RECOMMENDER_RESPONSE = (
-    "MODEL: x\n"
-    "PLATFORM: y\n"
-    "MAX MODE: Off\n"
-    "THINKING: Off\n"
-    "CONVERSATION: New\n"
-    "RATIONALE: stub\n"
+    "MODEL: x\nPLATFORM: y\nMAX MODE: Off\nTHINKING: Off\nCONVERSATION: New\nRATIONALE: stub\n"
 )
 
 
@@ -74,9 +69,7 @@ def _install_google_fake(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_google_forwards_max_output_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
     _install_google_fake(monkeypatch)
-    google_provider.recommend(
-        "prompt", "system", api_key="key", max_output_tokens=1024
-    )
+    google_provider.recommend("prompt", "system", api_key="key", max_output_tokens=1024)
     config = _FakeGoogleClient.captured["config"]
     assert config["max_output_tokens"] == 1024
     assert config["system_instruction"] == "system"
@@ -125,9 +118,7 @@ def test_anthropic_forwards_max_output_tokens(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     _install_anthropic_fake(monkeypatch)
-    anthropic_provider.recommend(
-        "prompt", "system", api_key="key", max_output_tokens=1024
-    )
+    anthropic_provider.recommend("prompt", "system", api_key="key", max_output_tokens=1024)
     assert _FakeAnthropicClient.captured["max_tokens"] == 1024
 
 
@@ -170,9 +161,7 @@ def _install_openai_fake(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_openai_forwards_max_output_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
     _install_openai_fake(monkeypatch)
-    openai_provider.recommend(
-        "prompt", "system", api_key="key", max_output_tokens=1024
-    )
+    openai_provider.recommend("prompt", "system", api_key="key", max_output_tokens=1024)
     assert _FakeOpenAIClient.captured["max_output_tokens"] == 1024
 
 

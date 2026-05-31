@@ -50,6 +50,5 @@ def recommend_endpoint(req: RecommendRequest, response: Response) -> RecommendRe
         total_elapsed_ms = int((time.perf_counter() - overall_start) * 1000)
         scoring_ms = max(0, total_elapsed_ms - provider_elapsed_ms)
         response.headers["X-Roadmodel-Timing"] = (
-            f"service_scoring_ms={scoring_ms};"
-            f"service_provider_ms={provider_elapsed_ms}"
+            f"service_scoring_ms={scoring_ms};service_provider_ms={provider_elapsed_ms}"
         )

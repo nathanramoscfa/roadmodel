@@ -1,6 +1,8 @@
 # src/roadmodel/providers/openai.py
 from __future__ import annotations
 
+from typing import Any
+
 from roadmodel.errors import ProviderCallError
 
 DEFAULT_MODEL = "gpt-5.4"
@@ -37,7 +39,10 @@ def recommend(
 
     try:
         client = OpenAI(api_key=api_key)
-        kwargs: dict[str, object] = {
+        # `kwargs` is typed `Any` so mypy strict doesn't reject the
+        # mixed-value-type dict against the SDK's overloaded `create`
+        # signature; the runtime call accepts plain dicts identically.
+        kwargs: Any = {
             "model": model or DEFAULT_MODEL,
             "input": [
                 {"role": "system", "content": system},

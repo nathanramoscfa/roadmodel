@@ -244,13 +244,14 @@ run_static_checks() {
 
   # --- Step 3 (CLI surface upgrade) — checks 10-15 ---
 
-  # 10 — __version__ == 0.2.0
+  # 10 — __version__ is 0.2.x (Phase 2 set the 0.2 minor; later patch
+  # bumps within the 0.2 line are acceptable, e.g. Phase 4 Step 7b 0.2.1).
   if [[ -f src/roadmodel/__init__.py ]] &&
-    grep -Eq '__version__[[:space:]]*=[[:space:]]*"0\.2\.0"' src/roadmodel/__init__.py; then
-    record_pass 10 "src/roadmodel/__init__.py declares __version__ = \"0.2.0\""
+    grep -Eq '__version__[[:space:]]*=[[:space:]]*"0\.2\.[0-9]+"' src/roadmodel/__init__.py; then
+    record_pass 10 "src/roadmodel/__init__.py declares __version__ = \"0.2.x\""
   else
-    record_fail 10 "src/roadmodel/__init__.py declares __version__ = \"0.2.0\"" \
-      "version literal not found"
+    record_fail 10 "src/roadmodel/__init__.py declares __version__ = \"0.2.x\"" \
+      "version literal not in the 0.2.x range"
   fi
 
   # 11
