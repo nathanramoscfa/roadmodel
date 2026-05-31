@@ -1,0 +1,11 @@
+{
+  "changelog": {
+    "name": "Claude Code CHANGELOG (raw)",
+    "url": "https://raw.githubusercontent.com/anthropics/claude-code/main/CHANGELOG.md",
+    "purpose": "Authoritative source for Claude Code surface-parameter changes (Effort levels, Thinking knobs, slash commands, slider labels, settings.json keys, environment variables). Anthropic ships the canonical changelog per-release in the claude-code repo. Reading the raw GitHub blob bypasses GitHub HTML wrapping and is trivially parseable as Markdown.",
+    "validate": {
+      "min_bytes": 2000,
+      "must_contain_all": ["#"]
+    }
+  }
+}
