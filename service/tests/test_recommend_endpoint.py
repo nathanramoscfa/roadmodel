@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import importlib
+import inspect
 import sys
 from types import ModuleType
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from roadmodel.errors import MalformedResponseError  # type: ignore[import-untyped]
 
 _MODULES_TO_RESET = (
     "app.main",
@@ -138,3 +140,101 @@ def test_response_schema_matches_phase2_contract(
         "session_cost_estimate",
         "comparison_table",
     }
+
+
+def test_recommend_falls_back_to_next_provider_on_malformed_response(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Issue #133: a parser failure (MalformedResponseError) on the primary
+    provider must fall through to the next provider in the chain instead of
+    leaking a 500. Mirrors the 2026-05-31 incident shape where the primary's
+    response failed the regex while a fallback could still succeed."""
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-google-key")
+    recommend_module = importlib.import_module("app.recommend")
+    attempted: list[str] = []
+
+    def _fake_recommend_structured(
+        prompt: str,
+        config: Any,
+        *,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        max_mode: bool = False,
+        max_output_tokens: int | None = None,
+    ) -> dict[str, Any]:
+        attempted.append(config.provider)
+        if config.provider == "anthropic":
+            raise MalformedResponseError("ORCHESTRATION: Ultracode\n<unparseable for old regex>")
+        return dict(_RECOMMEND_DICT)
+
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
+
+    response = client.post("/v1/recommend", json=_request_payload())
+
+    assert response.status_code == 200
+    # Primary (anthropic) raised MalformedResponseError; loop fell through to
+    # google, which succeeded.
+    assert attempted == ["anthropic", "google"]
+    assert response.json()["model"] == _RECOMMEND_DICT["model"]
+
+
+def test_recommend_attempts_all_providers_then_raises_when_all_malformed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Issue #133: when EVERY provider returns an unparseable response (the
+    actual 2026-05-31 incident shape — both Gemini and Haiku followed the new
+    schema the old regex rejected), the fallback loop must attempt every
+    provider and then re-raise MalformedResponseError rather than swallow it.
+    The service has no HTTP error mapping, so this surfaces as the same
+    unhandled 500 as the pre-existing all-providers-failed path — the drift
+    guard (issue #134) is what stops whole-chain schema drift from shipping.
+    Tested at the function level since the loop, not the HTTP layer, owns this
+    behavior."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-google-key")
+    recommend_module = importlib.import_module("app.recommend")
+    attempted: list[str] = []
+
+    def _fake_recommend_structured(
+        prompt: str,
+        config: Any,
+        *,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        max_mode: bool = False,
+        max_output_tokens: int | None = None,
+    ) -> dict[str, Any]:
+        attempted.append(config.provider)
+        raise MalformedResponseError("<unparseable>")
+
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
+
+    request = recommend_module.RecommendRequest(task_description="pick a model")
+    with pytest.raises(MalformedResponseError):
+        recommend_module.recommend(request)
+
+    # Every provider in the chain was attempted before the loop re-raised.
+    assert attempted == ["anthropic", "google"]
+
+
+def test_fake_recommend_structured_matches_real_signature() -> None:
+    """Contract guard per feedback_monkeypatched_contract_validation. The fakes
+    in this file assume recommend_structured(prompt, config, *, input_tokens,
+    output_tokens, max_mode, max_output_tokens). If the real signature drifts,
+    every fake silently diverges and the first live call 500s — exactly the
+    Phase 3 Step 3 failure mode. Pin the real contract the fakes are written
+    against."""
+    from roadmodel.recommend import recommend_structured as real  # type: ignore[import-untyped]
+
+    params = inspect.signature(real).parameters
+    assert list(params) == [
+        "prompt",
+        "config",
+        "input_tokens",
+        "output_tokens",
+        "max_mode",
+        "max_output_tokens",
+    ]
+    # Everything after `config` is keyword-only (declared after the bare *).
+    assert params["input_tokens"].kind is inspect.Parameter.KEYWORD_ONLY
