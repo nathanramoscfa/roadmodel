@@ -198,12 +198,15 @@ spec called out as candidate fix #1.
 > release version, `service/pyproject.toml` pin range, Vercel
 > Cron `crons[]` entry).
 
-**Token cap (1024) — landed in `roadmodel` 0.2.1 + `roadmodel-service`
-pin bump (this PR, Phase 4 Step 7b).**
+**Token cap (1024) lands in two PRs — package release in 7b-a
+(this PR), service uptake in 7b-b (follow-up after PyPI publish).**
 
-- Added optional `max_output_tokens: int | None` keyword to
+The fix requires a chicken-and-egg-aware split:
+
+- *PR 7b-a (this PR)* ships the `roadmodel` 0.2.1 package release:
+  optional `max_output_tokens: int | None` keyword on
   `roadmodel.recommend.recommend`, `recommend_structured`, and the
-  `ProviderAdapter` Protocol. Threaded through all three bundled
+  `ProviderAdapter` Protocol, threaded through all three bundled
   providers:
   - `providers.google` → forwarded as `config.max_output_tokens` to
     `client.models.generate_content`.
@@ -211,33 +214,39 @@ pin bump (this PR, Phase 4 Step 7b).**
     prior hardcoded `4096` when set).
   - `providers.openai` → forwarded as `max_output_tokens` to the
     Responses API.
-- `roadmodel-service` now passes `max_output_tokens=1024` from
-  `service/app/recommend.py` via a module-level constant
-  (`_RECOMMENDER_MAX_OUTPUT_TOKENS = 1024`) with an inline comment
-  citing the baseline P50 of 17,014 ms.
-- Package version bumped `0.2.0` → `0.2.1` (patch SemVer — additive
-  optional keyword, behavior unchanged when unset).
-  `service/pyproject.toml` pin updated to `roadmodel>=0.2.1,<0.3`.
-- Unit test `tests/test_provider_max_output_tokens.py` asserts the
-  keyword is propagated to every SDK call (monkey-patched fakes
-  capture kwargs and check `max_output_tokens` is present when
-  passed and absent when omitted, with the Anthropic prior `4096`
-  default preserved). Per
+
+  Package version bumped `0.2.0` → `0.2.1` (patch SemVer; additive
+  optional keyword, behavior unchanged when unset). Unit test
+  `tests/test_provider_max_output_tokens.py` asserts propagation
+  across every SDK call (monkey-patched fakes capture kwargs and
+  check `max_output_tokens` is present when passed and absent when
+  omitted, with the Anthropic prior `4096` default preserved). Per
   [[feedback-monkeypatched-contract-validation]] the suite also
   includes a drift guard that `inspect.signature` validates each
   provider's `recommend` continues to accept the keyword.
-- PyPI publish via the existing OIDC Trusted Publishing path
+
+  PyPI publish via the existing OIDC Trusted Publishing path
   ([[project-pypi-publish-oidc]]) — `git tag -s v0.2.1` from `main`
   after this PR squash-merges; `release.yml` handles the upload.
-  `roadmodel-service` redeploys on Vercel automatically from `main`
-  on the same merge.
 
-**Expected impact.** Capping output at 1,024 tokens should reduce
-the dominant span (`service_provider_ms`) by roughly the same ratio
-as the over-allocation — 8,192 / 1,024 = 8×. If decode-time scales
+- *PR 7b-b (follow-up)* bumps `service/pyproject.toml` pin to
+  `roadmodel>=0.2.1,<0.3` and passes `max_output_tokens=1024` from
+  `service/app/recommend.py` to the recommender call. Cannot land
+  in this PR because the Vercel `roadmodel-api` deploy installs
+  from PyPI and 0.2.1 doesn't exist there until v0.2.1's tag-push
+  triggers the OIDC publish on `main`. CI's `service-tests` job is
+  fine (it installs the in-repo roadmodel editable via this PR's
+  `pip install -e .` addition to `tests.yml`), but the Vercel build
+  has no equivalent escape hatch.
+
+**Expected impact.** Capping output at 1,024 tokens (which the
+service uptake PR 7b-b will configure) should reduce the dominant
+span (`service_provider_ms`) by roughly the same ratio as the
+over-allocation — 8,192 / 1,024 = 8×. If decode-time scales
 linearly with output budget allocation, P50 could drop from
 ~17,000 ms to ~2,000–3,000 ms, putting the warm path inside or
-near budget. Empirical post-fix sweep numbers land in PR 7c.
+near budget. Empirical post-fix sweep numbers land in PR 7c after
+PR 7b-b deploys to production.
 
 ## Fixes deferred
 
