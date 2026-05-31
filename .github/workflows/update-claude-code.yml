@@ -1,0 +1,144 @@
+# .github/workflows/update-claude-code.yml
+name: Update Claude Code surface parameters
+
+on:
+  schedule:
+    # Daily at 17:00 UTC. Staggered 1h after the Cursor catalog refresh
+    # cron (16:00 UTC in update-models.yml) so the two crons never race
+    # for the same branch / model-selector.txt write. The first step
+    # hashes Anthropic's claude-code CHANGELOG — the canonical signal
+    # for "new Claude Code surface parameter" — and skips the Opus call
+    # on days the CHANGELOG hasn't changed. See
+    # `update/check_claude_code_source.py` for the rationale on why
+    # only the CHANGELOG and not the docs site or release-notes blog.
+    - cron: "0 17 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-claude-code
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Use the maintainer's PAT so the subsequent git push + gh pr
+          # create are attributed to a user, not the github-actions bot.
+          # PRs opened by GITHUB_TOKEN do not trigger required-status
+          # workflows; authenticating as the maintainer fixes that.
+          # Same pattern as update-models.yml.
+          token: ${{ secrets.BOT_PAT }}
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: update/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r update/requirements.txt
+
+      - name: Restore Claude Code source-hash cache
+        # Signature and last-processed-version from the previous
+        # successful run. Restore-keys lookup falls back to the most
+        # recent saved entry if the exact run_id key misses (always,
+        # by design).
+        uses: actions/cache@v4
+        with:
+          path: |
+            update/.cache/claude-code-hash
+            update/.cache/claude-code-last-version
+          key: claude-code-hash-${{ github.run_id }}
+          restore-keys: |
+            claude-code-hash-
+
+      - name: Check for upstream CHANGELOG changes
+        id: gate
+        run: python update/check_claude_code_source.py
+
+      - name: Snapshot selector for diff validator
+        # Capture the pre-Opus contents of docs/model-selector.txt so
+        # the validator's --before/--after path works even when the
+        # post-Opus write has occurred. Cheap, deterministic.
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
+        run: |
+          mkdir -p update/.cache
+          cp docs/model-selector.txt update/.cache/selector.before.txt
+
+      - name: Refresh Claude Code surface parameters (Opus)
+        # Skip on scheduled runs when the CHANGELOG didn't change.
+        # workflow_dispatch always runs.
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
+        id: opus
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python update/update_claude_code.py
+
+      - name: Validate diff (coverage + citation)
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          if [ ! -f update/.cache/pending-bullets.json ]; then
+            echo "No pending bullets — Opus step was a no-op; skipping validator."
+            exit 0
+          fi
+          python update/validate_claude_code_diff.py \
+            --consumed-versions update/.cache/consumed-versions.json \
+            --before update/.cache/selector.before.txt \
+            --after docs/model-selector.txt
+
+      - name: Open PR if selector changed
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.BOT_PAT }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- docs/model-selector.txt; then
+            echo "No selector changes — nothing to commit."
+            exit 0
+          fi
+          git config user.name "roadmodel-bot"
+          git config user.email "roadmodel-bot@users.noreply.github.com"
+          DATE="$(date -u +%Y-%m-%d)"
+          BRANCH="chore/claude-code-refresh-${DATE}"
+          git branch -D "$BRANCH" 2>/dev/null || true
+          git checkout -b "$BRANCH"
+          summary="$(cat update/.last-claude-code-summary.txt 2>/dev/null || echo 'Automated Claude Code surface refresh.')"
+          warnings=""
+          if [ -f update/.last-claude-code-warnings.txt ] && [ -s update/.last-claude-code-warnings.txt ]; then
+            warnings="$(printf '\n\n## Warnings\n')$(sed 's/^/- /' update/.last-claude-code-warnings.txt)"
+          fi
+          git add docs/model-selector.txt
+          git commit -m "Automated Claude Code refresh: ${DATE}" -m "${summary}${warnings}"
+          git push -u origin "$BRANCH"
+          PR_URL="$(gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "Automated Claude Code refresh: ${DATE}" \
+            --body "$(printf '## Summary\n\n%s%s\n\n---\n\nThis PR was opened automatically by the daily Claude Code refresh cron in `.github/workflows/update-claude-code.yml`. Auto-merge is enabled: GitHub will squash-merge this PR once the `test` status check passes. If `test` fails or warnings above warrant manual review, disable auto-merge (`gh pr merge --disable-auto`) before the check resolves.' "$summary" "$warnings")")"
+          echo "Opened: $PR_URL"
+          gh pr merge --auto --squash --delete-branch "$PR_URL"
+
+      - name: Promote source-hash and last-version for next run
+        # Only promote staged → canonical if every prior step succeeded.
+        # A transient Opus or validator failure must NOT swallow a real
+        # CHANGELOG change: leave the old hash + last-version in place
+        # so tomorrow's gate sees the same diff and retries.
+        if: success()
+        run: |
+          set -euo pipefail
+          if [ -f update/.cache/claude-code-hash.new ]; then
+            mv update/.cache/claude-code-hash.new update/.cache/claude-code-hash
+            echo "Promoted claude-code-hash for next-run comparison."
+          fi
+          if [ -f update/.cache/claude-code-last-version.new ]; then
+            mv update/.cache/claude-code-last-version.new update/.cache/claude-code-last-version
+            echo "Promoted claude-code-last-version for next-run slicing."
+          fi
