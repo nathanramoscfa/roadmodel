@@ -107,7 +107,12 @@ def parse_response(text: str) -> dict[str, str]:
     raise MalformedResponseError(text)
 
 
-def recommend(prompt: str, config: Config) -> dict[str, str]:
+def recommend(
+    prompt: str,
+    config: Config,
+    *,
+    max_output_tokens: int | None = None,
+) -> dict[str, str]:
     user_context_text = user_context.read(config.user_context_path)
     system_prompt, user_prompt = build_prompt(prompt, user_context_text=user_context_text)
     adapter = PROVIDER_ADAPTERS[config.provider]
@@ -116,6 +121,7 @@ def recommend(prompt: str, config: Config) -> dict[str, str]:
         system_prompt,
         model=config.model,
         api_key=config.api_key,
+        max_output_tokens=max_output_tokens,
     )
     return parse_response(raw_response)
 
@@ -150,9 +156,10 @@ def recommend_structured(
     input_tokens: int | None = None,
     output_tokens: int | None = None,
     max_mode: bool = False,
+    max_output_tokens: int | None = None,
 ) -> dict[str, Any]:
     """Return roadmap-style structured output plus optional cost estimates."""
-    base = recommend(prompt, config)
+    base = recommend(prompt, config, max_output_tokens=max_output_tokens)
     payload: dict[str, Any] = {
         "model": base["model"],
         "platform": base["platform"],

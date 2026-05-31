@@ -68,6 +68,7 @@ def test_recommend_returns_200(
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
+        max_output_tokens: int | None = None,
     ) -> dict[str, Any]:
         call_args["prompt"] = prompt
         call_args["config_provider"] = config.provider
@@ -120,6 +121,7 @@ def test_response_schema_matches_phase2_contract(
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
+        max_output_tokens: int | None = None,
     ) -> dict[str, Any]:
         del prompt, config, input_tokens, output_tokens, max_mode
         return dict(_RECOMMEND_DICT)

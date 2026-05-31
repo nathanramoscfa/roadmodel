@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] — 2026-05-31
+
+### Added
+
+- Optional `max_output_tokens: int | None` keyword on
+  `roadmodel.recommend.recommend` and
+  `roadmodel.recommend.recommend_structured`, threaded through every
+  bundled provider adapter (`providers.google`,
+  `providers.anthropic`, `providers.openai`) and the
+  `ProviderAdapter` Protocol. When unset, each provider keeps its
+  prior default (Google: SDK default 8192, Anthropic: 4096, OpenAI:
+  SDK default). When set, it is forwarded as
+  `config.max_output_tokens` to Gemini, `max_tokens` to Anthropic,
+  and `max_output_tokens` to the OpenAI Responses API. Caller
+  motivation: Phase 4 Step 7 warm-path latency profiling against
+  `/api/recommend` showed `service_provider_ms` P50 = 17,014 ms
+  (5.7× over the ≤ 3000 ms budget); capping the Gemini Flash output
+  at 1,024 tokens cuts decode-time without truncating the
+  recommender's six-field response. The service-side uptake (passing
+  `max_output_tokens=1024` from `roadmodel-service` plus bumping the
+  package pin) ships in a follow-up PR after this 0.2.1 PyPI publish
+  lands (chicken-and-egg: Vercel deploys can't install a pre-PyPI
+  version). See `docs/phase04-latency-findings.md`.
+
 ## [0.2.0] — 2026-05-17
 
 ### Added

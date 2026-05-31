@@ -249,6 +249,12 @@ jobs:
       - name: Install service dependencies
         run: |
           python -m pip install --upgrade pip
+          # Install the in-repo roadmodel editable first so the
+          # service's `roadmodel>=X.Y.Z` pin is satisfied without
+          # waiting on a PyPI publish (relevant during PRs that bump
+          # the roadmodel version + service pin in the same commit —
+          # the new version doesn't exist on PyPI yet at CI time).
+          pip install -e .
           pip install -e "service[dev]"
       - name: Ruff lint (service)
         run: ruff check service/
