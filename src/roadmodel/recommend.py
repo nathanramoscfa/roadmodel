@@ -24,12 +24,19 @@ BUNDLED_USER_CONTEXT_TEMPLATE_PATH: Traversable = (
 
 _REQUIRED_KEYS: Final = ("model", "platform", "max_mode", "thinking", "conversation", "rationale")
 
+# ORCHESTRATION is optional in the response block: the bundled selector
+# emits it on Claude Code surfaces (Ultracode), and not at all elsewhere.
+# Pre-orchestration responses (and any provider that omits the line) must
+# still parse, so the line is wrapped in a non-capturing optional group.
+# The captured value is intentionally not propagated into the parsed dict
+# yet — surfacing it via recommend_structured is a separate change.
 _RESPONSE_BLOCK_RE: Final = re.compile(
     r"(?:^\s*PROMPT:\s*[^\n]*\n\s*)*"
     r"MODEL:\s*(?P<model>[^\n]+)\s*\n"
     r"PLATFORM:\s*(?P<platform>[^\n]+)\s*\n"
     r"MAX\s+MODE:\s*(?P<max_mode>[^\n]+)\s*\n"
     r"THINKING:\s*(?P<thinking>[^\n]+)\s*\n"
+    r"(?:ORCHESTRATION:\s*(?P<orchestration>[^\n]+)\s*\n)?"
     r"CONVERSATION:\s*(?P<conversation>[^\n]+)\s*\n"
     r"RATIONALE:\s*(?P<rationale>.+?)(?=\n\s*(?:PROMPT:|MODEL:)|\Z)",
     flags=re.IGNORECASE | re.MULTILINE | re.DOTALL,
@@ -100,9 +107,14 @@ def parse_response(text: str) -> dict[str, str]:
 
     regex_match = _RESPONSE_BLOCK_RE.search(text)
     if regex_match:
-        parsed_block = {key: value.strip() for key, value in regex_match.groupdict().items()}
+        # The ORCHESTRATION group is optional and captures None when absent;
+        # coerce None → "" so .strip() doesn't crash. orchestration is
+        # consumed silently — not yet surfaced via the returned dict.
+        parsed_block = {
+            key: (value.strip() if value else "") for key, value in regex_match.groupdict().items()
+        }
         if all(parsed_block.get(key) for key in _REQUIRED_KEYS):
-            return parsed_block
+            return {key: parsed_block[key] for key in _REQUIRED_KEYS}
 
     raise MalformedResponseError(text)
 
