@@ -133,7 +133,7 @@ commentary outside the object:
 
 ```
 {
-  "model_selector_txt": "<full updated content of docs/model-selector.txt>",
+  "roadmodel_txt": "<full updated content of docs/model-selector.txt>",
   "summary": "<3-8 line plain-text summary of what changed; this becomes the commit message body>",
   "warnings": ["<any caveats, missing data, judgments worth flagging>"],
   "consumed_versions": ["<every version string from new_versions_since_last_run that you considered, even if it produced no edit>"]
@@ -152,7 +152,7 @@ If a version was considered and produced no edit, ALSO add a warning
 of the form `version <N.N.N> considered no-op: <one-sentence reason>`
 so the PR description surfaces the skip rationale.
 
-If nothing changed at all, return `model_selector_txt` verbatim, set
+If nothing changed at all, return `roadmodel_txt` verbatim, set
 `summary` to "No changes detected.", populate `consumed_versions`
 with every entry from `<new_versions_since_last_run>`, and add a
 `considered no-op` warning per version.

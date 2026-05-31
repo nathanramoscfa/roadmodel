@@ -64,13 +64,13 @@ jobs:
         run: python update/check_claude_code_source.py
 
       - name: Snapshot selector for diff validator
-        # Capture the pre-Opus contents of model-selector.txt so the
-        # validator's --before/--after path works even when post-Opus
-        # write has occurred. Cheap, deterministic.
+        # Capture the pre-Opus contents of docs/model-selector.txt so
+        # the validator's --before/--after path works even when the
+        # post-Opus write has occurred. Cheap, deterministic.
         if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
         run: |
           mkdir -p update/.cache
-          cp docs/model-selector.txt update/.cache/model-selector.before.txt
+          cp docs/model-selector.txt update/.cache/selector.before.txt
 
       - name: Refresh Claude Code surface parameters (Opus)
         # Skip on scheduled runs when the CHANGELOG didn't change.
@@ -91,7 +91,7 @@ jobs:
           fi
           python update/validate_claude_code_diff.py \
             --consumed-versions update/.cache/consumed-versions.json \
-            --before update/.cache/model-selector.before.txt \
+            --before update/.cache/selector.before.txt \
             --after docs/model-selector.txt
 
       - name: Open PR if selector changed

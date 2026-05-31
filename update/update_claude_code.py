@@ -204,8 +204,9 @@ _FENCED_BLOCK_RE = re.compile(r"```[a-zA-Z]*\n(.*?)\n```", re.DOTALL)
 def parse_result(raw: str) -> dict[str, Any]:
     """Parse the model's JSON response, tolerating prose preamble/epilogue.
 
-    Mirrors the strategy in ``update/update_models.py::parse_result``
-    but keys on `model_selector_txt` instead of `roadmodel_txt`.
+    Mirrors the strategy in ``update/update_models.py::parse_result``.
+    Both crons share the ``roadmodel_txt`` JSON key so the parser
+    selection heuristic (longest plausible payload wins) generalizes.
     """
     text = raw.strip()
 
@@ -231,8 +232,8 @@ def parse_result(raw: str) -> dict[str, Any]:
         except json.JSONDecodeError:
             return
         if isinstance(parsed, dict):
-            selector_txt = parsed.get("model_selector_txt", "")
-            length = len(selector_txt) if isinstance(selector_txt, str) else 0
+            roadmodel_txt = parsed.get("roadmodel_txt", "")
+            length = len(roadmodel_txt) if isinstance(roadmodel_txt, str) else 0
             candidates.append((length, parsed))
 
     for block in _FENCED_BLOCK_RE.findall(text):
@@ -357,7 +358,7 @@ def main() -> int:
         sys.stderr.write("\n")
         return 2
 
-    new_selector = result["model_selector_txt"]
+    new_selector = result["roadmodel_txt"]
     summary = result.get("summary") or "Refresh Claude Code surface parameters"
     warnings = list(result.get("warnings") or [])
     consumed_versions = list(result.get("consumed_versions") or [])
