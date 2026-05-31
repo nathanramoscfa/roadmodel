@@ -1,18 +1,22 @@
 # service/app/recommend.py
 from __future__ import annotations
 
+import logging
 from importlib import resources
 from pathlib import Path
 from typing import Any
 
 from roadmodel.config import load_config  # type: ignore[import-untyped]
 from roadmodel.errors import (  # type: ignore[import-untyped]
+    MalformedResponseError,
     MissingProviderKeyError,
     ProviderCallError,
 )
 from roadmodel.recommend import recommend_structured  # type: ignore[import-untyped]
 
 from .models import RecommendRequest, RecommendResponse
+
+logger = logging.getLogger(__name__)
 
 
 def _bootstrap_user_context() -> Path:
@@ -48,19 +52,25 @@ _FALLBACK_CHAIN: tuple[str, ...] = (
 # "fits well under 1024 tokens" turned out to be false: Gemini 2.5
 # Flash at max_output_tokens=1024 emits a response that fails the
 # six-field regex parser in roadmodel.recommend.parse_response,
-# raising MalformedResponseError. The MalformedResponseError is
-# not caught by the fallback loop below (only ProviderCallError
-# and MissingProviderKeyError are), so 500s leak straight to the
-# client.
+# raising MalformedResponseError.
 #
-# Until we (a) capture the actual capped response shape to find a
-# working cap value, AND (b) extend the fallback loop to catch
-# MalformedResponseError, the service runs without a cap (Gemini
-# SDK default 8192) — matches pre-Step-7b behavior. The warm-path
-# latency budget stays missed (P50 ~17 s); that is a known
-# regression tracked as a follow-up issue, much smaller blast
-# radius than 500s on every call. See
-# docs/phase04-latency-findings.md.
+# As of issue #133 the fallback loop below catches
+# MalformedResponseError too, so a parser/selector drift on one
+# provider degrades to the next provider in the chain instead of
+# leaking an uncaught 500. If EVERY provider drifts, the terminal
+# `raise last_error` re-raises it — an unhandled 500, the same
+# terminal behavior as the pre-existing all-providers-ProviderCallError
+# path; the drift guard in tests/test_selector_parser_drift_guard.py
+# (issue #134) is what stops whole-chain schema/parser drift from
+# shipping in the first place.
+#
+# What remains before a cap can be re-introduced is finding a
+# max_output_tokens value Gemini's response shape actually fits
+# within (issue #132). Until then the service runs without a cap
+# (Gemini SDK default 8192) — matches pre-Step-7b behavior. The
+# warm-path latency budget stays missed (P50 ~17 s); that is a known
+# regression tracked by issue #132, a much smaller blast radius than
+# 500s on every call. See docs/phase04-latency-findings.md.
 
 
 def _config_for_hint(hint: str) -> Any:
@@ -96,8 +106,20 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
                 session_cost_estimate=result.get("session_cost_estimate"),
                 comparison_table=result.get("comparison_table") or [],
             )
-        except (MissingProviderKeyError, ProviderCallError) as exc:
+        except (MissingProviderKeyError, ProviderCallError, MalformedResponseError) as exc:
             last_error = exc
+            if isinstance(exc, MalformedResponseError):
+                # Parser/selector drift (the 2026-05-31 incident class): the
+                # provider returned text the bundled parser could not read.
+                # Log it so the drift is visible in the function logs, then
+                # fall through to the next provider instead of 500ing. The raw
+                # response is intentionally NOT logged (it can echo user input);
+                # issue #132 adds bounded debug capture inside parse_response.
+                logger.warning(
+                    "provider hint %r returned an unparseable response; "
+                    "falling through to the next provider in the chain",
+                    hint,
+                )
             continue
 
     if last_error is not None:
