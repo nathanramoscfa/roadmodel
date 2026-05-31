@@ -135,6 +135,38 @@ to `audit_log` before the script's 10-second settle window ended).
 
 Client-side wall clock: P50 17,805 ms / P95 31,901 ms / P99 40,005 ms.
 
+**Re-baseline 2026-05-31 (post-#131, clean anchor) — issue #132.**
+The sweep above was captured mid-incident-churn (between the PR #127
+cap add and the PR #131 recovery). After production settled at
+`roadmodel` 0.2.2 (no cap, thinking on — the same config the original
+baseline measured), a fresh 50-request / 600 s sweep against
+`https://roadmodel.ai/api/recommend` (all 50 → `200`, 48 audit rows)
+gives the stable anchor for any future thinking-off A/B:
+
+| Span                  | P50 (ms) | P95 (ms) | P99 (ms) | n  |
+| --------------------- | -------- | -------- | -------- | -- |
+| `total_ms`            |   13,083 |   19,267 |   21,090 | 48 |
+| `dispatch_ms`         |        2 |        6 |       24 | 48 |
+| `scoring_ms`          |        0 |        0 |        0 | 48 |
+| `provider_ms`         |   13,081 |   19,264 |   21,087 | 48 |
+| `service_scoring_ms`  |        0 |        0 |        0 | 48 |
+| `service_provider_ms` |   13,042 |   19,208 |   21,048 | 48 |
+| `render_ms`           |        0 |        0 |        0 | 48 |
+| `cold_start_ms`       |        0 |        0 |       39 | 48 |
+
+Client-side wall clock: P50 13,037 ms / P95 19,379 ms / P99 21,209 ms.
+
+The absolute numbers are lower than the original baseline, but the
+config is identical (uncapped, thinking on), so the delta is Gemini
+response-length variance (thinking tokens 1,580–2,487 and visible
+response 207–23,363 across the #132 probes), **not** a real
+improvement — do not read it as progress. The structural conclusion
+is unchanged and, if anything, firmer: warm-path **P50 13,042 ms is
+4.3× over** the ≤ 3,000 ms budget and **P95 19,208 ms is 3.8× over**
+the ≤ 5,000 ms budget, with `service_provider_ms` still ~99.7 % of
+`total_ms`. The gap is entirely the Gemini call; the lever remains the
+thinking budget (see Diagnosis correction and Future work).
+
 **The dominant span is unambiguous.** `service_provider_ms` accounts
 for **99.6 %+ of `total_ms`** at every percentile. The Gemini Flash
 call inside the FastAPI service is the only span large enough to
