@@ -22,7 +22,6 @@ if str(SRC_ROOT) not in sys.path:
 from roadmodel.errors import MalformedResponseError  # noqa: E402
 from roadmodel.recommend import parse_response  # noqa: E402
 
-
 _LEGACY_BLOCK = """\
 MODEL: Opus 4.7
 PLATFORM: Claude Code

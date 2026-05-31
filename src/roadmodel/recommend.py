@@ -111,8 +111,7 @@ def parse_response(text: str) -> dict[str, str]:
         # coerce None → "" so .strip() doesn't crash. orchestration is
         # consumed silently — not yet surfaced via the returned dict.
         parsed_block = {
-            key: (value.strip() if value else "")
-            for key, value in regex_match.groupdict().items()
+            key: (value.strip() if value else "") for key, value in regex_match.groupdict().items()
         }
         if all(parsed_block.get(key) for key in _REQUIRED_KEYS):
             return {key: parsed_block[key] for key in _REQUIRED_KEYS}
