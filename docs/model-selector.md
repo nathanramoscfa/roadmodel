@@ -350,6 +350,64 @@ as primary; the other becomes the secondary category for tie-breaking.
     Mode).
   </thinking-context>
 
+  <orchestration-context>
+    Orchestration (Claude Code's Dynamic Workflows feature, shipped
+    with Opus 4.8 in May 2026) lets the model fan a single prompt
+    out across parallel subagents from a script Claude writes and
+    the runtime executes. Up to 1,000 agents per run, 16 concurrent.
+    Intermediate results live in script variables, not the model's
+    context window. Workflows can adversarially cross-check
+    findings before reporting.
+
+    Providers expose orchestration differently:
+
+    - Claude Code (CLI, IDE extension): per-prompt opt-in by
+      including the word "workflow" in the prompt; session-wide
+      opt-in via /effort ultracode. Ultracode pins reasoning at
+      xhigh AND auto-authors a workflow for every substantive
+      task in the session.
+    - All other surfaces (Cursor, Codex, Gemini CLI, claude.ai
+      web, ChatGPT app, direct APIs): no equivalent built-in
+      orchestration primitive at time of writing.
+
+    Output mapping (the ORCHESTRATION field of the output format):
+    `None` / `PerPrompt` / `Ultracode` / `N/A`.
+
+    - Claude Code default → `None` (single-agent turn-by-turn).
+    - Claude Code with `workflow` keyword on this prompt only →
+      `PerPrompt`.
+    - Claude Code with `/effort ultracode` session-wide → `Ultracode`.
+    - Any non-Claude-Code platform → `N/A`.
+
+    Decision rule (applied during <access-selection>):
+    - PRIMARY task category `planning` with cross-cutting scope AND
+      overall complexity High AND chosen access method is Claude
+      Code → recommend `ORCHESTRATION: Ultracode`.
+    - PRIMARY task category `long-context` with multi-source
+      cross-checking required (e.g., codebase audit, migration
+      sweep, cited research) AND chosen access method is Claude
+      Code → recommend `ORCHESTRATION: Ultracode`.
+    - Single well-scoped deliverable (one file, one bug fix, one
+      refactor) → `None` even on Claude Code.
+    - Chosen access method's `exposes-orchestration` attribute is
+      `no` → `N/A` regardless of the above.
+
+    Cost note: Ultracode lifts the per-prompt token-cost ceiling
+    ("token cost is not a constraint" per Anthropic's built-in
+    framing). On claude.ai Max ($200/mo), per-call $ cost is $0
+    marginal, but session budget burns 10-100x faster than High.
+    Recommend Ultracode as a deliberate per-step opt-in, not as
+    a default — pair with a session-budget-awareness clause in
+    the rationale.
+
+    Orchestration, thinking, and Max Mode are three orthogonal
+    axes. Cursor + Max Mode + THINKING N/A + ORCHESTRATION N/A
+    is valid. Claude Code + THINKING XHigh + ORCHESTRATION
+    Ultracode is valid. Claude Code + THINKING XHigh +
+    ORCHESTRATION None is also valid (Extra high effort, no
+    auto-workflow).
+  </orchestration-context>
+
   <jurisdiction-context>
     Some users restrict which model providers are acceptable based on
     the provider's HQ jurisdiction — typically driven by data-
@@ -753,6 +811,64 @@ as primary; the other becomes the secondary category for tie-breaking.
     Mode).
   </thinking-context>
 
+  <orchestration-context>
+    Orchestration (Claude Code's Dynamic Workflows feature, shipped
+    with Opus 4.8 in May 2026) lets the model fan a single prompt
+    out across parallel subagents from a script Claude writes and
+    the runtime executes. Up to 1,000 agents per run, 16 concurrent.
+    Intermediate results live in script variables, not the model's
+    context window. Workflows can adversarially cross-check
+    findings before reporting.
+
+    Providers expose orchestration differently:
+
+    - Claude Code (CLI, IDE extension): per-prompt opt-in by
+      including the word "workflow" in the prompt; session-wide
+      opt-in via /effort ultracode. Ultracode pins reasoning at
+      xhigh AND auto-authors a workflow for every substantive
+      task in the session.
+    - All other surfaces (Cursor, Codex, Gemini CLI, claude.ai
+      web, ChatGPT app, direct APIs): no equivalent built-in
+      orchestration primitive at time of writing.
+
+    Output mapping (the ORCHESTRATION field of the output format):
+    `None` / `PerPrompt` / `Ultracode` / `N/A`.
+
+    - Claude Code default → `None` (single-agent turn-by-turn).
+    - Claude Code with `workflow` keyword on this prompt only →
+      `PerPrompt`.
+    - Claude Code with `/effort ultracode` session-wide → `Ultracode`.
+    - Any non-Claude-Code platform → `N/A`.
+
+    Decision rule (applied during <access-selection>):
+    - PRIMARY task category `planning` with cross-cutting scope AND
+      overall complexity High AND chosen access method is Claude
+      Code → recommend `ORCHESTRATION: Ultracode`.
+    - PRIMARY task category `long-context` with multi-source
+      cross-checking required (e.g., codebase audit, migration
+      sweep, cited research) AND chosen access method is Claude
+      Code → recommend `ORCHESTRATION: Ultracode`.
+    - Single well-scoped deliverable (one file, one bug fix, one
+      refactor) → `None` even on Claude Code.
+    - Chosen access method's `exposes-orchestration` attribute is
+      `no` → `N/A` regardless of the above.
+
+    Cost note: Ultracode lifts the per-prompt token-cost ceiling
+    ("token cost is not a constraint" per Anthropic's built-in
+    framing). On claude.ai Max ($200/mo), per-call $ cost is $0
+    marginal, but session budget burns 10-100x faster than High.
+    Recommend Ultracode as a deliberate per-step opt-in, not as
+    a default — pair with a session-budget-awareness clause in
+    the rationale.
+
+    Orchestration, thinking, and Max Mode are three orthogonal
+    axes. Cursor + Max Mode + THINKING N/A + ORCHESTRATION N/A
+    is valid. Claude Code + THINKING XHigh + ORCHESTRATION
+    Ultracode is valid. Claude Code + THINKING XHigh +
+    ORCHESTRATION None is also valid (Extra high effort, no
+    auto-workflow).
+  </orchestration-context>
+
   <jurisdiction-context>
     Some users restrict which model providers are acceptable based on
     the provider's HQ jurisdiction — typically driven by data-
@@ -1000,6 +1116,64 @@ as primary; the other becomes the secondary category for tie-breaking.
     THINKING `High` (Anthropic's surface exposes thinking, not Max
     Mode).
   </thinking-context>
+
+  <orchestration-context>
+    Orchestration (Claude Code's Dynamic Workflows feature, shipped
+    with Opus 4.8 in May 2026) lets the model fan a single prompt
+    out across parallel subagents from a script Claude writes and
+    the runtime executes. Up to 1,000 agents per run, 16 concurrent.
+    Intermediate results live in script variables, not the model's
+    context window. Workflows can adversarially cross-check
+    findings before reporting.
+
+    Providers expose orchestration differently:
+
+    - Claude Code (CLI, IDE extension): per-prompt opt-in by
+      including the word "workflow" in the prompt; session-wide
+      opt-in via /effort ultracode. Ultracode pins reasoning at
+      xhigh AND auto-authors a workflow for every substantive
+      task in the session.
+    - All other surfaces (Cursor, Codex, Gemini CLI, claude.ai
+      web, ChatGPT app, direct APIs): no equivalent built-in
+      orchestration primitive at time of writing.
+
+    Output mapping (the ORCHESTRATION field of the output format):
+    `None` / `PerPrompt` / `Ultracode` / `N/A`.
+
+    - Claude Code default → `None` (single-agent turn-by-turn).
+    - Claude Code with `workflow` keyword on this prompt only →
+      `PerPrompt`.
+    - Claude Code with `/effort ultracode` session-wide → `Ultracode`.
+    - Any non-Claude-Code platform → `N/A`.
+
+    Decision rule (applied during <access-selection>):
+    - PRIMARY task category `planning` with cross-cutting scope AND
+      overall complexity High AND chosen access method is Claude
+      Code → recommend `ORCHESTRATION: Ultracode`.
+    - PRIMARY task category `long-context` with multi-source
+      cross-checking required (e.g., codebase audit, migration
+      sweep, cited research) AND chosen access method is Claude
+      Code → recommend `ORCHESTRATION: Ultracode`.
+    - Single well-scoped deliverable (one file, one bug fix, one
+      refactor) → `None` even on Claude Code.
+    - Chosen access method's `exposes-orchestration` attribute is
+      `no` → `N/A` regardless of the above.
+
+    Cost note: Ultracode lifts the per-prompt token-cost ceiling
+    ("token cost is not a constraint" per Anthropic's built-in
+    framing). On claude.ai Max ($200/mo), per-call $ cost is $0
+    marginal, but session budget burns 10-100x faster than High.
+    Recommend Ultracode as a deliberate per-step opt-in, not as
+    a default — pair with a session-budget-awareness clause in
+    the rationale.
+
+    Orchestration, thinking, and Max Mode are three orthogonal
+    axes. Cursor + Max Mode + THINKING N/A + ORCHESTRATION N/A
+    is valid. Claude Code + THINKING XHigh + ORCHESTRATION
+    Ultracode is valid. Claude Code + THINKING XHigh +
+    ORCHESTRATION None is also valid (Extra high effort, no
+    auto-workflow).
+  </orchestration-context>
 
   <jurisdiction-context>
     Some users restrict which model providers are acceptable based on
@@ -1348,6 +1522,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="anthropic-api-key"
             supports-models="opus-4.7,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
             best-for="Programmatic / scripted Claude use outside Claude Code — raw API headers, batch endpoints, or features not surfaced by Claude Code. Falls back here when claude.ai Max budget is exhausted." />
     <method id="claude-code" name="Claude Code"
             provider="anthropic" billing="subscription-or-key"
@@ -1355,6 +1530,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="claude-max-subscription OR anthropic-api-key"
             supports-models="opus-4.7,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="yes"
             best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI and as an IDE extension inside Cursor. Heavy Opus usage that would cost over $1,000/mo on per-token API is fully covered by a $100/mo Max plan." />
     <method id="claude-web" name="claude.ai web / desktop"
             provider="anthropic" billing="subscription-included"
@@ -1362,6 +1538,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="claude-max-subscription"
             supports-models="opus-4.7,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
             best-for="Chat-driven Claude use (no terminal, no codebase tool use) under the same Max budget that funds Claude Code — pick when the task is conversational rather than code-editing." />
     <method id="openai-api" name="OpenAI API"
             provider="openai" billing="per-token"
@@ -1369,6 +1546,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="openai-api-key"
             supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.1-codex,gpt-5,gpt-5.4-mini,gpt-5.4-nano,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
             best-for="Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates." />
     <method id="codex-cli" name="Codex"
             provider="openai" billing="subscription-or-key"
@@ -1376,6 +1554,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="chatgpt-subscription OR openai-api-key"
             supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.1-codex,gpt-5,gpt-5.4-mini,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
             best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work." />
     <method id="chatgpt-app" name="ChatGPT (web / desktop)"
             provider="openai" billing="subscription-included"
@@ -1383,6 +1562,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="chatgpt-subscription"
             supports-models="gpt-5.5,gpt-5.4,gpt-5,gpt-5.4-mini,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
             best-for="Chat-driven GPT use without terminal or IDE integration; subscription-funded so marginal cost is $0 until ChatGPT's usage limits kick in." />
     <method id="google-api" name="Google AI Studio API"
             provider="google" billing="per-token"
@@ -1390,6 +1570,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="google-api-key"
             supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
             best-for="Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)." />
     <method id="gemini-cli" name="Gemini CLI"
             provider="google" billing="subscription-or-key"
@@ -1397,6 +1578,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="gemini-advanced-subscription OR google-api-key"
             supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
             best-for="Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool." />
     <method id="gemini-app" name="Gemini (web / app)"
             provider="google" billing="subscription-included"
@@ -1404,6 +1586,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="gemini-advanced-subscription"
             supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
             best-for="Chat-driven Gemini use under the Gemini Advanced subscription budget." />
     <method id="xai-api" name="xAI API"
             provider="xai" billing="per-token"
@@ -1411,6 +1594,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="xai-api-key"
             supports-models="grok-4.3"
             exposes-max-mode="no" exposes-thinking="no"
+            exposes-orchestration="no"
             best-for="Direct Grok API access for 2M-context or hallucination-resistant tasks; pay-per-token at xAI's published rates." />
     <method id="cursor" name="Cursor"
             provider="cursor" billing="subscription-pool"
@@ -1418,6 +1602,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="cursor-pro-or-ultra-subscription"
             supports-models="opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gpt-5.2,gemini-3.1-pro,gemini-3-pro,gpt-5,gpt-5.1-codex,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,composer-2.5,gemini-2.5-flash,gemini-3-flash,gemini-3.5-flash,gpt-5-mini,kimi-k2.5"
             exposes-max-mode="yes" exposes-thinking="no"
+            exposes-orchestration="no"
             best-for="Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / composer-2.5 imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. Cursor's own Auto and Premium routing modes are deliberately NOT enumerated as roadmodel-recommendable models because their routing is opaque (see `jurisdiction-context` for the rationale) — operators who want routing behavior pick a specific fixed model and let Cursor's pool handle the call. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)." />
   </access-methods>
 
@@ -1667,6 +1852,64 @@ as primary; the other becomes the secondary category for tie-breaking.
     Mode).
   </thinking-context>
 
+  <orchestration-context>
+    Orchestration (Claude Code's Dynamic Workflows feature, shipped
+    with Opus 4.8 in May 2026) lets the model fan a single prompt
+    out across parallel subagents from a script Claude writes and
+    the runtime executes. Up to 1,000 agents per run, 16 concurrent.
+    Intermediate results live in script variables, not the model's
+    context window. Workflows can adversarially cross-check
+    findings before reporting.
+
+    Providers expose orchestration differently:
+
+    - Claude Code (CLI, IDE extension): per-prompt opt-in by
+      including the word "workflow" in the prompt; session-wide
+      opt-in via /effort ultracode. Ultracode pins reasoning at
+      xhigh AND auto-authors a workflow for every substantive
+      task in the session.
+    - All other surfaces (Cursor, Codex, Gemini CLI, claude.ai
+      web, ChatGPT app, direct APIs): no equivalent built-in
+      orchestration primitive at time of writing.
+
+    Output mapping (the ORCHESTRATION field of the output format):
+    `None` / `PerPrompt` / `Ultracode` / `N/A`.
+
+    - Claude Code default → `None` (single-agent turn-by-turn).
+    - Claude Code with `workflow` keyword on this prompt only →
+      `PerPrompt`.
+    - Claude Code with `/effort ultracode` session-wide → `Ultracode`.
+    - Any non-Claude-Code platform → `N/A`.
+
+    Decision rule (applied during <access-selection>):
+    - PRIMARY task category `planning` with cross-cutting scope AND
+      overall complexity High AND chosen access method is Claude
+      Code → recommend `ORCHESTRATION: Ultracode`.
+    - PRIMARY task category `long-context` with multi-source
+      cross-checking required (e.g., codebase audit, migration
+      sweep, cited research) AND chosen access method is Claude
+      Code → recommend `ORCHESTRATION: Ultracode`.
+    - Single well-scoped deliverable (one file, one bug fix, one
+      refactor) → `None` even on Claude Code.
+    - Chosen access method's `exposes-orchestration` attribute is
+      `no` → `N/A` regardless of the above.
+
+    Cost note: Ultracode lifts the per-prompt token-cost ceiling
+    ("token cost is not a constraint" per Anthropic's built-in
+    framing). On claude.ai Max ($200/mo), per-call $ cost is $0
+    marginal, but session budget burns 10-100x faster than High.
+    Recommend Ultracode as a deliberate per-step opt-in, not as
+    a default — pair with a session-budget-awareness clause in
+    the rationale.
+
+    Orchestration, thinking, and Max Mode are three orthogonal
+    axes. Cursor + Max Mode + THINKING N/A + ORCHESTRATION N/A
+    is valid. Claude Code + THINKING XHigh + ORCHESTRATION
+    Ultracode is valid. Claude Code + THINKING XHigh +
+    ORCHESTRATION None is also valid (Extra high effort, no
+    auto-workflow).
+  </orchestration-context>
+
   <jurisdiction-context>
     Some users restrict which model providers are acceptable based on
     the provider's HQ jurisdiction — typically driven by data-
@@ -2014,6 +2257,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="anthropic-api-key"
             supports-models="opus-4.7,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
             best-for="Programmatic / scripted Claude use outside Claude Code — raw API headers, batch endpoints, or features not surfaced by Claude Code. Falls back here when claude.ai Max budget is exhausted." />
     <method id="claude-code" name="Claude Code"
             provider="anthropic" billing="subscription-or-key"
@@ -2021,6 +2265,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="claude-max-subscription OR anthropic-api-key"
             supports-models="opus-4.7,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="yes"
             best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI and as an IDE extension inside Cursor. Heavy Opus usage that would cost over $1,000/mo on per-token API is fully covered by a $100/mo Max plan." />
     <method id="claude-web" name="claude.ai web / desktop"
             provider="anthropic" billing="subscription-included"
@@ -2028,6 +2273,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="claude-max-subscription"
             supports-models="opus-4.7,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
             best-for="Chat-driven Claude use (no terminal, no codebase tool use) under the same Max budget that funds Claude Code — pick when the task is conversational rather than code-editing." />
     <method id="openai-api" name="OpenAI API"
             provider="openai" billing="per-token"
@@ -2035,6 +2281,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="openai-api-key"
             supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.1-codex,gpt-5,gpt-5.4-mini,gpt-5.4-nano,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
             best-for="Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates." />
     <method id="codex-cli" name="Codex"
             provider="openai" billing="subscription-or-key"
@@ -2042,6 +2289,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="chatgpt-subscription OR openai-api-key"
             supports-models="gpt-5.5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.1-codex,gpt-5,gpt-5.4-mini,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
             best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work." />
     <method id="chatgpt-app" name="ChatGPT (web / desktop)"
             provider="openai" billing="subscription-included"
@@ -2049,6 +2297,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="chatgpt-subscription"
             supports-models="gpt-5.5,gpt-5.4,gpt-5,gpt-5.4-mini,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
             best-for="Chat-driven GPT use without terminal or IDE integration; subscription-funded so marginal cost is $0 until ChatGPT's usage limits kick in." />
     <method id="google-api" name="Google AI Studio API"
             provider="google" billing="per-token"
@@ -2056,6 +2305,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="google-api-key"
             supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
             best-for="Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)." />
     <method id="gemini-cli" name="Gemini CLI"
             provider="google" billing="subscription-or-key"
@@ -2063,6 +2313,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="gemini-advanced-subscription OR google-api-key"
             supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
             best-for="Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool." />
     <method id="gemini-app" name="Gemini (web / app)"
             provider="google" billing="subscription-included"
@@ -2070,6 +2321,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="gemini-advanced-subscription"
             supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
             best-for="Chat-driven Gemini use under the Gemini Advanced subscription budget." />
     <method id="xai-api" name="xAI API"
             provider="xai" billing="per-token"
@@ -2077,6 +2329,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="xai-api-key"
             supports-models="grok-4.3"
             exposes-max-mode="no" exposes-thinking="no"
+            exposes-orchestration="no"
             best-for="Direct Grok API access for 2M-context or hallucination-resistant tasks; pay-per-token at xAI's published rates." />
     <method id="cursor" name="Cursor"
             provider="cursor" billing="subscription-pool"
@@ -2084,6 +2337,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             requires="cursor-pro-or-ultra-subscription"
             supports-models="opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gpt-5.2,gemini-3.1-pro,gemini-3-pro,gpt-5,gpt-5.1-codex,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,composer-2.5,gemini-2.5-flash,gemini-3-flash,gemini-3.5-flash,gpt-5-mini,kimi-k2.5"
             exposes-max-mode="yes" exposes-thinking="no"
+            exposes-orchestration="no"
             best-for="Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / composer-2.5 imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. Cursor's own Auto and Premium routing modes are deliberately NOT enumerated as roadmodel-recommendable models because their routing is opaque (see `jurisdiction-context` for the rationale) — operators who want routing behavior pick a specific fixed model and let Cursor's pool handle the call. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)." />
   </access-methods>
 
@@ -2247,6 +2501,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       chosen access method's `exposes-thinking` attribute is `no`,
       set THINKING `N/A` regardless of complexity.
 
+    Step E2 — ORCHESTRATION: apply the decision rule from
+      <orchestration-context>. If the chosen method has
+      `exposes-orchestration="no"`, emit ORCHESTRATION: N/A.
+      Otherwise consider PRIMARY task category, scope, and
+      complexity per the rule list. Default ORCHESTRATION: None
+      for well-scoped single deliverables on Claude Code.
+
     Step F — Resolve MAX MODE against the chosen PLATFORM.
       Max Mode is a Cursor-surface concept. If the chosen access
       method's `exposes-max-mode` attribute is `no`, set MAX MODE
@@ -2256,11 +2517,15 @@ as primary; the other becomes the secondary category for tie-breaking.
       context, cross-cutting reasoning) still holds; it just manifests
       as native context-window use on non-Cursor surfaces.
 
-    Step G — Emit PLATFORM, THINKING, and MAX MODE in the output.
-      The PLATFORM field is the `name` attribute of the chosen access
-      method. The RATIONALE must name (a) the subscription or API key
-      that pays for the call (or note the lack thereof), and (b) why
-      the THINKING level was chosen (or why it is `N/A`).
+    Step G — Emit PLATFORM, THINKING, ORCHESTRATION, and MAX MODE
+      in the output. The PLATFORM field is the `name` attribute of
+      the chosen access method. The RATIONALE must name (a) the
+      subscription or API key that pays for the call (or note the
+      lack thereof), (b) why the THINKING level was chosen (or why
+      it is `N/A`), and (c) why ORCHESTRATION was chosen — and when
+      ORCHESTRATION is `Ultracode`, the rationale must call out the
+      session-budget caveat (claude.ai Max budget burns 10-100x
+      faster than at High effort).
 
     Guardrails:
     - Never recommend an access method whose credential the user does
@@ -2307,6 +2572,7 @@ MODEL: [Model Name]
 PLATFORM: [Access Method Name]
 MAX MODE: [On/Off]
 THINKING: [Off/Low/Medium/High/XHigh/N/A]
+ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
 CONVERSATION: [New/Continue]
 RATIONALE: [2-3 sentences that MUST name (a) the prompt's PRIMARY task
             category, (b) the recommended model's tier rating in that
@@ -2315,8 +2581,10 @@ RATIONALE: [2-3 sentences that MUST name (a) the prompt's PRIMARY task
             (d) the cost tie-breaker outcome if step 5 of the
             selection-algorithm applied, (e) the subscription or API
             key that pays for the chosen PLATFORM (or note its
-            absence), and (f) why the THINKING level was set as
-            stated (or why it is N/A). Also note the conversation
+            absence), (f) why the THINKING level was set as stated
+            (or why it is N/A), and (g) why ORCHESTRATION was set to
+            its value, including the session-budget caveat when
+            Ultracode is recommended. Also note the conversation
             handling decision.]
 
 Roadmap annotation mode — output one block per prompt, preceded by the
@@ -2326,6 +2594,7 @@ MODEL: [Model Name]
 PLATFORM: [Access Method Name]
 MAX MODE: [On/Off]
 THINKING: [Off/Low/Medium/High/XHigh/N/A]
+ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
 CONVERSATION: [New/Continue]
 RATIONALE: [2-3 sentences that MUST name (a) the prompt's PRIMARY task
             category, (b) the recommended model's tier rating in that
@@ -2334,7 +2603,9 @@ RATIONALE: [2-3 sentences that MUST name (a) the prompt's PRIMARY task
             (d) the cost tie-breaker outcome if step 5 of the
             selection-algorithm applied, (e) the subscription or API
             key that pays for the chosen PLATFORM (or note its
-            absence), and (f) why the THINKING level was set as
-            stated (or why it is N/A). Also note the conversation
+            absence), (f) why the THINKING level was set as stated
+            (or why it is N/A), and (g) why ORCHESTRATION was set to
+            its value, including the session-budget caveat when
+            Ultracode is recommended. Also note the conversation
             handling decision.]
 PROMPT: [Prompt # or short label]
