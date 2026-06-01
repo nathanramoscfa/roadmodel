@@ -13,7 +13,16 @@ def recommend(
     model: str | None = None,
     api_key: str,
     max_output_tokens: int | None = None,
+    thinking_budget: int | None = None,
 ) -> str:
+    # thinking_budget is accepted for ProviderAdapter Protocol parity but
+    # intentionally NOT forwarded: it is a Gemini-specific knob for the
+    # recommender latency work (issue #132). Anthropic extended-thinking has
+    # different semantics (a `thinking` block with its own budget_tokens and
+    # minimums) and the recommender response shape does not tolerate small
+    # caps on Anthropic at all (PR #128). Anthropic reasoning control is
+    # Phase 5 paid-frontier scope.
+    _ = thinking_budget
     try:
         from anthropic import Anthropic, APIError
     except Exception as exc:  # pragma: no cover - dependency/runtime guard
