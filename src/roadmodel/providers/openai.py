@@ -31,7 +31,14 @@ def recommend(
     model: str | None = None,
     api_key: str,
     max_output_tokens: int | None = None,
+    thinking_budget: int | None = None,
 ) -> str:
+    # thinking_budget is accepted for ProviderAdapter Protocol parity but
+    # intentionally NOT forwarded: it is a Gemini-specific knob for the
+    # recommender latency work (issue #132). OpenAI reasoning control uses a
+    # different mechanism (`reasoning.effort` on reasoning models), out of
+    # scope for the free-tier recommender, which runs on Gemini Flash.
+    _ = thinking_budget
     try:
         from openai import APIError, OpenAI
     except Exception as exc:  # pragma: no cover - dependency/runtime guard

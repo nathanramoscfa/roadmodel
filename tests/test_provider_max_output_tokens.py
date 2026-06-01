@@ -84,6 +84,34 @@ def test_google_omits_max_output_tokens_when_unset(
     assert "max_output_tokens" not in config
 
 
+def test_google_forwards_thinking_budget(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Issue #132: Gemini Flash reasons by default and that reasoning is decoded
+    before (and against the budget of) the visible answer. thinking_budget must
+    reach the SDK as config.thinking_config.thinking_budget."""
+    _install_google_fake(monkeypatch)
+    google_provider.recommend("prompt", "system", api_key="key", thinking_budget=512)
+    config = _FakeGoogleClient.captured["config"]
+    assert config["thinking_config"] == {"thinking_budget": 512}
+
+
+def test_google_forwards_thinking_budget_zero(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The critical case: thinking_budget=0 disables thinking. Because 0 is
+    falsy, a truthiness guard would silently drop it and leave thinking on —
+    exactly the bug that would make the latency fix a no-op. Pin that 0 is
+    forwarded, not swallowed."""
+    _install_google_fake(monkeypatch)
+    google_provider.recommend("prompt", "system", api_key="key", thinking_budget=0)
+    config = _FakeGoogleClient.captured["config"]
+    assert config["thinking_config"] == {"thinking_budget": 0}
+
+
+def test_google_omits_thinking_config_when_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_google_fake(monkeypatch)
+    google_provider.recommend("prompt", "system", api_key="key")
+    config = _FakeGoogleClient.captured["config"]
+    assert "thinking_config" not in config
+
+
 # ------------------------------------------------------------------ anthropic
 
 
@@ -130,6 +158,19 @@ def test_anthropic_keeps_4096_default_when_unset(
     assert _FakeAnthropicClient.captured["max_tokens"] == 4096
 
 
+def test_anthropic_ignores_thinking_budget(monkeypatch: pytest.MonkeyPatch) -> None:
+    """thinking_budget is Gemini-specific (issue #132). Anthropic accepts the
+    keyword for ProviderAdapter parity but must NOT forward it to the SDK —
+    Anthropic extended-thinking has different semantics and the recommender
+    response shape does not tolerate small caps on Anthropic (PR #128)."""
+    _install_anthropic_fake(monkeypatch)
+    anthropic_provider.recommend("prompt", "system", api_key="key", thinking_budget=0)
+    captured = _FakeAnthropicClient.captured
+    assert "thinking_budget" not in captured
+    assert "thinking" not in captured
+    assert "thinking_config" not in captured
+
+
 # --------------------------------------------------------------------- openai
 
 
@@ -173,6 +214,19 @@ def test_openai_omits_max_output_tokens_when_unset(
     assert "max_output_tokens" not in _FakeOpenAIClient.captured
 
 
+def test_openai_ignores_thinking_budget(monkeypatch: pytest.MonkeyPatch) -> None:
+    """thinking_budget is Gemini-specific (issue #132). OpenAI accepts the
+    keyword for ProviderAdapter parity but must NOT forward it — OpenAI
+    reasoning control uses reasoning.effort, out of scope for the free-tier
+    recommender, which runs on Gemini Flash."""
+    _install_openai_fake(monkeypatch)
+    openai_provider.recommend("prompt", "system", api_key="key", thinking_budget=0)
+    captured = _FakeOpenAIClient.captured
+    assert "thinking_budget" not in captured
+    assert "thinking_config" not in captured
+    assert "reasoning" not in captured
+
+
 # ---------------------------------------------- contract validation (drift guard)
 
 
@@ -194,5 +248,25 @@ def test_provider_signature_accepts_max_output_tokens(
     sig = inspect.signature(module.recommend)
     assert "max_output_tokens" in sig.parameters
     param = sig.parameters["max_output_tokens"]
+    assert param.kind == inspect.Parameter.KEYWORD_ONLY
+    assert param.default is None
+
+
+@pytest.mark.parametrize(
+    "module",
+    [google_provider, anthropic_provider, openai_provider],
+    ids=["google", "anthropic", "openai"],
+)
+def test_provider_signature_accepts_thinking_budget(
+    module: ProviderAdapter,
+) -> None:
+    """Drift guard for the issue #132 thinking_budget keyword. Every provider
+    must accept it as a keyword-only, default-None parameter (Gemini forwards
+    it; Anthropic/OpenAI accept-and-ignore for ProviderAdapter parity) so the
+    monkey-patched fixtures above cannot silently diverge from the real
+    adapters. Mirrors the max_output_tokens guard."""
+    sig = inspect.signature(module.recommend)
+    assert "thinking_budget" in sig.parameters
+    param = sig.parameters["thinking_budget"]
     assert param.kind == inspect.Parameter.KEYWORD_ONLY
     assert param.default is None
