@@ -297,7 +297,7 @@ def test_latency_kwargs_passed_only_on_gemini_path(
         recommend_module._GEMINI_MAX_OUTPUT_TOKENS,
     )
     assert recommend_module._GEMINI_THINKING_BUDGET == 0
-    assert recommend_module._GEMINI_MAX_OUTPUT_TOKENS == 768
+    assert recommend_module._GEMINI_MAX_OUTPUT_TOKENS == 512
 
     # Default chain serves anthropic first: both kwargs must be None there.
     captured.clear()
