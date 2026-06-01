@@ -376,6 +376,47 @@ Per this section's own guidance ("if P95 misses budget, do NOT iterate
 here — open a follow-up issue"), the residual P95 tail is filed
 separately rather than chased by re-tuning the budget value.
 
+### P95 tail follow-up 2026-06-01 — Gemini output cap (issue #146)
+
+The residual P95 tail above was diagnosed as **runaway-`RATIONALE`
+generation variance**: a local probe of the real recommender prompt at
+`thinking_budget=0` measured normal visible output at **124–300 tokens**
+across 8 representative prompts, with a single **4,125-token runaway** on
+a complex-planning prompt — the exact bimodal tail. Because thinking is
+now OFF, `max_output_tokens` is a pure visible-response cap (no reasoning
+to consume it, unlike the 2026-05-31 incident), so bounding it caps the
+longest generations. Truncation is **parser-safe**: the 6 required fields
+(`MODEL`..`CONVERSATION`) are emitted first and `RATIONALE` is captured
+lazily to end-of-string, so even a forced `cap=96` truncation still parses
+with the pick preserved (verified). The cap is **Gemini-only** (never the
+Anthropic path, #128).
+
+Two production sweeps (50 req / 600 s window against
+`https://roadmodel.ai/api/recommend`, all 50 → `200`) converged the cap:
+
+| `service_provider_ms` | P50      | **P95**       | P99      | Budget        |
+| --------------------- | -------- | ------------- | -------- | ------------- |
+| thinking_budget=0 only (above) | 1,627 ms | 11,084 ms | — | P95 ≤ 5,000 |
+| + `max_output_tokens=768` (PR #149) | 1,735 ms | 5,530 ms | 5,755 ms | ❌ (−530 ms) |
+| + `max_output_tokens=512` (PR #150) | 1,661 ms | **3,968 ms** | 6,356 ms | ✅ **MET** |
+
+768 collapsed the runaway tail (11,084 → 5,530 ms) but missed the budget
+by ~530 ms — the cap-bound long generations landed at ~5.5–6.3 s. The
+capped tail scales with token count (~187 tok/s decode + ~1.4 s base), so
+**512** brought it to ~4.1 s. At 512 the distribution is 35/50 fast
+(≤3 s), 14/50 mid (3.2–4.7 s, the former runaways), and a single 7.1 s
+outlier (the P99 — irreducible Google-side server variance, **not**
+cap-bound at 512). 512 is still ~1.7× the observed normal-output max, so
+normal rationales are never clipped — only over-long ones are trimmed.
+
+**Verdict: P95 budget MET (3,968 ms ≤ 5,000 ms); P50 stayed met
+(1,661 ms).** Quality held: 50/50 `200`, no fallback, and an authenticated
+spot-check on the complex-planning prompt returned `opus-4.8` on Claude
+Code (XHigh) — a defensible A-tier planning pick. The residual P99 tail
+(~6.4 s) is Gemini server variance below the P95 line; closing it further
+would need a different lever (prompt caching / streaming), not a tighter
+cap. **Issue #146 resolved.**
+
 ### Diagnostic sweep (2026-05-31, issue #132 — local, exploratory)
 
 Run from a laptop (not production) against the live Gemini 2.5 Flash
