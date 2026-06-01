@@ -221,10 +221,12 @@ def test_recommend_attempts_all_providers_then_raises_when_all_malformed(
 def test_fake_recommend_structured_matches_real_signature() -> None:
     """Contract guard per feedback_monkeypatched_contract_validation. The fakes
     in this file assume recommend_structured(prompt, config, *, input_tokens,
-    output_tokens, max_mode, max_output_tokens). If the real signature drifts,
-    every fake silently diverges and the first live call 500s — exactly the
-    Phase 3 Step 3 failure mode. Pin the real contract the fakes are written
-    against."""
+    output_tokens, max_mode, max_output_tokens, thinking_budget). If the real
+    signature drifts, every fake silently diverges and the first live call 500s
+    — exactly the Phase 3 Step 3 failure mode. Pin the real contract the fakes
+    are written against. (thinking_budget was added for the issue #132 Gemini
+    latency work; the service fakes don't exercise it but the guard must track
+    the real signature so a future drift still fails loudly here.)"""
     from roadmodel.recommend import recommend_structured as real  # type: ignore[import-untyped]
 
     params = inspect.signature(real).parameters
@@ -235,6 +237,7 @@ def test_fake_recommend_structured_matches_real_signature() -> None:
         "output_tokens",
         "max_mode",
         "max_output_tokens",
+        "thinking_budget",
     ]
     # Everything after `config` is keyword-only (declared after the bare *).
     assert params["input_tokens"].kind is inspect.Parameter.KEYWORD_ONLY
