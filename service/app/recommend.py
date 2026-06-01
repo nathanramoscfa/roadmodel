@@ -47,30 +47,30 @@ _FALLBACK_CHAIN: tuple[str, ...] = (
     "google-gemini-2.5-flash",
 )
 
-# Phase 4 Step 7b cap REMOVED 2026-05-31 to recover from a
-# production incident. The premise that the recommender's response
-# "fits well under 1024 tokens" turned out to be false: Gemini 2.5
-# Flash at max_output_tokens=1024 emits a response that fails the
-# six-field regex parser in roadmodel.recommend.parse_response,
-# raising MalformedResponseError.
+# Phase 4 Step 7 latency lever (issue #132). The warm-path latency
+# gap is NOT the output token count — it is Gemini 2.5 Flash's
+# default reasoning, which is decoded before (and counted against
+# the budget of) the visible answer. A clean production baseline
+# measured P50 ~13 s with the Gemini call ~99.7% of total. The
+# 2026-05-31 incident proved that capping max_output_tokens alone
+# cannot fix this: at 1024 the thinking tokens consumed the budget
+# and the visible six-field block truncated below the parser
+# threshold (MalformedResponseError on every call).
 #
-# As of issue #133 the fallback loop below catches
-# MalformedResponseError too, so a parser/selector drift on one
-# provider degrades to the next provider in the chain instead of
-# leaking an uncaught 500. If EVERY provider drifts, the terminal
-# `raise last_error` re-raises it — an unhandled 500, the same
-# terminal behavior as the pre-existing all-providers-ProviderCallError
-# path; the drift guard in tests/test_selector_parser_drift_guard.py
-# (issue #134) is what stops whole-chain schema/parser drift from
-# shipping in the first place.
+# roadmodel 0.2.3 adds an optional thinking_budget keyword to the
+# Google provider (config.thinking_config.thinking_budget). We pass
+# it ONLY on the Gemini path below. 0 disables Gemini's default
+# reasoning entirely — the most aggressive latency cut — and is the
+# starting value; a production A/B may tune it upward if response
+# quality (the model pick) degrades. It is deliberately NOT passed
+# on the Anthropic path: Anthropic extended-thinking has different
+# semantics and the recommender response shape does not tolerate
+# small caps on Anthropic (PR #128).
 #
-# What remains before a cap can be re-introduced is finding a
-# max_output_tokens value Gemini's response shape actually fits
-# within (issue #132). Until then the service runs without a cap
-# (Gemini SDK default 8192) — matches pre-Step-7b behavior. The
-# warm-path latency budget stays missed (P50 ~17 s); that is a known
-# regression tracked by issue #132, a much smaller blast radius than
-# 500s on every call. See docs/phase04-latency-findings.md.
+# The issue #133 fallback loop still catches MalformedResponseError,
+# so any parser/selector drift on one provider degrades to the next
+# instead of 500ing. See docs/phase04-latency-findings.md.
+_GEMINI_THINKING_BUDGET = 0
 
 
 def _config_for_hint(hint: str) -> Any:
@@ -97,8 +97,13 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
 
     for hint in _provider_chain(req.context):
         config = _config_for_hint(hint)
+        # Gemini-only: cap the default reasoning that dominates the
+        # warm-path latency (#132). Anthropic is left untouched (#128).
+        thinking_budget = _GEMINI_THINKING_BUDGET if config.provider == "google" else None
         try:
-            result = recommend_structured(req.task_description, config)
+            result = recommend_structured(
+                req.task_description, config, thinking_budget=thinking_budget
+            )
             return RecommendResponse(
                 model=result["model"],
                 platform=result["platform"],
