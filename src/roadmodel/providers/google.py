@@ -15,6 +15,7 @@ def recommend(
     model: str | None = None,
     api_key: str,
     max_output_tokens: int | None = None,
+    thinking_budget: int | None = None,
 ) -> str:
     try:
         from google import genai
@@ -32,6 +33,13 @@ def recommend(
         config: Any = {"system_instruction": system}
         if max_output_tokens is not None:
             config["max_output_tokens"] = max_output_tokens
+        if thinking_budget is not None:
+            # Gemini 2.5+ Flash reasons by default, and that reasoning is
+            # decoded before the visible answer (and counts against
+            # max_output_tokens). thinking_budget caps it: 0 disables
+            # thinking entirely, a small value bounds it. `is not None` —
+            # not truthiness — because 0 is a meaningful value (thinking off).
+            config["thinking_config"] = {"thinking_budget": thinking_budget}
         response = client.models.generate_content(
             model=model or DEFAULT_MODEL,
             contents=prompt,

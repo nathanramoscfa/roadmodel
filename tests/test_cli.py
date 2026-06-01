@@ -74,6 +74,7 @@ def test_recommend_invokes_build_prompt_and_parser(
             model: str | None = None,
             api_key: str,
             max_output_tokens: int | None = None,
+            thinking_budget: int | None = None,
         ) -> str:
             self.calls.append(
                 {"prompt": prompt, "system": system, "model": model, "api_key": api_key}
@@ -158,6 +159,7 @@ def test_recommend_first_run_bootstraps_user_context(
             model: str | None = None,
             api_key: str,
             max_output_tokens: int | None = None,
+            thinking_budget: int | None = None,
         ) -> str:
             raise AssertionError("Provider must not be called before first-run bootstrap.")
 
@@ -194,6 +196,7 @@ def test_recommend_unedited_user_context_warns_but_proceeds(
             model: str | None = None,
             api_key: str,
             max_output_tokens: int | None = None,
+            thinking_budget: int | None = None,
         ) -> str:
             return sample_response
 
@@ -491,6 +494,7 @@ def test_recommend_structured_output(monkeypatch: pytest.MonkeyPatch, tmp_path: 
             model: str | None = None,
             api_key: str,
             max_output_tokens: int | None = None,
+            thinking_budget: int | None = None,
         ) -> str:
             return RESPONSE_GPT_TEST_CODEX
 
@@ -558,6 +562,7 @@ def test_recommend_legacy_flag(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) 
             model: str | None = None,
             api_key: str,
             max_output_tokens: int | None = None,
+            thinking_budget: int | None = None,
         ) -> str:
             return RESPONSE_GPT_TEST_CODEX
 
@@ -590,6 +595,7 @@ def test_recommend_json_output(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) 
             model: str | None = None,
             api_key: str,
             max_output_tokens: int | None = None,
+            thinking_budget: int | None = None,
         ) -> str:
             return RESPONSE_GPT_TEST_CODEX
 
