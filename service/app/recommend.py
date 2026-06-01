@@ -72,6 +72,25 @@ _FALLBACK_CHAIN: tuple[str, ...] = (
 # instead of 500ing. See docs/phase04-latency-findings.md.
 _GEMINI_THINKING_BUDGET = 0
 
+# Phase 4 Step 7 latency tail (issue #146). thinking_budget=0 fixed the
+# P50 (13.0s -> 1.6s) but left a bimodal P95 tail (~11s): a minority of
+# requests where Gemini 2.5 Flash emits a runaway RATIONALE (the last,
+# variable-length field of the response block) on complex planning
+# prompts. A 2026-05-31 probe of the real recommender prompt at
+# thinking_budget=0 measured normal visible output at 124-300 tokens with
+# a single 4,125-token runaway on a planning prompt -- the exact tail.
+#
+# Because thinking is OFF, max_output_tokens is now a pure visible-response
+# cap (no reasoning to consume it -- the 2026-05-31 cap=1024 incident only
+# happened with thinking ON, see project_parser_selector_drift_incident).
+# 768 sits ~2.5x above the observed normal max (300), so normal responses
+# are never clipped, while runaway rationales are bounded -- cutting their
+# decode time. Truncation is parser-safe: the 6 required fields (MODEL..
+# CONVERSATION) are emitted first and RATIONALE is captured lazily to
+# end-of-string, so even a forced cap=96 truncation still parses with the
+# pick preserved. Gemini-only, like thinking_budget (never Anthropic, #128).
+_GEMINI_MAX_OUTPUT_TOKENS = 768
+
 
 def _config_for_hint(hint: str) -> Any:
     provider, model = _PROVIDER_HINTS[hint]
@@ -98,11 +117,18 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
     for hint in _provider_chain(req.context):
         config = _config_for_hint(hint)
         # Gemini-only: cap the default reasoning that dominates the
-        # warm-path latency (#132). Anthropic is left untouched (#128).
-        thinking_budget = _GEMINI_THINKING_BUDGET if config.provider == "google" else None
+        # warm-path latency (#132), and bound the runaway-rationale P95
+        # tail with a visible-output cap (#146). Anthropic is left
+        # untouched on both (#128).
+        is_gemini = config.provider == "google"
+        thinking_budget = _GEMINI_THINKING_BUDGET if is_gemini else None
+        max_output_tokens = _GEMINI_MAX_OUTPUT_TOKENS if is_gemini else None
         try:
             result = recommend_structured(
-                req.task_description, config, thinking_budget=thinking_budget
+                req.task_description,
+                config,
+                max_output_tokens=max_output_tokens,
+                thinking_budget=thinking_budget,
             )
             return RecommendResponse(
                 model=result["model"],
