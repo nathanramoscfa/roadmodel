@@ -31,6 +31,7 @@ import {
 } from "../lib/model-routing";
 import { ENGINE_OVERRIDES } from "../lib/engine-overrides";
 import { createRoadmapStream } from "../lib/roadmap-engine";
+import { env } from "../lib/env";
 import type { Profile } from "../lib/profile";
 
 // ---------------------------------------------------------------
@@ -281,6 +282,37 @@ test(
     expect(resolved.engine).toBe("gemini-2.5-flash");
     expect(resolved.provider).toBe("google");
     expect(resolved.use_frontier).toBe(false);
+  },
+);
+
+test(
+  "resolveRoadmapEngine defaults to the free Google engine when env frontier flag is false (issue #155)",
+  () => {
+    // Regression for #155: the default free-tier path (no per-user
+    // override, env flag false) must resolve to the Google engine,
+    // NOT the Phase-5 Anthropic stub. Pairs with the env=true shape
+    // test above.
+    const resolved = resolveRoadmapEngine({
+      profile: profileWith(),
+      envFrontierEnabled: false,
+    });
+    expect(resolved.provider).toBe("google");
+    expect(resolved.use_frontier).toBe(false);
+    expect(resolved.engine).toBe("gemini-2.5-flash");
+  },
+);
+
+test(
+  "env.FRONTIER_ROADMAP_ENABLED is false when unset, not Boolean(\"false\")===true (issue #155)",
+  () => {
+    // The #155 root cause: z.coerce.boolean() runs Boolean(value),
+    // and Boolean("false") === true. With the var unset (as in CI
+    // and every prod scope), the flag MUST parse to false, otherwise
+    // every /roadmap request routes to the not-yet-wired frontier
+    // branch. seed-test-env does not set this var, so this asserts
+    // the real unset condition through the actual env schema.
+    expect(process.env.FRONTIER_ROADMAP_ENABLED).toBeUndefined();
+    expect(env.FRONTIER_ROADMAP_ENABLED).toBe(false);
   },
 );
 
