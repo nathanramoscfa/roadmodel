@@ -45,7 +45,16 @@ const envSchema = z.object({
   // missing var on any scope behaves as a Phase 4 deployment.
   // Reserved — DO NOT flip true in Phase 4 (the roadmap-engine
   // wrapper throws "Phase 5 scope" on the frontier branch).
-  FRONTIER_ROADMAP_ENABLED: z.coerce.boolean().default(false),
+  // Parsed explicitly, NOT via z.coerce.boolean(): coercion runs
+  // Boolean(value), and Boolean("false") === true for any non-empty
+  // string — which silently forced the frontier branch ON in every
+  // environment (the var is unset, defaulting to the STRING "false"),
+  // breaking /roadmap for all users (issue #155). Only "true"/"1"
+  // enable it; unset or "false"/anything else → false.
+  FRONTIER_ROADMAP_ENABLED: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true" || v === "1"),
   // Phase 4 Step 7 — temporary env-gated bypass for the
   // maintainer-run latency sweep. When SET and the inbound
   // request carries an X-Roadmodel-Bypass header whose value
@@ -76,6 +85,10 @@ export const env = envSchema.parse({
   UPSTASH_REDIS_URL: process.env.UPSTASH_REDIS_URL,
   UPSTASH_REDIS_TOKEN: process.env.UPSTASH_REDIS_TOKEN,
   GOOGLE_API_KEY: requireVar("GOOGLE_API_KEY"),
-  FRONTIER_ROADMAP_ENABLED: process.env.FRONTIER_ROADMAP_ENABLED ?? "false",
+  // Pass the raw value through (string | undefined); the schema's
+  // .default("false") handles undefined. Do NOT pre-default to the
+  // string "false" here — that defeats the schema default and was
+  // half of the #155 coercion footgun.
+  FRONTIER_ROADMAP_ENABLED: process.env.FRONTIER_ROADMAP_ENABLED,
   ROADMODEL_LATENCY_BYPASS_TOKEN: process.env.ROADMODEL_LATENCY_BYPASS_TOKEN,
 });
