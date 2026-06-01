@@ -136,6 +136,16 @@ const handler = async (req: Request): Promise<Response> =>
 
         const td = (parsedBody as { task_description: string })
           .task_description;
+        // Mirror the service-tier task_description cap (issue #142:
+        // RecommendRequest max_length=50000) at the edge so oversized
+        // input is rejected here with a clear 400 instead of paying the
+        // upstream fetch only to get a 422. Keep the two bounds in sync.
+        if (td.length > 50000) {
+          return {
+            kind: "bad_input",
+            error_class: "task_description_too_long",
+          } as const;
+        }
         const ctx =
           typeof (parsedBody as { context?: unknown }).context === "object" &&
           (parsedBody as { context?: unknown }).context !== null
