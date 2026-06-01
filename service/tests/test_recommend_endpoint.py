@@ -256,18 +256,20 @@ def test_recommend_attempts_all_providers_then_raises_when_all_malformed(
     assert attempted == ["anthropic", "google"]
 
 
-def test_thinking_budget_passed_only_on_gemini_path(
+def test_latency_kwargs_passed_only_on_gemini_path(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Issue #132: the service caps Gemini's default reasoning (the warm-path
-    latency lever) by passing thinking_budget=0 to recommend_structured on the
-    google path, and must NOT pass a budget on the anthropic path (Anthropic
-    extended-thinking has different semantics and does not tolerate it, per
-    #128). Force each provider in turn and capture the kwarg actually passed."""
+    """Issues #132 + #146: the service applies two Gemini-only latency levers
+    via recommend_structured on the google path -- thinking_budget=0 (caps the
+    default reasoning that dominated P50, #132) and max_output_tokens=768
+    (bounds the runaway-rationale P95 tail, #146). NEITHER is passed on the
+    anthropic path (Anthropic extended-thinking has different semantics and the
+    response shape does not tolerate small caps, per #128). Force each provider
+    in turn and capture the kwargs actually passed."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
     monkeypatch.setenv("GOOGLE_API_KEY", "test-google-key")
     recommend_module = importlib.import_module("app.recommend")
-    captured: dict[str, int | None] = {}
+    captured: dict[str, tuple[int | None, int | None]] = {}
 
     def _fake_recommend_structured(
         prompt: str,
@@ -279,24 +281,29 @@ def test_thinking_budget_passed_only_on_gemini_path(
         max_output_tokens: int | None = None,
         thinking_budget: int | None = None,
     ) -> dict[str, Any]:
-        captured[config.provider] = thinking_budget
+        captured[config.provider] = (thinking_budget, max_output_tokens)
         return dict(_RECOMMEND_DICT)
 
     monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
 
-    # Force the Gemini path: thinking_budget must be the configured cap (0).
+    # Force the Gemini path: both latency kwargs must be the configured caps.
     google_req = recommend_module.RecommendRequest(
         task_description="pick a model",
         context={"force_provider": "google-gemini-2.5-flash"},
     )
     recommend_module.recommend(google_req)
-    assert captured["google"] == recommend_module._GEMINI_THINKING_BUDGET == 0
+    assert captured["google"] == (
+        recommend_module._GEMINI_THINKING_BUDGET,
+        recommend_module._GEMINI_MAX_OUTPUT_TOKENS,
+    )
+    assert recommend_module._GEMINI_THINKING_BUDGET == 0
+    assert recommend_module._GEMINI_MAX_OUTPUT_TOKENS == 768
 
-    # Default chain serves anthropic first: thinking_budget must be None there.
+    # Default chain serves anthropic first: both kwargs must be None there.
     captured.clear()
     anthropic_req = recommend_module.RecommendRequest(task_description="pick a model")
     recommend_module.recommend(anthropic_req)
-    assert captured["anthropic"] is None
+    assert captured["anthropic"] == (None, None)
 
 
 def test_fake_recommend_structured_matches_real_signature() -> None:
