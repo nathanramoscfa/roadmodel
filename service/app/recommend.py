@@ -83,13 +83,21 @@ _GEMINI_THINKING_BUDGET = 0
 # Because thinking is OFF, max_output_tokens is now a pure visible-response
 # cap (no reasoning to consume it -- the 2026-05-31 cap=1024 incident only
 # happened with thinking ON, see project_parser_selector_drift_incident).
-# 768 sits ~2.5x above the observed normal max (300), so normal responses
+# 512 sits ~1.7x above the observed normal max (300), so normal responses
 # are never clipped, while runaway rationales are bounded -- cutting their
 # decode time. Truncation is parser-safe: the 6 required fields (MODEL..
 # CONVERSATION) are emitted first and RATIONALE is captured lazily to
 # end-of-string, so even a forced cap=96 truncation still parses with the
 # pick preserved. Gemini-only, like thinking_budget (never Anthropic, #128).
-_GEMINI_MAX_OUTPUT_TOKENS = 768
+#
+# Value history: an initial 768 cap (2026-06-01 prod sweep) cut P95 from
+# 11,084ms to 5,530ms -- the runaway tail collapsed, but P95 still missed
+# the <=5,000ms budget by ~530ms because the cap-bound long generations
+# landed at ~5.5-6.3s. The capped tail scales with the token count (~187
+# tok/s decode + ~1.4s base), so 512 brings it to ~4.1s with margin. 512
+# is still well above the normal-output ceiling, so the tightening only
+# trims over-long (>1.7x normal) rationales, never the pick.
+_GEMINI_MAX_OUTPUT_TOKENS = 512
 
 
 def _config_for_hint(hint: str) -> Any:
