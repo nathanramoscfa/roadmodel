@@ -335,12 +335,46 @@ long-tail of cold instances during off-peak hours.
 > `phase04-step7d-latency-followup` and file PR 7d as a
 > follow-up step.
 
-**No post-fix production sweep exists yet — the token cap was
-reverted, not shipped.** The 1,024 cap (PR #127) was rolled back the
-same day (PR #129) because it broke parsing; no cap is in production.
-The warm path remains at the ~17 s baseline. Closing this section
-requires a *new* fix (thinking-budget control, below) and a fresh
-production sweep, both tracked by **issue #132**.
+**Post-fix sweep 2026-06-01 — `thinking_budget=0` shipped (issue #132).**
+The fix that landed is NOT a `max_output_tokens` cap (that reverted
+approach is preserved in the diagnostic sweep below). `roadmodel` 0.2.3
+(PR #141) added an optional `thinking_budget` keyword to the Google
+provider; the service passes `thinking_budget=0` on the Gemini path
+(PR #144), disabling Gemini 2.5 Flash's default reasoning — the
+dominant latency term. Production was confirmed at `roadmodel` 0.2.3
+(`/healthz`) before the sweep. 50 requests / 600 s window against
+`https://roadmodel.ai/api/recommend`; all 50 → `200`.
+
+| Span                  | Baseline P50 | **Post-fix P50** | Baseline P95 | **Post-fix P95** | Budget        |
+| --------------------- | ------------ | ---------------- | ------------ | ---------------- | ------------- |
+| `service_provider_ms` | 13,042 ms    | **1,627 ms**     | 19,208 ms    | **11,084 ms**    | P50 ≤ 3,000 / P95 ≤ 5,000 |
+| `total_ms`            | 13,083 ms    | 1,724 ms         | 19,267 ms    | 11,130 ms        | —             |
+
+Client-side wall clock: P50 1,960 ms / P95 11,356 ms / P99 13,389 ms.
+
+**Verdict: P50 budget MET (8.0× faster, 13,042 → 1,627 ms); P95 budget
+still MISSED (11,084 ms vs ≤ 5,000).** The per-request distribution is
+sharply **bimodal**: 37 of 50 requests cluster at 1.3–2.7 s (well inside
+budget), then a cliff to a slow tail of 13 requests at 4.6–13.4 s. The
+tail is not cold-starts (`cold_start_ms` P95 = 16 ms) and not a specific
+output platform (the slow rows span Cursor / Claude Code / claude.ai
+picks). It is **Gemini 2.5 Flash's own residual generation variance**:
+`thinking_budget=0` removes the reasoning term that dominated the median,
+but Flash still occasionally takes 5–13 s to emit the visible block
+(longer rationales on complex planning prompts). More budget tuning
+cannot close this — the lever for the P95 tail is different (smaller
+system prompt, prompt caching, or streaming), tracked as a follow-up.
+
+**Quality held.** Spot-checked recommendations remained defensible with
+thinking off — e.g. a Python-CLI coding prompt returned `gpt-5.3-codex`
+on Codex (an A/S-tier coding pick), matching the thinking-off picks seen
+in the pre-fix diagnostic probe. No degradation, no parse failures
+(50/50 `200`).
+
+The §4.7 budget had **two** criteria; one is now met and one is not.
+Per this section's own guidance ("if P95 misses budget, do NOT iterate
+here — open a follow-up issue"), the residual P95 tail is filed
+separately rather than chased by re-tuning the budget value.
 
 ### Diagnostic sweep (2026-05-31, issue #132 — local, exploratory)
 
@@ -412,8 +446,10 @@ two audit rows that did not flush in time). All other requests
 hit warm Vercel Fluid Compute instances. The keep-alive trigger
 (`cold_start_ms` P95 > 8,000 ms) does not fire.
 
-Post-fix numbers land in PR 7c with the rest of the post-fix
-sweep.
+**Post-fix (2026-06-01):** `cold_start_ms` P50 = 0 ms, P95 = 16 ms,
+P99 = 55 ms — still two orders of magnitude under the 8,000 ms
+keep-alive trigger. The `thinking_budget=0` change did not affect
+cold-start; warm Vercel Fluid Compute reuse continues to absorb it.
 
 ## Future work
 
