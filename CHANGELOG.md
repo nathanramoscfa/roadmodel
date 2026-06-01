@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] — 2026-06-01
+
+### Added
+
+- Optional `thinking_budget: int | None` keyword on
+  `roadmodel.recommend.recommend` and
+  `roadmodel.recommend.recommend_structured`, plumbed through the
+  `ProviderAdapter` Protocol. When set, `providers.google` forwards it
+  to the Gemini SDK as `config.thinking_config.thinking_budget`
+  (`0` disables Gemini's default reasoning entirely; a small value
+  bounds it). The guard uses `is not None`, so `thinking_budget=0` is
+  honored rather than dropped. `providers.anthropic` and
+  `providers.openai` accept the keyword for Protocol parity but do not
+  forward it — Anthropic extended-thinking has different semantics
+  (and the recommender response shape does not tolerate small caps on
+  Anthropic), and OpenAI uses `reasoning.effort`; wiring those is
+  out of scope here. When unset, every provider keeps its prior
+  behavior exactly, so this release is a no-op until a caller opts in.
+
+  Motivation: Gemini 2.5 Flash reasons by default, and those reasoning
+  tokens are decoded before — and counted against the budget of — the
+  visible answer. That is the dominant term in the recommender's
+  warm-path latency (a clean production baseline measured a P50 of
+  ~13 s, with the Gemini call accounting for ~99.7 % of total time).
+  `thinking_budget` is the lever to bring that down; it also explains
+  why the 0.2.1 `max_output_tokens` cap alone could not fix the
+  latency without truncating the response.
+
 ## [0.2.2] — 2026-05-31
 
 ### Fixed
