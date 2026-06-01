@@ -103,12 +103,46 @@ def test_recommend_returns_200(
 
 
 def test_recommend_input_length_cap(client: TestClient) -> None:
+    # Cap raised to 50k chars (issue #142). Over-cap input is rejected 422;
+    # the web edge mirrors this bound and rejects oversized input as a 400
+    # before the request ever reaches the service.
     response = client.post(
         "/v1/recommend",
-        json=_request_payload(task_description="a" * 20001),
+        json=_request_payload(task_description="a" * 50001),
     )
 
     assert response.status_code == 422
+
+
+def test_recommend_accepts_large_under_cap(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Issue #142: a 20k-char prompt — rejected under the old 20k cap — is now
+    accepted (within the raised 50k bound). Guards against the cap silently
+    regressing."""
+    recommend_module = importlib.import_module("app.recommend")
+
+    def _fake_recommend_structured(
+        prompt: str,
+        config: Any,
+        *,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        max_mode: bool = False,
+        max_output_tokens: int | None = None,
+        thinking_budget: int | None = None,
+    ) -> dict[str, Any]:
+        return dict(_RECOMMEND_DICT)
+
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
+
+    response = client.post(
+        "/v1/recommend",
+        json=_request_payload(task_description="a" * 20000),
+    )
+
+    assert response.status_code == 200
 
 
 def test_response_schema_matches_phase2_contract(
