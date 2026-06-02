@@ -122,9 +122,23 @@ function toGeminiContents(
 // If any required region is missing, return null — the route
 // handler skips the roadmap_draft event for that chunk and the
 // assistant message still streams as plain text.
-const EXECUTIVE_SUMMARY_RE = /(?:^|\n)#{1,3}\s+Executive Summary\s*\n+([\s\S]*?)(?=\n#{1,3}\s|\n*$)/i;
+// The bundled project-roadmap-template.md NUMBERS its section headings
+// ("## 1. Executive Summary", "## 7. Glossary"), and the model follows
+// the template faithfully — so the heading matchers MUST tolerate an
+// optional leading section number (e.g. "1. ", "1.2 ", "7. "). The
+// pre-#158 patterns required a bare "## Executive Summary" and silently
+// failed on every real roadmap, so parseRoadmapDraft returned null and
+// the preview panel never populated (issue #158).
+const SECTION_NUM = String.raw`(?:\d+(?:\.\d+)*\.?\s+)?`;
+const EXECUTIVE_SUMMARY_RE = new RegExp(
+  `(?:^|\\n)#{1,3}\\s+${SECTION_NUM}Executive Summary\\s*\\n+([\\s\\S]*?)(?=\\n#{1,3}\\s|\\n*$)`,
+  "i",
+);
 const ACCEPTANCE_RE = /Acceptance criteria\s*\n+((?:[-*]\s+[^\n]+\n?)+)/i;
-const GLOSSARY_RE = /(?:^|\n)#{1,3}\s+Glossary\s*\n+([\s\S]*?)(?=\n#{1,3}\s|\n*$)/i;
+const GLOSSARY_RE = new RegExp(
+  `(?:^|\\n)#{1,3}\\s+${SECTION_NUM}Glossary\\s*\\n+([\\s\\S]*?)(?=\\n#{1,3}\\s|\\n*$)`,
+  "i",
+);
 const TOP_HEADING_RE = /(?:^|\n)#\s+[^\n]+/;
 // Title capture mirrors TOP_HEADING_RE but in a capturing form so
 // the parsed draft carries the project name. Step 5 stores this
