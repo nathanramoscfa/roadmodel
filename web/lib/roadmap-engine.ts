@@ -20,10 +20,7 @@
 // — the 70 % cache-hit-rate target acceptance criterion checks
 // that signal across a representative sample.
 
-import type {
-  GenerateContentParameters,
-  GenerateContentResponse,
-} from "@google/genai";
+import type { GenerateContentResponse } from "@google/genai";
 
 import { resolveGeminiClient, withGeminiRetry, GEMINI_MAX_OUTPUT_TOKENS } from "./gemini-client";
 import {
@@ -106,9 +103,9 @@ interface CreateRoadmapStreamArgs {
 // cache-prefix contract (see Step 6) depends on this ordering —
 // reversing it would invalidate the systemInstruction prefix's
 // cache key on every turn.
-function toGeminiContents(
-  messages: Message[],
-): GenerateContentParameters["contents"] {
+type GeminiTurn = { role: "user" | "model"; parts: { text: string }[] };
+
+function toGeminiContents(messages: Message[]): GeminiTurn[] {
   return messages.map((m) => ({
     role: m.role === "assistant" ? "model" : "user",
     parts: [{ text: m.content }],
@@ -337,33 +334,38 @@ export async function* createRoadmapStream(
     cachedContentName = null;
   }
 
-  const contents = toGeminiContents(args.messages);
+  const baseContents = toGeminiContents(args.messages);
 
-  // systemInstruction passed on each call is the orientation +
-  // profile segment ONLY when cachedContent is used (the cached
-  // resource already carries the project + phase template
-  // segments). When the cache isn't mounted we send the full
-  // four-segment prompt verbatim, matching the Step 4 baseline.
+  // Gemini REJECTS a request that sets BOTH cachedContent and
+  // system_instruction (issue #161: "CachedContent can not be used
+  // with GenerateContent request setting system_instruction"). When a
+  // cached prefix is mounted, the orientation + templates already live
+  // INSIDE the cached resource, so the request must NOT carry a
+  // systemInstruction at all. The per-user profile segment is
+  // intentionally NOT cached (so per-user variation never invalidates
+  // the shared prefix) — when cached, deliver it as a leading content
+  // turn instead. Without a cache we send the full four-segment prompt
+  // as systemInstruction, matching the Step 4 baseline.
   const fullSystemInstruction = [
     promptParts.orientation,
     promptParts.projectTemplate,
     promptParts.phaseTemplate,
     promptParts.profile,
   ].join("\n\n");
-  const trimmedSystemInstruction = [
-    promptParts.orientation,
-    promptParts.profile,
-  ].join("\n\n");
-  const systemInstruction = cachedContentName
-    ? trimmedSystemInstruction
-    : fullSystemInstruction;
 
   const generateConfig: Record<string, unknown> = {
-    systemInstruction,
     maxOutputTokens: engine.max_tokens ?? GEMINI_MAX_OUTPUT_TOKENS,
   };
+  let contents: GeminiTurn[];
   if (cachedContentName) {
     generateConfig.cachedContent = cachedContentName;
+    const profileText = promptParts.profile?.trim();
+    contents = profileText
+      ? [{ role: "user", parts: [{ text: profileText }] }, ...baseContents]
+      : baseContents;
+  } else {
+    generateConfig.systemInstruction = fullSystemInstruction;
+    contents = baseContents;
   }
 
   const stream = await withGeminiRetry(() =>
