@@ -652,6 +652,57 @@ test(
 );
 
 test(
+  "cached request omits systemInstruction (Gemini rejects it with cachedContent) (#161)",
+  async () => {
+    // Regression for #161: a generate request that sets BOTH
+    // cachedContent AND system_instruction is rejected by Gemini
+    // ("CachedContent can not be used with GenerateContent request
+    // setting system_instruction"). When a cache prefix is mounted the
+    // orientation lives in the cache, so the request must carry NO
+    // systemInstruction; the per-user profile rides as a leading
+    // content turn instead. The stub cache client does not enforce
+    // Gemini's rule, so this assertion is what guards the contract.
+    const redis = buildInMemoryRedis();
+    setTestRedisClient(redis as unknown as Parameters<typeof setTestRedisClient>[0]);
+    _resetCacheClientsForTest();
+    setTestRedisClient(redis as unknown as Parameters<typeof setTestRedisClient>[0]);
+
+    const cacheCalls: CapturedCacheCreate[] = [];
+    const generateCalls: CapturedGenerate[] = [];
+    const stub = buildStubGeminiClient(
+      cacheCalls,
+      generateCalls,
+      [[{ text: "ok", usageMetadata: { promptTokenCount: 1024, candidatesTokenCount: 16 } }]],
+      "cachedContents/stub-161",
+    );
+    setTestGeminiClient(stub);
+
+    try {
+      for await (const _ of createRoadmapStream({
+        messages: TWO_TURN_MESSAGES,
+        profile: profileWith({ subscriptions: ["claude-max"], budget_priority: "best" }),
+        envFrontierEnabled: false,
+      })) {
+        void _;
+      }
+    } finally {
+      setTestGeminiClient(null);
+      setTestRedisClient(null);
+      _resetCacheClientsForTest();
+    }
+
+    // Precondition: the cache WAS mounted (else this test proves nothing).
+    expect(cacheCalls.length).toBe(1);
+    expect(generateCalls[0]?.config?.cachedContent).toBe("cachedContents/stub-161");
+    // The #161 invariant: no systemInstruction alongside cachedContent.
+    expect(generateCalls[0]?.config?.systemInstruction).toBeUndefined();
+    // The profile (uncached) is delivered as a leading content turn, so
+    // there are more content turns than input messages.
+    expect(generateCalls[0]?.contents.length).toBeGreaterThan(TWO_TURN_MESSAGES.length);
+  },
+);
+
+test(
   "FAIL-escalation path: minTier='A' routes through the same SDK, same caching API",
   async () => {
     // Mirrors the createRoadmapStream test but injects the
