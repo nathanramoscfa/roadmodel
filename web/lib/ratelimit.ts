@@ -55,13 +55,47 @@ function buildLimiters(): Limiters | null {
     }),
     roadmapMonthly: new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(3, "30 d"),
+      limiter: Ratelimit.slidingWindow(env.ROADMAP_MONTHLY_LIMIT, "30 d"),
       prefix: "rl:roadmap",
     }),
   };
 }
 
 const limiters = buildLimiters();
+
+// Subset of the @upstash/ratelimit API the roadmap monthly cap uses.
+// getRemaining is READ-ONLY (no token consumed); limit() consumes one.
+type RoadmapLimiter = Pick<Ratelimit, "getRemaining" | "limit">;
+
+// Test seam: inject a fake roadmap limiter so the read-only-check and
+// consume-on-success behavior can be exercised deterministically
+// without a live Upstash backend (mirrors setTestRedisClient).
+let testRoadmapLimiter: RoadmapLimiter | null = null;
+export function setTestRoadmapLimiter(fake: RoadmapLimiter | null): void {
+  testRoadmapLimiter = fake;
+}
+function roadmapLimiter(): RoadmapLimiter | null {
+  return testRoadmapLimiter ?? limiters?.roadmapMonthly ?? null;
+}
+
+// Parse the comma-separated exempt-user-id env var into a Set.
+// Trimmed; blanks dropped. Pure + exported for unit testing.
+export function parseExemptIds(raw: string): Set<string> {
+  return new Set(
+    raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0),
+  );
+}
+
+// User_ids exempt from the roadmap monthly cap (founder/dev dogfooding),
+// parsed once from the env var at module load.
+const ROADMAP_CAP_EXEMPT = parseExemptIds(env.ROADMAP_CAP_EXEMPT_USER_IDS);
+
+export function isRoadmapCapExempt(userId: string): boolean {
+  return ROADMAP_CAP_EXEMPT.has(userId);
+}
 
 export async function checkLimits(key: string): Promise<RateLimitResult> {
   if (!limiters) {
@@ -112,19 +146,30 @@ export async function checkLimits(key: string): Promise<RateLimitResult> {
 // monthly cap rather than an unrelated IP-pool exhaustion. When
 // Upstash is unseeded or unreachable, this layer fails open via
 // the same E2E-vs-prod policy as checkLimits().
+// READ-ONLY pre-flight check: does this user have monthly roadmap
+// allowance left? Uses getRemaining (no token consumed) so a request
+// that later fails mid-generation does NOT burn quota — the token is
+// consumed separately by consumeRoadmapMonthlyToken() only after a
+// roadmap successfully streams (issue #157: failed attempts used to
+// drain the allowance, locking users out without ever getting output).
+// Exempt user_ids (founder/dev) always pass.
 export async function checkRoadmapMonthlyLimit(
   userId: string,
 ): Promise<RateLimitResult> {
-  if (!limiters) {
+  if (isRoadmapCapExempt(userId)) {
+    return { allowed: true };
+  }
+  const limiter = roadmapLimiter();
+  if (!limiter) {
     return { allowed: true };
   }
   try {
-    const result = await limiters.roadmapMonthly.limit(`user:${userId}`);
-    if (!result.success) {
+    const { remaining, reset } = await limiter.getRemaining(`user:${userId}`);
+    if (remaining <= 0) {
       return {
         allowed: false,
         reason: "roadmap_monthly_cap",
-        retryAfter: Math.ceil((result.reset - Date.now()) / 1000),
+        retryAfter: Math.ceil((reset - Date.now()) / 1000),
       };
     }
     return { allowed: true };
@@ -137,5 +182,28 @@ export async function checkRoadmapMonthlyLimit(
       return { allowed: true };
     }
     throw err;
+  }
+}
+
+// Consume one monthly roadmap token. Called ONLY after a roadmap has
+// successfully streamed, so errored/aborted attempts don't count
+// (issue #157). Exempt users consume nothing. A metering failure here
+// is non-fatal — the user already got their roadmap, so we log and
+// move on rather than fail the completed request over a counter write.
+export async function consumeRoadmapMonthlyToken(userId: string): Promise<void> {
+  if (isRoadmapCapExempt(userId)) {
+    return;
+  }
+  const limiter = roadmapLimiter();
+  if (!limiter) {
+    return;
+  }
+  try {
+    await limiter.limit(`user:${userId}`);
+  } catch (err) {
+    console.warn(
+      "[ratelimit] failed to consume roadmap monthly token (non-fatal)",
+      err,
+    );
   }
 }

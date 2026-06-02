@@ -64,6 +64,17 @@ const envSchema = z.object({
   // the withRateLimit branch, and the bypassed_rate_limit audit
   // outcome) in PR 7c after the post-fix sweep lands.
   ROADMODEL_LATENCY_BYPASS_TOKEN: z.string().optional(),
+  // Per-user /api/roadmap monthly cap (rolling 30 days). Configurable
+  // so the free-tier allowance can be tuned without a code change;
+  // default 10 (raised from the original hard-coded 3, which was too
+  // low even for evaluation — issue #157). Parsed as an int with an
+  // explicit default; pass the raw env value so the default fires on
+  // undefined (NOT pre-defaulted to a string).
+  ROADMAP_MONTHLY_LIMIT: z.coerce.number().int().positive().default(10),
+  // Comma-separated Supabase user_ids exempt from the roadmap monthly
+  // cap (founder/dev dogfooding). Empty by default → nobody exempt.
+  // Seeded per Vercel scope; see infra/README.md. (#157)
+  ROADMAP_CAP_EXEMPT_USER_IDS: z.string().default(""),
 });
 
 function requireVar(name: string): string {
@@ -91,4 +102,7 @@ export const env = envSchema.parse({
   // half of the #155 coercion footgun.
   FRONTIER_ROADMAP_ENABLED: process.env.FRONTIER_ROADMAP_ENABLED,
   ROADMODEL_LATENCY_BYPASS_TOKEN: process.env.ROADMODEL_LATENCY_BYPASS_TOKEN,
+  // Raw values through; schema defaults handle undefined.
+  ROADMAP_MONTHLY_LIMIT: process.env.ROADMAP_MONTHLY_LIMIT,
+  ROADMAP_CAP_EXEMPT_USER_IDS: process.env.ROADMAP_CAP_EXEMPT_USER_IDS,
 });

@@ -32,7 +32,10 @@ import { env } from "@/lib/env";
 import type { CacheStats } from "@/lib/llm-cache";
 import { resolveRoadmapEngine } from "@/lib/model-routing";
 import { getProfile } from "@/lib/profile";
-import { checkRoadmapMonthlyLimit } from "@/lib/ratelimit";
+import {
+  checkRoadmapMonthlyLimit,
+  consumeRoadmapMonthlyToken,
+} from "@/lib/ratelimit";
 import { createRoadmapStream } from "@/lib/roadmap-engine";
 import type { RoadmapDraft } from "@/lib/roadmap-types";
 import { identifyRequest, withRateLimit } from "@/lib/withRateLimit";
@@ -272,6 +275,15 @@ const handler = async (req: Request): Promise<Response> => {
               title: latestDraft.title,
             });
           }
+        }
+
+        // Consume one monthly roadmap token ONLY now that a roadmap
+        // actually streamed (assistantContent non-empty). The pre-stream
+        // check above is read-only, so a failed/aborted generation never
+        // burns the user's allowance (issue #157). Exempt users consume
+        // nothing; a metering failure is swallowed (non-fatal).
+        if (assistantContent.trim().length > 0) {
+          await consumeRoadmapMonthlyToken(userId);
         }
 
         controller.close();
