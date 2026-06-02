@@ -446,6 +446,92 @@ test("extractCacheStats('google', response) returns the Google variant", () => {
 // ---------------------------------------------------------------
 
 test(
+  "createRoadmapStream emits a roadmap_draft for a NUMBERED-heading roadmap (issue #158)",
+  async () => {
+    // Regression for #158: the bundled project-roadmap-template.md numbers
+    // its section headings ("## 1. Executive Summary", "## 7. Glossary"),
+    // and the model follows it. The pre-fix parser regexes required bare
+    // "## Executive Summary", so parseRoadmapDraft returned null on every
+    // real roadmap and the preview panel never populated. This asserts the
+    // draft IS extracted from a template-shaped (numbered) roadmap.
+    const redis = buildInMemoryRedis();
+    setTestRedisClient(redis as unknown as Parameters<typeof setTestRedisClient>[0]);
+    _resetCacheClientsForTest();
+    setTestRedisClient(redis as unknown as Parameters<typeof setTestRedisClient>[0]);
+
+    const roadmapMd = [
+      "# Alpaca Mean-Reversion Bot — Automated Trading",
+      "",
+      "## 1. Executive Summary",
+      "",
+      "Build and deploy a mean-reversion trading bot on Alpaca, paper then live.",
+      "",
+      "## 4. Phased Roadmap",
+      "",
+      "### Phase 1 — Foundation & Data Ingestion",
+      "",
+      "Goal: stand up the VM, database, and Alpaca data pipeline.",
+      "",
+      "- Provision the VM",
+      "- Dockerize Postgres",
+      "",
+      "Acceptance criteria",
+      "- VM reachable over SSH",
+      "- Migrations applied",
+      "",
+      "### Phase 2 — Strategy & Backtesting",
+      "",
+      "Goal: implement the mean-reversion strategy and a backtester.",
+      "",
+      "- Build the backtest engine",
+      "",
+      "Acceptance criteria",
+      "- Backtest reproduces a known result",
+      "",
+      "## 7. Glossary",
+      "",
+      "- EOD — end of day",
+    ].join("\n");
+
+    const cacheCalls: CapturedCacheCreate[] = [];
+    const generateCalls: CapturedGenerate[] = [];
+    const stub = buildStubGeminiClient(
+      cacheCalls,
+      generateCalls,
+      [[{ text: roadmapMd, usageMetadata: { promptTokenCount: 1024, candidatesTokenCount: 256 } }]],
+      "cachedContents/stub-158",
+    );
+    setTestGeminiClient(stub);
+
+    let draft: { title?: string; project_overview: string; phases: { title: string }[] } | null =
+      null;
+    try {
+      for await (const event of createRoadmapStream({
+        messages: TWO_TURN_MESSAGES,
+        profile: profileWith(),
+        envFrontierEnabled: false,
+      })) {
+        if (event.type === "roadmap_draft") {
+          draft = event.draft;
+        }
+      }
+    } finally {
+      setTestGeminiClient(null);
+      setTestRedisClient(null);
+      _resetCacheClientsForTest();
+    }
+
+    expect(draft).not.toBeNull();
+    expect(draft?.title).toContain("Alpaca Mean-Reversion Bot");
+    expect(draft?.project_overview).toContain("mean-reversion trading bot");
+    expect(draft?.phases.map((p) => p.title)).toEqual([
+      "Phase 1 — Foundation & Data Ingestion",
+      "Phase 2 — Strategy & Backtesting",
+    ]);
+  },
+);
+
+test(
   "createRoadmapStream creates the Gemini cache on turn 1 and reuses it on turn 2",
   async () => {
     const redis = buildInMemoryRedis();
