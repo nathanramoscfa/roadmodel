@@ -4,25 +4,17 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-// Type-only import: importing a VALUE from @/lib/profile pulls in
-// lib/auth.ts -> next/headers, which is server-only and breaks this
-// client component's build. Keep the default jurisdiction list as a
-// local literal here instead (it mirrors DEFAULT_PROFILE.allowed_jurisdictions).
+// Type-only imports: importing a VALUE from @/lib/profile or
+// @/lib/subscriptions pulls in server-only modules (next/headers,
+// catalog.json) and breaks this client component's build. The default
+// jurisdiction list is a local literal; the catalog-derived subscription
+// options arrive as a prop from the server page (issue #152, #154).
 import type {
   BudgetPriority,
   JurisdictionCode,
   SubscriptionId,
 } from "@/lib/profile";
-
-// Shared preference fields rendered by BOTH the first-session onboarding
-// flow and the /settings page, so the two never drift (issue #154). The
-// subscription option list is the single edit point for the catalog-derived
-// picker work in #152 — fixing it here fixes both surfaces at once.
-export const SUBSCRIPTION_OPTIONS: { id: SubscriptionId; label: string }[] = [
-  { id: "claude-max", label: "claude.ai Max" },
-  { id: "cursor-ultra", label: "Cursor Ultra" },
-  { id: "chatgpt-pro", label: "ChatGPT Pro" },
-];
+import type { SubscriptionOption } from "@/lib/subscriptions";
 
 const BUDGET_OPTIONS: { id: BudgetPriority; label: string }[] = [
   { id: "cheap", label: "Cheap" },
@@ -66,6 +58,9 @@ function sameJurisdictionSet(
 }
 
 export interface ProfilePreferencesFormProps {
+  // Catalog-derived subscription options, passed from the server page so
+  // the large catalog.json stays out of the client bundle (issue #152).
+  subscriptionOptions: SubscriptionOption[];
   initialSubscriptions: SubscriptionId[];
   initialBudgetPriority: BudgetPriority;
   initialJurisdictions: JurisdictionCode[];
@@ -78,6 +73,7 @@ export interface ProfilePreferencesFormProps {
 }
 
 export function ProfilePreferencesForm({
+  subscriptionOptions,
   initialSubscriptions,
   initialBudgetPriority,
   initialJurisdictions,
@@ -161,6 +157,18 @@ export function ProfilePreferencesForm({
     await saveProfile({ skip: true });
   }
 
+  // Group the catalog-derived options by provider, preserving first-seen
+  // order (the order they appear in the catalog).
+  const groupedSubscriptions: { provider: string; options: SubscriptionOption[] }[] = [];
+  for (const option of subscriptionOptions) {
+    const group = groupedSubscriptions.find((g) => g.provider === option.provider);
+    if (group) {
+      group.options.push(option);
+    } else {
+      groupedSubscriptions.push({ provider: option.provider, options: [option] });
+    }
+  }
+
   return (
     <form onSubmit={handleSave} className="mt-8 flex flex-col gap-8">
       <fieldset>
@@ -170,20 +178,27 @@ export function ProfilePreferencesForm({
         <p className="mt-1 text-sm text-brand-slate-600">
           Select every subscription you pay for today.
         </p>
-        <div className="mt-4 flex flex-col gap-3">
-          {SUBSCRIPTION_OPTIONS.map((option) => (
-            <label
-              key={option.id}
-              className="flex items-center gap-2 text-sm text-brand-slate-800"
-            >
-              <input
-                type="checkbox"
-                checked={subscriptions.includes(option.id)}
-                onChange={() => toggleSubscription(option.id)}
-                className="rounded border-brand-slate-300"
-              />
-              {option.label}
-            </label>
+        <div className="mt-4 flex flex-col gap-5">
+          {groupedSubscriptions.map((group) => (
+            <div key={group.provider} className="flex flex-col gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-slate-500">
+                {group.provider}
+              </p>
+              {group.options.map((option) => (
+                <label
+                  key={option.id}
+                  className="flex items-center gap-2 text-sm text-brand-slate-800"
+                >
+                  <input
+                    type="checkbox"
+                    checked={subscriptions.includes(option.id)}
+                    onChange={() => toggleSubscription(option.id)}
+                    className="rounded border-brand-slate-300"
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
           ))}
         </div>
       </fieldset>

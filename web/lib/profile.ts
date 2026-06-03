@@ -11,10 +11,11 @@ import { isE2eAuthEnabled } from "./e2e-mode";
 
 export { isE2eAuthEnabled };
 
-export type SubscriptionId =
-  | "claude-max"
-  | "cursor-ultra"
-  | "chatgpt-pro";
+// Catalog-derived (issue #152): subscription ids now come from
+// catalog.json's subscription_tiers (see web/lib/subscriptions.ts), so the
+// set isn't a fixed compile-time union. Stored values are validated against
+// the catalog-derived id set in /api/profile.
+export type SubscriptionId = string;
 
 export type BudgetPriority = "cheap" | "balanced" | "best";
 

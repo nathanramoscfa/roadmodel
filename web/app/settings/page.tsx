@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { ProfilePreferencesForm } from "@/components/ProfilePreferencesForm";
 import { getServerSession } from "@/lib/auth";
 import { DEFAULT_PROFILE, getProfile } from "@/lib/profile";
+import { getSubscriptionOptions } from "@/lib/subscriptions";
 
 export const metadata: Metadata = {
   title: "roadmodel — settings",
@@ -40,6 +41,7 @@ export default async function SettingsPage() {
           for you.
         </p>
         <ProfilePreferencesForm
+          subscriptionOptions={getSubscriptionOptions()}
           initialSubscriptions={
             profile?.subscriptions ?? [...DEFAULT_PROFILE.subscriptions]
           }
