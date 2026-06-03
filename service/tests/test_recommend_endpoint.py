@@ -306,6 +306,62 @@ def test_latency_kwargs_passed_only_on_gemini_path(
     assert captured["anthropic"] == (None, None)
 
 
+def _fake_returning(model: str, platform: str) -> Any:
+    def _fake(prompt: str, config: Any, **_kwargs: Any) -> dict[str, Any]:
+        return {
+            "model": model,
+            "platform": platform,
+            "settings": {"effort": "High", "thinking": "On"},
+            "rationale": "test",
+            "conversation": "New",
+            "session_cost_estimate": None,
+            "comparison_table": None,
+        }
+
+    return _fake
+
+
+def test_recommend_populates_session_cost_for_resolvable_pick(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Issue #164: the service now computes session_cost_estimate +
+    comparison_table for the recommended pick (the cost panel was always
+    empty before because the service never supplied token counts)."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+    recommend_module = importlib.import_module("app.recommend")
+    monkeypatch.setattr(
+        recommend_module,
+        "recommend_structured",
+        _fake_returning("Opus 4.7", "Claude Code"),
+    )
+    resp = recommend_module.recommend(
+        recommend_module.RecommendRequest(task_description="refactor a python service")
+    )
+    assert resp.session_cost_estimate is not None
+    assert "total_usd" in resp.session_cost_estimate
+    assert len(resp.comparison_table) >= 1
+
+
+def test_recommend_cost_degrades_gracefully_when_platform_unresolvable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Cost is best-effort (#164): a pick whose platform isn't in the cost
+    catalog must yield an empty cost panel, NOT a 500."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+    recommend_module = importlib.import_module("app.recommend")
+    monkeypatch.setattr(
+        recommend_module,
+        "recommend_structured",
+        _fake_returning("gemini-2.5-flash", "gemini-api"),
+    )
+    resp = recommend_module.recommend(
+        recommend_module.RecommendRequest(task_description="pick a model")
+    )
+    assert resp.model == "gemini-2.5-flash"
+    assert resp.session_cost_estimate is None
+    assert resp.comparison_table == []
+
+
 def test_fake_recommend_structured_matches_real_signature() -> None:
     """Contract guard per feedback_monkeypatched_contract_validation. The fakes
     in this file assume recommend_structured(prompt, config, *, input_tokens,

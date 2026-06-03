@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import logging
+import os
+from dataclasses import asdict
 from importlib import resources
 from pathlib import Path
 from typing import Any
 
+from roadmodel import cost  # type: ignore[import-untyped]
 from roadmodel.config import load_config  # type: ignore[import-untyped]
 from roadmodel.errors import (  # type: ignore[import-untyped]
     MalformedResponseError,
@@ -36,6 +39,48 @@ def _bootstrap_user_context() -> Path:
 
 
 _BUNDLED_USER_CONTEXT = _bootstrap_user_context()
+
+# Point roadmodel.cost's funding resolution at the bundled user-context so
+# session_cost_estimate / comparison_table reflect the funded-platform
+# discounts (#164). cost.estimate_session_cost reads ROADMODEL_USER_CONTEXT
+# (or a default path that doesn't exist on the read-only Function fs), NOT a
+# per-request arg — per-user personalization is the (package-gated) #163.
+# setdefault so an explicit deployment override still wins.
+os.environ.setdefault("ROADMODEL_USER_CONTEXT", str(_BUNDLED_USER_CONTEXT))
+
+# Representative session size for the cost projection (#164). The cost panel
+# shows what a typical session with the recommended model would cost (and how
+# alternatives rank by what the user's subscriptions fund), so we project from
+# the task_description length with a sane floor + a typical answer size rather
+# than the recommend call's own tokens. Heuristic, intentionally simple.
+_COST_OUTPUT_TOKENS = 2000
+_COST_INPUT_FLOOR = 1000
+
+
+def _estimate_session_tokens(task_description: str) -> tuple[int, int]:
+    input_tokens = max(_COST_INPUT_FLOOR, len(task_description) // 4)
+    return input_tokens, _COST_OUTPUT_TOKENS
+
+
+def _session_cost(
+    model: str, platform: str, task_description: str
+) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
+    """Best-effort cost projection. NEVER raises into the request path: a
+    cost-catalog resolution miss must not turn a good recommendation into a
+    500 (the recommendation itself already succeeded)."""
+    try:
+        input_tokens, output_tokens = _estimate_session_tokens(task_description)
+        primary = cost.estimate_session_cost(
+            model, platform, input_tokens=input_tokens, output_tokens=output_tokens
+        )
+        ranked = cost.compare_alternatives_funding_rank(
+            model, input_tokens=input_tokens, output_tokens=output_tokens
+        )
+        return asdict(primary), [asdict(est) for est in ranked]
+    except Exception:  # noqa: BLE001 - cost is best-effort, never fatal
+        logger.warning("session cost estimate failed (non-fatal)", exc_info=True)
+        return None, []
+
 
 _PROVIDER_HINTS: dict[str, tuple[str, str]] = {
     "anthropic-haiku-4-5": ("anthropic", "claude-haiku-4-5-20251001"),
@@ -138,12 +183,18 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
                 max_output_tokens=max_output_tokens,
                 thinking_budget=thinking_budget,
             )
+            # Compute cost separately + best-effort (#164) rather than via
+            # recommend_structured's input_tokens path, so a cost-catalog miss
+            # degrades to "no cost panel" instead of failing the recommendation.
+            session_cost_estimate, comparison_table = _session_cost(
+                result["model"], result["platform"], req.task_description
+            )
             return RecommendResponse(
                 model=result["model"],
                 platform=result["platform"],
                 settings=result["settings"],
-                session_cost_estimate=result.get("session_cost_estimate"),
-                comparison_table=result.get("comparison_table") or [],
+                session_cost_estimate=session_cost_estimate,
+                comparison_table=comparison_table,
             )
         except (MissingProviderKeyError, ProviderCallError, MalformedResponseError) as exc:
             last_error = exc
