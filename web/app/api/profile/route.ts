@@ -10,6 +10,7 @@ import {
   type JurisdictionCode,
   type SubscriptionId,
 } from "@/lib/profile";
+import { SUBSCRIPTION_IDS } from "@/lib/subscriptions";
 
 const jurisdictionEnum = z.enum([
   "us",
@@ -25,8 +26,10 @@ const jurisdictionEnum = z.enum([
 ]);
 
 const patchSchema = z.object({
+  // Catalog-derived id set (issue #152), validated server-side rather than
+  // a fixed enum so it tracks catalog.json's subscription_tiers.
   subscriptions: z
-    .array(z.enum(["claude-max", "cursor-ultra", "chatgpt-pro"]))
+    .array(z.string().refine((id) => SUBSCRIPTION_IDS.has(id)))
     .default([]),
   budget_priority: z
     .enum(["cheap", "balanced", "best"])
