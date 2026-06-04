@@ -112,6 +112,33 @@ def test_google_omits_thinking_config_when_unset(monkeypatch: pytest.MonkeyPatch
     assert "thinking_config" not in config
 
 
+def test_google_forwards_temperature(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Issue #176: without an explicit temperature Gemini samples at its default
+    (~1.0), so the same task returns different model picks run-to-run.
+    temperature must reach the SDK as config.temperature."""
+    _install_google_fake(monkeypatch)
+    google_provider.recommend("prompt", "system", api_key="key", temperature=0.3)
+    config = _FakeGoogleClient.captured["config"]
+    assert config["temperature"] == 0.3
+
+
+def test_google_forwards_temperature_zero(monkeypatch: pytest.MonkeyPatch) -> None:
+    """0.0 (greedy/deterministic) is the intended recommender default. Because
+    0.0 is falsy, a truthiness guard would silently drop it — pin that it is
+    forwarded, not swallowed (mirrors the thinking_budget=0 guard)."""
+    _install_google_fake(monkeypatch)
+    google_provider.recommend("prompt", "system", api_key="key", temperature=0.0)
+    config = _FakeGoogleClient.captured["config"]
+    assert config["temperature"] == 0.0
+
+
+def test_google_omits_temperature_when_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_google_fake(monkeypatch)
+    google_provider.recommend("prompt", "system", api_key="key")
+    config = _FakeGoogleClient.captured["config"]
+    assert "temperature" not in config
+
+
 # ------------------------------------------------------------------ anthropic
 
 
@@ -171,6 +198,14 @@ def test_anthropic_ignores_thinking_budget(monkeypatch: pytest.MonkeyPatch) -> N
     assert "thinking_config" not in captured
 
 
+def test_anthropic_ignores_temperature(monkeypatch: pytest.MonkeyPatch) -> None:
+    """temperature is a Gemini-specific knob (#176). Anthropic accepts it for
+    ProviderAdapter parity but must NOT forward it to the SDK."""
+    _install_anthropic_fake(monkeypatch)
+    anthropic_provider.recommend("prompt", "system", api_key="key", temperature=0.0)
+    assert "temperature" not in _FakeAnthropicClient.captured
+
+
 # --------------------------------------------------------------------- openai
 
 
@@ -227,6 +262,14 @@ def test_openai_ignores_thinking_budget(monkeypatch: pytest.MonkeyPatch) -> None
     assert "reasoning" not in captured
 
 
+def test_openai_ignores_temperature(monkeypatch: pytest.MonkeyPatch) -> None:
+    """temperature is a Gemini-specific knob (#176). OpenAI accepts it for
+    ProviderAdapter parity but must NOT forward it to the SDK."""
+    _install_openai_fake(monkeypatch)
+    openai_provider.recommend("prompt", "system", api_key="key", temperature=0.0)
+    assert "temperature" not in _FakeOpenAIClient.captured
+
+
 # ---------------------------------------------- contract validation (drift guard)
 
 
@@ -268,5 +311,23 @@ def test_provider_signature_accepts_thinking_budget(
     sig = inspect.signature(module.recommend)
     assert "thinking_budget" in sig.parameters
     param = sig.parameters["thinking_budget"]
+    assert param.kind == inspect.Parameter.KEYWORD_ONLY
+    assert param.default is None
+
+
+@pytest.mark.parametrize(
+    "module",
+    [google_provider, anthropic_provider, openai_provider],
+    ids=["google", "anthropic", "openai"],
+)
+def test_provider_signature_accepts_temperature(
+    module: ProviderAdapter,
+) -> None:
+    """Drift guard for the issue #176 temperature keyword. Every provider must
+    accept it as a keyword-only, default-None parameter (Gemini forwards it;
+    Anthropic/OpenAI accept-and-ignore for ProviderAdapter parity)."""
+    sig = inspect.signature(module.recommend)
+    assert "temperature" in sig.parameters
+    param = sig.parameters["temperature"]
     assert param.kind == inspect.Parameter.KEYWORD_ONLY
     assert param.default is None

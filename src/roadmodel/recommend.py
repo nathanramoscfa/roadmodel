@@ -125,6 +125,7 @@ def recommend(
     *,
     max_output_tokens: int | None = None,
     thinking_budget: int | None = None,
+    temperature: float | None = None,
 ) -> dict[str, str]:
     user_context_text = user_context.read(config.user_context_path)
     system_prompt, user_prompt = build_prompt(prompt, user_context_text=user_context_text)
@@ -136,6 +137,7 @@ def recommend(
         api_key=config.api_key,
         max_output_tokens=max_output_tokens,
         thinking_budget=thinking_budget,
+        temperature=temperature,
     )
     return parse_response(raw_response)
 
@@ -172,11 +174,28 @@ def recommend_structured(
     max_mode: bool = False,
     max_output_tokens: int | None = None,
     thinking_budget: int | None = None,
+    temperature: float | None = None,
 ) -> dict[str, Any]:
     """Return roadmap-style structured output plus optional cost estimates."""
     base = recommend(
-        prompt, config, max_output_tokens=max_output_tokens, thinking_budget=thinking_budget
+        prompt,
+        config,
+        max_output_tokens=max_output_tokens,
+        thinking_budget=thinking_budget,
+        temperature=temperature,
     )
+    # Canonicalize the model + platform to their catalog display names (#174):
+    # the LLM emits either the id/slug or the display name freely, which made
+    # the response header (raw) disagree with the cost/comparison table
+    # (catalog name) and risked a silent cost-panel drop on an unrecognized
+    # label. Resolve once here so the payload, per-surface settings, and the
+    # cost calls below all agree; falls back to the raw value on a catalog
+    # miss (canonical_* never raises).
+    base = {
+        **base,
+        "model": cost.canonical_model_name(base["model"]),
+        "platform": cost.canonical_platform_name(base["platform"]),
+    }
     payload: dict[str, Any] = {
         "model": base["model"],
         "platform": base["platform"],

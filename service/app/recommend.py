@@ -144,6 +144,15 @@ _GEMINI_THINKING_BUDGET = 0
 # trims over-long (>1.7x normal) rationales, never the pick.
 _GEMINI_MAX_OUTPUT_TOKENS = 512
 
+# Recommender determinism (#176). Without an explicit temperature Gemini
+# samples at its default (~1.0), so the SAME task_description returns
+# different model picks run-to-run (a prod dogfooding sweep saw ~25% of
+# identical requests flip to a different model). 0.0 = greedy/deterministic,
+# the right default for a recommender (consistency builds trust); tunable up
+# if pick diversity is ever wanted. Gemini-only, like the two caps above
+# (never Anthropic, #128).
+_GEMINI_TEMPERATURE = 0.0
+
 
 def _config_for_hint(hint: str) -> Any:
     provider, model = _PROVIDER_HINTS[hint]
@@ -176,12 +185,14 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
         is_gemini = config.provider == "google"
         thinking_budget = _GEMINI_THINKING_BUDGET if is_gemini else None
         max_output_tokens = _GEMINI_MAX_OUTPUT_TOKENS if is_gemini else None
+        temperature = _GEMINI_TEMPERATURE if is_gemini else None
         try:
             result = recommend_structured(
                 req.task_description,
                 config,
                 max_output_tokens=max_output_tokens,
                 thinking_budget=thinking_budget,
+                temperature=temperature,
             )
             # Compute cost separately + best-effort (#164) rather than via
             # recommend_structured's input_tokens path, so a cost-catalog miss

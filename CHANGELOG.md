@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.4] — 2026-06-04
+
+### Added
+
+- Optional `temperature: float | None` keyword on
+  `roadmodel.recommend.recommend` and
+  `roadmodel.recommend.recommend_structured`, plumbed through the
+  `ProviderAdapter` Protocol (mirrors the `0.2.3` `thinking_budget`
+  work). When set, `providers.google` forwards it to the Gemini SDK as
+  `config.temperature`; the guard uses `is not None`, so `temperature=0.0`
+  (greedy/deterministic) is honored rather than dropped.
+  `providers.anthropic` and `providers.openai` accept the keyword for
+  Protocol parity but do not forward it. When unset, every provider keeps
+  its prior behavior exactly, so this is a no-op until a caller opts in.
+
+  Motivation: the free-tier recommender ran Gemini at its default sampling
+  temperature (~1.0), so the same `task_description` returned different
+  model picks run-to-run (a production dogfooding sweep saw ~25% of
+  identical requests flip to a different model). Callers can now pin a low
+  or zero temperature for consistent recommendations (#176).
+
+- `roadmodel.cost.canonical_model_name` and
+  `roadmodel.cost.canonical_platform_name`: resolve a model or
+  access-method **id-or-name** to its catalog display name, returning the
+  input unchanged on any catalog miss (never raise) (#174).
+
+### Changed
+
+- `recommend_structured` now canonicalizes the recommended model and
+  platform to their catalog display names before building the payload (and
+  reuses them for the cost estimate + comparison-table calls). The selector
+  LLM emits either the catalog id/slug or the display name freely, which
+  made the response header (raw) disagree with the cost/comparison table
+  (catalog-canonical) within one response and risked silently dropping the
+  cost panel on an unrecognized label. Falls back to the raw value on a
+  catalog miss (#174).
+
 ## [0.2.3] — 2026-06-01
 
 ### Added
