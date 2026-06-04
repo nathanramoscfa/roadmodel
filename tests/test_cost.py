@@ -14,6 +14,8 @@ if str(SRC_ROOT) not in sys.path:
 
 from roadmodel.cost import (  # noqa: E402
     SessionCostEstimate,
+    canonical_model_name,
+    canonical_platform_name,
     compare_alternatives,
     estimate_session_cost,
 )
@@ -28,6 +30,26 @@ FIXTURE_USER_CONTEXT = FIXTURES / "cost_user_context.md"
 def _fixture_catalog_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ROADMODEL_CATALOG_PATH", str(FIXTURE_CATALOG))
     monkeypatch.setenv("ROADMODEL_USER_CONTEXT", str(FIXTURE_USER_CONTEXT))
+
+
+def test_canonical_model_name_resolves_id_or_name_to_display() -> None:
+    # #174: the recommender LLM emits the model as either the catalog id/slug
+    # or the display name; canonicalize both to the display name so the header,
+    # settings, and comparison table agree.
+    assert canonical_model_name("opus-test") == "Opus Test"
+    assert canonical_model_name("Opus Test") == "Opus Test"
+
+
+def test_canonical_platform_name_resolves_id_or_name_to_display() -> None:
+    assert canonical_platform_name("codex-test") == "Codex"
+    assert canonical_platform_name("Codex") == "Codex"
+
+
+def test_canonical_names_passthrough_and_never_raise_on_unknown() -> None:
+    # A label that is neither an id nor a catalog name is returned unchanged
+    # (never raises) so a catalog miss degrades gracefully (#174).
+    assert canonical_model_name("totally-made-up-model") == "totally-made-up-model"
+    assert canonical_platform_name("Totally Made Up Platform") == "Totally Made Up Platform"
 
 
 def test_estimate_per_token_path() -> None:

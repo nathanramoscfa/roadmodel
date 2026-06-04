@@ -16,6 +16,7 @@ def recommend(
     api_key: str,
     max_output_tokens: int | None = None,
     thinking_budget: int | None = None,
+    temperature: float | None = None,
 ) -> str:
     try:
         from google import genai
@@ -40,6 +41,12 @@ def recommend(
             # thinking entirely, a small value bounds it. `is not None` —
             # not truthiness — because 0 is a meaningful value (thinking off).
             config["thinking_config"] = {"thinking_budget": thinking_budget}
+        if temperature is not None:
+            # Recommender determinism (#176): without this Gemini samples at
+            # its default temperature (~1.0), so identical input yields
+            # different model picks run-to-run. `is not None` — not truthiness
+            # — because 0.0 (greedy/deterministic) is the intended value.
+            config["temperature"] = temperature
         response = client.models.generate_content(
             model=model or DEFAULT_MODEL,
             contents=prompt,
