@@ -23,6 +23,11 @@ class RecommendResponse(BaseModel):
     model: str
     platform: str
     settings: dict[str, Any]
+    # The model's own reasoning for the pick. recommend_structured emits this
+    # as a top-level key; the service must carry it through or the web "Why
+    # this model?" panel is empty for every user (issue #173 — the same
+    # service-boundary drop class as the #164 cost/comparison_table fix).
+    rationale: str | None = None
     session_cost_estimate: dict[str, Any] | None = None
     comparison_table: list[dict[str, Any]] = Field(default_factory=list)
 

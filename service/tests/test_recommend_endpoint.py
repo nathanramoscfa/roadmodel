@@ -97,6 +97,8 @@ def test_recommend_returns_200(
         "model": "Claude Sonnet 4.6",
         "platform": "Claude Code",
         "settings": {"effort": "High", "thinking": "On"},
+        # #173: the model's rationale now survives the service boundary.
+        "rationale": "Best for coding tasks.",
         "session_cost_estimate": None,
         "comparison_table": [],
     }
@@ -173,6 +175,7 @@ def test_response_schema_matches_phase2_contract(
         "model",
         "platform",
         "settings",
+        "rationale",  # #173 — carried through the service boundary
         "session_cost_estimate",
         "comparison_table",
     }
@@ -360,6 +363,26 @@ def test_recommend_cost_degrades_gracefully_when_platform_unresolvable(
     assert resp.model == "gemini-2.5-flash"
     assert resp.session_cost_estimate is None
     assert resp.comparison_table == []
+
+
+def test_recommend_passes_through_rationale(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Issue #173: recommend_structured emits the model's reasoning as a
+    top-level ``rationale``; the service must carry it into RecommendResponse.
+    It previously dropped it (so the web "Why this model?" panel was empty for
+    every user) — the same service-boundary drop class as #164."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+    recommend_module = importlib.import_module("app.recommend")
+    monkeypatch.setattr(
+        recommend_module,
+        "recommend_structured",
+        _fake_returning("Opus 4.7", "Claude Code"),  # returns rationale="test"
+    )
+    resp = recommend_module.recommend(
+        recommend_module.RecommendRequest(task_description="pick a model")
+    )
+    assert resp.rationale == "test"
 
 
 def test_fake_recommend_structured_matches_real_signature() -> None:
