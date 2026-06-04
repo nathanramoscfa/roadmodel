@@ -1,5 +1,6 @@
 // web/app/roadmap/page.tsx
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { RoadmapWorkspace } from "@/components/RoadmapWorkspace";
 import { getServerSession } from "@/lib/auth";
@@ -16,6 +17,10 @@ export const metadata: Metadata = {
 };
 
 export default async function RoadmapPage() {
+  // Recommender-only mode (issue #171): the roadmap builder is off.
+  if (!env.ROADMAP_ENABLED) {
+    redirect("/recommend");
+  }
   const session = await getServerSession();
   // Step 6 — resolve the catalog-tracked engine server-side so
   // the PreviewPanel can render the free-tier label with the

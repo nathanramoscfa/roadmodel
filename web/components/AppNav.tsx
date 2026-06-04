@@ -21,7 +21,7 @@ const NAV_LINKS: { href: string; label: string }[] = [
 // /onboarding, /callback, /gate, /signout, /privacy, /terms) renders without it.
 const APP_PREFIXES = ["/recommend", "/roadmap", "/history", "/settings"];
 
-export function AppNav() {
+export function AppNav({ roadmapEnabled }: { roadmapEnabled: boolean }) {
   const pathname = usePathname();
   const onAppSurface = APP_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
@@ -29,6 +29,16 @@ export function AppNav() {
   if (!onAppSurface) {
     return null;
   }
+
+  // Recommender-only mode (issue #171): hide the Roadmap + History
+  // links when the roadmap builder is disabled. Recommend + Settings
+  // always render. The /roadmap + /history routes also redirect to
+  // /recommend server-side, so this just keeps the nav consistent.
+  const links = roadmapEnabled
+    ? NAV_LINKS
+    : NAV_LINKS.filter(
+        (link) => link.href !== "/roadmap" && link.href !== "/history",
+      );
 
   return (
     <nav
@@ -43,7 +53,7 @@ export function AppNav() {
           roadmodel
         </Link>
         <div className="flex items-center gap-1 sm:gap-2">
-          {NAV_LINKS.map((link) => {
+          {links.map((link) => {
             const active =
               pathname === link.href || pathname.startsWith(`${link.href}/`);
             return (

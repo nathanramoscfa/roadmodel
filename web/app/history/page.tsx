@@ -13,6 +13,7 @@ import { redirect } from "next/navigation";
 
 import { getServerSession } from "@/lib/auth";
 import { listConversationsForUser } from "@/lib/conversations";
+import { env } from "@/lib/env";
 import { HistoryList } from "./HistoryList";
 
 export const metadata: Metadata = {
@@ -21,6 +22,10 @@ export const metadata: Metadata = {
 };
 
 export default async function HistoryPage() {
+  // Recommender-only mode (issue #171): the roadmap builder is off.
+  if (!env.ROADMAP_ENABLED) {
+    redirect("/recommend");
+  }
   const session = await getServerSession();
   if (!session) {
     redirect("/login?next=/history");

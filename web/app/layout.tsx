@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 
 import { AppNav } from "@/components/AppNav";
+import { env } from "@/lib/env";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -34,7 +35,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <body className={`${inter.className} min-h-screen font-sans`}>
-        <AppNav />
+        <AppNav roadmapEnabled={env.ROADMAP_ENABLED} />
         <main>{children}</main>
       </body>
     </html>

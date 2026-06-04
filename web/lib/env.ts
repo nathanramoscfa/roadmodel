@@ -4,6 +4,16 @@ import { z } from "zod";
 const ENV_README =
   'infra/README.md "Environment variables"';
 
+// Opt-out boolean flag parser: enabled UNLESS the raw value is exactly
+// "false" or "0". Explicit on purpose — NOT z.coerce.boolean(), which
+// runs Boolean(value) where Boolean("false") === true. That is the
+// inverse of the #155 footgun: for a default-ON flag, coercion would
+// leave it stuck ON even when prod sets it to "false". Exported so the
+// input -> output cases are unit-tested directly (tests/env.spec.ts).
+export function parseRoadmapEnabled(raw: string): boolean {
+  return raw !== "false" && raw !== "0";
+}
+
 const envSchema = z.object({
   NEXT_PUBLIC_SITE_URL: z
     .string()
@@ -75,6 +85,16 @@ const envSchema = z.object({
   // cap (founder/dev dogfooding). Empty by default → nobody exempt.
   // Seeded per Vercel scope; see infra/README.md. (#157)
   ROADMAP_CAP_EXEMPT_USER_IDS: z.string().default(""),
+  // Recommender-only off-switch for the roadmap builder. When set to
+  // "false" (or "0") the roadmap + history surfaces are hidden from the
+  // app nav and their routes redirect to /recommend — a reversible
+  // toggle, NOT a deletion (all roadmap/history code + tests stay
+  // intact). Default ON so CI, the Playwright app server, and the
+  // default code path are unaffected; prod is narrowed to the
+  // recommender by setting ROADMAP_ENABLED=false in the Production
+  // scope. Parsed via parseRoadmapEnabled (explicit opt-out) — see its
+  // comment for why NOT z.coerce.boolean(). Issue #171.
+  ROADMAP_ENABLED: z.string().default("true").transform(parseRoadmapEnabled),
 });
 
 function requireVar(name: string): string {
@@ -105,4 +125,7 @@ export const env = envSchema.parse({
   // Raw values through; schema defaults handle undefined.
   ROADMAP_MONTHLY_LIMIT: process.env.ROADMAP_MONTHLY_LIMIT,
   ROADMAP_CAP_EXEMPT_USER_IDS: process.env.ROADMAP_CAP_EXEMPT_USER_IDS,
+  // Raw value through (string | undefined); the schema's .default("true")
+  // handles undefined. Do NOT pre-default to a string here.
+  ROADMAP_ENABLED: process.env.ROADMAP_ENABLED,
 });
