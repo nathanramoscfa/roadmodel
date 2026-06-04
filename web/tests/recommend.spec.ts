@@ -118,3 +118,17 @@ test("daily_limit daily-cap 429 renders daily-cap message", async ({ page }) => 
   await page.getByRole("button", { name: /Submit/i }).click();
   await expect(page.getByText(/daily recommendation limit/i)).toBeVisible();
 });
+
+test("blank task_description returns 400 bad_input (no upstream call)", async ({
+  request,
+}) => {
+  // #175: the real edge route (not page.route-mocked here) rejects
+  // whitespace-only input with a 400 before any upstream fetch. The E2E
+  // webServer runs with no SITE_PASSWORD, so /api/recommend is reachable
+  // without the gate; the blank guard runs in the dispatch span.
+  const res = await request.post("/api/recommend", {
+    data: { task_description: "   " },
+  });
+  expect(res.status()).toBe(400);
+  expect(await res.json()).toMatchObject({ error: "bad_input" });
+});
