@@ -29,6 +29,10 @@ export const metadata: Metadata = {
 };
 
 export default async function HydratedRoadmapPage({ params }: PageProps) {
+  // Recommender-only mode (issue #171): the roadmap builder is off.
+  if (!env.ROADMAP_ENABLED) {
+    redirect("/recommend");
+  }
   const session = await getServerSession();
   const { conversation_id } = await params;
   if (!session) {
