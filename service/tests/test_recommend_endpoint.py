@@ -72,6 +72,7 @@ def test_recommend_returns_200(
         max_mode: bool = False,
         max_output_tokens: int | None = None,
         thinking_budget: int | None = None,
+        temperature: float | None = None,
     ) -> dict[str, Any]:
         call_args["prompt"] = prompt
         call_args["config_provider"] = config.provider
@@ -147,6 +148,7 @@ def test_recommend_accepts_large_under_cap(
         max_mode: bool = False,
         max_output_tokens: int | None = None,
         thinking_budget: int | None = None,
+        temperature: float | None = None,
     ) -> dict[str, Any]:
         return dict(_RECOMMEND_DICT)
 
@@ -175,6 +177,7 @@ def test_response_schema_matches_phase2_contract(
         max_mode: bool = False,
         max_output_tokens: int | None = None,
         thinking_budget: int | None = None,
+        temperature: float | None = None,
     ) -> dict[str, Any]:
         del prompt, config, input_tokens, output_tokens, max_mode
         return dict(_RECOMMEND_DICT)
@@ -215,6 +218,7 @@ def test_recommend_falls_back_to_next_provider_on_malformed_response(
         max_mode: bool = False,
         max_output_tokens: int | None = None,
         thinking_budget: int | None = None,
+        temperature: float | None = None,
     ) -> dict[str, Any]:
         attempted.append(config.provider)
         if config.provider == "anthropic":
@@ -258,6 +262,7 @@ def test_recommend_attempts_all_providers_then_raises_when_all_malformed(
         max_mode: bool = False,
         max_output_tokens: int | None = None,
         thinking_budget: int | None = None,
+        temperature: float | None = None,
     ) -> dict[str, Any]:
         attempted.append(config.provider)
         raise MalformedResponseError("<unparseable>")
@@ -285,7 +290,7 @@ def test_latency_kwargs_passed_only_on_gemini_path(
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
     monkeypatch.setenv("GOOGLE_API_KEY", "test-google-key")
     recommend_module = importlib.import_module("app.recommend")
-    captured: dict[str, tuple[int | None, int | None]] = {}
+    captured: dict[str, tuple[int | None, int | None, float | None]] = {}
 
     def _fake_recommend_structured(
         prompt: str,
@@ -296,8 +301,9 @@ def test_latency_kwargs_passed_only_on_gemini_path(
         max_mode: bool = False,
         max_output_tokens: int | None = None,
         thinking_budget: int | None = None,
+        temperature: float | None = None,
     ) -> dict[str, Any]:
-        captured[config.provider] = (thinking_budget, max_output_tokens)
+        captured[config.provider] = (thinking_budget, max_output_tokens, temperature)
         return dict(_RECOMMEND_DICT)
 
     monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
@@ -311,15 +317,17 @@ def test_latency_kwargs_passed_only_on_gemini_path(
     assert captured["google"] == (
         recommend_module._GEMINI_THINKING_BUDGET,
         recommend_module._GEMINI_MAX_OUTPUT_TOKENS,
+        recommend_module._GEMINI_TEMPERATURE,
     )
     assert recommend_module._GEMINI_THINKING_BUDGET == 0
     assert recommend_module._GEMINI_MAX_OUTPUT_TOKENS == 512
+    assert recommend_module._GEMINI_TEMPERATURE == 0.0
 
     # Default chain serves anthropic first: both kwargs must be None there.
     captured.clear()
     anthropic_req = recommend_module.RecommendRequest(task_description="pick a model")
     recommend_module.recommend(anthropic_req)
-    assert captured["anthropic"] == (None, None)
+    assert captured["anthropic"] == (None, None, None)
 
 
 def _fake_returning(model: str, platform: str) -> Any:
@@ -418,6 +426,7 @@ def test_fake_recommend_structured_matches_real_signature() -> None:
         "max_mode",
         "max_output_tokens",
         "thinking_budget",
+        "temperature",
     ]
     # Everything after `config` is keyword-only (declared after the bare *).
     assert params["input_tokens"].kind is inspect.Parameter.KEYWORD_ONLY

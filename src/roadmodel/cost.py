@@ -258,6 +258,31 @@ def _resolve_method(platform_id: str, catalog: dict[str, Any]) -> dict[str, Any]
     )
 
 
+def canonical_model_name(model_ref: str) -> str:
+    """Resolve a model id-or-name to its catalog display ``name``; return the
+    input unchanged on any catalog miss (never raises).
+
+    The recommender LLM emits the model freely as either the catalog id/slug
+    or the display name, which made the response header (raw) disagree with the
+    cost/comparison table (catalog name) and risked silently dropping the cost
+    panel on an unrecognized label (#174). Callers canonicalize once so every
+    downstream consumer references one consistent name.
+    """
+    try:
+        return str(_resolve_model(model_ref, _load_catalog())["name"])
+    except (ValueError, BundledDocNotFoundError):
+        return model_ref
+
+
+def canonical_platform_name(platform_ref: str) -> str:
+    """Resolve an access-method id-or-name to its catalog display ``name``;
+    return the input unchanged on any catalog miss (never raises) (#174)."""
+    try:
+        return str(_resolve_method(platform_ref, _load_catalog())["name"])
+    except (ValueError, BundledDocNotFoundError):
+        return platform_ref
+
+
 def _as_dict(value: object) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise BundledDocNotFoundError("catalog.json")

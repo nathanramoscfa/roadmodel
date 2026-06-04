@@ -14,4 +14,5 @@ class ProviderAdapter(Protocol):
         api_key: str,
         max_output_tokens: int | None = None,
         thinking_budget: int | None = None,
+        temperature: float | None = None,
     ) -> str: ...
