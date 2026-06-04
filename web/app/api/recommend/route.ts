@@ -138,6 +138,16 @@ const handler = async (req: Request): Promise<Response> =>
 
         const td = (parsedBody as { task_description: string })
           .task_description;
+        // Reject blank / whitespace-only input before paying an upstream
+        // call. The service's min_length=1 counts characters, not stripped
+        // content, so "   " slipped through to a paid LLM call (#175).
+        // Mirrors the too-long guard below; the service tier validates too.
+        if (td.trim().length === 0) {
+          return {
+            kind: "bad_input",
+            error_class: "blank_task_description",
+          } as const;
+        }
         // Mirror the service-tier task_description cap (issue #142:
         // RecommendRequest max_length=50000) at the edge so oversized
         // input is rejected here with a clear 400 instead of paying the

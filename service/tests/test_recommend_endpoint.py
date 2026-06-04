@@ -116,6 +116,19 @@ def test_recommend_input_length_cap(client: TestClient) -> None:
     assert response.status_code == 422
 
 
+def test_recommend_rejects_blank_task_description(client: TestClient) -> None:
+    """Issue #175: Pydantic min_length=1 counts characters, not stripped
+    content, so whitespace-only input (spaces, tabs, newlines) slipped through
+    to a paid LLM call. A field_validator now strips and re-checks -> 422. The
+    web edge returns 400 for the same case before the upstream fetch."""
+    for blank in ("   ", "\t\n  "):
+        response = client.post(
+            "/v1/recommend",
+            json=_request_payload(task_description=blank),
+        )
+        assert response.status_code == 422, blank
+
+
 def test_recommend_accepts_large_under_cap(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
