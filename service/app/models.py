@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class RecommendRequest(BaseModel):
@@ -15,6 +15,17 @@ class RecommendRequest(BaseModel):
     # for a 1M-token context it is a founder-paid free-tier abuse risk.
     task_description: str = Field(min_length=1, max_length=50000)
     context: dict[str, Any] | None = None
+
+    @field_validator("task_description")
+    @classmethod
+    def _non_blank(cls, value: str) -> str:
+        # min_length=1 counts characters, not stripped content, so "   " /
+        # tabs / newlines slip through and reach a paid LLM call. Reject
+        # blank / whitespace-only input (#175). The web edge returns 400 for
+        # the same case before the upstream fetch; this is the service guard.
+        if not value.strip():
+            raise ValueError("task_description must not be blank or whitespace-only")
+        return value
 
     model_config = ConfigDict(extra="forbid")
 
