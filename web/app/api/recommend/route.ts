@@ -319,24 +319,31 @@ const handler = async (req: Request): Promise<Response> =>
         };
       }
 
-      // Surface the model's own reasoning. recommend_structured emits it as a
-      // TOP-LEVEL `rationale`; the service now passes it through (#173). Older
-      // or empty responses fall back to settings.rationale. Without this the
-      // "Why this model?" panel only ever showed the budget sentence.
-      const rationale =
+      // Surface the model's own reasoning in settings.rationale (the field the
+      // UI reads). recommend_structured emits it as a TOP-LEVEL `rationale`;
+      // the service passes it through (#173), with settings.rationale as a
+      // fallback. Append the budget-priority note unless the reasoning already
+      // names it (avoid redundancy) — but ALWAYS surface the reasoning itself,
+      // even when it mentions the budget word, or the "Why this model?" panel
+      // goes blank for those picks (e.g. a budget=best rationale saying "best").
+      // budget_priority is set on settings by the block above.
+      const baseRationale =
         (typeof payload.settings?.rationale === "string" &&
           payload.settings.rationale) ||
         (typeof payload.rationale === "string" && payload.rationale) ||
         "";
-      if (budgetPriority && !rationale.includes(budgetPriority)) {
+      const rationale =
+        budgetPriority && !baseRationale.includes(budgetPriority)
+          ? baseRationale
+            ? `${baseRationale} Budget priority: ${budgetPriority}.`
+            : `Budget priority: ${budgetPriority}.`
+          : baseRationale;
+      if (rationale) {
         payload = {
           ...payload,
           settings: {
             ...(payload.settings ?? {}),
-            rationale: rationale
-              ? `${rationale} Budget priority: ${budgetPriority}.`
-              : `Budget priority: ${budgetPriority}.`,
-            budget_priority: budgetPriority,
+            rationale,
           },
         };
       }
