@@ -193,6 +193,9 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
                 model=result["model"],
                 platform=result["platform"],
                 settings=result["settings"],
+                # Carry the model's reasoning across the service boundary (#173);
+                # empty string -> None so the web edge falls back cleanly.
+                rationale=result.get("rationale") or None,
                 session_cost_estimate=session_cost_estimate,
                 comparison_table=comparison_table,
             )

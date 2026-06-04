@@ -48,6 +48,8 @@ interface RecommenderPayload {
   session_cost_estimate?: { total_usd?: number };
   settings?: Record<string, unknown>;
   comparison_table?: Record<string, unknown>[];
+  // The model's reasoning, carried as a top-level field by the service (#173).
+  rationale?: string;
 }
 
 function isCnJurisdictionModel(model: string | undefined): boolean {
@@ -317,10 +319,15 @@ const handler = async (req: Request): Promise<Response> =>
         };
       }
 
+      // Surface the model's own reasoning. recommend_structured emits it as a
+      // TOP-LEVEL `rationale`; the service now passes it through (#173). Older
+      // or empty responses fall back to settings.rationale. Without this the
+      // "Why this model?" panel only ever showed the budget sentence.
       const rationale =
-        typeof payload.settings?.rationale === "string"
-          ? payload.settings.rationale
-          : "";
+        (typeof payload.settings?.rationale === "string" &&
+          payload.settings.rationale) ||
+        (typeof payload.rationale === "string" && payload.rationale) ||
+        "";
       if (budgetPriority && !rationale.includes(budgetPriority)) {
         payload = {
           ...payload,
