@@ -120,7 +120,7 @@ table and surface material cost / availability / capability constraints.
 
 ---
 
-<!-- subscription-tiers-reviewed: 2026-05-28 -->
+<!-- subscription-tiers-reviewed: 2026-06-04 -->
 
 ## Subscription Tiers and Access Methods
 
@@ -243,7 +243,7 @@ ids no longer appear as recommendable engines.
 | gpt-5.1-codex    | $10.00 | Medium    | New — added 2026-05-21; earlier-generation Codex variant at $10/M output                                                    |
 | composer-2.5     | $2.50  | Low       | New — added 2026-05-21; Composer 2 successor (same output price, equal-output-price replacement rule)                       |
 | kimi-k2.5        | $3.00  | Low       | New — added 2026-05-21; Moonshot's Kimi K2.5 (routed via Cursor pool; no direct Moonshot access method enumerated yet)      |
-| opus-4.8         | $25.00 | Very High | New 2026-05-30 — Anthropic's Claude Opus 4.8 added to `<model-options>` alongside cost-scale on the same run; placeholder tier ratings inherited from opus-4.7 (same series successor at same per-token pricing) pending benchmark coverage on next refresh; opus-4.7 simultaneously flipped to Hidden by default on Cursor's pricing page |
+| opus-4.8         | $25.00 | Very High | Benchmarks indexed 2026-06-04 — AA Intelligence Index 61.4 (#1), HLE 45.7%, Terminal-Bench Hard 58.3, τ²-bench retail 94.4%; tier-agentic bumped from A to S based on Terminal-Bench Hard + τ²-bench evidence |
 | grok-build-0.1   | $2.00  | Low       | New 2026-05-28 in cost-scale — xAI's Grok Build 0.1 visible on Cursor pricing page; `<model-options>` entry deferred until benchmark sources index it (no published benchmarks yet) |
 | auto             | —      | —         | REMOVED 2026-05-21; Cursor-managed routing meta-model. Opaque routing conflicts with per-model tier ratings + jurisdiction filter |
 | premium          | —      | —         | REMOVED 2026-05-21; Cursor-managed routing meta-model. Same rationale as `auto` removal                                     |
