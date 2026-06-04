@@ -94,7 +94,12 @@ jobs:
           pip install -r tests/requirements.txt
           pip install -e ".[dev]"
       - name: Pytest
-        run: pytest -x --cov=roadmodel tests/
+        # Ignore the live-network source suite in the per-PR matrix (#170):
+        # it makes real HTTP calls to external data sources (HuggingFace
+        # LMArena parquet, etc.) that rate-limit (429), flaking CI and
+        # blocking unrelated PRs. Live-source drift is covered by the weekly
+        # cron (which carries AA_API_KEY); the verify scripts deselect it too.
+        run: pytest -x --cov=roadmodel tests/ --ignore=tests/test_sources_live.py
 
   package-smoke:
     runs-on: ubuntu-latest
