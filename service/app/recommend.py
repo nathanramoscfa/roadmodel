@@ -153,6 +153,26 @@ _GEMINI_MAX_OUTPUT_TOKENS = 512
 # (never Anthropic, #128).
 _GEMINI_TEMPERATURE = 0.0
 
+# Issue #188: the selector's <access-methods> mark `cursor` and `xai-api` with
+# exposes-thinking="no", and <thinking-context> makes that an OVERRIDE — THINKING
+# must be N/A on those surfaces regardless of task complexity. Gemini 2.5 Flash
+# fills a THINKING value anyway (6 of 7 Cursor probes in the Task-1 sweep), so the
+# structured `thinking` field the UI renders is wrong. Normalize it deterministically
+# here. This governs the actionable structured field only; the model's rationale
+# PROSE is corrected separately by the A0 prompt-hardening pass. Folding the override
+# into the package's _structured_settings is a follow-up (would need a release).
+_NO_THINKING_PLATFORMS = frozenset({"Cursor", "xAI API"})
+
+
+def _normalize_no_thinking(platform: str, settings: dict[str, Any]) -> dict[str, Any]:
+    """Force settings['thinking'] to N/A on surfaces that expose no thinking dial."""
+    if platform not in _NO_THINKING_PLATFORMS:
+        return settings
+    thinking = settings.get("thinking")
+    if thinking is None or str(thinking).strip().upper() in {"N/A", "NA"}:
+        return settings
+    return {**settings, "thinking": "N/A"}
+
 
 def _config_for_hint(hint: str) -> Any:
     provider, model = _PROVIDER_HINTS[hint]
@@ -203,10 +223,14 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
             return RecommendResponse(
                 model=result["model"],
                 platform=result["platform"],
-                settings=result["settings"],
+                # Deterministic THINKING=N/A override on no-thinking surfaces (#188).
+                settings=_normalize_no_thinking(result["platform"], result["settings"]),
                 # Carry the model's reasoning across the service boundary (#173);
                 # empty string -> None so the web edge falls back cleanly.
                 rationale=result.get("rationale") or None,
+                # Carry the conversation-handling decision across the boundary (#190),
+                # same drop class as rationale; empty -> None.
+                conversation=result.get("conversation") or None,
                 session_cost_estimate=session_cost_estimate,
                 comparison_table=comparison_table,
             )

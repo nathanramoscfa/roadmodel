@@ -97,12 +97,54 @@ def test_recommend_returns_200(
     assert body == {
         "model": "Claude Sonnet 4.6",
         "platform": "Claude Code",
+        # Claude Code is NOT a no-thinking surface, so settings pass through
+        # unchanged (#188 only normalizes Cursor / xAI API).
         "settings": {"effort": "High", "thinking": "On"},
         # #173: the model's rationale now survives the service boundary.
         "rationale": "Best for coding tasks.",
+        # #190: the conversation-handling decision now survives too.
+        "conversation": "New",
         "session_cost_estimate": None,
         "comparison_table": [],
     }
+
+
+def test_recommend_normalizes_thinking_na_on_no_thinking_surface(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Issue #188: Cursor and xAI API expose no thinking dial
+    (exposes-thinking="no"), so the structured THINKING field must be N/A
+    regardless of what the model emitted. Gemini 2.5 Flash filled a value on
+    6/7 Cursor probes in the Task-1 sweep. max_mode (a real Cursor dial) and
+    the conversation passthrough (#190) are left intact."""
+    recommend_module = importlib.import_module("app.recommend")
+    cursor_dict = dict(_RECOMMEND_DICT)
+    cursor_dict["platform"] = "Cursor"
+    cursor_dict["settings"] = {"max_mode": "OFF", "thinking": "Medium"}
+
+    def _fake_recommend_structured(
+        prompt: str,
+        config: Any,
+        *,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        max_mode: bool = False,
+        max_output_tokens: int | None = None,
+        thinking_budget: int | None = None,
+        temperature: float | None = None,
+    ) -> dict[str, Any]:
+        del prompt, config, input_tokens, output_tokens, max_mode
+        del max_output_tokens, thinking_budget, temperature
+        return dict(cursor_dict)
+
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
+
+    body = client.post("/v1/recommend", json=_request_payload()).json()
+    assert body["platform"] == "Cursor"
+    assert body["settings"]["thinking"] == "N/A"
+    assert body["settings"]["max_mode"] == "OFF"
+    assert body["conversation"] == "New"
 
 
 def test_recommend_input_length_cap(client: TestClient) -> None:
@@ -192,6 +234,7 @@ def test_response_schema_matches_phase2_contract(
         "platform",
         "settings",
         "rationale",  # #173 — carried through the service boundary
+        "conversation",  # #190 — same boundary, now carried through
         "session_cost_estimate",
         "comparison_table",
     }
