@@ -102,7 +102,10 @@ def test_recommend_invokes_build_prompt_and_parser(
     }
     assert adapter.calls, "provider adapter was not called"
     assert "<model-selector>" in str(adapter.calls[0]["system"])
-    assert "build a SQL agent" == adapter.calls[0]["prompt"]
+    # The user prompt is wrapped as delimited input (classify-don't-execute, #187).
+    assert (
+        adapter.calls[0]["prompt"] == "<task-to-classify>\nbuild a SQL agent\n</task-to-classify>"
+    )
 
 
 def test_recommend_no_key_exits_nonzero(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
