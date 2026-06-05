@@ -50,6 +50,9 @@ interface RecommenderPayload {
   comparison_table?: Record<string, unknown>[];
   // The model's reasoning, carried as a top-level field by the service (#173).
   rationale?: string;
+  // The conversation-handling decision (New/Continue), carried as a top-level
+  // field by the service (#190). Spread through to the client via `parsed`.
+  conversation?: string;
 }
 
 function isCnJurisdictionModel(model: string | undefined): boolean {

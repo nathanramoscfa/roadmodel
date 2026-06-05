@@ -39,6 +39,11 @@ class RecommendResponse(BaseModel):
     # this model?" panel is empty for every user (issue #173 — the same
     # service-boundary drop class as the #164 cost/comparison_table fix).
     rationale: str | None = None
+    # The model's conversation-handling decision (New/Continue). recommend_structured
+    # emits this as a top-level key; like rationale (#173) it was dropped at the
+    # service boundary (extra="forbid" + never passed through) — issue #190. Carry
+    # it so the field survives end-to-end; empty -> None for a clean web fallback.
+    conversation: str | None = None
     session_cost_estimate: dict[str, Any] | None = None
     comparison_table: list[dict[str, Any]] = Field(default_factory=list)
 
