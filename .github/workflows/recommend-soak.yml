@@ -78,7 +78,10 @@ jobs:
           ROADMODEL_LATENCY_BYPASS_TOKEN: ${{ secrets.ROADMODEL_LATENCY_BYPASS_TOKEN }}
         run: |
           set +e
-          NODE_PATH="$(pwd)/node_modules" node node_modules/.bin/tsx ../scripts/soak-recommend.ts 2>&1 | tee /tmp/soak.log
+          # tsx is a transitive dep (not declared), so `npm ci` doesn't link
+          # .bin/tsx in CI — resolve the package directly via npx. NODE_PATH so
+          # the ../scripts file resolves @supabase/* against web/node_modules.
+          NODE_PATH="$(pwd)/node_modules" npx --yes tsx ../scripts/soak-recommend.ts 2>&1 | tee /tmp/soak.log
           echo "exit=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
 
       - name: Track regression in a single issue
