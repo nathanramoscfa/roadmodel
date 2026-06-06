@@ -54,10 +54,12 @@ test("save-and-continue persists prefs and surfaces budget priority", async ({
   await expect(
     page.getByRole("heading", { name: /Claude 4\.5 Haiku/i }),
   ).toBeVisible();
-  await page.getByText(/Why this model/i).click();
-  await expect(
-    page.locator("details p").filter({ hasText: /Budget priority: best/i }),
-  ).toBeVisible();
+  // The rationale renders prominently (T4 — an always-visible "Why this model?"
+  // card, no longer a collapsed <details> behind a click). The route injects the
+  // profile's budget priority into the rationale (#173).
+  const why = page.getByRole("region", { name: /Why this model/i });
+  await expect(why).toBeVisible();
+  await expect(why.getByText(/Budget priority: best/i)).toBeVisible();
 });
 
 test("skip persists defaults and sets onboarded_at", async ({ page }) => {

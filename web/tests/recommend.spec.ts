@@ -50,6 +50,53 @@ test(
   },
 );
 
+test("humanizes settings labels and renders the rationale prominently", async ({
+  page,
+}) => {
+  await page.route("**/api/recommend", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        model: "Opus 4.8",
+        platform: "Claude Code",
+        settings: {
+          max_mode: "OFF",
+          thinking: "High",
+          budget_priority: "balanced",
+          rationale: "Chosen for deep reasoning on a hard task.",
+        },
+        conversation: "New",
+        comparison_table: [],
+      }),
+    }),
+  );
+  await page.goto("/recommend");
+  await page.getByPlaceholder(/Describe the task/i).fill("prove a theorem");
+  await page.getByRole("button", { name: /Submit/i }).click();
+  // Humanized labels + values in the settings list (term/definition roles —
+  // scoped so we don't collide with the budget picker in the prompt form).
+  await expect(
+    page.getByRole("term").filter({ hasText: "Max Mode" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("term").filter({ hasText: "Budget Priority" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("definition").filter({ hasText: "Balanced" }),
+  ).toBeVisible();
+  await expect(page.getByText("budget_priority")).toHaveCount(0);
+  // Rationale is surfaced prominently (visible without expanding a disclosure)
+  // and is NOT duplicated as a settings row.
+  await expect(
+    page.getByRole("heading", { name: /Why this model\?/i }),
+  ).toBeVisible();
+  await expect(page.getByText(/Chosen for deep reasoning/i)).toBeVisible();
+  await expect(
+    page.getByRole("term").filter({ hasText: "Rationale" }),
+  ).toHaveCount(0);
+});
+
 test("502 error renders friendly message", async ({ page }) => {
   await page.route("**/api/recommend", (route) =>
     route.fulfill({
