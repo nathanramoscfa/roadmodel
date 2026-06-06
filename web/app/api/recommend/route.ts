@@ -430,7 +430,16 @@ const handler = async (req: Request): Promise<Response> =>
       latency_ms: getTimings(),
     });
 
-    return new NextResponse(JSON.stringify(responsePayload), {
+    // Surface the engine tier so the client renders an accurate tier label
+    // (T3b): signed-in frontier users should not be told to "upgrade for
+    // frontier models" when they are already on Gemini 2.5 Pro.
+    const tieredPayload = {
+      ...responsePayload,
+      tier: recommenderEngine.use_frontier ? "frontier" : "free",
+      engine: recommenderEngine.engine,
+    };
+
+    return new NextResponse(JSON.stringify(tieredPayload), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
