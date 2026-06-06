@@ -50,10 +50,10 @@ export function SettingsList({ settings }: SettingsListProps) {
     <dl className="space-y-2">
       {entries.map(([key, value]) => (
         <div key={key} className="grid grid-cols-2 gap-2 text-sm">
-          <dt className="font-medium text-brand-slate-600">
+          <dt className="font-medium text-brand-slate-600 dark:text-brand-slate-300">
             {humanizeKey(key)}
           </dt>
-          <dd className="text-brand-slate-900">{formatValue(value)}</dd>
+          <dd className="text-brand-slate-900 dark:text-brand-slate-50">{formatValue(value)}</dd>
         </div>
       ))}
     </dl>

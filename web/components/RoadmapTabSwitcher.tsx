@@ -35,7 +35,7 @@ export function RoadmapTabSwitcher({
             className={
               (isActive
                 ? "bg-brand-accent text-white "
-                : "bg-brand-slate-100 text-brand-slate-700 ") +
+                : "bg-brand-slate-100 dark:bg-brand-slate-800 text-brand-slate-700 dark:text-brand-slate-200 ") +
               "rounded-full px-4 py-2 text-sm font-semibold transition"
             }
           >

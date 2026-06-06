@@ -17,12 +17,12 @@ export function WhyDisclosure({ rationale }: WhyDisclosureProps) {
   return (
     <section
       aria-label="Why this model?"
-      className="rounded-lg border border-brand-slate-200 bg-brand-slate-50 p-4"
+      className="rounded-lg border border-brand-slate-200 dark:border-brand-slate-700 bg-brand-slate-50 dark:bg-brand-slate-900 p-4"
     >
-      <h3 className="text-sm font-semibold text-brand-slate-800">
+      <h3 className="text-sm font-semibold text-brand-slate-800 dark:text-brand-slate-100">
         Why this model?
       </h3>
-      <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-brand-slate-700">
+      <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-brand-slate-700 dark:text-brand-slate-200">
         {rationale}
       </p>
     </section>

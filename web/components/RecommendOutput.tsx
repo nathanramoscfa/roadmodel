@@ -28,8 +28,8 @@ export function RecommendOutput({ data }: RecommendOutputProps) {
   return (
     <div
       className={
-        "flex flex-col gap-6 rounded-xl border border-brand-slate-200 " +
-        "bg-white p-6 shadow-sm"
+        "flex flex-col gap-6 rounded-xl border border-brand-slate-200 dark:border-brand-slate-700 " +
+        "bg-white dark:bg-brand-slate-800 p-6 shadow-sm"
       }
     >
       <ModelHeader model={data.model} platform={data.platform} />

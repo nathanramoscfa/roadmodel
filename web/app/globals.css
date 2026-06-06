@@ -4,7 +4,11 @@
 @tailwind utilities;
 
 @layer base {
+  /* Base shell. Dark mode (T4) is opt-in via the `dark` class on <html>
+     (toggled by ThemeToggle, persisted to localStorage, applied pre-paint by
+     the no-flash script in layout.tsx). Light is the default — no `dark` class
+     means the current experience is unchanged. */
   body {
-    @apply bg-brand-slate-50 text-brand-slate-900 antialiased;
+    @apply bg-brand-slate-50 text-brand-slate-900 antialiased dark:bg-brand-slate-900 dark:text-brand-slate-50;
   }
 }

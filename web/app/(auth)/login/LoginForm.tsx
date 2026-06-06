@@ -66,22 +66,22 @@ export function LoginForm({
   const sending = status.kind === "sending";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-brand-slate-50 px-6 py-16">
-      <div className="w-full max-w-md rounded-2xl border border-brand-slate-200 bg-white p-8 shadow-sm">
+    <div className="flex min-h-screen items-center justify-center bg-brand-slate-50 dark:bg-brand-slate-900 px-6 py-16">
+      <div className="w-full max-w-md rounded-2xl border border-brand-slate-200 dark:border-brand-slate-700 bg-white dark:bg-brand-slate-800 p-8 shadow-sm">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-accent">
           roadmodel
         </p>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight text-brand-slate-900">
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-brand-slate-900 dark:text-brand-slate-50">
           Sign in
         </h1>
-        <p className="mt-3 text-sm text-brand-slate-600">
+        <p className="mt-3 text-sm text-brand-slate-600 dark:text-brand-slate-300">
           Use a magic link or your GitHub account.
         </p>
 
         <form onSubmit={sendMagicLink} className="mt-6 flex flex-col gap-3">
           <label
             htmlFor="email"
-            className="text-sm font-medium text-brand-slate-800"
+            className="text-sm font-medium text-brand-slate-800 dark:text-brand-slate-100"
           >
             Email
           </label>
@@ -94,7 +94,7 @@ export function LoginForm({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={
-              "rounded-lg border border-brand-slate-300 px-3 py-2 text-sm " +
+              "rounded-lg border border-brand-slate-300 dark:border-brand-slate-700 px-3 py-2 text-sm " +
               "shadow-sm focus:border-brand-accent focus:outline-none " +
               "focus:ring-2 focus:ring-brand-accent/30"
             }
@@ -113,11 +113,11 @@ export function LoginForm({
         </form>
 
         <div className="my-6 flex items-center gap-3">
-          <div className="h-px flex-1 bg-brand-slate-200" />
-          <span className="text-xs uppercase tracking-wide text-brand-slate-500">
+          <div className="h-px flex-1 bg-brand-slate-200 dark:bg-brand-slate-700" />
+          <span className="text-xs uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
             or
           </span>
-          <div className="h-px flex-1 bg-brand-slate-200" />
+          <div className="h-px flex-1 bg-brand-slate-200 dark:bg-brand-slate-700" />
         </div>
 
         <button
@@ -125,9 +125,9 @@ export function LoginForm({
           onClick={signInWithGitHub}
           disabled={sending}
           className={
-            "w-full rounded-lg border border-brand-slate-300 bg-white px-4 py-2 " +
-            "text-sm font-semibold text-brand-slate-800 shadow-sm " +
-            "hover:bg-brand-slate-50 focus:outline-none focus:ring-2 " +
+            "w-full rounded-lg border border-brand-slate-300 dark:border-brand-slate-700 bg-white dark:bg-brand-slate-800 px-4 py-2 " +
+            "text-sm font-semibold text-brand-slate-800 dark:text-brand-slate-100 shadow-sm " +
+            "hover:bg-brand-slate-50 dark:bg-brand-slate-900 focus:outline-none focus:ring-2 " +
             "focus:ring-brand-accent/40 disabled:opacity-60"
           }
         >
@@ -135,7 +135,7 @@ export function LoginForm({
         </button>
 
         {status.kind === "sent" ? (
-          <p className="mt-6 text-sm text-brand-slate-700">
+          <p className="mt-6 text-sm text-brand-slate-700 dark:text-brand-slate-200">
             Check your email at <strong>{status.email}</strong> for the
             sign-in link.
           </p>

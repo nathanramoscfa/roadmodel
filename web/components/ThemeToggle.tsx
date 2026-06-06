@@ -1,0 +1,45 @@
+// web/components/ThemeToggle.tsx
+"use client";
+
+import { useEffect, useState } from "react";
+
+// Light/dark theme toggle (T4). Flips the `dark` class on <html> and persists
+// the choice to localStorage; the no-flash script in layout.tsx re-applies it
+// before paint on the next load. Default is light — a user only gets dark by
+// explicitly toggling, so the existing experience is unchanged until opt-in.
+export function ThemeToggle() {
+  const [dark, setDark] = useState(false);
+
+  // Sync initial state from the class the no-flash script already applied.
+  useEffect(() => {
+    setDark(document.documentElement.classList.contains("dark"));
+  }, []);
+
+  function toggle() {
+    const next = !document.documentElement.classList.contains("dark");
+    document.documentElement.classList.toggle("dark", next);
+    try {
+      localStorage.setItem("theme", next ? "dark" : "light");
+    } catch {
+      // localStorage unavailable (private mode / SSR) — the toggle still works
+      // for the current session; it just won't persist.
+    }
+    setDark(next);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
+      aria-pressed={dark}
+      className={
+        "rounded-md px-3 py-1.5 text-sm font-medium text-brand-slate-600 " +
+        "hover:bg-brand-slate-50 hover:text-brand-slate-900 " +
+        "dark:text-brand-slate-300 dark:hover:bg-brand-slate-800 dark:hover:text-brand-slate-50"
+      }
+    >
+      {dark ? "Light" : "Dark"}
+    </button>
+  );
+}

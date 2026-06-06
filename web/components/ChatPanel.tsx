@@ -20,8 +20,8 @@ function MessageBubble({ message }: { message: Message }) {
           (isUser
             ? "max-w-[85%] rounded-2xl rounded-br-md bg-brand-accent " +
               "text-white "
-            : "max-w-[85%] rounded-2xl rounded-bl-md bg-brand-slate-100 " +
-              "text-brand-slate-900 ") + "px-4 py-3 text-sm"
+            : "max-w-[85%] rounded-2xl rounded-bl-md bg-brand-slate-100 dark:bg-brand-slate-800 " +
+              "text-brand-slate-900 dark:text-brand-slate-50 ") + "px-4 py-3 text-sm"
         }
       >
         <p className="whitespace-pre-wrap">{message.content}</p>
@@ -48,12 +48,12 @@ export function ChatPanel({
     <div
       className={
         "flex min-h-[480px] flex-1 flex-col rounded-xl border " +
-        "border-brand-slate-200 bg-white p-4 shadow-sm sm:p-6"
+        "border-brand-slate-200 dark:border-brand-slate-700 bg-white dark:bg-brand-slate-800 p-4 shadow-sm sm:p-6"
       }
     >
       <div className="flex-1 space-y-4 overflow-y-auto pb-4">
         {messages.length === 0 ? (
-          <p className="text-sm text-brand-slate-500">
+          <p className="text-sm text-brand-slate-500 dark:text-brand-slate-400">
             Describe your project to start building a roadmap.
           </p>
         ) : (

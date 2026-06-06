@@ -39,10 +39,10 @@ export default async function HistoryPage() {
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-accent">
           roadmodel
         </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-brand-slate-900 sm:text-4xl">
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-brand-slate-900 dark:text-brand-slate-50 sm:text-4xl">
           Roadmap history
         </h1>
-        <p className="mt-3 text-brand-slate-600">
+        <p className="mt-3 text-brand-slate-600 dark:text-brand-slate-300">
           Pick up a past roadmap or browse what you have generated so far.
         </p>
       </header>
@@ -51,11 +51,11 @@ export default async function HistoryPage() {
         {conversations.length === 0 ? (
           <div
             className={
-              "rounded-lg border border-brand-slate-200 bg-brand-slate-50 " +
+              "rounded-lg border border-brand-slate-200 dark:border-brand-slate-700 bg-brand-slate-50 dark:bg-brand-slate-900 " +
               "px-6 py-10 text-center"
             }
           >
-            <p className="text-brand-slate-700">
+            <p className="text-brand-slate-700 dark:text-brand-slate-200">
               No roadmaps yet. Start one at{" "}
               <Link href="/roadmap" className="font-medium text-brand-accent underline">
                 /roadmap

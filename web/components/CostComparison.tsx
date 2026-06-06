@@ -55,7 +55,7 @@ export function CostComparison({ comparisonTable }: CostComparisonProps) {
     <div className="overflow-x-auto">
       <table className="w-full min-w-[280px] text-left text-sm">
         <thead>
-          <tr className="border-b border-brand-slate-200 text-brand-slate-600">
+          <tr className="border-b border-brand-slate-200 dark:border-brand-slate-700 text-brand-slate-600 dark:text-brand-slate-300">
             {showModelColumn ? (
               <th className="py-2 pr-3 font-medium">Model</th>
             ) : null}
@@ -71,17 +71,17 @@ export function CostComparison({ comparisonTable }: CostComparisonProps) {
               className="border-b border-brand-slate-100"
             >
               {showModelColumn ? (
-                <td className="py-2 pr-3 text-brand-slate-900">
+                <td className="py-2 pr-3 text-brand-slate-900 dark:text-brand-slate-50">
                   {rowModel(row)}
                 </td>
               ) : null}
-              <td className="py-2 pr-3 text-brand-slate-700">
+              <td className="py-2 pr-3 text-brand-slate-700 dark:text-brand-slate-200">
                 {rowPlatform(row)}
               </td>
-              <td className="py-2 pr-3 text-brand-slate-700">
+              <td className="py-2 pr-3 text-brand-slate-700 dark:text-brand-slate-200">
                 {per1kCost(row)}
               </td>
-              <td className="py-2 text-brand-slate-600">
+              <td className="py-2 text-brand-slate-600 dark:text-brand-slate-300">
                 {subscriptionNote(row)}
               </td>
             </tr>
