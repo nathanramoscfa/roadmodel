@@ -50,15 +50,13 @@ jobs:
             echo "::notice::Prod-soak secrets not seeded — skipping. Seed SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_ANON_KEY, SITE_PASSWORD (and optionally ROADMODEL_LATENCY_BYPASS_TOKEN) as Actions secrets to enable."
           fi
 
-      - name: Node version
-        if: steps.check.outputs.have == 'true'
-        id: node-version
-        run: echo "version=$(cat web/.nvmrc)" >> "$GITHUB_OUTPUT"
-
       - uses: actions/setup-node@v4
         if: steps.check.outputs.have == 'true'
         with:
-          node-version: ${{ steps.node-version.outputs.version }}
+          # Node 22 (not web/.nvmrc's 20): @supabase/supabase-js's realtime
+          # client needs native global WebSocket, which lands in Node 22.
+          # The soak is a standalone script, so it need not match the web build.
+          node-version: "22"
           cache: npm
           cache-dependency-path: web/package-lock.json
 
