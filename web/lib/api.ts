@@ -5,6 +5,12 @@ export interface RecommendResponse {
   settings: Record<string, unknown>;
   session_cost_estimate: Record<string, unknown>;
   comparison_table: Record<string, unknown>[];
+  // Which engine tier served this recommendation (T3b): "free" (Gemini 2.5
+  // Flash, anon) or "frontier" (Gemini 2.5 Pro, signed-in quality tier). Drives
+  // the tier label so signed-in users aren't told to "upgrade for frontier
+  // models" when they are already on it. `engine` is the resolved engine id.
+  tier?: "free" | "frontier";
+  engine?: string;
 }
 
 const DEFAULT_SERVICE_URL =
