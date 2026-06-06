@@ -21,9 +21,39 @@ import {
   type JurisdictionCode,
 } from "@/lib/profile";
 import { identifyRequest, withRateLimit } from "@/lib/withRateLimit";
+import { env } from "@/lib/env";
 
 const DEFAULT_RECOMMENDER_URL =
   "https://roadmodel-api.vercel.app/v1/recommend";
+
+// Per-call cost LEDGER (Phase 4.5 T3b). Estimates the recommend ENGINE call's
+// spend so signed-in frontier usage is queryable per audit row (e.g. sum
+// cost_usd over signed-in rows = frontier spend). This is OUR cost, distinct
+// from the recommended model's user-facing session_cost_estimate. Rates are per
+// 1M tokens; the static system prompt (header + selector + tier-cost +
+// user-context) dominates input at ~20k tokens. outTokens is the visible +
+// (frontier) reasoning estimate. Engines absent here yield no ledger fields.
+const ENGINE_RATES: Record<
+  string,
+  { inPer1m: number; outPer1m: number; outTokens: number }
+> = {
+  "gemini-2.5-flash": { inPer1m: 0.3, outPer1m: 2.5, outTokens: 512 },
+  "gemini-2.5-pro": { inPer1m: 1.25, outPer1m: 10, outTokens: 900 },
+};
+const STATIC_PROMPT_TOKENS = 20000;
+
+function estimateEngineCost(
+  engine: string,
+  taskLen: number,
+): { inputTokens: number; outputTokens: number; costUsd: number } | undefined {
+  const r = ENGINE_RATES[engine];
+  if (!r) return undefined;
+  const inputTokens = STATIC_PROMPT_TOKENS + Math.ceil(taskLen / 4);
+  const outputTokens = r.outTokens;
+  const costUsd =
+    (inputTokens * r.inPer1m + outputTokens * r.outPer1m) / 1_000_000;
+  return { inputTokens, outputTokens, costUsd: Number(costUsd.toFixed(6)) };
+}
 
 function recommenderUrl(): string {
   if (
@@ -178,7 +208,13 @@ const handler = async (req: Request): Promise<Response> =>
           : [...DEFAULT_PROFILE.allowed_jurisdictions];
 
         try {
-          const engine = resolveRecommenderEngine({ profile });
+          // T3b: signed-in users get the frontier engine ONLY when the gate is
+          // on; anonymous requests always get the free (Flash) engine.
+          const engine = resolveRecommenderEngine({
+            profile,
+            signedIn: Boolean(localUserId),
+            frontierEnabled: env.RECOMMENDER_FRONTIER_ENABLED,
+          });
           return {
             kind: "ok",
             body: parsedBody,
@@ -376,11 +412,20 @@ const handler = async (req: Request): Promise<Response> =>
       // contract documents.
     });
 
+    // Per-call cost ledger (T3b): record OUR engine call's estimated spend +
+    // tokens. provider/model stay as the RECOMMENDATION (what we returned);
+    // cost_usd/input_tokens/output_tokens are the engine call (what it cost us).
+    const engineCost = estimateEngineCost(
+      recommenderEngine.engine,
+      taskDescription.length,
+    );
     recordTotal();
     auditFor(req, "ok", {
       provider: responsePayload.platform,
       model: responsePayload.model,
-      cost_usd: responsePayload.session_cost_estimate?.total_usd,
+      input_tokens: engineCost?.inputTokens,
+      output_tokens: engineCost?.outputTokens,
+      cost_usd: engineCost?.costUsd,
       user_id: userId,
       latency_ms: getTimings(),
     });
