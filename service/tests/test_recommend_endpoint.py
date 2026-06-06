@@ -373,6 +373,58 @@ def test_latency_kwargs_passed_only_on_gemini_path(
     assert captured["anthropic"] == (None, None, None)
 
 
+def test_frontier_gemini_pro_uses_thinking_on_params(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Phase 4.5 T3b: the signed-in quality tier forces gemini-2.5-pro, which
+    must run with reasoning ON (thinking_budget=512, max_output_tokens=2048) —
+    distinct from the free tier's gemini-2.5-flash (0/512). The params key off
+    the MODEL, so no separate request flag is needed."""
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-google-key")
+    recommend_module = importlib.import_module("app.recommend")
+    captured: dict[str, tuple[int | None, int | None]] = {}
+
+    def _fake_recommend_structured(
+        prompt: str,
+        config: Any,
+        *,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        max_mode: bool = False,
+        max_output_tokens: int | None = None,
+        thinking_budget: int | None = None,
+        temperature: float | None = None,
+    ) -> dict[str, Any]:
+        captured[config.model] = (thinking_budget, max_output_tokens)
+        return dict(_RECOMMEND_DICT)
+
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
+
+    # Frontier: gemini-2.5-pro → reasoning-ON params.
+    recommend_module.recommend(
+        recommend_module.RecommendRequest(
+            task_description="pick a model",
+            context={"force_provider": "google-gemini-2.5-pro"},
+        )
+    )
+    assert captured["gemini-2.5-pro"] == (
+        recommend_module._GEMINI_FRONTIER_THINKING_BUDGET,
+        recommend_module._GEMINI_FRONTIER_MAX_OUTPUT_TOKENS,
+    )
+    assert recommend_module._GEMINI_FRONTIER_THINKING_BUDGET == 512
+    assert recommend_module._GEMINI_FRONTIER_MAX_OUTPUT_TOKENS == 2048
+
+    # Free tier: gemini-2.5-flash keeps reasoning OFF + the tight cap.
+    captured.clear()
+    recommend_module.recommend(
+        recommend_module.RecommendRequest(
+            task_description="pick a model",
+            context={"force_provider": "google-gemini-2.5-flash"},
+        )
+    )
+    assert captured["gemini-2.5-flash"] == (0, 512)
+
+
 def _fake_returning(model: str, platform: str) -> Any:
     def _fake(prompt: str, config: Any, **_kwargs: Any) -> dict[str, Any]:
         return {
