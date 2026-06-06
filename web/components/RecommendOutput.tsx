@@ -36,7 +36,7 @@ export function RecommendOutput({ data }: RecommendOutputProps) {
       <SettingsList settings={data.settings} />
       <CostComparison comparisonTable={data.comparison_table} />
       <WhyDisclosure rationale={rationale} />
-      <FreeTierLabel label="Free tier (Gemini 2.5 Flash) — upgrade for frontier models" />
+      <FreeTierLabel surface="recommend" tier={data.tier} engine={data.engine} />
     </div>
   );
 }

@@ -97,6 +97,36 @@ test("humanizes settings labels and renders the rationale prominently", async ({
   ).toHaveCount(0);
 });
 
+test("frontier-tier recommendation shows the quality-tier label (no upgrade CTA)", async ({
+  page,
+}) => {
+  await page.route("**/api/recommend", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        model: "Opus 4.8",
+        platform: "Claude Code",
+        settings: { thinking: "High" },
+        tier: "frontier",
+        engine: "gemini-2.5-pro",
+        comparison_table: [],
+      }),
+    }),
+  );
+  await page.goto("/recommend");
+  await page.getByPlaceholder(/Describe the task/i).fill("hard reasoning task");
+  await page.getByRole("button", { name: /Submit/i }).click();
+  // Signed-in frontier users see the quality-tier engine, NOT a "free tier …
+  // upgrade for frontier models" CTA they're already past.
+  await expect(
+    page.getByText("Quality tier (Gemini 2.5 Pro)"),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/upgrade for frontier models/i),
+  ).toHaveCount(0);
+});
+
 test("502 error renders friendly message", async ({ page }) => {
   await page.route("**/api/recommend", (route) =>
     route.fulfill({
