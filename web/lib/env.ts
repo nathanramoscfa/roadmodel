@@ -95,6 +95,17 @@ const envSchema = z.object({
   // scope. Parsed via parseRoadmapEnabled (explicit opt-out) — see its
   // comment for why NOT z.coerce.boolean(). Issue #171.
   ROADMAP_ENABLED: z.string().default("true").transform(parseRoadmapEnabled),
+  // Phase 4.5 T3b — signed-in QUALITY-tier recommender engine gate. When on
+  // ("true"/"1"), signed-in /api/recommend requests route to the Gemini 2.5 Pro
+  // frontier engine (reasoning ON) instead of the free-tier Flash engine;
+  // ANONYMOUS requests always stay on Flash. Default OFF so the engine ships
+  // dark (T3b increment 1) and is flipped on per Vercel scope after live
+  // verification (increment 2). Explicit opt-in parse, NOT z.coerce.boolean
+  // (#155): only "true"/"1" enable it; unset / "false" / anything else → false.
+  RECOMMENDER_FRONTIER_ENABLED: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true" || v === "1"),
 });
 
 function requireVar(name: string): string {
@@ -128,4 +139,6 @@ export const env = envSchema.parse({
   // Raw value through (string | undefined); the schema's .default("true")
   // handles undefined. Do NOT pre-default to a string here.
   ROADMAP_ENABLED: process.env.ROADMAP_ENABLED,
+  // Raw value through; schema .default("false") handles undefined (#155).
+  RECOMMENDER_FRONTIER_ENABLED: process.env.RECOMMENDER_FRONTIER_ENABLED,
 });

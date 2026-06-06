@@ -85,7 +85,15 @@ def _session_cost(
 _PROVIDER_HINTS: dict[str, tuple[str, str]] = {
     "anthropic-haiku-4-5": ("anthropic", "claude-haiku-4-5-20251001"),
     "google-gemini-2.5-flash": ("google", "gemini-2.5-flash"),
+    # Phase 4.5 T3b signed-in quality tier: Gemini 2.5 Pro with thinking ON
+    # (params below). The free/anon tier stays on 2.5 Flash; the web edge only
+    # routes signed-in users here when RECOMMENDER_FRONTIER_ENABLED is on.
+    "google-gemini-2.5-pro": ("google", "gemini-2.5-pro"),
 }
+
+# The frontier model id — keyed on directly so its thinking-ON params apply
+# without a separate request flag (the model IS the tier signal).
+_GEMINI_FRONTIER_MODEL = "gemini-2.5-pro"
 
 _FALLBACK_CHAIN: tuple[str, ...] = (
     "anthropic-haiku-4-5",
@@ -153,6 +161,19 @@ _GEMINI_MAX_OUTPUT_TOKENS = 512
 # (never Anthropic, #128).
 _GEMINI_TEMPERATURE = 0.0
 
+# Phase 4.5 T3b — signed-in QUALITY-tier Gemini params (frontier model only).
+# The free tier runs Gemini 2.5 Flash with reasoning OFF for latency (#132); the
+# quality tier runs Gemini 2.5 Pro with reasoning ON, which is what closes the
+# adherence residuals (#185 cost-demotion, #188 thinking-prose) the free engine
+# left open. The bake-off (2026-06-06) showed thinking_budget=512 is the sweet
+# spot: thinking_budget=None starved the visible block (no-output failures) and
+# thinking_budget=1024 doubled latency (~12s) for no quality gain, while 512
+# cleared the residuals at ~6-7s (within the quality-tier P50<=8s budget). The
+# combined max_output_tokens must leave room for both the bounded thinking and
+# the visible six-field block, hence 2048 (vs the free tier's 512).
+_GEMINI_FRONTIER_THINKING_BUDGET = 512
+_GEMINI_FRONTIER_MAX_OUTPUT_TOKENS = 2048
+
 # Issue #188: the selector's <access-methods> mark `cursor` and `xai-api` with
 # exposes-thinking="no", and <thinking-context> makes that an OVERRIDE — THINKING
 # must be N/A on those surfaces regardless of task complexity. Gemini 2.5 Flash
@@ -203,8 +224,18 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
         # tail with a visible-output cap (#146). Anthropic is left
         # untouched on both (#128).
         is_gemini = config.provider == "google"
-        thinking_budget = _GEMINI_THINKING_BUDGET if is_gemini else None
-        max_output_tokens = _GEMINI_MAX_OUTPUT_TOKENS if is_gemini else None
+        is_frontier = is_gemini and config.model == _GEMINI_FRONTIER_MODEL
+        if is_frontier:
+            # Quality tier: reasoning ON, larger combined cap (T3b).
+            thinking_budget: int | None = _GEMINI_FRONTIER_THINKING_BUDGET
+            max_output_tokens: int | None = _GEMINI_FRONTIER_MAX_OUTPUT_TOKENS
+        elif is_gemini:
+            # Free tier: reasoning OFF (#132), tight visible cap (#146).
+            thinking_budget = _GEMINI_THINKING_BUDGET
+            max_output_tokens = _GEMINI_MAX_OUTPUT_TOKENS
+        else:
+            thinking_budget = None
+            max_output_tokens = None
         temperature = _GEMINI_TEMPERATURE if is_gemini else None
         try:
             result = recommend_structured(

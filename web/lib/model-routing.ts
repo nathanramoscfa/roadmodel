@@ -346,16 +346,41 @@ export function resolveRoadmapEngine(
 
 interface ResolveRecommenderEngineArgs {
   profile: Profile | null;
+  // True when the request carries an authenticated session. The frontier
+  // quality tier is signed-in-only; anonymous requests always get the free
+  // engine. (Phase 4.5 T3b)
+  signedIn?: boolean;
+  // RECOMMENDER_FRONTIER_ENABLED gate. Off by default → the free engine for
+  // everyone (the increment-1 dark-ship state). (Phase 4.5 T3b)
+  frontierEnabled?: boolean;
 }
 
-// Recommender-surface entry point. No frontier branch — the
-// recommender service is free-tier only. Returns a ResolvedEngine
-// whose `force_provider` string passes through to the FastAPI
-// recommender as the upstream engine pin.
+// Phase 4.5 T3b signed-in quality-tier engine: Gemini 2.5 Pro on the Google
+// key, run with reasoning ON by the FastAPI service (which keys its thinking-ON
+// params off this model id — see service/app/recommend.py). The 2026-06-06
+// bake-off picked it as the lowest-coupling engine that clears the #185/#188
+// adherence residuals the free-tier Flash engine left open. max_tokens mirrors
+// the service's frontier combined cap; use_frontier marks the audit row for the
+// per-call cost ledger.
+const FRONTIER_RECOMMENDER_ENGINE = "gemini-2.5-pro";
+
+// Recommender-surface entry point. Free engine (catalog-derived Flash) by
+// default; routes signed-in requests to the frontier engine ONLY when
+// RECOMMENDER_FRONTIER_ENABLED is on. The `force_provider` string passes
+// through to the FastAPI recommender as the upstream engine pin.
 export function resolveRecommenderEngine(
   args: ResolveRecommenderEngineArgs,
 ): ResolvedEngine {
-  const { profile } = args;
+  const { profile, signedIn = false, frontierEnabled = false } = args;
+  if (signedIn && frontierEnabled) {
+    return {
+      engine: FRONTIER_RECOMMENDER_ENGINE,
+      provider: "google",
+      force_provider: `google-${FRONTIER_RECOMMENDER_ENGINE}`,
+      max_tokens: 2048,
+      use_frontier: true,
+    };
+  }
   return pickFreeEngine({
     surface: "recommend",
     minTier: FREE_RECOMMEND_MIN_TIER,
