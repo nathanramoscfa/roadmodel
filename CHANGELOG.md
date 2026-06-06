@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5] — 2026-06-06
+
+### Changed
+
+- `roadmodel.recommend.build_prompt` hardens the SaaS recommender system
+  prompt so the recommender follows the selector spec instead of performing
+  the user's task:
+  - **Strips the bundled `model-selector.txt` `<instruction>`/`<usage>`
+    blocks** from the assembled system prompt. Those blocks frame the file's
+    IDE roadmap-*annotation* mode ("Execute the requested task in full … the
+    AI performs the task"), which pushed the recommender to write the user's
+    study plan / poem / proof inside the `RATIONALE`. The bundled file is left
+    untouched, so the IDE / Claude Code path keeps the full framing (#187).
+  - **Front-loads a hardened header** restating the rules the recommender
+    model most often violates against the deep spec: quality-over-cost (no
+    cost-demotion below the top reachable tier, #185), the funded-platform
+    preference order (#186), `THINKING: N/A` on surfaces that expose no
+    thinking dial (#188), and strict PRIMARY-category classification (#189).
+  - **Wraps the user prompt** in `<task-to-classify>` so the model reads it
+    as delimited input rather than an instruction to execute.
+
+  No engine, model, or cost change — the free-tier recommender still runs the
+  same provider; only the prompt text changes. Validated against Gemini 2.5
+  Flash (prod params, repeated runs): task-execution leak eliminated,
+  quality-undershoots corrected to the top reachable tier, platform routing
+  moved to the $0-funded surfaces, and run-to-run pick determinism improved.
+
 ## [0.2.4] — 2026-06-04
 
 ### Added
