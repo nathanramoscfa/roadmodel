@@ -1,0 +1,112 @@
+# .github/workflows/recommend-soak.yml
+#
+# Phase 4.5 Stream C — scheduled recommender SOAK. Runs scripts/soak-recommend.ts
+# (the deterministic bar-scorecard) against gated prod daily and on demand, then
+# REPORTS: on a bar regression it creates/updates a single tracking issue with
+# the scorecard. Report-only — never auto-fixes, and the job stays GREEN even
+# when the bar isn't met (so it doesn't spam red runs or trip auto-remediate;
+# the open tracking issue is the signal).
+#
+# GATED: skips cleanly until the 5 prod-soak secrets are seeded as Actions
+# secrets (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+# SITE_PASSWORD, and optional ROADMODEL_LATENCY_BYPASS_TOKEN). Until then it logs
+# a notice and no-ops. NOTE: SUPABASE_SERVICE_ROLE_KEY grants full DB access —
+# seeding it into Actions is a deliberate exposure decision (see the PR).
+
+name: Recommender soak
+
+on:
+  schedule:
+    - cron: "0 13 * * *" # daily 13:00 UTC (clear of the catalog crons at 16:00/17:00)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: recommend-soak
+  cancel-in-progress: false
+
+jobs:
+  soak:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check prod-soak secrets present
+        id: check
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+        run: |
+          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] \
+             && [ -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ] && [ -n "$SITE_PASSWORD" ]; then
+            echo "have=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "have=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Prod-soak secrets not seeded — skipping. Seed SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_ANON_KEY, SITE_PASSWORD (and optionally ROADMODEL_LATENCY_BYPASS_TOKEN) as Actions secrets to enable."
+          fi
+
+      - name: Node version
+        if: steps.check.outputs.have == 'true'
+        id: node-version
+        run: echo "version=$(cat web/.nvmrc)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.have == 'true'
+        with:
+          node-version: ${{ steps.node-version.outputs.version }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install web deps
+        if: steps.check.outputs.have == 'true'
+        run: npm ci --prefix web
+
+      - name: Run soak (report-only)
+        id: soak
+        if: steps.check.outputs.have == 'true'
+        working-directory: web
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+          ROADMODEL_LATENCY_BYPASS_TOKEN: ${{ secrets.ROADMODEL_LATENCY_BYPASS_TOKEN }}
+        run: |
+          set +e
+          NODE_PATH="$(pwd)/node_modules" node node_modules/.bin/tsx ../scripts/soak-recommend.ts 2>&1 | tee /tmp/soak.log
+          echo "exit=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Track regression in a single issue
+        if: steps.check.outputs.have == 'true' && steps.soak.outputs.exit != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            let log = "";
+            try { log = fs.readFileSync("/tmp/soak.log", "utf8"); } catch {}
+            const idx = log.indexOf("=== SOAK SCORECARD");
+            const scorecard = idx >= 0 ? log.slice(idx) : log.slice(-3000);
+            const title = "Recommender soak: quality bar not met";
+            const body = [
+              `The daily recommender soak did not meet the Phase 4.5 quality BAR (run ${context.runId}).`,
+              "",
+              "```",
+              scorecard.trim(),
+              "```",
+              "",
+              "Report-only (no auto-fix). Tracks the iterate-to-the-bar residuals (#185 / #188 / #189 + determinism). This issue is updated in place each failing run; it auto-resolves when the soak passes (close it once the bar holds).",
+            ].join("\n");
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: "open", labels: "dogfood", per_page: 100,
+            });
+            const found = open.data.find((i) => i.title === title);
+            if (found) {
+              await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: found.number, body });
+            } else {
+              await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body, labels: ["dogfood"] });
+            }
