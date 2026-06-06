@@ -17,21 +17,21 @@ export default function TermsPage() {
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-accent">
           roadmodel
         </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-brand-slate-900 sm:text-4xl">
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-brand-slate-900 dark:text-brand-slate-50 sm:text-4xl">
           Terms of Use
         </h1>
-        <p className="mt-2 text-sm text-brand-slate-500">
+        <p className="mt-2 text-sm text-brand-slate-500 dark:text-brand-slate-400">
           Last updated: 2026-05-20.
         </p>
 
-        <div className="prose prose-slate mt-8 max-w-none text-brand-slate-700">
+        <div className="prose prose-slate mt-8 max-w-none text-brand-slate-700 dark:text-brand-slate-200">
           <p>
             <strong>roadmodel.ai</strong> is an anonymous AI model-recommendation
             service operated by Arcforge Digital Labs LLC. By using the site
             you agree to the terms below.
           </p>
 
-          <h2 className="mt-8 text-xl font-semibold text-brand-slate-900">
+          <h2 className="mt-8 text-xl font-semibold text-brand-slate-900 dark:text-brand-slate-50">
             Service
           </h2>
           <p className="mt-3">
@@ -46,7 +46,7 @@ export default function TermsPage() {
             on it.
           </p>
 
-          <h2 className="mt-8 text-xl font-semibold text-brand-slate-900">
+          <h2 className="mt-8 text-xl font-semibold text-brand-slate-900 dark:text-brand-slate-50">
             Fair use
           </h2>
           <ul className="mt-3 list-disc space-y-2 pl-6">
@@ -66,7 +66,7 @@ export default function TermsPage() {
             </li>
           </ul>
 
-          <h2 className="mt-8 text-xl font-semibold text-brand-slate-900">
+          <h2 className="mt-8 text-xl font-semibold text-brand-slate-900 dark:text-brand-slate-50">
             No account, no data-subject relationship
           </h2>
           <p className="mt-3">
@@ -81,7 +81,7 @@ export default function TermsPage() {
             page (salted hashes of identifiers and per-request metadata).
           </p>
 
-          <h2 className="mt-8 text-xl font-semibold text-brand-slate-900">
+          <h2 className="mt-8 text-xl font-semibold text-brand-slate-900 dark:text-brand-slate-50">
             Intellectual property
           </h2>
           <p className="mt-3">
@@ -99,7 +99,7 @@ export default function TermsPage() {
             .
           </p>
 
-          <h2 className="mt-8 text-xl font-semibold text-brand-slate-900">
+          <h2 className="mt-8 text-xl font-semibold text-brand-slate-900 dark:text-brand-slate-50">
             Changes
           </h2>
           <p className="mt-3">
@@ -108,7 +108,7 @@ export default function TermsPage() {
             acceptance.
           </p>
 
-          <h2 className="mt-8 text-xl font-semibold text-brand-slate-900">
+          <h2 className="mt-8 text-xl font-semibold text-brand-slate-900 dark:text-brand-slate-50">
             Contact
           </h2>
           <p className="mt-3">

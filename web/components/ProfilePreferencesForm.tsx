@@ -172,28 +172,28 @@ export function ProfilePreferencesForm({
   return (
     <form onSubmit={handleSave} className="mt-8 flex flex-col gap-8">
       <fieldset>
-        <legend className="text-sm font-semibold text-brand-slate-900">
+        <legend className="text-sm font-semibold text-brand-slate-900 dark:text-brand-slate-50">
           Active subscriptions
         </legend>
-        <p className="mt-1 text-sm text-brand-slate-600">
+        <p className="mt-1 text-sm text-brand-slate-600 dark:text-brand-slate-300">
           Select every subscription you pay for today.
         </p>
         <div className="mt-4 flex flex-col gap-5">
           {groupedSubscriptions.map((group) => (
             <div key={group.provider} className="flex flex-col gap-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-brand-slate-500">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
                 {group.provider}
               </p>
               {group.options.map((option) => (
                 <label
                   key={option.id}
-                  className="flex items-center gap-2 text-sm text-brand-slate-800"
+                  className="flex items-center gap-2 text-sm text-brand-slate-800 dark:text-brand-slate-100"
                 >
                   <input
                     type="checkbox"
                     checked={subscriptions.includes(option.id)}
                     onChange={() => toggleSubscription(option.id)}
-                    className="rounded border-brand-slate-300"
+                    className="rounded border-brand-slate-300 dark:border-brand-slate-700"
                   />
                   {option.label}
                 </label>
@@ -204,17 +204,17 @@ export function ProfilePreferencesForm({
       </fieldset>
 
       <fieldset>
-        <legend className="text-sm font-semibold text-brand-slate-900">
+        <legend className="text-sm font-semibold text-brand-slate-900 dark:text-brand-slate-50">
           Budget priority
         </legend>
-        <p className="mt-1 text-sm text-brand-slate-600">
+        <p className="mt-1 text-sm text-brand-slate-600 dark:text-brand-slate-300">
           How aggressively should we optimize for cost vs. quality?
         </p>
         <div className="mt-4 flex flex-wrap gap-4">
           {BUDGET_OPTIONS.map((option) => (
             <label
               key={option.id}
-              className="flex items-center gap-2 text-sm text-brand-slate-800"
+              className="flex items-center gap-2 text-sm text-brand-slate-800 dark:text-brand-slate-100"
             >
               <input
                 type="radio"
@@ -237,13 +237,13 @@ export function ProfilePreferencesForm({
         onToggle={(event) =>
           setAdvancedOpen((event.target as HTMLDetailsElement).open)
         }
-        className="rounded-lg border border-brand-slate-200 bg-white"
+        className="rounded-lg border border-brand-slate-200 dark:border-brand-slate-700 bg-white dark:bg-brand-slate-800"
       >
-        <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-brand-slate-800">
+        <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-brand-slate-800 dark:text-brand-slate-100">
           Advanced: jurisdiction filter
         </summary>
-        <div className="space-y-4 border-t border-brand-slate-200 px-4 py-4">
-          <label className="flex items-start gap-2 text-sm text-brand-slate-800">
+        <div className="space-y-4 border-t border-brand-slate-200 dark:border-brand-slate-700 px-4 py-4">
+          <label className="flex items-start gap-2 text-sm text-brand-slate-800 dark:text-brand-slate-100">
             <input
               type="checkbox"
               checked={restrictLowRisk}
@@ -251,7 +251,7 @@ export function ProfilePreferencesForm({
                 setSaved(false);
                 setRestrictLowRisk(event.target.checked);
               }}
-              className="mt-0.5 rounded border-brand-slate-300"
+              className="mt-0.5 rounded border-brand-slate-300 dark:border-brand-slate-700"
             />
             <span>Restrict to low-risk jurisdictions (recommended)</span>
           </label>
@@ -261,8 +261,8 @@ export function ProfilePreferencesForm({
                 <span
                   key={code}
                   className={
-                    "rounded-full bg-brand-slate-100 px-3 py-1 text-xs " +
-                    "font-medium uppercase tracking-wide text-brand-slate-700"
+                    "rounded-full bg-brand-slate-100 dark:bg-brand-slate-800 px-3 py-1 text-xs " +
+                    "font-medium uppercase tracking-wide text-brand-slate-700 dark:text-brand-slate-200"
                   }
                 >
                   {code}
@@ -271,7 +271,7 @@ export function ProfilePreferencesForm({
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              <p className="text-sm text-brand-slate-600">
+              <p className="text-sm text-brand-slate-600 dark:text-brand-slate-300">
                 Explicitly choose which jurisdictions may appear in
                 recommendations. Check China or Russia only if you accept
                 the provider risk.
@@ -279,13 +279,13 @@ export function ProfilePreferencesForm({
               {ALL_JURISDICTIONS.map((option) => (
                 <label
                   key={option.id}
-                  className="flex items-center gap-2 text-sm text-brand-slate-800"
+                  className="flex items-center gap-2 text-sm text-brand-slate-800 dark:text-brand-slate-100"
                 >
                   <input
                     type="checkbox"
                     checked={customJurisdictions.includes(option.id)}
                     onChange={() => toggleJurisdiction(option.id)}
-                    className="rounded border-brand-slate-300"
+                    className="rounded border-brand-slate-300 dark:border-brand-slate-700"
                   />
                   {option.label} ({option.id})
                 </label>
