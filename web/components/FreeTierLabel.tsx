@@ -75,7 +75,7 @@ function resolveLabel(props: FreeTierLabelProps): Resolved {
 export function FreeTierLabel(props: FreeTierLabelProps) {
   const { text, upgrade } = resolveLabel(props);
   if (!upgrade) {
-    return <p className="text-sm font-medium text-brand-slate-600">{text}</p>;
+    return <p className="text-sm font-medium text-brand-slate-600 dark:text-brand-slate-300">{text}</p>;
   }
   return (
     <p className="text-sm">

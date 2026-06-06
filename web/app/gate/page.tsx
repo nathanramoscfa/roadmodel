@@ -20,15 +20,15 @@ export default async function GatePage({ searchParams }: GatePageProps) {
   const error = params.error === "1";
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-brand-slate-50 px-6 py-16">
-      <div className="w-full max-w-md rounded-2xl border border-brand-slate-200 bg-white p-8 shadow-sm">
+    <div className="flex min-h-screen items-center justify-center bg-brand-slate-50 dark:bg-brand-slate-900 px-6 py-16">
+      <div className="w-full max-w-md rounded-2xl border border-brand-slate-200 dark:border-brand-slate-700 bg-white dark:bg-brand-slate-800 p-8 shadow-sm">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-accent">
           roadmodel
         </p>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight text-brand-slate-900">
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-brand-slate-900 dark:text-brand-slate-50">
           Preview access
         </h1>
-        <p className="mt-3 text-sm text-brand-slate-600">
+        <p className="mt-3 text-sm text-brand-slate-600 dark:text-brand-slate-300">
           This site is in pre-launch preview while we finish bug fixes and
           design polish. Enter the access password to continue.
         </p>
@@ -41,7 +41,7 @@ export default async function GatePage({ searchParams }: GatePageProps) {
           <input type="hidden" name="next" value={next} />
           <label
             htmlFor="password"
-            className="text-sm font-medium text-brand-slate-800"
+            className="text-sm font-medium text-brand-slate-800 dark:text-brand-slate-100"
           >
             Password
           </label>
@@ -53,7 +53,7 @@ export default async function GatePage({ searchParams }: GatePageProps) {
             autoFocus
             required
             className={
-              "rounded-lg border border-brand-slate-300 px-3 py-2 text-sm " +
+              "rounded-lg border border-brand-slate-300 dark:border-brand-slate-700 px-3 py-2 text-sm " +
               "shadow-sm focus:border-brand-accent focus:outline-none " +
               "focus:ring-2 focus:ring-brand-accent/30"
             }

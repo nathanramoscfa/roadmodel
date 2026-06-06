@@ -4,6 +4,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { ThemeToggle } from "./ThemeToggle";
+
 // Global navigation for the signed-in app surfaces (issue #153). Before
 // this, every authed page (/recommend, /roadmap, /history, /settings) was a
 // navigational dead-end — no link home or between surfaces. Rendered once in
@@ -43,7 +45,7 @@ export function AppNav({ roadmapEnabled }: { roadmapEnabled: boolean }) {
   return (
     <nav
       aria-label="Primary"
-      className="border-b border-brand-slate-200 bg-white"
+      className="border-b border-brand-slate-200 dark:border-brand-slate-700 bg-white dark:bg-brand-slate-800"
     >
       <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
         <Link
@@ -64,18 +66,19 @@ export function AppNav({ roadmapEnabled }: { roadmapEnabled: boolean }) {
                 className={
                   "rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
                   (active
-                    ? "bg-brand-slate-100 text-brand-slate-900"
-                    : "text-brand-slate-600 hover:bg-brand-slate-50 hover:text-brand-slate-900")
+                    ? "bg-brand-slate-100 dark:bg-brand-slate-800 text-brand-slate-900 dark:text-brand-slate-50"
+                    : "text-brand-slate-600 dark:text-brand-slate-300 hover:bg-brand-slate-50 dark:hover:bg-brand-slate-800 hover:text-brand-slate-900 dark:hover:text-brand-slate-50")
                 }
               >
                 {link.label}
               </Link>
             );
           })}
+          <ThemeToggle />
           <form action="/signout" method="post" className="ml-1">
             <button
               type="submit"
-              className="rounded-md px-3 py-1.5 text-sm font-medium text-brand-slate-600 hover:bg-brand-slate-50 hover:text-brand-slate-900"
+              className="rounded-md px-3 py-1.5 text-sm font-medium text-brand-slate-600 dark:text-brand-slate-300 hover:bg-brand-slate-50 dark:hover:bg-brand-slate-800 hover:text-brand-slate-900 dark:hover:text-brand-slate-50"
             >
               Sign out
             </button>

@@ -44,16 +44,16 @@ export function SoftSignupWall({ children }: SoftSignupWallProps) {
             aria-labelledby="soft-signup-wall-title"
             className={
               "relative z-10 w-full max-w-md rounded-xl border " +
-              "border-brand-slate-200 bg-white p-6 shadow-lg"
+              "border-brand-slate-200 dark:border-brand-slate-700 bg-white dark:bg-brand-slate-800 p-6 shadow-lg"
             }
           >
             <h2
               id="soft-signup-wall-title"
-              className="text-lg font-semibold text-brand-slate-900"
+              className="text-lg font-semibold text-brand-slate-900 dark:text-brand-slate-50"
             >
               Sign in required
             </h2>
-            <p className="mt-3 text-sm text-brand-slate-600">
+            <p className="mt-3 text-sm text-brand-slate-600 dark:text-brand-slate-300">
               Sign in to send your message. Your text stays right where
               you typed it.
             </p>
@@ -62,9 +62,9 @@ export function SoftSignupWall({ children }: SoftSignupWallProps) {
                 type="button"
                 onClick={() => setShowModal(false)}
                 className={
-                  "rounded-lg border border-brand-slate-300 px-4 py-2 " +
-                  "text-sm font-medium text-brand-slate-700 transition " +
-                  "hover:bg-brand-slate-50"
+                  "rounded-lg border border-brand-slate-300 dark:border-brand-slate-700 px-4 py-2 " +
+                  "text-sm font-medium text-brand-slate-700 dark:text-brand-slate-200 transition " +
+                  "hover:bg-brand-slate-50 dark:bg-brand-slate-900"
                 }
               >
                 Cancel

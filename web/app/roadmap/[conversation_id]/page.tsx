@@ -62,10 +62,10 @@ export default async function HydratedRoadmapPage({ params }: PageProps) {
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-accent">
           roadmodel
         </p>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-brand-slate-900 sm:text-4xl">
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-brand-slate-900 dark:text-brand-slate-50 sm:text-4xl">
           {detail.title}
         </h1>
-        <p className="mt-3 text-brand-slate-600">
+        <p className="mt-3 text-brand-slate-600 dark:text-brand-slate-300">
           Continue the conversation, or download the latest roadmap.
         </p>
       </header>

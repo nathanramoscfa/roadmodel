@@ -6,7 +6,7 @@ const ARCFORGE_URL = "https://arcforgelabs.io";
 
 export function Footer() {
   return (
-    <footer className="border-t border-brand-slate-200 bg-brand-slate-900 py-12 text-brand-slate-300">
+    <footer className="border-t border-brand-slate-200 dark:border-brand-slate-700 bg-brand-slate-900 py-12 text-brand-slate-300">
       <div className="mx-auto flex max-w-5xl flex-col items-center gap-6 px-6 sm:flex-row sm:justify-between">
         <nav className="flex flex-wrap justify-center gap-6 text-sm">
           <Link

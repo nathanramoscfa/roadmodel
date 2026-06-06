@@ -7,7 +7,7 @@ interface ModelHeaderProps {
 export function ModelHeader({ model, platform }: ModelHeaderProps) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <h2 className="text-2xl font-bold text-brand-slate-900">{model}</h2>
+      <h2 className="text-2xl font-bold text-brand-slate-900 dark:text-brand-slate-50">{model}</h2>
       <span
         className={
           "inline-flex rounded-full bg-brand-accent-muted px-3 py-1 " +

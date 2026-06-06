@@ -136,7 +136,7 @@ export function PromptForm({ initialTask = "", onSuccess }: PromptFormProps) {
           value={task}
           onChange={(e) => setTask(e.target.value)}
           placeholder="Describe the task you want a model for…"
-          className="w-full resize-y rounded-lg border border-brand-slate-300 bg-white px-4 py-3 text-brand-slate-900 shadow-sm placeholder:text-brand-slate-400 focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
+          className="w-full resize-y rounded-lg border border-brand-slate-300 dark:border-brand-slate-700 bg-white dark:bg-brand-slate-800 px-4 py-3 text-brand-slate-900 dark:text-brand-slate-50 shadow-sm placeholder:text-brand-slate-400 focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
         />
 
         <div
@@ -144,11 +144,11 @@ export function PromptForm({ initialTask = "", onSuccess }: PromptFormProps) {
           onDragOver={(event) => event.preventDefault()}
           onDrop={handleDrop}
           className={
-            "rounded-lg border-2 border-dashed border-brand-slate-300 " +
-            "bg-brand-slate-50 px-4 py-6 text-center"
+            "rounded-lg border-2 border-dashed border-brand-slate-300 dark:border-brand-slate-700 " +
+            "bg-brand-slate-50 dark:bg-brand-slate-900 px-4 py-6 text-center"
           }
         >
-          <p className="text-sm text-brand-slate-600">
+          <p className="text-sm text-brand-slate-600 dark:text-brand-slate-300">
             Drop files here (.md, .txt, .json, .png, .jpg) — up to 5
           </p>
           <button
@@ -167,7 +167,7 @@ export function PromptForm({ initialTask = "", onSuccess }: PromptFormProps) {
             onChange={(e) => handleFilesSelected(e.target.files)}
           />
           {attachments.length > 0 ? (
-            <ul className="mt-3 space-y-1 text-left text-sm text-brand-slate-700">
+            <ul className="mt-3 space-y-1 text-left text-sm text-brand-slate-700 dark:text-brand-slate-200">
               {attachments.map((name) => (
                 <li key={name}>{name}</li>
               ))}
@@ -175,37 +175,37 @@ export function PromptForm({ initialTask = "", onSuccess }: PromptFormProps) {
           ) : null}
         </div>
 
-        <details className="rounded-lg border border-brand-slate-200 bg-white">
-          <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-brand-slate-800">
+        <details className="rounded-lg border border-brand-slate-200 dark:border-brand-slate-700 bg-white dark:bg-brand-slate-800">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-brand-slate-800 dark:text-brand-slate-100">
             Your context
           </summary>
-          <div className="space-y-4 border-t border-brand-slate-200 px-4 py-4">
-            <label className="flex items-center gap-2 text-sm text-brand-slate-700">
+          <div className="space-y-4 border-t border-brand-slate-200 dark:border-brand-slate-700 px-4 py-4">
+            <label className="flex items-center gap-2 text-sm text-brand-slate-700 dark:text-brand-slate-200">
               <input
                 type="checkbox"
                 name="has_claude_code"
-                className="rounded border-brand-slate-300"
+                className="rounded border-brand-slate-300 dark:border-brand-slate-700"
               />
               I have a Claude Code subscription
             </label>
-            <label className="flex items-center gap-2 text-sm text-brand-slate-700">
+            <label className="flex items-center gap-2 text-sm text-brand-slate-700 dark:text-brand-slate-200">
               <input
                 type="checkbox"
                 name="has_cursor"
-                className="rounded border-brand-slate-300"
+                className="rounded border-brand-slate-300 dark:border-brand-slate-700"
               />
               I have a Cursor subscription
             </label>
-            <label className="flex items-center gap-2 text-sm text-brand-slate-700">
+            <label className="flex items-center gap-2 text-sm text-brand-slate-700 dark:text-brand-slate-200">
               <input
                 type="checkbox"
                 name="has_chatgpt"
-                className="rounded border-brand-slate-300"
+                className="rounded border-brand-slate-300 dark:border-brand-slate-700"
               />
               I have a ChatGPT subscription
             </label>
             <fieldset>
-              <legend className="text-sm font-medium text-brand-slate-800">
+              <legend className="text-sm font-medium text-brand-slate-800 dark:text-brand-slate-100">
                 Budget priority
               </legend>
               <div className="mt-2 flex flex-wrap gap-4">
@@ -218,7 +218,7 @@ export function PromptForm({ initialTask = "", onSuccess }: PromptFormProps) {
                 ).map(([value, label]) => (
                   <label
                     key={value}
-                    className="flex items-center gap-2 text-sm text-brand-slate-700"
+                    className="flex items-center gap-2 text-sm text-brand-slate-700 dark:text-brand-slate-200"
                   >
                     <input
                       type="radio"

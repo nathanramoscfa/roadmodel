@@ -8,10 +8,10 @@ export function Hero() {
       <p className="text-sm font-semibold uppercase tracking-wide text-brand-accent">
         roadmodel
       </p>
-      <h1 className="mt-4 text-4xl font-bold tracking-tight text-brand-slate-900 sm:text-5xl">
+      <h1 className="mt-4 text-4xl font-bold tracking-tight text-brand-slate-900 dark:text-brand-slate-50 sm:text-5xl">
         Pick the right model for the right job
       </h1>
-      <p className="mx-auto mt-6 max-w-2xl text-lg text-brand-slate-600">
+      <p className="mx-auto mt-6 max-w-2xl text-lg text-brand-slate-600 dark:text-brand-slate-300">
         Point roadmodel at a task description and get a grounded recommendation
         for which AI model, which platform, and which settings to use — with
         cost context from live benchmarks and pricing catalogs.

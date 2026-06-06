@@ -17,9 +17,9 @@ interface ExportPanelProps {
 export function ExportPanel({ open, onOpen, onClose, roadmapId }: ExportPanelProps) {
   const href = `/api/roadmaps/${roadmapId}/export`;
   return (
-    <div className="mt-8 flex flex-col gap-4 border-t border-brand-slate-200 pt-6">
+    <div className="mt-8 flex flex-col gap-4 border-t border-brand-slate-200 dark:border-brand-slate-700 pt-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-brand-slate-600">
+        <p className="text-sm text-brand-slate-600 dark:text-brand-slate-300">
           Happy with the draft? Save a copy or share it with your team.
         </p>
         <button
@@ -39,10 +39,10 @@ export function ExportPanel({ open, onOpen, onClose, roadmapId }: ExportPanelPro
         <div
           data-testid="export-panel"
           className={
-            "rounded-lg border border-brand-slate-200 bg-white p-4 shadow-sm"
+            "rounded-lg border border-brand-slate-200 dark:border-brand-slate-700 bg-white dark:bg-brand-slate-800 p-4 shadow-sm"
           }
         >
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-brand-slate-500">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
             Export options
           </h3>
           <ul className="mt-3 space-y-2 text-sm">
@@ -53,14 +53,14 @@ export function ExportPanel({ open, onOpen, onClose, roadmapId }: ExportPanelPro
                 data-testid="export-markdown"
                 className={
                   "inline-flex items-center gap-2 rounded-md border " +
-                  "border-brand-slate-300 px-3 py-2 font-medium text-brand-slate-900 " +
+                  "border-brand-slate-300 dark:border-brand-slate-700 px-3 py-2 font-medium text-brand-slate-900 dark:text-brand-slate-50 " +
                   "hover:border-brand-accent hover:text-brand-accent"
                 }
               >
                 Download as Markdown
               </a>
             </li>
-            <li className="text-xs text-brand-slate-500">
+            <li className="text-xs text-brand-slate-500 dark:text-brand-slate-400">
               HTML, PDF, and DOCX exports arrive in Phase 6.
             </li>
           </ul>

@@ -68,7 +68,7 @@ export function TryItNowTextarea() {
         value={task}
         onChange={(event) => setTask(event.target.value)}
         placeholder="Describe your task — e.g. refactor auth middleware across 12 files"
-        className="w-full resize-y rounded-lg border border-brand-slate-300 bg-white px-4 py-3 text-brand-slate-900 shadow-sm placeholder:text-brand-slate-400 focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
+        className="w-full resize-y rounded-lg border border-brand-slate-300 dark:border-brand-slate-700 bg-white dark:bg-brand-slate-800 px-4 py-3 text-brand-slate-900 dark:text-brand-slate-50 shadow-sm placeholder:text-brand-slate-400 focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
       />
       {error ? (
         <p className="mt-2 text-sm text-red-600" role="alert">
