@@ -5,8 +5,51 @@ import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import type { RecommendResponse } from "@/lib/api";
 
-const ACCEPTED_EXTENSIONS = [".md", ".txt", ".json", ".png", ".jpg"];
+// Phase A of the file-input feature (docs/file-input.md): text files only.
+// Their contents are read client-side and prepended to the task. Documents
+// (.pdf/.docx/.xlsx, #210) and images (.png/.jpg, #211) are later phases —
+// dropped now, they're skipped with a hint.
+const TEXT_EXTENSIONS = [".txt", ".md", ".json"];
 const MAX_ATTACHMENTS = 5;
+// Per-file and total caps mirror the service input cap (#142, 50k chars). A
+// file's text is the TASK TO CLASSIFY, never instructions (the #187 hardening),
+// so it is prepended as plainly-labelled input, not interpolated as a command.
+const PER_FILE_CHARS = 50_000;
+const MAX_TOTAL_CHARS = 50_000;
+
+interface Attachment {
+  name: string;
+  text: string;
+}
+
+function readFileText(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(reader.error ?? new Error("file read failed"));
+    reader.readAsText(file);
+  });
+}
+
+// Build the delimited prefix sent ahead of the typed prompt. Capped to
+// MAX_TOTAL_CHARS with a visible truncation note when exceeded.
+function buildAttachmentsText(attachments: Attachment[]): {
+  text: string;
+  truncated: boolean;
+} {
+  const joined = attachments
+    .map((a) => `Attached file ${a.name}:\n${a.text}\n\n`)
+    .join("");
+  if (joined.length <= MAX_TOTAL_CHARS) {
+    return { text: joined, truncated: false };
+  }
+  return {
+    text:
+      joined.slice(0, MAX_TOTAL_CHARS) +
+      "\n[Attached file content truncated at 50,000 characters.]\n\n",
+    truncated: true,
+  };
+}
 
 interface RecommendActionState {
   data?: RecommendResponse;
@@ -23,9 +66,14 @@ async function submitRecommend(
   formData: FormData,
 ): Promise<RecommendActionState> {
   const task = String(formData.get("task_description") ?? "").trim();
-  if (!task) {
-    return { error: "Input a prompt before submitting." };
+  // Text from any attached files is prepended (clearly delimited) to the typed
+  // prompt — see PromptForm's hidden `attachments_text` field. It is task INPUT
+  // to classify, never instructions (#187).
+  const attachments = String(formData.get("attachments_text") ?? "");
+  if (!task && !attachments) {
+    return { error: "Input a prompt or attach a file before submitting." };
   }
+  const taskDescription = attachments ? `${attachments}${task}` : task;
 
   // Subscriptions + budget priority come from the signed-in user's profile
   // (Settings), which the /api/recommend route reads server-side — so the
@@ -34,7 +82,7 @@ async function submitRecommend(
   const res = await fetch("/api/recommend", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ task_description: task }),
+    body: JSON.stringify({ task_description: taskDescription }),
   });
 
   if (!res.ok) {
@@ -71,7 +119,8 @@ async function submitRecommend(
 
 export function PromptForm({ initialTask = "", onSuccess }: PromptFormProps) {
   const [task, setTask] = useState(initialTask);
-  const [attachments, setAttachments] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [fileNotice, setFileNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [state, formAction, pending] = useActionState(
@@ -91,19 +140,27 @@ export function PromptForm({ initialTask = "", onSuccess }: PromptFormProps) {
     }
   }, [state.data, onSuccess]);
 
-  function handleFilesSelected(files: FileList | null) {
+  async function handleFilesSelected(files: FileList | null) {
     if (!files) {
       return;
     }
-    const names = Array.from(files)
-      .map((f) => f.name)
-      .filter((name) =>
-        ACCEPTED_EXTENSIONS.some((ext) =>
-          name.toLowerCase().endsWith(ext),
-        ),
-      );
-    setAttachments((prev) =>
-      [...prev, ...names].slice(0, MAX_ATTACHMENTS),
+    const incoming = Array.from(files);
+    const isText = (name: string) =>
+      TEXT_EXTENSIONS.some((ext) => name.toLowerCase().endsWith(ext));
+    const textFiles = incoming.filter((f) => isText(f.name));
+    const skipped = incoming.filter((f) => !isText(f.name)).map((f) => f.name);
+
+    const read = await Promise.all(
+      textFiles.map(async (f) => ({
+        name: f.name,
+        text: (await readFileText(f)).slice(0, PER_FILE_CHARS),
+      })),
+    );
+    setAttachments((prev) => [...prev, ...read].slice(0, MAX_ATTACHMENTS));
+    setFileNotice(
+      skipped.length > 0
+        ? `Skipped ${skipped.join(", ")} — only text files (.txt, .md, .json) are supported for now.`
+        : null,
     );
   }
 
@@ -112,9 +169,14 @@ export function PromptForm({ initialTask = "", onSuccess }: PromptFormProps) {
     handleFilesSelected(event.dataTransfer.files);
   }
 
+  const { text: attachmentsText, truncated } = buildAttachmentsText(attachments);
+
   return (
     <div className="flex flex-col gap-6">
       <form action={formAction} className="flex flex-col gap-4">
+        {/* File text is prepended to the typed prompt server-side in
+            submitRecommend; this hidden field carries it into the form action. */}
+        <input type="hidden" name="attachments_text" value={attachmentsText} />
         <label htmlFor="task_description" className="sr-only">
           Task description
         </label>
@@ -138,7 +200,7 @@ export function PromptForm({ initialTask = "", onSuccess }: PromptFormProps) {
           }
         >
           <p className="text-sm text-brand-slate-600 dark:text-brand-slate-300">
-            Drop files here (.md, .txt, .json, .png, .jpg) — up to 5
+            Drop text files here (.txt, .md, .json) — up to 5
           </p>
           <button
             type="button"
@@ -150,17 +212,30 @@ export function PromptForm({ initialTask = "", onSuccess }: PromptFormProps) {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".md,.txt,.json,.png,.jpg"
+            accept=".txt,.md,.json"
             multiple
             className="hidden"
             onChange={(e) => handleFilesSelected(e.target.files)}
           />
           {attachments.length > 0 ? (
             <ul className="mt-3 space-y-1 text-left text-sm text-brand-slate-700 dark:text-brand-slate-200">
-              {attachments.map((name) => (
-                <li key={name}>{name}</li>
+              {attachments.map((a) => (
+                <li key={a.name}>{a.name}</li>
               ))}
             </ul>
+          ) : null}
+          {truncated ? (
+            <p className="mt-2 text-left text-xs text-brand-slate-500 dark:text-brand-slate-400">
+              Attached file content was truncated at 50,000 characters.
+            </p>
+          ) : null}
+          {fileNotice ? (
+            <p
+              className="mt-2 text-left text-xs text-brand-slate-500 dark:text-brand-slate-400"
+              role="status"
+            >
+              {fileNotice}
+            </p>
           ) : null}
         </div>
 

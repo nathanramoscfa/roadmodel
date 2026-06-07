@@ -127,6 +127,69 @@ test("frontier-tier recommendation shows the quality-tier label (no upgrade CTA)
   ).toHaveCount(0);
 });
 
+test("attached text file content is prepended to the request body (file-input Phase A)", async ({
+  page,
+}) => {
+  // Capture the outbound request body so we can assert the dropped file's text
+  // reaches task_description, prepended to the typed prompt.
+  let sentTask = "";
+  await page.route("**/api/recommend", async (route) => {
+    const body = JSON.parse(route.request().postData() ?? "{}") as {
+      task_description?: string;
+    };
+    sentTask = body.task_description ?? "";
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        model: "Opus 4.8",
+        platform: "Claude Code",
+        settings: {},
+        comparison_table: [],
+      }),
+    });
+  });
+  await page.goto("/recommend");
+  // "Drop" a .txt by setting it on the (hidden) file input.
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "my-prompt.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Summarize this quarterly earnings report."),
+  });
+  await expect(page.getByText("my-prompt.txt")).toBeVisible();
+  await page
+    .getByPlaceholder(/Input the prompt/i)
+    .fill("which model should I use?");
+  await page.getByRole("button", { name: /Submit/i }).click();
+  await expect(page.getByText(/Opus 4.8/i)).toBeVisible();
+  // The file's text is delimited as input and precedes the typed prompt.
+  expect(sentTask).toContain("Attached file my-prompt.txt:");
+  expect(sentTask).toContain("Summarize this quarterly earnings report.");
+  expect(sentTask).toContain("which model should I use?");
+  expect(sentTask.indexOf("Summarize this quarterly")).toBeLessThan(
+    sentTask.indexOf("which model should I use?"),
+  );
+});
+
+test("non-text files are skipped with a hint (file-input Phase A)", async ({
+  page,
+}) => {
+  await page.goto("/recommend");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "diagram.png",
+    mimeType: "image/png",
+    buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+  });
+  await expect(
+    page.getByText(/only text files \(\.txt, \.md, \.json\) are supported/i),
+  ).toBeVisible();
+  // The image is not added to the attachment list in Phase A (its name only
+  // appears inside the skip notice, not as a list item).
+  await expect(
+    page.getByRole("listitem").filter({ hasText: "diagram.png" }),
+  ).toHaveCount(0);
+});
+
 test("502 error renders friendly message", async ({ page }) => {
   await page.route("**/api/recommend", (route) =>
     route.fulfill({
