@@ -48,7 +48,7 @@ test("save-and-continue persists prefs and surfaces budget priority", async ({
 
   await page.goto("/recommend");
   await page
-    .getByPlaceholder(/Describe the task/i)
+    .getByPlaceholder(/Input the prompt/i)
     .fill("profile onboarding smoke");
   await page.getByRole("button", { name: /Submit/i }).click();
   await expect(
@@ -108,7 +108,7 @@ test("default-restrict path excludes Kimi K2.5 from recommendations", async ({
   await expect(page).toHaveURL("/");
 
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Describe the task/i).fill("restrict cn");
+  await page.getByPlaceholder(/Input the prompt/i).fill("restrict cn");
   await page.getByRole("button", { name: /Submit/i }).click();
   await expect(
     page.getByRole("heading", { name: /Claude 4\.5 Haiku/i }),
@@ -129,7 +129,7 @@ test("widen path includes cn and surfaces Kimi K2.5", async ({ page }) => {
   await expect(page).toHaveURL("/");
 
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Describe the task/i).fill("allow cn");
+  await page.getByPlaceholder(/Input the prompt/i).fill("allow cn");
   await page.getByRole("button", { name: /Submit/i }).click();
   await expect(
     page.getByRole("heading", { name: /Kimi K2\.5/i }),
