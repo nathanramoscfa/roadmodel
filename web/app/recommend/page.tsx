@@ -12,8 +12,8 @@ export default function RecommendPage() {
           Get a model recommendation
         </h1>
         <p className="mt-3 text-brand-slate-600 dark:text-brand-slate-300">
-          Describe your task and we will suggest a model, platform, settings,
-          and cost context.
+          Input your prompt and we&apos;ll suggest a model, platform, settings,
+          and cost.
         </p>
       </header>
 

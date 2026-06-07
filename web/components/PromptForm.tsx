@@ -1,18 +1,12 @@
 // web/components/PromptForm.tsx
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import type { RecommendResponse } from "@/lib/api";
 
 const ACCEPTED_EXTENSIONS = [".md", ".txt", ".json", ".png", ".jpg"];
 const MAX_ATTACHMENTS = 5;
-
-export interface RecommendContext {
-  has_claude_code: boolean;
-  has_cursor: boolean;
-  has_chatgpt: boolean;
-  budget_priority: "cheap" | "balanced" | "best";
-}
 
 interface RecommendActionState {
   data?: RecommendResponse;
@@ -30,22 +24,17 @@ async function submitRecommend(
 ): Promise<RecommendActionState> {
   const task = String(formData.get("task_description") ?? "").trim();
   if (!task) {
-    return { error: "Describe your task before submitting." };
+    return { error: "Input a prompt before submitting." };
   }
 
-  const context: RecommendContext = {
-    has_claude_code: formData.get("has_claude_code") === "on",
-    has_cursor: formData.get("has_cursor") === "on",
-    has_chatgpt: formData.get("has_chatgpt") === "on",
-    budget_priority: String(
-      formData.get("budget_priority") ?? "cheap",
-    ) as RecommendContext["budget_priority"],
-  };
-
+  // Subscriptions + budget priority come from the signed-in user's profile
+  // (Settings), which the /api/recommend route reads server-side — so the
+  // request only carries the prompt. (The old inline "Your context" inputs were
+  // dead: the route already overrode them with the profile.)
   const res = await fetch("/api/recommend", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ task_description: task, context }),
+    body: JSON.stringify({ task_description: task }),
   });
 
   if (!res.ok) {
@@ -135,7 +124,7 @@ export function PromptForm({ initialTask = "", onSuccess }: PromptFormProps) {
           rows={8}
           value={task}
           onChange={(e) => setTask(e.target.value)}
-          placeholder="Describe the task you want a model for…"
+          placeholder="Input the prompt you want a model for…"
           className="w-full resize-y rounded-lg border border-brand-slate-300 dark:border-brand-slate-700 bg-white dark:bg-brand-slate-800 px-4 py-3 text-brand-slate-900 dark:text-brand-slate-50 shadow-sm placeholder:text-brand-slate-400 focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
         />
 
@@ -175,64 +164,16 @@ export function PromptForm({ initialTask = "", onSuccess }: PromptFormProps) {
           ) : null}
         </div>
 
-        <details className="rounded-lg border border-brand-slate-200 dark:border-brand-slate-700 bg-white dark:bg-brand-slate-800">
-          <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-brand-slate-800 dark:text-brand-slate-100">
-            Your context
-          </summary>
-          <div className="space-y-4 border-t border-brand-slate-200 dark:border-brand-slate-700 px-4 py-4">
-            <label className="flex items-center gap-2 text-sm text-brand-slate-700 dark:text-brand-slate-200">
-              <input
-                type="checkbox"
-                name="has_claude_code"
-                className="rounded border-brand-slate-300 dark:border-brand-slate-700"
-              />
-              I have a Claude Code subscription
-            </label>
-            <label className="flex items-center gap-2 text-sm text-brand-slate-700 dark:text-brand-slate-200">
-              <input
-                type="checkbox"
-                name="has_cursor"
-                className="rounded border-brand-slate-300 dark:border-brand-slate-700"
-              />
-              I have a Cursor subscription
-            </label>
-            <label className="flex items-center gap-2 text-sm text-brand-slate-700 dark:text-brand-slate-200">
-              <input
-                type="checkbox"
-                name="has_chatgpt"
-                className="rounded border-brand-slate-300 dark:border-brand-slate-700"
-              />
-              I have a ChatGPT subscription
-            </label>
-            <fieldset>
-              <legend className="text-sm font-medium text-brand-slate-800 dark:text-brand-slate-100">
-                Budget priority
-              </legend>
-              <div className="mt-2 flex flex-wrap gap-4">
-                {(
-                  [
-                    ["cheap", "Cheap"],
-                    ["balanced", "Balanced"],
-                    ["best", "Best"],
-                  ] as const
-                ).map(([value, label]) => (
-                  <label
-                    key={value}
-                    className="flex items-center gap-2 text-sm text-brand-slate-700 dark:text-brand-slate-200"
-                  >
-                    <input
-                      type="radio"
-                      name="budget_priority"
-                      value={value}
-                      defaultChecked={value === "cheap"}
-                    />
-                    {label}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          </div>
-        </details>
+        <p className="text-sm text-brand-slate-600 dark:text-brand-slate-300">
+          Recommendations use your AI subscriptions and budget priority from{" "}
+          <Link
+            href="/settings"
+            className="font-medium text-brand-accent hover:text-brand-accent-hover"
+          >
+            Settings
+          </Link>
+          .
+        </p>
 
         {state.error ? (
           <p className="text-sm text-red-600" role="alert">

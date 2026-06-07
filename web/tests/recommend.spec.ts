@@ -4,7 +4,7 @@ import { test, expect } from "@playwright/test";
 test("/recommend renders form + empty output", async ({ page }) => {
   await page.goto("/recommend");
   await expect(
-    page.getByPlaceholder(/Describe the task/i),
+    page.getByPlaceholder(/Input the prompt/i),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: /Submit/i }),
@@ -42,7 +42,7 @@ test(
     );
     await page.goto("/recommend");
     await page
-      .getByPlaceholder(/Describe the task/i)
+      .getByPlaceholder(/Input the prompt/i)
       .fill("build a SQL agent");
     await page.getByRole("button", { name: /Submit/i }).click();
     await expect(page.getByText(/Claude 4.5 Haiku/i)).toBeVisible();
@@ -72,7 +72,7 @@ test("humanizes settings labels and renders the rationale prominently", async ({
     }),
   );
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Describe the task/i).fill("prove a theorem");
+  await page.getByPlaceholder(/Input the prompt/i).fill("prove a theorem");
   await page.getByRole("button", { name: /Submit/i }).click();
   // Humanized labels + values in the settings list (term/definition roles —
   // scoped so we don't collide with the budget picker in the prompt form).
@@ -115,7 +115,7 @@ test("frontier-tier recommendation shows the quality-tier label (no upgrade CTA)
     }),
   );
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Describe the task/i).fill("hard reasoning task");
+  await page.getByPlaceholder(/Input the prompt/i).fill("hard reasoning task");
   await page.getByRole("button", { name: /Submit/i }).click();
   // Signed-in frontier users see the quality-tier engine, NOT a "free tier …
   // upgrade for frontier models" CTA they're already past.
@@ -138,7 +138,7 @@ test("502 error renders friendly message", async ({ page }) => {
     }),
   );
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Describe the task/i).fill("hello");
+  await page.getByPlaceholder(/Input the prompt/i).fill("hello");
   await page.getByRole("button", { name: /Submit/i }).click();
   await expect(
     page.getByText(/try again in a moment/i),
@@ -173,7 +173,7 @@ test("burst_limit burst-drop 429 renders slow-down message", async ({ page }) =>
     }),
   );
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Describe the task/i).fill("burst test");
+  await page.getByPlaceholder(/Input the prompt/i).fill("burst test");
   await page.getByRole("button", { name: /Submit/i }).click();
   await expect(page.getByText(/Slow down/i)).toBeVisible();
 });
@@ -191,7 +191,7 @@ test("daily_limit daily-cap 429 renders daily-cap message", async ({ page }) => 
     }),
   );
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Describe the task/i).fill("daily test");
+  await page.getByPlaceholder(/Input the prompt/i).fill("daily test");
   await page.getByRole("button", { name: /Submit/i }).click();
   await expect(page.getByText(/daily recommendation limit/i)).toBeVisible();
 });
