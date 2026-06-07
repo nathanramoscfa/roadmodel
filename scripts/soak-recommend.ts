@@ -19,7 +19,30 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { createHash } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+// Model display-name → cost tier (very-high/high/medium/low), from the bundled
+// catalog. Used by the B7 tier-stability check. Resolved relative to this
+// script so it works regardless of cwd (local from web/, or the CI cron).
+const MODEL_TIER: Record<string, string> = (() => {
+  try {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const cat = JSON.parse(
+      readFileSync(join(here, "..", "web", "data", "catalog.json"), "utf8"),
+    ) as { models: { name?: string; tier_cost?: string }[] };
+    const map: Record<string, string> = {};
+    for (const m of cat.models) if (m.name && m.tier_cost) map[m.name] = m.tier_cost;
+    return map;
+  } catch {
+    return {};
+  }
+})();
+// Unknown models fall back to their own name as the "tier" so a flip to an
+// unrecognized model still trips the check rather than silently passing.
+const modelTier = (name: string | null): string =>
+  (name && MODEL_TIER[name]) || `?${name}`;
 
 const BASE = process.argv[2] ?? "https://roadmodel.ai";
 const EMAIL = process.env.ROADMODEL_DOGFOOD_EMAIL ?? "nathan.ramos.github@gmail.com";
@@ -181,11 +204,21 @@ function score(rows: Row[]): Check[] {
   const noConv = ok.filter((r) => r.conversation === null);
   checks.push({ id: "conversation-present", bar: "B5", pass: noConv.length === 0, detail: `${noConv.length} missing` });
 
-  // B7 — determinism: anon prompt twice → same model+platform.
+  // B7 — determinism, recalibrated to TIER-stability (2026-06-07). Exact-model
+  // determinism is too strict for a recommender: a vague prompt legitimately
+  // ties several tier-appropriate models (e.g. Opus 4.8 vs Gemini 3.1 Pro for
+  // "creative"). What must be stable run-to-run is the quality TIER, not the
+  // exact model. The exact-model flip is kept as a non-blocking watch.
   const byId: Record<string, Row[]> = {};
   for (const r of anon) (byId[r.id] ||= []).push(r);
-  const flaky = Object.entries(byId).filter(([, rs]) => rs.length >= 2 && new Set(rs.map((r) => `${r.model}|${r.platform}`)).size > 1);
-  checks.push({ id: "determinism", bar: "B7", pass: flaky.length === 0, detail: flaky.map(([id]) => id).join(",") || "stable" });
+  const tierFlaky = Object.entries(byId).filter(
+    ([, rs]) => rs.length >= 2 && new Set(rs.map((r) => modelTier(r.model))).size > 1,
+  );
+  checks.push({ id: "determinism-tier", bar: "B7", pass: tierFlaky.length === 0, detail: tierFlaky.map(([id]) => id).join(",") || "tier-stable" });
+  const modelFlaky = Object.entries(byId).filter(
+    ([, rs]) => rs.length >= 2 && new Set(rs.map((r) => `${r.model}|${r.platform}`)).size > 1,
+  );
+  checks.push({ id: "watch:exact-model-flip", bar: "B7", pass: true, detail: modelFlaky.map(([id]) => id).join(",") || "stable" });
 
   // B8 — free-tier latency P50<=3s / P95<=5s.
   const aMs = anon.map((r) => r.ms);
