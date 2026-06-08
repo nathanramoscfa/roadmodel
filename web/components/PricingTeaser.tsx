@@ -38,7 +38,7 @@ export function PricingTeaser() {
             <button
               type="button"
               disabled
-              className="mt-6 cursor-not-allowed rounded-lg bg-brand-slate-300 px-4 py-2 text-sm font-medium text-brand-slate-600 dark:text-brand-slate-300"
+              className="mt-6 cursor-not-allowed rounded-lg bg-brand-slate-200 px-4 py-2 text-sm font-medium text-brand-slate-500 dark:bg-brand-slate-800 dark:text-brand-slate-400"
             >
               Coming in Phase 5
             </button>
