@@ -193,7 +193,7 @@ export function ProfilePreferencesForm({
                     type="checkbox"
                     checked={subscriptions.includes(option.id)}
                     onChange={() => toggleSubscription(option.id)}
-                    className="rounded border-brand-slate-300 dark:border-brand-slate-700"
+                    className="rounded border-brand-slate-300 dark:border-brand-slate-700 accent-brand-accent"
                   />
                   {option.label}
                 </label>
@@ -225,6 +225,7 @@ export function ProfilePreferencesForm({
                   setSaved(false);
                   setBudgetPriority(option.id);
                 }}
+                className="accent-brand-accent"
               />
               {option.label}
             </label>
@@ -251,7 +252,7 @@ export function ProfilePreferencesForm({
                 setSaved(false);
                 setRestrictLowRisk(event.target.checked);
               }}
-              className="mt-0.5 rounded border-brand-slate-300 dark:border-brand-slate-700"
+              className="mt-0.5 rounded border-brand-slate-300 dark:border-brand-slate-700 accent-brand-accent"
             />
             <span>Restrict to low-risk jurisdictions (recommended)</span>
           </label>

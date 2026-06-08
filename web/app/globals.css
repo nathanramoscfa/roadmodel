@@ -11,4 +11,15 @@
   body {
     @apply bg-brand-slate-50 text-brand-slate-900 antialiased dark:bg-brand-slate-900 dark:text-brand-slate-50;
   }
+
+  /* color-scheme tells the UA which palette to render native form controls
+     (checkboxes, radios, the caret, scrollbars) in. Without this, dark mode
+     left unchecked native checkboxes as bright white squares against the dark
+     cards. Keyed on the `dark` class so it tracks the theme toggle. */
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
 }
