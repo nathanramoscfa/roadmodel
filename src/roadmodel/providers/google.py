@@ -5,7 +5,14 @@ from typing import Any
 
 from roadmodel.errors import ProviderCallError
 
-DEFAULT_MODEL = "gemini-3.1-pro"
+# Default engine model for direct Google API calls when no model is passed.
+# Must be a model that is actually callable on the public Google Generative
+# Language API (v1beta generateContent). `gemini-3.1-pro` is catalog-only
+# (Cursor) and returns 404 NOT_FOUND on the direct API, so a bare
+# `roadmodel recommend` / the MCP server / any SDK caller with only a Google
+# key would fail; `gemini-2.5-pro` is the highest-quality callable Gemini.
+# Prod (the hosted service) forces an explicit model and never relies on this.
+DEFAULT_MODEL = "gemini-2.5-pro"
 
 
 def recommend(
