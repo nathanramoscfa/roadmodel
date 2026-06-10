@@ -11,6 +11,9 @@ interface GatePageProps {
   searchParams: Promise<{
     next?: string;
     error?: string;
+    locked?: string;
+    remaining?: string;
+    retry?: string;
   }>;
 }
 
@@ -18,6 +21,9 @@ export default async function GatePage({ searchParams }: GatePageProps) {
   const params = await searchParams;
   const next = typeof params.next === "string" ? params.next : "/";
   const error = params.error === "1";
+  const locked = params.locked === "1";
+  const retryMinutes = Math.max(1, Math.ceil(Number(params.retry ?? "300") / 60));
+  const remaining = Number(params.remaining ?? "");
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-brand-slate-50 dark:bg-brand-slate-900 px-6 py-16">
@@ -52,25 +58,38 @@ export default async function GatePage({ searchParams }: GatePageProps) {
             autoComplete="current-password"
             autoFocus
             required
+            disabled={locked}
             className={
               "rounded-lg border border-brand-slate-300 dark:border-brand-slate-700 px-3 py-2 text-sm " +
               "bg-white dark:bg-brand-slate-800 text-brand-slate-900 dark:text-brand-slate-50 " +
               "placeholder:text-brand-slate-400 " +
               "shadow-sm focus:border-brand-accent focus:outline-none " +
-              "focus:ring-2 focus:ring-brand-accent/30"
+              "focus:ring-2 focus:ring-brand-accent/30 " +
+              "disabled:cursor-not-allowed disabled:opacity-60"
             }
           />
-          {error ? (
-            <p className="text-sm text-red-600">
+          {locked ? (
+            <p className="text-sm text-red-600" role="alert">
+              Too many incorrect attempts. Access is locked for about{" "}
+              {retryMinutes} minute{retryMinutes === 1 ? "" : "s"}. Try again
+              later.
+            </p>
+          ) : error ? (
+            <p className="text-sm text-red-600" role="alert">
               Incorrect password. Try again.
+              {Number.isFinite(remaining) && remaining > 0
+                ? ` ${remaining} attempt${remaining === 1 ? "" : "s"} left before a temporary lockout.`
+                : ""}
             </p>
           ) : null}
           <button
             type="submit"
+            disabled={locked}
             className={
               "mt-2 rounded-lg bg-brand-accent px-4 py-2 text-sm font-semibold " +
               "text-white shadow-sm hover:bg-brand-accent/90 focus:outline-none " +
-              "focus:ring-2 focus:ring-brand-accent/40"
+              "focus:ring-2 focus:ring-brand-accent/40 " +
+              "disabled:cursor-not-allowed disabled:opacity-60"
             }
           >
             Continue
