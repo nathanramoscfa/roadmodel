@@ -5,14 +5,18 @@ on:
   schedule:
     # Daily at 17:00 UTC. Staggered 1h after the Cursor catalog refresh
     # cron (16:00 UTC in update-models.yml) so the two crons never race
-    # for the same branch / model-selector.txt write. The first step
-    # hashes Anthropic's claude-code CHANGELOG — the canonical signal
-    # for "new Claude Code surface parameter" — and skips the Opus call
-    # on days the CHANGELOG hasn't changed. See
-    # `update/check_claude_code_source.py` for the rationale on why
-    # only the CHANGELOG and not the docs site or release-notes blog.
+    # for the same branch / model-selector.txt write. The gate step hashes
+    # BOTH Anthropic's claude-code CHANGELOG and the in-scope span of the
+    # official model-config docs — the two canonical signals for a new
+    # Claude Code surface parameter — and skips the Opus call on days
+    # neither changed. See `update/check_claude_code_source.py`.
     - cron: "0 17 * * *"
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview only: gate + snapshot refresh + Opus --dry-run + conformance gate, but do NOT render, open a PR, or promote hashes."
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -46,43 +50,67 @@ jobs:
         run: pip install -r update/requirements.txt
 
       - name: Restore Claude Code source-hash cache
-        # Signature and last-processed-version from the previous
-        # successful run. Restore-keys lookup falls back to the most
-        # recent saved entry if the exact run_id key misses (always,
-        # by design).
+        # CHANGELOG + in-scope-docs-span signatures and last-processed
+        # version from the previous successful run. Restore-keys lookup
+        # falls back to the most recent saved entry if the exact run_id
+        # key misses (always, by design).
         uses: actions/cache@v4
         with:
           path: |
             update/.cache/claude-code-hash
+            update/.cache/claude-code-docs-hash
             update/.cache/claude-code-last-version
           key: claude-code-hash-${{ github.run_id }}
           restore-keys: |
             claude-code-hash-
 
-      - name: Check for upstream CHANGELOG changes
+      - name: Check for upstream CHANGELOG / docs changes
         id: gate
         run: python update/check_claude_code_source.py
 
       - name: Snapshot selector for diff validator
-        # Capture the pre-Opus contents of docs/model-selector.txt so
-        # the validator's --before/--after path works even when the
-        # post-Opus write has occurred. Cheap, deterministic.
+        # Capture the pre-Opus contents of docs/model-selector.txt so the
+        # validator's --before/--after path works after the post-Opus write.
         if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
         run: |
           mkdir -p update/.cache
           cp docs/model-selector.txt update/.cache/selector.before.txt
 
+      - name: Refresh docs effort/thinking snapshot
+        # Deterministically re-extract the official docs into the committed
+        # snapshot BEFORE Opus, so Opus reconciles against fresh facts and
+        # the conformance gate checks against them. Fatal on a docs
+        # restructure (the extractor fails loud) — the maintainer investigates.
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
+        run: python update/extract_claude_code_effort.py --output update/claude-code-effort.json
+
       - name: Refresh Claude Code surface parameters (Opus)
-        # Skip on scheduled runs when the CHANGELOG didn't change.
-        # workflow_dispatch always runs.
+        # Skip on scheduled runs when neither source changed. workflow_dispatch
+        # always runs. --docs-changed forces the reconciliation even with no
+        # new CHANGELOG versions; --dry-run previews without writing.
         if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
         id: opus
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: python update/update_claude_code.py
+        run: |
+          set -eo pipefail
+          ARGS=""
+          if [ "${{ steps.gate.outputs.docs_changed }}" = "true" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ARGS="$ARGS --docs-changed"
+          fi
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          python update/update_claude_code.py $ARGS
+
+      - name: Render model-selector.md
+        # Keep the rendered mirror in sync with the .txt Opus just edited
+        # (the test_doc_schema sync test gates this on the PR).
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
+        run: python update/render_md.py
 
       - name: Validate diff (coverage + citation)
-        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         run: |
           set -euo pipefail
           if [ ! -f update/.cache/pending-bullets.json ]; then
@@ -94,14 +122,23 @@ jobs:
             --before update/.cache/selector.before.txt \
             --after docs/model-selector.txt
 
-      - name: Open PR if selector changed
+      - name: Conformance gate (effort/thinking vs docs)
+        # Deterministic backstop: the (Opus-edited) selector must conform to
+        # the (freshly-extracted) docs snapshot — vocabulary subset, per-model
+        # effort support, ultracode/ultrathink distinct. Fatal on violation,
+        # so a bad Opus prose edit blocks the PR. Runs in dry-run too (the
+        # snapshot is refreshed even there).
         if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
+        run: python update/validate_effort_conformance.py
+
+      - name: Open PR if selector or snapshot changed
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ secrets.BOT_PAT }}
         run: |
           set -euo pipefail
-          if git diff --quiet -- docs/model-selector.txt; then
-            echo "No selector changes — nothing to commit."
+          if git diff --quiet -- docs/model-selector.txt docs/model-selector.md update/claude-code-effort.json; then
+            echo "No selector / snapshot changes — nothing to commit."
             exit 0
           fi
           git config user.name "roadmodel-bot"
@@ -115,30 +152,33 @@ jobs:
           if [ -f update/.last-claude-code-warnings.txt ] && [ -s update/.last-claude-code-warnings.txt ]; then
             warnings="$(printf '\n\n## Warnings\n')$(sed 's/^/- /' update/.last-claude-code-warnings.txt)"
           fi
-          git add docs/model-selector.txt
-          git commit -m "Automated Claude Code refresh: ${DATE}" -m "${summary}${warnings}"
+          # FLAG (never act on) a new model the docs effort table introduced.
+          unexpected="$(python -c "import json; print(', '.join(json.load(open('update/claude-code-effort.json')).get('unexpected_models', [])))" 2>/dev/null || true)"
+          newmodel=""
+          if [ -n "$unexpected" ]; then
+            newmodel="$(printf '\n\n## New model(s) detected — route to the catalog cron\n\nThe docs effort table introduced: %s. This tracker only FLAGS new models; do NOT add them to selector model lists here. Open an issue for the catalog refresh.' "$unexpected")"
+          fi
+          git add docs/model-selector.txt docs/model-selector.md update/claude-code-effort.json
+          git commit -m "Automated Claude Code refresh: ${DATE}" -m "${summary}${warnings}${newmodel}"
           git push -u origin "$BRANCH"
           PR_URL="$(gh pr create \
             --base main \
             --head "$BRANCH" \
             --title "Automated Claude Code refresh: ${DATE}" \
-            --body "$(printf '## Summary\n\n%s%s\n\n---\n\nThis PR was opened automatically by the daily Claude Code refresh cron in `.github/workflows/update-claude-code.yml`. Auto-merge is enabled: GitHub will squash-merge this PR once the `test` status check passes. If `test` fails or warnings above warrant manual review, disable auto-merge (`gh pr merge --disable-auto`) before the check resolves.' "$summary" "$warnings")")"
+            --body "$(printf '## Summary\n\n%s%s%s\n\n---\n\nThis PR was opened automatically by the daily Claude Code refresh cron in `.github/workflows/update-claude-code.yml`. It tracks the CHANGELOG and the in-scope model-config docs span; the docs snapshot (`update/claude-code-effort.json`) and the offline conformance gate keep the selector consistent with the docs. Auto-merge is enabled: GitHub will squash-merge once the `test` status check passes. To stop it: `gh pr merge --disable-auto`.' "$summary" "$warnings" "$newmodel")")"
           echo "Opened: $PR_URL"
           gh pr merge --auto --squash --delete-branch "$PR_URL"
 
       - name: Promote source-hash and last-version for next run
-        # Only promote staged → canonical if every prior step succeeded.
-        # A transient Opus or validator failure must NOT swallow a real
-        # CHANGELOG change: leave the old hash + last-version in place
-        # so tomorrow's gate sees the same diff and retries.
-        if: success()
+        # Only promote staged → canonical if every prior step succeeded and
+        # this is not a dry run. A transient failure must NOT swallow a real
+        # change: leave the old hashes in place so tomorrow's gate retries.
+        if: success() && github.event.inputs.dry_run != 'true'
         run: |
           set -euo pipefail
-          if [ -f update/.cache/claude-code-hash.new ]; then
-            mv update/.cache/claude-code-hash.new update/.cache/claude-code-hash
-            echo "Promoted claude-code-hash for next-run comparison."
-          fi
-          if [ -f update/.cache/claude-code-last-version.new ]; then
-            mv update/.cache/claude-code-last-version.new update/.cache/claude-code-last-version
-            echo "Promoted claude-code-last-version for next-run slicing."
-          fi
+          for name in claude-code-hash claude-code-docs-hash claude-code-last-version; do
+            if [ -f "update/.cache/${name}.new" ]; then
+              mv "update/.cache/${name}.new" "update/.cache/${name}"
+              echo "Promoted ${name} for next-run comparison."
+            fi
+          done

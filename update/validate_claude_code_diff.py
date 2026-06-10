@@ -68,6 +68,10 @@ TRIGGER_KEYWORDS = (
     "extended thinking",
     "auto mode",
     "ultracode",
+    "ultrathink",
+    "xhigh",
+    "max effort",
+    "adaptive reasoning",
     "claude_code_",
 )
 
@@ -76,12 +80,50 @@ TRIGGER_KEYWORDS = (
 # spuriously satisfy the citation check.
 _STOPWORDS = frozenset(
     [
-        "the", "a", "an", "and", "or", "of", "to", "for", "in", "on",
-        "with", "by", "is", "are", "be", "now", "new", "add", "added",
-        "adds", "support", "supports", "supported", "fix", "fixed",
-        "fixes", "update", "updated", "updates", "improve", "improved",
-        "improves", "claude", "code", "release", "this", "that",
-        "when", "where", "via", "into", "from", "as", "at",
+        "the",
+        "a",
+        "an",
+        "and",
+        "or",
+        "of",
+        "to",
+        "for",
+        "in",
+        "on",
+        "with",
+        "by",
+        "is",
+        "are",
+        "be",
+        "now",
+        "new",
+        "add",
+        "added",
+        "adds",
+        "support",
+        "supports",
+        "supported",
+        "fix",
+        "fixed",
+        "fixes",
+        "update",
+        "updated",
+        "updates",
+        "improve",
+        "improved",
+        "improves",
+        "claude",
+        "code",
+        "release",
+        "this",
+        "that",
+        "when",
+        "where",
+        "via",
+        "into",
+        "from",
+        "as",
+        "at",
     ]
 )
 _TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9_\-/.]{2,}")
@@ -105,9 +147,7 @@ def load_pending() -> list[dict[str, object]]:
     return payload
 
 
-def coverage_check(
-    pending: list[dict[str, object]], consumed: set[str]
-) -> list[str]:
+def coverage_check(pending: list[dict[str, object]], consumed: set[str]) -> list[str]:
     """Return a list of FAIL messages; empty list means pass."""
     failures: list[str] = []
     for entry in pending:
@@ -131,11 +171,7 @@ def bullet_is_trigger(bullet: str) -> bool:
 
 
 def non_trivial_tokens(text: str) -> set[str]:
-    return {
-        t.lower()
-        for t in _TOKEN_RE.findall(text)
-        if t.lower() not in _STOPWORDS
-    }
+    return {t.lower() for t in _TOKEN_RE.findall(text) if t.lower() not in _STOPWORDS}
 
 
 def load_diff(before: Path | None, after: Path | None) -> str:
@@ -147,8 +183,8 @@ def load_diff(before: Path | None, after: Path | None) -> str:
     """
     if before is None and after is None:
         try:
-            result = subprocess.run(
-                [
+            result = subprocess.run(  # noqa: S603 — fixed git binary, no shell, literal args
+                [  # noqa: S607 — "git" resolved via the runner's PATH; repo-relative literal args
                     "git",
                     "-C",
                     str(REPO_ROOT),
@@ -161,9 +197,7 @@ def load_diff(before: Path | None, after: Path | None) -> str:
                 check=True,
             )
         except subprocess.CalledProcessError as exc:
-            raise RuntimeError(
-                f"git diff failed: {exc.stderr.strip()}"
-            ) from exc
+            raise RuntimeError(f"git diff failed: {exc.stderr.strip()}") from exc
         return result.stdout
     if before is None or after is None:
         raise ValueError("--before and --after must be given together")
@@ -179,9 +213,7 @@ def load_diff(before: Path | None, after: Path | None) -> str:
     )
 
 
-def citation_check(
-    pending: list[dict[str, object]], diff_text: str
-) -> list[str]:
+def citation_check(pending: list[dict[str, object]], diff_text: str) -> list[str]:
     """For every trigger bullet, require ≥1 non-trivial token in the diff."""
     failures: list[str] = []
     diff_tokens = non_trivial_tokens(diff_text)
@@ -252,8 +284,7 @@ def main() -> int:
         type=Path,
         default=None,
         help=(
-            "Override path to pending-bullets.json (default: "
-            "update/.cache/pending-bullets.json)."
+            "Override path to pending-bullets.json (default: update/.cache/pending-bullets.json)."
         ),
     )
     args = parser.parse_args()
@@ -278,9 +309,7 @@ def main() -> int:
         env_value = os.environ.get("CLAUDE_CODE_CONSUMED_VERSIONS", "")
         consumed_raw = json.loads(env_value) if env_value else []
     if not isinstance(consumed_raw, list):
-        sys.stderr.write(
-            "validate_claude_code_diff: consumed_versions must be a list\n"
-        )
+        sys.stderr.write("validate_claude_code_diff: consumed_versions must be a list\n")
         return 2
 
     consumed = extract_consumed_versions(consumed_raw)  # type: ignore[arg-type]
@@ -296,9 +325,7 @@ def main() -> int:
     failures.extend(citation_check(pending, diff_text))
 
     if failures:
-        sys.stderr.write(
-            f"validate_claude_code_diff: {len(failures)} failure(s):\n"
-        )
+        sys.stderr.write(f"validate_claude_code_diff: {len(failures)} failure(s):\n")
         for f in failures:
             sys.stderr.write(f"  - {f}\n")
         return 1

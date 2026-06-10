@@ -7,5 +7,14 @@
       "min_bytes": 2000,
       "must_contain_all": ["#"]
     }
+  },
+  "model_config_docs": {
+    "name": "Claude Code model-config docs (effort/thinking)",
+    "url": "https://code.claude.com/docs/en/model-config.md",
+    "purpose": "Authoritative source for Claude Code Effort levels (the per-model matrix), the ultracode session setting vs the ultrathink per-turn keyword, and the extended-thinking controls. Only the four in-scope sections (#adjust-effort-level, #choose-an-effort-level, #use-ultrathink-for-one-off-deep-reasoning, #extended-thinking) are tracked; the source-hash gate hashes ONLY that span so unrelated docs edits (model aliases, env vars, 1M context, caching) don't trigger a run. The committed snapshot is update/claude-code-effort.json; the offline conformance gate is update/validate_effort_conformance.py.",
+    "validate": {
+      "min_bytes": 2000,
+      "must_contain_all": ["Adjust effort level", "ultrathink", "Extended thinking"]
+    }
   }
 }
