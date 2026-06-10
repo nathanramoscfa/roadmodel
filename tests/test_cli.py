@@ -214,6 +214,67 @@ def test_recommend_unedited_user_context_warns_but_proceeds(
     assert "GPT-5.3 Codex" in result.stdout
 
 
+def test_recommend_forwards_engine_params_to_adapter(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    # The --thinking-budget / --max-output-tokens / --temperature flags must
+    # reach the provider adapter so local dogfooding can mirror prod's tuned
+    # engine params (free tier thinking_budget=0; frontier 512 + caps). The
+    # zero values matter: thinking_budget=0 (thinking off) and temperature=0.0
+    # (deterministic) are meaningful, not "unset".
+    _clear_provider_env(monkeypatch)
+    _set_isolated_home(monkeypatch, tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-test")
+
+    context_path = tmp_path / "xdg" / "roadmodel" / "user-context.md"
+    context_path.parent.mkdir(parents=True, exist_ok=True)
+    context_path.write_text(
+        (REPO_ROOT / "docs" / "user-context.example.md").read_text(), encoding="utf-8"
+    )
+    sample_response = FIXTURE_RESPONSE_PATH.read_text(encoding="utf-8")
+    captured: dict[str, object] = {}
+
+    class RecordingAdapter:
+        def recommend(
+            self,
+            prompt: str,
+            system: str,
+            *,
+            model: str | None = None,
+            api_key: str,
+            max_output_tokens: int | None = None,
+            thinking_budget: int | None = None,
+            temperature: float | None = None,
+        ) -> str:
+            captured["max_output_tokens"] = max_output_tokens
+            captured["thinking_budget"] = thinking_budget
+            captured["temperature"] = temperature
+            return sample_response
+
+    monkeypatch.setitem(recommend_module.PROVIDER_ADAPTERS, "anthropic", RecordingAdapter())
+
+    result = _runner().invoke(
+        cli,
+        [
+            "recommend",
+            "--thinking-budget",
+            "0",
+            "--max-output-tokens",
+            "256",
+            "--temperature",
+            "0",
+            "build a SQL agent",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert captured == {
+        "max_output_tokens": 256,
+        "thinking_budget": 0,
+        "temperature": 0.0,
+    }
+
+
 def test_catalog_show_bytes_match_source() -> None:
     result = _runner().invoke(cli, ["catalog", "show"])
     expected = (REPO_ROOT / "docs" / "model-selector.txt").read_text(encoding="utf-8")

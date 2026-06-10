@@ -238,6 +238,27 @@ def cli() -> None:
     help="Apply Max Mode pricing when both token counts are set.",
 )
 @click.option(
+    "--thinking-budget",
+    type=int,
+    default=None,
+    help=(
+        "Engine thinking-token budget (Google/Gemini): 0 disables thinking, a "
+        "small value bounds it. Mirror prod with 0 (free tier) or 512 (frontier)."
+    ),
+)
+@click.option(
+    "--max-output-tokens",
+    type=int,
+    default=None,
+    help="Cap the engine call's output tokens (mirror prod's per-tier caps).",
+)
+@click.option(
+    "--temperature",
+    type=float,
+    default=None,
+    help="Engine sampling temperature (0.0 = deterministic / greedy decoding).",
+)
+@click.option(
     "--provider",
     type=click.Choice(["anthropic", "openai", "google"], case_sensitive=False),
     help="Provider override (anthropic/openai/google).",
@@ -261,6 +282,9 @@ def recommend(
     input_tokens: int | None,
     output_tokens: int | None,
     max_mode: bool,
+    thinking_budget: int | None,
+    max_output_tokens: int | None,
+    temperature: float | None,
     provider: str | None,
     model: str | None,
     user_context_path: Path | None,
@@ -318,7 +342,13 @@ def recommend(
     want_json = emit_json or output.lower() == "json"
 
     if legacy:
-        result = recommender.recommend(prompt_text, config)
+        result = recommender.recommend(
+            prompt_text,
+            config,
+            max_output_tokens=max_output_tokens,
+            thinking_budget=thinking_budget,
+            temperature=temperature,
+        )
         if want_json:
             click.echo(json.dumps(result, indent=2))
         else:
@@ -332,6 +362,9 @@ def recommend(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             max_mode=max_mode,
+            max_output_tokens=max_output_tokens,
+            thinking_budget=thinking_budget,
+            temperature=temperature,
         )
     except (ValueError, AlternativeRejectedError) as exc:
         _emit_recommend_cost_error(exc)
