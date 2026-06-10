@@ -84,6 +84,37 @@ jobs:
         if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
         run: python update/extract_claude_code_effort.py --output update/claude-code-effort.json
 
+      - name: Flag new models for the catalog cron
+        # A model in the docs effort table this tracker hasn't seen is the
+        # catalog cron's lane. Open a DEDUPLICATED tracking issue (never edit
+        # model lists here) so the flag survives the auto-merge — the PR body
+        # also notes it. Deduped by title so a re-run doesn't spam.
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.BOT_PAT }}
+        run: |
+          set -euo pipefail
+          mapfile -t models < <(python -c "import json; [print(m) for m in json.load(open('update/claude-code-effort.json')).get('unexpected_models', [])]")
+          if [ "${#models[@]}" -eq 0 ]; then
+            echo "No new models flagged."
+            exit 0
+          fi
+          gh label create cc-new-model --color FBCA04 \
+            --description "Claude Code docs introduced a model the catalog cron should route" 2>/dev/null || true
+          existing="$(gh issue list --state open --search 'Claude Code docs introduced model in:title' --json title -q '.[].title' || true)"
+          for model in "${models[@]}"; do
+            [ -z "$model" ] && continue
+            if printf '%s\n' "$existing" | grep -Fq "$model"; then
+              echo "Tracking issue already open for: ${model}"
+              continue
+            fi
+            gh issue create \
+              --title "chore(catalog): Claude Code docs introduced model \"${model}\"" \
+              --label cc-new-model \
+              --body "$(printf 'The Claude Code model-config docs effort table now lists **%s**, which the effort/thinking tracker has not seen before (recorded in `update/claude-code-effort.json` under `unexpected_models`).\n\nThis tracker only FLAGS new models — it never edits selector model lists; that is the catalog cron'"'"'s lane. **Action:** confirm whether **%s** should be added to `<model-options>` / `supports-models` via the catalog refresh.\n\nOpened automatically by the Claude Code refresh cron (`.github/workflows/update-claude-code.yml`).' "${model}" "${model}")"
+            echo "Opened tracking issue for: ${model}"
+          done
+
       - name: Refresh Claude Code surface parameters (Opus)
         # Skip on scheduled runs when neither source changed. workflow_dispatch
         # always runs. --docs-changed forces the reconciliation even with no
