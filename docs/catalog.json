@@ -1,9 +1,9 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-06-04T17:11:20Z",
+  "generated_at_utc": "2026-06-10T17:13:46Z",
   "source_doc_sha256": {
-    "model-selector.txt": "44f579c6e2bb28bd06ea0fedf75d4f36580f1a105a48102b0ffd71f30abd3388",
-    "model-tier-cost-scale.md": "647e34001582fb6b56ffc12a7258fab9c1806ecaba558d0350e8d9bf989aefe7"
+    "model-selector.txt": "085128937cce25860c3a5ee77c71625c63622283b6df43d23c0ced1f469a20ad",
+    "model-tier-cost-scale.md": "bba3ab24f4fd05ff5474ec3a8ce6ef9052f76299d988ea3de77e27929cc128b9"
   },
   "models": [
     {
@@ -149,7 +149,7 @@
         "speed": "B"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 57.2 (#3); AA-Omniscience 32.9 (#1); HLE 44.7% (#1); LMArena Text Elo 1481.4 (#5); 1M-token context",
+      "headline_benchmarks": "AA Intelligence Index 57.2 (#3); AA-Omniscience 32.9 (#1); HLE 44.7% (#1); LMArena Text Elo 1482.0 (#4); 1M-token context",
       "pricing_notes": "-",
       "best_for": "True native multimodal understanding (text, image, video, audio, and code in a single pass), 1M-token context optimized for heterogeneous inputs, strong agentic multi-step tool use, and synthesizing insights across large mixed-media datasets or sprawling document corpora \u2014 the obvious choice whenever multimodal or long-context is the primary category"
     },
@@ -296,7 +296,7 @@
         "speed": "B"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 56.8 (#4); LMArena Text Elo 1456.3 (#19); GPT-5.4 (xhigh) Output Speed 79.8 tokens/s; lowest factual error rate among GPT models",
+      "headline_benchmarks": "AA Intelligence Index 56.8 (#4); LMArena Text Elo 1452.5 (#23); GPT-5.4 (xhigh) Output Speed 79.8 tokens/s; lowest factual error rate among GPT models",
       "pricing_notes": "Hidden by default; Requires Max Mode on request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context (Max Mode) supports up to 1M tokens with 2x input pricing",
       "best_for": "Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding"
     },
@@ -359,7 +359,7 @@
         "speed": "D"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 60.2 (#1); LMArena Text Elo 1463.9 (#16); HLE 44.3%; AA-Omniscience 20.1 (#3)",
+      "headline_benchmarks": "AA Intelligence Index 60.2 (#1); LMArena Text Elo 1462.3 (#16); HLE 44.3%; AA-Omniscience 20.1 (#3)",
       "pricing_notes": "Requires Max Mode on request-based plans; Agentic and reasoning capabilities; More token-efficient than GPT-5.4 on comparable tasks; Improved persistence on long-running tasks; Fast mode is available at higher rates; Long context (Max Mode) supports up to 1M tokens with 2x input pricing",
       "best_for": "OpenAI's most capable frontier model and highest-cost GPT offering, best suited for the most demanding reasoning, long-horizon planning, and tasks where maximum intelligence is required regardless of cost \u2014 strongest single model for hard coding, agentic execution, and reasoning, but verify factual claims due to elevated hallucination"
     },
@@ -422,7 +422,7 @@
         "speed": "D"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 57.3 (#2); LMArena Text #6 (Elo 1480.8); LMArena WebDev #2 (Elo 1562.4); AA-Omniscience 26.2 (#2)",
+      "headline_benchmarks": "AA Intelligence Index 57.3 (#2); LMArena Text #6 (Elo 1480.4); LMArena WebDev #2 (Elo 1556.5); AA-Omniscience 26.2 (#2)",
       "pricing_notes": "Hidden by default; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)",
       "best_for": "Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching"
     },
@@ -464,7 +464,7 @@
         "speed": "B"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 51.7; LMArena WebDev Elo 1522.9 (#7); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage",
+      "headline_benchmarks": "AA Intelligence Index 51.7; LMArena WebDev Elo 1522.2 (#10); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage",
       "pricing_notes": "Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)",
       "best_for": "Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation"
     }
