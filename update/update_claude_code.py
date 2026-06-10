@@ -39,21 +39,20 @@ LAST_VERSION_PATH = CACHE_DIR / "claude-code-last-version"
 CONSUMED_VERSIONS_PATH = CACHE_DIR / "consumed-versions.json"
 LAST_SUMMARY_PATH = UPDATE_DIR / ".last-claude-code-summary.txt"
 LAST_WARNINGS_PATH = UPDATE_DIR / ".last-claude-code-warnings.txt"
+# The committed docs-facts snapshot (refreshed by extract_claude_code_effort.py
+# before this step). Fed to Opus as authoritative for effort/thinking content.
+EFFORT_JSON_PATH = UPDATE_DIR / "claude-code-effort.json"
+DOCS_URL = "https://code.claude.com/docs/en/model-config.md"
 
 MODEL_ID = "claude-opus-4-7"
 MAX_TOKENS = 64000
-USER_AGENT = (
-    "roadmodel-updater/1.0 "
-    "(+https://github.com/nathanramoscfa/roadmodel)"
-)
+USER_AGENT = "roadmodel-updater/1.0 (+https://github.com/nathanramoscfa/roadmodel)"
 FETCH_TIMEOUT = 30
 
 # Matches a Markdown H2 version header such as `## 2.1.158`. Tolerates
 # leading whitespace and an optional trailing date/note in parentheses,
 # but the captured group is the bare semver-ish version string.
-_VERSION_HEADER_RE = re.compile(
-    r"^\s*##\s+(\d+\.\d+\.\d+)\b", re.MULTILINE
-)
+_VERSION_HEADER_RE = re.compile(r"^\s*##\s+(\d+\.\d+\.\d+)\b", re.MULTILINE)
 # Matches a Markdown bullet (`-` or `*`) with at least one space and
 # captures the bullet text. Multi-line bullets are collapsed to the
 # first line — this cron only inspects bullet text for keyword
@@ -128,10 +127,7 @@ def write_pending_bullets(new_entries: list[tuple[str, list[str]]]) -> None:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     PENDING_BULLETS_PATH.write_text(
         json.dumps(
-            [
-                {"version": v, "bullets": bs}
-                for v, bs in new_entries
-            ],
+            [{"version": v, "bullets": bs} for v, bs in new_entries],
             indent=2,
         )
     )
@@ -144,26 +140,33 @@ def read_last_version() -> str | None:
     return value or None
 
 
+def read_docs_facts() -> str | None:
+    """The committed docs-facts snapshot (update/claude-code-effort.json), or
+    None if it has not been generated yet."""
+    if not EFFORT_JSON_PATH.exists():
+        return None
+    return EFFORT_JSON_PATH.read_text()
+
+
 def build_user_message(
     selector_text: str,
     changelog_url: str,
     changelog_text: str,
     new_entries: list[tuple[str, list[str]]],
+    docs_facts: str | None = None,
 ) -> str:
     versions_only = [v for v, _ in new_entries]
     blocks = [
         f'<current_file path="docs/model-selector.txt">\n{selector_text}\n</current_file>',
-        (
-            f'<source type="changelog" url="{changelog_url}">\n'
-            f"{changelog_text}\n"
-            f"</source>"
-        ),
+        (f'<source type="changelog" url="{changelog_url}">\n{changelog_text}\n</source>'),
         (
             "<new_versions_since_last_run>\n"
             f"{json.dumps(versions_only)}\n"
             "</new_versions_since_last_run>"
         ),
     ]
+    if docs_facts:
+        blocks.append(f'<docs_facts source="{DOCS_URL}">\n{docs_facts}\n</docs_facts>')
     return "\n\n".join(blocks)
 
 
@@ -172,8 +175,10 @@ def call_opus(system_prompt: str, user_message: str, api_key: str) -> str:
 
     No tools — this prompt's inputs are fully self-contained in the
     user message. Web search is intentionally NOT enabled because
-    citations from outside the CHANGELOG would invite drift; the
-    CHANGELOG itself is the authoritative input.
+    citations from outside the provided inputs would invite drift; the
+    CHANGELOG (change trigger) and the deterministically-extracted
+    <docs_facts> (authoritative for effort/thinking content) are the
+    only authoritative inputs.
     """
     client = Anthropic(api_key=api_key)
     system_blocks = [
@@ -192,9 +197,7 @@ def call_opus(system_prompt: str, user_message: str, api_key: str) -> str:
     ) as stream:
         response = stream.get_final_message()
     return "".join(
-        block.text
-        for block in response.content
-        if getattr(block, "type", None) == "text"
+        block.text for block in response.content if getattr(block, "type", None) == "text"
     )
 
 
@@ -254,9 +257,7 @@ def parse_result(raw: str) -> dict[str, Any]:
     start = text.find("{")
     end = text.rfind("}")
     if start < 0 or end <= start:
-        raise json.JSONDecodeError(
-            "could not extract JSON object from model output", text, 0
-        )
+        raise json.JSONDecodeError("could not extract JSON object from model output", text, 0)
     return json.loads(text[start : end + 1])
 
 
@@ -300,6 +301,16 @@ def main() -> int:
             "for previewing what the next refresh would change."
         ),
     )
+    parser.add_argument(
+        "--docs-changed",
+        action="store_true",
+        help=(
+            "Set by the workflow when the in-scope model-config docs span "
+            "changed. Forces the Opus reconciliation to run even when there "
+            "are no new CHANGELOG versions, so <thinking-context> and the "
+            "claude-code best-for can be brought in line with the docs."
+        ),
+    )
     args = parser.parse_args()
 
     api_key = os.environ.get("ANTHROPIC_API_KEY")
@@ -316,8 +327,7 @@ def main() -> int:
         changelog_text = fetch(changelog_url)
     except Exception as exc:
         sys.stderr.write(
-            f"Failed to fetch Claude Code CHANGELOG ({exc!r}); refusing to "
-            "call Opus.\n"
+            f"Failed to fetch Claude Code CHANGELOG ({exc!r}); refusing to call Opus.\n"
         )
         return 3
 
@@ -333,10 +343,12 @@ def main() -> int:
     new_entries = new_versions(parsed, last_version)
     write_pending_bullets(new_entries)
 
-    if not new_entries:
+    docs_facts = read_docs_facts()
+
+    if not new_entries and not args.docs_changed:
         msg = (
-            f"No new Claude Code releases since {last_version}; "
-            "nothing to do."
+            f"No new Claude Code releases since {last_version} and the "
+            "in-scope docs span is unchanged; nothing to do."
         )
         print(msg)
         if not args.dry_run:
@@ -345,8 +357,15 @@ def main() -> int:
                 LAST_WARNINGS_PATH.unlink()
         return 0
 
+    if not new_entries:
+        print(
+            f"No new CHANGELOG releases since {last_version}, but the in-scope "
+            "docs span changed — running Opus to reconcile <thinking-context> "
+            "and the claude-code best-for with the docs."
+        )
+
     user_message = build_user_message(
-        selector_text, changelog_url, changelog_text, new_entries
+        selector_text, changelog_url, changelog_text, new_entries, docs_facts
     )
 
     raw = call_opus(system_prompt, user_message, api_key)
@@ -364,9 +383,7 @@ def main() -> int:
     consumed_versions = list(result.get("consumed_versions") or [])
 
     if args.dry_run:
-        write_dry_run_report(
-            selector_text, new_selector, summary, warnings, new_entries
-        )
+        write_dry_run_report(selector_text, new_selector, summary, warnings, new_entries)
         print("\n=== consumed_versions ===")
         for v in consumed_versions:
             print(f"  - {v}")
@@ -384,17 +401,13 @@ def main() -> int:
     # pending-bullets.json that was written PRE-Opus, so a missing
     # version surfaces as a hard FAIL. Writing this from a separate
     # step (e.g. echoing the pending list) would defeat the check.
-    CONSUMED_VERSIONS_PATH.write_text(
-        json.dumps({"consumed_versions": consumed_versions}) + "\n"
-    )
+    CONSUMED_VERSIONS_PATH.write_text(json.dumps({"consumed_versions": consumed_versions}) + "\n")
 
     # Stage the newest version processed as the next "last_version".
     # The workflow promotes the stage file → canonical after the
     # validator and PR-open steps both succeed.
     newest_processed = new_entries[0][0]
-    (CACHE_DIR / "claude-code-last-version.new").write_text(
-        newest_processed + "\n"
-    )
+    (CACHE_DIR / "claude-code-last-version.new").write_text(newest_processed + "\n")
 
     print(summary)
     if warnings:
