@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  launchd agent: drain roadmodel preview-gate intrusion alerts every 60s and
+  surface them as a macOS notification + Mail.app email.
+
+  Install (one time):
+    cp scripts/com.roadmodel.gate-alert-watcher.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.roadmodel.gate-alert-watcher.plist
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.roadmodel.gate-alert-watcher.plist
+    rm ~/Library/LaunchAgents/com.roadmodel.gate-alert-watcher.plist
+
+  The watcher self-fetches Upstash creds from the login keychain
+  (roadmodel/UPSTASH_REDIS_URL, roadmodel/UPSTASH_REDIS_TOKEN). Adjust the path
+  below if your checkout is not at ~/roadmodel.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.roadmodel.gate-alert-watcher</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/nathanramos/roadmodel/scripts/gate-alert-watcher.py</string>
+  </array>
+
+  <key>StartInterval</key>
+  <integer>60</integer>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/roadmodel-gate-watcher.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/roadmodel-gate-watcher.log</string>
+</dict>
+</plist>
