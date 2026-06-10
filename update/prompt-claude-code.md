@@ -26,6 +26,16 @@ A user message containing, in order:
   since the last successful refresh. You MUST process every entry
   in this list; the validator will fail the run if any version is
   missing from `consumed_versions` in your output.
+- `<docs_facts source="…model-config.md">…</docs_facts>` — a JSON
+  object deterministically extracted (no LLM) from Claude Code's
+  official model-config docs: the per-model Effort matrix
+  (`per_model_effort`, `effort_levels`, `default_effort`), the
+  `ultracode` (session setting) and `ultrathink` (per-turn keyword)
+  semantics, and the extended-thinking controls. This is the
+  **authoritative** source for effort/thinking CONTENT (the CHANGELOG
+  is the change-trigger / citation). It may be present even when
+  `<new_versions_since_last_run>` is empty — that is a docs-only change;
+  reconcile `<thinking-context>` to it (Scope 1).
 
 # What to update
 
@@ -57,6 +67,27 @@ the new level needs a slot in the existing 6-state field
 (`Off`/`Low`/`Medium`/`High`/`XHigh`/`N/A`). Map a brand-new top-of-
 scale level (e.g. Ultracode) onto `XHigh` — never invent a 7th state.
 If the change is just a label rename, do NOT touch the output mapping.
+
+**Reconcile with `<docs_facts>` (authoritative for effort/thinking).**
+When `<docs_facts>` is present, make `<thinking-context>` consistent
+with it using the SMALLEST edit:
+
+- The Claude Code effort vocabulary must stay within `effort_levels`,
+  and the `XHigh = xhigh` mapping (UI label "Extra High") must hold.
+- `ultracode` must read as a SESSION setting that sends `xhigh` and
+  orchestrates Dynamic Workflows; `ultrathink` as a PER-TURN prompt
+  keyword that does NOT change session effort. Never conflate them.
+- Do NOT add a per-model effort claim that names a model alongside an
+  effort level its `per_model_effort` row lacks (e.g. never imply
+  Sonnet 4.6 supports `xhigh`).
+
+An offline conformance gate (`update/validate_effort_conformance.py`)
+HARD-FAILS the run if the result violates any of the above, so prefer
+matching `<docs_facts>` exactly over paraphrasing. If
+`<new_versions_since_last_run>` is empty but `<docs_facts>` is present,
+this reconciliation is your ONLY task: set `consumed_versions` to `[]`
+and make just the thinking-context (and, if warranted, best-for) edits
+the docs imply.
 
 ## Scope 2 — `<max-mode-context>`
 
@@ -116,6 +147,11 @@ id="claude-code">` element (`id`, `name`, `provider`, `billing`,
   `anthropic-api`, `codex-cli`, `chatgpt-app`, `gemini-cli`,
   `gemini-app`, `cursor-chat`, `cursor-composer`, `openai-api`,
   `google-api`, and `xai-api` are out of scope.
+- `<orchestration-context>` — the ORCHESTRATION (`None`/`PerPrompt`/
+  `Ultracode`/`N/A`) mapping lives here and is NOT this cron's lane.
+  `<thinking-context>` may REFERENCE it (e.g. "see
+  `<orchestration-context>`") but you MUST NOT edit the
+  `<orchestration-context>` element itself.
 - All other sections of `model-selector.txt`:
   `<instruction>`, `<usage>`, `<objective>`, `<pricing-context>`,
   `<jurisdiction-context>`, `<task-categories>`,
