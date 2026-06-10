@@ -10,13 +10,19 @@ no thinking-prose on no-thinking surfaces, and tier-stability across runs.
 Unlike the soak this needs NO gate, NO Supabase auth, and NO prod traffic — it
 calls the local CLI directly, which makes one provider API call per run. Default
 engine is google + gemini-2.5-flash (~$0.002/call), so a full default run
-(8 prompts x 2 = 16 calls) costs ~$0.03. Pass --model gemini-2.5-pro to dogfood
-the signed-in frontier tier instead.
+(8 prompts x 2 = 16 calls) costs ~$0.03. `--tier frontier` dogfoods the signed-in
+tier (Gemini 2.5 Pro) instead.
+
+The `--tier` preset makes runs reproduce the HOSTED engine params (free = thinking
+off + temp 0; frontier = thinking 512), NOT the package defaults — otherwise the
+picks over-escalate and flip run-to-run, a fidelity artifact rather than a real
+defect (this is what closed #216). Default tier is `free` (the prod anon path).
 
 Usage (from the repo root):
-    python3 scripts/dogfood_cli.py                  # default battery, 2x each
+    python3 scripts/dogfood_cli.py                  # free tier (prod anon), 2x each
+    python3 scripts/dogfood_cli.py --tier frontier  # prod signed-in tier (Pro)
+    python3 scripts/dogfood_cli.py --tier raw       # package defaults (A/B compare)
     python3 scripts/dogfood_cli.py --runs 3         # 3x for stricter determinism
-    python3 scripts/dogfood_cli.py --model gemini-2.5-pro
     python3 scripts/dogfood_cli.py --limit 3        # just the first 3 prompts
 
 The Google key is read from $GOOGLE_API_KEY, falling back to the macOS keychain
@@ -43,6 +49,34 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_BIN = Path.home() / ".venvs" / "roadmodel" / "bin" / "roadmodel"
 LOG_DIR = REPO_ROOT / "private" / "dogfood"
 CATALOG_JSON = REPO_ROOT / "web" / "data" / "catalog.json"
+
+# Prod-matching engine presets so local runs reproduce the HOSTED tiers, not the
+# package defaults. Running with defaults over-escalates and flips run-to-run
+# (default = thinking ON + temp ~1.0) — a fidelity artifact, not a real defect
+# (closed #216). Values mirror service/app/recommend.py + web/lib/model-routing.ts:
+# free tier = Flash, thinking off, output cap, temp 0; frontier = Pro, thinking
+# 512, larger cap, temp 0. `raw` keeps the package defaults for A/B comparison.
+TIER_PRESETS: dict[str, dict[str, object]] = {
+    "free": {
+        "model": "gemini-2.5-flash",
+        "thinking_budget": 0,
+        "max_output_tokens": 512,
+        "temperature": 0.0,
+    },
+    "frontier": {
+        "model": "gemini-2.5-pro",
+        "thinking_budget": 512,
+        "max_output_tokens": 2048,
+        "temperature": 0.0,
+    },
+    "raw": {
+        "model": "gemini-2.5-flash",
+        "thinking_budget": None,
+        "max_output_tokens": None,
+        "temperature": None,
+    },
+}
+PER_CALL_USD = {"gemini-2.5-flash": 0.002, "gemini-2.5-pro": 0.016}
 
 # Rule constants mirrored from scripts/soak-recommend.ts so the local bar
 # matches the prod soak. Keep these in sync if the soak's rules change.
@@ -159,10 +193,17 @@ def _thinking_of(settings: dict) -> str:
     return "N/A"
 
 
-def run_probe(bin_path: str, probe: Probe, run: int, provider: str, model: str,
-              key: str) -> Result:
-    cmd = [bin_path, "recommend", "--provider", provider, "--model", model,
-           "--output", "json", probe.prompt]
+def run_probe(bin_path: str, probe: Probe, run: int, provider: str,
+              engine: dict[str, object], key: str) -> Result:
+    cmd = [bin_path, "recommend", "--provider", provider,
+           "--model", str(engine["model"]), "--output", "json"]
+    if engine.get("thinking_budget") is not None:
+        cmd += ["--thinking-budget", str(engine["thinking_budget"])]
+    if engine.get("max_output_tokens") is not None:
+        cmd += ["--max-output-tokens", str(engine["max_output_tokens"])]
+    if engine.get("temperature") is not None:
+        cmd += ["--temperature", str(engine["temperature"])]
+    cmd.append(probe.prompt)
     env = {**os.environ, "GOOGLE_API_KEY": key}
     try:
         proc = subprocess.run(  # noqa: S603 — roadmodel binary, curated prompts
@@ -253,8 +294,16 @@ def append_logs(results: list[Result], checks: list[tuple[str, bool, str]],
 def main() -> int:
     parser = argparse.ArgumentParser(description="Local dogfood harness for the roadmodel CLI.")
     parser.add_argument("--runs", type=int, default=2, help="Runs per prompt (determinism).")
+    parser.add_argument(
+        "--tier",
+        choices=["free", "frontier", "raw"],
+        default="free",
+        help="Engine preset (default free): free = Flash + thinking 0 + temp 0 "
+        "(prod anon); frontier = Pro + thinking 512 (prod signed-in); raw = "
+        "package defaults (A/B). Mirrors prod so picks aren't a params artifact.",
+    )
     parser.add_argument("--provider", default="google")
-    parser.add_argument("--model", default="gemini-2.5-flash")
+    parser.add_argument("--model", default="", help="Override the tier's model.")
     parser.add_argument("--limit", type=int, default=0, help="Only the first N prompts (0 = all).")
     parser.add_argument("--bin", default=str(DEFAULT_BIN), help="Path to the roadmodel binary.")
     parser.add_argument("--stamp", default="", help="Run label for the log (e.g. a date).")
@@ -266,16 +315,22 @@ def main() -> int:
         print("No GOOGLE_API_KEY in env or keychain (roadmodel/GOOGLE_API_KEY).", file=sys.stderr)
         return 2
 
+    engine = dict(TIER_PRESETS[args.tier])
+    if args.model:
+        engine["model"] = args.model
+    model_name = str(engine["model"])
+    per_call = PER_CALL_USD.get(model_name, 0.016)
+
     probes = PROBES[: args.limit] if args.limit > 0 else PROBES
     total = len(probes) * args.runs
-    print(f"Dogfooding {len(probes)} prompts x {args.runs} = {total} calls "
-          f"via {args.provider}/{args.model} (~${total * 0.002:.2f} on flash)\n")
+    print(f"Dogfooding {len(probes)} prompts x {args.runs} = {total} calls via "
+          f"{args.provider}/{model_name} [tier={args.tier}] (~${total * per_call:.2f})\n")
 
     results: list[Result] = []
     for probe in probes:
         picks = []
         for run in range(1, args.runs + 1):
-            res = run_probe(bin_path, probe, run, args.provider, args.model, key)
+            res = run_probe(bin_path, probe, run, args.provider, engine, key)
             results.append(res)
             picks.append(f"{res.model}/{res.platform}" if res.ok else f"ERR:{res.error[:40]}")
         print(f"  {probe.id:<18} {' | '.join(picks)}")
@@ -293,8 +348,8 @@ def main() -> int:
     print(f"\nRESULT: {'PASS' if not failed else 'FAIL'} "
           f"({len(blocking) - len(failed)}/{len(blocking)} blocking checks)")
 
-    stamp = args.stamp or "run"
-    append_logs(results, checks, args.provider, args.model, stamp)
+    stamp = f"{args.stamp or 'run'} [tier={args.tier}]"
+    append_logs(results, checks, args.provider, model_name, stamp)
     print(f"Logged to {LOG_DIR}/cli-log.md and cli-runs.jsonl")
     return 0 if not failed else 1
 
