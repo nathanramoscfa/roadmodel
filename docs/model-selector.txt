@@ -150,6 +150,31 @@
       mode surfaces the dial), regardless of whether the underlying
       model supports one.
 
+    Claude Code effort and this THINKING field (kept in sync with Claude
+    Code's official model-config docs by the docs tracker): Claude Code
+    exposes a per-session `/effort` level whose documented values are
+    `low`, `medium`, `high`, `xhigh`, `max` (shown in the UI as Low /
+    Medium / High / Extra High / Max). This selector's THINKING field is
+    the effort dial for Claude Code: `High` is the docs' `high` (the
+    default effort on most models), `XHigh` is the docs' `xhigh` (the
+    "Extra High" UI label), `Off` means extended thinking is disabled; `N/A`
+    means the surface exposes no thinking dial. An effort level a model
+    does not support falls back to the highest supported level at or
+    below it, so `xhigh` and `max` apply only to the models whose
+    documented row lists them.
+
+    Two Claude Code controls that must NOT be conflated:
+    - `ultracode` is a SESSION setting (set with `/effort ultracode` or
+      `"ultracode": true`): it sends `xhigh` to the model AND has Claude
+      orchestrate Dynamic Workflows for substantive tasks. It is the
+      ORCHESTRATION `Ultracode` value (see `<orchestration-context>`),
+      not a per-turn keyword.
+    - `ultrathink` is a PER-TURN prompt keyword: include it anywhere in a
+      single prompt for deeper reasoning on that turn only; it does NOT
+      change the session effort level and does NOT orchestrate workflows.
+      The phrases "think", "think hard", and "think more" are NOT
+      recognized keywords.
+
     Decision rule (applied during `<access-selection>` Step E):
     - Overall complexity from `<selection-algorithm>` Step 2 Low →
       THINKING `Off`.
