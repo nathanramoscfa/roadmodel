@@ -136,9 +136,9 @@ differently:
   thinking" on/off with a configurable thinking-token budget. Off
   by default for chat; On for hard reasoning tasks.
 - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
-  reasoning-effort knob — `minimal`, `low`, `medium`, `high`.
-  Higher effort spends more reasoning tokens before visible
-  output.
+  reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
+  `xhigh` (the top "Extra High" tier; model-dependent). Higher
+  effort spends more reasoning tokens before visible output.
 - Gemini (Google API, Gemini CLI): thinking-budget setting in
   tokens.
 - Cursor: usually inherits the underlying model's thinking
@@ -325,9 +325,9 @@ as primary; the other becomes the secondary category for tie-breaking.
       thinking" on/off with a configurable thinking-token budget. Off
       by default for chat; On for hard reasoning tasks.
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
-      reasoning-effort knob — `minimal`, `low`, `medium`, `high`.
-      Higher effort spends more reasoning tokens before visible
-      output.
+      reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
+      `xhigh` (the top "Extra High" tier; model-dependent). Higher
+      effort spends more reasoning tokens before visible output.
     - Gemini (Google API, Gemini CLI): thinking-budget setting in
       tokens.
     - Cursor: usually inherits the underlying model's thinking
@@ -819,9 +819,9 @@ as primary; the other becomes the secondary category for tie-breaking.
       thinking" on/off with a configurable thinking-token budget. Off
       by default for chat; On for hard reasoning tasks.
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
-      reasoning-effort knob — `minimal`, `low`, `medium`, `high`.
-      Higher effort spends more reasoning tokens before visible
-      output.
+      reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
+      `xhigh` (the top "Extra High" tier; model-dependent). Higher
+      effort spends more reasoning tokens before visible output.
     - Gemini (Google API, Gemini CLI): thinking-budget setting in
       tokens.
     - Cursor: usually inherits the underlying model's thinking
@@ -1150,9 +1150,9 @@ as primary; the other becomes the secondary category for tie-breaking.
       thinking" on/off with a configurable thinking-token budget. Off
       by default for chat; On for hard reasoning tasks.
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
-      reasoning-effort knob — `minimal`, `low`, `medium`, `high`.
-      Higher effort spends more reasoning tokens before visible
-      output.
+      reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
+      `xhigh` (the top "Extra High" tier; model-dependent). Higher
+      effort spends more reasoning tokens before visible output.
     - Gemini (Google API, Gemini CLI): thinking-budget setting in
       tokens.
     - Cursor: usually inherits the underlying model's thinking
@@ -1919,9 +1919,9 @@ as primary; the other becomes the secondary category for tie-breaking.
       thinking" on/off with a configurable thinking-token budget. Off
       by default for chat; On for hard reasoning tasks.
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
-      reasoning-effort knob — `minimal`, `low`, `medium`, `high`.
-      Higher effort spends more reasoning tokens before visible
-      output.
+      reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
+      `xhigh` (the top "Extra High" tier; model-dependent). Higher
+      effort spends more reasoning tokens before visible output.
     - Gemini (Google API, Gemini CLI): thinking-budget setting in
       tokens.
     - Cursor: usually inherits the underlying model's thinking

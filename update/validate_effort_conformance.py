@@ -1,31 +1,43 @@
-"""Offline conformance gate: the selector's Claude Code effort / thinking
-vocabulary must stay a subset of — and consistent with — Claude Code's
-official model-config docs.
+"""Offline, provider-aware conformance gate: the selector's effort / thinking /
+reasoning vocabulary must stay a subset of — and consistent with — the official
+docs of the surfaces it describes (Claude Code's model-config docs and Codex's
+config-reference docs).
 
 Why this exists: a bundled artifact (``docs/model-selector.txt``) and the
-contract it must honor (Claude Code's documented effort levels) can drift
-independently and invisibly until a release boundary. This check materializes
-that contract as a hard CI gate so the app never recommends an Effort level or
-Thinking mode the docs don't sanction. It reads two COMMITTED files and makes
-NO network call (the per-PR ``test`` job has no network) — the canonical docs
-facts come from ``update/claude-code-effort.json``, refreshed by
-``update/extract_claude_code_effort.py``.
+contracts it must honor (Claude Code's documented effort levels, Codex's
+documented reasoning-effort values) can drift independently and invisibly until
+a release boundary. This check materializes those contracts as a hard CI gate so
+the app never recommends an Effort / reasoning level the docs don't sanction. It
+reads COMMITTED files and makes NO network call (the per-PR ``test`` job has no
+network) — the canonical docs facts come from ``update/claude-code-effort.json``
+(refreshed by ``update/extract_claude_code_effort.py``) and
+``update/codex-reasoning.json`` (refreshed by
+``update/extract_codex_reasoning.py``).
 
-Three hard checks:
+Four hard checks:
 
-  A. Effort-vocabulary subset. Every effort-bearing value the selector's
-     ``THINKING`` field can emit for Claude Code (i.e. excluding the control
-     states ``Off`` / ``N/A``) must, normalized, be a documented effort level.
-  B. Per-model effort support. Where the selector AFFIRMATIVELY ties a specific
-     Claude model to an effort level (within a short span in the Claude Code
-     blocks, and not a negation/fallback statement), that level must appear in
-     that model's documented row — e.g. ``xhigh`` on Sonnet 4.6 is a violation
-     (Sonnet 4.6 supports only low/medium/high/max). The effort-token
+  A. Effort-vocabulary subset (Claude Code). Every effort-bearing value the
+     selector's ``THINKING`` field can emit (i.e. excluding the control states
+     ``Off`` / ``N/A``) must, normalized, be a documented Claude Code effort
+     level.
+  B. Per-model effort support (Claude Code). Where the selector AFFIRMATIVELY
+     ties a specific Claude model to an effort level (within a short span in the
+     Claude Code blocks, and not a negation/fallback statement), that level must
+     appear in that model's documented row — e.g. ``xhigh`` on Sonnet 4.6 is a
+     violation (Sonnet 4.6 supports only low/medium/high/max). The effort-token
      vocabulary is taken from the snapshot, so a docs-added level is covered.
-  C. ultracode vs ultrathink not conflated. ``ultracode`` must be described as a
-     SESSION setting (sends ``xhigh`` + orchestrates workflows); ``ultrathink``
-     as a PER-TURN prompt keyword that does not change session effort. Neither
-     may be described with the other's semantics.
+  C. ultracode vs ultrathink not conflated (Claude Code). ``ultracode`` must be
+     described as a SESSION setting (sends ``xhigh`` + orchestrates workflows);
+     ``ultrathink`` as a PER-TURN prompt keyword that does not change session
+     effort. Neither may be described with the other's semantics.
+  D. Codex reasoning-effort vocabulary (Codex/OpenAI). The reasoning values the
+     selector enumerates for OpenAI/Codex — both on the ``reasoning-effort
+     knob`` bullet of ``<thinking-context>`` and in its OpenAI → THINKING output
+     mapping — must EQUAL the documented Codex ``model_reasoning_effort`` set
+     (``minimal | low | medium | high | xhigh``): no undocumented reasoning
+     value (subset) and no documented value left unencoded (completeness). The
+     UI synonym ``extra-high`` is treated as ``xhigh``. Codex publishes no
+     per-model reasoning matrix, so this is a pure vocabulary check.
 
 Exit codes: 0 PASS, 1 conformance failure, 2 input/config error.
 """
@@ -41,11 +53,20 @@ from pathlib import Path
 UPDATE_DIR = Path(__file__).resolve().parent
 REPO_ROOT = UPDATE_DIR.parent
 DEFAULT_SNAPSHOT = UPDATE_DIR / "claude-code-effort.json"
+DEFAULT_CODEX_SNAPSHOT = UPDATE_DIR / "codex-reasoning.json"
 DEFAULT_SELECTOR = REPO_ROOT / "docs" / "model-selector.txt"
 
 # Snapshot keys the gate depends on. A snapshot missing any of these is a
 # config error (fail closed) rather than a silent partial check.
 REQUIRED_SNAPSHOT_KEYS = ("effort_levels", "per_model_effort", "ultracode", "ultrathink")
+# The Codex snapshot key the provider-aware check D depends on.
+REQUIRED_CODEX_SNAPSHOT_KEYS = ("reasoning_effort",)
+
+# UI / label synonyms that denote a documented Codex config reasoning value.
+# The selector writes "Extra High" / ``extra-high`` for the ``xhigh`` config
+# token (the Intelligence "Extra High" tier); normalize it so the vocabulary
+# check compares config tokens to config tokens.
+CODEX_REASONING_SYNONYMS = {"extra-high": "xhigh", "extrahigh": "xhigh"}
 
 # THINKING values that are NOT effort levels (exempt from the subset check):
 # thinking disabled, and surface-does-not-expose.
@@ -147,6 +168,23 @@ def load_snapshot(path: Path) -> dict[str, object]:
     missing = [k for k in REQUIRED_SNAPSHOT_KEYS if k not in data]
     if missing:
         raise ConfigError(f"docs snapshot is missing required keys {missing}: {path}")
+    return data
+
+
+def load_codex_snapshot(path: Path) -> dict[str, object]:
+    try:
+        data = json.loads(path.read_text())
+    except FileNotFoundError as exc:
+        raise ConfigError(
+            f"codex snapshot not found: {path} — run extract_codex_reasoning.py"
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise ConfigError(f"codex snapshot is not valid JSON: {path} ({exc})") from exc
+    if not isinstance(data, dict):
+        raise ConfigError(f"codex snapshot must be a JSON object: {path}")
+    missing = [k for k in REQUIRED_CODEX_SNAPSHOT_KEYS if k not in data]
+    if missing:
+        raise ConfigError(f"codex snapshot is missing required keys {missing}: {path}")
     return data
 
 
@@ -418,11 +456,107 @@ def check_ultracode_ultrathink(selector: str, snapshot: dict[str, object]) -> li
     return failures
 
 
-def run_checks(selector: str, snapshot: dict[str, object]) -> list[str]:
+def _normalize_codex_token(token: str) -> str:
+    norm = token.strip().lower()
+    return CODEX_REASONING_SYNONYMS.get(norm, norm)
+
+
+def openai_bullet_reasoning_tokens(thinking_flat: str) -> set[str]:
+    """Reasoning tokens enumerated on the OpenAI ``reasoning-effort knob`` bullet.
+
+    ``thinking_flat`` is the whitespace-collapsed ``<thinking-context>`` block,
+    so the enumeration survives the selector's hard-wrapped lines. The bullet
+    uses pure config tokens (e.g. ```minimal``, ``low``, ...``), captured up to
+    the sentence-ending period after the knob phrase.
+    """
+    m = re.search(r"reasoning-effort knob\s*[—–\-]+\s*([^.]*)", thinking_flat)
+    if not m:
+        return set()
+    return {_normalize_codex_token(t) for t in re.findall(r"`([^`]+)`", m.group(1))}
+
+
+def openai_mapping_reasoning_tokens(thinking_flat: str) -> set[str]:
+    """Reasoning tokens on the LEFT of each arrow in the OpenAI output mapping.
+
+    The mapping reads ``OpenAI `minimal` -> `Off`; `low` -> `Low`; ... ->
+    `XHigh```. The token immediately before each ``->`` is the provider-native
+    reasoning value (the token after is the unified THINKING output state).
+    Parenthetical asides — e.g. ``(... e.g. `gpt-5.3-codex-high`)`` — are
+    stripped first so a model-id example is not mistaken for a reasoning value.
+    """
+    m = re.search(r"OpenAI\s+`minimal`(.*?→\s*`XHigh`)", thinking_flat)
+    if not m:
+        return set()
+    seg = "OpenAI `minimal`" + re.sub(r"\([^)]*\)", "", m.group(1))
+    tokens: set[str] = set()
+    parts = seg.split("→")
+    # Each part except the last feeds an arrow; its trailing backtick token is
+    # the reasoning value. The final part is the last output state (no arrow).
+    for part in parts[:-1]:
+        backticks = re.findall(r"`([^`]+)`", part)
+        if backticks:
+            tokens.add(_normalize_codex_token(backticks[-1]))
+    return tokens
+
+
+def check_codex_reasoning_vocab(selector: str, codex_snapshot: dict[str, object]) -> list[str]:
+    """Check D — the selector's Codex/OpenAI reasoning vocabulary EQUALS the
+    documented Codex ``model_reasoning_effort`` set (subset + completeness).
+    """
+    documented_raw = codex_snapshot.get("reasoning_effort")
+    if not isinstance(documented_raw, list) or not documented_raw:
+        return ["check D (codex reasoning): snapshot is missing the 'reasoning_effort' list"]
+    documented = {str(lv).lower() for lv in documented_raw}
+
+    thinking_flat = _collapse(extract_block(selector, THINKING_BLOCK))
+    bullet = openai_bullet_reasoning_tokens(thinking_flat)
+    mapping = openai_mapping_reasoning_tokens(thinking_flat)
+
+    if not bullet:
+        return [
+            "check D (codex reasoning): could not find the OpenAI 'reasoning-effort "
+            "knob' enumeration in <thinking-context>"
+        ]
+    if not mapping:
+        return [
+            "check D (codex reasoning): could not find the OpenAI output mapping "
+            "('OpenAI `minimal` -> ... -> `XHigh`') in <thinking-context>"
+        ]
+
+    failures: list[str] = []
+    # Subset: no reasoning token outside the documented set, in bullet OR mapping.
+    for token in sorted((bullet | mapping) - documented):
+        failures.append(
+            f"check D (codex reasoning): the selector ties Codex/OpenAI to reasoning "
+            f"value {token!r}, which is not a documented Codex reasoning-effort value "
+            f"({sorted(documented)})"
+        )
+    # Completeness: every documented reasoning level must be enumerated on the
+    # bullet AND mapped to a THINKING output state.
+    for token in sorted(documented - bullet):
+        failures.append(
+            f"check D (codex reasoning): documented Codex reasoning value {token!r} is "
+            "missing from the selector's OpenAI 'reasoning-effort knob' enumeration"
+        )
+    for token in sorted(documented - mapping):
+        failures.append(
+            f"check D (codex reasoning): documented Codex reasoning value {token!r} is "
+            "missing from the selector's OpenAI -> THINKING output mapping"
+        )
+    return failures
+
+
+def run_checks(
+    selector: str,
+    snapshot: dict[str, object],
+    codex_snapshot: dict[str, object] | None = None,
+) -> list[str]:
     failures: list[str] = []
     failures += check_thinking_vocab(selector, snapshot)
     failures += check_per_model_effort(selector, snapshot)
     failures += check_ultracode_ultrathink(selector, snapshot)
+    if codex_snapshot is not None:
+        failures += check_codex_reasoning_vocab(selector, codex_snapshot)
     return failures
 
 
@@ -432,16 +566,18 @@ def main() -> int:
     )
     parser.add_argument("--selector", type=Path, default=DEFAULT_SELECTOR)
     parser.add_argument("--snapshot", type=Path, default=DEFAULT_SNAPSHOT)
+    parser.add_argument("--codex-snapshot", type=Path, default=DEFAULT_CODEX_SNAPSHOT)
     args = parser.parse_args()
 
     try:
         snapshot = load_snapshot(args.snapshot)
+        codex_snapshot = load_codex_snapshot(args.codex_snapshot)
         selector = read_selector(args.selector)
     except ConfigError as exc:
         print(f"validate_effort_conformance: config error: {exc}", file=sys.stderr)
         return 2
 
-    failures = run_checks(selector, snapshot)
+    failures = run_checks(selector, snapshot, codex_snapshot)
     if failures:
         print(
             f"validate_effort_conformance: {len(failures)} failure(s):",
@@ -452,9 +588,9 @@ def main() -> int:
         return 1
 
     print(
-        "validate_effort_conformance: PASS (effort vocabulary is a documented "
-        "subset; no model tied to an unsupported effort level; ultracode and "
-        "ultrathink kept distinct)"
+        "validate_effort_conformance: PASS (Claude Code effort vocabulary is a "
+        "documented subset; no model tied to an unsupported effort level; ultracode "
+        "and ultrathink kept distinct; Codex reasoning vocabulary matches the docs)"
     )
     return 0
 
