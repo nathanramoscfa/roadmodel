@@ -21,10 +21,11 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import requests
 from anthropic import Anthropic
+from anthropic.types import TextBlock
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = REPO_ROOT / "docs"
@@ -189,16 +190,16 @@ def call_opus(system_prompt: str, user_message: str, api_key: str) -> str:
         }
     ]
     user_blocks = [{"role": "user", "content": user_message}]
+    # The SDK accepts these plain dict shapes at runtime; its param types
+    # (TextBlockParam / MessageParam) are stricter than what we pass.
     with client.messages.stream(
         model=MODEL_ID,
         max_tokens=MAX_TOKENS,
-        system=system_blocks,
-        messages=user_blocks,
+        system=system_blocks,  # type: ignore[arg-type]
+        messages=user_blocks,  # type: ignore[arg-type]
     ) as stream:
         response = stream.get_final_message()
-    return "".join(
-        block.text for block in response.content if getattr(block, "type", None) == "text"
-    )
+    return "".join(block.text for block in response.content if isinstance(block, TextBlock))
 
 
 _FENCED_BLOCK_RE = re.compile(r"```[a-zA-Z]*\n(.*?)\n```", re.DOTALL)
@@ -214,7 +215,7 @@ def parse_result(raw: str) -> dict[str, Any]:
     text = raw.strip()
 
     try:
-        return json.loads(text)
+        return cast("dict[str, Any]", json.loads(text))
     except json.JSONDecodeError:
         pass
 
@@ -223,7 +224,7 @@ def parse_result(raw: str) -> dict[str, Any]:
         if first_nl != -1:
             inner = text[first_nl + 1 : -3].rstrip()
             try:
-                return json.loads(inner)
+                return cast("dict[str, Any]", json.loads(inner))
             except json.JSONDecodeError:
                 pass
 
@@ -258,7 +259,7 @@ def parse_result(raw: str) -> dict[str, Any]:
     end = text.rfind("}")
     if start < 0 or end <= start:
         raise json.JSONDecodeError("could not extract JSON object from model output", text, 0)
-    return json.loads(text[start : end + 1])
+    return cast("dict[str, Any]", json.loads(text[start : end + 1]))
 
 
 def write_dry_run_report(

@@ -8,14 +8,14 @@ import argparse
 import difflib
 import json
 import os
+import re
 import sys
 from pathlib import Path
-from typing import Any
-
-import re
+from typing import Any, cast
 
 import requests
 from anthropic import Anthropic
+from anthropic.types import TextBlock
 from bs4 import BeautifulSoup
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -28,10 +28,7 @@ COST_SCALE_PATH = DOCS_DIR / "model-tier-cost-scale.md"
 MODEL_ID = "claude-opus-4-7"
 MAX_TOKENS = 64000
 WEB_SEARCH_MAX_USES = 30
-USER_AGENT = (
-    "roadmodel-updater/1.0 "
-    "(+https://github.com/nathanramoscfa/roadmodel)"
-)
+USER_AGENT = "roadmodel-updater/1.0 (+https://github.com/nathanramoscfa/roadmodel)"
 FETCH_TIMEOUT = 30
 DEFAULT_MAX_BYTES = 150_000
 HTML_SNIFF_BYTES = 1024
@@ -117,9 +114,7 @@ def validate_content(content: str, rules: dict[str, Any] | None) -> str | None:
     return None
 
 
-_CURSOR_PROVIDERS_PATTERN = (
-    r"(?:Anthropic|OpenAI|Google|xAI|Cursor|Moonshot|Z\s*AI|DeepSeek)"
-)
+_CURSOR_PROVIDERS_PATTERN = r"(?:Anthropic|OpenAI|Google|xAI|Cursor|Moonshot|Z\s*AI|DeepSeek)"
 
 
 def _name_tokens(s: str | None) -> set[str]:
@@ -150,9 +145,7 @@ def _cursor_model_token_sets() -> list[set[str]]:
     is read from sources.json so this stays in sync with the
     canonical source list.
     """
-    cursor_url = json.loads(
-        (UPDATE_DIR / "sources.json").read_text()
-    )["pricing"]["url"]
+    cursor_url = json.loads((UPDATE_DIR / "sources.json").read_text())["pricing"]["url"]
     md = fetch(cursor_url)
     rows = re.findall(
         rf"^\|\s*([^|]+?)\s*\|\s*{_CURSOR_PROVIDERS_PATTERN}\s*\|",
@@ -237,12 +230,8 @@ def _transform_aa_api(url: str) -> str:
             "slug": m.get("slug"),
             "creator": (m.get("model_creator") or {}).get("name"),
             "evaluations": m.get("evaluations"),
-            "median_output_tokens_per_second": m.get(
-                "median_output_tokens_per_second"
-            ),
-            "median_time_to_first_token_seconds": m.get(
-                "median_time_to_first_token_seconds"
-            ),
+            "median_output_tokens_per_second": m.get("median_output_tokens_per_second"),
+            "median_time_to_first_token_seconds": m.get("median_time_to_first_token_seconds"),
         }
         for m in models
     ]
@@ -270,7 +259,7 @@ def _transform_tau2_bench(url: str) -> str:
             sub_url = f"{base}/{sid}/submission.json"
             try:
                 sub_raw = fetch(sub_url)
-            except Exception:
+            except Exception:  # noqa: S112 — best-effort sub-source; a failed fetch is intentionally skipped
                 continue
             sub = json.loads(sub_raw)
             bucket_results.append(
@@ -337,7 +326,7 @@ def _transform_livecodebench(url: str) -> str:
                 "questions": len(scores["all"]),
             }
         )
-    out.sort(key=lambda x: (x["pass1_overall"] or 0), reverse=True)
+    out.sort(key=lambda x: x["pass1_overall"] or 0, reverse=True)
     return json.dumps(out, indent=None)
 
 
@@ -352,7 +341,7 @@ def _transform_swebench(url: str) -> str:
     raw = fetch(url)
     data = json.loads(raw)
     keep_splits = {"Verified", "Multilingual"}
-    out = {"leaderboards": []}
+    out: dict[str, list[dict[str, Any]]] = {"leaderboards": []}
     for lb in data.get("leaderboards", []):
         if lb.get("name") not in keep_splits:
             continue
@@ -407,7 +396,8 @@ def _transform_lmarena(url: str) -> str:
     combined: list[dict[str, Any]] = []
     for subset_label, subset_url in subset_urls.items():
         body = fetch_bytes(subset_url)
-        table = pq.read_table(io.BytesIO(body))
+        # pyarrow ships no type stubs, so read_table is seen as untyped.
+        table = pq.read_table(io.BytesIO(body))  # type: ignore[no-untyped-call]
         rows = table.to_pylist()
         if not rows:
             continue
@@ -495,7 +485,7 @@ def build_user_message(
     for src in fetched:
         blocks.append(
             f'<source type="{src["type"]}" name="{src["name"]}" url="{src["url"]}">\n'
-            f'{src["content"]}\n'
+            f"{src['content']}\n"
             f"</source>"
         )
     if fetch_errors:
@@ -530,19 +520,17 @@ def call_opus(system_prompt: str, user_message: str, api_key: str) -> str:
             "max_uses": WEB_SEARCH_MAX_USES,
         }
     ]
+    # The SDK accepts these plain dict shapes at runtime; its param types
+    # (TextBlockParam / MessageParam / ToolParam) are stricter than what we pass.
     with client.messages.stream(
         model=MODEL_ID,
         max_tokens=MAX_TOKENS,
-        system=system_blocks,
-        messages=user_blocks,
-        tools=tools,
+        system=system_blocks,  # type: ignore[arg-type]
+        messages=user_blocks,  # type: ignore[arg-type]
+        tools=tools,  # type: ignore[arg-type]
     ) as stream:
         response = stream.get_final_message()
-    return "".join(
-        block.text
-        for block in response.content
-        if getattr(block, "type", None) == "text"
-    )
+    return "".join(block.text for block in response.content if isinstance(block, TextBlock))
 
 
 _FENCED_BLOCK_RE = re.compile(r"```[a-zA-Z]*\n(.*?)\n```", re.DOTALL)
@@ -576,7 +564,7 @@ def parse_result(raw: str) -> dict[str, Any]:
     text = raw.strip()
 
     try:
-        return json.loads(text)
+        return cast("dict[str, Any]", json.loads(text))
     except json.JSONDecodeError:
         pass
 
@@ -585,7 +573,7 @@ def parse_result(raw: str) -> dict[str, Any]:
         if first_nl != -1:
             inner = text[first_nl + 1 : -3].rstrip()
             try:
-                return json.loads(inner)
+                return cast("dict[str, Any]", json.loads(inner))
             except json.JSONDecodeError:
                 pass
 
@@ -620,7 +608,7 @@ def parse_result(raw: str) -> dict[str, Any]:
     end = text.rfind("}")
     if start < 0 or end <= start:
         raise json.JSONDecodeError("could not extract JSON object from model output", text, 0)
-    return json.loads(text[start : end + 1])
+    return cast("dict[str, Any]", json.loads(text[start : end + 1]))
 
 
 def load_fixture(path: Path) -> tuple[list[dict[str, str]], list[str]]:
@@ -716,15 +704,11 @@ def main() -> int:
         fetched, fetch_errors = gather_sources()
     if not fetched:
         sys.stderr.write(
-            "All source fetches failed; refusing to call Opus.\n"
-            + "\n".join(fetch_errors)
-            + "\n"
+            "All source fetches failed; refusing to call Opus.\n" + "\n".join(fetch_errors) + "\n"
         )
         return 3
 
-    user_message = build_user_message(
-        selector_text, cost_scale_text, fetched, fetch_errors
-    )
+    user_message = build_user_message(selector_text, cost_scale_text, fetched, fetch_errors)
 
     raw = call_opus(system_prompt, user_message, api_key)
     try:
@@ -744,9 +728,12 @@ def main() -> int:
 
     if args.dry_run:
         write_dry_run_report(
-            selector_text, new_selector,
-            cost_scale_text, new_cost_scale,
-            summary, warnings,
+            selector_text,
+            new_selector,
+            cost_scale_text,
+            new_cost_scale,
+            summary,
+            warnings,
         )
         return 0
 
@@ -755,7 +742,7 @@ def main() -> int:
 
     # Regenerate the human-readable mirror from the updated .txt so the two
     # files commit together. render_md.py imports without side effects.
-    from render_md import render, SELECTOR_MD
+    from render_md import SELECTOR_MD, render
 
     SELECTOR_MD.write_text(render(SELECTOR_PATH.read_text()))
 
