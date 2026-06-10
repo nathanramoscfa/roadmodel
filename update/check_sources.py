@@ -46,16 +46,13 @@ CACHE_DIR = UPDATE_DIR / ".cache"
 HASH_PATH = CACHE_DIR / "sources-hash"
 HASH_STAGING_PATH = CACHE_DIR / "sources-hash.new"
 
-USER_AGENT = (
-    "roadmodel-updater/1.0 "
-    "(+https://github.com/nathanramoscfa/roadmodel)"
-)
+USER_AGENT = "roadmodel-updater/1.0 (+https://github.com/nathanramoscfa/roadmodel)"
 FETCH_TIMEOUT = 30
 
 
 def pricing_url() -> str:
     payload = json.loads(SOURCES_PATH.read_text())
-    return payload["pricing"]["url"]
+    return str(payload["pricing"]["url"])
 
 
 def fetch_bytes(url: str) -> bytes:

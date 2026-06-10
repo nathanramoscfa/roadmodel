@@ -12,6 +12,7 @@ Usage:
 The Monday refresh runs this after Opus updates the .txt so the .md is
 always regenerated. Tests run --check to catch drift.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -95,9 +96,7 @@ def render_usage(content: str) -> str:
 
 def render_objective(content: str) -> str:
     body = _section(content, "objective")
-    body = re.sub(
-        r"^PRIMARY:", "**PRIMARY:**", body, flags=re.MULTILINE
-    )
+    body = re.sub(r"^PRIMARY:", "**PRIMARY:**", body, flags=re.MULTILINE)
     body = re.sub(
         r"^SECONDARY \(tie-breaker only\):",
         "**SECONDARY (tie-breaker only):**",
@@ -152,9 +151,7 @@ def _render_model_card(attrs: dict[str, str]) -> str:
     in_price = _format_price(attrs["input-price-per-1m"])
     out_price = _format_price(attrs["output-price-per-1m"])
 
-    ratings = " · ".join(
-        f"{label} **{attrs[key]}**" for key, label in RATING_FIELDS
-    )
+    ratings = " · ".join(f"{label} **{attrs[key]}**" for key, label in RATING_FIELDS)
 
     headline = attrs.get("headline-benchmarks", "").strip() or "-"
     pricing_notes = attrs.get("pricing-notes", "").strip() or "-"

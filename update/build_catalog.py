@@ -14,6 +14,7 @@ Determinism contract:
     newest source-doc mtime (or SOURCE_DATE_EPOCH when set) rather than
     wall-clock time so the workflow's determinism guard passes.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -69,20 +70,14 @@ SELECTOR_TO_COST_SCALE_NAME = {
     "gpt-5.4-nano": "GPT-5.4 Nano",
 }
 
-CURSOR_2X_PHRASE = (
-    "Long context (Max Mode) supports up to 1M tokens with 2x input pricing"
-)
+CURSOR_2X_PHRASE = "Long context (Max Mode) supports up to 1M tokens with 2x input pricing"
 
 _OPTIONS_RE = re.compile(r"<model-options>(.*?)</model-options>", re.DOTALL)
 _TIER_RE = re.compile(r'<tier\s+cost="([^"]+)"\s*>(.*?)</tier>', re.DOTALL)
 _MODEL_RE = re.compile(r"<model\s+([^>]+?)\s*/>", re.DOTALL)
 _METHOD_RE = re.compile(r"<method\s+([^>]+?)\s*/>", re.DOTALL)
-_ACCESS_METHODS_RE = re.compile(
-    r"<access-methods>(.*?)</access-methods>", re.DOTALL
-)
-_MAX_MODE_CTX_RE = re.compile(
-    r"<max-mode-context>(.*?)</max-mode-context>", re.DOTALL
-)
+_ACCESS_METHODS_RE = re.compile(r"<access-methods>(.*?)</access-methods>", re.DOTALL)
+_MAX_MODE_CTX_RE = re.compile(r"<max-mode-context>(.*?)</max-mode-context>", re.DOTALL)
 _ATTR_RE = re.compile(r'([\w-]+)="([^"]*)"')
 _LEADING_DOLLAR_RE = re.compile(r"\$\s*(\d+(?:\.\d+)?)")
 
@@ -121,12 +116,8 @@ def _parse_models(selector_text: str) -> list[dict[str, Any]]:
                 {
                     "id": attrs.get("id", ""),
                     "name": attrs.get("name", ""),
-                    "input_price_per_1m": _parse_price(
-                        attrs.get("input-price-per-1m", "")
-                    ),
-                    "output_price_per_1m": _parse_price(
-                        attrs.get("output-price-per-1m", "")
-                    ),
+                    "input_price_per_1m": _parse_price(attrs.get("input-price-per-1m", "")),
+                    "output_price_per_1m": _parse_price(attrs.get("output-price-per-1m", "")),
                     "cache_read_per_1m": None,
                     "tier_cost": tier_cost,
                     "tiers": tiers,
@@ -146,19 +137,13 @@ def _parse_access_methods(selector_text: str) -> list[dict[str, Any]]:
     methods: list[dict[str, Any]] = []
     for method_m in _METHOD_RE.finditer(access_match.group(1)):
         attrs = dict(_ATTR_RE.findall(method_m.group(1)))
-        supports = [
-            s.strip()
-            for s in attrs.get("supports-models", "").split(",")
-            if s.strip()
-        ]
+        supports = [s.strip() for s in attrs.get("supports-models", "").split(",") if s.strip()]
         methods.append(
             {
                 "id": attrs.get("id", ""),
                 "name": attrs.get("name", ""),
                 "provider": attrs.get("provider", ""),
-                "provider_jurisdiction": attrs.get(
-                    "provider-jurisdiction", "unknown"
-                ),
+                "provider_jurisdiction": attrs.get("provider-jurisdiction", "unknown"),
                 "billing": attrs.get("billing", ""),
                 "requires": attrs.get("requires", ""),
                 "supports_models": sorted(supports),
@@ -170,16 +155,12 @@ def _parse_access_methods(selector_text: str) -> list[dict[str, Any]]:
     return methods
 
 
-def _parse_max_mode_rules(
-    selector_text: str, models: list[dict[str, Any]]
-) -> dict[str, Any]:
+def _parse_max_mode_rules(selector_text: str, models: list[dict[str, Any]]) -> dict[str, Any]:
     ctx_match = _MAX_MODE_CTX_RE.search(selector_text)
     if not ctx_match:
         raise ValueError("<max-mode-context> block not found in selector text")
     applies_to = sorted(
-        m["id"]
-        for m in models
-        if CURSOR_2X_PHRASE in (m.get("pricing_notes") or "")
+        m["id"] for m in models if CURSOR_2X_PHRASE in (m.get("pricing_notes") or "")
     )
     return {
         "cursor_2x_input": {
@@ -220,9 +201,7 @@ def _parse_cost_scale_rows(cost_scale_text: str) -> dict[str, dict[str, str]]:
     return out
 
 
-def _attach_cache_read(
-    models: list[dict[str, Any]], cost_scale_text: str
-) -> None:
+def _attach_cache_read(models: list[dict[str, Any]], cost_scale_text: str) -> None:
     rows = _parse_cost_scale_rows(cost_scale_text)
     for model in models:
         cs_name = SELECTOR_TO_COST_SCALE_NAME.get(model["id"])
@@ -277,9 +256,7 @@ def _parse_subscription_tiers(cost_scale_text: str) -> list[dict[str, Any]]:
         except ValueError:
             monthly_usd = None
         surfaces = [
-            s.strip()
-            for s in row.get("Access methods unlocked", "").split(",")
-            if s.strip()
+            s.strip() for s in row.get("Access methods unlocked", "").split(",") if s.strip()
         ]
         tiers.append(
             {
@@ -305,9 +282,7 @@ def _derive_generated_at() -> str:
     if epoch_env:
         epoch = int(epoch_env)
     else:
-        epoch = int(
-            max(SELECTOR_PATH.stat().st_mtime, COST_SCALE_PATH.stat().st_mtime)
-        )
+        epoch = int(max(SELECTOR_PATH.stat().st_mtime, COST_SCALE_PATH.stat().st_mtime))
     dt = datetime.fromtimestamp(epoch, tz=timezone.utc)
     return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 

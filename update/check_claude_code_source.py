@@ -28,7 +28,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable, cast
 
 import requests
 
@@ -54,8 +54,8 @@ USER_AGENT = "roadmodel-updater/1.0 (+https://github.com/nathanramoscfa/roadmode
 FETCH_TIMEOUT = 30
 
 
-def sources() -> dict[str, dict]:
-    return json.loads(SOURCES_PATH.read_text())
+def sources() -> dict[str, Any]:
+    return cast("dict[str, Any]", json.loads(SOURCES_PATH.read_text()))
 
 
 def fetch_bytes(url: str) -> bytes:
@@ -80,7 +80,7 @@ def fetch_text(url: str) -> str:
     return response.text
 
 
-def validate_docs(text: str, cfg: dict) -> None:
+def validate_docs(text: str, cfg: dict[str, Any]) -> None:
     """Enforce the source entry's declarative ``validate`` block."""
     rules = cfg.get("validate", {})
     min_bytes = int(rules.get("min_bytes", 0))

@@ -47,6 +47,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import cast
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 UPDATE_DIR = REPO_ROOT / "update"
@@ -312,7 +313,7 @@ def main() -> int:
         sys.stderr.write("validate_claude_code_diff: consumed_versions must be a list\n")
         return 2
 
-    consumed = extract_consumed_versions(consumed_raw)  # type: ignore[arg-type]
+    consumed = extract_consumed_versions(consumed_raw)
 
     failures: list[str] = []
     failures.extend(coverage_check(pending, consumed))
@@ -333,7 +334,7 @@ def main() -> int:
     print(
         "validate_claude_code_diff: PASS "
         f"({len(pending)} version(s), "
-        f"{sum(len(e.get('bullets') or []) for e in pending)} bullet(s) "
+        f"{sum(len(cast('list[object]', e.get('bullets') or [])) for e in pending)} bullet(s) "
         "inspected)"
     )
     return 0
