@@ -732,13 +732,17 @@ def main() -> int:
     pricing_sources = [s for s in fetched if s["type"] == "pricing"]
     benchmark_sources = [s for s in fetched if s["type"] == "benchmark"]
 
-    def run_call(target: str, cost_scale_in: str, srcs: list[dict[str, str]], key: str) -> dict[str, Any] | None:
+    def run_call(
+        target: str, cost_scale_in: str, srcs: list[dict[str, str]], key: str
+    ) -> dict[str, Any] | None:
         msg = build_user_message(selector_text, cost_scale_in, srcs, fetch_errors, target=target)
         raw = call_opus(system_prompt, msg, api_key)
         try:
             return parse_result(raw, primary_key=key)
         except json.JSONDecodeError:
-            sys.stderr.write(f"Model did not return valid JSON for target={target!r}. Raw output:\n")
+            sys.stderr.write(
+                f"Model did not return valid JSON for target={target!r}. Raw output:\n"
+            )
             sys.stderr.write(raw + "\n")
             return None
 
