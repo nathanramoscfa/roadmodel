@@ -6,8 +6,8 @@
     "max"
   ],
   "thinking_toggle": [
-    "disabled",
-    "enabled"
+    "enabled",
+    "disabled"
   ],
   "toggle_default": "enabled",
   "effort_default": "high",
@@ -18,5 +18,5 @@
   },
   "unexpected_effort": [],
   "unexpected_toggle": [],
-  "section_sha256": "cba4ffdd3e90a4e2e40dc5b0053c415ac545c6fd8ea47dca65f6de8c29ab9372"
+  "section_sha256": "861fd8e2ff782c80df337bc3357ac1746b4ed5728efab78ccd1c1ab88971a1ce"
 }

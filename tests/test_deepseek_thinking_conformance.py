@@ -84,7 +84,7 @@ def test_extractor_parses_control_table() -> None:
     snap = mod.build_snapshot(SAMPLE_HTML.read_text(), source_url="file://sample")
 
     assert snap["reasoning_effort"] == ["high", "max"]
-    assert snap["thinking_toggle"] == ["disabled", "enabled"]
+    assert snap["thinking_toggle"] == ["enabled", "disabled"]
     assert snap["toggle_default"] == "enabled"
     assert snap["effort_default"] == "high"
     assert snap["effort_aliases"] == {"low": "high", "medium": "high", "xhigh": "max"}
@@ -103,14 +103,14 @@ def test_extractor_cli_writes_snapshot(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stderr
     data = json.loads(out.read_text())
     assert data["reasoning_effort"] == ["high", "max"]
-    assert data["thinking_toggle"] == ["disabled", "enabled"]
+    assert data["thinking_toggle"] == ["enabled", "disabled"]
 
 
 def test_committed_snapshot_invariants() -> None:
     """The committed snapshot must carry the headline facts the gate relies on."""
     snap = json.loads(REAL_DEEPSEEK_SNAPSHOT.read_text())
     assert snap["reasoning_effort"] == ["high", "max"]
-    assert snap["thinking_toggle"] == ["disabled", "enabled"]
+    assert snap["thinking_toggle"] == ["enabled", "disabled"]
     assert snap["effort_default"] == "high"
     assert snap["toggle_default"] == "enabled"
 
