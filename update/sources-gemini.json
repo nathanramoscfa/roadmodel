@@ -1,0 +1,18 @@
+{
+  "thinking_docs": {
+    "name": "Gemini API thinking docs (levels + budget)",
+    "url": "https://ai.google.dev/gemini-api/docs/thinking",
+    "purpose": "Authoritative source for Gemini's reasoning surface: the Gemini 3.x thinking-level support matrix (minimal/low/medium/high) and the Gemini 2.5 numeric thinkingBudget ranges + 0/-1 sentinels. ai.google.dev serves server-rendered HTML (no clean .md endpoint), parsed with bs4 by update/extract_gemini_thinking.py. Robustness: the must_contain_all anchors are the literal column headers / sentinels that live in the SERVER-rendered tables (the data is present in the initial HTML response, not injected by client-side JS — confirmed: bs4 parses them from a plain curl with no JS engine). If Google ever switched this page to client-side rendering, a consent/redirect interstitial, or restructured the tables, those anchors would be absent from the fetched bytes and the gate fails LOUD (the extractor exits 4) instead of silently scraping an empty shell. The docs-freshness cron hashes the EXTRACTED FACTS (canonical JSON), not the raw HTML, so devsite re-renders / cosmetic churn never false-trigger an expensive Opus run. New Gemini 3.x level models are flagged from the snapshot's unexpected_models (this page is itself the model source for the reasoning matrix); the catalog cron owns model lists.",
+    "validate": {
+      "min_bytes": 20000,
+      "must_contain_all": [
+        "Thinking Level",
+        "thinkingBudget",
+        "Default setting",
+        "Range",
+        "Disable thinking",
+        "Dynamic thinking"
+      ]
+    }
+  }
+}
