@@ -641,7 +641,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 
 - **Pricing:** Input $2.50/M · Output $15.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **S** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 56.8 (#4); LMArena Text Elo 1452.5 (#23); GPT-5.4 (xhigh) Output Speed 79.8 tokens/s; lowest factual error rate among GPT models
+- **Headline benchmarks:** AA Intelligence Index 56.8 (#4); LMArena Text Elo 1452.5 (#23); GPT-5.4 (xhigh) Output Speed 86.1 tokens/s; lowest factual error rate among GPT models
 - **Pricing notes:** Hidden by default; Requires Max Mode on request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context (Max Mode) supports up to 1M tokens with 2x input pricing
 - **Best for:** Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding
 
@@ -710,14 +710,14 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Pricing:** Input $1.25/M · Output $2.50/M
 - **Tier ratings:** Coding **B** · Planning **A** · Agentic **S** · Multimodal **B** · Long-context **S** · Knowledge **A** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 53.2 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1189.2
-- **Pricing notes:** Requires Max Mode on request-based plans
+- **Pricing notes:** Hidden by default; Requires Max Mode on request-based plans
 - **Best for:** Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding — leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist
 
 #### Claude 4.5 Haiku — `claude-4.5-haiku`
 
 - **Pricing:** Input $1.00/M · Output $5.00/M
 - **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **B** · Long-context **B** · Knowledge **B** · Speed **S**
-- **Headline benchmarks:** AA Intelligence Index 37.1; Output Speed 135.4 tokens/s; AA-Omniscience -4.2; latency leader among Claude family
+- **Headline benchmarks:** AA Intelligence Index 37.1; Output Speed 143.0 tokens/s; AA-Omniscience -4.2; latency leader among Claude family
 - **Pricing notes:** Hidden by default; Bedrock/Vertex: regional endpoints +10% surcharge; Cache: writes 1.25x, reads 0.1x
 - **Best for:** Speed-optimized lowest-cost Claude model, ideal for simple completions, high-volume repetitive tasks, and latency-sensitive workflows where a lightweight capable response matters more than deep reasoning
 
@@ -725,7 +725,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 
 - **Pricing:** Input $0.75/M · Output $4.50/M
 - **Tier ratings:** Coding **B** · Planning **C** · Agentic **C** · Multimodal **B** · Long-context **B** · Knowledge **B** · Speed **A**
-- **Headline benchmarks:** AA Intelligence Index 48.9 (xhigh); Output Speed 157.0 tokens/s; HLE 26.6% (GPT-5.4-mini xhigh)
+- **Headline benchmarks:** AA Intelligence Index 48.9 (xhigh); Output Speed 180.8 tokens/s; HLE 26.6% (GPT-5.4-mini xhigh)
 - **Pricing notes:** Hidden by default; Smaller, faster variant of GPT-5.4; 90% discount on cached input tokens
 - **Best for:** Lightweight GPT-5.4 variant balancing quality and cost, well-suited for straightforward coding, short-form generation, and high-throughput workloads needing solid GPT reasoning at a fraction of the flagship price
 
@@ -765,7 +765,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 
 - **Pricing:** Input $1.50/M · Output $9.00/M
 - **Tier ratings:** Coding **B** · Planning **A** · Agentic **A** · Multimodal **B** · Long-context **B** · Knowledge **A** · Speed **S**
-- **Headline benchmarks:** AA Intelligence Index 55.3 (high reasoning); τ²-bench retail pass_1 45.6 (Gemini 3.5 Flash); Output Speed 200.4 tokens/s
+- **Headline benchmarks:** AA Intelligence Index 55.3 (high reasoning); τ²-bench retail pass_1 45.6 (Gemini 3.5 Flash); Output Speed 203.7 tokens/s
 - **Pricing notes:** -
 - **Best for:** Auto-added cheap-tier Google model; pending editorial best-for refinement.
 
@@ -1496,7 +1496,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="A" tier-planning="A" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="S"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 56.8 (#4); LMArena Text Elo 1452.5 (#23); GPT-5.4 (xhigh) Output Speed 79.8 tokens/s; lowest factual error rate among GPT models"
+             headline-benchmarks="AA Intelligence Index 56.8 (#4); LMArena Text Elo 1452.5 (#23); GPT-5.4 (xhigh) Output Speed 86.1 tokens/s; lowest factual error rate among GPT models"
              pricing-notes="Hidden by default; Requires Max Mode on request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context (Max Mode) supports up to 1M tokens with 2x input pricing"
              best-for="Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding" />
     </tier>
@@ -1573,7 +1573,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-multimodal="B" tier-long-context="S" tier-knowledge="A"
              tier-speed="B"
              headline-benchmarks="AA Intelligence Index 53.2 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1189.2"
-             pricing-notes="Requires Max Mode on request-based plans"
+             pricing-notes="Hidden by default; Requires Max Mode on request-based plans"
              best-for="Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding — leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist" />
       <model id="claude-4.5-haiku" name="Claude 4.5 Haiku"
              input-price-per-1m="$1.00" output-price-per-1m="$5.00"
@@ -1581,7 +1581,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="B" tier-planning="B" tier-agentic="B"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
              tier-speed="S"
-             headline-benchmarks="AA Intelligence Index 37.1; Output Speed 135.4 tokens/s; AA-Omniscience -4.2; latency leader among Claude family"
+             headline-benchmarks="AA Intelligence Index 37.1; Output Speed 143.0 tokens/s; AA-Omniscience -4.2; latency leader among Claude family"
              pricing-notes="Hidden by default; Bedrock/Vertex: regional endpoints +10% surcharge; Cache: writes 1.25x, reads 0.1x"
              best-for="Speed-optimized lowest-cost Claude model, ideal for simple completions, high-volume repetitive tasks, and latency-sensitive workflows where a lightweight capable response matters more than deep reasoning" />
       <model id="gpt-5.4-mini" name="GPT-5.4 Mini"
@@ -1590,7 +1590,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="B" tier-planning="C" tier-agentic="C"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
              tier-speed="A"
-             headline-benchmarks="AA Intelligence Index 48.9 (xhigh); Output Speed 157.0 tokens/s; HLE 26.6% (GPT-5.4-mini xhigh)"
+             headline-benchmarks="AA Intelligence Index 48.9 (xhigh); Output Speed 180.8 tokens/s; HLE 26.6% (GPT-5.4-mini xhigh)"
              pricing-notes="Hidden by default; Smaller, faster variant of GPT-5.4; 90% discount on cached input tokens"
              best-for="Lightweight GPT-5.4 variant balancing quality and cost, well-suited for straightforward coding, short-form generation, and high-throughput workloads needing solid GPT reasoning at a fraction of the flagship price" />
       <model id="gpt-5.4-nano" name="GPT-5.4 Nano"
@@ -1635,7 +1635,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="B" tier-planning="A" tier-agentic="A"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="A"
              tier-speed="S"
-             headline-benchmarks="AA Intelligence Index 55.3 (high reasoning); τ²-bench retail pass_1 45.6 (Gemini 3.5 Flash); Output Speed 200.4 tokens/s"
+             headline-benchmarks="AA Intelligence Index 55.3 (high reasoning); τ²-bench retail pass_1 45.6 (Gemini 3.5 Flash); Output Speed 203.7 tokens/s"
              pricing-notes="-"
              best-for="Auto-added cheap-tier Google model; pending editorial best-for refinement." />
       <model id="gpt-5-mini" name="GPT-5 Mini"
@@ -1855,12 +1855,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       - Never sacrifice quality to save cost — the cost step is a true-tie
         resolver, not a downgrade trigger.
       - For PRIMARY = `multimodal`, only consider models with tier-multimodal
-        of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro at S; sonnet-4.6, gpt-5.4, opus-4.7, opus-4.8, gpt-5.5 at A).
+        of S or A (currently: claude-fable-5, gemini-3-flash, gemini-3-pro, gemini-3.1-pro at S; sonnet-4.6, gpt-5.4, opus-4.7, opus-4.8, gpt-5.5 at A).
       - For PRIMARY = `long-context`, prefer models with native large
         context (opus-4.7 1M, opus-4.8 1M, gemini-3.1-pro 1M, grok-4.3 2M) over forcing
         a smaller-context model into Max Mode truncation.
       - For PRIMARY = `coding` at S-tier requirement, the candidate set is
-        gpt-5.1-codex, gpt-5.3-codex, opus-4.7, opus-4.8, gpt-5.5; cost tie-breaker favors
+        gpt-5.1-codex, gpt-5.3-codex, opus-4.7, opus-4.8, claude-fable-5, gpt-5.5; cost tie-breaker favors
         gpt-5.1-codex when the ratings are equivalent for the prompt.
       - Default to composer-2 for routine multi-file implementation when a
         coding-A rating suffices; escalate only on a concrete capability
@@ -2282,7 +2282,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="A" tier-planning="A" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="S"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 56.8 (#4); LMArena Text Elo 1452.5 (#23); GPT-5.4 (xhigh) Output Speed 79.8 tokens/s; lowest factual error rate among GPT models"
+             headline-benchmarks="AA Intelligence Index 56.8 (#4); LMArena Text Elo 1452.5 (#23); GPT-5.4 (xhigh) Output Speed 86.1 tokens/s; lowest factual error rate among GPT models"
              pricing-notes="Hidden by default; Requires Max Mode on request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context (Max Mode) supports up to 1M tokens with 2x input pricing"
              best-for="Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding" />
     </tier>
@@ -2359,7 +2359,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-multimodal="B" tier-long-context="S" tier-knowledge="A"
              tier-speed="B"
              headline-benchmarks="AA Intelligence Index 53.2 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1189.2"
-             pricing-notes="Requires Max Mode on request-based plans"
+             pricing-notes="Hidden by default; Requires Max Mode on request-based plans"
              best-for="Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding — leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist" />
       <model id="claude-4.5-haiku" name="Claude 4.5 Haiku"
              input-price-per-1m="$1.00" output-price-per-1m="$5.00"
@@ -2367,7 +2367,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="B" tier-planning="B" tier-agentic="B"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
              tier-speed="S"
-             headline-benchmarks="AA Intelligence Index 37.1; Output Speed 135.4 tokens/s; AA-Omniscience -4.2; latency leader among Claude family"
+             headline-benchmarks="AA Intelligence Index 37.1; Output Speed 143.0 tokens/s; AA-Omniscience -4.2; latency leader among Claude family"
              pricing-notes="Hidden by default; Bedrock/Vertex: regional endpoints +10% surcharge; Cache: writes 1.25x, reads 0.1x"
              best-for="Speed-optimized lowest-cost Claude model, ideal for simple completions, high-volume repetitive tasks, and latency-sensitive workflows where a lightweight capable response matters more than deep reasoning" />
       <model id="gpt-5.4-mini" name="GPT-5.4 Mini"
@@ -2376,7 +2376,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="B" tier-planning="C" tier-agentic="C"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
              tier-speed="A"
-             headline-benchmarks="AA Intelligence Index 48.9 (xhigh); Output Speed 157.0 tokens/s; HLE 26.6% (GPT-5.4-mini xhigh)"
+             headline-benchmarks="AA Intelligence Index 48.9 (xhigh); Output Speed 180.8 tokens/s; HLE 26.6% (GPT-5.4-mini xhigh)"
              pricing-notes="Hidden by default; Smaller, faster variant of GPT-5.4; 90% discount on cached input tokens"
              best-for="Lightweight GPT-5.4 variant balancing quality and cost, well-suited for straightforward coding, short-form generation, and high-throughput workloads needing solid GPT reasoning at a fraction of the flagship price" />
       <model id="gpt-5.4-nano" name="GPT-5.4 Nano"
@@ -2421,7 +2421,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="B" tier-planning="A" tier-agentic="A"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="A"
              tier-speed="S"
-             headline-benchmarks="AA Intelligence Index 55.3 (high reasoning); τ²-bench retail pass_1 45.6 (Gemini 3.5 Flash); Output Speed 200.4 tokens/s"
+             headline-benchmarks="AA Intelligence Index 55.3 (high reasoning); τ²-bench retail pass_1 45.6 (Gemini 3.5 Flash); Output Speed 203.7 tokens/s"
              pricing-notes="-"
              best-for="Auto-added cheap-tier Google model; pending editorial best-for refinement." />
       <model id="gpt-5-mini" name="GPT-5 Mini"
@@ -2641,12 +2641,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       - Never sacrifice quality to save cost — the cost step is a true-tie
         resolver, not a downgrade trigger.
       - For PRIMARY = `multimodal`, only consider models with tier-multimodal
-        of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro at S; sonnet-4.6, gpt-5.4, opus-4.7, opus-4.8, gpt-5.5 at A).
+        of S or A (currently: claude-fable-5, gemini-3-flash, gemini-3-pro, gemini-3.1-pro at S; sonnet-4.6, gpt-5.4, opus-4.7, opus-4.8, gpt-5.5 at A).
       - For PRIMARY = `long-context`, prefer models with native large
         context (opus-4.7 1M, opus-4.8 1M, gemini-3.1-pro 1M, grok-4.3 2M) over forcing
         a smaller-context model into Max Mode truncation.
       - For PRIMARY = `coding` at S-tier requirement, the candidate set is
-        gpt-5.1-codex, gpt-5.3-codex, opus-4.7, opus-4.8, gpt-5.5; cost tie-breaker favors
+        gpt-5.1-codex, gpt-5.3-codex, opus-4.7, opus-4.8, claude-fable-5, gpt-5.5; cost tie-breaker favors
         gpt-5.1-codex when the ratings are equivalent for the prompt.
       - Default to composer-2 for routine multi-file implementation when a
         coding-A rating suffices; escalate only on a concrete capability
