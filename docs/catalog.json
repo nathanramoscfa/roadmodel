@@ -1,8 +1,8 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-06-11T04:55:05Z",
+  "generated_at_utc": "2026-06-11T04:58:28Z",
   "source_doc_sha256": {
-    "model-selector.txt": "599cce0e653ad6353cc092c9ad0303cdfc9e35cf4cbe90d6f711430f88965de1",
+    "model-selector.txt": "97f4fd24df7e745860f8006c4e1f2253db7c2bc5e02953feecc0da5c2e0a8b4c",
     "model-tier-cost-scale.md": "2c73039da4d7c3cdd1a7a184e209f7f125977ad3d1d3c8812a808d38ebf7cd84"
   },
   "models": [
@@ -402,7 +402,7 @@
       },
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 53.2 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1189.2",
-      "pricing_notes": "Requires Max Mode on request-based plans",
+      "pricing_notes": "Hidden by default; Requires Max Mode on request-based plans",
       "best_for": "Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding \u2014 leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist"
     },
     {
