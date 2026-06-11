@@ -48,7 +48,9 @@ def _load(name: str) -> Any:
         sys.path.pop(0)
 
 
-def _run_conformance(selector: Path) -> subprocess.CompletedProcess[str]:
+def _run_conformance(
+    selector: Path, gemini_snapshot: Path = REAL_GEMINI_SNAPSHOT
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [
             sys.executable,
@@ -60,7 +62,7 @@ def _run_conformance(selector: Path) -> subprocess.CompletedProcess[str]:
             "--codex-snapshot",
             str(REAL_CODEX_SNAPSHOT),
             "--gemini-snapshot",
-            str(REAL_GEMINI_SNAPSHOT),
+            str(gemini_snapshot),
         ],
         capture_output=True,
         text=True,
@@ -91,6 +93,7 @@ def test_extractor_parses_both_tables() -> None:
 
     assert snap["budget_sentinels"] == {"dynamic": -1, "disable": 0}
     assert snap["unexpected_models"] == []
+    assert snap["unexpected_levels"] == []
     assert len(snap["section_sha256"]) == 64
 
 
@@ -130,6 +133,38 @@ def test_extractor_flags_unexpected_level_model() -> None:
     snap = mod.build_snapshot(html, source_url="x")
     assert "Gemini 4 Flash" in snap["unexpected_models"]
     assert "Gemini 4 Flash" in snap["per_model_levels"]
+
+
+def test_extractor_flags_a_new_thinking_level() -> None:
+    """A docs-added thinking-LEVEL row (a new tier beyond the known baseline)
+    must be CAPTURED — flowed into thinking_levels + per_model_levels and surfaced
+    in unexpected_levels — not silently dropped. Closes the silent-miss gap."""
+    mod = _load("extract_gemini_thinking")
+    new_row = (
+        "<tr><td>ultra</td><td>Supported</td><td>Supported</td>"
+        "<td>Supported</td><td>Supported</td><td>Top tier.</td></tr>"
+    )
+    # Insert the new level row just before the FIRST </tbody> (the level matrix).
+    html = SAMPLE_HTML.read_text().replace("</tbody>", new_row + "</tbody>", 1)
+    snap = mod.build_snapshot(html, source_url="x")
+    assert "ultra" in snap["thinking_levels"]
+    assert "ultra" in snap["unexpected_levels"]
+    assert "ultra" in snap["per_model_levels"]["Gemini 3.1 Pro"]
+
+
+def test_conformance_demands_a_newly_documented_level(tmp_path: Path) -> None:
+    """The teeth: if the docs add a thinking level (snapshot has it) the selector
+    does NOT yet enumerate, the gate FAILS (E1 completeness) — so a new tier can
+    never slip through silently."""
+    snap = json.loads(REAL_GEMINI_SNAPSHOT.read_text())
+    snap["thinking_levels"] = [*snap["thinking_levels"], "ultra"]
+    drifted_snapshot = tmp_path / "gemini.json"
+    drifted_snapshot.write_text(json.dumps(snap))
+
+    result = _run_conformance(REAL_SELECTOR, gemini_snapshot=drifted_snapshot)
+    assert result.returncode == 1
+    assert "check E (gemini levels)" in result.stderr
+    assert "ultra" in result.stderr
 
 
 # --------------------------------------------------------------------------- #

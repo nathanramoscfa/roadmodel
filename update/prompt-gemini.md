@@ -53,9 +53,17 @@ describe both:
 The **Output mapping** subsection maps provider-native scales onto the existing
 6-state THINKING field (`Off`/`Low`/`Medium`/`High`/`XHigh`/`N/A`). Keep:
 `minimal → Off`, `low → Low`, `medium → Medium`, `high → High` for 3.x
-(Gemini 3.x has NO `xhigh` tier — do not map any 3.x level to `XHigh`); and the
-2.5 budget mapping `0 → Off`, `-1`/dynamic → `Medium`, with larger budgets
-mapping up through `High` / `XHigh`. Never invent a 7th state.
+(Gemini 3.x currently has NO `xhigh` tier — do not map any 3.x level to
+`XHigh`); and the 2.5 budget mapping `0 → Off`, `-1`/dynamic → `Medium`, with
+larger budgets mapping up through `High` / `XHigh`. Never invent a 7th state.
+
+If `<docs_facts>` introduces a thinking level beyond `minimal`/`low`/`medium`/
+`high` (it appears in both `thinking_levels` and `unexpected_levels`), ADD that
+level to the bullet enumeration AND give it a THINKING mapping — a new
+top-of-scale tier maps to `XHigh` — and add a warning naming the new tier so the
+maintainer reviews the new reasoning level. Do NOT silently omit it: the
+conformance gate requires the selector's Gemini 3.x vocabulary to EQUAL the
+documented `thinking_levels`.
 
 Do NOT touch the Claude, OpenAI/Codex, or Cursor bullets/mappings, or any
 Claude Code effort / ultracode / ultrathink material.
