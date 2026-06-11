@@ -1,0 +1,177 @@
+# .github/workflows/update-codex.yml
+name: Update Codex reasoning-effort parameters
+
+on:
+  schedule:
+    # Daily at 18:00 UTC. Staggered 1h after the Claude Code cron (17:00 in
+    # update-claude-code.yml) and 2h after the Cursor catalog cron (16:00 in
+    # update-models.yml) so the three crons never race for the same branch /
+    # model-selector.txt write. The gate hashes ONLY the in-scope reasoning-key
+    # span of OpenAI's Codex config-reference docs — the single canonical signal
+    # for a Codex reasoning-effort change — and skips the Opus call on days it
+    # is unchanged. See `update/check_codex_source.py`.
+    - cron: "0 18 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview only: gate + snapshot refresh + Opus --dry-run + conformance gate, but do NOT render, open a PR, or promote the hash."
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-codex
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Use the maintainer's PAT so the subsequent git push + gh pr create
+          # are attributed to a user, not the github-actions bot. PRs opened by
+          # GITHUB_TOKEN do not trigger required-status workflows. Same pattern
+          # as update-claude-code.yml / update-models.yml.
+          token: ${{ secrets.BOT_PAT }}
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: update/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r update/requirements.txt
+
+      - name: Restore Codex source-hash cache
+        # In-scope reasoning-span signature from the previous successful run.
+        # Restore-keys lookup falls back to the most recent saved entry if the
+        # exact run_id key misses (always, by design).
+        uses: actions/cache@v4
+        with:
+          path: |
+            update/.cache/codex-docs-hash
+          key: codex-hash-${{ github.run_id }}
+          restore-keys: |
+            codex-hash-
+
+      - name: Check for upstream docs changes
+        id: gate
+        run: python update/check_codex_source.py
+
+      - name: Refresh reasoning-effort snapshot
+        # Deterministically re-extract the official docs into the committed
+        # snapshot BEFORE Opus, so Opus reconciles against fresh facts and the
+        # conformance gate checks against them. Fatal on a docs restructure (the
+        # extractor fails loud) — the maintainer investigates.
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
+        run: python update/extract_codex_reasoning.py --output update/codex-reasoning.json
+
+      - name: Flag new Codex models for the catalog cron
+        # A recommended model in models.md this tracker hasn't seen is the Cursor
+        # catalog cron's lane. Open a DEDUPLICATED tracking issue (never edit
+        # model lists here) so the flag survives auto-merge. Deduped by title so
+        # a re-run doesn't spam. Fail-open (the extractor never errors out).
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.BOT_PAT }}
+        run: |
+          set -euo pipefail
+          mapfile -t models < <(python update/extract_codex_models.py 2>/dev/null || true)
+          if [ "${#models[@]}" -eq 0 ]; then
+            echo "No new models flagged."
+            exit 0
+          fi
+          gh label create codex-new-model --color FBCA04 \
+            --description "Codex docs introduced a model the catalog cron should route" 2>/dev/null || true
+          existing="$(gh issue list --state open --search 'Codex docs introduced model in:title' --json title -q '.[].title' || true)"
+          for model in "${models[@]}"; do
+            [ -z "$model" ] && continue
+            if printf '%s\n' "$existing" | grep -Fq "$model"; then
+              echo "Tracking issue already open for: ${model}"
+              continue
+            fi
+            gh issue create \
+              --title "chore(catalog): Codex docs introduced model \"${model}\"" \
+              --label codex-new-model \
+              --body "$(printf 'The Codex models docs now recommend **%s**, which the Codex reasoning-effort tracker has not seen before (baseline in `update/extract_codex_models.py`).\n\nThis tracker only FLAGS new models — it never edits selector model lists; that is the catalog cron'"'"'s lane. **Action:** confirm whether **%s** should be added to `<model-options>` / `supports-models` via the catalog refresh.\n\nOpened automatically by the Codex refresh cron (`.github/workflows/update-codex.yml`).' "${model}" "${model}")"
+            echo "Opened tracking issue for: ${model}"
+          done
+
+      - name: Reconcile Codex reasoning-effort (Opus)
+        # Skip on scheduled runs when the docs span did not change.
+        # workflow_dispatch always runs. --dry-run previews without writing.
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
+        id: opus
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          set -eo pipefail
+          ARGS="--docs-changed"
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          python update/update_codex.py $ARGS
+
+      - name: Render model-selector.md
+        # Keep the rendered mirror in sync with the .txt Opus just edited (the
+        # test_doc_schema sync test gates this on the PR).
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
+        run: python update/render_md.py
+
+      - name: Conformance gate (reasoning vocabulary vs docs)
+        # Deterministic backstop: the (Opus-edited) selector must conform to the
+        # (freshly-extracted) docs snapshot — Codex check D plus the existing
+        # Claude Code checks. Fatal on violation, so a bad Opus prose edit blocks
+        # the PR. Runs in dry-run too (the snapshot is refreshed even there).
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
+        run: python update/validate_effort_conformance.py
+
+      - name: Open PR if selector or snapshot changed
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.BOT_PAT }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- docs/model-selector.txt docs/model-selector.md update/codex-reasoning.json; then
+            echo "No selector / snapshot changes — nothing to commit."
+            exit 0
+          fi
+          git config user.name "roadmodel-bot"
+          git config user.email "roadmodel-bot@users.noreply.github.com"
+          DATE="$(date -u +%Y-%m-%d)"
+          BRANCH="chore/codex-refresh-${DATE}"
+          git branch -D "$BRANCH" 2>/dev/null || true
+          git checkout -b "$BRANCH"
+          summary="$(cat update/.last-codex-summary.txt 2>/dev/null || echo 'Automated Codex reasoning-effort refresh.')"
+          warnings=""
+          if [ -f update/.last-codex-warnings.txt ] && [ -s update/.last-codex-warnings.txt ]; then
+            warnings="$(printf '\n\n## Warnings\n')$(sed 's/^/- /' update/.last-codex-warnings.txt)"
+          fi
+          git add docs/model-selector.txt docs/model-selector.md update/codex-reasoning.json
+          git commit -m "Automated Codex refresh: ${DATE}" -m "${summary}${warnings}"
+          git push -u origin "$BRANCH"
+          PR_URL="$(gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "Automated Codex refresh: ${DATE}" \
+            --body "$(printf '## Summary\n\n%s%s\n\n---\n\nThis PR was opened automatically by the daily Codex refresh cron in `.github/workflows/update-codex.yml`. It tracks the in-scope reasoning-key span of OpenAI'"'"'s Codex config-reference docs; the docs snapshot (`update/codex-reasoning.json`) and the offline conformance gate (check D) keep the selector consistent with the docs. Auto-merge is enabled: GitHub will squash-merge once the `test` status check passes. To stop it: `gh pr merge --disable-auto`.' "$summary" "$warnings")")"
+          echo "Opened: $PR_URL"
+          gh pr merge --auto --squash --delete-branch "$PR_URL"
+
+      - name: Promote source-hash for next run
+        # Only promote staged → canonical if every prior step succeeded and this
+        # is not a dry run. A transient failure must NOT swallow a real change:
+        # leave the old hash in place so tomorrow's gate retries.
+        if: success() && github.event.inputs.dry_run != 'true'
+        run: |
+          set -euo pipefail
+          if [ -f "update/.cache/codex-docs-hash.new" ]; then
+            mv "update/.cache/codex-docs-hash.new" "update/.cache/codex-docs-hash"
+            echo "Promoted codex-docs-hash for next-run comparison."
+          fi
