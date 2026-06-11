@@ -56,11 +56,13 @@ DOCS_URL = "https://api-docs.deepseek.com/guides/thinking_mode"
 USER_AGENT = "roadmodel-updater/1.0 (+https://github.com/nathanramoscfa/roadmodel)"
 FETCH_TIMEOUT = 30
 
-# Canonical display order for the DeepSeek reasoning vocabulary. A toggle/effort
-# value outside these sets is FLAGGED (a docs-added native tier is significant —
-# it needs a deliberate THINKING-field mapping), never silently absorbed. This
+# Canonical display order for the DeepSeek reasoning vocabulary — matching the
+# docs' own cell order ("enabled/disabled" and "high/max") so the snapshot reads
+# the way the docs (and the selector bullet) present it. A toggle/effort value
+# outside these sets is FLAGGED (a docs-added native tier is significant — it
+# needs a deliberate THINKING-field mapping), never silently absorbed. This
 # mirrors the Gemini extractor's unexpected_levels guard (PR #229).
-TOGGLE_ORDER = ("disabled", "enabled")
+TOGGLE_ORDER = ("enabled", "disabled")
 EFFORT_ORDER = ("high", "max")
 
 # Sentinel substrings that MUST survive on the page. Their absence means the
