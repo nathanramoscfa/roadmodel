@@ -1,0 +1,20 @@
+{
+  "reasoning_docs": {
+    "name": "Codex config-reference docs (reasoning-effort)",
+    "url": "https://developers.openai.com/codex/config-reference.md",
+    "purpose": "Authoritative source for Codex reasoning-effort vocabulary (model_reasoning_effort and the plan-mode / summary / verbosity knobs) inside the `## config.toml` ConfigTable. Only the in-scope reasoning/verbosity config-key span is tracked; the source-hash gate hashes ONLY that span (via extract_codex_reasoning.isolate_in_scope) so unrelated config-key edits (providers, hooks, telemetry, catalogs) don't trigger a run. developers.openai.com serves raw Markdown at any page's `.md` suffix. The committed snapshot is update/codex-reasoning.json; the offline conformance gate is update/validate_effort_conformance.py (check D).",
+    "validate": {
+      "min_bytes": 2000,
+      "must_contain_all": ["model_reasoning_effort", "config.toml"]
+    }
+  },
+  "models_docs": {
+    "name": "Codex models docs (lineup, flag-only)",
+    "url": "https://developers.openai.com/codex/models.md",
+    "purpose": "The Codex recommended-model lineup, read ONLY to FLAG a model this tracker has not seen (open a deduped tracking issue). This cron NEVER edits selector model lists — new models are the Cursor catalog cron's lane. Parsed by update/extract_codex_models.py from the `slug=\"...\"` attributes under `## Recommended models`.",
+    "validate": {
+      "min_bytes": 1000,
+      "must_contain_all": ["Recommended models", "slug="]
+    }
+  }
+}

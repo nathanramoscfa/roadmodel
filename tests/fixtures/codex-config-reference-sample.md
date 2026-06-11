@@ -7,6 +7,14 @@ covering ONLY the in-scope reasoning/verbosity config keys of the
 update/extract_codex_reasoning.py offline. A couple of neighbouring keys are
 kept (one before, one after) so the in-scope-span isolation is exercised
 realistically. Refresh from the live docs if the parser's expectations change.
+
+This comment is intentionally padded so the fixture clears the `min_bytes`
+floor declared in update/sources-codex.json (the real config-reference.md page
+is ~67 KB, so the floor guards against a truncated or empty fetch). Padding the
+comment does NOT affect the in-scope span the extractor isolates — that span
+runs from the `{` of the model_reasoning_effort object to the `}` of the
+model_verbosity object — so the recorded section_sha256 stays byte-identical to
+the live docs. Do not move the in-scope config keys below into a comment.
 -->
 
 ## `config.toml`
