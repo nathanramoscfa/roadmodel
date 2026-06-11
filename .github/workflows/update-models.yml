@@ -12,6 +12,11 @@ on:
     # catalog reflecting it under ~24h instead of ~7 days.
     - cron: "0 16 * * *"
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview only: gate + Opus --dry-run (prints the proposed catalog diff), but do NOT rebuild catalog.json, open a PR, or promote the source hash."
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -71,10 +76,16 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           AA_API_KEY: ${{ secrets.AA_API_KEY }}
-        run: python update/update_models.py
+        run: |
+          set -eo pipefail
+          ARGS=""
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            ARGS="--dry-run"
+          fi
+          python update/update_models.py $ARGS
 
       - name: Rebuild docs/catalog.json (deterministic)
-        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         run: |
           set -euo pipefail
           python update/build_catalog.py
@@ -87,7 +98,7 @@ jobs:
           fi
 
       - name: Open PR if catalog changed
-        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ secrets.BOT_PAT }}
         run: |
@@ -130,7 +141,9 @@ jobs:
         # gate sees the same diff and retries. `success()` is true even
         # when the Opus/rebuild/PR steps were skipped via the `if:`
         # condition, so unchanged-source days promote correctly too.
-        if: success()
+        # Skip on a dry run so a preview never advances the hash (the real
+        # next run must still see and process the upstream change).
+        if: success() && github.event.inputs.dry_run != 'true'
         run: |
           set -euo pipefail
           if [ -f update/.cache/sources-hash.new ]; then
