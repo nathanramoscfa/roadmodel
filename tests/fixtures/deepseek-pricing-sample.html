@@ -1,11 +1,16 @@
 <!DOCTYPE html>
 <!--
-Faithful slice of https://api-docs.deepseek.com/quick_start/pricing covering the
-MODEL header row (and a couple of context rows) of the pricing table, used to
-test update/extract_deepseek_models.py offline. The flag-only models extractor
-reads ONLY the MODEL row; the per-token $ pricing is the Cursor catalog cron's
-lane and is intentionally NOT parsed here. Refresh from the live docs if the
-parser's expectations change.
+Faithful slice of https://api-docs.deepseek.com/quick_start/pricing — the pricing
+table, used to test update/extract_deepseek_catalog.py (catalog source) AND
+update/extract_deepseek_models.py (flag-only models) offline. Reproduces the live
+table's mixed layout so the parser's rowspan/colspan handling is exercised:
+  - the MODEL row names the models (footnote marker on the first);
+  - CONTEXT LENGTH and MAX OUTPUT use colspan (one value shared across models);
+  - the PRICING section label uses rowspan, so the cache-hit row carries an extra
+    leading cell while the cache-miss / output rows do not.
+The per-token $ pricing is the Cursor catalog cron's lane downstream — this
+fixture exists only to test the deterministic parse. Refresh from the live docs
+if the parser's expectations change.
 -->
 <html>
 <body>
@@ -17,14 +22,33 @@ parser's expectations change.
       <td>deepseek-v4-pro</td>
     </tr>
     <tr>
+      <td>MODEL VERSION</td>
+      <td>DeepSeek-V4-Flash</td>
+      <td>DeepSeek-V4-Pro</td>
+    </tr>
+    <tr>
       <td>CONTEXT LENGTH</td>
-      <td>1M</td>
-      <td>1M</td>
+      <td colspan="2">1M</td>
+    </tr>
+    <tr>
+      <td>MAX OUTPUT</td>
+      <td colspan="2">MAXIMUM: 384K</td>
+    </tr>
+    <tr>
+      <td rowspan="3">PRICING</td>
+      <td>1M INPUT TOKENS (CACHE HIT)</td>
+      <td>$0.0028</td>
+      <td>$0.003625</td>
     </tr>
     <tr>
       <td>1M INPUT TOKENS (CACHE MISS)</td>
       <td>$0.14</td>
       <td>$0.435</td>
+    </tr>
+    <tr>
+      <td>1M OUTPUT TOKENS</td>
+      <td>$0.28</td>
+      <td>$0.87</td>
     </tr>
   </tbody>
 </table>
