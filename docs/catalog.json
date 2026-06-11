@@ -1,9 +1,9 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-06-11T04:42:16Z",
+  "generated_at_utc": "2026-06-11T04:58:28Z",
   "source_doc_sha256": {
-    "model-selector.txt": "29464f2393492156310dd39954d6b4644d2ff87c088f4cc535d5617a565074dc",
-    "model-tier-cost-scale.md": "d712a4e3df1ea517f6f41d8b4cd0649dcb1662985aa556554b3919a7051e427f"
+    "model-selector.txt": "97f4fd24df7e745860f8006c4e1f2253db7c2bc5e02953feecc0da5c2e0a8b4c",
+    "model-tier-cost-scale.md": "2c73039da4d7c3cdd1a7a184e209f7f125977ad3d1d3c8812a808d38ebf7cd84"
   },
   "models": [
     {
@@ -23,7 +23,7 @@
         "speed": "S"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 37.1; Output Speed 135.4 tokens/s; AA-Omniscience -4.2; latency leader among Claude family",
+      "headline_benchmarks": "AA Intelligence Index 37.1; Output Speed 143.0 tokens/s; AA-Omniscience -4.2; latency leader among Claude family",
       "pricing_notes": "Hidden by default; Bedrock/Vertex: regional endpoints +10% surcharge; Cache: writes 1.25x, reads 0.1x",
       "best_for": "Speed-optimized lowest-cost Claude model, ideal for simple completions, high-volume repetitive tasks, and latency-sensitive workflows where a lightweight capable response matters more than deep reasoning"
     },
@@ -191,7 +191,7 @@
         "speed": "S"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 55.3 (high reasoning); \u03c4\u00b2-bench retail pass_1 45.6 (Gemini 3.5 Flash); Output Speed 200.4 tokens/s",
+      "headline_benchmarks": "AA Intelligence Index 55.3 (high reasoning); \u03c4\u00b2-bench retail pass_1 45.6 (Gemini 3.5 Flash); Output Speed 203.7 tokens/s",
       "pricing_notes": "-",
       "best_for": "Auto-added cheap-tier Google model; pending editorial best-for refinement."
     },
@@ -317,7 +317,7 @@
         "speed": "B"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 56.8 (#4); LMArena Text Elo 1452.5 (#23); GPT-5.4 (xhigh) Output Speed 79.8 tokens/s; lowest factual error rate among GPT models",
+      "headline_benchmarks": "AA Intelligence Index 56.8 (#4); LMArena Text Elo 1452.5 (#23); GPT-5.4 (xhigh) Output Speed 86.1 tokens/s; lowest factual error rate among GPT models",
       "pricing_notes": "Hidden by default; Requires Max Mode on request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context (Max Mode) supports up to 1M tokens with 2x input pricing",
       "best_for": "Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding"
     },
@@ -338,7 +338,7 @@
         "speed": "A"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 48.9 (xhigh); Output Speed 157.0 tokens/s; HLE 26.6% (GPT-5.4-mini xhigh)",
+      "headline_benchmarks": "AA Intelligence Index 48.9 (xhigh); Output Speed 180.8 tokens/s; HLE 26.6% (GPT-5.4-mini xhigh)",
       "pricing_notes": "Hidden by default; Smaller, faster variant of GPT-5.4; 90% discount on cached input tokens",
       "best_for": "Lightweight GPT-5.4 variant balancing quality and cost, well-suited for straightforward coding, short-form generation, and high-throughput workloads needing solid GPT reasoning at a fraction of the flagship price"
     },
@@ -402,7 +402,7 @@
       },
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 53.2 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1189.2",
-      "pricing_notes": "Requires Max Mode on request-based plans",
+      "pricing_notes": "Hidden by default; Requires Max Mode on request-based plans",
       "best_for": "Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding \u2014 leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist"
     },
     {
@@ -780,12 +780,12 @@
     {
       "provider": "Google",
       "tier": "Google AI Plus",
-      "monthly_usd": 7.99,
+      "monthly_usd": 4.99,
       "surface_funded": [
         "gemini-app",
         "gemini-cli"
       ],
-      "notes": "Entry-paid Google AI tier with 2x higher usage limits than Free in the Gemini app, access to video generation and Daily Brief, 200 Google Flow Credits, and 200 GB of cloud storage."
+      "notes": "Entry-paid Google AI tier with 2x higher usage limits than Free in the Gemini app, access to Gemini 3.1 Pro / Nano Banana Pro / Daily Brief / Gemini Omni video generation, 200 Google Flow Credits, and 400 GB of cloud storage (price cut from $7.99 to $4.99 on 2026-06-08; storage doubled from 200 GB to 400 GB)."
     },
     {
       "provider": "Google",
