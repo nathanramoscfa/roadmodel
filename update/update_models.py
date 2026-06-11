@@ -477,7 +477,17 @@ def build_user_message(
     cost_scale_text: str,
     fetched: list[dict[str, str]],
     fetch_errors: list[str],
+    target: str | None = None,
 ) -> str:
+    """Assemble the Opus user message.
+
+    ``target`` selects which file the model must emit (the refresh is split into
+    two single-file Opus calls so neither response approaches the output-token
+    ceiling — emitting two full regenerated files in one call overflows when a
+    new model family is added). ``None`` keeps the legacy two-file contract.
+    For ``"selector"``, ``cost_scale_text`` is the ALREADY-updated cost scale
+    from the first call, so ``<model-options>`` is synced to fresh tiers.
+    """
     blocks: list[str] = [
         f'<current_file path="docs/model-selector.txt">\n{selector_text}\n</current_file>',
         f'<current_file path="docs/model-tier-cost-scale.md">\n{cost_scale_text}\n</current_file>',
@@ -490,6 +500,8 @@ def build_user_message(
         )
     if fetch_errors:
         blocks.append("<fetch_errors>\n" + "\n".join(fetch_errors) + "\n</fetch_errors>")
+    if target is not None:
+        blocks.append(f"<emit_target>{target}</emit_target>")
     return "\n\n".join(blocks)
 
 
@@ -536,7 +548,7 @@ def call_opus(system_prompt: str, user_message: str, api_key: str) -> str:
 _FENCED_BLOCK_RE = re.compile(r"```[a-zA-Z]*\n(.*?)\n```", re.DOTALL)
 
 
-def parse_result(raw: str) -> dict[str, Any]:
+def parse_result(raw: str, primary_key: str = "roadmodel_txt") -> dict[str, Any]:
     """Parse the model's JSON response, tolerating prose preamble/epilogue.
 
     The system prompt asks for a single JSON object with no surrounding
@@ -547,9 +559,10 @@ def parse_result(raw: str) -> dict[str, Any]:
     2. If a markdown fence wraps the entire response (starts AND ends
        with ```), strip the outermost fence and retry.
     3. Scan all embedded fenced code blocks; if any of them parses as
-       JSON, return the one with the longest `roadmodel_txt` value.
-       This discriminates the real payload (entire selector.txt) from
-       sample/template fences (placeholder strings like "...full
+       JSON, return the one with the longest ``primary_key`` value
+       (``roadmodel_txt`` by default, ``model_tier_cost_scale_md`` for the
+       cost-scale pass). This discriminates the real payload (a full file)
+       from sample/template fences (placeholder strings like "...full
        file...").
     4. Strip all fenced blocks and try parsing what remains, then fall
        back to first `{` to last `}`.
@@ -585,8 +598,8 @@ def parse_result(raw: str) -> dict[str, Any]:
         except json.JSONDecodeError:
             return
         if isinstance(parsed, dict):
-            roadmodel_txt = parsed.get("roadmodel_txt", "")
-            length = len(roadmodel_txt) if isinstance(roadmodel_txt, str) else 0
+            payload = parsed.get(primary_key, "")
+            length = len(payload) if isinstance(payload, str) else 0
             candidates.append((length, parsed))
 
     for block in _FENCED_BLOCK_RE.findall(text):
@@ -708,21 +721,57 @@ def main() -> int:
         )
         return 3
 
-    user_message = build_user_message(selector_text, cost_scale_text, fetched, fetch_errors)
+    # Two single-file Opus calls instead of one two-file call. Emitting both
+    # full regenerated files in a single response overflows the output-token
+    # ceiling when a new model FAMILY is added (the from-scratch tier profile
+    # tips it over → truncated, invalid JSON, the refresh fails). The cost-scale
+    # is the upstream artifact and the selector's <model-options> is synced FROM
+    # it, so run cost-scale first and feed its output into the selector call.
+    # Sources are partitioned by what each file needs (pricing → cost-scale;
+    # benchmarks → selector), so total input stays ~constant rather than doubling.
+    pricing_sources = [s for s in fetched if s["type"] == "pricing"]
+    benchmark_sources = [s for s in fetched if s["type"] == "benchmark"]
 
-    raw = call_opus(system_prompt, user_message, api_key)
-    try:
-        result = parse_result(raw)
-    except json.JSONDecodeError:
-        sys.stderr.write("Model did not return valid JSON. Raw output:\n")
-        sys.stderr.write(raw)
-        sys.stderr.write("\n")
+    def run_call(target: str, cost_scale_in: str, srcs: list[dict[str, str]], key: str) -> dict[str, Any] | None:
+        msg = build_user_message(selector_text, cost_scale_in, srcs, fetch_errors, target=target)
+        raw = call_opus(system_prompt, msg, api_key)
+        try:
+            return parse_result(raw, primary_key=key)
+        except json.JSONDecodeError:
+            sys.stderr.write(f"Model did not return valid JSON for target={target!r}. Raw output:\n")
+            sys.stderr.write(raw + "\n")
+            return None
+
+    # Pass: cost-scale (pricing sources only).
+    result_cs = run_call("cost_scale", cost_scale_text, pricing_sources, "model_tier_cost_scale_md")
+    if result_cs is None:
         return 2
+    new_cost_scale_obj = result_cs.get("model_tier_cost_scale_md")
+    if not isinstance(new_cost_scale_obj, str) or not new_cost_scale_obj.strip():
+        sys.stderr.write("cost_scale pass did not return a model_tier_cost_scale_md string\n")
+        return 2
+    new_cost_scale: str = new_cost_scale_obj
 
-    new_selector = result["roadmodel_txt"]
-    new_cost_scale = result["model_tier_cost_scale_md"]
-    summary = result.get("summary") or "Refresh roadmodel catalog"
-    warnings = list(result.get("warnings") or [])
+    # Pass: selector (benchmark sources + the freshly-updated cost-scale).
+    result_sel = run_call("selector", new_cost_scale, benchmark_sources, "roadmodel_txt")
+    if result_sel is None:
+        return 2
+    new_selector_obj = result_sel.get("roadmodel_txt")
+    if not isinstance(new_selector_obj, str) or not new_selector_obj.strip():
+        sys.stderr.write("selector pass did not return a roadmodel_txt string\n")
+        return 2
+    new_selector: str = new_selector_obj
+
+    # Merge summaries (drop bare "No changes detected.") and warnings.
+    summary_parts = [
+        s.strip()
+        for s in (result_cs.get("summary"), result_sel.get("summary"))
+        if isinstance(s, str) and s.strip() and s.strip() != "No changes detected."
+    ]
+    summary = " | ".join(summary_parts) if summary_parts else "No changes detected."
+    warnings: list[str] = []
+    for r in (result_cs, result_sel):
+        warnings.extend(w for w in (r.get("warnings") or []) if isinstance(w, str))
     if fetch_errors:
         warnings.extend(f"Fetch error: {err}" for err in fetch_errors)
 
