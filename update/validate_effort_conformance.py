@@ -38,6 +38,15 @@ Four hard checks:
      value (subset) and no documented value left unencoded (completeness). The
      UI synonym ``extra-high`` is treated as ``xhigh``. Codex publishes no
      per-model reasoning matrix, so this is a pure vocabulary check.
+  E. Gemini thinking surface (Gemini/Google). Gemini exposes TWO reasoning
+     surfaces; the selector must stay consistent with both. E1: the Gemini 3.x
+     ``thinking-level`` vocabulary the selector enumerates must EQUAL the
+     documented ``thinking_levels`` set (``minimal | low | medium | high``). E2:
+     where the selector affirmatively ties a Gemini 3.x model to a level its
+     documented row lacks (clause-scoped, negation-aware), that is a violation —
+     e.g. Gemini 3.1 Pro has no ``minimal``. E3: the Gemini 2.5 numeric
+     ``thinkingBudget`` sentinels must survive — ``0`` mapped to Off (disable)
+     and the ``-1`` / dynamic sentinel acknowledged.
 
 Exit codes: 0 PASS, 1 conformance failure, 2 input/config error.
 """
@@ -54,6 +63,7 @@ UPDATE_DIR = Path(__file__).resolve().parent
 REPO_ROOT = UPDATE_DIR.parent
 DEFAULT_SNAPSHOT = UPDATE_DIR / "claude-code-effort.json"
 DEFAULT_CODEX_SNAPSHOT = UPDATE_DIR / "codex-reasoning.json"
+DEFAULT_GEMINI_SNAPSHOT = UPDATE_DIR / "gemini-thinking.json"
 DEFAULT_SELECTOR = REPO_ROOT / "docs" / "model-selector.txt"
 
 # Snapshot keys the gate depends on. A snapshot missing any of these is a
@@ -61,6 +71,8 @@ DEFAULT_SELECTOR = REPO_ROOT / "docs" / "model-selector.txt"
 REQUIRED_SNAPSHOT_KEYS = ("effort_levels", "per_model_effort", "ultracode", "ultrathink")
 # The Codex snapshot key the provider-aware check D depends on.
 REQUIRED_CODEX_SNAPSHOT_KEYS = ("reasoning_effort",)
+# The Gemini snapshot keys the provider-aware check E depends on.
+REQUIRED_GEMINI_SNAPSHOT_KEYS = ("thinking_levels", "per_model_levels", "budget_sentinels")
 
 # UI / label synonyms that denote a documented Codex config reasoning value.
 # The selector writes "Extra High" / ``extra-high`` for the ``xhigh`` config
@@ -185,6 +197,23 @@ def load_codex_snapshot(path: Path) -> dict[str, object]:
     missing = [k for k in REQUIRED_CODEX_SNAPSHOT_KEYS if k not in data]
     if missing:
         raise ConfigError(f"codex snapshot is missing required keys {missing}: {path}")
+    return data
+
+
+def load_gemini_snapshot(path: Path) -> dict[str, object]:
+    try:
+        data = json.loads(path.read_text())
+    except FileNotFoundError as exc:
+        raise ConfigError(
+            f"gemini snapshot not found: {path} — run extract_gemini_thinking.py"
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise ConfigError(f"gemini snapshot is not valid JSON: {path} ({exc})") from exc
+    if not isinstance(data, dict):
+        raise ConfigError(f"gemini snapshot must be a JSON object: {path}")
+    missing = [k for k in REQUIRED_GEMINI_SNAPSHOT_KEYS if k not in data]
+    if missing:
+        raise ConfigError(f"gemini snapshot is missing required keys {missing}: {path}")
     return data
 
 
@@ -546,10 +575,110 @@ def check_codex_reasoning_vocab(selector: str, codex_snapshot: dict[str, object]
     return failures
 
 
+def gemini_level_tokens(thinking_flat: str) -> set[str]:
+    """Gemini 3.x thinking-level tokens enumerated on the Gemini bullet.
+
+    The bullet reads "... thinking-level knob - ``minimal``, ``low``, ...";
+    capture the backtick tokens up to the first ``.`` or ``(`` (the per-model
+    caveat that follows is a parenthetical / new sentence).
+    """
+    m = re.search(r"thinking-level knob\s*[—–\-]+\s*([^.(]*)", thinking_flat)
+    if not m:
+        return set()
+    return {t.lower() for t in re.findall(r"`([^`]+)`", m.group(1))}
+
+
+def check_gemini_thinking(selector: str, gemini_snapshot: dict[str, object]) -> list[str]:
+    """Check E — the selector's Gemini reasoning description must match the docs.
+
+    E1 (vocabulary): the Gemini 3.x thinking-level vocabulary the selector
+        enumerates must EQUAL the documented ``thinking_levels`` set.
+    E2 (per-model): where the selector affirmatively ties a Gemini 3.x model to
+        a thinking level its documented row lacks (clause-scoped, negation-aware,
+        mirroring check B), that is a violation — e.g. tying Gemini 3.1 Pro to
+        ``minimal`` (its row is low/medium/high).
+    E3 (sentinels): the selector must keep the documented Gemini 2.5
+        ``thinkingBudget`` sentinels — ``0`` mapped to Off (disable) and the
+        ``-1`` / dynamic sentinel acknowledged.
+    """
+    levels_raw = gemini_snapshot.get("thinking_levels")
+    per_model_raw = gemini_snapshot.get("per_model_levels")
+    sentinels_raw = gemini_snapshot.get("budget_sentinels")
+    if not isinstance(levels_raw, list) or not levels_raw:
+        return ["check E (gemini): snapshot is missing the 'thinking_levels' list"]
+    if not isinstance(per_model_raw, dict):
+        return ["check E (gemini): snapshot is missing the 'per_model_levels' map"]
+    documented = {str(lv).lower() for lv in levels_raw}
+    sentinels = sentinels_raw if isinstance(sentinels_raw, dict) else {}
+
+    thinking = extract_block(selector, THINKING_BLOCK)
+    flat = _collapse(thinking)
+    flat_low = flat.lower()
+    failures: list[str] = []
+
+    # E1 — vocabulary equality (subset + completeness).
+    vocab = gemini_level_tokens(flat)
+    if not vocab:
+        failures.append(
+            "check E (gemini levels): could not find the Gemini 3.x 'thinking-level "
+            "knob' enumeration in <thinking-context>"
+        )
+    else:
+        for token in sorted(vocab - documented):
+            failures.append(
+                f"check E (gemini levels): the selector ties Gemini to thinking level "
+                f"{token!r}, which is not a documented Gemini 3.x level "
+                f"({sorted(documented)})"
+            )
+        for token in sorted(documented - vocab):
+            failures.append(
+                f"check E (gemini levels): documented Gemini 3.x level {token!r} is "
+                "missing from the selector's thinking-level enumeration"
+            )
+
+    # E2 — per-model support (clause-scoped, negation-aware).
+    token_re = effort_token_re(list(documented))
+    seen: set[tuple[str, str]] = set()
+    for clause in split_clauses(flat_low):
+        if any(cue in clause for cue in NEGATION_CUES):
+            continue
+        tokens = {t.lower() for t in token_re.findall(clause)}
+        if not tokens:
+            continue
+        for model, levels in per_model_raw.items():
+            if model.lower() not in clause:
+                continue
+            supported = {str(lv).lower() for lv in levels} if isinstance(levels, list) else set()
+            for token in sorted(tokens - supported):
+                key = (model, token)
+                if key in seen:
+                    continue
+                seen.add(key)
+                failures.append(
+                    f"check E (gemini per-model): the selector ties {model!r} to "
+                    f"thinking level {token!r}, which is not in its documented row "
+                    f"{sorted(supported)}"
+                )
+
+    # E3 — Gemini 2.5 thinkingBudget sentinels.
+    if sentinels.get("dynamic") == -1 and "-1" not in flat and "dynamic" not in flat_low:
+        failures.append(
+            "check E (gemini sentinels): the selector must acknowledge Gemini's "
+            "`-1` / dynamic thinkingBudget sentinel"
+        )
+    if sentinels.get("disable") == 0 and not re.search(r"`?0`?\s*(?:→|->)\s*`?off`?", flat_low):
+        failures.append(
+            "check E (gemini sentinels): the selector must map Gemini thinkingBudget "
+            "`0` to `Off` (disable thinking)"
+        )
+    return failures
+
+
 def run_checks(
     selector: str,
     snapshot: dict[str, object],
     codex_snapshot: dict[str, object] | None = None,
+    gemini_snapshot: dict[str, object] | None = None,
 ) -> list[str]:
     failures: list[str] = []
     failures += check_thinking_vocab(selector, snapshot)
@@ -557,6 +686,8 @@ def run_checks(
     failures += check_ultracode_ultrathink(selector, snapshot)
     if codex_snapshot is not None:
         failures += check_codex_reasoning_vocab(selector, codex_snapshot)
+    if gemini_snapshot is not None:
+        failures += check_gemini_thinking(selector, gemini_snapshot)
     return failures
 
 
@@ -567,17 +698,19 @@ def main() -> int:
     parser.add_argument("--selector", type=Path, default=DEFAULT_SELECTOR)
     parser.add_argument("--snapshot", type=Path, default=DEFAULT_SNAPSHOT)
     parser.add_argument("--codex-snapshot", type=Path, default=DEFAULT_CODEX_SNAPSHOT)
+    parser.add_argument("--gemini-snapshot", type=Path, default=DEFAULT_GEMINI_SNAPSHOT)
     args = parser.parse_args()
 
     try:
         snapshot = load_snapshot(args.snapshot)
         codex_snapshot = load_codex_snapshot(args.codex_snapshot)
+        gemini_snapshot = load_gemini_snapshot(args.gemini_snapshot)
         selector = read_selector(args.selector)
     except ConfigError as exc:
         print(f"validate_effort_conformance: config error: {exc}", file=sys.stderr)
         return 2
 
-    failures = run_checks(selector, snapshot, codex_snapshot)
+    failures = run_checks(selector, snapshot, codex_snapshot, gemini_snapshot)
     if failures:
         print(
             f"validate_effort_conformance: {len(failures)} failure(s):",
@@ -590,7 +723,8 @@ def main() -> int:
     print(
         "validate_effort_conformance: PASS (Claude Code effort vocabulary is a "
         "documented subset; no model tied to an unsupported effort level; ultracode "
-        "and ultrathink kept distinct; Codex reasoning vocabulary matches the docs)"
+        "and ultrathink kept distinct; Codex reasoning vocabulary matches the docs; "
+        "Gemini thinking levels + budget sentinels match the docs)"
     )
     return 0
 

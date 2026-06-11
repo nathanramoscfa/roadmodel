@@ -139,8 +139,13 @@ differently:
   reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
   `xhigh` (the top "Extra High" tier; model-dependent). Higher
   effort spends more reasoning tokens before visible output.
-- Gemini (Google API, Gemini CLI): thinking-budget setting in
-  tokens.
+- Gemini (Google API, Gemini CLI): two reasoning surfaces by
+  model generation. Gemini 3.x exposes a discrete thinking-level
+  knob — `minimal`, `low`, `medium`, `high` (not every model
+  supports every level; e.g. Gemini 3.1 Pro has no `minimal`).
+  Gemini 2.5 exposes a numeric `thinkingBudget` in tokens, with
+  `0` to disable thinking where the model allows it (Gemini 2.5
+  Pro cannot) and `-1` for dynamic, model-decided thinking.
 - Cursor: usually inherits the underlying model's thinking
   behavior but does not expose the toggle in the IDE surface
   (true in both Composer mode and Chat mode).
@@ -155,7 +160,10 @@ provider-native scales onto this 6-state field:
 - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
   `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
   Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
-- Gemini thinking-budget 0 → `Off`; small → `Low`; medium →
+- Gemini 3.x thinking levels: `minimal` → `Off`; `low` → `Low`;
+  `medium` → `Medium`; `high` → `High` (Gemini 3.x tops out at
+  `high` — no `xhigh` tier). Gemini 2.5 `thinkingBudget`: `0` →
+  `Off`; `-1` (dynamic) → `Medium`; small → `Low`; medium →
   `Medium`; large → `High`; very large → `XHigh`.
 - `N/A` when the chosen access method does not expose a thinking
   toggle (e.g. Cursor — neither its Composer mode nor its Chat
@@ -328,8 +336,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
-    - Gemini (Google API, Gemini CLI): thinking-budget setting in
-      tokens.
+    - Gemini (Google API, Gemini CLI): two reasoning surfaces by
+      model generation. Gemini 3.x exposes a discrete thinking-level
+      knob — `minimal`, `low`, `medium`, `high` (not every model
+      supports every level; e.g. Gemini 3.1 Pro has no `minimal`).
+      Gemini 2.5 exposes a numeric `thinkingBudget` in tokens, with
+      `0` to disable thinking where the model allows it (Gemini 2.5
+      Pro cannot) and `-1` for dynamic, model-decided thinking.
     - Cursor: usually inherits the underlying model's thinking
       behavior but does not expose the toggle in the IDE surface
       (true in both Composer mode and Chat mode).
@@ -344,7 +357,10 @@ as primary; the other becomes the secondary category for tie-breaking.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
-    - Gemini thinking-budget 0 → `Off`; small → `Low`; medium →
+    - Gemini 3.x thinking levels: `minimal` → `Off`; `low` → `Low`;
+      `medium` → `Medium`; `high` → `High` (Gemini 3.x tops out at
+      `high` — no `xhigh` tier). Gemini 2.5 `thinkingBudget`: `0` →
+      `Off`; `-1` (dynamic) → `Medium`; small → `Low`; medium →
       `Medium`; large → `High`; very large → `XHigh`.
     - `N/A` when the chosen access method does not expose a thinking
       toggle (e.g. Cursor — neither its Composer mode nor its Chat
@@ -822,8 +838,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
-    - Gemini (Google API, Gemini CLI): thinking-budget setting in
-      tokens.
+    - Gemini (Google API, Gemini CLI): two reasoning surfaces by
+      model generation. Gemini 3.x exposes a discrete thinking-level
+      knob — `minimal`, `low`, `medium`, `high` (not every model
+      supports every level; e.g. Gemini 3.1 Pro has no `minimal`).
+      Gemini 2.5 exposes a numeric `thinkingBudget` in tokens, with
+      `0` to disable thinking where the model allows it (Gemini 2.5
+      Pro cannot) and `-1` for dynamic, model-decided thinking.
     - Cursor: usually inherits the underlying model's thinking
       behavior but does not expose the toggle in the IDE surface
       (true in both Composer mode and Chat mode).
@@ -838,7 +859,10 @@ as primary; the other becomes the secondary category for tie-breaking.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
-    - Gemini thinking-budget 0 → `Off`; small → `Low`; medium →
+    - Gemini 3.x thinking levels: `minimal` → `Off`; `low` → `Low`;
+      `medium` → `Medium`; `high` → `High` (Gemini 3.x tops out at
+      `high` — no `xhigh` tier). Gemini 2.5 `thinkingBudget`: `0` →
+      `Off`; `-1` (dynamic) → `Medium`; small → `Low`; medium →
       `Medium`; large → `High`; very large → `XHigh`.
     - `N/A` when the chosen access method does not expose a thinking
       toggle (e.g. Cursor — neither its Composer mode nor its Chat
@@ -1153,8 +1177,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
-    - Gemini (Google API, Gemini CLI): thinking-budget setting in
-      tokens.
+    - Gemini (Google API, Gemini CLI): two reasoning surfaces by
+      model generation. Gemini 3.x exposes a discrete thinking-level
+      knob — `minimal`, `low`, `medium`, `high` (not every model
+      supports every level; e.g. Gemini 3.1 Pro has no `minimal`).
+      Gemini 2.5 exposes a numeric `thinkingBudget` in tokens, with
+      `0` to disable thinking where the model allows it (Gemini 2.5
+      Pro cannot) and `-1` for dynamic, model-decided thinking.
     - Cursor: usually inherits the underlying model's thinking
       behavior but does not expose the toggle in the IDE surface
       (true in both Composer mode and Chat mode).
@@ -1169,7 +1198,10 @@ as primary; the other becomes the secondary category for tie-breaking.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
-    - Gemini thinking-budget 0 → `Off`; small → `Low`; medium →
+    - Gemini 3.x thinking levels: `minimal` → `Off`; `low` → `Low`;
+      `medium` → `Medium`; `high` → `High` (Gemini 3.x tops out at
+      `high` — no `xhigh` tier). Gemini 2.5 `thinkingBudget`: `0` →
+      `Off`; `-1` (dynamic) → `Medium`; small → `Low`; medium →
       `Medium`; large → `High`; very large → `XHigh`.
     - `N/A` when the chosen access method does not expose a thinking
       toggle (e.g. Cursor — neither its Composer mode nor its Chat
@@ -1922,8 +1954,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
-    - Gemini (Google API, Gemini CLI): thinking-budget setting in
-      tokens.
+    - Gemini (Google API, Gemini CLI): two reasoning surfaces by
+      model generation. Gemini 3.x exposes a discrete thinking-level
+      knob — `minimal`, `low`, `medium`, `high` (not every model
+      supports every level; e.g. Gemini 3.1 Pro has no `minimal`).
+      Gemini 2.5 exposes a numeric `thinkingBudget` in tokens, with
+      `0` to disable thinking where the model allows it (Gemini 2.5
+      Pro cannot) and `-1` for dynamic, model-decided thinking.
     - Cursor: usually inherits the underlying model's thinking
       behavior but does not expose the toggle in the IDE surface
       (true in both Composer mode and Chat mode).
@@ -1938,7 +1975,10 @@ as primary; the other becomes the secondary category for tie-breaking.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
-    - Gemini thinking-budget 0 → `Off`; small → `Low`; medium →
+    - Gemini 3.x thinking levels: `minimal` → `Off`; `low` → `Low`;
+      `medium` → `Medium`; `high` → `High` (Gemini 3.x tops out at
+      `high` — no `xhigh` tier). Gemini 2.5 `thinkingBudget`: `0` →
+      `Off`; `-1` (dynamic) → `Medium`; small → `Low`; medium →
       `Medium`; large → `High`; very large → `XHigh`.
     - `N/A` when the chosen access method does not expose a thinking
       toggle (e.g. Cursor — neither its Composer mode nor its Chat
