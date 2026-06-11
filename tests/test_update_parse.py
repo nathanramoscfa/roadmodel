@@ -106,3 +106,41 @@ def test_real_json_inside_second_fence() -> None:
 def test_malformed_raises_json_decode_error() -> None:
     with pytest.raises(json.JSONDecodeError):
         parse_result("not JSON at all, no braces")
+
+
+# --------------------------------------------------------------------------- #
+# Split-call (two single-file Opus passes) — see update_models.main()
+# --------------------------------------------------------------------------- #
+
+
+def test_cost_scale_pass_discriminates_by_its_own_key() -> None:
+    """The cost-scale pass response has NO roadmodel_txt; the real payload must
+    be discriminated by `model_tier_cost_scale_md` length, not roadmodel_txt."""
+    real = "# Model tier cost scale " + "y" * 500
+    raw = (
+        "```json\n"
+        '{"model_tier_cost_scale_md": "...", "summary": "...", "warnings": []}\n'
+        "```\n\nReal output:\n\n"
+        '{"model_tier_cost_scale_md": "' + real + '", "summary": "CS refreshed", "warnings": []}'
+    )
+    parsed = parse_result(raw, primary_key="model_tier_cost_scale_md")
+    assert parsed["model_tier_cost_scale_md"] == real
+    assert parsed["summary"] == "CS refreshed"
+    assert "roadmodel_txt" not in parsed
+
+
+def test_build_user_message_emit_target_directive() -> None:
+    from update_models import build_user_message
+
+    msg = build_user_message("SEL", "CS", [], [], target="cost_scale")
+    assert "<emit_target>cost_scale</emit_target>" in msg
+    msg_sel = build_user_message("SEL", "CS", [], [], target="selector")
+    assert "<emit_target>selector</emit_target>" in msg_sel
+    # Legacy two-file contract: no directive when target is omitted.
+    assert "<emit_target>" not in build_user_message("SEL", "CS", [], [])
+
+
+def test_prompt_documents_emit_target() -> None:
+    prompt = (UPDATE_DIR / "prompt.md").read_text()
+    assert "<emit_target>cost_scale</emit_target>" in prompt
+    assert "<emit_target>selector</emit_target>" in prompt
