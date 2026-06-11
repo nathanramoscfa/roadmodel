@@ -842,7 +842,20 @@ entirely) plus `summary` and `warnings`:
   `supports-models`). The provided
   `<current_file path="docs/model-tier-cost-scale.md">` is the ALREADY-UPDATED
   cost scale — treat it as authoritative and sync `<model-options>` (prices,
-  tier buckets, the new/removed models) to it. Do NOT return
+  tier buckets, the new/removed models) to it.
+
+  **CRITICAL — `pricing-notes` ≡ cost-scale `Notes` (byte-identical).** Because
+  this is the selector-only pass, the cost-scale you receive has ALREADY been
+  refreshed by the cost-scale pass; its `Notes` may differ from the selector's
+  current `pricing-notes`. For EVERY model present in both files, copy that
+  model's cost-scale-row `Notes` column VERBATIM into its `<model …
+  pricing-notes="…">` — including any value that just changed (e.g. a newly
+  added `Hidden by default;` prefix). A per-PR test
+  (`test_selector_pricing_notes_match_cost_scale_notes`) HARD-FAILS the run on
+  any mismatch, so do not paraphrase, reorder, or drop clauses. This is the
+  "Final-pass invariant: cost-scale `Notes` ≡ selector `pricing-notes`" rule
+  above, now applied against the provided (authoritative) cost scale rather than
+  one you emit in the same response. Do NOT return
   `model_tier_cost_scale_md`.
   ```
   { "roadmodel_txt": "<full updated content>", "summary": "...", "warnings": [...] }
