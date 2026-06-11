@@ -14,7 +14,7 @@ network) — the canonical docs facts come from ``update/claude-code-effort.json
 ``update/codex-reasoning.json`` (refreshed by
 ``update/extract_codex_reasoning.py``).
 
-Four hard checks:
+Six hard checks:
 
   A. Effort-vocabulary subset (Claude Code). Every effort-bearing value the
      selector's ``THINKING`` field can emit (i.e. excluding the control states
@@ -47,6 +47,16 @@ Four hard checks:
      e.g. Gemini 3.1 Pro has no ``minimal``. E3: the Gemini 2.5 numeric
      ``thinkingBudget`` sentinels must survive — ``0`` mapped to Off (disable)
      and the ``-1`` / dynamic sentinel acknowledged.
+  F. DeepSeek thinking surface (DeepSeek). DeepSeek exposes ONE reasoning
+     surface: a thinking toggle plus a reasoning-effort enum. F1: the effort
+     vocabulary the selector enumerates must EQUAL the documented
+     ``reasoning_effort`` set (``high | max``) AND the toggle vocabulary must
+     EQUAL the documented ``thinking_toggle`` set (``enabled | disabled``) — both
+     subset + completeness. F-mapping: the DeepSeek output mapping must hold —
+     thinking ``disabled`` -> Off, effort ``high`` -> High, effort ``max`` ->
+     XHigh (scoped to the DeepSeek mapping clause, so the OpenAI mapping's own
+     ``high`` -> High is not mistaken for it). DeepSeek publishes no per-model
+     reasoning matrix, so there is no per-model sub-check.
 
 Exit codes: 0 PASS, 1 conformance failure, 2 input/config error.
 """
@@ -64,6 +74,7 @@ REPO_ROOT = UPDATE_DIR.parent
 DEFAULT_SNAPSHOT = UPDATE_DIR / "claude-code-effort.json"
 DEFAULT_CODEX_SNAPSHOT = UPDATE_DIR / "codex-reasoning.json"
 DEFAULT_GEMINI_SNAPSHOT = UPDATE_DIR / "gemini-thinking.json"
+DEFAULT_DEEPSEEK_SNAPSHOT = UPDATE_DIR / "deepseek-thinking.json"
 DEFAULT_SELECTOR = REPO_ROOT / "docs" / "model-selector.txt"
 
 # Snapshot keys the gate depends on. A snapshot missing any of these is a
@@ -73,6 +84,8 @@ REQUIRED_SNAPSHOT_KEYS = ("effort_levels", "per_model_effort", "ultracode", "ult
 REQUIRED_CODEX_SNAPSHOT_KEYS = ("reasoning_effort",)
 # The Gemini snapshot keys the provider-aware check E depends on.
 REQUIRED_GEMINI_SNAPSHOT_KEYS = ("thinking_levels", "per_model_levels", "budget_sentinels")
+# The DeepSeek snapshot keys the provider-aware check F depends on.
+REQUIRED_DEEPSEEK_SNAPSHOT_KEYS = ("reasoning_effort", "thinking_toggle")
 
 # UI / label synonyms that denote a documented Codex config reasoning value.
 # The selector writes "Extra High" / ``extra-high`` for the ``xhigh`` config
@@ -214,6 +227,23 @@ def load_gemini_snapshot(path: Path) -> dict[str, object]:
     missing = [k for k in REQUIRED_GEMINI_SNAPSHOT_KEYS if k not in data]
     if missing:
         raise ConfigError(f"gemini snapshot is missing required keys {missing}: {path}")
+    return data
+
+
+def load_deepseek_snapshot(path: Path) -> dict[str, object]:
+    try:
+        data = json.loads(path.read_text())
+    except FileNotFoundError as exc:
+        raise ConfigError(
+            f"deepseek snapshot not found: {path} — run extract_deepseek_thinking.py"
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise ConfigError(f"deepseek snapshot is not valid JSON: {path} ({exc})") from exc
+    if not isinstance(data, dict):
+        raise ConfigError(f"deepseek snapshot must be a JSON object: {path}")
+    missing = [k for k in REQUIRED_DEEPSEEK_SNAPSHOT_KEYS if k not in data]
+    if missing:
+        raise ConfigError(f"deepseek snapshot is missing required keys {missing}: {path}")
     return data
 
 
@@ -674,11 +704,139 @@ def check_gemini_thinking(selector: str, gemini_snapshot: dict[str, object]) -> 
     return failures
 
 
+def deepseek_effort_tokens(thinking_flat: str) -> set[str]:
+    """DeepSeek reasoning-effort tokens enumerated on the DeepSeek bullet.
+
+    The bullet reads "... a reasoning-effort enum — ``high``, ``max`` (default
+    ...)"; capture the backtick tokens up to the first ``.`` or ``(`` (the
+    default / compatibility caveat that follows is parenthetical). The anchor is
+    "reasoning-effort **enum**", distinct from OpenAI's "reasoning-effort **knob**"
+    (check D), so the two never collide.
+    """
+    m = re.search(r"reasoning-effort enum\s*[—–\-]+\s*([^.(]*)", thinking_flat)
+    if not m:
+        return set()
+    return {t.lower() for t in re.findall(r"`([^`]+)`", m.group(1))}
+
+
+def deepseek_toggle_tokens(thinking_flat: str) -> set[str]:
+    """DeepSeek thinking-toggle tokens enumerated on the DeepSeek bullet.
+
+    The bullet reads "... a thinking toggle (``enabled`` / ``disabled``, default
+    ``enabled``) ..."; capture the backtick tokens inside that first parenthetical.
+    """
+    m = re.search(r"thinking toggle\s*\(([^)]*)\)", thinking_flat)
+    if not m:
+        return set()
+    return {t.lower() for t in re.findall(r"`([^`]+)`", m.group(1))}
+
+
+def deepseek_mapping_segment(thinking_flat_low: str) -> str:
+    """The DeepSeek output-mapping clause (lowercased).
+
+    From the anchor "deepseek: thinking" to the next list bullet (" - ") or end.
+    Scoping the arrow checks to this clause keeps the OpenAI mapping's own
+    ``high`` -> ``High`` from satisfying DeepSeek's ``high`` -> ``High`` check.
+    """
+    m = re.search(r"deepseek: thinking(.*?)(?: - |$)", thinking_flat_low, re.DOTALL)
+    return m.group(1) if m else ""
+
+
+def check_deepseek_thinking(selector: str, deepseek_snapshot: dict[str, object]) -> list[str]:
+    """Check F — the selector's DeepSeek reasoning description must match the docs.
+
+    F1 (vocabulary): the DeepSeek reasoning-effort vocabulary the selector
+        enumerates must EQUAL the documented ``reasoning_effort`` set
+        (``high``/``max``), and the toggle vocabulary must EQUAL the documented
+        ``thinking_toggle`` set (``enabled``/``disabled``) — subset + completeness.
+    F-mapping: the DeepSeek output mapping must hold — thinking ``disabled`` ->
+        Off, effort ``high`` -> High, effort ``max`` -> XHigh — scoped to the
+        DeepSeek mapping clause.
+    """
+    effort_raw = deepseek_snapshot.get("reasoning_effort")
+    toggle_raw = deepseek_snapshot.get("thinking_toggle")
+    if not isinstance(effort_raw, list) or not effort_raw:
+        return ["check F (deepseek): snapshot is missing the 'reasoning_effort' list"]
+    if not isinstance(toggle_raw, list) or not toggle_raw:
+        return ["check F (deepseek): snapshot is missing the 'thinking_toggle' list"]
+    documented_effort = {str(v).lower() for v in effort_raw}
+    documented_toggle = {str(v).lower() for v in toggle_raw}
+
+    thinking = extract_block(selector, THINKING_BLOCK)
+    flat = _collapse(thinking)
+    flat_low = flat.lower()
+    failures: list[str] = []
+
+    # F1 — reasoning-effort vocabulary equality (subset + completeness).
+    effort_vocab = deepseek_effort_tokens(flat)
+    if not effort_vocab:
+        failures.append(
+            "check F (deepseek effort): could not find the DeepSeek 'reasoning-effort "
+            "enum' enumeration in <thinking-context>"
+        )
+    else:
+        for token in sorted(effort_vocab - documented_effort):
+            failures.append(
+                f"check F (deepseek effort): the selector ties DeepSeek to reasoning "
+                f"value {token!r}, which is not a documented DeepSeek reasoning-effort "
+                f"value ({sorted(documented_effort)})"
+            )
+        for token in sorted(documented_effort - effort_vocab):
+            failures.append(
+                f"check F (deepseek effort): documented DeepSeek reasoning value "
+                f"{token!r} is missing from the selector's reasoning-effort enumeration"
+            )
+
+    # F1 — thinking-toggle vocabulary equality.
+    toggle_vocab = deepseek_toggle_tokens(flat)
+    if not toggle_vocab:
+        failures.append(
+            "check F (deepseek toggle): could not find the DeepSeek thinking-toggle "
+            "enumeration in <thinking-context>"
+        )
+    else:
+        for token in sorted(toggle_vocab - documented_toggle):
+            failures.append(
+                f"check F (deepseek toggle): the selector ties DeepSeek to toggle value "
+                f"{token!r}, which is not a documented DeepSeek toggle value "
+                f"({sorted(documented_toggle)})"
+            )
+        for token in sorted(documented_toggle - toggle_vocab):
+            failures.append(
+                f"check F (deepseek toggle): documented DeepSeek toggle value {token!r} "
+                "is missing from the selector's thinking-toggle enumeration"
+            )
+
+    # F-mapping — disabled->Off, high->High, max->XHigh, scoped to the clause.
+    segment = deepseek_mapping_segment(flat_low)
+    if not segment:
+        failures.append(
+            "check F (deepseek mapping): could not find the DeepSeek output mapping "
+            "('DeepSeek: thinking `disabled` -> ...') in <thinking-context>"
+        )
+    else:
+        if not re.search(r"`disabled`\s*(?:→|->)\s*`off`", segment):
+            failures.append(
+                "check F (deepseek mapping): the selector must map DeepSeek thinking "
+                "`disabled` to `Off`"
+            )
+        if not re.search(r"`high`\s*(?:→|->)\s*`high`", segment):
+            failures.append(
+                "check F (deepseek mapping): the selector must map DeepSeek effort `high` to `High`"
+            )
+        if not re.search(r"`max`\s*(?:→|->)\s*`xhigh`", segment):
+            failures.append(
+                "check F (deepseek mapping): the selector must map DeepSeek effort `max` to `XHigh`"
+            )
+    return failures
+
+
 def run_checks(
     selector: str,
     snapshot: dict[str, object],
     codex_snapshot: dict[str, object] | None = None,
     gemini_snapshot: dict[str, object] | None = None,
+    deepseek_snapshot: dict[str, object] | None = None,
 ) -> list[str]:
     failures: list[str] = []
     failures += check_thinking_vocab(selector, snapshot)
@@ -688,6 +846,8 @@ def run_checks(
         failures += check_codex_reasoning_vocab(selector, codex_snapshot)
     if gemini_snapshot is not None:
         failures += check_gemini_thinking(selector, gemini_snapshot)
+    if deepseek_snapshot is not None:
+        failures += check_deepseek_thinking(selector, deepseek_snapshot)
     return failures
 
 
@@ -699,18 +859,20 @@ def main() -> int:
     parser.add_argument("--snapshot", type=Path, default=DEFAULT_SNAPSHOT)
     parser.add_argument("--codex-snapshot", type=Path, default=DEFAULT_CODEX_SNAPSHOT)
     parser.add_argument("--gemini-snapshot", type=Path, default=DEFAULT_GEMINI_SNAPSHOT)
+    parser.add_argument("--deepseek-snapshot", type=Path, default=DEFAULT_DEEPSEEK_SNAPSHOT)
     args = parser.parse_args()
 
     try:
         snapshot = load_snapshot(args.snapshot)
         codex_snapshot = load_codex_snapshot(args.codex_snapshot)
         gemini_snapshot = load_gemini_snapshot(args.gemini_snapshot)
+        deepseek_snapshot = load_deepseek_snapshot(args.deepseek_snapshot)
         selector = read_selector(args.selector)
     except ConfigError as exc:
         print(f"validate_effort_conformance: config error: {exc}", file=sys.stderr)
         return 2
 
-    failures = run_checks(selector, snapshot, codex_snapshot, gemini_snapshot)
+    failures = run_checks(selector, snapshot, codex_snapshot, gemini_snapshot, deepseek_snapshot)
     if failures:
         print(
             f"validate_effort_conformance: {len(failures)} failure(s):",
@@ -724,7 +886,8 @@ def main() -> int:
         "validate_effort_conformance: PASS (Claude Code effort vocabulary is a "
         "documented subset; no model tied to an unsupported effort level; ultracode "
         "and ultrathink kept distinct; Codex reasoning vocabulary matches the docs; "
-        "Gemini thinking levels + budget sentinels match the docs)"
+        "Gemini thinking levels + budget sentinels match the docs; DeepSeek "
+        "thinking toggle + reasoning-effort vocabulary and mapping match the docs)"
     )
     return 0
 

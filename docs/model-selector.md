@@ -146,6 +146,14 @@ differently:
   Gemini 2.5 exposes a numeric `thinkingBudget` in tokens, with
   `0` to disable thinking where the model allows it (Gemini 2.5
   Pro cannot) and `-1` for dynamic, model-decided thinking.
+- DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
+  `disabled`, default `enabled`) plus a reasoning-effort enum —
+  `high`, `max` (default `high`; `max` for some complex agentic
+  requests). DeepSeek's effort scale has no `low` / `medium` tier
+  (for compatibility the API accepts `low` / `medium`, mapping
+  both to `high`, and `xhigh`, mapping it to `max`). A consumer
+  DeepThink app toggle exposes only thinking on/off, not the
+  effort enum.
 - Cursor: usually inherits the underlying model's thinking
   behavior but does not expose the toggle in the IDE surface
   (true in both Composer mode and Chat mode).
@@ -165,6 +173,12 @@ provider-native scales onto this 6-state field:
   `high` — no `xhigh` tier). Gemini 2.5 `thinkingBudget`: `0` →
   `Off`; `-1` (dynamic) → `Medium`; small → `Low`; medium →
   `Medium`; large → `High`; very large → `XHigh`.
+- DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
+  `high` → `High`; `enabled` + effort `max` → `XHigh`. DeepSeek
+  effort has no `low` / `medium` tier, so no DeepSeek level maps
+  to `Low` or `Medium`. A consumer DeepThink on/off toggle (no
+  effort enum) maps `On` → `High` (default effort) and `Off` →
+  `Off`.
 - `N/A` when the chosen access method does not expose a thinking
   toggle (e.g. Cursor — neither its Composer mode nor its Chat
   mode surfaces the dial), regardless of whether the underlying
@@ -343,6 +357,14 @@ as primary; the other becomes the secondary category for tie-breaking.
       Gemini 2.5 exposes a numeric `thinkingBudget` in tokens, with
       `0` to disable thinking where the model allows it (Gemini 2.5
       Pro cannot) and `-1` for dynamic, model-decided thinking.
+    - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
+      `disabled`, default `enabled`) plus a reasoning-effort enum —
+      `high`, `max` (default `high`; `max` for some complex agentic
+      requests). DeepSeek's effort scale has no `low` / `medium` tier
+      (for compatibility the API accepts `low` / `medium`, mapping
+      both to `high`, and `xhigh`, mapping it to `max`). A consumer
+      DeepThink app toggle exposes only thinking on/off, not the
+      effort enum.
     - Cursor: usually inherits the underlying model's thinking
       behavior but does not expose the toggle in the IDE surface
       (true in both Composer mode and Chat mode).
@@ -362,6 +384,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       `high` — no `xhigh` tier). Gemini 2.5 `thinkingBudget`: `0` →
       `Off`; `-1` (dynamic) → `Medium`; small → `Low`; medium →
       `Medium`; large → `High`; very large → `XHigh`.
+    - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
+      `high` → `High`; `enabled` + effort `max` → `XHigh`. DeepSeek
+      effort has no `low` / `medium` tier, so no DeepSeek level maps
+      to `Low` or `Medium`. A consumer DeepThink on/off toggle (no
+      effort enum) maps `On` → `High` (default effort) and `Off` →
+      `Off`.
     - `N/A` when the chosen access method does not expose a thinking
       toggle (e.g. Cursor — neither its Composer mode nor its Chat
       mode surfaces the dial), regardless of whether the underlying
@@ -853,6 +881,14 @@ as primary; the other becomes the secondary category for tie-breaking.
       Gemini 2.5 exposes a numeric `thinkingBudget` in tokens, with
       `0` to disable thinking where the model allows it (Gemini 2.5
       Pro cannot) and `-1` for dynamic, model-decided thinking.
+    - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
+      `disabled`, default `enabled`) plus a reasoning-effort enum —
+      `high`, `max` (default `high`; `max` for some complex agentic
+      requests). DeepSeek's effort scale has no `low` / `medium` tier
+      (for compatibility the API accepts `low` / `medium`, mapping
+      both to `high`, and `xhigh`, mapping it to `max`). A consumer
+      DeepThink app toggle exposes only thinking on/off, not the
+      effort enum.
     - Cursor: usually inherits the underlying model's thinking
       behavior but does not expose the toggle in the IDE surface
       (true in both Composer mode and Chat mode).
@@ -872,6 +908,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       `high` — no `xhigh` tier). Gemini 2.5 `thinkingBudget`: `0` →
       `Off`; `-1` (dynamic) → `Medium`; small → `Low`; medium →
       `Medium`; large → `High`; very large → `XHigh`.
+    - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
+      `high` → `High`; `enabled` + effort `max` → `XHigh`. DeepSeek
+      effort has no `low` / `medium` tier, so no DeepSeek level maps
+      to `Low` or `Medium`. A consumer DeepThink on/off toggle (no
+      effort enum) maps `On` → `High` (default effort) and `Off` →
+      `Off`.
     - `N/A` when the chosen access method does not expose a thinking
       toggle (e.g. Cursor — neither its Composer mode nor its Chat
       mode surfaces the dial), regardless of whether the underlying
@@ -1192,6 +1234,14 @@ as primary; the other becomes the secondary category for tie-breaking.
       Gemini 2.5 exposes a numeric `thinkingBudget` in tokens, with
       `0` to disable thinking where the model allows it (Gemini 2.5
       Pro cannot) and `-1` for dynamic, model-decided thinking.
+    - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
+      `disabled`, default `enabled`) plus a reasoning-effort enum —
+      `high`, `max` (default `high`; `max` for some complex agentic
+      requests). DeepSeek's effort scale has no `low` / `medium` tier
+      (for compatibility the API accepts `low` / `medium`, mapping
+      both to `high`, and `xhigh`, mapping it to `max`). A consumer
+      DeepThink app toggle exposes only thinking on/off, not the
+      effort enum.
     - Cursor: usually inherits the underlying model's thinking
       behavior but does not expose the toggle in the IDE surface
       (true in both Composer mode and Chat mode).
@@ -1211,6 +1261,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       `high` — no `xhigh` tier). Gemini 2.5 `thinkingBudget`: `0` →
       `Off`; `-1` (dynamic) → `Medium`; small → `Low`; medium →
       `Medium`; large → `High`; very large → `XHigh`.
+    - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
+      `high` → `High`; `enabled` + effort `max` → `XHigh`. DeepSeek
+      effort has no `low` / `medium` tier, so no DeepSeek level maps
+      to `Low` or `Medium`. A consumer DeepThink on/off toggle (no
+      effort enum) maps `On` → `High` (default effort) and `Off` →
+      `Off`.
     - `N/A` when the chosen access method does not expose a thinking
       toggle (e.g. Cursor — neither its Composer mode nor its Chat
       mode surfaces the dial), regardless of whether the underlying
@@ -1978,6 +2034,14 @@ as primary; the other becomes the secondary category for tie-breaking.
       Gemini 2.5 exposes a numeric `thinkingBudget` in tokens, with
       `0` to disable thinking where the model allows it (Gemini 2.5
       Pro cannot) and `-1` for dynamic, model-decided thinking.
+    - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
+      `disabled`, default `enabled`) plus a reasoning-effort enum —
+      `high`, `max` (default `high`; `max` for some complex agentic
+      requests). DeepSeek's effort scale has no `low` / `medium` tier
+      (for compatibility the API accepts `low` / `medium`, mapping
+      both to `high`, and `xhigh`, mapping it to `max`). A consumer
+      DeepThink app toggle exposes only thinking on/off, not the
+      effort enum.
     - Cursor: usually inherits the underlying model's thinking
       behavior but does not expose the toggle in the IDE surface
       (true in both Composer mode and Chat mode).
@@ -1997,6 +2061,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       `high` — no `xhigh` tier). Gemini 2.5 `thinkingBudget`: `0` →
       `Off`; `-1` (dynamic) → `Medium`; small → `Low`; medium →
       `Medium`; large → `High`; very large → `XHigh`.
+    - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
+      `high` → `High`; `enabled` + effort `max` → `XHigh`. DeepSeek
+      effort has no `low` / `medium` tier, so no DeepSeek level maps
+      to `Low` or `Medium`. A consumer DeepThink on/off toggle (no
+      effort enum) maps `On` → `High` (default effort) and `Off` →
+      `Off`.
     - `N/A` when the chosen access method does not expose a thinking
       toggle (e.g. Cursor — neither its Composer mode nor its Chat
       mode surfaces the dial), regardless of whether the underlying

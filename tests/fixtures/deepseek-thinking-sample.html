@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!--
+Faithful slice of https://api-docs.deepseek.com/guides/thinking_mode covering
+ONLY the in-scope "Control Parameter" table (the thinking-toggle row and the
+reasoning-effort row) plus the three footnotes, used to test
+update/extract_deepseek_thinking.py offline. api-docs.deepseek.com serves HTML
+(no .md endpoint), so the fixture is HTML and the extractor parses it with bs4.
+The toggle JSON cell spans both format columns (colspan=2) on the live page;
+kept here. Refresh from the live docs if the parser's expectations change.
+-->
+<html>
+<body>
+<h2>Thinking Mode Toggle and Effort Control</h2>
+<table>
+  <thead>
+    <tr>
+      <td></td>
+      <td>Control Parameter (OpenAI Format)</td>
+      <td>Control Parameter (Anthropic Format)</td>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Thinking Mode Toggle<sup>(1)</sup></td>
+      <td colspan="2"><code>{"thinking": {"type": "enabled/disabled"}}</code></td>
+    </tr>
+    <tr>
+      <td>Thinking Effort Control<sup>(2)(3)</sup></td>
+      <td><code>{"reasoning_effort": "high/max"}</code></td>
+      <td><code>{"output_config": {"effort": "high/max"}}</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<ol>
+  <li>The thinking toggle defaults to enabled</li>
+  <li>In thinking mode, the default effort is high for regular requests; for some
+      complex agent requests (such as Claude Code, OpenCode), effort is
+      automatically set to max</li>
+  <li>In thinking mode, for compatibility, low and medium are mapped to high, and
+      xhigh is mapped to max</li>
+</ol>
+</body>
+</html>
