@@ -615,9 +615,9 @@ as primary; the other becomes the secondary category for tie-breaking.
 
 - **Pricing:** Input $10.00/M · Output $50.00/M
 - **Tier ratings:** Coding **S** · Planning **S** · Agentic **S** · Multimodal **S** · Long-context **S** · Knowledge **S** · Speed **D**
-- **Headline benchmarks:** AA Intelligence Index 64.9 (#1); HLE 53.3% (#1); Terminal-Bench Hard 62.9 (#1); τ²-bench retail pass_1 98.5 (#1)
+- **Headline benchmarks:** AA Intelligence Index 64.9 (#1); HLE 53.3% (#1); Terminal-Bench Hard 62.9 (#1)
 - **Pricing notes:** Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; About 2x the cost of Claude Opus 4.8; Requires Max Mode on request-based plans
-- **Best for:** Anthropic's new top-of-line Fable family flagship (no predecessor) — S-tier across coding, planning, agentic, multimodal, long-context, and knowledge, leading HLE (53.3%), Terminal-Bench Hard (62.9), and τ²-bench retail (98.5) with state-of-the-art vision and a 1M default context; about 2x the cost of Opus 4.8 and latency-slow (output ~64 tokens/s), so reserve for the hardest reasoning, agentic, and vision work where maximum capability outweighs cost and speed; security-guardrail trips auto-route to Opus. Tier profile sourced from the catalog cron's 2026-06-11 dry-run reconciliation against the live benchmark sources, pending editorial confirmation in the next refresh.
+- **Best for:** Anthropic's new top-of-line Fable family flagship (no predecessor) — S-tier across coding, planning, agentic, multimodal, long-context, and knowledge, leading HLE (53.3%) and Terminal-Bench Hard (62.9) with state-of-the-art vision and a 1M default context; about 2x the cost of Opus 4.8 and latency-slow (output ~64 tokens/s), so reserve for the hardest reasoning, agentic, and vision work where maximum capability outweighs cost and speed; security-guardrail trips auto-route to Opus. Tier profile sourced from the catalog cron's 2026-06-11 dry-run reconciliation against the live benchmark sources (τ²-bench retail not yet published for this model), pending editorial confirmation in the next refresh.
 
 #### GPT-5.5 — `gpt-5.5`
 
@@ -1011,7 +1011,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 #### claude.ai web / desktop — `claude-web`
 
 - **Billing:** subscription-included (requires claude-max-subscription)
-- **Supports models:** opus-4.8,claude-fable-5,opus-4.7,sonnet-4.6,claude-4.5-haiku
+- **Supports models:** opus-4.8,opus-4.7,sonnet-4.6,claude-4.5-haiku
 - **Toggles:** Max Mode — no · Thinking — yes
 - **Best for:** Chat-driven Claude use (no terminal, no codebase tool use) under the same Max budget that funds Claude Code — pick when the task is conversational rather than code-editing.
 
@@ -1467,9 +1467,9 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="S" tier-planning="S" tier-agentic="S"
              tier-multimodal="S" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 64.9 (#1); HLE 53.3% (#1); Terminal-Bench Hard 62.9 (#1); τ²-bench retail pass_1 98.5 (#1)"
+             headline-benchmarks="AA Intelligence Index 64.9 (#1); HLE 53.3% (#1); Terminal-Bench Hard 62.9 (#1)"
              pricing-notes="Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; About 2x the cost of Claude Opus 4.8; Requires Max Mode on request-based plans"
-             best-for="Anthropic's new top-of-line Fable family flagship (no predecessor) — S-tier across coding, planning, agentic, multimodal, long-context, and knowledge, leading HLE (53.3%), Terminal-Bench Hard (62.9), and τ²-bench retail (98.5) with state-of-the-art vision and a 1M default context; about 2x the cost of Opus 4.8 and latency-slow (output ~64 tokens/s), so reserve for the hardest reasoning, agentic, and vision work where maximum capability outweighs cost and speed; security-guardrail trips auto-route to Opus. Tier profile sourced from the catalog cron's 2026-06-11 dry-run reconciliation against the live benchmark sources, pending editorial confirmation in the next refresh." />
+             best-for="Anthropic's new top-of-line Fable family flagship (no predecessor) — S-tier across coding, planning, agentic, multimodal, long-context, and knowledge, leading HLE (53.3%) and Terminal-Bench Hard (62.9) with state-of-the-art vision and a 1M default context; about 2x the cost of Opus 4.8 and latency-slow (output ~64 tokens/s), so reserve for the hardest reasoning, agentic, and vision work where maximum capability outweighs cost and speed; security-guardrail trips auto-route to Opus. Tier profile sourced from the catalog cron's 2026-06-11 dry-run reconciliation against the live benchmark sources (τ²-bench retail not yet published for this model), pending editorial confirmation in the next refresh." />
       <model id="gpt-5.5" name="GPT-5.5"
              input-price-per-1m="$5.00" output-price-per-1m="$30.00"
              jurisdiction="us"
@@ -1702,7 +1702,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             provider="anthropic" billing="subscription-included"
             provider-jurisdiction="us"
             requires="claude-max-subscription"
-            supports-models="opus-4.8,claude-fable-5,opus-4.7,sonnet-4.6,claude-4.5-haiku"
+            supports-models="opus-4.8,opus-4.7,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
             best-for="Chat-driven Claude use (no terminal, no codebase tool use) under the same Max budget that funds Claude Code — pick when the task is conversational rather than code-editing." />
@@ -2253,9 +2253,9 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="S" tier-planning="S" tier-agentic="S"
              tier-multimodal="S" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 64.9 (#1); HLE 53.3% (#1); Terminal-Bench Hard 62.9 (#1); τ²-bench retail pass_1 98.5 (#1)"
+             headline-benchmarks="AA Intelligence Index 64.9 (#1); HLE 53.3% (#1); Terminal-Bench Hard 62.9 (#1)"
              pricing-notes="Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; About 2x the cost of Claude Opus 4.8; Requires Max Mode on request-based plans"
-             best-for="Anthropic's new top-of-line Fable family flagship (no predecessor) — S-tier across coding, planning, agentic, multimodal, long-context, and knowledge, leading HLE (53.3%), Terminal-Bench Hard (62.9), and τ²-bench retail (98.5) with state-of-the-art vision and a 1M default context; about 2x the cost of Opus 4.8 and latency-slow (output ~64 tokens/s), so reserve for the hardest reasoning, agentic, and vision work where maximum capability outweighs cost and speed; security-guardrail trips auto-route to Opus. Tier profile sourced from the catalog cron's 2026-06-11 dry-run reconciliation against the live benchmark sources, pending editorial confirmation in the next refresh." />
+             best-for="Anthropic's new top-of-line Fable family flagship (no predecessor) — S-tier across coding, planning, agentic, multimodal, long-context, and knowledge, leading HLE (53.3%) and Terminal-Bench Hard (62.9) with state-of-the-art vision and a 1M default context; about 2x the cost of Opus 4.8 and latency-slow (output ~64 tokens/s), so reserve for the hardest reasoning, agentic, and vision work where maximum capability outweighs cost and speed; security-guardrail trips auto-route to Opus. Tier profile sourced from the catalog cron's 2026-06-11 dry-run reconciliation against the live benchmark sources (τ²-bench retail not yet published for this model), pending editorial confirmation in the next refresh." />
       <model id="gpt-5.5" name="GPT-5.5"
              input-price-per-1m="$5.00" output-price-per-1m="$30.00"
              jurisdiction="us"
@@ -2488,7 +2488,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             provider="anthropic" billing="subscription-included"
             provider-jurisdiction="us"
             requires="claude-max-subscription"
-            supports-models="opus-4.8,claude-fable-5,opus-4.7,sonnet-4.6,claude-4.5-haiku"
+            supports-models="opus-4.8,opus-4.7,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
             best-for="Chat-driven Claude use (no terminal, no codebase tool use) under the same Max budget that funds Claude Code — pick when the task is conversational rather than code-editing." />

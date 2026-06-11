@@ -1,8 +1,8 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-06-11T03:57:21Z",
+  "generated_at_utc": "2026-06-11T04:42:16Z",
   "source_doc_sha256": {
-    "model-selector.txt": "8efedfbafa4e99346d0d833ecf0594c137bc23cdcea42201299b87eb57a9985a",
+    "model-selector.txt": "29464f2393492156310dd39954d6b4644d2ff87c088f4cc535d5617a565074dc",
     "model-tier-cost-scale.md": "d712a4e3df1ea517f6f41d8b4cd0649dcb1662985aa556554b3919a7051e427f"
   },
   "models": [
@@ -44,9 +44,9 @@
         "speed": "D"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 64.9 (#1); HLE 53.3% (#1); Terminal-Bench Hard 62.9 (#1); \u03c4\u00b2-bench retail pass_1 98.5 (#1)",
+      "headline_benchmarks": "AA Intelligence Index 64.9 (#1); HLE 53.3% (#1); Terminal-Bench Hard 62.9 (#1)",
       "pricing_notes": "Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; About 2x the cost of Claude Opus 4.8; Requires Max Mode on request-based plans",
-      "best_for": "Anthropic's new top-of-line Fable family flagship (no predecessor) \u2014 S-tier across coding, planning, agentic, multimodal, long-context, and knowledge, leading HLE (53.3%), Terminal-Bench Hard (62.9), and \u03c4\u00b2-bench retail (98.5) with state-of-the-art vision and a 1M default context; about 2x the cost of Opus 4.8 and latency-slow (output ~64 tokens/s), so reserve for the hardest reasoning, agentic, and vision work where maximum capability outweighs cost and speed; security-guardrail trips auto-route to Opus. Tier profile sourced from the catalog cron's 2026-06-11 dry-run reconciliation against the live benchmark sources, pending editorial confirmation in the next refresh."
+      "best_for": "Anthropic's new top-of-line Fable family flagship (no predecessor) \u2014 S-tier across coding, planning, agentic, multimodal, long-context, and knowledge, leading HLE (53.3%) and Terminal-Bench Hard (62.9) with state-of-the-art vision and a 1M default context; about 2x the cost of Opus 4.8 and latency-slow (output ~64 tokens/s), so reserve for the hardest reasoning, agentic, and vision work where maximum capability outweighs cost and speed; security-guardrail trips auto-route to Opus. Tier profile sourced from the catalog cron's 2026-06-11 dry-run reconciliation against the live benchmark sources (\u03c4\u00b2-bench retail not yet published for this model), pending editorial confirmation in the next refresh."
     },
     {
       "id": "composer-2",
@@ -554,7 +554,6 @@
       "requires": "claude-max-subscription",
       "supports_models": [
         "claude-4.5-haiku",
-        "claude-fable-5",
         "opus-4.7",
         "opus-4.8",
         "sonnet-4.6"
