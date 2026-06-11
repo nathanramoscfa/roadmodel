@@ -821,3 +821,32 @@ commentary outside the object:
 
 If nothing changed, return both files verbatim, set `summary` to
 "No changes detected.", and `warnings` to an empty array.
+
+## Single-target emit (`<emit_target>`)
+
+To keep each response well under the output-token ceiling, the refresh is split
+into two calls, each emitting ONE file. When the user message contains an
+`<emit_target>` directive, emit ONLY the named file's key (omit the other
+entirely) plus `summary` and `warnings`:
+
+- `<emit_target>cost_scale</emit_target>` — return ONLY
+  `model_tier_cost_scale_md` (apply every rule above that concerns
+  `docs/model-tier-cost-scale.md`: pricing rows, tiers, the Classification
+  Audit, subscription tiers). Do NOT return `roadmodel_txt`.
+  ```
+  { "model_tier_cost_scale_md": "<full updated content>", "summary": "...", "warnings": [...] }
+  ```
+- `<emit_target>selector</emit_target>` — return ONLY `roadmodel_txt` (apply
+  every rule that concerns `docs/model-selector.txt`: `<model-options>`
+  lifecycle, tier ratings, `headline-benchmarks`, `pricing-notes`,
+  `supports-models`). The provided
+  `<current_file path="docs/model-tier-cost-scale.md">` is the ALREADY-UPDATED
+  cost scale — treat it as authoritative and sync `<model-options>` (prices,
+  tier buckets, the new/removed models) to it. Do NOT return
+  `model_tier_cost_scale_md`.
+  ```
+  { "roadmodel_txt": "<full updated content>", "summary": "...", "warnings": [...] }
+  ```
+
+The `summary` / `warnings` rules and the "No changes detected." convention are
+unchanged. Emit the same strict single-JSON-object format (no prose, no fences).
