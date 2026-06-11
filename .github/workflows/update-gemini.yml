@@ -104,6 +104,38 @@ jobs:
             echo "Opened tracking issue for: ${model}"
           done
 
+      - name: Flag new Gemini thinking levels
+        # A docs-added thinking TIER beyond minimal/low/medium/high is significant
+        # (it needs a deliberate THINKING-field mapping). The conformance gate
+        # already hard-fails until the selector enumerates it, but open a deduped
+        # tracking issue too so the new tier gets human eyes even if Opus maps it
+        # and the PR auto-merges.
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.BOT_PAT }}
+        run: |
+          set -euo pipefail
+          mapfile -t levels < <(python -c "import json; [print(x) for x in json.load(open('update/gemini-thinking.json')).get('unexpected_levels', [])]")
+          if [ "${#levels[@]}" -eq 0 ]; then
+            echo "No new thinking levels flagged."
+            exit 0
+          fi
+          gh label create gemini-new-level --color D93F0B \
+            --description "Gemini docs introduced a thinking tier needing a THINKING mapping" 2>/dev/null || true
+          existing="$(gh issue list --state open --search 'Gemini docs introduced thinking level in:title' --json title -q '.[].title' || true)"
+          for level in "${levels[@]}"; do
+            [ -z "$level" ] && continue
+            if printf '%s\n' "$existing" | grep -Fq "$level"; then
+              echo "Tracking issue already open for level: ${level}"
+              continue
+            fi
+            gh issue create \
+              --title "feat(selector): Gemini docs introduced thinking level \"${level}\"" \
+              --label gemini-new-level \
+              --body "$(printf 'The Gemini API thinking docs introduced a thinking LEVEL **%s** beyond the known baseline (minimal/low/medium/high), recorded in `update/gemini-thinking.json` under `unexpected_levels`.\n\nThe refresh cron has flowed it into `thinking_levels`, so the conformance gate (check E) now requires the selector to enumerate and map it. **Action:** confirm the THINKING-field mapping the cron chose for **%s** (a new top-of-scale tier defaults to `XHigh`).\n\nOpened automatically by the Gemini refresh cron (`.github/workflows/update-gemini.yml`).' "${level}" "${level}")"
+            echo "Opened tracking issue for level: ${level}"
+          done
+
       - name: Reconcile Gemini thinking surface (Opus)
         # Skip on scheduled runs when the extracted facts did not change.
         # workflow_dispatch always runs. --dry-run previews without writing.
@@ -160,14 +192,21 @@ jobs:
           if [ -n "$unexpected" ]; then
             newmodel="$(printf '\n\n## New model(s) detected — route to the catalog cron\n\nThe Gemini thinking docs introduced: %s. This tracker only FLAGS new models; do NOT add them to selector model lists here. A tracking issue was opened.' "$unexpected")"
           fi
+          # NOTE a new thinking LEVEL the docs introduced (the selector was updated
+          # to enumerate/map it; the conformance gate enforced it).
+          unexlevels="$(python -c "import json; print(', '.join(json.load(open('update/gemini-thinking.json')).get('unexpected_levels', [])))" 2>/dev/null || true)"
+          newlevel=""
+          if [ -n "$unexlevels" ]; then
+            newlevel="$(printf '\n\n## New thinking level(s) detected\n\nThe Gemini thinking docs introduced reasoning tier(s): %s. The selector was reconciled to enumerate and map them (new top-of-scale tier -> XHigh); the conformance gate enforced it. A tracking issue was opened for review.' "$unexlevels")"
+          fi
           git add docs/model-selector.txt docs/model-selector.md update/gemini-thinking.json
-          git commit -m "Automated Gemini refresh: ${DATE}" -m "${summary}${warnings}${newmodel}"
+          git commit -m "Automated Gemini refresh: ${DATE}" -m "${summary}${warnings}${newmodel}${newlevel}"
           git push -u origin "$BRANCH"
           PR_URL="$(gh pr create \
             --base main \
             --head "$BRANCH" \
             --title "Automated Gemini refresh: ${DATE}" \
-            --body "$(printf '## Summary\n\n%s%s%s\n\n---\n\nThis PR was opened automatically by the daily Gemini refresh cron in `.github/workflows/update-gemini.yml`. It tracks the Gemini API thinking docs (HTML, parsed with bs4); the change trigger hashes the EXTRACTED FACTS, and the docs snapshot (`update/gemini-thinking.json`) plus the offline conformance gate (check E) keep the selector consistent with the docs. Auto-merge is enabled: GitHub will squash-merge once the `test` status check passes. To stop it: `gh pr merge --disable-auto`.' "$summary" "$warnings" "$newmodel")")"
+            --body "$(printf '## Summary\n\n%s%s%s\n\n---\n\nThis PR was opened automatically by the daily Gemini refresh cron in `.github/workflows/update-gemini.yml`. It tracks the Gemini API thinking docs (HTML, parsed with bs4); the change trigger hashes the EXTRACTED FACTS, and the docs snapshot (`update/gemini-thinking.json`) plus the offline conformance gate (check E) keep the selector consistent with the docs. Auto-merge is enabled: GitHub will squash-merge once the `test` status check passes. To stop it: `gh pr merge --disable-auto`.' "$summary" "$warnings$newmodel" "$newlevel")")"
           echo "Opened: $PR_URL"
           gh pr merge --auto --squash --delete-branch "$PR_URL"
 
