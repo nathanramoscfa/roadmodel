@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--
+Faithful slice of https://api-docs.deepseek.com/quick_start/pricing covering the
+MODEL header row (and a couple of context rows) of the pricing table, used to
+test update/extract_deepseek_models.py offline. The flag-only models extractor
+reads ONLY the MODEL row; the per-token $ pricing is the Cursor catalog cron's
+lane and is intentionally NOT parsed here. Refresh from the live docs if the
+parser's expectations change.
+-->
+<html>
+<body>
+<table>
+  <tbody>
+    <tr>
+      <td>MODEL</td>
+      <td>deepseek-v4-flash<sup>(1)</sup></td>
+      <td>deepseek-v4-pro</td>
+    </tr>
+    <tr>
+      <td>CONTEXT LENGTH</td>
+      <td>1M</td>
+      <td>1M</td>
+    </tr>
+    <tr>
+      <td>1M INPUT TOKENS (CACHE MISS)</td>
+      <td>$0.14</td>
+      <td>$0.435</td>
+    </tr>
+  </tbody>
+</table>
+</body>
+</html>

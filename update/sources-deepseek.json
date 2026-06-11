@@ -1,0 +1,27 @@
+{
+  "thinking_docs": {
+    "name": "DeepSeek API thinking-mode docs (toggle + reasoning-effort)",
+    "url": "https://api-docs.deepseek.com/guides/thinking_mode",
+    "purpose": "Authoritative source for DeepSeek's reasoning surface: the thinking toggle ({\"thinking\": {\"type\": \"enabled/disabled\"}}) and the reasoning-effort enum ({\"reasoning_effort\": \"high/max\"}), parsed from the single Control-Parameter HTML table by update/extract_deepseek_thinking.py. api-docs.deepseek.com serves server-rendered HTML (no clean .md endpoint; the models API needs auth), so this is the Gemini situation. Robustness: the must_contain_all anchors are literal server-rendered table headers / cell values (the data is present in the initial HTML response, parseable by bs4 from a plain curl with no JS engine — confirmed 2026-06-11). If DeepSeek ever switched this page to client-side rendering, an interstitial, or restructured the table, those anchors would be absent and the gate fails LOUD (the extractor exits 4) instead of silently scraping an empty shell. The docs-freshness cron hashes the EXTRACTED FACTS (canonical JSON), not the raw HTML, so devsite re-renders / cosmetic churn never false-trigger an expensive Opus run. A docs-added NATIVE effort/toggle tier is flagged from the snapshot's unexpected_effort / unexpected_toggle. The committed snapshot is update/deepseek-thinking.json; the offline conformance gate is update/validate_effort_conformance.py (check F).",
+    "validate": {
+      "min_bytes": 20000,
+      "must_contain_all": [
+        "Control Parameter",
+        "reasoning_effort",
+        "Thinking Mode Toggle",
+        "Thinking Effort Control",
+        "enabled/disabled",
+        "high/max"
+      ]
+    }
+  },
+  "models_docs": {
+    "name": "DeepSeek pricing docs (lineup, flag-only)",
+    "url": "https://api-docs.deepseek.com/quick_start/pricing",
+    "purpose": "The DeepSeek model lineup, read ONLY to FLAG a model this tracker has not seen (open a deduped tracking issue). This cron NEVER edits selector model lists and NEVER adds the per-token $ pricing here — both are the Cursor catalog cron's lane. Parsed by update/extract_deepseek_models.py from the MODEL header row of the pricing HTML table (the reasoning-dial thinking_mode page lists no models, unlike the Gemini docs, so the model source is the pricing page).",
+    "validate": {
+      "min_bytes": 5000,
+      "must_contain_all": ["MODEL", "deepseek-v4", "1M INPUT TOKENS"]
+    }
+  }
+}
