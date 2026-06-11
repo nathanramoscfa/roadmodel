@@ -403,6 +403,15 @@
              headline-benchmarks="AA Intelligence Index 61.4 (#1); HLE 45.7%; Terminal-Bench Hard 58.3 (top-tier); τ²-bench retail pass_1 94.4%"
              pricing-notes="Requires Max Mode on request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)"
              best-for="Anthropic's Opus 4.7 successor at the same very-high tier pricing — placeholder tier ratings inherited from opus-4.7 pending benchmark coverage; the 3x cheaper fast-mode per-token rate (vs opus-4.7 fast mode) is the headline cost-structure change to surface in the next editorial pass" />
+      <model id="claude-fable-5" name="Fable 5"
+             input-price-per-1m="$10.00" output-price-per-1m="$50.00"
+             jurisdiction="us"
+             tier-coding="S" tier-planning="S" tier-agentic="S"
+             tier-multimodal="S" tier-long-context="S" tier-knowledge="S"
+             tier-speed="D"
+             headline-benchmarks="AA Intelligence Index 64.9 (#1); HLE 53.3% (#1); Terminal-Bench Hard 62.9 (#1); τ²-bench retail pass_1 98.5 (#1)"
+             pricing-notes="Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; About 2x the cost of Claude Opus 4.8; Requires Max Mode on request-based plans"
+             best-for="Anthropic's new top-of-line Fable family flagship (no predecessor) — S-tier across coding, planning, agentic, multimodal, long-context, and knowledge, leading HLE (53.3%), Terminal-Bench Hard (62.9), and τ²-bench retail (98.5) with state-of-the-art vision and a 1M default context; about 2x the cost of Opus 4.8 and latency-slow (output ~64 tokens/s), so reserve for the hardest reasoning, agentic, and vision work where maximum capability outweighs cost and speed; security-guardrail trips auto-route to Opus. Tier profile sourced from the catalog cron's 2026-06-11 dry-run reconciliation against the live benchmark sources, pending editorial confirmation in the next refresh." />
       <model id="gpt-5.5" name="GPT-5.5"
              input-price-per-1m="$5.00" output-price-per-1m="$30.00"
              jurisdiction="us"
@@ -619,7 +628,7 @@
             provider="anthropic" billing="per-token"
             provider-jurisdiction="us"
             requires="anthropic-api-key"
-            supports-models="opus-4.8,opus-4.7,sonnet-4.6,claude-4.5-haiku"
+            supports-models="opus-4.8,claude-fable-5,opus-4.7,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
             best-for="Programmatic / scripted Claude use outside Claude Code — raw API headers, batch endpoints, or features not surfaced by Claude Code. Falls back here when claude.ai Max budget is exhausted." />
@@ -627,7 +636,7 @@
             provider="anthropic" billing="subscription-or-key"
             provider-jurisdiction="us"
             requires="claude-max-subscription OR anthropic-api-key"
-            supports-models="opus-4.8,opus-4.7,sonnet-4.6,claude-4.5-haiku"
+            supports-models="opus-4.8,claude-fable-5,opus-4.7,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="yes"
             best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI and as an IDE extension inside Cursor. Heavy Opus usage that would cost over $1,000/mo on per-token API is fully covered by a $100/mo Max plan." />
@@ -635,7 +644,7 @@
             provider="anthropic" billing="subscription-included"
             provider-jurisdiction="us"
             requires="claude-max-subscription"
-            supports-models="opus-4.8,opus-4.7,sonnet-4.6,claude-4.5-haiku"
+            supports-models="opus-4.8,claude-fable-5,opus-4.7,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
             best-for="Chat-driven Claude use (no terminal, no codebase tool use) under the same Max budget that funds Claude Code — pick when the task is conversational rather than code-editing." />
@@ -699,7 +708,7 @@
             provider="cursor" billing="subscription-pool"
             provider-jurisdiction="us"
             requires="cursor-pro-or-ultra-subscription"
-            supports-models="opus-4.8,opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gpt-5.2,gemini-3.1-pro,gemini-3-pro,gpt-5,gpt-5.1-codex,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,composer-2.5,gemini-2.5-flash,gemini-3-flash,gemini-3.5-flash,gpt-5-mini,kimi-k2.5"
+            supports-models="opus-4.8,claude-fable-5,opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gpt-5.2,gemini-3.1-pro,gemini-3-pro,gpt-5,gpt-5.1-codex,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,composer-2.5,gemini-2.5-flash,gemini-3-flash,gemini-3.5-flash,gpt-5-mini,kimi-k2.5"
             exposes-max-mode="yes" exposes-thinking="no"
             exposes-orchestration="no"
             best-for="Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / composer-2.5 imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. Cursor's own Auto and Premium routing modes are deliberately NOT enumerated as roadmodel-recommendable models because their routing is opaque (see `jurisdiction-context` for the rationale) — operators who want routing behavior pick a specific fixed model and let Cursor's pool handle the call. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)." />
