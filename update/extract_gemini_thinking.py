@@ -121,12 +121,34 @@ def _find_table(soup: BeautifulSoup, header_needles: tuple[str, ...]) -> Tag:
     raise ExtractError(f"no table found whose header contains all of {header_needles}")
 
 
-def parse_level_matrix(soup: BeautifulSoup) -> tuple[dict[str, list[str]], dict[str, str]]:
+def order_levels(levels: list[str]) -> list[str]:
+    """Known levels first (canonical order), then any extras sorted.
+
+    Keeping docs-added levels (not just the known baseline) means a new
+    top-of-scale tier flows into ``thinking_levels`` / ``per_model_levels`` —
+    so it changes the facts hash (the cron triggers) AND the conformance gate
+    demands the selector enumerate it, rather than the level being silently
+    dropped.
+    """
+    known = [lv for lv in LEVEL_ORDER if lv in levels]
+    extras = sorted(set(levels) - set(LEVEL_ORDER))
+    return known + extras
+
+
+def parse_level_matrix(
+    soup: BeautifulSoup,
+) -> tuple[dict[str, list[str]], dict[str, str], list[str]]:
     """Parse the Gemini 3.x ``Thinking Level`` per-model support matrix.
 
-    Returns ``(per_model_levels, level_defaults)``. A model supports a level
-    when its cell says "Supported" (but NOT "Not supported"); it is the default
-    when the cell also says "Default".
+    Returns ``(per_model_levels, level_defaults, all_levels)``. A model supports
+    a level when its cell says "Supported" (but NOT "Not supported"); it is the
+    default when the cell also says "Default".
+
+    A level/support row is identified structurally — a single-token level name in
+    the first column and at least one model cell stating support — NOT by an
+    allow-list of known level names. That way a docs-added tier (e.g. a new
+    top-of-scale level beyond the known baseline) is CAPTURED and surfaced, not
+    silently skipped.
     """
     table = _find_table(soup, ("Thinking Level",))
     rows = [r for r in table.find_all("tr") if isinstance(r, Tag)]
@@ -145,9 +167,16 @@ def parse_level_matrix(soup: BeautifulSoup) -> tuple[dict[str, list[str]], dict[
         if not cells:
             continue
         level = cells[0].strip().lower()
-        if level not in LEVEL_ORDER:
+        # Level names are single tokens; a real support row also has at least one
+        # model cell that states support. Both guards keep stray rows out without
+        # restricting to a known-level allow-list.
+        if not level or any(ch.isspace() for ch in level):
             continue
-        seen_levels.append(level)
+        model_cells = [cells[idx].lower() for idx, _ in model_cols if idx < len(cells)]
+        if not any("supported" in c for c in model_cells):
+            continue
+        if level not in seen_levels:
+            seen_levels.append(level)
         for idx, model in model_cols:
             if idx >= len(cells):
                 continue
@@ -158,13 +187,11 @@ def parse_level_matrix(soup: BeautifulSoup) -> tuple[dict[str, list[str]], dict[
                 if "default" in cell:
                     defaults[model] = level
 
-    # Order each model's levels canonically and drop models with no support.
-    ordered = {
-        model: [lv for lv in LEVEL_ORDER if lv in lvls] for model, lvls in per_model.items() if lvls
-    }
+    # Order each model's levels (known-first, extras sorted); drop empty models.
+    ordered = {model: order_levels(lvls) for model, lvls in per_model.items() if lvls}
     if not ordered or not seen_levels:
         raise ExtractError("level matrix parsed no model/level support")
-    return ordered, defaults
+    return ordered, defaults, order_levels(seen_levels)
 
 
 def parse_budget_table(soup: BeautifulSoup) -> dict[str, dict[str, object]]:
@@ -214,13 +241,6 @@ def parse_budget_table(soup: BeautifulSoup) -> dict[str, dict[str, object]]:
     return out
 
 
-def build_thinking_levels(per_model_levels: dict[str, list[str]]) -> list[str]:
-    seen: set[str] = set()
-    for lvls in per_model_levels.values():
-        seen.update(lvls)
-    return [lv for lv in LEVEL_ORDER if lv in seen]
-
-
 def canonical_facts(
     thinking_levels: list[str],
     per_model_levels: dict[str, list[str]],
@@ -245,9 +265,8 @@ def build_snapshot(html: str, *, source_url: str) -> dict[str, object]:
     verify_anchors(html)
     soup = BeautifulSoup(html, "html.parser")
 
-    per_model_levels, level_defaults = parse_level_matrix(soup)
+    per_model_levels, level_defaults, thinking_levels = parse_level_matrix(soup)
     per_model_budget = parse_budget_table(soup)
-    thinking_levels = build_thinking_levels(per_model_levels)
 
     # Derive the documented sentinels from the budget table rather than
     # hardcoding: disable = 0 (any model that can disable), dynamic = -1.
@@ -271,6 +290,21 @@ def build_snapshot(html: str, *, source_url: str) -> dict[str, object]:
             file=sys.stderr,
         )
 
+    # FLAG a thinking LEVEL the docs introduced beyond the known baseline. This
+    # is the high-value guard: a new top-of-scale tier now flows into
+    # thinking_levels (so the facts hash changes and the cron triggers) AND is
+    # surfaced explicitly so the new tier gets a deliberate THINKING mapping
+    # rather than being silently dropped.
+    unexpected_levels = [lv for lv in thinking_levels if lv not in LEVEL_ORDER]
+    if unexpected_levels:
+        print(
+            f"extract_gemini_thinking: NOTE unexpected Gemini thinking level(s) "
+            f"not in the known baseline {list(LEVEL_ORDER)}: {unexpected_levels}. A "
+            f"new reasoning tier needs a deliberate THINKING-field mapping in the "
+            f"selector — flag for review.",
+            file=sys.stderr,
+        )
+
     facts = canonical_facts(
         thinking_levels, per_model_levels, level_defaults, per_model_budget, budget_sentinels
     )
@@ -288,6 +322,7 @@ def build_snapshot(html: str, *, source_url: str) -> dict[str, object]:
         "per_model_budget": per_model_budget,
         "budget_sentinels": budget_sentinels,
         "unexpected_models": unexpected,
+        "unexpected_levels": unexpected_levels,
         "section_sha256": hashlib.sha256(facts.encode("utf-8")).hexdigest(),
     }
 
