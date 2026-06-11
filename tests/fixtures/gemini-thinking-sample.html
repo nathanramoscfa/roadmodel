@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<!--
+Faithful slice of https://ai.google.dev/gemini-api/docs/thinking covering ONLY
+the two in-scope tables (the Gemini 3.x "Thinking Level" support matrix and the
+Gemini 2.5 numeric thinkingBudget table), used to test
+update/extract_gemini_thinking.py offline. ai.google.dev serves HTML (no .md
+endpoint), so the fixture is HTML and the extractor parses it with bs4. The
+budget table keeps a subset of the live rows; the level matrix is complete.
+Refresh from the live docs if the parser's expectations change.
+-->
+<html>
+<body>
+<h2>Set the thinking level</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Thinking Level</th>
+      <th>Gemini 3.1 Pro</th>
+      <th>Gemini 3.1 Flash-Lite</th>
+      <th>Gemini 3 Flash</th>
+      <th>Gemini 3.5 Flash</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>minimal</td>
+      <td>Not supported</td>
+      <td>Supported (Default)</td>
+      <td>Supported</td>
+      <td>Supported</td>
+      <td>Matches the "no thinking" setting for most queries.</td>
+    </tr>
+    <tr>
+      <td>low</td>
+      <td>Supported</td>
+      <td>Supported</td>
+      <td>Supported</td>
+      <td>Supported</td>
+      <td>Minimizes latency and cost.</td>
+    </tr>
+    <tr>
+      <td>medium</td>
+      <td>Supported</td>
+      <td>Supported</td>
+      <td>Supported</td>
+      <td>Supported (Default)</td>
+      <td>Balanced thinking for most tasks.</td>
+    </tr>
+    <tr>
+      <td>high</td>
+      <td>Supported (Default, Dynamic)</td>
+      <td>Supported (Dynamic)</td>
+      <td>Supported (Default, Dynamic)</td>
+      <td>Supported (Dynamic)</td>
+      <td>Maximizes reasoning depth.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Set a thinking budget</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Model</th>
+      <th>Default setting (Thinking budget is not set)</th>
+      <th>Range</th>
+      <th>Disable thinking</th>
+      <th>Turn on dynamic thinking</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2.5 Pro</td>
+      <td>Dynamic thinking</td>
+      <td>128 to 32768</td>
+      <td>N/A: Cannot disable thinking</td>
+      <td>thinkingBudget = -1 (Default)</td>
+    </tr>
+    <tr>
+      <td>2.5 Flash</td>
+      <td>Dynamic thinking</td>
+      <td>0 to 24576</td>
+      <td>thinkingBudget = 0</td>
+      <td>thinkingBudget = -1 (Default)</td>
+    </tr>
+    <tr>
+      <td>2.5 Flash Lite</td>
+      <td>Model does not think</td>
+      <td>512 to 24576</td>
+      <td>thinkingBudget = 0</td>
+      <td>thinkingBudget = -1</td>
+    </tr>
+  </tbody>
+</table>
+</body>
+</html>
