@@ -1,8 +1,8 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-06-12T00:47:09Z",
+  "generated_at_utc": "2026-06-12T03:47:20Z",
   "source_doc_sha256": {
-    "model-selector.txt": "eb1e2883dc67c5b10dd9cfc5be3f2bba65866c04d35df805d9886dd38e9d2b3e",
+    "model-selector.txt": "349b651368bfa1db2ca8639ef78a0201bd1ec305a1e27019e52ae02e3f7c205c",
     "model-tier-cost-scale.md": "2c73039da4d7c3cdd1a7a184e209f7f125977ad3d1d3c8812a808d38ebf7cd84"
   },
   "models": [
@@ -98,18 +98,18 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "C",
-        "planning": "C",
-        "agentic": "C",
-        "multimodal": "C",
+        "coding": "A",
+        "planning": "B",
+        "agentic": "B",
+        "multimodal": "D",
         "long-context": "B",
-        "knowledge": "C",
+        "knowledge": "B",
         "speed": "A"
       },
       "jurisdiction": "cn",
-      "headline_benchmarks": "DeepSeek V4-Flash fast/cheap variant at $0.28/M output with 1M context; specific benchmark numbers pending benchmark-source coverage of DeepSeek V4",
-      "pricing_notes": "Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.0028/M; PLACEHOLDER conservative tier ratings pending benchmark confirmation",
-      "best_for": "DeepSeek's V4-Flash \u2014 the fast, cheapest DeepSeek variant ($0.28/M output) with a 1M context window, for high-throughput / latency-sensitive text and code tasks under the cn jurisdiction with a deepseek-api-key; reached via the `deepseek-api` method (provider-direct per-token). Tier ratings are CONSERVATIVE PLACEHOLDERS pending benchmark confirmation \u2014 the catalog cron's benchmark pass refines them."
+      "headline_benchmarks": "AA Intelligence Index 47 (reasoning, max effort) \u2014 independently measured by Artificial Analysis; SWE-bench Verified 79.0% (DeepSeek-reported); 1M-token context; text-only (no image input); ~90 tokens/s",
+      "pricing_notes": "Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.0028/M",
+      "best_for": "DeepSeek's V4-Flash \u2014 the fast (~90 tokens/s), cheapest DeepSeek variant ($0.28/M output) with a 1M-token context window, for high-throughput / latency-sensitive text and code work under the cn jurisdiction with a deepseek-api-key. Mid-pack general intelligence (Artificial Analysis Intelligence Index 47) paired with a strong, DeepSeek-reported coding result (SWE-bench Verified 79.0%) \u2014 rated coding-A on that basis with the rest of its profile B-tier; text-only (no multimodal). Reached via the `deepseek-api` method (provider-direct per-token). Pick V4-Pro over V4-Flash when reasoning depth or the strongest coding matters; pick V4-Flash when speed and the lowest cost dominate."
     },
     {
       "id": "deepseek-v4-pro",
@@ -119,18 +119,18 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "B",
-        "planning": "B",
-        "agentic": "B",
-        "multimodal": "C",
-        "long-context": "B",
-        "knowledge": "B",
-        "speed": "B"
+        "coding": "A",
+        "planning": "A",
+        "agentic": "A",
+        "multimodal": "D",
+        "long-context": "A",
+        "knowledge": "A",
+        "speed": "C"
       },
       "jurisdiction": "cn",
-      "headline_benchmarks": "DeepSeek V4-Pro flagship at $0.87/M output with 1M context and thinking mode on by default; specific benchmark numbers pending benchmark-source coverage of DeepSeek V4 (AA Intelligence Index / LMArena / SWE-bench not yet indexing it)",
-      "pricing_notes": "Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.003625/M; PLACEHOLDER conservative tier ratings pending benchmark confirmation",
-      "best_for": "DeepSeek's V4-Pro \u2014 a very low-cost, cn-jurisdiction option with a 1M context window and thinking mode on by default, for cost-conscious coding / reasoning / long-context work when the cn jurisdiction is acceptable and a deepseek-api-key is configured; reached via the `deepseek-api` method (provider-direct per-token, not the Cursor pool). Tier ratings are CONSERVATIVE PLACEHOLDERS (the cn cheap-capable profile) pending benchmark-source coverage of DeepSeek V4 \u2014 likely under-rated; the catalog cron's benchmark pass refines them once AA / LMArena / SWE-bench index the model."
+      "headline_benchmarks": "AA Intelligence Index 52 (reasoning, max effort) \u2014 independently measured by Artificial Analysis; SWE-bench Verified 80.6%, LiveCodeBench 93.5, Terminal-Bench 2.0 67.9, Codeforces CodeElo 3206, Putnam-2025 120/120 (DeepSeek-reported); 1M-token context; text-only (no image input); ~46 tokens/s (notably slow)",
+      "pricing_notes": "Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.003625/M",
+      "best_for": "DeepSeek's V4-Pro flagship \u2014 a very low-cost ($0.87/M output), cn-jurisdiction reasoning model with a 1M-token context window and thinking mode on by default. Strong general intelligence (Artificial Analysis Intelligence Index 52, just below Grok 4.3) and a frontier-approaching coding profile (SWE-bench Verified 80.6%, LiveCodeBench 93.5, Codeforces CodeElo 3206) \u2014 these coding numbers are DeepSeek-reported, so it is rated coding-A rather than S pending an independent SWE-bench leaderboard entry. Text-only (no multimodal) and notably slow (~46 tokens/s), so not for latency-sensitive or image work. Reached via the `deepseek-api` method (provider-direct per-token, not the Cursor pool) when the cn jurisdiction is acceptable and a deepseek-api-key is configured \u2014 the cheapest A-tier coding / reasoning option in the catalog."
     },
     {
       "id": "gemini-2.5-flash",
