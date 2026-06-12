@@ -29,6 +29,8 @@ REAL_SELECTOR = REPO_ROOT / "docs" / "model-selector.txt"
 REAL_DEEPSEEK_CATALOG = UPDATE_DIR / "catalog-deepseek.json"
 REAL_ANTHROPIC_CATALOG = UPDATE_DIR / "catalog-anthropic.json"
 ANTHROPIC_MD = REPO_ROOT / "tests" / "fixtures" / "anthropic-pricing-sample.md"
+REAL_OPENAI_CATALOG = UPDATE_DIR / "catalog-openai.json"
+OPENAI_MD = REPO_ROOT / "tests" / "fixtures" / "openai-pricing-sample.md"
 
 
 def _load(name: str) -> Any:
@@ -378,12 +380,13 @@ def test_overlay_only_targets_whole_element_providers() -> None:
     assert mod.provider_direct_ids(snaps) == {"deepseek-v4-pro"}
 
 
-def test_real_overlay_excludes_anthropic() -> None:
+def test_real_overlay_excludes_price_only_providers() -> None:
     mod = _load("merge_catalog")
     ids = mod.provider_direct_ids(mod.provider_snapshots())
-    assert (
-        "opus-4.8" not in ids
-    )  # Anthropic is price-only — never force-overlaid (no rating freeze)
+    # Anthropic + OpenAI are price-only — never force-overlaid (no rating freeze).
+    assert "opus-4.8" not in ids
+    assert "gpt-5.5" not in ids
+    # Only the off-Cursor whole-element provider (DeepSeek) is overlaid.
     assert {"deepseek-v4-flash", "deepseek-v4-pro"} <= ids
 
 
@@ -403,6 +406,60 @@ def test_price_provenance_fails_on_selector_drift(tmp_path: Path) -> None:
     assert result.returncode == 1
     assert "G4 (price provenance)" in result.stderr
     assert "opus-4.8" in result.stderr
+
+
+# --------------------------------------------------------------------------- #
+# OpenAI provider-direct catalog source (T3 — JS-array .md, standard pane only)
+# --------------------------------------------------------------------------- #
+
+
+def test_openai_extractor_parses_standard_pane_not_batch() -> None:
+    mod = _load("extract_openai_catalog")
+    snap = mod.build_snapshot(OPENAI_MD.read_text(), source_url="file://sample")
+    models = {m["id"]: m for m in snap["models"]}
+    assert set(models) == {
+        "gpt-5.5",
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "gpt-5.4-nano",
+        "gpt-5.2",
+        "gpt-5",
+        "gpt-5-mini",
+    }
+    # STANDARD pane prices, NOT the half-price Batch pane below.
+    assert models["gpt-5.5"]["input_price_per_1m"] == 5.0
+    assert models["gpt-5.5"]["output_price_per_1m"] == 30.0
+    assert models["gpt-5.4"]["output_price_per_1m"] == 15.0
+    assert models["gpt-5-mini"]["output_price_per_1m"] == 2.0
+    # The "(<272K context length)" suffix is stripped; cached-input becomes cache_read.
+    assert models["gpt-5.5"]["cache_read_per_1m"] == 0.5
+    assert snap["overlay_mode"] == "price-only"
+    assert snap["jurisdiction"] == "us"
+    # gpt-5.1 + the -pro rows are present in the pane but NOT mapped (selector uses
+    # gpt-5.1-codex, not gpt-5.1) — confirm they are skipped.
+    assert "gpt-5.1" not in models
+    assert "gpt-5.5-pro" not in {m["name"] for m in snap["models"]}
+
+
+def test_openai_extractor_raises_on_restructure() -> None:
+    mod = _load("extract_openai_catalog")
+    with pytest.raises(mod.ExtractError):
+        mod.build_snapshot("# Pricing\n\nno standard pane here\n", source_url="x")
+
+
+def test_openai_committed_snapshot_matches_selector_prices() -> None:
+    cat = json.loads(REAL_OPENAI_CATALOG.read_text())
+    assert cat["overlay_mode"] == "price-only"
+    mc = _load("merge_catalog")
+    base = mc.base_models(REAL_SELECTOR.read_text())
+    for m in cat["models"]:
+        sel = base[m["id"]]
+        assert sel["input_price_per_1m"] == m["input_price_per_1m"]
+        assert sel["output_price_per_1m"] == m["output_price_per_1m"]
+    # The Codex variants are deliberately NOT migrated (not on the standard page).
+    ids = {m["id"] for m in cat["models"]}
+    assert "gpt-5.3-codex" not in ids
+    assert "gpt-5.1-codex" not in ids
 
 
 if __name__ == "__main__":
