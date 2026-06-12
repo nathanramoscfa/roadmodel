@@ -1,8 +1,8 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-06-12T03:47:20Z",
+  "generated_at_utc": "2026-06-12T13:56:35Z",
   "source_doc_sha256": {
-    "model-selector.txt": "349b651368bfa1db2ca8639ef78a0201bd1ec305a1e27019e52ae02e3f7c205c",
+    "model-selector.txt": "44ce20f9e47e6168237de52d4819e4a17782afe2053ad78aec85fc362f5f2e9b",
     "model-tier-cost-scale.md": "2c73039da4d7c3cdd1a7a184e209f7f125977ad3d1d3c8812a808d38ebf7cd84"
   },
   "models": [
@@ -47,6 +47,27 @@
       "headline_benchmarks": "AA Intelligence Index 64.9 (#1); HLE 53.3% (#1); Terminal-Bench Hard 62.9 (#1)",
       "pricing_notes": "Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; About 2x the cost of Claude Opus 4.8; Requires Max Mode on request-based plans",
       "best_for": "Anthropic's new top-of-line Fable family flagship (no predecessor) \u2014 S-tier across coding, planning, agentic, multimodal, long-context, and knowledge, leading HLE (53.3%) and Terminal-Bench Hard (62.9) with state-of-the-art vision and a 1M default context; about 2x the cost of Opus 4.8 and latency-slow (output ~64 tokens/s), so reserve for the hardest reasoning, agentic, and vision work where maximum capability outweighs cost and speed; security-guardrail trips auto-route to Opus. Tier profile sourced from the catalog cron's 2026-06-11 dry-run reconciliation against the live benchmark sources (\u03c4\u00b2-bench retail not yet published for this model), pending editorial confirmation in the next refresh."
+    },
+    {
+      "id": "codestral",
+      "name": "Codestral",
+      "input_price_per_1m": 0.3,
+      "output_price_per_1m": 0.9,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "C",
+        "agentic": "C",
+        "multimodal": "D",
+        "long-context": "B",
+        "knowledge": "C",
+        "speed": "A"
+      },
+      "jurisdiction": "eu",
+      "headline_benchmarks": "Mistral's code-specialist model; fast low-latency completion / fill-in-the-middle across many languages with a large code context window; specific public benchmark numbers pending",
+      "pricing_notes": "Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)",
+      "best_for": "Mistral's dedicated code model \u2014 fast, cheap ($0.90/M output) code completion and fill-in-the-middle under the EU jurisdiction, for autocomplete-style / high-throughput coding loops where an EU operator and low latency matter more than top-tier agentic reasoning. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key; prefer mistral-medium-3.5 for reasoning-heavy coding, codestral for fast bounded completions."
     },
     {
       "id": "composer-2",
@@ -469,6 +490,69 @@
       "best_for": "Moonshot's affordable mid-volume model \u2014 a non-Google / non-OpenAI / non-Anthropic option at low-tier pricing for cost-conscious code and text generation when provider diversity is desired (vendor-risk hedging, regional preferences); routed via Cursor's pool only \u2014 no direct Moonshot access method is currently enumerated in the access-methods block"
     },
     {
+      "id": "mistral-large-3",
+      "name": "Mistral Large 3",
+      "input_price_per_1m": 0.5,
+      "output_price_per_1m": 1.5,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "C",
+        "planning": "C",
+        "agentic": "C",
+        "multimodal": "D",
+        "long-context": "C",
+        "knowledge": "C",
+        "speed": "B"
+      },
+      "jurisdiction": "eu",
+      "headline_benchmarks": "AA Intelligence Index 23 (independently measured by Artificial Analysis); open-weight Mixture-of-Experts (self-hostable); text-only",
+      "pricing_notes": "Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)",
+      "best_for": "Mistral's open-weight Large 3 (MoE) \u2014 an EU-jurisdiction, self-hostable option at very low cost ($1.50/M output) for data-sovereignty workloads or teams that want to run the weights themselves. Artificial Analysis Intelligence Index 23 sits below the frontier and even below Mistral's own Medium 3.5 (Mistral repositioned Large as an open community model) \u2014 pick it for the open-weights / EU-operator profile, not raw capability. Reached via the `mistral-api` method (provider-direct per-token) or self-hosting."
+    },
+    {
+      "id": "mistral-medium-3.5",
+      "name": "Mistral Medium 3.5",
+      "input_price_per_1m": 1.5,
+      "output_price_per_1m": 7.5,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "B",
+        "agentic": "C",
+        "multimodal": "B",
+        "long-context": "B",
+        "knowledge": "B",
+        "speed": "B"
+      },
+      "jurisdiction": "eu",
+      "headline_benchmarks": "AA Intelligence Index 39 (independently measured by Artificial Analysis); unified chat / reasoning / code model with an adjustable reasoning dial (reasoning_effort); multimodal (text + image input)",
+      "pricing_notes": "Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)",
+      "best_for": "Mistral's flagship unified model \u2014 the EU-jurisdiction choice for data-sovereignty / EU-regulatory workloads at low cost ($7.50/M output), with adjustable reasoning and multimodal (vision) input. Artificial Analysis Intelligence Index 39 places it mid-pack (below the US/cn frontier such as Gemini 3.1 Pro or DeepSeek V4-Pro) \u2014 pick it when the operator's EU jurisdiction is the deciding constraint, not when raw capability is. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key."
+    },
+    {
+      "id": "mistral-small-4",
+      "name": "Mistral Small 4",
+      "input_price_per_1m": 0.1,
+      "output_price_per_1m": 0.3,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "C",
+        "planning": "C",
+        "agentic": "C",
+        "multimodal": "B",
+        "long-context": "C",
+        "knowledge": "C",
+        "speed": "A"
+      },
+      "jurisdiction": "eu",
+      "headline_benchmarks": "AA Intelligence Index 28 (independently measured by Artificial Analysis); compact Mixture-of-Experts unifying the former Small / Magistral / Pixtral / Devstral lines; adjustable reasoning_effort; multimodal (text + image)",
+      "pricing_notes": "Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)",
+      "best_for": "Mistral's cheapest fast model ($0.30/M output) \u2014 a small EU-jurisdiction MoE with multimodal input and an optional reasoning dial, for high-throughput / latency-sensitive text and light multimodal work where the EU operator matters and a mistral-api-key is configured. Artificial Analysis Intelligence Index 28 is low, so it is a cost / sovereignty pick rather than a capability pick. Reached via the `mistral-api` method (provider-direct per-token)."
+    },
+    {
       "id": "opus-4.7",
       "name": "Opus 4.7",
       "input_price_per_1m": 5.0,
@@ -729,6 +813,23 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "best_for": "Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)."
+    },
+    {
+      "id": "mistral-api",
+      "name": "Mistral API",
+      "provider": "mistral",
+      "provider_jurisdiction": "eu",
+      "billing": "per-token",
+      "requires": "mistral-api-key",
+      "supports_models": [
+        "codestral",
+        "mistral-large-3",
+        "mistral-medium-3.5",
+        "mistral-small-4"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "best_for": "Direct Mistral API access (provider-direct per-token; La Plateforme at api.mistral.ai) for the Mistral models \u2014 the EU-jurisdiction option for data-sovereignty / EU-regulatory workloads at low cost. Exposes a reasoning dial on the unified models (Mistral Small 4 / Medium 3.5) via the `reasoning_effort` parameter. Not routed via the Cursor pool. eu-jurisdiction is in the default allowed-jurisdictions list, so Mistral surfaces for any user with a mistral-api-key configured (no jurisdiction opt-in required, unlike cn providers)."
     },
     {
       "id": "openai-api",

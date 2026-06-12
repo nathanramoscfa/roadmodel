@@ -516,7 +516,9 @@ as primary; the other becomes the secondary category for tie-breaking.
 
     - `us` — United States. Today: Anthropic, OpenAI, Google, xAI,
       Cursor.
-    - `eu` — European Union member state.
+    - `eu` — European Union member state. Today: Mistral (La
+      Plateforme). In the default allowed list, so EU-operator models
+      surface for any user holding the relevant provider key.
     - `uk` — United Kingdom.
     - `ca` — Canada.
     - `au` — Australia.
@@ -829,6 +831,38 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Pricing notes:** Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.0028/M
 - **Best for:** DeepSeek's V4-Flash — the fast (~90 tokens/s), cheapest DeepSeek variant ($0.28/M output) with a 1M-token context window, for high-throughput / latency-sensitive text and code work under the cn jurisdiction with a deepseek-api-key. Mid-pack general intelligence (Artificial Analysis Intelligence Index 47) paired with a strong, DeepSeek-reported coding result (SWE-bench Verified 79.0%) — rated coding-A on that basis with the rest of its profile B-tier; text-only (no multimodal). Reached via the `deepseek-api` method (provider-direct per-token). Pick V4-Pro over V4-Flash when reasoning depth or the strongest coding matters; pick V4-Flash when speed and the lowest cost dominate.
 
+#### Mistral Medium 3.5 — `mistral-medium-3.5`
+
+- **Pricing:** Input $1.50/M · Output $7.50/M
+- **Tier ratings:** Coding **B** · Planning **B** · Agentic **C** · Multimodal **B** · Long-context **B** · Knowledge **B** · Speed **B**
+- **Headline benchmarks:** AA Intelligence Index 39 (independently measured by Artificial Analysis); unified chat / reasoning / code model with an adjustable reasoning dial (reasoning_effort); multimodal (text + image input)
+- **Pricing notes:** Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)
+- **Best for:** Mistral's flagship unified model — the EU-jurisdiction choice for data-sovereignty / EU-regulatory workloads at low cost ($7.50/M output), with adjustable reasoning and multimodal (vision) input. Artificial Analysis Intelligence Index 39 places it mid-pack (below the US/cn frontier such as Gemini 3.1 Pro or DeepSeek V4-Pro) — pick it when the operator's EU jurisdiction is the deciding constraint, not when raw capability is. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key.
+
+#### Mistral Small 4 — `mistral-small-4`
+
+- **Pricing:** Input $0.10/M · Output $0.30/M
+- **Tier ratings:** Coding **C** · Planning **C** · Agentic **C** · Multimodal **B** · Long-context **C** · Knowledge **C** · Speed **A**
+- **Headline benchmarks:** AA Intelligence Index 28 (independently measured by Artificial Analysis); compact Mixture-of-Experts unifying the former Small / Magistral / Pixtral / Devstral lines; adjustable reasoning_effort; multimodal (text + image)
+- **Pricing notes:** Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)
+- **Best for:** Mistral's cheapest fast model ($0.30/M output) — a small EU-jurisdiction MoE with multimodal input and an optional reasoning dial, for high-throughput / latency-sensitive text and light multimodal work where the EU operator matters and a mistral-api-key is configured. Artificial Analysis Intelligence Index 28 is low, so it is a cost / sovereignty pick rather than a capability pick. Reached via the `mistral-api` method (provider-direct per-token).
+
+#### Mistral Large 3 — `mistral-large-3`
+
+- **Pricing:** Input $0.50/M · Output $1.50/M
+- **Tier ratings:** Coding **C** · Planning **C** · Agentic **C** · Multimodal **D** · Long-context **C** · Knowledge **C** · Speed **B**
+- **Headline benchmarks:** AA Intelligence Index 23 (independently measured by Artificial Analysis); open-weight Mixture-of-Experts (self-hostable); text-only
+- **Pricing notes:** Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)
+- **Best for:** Mistral's open-weight Large 3 (MoE) — an EU-jurisdiction, self-hostable option at very low cost ($1.50/M output) for data-sovereignty workloads or teams that want to run the weights themselves. Artificial Analysis Intelligence Index 23 sits below the frontier and even below Mistral's own Medium 3.5 (Mistral repositioned Large as an open community model) — pick it for the open-weights / EU-operator profile, not raw capability. Reached via the `mistral-api` method (provider-direct per-token) or self-hosting.
+
+#### Codestral — `codestral`
+
+- **Pricing:** Input $0.30/M · Output $0.90/M
+- **Tier ratings:** Coding **B** · Planning **C** · Agentic **C** · Multimodal **D** · Long-context **B** · Knowledge **C** · Speed **A**
+- **Headline benchmarks:** Mistral's code-specialist model; fast low-latency completion / fill-in-the-middle across many languages with a large code context window; specific public benchmark numbers pending
+- **Pricing notes:** Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)
+- **Best for:** Mistral's dedicated code model — fast, cheap ($0.90/M output) code completion and fill-in-the-middle under the EU jurisdiction, for autocomplete-style / high-throughput coding loops where an EU operator and low latency matter more than top-tier agentic reasoning. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key; prefer mistral-medium-3.5 for reasoning-heavy coding, codestral for fast bounded completions.
+
 ## Access Methods
 
 `) bundle the same models behind
@@ -1137,6 +1171,15 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Toggles:** Max Mode — no · Thinking — yes
 - **Best for:** Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn.
 
+### Mistral
+
+#### Mistral API — `mistral-api`
+
+- **Billing:** per-token (requires mistral-api-key)
+- **Supports models:** mistral-medium-3.5,mistral-small-4,mistral-large-3,codestral
+- **Toggles:** Max Mode — no · Thinking — yes
+- **Best for:** Direct Mistral API access (provider-direct per-token; La Plateforme at api.mistral.ai) for the Mistral models — the EU-jurisdiction option for data-sovereignty / EU-regulatory workloads at low cost. Exposes a reasoning dial on the unified models (Mistral Small 4 / Medium 3.5) via the `reasoning_effort` parameter. Not routed via the Cursor pool. eu-jurisdiction is in the default allowed-jurisdictions list, so Mistral surfaces for any user with a mistral-api-key configured (no jurisdiction opt-in required, unlike cn providers).
+
 ### Cursor
 
 #### Cursor — `cursor`
@@ -1418,7 +1461,9 @@ as primary; the other becomes the secondary category for tie-breaking.
 
     - `us` — United States. Today: Anthropic, OpenAI, Google, xAI,
       Cursor.
-    - `eu` — European Union member state.
+    - `eu` — European Union member state. Today: Mistral (La
+      Plateforme). In the default allowed list, so EU-operator models
+      surface for any user holding the relevant provider key.
     - `uk` — United Kingdom.
     - `ca` — Canada.
     - `au` — Australia.
@@ -1755,6 +1800,42 @@ as primary; the other becomes the secondary category for tie-breaking.
              headline-benchmarks="AA Intelligence Index 47 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 79.0% (DeepSeek-reported); 1M-token context; text-only (no image input); ~90 tokens/s"
              pricing-notes="Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.0028/M"
              best-for="DeepSeek's V4-Flash — the fast (~90 tokens/s), cheapest DeepSeek variant ($0.28/M output) with a 1M-token context window, for high-throughput / latency-sensitive text and code work under the cn jurisdiction with a deepseek-api-key. Mid-pack general intelligence (Artificial Analysis Intelligence Index 47) paired with a strong, DeepSeek-reported coding result (SWE-bench Verified 79.0%) — rated coding-A on that basis with the rest of its profile B-tier; text-only (no multimodal). Reached via the `deepseek-api` method (provider-direct per-token). Pick V4-Pro over V4-Flash when reasoning depth or the strongest coding matters; pick V4-Flash when speed and the lowest cost dominate." />
+      <model id="mistral-medium-3.5" name="Mistral Medium 3.5"
+             input-price-per-1m="$1.50" output-price-per-1m="$7.50"
+             jurisdiction="eu"
+             tier-coding="B" tier-planning="B" tier-agentic="C"
+             tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
+             tier-speed="B"
+             headline-benchmarks="AA Intelligence Index 39 (independently measured by Artificial Analysis); unified chat / reasoning / code model with an adjustable reasoning dial (reasoning_effort); multimodal (text + image input)"
+             pricing-notes="Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)"
+             best-for="Mistral's flagship unified model — the EU-jurisdiction choice for data-sovereignty / EU-regulatory workloads at low cost ($7.50/M output), with adjustable reasoning and multimodal (vision) input. Artificial Analysis Intelligence Index 39 places it mid-pack (below the US/cn frontier such as Gemini 3.1 Pro or DeepSeek V4-Pro) — pick it when the operator's EU jurisdiction is the deciding constraint, not when raw capability is. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key." />
+      <model id="mistral-small-4" name="Mistral Small 4"
+             input-price-per-1m="$0.10" output-price-per-1m="$0.30"
+             jurisdiction="eu"
+             tier-coding="C" tier-planning="C" tier-agentic="C"
+             tier-multimodal="B" tier-long-context="C" tier-knowledge="C"
+             tier-speed="A"
+             headline-benchmarks="AA Intelligence Index 28 (independently measured by Artificial Analysis); compact Mixture-of-Experts unifying the former Small / Magistral / Pixtral / Devstral lines; adjustable reasoning_effort; multimodal (text + image)"
+             pricing-notes="Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)"
+             best-for="Mistral's cheapest fast model ($0.30/M output) — a small EU-jurisdiction MoE with multimodal input and an optional reasoning dial, for high-throughput / latency-sensitive text and light multimodal work where the EU operator matters and a mistral-api-key is configured. Artificial Analysis Intelligence Index 28 is low, so it is a cost / sovereignty pick rather than a capability pick. Reached via the `mistral-api` method (provider-direct per-token)." />
+      <model id="mistral-large-3" name="Mistral Large 3"
+             input-price-per-1m="$0.50" output-price-per-1m="$1.50"
+             jurisdiction="eu"
+             tier-coding="C" tier-planning="C" tier-agentic="C"
+             tier-multimodal="D" tier-long-context="C" tier-knowledge="C"
+             tier-speed="B"
+             headline-benchmarks="AA Intelligence Index 23 (independently measured by Artificial Analysis); open-weight Mixture-of-Experts (self-hostable); text-only"
+             pricing-notes="Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)"
+             best-for="Mistral's open-weight Large 3 (MoE) — an EU-jurisdiction, self-hostable option at very low cost ($1.50/M output) for data-sovereignty workloads or teams that want to run the weights themselves. Artificial Analysis Intelligence Index 23 sits below the frontier and even below Mistral's own Medium 3.5 (Mistral repositioned Large as an open community model) — pick it for the open-weights / EU-operator profile, not raw capability. Reached via the `mistral-api` method (provider-direct per-token) or self-hosting." />
+      <model id="codestral" name="Codestral"
+             input-price-per-1m="$0.30" output-price-per-1m="$0.90"
+             jurisdiction="eu"
+             tier-coding="B" tier-planning="C" tier-agentic="C"
+             tier-multimodal="D" tier-long-context="B" tier-knowledge="C"
+             tier-speed="A"
+             headline-benchmarks="Mistral's code-specialist model; fast low-latency completion / fill-in-the-middle across many languages with a large code context window; specific public benchmark numbers pending"
+             pricing-notes="Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)"
+             best-for="Mistral's dedicated code model — fast, cheap ($0.90/M output) code completion and fill-in-the-middle under the EU jurisdiction, for autocomplete-style / high-throughput coding loops where an EU operator and low latency matter more than top-tier agentic reasoning. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key; prefer mistral-medium-3.5 for reasoning-heavy coding, codestral for fast bounded completions." />
     </tier>
   </model-options>
 
@@ -1869,6 +1950,14 @@ as primary; the other becomes the secondary category for tie-breaking.
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
             best-for="Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn." />
+    <method id="mistral-api" name="Mistral API"
+            provider="mistral" billing="per-token"
+            provider-jurisdiction="eu"
+            requires="mistral-api-key"
+            supports-models="mistral-medium-3.5,mistral-small-4,mistral-large-3,codestral"
+            exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
+            best-for="Direct Mistral API access (provider-direct per-token; La Plateforme at api.mistral.ai) for the Mistral models — the EU-jurisdiction option for data-sovereignty / EU-regulatory workloads at low cost. Exposes a reasoning dial on the unified models (Mistral Small 4 / Medium 3.5) via the `reasoning_effort` parameter. Not routed via the Cursor pool. eu-jurisdiction is in the default allowed-jurisdictions list, so Mistral surfaces for any user with a mistral-api-key configured (no jurisdiction opt-in required, unlike cn providers)." />
     <method id="cursor" name="Cursor"
             provider="cursor" billing="subscription-pool"
             provider-jurisdiction="us"
@@ -2244,7 +2333,9 @@ as primary; the other becomes the secondary category for tie-breaking.
 
     - `us` — United States. Today: Anthropic, OpenAI, Google, xAI,
       Cursor.
-    - `eu` — European Union member state.
+    - `eu` — European Union member state. Today: Mistral (La
+      Plateforme). In the default allowed list, so EU-operator models
+      surface for any user holding the relevant provider key.
     - `uk` — United Kingdom.
     - `ca` — Canada.
     - `au` — Australia.
@@ -2581,6 +2672,42 @@ as primary; the other becomes the secondary category for tie-breaking.
              headline-benchmarks="AA Intelligence Index 47 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 79.0% (DeepSeek-reported); 1M-token context; text-only (no image input); ~90 tokens/s"
              pricing-notes="Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.0028/M"
              best-for="DeepSeek's V4-Flash — the fast (~90 tokens/s), cheapest DeepSeek variant ($0.28/M output) with a 1M-token context window, for high-throughput / latency-sensitive text and code work under the cn jurisdiction with a deepseek-api-key. Mid-pack general intelligence (Artificial Analysis Intelligence Index 47) paired with a strong, DeepSeek-reported coding result (SWE-bench Verified 79.0%) — rated coding-A on that basis with the rest of its profile B-tier; text-only (no multimodal). Reached via the `deepseek-api` method (provider-direct per-token). Pick V4-Pro over V4-Flash when reasoning depth or the strongest coding matters; pick V4-Flash when speed and the lowest cost dominate." />
+      <model id="mistral-medium-3.5" name="Mistral Medium 3.5"
+             input-price-per-1m="$1.50" output-price-per-1m="$7.50"
+             jurisdiction="eu"
+             tier-coding="B" tier-planning="B" tier-agentic="C"
+             tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
+             tier-speed="B"
+             headline-benchmarks="AA Intelligence Index 39 (independently measured by Artificial Analysis); unified chat / reasoning / code model with an adjustable reasoning dial (reasoning_effort); multimodal (text + image input)"
+             pricing-notes="Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)"
+             best-for="Mistral's flagship unified model — the EU-jurisdiction choice for data-sovereignty / EU-regulatory workloads at low cost ($7.50/M output), with adjustable reasoning and multimodal (vision) input. Artificial Analysis Intelligence Index 39 places it mid-pack (below the US/cn frontier such as Gemini 3.1 Pro or DeepSeek V4-Pro) — pick it when the operator's EU jurisdiction is the deciding constraint, not when raw capability is. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key." />
+      <model id="mistral-small-4" name="Mistral Small 4"
+             input-price-per-1m="$0.10" output-price-per-1m="$0.30"
+             jurisdiction="eu"
+             tier-coding="C" tier-planning="C" tier-agentic="C"
+             tier-multimodal="B" tier-long-context="C" tier-knowledge="C"
+             tier-speed="A"
+             headline-benchmarks="AA Intelligence Index 28 (independently measured by Artificial Analysis); compact Mixture-of-Experts unifying the former Small / Magistral / Pixtral / Devstral lines; adjustable reasoning_effort; multimodal (text + image)"
+             pricing-notes="Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)"
+             best-for="Mistral's cheapest fast model ($0.30/M output) — a small EU-jurisdiction MoE with multimodal input and an optional reasoning dial, for high-throughput / latency-sensitive text and light multimodal work where the EU operator matters and a mistral-api-key is configured. Artificial Analysis Intelligence Index 28 is low, so it is a cost / sovereignty pick rather than a capability pick. Reached via the `mistral-api` method (provider-direct per-token)." />
+      <model id="mistral-large-3" name="Mistral Large 3"
+             input-price-per-1m="$0.50" output-price-per-1m="$1.50"
+             jurisdiction="eu"
+             tier-coding="C" tier-planning="C" tier-agentic="C"
+             tier-multimodal="D" tier-long-context="C" tier-knowledge="C"
+             tier-speed="B"
+             headline-benchmarks="AA Intelligence Index 23 (independently measured by Artificial Analysis); open-weight Mixture-of-Experts (self-hostable); text-only"
+             pricing-notes="Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)"
+             best-for="Mistral's open-weight Large 3 (MoE) — an EU-jurisdiction, self-hostable option at very low cost ($1.50/M output) for data-sovereignty workloads or teams that want to run the weights themselves. Artificial Analysis Intelligence Index 23 sits below the frontier and even below Mistral's own Medium 3.5 (Mistral repositioned Large as an open community model) — pick it for the open-weights / EU-operator profile, not raw capability. Reached via the `mistral-api` method (provider-direct per-token) or self-hosting." />
+      <model id="codestral" name="Codestral"
+             input-price-per-1m="$0.30" output-price-per-1m="$0.90"
+             jurisdiction="eu"
+             tier-coding="B" tier-planning="C" tier-agentic="C"
+             tier-multimodal="D" tier-long-context="B" tier-knowledge="C"
+             tier-speed="A"
+             headline-benchmarks="Mistral's code-specialist model; fast low-latency completion / fill-in-the-middle across many languages with a large code context window; specific public benchmark numbers pending"
+             pricing-notes="Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)"
+             best-for="Mistral's dedicated code model — fast, cheap ($0.90/M output) code completion and fill-in-the-middle under the EU jurisdiction, for autocomplete-style / high-throughput coding loops where an EU operator and low latency matter more than top-tier agentic reasoning. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key; prefer mistral-medium-3.5 for reasoning-heavy coding, codestral for fast bounded completions." />
     </tier>
   </model-options>
 
@@ -2695,6 +2822,14 @@ as primary; the other becomes the secondary category for tie-breaking.
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
             best-for="Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn." />
+    <method id="mistral-api" name="Mistral API"
+            provider="mistral" billing="per-token"
+            provider-jurisdiction="eu"
+            requires="mistral-api-key"
+            supports-models="mistral-medium-3.5,mistral-small-4,mistral-large-3,codestral"
+            exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
+            best-for="Direct Mistral API access (provider-direct per-token; La Plateforme at api.mistral.ai) for the Mistral models — the EU-jurisdiction option for data-sovereignty / EU-regulatory workloads at low cost. Exposes a reasoning dial on the unified models (Mistral Small 4 / Medium 3.5) via the `reasoning_effort` parameter. Not routed via the Cursor pool. eu-jurisdiction is in the default allowed-jurisdictions list, so Mistral surfaces for any user with a mistral-api-key configured (no jurisdiction opt-in required, unlike cn providers)." />
     <method id="cursor" name="Cursor"
             provider="cursor" billing="subscription-pool"
             provider-jurisdiction="us"

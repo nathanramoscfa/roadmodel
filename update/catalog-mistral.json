@@ -1,0 +1,56 @@
+{
+  "_comment": "Canonical Mistral catalog (pricing) facts. MANUALLY MAINTAINED — unlike the other provider-direct sources, Mistral publishes NO machine-readable price source (mistral.ai/pricing and docs.mistral.ai/.../pricing are both JS-rendered SPAs with scattered, self-conflicting price text and no static table / JSON island). Per the Phase 4.6 T5 decision, prices here are MANUALLY VERIFIED from the rendered mistral.ai/pricing page and updated by hand; update/extract_mistral_catalog.py only DRIFT-CHECKS that the committed model names still appear on the page (it does NOT parse prices). Re-verify prices manually when the page changes. Consumed OFFLINE by update/merge_catalog.py + update/validate_catalog_conformance.py. overlay_mode whole-element: Mistral is not on Cursor's pricing page, so the catalog cron's Opus pass drops these models and the de-clobber overlay re-adds them from the committed selector.",
+  "price_maintenance": "manual",
+  "prices_verified_date": "2026-06-12",
+  "source_url": "https://mistral.ai/pricing",
+  "provider": "mistral",
+  "jurisdiction": "eu",
+  "overlay_mode": "whole-element",
+  "models": [
+    {
+      "id": "mistral-medium-3.5",
+      "slug": "mistral-medium-3.5",
+      "name": "Mistral Medium 3.5",
+      "input_price_per_1m": 1.5,
+      "output_price_per_1m": 7.5,
+      "cache_read_per_1m": null,
+      "multimodal": true
+    },
+    {
+      "id": "mistral-small-4",
+      "slug": "mistral-small-4",
+      "name": "Mistral Small 4",
+      "input_price_per_1m": 0.1,
+      "output_price_per_1m": 0.3,
+      "cache_read_per_1m": null,
+      "multimodal": true
+    },
+    {
+      "id": "mistral-large-3",
+      "slug": "mistral-large-3",
+      "name": "Mistral Large 3",
+      "input_price_per_1m": 0.5,
+      "output_price_per_1m": 1.5,
+      "cache_read_per_1m": null,
+      "multimodal": false
+    },
+    {
+      "id": "codestral",
+      "slug": "codestral",
+      "name": "Codestral",
+      "input_price_per_1m": 0.3,
+      "output_price_per_1m": 0.9,
+      "cache_read_per_1m": null,
+      "multimodal": false
+    }
+  ],
+  "slug_to_id": {
+    "mistral-medium-3.5": "mistral-medium-3.5",
+    "mistral-small-4": "mistral-small-4",
+    "mistral-large-3": "mistral-large-3",
+    "codestral": "codestral"
+  },
+  "unexpected_slugs": [],
+  "missing_on_page": [],
+  "section_sha256": "cfcbf346be415929ecc73a609e00ca0632f14f2b93dd4cba502ac6bcae2d42d6"
+}
