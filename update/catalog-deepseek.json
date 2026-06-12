@@ -3,6 +3,7 @@
   "source_url": "https://api-docs.deepseek.com/quick_start/pricing",
   "provider": "deepseek",
   "jurisdiction": "cn",
+  "overlay_mode": "whole-element",
   "models": [
     {
       "id": "deepseek-v4-flash",

@@ -18,6 +18,12 @@ Checks:
   G3. Composition integrity (decision 4a). ``merge_catalog.compose`` over the
       committed base + snapshots produces NO conflict flags (no canonical id
       claimed by two provider-direct sources).
+  G4. Price provenance. For every provider-direct snapshot model that ALSO exists
+      in ``<model-options>``, the selector's input/output price must EQUAL the
+      provider-direct snapshot's. This makes the provider's OWN page authoritative
+      for its prices (decision 1) — Cursor's pricing-page mirror can no longer be
+      the authority; a Cursor↔provider divergence fails this gate so a human
+      reconciles the selector to the provider-direct truth.
 
 Exit codes: 0 PASS, 1 conformance failure, 2 input/config error.
 """
@@ -99,8 +105,51 @@ def check_snapshot_schema(path: Path, snap: dict[str, Any]) -> list[str]:
 
     if not isinstance(snap.get("unexpected_slugs"), list):
         failures.append(f"G1 ({name}): 'unexpected_slugs' must be a list")
+    overlay_mode = snap.get("overlay_mode")
+    if overlay_mode is not None and overlay_mode not in ("whole-element", "price-only"):
+        failures.append(
+            f"G1 ({name}): overlay_mode {overlay_mode!r} must be 'whole-element' or 'price-only'"
+        )
     if not _HEX64_RE.match(str(snap.get("section_sha256", ""))):
         failures.append(f"G1 ({name}): 'section_sha256' must be 64 hex chars")
+    return failures
+
+
+def check_price_provenance(
+    base: dict[str, dict[str, Any]], snapshots: list[dict[str, Any]]
+) -> list[str]:
+    """G4 — the provider-direct snapshot is authoritative for a model's price.
+
+    For each snapshot model that is ALSO in ``<model-options>``, the selector's
+    input/output price must EQUAL the snapshot's. Models not yet in the selector
+    are skipped (nothing to reconcile yet).
+    """
+    failures: list[str] = []
+    for snap in snapshots:
+        provider = str(snap.get("provider", "?"))
+        models = snap.get("models", [])
+        if not isinstance(models, list):
+            continue
+        for model in models:
+            mid = str(model.get("id", ""))
+            if mid not in base:
+                continue
+            sel = base[mid]
+            for field, label in (
+                ("input_price_per_1m", "input"),
+                ("output_price_per_1m", "output"),
+            ):
+                snap_v = model.get(field)
+                sel_v = sel.get(field)
+                if not isinstance(snap_v, (int, float)) or not isinstance(sel_v, (int, float)):
+                    continue
+                if round(float(snap_v), 6) != round(float(sel_v), 6):
+                    failures.append(
+                        f"G4 (price provenance): {provider} model {mid!r} {label} price: "
+                        f"selector=${sel_v} but the provider-direct source says ${snap_v} — "
+                        f"Cursor's mirror has drifted from {provider}'s own page; reconcile "
+                        f"the selector to the provider-direct price"
+                    )
     return failures
 
 
@@ -123,6 +172,9 @@ def run_checks(selector_text: str, snapshot_paths: list[Path]) -> list[str]:
     base = base_models(selector_text)
     _, flags = compose(base, snapshots)
     failures += [f"G3 (composition): {flag}" for flag in flags]
+
+    # G4 — price provenance: selector prices match the provider-direct source.
+    failures += check_price_provenance(base, snapshots)
     return failures
 
 
@@ -168,7 +220,8 @@ def main() -> int:
     print(
         f"validate_catalog_conformance: PASS ({len(snapshot_paths)} provider-direct "
         "catalog snapshot(s): schema well-formed; prices positive; output prices map to "
-        "documented cost tiers; composition has no two-source id conflict)"
+        "documented cost tiers; composition has no two-source id conflict; selector prices "
+        "match the provider-direct source for every migrated model)"
     )
     return 0
 

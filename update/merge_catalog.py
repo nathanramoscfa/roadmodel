@@ -197,8 +197,16 @@ def _element_tier(selector_text: str, mid: str) -> str | None:
 
 
 def provider_direct_ids(snapshots: list[dict[str, Any]]) -> set[str]:
+    """Ids the de-clobber overlay force-applies: ONLY ``overlay_mode ==
+    "whole-element"`` snapshots (off-Cursor providers like DeepSeek that the cron
+    would drop). ``price-only`` providers (on Cursor's page, e.g. Anthropic) keep
+    their Cursor-maintained elements and are gated on price by G4, NOT overlaid —
+    forcing them would freeze their benchmark-derived tier ratings. A snapshot
+    with no ``overlay_mode`` is treated as price-only (safe default: not forced)."""
     ids: set[str] = set()
     for snap in snapshots:
+        if snap.get("overlay_mode") != "whole-element":
+            continue
         for model in snap.get("models", []):
             mid = str(model.get("id", "")).strip()
             if mid:
