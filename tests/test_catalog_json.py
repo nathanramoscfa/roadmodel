@@ -220,6 +220,17 @@ def test_subscription_tiers_match_tier_cost_scale() -> None:
             mismatches.append(
                 f"{key} monthly: cost-scale={expected_monthly} catalog={cat['monthly_usd']}"
             )
+        # Annual is OPTIONAL + editorial: "—" / blank round-trips to a
+        # null annual_usd; a "$N" cell to that float (Phase 4.7 T2).
+        annual_raw = row.get("Annual", "").lstrip("$").replace(",", "").strip()
+        try:
+            expected_annual: float | None = float(annual_raw)
+        except ValueError:
+            expected_annual = None
+        if cat.get("annual_usd") != expected_annual:
+            mismatches.append(
+                f"{key} annual: cost-scale={expected_annual} catalog={cat.get('annual_usd')}"
+            )
         expected_surfaces = sorted(
             s.strip() for s in row.get("Access methods unlocked", "").split(",") if s.strip()
         )

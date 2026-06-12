@@ -292,6 +292,11 @@ def test_prompt_has_subscription_refresh_rules() -> None:
         "Subscription tiers",
         "web_search",
         "Provider → access-methods mapping",
+        # The Annual column is editorial + hand-seeded; the cron must
+        # preserve it across rebuilds rather than fetch/overwrite it
+        # (Phase 4.7 T2). Guard the preserve contract so a future
+        # prompt regen can't silently drop the Annual values.
+        "Annual column (editorial — preserve, never fetch)",
         "Rebuild procedure (per provider)",
         "Sanity guards",
         "subscription tier added:",

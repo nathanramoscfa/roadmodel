@@ -1,9 +1,9 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-06-12T14:07:28Z",
+  "generated_at_utc": "2026-06-12T23:05:19Z",
   "source_doc_sha256": {
-    "model-selector.txt": "2ba48e9422009b55fe1437bb853570e712a2cb34fad0de4bde50f0a4f1326433",
-    "model-tier-cost-scale.md": "2c73039da4d7c3cdd1a7a184e209f7f125977ad3d1d3c8812a808d38ebf7cd84"
+    "model-selector.txt": "3678876fce07458df5b821be0cee45475797adab6c243150ac5630bf7169b23a",
+    "model-tier-cost-scale.md": "45919c0d9f574ab94296a8eb4ae7c122d1454dc6537b5df4f46412311ddcb7a7"
   },
   "models": [
     {
@@ -669,7 +669,7 @@
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
-      "best_for": "Default for Claude coding or terminal tasks when a claude.ai Max subscription is active \u2014 $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI and as an IDE extension inside Cursor. Heavy Opus usage that would cost over $1,000/mo on per-token API is fully covered by a $100/mo Max plan."
+      "best_for": "Default for Claude coding or terminal tasks when a claude.ai Max subscription is active \u2014 $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI and as an IDE extension inside Cursor. Heavy Opus usage that would cost over $1,000/mo on per-token API is fully covered by a $100/mo Max plan. Exposes the full `/effort` dial (low/medium/high/xhigh/max \u2014 Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, and Fable 5 expose the full range) plus Ultracode (session-wide xhigh + Dynamic Workflows) and the per-turn `ultrathink` keyword."
     },
     {
       "id": "claude-web",
@@ -882,6 +882,7 @@
       "provider": "Anthropic",
       "tier": "Claude Pro",
       "monthly_usd": 20.0,
+      "annual_usd": 200.0,
       "surface_funded": [
         "claude-code",
         "claude-web"
@@ -892,6 +893,7 @@
       "provider": "Anthropic",
       "tier": "claude.ai Max ($100)",
       "monthly_usd": 100.0,
+      "annual_usd": null,
       "surface_funded": [
         "claude-code",
         "claude-web"
@@ -902,6 +904,7 @@
       "provider": "Anthropic",
       "tier": "claude.ai Max ($200)",
       "monthly_usd": 200.0,
+      "annual_usd": null,
       "surface_funded": [
         "claude-code",
         "claude-web"
@@ -912,6 +915,7 @@
       "provider": "Cursor",
       "tier": "Cursor Pro",
       "monthly_usd": 20.0,
+      "annual_usd": null,
       "surface_funded": [
         "cursor"
       ],
@@ -921,6 +925,7 @@
       "provider": "Cursor",
       "tier": "Cursor Pro+",
       "monthly_usd": 60.0,
+      "annual_usd": null,
       "surface_funded": [
         "cursor"
       ],
@@ -930,6 +935,7 @@
       "provider": "Cursor",
       "tier": "Cursor Ultra",
       "monthly_usd": 200.0,
+      "annual_usd": null,
       "surface_funded": [
         "cursor"
       ],
@@ -939,6 +945,7 @@
       "provider": "Google",
       "tier": "Google AI Plus",
       "monthly_usd": 4.99,
+      "annual_usd": null,
       "surface_funded": [
         "gemini-app",
         "gemini-cli"
@@ -949,6 +956,7 @@
       "provider": "Google",
       "tier": "Google AI Pro",
       "monthly_usd": 20.0,
+      "annual_usd": null,
       "surface_funded": [
         "gemini-app",
         "gemini-cli"
@@ -959,6 +967,7 @@
       "provider": "Google",
       "tier": "Google AI Ultra ($100)",
       "monthly_usd": 100.0,
+      "annual_usd": null,
       "surface_funded": [
         "gemini-app",
         "gemini-cli"
@@ -969,6 +978,7 @@
       "provider": "Google",
       "tier": "Google AI Ultra ($200)",
       "monthly_usd": 200.0,
+      "annual_usd": null,
       "surface_funded": [
         "gemini-app",
         "gemini-cli"
@@ -979,6 +989,7 @@
       "provider": "OpenAI",
       "tier": "ChatGPT Go",
       "monthly_usd": 8.0,
+      "annual_usd": null,
       "surface_funded": [
         "chatgpt-app",
         "codex-cli"
@@ -989,6 +1000,7 @@
       "provider": "OpenAI",
       "tier": "ChatGPT Plus",
       "monthly_usd": 20.0,
+      "annual_usd": null,
       "surface_funded": [
         "chatgpt-app",
         "codex-cli"
@@ -999,6 +1011,7 @@
       "provider": "OpenAI",
       "tier": "ChatGPT Pro ($100)",
       "monthly_usd": 100.0,
+      "annual_usd": null,
       "surface_funded": [
         "chatgpt-app",
         "codex-cli"
@@ -1009,6 +1022,7 @@
       "provider": "OpenAI",
       "tier": "ChatGPT Pro ($200)",
       "monthly_usd": 200.0,
+      "annual_usd": null,
       "surface_funded": [
         "chatgpt-app",
         "codex-cli"

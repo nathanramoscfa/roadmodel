@@ -19,12 +19,19 @@ export interface SubscriptionOption {
   // table. The UI renders this consistently instead of the parenthetical
   // price disambiguator baked into a few labels (Phase 4.7 T1).
   monthly_usd: number;
+  // Editorial, hand-seeded annual price (USD); null when the tier has no
+  // verified annual plan. The UI shows "· $Y/yr (save Z%)" only when this
+  // is present and below 12× monthly (Phase 4.7 T2).
+  annual_usd: number | null;
 }
 
 interface SubscriptionTier {
   provider: string;
   tier: string;
   monthly_usd: number;
+  // Optional: older catalogs (pre-T2) omit this key entirely; "—" rows
+  // parse to null. Coalesced to null when mapping to a SubscriptionOption.
+  annual_usd?: number | null;
   surface_funded: string[];
   notes?: string;
 }
@@ -72,6 +79,7 @@ export function getSubscriptionOptions(): SubscriptionOption[] {
     label: cleanLabel(t.tier),
     provider: t.provider,
     monthly_usd: t.monthly_usd,
+    annual_usd: t.annual_usd ?? null,
   }));
 }
 
