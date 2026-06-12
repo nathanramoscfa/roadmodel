@@ -50,6 +50,15 @@ test("carries the structured monthly_usd price through to the options", () => {
   expect(byId.get("cursor-ultra")?.monthly_usd).toBe(200);
 });
 
+test("carries the editorial annual_usd (null where no annual plan)", () => {
+  const byId = new Map(getSubscriptionOptions().map((o) => [o.id, o]));
+  // Claude Pro is the seeded annual plan ($200/yr vs $20/mo).
+  expect(byId.get("anthropic-claude-pro")?.annual_usd).toBe(200);
+  // A tier with no verified annual plan carries null (the "—" cell).
+  expect(byId.get("claude-max")?.annual_usd).toBeNull();
+  expect(byId.get("cursor-ultra")?.annual_usd).toBeNull();
+});
+
 test("SUBSCRIPTION_IDS matches the derived options and funds map to surfaces", () => {
   const opts = getSubscriptionOptions();
   expect(SUBSCRIPTION_IDS.size).toBe(opts.length);

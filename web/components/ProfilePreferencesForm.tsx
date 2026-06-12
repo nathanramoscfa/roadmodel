@@ -80,6 +80,22 @@ function displayName(label: string): string {
   return label.replace(/\s*\(\$[\d.,]+\)\s*$/, "");
 }
 
+// Build the price-column text for a tier: "$N/mo" always, plus
+// "· $Y/yr (save Z%)" when a verified annual plan exists and beats 12×
+// monthly (Phase 4.7 T2). annual_usd is null for tiers with no annual plan.
+function priceLabel(monthly: number, annual: number | null): string {
+  const monthlyPart = `${formatMoney(monthly)}/mo`;
+  const annualBeatsMonthly = annual !== null && annual < monthly * 12;
+  if (!annualBeatsMonthly) {
+    return monthlyPart;
+  }
+  const savings = Math.round((1 - annual / (monthly * 12)) * 100);
+  const annualPart = `${formatMoney(annual)}/yr`;
+  return savings > 0
+    ? `${monthlyPart} · ${annualPart} (save ${savings}%)`
+    : `${monthlyPart} · ${annualPart}`;
+}
+
 export interface ProfilePreferencesFormProps {
   // Catalog-derived subscription options, passed from the server page so
   // the large catalog.json stays out of the client bundle (issue #152).
@@ -222,7 +238,7 @@ export function ProfilePreferencesForm({
                     {displayName(option.label)}
                   </span>
                   <span className="tabular-nums text-brand-slate-500 dark:text-brand-slate-400">
-                    {formatMoney(option.monthly_usd)}/mo
+                    {priceLabel(option.monthly_usd, option.annual_usd)}
                   </span>
                 </label>
               ))}
