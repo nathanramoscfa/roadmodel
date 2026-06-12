@@ -698,5 +698,75 @@ def test_overlays_are_byte_stable_on_committed_docs() -> None:
     assert cs_flags == []
 
 
+# --------------------------------------------------------------------------- #
+# T5 — Mistral onboarding closes the EU-jurisdiction gap
+# --------------------------------------------------------------------------- #
+
+import re as _re  # noqa: E402
+
+
+def _model_jurisdictions(selector_text: str) -> dict[str, str]:
+    opts = _re.search(r"<model-options>(.*?)</model-options>", selector_text, _re.DOTALL)
+    assert opts is not None
+    out: dict[str, str] = {}
+    for m in _re.finditer(
+        r'<model\s+id="([^"]+)"[^>]*?jurisdiction="([^"]+)"', opts.group(1), _re.DOTALL
+    ):
+        out[m.group(1)] = m.group(2)
+    return out
+
+
+def _methods(selector_text: str) -> list[dict[str, Any]]:
+    block = _re.search(r"<access-methods>(.*?)</access-methods>", selector_text, _re.DOTALL)
+    assert block is not None
+    methods: list[dict[str, Any]] = []
+    for chunk in block.group(1).split("<method ")[1:]:
+        mid = _re.search(r'id="([^"]+)"', chunk)
+        pj = _re.search(r'provider-jurisdiction="([^"]+)"', chunk)
+        sm = _re.search(r'supports-models="([^"]*)"', chunk)
+        if mid and pj and sm:
+            methods.append(
+                {
+                    "id": mid.group(1),
+                    "jurisdiction": pj.group(1),
+                    "supports": [s for s in sm.group(1).split(",") if s],
+                }
+            )
+    return methods
+
+
+def test_eu_only_jurisdiction_now_resolves_to_a_recommendation() -> None:
+    """T5's headline win: an allowed-jurisdictions of [eu] previously returned ZERO
+    recommendations (every provider was us/cn). Mistral closes the gap — a complete
+    recommendable path (an eu-jurisdiction model reachable via an eu-operator method)
+    must now exist."""
+    sel = REAL_SELECTOR.read_text()
+    model_juris = _model_jurisdictions(sel)
+    methods = _methods(sel)
+    allowed = {"eu"}
+    eu_models = {mid for mid, j in model_juris.items() if j in allowed}
+    eu_methods = [mt for mt in methods if mt["jurisdiction"] in allowed]
+    reachable = {mid for mt in eu_methods for mid in mt["supports"] if mid in eu_models}
+    assert reachable, "an [eu]-only allowed-jurisdictions must resolve to >=1 recommendable model"
+    assert {
+        "mistral-medium-3.5",
+        "mistral-small-4",
+        "mistral-large-3",
+        "codestral",
+    } <= reachable
+    assert any(mt["id"] == "mistral-api" for mt in eu_methods)
+
+
+def test_mistral_method_supports_only_real_mistral_models() -> None:
+    """Defensive: the mistral-api method's supports-models all exist in <model-options>
+    as eu-jurisdiction models (mirrors the schema test, scoped to the new provider)."""
+    sel = REAL_SELECTOR.read_text()
+    model_juris = _model_jurisdictions(sel)
+    mistral = next(mt for mt in _methods(sel) if mt["id"] == "mistral-api")
+    assert mistral["jurisdiction"] == "eu"
+    for mid in mistral["supports"]:
+        assert model_juris.get(mid) == "eu", f"{mid} missing or not eu-jurisdiction"
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
