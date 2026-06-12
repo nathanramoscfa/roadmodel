@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<!--
+Faithful slice of https://ai.google.dev/gemini-api/docs/pricing covering the
+per-model section layout used to test update/extract_google_catalog.py offline:
+a model heading (h2) above per-tier (h3 Standard/Batch) tables with Input/Output
+price rows in a Free/Paid column pair. Exercises the hard cases: a " Preview"
+suffix, context-tiered Pro (two Standard tables — the FIRST is the <=200K
+headline price), and near-misses that MUST NOT bind ("Gemini 3 Pro Image",
+"Gemini 2.5 Flash-Lite"; there is no standalone "Gemini 3 Pro").
+-->
+<html>
+<body>
+<h2>Gemini 3.5 Flash</h2>
+<h3>Standard</h3>
+<table>
+  <tr><td></td><td>Free Tier</td><td>Paid Tier, per 1M tokens in USD</td></tr>
+  <tr><td>Input price</td><td>Free of charge</td><td>$1.50</td></tr>
+  <tr><td>Output price (including thinking tokens)</td><td>Free of charge</td><td>$9.00</td></tr>
+</table>
+<h3>Batch</h3>
+<table>
+  <tr><td></td><td>Free Tier</td><td>Paid Tier, per 1M tokens in USD</td></tr>
+  <tr><td>Input price</td><td>Not available</td><td>$0.75</td></tr>
+  <tr><td>Output price (including thinking tokens)</td><td>Not available</td><td>$4.50</td></tr>
+</table>
+
+<h2>Gemini 3.1 Pro Preview</h2>
+<h3>Standard</h3>
+<table>
+  <tr><td></td><td>Free Tier</td><td>Paid Tier, per 1M tokens in USD</td></tr>
+  <tr><td>Input price</td><td>Free of charge</td><td>$2.00 (prompts &lt;= 200k tokens)</td></tr>
+  <tr><td>Output price (including thinking tokens)</td><td>Free of charge</td><td>$12.00 (prompts &lt;= 200k tokens)</td></tr>
+</table>
+<h3>Standard</h3>
+<table>
+  <tr><td></td><td>Free Tier</td><td>Paid Tier, per 1M tokens in USD</td></tr>
+  <tr><td>Input price</td><td>Free of charge</td><td>$4.00 (prompts &gt; 200k tokens)</td></tr>
+  <tr><td>Output price (including thinking tokens)</td><td>Free of charge</td><td>$18.00 (prompts &gt; 200k tokens)</td></tr>
+</table>
+
+<h2>Gemini 3 Flash Preview</h2>
+<h3>Standard</h3>
+<table>
+  <tr><td></td><td>Free Tier</td><td>Paid Tier, per 1M tokens in USD</td></tr>
+  <tr><td>Input price</td><td>Free of charge</td><td>$0.50</td></tr>
+  <tr><td>Output price (including thinking tokens)</td><td>Free of charge</td><td>$3.00</td></tr>
+</table>
+
+<h2>Gemini 3 Pro Image 🍌</h2>
+<h3>Standard</h3>
+<table>
+  <tr><td></td><td>Free Tier</td><td>Paid Tier, per 1M tokens in USD</td></tr>
+  <tr><td>Input price</td><td>Free of charge</td><td>$2.00</td></tr>
+  <tr><td>Output price (including thinking tokens)</td><td>Free of charge</td><td>$12.00</td></tr>
+</table>
+
+<h2>Gemini 2.5 Flash</h2>
+<h3>Standard</h3>
+<table>
+  <tr><td></td><td>Free Tier</td><td>Paid Tier, per 1M tokens in USD</td></tr>
+  <tr><td>Input price</td><td>Free of charge</td><td>$0.30</td></tr>
+  <tr><td>Output price (including thinking tokens)</td><td>Free of charge</td><td>$2.50</td></tr>
+</table>
+
+<h2>Gemini 2.5 Flash-Lite</h2>
+<h3>Standard</h3>
+<table>
+  <tr><td></td><td>Free Tier</td><td>Paid Tier, per 1M tokens in USD</td></tr>
+  <tr><td>Input price</td><td>Free of charge</td><td>$0.10</td></tr>
+  <tr><td>Output price (including thinking tokens)</td><td>Free of charge</td><td>$0.40</td></tr>
+</table>
+</body>
+</html>

@@ -31,6 +31,10 @@ REAL_ANTHROPIC_CATALOG = UPDATE_DIR / "catalog-anthropic.json"
 ANTHROPIC_MD = REPO_ROOT / "tests" / "fixtures" / "anthropic-pricing-sample.md"
 REAL_OPENAI_CATALOG = UPDATE_DIR / "catalog-openai.json"
 OPENAI_MD = REPO_ROOT / "tests" / "fixtures" / "openai-pricing-sample.md"
+REAL_XAI_CATALOG = UPDATE_DIR / "catalog-xai.json"
+XAI_MD = REPO_ROOT / "tests" / "fixtures" / "xai-models-sample.md"
+REAL_GOOGLE_CATALOG = UPDATE_DIR / "catalog-google.json"
+GOOGLE_HTML = REPO_ROOT / "tests" / "fixtures" / "google-pricing-sample.html"
 
 
 def _load(name: str) -> Any:
@@ -383,9 +387,9 @@ def test_overlay_only_targets_whole_element_providers() -> None:
 def test_real_overlay_excludes_price_only_providers() -> None:
     mod = _load("merge_catalog")
     ids = mod.provider_direct_ids(mod.provider_snapshots())
-    # Anthropic + OpenAI are price-only — never force-overlaid (no rating freeze).
-    assert "opus-4.8" not in ids
-    assert "gpt-5.5" not in ids
+    # Anthropic / OpenAI / Google / xAI are price-only — never force-overlaid.
+    for price_only_id in ("opus-4.8", "gpt-5.5", "gemini-3.5-flash", "grok-4.3"):
+        assert price_only_id not in ids
     # Only the off-Cursor whole-element provider (DeepSeek) is overlaid.
     assert {"deepseek-v4-flash", "deepseek-v4-pro"} <= ids
 
@@ -460,6 +464,89 @@ def test_openai_committed_snapshot_matches_selector_prices() -> None:
     ids = {m["id"] for m in cat["models"]}
     assert "gpt-5.3-codex" not in ids
     assert "gpt-5.1-codex" not in ids
+
+
+# --------------------------------------------------------------------------- #
+# xAI provider-direct catalog source (T3 — Markdown table, price-only)
+# --------------------------------------------------------------------------- #
+
+
+def test_xai_extractor_parses_token_table_not_image() -> None:
+    mod = _load("extract_xai_catalog")
+    snap = mod.build_snapshot(XAI_MD.read_text(), source_url="file://sample")
+    models = {m["id"]: m for m in snap["models"]}
+    assert set(models) == {"grok-4.3"}  # only the selector model; grok-4.20/build/image skipped
+    assert models["grok-4.3"]["input_price_per_1m"] == 1.25
+    assert models["grok-4.3"]["output_price_per_1m"] == 2.5
+    assert snap["overlay_mode"] == "price-only"
+    assert snap["jurisdiction"] == "us"
+
+
+def test_xai_extractor_raises_on_restructure() -> None:
+    mod = _load("extract_xai_catalog")
+    with pytest.raises(mod.ExtractError):
+        mod.build_snapshot("# Models\n\nno table\n", source_url="x")
+
+
+def test_xai_committed_snapshot_matches_selector_prices() -> None:
+    cat = json.loads(REAL_XAI_CATALOG.read_text())
+    assert cat["overlay_mode"] == "price-only"
+    mc = _load("merge_catalog")
+    base = mc.base_models(REAL_SELECTOR.read_text())
+    for m in cat["models"]:
+        sel = base[m["id"]]
+        assert sel["input_price_per_1m"] == m["input_price_per_1m"]
+        assert sel["output_price_per_1m"] == m["output_price_per_1m"]
+
+
+# --------------------------------------------------------------------------- #
+# Google (Gemini) provider-direct catalog source (T3 — HTML section-walk)
+# --------------------------------------------------------------------------- #
+
+
+def test_google_extractor_section_walk_and_disambiguation() -> None:
+    mod = _load("extract_google_catalog")
+    snap = mod.build_snapshot(GOOGLE_HTML.read_text(), source_url="file://sample")
+    models = {m["id"]: m for m in snap["models"]}
+    # 4 of 5: gemini-3-pro has no standalone heading (only "Gemini 3 Pro Image").
+    assert set(models) == {
+        "gemini-3.5-flash",
+        "gemini-3.1-pro",
+        "gemini-3-flash",
+        "gemini-2.5-flash",
+    }
+    assert models["gemini-3.5-flash"]["output_price_per_1m"] == 9.0
+    # Pro is context-tiered: the FIRST Standard table (<=200K) is the headline price.
+    assert models["gemini-3.1-pro"]["input_price_per_1m"] == 2.0
+    assert models["gemini-3.1-pro"]["output_price_per_1m"] == 12.0
+    assert models["gemini-3-flash"]["output_price_per_1m"] == 3.0
+    # 2.5 Flash, NOT the $0.10 Flash-Lite near-miss below it.
+    assert models["gemini-2.5-flash"]["input_price_per_1m"] == 0.3
+    # Near-misses did NOT bind.
+    assert "gemini-3-pro" not in models  # "Gemini 3 Pro Image" must not bind
+    assert snap["missing_mapped_models"] == ["gemini-3-pro"]
+    assert snap["overlay_mode"] == "price-only"
+
+
+def test_google_extractor_raises_on_restructure() -> None:
+    mod = _load("extract_google_catalog")
+    with pytest.raises(mod.ExtractError):
+        mod.build_snapshot(
+            "<html><body><h2>Gemini 3.1 Pro</h2><p>Input price Paid Tier</p></body></html>",
+            source_url="x",
+        )
+
+
+def test_google_committed_snapshot_matches_selector_prices() -> None:
+    cat = json.loads(REAL_GOOGLE_CATALOG.read_text())
+    assert cat["overlay_mode"] == "price-only"
+    assert cat["missing_mapped_models"] == ["gemini-3-pro"]
+    mc = _load("merge_catalog")
+    base = mc.base_models(REAL_SELECTOR.read_text())
+    for m in cat["models"]:
+        sel = base[m["id"]]
+        assert sel["input_price_per_1m"] == m["input_price_per_1m"]
+        assert sel["output_price_per_1m"] == m["output_price_per_1m"]
 
 
 if __name__ == "__main__":
