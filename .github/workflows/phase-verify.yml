@@ -22,12 +22,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        phase: ["01", "02", "03", "04"]
+        phase: ["01", "02", "03", "04", "046"]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
-          python-version: ${{ (matrix.phase == '03' || matrix.phase == '04') && '3.12' || '3.11' }}
+          python-version: ${{ (matrix.phase == '03' || matrix.phase == '04' || matrix.phase == '046') && '3.12' || '3.11' }}
       - name: Run phase verify script (--fast)
         env:
           ROADMODEL_VERIFY_PYTHON: python
@@ -40,7 +40,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        phase: ["01", "02", "03", "04"]
+        phase: ["01", "02", "03", "04", "046"]
     steps:
       # fetch-depth: 0 so gitleaks detect can scan the full git history,
       # not just the latest commit.
@@ -49,7 +49,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
-          python-version: ${{ (matrix.phase == '03' || matrix.phase == '04') && '3.12' || '3.11' }}
+          python-version: ${{ (matrix.phase == '03' || matrix.phase == '04' || matrix.phase == '046') && '3.12' || '3.11' }}
           # setup-python's built-in pip cache handles macOS
           # (~/Library/Caches/pip) and Linux (~/.cache/pip) paths
           # automatically — cleaner than a hand-rolled actions/cache.
