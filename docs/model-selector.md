@@ -154,6 +154,13 @@ differently:
   both to `high`, and `xhigh`, mapping it to `max`). A consumer
   DeepThink app toggle exposes only thinking on/off, not the
   effort enum.
+- Mistral (Mistral API / La Plateforme): a `reasoning_effort`
+  parameter on the unified models (Mistral Small 4 and Medium 3.5).
+  The docs surface `none` (reasoning off / fast) and `high` (full
+  step-by-step reasoning); Mistral's API is OpenAI-compatible, so
+  intermediate `low` / `medium` may also be accepted. The former
+  standalone reasoning models (Magistral) are folded into this dial;
+  Codestral and the open-weight Large 3 do not expose it.
 - Cursor: usually inherits the underlying model's thinking
   behavior but does not expose the toggle in the IDE surface
   (true in both Composer mode and Chat mode).
@@ -179,6 +186,11 @@ provider-native scales onto this 6-state field:
   to `Low` or `Medium`. A consumer DeepThink on/off toggle (no
   effort enum) maps `On` → `High` (default effort) and `Off` →
   `Off`.
+- Mistral: `reasoning_effort` `none` → `Off`; `high` → `High`
+  (Mistral's documented scale tops out at `high`, so no `XHigh`).
+  If the OpenAI-compatible `low` / `medium` values are accepted
+  they map to `Low` / `Medium`. A Mistral model without the dial
+  (Codestral, Large 3) maps to `N/A`.
 - `N/A` when the chosen access method does not expose a thinking
   toggle (e.g. Cursor — neither its Composer mode nor its Chat
   mode surfaces the dial), regardless of whether the underlying
@@ -365,6 +377,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       both to `high`, and `xhigh`, mapping it to `max`). A consumer
       DeepThink app toggle exposes only thinking on/off, not the
       effort enum.
+    - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
+      parameter on the unified models (Mistral Small 4 and Medium 3.5).
+      The docs surface `none` (reasoning off / fast) and `high` (full
+      step-by-step reasoning); Mistral's API is OpenAI-compatible, so
+      intermediate `low` / `medium` may also be accepted. The former
+      standalone reasoning models (Magistral) are folded into this dial;
+      Codestral and the open-weight Large 3 do not expose it.
     - Cursor: usually inherits the underlying model's thinking
       behavior but does not expose the toggle in the IDE surface
       (true in both Composer mode and Chat mode).
@@ -390,6 +409,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       to `Low` or `Medium`. A consumer DeepThink on/off toggle (no
       effort enum) maps `On` → `High` (default effort) and `Off` →
       `Off`.
+    - Mistral: `reasoning_effort` `none` → `Off`; `high` → `High`
+      (Mistral's documented scale tops out at `high`, so no `XHigh`).
+      If the OpenAI-compatible `low` / `medium` values are accepted
+      they map to `Low` / `Medium`. A Mistral model without the dial
+      (Codestral, Large 3) maps to `N/A`.
     - `N/A` when the chosen access method does not expose a thinking
       toggle (e.g. Cursor — neither its Composer mode nor its Chat
       mode surfaces the dial), regardless of whether the underlying
@@ -939,6 +963,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       both to `high`, and `xhigh`, mapping it to `max`). A consumer
       DeepThink app toggle exposes only thinking on/off, not the
       effort enum.
+    - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
+      parameter on the unified models (Mistral Small 4 and Medium 3.5).
+      The docs surface `none` (reasoning off / fast) and `high` (full
+      step-by-step reasoning); Mistral's API is OpenAI-compatible, so
+      intermediate `low` / `medium` may also be accepted. The former
+      standalone reasoning models (Magistral) are folded into this dial;
+      Codestral and the open-weight Large 3 do not expose it.
     - Cursor: usually inherits the underlying model's thinking
       behavior but does not expose the toggle in the IDE surface
       (true in both Composer mode and Chat mode).
@@ -964,6 +995,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       to `Low` or `Medium`. A consumer DeepThink on/off toggle (no
       effort enum) maps `On` → `High` (default effort) and `Off` →
       `Off`.
+    - Mistral: `reasoning_effort` `none` → `Off`; `high` → `High`
+      (Mistral's documented scale tops out at `high`, so no `XHigh`).
+      If the OpenAI-compatible `low` / `medium` values are accepted
+      they map to `Low` / `Medium`. A Mistral model without the dial
+      (Codestral, Large 3) maps to `N/A`.
     - `N/A` when the chosen access method does not expose a thinking
       toggle (e.g. Cursor — neither its Composer mode nor its Chat
       mode surfaces the dial), regardless of whether the underlying
@@ -1310,6 +1346,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       both to `high`, and `xhigh`, mapping it to `max`). A consumer
       DeepThink app toggle exposes only thinking on/off, not the
       effort enum.
+    - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
+      parameter on the unified models (Mistral Small 4 and Medium 3.5).
+      The docs surface `none` (reasoning off / fast) and `high` (full
+      step-by-step reasoning); Mistral's API is OpenAI-compatible, so
+      intermediate `low` / `medium` may also be accepted. The former
+      standalone reasoning models (Magistral) are folded into this dial;
+      Codestral and the open-weight Large 3 do not expose it.
     - Cursor: usually inherits the underlying model's thinking
       behavior but does not expose the toggle in the IDE surface
       (true in both Composer mode and Chat mode).
@@ -1335,6 +1378,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       to `Low` or `Medium`. A consumer DeepThink on/off toggle (no
       effort enum) maps `On` → `High` (default effort) and `Off` →
       `Off`.
+    - Mistral: `reasoning_effort` `none` → `Off`; `high` → `High`
+      (Mistral's documented scale tops out at `high`, so no `XHigh`).
+      If the OpenAI-compatible `low` / `medium` values are accepted
+      they map to `Low` / `Medium`. A Mistral model without the dial
+      (Codestral, Large 3) maps to `N/A`.
     - `N/A` when the chosen access method does not expose a thinking
       toggle (e.g. Cursor — neither its Composer mode nor its Chat
       mode surfaces the dial), regardless of whether the underlying
@@ -2182,6 +2230,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       both to `high`, and `xhigh`, mapping it to `max`). A consumer
       DeepThink app toggle exposes only thinking on/off, not the
       effort enum.
+    - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
+      parameter on the unified models (Mistral Small 4 and Medium 3.5).
+      The docs surface `none` (reasoning off / fast) and `high` (full
+      step-by-step reasoning); Mistral's API is OpenAI-compatible, so
+      intermediate `low` / `medium` may also be accepted. The former
+      standalone reasoning models (Magistral) are folded into this dial;
+      Codestral and the open-weight Large 3 do not expose it.
     - Cursor: usually inherits the underlying model's thinking
       behavior but does not expose the toggle in the IDE surface
       (true in both Composer mode and Chat mode).
@@ -2207,6 +2262,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       to `Low` or `Medium`. A consumer DeepThink on/off toggle (no
       effort enum) maps `On` → `High` (default effort) and `Off` →
       `Off`.
+    - Mistral: `reasoning_effort` `none` → `Off`; `high` → `High`
+      (Mistral's documented scale tops out at `high`, so no `XHigh`).
+      If the OpenAI-compatible `low` / `medium` values are accepted
+      they map to `Low` / `Medium`. A Mistral model without the dial
+      (Codestral, Large 3) maps to `N/A`.
     - `N/A` when the chosen access method does not expose a thinking
       toggle (e.g. Cursor — neither its Composer mode nor its Chat
       mode surfaces the dial), regardless of whether the underlying

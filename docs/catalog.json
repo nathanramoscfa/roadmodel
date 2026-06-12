@@ -1,8 +1,8 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-06-12T13:56:35Z",
+  "generated_at_utc": "2026-06-12T14:07:28Z",
   "source_doc_sha256": {
-    "model-selector.txt": "44ce20f9e47e6168237de52d4819e4a17782afe2053ad78aec85fc362f5f2e9b",
+    "model-selector.txt": "2ba48e9422009b55fe1437bb853570e712a2cb34fad0de4bde50f0a4f1326433",
     "model-tier-cost-scale.md": "2c73039da4d7c3cdd1a7a184e209f7f125977ad3d1d3c8812a808d38ebf7cd84"
   },
   "models": [
