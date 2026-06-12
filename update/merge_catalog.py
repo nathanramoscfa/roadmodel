@@ -242,7 +242,10 @@ def apply_overlay(current: str, base: str, ids: set[str]) -> tuple[str, list[str
         if cur_el == base_el:
             continue
         if cur_el is not None:
-            current = _element_re(mid).sub(lambda _m: base_el, current, count=1)
+            # Direct string replace (cur_el is an exact substring) — avoids a
+            # regex-replacement lambda that would close over the loop var (B023)
+            # and sidesteps backslash/backref expansion in the replacement.
+            current = current.replace(cur_el, base_el, 1)
             applied.append(mid)
             continue
         tier = _element_tier(base, mid)
