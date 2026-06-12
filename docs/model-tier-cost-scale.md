@@ -145,6 +145,17 @@ the next run. To change which providers are in scope, edit
 existing model-lifecycle rules); the next cron run picks up the new
 provider automatically.
 
+The **`Annual`** column is the one EXCEPTION to the rebuild: it is an
+EDITORIAL, hand-seeded value (verified per provider against the official
+billing page), NOT discovered via `web_search`. The cron PRESERVES each
+tier's existing `Annual` cell verbatim across rebuilds, matching by plan
+name (Phase 4.7 T2; the same manual-snapshot contract the Mistral
+catalog source uses). A tier with no annual plan — or one whose annual
+price has not yet been hand-verified — carries `—` (parsed as a null
+`annual_usd`, which suppresses the annual price + savings in the UI).
+To add or correct an annual price, edit the cell directly and the next
+build picks it up; the cron will then preserve it.
+
 `tests/test_subscription_freshness.py` watches the
 `<!-- subscription-tiers-reviewed: YYYY-MM-DD -->` marker above. The
 cron bumps the marker to today's date only when every in-scope
@@ -156,22 +167,22 @@ parse cleanly. When that happens, eyeball the failing provider's page
 and adjust the rebuild rules in [`update/prompt.md`](../update/prompt.md).
 
 
-| Subscription           | Monthly | Provider  | Access methods unlocked      | Coverage                                                                                                  |
-| ---------------------- | ------- | --------- | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Claude Pro             | $20     | Anthropic | claude-code, claude-web      | Opus 4.7, Sonnet 4.6, and Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE), with roughly 5x the usage of the Free tier. |
-| claude.ai Max ($100)   | $100    | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 5x the Pro usage budget; priority access during peak traffic.       |
-| claude.ai Max ($200)   | $200    | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 20x the Pro usage budget; highest consumer-tier Claude budget.      |
-| ChatGPT Go             | $8      | OpenAI    | chatgpt-app, codex-cli       | Budget tier with GPT-5.3 Instant unlimited and GPT-5.3 quota, more uploads and image generation than Free; ads still shown; lacks advanced reasoning models, Sora, Codex full access, Agent Mode, and Deep Research. |
-| ChatGPT Plus           | $20     | OpenAI    | chatgpt-app, codex-cli       | GPT-5.5 default model with full feature suite — Deep Research (10 runs/mo), Sora video, Codex, Agent Mode; GPT-5.4 Thinking and GPT-5.4 Mini also available. |
-| ChatGPT Pro ($100)     | $100    | OpenAI    | chatgpt-app, codex-cli       | Same model suite as Pro $200 (GPT-5.5, GPT-5.5 Pro, o1 Pro mode) at 5x Plus usage limits; Codex access included with promotional 10x multiplier through May 31, 2026. |
-| ChatGPT Pro ($200)     | $200    | OpenAI    | chatgpt-app, codex-cli       | Same coverage as Pro $100 with much higher caps (20x Plus limits), 1M-token context window, Sora access, and GPT-5.4 Pro / GPT-5.5 Pro priority. |
-| Google AI Plus         | $4.99   | Google    | gemini-app, gemini-cli       | Entry-paid Google AI tier with 2x higher usage limits than Free in the Gemini app, access to Gemini 3.1 Pro / Nano Banana Pro / Daily Brief / Gemini Omni video generation, 200 Google Flow Credits, and 400 GB of cloud storage (price cut from $7.99 to $4.99 on 2026-06-08; storage doubled from 200 GB to 400 GB). |
-| Google AI Pro          | $20     | Google    | gemini-app, gemini-cli       | Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus Deep Research, Nano Banana Pro, Veo 3.1 access, 1,000 monthly AI credits, and 2 TB of Google One storage; includes YouTube Premium Lite. |
-| Google AI Ultra ($100) | $100    | Google    | gemini-app, gemini-cli       | New developer-focused Ultra tier (May 2026): 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan. |
-| Google AI Ultra ($200) | $200    | Google    | gemini-app, gemini-cli       | Highest access to Gemini 3.1 Pro, Deep Think, Project Genie, Veo 3.1 with 25,000 monthly AI credits, $100/month Google Cloud credits, and 30 TB Google One storage (price reduced from $250 to $200). |
-| Cursor Pro             | $20     | Cursor    | cursor                       | $20 monthly model-usage credit pool across every model in Cursor's catalog; on-demand overage billed at API rates. |
-| Cursor Pro+            | $60     | Cursor    | cursor                       | Same model coverage as Pro at roughly 3x the OpenAI / Claude / Gemini usage budget.                       |
-| Cursor Ultra           | $200    | Cursor    | cursor                       | Same model coverage as Pro at roughly 20x the OpenAI / Claude / Gemini usage budget; priority access to new features. |
+| Subscription           | Monthly | Annual | Provider  | Access methods unlocked      | Coverage                                                                                                  |
+| ---------------------- | ------- | ------ | --------- | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Claude Pro             | $20     | $200   | Anthropic | claude-code, claude-web      | Opus 4.7, Sonnet 4.6, and Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE), with roughly 5x the usage of the Free tier. |
+| claude.ai Max ($100)   | $100    | —      | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 5x the Pro usage budget; priority access during peak traffic.       |
+| claude.ai Max ($200)   | $200    | —      | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 20x the Pro usage budget; highest consumer-tier Claude budget.      |
+| ChatGPT Go             | $8      | —      | OpenAI    | chatgpt-app, codex-cli       | Budget tier with GPT-5.3 Instant unlimited and GPT-5.3 quota, more uploads and image generation than Free; ads still shown; lacks advanced reasoning models, Sora, Codex full access, Agent Mode, and Deep Research. |
+| ChatGPT Plus           | $20     | —      | OpenAI    | chatgpt-app, codex-cli       | GPT-5.5 default model with full feature suite — Deep Research (10 runs/mo), Sora video, Codex, Agent Mode; GPT-5.4 Thinking and GPT-5.4 Mini also available. |
+| ChatGPT Pro ($100)     | $100    | —      | OpenAI    | chatgpt-app, codex-cli       | Same model suite as Pro $200 (GPT-5.5, GPT-5.5 Pro, o1 Pro mode) at 5x Plus usage limits; Codex access included with promotional 10x multiplier through May 31, 2026. |
+| ChatGPT Pro ($200)     | $200    | —      | OpenAI    | chatgpt-app, codex-cli       | Same coverage as Pro $100 with much higher caps (20x Plus limits), 1M-token context window, Sora access, and GPT-5.4 Pro / GPT-5.5 Pro priority. |
+| Google AI Plus         | $4.99   | —      | Google    | gemini-app, gemini-cli       | Entry-paid Google AI tier with 2x higher usage limits than Free in the Gemini app, access to Gemini 3.1 Pro / Nano Banana Pro / Daily Brief / Gemini Omni video generation, 200 Google Flow Credits, and 400 GB of cloud storage (price cut from $7.99 to $4.99 on 2026-06-08; storage doubled from 200 GB to 400 GB). |
+| Google AI Pro          | $20     | —      | Google    | gemini-app, gemini-cli       | Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus Deep Research, Nano Banana Pro, Veo 3.1 access, 1,000 monthly AI credits, and 2 TB of Google One storage; includes YouTube Premium Lite. |
+| Google AI Ultra ($100) | $100    | —      | Google    | gemini-app, gemini-cli       | New developer-focused Ultra tier (May 2026): 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan. |
+| Google AI Ultra ($200) | $200    | —      | Google    | gemini-app, gemini-cli       | Highest access to Gemini 3.1 Pro, Deep Think, Project Genie, Veo 3.1 with 25,000 monthly AI credits, $100/month Google Cloud credits, and 30 TB Google One storage (price reduced from $250 to $200). |
+| Cursor Pro             | $20     | —      | Cursor    | cursor                       | $20 monthly model-usage credit pool across every model in Cursor's catalog; on-demand overage billed at API rates. |
+| Cursor Pro+            | $60     | —      | Cursor    | cursor                       | Same model coverage as Pro at roughly 3x the OpenAI / Claude / Gemini usage budget.                       |
+| Cursor Ultra           | $200    | —      | Cursor    | cursor                       | Same model coverage as Pro at roughly 20x the OpenAI / Claude / Gemini usage budget; priority access to new features. |
 
 
 The "Access methods unlocked" column references method ids enumerated in

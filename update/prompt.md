@@ -150,7 +150,20 @@ per discovered subscription tier. Manual edits to the table will be
 overwritten on the next run.
 
 Each row has the schema
-`Subscription | Monthly | Provider | Access methods unlocked | Coverage`.
+`Subscription | Monthly | Annual | Provider | Access methods unlocked | Coverage`.
+
+### Annual column (editorial — preserve, never fetch)
+
+The `Annual` column does NOT come from web_search. It is an EDITORIAL,
+hand-seeded value (a maintainer verifies it against the provider's
+official billing page). When you rebuild a provider's rows, CARRY OVER
+the existing `Annual` cell verbatim for each tier you can match to a
+prior row by plan name; this includes the literal `—` placeholder used
+for tiers with no verified annual plan. For a genuinely NEW tier with no
+prior row to inherit from, write `—` (a null annual price). NEVER fetch,
+infer, or invent an annual price, and never overwrite a seeded annual
+value with one derived from the monthly price. The build parses `—` /
+blank as a null `annual_usd`, so a preserved or new `—` is always safe.
 
 ### Provider → access-methods mapping (hardcoded)
 
@@ -213,6 +226,10 @@ skipped per the mapping above):
          token-based billing (no Max Mode surcharge)."
        - "Opus 4.7, Sonnet 4.6, Claude 4.5 Haiku on web / desktop and
          inside Claude Code under a shared monthly budget."
+   - **Annual price** is NOT captured from the page — carry over the
+     existing `Annual` cell for this tier from the current table (match
+     by plan name), or `—` for a new tier. See the "Annual column"
+     section above.
    - **Access methods unlocked** from the hardcoded mapping above
      for provider P.
    - **Provider** = canonical provider name as displayed in
@@ -265,9 +282,11 @@ After all providers have been processed:
 2. Within a provider group, sort rows by `Monthly` price ascending,
    placing `usage-based` rows at the end of their provider group.
 3. Replace the body of the Subscription Tiers table with the
-   concatenated, sorted row set. Preserve the table header row, the
-   section header, the explanatory prose, and the freshness marker
-   verbatim — only the table BODY rows are replaced.
+   concatenated, sorted row set. Preserve the table header row (which
+   includes the editorial `Annual` column), the section header, the
+   explanatory prose, and the freshness marker verbatim — only the
+   table BODY rows are replaced, and each row's `Annual` cell carries
+   over its prior (seeded) value per the "Annual column" section above.
 
 ### Surfacing visible changes
 

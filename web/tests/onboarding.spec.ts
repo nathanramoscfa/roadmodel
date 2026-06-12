@@ -74,6 +74,12 @@ test("renders a consistent monthly price for every subscription tier", async ({
   await expect(page.getByLabel(/Claude Max.*\$200\/mo/i)).toBeVisible();
   // No parenthetical "($NNN)" price leaks into any label anymore.
   await expect(page.getByText(/\(\$\d/)).toHaveCount(0);
+  // The seeded annual plan (Claude Pro) shows monthly + annual + savings...
+  await expect(
+    page.getByLabel(/Claude Pro.*\$20\/mo.*\$200\/yr.*save 17%/i),
+  ).toBeVisible();
+  // ...while a tier with no annual plan shows monthly only (no "/yr").
+  await expect(page.getByLabel(/Cursor Ultra.*\/yr/i)).toHaveCount(0);
 });
 
 test("skip persists defaults and sets onboarded_at", async ({ page }) => {

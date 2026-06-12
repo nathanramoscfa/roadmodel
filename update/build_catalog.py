@@ -214,13 +214,19 @@ def _attach_cache_read(models: list[dict[str, Any]], cost_scale_text: str) -> No
 def _parse_subscription_tiers(cost_scale_text: str) -> list[dict[str, Any]]:
     """Parse the "Subscription Tiers and Access Methods" section.
 
-    The header row is `Subscription | Monthly | Provider | Access methods
-    unlocked | Coverage`. Each row maps to:
+    The header row is `Subscription | Monthly | Annual | Provider |
+    Access methods unlocked | Coverage`. Each row maps to:
         tier            ← Subscription
         monthly_usd     ← Monthly (stripped of "$" / commas)
+        annual_usd      ← Annual (stripped of "$" / commas; "—"/blank → null)
         provider        ← Provider
         surface_funded  ← Access methods unlocked (comma-split)
         notes           ← Coverage
+
+    The Annual column is OPTIONAL and editorial (hand-seeded, not from the
+    cron's web_search); a tier with no verified annual plan carries "—",
+    which parses to ``annual_usd: None``. Parsing is therefore null-safe:
+    a missing or unparseable Annual cell never breaks a tier (Phase 4.7 T2).
     """
     section_start = cost_scale_text.find("## Subscription Tiers")
     if section_start == -1:
@@ -255,6 +261,11 @@ def _parse_subscription_tiers(cost_scale_text: str) -> list[dict[str, Any]]:
             monthly_usd: float | None = float(monthly_raw)
         except ValueError:
             monthly_usd = None
+        annual_raw = row.get("Annual", "").lstrip("$").replace(",", "").strip()
+        try:
+            annual_usd: float | None = float(annual_raw)
+        except ValueError:
+            annual_usd = None
         surfaces = [
             s.strip() for s in row.get("Access methods unlocked", "").split(",") if s.strip()
         ]
@@ -263,6 +274,7 @@ def _parse_subscription_tiers(cost_scale_text: str) -> list[dict[str, Any]]:
                 "provider": row.get("Provider", ""),
                 "tier": row.get("Subscription", ""),
                 "monthly_usd": monthly_usd,
+                "annual_usd": annual_usd,
                 "surface_funded": sorted(surfaces),
                 "notes": row.get("Coverage", ""),
             }
