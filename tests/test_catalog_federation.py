@@ -784,5 +784,25 @@ def test_thinking_context_documents_mistral_reasoning_dial() -> None:
     assert "`high` → `High`" in body
 
 
+def test_check_additions_cli_emits_proposed_additions() -> None:
+    """Flag-only model-list federation (Phase 4.6): `merge_catalog --check-additions`
+    prints the provider-direct snapshot models not yet in <model-options>, one id per
+    line, so the cron can open a deduped editorial-add issue. It must emit exactly
+    proposed_additions and exit 0 (fail-open). Today the federation is complete, so the
+    set is empty — a model is NEVER auto-added (it needs editorial tier ratings)."""
+    mod = _load("merge_catalog")
+    base = mod.base_models(REAL_SELECTOR.read_text())
+    expected = set(mod.proposed_additions(base, mod.provider_snapshots()))
+    result = subprocess.run(
+        [sys.executable, str(UPDATE_DIR / "merge_catalog.py"), "--check-additions"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    emitted = {line for line in result.stdout.splitlines() if line.strip()}
+    assert emitted == expected
+    assert emitted == set()  # federation complete today — no unfederated models
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))

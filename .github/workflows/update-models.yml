@@ -105,6 +105,39 @@ jobs:
           # manually-maintained snapshot. Fail-open: a drift (exit 4) is logged.
           python update/extract_mistral_catalog.py || echo "mistral drift-check flagged or failed; catalog-mistral.json prices are manually maintained — review"
 
+      - name: Flag unfederated provider-direct models (model-list federation)
+        # Phase 4.6 model-list federation (FLAG-ONLY): each provider-direct snapshot
+        # is the discovery source for ITS models. Any snapshot model not yet in
+        # <model-options> is flagged via a DEDUPED issue for an editorial add (with
+        # tier ratings — the DeepSeek/Mistral path); it is NEVER auto-added, so no
+        # unrated model can surface in recommendations. No-op when every snapshot
+        # model is already in the registry (today's state). Fail-open.
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.BOT_PAT }}
+        run: |
+          set -uo pipefail
+          mapfile -t additions < <(python update/merge_catalog.py --check-additions 2>/dev/null || true)
+          if [ ${#additions[@]} -eq 0 ]; then
+            echo "No unfederated provider-direct models; nothing to flag."
+            exit 0
+          fi
+          gh label create catalog-unfederated-model --color FBCA04 \
+            --description "A provider-direct snapshot lists a model not yet in <model-options>" 2>/dev/null || true
+          existing="$(gh issue list --state open --search 'provider-direct model in:title' --json title -q '.[].title' || true)"
+          for model in "${additions[@]}"; do
+            [ -z "${model}" ] && continue
+            if grep -Fq "${model}" <<< "${existing}"; then
+              echo "Issue already open for ${model}; skipping."
+              continue
+            fi
+            gh issue create \
+              --title "chore(catalog): provider-direct model \"${model}\" not in <model-options>" \
+              --label catalog-unfederated-model \
+              --body "A committed provider-direct catalog snapshot (\`update/catalog-*.json\`) lists \`${model}\`, which is not yet in \`<model-options>\` of \`docs/model-selector.txt\`. Add it editorially with tier ratings (the DeepSeek / Mistral path) so it becomes recommendable. Phase 4.6 model-list federation flags discovery only; it never auto-adds an unrated model." \
+              || echo "issue create failed for ${model}"
+          done
+
       - name: Re-apply provider-direct models (federation overlay)
         # Deterministic backstop (Phase 4.6 T4). The Opus refresh above rewrites
         # the catalog from Cursor's pricing page; this step reconciles every
