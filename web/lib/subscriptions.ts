@@ -15,6 +15,10 @@ export interface SubscriptionOption {
   id: string;
   label: string;
   provider: string;
+  // Structured monthly price (USD) from the cost-scale Subscription Tiers
+  // table. The UI renders this consistently instead of the parenthetical
+  // price disambiguator baked into a few labels (Phase 4.7 T1).
+  monthly_usd: number;
 }
 
 interface SubscriptionTier {
@@ -67,6 +71,7 @@ export function getSubscriptionOptions(): SubscriptionOption[] {
     id: tierId(t.provider, t.tier),
     label: cleanLabel(t.tier),
     provider: t.provider,
+    monthly_usd: t.monthly_usd,
   }));
 }
 

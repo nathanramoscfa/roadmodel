@@ -20,7 +20,7 @@ test.beforeEach(async ({ page }) => {
 // Onboard first (subscriptions + budget), then settings must pre-fill them.
 async function onboardWith(page: import("@playwright/test").Page) {
   await signInViaCallback(page);
-  await page.getByLabel(/Claude Max \(\$200\)/i).check();
+  await page.getByLabel(/Claude Max.*\$200\/mo/i).check();
   await page.getByLabel(/Cursor Ultra/i).check();
   await page.getByRole("radio", { name: /^Best$/i }).check();
   await page.getByRole("button", { name: /Save and continue/i }).click();
@@ -33,9 +33,9 @@ test("/settings pre-fills the saved preferences", async ({ page }) => {
   await expect(
     page.getByRole("heading", { name: /^Settings$/i }),
   ).toBeVisible();
-  await expect(page.getByLabel(/Claude Max \(\$200\)/i)).toBeChecked();
+  await expect(page.getByLabel(/Claude Max.*\$200\/mo/i)).toBeChecked();
   await expect(page.getByLabel(/Cursor Ultra/i)).toBeChecked();
-  await expect(page.getByLabel(/ChatGPT Pro \(\$200\)/i)).not.toBeChecked();
+  await expect(page.getByLabel(/ChatGPT Pro.*\$200\/mo/i)).not.toBeChecked();
   await expect(page.getByRole("radio", { name: /^Best$/i })).toBeChecked();
 });
 
