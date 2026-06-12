@@ -20,8 +20,13 @@ Flash-Lite``). We strip a trailing `` Preview`` and then EXACT-match the display
 name, and stop at any non-target ``Gemini …`` h2 so a table never binds to the
 wrong model. Pro pricing is context-tiered (≤200K vs >200K); the FIRST Standard
 table per model is the ≤200K (headline) tier the selector carries.
-``gemini-3-pro`` has no standalone heading today (only ``Gemini 3 Pro Image``), so
-it stays Cursor-sourced (``missing_mapped_models``).
+
+``gemini-3-pro`` is deliberately NOT mapped: Google delisted the standalone text
+SKU when ``gemini-3.1-pro`` replaced it (only ``Gemini 3 Pro Image`` — an image
+model — remains on the page), so its price is owned by the Cursor pool, not this
+source. It is therefore absent from ``NAME_TO_ID`` rather than surfaced as
+``missing_mapped_models`` — that field is a rename/drift detector for models
+Google IS expected to price, and a permanent delisting would only desensitize it.
 
 Exit codes: 0 ok, 3 fetch/read failure, 4 extraction failure (restructure).
 """
@@ -52,10 +57,11 @@ FETCH_TIMEOUT = 30
 
 # Gemini pricing-section model heading (trailing " Preview" stripped) -> selector
 # id. EXACT match only, so near-misses (Gemini 3 Pro Image, 2.5 Flash-Lite, 2.5
-# Flash Image, …) do NOT bind. gemini-3-pro has no standalone heading today.
+# Flash Image, …) do NOT bind. gemini-3-pro is intentionally absent — Google
+# delisted the standalone text SKU for gemini-3.1-pro, so its price stays
+# Cursor-sourced (see the module docstring).
 NAME_TO_ID = {
     "Gemini 3.1 Pro": "gemini-3.1-pro",
-    "Gemini 3 Pro": "gemini-3-pro",
     "Gemini 3.5 Flash": "gemini-3.5-flash",
     "Gemini 3 Flash": "gemini-3-flash",
     "Gemini 2.5 Flash": "gemini-2.5-flash",
@@ -186,9 +192,10 @@ def build_snapshot(html: str, *, source_url: str) -> dict[str, object]:
     missing = sorted(set(NAME_TO_ID.values()) - found)
     if missing:
         print(
-            f"extract_google_catalog: NOTE mapped selector model(s) with no standalone "
-            f"Standard pricing section: {missing} (e.g. gemini-3-pro — only 'Gemini 3 Pro "
-            f"Image' is listed). Their price stays Cursor-sourced until reconciled.",
+            f"extract_google_catalog: WARNING expected Google-priced model(s) missing a "
+            f"standalone Standard pricing section: {missing}. A rename/restructure (or a "
+            f"delisting, as happened to gemini-3-pro) — investigate; their price falls "
+            f"back to Cursor until the mapping is reconciled.",
             file=sys.stderr,
         )
 
