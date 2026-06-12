@@ -35,11 +35,36 @@ A user message containing, in order:
 
 ## Pricing
 
-Source of truth: the Cursor pricing page.
+Source of truth — the Cursor pricing page is authoritative for the model LIST
+(which models exist), the `cursor` method's pool availability, the pricing NOTES
+(hovertext), and the input/output prices of **Cursor-only** models (those without
+a provider-direct source — e.g. Composer, Kimi). It is NO LONGER the source of
+truth for the canonical price of a provider-direct model (see the Federation rule
+immediately below). roadmodel's catalog is federated: `price = f(model, platform)`,
+and each provider's own page owns that provider's prices.
+
+**Federation — provider-direct prices (do NOT re-derive from Cursor).** For models
+from a provider that has a provider-direct catalog source — currently **Anthropic,
+OpenAI, Google, xAI, DeepSeek** — the canonical `input-price-per-1m` and
+`output-price-per-1m` are owned by that provider's OWN pricing page, not Cursor's,
+and are enforced by the G4 price-provenance gate in
+`update/validate_catalog_conformance.py` (the selector price MUST equal the
+committed `update/catalog-<provider>.json` snapshot, or CI fails the refresh PR).
+Treat these models' input/output prices as READ-ONLY: preserve the existing values
+verbatim in BOTH `model-selector.txt` and `model-tier-cost-scale.md`; never
+overwrite them with a Cursor-pool rate (Cursor's pool price can differ from the
+provider's list price, and the provider's page wins). If a provider-direct price
+looks stale, emit a warning rather than editing it — the provider-direct extractor
+and its daily tracker own that update. Cursor's page still drives everything else
+for these models: the tier bucket (by Output price), the notes, and pool
+availability. This rule keeps the daily refresh from authoring a price the G4 gate
+would then reject.
 
 - Compare every row in the price tables of `model-tier-cost-scale.md`
   against the scraped Cursor page. Update Input / Cache Write / Cache
-  Read / Output values that have changed.
+  Read / Output values that have changed. (Provider-direct models, per the
+  Federation rule above: do NOT change their Input / Output values — preserve
+  them verbatim; their tier bucket still follows the preserved Output price.)
 - Re-classify each model's tier strictly by Output price using the
   documented boundaries:
     Low &lt; $10, Medium $10–$14.99, High $15–$24.99, Very High ≥ $25.
@@ -51,6 +76,10 @@ Source of truth: the Cursor pricing page.
   `model-selector.txt`, update its `input-price-per-1m` and
   `output-price-per-1m` attributes. Move the `<model …/>` element into
   the correct `<tier cost="…">` group if its tier classification changed.
+  EXCEPTION (Federation rule): for provider-direct models (Anthropic, OpenAI,
+  Google, xAI, DeepSeek) do NOT update `input-price-per-1m` /
+  `output-price-per-1m` — preserve them verbatim; only the tier-group move (driven
+  by the preserved Output price) may still apply.
 - **`<model-options>` is comprehensive, not hand-curated.** If a model
   appears in `model-tier-cost-scale.md`'s price tables but NOT in
   `<model-options>` of `model-selector.txt`, ADD it to `<model-options>`
