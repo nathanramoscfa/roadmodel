@@ -460,7 +460,10 @@ def test_openai_committed_snapshot_matches_selector_prices() -> None:
         sel = base[m["id"]]
         assert sel["input_price_per_1m"] == m["input_price_per_1m"]
         assert sel["output_price_per_1m"] == m["output_price_per_1m"]
-    # The Codex variants are deliberately NOT migrated (not on the standard page).
+    # The Codex variants stay Cursor-sourced BY DESIGN: OpenAI publishes no clean
+    # per-token USD price for the gpt-5.3-codex / gpt-5.1-codex SKUs (the dedicated
+    # Codex pages price the product in credits against base models; aggregator USD
+    # figures are rejected). An intentional exception, not a pending gap.
     ids = {m["id"] for m in cat["models"]}
     assert "gpt-5.3-codex" not in ids
     assert "gpt-5.1-codex" not in ids
@@ -508,7 +511,9 @@ def test_google_extractor_section_walk_and_disambiguation() -> None:
     mod = _load("extract_google_catalog")
     snap = mod.build_snapshot(GOOGLE_HTML.read_text(), source_url="file://sample")
     models = {m["id"]: m for m in snap["models"]}
-    # 4 of 5: gemini-3-pro has no standalone heading (only "Gemini 3 Pro Image").
+    # gemini-3-pro is intentionally NOT in NAME_TO_ID (Google delisted the standalone
+    # text SKU for gemini-3.1-pro; only "Gemini 3 Pro Image" remains), so the four
+    # mapped models are the full expected set.
     assert set(models) == {
         "gemini-3.5-flash",
         "gemini-3.1-pro",
@@ -524,7 +529,9 @@ def test_google_extractor_section_walk_and_disambiguation() -> None:
     assert models["gemini-2.5-flash"]["input_price_per_1m"] == 0.3
     # Near-misses did NOT bind.
     assert "gemini-3-pro" not in models  # "Gemini 3 Pro Image" must not bind
-    assert snap["missing_mapped_models"] == ["gemini-3-pro"]
+    # gemini-3-pro is deliberately unmapped (Cursor-sourced), so it is NOT a "missing"
+    # model — that field stays a clean rename/drift detector.
+    assert snap["missing_mapped_models"] == []
     assert snap["overlay_mode"] == "price-only"
 
 
@@ -540,7 +547,7 @@ def test_google_extractor_raises_on_restructure() -> None:
 def test_google_committed_snapshot_matches_selector_prices() -> None:
     cat = json.loads(REAL_GOOGLE_CATALOG.read_text())
     assert cat["overlay_mode"] == "price-only"
-    assert cat["missing_mapped_models"] == ["gemini-3-pro"]
+    assert cat["missing_mapped_models"] == []
     mc = _load("merge_catalog")
     base = mc.base_models(REAL_SELECTOR.read_text())
     for m in cat["models"]:
