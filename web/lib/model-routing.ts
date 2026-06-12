@@ -124,6 +124,10 @@ export function inferProvider(id: string): string {
   if (id.startsWith("composer-")) return "cursor";
   if (id.startsWith("grok-")) return "xai";
   if (id.startsWith("kimi-")) return "moonshot";
+  if (id.startsWith("deepseek-")) return "deepseek";
+  // Mistral's code model "codestral" carries no "mistral-" prefix — handle it
+  // like the Anthropic sonnet-/opus- exceptions below (Phase 4.6 T5 providers).
+  if (id.startsWith("mistral-") || id === "codestral") return "mistral";
   if (
     id.startsWith("claude-") ||
     id.startsWith("sonnet-") ||
