@@ -45,8 +45,6 @@
     "Gemini 2.5 Flash": "gemini-2.5-flash"
   },
   "unexpected_slugs": [],
-  "missing_mapped_models": [
-    "gemini-3-pro"
-  ],
+  "missing_mapped_models": [],
   "section_sha256": "6bae7254a93b2c49663e3d911c0c4de5f7a9f328ef213d238eda3cb1e4608cb4"
 }
