@@ -556,5 +556,29 @@ def test_google_committed_snapshot_matches_selector_prices() -> None:
         assert sel["output_price_per_1m"] == m["output_price_per_1m"]
 
 
+# --------------------------------------------------------------------------- #
+# T4 — Cursor cron is federation-aware (prompt carries the price carve-out)
+# --------------------------------------------------------------------------- #
+
+
+def test_cron_prompt_carries_federation_price_rule() -> None:
+    """The Cursor catalog cron's Opus prompt must keep the federation carve-out so
+    the daily refresh never re-authors a provider-direct model's price from Cursor's
+    page (which the G4 price-provenance gate would then reject, reddening the PR).
+    Guards against a future prompt edit silently dropping the rule — Phase 4.6 T4."""
+    prompt = (UPDATE_DIR / "prompt.md").read_text().lower()
+    assert "provider-direct" in prompt
+    # Every provider with a committed catalog-<provider>.json snapshot is named as
+    # price-owned-elsewhere, so Opus knows which models to leave alone.
+    for provider in ("anthropic", "openai", "google", "xai", "deepseek"):
+        assert provider in prompt, f"federation rule must name {provider}"
+    # Tells Opus to preserve those prices (not re-derive from Cursor)...
+    assert (
+        "do not re-derive" in prompt or "read-only" in prompt or "preserve the existing" in prompt
+    )
+    # ...and cites the deterministic backstop (the G4 price-provenance gate).
+    assert "g4" in prompt or "price-provenance" in prompt
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
