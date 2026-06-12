@@ -84,6 +84,20 @@ jobs:
           fi
           python update/update_models.py $ARGS
 
+      - name: Refresh provider-direct catalog snapshots
+        # Federation (Phase 4.6): refresh each provider's OWN pricing snapshot from
+        # its own docs so the price-provenance gate (G4 in
+        # update/validate_catalog_conformance.py) checks the selector against
+        # CURRENT provider prices. Fail-open per provider — a fetch/parse failure
+        # keeps the committed snapshot rather than breaking the catalog refresh
+        # (a real source restructure surfaces later as a G4 mismatch / a stale
+        # snapshot, not a hard cron failure here).
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
+        run: |
+          set -uo pipefail
+          python update/extract_anthropic_catalog.py || echo "anthropic catalog refresh failed; keeping committed snapshot"
+          python update/extract_deepseek_catalog.py || echo "deepseek catalog refresh failed; keeping committed snapshot"
+
       - name: Re-apply provider-direct models (federation overlay)
         # The Opus refresh above rewrites <model-options> from Cursor's pricing
         # page, which would DROP a provider-direct model not on that page (e.g.
@@ -118,7 +132,7 @@ jobs:
           GH_TOKEN: ${{ secrets.BOT_PAT }}
         run: |
           set -euo pipefail
-          if git diff --quiet -- docs/; then
+          if git diff --quiet -- docs/ update/catalog-anthropic.json update/catalog-deepseek.json; then
             echo "No changes to commit."
             exit 0
           fi
@@ -134,7 +148,7 @@ jobs:
           if [ -f update/.last-warnings.txt ] && [ -s update/.last-warnings.txt ]; then
             warnings="$(printf '\n\n## Warnings\n')$(sed 's/^/- /' update/.last-warnings.txt)"
           fi
-          git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json
+          git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json update/catalog-anthropic.json update/catalog-deepseek.json
           git commit -m "Automated catalog refresh: ${DATE}" -m "${summary}${warnings}"
           git push -u origin "$BRANCH"
           PR_URL="$(gh pr create \

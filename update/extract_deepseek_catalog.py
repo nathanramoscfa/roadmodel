@@ -255,6 +255,12 @@ def build_snapshot(html: str, *, source_url: str) -> dict[str, object]:
         "source_url": source_url,
         "provider": PROVIDER,
         "jurisdiction": JURISDICTION,
+        # whole-element: DeepSeek is NOT on Cursor's pricing page, so the cron's
+        # Opus rewrite drops it — the federation overlay re-adds the full <model>
+        # element (incl. its editorial tier ratings). Contrast price-only providers
+        # (on Cursor's page) whose elements stay Cursor-maintained and are gated
+        # only on price (G4).
+        "overlay_mode": "whole-element",
         "models": models,
         "slug_to_id": dict(sorted(SLUG_TO_ID.items())),
         "unexpected_slugs": unexpected,

@@ -27,6 +27,8 @@ CATALOG_GATE = UPDATE_DIR / "validate_catalog_conformance.py"
 PRICING_HTML = REPO_ROOT / "tests" / "fixtures" / "deepseek-pricing-sample.html"
 REAL_SELECTOR = REPO_ROOT / "docs" / "model-selector.txt"
 REAL_DEEPSEEK_CATALOG = UPDATE_DIR / "catalog-deepseek.json"
+REAL_ANTHROPIC_CATALOG = UPDATE_DIR / "catalog-anthropic.json"
+ANTHROPIC_MD = REPO_ROOT / "tests" / "fixtures" / "anthropic-pricing-sample.md"
 
 
 def _load(name: str) -> Any:
@@ -268,8 +270,8 @@ def test_overlay_on_committed_selector_is_byte_stable() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def _run_gate(*snapshots: Path) -> subprocess.CompletedProcess[str]:
-    cmd = [sys.executable, str(CATALOG_GATE), "--selector", str(REAL_SELECTOR)]
+def _run_gate(*snapshots: Path, selector: Path = REAL_SELECTOR) -> subprocess.CompletedProcess[str]:
+    cmd = [sys.executable, str(CATALOG_GATE), "--selector", str(selector)]
     if snapshots:
         cmd += ["--snapshots", *[str(p) for p in snapshots]]
     return subprocess.run(cmd, capture_output=True, text=True)
@@ -309,6 +311,98 @@ def test_catalog_gate_fails_on_two_source_conflict(tmp_path: Path) -> None:
     result = _run_gate(a, b)
     assert result.returncode == 1
     assert "check 4a" in result.stderr
+
+
+# --------------------------------------------------------------------------- #
+# Anthropic provider-direct catalog source (T3 — Markdown, price-only)
+# --------------------------------------------------------------------------- #
+
+
+def test_anthropic_extractor_parses_standard_table() -> None:
+    mod = _load("extract_anthropic_catalog")
+    snap = mod.build_snapshot(ANTHROPIC_MD.read_text(), source_url="file://sample")
+    models = {m["id"]: m for m in snap["models"]}
+    assert set(models) == {
+        "claude-fable-5",
+        "opus-4.8",
+        "opus-4.7",
+        "sonnet-4.6",
+        "claude-4.5-haiku",
+    }
+    # The STANDARD table, not the 50%-off Batch table below it.
+    assert models["opus-4.8"]["input_price_per_1m"] == 5.0
+    assert models["opus-4.8"]["output_price_per_1m"] == 25.0
+    # Cache Hits & Refreshes column, NOT the "Cache Writes" columns.
+    assert models["opus-4.8"]["cache_read_per_1m"] == 0.5
+    assert models["claude-fable-5"]["output_price_per_1m"] == 50.0
+    assert models["sonnet-4.6"]["output_price_per_1m"] == 15.0
+    assert snap["overlay_mode"] == "price-only"
+    assert snap["jurisdiction"] == "us"
+    # Non-selector (Mythos) + deprecated rows are not mapped.
+    assert "Claude Mythos 5" not in {m["name"] for m in snap["models"]}
+
+
+def test_anthropic_extractor_raises_on_restructure() -> None:
+    mod = _load("extract_anthropic_catalog")
+    with pytest.raises(mod.ExtractError):
+        mod.build_snapshot("# Pricing\n\nNo table here.\n", source_url="x")
+
+
+def test_anthropic_committed_snapshot_matches_selector_prices() -> None:
+    cat = json.loads(REAL_ANTHROPIC_CATALOG.read_text())
+    assert cat["overlay_mode"] == "price-only"
+    mc = _load("merge_catalog")
+    base = mc.base_models(REAL_SELECTOR.read_text())
+    for m in cat["models"]:
+        sel = base[m["id"]]
+        assert sel["input_price_per_1m"] == m["input_price_per_1m"]
+        assert sel["output_price_per_1m"] == m["output_price_per_1m"]
+
+
+# --------------------------------------------------------------------------- #
+# overlay_mode scoping + G4 price provenance
+# --------------------------------------------------------------------------- #
+
+
+def test_overlay_only_targets_whole_element_providers() -> None:
+    mod = _load("merge_catalog")
+    snaps = [
+        {"provider": "anthropic", "overlay_mode": "price-only", "models": [{"id": "opus-4.8"}]},
+        {
+            "provider": "deepseek",
+            "overlay_mode": "whole-element",
+            "models": [{"id": "deepseek-v4-pro"}],
+        },
+        {"provider": "x", "models": [{"id": "no-mode-model"}]},  # no mode -> not forced
+    ]
+    assert mod.provider_direct_ids(snaps) == {"deepseek-v4-pro"}
+
+
+def test_real_overlay_excludes_anthropic() -> None:
+    mod = _load("merge_catalog")
+    ids = mod.provider_direct_ids(mod.provider_snapshots())
+    assert (
+        "opus-4.8" not in ids
+    )  # Anthropic is price-only — never force-overlaid (no rating freeze)
+    assert {"deepseek-v4-flash", "deepseek-v4-pro"} <= ids
+
+
+def test_price_provenance_fails_on_selector_drift(tmp_path: Path) -> None:
+    """G4: a selector Anthropic price that drifts from the provider-direct snapshot
+    fails the gate (Cursor's mirror != Anthropic's own page)."""
+    drifted = REAL_SELECTOR.read_text().replace(
+        'id="opus-4.8" name="Opus 4.8"\n'
+        '             input-price-per-1m="$5.00" output-price-per-1m="$25.00"',
+        'id="opus-4.8" name="Opus 4.8"\n'
+        '             input-price-per-1m="$5.00" output-price-per-1m="$26.00"',
+    )
+    assert drifted != REAL_SELECTOR.read_text(), "drift fixture anchor did not match"
+    selector = tmp_path / "selector.txt"
+    selector.write_text(drifted)
+    result = _run_gate(REAL_ANTHROPIC_CATALOG, selector=selector)
+    assert result.returncode == 1
+    assert "G4 (price provenance)" in result.stderr
+    assert "opus-4.8" in result.stderr
 
 
 if __name__ == "__main__":
