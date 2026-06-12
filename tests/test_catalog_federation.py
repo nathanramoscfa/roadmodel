@@ -768,5 +768,21 @@ def test_mistral_method_supports_only_real_mistral_models() -> None:
         assert model_juris.get(mid) == "eu", f"{mid} missing or not eu-jurisdiction"
 
 
+def test_thinking_context_documents_mistral_reasoning_dial() -> None:
+    """T5 PR2 (lighter approach): the selector's <thinking-context> describes Mistral's
+    reasoning_effort dial + its output mapping. Mistral's reasoning docs are a JS SPA
+    with an ambiguous enum, so the dial is documented HONESTLY here rather than pinned
+    by a check-G gate — this presence test is the regression guard."""
+    sel = REAL_SELECTOR.read_text()
+    tc = _re.search(r"<thinking-context>(.*?)</thinking-context>", sel, _re.DOTALL)
+    assert tc is not None
+    body = tc.group(1)
+    assert "Mistral" in body
+    assert "reasoning_effort" in body
+    # Output mapping present for the two documented values.
+    assert "`none` → `Off`" in body
+    assert "`high` → `High`" in body
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
