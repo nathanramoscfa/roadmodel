@@ -416,6 +416,37 @@ def _run_report(selector_path: Path) -> int:
     return 0
 
 
+def _run_check_additions(selector_path: Path) -> int:
+    """FLAG-ONLY model-list federation (Phase 4.6): print each provider-direct
+    snapshot model NOT yet in ``<model-options>``, one id per line on stdout
+    (summary on stderr), so the cron can open a deduped "add this model editorially"
+    issue. Discovery moves to the provider snapshots; a model is NEVER auto-added
+    (it needs editorial tier ratings — the DeepSeek/Mistral path). Fail-open: any
+    error prints no ids and returns 0, so a transient snapshot problem never breaks
+    the catalog refresh."""
+    try:
+        base = base_models(selector_path.read_text())
+        additions = proposed_additions(base, provider_snapshots())
+    except Exception as exc:  # noqa: BLE001 — fail-open by design
+        print(f"merge_catalog: --check-additions failed (fail-open): {exc!r}", file=sys.stderr)
+        return 0
+    if additions:
+        print(
+            f"merge_catalog: {len(additions)} provider-direct model(s) not in "
+            f"<model-options> — need an editorial add with tier ratings: {additions}",
+            file=sys.stderr,
+        )
+        for mid in additions:
+            print(mid)
+    else:
+        print(
+            "merge_catalog: no unfederated provider-direct models (every snapshot "
+            "model is already in <model-options>).",
+            file=sys.stderr,
+        )
+    return 0
+
+
 def _run_write(selector_path: Path, base_path: Path, cost_scale_path: Path) -> int:
     snaps = provider_snapshots()
     prices = snapshot_price_map(snaps)
@@ -476,8 +507,16 @@ def main() -> int:
         help="Base (committed, pre-Opus) selector to take whole-element provider-direct "
         "models from. With --write; defaults to --selector itself (a self no-op) when omitted.",
     )
+    parser.add_argument(
+        "--check-additions",
+        action="store_true",
+        help="Flag-only model-list federation: print provider-direct snapshot models "
+        "not yet in <model-options> (one id per line) for a deduped editorial-add issue.",
+    )
     args = parser.parse_args()
 
+    if args.check_additions:
+        return _run_check_additions(args.selector)
     if args.write:
         base = args.base if args.base is not None else args.selector
         return _run_write(args.selector, base, args.cost_scale)

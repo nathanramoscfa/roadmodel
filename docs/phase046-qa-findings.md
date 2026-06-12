@@ -56,18 +56,24 @@ openai, google, xai, deepseek, mistral).
 - **No check G.** Unlike the four reasoning-dial trackers (CC/Codex/Gemini/DeepSeek),
   Mistral's dial is not gated — see the Mistral reasoning note above.
 
-## Pre-ship / follow-up items
+## Post-T6 follow-ups (resolved)
 
-- **Model-list federation** (the last remaining SSOT residue): the Opus auto-add rule in
-  `update/prompt.md` still treats Cursor's pricing page as the source for *which models
-  exist*. Making provider snapshots drive existence is behavior-affecting (net-new models
-  could surface) and is tracked as its own deliberate effort.
-- **`web/lib/model-routing.ts::inferProvider`** should learn the `deepseek-` / `mistral-` /
-  `codestral` prefixes (returns `"unknown"` for them today; low-impact while engine
-  selection is Google-only, but a clean correctness fix).
+- **Model-list federation — DONE (flag-only).** The last SSOT residue was *model
+  discovery* (a model had to appear on Cursor's page to auto-flow into the registry).
+  `merge_catalog.py --check-additions` now emits any provider-direct snapshot model not
+  yet in `<model-options>`, and the catalog cron opens a **deduped** `catalog-unfederated-model`
+  issue for an editorial add (with tier ratings — the DeepSeek/Mistral path). Discovery
+  is de-Cursored; a model is **never auto-added** (no unrated model surfaces), so there is
+  zero behavior change. No-op today (`proposed_additions == []`).
+- **`web/lib/model-routing.ts::inferProvider` — DONE.** Now recognizes `deepseek-` /
+  `mistral-` / `codestral` (was `"unknown"`).
+
+## Standing maintenance note
+
 - **Mistral prices are manually verified** (2026-06-12 from the rendered pricing page);
-  re-verify by eye when the page changes — the drift-checker only catches a delisting/
-  rename, not a silent price change.
+  re-verify by eye when the page changes — `extract_mistral_catalog.py` only catches a
+  delisting/rename (model-name presence), not a silent price change. Promote it to a real
+  extractor if Mistral ships a machine-readable source.
 
 ## How to run
 
