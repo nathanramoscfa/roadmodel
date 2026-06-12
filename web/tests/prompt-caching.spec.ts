@@ -250,6 +250,10 @@ test("inferProvider maps catalog id prefixes to providers", () => {
   expect(inferProvider("claude-4.5-haiku")).toBe("anthropic");
   expect(inferProvider("grok-4.3")).toBe("xai");
   expect(inferProvider("kimi-k2.5")).toBe("moonshot");
+  // Phase 4.6 T5 providers — deepseek-/mistral- prefixes + the codestral exception.
+  expect(inferProvider("deepseek-v4-pro")).toBe("deepseek");
+  expect(inferProvider("mistral-medium-3.5")).toBe("mistral");
+  expect(inferProvider("codestral")).toBe("mistral");
 });
 
 test(
