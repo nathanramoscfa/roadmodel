@@ -1,8 +1,8 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-06-11T04:58:28Z",
+  "generated_at_utc": "2026-06-12T00:47:09Z",
   "source_doc_sha256": {
-    "model-selector.txt": "97f4fd24df7e745860f8006c4e1f2253db7c2bc5e02953feecc0da5c2e0a8b4c",
+    "model-selector.txt": "eb1e2883dc67c5b10dd9cfc5be3f2bba65866c04d35df805d9886dd38e9d2b3e",
     "model-tier-cost-scale.md": "2c73039da4d7c3cdd1a7a184e209f7f125977ad3d1d3c8812a808d38ebf7cd84"
   },
   "models": [
@@ -89,6 +89,48 @@
       "headline_benchmarks": "Composer 2 family successor at the same output price ($2.50/M); Cursor's release notes claim substantial intelligence + behavior improvements over Composer 2 trained on ~25x more synthetic tasks; specific benchmark numbers pending republish (CursorBench 61.3 + SWE-bench Multilingual 73.7 + Terminal-Bench 2.0 61.7 from Composer 2 carry forward as floors)",
       "pricing_notes": "-",
       "best_for": "Composer 2's successor at the same output price \u2014 Cursor's purpose-built multi-file agentic editor with frontier-level coding quality and speed-optimized inference; prefer over Composer 2 when both are available since 2.5 supersedes 2 within the same series per the equal-output-price replacement rule (Composer 2 is now Hidden by default on Cursor's pricing page)"
+    },
+    {
+      "id": "deepseek-v4-flash",
+      "name": "DeepSeek-V4-Flash",
+      "input_price_per_1m": 0.14,
+      "output_price_per_1m": 0.28,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "C",
+        "planning": "C",
+        "agentic": "C",
+        "multimodal": "C",
+        "long-context": "B",
+        "knowledge": "C",
+        "speed": "A"
+      },
+      "jurisdiction": "cn",
+      "headline_benchmarks": "DeepSeek V4-Flash fast/cheap variant at $0.28/M output with 1M context; specific benchmark numbers pending benchmark-source coverage of DeepSeek V4",
+      "pricing_notes": "Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.0028/M; PLACEHOLDER conservative tier ratings pending benchmark confirmation",
+      "best_for": "DeepSeek's V4-Flash \u2014 the fast, cheapest DeepSeek variant ($0.28/M output) with a 1M context window, for high-throughput / latency-sensitive text and code tasks under the cn jurisdiction with a deepseek-api-key; reached via the `deepseek-api` method (provider-direct per-token). Tier ratings are CONSERVATIVE PLACEHOLDERS pending benchmark confirmation \u2014 the catalog cron's benchmark pass refines them."
+    },
+    {
+      "id": "deepseek-v4-pro",
+      "name": "DeepSeek-V4-Pro",
+      "input_price_per_1m": 0.435,
+      "output_price_per_1m": 0.87,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "B",
+        "agentic": "B",
+        "multimodal": "C",
+        "long-context": "B",
+        "knowledge": "B",
+        "speed": "B"
+      },
+      "jurisdiction": "cn",
+      "headline_benchmarks": "DeepSeek V4-Pro flagship at $0.87/M output with 1M context and thinking mode on by default; specific benchmark numbers pending benchmark-source coverage of DeepSeek V4 (AA Intelligence Index / LMArena / SWE-bench not yet indexing it)",
+      "pricing_notes": "Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.003625/M; PLACEHOLDER conservative tier ratings pending benchmark confirmation",
+      "best_for": "DeepSeek's V4-Pro \u2014 a very low-cost, cn-jurisdiction option with a 1M context window and thinking mode on by default, for cost-conscious coding / reasoning / long-context work when the cn jurisdiction is acceptable and a deepseek-api-key is configured; reached via the `deepseek-api` method (provider-direct per-token, not the Cursor pool). Tier ratings are CONSERVATIVE PLACEHOLDERS (the cn cheap-capable profile) pending benchmark-source coverage of DeepSeek V4 \u2014 likely under-rated; the catalog cron's benchmark pass refines them once AA / LMArena / SWE-bench index the model."
     },
     {
       "id": "gemini-2.5-flash",
@@ -618,6 +660,21 @@
       "exposes_max_mode": "yes",
       "exposes_thinking": "no",
       "best_for": "Cursor IDE \u2014 single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / composer-2.5 imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. Cursor's own Auto and Premium routing modes are deliberately NOT enumerated as roadmodel-recommendable models because their routing is opaque (see `jurisdiction-context` for the rationale) \u2014 operators who want routing behavior pick a specific fixed model and let Cursor's pool handle the call. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)."
+    },
+    {
+      "id": "deepseek-api",
+      "name": "DeepSeek API",
+      "provider": "deepseek",
+      "provider_jurisdiction": "cn",
+      "billing": "per-token",
+      "requires": "deepseek-api-key",
+      "supports_models": [
+        "deepseek-v4-flash",
+        "deepseek-v4-pro"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "best_for": "Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models \u2014 cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn."
     },
     {
       "id": "gemini-app",

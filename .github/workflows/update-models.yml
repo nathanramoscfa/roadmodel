@@ -84,6 +84,21 @@ jobs:
           fi
           python update/update_models.py $ARGS
 
+      - name: Re-apply provider-direct models (federation overlay)
+        # The Opus refresh above rewrites <model-options> from Cursor's pricing
+        # page, which would DROP a provider-direct model not on that page (e.g.
+        # DeepSeek, sourced from update/catalog-deepseek.json). Force those
+        # elements back from the committed (pre-run) selector so the daily
+        # refresh never clobbers a federated provider. No-op when no
+        # provider-direct model is present in the committed selector. See
+        # update/merge_catalog.py + Phase 4.6.
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
+        run: |
+          set -euo pipefail
+          git show HEAD:docs/model-selector.txt > /tmp/base-selector.txt
+          python update/merge_catalog.py --write --base /tmp/base-selector.txt
+          python update/render_md.py
+
       - name: Rebuild docs/catalog.json (deterministic)
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         run: |
