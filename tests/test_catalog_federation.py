@@ -174,11 +174,93 @@ def test_compose_on_real_artifacts_is_clean() -> None:
     snaps = mod.provider_snapshots()
     composed, flags = mod.compose(base, snaps)
     assert flags == []
-    # DeepSeek is the only provider-direct source today; both models compose at low tier.
+    # DeepSeek is the only provider-direct source today; both models compose at low
+    # tier, and provider-direct wins over the (now-present) <model-options> base entry.
     assert composed["deepseek-v4-flash"].source == "deepseek"
     assert composed["deepseek-v4-flash"].cost_tier == "low"
-    # Proposed additions are exactly the DeepSeek models (not yet in <model-options>).
-    assert mod.proposed_additions(base, snaps) == ["deepseek-v4-flash", "deepseek-v4-pro"]
+    assert composed["deepseek-v4-pro"].source == "deepseek"
+    # DeepSeek is now IN <model-options> (the wiring slice landed it), so it is no
+    # longer a "proposed" (not-yet-in-selector) addition.
+    assert mod.proposed_additions(base, snaps) == []
+
+
+# --------------------------------------------------------------------------- #
+# De-clobber overlay (force provider-direct elements after the cron's Opus rewrite)
+# --------------------------------------------------------------------------- #
+
+
+def _mini_selector(*low_tier_models: str) -> str:
+    body = "\n".join(low_tier_models)
+    return f'<model-options>\n    <tier cost="low">\n{body}\n    </tier>\n  </model-options>\n'
+
+
+_DS_ELEMENT = (
+    '      <model id="deepseek-v4-pro" name="DeepSeek-V4-Pro"\n'
+    '             input-price-per-1m="$0.435" output-price-per-1m="$0.87"\n'
+    '             jurisdiction="cn"\n'
+    '             tier-coding="B" tier-planning="B" tier-agentic="B"\n'
+    '             tier-multimodal="C" tier-long-context="B" tier-knowledge="B"\n'
+    '             tier-speed="B"\n'
+    '             headline-benchmarks="placeholder"\n'
+    '             pricing-notes="placeholder"\n'
+    '             best-for="placeholder" />'
+)
+_KIMI_ELEMENT = (
+    '      <model id="kimi-k2.5" name="Kimi K2.5" jurisdiction="cn" output-price-per-1m="$3.00" />'
+)
+
+
+def test_overlay_reinserts_dropped_element() -> None:
+    mod = _load("merge_catalog")
+    base = _mini_selector(_KIMI_ELEMENT, _DS_ELEMENT)
+    current = _mini_selector(_KIMI_ELEMENT)  # Opus dropped the provider-direct DeepSeek element
+    new_current, applied, flags = mod.apply_overlay(current, base, {"deepseek-v4-pro"})
+    assert flags == []
+    assert applied == ["deepseek-v4-pro"]
+    assert mod.extract_element(new_current, "deepseek-v4-pro") == _DS_ELEMENT
+    assert mod.extract_element(new_current, "kimi-k2.5") is not None  # untouched
+
+
+def test_overlay_replaces_drifted_element() -> None:
+    mod = _load("merge_catalog")
+    base = _mini_selector(_KIMI_ELEMENT, _DS_ELEMENT)
+    drifted = _DS_ELEMENT.replace('tier-coding="B"', 'tier-coding="S"')  # Opus altered it
+    current = _mini_selector(_KIMI_ELEMENT, drifted)
+    new_current, applied, flags = mod.apply_overlay(current, base, {"deepseek-v4-pro"})
+    assert flags == []
+    assert applied == ["deepseek-v4-pro"]
+    assert mod.extract_element(new_current, "deepseek-v4-pro") == _DS_ELEMENT  # forced back
+
+
+def test_overlay_noop_when_identical() -> None:
+    mod = _load("merge_catalog")
+    base = _mini_selector(_KIMI_ELEMENT, _DS_ELEMENT)
+    new_current, applied, flags = mod.apply_overlay(base, base, {"deepseek-v4-pro"})
+    assert applied == []
+    assert flags == []
+    assert new_current == base
+
+
+def test_overlay_noop_when_id_absent_from_base() -> None:
+    mod = _load("merge_catalog")
+    base = _mini_selector(_KIMI_ELEMENT)  # no provider-direct element to protect
+    current = _mini_selector(_KIMI_ELEMENT)
+    new_current, applied, flags = mod.apply_overlay(current, base, {"deepseek-v4-pro"})
+    assert applied == []
+    assert flags == []
+    assert new_current == current
+
+
+def test_overlay_on_committed_selector_is_byte_stable() -> None:
+    """With base == the committed selector, the overlay must change nothing (the
+    DeepSeek elements are already present + identical)."""
+    mod = _load("merge_catalog")
+    text = REAL_SELECTOR.read_text()
+    ids = mod.provider_direct_ids(mod.provider_snapshots())
+    new_text, applied, flags = mod.apply_overlay(text, text, ids)
+    assert new_text == text
+    assert applied == []
+    assert flags == []
 
 
 # --------------------------------------------------------------------------- #
