@@ -102,13 +102,18 @@ jobs:
           python update/extract_deepseek_catalog.py || echo "deepseek catalog refresh failed; keeping committed snapshot"
 
       - name: Re-apply provider-direct models (federation overlay)
-        # The Opus refresh above rewrites <model-options> from Cursor's pricing
-        # page, which would DROP a provider-direct model not on that page (e.g.
-        # DeepSeek, sourced from update/catalog-deepseek.json). Force those
-        # elements back from the committed (pre-run) selector so the daily
-        # refresh never clobbers a federated provider. No-op when no
-        # provider-direct model is present in the committed selector. See
-        # update/merge_catalog.py + Phase 4.6.
+        # Deterministic backstop (Phase 4.6 T4). The Opus refresh above rewrites
+        # the catalog from Cursor's pricing page; this step reconciles every
+        # provider-direct model against the committed snapshots so the conformance
+        # gate stays green BY CONSTRUCTION and a provider price change auto-flows:
+        #   1. whole-element providers the Opus rewrite drops (e.g. DeepSeek) are
+        #      re-added from the committed (pre-run) selector;
+        #   2. every provider-direct input/output price is forced to its snapshot
+        #      in BOTH docs/model-selector.txt AND docs/model-tier-cost-scale.md
+        #      (so G4 never rejects an Opus-authored price, and selector<->cost-scale
+        #      stay consistent). Snapshots were refreshed in the prior step.
+        # Strict no-op when the docs already match the snapshots. See
+        # update/merge_catalog.py.
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         run: |
           set -euo pipefail

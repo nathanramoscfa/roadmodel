@@ -580,5 +580,123 @@ def test_cron_prompt_carries_federation_price_rule() -> None:
     assert "g4" in prompt or "price-provenance" in prompt
 
 
+# --------------------------------------------------------------------------- #
+# T4 deterministic backstop — price overlay (selector + cost-scale) from snapshots
+# --------------------------------------------------------------------------- #
+
+COST_SCALE = REPO_ROOT / "docs" / "model-tier-cost-scale.md"
+
+
+def test_snapshot_price_map_includes_providers_excludes_codex() -> None:
+    mod = _load("merge_catalog")
+    prices = mod.snapshot_price_map(mod.provider_snapshots())
+    # Codex SKUs have no snapshot, so the overlay never touches them — they stay
+    # Cursor-authored (the #244 intentional exception).
+    assert "gpt-5.3-codex" not in prices
+    assert "gpt-5.1-codex" not in prices
+    # Provider-direct models are present with their snapshot prices.
+    assert prices["opus-4.8"]["output"] == 25.0
+    assert prices["grok-4.3"] == {"input": 1.25, "output": 2.5}
+
+
+def test_price_overlay_forces_snapshot_price_and_is_noop_on_match() -> None:
+    mod = _load("merge_catalog")
+    selector = (
+        '<model-options>\n  <tier cost="very-high">\n'
+        '      <model id="opus-4.8" name="Opus 4.8"\n'
+        '             input-price-per-1m="$9.99" output-price-per-1m="$25.00"\n'
+        '             tier-coding="S" />\n'
+        "  </tier>\n</model-options>"
+    )
+    price_map = {"opus-4.8": {"input": 5.0, "output": 25.0}}
+    new, applied, flags = mod.apply_price_overlay(selector, price_map)
+    assert flags == []
+    assert applied == ["opus-4.8"]
+    assert 'input-price-per-1m="$5.00"' in new  # drifted input corrected from snapshot
+    assert 'output-price-per-1m="$25.00"' in new  # matching output left byte-identical
+    # Idempotent — second pass is a strict no-op.
+    again, applied2, _ = mod.apply_price_overlay(new, price_map)
+    assert again == new
+    assert applied2 == []
+
+
+def test_price_overlay_skips_models_absent_from_selector() -> None:
+    mod = _load("merge_catalog")
+    selector = "<model-options>\n</model-options>"
+    new, applied, flags = mod.apply_price_overlay(
+        selector, {"opus-4.8": {"input": 5.0, "output": 25.0}}
+    )
+    assert new == selector
+    assert applied == []
+    assert flags == []
+
+
+def test_price_overlay_preserves_sub_cent_precision() -> None:
+    mod = _load("merge_catalog")
+    # A 3-decimal provider-direct price (DeepSeek-style) must not be rounded to 2dp.
+    selector = (
+        '<model-options>\n  <tier cost="low">\n'
+        '      <model id="deepseek-v4-pro" name="X"\n'
+        '             input-price-per-1m="$0.40" output-price-per-1m="$0.87" />\n'
+        "  </tier>\n</model-options>"
+    )
+    new, applied, _ = mod.apply_price_overlay(
+        selector, {"deepseek-v4-pro": {"input": 0.435, "output": 0.87}}
+    )
+    assert 'input-price-per-1m="$0.435"' in new
+    assert applied == ["deepseek-v4-pro"]
+
+
+def test_cost_scale_overlay_corrects_mapped_row_and_is_noop_on_match() -> None:
+    mod = _load("merge_catalog")
+    cost_scale = (
+        "### API Pool — Anthropic (Claude)\n\n"
+        "| Model           | Input | Cache Write | Cache Read | Output | Tier      | Notes |\n"
+        "| --------------- | ----- | ----------- | ---------- | ------ | --------- | ----- |\n"
+        "| Claude Opus 4.8 | $9.99 | $6.25       | $0.50      | $25.00 | Very High | -     |\n"
+    )
+    # opus-4.8 maps to "Claude Opus 4.8" in SELECTOR_TO_COST_SCALE_NAME.
+    price_map = {"opus-4.8": {"input": 5.0, "output": 25.0}}
+    new, applied, flags = mod.apply_cost_scale_price_overlay(cost_scale, price_map)
+    assert flags == []
+    assert applied == ["Claude Opus 4.8"]
+    assert "$5.00" in new  # Input corrected
+    assert "$25.00" in new  # Output (matching) preserved
+    assert "$9.99" not in new
+    # The header / separator rows must be untouched.
+    assert "| Model           | Input |" in new
+    # No-op on a second pass.
+    again, applied2, _ = mod.apply_cost_scale_price_overlay(new, price_map)
+    assert again == new
+    assert applied2 == []
+
+
+def test_cost_scale_overlay_flags_missing_row() -> None:
+    mod = _load("merge_catalog")
+    # opus-4.8 is mapped but absent from this (header-only) table -> flagged, not silent.
+    cost_scale = "| Model | Input | Cache Write | Cache Read | Output | Tier | Notes |\n"
+    new, applied, flags = mod.apply_cost_scale_price_overlay(
+        cost_scale, {"opus-4.8": {"input": 5.0, "output": 25.0}}
+    )
+    assert applied == []
+    assert any("no table row found" in f for f in flags)
+
+
+def test_overlays_are_byte_stable_on_committed_docs() -> None:
+    """The deterministic backstop must be a strict no-op when the committed selector
+    + cost-scale already match the snapshots (today's state). This locks in
+    byte-stability AND guards the cross-doc invariant — Phase 4.6 T4 backstop."""
+    mod = _load("merge_catalog")
+    prices = mod.snapshot_price_map(mod.provider_snapshots())
+    selector = REAL_SELECTOR.read_text()
+    new_sel, _, sel_flags = mod.apply_price_overlay(selector, prices)
+    assert new_sel == selector, "selector price overlay changed committed docs (expected no-op)"
+    assert sel_flags == []
+    cost_scale = COST_SCALE.read_text()
+    new_cs, _, cs_flags = mod.apply_cost_scale_price_overlay(cost_scale, prices)
+    assert new_cs == cost_scale, "cost-scale price overlay changed committed docs (expected no-op)"
+    assert cs_flags == []
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
