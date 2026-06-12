@@ -522,8 +522,8 @@ as primary; the other becomes the secondary category for tie-breaking.
     - `au` — Australia.
     - `jp` — Japan.
     - `kr` — South Korea.
-    - `cn` — China. Today: Moonshot (Kimi). Future Chinese-HQ
-      entrants inherit this code.
+    - `cn` — China. Today: Moonshot (Kimi), DeepSeek. Future
+      Chinese-HQ entrants inherit this code.
     - `ru` — Russia. (No models on Cursor's pricing page from this
       jurisdiction at time of writing.)
     - `unknown` — provider HQ has not been editorially verified yet.
@@ -812,6 +812,22 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Headline benchmarks:** Moonshot AI's Kimi K2 series successor at $3.00/M output; competitive cost positioning across general text tasks; specific benchmark numbers pending refresh
 - **Pricing notes:** Hidden by default
 - **Best for:** Moonshot's affordable mid-volume model — a non-Google / non-OpenAI / non-Anthropic option at low-tier pricing for cost-conscious code and text generation when provider diversity is desired (vendor-risk hedging, regional preferences); routed via Cursor's pool only — no direct Moonshot access method is currently enumerated in the access-methods block
+
+#### DeepSeek-V4-Pro — `deepseek-v4-pro`
+
+- **Pricing:** Input $0.435/M · Output $0.87/M
+- **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **C** · Long-context **B** · Knowledge **B** · Speed **B**
+- **Headline benchmarks:** DeepSeek V4-Pro flagship at $0.87/M output with 1M context and thinking mode on by default; specific benchmark numbers pending benchmark-source coverage of DeepSeek V4 (AA Intelligence Index / LMArena / SWE-bench not yet indexing it)
+- **Pricing notes:** Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.003625/M; PLACEHOLDER conservative tier ratings pending benchmark confirmation
+- **Best for:** DeepSeek's V4-Pro — a very low-cost, cn-jurisdiction option with a 1M context window and thinking mode on by default, for cost-conscious coding / reasoning / long-context work when the cn jurisdiction is acceptable and a deepseek-api-key is configured; reached via the `deepseek-api` method (provider-direct per-token, not the Cursor pool). Tier ratings are CONSERVATIVE PLACEHOLDERS (the cn cheap-capable profile) pending benchmark-source coverage of DeepSeek V4 — likely under-rated; the catalog cron's benchmark pass refines them once AA / LMArena / SWE-bench index the model.
+
+#### DeepSeek-V4-Flash — `deepseek-v4-flash`
+
+- **Pricing:** Input $0.14/M · Output $0.28/M
+- **Tier ratings:** Coding **C** · Planning **C** · Agentic **C** · Multimodal **C** · Long-context **B** · Knowledge **C** · Speed **A**
+- **Headline benchmarks:** DeepSeek V4-Flash fast/cheap variant at $0.28/M output with 1M context; specific benchmark numbers pending benchmark-source coverage of DeepSeek V4
+- **Pricing notes:** Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.0028/M; PLACEHOLDER conservative tier ratings pending benchmark confirmation
+- **Best for:** DeepSeek's V4-Flash — the fast, cheapest DeepSeek variant ($0.28/M output) with a 1M context window, for high-throughput / latency-sensitive text and code tasks under the cn jurisdiction with a deepseek-api-key; reached via the `deepseek-api` method (provider-direct per-token). Tier ratings are CONSERVATIVE PLACEHOLDERS pending benchmark confirmation — the catalog cron's benchmark pass refines them.
 
 ## Access Methods
 
@@ -1112,6 +1128,15 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Toggles:** Max Mode — no · Thinking — no
 - **Best for:** Direct Grok API access for 2M-context or hallucination-resistant tasks; pay-per-token at xAI's published rates.
 
+### Deepseek
+
+#### DeepSeek API — `deepseek-api`
+
+- **Billing:** per-token (requires deepseek-api-key)
+- **Supports models:** deepseek-v4-flash,deepseek-v4-pro
+- **Toggles:** Max Mode — no · Thinking — yes
+- **Best for:** Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn.
+
 ### Cursor
 
 #### Cursor — `cursor`
@@ -1399,8 +1424,8 @@ as primary; the other becomes the secondary category for tie-breaking.
     - `au` — Australia.
     - `jp` — Japan.
     - `kr` — South Korea.
-    - `cn` — China. Today: Moonshot (Kimi). Future Chinese-HQ
-      entrants inherit this code.
+    - `cn` — China. Today: Moonshot (Kimi), DeepSeek. Future
+      Chinese-HQ entrants inherit this code.
     - `ru` — Russia. (No models on Cursor's pricing page from this
       jurisdiction at time of writing.)
     - `unknown` — provider HQ has not been editorially verified yet.
@@ -1712,6 +1737,24 @@ as primary; the other becomes the secondary category for tie-breaking.
              headline-benchmarks="Moonshot AI's Kimi K2 series successor at $3.00/M output; competitive cost positioning across general text tasks; specific benchmark numbers pending refresh"
              pricing-notes="Hidden by default"
              best-for="Moonshot's affordable mid-volume model — a non-Google / non-OpenAI / non-Anthropic option at low-tier pricing for cost-conscious code and text generation when provider diversity is desired (vendor-risk hedging, regional preferences); routed via Cursor's pool only — no direct Moonshot access method is currently enumerated in the access-methods block" />
+      <model id="deepseek-v4-pro" name="DeepSeek-V4-Pro"
+             input-price-per-1m="$0.435" output-price-per-1m="$0.87"
+             jurisdiction="cn"
+             tier-coding="B" tier-planning="B" tier-agentic="B"
+             tier-multimodal="C" tier-long-context="B" tier-knowledge="B"
+             tier-speed="B"
+             headline-benchmarks="DeepSeek V4-Pro flagship at $0.87/M output with 1M context and thinking mode on by default; specific benchmark numbers pending benchmark-source coverage of DeepSeek V4 (AA Intelligence Index / LMArena / SWE-bench not yet indexing it)"
+             pricing-notes="Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.003625/M; PLACEHOLDER conservative tier ratings pending benchmark confirmation"
+             best-for="DeepSeek's V4-Pro — a very low-cost, cn-jurisdiction option with a 1M context window and thinking mode on by default, for cost-conscious coding / reasoning / long-context work when the cn jurisdiction is acceptable and a deepseek-api-key is configured; reached via the `deepseek-api` method (provider-direct per-token, not the Cursor pool). Tier ratings are CONSERVATIVE PLACEHOLDERS (the cn cheap-capable profile) pending benchmark-source coverage of DeepSeek V4 — likely under-rated; the catalog cron's benchmark pass refines them once AA / LMArena / SWE-bench index the model." />
+      <model id="deepseek-v4-flash" name="DeepSeek-V4-Flash"
+             input-price-per-1m="$0.14" output-price-per-1m="$0.28"
+             jurisdiction="cn"
+             tier-coding="C" tier-planning="C" tier-agentic="C"
+             tier-multimodal="C" tier-long-context="B" tier-knowledge="C"
+             tier-speed="A"
+             headline-benchmarks="DeepSeek V4-Flash fast/cheap variant at $0.28/M output with 1M context; specific benchmark numbers pending benchmark-source coverage of DeepSeek V4"
+             pricing-notes="Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.0028/M; PLACEHOLDER conservative tier ratings pending benchmark confirmation"
+             best-for="DeepSeek's V4-Flash — the fast, cheapest DeepSeek variant ($0.28/M output) with a 1M context window, for high-throughput / latency-sensitive text and code tasks under the cn jurisdiction with a deepseek-api-key; reached via the `deepseek-api` method (provider-direct per-token). Tier ratings are CONSERVATIVE PLACEHOLDERS pending benchmark confirmation — the catalog cron's benchmark pass refines them." />
     </tier>
   </model-options>
 
@@ -1818,6 +1861,14 @@ as primary; the other becomes the secondary category for tie-breaking.
             exposes-max-mode="no" exposes-thinking="no"
             exposes-orchestration="no"
             best-for="Direct Grok API access for 2M-context or hallucination-resistant tasks; pay-per-token at xAI's published rates." />
+    <method id="deepseek-api" name="DeepSeek API"
+            provider="deepseek" billing="per-token"
+            provider-jurisdiction="cn"
+            requires="deepseek-api-key"
+            supports-models="deepseek-v4-flash,deepseek-v4-pro"
+            exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
+            best-for="Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn." />
     <method id="cursor" name="Cursor"
             provider="cursor" billing="subscription-pool"
             provider-jurisdiction="us"
@@ -2199,8 +2250,8 @@ as primary; the other becomes the secondary category for tie-breaking.
     - `au` — Australia.
     - `jp` — Japan.
     - `kr` — South Korea.
-    - `cn` — China. Today: Moonshot (Kimi). Future Chinese-HQ
-      entrants inherit this code.
+    - `cn` — China. Today: Moonshot (Kimi), DeepSeek. Future
+      Chinese-HQ entrants inherit this code.
     - `ru` — Russia. (No models on Cursor's pricing page from this
       jurisdiction at time of writing.)
     - `unknown` — provider HQ has not been editorially verified yet.
@@ -2512,6 +2563,24 @@ as primary; the other becomes the secondary category for tie-breaking.
              headline-benchmarks="Moonshot AI's Kimi K2 series successor at $3.00/M output; competitive cost positioning across general text tasks; specific benchmark numbers pending refresh"
              pricing-notes="Hidden by default"
              best-for="Moonshot's affordable mid-volume model — a non-Google / non-OpenAI / non-Anthropic option at low-tier pricing for cost-conscious code and text generation when provider diversity is desired (vendor-risk hedging, regional preferences); routed via Cursor's pool only — no direct Moonshot access method is currently enumerated in the access-methods block" />
+      <model id="deepseek-v4-pro" name="DeepSeek-V4-Pro"
+             input-price-per-1m="$0.435" output-price-per-1m="$0.87"
+             jurisdiction="cn"
+             tier-coding="B" tier-planning="B" tier-agentic="B"
+             tier-multimodal="C" tier-long-context="B" tier-knowledge="B"
+             tier-speed="B"
+             headline-benchmarks="DeepSeek V4-Pro flagship at $0.87/M output with 1M context and thinking mode on by default; specific benchmark numbers pending benchmark-source coverage of DeepSeek V4 (AA Intelligence Index / LMArena / SWE-bench not yet indexing it)"
+             pricing-notes="Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.003625/M; PLACEHOLDER conservative tier ratings pending benchmark confirmation"
+             best-for="DeepSeek's V4-Pro — a very low-cost, cn-jurisdiction option with a 1M context window and thinking mode on by default, for cost-conscious coding / reasoning / long-context work when the cn jurisdiction is acceptable and a deepseek-api-key is configured; reached via the `deepseek-api` method (provider-direct per-token, not the Cursor pool). Tier ratings are CONSERVATIVE PLACEHOLDERS (the cn cheap-capable profile) pending benchmark-source coverage of DeepSeek V4 — likely under-rated; the catalog cron's benchmark pass refines them once AA / LMArena / SWE-bench index the model." />
+      <model id="deepseek-v4-flash" name="DeepSeek-V4-Flash"
+             input-price-per-1m="$0.14" output-price-per-1m="$0.28"
+             jurisdiction="cn"
+             tier-coding="C" tier-planning="C" tier-agentic="C"
+             tier-multimodal="C" tier-long-context="B" tier-knowledge="C"
+             tier-speed="A"
+             headline-benchmarks="DeepSeek V4-Flash fast/cheap variant at $0.28/M output with 1M context; specific benchmark numbers pending benchmark-source coverage of DeepSeek V4"
+             pricing-notes="Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.0028/M; PLACEHOLDER conservative tier ratings pending benchmark confirmation"
+             best-for="DeepSeek's V4-Flash — the fast, cheapest DeepSeek variant ($0.28/M output) with a 1M context window, for high-throughput / latency-sensitive text and code tasks under the cn jurisdiction with a deepseek-api-key; reached via the `deepseek-api` method (provider-direct per-token). Tier ratings are CONSERVATIVE PLACEHOLDERS pending benchmark confirmation — the catalog cron's benchmark pass refines them." />
     </tier>
   </model-options>
 
@@ -2618,6 +2687,14 @@ as primary; the other becomes the secondary category for tie-breaking.
             exposes-max-mode="no" exposes-thinking="no"
             exposes-orchestration="no"
             best-for="Direct Grok API access for 2M-context or hallucination-resistant tasks; pay-per-token at xAI's published rates." />
+    <method id="deepseek-api" name="DeepSeek API"
+            provider="deepseek" billing="per-token"
+            provider-jurisdiction="cn"
+            requires="deepseek-api-key"
+            supports-models="deepseek-v4-flash,deepseek-v4-pro"
+            exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
+            best-for="Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn." />
     <method id="cursor" name="Cursor"
             provider="cursor" billing="subscription-pool"
             provider-jurisdiction="us"

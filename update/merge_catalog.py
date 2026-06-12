@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -154,32 +155,171 @@ def proposed_additions(
     return sorted(additions)
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Compose the federated model registry (report).")
-    parser.add_argument("--selector", type=Path, default=SELECTOR_PATH)
-    args = parser.parse_args()
+# --------------------------------------------------------------------------- #
+# De-clobber overlay. The Cursor cron does a full-file Opus rewrite of the
+# selector from Cursor's pricing page, which would drop a provider-direct model
+# (e.g. DeepSeek) that isn't on that page. The provider-direct <model> elements —
+# with their editorial tier ratings — live in the committed selector; this
+# overlay forces each provider-direct id's element in the CURRENT (post-Opus)
+# selector to match the BASE (committed, pre-Opus) selector. Idempotent; a no-op
+# when no provider-direct id exists in the base.
+# --------------------------------------------------------------------------- #
 
-    base = base_models(args.selector.read_text())
+_OPTIONS_RE = re.compile(r"<model-options>(.*?)</model-options>", re.DOTALL)
+_TIER_BLOCK_RE = re.compile(r'(<tier\s+cost="([^"]+)"\s*>)(.*?)(</tier>)', re.DOTALL)
+
+
+def _element_re(mid: str) -> re.Pattern[str]:
+    """Match a full, indented ``<model ... id="mid" ... />`` element.
+
+    A model element contains no ``>`` until its closing ``/>``, so ``[^>]*?``
+    safely spans its multi-line attributes without crossing into a sibling.
+    """
+    return re.compile(
+        r'^[ \t]*<model\s+[^>]*?\bid="' + re.escape(mid) + r'"[^>]*?/>[ \t]*$',
+        re.MULTILINE,
+    )
+
+
+def extract_element(selector_text: str, mid: str) -> str | None:
+    m = _element_re(mid).search(selector_text)
+    return m.group(0) if m else None
+
+
+def _element_tier(selector_text: str, mid: str) -> str | None:
+    options = _OPTIONS_RE.search(selector_text)
+    if not options:
+        return None
+    for tier_m in _TIER_BLOCK_RE.finditer(options.group(1)):
+        if _element_re(mid).search(tier_m.group(3)):
+            return tier_m.group(2)
+    return None
+
+
+def provider_direct_ids(snapshots: list[dict[str, Any]]) -> set[str]:
+    ids: set[str] = set()
+    for snap in snapshots:
+        for model in snap.get("models", []):
+            mid = str(model.get("id", "")).strip()
+            if mid:
+                ids.add(mid)
+    return ids
+
+
+def _insert_into_tier(selector_text: str, element: str, tier_cost: str) -> str | None:
+    """Insert ``element`` as the last model of the ``tier_cost`` block."""
+    inserted = False
+
+    def _sub_tier(tier_m: re.Match[str]) -> str:
+        nonlocal inserted
+        if inserted or tier_m.group(2) != tier_cost:
+            return tier_m.group(0)
+        inserted = True
+        body = tier_m.group(3).rstrip()  # drop the trailing "\n    " before </tier>
+        return tier_m.group(1) + body + "\n" + element + "\n    " + tier_m.group(4)
+
+    def _sub_options(opt_m: re.Match[str]) -> str:
+        return (
+            "<model-options>" + _TIER_BLOCK_RE.sub(_sub_tier, opt_m.group(1)) + "</model-options>"
+        )
+
+    new_text = _OPTIONS_RE.sub(_sub_options, selector_text, count=1)
+    return new_text if inserted else None
+
+
+def apply_overlay(current: str, base: str, ids: set[str]) -> tuple[str, list[str], list[str]]:
+    """Force each provider-direct id's ``<model>`` element in ``current`` to match
+    ``base`` (insert if missing, replace if it drifted). Returns
+    ``(new_current, applied_ids, flags)``. Ids absent from ``base`` are skipped —
+    there is nothing authoritative to protect yet."""
+    applied: list[str] = []
+    flags: list[str] = []
+    for mid in sorted(ids):
+        base_el = extract_element(base, mid)
+        if base_el is None:
+            continue
+        cur_el = extract_element(current, mid)
+        if cur_el == base_el:
+            continue
+        if cur_el is not None:
+            current = _element_re(mid).sub(lambda _m: base_el, current, count=1)
+            applied.append(mid)
+            continue
+        tier = _element_tier(base, mid)
+        if tier is None:
+            flags.append(f"overlay: {mid!r} is in base but its <tier> block could not be located")
+            continue
+        new_current = _insert_into_tier(current, base_el, tier)
+        if new_current is None:
+            flags.append(f"overlay: could not insert {mid!r} into <tier cost={tier!r}>")
+            continue
+        current = new_current
+        applied.append(mid)
+    return current, applied, flags
+
+
+def _run_report(selector_path: Path) -> int:
+    base = base_models(selector_path.read_text())
     snaps = provider_snapshots()
     composed, flags = compose(base, snaps)
     additions = proposed_additions(base, snaps)
-
     provider_direct = sorted(m.id for m in composed.values() if m.source != "cursor")
     print(
         f"merge_catalog: {len(composed)} models composed; "
-        f"{len(provider_direct)} provider-direct, {len(additions)} proposed addition(s)."
+        f"{len(provider_direct)} provider-direct, {len(additions)} not-yet-in-selector."
     )
     for mid in provider_direct:
         cm = composed[mid]
         print(f"  provider-direct: {mid} (source={cm.source}, tier={cm.cost_tier})")
-    if additions:
-        print(f"  proposed <model-options> additions (need editorial tier ratings): {additions}")
     if flags:
         print("merge_catalog: composition flags:", file=sys.stderr)
         for f in flags:
             print(f"  - {f}", file=sys.stderr)
         return 1
     return 0
+
+
+def _run_write(selector_path: Path, base_path: Path) -> int:
+    current = selector_path.read_text()
+    base = base_path.read_text()
+    ids = provider_direct_ids(provider_snapshots())
+    new_current, applied, flags = apply_overlay(current, base, ids)
+    for f in flags:
+        print(f"merge_catalog: {f}", file=sys.stderr)
+    if new_current != current:
+        selector_path.write_text(new_current)
+        print(f"merge_catalog: overlay re-applied provider-direct element(s): {applied}")
+    else:
+        print(
+            f"merge_catalog: overlay no-op ({len(ids)} provider-direct id(s); "
+            "none needed re-applying)"
+        )
+    return 1 if flags else 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Compose (report) / overlay (--write) the federated model registry."
+    )
+    parser.add_argument("--selector", type=Path, default=SELECTOR_PATH)
+    parser.add_argument(
+        "--write",
+        action="store_true",
+        help="De-clobber overlay: force provider-direct <model> elements in "
+        "--selector to match --base.",
+    )
+    parser.add_argument(
+        "--base",
+        type=Path,
+        default=None,
+        help="Base (committed, pre-Opus) selector to take provider-direct elements "
+        "from. With --write; defaults to --selector itself (a self no-op) when omitted.",
+    )
+    args = parser.parse_args()
+
+    if args.write:
+        return _run_write(args.selector, args.base if args.base is not None else args.selector)
+    return _run_report(args.selector)
 
 
 if __name__ == "__main__":
