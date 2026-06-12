@@ -97,6 +97,8 @@ jobs:
           set -uo pipefail
           python update/extract_anthropic_catalog.py || echo "anthropic catalog refresh failed; keeping committed snapshot"
           python update/extract_openai_catalog.py || echo "openai catalog refresh failed; keeping committed snapshot"
+          python update/extract_google_catalog.py || echo "google catalog refresh failed; keeping committed snapshot"
+          python update/extract_xai_catalog.py || echo "xai catalog refresh failed; keeping committed snapshot"
           python update/extract_deepseek_catalog.py || echo "deepseek catalog refresh failed; keeping committed snapshot"
 
       - name: Re-apply provider-direct models (federation overlay)
@@ -133,7 +135,7 @@ jobs:
           GH_TOKEN: ${{ secrets.BOT_PAT }}
         run: |
           set -euo pipefail
-          if git diff --quiet -- docs/ update/catalog-anthropic.json update/catalog-openai.json update/catalog-deepseek.json; then
+          if git diff --quiet -- docs/ update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json; then
             echo "No changes to commit."
             exit 0
           fi
@@ -149,7 +151,7 @@ jobs:
           if [ -f update/.last-warnings.txt ] && [ -s update/.last-warnings.txt ]; then
             warnings="$(printf '\n\n## Warnings\n')$(sed 's/^/- /' update/.last-warnings.txt)"
           fi
-          git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-deepseek.json
+          git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json
           git commit -m "Automated catalog refresh: ${DATE}" -m "${summary}${warnings}"
           git push -u origin "$BRANCH"
           PR_URL="$(gh pr create \
