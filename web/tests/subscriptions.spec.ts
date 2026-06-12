@@ -40,6 +40,16 @@ test("cleans 'claude.ai Max' labels to 'Claude Max' and slugs the rest", () => {
   expect(max100?.id).toBe("anthropic-claude-max-100");
 });
 
+test("carries the structured monthly_usd price through to the options", () => {
+  const byId = new Map(getSubscriptionOptions().map((o) => [o.id, o]));
+  // Both duplicate-name "Claude Max" tiers carry their distinct price (the
+  // basis for the price column that disambiguates them in the UI).
+  expect(byId.get("claude-max")?.monthly_usd).toBe(200);
+  expect(byId.get("anthropic-claude-max-100")?.monthly_usd).toBe(100);
+  // A unique-name tier carries its price too.
+  expect(byId.get("cursor-ultra")?.monthly_usd).toBe(200);
+});
+
 test("SUBSCRIPTION_IDS matches the derived options and funds map to surfaces", () => {
   const opts = getSubscriptionOptions();
   expect(SUBSCRIPTION_IDS.size).toBe(opts.length);

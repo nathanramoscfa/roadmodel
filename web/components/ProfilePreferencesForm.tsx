@@ -57,6 +57,29 @@ function sameJurisdictionSet(
   return a.every((j) => setB.has(j));
 }
 
+const MONEY = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  // Drop the cents on whole dollars ("$200", not "$200.00") but keep them
+  // where they matter ("$4.99"). The currency style defaults the minimum
+  // to 2, so set it explicitly to 0.
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
+
+// Format a USD amount currency-grouped, dropping the cents on whole dollars
+// ("$200", "$2,000", "$4.99"). Used for the subscription price column.
+function formatMoney(usd: number): string {
+  return MONEY.format(usd);
+}
+
+// The catalog bakes a "($NNN)" price disambiguator into a few tier names
+// (the two "Claude Max" rows, etc.). The price column now disambiguates
+// them, so strip the parenthetical for display (Phase 4.7 T1).
+function displayName(label: string): string {
+  return label.replace(/\s*\(\$[\d.,]+\)\s*$/, "");
+}
+
 export interface ProfilePreferencesFormProps {
   // Catalog-derived subscription options, passed from the server page so
   // the large catalog.json stays out of the client bundle (issue #152).
@@ -187,15 +210,20 @@ export function ProfilePreferencesForm({
               {group.options.map((option) => (
                 <label
                   key={option.id}
-                  className="flex items-center gap-2 text-sm text-brand-slate-800 dark:text-brand-slate-100"
+                  className="flex items-center justify-between gap-3 text-sm text-brand-slate-800 dark:text-brand-slate-100"
                 >
-                  <input
-                    type="checkbox"
-                    checked={subscriptions.includes(option.id)}
-                    onChange={() => toggleSubscription(option.id)}
-                    className="rounded border-brand-slate-300 dark:border-brand-slate-700 accent-brand-accent"
-                  />
-                  {option.label}
+                  <span className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={subscriptions.includes(option.id)}
+                      onChange={() => toggleSubscription(option.id)}
+                      className="rounded border-brand-slate-300 dark:border-brand-slate-700 accent-brand-accent"
+                    />
+                    {displayName(option.label)}
+                  </span>
+                  <span className="tabular-nums text-brand-slate-500 dark:text-brand-slate-400">
+                    {formatMoney(option.monthly_usd)}/mo
+                  </span>
                 </label>
               ))}
             </div>

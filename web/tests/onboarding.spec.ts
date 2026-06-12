@@ -29,7 +29,7 @@ test("save-and-continue persists prefs and surfaces budget priority", async ({
   page,
 }) => {
   await signInViaCallback(page);
-  await page.getByLabel(/Claude Max \(\$200\)/i).check();
+  await page.getByLabel(/Claude Max.*\$200\/mo/i).check();
   await page.getByLabel(/Cursor Ultra/i).check();
   await page.getByRole("radio", { name: /^Best$/i }).check();
 
@@ -60,6 +60,20 @@ test("save-and-continue persists prefs and surfaces budget priority", async ({
   const why = page.getByRole("region", { name: /Why this model/i });
   await expect(why).toBeVisible();
   await expect(why.getByText(/Budget priority: best/i)).toBeVisible();
+});
+
+test("renders a consistent monthly price for every subscription tier", async ({
+  page,
+}) => {
+  await signInViaCallback(page);
+  // A unique-name tier shows its price...
+  await expect(page.getByLabel(/Cursor Ultra.*\$200\/mo/i)).toBeVisible();
+  // ...and the two duplicate-name "Claude Max" tiers are disambiguated by
+  // the price column, not a parenthetical in the name.
+  await expect(page.getByLabel(/Claude Max.*\$100\/mo/i)).toBeVisible();
+  await expect(page.getByLabel(/Claude Max.*\$200\/mo/i)).toBeVisible();
+  // No parenthetical "($NNN)" price leaks into any label anymore.
+  await expect(page.getByText(/\(\$\d/)).toHaveCount(0);
 });
 
 test("skip persists defaults and sets onboarded_at", async ({ page }) => {
