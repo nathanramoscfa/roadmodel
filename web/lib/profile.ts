@@ -17,6 +17,12 @@ export { isE2eAuthEnabled };
 // the catalog-derived id set in /api/profile.
 export type SubscriptionId = string;
 
+// Catalog-derived (Phase 4.8, #260): provider ids the user reaches via their
+// own API key (billing per-token / subscription-or-key). Validated against
+// the catalog-derived id set in /api/profile. A boolean signal per provider —
+// never the API key itself.
+export type ApiProviderId = string;
+
 export type BudgetPriority = "cheap" | "balanced" | "best";
 
 export type JurisdictionCode =
@@ -34,6 +40,9 @@ export type JurisdictionCode =
 export interface Profile {
   user_id: string;
   subscriptions: SubscriptionId[];
+  // Phase 4.8 (#260) — providers the user reaches via their own API key.
+  // Additive; defaults to [] for pre-4.8 rows.
+  api_providers: ApiProviderId[];
   budget_priority: BudgetPriority;
   allowed_jurisdictions: JurisdictionCode[];
   onboarded_at: string | null;
@@ -47,6 +56,7 @@ export interface Profile {
 
 export const DEFAULT_PROFILE = {
   subscriptions: [] as SubscriptionId[],
+  api_providers: [] as ApiProviderId[],
   budget_priority: "balanced" as BudgetPriority,
   allowed_jurisdictions: [
     "us",
@@ -85,6 +95,7 @@ export function e2eUpsertProfile(
   const profile: Profile = {
     user_id: userId,
     subscriptions: row.subscriptions,
+    api_providers: row.api_providers,
     budget_priority: row.budget_priority,
     allowed_jurisdictions: row.allowed_jurisdictions,
     onboarded_at: row.onboarded_at,
@@ -115,6 +126,7 @@ function mapRow(row: Record<string, unknown>): Profile {
   return {
     user_id: String(row.user_id),
     subscriptions: (row.subscriptions ?? []) as SubscriptionId[],
+    api_providers: (row.api_providers ?? []) as ApiProviderId[],
     budget_priority: row.budget_priority as BudgetPriority,
     allowed_jurisdictions: (row.allowed_jurisdictions ??
       DEFAULT_PROFILE.allowed_jurisdictions) as JurisdictionCode[],

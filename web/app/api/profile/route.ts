@@ -6,10 +6,12 @@ import { AuthError, createSupabaseServerClient, requireSession } from "@/lib/aut
 import {
   e2eUpsertProfile,
   isE2eAuthEnabled,
+  type ApiProviderId,
   type BudgetPriority,
   type JurisdictionCode,
   type SubscriptionId,
 } from "@/lib/profile";
+import { API_PROVIDER_IDS } from "@/lib/api-providers";
 import { SUBSCRIPTION_IDS } from "@/lib/subscriptions";
 
 const jurisdictionEnum = z.enum([
@@ -30,6 +32,11 @@ const patchSchema = z.object({
   // a fixed enum so it tracks catalog.json's subscription_tiers.
   subscriptions: z
     .array(z.string().refine((id) => SUBSCRIPTION_IDS.has(id)))
+    .default([]),
+  // Catalog-derived API-provider id set (Phase 4.8, #260); same server-side
+  // validation pattern as subscriptions. Boolean signal only — no keys.
+  api_providers: z
+    .array(z.string().refine((id) => API_PROVIDER_IDS.has(id)))
     .default([]),
   budget_priority: z
     .enum(["cheap", "balanced", "best"])
@@ -67,6 +74,7 @@ export async function PATCH(req: Request): Promise<Response> {
   const payload = parsed.data;
   const row = {
     subscriptions: payload.subscriptions as SubscriptionId[],
+    api_providers: payload.api_providers as ApiProviderId[],
     budget_priority: payload.budget_priority as BudgetPriority,
     allowed_jurisdictions:
       payload.allowed_jurisdictions as JurisdictionCode[],
