@@ -145,16 +145,18 @@ the next run. To change which providers are in scope, edit
 existing model-lifecycle rules); the next cron run picks up the new
 provider automatically.
 
-The **`Annual`** column is the one EXCEPTION to the rebuild: it is an
-EDITORIAL, hand-seeded value (verified per provider against the official
-billing page), NOT discovered via `web_search`. The cron PRESERVES each
-tier's existing `Annual` cell verbatim across rebuilds, matching by plan
-name (Phase 4.7 T2; the same manual-snapshot contract the Mistral
-catalog source uses). A tier with no annual plan — or one whose annual
-price has not yet been hand-verified — carries `—` (parsed as a null
-`annual_usd`, which suppresses the annual price + savings in the UI).
-To add or correct an annual price, edit the cell directly and the next
-build picks it up; the cron will then preserve it.
+The **`Annual`** column (the full yearly total in USD) is rebuilt by the
+same `web_search` pass as the monthly price, with two safeguards (see
+[`update/prompt.md`](../update/prompt.md) § "Annual column"): a **sanity
+guard** accepts a captured annual `A` for a tier with monthly `M` only
+when `8 × M ≤ A ≤ 12 × M` (a real annual discount, never a misparse), and
+**preserve-on-miss** keeps the existing cell verbatim when no annual is
+found or the guard trips — so a transient fetch miss never downgrades a
+known-good price. A tier with no annual plan carries `—` (parsed as a
+null `annual_usd`, which suppresses the annual price + savings in the UI
+without breaking the tier). To pin or correct an annual price by hand,
+edit the cell directly; the next rebuild keeps it unless it re-derives a
+guarded value that differs (and then logs the change).
 
 `tests/test_subscription_freshness.py` watches the
 `<!-- subscription-tiers-reviewed: YYYY-MM-DD -->` marker above. The
