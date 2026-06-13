@@ -167,12 +167,23 @@ def recommend(
     prompt: str,
     config: Config,
     *,
+    user_context_text: str | None = None,
     max_output_tokens: int | None = None,
     thinking_budget: int | None = None,
     temperature: float | None = None,
 ) -> dict[str, str]:
-    user_context_text = user_context.read(config.user_context_path)
-    system_prompt, user_prompt = build_prompt(prompt, user_context_text=user_context_text)
+    # When user_context_text is supplied, use it verbatim as the user-context
+    # section of the system prompt and SKIP the config.user_context_path file
+    # read entirely. This lets a caller (e.g. the SaaS service) inject a
+    # per-request, per-user funding context instead of the on-disk file. When
+    # None (the default, and every CLI/MCP call), behavior is unchanged: the
+    # file at config.user_context_path is read as before.
+    resolved_user_context = (
+        user_context_text
+        if user_context_text is not None
+        else user_context.read(config.user_context_path)
+    )
+    system_prompt, user_prompt = build_prompt(prompt, user_context_text=resolved_user_context)
     adapter = PROVIDER_ADAPTERS[config.provider]
     raw_response = adapter.recommend(
         user_prompt,
@@ -213,6 +224,7 @@ def recommend_structured(
     prompt: str,
     config: Config,
     *,
+    user_context_text: str | None = None,
     input_tokens: int | None = None,
     output_tokens: int | None = None,
     max_mode: bool = False,
@@ -220,10 +232,16 @@ def recommend_structured(
     thinking_budget: int | None = None,
     temperature: float | None = None,
 ) -> dict[str, Any]:
-    """Return roadmap-style structured output plus optional cost estimates."""
+    """Return roadmap-style structured output plus optional cost estimates.
+
+    ``user_context_text`` is forwarded to :func:`recommend`: when provided it
+    overrides the on-disk user-context file (see ``recommend``); when ``None``
+    the file at ``config.user_context_path`` is read as before.
+    """
     base = recommend(
         prompt,
         config,
+        user_context_text=user_context_text,
         max_output_tokens=max_output_tokens,
         thinking_budget=thinking_budget,
         temperature=temperature,

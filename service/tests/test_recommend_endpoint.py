@@ -503,19 +503,22 @@ def test_recommend_passes_through_rationale(
 
 def test_fake_recommend_structured_matches_real_signature() -> None:
     """Contract guard per feedback_monkeypatched_contract_validation. The fakes
-    in this file assume recommend_structured(prompt, config, *, input_tokens,
-    output_tokens, max_mode, max_output_tokens, thinking_budget). If the real
-    signature drifts, every fake silently diverges and the first live call 500s
-    — exactly the Phase 3 Step 3 failure mode. Pin the real contract the fakes
+    in this file assume recommend_structured(prompt, config, *, user_context_text,
+    input_tokens, output_tokens, max_mode, max_output_tokens, thinking_budget). If
+    the real signature drifts, every fake silently diverges and the first live call
+    500s — exactly the Phase 3 Step 3 failure mode. Pin the real contract the fakes
     are written against. (thinking_budget was added for the issue #132 Gemini
-    latency work; the service fakes don't exercise it but the guard must track
-    the real signature so a future drift still fails loudly here.)"""
+    latency work; user_context_text for the Phase 4.8 T2b per-user funding context.
+    Both are optional keyword-only — the service does not pass user_context_text
+    until T2b-2 wires it — but the guard must track the real signature so a future
+    drift still fails loudly here.)"""
     from roadmodel.recommend import recommend_structured as real  # type: ignore[import-untyped]
 
     params = inspect.signature(real).parameters
     assert list(params) == [
         "prompt",
         "config",
+        "user_context_text",
         "input_tokens",
         "output_tokens",
         "max_mode",

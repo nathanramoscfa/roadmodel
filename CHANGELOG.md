@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.6] — 2026-06-13
+
+### Added
+
+- Optional `user_context_text: str | None` keyword on
+  `roadmodel.recommend.recommend` and
+  `roadmodel.recommend.recommend_structured`. When provided, the supplied
+  text is used verbatim as the user-context section of the system prompt and
+  the `config.user_context_path` file read is **skipped**; when `None` (the
+  default, and every CLI/MCP call) behavior is unchanged — the on-disk
+  user-context file is read exactly as before. This lets an embedding caller
+  (the roadmodel.ai SaaS service) inject a **per-request, per-user** funding
+  context — the user's held subscriptions and enabled API providers — so the
+  selector can prefer a model the user already funds at $0 on a quality tie,
+  instead of always seeing one static bundled user-context. No engine, model,
+  cost, or prompt-template change; purely an additive, backward-compatible
+  API surface.
+
 ## [0.2.5] — 2026-06-06
 
 ### Changed

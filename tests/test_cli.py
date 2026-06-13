@@ -108,6 +108,108 @@ def test_recommend_invokes_build_prompt_and_parser(
     )
 
 
+class _CapturingAdapter:
+    """Provider adapter stub that records the system prompt it was handed."""
+
+    def __init__(self) -> None:
+        self.system: str | None = None
+
+    def recommend(
+        self,
+        prompt: str,
+        system: str,
+        *,
+        model: str | None = None,
+        api_key: str,
+        max_output_tokens: int | None = None,
+        thinking_budget: int | None = None,
+        temperature: float | None = None,
+    ) -> str:
+        self.system = system
+        return RESPONSE_GPT_TEST_CODEX
+
+
+def test_recommend_user_context_text_overrides_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A supplied user_context_text is used verbatim AND skips the on-disk file
+    read (Phase 4.8 T2b). Proven by pointing user_context_path at a nonexistent
+    file: the file read would raise UserContextNotFoundError, so a clean parse
+    means the override short-circuited it; the marker proves the text is used."""
+    adapter = _CapturingAdapter()
+    monkeypatch.setitem(recommend_module.PROVIDER_ADAPTERS, "anthropic", adapter)
+    config = Config(
+        provider="anthropic",
+        model=None,
+        api_key="test-key",
+        user_context_path=tmp_path / "does-not-exist.md",
+    )
+
+    parsed = recommend_module.recommend(
+        "build a SQL agent",
+        config,
+        user_context_text="OVERRIDE_CONTEXT_MARKER",
+    )
+
+    assert set(parsed.keys()) == {
+        "model",
+        "platform",
+        "max_mode",
+        "thinking",
+        "conversation",
+        "rationale",
+    }
+    assert adapter.system is not None
+    assert "OVERRIDE_CONTEXT_MARKER" in adapter.system
+
+
+def test_recommend_reads_user_context_file_when_no_override(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """With no override (user_context_text=None, the default) behavior is
+    unchanged: the file at config.user_context_path is read into the prompt."""
+    adapter = _CapturingAdapter()
+    monkeypatch.setitem(recommend_module.PROVIDER_ADAPTERS, "anthropic", adapter)
+    context_path = tmp_path / "user-context.md"
+    context_path.write_text("FILE_CONTEXT_MARKER\n", encoding="utf-8")
+    config = Config(
+        provider="anthropic",
+        model=None,
+        api_key="test-key",
+        user_context_path=context_path,
+    )
+
+    recommend_module.recommend("build a SQL agent", config)
+
+    assert adapter.system is not None
+    assert "FILE_CONTEXT_MARKER" in adapter.system
+
+
+def test_recommend_structured_threads_user_context_text(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """recommend_structured forwards user_context_text to recommend so the
+    override reaches the prompt — proven again against a missing file path."""
+    adapter = _CapturingAdapter()
+    monkeypatch.setitem(recommend_module.PROVIDER_ADAPTERS, "anthropic", adapter)
+    config = Config(
+        provider="anthropic",
+        model=None,
+        api_key="test-key",
+        user_context_path=tmp_path / "does-not-exist.md",
+    )
+
+    payload = recommend_module.recommend_structured(
+        "build a SQL agent",
+        config,
+        user_context_text="STRUCTURED_OVERRIDE_MARKER",
+    )
+
+    assert payload["model"]
+    assert adapter.system is not None
+    assert "STRUCTURED_OVERRIDE_MARKER" in adapter.system
+
+
 def test_recommend_no_key_exits_nonzero(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     _clear_provider_env(monkeypatch)
     _set_isolated_home(monkeypatch, tmp_path)
