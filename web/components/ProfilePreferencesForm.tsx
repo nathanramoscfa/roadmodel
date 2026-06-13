@@ -10,10 +10,12 @@ import { useState } from "react";
 // jurisdiction list is a local literal; the catalog-derived subscription
 // options arrive as a prop from the server page (issue #152, #154).
 import type {
+  ApiProviderId,
   BudgetPriority,
   JurisdictionCode,
   SubscriptionId,
 } from "@/lib/profile";
+import type { ApiProviderOption } from "@/lib/api-providers";
 import type { SubscriptionOption } from "@/lib/subscriptions";
 
 const BUDGET_OPTIONS: { id: BudgetPriority; label: string }[] = [
@@ -101,6 +103,10 @@ export interface ProfilePreferencesFormProps {
   // the large catalog.json stays out of the client bundle (issue #152).
   subscriptionOptions: SubscriptionOption[];
   initialSubscriptions: SubscriptionId[];
+  // Catalog-derived API-provider options (Phase 4.8, #260), passed from the
+  // server page alongside the subscription options.
+  apiProviderOptions: ApiProviderOption[];
+  initialApiProviders: ApiProviderId[];
   initialBudgetPriority: BudgetPriority;
   initialJurisdictions: JurisdictionCode[];
   submitLabel: string;
@@ -114,6 +120,8 @@ export interface ProfilePreferencesFormProps {
 export function ProfilePreferencesForm({
   subscriptionOptions,
   initialSubscriptions,
+  apiProviderOptions,
+  initialApiProviders,
   initialBudgetPriority,
   initialJurisdictions,
   submitLabel,
@@ -123,6 +131,8 @@ export function ProfilePreferencesForm({
   const router = useRouter();
   const [subscriptions, setSubscriptions] =
     useState<SubscriptionId[]>(initialSubscriptions);
+  const [apiProviders, setApiProviders] =
+    useState<ApiProviderId[]>(initialApiProviders);
   const [budgetPriority, setBudgetPriority] =
     useState<BudgetPriority>(initialBudgetPriority);
   const [restrictLowRisk, setRestrictLowRisk] = useState(
@@ -140,6 +150,13 @@ export function ProfilePreferencesForm({
     setSaved(false);
     setSubscriptions((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
+    );
+  }
+
+  function toggleApiProvider(id: ApiProviderId): void {
+    setSaved(false);
+    setApiProviders((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
     );
   }
 
@@ -183,6 +200,7 @@ export function ProfilePreferencesForm({
     event.preventDefault();
     await saveProfile({
       subscriptions,
+      api_providers: apiProviders,
       budget_priority: budgetPriority,
       allowed_jurisdictions: allowedJurisdictions(),
       skip: false,
@@ -246,6 +264,35 @@ export function ProfilePreferencesForm({
           ))}
         </div>
       </fieldset>
+
+      {apiProviderOptions.length > 0 ? (
+        <fieldset>
+          <legend className="text-sm font-semibold text-brand-slate-900 dark:text-brand-slate-50">
+            API access
+          </legend>
+          <p className="mt-1 text-sm text-brand-slate-600 dark:text-brand-slate-300">
+            Select any provider you also use directly via your own API key
+            (pay-per-token). We never store your keys — this just lets us weigh
+            API cost against the subscriptions you already pay for.
+          </p>
+          <div className="mt-4 flex flex-col gap-2">
+            {apiProviderOptions.map((option) => (
+              <label
+                key={option.id}
+                className="flex items-center gap-2 text-sm text-brand-slate-800 dark:text-brand-slate-100"
+              >
+                <input
+                  type="checkbox"
+                  checked={apiProviders.includes(option.id)}
+                  onChange={() => toggleApiProvider(option.id)}
+                  className="rounded border-brand-slate-300 dark:border-brand-slate-700 accent-brand-accent"
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ) : null}
 
       <fieldset>
         <legend className="text-sm font-semibold text-brand-slate-900 dark:text-brand-slate-50">

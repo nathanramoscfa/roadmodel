@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "@/lib/auth";
 import { getProfile, isOnboarded } from "@/lib/profile";
 import { getSubscriptionOptions } from "@/lib/subscriptions";
+import { getApiProviderOptions } from "@/lib/api-providers";
 
 import { OnboardingForm } from "./OnboardingForm";
 
@@ -51,7 +52,11 @@ export default async function OnboardingPage({
           preferences shape every model recommendation and roadmap
           suggestion we generate for you.
         </p>
-        <OnboardingForm next={next} subscriptionOptions={getSubscriptionOptions()} />
+        <OnboardingForm
+          next={next}
+          subscriptionOptions={getSubscriptionOptions()}
+          apiProviderOptions={getApiProviderOptions()}
+        />
       </div>
     </div>
   );

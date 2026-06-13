@@ -201,6 +201,7 @@ test(
       profile: {
         user_id: "test-user",
         subscriptions: ["claude-max"],
+        api_providers: [],
         budget_priority: "cheap",
         allowed_jurisdictions: ["us"],
         onboarded_at: new Date().toISOString(),

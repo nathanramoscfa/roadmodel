@@ -22,6 +22,7 @@ async function onboardWith(page: import("@playwright/test").Page) {
   await signInViaCallback(page);
   await page.getByLabel(/Claude Max.*\$200\/mo/i).check();
   await page.getByLabel(/Cursor Ultra/i).check();
+  await page.getByLabel("DeepSeek").check();
   await page.getByRole("radio", { name: /^Best$/i }).check();
   await page.getByRole("button", { name: /Save and continue/i }).click();
   await expect(page).toHaveURL("/");
@@ -36,6 +37,9 @@ test("/settings pre-fills the saved preferences", async ({ page }) => {
   await expect(page.getByLabel(/Claude Max.*\$200\/mo/i)).toBeChecked();
   await expect(page.getByLabel(/Cursor Ultra/i)).toBeChecked();
   await expect(page.getByLabel(/ChatGPT Pro.*\$200\/mo/i)).not.toBeChecked();
+  // API-access selection (Phase 4.8) pre-fills too.
+  await expect(page.getByLabel("DeepSeek")).toBeChecked();
+  await expect(page.getByLabel("OpenAI")).not.toBeChecked();
   await expect(page.getByRole("radio", { name: /^Best$/i })).toBeChecked();
 });
 
@@ -55,6 +59,8 @@ test("/settings save PATCHes the profile and stays on the page", async ({
   await page.getByRole("button", { name: /Save changes/i }).click();
   const profile = await (await savePromise).json();
   expect(profile.subscriptions).toEqual(["claude-max"]);
+  // API-access selection survives a settings save untouched (Phase 4.8).
+  expect(profile.api_providers).toEqual(["deepseek"]);
   expect(profile.budget_priority).toBe("best");
 
   // Settings stays put (no redirect) and confirms inline.

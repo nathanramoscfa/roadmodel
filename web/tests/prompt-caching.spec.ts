@@ -133,6 +133,7 @@ function profileWith(
   return {
     user_id: "test-user",
     subscriptions: [],
+    api_providers: [],
     budget_priority: "balanced",
     allowed_jurisdictions: ["us"],
     onboarded_at: now,

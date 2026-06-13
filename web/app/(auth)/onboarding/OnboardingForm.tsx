@@ -6,10 +6,12 @@ import {
   ProfilePreferencesForm,
 } from "@/components/ProfilePreferencesForm";
 import type { SubscriptionOption } from "@/lib/subscriptions";
+import type { ApiProviderOption } from "@/lib/api-providers";
 
 interface OnboardingFormProps {
   next: string;
   subscriptionOptions: SubscriptionOption[];
+  apiProviderOptions: ApiProviderOption[];
 }
 
 // First-session capture. Defaults to an empty selection + the recommended
@@ -17,11 +19,17 @@ interface OnboardingFormProps {
 // actual fields live in the shared ProfilePreferencesForm so onboarding and
 // /settings never drift (issue #154); the subscription options are
 // catalog-derived and passed from the server page (issue #152).
-export function OnboardingForm({ next, subscriptionOptions }: OnboardingFormProps) {
+export function OnboardingForm({
+  next,
+  subscriptionOptions,
+  apiProviderOptions,
+}: OnboardingFormProps) {
   return (
     <ProfilePreferencesForm
       subscriptionOptions={subscriptionOptions}
       initialSubscriptions={[]}
+      apiProviderOptions={apiProviderOptions}
+      initialApiProviders={[]}
       initialBudgetPriority="balanced"
       initialJurisdictions={DEFAULT_JURISDICTIONS}
       submitLabel="Save and continue"

@@ -82,6 +82,28 @@ test("renders a consistent monthly price for every subscription tier", async ({
   await expect(page.getByLabel(/Cursor Ultra.*\/yr/i)).toHaveCount(0);
 });
 
+test("captures API-access providers and persists them (Phase 4.8)", async ({
+  page,
+}) => {
+  await signInViaCallback(page);
+  // The catalog-derived "API access" section renders...
+  await expect(page.getByText("API access")).toBeVisible();
+  await expect(page.getByLabel("DeepSeek")).toBeVisible();
+  // ...and the selected providers persist on save.
+  await page.getByLabel("DeepSeek").check();
+  await page.getByLabel("Anthropic").check();
+
+  const savePromise = page.waitForResponse(
+    (resp) =>
+      resp.url().includes("/api/profile") &&
+      resp.request().method() === "PATCH",
+  );
+  await page.getByRole("button", { name: /Save and continue/i }).click();
+  const profile = await (await savePromise).json();
+  expect([...profile.api_providers].sort()).toEqual(["anthropic", "deepseek"]);
+  await expect(page).toHaveURL("/");
+});
+
 test("skip persists defaults and sets onboarded_at", async ({ page }) => {
   await signInViaCallback(page);
   const savePromise = page.waitForResponse(
