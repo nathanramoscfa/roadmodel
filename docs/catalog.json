@@ -1,9 +1,9 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-06-12T23:05:19Z",
+  "generated_at_utc": "2026-06-13T02:56:51Z",
   "source_doc_sha256": {
     "model-selector.txt": "3678876fce07458df5b821be0cee45475797adab6c243150ac5630bf7169b23a",
-    "model-tier-cost-scale.md": "45919c0d9f574ab94296a8eb4ae7c122d1454dc6537b5df4f46412311ddcb7a7"
+    "model-tier-cost-scale.md": "9acdbfab8de0b1a83e6088cead54e9d72d58a7d978e42ff68765f9ef1b8906cb"
   },
   "models": [
     {
@@ -915,7 +915,7 @@
       "provider": "Cursor",
       "tier": "Cursor Pro",
       "monthly_usd": 20.0,
-      "annual_usd": null,
+      "annual_usd": 192.0,
       "surface_funded": [
         "cursor"
       ],
@@ -956,7 +956,7 @@
       "provider": "Google",
       "tier": "Google AI Pro",
       "monthly_usd": 20.0,
-      "annual_usd": null,
+      "annual_usd": 199.99,
       "surface_funded": [
         "gemini-app",
         "gemini-cli"
