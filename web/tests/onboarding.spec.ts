@@ -109,6 +109,34 @@ test("captures API-access providers and persists them (Phase 4.8)", async ({
   await expect(page).toHaveURL("/");
 });
 
+test("forwards held subscriptions + enabled API providers to the recommender (Phase 4.8 T2b)", async ({
+  page,
+}) => {
+  await signInViaCallback(page);
+  // Declare a held subscription AND an enabled API provider.
+  await page.getByLabel(/Claude Max.*\$200\/mo/i).check();
+  await page.getByLabel("DeepSeek").check();
+  await page.getByRole("button", { name: /Save and continue/i }).click();
+  await expect(page).toHaveURL("/");
+
+  await page.goto("/recommend");
+  await page.getByPlaceholder(/Input the prompt/i).fill("forwarding smoke");
+  await page.getByRole("button", { name: /Submit/i }).click();
+  await expect(
+    page.getByRole("heading", { name: /Claude 4\.5 Haiku/i }),
+  ).toBeVisible();
+  // The edge now forwards the user's declared funding to the service; the E2E
+  // mock echoes it back, proving subscriptions + api_providers reach the upstream
+  // (where the real service builds the per-user user-context that biases model
+  // SELECTION). The lowercase ids appear ONLY in the echo — the T2a edge note
+  // uses the display label "Claude Max", so matching "claude-max"/"deepseek"
+  // specifically confirms the forwarded payload.
+  const why = page.getByRole("region", { name: /Why this model/i });
+  await expect(why).toContainText("Forwarded funding");
+  await expect(why).toContainText("claude-max");
+  await expect(why).toContainText("deepseek");
+});
+
 test("skip persists defaults and sets onboarded_at", async ({ page }) => {
   await signInViaCallback(page);
   const savePromise = page.waitForResponse(

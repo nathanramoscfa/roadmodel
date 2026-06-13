@@ -312,6 +312,14 @@ const handler = async (req: Request): Promise<Response> =>
         ...incomingContext,
         budget_priority: budgetPriority,
         allowed_jurisdictions: allowedJurisdictions,
+        // Phase 4.8 T2b (#163): forward the user's declared funding so the
+        // service can build a per-user user-context and the recommendation LLM's
+        // model SELECTION prefers a surface the user funds at $0 on a quality
+        // tie. Empty arrays for anon -> the service builds no per-user context
+        // (bundled template, unchanged). No keys are sent — api_providers is a
+        // per-provider boolean signal only.
+        subscriptions,
+        api_providers: apiProviders,
         force_provider: recommenderEngine.force_provider,
       },
     };
