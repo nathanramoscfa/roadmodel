@@ -60,6 +60,11 @@ test("save-and-continue persists prefs and surfaces budget priority", async ({
   const why = page.getByRole("region", { name: /Why this model/i });
   await expect(why).toBeVisible();
   await expect(why.getByText(/Budget priority: best/i)).toBeVisible();
+  // Phase 4.8 T2: the edge appends the user's cheapest funded path. This user
+  // holds Claude Max, which funds Claude Code → a $0 path to the Haiku pick.
+  await expect(
+    why.getByText(/\$0 path to Claude 4\.5 Haiku via your Claude Max/i),
+  ).toBeVisible();
 });
 
 test("renders a consistent monthly price for every subscription tier", async ({
