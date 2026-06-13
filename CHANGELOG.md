@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.7] — 2026-06-13
+
+### Changed
+
+- The bundled `model-selector.txt` now carries the **bias-not-gate**
+  funding-aware `<access-selection>` prose (Phase 4.8 T2b). The recommender
+  builds its prompt from the package-bundled selector, so this prose only
+  reaches the recommendation LLM via a release — `0.2.6` still shipped the
+  prior hard-gating prose. The softened algorithm:
+  - **Step B** tags each access method funded/unfunded and **never drops**
+    an unfunded one (it is a valid platform that simply costs real money);
+    funding never changes the chosen MODEL.
+  - **Step C** picks the cheapest path and, when no funded method reaches
+    the chosen model, **still recommends that model** via its cheapest
+    access method and discloses the pay-per-token spend in the rationale.
+  - **Guardrails** prefer a funded surface only to break an exact quality
+    tie and never downgrade the model to avoid spend. Jurisdiction remains
+    the one hard filter (a compliance constraint, not a cost one).
+
+  No engine, model, cost, or API change — only the bundled selector text
+  (and the regenerated `model-selector.md` / `catalog.json`, whose diff is
+  limited to the source hash). Pairs with the service-side per-user funding
+  context (`user_context_text`, added in `0.2.6`) so model SELECTION honors
+  each user's declared funding without excluding the best model (#163).
+
 ## [0.2.6] — 2026-06-13
 
 ### Added
