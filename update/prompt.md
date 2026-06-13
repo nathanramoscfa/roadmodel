@@ -152,18 +152,39 @@ overwritten on the next run.
 Each row has the schema
 `Subscription | Monthly | Annual | Provider | Access methods unlocked | Coverage`.
 
-### Annual column (editorial — preserve, never fetch)
+### Annual column (web_search with sanity guard; preserve on miss)
 
-The `Annual` column does NOT come from web_search. It is an EDITORIAL,
-hand-seeded value (a maintainer verifies it against the provider's
-official billing page). When you rebuild a provider's rows, CARRY OVER
-the existing `Annual` cell verbatim for each tier you can match to a
-prior row by plan name; this includes the literal `—` placeholder used
-for tiers with no verified annual plan. For a genuinely NEW tier with no
-prior row to inherit from, write `—` (a null annual price). NEVER fetch,
-infer, or invent an annual price, and never overwrite a seeded annual
-value with one derived from the monthly price. The build parses `—` /
-blank as a null `annual_usd`, so a preserved or new `—` is always safe.
+Capture each tier's annual price during the SAME per-provider web_search
+you use for the monthly price — you are already on the provider's pricing
+page. Normalize the captured value to the FULL YEARLY TOTAL in USD:
+
+- If the page shows a yearly total directly (e.g. "$192/year"), use it.
+- If it shows a discounted monthly rate "billed annually" (e.g.
+  "$16/mo billed annually"), multiply by 12 (→ `$192`).
+- If it shows "save N%" or "N months free" against the monthly price M,
+  compute the yearly total (e.g. 2 months free → M × 10).
+
+**Sanity guard (reject a misparse).** For a tier with monthly price M,
+accept the captured annual A ONLY IF `8 × M ≤ A ≤ 12 × M` — a real annual
+discount, never below ~8× the monthly price (which would mean you captured
+a per-month figure or the wrong number) and never above the 12× monthly
+run-rate. An A outside that band is treated as NOT FOUND.
+
+Write the `Annual` cell as follows:
+
+- **Found + passes guard** → `$<A>` (the yearly total, e.g. `$192`,
+  `$199.99`).
+- **Not found, no annual plan offered, or guard tripped** → PRESERVE the
+  tier's existing `Annual` cell verbatim (match by plan name). Only write
+  `—` for a genuinely NEW tier with no prior cell. This preserve-on-miss
+  rule means a transient fetch miss NEVER downgrades a known-good annual
+  price to `—` (it mirrors the monthly sanity guards' "retain existing on
+  failure" posture).
+
+NEVER invent an annual price, and never write one that fails the guard. A
+`—` (or a preserved prior value) is always safe: the build parses `—` /
+blank as a null `annual_usd`, which suppresses the annual price + savings
+in the UI without breaking the tier.
 
 ### Provider → access-methods mapping (hardcoded)
 
@@ -226,10 +247,10 @@ skipped per the mapping above):
          token-based billing (no Max Mode surcharge)."
        - "Opus 4.7, Sonnet 4.6, Claude 4.5 Haiku on web / desktop and
          inside Claude Code under a shared monthly budget."
-   - **Annual price** is NOT captured from the page — carry over the
-     existing `Annual` cell for this tier from the current table (match
-     by plan name), or `—` for a new tier. See the "Annual column"
-     section above.
+   - **Annual price** captured from the page and normalized to the FULL
+     YEARLY TOTAL, sanity-guarded, with preserve-on-miss — see the
+     "Annual column" section above. `—` only for a new tier with no
+     annual plan.
    - **Access methods unlocked** from the hardcoded mapping above
      for provider P.
    - **Provider** = canonical provider name as displayed in
@@ -285,8 +306,9 @@ After all providers have been processed:
    concatenated, sorted row set. Preserve the table header row (which
    includes the editorial `Annual` column), the section header, the
    explanatory prose, and the freshness marker verbatim — only the
-   table BODY rows are replaced, and each row's `Annual` cell carries
-   over its prior (seeded) value per the "Annual column" section above.
+   table BODY rows are replaced, and each row's `Annual` cell is the
+   sanity-guarded fetch result, or its preserved prior value on a miss,
+   per the "Annual column" section above.
 
 ### Surfacing visible changes
 
@@ -300,6 +322,10 @@ commit body. Use the most specific applicable form:
   `subscription tier removed: <provider>: <tier name> — no longer listed on <provider domain>`.
 - Monthly price change:
   `subscription price updated: <tier name>: $<old> → $<new> (source: <provider domain>)`.
+- Annual price change (a guarded annual differs from the prior cell):
+  `subscription annual updated: <tier name>: $<old> → $<new>/yr (source: <provider domain>)`.
+- Annual not found this run but a prior value was kept:
+  `subscription annual not found (preserved existing): <tier name> (source: <provider domain>)`.
 - Coverage description change (substantive, not just wording):
   `subscription coverage updated: <tier name>: <one-line description of the change> (source: <provider domain>)`.
 
