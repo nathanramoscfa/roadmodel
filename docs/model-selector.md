@@ -88,7 +88,11 @@ covering Cursor Pro/Ultra, claude.ai Max, ChatGPT Plus/Pro, Gemini
 Advanced, and similar flat-monthly plans. The `<access-selection>`
 step picks the cheapest effective path for the user's specific
 subscription state — burning sunk-cost subscription budget before
-pay-per-token spend is the default posture.
+pay-per-token spend is the default posture. This optimizes only HOW
+a model is reached (the PLATFORM), never WHICH model is chosen: a
+best-fit model the user does not yet fund is still recommended, with
+its cheapest reachable path and the required spend disclosed — never
+swapped for a cheaper-to-reach one (see `<access-selection>`).
 
 ## Max Mode Context
 
@@ -314,7 +318,11 @@ as primary; the other becomes the secondary category for tie-breaking.
     Advanced, and similar flat-monthly plans. The `<access-selection>`
     step picks the cheapest effective path for the user's specific
     subscription state — burning sunk-cost subscription budget before
-    pay-per-token spend is the default posture.
+    pay-per-token spend is the default posture. This optimizes only HOW
+    a model is reached (the PLATFORM), never WHICH model is chosen: a
+    best-fit model the user does not yet fund is still recommended, with
+    its cheapest reachable path and the required spend disclosed — never
+    swapped for a cheaper-to-reach one (see `<access-selection>`).
   </pricing-context>
 
   <max-mode-context>
@@ -903,7 +911,11 @@ as primary; the other becomes the secondary category for tie-breaking.
     Advanced, and similar flat-monthly plans. The `<access-selection>`
     step picks the cheapest effective path for the user's specific
     subscription state — burning sunk-cost subscription budget before
-    pay-per-token spend is the default posture.
+    pay-per-token spend is the default posture. This optimizes only HOW
+    a model is reached (the PLATFORM), never WHICH model is chosen: a
+    best-fit model the user does not yet fund is still recommended, with
+    its cheapest reachable path and the required spend disclosed — never
+    swapped for a cheaper-to-reach one (see `<access-selection>`).
   </pricing-context>
 
   <max-mode-context>
@@ -1289,7 +1301,11 @@ as primary; the other becomes the secondary category for tie-breaking.
     Advanced, and similar flat-monthly plans. The `<access-selection>`
     step picks the cheapest effective path for the user's specific
     subscription state — burning sunk-cost subscription budget before
-    pay-per-token spend is the default posture.
+    pay-per-token spend is the default posture. This optimizes only HOW
+    a model is reached (the PLATFORM), never WHICH model is chosen: a
+    best-fit model the user does not yet fund is still recommended, with
+    its cheapest reachable path and the required spend disclosed — never
+    swapped for a cheaper-to-reach one (see `<access-selection>`).
   </pricing-context>
 
   <max-mode-context>
@@ -2176,7 +2192,11 @@ as primary; the other becomes the secondary category for tie-breaking.
     Advanced, and similar flat-monthly plans. The `<access-selection>`
     step picks the cheapest effective path for the user's specific
     subscription state — burning sunk-cost subscription budget before
-    pay-per-token spend is the default posture.
+    pay-per-token spend is the default posture. This optimizes only HOW
+    a model is reached (the PLATFORM), never WHICH model is chosen: a
+    best-fit model the user does not yet fund is still recommended, with
+    its cheapest reachable path and the required spend disclosed — never
+    swapped for a cheaper-to-reach one (see `<access-selection>`).
   </pricing-context>
 
   <max-mode-context>
@@ -3037,11 +3057,16 @@ as primary; the other becomes the secondary category for tie-breaking.
       `supports-models` attribute lists the chosen model id.
       The result is the candidate set of platforms.
 
-    Step B — Filter by credential availability.
-      Reduce the candidate set to access methods whose `requires`
-      clause is satisfied by the user's active subscriptions or API
-      keys per docs/user-context.md. Drop any method whose credential
-      the user does not have.
+    Step B — Tag credential availability (funded vs unfunded; do NOT drop).
+      Tag each candidate access method FUNDED when the user's active
+      subscriptions or API keys per docs/user-context.md satisfy its
+      `requires` clause, and UNFUNDED otherwise. Keep BOTH: an unfunded
+      method is still a valid platform that simply costs real money to
+      use. Do NOT drop unfunded methods, and never let funding change the
+      MODEL — the model is fixed by `<selection-algorithm>` on quality.
+      This tag only feeds the cost ranking in Step C and the spend
+      disclosure in the RATIONALE (consider every model, surface the
+      cheaper path, never suppress the better pick).
 
     Step C — Rank by effective marginal cost.
       Order survivors lowest-cost first:
@@ -3059,6 +3084,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       `cursor` access method — the operator picks the mode at task
       time based on the chosen Model (composer-2 / composer-2.5
       imply Composer mode; frontier models imply Chat mode).
+      If every survivor is UNFUNDED (the user holds no credential for
+      any method that reaches the chosen model), still pick the cheapest
+      of them by published per-token rate and disclose in the RATIONALE
+      that reaching this model needs pay-per-token spend (and a
+      credential the user has not declared, if so). Do NOT swap the
+      model for a cheaper-to-reach one.
 
     Step D — Apply user-context.md preference overrides.
       docs/user-context.md may set a preferred platform order. When
@@ -3102,15 +3133,22 @@ as primary; the other becomes the secondary category for tie-breaking.
       faster than at High effort).
 
     Guardrails:
-    - Never recommend an access method whose credential the user does
-      not have. If the candidate set in Step B is empty, the model
-      chosen in `<selection-algorithm>` is unreachable for this user;
-      fall back to the next-best model whose access methods ARE
-      reachable, and add a rationale clause noting the substitution
-      and why the first-choice model was unreachable.
-    - Never burn pay-per-token spend when a subscription that is
-      already paid can serve the call. Subscriptions are sunk cost;
-      a per-token call is real cash out.
+    - Prefer a FUNDED access method, but NEVER hard-exclude an unfunded
+      one and NEVER downgrade the MODEL to avoid spend. The model from
+      `<selection-algorithm>` stands on quality. If no funded method
+      reaches it, still recommend that model via its cheapest access
+      method (Step C) and add a RATIONALE clause disclosing the
+      pay-per-token spend — and, when the user has not declared that
+      credential, noting that reaching this pick needs an API key or
+      subscription they have not listed. Consider every model, surface
+      the cheaper path, never suppress the better pick. (Jurisdiction is
+      the one hard filter — Step A0 / `<selection-algorithm>` Step 0 —
+      because it is a compliance constraint, not a cost one; funding is
+      always a soft, tie-break preference.)
+    - On a quality tie, do not burn pay-per-token spend when an already-
+      paid subscription can serve the call: subscriptions are sunk cost,
+      a per-token call is real cash out. This is a tie-break only — it
+      never overrides the quality decision or drops a model.
     - When the chosen model is a Cursor-only model (composer-2,
       composer-2.5), the only valid access method is `cursor`
       (the operator uses Composer mode at task time). Cursor's
