@@ -21,6 +21,7 @@ import {
   type JurisdictionCode,
 } from "@/lib/profile";
 import { identifyRequest, withRateLimit } from "@/lib/withRateLimit";
+import { fundingNoteForModel } from "@/lib/funding";
 import { env } from "@/lib/env";
 
 const DEFAULT_RECOMMENDER_URL =
@@ -145,6 +146,8 @@ const handler = async (req: Request): Promise<Response> =>
     let userId: string | undefined;
     let allowedJurisdictions: JurisdictionCode[];
     let budgetPriority: string;
+    let subscriptions: string[];
+    let apiProviders: string[];
     let taskDescription: string;
     let incomingContext: Record<string, unknown>;
     let recommenderEngine: ReturnType<typeof resolveRecommenderEngine>;
@@ -206,6 +209,12 @@ const handler = async (req: Request): Promise<Response> =>
         const localJurisdictions = localUserId
           ? await getAllowedJurisdictions(localUserId)
           : [...DEFAULT_PROFILE.allowed_jurisdictions];
+        // Phase 4.8 T2: the user's declared funding, for the edge-side
+        // cost annotation (subscription-$0 vs API-PAYG). Empty for anon.
+        const localSubscriptions =
+          profile?.subscriptions ?? [...DEFAULT_PROFILE.subscriptions];
+        const localApiProviders =
+          profile?.api_providers ?? [...DEFAULT_PROFILE.api_providers];
 
         try {
           // T3b: signed-in users get the frontier engine ONLY when the gate is
@@ -224,6 +233,8 @@ const handler = async (req: Request): Promise<Response> =>
             incomingContext: ctx,
             allowedJurisdictions: localJurisdictions,
             budgetPriority: localBudget,
+            subscriptions: localSubscriptions,
+            apiProviders: localApiProviders,
             engine,
           } as const;
         } catch (err) {
@@ -268,6 +279,8 @@ const handler = async (req: Request): Promise<Response> =>
       incomingContext = dispatched.incomingContext;
       allowedJurisdictions = dispatched.allowedJurisdictions;
       budgetPriority = dispatched.budgetPriority;
+      subscriptions = dispatched.subscriptions;
+      apiProviders = dispatched.apiProviders;
       recommenderEngine = dispatched.engine;
     } catch (err) {
       // Unexpected error inside the dispatch span — treat as a 500-
@@ -381,12 +394,27 @@ const handler = async (req: Request): Promise<Response> =>
           payload.settings.rationale) ||
         (typeof payload.rationale === "string" && payload.rationale) ||
         "";
-      const rationale =
+      const withBudget =
         budgetPriority && !baseRationale.includes(budgetPriority)
           ? baseRationale
             ? `${baseRationale} Budget priority: ${budgetPriority}.`
             : `Budget priority: ${budgetPriority}.`
           : baseRationale;
+      // Phase 4.8 T2: append the user's cheapest funded path for the
+      // recommended model (subscription-$0 vs API-PAYG), computed
+      // deterministically at the edge from their declared funding. Null
+      // (no note) when they've declared nothing that reaches the model —
+      // never changes the model that was selected.
+      const fundingNote = fundingNoteForModel(
+        payload.model ?? "",
+        subscriptions,
+        apiProviders,
+      );
+      const rationale = fundingNote
+        ? withBudget
+          ? `${withBudget} ${fundingNote}`
+          : fundingNote
+        : withBudget;
       if (rationale) {
         payload = {
           ...payload,
