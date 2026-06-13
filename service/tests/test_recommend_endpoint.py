@@ -67,6 +67,7 @@ def test_recommend_returns_200(
         prompt: str,
         config: Any,
         *,
+        user_context_text: str | None = None,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -127,6 +128,7 @@ def test_recommend_normalizes_thinking_na_on_no_thinking_surface(
         prompt: str,
         config: Any,
         *,
+        user_context_text: str | None = None,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -185,6 +187,7 @@ def test_recommend_accepts_large_under_cap(
         prompt: str,
         config: Any,
         *,
+        user_context_text: str | None = None,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -214,6 +217,7 @@ def test_response_schema_matches_phase2_contract(
         prompt: str,
         config: Any,
         *,
+        user_context_text: str | None = None,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -256,6 +260,7 @@ def test_recommend_falls_back_to_next_provider_on_malformed_response(
         prompt: str,
         config: Any,
         *,
+        user_context_text: str | None = None,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -300,6 +305,7 @@ def test_recommend_attempts_all_providers_then_raises_when_all_malformed(
         prompt: str,
         config: Any,
         *,
+        user_context_text: str | None = None,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -339,6 +345,7 @@ def test_latency_kwargs_passed_only_on_gemini_path(
         prompt: str,
         config: Any,
         *,
+        user_context_text: str | None = None,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -388,6 +395,7 @@ def test_frontier_gemini_pro_uses_thinking_on_params(
         prompt: str,
         config: Any,
         *,
+        user_context_text: str | None = None,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -509,9 +517,9 @@ def test_fake_recommend_structured_matches_real_signature() -> None:
     500s — exactly the Phase 3 Step 3 failure mode. Pin the real contract the fakes
     are written against. (thinking_budget was added for the issue #132 Gemini
     latency work; user_context_text for the Phase 4.8 T2b per-user funding context.
-    Both are optional keyword-only — the service does not pass user_context_text
-    until T2b-2 wires it — but the guard must track the real signature so a future
-    drift still fails loudly here.)"""
+    Both are optional keyword-only — the service now passes user_context_text
+    (T2b-2 funding wiring) and every fake here accepts it — and the guard must
+    track the real signature so a future drift still fails loudly here.)"""
     from roadmodel.recommend import recommend_structured as real  # type: ignore[import-untyped]
 
     params = inspect.signature(real).parameters
@@ -528,3 +536,82 @@ def test_fake_recommend_structured_matches_real_signature() -> None:
     ]
     # Everything after `config` is keyword-only (declared after the bare *).
     assert params["input_tokens"].kind is inspect.Parameter.KEYWORD_ONLY
+
+
+def test_funding_context_is_threaded_to_recommend_structured(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Phase 4.8 T2b: whatever the per-user funding builder returns is passed to
+    recommend_structured as user_context_text, so model SELECTION sees the user's
+    funding. (Builder CONTENT is covered hermetically in test_funding.py; this
+    pins the service PLUMBING — that req.context reaches the builder and its
+    output reaches the recommender.)"""
+    recommend_module = importlib.import_module("app.recommend")
+    seen: dict[str, Any] = {}
+
+    def _fake_from_request(context: Any) -> str:
+        seen["context"] = context
+        return "SENTINEL-FUNDING-CONTEXT"
+
+    captured: dict[str, Any] = {}
+
+    def _fake_recommend_structured(
+        prompt: str,
+        config: Any,
+        *,
+        user_context_text: str | None = None,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        max_mode: bool = False,
+        max_output_tokens: int | None = None,
+        thinking_budget: int | None = None,
+        temperature: float | None = None,
+    ) -> dict[str, Any]:
+        captured["user_context_text"] = user_context_text
+        return dict(_RECOMMEND_DICT)
+
+    monkeypatch.setattr(recommend_module, "user_context_from_request", _fake_from_request)
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
+
+    ctx = {"subscriptions": ["claude-max"], "api_providers": ["deepseek"]}
+    response = client.post(
+        "/v1/recommend", json={"task_description": "pick a model", "context": ctx}
+    )
+
+    assert response.status_code == 200
+    assert seen["context"] == ctx
+    assert captured["user_context_text"] == "SENTINEL-FUNDING-CONTEXT"
+
+
+def test_no_funding_passes_none_user_context(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Anon / no-funding requests pass user_context_text=None so the bundled
+    template is used and the free path is unchanged (T2b guardrail). Exercises
+    the REAL builder's None short-circuit end-to-end (no monkeypatch on it)."""
+    recommend_module = importlib.import_module("app.recommend")
+    captured: dict[str, Any] = {}
+
+    def _fake_recommend_structured(
+        prompt: str,
+        config: Any,
+        *,
+        user_context_text: str | None = None,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        max_mode: bool = False,
+        max_output_tokens: int | None = None,
+        thinking_budget: int | None = None,
+        temperature: float | None = None,
+    ) -> dict[str, Any]:
+        captured["user_context_text"] = user_context_text
+        return dict(_RECOMMEND_DICT)
+
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
+
+    response = client.post("/v1/recommend", json=_request_payload())
+
+    assert response.status_code == 200
+    assert captured["user_context_text"] is None
