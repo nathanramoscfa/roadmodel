@@ -6,6 +6,7 @@ import { ProfilePreferencesForm } from "@/components/ProfilePreferencesForm";
 import { getServerSession } from "@/lib/auth";
 import { DEFAULT_PROFILE, getProfile } from "@/lib/profile";
 import { getSubscriptionOptions } from "@/lib/subscriptions";
+import { getApiProviderOptions } from "@/lib/api-providers";
 
 export const metadata: Metadata = {
   title: "roadmodel — settings",
@@ -44,6 +45,10 @@ export default async function SettingsPage() {
           subscriptionOptions={getSubscriptionOptions()}
           initialSubscriptions={
             profile?.subscriptions ?? [...DEFAULT_PROFILE.subscriptions]
+          }
+          apiProviderOptions={getApiProviderOptions()}
+          initialApiProviders={
+            profile?.api_providers ?? [...DEFAULT_PROFILE.api_providers]
           }
           initialBudgetPriority={
             profile?.budget_priority ?? DEFAULT_PROFILE.budget_priority
