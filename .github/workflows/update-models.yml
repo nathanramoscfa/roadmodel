@@ -31,15 +31,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@v5
         with:
-          # Use the maintainer's PAT so subsequent git push + gh pr create
-          # are attributed to a user, not the github-actions bot. PRs opened
-          # by the default GITHUB_TOKEN do not trigger workflows (a GitHub
-          # security feature against recursive runs), which left every cron
-          # PR sitting in mergeStateStatus=BLOCKED with no `test` check ever
-          # firing. Authenticating as the maintainer fixes that.
-          token: ${{ secrets.BOT_PAT }}
+          # Authenticate as the roadmodel cron GitHub App (installation token
+          # minted above) so the subsequent git push + gh pr create are
+          # attributed to the App and its PRs TRIGGER required-status workflows
+          # (the default GITHUB_TOKEN's PRs do not — a GitHub anti-recursion
+          # feature — which left cron PRs BLOCKED with no `test` check firing).
+          # Replaces the old maintainer PAT (secrets.BOT_PAT), which expired
+          # and broke every cron at checkout; the App token auto-rotates.
+          token: ${{ steps.app-token.outputs.token }}
 
       - uses: actions/setup-python@v6
         with:
@@ -114,7 +121,7 @@ jobs:
         # model is already in the registry (today's state). Fail-open.
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         env:
-          GH_TOKEN: ${{ secrets.BOT_PAT }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -uo pipefail
           mapfile -t additions < <(python update/merge_catalog.py --check-additions 2>/dev/null || true)
@@ -174,7 +181,7 @@ jobs:
       - name: Open PR if catalog changed
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         env:
-          GH_TOKEN: ${{ secrets.BOT_PAT }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
           if git diff --quiet -- docs/ update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-mistral.json; then
