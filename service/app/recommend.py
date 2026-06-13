@@ -17,6 +17,7 @@ from roadmodel.errors import (  # type: ignore[import-untyped]
 )
 from roadmodel.recommend import recommend_structured  # type: ignore[import-untyped]
 
+from .funding import user_context_from_request
 from .models import RecommendRequest, RecommendResponse
 
 logger = logging.getLogger(__name__)
@@ -217,6 +218,13 @@ def _provider_chain(context: dict[str, Any] | None) -> tuple[str, ...]:
 def recommend(req: RecommendRequest) -> RecommendResponse:
     last_error: Exception | None = None
 
+    # Build the per-user funding context once (provider-independent): the user's
+    # held subscriptions + enabled API providers, so model SELECTION can prefer a
+    # surface the user funds at $0 (Phase 4.8 T2b, #163). None when the request
+    # declares no funding (anon/free) -> recommend_structured falls back to the
+    # bundled template, leaving that path unchanged.
+    user_context_text = user_context_from_request(req.context)
+
     for hint in _provider_chain(req.context):
         config = _config_for_hint(hint)
         # Gemini-only: cap the default reasoning that dominates the
@@ -241,6 +249,7 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
             result = recommend_structured(
                 req.task_description,
                 config,
+                user_context_text=user_context_text,
                 max_output_tokens=max_output_tokens,
                 thinking_budget=thinking_budget,
                 temperature=temperature,
