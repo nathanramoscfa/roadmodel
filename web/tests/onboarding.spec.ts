@@ -77,12 +77,12 @@ test("renders a consistent monthly price for every subscription tier", async ({
   await expect(page.getByLabel(/Claude Max.*\$200\/mo/i)).toBeVisible();
   // No parenthetical "($NNN)" price leaks into any label anymore.
   await expect(page.getByText(/\(\$\d/)).toHaveCount(0);
-  // The seeded annual plan (Claude Pro) shows monthly + annual + savings...
-  await expect(
-    page.getByLabel(/Claude Pro.*\$20\/mo.*\$200\/yr.*save 17%/i),
-  ).toBeVisible();
-  // ...while a tier with no annual plan shows monthly only (no "/yr").
-  await expect(page.getByLabel(/Cursor Ultra.*\/yr/i)).toHaveCount(0);
+  // The price column is monthly-only for every tier — even the seeded annual
+  // plan (Claude Pro) shows just "$20/mo"; no "/yr" or "save Z%" leaks into any
+  // label anymore (annual display was removed as inconsistent across tiers).
+  await expect(page.getByLabel(/Claude Pro.*\$20\/mo/i)).toBeVisible();
+  await expect(page.getByText(/\/yr/i)).toHaveCount(0);
+  await expect(page.getByText(/save \d/i)).toHaveCount(0);
 });
 
 test("captures API-access providers and persists them (Phase 4.8)", async ({
