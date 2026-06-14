@@ -14,6 +14,7 @@ import { test, expect } from "@playwright/test";
 import {
   checkRoadmapMonthlyLimit,
   consumeRoadmapMonthlyToken,
+  isRateLimitExempt,
   parseExemptIds,
   setTestRoadmapLimiter,
 } from "../lib/ratelimit";
@@ -40,6 +41,13 @@ test("parseExemptIds trims, drops blanks, and dedups", () => {
   expect([...parseExemptIds("")]).toEqual([]);
   expect([...parseExemptIds("a, b ,, c,")]).toEqual(["a", "b", "c"]);
   expect([...parseExemptIds("u1,u1")]).toEqual(["u1"]);
+});
+
+test("isRateLimitExempt: only configured user_ids are exempt (default-closed)", () => {
+  // RECOMMEND_RATELIMIT_EXEMPT_USER_IDS is seeded to "rl-exempt-test-uid" by
+  // fixtures/seed-test-env. A configured id is exempt; everyone else is not.
+  expect(isRateLimitExempt("rl-exempt-test-uid")).toBe(true);
+  expect(isRateLimitExempt("some-other-user")).toBe(false);
 });
 
 test("checkRoadmapMonthlyLimit is READ-ONLY — uses getRemaining, never limit (#157)", async () => {
