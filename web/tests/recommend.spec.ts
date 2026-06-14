@@ -99,7 +99,7 @@ test("humanizes settings labels and renders the rationale prominently", async ({
   ).toHaveCount(0);
 });
 
-test("renders a multi-sentence rationale as separate readable lines (#270)", async ({
+test("renders the rationale as readable lines with glossary popovers (#270, #269)", async ({
   page,
 }) => {
   await page.route("**/api/recommend", (route) =>
@@ -111,22 +111,29 @@ test("renders a multi-sentence rationale as separate readable lines (#270)", asy
         platform: "Claude Code",
         settings: {
           rationale:
-            "Opus 4.8 is S-tier for coding. Max Mode is enabled for the large refactor. THINKING is set to XHigh for the required rigor.",
+            "Opus 4.8 is S-tier for coding. It leads on SWE-bench Verified. THINKING is set to XHigh for the required rigor.",
         },
         comparison_table: [],
       }),
     }),
   );
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Input the prompt/i).fill("split rationale");
+  await page.getByPlaceholder(/Input the prompt/i).fill("split + glossary");
   await page.getByRole("button", { name: /Submit/i }).click();
   const why = page.getByRole("region", { name: /Why this model/i });
   await expect(why).toBeVisible();
-  // The three sentences render as three separate paragraphs, not one block.
+  // #270: three sentences → three paragraphs, not one dense block.
   await expect(why.locator("p")).toHaveCount(3);
+  // #269: the jargon terms ("S-tier", "SWE-bench Verified") carry inline
+  // definition popovers (role="tooltip", revealed on hover/focus).
+  const tooltips = why.locator('[role="tooltip"]');
+  await expect(tooltips).toHaveCount(2);
   await expect(
-    why.getByText("Opus 4.8 is S-tier for coding."),
-  ).toBeVisible();
+    tooltips.filter({ hasText: "Top-1 or top-2 globally" }),
+  ).toHaveCount(1);
+  await expect(
+    tooltips.filter({ hasText: "gold standard for software-engineering" }),
+  ).toHaveCount(1);
 });
 
 test("frontier-tier recommendation shows the quality-tier label (no upgrade CTA)", async ({
