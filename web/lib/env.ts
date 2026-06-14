@@ -85,6 +85,13 @@ const envSchema = z.object({
   // cap (founder/dev dogfooding). Empty by default → nobody exempt.
   // Seeded per Vercel scope; see infra/README.md. (#157)
   ROADMAP_CAP_EXEMPT_USER_IDS: z.string().default(""),
+  // Comma-separated Supabase user_ids exempt from the /api/recommend IP-pool
+  // rate limit (founder/dev dogfooding via the BROWSER — the X-Roadmodel-Bypass
+  // header bypass only works for scripts that can set a header). Empty by
+  // default → nobody exempt, so the global daily limit still protects real
+  // traffic. Seeded per Vercel scope; mirrors ROADMAP_CAP_EXEMPT_USER_IDS (same
+  // founder uid). See infra/README.md.
+  RECOMMEND_RATELIMIT_EXEMPT_USER_IDS: z.string().default(""),
   // Recommender-only off-switch for the roadmap builder. When set to
   // "false" (or "0") the roadmap + history surfaces are hidden from the
   // app nav and their routes redirect to /recommend — a reversible
@@ -136,6 +143,8 @@ export const env = envSchema.parse({
   // Raw values through; schema defaults handle undefined.
   ROADMAP_MONTHLY_LIMIT: process.env.ROADMAP_MONTHLY_LIMIT,
   ROADMAP_CAP_EXEMPT_USER_IDS: process.env.ROADMAP_CAP_EXEMPT_USER_IDS,
+  RECOMMEND_RATELIMIT_EXEMPT_USER_IDS:
+    process.env.RECOMMEND_RATELIMIT_EXEMPT_USER_IDS,
   // Raw value through (string | undefined); the schema's .default("true")
   // handles undefined. Do NOT pre-default to a string here.
   ROADMAP_ENABLED: process.env.ROADMAP_ENABLED,

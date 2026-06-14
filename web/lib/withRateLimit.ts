@@ -1,7 +1,7 @@
 // web/lib/withRateLimit.ts
 import { NextResponse } from "next/server";
 import { createHash, timingSafeEqual } from "node:crypto";
-import { checkLimits } from "./ratelimit";
+import { checkLimits, isRateLimitExempt } from "./ratelimit";
 import { writeAudit } from "./audit";
 import { env } from "./env";
 
@@ -76,6 +76,16 @@ export function withRateLimit(
         outcome: "bypassed_rate_limit",
         user_id: userId,
       });
+      return handler(req);
+    }
+
+    // Founder/dev exemption: a signed-in user on the exempt list skips the
+    // IP-pool rate limit entirely. This is the BROWSER-usable counterpart to the
+    // X-Roadmodel-Bypass header above (which scripts can set but a browser
+    // can't). The handler still runs and writes its normal audit row, so the
+    // request is recorded as usual — no separate audit needed. Default-closed:
+    // when RECOMMEND_RATELIMIT_EXEMPT_USER_IDS is unset, nobody is exempt.
+    if (userId && isRateLimitExempt(userId)) {
       return handler(req);
     }
 

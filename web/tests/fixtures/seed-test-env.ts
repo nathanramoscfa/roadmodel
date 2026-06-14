@@ -18,6 +18,10 @@ const placeholders: Record<string, string> = {
   SUPABASE_SERVICE_ROLE_KEY: "ci-placeholder-service-role-key",
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "ci-placeholder-anon-key",
   GOOGLE_API_KEY: "ci-placeholder-google-api-key",
+  // A dummy founder-exempt user_id so ratelimit.spec can exercise both
+  // branches of isRateLimitExempt(). Can't match any real Supabase uid; only
+  // affects in-process unit tests (E2E uses the webServer env, not this seed).
+  RECOMMEND_RATELIMIT_EXEMPT_USER_IDS: "rl-exempt-test-uid",
 };
 
 for (const [key, value] of Object.entries(placeholders)) {

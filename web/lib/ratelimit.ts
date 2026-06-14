@@ -97,6 +97,15 @@ export function isRoadmapCapExempt(userId: string): boolean {
   return ROADMAP_CAP_EXEMPT.has(userId);
 }
 
+// User_ids exempt from the /api/recommend IP-pool rate limit (founder/dev
+// dogfooding via the browser), parsed once at module load. Empty → nobody
+// exempt, so the global limit applies to everyone (default-closed).
+const RATE_LIMIT_EXEMPT = parseExemptIds(env.RECOMMEND_RATELIMIT_EXEMPT_USER_IDS);
+
+export function isRateLimitExempt(userId: string): boolean {
+  return RATE_LIMIT_EXEMPT.has(userId);
+}
+
 export async function checkLimits(key: string): Promise<RateLimitResult> {
   if (!limiters) {
     return { allowed: true };
