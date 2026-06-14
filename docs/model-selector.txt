@@ -358,6 +358,32 @@
     among models of the same family.
   </jurisdiction-context>
 
+  <availability-context>
+    A model can be present in `<model-options>` for catalog completeness
+    (pricing, benchmarks, and capability reference) yet be temporarily
+    UNAVAILABLE to recommend — its provider has restricted, withdrawn,
+    waitlisted, or otherwise blocked end-user access. Recommending such a
+    model is not actionable: the user cannot run it however strong its tier
+    ratings are. The selector tracks this with the small, maintainer-owned
+    list below, kept separate from the catalog's per-model pricing and tier
+    data (which an automated refresh maintains). Adding an id disables the
+    model; removing it re-enables it — a one-line editorial switch that the
+    automated catalog refresh never overwrites.
+
+    Currently unavailable — do NOT recommend (enforced at Step 0a of
+    `<selection-algorithm>`):
+
+    - `claude-fable-5` (Fable 5) — access restricted by Anthropic; not
+      usable by end users at this time. Its `<model>` entry and tier
+      ratings are retained for reference, but it must never be returned as
+      a recommendation. Re-enable by deleting this line once access is
+      restored.
+
+    When an unavailable model would otherwise have been the best fit,
+    return the next-best AVAILABLE model and disclose the substitution in
+    the RATIONALE, exactly as the `<jurisdiction-context>` filter does.
+  </availability-context>
+
   <benchmark-sources>
     Authoritative LLM leaderboards the AI may cite when justifying a model
     recommendation. When reasoning about a model's strength in a task
@@ -821,11 +847,22 @@
 
   <selection-algorithm>
     Run this procedure for every prompt that needs a model recommendation.
-    Quality wins at every step; cost only enters at step 5. The
-    jurisdiction filter (Step 0) runs first because a forbidden-
-    jurisdiction model can never be recommended regardless of quality.
+    Quality wins at every step; cost only enters at step 5. Two hard
+    pre-filters run first (Step 0a then Step 0b), because a model that is
+    unavailable, or of a forbidden jurisdiction, can never be recommended
+    regardless of quality.
 
-    Step 0 — Filter candidate models by allowed jurisdictions.
+    Step 0a — Filter out unavailable models.
+      Drop every `<model>` whose id is listed as currently unavailable in
+      `<availability-context>`. Such a model is never recommended,
+      regardless of its tier ratings — its provider has restricted or
+      withdrawn end-user access, so the recommendation would not be
+      actionable. When an unavailable model would otherwise have been the
+      best fit, the RATIONALE MUST disclose it — e.g., "Fable 5 was the
+      strongest fit but is currently unavailable (access restricted by
+      Anthropic); next-best available model returned instead."
+
+    Step 0b — Filter candidate models by allowed jurisdictions.
       Read the user's allowed-jurisdictions list from
       `docs/user-context.md` (the SaaS surface reads it from the
       user's `profiles.allowed_jurisdictions` column). Default when
@@ -902,12 +939,12 @@
       - Never sacrifice quality to save cost — the cost step is a true-tie
         resolver, not a downgrade trigger.
       - For PRIMARY = `multimodal`, only consider models with tier-multimodal
-        of S or A (currently: claude-fable-5, gemini-3-flash, gemini-3-pro, gemini-3.1-pro at S; sonnet-4.6, gpt-5.4, opus-4.7, opus-4.8, gpt-5.5 at A).
+        of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro at S; sonnet-4.6, gpt-5.4, opus-4.7, opus-4.8, gpt-5.5 at A).
       - For PRIMARY = `long-context`, prefer models with native large
         context (opus-4.7 1M, opus-4.8 1M, gemini-3.1-pro 1M, grok-4.3 2M) over forcing
         a smaller-context model into Max Mode truncation.
       - For PRIMARY = `coding` at S-tier requirement, the candidate set is
-        gpt-5.1-codex, gpt-5.3-codex, opus-4.7, opus-4.8, claude-fable-5, gpt-5.5; cost tie-breaker favors
+        gpt-5.1-codex, gpt-5.3-codex, opus-4.7, opus-4.8, gpt-5.5; cost tie-breaker favors
         gpt-5.1-codex when the ratings are equivalent for the prompt.
       - Default to composer-2 for routine multi-file implementation when a
         coding-A rating suffices; escalate only on a concrete capability

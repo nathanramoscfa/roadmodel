@@ -251,6 +251,51 @@ def test_every_method_supports_models_references_valid_models() -> None:
     assert not failures, "supports-models referential integrity broken:\n  " + "\n  ".join(failures)
 
 
+# --- Availability filter (Step 0a) invariants ---
+
+_UNAVAILABLE_ID_RE = re.compile(r"^\s*-\s*`([a-z0-9.\-]+)`", re.MULTILINE)
+
+
+def _element_body(tag: str) -> str:
+    """Return the inner text of the real <tag>...</tag> block element.
+
+    Anchors on the tag alone on its line, so inline backticked references to
+    the same tag name (which the doc legitimately contains — see the module
+    docstring) are never mistaken for the element itself.
+    """
+    text = SELECTOR_PATH.read_text()
+    match = re.search(rf"(?m)^\s*<{tag}>\s*$(.*?)^\s*</{tag}>\s*$", text, re.DOTALL)
+    assert match, f"<{tag}>...</{tag}> block element not found"
+    return match.group(1)
+
+
+def _unavailable_model_ids() -> list[str]:
+    return _UNAVAILABLE_ID_RE.findall(_element_body("availability-context"))
+
+
+def test_availability_context_lists_valid_model_ids() -> None:
+    """Every model id flagged unavailable in <availability-context> must be a
+    real <model-options> id; a typo would silently disable nothing."""
+    unavailable = _unavailable_model_ids()
+    assert unavailable, "<availability-context> lists no unavailable model ids"
+    catalog_ids = {attrs.get("id", "") for _, attrs in _parse_models()}
+    unknown = [i for i in unavailable if i not in catalog_ids]
+    assert not unknown, f"<availability-context> references unknown model ids: {unknown}"
+
+
+def test_unavailable_models_absent_from_selection_algorithm() -> None:
+    """An unavailable model must not appear in <selection-algorithm>'s candidate
+    enumerations, or it could be re-introduced as a pick despite the Step 0a
+    availability filter."""
+    unavailable = _unavailable_model_ids()
+    algo = _element_body("selection-algorithm")
+    leaked = [i for i in unavailable if i in algo]
+    assert not leaked, (
+        f"unavailable model id(s) {leaked} appear in <selection-algorithm> — "
+        "remove them from the candidate lists so Step 0a stays consistent"
+    )
+
+
 def test_prompt_has_lifecycle_rules() -> None:
     """update/prompt.md must contain the Model lifecycle rules. Without
     them, a future refresh could silently remove a model when a costlier
