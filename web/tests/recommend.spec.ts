@@ -46,7 +46,9 @@ test(
       .fill("build a SQL agent");
     await page.getByRole("button", { name: /Submit/i }).click();
     await expect(page.getByText(/Claude 4.5 Haiku/i)).toBeVisible();
-    await expect(page.getByText(/Free tier/i)).toBeVisible();
+    // The engine-tier line names the engine that produced the recommendation
+    // (#271), not the recommended model.
+    await expect(page.getByText(/free engine/i)).toBeVisible();
   },
 );
 
@@ -97,6 +99,36 @@ test("humanizes settings labels and renders the rationale prominently", async ({
   ).toHaveCount(0);
 });
 
+test("renders a multi-sentence rationale as separate readable lines (#270)", async ({
+  page,
+}) => {
+  await page.route("**/api/recommend", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        model: "Opus 4.8",
+        platform: "Claude Code",
+        settings: {
+          rationale:
+            "Opus 4.8 is S-tier for coding. Max Mode is enabled for the large refactor. THINKING is set to XHigh for the required rigor.",
+        },
+        comparison_table: [],
+      }),
+    }),
+  );
+  await page.goto("/recommend");
+  await page.getByPlaceholder(/Input the prompt/i).fill("split rationale");
+  await page.getByRole("button", { name: /Submit/i }).click();
+  const why = page.getByRole("region", { name: /Why this model/i });
+  await expect(why).toBeVisible();
+  // The three sentences render as three separate paragraphs, not one block.
+  await expect(why.locator("p")).toHaveCount(3);
+  await expect(
+    why.getByText("Opus 4.8 is S-tier for coding."),
+  ).toBeVisible();
+});
+
 test("frontier-tier recommendation shows the quality-tier label (no upgrade CTA)", async ({
   page,
 }) => {
@@ -117,14 +149,12 @@ test("frontier-tier recommendation shows the quality-tier label (no upgrade CTA)
   await page.goto("/recommend");
   await page.getByPlaceholder(/Input the prompt/i).fill("hard reasoning task");
   await page.getByRole("button", { name: /Submit/i }).click();
-  // Signed-in frontier users see the quality-tier engine, NOT a "free tier …
-  // upgrade for frontier models" CTA they're already past.
+  // Signed-in frontier users see the engine that generated the recommendation
+  // (#271) and NO upgrade CTA they're already past.
   await expect(
-    page.getByText("Quality tier (Gemini 2.5 Pro)"),
+    page.getByText(/quality engine · Gemini 2\.5 Pro/i),
   ).toBeVisible();
-  await expect(
-    page.getByText(/upgrade for frontier models/i),
-  ).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /upgrade/i })).toHaveCount(0);
 });
 
 test("attached text file content is prepended to the request body (file-input Phase A)", async ({

@@ -9,10 +9,27 @@ interface WhyDisclosureProps {
   rationale: string | null;
 }
 
+// Break the rationale into readable lines so it doesn't render as one dense
+// block (#270). Honor any explicit newlines first, then split each paragraph on
+// sentence boundaries — punctuation followed by whitespace + a capital/quote.
+// The lookbehind/lookahead avoids splitting decimals ("62.9") or "(#2)." mid-
+// number, so benchmark figures stay intact.
+function toLines(rationale: string): string[] {
+  const lines = rationale
+    .trim()
+    .split(/\n+/)
+    .flatMap((para) => para.split(/(?<=[.!?])\s+(?=[A-Z"'(])/))
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return lines.length > 0 ? lines : [rationale.trim()];
+}
+
 export function WhyDisclosure({ rationale }: WhyDisclosureProps) {
   if (!rationale?.trim()) {
     return null;
   }
+
+  const lines = toLines(rationale);
 
   return (
     <section
@@ -22,9 +39,11 @@ export function WhyDisclosure({ rationale }: WhyDisclosureProps) {
       <h3 className="text-sm font-semibold text-brand-slate-800 dark:text-brand-slate-100">
         Why this model?
       </h3>
-      <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-brand-slate-700 dark:text-brand-slate-200">
-        {rationale}
-      </p>
+      <div className="mt-2 space-y-2 text-sm leading-relaxed text-brand-slate-700 dark:text-brand-slate-200">
+        {lines.map((line, index) => (
+          <p key={index}>{line}</p>
+        ))}
+      </div>
     </section>
   );
 }

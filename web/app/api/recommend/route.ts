@@ -425,16 +425,21 @@ const handler = async (req: Request): Promise<Response> =>
             ? `${baseRationale} Budget priority: ${budgetPriority}.`
             : `Budget priority: ${budgetPriority}.`
           : baseRationale;
-      // Phase 4.8 T2: append the user's cheapest funded path for the
-      // recommended model (subscription-$0 vs API-PAYG), computed
-      // deterministically at the edge from their declared funding. Null
-      // (no note) when they've declared nothing that reaches the model —
-      // never changes the model that was selected.
-      const fundingNote = fundingNoteForModel(
-        payload.model ?? "",
-        subscriptions,
-        apiProviders,
-      );
+      // Phase 4.8 T2: the user's cheapest funded path for the recommended
+      // model (subscription-$0 vs API-PAYG), computed deterministically from
+      // their declared funding. Null when they've declared nothing that reaches
+      // the model — never changes the model that was selected.
+      //
+      // T3 dedup (#270): when the personalized cost table will render (non-empty),
+      // it already shows this funded path ("✓ $0 · <sub>"), so omit the funding
+      // sentence from the rationale to avoid duplicating it. Keep it as a
+      // fallback only when there's no table (e.g. cost estimation returned none).
+      const tableShowsFunding =
+        Array.isArray(payload.comparison_table) &&
+        payload.comparison_table.length > 0;
+      const fundingNote = tableShowsFunding
+        ? null
+        : fundingNoteForModel(payload.model ?? "", subscriptions, apiProviders);
       const rationale = fundingNote
         ? withBudget
           ? `${withBudget} ${fundingNote}`
