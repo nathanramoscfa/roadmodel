@@ -2186,6 +2186,24 @@ as primary; the other becomes the secondary category for tie-breaking.
         - Prompt explicitly requires extended reasoning across many files
       Otherwise leave Max Mode Off.
 
+    Step 7 — Name a backup model (the BACKUP output field).
+      After the primary MODEL is fixed, also name a BACKUP: a second model
+      the user can fall back to if the primary is unavailable to them (no
+      funded platform, provider outage, or a later access restriction).
+      Choose it from the SAME candidate set that survived Step 0a (available)
+      and Step 0b (allowed jurisdiction), applying the Step 4-5 quality-then-
+      cost ranking — but:
+        - Prefer a model from a DIFFERENT provider/family than the primary,
+          so one provider's outage or access block does not take out both.
+          Only fall back to a same-family model when no distinct provider
+          meets the minimum PRIMARY tier.
+        - The BACKUP must meet the same minimum PRIMARY tier (Step 3) and
+          must NEVER be an unavailable model (Step 0a) or the same model as
+          the primary.
+      Emit `None` only when no qualifying distinct alternative exists. The
+      BACKUP does not change the primary MODEL, MAX MODE, THINKING, or
+      PLATFORM — it is advisory.
+
     Guardrails:
       - Never sacrifice quality to save cost — the cost step is a true-tie
         resolver, not a downgrade trigger.
@@ -3114,6 +3132,24 @@ as primary; the other becomes the secondary category for tie-breaking.
         - Prompt explicitly requires extended reasoning across many files
       Otherwise leave Max Mode Off.
 
+    Step 7 — Name a backup model (the BACKUP output field).
+      After the primary MODEL is fixed, also name a BACKUP: a second model
+      the user can fall back to if the primary is unavailable to them (no
+      funded platform, provider outage, or a later access restriction).
+      Choose it from the SAME candidate set that survived Step 0a (available)
+      and Step 0b (allowed jurisdiction), applying the Step 4-5 quality-then-
+      cost ranking — but:
+        - Prefer a model from a DIFFERENT provider/family than the primary,
+          so one provider's outage or access block does not take out both.
+          Only fall back to a same-family model when no distinct provider
+          meets the minimum PRIMARY tier.
+        - The BACKUP must meet the same minimum PRIMARY tier (Step 3) and
+          must NEVER be an unavailable model (Step 0a) or the same model as
+          the primary.
+      Emit `None` only when no qualifying distinct alternative exists. The
+      BACKUP does not change the primary MODEL, MAX MODE, THINKING, or
+      PLATFORM — it is advisory.
+
     Guardrails:
       - Never sacrifice quality to save cost — the cost step is a true-tie
         resolver, not a downgrade trigger.
@@ -3278,9 +3314,15 @@ as primary; the other becomes the secondary category for tie-breaking.
 CRITICAL: Respond in EXACTLY this format and ABSOLUTELY NOTHING ELSE.
 Do not add any preamble, explanation, or perform any actions.
 
+BACKUP names the fallback model from Step 7 of the
+`<selection-algorithm>` — the next-best AVAILABLE model to use if the
+primary MODEL is unavailable to the user. Emit `None` when no distinct
+alternative qualifies; never emit an unavailable model (Step 0a) here.
+
 Single-prompt mode — output one block:
 
 MODEL: [Model Name]
+BACKUP: [Model Name or None]
 PLATFORM: [Access Method Name]
 MAX MODE: [On/Off]
 THINKING: [Off/Low/Medium/High/XHigh/N/A]
@@ -3303,6 +3345,7 @@ Roadmap annotation mode — output one block per prompt, preceded by the
 prompt identifier or a brief label, in order:
 
 MODEL: [Model Name]
+BACKUP: [Model Name or None]
 PLATFORM: [Access Method Name]
 MAX MODE: [On/Off]
 THINKING: [Off/Low/Medium/High/XHigh/N/A]

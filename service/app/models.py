@@ -44,6 +44,12 @@ class RecommendResponse(BaseModel):
     # service boundary (extra="forbid" + never passed through) — issue #190. Carry
     # it so the field survives end-to-end; empty -> None for a clean web fallback.
     conversation: str | None = None
+    # The fallback model (Step 7 of the selection algorithm), surfaced so the web
+    # "Backup" line can show an alternative if the primary is unavailable to the
+    # user. Optional in recommend_structured (absent when the LLM emits no BACKUP
+    # or "None") — same service-boundary carry-through as rationale (#173) and
+    # conversation (#190); empty -> None for a clean web fallback.
+    backup: str | None = None
     session_cost_estimate: dict[str, Any] | None = None
     comparison_table: list[dict[str, Any]] = Field(default_factory=list)
 

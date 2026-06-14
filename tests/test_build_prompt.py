@@ -48,6 +48,7 @@ def test_build_prompt_header_front_loads_binding_rules() -> None:
     assert "FUNDED surface" in system  # platform cost posture (#186)
     assert "no thinking dial" in system  # THINKING N/A on Cursor/xAI (#188)
     assert "multi-file" in system  # category worked example (#189)
+    assert "BACKUP is the fallback model" in system  # backup elicited (Step 7)
     # The user context is still appended.
     assert "placeholder user context" in system
 

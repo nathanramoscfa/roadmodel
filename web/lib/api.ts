@@ -11,6 +11,10 @@ export interface RecommendResponse {
   // models" when they are already on it. `engine` is the resolved engine id.
   tier?: "free" | "frontier";
   engine?: string;
+  // Fallback model (Step 7 of the selector) — rendered as the "Backup" line so
+  // the user has an alternative if the primary is unavailable to them. Optional:
+  // absent/null when the recommender emitted no backup.
+  backup?: string | null;
 }
 
 const DEFAULT_SERVICE_URL =

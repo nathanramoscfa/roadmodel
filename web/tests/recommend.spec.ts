@@ -49,8 +49,33 @@ test(
     // The engine-tier line names the engine that produced the recommendation
     // (#271), not the recommended model.
     await expect(page.getByText(/free engine/i)).toBeVisible();
+    // This payload carries no backup, so the backup line must not render.
+    await expect(page.getByText(/Backup if unavailable/i)).toHaveCount(0);
   },
 );
+
+test("renders the backup model line when the recommendation includes one", async ({
+  page,
+}) => {
+  await page.route("**/api/recommend", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        model: "Opus 4.8",
+        platform: "Claude Code",
+        settings: { max_mode: "OFF", thinking: "High" },
+        backup: "GPT-5.5",
+        comparison_table: [],
+      }),
+    }),
+  );
+  await page.goto("/recommend");
+  await page.getByPlaceholder(/Input the prompt/i).fill("build a SQL agent");
+  await page.getByRole("button", { name: /Submit/i }).click();
+  await expect(page.getByText(/Backup if unavailable/i)).toBeVisible();
+  await expect(page.getByText(/GPT-5\.5/)).toBeVisible();
+});
 
 test("humanizes settings labels and renders the rationale prominently", async ({
   page,

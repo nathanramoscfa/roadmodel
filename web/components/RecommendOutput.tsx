@@ -33,6 +33,14 @@ export function RecommendOutput({ data }: RecommendOutputProps) {
       }
     >
       <ModelHeader model={data.model} platform={data.platform} />
+      {data.backup ? (
+        <p className="-mt-3 text-sm text-brand-slate-500 dark:text-brand-slate-400">
+          Backup if unavailable:{" "}
+          <span className="font-medium text-brand-slate-700 dark:text-brand-slate-200">
+            {data.backup}
+          </span>
+        </p>
+      ) : null}
       <SettingsList settings={data.settings} />
       <CostComparison comparisonTable={data.comparison_table} />
       <WhyDisclosure rationale={rationale} />
