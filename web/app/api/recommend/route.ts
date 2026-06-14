@@ -84,6 +84,10 @@ interface RecommenderPayload {
   // The conversation-handling decision (New/Continue), carried as a top-level
   // field by the service (#190). Spread through to the client via `parsed`.
   conversation?: string;
+  // The fallback model (Step 7) — shown as the "Backup" line if the primary is
+  // unavailable. Carried top-level by the service; spread to the client via
+  // `parsed`, same as conversation. Absent when the LLM emitted no backup.
+  backup?: string;
 }
 
 function isCnJurisdictionModel(model: string | undefined): boolean {

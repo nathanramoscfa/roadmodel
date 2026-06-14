@@ -105,9 +105,47 @@ def test_recommend_returns_200(
         "rationale": "Best for coding tasks.",
         # #190: the conversation-handling decision now survives too.
         "conversation": "New",
+        # The fallback model (Step 7) survives the boundary too; None here
+        # because this fake payload emits no backup.
+        "backup": None,
         "session_cost_estimate": None,
         "comparison_table": [],
     }
+
+
+def test_recommend_carries_backup(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A backup model emitted by recommend_structured survives the service
+    boundary. RecommendResponse whitelists fields (extra="forbid"), so an
+    undeclared field would be dropped — the same class as rationale (#173)
+    and conversation (#190)."""
+    recommend_module = importlib.import_module("app.recommend")
+    payload = dict(_RECOMMEND_DICT)
+    payload["backup"] = "GPT-5.5"
+
+    def _fake_recommend_structured(
+        prompt: str,
+        config: Any,
+        *,
+        user_context_text: str | None = None,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        max_mode: bool = False,
+        max_output_tokens: int | None = None,
+        thinking_budget: int | None = None,
+        temperature: float | None = None,
+    ) -> dict[str, Any]:
+        del prompt, config, input_tokens, output_tokens, max_mode
+        return payload
+
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
+
+    response = client.post("/v1/recommend", json=_request_payload())
+
+    assert response.status_code == 200
+    assert response.json()["backup"] == "GPT-5.5"
 
 
 def test_recommend_normalizes_thinking_na_on_no_thinking_surface(
@@ -239,6 +277,7 @@ def test_response_schema_matches_phase2_contract(
         "settings",
         "rationale",  # #173 — carried through the service boundary
         "conversation",  # #190 — same boundary, now carried through
+        "backup",  # fallback model (Step 7) — same boundary, carried through
         "session_cost_estimate",
         "comparison_table",
     }

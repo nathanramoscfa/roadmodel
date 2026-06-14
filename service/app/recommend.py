@@ -271,6 +271,9 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
                 # Carry the conversation-handling decision across the boundary (#190),
                 # same drop class as rationale; empty -> None.
                 conversation=result.get("conversation") or None,
+                # Carry the fallback model (Step 7) across the boundary, same drop
+                # class as conversation; absent/empty -> None.
+                backup=result.get("backup") or None,
                 session_cost_estimate=session_cost_estimate,
                 comparison_table=comparison_table,
             )

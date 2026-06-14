@@ -49,11 +49,12 @@ _OUTPUT_FORMAT_RE = re.compile(r"<output-format>(.*?)</output-format>", re.DOTAL
 _FIELD_LINE_RE = re.compile(r"^[ \t]*([A-Z][A-Z ]*[A-Z]):[ \t]*\[", re.MULTILINE)
 
 # Field names parse_response accepts beyond the strictly-required six.
-# ORCHESTRATION is captured-then-dropped (added in the #130 fix); PROMPT is
-# handled as an optional leading prefix / rationale terminator for
-# roadmap-annotation mode. A field declared in the selector that is NOT in
-# this set union _REQUIRED_KEYS is exactly the 2026-05-31 drift class.
-_KNOWN_OPTIONAL_FIELDS = frozenset({"orchestration", "prompt"})
+# ORCHESTRATION is captured-then-dropped (added in the #130 fix); BACKUP is the
+# optional fallback model (Step 7), surfaced when present; PROMPT is handled as
+# an optional leading prefix / rationale terminator for roadmap-annotation mode.
+# A field declared in the selector that is NOT in this set union _REQUIRED_KEYS
+# is exactly the 2026-05-31 drift class.
+_KNOWN_OPTIONAL_FIELDS = frozenset({"orchestration", "backup", "prompt"})
 
 # Realistic single-line values for synthesizing a response that follows the
 # template. Unknown/new fields fall back to a generic token so a freshly-added
@@ -61,6 +62,7 @@ _KNOWN_OPTIONAL_FIELDS = frozenset({"orchestration", "prompt"})
 # parse_response decide whether the field breaks the regex.
 _SAMPLE_VALUES = {
     "model": "Opus 4.8",
+    "backup": "GPT-5.5",
     "platform": "Claude Code",
     "max_mode": "Off",
     "thinking": "XHigh",
