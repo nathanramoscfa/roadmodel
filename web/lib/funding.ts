@@ -59,6 +59,7 @@ for (const m of MODELS) {
   NAME_TO_ID.set(m.id, m.id);
 }
 const ID_TO_MODEL = new Map(MODELS.map((m) => [m.id, m]));
+const METHOD_BY_ID = new Map(METHODS.map((m) => [m.id, m]));
 // Strip the catalog's " ($NNN)" name disambiguator for a clean note
 // (mirrors the picker's display treatment in ProfilePreferencesForm).
 const SUB_LABEL = new Map(
@@ -119,4 +120,93 @@ export function fundingNoteForModel(
   }
 
   return null;
+}
+
+// Phase 4.8 T3 (#260 / #163). Re-rank + relabel the recommended model's
+// per-platform cost rows to the REQUESTING user's funding, so the cost table
+// shows THEIR subscription-$0 vs API-pay-per-token tradeoff instead of the
+// service's bundled (founder) funding. Each row gains `your_cost` (display
+// string) + `funded` (boolean); rows are reordered funded-first, then by cost.
+//
+// Deterministic + catalog-derived; runs at the web edge (no service/package
+// change). When the user has declared NO funding (anon), rows are returned
+// unchanged so the table keeps the service's existing funding column exactly
+// as before — mirroring fundingNoteForModel's "no note for anon" posture.
+export function personalizeComparison(
+  rows: readonly Record<string, unknown>[],
+  subscriptions: readonly string[],
+  apiProviders: readonly string[],
+): Record<string, unknown>[] {
+  if ((subscriptions.length === 0 && apiProviders.length === 0) || rows.length === 0) {
+    return [...rows];
+  }
+
+  // Funded access-method surface -> the held subscription that funds it (first
+  // wins), for the "$0 · <subscription>" label.
+  const subForSurface = new Map<string, string>();
+  for (const sub of subscriptions) {
+    const label = SUB_LABEL.get(sub) ?? sub;
+    for (const surface of fundedSurfacesForSubscription(sub)) {
+      if (!subForSurface.has(surface)) subForSurface.set(surface, label);
+    }
+  }
+  const enabledApi = new Set(apiProviders);
+
+  const RANK_FUNDED = 0;
+  const RANK_API = 1;
+  const RANK_UNFUNDED = 2;
+
+  const annotated = rows.map((row) => {
+    const platformId =
+      typeof row.platform_id === "string" ? row.platform_id : "";
+    const modelId =
+      typeof row.model_id === "string"
+        ? row.model_id
+        : typeof row.model === "string"
+          ? (NAME_TO_ID.get(row.model) ?? "")
+          : "";
+
+    let rank: number = RANK_UNFUNDED;
+    let yourCost = "pay-per-token (not funded)";
+    let funded = false;
+
+    const sub = subForSurface.get(platformId);
+    if (sub) {
+      rank = RANK_FUNDED;
+      funded = true;
+      yourCost = `$0 · ${sub}`;
+    } else {
+      const method = METHOD_BY_ID.get(platformId);
+      if (
+        method &&
+        API_BILLING.has(method.billing) &&
+        enabledApi.has(method.provider)
+      ) {
+        rank = RANK_API;
+        const out = modelId
+          ? ID_TO_MODEL.get(modelId)?.output_price_per_1m
+          : undefined;
+        const rate =
+          typeof out === "number" ? `~${MONEY.format(out)}/M out` : "pay-per-token";
+        yourCost = `${rate} · your ${providerLabel(method.provider)} API`;
+      }
+    }
+    const personalizedRow: Record<string, unknown> = {
+      ...row,
+      your_cost: yourCost,
+      funded,
+    };
+    return { row: personalizedRow, rank };
+  });
+
+  annotated.sort((a, b) => {
+    if (a.rank !== b.rank) return a.rank - b.rank;
+    const at =
+      typeof a.row.total_usd === "number" ? a.row.total_usd : Number.POSITIVE_INFINITY;
+    const bt =
+      typeof b.row.total_usd === "number" ? b.row.total_usd : Number.POSITIVE_INFINITY;
+    return at - bt;
+  });
+
+  return annotated.map((a) => a.row);
 }
