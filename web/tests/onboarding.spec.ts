@@ -137,6 +137,31 @@ test("forwards held subscriptions + enabled API providers to the recommender (Ph
   await expect(why).toContainText("deepseek");
 });
 
+test("cost table is personalized to the signed-in user's funding (Phase 4.8 T3)", async ({
+  page,
+}) => {
+  await signInViaCallback(page);
+  await page.getByLabel(/Claude Max.*\$200\/mo/i).check();
+  await page.getByRole("button", { name: /Save and continue/i }).click();
+  await expect(page).toHaveURL("/");
+
+  await page.goto("/recommend");
+  await page.getByPlaceholder(/Input the prompt/i).fill("personalized cost table");
+  await page.getByRole("button", { name: /Submit/i }).click();
+  await expect(
+    page.getByRole("heading", { name: /Claude 4\.5 Haiku/i }),
+  ).toBeVisible();
+  // The cost table reflects THIS user's funding, not the bundled founder
+  // context: the column is "Your cost" and the Claude Code row is $0 via the
+  // user's held Claude Max subscription.
+  await expect(
+    page.getByRole("columnheader", { name: "Your cost" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: /\$0 · Claude Max/i }),
+  ).toBeVisible();
+});
+
 test("skip persists defaults and sets onboarded_at", async ({ page }) => {
   await signInViaCallback(page);
   const savePromise = page.waitForResponse(

@@ -21,7 +21,7 @@ import {
   type JurisdictionCode,
 } from "@/lib/profile";
 import { identifyRequest, withRateLimit } from "@/lib/withRateLimit";
-import { fundingNoteForModel } from "@/lib/funding";
+import { fundingNoteForModel, personalizeComparison } from "@/lib/funding";
 import { env } from "@/lib/env";
 
 const DEFAULT_RECOMMENDER_URL =
@@ -378,6 +378,23 @@ const handler = async (req: Request): Promise<Response> =>
     const responsePayload = await withSpan("render", async () => {
       let payload = parsed ?? {};
       payload = filterByJurisdiction(payload, allowedJurisdictions);
+
+      // Phase 4.8 T3: re-rank + relabel the cost table's per-platform rows to
+      // THIS user's funding (subscription-$0 vs API-PAYG vs unfunded). The
+      // service computes the table against the bundled founder context, so
+      // without this a signed-in user would see the founder's funding. Anon /
+      // no declared funding -> rows unchanged (consider-all, surface-cheaper;
+      // never changes which model was selected).
+      if (payload.comparison_table) {
+        payload = {
+          ...payload,
+          comparison_table: personalizeComparison(
+            payload.comparison_table,
+            subscriptions,
+            apiProviders,
+          ),
+        };
+      }
 
       if (budgetPriority && payload.settings) {
         payload = {
