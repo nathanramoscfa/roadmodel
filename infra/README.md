@@ -442,6 +442,7 @@ deliberate — Step 6 should not relitigate the Upstash decision.
 | `UPSTASH_REDIS_TOKEN`          | `roadmodel-web` Vercel env vars (Marketplace Upstash + alias) | Next.js rate limiter (live since Step 7 close-out)                          | web: production + preview + development + staging Custom Env (Step 7) | web: production + preview + development + staging |
 | `ROADMODEL_IP_SALT`            | `roadmodel-web` Vercel env vars (generated `openssl rand -hex 32`) | Next.js rate limiter daily IP+UA hashing salt (live since Step 7 close-out); rotate quarterly | web: production + preview + development + staging Custom Env (Step 7) | web: production + preview + development + staging |
 | `FRONTIER_ROADMAP_ENABLED`     | `roadmodel-web` Vercel env vars (default `false`)            | Next.js model-routing resolver — gates the Phase 5 Anthropic frontier branch | **not set anywhere in Phase 4 (defaults false)**         | web: production + preview + staging (set true on the scope where Phase 5 rolls out) |
+| `RECOMMEND_RATELIMIT_EXEMPT_USER_IDS` | `roadmodel-web` Vercel env vars (comma-separated founder Supabase uid; default empty) | Next.js rate limiter — user_ids that skip the `/api/recommend` daily limit (founder browser dogfooding); empty = nobody exempt | web: production (founder uid) | web: production (+ preview/staging if founder tests there) |
 
 Rules:
 
