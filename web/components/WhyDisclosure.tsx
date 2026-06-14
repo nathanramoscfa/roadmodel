@@ -4,6 +4,11 @@
 // card. Previously a collapsed <details> that hid the rationale behind a click —
 // but the rationale is the core value of a recommendation (the #173 work made it
 // non-empty), so it is surfaced prominently rather than disclosed.
+import { Fragment } from "react";
+
+import { segmentRationale } from "@/lib/glossary";
+
+import { GlossaryTerm } from "./GlossaryTerm";
 
 interface WhyDisclosureProps {
   rationale: string | null;
@@ -41,7 +46,17 @@ export function WhyDisclosure({ rationale }: WhyDisclosureProps) {
       </h3>
       <div className="mt-2 space-y-2 text-sm leading-relaxed text-brand-slate-700 dark:text-brand-slate-200">
         {lines.map((line, index) => (
-          <p key={index}>{line}</p>
+          <p key={index}>
+            {segmentRationale(line).map((segment, segmentIndex) =>
+              segment.term && segment.definition ? (
+                <GlossaryTerm key={segmentIndex} definition={segment.definition}>
+                  {segment.text}
+                </GlossaryTerm>
+              ) : (
+                <Fragment key={segmentIndex}>{segment.text}</Fragment>
+              ),
+            )}
+          </p>
         ))}
       </div>
     </section>
