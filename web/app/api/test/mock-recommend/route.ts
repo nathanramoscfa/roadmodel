@@ -37,15 +37,22 @@ export async function POST(req: Request): Promise<Response> {
         )}]; api: [${apiProviders.join(", ")}].`
       : "";
 
+  // Realistic SessionCostEstimate shape (model_id/platform_id) so the T3 edge
+  // personalization (web/lib/funding.ts personalizeComparison) can resolve each
+  // row against the user's funding in E2E.
   const comparison = [
     {
-      model: "Claude 4.5 Haiku",
-      platform: "Claude Code",
+      model_name: "Claude 4.5 Haiku",
+      model_id: "claude-4.5-haiku",
+      platform_name: "Claude Code",
+      platform_id: "claude-code",
       total_usd: 0.01,
     },
     {
-      model: "Kimi K2.5",
-      platform: "Cursor",
+      model_name: "Kimi K2.5",
+      model_id: "kimi-k2.5",
+      platform_name: "Cursor",
+      platform_id: "cursor",
       total_usd: 0.005,
     },
   ];

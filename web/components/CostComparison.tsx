@@ -44,12 +44,38 @@ function subscriptionNote(row: Record<string, unknown>): string {
   return "Per-token";
 }
 
+// Phase 4.8 T3: when the edge has personalized the row to the user's funding it
+// carries `your_cost` (display string) + `funded` (boolean). Render that instead
+// of the generic funding label; otherwise fall back to subscriptionNote.
+function yourCostText(row: Record<string, unknown>): string {
+  return typeof row.your_cost === "string" ? row.your_cost : subscriptionNote(row);
+}
+
+function fundingCell(row: Record<string, unknown>, personalized: boolean) {
+  if (!personalized) {
+    return subscriptionNote(row);
+  }
+  if (row.funded === true) {
+    return (
+      <span className="font-medium text-green-600 dark:text-green-400">
+        ✓ {yourCostText(row)}
+      </span>
+    );
+  }
+  return yourCostText(row);
+}
+
 export function CostComparison({ comparisonTable }: CostComparisonProps) {
   if (comparisonTable.length === 0) {
     return null;
   }
 
   const showModelColumn = comparisonTable.length > 1;
+  // Personalized rows carry a `your_cost` string (Phase 4.8 T3). When present,
+  // the column shows the user's own cost; otherwise it shows generic funding.
+  const personalized = comparisonTable.some(
+    (row) => typeof row.your_cost === "string",
+  );
 
   return (
     <div className="overflow-x-auto">
@@ -61,7 +87,7 @@ export function CostComparison({ comparisonTable }: CostComparisonProps) {
             ) : null}
             <th className="py-2 pr-3 font-medium">Platform</th>
             <th className="py-2 pr-3 font-medium">Per 1k tokens</th>
-            <th className="py-2 font-medium">Funding</th>
+            <th className="py-2 font-medium">{personalized ? "Your cost" : "Funding"}</th>
           </tr>
         </thead>
         <tbody>
@@ -82,7 +108,7 @@ export function CostComparison({ comparisonTable }: CostComparisonProps) {
                 {per1kCost(row)}
               </td>
               <td className="py-2 text-brand-slate-600 dark:text-brand-slate-300">
-                {subscriptionNote(row)}
+                {fundingCell(row, personalized)}
               </td>
             </tr>
           ))}
