@@ -1,27 +1,26 @@
-"""Daily Anthropic availability probe (Phase 4.9 B4).
+"""Daily model-availability probe (Phase 4.9 B4 + multi-provider extension).
 
-Invokes each Anthropic model in roadmodel's catalog with a 1-token request and
-classifies whether it is still callable. A model the API reports as
-**not-found** is added to ``infra/model-availability.json`` (so the recommender
-stops picking it WITHOUT a package release); a benched model that becomes callable
-again is removed (self-healing). The daily cron runs this and, when the JSON
-changes, opens an auto-PR for a human glance before it auto-merges + syncs to the
-table that the web recommend path reads.
+Checks each watched catalog model against its provider's live API and, when a
+model becomes not-found (pulled) or callable again (restored), edits
+``infra/model-availability.json`` so the recommender stops / resumes picking it
+WITHOUT a package release. The daily cron runs this and, on a change, opens an
+auto-PR for a human glance before it auto-merges + syncs to the table the web
+recommend path reads.
 
-Why invocation, not the model list: when Anthropic suspended Fable 5 (2026-06-12)
-the public model LIST still showed it — only an actual call was definitive.
+Per-provider strategy (each provider gated on its key — a missing key SKIPS that
+provider, never errors):
+  - anthropic: INVOCATION (1-token call). Its model LIST still showed Fable 5
+    after the 2026-06-12 suspension, so only an actual call was definitive.
+  - google / openai: MODEL LIST + longest-prefix match. Their ids carry version /
+    preview / variant suffixes (gemini-3-pro -> gemini-3-pro-preview), so an exact
+    id is brittle; matching each API id to its longest catalog-id prefix is robust
+    and free, and these providers have no export-control-suspension concern.
 
-FAIL-SAFE: only an explicit not-found classifies a model unavailable. Auth /
-rate-limit / 5xx / network errors classify as **ambiguous** and never bench a
-model, so a transient blip can't take a model offline. The auto-PR's human glance
-is the second backstop.
-
-Scope (v1): Anthropic only (its key is already a cron secret). The WATCH map below
-is the explicit roadmodel-id -> Anthropic-API-id list; a new Anthropic catalog
-model must be added here (a test asserts every WATCH id is a real catalog id).
-The probe runs from a US-based key, so an export-control suspension that is merely
-foreign-national-gated could read as available here — which is why Fable 5 also
-stays baked in <availability-context> as a belt-and-suspenders default.
+FAIL-SAFE: only an explicit not-found (invoke) or absence-from-the-list benches a
+model; auth / rate-limit / 5xx / network / a failed list fetch classify
+'ambiguous' and never change the file. The auto-PR's human glance is the backstop.
+A US-keyed probe can't see a purely foreign-national export gate, so Fable 5 also
+stays baked in <availability-context>.
 """
 
 from __future__ import annotations
@@ -39,23 +38,67 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 AVAILABILITY_JSON = REPO_ROOT / "infra" / "model-availability.json"
 
-# roadmodel catalog id -> Anthropic API model id. Keep in sync with the Anthropic
-# models in <model-options> (test_probe_availability asserts the ids are valid).
-WATCH: dict[str, str] = {
-    "claude-fable-5": "claude-fable-5",
-    "opus-4.8": "claude-opus-4-8",
-    "opus-4.7": "claude-opus-4-7",
-    "sonnet-4.6": "claude-sonnet-4-6",
-    "claude-4.5-haiku": "claude-haiku-4-5",
+# provider -> {"env", "strategy", "models"}. For "invoke", models maps catalog id
+# -> exact API id. For "list", models is the catalog ids (matched against the
+# provider's model list by longest prefix). Keep in sync with <model-options>
+# (a test asserts every id is a real catalog model).
+PROVIDERS: dict[str, dict[str, Any]] = {
+    "anthropic": {
+        "env": "ANTHROPIC_API_KEY",
+        "strategy": "invoke",
+        "models": {
+            "claude-fable-5": "claude-fable-5",
+            "opus-4.8": "claude-opus-4-8",
+            "opus-4.7": "claude-opus-4-7",
+            "sonnet-4.6": "claude-sonnet-4-6",
+            "claude-4.5-haiku": "claude-haiku-4-5",
+        },
+    },
+    "google": {
+        "env": "GOOGLE_API_KEY",
+        "strategy": "list",
+        "models": [
+            "gemini-2.5-flash",
+            "gemini-3-flash",
+            "gemini-3-pro",
+            "gemini-3.1-pro",
+            "gemini-3.5-flash",
+        ],
+    },
+    "openai": {
+        "env": "OPENAI_API_KEY",
+        "strategy": "list",
+        "models": [
+            "gpt-5",
+            "gpt-5-mini",
+            "gpt-5.1-codex",
+            "gpt-5.2",
+            "gpt-5.3-codex",
+            "gpt-5.4",
+            "gpt-5.4-mini",
+            "gpt-5.4-nano",
+            "gpt-5.5",
+        ],
+    },
 }
 
-_ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+
+def watch_ids() -> list[str]:
+    """Every catalog id the probe watches, across providers."""
+    out: list[str] = []
+    for cfg in PROVIDERS.values():
+        models = cfg["models"]
+        out.extend(models if isinstance(models, list) else list(models))
+    return out
+
+
+# --- invocation (Anthropic) ---
 
 
 def classify_probe(status: int, body: str) -> str:
-    """Map an Anthropic /v1/messages response to available|unavailable|ambiguous.
+    """Map an invocation response to available|unavailable|ambiguous.
 
-    Only an explicit not-found is 'unavailable'. Anything else non-200 (auth,
+    Only an explicit not-found is 'unavailable'; everything else non-200 (auth,
     rate-limit, 5xx, malformed) is 'ambiguous' — never bench on uncertainty.
     """
     if status == 200:
@@ -72,8 +115,8 @@ def classify_probe(status: int, body: str) -> str:
     return "ambiguous"
 
 
-def probe_model(api_id: str, key: str) -> str:
-    """Invoke a model with a 1-token request; return its availability class."""
+def probe_invoke(api_id: str, key: str) -> str:
+    """Anthropic 1-token invocation -> availability class."""
     payload = json.dumps(
         {"model": api_id, "max_tokens": 1, "messages": [{"role": "user", "content": "hi"}]}
     ).encode()
@@ -82,14 +125,89 @@ def probe_model(api_id: str, key: str) -> str:
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
     }
-    req = urllib.request.Request(_ANTHROPIC_URL, data=payload, headers=headers, method="POST")  # noqa: S310
+    req = urllib.request.Request(  # noqa: S310
+        "https://api.anthropic.com/v1/messages", data=payload, headers=headers, method="POST"
+    )
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
             return classify_probe(resp.status, "")
     except urllib.error.HTTPError as exc:
         return classify_probe(exc.code, exc.read().decode(errors="replace"))
     except (urllib.error.URLError, TimeoutError, OSError):
-        return "ambiguous"  # transient / network -> fail-safe
+        return "ambiguous"
+
+
+# --- model list (Google / OpenAI) ---
+
+
+def _http_get_json(url: str, headers: dict[str, str]) -> Any | None:
+    req = urllib.request.Request(url, headers=headers, method="GET")  # noqa: S310
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
+            return json.loads(resp.read())
+    except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError):
+        return None
+
+
+def fetch_model_list(provider: str, key: str) -> set[str] | None:
+    """Return the provider's live set of API model ids, or None on any error."""
+    if provider == "google":
+        url = f"https://generativelanguage.googleapis.com/v1beta/models?key={key}&pageSize=1000"
+        data = _http_get_json(url, {})
+        if not isinstance(data, dict):
+            return None
+        return {
+            str(m["name"]).removeprefix("models/")
+            for m in data.get("models", [])
+            if isinstance(m, dict) and m.get("name")
+        }
+    if provider == "openai":
+        data = _http_get_json(
+            "https://api.openai.com/v1/models", {"Authorization": f"Bearer {key}"}
+        )
+        if not isinstance(data, dict):
+            return None
+        return {str(m["id"]) for m in data.get("data", []) if isinstance(m, dict) and m.get("id")}
+    return None
+
+
+def _best_match(api_id: str, catalog_ids: list[str]) -> str | None:
+    """The longest catalog id that ``api_id`` belongs to (exact, or id + '-suffix').
+
+    Longest-match disambiguates e.g. 'gpt-5-mini-2026' -> 'gpt-5-mini' (not 'gpt-5')
+    and 'gemini-3-pro-preview' -> 'gemini-3-pro'.
+    """
+    best: str | None = None
+    for cid in catalog_ids:
+        if api_id == cid or api_id.startswith(cid + "-"):
+            if best is None or len(cid) > len(best):
+                best = cid
+    return best
+
+
+def availability_from_list(catalog_ids: list[str], api_ids: set[str]) -> dict[str, str]:
+    """Classify each catalog id available/unavailable by membership in the API list."""
+    covered: set[str] = set()
+    for api_id in api_ids:
+        match = _best_match(api_id, catalog_ids)
+        if match is not None:
+            covered.add(match)
+    return {cid: ("available" if cid in covered else "unavailable") for cid in catalog_ids}
+
+
+def probe_provider(provider: str, cfg: dict[str, Any], key: str) -> dict[str, str]:
+    """Return {catalog_id: class} for one provider's watched models."""
+    if cfg["strategy"] == "invoke":
+        models: dict[str, str] = cfg["models"]
+        return {cid: probe_invoke(api_id, key) for cid, api_id in models.items()}
+    catalog_ids: list[str] = cfg["models"]
+    listed = fetch_model_list(provider, key)
+    if listed is None:
+        return dict.fromkeys(catalog_ids, "ambiguous")  # fail-safe: list fetch failed
+    return availability_from_list(catalog_ids, listed)
+
+
+# --- reconcile (provider-agnostic, driven by probe results) ---
 
 
 def reconcile(
@@ -97,29 +215,30 @@ def reconcile(
 ) -> tuple[list[Any], list[str], list[str]]:
     """Apply probe results to the current ``unavailable`` entries.
 
-    - a WATCH id that probed 'unavailable' and isn't listed -> ADD (source=probe)
-    - a WATCH id that probed 'available' and IS listed       -> REMOVE (self-heal)
-    - 'ambiguous', and any non-WATCH entry, are left untouched
-    Returns (new_unavailable_list, added_ids, removed_ids).
+    Driven by ``results`` (only probed models), so a skipped provider (no key)
+    leaves its models untouched.
+      - probed 'unavailable' and not listed -> ADD (source=probe)
+      - probed 'available' and IS listed    -> REMOVE (self-heal)
+      - 'ambiguous' / not probed / non-watch entries -> left as-is
     """
     listed = {e["id"] for e in current if isinstance(e, dict) and e.get("id")}
     removed: list[str] = []
     new_list: list[Any] = []
     for entry in current:
         mid = entry.get("id") if isinstance(entry, dict) else None
-        if mid in WATCH and results.get(mid) == "available":
+        if mid is not None and results.get(mid) == "available":
             removed.append(mid)
             continue  # re-enabled
         new_list.append(entry)
     added: list[str] = []
-    for mid in WATCH:
-        if results.get(mid) == "unavailable" and mid not in listed:
+    for mid in sorted(results):
+        if results[mid] == "unavailable" and mid not in listed:
             new_list.append(
                 {
                     "id": mid,
                     "reason": (
-                        f"Auto-detected unavailable by the daily Anthropic probe on "
-                        f"{today} (the API returned model-not-found)."
+                        f"Auto-detected unavailable by the daily availability probe on "
+                        f"{today} (provider API reported not-found)."
                     ),
                     "since": today,
                     "source": "probe",
@@ -129,12 +248,19 @@ def reconcile(
     return new_list, sorted(added), sorted(removed)
 
 
-def run(path: Path, key: str, today: str, *, dry_run: bool) -> int:
-    data = json.loads(path.read_text(encoding="utf-8"))
-    results = {rm_id: probe_model(api_id, key) for rm_id, api_id in WATCH.items()}
-    for rm_id, cls in sorted(results.items()):
-        print(f"  probe {rm_id:18} -> {cls}")
+def run(path: Path, env: dict[str, str], today: str, *, dry_run: bool) -> int:
+    results: dict[str, str] = {}
+    for provider, cfg in PROVIDERS.items():
+        key = env.get(cfg["env"], "")
+        if not key:
+            print(f"[{provider}] no {cfg['env']} — skipped")
+            continue
+        provider_results = probe_provider(provider, cfg, key)
+        results.update(provider_results)
+        for cid, cls in sorted(provider_results.items()):
+            print(f"  [{provider}] {cid:18} -> {cls}")
 
+    data = json.loads(path.read_text(encoding="utf-8"))
     new_list, added, removed = reconcile(results, data.get("unavailable", []), today)
     print(f"add (now unavailable): {added or '(none)'}")
     print(f"remove (re-enabled):   {removed or '(none)'}")
@@ -151,17 +277,18 @@ def run(path: Path, key: str, today: str, *, dry_run: bool) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Probe Anthropic model availability.")
+    parser = argparse.ArgumentParser(description="Probe model availability across providers.")
     parser.add_argument("--dry-run", action="store_true", help="Probe + print plan; do not write.")
     parser.add_argument("--json", type=Path, default=AVAILABILITY_JSON)
     args = parser.parse_args(argv)
 
-    key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not key:
-        print("ANTHROPIC_API_KEY required.", file=sys.stderr)
+    env = dict(os.environ)
+    if not any(env.get(cfg["env"]) for cfg in PROVIDERS.values()):
+        keys = [cfg["env"] for cfg in PROVIDERS.values()]
+        print(f"No provider API key present (need at least one of {keys}).", file=sys.stderr)
         return 2
     today = datetime.datetime.now(tz=datetime.timezone.utc).date().isoformat()
-    return run(args.json, key, today, dry_run=args.dry_run)
+    return run(args.json, env, today, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":
