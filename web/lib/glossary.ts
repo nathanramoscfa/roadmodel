@@ -24,12 +24,31 @@ interface GlossaryEntry {
 
 const TIER_SCALE = "Per-category quality rating: S (best) → D (worst).";
 
-const ENTRIES: GlossaryEntry[] = [
-  { term: "S-tier", definition: `Top-1 or top-2 globally in this task category. ${TIER_SCALE}`, phrases: ["S-tier"] },
-  { term: "A-tier", definition: `Strong, reliable, near-frontier in this category. ${TIER_SCALE}`, phrases: ["A-tier"] },
-  { term: "B-tier", definition: `Competent for this category. ${TIER_SCALE}`, phrases: ["B-tier"] },
-  { term: "C-tier", definition: `Limited — usable only for trivial work in this category. ${TIER_SCALE}`, phrases: ["C-tier"] },
-  { term: "D-tier", definition: `Not suited for this category. ${TIER_SCALE}`, phrases: ["D-tier"] },
+// Per-category rating scale — the single source for the rationale's tier popovers
+// AND the /docs rating table. Each model is rated S→D in seven categories.
+export interface RatingRow {
+  rating: string;
+  meaning: string;
+}
+export const RATING_SCALE: RatingRow[] = [
+  { rating: "S", meaning: "Top-1 or top-2 globally in this category." },
+  { rating: "A", meaning: "Strong, reliable, near-frontier." },
+  { rating: "B", meaning: "Competent." },
+  { rating: "C", meaning: "Limited — usable only for trivial work." },
+  { rating: "D", meaning: "Not suited for this category." },
+];
+
+// Tier popovers derive from RATING_SCALE; the term links to the rating-scale doc.
+const TIER_ENTRIES: GlossaryEntry[] = RATING_SCALE.map((row) => ({
+  term: `${row.rating}-tier`,
+  definition: `${row.meaning} ${TIER_SCALE}`,
+  phrases: [`${row.rating}-tier`],
+  url: "/docs#ratings",
+}));
+
+// The benchmarks the recommender cites — also exported for the /docs page + the
+// /recommend reference panel (each has its verified source url).
+const BENCHMARK_ENTRIES: GlossaryEntry[] = [
   {
     term: "LMArena",
     definition: "Human-preference Elo ranking across general chat.",
@@ -113,6 +132,11 @@ const ENTRIES: GlossaryEntry[] = [
     url: "https://cursor.com/blog/cursorbench",
   },
 ];
+
+// The benchmarks index, for the /docs page + the /recommend reference panel.
+export const BENCHMARKS = BENCHMARK_ENTRIES;
+
+const ENTRIES: GlossaryEntry[] = [...TIER_ENTRIES, ...BENCHMARK_ENTRIES];
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
