@@ -49,7 +49,11 @@ export function WhyDisclosure({ rationale }: WhyDisclosureProps) {
           <p key={index}>
             {segmentRationale(line).map((segment, segmentIndex) =>
               segment.term && segment.definition ? (
-                <GlossaryTerm key={segmentIndex} definition={segment.definition}>
+                <GlossaryTerm
+                  key={segmentIndex}
+                  definition={segment.definition}
+                  url={segment.url}
+                >
                   {segment.text}
                 </GlossaryTerm>
               ) : (

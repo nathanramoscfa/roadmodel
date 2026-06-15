@@ -160,6 +160,11 @@ test("renders the rationale as readable lines with glossary popovers (#270, #269
   await expect(
     tooltips.filter({ hasText: "gold standard for software-engineering" }),
   ).toHaveCount(1);
+  // Benchmark terms link to their canonical, up-to-date source (opens in a new
+  // tab). "S-tier" is a rating, not a benchmark, so it stays a definable span.
+  const swebench = why.getByRole("link", { name: "SWE-bench Verified" });
+  await expect(swebench).toHaveAttribute("href", "https://www.swebench.com/");
+  await expect(swebench).toHaveAttribute("target", "_blank");
 });
 
 test("frontier-tier recommendation shows the quality-tier label (no upgrade CTA)", async ({
