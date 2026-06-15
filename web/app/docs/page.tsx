@@ -34,7 +34,7 @@ export default function DocsPage() {
           </h2>
           <div className="mt-2 space-y-3 text-brand-slate-600 dark:text-brand-slate-300">
             <p>
-              Describe your task and roadmodel recommends a <strong>model</strong>,
+              Input your prompt and roadmodel recommends a <strong>model</strong>,
               the <strong>platform</strong> to run it on, the{" "}
               <strong>settings</strong> (Max Mode, thinking level), and an estimated{" "}
               <strong>cost</strong> &mdash; with a plain-English rationale. A{" "}
