@@ -17,11 +17,12 @@ const NAV_LINKS: { href: string; label: string }[] = [
   { href: "/roadmap", label: "Roadmap" },
   { href: "/history", label: "History" },
   { href: "/settings", label: "Settings" },
+  { href: "/docs", label: "Docs" },
 ];
 
 // Route prefixes the app nav appears on. Everything else (/, /login,
 // /onboarding, /callback, /gate, /signout, /privacy, /terms) renders without it.
-const APP_PREFIXES = ["/recommend", "/roadmap", "/history", "/settings"];
+const APP_PREFIXES = ["/recommend", "/roadmap", "/history", "/settings", "/docs"];
 
 export function AppNav({ roadmapEnabled }: { roadmapEnabled: boolean }) {
   const pathname = usePathname();
