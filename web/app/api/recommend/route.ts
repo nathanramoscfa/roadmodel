@@ -1,6 +1,7 @@
 // web/app/api/recommend/route.ts
 import { NextResponse } from "next/server";
 import { writeAudit, type AuditOutcome } from "@/lib/audit";
+import { getUnavailableModelIds } from "@/lib/availability";
 import { getServerSession } from "@/lib/auth";
 import { isE2eAuthEnabled } from "@/lib/e2e-mode";
 import {
@@ -310,10 +311,16 @@ const handler = async (req: Request): Promise<Response> =>
     void body;
     void session;
 
+    // Phase 4.9 B2: forward the runtime unavailable-model ids so the selector
+    // excludes a benched model (Step 0a) without a roadmodel release. Cached +
+    // fail-open (empty on any error) — never blocks a recommendation.
+    const unavailableModels = await getUnavailableModelIds();
+
     const upstreamPayload = {
       task_description: taskDescription,
       context: {
         ...incomingContext,
+        unavailable_models: unavailableModels,
         budget_priority: budgetPriority,
         allowed_jurisdictions: allowedJurisdictions,
         // Phase 4.8 T2b (#163): forward the user's declared funding so the

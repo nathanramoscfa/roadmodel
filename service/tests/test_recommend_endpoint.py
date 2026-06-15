@@ -635,6 +635,73 @@ def test_funding_context_is_threaded_to_recommend_structured(
     assert captured["user_context_text"] == "SENTINEL-FUNDING-CONTEXT"
 
 
+def test_unavailable_models_threaded_to_recommend_structured(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Phase 4.9 B2: the runtime unavailable-ids the web edge forwards in context
+    reach recommend_structured as the Step-0a override, cleaned (blanks /
+    non-strings dropped, order preserved)."""
+    recommend_module = importlib.import_module("app.recommend")
+    captured: dict[str, Any] = {}
+
+    def _fake_recommend_structured(
+        prompt: str,
+        config: Any,
+        *,
+        user_context_text: str | None = None,
+        unavailable_models: list[str] | None = None,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        max_mode: bool = False,
+        max_output_tokens: int | None = None,
+        thinking_budget: int | None = None,
+        temperature: float | None = None,
+    ) -> dict[str, Any]:
+        captured["unavailable_models"] = unavailable_models
+        return dict(_RECOMMEND_DICT)
+
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
+
+    ctx = {"unavailable_models": ["claude-fable-5", "  ", 123, "gpt-x"]}
+    response = client.post(
+        "/v1/recommend", json={"task_description": "pick a model", "context": ctx}
+    )
+
+    assert response.status_code == 200
+    assert captured["unavailable_models"] == ["claude-fable-5", "gpt-x"]
+
+
+def test_no_unavailable_models_passes_none(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """No unavailable_models in context (legacy / direct caller) -> None, so only
+    the bundled <availability-context> defaults apply."""
+    recommend_module = importlib.import_module("app.recommend")
+    captured: dict[str, Any] = {}
+
+    def _fake_recommend_structured(
+        prompt: str,
+        config: Any,
+        *,
+        user_context_text: str | None = None,
+        unavailable_models: list[str] | None = None,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        max_mode: bool = False,
+        max_output_tokens: int | None = None,
+        thinking_budget: int | None = None,
+        temperature: float | None = None,
+    ) -> dict[str, Any]:
+        captured["unavailable_models"] = unavailable_models
+        return dict(_RECOMMEND_DICT)
+
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
+    client.post("/v1/recommend", json={"task_description": "x"})
+    assert captured["unavailable_models"] is None
+
+
 def test_no_funding_passes_none_user_context(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,

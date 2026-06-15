@@ -215,6 +215,25 @@ def _provider_chain(context: dict[str, Any] | None) -> tuple[str, ...]:
     return _FALLBACK_CHAIN
 
 
+def _unavailable_models_from_request(context: dict[str, Any] | None) -> list[str] | None:
+    """Pull the runtime unavailable-model id list the web edge forwards in context.
+
+    The web /api/recommend route reads the `model_availability` table and forwards
+    the unavailable ids here; we hand them to recommend_structured as a runtime
+    Step-0a override (roadmodel >=0.2.9). Defensive: only non-empty strings are
+    honored; anything else -> None (no override, the bundled <availability-context>
+    defaults still apply). Fail-open by design — a missing/garbled list never
+    blocks a recommendation, it just falls back to the static defaults.
+    """
+    if not context:
+        return None
+    raw = context.get("unavailable_models")
+    if not isinstance(raw, list):
+        return None
+    ids = [s.strip() for s in raw if isinstance(s, str) and s.strip()]
+    return ids or None
+
+
 def recommend(req: RecommendRequest) -> RecommendResponse:
     last_error: Exception | None = None
 
@@ -224,6 +243,11 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
     # declares no funding (anon/free) -> recommend_structured falls back to the
     # bundled template, leaving that path unchanged.
     user_context_text = user_context_from_request(req.context)
+    # Runtime availability override (Phase 4.9 B2): the web edge forwards the
+    # model_availability unavailable-ids so a benched model is excluded without a
+    # roadmodel release. Provider-independent, so resolve once. None for legacy /
+    # direct callers -> only the bundled <availability-context> defaults apply.
+    unavailable_models = _unavailable_models_from_request(req.context)
 
     for hint in _provider_chain(req.context):
         config = _config_for_hint(hint)
@@ -250,6 +274,7 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
                 req.task_description,
                 config,
                 user_context_text=user_context_text,
+                unavailable_models=unavailable_models,
                 max_output_tokens=max_output_tokens,
                 thinking_budget=thinking_budget,
                 temperature=temperature,
