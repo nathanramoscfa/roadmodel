@@ -159,6 +159,15 @@ category and complexity; `PLATFORM` and `THINKING` are filled by the
 `<access-selection>` step, which depends on the subscriptions and
 API-key state declared in your `user-context.md`.
 
+## Benchmarks & ratings
+
+Each model carries a per-category capability rating on an **S → D** scale, and the
+recommender grounds its rationale in public benchmarks (SWE-bench Verified, τ²-bench,
+Terminal-Bench, Humanity's Last Exam, and more). See
+[**docs/benchmarks-and-ratings.md**](docs/benchmarks-and-ratings.md) for what the
+scale means and a linked index of every benchmark the recommender cites — in the web
+app, each benchmark term in a recommendation's rationale links straight to its source.
+
 ## Project status
 
 roadmodel is in **Phase 1** — the open-source CLI release. Phase 2
