@@ -43,9 +43,13 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Probe Anthropic model availability
+      - name: Probe model availability (Anthropic / Google / OpenAI)
+        # Each provider is gated on its key; a secret that is unset (e.g. OpenAI
+        # until a key is added) simply skips that provider, never errors.
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           python update/probe_availability.py \
             ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}
