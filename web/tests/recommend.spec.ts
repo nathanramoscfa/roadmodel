@@ -12,6 +12,16 @@ test("/recommend renders form + empty output", async ({ page }) => {
   await expect(
     page.getByText(/Your recommendation will appear here/i),
   ).toBeVisible();
+  // The benchmarks & ratings reference panel fills the left column under Submit.
+  await expect(
+    page.getByRole("heading", { name: /Benchmarks & ratings/i }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Full reference/i }),
+  ).toHaveAttribute("href", "/docs");
+  await expect(
+    page.getByRole("link", { name: "SWE-bench Verified" }).first(),
+  ).toHaveAttribute("href", "https://www.swebench.com/");
 });
 
 test(
