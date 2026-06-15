@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.8] — 2026-06-14
+
+### Changed
+
+- **The recommender no longer recommends unavailable models.** The bundled
+  `model-selector.txt` gains an editorial `<availability-context>` block and a
+  `<selection-algorithm>` **Step 0a** pre-filter (mirroring the jurisdiction
+  filter) that drops listed model ids from the candidate set before quality
+  ranking. **`claude-fable-5` (Claude Fable 5) is marked unavailable** —
+  Anthropic suspended access on 2026-06-12 under a US export-control directive —
+  so the recommender returns the next-best available model instead. The model's
+  catalog entry and tier ratings are retained for reference; it is excluded only
+  at selection time, so re-enabling is a one-line edit (#276).
+
+### Added
+
+- **Optional `BACKUP` recommendation field.** The bundled selector's
+  `<output-format>` now emits a `BACKUP` line (**Step 7** of the selection
+  algorithm) naming the next-best *available* model — preferably a different
+  provider/family — to fall back to when the primary is unavailable to the user.
+  `parse_response` captures it as an OPTIONAL field (kept out of
+  `_REQUIRED_KEYS`, mirroring `ORCHESTRATION`), so a provider that omits it or
+  emits `None` still parses with no error; `recommend_structured` surfaces it
+  when present (#277).
+
+  Like all bundled-selector changes, both of the above reach the recommendation
+  LLM only via this release.
+
 ## [0.2.7] — 2026-06-13
 
 ### Changed
