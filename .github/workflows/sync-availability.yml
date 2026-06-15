@@ -1,0 +1,42 @@
+name: sync-availability
+
+# Phase 4.9 B3 — reconcile infra/model-availability.json into the Supabase
+# model_availability table whenever the source of truth changes on main (or on a
+# manual dispatch). The web recommend path reads that table and excludes benched
+# models without a roadmodel release. The script is stdlib-only (no pip install)
+# and idempotent; a no-op run when nothing changed is harmless.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/model-availability.json"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Print the reconcile plan without writing to Supabase."
+        type: boolean
+        default: false
+
+concurrency:
+  group: sync-availability
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Sync model-availability.json -> Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          python update/sync_availability.py \
+            ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}
