@@ -1,0 +1,73 @@
+name: probe-availability
+
+# Phase 4.9 B4 — daily Anthropic availability probe. Invokes each Anthropic
+# catalog model with a 1-token request; a model the API reports not-found is added
+# to infra/model-availability.json, a benched model that becomes callable again is
+# removed (self-heal). When the JSON changes it opens an auto-PR (glance, then it
+# auto-merges); merging triggers sync-availability.yml, which writes the table the
+# recommender reads — so a benched model is excluded WITHOUT a roadmodel release.
+#
+# Reads public-ish provider state only: the existing ANTHROPIC_API_KEY cron secret
+# (already used by the catalog cron). No new secrets.
+
+on:
+  schedule:
+    - cron: "0 21 * * *" # daily 21:00 UTC (staggered after the DeepSeek cron @20:00)
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Probe + print the plan; do not write the JSON or open a PR."
+        type: boolean
+        default: false
+
+concurrency:
+  group: probe-availability
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Probe Anthropic model availability
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python update/probe_availability.py \
+            ${{ (github.event_name == 'workflow_dispatch' && inputs.dry_run) && '--dry-run' || '' }}
+
+      - name: Open auto-PR if availability changed
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          if git diff --quiet -- infra/model-availability.json; then
+            echo "No availability change — nothing to open."
+            exit 0
+          fi
+          DATE="$(date -u +%Y-%m-%d)"
+          BRANCH="auto/availability-${DATE}-${{ github.run_id }}"
+          git config user.name "roadmodel-bot"
+          git config user.email "roadmodel-bot@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add infra/model-availability.json
+          git commit -m "chore(availability): probe-detected availability change (${DATE})"
+          git push -u origin "$BRANCH"
+          PR_URL="$(gh pr create \
+            --title "chore(availability): probe-detected model availability change (${DATE})" \
+            --body "$(printf '## Summary\n\nThe daily Anthropic availability probe detected a change and updated `infra/model-availability.json`. On merge, `sync-availability.yml` writes it to the `model_availability` table the recommender reads.\n\n**Glance, then it auto-merges.** In the diff, an ADD benches a model (the probe got model-not-found); a REMOVE re-enables one (the probe succeeded). A change only happens on an explicit not-found / success — transient, auth, and rate-limit errors classify as ambiguous and never edit the file.\n\nProbe: `update/probe_availability.py` (1-token invocation per Anthropic catalog model). Opened automatically by `.github/workflows/probe-availability.yml`. To stop: `gh pr merge --disable-auto`.')")"
+          gh pr merge --auto --squash --delete-branch "$PR_URL"
