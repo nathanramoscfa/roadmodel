@@ -46,6 +46,12 @@ pip-wheel-metadata/
 # source of truth alongside docs/.
 /src/roadmodel/data/
 
+# Supabase CLI working dir: .temp/ holds the linked-project pooler URL (a DB
+# connection SECRET) and project ref; migrations is a symlink to the canonical
+# tracked infra/supabase/migrations/. Never commit this dir — `supabase db push`
+# still reads it from disk. (Guards against an accidental `git add -A` leak.)
+/supabase/
+
 # Update run artifacts (transient outputs of update_models.py)
 update/.last-summary.txt
 update/.last-warnings.txt
