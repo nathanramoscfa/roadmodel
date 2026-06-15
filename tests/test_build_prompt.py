@@ -58,6 +58,31 @@ def test_build_prompt_wraps_user_prompt_as_input() -> None:
     assert task == "<task-to-classify>\nbuild a SQL agent\n</task-to-classify>"
 
 
+def test_build_prompt_injects_runtime_availability_override() -> None:
+    """A runtime unavailable_models list adds a Step-0a override naming each id —
+    the hook the SaaS service uses to bench a model without a package release."""
+    system, _task = build_prompt(
+        "pick a model",
+        user_context_text=_UCTX,
+        unavailable_models=["claude-fable-5", "some-other-id"],
+    )
+    assert "RUNTIME AVAILABILITY OVERRIDE" in system
+    assert "Step 0a" in system
+    assert "claude-fable-5" in system
+    assert "some-other-id" in system
+
+
+def test_build_prompt_no_override_without_unavailable_models() -> None:
+    """No runtime list (the default, and every CLI/MCP call) → no override section;
+    an empty or whitespace-only list is also a no-op."""
+    base, _ = build_prompt("pick a model", user_context_text=_UCTX)
+    assert "RUNTIME AVAILABILITY OVERRIDE" not in base
+    empty, _ = build_prompt("pick a model", user_context_text=_UCTX, unavailable_models=[])
+    assert "RUNTIME AVAILABILITY OVERRIDE" not in empty
+    blank, _ = build_prompt("pick a model", user_context_text=_UCTX, unavailable_models=["  "])
+    assert "RUNTIME AVAILABILITY OVERRIDE" not in blank
+
+
 def test_strip_ide_framing_is_targeted_and_idempotent() -> None:
     # No-op on text without the framing tags.
     plain = "<model-selector>\n  <objective>x</objective>\n</model-selector>"
