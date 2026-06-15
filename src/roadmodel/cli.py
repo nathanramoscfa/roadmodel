@@ -152,6 +152,9 @@ def _ascii_cost_table(rows: list[dict[str, Any]]) -> str:
 
 def _format_structured_text(payload: dict[str, Any]) -> str:
     lines: list[str] = [f"{payload['model']} — {payload['platform']}"]
+    backup = payload.get("backup")
+    if backup:
+        lines.append(f"Backup if unavailable: {backup}")
     lines.extend(_settings_text_lines(dict(payload["settings"])))
     lines.append("")
     lines.append(textwrap.fill(str(payload["rationale"]), width=80))

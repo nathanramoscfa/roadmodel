@@ -33,6 +33,16 @@ RESPONSE_GPT_TEST_CODEX = (
     "RATIONALE: Fixture rationale for structured CLI tests.\n"
 )
 
+RESPONSE_WITH_BACKUP = (
+    "MODEL: Opus 4.8\n"
+    "BACKUP: GPT-5.5\n"
+    "PLATFORM: Claude Code\n"
+    "MAX MODE: Off\n"
+    "THINKING: High\n"
+    "CONVERSATION: New\n"
+    "RATIONALE: Fixture rationale with a backup model.\n"
+)
+
 
 def _runner() -> CliRunner:
     return CliRunner()
@@ -708,6 +718,50 @@ def test_recommend_structured_output(monkeypatch: pytest.MonkeyPatch, tmp_path: 
     assert full["session_cost_estimate"]["total_usd"] == 7.0
     assert full["comparison_table"] is not None
     assert len(full["comparison_table"]) == 3
+
+
+def test_recommend_text_output_shows_backup(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The default (structured) CLI text output renders the BACKUP model when the
+    selector emits one — parity with the web app's "Backup if unavailable" line.
+    The no-backup fixtures above never render the line (it's absent-safe)."""
+    _clear_provider_env(monkeypatch)
+    _set_isolated_home(monkeypatch, tmp_path)
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "anthropic-test")
+    _cost_fixture_env(monkeypatch)
+
+    context_path = tmp_path / "xdg" / "roadmodel" / "user-context.md"
+    context_path.parent.mkdir(parents=True, exist_ok=True)
+    context_path.write_text(
+        FIXTURE_COST_USER_CONTEXT_PATH.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    class BackupAdapter:
+        def recommend(
+            self,
+            prompt: str,
+            system: str,
+            *,
+            model: str | None = None,
+            api_key: str,
+            max_output_tokens: int | None = None,
+            thinking_budget: int | None = None,
+            temperature: float | None = None,
+        ) -> str:
+            return RESPONSE_WITH_BACKUP
+
+    monkeypatch.setitem(recommend_module.PROVIDER_ADAPTERS, "anthropic", BackupAdapter())
+
+    text = _runner().invoke(cli, ["recommend", "build a SQL agent"])
+    assert text.exit_code == 0, text.stderr
+    assert "Backup if unavailable: GPT-5.5" in text.stdout
+
+    js = _runner().invoke(cli, ["recommend", "--output", "json", "build a SQL agent"])
+    assert js.exit_code == 0, js.stderr
+    assert json.loads(js.stdout)["backup"] == "GPT-5.5"
 
 
 def test_recommend_legacy_flag(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
