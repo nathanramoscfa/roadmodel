@@ -87,9 +87,18 @@ def _recommend_structured_with_prompts(
     original_build_prompt = recommender.build_prompt
     forced_user_prompt = user_prompt
 
-    def _build_prompt_override(user_prompt: str, *, user_context_text: str) -> tuple[str, str]:
+    def _build_prompt_override(
+        user_prompt: str,
+        *,
+        user_context_text: str,
+        unavailable_models: list[str] | None = None,
+    ) -> tuple[str, str]:
+        # Signature must match recommender.build_prompt. The MCP path forces a
+        # fully pre-built system prompt, so all build inputs (incl. the runtime
+        # unavailable_models override) are intentionally ignored here.
         del user_prompt
         del user_context_text
+        del unavailable_models
         return system_prompt, forced_user_prompt
 
     recommender.build_prompt = _build_prompt_override

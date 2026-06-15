@@ -124,21 +124,46 @@ _SAAS_HEADER: Final = (
 )
 
 
-def build_prompt(user_prompt: str, *, user_context_text: str) -> tuple[str, str]:
+def _runtime_availability_note(unavailable_models: list[str] | None) -> str | None:
+    """Render a runtime Step-0a override listing additionally-unavailable model ids.
+
+    Returns ``None`` when there is nothing to add. An embedding caller (the SaaS
+    service) supplies this list from a RUNTIME source — a provider-availability
+    probe writes it, the service reads it per request — so a model can be benched
+    (or un-benched) WITHOUT a package release. The bundled ``<availability-context>``
+    stays as the static, always-applied default; this note layers on top of it.
+    """
+    if not unavailable_models:
+        return None
+    ids = ", ".join(sorted({m.strip() for m in unavailable_models if m.strip()}))
+    if not ids:
+        return None
+    return (
+        "RUNTIME AVAILABILITY OVERRIDE (highest priority, applied on top of the "
+        "<availability-context> defaults): the model ids below are CURRENTLY "
+        "UNAVAILABLE. Apply Step 0a of the selection algorithm to each — NEVER "
+        "recommend it as MODEL or BACKUP; return the next-best available model "
+        f"instead. Unavailable ids: {ids}."
+    )
+
+
+def build_prompt(
+    user_prompt: str,
+    *,
+    user_context_text: str,
+    unavailable_models: list[str] | None = None,
+) -> tuple[str, str]:
     selector_text = _strip_ide_framing(
         _read_bundled_doc(BUNDLED_SELECTOR_PATH, "model-selector.txt")
     )
     tier_cost_text = _read_bundled_doc(BUNDLED_TIER_COST_PATH, "model-tier-cost-scale.md")
     _ = _read_bundled_doc(BUNDLED_USER_CONTEXT_TEMPLATE_PATH, "user-context.example.md")
 
-    system = "\n\n".join(
-        [
-            _SAAS_HEADER,
-            selector_text,
-            tier_cost_text,
-            user_context_text,
-        ]
-    )
+    sections = [_SAAS_HEADER, selector_text, tier_cost_text, user_context_text]
+    runtime_note = _runtime_availability_note(unavailable_models)
+    if runtime_note is not None:
+        sections.append(runtime_note)
+    system = "\n\n".join(sections)
     # Wrap the user prompt so the model sees it as delimited INPUT, not an
     # instruction to execute (reinforces the header's classify-don't-perform rule).
     task = f"<task-to-classify>\n{user_prompt.strip()}\n</task-to-classify>"
@@ -194,6 +219,7 @@ def recommend(
     config: Config,
     *,
     user_context_text: str | None = None,
+    unavailable_models: list[str] | None = None,
     max_output_tokens: int | None = None,
     thinking_budget: int | None = None,
     temperature: float | None = None,
@@ -204,12 +230,20 @@ def recommend(
     # per-request, per-user funding context instead of the on-disk file. When
     # None (the default, and every CLI/MCP call), behavior is unchanged: the
     # file at config.user_context_path is read as before.
+    #
+    # unavailable_models layers a RUNTIME Step-0a override on top of the bundled
+    # <availability-context> (see _runtime_availability_note); the SaaS service
+    # passes a probe-maintained list so a model can be benched without a release.
     resolved_user_context = (
         user_context_text
         if user_context_text is not None
         else user_context.read(config.user_context_path)
     )
-    system_prompt, user_prompt = build_prompt(prompt, user_context_text=resolved_user_context)
+    system_prompt, user_prompt = build_prompt(
+        prompt,
+        user_context_text=resolved_user_context,
+        unavailable_models=unavailable_models,
+    )
     adapter = PROVIDER_ADAPTERS[config.provider]
     raw_response = adapter.recommend(
         user_prompt,
@@ -251,6 +285,7 @@ def recommend_structured(
     config: Config,
     *,
     user_context_text: str | None = None,
+    unavailable_models: list[str] | None = None,
     input_tokens: int | None = None,
     output_tokens: int | None = None,
     max_mode: bool = False,
@@ -263,11 +298,16 @@ def recommend_structured(
     ``user_context_text`` is forwarded to :func:`recommend`: when provided it
     overrides the on-disk user-context file (see ``recommend``); when ``None``
     the file at ``config.user_context_path`` is read as before.
+
+    ``unavailable_models`` is forwarded to :func:`recommend`: a RUNTIME list of
+    model ids to exclude (Step 0a) on top of the bundled ``<availability-context>``
+    defaults, so an embedding caller can bench a model without a package release.
     """
     base = recommend(
         prompt,
         config,
         user_context_text=user_context_text,
+        unavailable_models=unavailable_models,
         max_output_tokens=max_output_tokens,
         thinking_budget=thinking_budget,
         temperature=temperature,
