@@ -29,8 +29,10 @@ export function RatingScale({ id, compact = false }: { id?: string; compact?: bo
       <p className="mt-2 text-brand-slate-600 dark:text-brand-slate-300">
         Every model is rated in seven categories &mdash; coding, planning, agentic,
         multimodal, long-context, knowledge, and speed &mdash; on an{" "}
-        <strong>S&nbsp;&rarr;&nbsp;D</strong> scale. The selection algorithm sets a
-        minimum required rating from the prompt&rsquo;s complexity, then picks the
+        <strong>S&nbsp;&rarr;&nbsp;D</strong> scale &mdash; <strong>S</strong> is the
+        top &ldquo;tier-list&rdquo; rank, a step above A (the gaming convention for
+        the genuine best), then A, B, C, D. The selection algorithm sets a minimum
+        required rating from the prompt&rsquo;s complexity, then picks the
         highest-rated available model that clears it.
       </p>
       <dl className="mt-4 divide-y divide-brand-slate-200 dark:divide-brand-slate-700 rounded-lg border border-brand-slate-200 dark:border-brand-slate-700">

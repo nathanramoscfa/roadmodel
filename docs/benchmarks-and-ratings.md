@@ -11,7 +11,9 @@ rating scale the recommender uses and the benchmarks it cites in its rationale.
 ## Rating scale
 
 Every model carries a rating in each of seven categories — **coding, planning,
-agentic, multimodal, long-context, knowledge, speed** — on an **S → D** scale:
+agentic, multimodal, long-context, knowledge, speed** — on an **S → D** scale.
+**S** is the top "tier-list" rank, a step above A (the gaming convention for the
+genuine best), then A, B, C, D:
 
 | Rating | Meaning |
 |:------:|---------|
