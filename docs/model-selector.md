@@ -693,7 +693,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 
 - **Pricing:** Input $5.00/M · Output $25.00/M
 - **Tier ratings:** Coding **S** · Planning **S** · Agentic **A** · Multimodal **A** · Long-context **S** · Knowledge **S** · Speed **D**
-- **Headline benchmarks:** AA Intelligence Index 57.3 (#2); LMArena Text #6 (Elo 1480.4); LMArena WebDev #2 (Elo 1556.5); AA-Omniscience 26.2 (#2)
+- **Headline benchmarks:** AA Intelligence Index 57.3 (#2); LMArena Text #6 (Elo 1480.4); LMArena WebDev #2 (Elo 1556.6); AA-Omniscience 26.2 (#2)
 - **Pricing notes:** Hidden by default; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)
 - **Best for:** Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching
 
@@ -727,7 +727,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 
 - **Pricing:** Input $3.00/M · Output $15.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 51.7; LMArena WebDev Elo 1522.2 (#10); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage
+- **Headline benchmarks:** AA Intelligence Index 51.7; LMArena WebDev Elo 1522.6 (#10); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage
 - **Pricing notes:** Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)
 - **Best for:** Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation
 
@@ -1703,7 +1703,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="S" tier-planning="S" tier-agentic="A"
              tier-multimodal="A" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 57.3 (#2); LMArena Text #6 (Elo 1480.4); LMArena WebDev #2 (Elo 1556.5); AA-Omniscience 26.2 (#2)"
+             headline-benchmarks="AA Intelligence Index 57.3 (#2); LMArena Text #6 (Elo 1480.4); LMArena WebDev #2 (Elo 1556.6); AA-Omniscience 26.2 (#2)"
              pricing-notes="Hidden by default; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)"
              best-for="Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching" />
       <model id="opus-4.8" name="Opus 4.8"
@@ -1741,7 +1741,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="A" tier-planning="A" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 51.7; LMArena WebDev Elo 1522.2 (#10); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage"
+             headline-benchmarks="AA Intelligence Index 51.7; LMArena WebDev Elo 1522.6 (#10); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage"
              pricing-notes="Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)"
              best-for="Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation" />
       <model id="gpt-5.4" name="GPT-5.4"
@@ -2208,12 +2208,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       - Never sacrifice quality to save cost — the cost step is a true-tie
         resolver, not a downgrade trigger.
       - For PRIMARY = `multimodal`, only consider models with tier-multimodal
-        of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro at S; sonnet-4.6, gpt-5.4, opus-4.7, opus-4.8, gpt-5.5 at A).
+        of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro, claude-fable-5 at S; sonnet-4.6, gpt-5.4, opus-4.7, opus-4.8, gpt-5.5 at A).
       - For PRIMARY = `long-context`, prefer models with native large
         context (opus-4.7 1M, opus-4.8 1M, gemini-3.1-pro 1M, grok-4.3 2M) over forcing
         a smaller-context model into Max Mode truncation.
       - For PRIMARY = `coding` at S-tier requirement, the candidate set is
-        gpt-5.1-codex, gpt-5.3-codex, opus-4.7, opus-4.8, gpt-5.5; cost tie-breaker favors
+        claude-fable-5, gpt-5.1-codex, gpt-5.3-codex, opus-4.7, opus-4.8, gpt-5.5; cost tie-breaker favors
         gpt-5.1-codex when the ratings are equivalent for the prompt.
       - Default to composer-2 for routine multi-file implementation when a
         coding-A rating suffices; escalate only on a concrete capability
@@ -2649,7 +2649,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="S" tier-planning="S" tier-agentic="A"
              tier-multimodal="A" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 57.3 (#2); LMArena Text #6 (Elo 1480.4); LMArena WebDev #2 (Elo 1556.5); AA-Omniscience 26.2 (#2)"
+             headline-benchmarks="AA Intelligence Index 57.3 (#2); LMArena Text #6 (Elo 1480.4); LMArena WebDev #2 (Elo 1556.6); AA-Omniscience 26.2 (#2)"
              pricing-notes="Hidden by default; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)"
              best-for="Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching" />
       <model id="opus-4.8" name="Opus 4.8"
@@ -2687,7 +2687,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="A" tier-planning="A" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 51.7; LMArena WebDev Elo 1522.2 (#10); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage"
+             headline-benchmarks="AA Intelligence Index 51.7; LMArena WebDev Elo 1522.6 (#10); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage"
              pricing-notes="Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)"
              best-for="Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation" />
       <model id="gpt-5.4" name="GPT-5.4"
@@ -3154,12 +3154,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       - Never sacrifice quality to save cost — the cost step is a true-tie
         resolver, not a downgrade trigger.
       - For PRIMARY = `multimodal`, only consider models with tier-multimodal
-        of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro at S; sonnet-4.6, gpt-5.4, opus-4.7, opus-4.8, gpt-5.5 at A).
+        of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro, claude-fable-5 at S; sonnet-4.6, gpt-5.4, opus-4.7, opus-4.8, gpt-5.5 at A).
       - For PRIMARY = `long-context`, prefer models with native large
         context (opus-4.7 1M, opus-4.8 1M, gemini-3.1-pro 1M, grok-4.3 2M) over forcing
         a smaller-context model into Max Mode truncation.
       - For PRIMARY = `coding` at S-tier requirement, the candidate set is
-        gpt-5.1-codex, gpt-5.3-codex, opus-4.7, opus-4.8, gpt-5.5; cost tie-breaker favors
+        claude-fable-5, gpt-5.1-codex, gpt-5.3-codex, opus-4.7, opus-4.8, gpt-5.5; cost tie-breaker favors
         gpt-5.1-codex when the ratings are equivalent for the prompt.
       - Default to composer-2 for routine multi-file implementation when a
         coding-A rating suffices; escalate only on a concrete capability
