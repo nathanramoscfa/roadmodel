@@ -4,7 +4,20 @@ import { RATING_SCALE } from "@/lib/glossary";
 // The S→D per-category rating scale, rendered from the glossary's RATING_SCALE
 // (the same source as the rationale's tier popovers). `id` lets the rationale's
 // tier links anchor here (the glossary points "S-tier" etc. at /docs#ratings).
-export function RatingScale({ id }: { id?: string }) {
+// `compact` is the dense S–D list for the /recommend reference panel.
+export function RatingScale({ id, compact = false }: { id?: string; compact?: boolean }) {
+  if (compact) {
+    return (
+      <dl className="space-y-1.5">
+        {RATING_SCALE.map((row) => (
+          <div key={row.rating} className="flex gap-2 text-xs">
+            <dt className="w-4 shrink-0 font-bold text-brand-accent">{row.rating}</dt>
+            <dd className="text-brand-slate-600 dark:text-brand-slate-300">{row.meaning}</dd>
+          </div>
+        ))}
+      </dl>
+    );
+  }
   return (
     <section id={id} aria-labelledby="rating-scale-heading" className="scroll-mt-20">
       <h2
