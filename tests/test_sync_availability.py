@@ -19,10 +19,15 @@ if str(UPDATE_ROOT) not in sys.path:
 from sync_availability import AVAILABILITY_JSON, load_unavailable, plan  # noqa: E402
 
 
-def test_committed_source_of_truth_is_valid_and_lists_fable5() -> None:
+def test_committed_source_of_truth_is_well_formed() -> None:
+    """The committed source of truth loads and every entry has a non-empty id +
+    reason. Deliberately NOT pinned to a specific model: the probe (B4) may add or
+    remove entries (e.g. self-heal Fable 5 if Anthropic restores access), and that
+    must not break CI on the auto-PR."""
     desired = load_unavailable(AVAILABILITY_JSON)
-    assert "claude-fable-5" in desired
-    assert desired["claude-fable-5"]["reason"]  # non-empty reason
+    for model_id, meta in desired.items():
+        assert model_id
+        assert meta["reason"], f"{model_id} has no reason"
 
 
 def test_load_unavailable_skips_garbled_entries(tmp_path: Path) -> None:
