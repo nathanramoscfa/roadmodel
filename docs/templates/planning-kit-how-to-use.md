@@ -1,0 +1,76 @@
+<!-- planning/HOW-TO-USE.md -->
+# roadmodel planning kit — how to use
+
+This folder is a **planning kit** exported from
+[roadmodel](https://github.com/nathanramoscfa/roadmodel). It lets an in-editor
+AI (Claude Code, Cursor, etc.) author project and phase roadmaps **with
+per-step model recommendations**, without installing anything or calling any
+paid API.
+
+## What's here
+
+| File | Purpose |
+| ---- | ------- |
+| `model-selector.txt` | The recommendation **algorithm** + the inline model **catalog** (ratings, `best-for`, availability exclusions) + `<benchmark-sources>`. |
+| `model-tier-cost-scale.md` | Per-token **prices** and **subscription tiers** — the funding/cost data the selector's access-selection step consumes. |
+| `user-context.md` | The operator's **subscriptions + API keys + platform preference order** — decides *which platform pays* for each pick. |
+| `templates/project-roadmap-template.md` | Skeleton for a whole-project `ROADMAP.md`. |
+| `templates/phase-roadmap-template.md` | Skeleton for one `phaseNN-roadmap.md`. |
+
+## The one rule: **you are the engine**
+
+When asked to recommend a model for a step, **run the `model-selector.txt`
+algorithm yourself, in your own context.** Do **not** call any external API,
+MCP tool, or web service — the operator's editor session already pays for your
+reasoning (e.g. Claude Code funded by a flat Max plan = $0 marginal). Calling
+out would add cost for no benefit.
+
+Concretely, for each roadmap step:
+
+1. **Classify** the step's task with the selector's
+   `<task-categorization>` / `<selection-algorithm>` (PRIMARY category +
+   complexity).
+2. **Pick the model** by running `<selection-algorithm>` against the inline
+   `<model>` catalog in `model-selector.txt` and the prices in
+   `model-tier-cost-scale.md`. Honor the **availability exclusions** (any model
+   marked "do NOT recommend" — e.g. a withdrawn flagship — is off the table;
+   use its documented fallback).
+3. **Pick the platform** by running `<access-selection>` against
+   `user-context.md` — the cheapest access method that can run the chosen model
+   given the operator's active subscriptions (a Claude pick → "Claude Code"
+   funded by Max; a GPT pick → "Codex" funded by ChatGPT Pro; etc.).
+4. **Emit** the step's Settings table using the **platform-specific variant**
+   the template defines (Claude Code → Effort + Thinking; Codex → Intelligence;
+   Cursor/ChatGPT/API → Max Mode + Thinking), a Model-rationale paragraph that
+   names the funding source and justifies each dial in the surface's native
+   vocabulary, and a **backup** model in case the primary is unavailable to the
+   operator.
+
+## Paste-prompt
+
+Open a new chat in this project and paste:
+
+> Write the Phase 1 roadmap `.md` using `@planning/templates/phase-roadmap-template.md`
+> as the template. For **each step's** Settings table and Model rationale, run
+> the model selector in `@planning/model-selector.txt` (with prices from
+> `@planning/model-tier-cost-scale.md`) against `@planning/user-context.md` — you
+> are the engine, do not call any external API. Honor every availability
+> exclusion in the selector. Fill the rest of the template from the project
+> roadmap, and include a backup model per step.
+
+Swap `phase-roadmap-template.md` → `project-roadmap-template.md` (and adjust the
+ask) to author the top-level project roadmap instead.
+
+## Staying current
+
+This kit is a **snapshot**. roadmodel's catalog is refreshed continuously
+(new models, price changes, availability kill-switches), so **re-export the kit
+at the start of each phase** to pull the latest:
+
+```sh
+# from a roadmodel checkout, or anywhere with the script:
+scripts/export-planning-kit.sh /path/to/this/project
+```
+
+A stale kit risks recommending a model that has since been withdrawn or
+repriced — re-exporting is the cheap insurance.
