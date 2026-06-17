@@ -93,6 +93,17 @@ def _catalog_doc_path(doc: str) -> Path:
         raise BundledDocNotFoundError(filename) from exc
 
 
+def _write_bundled_text(resource: Traversable, dest: Path) -> None:
+    """Write a bundled doc to ``dest`` as clean UTF-8 with LF newlines.
+
+    Using read_text/write_text (rather than a shell redirect) keeps the kit
+    byte-identical on Windows, macOS, and Linux — no UTF-16 / BOM surprises
+    from PowerShell redirection.
+    """
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(resource.read_text(encoding="utf-8"), encoding="utf-8", newline="\n")
+
+
 def _settings_text_lines(settings: dict[str, str]) -> list[str]:
     if "effort" in settings and "thinking" in settings:
         return [
@@ -502,6 +513,89 @@ def context_init(force: bool) -> None:
         raise click.ClickException(f"{target} already exists; re-run with --force to overwrite.")
     user_context.bootstrap(target)
     click.echo(str(target))
+
+
+@cli.command("export-kit")
+@click.argument(
+    "target",
+    type=click.Path(path_type=Path, file_okay=False, exists=True, resolve_path=True),
+    default=".",
+)
+@click.option(
+    "--dest",
+    default="planning",
+    show_default=True,
+    help="Subdirectory created inside TARGET to hold the kit.",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Overwrite an existing user-context.md in the kit "
+    "(the catalog docs and templates are always refreshed).",
+)
+@click.option(
+    "--user-context",
+    "user_context_path",
+    type=click.Path(path_type=Path, dir_okay=False, resolve_path=False),
+    help="user-context.md to copy into the kit "
+    "(default: the resolved user-context, else the bundled template).",
+)
+@_error_mapped
+def export_kit(target: Path, dest: str, force: bool, user_context_path: Path | None) -> None:
+    """Export the planning kit into TARGET/<dest>/ for in-editor roadmap authoring.
+
+    Writes the model selector, the tier-cost scale, the project- and
+    phase-roadmap templates, and a HOW-TO-USE guide from the bundled catalog,
+    plus your user-context.md. An AI in your editor can then author roadmaps
+    with per-step model recommendations by running the selector in its own
+    context — no per-call API spend, no shell or network required, identical
+    on every OS. Re-run after `pip install -U roadmodel` to refresh the catalog.
+    """
+    planning = target / dest
+    templates = planning / "templates"
+
+    bundled: list[tuple[Traversable, Path]] = [
+        (recommender.BUNDLED_SELECTOR_PATH, planning / "model-selector.txt"),
+        (recommender.BUNDLED_TIER_COST_PATH, planning / "model-tier-cost-scale.md"),
+        (
+            recommender.BUNDLED_PROJECT_ROADMAP_TEMPLATE_PATH,
+            templates / "project-roadmap-template.md",
+        ),
+        (recommender.BUNDLED_PHASE_ROADMAP_TEMPLATE_PATH, templates / "phase-roadmap-template.md"),
+        (recommender.BUNDLED_PLANNING_KIT_HOWTO_PATH, planning / "HOW-TO-USE.md"),
+    ]
+    written: list[Path] = []
+    for resource, out in bundled:
+        _write_bundled_text(resource, out)
+        written.append(out)
+
+    # user-context: copy the operator's real file when present; otherwise seed
+    # the bundled template so platform selection still has a schema to fill in.
+    uc_out = planning / "user-context.md"
+    resolved = user_context.resolve(cli_path=user_context_path)
+    if uc_out.exists() and not force:
+        uc_note = f"  = {uc_out.relative_to(target)} (kept; --force to overwrite)"
+    elif resolved.exists():
+        uc_out.parent.mkdir(parents=True, exist_ok=True)
+        uc_out.write_text(user_context.read(resolved), encoding="utf-8", newline="\n")
+        uc_note = f"  + {uc_out.relative_to(target)} (from {resolved})"
+    else:
+        _write_bundled_text(recommender.BUNDLED_USER_CONTEXT_TEMPLATE_PATH, uc_out)
+        uc_note = (
+            f"  ! {uc_out.relative_to(target)} (bundled TEMPLATE — fill in your subscriptions)"
+        )
+
+    click.echo(f"Exported roadmodel planning kit -> {planning}")
+    for out in written:
+        click.echo(f"  + {out.relative_to(target)}")
+    click.echo(uc_note)
+    click.echo("")
+    click.echo(
+        f"Next: open an AI chat in this project and ask it to write your phase "
+        f"roadmap using @{dest}/templates/phase-roadmap-template.md, selecting each "
+        f"step's model with @{dest}/model-selector.txt against @{dest}/user-context.md "
+        f"(it is the engine — no external API). See @{dest}/HOW-TO-USE.md."
+    )
 
 
 @cli.command()
