@@ -21,6 +21,15 @@ BUNDLED_TIER_COST_PATH: Traversable = resources.files("roadmodel.data") / "model
 BUNDLED_USER_CONTEXT_TEMPLATE_PATH: Traversable = (
     resources.files("roadmodel.data") / "user-context.example.md"
 )
+BUNDLED_PHASE_ROADMAP_TEMPLATE_PATH: Traversable = (
+    resources.files("roadmodel.data") / "phase-roadmap-template.md"
+)
+BUNDLED_PROJECT_ROADMAP_TEMPLATE_PATH: Traversable = (
+    resources.files("roadmodel.data") / "project-roadmap-template.md"
+)
+BUNDLED_PLANNING_KIT_HOWTO_PATH: Traversable = (
+    resources.files("roadmodel.data") / "planning-kit-how-to-use.md"
+)
 
 _REQUIRED_KEYS: Final = ("model", "platform", "max_mode", "thinking", "conversation", "rationale")
 

@@ -36,6 +36,8 @@ BUNDLED_DOCS: dict[str, str] = {
     "user-context.example.md": "user-context.example.md",
     "catalog.json": "catalog.json",
     "templates/phase-roadmap-template.md": "phase-roadmap-template.md",
+    "templates/project-roadmap-template.md": "project-roadmap-template.md",
+    "templates/planning-kit-how-to-use.md": "planning-kit-how-to-use.md",
 }
 
 

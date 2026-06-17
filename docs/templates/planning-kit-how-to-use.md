@@ -68,7 +68,11 @@ This kit is a **snapshot**. roadmodel's catalog is refreshed continuously
 at the start of each phase** to pull the latest:
 
 ```sh
-# from a roadmodel checkout, or anywhere with the script:
+# Cross-platform (Windows / macOS / Linux), with roadmodel installed:
+pip install -U roadmodel
+roadmodel export-kit /path/to/this/project
+
+# Or fetch fresh from GitHub main with the bash script:
 scripts/export-planning-kit.sh /path/to/this/project
 ```
 
