@@ -37,30 +37,43 @@ Per-client registration walk-throughs live in
 [docs/mcp-setup.md](docs/mcp-setup.md); tool signatures and return
 schemas are documented in [docs/mcp-tools.md](docs/mcp-tools.md).
 
-## Planning kit (zero-install, $0 marginal)
+## Planning kit ($0 marginal recommendations)
 
 To author project/phase roadmaps **with per-step model recommendations**
-in another project, you do not need to install anything or spend on
-per-call API tokens. Export the **planning kit** into that project and
-let the AI already open in your editor (e.g. Claude Code on a flat plan)
-run the selector in its own context:
+in another project, export the **planning kit** into it and let the AI
+already open in your editor (e.g. Claude Code on a flat plan) run the
+selector in its own context — no per-call API spend, just the editor
+session you already pay for.
+
+**Cross-platform (recommended).** With roadmodel installed, one command
+writes the kit on Windows, macOS, or Linux — no shell or network needed:
+
+```sh
+cd /path/to/other-project
+roadmodel export-kit            # writes ./planning with selector + cost-scale
+                                # + templates + HOW-TO-USE + your user-context
+```
+
+It uses the catalog **bundled in the installed wheel**, so refresh with
+`pip install -U roadmodel` and re-run `roadmodel export-kit` at the start
+of each phase. Flags: `--dest <subdir>`, `--force` (overwrite an existing
+kit `user-context.md`), `--user-context <path>`.
+
+**Shell alternative (no install).** A bash script fetches the kit fresh
+from this repo's `main` branch instead of from an installed wheel:
 
 ```sh
 scripts/export-planning-kit.sh /path/to/other-project
 ```
 
-This fetches the current `model-selector.txt`, `model-tier-cost-scale.md`,
-the two roadmap templates, and a `HOW-TO-USE.md` from this repo's `main`
-branch into `<project>/planning/`, and copies your
-`~/.config/roadmodel/user-context.md` alongside them. Because the files
-are pulled fresh each run, the kit stays current with the catalog crons
-(new models, prices, availability exclusions) — re-export at the start of
-each phase. The in-editor AI then runs the algorithm itself rather than
-calling the recommender service, so the recommendation costs nothing
-beyond the editor session you are already paying for. Use the MCP server
-above instead when you want deterministic, structured recommendations in
-a script or CI. Flags: `--dest <subdir>`, `--ref <git-ref>`, `--local`
-(copy from a local checkout instead of GitHub), `--user-context <path>`.
+Flags: `--dest <subdir>`, `--ref <git-ref>`, `--local` (copy from a local
+checkout instead of GitHub), `--user-context <path>`. On Windows
+PowerShell, call `curl.exe` (not the `curl` alias) if you fetch files by
+hand; the `export-kit` command above avoids that entirely.
+
+Either way the in-editor AI runs the algorithm itself rather than calling
+the recommender service. Use the MCP server above instead when you want
+deterministic, structured recommendations in a script or CI.
 
 ## Quickstart
 

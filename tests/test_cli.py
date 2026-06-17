@@ -920,3 +920,100 @@ def test_cost_fast_variant_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert result.exit_code == 4
     assert "Opus Test" in result.stderr
+
+
+# --- export-kit -----------------------------------------------------------
+
+
+def _export_kit_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Isolate HOME/XDG so resolve() never picks up the real ~/.config copy."""
+    _clear_provider_env(monkeypatch)
+    _set_isolated_home(monkeypatch, tmp_path)
+
+
+def test_export_kit_writes_full_kit(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _export_kit_env(monkeypatch, tmp_path)
+    project = tmp_path / "proj"
+    project.mkdir()
+    uc = tmp_path / "user-context.md"
+    uc.write_text("# User Context\n\nMY_REAL_SUBS_MARKER\n", encoding="utf-8")
+
+    result = _runner().invoke(cli, ["export-kit", str(project), "--user-context", str(uc)])
+    assert result.exit_code == 0, result.output
+
+    planning = project / "planning"
+    for rel in [
+        "model-selector.txt",
+        "model-tier-cost-scale.md",
+        "HOW-TO-USE.md",
+        "user-context.md",
+        "templates/project-roadmap-template.md",
+        "templates/phase-roadmap-template.md",
+    ]:
+        assert (planning / rel).is_file(), f"missing {rel}"
+
+    assert "<model-selector>" in (planning / "model-selector.txt").read_text(encoding="utf-8")
+    assert "MY_REAL_SUBS_MARKER" in (planning / "user-context.md").read_text(encoding="utf-8")
+    assert "you are the engine" in (planning / "HOW-TO-USE.md").read_text(encoding="utf-8").lower()
+
+
+def test_export_kit_seeds_template_when_no_user_context(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _export_kit_env(monkeypatch, tmp_path)
+    project = tmp_path / "proj"
+    project.mkdir()
+    missing = tmp_path / "nope" / "user-context.md"
+
+    result = _runner().invoke(cli, ["export-kit", str(project), "--user-context", str(missing)])
+    assert result.exit_code == 0, result.output
+
+    uc_out = project / "planning" / "user-context.md"
+    assert uc_out.is_file()
+    assert "User Context" in uc_out.read_text(encoding="utf-8")
+    assert "TEMPLATE" in result.output
+
+
+def test_export_kit_custom_dest(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _export_kit_env(monkeypatch, tmp_path)
+    project = tmp_path / "proj"
+    project.mkdir()
+    uc = tmp_path / "uc.md"
+    uc.write_text("# User Context\n", encoding="utf-8")
+
+    result = _runner().invoke(
+        cli, ["export-kit", str(project), "--dest", "kit", "--user-context", str(uc)]
+    )
+    assert result.exit_code == 0, result.output
+    assert (project / "kit" / "model-selector.txt").is_file()
+    assert not (project / "planning").exists()
+
+
+def test_export_kit_preserves_user_context_without_force(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _export_kit_env(monkeypatch, tmp_path)
+    project = tmp_path / "proj"
+    project.mkdir()
+    uc1 = tmp_path / "uc1.md"
+    uc1.write_text("# User Context\n\nFIRST\n", encoding="utf-8")
+    uc2 = tmp_path / "uc2.md"
+    uc2.write_text("# User Context\n\nSECOND\n", encoding="utf-8")
+
+    _runner().invoke(cli, ["export-kit", str(project), "--user-context", str(uc1)])
+    uc_out = project / "planning" / "user-context.md"
+    assert "FIRST" in uc_out.read_text(encoding="utf-8")
+
+    # Second run without --force keeps the existing kit user-context.
+    _runner().invoke(cli, ["export-kit", str(project), "--user-context", str(uc2)])
+    assert "FIRST" in uc_out.read_text(encoding="utf-8")
+
+    # With --force it is overwritten.
+    _runner().invoke(cli, ["export-kit", str(project), "--user-context", str(uc2), "--force"])
+    assert "SECOND" in uc_out.read_text(encoding="utf-8")
+
+
+def test_export_kit_missing_target_errors(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _export_kit_env(monkeypatch, tmp_path)
+    result = _runner().invoke(cli, ["export-kit", str(tmp_path / "does-not-exist")])
+    assert result.exit_code != 0
