@@ -15,9 +15,19 @@ import {
 
 test("derives every provider with an API path, excluding pool-only ones", () => {
   const ids = new Set(getApiProviderOptions().map((o) => o.id));
-  // The 6 federated providers reachable via a direct API key.
+  // The 8 federated providers reachable via a direct API key (z.ai + Groq
+  // joined in #296 — GLM and Groq-hosted gpt-oss).
   expect(ids).toEqual(
-    new Set(["anthropic", "openai", "google", "deepseek", "mistral", "xai"]),
+    new Set([
+      "anthropic",
+      "openai",
+      "google",
+      "deepseek",
+      "mistral",
+      "xai",
+      "zai",
+      "groq",
+    ]),
   );
   // Cursor is subscription-pool only (no bring-your-own-key path) → excluded.
   expect(ids.has("cursor")).toBe(false);
@@ -29,6 +39,8 @@ test("labels each provider with its display name", () => {
   expect(byId.get("openai")).toBe("OpenAI");
   expect(byId.get("deepseek")).toBe("DeepSeek");
   expect(byId.get("xai")).toBe("xAI");
+  expect(byId.get("zai")).toBe("z.ai");
+  expect(byId.get("groq")).toBe("Groq");
 });
 
 test("API_PROVIDER_IDS matches the derived options", () => {

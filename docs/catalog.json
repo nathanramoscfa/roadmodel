@@ -1,8 +1,8 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-06-13T22:44:26Z",
+  "generated_at_utc": "2026-06-21T12:53:54Z",
   "source_doc_sha256": {
-    "model-selector.txt": "913442ff21071ecbe9fb719f14c6b0edb143d3eac73db6c727ab28990ee6b437",
+    "model-selector.txt": "23a03c703e35cfeab09498d8d63904ccd170e0e9983d3fdf057842ddc74cc242",
     "model-tier-cost-scale.md": "7e874453400fa3a6d5d9122f762abe654f9a9f565a307d9391143585b2eba451"
   },
   "models": [
@@ -259,6 +259,69 @@
       "best_for": "Auto-added cheap-tier Google model; pending editorial best-for refinement."
     },
     {
+      "id": "glm-4.5-air",
+      "name": "GLM-4.5-Air",
+      "input_price_per_1m": 0.2,
+      "output_price_per_1m": 1.1,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "C",
+        "agentic": "C",
+        "multimodal": "D",
+        "long-context": "C",
+        "knowledge": "C",
+        "speed": "A"
+      },
+      "jurisdiction": "cn",
+      "headline_benchmarks": "z.ai GLM-4.5-Air \u2014 a lightweight, fast, low-cost GLM variant for high-throughput text / code; text-only; cn-jurisdiction; specific numbers pending independent refresh",
+      "pricing_notes": "Provider-direct z.ai (Zhipu) API per-token pricing (not via the Cursor pool); cn-jurisdiction; cache-input $0.03/M",
+      "best_for": "z.ai's GLM-4.5-Air \u2014 the cheapest non-free GLM ($1.10/M output): a small, fast, cn-jurisdiction model for high-throughput / latency-sensitive text and light coding where cost is the binding constraint, not top-tier capability. Reached via the `zai-api` method (provider-direct per-token) with a zai-api-key; step up to glm-4.6 for serious coding or glm-5.2 for reasoning / agentic work."
+    },
+    {
+      "id": "glm-4.6",
+      "name": "GLM-4.6",
+      "input_price_per_1m": 0.6,
+      "output_price_per_1m": 2.2,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "A",
+        "planning": "B",
+        "agentic": "B",
+        "multimodal": "D",
+        "long-context": "B",
+        "knowledge": "B",
+        "speed": "B"
+      },
+      "jurisdiction": "cn",
+      "headline_benchmarks": "z.ai GLM-4.6 \u2014 the widely-adopted, cost-efficient GLM coding workhorse; regarded as a strong value coding model in the GLM-4.x line; text-only; cn-jurisdiction; specific numbers pending independent refresh",
+      "pricing_notes": "Provider-direct z.ai (Zhipu) API per-token pricing (not via the Cursor pool); cn-jurisdiction; cache-input $0.11/M",
+      "best_for": "z.ai's GLM-4.6 \u2014 the proven value coding model: very low cost ($2.20/M output), cn-jurisdiction, and a strong code-generation / fill profile that made it a popular coding-plan default. Pick it over glm-5.2 when cost dominates and the task is bounded coding rather than the hardest agentic reasoning; pick glm-5.2 when reasoning depth or agentic autonomy matters. Text-only. Reached via the `zai-api` method (provider-direct per-token) with a zai-api-key."
+    },
+    {
+      "id": "glm-5.2",
+      "name": "GLM-5.2",
+      "input_price_per_1m": 1.4,
+      "output_price_per_1m": 4.4,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "A",
+        "planning": "A",
+        "agentic": "A",
+        "multimodal": "D",
+        "long-context": "B",
+        "knowledge": "A",
+        "speed": "B"
+      },
+      "jurisdiction": "cn",
+      "headline_benchmarks": "z.ai (Zhipu AI) GLM-5.2 flagship (~Jun 2026) \u2014 strong coding / agentic model in the GLM-5 line; text-only; cn-jurisdiction; specific public benchmark numbers pending independent refresh",
+      "pricing_notes": "Provider-direct z.ai (Zhipu) API per-token pricing (not via the Cursor pool); cn-jurisdiction; cache-input $0.26/M",
+      "best_for": "z.ai's flagship GLM-5.2 \u2014 a low-cost ($4.40/M output), cn-jurisdiction reasoning / coding model and the strongest GLM for multi-step coding and agentic work. Pick it when the cn jurisdiction is acceptable and a zai-api-key is configured and you want a frontier-adjacent coder at a fraction of US-frontier output price; text-only, so not for multimodal work (use the GLM-V vision line, not yet in the catalog). Reached via the `zai-api` method (provider-direct per-token, not the Cursor pool). Rated coding/planning/agentic-A on the GLM-5 line's positioning pending an independent benchmark refresh (the catalog cron's Opus lane owns the numbers)."
+    },
+    {
       "id": "gpt-5",
       "name": "GPT-5",
       "input_price_per_1m": 1.25,
@@ -446,6 +509,48 @@
       "headline_benchmarks": "AA Intelligence Index 60.2 (#1); LMArena Text Elo 1462.3 (#16); HLE 44.3%; AA-Omniscience 20.1 (#3)",
       "pricing_notes": "Requires Max Mode on request-based plans; Agentic and reasoning capabilities; More token-efficient than GPT-5.4 on comparable tasks; Improved persistence on long-running tasks; Fast mode is available at higher rates; Long context (Max Mode) supports up to 1M tokens with 2x input pricing",
       "best_for": "OpenAI's most capable frontier model and highest-cost GPT offering, best suited for the most demanding reasoning, long-horizon planning, and tasks where maximum intelligence is required regardless of cost \u2014 strongest single model for hard coding, agentic execution, and reasoning, but verify factual claims due to elevated hallucination"
+    },
+    {
+      "id": "gpt-oss-120b",
+      "name": "gpt-oss-120b",
+      "input_price_per_1m": 0.15,
+      "output_price_per_1m": 0.6,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "B",
+        "agentic": "B",
+        "multimodal": "D",
+        "long-context": "C",
+        "knowledge": "B",
+        "speed": "A"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "OpenAI gpt-oss-120b \u2014 open-weight (Apache-2.0) Mixture-of-Experts reasoning model (~117B total / ~5B active) with configurable reasoning effort; OpenAI positions it near o4-mini on reasoning; 128K context; hosted by Groq (~500 tokens/s); us-jurisdiction",
+      "pricing_notes": "Provider-direct Groq-hosted pricing for OpenAI's open-weight gpt-oss (Apache-2.0); us-jurisdiction; prices manually maintained from groq.com/pricing",
+      "best_for": "OpenAI's open-weight gpt-oss-120b (Apache-2.0) hosted by Groq \u2014 a very low-cost ($0.60/M output), fast (~500 tokens/s), us-jurisdiction reasoning model with an adjustable reasoning dial, for cost / throughput-sensitive reasoning and coding where an open-weight, self-hostable model (data-sovereignty, on-prem portability) is preferred. OpenAI positions it near o4-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key \u2014 note this host is not among the operator's current subscriptions, so it is catalog-present but only recommendable once a groq-api-key (or another gpt-oss host) is configured."
+    },
+    {
+      "id": "gpt-oss-20b",
+      "name": "gpt-oss-20b",
+      "input_price_per_1m": 0.075,
+      "output_price_per_1m": 0.3,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "C",
+        "planning": "C",
+        "agentic": "C",
+        "multimodal": "D",
+        "long-context": "C",
+        "knowledge": "C",
+        "speed": "S"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "OpenAI gpt-oss-20b \u2014 smaller open-weight (Apache-2.0) Mixture-of-Experts reasoning model (~21B total / ~3.6B active); OpenAI positions it near o3-mini; 128K context; very fast on Groq (~1000 tokens/s); us-jurisdiction",
+      "pricing_notes": "Provider-direct Groq-hosted pricing for OpenAI's open-weight gpt-oss (Apache-2.0); us-jurisdiction; prices manually maintained from groq.com/pricing",
+      "best_for": "OpenAI's smaller open-weight gpt-oss-20b (Apache-2.0) hosted by Groq \u2014 the cheapest gpt-oss ($0.30/M output) and extremely fast (~1000 tokens/s), for high-throughput / latency-sensitive light reasoning, classification, and simple code under the us jurisdiction, or as an on-device / self-hostable open-weight option. OpenAI positions it near o3-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key \u2014 catalog-present but only recommendable once a groq-api-key (or another gpt-oss host) is configured. Prefer gpt-oss-120b when reasoning quality matters more than raw speed / cost."
     },
     {
       "id": "grok-4.3",
@@ -815,6 +920,21 @@
       "best_for": "Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)."
     },
     {
+      "id": "groq-api",
+      "name": "Groq API",
+      "provider": "groq",
+      "provider_jurisdiction": "us",
+      "billing": "per-token",
+      "requires": "groq-api-key",
+      "supports_models": [
+        "gpt-oss-120b",
+        "gpt-oss-20b"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "best_for": "Direct Groq API access (provider-direct per-token; OpenAI-format at api.groq.com) hosting OpenAI's open-weight gpt-oss (Apache-2.0) models \u2014 very low-cost, very high-throughput reasoning / coding under the us jurisdiction. Exposes the gpt-oss reasoning-effort dial. Groq is the pinned host that defines gpt-oss price + access (price = f(model, platform)); the open weights can also be self-hosted or run on another host. NOTE Groq is not among the operator's current subscriptions, so gpt-oss is catalog-present but only recommendable once a groq-api-key is configured."
+    },
+    {
       "id": "mistral-api",
       "name": "Mistral API",
       "provider": "mistral",
@@ -866,6 +986,22 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "no",
       "best_for": "Direct Grok API access for 2M-context or hallucination-resistant tasks; pay-per-token at xAI's published rates."
+    },
+    {
+      "id": "zai-api",
+      "name": "z.ai API",
+      "provider": "zai",
+      "provider_jurisdiction": "cn",
+      "billing": "per-token",
+      "requires": "zai-api-key",
+      "supports_models": [
+        "glm-4.5-air",
+        "glm-4.6",
+        "glm-5.2"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "best_for": "Direct z.ai (Zhipu AI) API access (provider-direct per-token; OpenAI-format and Anthropic-format endpoints at api.z.ai) for the GLM models \u2014 cost-conscious coding / reasoning / agentic work when the cn jurisdiction is acceptable and a zai-api-key is configured. Exposes the GLM thinking dial. Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn."
     }
   ],
   "max_mode_rules": {

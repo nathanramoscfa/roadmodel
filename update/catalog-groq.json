@@ -1,0 +1,36 @@
+{
+  "_comment": "Canonical Groq-hosted gpt-oss catalog (pricing) facts. MANUALLY MAINTAINED — Groq's pricing page is a hashed-CSS div-grid with no machine-readable table, so prices in the MODELS constant of update/extract_groq_catalog.py are verified by hand from groq.com/pricing; running that script re-writes this file (with a correct section_sha256) and drift-checks that the model names still appear on the live page (it does NOT parse prices). The models are OpenAI's open-weight gpt-oss (Apache-2.0); Groq is the pinned host that defines price + the groq-api access method (price = f(model, platform)). Consumed OFFLINE by update/merge_catalog.py + update/validate_catalog_conformance.py. overlay_mode whole-element: not on Cursor's page, so the cron's Opus pass drops these and the de-clobber overlay re-adds them from the committed selector.",
+  "price_maintenance": "manual",
+  "prices_verified_date": "2026-06-21",
+  "source_url": "https://groq.com/pricing",
+  "provider": "groq",
+  "jurisdiction": "us",
+  "overlay_mode": "whole-element",
+  "models": [
+    {
+      "id": "gpt-oss-120b",
+      "slug": "gpt-oss-120b",
+      "name": "gpt-oss-120b",
+      "input_price_per_1m": 0.15,
+      "output_price_per_1m": 0.6,
+      "cache_read_per_1m": null,
+      "context_tokens": 131072
+    },
+    {
+      "id": "gpt-oss-20b",
+      "slug": "gpt-oss-20b",
+      "name": "gpt-oss-20b",
+      "input_price_per_1m": 0.075,
+      "output_price_per_1m": 0.3,
+      "cache_read_per_1m": null,
+      "context_tokens": 131072
+    }
+  ],
+  "slug_to_id": {
+    "gpt-oss-120b": "gpt-oss-120b",
+    "gpt-oss-20b": "gpt-oss-20b"
+  },
+  "unexpected_slugs": [],
+  "missing_on_page": [],
+  "section_sha256": "66e1c72147e388a8fc40ef3273497540425f91c3730f4519af4cf1d26f23ee1e"
+}
