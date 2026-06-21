@@ -26,6 +26,7 @@ test("app nav appears on /recommend and links between surfaces", async ({
   const nav = page.getByRole("navigation", { name: /Primary/i });
   await expect(nav).toBeVisible();
   await expect(nav.getByRole("link", { name: /^Recommend$/ })).toBeVisible();
+  await expect(nav.getByRole("link", { name: /^Models$/ })).toBeVisible();
   await expect(nav.getByRole("link", { name: /^Roadmap$/ })).toBeVisible();
   await expect(nav.getByRole("link", { name: /^History$/ })).toBeVisible();
   await expect(nav.getByRole("button", { name: /Sign out/i })).toBeVisible();
