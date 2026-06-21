@@ -45,7 +45,8 @@ and each provider's own page owns that provider's prices.
 
 **Federation — provider-direct prices (do NOT re-derive from Cursor).** For models
 from a provider that has a provider-direct catalog source — currently **Anthropic,
-OpenAI, Google, xAI, DeepSeek** — the canonical `input-price-per-1m` and
+OpenAI, Google, xAI, DeepSeek, z.ai (GLM; `catalog-zai.json`), Mistral, and Groq
+(OpenAI open-weight gpt-oss; `catalog-groq.json`)** — the canonical `input-price-per-1m` and
 `output-price-per-1m` are owned by that provider's OWN pricing page, not Cursor's,
 and are enforced by the G4 price-provenance gate in
 `update/validate_catalog_conformance.py` (the selector price MUST equal the
@@ -77,7 +78,7 @@ would then reject.
   `output-price-per-1m` attributes. Move the `<model …/>` element into
   the correct `<tier cost="…">` group if its tier classification changed.
   EXCEPTION (Federation rule): for provider-direct models (Anthropic, OpenAI,
-  Google, xAI, DeepSeek) do NOT update `input-price-per-1m` /
+  Google, xAI, DeepSeek, z.ai, Mistral, Groq) do NOT update `input-price-per-1m` /
   `output-price-per-1m` — preserve them verbatim; only the tier-group move (driven
   by the preserved Output price) may still apply.
 - **`<model-options>` is comprehensive, not hand-curated.** If a model
