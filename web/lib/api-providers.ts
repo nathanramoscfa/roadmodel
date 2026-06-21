@@ -47,6 +47,8 @@ const PROVIDER_LABELS: Record<string, string> = {
   mistral: "Mistral",
   deepseek: "DeepSeek",
   xai: "xAI",
+  zai: "z.ai",
+  groq: "Groq",
   cursor: "Cursor",
 };
 

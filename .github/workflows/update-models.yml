@@ -107,10 +107,16 @@ jobs:
           python update/extract_google_catalog.py || echo "google catalog refresh failed; keeping committed snapshot"
           python update/extract_xai_catalog.py || echo "xai catalog refresh failed; keeping committed snapshot"
           python update/extract_deepseek_catalog.py || echo "deepseek catalog refresh failed; keeping committed snapshot"
+          # z.ai (Zhipu / GLM): real extractor parsing the Mintlify .md pricing source.
+          python update/extract_zai_catalog.py || echo "zai catalog refresh failed; keeping committed snapshot"
           # Mistral has no machine-readable price source, so this is a DRIFT-CHECK
           # (model-name presence), not a price refresh; it never rewrites the
           # manually-maintained snapshot. Fail-open: a drift (exit 4) is logged.
           python update/extract_mistral_catalog.py || echo "mistral drift-check flagged or failed; catalog-mistral.json prices are manually maintained — review"
+          # Groq-hosted gpt-oss: like Mistral, no machine-readable price table, so the
+          # script re-writes the manual snapshot from its constant and DRIFT-CHECKS the
+          # gpt-oss model names against groq.com/pricing (it does not parse prices).
+          python update/extract_groq_catalog.py || echo "groq drift-check flagged or failed; catalog-groq.json prices are manually maintained — review"
 
       - name: Flag unfederated provider-direct models (model-list federation)
         # Phase 4.6 model-list federation (FLAG-ONLY): each provider-direct snapshot
@@ -184,7 +190,7 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
-          if git diff --quiet -- docs/ update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-mistral.json; then
+          if git diff --quiet -- docs/ update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json; then
             echo "No changes to commit."
             exit 0
           fi
@@ -200,7 +206,7 @@ jobs:
           if [ -f update/.last-warnings.txt ] && [ -s update/.last-warnings.txt ]; then
             warnings="$(printf '\n\n## Warnings\n')$(sed 's/^/- /' update/.last-warnings.txt)"
           fi
-          git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-mistral.json
+          git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
           git commit -m "Automated catalog refresh: ${DATE}" -m "${summary}${warnings}"
           git push -u origin "$BRANCH"
           PR_URL="$(gh pr create \

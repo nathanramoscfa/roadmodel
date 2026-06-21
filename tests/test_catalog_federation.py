@@ -35,6 +35,10 @@ REAL_XAI_CATALOG = UPDATE_DIR / "catalog-xai.json"
 XAI_MD = REPO_ROOT / "tests" / "fixtures" / "xai-models-sample.md"
 REAL_GOOGLE_CATALOG = UPDATE_DIR / "catalog-google.json"
 GOOGLE_HTML = REPO_ROOT / "tests" / "fixtures" / "google-pricing-sample.html"
+REAL_ZAI_CATALOG = UPDATE_DIR / "catalog-zai.json"
+ZAI_MD = REPO_ROOT / "tests" / "fixtures" / "zai-pricing-sample.md"
+REAL_GROQ_CATALOG = UPDATE_DIR / "catalog-groq.json"
+GROQ_HTML = REPO_ROOT / "tests" / "fixtures" / "groq-pricing-sample.html"
 
 
 def _load(name: str) -> Any:
@@ -111,6 +115,157 @@ def test_committed_catalog_snapshot_invariants() -> None:
     assert snap["jurisdiction"] == "cn"
     ids = {m["id"] for m in snap["models"]}
     assert {"deepseek-v4-flash", "deepseek-v4-pro"} <= ids
+    for m in snap["models"]:
+        assert m["input_price_per_1m"] > 0
+        assert m["output_price_per_1m"] > 0
+
+
+# --------------------------------------------------------------------------- #
+# z.ai (Zhipu / GLM) catalog source — Markdown (.md) extractor
+# --------------------------------------------------------------------------- #
+
+
+def test_zai_extractor_parses_fixture() -> None:
+    mod = _load("extract_zai_catalog")
+    snap = mod.build_snapshot(ZAI_MD.read_text(), source_url="file://sample")
+
+    models = {m["id"]: m for m in snap["models"]}
+    # Exactly the curated subset is emitted (z.ai ships ~17 priced models).
+    assert set(models) == {"glm-5.2", "glm-4.6", "glm-4.5-air"}
+
+    assert models["glm-5.2"]["input_price_per_1m"] == 1.4
+    assert models["glm-5.2"]["output_price_per_1m"] == 4.4
+    assert models["glm-5.2"]["cache_read_per_1m"] == 0.26
+    assert models["glm-4.6"]["output_price_per_1m"] == 2.2
+    assert models["glm-4.5-air"]["output_price_per_1m"] == 1.1
+
+    assert snap["jurisdiction"] == "cn"
+    assert snap["overlay_mode"] == "whole-element"
+    assert snap["unexpected_slugs"] == []  # every page slug is in the known baseline
+    assert len(snap["section_sha256"]) == 64
+
+
+def test_zai_extractor_excludes_free_and_noncurated() -> None:
+    """Free-tier rows ($0 output) and non-curated models must never reach the
+    snapshot — the curated allow-list is the only thing emitted."""
+    mod = _load("extract_zai_catalog")
+    snap = mod.build_snapshot(ZAI_MD.read_text(), source_url="x")
+    ids = {m["id"] for m in snap["models"]}
+    # GLM-5 / GLM-4.5-X are priced but not curated; the *-Flash rows are Free.
+    assert "GLM-5" not in ids and "glm-5" not in ids
+    assert "GLM-4.7-Flash" not in ids
+    for m in snap["models"]:
+        assert m["output_price_per_1m"] > 0
+
+
+def test_zai_extractor_flags_new_model() -> None:
+    mod = _load("extract_zai_catalog")
+    # A genuinely new flagship slug (not in the known baseline) is flagged for review.
+    md = ZAI_MD.read_text().replace("GLM-5.1", "GLM-6")
+    snap = mod.build_snapshot(md, source_url="x")
+    assert "GLM-6" in snap["unexpected_slugs"]
+
+
+def test_zai_extractor_raises_on_restructure() -> None:
+    mod = _load("extract_zai_catalog")
+    with pytest.raises(mod.ExtractError):
+        mod.build_snapshot("# Pricing\n\nNo table here.\n", source_url="x")
+
+
+def test_zai_extractor_raises_when_curated_missing() -> None:
+    """A curated model vanishing from the page is a delisting/rename — fail loud."""
+    mod = _load("extract_zai_catalog")
+    md = ZAI_MD.read_text().replace("| GLM-5.2", "| GLM-5.2-renamed")
+    with pytest.raises(mod.ExtractError):
+        mod.build_snapshot(md, source_url="x")
+
+
+def test_zai_extractor_cli_writes_snapshot(tmp_path: Path) -> None:
+    out = tmp_path / "catalog-zai.json"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(UPDATE_DIR / "extract_zai_catalog.py"),
+            "--input",
+            str(ZAI_MD),
+            "--output",
+            str(out),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    data = json.loads(out.read_text())
+    assert {m["id"] for m in data["models"]} == {"glm-5.2", "glm-4.6", "glm-4.5-air"}
+
+
+def test_committed_zai_snapshot_invariants() -> None:
+    snap = json.loads(REAL_ZAI_CATALOG.read_text())
+    assert snap["jurisdiction"] == "cn"
+    assert snap["overlay_mode"] == "whole-element"
+    ids = {m["id"] for m in snap["models"]}
+    assert {"glm-5.2", "glm-4.6", "glm-4.5-air"} <= ids
+    for m in snap["models"]:
+        assert m["input_price_per_1m"] > 0
+        assert m["output_price_per_1m"] > 0
+
+
+# --------------------------------------------------------------------------- #
+# Groq-hosted gpt-oss catalog source — manual snapshot + drift-check
+# --------------------------------------------------------------------------- #
+
+
+def test_groq_snapshot_writer_invariants() -> None:
+    mod = _load("extract_groq_catalog")
+    snap = mod.build_snapshot()
+    assert snap["provider"] == "groq"
+    assert snap["jurisdiction"] == "us"
+    assert snap["overlay_mode"] == "whole-element"
+    assert snap["price_maintenance"] == "manual"
+    models = {m["id"]: m for m in snap["models"]}
+    assert models["gpt-oss-120b"]["output_price_per_1m"] == 0.60
+    assert models["gpt-oss-20b"]["input_price_per_1m"] == 0.075
+    assert len(snap["section_sha256"]) == 64
+
+
+def test_groq_drift_check_matches_display_names() -> None:
+    """The live page prints "GPT OSS 120B 128k"; the normalized drift check must
+    still match the canonical id "gpt-oss-120b" (case/space/hyphen-insensitive)."""
+    mod = _load("extract_groq_catalog")
+    assert mod.names_missing_from_page(GROQ_HTML.read_text()) == []
+
+
+def test_groq_drift_check_flags_missing_model() -> None:
+    mod = _load("extract_groq_catalog")
+    missing = mod.names_missing_from_page("<html>only kimi here, no oss</html>")
+    assert set(missing) == {"gpt-oss-120b", "gpt-oss-20b"}
+
+
+def test_groq_cli_writes_and_drift_checks(tmp_path: Path) -> None:
+    out = tmp_path / "catalog-groq.json"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(UPDATE_DIR / "extract_groq_catalog.py"),
+            "--input",
+            str(GROQ_HTML),
+            "--output",
+            str(out),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    data = json.loads(out.read_text())
+    assert {m["id"] for m in data["models"]} == {"gpt-oss-120b", "gpt-oss-20b"}
+
+
+def test_committed_groq_snapshot_invariants() -> None:
+    snap = json.loads(REAL_GROQ_CATALOG.read_text())
+    assert snap["jurisdiction"] == "us"
+    assert snap["overlay_mode"] == "whole-element"
+    ids = {m["id"] for m in snap["models"]}
+    assert ids == {"gpt-oss-120b", "gpt-oss-20b"}
     for m in snap["models"]:
         assert m["input_price_per_1m"] > 0
         assert m["output_price_per_1m"] > 0
@@ -570,7 +725,7 @@ def test_cron_prompt_carries_federation_price_rule() -> None:
     assert "provider-direct" in prompt
     # Every provider with a committed catalog-<provider>.json snapshot is named as
     # price-owned-elsewhere, so Opus knows which models to leave alone.
-    for provider in ("anthropic", "openai", "google", "xai", "deepseek"):
+    for provider in ("anthropic", "openai", "google", "xai", "deepseek", "mistral", "zai", "groq"):
         assert provider in prompt, f"federation rule must name {provider}"
     # Tells Opus to preserve those prices (not re-derive from Cursor)...
     assert (
