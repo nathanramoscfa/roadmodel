@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Moon, Sun } from "lucide-react";
 
 // Light/dark theme toggle (T4). Flips the `dark` class on <html> and persists
 // the choice to localStorage; the no-flash script in layout.tsx re-applies it
@@ -34,12 +35,16 @@ export function ThemeToggle() {
       aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
       aria-pressed={dark}
       className={
-        "rounded-md px-3 py-1.5 text-sm font-medium text-brand-slate-600 " +
+        "rounded-md p-2 text-brand-slate-600 " +
         "hover:bg-brand-slate-50 hover:text-brand-slate-900 " +
         "dark:text-brand-slate-300 dark:hover:bg-brand-slate-800 dark:hover:text-brand-slate-50"
       }
     >
-      {dark ? "Light" : "Dark"}
+      {dark ? (
+        <Sun className="h-5 w-5" aria-hidden="true" />
+      ) : (
+        <Moon className="h-5 w-5" aria-hidden="true" />
+      )}
     </button>
   );
 }
