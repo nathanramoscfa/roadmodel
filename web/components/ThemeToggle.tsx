@@ -6,8 +6,9 @@ import { Moon, Sun } from "lucide-react";
 
 // Light/dark theme toggle (T4). Flips the `dark` class on <html> and persists
 // the choice to localStorage; the no-flash script in layout.tsx re-applies it
-// before paint on the next load. Default is light — a user only gets dark by
-// explicitly toggling, so the existing experience is unchanged until opt-in.
+// before paint on the next load. Dark is the default — a user only gets light
+// by explicitly toggling. Initial state is read from the live class, so it
+// tracks whatever the no-flash script already applied.
 export function ThemeToggle() {
   const [dark, setDark] = useState(false);
 
