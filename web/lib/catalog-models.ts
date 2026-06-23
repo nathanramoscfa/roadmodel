@@ -6,7 +6,15 @@
 // bundle — the same pattern as lib/api-providers.ts and lib/subscriptions.ts.
 import catalog from "@/data/catalog.json";
 
-import type { Category, CostTier, ModelRow, Rating } from "@/lib/catalog-fields";
+import {
+  CATEGORY_ORDER,
+  modelProvider,
+  type Category,
+  type CostTier,
+  type ModelRow,
+  type Rating,
+} from "@/lib/catalog-fields";
+import { BENCHMARKS } from "@/lib/glossary";
 
 interface RawModel {
   id: string;
@@ -45,4 +53,41 @@ export function getCatalogGeneratedAt(): string {
   const raw = (catalog as { generated_at_utc?: string }).generated_at_utc ?? "";
   const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(raw);
   return m ? `${m[1]} ${m[2]} UTC` : raw;
+}
+
+export interface CatalogStats {
+  modelCount: number;
+  // Distinct providers, plus their display labels (Anthropic, OpenAI, …) sorted.
+  providerCount: number;
+  providers: string[];
+  // Distinct jurisdiction codes present (us / eu / cn).
+  jurisdictionCount: number;
+  categoryCount: number;
+  benchmarkCount: number;
+  generatedAt: string;
+}
+
+// Headline numbers for the home page, derived from the live catalog so they
+// never drift as the daily refresh adds or re-prices models. Provider labels
+// reuse the same modelProvider() inference the /models table links with.
+export function getCatalogStats(): CatalogStats {
+  const providerLabels = new Map<string, string>();
+  const jurisdictions = new Set<string>();
+  for (const m of MODELS) {
+    const provider = modelProvider(m.id);
+    if (provider) providerLabels.set(provider.key, provider.label);
+    if (m.jurisdiction) jurisdictions.add(m.jurisdiction);
+  }
+  const providers = [...providerLabels.values()].sort((a, b) =>
+    a.localeCompare(b),
+  );
+  return {
+    modelCount: MODELS.length,
+    providerCount: providers.length,
+    providers,
+    jurisdictionCount: jurisdictions.size,
+    categoryCount: CATEGORY_ORDER.length,
+    benchmarkCount: BENCHMARKS.length,
+    generatedAt: getCatalogGeneratedAt(),
+  };
 }
