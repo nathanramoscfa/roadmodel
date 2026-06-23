@@ -3,7 +3,8 @@
 // T4 dark-mode mechanism. The visual palette is refined separately, but the
 // mechanism is verifiable: the toggle flips the `dark` class on <html> and
 // persists the choice, and the no-flash init script re-applies it on load.
-// Default is light (no `dark` class) so the existing experience is unchanged.
+// Dark is the default (the `dark` class ships on <html> from the server); a
+// user only gets light by explicitly toggling.
 
 import { test, expect } from "@playwright/test";
 
@@ -16,23 +17,23 @@ test("theme toggle flips the <html> dark class and persists the choice", async (
   page,
 }) => {
   await page.goto("/recommend");
-  // Default light.
-  expect(await isDark(page)).toBe(false);
-
-  await page.getByRole("button", { name: /Switch to dark theme/i }).click();
+  // Default dark.
   expect(await isDark(page)).toBe(true);
-  expect(await stored(page)).toBe("dark");
 
   await page.getByRole("button", { name: /Switch to light theme/i }).click();
   expect(await isDark(page)).toBe(false);
   expect(await stored(page)).toBe("light");
+
+  await page.getByRole("button", { name: /Switch to dark theme/i }).click();
+  expect(await isDark(page)).toBe(true);
+  expect(await stored(page)).toBe("dark");
 });
 
-test("persisted dark theme is re-applied on next load (no-flash script)", async ({
+test("persisted light theme is re-applied on next load (no-flash script)", async ({
   page,
 }) => {
   await page.goto("/recommend");
-  await page.evaluate(() => localStorage.setItem("theme", "dark"));
+  await page.evaluate(() => localStorage.setItem("theme", "light"));
   await page.reload();
-  expect(await isDark(page)).toBe(true);
+  expect(await isDark(page)).toBe(false);
 });
