@@ -35,15 +35,17 @@ export default function RootLayout({
   return (
     // suppressHydrationWarning: the no-flash script below mutates the <html>
     // class before React hydrates (T4 dark mode); without it React would flag
-    // (and strip) the script-applied `dark` class as a hydration mismatch.
-    <html lang="en" className={inter.variable} suppressHydrationWarning>
+    // (and reconcile) the script's class change as a hydration mismatch.
+    <html lang="en" className={`${inter.variable} dark`} suppressHydrationWarning>
       <body className={`${inter.className} min-h-screen font-sans`}>
-        {/* No-flash theme init: apply the persisted theme before paint.
-            Default light — only an explicit "dark" choice adds the class. */}
+        {/* No-flash theme init: dark is the default, so the server already
+            renders <html class="dark"> (zero flash for the common case). Only
+            an explicit "light" choice removes it before paint; "dark" or an
+            unset preference stay dark. */}
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}",
+              "try{if(localStorage.getItem('theme')==='light')document.documentElement.classList.remove('dark')}catch(e){}",
           }}
         />
         <AppNav roadmapEnabled={env.ROADMAP_ENABLED} />
