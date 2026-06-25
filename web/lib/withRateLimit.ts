@@ -21,6 +21,16 @@ export interface RequestIdentity {
 }
 
 export function identifyRequest(req: Request): RequestIdentity {
+  // Trusted client IP. On Vercel `x-forwarded-for` is OVERWRITTEN by the
+  // platform with the real client IP and client-supplied values are NOT
+  // forwarded — Vercel does this specifically to prevent IP spoofing
+  // (https://vercel.com/docs/headers/request-headers#x-forwarded-for). So
+  // the header is effectively a single trusted IP here and `[0]` is the
+  // genuine client. Do NOT "harden" this to take the LAST entry: that would
+  // be correct on hosts that APPEND, but on Vercel it changes nothing while
+  // making the code read as if a spoofable prefix exists. If this app is ever
+  // deployed off Vercel (no spoof-proof proxy), revisit — XFF would then be
+  // client-controlled and this keying would need a trusted-proxy IP instead.
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const ua = req.headers.get("user-agent") ?? "unknown";

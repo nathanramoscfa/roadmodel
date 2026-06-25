@@ -1,5 +1,6 @@
 // web/app/api/gate/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { GATE_COOKIE, deriveGateToken } from "@/lib/gate";
 import {
   fireGateAlert,
@@ -9,6 +10,18 @@ import {
 
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
 
+// Constant-time password comparison. Raw `submitted !== expected` short-
+// circuits at the first differing byte, leaking a timing oracle that — given
+// enough attempts — lets a remote attacker recover SITE_PASSWORD byte by byte.
+// Hash both sides to fixed-length SHA-256 digests first so neither the compare
+// timing NOR the buffer length reveals anything about the password, then
+// compare with timingSafeEqual. Mirrors the pattern in lib/withRateLimit.ts.
+function passwordMatches(submitted: string, expected: string): boolean {
+  const a = createHash("sha256").update(submitted).digest();
+  const b = createHash("sha256").update(expected).digest();
+  return timingSafeEqual(a, b);
+}
+
 function safeNext(raw: string | null): string {
   if (typeof raw !== "string" || raw.length === 0) return "/";
   if (!raw.startsWith("/") || raw.startsWith("//")) return "/";
@@ -16,6 +29,13 @@ function safeNext(raw: string | null): string {
 }
 
 function clientIp(req: NextRequest): string {
+  // Trusted client IP for the brute-force lockout (see lib/gateGuard.ts). On
+  // Vercel `x-forwarded-for` is OVERWRITTEN with the real client IP and any
+  // client-supplied value is dropped, specifically to prevent IP spoofing
+  // (https://vercel.com/docs/headers/request-headers#x-forwarded-for). So the
+  // per-IP lockout CANNOT be evaded or poisoned by sending a forged
+  // X-Forwarded-For here. Keep `[0]`; do not switch to the last entry (that is
+  // only correct on append-style proxies). Revisit if deployed off Vercel.
   return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 }
 
@@ -61,7 +81,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     });
   }
 
-  if (typeof submitted !== "string" || submitted !== expected) {
+  if (typeof submitted !== "string" || !passwordMatches(submitted, expected)) {
     // Wrong password — count the failure. If it trips the lockout, alert.
     const after = await recordGateFailure(ip);
     if (after.locked) {
