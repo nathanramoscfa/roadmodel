@@ -39,8 +39,12 @@ _RECOMMEND_DICT: dict[str, Any] = {
 }
 
 
+_TEST_TOKEN = "test-internal-token"
+
+
 def _load_main_module(monkeypatch: pytest.MonkeyPatch) -> ModuleType:
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+    monkeypatch.setenv("ROADMODEL_INTERNAL_TOKEN", _TEST_TOKEN)
     for module_name in _MODULES_TO_RESET:
         sys.modules.pop(module_name, None)
     return importlib.import_module("app.main")
@@ -49,7 +53,12 @@ def _load_main_module(monkeypatch: pytest.MonkeyPatch) -> ModuleType:
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     app_main = _load_main_module(monkeypatch)
-    return TestClient(app_main.app)
+    # /v1/recommend now requires the edge bearer; send it by default so
+    # the timing-header assertions exercise the authenticated happy path.
+    return TestClient(
+        app_main.app,
+        headers={"Authorization": f"Bearer {_TEST_TOKEN}"},
+    )
 
 
 def _parse_timing(header_value: str) -> dict[str, int]:
