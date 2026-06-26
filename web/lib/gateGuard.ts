@@ -17,8 +17,7 @@ import { Redis } from "@upstash/redis";
 import { createHash } from "node:crypto";
 
 import { env } from "./env";
-
-const SALT = process.env.ROADMODEL_IP_SALT ?? "default-salt-rotate-quarterly";
+import { ipHashSalt } from "./ip-salt";
 
 export const MAX_ATTEMPTS = 3;
 const WINDOW = "5 m";
@@ -73,7 +72,9 @@ function backend(): GateBackend | null {
 }
 
 export function hashIp(ip: string): string {
-  return createHash("sha256").update(`${ip}|${SALT}`).digest("hex");
+  // ipHashSalt() throws in production if ROADMODEL_IP_SALT is unset (fail
+  // closed) and returns a labelled default elsewhere — see lib/ip-salt.ts.
+  return createHash("sha256").update(`${ip}|${ipHashSalt()}`).digest("hex");
 }
 
 function retryAfterFrom(reset: number): number {

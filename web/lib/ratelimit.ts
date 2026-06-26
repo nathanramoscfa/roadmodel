@@ -108,6 +108,20 @@ export function isRateLimitExempt(userId: string): boolean {
 
 export async function checkLimits(key: string): Promise<RateLimitResult> {
   if (!limiters) {
+    // No Upstash configured. In PRODUCTION the limiter is the spend boundary
+    // for the paid recommender — refuse to serve uncapped rather than silently
+    // fail open. Throwing here makes the route return 500 BEFORE any upstream
+    // call (fail closed). Elsewhere (local/CI/preview, where Upstash is
+    // intentionally unseeded) keep the fail-open behaviour so dev/test run.
+    // Gated on VERCEL_ENV === "production" (not VERCEL=1, which is every
+    // Vercel runtime). See also lib/ip-salt.ts for the same prod policy.
+    if (process.env.VERCEL_ENV === "production") {
+      throw new Error(
+        "[ratelimit] UPSTASH_REDIS_URL / UPSTASH_REDIS_TOKEN unset in " +
+          "production — refusing to run the recommender without a rate " +
+          'limiter. See infra/README.md "Environment variables".',
+      );
+    }
     return { allowed: true };
   }
 

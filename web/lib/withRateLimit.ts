@@ -4,13 +4,13 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { checkLimits, isRateLimitExempt } from "./ratelimit";
 import { writeAudit } from "./audit";
 import { env } from "./env";
-
-const DAILY_SALT =
-  process.env.ROADMODEL_IP_SALT ?? "default-salt-rotate-quarterly";
+import { ipHashSalt } from "./ip-salt";
 
 function hash(value: string): string {
+  // ipHashSalt() throws in production if ROADMODEL_IP_SALT is unset (fail
+  // closed) and returns a labelled default elsewhere — see lib/ip-salt.ts.
   return createHash("sha256")
-    .update(`${value}|${DAILY_SALT}`)
+    .update(`${value}|${ipHashSalt()}`)
     .digest("hex");
 }
 
