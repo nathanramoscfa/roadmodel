@@ -21,6 +21,40 @@ const nextConfig = {
       "../docs/templates/phase-roadmap-template.md",
     ],
   },
+  // Security response headers (audit H3). Applied to every route. These are
+  // the framework-functionality-safe set:
+  //   - HSTS: force HTTPS for 2y incl. subdomains. No `preload` on purpose —
+  //     preload-list submission is a separate, hard-to-reverse commitment we
+  //     don't want to make pre-launch.
+  //   - X-Frame-Options: DENY — clickjacking protection (the app is never
+  //     framed; the gate + auth flows especially must not be).
+  //   - X-Content-Type-Options: nosniff — block MIME sniffing.
+  //   - Referrer-Policy: don't leak full URLs (which can carry the gate
+  //     `next=` param / ids) to cross-origin destinations.
+  //   - Permissions-Policy: deny powerful features the app never uses.
+  // NOTE: a strict Content-Security-Policy is intentionally NOT set here yet.
+  // Next.js App Router injects inline bootstrap/hydration scripts (and we ship
+  // one static inline theme script in app/layout.tsx), so a correct CSP needs
+  // per-request nonce wiring in middleware + browser verification. Tracked as
+  // a follow-up; there are no XSS sinks in the app today (all LLM/user output
+  // renders through JSX auto-escaping), so CSP here is defense-in-depth, not a
+  // live gap.
+  async headers() {
+    const securityHeaders = [
+      {
+        key: "Strict-Transport-Security",
+        value: "max-age=63072000; includeSubDomains",
+      },
+      { key: "X-Frame-Options", value: "DENY" },
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      {
+        key: "Permissions-Policy",
+        value: "camera=(), microphone=(), geolocation=(), browsing-topics=()",
+      },
+    ];
+    return [{ source: "/:path*", headers: securityHeaders }];
+  },
 };
 
 export default nextConfig;
