@@ -27,8 +27,12 @@ _RECOMMEND_DICT: dict[str, Any] = {
 }
 
 
+_TEST_TOKEN = "test-internal-token"
+
+
 def _load_main_module(monkeypatch: pytest.MonkeyPatch) -> ModuleType:
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+    monkeypatch.setenv("ROADMODEL_INTERNAL_TOKEN", _TEST_TOKEN)
     for module_name in _MODULES_TO_RESET:
         sys.modules.pop(module_name, None)
     return importlib.import_module("app.main")
@@ -37,7 +41,14 @@ def _load_main_module(monkeypatch: pytest.MonkeyPatch) -> ModuleType:
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     app_main = _load_main_module(monkeypatch)
-    return TestClient(app_main.app)
+    # /v1/recommend now requires the shared edge bearer (require_bearer).
+    # Send it by default so the existing behavioural tests exercise the
+    # authenticated happy path; the auth-specific tests below build their
+    # own header-less / wrong-token clients to cover the reject paths.
+    return TestClient(
+        app_main.app,
+        headers={"Authorization": f"Bearer {_TEST_TOKEN}"},
+    )
 
 
 def _request_payload(task_description: str = "pick a model") -> dict[str, Any]:
@@ -67,6 +78,41 @@ def test_docs_enabled_off_vercel(monkeypatch: pytest.MonkeyPatch) -> None:
     app_main = importlib.import_module("app.main")
     raw = TestClient(app_main.app)
     assert raw.get("/openapi.json").status_code == 200
+
+
+def test_recommend_rejects_missing_bearer(monkeypatch: pytest.MonkeyPatch) -> None:
+    # No Authorization header at all → 401 before any upstream call.
+    app_main = _load_main_module(monkeypatch)
+    raw = TestClient(app_main.app)
+    response = raw.post("/v1/recommend", json=_request_payload())
+    assert response.status_code == 401
+    assert response.json()["detail"] == "invalid_or_missing_bearer"
+
+
+def test_recommend_rejects_wrong_bearer(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Wrong token → 401 (constant-time mismatch in require_bearer).
+    app_main = _load_main_module(monkeypatch)
+    raw = TestClient(app_main.app, headers={"Authorization": "Bearer not-the-token"})
+    response = raw.post("/v1/recommend", json=_request_payload())
+    assert response.status_code == 401
+    assert response.json()["detail"] == "invalid_or_missing_bearer"
+
+
+def test_recommend_503_when_token_unconfigured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Bearer supplied but the server has NO ROADMODEL_INTERNAL_TOKEN set →
+    # 503 (fail-closed): a misconfigured service refuses rather than serving
+    # a free upstream call.
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+    monkeypatch.delenv("ROADMODEL_INTERNAL_TOKEN", raising=False)
+    for module_name in _MODULES_TO_RESET:
+        sys.modules.pop(module_name, None)
+    app_main = importlib.import_module("app.main")
+    raw = TestClient(app_main.app, headers={"Authorization": "Bearer anything"})
+    response = raw.post("/v1/recommend", json=_request_payload())
+    assert response.status_code == 503
+    assert response.json()["detail"] == "internal_token_unconfigured"
 
 
 def test_healthz_returns_200(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -4,8 +4,9 @@ from __future__ import annotations
 import os
 import time
 
-from fastapi import FastAPI, Response
+from fastapi import Depends, FastAPI, Response
 
+from .auth import require_bearer
 from .models import RecommendRequest, RecommendResponse
 from .recommend import recommend
 
@@ -50,7 +51,18 @@ def healthz() -> dict[str, str]:
 # this endpoint does — request validation, fallback chain
 # walking, response model assembly. Together they sum to the
 # wall-clock time the web tier observes in its provider span.
-@app.post("/v1/recommend", response_model=RecommendResponse)
+# Authenticated edge-only endpoint. `require_bearer` validates an
+# `Authorization: Bearer <ROADMODEL_INTERNAL_TOKEN>` header in constant
+# time against the shared secret the Next.js edge carries. This is the
+# spend boundary: without it the service is world-callable and every
+# request is a paid Gemini call (the web gate + Upstash rate limit only
+# front the web project, not this one). Fail-closed by construction — a
+# missing/unconfigured token yields 401/503, never a free upstream call.
+@app.post(
+    "/v1/recommend",
+    response_model=RecommendResponse,
+    dependencies=[Depends(require_bearer)],
+)
 def recommend_endpoint(req: RecommendRequest, response: Response) -> RecommendResponse:
     overall_start = time.perf_counter()
     provider_elapsed_ms = 0
