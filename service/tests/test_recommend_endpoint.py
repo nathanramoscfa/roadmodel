@@ -44,6 +44,31 @@ def _request_payload(task_description: str = "pick a model") -> dict[str, Any]:
     return {"task_description": task_description}
 
 
+def test_docs_and_openapi_disabled_on_vercel(monkeypatch: pytest.MonkeyPatch) -> None:
+    # On a Vercel runtime (VERCEL=1) the interactive docs + OpenAPI schema
+    # must be unreachable so the request schema isn't advertised to probers.
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+    monkeypatch.setenv("VERCEL", "1")
+    for module_name in _MODULES_TO_RESET:
+        sys.modules.pop(module_name, None)
+    app_main = importlib.import_module("app.main")
+    raw = TestClient(app_main.app)
+    assert raw.get("/openapi.json").status_code == 404
+    assert raw.get("/docs").status_code == 404
+    assert raw.get("/redoc").status_code == 404
+
+
+def test_docs_enabled_off_vercel(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Local/dev (no VERCEL) keeps the docs on for convenience.
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+    monkeypatch.delenv("VERCEL", raising=False)
+    for module_name in _MODULES_TO_RESET:
+        sys.modules.pop(module_name, None)
+    app_main = importlib.import_module("app.main")
+    raw = TestClient(app_main.app)
+    assert raw.get("/openapi.json").status_code == 200
+
+
 def test_healthz_returns_200(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("importlib.metadata.version", lambda _: "0.2.0")
 
