@@ -28,11 +28,13 @@ const envSchema = z.object({
   // broken login flow in production. Seeded in Vercel scopes
   // Production, Preview, and the staging Custom Env.
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
-  // Optional until the maintainer seeds them on roadmodel-web Vercel
-  // env vars (preview + staging + production). When unset, the
-  // Step 6 rate limiter fails open with a startup warning — see
-  // web/lib/ratelimit.ts. Flip to .min(1) in the follow-up PR that
-  // lands the seeded values; same for ROADMODEL_IP_SALT.
+  // Kept .optional() ON PURPOSE: local/CI/Preview intentionally run without
+  // a real Upstash backend, so a static .min(1) would break those scopes.
+  // Production-required enforcement lives in the CONSUMERS instead, gated on
+  // VERCEL_ENV === "production": web/lib/ratelimit.ts (checkLimits throws —
+  // fail closed — when these are unset in prod, never silently allow-all) and
+  // web/lib/ip-salt.ts (same policy for ROADMODEL_IP_SALT). When unset in
+  // non-prod the limiter fails OPEN with a startup warning.
   UPSTASH_REDIS_URL: z.string().optional(),
   UPSTASH_REDIS_TOKEN: z.string().optional(),
   // Google Generative AI key. One key, three call sites:
