@@ -76,10 +76,12 @@ jobs:
           ROADMODEL_LATENCY_BYPASS_TOKEN: ${{ secrets.ROADMODEL_LATENCY_BYPASS_TOKEN }}
         run: |
           set +e
-          # tsx is a transitive dep (not declared), so `npm ci` doesn't link
-          # .bin/tsx in CI — resolve the package directly via npx. NODE_PATH so
-          # the ../scripts file resolves @supabase/* against web/node_modules.
-          NODE_PATH="$(pwd)/node_modules" npx --yes tsx ../scripts/soak-recommend.ts 2>&1 | tee /tmp/soak.log
+          # tsx is a pinned devDependency (web/package.json + lockfile), so
+          # `npm ci` links .bin/tsx — run it directly instead of `npx --yes`,
+          # which would fetch tsx from npm at runtime alongside a full-access
+          # DB key in env (supply-chain risk, audit L1). NODE_PATH so the
+          # ../scripts file resolves @supabase/* against web/node_modules.
+          NODE_PATH="$(pwd)/node_modules" node_modules/.bin/tsx ../scripts/soak-recommend.ts 2>&1 | tee /tmp/soak.log
           echo "exit=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
 
       - name: Track regression in a single issue
