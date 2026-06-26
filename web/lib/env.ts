@@ -76,6 +76,16 @@ const envSchema = z.object({
   // the withRateLimit branch, and the bypassed_rate_limit audit
   // outcome) in PR 7c after the post-fix sweep lands.
   ROADMODEL_LATENCY_BYPASS_TOKEN: z.string().optional(),
+  // Shared edge<->service bearer secret. Sent as
+  // `Authorization: Bearer <this>` on every call to the FastAPI
+  // recommender (/v1/recommend), which requires it. Must match the
+  // ROADMODEL_INTERNAL_TOKEN seeded on the roadmodel-api Vercel
+  // project. Optional in the schema so local/CI/E2E (which uses the
+  // mock recommender) can boot without it; in Production it MUST be
+  // seeded. Fail-closed: when unset the edge sends no Authorization
+  // header, so the real service rejects with 401 rather than serving
+  // a free (paid-upstream) call.
+  ROADMODEL_INTERNAL_TOKEN: z.string().optional(),
   // Per-user /api/roadmap monthly cap (rolling 30 days). Configurable
   // so the free-tier allowance can be tuned without a code change;
   // default 10 (raised from the original hard-coded 3, which was too
@@ -142,6 +152,7 @@ export const env = envSchema.parse({
   // half of the #155 coercion footgun.
   FRONTIER_ROADMAP_ENABLED: process.env.FRONTIER_ROADMAP_ENABLED,
   ROADMODEL_LATENCY_BYPASS_TOKEN: process.env.ROADMODEL_LATENCY_BYPASS_TOKEN,
+  ROADMODEL_INTERNAL_TOKEN: process.env.ROADMODEL_INTERNAL_TOKEN,
   // Raw values through; schema defaults handle undefined.
   ROADMAP_MONTHLY_LIMIT: process.env.ROADMAP_MONTHLY_LIMIT,
   ROADMAP_CAP_EXEMPT_USER_IDS: process.env.ROADMAP_CAP_EXEMPT_USER_IDS,

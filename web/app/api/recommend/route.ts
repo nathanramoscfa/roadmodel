@@ -21,6 +21,7 @@ import {
   getProfile,
   type JurisdictionCode,
 } from "@/lib/profile";
+import { recommenderRequestHeaders } from "@/lib/api";
 import { identifyRequest, withRateLimit } from "@/lib/withRateLimit";
 import { fundingNoteForModel, personalizeComparison } from "@/lib/funding";
 import { env } from "@/lib/env";
@@ -340,7 +341,7 @@ const handler = async (req: Request): Promise<Response> =>
       upstream = await withSpan("provider", async () =>
         fetch(recommenderUrl(), {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: recommenderRequestHeaders(),
           body: JSON.stringify(upstreamPayload),
         }),
       );

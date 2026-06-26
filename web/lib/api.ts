@@ -1,4 +1,22 @@
 // web/lib/api.ts
+import { env } from "./env";
+
+// Headers for a server->service /v1/recommend call. Always JSON; attaches
+// the shared edge<->service bearer when ROADMODEL_INTERNAL_TOKEN is set.
+// Fail-closed: when the token is unset the Authorization header is omitted,
+// so the authenticated service rejects with 401 rather than serving a free
+// (paid-upstream) call. The E2E mock recommender ignores the header.
+export function recommenderRequestHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  const token = env.ROADMODEL_INTERNAL_TOKEN;
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 export interface RecommendResponse {
   model: string;
   platform: string;
@@ -35,7 +53,7 @@ export async function recommendOnServer(
   };
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: recommenderRequestHeaders(),
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
