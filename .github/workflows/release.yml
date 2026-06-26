@@ -53,7 +53,7 @@ jobs:
         with:
           name: dist
           path: dist
-      - uses: sigstore/gh-action-sigstore-python@v3.3.0
+      - uses: sigstore/gh-action-sigstore-python@04cffa1d795717b140764e8b640de88853c92acc # v3.3.0
         with:
           inputs: |
             dist/*.whl
@@ -190,7 +190,7 @@ jobs:
               echo "No matching changelog section was found."
             } > RELEASE_NOTES.md
           fi
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           tag_name: ${{ inputs.tag }}
           body_path: RELEASE_NOTES.md
