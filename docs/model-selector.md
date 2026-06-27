@@ -152,13 +152,13 @@ differently:
   reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
   `xhigh` (the top "Extra High" tier; model-dependent). Higher
   effort spends more reasoning tokens before visible output.
-- Gemini (Google API, Gemini CLI): two reasoning surfaces by
-  model generation. Gemini 3.x exposes a discrete thinking-level
-  knob — `minimal`, `low`, `medium`, `high` (not every model
-  supports every level; e.g. Gemini 3.1 Pro has no `minimal`).
-  Gemini 2.5 exposes a numeric `thinkingBudget` in tokens, with
-  `0` to disable thinking where the model allows it (Gemini 2.5
-  Pro cannot) and `-1` for dynamic, model-decided thinking.
+- Gemini (Google API, Gemini CLI): a discrete thinking-level
+  knob — `low`, `medium`, `high` — across both the 3.x and 2.5
+  model generations (not every model supports every level; e.g.
+  Gemini 3 Pro is low/high only). Thinking can be turned off on
+  models that allow it (e.g. Gemini 2.5 Flash-Lite defaults off);
+  Google retired the numeric `thinkingBudget` from the docs in
+  favor of these levels.
 - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
   `disabled`, default `enabled`) plus a reasoning-effort enum —
   `high`, `max` (default `high`; `max` for some complex agentic
@@ -195,11 +195,10 @@ provider-native scales onto this 6-state field:
 - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
   `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
   Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
-- Gemini 3.x thinking levels: `minimal` → `Off`; `low` → `Low`;
-  `medium` → `Medium`; `high` → `High` (Gemini 3.x tops out at
-  `high` — no `xhigh` tier). Gemini 2.5 `thinkingBudget`: `0` →
-  `Off`; `-1` (dynamic) → `Medium`; small → `Low`; medium →
-  `Medium`; large → `High`; very large → `XHigh`.
+- Gemini thinking levels: `low` → `Low`; `medium` → `Medium`;
+  `high` → `High` (Gemini tops out at `high` — no `xhigh` tier).
+  Thinking turned off, on models that allow it (e.g. Gemini 2.5
+  Flash-Lite), → `Off`.
 - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
   `high` → `High`; `enabled` + effort `max` → `XHigh`. DeepSeek
   effort has no `low` / `medium` tier, so no DeepSeek level maps
@@ -382,13 +381,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
-    - Gemini (Google API, Gemini CLI): two reasoning surfaces by
-      model generation. Gemini 3.x exposes a discrete thinking-level
-      knob — `minimal`, `low`, `medium`, `high` (not every model
-      supports every level; e.g. Gemini 3.1 Pro has no `minimal`).
-      Gemini 2.5 exposes a numeric `thinkingBudget` in tokens, with
-      `0` to disable thinking where the model allows it (Gemini 2.5
-      Pro cannot) and `-1` for dynamic, model-decided thinking.
+    - Gemini (Google API, Gemini CLI): a discrete thinking-level
+      knob — `low`, `medium`, `high` — across both the 3.x and 2.5
+      model generations (not every model supports every level; e.g.
+      Gemini 3 Pro is low/high only). Thinking can be turned off on
+      models that allow it (e.g. Gemini 2.5 Flash-Lite defaults off);
+      Google retired the numeric `thinkingBudget` from the docs in
+      favor of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
       `high`, `max` (default `high`; `max` for some complex agentic
@@ -425,11 +424,10 @@ as primary; the other becomes the secondary category for tie-breaking.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
-    - Gemini 3.x thinking levels: `minimal` → `Off`; `low` → `Low`;
-      `medium` → `Medium`; `high` → `High` (Gemini 3.x tops out at
-      `high` — no `xhigh` tier). Gemini 2.5 `thinkingBudget`: `0` →
-      `Off`; `-1` (dynamic) → `Medium`; small → `Low`; medium →
-      `Medium`; large → `High`; very large → `XHigh`.
+    - Gemini thinking levels: `low` → `Low`; `medium` → `Medium`;
+      `high` → `High` (Gemini tops out at `high` — no `xhigh` tier).
+      Thinking turned off, on models that allow it (e.g. Gemini 2.5
+      Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
       `high` → `High`; `enabled` + effort `max` → `XHigh`. DeepSeek
       effort has no `low` / `medium` tier, so no DeepSeek level maps
@@ -1041,13 +1039,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
-    - Gemini (Google API, Gemini CLI): two reasoning surfaces by
-      model generation. Gemini 3.x exposes a discrete thinking-level
-      knob — `minimal`, `low`, `medium`, `high` (not every model
-      supports every level; e.g. Gemini 3.1 Pro has no `minimal`).
-      Gemini 2.5 exposes a numeric `thinkingBudget` in tokens, with
-      `0` to disable thinking where the model allows it (Gemini 2.5
-      Pro cannot) and `-1` for dynamic, model-decided thinking.
+    - Gemini (Google API, Gemini CLI): a discrete thinking-level
+      knob — `low`, `medium`, `high` — across both the 3.x and 2.5
+      model generations (not every model supports every level; e.g.
+      Gemini 3 Pro is low/high only). Thinking can be turned off on
+      models that allow it (e.g. Gemini 2.5 Flash-Lite defaults off);
+      Google retired the numeric `thinkingBudget` from the docs in
+      favor of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
       `high`, `max` (default `high`; `max` for some complex agentic
@@ -1084,11 +1082,10 @@ as primary; the other becomes the secondary category for tie-breaking.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
-    - Gemini 3.x thinking levels: `minimal` → `Off`; `low` → `Low`;
-      `medium` → `Medium`; `high` → `High` (Gemini 3.x tops out at
-      `high` — no `xhigh` tier). Gemini 2.5 `thinkingBudget`: `0` →
-      `Off`; `-1` (dynamic) → `Medium`; small → `Low`; medium →
-      `Medium`; large → `High`; very large → `XHigh`.
+    - Gemini thinking levels: `low` → `Low`; `medium` → `Medium`;
+      `high` → `High` (Gemini tops out at `high` — no `xhigh` tier).
+      Thinking turned off, on models that allow it (e.g. Gemini 2.5
+      Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
       `high` → `High`; `enabled` + effort `max` → `XHigh`. DeepSeek
       effort has no `low` / `medium` tier, so no DeepSeek level maps
@@ -1449,13 +1446,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
-    - Gemini (Google API, Gemini CLI): two reasoning surfaces by
-      model generation. Gemini 3.x exposes a discrete thinking-level
-      knob — `minimal`, `low`, `medium`, `high` (not every model
-      supports every level; e.g. Gemini 3.1 Pro has no `minimal`).
-      Gemini 2.5 exposes a numeric `thinkingBudget` in tokens, with
-      `0` to disable thinking where the model allows it (Gemini 2.5
-      Pro cannot) and `-1` for dynamic, model-decided thinking.
+    - Gemini (Google API, Gemini CLI): a discrete thinking-level
+      knob — `low`, `medium`, `high` — across both the 3.x and 2.5
+      model generations (not every model supports every level; e.g.
+      Gemini 3 Pro is low/high only). Thinking can be turned off on
+      models that allow it (e.g. Gemini 2.5 Flash-Lite defaults off);
+      Google retired the numeric `thinkingBudget` from the docs in
+      favor of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
       `high`, `max` (default `high`; `max` for some complex agentic
@@ -1492,11 +1489,10 @@ as primary; the other becomes the secondary category for tie-breaking.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
-    - Gemini 3.x thinking levels: `minimal` → `Off`; `low` → `Low`;
-      `medium` → `Medium`; `high` → `High` (Gemini 3.x tops out at
-      `high` — no `xhigh` tier). Gemini 2.5 `thinkingBudget`: `0` →
-      `Off`; `-1` (dynamic) → `Medium`; small → `Low`; medium →
-      `Medium`; large → `High`; very large → `XHigh`.
+    - Gemini thinking levels: `low` → `Low`; `medium` → `Medium`;
+      `high` → `High` (Gemini tops out at `high` — no `xhigh` tier).
+      Thinking turned off, on models that allow it (e.g. Gemini 2.5
+      Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
       `high` → `High`; `enabled` + effort `max` → `XHigh`. DeepSeek
       effort has no `low` / `medium` tier, so no DeepSeek level maps
@@ -2456,13 +2452,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
-    - Gemini (Google API, Gemini CLI): two reasoning surfaces by
-      model generation. Gemini 3.x exposes a discrete thinking-level
-      knob — `minimal`, `low`, `medium`, `high` (not every model
-      supports every level; e.g. Gemini 3.1 Pro has no `minimal`).
-      Gemini 2.5 exposes a numeric `thinkingBudget` in tokens, with
-      `0` to disable thinking where the model allows it (Gemini 2.5
-      Pro cannot) and `-1` for dynamic, model-decided thinking.
+    - Gemini (Google API, Gemini CLI): a discrete thinking-level
+      knob — `low`, `medium`, `high` — across both the 3.x and 2.5
+      model generations (not every model supports every level; e.g.
+      Gemini 3 Pro is low/high only). Thinking can be turned off on
+      models that allow it (e.g. Gemini 2.5 Flash-Lite defaults off);
+      Google retired the numeric `thinkingBudget` from the docs in
+      favor of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
       `high`, `max` (default `high`; `max` for some complex agentic
@@ -2499,11 +2495,10 @@ as primary; the other becomes the secondary category for tie-breaking.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
-    - Gemini 3.x thinking levels: `minimal` → `Off`; `low` → `Low`;
-      `medium` → `Medium`; `high` → `High` (Gemini 3.x tops out at
-      `high` — no `xhigh` tier). Gemini 2.5 `thinkingBudget`: `0` →
-      `Off`; `-1` (dynamic) → `Medium`; small → `Low`; medium →
-      `Medium`; large → `High`; very large → `XHigh`.
+    - Gemini thinking levels: `low` → `Low`; `medium` → `Medium`;
+      `high` → `High` (Gemini tops out at `high` — no `xhigh` tier).
+      Thinking turned off, on models that allow it (e.g. Gemini 2.5
+      Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
       `high` → `High`; `enabled` + effort `max` → `XHigh`. DeepSeek
       effort has no `low` / `medium` tier, so no DeepSeek level maps
