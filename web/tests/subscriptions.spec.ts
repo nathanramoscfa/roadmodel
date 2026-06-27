@@ -54,9 +54,12 @@ test("carries the editorial annual_usd (null where no annual plan)", () => {
   const byId = new Map(getSubscriptionOptions().map((o) => [o.id, o]));
   // Claude Pro is the seeded annual plan ($200/yr vs $20/mo).
   expect(byId.get("anthropic-claude-pro")?.annual_usd).toBe(200);
-  // A tier with no verified annual plan carries null (the "—" cell).
+  // Cursor Ultra carries its verified annual ($1920/yr = $160/mo billed
+  // annually, the standard 20% Cursor annual discount on $200/mo).
+  expect(byId.get("cursor-ultra")?.annual_usd).toBe(1920);
+  // A tier with no annual plan carries null (the "—" cell). Anthropic Max
+  // is monthly-only.
   expect(byId.get("claude-max")?.annual_usd).toBeNull();
-  expect(byId.get("cursor-ultra")?.annual_usd).toBeNull();
 });
 
 test("SUBSCRIPTION_IDS matches the derived options and funds map to surfaces", () => {

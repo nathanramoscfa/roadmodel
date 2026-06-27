@@ -184,7 +184,7 @@ and adjust the rebuild rules in [`update/prompt.md`](../update/prompt.md).
 | Google AI Ultra ($200) | $200    | —      | Google    | gemini-app, gemini-cli       | Highest access to Gemini 3.1 Pro, Deep Think, Project Genie, Veo 3.1 with 25,000 monthly AI credits, $100/month Google Cloud credits, and 30 TB Google One storage (price reduced from $250 to $200). |
 | Cursor Pro             | $20     | $192   | Cursor    | cursor                       | $20 monthly model-usage credit pool across every model in Cursor's catalog; on-demand overage billed at API rates. |
 | Cursor Pro+            | $60     | —      | Cursor    | cursor                       | Same model coverage as Pro at roughly 3x the OpenAI / Claude / Gemini usage budget.                       |
-| Cursor Ultra           | $200    | —      | Cursor    | cursor                       | Same model coverage as Pro at roughly 20x the OpenAI / Claude / Gemini usage budget; priority access to new features. |
+| Cursor Ultra           | $200    | $1920  | Cursor    | cursor                       | Same model coverage as Pro at roughly 20x the OpenAI / Claude / Gemini usage budget; priority access to new features. |
 
 
 The "Access methods unlocked" column references method ids enumerated in
