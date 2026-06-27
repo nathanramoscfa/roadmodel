@@ -17,6 +17,8 @@
 
 import { randomUUID } from "node:crypto";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { createSupabaseServerClient } from "./auth";
 import { isE2eAuthEnabled } from "./e2e-mode";
 import type {
@@ -265,6 +267,7 @@ export async function getConversationDetail(
     .from("conversations")
     .select("id, title, created_at, updated_at")
     .eq("id", conversationId)
+    .eq("user_id", userId) // defense-in-depth (M5); gates the message/roadmap reads below
     .maybeSingle();
   if (convoErr || !convoRow) {
     return null;
@@ -295,6 +298,26 @@ export async function getConversationDetail(
   };
 }
 
+// Defense-in-depth ownership check (audit M5). RLS already pins every row to
+// auth.uid() via the anon+cookie client, so this is belt-and-suspenders: it
+// means a future RLS regression (a dropped policy, or a refactor that swaps in
+// the service-role client) can't silently turn the message/roadmap writes —
+// which key off conversation_id ALONE — into a cross-user IDOR. Cheap: one
+// indexed lookup, and roadmap writes are off in prod today (ROADMAP_ENABLED).
+async function conversationBelongsToUser(
+  supabase: SupabaseClient,
+  conversationId: string,
+  userId: string,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("id", conversationId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  return Boolean(data);
+}
+
 export async function insertMessage(args: {
   conversationId: string;
   userId: string;
@@ -319,6 +342,10 @@ export async function insertMessage(args: {
     return;
   }
   const supabase = await createSupabaseServerClient();
+  if (!(await conversationBelongsToUser(supabase, args.conversationId, args.userId))) {
+    console.error("message_insert_denied: conversation not owned by user");
+    return;
+  }
   const { error } = await supabase.from("messages").insert({
     conversation_id: args.conversationId,
     role: args.role,
@@ -353,6 +380,10 @@ export async function upsertRoadmap(args: {
     return { id: row.id };
   }
   const supabase = await createSupabaseServerClient();
+  if (!(await conversationBelongsToUser(supabase, args.conversationId, args.userId))) {
+    console.error("roadmap_upsert_denied: conversation not owned by user");
+    return null;
+  }
   const { data, error } = await supabase
     .from("roadmaps")
     .upsert(
@@ -395,7 +426,8 @@ export async function updateConversationTitle(args: {
   const { error } = await supabase
     .from("conversations")
     .update({ title })
-    .eq("id", args.conversationId);
+    .eq("id", args.conversationId)
+    .eq("user_id", args.userId); // defense-in-depth (M5): only the owner's row
   if (error) {
     console.error("conversation_title_update_failed", error);
   }
@@ -418,6 +450,7 @@ export async function getRoadmapById(
     .from("roadmaps")
     .select("id, conversation_id, user_id, draft, generated_at")
     .eq("id", roadmapId)
+    .eq("user_id", userId) // defense-in-depth (M5)
     .maybeSingle();
   if (error || !data) {
     return null;
