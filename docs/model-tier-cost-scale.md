@@ -119,9 +119,17 @@ table and surface material cost / availability / capability constraints.
 | Kimi K2.5 | $0.60 | –           | $0.10      | $3.00  | Low  | Hidden by default |
 
 
+### API Pool — Z.ai
+
+
+| Model   | Input | Cache Write | Cache Read | Output | Tier | Notes |
+| ------- | ----- | ----------- | ---------- | ------ | ---- | ----- |
+| GLM 5.2 | $1.40 | –           | $0.26      | $4.40  | Low  | Hidden by default |
+
+
 ---
 
-<!-- subscription-tiers-reviewed: 2026-06-11 -->
+<!-- subscription-tiers-reviewed: 2026-06-27 -->
 
 ## Subscription Tiers and Access Methods
 
@@ -183,7 +191,7 @@ and adjust the rebuild rules in [`update/prompt.md`](../update/prompt.md).
 | Google AI Ultra ($100) | $100    | —      | Google    | gemini-app, gemini-cli       | New developer-focused Ultra tier (May 2026): 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan. |
 | Google AI Ultra ($200) | $200    | —      | Google    | gemini-app, gemini-cli       | Highest access to Gemini 3.1 Pro, Deep Think, Project Genie, Veo 3.1 with 25,000 monthly AI credits, $100/month Google Cloud credits, and 30 TB Google One storage (price reduced from $250 to $200). |
 | Cursor Pro             | $20     | $192   | Cursor    | cursor                       | $20 monthly model-usage credit pool across every model in Cursor's catalog; on-demand overage billed at API rates. |
-| Cursor Pro+            | $60     | —      | Cursor    | cursor                       | Same model coverage as Pro at roughly 3x the OpenAI / Claude / Gemini usage budget.                       |
+| Cursor Pro+            | $60     | $576   | Cursor    | cursor                       | Same model coverage as Pro at roughly 3x the OpenAI / Claude / Gemini usage budget.                       |
 | Cursor Ultra           | $200    | $1920  | Cursor    | cursor                       | Same model coverage as Pro at roughly 20x the OpenAI / Claude / Gemini usage budget; priority access to new features. |
 
 
@@ -228,6 +236,17 @@ appear here.
 | gpt-5-mini       | $2.00   | Low          | Low          | ✓      |
 | gpt-5.4-mini     | $4.50   | Low          | Low          | ✓      |
 | gpt-5.4-nano     | $1.25   | Low          | Low          | ✓      |
+| glm-5.2          | $4.40   | Low          | Low          | ✓      |
+| glm-4.6          | $2.20   | Low          | Low          | ✓      |
+| glm-4.5-air      | $1.10   | Low          | Low          | ✓      |
+| deepseek-v4-pro  | $0.87   | Low          | Low          | ✓      |
+| deepseek-v4-flash | $0.28  | Low          | Low          | ✓      |
+| mistral-medium-3.5 | $7.50 | Low          | Low          | ✓      |
+| mistral-small-4  | $0.30   | Low          | Low          | ✓      |
+| mistral-large-3  | $1.50   | Low          | Low          | ✓      |
+| codestral        | $0.90   | Low          | Low          | ✓      |
+| gpt-oss-120b     | $0.60   | Low          | Low          | ✓      |
+| gpt-oss-20b      | $0.30   | Low          | Low          | ✓      |
 
 
 Routing meta-models (Cursor's "Auto" / "Premium" modes; analogous
@@ -248,6 +267,7 @@ ids no longer appear as recommendable engines.
 
 | Model id         | Output | Tier      | Change                                                                                                                     |
 | ---------------- | ------ | --------- | -------------------------------------------------------------------------------------------------------------------------- |
+| glm-5.2          | $4.40  | Low       | New 2026-06-27 in cost-scale — z.ai's GLM 5.2 now visible on Cursor's pricing page (provider header "Z.ai"); already present in `<model-options>` via provider-direct `zai-api` method, prices preserved per the Federation rule (provider-direct catalog owns input/output) |
 | grok-4.3         | $2.50  | Low       | New — supersedes grok-4.20 in selector list                                                                                |
 | gemini-2.5-flash | $2.50  | Low       | New — added 2026-05-21; cheap multimodal Flash model now visible in `<model-options>` for SaaS-backend free-tier picks      |
 | gemini-3-flash   | $3.00  | Low       | New — added 2026-05-21; Gemini 3 generation Flash variant; previously Hidden-by-default on Cursor's pricing page            |
@@ -285,6 +305,10 @@ this table.
 | xAI (Palo Alto, US)           | `us`              | grok-4.3                                                                                                                |
 | Cursor (San Francisco, US)    | `us`              | composer-2, composer-2.5 — note: base weights for these Composer models derive from Moonshot's Kimi K2 series; Cursor's operator status determines the jurisdiction code per `<jurisdiction-context>` (data flow governed by Cursor's privacy policy and US law) |
 | Moonshot AI (Beijing, CN)     | `cn`              | kimi-k2.5                                                                                                               |
+| DeepSeek (Hangzhou, CN)       | `cn`              | deepseek-v4-pro, deepseek-v4-flash                                                                                      |
+| z.ai / Zhipu AI (Beijing, CN) | `cn`              | glm-5.2, glm-4.6, glm-4.5-air                                                                                           |
+| Mistral AI (Paris, FR/EU)     | `eu`              | mistral-medium-3.5, mistral-small-4, mistral-large-3, codestral                                                         |
+| Groq (Mountain View, US)      | `us`              | gpt-oss-120b, gpt-oss-20b (hosts OpenAI's open-weight gpt-oss; pinned host that defines per-token price + access)        |
 
 
 Notes on the mapping:
