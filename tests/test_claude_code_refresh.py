@@ -161,6 +161,57 @@ def test_non_trigger_bullets_are_exempt(tmp_path: Path) -> None:
     assert "PASS" in result.stdout
 
 
+def test_generic_feature_bullets_do_not_trigger(tmp_path: Path) -> None:
+    """Regression (2026-06): real CHANGELOG bullets about generic Claude Code
+    features — NOT reasoning/effort dials — must not trip the citation check.
+
+    These four bullets matched the old over-broad keywords ("slash command",
+    "settings.json", "claude_code_") and blocked the cron for ~2 weeks even
+    though none touches the selector's documented surface parameters. With no
+    effort/thinking edit in the diff the validator must still PASS.
+    """
+    pending = _write_pending(
+        tmp_path,
+        [
+            {
+                "version": "2.1.191",
+                "bullets": [
+                    "Improved vim mode prompt-history search (NORMAL `/`) to "
+                    "hint how to reach slash commands",
+                ],
+            },
+            {
+                "version": "2.1.187",
+                "bullets": [
+                    "Fixed remote MCP tool calls that hang with no response for 5 "
+                    "minutes (override with `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT`)",
+                ],
+            },
+            {
+                "version": "2.1.186",
+                "bullets": [
+                    "`!` bash commands now trigger Claude to respond to the output "
+                    'automatically; set `"respondToBashCommands": false` in '
+                    "settings.json to keep the previous behavior",
+                    "Changed `CLAUDE_CODE_MAX_RETRIES` to cap at 15; use "
+                    "`CLAUDE_CODE_RETRY_WATCHDOG` for unattended sessions",
+                ],
+            },
+        ],
+    )
+    consumed = _write_consumed(tmp_path, ["2.1.191", "2.1.187", "2.1.186"])
+    before = tmp_path / "before.txt"
+    after = tmp_path / "after.txt"
+    # No reasoning-surface edit at all — yet must PASS, because none of these
+    # bullets is an effort/thinking-dial change.
+    before.write_text("- Effort levels: low / medium / high / xhigh\n")
+    after.write_text("- Effort levels: low / medium / high / xhigh\n")
+
+    result = _run_validator(pending, consumed, before, after)
+    assert result.returncode == 0, result.stderr
+    assert "PASS" in result.stdout
+
+
 def test_pending_file_missing_errors_cleanly(tmp_path: Path) -> None:
     """Validator exits 2 (config error) when pending-bullets.json is missing."""
     consumed = _write_consumed(tmp_path, [])

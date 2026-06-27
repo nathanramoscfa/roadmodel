@@ -60,12 +60,22 @@ LAST_SUMMARY_PATH = UPDATE_DIR / ".last-claude-code-summary.txt"
 # parameter change Opus is responsible for reflecting in the diff.
 # Casefolded comparison; substrings allowed. Keep this list narrow:
 # false positives block PR merge unnecessarily.
+#
+# Scope: ONLY the reasoning/effort/thinking dials that the selector's
+# `<method id="claude-code">` and `<thinking-context>` actually document.
+# Generic Claude Code features (hooks, slash commands in general,
+# settings.json keys, arbitrary CLAUDE_CODE_* env vars) are NOT in the
+# selector's lane and must not trigger the citation check. Earlier broad
+# keywords ("slash command", "hook", "settings.json", "claude_code_")
+# matched unrelated CHANGELOG bullets (vim-mode search, `!`-bash respond,
+# MCP idle-timeout, CLAUDE_CODE_MAX_RETRIES) and blocked the cron for two
+# weeks (2026-06); removed. A genuinely reasoning-related env var or
+# settings key still names "effort"/"thinking"/a dial and is caught by the
+# specific keywords below. The conformance gate (validate_effort_
+# conformance.py checks A–F) remains the hard enforcement for the vocab.
 TRIGGER_KEYWORDS = (
     "/effort",
     "effort level",
-    "slash command",
-    "hook",
-    "settings.json",
     "extended thinking",
     "auto mode",
     "ultracode",
@@ -73,7 +83,6 @@ TRIGGER_KEYWORDS = (
     "xhigh",
     "max effort",
     "adaptive reasoning",
-    "claude_code_",
 )
 
 # Tokens to ignore when computing "non-trivial" overlap between a
