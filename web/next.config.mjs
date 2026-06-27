@@ -32,13 +32,11 @@ const nextConfig = {
   //   - Referrer-Policy: don't leak full URLs (which can carry the gate
   //     `next=` param / ids) to cross-origin destinations.
   //   - Permissions-Policy: deny powerful features the app never uses.
-  // NOTE: a strict Content-Security-Policy is intentionally NOT set here yet.
-  // Next.js App Router injects inline bootstrap/hydration scripts (and we ship
-  // one static inline theme script in app/layout.tsx), so a correct CSP needs
-  // per-request nonce wiring in middleware + browser verification. Tracked as
-  // a follow-up; there are no XSS sinks in the app today (all LLM/user output
-  // renders through JSX auto-escaping), so CSP here is defense-in-depth, not a
-  // live gap.
+  // The Content-Security-Policy is set per-request in web/middleware.ts (it
+  // needs a per-request nonce so Next's inline bootstrap/streaming scripts +
+  // our inline theme script execute under a strict, no-'unsafe-inline' policy)
+  // — it can't live here in the static header set. Defense-in-depth; no XSS
+  // sink today (all LLM/user output renders through JSX auto-escaping).
   async headers() {
     const securityHeaders = [
       {
