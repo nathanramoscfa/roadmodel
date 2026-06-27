@@ -23,7 +23,7 @@ async function onboardWith(page: import("@playwright/test").Page) {
   await page.getByLabel(/Claude Max.*\$200\/mo/i).check();
   await page.getByLabel(/Cursor Ultra/i).check();
   await page.getByLabel("DeepSeek").check();
-  await page.getByRole("radio", { name: /^Best$/i }).check();
+  await page.getByRole("radio", { name: /^Quality$/i }).check();
   await page.getByRole("button", { name: /Save and continue/i }).click();
   await expect(page).toHaveURL("/");
 }
@@ -40,7 +40,7 @@ test("/settings pre-fills the saved preferences", async ({ page }) => {
   // API-access selection (Phase 4.8) pre-fills too.
   await expect(page.getByLabel("DeepSeek")).toBeChecked();
   await expect(page.getByLabel("OpenAI")).not.toBeChecked();
-  await expect(page.getByRole("radio", { name: /^Best$/i })).toBeChecked();
+  await expect(page.getByRole("radio", { name: /^Quality$/i })).toBeChecked();
 });
 
 test("/settings save PATCHes the profile and stays on the page", async ({
@@ -66,4 +66,36 @@ test("/settings save PATCHes the profile and stays on the page", async ({
   // Settings stays put (no redirect) and confirms inline.
   await expect(page).toHaveURL(/\/settings/);
   await expect(page.getByText(/Preferences saved\./i)).toBeVisible();
+});
+
+test("changing budget on /recommend persists and Settings reflects it, without wiping subscriptions", async ({
+  page,
+}) => {
+  // Onboard with a subscription + Balanced so we can prove the inline budget
+  // change is a true MERGE (it must not reset subscriptions to defaults).
+  await signInViaCallback(page);
+  await page.getByLabel(/Claude Max.*\$200\/mo/i).check();
+  await page.getByRole("radio", { name: /^Balanced$/i }).check();
+  await page.getByRole("button", { name: /Save and continue/i }).click();
+  await expect(page).toHaveURL("/");
+
+  // Switch to Quality on /recommend — it PATCHes the profile inline.
+  await page.goto("/recommend");
+  const group = page.getByRole("radiogroup", { name: /Budget priority/i });
+  const patchPromise = page.waitForResponse(
+    (resp) =>
+      resp.url().includes("/api/profile") &&
+      resp.request().method() === "PATCH",
+  );
+  await group.getByText("Quality", { exact: true }).click();
+  const profile = await (await patchPromise).json();
+  expect(profile.budget_priority).toBe("best");
+  // The merge preserves the subscription chosen at onboarding (issue: a
+  // budget-only PATCH used to reset every other field to its default).
+  expect(profile.subscriptions).toEqual(["claude-max"]);
+
+  // Settings reflects the inline change — no need to re-pick it there.
+  await page.goto("/settings");
+  await expect(page.getByRole("radio", { name: /^Quality$/i })).toBeChecked();
+  await expect(page.getByLabel(/Claude Max.*\$200\/mo/i)).toBeChecked();
 });

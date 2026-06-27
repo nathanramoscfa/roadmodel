@@ -22,6 +22,46 @@ test("/recommend renders form + empty output", async ({ page }) => {
   await expect(
     page.getByRole("link", { name: "SWE-bench Verified" }).first(),
   ).toHaveAttribute("href", "https://www.swebench.com/");
+  // The inline budget-priority control (Cost / Balanced / Quality) lets the
+  // user steer cost-vs-quality without leaving the page and losing their prompt.
+  const group = page.getByRole("radiogroup", { name: /Budget priority/i });
+  await expect(group).toBeVisible();
+  await expect(page.getByRole("radio", { name: "Cost" })).toBeAttached();
+  await expect(page.getByRole("radio", { name: "Quality" })).toBeAttached();
+  // Signed-out default is Balanced.
+  await expect(page.getByRole("radio", { name: "Balanced" })).toBeChecked();
+});
+
+test("the inline budget choice rides in the recommend request body", async ({
+  page,
+}) => {
+  let captured: { budget_priority?: string } | null = null;
+  await page.route("**/api/recommend", async (route) => {
+    captured = route.request().postDataJSON() as { budget_priority?: string };
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        model: "Claude 4.5 Haiku",
+        platform: "Anthropic API",
+        settings: {},
+        session_cost_estimate: { total_usd: 0.001 },
+        comparison_table: [],
+      }),
+    });
+  });
+  await page.goto("/recommend");
+  // Pick Quality (stored id "best") — the prompt the user typed stays intact.
+  const group = page.getByRole("radiogroup", { name: /Budget priority/i });
+  await group.getByText("Quality", { exact: true }).click();
+  await expect(page.getByRole("radio", { name: "Quality" })).toBeChecked();
+  await page.getByPlaceholder(/Input the prompt/i).fill("build a SQL agent");
+  await page.getByRole("button", { name: /Submit/i }).click();
+  await expect(page.getByText(/Claude 4.5 Haiku/i)).toBeVisible();
+  // Cast past control-flow narrowing: TS only sees the `null` initializer in
+  // this scope (the assignment happens inside the route callback at runtime).
+  const body = captured as { budget_priority?: string } | null;
+  expect(body?.budget_priority).toBe("best");
 });
 
 test(

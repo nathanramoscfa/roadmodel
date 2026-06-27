@@ -21,6 +21,7 @@ import {
   getProfile,
   type JurisdictionCode,
 } from "@/lib/profile";
+import { isBudgetPriority } from "@/lib/budget-priority";
 import { recommenderRequestHeaders } from "@/lib/api";
 import { identifyRequest, withRateLimit } from "@/lib/withRateLimit";
 import { fundingNoteForModel, personalizeComparison } from "@/lib/funding";
@@ -207,11 +208,17 @@ const handler = async (req: Request): Promise<Response> =>
                 {})
             : {};
 
+        // Budget priority chosen inline on /recommend rides in the request
+        // body so it takes effect immediately — even signed-out, and before the
+        // profile PATCH lands — overriding the stored profile for THIS call.
+        const bodyBudget = (parsedBody as { budget_priority?: unknown })
+          .budget_priority;
         const localSession = await getServerSession();
         const localUserId = localSession?.id;
         const profile = localUserId ? await getProfile(localUserId) : null;
-        const localBudget =
-          profile?.budget_priority ?? DEFAULT_PROFILE.budget_priority;
+        const localBudget = isBudgetPriority(bodyBudget)
+          ? bodyBudget
+          : (profile?.budget_priority ?? DEFAULT_PROFILE.budget_priority);
         const localJurisdictions = localUserId
           ? await getAllowedJurisdictions(localUserId)
           : [...DEFAULT_PROFILE.allowed_jurisdictions];

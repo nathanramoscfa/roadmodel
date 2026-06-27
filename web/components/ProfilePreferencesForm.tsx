@@ -17,12 +17,7 @@ import type {
 } from "@/lib/profile";
 import type { ApiProviderOption } from "@/lib/api-providers";
 import type { SubscriptionOption } from "@/lib/subscriptions";
-
-const BUDGET_OPTIONS: { id: BudgetPriority; label: string }[] = [
-  { id: "cheap", label: "Cheap" },
-  { id: "balanced", label: "Balanced" },
-  { id: "best", label: "Best" },
-];
+import { BUDGET_PRIORITY_OPTIONS } from "@/lib/budget-priority";
 
 // Mirrors DEFAULT_PROFILE.allowed_jurisdictions (kept as a literal here so
 // this client component doesn't import a value from the server-coupled
@@ -294,7 +289,7 @@ export function ProfilePreferencesForm({
           How aggressively should we optimize for cost vs. quality?
         </p>
         <div className="mt-4 flex flex-wrap gap-4">
-          {BUDGET_OPTIONS.map((option) => (
+          {BUDGET_PRIORITY_OPTIONS.map((option) => (
             <label
               key={option.id}
               className="flex items-center gap-2 text-sm text-brand-slate-800 dark:text-brand-slate-100"

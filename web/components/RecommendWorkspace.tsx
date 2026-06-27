@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import type { RecommendResponse } from "@/lib/api";
+import type { BudgetPriority } from "@/lib/profile";
 import { PromptForm } from "./PromptForm";
 import { RecommendOutput } from "./RecommendOutput";
 import { RecommendOutputEmpty } from "./RecommendOutputEmpty";
@@ -15,7 +16,18 @@ interface PrefillPayload {
   recommendation: RecommendResponse;
 }
 
-export function RecommendWorkspace() {
+interface RecommendWorkspaceProps {
+  // The signed-in user's current budget priority (or the default for anon), so
+  // the inline control opens on the right choice; canPersistBudget gates the
+  // Settings sync (signed-in only). Both supplied by the server page.
+  initialBudgetPriority: BudgetPriority;
+  canPersistBudget: boolean;
+}
+
+export function RecommendWorkspace({
+  initialBudgetPriority,
+  canPersistBudget,
+}: RecommendWorkspaceProps) {
   const [data, setData] = useState<RecommendResponse | null>(null);
   const [initialTask, setInitialTask] = useState("");
 
@@ -44,7 +56,12 @@ export function RecommendWorkspace() {
   return (
     <div className="contents">
       <div className="flex flex-col gap-8">
-        <PromptForm initialTask={initialTask} onSuccess={setData} />
+        <PromptForm
+          initialTask={initialTask}
+          initialBudgetPriority={initialBudgetPriority}
+          canPersistBudget={canPersistBudget}
+          onSuccess={setData}
+        />
         <RecommendReference />
       </div>
       {data ? (
