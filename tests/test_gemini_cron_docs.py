@@ -45,10 +45,10 @@ def test_validate_docs_enforces_server_rendered_anchors() -> None:
     cfg = {
         "validate": {
             "min_bytes": 20,
-            "must_contain_all": ["Thinking Level", "thinkingBudget"],
+            "must_contain_all": ["Model", "Levels Supported"],
         }
     }
-    mod.validate_docs("Thinking Level ... thinkingBudget ... padded out here.", cfg)
+    mod.validate_docs("Model ... Levels Supported ... padded out here.", cfg)
     with pytest.raises(ValueError):
         mod.validate_docs("tiny", cfg)  # below min_bytes + missing anchors
     # A client-rendered shell that lacks the server-rendered table anchors.
@@ -63,8 +63,8 @@ def test_facts_signature_ignores_cosmetic_html_but_catches_fact_change(
     base = SAMPLE_HTML.read_text()
     # Cosmetic churn: surrounding prose + whitespace, NO table-fact change.
     cosmetic = base.replace("<body>", "<body>\n<p>Unrelated re-render blurb.</p>\n")
-    # Real fact change: a budget range edit.
-    fact_change = base.replace("128 to 32768", "256 to 32768", 1)
+    # Real fact change: a per-model level edit (Gemini 3 Pro gains `medium`).
+    fact_change = base.replace("low, high</td>", "low, medium, high</td>", 1)
 
     # The fixture is a small slice; supply a permissive cfg (the real min_bytes
     # floor guards the 219 KB live page, not this offline slice). The anchors
@@ -88,7 +88,7 @@ def test_facts_signature_ignores_cosmetic_html_but_catches_fact_change(
     sig_fact = mod.facts_signature()
 
     assert sig_base == sig_cosmetic, "cosmetic HTML churn must NOT change the facts signature"
-    assert sig_base != sig_fact, "a real budget-range change MUST change the facts signature"
+    assert sig_base != sig_fact, "a real per-model level change MUST change the facts signature"
 
 
 def test_facts_signature_fails_open_on_shell(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -104,7 +104,7 @@ def test_facts_signature_fails_open_on_shell(monkeypatch: pytest.MonkeyPatch) ->
 
 def test_build_user_message_includes_docs_facts() -> None:
     mod = _load("update_gemini")
-    msg = mod.build_user_message("SELECTOR", docs_facts='{"thinking_levels": ["minimal", "high"]}')
+    msg = mod.build_user_message("SELECTOR", docs_facts='{"thinking_levels": ["low", "high"]}')
     assert "<docs_facts" in msg
     assert "thinking_levels" in msg
 
@@ -135,7 +135,7 @@ def test_sources_gemini_has_thinking_docs_entry() -> None:
     sources = json.loads((UPDATE_DIR / "sources-gemini.json").read_text())
     assert "thinking" in sources["thinking_docs"]["url"]
     anchors = sources["thinking_docs"]["validate"]["must_contain_all"]
-    for needle in ("Thinking Level", "thinkingBudget", "Range"):
+    for needle in ("Model", "Default Thinking", "Levels Supported"):
         assert needle in anchors
 
 

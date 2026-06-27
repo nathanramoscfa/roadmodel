@@ -38,15 +38,14 @@ Six hard checks:
      value (subset) and no documented value left unencoded (completeness). The
      UI synonym ``extra-high`` is treated as ``xhigh``. Codex publishes no
      per-model reasoning matrix, so this is a pure vocabulary check.
-  E. Gemini thinking surface (Gemini/Google). Gemini exposes TWO reasoning
-     surfaces; the selector must stay consistent with both. E1: the Gemini 3.x
-     ``thinking-level`` vocabulary the selector enumerates must EQUAL the
-     documented ``thinking_levels`` set (``minimal | low | medium | high``). E2:
-     where the selector affirmatively ties a Gemini 3.x model to a level its
-     documented row lacks (clause-scoped, negation-aware), that is a violation —
-     e.g. Gemini 3.1 Pro has no ``minimal``. E3: the Gemini 2.5 numeric
-     ``thinkingBudget`` sentinels must survive — ``0`` mapped to Off (disable)
-     and the ``-1`` / dynamic sentinel acknowledged.
+  E. Gemini thinking surface (Gemini/Google). Gemini unified its reasoning
+     surface onto ONE discrete thinking-level vocabulary (2026-06), spanning the
+     3.x and 2.5 generations; the numeric 2.5 ``thinkingBudget`` is no longer
+     documented or tracked. E1: the ``thinking-level`` vocabulary the selector
+     enumerates must EQUAL the documented ``thinking_levels`` set
+     (``low | medium | high``). E2: where the selector affirmatively ties a
+     Gemini model to a level its documented row lacks (clause-scoped,
+     negation-aware), that is a violation — e.g. Gemini 3 Pro is low/high only.
   F. DeepSeek thinking surface (DeepSeek). DeepSeek exposes ONE reasoning
      surface: a thinking toggle plus a reasoning-effort enum. F1: the effort
      vocabulary the selector enumerates must EQUAL the documented
@@ -83,7 +82,7 @@ REQUIRED_SNAPSHOT_KEYS = ("effort_levels", "per_model_effort", "ultracode", "ult
 # The Codex snapshot key the provider-aware check D depends on.
 REQUIRED_CODEX_SNAPSHOT_KEYS = ("reasoning_effort",)
 # The Gemini snapshot keys the provider-aware check E depends on.
-REQUIRED_GEMINI_SNAPSHOT_KEYS = ("thinking_levels", "per_model_levels", "budget_sentinels")
+REQUIRED_GEMINI_SNAPSHOT_KEYS = ("thinking_levels", "per_model_levels")
 # The DeepSeek snapshot keys the provider-aware check F depends on.
 REQUIRED_DEEPSEEK_SNAPSHOT_KEYS = ("reasoning_effort", "thinking_toggle")
 
@@ -621,25 +620,24 @@ def gemini_level_tokens(thinking_flat: str) -> set[str]:
 def check_gemini_thinking(selector: str, gemini_snapshot: dict[str, object]) -> list[str]:
     """Check E — the selector's Gemini reasoning description must match the docs.
 
-    E1 (vocabulary): the Gemini 3.x thinking-level vocabulary the selector
+    Gemini unified its reasoning surface onto discrete levels (2026-06); the
+    numeric 2.5 ``thinkingBudget`` is no longer documented, so there is no
+    sentinel sub-check.
+
+    E1 (vocabulary): the Gemini thinking-level vocabulary the selector
         enumerates must EQUAL the documented ``thinking_levels`` set.
-    E2 (per-model): where the selector affirmatively ties a Gemini 3.x model to
-        a thinking level its documented row lacks (clause-scoped, negation-aware,
-        mirroring check B), that is a violation — e.g. tying Gemini 3.1 Pro to
-        ``minimal`` (its row is low/medium/high).
-    E3 (sentinels): the selector must keep the documented Gemini 2.5
-        ``thinkingBudget`` sentinels — ``0`` mapped to Off (disable) and the
-        ``-1`` / dynamic sentinel acknowledged.
+    E2 (per-model): where the selector affirmatively ties a Gemini model to a
+        thinking level its documented row lacks (clause-scoped, negation-aware,
+        mirroring check B), that is a violation — e.g. tying Gemini 3 Pro to
+        ``medium`` (its row is low/high).
     """
     levels_raw = gemini_snapshot.get("thinking_levels")
     per_model_raw = gemini_snapshot.get("per_model_levels")
-    sentinels_raw = gemini_snapshot.get("budget_sentinels")
     if not isinstance(levels_raw, list) or not levels_raw:
         return ["check E (gemini): snapshot is missing the 'thinking_levels' list"]
     if not isinstance(per_model_raw, dict):
         return ["check E (gemini): snapshot is missing the 'per_model_levels' map"]
     documented = {str(lv).lower() for lv in levels_raw}
-    sentinels = sentinels_raw if isinstance(sentinels_raw, dict) else {}
 
     thinking = extract_block(selector, THINKING_BLOCK)
     flat = _collapse(thinking)
@@ -690,17 +688,6 @@ def check_gemini_thinking(selector: str, gemini_snapshot: dict[str, object]) -> 
                     f"{sorted(supported)}"
                 )
 
-    # E3 — Gemini 2.5 thinkingBudget sentinels.
-    if sentinels.get("dynamic") == -1 and "-1" not in flat and "dynamic" not in flat_low:
-        failures.append(
-            "check E (gemini sentinels): the selector must acknowledge Gemini's "
-            "`-1` / dynamic thinkingBudget sentinel"
-        )
-    if sentinels.get("disable") == 0 and not re.search(r"`?0`?\s*(?:→|->)\s*`?off`?", flat_low):
-        failures.append(
-            "check E (gemini sentinels): the selector must map Gemini thinkingBudget "
-            "`0` to `Off` (disable thinking)"
-        )
     return failures
 
 
@@ -886,7 +873,7 @@ def main() -> int:
         "validate_effort_conformance: PASS (Claude Code effort vocabulary is a "
         "documented subset; no model tied to an unsupported effort level; ultracode "
         "and ultrathink kept distinct; Codex reasoning vocabulary matches the docs; "
-        "Gemini thinking levels + budget sentinels match the docs; DeepSeek "
+        "Gemini thinking levels match the docs; DeepSeek "
         "thinking toggle + reasoning-effort vocabulary and mapping match the docs)"
     )
     return 0

@@ -19,15 +19,15 @@ A user message containing, in order:
   current contents of the selector.
 - `<docs_facts source="…thinking">…</docs_facts>` — a JSON object
   deterministically extracted (no LLM) from Google's Gemini API thinking docs:
-  - `thinking_levels` — the Gemini 3.x discrete thinking-level vocabulary
-    (`minimal`, `low`, `medium`, `high`).
-  - `per_model_levels` — which 3.x models support which levels (e.g. Gemini
-    3.1 Pro has no `minimal`).
-  - `per_model_budget` — the Gemini 2.5 numeric `thinkingBudget` ranges per
-    model, with `can_disable` and the default.
-  - `budget_sentinels` — `0` disables thinking (where allowed); `-1` is dynamic
-    (model-decided) thinking.
-  This is the **authoritative** source for Gemini reasoning CONTENT.
+  - `thinking_levels` — the unified Gemini discrete thinking-level vocabulary
+    (`low`, `medium`, `high`), shared across the 3.x and 2.5 generations.
+  - `per_model_levels` — which models support which levels (e.g. Gemini 3 Pro
+    is `low`/`high` only).
+  - `level_defaults` — each model's default thinking state (a level, or `on` /
+    `off`).
+  This is the **authoritative** source for Gemini reasoning CONTENT. (Google
+  retired the numeric 2.5 `thinkingBudget` table in 2026-06; it is no longer
+  documented or tracked.)
 
 # What to update
 
@@ -36,34 +36,29 @@ using the SMALLEST edit. There are exactly TWO narrow scopes.
 
 ## Scope 1 — `<thinking-context>` (Gemini bullet + output mapping)
 
-Gemini exposes TWO reasoning surfaces by model generation; the selector must
-describe both:
+Gemini exposes ONE reasoning surface: a discrete thinking-LEVEL knob shared
+across the 3.x and 2.5 model generations. The selector must describe it:
 
-- **Gemini 3.x** uses a discrete thinking-LEVEL knob. The bullet must enumerate
-  exactly the documented `thinking_levels` (`minimal`, `low`, `medium`, `high`)
-  — no documented level omitted, no undocumented level added. If the selector
-  makes a per-model claim, it must not tie a model to a level its
-  `per_model_levels` row lacks (e.g. never imply Gemini 3.1 Pro supports
-  `minimal`); the docs-faithful way to mention it is the NEGATIVE ("Gemini 3.1
-  Pro has no `minimal`").
-- **Gemini 2.5** uses a numeric `thinkingBudget` in tokens. Preserve the
-  documented sentinels: `0` disables thinking where the model allows it (note
-  that Gemini 2.5 Pro cannot disable), and `-1` is dynamic / model-decided.
+- The bullet must enumerate exactly the documented `thinking_levels` (`low`,
+  `medium`, `high`) — no documented level omitted, no undocumented level added.
+  If the selector makes a per-model claim, it must not tie a model to a level its
+  `per_model_levels` row lacks (e.g. never imply Gemini 3 Pro supports `medium`);
+  the docs-faithful way to mention a gap is the explicit subset ("Gemini 3 Pro is
+  low/high only"). Thinking can be turned off on models whose `level_defaults` is
+  `off` (or that otherwise allow disabling).
 
 The **Output mapping** subsection maps provider-native scales onto the existing
 6-state THINKING field (`Off`/`Low`/`Medium`/`High`/`XHigh`/`N/A`). Keep:
-`minimal → Off`, `low → Low`, `medium → Medium`, `high → High` for 3.x
-(Gemini 3.x currently has NO `xhigh` tier — do not map any 3.x level to
-`XHigh`); and the 2.5 budget mapping `0 → Off`, `-1`/dynamic → `Medium`, with
-larger budgets mapping up through `High` / `XHigh`. Never invent a 7th state.
+`low → Low`, `medium → Medium`, `high → High` (Gemini currently has NO `xhigh`
+tier — do not map any Gemini level to `XHigh`); thinking turned off → `Off`.
+Never invent a 7th state.
 
-If `<docs_facts>` introduces a thinking level beyond `minimal`/`low`/`medium`/
-`high` (it appears in both `thinking_levels` and `unexpected_levels`), ADD that
-level to the bullet enumeration AND give it a THINKING mapping — a new
-top-of-scale tier maps to `XHigh` — and add a warning naming the new tier so the
-maintainer reviews the new reasoning level. Do NOT silently omit it: the
-conformance gate requires the selector's Gemini 3.x vocabulary to EQUAL the
-documented `thinking_levels`.
+If `<docs_facts>` introduces a thinking level beyond `low`/`medium`/`high` (it
+appears in both `thinking_levels` and `unexpected_levels`), ADD that level to the
+bullet enumeration AND give it a THINKING mapping — a new top-of-scale tier maps
+to `XHigh` — and add a warning naming the new tier so the maintainer reviews the
+new reasoning level. Do NOT silently omit it: the conformance gate requires the
+selector's Gemini vocabulary to EQUAL the documented `thinking_levels`.
 
 Do NOT touch the Claude, OpenAI/Codex, or Cursor bullets/mappings, or any
 Claude Code effort / ultracode / ultrathink material.
@@ -95,10 +90,10 @@ OWNED by the Cursor catalog cron. You MUST NOT touch any other attribute
   elements, or columns.
 
 An offline conformance gate (`update/validate_effort_conformance.py`, check E)
-HARD-FAILS the run if (E1) the selector's Gemini 3.x thinking-level vocabulary
-does not EQUAL the documented `thinking_levels`, (E2) a Gemini model is
-affirmatively tied to a level its row lacks, or (E3) the 2.5 `0` / `-1`
-sentinels are dropped. Prefer matching `<docs_facts>` exactly over paraphrasing.
+HARD-FAILS the run if (E1) the selector's Gemini thinking-level vocabulary does
+not EQUAL the documented `thinking_levels`, or (E2) a Gemini model is
+affirmatively tied to a level its row lacks. Prefer matching `<docs_facts>`
+exactly over paraphrasing.
 
 # Output format
 
