@@ -674,6 +674,118 @@ def write_dry_run_report(
     )
 
 
+# --------------------------------------------------------------------------- #
+# Annual-column carry-forward (issue #315)
+# --------------------------------------------------------------------------- #
+# Subscription Tiers `Annual` prices are EDITORIAL — a human sets them by
+# hand-editing docs/model-tier-cost-scale.md. The cron must never ORIGINATE one:
+# the old `8x-12x monthly` shape guard accepts any plausibly-shaped value, so a
+# hallucinated annual passed it (issue #315). After the Opus cost-scale pass this
+# overlay deterministically restores every Annual cell to the committed value and
+# FLAGS a tier new to the table (nulled to `—`) for explicit maintainer review.
+
+
+def _subscription_annual_cols(cells: list[str]) -> tuple[int, int] | None:
+    """For a ``|``-split header row, return ``(name_idx, annual_idx)`` when it is
+    the Subscription Tiers header (carries both 'Subscription' and 'Annual'),
+    else None. The per-token price tables lack these headers, so they are skipped.
+    """
+    stripped = [c.strip() for c in cells]
+    if "Subscription" not in stripped or "Annual" not in stripped:
+        return None
+    return stripped.index("Subscription"), stripped.index("Annual")
+
+
+def _is_table_separator(cells: list[str]) -> bool:
+    """A markdown ``|---|:--:|`` separator row (dashes/colons only in each field)."""
+    body = [c.strip() for c in cells[1:-1]]
+    return bool(body) and all(c and set(c) <= set("-:") for c in body)
+
+
+def parse_subscription_annuals(cost_scale: str) -> dict[str, str]:
+    """Map each Subscription Tiers tier name → its stripped ``Annual`` cell.
+
+    Empty when the table is absent. Only the subscription table is read.
+    """
+    out: dict[str, str] = {}
+    name_idx = annual_idx = None
+    for line in cost_scale.split("\n"):
+        if not line.lstrip().startswith("|"):
+            name_idx = annual_idx = None
+            continue
+        cells = line.split("|")
+        if name_idx is None:
+            cols = _subscription_annual_cols(cells)
+            if cols is not None:
+                name_idx, annual_idx = cols
+            continue
+        if _is_table_separator(cells) or len(cells) <= max(name_idx, annual_idx):
+            continue
+        name = cells[name_idx].strip()
+        if name:
+            out[name] = cells[annual_idx].strip()
+    return out
+
+
+def _set_table_cell(cell: str, content: str) -> str:
+    """Replace a cell's content, keeping a leading + trailing space and the cell's
+    original width (column alignment) when the new content fits."""
+    return f" {content} ".ljust(len(cell))
+
+
+def carry_forward_annual_column(before: str, after: str) -> tuple[str, list[str]]:
+    """Restore every Subscription Tiers ``Annual`` cell in ``after`` to its
+    committed value in ``before``.
+
+    Annual prices are editorial: the cron PRESERVES them and never originates one.
+    A tier new to ``after`` is nulled to ``—`` and flagged. Returns
+    ``(reconciled_after, warnings)`` — a strict byte-stable no-op when the Opus
+    pass already left the committed annuals unchanged.
+    """
+    committed = parse_subscription_annuals(before)
+    warnings: list[str] = []
+    name_idx = annual_idx = None
+    lines = after.split("\n")
+    for i, line in enumerate(lines):
+        if not line.lstrip().startswith("|"):
+            name_idx = annual_idx = None
+            continue
+        cells = line.split("|")
+        if name_idx is None:
+            cols = _subscription_annual_cols(cells)
+            if cols is not None:
+                name_idx, annual_idx = cols
+            continue
+        if _is_table_separator(cells) or len(cells) <= max(name_idx, annual_idx):
+            continue
+        name = cells[name_idx].strip()
+        if not name:
+            continue
+        current = cells[annual_idx].strip()
+        want = committed.get(name)
+        if want is None:
+            # The cron cannot originate an annual: null a new tier for review.
+            if current in ("—", ""):
+                continue
+            warnings.append(
+                f"Annual carry-forward: NEW tier {name!r} — cron proposed annual "
+                f"{current!r}; reset to '—'. Hand-verify and edit "
+                f"docs/model-tier-cost-scale.md to set it if real."
+            )
+            want = "—"
+        elif current == want:
+            continue  # editorial value already intact — no-op
+        else:
+            warnings.append(
+                f"Annual carry-forward: held {name!r} at the editorial annual {want!r} "
+                f"(cron proposed {current!r}). Annuals are editorial — edit "
+                f"docs/model-tier-cost-scale.md to change one."
+            )
+        cells[annual_idx] = _set_table_cell(cells[annual_idx], want)
+        lines[i] = "|".join(cells)
+    return "\n".join(lines), warnings
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -756,6 +868,11 @@ def main() -> int:
         return 2
     new_cost_scale: str = new_cost_scale_obj
 
+    # Annual prices are EDITORIAL — deterministically restore the committed Annual
+    # column so the cron can never originate one (issue #315). Runs before the
+    # selector pass + the dry-run report so both see the reconciled cost-scale.
+    new_cost_scale, annual_warnings = carry_forward_annual_column(cost_scale_text, new_cost_scale)
+
     # Pass: selector (benchmark sources + the freshly-updated cost-scale).
     result_sel = run_call("selector", new_cost_scale, benchmark_sources, "roadmodel_txt")
     if result_sel is None:
@@ -776,6 +893,7 @@ def main() -> int:
     warnings: list[str] = []
     for r in (result_cs, result_sel):
         warnings.extend(w for w in (r.get("warnings") or []) if isinstance(w, str))
+    warnings.extend(annual_warnings)
     if fetch_errors:
         warnings.extend(f"Fetch error: {err}" for err in fetch_errors)
 
