@@ -1,6 +1,7 @@
 // web/app/layout.tsx
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 
 import { AppNav } from "@/components/AppNav";
@@ -27,11 +28,14 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // CSP nonce set by middleware.ts; applied to the inline theme script below so
+  // it executes under the strict (no 'unsafe-inline') script-src policy.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     // suppressHydrationWarning: the no-flash script below mutates the <html>
     // class before React hydrates (T4 dark mode); without it React would flag
@@ -43,6 +47,7 @@ export default function RootLayout({
             an explicit "light" choice removes it before paint; "dark" or an
             unset preference stay dark. */}
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html:
               "try{if(localStorage.getItem('theme')==='light')document.documentElement.classList.remove('dark')}catch(e){}",
