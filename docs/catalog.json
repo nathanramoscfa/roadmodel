@@ -1071,7 +1071,7 @@
       "provider": "Cursor",
       "tier": "Cursor Ultra",
       "monthly_usd": 200.0,
-      "annual_usd": null,
+      "annual_usd": 1920.0,
       "surface_funded": [
         "cursor"
       ],
