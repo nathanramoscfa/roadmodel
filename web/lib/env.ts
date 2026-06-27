@@ -86,6 +86,14 @@ const envSchema = z.object({
   // header, so the real service rejects with 401 rather than serving
   // a free (paid-upstream) call.
   ROADMODEL_INTERNAL_TOKEN: z.string().optional(),
+  // Real-time daily spend cap (USD) for the paid routes — the in-app circuit
+  // breaker (web/lib/spend-guard.ts) that complements the GCP budget
+  // kill-switch (infra/gcp-killswitch/). When the current UTC day's summed
+  // audit_log.cost_usd reaches this, /api/recommend + /api/roadmap return 503
+  // until UTC midnight. Default 0 = DISABLED (opt-in): unset behaves exactly as
+  // before. Coerced number; fails open on a ledger read error so a metering
+  // hiccup never bricks the app.
+  ROADMODEL_DAILY_COST_CAP_USD: z.coerce.number().nonnegative().default(0),
   // Per-user /api/roadmap monthly cap (rolling 30 days). Configurable
   // so the free-tier allowance can be tuned without a code change;
   // default 10 (raised from the original hard-coded 3, which was too
@@ -152,6 +160,7 @@ export const env = envSchema.parse({
   // half of the #155 coercion footgun.
   FRONTIER_ROADMAP_ENABLED: process.env.FRONTIER_ROADMAP_ENABLED,
   ROADMODEL_LATENCY_BYPASS_TOKEN: process.env.ROADMODEL_LATENCY_BYPASS_TOKEN,
+  ROADMODEL_DAILY_COST_CAP_USD: process.env.ROADMODEL_DAILY_COST_CAP_USD,
   ROADMODEL_INTERNAL_TOKEN: process.env.ROADMODEL_INTERNAL_TOKEN,
   // Raw values through; schema defaults handle undefined.
   ROADMAP_MONTHLY_LIMIT: process.env.ROADMAP_MONTHLY_LIMIT,

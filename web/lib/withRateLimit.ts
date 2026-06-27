@@ -5,6 +5,7 @@ import { checkLimits, isRateLimitExempt } from "./ratelimit";
 import { writeAudit } from "./audit";
 import { env } from "./env";
 import { ipHashSalt } from "./ip-salt";
+import { dailyCostCapTripped } from "./spend-guard";
 
 function hash(value: string): string {
   // ipHashSalt() throws in production if ROADMODEL_IP_SALT is unset (fail
@@ -74,6 +75,30 @@ export function withRateLimit(
   return async (req: Request): Promise<Response> => {
     const id = identifyRequest(req);
     const userId = resolveUserId ? await resolveUserId(req) : undefined;
+
+    // Daily spend circuit breaker (real-time complement to the GCP budget
+    // kill-switch). Checked FIRST — ahead of the bypass/exempt paths — because
+    // it's an emergency cap on OUR spend: once the UTC day's metered cost
+    // crosses ROADMODEL_DAILY_COST_CAP_USD, every paid call stops, including
+    // the founder-exempt browser path and the latency-sweep bypass. Default
+    // off (cap 0), so this is a no-op until armed. Fails open on a ledger error.
+    const cap = await dailyCostCapTripped();
+    if (cap.tripped) {
+      void writeAudit({
+        ip_hash: id.ipHash,
+        ua_hash: id.uaHash,
+        route: id.route,
+        outcome: "daily_cost_cap",
+        user_id: userId,
+      });
+      return NextResponse.json(
+        { error: "daily_cost_cap", retry_after: cap.retryAfter },
+        {
+          status: 503,
+          headers: { "Retry-After": String(cap.retryAfter ?? 3600) },
+        },
+      );
+    }
 
     if (bypassMatches(req)) {
       // Step 7 bypass — record the bypass so the latency sweep
