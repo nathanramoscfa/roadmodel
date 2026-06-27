@@ -1,19 +1,24 @@
 """Tests for the Gemini thinking docs extractor + conformance check.
 
-Covers ``update/extract_gemini_thinking.py`` (deterministic bs4 parse of the two
-in-scope tables, offline, against a committed HTML slice) and the provider-aware
-Gemini check (check E) added to ``update/validate_effort_conformance.py``:
+Covers ``update/extract_gemini_thinking.py`` (deterministic bs4 parse of the
+unified discrete-level table, offline, against a committed HTML slice) and the
+provider-aware Gemini check (check E) in
+``update/validate_effort_conformance.py``.
 
-- Extractor parses the Gemini 3.x thinking-level support matrix (3.1 Pro lacks
-  minimal) and the Gemini 2.5 numeric budget table (2.5 Pro cannot disable) from
-  the HTML slice, and derives the -1/0 sentinels.
+As of 2026-06 Google unified the Gemini reasoning surface onto a single discrete
+thinking-level table (``Model | Default Thinking | Levels Supported``) spanning
+the 3.x and 2.5 generations; the numeric 2.5 ``thinkingBudget`` table was retired
+upstream and is no longer parsed or tracked.
+
+- Extractor parses the level table (Gemini 3 Pro is low/high; 2.5 models use the
+  same discrete levels) and keys it by selector display name.
 - Extractor fails loudly when the docs are restructured (anchors gone) and flags
-  an unexpected level-matrix model rather than absorbing it.
+  an unexpected model / a newly documented level rather than absorbing it.
 - The level-vocabulary extractor pulls the right tokens from the real selector.
 - Conformance PASSES on the committed selector + committed Gemini snapshot.
-- Conformance FAILS on an undocumented level (subset), a documented level
-  dropped from the bullet (completeness), a per-model tie the docs disallow
-  (3.1 Pro -> minimal), and a dropped -1/dynamic sentinel.
+- Conformance FAILS on an undocumented level (subset), a documented level dropped
+  from the bullet (completeness), and a per-model tie the docs disallow
+  (Gemini 3 Pro -> medium).
 """
 
 from __future__ import annotations
@@ -74,24 +79,20 @@ def _run_conformance(
 # --------------------------------------------------------------------------- #
 
 
-def test_extractor_parses_both_tables() -> None:
+def test_extractor_parses_level_table() -> None:
     mod = _load("extract_gemini_thinking")
     snap = mod.build_snapshot(SAMPLE_HTML.read_text(), source_url="file://sample")
 
-    assert snap["thinking_levels"] == ["minimal", "low", "medium", "high"]
+    assert snap["thinking_levels"] == ["low", "medium", "high"]
     assert snap["per_model_levels"]["Gemini 3.1 Pro"] == ["low", "medium", "high"]
-    assert "minimal" not in snap["per_model_levels"]["Gemini 3.1 Pro"]
-    assert snap["per_model_levels"]["Gemini 3 Flash"] == ["minimal", "low", "medium", "high"]
+    # The subset model: Gemini 3 Pro supports only low/high (no medium).
+    assert snap["per_model_levels"]["Gemini 3 Pro"] == ["low", "high"]
+    # 2.5 models now use the same discrete levels.
+    assert snap["per_model_levels"]["Gemini 2.5 Flash"] == ["low", "medium", "high"]
     assert snap["level_defaults"]["Gemini 3.1 Pro"] == "high"
     assert snap["level_defaults"]["Gemini 3.5 Flash"] == "medium"
+    assert snap["level_defaults"]["Gemini 2.5 Flash-Lite"] == "off"
 
-    budget = snap["per_model_budget"]
-    assert budget["2.5 Pro"]["range"] == [128, 32768]
-    assert budget["2.5 Pro"]["can_disable"] is False
-    assert budget["2.5 Flash"]["range"] == [0, 24576]
-    assert budget["2.5 Flash"]["can_disable"] is True
-
-    assert snap["budget_sentinels"] == {"dynamic": -1, "disable": 0}
     assert snap["unexpected_models"] == []
     assert snap["unexpected_levels"] == []
     assert len(snap["section_sha256"]) == 64
@@ -106,16 +107,17 @@ def test_extractor_cli_writes_snapshot(tmp_path: Path) -> None:
     )
     assert result.returncode == 0, result.stderr
     data = json.loads(out.read_text())
-    assert data["thinking_levels"] == ["minimal", "low", "medium", "high"]
+    assert data["thinking_levels"] == ["low", "medium", "high"]
 
 
 def test_committed_snapshot_invariants() -> None:
     """The committed snapshot must carry the headline facts the gate relies on."""
     snap = json.loads(REAL_GEMINI_SNAPSHOT.read_text())
-    assert snap["thinking_levels"] == ["minimal", "low", "medium", "high"]
-    assert "minimal" not in snap["per_model_levels"]["Gemini 3.1 Pro"]
-    assert snap["budget_sentinels"]["dynamic"] == -1
-    assert snap["budget_sentinels"]["disable"] == 0
+    assert snap["thinking_levels"] == ["low", "medium", "high"]
+    assert snap["per_model_levels"]["Gemini 3 Pro"] == ["low", "high"]
+    # The retired numeric-budget keys must NOT come back.
+    assert "per_model_budget" not in snap
+    assert "budget_sentinels" not in snap
 
 
 def test_extractor_raises_on_restructured_docs() -> None:
@@ -127,8 +129,8 @@ def test_extractor_raises_on_restructured_docs() -> None:
 def test_extractor_flags_unexpected_level_model() -> None:
     mod = _load("extract_gemini_thinking")
     html = SAMPLE_HTML.read_text().replace(
-        "<th>Gemini 3 Flash</th>",
-        "<th>Gemini 4 Flash</th>",
+        "gemini-3-flash-preview",
+        "gemini-4-flash-preview",
     )
     snap = mod.build_snapshot(html, source_url="x")
     assert "Gemini 4 Flash" in snap["unexpected_models"]
@@ -136,20 +138,16 @@ def test_extractor_flags_unexpected_level_model() -> None:
 
 
 def test_extractor_flags_a_new_thinking_level() -> None:
-    """A docs-added thinking-LEVEL row (a new tier beyond the known baseline)
-    must be CAPTURED — flowed into thinking_levels + per_model_levels and surfaced
-    in unexpected_levels — not silently dropped. Closes the silent-miss gap."""
+    """A docs-added thinking LEVEL (a new tier beyond the known baseline) must be
+    CAPTURED — flowed into thinking_levels + per_model_levels and surfaced in
+    unexpected_levels — not silently dropped. Closes the silent-miss gap."""
     mod = _load("extract_gemini_thinking")
-    new_row = (
-        "<tr><td>ultra</td><td>Supported</td><td>Supported</td>"
-        "<td>Supported</td><td>Supported</td><td>Top tier.</td></tr>"
-    )
-    # Insert the new level row just before the FIRST </tbody> (the level matrix).
-    html = SAMPLE_HTML.read_text().replace("</tbody>", new_row + "</tbody>", 1)
+    # The "low, high" cell is unique to the Gemini 3 Pro row.
+    html = SAMPLE_HTML.read_text().replace("low, high</td>", "low, high, ultra</td>")
     snap = mod.build_snapshot(html, source_url="x")
     assert "ultra" in snap["thinking_levels"]
     assert "ultra" in snap["unexpected_levels"]
-    assert "ultra" in snap["per_model_levels"]["Gemini 3.1 Pro"]
+    assert "ultra" in snap["per_model_levels"]["Gemini 3 Pro"]
 
 
 def test_conformance_demands_a_newly_documented_level(tmp_path: Path) -> None:
@@ -177,7 +175,7 @@ def test_level_vocab_extraction_on_real_selector() -> None:
     selector = REAL_SELECTOR.read_text()
     thinking_flat = mod._collapse(mod.extract_block(selector, mod.THINKING_BLOCK))
     vocab = mod.gemini_level_tokens(thinking_flat)
-    assert vocab == {"minimal", "low", "medium", "high"}
+    assert vocab == {"low", "medium", "high"}
 
 
 # --------------------------------------------------------------------------- #
@@ -194,8 +192,8 @@ def test_conformance_passes_on_committed_artifacts() -> None:
 def test_conformance_flags_undocumented_gemini_level(tmp_path: Path) -> None:
     """E1 subset: an undocumented level in the Gemini bullet enumeration -> FAIL."""
     drifted = REAL_SELECTOR.read_text().replace(
-        "`minimal`, `low`, `medium`, `high` (not every",
-        "`minimal`, `low`, `medium`, `high`, `ultra` (not every",
+        "`low`, `medium`, `high` — across",
+        "`low`, `medium`, `high`, `ultra` — across",
     )
     selector = tmp_path / "selector.txt"
     selector.write_text(drifted)
@@ -208,8 +206,8 @@ def test_conformance_flags_undocumented_gemini_level(tmp_path: Path) -> None:
 def test_conformance_flags_documented_level_missing(tmp_path: Path) -> None:
     """E1 completeness: dropping `high` from the bullet enumeration -> FAIL."""
     drifted = REAL_SELECTOR.read_text().replace(
-        "`minimal`, `low`, `medium`, `high` (not every",
-        "`minimal`, `low`, `medium` (not every",
+        "`low`, `medium`, `high` — across",
+        "`low`, `medium` — across",
     )
     selector = tmp_path / "selector.txt"
     selector.write_text(drifted)
@@ -220,32 +218,17 @@ def test_conformance_flags_documented_level_missing(tmp_path: Path) -> None:
 
 
 def test_conformance_flags_unsupported_per_model_level(tmp_path: Path) -> None:
-    """E2: affirmatively tying Gemini 3.1 Pro to `minimal` (which it lacks) -> FAIL."""
+    """E2: affirmatively tying Gemini 3 Pro to `medium` (which it lacks) -> FAIL."""
     drifted = REAL_SELECTOR.read_text().replace(
         "</thinking-context>",
-        "    Gemini 3.1 Pro runs at `minimal` thinking by default.\n  </thinking-context>",
+        "    Gemini 3 Pro runs at `medium` thinking by default.\n  </thinking-context>",
     )
     selector = tmp_path / "selector.txt"
     selector.write_text(drifted)
     result = _run_conformance(selector)
     assert result.returncode == 1
     assert "check E (gemini per-model)" in result.stderr
-    assert "Gemini 3.1 Pro" in result.stderr
-
-
-def test_conformance_flags_dropped_dynamic_sentinel(tmp_path: Path) -> None:
-    """E3: removing the -1/dynamic sentinel acknowledgement -> FAIL."""
-    drifted = (
-        REAL_SELECTOR.read_text()
-        .replace("`-1`", "`none`")
-        .replace("dynamic", "static")
-        .replace("Dynamic", "Static")
-    )
-    selector = tmp_path / "selector.txt"
-    selector.write_text(drifted)
-    result = _run_conformance(selector)
-    assert result.returncode == 1
-    assert "check E (gemini sentinels)" in result.stderr
+    assert "Gemini 3 Pro" in result.stderr
 
 
 if __name__ == "__main__":

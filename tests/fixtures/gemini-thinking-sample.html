@@ -1,97 +1,39 @@
 <!DOCTYPE html>
 <!--
-Faithful slice of https://ai.google.dev/gemini-api/docs/thinking covering ONLY
-the two in-scope tables (the Gemini 3.x "Thinking Level" support matrix and the
-Gemini 2.5 numeric thinkingBudget table), used to test
-update/extract_gemini_thinking.py offline. ai.google.dev serves HTML (no .md
-endpoint), so the fixture is HTML and the extractor parses it with bs4. The
-budget table keeps a subset of the live rows; the level matrix is complete.
-Refresh from the live docs if the parser's expectations change.
+Faithful slice of https://ai.google.dev/gemini-api/docs/thinking covering the
+unified discrete thinking-level table (Model | Default Thinking | Levels
+Supported), used to test update/extract_gemini_thinking.py offline. ai.google.dev
+serves HTML (no .md endpoint), so the fixture is HTML and the extractor parses it
+with bs4. Google retired the separate numeric 2.5 thinkingBudget table (2026-06);
+the 2.5 models now use the same discrete levels, so this fixture carries the
+single level table only.
 -->
 <html>
 <body>
 <h2>Set the thinking level</h2>
+<p>
+  Gemini models think before they answer. The thinking level controls how much
+  internal reasoning the model spends before producing visible output. Use a
+  lower level for latency-sensitive work and a higher level for hard problems.
+</p>
 <table>
   <thead>
-    <tr>
-      <th>Thinking Level</th>
-      <th>Gemini 3.1 Pro</th>
-      <th>Gemini 3.1 Flash-Lite</th>
-      <th>Gemini 3 Flash</th>
-      <th>Gemini 3.5 Flash</th>
-      <th>Description</th>
-    </tr>
+    <tr><th>Model</th><th>Default Thinking</th><th>Levels Supported</th></tr>
   </thead>
   <tbody>
-    <tr>
-      <td>minimal</td>
-      <td>Not supported</td>
-      <td>Supported (Default)</td>
-      <td>Supported</td>
-      <td>Supported</td>
-      <td>Matches the "no thinking" setting for most queries.</td>
-    </tr>
-    <tr>
-      <td>low</td>
-      <td>Supported</td>
-      <td>Supported</td>
-      <td>Supported</td>
-      <td>Supported</td>
-      <td>Minimizes latency and cost.</td>
-    </tr>
-    <tr>
-      <td>medium</td>
-      <td>Supported</td>
-      <td>Supported</td>
-      <td>Supported</td>
-      <td>Supported (Default)</td>
-      <td>Balanced thinking for most tasks.</td>
-    </tr>
-    <tr>
-      <td>high</td>
-      <td>Supported (Default, Dynamic)</td>
-      <td>Supported (Dynamic)</td>
-      <td>Supported (Default, Dynamic)</td>
-      <td>Supported (Dynamic)</td>
-      <td>Maximizes reasoning depth.</td>
-    </tr>
+    <tr><td>gemini-3.1-pro-preview</td><td>On (high)</td><td>low, medium, high</td></tr>
+    <tr><td>gemini-3-flash-preview</td><td>On (high)</td><td>low, medium, high</td></tr>
+    <tr><td>gemini-3-pro-preview</td><td>On (high)</td><td>low, high</td></tr>
+    <tr><td>gemini-3.5-flash</td><td>On (medium)</td><td>low, medium, high</td></tr>
+    <tr><td>gemini-2.5-pro</td><td>On</td><td>low, medium, high</td></tr>
+    <tr><td>gemini-2.5-flash</td><td>On</td><td>low, medium, high</td></tr>
+    <tr><td>gemini-2.5-flash-lite</td><td>Off</td><td>low, medium, high</td></tr>
   </tbody>
 </table>
-
-<h2>Set a thinking budget</h2>
-<table>
-  <thead>
-    <tr>
-      <th>Model</th>
-      <th>Default setting (Thinking budget is not set)</th>
-      <th>Range</th>
-      <th>Disable thinking</th>
-      <th>Turn on dynamic thinking</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>2.5 Pro</td>
-      <td>Dynamic thinking</td>
-      <td>128 to 32768</td>
-      <td>N/A: Cannot disable thinking</td>
-      <td>thinkingBudget = -1 (Default)</td>
-    </tr>
-    <tr>
-      <td>2.5 Flash</td>
-      <td>Dynamic thinking</td>
-      <td>0 to 24576</td>
-      <td>thinkingBudget = 0</td>
-      <td>thinkingBudget = -1 (Default)</td>
-    </tr>
-    <tr>
-      <td>2.5 Flash Lite</td>
-      <td>Model does not think</td>
-      <td>512 to 24576</td>
-      <td>thinkingBudget = 0</td>
-      <td>thinkingBudget = -1</td>
-    </tr>
-  </tbody>
-</table>
+<p>
+  Thinking can be disabled on models that allow it; some models (the pro tier)
+  always think. The level vocabulary is shared across the 3.x and 2.5 model
+  generations now that the numeric thinkingBudget knob has been retired.
+</p>
 </body>
 </html>

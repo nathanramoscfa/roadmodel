@@ -1,17 +1,14 @@
 {
   "thinking_docs": {
-    "name": "Gemini API thinking docs (levels + budget)",
+    "name": "Gemini API thinking docs (discrete levels)",
     "url": "https://ai.google.dev/gemini-api/docs/thinking",
-    "purpose": "Authoritative source for Gemini's reasoning surface: the Gemini 3.x thinking-level support matrix (minimal/low/medium/high) and the Gemini 2.5 numeric thinkingBudget ranges + 0/-1 sentinels. ai.google.dev serves server-rendered HTML (no clean .md endpoint), parsed with bs4 by update/extract_gemini_thinking.py. Robustness: the must_contain_all anchors are the literal column headers / sentinels that live in the SERVER-rendered tables (the data is present in the initial HTML response, not injected by client-side JS — confirmed: bs4 parses them from a plain curl with no JS engine). If Google ever switched this page to client-side rendering, a consent/redirect interstitial, or restructured the tables, those anchors would be absent from the fetched bytes and the gate fails LOUD (the extractor exits 4) instead of silently scraping an empty shell. The docs-freshness cron hashes the EXTRACTED FACTS (canonical JSON), not the raw HTML, so devsite re-renders / cosmetic churn never false-trigger an expensive Opus run. New Gemini 3.x level models are flagged from the snapshot's unexpected_models (this page is itself the model source for the reasoning matrix); the catalog cron owns model lists.",
+    "purpose": "Authoritative source for Gemini's reasoning surface: the unified discrete thinking-level table (low/medium/high) spanning BOTH the 3.x and 2.5 model generations. As of 2026-06 Google retired the separate numeric 2.5 thinkingBudget table — 2.5 now uses the same discrete levels — so this tracker no longer parses numeric budgets or the 0/-1 sentinels. ai.google.dev serves server-rendered HTML (no clean .md endpoint), parsed with bs4 by update/extract_gemini_thinking.py. Robustness: the must_contain_all anchors are the literal column headers of the SERVER-rendered level table (Model | Default Thinking | Levels Supported), present in the initial HTML response (not injected by client-side JS — confirmed: bs4 parses them from a plain fetch with no JS engine). If Google switches this page to client-side rendering, a consent/redirect interstitial, or restructures the table, those anchors would be absent from the fetched bytes and the gate fails LOUD (the extractor exits 4) instead of silently scraping an empty shell. The docs-freshness cron hashes the EXTRACTED FACTS (canonical JSON), not the raw HTML, so devsite re-renders / cosmetic churn never false-trigger an expensive Opus run. New Gemini level-table models are flagged from the snapshot's unexpected_models (this page is itself the model source for the reasoning matrix); the catalog cron owns model lists.",
     "validate": {
       "min_bytes": 20000,
       "must_contain_all": [
-        "Thinking Level",
-        "thinkingBudget",
-        "Default setting",
-        "Range",
-        "Disable thinking",
-        "Dynamic thinking"
+        "Model",
+        "Default Thinking",
+        "Levels Supported"
       ]
     }
   }
