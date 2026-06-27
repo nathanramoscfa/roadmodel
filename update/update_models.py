@@ -708,17 +708,16 @@ def parse_subscription_annuals(cost_scale: str) -> dict[str, str]:
     Empty when the table is absent. Only the subscription table is read.
     """
     out: dict[str, str] = {}
-    name_idx = annual_idx = None
+    cols: tuple[int, int] | None = None
     for line in cost_scale.split("\n"):
         if not line.lstrip().startswith("|"):
-            name_idx = annual_idx = None
+            cols = None
             continue
         cells = line.split("|")
-        if name_idx is None:
+        if cols is None:
             cols = _subscription_annual_cols(cells)
-            if cols is not None:
-                name_idx, annual_idx = cols
             continue
+        name_idx, annual_idx = cols
         if _is_table_separator(cells) or len(cells) <= max(name_idx, annual_idx):
             continue
         name = cells[name_idx].strip()
@@ -744,18 +743,17 @@ def carry_forward_annual_column(before: str, after: str) -> tuple[str, list[str]
     """
     committed = parse_subscription_annuals(before)
     warnings: list[str] = []
-    name_idx = annual_idx = None
+    cols: tuple[int, int] | None = None
     lines = after.split("\n")
     for i, line in enumerate(lines):
         if not line.lstrip().startswith("|"):
-            name_idx = annual_idx = None
+            cols = None
             continue
         cells = line.split("|")
-        if name_idx is None:
+        if cols is None:
             cols = _subscription_annual_cols(cells)
-            if cols is not None:
-                name_idx, annual_idx = cols
             continue
+        name_idx, annual_idx = cols
         if _is_table_separator(cells) or len(cells) <= max(name_idx, annual_idx):
             continue
         name = cells[name_idx].strip()
