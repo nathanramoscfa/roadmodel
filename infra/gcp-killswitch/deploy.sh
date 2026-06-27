@@ -47,14 +47,13 @@ gcloud projects add-iam-policy-binding "${PROJECT}" \
   --role="roles/serviceusage.serviceUsageAdmin" --condition=None >/dev/null
 echo "    granted roles/serviceusage.serviceUsageAdmin"
 
-echo "==> Let the Cloud Billing budgets service agent publish to the topic"
-# The budget notification is published by Google's billing-budgets service
-# agent; it needs pubsub.publisher on the topic.
-BUDGETS_SA="cloud-billing-budget-notification@system.gserviceaccount.com"
-gcloud pubsub topics add-iam-policy-binding "${TOPIC}" --project="${PROJECT}" \
-  --member="serviceAccount:${BUDGETS_SA}" \
-  --role="roles/pubsub.publisher" >/dev/null 2>&1 \
-  || echo "    NOTE: could not grant publisher to ${BUDGETS_SA} — verify in console (Pub/Sub > topic > permissions)"
+echo "==> Grant the gen2 build service account (compute default) builder role"
+# Without this the Cloud Function build fails with "missing permission on the
+# build service account" under orgs that don't auto-grant default-SA roles.
+gcloud projects add-iam-policy-binding "${PROJECT}" \
+  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+  --role="roles/cloudbuild.builds.builder" --condition=None >/dev/null
+echo "    granted roles/cloudbuild.builds.builder"
 
 echo "==> Deploying Cloud Function ${FUNCTION} (DRY_RUN=true — inert)"
 gcloud functions deploy "${FUNCTION}" \
@@ -64,9 +63,24 @@ gcloud functions deploy "${FUNCTION}" \
   --service-account="${SA_EMAIL}" \
   --set-env-vars="TARGET_PROJECT=${PROJECT},TARGET_SERVICE=generativelanguage.googleapis.com,DRY_RUN=true"
 
+echo "==> Let the Pub/Sub trigger invoke the function (gen2 = Cloud Run service)"
+# The Eventarc/Pub/Sub trigger runs as ${SA_EMAIL}; it needs run.invoker on the
+# underlying Cloud Run service, and the Pub/Sub service agent needs
+# token-creator to mint the push OIDC token. Without these, deliveries fail with
+# "request was not authenticated / lacks run.routes.invoke". (Allow a minute for
+# the IAM grants to propagate before the first delivery succeeds.)
+gcloud run services add-iam-policy-binding "${FUNCTION}" \
+  --region="${REGION}" --project="${PROJECT}" \
+  --member="serviceAccount:${SA_EMAIL}" --role="roles/run.invoker" >/dev/null
+gcloud projects add-iam-policy-binding "${PROJECT}" \
+  --member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-pubsub.iam.gserviceaccount.com" \
+  --role="roles/iam.serviceAccountTokenCreator" --condition=None >/dev/null
+echo "    granted run.invoker + pubsub token-creator"
+
 echo "==> Project-scoped budget wired to the topic"
 # Scoped to roadmodel-saas ONLY (not account-wide), so other projects' spend
-# can't trip the Gemini kill-switch. 100% threshold drives the Pub/Sub notify.
+# can't trip the Gemini kill-switch. Thresholds drive the Pub/Sub notify; the
+# create auto-grants the billing-budget-alert@system SA publisher on the topic.
 if ! gcloud billing budgets list --billing-account="${BILLING_ACCOUNT}" \
      --format="value(displayName)" 2>/dev/null | grep -qF "${BUDGET_NAME}"; then
   gcloud billing budgets create --billing-account="${BILLING_ACCOUNT}" \
@@ -75,7 +89,7 @@ if ! gcloud billing budgets list --billing-account="${BILLING_ACCOUNT}" \
     --filter-projects="projects/${PROJECT_NUMBER}" \
     --threshold-rule=percent=0.9 \
     --threshold-rule=percent=1.0 \
-    --all-updates-rule-pubsub-topic="projects/${PROJECT}/topics/${TOPIC}"
+    --notifications-rule-pubsub-topic="projects/${PROJECT}/topics/${TOPIC}"
 else
   echo "    budget '${BUDGET_NAME}' exists — skipping create"
 fi

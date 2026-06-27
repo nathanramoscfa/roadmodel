@@ -35,6 +35,9 @@ export type AuditOutcome =
   | "roadmap_monthly_cap"
   | "roadmap_error"
   | "unauthorized"
+  // Real-time daily spend circuit breaker tripped (web/lib/spend-guard.ts):
+  // the UTC day's metered cost_usd reached ROADMODEL_DAILY_COST_CAP_USD.
+  | "daily_cost_cap"
   // Phase 4 Step 7 — env-gated rate-limit bypass for the
   // maintainer-run latency sweep. Removed in PR 7c alongside the
   // ROADMODEL_LATENCY_BYPASS_TOKEN env var.
