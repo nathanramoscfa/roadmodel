@@ -337,13 +337,12 @@ def test_prompt_has_subscription_refresh_rules() -> None:
         "Subscription tiers",
         "web_search",
         "Provider → access-methods mapping",
-        # The Annual column is web_search-fetched with a sanity guard +
-        # preserve-on-miss (Phase 4.7: editorial-seed → automated). Guard
-        # the contract so a future prompt regen can't drop the safeguards
-        # that stop a misparse or a transient miss from corrupting annual.
-        "Annual column (web_search with sanity guard; preserve on miss)",
-        "subscription annual updated:",
-        "subscription annual not found (preserved existing):",
+        # The Annual column is EDITORIAL (issue #315): the cron must NOT fetch or
+        # originate an annual price (a plausibly-shaped value is indistinguishable
+        # from a hallucination). Guard the contract so a future prompt regen can't
+        # re-introduce annual fetching — the deterministic carry-forward owns it.
+        "Annual column (EDITORIAL — leave every cell verbatim)",
+        "carry_forward_annual_column",
         "Rebuild procedure (per provider)",
         "Sanity guards",
         "subscription tier added:",
