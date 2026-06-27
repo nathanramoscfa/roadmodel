@@ -1,7 +1,17 @@
 // web/app/recommend/page.tsx
 import { RecommendWorkspace } from "@/components/RecommendWorkspace";
+import { getServerSession } from "@/lib/auth";
+import { DEFAULT_PROFILE, getProfile } from "@/lib/profile";
 
-export default function RecommendPage() {
+export default async function RecommendPage() {
+  // Seed the inline budget control from the user's saved profile (or the
+  // default for signed-out visitors). Signed-in users can persist a change
+  // back to Settings; signed-out users get the control for the session only.
+  const session = await getServerSession();
+  const profile = session ? await getProfile(session.id) : null;
+  const initialBudgetPriority =
+    profile?.budget_priority ?? DEFAULT_PROFILE.budget_priority;
+
   return (
     <section className="mx-auto max-w-6xl px-6 py-12 sm:py-16">
       <header className="max-w-2xl">
@@ -18,7 +28,10 @@ export default function RecommendPage() {
       </header>
 
       <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-12">
-        <RecommendWorkspace />
+        <RecommendWorkspace
+          initialBudgetPriority={initialBudgetPriority}
+          canPersistBudget={session !== null}
+        />
       </div>
     </section>
   );

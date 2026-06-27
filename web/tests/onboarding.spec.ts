@@ -31,7 +31,7 @@ test("save-and-continue persists prefs and surfaces budget priority", async ({
   await signInViaCallback(page);
   await page.getByLabel(/Claude Max.*\$200\/mo/i).check();
   await page.getByLabel(/Cursor Ultra/i).check();
-  await page.getByRole("radio", { name: /^Best$/i }).check();
+  await page.getByRole("radio", { name: /^Quality$/i }).check();
 
   const savePromise = page.waitForResponse(
     (resp) =>
