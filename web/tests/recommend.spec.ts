@@ -1,6 +1,18 @@
 // web/tests/recommend.spec.ts
 import { test, expect } from "@playwright/test";
 
+type Pick = Record<string, unknown> & { priority?: string };
+
+// /api/recommend now returns all three priorities at once
+// ({ recommendations: [...], primary }). `mk` wraps the legacy single-pick
+// payloads these tests assert on into that shape with one card.
+function mk(pick: Pick, primary = "balanced") {
+  return JSON.stringify({
+    recommendations: [{ priority: primary, ...pick }],
+    primary,
+  });
+}
+
 test("/recommend renders form + empty output", async ({ page }) => {
   await page.goto("/recommend");
   await expect(
@@ -22,46 +34,69 @@ test("/recommend renders form + empty output", async ({ page }) => {
   await expect(
     page.getByRole("link", { name: "SWE-bench Verified" }).first(),
   ).toHaveAttribute("href", "https://www.swebench.com/");
-  // The inline budget-priority control (Cost / Balanced / Quality) lets the
-  // user steer cost-vs-quality without leaving the page and losing their prompt.
-  const group = page.getByRole("radiogroup", { name: /Budget priority/i });
-  await expect(group).toBeVisible();
-  await expect(page.getByRole("radio", { name: "Cost" })).toBeAttached();
-  await expect(page.getByRole("radio", { name: "Quality" })).toBeAttached();
-  // Signed-out default is Balanced.
-  await expect(page.getByRole("radio", { name: "Balanced" })).toBeChecked();
+  // The pre-submit budget toggle is gone — all three priorities are shown after
+  // a submit instead (see the three-card test below).
+  await expect(
+    page.getByRole("radiogroup", { name: /Budget priority/i }),
+  ).toHaveCount(0);
 });
 
-test("the inline budget choice rides in the recommend request body", async ({
+test("a single submit renders all three priority cards (Cost / Balanced / Quality)", async ({
   page,
 }) => {
-  let captured: { budget_priority?: string } | null = null;
-  await page.route("**/api/recommend", async (route) => {
-    captured = route.request().postDataJSON() as { budget_priority?: string };
-    await route.fulfill({
+  await page.route("**/api/recommend", (route) =>
+    route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
-        model: "Claude 4.5 Haiku",
-        platform: "Anthropic API",
-        settings: {},
-        session_cost_estimate: { total_usd: 0.001 },
-        comparison_table: [],
+        primary: "balanced",
+        recommendations: [
+          {
+            priority: "cheap",
+            model: "Claude 4.5 Haiku",
+            platform: "Claude Code",
+            settings: {},
+            comparison_table: [],
+          },
+          {
+            priority: "balanced",
+            model: "GPT-5.4",
+            platform: "Codex",
+            settings: {},
+            comparison_table: [],
+          },
+          {
+            priority: "best",
+            model: "Claude Opus 4.8",
+            platform: "Claude Code",
+            settings: {},
+            comparison_table: [],
+          },
+        ],
       }),
-    });
-  });
+    }),
+  );
   await page.goto("/recommend");
-  // Pick Quality (stored id "best") — the prompt the user typed stays intact.
-  const group = page.getByRole("radiogroup", { name: /Budget priority/i });
-  await group.getByText("Quality", { exact: true }).click();
-  await expect(page.getByRole("radio", { name: "Quality" })).toBeChecked();
   await page.getByPlaceholder(/Input the prompt/i).fill("build a SQL agent");
   await page.getByRole("button", { name: /Submit/i }).click();
-  await expect(page.getByText(/Claude 4.5 Haiku/i)).toBeVisible();
-  // Cast past control-flow narrowing: TS only sees the `null` initializer in
-  // this scope (the assignment happens inside the route callback at runtime).
-  const body = captured as { budget_priority?: string } | null;
-  expect(body?.budget_priority).toBe("best");
+
+  // Three cards, one per priority, each with its distinct model.
+  await expect(page.locator("[data-priority]")).toHaveCount(3);
+  await expect(
+    page.locator('[data-priority="cheap"]').getByText(/Claude 4.5 Haiku/i),
+  ).toBeVisible();
+  await expect(
+    page.locator('[data-priority="balanced"]').getByText(/GPT-5\.4/),
+  ).toBeVisible();
+  await expect(
+    page.locator('[data-priority="best"]').getByText(/Claude Opus 4\.8/i),
+  ).toBeVisible();
+  // The saved-preference priority (Balanced) leads with the Default badge; the
+  // others offer to become the default (signed-out shows neither control — this
+  // E2E webServer runs unauthenticated, so no "Set as default" appears).
+  await expect(
+    page.locator('[data-priority="balanced"]').getByText("Default"),
+  ).toBeVisible();
 });
 
 test(
@@ -71,7 +106,7 @@ test(
       route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({
+        body: mk({
           model: "Claude 4.5 Haiku",
           platform: "Anthropic API",
           settings: {
@@ -112,7 +147,7 @@ test("renders the backup model line when the recommendation includes one", async
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
+      body: mk({
         model: "Opus 4.8",
         platform: "Claude Code",
         settings: { max_mode: "OFF", thinking: "High" },
@@ -135,7 +170,7 @@ test("humanizes settings labels and renders the rationale prominently", async ({
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
+      body: mk({
         model: "Opus 4.8",
         platform: "Claude Code",
         settings: {
@@ -182,7 +217,7 @@ test("renders the rationale as readable lines with glossary popovers (#270, #269
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
+      body: mk({
         model: "Opus 4.8",
         platform: "Claude Code",
         settings: {
@@ -224,7 +259,7 @@ test("frontier-tier recommendation shows the quality-tier label (no upgrade CTA)
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
+      body: mk({
         model: "Opus 4.8",
         platform: "Claude Code",
         settings: { thinking: "High" },
@@ -259,7 +294,7 @@ test("attached text file content is prepended to the request body (file-input Ph
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({
+      body: mk({
         model: "Opus 4.8",
         platform: "Claude Code",
         settings: {},

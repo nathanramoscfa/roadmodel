@@ -68,10 +68,10 @@ test("/settings save PATCHes the profile and stays on the page", async ({
   await expect(page.getByText(/Preferences saved\./i)).toBeVisible();
 });
 
-test("changing budget on /recommend persists and Settings reflects it, without wiping subscriptions", async ({
+test("pinning a priority as default on /recommend persists and Settings reflects it, without wiping subscriptions", async ({
   page,
 }) => {
-  // Onboard with a subscription + Balanced so we can prove the inline budget
+  // Onboard with a subscription + Balanced so we can prove the default-emphasis
   // change is a true MERGE (it must not reset subscriptions to defaults).
   await signInViaCallback(page);
   await page.getByLabel(/Claude Max.*\$200\/mo/i).check();
@@ -79,22 +79,45 @@ test("changing budget on /recommend persists and Settings reflects it, without w
   await page.getByRole("button", { name: /Save and continue/i }).click();
   await expect(page).toHaveURL("/");
 
-  // Switch to Quality on /recommend — it PATCHes the profile inline.
+  // /recommend now shows all three priority cards per submit. Mock the recommend
+  // fan-out at the browser level (so the REAL /api/profile merge below is still
+  // exercised), submit, then pin Quality as the default via its card control.
+  await page.route("**/api/recommend", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        primary: "balanced",
+        recommendations: [
+          { priority: "cheap", model: "Claude 4.5 Haiku", platform: "Claude Code", settings: {}, comparison_table: [] },
+          { priority: "balanced", model: "GPT-5.4", platform: "Codex", settings: {}, comparison_table: [] },
+          { priority: "best", model: "Claude Opus 4.8", platform: "Claude Code", settings: {}, comparison_table: [] },
+        ],
+      }),
+    }),
+  );
   await page.goto("/recommend");
-  const group = page.getByRole("radiogroup", { name: /Budget priority/i });
+  await page.getByPlaceholder(/Input the prompt/i).fill("build a SQL agent");
+  await page.getByRole("button", { name: /Submit/i }).click();
+  const qualityCard = page.locator('[data-priority="best"]');
+  await expect(qualityCard).toBeVisible();
+
   const patchPromise = page.waitForResponse(
     (resp) =>
       resp.url().includes("/api/profile") &&
       resp.request().method() === "PATCH",
   );
-  await group.getByText("Quality", { exact: true }).click();
+  await qualityCard.getByRole("button", { name: /Set as default/i }).click();
   const profile = await (await patchPromise).json();
   expect(profile.budget_priority).toBe("best");
   // The merge preserves the subscription chosen at onboarding (issue: a
   // budget-only PATCH used to reset every other field to its default).
   expect(profile.subscriptions).toEqual(["claude-max"]);
 
-  // Settings reflects the inline change — no need to re-pick it there.
+  // The Quality card now leads with the Default badge (optimistic highlight).
+  await expect(qualityCard.getByText("Default")).toBeVisible();
+
+  // Settings reflects the change — no need to re-pick it there.
   await page.goto("/settings");
   await expect(page.getByRole("radio", { name: /^Quality$/i })).toBeChecked();
   await expect(page.getByLabel(/Claude Max.*\$200\/mo/i)).toBeChecked();

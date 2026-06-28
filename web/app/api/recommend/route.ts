@@ -19,9 +19,10 @@ import {
   DEFAULT_PROFILE,
   getAllowedJurisdictions,
   getProfile,
+  type BudgetPriority,
   type JurisdictionCode,
 } from "@/lib/profile";
-import { isBudgetPriority } from "@/lib/budget-priority";
+import { BUDGET_PRIORITY_IDS, isBudgetPriority } from "@/lib/budget-priority";
 import { recommenderRequestHeaders } from "@/lib/api";
 import { identifyRequest, withRateLimit } from "@/lib/withRateLimit";
 import { fundingNoteForModel, personalizeComparison } from "@/lib/funding";
@@ -324,86 +325,20 @@ const handler = async (req: Request): Promise<Response> =>
     // fail-open (empty on any error) — never blocks a recommendation.
     const unavailableModels = await getUnavailableModelIds();
 
-    const upstreamPayload = {
-      task_description: taskDescription,
-      context: {
-        ...incomingContext,
-        unavailable_models: unavailableModels,
-        budget_priority: budgetPriority,
-        allowed_jurisdictions: allowedJurisdictions,
-        // Phase 4.8 T2b (#163): forward the user's declared funding so the
-        // service can build a per-user user-context and the recommendation LLM's
-        // model SELECTION prefers a surface the user funds at $0 on a quality
-        // tie. Empty arrays for anon -> the service builds no per-user context
-        // (bundled template, unchanged). No keys are sent — api_providers is a
-        // per-provider boolean signal only.
-        subscriptions,
-        api_providers: apiProviders,
-        force_provider: recommenderEngine.force_provider,
-      },
-    };
-
-    let upstream: Response;
-    try {
-      upstream = await withSpan("provider", async () =>
-        fetch(recommenderUrl(), {
-          method: "POST",
-          headers: recommenderRequestHeaders(),
-          body: JSON.stringify(upstreamPayload),
-        }),
-      );
-    } catch (err) {
-      recordTotal();
-      auditFor(req, "recommender_error", {
-        error_class: err instanceof Error ? err.name : "fetch_failed",
-        user_id: userId,
-        latency_ms: getTimings(),
-      });
-      return NextResponse.json(
-        { error: "recommender_unavailable" },
-        { status: 502 },
-      );
-    }
-
-    // Decompose the provider span into the upstream's
-    // service_scoring_ms + service_provider_ms via the
-    // X-Roadmodel-Timing header (Step 7 contract). When the
-    // upstream is older than Step 7 the header is missing and
-    // ingestServiceTimings is a no-op — provider_ms stays opaque
-    // for those rows.
-    ingestServiceTimings(upstream.headers.get("X-Roadmodel-Timing"));
-
-    const upstreamBody = await upstream.text();
-    let parsed: RecommenderPayload | null = null;
-    try {
-      parsed = JSON.parse(upstreamBody) as RecommenderPayload;
-    } catch {
-      parsed = null;
-    }
-
-    if (!upstream.ok) {
-      recordTotal();
-      auditFor(req, "recommender_error", {
-        error_class: `upstream_${upstream.status}`,
-        user_id: userId,
-        latency_ms: getTimings(),
-      });
-      return new NextResponse(upstreamBody, {
-        status: upstream.status,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const responsePayload = await withSpan("render", async () => {
-      let payload = parsed ?? {};
-      payload = filterByJurisdiction(payload, allowedJurisdictions);
+    // Shape ONE upstream pick (jurisdiction filter + funding personalization +
+    // rationale assembly) for a given budget priority. Lifted verbatim from the
+    // former single-call render span and parameterized on `priority` so it can
+    // run once per priority below. Pure + sync; closes over the request's
+    // jurisdictions + declared funding.
+    const shapePick = (
+      parsed: RecommenderPayload | null,
+      priority: string,
+    ): RecommenderPayload => {
+      let payload = filterByJurisdiction(parsed ?? {}, allowedJurisdictions);
 
       // Phase 4.8 T3: re-rank + relabel the cost table's per-platform rows to
-      // THIS user's funding (subscription-$0 vs API-PAYG vs unfunded). The
-      // service computes the table against the bundled founder context, so
-      // without this a signed-in user would see the founder's funding. Anon /
-      // no declared funding -> rows unchanged (consider-all, surface-cheaper;
-      // never changes which model was selected).
+      // THIS user's funding (subscription-$0 vs API-PAYG vs unfunded). Anon /
+      // no declared funding -> rows unchanged (never changes the model picked).
       if (payload.comparison_table) {
         payload = {
           ...payload,
@@ -415,44 +350,28 @@ const handler = async (req: Request): Promise<Response> =>
         };
       }
 
-      if (budgetPriority && payload.settings) {
+      if (payload.settings) {
         payload = {
           ...payload,
-          settings: {
-            ...payload.settings,
-            budget_priority: budgetPriority,
-          },
+          settings: { ...payload.settings, budget_priority: priority },
         };
       }
 
       // Surface the model's own reasoning in settings.rationale (the field the
-      // UI reads). recommend_structured emits it as a TOP-LEVEL `rationale`;
-      // the service passes it through (#173), with settings.rationale as a
-      // fallback. Append the budget-priority note unless the reasoning already
-      // names it (avoid redundancy) — but ALWAYS surface the reasoning itself,
-      // even when it mentions the budget word, or the "Why this model?" panel
-      // goes blank for those picks (e.g. a budget=best rationale saying "best").
-      // budget_priority is set on settings by the block above.
+      // UI reads), appending the budget-priority note unless already named.
       const baseRationale =
         (typeof payload.settings?.rationale === "string" &&
           payload.settings.rationale) ||
         (typeof payload.rationale === "string" && payload.rationale) ||
         "";
-      const withBudget =
-        budgetPriority && !baseRationale.includes(budgetPriority)
-          ? baseRationale
-            ? `${baseRationale} Budget priority: ${budgetPriority}.`
-            : `Budget priority: ${budgetPriority}.`
-          : baseRationale;
-      // Phase 4.8 T2: the user's cheapest funded path for the recommended
-      // model (subscription-$0 vs API-PAYG), computed deterministically from
-      // their declared funding. Null when they've declared nothing that reaches
-      // the model — never changes the model that was selected.
-      //
-      // T3 dedup (#270): when the personalized cost table will render (non-empty),
-      // it already shows this funded path ("✓ $0 · <sub>"), so omit the funding
-      // sentence from the rationale to avoid duplicating it. Keep it as a
-      // fallback only when there's no table (e.g. cost estimation returned none).
+      const withBudget = !baseRationale.includes(priority)
+        ? baseRationale
+          ? `${baseRationale} Budget priority: ${priority}.`
+          : `Budget priority: ${priority}.`
+        : baseRationale;
+      // T3 dedup (#270): when the personalized cost table renders it already
+      // shows the funded path, so omit the funding sentence; keep it as a
+      // fallback only when there's no table.
       const tableShowsFunding =
         Array.isArray(payload.comparison_table) &&
         payload.comparison_table.length > 0;
@@ -467,59 +386,148 @@ const handler = async (req: Request): Promise<Response> =>
       if (rationale) {
         payload = {
           ...payload,
-          settings: {
-            ...(payload.settings ?? {}),
-            rationale,
-          },
+          settings: { ...(payload.settings ?? {}), rationale },
         };
       }
       return payload;
-    });
+    };
 
-    // The scoring span is a thin wrapper around the audit-row
-    // assembly. It exists for symmetric naming so Phase 9
-    // dashboards can decompose the request into the same four
-    // span buckets regardless of which surface (recommend /
-    // roadmap) the row came from.
-    await withSpan("scoring", async () => {
-      // Intentional no-op body — the audit write itself happens
-      // AFTER recordTotal() below so the row carries the final
-      // latency_ms map. Keeping this span empty (rather than
-      // skipping it) preserves the four-span shape the audit
-      // contract documents.
-    });
+    // Fan out one upstream /v1/recommend call per budget priority. The page now
+    // shows Cost / Balanced / Quality side by side from a SINGLE user request
+    // (so users see the cost-vs-quality trade-off for their prompt instead of
+    // pre-committing with a toggle). One call per priority, run in parallel, so
+    // wall-clock ~= a single call; the recommender is deterministic (temp 0) so
+    // the three picks are stable + reliably ordered. Still ONE request -> one
+    // rate-limit decrement. Never throws: a per-priority failure degrades that
+    // column rather than the whole response.
+    type PickFetch =
+      | {
+          priority: BudgetPriority;
+          ok: true;
+          parsed: RecommenderPayload | null;
+          timing: string | null;
+        }
+      | { priority: BudgetPriority; ok: false; status: number; body: string };
 
-    // Per-call cost ledger (T3b): record OUR engine call's estimated spend +
-    // tokens. provider/model stay as the RECOMMENDATION (what we returned);
-    // cost_usd/input_tokens/output_tokens are the engine call (what it cost us).
-    const engineCost = estimateEngineCost(
+    const fetchOne = async (priority: BudgetPriority): Promise<PickFetch> => {
+      const upstreamPayload = {
+        task_description: taskDescription,
+        context: {
+          ...incomingContext,
+          unavailable_models: unavailableModels,
+          budget_priority: priority,
+          allowed_jurisdictions: allowedJurisdictions,
+          // Phase 4.8 T2b (#163): forward declared funding so the service biases
+          // SELECTION toward a $0-funded surface on a quality tie. No keys sent.
+          subscriptions,
+          api_providers: apiProviders,
+          force_provider: recommenderEngine.force_provider,
+        },
+      };
+      let upstream: Response;
+      try {
+        upstream = await fetch(recommenderUrl(), {
+          method: "POST",
+          headers: recommenderRequestHeaders(),
+          body: JSON.stringify(upstreamPayload),
+        });
+      } catch (err) {
+        return {
+          priority,
+          ok: false,
+          status: 502,
+          body: err instanceof Error ? err.name : "fetch_failed",
+        };
+      }
+      const text = await upstream.text();
+      if (!upstream.ok) {
+        return { priority, ok: false, status: upstream.status, body: text };
+      }
+      let parsed: RecommenderPayload | null = null;
+      try {
+        parsed = JSON.parse(text) as RecommenderPayload;
+      } catch {
+        parsed = null;
+      }
+      return {
+        priority,
+        ok: true,
+        parsed,
+        timing: upstream.headers.get("X-Roadmodel-Timing"),
+      };
+    };
+
+    const results = await withSpan("provider", async () =>
+      Promise.all(BUDGET_PRIORITY_IDS.map(fetchOne)),
+    );
+
+    const ok = results.filter(
+      (r): r is Extract<PickFetch, { ok: true }> => r.ok,
+    );
+    // Decompose the provider span via the first pick's timing header (Step 7);
+    // the three calls share an engine so one sample is representative.
+    if (ok.length > 0) {
+      ingestServiceTimings(ok[0].timing);
+    }
+
+    if (ok.length === 0) {
+      recordTotal();
+      const first = results.find(
+        (r): r is Extract<PickFetch, { ok: false }> => !r.ok,
+      );
+      const status = first?.status ?? 502;
+      auditFor(req, "recommender_error", {
+        error_class: `upstream_${status}`,
+        user_id: userId,
+        latency_ms: getTimings(),
+      });
+      return new NextResponse(
+        first?.body ?? JSON.stringify({ error: "recommender_unavailable" }),
+        { status, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    const recommendations = await withSpan("render", async () =>
+      // results preserve BUDGET_PRIORITY_IDS order (Cost -> Balanced -> Quality).
+      ok.map((r) => ({
+        ...shapePick(r.parsed, r.priority),
+        priority: r.priority,
+        // Same engine for every pick (T3b tier label).
+        tier: recommenderEngine.use_frontier ? "frontier" : "free",
+        engine: recommenderEngine.engine,
+      })),
+    );
+
+    // The scoring span preserves the four-span shape the audit contract
+    // documents (no-op body; the audit write happens after recordTotal()).
+    await withSpan("scoring", async () => {});
+
+    // Per-call cost ledger (T3b): OUR engine spend, now multiplied by the number
+    // of priority calls actually made (3 on success). provider/model name the
+    // PRIMARY (highlighted) pick.
+    const primaryPick =
+      recommendations.find((r) => r.priority === budgetPriority) ??
+      recommendations[0];
+    const per = estimateEngineCost(
       recommenderEngine.engine,
       taskDescription.length,
     );
+    const n = recommendations.length;
     recordTotal();
     auditFor(req, "ok", {
-      provider: responsePayload.platform,
-      model: responsePayload.model,
-      input_tokens: engineCost?.inputTokens,
-      output_tokens: engineCost?.outputTokens,
-      cost_usd: engineCost?.costUsd,
+      provider: primaryPick.platform,
+      model: primaryPick.model,
+      input_tokens: per ? per.inputTokens * n : undefined,
+      output_tokens: per ? per.outputTokens * n : undefined,
+      cost_usd: per ? Number((per.costUsd * n).toFixed(6)) : undefined,
       user_id: userId,
       latency_ms: getTimings(),
     });
 
-    // Surface the engine tier so the client renders an accurate tier label
-    // (T3b): signed-in frontier users should not be told to "upgrade for
-    // frontier models" when they are already on Gemini 2.5 Pro.
-    const tieredPayload = {
-      ...responsePayload,
-      tier: recommenderEngine.use_frontier ? "frontier" : "free",
-      engine: recommenderEngine.engine,
-    };
-
-    return new NextResponse(JSON.stringify(tieredPayload), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new NextResponse(
+      JSON.stringify({ recommendations, primary: budgetPriority }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
   });
 
 export const POST = withRateLimit(handler, async () => {

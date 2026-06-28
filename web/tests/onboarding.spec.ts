@@ -46,23 +46,43 @@ test("save-and-continue persists prefs and surfaces budget priority", async ({
   expect(profile.onboarded_at).toBeTruthy();
   await expect(page).toHaveURL("/");
 
+  // /recommend now shows all three priority cards per submit, with the saved
+  // emphasis (Quality = "best") highlighted. Mock the fan-out at the browser
+  // level (the real route's 3 parallel upstream calls are verified in prod, and
+  // the in-process E2E self-fetch is too slow to run 3× under CI). The mock
+  // mirrors what the real edge emits: a per-card "Budget priority: X" rationale
+  // and primary = the user's saved priority.
+  await page.route("**/api/recommend", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        primary: "best",
+        recommendations: [
+          { priority: "cheap", model: "Claude 4.5 Haiku", platform: "Claude Code", settings: { rationale: "Budget priority: cheap." }, comparison_table: [] },
+          { priority: "balanced", model: "GPT-5.4", platform: "Codex", settings: { rationale: "Budget priority: balanced." }, comparison_table: [] },
+          { priority: "best", model: "Claude Opus 4.8", platform: "Claude Code", settings: { rationale: "Chosen for deep reasoning. Budget priority: best." }, comparison_table: [] },
+        ],
+      }),
+    }),
+  );
   await page.goto("/recommend");
   await page
     .getByPlaceholder(/Input the prompt/i)
     .fill("profile onboarding smoke");
   await page.getByRole("button", { name: /Submit/i }).click();
+  // The saved emphasis (best) is the highlighted/default card; scope to it.
+  const qualityCard = page.locator('[data-priority="best"]');
+  await expect(qualityCard.getByText("Default")).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: /Claude 4\.5 Haiku/i }),
+    qualityCard.getByRole("heading", { name: /Claude Opus 4\.8/i }),
   ).toBeVisible();
   // The rationale renders prominently (T4 — an always-visible "Why this model?"
-  // card, no longer a collapsed <details> behind a click). The route injects the
-  // profile's budget priority into the rationale (#173).
-  const why = page.getByRole("region", { name: /Why this model/i });
+  // card, no longer a collapsed <details> behind a click), carrying the per-card
+  // budget priority (#173).
+  const why = qualityCard.getByRole("region", { name: /Why this model/i });
   await expect(why).toBeVisible();
   await expect(why.getByText(/Budget priority: best/i)).toBeVisible();
-  // Phase 4.8 T3 (#270): the funded-path detail now lives in the personalized
-  // cost table (asserted in the dedicated T3 test), not duplicated in the
-  // rationale — so it is intentionally NOT expected in "Why this model?" here.
 });
 
 test("renders a consistent monthly price for every subscription tier", async ({
@@ -120,16 +140,20 @@ test("forwards held subscriptions + enabled API providers to the recommender (Ph
   await page.goto("/recommend");
   await page.getByPlaceholder(/Input the prompt/i).fill("forwarding smoke");
   await page.getByRole("button", { name: /Submit/i }).click();
+  // The page now renders three priority cards; the forwarded funding is echoed
+  // in every card's rationale. Scope to the Cost card (the mock's cheap pick is
+  // Claude 4.5 Haiku) so the "Why this model" region is unambiguous.
+  const card = page.locator('[data-priority="cheap"]');
   await expect(
-    page.getByRole("heading", { name: /Claude 4\.5 Haiku/i }),
+    card.getByRole("heading", { name: /Claude 4\.5 Haiku/i }),
   ).toBeVisible();
-  // The edge now forwards the user's declared funding to the service; the E2E
-  // mock echoes it back, proving subscriptions + api_providers reach the upstream
+  // The edge forwards the user's declared funding to the service; the E2E mock
+  // echoes it back, proving subscriptions + api_providers reach the upstream
   // (where the real service builds the per-user user-context that biases model
   // SELECTION). The lowercase ids appear ONLY in the echo — the T2a edge note
   // uses the display label "Claude Max", so matching "claude-max"/"deepseek"
   // specifically confirms the forwarded payload.
-  const why = page.getByRole("region", { name: /Why this model/i });
+  const why = card.getByRole("region", { name: /Why this model/i });
   await expect(why).toContainText("Forwarded funding");
   await expect(why).toContainText("claude-max");
   await expect(why).toContainText("deepseek");
@@ -146,17 +170,21 @@ test("cost table is personalized to the signed-in user's funding (Phase 4.8 T3)"
   await page.goto("/recommend");
   await page.getByPlaceholder(/Input the prompt/i).fill("personalized cost table");
   await page.getByRole("button", { name: /Submit/i }).click();
+  // Three cards render, each with a personalized cost table; scope to the Cost
+  // card (mock's cheap pick = Claude 4.5 Haiku) so the table assertions are
+  // unambiguous.
+  const card = page.locator('[data-priority="cheap"]');
   await expect(
-    page.getByRole("heading", { name: /Claude 4\.5 Haiku/i }),
+    card.getByRole("heading", { name: /Claude 4\.5 Haiku/i }),
   ).toBeVisible();
   // The cost table reflects THIS user's funding, not the bundled founder
   // context: the column is "Your cost" and the Claude Code row is $0 via the
   // user's held Claude Max subscription.
   await expect(
-    page.getByRole("columnheader", { name: "Your cost" }),
+    card.getByRole("columnheader", { name: "Your cost" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("cell", { name: /\$0 · Claude Max/i }),
+    card.getByRole("cell", { name: /\$0 · Claude Max/i }),
   ).toBeVisible();
 });
 
@@ -229,8 +257,10 @@ test("widen path includes cn and surfaces Kimi K2.5", async ({ page }) => {
   await page.goto("/recommend");
   await page.getByPlaceholder(/Input the prompt/i).fill("allow cn");
   await page.getByRole("button", { name: /Submit/i }).click();
+  // With cn allowed the mock returns Kimi K2.5 for every priority, so the
+  // heading appears in all three cards — assert the first is visible.
   await expect(
-    page.getByRole("heading", { name: /Kimi K2\.5/i }),
+    page.getByRole("heading", { name: /Kimi K2\.5/i }).first(),
   ).toBeVisible();
 });
 
