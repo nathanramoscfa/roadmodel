@@ -46,23 +46,43 @@ test("save-and-continue persists prefs and surfaces budget priority", async ({
   expect(profile.onboarded_at).toBeTruthy();
   await expect(page).toHaveURL("/");
 
+  // /recommend now shows all three priority cards per submit, with the saved
+  // emphasis (Quality = "best") highlighted. Mock the fan-out at the browser
+  // level (the real route's 3 parallel upstream calls are verified in prod, and
+  // the in-process E2E self-fetch is too slow to run 3× under CI). The mock
+  // mirrors what the real edge emits: a per-card "Budget priority: X" rationale
+  // and primary = the user's saved priority.
+  await page.route("**/api/recommend", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        primary: "best",
+        recommendations: [
+          { priority: "cheap", model: "Claude 4.5 Haiku", platform: "Claude Code", settings: { rationale: "Budget priority: cheap." }, comparison_table: [] },
+          { priority: "balanced", model: "GPT-5.4", platform: "Codex", settings: { rationale: "Budget priority: balanced." }, comparison_table: [] },
+          { priority: "best", model: "Claude Opus 4.8", platform: "Claude Code", settings: { rationale: "Chosen for deep reasoning. Budget priority: best." }, comparison_table: [] },
+        ],
+      }),
+    }),
+  );
   await page.goto("/recommend");
   await page
     .getByPlaceholder(/Input the prompt/i)
     .fill("profile onboarding smoke");
   await page.getByRole("button", { name: /Submit/i }).click();
+  // The saved emphasis (best) is the highlighted/default card; scope to it.
+  const qualityCard = page.locator('[data-priority="best"]');
+  await expect(qualityCard.getByText("Default")).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: /Claude 4\.5 Haiku/i }),
+    qualityCard.getByRole("heading", { name: /Claude Opus 4\.8/i }),
   ).toBeVisible();
   // The rationale renders prominently (T4 — an always-visible "Why this model?"
-  // card, no longer a collapsed <details> behind a click). The route injects the
-  // profile's budget priority into the rationale (#173).
-  const why = page.getByRole("region", { name: /Why this model/i });
+  // card, no longer a collapsed <details> behind a click), carrying the per-card
+  // budget priority (#173).
+  const why = qualityCard.getByRole("region", { name: /Why this model/i });
   await expect(why).toBeVisible();
   await expect(why.getByText(/Budget priority: best/i)).toBeVisible();
-  // Phase 4.8 T3 (#270): the funded-path detail now lives in the personalized
-  // cost table (asserted in the dedicated T3 test), not duplicated in the
-  // rationale — so it is intentionally NOT expected in "Why this model?" here.
 });
 
 test("renders a consistent monthly price for every subscription tier", async ({
