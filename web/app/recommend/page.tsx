@@ -1,16 +1,13 @@
 // web/app/recommend/page.tsx
 import { RecommendWorkspace } from "@/components/RecommendWorkspace";
 import { getServerSession } from "@/lib/auth";
-import { DEFAULT_PROFILE, getProfile } from "@/lib/profile";
 
 export default async function RecommendPage() {
-  // Seed the inline budget control from the user's saved profile (or the
-  // default for signed-out visitors). Signed-in users can persist a change
-  // back to Settings; signed-out users get the control for the session only.
+  // The page returns all three priorities (Cost / Balanced / Quality) per
+  // submit; the highlighted-by-default one is seeded server-side from the
+  // profile inside /api/recommend. Here we only need to know whether the
+  // visitor is signed in, so the "Set as default" control can persist.
   const session = await getServerSession();
-  const profile = session ? await getProfile(session.id) : null;
-  const initialBudgetPriority =
-    profile?.budget_priority ?? DEFAULT_PROFILE.budget_priority;
 
   return (
     <section className="mx-auto max-w-6xl px-6 py-12 sm:py-16">
@@ -22,16 +19,13 @@ export default async function RecommendPage() {
           Get a model recommendation
         </h1>
         <p className="mt-3 text-brand-slate-600 dark:text-brand-slate-300">
-          Input your prompt and we&apos;ll suggest a model, platform, settings,
-          and cost.
+          Input your prompt and we&apos;ll suggest a Cost, Balanced, and Quality
+          model — each with its platform, settings, and cost.
         </p>
       </header>
 
       <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-12">
-        <RecommendWorkspace
-          initialBudgetPriority={initialBudgetPriority}
-          canPersistBudget={session !== null}
-        />
+        <RecommendWorkspace canPersistBudget={session !== null} />
       </div>
     </section>
   );

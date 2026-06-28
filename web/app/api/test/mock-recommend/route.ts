@@ -13,6 +13,7 @@ export async function POST(req: Request): Promise<Response> {
       allowed_jurisdictions?: string[];
       subscriptions?: string[];
       api_providers?: string[];
+      budget_priority?: string;
     };
   } = {};
   try {
@@ -23,6 +24,21 @@ export async function POST(req: Request): Promise<Response> {
 
   const allowed = body.context?.allowed_jurisdictions ?? [];
   const includeKimi = allowed.includes("cn");
+
+  // The edge now fans out one call per budget priority (Cost / Balanced /
+  // Quality). Vary the mock pick by the forwarded budget_priority so the
+  // three-card UI renders three distinct models in E2E (the real engine does
+  // this via the per-priority posture, #319). cn-jurisdiction Kimi still takes
+  // precedence so the existing jurisdiction-filter spec is unaffected.
+  const budget = body.context?.budget_priority ?? "balanced";
+  const byBudget: Record<string, { model: string; platform: string }> = {
+    cheap: { model: "Claude 4.5 Haiku", platform: "Claude Code" },
+    balanced: { model: "GPT-5.4", platform: "Codex" },
+    best: { model: "Claude Opus 4.8", platform: "Claude Code" },
+  };
+  const pick = includeKimi
+    ? { model: "Kimi K2.5", platform: "Cursor" }
+    : (byBudget[budget] ?? byBudget.balanced);
 
   // Phase 4.8 T2b: echo the forwarded funding so the edge -> service forwarding
   // contract is observable in E2E (mirrors how allowed_jurisdictions drives the
@@ -58,8 +74,8 @@ export async function POST(req: Request): Promise<Response> {
   ];
 
   return NextResponse.json({
-    model: includeKimi ? "Kimi K2.5" : "Claude 4.5 Haiku",
-    platform: includeKimi ? "Cursor" : "Claude Code",
+    model: pick.model,
+    platform: pick.platform,
     settings: {
       rationale:
         (includeKimi

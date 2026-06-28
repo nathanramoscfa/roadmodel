@@ -2,8 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { RecommendResponse } from "@/lib/api";
-import type { BudgetPriority } from "@/lib/profile";
+import type { MultiRecommendResponse } from "@/lib/api";
 import { PromptForm } from "./PromptForm";
 import { RecommendOutput } from "./RecommendOutput";
 import { RecommendOutputEmpty } from "./RecommendOutputEmpty";
@@ -13,22 +12,19 @@ export const RECOMMEND_PREFILL_KEY = "roadmodel:recommend-prefill";
 
 interface PrefillPayload {
   task_description: string;
-  recommendation: RecommendResponse;
+  recommendation: MultiRecommendResponse;
 }
 
 interface RecommendWorkspaceProps {
-  // The signed-in user's current budget priority (or the default for anon), so
-  // the inline control opens on the right choice; canPersistBudget gates the
-  // Settings sync (signed-in only). Both supplied by the server page.
-  initialBudgetPriority: BudgetPriority;
+  // Signed-in users can pin a priority as their default emphasis (persists to
+  // Settings); the server page supplies whether the visitor is signed in.
   canPersistBudget: boolean;
 }
 
 export function RecommendWorkspace({
-  initialBudgetPriority,
   canPersistBudget,
 }: RecommendWorkspaceProps) {
-  const [data, setData] = useState<RecommendResponse | null>(null);
+  const [data, setData] = useState<MultiRecommendResponse | null>(null);
   const [initialTask, setInitialTask] = useState("");
 
   useEffect(() => {
@@ -42,7 +38,10 @@ export function RecommendWorkspace({
       if (parsed.task_description) {
         setInitialTask(parsed.task_description);
       }
-      if (parsed.recommendation) {
+      // Only accept a well-formed multi-pick payload (the shape changed when
+      // /recommend moved to three priority cards); a stale single-pick prefill
+      // is ignored rather than rendered broken.
+      if (Array.isArray(parsed.recommendation?.recommendations)) {
         setData(parsed.recommendation);
       }
     } catch {
@@ -56,16 +55,11 @@ export function RecommendWorkspace({
   return (
     <div className="contents">
       <div className="flex flex-col gap-8">
-        <PromptForm
-          initialTask={initialTask}
-          initialBudgetPriority={initialBudgetPriority}
-          canPersistBudget={canPersistBudget}
-          onSuccess={setData}
-        />
+        <PromptForm initialTask={initialTask} onSuccess={setData} />
         <RecommendReference />
       </div>
       {data ? (
-        <RecommendOutput data={data} />
+        <RecommendOutput data={data} canPersist={canPersistBudget} />
       ) : (
         <RecommendOutputEmpty />
       )}

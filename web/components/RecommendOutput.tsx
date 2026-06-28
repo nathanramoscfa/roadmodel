@@ -1,50 +1,72 @@
 // web/components/RecommendOutput.tsx
-import type { RecommendResponse } from "@/lib/api";
-import { CostComparison } from "./CostComparison";
+"use client";
+
+import { useEffect, useState } from "react";
+import type { MultiRecommendResponse, PriorityRecommendation } from "@/lib/api";
 import { FreeTierLabel } from "./FreeTierLabel";
-import { ModelHeader } from "./ModelHeader";
-import { SettingsList } from "./SettingsList";
-import { WhyDisclosure } from "./WhyDisclosure";
+import { PriorityCard } from "./PriorityCard";
 
 interface RecommendOutputProps {
-  data: RecommendResponse;
+  data: MultiRecommendResponse;
+  // Signed-in users can pin a priority as their default emphasis (persists to
+  // Settings); signed-out users get the three picks without the control.
+  canPersist: boolean;
 }
 
-function extractRationale(data: RecommendResponse): string | null {
-  const fromSettings = data.settings.rationale;
-  if (typeof fromSettings === "string" && fromSettings.trim()) {
-    return fromSettings;
-  }
-  const first = data.comparison_table[0];
-  if (first && typeof first.rationale === "string") {
-    return first.rationale;
-  }
-  return null;
-}
+export function RecommendOutput({ data, canPersist }: RecommendOutputProps) {
+  // Which priority leads (ring + "Default" badge). Seeded from the server's
+  // saved preference (data.primary) and re-seeded whenever a new result lands;
+  // a "Set as default" click updates it optimistically and persists in the
+  // background so Settings reflects it.
+  const [primary, setPrimary] = useState(data.primary);
+  const [persisting, setPersisting] = useState(false);
 
-export function RecommendOutput({ data }: RecommendOutputProps) {
-  const rationale = extractRationale(data);
+  useEffect(() => {
+    setPrimary(data.primary);
+  }, [data]);
+
+  function handleSetDefault(priority: PriorityRecommendation["priority"]): void {
+    setPrimary(priority);
+    if (!canPersist) {
+      return;
+    }
+    // Fire-and-forget: the highlight already updated optimistically, so a failed
+    // sync never blocks the UI. Only signed-in users have a profile to write to.
+    setPersisting(true);
+    void fetch("/api/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ budget_priority: priority }),
+    })
+      .catch(() => {})
+      .finally(() => setPersisting(false));
+  }
+
+  // recommendations arrive ordered Cost -> Balanced -> Quality (the edge fans
+  // out in BUDGET_PRIORITY_IDS order); render them in that order.
+  const tierSource =
+    data.recommendations.find((r) => r.priority === primary) ??
+    data.recommendations[0];
 
   return (
-    <div
-      className={
-        "flex flex-col gap-6 rounded-xl border border-brand-slate-200 dark:border-brand-slate-700 " +
-        "bg-white dark:bg-brand-slate-800 p-6 shadow-sm"
-      }
-    >
-      <ModelHeader model={data.model} platform={data.platform} />
-      {data.backup ? (
-        <p className="-mt-3 text-sm text-brand-slate-500 dark:text-brand-slate-400">
-          Backup if unavailable:{" "}
-          <span className="font-medium text-brand-slate-700 dark:text-brand-slate-200">
-            {data.backup}
-          </span>
-        </p>
+    <div className="flex flex-col gap-5">
+      {data.recommendations.map((rec) => (
+        <PriorityCard
+          key={rec.priority}
+          data={rec}
+          isPrimary={rec.priority === primary}
+          canPersist={canPersist}
+          persisting={persisting}
+          onSetDefault={handleSetDefault}
+        />
+      ))}
+      {tierSource ? (
+        <FreeTierLabel
+          surface="recommend"
+          tier={tierSource.tier}
+          engine={tierSource.engine}
+        />
       ) : null}
-      <SettingsList settings={data.settings} />
-      <CostComparison comparisonTable={data.comparison_table} />
-      <WhyDisclosure rationale={rationale} />
-      <FreeTierLabel surface="recommend" tier={data.tier} engine={data.engine} />
     </div>
   );
 }

@@ -3,9 +3,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
-import type { RecommendResponse } from "@/lib/api";
-import type { BudgetPriority } from "@/lib/profile";
-import { BUDGET_PRIORITY_OPTIONS } from "@/lib/budget-priority";
+import type { MultiRecommendResponse } from "@/lib/api";
 
 // Phase A of the file-input feature (docs/file-input.md): text files only.
 // Their contents are read client-side and prepended to the task. Documents
@@ -54,19 +52,13 @@ function buildAttachmentsText(attachments: Attachment[]): {
 }
 
 interface RecommendActionState {
-  data?: RecommendResponse;
+  data?: MultiRecommendResponse;
   error?: string;
 }
 
 interface PromptFormProps {
   initialTask?: string;
-  // The user's current budget priority (from their profile, or the default),
-  // so the inline control opens on the right choice.
-  initialBudgetPriority: BudgetPriority;
-  // Only signed-in users have a profile to persist to; signed-out users still
-  // get the inline control (it rides in the request body) but no Settings sync.
-  canPersistBudget: boolean;
-  onSuccess: (data: RecommendResponse) => void;
+  onSuccess: (data: MultiRecommendResponse) => void;
 }
 
 async function submitRecommend(
@@ -83,18 +75,14 @@ async function submitRecommend(
   }
   const taskDescription = attachments ? `${attachments}${task}` : task;
 
-  // Subscriptions come from the signed-in user's profile (Settings), read
-  // server-side. Budget priority is chosen inline (the segmented control) and
-  // sent in the body so it applies to THIS call immediately — even before the
-  // profile PATCH lands, and for signed-out users with no profile.
-  const budgetPriority = String(formData.get("budget_priority") ?? "").trim();
+  // The page now returns all three budget priorities (Cost / Balanced / Quality)
+  // from a single submit, so the form no longer pre-selects one — it just sends
+  // the task. Subscriptions + the highlighted-by-default priority come from the
+  // signed-in user's profile, read server-side.
   const res = await fetch("/api/recommend", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      task_description: taskDescription,
-      ...(budgetPriority ? { budget_priority: budgetPriority } : {}),
-    }),
+    body: JSON.stringify({ task_description: taskDescription }),
   });
 
   if (!res.ok) {
@@ -125,36 +113,15 @@ async function submitRecommend(
     };
   }
 
-  const data = (await res.json()) as RecommendResponse;
+  const data = (await res.json()) as MultiRecommendResponse;
   return { data };
 }
 
-export function PromptForm({
-  initialTask = "",
-  initialBudgetPriority,
-  canPersistBudget,
-  onSuccess,
-}: PromptFormProps) {
+export function PromptForm({ initialTask = "", onSuccess }: PromptFormProps) {
   const [task, setTask] = useState(initialTask);
-  const [budgetPriority, setBudgetPriority] =
-    useState<BudgetPriority>(initialBudgetPriority);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [fileNotice, setFileNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  function handleBudgetChange(next: BudgetPriority): void {
-    setBudgetPriority(next);
-    // Persist so Settings reflects the choice. Fire-and-forget: the value also
-    // rides in the next recommend request body, so a failed sync never blocks a
-    // recommendation. Only signed-in users have a profile to write to.
-    if (canPersistBudget) {
-      void fetch("/api/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ budget_priority: next }),
-      }).catch(() => {});
-    }
-  }
 
   const [state, formAction, pending] = useActionState(
     submitRecommend,
@@ -223,43 +190,6 @@ export function PromptForm({
           className="w-full resize-y rounded-lg border border-brand-slate-300 dark:border-brand-slate-700 bg-white dark:bg-brand-slate-800 px-4 py-3 text-brand-slate-900 dark:text-brand-slate-50 shadow-sm placeholder:text-brand-slate-400 focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/30"
         />
 
-        <fieldset className="flex flex-col gap-2">
-          <legend className="text-sm font-medium text-brand-slate-800 dark:text-brand-slate-100">
-            Prioritize
-          </legend>
-          <div
-            role="radiogroup"
-            aria-label="Budget priority"
-            className="inline-flex self-start rounded-lg border border-brand-slate-300 dark:border-brand-slate-700 bg-brand-slate-50 dark:bg-brand-slate-900 p-1"
-          >
-            {BUDGET_PRIORITY_OPTIONS.map((option) => {
-              const selected = budgetPriority === option.id;
-              return (
-                <label
-                  key={option.id}
-                  title={option.hint}
-                  className={
-                    "cursor-pointer rounded-md px-4 py-1.5 text-sm font-medium transition " +
-                    (selected
-                      ? "bg-brand-accent text-white shadow-sm"
-                      : "text-brand-slate-600 dark:text-brand-slate-300 hover:text-brand-slate-900 dark:hover:text-brand-slate-100")
-                  }
-                >
-                  <input
-                    type="radio"
-                    name="budget_priority"
-                    value={option.id}
-                    checked={selected}
-                    onChange={() => handleBudgetChange(option.id)}
-                    className="sr-only"
-                  />
-                  {option.label}
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
-
         <div
           role="presentation"
           onDragOver={(event) => event.preventDefault()}
@@ -310,6 +240,7 @@ export function PromptForm({
         </div>
 
         <p className="text-sm text-brand-slate-600 dark:text-brand-slate-300">
+          We&apos;ll show a Cost, Balanced, and Quality pick for your prompt.
           Recommendations use your AI subscriptions from{" "}
           <Link
             href="/settings"
@@ -317,9 +248,7 @@ export function PromptForm({
           >
             Settings
           </Link>
-          {canPersistBudget
-            ? ". Your budget priority above is saved there too."
-            : "."}
+          .
         </p>
 
         {state.error ? (

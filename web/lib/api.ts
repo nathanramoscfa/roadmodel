@@ -35,6 +35,27 @@ export interface RecommendResponse {
   backup?: string | null;
 }
 
+// One recommendation computed at a specific budget priority. The /recommend
+// surface now returns all three (Cost / Balanced / Quality) from a single user
+// request — the edge fans out three parallel /v1/recommend calls, one per
+// priority — so the user sees the cost-vs-quality trade-off for THEIR prompt
+// instead of pre-committing to one with a toggle. Reuses RecommendResponse so
+// the existing card internals (header / settings / cost / why) render unchanged.
+export interface PriorityRecommendation extends RecommendResponse {
+  // The historical stored id: "cheap" (Cost) | "balanced" (Balanced) | "best"
+  // (Quality). Mirrors BudgetPriority in @/lib/profile.
+  priority: "cheap" | "balanced" | "best";
+}
+
+// The /api/recommend response shape (replaces the single RecommendResponse on
+// the wire). `primary` is the priority to highlight / lead with — seeded from
+// the user's saved profile preference (or Balanced by default). `recommendations`
+// is always ordered Cost → Balanced → Quality.
+export interface MultiRecommendResponse {
+  recommendations: PriorityRecommendation[];
+  primary: "cheap" | "balanced" | "best";
+}
+
 const DEFAULT_SERVICE_URL =
   "https://roadmodel-api.vercel.app/v1/recommend";
 
