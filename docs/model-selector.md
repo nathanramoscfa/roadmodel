@@ -41,18 +41,32 @@ and API-key state read from docs/user-context.md.
 
 ## Objective
 
-**PRIMARY:** Maximize quality. Recommend the highest-quality model whose
-strengths match the prompt's task type, regardless of cost. If Opus 4.7
-in Max Mode is the most appropriate fit for a given prompt, recommend
+DEFAULT POSTURE — Maximize quality. Recommend the highest-quality model
+whose strengths match the prompt's task type, regardless of cost. If Opus
+4.7 in Max Mode is the most appropriate fit for a given prompt, recommend
 Opus 4.7 in Max Mode.
 
 **SECONDARY (tie-breaker only):** When two or more models are tied in
 expected quality for the prompt's task type, recommend the one with the
 lower output price per 1M tokens.
 
-Quality always wins. Cost only resolves true ties — never near-ties,
-never "close enough." The user is paying for access to every tier and
-expects the best outcome for each prompt.
+Under this default posture quality wins; cost only resolves true ties —
+never near-ties, never "close enough." The user is paying for access to
+every tier and expects the best outcome for each prompt.
+
+BUDGET-PRIORITY OVERRIDE: When the appended user-context declares a
+"Budget priority and speed posture", THAT posture is the user's explicit
+quality-vs-cost instruction for the request and OVERRIDES the default
+posture above. Honor whichever it states:
+- `cheap` (Cost) — recommend the cheapest model, and lower reasoning
+  effort / thinking, that can do the task to an acceptable standard;
+  do not maximize quality beyond what the task needs.
+- `balanced` (Balanced) — recommend the best value: prefer the cheaper
+  model when two are CLOSE in expected quality (not only on an exact tie),
+  reserving the most expensive tiers for tasks that require them.
+- `best` (Quality) — the default quality-first posture above.
+When no such posture is declared (legacy / direct callers), the default
+posture governs.
 
 ## Pricing Context
 
@@ -1335,18 +1349,32 @@ as primary; the other becomes the secondary category for tie-breaking.
   </usage>
 
   <objective>
-    PRIMARY: Maximize quality. Recommend the highest-quality model whose
-    strengths match the prompt's task type, regardless of cost. If Opus 4.7
-    in Max Mode is the most appropriate fit for a given prompt, recommend
+    DEFAULT POSTURE — Maximize quality. Recommend the highest-quality model
+    whose strengths match the prompt's task type, regardless of cost. If Opus
+    4.7 in Max Mode is the most appropriate fit for a given prompt, recommend
     Opus 4.7 in Max Mode.
 
     SECONDARY (tie-breaker only): When two or more models are tied in
     expected quality for the prompt's task type, recommend the one with the
     lower output price per 1M tokens.
 
-    Quality always wins. Cost only resolves true ties — never near-ties,
-    never "close enough." The user is paying for access to every tier and
-    expects the best outcome for each prompt.
+    Under this default posture quality wins; cost only resolves true ties —
+    never near-ties, never "close enough." The user is paying for access to
+    every tier and expects the best outcome for each prompt.
+
+    BUDGET-PRIORITY OVERRIDE: When the appended user-context declares a
+    "Budget priority and speed posture", THAT posture is the user's explicit
+    quality-vs-cost instruction for the request and OVERRIDES the default
+    posture above. Honor whichever it states:
+    - `cheap` (Cost) — recommend the cheapest model, and lower reasoning
+      effort / thinking, that can do the task to an acceptable standard;
+      do not maximize quality beyond what the task needs.
+    - `balanced` (Balanced) — recommend the best value: prefer the cheaper
+      model when two are CLOSE in expected quality (not only on an exact tie),
+      reserving the most expensive tiers for tasks that require them.
+    - `best` (Quality) — the default quality-first posture above.
+    When no such posture is declared (legacy / direct callers), the default
+    posture governs.
   </objective>
 
   <pricing-context>
@@ -2341,18 +2369,32 @@ as primary; the other becomes the secondary category for tie-breaking.
   </usage>
 
   <objective>
-    PRIMARY: Maximize quality. Recommend the highest-quality model whose
-    strengths match the prompt's task type, regardless of cost. If Opus 4.7
-    in Max Mode is the most appropriate fit for a given prompt, recommend
+    DEFAULT POSTURE — Maximize quality. Recommend the highest-quality model
+    whose strengths match the prompt's task type, regardless of cost. If Opus
+    4.7 in Max Mode is the most appropriate fit for a given prompt, recommend
     Opus 4.7 in Max Mode.
 
     SECONDARY (tie-breaker only): When two or more models are tied in
     expected quality for the prompt's task type, recommend the one with the
     lower output price per 1M tokens.
 
-    Quality always wins. Cost only resolves true ties — never near-ties,
-    never "close enough." The user is paying for access to every tier and
-    expects the best outcome for each prompt.
+    Under this default posture quality wins; cost only resolves true ties —
+    never near-ties, never "close enough." The user is paying for access to
+    every tier and expects the best outcome for each prompt.
+
+    BUDGET-PRIORITY OVERRIDE: When the appended user-context declares a
+    "Budget priority and speed posture", THAT posture is the user's explicit
+    quality-vs-cost instruction for the request and OVERRIDES the default
+    posture above. Honor whichever it states:
+    - `cheap` (Cost) — recommend the cheapest model, and lower reasoning
+      effort / thinking, that can do the task to an acceptable standard;
+      do not maximize quality beyond what the task needs.
+    - `balanced` (Balanced) — recommend the best value: prefer the cheaper
+      model when two are CLOSE in expected quality (not only on an exact tie),
+      reserving the most expensive tiers for tasks that require them.
+    - `best` (Quality) — the default quality-first posture above.
+    When no such posture is declared (legacy / direct callers), the default
+    posture governs.
   </objective>
 
   <pricing-context>
