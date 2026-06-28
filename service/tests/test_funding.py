@@ -164,15 +164,19 @@ def test_budget_postures_steer_selection_differently() -> None:
     texts = {b: posture(b) for b in ("cheap", "balanced", "best")}
     # All three postures are distinct documents.
     assert len({t for t in texts.values()}) == 3
-    # Cost steers DOWN (cheapest adequate, lower effort/thinking).
-    assert "CHEAPEST model" in texts["cheap"]
-    assert "lower reasoning effort" in texts["cheap"]
-    assert "do NOT maximize quality" in texts["cheap"]
-    # Quality steers UP (highest-quality regardless of cost).
-    assert "HIGHEST-QUALITY model" in texts["best"]
+    # Cost is funding-aware: hold a $0-funded adequate model and lower effort
+    # rather than switch to a cheaper-tier model the user pays per-token for.
+    assert "$0-funded" in texts["cheap"]
+    assert "KEEP that model" in texts["cheap"]
+    assert "LOWEST reasoning effort" in texts["cheap"]
+    # ...with the fallback to the cheapest model when nothing is $0-funded.
+    assert "cheapest model" in texts["cheap"]
+    # Quality steers UP (highest-quality outcome, top useful effort).
+    assert "HIGHEST-QUALITY outcome" in texts["best"]
     assert "regardless of cost" in texts["best"]
+    assert "highest USEFUL reasoning effort" in texts["best"]
     # Balanced is best-value, distinct from both extremes.
-    assert "BEST VALUE" in texts["balanced"]
+    assert "best VALUE" in texts["balanced"]
     # Every posture frames itself as an explicit override of the default
     # quality-first objective, so it takes effect from the appended context alone.
     for t in texts.values():
@@ -187,7 +191,7 @@ def test_unknown_budget_id_falls_back_to_balanced_posture() -> None:
     )
     assert text is not None
     assert "**Budget priority:** cost" in text
-    assert "BEST VALUE" in text  # balanced posture body
+    assert "best VALUE" in text  # balanced posture body
 
 
 def test_no_funding_explicit_budget_still_builds() -> None:
@@ -196,7 +200,9 @@ def test_no_funding_explicit_budget_still_builds() -> None:
     # works signed-out. Funding sections render "None declared.".
     cheap = funding.build_user_context([], [], budget_priority="cheap", catalog=_FAKE_CATALOG)
     assert cheap is not None
-    assert "CHEAPEST model" in cheap
+    # With no $0-funded model declared, the Cost posture's fallback (cheapest
+    # model) is what applies — but the funding-aware language is still present.
+    assert "cheapest model" in cheap
     assert "None declared." in cheap
     # But the DEFAULT (balanced) with no funding stays on the bundled template
     # (None) — the highest-volume default path is unchanged.
@@ -234,7 +240,7 @@ def test_from_request_explicit_budget_builds_without_funding(
     monkeypatch.setenv("ROADMODEL_CATALOG_PATH", str(REAL_CATALOG))
     text = funding.user_context_from_request({"budget_priority": "cheap"})
     assert text is not None
-    assert "CHEAPEST model" in text
+    assert "cheapest model" in text
     # Default budget with no funding still short-circuits (free path unchanged),
     # without needing a catalog load.
     assert funding.user_context_from_request({"budget_priority": "balanced"}) is None
