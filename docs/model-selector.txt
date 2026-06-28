@@ -46,15 +46,29 @@
     "Budget priority and speed posture", THAT posture is the user's explicit
     quality-vs-cost instruction for the request and OVERRIDES the default
     posture above. Honor whichever it states:
-    - `cheap` (Cost) — recommend the cheapest model, and lower reasoning
-      effort / thinking, that can do the task to an acceptable standard;
-      do not maximize quality beyond what the task needs.
-    - `balanced` (Balanced) — recommend the best value: prefer the cheaper
-      model when two are CLOSE in expected quality (not only on an exact tie),
-      reserving the most expensive tiers for tasks that require them.
-    - `best` (Quality) — the default quality-first posture above.
-    When no such posture is declared (legacy / direct callers), the default
-    posture governs.
+    - `cheap` (Cost) — minimize the user's REAL cost, not list price. If the
+      user-context's "Active subscriptions" fund a capable model at $0 and it
+      is an acceptable-quality fit, KEEP that model and lower its reasoning
+      effort / thinking to the lowest level that clears the task — do NOT
+      switch to a cheaper-tier model the user pays per-token for (that raises
+      their real cost). Only when no $0-funded model is adequate, drop to the
+      cheapest model that can do the task. This is the ONE case where the
+      user's funding may change WHICH model is chosen (a deliberate, scoped
+      exception to the `<access-selection>` rule that funding changes only the
+      platform) — because abandoning a $0 model to lower a list price the user
+      does not pay is not a real saving.
+    - `balanced` (Balanced) — recommend the best value: prefer a $0-funded
+      model when competitive, prefer the cheaper model when two are CLOSE in
+      expected quality (not only on an exact tie), and use a sensible (not
+      maxed-out) effort level; reserve the most expensive tiers for tasks that
+      require them.
+    - `best` (Quality) — the default quality-first posture above, at the
+      highest USEFUL reasoning effort (`xhigh` / `max` where supported).
+    Across the three priorities, when the chosen model is HELD (e.g. a
+    $0-funded model fit for the task), reasoning effort / thinking is the
+    cost-vs-quality axis: Cost = lowest-adequate, Balanced = sensible, Quality
+    = highest-useful. When no posture is declared (legacy / direct callers),
+    the default posture governs.
   </objective>
 
   <pricing-context>

@@ -77,27 +77,42 @@ _DEFAULT_BUDGET_PRIORITY = "balanced"
 # <objective> "BUDGET-PRIORITY OVERRIDE" clause ships in a roadmodel release.
 # Unknown / legacy ids fall back to the balanced posture so a bad value never
 # crashes or silently hard-codes one extreme.
+#
+# FUNDING-AWARE COST: when the user already funds a capable model at $0 (the
+# **Active subscriptions** section above), list-price model-switching is the
+# WRONG cost lever — dropping that $0 model for a cheaper-TIER model the user
+# pays per-token for raises their real cost. So the Cost posture holds a
+# $0-funded adequate model and lowers EFFORT instead; effort becomes the
+# cost-vs-quality axis across the three priorities when the model is held. (For
+# a user with no $0-funded adequate model, Cost still drops to a cheaper model —
+# there the list price IS their real cost.)
 _BUDGET_POSTURE: dict[str, str] = {
     "cheap": (
-        "recommend the CHEAPEST model that can do this task to an acceptable "
-        "standard. Prefer a lower-cost tier — and lower reasoning effort / "
-        "thinking — whenever a cheaper or lighter model is adequate for the "
-        "task; step up to a pricier tier ONLY when the task genuinely cannot be "
-        "done well at a cheaper one. Treat cost as a primary objective, co-equal "
-        "with adequacy: do NOT maximize quality beyond what the task needs."
+        "minimize the user's REAL cost. FIRST consider the **Active "
+        "subscriptions** section above: if a model the user funds at $0 there is "
+        "an ACCEPTABLE-quality fit for this task, KEEP that model and pick the "
+        "LOWEST reasoning effort / thinking level that still clears the task — do "
+        "NOT switch to a cheaper-TIER model the user pays per-token for just to "
+        "shave a list price they do not actually pay (that would RAISE their real "
+        "cost). Only when NO $0-funded model is adequate, recommend the cheapest "
+        "model that can do the task. Either way, do not over-buy effort or "
+        "quality beyond what the task needs."
     ),
     "balanced": (
-        "recommend the BEST VALUE for this task — the model whose quality is "
-        "well-matched to the task's difficulty, without paying for capability "
-        "the task does not need. Prefer the cheaper option when two models are "
-        "CLOSE in expected quality (not only on an exact tie), and reserve the "
-        "most expensive tiers for tasks that genuinely require them."
+        "recommend the best VALUE — a model whose quality is well-matched to the "
+        "task's difficulty, at a sensible (not maxed-out) reasoning effort. "
+        "Prefer a $0-funded model from the **Active subscriptions** section above "
+        "when it is competitive, and prefer the cheaper option when two models "
+        "are CLOSE in expected quality (not only on an exact tie); reserve the "
+        "most expensive tiers and top effort levels for tasks that require them."
     ),
     "best": (
-        "recommend the HIGHEST-QUALITY model whose strengths match this task, "
-        "regardless of cost. Quality wins outright; cost only breaks an exact "
-        "quality tie. The user is paying for access to every tier and expects "
-        "the best possible outcome for this prompt."
+        "recommend the HIGHEST-QUALITY outcome for this task, regardless of cost: "
+        "the best-fit model at its highest USEFUL reasoning effort (e.g. `xhigh` "
+        "/ `max` where the model and surface support it). When the best-fit model "
+        "is $0-funded the user is spending only session budget, so do NOT hold "
+        "effort back. Quality wins outright; cost only breaks an exact quality "
+        "tie."
     ),
 }
 
