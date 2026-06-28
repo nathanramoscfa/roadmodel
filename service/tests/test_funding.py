@@ -155,11 +155,13 @@ def test_budget_postures_steer_selection_differently() -> None:
     "quality wins, cost breaks ties" line, so Cost and Quality returned the same
     model (the reported bug). Assert the three selection instructions diverge and
     that Cost/Quality carry the expected opposing directives."""
-    texts = {
-        b: funding.build_user_context(["claude-max"], [], budget_priority=b, catalog=_FAKE_CATALOG)
-        for b in ("cheap", "balanced", "best")
-    }
-    assert all(t is not None for t in texts.values())
+
+    def posture(b: str) -> str:
+        t = funding.build_user_context(["claude-max"], [], budget_priority=b, catalog=_FAKE_CATALOG)
+        assert t is not None
+        return t
+
+    texts = {b: posture(b) for b in ("cheap", "balanced", "best")}
     # All three postures are distinct documents.
     assert len({t for t in texts.values()}) == 3
     # Cost steers DOWN (cheapest adequate, lower effort/thinking).
