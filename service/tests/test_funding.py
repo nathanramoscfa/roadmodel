@@ -149,6 +149,64 @@ def test_budget_and_jurisdiction_defaults() -> None:
     assert "`us, eu, uk, ca, au, jp, kr`" in text
 
 
+def test_budget_postures_steer_selection_differently() -> None:
+    """The lever's whole point: each budget priority must give the selector a
+    DIFFERENT quality-vs-cost rule. Before this, all three emitted the same
+    "quality wins, cost breaks ties" line, so Cost and Quality returned the same
+    model (the reported bug). Assert the three selection instructions diverge and
+    that Cost/Quality carry the expected opposing directives."""
+
+    def posture(b: str) -> str:
+        t = funding.build_user_context(["claude-max"], [], budget_priority=b, catalog=_FAKE_CATALOG)
+        assert t is not None
+        return t
+
+    texts = {b: posture(b) for b in ("cheap", "balanced", "best")}
+    # All three postures are distinct documents.
+    assert len({t for t in texts.values()}) == 3
+    # Cost steers DOWN (cheapest adequate, lower effort/thinking).
+    assert "CHEAPEST model" in texts["cheap"]
+    assert "lower reasoning effort" in texts["cheap"]
+    assert "do NOT maximize quality" in texts["cheap"]
+    # Quality steers UP (highest-quality regardless of cost).
+    assert "HIGHEST-QUALITY model" in texts["best"]
+    assert "regardless of cost" in texts["best"]
+    # Balanced is best-value, distinct from both extremes.
+    assert "BEST VALUE" in texts["balanced"]
+    # Every posture frames itself as an explicit override of the default
+    # quality-first objective, so it takes effect from the appended context alone.
+    for t in texts.values():
+        assert "OVERRIDES any default" in t
+
+
+def test_unknown_budget_id_falls_back_to_balanced_posture() -> None:
+    # A stale / unexpected id must not crash or hard-code an extreme: echo the id
+    # verbatim but apply the balanced posture.
+    text = funding.build_user_context(
+        ["claude-max"], [], budget_priority="cost", catalog=_FAKE_CATALOG
+    )
+    assert text is not None
+    assert "**Budget priority:** cost" in text
+    assert "BEST VALUE" in text  # balanced posture body
+
+
+def test_no_funding_explicit_budget_still_builds() -> None:
+    # A signed-out user who actively picks Cost/Quality (non-default) must still
+    # get the posture in the prompt even with zero declared funding — the lever
+    # works signed-out. Funding sections render "None declared.".
+    cheap = funding.build_user_context([], [], budget_priority="cheap", catalog=_FAKE_CATALOG)
+    assert cheap is not None
+    assert "CHEAPEST model" in cheap
+    assert "None declared." in cheap
+    # But the DEFAULT (balanced) with no funding stays on the bundled template
+    # (None) — the highest-volume default path is unchanged.
+    assert (
+        funding.build_user_context([], [], budget_priority="balanced", catalog=_FAKE_CATALOG)
+        is None
+    )
+    assert funding.build_user_context([], [], catalog=_FAKE_CATALOG) is None
+
+
 # --- user_context_from_request: extraction + short-circuit ---
 
 
@@ -165,6 +223,21 @@ def test_from_request_short_circuits_without_funding(context: dict[str, Any] | N
 def test_from_request_coerces_non_list_fields() -> None:
     # A malformed (non-list) funding field is dropped, not crashed on.
     assert funding.user_context_from_request({"subscriptions": "claude-max"}) is None
+
+
+def test_from_request_explicit_budget_builds_without_funding(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # An explicit non-default budget with NO funding must NOT short-circuit: the
+    # signed-out Cost/Quality posture has to reach the selector. (Needs a catalog
+    # since it now proceeds to build.)
+    monkeypatch.setenv("ROADMODEL_CATALOG_PATH", str(REAL_CATALOG))
+    text = funding.user_context_from_request({"budget_priority": "cheap"})
+    assert text is not None
+    assert "CHEAPEST model" in text
+    # Default budget with no funding still short-circuits (free path unchanged),
+    # without needing a catalog load.
+    assert funding.user_context_from_request({"budget_priority": "balanced"}) is None
 
 
 def test_from_request_builds_against_real_catalog(monkeypatch: pytest.MonkeyPatch) -> None:

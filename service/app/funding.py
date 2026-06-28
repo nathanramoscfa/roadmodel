@@ -67,6 +67,57 @@ _BASELINE_JURISDICTIONS: tuple[str, ...] = ("us", "eu", "uk", "ca", "au", "jp", 
 
 _DEFAULT_BUDGET_PRIORITY = "balanced"
 
+# The budget-priority posture is the user's quality-vs-cost lever (Cost /
+# Balanced / Quality on /recommend, stored as the historical ids cheap /
+# balanced / best). It is the ONE place the per-request budget choice changes
+# model SELECTION: each posture hands the selector a DIFFERENT quality-vs-cost
+# rule. The text is self-asserting as an OVERRIDE of the selector objective's
+# default quality-first posture, so the lever takes effect from this appended
+# user-context alone — even before the matching docs/model-selector.txt
+# <objective> "BUDGET-PRIORITY OVERRIDE" clause ships in a roadmodel release.
+# Unknown / legacy ids fall back to the balanced posture so a bad value never
+# crashes or silently hard-codes one extreme.
+_BUDGET_POSTURE: dict[str, str] = {
+    "cheap": (
+        "recommend the CHEAPEST model that can do this task to an acceptable "
+        "standard. Prefer a lower-cost tier — and lower reasoning effort / "
+        "thinking — whenever a cheaper or lighter model is adequate for the "
+        "task; step up to a pricier tier ONLY when the task genuinely cannot be "
+        "done well at a cheaper one. Treat cost as a primary objective, co-equal "
+        "with adequacy: do NOT maximize quality beyond what the task needs."
+    ),
+    "balanced": (
+        "recommend the BEST VALUE for this task — the model whose quality is "
+        "well-matched to the task's difficulty, without paying for capability "
+        "the task does not need. Prefer the cheaper option when two models are "
+        "CLOSE in expected quality (not only on an exact tie), and reserve the "
+        "most expensive tiers for tasks that genuinely require them."
+    ),
+    "best": (
+        "recommend the HIGHEST-QUALITY model whose strengths match this task, "
+        "regardless of cost. Quality wins outright; cost only breaks an exact "
+        "quality tie. The user is paying for access to every tier and expects "
+        "the best possible outcome for this prompt."
+    ),
+}
+
+
+def _budget_block(budget: str) -> str:
+    """Render the value-dependent budget-priority posture for the user-context.
+
+    ``budget`` is echoed verbatim in the bold header so the persisted id is
+    visible, while the POSTURE sentence (the part the selector acts on) is keyed
+    off it via _BUDGET_POSTURE — unknown ids degrade to the balanced posture.
+    """
+    posture = _BUDGET_POSTURE.get(budget, _BUDGET_POSTURE["balanced"])
+    return (
+        f"**Budget priority:** {budget} — this is the user's explicit "
+        f"quality-vs-cost instruction for THIS request and OVERRIDES any default "
+        f"quality-first posture in the selector objective. For this request, "
+        f"{posture} On a quality tie a $0 held subscription beats new "
+        f"pay-per-token spend; treat the subscriptions above as sunk cost."
+    )
+
 
 def load_catalog() -> dict[str, Any]:
     """Load the catalog (env override -> bundled), mirroring roadmodel.cost.
@@ -197,12 +248,20 @@ def build_user_context(
             f"- **{_provider_label(provider)}** — pay-per-token via your own API key{ref}."
         )
 
-    if not held_lines and not api_lines:
-        return None
-
     budget = _DEFAULT_BUDGET_PRIORITY
     if isinstance(budget_priority, str) and budget_priority:
         budget = budget_priority
+
+    # No funding declared:
+    #   - DEFAULT (balanced) budget -> None: the anon / free path is unchanged
+    #     (the bundled template governs, exactly as before this lever existed),
+    #     so we never shift the highest-volume default-toggle baseline.
+    #   - an EXPLICIT non-default budget (Cost / Quality) -> still build, so the
+    #     posture reaches the selector even for a signed-out user who actively
+    #     changed the toggle. The funding sections then render "None declared."
+    if not held_lines and not api_lines and budget == _DEFAULT_BUDGET_PRIORITY:
+        return None
+
     juris = allowed_jurisdictions if allowed_jurisdictions else list(_BASELINE_JURISDICTIONS)
 
     held_block = "\n".join(held_lines) if held_lines else "- None declared."
@@ -245,9 +304,7 @@ key that is not listed above.
 
 ## Budget priority and speed posture
 
-**Budget priority:** {budget} — quality wins per `<objective>`; cost only
-breaks an exact quality tie, and on a tie a $0 held subscription beats new
-pay-per-token spend. Treat the subscriptions above as sunk cost.
+{_budget_block(budget)}
 
 **Speed posture:** not a valued dimension unless the prompt states an explicit
 latency requirement.
@@ -269,12 +326,20 @@ def user_context_from_request(context: dict[str, Any] | None) -> str | None:
         return None
     subscriptions = _str_list(context.get("subscriptions"))
     api_providers = _str_list(context.get("api_providers"))
-    if not subscriptions and not api_providers:
-        return None
 
     budget_raw = context.get("budget_priority")
     budget_priority = budget_raw if isinstance(budget_raw, str) else None
     allowed_jurisdictions = _str_list(context.get("allowed_jurisdictions")) or None
+
+    # No funding declared -> short-circuit to the bundled template (free path
+    # unchanged) UNLESS the user explicitly chose a non-default budget priority:
+    # the Cost / Quality posture must still reach the selector signed-out. A
+    # default (or absent) budget with no funding stays on the bundled template,
+    # so the highest-volume default path never pays a catalog build. Mirrors the
+    # same guard in build_user_context.
+    budget_is_default = budget_priority is None or budget_priority == _DEFAULT_BUDGET_PRIORITY
+    if not subscriptions and not api_providers and budget_is_default:
+        return None
 
     try:
         return build_user_context(
