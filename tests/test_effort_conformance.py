@@ -150,8 +150,8 @@ def test_conformance_passes_on_committed_artifacts() -> None:
 def test_conformance_flags_undocumented_effort_level(tmp_path: Path) -> None:
     """Check A: an undocumented value in the THINKING enum → FAIL."""
     drifted = REAL_SELECTOR.read_text().replace(
-        "THINKING: [Off/Low/Medium/High/XHigh/N/A]",
-        "THINKING: [Off/Low/Medium/High/XHigh/Ultra/N/A]",
+        "THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]",
+        "THINKING: [Off/Low/Medium/High/XHigh/Max/Ultra/N/A]",
     )
     selector = tmp_path / "selector.txt"
     selector.write_text(drifted)

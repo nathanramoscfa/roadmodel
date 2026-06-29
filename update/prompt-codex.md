@@ -39,11 +39,12 @@ controls)** material:
   ``high``, ``xhigh``) — no documented value omitted, no undocumented value
   added.
 - The **Output mapping** subsection's OpenAI line must map each documented
-  reasoning value onto the existing 6-state THINKING field
-  (`Off`/`Low`/`Medium`/`High`/`XHigh`/`N/A`). The established mapping is
+  reasoning value onto the existing 7-state THINKING field
+  (`Off`/`Low`/`Medium`/`High`/`XHigh`/`Max`/`N/A`). The established mapping is
   `minimal → Off`, `low → Low`, `medium → Medium`, `high → High`,
-  `xhigh` / `extra-high` → `XHigh`. Map a brand-new top-of-scale level onto
-  `XHigh` — never invent a 7th state. `extra-high` is the UI synonym for the
+  `xhigh` / `extra-high` → `XHigh`. OpenAI's scale tops out at `xhigh`, so no
+  OpenAI level maps to `Max` (the `Max` slot is for an above-`xhigh` step, which
+  only the Claude `max` models reach). `extra-high` is the UI synonym for the
   `xhigh` config token; keep both readable but they mean the same tier.
 
 Do NOT touch the Claude, Gemini, or Cursor bullets, the Claude extended-thinking
