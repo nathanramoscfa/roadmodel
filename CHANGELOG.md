@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.10] — 2026-06-28
+
+### Added
+
+- **`roadmodel export-kit`.** New CLI command that exports the bundled planning
+  kit — phase/project roadmap templates and the how-to — to a target directory
+  for cross-platform use (`--force` to overwrite, optional user-context
+  override) (#295).
+
+### Changed
+
+- **Budget-priority steering in the selector prompt.** The `<objective>` now
+  honors a per-request "Budget priority and speed posture" declared in the
+  appended user-context — `cheap` (Cost), `balanced` (Balanced), `best`
+  (Quality) — each applying a distinct quality-vs-cost rule that overrides the
+  default quality-first posture. **Cost is funding-aware:** when the
+  user-context's held subscriptions fund a capable model at $0, Cost keeps that
+  model and lowers reasoning effort/thinking rather than switching to a
+  cheaper-tier model the user pays per-token for (the one scoped exception to
+  "funding changes only the platform, never the model"); reasoning effort
+  becomes the cost-vs-quality axis when the model is held. No-op when no posture
+  is declared, so every CLI/MCP call is unchanged.
+- **BACKUP model in the `recommend` text output.** The CLI now renders the
+  fallback model when the selector emits one (#293).
+- Refreshed the bundled catalog (models, pricing, availability).
+
 ## [0.2.9] — 2026-06-15
 
 ### Added
