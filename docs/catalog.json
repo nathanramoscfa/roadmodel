@@ -1,9 +1,9 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-06-27T14:44:45Z",
+  "generated_at_utc": "2026-06-29T17:13:12Z",
   "source_doc_sha256": {
-    "model-selector.txt": "02360709bd7b6723bcdd16589cb207c33bfc65e4682768e97011c03d74500878",
-    "model-tier-cost-scale.md": "bf60eb49204f351e8066df6e1b32e3b82c4fce72e562a32e0e3b9fdc11dbb072"
+    "model-selector.txt": "0ce9e30a3949dd750c9da89e2036efede13a9f4a754f294536897a9462cdc6f2",
+    "model-tier-cost-scale.md": "0034a1a77566cca94be22ca6cd85cb6ec71fbf9b6cc68a657c9d389ddc220452"
   },
   "models": [
     {
@@ -1023,7 +1023,7 @@
         "claude-code",
         "claude-web"
       ],
-      "notes": "Opus 4.7, Sonnet 4.6, and Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE), with roughly 5x the usage of the Free tier."
+      "notes": "<cite index=\"2-16,2-17\">Claude Pro costs $20 per month, or $17 per month when billed annually</cite>; standard entry tier with Opus 4.7, Sonnet 4.6, and Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE), roughly 5x Free usage."
     },
     {
       "provider": "Anthropic",
@@ -1034,7 +1034,7 @@
         "claude-code",
         "claude-web"
       ],
-      "notes": "Same model coverage as Pro at roughly 5x the Pro usage budget; priority access during peak traffic."
+      "notes": "<cite index=\"2-21\">Claude Max provides 5x the usage of Claude Pro, with priority access during high-traffic periods</cite>; same model coverage as Pro."
     },
     {
       "provider": "Anthropic",
@@ -1045,7 +1045,7 @@
         "claude-code",
         "claude-web"
       ],
-      "notes": "Same model coverage as Pro at roughly 20x the Pro usage budget; highest consumer-tier Claude budget."
+      "notes": "<cite index=\"8-4\">Max 20x gives you 20\u00d7 Pro's per-session limit</cite>; same model coverage as Pro at the highest consumer-tier Claude budget."
     },
     {
       "provider": "Cursor",
@@ -1055,7 +1055,7 @@
       "surface_funded": [
         "cursor"
       ],
-      "notes": "$20 monthly model-usage credit pool across every model in Cursor's catalog; on-demand overage billed at API rates."
+      "notes": "<cite index=\"31-25,31-26,31-27\">$20 monthly credit pool across frontier models with optional on-demand purchase; Auto routing usage is unlimited and does not draw from the credit pool</cite>."
     },
     {
       "provider": "Cursor",
@@ -1065,7 +1065,7 @@
       "surface_funded": [
         "cursor"
       ],
-      "notes": "Same model coverage as Pro at roughly 3x the OpenAI / Claude / Gemini usage budget."
+      "notes": "<cite index=\"32-22,32-23\">$60/month with 3x the usage credits compared to Pro, otherwise identical features</cite>; same model coverage as Pro at roughly 3x the OpenAI / Claude / Gemini usage budget."
     },
     {
       "provider": "Cursor",
@@ -1075,7 +1075,7 @@
       "surface_funded": [
         "cursor"
       ],
-      "notes": "Same model coverage as Pro at roughly 20x the OpenAI / Claude / Gemini usage budget; priority access to new features."
+      "notes": "<cite index=\"29-1,29-2\">Top individual tier at $200/month with roughly 20 times the usage of Pro and priority access to new features</cite>; same model coverage as Pro."
     },
     {
       "provider": "Google",
@@ -1086,40 +1086,40 @@
         "gemini-app",
         "gemini-cli"
       ],
-      "notes": "Entry-paid Google AI tier with 2x higher usage limits than Free in the Gemini app, access to Gemini 3.1 Pro / Nano Banana Pro / Daily Brief / Gemini Omni video generation, 200 Google Flow Credits, and 400 GB of cloud storage (price cut from $7.99 to $4.99 on 2026-06-08; storage doubled from 200 GB to 400 GB)."
+      "notes": "<cite index=\"28-5\">Google AI Plus plan at $4.99/mo (down from $7.99) with included storage doubled from 200GB to 400GB</cite>; 2x higher usage limits than Free with access to Gemini 3.1 Pro / Nano Banana Pro / Daily Brief / Gemini Omni video and 200 Google Flow Credits."
     },
     {
       "provider": "Google",
       "tier": "Google AI Pro",
-      "monthly_usd": 20.0,
+      "monthly_usd": 19.99,
       "annual_usd": 199.99,
       "surface_funded": [
         "gemini-app",
         "gemini-cli"
       ],
-      "notes": "Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus Deep Research, Nano Banana Pro, Veo 3.1 access, 1,000 monthly AI credits, and 2 TB of Google One storage; includes YouTube Premium Lite."
+      "notes": "<cite index=\"40-2\">$19.99/month for higher access to Gemini 3 Pro, Deep Research, image generation with Nano Banana Pro, and limited Veo 3.1 Fast video generation, plus 1,000 monthly AI credits</cite>; includes 2 TB Google One storage and YouTube Premium Lite."
     },
     {
       "provider": "Google",
       "tier": "Google AI Ultra ($100)",
-      "monthly_usd": 100.0,
+      "monthly_usd": 99.99,
       "annual_usd": null,
       "surface_funded": [
         "gemini-app",
         "gemini-cli"
       ],
-      "notes": "New developer-focused Ultra tier (May 2026): 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan."
+      "notes": "<cite index=\"22-2,22-3\">Developer-focused $100/month AI Ultra plan with 5X higher usage limits than the Pro plan in the Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20TB of cloud storage, and YouTube Premium individual plan</cite>."
     },
     {
       "provider": "Google",
       "tier": "Google AI Ultra ($200)",
-      "monthly_usd": 200.0,
+      "monthly_usd": 199.99,
       "annual_usd": null,
       "surface_funded": [
         "gemini-app",
         "gemini-cli"
       ],
-      "notes": "Highest access to Gemini 3.1 Pro, Deep Think, Project Genie, Veo 3.1 with 25,000 monthly AI credits, $100/month Google Cloud credits, and 30 TB Google One storage (price reduced from $250 to $200)."
+      "notes": "<cite index=\"39-3\">$199.99/month tier with 20x higher usage limits vs. AI Pro and first access to advanced features like Deep Think and Gemini Spark</cite>; <cite index=\"22-3\">price reduced from $250 to $200</cite>; 25,000 monthly AI credits and 30 TB Google One storage."
     },
     {
       "provider": "OpenAI",
@@ -1130,7 +1130,7 @@
         "chatgpt-app",
         "codex-cli"
       ],
-      "notes": "Budget tier with GPT-5.3 Instant unlimited and GPT-5.3 quota, more uploads and image generation than Free; ads still shown; lacks advanced reasoning models, Sora, Codex full access, Agent Mode, and Deep Research."
+      "notes": "<cite index=\"17-27,17-28,17-29\">$8/month tier with 10x more messages, unlimited GPT-5.3 Instant, file uploads, and image creation, but ads still shown and missing GPT-5.5 plus Codex / Agent Mode / Deep Research</cite>."
     },
     {
       "provider": "OpenAI",
@@ -1141,7 +1141,7 @@
         "chatgpt-app",
         "codex-cli"
       ],
-      "notes": "GPT-5.5 default model with full feature suite \u2014 Deep Research (10 runs/mo), Sora video, Codex, Agent Mode; GPT-5.4 Thinking and GPT-5.4 Mini also available."
+      "notes": "<cite index=\"14-22,14-23\">Full model suite, Deep Research (10 runs/mo), Sora, Codex, Agent Mode; ad-free</cite>; GPT-5.5 default model with GPT-5.4 Thinking and GPT-5.4 Mini also available."
     },
     {
       "provider": "OpenAI",
@@ -1152,7 +1152,7 @@
         "chatgpt-app",
         "codex-cli"
       ],
-      "notes": "Same model suite as Pro $200 (GPT-5.5, GPT-5.5 Pro, o1 Pro mode) at 5x Plus usage limits; Codex access included with promotional 10x multiplier through May 31, 2026."
+      "notes": "<cite index=\"17-22,17-23,17-24,17-25\">$100/mo tier launched April 9, 2026, positioned against Claude Max at the same price; includes GPT-5.5, GPT-5.5 Pro, o1 Pro mode, and 5x Plus usage limits, with a launch promotion doubling Codex usage to 10x through May 31, 2026 before dropping to 5x</cite>."
     },
     {
       "provider": "OpenAI",
@@ -1163,7 +1163,7 @@
         "chatgpt-app",
         "codex-cli"
       ],
-      "notes": "Same coverage as Pro $100 with much higher caps (20x Plus limits), 1M-token context window, Sora access, and GPT-5.4 Pro / GPT-5.5 Pro priority."
+      "notes": "<cite index=\"13-28,13-29\">Top tier with GPT-5.4 Pro and GPT-5.5 at near-unlimited usage and 1M token context window plus Sora access</cite>; 20x Plus limits, the only consumer tier covering both top-tier model capability and video generation."
     }
   ]
 }
