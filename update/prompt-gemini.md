@@ -48,9 +48,10 @@ across the 3.x and 2.5 model generations. The selector must describe it:
   `off` (or that otherwise allow disabling).
 
 The **Output mapping** subsection maps provider-native scales onto the existing
-6-state THINKING field (`Off`/`Low`/`Medium`/`High`/`XHigh`/`N/A`). Keep:
+7-state THINKING field (`Off`/`Low`/`Medium`/`High`/`XHigh`/`Max`/`N/A`). Keep:
 `low → Low`, `medium → Medium`, `high → High` (Gemini currently has NO `xhigh`
-tier — do not map any Gemini level to `XHigh`); thinking turned off → `Off`.
+or `max` tier — do not map any Gemini level to `XHigh` or `Max`); thinking
+turned off → `Off`.
 Never invent a 7th state.
 
 If `<docs_facts>` introduces a thinking level beyond `low`/`medium`/`high` (it

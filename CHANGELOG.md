@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.11] — 2026-06-29
+
+### Changed
+
+- **The recommender can now recommend `Max` reasoning effort.** The selector's
+  structured `THINKING` output field gains a `Max` state above `XHigh`
+  (`Off / Low / Medium / High / XHigh / Max / N/A`), so it can surface Claude
+  Code's top `/effort` level on models that expose a `max` step above `xhigh`
+  (Opus 4.7, Opus 4.8, Fable 5). The selection algorithm reaches `Max` on those
+  models for the most demanding tasks or under a Quality budget posture, and
+  never under a Cost posture (where effort is held to the lowest level that
+  clears the task). Faithful normalization: a model whose top is `max` with no
+  `xhigh` step (Opus 4.6, Sonnet 4.6) and DeepSeek (no `xhigh` step) keep
+  `max → XHigh`; providers that top out at `xhigh` (OpenAI) or `high` (Gemini,
+  Mistral) are unchanged. Tracker prompts were updated so a daily refresh does
+  not revert the new state. (Ultracode remains a separate `ORCHESTRATION` axis —
+  a follow-up.)
+
 ## [0.2.10] — 2026-06-28
 
 ### Added

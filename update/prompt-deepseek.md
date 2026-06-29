@@ -48,10 +48,11 @@ enum. The selector must describe both:
   `low` / `medium` native tier (the `effort_aliases` show the API accepts them
   for compatibility, mapping `low`/`medium` → `high` and `xhigh` → `max`).
 - The **Output mapping** subsection maps provider-native scales onto the existing
-  6-state THINKING field (`Off`/`Low`/`Medium`/`High`/`XHigh`/`N/A`). Keep:
+  7-state THINKING field (`Off`/`Low`/`Medium`/`High`/`XHigh`/`Max`/`N/A`). Keep:
   thinking `disabled` → `Off`; `enabled` + effort `high` → `High`; `enabled` +
-  effort `max` → `XHigh`. DeepSeek has no `low` / `medium` tier, so no DeepSeek
-  level maps to `Low` or `Medium`. A consumer DeepThink on/off toggle (no effort
+  effort `max` → `XHigh` (DeepSeek has no `xhigh` step, so its `max` is the
+  Extra-High top, not the above-`xhigh` `Max`). DeepSeek has no `low` / `medium`
+  tier, so no DeepSeek level maps to `Low` or `Medium`. A consumer DeepThink on/off toggle (no effort
   enum) maps `On` → `High` (default effort) / `Off` → `Off`. Never invent a 7th
   state.
 
