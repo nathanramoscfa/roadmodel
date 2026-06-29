@@ -63,10 +63,15 @@ Examples of in-scope edits:
   with a user-visible name → add it to the enumerated levels.
 
 Then propagate the change to the **Output mapping** subsection ONLY if
-the new level needs a slot in the existing 6-state field
-(`Off`/`Low`/`Medium`/`High`/`XHigh`/`N/A`). Map a brand-new top-of-
-scale level (e.g. Ultracode) onto `XHigh` — never invent a 7th state.
-If the change is just a label rename, do NOT touch the output mapping.
+the new level needs a slot in the existing 7-state field
+(`Off`/`Low`/`Medium`/`High`/`XHigh`/`Max`/`N/A`). The established
+mapping is `xhigh` → `XHigh` and `max` → `Max` — the latter ONLY on
+models whose row exposes a `max` step ABOVE `xhigh` (Opus 4.7/4.8,
+Fable 5); a model whose top is `max` with no `xhigh` step maps
+`max` → `XHigh`. Do NOT add an 8th state for `ultracode`: it is
+ORCHESTRATION (the `Ultracode` value of the ORCHESTRATION field), not a
+THINKING level. If the change is just a label rename, do NOT touch the
+output mapping.
 
 **Reconcile with `<docs_facts>` (authoritative for effort/thinking).**
 When `<docs_facts>` is present, make `<thinking-context>` consistent

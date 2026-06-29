@@ -289,7 +289,7 @@ def extract_cc_method(text: str) -> str:
 def parse_enum(selector: str, field: str) -> set[str]:
     """Collect the bracketed enum values of an output-format field.
 
-    e.g. ``THINKING: [Off/Low/Medium/High/XHigh/N/A]`` -> the six tokens.
+    e.g. ``THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]`` -> the seven tokens.
     """
     values: set[str] = set()
     for m in re.finditer(rf"{field}:\s*\[([^\]]+)\]", selector):

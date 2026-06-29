@@ -207,19 +207,20 @@ differently:
   (true in both Composer mode and Chat mode).
 
 Output mapping (the THINKING field of the output format):
-`Off` / `Low` / `Medium` / `High` / `XHigh` / `N/A`. Map
-provider-native scales onto this 6-state field:
+`Off` / `Low` / `Medium` / `High` / `XHigh` / `Max` / `N/A`. Map
+provider-native scales onto this 7-state field:
 
 - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
   `high` → `High` (the docs' default effort on Opus 4.6, Opus 4.8,
   Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the "Extra High"
-  UI label, and the default for Opus 4.7); `max` also maps to
-  `XHigh` for models whose row lists it (this selector's 6-state
-  field has no separate Max slot — the rationale should name
-  `max` explicitly when chosen). Extended thinking disabled
-  (Option+T / Alt+T, `MAX_THINKING_TOKENS=0`, or
-  `alwaysThinkingEnabled` false) → `Off`; Fable 5 cannot map to
-  `Off`.
+  UI label, and the default for Opus 4.7); `max` → `Max` (the top
+  "Max" UI level, ABOVE "Extra High") ONLY on models whose
+  documented row exposes a `max` step above `xhigh` — Opus 4.7,
+  Opus 4.8, and Fable 5. On models that reach `max` with NO `xhigh`
+  step (Opus 4.6, Sonnet 4.6), `max` is their Extra-High top and
+  maps to `XHigh`, not `Max`. Extended thinking disabled (Option+T
+  / Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
+  false) → `Off`; Fable 5 cannot map to `Off`.
 - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
   `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
   Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
@@ -228,9 +229,11 @@ provider-native scales onto this 6-state field:
   Thinking turned off, on models that allow it (e.g. Gemini 2.5
   Flash-Lite), → `Off`.
 - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
-  `high` → `High`; `enabled` + effort `max` → `XHigh`. DeepSeek
-  effort has no `low` / `medium` tier, so no DeepSeek level maps
-  to `Low` or `Medium`. A consumer DeepThink on/off toggle (no
+  `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
+  no `xhigh` step, so its `max` is the Extra-High top, not the
+  above-`xhigh` cross-provider `Max`). DeepSeek effort has no
+  `low` / `medium` tier, so no DeepSeek level maps to `Low` or
+  `Medium`. A consumer DeepThink on/off toggle (no
   effort enum) maps `On` → `High` (default effort) and `Off` →
   `Off`.
 - Mistral: `reasoning_effort` `none` → `Off`; `high` → `High`
@@ -269,6 +272,17 @@ Decision rule (applied during `<access-selection>` Step E):
   cross-cutting scope → bump THINKING up at least one level
   (`Off` → `Low`, `Low` → `Medium`, `Medium` → `High`, `High` →
   `XHigh`).
+- Ceiling — `Max`: the top output level, used ONLY on models whose
+  `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus
+  4.7, Opus 4.8, Fable 5). On such a model, prefer `Max` over
+  `XHigh` when the appended user-context declares a Quality (`best`)
+  budget posture, or for the most demanding tasks (the `XHigh`
+  conditions above taken to their limit). Under a Cost (`cheap`)
+  budget posture, never emit `Max` and do not exceed the lowest
+  level that clears the task. Absent any budget posture, `XHigh`
+  stays the default ceiling and `Max` is reserved for the genuinely
+  hardest tasks on max-capable models. Never emit `Max` for a model
+  whose row lacks a `max`-above-`xhigh` step.
 - Chosen access method's `exposes-thinking` attribute is `no` →
   THINKING `N/A`, overriding the above.
 
@@ -436,19 +450,20 @@ as primary; the other becomes the secondary category for tie-breaking.
       (true in both Composer mode and Chat mode).
 
     Output mapping (the THINKING field of the output format):
-    `Off` / `Low` / `Medium` / `High` / `XHigh` / `N/A`. Map
-    provider-native scales onto this 6-state field:
+    `Off` / `Low` / `Medium` / `High` / `XHigh` / `Max` / `N/A`. Map
+    provider-native scales onto this 7-state field:
 
     - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
       `high` → `High` (the docs' default effort on Opus 4.6, Opus 4.8,
       Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the "Extra High"
-      UI label, and the default for Opus 4.7); `max` also maps to
-      `XHigh` for models whose row lists it (this selector's 6-state
-      field has no separate Max slot — the rationale should name
-      `max` explicitly when chosen). Extended thinking disabled
-      (Option+T / Alt+T, `MAX_THINKING_TOKENS=0`, or
-      `alwaysThinkingEnabled` false) → `Off`; Fable 5 cannot map to
-      `Off`.
+      UI label, and the default for Opus 4.7); `max` → `Max` (the top
+      "Max" UI level, ABOVE "Extra High") ONLY on models whose
+      documented row exposes a `max` step above `xhigh` — Opus 4.7,
+      Opus 4.8, and Fable 5. On models that reach `max` with NO `xhigh`
+      step (Opus 4.6, Sonnet 4.6), `max` is their Extra-High top and
+      maps to `XHigh`, not `Max`. Extended thinking disabled (Option+T
+      / Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
+      false) → `Off`; Fable 5 cannot map to `Off`.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
@@ -457,9 +472,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       Thinking turned off, on models that allow it (e.g. Gemini 2.5
       Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
-      `high` → `High`; `enabled` + effort `max` → `XHigh`. DeepSeek
-      effort has no `low` / `medium` tier, so no DeepSeek level maps
-      to `Low` or `Medium`. A consumer DeepThink on/off toggle (no
+      `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
+      no `xhigh` step, so its `max` is the Extra-High top, not the
+      above-`xhigh` cross-provider `Max`). DeepSeek effort has no
+      `low` / `medium` tier, so no DeepSeek level maps to `Low` or
+      `Medium`. A consumer DeepThink on/off toggle (no
       effort enum) maps `On` → `High` (default effort) and `Off` →
       `Off`.
     - Mistral: `reasoning_effort` `none` → `Off`; `high` → `High`
@@ -498,6 +515,17 @@ as primary; the other becomes the secondary category for tie-breaking.
       cross-cutting scope → bump THINKING up at least one level
       (`Off` → `Low`, `Low` → `Medium`, `Medium` → `High`, `High` →
       `XHigh`).
+    - Ceiling — `Max`: the top output level, used ONLY on models whose
+      `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus
+      4.7, Opus 4.8, Fable 5). On such a model, prefer `Max` over
+      `XHigh` when the appended user-context declares a Quality (`best`)
+      budget posture, or for the most demanding tasks (the `XHigh`
+      conditions above taken to their limit). Under a Cost (`cheap`)
+      budget posture, never emit `Max` and do not exceed the lowest
+      level that clears the task. Absent any budget posture, `XHigh`
+      stays the default ceiling and `Max` is reserved for the genuinely
+      hardest tasks on max-capable models. Never emit `Max` for a model
+      whose row lacks a `max`-above-`xhigh` step.
     - Chosen access method's `exposes-thinking` attribute is `no` →
       THINKING `N/A`, overriding the above.
 
@@ -1094,19 +1122,20 @@ as primary; the other becomes the secondary category for tie-breaking.
       (true in both Composer mode and Chat mode).
 
     Output mapping (the THINKING field of the output format):
-    `Off` / `Low` / `Medium` / `High` / `XHigh` / `N/A`. Map
-    provider-native scales onto this 6-state field:
+    `Off` / `Low` / `Medium` / `High` / `XHigh` / `Max` / `N/A`. Map
+    provider-native scales onto this 7-state field:
 
     - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
       `high` → `High` (the docs' default effort on Opus 4.6, Opus 4.8,
       Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the "Extra High"
-      UI label, and the default for Opus 4.7); `max` also maps to
-      `XHigh` for models whose row lists it (this selector's 6-state
-      field has no separate Max slot — the rationale should name
-      `max` explicitly when chosen). Extended thinking disabled
-      (Option+T / Alt+T, `MAX_THINKING_TOKENS=0`, or
-      `alwaysThinkingEnabled` false) → `Off`; Fable 5 cannot map to
-      `Off`.
+      UI label, and the default for Opus 4.7); `max` → `Max` (the top
+      "Max" UI level, ABOVE "Extra High") ONLY on models whose
+      documented row exposes a `max` step above `xhigh` — Opus 4.7,
+      Opus 4.8, and Fable 5. On models that reach `max` with NO `xhigh`
+      step (Opus 4.6, Sonnet 4.6), `max` is their Extra-High top and
+      maps to `XHigh`, not `Max`. Extended thinking disabled (Option+T
+      / Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
+      false) → `Off`; Fable 5 cannot map to `Off`.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
@@ -1115,9 +1144,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       Thinking turned off, on models that allow it (e.g. Gemini 2.5
       Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
-      `high` → `High`; `enabled` + effort `max` → `XHigh`. DeepSeek
-      effort has no `low` / `medium` tier, so no DeepSeek level maps
-      to `Low` or `Medium`. A consumer DeepThink on/off toggle (no
+      `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
+      no `xhigh` step, so its `max` is the Extra-High top, not the
+      above-`xhigh` cross-provider `Max`). DeepSeek effort has no
+      `low` / `medium` tier, so no DeepSeek level maps to `Low` or
+      `Medium`. A consumer DeepThink on/off toggle (no
       effort enum) maps `On` → `High` (default effort) and `Off` →
       `Off`.
     - Mistral: `reasoning_effort` `none` → `Off`; `high` → `High`
@@ -1156,6 +1187,17 @@ as primary; the other becomes the secondary category for tie-breaking.
       cross-cutting scope → bump THINKING up at least one level
       (`Off` → `Low`, `Low` → `Medium`, `Medium` → `High`, `High` →
       `XHigh`).
+    - Ceiling — `Max`: the top output level, used ONLY on models whose
+      `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus
+      4.7, Opus 4.8, Fable 5). On such a model, prefer `Max` over
+      `XHigh` when the appended user-context declares a Quality (`best`)
+      budget posture, or for the most demanding tasks (the `XHigh`
+      conditions above taken to their limit). Under a Cost (`cheap`)
+      budget posture, never emit `Max` and do not exceed the lowest
+      level that clears the task. Absent any budget posture, `XHigh`
+      stays the default ceiling and `Max` is reserved for the genuinely
+      hardest tasks on max-capable models. Never emit `Max` for a model
+      whose row lacks a `max`-above-`xhigh` step.
     - Chosen access method's `exposes-thinking` attribute is `no` →
       THINKING `N/A`, overriding the above.
 
@@ -1529,19 +1571,20 @@ as primary; the other becomes the secondary category for tie-breaking.
       (true in both Composer mode and Chat mode).
 
     Output mapping (the THINKING field of the output format):
-    `Off` / `Low` / `Medium` / `High` / `XHigh` / `N/A`. Map
-    provider-native scales onto this 6-state field:
+    `Off` / `Low` / `Medium` / `High` / `XHigh` / `Max` / `N/A`. Map
+    provider-native scales onto this 7-state field:
 
     - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
       `high` → `High` (the docs' default effort on Opus 4.6, Opus 4.8,
       Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the "Extra High"
-      UI label, and the default for Opus 4.7); `max` also maps to
-      `XHigh` for models whose row lists it (this selector's 6-state
-      field has no separate Max slot — the rationale should name
-      `max` explicitly when chosen). Extended thinking disabled
-      (Option+T / Alt+T, `MAX_THINKING_TOKENS=0`, or
-      `alwaysThinkingEnabled` false) → `Off`; Fable 5 cannot map to
-      `Off`.
+      UI label, and the default for Opus 4.7); `max` → `Max` (the top
+      "Max" UI level, ABOVE "Extra High") ONLY on models whose
+      documented row exposes a `max` step above `xhigh` — Opus 4.7,
+      Opus 4.8, and Fable 5. On models that reach `max` with NO `xhigh`
+      step (Opus 4.6, Sonnet 4.6), `max` is their Extra-High top and
+      maps to `XHigh`, not `Max`. Extended thinking disabled (Option+T
+      / Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
+      false) → `Off`; Fable 5 cannot map to `Off`.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
@@ -1550,9 +1593,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       Thinking turned off, on models that allow it (e.g. Gemini 2.5
       Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
-      `high` → `High`; `enabled` + effort `max` → `XHigh`. DeepSeek
-      effort has no `low` / `medium` tier, so no DeepSeek level maps
-      to `Low` or `Medium`. A consumer DeepThink on/off toggle (no
+      `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
+      no `xhigh` step, so its `max` is the Extra-High top, not the
+      above-`xhigh` cross-provider `Max`). DeepSeek effort has no
+      `low` / `medium` tier, so no DeepSeek level maps to `Low` or
+      `Medium`. A consumer DeepThink on/off toggle (no
       effort enum) maps `On` → `High` (default effort) and `Off` →
       `Off`.
     - Mistral: `reasoning_effort` `none` → `Off`; `high` → `High`
@@ -1591,6 +1636,17 @@ as primary; the other becomes the secondary category for tie-breaking.
       cross-cutting scope → bump THINKING up at least one level
       (`Off` → `Low`, `Low` → `Medium`, `Medium` → `High`, `High` →
       `XHigh`).
+    - Ceiling — `Max`: the top output level, used ONLY on models whose
+      `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus
+      4.7, Opus 4.8, Fable 5). On such a model, prefer `Max` over
+      `XHigh` when the appended user-context declares a Quality (`best`)
+      budget posture, or for the most demanding tasks (the `XHigh`
+      conditions above taken to their limit). Under a Cost (`cheap`)
+      budget posture, never emit `Max` and do not exceed the lowest
+      level that clears the task. Absent any budget posture, `XHigh`
+      stays the default ceiling and `Max` is reserved for the genuinely
+      hardest tasks on max-capable models. Never emit `Max` for a model
+      whose row lacks a `max`-above-`xhigh` step.
     - Chosen access method's `exposes-thinking` attribute is `no` →
       THINKING `N/A`, overriding the above.
 
@@ -2563,19 +2619,20 @@ as primary; the other becomes the secondary category for tie-breaking.
       (true in both Composer mode and Chat mode).
 
     Output mapping (the THINKING field of the output format):
-    `Off` / `Low` / `Medium` / `High` / `XHigh` / `N/A`. Map
-    provider-native scales onto this 6-state field:
+    `Off` / `Low` / `Medium` / `High` / `XHigh` / `Max` / `N/A`. Map
+    provider-native scales onto this 7-state field:
 
     - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
       `high` → `High` (the docs' default effort on Opus 4.6, Opus 4.8,
       Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the "Extra High"
-      UI label, and the default for Opus 4.7); `max` also maps to
-      `XHigh` for models whose row lists it (this selector's 6-state
-      field has no separate Max slot — the rationale should name
-      `max` explicitly when chosen). Extended thinking disabled
-      (Option+T / Alt+T, `MAX_THINKING_TOKENS=0`, or
-      `alwaysThinkingEnabled` false) → `Off`; Fable 5 cannot map to
-      `Off`.
+      UI label, and the default for Opus 4.7); `max` → `Max` (the top
+      "Max" UI level, ABOVE "Extra High") ONLY on models whose
+      documented row exposes a `max` step above `xhigh` — Opus 4.7,
+      Opus 4.8, and Fable 5. On models that reach `max` with NO `xhigh`
+      step (Opus 4.6, Sonnet 4.6), `max` is their Extra-High top and
+      maps to `XHigh`, not `Max`. Extended thinking disabled (Option+T
+      / Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
+      false) → `Off`; Fable 5 cannot map to `Off`.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
@@ -2584,9 +2641,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       Thinking turned off, on models that allow it (e.g. Gemini 2.5
       Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
-      `high` → `High`; `enabled` + effort `max` → `XHigh`. DeepSeek
-      effort has no `low` / `medium` tier, so no DeepSeek level maps
-      to `Low` or `Medium`. A consumer DeepThink on/off toggle (no
+      `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
+      no `xhigh` step, so its `max` is the Extra-High top, not the
+      above-`xhigh` cross-provider `Max`). DeepSeek effort has no
+      `low` / `medium` tier, so no DeepSeek level maps to `Low` or
+      `Medium`. A consumer DeepThink on/off toggle (no
       effort enum) maps `On` → `High` (default effort) and `Off` →
       `Off`.
     - Mistral: `reasoning_effort` `none` → `Off`; `high` → `High`
@@ -2625,6 +2684,17 @@ as primary; the other becomes the secondary category for tie-breaking.
       cross-cutting scope → bump THINKING up at least one level
       (`Off` → `Low`, `Low` → `Medium`, `Medium` → `High`, `High` →
       `XHigh`).
+    - Ceiling — `Max`: the top output level, used ONLY on models whose
+      `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus
+      4.7, Opus 4.8, Fable 5). On such a model, prefer `Max` over
+      `XHigh` when the appended user-context declares a Quality (`best`)
+      budget posture, or for the most demanding tasks (the `XHigh`
+      conditions above taken to their limit). Under a Cost (`cheap`)
+      budget posture, never emit `Max` and do not exceed the lowest
+      level that clears the task. Absent any budget posture, `XHigh`
+      stays the default ceiling and `Max` is reserved for the genuinely
+      hardest tasks on max-capable models. Never emit `Max` for a model
+      whose row lacks a `max`-above-`xhigh` step.
     - Chosen access method's `exposes-thinking` attribute is `no` →
       THINKING `N/A`, overriding the above.
 
@@ -3584,7 +3654,7 @@ MODEL: [Model Name]
 BACKUP: [Model Name or None]
 PLATFORM: [Access Method Name]
 MAX MODE: [On/Off]
-THINKING: [Off/Low/Medium/High/XHigh/N/A]
+THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]
 ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
 CONVERSATION: [New/Continue]
 RATIONALE: [2-3 sentences that MUST name (a) the prompt's PRIMARY task
@@ -3607,7 +3677,7 @@ MODEL: [Model Name]
 BACKUP: [Model Name or None]
 PLATFORM: [Access Method Name]
 MAX MODE: [On/Off]
-THINKING: [Off/Low/Medium/High/XHigh/N/A]
+THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]
 ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
 CONVERSATION: [New/Continue]
 RATIONALE: [2-3 sentences that MUST name (a) the prompt's PRIMARY task
