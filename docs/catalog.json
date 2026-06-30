@@ -1,9 +1,9 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-06-27T14:44:45Z",
+  "generated_at_utc": "2026-06-30T16:54:52Z",
   "source_doc_sha256": {
-    "model-selector.txt": "02360709bd7b6723bcdd16589cb207c33bfc65e4682768e97011c03d74500878",
-    "model-tier-cost-scale.md": "bf60eb49204f351e8066df6e1b32e3b82c4fce72e562a32e0e3b9fdc11dbb072"
+    "model-selector.txt": "0ce9e30a3949dd750c9da89e2036efede13a9f4a754f294536897a9462cdc6f2",
+    "model-tier-cost-scale.md": "c6646f523077113909c39db34ffd708df69e1e26f9466b10744f45e0b488bd47"
   },
   "models": [
     {
@@ -1091,7 +1091,7 @@
     {
       "provider": "Google",
       "tier": "Google AI Pro",
-      "monthly_usd": 20.0,
+      "monthly_usd": 19.99,
       "annual_usd": 199.99,
       "surface_funded": [
         "gemini-app",

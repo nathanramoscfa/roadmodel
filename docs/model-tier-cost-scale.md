@@ -129,7 +129,7 @@ table and surface material cost / availability / capability constraints.
 
 ---
 
-<!-- subscription-tiers-reviewed: 2026-06-27 -->
+<!-- subscription-tiers-reviewed: 2026-06-30 -->
 
 ## Subscription Tiers and Access Methods
 
@@ -187,7 +187,7 @@ and adjust the rebuild rules in [`update/prompt.md`](../update/prompt.md).
 | ChatGPT Pro ($100)     | $100    | —      | OpenAI    | chatgpt-app, codex-cli       | Same model suite as Pro $200 (GPT-5.5, GPT-5.5 Pro, o1 Pro mode) at 5x Plus usage limits; Codex access included with promotional 10x multiplier through May 31, 2026. |
 | ChatGPT Pro ($200)     | $200    | —      | OpenAI    | chatgpt-app, codex-cli       | Same coverage as Pro $100 with much higher caps (20x Plus limits), 1M-token context window, Sora access, and GPT-5.4 Pro / GPT-5.5 Pro priority. |
 | Google AI Plus         | $4.99   | —      | Google    | gemini-app, gemini-cli       | Entry-paid Google AI tier with 2x higher usage limits than Free in the Gemini app, access to Gemini 3.1 Pro / Nano Banana Pro / Daily Brief / Gemini Omni video generation, 200 Google Flow Credits, and 400 GB of cloud storage (price cut from $7.99 to $4.99 on 2026-06-08; storage doubled from 200 GB to 400 GB). |
-| Google AI Pro          | $20     | $199.99 | Google   | gemini-app, gemini-cli       | Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus Deep Research, Nano Banana Pro, Veo 3.1 access, 1,000 monthly AI credits, and 2 TB of Google One storage; includes YouTube Premium Lite. |
+| Google AI Pro          | $19.99  | $199.99 | Google   | gemini-app, gemini-cli       | Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus Deep Research, Nano Banana Pro, Veo 3.1 access, 1,000 monthly AI credits, and 2 TB of Google One storage; includes YouTube Premium Lite. |
 | Google AI Ultra ($100) | $100    | —      | Google    | gemini-app, gemini-cli       | New developer-focused Ultra tier (May 2026): 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan. |
 | Google AI Ultra ($200) | $200    | —      | Google    | gemini-app, gemini-cli       | Highest access to Gemini 3.1 Pro, Deep Think, Project Genie, Veo 3.1 with 25,000 monthly AI credits, $100/month Google Cloud credits, and 30 TB Google One storage (price reduced from $250 to $200). |
 | Cursor Pro             | $20     | $192   | Cursor    | cursor                       | $20 monthly model-usage credit pool across every model in Cursor's catalog; on-demand overage billed at API rates. |
