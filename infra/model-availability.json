@@ -1,4 +1,12 @@
 {
-  "_note": "Phase 4.9 source of truth for RUNTIME model availability. Each entry marks a catalogued model id as currently UNAVAILABLE (provider access pulled/restricted). On merge to main, sync-availability.yml reconciles this list into the Supabase model_availability table; the web /api/recommend route reads that table and forwards the ids to the selector as a runtime Step-0a override (roadmodel >=0.2.9), so a benched model is excluded WITHOUT a package release. Maintained by the daily availability probe (auto-PR). Removing an id here re-enables the model on the next sync. The bundled <availability-context> in model-selector.txt stays as a static belt-and-suspenders default.",
-  "unavailable": []
+  "_note": "Phase 4.9 source of truth for RUNTIME model availability. Each entry marks a catalogued model id as currently UNAVAILABLE (provider access pulled/restricted). On merge to main, sync-availability.yml reconciles this list into the Supabase model_availability table; the web /api/recommend route reads that table and forwards the ids to the selector as a runtime Step-0a override (roadmodel >=0.2.9), so a benched model is excluded WITHOUT a package release. Maintained by the daily availability probe (auto-PR). Un-benching (removing an id) is now GATED by an AI web-search verification (update/verify_availability.py): the daily probe re-verifies every entry here and only removes it on a grounded verdict, and export-control entries carry a higher bar. Optional per-entry audit fields written by the verifier: restriction_type, verdict, confidence, evidence_urls, ai_summary, ai_as_of, decision_reason, verified_at. The bundled <availability-context> in model-selector.txt stays as a static belt-and-suspenders default.",
+  "unavailable": [
+    {
+      "id": "claude-fable-5",
+      "reason": "Access suspended by Anthropic on 2026-06-12 under a US export-control directive (foreign-national access; disabled for all customers).",
+      "restriction_type": "export_control_or_jurisdictional",
+      "since": "2026-06-12",
+      "source": "manual"
+    }
+  ]
 }
