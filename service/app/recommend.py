@@ -234,6 +234,21 @@ def _unavailable_models_from_request(context: dict[str, Any] | None) -> list[str
     return ids or None
 
 
+def _availability_authoritative_from_request(context: dict[str, Any] | None) -> bool:
+    """Whether the web edge read the availability table SUCCESSFULLY this request.
+
+    True -> the forwarded ``unavailable_models`` list is the COMPLETE current
+    unavailable set; the selector treats it as authoritative and supersedes the
+    bundled ``<availability-context>`` fallback (so a model the probe/AI verifier
+    has RESTORED is recommendable again WITHOUT a package release). Absent or not
+    exactly True -> False: additive/fallback mode, so a legacy/direct caller or a
+    failed (fail-open) edge read still gets the conservative static defaults.
+    """
+    if not context:
+        return False
+    return context.get("availability_authoritative") is True
+
+
 def recommend(req: RecommendRequest) -> RecommendResponse:
     last_error: Exception | None = None
 
@@ -248,6 +263,11 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
     # roadmodel release. Provider-independent, so resolve once. None for legacy /
     # direct callers -> only the bundled <availability-context> defaults apply.
     unavailable_models = _unavailable_models_from_request(req.context)
+    # When the edge read the availability table successfully, its list is the
+    # complete truth and supersedes the bundled fallback (lets a RESTORED model be
+    # recommended without a release). A failed/absent read -> False -> fail-closed
+    # static defaults still apply.
+    availability_authoritative = _availability_authoritative_from_request(req.context)
 
     for hint in _provider_chain(req.context):
         config = _config_for_hint(hint)
@@ -275,6 +295,7 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
                 config,
                 user_context_text=user_context_text,
                 unavailable_models=unavailable_models,
+                availability_authoritative=availability_authoritative,
                 max_output_tokens=max_output_tokens,
                 thinking_budget=thinking_budget,
                 temperature=temperature,

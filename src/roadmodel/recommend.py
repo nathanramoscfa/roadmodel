@@ -133,18 +133,48 @@ _SAAS_HEADER: Final = (
 )
 
 
-def _runtime_availability_note(unavailable_models: list[str] | None) -> str | None:
-    """Render a runtime Step-0a override listing additionally-unavailable model ids.
+def _runtime_availability_note(
+    unavailable_models: list[str] | None, *, authoritative: bool = False
+) -> str | None:
+    """Render the runtime Step-0a availability override.
 
-    Returns ``None`` when there is nothing to add. An embedding caller (the SaaS
-    service) supplies this list from a RUNTIME source — a provider-availability
-    probe writes it, the service reads it per request — so a model can be benched
-    (or un-benched) WITHOUT a package release. The bundled ``<availability-context>``
-    stays as the static, always-applied default; this note layers on top of it.
+    An embedding caller (the SaaS service) supplies the list from a RUNTIME source
+    — the availability probe writes it, the service reads it per request — so a
+    model can be benched or un-benched WITHOUT a package release.
+
+    ``authoritative`` selects the two modes that make the runtime layer the source
+    of truth while keeping the bundled ``<availability-context>`` as a fallback:
+
+    - ``False`` (default; also the fail-open path when the availability service is
+      unreachable): the list layers ADDITIVELY on top of the static
+      ``<availability-context>`` default — it can only ADD exclusions, and the
+      static list still applies (fail-closed for anything named there). Returns
+      ``None`` when the list is empty.
+    - ``True`` (the availability service was read successfully): the list is the
+      COMPLETE current unavailable set and SUPERSEDES the static
+      ``<availability-context>`` fallback — a catalogued model absent from the list
+      is available even if the static block names it. A note is always emitted,
+      including for an empty list (which means "every catalogued model is available").
     """
-    if not unavailable_models:
-        return None
-    ids = ", ".join(sorted({m.strip() for m in unavailable_models if m.strip()}))
+    ids = ", ".join(sorted({m.strip() for m in (unavailable_models or []) if m.strip()}))
+    if authoritative:
+        if ids:
+            return (
+                "RUNTIME AVAILABILITY OVERRIDE — AUTHORITATIVE (supersedes the "
+                "<availability-context> fallback list). The availability service was "
+                "read successfully; the ids below are the COMPLETE set that is "
+                "CURRENTLY UNAVAILABLE. Apply Step 0a to each — NEVER recommend it as "
+                "MODEL or BACKUP. A catalogued model NOT in this list is AVAILABLE, "
+                "even if <availability-context> names it as a fallback default. "
+                f"Unavailable ids: {ids}."
+            )
+        return (
+            "RUNTIME AVAILABILITY OVERRIDE — AUTHORITATIVE (supersedes the "
+            "<availability-context> fallback list). The availability service was read "
+            "successfully and reports NO models currently unavailable: every "
+            "catalogued model is AVAILABLE to recommend. Disregard the "
+            "<availability-context> fallback exclusions."
+        )
     if not ids:
         return None
     return (
@@ -161,6 +191,7 @@ def build_prompt(
     *,
     user_context_text: str,
     unavailable_models: list[str] | None = None,
+    availability_authoritative: bool = False,
 ) -> tuple[str, str]:
     selector_text = _strip_ide_framing(
         _read_bundled_doc(BUNDLED_SELECTOR_PATH, "model-selector.txt")
@@ -169,7 +200,9 @@ def build_prompt(
     _ = _read_bundled_doc(BUNDLED_USER_CONTEXT_TEMPLATE_PATH, "user-context.example.md")
 
     sections = [_SAAS_HEADER, selector_text, tier_cost_text, user_context_text]
-    runtime_note = _runtime_availability_note(unavailable_models)
+    runtime_note = _runtime_availability_note(
+        unavailable_models, authoritative=availability_authoritative
+    )
     if runtime_note is not None:
         sections.append(runtime_note)
     system = "\n\n".join(sections)
@@ -229,6 +262,7 @@ def recommend(
     *,
     user_context_text: str | None = None,
     unavailable_models: list[str] | None = None,
+    availability_authoritative: bool = False,
     max_output_tokens: int | None = None,
     thinking_budget: int | None = None,
     temperature: float | None = None,
@@ -252,6 +286,7 @@ def recommend(
         prompt,
         user_context_text=resolved_user_context,
         unavailable_models=unavailable_models,
+        availability_authoritative=availability_authoritative,
     )
     adapter = PROVIDER_ADAPTERS[config.provider]
     raw_response = adapter.recommend(
@@ -295,6 +330,7 @@ def recommend_structured(
     *,
     user_context_text: str | None = None,
     unavailable_models: list[str] | None = None,
+    availability_authoritative: bool = False,
     input_tokens: int | None = None,
     output_tokens: int | None = None,
     max_mode: bool = False,
@@ -317,6 +353,7 @@ def recommend_structured(
         config,
         user_context_text=user_context_text,
         unavailable_models=unavailable_models,
+        availability_authoritative=availability_authoritative,
         max_output_tokens=max_output_tokens,
         thinking_budget=thinking_budget,
         temperature=temperature,

@@ -140,6 +140,7 @@ def test_recommend_returns_200(
         *,
         user_context_text: str | None = None,
         unavailable_models: list[str] | None = None,
+        availability_authoritative: bool = False,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -203,6 +204,7 @@ def test_recommend_carries_backup(
         *,
         user_context_text: str | None = None,
         unavailable_models: list[str] | None = None,
+        availability_authoritative: bool = False,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -241,6 +243,7 @@ def test_recommend_normalizes_thinking_na_on_no_thinking_surface(
         *,
         user_context_text: str | None = None,
         unavailable_models: list[str] | None = None,
+        availability_authoritative: bool = False,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -301,6 +304,7 @@ def test_recommend_accepts_large_under_cap(
         *,
         user_context_text: str | None = None,
         unavailable_models: list[str] | None = None,
+        availability_authoritative: bool = False,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -332,6 +336,7 @@ def test_response_schema_matches_phase2_contract(
         *,
         user_context_text: str | None = None,
         unavailable_models: list[str] | None = None,
+        availability_authoritative: bool = False,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -377,6 +382,7 @@ def test_recommend_falls_back_to_next_provider_on_malformed_response(
         *,
         user_context_text: str | None = None,
         unavailable_models: list[str] | None = None,
+        availability_authoritative: bool = False,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -423,6 +429,7 @@ def test_recommend_attempts_all_providers_then_raises_when_all_malformed(
         *,
         user_context_text: str | None = None,
         unavailable_models: list[str] | None = None,
+        availability_authoritative: bool = False,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -464,6 +471,7 @@ def test_latency_kwargs_passed_only_on_gemini_path(
         *,
         user_context_text: str | None = None,
         unavailable_models: list[str] | None = None,
+        availability_authoritative: bool = False,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -515,6 +523,7 @@ def test_frontier_gemini_pro_uses_thinking_on_params(
         *,
         user_context_text: str | None = None,
         unavailable_models: list[str] | None = None,
+        availability_authoritative: bool = False,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -648,6 +657,7 @@ def test_fake_recommend_structured_matches_real_signature() -> None:
         "config",
         "user_context_text",
         "unavailable_models",
+        "availability_authoritative",
         "input_tokens",
         "output_tokens",
         "max_mode",
@@ -683,6 +693,7 @@ def test_funding_context_is_threaded_to_recommend_structured(
         *,
         user_context_text: str | None = None,
         unavailable_models: list[str] | None = None,
+        availability_authoritative: bool = False,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -722,6 +733,7 @@ def test_unavailable_models_threaded_to_recommend_structured(
         *,
         user_context_text: str | None = None,
         unavailable_models: list[str] | None = None,
+        availability_authoritative: bool = False,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -743,6 +755,47 @@ def test_unavailable_models_threaded_to_recommend_structured(
     assert captured["unavailable_models"] == ["claude-fable-5", "gpt-x"]
 
 
+def test_availability_authoritative_threaded_to_recommend_structured(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Phase 4.9 B5: the web edge's authoritative flag (the table read succeeded)
+    reaches recommend_structured. True -> the forwarded list supersedes the bundled
+    fallback so a restored model is recommendable; absent -> False (fail-closed)."""
+    recommend_module = importlib.import_module("app.recommend")
+    captured: dict[str, Any] = {}
+
+    def _fake_recommend_structured(
+        prompt: str,
+        config: Any,
+        *,
+        user_context_text: str | None = None,
+        unavailable_models: list[str] | None = None,
+        availability_authoritative: bool = False,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
+        max_mode: bool = False,
+        max_output_tokens: int | None = None,
+        thinking_budget: int | None = None,
+        temperature: float | None = None,
+    ) -> dict[str, Any]:
+        captured["authoritative"] = availability_authoritative
+        return dict(_RECOMMEND_DICT)
+
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
+
+    # Explicit True -> forwarded True.
+    client.post(
+        "/v1/recommend",
+        json={"task_description": "pick a model", "context": {"availability_authoritative": True}},
+    )
+    assert captured["authoritative"] is True
+
+    # Absent (or non-True) -> fail-closed default False.
+    client.post("/v1/recommend", json={"task_description": "pick a model", "context": {}})
+    assert captured["authoritative"] is False
+
+
 def test_no_unavailable_models_passes_none(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
@@ -758,6 +811,7 @@ def test_no_unavailable_models_passes_none(
         *,
         user_context_text: str | None = None,
         unavailable_models: list[str] | None = None,
+        availability_authoritative: bool = False,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
@@ -789,6 +843,7 @@ def test_no_funding_passes_none_user_context(
         *,
         user_context_text: str | None = None,
         unavailable_models: list[str] | None = None,
+        availability_authoritative: bool = False,
         input_tokens: int | None = None,
         output_tokens: int | None = None,
         max_mode: bool = False,
