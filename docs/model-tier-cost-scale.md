@@ -48,12 +48,12 @@ table and surface material cost / availability / capability constraints.
 | Claude 4.5 Opus             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Hidden by default; Requires Max Mode on request-based plans |
 | Claude 4.5 Sonnet           | $3.00  | $3.75       | $0.30      | $15.00  | High      | Hidden by default; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
 | Claude 4.6 Opus             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Hidden by default; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
-| Claude 4.6 Opus (Fast mode) | $30.00 | $37.50      | $3.00      | $150.00 | Very High | Hidden by default; Requires Max Mode on request-based plans; Limited research preview; Up to 1M tokens in Max Mode at the same per-token rates as shorter context |
-| Claude 4.6 Sonnet           | $3.00  | $3.75       | $0.30      | $15.00  | High      | Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
+| Claude 4.6 Sonnet           | $3.00  | $3.75       | $0.30      | $15.00  | High      | Hidden by default; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
 | Claude 4.7 Opus             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Hidden by default; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
 | Claude Fable 5              | $10.00 | $12.50      | $1.00      | $50.00  | Very High | Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; About 2x the cost of Claude Opus 4.8; Requires Max Mode on request-based plans |
 | Claude Opus 4.7 (fast mode) | $30.00 | $37.50      | $3.00      | $150.00 | Very High | Hidden by default; Requires Max Mode on request-based plans; Limited research preview; Up to 1M tokens in Max Mode at the same per-token rates as shorter context |
 | Claude Opus 4.8             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Requires Max Mode on request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
+| Claude Sonnet 5             | $3.00  | $3.75       | $0.30      | $15.00  | High      | Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens |
 
 
 ### API Pool — Cursor Composer
@@ -129,7 +129,7 @@ table and surface material cost / availability / capability constraints.
 
 ---
 
-<!-- subscription-tiers-reviewed: 2026-06-27 -->
+<!-- subscription-tiers-reviewed: 2026-07-01 -->
 
 ## Subscription Tiers and Access Methods
 
@@ -267,6 +267,8 @@ ids no longer appear as recommendable engines.
 
 | Model id         | Output | Tier      | Change                                                                                                                     |
 | ---------------- | ------ | --------- | -------------------------------------------------------------------------------------------------------------------------- |
+| claude-sonnet-5  | $15.00 | High      | New 2026-07-01 in cost-scale — Anthropic's Claude Sonnet 5 now visible on Cursor's pricing page; launch promotion $2/$10 input/output through August 31, 2026 (standard $3/$15 thereafter); `<model-options>` entry deferred to the selector pass which owns model-lifecycle adds |
+| claude-4.6-opus-fast | —  | —         | REMOVED 2026-07-01 from cost-scale — Cursor's pricing page no longer lists the "Claude 4.6 Opus (Fast mode)" row; Claude Opus 4.7 fast mode remains listed |
 | glm-5.2          | $4.40  | Low       | New 2026-06-27 in cost-scale — z.ai's GLM 5.2 now visible on Cursor's pricing page (provider header "Z.ai"); already present in `<model-options>` via provider-direct `zai-api` method, prices preserved per the Federation rule (provider-direct catalog owns input/output) |
 | grok-4.3         | $2.50  | Low       | New — supersedes grok-4.20 in selector list                                                                                |
 | gemini-2.5-flash | $2.50  | Low       | New — added 2026-05-21; cheap multimodal Flash model now visible in `<model-options>` for SaaS-backend free-tier picks      |

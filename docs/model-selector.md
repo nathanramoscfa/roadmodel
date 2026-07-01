@@ -777,13 +777,13 @@ as primary; the other becomes the secondary category for tie-breaking.
 
 ### High Cost Tier
 
-#### Sonnet 4.6 — `sonnet-4.6`
+#### Claude Sonnet 5 — `claude-sonnet-5`
 
 - **Pricing:** Input $3.00/M · Output $15.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 47.2; LMArena Text Elo 1457.1 (#23); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage
-- **Pricing notes:** Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)
-- **Best for:** Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation
+- **Headline benchmarks:** AA Intelligence Index 53.4 (Adaptive Reasoning, Max Effort); LMArena Text Elo 1440.5 (approx, post-launch snapshot); positioned by Anthropic as closing the gap to Opus 4.8 on agentic performance at a fraction of the price
+- **Pricing notes:** Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens
+- **Best for:** Anthropic's Sonnet 4.6 successor at the same standard high-tier pricing ($15/M output) — supersedes sonnet-4.6 per the same-series equal-output-price replacement rule; placeholder tier ratings inherited from sonnet-4.6 pending an editorial confirmation pass with independent benchmark coverage; Anthropic positions it as near-Opus-4.8 agentic performance at Sonnet economics, with the launch promotion ($2/$10) active through August 31, 2026
 
 #### GPT-5.4 — `gpt-5.4`
 
@@ -1279,21 +1279,21 @@ as primary; the other becomes the secondary category for tie-breaking.
 #### Anthropic API — `anthropic-api`
 
 - **Billing:** per-token (requires anthropic-api-key)
-- **Supports models:** opus-4.8,claude-fable-5,opus-4.7,sonnet-4.6,claude-4.5-haiku
+- **Supports models:** opus-4.8,claude-fable-5,opus-4.7,claude-sonnet-5,claude-4.5-haiku
 - **Toggles:** Max Mode — no · Thinking — yes
 - **Best for:** Programmatic / scripted Claude use outside Claude Code — raw API headers, batch endpoints, or features not surfaced by Claude Code. Falls back here when claude.ai Max budget is exhausted.
 
 #### Claude Code — `claude-code`
 
 - **Billing:** subscription-or-key (requires claude-max-subscription OR anthropic-api-key)
-- **Supports models:** opus-4.8,claude-fable-5,opus-4.7,sonnet-4.6,claude-4.5-haiku
+- **Supports models:** opus-4.8,claude-fable-5,opus-4.7,claude-sonnet-5,claude-4.5-haiku
 - **Toggles:** Max Mode — no · Thinking — yes
 - **Best for:** Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI and as an IDE extension inside Cursor. Heavy Opus usage that would cost over $1,000/mo on per-token API is fully covered by a $100/mo Max plan. Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, and Fable 5 expose the full range) plus Ultracode (session-wide xhigh + Dynamic Workflows) and the per-turn `ultrathink` keyword.
 
 #### claude.ai web / desktop — `claude-web`
 
 - **Billing:** subscription-included (requires claude-max-subscription)
-- **Supports models:** opus-4.8,opus-4.7,sonnet-4.6,claude-4.5-haiku
+- **Supports models:** opus-4.8,opus-4.7,claude-sonnet-5,claude-4.5-haiku
 - **Toggles:** Max Mode — no · Thinking — yes
 - **Best for:** Chat-driven Claude use (no terminal, no codebase tool use) under the same Max budget that funds Claude Code — pick when the task is conversational rather than code-editing.
 
@@ -1393,9 +1393,9 @@ as primary; the other becomes the secondary category for tie-breaking.
 #### Cursor — `cursor`
 
 - **Billing:** subscription-pool (requires cursor-pro-or-ultra-subscription)
-- **Supports models:** opus-4.8,claude-fable-5,opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gpt-5.2,gemini-3.1-pro,gemini-3-pro,gpt-5,gpt-5.1-codex,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,composer-2.5,gemini-2.5-flash,gemini-3-flash,gemini-3.5-flash,gpt-5-mini,kimi-k2.5
+- **Supports models:** opus-4.8,claude-fable-5,opus-4.7,gpt-5.5,claude-sonnet-5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gemini-3.1-pro,gemini-3-pro,gpt-5,gpt-5.1-codex,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,composer-2.5,gemini-2.5-flash,gemini-3-flash,gemini-3.5-flash,gpt-5-mini,kimi-k2.5
 - **Toggles:** Max Mode — yes · Thinking — no
-- **Best for:** Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / composer-2.5 imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. Cursor's own Auto and Premium routing modes are deliberately NOT enumerated as roadmodel-recommendable models because their routing is opaque (see `jurisdiction-context` for the rationale) — operators who want routing behavior pick a specific fixed model and let Cursor's pool handle the call. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path).
+- **Best for:** Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / composer-2.5 imply Composer mode; frontier models (opus-4.7, gpt-5.5, claude-sonnet-5, etc.) imply Chat mode. Cursor's own Auto and Premium routing modes are deliberately NOT enumerated as roadmodel-recommendable models because their routing is opaque (see `jurisdiction-context` for the rationale) — operators who want routing behavior pick a specific fixed model and let Cursor's pool handle the call. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path).
 
 ## Selection Algorithm
 
@@ -1901,15 +1901,15 @@ as primary; the other becomes the secondary category for tie-breaking.
              best-for="OpenAI's most capable frontier model and highest-cost GPT offering, best suited for the most demanding reasoning, long-horizon planning, and tasks where maximum intelligence is required regardless of cost — strongest single model for hard coding, agentic execution, and reasoning, but verify factual claims due to elevated hallucination" />
     </tier>
     <tier cost="high">
-      <model id="sonnet-4.6" name="Sonnet 4.6"
+      <model id="claude-sonnet-5" name="Claude Sonnet 5"
              input-price-per-1m="$3.00" output-price-per-1m="$15.00"
              jurisdiction="us"
              tier-coding="A" tier-planning="A" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 47.2; LMArena Text Elo 1457.1 (#23); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage"
-             pricing-notes="Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)"
-             best-for="Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation" />
+             headline-benchmarks="AA Intelligence Index 53.4 (Adaptive Reasoning, Max Effort); LMArena Text Elo 1440.5 (approx, post-launch snapshot); positioned by Anthropic as closing the gap to Opus 4.8 on agentic performance at a fraction of the price"
+             pricing-notes="Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens"
+             best-for="Anthropic's Sonnet 4.6 successor at the same standard high-tier pricing ($15/M output) — supersedes sonnet-4.6 per the same-series equal-output-price replacement rule; placeholder tier ratings inherited from sonnet-4.6 pending an editorial confirmation pass with independent benchmark coverage; Anthropic positions it as near-Opus-4.8 agentic performance at Sonnet economics, with the launch promotion ($2/$10) active through August 31, 2026" />
       <model id="gpt-5.4" name="GPT-5.4"
              input-price-per-1m="$2.50" output-price-per-1m="$15.00"
              jurisdiction="us"
@@ -2205,7 +2205,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             provider="anthropic" billing="per-token"
             provider-jurisdiction="us"
             requires="anthropic-api-key"
-            supports-models="opus-4.8,claude-fable-5,opus-4.7,sonnet-4.6,claude-4.5-haiku"
+            supports-models="opus-4.8,claude-fable-5,opus-4.7,claude-sonnet-5,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
             best-for="Programmatic / scripted Claude use outside Claude Code — raw API headers, batch endpoints, or features not surfaced by Claude Code. Falls back here when claude.ai Max budget is exhausted." />
@@ -2213,7 +2213,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             provider="anthropic" billing="subscription-or-key"
             provider-jurisdiction="us"
             requires="claude-max-subscription OR anthropic-api-key"
-            supports-models="opus-4.8,claude-fable-5,opus-4.7,sonnet-4.6,claude-4.5-haiku"
+            supports-models="opus-4.8,claude-fable-5,opus-4.7,claude-sonnet-5,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="yes"
             best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI and as an IDE extension inside Cursor. Heavy Opus usage that would cost over $1,000/mo on per-token API is fully covered by a $100/mo Max plan. Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, and Fable 5 expose the full range) plus Ultracode (session-wide xhigh + Dynamic Workflows) and the per-turn `ultrathink` keyword." />
@@ -2221,7 +2221,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             provider="anthropic" billing="subscription-included"
             provider-jurisdiction="us"
             requires="claude-max-subscription"
-            supports-models="opus-4.8,opus-4.7,sonnet-4.6,claude-4.5-haiku"
+            supports-models="opus-4.8,opus-4.7,claude-sonnet-5,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
             best-for="Chat-driven Claude use (no terminal, no codebase tool use) under the same Max budget that funds Claude Code — pick when the task is conversational rather than code-editing." />
@@ -2317,10 +2317,10 @@ as primary; the other becomes the secondary category for tie-breaking.
             provider="cursor" billing="subscription-pool"
             provider-jurisdiction="us"
             requires="cursor-pro-or-ultra-subscription"
-            supports-models="opus-4.8,claude-fable-5,opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gpt-5.2,gemini-3.1-pro,gemini-3-pro,gpt-5,gpt-5.1-codex,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,composer-2.5,gemini-2.5-flash,gemini-3-flash,gemini-3.5-flash,gpt-5-mini,kimi-k2.5"
+            supports-models="opus-4.8,claude-fable-5,opus-4.7,gpt-5.5,claude-sonnet-5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gemini-3.1-pro,gemini-3-pro,gpt-5,gpt-5.1-codex,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,composer-2.5,gemini-2.5-flash,gemini-3-flash,gemini-3.5-flash,gpt-5-mini,kimi-k2.5"
             exposes-max-mode="yes" exposes-thinking="no"
             exposes-orchestration="no"
-            best-for="Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / composer-2.5 imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. Cursor's own Auto and Premium routing modes are deliberately NOT enumerated as roadmodel-recommendable models because their routing is opaque (see `jurisdiction-context` for the rationale) — operators who want routing behavior pick a specific fixed model and let Cursor's pool handle the call. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)." />
+            best-for="Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / composer-2.5 imply Composer mode; frontier models (opus-4.7, gpt-5.5, claude-sonnet-5, etc.) imply Chat mode. Cursor's own Auto and Premium routing modes are deliberately NOT enumerated as roadmodel-recommendable models because their routing is opaque (see `jurisdiction-context` for the rationale) — operators who want routing behavior pick a specific fixed model and let Cursor's pool handle the call. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)." />
   </access-methods>
 
   <selection-algorithm>
@@ -2435,7 +2435,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       - Never sacrifice quality to save cost — the cost step is a true-tie
         resolver, not a downgrade trigger.
       - For PRIMARY = `multimodal`, only consider models with tier-multimodal
-        of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro at S; sonnet-4.6, gpt-5.4, opus-4.7, opus-4.8, gpt-5.5 at A).
+        of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro at S; gpt-5.4, claude-sonnet-5, opus-4.7, opus-4.8, gpt-5.5 at A).
       - For PRIMARY = `long-context`, prefer models with native large
         context (opus-4.7 1M, opus-4.8 1M, gemini-3.1-pro 1M, grok-4.3 2M) over forcing
         a smaller-context model into Max Mode truncation.
@@ -2949,15 +2949,15 @@ as primary; the other becomes the secondary category for tie-breaking.
              best-for="OpenAI's most capable frontier model and highest-cost GPT offering, best suited for the most demanding reasoning, long-horizon planning, and tasks where maximum intelligence is required regardless of cost — strongest single model for hard coding, agentic execution, and reasoning, but verify factual claims due to elevated hallucination" />
     </tier>
     <tier cost="high">
-      <model id="sonnet-4.6" name="Sonnet 4.6"
+      <model id="claude-sonnet-5" name="Claude Sonnet 5"
              input-price-per-1m="$3.00" output-price-per-1m="$15.00"
              jurisdiction="us"
              tier-coding="A" tier-planning="A" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 47.2; LMArena Text Elo 1457.1 (#23); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage"
-             pricing-notes="Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)"
-             best-for="Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation" />
+             headline-benchmarks="AA Intelligence Index 53.4 (Adaptive Reasoning, Max Effort); LMArena Text Elo 1440.5 (approx, post-launch snapshot); positioned by Anthropic as closing the gap to Opus 4.8 on agentic performance at a fraction of the price"
+             pricing-notes="Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens"
+             best-for="Anthropic's Sonnet 4.6 successor at the same standard high-tier pricing ($15/M output) — supersedes sonnet-4.6 per the same-series equal-output-price replacement rule; placeholder tier ratings inherited from sonnet-4.6 pending an editorial confirmation pass with independent benchmark coverage; Anthropic positions it as near-Opus-4.8 agentic performance at Sonnet economics, with the launch promotion ($2/$10) active through August 31, 2026" />
       <model id="gpt-5.4" name="GPT-5.4"
              input-price-per-1m="$2.50" output-price-per-1m="$15.00"
              jurisdiction="us"
@@ -3253,7 +3253,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             provider="anthropic" billing="per-token"
             provider-jurisdiction="us"
             requires="anthropic-api-key"
-            supports-models="opus-4.8,claude-fable-5,opus-4.7,sonnet-4.6,claude-4.5-haiku"
+            supports-models="opus-4.8,claude-fable-5,opus-4.7,claude-sonnet-5,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
             best-for="Programmatic / scripted Claude use outside Claude Code — raw API headers, batch endpoints, or features not surfaced by Claude Code. Falls back here when claude.ai Max budget is exhausted." />
@@ -3261,7 +3261,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             provider="anthropic" billing="subscription-or-key"
             provider-jurisdiction="us"
             requires="claude-max-subscription OR anthropic-api-key"
-            supports-models="opus-4.8,claude-fable-5,opus-4.7,sonnet-4.6,claude-4.5-haiku"
+            supports-models="opus-4.8,claude-fable-5,opus-4.7,claude-sonnet-5,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="yes"
             best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI and as an IDE extension inside Cursor. Heavy Opus usage that would cost over $1,000/mo on per-token API is fully covered by a $100/mo Max plan. Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, and Fable 5 expose the full range) plus Ultracode (session-wide xhigh + Dynamic Workflows) and the per-turn `ultrathink` keyword." />
@@ -3269,7 +3269,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             provider="anthropic" billing="subscription-included"
             provider-jurisdiction="us"
             requires="claude-max-subscription"
-            supports-models="opus-4.8,opus-4.7,sonnet-4.6,claude-4.5-haiku"
+            supports-models="opus-4.8,opus-4.7,claude-sonnet-5,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
             best-for="Chat-driven Claude use (no terminal, no codebase tool use) under the same Max budget that funds Claude Code — pick when the task is conversational rather than code-editing." />
@@ -3365,10 +3365,10 @@ as primary; the other becomes the secondary category for tie-breaking.
             provider="cursor" billing="subscription-pool"
             provider-jurisdiction="us"
             requires="cursor-pro-or-ultra-subscription"
-            supports-models="opus-4.8,claude-fable-5,opus-4.7,gpt-5.5,sonnet-4.6,gpt-5.4,gpt-5.3-codex,gpt-5.2,gemini-3.1-pro,gemini-3-pro,gpt-5,gpt-5.1-codex,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,composer-2.5,gemini-2.5-flash,gemini-3-flash,gemini-3.5-flash,gpt-5-mini,kimi-k2.5"
+            supports-models="opus-4.8,claude-fable-5,opus-4.7,gpt-5.5,claude-sonnet-5,gpt-5.4,gpt-5.3-codex,gpt-5.2,gemini-3.1-pro,gemini-3-pro,gpt-5,gpt-5.1-codex,grok-4.3,claude-4.5-haiku,gpt-5.4-mini,gpt-5.4-nano,composer-2,composer-2.5,gemini-2.5-flash,gemini-3-flash,gemini-3.5-flash,gpt-5-mini,kimi-k2.5"
             exposes-max-mode="yes" exposes-thinking="no"
             exposes-orchestration="no"
-            best-for="Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / composer-2.5 imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. Cursor's own Auto and Premium routing modes are deliberately NOT enumerated as roadmodel-recommendable models because their routing is opaque (see `jurisdiction-context` for the rationale) — operators who want routing behavior pick a specific fixed model and let Cursor's pool handle the call. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)." />
+            best-for="Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / composer-2.5 imply Composer mode; frontier models (opus-4.7, gpt-5.5, claude-sonnet-5, etc.) imply Chat mode. Cursor's own Auto and Premium routing modes are deliberately NOT enumerated as roadmodel-recommendable models because their routing is opaque (see `jurisdiction-context` for the rationale) — operators who want routing behavior pick a specific fixed model and let Cursor's pool handle the call. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)." />
   </access-methods>
 
   <selection-algorithm>
@@ -3483,7 +3483,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       - Never sacrifice quality to save cost — the cost step is a true-tie
         resolver, not a downgrade trigger.
       - For PRIMARY = `multimodal`, only consider models with tier-multimodal
-        of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro at S; sonnet-4.6, gpt-5.4, opus-4.7, opus-4.8, gpt-5.5 at A).
+        of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro at S; gpt-5.4, claude-sonnet-5, opus-4.7, opus-4.8, gpt-5.5 at A).
       - For PRIMARY = `long-context`, prefer models with native large
         context (opus-4.7 1M, opus-4.8 1M, gemini-3.1-pro 1M, grok-4.3 2M) over forcing
         a smaller-context model into Max Mode truncation.
@@ -3623,8 +3623,8 @@ as primary; the other becomes the secondary category for tie-breaking.
       a specific fixed model and lets the Cursor pool handle
       the call, which keeps the catalog's tier ratings and
       jurisdiction filter meaningful.
-    - When the chosen model is Claude (opus-4.7, sonnet-4.6, claude-
-      4.5-haiku) AND the user has both claude-max-subscription and
+    - When the chosen model is Claude (opus-4.7, claude-sonnet-5,
+      claude-4.5-haiku) AND the user has both claude-max-subscription and
       cursor-pro-or-ultra-subscription active, prefer claude-code (or
       claude-web for non-coding tasks) over `cursor` — the Max
       subscription is dedicated Claude budget that the Cursor pool
