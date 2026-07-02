@@ -1,7 +1,7 @@
 // web/app/api/recommend/route.ts
 import { NextResponse } from "next/server";
 import { writeAudit, type AuditOutcome } from "@/lib/audit";
-import { getUnavailableModelIds } from "@/lib/availability";
+import { getModelAvailability } from "@/lib/availability";
 import { getServerSession } from "@/lib/auth";
 import { isE2eAuthEnabled } from "@/lib/e2e-mode";
 import {
@@ -320,10 +320,15 @@ const handler = async (req: Request): Promise<Response> =>
     void body;
     void session;
 
-    // Phase 4.9 B2: forward the runtime unavailable-model ids so the selector
+    // Phase 4.9 B2/B5: forward the runtime unavailable-model ids so the selector
     // excludes a benched model (Step 0a) without a roadmodel release. Cached +
-    // fail-open (empty on any error) — never blocks a recommendation.
-    const unavailableModels = await getUnavailableModelIds();
+    // fail-open (empty on any error) — never blocks a recommendation. When the read
+    // is authoritative (it succeeded), the list is the COMPLETE current truth and
+    // the selector supersedes its bundled fallback with it — so a model the probe/AI
+    // verifier has RESTORED becomes recommendable again with no release. A failed
+    // read is not authoritative -> the service keeps its fail-closed static defaults.
+    const { ids: unavailableModels, authoritative: availabilityAuthoritative } =
+      await getModelAvailability();
 
     // Shape ONE upstream pick (jurisdiction filter + funding personalization +
     // rationale assembly) for a given budget priority. Lifted verbatim from the
@@ -415,6 +420,7 @@ const handler = async (req: Request): Promise<Response> =>
         context: {
           ...incomingContext,
           unavailable_models: unavailableModels,
+          availability_authoritative: availabilityAuthoritative,
           budget_priority: priority,
           allowed_jurisdictions: allowedJurisdictions,
           // Phase 4.8 T2b (#163): forward declared funding so the service biases
