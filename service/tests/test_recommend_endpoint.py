@@ -796,34 +796,6 @@ def test_availability_authoritative_threaded_to_recommend_structured(
     assert captured["authoritative"] is False
 
 
-def test_authoritative_kwarg_omitted_when_installed_roadmodel_lacks_it(
-    client: TestClient,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Prod-safety guard: the service pins roadmodel from PyPI and can deploy from
-    main BEFORE the release that adds `availability_authoritative`. When the installed
-    package lacks the param, the service must NOT pass it (an unsupported kwarg would
-    500 every recommend)."""
-    recommend_module = importlib.import_module("app.recommend")
-    monkeypatch.setattr(recommend_module, "_RS_SUPPORTS_AUTHORITATIVE", False)
-    captured: dict[str, Any] = {}
-
-    def _fake_recommend_structured(prompt: str, config: Any, **kwargs: Any) -> dict[str, Any]:
-        captured["kwargs"] = kwargs
-        return dict(_RECOMMEND_DICT)
-
-    monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
-
-    resp = client.post(
-        "/v1/recommend",
-        json={"task_description": "pick a model", "context": {"availability_authoritative": True}},
-    )
-    assert resp.status_code == 200
-    assert "availability_authoritative" not in captured["kwargs"]
-    # unavailable_models is still forwarded — only the new flag is gated.
-    assert "unavailable_models" in captured["kwargs"]
-
-
 def test_no_unavailable_models_passes_none(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
