@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.12] — 2026-07-02
+
+### Changed
+
+- **Runtime model availability can now be authoritative.** `build_prompt`,
+  `recommend`, and `recommend_structured` gain an `availability_authoritative`
+  keyword. When an embedding caller (the SaaS service) passes it `True` — meaning
+  it read the live availability source successfully — the supplied
+  `unavailable_models` list is treated as the COMPLETE current unavailable set and
+  SUPERSEDES the bundled `<availability-context>` defaults: a catalogued model
+  absent from the list is available even if the static block names it. This lets a
+  model whose provider access is RESTORED become recommendable again without a
+  package release. The default (`False`) preserves the prior additive behavior —
+  the runtime list can only ADD exclusions on top of the static defaults — so
+  every CLI/MCP/direct caller is unchanged, and a caller whose availability read
+  fails stays fail-closed on the static defaults.
+- **`<availability-context>` reworded as a fail-closed cold-start fallback.** The
+  bundled unavailable list (e.g. an export-controlled model) is now documented as
+  the default that applies only when no authoritative runtime override is supplied,
+  rather than a hardcode that must be hand-edited to lift. When the runtime override
+  is authoritative it wins; the static list is the safety net for when the
+  availability service is unreachable.
+
 ## [0.2.11] — 2026-06-29
 
 ### Changed
