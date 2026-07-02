@@ -1,6 +1,7 @@
 # service/app/recommend.py
 from __future__ import annotations
 
+import inspect
 import logging
 import os
 from dataclasses import asdict
@@ -21,6 +22,17 @@ from .funding import user_context_from_request
 from .models import RecommendRequest, RecommendResponse
 
 logger = logging.getLogger(__name__)
+
+# Whether the INSTALLED roadmodel exposes recommend_structured's
+# `availability_authoritative` param. The service pins roadmodel from PyPI
+# (release-pipeline), so this code can deploy from main BEFORE the roadmodel
+# release that adds the param — passing an unsupported kwarg would 500 every
+# recommend. Feature-detect once and only forward the flag when it's supported;
+# on the old package the runtime override degrades to additive/fail-closed mode
+# (the pre-B5 behavior), never a crash. Remove the guard after the floor bump.
+_RS_SUPPORTS_AUTHORITATIVE = (
+    "availability_authoritative" in inspect.signature(recommend_structured).parameters
+)
 
 
 def _bootstrap_user_context() -> Path:
@@ -234,6 +246,21 @@ def _unavailable_models_from_request(context: dict[str, Any] | None) -> list[str
     return ids or None
 
 
+def _availability_authoritative_from_request(context: dict[str, Any] | None) -> bool:
+    """Whether the web edge read the availability table SUCCESSFULLY this request.
+
+    True -> the forwarded ``unavailable_models`` list is the COMPLETE current
+    unavailable set; the selector treats it as authoritative and supersedes the
+    bundled ``<availability-context>`` fallback (so a model the probe/AI verifier
+    has RESTORED is recommendable again WITHOUT a package release). Absent or not
+    exactly True -> False: additive/fallback mode, so a legacy/direct caller or a
+    failed (fail-open) edge read still gets the conservative static defaults.
+    """
+    if not context:
+        return False
+    return context.get("availability_authoritative") is True
+
+
 def recommend(req: RecommendRequest) -> RecommendResponse:
     last_error: Exception | None = None
 
@@ -248,6 +275,11 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
     # roadmodel release. Provider-independent, so resolve once. None for legacy /
     # direct callers -> only the bundled <availability-context> defaults apply.
     unavailable_models = _unavailable_models_from_request(req.context)
+    # When the edge read the availability table successfully, its list is the
+    # complete truth and supersedes the bundled fallback (lets a RESTORED model be
+    # recommended without a release). A failed/absent read -> False -> fail-closed
+    # static defaults still apply.
+    availability_authoritative = _availability_authoritative_from_request(req.context)
 
     for hint in _provider_chain(req.context):
         config = _config_for_hint(hint)
@@ -269,12 +301,21 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
             thinking_budget = None
             max_output_tokens = None
         temperature = _GEMINI_TEMPERATURE if is_gemini else None
+        # Forward the authoritative flag only when the installed roadmodel accepts
+        # it (see _RS_SUPPORTS_AUTHORITATIVE) — keeps the service deployable from
+        # main ahead of the roadmodel release that adds the param.
+        authoritative_kwarg = (
+            {"availability_authoritative": availability_authoritative}
+            if _RS_SUPPORTS_AUTHORITATIVE
+            else {}
+        )
         try:
             result = recommend_structured(
                 req.task_description,
                 config,
                 user_context_text=user_context_text,
                 unavailable_models=unavailable_models,
+                **authoritative_kwarg,
                 max_output_tokens=max_output_tokens,
                 thinking_budget=thinking_budget,
                 temperature=temperature,

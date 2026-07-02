@@ -83,6 +83,34 @@ def test_build_prompt_no_override_without_unavailable_models() -> None:
     assert "RUNTIME AVAILABILITY OVERRIDE" not in blank
 
 
+def test_build_prompt_authoritative_supersedes_static_fallback() -> None:
+    """authoritative=True marks the runtime list as the COMPLETE unavailable set and
+    supersedes the <availability-context> fallback — the hook that lets a restored
+    model be recommended without a package release."""
+    system, _ = build_prompt(
+        "pick a model",
+        user_context_text=_UCTX,
+        unavailable_models=["some-other-id"],
+        availability_authoritative=True,
+    )
+    assert "AUTHORITATIVE" in system
+    assert "some-other-id" in system
+
+
+def test_build_prompt_authoritative_empty_reenables_everything() -> None:
+    """authoritative=True with an empty list still emits a note (unlike additive
+    mode) that disregards the static fallback — this is what re-enables a model in
+    prod once the availability service reports it restored."""
+    system, _ = build_prompt(
+        "pick a model",
+        user_context_text=_UCTX,
+        unavailable_models=[],
+        availability_authoritative=True,
+    )
+    assert "AUTHORITATIVE" in system
+    assert "NO models currently unavailable" in system
+
+
 def test_strip_ide_framing_is_targeted_and_idempotent() -> None:
     # No-op on text without the framing tags.
     plain = "<model-selector>\n  <objective>x</objective>\n</model-selector>"

@@ -660,24 +660,30 @@ as primary; the other becomes the secondary category for tie-breaking.
     UNAVAILABLE to recommend — its provider has restricted, withdrawn,
     waitlisted, or otherwise blocked end-user access. Recommending such a
     model is not actionable: the user cannot run it however strong its tier
-    ratings are. The selector tracks this with the small, maintainer-owned
-    list below, kept separate from the catalog's per-model pricing and tier
-    data (which an automated refresh maintains). Adding an id disables the
-    model; removing it re-enables it — a one-line editorial switch that the
-    automated catalog refresh never overwrites.
+    ratings are.
 
-    Currently unavailable — do NOT recommend (enforced at Step 0a of
-    `<selection-algorithm>`):
+    Authoritative source — the runtime override. Live availability is
+    maintained out of band by a daily probe + AI web-search verification and
+    delivered at request time as a runtime availability-override block. When
+    that block is present it is authoritative: it lists the complete current
+    unavailable set, and a catalogued model absent from it is available — even
+    if it appears in the fallback list below. The list below is only a
+    cold-start fallback, applied when no runtime override is supplied (the
+    availability service was unreachable); it is intentionally conservative so
+    an outage fails closed rather than recommending a possibly-restricted model.
 
-    - `claude-fable-5` (Fable 5) — access restricted by Anthropic; not
-      usable by end users at this time. Its `<model>` entry and tier
-      ratings are retained for reference, but it must never be returned as
-      a recommendation. Re-enable by deleting this line once access is
-      restored.
+    Cold-start fallback — treat as unavailable ONLY when no runtime override is
+    present (enforced at Step 0a of `<selection-algorithm>`):
 
-    When an unavailable model would otherwise have been the best fit,
-    return the next-best AVAILABLE model and disclose the substitution in
-    the RATIONALE, exactly as the `<jurisdiction-context>` filter does.
+    - `claude-fable-5` (Fable 5) — access restricted by Anthropic under an
+      export-control directive as of 2026-06-12. The runtime override lifts
+      this automatically once verification confirms access is restored; this
+      fallback line is the fail-closed default for when the availability
+      service can't be reached, and does not itself need editing.
+
+    When an unavailable model would otherwise have been the best fit, return
+    the next-best AVAILABLE model and disclose the substitution in the
+    RATIONALE, exactly as the `<jurisdiction-context>` filter does.
   </availability-context>
 
   <benchmark-sources>
@@ -1781,24 +1787,30 @@ as primary; the other becomes the secondary category for tie-breaking.
     UNAVAILABLE to recommend — its provider has restricted, withdrawn,
     waitlisted, or otherwise blocked end-user access. Recommending such a
     model is not actionable: the user cannot run it however strong its tier
-    ratings are. The selector tracks this with the small, maintainer-owned
-    list below, kept separate from the catalog's per-model pricing and tier
-    data (which an automated refresh maintains). Adding an id disables the
-    model; removing it re-enables it — a one-line editorial switch that the
-    automated catalog refresh never overwrites.
+    ratings are.
 
-    Currently unavailable — do NOT recommend (enforced at Step 0a of
-    `<selection-algorithm>`):
+    Authoritative source — the runtime override. Live availability is
+    maintained out of band by a daily probe + AI web-search verification and
+    delivered at request time as a runtime availability-override block. When
+    that block is present it is authoritative: it lists the complete current
+    unavailable set, and a catalogued model absent from it is available — even
+    if it appears in the fallback list below. The list below is only a
+    cold-start fallback, applied when no runtime override is supplied (the
+    availability service was unreachable); it is intentionally conservative so
+    an outage fails closed rather than recommending a possibly-restricted model.
 
-    - `claude-fable-5` (Fable 5) — access restricted by Anthropic; not
-      usable by end users at this time. Its `<model>` entry and tier
-      ratings are retained for reference, but it must never be returned as
-      a recommendation. Re-enable by deleting this line once access is
-      restored.
+    Cold-start fallback — treat as unavailable ONLY when no runtime override is
+    present (enforced at Step 0a of `<selection-algorithm>`):
 
-    When an unavailable model would otherwise have been the best fit,
-    return the next-best AVAILABLE model and disclose the substitution in
-    the RATIONALE, exactly as the `<jurisdiction-context>` filter does.
+    - `claude-fable-5` (Fable 5) — access restricted by Anthropic under an
+      export-control directive as of 2026-06-12. The runtime override lifts
+      this automatically once verification confirms access is restored; this
+      fallback line is the fail-closed default for when the availability
+      service can't be reached, and does not itself need editing.
+
+    When an unavailable model would otherwise have been the best fit, return
+    the next-best AVAILABLE model and disclose the substitution in the
+    RATIONALE, exactly as the `<jurisdiction-context>` filter does.
   </availability-context>
 
   <benchmark-sources>
@@ -2829,24 +2841,30 @@ as primary; the other becomes the secondary category for tie-breaking.
     UNAVAILABLE to recommend — its provider has restricted, withdrawn,
     waitlisted, or otherwise blocked end-user access. Recommending such a
     model is not actionable: the user cannot run it however strong its tier
-    ratings are. The selector tracks this with the small, maintainer-owned
-    list below, kept separate from the catalog's per-model pricing and tier
-    data (which an automated refresh maintains). Adding an id disables the
-    model; removing it re-enables it — a one-line editorial switch that the
-    automated catalog refresh never overwrites.
+    ratings are.
 
-    Currently unavailable — do NOT recommend (enforced at Step 0a of
-    `<selection-algorithm>`):
+    Authoritative source — the runtime override. Live availability is
+    maintained out of band by a daily probe + AI web-search verification and
+    delivered at request time as a runtime availability-override block. When
+    that block is present it is authoritative: it lists the complete current
+    unavailable set, and a catalogued model absent from it is available — even
+    if it appears in the fallback list below. The list below is only a
+    cold-start fallback, applied when no runtime override is supplied (the
+    availability service was unreachable); it is intentionally conservative so
+    an outage fails closed rather than recommending a possibly-restricted model.
 
-    - `claude-fable-5` (Fable 5) — access restricted by Anthropic; not
-      usable by end users at this time. Its `<model>` entry and tier
-      ratings are retained for reference, but it must never be returned as
-      a recommendation. Re-enable by deleting this line once access is
-      restored.
+    Cold-start fallback — treat as unavailable ONLY when no runtime override is
+    present (enforced at Step 0a of `<selection-algorithm>`):
 
-    When an unavailable model would otherwise have been the best fit,
-    return the next-best AVAILABLE model and disclose the substitution in
-    the RATIONALE, exactly as the `<jurisdiction-context>` filter does.
+    - `claude-fable-5` (Fable 5) — access restricted by Anthropic under an
+      export-control directive as of 2026-06-12. The runtime override lifts
+      this automatically once verification confirms access is restored; this
+      fallback line is the fail-closed default for when the availability
+      service can't be reached, and does not itself need editing.
+
+    When an unavailable model would otherwise have been the best fit, return
+    the next-best AVAILABLE model and disclose the substitution in the
+    RATIONALE, exactly as the `<jurisdiction-context>` filter does.
   </availability-context>
 
   <benchmark-sources>

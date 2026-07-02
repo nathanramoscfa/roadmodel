@@ -33,7 +33,20 @@ function getSupabase(): SupabaseClient {
 
 export const AVAILABILITY_CACHE_TTL_MS = 60_000;
 
-let cache: { ids: string[]; at: number } | null = null;
+export interface ModelAvailability {
+  /** Ids currently marked unavailable (available = false). */
+  ids: string[];
+  /**
+   * True when the table read SUCCEEDED — the list is then the complete current
+   * truth, so the selector treats it as authoritative and a restored model absent
+   * from it is recommendable (no package release needed). False when the read
+   * failed (fail-open): the service keeps its conservative bundled
+   * <availability-context> static defaults instead.
+   */
+  authoritative: boolean;
+}
+
+let cache: { value: ModelAvailability; at: number } | null = null;
 
 /** Reset the in-memory cache. Test-only. */
 export function _resetAvailabilityCache(): void {
@@ -41,13 +54,17 @@ export function _resetAvailabilityCache(): void {
 }
 
 /**
- * Model ids currently marked unavailable (available = false). Cached for
- * AVAILABILITY_CACHE_TTL_MS; fail-open to [] on any error. `now` is injectable
- * for tests.
+ * Current runtime availability: the unavailable-id list plus whether the read
+ * was authoritative. Cached for AVAILABILITY_CACHE_TTL_MS. On any error, fail-open
+ * to an empty list with `authoritative: false` so the service keeps its
+ * fail-closed static defaults rather than the read blocking a recommendation.
+ * `now` is injectable for tests.
  */
-export async function getUnavailableModelIds(now: number = Date.now()): Promise<string[]> {
+export async function getModelAvailability(
+  now: number = Date.now(),
+): Promise<ModelAvailability> {
   if (cache && now - cache.at < AVAILABILITY_CACHE_TTL_MS) {
-    return cache.ids;
+    return cache.value;
   }
   try {
     const { data, error } = await getSupabase()
@@ -58,11 +75,22 @@ export async function getUnavailableModelIds(now: number = Date.now()): Promise<
     const ids = (data ?? [])
       .map((row) => (row as { model_id?: unknown }).model_id)
       .filter((id): id is string => typeof id === "string" && id.length > 0);
-    cache = { ids, at: now };
-    return ids;
+    // Read succeeded (even when empty) -> authoritative.
+    const value: ModelAvailability = { ids, authoritative: true };
+    cache = { value, at: now };
+    return value;
   } catch {
     // Never block a recommendation on the availability read.
-    cache = { ids: [], at: now };
-    return [];
+    const value: ModelAvailability = { ids: [], authoritative: false };
+    cache = { value, at: now };
+    return value;
   }
+}
+
+/**
+ * Back-compat shim: just the unavailable-id list. Prefer getModelAvailability(),
+ * which also reports whether the read was authoritative.
+ */
+export async function getUnavailableModelIds(now: number = Date.now()): Promise<string[]> {
+  return (await getModelAvailability(now)).ids;
 }
