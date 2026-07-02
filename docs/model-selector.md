@@ -791,6 +791,14 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Pricing notes:** Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)
 - **Best for:** Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation
 
+#### Claude Sonnet 5 — `claude-sonnet-5`
+
+- **Pricing:** Input $3.00/M · Output $15.00/M
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **B**
+- **Headline benchmarks:** AA Intelligence Index 53.4 (max effort); LMArena Text Elo 1437.8; HLE 39.6%; Terminal-Bench 2.0 80.5
+- **Pricing notes:** Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens
+- **Best for:** Anthropic's Sonnet 4.6 successor at the same $3/$15 per-M list price (with a $2/$10 launch promotion through August 31, 2026) — placeholder same-series tier ratings inherited from sonnet-4.6 pending editorial confirmation; AA Intelligence Index (max effort) 53.4 is a notable step up from Sonnet 4.6's 47.2, but the tokenizer refresh means the same input can bill more tokens, so evaluate cost/quality against Sonnet 4.6 on real workloads before defaulting to it.
+
 #### GPT-5.4 — `gpt-5.4`
 
 - **Pricing:** Input $2.50/M · Output $15.00/M
@@ -1922,6 +1930,15 @@ as primary; the other becomes the secondary category for tie-breaking.
              headline-benchmarks="AA Intelligence Index 47.2; LMArena Text Elo 1457.1 (#23); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage"
              pricing-notes="Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)"
              best-for="Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation" />
+      <model id="claude-sonnet-5" name="Claude Sonnet 5"
+             input-price-per-1m="$3.00" output-price-per-1m="$15.00"
+             jurisdiction="us"
+             tier-coding="A" tier-planning="A" tier-agentic="S"
+             tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
+             tier-speed="B"
+             headline-benchmarks="AA Intelligence Index 53.4 (max effort); LMArena Text Elo 1437.8; HLE 39.6%; Terminal-Bench 2.0 80.5"
+             pricing-notes="Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens"
+             best-for="Anthropic's Sonnet 4.6 successor at the same $3/$15 per-M list price (with a $2/$10 launch promotion through August 31, 2026) — placeholder same-series tier ratings inherited from sonnet-4.6 pending editorial confirmation; AA Intelligence Index (max effort) 53.4 is a notable step up from Sonnet 4.6's 47.2, but the tokenizer refresh means the same input can bill more tokens, so evaluate cost/quality against Sonnet 4.6 on real workloads before defaulting to it." />
       <model id="gpt-5.4" name="GPT-5.4"
              input-price-per-1m="$2.50" output-price-per-1m="$15.00"
              jurisdiction="us"
@@ -2447,7 +2464,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       - Never sacrifice quality to save cost — the cost step is a true-tie
         resolver, not a downgrade trigger.
       - For PRIMARY = `multimodal`, only consider models with tier-multimodal
-        of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro at S; sonnet-4.6, gpt-5.4, opus-4.7, opus-4.8, gpt-5.5 at A).
+        of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro at S; gpt-5.4, sonnet-4.6, claude-sonnet-5, opus-4.7, opus-4.8, gpt-5.5 at A).
       - For PRIMARY = `long-context`, prefer models with native large
         context (opus-4.7 1M, opus-4.8 1M, gemini-3.1-pro 1M, grok-4.3 2M) over forcing
         a smaller-context model into Max Mode truncation.
@@ -2976,6 +2993,15 @@ as primary; the other becomes the secondary category for tie-breaking.
              headline-benchmarks="AA Intelligence Index 47.2; LMArena Text Elo 1457.1 (#23); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage"
              pricing-notes="Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)"
              best-for="Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation" />
+      <model id="claude-sonnet-5" name="Claude Sonnet 5"
+             input-price-per-1m="$3.00" output-price-per-1m="$15.00"
+             jurisdiction="us"
+             tier-coding="A" tier-planning="A" tier-agentic="S"
+             tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
+             tier-speed="B"
+             headline-benchmarks="AA Intelligence Index 53.4 (max effort); LMArena Text Elo 1437.8; HLE 39.6%; Terminal-Bench 2.0 80.5"
+             pricing-notes="Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens"
+             best-for="Anthropic's Sonnet 4.6 successor at the same $3/$15 per-M list price (with a $2/$10 launch promotion through August 31, 2026) — placeholder same-series tier ratings inherited from sonnet-4.6 pending editorial confirmation; AA Intelligence Index (max effort) 53.4 is a notable step up from Sonnet 4.6's 47.2, but the tokenizer refresh means the same input can bill more tokens, so evaluate cost/quality against Sonnet 4.6 on real workloads before defaulting to it." />
       <model id="gpt-5.4" name="GPT-5.4"
              input-price-per-1m="$2.50" output-price-per-1m="$15.00"
              jurisdiction="us"
@@ -3501,7 +3527,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       - Never sacrifice quality to save cost — the cost step is a true-tie
         resolver, not a downgrade trigger.
       - For PRIMARY = `multimodal`, only consider models with tier-multimodal
-        of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro at S; sonnet-4.6, gpt-5.4, opus-4.7, opus-4.8, gpt-5.5 at A).
+        of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro at S; gpt-5.4, sonnet-4.6, claude-sonnet-5, opus-4.7, opus-4.8, gpt-5.5 at A).
       - For PRIMARY = `long-context`, prefer models with native large
         context (opus-4.7 1M, opus-4.8 1M, gemini-3.1-pro 1M, grok-4.3 2M) over forcing
         a smaller-context model into Max Mode truncation.
