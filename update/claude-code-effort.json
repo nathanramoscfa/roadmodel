@@ -22,7 +22,7 @@
       "xhigh",
       "max"
     ],
-    "Opus 4.8": [
+    "Sonnet 5, Opus 4.8,": [
       "low",
       "medium",
       "high",
@@ -51,6 +51,7 @@
   },
   "default_effort": {
     "Fable 5": "high",
+    "Sonnet 5": "high",
     "Opus 4.8": "high",
     "Opus 4.6": "high",
     "Sonnet 4.6": "high",
@@ -93,6 +94,8 @@
       "Fable 5"
     ]
   },
-  "unexpected_models": [],
-  "section_sha256": "149b72c155fdd057a6a5e7772091956663817cf8eb0c456074121ba5f1c9c68d"
+  "unexpected_models": [
+    "Sonnet 5, Opus 4.8,"
+  ],
+  "section_sha256": "30f9ffc2dcdd2b61abd501581ac36e70e92b23792b43364adc901683ac991a76"
 }
