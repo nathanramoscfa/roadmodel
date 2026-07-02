@@ -1,7 +1,6 @@
 # service/app/recommend.py
 from __future__ import annotations
 
-import inspect
 import logging
 import os
 from dataclasses import asdict
@@ -22,17 +21,6 @@ from .funding import user_context_from_request
 from .models import RecommendRequest, RecommendResponse
 
 logger = logging.getLogger(__name__)
-
-# Whether the INSTALLED roadmodel exposes recommend_structured's
-# `availability_authoritative` param. The service pins roadmodel from PyPI
-# (release-pipeline), so this code can deploy from main BEFORE the roadmodel
-# release that adds the param — passing an unsupported kwarg would 500 every
-# recommend. Feature-detect once and only forward the flag when it's supported;
-# on the old package the runtime override degrades to additive/fail-closed mode
-# (the pre-B5 behavior), never a crash. Remove the guard after the floor bump.
-_RS_SUPPORTS_AUTHORITATIVE = (
-    "availability_authoritative" in inspect.signature(recommend_structured).parameters
-)
 
 
 def _bootstrap_user_context() -> Path:
@@ -301,21 +289,13 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
             thinking_budget = None
             max_output_tokens = None
         temperature = _GEMINI_TEMPERATURE if is_gemini else None
-        # Forward the authoritative flag only when the installed roadmodel accepts
-        # it (see _RS_SUPPORTS_AUTHORITATIVE) — keeps the service deployable from
-        # main ahead of the roadmodel release that adds the param.
-        authoritative_kwarg = (
-            {"availability_authoritative": availability_authoritative}
-            if _RS_SUPPORTS_AUTHORITATIVE
-            else {}
-        )
         try:
             result = recommend_structured(
                 req.task_description,
                 config,
                 user_context_text=user_context_text,
                 unavailable_models=unavailable_models,
-                **authoritative_kwarg,
+                availability_authoritative=availability_authoritative,
                 max_output_tokens=max_output_tokens,
                 thinking_budget=thinking_budget,
                 temperature=temperature,
