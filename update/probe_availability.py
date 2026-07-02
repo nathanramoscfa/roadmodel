@@ -251,7 +251,9 @@ def reconcile(
             continue
         if adjudicate is not None:
             action, meta = adjudicate(entry)
-            print(f"  [verify] {mid:18} -> {action}: {meta.get('decision_reason', '')}")
+            srcs = meta.get("evidence_urls") or []
+            src_note = f" | sources: {', '.join(srcs[:5])}" if srcs else ""
+            print(f"  [verify] {mid:18} -> {action}: {meta.get('decision_reason', '')}{src_note}")
             if action == "unbench":
                 removed.append(mid)
                 continue
