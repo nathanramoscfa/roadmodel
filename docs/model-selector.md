@@ -169,7 +169,7 @@ differently:
   `xhigh`, `max` (shown in the UI as Low / Medium / High / Extra
   High / Max). Not every model supports every level — `xhigh` and
   `max` apply only to the models whose documented row lists them
-  (e.g. Opus 4.7, Opus 4.8, and Fable 5 expose the full
+  (e.g. Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full
   low/medium/high/xhigh/max range; Opus 4.6 and Sonnet 4.6 top out
   at `max` without an `xhigh` step). An effort level a model does
   not support falls back to the highest supported level at or
@@ -212,15 +212,16 @@ provider-native scales onto this 7-state field:
 
 - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
   `high` → `High` (the docs' default effort on Opus 4.6, Opus 4.8,
-  Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the "Extra High"
-  UI label, and the default for Opus 4.7); `max` → `Max` (the top
-  "Max" UI level, ABOVE "Extra High") ONLY on models whose
-  documented row exposes a `max` step above `xhigh` — Opus 4.7,
-  Opus 4.8, and Fable 5. On models that reach `max` with NO `xhigh`
-  step (Opus 4.6, Sonnet 4.6), `max` is their Extra-High top and
-  maps to `XHigh`, not `Max`. Extended thinking disabled (Option+T
-  / Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
-  false) → `Off`; Fable 5 cannot map to `Off`.
+  Sonnet 5, Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the
+  "Extra High" UI label, and the default for Opus 4.7); `max` →
+  `Max` (the top "Max" UI level, ABOVE "Extra High") ONLY on
+  models whose documented row exposes a `max` step above `xhigh`
+  — Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5. On models that
+  reach `max` with NO `xhigh` step (Opus 4.6, Sonnet 4.6), `max`
+  is their Extra-High top and maps to `XHigh`, not `Max`.
+  Extended thinking disabled (Option+T / Alt+T,
+  `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled` false) →
+  `Off`; Fable 5 cannot map to `Off`.
 - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
   `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
   Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
@@ -274,15 +275,15 @@ Decision rule (applied during `<access-selection>` Step E):
   `XHigh`).
 - Ceiling — `Max`: the top output level, used ONLY on models whose
   `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus
-  4.7, Opus 4.8, Fable 5). On such a model, prefer `Max` over
-  `XHigh` when the appended user-context declares a Quality (`best`)
-  budget posture, or for the most demanding tasks (the `XHigh`
-  conditions above taken to their limit). Under a Cost (`cheap`)
-  budget posture, never emit `Max` and do not exceed the lowest
-  level that clears the task. Absent any budget posture, `XHigh`
-  stays the default ceiling and `Max` is reserved for the genuinely
-  hardest tasks on max-capable models. Never emit `Max` for a model
-  whose row lacks a `max`-above-`xhigh` step.
+  4.7, Opus 4.8, Sonnet 5, Fable 5). On such a model, prefer `Max`
+  over `XHigh` when the appended user-context declares a Quality
+  (`best`) budget posture, or for the most demanding tasks (the
+  `XHigh` conditions above taken to their limit). Under a Cost
+  (`cheap`) budget posture, never emit `Max` and do not exceed the
+  lowest level that clears the task. Absent any budget posture,
+  `XHigh` stays the default ceiling and `Max` is reserved for the
+  genuinely hardest tasks on max-capable models. Never emit `Max`
+  for a model whose row lacks a `max`-above-`xhigh` step.
 - Chosen access method's `exposes-thinking` attribute is `no` →
   THINKING `N/A`, overriding the above.
 
@@ -412,7 +413,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       `xhigh`, `max` (shown in the UI as Low / Medium / High / Extra
       High / Max). Not every model supports every level — `xhigh` and
       `max` apply only to the models whose documented row lists them
-      (e.g. Opus 4.7, Opus 4.8, and Fable 5 expose the full
+      (e.g. Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full
       low/medium/high/xhigh/max range; Opus 4.6 and Sonnet 4.6 top out
       at `max` without an `xhigh` step). An effort level a model does
       not support falls back to the highest supported level at or
@@ -455,15 +456,16 @@ as primary; the other becomes the secondary category for tie-breaking.
 
     - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
       `high` → `High` (the docs' default effort on Opus 4.6, Opus 4.8,
-      Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the "Extra High"
-      UI label, and the default for Opus 4.7); `max` → `Max` (the top
-      "Max" UI level, ABOVE "Extra High") ONLY on models whose
-      documented row exposes a `max` step above `xhigh` — Opus 4.7,
-      Opus 4.8, and Fable 5. On models that reach `max` with NO `xhigh`
-      step (Opus 4.6, Sonnet 4.6), `max` is their Extra-High top and
-      maps to `XHigh`, not `Max`. Extended thinking disabled (Option+T
-      / Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
-      false) → `Off`; Fable 5 cannot map to `Off`.
+      Sonnet 5, Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the
+      "Extra High" UI label, and the default for Opus 4.7); `max` →
+      `Max` (the top "Max" UI level, ABOVE "Extra High") ONLY on
+      models whose documented row exposes a `max` step above `xhigh`
+      — Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5. On models that
+      reach `max` with NO `xhigh` step (Opus 4.6, Sonnet 4.6), `max`
+      is their Extra-High top and maps to `XHigh`, not `Max`.
+      Extended thinking disabled (Option+T / Alt+T,
+      `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled` false) →
+      `Off`; Fable 5 cannot map to `Off`.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
@@ -517,15 +519,15 @@ as primary; the other becomes the secondary category for tie-breaking.
       `XHigh`).
     - Ceiling — `Max`: the top output level, used ONLY on models whose
       `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus
-      4.7, Opus 4.8, Fable 5). On such a model, prefer `Max` over
-      `XHigh` when the appended user-context declares a Quality (`best`)
-      budget posture, or for the most demanding tasks (the `XHigh`
-      conditions above taken to their limit). Under a Cost (`cheap`)
-      budget posture, never emit `Max` and do not exceed the lowest
-      level that clears the task. Absent any budget posture, `XHigh`
-      stays the default ceiling and `Max` is reserved for the genuinely
-      hardest tasks on max-capable models. Never emit `Max` for a model
-      whose row lacks a `max`-above-`xhigh` step.
+      4.7, Opus 4.8, Sonnet 5, Fable 5). On such a model, prefer `Max`
+      over `XHigh` when the appended user-context declares a Quality
+      (`best`) budget posture, or for the most demanding tasks (the
+      `XHigh` conditions above taken to their limit). Under a Cost
+      (`cheap`) budget posture, never emit `Max` and do not exceed the
+      lowest level that clears the task. Absent any budget posture,
+      `XHigh` stays the default ceiling and `Max` is reserved for the
+      genuinely hardest tasks on max-capable models. Never emit `Max`
+      for a model whose row lacks a `max`-above-`xhigh` step.
     - Chosen access method's `exposes-thinking` attribute is `no` →
       THINKING `N/A`, overriding the above.
 
@@ -1090,7 +1092,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       `xhigh`, `max` (shown in the UI as Low / Medium / High / Extra
       High / Max). Not every model supports every level — `xhigh` and
       `max` apply only to the models whose documented row lists them
-      (e.g. Opus 4.7, Opus 4.8, and Fable 5 expose the full
+      (e.g. Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full
       low/medium/high/xhigh/max range; Opus 4.6 and Sonnet 4.6 top out
       at `max` without an `xhigh` step). An effort level a model does
       not support falls back to the highest supported level at or
@@ -1133,15 +1135,16 @@ as primary; the other becomes the secondary category for tie-breaking.
 
     - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
       `high` → `High` (the docs' default effort on Opus 4.6, Opus 4.8,
-      Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the "Extra High"
-      UI label, and the default for Opus 4.7); `max` → `Max` (the top
-      "Max" UI level, ABOVE "Extra High") ONLY on models whose
-      documented row exposes a `max` step above `xhigh` — Opus 4.7,
-      Opus 4.8, and Fable 5. On models that reach `max` with NO `xhigh`
-      step (Opus 4.6, Sonnet 4.6), `max` is their Extra-High top and
-      maps to `XHigh`, not `Max`. Extended thinking disabled (Option+T
-      / Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
-      false) → `Off`; Fable 5 cannot map to `Off`.
+      Sonnet 5, Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the
+      "Extra High" UI label, and the default for Opus 4.7); `max` →
+      `Max` (the top "Max" UI level, ABOVE "Extra High") ONLY on
+      models whose documented row exposes a `max` step above `xhigh`
+      — Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5. On models that
+      reach `max` with NO `xhigh` step (Opus 4.6, Sonnet 4.6), `max`
+      is their Extra-High top and maps to `XHigh`, not `Max`.
+      Extended thinking disabled (Option+T / Alt+T,
+      `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled` false) →
+      `Off`; Fable 5 cannot map to `Off`.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
@@ -1195,15 +1198,15 @@ as primary; the other becomes the secondary category for tie-breaking.
       `XHigh`).
     - Ceiling — `Max`: the top output level, used ONLY on models whose
       `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus
-      4.7, Opus 4.8, Fable 5). On such a model, prefer `Max` over
-      `XHigh` when the appended user-context declares a Quality (`best`)
-      budget posture, or for the most demanding tasks (the `XHigh`
-      conditions above taken to their limit). Under a Cost (`cheap`)
-      budget posture, never emit `Max` and do not exceed the lowest
-      level that clears the task. Absent any budget posture, `XHigh`
-      stays the default ceiling and `Max` is reserved for the genuinely
-      hardest tasks on max-capable models. Never emit `Max` for a model
-      whose row lacks a `max`-above-`xhigh` step.
+      4.7, Opus 4.8, Sonnet 5, Fable 5). On such a model, prefer `Max`
+      over `XHigh` when the appended user-context declares a Quality
+      (`best`) budget posture, or for the most demanding tasks (the
+      `XHigh` conditions above taken to their limit). Under a Cost
+      (`cheap`) budget posture, never emit `Max` and do not exceed the
+      lowest level that clears the task. Absent any budget posture,
+      `XHigh` stays the default ceiling and `Max` is reserved for the
+      genuinely hardest tasks on max-capable models. Never emit `Max`
+      for a model whose row lacks a `max`-above-`xhigh` step.
     - Chosen access method's `exposes-thinking` attribute is `no` →
       THINKING `N/A`, overriding the above.
 
@@ -1294,7 +1297,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Billing:** subscription-or-key (requires claude-max-subscription OR anthropic-api-key)
 - **Supports models:** opus-4.8,claude-fable-5,opus-4.7,sonnet-4.6,claude-4.5-haiku
 - **Toggles:** Max Mode — no · Thinking — yes
-- **Best for:** Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI and as an IDE extension inside Cursor. Heavy Opus usage that would cost over $1,000/mo on per-token API is fully covered by a $100/mo Max plan. Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, and Fable 5 expose the full range) plus Ultracode (session-wide xhigh + Dynamic Workflows) and the per-turn `ultrathink` keyword.
+- **Best for:** Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range) plus Ultracode (session-wide xhigh + Dynamic Workflows) and the per-turn `ultrathink` keyword.
 
 #### claude.ai web / desktop — `claude-web`
 
@@ -1539,7 +1542,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       `xhigh`, `max` (shown in the UI as Low / Medium / High / Extra
       High / Max). Not every model supports every level — `xhigh` and
       `max` apply only to the models whose documented row lists them
-      (e.g. Opus 4.7, Opus 4.8, and Fable 5 expose the full
+      (e.g. Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full
       low/medium/high/xhigh/max range; Opus 4.6 and Sonnet 4.6 top out
       at `max` without an `xhigh` step). An effort level a model does
       not support falls back to the highest supported level at or
@@ -1582,15 +1585,16 @@ as primary; the other becomes the secondary category for tie-breaking.
 
     - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
       `high` → `High` (the docs' default effort on Opus 4.6, Opus 4.8,
-      Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the "Extra High"
-      UI label, and the default for Opus 4.7); `max` → `Max` (the top
-      "Max" UI level, ABOVE "Extra High") ONLY on models whose
-      documented row exposes a `max` step above `xhigh` — Opus 4.7,
-      Opus 4.8, and Fable 5. On models that reach `max` with NO `xhigh`
-      step (Opus 4.6, Sonnet 4.6), `max` is their Extra-High top and
-      maps to `XHigh`, not `Max`. Extended thinking disabled (Option+T
-      / Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
-      false) → `Off`; Fable 5 cannot map to `Off`.
+      Sonnet 5, Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the
+      "Extra High" UI label, and the default for Opus 4.7); `max` →
+      `Max` (the top "Max" UI level, ABOVE "Extra High") ONLY on
+      models whose documented row exposes a `max` step above `xhigh`
+      — Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5. On models that
+      reach `max` with NO `xhigh` step (Opus 4.6, Sonnet 4.6), `max`
+      is their Extra-High top and maps to `XHigh`, not `Max`.
+      Extended thinking disabled (Option+T / Alt+T,
+      `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled` false) →
+      `Off`; Fable 5 cannot map to `Off`.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
@@ -1644,15 +1648,15 @@ as primary; the other becomes the secondary category for tie-breaking.
       `XHigh`).
     - Ceiling — `Max`: the top output level, used ONLY on models whose
       `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus
-      4.7, Opus 4.8, Fable 5). On such a model, prefer `Max` over
-      `XHigh` when the appended user-context declares a Quality (`best`)
-      budget posture, or for the most demanding tasks (the `XHigh`
-      conditions above taken to their limit). Under a Cost (`cheap`)
-      budget posture, never emit `Max` and do not exceed the lowest
-      level that clears the task. Absent any budget posture, `XHigh`
-      stays the default ceiling and `Max` is reserved for the genuinely
-      hardest tasks on max-capable models. Never emit `Max` for a model
-      whose row lacks a `max`-above-`xhigh` step.
+      4.7, Opus 4.8, Sonnet 5, Fable 5). On such a model, prefer `Max`
+      over `XHigh` when the appended user-context declares a Quality
+      (`best`) budget posture, or for the most demanding tasks (the
+      `XHigh` conditions above taken to their limit). Under a Cost
+      (`cheap`) budget posture, never emit `Max` and do not exceed the
+      lowest level that clears the task. Absent any budget posture,
+      `XHigh` stays the default ceiling and `Max` is reserved for the
+      genuinely hardest tasks on max-capable models. Never emit `Max`
+      for a model whose row lacks a `max`-above-`xhigh` step.
     - Chosen access method's `exposes-thinking` attribute is `no` →
       THINKING `N/A`, overriding the above.
 
@@ -2228,7 +2232,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="opus-4.8,claude-fable-5,opus-4.7,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="yes"
-            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI and as an IDE extension inside Cursor. Heavy Opus usage that would cost over $1,000/mo on per-token API is fully covered by a $100/mo Max plan. Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, and Fable 5 expose the full range) plus Ultracode (session-wide xhigh + Dynamic Workflows) and the per-turn `ultrathink` keyword." />
+            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range) plus Ultracode (session-wide xhigh + Dynamic Workflows) and the per-turn `ultrathink` keyword." />
     <method id="claude-web" name="claude.ai web / desktop"
             provider="anthropic" billing="subscription-included"
             provider-jurisdiction="us"
@@ -2593,7 +2597,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       `xhigh`, `max` (shown in the UI as Low / Medium / High / Extra
       High / Max). Not every model supports every level — `xhigh` and
       `max` apply only to the models whose documented row lists them
-      (e.g. Opus 4.7, Opus 4.8, and Fable 5 expose the full
+      (e.g. Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full
       low/medium/high/xhigh/max range; Opus 4.6 and Sonnet 4.6 top out
       at `max` without an `xhigh` step). An effort level a model does
       not support falls back to the highest supported level at or
@@ -2636,15 +2640,16 @@ as primary; the other becomes the secondary category for tie-breaking.
 
     - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
       `high` → `High` (the docs' default effort on Opus 4.6, Opus 4.8,
-      Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the "Extra High"
-      UI label, and the default for Opus 4.7); `max` → `Max` (the top
-      "Max" UI level, ABOVE "Extra High") ONLY on models whose
-      documented row exposes a `max` step above `xhigh` — Opus 4.7,
-      Opus 4.8, and Fable 5. On models that reach `max` with NO `xhigh`
-      step (Opus 4.6, Sonnet 4.6), `max` is their Extra-High top and
-      maps to `XHigh`, not `Max`. Extended thinking disabled (Option+T
-      / Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
-      false) → `Off`; Fable 5 cannot map to `Off`.
+      Sonnet 5, Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the
+      "Extra High" UI label, and the default for Opus 4.7); `max` →
+      `Max` (the top "Max" UI level, ABOVE "Extra High") ONLY on
+      models whose documented row exposes a `max` step above `xhigh`
+      — Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5. On models that
+      reach `max` with NO `xhigh` step (Opus 4.6, Sonnet 4.6), `max`
+      is their Extra-High top and maps to `XHigh`, not `Max`.
+      Extended thinking disabled (Option+T / Alt+T,
+      `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled` false) →
+      `Off`; Fable 5 cannot map to `Off`.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
@@ -2698,15 +2703,15 @@ as primary; the other becomes the secondary category for tie-breaking.
       `XHigh`).
     - Ceiling — `Max`: the top output level, used ONLY on models whose
       `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus
-      4.7, Opus 4.8, Fable 5). On such a model, prefer `Max` over
-      `XHigh` when the appended user-context declares a Quality (`best`)
-      budget posture, or for the most demanding tasks (the `XHigh`
-      conditions above taken to their limit). Under a Cost (`cheap`)
-      budget posture, never emit `Max` and do not exceed the lowest
-      level that clears the task. Absent any budget posture, `XHigh`
-      stays the default ceiling and `Max` is reserved for the genuinely
-      hardest tasks on max-capable models. Never emit `Max` for a model
-      whose row lacks a `max`-above-`xhigh` step.
+      4.7, Opus 4.8, Sonnet 5, Fable 5). On such a model, prefer `Max`
+      over `XHigh` when the appended user-context declares a Quality
+      (`best`) budget posture, or for the most demanding tasks (the
+      `XHigh` conditions above taken to their limit). Under a Cost
+      (`cheap`) budget posture, never emit `Max` and do not exceed the
+      lowest level that clears the task. Absent any budget posture,
+      `XHigh` stays the default ceiling and `Max` is reserved for the
+      genuinely hardest tasks on max-capable models. Never emit `Max`
+      for a model whose row lacks a `max`-above-`xhigh` step.
     - Chosen access method's `exposes-thinking` attribute is `no` →
       THINKING `N/A`, overriding the above.
 
@@ -3282,7 +3287,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="opus-4.8,claude-fable-5,opus-4.7,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="yes"
-            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI and as an IDE extension inside Cursor. Heavy Opus usage that would cost over $1,000/mo on per-token API is fully covered by a $100/mo Max plan. Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, and Fable 5 expose the full range) plus Ultracode (session-wide xhigh + Dynamic Workflows) and the per-turn `ultrathink` keyword." />
+            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range) plus Ultracode (session-wide xhigh + Dynamic Workflows) and the per-turn `ultrathink` keyword." />
     <method id="claude-web" name="claude.ai web / desktop"
             provider="anthropic" billing="subscription-included"
             provider-jurisdiction="us"
