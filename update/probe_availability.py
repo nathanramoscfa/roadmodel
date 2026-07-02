@@ -21,6 +21,14 @@ model; auth / rate-limit / 5xx / network / a failed list fetch classify
 'ambiguous' and never change the file. The auto-PR's human glance is the backstop.
 A US-keyed probe can't see a purely foreign-national export gate, so Fable 5 also
 stays baked in <availability-context>.
+
+GROUNDED UN-BENCH: the cheap 'available' status is trusted to BENCH but not to
+UN-BENCH. When ANTHROPIC_API_KEY is set, every currently-benched entry is re-run
+through an AI web-search verification (verify_availability.py) — the daily
+restricted sweep — and a model is only un-benched on a grounded verdict (cited
+evidence, above a confidence bar that is higher for export-control entries). This
+is what lets an export-control model be restored autonomously without a US-keyed
+200 lifting a foreign-national gate it can't observe.
 """
 
 from __future__ import annotations
@@ -33,7 +41,7 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 AVAILABILITY_JSON = REPO_ROOT / "infra" / "model-availability.json"
@@ -211,24 +219,50 @@ def probe_provider(provider: str, cfg: dict[str, Any], key: str) -> dict[str, st
 
 
 def reconcile(
-    results: dict[str, str], current: list[Any], today: str
+    results: dict[str, str],
+    current: list[Any],
+    today: str,
+    *,
+    adjudicate: Callable[[dict[str, Any]], tuple[str, dict[str, Any]]] | None = None,
 ) -> tuple[list[Any], list[str], list[str]]:
     """Apply probe results to the current ``unavailable`` entries.
 
     Driven by ``results`` (only probed models), so a skipped provider (no key)
     leaves its models untouched.
       - probed 'unavailable' and not listed -> ADD (source=probe)
-      - probed 'available' and IS listed    -> REMOVE (self-heal)
+      - currently benched -> REMOVE only if grounded (see below)
       - 'ambiguous' / not probed / non-watch entries -> left as-is
+
+    ``adjudicate`` gates the un-bench (removal) direction. When None (unit tests,
+    or no ANTHROPIC_API_KEY), removal falls back to the cheap self-heal: a bare
+    'available' status un-benches. When provided (the daily restricted sweep), the
+    cheap status is NOT trusted on its own — every currently-benched entry is
+    re-verified with web search, and only a grounded 'unbench' verdict removes it;
+    a 'hold' keeps the entry and records the fresh audit metadata. This is what
+    stops a US-keyed 200 from lifting an export-control gate it can't see.
     """
     listed = {e["id"] for e in current if isinstance(e, dict) and e.get("id")}
     removed: list[str] = []
     new_list: list[Any] = []
     for entry in current:
         mid = entry.get("id") if isinstance(entry, dict) else None
-        if mid is not None and results.get(mid) == "available":
+        if mid is None:
+            new_list.append(entry)
+            continue
+        if adjudicate is not None:
+            action, meta = adjudicate(entry)
+            print(f"  [verify] {mid:18} -> {action}: {meta.get('decision_reason', '')}")
+            if action == "unbench":
+                removed.append(mid)
+                continue
+            held = dict(entry)
+            held.update(meta)
+            held["verified_at"] = today
+            new_list.append(held)
+            continue
+        if results.get(mid) == "available":
             removed.append(mid)
-            continue  # re-enabled
+            continue  # re-enabled (cheap self-heal — no adjudicator)
         new_list.append(entry)
     added: list[str] = []
     for mid in sorted(results):
@@ -248,6 +282,45 @@ def reconcile(
     return new_list, sorted(added), sorted(removed)
 
 
+def _provider_of_map() -> dict[str, str]:
+    """catalog id -> provider name, from the PROVIDERS watch table."""
+    out: dict[str, str] = {}
+    for provider, cfg in PROVIDERS.items():
+        models = cfg["models"]
+        for cid in models:  # dict (invoke) iterates keys; list iterates items
+            out[cid] = provider
+    return out
+
+
+def _build_adjudicator(
+    env: dict[str, str], results: dict[str, str]
+) -> Callable[[dict[str, Any]], tuple[str, dict[str, Any]]] | None:
+    """AI adjudicator for the daily restricted sweep, or None (falls back to cheap).
+
+    Gated on ANTHROPIC_API_KEY (already a probe secret). Any import/client failure
+    degrades to the cheap self-heal rather than blocking the probe.
+    """
+    if not env.get("ANTHROPIC_API_KEY"):
+        return None
+    try:
+        import anthropic
+        from verify_availability import make_adjudicator
+
+        client = anthropic.Anthropic()
+        provider_of = _provider_of_map()
+        return make_adjudicator(
+            client,
+            provider_of=lambda m: provider_of.get(m, "unknown"),
+            cheap_of=lambda m: results.get(m),
+        )
+    except Exception as exc:  # noqa: BLE001 — never let verification break the probe
+        print(
+            f"[verify] AI adjudicator unavailable ({exc!r}); using cheap self-heal.",
+            file=sys.stderr,
+        )
+        return None
+
+
 def run(path: Path, env: dict[str, str], today: str, *, dry_run: bool) -> int:
     results: dict[str, str] = {}
     for provider, cfg in PROVIDERS.items():
@@ -261,7 +334,12 @@ def run(path: Path, env: dict[str, str], today: str, *, dry_run: bool) -> int:
             print(f"  [{provider}] {cid:18} -> {cls}")
 
     data = json.loads(path.read_text(encoding="utf-8"))
-    new_list, added, removed = reconcile(results, data.get("unavailable", []), today)
+    adjudicate = _build_adjudicator(env, results)
+    if adjudicate is not None and data.get("unavailable"):
+        print("[verify] AI-adjudicating the restricted sweep (grounded un-bench)…")
+    new_list, added, removed = reconcile(
+        results, data.get("unavailable", []), today, adjudicate=adjudicate
+    )
     print(f"add (now unavailable): {added or '(none)'}")
     print(f"remove (re-enabled):   {removed or '(none)'}")
     if not added and not removed:

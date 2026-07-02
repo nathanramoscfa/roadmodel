@@ -43,9 +43,17 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install the AI-verification SDK
+        # Only needed for the grounded un-bench sweep (verify_availability.py). The
+        # cheap probe itself is stdlib; anthropic is imported lazily when a benched
+        # entry is re-verified, so a missing/old SDK degrades to the cheap self-heal.
+        run: pip install "anthropic>=0.97.0"
+
       - name: Probe model availability (Anthropic / Google / OpenAI)
         # Each provider is gated on its key; a secret that is unset (e.g. OpenAI
-        # until a key is added) simply skips that provider, never errors.
+        # until a key is added) simply skips that provider, never errors. The same
+        # ANTHROPIC_API_KEY also powers the AI web-search verification that gates
+        # un-benching (grounded restricted sweep).
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
