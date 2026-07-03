@@ -7,7 +7,7 @@ import { RATING_SCALE } from "@/lib/glossary";
 // full benchmark list lives in the reference below the results).
 export function RatingKey() {
   return (
-    <div className="mt-auto rounded-lg border border-brand-slate-200 dark:border-brand-slate-700 p-3.5">
+    <div className="rounded-lg border border-brand-slate-200 dark:border-brand-slate-700 p-3.5">
       <span className="text-[10.5px] font-bold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
         How picks are rated
       </span>

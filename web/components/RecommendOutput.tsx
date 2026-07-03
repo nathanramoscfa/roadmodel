@@ -4,6 +4,7 @@
 import { Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { MultiRecommendResponse, PriorityRecommendation } from "@/lib/api";
+import { CostComparison } from "./CostComparison";
 import { FreeTierLabel } from "./FreeTierLabel";
 import { RatingKey } from "./RatingKey";
 import { TierDetail } from "./TierDetail";
@@ -19,9 +20,8 @@ interface RecommendOutputProps {
 // The funded-$0 insight strip (the mock's "All three run at $0 to you…"). Only
 // shown when EVERY pick is funded at $0 to the user (the common case for a
 // subscription like Claude Max) — the "trade-off is capability, not price"
-// framing only holds when price is flat, so it's omitted otherwise. Funding
-// source is best-effort from the personalized your_cost string; omitted if the
-// picks don't share one clean source.
+// framing only holds when price is flat. Funding source is best-effort from the
+// personalized your_cost string; omitted if the picks don't share one clean one.
 function fundedZeroInsight(
   recs: PriorityRecommendation[],
 ): { source: string | null } | null {
@@ -55,10 +55,12 @@ function fundedZeroInsight(
 }
 
 // The redesign renders the three priority picks as a single comparison matrix
-// (Cost / Balanced / Quality as columns, shared attributes as rows) beside a
-// detail panel for the SELECTED pick — replacing the three tall stacked cards
-// that overflowed the viewport and read as duplicates. `selected` drives the
-// detail (click a column to switch); `primary` is the pinned default badge.
+// (Cost / Balanced / Quality as columns, shared attributes as rows) — replacing
+// the three tall stacked cards. The matrix spans the full width; below it, the
+// SELECTED pick's rationale sits beside its cost breakdown + the rating key.
+// Stacking (rather than matrix-beside-detail) keeps the layout balanced no
+// matter how long a rationale runs — a short matrix beside a tall rationale
+// otherwise left a large empty column.
 export function RecommendOutput({ data, canPersist }: RecommendOutputProps) {
   const [primary, setPrimary] = useState(data.primary);
   const [selected, setSelected] = useState(data.primary);
@@ -90,6 +92,7 @@ export function RecommendOutput({ data, canPersist }: RecommendOutputProps) {
     data.recommendations[0];
   const insight = fundedZeroInsight(data.recommendations);
   const three = data.recommendations.length === 3;
+  const hasCost = (selectedRec?.comparison_table ?? []).length > 0;
 
   return (
     <div className="flex flex-col gap-3">
@@ -121,17 +124,19 @@ export function RecommendOutput({ data, canPersist }: RecommendOutputProps) {
           </div>
         ) : null}
 
-        <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr] lg:items-stretch">
-          <div className="flex flex-col gap-3">
-            <TierMatrix
-              recommendations={data.recommendations}
-              selected={selected}
-              primary={primary}
-              onSelect={setSelected}
-            />
-            <RatingKey />
-          </div>
-          {selectedRec ? (
+        {/* Full-width comparison matrix. */}
+        <TierMatrix
+          recommendations={data.recommendations}
+          selected={selected}
+          primary={primary}
+          onSelect={setSelected}
+        />
+
+        {/* Selected pick's deep-dive: rationale (left) beside cost + rating key
+            (right). Balanced columns since the rationale is the tall element and
+            the cost + key fill the narrower side. */}
+        {selectedRec ? (
+          <div className="mt-4 grid gap-4 lg:grid-cols-[1.5fr_1fr] lg:items-start">
             <TierDetail
               rec={selectedRec}
               canPersist={canPersist}
@@ -139,8 +144,19 @@ export function RecommendOutput({ data, canPersist }: RecommendOutputProps) {
               isDefault={selectedRec.priority === primary}
               onSetDefault={handleSetDefault}
             />
-          ) : null}
-        </div>
+            <div className="flex flex-col gap-4">
+              {hasCost ? (
+                <div className="rounded-lg border border-brand-slate-200 dark:border-brand-slate-700 bg-brand-slate-50 dark:bg-brand-slate-900 p-4">
+                  <h4 className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
+                    Your cost by platform
+                  </h4>
+                  <CostComparison comparisonTable={selectedRec.comparison_table} />
+                </div>
+              ) : null}
+              <RatingKey />
+            </div>
+          </div>
+        ) : null}
       </div>
       {selectedRec ? (
         <FreeTierLabel
