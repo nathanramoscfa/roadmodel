@@ -58,7 +58,9 @@ interface RecommendActionState {
 
 interface PromptFormProps {
   initialTask?: string;
-  onSuccess: (data: MultiRecommendResponse) => void;
+  // `task` is the typed prompt that produced the result, so the workspace can
+  // show it in the collapsed prompt-summary bar after a submit.
+  onSuccess: (data: MultiRecommendResponse, task: string) => void;
 }
 
 async function submitRecommend(
@@ -136,8 +138,11 @@ export function PromptForm({ initialTask = "", onSuccess }: PromptFormProps) {
 
   useEffect(() => {
     if (state.data) {
-      onSuccess(state.data);
+      onSuccess(state.data, task);
     }
+    // `task` intentionally omitted from deps: fire only when a new result lands,
+    // carrying the prompt as it was at submit time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.data, onSuccess]);
 
   async function handleFilesSelected(files: FileList | null) {
