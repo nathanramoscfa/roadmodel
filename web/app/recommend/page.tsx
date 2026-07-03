@@ -24,7 +24,10 @@ export default async function RecommendPage() {
         </p>
       </header>
 
-      <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-12">
+      {/* Single full-width column: the redesign renders the three picks as a
+          side-by-side comparison matrix + detail, which needs the full width
+          (the old two-column layout squeezed them into stacked cards). */}
+      <div className="mt-8">
         <RecommendWorkspace canPersistBudget={session !== null} />
       </div>
     </section>

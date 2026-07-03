@@ -102,12 +102,16 @@ test("pinning a priority as default on /recommend persists and Settings reflects
   const qualityCard = page.locator('[data-priority="best"]');
   await expect(qualityCard).toBeVisible();
 
+  // Redesign: select the Quality column, then pin it as default from the
+  // selected-pick detail panel (the "Set as default" control moved off the
+  // per-card chrome into the detail).
+  await qualityCard.click();
   const patchPromise = page.waitForResponse(
     (resp) =>
       resp.url().includes("/api/profile") &&
       resp.request().method() === "PATCH",
   );
-  await qualityCard.getByRole("button", { name: /Set as default/i }).click();
+  await page.getByRole("button", { name: /Set as default/i }).click();
   const profile = await (await patchPromise).json();
   expect(profile.budget_priority).toBe("best");
   // The merge preserves the subscription chosen at onboarding (issue: a
