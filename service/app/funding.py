@@ -78,28 +78,34 @@ _DEFAULT_BUDGET_PRIORITY = "balanced"
 # Unknown / legacy ids fall back to the balanced posture so a bad value never
 # crashes or silently hard-codes one extreme.
 #
-# FUNDING-AWARE COST: when the user already funds a capable model at $0 (the
-# **Active subscriptions** section above), list-price model-switching is the
-# WRONG cost lever — dropping that $0 model for a cheaper-TIER model the user
-# pays per-token for raises their real cost. So the Cost posture holds a
-# $0-funded adequate model and lowers EFFORT instead; effort becomes the
-# cost-vs-quality axis across the three priorities when the model is held. (For
-# a user with no $0-funded adequate model, Cost still drops to a cheaper model —
-# there the list price IS their real cost.)
+# COST BY TIER + EFFORT, NOT JUST PRICE: when the user funds a whole family at
+# $0 (the **Active subscriptions** section above, e.g. claude.ai Max), the
+# out-of-pocket price is FLAT across every candidate, so price alone cannot
+# differentiate the three priorities — left to price, the selector held the
+# FRONTIER $0 model for Cost, Balanced, and Quality alike (the all-Max collapse:
+# Cost==Quality at max effort). So the Cost posture differentiates by CAPABILITY
+# TIER and EFFORT: the smallest / lowest-tier ADEQUATE model at the lowest
+# clearing effort, landing clearly BELOW the Quality pick — not the top $0 model.
+# It only drops to a per-token model when that is genuinely cheaper AND adequate.
 _BUDGET_POSTURE: dict[str, str] = {
     "cheap": (
-        "minimize the user's REAL cost. FIRST consider the **Active "
-        "subscriptions** section above: if a model the user funds at $0 there is "
-        "an ACCEPTABLE-quality fit for this task, KEEP that model and pick the "
-        "LOWEST reasoning effort / thinking level that still clears the task — do "
-        "NOT switch to a cheaper-TIER model the user pays per-token for just to "
-        "shave a list price they do not actually pay (that would RAISE their real "
-        "cost). Only when NO $0-funded model is adequate, recommend the cheapest "
-        "model that can do the task. Either way, do not over-buy effort or "
-        "quality beyond what the task needs."
+        "minimize the RESOURCES this task consumes — the real cost signal even "
+        "when out-of-pocket price is $0. When several models are funded at $0 "
+        "(e.g. a whole family via one subscription like claude.ai Max), price is "
+        "FLAT across them and cannot be the tie-breaker, so differentiate by "
+        "CAPABILITY TIER and EFFORT: pick the SMALLEST / lowest-tier model that "
+        "is still an ADEQUATE fit for this task (a mid-tier model over a frontier "
+        "one when the mid-tier clears the bar), at the LOWEST reasoning effort / "
+        "thinking level that still clears it. Do NOT keep the most capable model "
+        "just because it is also $0-funded — that is the Quality pick; the Cost "
+        "pick MUST land clearly BELOW it in capability tier and effort. Only "
+        "switch to a cheaper-tier model the user pays per-token for when it is "
+        "genuinely cheaper in real dollars AND adequate. Never emit the top "
+        "`max` effort; never over-buy tier or effort beyond what the task needs."
     ),
     "balanced": (
-        "recommend the best VALUE — a model whose quality is well-matched to the "
+        "recommend the best VALUE, landing BETWEEN the Cost and Quality picks in "
+        "capability and effort — a model whose quality is well-matched to the "
         "task's difficulty, at a sensible (not maxed-out) reasoning effort. "
         "Prefer a $0-funded model from the **Active subscriptions** section above "
         "when it is competitive, and prefer the cheaper option when two models "

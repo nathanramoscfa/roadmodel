@@ -164,13 +164,16 @@ def test_budget_postures_steer_selection_differently() -> None:
     texts = {b: posture(b) for b in ("cheap", "balanced", "best")}
     # All three postures are distinct documents.
     assert len({t for t in texts.values()}) == 3
-    # Cost is funding-aware: hold a $0-funded adequate model and lower effort
-    # rather than switch to a cheaper-tier model the user pays per-token for.
-    assert "$0-funded" in texts["cheap"]
-    assert "KEEP that model" in texts["cheap"]
+    # Cost differentiates by CAPABILITY TIER + EFFORT (not just price): when a
+    # whole family is $0-funded, price is flat, so pick the smallest adequate
+    # model at lowest effort, landing clearly BELOW the Quality pick — the fix
+    # for the all-Max collapse where Cost held the frontier model at max effort.
+    assert "differentiate by CAPABILITY TIER and EFFORT" in texts["cheap"]
+    assert "SMALLEST / lowest-tier model" in texts["cheap"]
     assert "LOWEST reasoning effort" in texts["cheap"]
-    # ...with the fallback to the cheapest model when nothing is $0-funded.
-    assert "cheapest model" in texts["cheap"]
+    assert "MUST land clearly BELOW it in capability tier and effort" in texts["cheap"]
+    # ...only switching to a per-token model when it is genuinely cheaper.
+    assert "genuinely cheaper in real dollars AND adequate" in texts["cheap"]
     # Quality steers UP (highest-quality outcome, top useful effort).
     assert "HIGHEST-QUALITY outcome" in texts["best"]
     assert "regardless of cost" in texts["best"]
@@ -200,9 +203,9 @@ def test_no_funding_explicit_budget_still_builds() -> None:
     # works signed-out. Funding sections render "None declared.".
     cheap = funding.build_user_context([], [], budget_priority="cheap", catalog=_FAKE_CATALOG)
     assert cheap is not None
-    # With no $0-funded model declared, the Cost posture's fallback (cheapest
-    # model) is what applies — but the funding-aware language is still present.
-    assert "cheapest model" in cheap
+    # Even with no declared funding, the Cost posture's tier+effort steering is
+    # present (it applies whether or not a $0 family is held).
+    assert "differentiate by CAPABILITY TIER and EFFORT" in cheap
     assert "None declared." in cheap
     # But the DEFAULT (balanced) with no funding stays on the bundled template
     # (None) — the highest-volume default path is unchanged.
@@ -240,7 +243,7 @@ def test_from_request_explicit_budget_builds_without_funding(
     monkeypatch.setenv("ROADMODEL_CATALOG_PATH", str(REAL_CATALOG))
     text = funding.user_context_from_request({"budget_priority": "cheap"})
     assert text is not None
-    assert "cheapest model" in text
+    assert "differentiate by CAPABILITY TIER and EFFORT" in text
     # Default budget with no funding still short-circuits (free path unchanged),
     # without needing a catalog load.
     assert funding.user_context_from_request({"budget_priority": "balanced"}) is None
