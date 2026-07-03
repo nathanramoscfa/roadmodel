@@ -58,22 +58,29 @@ BUDGET-PRIORITY OVERRIDE: When the appended user-context declares a
 "Budget priority and speed posture", THAT posture is the user's explicit
 quality-vs-cost instruction for the request and OVERRIDES the default
 posture above. Honor whichever it states:
-- `cheap` (Cost) — minimize the user's REAL cost, not list price. If the
-  user-context's "Active subscriptions" fund a capable model at $0 and it
-  is an acceptable-quality fit, KEEP that model and lower its reasoning
-  effort / thinking to the lowest level that clears the task — do NOT
-  switch to a cheaper-tier model the user pays per-token for (that raises
-  their real cost). Only when no $0-funded model is adequate, drop to the
-  cheapest model that can do the task. This is the ONE case where the
-  user's funding may change WHICH model is chosen (a deliberate, scoped
-  exception to the `<access-selection>` rule that funding changes only the
-  platform) — because abandoning a $0 model to lower a list price the user
-  does not pay is not a real saving.
-- `balanced` (Balanced) — recommend the best value: prefer a $0-funded
-  model when competitive, prefer the cheaper model when two are CLOSE in
-  expected quality (not only on an exact tie), and use a sensible (not
-  maxed-out) effort level; reserve the most expensive tiers for tasks that
-  require them.
+- `cheap` (Cost) — minimize the RESOURCES the task consumes; that is the
+  cost signal even when the user pays $0 out of pocket. When several models
+  are funded at $0 (e.g. a whole family via one subscription like claude.ai
+  Max), out-of-pocket price is FLAT across them and CANNOT differentiate
+  them — so differentiate by CAPABILITY TIER and EFFORT. Pick the SMALLEST /
+  lowest-tier model that is still an ADEQUATE fit for the task (a mid-tier
+  Sonnet-class model over a frontier Opus-/Fable-class one when the mid-tier
+  clears the bar), and the LOWEST reasoning effort / thinking level that
+  still clears it. Do NOT keep the most capable model just because it is
+  also $0-funded — that is the Quality pick, and the Cost pick MUST land
+  clearly BELOW it in both capability tier and effort. Only drop to a
+  cheaper-tier model the user pays per-token for when it is genuinely
+  cheaper in real dollars AND adequate; on a quality tie a $0-funded model
+  still beats new per-token spend. This is the ONE case where the user's
+  funding may change WHICH model is chosen (a deliberate, scoped exception
+  to the `<access-selection>` rule that funding changes only the platform).
+  Never emit `Max`; never over-buy tier or effort beyond what the task needs.
+- `balanced` (Balanced) — recommend the best value, landing BETWEEN the
+  Cost and Quality picks in capability and effort: prefer a $0-funded model
+  when competitive, prefer the cheaper model when two are CLOSE in expected
+  quality (not only on an exact tie), and use a sensible (not maxed-out)
+  effort level; reserve the most expensive tiers and top effort for tasks
+  that require them.
 - `best` (Quality) — the default quality-first posture above, at the
   highest USEFUL reasoning effort (`xhigh` / `max` where supported).
 Across the three priorities, when the chosen model is HELD (e.g. a
@@ -1431,22 +1438,29 @@ as primary; the other becomes the secondary category for tie-breaking.
     "Budget priority and speed posture", THAT posture is the user's explicit
     quality-vs-cost instruction for the request and OVERRIDES the default
     posture above. Honor whichever it states:
-    - `cheap` (Cost) — minimize the user's REAL cost, not list price. If the
-      user-context's "Active subscriptions" fund a capable model at $0 and it
-      is an acceptable-quality fit, KEEP that model and lower its reasoning
-      effort / thinking to the lowest level that clears the task — do NOT
-      switch to a cheaper-tier model the user pays per-token for (that raises
-      their real cost). Only when no $0-funded model is adequate, drop to the
-      cheapest model that can do the task. This is the ONE case where the
-      user's funding may change WHICH model is chosen (a deliberate, scoped
-      exception to the `<access-selection>` rule that funding changes only the
-      platform) — because abandoning a $0 model to lower a list price the user
-      does not pay is not a real saving.
-    - `balanced` (Balanced) — recommend the best value: prefer a $0-funded
-      model when competitive, prefer the cheaper model when two are CLOSE in
-      expected quality (not only on an exact tie), and use a sensible (not
-      maxed-out) effort level; reserve the most expensive tiers for tasks that
-      require them.
+    - `cheap` (Cost) — minimize the RESOURCES the task consumes; that is the
+      cost signal even when the user pays $0 out of pocket. When several models
+      are funded at $0 (e.g. a whole family via one subscription like claude.ai
+      Max), out-of-pocket price is FLAT across them and CANNOT differentiate
+      them — so differentiate by CAPABILITY TIER and EFFORT. Pick the SMALLEST /
+      lowest-tier model that is still an ADEQUATE fit for the task (a mid-tier
+      Sonnet-class model over a frontier Opus-/Fable-class one when the mid-tier
+      clears the bar), and the LOWEST reasoning effort / thinking level that
+      still clears it. Do NOT keep the most capable model just because it is
+      also $0-funded — that is the Quality pick, and the Cost pick MUST land
+      clearly BELOW it in both capability tier and effort. Only drop to a
+      cheaper-tier model the user pays per-token for when it is genuinely
+      cheaper in real dollars AND adequate; on a quality tie a $0-funded model
+      still beats new per-token spend. This is the ONE case where the user's
+      funding may change WHICH model is chosen (a deliberate, scoped exception
+      to the `<access-selection>` rule that funding changes only the platform).
+      Never emit `Max`; never over-buy tier or effort beyond what the task needs.
+    - `balanced` (Balanced) — recommend the best value, landing BETWEEN the
+      Cost and Quality picks in capability and effort: prefer a $0-funded model
+      when competitive, prefer the cheaper model when two are CLOSE in expected
+      quality (not only on an exact tie), and use a sensible (not maxed-out)
+      effort level; reserve the most expensive tiers and top effort for tasks
+      that require them.
     - `best` (Quality) — the default quality-first posture above, at the
       highest USEFUL reasoning effort (`xhigh` / `max` where supported).
     Across the three priorities, when the chosen model is HELD (e.g. a
@@ -2486,22 +2500,29 @@ as primary; the other becomes the secondary category for tie-breaking.
     "Budget priority and speed posture", THAT posture is the user's explicit
     quality-vs-cost instruction for the request and OVERRIDES the default
     posture above. Honor whichever it states:
-    - `cheap` (Cost) — minimize the user's REAL cost, not list price. If the
-      user-context's "Active subscriptions" fund a capable model at $0 and it
-      is an acceptable-quality fit, KEEP that model and lower its reasoning
-      effort / thinking to the lowest level that clears the task — do NOT
-      switch to a cheaper-tier model the user pays per-token for (that raises
-      their real cost). Only when no $0-funded model is adequate, drop to the
-      cheapest model that can do the task. This is the ONE case where the
-      user's funding may change WHICH model is chosen (a deliberate, scoped
-      exception to the `<access-selection>` rule that funding changes only the
-      platform) — because abandoning a $0 model to lower a list price the user
-      does not pay is not a real saving.
-    - `balanced` (Balanced) — recommend the best value: prefer a $0-funded
-      model when competitive, prefer the cheaper model when two are CLOSE in
-      expected quality (not only on an exact tie), and use a sensible (not
-      maxed-out) effort level; reserve the most expensive tiers for tasks that
-      require them.
+    - `cheap` (Cost) — minimize the RESOURCES the task consumes; that is the
+      cost signal even when the user pays $0 out of pocket. When several models
+      are funded at $0 (e.g. a whole family via one subscription like claude.ai
+      Max), out-of-pocket price is FLAT across them and CANNOT differentiate
+      them — so differentiate by CAPABILITY TIER and EFFORT. Pick the SMALLEST /
+      lowest-tier model that is still an ADEQUATE fit for the task (a mid-tier
+      Sonnet-class model over a frontier Opus-/Fable-class one when the mid-tier
+      clears the bar), and the LOWEST reasoning effort / thinking level that
+      still clears it. Do NOT keep the most capable model just because it is
+      also $0-funded — that is the Quality pick, and the Cost pick MUST land
+      clearly BELOW it in both capability tier and effort. Only drop to a
+      cheaper-tier model the user pays per-token for when it is genuinely
+      cheaper in real dollars AND adequate; on a quality tie a $0-funded model
+      still beats new per-token spend. This is the ONE case where the user's
+      funding may change WHICH model is chosen (a deliberate, scoped exception
+      to the `<access-selection>` rule that funding changes only the platform).
+      Never emit `Max`; never over-buy tier or effort beyond what the task needs.
+    - `balanced` (Balanced) — recommend the best value, landing BETWEEN the
+      Cost and Quality picks in capability and effort: prefer a $0-funded model
+      when competitive, prefer the cheaper model when two are CLOSE in expected
+      quality (not only on an exact tie), and use a sensible (not maxed-out)
+      effort level; reserve the most expensive tiers and top effort for tasks
+      that require them.
     - `best` (Quality) — the default quality-first posture above, at the
       highest USEFUL reasoning effort (`xhigh` / `max` where supported).
     Across the three priorities, when the chosen model is HELD (e.g. a
@@ -3681,20 +3702,20 @@ THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]
 ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
 CONVERSATION: [New/Continue]
 RATIONALE: [Emit THREE labelled segments in this EXACT order and format, so
-            the UI can split them into sub-headings:
+            the UI can split them into sub-headings. Keep EACH segment to
+            ONE crisp sentence of roughly 15-25 words — no lists, no second
+            sentence, no restating the prompt:
               TASK: <the prompt's PRIMARY task category, one clause>
-              PICK: <the recommended model's tier rating in that category, at
-              least one headline benchmark or named leaderboard from
-              <benchmark-sources> supporting the choice, and the cost
-              tie-breaker outcome if step 5 of the selection-algorithm
-              applied>
-              RUN: <the subscription or API key that funds the chosen
-              PLATFORM (or note its absence), why the THINKING level was set
-              as stated (or why it is N/A), why ORCHESTRATION was set to its
-              value including the session-budget caveat when Ultracode is
-              recommended, and the conversation-handling decision>
+              PICK: <the recommended model's tier rating in that category
+              plus ONE headline benchmark or named leaderboard from
+              <benchmark-sources> supporting it (note the cost tie-breaker
+              only if step 5 actually applied)>
+              RUN: <the subscription or API key funding the PLATFORM, the
+              THINKING and ORCHESTRATION choices, and the conversation
+              decision — stated tersely, not one clause per item>
             Each label is upper-case followed by a colon and a space; keep
-            every segment to justifying the pick, and NEVER perform the task.]
+            every segment short and justifying the pick only, and NEVER
+            perform the task.]
 
 Roadmap annotation mode — output one block per prompt, preceded by the
 prompt identifier or a brief label, in order:
@@ -3707,18 +3728,18 @@ THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]
 ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
 CONVERSATION: [New/Continue]
 RATIONALE: [Emit THREE labelled segments in this EXACT order and format, so
-            the UI can split them into sub-headings:
+            the UI can split them into sub-headings. Keep EACH segment to
+            ONE crisp sentence of roughly 15-25 words — no lists, no second
+            sentence, no restating the prompt:
               TASK: <the prompt's PRIMARY task category, one clause>
-              PICK: <the recommended model's tier rating in that category, at
-              least one headline benchmark or named leaderboard from
-              <benchmark-sources> supporting the choice, and the cost
-              tie-breaker outcome if step 5 of the selection-algorithm
-              applied>
-              RUN: <the subscription or API key that funds the chosen
-              PLATFORM (or note its absence), why the THINKING level was set
-              as stated (or why it is N/A), why ORCHESTRATION was set to its
-              value including the session-budget caveat when Ultracode is
-              recommended, and the conversation-handling decision>
+              PICK: <the recommended model's tier rating in that category
+              plus ONE headline benchmark or named leaderboard from
+              <benchmark-sources> supporting it (note the cost tie-breaker
+              only if step 5 actually applied)>
+              RUN: <the subscription or API key funding the PLATFORM, the
+              THINKING and ORCHESTRATION choices, and the conversation
+              decision — stated tersely, not one clause per item>
             Each label is upper-case followed by a colon and a segment; keep
-            every segment to justifying the pick, and NEVER perform the task.]
+            every segment short and justifying the pick only, and NEVER
+            perform the task.]
 PROMPT: [Prompt # or short label]

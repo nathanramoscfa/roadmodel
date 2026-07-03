@@ -44,7 +44,12 @@ def test_build_prompt_strips_ide_annotation_framing() -> None:
 def test_build_prompt_header_front_loads_binding_rules() -> None:
     system, _task = build_prompt("pick a model", user_context_text=_UCTX)
     assert "PROMPT TO CLASSIFY" in system  # classify, don't execute (#187)
-    assert "QUALITY IS THE ONLY OBJECTIVE" in system  # no cost-demotion (#185)
+    # The objective now FOLLOWS the budget priority (Cost/Balanced/Quality)
+    # instead of hard quality-first, and the Cost posture must lower TIER/EFFORT
+    # even when every candidate is $0-funded (the all-Max collapse fix).
+    assert "THE BUDGET PRIORITY IS THE OBJECTIVE" in system
+    assert "LOWER capability tier" in system
+    assert "never collapse the Cost pick onto the Quality pick" in system
     assert "FUNDED surface" in system  # platform cost posture (#186)
     assert "no thinking dial" in system  # THINKING N/A on Cursor/xAI (#188)
     assert "multi-file" in system  # category worked example (#189)
@@ -70,6 +75,21 @@ def test_build_prompt_injects_runtime_availability_override() -> None:
     assert "Step 0a" in system
     assert "claude-fable-5" in system
     assert "some-other-id" in system
+
+
+def test_build_prompt_budget_override_steers_cost_below_quality() -> None:
+    """The selector's <objective> BUDGET-PRIORITY OVERRIDE must tell the model to
+    lower the Cost pick's CAPABILITY TIER and EFFORT (not just its price) and hold
+    the frontier for Quality — the fix for the all-$0-funded collapse where Cost,
+    Balanced, and Quality all returned the same frontier model at max effort."""
+    system, _ = build_prompt("pick a model", user_context_text=_UCTX)
+    assert "BUDGET-PRIORITY OVERRIDE" in system
+    # Cost lowers TIER + EFFORT even when out-of-pocket price is flat at $0.
+    assert "out-of-pocket price is FLAT" in system
+    assert "differentiate by CAPABILITY TIER and EFFORT" in system
+    assert "clearly BELOW it in both capability tier and effort" in system
+    # Quality still holds the frontier at top useful effort.
+    assert "highest USEFUL reasoning effort" in system
 
 
 def test_build_prompt_no_override_without_unavailable_models() -> None:
