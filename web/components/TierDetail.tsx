@@ -42,18 +42,21 @@ export function TierDetail({
   const hasCost = (rec.comparison_table ?? []).length > 0;
 
   return (
-    // No card chrome here — the parent results card owns the border; the detail
-    // is just the selected column's deep-dive (rationale panel + cost + pin).
-    <div className="flex flex-col gap-4">
+    // One cohesive panel: the selected pick's rationale + a divider + its cost,
+    // so the detail reads as a single card beside the matrix.
+    <div className="flex flex-col gap-3 rounded-lg border border-brand-slate-200 dark:border-brand-slate-700 bg-brand-slate-50 dark:bg-brand-slate-900 p-4">
       <WhyDisclosure rationale={rationale} sections={sections} />
 
       {hasCost ? (
-        <div>
-          <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
-            Your cost by platform
-          </h4>
-          <CostComparison comparisonTable={rec.comparison_table} />
-        </div>
+        <>
+          <div className="h-px bg-brand-slate-200 dark:bg-brand-slate-800" />
+          <div>
+            <h4 className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
+              Your cost by platform
+            </h4>
+            <CostComparison comparisonTable={rec.comparison_table} />
+          </div>
+        </>
       ) : null}
 
       {canPersist ? (
