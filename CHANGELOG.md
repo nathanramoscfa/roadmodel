@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.13] — 2026-07-03
+
+### Changed
+
+- **The selector emits its `RATIONALE` as three labelled segments** — `TASK:` /
+  `PICK:` / `RUN:` — so a consuming UI can render sub-headed sections ("The task
+  / Why this pick / How to run it") instead of one prose blob. `recommend_structured`
+  parses them best-effort into a new `rationale_sections` payload field. The
+  single `RATIONALE` field stays required and its `parse_response` regex,
+  `_REQUIRED_KEYS`, and the parser-drift guard are unchanged, so a model that
+  ignores the labelled format still returns a valid recommendation — purely
+  additive, with no new failure path (the Gemini instruction-adherence safety
+  net). The FastAPI wrapper carries `rationale_sections` across the service
+  boundary on `RecommendResponse` (absent → `None`).
+
 ## [0.2.12] — 2026-07-02
 
 ### Changed
