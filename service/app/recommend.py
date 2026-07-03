@@ -314,6 +314,11 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
                 # Carry the model's reasoning across the service boundary (#173);
                 # empty string -> None so the web edge falls back cleanly.
                 rationale=result.get("rationale") or None,
+                # Carry the best-effort structured rationale sections (task/pick/
+                # run) so the web panel can render sub-headings; absent on an
+                # older roadmodel or a non-conforming model response -> None, and
+                # the edge falls back to the raw `rationale` string above.
+                rationale_sections=result.get("rationale_sections") or None,
                 # Carry the conversation-handling decision across the boundary (#190),
                 # same drop class as rationale; empty -> None.
                 conversation=result.get("conversation") or None,
