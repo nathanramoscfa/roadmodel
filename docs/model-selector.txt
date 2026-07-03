@@ -1240,18 +1240,21 @@
     THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]
     ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
     CONVERSATION: [New/Continue]
-    RATIONALE: [2-3 sentences that MUST name (a) the prompt's PRIMARY task
-                category, (b) the recommended model's tier rating in that
-                category, (c) at least one headline benchmark or named
-                leaderboard from <benchmark-sources> supporting the choice,
-                (d) the cost tie-breaker outcome if step 5 of the
-                selection-algorithm applied, (e) the subscription or API
-                key that pays for the chosen PLATFORM (or note its
-                absence), (f) why the THINKING level was set as stated
-                (or why it is N/A), and (g) why ORCHESTRATION was set to
-                its value, including the session-budget caveat when
-                Ultracode is recommended. Also note the conversation
-                handling decision.]
+    RATIONALE: [Emit THREE labelled segments in this EXACT order and format, so
+                the UI can split them into sub-headings:
+                  TASK: <the prompt's PRIMARY task category, one clause>
+                  PICK: <the recommended model's tier rating in that category, at
+                  least one headline benchmark or named leaderboard from
+                  <benchmark-sources> supporting the choice, and the cost
+                  tie-breaker outcome if step 5 of the selection-algorithm
+                  applied>
+                  RUN: <the subscription or API key that funds the chosen
+                  PLATFORM (or note its absence), why the THINKING level was set
+                  as stated (or why it is N/A), why ORCHESTRATION was set to its
+                  value including the session-budget caveat when Ultracode is
+                  recommended, and the conversation-handling decision>
+                Each label is upper-case followed by a colon and a space; keep
+                every segment to justifying the pick, and NEVER perform the task.]
 
     Roadmap annotation mode — output one block per prompt, preceded by the
     prompt identifier or a brief label, in order:
@@ -1263,18 +1266,21 @@
     THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]
     ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
     CONVERSATION: [New/Continue]
-    RATIONALE: [2-3 sentences that MUST name (a) the prompt's PRIMARY task
-                category, (b) the recommended model's tier rating in that
-                category, (c) at least one headline benchmark or named
-                leaderboard from <benchmark-sources> supporting the choice,
-                (d) the cost tie-breaker outcome if step 5 of the
-                selection-algorithm applied, (e) the subscription or API
-                key that pays for the chosen PLATFORM (or note its
-                absence), (f) why the THINKING level was set as stated
-                (or why it is N/A), and (g) why ORCHESTRATION was set to
-                its value, including the session-budget caveat when
-                Ultracode is recommended. Also note the conversation
-                handling decision.]
+    RATIONALE: [Emit THREE labelled segments in this EXACT order and format, so
+                the UI can split them into sub-headings:
+                  TASK: <the prompt's PRIMARY task category, one clause>
+                  PICK: <the recommended model's tier rating in that category, at
+                  least one headline benchmark or named leaderboard from
+                  <benchmark-sources> supporting the choice, and the cost
+                  tie-breaker outcome if step 5 of the selection-algorithm
+                  applied>
+                  RUN: <the subscription or API key that funds the chosen
+                  PLATFORM (or note its absence), why the THINKING level was set
+                  as stated (or why it is N/A), why ORCHESTRATION was set to its
+                  value including the session-budget caveat when Ultracode is
+                  recommended, and the conversation-handling decision>
+                Each label is upper-case followed by a colon and a space; keep
+                every segment to justifying the pick, and NEVER perform the task.]
     PROMPT: [Prompt # or short label]
   </output-format>
 
