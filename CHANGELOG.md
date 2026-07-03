@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.14] — 2026-07-03
+
+### Changed
+
+- **Budget priority now steers the Cost pick by capability tier + effort, not
+  just out-of-pocket price.** When a user funds a whole model family at $0 (e.g.
+  claude.ai Max), list price is flat across every candidate, so the old
+  "keep the $0 model, lower effort" rule let the selector hold the *frontier*
+  model for all three priorities — Cost, Balanced, and Quality collapsed onto
+  the same top model at max effort. The `<objective>` BUDGET-PRIORITY OVERRIDE
+  and the SaaS header now instruct the `cheap` posture to pick the smallest /
+  lowest-tier model that is still adequate at the lowest effort that clears the
+  task — landing clearly below the Quality pick in both tier and effort — while
+  Quality holds the frontier and Balanced sits between. The three picks are once
+  again distinct and sensibly ordered.
+- **The `RATIONALE` segments are terser.** Each of `TASK:` / `PICK:` / `RUN:`
+  is now capped at one crisp sentence (~15–25 words) in the `<output-format>`
+  template and the SaaS header, so the "Why this model?" panel renders compactly
+  instead of a 12–15 line wall of text. The three-segment labelled format,
+  `parse_response` regex, `_REQUIRED_KEYS`, and the drift guard are unchanged.
+
 ## [0.2.13] — 2026-07-03
 
 ### Changed
