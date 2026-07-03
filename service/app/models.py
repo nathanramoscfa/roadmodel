@@ -39,6 +39,15 @@ class RecommendResponse(BaseModel):
     # this model?" panel is empty for every user (issue #173 — the same
     # service-boundary drop class as the #164 cost/comparison_table fix).
     rationale: str | None = None
+    # Structured rationale sections (task / pick / run) parsed best-effort from
+    # the labelled RATIONALE, so the web "Why this model?" panel can render
+    # sub-headed segments instead of splitting one prose string. Present only
+    # when the model followed the labelled format; absent -> None and the web
+    # edge falls back to the single `rationale` string above. Same
+    # service-boundary carry-through discipline as rationale (#173). Using
+    # ``.get`` on the selector payload keeps the service deployable against an
+    # older roadmodel that never emits this key.
+    rationale_sections: dict[str, str] | None = None
     # The model's conversation-handling decision (New/Continue). recommend_structured
     # emits this as a top-level key; like rationale (#173) it was dropped at the
     # service boundary (extra="forbid" + never passed through) — issue #190. Carry

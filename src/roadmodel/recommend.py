@@ -58,6 +58,49 @@ _RESPONSE_BLOCK_RE: Final = re.compile(
     flags=re.IGNORECASE | re.MULTILINE | re.DOTALL,
 )
 
+# The RATIONALE value is emitted as three labelled segments — "TASK: ... PICK:
+# ... RUN: ..." — so the web "Why this model?" panel can render sub-headed
+# sections instead of splitting one prose blob (the redesign). This is a
+# BEST-EFFORT parse over the already-captured rationale STRING: the single
+# RATIONALE field stays required and unchanged (_REQUIRED_KEYS /
+# _RESPONSE_BLOCK_RE are untouched), so a model that ignores the labelled format
+# still yields a valid recommendation — it just carries no structured sections
+# and the web edge falls back to rendering the raw string. Anchored on the three
+# labels in order; a lazy match bounds each segment at the next label.
+_RATIONALE_SECTION_RE: Final = re.compile(
+    r"\bTASK:\s*(?P<task>.+?)\s*"
+    r"\bPICK:\s*(?P<pick>.+?)\s*"
+    r"\bRUN:\s*(?P<run>.+)",
+    flags=re.IGNORECASE | re.DOTALL,
+)
+
+
+def _clean_segment(value: str) -> str:
+    """Trim whitespace and stray leading markdown emphasis/bullets off a segment."""
+    return re.sub(r"^[\s*_#>•–—-]+", "", value.strip()).strip("*_ ").strip()
+
+
+def _split_rationale_sections(rationale: str) -> dict[str, str] | None:
+    """Best-effort split of the labelled RATIONALE into task/pick/run sections.
+
+    Returns a ``{"task", "pick", "run"}`` dict when the model emitted all three
+    labelled segments in order; otherwise ``None`` (the caller then carries only
+    the raw ``rationale`` string and the web edge renders it unsplit). Never
+    raises — a non-conforming rationale simply yields no sections, so this can
+    never turn a good recommendation into a failed one.
+    """
+    if not rationale or not rationale.strip():
+        return None
+    match = _RATIONALE_SECTION_RE.search(rationale)
+    if not match:
+        return None
+    sections = {key: _clean_segment(value) for key, value in match.groupdict().items()}
+    # All three must be non-empty; a partial match is treated as unstructured so
+    # the UI never renders an empty sub-heading.
+    if not all(sections.values()):
+        return None
+    return sections
+
 
 def _attach_optional(result: dict[str, str], source: dict[str, str]) -> dict[str, str]:
     """Copy present, meaningful _OPTIONAL_KEYS from ``source`` into ``result``.
@@ -129,7 +172,13 @@ _SAAS_HEADER: Final = (
     "- BACKUP is the fallback model (Step 7): the next-best AVAILABLE model, "
     "preferably a different provider/family than MODEL, or 'None' if no distinct "
     "alternative qualifies. Never name an unavailable model.\n"
-    "- RATIONALE is 2-3 sentences justifying the pick only.\n"
+    "- RATIONALE is three labelled segments, in this exact order, each starting "
+    "with its upper-case label and a colon: 'TASK:' (the prompt's PRIMARY task "
+    "category), then 'PICK:' (the model's tier rating in that category plus a "
+    "headline benchmark/leaderboard supporting it), then 'RUN:' (the funding "
+    "subscription/API, the THINKING and ORCHESTRATION choices, and the "
+    "conversation decision). One to two sentences each; justify the pick only, "
+    "never perform the task.\n"
 )
 
 
@@ -379,6 +428,13 @@ def recommend_structured(
         "session_cost_estimate": None,
         "comparison_table": None,
     }
+    # Best-effort structured rationale (task / pick / run) for the web "Why this
+    # model?" sub-headings. Omitted entirely when the model didn't emit the
+    # labelled segments, so the service/edge fall back to the raw `rationale`
+    # string — never a hard dependency on the model following the new format.
+    sections = _split_rationale_sections(base["rationale"])
+    if sections:
+        payload["rationale_sections"] = sections
     # Optional fallback model (Step 7); present only when the LLM emitted a
     # BACKUP line. Canonicalize to the catalog display name like the primary
     # (canonical_model_name never raises — falls back to the raw value).

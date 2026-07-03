@@ -176,6 +176,9 @@ def test_recommend_returns_200(
         "settings": {"effort": "High", "thinking": "On"},
         # #173: the model's rationale now survives the service boundary.
         "rationale": "Best for coding tasks.",
+        # Structured rationale sections (task/pick/run) default to None when the
+        # selector payload omits them (this fake carries only the raw string).
+        "rationale_sections": None,
         # #190: the conversation-handling decision now survives too.
         "conversation": "New",
         # The fallback model (Step 7) survives the boundary too; None here
@@ -357,6 +360,7 @@ def test_response_schema_matches_phase2_contract(
         "platform",
         "settings",
         "rationale",  # #173 — carried through the service boundary
+        "rationale_sections",  # structured task/pick/run — carried through, None when absent
         "conversation",  # #190 — same boundary, now carried through
         "backup",  # fallback model (Step 7) — same boundary, carried through
         "session_cost_estimate",
@@ -635,6 +639,54 @@ def test_recommend_passes_through_rationale(
         recommend_module.RecommendRequest(task_description="pick a model")
     )
     assert resp.rationale == "test"
+
+
+def test_recommend_passes_through_rationale_sections(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The /recommend redesign: recommend_structured emits best-effort structured
+    rationale (task/pick/run) alongside the raw string; the service must carry it
+    into RecommendResponse so the web panel can render sub-headings. Same
+    service-boundary carry-through as rationale (#173)."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+    recommend_module = importlib.import_module("app.recommend")
+    sections = {
+        "task": "Ship an equity research report.",
+        "pick": "Fable 5 is S-tier; leads HLE.",
+        "run": "Claude Code, XHigh effort, funded by Claude Max.",
+    }
+
+    def _fake(prompt: str, config: Any, **_kwargs: Any) -> dict[str, Any]:
+        payload = dict(_RECOMMEND_DICT)
+        payload["rationale_sections"] = sections
+        return payload
+
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake)
+    resp = recommend_module.recommend(
+        recommend_module.RecommendRequest(task_description="pick a model")
+    )
+    assert resp.rationale_sections == sections
+    # The raw string is still carried for the fallback path.
+    assert resp.rationale == _RECOMMEND_DICT["rationale"]
+
+
+def test_recommend_rationale_sections_absent_is_none(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When recommend_structured omits rationale_sections — an older roadmodel,
+    or a model that ignored the labelled RATIONALE format — the field is None,
+    and the web edge falls back to splitting the raw `rationale` string."""
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+    recommend_module = importlib.import_module("app.recommend")
+    monkeypatch.setattr(
+        recommend_module,
+        "recommend_structured",
+        _fake_returning("Opus 4.7", "Claude Code"),  # _RECOMMEND_DICT has no sections
+    )
+    resp = recommend_module.recommend(
+        recommend_module.RecommendRequest(task_description="pick a model")
+    )
+    assert resp.rationale_sections is None
 
 
 def test_fake_recommend_structured_matches_real_signature() -> None:
