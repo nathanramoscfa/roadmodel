@@ -1,7 +1,7 @@
 // web/components/TierMatrix.tsx
 "use client";
 
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 
 import type { PriorityRecommendation } from "@/lib/api";
 import { BUDGET_PRIORITY_OPTIONS } from "@/lib/budget-priority";
@@ -29,6 +29,18 @@ const SHORT_HINT: Record<string, string> = {
 // budget_priority is redundant with the column itself; rationale renders in the
 // detail panel. Everything else in `settings` becomes a comparison row.
 const HIDDEN_SETTING_KEYS = new Set(["rationale", "budget_priority"]);
+
+// Active-column outline (matches mockups/recommend-redesign.html). The selected
+// column reads as ONE continuous rounded box: the header carries an accent
+// border on its top + sides (no bottom, so it flows into the cells), every cell
+// carries accent side-borders via inset box-shadows, and the LAST cell adds a
+// bottom border + rounded bottom corners to close the box. A subtle accent tint
+// fills the whole column. #2563eb == brand-accent DEFAULT (tailwind.config.ts).
+const ACTIVE_TINT = "bg-brand-accent/10";
+const ACTIVE_HEAD = "border-brand-accent border-b-transparent " + ACTIVE_TINT;
+const ACTIVE_CELL_SIDES = "shadow-[inset_1.5px_0_0_#2563eb,inset_-1.5px_0_0_#2563eb]";
+const ACTIVE_CELL_LAST =
+  "shadow-[inset_1.5px_0_0_#2563eb,inset_-1.5px_0_0_#2563eb,inset_0_-1.5px_0_#2563eb] rounded-b-lg";
 
 // The union of setting keys across the picks, in first-seen order, so every
 // surface-specific dimension (effort, thinking, max_mode, intelligence …) gets
@@ -66,6 +78,14 @@ function headlineCost(rec: PriorityRecommendation): {
   return { text: "—", funded: false };
 }
 
+// One matrix row: a label plus a per-pick cell. `funded` lets the "Your cost"
+// row tint its value green; other rows leave it undefined.
+interface MatrixRow {
+  key: string;
+  label: string;
+  cell: (rec: PriorityRecommendation) => { node: ReactNode; funded?: boolean };
+}
+
 interface TierMatrixProps {
   recommendations: PriorityRecommendation[];
   // The pick whose detail is shown (highlighted column).
@@ -90,9 +110,47 @@ export function TierMatrix({
 
   const cellBase =
     "flex items-center gap-1.5 px-3 py-2 text-sm border-t border-brand-slate-100 dark:border-brand-slate-800";
-  const activeCell = "bg-brand-accent/5";
   const rowLabel =
     "flex items-center py-2 text-xs font-medium text-brand-slate-500 dark:text-brand-slate-400 border-t border-brand-slate-100 dark:border-brand-slate-800";
+
+  // Every matrix row in render order — so the LAST one can close the column box.
+  const rows: MatrixRow[] = [
+    {
+      key: "__cost",
+      label: "Your cost",
+      cell: (rec) => {
+        const cost = headlineCost(rec);
+        return {
+          node: (
+            <>
+              {cost.funded ? "✓ " : ""}
+              {cost.text}
+            </>
+          ),
+          funded: cost.funded,
+        };
+      },
+    },
+    ...keys.map(
+      (key): MatrixRow => ({
+        key,
+        label: humanizeSettingKey(key),
+        cell: (rec) => ({ node: formatSettingValue((rec.settings ?? {})[key]) }),
+      }),
+    ),
+    ...(showBackup
+      ? [
+          {
+            key: "__backup",
+            label: "Backup",
+            cell: (rec: PriorityRecommendation) => ({
+              node:
+                typeof rec.backup === "string" && rec.backup ? rec.backup : "—",
+            }),
+          } satisfies MatrixRow,
+        ]
+      : []),
+  ];
 
   return (
     <div className="grid" style={gridStyle}>
@@ -110,10 +168,10 @@ export function TierMatrix({
             aria-pressed={isSelected}
             onClick={() => onSelect(rec.priority)}
             className={
-              "relative flex flex-col gap-1 rounded-t-lg px-3 pb-3 pt-2.5 text-left transition-colors " +
+              "relative flex flex-col gap-1 rounded-t-lg border-[1.5px] px-3 pb-3 pt-2.5 text-left transition-colors " +
               (isSelected
-                ? "bg-brand-accent/5 ring-1 ring-inset ring-brand-accent"
-                : "hover:bg-brand-slate-50 dark:hover:bg-brand-slate-800/60")
+                ? ACTIVE_HEAD
+                : "border-transparent hover:bg-brand-slate-50 dark:hover:bg-brand-slate-800/60")
             }
           >
             {isPrimary ? (
@@ -137,72 +195,33 @@ export function TierMatrix({
         );
       })}
 
-      {/* Your cost */}
-      <div className={rowLabel}>Your cost</div>
-      {recommendations.map((rec) => {
-        const cost = headlineCost(rec);
-        const isSelected = rec.priority === selected;
+      {/* one row per dimension; the last row closes the active column's box */}
+      {rows.map((row, rowIndex) => {
+        const isLastRow = rowIndex === rows.length - 1;
         return (
-          <div
-            key={rec.priority}
-            className={
-              cellBase +
-              " " +
-              (isSelected ? activeCell + " " : "") +
-              (cost.funded
+          <Fragment key={row.key}>
+            <div className={rowLabel}>{row.label}</div>
+            {recommendations.map((rec) => {
+              const isSelected = rec.priority === selected;
+              const { node, funded } = row.cell(rec);
+              const color = funded
                 ? "font-semibold text-green-600 dark:text-green-400"
-                : "text-brand-slate-700 dark:text-brand-slate-200")
-            }
-          >
-            {cost.funded ? "✓ " : ""}
-            {cost.text}
-          </div>
+                : "text-brand-slate-700 dark:text-brand-slate-200";
+              const active = isSelected
+                ? ` ${ACTIVE_TINT} ${isLastRow ? ACTIVE_CELL_LAST : ACTIVE_CELL_SIDES}`
+                : "";
+              return (
+                <div
+                  key={rec.priority}
+                  className={`${cellBase} ${color}${active}`}
+                >
+                  {node}
+                </div>
+              );
+            })}
+          </Fragment>
         );
       })}
-
-      {/* one row per shared setting dimension */}
-      {keys.map((key) => (
-        <Fragment key={key}>
-          <div className={rowLabel}>{humanizeSettingKey(key)}</div>
-          {recommendations.map((rec) => {
-            const isSelected = rec.priority === selected;
-            return (
-              <div
-                key={rec.priority}
-                className={
-                  cellBase +
-                  " text-brand-slate-700 dark:text-brand-slate-200 " +
-                  (isSelected ? activeCell : "")
-                }
-              >
-                {formatSettingValue((rec.settings ?? {})[key])}
-              </div>
-            );
-          })}
-        </Fragment>
-      ))}
-
-      {/* Backup (only when a pick emitted one) */}
-      {showBackup ? (
-        <>
-          <div className={rowLabel}>Backup</div>
-          {recommendations.map((rec) => {
-            const isSelected = rec.priority === selected;
-            return (
-              <div
-                key={rec.priority}
-                className={
-                  cellBase +
-                  " text-brand-slate-700 dark:text-brand-slate-200 " +
-                  (isSelected ? activeCell : "")
-                }
-              >
-                {typeof rec.backup === "string" && rec.backup ? rec.backup : "—"}
-              </div>
-            );
-          })}
-        </>
-      ) : null}
     </div>
   );
 }
