@@ -81,10 +81,14 @@ export function RecommendWorkspace({
       {data ? (
         <RecommendOutput data={data} canPersist={canPersistBudget} />
       ) : (
-        <RecommendOutputEmpty />
+        <>
+          <RecommendOutputEmpty />
+          {/* Pre-submit only: once picks render, the rating key inside the
+              results (RatingKey) carries the scale + benchmarks, so the fuller
+              reference card here would duplicate it. */}
+          <RecommendReference />
+        </>
       )}
-
-      <RecommendReference />
     </div>
   );
 }
