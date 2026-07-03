@@ -29,6 +29,12 @@ export interface RecommendResponse {
   // models" when they are already on it. `engine` is the resolved engine id.
   tier?: "free" | "frontier";
   engine?: string;
+  // Structured rationale sections (task / pick / run), emitted best-effort by
+  // the service when the model followed the labelled RATIONALE format. The
+  // "Why this model?" panel renders these as sub-headings; absent/null -> it
+  // falls back to splitting the single `rationale` string. Carried verbatim by
+  // the edge (no budget/funding notes appended, unlike settings.rationale).
+  rationale_sections?: Record<string, string> | null;
   // Fallback model (Step 7 of the selector) — rendered as the "Backup" line so
   // the user has an alternative if the primary is unavailable to them. Optional:
   // absent/null when the recommender emitted no backup.

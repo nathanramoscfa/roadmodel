@@ -74,13 +74,13 @@ test("save-and-continue persists prefs and surfaces budget priority", async ({
   // The saved emphasis (best) is the highlighted/default card; scope to it.
   const qualityCard = page.locator('[data-priority="best"]');
   await expect(qualityCard.getByText("Default")).toBeVisible();
-  await expect(
-    qualityCard.getByRole("heading", { name: /Claude Opus 4\.8/i }),
-  ).toBeVisible();
-  // The rationale renders prominently (T4 — an always-visible "Why this model?"
-  // card, no longer a collapsed <details> behind a click), carrying the per-card
-  // budget priority (#173).
-  const why = qualityCard.getByRole("region", { name: /Why this model/i });
+  // The model name is a matrix column header (was a card heading pre-redesign).
+  await expect(qualityCard.getByText(/Claude Opus 4\.8/i)).toBeVisible();
+  // The saved emphasis (best) is the selected pick, so its rationale renders in
+  // the detail panel beside the matrix — an always-visible "Why this model?"
+  // region carrying the budget priority (#173). It is a sibling of the matrix,
+  // not nested in the column, so scope to the page.
+  const why = page.getByRole("region", { name: /Why this model/i });
   await expect(why).toBeVisible();
   await expect(why.getByText(/Budget priority: best/i)).toBeVisible();
 });
@@ -144,16 +144,15 @@ test("forwards held subscriptions + enabled API providers to the recommender (Ph
   // in every card's rationale. Scope to the Cost card (the mock's cheap pick is
   // Claude 4.5 Haiku) so the "Why this model" region is unambiguous.
   const card = page.locator('[data-priority="cheap"]');
-  await expect(
-    card.getByRole("heading", { name: /Claude 4\.5 Haiku/i }),
-  ).toBeVisible();
+  await expect(card.getByText(/Claude 4\.5 Haiku/i)).toBeVisible();
   // The edge forwards the user's declared funding to the service; the E2E mock
   // echoes it back, proving subscriptions + api_providers reach the upstream
   // (where the real service builds the per-user user-context that biases model
   // SELECTION). The lowercase ids appear ONLY in the echo — the T2a edge note
   // uses the display label "Claude Max", so matching "claude-max"/"deepseek"
-  // specifically confirms the forwarded payload.
-  const why = card.getByRole("region", { name: /Why this model/i });
+  // specifically confirms the forwarded payload. The echo rides in the selected
+  // pick's rationale, rendered in the detail panel beside the matrix.
+  const why = page.getByRole("region", { name: /Why this model/i });
   await expect(why).toContainText("Forwarded funding");
   await expect(why).toContainText("claude-max");
   await expect(why).toContainText("deepseek");
@@ -174,17 +173,16 @@ test("cost table is personalized to the signed-in user's funding (Phase 4.8 T3)"
   // card (mock's cheap pick = Claude 4.5 Haiku) so the table assertions are
   // unambiguous.
   const card = page.locator('[data-priority="cheap"]');
-  await expect(
-    card.getByRole("heading", { name: /Claude 4\.5 Haiku/i }),
-  ).toBeVisible();
+  await expect(card.getByText(/Claude 4\.5 Haiku/i)).toBeVisible();
   // The cost table reflects THIS user's funding, not the bundled founder
   // context: the column is "Your cost" and the Claude Code row is $0 via the
-  // user's held Claude Max subscription.
+  // user's held Claude Max subscription. It renders in the selected pick's
+  // detail panel (beside the matrix), so scope the table assertions to the page.
   await expect(
-    card.getByRole("columnheader", { name: "Your cost" }),
+    page.getByRole("columnheader", { name: "Your cost" }),
   ).toBeVisible();
   await expect(
-    card.getByRole("cell", { name: /\$0 · Claude Max/i }),
+    page.getByRole("cell", { name: /\$0 · Claude Max/i }),
   ).toBeVisible();
 });
 
@@ -236,12 +234,16 @@ test("default-restrict path excludes Kimi K2.5 from recommendations", async ({
   await page.goto("/recommend");
   await page.getByPlaceholder(/Input the prompt/i).fill("restrict cn");
   await page.getByRole("button", { name: /Submit/i }).click();
+  // Claude 4.5 Haiku is a recommended pick (a matrix column).
   await expect(
-    page.getByRole("heading", { name: /Claude 4\.5 Haiku/i }),
+    page.locator("[data-priority]").filter({ hasText: /Claude 4\.5 Haiku/i }).first(),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: /Kimi K2\.5/i })).toHaveCount(
-    0,
-  );
+  // Kimi K2.5 is jurisdiction-excluded from the PICKS (the matrix columns). It
+  // may still surface as an alternative cost-table row (the per-pick filter
+  // keys on `model`, not the cost row's `model_name`), so scope to the picks.
+  await expect(
+    page.locator("[data-priority]").filter({ hasText: /Kimi K2\.5/i }),
+  ).toHaveCount(0);
 });
 
 test("widen path includes cn and surfaces Kimi K2.5", async ({ page }) => {
@@ -257,10 +259,10 @@ test("widen path includes cn and surfaces Kimi K2.5", async ({ page }) => {
   await page.goto("/recommend");
   await page.getByPlaceholder(/Input the prompt/i).fill("allow cn");
   await page.getByRole("button", { name: /Submit/i }).click();
-  // With cn allowed the mock returns Kimi K2.5 for every priority, so the
-  // heading appears in all three cards — assert the first is visible.
+  // With cn allowed the mock returns Kimi K2.5 for every priority, so the model
+  // appears as a pick in all three matrix columns — assert the first is visible.
   await expect(
-    page.getByRole("heading", { name: /Kimi K2\.5/i }).first(),
+    page.locator("[data-priority]").filter({ hasText: /Kimi K2\.5/i }).first(),
   ).toBeVisible();
 });
 

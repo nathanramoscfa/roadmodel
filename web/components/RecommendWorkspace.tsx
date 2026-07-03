@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import type { MultiRecommendResponse } from "@/lib/api";
 import { PromptForm } from "./PromptForm";
+import { PromptSummaryBar } from "./PromptSummaryBar";
 import { RecommendOutput } from "./RecommendOutput";
 import { RecommendOutputEmpty } from "./RecommendOutputEmpty";
 import { RecommendReference } from "./RecommendReference";
@@ -21,11 +22,17 @@ interface RecommendWorkspaceProps {
   canPersistBudget: boolean;
 }
 
+// The redesign is a single full-width column: the prompt (which collapses to a
+// summary bar once a result lands), the comparison-matrix output, and the
+// benchmarks/ratings reference. Full width lets the three picks render as a
+// side-by-side comparison instead of three stacked cards.
 export function RecommendWorkspace({
   canPersistBudget,
 }: RecommendWorkspaceProps) {
   const [data, setData] = useState<MultiRecommendResponse | null>(null);
   const [initialTask, setInitialTask] = useState("");
+  const [submittedTask, setSubmittedTask] = useState("");
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     try {
@@ -37,10 +44,10 @@ export function RecommendWorkspace({
       const parsed = JSON.parse(raw) as PrefillPayload;
       if (parsed.task_description) {
         setInitialTask(parsed.task_description);
+        setSubmittedTask(parsed.task_description);
       }
-      // Only accept a well-formed multi-pick payload (the shape changed when
-      // /recommend moved to three priority cards); a stale single-pick prefill
-      // is ignored rather than rendered broken.
+      // Only accept a well-formed multi-pick payload (a stale single-pick
+      // prefill is ignored rather than rendered broken).
       if (Array.isArray(parsed.recommendation?.recommendations)) {
         setData(parsed.recommendation);
       }
@@ -49,20 +56,35 @@ export function RecommendWorkspace({
     }
   }, []);
 
-  // Two grid columns (the parent page is lg:grid-cols-2): the prompt form plus a
-  // benchmarks/ratings reference on the left (the reference fills the space under
-  // Submit), and the recommendation output on the right.
+  // Show the full form pre-submit (or while editing); collapse to the summary
+  // bar once a result exists so the picks sit near the top of the viewport.
+  const showForm = !data || editing;
+
   return (
-    <div className="contents">
-      <div className="flex flex-col gap-8">
-        <PromptForm initialTask={initialTask} onSuccess={setData} />
-        <RecommendReference />
-      </div>
+    <div className="flex flex-col gap-6">
+      {showForm ? (
+        <PromptForm
+          initialTask={initialTask}
+          onSuccess={(recommendation, task) => {
+            setData(recommendation);
+            setSubmittedTask(task);
+            setEditing(false);
+          }}
+        />
+      ) : (
+        <PromptSummaryBar
+          task={submittedTask}
+          onEdit={() => setEditing(true)}
+        />
+      )}
+
       {data ? (
         <RecommendOutput data={data} canPersist={canPersistBudget} />
       ) : (
         <RecommendOutputEmpty />
       )}
+
+      <RecommendReference />
     </div>
   );
 }

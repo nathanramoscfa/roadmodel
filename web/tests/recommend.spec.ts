@@ -159,7 +159,9 @@ test("renders the backup model line when the recommendation includes one", async
   await page.goto("/recommend");
   await page.getByPlaceholder(/Input the prompt/i).fill("build a SQL agent");
   await page.getByRole("button", { name: /Submit/i }).click();
-  await expect(page.getByText(/Backup if unavailable/i)).toBeVisible();
+  // Backup is now a comparison-matrix row (was the per-card "Backup if
+  // unavailable" line); the fallback model still surfaces.
+  await expect(page.getByText("Backup", { exact: true })).toBeVisible();
   await expect(page.getByText(/GPT-5\.5/)).toBeVisible();
 });
 
@@ -187,17 +189,11 @@ test("humanizes settings labels and renders the rationale prominently", async ({
   await page.goto("/recommend");
   await page.getByPlaceholder(/Input the prompt/i).fill("prove a theorem");
   await page.getByRole("button", { name: /Submit/i }).click();
-  // Humanized labels + values in the settings list (term/definition roles —
-  // scoped so we don't collide with the budget picker in the prompt form).
-  await expect(
-    page.getByRole("term").filter({ hasText: "Max Mode" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("term").filter({ hasText: "Budget Priority" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("definition").filter({ hasText: "Balanced" }),
-  ).toBeVisible();
+  // Settings render as humanized comparison-matrix rows (Max Mode, Thinking).
+  // budget_priority is implied by the column, so it's not shown as a row, and
+  // the raw snake_case key is never surfaced.
+  await expect(page.getByText("Max Mode")).toBeVisible();
+  await expect(page.getByText("Thinking")).toBeVisible();
   await expect(page.getByText("budget_priority")).toHaveCount(0);
   // Rationale is surfaced prominently (visible without expanding a disclosure)
   // and is NOT duplicated as a settings row.
@@ -205,9 +201,6 @@ test("humanizes settings labels and renders the rationale prominently", async ({
     page.getByRole("heading", { name: /Why this model\?/i }),
   ).toBeVisible();
   await expect(page.getByText(/Chosen for deep reasoning/i)).toBeVisible();
-  await expect(
-    page.getByRole("term").filter({ hasText: "Rationale" }),
-  ).toHaveCount(0);
 });
 
 test("renders the rationale as readable lines with glossary popovers (#270, #269)", async ({
@@ -250,6 +243,43 @@ test("renders the rationale as readable lines with glossary popovers (#270, #269
   const swebench = why.getByRole("link", { name: "SWE-bench Verified" });
   await expect(swebench).toHaveAttribute("href", "https://www.swebench.com/");
   await expect(swebench).toHaveAttribute("target", "_blank");
+});
+
+test("renders sub-headed rationale sections when the service supplies them", async ({
+  page,
+}) => {
+  // When the recommender emits structured rationale (task/pick/run), the panel
+  // renders sub-headings instead of splitting one prose string.
+  await page.route("**/api/recommend", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: mk({
+        model: "Opus 4.8",
+        platform: "Claude Code",
+        settings: {
+          rationale:
+            "TASK: Ship a report. PICK: Opus 4.8 is S-tier. RUN: Claude Code, Max effort.",
+        },
+        rationale_sections: {
+          task: "Ship an institutional-grade equity research report.",
+          pick: "Opus 4.8 is S-tier for coding.",
+          run: "Run on Claude Code at Max effort, funded by Claude Max.",
+        },
+        comparison_table: [],
+      }),
+    }),
+  );
+  await page.goto("/recommend");
+  await page.getByPlaceholder(/Input the prompt/i).fill("structured why");
+  await page.getByRole("button", { name: /Submit/i }).click();
+  const why = page.getByRole("region", { name: /Why this model/i });
+  await expect(why).toBeVisible();
+  // Three sub-headings, one per section.
+  await expect(why.getByRole("heading", { name: "The task" })).toBeVisible();
+  await expect(why.getByRole("heading", { name: "Why this pick" })).toBeVisible();
+  await expect(why.getByRole("heading", { name: "How to run it" })).toBeVisible();
+  await expect(why.getByText(/institutional-grade equity research report/i)).toBeVisible();
 });
 
 test("frontier-tier recommendation shows the quality-tier label (no upgrade CTA)", async ({
