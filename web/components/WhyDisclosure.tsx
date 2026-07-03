@@ -73,10 +73,9 @@ export function WhyDisclosure({ rationale, sections }: WhyDisclosureProps) {
   }
 
   return (
-    <section
-      aria-label="Why this model?"
-      className="rounded-lg border border-brand-slate-200 dark:border-brand-slate-700 bg-brand-slate-50 dark:bg-brand-slate-900 p-4"
-    >
+    // No chrome of its own — the parent TierDetail panel owns the border/bg so
+    // the rationale + cost read as one cohesive card.
+    <section aria-label="Why this model?">
       <h3 className="text-sm font-semibold text-brand-slate-800 dark:text-brand-slate-100">
         Why this model?
       </h3>

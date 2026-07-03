@@ -17,6 +17,15 @@ import { formatSettingValue, humanizeSettingKey } from "@/lib/settings-format";
 
 const LABELS = new Map(BUDGET_PRIORITY_OPTIONS.map((o) => [o.id, o]));
 
+// Terse column subtitles — the full budget-priority hints ("Cheapest model that
+// can do the job") wrap and crowd the compact column headers, so the matrix uses
+// short forms while Settings keeps the descriptive ones.
+const SHORT_HINT: Record<string, string> = {
+  cheap: "Cheapest that works",
+  balanced: "Best value",
+  best: "Highest quality",
+};
+
 // budget_priority is redundant with the column itself; rationale renders in the
 // detail panel. Everything else in `settings` becomes a comparison row.
 const HIDDEN_SETTING_KEYS = new Set(["rationale", "budget_priority"]);
@@ -115,8 +124,8 @@ export function TierMatrix({
             <span className="text-xs font-semibold uppercase tracking-wide text-brand-accent">
               {meta?.label ?? rec.priority}
             </span>
-            <span className="text-[11px] text-brand-slate-500 dark:text-brand-slate-400">
-              {meta?.hint}
+            <span className="text-[11px] leading-tight text-brand-slate-500 dark:text-brand-slate-400">
+              {SHORT_HINT[rec.priority] ?? meta?.hint}
             </span>
             <span className="mt-0.5 text-lg font-bold leading-tight text-brand-slate-900 dark:text-brand-slate-50">
               {rec.model}
