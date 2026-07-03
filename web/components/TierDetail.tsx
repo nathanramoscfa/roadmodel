@@ -2,7 +2,6 @@
 "use client";
 
 import type { PriorityRecommendation } from "@/lib/api";
-import { CostComparison } from "./CostComparison";
 import { WhyDisclosure } from "./WhyDisclosure";
 
 // The rationale STRING (the fallback + the fold-in the edge assembles into
@@ -30,6 +29,9 @@ interface TierDetailProps {
   onSetDefault: (priority: PriorityRecommendation["priority"]) => void;
 }
 
+// The selected pick's rationale panel ("Why this model?" + the pin control). The
+// cost table renders separately (RecommendOutput's right column) so the two
+// detail columns stay balanced regardless of how long the rationale runs.
 export function TierDetail({
   rec,
   canPersist,
@@ -39,25 +41,10 @@ export function TierDetail({
 }: TierDetailProps) {
   const rationale = extractRationale(rec);
   const sections = rec.rationale_sections ?? null;
-  const hasCost = (rec.comparison_table ?? []).length > 0;
 
   return (
-    // One cohesive panel: the selected pick's rationale + a divider + its cost,
-    // so the detail reads as a single card beside the matrix.
     <div className="flex flex-col gap-3 rounded-lg border border-brand-slate-200 dark:border-brand-slate-700 bg-brand-slate-50 dark:bg-brand-slate-900 p-4">
       <WhyDisclosure rationale={rationale} sections={sections} />
-
-      {hasCost ? (
-        <>
-          <div className="h-px bg-brand-slate-200 dark:bg-brand-slate-800" />
-          <div>
-            <h4 className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
-              Your cost by platform
-            </h4>
-            <CostComparison comparisonTable={rec.comparison_table} />
-          </div>
-        </>
-      ) : null}
 
       {canPersist ? (
         isDefault ? (
