@@ -847,7 +847,7 @@
             supports-models="opus-4.8,claude-fable-5,opus-4.7,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="yes"
-            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range) plus Ultracode (session-wide xhigh + Dynamic Workflows) and the per-turn `ultrathink` keyword." />
+            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\"ultracode\": true`) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized). As of 2.1.200 the default permission mode is `Manual` across the CLI, VS Code, and JetBrains." />
     <method id="claude-web" name="claude.ai web / desktop"
             provider="anthropic" billing="subscription-included"
             provider-jurisdiction="us"
@@ -1279,7 +1279,7 @@
                   as stated (or why it is N/A), why ORCHESTRATION was set to its
                   value including the session-budget caveat when Ultracode is
                   recommended, and the conversation-handling decision>
-                Each label is upper-case followed by a colon and a space; keep
+                Each label is upper-case followed by a colon and a segment; keep
                 every segment to justifying the pick, and NEVER perform the task.]
     PROMPT: [Prompt # or short label]
   </output-format>
