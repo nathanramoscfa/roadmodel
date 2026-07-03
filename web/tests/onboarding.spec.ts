@@ -234,16 +234,12 @@ test("default-restrict path excludes Kimi K2.5 from recommendations", async ({
   await page.goto("/recommend");
   await page.getByPlaceholder(/Input the prompt/i).fill("restrict cn");
   await page.getByRole("button", { name: /Submit/i }).click();
-  // Claude 4.5 Haiku is a recommended pick (a matrix column).
-  await expect(
-    page.locator("[data-priority]").filter({ hasText: /Claude 4\.5 Haiku/i }).first(),
-  ).toBeVisible();
-  // Kimi K2.5 is jurisdiction-excluded from the PICKS (the matrix columns). It
-  // may still surface as an alternative cost-table row (the per-pick filter
-  // keys on `model`, not the cost row's `model_name`), so scope to the picks.
-  await expect(
-    page.locator("[data-priority]").filter({ hasText: /Kimi K2\.5/i }),
-  ).toHaveCount(0);
+  // Claude 4.5 Haiku is a recommended pick.
+  await expect(page.getByText(/Claude 4\.5 Haiku/i).first()).toBeVisible();
+  // Kimi K2.5 is jurisdiction-excluded EVERYWHERE — not a pick and not a
+  // cost-table alternative (the edge filter now matches the cost row's
+  // `model_name`, not just `model`).
+  await expect(page.getByText(/Kimi K2\.5/i)).toHaveCount(0);
 });
 
 test("widen path includes cn and surfaces Kimi K2.5", async ({ page }) => {

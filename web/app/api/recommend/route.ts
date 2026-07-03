@@ -116,7 +116,16 @@ function filterByJurisdiction(
   }
   const comparison = payload.comparison_table ?? [];
   const filtered = comparison.filter((row) => {
-    const model = typeof row.model === "string" ? row.model : "";
+    // Cost rows carry the model under `model_name` (SessionCostEstimate);
+    // fall back to `model` for any legacy shape. Reading only `model` let a
+    // jurisdiction-restricted model slip through as a cost-table alternative
+    // even though it was correctly excluded as a pick.
+    const model =
+      typeof row.model_name === "string"
+        ? row.model_name
+        : typeof row.model === "string"
+          ? row.model
+          : "";
     return !isCnJurisdictionModel(model);
   });
   let model = payload.model;
