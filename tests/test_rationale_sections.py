@@ -160,22 +160,26 @@ def _fake_base_with(**fields: str):
     return _fake
 
 
-def test_recommend_structured_surfaces_orchestration_setting(
+def test_recommend_structured_folds_ultracode_into_effort(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """A Claude Code pick with ORCHESTRATION Ultracode surfaces it as a settings
-    dimension so the comparison matrix can render an Orchestration row (0.2.15)."""
+    """Claude Code has NO separate orchestration dial — Ultracode is the TOP of its
+    single /effort ladder (xhigh + Dynamic Workflows). So an ORCHESTRATION of
+    Ultracode FOLDS into the effort value and there is NO separate orchestration
+    settings row (0.2.16 reconciliation of the 0.2.15 orchestration row)."""
     monkeypatch.setattr(recommend_module, "recommend", _fake_base_with(orchestration="Ultracode"))
     payload = recommend_module.recommend_structured("plan a system", _config(tmp_path))
-    assert payload["settings"]["orchestration"] == "Ultracode"
-    assert payload["settings"]["effort"] == "XHigh"
+    assert payload["settings"]["effort"] == "Ultracode"
+    assert payload["settings"]["thinking"] == "On"
+    assert "orchestration" not in payload["settings"]
 
 
-def test_recommend_structured_orchestration_defaults_to_standard(
+def test_recommend_structured_no_orchestration_leaves_effort_from_thinking(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """An absent/None ORCHESTRATION on Claude Code is the standard run — shown as
-    'Standard' so the matrix row always has a value."""
+    """Without an Ultracode orchestration, the Claude Code effort is just the
+    THINKING level (here XHigh) and no orchestration row is emitted."""
     monkeypatch.setattr(recommend_module, "recommend", _fake_base_with())
     payload = recommend_module.recommend_structured("plan a system", _config(tmp_path))
-    assert payload["settings"]["orchestration"] == "Standard"
+    assert payload["settings"]["effort"] == "XHigh"
+    assert "orchestration" not in payload["settings"]
