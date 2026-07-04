@@ -283,6 +283,42 @@ def canonical_platform_name(platform_ref: str) -> str:
         return platform_ref
 
 
+# Pricing-tier buckets by OUTPUT price per 1M tokens, mirroring
+# docs/model-tier-cost-scale.md: Low < $10, Medium $10–14.99, High $15–24.99,
+# Very High >= $25. Rank is an integer so tiers compare directly (higher rank =
+# pricier): low=0, medium=1, high=2, very-high=3. Used by the tier-ladder guard
+# to check the Cost/Balanced/Quality picks occupy distinct, decreasing tiers.
+_PRICING_TIER_RANK: dict[str, int] = {"low": 0, "medium": 1, "high": 2, "very-high": 3}
+
+
+def pricing_tier(model_ref: str) -> str | None:
+    """Resolve a model id-or-name to its pricing tier
+    (``low`` / ``medium`` / ``high`` / ``very-high``) by bucketing its catalog
+    output price, per docs/model-tier-cost-scale.md. Returns ``None`` on any
+    catalog miss or missing price (never raises), so the ladder guard degrades
+    to "tier unknown" rather than failing a recommendation."""
+    try:
+        model = _resolve_model(model_ref, _load_catalog())
+        output_price = float(model["output_price_per_1m"])
+    except (ValueError, BundledDocNotFoundError, KeyError, TypeError):
+        return None
+    if output_price < 10.0:
+        return "low"
+    if output_price < 15.0:
+        return "medium"
+    if output_price < 25.0:
+        return "high"
+    return "very-high"
+
+
+def pricing_tier_rank(tier: str | None) -> int | None:
+    """Map a pricing-tier name to its integer rank (higher = pricier), or
+    ``None`` when the tier is unknown."""
+    if tier is None:
+        return None
+    return _PRICING_TIER_RANK.get(tier)
+
+
 def _as_dict(value: object) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise BundledDocNotFoundError("catalog.json")

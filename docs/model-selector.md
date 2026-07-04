@@ -3813,3 +3813,64 @@ RATIONALE: [Emit THREE labelled segments in this EXACT order and format, so
             every segment short and justifying the pick only, and NEVER
             perform the task.]
 PROMPT: [Prompt # or short label]
+
+Ladder mode — output EXACTLY three blocks for the SAME single prompt, one
+per budget tier, each prefixed with its TIER label, in this exact order
+(highest tier first). This mode is used when the request explicitly asks for
+a Quality/Balanced/Cost ladder; it replaces the three separate calls with one
+coherent, anchored recommendation set:
+
+TIER: QUALITY
+MODEL: [Model Name]
+BACKUP: [Model Name or None]
+PLATFORM: [Access Method Name]
+MAX MODE: [On/Off]
+THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]
+ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
+CONVERSATION: [New/Continue]
+RATIONALE: [THREE labelled segments — TASK: / PICK: / RUN: — exactly as in
+            single-prompt mode.]
+
+TIER: BALANCED
+MODEL: [Model Name]
+BACKUP: [Model Name or None]
+PLATFORM: [Access Method Name]
+MAX MODE: [On/Off]
+THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]
+ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
+CONVERSATION: [New/Continue]
+RATIONALE: [TASK: / PICK: / RUN: as above.]
+
+TIER: COST
+MODEL: [Model Name]
+BACKUP: [Model Name or None]
+PLATFORM: [Access Method Name]
+MAX MODE: [On/Off]
+THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]
+ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
+CONVERSATION: [New/Continue]
+RATIONALE: [TASK: / PICK: / RUN: as above.]
+
+Ladder construction rules (the WHOLE POINT of this mode — obey strictly):
+  1. Determine the QUALITY pick FIRST, by running the full selection
+     algorithm (Steps 0a–7) with NO budget cap — the highest-quality model,
+     tier, and effort the task genuinely warrants. This is the anchor.
+  2. Derive BALANCED as the best-VALUE rung anchored BELOW quality: a
+     STRICTLY-LOWER pricing tier (per <model-tier-cost-scale>) AND/OR a
+     strictly-lower effort than the QUALITY pick — the cheapest option that
+     still does the job well.
+  3. Derive COST as STRICTLY-LOWER than BALANCED: the smallest / lowest-tier
+     model (and lowest effort) that still clears the task.
+  4. The three picks MUST occupy three DISTINCT pricing tiers whenever the
+     surviving candidate set (post Steps 0a/0b + funding) contains models at
+     three or more tiers. Target end state, e.g.: COST = a Low-tier model,
+     BALANCED = a High-tier model, QUALITY = a Very-High-tier model.
+  5. Only when the candidate set genuinely cannot supply three distinct
+     tiers (e.g. every funded candidate sits in one tier) may two picks share
+     a tier — and then they MUST differ by EFFORT, and each RATIONALE must
+     state the tie ("same tier; differentiated by effort"). NEVER emit the
+     same MODEL for two tiers, and NEVER collapse BALANCED or COST onto the
+     QUALITY pick.
+  6. Each pick independently obeys every algorithm rule (availability,
+     jurisdiction, the Step 7 cross-provider BACKUP requirement, platform
+     funding, thinking/max-mode/orchestration mapping).
