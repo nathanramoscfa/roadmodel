@@ -1,35 +1,15 @@
 // web/components/CostComparison.tsx
+import {
+  type CostRow,
+  hasPoolBilledRow,
+  per1kCost,
+  rowModel,
+  rowPlatform,
+  sharedApiRate,
+} from "@/lib/cost-format";
+
 interface CostComparisonProps {
-  comparisonTable: Record<string, unknown>[];
-}
-
-function rowModel(row: Record<string, unknown>): string {
-  const name = row.model_name ?? row.model;
-  return typeof name === "string" ? name : "—";
-}
-
-function rowPlatform(row: Record<string, unknown>): string {
-  const name = row.platform_name ?? row.platform;
-  return typeof name === "string" ? name : "—";
-}
-
-function per1kCost(row: Record<string, unknown>): string {
-  const input = row.input_tokens;
-  const output = row.output_tokens;
-  const total = row.total_usd;
-  if (
-    typeof input === "number" &&
-    typeof output === "number" &&
-    typeof total === "number" &&
-    input + output > 0
-  ) {
-    const per1k = (total / (input + output)) * 1000;
-    return `$${per1k.toFixed(4)}`;
-  }
-  if (typeof total === "number") {
-    return `$${total.toFixed(4)} (session)`;
-  }
-  return "—";
+  comparisonTable: CostRow[];
 }
 
 function subscriptionNote(row: Record<string, unknown>): string {
@@ -83,17 +63,44 @@ export function CostComparison({ comparisonTable }: CostComparisonProps) {
     (row) => typeof row.your_cost === "string",
   );
 
+  // Per-1k is the MODEL's API token rate, not a per-platform charge (access
+  // methods carry no per-platform token pricing). When every row is the same
+  // model it is identical across platforms — so we lift it OUT of the table and
+  // show it once as a model-level rate, leaving "Your cost" as the genuine
+  // per-platform column. Only when rows span multiple models (rare) does per-1k
+  // vary per row and stay in the table.
+  const apiRate = showModelColumn ? null : sharedApiRate(comparisonTable);
+  const showPer1kColumn = apiRate === null;
+  const poolBilled = hasPoolBilledRow(comparisonTable);
+  // The last column is the genuine per-platform figure — the user's own cost
+  // when personalized, else the generic funding source.
+  const costColLabel = personalized ? "Your cost" : "Funding";
+
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[280px] text-left text-sm">
+      {apiRate ? (
+        <p className="mb-2 text-sm text-brand-slate-600 dark:text-brand-slate-300">
+          <span className="font-medium text-brand-slate-900 dark:text-brand-slate-50">
+            {rowModel(comparisonTable[0])}
+          </span>{" "}
+          API rate:{" "}
+          <span className="font-medium text-brand-slate-900 dark:text-brand-slate-50">
+            {apiRate}
+          </span>{" "}
+          / 1k tokens
+        </p>
+      ) : null}
+      <table className="w-full min-w-[240px] text-left text-sm">
         <thead>
           <tr className="border-b border-brand-slate-200 dark:border-brand-slate-700 text-brand-slate-600 dark:text-brand-slate-300">
             {showModelColumn ? (
               <th className="py-1.5 pr-3 font-medium">Model</th>
             ) : null}
             <th className="py-1.5 pr-3 font-medium">Platform</th>
-            <th className="whitespace-nowrap py-1.5 pr-3 font-medium">Per 1k</th>
-            <th className="py-1.5 font-medium">{personalized ? "Your cost" : "Funding"}</th>
+            {showPer1kColumn ? (
+              <th className="whitespace-nowrap py-1.5 pr-3 font-medium">Per 1k</th>
+            ) : null}
+            <th className="py-1.5 font-medium">{costColLabel}</th>
           </tr>
         </thead>
         <tbody>
@@ -110,9 +117,11 @@ export function CostComparison({ comparisonTable }: CostComparisonProps) {
               <td className="py-1.5 pr-3 text-brand-slate-700 dark:text-brand-slate-200">
                 {rowPlatform(row)}
               </td>
-              <td className="py-1.5 pr-3 text-brand-slate-700 dark:text-brand-slate-200">
-                {per1kCost(row)}
-              </td>
+              {showPer1kColumn ? (
+                <td className="py-1.5 pr-3 text-brand-slate-700 dark:text-brand-slate-200">
+                  {per1kCost(row)}
+                </td>
+              ) : null}
               <td className="py-1.5 text-brand-slate-600 dark:text-brand-slate-300">
                 {fundingCell(row, personalized)}
               </td>
@@ -120,6 +129,19 @@ export function CostComparison({ comparisonTable }: CostComparisonProps) {
           ))}
         </tbody>
       </table>
+      {/* The per-1k is a MODEL-level token rate: a provider bills it identically
+          across its OWN surfaces (Claude Code / claude.ai / its API), so it does
+          not vary per platform. Third-party platforms (e.g. Cursor) bill by
+          request/subscription pool, not per token, so "Your cost" — not the API
+          rate — is what actually differs by platform. */}
+      <p className="mt-2 text-xs leading-snug text-brand-slate-400 dark:text-brand-slate-500">
+        {showPer1kColumn ? "Per 1k is the model's API token rate" : "The API rate is model-level"} — a
+        provider bills it the same across its own surfaces (Claude Code, claude.ai,
+        API).{" "}
+        {poolBilled ? "Cursor and other" : "Third-party"} platforms bill by
+        request/subscription pool, not per token, so{" "}
+        <span className="font-medium">{costColLabel}</span> is what changes by platform.
+      </p>
     </div>
   );
 }
