@@ -362,6 +362,37 @@ def test_prompt_has_subscription_refresh_rules() -> None:
     )
 
 
+def test_backup_step_requires_different_provider() -> None:
+    """Step 7 must state the cross-provider BACKUP rule as a HARD requirement
+    (not a soft "prefer"). The backup exists so a single provider's outage or
+    access block can't take out both picks; a same-provider fallback defeats
+    that. This guards against a refresh silently softening the rule back to a
+    preference (the Fable 5 -> Opus 4.8, both Anthropic, regression class).
+    """
+    text = SELECTOR_PATH.read_text()
+    # The Step 7 block, isolated so we assert on the backup rule specifically.
+    assert "Name a backup model" in text, "Step 7 backup section is missing"
+    required = [
+        "MUST be from a DIFFERENT provider/family",
+        "HARD requirement",
+        "NEVER acceptable",
+        # The option-A fallback: drop tier rather than name no backup.
+        "DROP the",
+    ]
+    missing = [phrase for phrase in required if phrase not in text]
+    assert not missing, (
+        "docs/model-selector.txt Step 7 is missing the hard cross-provider "
+        f"BACKUP phrases: {missing}. The backup must be a different "
+        "provider/family than the primary (hard rule), dropping tier if "
+        "needed to stay cross-provider."
+    )
+    # The old soft phrasing must not creep back in.
+    assert "Prefer a model from a DIFFERENT provider" not in text, (
+        "Step 7 still contains the SOFT 'Prefer a model from a DIFFERENT "
+        "provider' phrasing — the cross-provider backup rule must be HARD."
+    )
+
+
 def test_cost_scale_provider_tables_have_required_columns() -> None:
     text = COST_SCALE_PATH.read_text()
     headers_found = re.findall(r"^\|\s*Model\s*\|.*\|\s*Notes\s*\|", text, re.MULTILINE)
