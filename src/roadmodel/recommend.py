@@ -398,6 +398,19 @@ def _structured_settings(base: dict[str, str]) -> dict[str, str]:
         return {"intelligence": thinking_raw}
 
     max_label = "ON" if max_mode_on() else "OFF"
+
+    if plat == "cursor":
+        # Cursor's frontier models always reason, but the IDE exposes NO
+        # thinking-level dial — so the selector emits THINKING `N/A` (see
+        # <thinking-context> Step E). Surfaced raw, that read "Thinking: N/A"
+        # next to an em-dash Effort, implying Cursor had no controllable
+        # settings at all. Reframe it for display: Thinking is "On" (reasoning
+        # happens, just not user-dialable) and the user's real dial on Cursor is
+        # Max Mode (its own matrix row). Done HERE at the display layer, not in
+        # the selector vocabulary, so the daily effort/thinking conformance cron
+        # (which pins Cursor's THINKING=N/A) can never revert it.
+        return {"max_mode": max_label, "thinking": "On"}
+
     return {"max_mode": max_label, "thinking": thinking_raw}
 
 
