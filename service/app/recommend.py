@@ -15,10 +15,13 @@ from roadmodel.errors import (  # type: ignore[import-untyped]
     MissingProviderKeyError,
     ProviderCallError,
 )
-from roadmodel.recommend import recommend_structured  # type: ignore[import-untyped]
+from roadmodel.recommend import (  # type: ignore[import-untyped]
+    recommend_structured,
+    recommend_structured_ladder,
+)
 
 from .funding import user_context_from_request
-from .models import RecommendRequest, RecommendResponse
+from .models import LadderResponse, RecommendRequest, RecommendResponse
 
 logger = logging.getLogger(__name__)
 
@@ -175,6 +178,18 @@ _GEMINI_TEMPERATURE = 0.0
 _GEMINI_FRONTIER_THINKING_BUDGET = 512
 _GEMINI_FRONTIER_MAX_OUTPUT_TOKENS = 2048
 
+# Ladder mode (tasks #1/#3) emits THREE six/seven-field blocks in one response,
+# so the visible-output cap must scale ~3x the single-block cap or the third
+# (COST) block truncates below the parser threshold — the same failure class as
+# the 2026-05-31 incident, but from too-tight a cap on a 3x-longer body.
+_LADDER_OUTPUT_MULTIPLIER = 3
+
+
+def _ladder_output_cap(single_block_cap: int) -> int:
+    """Scale a single-block output cap for the three-block ladder response."""
+    return single_block_cap * _LADDER_OUTPUT_MULTIPLIER
+
+
 # Issue #188: the selector's <access-methods> mark `cursor` and `xai-api` with
 # exposes-thinking="no", and <thinking-context> makes that an OVERRIDE — THINKING
 # must be N/A on those surfaces regardless of task complexity. Gemini 2.5 Flash
@@ -300,34 +315,7 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
                 thinking_budget=thinking_budget,
                 temperature=temperature,
             )
-            # Compute cost separately + best-effort (#164) rather than via
-            # recommend_structured's input_tokens path, so a cost-catalog miss
-            # degrades to "no cost panel" instead of failing the recommendation.
-            session_cost_estimate, comparison_table = _session_cost(
-                result["model"], result["platform"], req.task_description
-            )
-            return RecommendResponse(
-                model=result["model"],
-                platform=result["platform"],
-                # Deterministic THINKING=N/A override on no-thinking surfaces (#188).
-                settings=_normalize_no_thinking(result["platform"], result["settings"]),
-                # Carry the model's reasoning across the service boundary (#173);
-                # empty string -> None so the web edge falls back cleanly.
-                rationale=result.get("rationale") or None,
-                # Carry the best-effort structured rationale sections (task/pick/
-                # run) so the web panel can render sub-headings; absent on an
-                # older roadmodel or a non-conforming model response -> None, and
-                # the edge falls back to the raw `rationale` string above.
-                rationale_sections=result.get("rationale_sections") or None,
-                # Carry the conversation-handling decision across the boundary (#190),
-                # same drop class as rationale; empty -> None.
-                conversation=result.get("conversation") or None,
-                # Carry the fallback model (Step 7) across the boundary, same drop
-                # class as conversation; absent/empty -> None.
-                backup=result.get("backup") or None,
-                session_cost_estimate=session_cost_estimate,
-                comparison_table=comparison_table,
-            )
+            return _pick_response(result, req.task_description)
         except (MissingProviderKeyError, ProviderCallError, MalformedResponseError) as exc:
             last_error = exc
             if isinstance(exc, MalformedResponseError):
@@ -347,3 +335,96 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
     if last_error is not None:
         raise last_error
     raise ProviderCallError("No provider available for recommendation.")
+
+
+def _pick_response(result: dict[str, Any], task_description: str) -> RecommendResponse:
+    """Build a RecommendResponse from one structured pick payload, computing its
+    cost separately + best-effort (#164) so a cost-catalog miss degrades to "no
+    cost panel" rather than failing the recommendation. Shared by the single-pick
+    path and each rung of the ladder."""
+    session_cost_estimate, comparison_table = _session_cost(
+        result["model"], result["platform"], task_description
+    )
+    return RecommendResponse(
+        model=result["model"],
+        platform=result["platform"],
+        # Deterministic THINKING=N/A override on no-thinking surfaces (#188).
+        settings=_normalize_no_thinking(result["platform"], result["settings"]),
+        # Carry the model's reasoning across the service boundary (#173);
+        # empty string -> None so the web edge falls back cleanly.
+        rationale=result.get("rationale") or None,
+        # Carry the best-effort structured rationale sections (task/pick/run) so
+        # the web panel can render sub-headings; absent -> None and the edge
+        # falls back to the raw `rationale` string above.
+        rationale_sections=result.get("rationale_sections") or None,
+        # Carry the conversation-handling decision across the boundary (#190).
+        conversation=result.get("conversation") or None,
+        # Carry the fallback model (Step 7) across the boundary.
+        backup=result.get("backup") or None,
+        session_cost_estimate=session_cost_estimate,
+        comparison_table=comparison_table,
+    )
+
+
+def recommend_ladder(req: RecommendRequest) -> LadderResponse:
+    """One-call Cost/Balanced/Quality ladder (tasks #1/#3).
+
+    Mirrors :func:`recommend` — same provider fallback chain, Gemini
+    latency/output caps, and per-user funding + runtime-availability context —
+    but calls the package's ``recommend_structured_ladder`` once and returns all
+    three anchored picks plus the deterministic tier-distinctness ``guard``. The
+    web edge calls this instead of fanning out three separate priority calls;
+    on any provider/parse failure it raises (like ``recommend``) so the edge
+    falls back to the fan-out.
+    """
+    last_error: Exception | None = None
+
+    user_context_text = user_context_from_request(req.context)
+    unavailable_models = _unavailable_models_from_request(req.context)
+    availability_authoritative = _availability_authoritative_from_request(req.context)
+
+    for hint in _provider_chain(req.context):
+        config = _config_for_hint(hint)
+        is_gemini = config.provider == "google"
+        is_frontier = is_gemini and config.model == _GEMINI_FRONTIER_MODEL
+        if is_frontier:
+            thinking_budget: int | None = _GEMINI_FRONTIER_THINKING_BUDGET
+            # The ladder emits ~3x the visible tokens (three blocks), so lift the
+            # per-call output cap accordingly to avoid truncating the third block.
+            max_output_tokens: int | None = _ladder_output_cap(_GEMINI_FRONTIER_MAX_OUTPUT_TOKENS)
+        elif is_gemini:
+            thinking_budget = _GEMINI_THINKING_BUDGET
+            max_output_tokens = _ladder_output_cap(_GEMINI_MAX_OUTPUT_TOKENS)
+        else:
+            thinking_budget = None
+            max_output_tokens = None
+        temperature = _GEMINI_TEMPERATURE if is_gemini else None
+        try:
+            ladder = recommend_structured_ladder(
+                req.task_description,
+                config,
+                user_context_text=user_context_text,
+                unavailable_models=unavailable_models,
+                availability_authoritative=availability_authoritative,
+                max_output_tokens=max_output_tokens,
+                thinking_budget=thinking_budget,
+                temperature=temperature,
+            )
+            picks = {
+                tier: _pick_response(pick, req.task_description)
+                for tier, pick in ladder["picks"].items()
+            }
+            return LadderResponse(picks=picks, guard=ladder.get("guard", {}))
+        except (MissingProviderKeyError, ProviderCallError, MalformedResponseError) as exc:
+            last_error = exc
+            if isinstance(exc, MalformedResponseError):
+                logger.warning(
+                    "provider hint %r returned an unparseable LADDER response; "
+                    "falling through to the next provider in the chain",
+                    hint,
+                )
+            continue
+
+    if last_error is not None:
+        raise last_error
+    raise ProviderCallError("No provider available for ladder recommendation.")

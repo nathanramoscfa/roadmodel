@@ -912,3 +912,104 @@ def test_no_funding_passes_none_user_context(
 
     assert response.status_code == 200
     assert captured["user_context_text"] is None
+
+
+# --- /v1/recommend/ladder (tasks #1/#3) --------------------------------------
+
+
+def _ladder_pick(model: str, platform: str, effort: str) -> dict[str, Any]:
+    return {
+        "model": model,
+        "platform": platform,
+        "settings": {"effort": effort, "thinking": "On"},
+        "rationale": f"TASK: Coding. PICK: {model}. RUN: {platform}.",
+        "conversation": "New",
+        "session_cost_estimate": None,
+        "comparison_table": None,
+    }
+
+
+def test_ladder_endpoint_returns_three_anchored_picks(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    recommend_module = importlib.import_module("app.recommend")
+    captured: dict[str, Any] = {}
+
+    def _fake_ladder(
+        prompt: str,
+        config: Any,
+        *,
+        user_context_text: str | None = None,
+        unavailable_models: list[str] | None = None,
+        availability_authoritative: bool = False,
+        max_output_tokens: int | None = None,
+        thinking_budget: int | None = None,
+        temperature: float | None = None,
+    ) -> dict[str, Any]:
+        captured["prompt"] = prompt
+        captured["max_output_tokens"] = max_output_tokens
+        return {
+            "picks": {
+                "quality": _ladder_pick("Opus 4.8", "Claude Code", "Max"),
+                "balanced": _ladder_pick("Sonnet 4.6", "Claude Code", "High"),
+                "cost": _ladder_pick("Composer 2.5", "Cursor", "Low"),
+            },
+            "guard": {
+                "duplicate_models": False,
+                "misordered": False,
+                "distinct_tiers": True,
+                "healthy": True,
+            },
+        }
+
+    monkeypatch.setattr(recommend_module, "recommend_structured_ladder", _fake_ladder)
+
+    response = client.post("/v1/recommend/ladder", json=_request_payload())
+
+    assert response.status_code == 200
+    body = response.json()
+    assert set(body["picks"]) == {"quality", "balanced", "cost"}
+    assert body["picks"]["quality"]["model"] == "Opus 4.8"
+    assert body["picks"]["balanced"]["model"] == "Sonnet 4.6"
+    assert body["picks"]["cost"]["model"] == "Composer 2.5"
+    # Each pick is shaped like a single RecommendResponse (rationale carried).
+    assert body["picks"]["quality"]["rationale"].startswith("TASK:")
+    # The deterministic guard rides along for the edge's fallback decision.
+    assert body["guard"]["healthy"] is True
+    # Ladder mode lifts the Gemini output cap (~3x) for the three-block body —
+    # but the anthropic default hint passes None (no Gemini cap). Assert the call
+    # was made; cap behavior is covered by the package-level tests.
+    assert captured["prompt"] == "pick a model"
+
+
+def test_ladder_endpoint_requires_bearer(monkeypatch: pytest.MonkeyPatch) -> None:
+    app_main = _load_main_module(monkeypatch)
+    raw = TestClient(app_main.app)
+    response = raw.post("/v1/recommend/ladder", json=_request_payload())
+    assert response.status_code == 401
+
+
+def test_ladder_endpoint_carries_backup_and_guard(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    recommend_module = importlib.import_module("app.recommend")
+
+    def _fake_ladder(prompt: str, config: Any, **_kwargs: Any) -> dict[str, Any]:
+        quality = _ladder_pick("Opus 4.8", "Claude Code", "Max")
+        quality["backup"] = "GPT-5.5"
+        return {
+            "picks": {
+                "quality": quality,
+                "balanced": _ladder_pick("Sonnet 4.6", "Claude Code", "High"),
+                "cost": _ladder_pick("Composer 2.5", "Cursor", "Low"),
+            },
+            "guard": {"healthy": True, "distinct_tiers": True},
+        }
+
+    monkeypatch.setattr(recommend_module, "recommend_structured_ladder", _fake_ladder)
+
+    body = client.post("/v1/recommend/ladder", json=_request_payload()).json()
+    assert body["picks"]["quality"]["backup"] == "GPT-5.5"
+    assert body["guard"]["distinct_tiers"] is True
