@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.17] — 2026-07-04
+
+### Changed
+
+- **The BACKUP model is now a HARD cross-provider requirement.** Step 7 of the
+  selection algorithm previously only *preferred* a backup from a different
+  provider/family, which let same-family backups through (e.g. a Fable 5 primary
+  with an Opus 4.8 backup — both Anthropic, so a single Anthropic outage takes out
+  both picks). The rule is now mandatory: the BACKUP must be from a different
+  provider/family than the primary, and if no different-provider model meets the
+  primary's required tier the selector DROPS the tier floor to keep the backup
+  cross-provider (a slightly weaker cross-provider fallback still preserves the
+  resilience guarantee). `None` is emitted only when the candidate set has no
+  other-provider model at all. A doc-schema prose-check guards the hard language.
+- **Cursor picks now read Thinking = On with Max Mode as the dial, not
+  Thinking = N/A.** Cursor's frontier models always reason, but the IDE exposes no
+  thinking-level dial, so the selector emits `THINKING: N/A` for Cursor — which
+  surfaced as a confusing "Thinking: N/A" beside an em-dash Effort, implying Cursor
+  had no controllable settings. `_structured_settings` now reframes a Cursor pick
+  as `thinking: "On"` (reasoning happens, just not user-dialable) and keeps Max
+  Mode (On/Off) as its real dial. Done at the display layer, not the selector
+  vocabulary, so the daily effort/thinking conformance cron can't revert it.
+
 ## [0.2.16] — 2026-07-04
 
 ### Changed
