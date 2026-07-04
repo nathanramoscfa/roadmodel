@@ -183,3 +183,49 @@ def test_recommend_structured_no_orchestration_leaves_effort_from_thinking(
     payload = recommend_module.recommend_structured("plan a system", _config(tmp_path))
     assert payload["settings"]["effort"] == "XHigh"
     assert "orchestration" not in payload["settings"]
+
+
+def test_recommend_structured_cursor_thinking_on_max_mode_dial(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A Cursor pick must read Thinking=On + Max Mode (On/Off), never the raw
+    THINKING=N/A the selector emits for Cursor (which has no thinking dial).
+    Cursor's frontier models reason; the reframe happens at the display layer
+    so the effort/thinking conformance cron can't revert it. There is NO effort
+    key (Cursor has no effort dial — its dial is Max Mode)."""
+    monkeypatch.setattr(
+        recommend_module,
+        "recommend",
+        _fake_base_with(
+            model="Composer 2.5",
+            platform="Cursor",
+            thinking="N/A",
+            max_mode="On",
+        ),
+    )
+    payload = recommend_module.recommend_structured("build a feature", _config(tmp_path))
+    settings = payload["settings"]
+    assert settings["thinking"] == "On"
+    assert settings["max_mode"] == "ON"
+    assert "effort" not in settings
+
+
+def test_recommend_structured_cursor_max_mode_off_still_thinking_on(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Even with Max Mode Off, a Cursor pick still reports Thinking=On — the
+    reframe is unconditional for Cursor, not gated on Max Mode."""
+    monkeypatch.setattr(
+        recommend_module,
+        "recommend",
+        _fake_base_with(
+            model="Composer 2.5",
+            platform="Cursor",
+            thinking="N/A",
+            max_mode="Off",
+        ),
+    )
+    payload = recommend_module.recommend_structured("fix a bug", _config(tmp_path))
+    settings = payload["settings"]
+    assert settings["thinking"] == "On"
+    assert settings["max_mode"] == "OFF"
