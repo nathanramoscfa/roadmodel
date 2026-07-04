@@ -27,8 +27,12 @@ const SHORT_HINT: Record<string, string> = {
 };
 
 // budget_priority is redundant with the column itself; rationale renders in the
-// detail panel. Everything else in `settings` becomes a comparison row.
-const HIDDEN_SETTING_KEYS = new Set(["rationale", "budget_priority"]);
+// detail panel. `orchestration` is never its own row: Claude Code has no separate
+// orchestration dial — Ultracode is the top of its single Effort ladder, so the
+// package folds it into the effort VALUE (roadmodel >=0.2.16). Hiding the key
+// here also cleans up any stale/cached record that still carries it. Everything
+// else in `settings` becomes a comparison row.
+const HIDDEN_SETTING_KEYS = new Set(["rationale", "budget_priority", "orchestration"]);
 
 // Active-column outline (matches mockups/recommend-redesign.html). The selected
 // column reads as ONE continuous rounded box: the header carries an accent
