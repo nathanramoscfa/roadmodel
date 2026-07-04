@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.18] — 2026-07-04
+
+### Added
+
+- **Single-call tier-ladder recommender (`recommend_ladder` /
+  `recommend_structured_ladder`).** A new selector "ladder mode" emits the whole
+  Cost/Balanced/Quality ladder in ONE response — the Quality pick is chosen first
+  with no budget cap, then Balanced and Cost are derived as strictly-lower rungs
+  (a lower pricing tier and/or effort) — instead of three independent calls that
+  could collapse onto the same model. `parse_ladder_response` splits the three
+  `TIER:`-labelled blocks (each parsed by the existing single-block parser, so it
+  can't reintroduce parser drift), and a deterministic tier-distinctness guard
+  (`_ladder_tier_guard`, backed by the new `cost.pricing_tier`) reports whether
+  the ladder is healthy (no duplicate models, no rank inversion) so an embedding
+  caller can fall back to the per-priority path on a collapse. Additive: the
+  single-prompt and roadmap-annotation modes are unchanged.
+- **`cost.pricing_tier` / `cost.pricing_tier_rank`** — resolve a model to its
+  pricing tier (low / medium / high / very-high) by bucketing its catalog output
+  price per `docs/model-tier-cost-scale.md`.
+
 ## [0.2.17] — 2026-07-04
 
 ### Changed
