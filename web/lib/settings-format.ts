@@ -15,7 +15,7 @@ export function humanizeSettingKey(key: string): string {
 }
 
 // Lightly normalize enum-ish values without mangling presentation-ready ones
-// (N/A, XHigh, On). SHOUTY enums (ON/OFF) -> Title case; lowercase enums
+// (N/A, On). SHOUTY enums (ON/OFF) -> Title case; lowercase enums
 // (balanced) -> Capitalized; everything else as-is. null/undefined -> em dash.
 export function formatSettingValue(value: unknown): string {
   if (value === null || value === undefined) {
@@ -25,6 +25,12 @@ export function formatSettingValue(value: unknown): string {
     return JSON.stringify(value);
   }
   const s = String(value);
+  // Match Claude Code's own effort label: the `xhigh` step is shown as
+  // "Extra high" in its /effort dial (the other levels — Low/Medium/High/Max/
+  // Ultracode — already read the same). Case-insensitive so XHigh/xhigh both map.
+  if (s.trim().toLowerCase() === "xhigh") {
+    return "Extra high";
+  }
   if (/^[A-Z]+$/.test(s)) {
     return s.charAt(0) + s.slice(1).toLowerCase();
   }
