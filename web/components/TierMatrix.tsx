@@ -120,11 +120,20 @@ export function TierMatrix({
       label: "Your cost",
       cell: (rec) => {
         const cost = headlineCost(rec);
+        // Match the mock: the amount ("$0") in the funded/green weight, the
+        // funding source ("Claude Max") as a muted sub-label — split off the
+        // "$0 · Claude Max" your_cost string (drop any leading ✓).
+        const [amount, ...rest] = cost.text.replace(/^✓\s*/, "").split(/\s*·\s*/);
+        const source = rest.join(" · ");
         return {
           node: (
             <>
-              {cost.funded ? "✓ " : ""}
-              {cost.text}
+              <span>{amount}</span>
+              {source ? (
+                <span className="font-normal text-brand-slate-400 dark:text-brand-slate-500">
+                  {source}
+                </span>
+              ) : null}
             </>
           ),
           funded: cost.funded,

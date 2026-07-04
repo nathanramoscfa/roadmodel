@@ -91,6 +91,7 @@ export function RecommendOutput({ data, canPersist }: RecommendOutputProps) {
     data.recommendations[0];
   const insight = fundedZeroInsight(data.recommendations);
   const three = data.recommendations.length === 3;
+  const hasBalanced = data.recommendations.some((r) => r.priority === "balanced");
 
   return (
     <div className="flex flex-col gap-3">
@@ -100,7 +101,7 @@ export function RecommendOutput({ data, canPersist }: RecommendOutputProps) {
             Your {three ? "three " : ""}picks
           </h2>
           <span className="text-xs text-brand-slate-400 dark:text-brand-slate-500">
-            Select a pick to see why &amp; the full cost
+            Select a pick to see the full rationale &amp; cost →
           </span>
         </div>
 
@@ -118,15 +119,19 @@ export function RecommendOutput({ data, canPersist }: RecommendOutputProps) {
                 capability &amp; effort
               </b>
               , not price.
+              {hasBalanced ? " Balanced is the best value." : ""}
             </span>
           </div>
         ) : null}
 
-        {/* Compact comparison matrix (left) beside the selected pick's detail
-            (right). The detail column is slightly wider so a long rationale
-            wraps to fewer lines; the rating key fills the left column beneath
-            the matrix so the two sides stay roughly balanced. */}
-        <div className="grid gap-4 lg:grid-cols-[1.18fr_1fr] lg:items-start">
+        {/* Compact comparison matrix (left) BESIDE the selected pick's detail
+            (right), matching the mock's `.body-split` (1.42fr / 1fr). The
+            side-by-side kicks in at the mock's own 920px breakpoint — not
+            Tailwind's `lg` (1024px), which left the two panels stacked at the
+            ~960px split-screen widths the page is actually viewed at. The
+            rating key fills the left column beneath the matrix so the two sides
+            stay balanced; below 920px they stack. */}
+        <div className="grid gap-4 min-[920px]:grid-cols-[1.42fr_1fr] min-[920px]:items-start">
           <div className="flex flex-col gap-3">
             <TierMatrix
               recommendations={data.recommendations}

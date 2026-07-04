@@ -17,6 +17,10 @@ interface WhyDisclosureProps {
   // Structured sections keyed by "task" / "pick" / "run" (best-effort from the
   // service). Rendered as sub-headings when any is present.
   sections?: Record<string, string> | null;
+  // The picked model's display name — shown in the heading ("Why Opus 4.8?")
+  // like the mock. Falls back to "this model" when absent. The section's
+  // aria-label stays "Why this model?" so it's a stable accessible landmark.
+  model?: string | null;
 }
 
 // The three sub-heads, in display order, mapped from the service's section keys.
@@ -66,18 +70,19 @@ function renderSegments(text: string): ReactNode {
   );
 }
 
-export function WhyDisclosure({ rationale, sections }: WhyDisclosureProps) {
+export function WhyDisclosure({ rationale, sections, model }: WhyDisclosureProps) {
   const structured = hasSections(sections);
   if (!structured && !rationale?.trim()) {
     return null;
   }
+  const heading = model?.trim() ? `Why ${model.trim()}?` : "Why this model?";
 
   return (
     // No chrome of its own — the parent TierDetail panel owns the border/bg so
     // the rationale + cost read as one cohesive card.
     <section aria-label="Why this model?">
       <h3 className="text-sm font-semibold text-brand-slate-800 dark:text-brand-slate-100">
-        Why this model?
+        {heading}
       </h3>
 
       {structured ? (
