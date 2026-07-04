@@ -63,3 +63,21 @@ class RecommendResponse(BaseModel):
     comparison_table: list[dict[str, Any]] = Field(default_factory=list)
 
     model_config = ConfigDict(extra="forbid")
+
+
+class LadderResponse(BaseModel):
+    """The whole Cost/Balanced/Quality ladder from ONE call (tasks #1/#3).
+
+    ``picks`` is keyed by tier (``quality`` / ``balanced`` / ``cost``), each the
+    same shape as a single :class:`RecommendResponse`, so the web edge can map
+    them straight into its existing per-priority ``recommendations[]`` payload
+    with no frontend change. ``guard`` is the deterministic tier-distinctness
+    report (models, resolved tiers, duplicate_models, misordered, distinct_tiers,
+    healthy) — the edge falls back to the per-priority fan-out when the ladder is
+    not healthy.
+    """
+
+    picks: dict[str, RecommendResponse]
+    guard: dict[str, Any] = Field(default_factory=dict)
+
+    model_config = ConfigDict(extra="forbid")

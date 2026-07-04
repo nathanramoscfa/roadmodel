@@ -133,6 +133,16 @@ const envSchema = z.object({
     .string()
     .default("false")
     .transform((v) => v === "true" || v === "1"),
+  // Tasks #1/#3: when on, /api/recommend makes ONE upstream call to the ladder
+  // endpoint (Quality anchored, Balanced/Cost strictly-lower) instead of fanning
+  // out three independent per-priority calls that can collapse onto the same
+  // model. Ships dark (default OFF); flipped on per Vercel scope after live
+  // latency/quality verification, with the fan-out as instant rollback. Explicit
+  // opt-in parse like RECOMMENDER_FRONTIER_ENABLED (#155): only "true"/"1" enable.
+  RECOMMEND_LADDER_ENABLED: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true" || v === "1"),
 });
 
 function requireVar(name: string): string {
@@ -172,4 +182,6 @@ export const env = envSchema.parse({
   ROADMAP_ENABLED: process.env.ROADMAP_ENABLED,
   // Raw value through; schema .default("false") handles undefined (#155).
   RECOMMENDER_FRONTIER_ENABLED: process.env.RECOMMENDER_FRONTIER_ENABLED,
+  // Raw value through; schema .default("false") handles undefined.
+  RECOMMEND_LADDER_ENABLED: process.env.RECOMMEND_LADDER_ENABLED,
 });
