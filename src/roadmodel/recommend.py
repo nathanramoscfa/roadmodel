@@ -36,10 +36,12 @@ _REQUIRED_KEYS: Final = ("model", "platform", "max_mode", "thinking", "conversat
 # Optional response fields: surfaced when present, never required. Keeping them
 # out of _REQUIRED_KEYS means a provider that omits one still parses (the
 # parser-500s drift class, 2026-05-31). A literal "None"/"N/A" value counts as
-# absent (see _attach_optional). ORCHESTRATION is Claude Code's Dynamic-Workflows
-# dial (None/PerPrompt/Ultracode); it is N/A on every other surface, so
-# _attach_optional drops it there and _structured_settings only reads it on the
-# Claude Code path (mapping absent -> "Standard").
+# absent (see _attach_optional). ORCHESTRATION (None/PerPrompt/Ultracode) is the
+# selector's INTERNAL Dynamic-Workflows axis — kept captured here so
+# _structured_settings can read it — but it is NEVER surfaced as its own settings
+# row: on the Claude Code path an ORCHESTRATION of Ultracode is FOLDED into the
+# effort value ("Ultracode" = the top of Claude Code's effort ladder), matching
+# Claude Code's single /effort dial. It is N/A on every other surface.
 _OPTIONAL_KEYS: Final = ("backup", "orchestration")
 
 # BACKUP and ORCHESTRATION are optional lines in the response block. BACKUP is
@@ -371,16 +373,23 @@ def _structured_settings(base: dict[str, str]) -> dict[str, str]:
         return lowered in {"on", "yes", "true", "enabled"}
 
     if "claude code" in plat.replace("_", " "):
-        # Orchestration is the Claude Code Dynamic-Workflows dial. _attach_optional
-        # only kept a meaningful value (Ultracode / PerPrompt); an absent or
-        # None/N/A value is the standard, no-orchestration run, shown as "Standard"
-        # so the comparison matrix always has a value to display.
-        orch = (base.get("orchestration") or "").strip()
-        orchestration = "Standard" if not orch or orch.lower() in {"none", "n/a", "na"} else orch
+        # Claude Code exposes a SINGLE effort dial — Low / Medium / High / XHigh /
+        # Max / Ultracode (top) — plus a separate Thinking on/off toggle. It has
+        # NO standalone "orchestration" control in its UI. The selector still
+        # reasons about THINKING and ORCHESTRATION as separate axes (that internal
+        # model drives the daily effort-conformance tracker, which requires
+        # Ultracode to read as a session setting = xhigh + Dynamic Workflows), but
+        # Ultracode IS the top of Claude Code's effort ladder — so we FOLD an
+        # ORCHESTRATION of Ultracode into the effort VALUE here and never surface a
+        # separate "orchestration" row (the 0.2.15 row didn't match Claude Code's
+        # UI and produced incoherent "Effort: High + Orchestration: Ultracode").
+        orch = (base.get("orchestration") or "").strip().lower()
         offish = {"off", "n/a", "none", "no"}
+        if orch == "ultracode":
+            return {"effort": "Ultracode", "thinking": "On"}
         if thinking_raw.lower() in offish:
-            return {"effort": "Low", "thinking": "Off", "orchestration": orchestration}
-        return {"effort": thinking_raw, "thinking": "On", "orchestration": orchestration}
+            return {"effort": "Low", "thinking": "Off"}
+        return {"effort": thinking_raw, "thinking": "On"}
 
     if plat == "codex" or plat.endswith(" codex"):
         return {"intelligence": thinking_raw}
