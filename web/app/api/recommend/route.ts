@@ -47,14 +47,20 @@ const ENGINE_RATES: Record<
 };
 const STATIC_PROMPT_TOKENS = 20000;
 
+// Cost ledger for the engine call(s). `inputCalls` / `outputCalls` scale the
+// static-prompt input and the visible output independently: the fan-out sends
+// the big system prompt N times (inputCalls = outputCalls = 3), while the ladder
+// sends it ONCE and emits ~3x the output (inputCalls = 1, outputCalls = 3) — so
+// the ladder's lower input cost is reflected faithfully.
 function estimateEngineCost(
   engine: string,
   taskLen: number,
+  { inputCalls = 1, outputCalls = 1 }: { inputCalls?: number; outputCalls?: number } = {},
 ): { inputTokens: number; outputTokens: number; costUsd: number } | undefined {
   const r = ENGINE_RATES[engine];
   if (!r) return undefined;
-  const inputTokens = STATIC_PROMPT_TOKENS + Math.ceil(taskLen / 4);
-  const outputTokens = r.outTokens;
+  const inputTokens = (STATIC_PROMPT_TOKENS + Math.ceil(taskLen / 4)) * inputCalls;
+  const outputTokens = r.outTokens * outputCalls;
   const costUsd =
     (inputTokens * r.inPer1m + outputTokens * r.outPer1m) / 1_000_000;
   return { inputTokens, outputTokens, costUsd: Number(costUsd.toFixed(6)) };
@@ -71,6 +77,32 @@ function recommenderUrl(): string {
   }
   return process.env.ROADMODEL_RECOMMEND_URL ?? DEFAULT_RECOMMENDER_URL;
 }
+
+// The single-call ladder endpoint (tasks #1/#3): the /v1/recommend base with a
+// /ladder suffix. Derived from recommenderUrl() so the ROADMODEL_RECOMMEND_URL
+// override and the E2E mock host both carry through (the E2E mock serves a
+// ladder-shaped body at the same path + /ladder).
+function ladderUrl(): string {
+  return `${recommenderUrl()}/ladder`;
+}
+
+// The ladder upstream response (tasks #1/#3): three tier-keyed picks (each the
+// same shape as a fanned-out RecommenderPayload) plus the deterministic
+// tier-distinctness guard the edge uses to decide whether to keep the ladder or
+// fall back to the fan-out.
+interface LadderPayload {
+  picks?: Partial<Record<"quality" | "balanced" | "cost", RecommenderPayload>>;
+  guard?: { healthy?: boolean; [k: string]: unknown };
+}
+
+// Ladder tier -> the priority id the frontend/matrix expect, in cost→best order.
+const LADDER_TIER_TO_PRIORITY: ReadonlyArray<
+  readonly [keyof NonNullable<LadderPayload["picks"]>, BudgetPriority]
+> = [
+  ["cost", "cheap"],
+  ["balanced", "balanced"],
+  ["quality", "best"],
+];
 
 const CN_JURISDICTION_MODELS = new Set([
   "kimi-k2.5",
@@ -478,69 +510,141 @@ const handler = async (req: Request): Promise<Response> =>
       };
     };
 
-    const results = await withSpan("provider", async () =>
-      Promise.all(BUDGET_PRIORITY_IDS.map(fetchOne)),
-    );
+    // Shape one upstream pick payload into the client-facing recommendation —
+    // shared by both the ladder and the fan-out so they emit identical objects.
+    const toRecommendation = (
+      parsed: RecommenderPayload | null,
+      priority: BudgetPriority,
+    ) => ({
+      ...shapePick(parsed, priority),
+      priority,
+      // Same engine for every pick (T3b tier label).
+      tier: recommenderEngine.use_frontier ? "frontier" : "free",
+      engine: recommenderEngine.engine,
+    });
 
-    const ok = results.filter(
-      (r): r is Extract<PickFetch, { ok: true }> => r.ok,
-    );
-    // Decompose the provider span via the first pick's timing header (Step 7);
-    // the three calls share an engine so one sample is representative.
-    if (ok.length > 0) {
-      ingestServiceTimings(ok[0].timing);
-    }
+    // Tasks #1/#3 — one upstream call returns the whole anchored Cost/Balanced/
+    // Quality ladder (Quality first, Balanced/Cost strictly lower). Returns null
+    // on any error OR an UNHEALTHY (collapsed) ladder so the caller falls back to
+    // the fan-out — the ladder can never make the result worse than today.
+    const fetchLadder = async (): Promise<
+      ReturnType<typeof toRecommendation>[] | null
+    > => {
+      const upstreamPayload = {
+        task_description: taskDescription,
+        context: {
+          ...incomingContext,
+          unavailable_models: unavailableModels,
+          availability_authoritative: availabilityAuthoritative,
+          // No budget_priority — the ladder emits all three tiers itself.
+          allowed_jurisdictions: allowedJurisdictions,
+          subscriptions,
+          api_providers: apiProviders,
+          force_provider: recommenderEngine.force_provider,
+        },
+      };
+      let upstream: Response;
+      try {
+        upstream = await fetch(ladderUrl(), {
+          method: "POST",
+          headers: recommenderRequestHeaders(),
+          body: JSON.stringify(upstreamPayload),
+        });
+      } catch {
+        return null;
+      }
+      if (!upstream.ok) return null;
+      let parsed: LadderPayload | null = null;
+      try {
+        parsed = JSON.parse(await upstream.text()) as LadderPayload;
+      } catch {
+        parsed = null;
+      }
+      const picks = parsed?.picks;
+      if (!picks) return null;
+      // A collapsed (unhealthy) ladder -> fall back to the fan-out.
+      if (parsed?.guard?.healthy === false) return null;
+      // One sample decomposes the provider span (Step 7).
+      ingestServiceTimings(upstream.headers.get("X-Roadmodel-Timing"));
+      const recs: ReturnType<typeof toRecommendation>[] = [];
+      for (const [tier, priority] of LADDER_TIER_TO_PRIORITY) {
+        const pick = picks[tier];
+        if (!pick) return null; // incomplete ladder -> fall back
+        recs.push(toRecommendation(pick, priority));
+      }
+      return recs;
+    };
 
-    if (ok.length === 0) {
-      recordTotal();
-      const first = results.find(
-        (r): r is Extract<PickFetch, { ok: false }> => !r.ok,
+    let recommendations: ReturnType<typeof toRecommendation>[];
+    let ladderMode = false;
+
+    const ladderRecs = env.RECOMMEND_LADDER_ENABLED
+      ? await withSpan("provider", fetchLadder)
+      : null;
+
+    if (ladderRecs) {
+      recommendations = await withSpan("render", async () => ladderRecs);
+      ladderMode = true;
+    } else {
+      const results = await withSpan("provider", async () =>
+        Promise.all(BUDGET_PRIORITY_IDS.map(fetchOne)),
       );
-      const status = first?.status ?? 502;
-      auditFor(req, "recommender_error", {
-        error_class: `upstream_${status}`,
-        user_id: userId,
-        latency_ms: getTimings(),
-      });
-      return new NextResponse(
-        first?.body ?? JSON.stringify({ error: "recommender_unavailable" }),
-        { status, headers: { "Content-Type": "application/json" } },
+
+      const ok = results.filter(
+        (r): r is Extract<PickFetch, { ok: true }> => r.ok,
+      );
+      // Decompose the provider span via the first pick's timing header (Step 7);
+      // the three calls share an engine so one sample is representative.
+      if (ok.length > 0) {
+        ingestServiceTimings(ok[0].timing);
+      }
+
+      if (ok.length === 0) {
+        recordTotal();
+        const first = results.find(
+          (r): r is Extract<PickFetch, { ok: false }> => !r.ok,
+        );
+        const status = first?.status ?? 502;
+        auditFor(req, "recommender_error", {
+          error_class: `upstream_${status}`,
+          user_id: userId,
+          latency_ms: getTimings(),
+        });
+        return new NextResponse(
+          first?.body ?? JSON.stringify({ error: "recommender_unavailable" }),
+          { status, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      recommendations = await withSpan("render", async () =>
+        // results preserve BUDGET_PRIORITY_IDS order (Cost -> Balanced -> Quality).
+        ok.map((r) => toRecommendation(r.parsed, r.priority)),
       );
     }
-
-    const recommendations = await withSpan("render", async () =>
-      // results preserve BUDGET_PRIORITY_IDS order (Cost -> Balanced -> Quality).
-      ok.map((r) => ({
-        ...shapePick(r.parsed, r.priority),
-        priority: r.priority,
-        // Same engine for every pick (T3b tier label).
-        tier: recommenderEngine.use_frontier ? "frontier" : "free",
-        engine: recommenderEngine.engine,
-      })),
-    );
 
     // The scoring span preserves the four-span shape the audit contract
     // documents (no-op body; the audit write happens after recordTotal()).
     await withSpan("scoring", async () => {});
 
-    // Per-call cost ledger (T3b): OUR engine spend, now multiplied by the number
-    // of priority calls actually made (3 on success). provider/model name the
-    // PRIMARY (highlighted) pick.
+    // Per-call cost ledger (T3b): OUR engine spend. The fan-out sends the big
+    // system prompt once PER priority (n input + n output "calls"); the ladder
+    // sends it ONCE and emits ~n× the output — so scale input/output separately.
+    // provider/model name the PRIMARY (highlighted) pick.
     const primaryPick =
       recommendations.find((r) => r.priority === budgetPriority) ??
       recommendations[0];
-    const per = estimateEngineCost(
-      recommenderEngine.engine,
-      taskDescription.length,
-    );
     const n = recommendations.length;
+    const per = estimateEngineCost(recommenderEngine.engine, taskDescription.length, {
+      inputCalls: ladderMode ? 1 : n,
+      outputCalls: n,
+    });
     recordTotal();
     auditFor(req, "ok", {
       provider: primaryPick.platform,
       model: primaryPick.model,
-      input_tokens: per ? per.inputTokens * n : undefined,
-      output_tokens: per ? per.outputTokens * n : undefined,
-      cost_usd: per ? Number((per.costUsd * n).toFixed(6)) : undefined,
+      input_tokens: per?.inputTokens,
+      output_tokens: per?.outputTokens,
+      cost_usd: per?.costUsd,
       user_id: userId,
       latency_ms: getTimings(),
     });

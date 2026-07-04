@@ -7,8 +7,8 @@ import time
 from fastapi import Depends, FastAPI, Response
 
 from .auth import require_bearer
-from .models import RecommendRequest, RecommendResponse
-from .recommend import recommend
+from .models import LadderResponse, RecommendRequest, RecommendResponse
+from .recommend import recommend, recommend_ladder
 
 # Disable the interactive docs + OpenAPI schema on deployed runtimes
 # (audit M4). They are served unauthenticated on the same host and would
@@ -69,6 +69,34 @@ def recommend_endpoint(req: RecommendRequest, response: Response) -> RecommendRe
     try:
         provider_start = time.perf_counter()
         result = recommend(req)
+        provider_elapsed_ms = int((time.perf_counter() - provider_start) * 1000)
+        return result
+    finally:
+        total_elapsed_ms = int((time.perf_counter() - overall_start) * 1000)
+        scoring_ms = max(0, total_elapsed_ms - provider_elapsed_ms)
+        response.headers["X-Roadmodel-Timing"] = (
+            f"service_scoring_ms={scoring_ms};service_provider_ms={provider_elapsed_ms}"
+        )
+
+
+# Tasks #1/#3 — the single-call Cost/Balanced/Quality ladder. The web edge calls
+# this (behind its LADDER_ENABLED flag) instead of fanning out three separate
+# priority calls, so the three picks are anchored + tier-laddered by construction
+# (Quality first, Balanced/Cost strictly lower) rather than three independent
+# calls that can collapse onto the same model. Same auth boundary + timing header
+# as /v1/recommend; on any provider/parse failure it raises (mapped to 5xx) and
+# the edge falls back to its fan-out path.
+@app.post(
+    "/v1/recommend/ladder",
+    response_model=LadderResponse,
+    dependencies=[Depends(require_bearer)],
+)
+def recommend_ladder_endpoint(req: RecommendRequest, response: Response) -> LadderResponse:
+    overall_start = time.perf_counter()
+    provider_elapsed_ms = 0
+    try:
+        provider_start = time.perf_counter()
+        result = recommend_ladder(req)
         provider_elapsed_ms = int((time.perf_counter() - provider_start) * 1000)
         return result
     finally:
