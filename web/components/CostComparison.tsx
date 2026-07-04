@@ -70,7 +70,13 @@ export function CostComparison({ comparisonTable }: CostComparisonProps) {
     return null;
   }
 
-  const showModelColumn = comparisonTable.length > 1;
+  // The funding-rank comparison lists the SAME recommended model across
+  // platforms, so a per-row "Model" column just repeats one name and steals the
+  // width the "Your cost" column needs (forcing it to wrap 2-3 lines and pushing
+  // the panel below the fold). Show it only if the rows actually span >1 model;
+  // otherwise mirror the mock's 3-column Platform / Per 1k / Your cost table.
+  const distinctModels = new Set(comparisonTable.map(rowModel)).size;
+  const showModelColumn = distinctModels > 1;
   // Personalized rows carry a `your_cost` string (Phase 4.8 T3). When present,
   // the column shows the user's own cost; otherwise it shows generic funding.
   const personalized = comparisonTable.some(
@@ -86,7 +92,7 @@ export function CostComparison({ comparisonTable }: CostComparisonProps) {
               <th className="py-1.5 pr-3 font-medium">Model</th>
             ) : null}
             <th className="py-1.5 pr-3 font-medium">Platform</th>
-            <th className="py-1.5 pr-3 font-medium">Per 1k tokens</th>
+            <th className="whitespace-nowrap py-1.5 pr-3 font-medium">Per 1k</th>
             <th className="py-1.5 font-medium">{personalized ? "Your cost" : "Funding"}</th>
           </tr>
         </thead>
