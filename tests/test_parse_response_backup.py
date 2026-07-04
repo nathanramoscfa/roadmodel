@@ -98,8 +98,9 @@ def test_backup_coexists_with_orchestration() -> None:
     assert result["backup"] == "GPT-5.5"
     assert result["max_mode"] == "On"
     assert result["conversation"] == "New"
-    # ORCHESTRATION stays captured-then-dropped; only BACKUP is surfaced.
-    assert "orchestration" not in result
+    # Both optional fields are now surfaced (0.2.15): BACKUP and a meaningful
+    # ORCHESTRATION value (Ultracode) both appear in the returned dict.
+    assert result["orchestration"] == "Ultracode"
 
 
 def test_required_fields_still_enforced_with_backup_present() -> None:

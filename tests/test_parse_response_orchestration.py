@@ -79,15 +79,16 @@ def test_orchestration_row_does_not_break_parsing() -> None:
     assert result["thinking"] == "XHigh"
     assert result["conversation"] == "New"
     assert "Opus 4.8 is selected" in result["rationale"]
-    # ORCHESTRATION is silently consumed — not surfaced in the returned
-    # dict yet (separate change to wire it through recommend_structured).
-    assert "orchestration" not in result
+    # ORCHESTRATION is now surfaced as an optional key (0.2.15) so the
+    # comparison matrix can render an Orchestration row; a meaningful value
+    # (Ultracode / PerPrompt) is carried through.
+    assert result["orchestration"] == "Ultracode"
 
 
 def test_orchestration_na_also_parses() -> None:
-    """ORCHESTRATION: N/A (the value emitted for non-Claude-Code surfaces)
-    is treated the same as any other ORCHESTRATION value — captured then
-    dropped from the returned dict."""
+    """ORCHESTRATION: N/A (the value emitted for non-Claude-Code surfaces) is
+    treated as absent — _attach_optional drops "None"/"N/A", so the key stays
+    out of the returned dict on those surfaces (only meaningful values surface)."""
     result = parse_response(_ORCHESTRATION_NA)
     assert result["model"] == "GPT-5.5"
     assert result["platform"] == "Codex"

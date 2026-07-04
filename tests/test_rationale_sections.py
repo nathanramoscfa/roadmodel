@@ -139,3 +139,43 @@ def test_recommend_structured_omits_sections_when_unlabelled(
     # Key omitted entirely (not None) so the web edge cleanly falls back.
     assert "rationale_sections" not in payload
     assert payload["rationale"] == "Opus 4.8 is S-tier for coding."
+
+
+def _fake_base_with(**fields: str):
+    """A fake ``recommend`` returning a base merged with ``fields`` (e.g. an
+    ``orchestration`` value), so tests can drive _structured_settings."""
+
+    def _fake(prompt: str, config: Config, **_kwargs: object) -> dict[str, str]:
+        base = {
+            "model": "Opus 4.8",
+            "platform": "Claude Code",
+            "max_mode": "Off",
+            "thinking": "XHigh",
+            "conversation": "New",
+            "rationale": "Opus 4.8 is S-tier.",
+        }
+        base.update(fields)
+        return base
+
+    return _fake
+
+
+def test_recommend_structured_surfaces_orchestration_setting(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A Claude Code pick with ORCHESTRATION Ultracode surfaces it as a settings
+    dimension so the comparison matrix can render an Orchestration row (0.2.15)."""
+    monkeypatch.setattr(recommend_module, "recommend", _fake_base_with(orchestration="Ultracode"))
+    payload = recommend_module.recommend_structured("plan a system", _config(tmp_path))
+    assert payload["settings"]["orchestration"] == "Ultracode"
+    assert payload["settings"]["effort"] == "XHigh"
+
+
+def test_recommend_structured_orchestration_defaults_to_standard(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """An absent/None ORCHESTRATION on Claude Code is the standard run — shown as
+    'Standard' so the matrix row always has a value."""
+    monkeypatch.setattr(recommend_module, "recommend", _fake_base_with())
+    payload = recommend_module.recommend_structured("plan a system", _config(tmp_path))
+    assert payload["settings"]["orchestration"] == "Standard"

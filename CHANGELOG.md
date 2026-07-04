@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.15] — 2026-07-04
+
+### Changed
+
+- **The recommender now surfaces the Claude Code `ORCHESTRATION` dial as a
+  settings dimension.** `ORCHESTRATION` (the Dynamic-Workflows lever —
+  `None` / `PerPrompt` / `Ultracode`) was captured by the parser but silently
+  dropped; it is now an optional key on the parsed response and, on the Claude
+  Code path, `_structured_settings` emits an `orchestration` value (an absent /
+  `None` value renders as `Standard`) so a consuming UI can show an
+  Orchestration row in the comparison matrix — matching the approved
+  `/recommend` mockup. It stays `N/A` (and is omitted) on non-Claude-Code
+  surfaces, and remains an OPTIONAL key kept out of `_REQUIRED_KEYS`, so a
+  provider that omits the line still parses.
+
 ## [0.2.14] — 2026-07-03
 
 ### Changed

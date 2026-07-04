@@ -36,8 +36,11 @@ _REQUIRED_KEYS: Final = ("model", "platform", "max_mode", "thinking", "conversat
 # Optional response fields: surfaced when present, never required. Keeping them
 # out of _REQUIRED_KEYS means a provider that omits one still parses (the
 # parser-500s drift class, 2026-05-31). A literal "None"/"N/A" value counts as
-# absent (see _attach_optional).
-_OPTIONAL_KEYS: Final = ("backup",)
+# absent (see _attach_optional). ORCHESTRATION is Claude Code's Dynamic-Workflows
+# dial (None/PerPrompt/Ultracode); it is N/A on every other surface, so
+# _attach_optional drops it there and _structured_settings only reads it on the
+# Claude Code path (mapping absent -> "Standard").
+_OPTIONAL_KEYS: Final = ("backup", "orchestration")
 
 # BACKUP and ORCHESTRATION are optional lines in the response block. BACKUP is
 # the fallback model (Step 7 of the selection algorithm); ORCHESTRATION is
@@ -368,10 +371,16 @@ def _structured_settings(base: dict[str, str]) -> dict[str, str]:
         return lowered in {"on", "yes", "true", "enabled"}
 
     if "claude code" in plat.replace("_", " "):
+        # Orchestration is the Claude Code Dynamic-Workflows dial. _attach_optional
+        # only kept a meaningful value (Ultracode / PerPrompt); an absent or
+        # None/N/A value is the standard, no-orchestration run, shown as "Standard"
+        # so the comparison matrix always has a value to display.
+        orch = (base.get("orchestration") or "").strip()
+        orchestration = "Standard" if not orch or orch.lower() in {"none", "n/a", "na"} else orch
         offish = {"off", "n/a", "none", "no"}
         if thinking_raw.lower() in offish:
-            return {"effort": "Low", "thinking": "Off"}
-        return {"effort": thinking_raw, "thinking": "On"}
+            return {"effort": "Low", "thinking": "Off", "orchestration": orchestration}
+        return {"effort": thinking_raw, "thinking": "On", "orchestration": orchestration}
 
     if plat == "codex" or plat.endswith(" codex"):
         return {"intelligence": thinking_raw}
