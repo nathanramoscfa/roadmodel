@@ -45,7 +45,7 @@ export function TierDetail({
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-brand-slate-200 dark:border-brand-slate-700 bg-brand-slate-50 dark:bg-brand-slate-900 p-4">
-      <WhyDisclosure rationale={rationale} sections={sections} />
+      <WhyDisclosure rationale={rationale} sections={sections} model={rec.model} />
 
       {hasCost ? (
         <>

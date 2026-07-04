@@ -198,7 +198,7 @@ test("humanizes settings labels and renders the rationale prominently", async ({
   // Rationale is surfaced prominently (visible without expanding a disclosure)
   // and is NOT duplicated as a settings row.
   await expect(
-    page.getByRole("heading", { name: /Why this model\?/i }),
+    page.getByRole("heading", { name: /Why Opus 4\.8\?/i }),
   ).toBeVisible();
   await expect(page.getByText(/Chosen for deep reasoning/i)).toBeVisible();
 });
