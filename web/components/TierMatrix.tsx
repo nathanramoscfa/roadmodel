@@ -194,20 +194,25 @@ export function TierMatrix({
             aria-pressed={isSelected}
             onClick={() => onSelect(rec.priority)}
             className={
-              "relative flex flex-col gap-0.5 rounded-t-lg border-[1.5px] px-3 pb-2.5 pt-2 text-left transition-colors " +
+              "flex flex-col gap-0.5 rounded-t-lg border-[1.5px] px-3 pb-2.5 pt-2 text-left transition-colors " +
               (isSelected
                 ? ACTIVE_HEAD
                 : "border-transparent hover:bg-brand-slate-50 dark:hover:bg-brand-slate-800/60")
             }
           >
-            {isPrimary ? (
-              <span className="absolute right-2.5 top-2.5 rounded-full bg-brand-accent/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-accent">
-                Default
+            {/* Label and DEFAULT badge share one in-flow row (justify-between)
+                so the badge can never overlap the column label — an absolutely
+                positioned badge ran under "BALANCED"/"QUALITY" on narrow columns. */}
+            <div className="flex items-start justify-between gap-1.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-brand-accent">
+                {meta?.label ?? rec.priority}
               </span>
-            ) : null}
-            <span className="text-xs font-semibold uppercase tracking-wide text-brand-accent">
-              {meta?.label ?? rec.priority}
-            </span>
+              {isPrimary ? (
+                <span className="shrink-0 rounded-full bg-brand-accent/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-accent">
+                  Default
+                </span>
+              ) : null}
+            </div>
             <span className="text-[11px] leading-tight text-brand-slate-500 dark:text-brand-slate-400">
               {SHORT_HINT[rec.priority] ?? meta?.hint}
             </span>
