@@ -42,9 +42,20 @@ const ACTIVE_CELL_SIDES = "shadow-[inset_1.5px_0_0_#2563eb,inset_-1.5px_0_0_#256
 const ACTIVE_CELL_LAST =
   "shadow-[inset_1.5px_0_0_#2563eb,inset_-1.5px_0_0_#2563eb,inset_0_-1.5px_0_#2563eb] rounded-b-lg";
 
+// A cell value that carries no signal — an off/absent dial. A row where EVERY
+// pick is one of these (e.g. "Max Mode: Off / — / —" when no pick is on a
+// Max-Mode surface) is dropped so the matrix shows only differentiating dials,
+// keeping the result compact like the mock (which omits such rows).
+const MEANINGLESS_VALUES = new Set(["", "—", "-", "off", "n/a", "na", "none"]);
+
+function isMeaningful(value: string): boolean {
+  return !MEANINGLESS_VALUES.has(value.trim().toLowerCase());
+}
+
 // The union of setting keys across the picks, in first-seen order, so every
 // surface-specific dimension (effort, thinking, max_mode, intelligence …) gets
-// a row even when only one pick emits it.
+// a row even when only one pick emits it — EXCEPT a key whose value is
+// non-meaningful for every pick (dropped, see MEANINGLESS_VALUES).
 function settingKeys(recs: PriorityRecommendation[]): string[] {
   const seen: string[] = [];
   for (const rec of recs) {
@@ -54,7 +65,9 @@ function settingKeys(recs: PriorityRecommendation[]): string[] {
       }
     }
   }
-  return seen;
+  return seen.filter((key) =>
+    recs.some((rec) => isMeaningful(formatSettingValue((rec.settings ?? {})[key]))),
+  );
 }
 
 // The single headline cost for a pick: the user's funded cost when the edge
