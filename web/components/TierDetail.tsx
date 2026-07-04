@@ -44,7 +44,7 @@ export function TierDetail({
   const hasCost = (rec.comparison_table ?? []).length > 0;
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-brand-slate-200 dark:border-brand-slate-700 bg-brand-slate-50 dark:bg-brand-slate-900 p-4">
+    <div className="flex flex-col gap-2.5 rounded-lg border border-brand-slate-200 dark:border-brand-slate-700 bg-brand-slate-50 dark:bg-brand-slate-900 p-3.5">
       <WhyDisclosure rationale={rationale} sections={sections} model={rec.model} />
 
       {hasCost ? (

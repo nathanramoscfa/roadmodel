@@ -109,9 +109,9 @@ export function TierMatrix({
   };
 
   const cellBase =
-    "flex items-center gap-1.5 px-3 py-2 text-sm border-t border-brand-slate-100 dark:border-brand-slate-800";
+    "flex items-center gap-1.5 px-3 py-1.5 text-sm border-t border-brand-slate-100 dark:border-brand-slate-800";
   const rowLabel =
-    "flex items-center py-2 text-xs font-medium text-brand-slate-500 dark:text-brand-slate-400 border-t border-brand-slate-100 dark:border-brand-slate-800";
+    "flex items-center py-1.5 text-xs font-medium text-brand-slate-500 dark:text-brand-slate-400 border-t border-brand-slate-100 dark:border-brand-slate-800";
 
   // Every matrix row in render order — so the LAST one can close the column box.
   const rows: MatrixRow[] = [
@@ -177,7 +177,7 @@ export function TierMatrix({
             aria-pressed={isSelected}
             onClick={() => onSelect(rec.priority)}
             className={
-              "relative flex flex-col gap-1 rounded-t-lg border-[1.5px] px-3 pb-3 pt-2.5 text-left transition-colors " +
+              "relative flex flex-col gap-0.5 rounded-t-lg border-[1.5px] px-3 pb-2.5 pt-2 text-left transition-colors " +
               (isSelected
                 ? ACTIVE_HEAD
                 : "border-transparent hover:bg-brand-slate-50 dark:hover:bg-brand-slate-800/60")
