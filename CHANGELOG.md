@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.16] — 2026-07-04
+
+### Changed
+
+- **Ultracode is now presented as the top of Claude Code's single Effort ladder,
+  not a separate "Orchestration" row.** Claude Code's UI exposes ONE effort dial —
+  `Low / Medium / High / XHigh / Max / Ultracode` (Ultracode = xhigh + Dynamic
+  Workflows) — plus a separate Thinking toggle; it has no standalone orchestration
+  control. The 0.2.15 change surfaced `ORCHESTRATION` as its own settings row,
+  which didn't match that UI and produced incoherent combos like
+  "Effort: High + Orchestration: Ultracode". `_structured_settings` now FOLDS an
+  `ORCHESTRATION: Ultracode` into the Claude Code **effort** value (`Effort:
+  Ultracode`) and no longer emits a separate `orchestration` settings key. The
+  selector's internal THINKING+ORCHESTRATION model is unchanged (it still drives
+  the effort-conformance tracker, which requires Ultracode to read as a session
+  setting = xhigh + workflows), so this is purely a presentation reconciliation.
+- **The orchestration decision rule is budget-aware.** The selector now never
+  recommends Ultracode under a Cost posture, reserves it for genuinely
+  orchestration-requiring work under Balanced, and prefers it for the Quality
+  posture on the most demanding tasks — so the Cost/Balanced/Quality effort tiers
+  stay distinct once Ultracode is folded into the effort ladder.
+
 ## [0.2.15] — 2026-07-04
 
 ### Changed

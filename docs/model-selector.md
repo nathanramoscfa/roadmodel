@@ -574,7 +574,20 @@ as primary; the other becomes the secondary category for tie-breaking.
     - Claude Code with `/effort ultracode` session-wide → `Ultracode`.
     - Any non-Claude-Code platform → `N/A`.
 
+    Note: because `/effort ultracode` IS the top of Claude Code's
+    single effort dial (it pins xhigh AND auto-authors workflows for
+    the session), a downstream recommender presents an Ultracode
+    orchestration as the TOP `Effort` value — above `Max` — not as a
+    separate control. It must therefore out-rank a plain `Max` pick
+    in capability and cost, so recommend it sparingly.
+
     Decision rule (applied during <access-selection>):
+    - BUDGET-PRIORITY GATE (highest precedence): under a Cost
+      (`cheap`) budget posture NEVER recommend `Ultracode` (it is the
+      most resource-intensive mode); under Balanced recommend it ONLY
+      when the task genuinely requires autonomous multi-agent
+      orchestration; reserve it primarily for the Quality (`best`)
+      posture on the most demanding tasks.
     - PRIMARY task category `planning` with cross-cutting scope AND
       overall complexity High AND chosen access method is Claude
       Code → recommend `ORCHESTRATION: Ultracode`.
@@ -1253,7 +1266,20 @@ as primary; the other becomes the secondary category for tie-breaking.
     - Claude Code with `/effort ultracode` session-wide → `Ultracode`.
     - Any non-Claude-Code platform → `N/A`.
 
+    Note: because `/effort ultracode` IS the top of Claude Code's
+    single effort dial (it pins xhigh AND auto-authors workflows for
+    the session), a downstream recommender presents an Ultracode
+    orchestration as the TOP `Effort` value — above `Max` — not as a
+    separate control. It must therefore out-rank a plain `Max` pick
+    in capability and cost, so recommend it sparingly.
+
     Decision rule (applied during <access-selection>):
+    - BUDGET-PRIORITY GATE (highest precedence): under a Cost
+      (`cheap`) budget posture NEVER recommend `Ultracode` (it is the
+      most resource-intensive mode); under Balanced recommend it ONLY
+      when the task genuinely requires autonomous multi-agent
+      orchestration; reserve it primarily for the Quality (`best`)
+      posture on the most demanding tasks.
     - PRIMARY task category `planning` with cross-cutting scope AND
       overall complexity High AND chosen access method is Claude
       Code → recommend `ORCHESTRATION: Ultracode`.
@@ -1710,7 +1736,20 @@ as primary; the other becomes the secondary category for tie-breaking.
     - Claude Code with `/effort ultracode` session-wide → `Ultracode`.
     - Any non-Claude-Code platform → `N/A`.
 
+    Note: because `/effort ultracode` IS the top of Claude Code's
+    single effort dial (it pins xhigh AND auto-authors workflows for
+    the session), a downstream recommender presents an Ultracode
+    orchestration as the TOP `Effort` value — above `Max` — not as a
+    separate control. It must therefore out-rank a plain `Max` pick
+    in capability and cost, so recommend it sparingly.
+
     Decision rule (applied during <access-selection>):
+    - BUDGET-PRIORITY GATE (highest precedence): under a Cost
+      (`cheap`) budget posture NEVER recommend `Ultracode` (it is the
+      most resource-intensive mode); under Balanced recommend it ONLY
+      when the task genuinely requires autonomous multi-agent
+      orchestration; reserve it primarily for the Quality (`best`)
+      posture on the most demanding tasks.
     - PRIMARY task category `planning` with cross-cutting scope AND
       overall complexity High AND chosen access method is Claude
       Code → recommend `ORCHESTRATION: Ultracode`.
@@ -2772,7 +2811,20 @@ as primary; the other becomes the secondary category for tie-breaking.
     - Claude Code with `/effort ultracode` session-wide → `Ultracode`.
     - Any non-Claude-Code platform → `N/A`.
 
+    Note: because `/effort ultracode` IS the top of Claude Code's
+    single effort dial (it pins xhigh AND auto-authors workflows for
+    the session), a downstream recommender presents an Ultracode
+    orchestration as the TOP `Effort` value — above `Max` — not as a
+    separate control. It must therefore out-rank a plain `Max` pick
+    in capability and cost, so recommend it sparingly.
+
     Decision rule (applied during <access-selection>):
+    - BUDGET-PRIORITY GATE (highest precedence): under a Cost
+      (`cheap`) budget posture NEVER recommend `Ultracode` (it is the
+      most resource-intensive mode); under Balanced recommend it ONLY
+      when the task genuinely requires autonomous multi-agent
+      orchestration; reserve it primarily for the Quality (`best`)
+      posture on the most demanding tasks.
     - PRIMARY task category `planning` with cross-cutting scope AND
       overall complexity High AND chosen access method is Claude
       Code → recommend `ORCHESTRATION: Ultracode`.
