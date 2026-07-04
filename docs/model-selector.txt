@@ -1071,16 +1071,25 @@
       Choose it from the SAME candidate set that survived Step 0a (available)
       and Step 0b (allowed jurisdiction), applying the Step 4-5 quality-then-
       cost ranking — but:
-        - Prefer a model from a DIFFERENT provider/family than the primary,
-          so one provider's outage or access block does not take out both.
-          Only fall back to a same-family model when no distinct provider
-          meets the minimum PRIMARY tier.
-        - The BACKUP must meet the same minimum PRIMARY tier (Step 3) and
-          must NEVER be an unavailable model (Step 0a) or the same model as
-          the primary.
-      Emit `None` only when no qualifying distinct alternative exists. The
-      BACKUP does not change the primary MODEL, MAX MODE, THINKING, or
-      PLATFORM — it is advisory.
+        - The BACKUP MUST be from a DIFFERENT provider/family than the
+          primary. This is a HARD requirement, not a preference: a backup
+          from the same provider/family as the primary is NEVER acceptable,
+          because one provider's outage or access block would then take out
+          both the primary and its fallback, defeating the whole point.
+        - Rank the different-provider candidates by the Step 4-5 quality-then-
+          cost order and take the best one that meets the minimum PRIMARY tier
+          (Step 3). If NO different-provider model meets that tier, DROP the
+          tier floor and take the closest (highest-quality) different-provider
+          model that is available instead — a slightly weaker cross-provider
+          fallback still preserves the resilience guarantee, so it is always
+          preferable to naming no backup.
+        - The BACKUP must NEVER be an unavailable model (Step 0a), a
+          jurisdiction-blocked model (Step 0b), or the same model as the
+          primary.
+      Emit `None` ONLY when the surviving candidate set contains no model at
+      all from a provider/family other than the primary's. The BACKUP does
+      not change the primary MODEL, MAX MODE, THINKING, or PLATFORM — it is
+      advisory.
 
     Guardrails:
       - Never sacrifice quality to save cost — the cost step is a true-tie
