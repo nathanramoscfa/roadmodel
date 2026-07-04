@@ -9,7 +9,7 @@ version = "0.3.0"
 description = "FastAPI wrapper service for roadmodel recommendations."
 requires-python = ">=3.12"
 dependencies = [
-    "roadmodel>=0.2.15,<0.3",
+    "roadmodel>=0.2.16,<0.3",
     "fastapi>=0.110",
     "uvicorn[standard]>=0.27",
     "pydantic>=2.6",
