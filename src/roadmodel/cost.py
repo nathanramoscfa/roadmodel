@@ -319,6 +319,66 @@ def pricing_tier_rank(tier: str | None) -> int | None:
     return _PRICING_TIER_RANK.get(tier)
 
 
+# Pool aggregators — access-method providers that RESELL other companies' models
+# rather than making them (Cursor's subscription pool). They must NOT be treated
+# as a model's "maker" when resolving provider for the cross-provider backup
+# guard: Opus 4.8 is reachable via Cursor, but its maker is Anthropic, and an
+# Anthropic outage is what a backup must survive. A model reachable ONLY through
+# an aggregator (e.g. Cursor's own Composer models) falls back to the aggregator
+# provider, since in that case the aggregator IS the maker.
+_AGGREGATOR_PROVIDERS: frozenset[str] = frozenset({"cursor"})
+
+
+def model_provider(model_ref: str) -> str | None:
+    """Resolve a model id-or-name to its MAKER (the company that produces it):
+    ``anthropic`` / ``openai`` / ``google`` / ``xai`` / ``deepseek`` / ``mistral``
+    / ``zai`` / ``groq`` / ``cursor`` …
+
+    The maker is the ``provider`` of a first-party access method that supports the
+    model, EXCLUDING pool aggregators (``_AGGREGATOR_PROVIDERS``) — so a model
+    reachable via both its provider's own API and Cursor's pool resolves to its
+    real maker, not Cursor. A model reachable only through an aggregator resolves
+    to that aggregator (it is the maker, e.g. Cursor's Composer). Returns ``None``
+    on a catalog miss or an ambiguous/absent mapping (never raises), so the
+    cross-provider backup guard degrades to "can't prove same maker → allow"
+    rather than dropping a valid backup.
+    """
+    try:
+        catalog = _load_catalog()
+        model_id = str(_resolve_model(model_ref, catalog)["id"])
+    except (ValueError, BundledDocNotFoundError, KeyError, TypeError):
+        return None
+    methods = catalog.get("access_methods", [])
+    if not isinstance(methods, list):
+        return None
+    supporting: set[str] = set()
+    for method in methods:
+        if not isinstance(method, dict):
+            continue
+        if model_id in method.get("supports_models", []):
+            provider = method.get("provider")
+            if isinstance(provider, str) and provider:
+                supporting.add(provider)
+    first_party = supporting - _AGGREGATOR_PROVIDERS
+    if len(first_party) == 1:
+        return next(iter(first_party))
+    if not first_party and len(supporting) == 1:
+        # Reachable only through an aggregator → the aggregator is the maker.
+        return next(iter(supporting))
+    # No supporting method, or an ambiguous multi-provider mapping (should not
+    # happen for a real maker) → unknown.
+    return None
+
+
+def same_provider(model_a: str, model_b: str) -> bool:
+    """True iff two models resolve to the SAME known maker. Unknown on either
+    side → False (we never assert a same-maker collision we can't prove), so a
+    caller using this to REJECT a backup fails safe (keeps the backup)."""
+    provider_a = model_provider(model_a)
+    provider_b = model_provider(model_b)
+    return provider_a is not None and provider_a == provider_b
+
+
 def _as_dict(value: object) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise BundledDocNotFoundError("catalog.json")

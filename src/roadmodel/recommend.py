@@ -537,6 +537,35 @@ def _structured_settings(base: dict[str, str]) -> dict[str, str]:
     return {"max_mode": max_label, "thinking": thinking_raw}
 
 
+def _backup_provider_guard(primary_model: str, backup_model: str) -> dict[str, Any]:
+    """Deterministic cross-provider check for the Step 7 BACKUP (mirrors
+    :func:`_ladder_tier_guard`). The #4 prompt hardening *instructs* the model
+    that the backup must be from a different provider/family than the primary,
+    but that is only prose — Gemini's instruction-adherence isn't perfect, so it
+    can still emit a same-maker backup (the observed Fable 5 → Opus 4.8, both
+    Anthropic). This resolves both makers via :func:`cost.model_provider` and
+    reports whether they collide.
+
+    A same-maker backup provides ZERO resilience: one provider outage / access
+    block takes out both picks, defeating the backup's entire purpose. Reports
+    (never raises, never mutates):
+    - ``primary_provider`` / ``backup_provider``: resolved makers (``None`` if
+      unknown).
+    - ``same_provider``: both resolved AND equal (a hard violation).
+    - ``ok``: ``not same_provider`` — unknown on either side fails SAFE (``ok``),
+      so we never drop a backup we can't prove is same-maker.
+    """
+    primary_provider = cost.model_provider(primary_model)
+    backup_provider = cost.model_provider(backup_model)
+    same = primary_provider is not None and primary_provider == backup_provider
+    return {
+        "primary_provider": primary_provider,
+        "backup_provider": backup_provider,
+        "same_provider": same,
+        "ok": not same,
+    }
+
+
 def _base_to_payload(base: dict[str, str]) -> dict[str, Any]:
     """Turn one parsed six-field ``base`` into the structured payload the
     service/web consume: canonical model + platform, per-surface settings,
@@ -575,7 +604,21 @@ def _base_to_payload(base: dict[str, str]) -> dict[str, Any]:
     # BACKUP line. Canonicalize to the catalog display name like the primary
     # (canonical_model_name never raises — falls back to the raw value).
     if base.get("backup"):
-        payload["backup"] = cost.canonical_model_name(base["backup"])
+        canonical_backup = cost.canonical_model_name(base["backup"])
+        guard = _backup_provider_guard(payload["model"], canonical_backup)
+        if guard["same_provider"]:
+            # DETERMINISTIC cross-provider enforcement of the Step 7 rule that the
+            # #4 prompt hardening can only *ask* for. The LLM emitted a backup from
+            # the SAME maker as the primary (e.g. Fable 5 → Opus 4.8, both
+            # Anthropic) — zero resilience, since one provider outage takes out
+            # both. Drop it: showing NO backup is honest, where showing a
+            # same-maker one falsely implies a fallback. A proper cross-provider
+            # backup returns on the next (prompt-driven) recommendation. The guard
+            # decision rides along for observability (the service ignores unknown
+            # keys; a future RecommendResponse field can surface it).
+            payload["backup_guard"] = guard
+        else:
+            payload["backup"] = canonical_backup
     return payload
 
 
