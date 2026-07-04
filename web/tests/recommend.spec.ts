@@ -176,7 +176,9 @@ test("humanizes settings labels and renders the rationale prominently", async ({
         model: "Opus 4.8",
         platform: "Claude Code",
         settings: {
-          max_mode: "OFF",
+          // Max Mode ON so the row renders — an all-OFF dial is now hidden as a
+          // non-differentiating row (see TierMatrix MEANINGLESS_VALUES).
+          max_mode: "ON",
           thinking: "High",
           budget_priority: "balanced",
           rationale: "Chosen for deep reasoning on a hard task.",
