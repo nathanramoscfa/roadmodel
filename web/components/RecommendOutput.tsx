@@ -4,6 +4,7 @@
 import { Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { MultiRecommendResponse, PriorityRecommendation } from "@/lib/api";
+import { BenchmarksDrawer } from "./BenchmarksDrawer";
 import { FreeTierLabel } from "./FreeTierLabel";
 import { RatingKey } from "./RatingKey";
 import { TierDetail } from "./TierDetail";
@@ -106,7 +107,7 @@ export function RecommendOutput({ data, canPersist }: RecommendOutputProps) {
         </div>
 
         {insight ? (
-          <div className="mb-3 flex items-center gap-2.5 rounded-md border border-brand-accent/30 bg-brand-accent/10 px-3 py-2 text-[13px] text-brand-slate-700 dark:text-brand-slate-200">
+          <div className="mb-2.5 flex items-center gap-2.5 rounded-md border border-brand-accent/30 bg-brand-accent/10 px-3 py-1.5 text-[13px] text-brand-slate-700 dark:text-brand-slate-200">
             <Sparkles className="h-4 w-4 flex-none text-brand-accent" aria-hidden />
             <span>
               All {three ? "three " : ""}picks run at{" "}
@@ -131,8 +132,8 @@ export function RecommendOutput({ data, canPersist }: RecommendOutputProps) {
             ~960px split-screen widths the page is actually viewed at. The
             rating key fills the left column beneath the matrix so the two sides
             stay balanced; below 920px they stack. */}
-        <div className="grid gap-4 min-[920px]:grid-cols-[1.42fr_1fr] min-[920px]:items-start">
-          <div className="flex flex-col gap-3">
+        <div className="grid gap-3 min-[920px]:grid-cols-[1.42fr_1fr] min-[920px]:items-start">
+          <div className="flex flex-col gap-2.5">
             <TierMatrix
               recommendations={data.recommendations}
               selected={selected}
@@ -159,6 +160,9 @@ export function RecommendOutput({ data, canPersist }: RecommendOutputProps) {
           engine={selectedRec.engine}
         />
       ) : null}
+      {/* Benchmark chips live here (collapsed) rather than in the left column,
+          so the result fits one viewport like the mock. */}
+      <BenchmarksDrawer />
     </div>
   );
 }
