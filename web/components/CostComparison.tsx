@@ -83,11 +83,11 @@ export function CostComparison({ comparisonTable }: CostComparisonProps) {
         <thead>
           <tr className="border-b border-brand-slate-200 dark:border-brand-slate-700 text-brand-slate-600 dark:text-brand-slate-300">
             {showModelColumn ? (
-              <th className="py-2 pr-3 font-medium">Model</th>
+              <th className="py-1.5 pr-3 font-medium">Model</th>
             ) : null}
-            <th className="py-2 pr-3 font-medium">Platform</th>
-            <th className="py-2 pr-3 font-medium">Per 1k tokens</th>
-            <th className="py-2 font-medium">{personalized ? "Your cost" : "Funding"}</th>
+            <th className="py-1.5 pr-3 font-medium">Platform</th>
+            <th className="py-1.5 pr-3 font-medium">Per 1k tokens</th>
+            <th className="py-1.5 font-medium">{personalized ? "Your cost" : "Funding"}</th>
           </tr>
         </thead>
         <tbody>
@@ -97,17 +97,17 @@ export function CostComparison({ comparisonTable }: CostComparisonProps) {
               className="border-b border-brand-slate-100"
             >
               {showModelColumn ? (
-                <td className="py-2 pr-3 text-brand-slate-900 dark:text-brand-slate-50">
+                <td className="py-1.5 pr-3 text-brand-slate-900 dark:text-brand-slate-50">
                   {rowModel(row)}
                 </td>
               ) : null}
-              <td className="py-2 pr-3 text-brand-slate-700 dark:text-brand-slate-200">
+              <td className="py-1.5 pr-3 text-brand-slate-700 dark:text-brand-slate-200">
                 {rowPlatform(row)}
               </td>
-              <td className="py-2 pr-3 text-brand-slate-700 dark:text-brand-slate-200">
+              <td className="py-1.5 pr-3 text-brand-slate-700 dark:text-brand-slate-200">
                 {per1kCost(row)}
               </td>
-              <td className="py-2 text-brand-slate-600 dark:text-brand-slate-300">
+              <td className="py-1.5 text-brand-slate-600 dark:text-brand-slate-300">
                 {fundingCell(row, personalized)}
               </td>
             </tr>

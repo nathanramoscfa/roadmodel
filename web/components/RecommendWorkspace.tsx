@@ -61,7 +61,7 @@ export function RecommendWorkspace({
   const showForm = !data || editing;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-3">
       {showForm ? (
         <PromptForm
           initialTask={initialTask}

@@ -10,14 +10,15 @@ export default async function RecommendPage() {
   const session = await getServerSession();
 
   return (
-    <section className="mx-auto max-w-6xl px-6 py-8">
+    <section className="mx-auto max-w-6xl px-6 pt-3 pb-8">
       {/* Compact header (the nav already brands "roadmodel") so the picks sit
-          near the top of the viewport — the redesign's fit-on-screen goal. */}
+          near the top of the viewport — the mock's no-scroll fit goal, which
+          wants a small title + tight gaps, not a hero header. */}
       <header className="max-w-2xl">
-        <h1 className="text-2xl font-bold tracking-tight text-brand-slate-900 dark:text-brand-slate-50">
+        <h1 className="text-xl font-bold tracking-tight text-brand-slate-900 dark:text-brand-slate-50">
           Get a model recommendation
         </h1>
-        <p className="mt-1.5 text-sm text-brand-slate-600 dark:text-brand-slate-300">
+        <p className="mt-1 text-[13px] leading-snug text-brand-slate-600 dark:text-brand-slate-300">
           One prompt, three picks — Cost, Balanced, and Quality — compared side
           by side, with platform, settings, and real cost to you.
         </p>
@@ -26,7 +27,7 @@ export default async function RecommendPage() {
       {/* Single full-width column: the redesign renders the three picks as a
           side-by-side comparison matrix + detail, which needs the full width
           (the old two-column layout squeezed them into stacked cards). */}
-      <div className="mt-6">
+      <div className="mt-3">
         <RecommendWorkspace canPersistBudget={session !== null} />
       </div>
     </section>

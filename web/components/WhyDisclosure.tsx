@@ -89,7 +89,7 @@ export function WhyDisclosure({ rationale, sections, model }: WhyDisclosureProps
         // Sub-headed sections: an accent label + the segment, each with a left
         // rail so the three read as distinct steps (The task / Why this pick /
         // How to run it).
-        <div className="mt-3 space-y-3">
+        <div className="mt-2 space-y-2">
           {SECTIONS.map(({ key, label }) => {
             const text = sectionText(sections, key);
             if (!text) {
@@ -103,7 +103,7 @@ export function WhyDisclosure({ rationale, sections, model }: WhyDisclosureProps
                 <h4 className="text-xs font-semibold uppercase tracking-wide text-brand-accent">
                   {label}
                 </h4>
-                <p className="mt-0.5 text-sm leading-relaxed text-brand-slate-700 dark:text-brand-slate-200">
+                <p className="mt-0.5 text-sm leading-snug text-brand-slate-700 dark:text-brand-slate-200">
                   {renderSegments(text)}
                 </p>
               </div>
