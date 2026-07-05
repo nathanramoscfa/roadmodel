@@ -138,3 +138,69 @@ def test_recommend_structured_no_backup_is_unchanged(
     payload = recommend_module.recommend_structured("audit this", _config(tmp_path))
     assert "backup" not in payload
     assert "backup_guard" not in payload
+
+
+# --- cost.suggest_cross_provider_backup (0.2.20 substitution) ----------------
+
+
+def test_suggest_cross_provider_picks_comparable_tier() -> None:
+    # Anthropic very-high primary → an OpenAI very-high backup (us).
+    assert cost.suggest_cross_provider_backup("Fable 5", allowed_jurisdictions=["us"]) == "GPT-5.5"
+    assert cost.suggest_cross_provider_backup("Opus 4.8", allowed_jurisdictions=["us"]) == "GPT-5.5"
+
+
+def test_suggest_cross_provider_respects_jurisdiction() -> None:
+    # EU-only / CN-only users get a region-valid cross-provider fallback, never a
+    # us-only model.
+    eu = cost.suggest_cross_provider_backup("Opus 4.8", allowed_jurisdictions=["eu"])
+    cn = cost.suggest_cross_provider_backup("Opus 4.8", allowed_jurisdictions=["cn"])
+    assert eu is not None and cost.model_provider(eu) != "anthropic"
+    assert cn is not None and cost.model_provider(cn) != "anthropic"
+
+
+def test_suggest_cross_provider_excludes_unavailable() -> None:
+    # Bench the top us cross-provider options → the next available one is chosen.
+    picked = cost.suggest_cross_provider_backup(
+        "Fable 5", allowed_jurisdictions=["us"], unavailable_models=["gpt-5.5", "gemini-3-pro"]
+    )
+    assert picked is not None
+    assert cost.model_provider(picked) != "anthropic"
+
+
+def test_suggest_cross_provider_none_without_jurisdiction() -> None:
+    # No allowed jurisdictions → None (a region-invalid substitute is worse than
+    # dropping).
+    assert cost.suggest_cross_provider_backup("Fable 5", allowed_jurisdictions=[]) is None
+
+
+# --- recommend_structured substitution wiring --------------------------------
+
+
+def test_recommend_structured_substitutes_same_provider_backup(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """With the user's jurisdictions supplied, a same-maker backup (Fable 5 →
+    Opus 4.8, both Anthropic) is SUBSTITUTED with a cross-provider model rather
+    than dropped — 0.2.17 option A ("a weaker cross-provider backup beats none")."""
+    monkeypatch.setattr(recommend_module, "recommend", _fake_base_with(backup="Opus 4.8"))
+    payload = recommend_module.recommend_structured(
+        "audit this", _config(tmp_path), allowed_jurisdictions=["us"]
+    )
+    assert payload["backup"] == "GPT-5.5"
+    assert cost.model_provider(payload["backup"]) != "anthropic"
+    guard = payload["backup_guard"]
+    assert guard["action"] == "substituted"
+    assert guard["original_backup"] == "Opus 4.8"
+    assert guard["substitute"] == "GPT-5.5"
+
+
+def test_recommend_structured_drops_when_no_jurisdiction(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Without jurisdictions (CLI/older caller), the guard still DROPS a same-maker
+    backup — a substitute could be region-invalid, so dropping stays the safe path."""
+    monkeypatch.setattr(recommend_module, "recommend", _fake_base_with(backup="Opus 4.8"))
+    payload = recommend_module.recommend_structured("audit this", _config(tmp_path))
+    assert "backup" not in payload
+    assert payload["backup_guard"]["action"] == "dropped"
+    assert payload["backup_guard"]["original_backup"] == "Opus 4.8"
