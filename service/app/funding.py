@@ -336,6 +336,15 @@ latency requirement.
 """
 
 
+def resolve_allowed_jurisdictions(context: dict[str, Any] | None) -> list[str]:
+    """The user's permitted jurisdictions for a request — the forwarded
+    ``allowed_jurisdictions`` list, or the documented baseline when absent. This
+    is the SAME set the selector uses for Step 0b, so the package's cross-provider
+    backup substitution filters candidates consistently with the primary pick."""
+    parsed = _str_list((context or {}).get("allowed_jurisdictions"))
+    return parsed or list(_BASELINE_JURISDICTIONS)
+
+
 def user_context_from_request(context: dict[str, Any] | None) -> str | None:
     """Build the per-user user-context from a RecommendRequest.context dict.
 
