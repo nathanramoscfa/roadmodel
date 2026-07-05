@@ -1,9 +1,9 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-06-27T14:44:45Z",
+  "generated_at_utc": "2026-07-05T17:16:18Z",
   "source_doc_sha256": {
-    "model-selector.txt": "02360709bd7b6723bcdd16589cb207c33bfc65e4682768e97011c03d74500878",
-    "model-tier-cost-scale.md": "bf60eb49204f351e8066df6e1b32e3b82c4fce72e562a32e0e3b9fdc11dbb072"
+    "model-selector.txt": "9afea1b4309710b05b6ce06b2a2db6c0d0ac3b3a876f4a6124846311ae355d50",
+    "model-tier-cost-scale.md": "704599cf22b742e797159a3f532df52518f90a48df793ac31598d53dc7ca8a86"
   },
   "models": [
     {
@@ -574,25 +574,25 @@
       "best_for": "Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding \u2014 leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist"
     },
     {
-      "id": "kimi-k2.5",
-      "name": "Kimi K2.5",
-      "input_price_per_1m": 0.6,
-      "output_price_per_1m": 3.0,
-      "cache_read_per_1m": 0.1,
+      "id": "kimi-k2.7-code",
+      "name": "Kimi K2.7 Code",
+      "input_price_per_1m": 0.95,
+      "output_price_per_1m": 4.0,
+      "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
         "coding": "B",
         "planning": "B",
         "agentic": "B",
-        "multimodal": "C",
+        "multimodal": "D",
         "long-context": "B",
         "knowledge": "B",
         "speed": "B"
       },
       "jurisdiction": "cn",
-      "headline_benchmarks": "Moonshot AI's Kimi K2 series successor at $3.00/M output; competitive cost positioning across general text tasks; specific benchmark numbers pending refresh",
+      "headline_benchmarks": "AA Intelligence Index 41.9; AA Coding Index 60.8; \u03c4\u00b2-bench retail pass_1 90.1; LMArena WebDev Elo 1470.6",
       "pricing_notes": "Hidden by default",
-      "best_for": "Moonshot's affordable mid-volume model \u2014 a non-Google / non-OpenAI / non-Anthropic option at low-tier pricing for cost-conscious code and text generation when provider diversity is desired (vendor-risk hedging, regional preferences); routed via Cursor's pool only \u2014 no direct Moonshot access method is currently enumerated in the access-methods block"
+      "best_for": "Moonshot's Kimi K2.7 Code \u2014 a code-specialist Kimi variant at $4.00/M output, superseding Kimi K2.5 in Cursor's pool. Placeholder tier ratings inherited from kimi-k2.5 pending broader benchmark coverage; the AA Coding Index 60.8 and \u03c4\u00b2-bench retail 90.1 place it as a competitive low-tier coding option for cost-conscious workloads when the cn jurisdiction is acceptable. Routed via Cursor's pool only \u2014 no direct Moonshot access method is currently enumerated in the access-methods block."
     },
     {
       "id": "mistral-large-3",
@@ -719,6 +719,27 @@
       "headline_benchmarks": "AA Intelligence Index 47.2; LMArena Text Elo 1457.1 (#23); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage",
       "pricing_notes": "Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge)",
       "best_for": "Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation"
+    },
+    {
+      "id": "sonnet-5",
+      "name": "Sonnet 5",
+      "input_price_per_1m": 3.0,
+      "output_price_per_1m": 15.0,
+      "cache_read_per_1m": null,
+      "tier_cost": "high",
+      "tiers": {
+        "coding": "A",
+        "planning": "A",
+        "agentic": "S",
+        "multimodal": "A",
+        "long-context": "A",
+        "knowledge": "A",
+        "speed": "B"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "AA Intelligence Index 53.4 (Adaptive Reasoning, Max Effort); AA Coding Index 71.5; \u03c4\u00b2-bench retail pass_1 86.2 (legacy submission); Terminal-Bench 2.0 80.5",
+      "pricing_notes": "Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens",
+      "best_for": "Anthropic's Sonnet 4.6 successor at the same high-tier pricing \u2014 placeholder tier ratings inherited from sonnet-4.6 pending broader benchmark coverage; the $2/$10 launch promotion (through 2026-08-31) plus the updated tokenizer are the headline cost-structure changes to surface, and the AA Intelligence Index 53.4 places Sonnet 5 competitively near Opus 4.7 on general intelligence at Sonnet-tier pricing."
     }
   ],
   "access_methods": [
@@ -734,7 +755,8 @@
         "claude-fable-5",
         "opus-4.7",
         "opus-4.8",
-        "sonnet-4.6"
+        "sonnet-4.6",
+        "sonnet-5"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
@@ -770,11 +792,12 @@
         "claude-fable-5",
         "opus-4.7",
         "opus-4.8",
-        "sonnet-4.6"
+        "sonnet-4.6",
+        "sonnet-5"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
-      "best_for": "Default for Claude coding or terminal tasks when a claude.ai Max subscription is active \u2014 $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI and as an IDE extension inside Cursor. Heavy Opus usage that would cost over $1,000/mo on per-token API is fully covered by a $100/mo Max plan. Exposes the full `/effort` dial (low/medium/high/xhigh/max \u2014 Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, and Fable 5 expose the full range) plus Ultracode (session-wide xhigh + Dynamic Workflows) and the per-turn `ultrathink` keyword."
+      "best_for": "Default for Claude coding or terminal tasks when a claude.ai Max subscription is active \u2014 $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198). Exposes the full `/effort` dial (low/medium/high/xhigh/max \u2014 Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\\"
     },
     {
       "id": "claude-web",
@@ -787,7 +810,8 @@
         "claude-4.5-haiku",
         "opus-4.7",
         "opus-4.8",
-        "sonnet-4.6"
+        "sonnet-4.6",
+        "sonnet-5"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
@@ -841,10 +865,11 @@
         "gpt-5.4-nano",
         "gpt-5.5",
         "grok-4.3",
-        "kimi-k2.5",
+        "kimi-k2.7-code",
         "opus-4.7",
         "opus-4.8",
-        "sonnet-4.6"
+        "sonnet-4.6",
+        "sonnet-5"
       ],
       "exposes_max_mode": "yes",
       "exposes_thinking": "no",
@@ -1023,7 +1048,7 @@
         "claude-code",
         "claude-web"
       ],
-      "notes": "Opus 4.7, Sonnet 4.6, and Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE), with roughly 5x the usage of the Free tier."
+      "notes": "Claude Sonnet 5 (new default), Opus 4.7/4.8, and Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE), with roughly 5x the usage of the Free tier."
     },
     {
       "provider": "Anthropic",
@@ -1086,34 +1111,34 @@
         "gemini-app",
         "gemini-cli"
       ],
-      "notes": "Entry-paid Google AI tier with 2x higher usage limits than Free in the Gemini app, access to Gemini 3.1 Pro / Nano Banana Pro / Daily Brief / Gemini Omni video generation, 200 Google Flow Credits, and 400 GB of cloud storage (price cut from $7.99 to $4.99 on 2026-06-08; storage doubled from 200 GB to 400 GB)."
+      "notes": "Entry-paid Google AI tier with 2x higher usage limits than Free in the Gemini app, access to Gemini 3.1 Pro / Nano Banana Pro / Daily Brief / Veo 3.1 Fast video generation, 200 Google Flow Credits, and 400 GB of cloud storage."
     },
     {
       "provider": "Google",
       "tier": "Google AI Pro",
-      "monthly_usd": 20.0,
+      "monthly_usd": 19.99,
       "annual_usd": 199.99,
       "surface_funded": [
         "gemini-app",
         "gemini-cli"
       ],
-      "notes": "Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus Deep Research, Nano Banana Pro, Veo 3.1 access, 1,000 monthly AI credits, and 2 TB of Google One storage; includes YouTube Premium Lite."
+      "notes": "Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus Deep Research, Nano Banana Pro, Veo 3.1 Lite access, 1,000 monthly AI credits, and 5 TB of Google One storage; includes YouTube Premium Lite."
     },
     {
       "provider": "Google",
       "tier": "Google AI Ultra ($100)",
-      "monthly_usd": 100.0,
+      "monthly_usd": 99.99,
       "annual_usd": null,
       "surface_funded": [
         "gemini-app",
         "gemini-cli"
       ],
-      "notes": "New developer-focused Ultra tier (May 2026): 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan."
+      "notes": "Developer-focused Ultra tier (May 2026): 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan."
     },
     {
       "provider": "Google",
       "tier": "Google AI Ultra ($200)",
-      "monthly_usd": 200.0,
+      "monthly_usd": 199.99,
       "annual_usd": null,
       "surface_funded": [
         "gemini-app",
