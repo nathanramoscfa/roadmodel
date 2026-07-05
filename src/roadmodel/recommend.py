@@ -566,13 +566,25 @@ def _backup_provider_guard(primary_model: str, backup_model: str) -> dict[str, A
     }
 
 
-def _base_to_payload(base: dict[str, str]) -> dict[str, Any]:
+def _base_to_payload(
+    base: dict[str, str],
+    *,
+    allowed_jurisdictions: list[str] | None = None,
+    unavailable_models: list[str] | None = None,
+) -> dict[str, Any]:
     """Turn one parsed six-field ``base`` into the structured payload the
     service/web consume: canonical model + platform, per-surface settings,
     rationale (+ best-effort task/pick/run sections), conversation, optional
     backup, and cost fields left None (the service fills those separately). Used
     by both :func:`recommend_structured` and :func:`recommend_structured_ladder`
-    so every pick — single or laddered — is shaped identically."""
+    so every pick — single or laddered — is shaped identically.
+
+    ``allowed_jurisdictions`` (the user's permitted regions) enables the backup
+    guard's cross-provider SUBSTITUTION: when the LLM emits a same-maker backup,
+    a jurisdiction-valid, available cross-provider model is put in its place
+    rather than dropping the backup. Without it, the guard falls back to dropping.
+    ``unavailable_models`` (the runtime Step-0a list) is honored so a benched
+    model is never substituted in."""
     # Canonicalize the model + platform to their catalog display names (#174):
     # the LLM emits either the id/slug or the display name freely, which made the
     # response header (raw) disagree with the cost/comparison table (catalog
@@ -606,19 +618,43 @@ def _base_to_payload(base: dict[str, str]) -> dict[str, Any]:
     if base.get("backup"):
         canonical_backup = cost.canonical_model_name(base["backup"])
         guard = _backup_provider_guard(payload["model"], canonical_backup)
-        if guard["same_provider"]:
+        if not guard["same_provider"]:
+            # Cross-provider (or unknown → fail-safe): keep the LLM's backup.
+            payload["backup"] = canonical_backup
+        else:
             # DETERMINISTIC cross-provider enforcement of the Step 7 rule that the
             # #4 prompt hardening can only *ask* for. The LLM emitted a backup from
             # the SAME maker as the primary (e.g. Fable 5 → Opus 4.8, both
             # Anthropic) — zero resilience, since one provider outage takes out
-            # both. Drop it: showing NO backup is honest, where showing a
-            # same-maker one falsely implies a fallback. A proper cross-provider
-            # backup returns on the next (prompt-driven) recommendation. The guard
-            # decision rides along for observability (the service ignores unknown
-            # keys; a future RecommendResponse field can surface it).
-            payload["backup_guard"] = guard
-        else:
-            payload["backup"] = canonical_backup
+            # both. SUBSTITUTE a jurisdiction-valid, available cross-provider model
+            # (option A: a weaker cross-provider backup beats none); only DROP when
+            # no such candidate exists, or when the caller supplied no jurisdiction
+            # (in which case a substitute could be region-invalid — dropping is the
+            # safe call). The guard decision rides along for observability (the
+            # service ignores unknown keys; a future response field can surface it).
+            substitute = (
+                cost.suggest_cross_provider_backup(
+                    payload["model"],
+                    allowed_jurisdictions=allowed_jurisdictions,
+                    unavailable_models=unavailable_models,
+                )
+                if allowed_jurisdictions
+                else None
+            )
+            if substitute:
+                payload["backup"] = substitute
+                payload["backup_guard"] = {
+                    **guard,
+                    "action": "substituted",
+                    "original_backup": canonical_backup,
+                    "substitute": substitute,
+                }
+            else:
+                payload["backup_guard"] = {
+                    **guard,
+                    "action": "dropped",
+                    "original_backup": canonical_backup,
+                }
     return payload
 
 
@@ -629,6 +665,7 @@ def recommend_structured(
     user_context_text: str | None = None,
     unavailable_models: list[str] | None = None,
     availability_authoritative: bool = False,
+    allowed_jurisdictions: list[str] | None = None,
     input_tokens: int | None = None,
     output_tokens: int | None = None,
     max_mode: bool = False,
@@ -656,7 +693,11 @@ def recommend_structured(
         thinking_budget=thinking_budget,
         temperature=temperature,
     )
-    payload = _base_to_payload(base)
+    payload = _base_to_payload(
+        base,
+        allowed_jurisdictions=allowed_jurisdictions,
+        unavailable_models=unavailable_models,
+    )
     # Re-resolve the canonical names for the cost calls below (the payload
     # already carries them).
     canonical_model = payload["model"]
@@ -737,6 +778,7 @@ def recommend_structured_ladder(
     user_context_text: str | None = None,
     unavailable_models: list[str] | None = None,
     availability_authoritative: bool = False,
+    allowed_jurisdictions: list[str] | None = None,
     max_output_tokens: int | None = None,
     thinking_budget: int | None = None,
     temperature: float | None = None,
@@ -763,5 +805,12 @@ def recommend_structured_ladder(
         thinking_budget=thinking_budget,
         temperature=temperature,
     )
-    picks = {tier: _base_to_payload(ladder[tier]) for tier in _LADDER_TIERS}
+    picks = {
+        tier: _base_to_payload(
+            ladder[tier],
+            allowed_jurisdictions=allowed_jurisdictions,
+            unavailable_models=unavailable_models,
+        )
+        for tier in _LADDER_TIERS
+    }
     return {"picks": picks, "guard": _ladder_tier_guard(picks)}
