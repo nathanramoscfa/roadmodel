@@ -379,6 +379,82 @@ def same_provider(model_a: str, model_b: str) -> bool:
     return provider_a is not None and provider_a == provider_b
 
 
+def suggest_cross_provider_backup(
+    primary_model: str,
+    *,
+    allowed_jurisdictions: list[str],
+    unavailable_models: list[str] | None = None,
+) -> str | None:
+    """Deterministically pick the best cross-provider fallback for ``primary_model``
+    — the substitution behind the Step 7 backup guard's "option A" (prefer a
+    weaker cross-provider backup over none).
+
+    A candidate must: resolve to a KNOWN maker DIFFERENT from the primary's, sit
+    in an ``allowed_jurisdictions`` jurisdiction, and not be ``unavailable``.
+    Ranking (deterministic, temp-0 safe): prefer the highest pricing tier that is
+    still <= the primary's tier (a comparably-capable, not-pricier backup);
+    if none sits at/below, take the closest tier above; break ties by higher
+    output price then model id. Returns the catalog display NAME, or ``None`` when
+    no cross-provider candidate qualifies (the caller then drops the backup).
+
+    Jurisdiction is REQUIRED (not defaulted) because a substitute the user can't
+    use in their region is worse than none — so a caller without the user's
+    allowed set should not call this and should drop instead.
+    """
+    try:
+        catalog = _load_catalog()
+        primary = _resolve_model(primary_model, catalog)
+    except (ValueError, BundledDocNotFoundError):
+        return None
+    primary_id = str(primary["id"])
+    primary_provider = model_provider(primary_id)
+    if primary_provider is None:
+        return None
+    primary_rank = pricing_tier_rank(pricing_tier(primary_id))
+    allowed = {j.strip().lower() for j in allowed_jurisdictions if isinstance(j, str)}
+    if not allowed:
+        return None
+    excluded = {m.strip() for m in (unavailable_models or []) if isinstance(m, str)}
+
+    scored: list[tuple[bool, int, float, str, str]] = []
+    for model in catalog.get("models", []):
+        if not isinstance(model, dict):
+            continue
+        model_id = str(model.get("id", ""))
+        if not model_id or model_id == primary_id or model_id in excluded:
+            continue
+        if str(model.get("jurisdiction", "")).strip().lower() not in allowed:
+            continue
+        provider = model_provider(model_id)
+        if provider is None or provider == primary_provider:
+            continue
+        rank = pricing_tier_rank(pricing_tier(model_id))
+        if rank is None:
+            continue
+        try:
+            out_price = float(model.get("output_price_per_1m") or 0.0)
+        except (TypeError, ValueError):
+            out_price = 0.0
+        # Sort key (descending): at/below primary tier first, then highest tier,
+        # then priciest-in-tier, then id for a stable final tiebreak.
+        at_or_below = primary_rank is None or rank <= primary_rank
+        scored.append((at_or_below, rank, out_price, model_id, str(model.get("name", model_id))))
+
+    if not scored:
+        return None
+    # When some candidates are at/below the primary tier, restrict to them and
+    # take the highest such tier; otherwise fall back to the closest tier above
+    # (the smallest rank among the all-above set).
+    at_below = [s for s in scored if s[0]]
+    if at_below:
+        best = max(at_below, key=lambda s: (s[1], s[2], s[3]))
+    else:
+        # All candidates are pricier than the primary — take the CLOSEST (lowest
+        # rank), then priciest-in-tier, then id.
+        best = min(scored, key=lambda s: (s[1], -s[2], s[3]))
+    return best[4]
+
+
 def _as_dict(value: object) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise BundledDocNotFoundError("catalog.json")
