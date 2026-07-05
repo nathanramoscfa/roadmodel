@@ -1,4 +1,5 @@
 // web/lib/audit.ts
+import { after } from "next/server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { env } from "./env";
 import type { LatencyTimings } from "./latency";
@@ -84,16 +85,39 @@ export function _setAuditSinkForTest(sink: AuditSink | null): AuditSink | null {
   return prior;
 }
 
+// Keep the serverless function alive until a fire-and-forget audit write flushes.
+// Every caller does `void writeAudit(...)` and returns the response immediately;
+// without this, Vercel can tear the function down after the response is sent but
+// BEFORE the Supabase insert commits, silently DROPPING audit rows (observed in a
+// prod diag: only the first of several rapid /api/recommend requests persisted,
+// under-counting the cost ledger + daily spend guard). Next 15's `after` runs the
+// task after the response finishes and holds the function open (waitUntil under
+// the hood) until it settles. Wrapped in try/catch so a caller outside a request
+// context (or a runtime without `after`) degrades to the prior best-effort void.
+function flushAfterResponse(write: Promise<unknown>): void {
+  try {
+    after(write);
+  } catch {
+    // No request context / `after` unavailable — fall back to best-effort.
+  }
+}
+
 export async function writeAudit(entry: AuditEntry): Promise<void> {
   if (testSink) {
     testSink(entry);
     return;
   }
-  const { error } = await getSupabase().from("audit_log").insert({
-    ts: new Date().toISOString(),
-    ...entry,
-  });
-  if (error) {
-    console.error("audit write failed", error);
-  }
+  // async IIFE so `write` is a real Promise (the Supabase builder is only a
+  // PromiseLike thenable), which both `after` and awaiting callers need.
+  const write = (async () => {
+    const { error } = await getSupabase().from("audit_log").insert({
+      ts: new Date().toISOString(),
+      ...entry,
+    });
+    if (error) {
+      console.error("audit write failed", error);
+    }
+  })();
+  flushAfterResponse(write);
+  return write;
 }
