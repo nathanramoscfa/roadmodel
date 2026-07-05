@@ -190,15 +190,19 @@ def _ladder_output_cap(single_block_cap: int) -> int:
     return single_block_cap * _LADDER_OUTPUT_MULTIPLIER
 
 
-# Issue #188: the selector's <access-methods> mark `cursor` and `xai-api` with
-# exposes-thinking="no", and <thinking-context> makes that an OVERRIDE — THINKING
-# must be N/A on those surfaces regardless of task complexity. Gemini 2.5 Flash
-# fills a THINKING value anyway (6 of 7 Cursor probes in the Task-1 sweep), so the
-# structured `thinking` field the UI renders is wrong. Normalize it deterministically
-# here. This governs the actionable structured field only; the model's rationale
-# PROSE is corrected separately by the A0 prompt-hardening pass. Folding the override
-# into the package's _structured_settings is a follow-up (would need a release).
-_NO_THINKING_PLATFORMS = frozenset({"Cursor", "xAI API"})
+# Issue #188: the selector's <access-methods> mark surfaces with no thinking
+# dial as exposes-thinking="no", and Gemini fills a bogus THINKING value anyway,
+# so the structured `thinking` field the UI renders is wrong. Normalize it
+# deterministically here for surfaces the PACKAGE does NOT already fix.
+#
+# CURSOR IS DELIBERATELY EXCLUDED (roadmodel >=0.2.17 / task #2): the package's
+# `_structured_settings` now emits Cursor's thinking as "On" ON PURPOSE — Cursor's
+# frontier models reason, the IDE just exposes no thinking-LEVEL dial, and the
+# user's real dial there is Max Mode. Listing "Cursor" here forced that intended
+# "On" straight back to "N/A", silently defeating #2 in prod. Only xAI API remains
+# (the package still passes its THINKING through unmodified, so it can carry a
+# bogus level that needs flattening).
+_NO_THINKING_PLATFORMS = frozenset({"xAI API"})
 
 
 def _normalize_no_thinking(platform: str, settings: dict[str, Any]) -> dict[str, Any]:
