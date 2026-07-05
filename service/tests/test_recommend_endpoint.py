@@ -172,7 +172,8 @@ def test_recommend_returns_200(
         "model": "Claude Sonnet 4.6",
         "platform": "Claude Code",
         # Claude Code is NOT a no-thinking surface, so settings pass through
-        # unchanged (#188 only normalizes Cursor / xAI API).
+        # unchanged (#188 now normalizes only xAI API — Cursor moved to the
+        # package's _structured_settings in #2 / roadmodel 0.2.17).
         "settings": {"effort": "High", "thinking": "On"},
         # #173: the model's rationale now survives the service boundary.
         "rationale": "Best for coding tasks.",
