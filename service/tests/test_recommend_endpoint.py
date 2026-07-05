@@ -226,45 +226,51 @@ def test_recommend_carries_backup(
     assert response.json()["backup"] == "GPT-5.5"
 
 
-def test_recommend_normalizes_thinking_na_on_no_thinking_surface(
+def _monkeypatch_structured(monkeypatch: pytest.MonkeyPatch, payload: dict[str, Any]) -> None:
+    recommend_module = importlib.import_module("app.recommend")
+
+    def _fake(prompt: str, config: Any, **_kwargs: Any) -> dict[str, Any]:
+        return dict(payload)
+
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake)
+
+
+def test_recommend_cursor_thinking_passes_through(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Issue #188: Cursor and xAI API expose no thinking dial
-    (exposes-thinking="no"), so the structured THINKING field must be N/A
-    regardless of what the model emitted. Gemini 2.5 Flash filled a value on
-    6/7 Cursor probes in the Task-1 sweep. max_mode (a real Cursor dial) and
-    the conversation passthrough (#190) are left intact."""
-    recommend_module = importlib.import_module("app.recommend")
+    """Cursor is NO LONGER normalized to N/A (roadmodel >=0.2.17 / task #2): the
+    package's _structured_settings deliberately emits Cursor thinking as "On"
+    (Cursor's frontier models reason; the dial it exposes is Max Mode). The
+    service must pass that through — listing Cursor in _NO_THINKING_PLATFORMS
+    forced the intended "On" back to "N/A" and silently defeated #2 in prod."""
     cursor_dict = dict(_RECOMMEND_DICT)
     cursor_dict["platform"] = "Cursor"
-    cursor_dict["settings"] = {"max_mode": "OFF", "thinking": "Medium"}
-
-    def _fake_recommend_structured(
-        prompt: str,
-        config: Any,
-        *,
-        user_context_text: str | None = None,
-        unavailable_models: list[str] | None = None,
-        availability_authoritative: bool = False,
-        input_tokens: int | None = None,
-        output_tokens: int | None = None,
-        max_mode: bool = False,
-        max_output_tokens: int | None = None,
-        thinking_budget: int | None = None,
-        temperature: float | None = None,
-    ) -> dict[str, Any]:
-        del prompt, config, input_tokens, output_tokens, max_mode
-        del max_output_tokens, thinking_budget, temperature
-        return dict(cursor_dict)
-
-    monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
+    cursor_dict["settings"] = {"max_mode": "OFF", "thinking": "On"}
+    _monkeypatch_structured(monkeypatch, cursor_dict)
 
     body = client.post("/v1/recommend", json=_request_payload()).json()
     assert body["platform"] == "Cursor"
-    assert body["settings"]["thinking"] == "N/A"
+    assert body["settings"]["thinking"] == "On"
     assert body["settings"]["max_mode"] == "OFF"
     assert body["conversation"] == "New"
+
+
+def test_recommend_normalizes_thinking_na_on_xai(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """xAI API still exposes no thinking dial and the package passes its THINKING
+    through unmodified, so a bogus level the model fills is flattened to N/A here
+    (issue #188 — retained for xAI only after Cursor moved to the package)."""
+    xai_dict = dict(_RECOMMEND_DICT)
+    xai_dict["platform"] = "xAI API"
+    xai_dict["settings"] = {"max_mode": "OFF", "thinking": "Medium"}
+    _monkeypatch_structured(monkeypatch, xai_dict)
+
+    body = client.post("/v1/recommend", json=_request_payload()).json()
+    assert body["platform"] == "xAI API"
+    assert body["settings"]["thinking"] == "N/A"
 
 
 def test_recommend_input_length_cap(client: TestClient) -> None:
