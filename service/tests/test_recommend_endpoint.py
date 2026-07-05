@@ -717,6 +717,7 @@ def test_fake_recommend_structured_matches_real_signature() -> None:
         "user_context_text",
         "unavailable_models",
         "availability_authoritative",
+        "allowed_jurisdictions",
         "input_tokens",
         "output_tokens",
         "max_mode",
