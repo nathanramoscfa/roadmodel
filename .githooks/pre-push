@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# .githooks/pre-push
+#
+# Runs native macOS verification before a push, replacing the macOS legs
+# that were removed from phase-verify.yml / verify-pypi.yml to stop paying
+# for macOS GitHub Actions minutes (the only paid Actions cost on this
+# public repo). The Linux matrix still gates every PR in CI; this hook is
+# the local macOS smoke that CI no longer runs.
+#
+# Install (one-time per clone):
+#   git config core.hooksPath .githooks
+#
+# Bypass once (e.g. quick iteration / WIP branch):
+#   ROADMODEL_SKIP_PREPUSH_VERIFY=1 git push
+#   # or the built-in:  git push --no-verify
+#
+# Disable persistently for this clone:
+#   git config roadmodel.prepushverify false
+#
+# Narrow scope (default is all phases, --fast):
+#   git config roadmodel.prepushphases "01 03"   # space-separated phase ids
+
+set -euo pipefail
+
+if [[ "${ROADMODEL_SKIP_PREPUSH_VERIFY:-0}" == "1" ]]; then
+  exit 0
+fi
+
+if [[ "$(git config --bool roadmodel.prepushverify 2>/dev/null || echo true)" == "false" ]]; then
+  exit 0
+fi
+
+# Skip when every pushed ref is a deletion (local sha all-zeros) — nothing
+# to verify. stdin lines: "<local ref> <local sha> <remote ref> <remote sha>".
+zero="0000000000000000000000000000000000000000"
+has_update=0
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+  [[ -z "${local_sha:-}" ]] && continue
+  if [[ "${local_sha}" != "${zero}" ]]; then
+    has_update=1
+  fi
+done
+if [[ "${has_update}" -eq 0 ]]; then
+  exit 0
+fi
+
+ROOT="$(git rev-parse --show-toplevel)"
+
+phase_args=()
+if phases="$(git config roadmodel.prepushphases 2>/dev/null)"; then
+  for p in ${phases}; do
+    phase_args+=(--phase "${p}")
+  done
+fi
+
+echo "pre-push: running local macOS verify (bypass: git push --no-verify)..."
+exec bash "${ROOT}/scripts/verify-macos.sh" --fast "${phase_args[@]}"

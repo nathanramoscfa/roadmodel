@@ -40,6 +40,18 @@ commit.
 Emergency bypass (reserved for incident recovery):
 `ROADMODEL_ALLOW_MAIN_COMMIT=1 git commit ...`.
 
+The same `core.hooksPath` setting also enables a **`pre-push`** hook that
+runs native macOS verification (`scripts/verify-macos.sh --fast`) before a
+push. CI runs the phase-verify matrix on Linux only — Linux Actions minutes
+are free on this public repo, whereas macOS runners are not — so this hook
+is where macOS-specific breakage gets caught, on Apple hardware, for free.
+
+Bypass once: `git push --no-verify` (or `ROADMODEL_SKIP_PREPUSH_VERIFY=1
+git push`). Disable for a clone: `git config roadmodel.prepushverify
+false`. Narrow scope: `git config roadmodel.prepushphases "01 03"`. Point
+`ROADMODEL_VERIFY_PYTHON` at a 3.11+ interpreter if your default `python3`
+is older.
+
 ## Pull request scope
 
 Keep each pull request scoped to **one phase sub-section** (one numbered
