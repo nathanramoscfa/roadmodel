@@ -20,7 +20,7 @@ from roadmodel.recommend import (  # type: ignore[import-untyped]
     recommend_structured_ladder,
 )
 
-from .funding import user_context_from_request
+from .funding import resolve_allowed_jurisdictions, user_context_from_request
 from .models import LadderResponse, RecommendRequest, RecommendResponse
 
 logger = logging.getLogger(__name__)
@@ -190,19 +190,15 @@ def _ladder_output_cap(single_block_cap: int) -> int:
     return single_block_cap * _LADDER_OUTPUT_MULTIPLIER
 
 
-# Issue #188: the selector's <access-methods> mark surfaces with no thinking
-# dial as exposes-thinking="no", and Gemini fills a bogus THINKING value anyway,
-# so the structured `thinking` field the UI renders is wrong. Normalize it
-# deterministically here for surfaces the PACKAGE does NOT already fix.
-#
-# CURSOR IS DELIBERATELY EXCLUDED (roadmodel >=0.2.17 / task #2): the package's
-# `_structured_settings` now emits Cursor's thinking as "On" ON PURPOSE — Cursor's
-# frontier models reason, the IDE just exposes no thinking-LEVEL dial, and the
-# user's real dial there is Max Mode. Listing "Cursor" here forced that intended
-# "On" straight back to "N/A", silently defeating #2 in prod. Only xAI API remains
-# (the package still passes its THINKING through unmodified, so it can carry a
-# bogus level that needs flattening).
-_NO_THINKING_PLATFORMS = frozenset({"xAI API"})
+# Issue #188: the selector's <access-methods> mark `cursor` and `xai-api` with
+# exposes-thinking="no", and <thinking-context> makes that an OVERRIDE — THINKING
+# must be N/A on those surfaces regardless of task complexity. Gemini 2.5 Flash
+# fills a THINKING value anyway (6 of 7 Cursor probes in the Task-1 sweep), so the
+# structured `thinking` field the UI renders is wrong. Normalize it deterministically
+# here. This governs the actionable structured field only; the model's rationale
+# PROSE is corrected separately by the A0 prompt-hardening pass. Folding the override
+# into the package's _structured_settings is a follow-up (would need a release).
+_NO_THINKING_PLATFORMS = frozenset({"Cursor", "xAI API"})
 
 
 def _normalize_no_thinking(platform: str, settings: dict[str, Any]) -> dict[str, Any]:
@@ -287,6 +283,10 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
     # recommended without a release). A failed/absent read -> False -> fail-closed
     # static defaults still apply.
     availability_authoritative = _availability_authoritative_from_request(req.context)
+    # The user's permitted jurisdictions (or the baseline) — forwarded to the
+    # package so the cross-provider backup substitution only picks a region-valid
+    # fallback (0.2.20).
+    allowed_jurisdictions = resolve_allowed_jurisdictions(req.context)
 
     for hint in _provider_chain(req.context):
         config = _config_for_hint(hint)
@@ -315,6 +315,7 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
                 user_context_text=user_context_text,
                 unavailable_models=unavailable_models,
                 availability_authoritative=availability_authoritative,
+                allowed_jurisdictions=allowed_jurisdictions,
                 max_output_tokens=max_output_tokens,
                 thinking_budget=thinking_budget,
                 temperature=temperature,
@@ -386,6 +387,10 @@ def recommend_ladder(req: RecommendRequest) -> LadderResponse:
     user_context_text = user_context_from_request(req.context)
     unavailable_models = _unavailable_models_from_request(req.context)
     availability_authoritative = _availability_authoritative_from_request(req.context)
+    # The user's permitted jurisdictions (or the baseline) — forwarded to the
+    # package so the cross-provider backup substitution only picks a region-valid
+    # fallback (0.2.20).
+    allowed_jurisdictions = resolve_allowed_jurisdictions(req.context)
 
     for hint in _provider_chain(req.context):
         config = _config_for_hint(hint)
@@ -410,6 +415,7 @@ def recommend_ladder(req: RecommendRequest) -> LadderResponse:
                 user_context_text=user_context_text,
                 unavailable_models=unavailable_models,
                 availability_authoritative=availability_authoritative,
+                allowed_jurisdictions=allowed_jurisdictions,
                 max_output_tokens=max_output_tokens,
                 thinking_budget=thinking_budget,
                 temperature=temperature,
