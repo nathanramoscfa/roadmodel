@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.19] — 2026-07-04
+
+### Added
+
+- **Deterministic same-provider BACKUP guard.** 0.2.17 made the Step 7 backup a
+  HARD cross-provider requirement, but only in prompt prose — and the recommender
+  model's instruction-adherence isn't perfect, so it could still emit a backup
+  from the SAME maker as the primary (observed: Fable 5 primary → Opus 4.8 backup,
+  both Anthropic), which provides zero resilience since one provider outage takes
+  out both. New `cost.model_provider(model)` resolves a model's maker from the
+  catalog access methods (excluding the Cursor pool aggregator, so an Anthropic
+  model reachable via Cursor still resolves to `anthropic`); `cost.same_provider`
+  compares two makers, failing safe on unknowns. `recommend_structured` /
+  `recommend_structured_ladder` now DROP a same-maker backup (recording the
+  decision under `backup_guard`) rather than surface a misleading fallback —
+  deterministic enforcement of what the prompt can only ask for. Unknown makers
+  fail safe (backup kept). Mirrors the tier-ladder tier-distinctness guard.
+
 ## [0.2.18] — 2026-07-04
 
 ### Added
