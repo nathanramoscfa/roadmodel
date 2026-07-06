@@ -38,7 +38,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # Linux only — free on public repos. macOS install-smoke runs locally
+        # on the Mac Studio via scripts/verify-macos.sh --pypi <version>.
+        os: [ubuntu-latest]
         python-version: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/setup-python@v6

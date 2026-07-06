@@ -2,10 +2,15 @@
 name: Phase verify
 
 on:
-  push:
-    branches: [main]
+  # PR-only gate. The post-merge push:[main] trigger was dropped to stop
+  # re-running the full matrix on the squash-merge commit (identical to the
+  # PR head that already passed under branch protection). Use the manual
+  # dispatch below to re-verify main on demand. macOS coverage moved off
+  # CI to the local Mac Studio (scripts/verify-macos.sh + pre-push hook) —
+  # macOS runners are the only paid Actions minutes on this public repo.
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -21,7 +26,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # Linux only — free on public repos. macOS verification runs locally
+        # on the Mac Studio via scripts/verify-macos.sh (see .githooks/pre-push).
+        os: [ubuntu-latest]
         phase: ["01", "02", "03", "04", "046"]
     steps:
       - uses: actions/checkout@v5
@@ -39,7 +46,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        # Linux only — free on public repos. macOS verification runs locally
+        # on the Mac Studio via scripts/verify-macos.sh (see .githooks/pre-push).
+        os: [ubuntu-latest]
         phase: ["01", "02", "03", "04", "046"]
     steps:
       # fetch-depth: 0 so gitleaks detect can scan the full git history,
