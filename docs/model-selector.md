@@ -260,6 +260,11 @@ Two Claude Code controls that must NOT be conflated:
   orchestrate Dynamic Workflows for substantive tasks. It is the
   ORCHESTRATION `Ultracode` value (see `<orchestration-context>`),
   not a per-turn keyword and not an effort level in its own right.
+  As of Claude Code 2.1.202, `/config` exposes a "Dynamic workflow
+  size" setting (small / medium / large agent counts) that guides
+  how large Claude generally makes dynamic workflows — advisory
+  only, not an enforced cap, and orthogonal to the ORCHESTRATION
+  value emitted here.
 - `ultrathink` is a PER-TURN prompt keyword: include it anywhere in a
   single prompt for deeper reasoning on that turn only; it does NOT
   change the session effort level and does NOT orchestrate workflows.
@@ -504,6 +509,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       orchestrate Dynamic Workflows for substantive tasks. It is the
       ORCHESTRATION `Ultracode` value (see `<orchestration-context>`),
       not a per-turn keyword and not an effort level in its own right.
+      As of Claude Code 2.1.202, `/config` exposes a "Dynamic workflow
+      size" setting (small / medium / large agent counts) that guides
+      how large Claude generally makes dynamic workflows — advisory
+      only, not an enforced cap, and orthogonal to the ORCHESTRATION
+      value emitted here.
     - `ultrathink` is a PER-TURN prompt keyword: include it anywhere in a
       single prompt for deeper reasoning on that turn only; it does NOT
       change the session effort level and does NOT orchestrate workflows.
@@ -1196,6 +1206,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       orchestrate Dynamic Workflows for substantive tasks. It is the
       ORCHESTRATION `Ultracode` value (see `<orchestration-context>`),
       not a per-turn keyword and not an effort level in its own right.
+      As of Claude Code 2.1.202, `/config` exposes a "Dynamic workflow
+      size" setting (small / medium / large agent counts) that guides
+      how large Claude generally makes dynamic workflows — advisory
+      only, not an enforced cap, and orthogonal to the ORCHESTRATION
+      value emitted here.
     - `ultrathink` is a PER-TURN prompt keyword: include it anywhere in a
       single prompt for deeper reasoning on that turn only; it does NOT
       change the session effort level and does NOT orchestrate workflows.
@@ -1666,6 +1681,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       orchestrate Dynamic Workflows for substantive tasks. It is the
       ORCHESTRATION `Ultracode` value (see `<orchestration-context>`),
       not a per-turn keyword and not an effort level in its own right.
+      As of Claude Code 2.1.202, `/config` exposes a "Dynamic workflow
+      size" setting (small / medium / large agent counts) that guides
+      how large Claude generally makes dynamic workflows — advisory
+      only, not an enforced cap, and orthogonal to the ORCHESTRATION
+      value emitted here.
     - `ultrathink` is a PER-TURN prompt keyword: include it anywhere in a
       single prompt for deeper reasoning on that turn only; it does NOT
       change the session effort level and does NOT orchestrate workflows.
@@ -2285,7 +2305,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="opus-4.8,claude-fable-5,opus-4.7,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="yes"
-            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context. Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\"ultracode\": true`) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized). As of 2.1.200 the default permission mode is `Manual` across the CLI, VS Code, and JetBrains." />
+            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context. Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\"ultracode\": true`; 2.1.202+ adds a `/config` \"Dynamic workflow size\" advisory guideline) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized). As of 2.1.200 the default permission mode is `Manual` across the CLI, VS Code, and JetBrains." />
     <method id="claude-web" name="claude.ai web / desktop"
             provider="anthropic" billing="subscription-included"
             provider-jurisdiction="us"
@@ -2750,6 +2770,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       orchestrate Dynamic Workflows for substantive tasks. It is the
       ORCHESTRATION `Ultracode` value (see `<orchestration-context>`),
       not a per-turn keyword and not an effort level in its own right.
+      As of Claude Code 2.1.202, `/config` exposes a "Dynamic workflow
+      size" setting (small / medium / large agent counts) that guides
+      how large Claude generally makes dynamic workflows — advisory
+      only, not an enforced cap, and orthogonal to the ORCHESTRATION
+      value emitted here.
     - `ultrathink` is a PER-TURN prompt keyword: include it anywhere in a
       single prompt for deeper reasoning on that turn only; it does NOT
       change the session effort level and does NOT orchestrate workflows.
@@ -3369,7 +3394,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="opus-4.8,claude-fable-5,opus-4.7,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="yes"
-            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context. Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\"ultracode\": true`) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized). As of 2.1.200 the default permission mode is `Manual` across the CLI, VS Code, and JetBrains." />
+            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context. Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\"ultracode\": true`; 2.1.202+ adds a `/config` \"Dynamic workflow size\" advisory guideline) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized). As of 2.1.200 the default permission mode is `Manual` across the CLI, VS Code, and JetBrains." />
     <method id="claude-web" name="claude.ai web / desktop"
             provider="anthropic" billing="subscription-included"
             provider-jurisdiction="us"
