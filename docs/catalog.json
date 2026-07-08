@@ -1,9 +1,9 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-06-27T14:44:45Z",
+  "generated_at_utc": "2026-07-08T17:37:25Z",
   "source_doc_sha256": {
-    "model-selector.txt": "02360709bd7b6723bcdd16589cb207c33bfc65e4682768e97011c03d74500878",
-    "model-tier-cost-scale.md": "bf60eb49204f351e8066df6e1b32e3b82c4fce72e562a32e0e3b9fdc11dbb072"
+    "model-selector.txt": "b384c0e7003a18504e5bc284bc17058fa42a9dc7d0de939f4506b41301c20d8f",
+    "model-tier-cost-scale.md": "a1786ac89d9cb98f3954e71b390ee59813e58895fa3461281a2acae0f5f2468d"
   },
   "models": [
     {
@@ -47,6 +47,27 @@
       "headline_benchmarks": "AA Intelligence Index 59.9 (#1); HLE 53.3% (#1); Terminal-Bench Hard 62.9 (#1)",
       "pricing_notes": "Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; About 2x the cost of Claude Opus 4.8; Requires Max Mode on request-based plans",
       "best_for": "Anthropic's new top-of-line Fable family flagship (no predecessor) \u2014 S-tier across coding, planning, agentic, multimodal, long-context, and knowledge, leading HLE (53.3%) and Terminal-Bench Hard (62.9) with state-of-the-art vision and a 1M default context; about 2x the cost of Opus 4.8 and latency-slow (output ~64 tokens/s), so reserve for the hardest reasoning, agentic, and vision work where maximum capability outweighs cost and speed; security-guardrail trips auto-route to Opus. Tier profile sourced from the catalog cron's 2026-06-11 dry-run reconciliation against the live benchmark sources (\u03c4\u00b2-bench retail not yet published for this model), pending editorial confirmation in the next refresh."
+    },
+    {
+      "id": "claude-sonnet-5",
+      "name": "Claude Sonnet 5",
+      "input_price_per_1m": 3.0,
+      "output_price_per_1m": 15.0,
+      "cache_read_per_1m": null,
+      "tier_cost": "high",
+      "tiers": {
+        "coding": "A",
+        "planning": "A",
+        "agentic": "S",
+        "multimodal": "A",
+        "long-context": "A",
+        "knowledge": "A",
+        "speed": "B"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "AA Intelligence Index 53.4 (Adaptive Reasoning, Max Effort); \u03c4\u00b2-bench retail pass_1 (Sonnet 4.6 lineage baseline pending own submission); Anthropic-native 1M-token context on Claude Code default; LMArena WebDev Elo 1551.3 (thinking, #6)",
+      "pricing_notes": "Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens",
+      "best_for": "Anthropic's Sonnet 4.6 successor at the same high-tier pricing \u2014 placeholder tier ratings inherited from sonnet-4.6 pending \u03c4\u00b2-bench and full editorial pass; carries native 1M-token context by default on Claude Code (with a `CLAUDE_CODE_DISABLE_1M_CONTEXT` cap for controlled deployments) and exposes the full `/effort` dial through `max`, making it the sonnet-class pick for long-context agentic coding under Anthropic subscriptions; note the launch-promo $2/$10 input/output pricing through August 31, 2026 (post-promo returns to the $3/$15 High-tier rates catalogued here)"
     },
     {
       "id": "codestral",
@@ -574,25 +595,25 @@
       "best_for": "Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding \u2014 leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist"
     },
     {
-      "id": "kimi-k2.5",
-      "name": "Kimi K2.5",
-      "input_price_per_1m": 0.6,
-      "output_price_per_1m": 3.0,
-      "cache_read_per_1m": 0.1,
+      "id": "kimi-k2.7-code",
+      "name": "Kimi K2.7 Code",
+      "input_price_per_1m": 0.95,
+      "output_price_per_1m": 4.0,
+      "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "B",
+        "coding": "A",
         "planning": "B",
-        "agentic": "B",
-        "multimodal": "C",
+        "agentic": "A",
+        "multimodal": "D",
         "long-context": "B",
         "knowledge": "B",
         "speed": "B"
       },
       "jurisdiction": "cn",
-      "headline_benchmarks": "Moonshot AI's Kimi K2 series successor at $3.00/M output; competitive cost positioning across general text tasks; specific benchmark numbers pending refresh",
+      "headline_benchmarks": "AA Intelligence Index 41.9; AA Coding Index 60.8; \u03c4\u00b2-bench retail pass_1 90.1; released June 12, 2026",
       "pricing_notes": "Hidden by default",
-      "best_for": "Moonshot's affordable mid-volume model \u2014 a non-Google / non-OpenAI / non-Anthropic option at low-tier pricing for cost-conscious code and text generation when provider diversity is desired (vendor-risk hedging, regional preferences); routed via Cursor's pool only \u2014 no direct Moonshot access method is currently enumerated in the access-methods block"
+      "best_for": "Moonshot's Kimi K2.7 Code \u2014 a cn-jurisdiction, coding-focused agentic MoE (1T total / 32B active) at $4.00/M output that carries AA Intelligence Index 41.9 and AA Coding Index 60.8; the successor to Kimi K2.5 in Cursor's Moonshot pool, positioned as a cost-conscious cross-provider option when the cn jurisdiction is acceptable and vendor diversity is desired (routed via Cursor's pool only \u2014 no direct Moonshot access method is currently enumerated in the access-methods block)"
     },
     {
       "id": "mistral-large-3",
@@ -732,6 +753,7 @@
       "supports_models": [
         "claude-4.5-haiku",
         "claude-fable-5",
+        "claude-sonnet-5",
         "opus-4.7",
         "opus-4.8",
         "sonnet-4.6"
@@ -768,13 +790,14 @@
       "supports_models": [
         "claude-4.5-haiku",
         "claude-fable-5",
+        "claude-sonnet-5",
         "opus-4.7",
         "opus-4.8",
         "sonnet-4.6"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
-      "best_for": "Default for Claude coding or terminal tasks when a claude.ai Max subscription is active \u2014 $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI and as an IDE extension inside Cursor. Heavy Opus usage that would cost over $1,000/mo on per-token API is fully covered by a $100/mo Max plan. Exposes the full `/effort` dial (low/medium/high/xhigh/max \u2014 Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, and Fable 5 expose the full range) plus Ultracode (session-wide xhigh + Dynamic Workflows) and the per-turn `ultrathink` keyword."
+      "best_for": "Default for Claude coding or terminal tasks when a claude.ai Max subscription is active \u2014 $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context. Exposes the full `/effort` dial (low/medium/high/xhigh/max \u2014 Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\\"
     },
     {
       "id": "claude-web",
@@ -785,6 +808,7 @@
       "requires": "claude-max-subscription",
       "supports_models": [
         "claude-4.5-haiku",
+        "claude-sonnet-5",
         "opus-4.7",
         "opus-4.8",
         "sonnet-4.6"
@@ -812,7 +836,7 @@
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
-      "best_for": "Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active \u2014 pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work."
+      "best_for": "Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active \u2014 pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work. Exposes the full Codex `model_reasoning_effort` dial (`minimal`, `low`, `medium`, `high`, `xhigh` \u2014 top `xhigh` tier is model-dependent) plus the plan-mode reasoning-effort variant that additionally accepts `none`."
     },
     {
       "id": "cursor",
@@ -824,6 +848,7 @@
       "supports_models": [
         "claude-4.5-haiku",
         "claude-fable-5",
+        "claude-sonnet-5",
         "composer-2",
         "composer-2.5",
         "gemini-2.5-flash",
@@ -841,7 +866,7 @@
         "gpt-5.4-nano",
         "gpt-5.5",
         "grok-4.3",
-        "kimi-k2.5",
+        "kimi-k2.7-code",
         "opus-4.7",
         "opus-4.8",
         "sonnet-4.6"
@@ -971,7 +996,7 @@
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
-      "best_for": "Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates."
+      "best_for": "Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates. Exposes the full Codex/OpenAI `reasoning_effort` dial (`minimal`, `low`, `medium`, `high`, `xhigh` \u2014 the top `xhigh` tier is model-dependent)."
     },
     {
       "id": "xai-api",
@@ -1091,7 +1116,7 @@
     {
       "provider": "Google",
       "tier": "Google AI Pro",
-      "monthly_usd": 20.0,
+      "monthly_usd": 19.99,
       "annual_usd": 199.99,
       "surface_funded": [
         "gemini-app",
@@ -1102,24 +1127,24 @@
     {
       "provider": "Google",
       "tier": "Google AI Ultra ($100)",
-      "monthly_usd": 100.0,
+      "monthly_usd": 99.99,
       "annual_usd": null,
       "surface_funded": [
         "gemini-app",
         "gemini-cli"
       ],
-      "notes": "New developer-focused Ultra tier (May 2026): 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan."
+      "notes": "Developer-focused Ultra tier: 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan."
     },
     {
       "provider": "Google",
       "tier": "Google AI Ultra ($200)",
-      "monthly_usd": 200.0,
+      "monthly_usd": 199.99,
       "annual_usd": null,
       "surface_funded": [
         "gemini-app",
         "gemini-cli"
       ],
-      "notes": "Highest access to Gemini 3.1 Pro, Deep Think, Project Genie, Veo 3.1 with 25,000 monthly AI credits, $100/month Google Cloud credits, and 30 TB Google One storage (price reduced from $250 to $200)."
+      "notes": "Highest access to Gemini 3.1 Pro, Deep Think, Project Genie, Veo 3.1 with 25,000 monthly AI credits, $100/month Google Cloud credits, and 30 TB Google One storage; 20x Pro usage limits."
     },
     {
       "provider": "OpenAI",
