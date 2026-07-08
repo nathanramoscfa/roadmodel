@@ -162,11 +162,10 @@
     - Claude (Anthropic API, Claude Code, claude.ai): per-session
       `/effort` level with documented values `low`, `medium`, `high`,
       `xhigh`, `max` (shown in the UI as Low / Medium / High / Extra
-      High / Max). Not every model supports every level — `xhigh` and
-      `max` apply only to the models whose documented row lists them
-      (e.g. Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full
+      High / Max). Not every model supports every level — Opus 4.7,
+      Opus 4.8, Sonnet 5, and Fable 5 expose the full
       low/medium/high/xhigh/max range; Opus 4.6 and Sonnet 4.6 top out
-      at `max` without an `xhigh` step). An effort level a model does
+      at `max` without an `xhigh` step. An effort level a model does
       not support falls back to the highest supported level at or
       below it. Extended thinking can also be toggled with Option+T /
       Alt+T, `alwaysThinkingEnabled`, or `MAX_THINKING_TOKENS=0`
