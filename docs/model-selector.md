@@ -187,12 +187,13 @@ differently:
   `xhigh` (the top "Extra High" tier; model-dependent). Higher
   effort spends more reasoning tokens before visible output.
 - Gemini (Google API, Gemini CLI): a discrete thinking-level
-  knob — `low`, `medium`, `high` — across both the 3.x and 2.5
-  model generations (not every model supports every level; e.g.
-  Gemini 3 Pro is low/high only). Thinking can be turned off on
-  models that allow it (e.g. Gemini 2.5 Flash-Lite defaults off);
-  Google retired the numeric `thinkingBudget` from the docs in
-  favor of these levels.
+  knob — `minimal`, `low`, `medium`, `high` — across both the 3.x
+  and 2.5 model generations (not every model supports every level;
+  e.g. Gemini 3 Pro is low/high only, and the 2.5 generation does
+  not expose `minimal`). Thinking can be turned off on models that
+  allow it (e.g. Gemini 2.5 Flash-Lite defaults off); Google
+  retired the numeric `thinkingBudget` from the docs in favor of
+  these levels.
 - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
   `disabled`, default `enabled`) plus a reasoning-effort enum —
   `high`, `max` (default `high`; `max` for some complex agentic
@@ -234,9 +235,10 @@ provider-native scales onto this 7-state field:
   OpenAI's scale tops out at `xhigh`, so no OpenAI level maps to
   `Max` (the `Max` slot is reserved for the above-`xhigh` step
   that only the Claude `max`-capable models reach).
-- Gemini thinking levels: `low` → `Low`; `medium` → `Medium`;
-  `high` → `High` (Gemini tops out at `high` — no `xhigh` tier).
-  Thinking turned off, on models that allow it (e.g. Gemini 2.5
+- Gemini thinking levels: `minimal` → `Off` (fast / effectively
+  no thinking); `low` → `Low`; `medium` → `Medium`; `high` →
+  `High` (Gemini tops out at `high` — no `xhigh` tier). Thinking
+  turned off, on models that allow it (e.g. Gemini 2.5
   Flash-Lite), → `Off`.
 - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
   `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
@@ -438,12 +440,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
     - Gemini (Google API, Gemini CLI): a discrete thinking-level
-      knob — `low`, `medium`, `high` — across both the 3.x and 2.5
-      model generations (not every model supports every level; e.g.
-      Gemini 3 Pro is low/high only). Thinking can be turned off on
-      models that allow it (e.g. Gemini 2.5 Flash-Lite defaults off);
-      Google retired the numeric `thinkingBudget` from the docs in
-      favor of these levels.
+      knob — `minimal`, `low`, `medium`, `high` — across both the 3.x
+      and 2.5 model generations (not every model supports every level;
+      e.g. Gemini 3 Pro is low/high only, and the 2.5 generation does
+      not expose `minimal`). Thinking can be turned off on models that
+      allow it (e.g. Gemini 2.5 Flash-Lite defaults off); Google
+      retired the numeric `thinkingBudget` from the docs in favor of
+      these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
       `high`, `max` (default `high`; `max` for some complex agentic
@@ -485,9 +488,10 @@ as primary; the other becomes the secondary category for tie-breaking.
       OpenAI's scale tops out at `xhigh`, so no OpenAI level maps to
       `Max` (the `Max` slot is reserved for the above-`xhigh` step
       that only the Claude `max`-capable models reach).
-    - Gemini thinking levels: `low` → `Low`; `medium` → `Medium`;
-      `high` → `High` (Gemini tops out at `high` — no `xhigh` tier).
-      Thinking turned off, on models that allow it (e.g. Gemini 2.5
+    - Gemini thinking levels: `minimal` → `Off` (fast / effectively
+      no thinking); `low` → `Low`; `medium` → `Medium`; `high` →
+      `High` (Gemini tops out at `high` — no `xhigh` tier). Thinking
+      turned off, on models that allow it (e.g. Gemini 2.5
       Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
       `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
@@ -1137,12 +1141,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
     - Gemini (Google API, Gemini CLI): a discrete thinking-level
-      knob — `low`, `medium`, `high` — across both the 3.x and 2.5
-      model generations (not every model supports every level; e.g.
-      Gemini 3 Pro is low/high only). Thinking can be turned off on
-      models that allow it (e.g. Gemini 2.5 Flash-Lite defaults off);
-      Google retired the numeric `thinkingBudget` from the docs in
-      favor of these levels.
+      knob — `minimal`, `low`, `medium`, `high` — across both the 3.x
+      and 2.5 model generations (not every model supports every level;
+      e.g. Gemini 3 Pro is low/high only, and the 2.5 generation does
+      not expose `minimal`). Thinking can be turned off on models that
+      allow it (e.g. Gemini 2.5 Flash-Lite defaults off); Google
+      retired the numeric `thinkingBudget` from the docs in favor of
+      these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
       `high`, `max` (default `high`; `max` for some complex agentic
@@ -1184,9 +1189,10 @@ as primary; the other becomes the secondary category for tie-breaking.
       OpenAI's scale tops out at `xhigh`, so no OpenAI level maps to
       `Max` (the `Max` slot is reserved for the above-`xhigh` step
       that only the Claude `max`-capable models reach).
-    - Gemini thinking levels: `low` → `Low`; `medium` → `Medium`;
-      `high` → `High` (Gemini tops out at `high` — no `xhigh` tier).
-      Thinking turned off, on models that allow it (e.g. Gemini 2.5
+    - Gemini thinking levels: `minimal` → `Off` (fast / effectively
+      no thinking); `low` → `Low`; `medium` → `Medium`; `high` →
+      `High` (Gemini tops out at `high` — no `xhigh` tier). Thinking
+      turned off, on models that allow it (e.g. Gemini 2.5
       Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
       `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
@@ -1390,14 +1396,14 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Billing:** per-token (requires google-api-key)
 - **Supports models:** gemini-3.1-pro,gemini-3-pro,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash
 - **Toggles:** Max Mode — no · Thinking — yes
-- **Best for:** Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation).
+- **Best for:** Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Exposes the Gemini discrete thinking-level dial (`minimal`, `low`, `medium`, `high`) — not every model supports every level (e.g. Gemini 3 Pro is low/high only; 2.5 generation does not expose `minimal`). Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation).
 
 #### Gemini CLI — `gemini-cli`
 
 - **Billing:** subscription-or-key (requires gemini-advanced-subscription OR google-api-key)
 - **Supports models:** gemini-3.1-pro,gemini-3-pro,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash
 - **Toggles:** Max Mode — no · Thinking — yes
-- **Best for:** Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool.
+- **Best for:** Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes the Gemini discrete thinking-level dial (`minimal`, `low`, `medium`, `high`) subject to each model's supported subset (e.g. Gemini 3 Pro is low/high only; 2.5 generation does not expose `minimal`).
 
 #### Gemini (web / app) — `gemini-app`
 
@@ -1614,12 +1620,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
     - Gemini (Google API, Gemini CLI): a discrete thinking-level
-      knob — `low`, `medium`, `high` — across both the 3.x and 2.5
-      model generations (not every model supports every level; e.g.
-      Gemini 3 Pro is low/high only). Thinking can be turned off on
-      models that allow it (e.g. Gemini 2.5 Flash-Lite defaults off);
-      Google retired the numeric `thinkingBudget` from the docs in
-      favor of these levels.
+      knob — `minimal`, `low`, `medium`, `high` — across both the 3.x
+      and 2.5 model generations (not every model supports every level;
+      e.g. Gemini 3 Pro is low/high only, and the 2.5 generation does
+      not expose `minimal`). Thinking can be turned off on models that
+      allow it (e.g. Gemini 2.5 Flash-Lite defaults off); Google
+      retired the numeric `thinkingBudget` from the docs in favor of
+      these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
       `high`, `max` (default `high`; `max` for some complex agentic
@@ -1661,9 +1668,10 @@ as primary; the other becomes the secondary category for tie-breaking.
       OpenAI's scale tops out at `xhigh`, so no OpenAI level maps to
       `Max` (the `Max` slot is reserved for the above-`xhigh` step
       that only the Claude `max`-capable models reach).
-    - Gemini thinking levels: `low` → `Low`; `medium` → `Medium`;
-      `high` → `High` (Gemini tops out at `high` — no `xhigh` tier).
-      Thinking turned off, on models that allow it (e.g. Gemini 2.5
+    - Gemini thinking levels: `minimal` → `Off` (fast / effectively
+      no thinking); `low` → `Low`; `medium` → `Medium`; `high` →
+      `High` (Gemini tops out at `high` — no `xhigh` tier). Thinking
+      turned off, on models that allow it (e.g. Gemini 2.5
       Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
       `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
@@ -2353,7 +2361,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)." />
+            best-for="Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Exposes the Gemini discrete thinking-level dial (`minimal`, `low`, `medium`, `high`) — not every model supports every level (e.g. Gemini 3 Pro is low/high only; 2.5 generation does not expose `minimal`). Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)." />
     <method id="gemini-cli" name="Gemini CLI"
             provider="google" billing="subscription-or-key"
             provider-jurisdiction="us"
@@ -2361,7 +2369,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool." />
+            best-for="Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes the Gemini discrete thinking-level dial (`minimal`, `low`, `medium`, `high`) subject to each model's supported subset (e.g. Gemini 3 Pro is low/high only; 2.5 generation does not expose `minimal`)." />
     <method id="gemini-app" name="Gemini (web / app)"
             provider="google" billing="subscription-included"
             provider-jurisdiction="us"
@@ -2705,12 +2713,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
     - Gemini (Google API, Gemini CLI): a discrete thinking-level
-      knob — `low`, `medium`, `high` — across both the 3.x and 2.5
-      model generations (not every model supports every level; e.g.
-      Gemini 3 Pro is low/high only). Thinking can be turned off on
-      models that allow it (e.g. Gemini 2.5 Flash-Lite defaults off);
-      Google retired the numeric `thinkingBudget` from the docs in
-      favor of these levels.
+      knob — `minimal`, `low`, `medium`, `high` — across both the 3.x
+      and 2.5 model generations (not every model supports every level;
+      e.g. Gemini 3 Pro is low/high only, and the 2.5 generation does
+      not expose `minimal`). Thinking can be turned off on models that
+      allow it (e.g. Gemini 2.5 Flash-Lite defaults off); Google
+      retired the numeric `thinkingBudget` from the docs in favor of
+      these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
       `high`, `max` (default `high`; `max` for some complex agentic
@@ -2752,9 +2761,10 @@ as primary; the other becomes the secondary category for tie-breaking.
       OpenAI's scale tops out at `xhigh`, so no OpenAI level maps to
       `Max` (the `Max` slot is reserved for the above-`xhigh` step
       that only the Claude `max`-capable models reach).
-    - Gemini thinking levels: `low` → `Low`; `medium` → `Medium`;
-      `high` → `High` (Gemini tops out at `high` — no `xhigh` tier).
-      Thinking turned off, on models that allow it (e.g. Gemini 2.5
+    - Gemini thinking levels: `minimal` → `Off` (fast / effectively
+      no thinking); `low` → `Low`; `medium` → `Medium`; `high` →
+      `High` (Gemini tops out at `high` — no `xhigh` tier). Thinking
+      turned off, on models that allow it (e.g. Gemini 2.5
       Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
       `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
@@ -3444,7 +3454,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)." />
+            best-for="Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Exposes the Gemini discrete thinking-level dial (`minimal`, `low`, `medium`, `high`) — not every model supports every level (e.g. Gemini 3 Pro is low/high only; 2.5 generation does not expose `minimal`). Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)." />
     <method id="gemini-cli" name="Gemini CLI"
             provider="google" billing="subscription-or-key"
             provider-jurisdiction="us"
@@ -3452,7 +3462,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool." />
+            best-for="Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes the Gemini discrete thinking-level dial (`minimal`, `low`, `medium`, `high`) subject to each model's supported subset (e.g. Gemini 3 Pro is low/high only; 2.5 generation does not expose `minimal`)." />
     <method id="gemini-app" name="Gemini (web / app)"
             provider="google" billing="subscription-included"
             provider-jurisdiction="us"
@@ -3908,4 +3918,4 @@ Ladder construction rules (the WHOLE POINT of this mode — obey strictly):
      QUALITY pick.
   6. Each pick independently obeys every algorithm rule (availability,
      jurisdiction, the Step 7 cross-provider BACKUP requirement, platform
-     funding, thinking/max-mode/orchestration mapping).
+     funding, thinking/max-mode/orchestration bmapping).
