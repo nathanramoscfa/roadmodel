@@ -45,7 +45,17 @@ TASK_CATEGORIES = (
 )
 
 # Maps selector model ids to their cost-scale display name so cache-read
-# values can be cross-referenced. Mirrors tests/test_doc_schema.py.
+# values can be cross-referenced and selector<->cost-scale prices are forced
+# in sync (update/merge_catalog.py). Mirrors tests/test_doc_schema.py.
+#
+# ONLY models Cursor lists on its pricing page belong here. A provider-direct
+# model that Cursor does NOT list is EXEMPT: its price comes from its own
+# provider-direct snapshot (update/catalog-*.json), enforced selector-side
+# only. Keeping such a model here makes the cost-scale overlay hard-fail
+# ("no table row found") the day Opus drops its Cursor-page row — which stalled
+# the catalog cron for a week when xAI was delisted from Cursor on 2026-07-14.
+# Currently exempt: DeepSeek (never on Cursor) and grok-4.3 (xAI delisted
+# 2026-07-14; still reachable provider-direct via the xai-api method).
 SELECTOR_TO_COST_SCALE_NAME = {
     "opus-4.7": "Claude 4.7 Opus",
     "opus-4.8": "Claude Opus 4.8",
@@ -62,7 +72,6 @@ SELECTOR_TO_COST_SCALE_NAME = {
     "gemini-2.5-flash": "Gemini 2.5 Flash",
     "composer-2": "Composer 2",
     "composer-2.5": "Composer 2.5",
-    "grok-4.3": "Grok 4.3",
     "kimi-k2.5": "Kimi K2.5",
     "claude-4.5-haiku": "Claude 4.5 Haiku",
     "gpt-5.4-mini": "GPT-5.4 Mini",
