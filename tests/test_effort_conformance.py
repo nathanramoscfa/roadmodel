@@ -109,6 +109,30 @@ def test_extractor_parses_in_scope_sections() -> None:
     assert len(snapshot["section_sha256"]) == 64
 
 
+def test_parse_effort_table_splits_oxford_comma_list() -> None:
+    """Regression: the live docs (2026-07-14) list a row's models as an
+    Oxford-comma list ("Sonnet 5, Opus 4.8, and Opus 4.7"), not just "and".
+    Splitting on "and" alone left the bogus name "Sonnet 5, Opus 4.8," which
+    the tracker flagged as a new model every day (11 dup issues). Each named
+    model must become its own key; no comma-joined fragment survives."""
+    mod = _load_extractor()
+    table = (
+        "| Model | Levels |\n"
+        "| --- | --- |\n"
+        "| Sonnet 5, Opus 4.8, and Opus 4.7 | `low`, `high`, `max` |\n"
+        "| Opus 4.6 and Sonnet 4.6 | `low`, `high` |\n"
+    )
+    per_model = mod.parse_effort_table(table)
+
+    assert set(per_model) == {"Sonnet 5", "Opus 4.8", "Opus 4.7", "Opus 4.6", "Sonnet 4.6"}
+    assert not any("," in name for name in per_model), (
+        f"comma-joined name survived: {list(per_model)}"
+    )
+    assert per_model["Sonnet 5"] == ["low", "high", "max"]
+    assert per_model["Opus 4.7"] == ["low", "high", "max"]
+    assert per_model["Sonnet 4.6"] == ["low", "high"]
+
+
 def test_extractor_cli_writes_snapshot(tmp_path: Path) -> None:
     out = tmp_path / "effort.json"
     result = subprocess.run(
