@@ -54,4 +54,7 @@ if phases="$(git config roadmodel.prepushphases 2>/dev/null)"; then
 fi
 
 echo "pre-push: running local macOS verify (bypass: git push --no-verify)..."
-exec bash "${ROOT}/scripts/verify-macos.sh" --fast "${phase_args[@]}"
+# ${phase_args[@]+"..."} guards the empty-array case: macOS ships bash 3.2,
+# where a bare "${phase_args[@]}" under `set -u` errors "unbound variable" when
+# no roadmodel.prepushphases is configured (the default) — which broke every push.
+exec bash "${ROOT}/scripts/verify-macos.sh" --fast ${phase_args[@]+"${phase_args[@]}"}
