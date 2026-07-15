@@ -396,8 +396,11 @@ def _transform_lmarena(url: str) -> str:
     combined: list[dict[str, Any]] = []
     for subset_label, subset_url in subset_urls.items():
         body = fetch_bytes(subset_url)
-        # pyarrow ships no type stubs, so read_table is seen as untyped.
-        table = pq.read_table(io.BytesIO(body))  # type: ignore[no-untyped-call]
+        # pyarrow is treated as untyped (see the mypy pyarrow.* override). The
+        # unused-ignore code keeps this green on builds that DO carry partial
+        # pyarrow stubs (where read_table is a no-untyped-call) as well as those
+        # that don't (where the ignore would otherwise be flagged unused).
+        table = pq.read_table(io.BytesIO(body))  # type: ignore[no-untyped-call, unused-ignore]
         rows = table.to_pylist()
         if not rows:
             continue
