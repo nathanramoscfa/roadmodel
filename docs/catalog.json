@@ -1,9 +1,9 @@
 {
   "schema_version": "2",
-  "generated_at_utc": "2026-07-15T23:29:53Z",
+  "generated_at_utc": "2026-07-15T23:58:09Z",
   "source_doc_sha256": {
-    "model-selector.txt": "d4d40d42fe7d6fd12ff1ed737f5ffcf0c3a9f1ae51357ecdf0a0723d0247e0e7",
-    "model-tier-cost-scale.md": "9b89a6f5f36ee0fa75b175be9f1e861cf8dda29c07a772e9a93aeb65033d170d"
+    "model-selector.txt": "c5fc48165d8dae272a63a71c43ac66decdf3ea7d6c43806931679a09244e5218",
+    "model-tier-cost-scale.md": "cfca0aa6dd333325be726e174f35b84b2ac6efaa9311f4d091329301e9ed2805"
   },
   "models": [
     {
@@ -465,7 +465,7 @@
       },
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 44.3 (xhigh); HLE 39.9%; Codex lineage retains strong Terminal-Bench and SWE-bench Verified performance for autonomous coding",
-      "pricing_notes": "Requires Max Mode on request-based plans; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.3-codex-high",
+      "pricing_notes": "Hidden by default; Requires Max Mode on request-based plans; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.3-codex-high",
       "best_for": "Highest terminal and tool-use proficiency at the medium tier, most token-efficient autonomous coding, excels at long-running agentic sessions spanning debugging through deployment, and hard algorithmic problems requiring sustained code reasoning across languages \u2014 the cost-efficient pick for pure coding and agentic execution when an S-tier coding rating is needed"
     },
     {
@@ -656,6 +656,27 @@
       "headline_benchmarks": "OpenAI gpt-oss-20b \u2014 smaller open-weight (Apache-2.0) Mixture-of-Experts reasoning model (~21B total / ~3.6B active); OpenAI positions it near o3-mini; 128K context; very fast on Groq (~1000 tokens/s); us-jurisdiction",
       "pricing_notes": "Provider-direct Groq-hosted pricing for OpenAI's open-weight gpt-oss (Apache-2.0); us-jurisdiction; prices manually maintained from groq.com/pricing",
       "best_for": "OpenAI's smaller open-weight gpt-oss-20b (Apache-2.0) hosted by Groq \u2014 the cheapest gpt-oss ($0.30/M output) and extremely fast (~1000 tokens/s), for high-throughput / latency-sensitive light reasoning, classification, and simple code under the us jurisdiction, or as an on-device / self-hostable open-weight option. OpenAI positions it near o3-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key \u2014 catalog-present but only recommendable once a groq-api-key (or another gpt-oss host) is configured. Prefer gpt-oss-120b when reasoning quality matters more than raw speed / cost."
+    },
+    {
+      "id": "grok-4.3",
+      "name": "Grok 4.3",
+      "input_price_per_1m": 1.25,
+      "output_price_per_1m": 2.5,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "A",
+        "agentic": "S",
+        "multimodal": "B",
+        "long-context": "S",
+        "knowledge": "A",
+        "speed": "B"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "AA Intelligence Index 37.6 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1165.3",
+      "pricing_notes": "Hidden by default; Requires Max Mode on request-based plans",
+      "best_for": "Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding \u2014 leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist"
     },
     {
       "id": "grok-4.5",
@@ -1107,7 +1128,9 @@
       "provider_jurisdiction": "us",
       "billing": "per-token",
       "requires": "xai-api-key",
-      "supports_models": [],
+      "supports_models": [
+        "grok-4.3"
+      ],
       "exposes_max_mode": "no",
       "exposes_thinking": "no",
       "best_for": "Direct Grok API access for 2M-context or hallucination-resistant tasks; pay-per-token at xAI's published rates."
