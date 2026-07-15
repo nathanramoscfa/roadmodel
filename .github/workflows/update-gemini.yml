@@ -98,15 +98,19 @@ jobs:
           fi
           gh label create gemini-new-model --color FBCA04 \
             --description "Gemini docs introduced a model the catalog cron should route" 2>/dev/null || true
-          existing="$(gh issue list --state open --search 'Gemini docs introduced model in:title' --json title -q '.[].title' || true)"
+          # REST issues API + exact title, not --search (its search-index lag
+          # returned empty in-run and re-filed dupes daily; see #420 for the
+          # Claude Code fix + rationale).
+          existing="$(gh issue list --state open --limit 200 --json title -q '.[].title' || true)"
           for model in "${models[@]}"; do
             [ -z "$model" ] && continue
-            if printf '%s\n' "$existing" | grep -Fq "$model"; then
+            title="chore(catalog): Gemini docs introduced model \"${model}\""
+            if printf '%s\n' "$existing" | grep -Fqx "$title"; then
               echo "Tracking issue already open for: ${model}"
               continue
             fi
             gh issue create \
-              --title "chore(catalog): Gemini docs introduced model \"${model}\"" \
+              --title "$title" \
               --label gemini-new-model \
               --body "$(printf 'The Gemini API thinking docs introduced a thinking-level model **%s**, which the Gemini thinking tracker has not seen before (recorded in `update/gemini-thinking.json` under `unexpected_models`).\n\nThis tracker only FLAGS new models — it never edits selector model lists; that is the catalog cron'"'"'s lane. **Action:** confirm whether **%s** should be added to `<model-options>` / `supports-models` via the catalog refresh.\n\nOpened automatically by the Gemini refresh cron (`.github/workflows/update-gemini.yml`).' "${model}" "${model}")"
             echo "Opened tracking issue for: ${model}"
@@ -130,15 +134,18 @@ jobs:
           fi
           gh label create gemini-new-level --color D93F0B \
             --description "Gemini docs introduced a thinking tier needing a THINKING mapping" 2>/dev/null || true
-          existing="$(gh issue list --state open --search 'Gemini docs introduced thinking level in:title' --json title -q '.[].title' || true)"
+          # REST issues API + exact title, not --search (index lag re-filed
+          # dupes daily; see #420).
+          existing="$(gh issue list --state open --limit 200 --json title -q '.[].title' || true)"
           for level in "${levels[@]}"; do
             [ -z "$level" ] && continue
-            if printf '%s\n' "$existing" | grep -Fq "$level"; then
+            title="feat(selector): Gemini docs introduced thinking level \"${level}\""
+            if printf '%s\n' "$existing" | grep -Fqx "$title"; then
               echo "Tracking issue already open for level: ${level}"
               continue
             fi
             gh issue create \
-              --title "feat(selector): Gemini docs introduced thinking level \"${level}\"" \
+              --title "$title" \
               --label gemini-new-level \
               --body "$(printf 'The Gemini API thinking docs introduced a thinking LEVEL **%s** beyond the known baseline (minimal/low/medium/high), recorded in `update/gemini-thinking.json` under `unexpected_levels`.\n\nThe refresh cron has flowed it into `thinking_levels`, so the conformance gate (check E) now requires the selector to enumerate and map it. **Action:** confirm the THINKING-field mapping the cron chose for **%s** (a new top-of-scale tier defaults to `XHigh`).\n\nOpened automatically by the Gemini refresh cron (`.github/workflows/update-gemini.yml`).' "${level}" "${level}")"
             echo "Opened tracking issue for level: ${level}"

@@ -96,15 +96,19 @@ jobs:
           fi
           gh label create codex-new-model --color FBCA04 \
             --description "Codex docs introduced a model the catalog cron should route" 2>/dev/null || true
-          existing="$(gh issue list --state open --search 'Codex docs introduced model in:title' --json title -q '.[].title' || true)"
+          # REST issues API + exact title, not --search (its search-index lag
+          # returned empty in-run and re-filed dupes daily; see #420 for the
+          # Claude Code fix + rationale).
+          existing="$(gh issue list --state open --limit 200 --json title -q '.[].title' || true)"
           for model in "${models[@]}"; do
             [ -z "$model" ] && continue
-            if printf '%s\n' "$existing" | grep -Fq "$model"; then
+            title="chore(catalog): Codex docs introduced model \"${model}\""
+            if printf '%s\n' "$existing" | grep -Fqx "$title"; then
               echo "Tracking issue already open for: ${model}"
               continue
             fi
             gh issue create \
-              --title "chore(catalog): Codex docs introduced model \"${model}\"" \
+              --title "$title" \
               --label codex-new-model \
               --body "$(printf 'The Codex models docs now recommend **%s**, which the Codex reasoning-effort tracker has not seen before (baseline in `update/extract_codex_models.py`).\n\nThis tracker only FLAGS new models — it never edits selector model lists; that is the catalog cron'"'"'s lane. **Action:** confirm whether **%s** should be added to `<model-options>` / `supports-models` via the catalog refresh.\n\nOpened automatically by the Codex refresh cron (`.github/workflows/update-codex.yml`).' "${model}" "${model}")"
             echo "Opened tracking issue for: ${model}"
