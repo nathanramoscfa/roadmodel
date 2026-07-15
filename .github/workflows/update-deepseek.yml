@@ -98,15 +98,19 @@ jobs:
           fi
           gh label create deepseek-new-model --color FBCA04 \
             --description "DeepSeek docs introduced a model the catalog cron should route" 2>/dev/null || true
-          existing="$(gh issue list --state open --search 'DeepSeek docs introduced model in:title' --json title -q '.[].title' || true)"
+          # REST issues API + exact title, not --search (its search-index lag
+          # returned empty in-run and re-filed dupes daily; see #420 for the
+          # Claude Code fix + rationale).
+          existing="$(gh issue list --state open --limit 200 --json title -q '.[].title' || true)"
           for model in "${models[@]}"; do
             [ -z "$model" ] && continue
-            if printf '%s\n' "$existing" | grep -Fq "$model"; then
+            title="chore(catalog): DeepSeek docs introduced model \"${model}\""
+            if printf '%s\n' "$existing" | grep -Fqx "$title"; then
               echo "Tracking issue already open for: ${model}"
               continue
             fi
             gh issue create \
-              --title "chore(catalog): DeepSeek docs introduced model \"${model}\"" \
+              --title "$title" \
               --label deepseek-new-model \
               --body "$(printf 'The DeepSeek pricing docs introduced a model **%s**, which the DeepSeek thinking tracker has not seen before (baseline in `update/extract_deepseek_models.py`).\n\nThis tracker only FLAGS new models — it never edits selector model lists or adds per-token $ pricing; that is the catalog cron'"'"'s lane. **Action:** confirm whether **%s** should be added to `<model-options>` / `supports-models` via the catalog refresh.\n\nOpened automatically by the DeepSeek refresh cron (`.github/workflows/update-deepseek.yml`).' "${model}" "${model}")"
             echo "Opened tracking issue for: ${model}"
@@ -130,15 +134,18 @@ jobs:
           fi
           gh label create deepseek-new-effort --color D93F0B \
             --description "DeepSeek docs introduced a reasoning-effort tier needing a THINKING mapping" 2>/dev/null || true
-          existing="$(gh issue list --state open --search 'DeepSeek docs introduced reasoning-effort in:title' --json title -q '.[].title' || true)"
+          # REST issues API + exact title, not --search (index lag re-filed
+          # dupes daily; see #420).
+          existing="$(gh issue list --state open --limit 200 --json title -q '.[].title' || true)"
           for tier in "${tiers[@]}"; do
             [ -z "$tier" ] && continue
-            if printf '%s\n' "$existing" | grep -Fq "$tier"; then
+            title="feat(selector): DeepSeek docs introduced reasoning-effort \"${tier}\""
+            if printf '%s\n' "$existing" | grep -Fqx "$title"; then
               echo "Tracking issue already open for tier: ${tier}"
               continue
             fi
             gh issue create \
-              --title "feat(selector): DeepSeek docs introduced reasoning-effort \"${tier}\"" \
+              --title "$title" \
               --label deepseek-new-effort \
               --body "$(printf 'The DeepSeek API thinking-mode docs introduced a reasoning-effort tier **%s** beyond the known baseline (high/max), recorded in `update/deepseek-thinking.json` under `unexpected_effort`.\n\nThe refresh cron has flowed it into `reasoning_effort`, so the conformance gate (check F) now requires the selector to enumerate and map it. **Action:** confirm the THINKING-field mapping the cron chose for **%s** (a new top-of-scale tier defaults to `XHigh`).\n\nOpened automatically by the DeepSeek refresh cron (`.github/workflows/update-deepseek.yml`).' "${tier}" "${tier}")"
             echo "Opened tracking issue for tier: ${tier}"
