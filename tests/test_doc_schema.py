@@ -84,7 +84,9 @@ SELECTOR_TO_COST_SCALE_NAME = {
     "gemini-2.5-flash": "Gemini 2.5 Flash",
     "composer-2": "Composer 2",
     "composer-2.5": "Composer 2.5",
-    "grok-4.3": "Grok 4.3",
+    # grok-4.3 is intentionally absent: xAI was delisted from Cursor's pricing
+    # page 2026-07-14, so grok-4.3 is now provider-direct-only (xai-api), exempt
+    # from cost-scale sync like DeepSeek. See update/build_catalog.py.
     "kimi-k2.5": "Kimi K2.5",
     "claude-4.5-haiku": "Claude 4.5 Haiku",
     "gpt-5.4-mini": "GPT-5.4 Mini",
