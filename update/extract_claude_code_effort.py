@@ -69,7 +69,10 @@ EFFORT_ORDER = ("low", "medium", "high", "xhigh", "max")
 
 # Models this tracker has seen in the effort table. A row outside this set is
 # FLAGGED (a new model is the catalog cron's lane), never acted on here.
-KNOWN_MODELS = frozenset({"Fable 5", "Opus 4.8", "Opus 4.7", "Opus 4.6", "Sonnet 4.6"})
+# "Sonnet 5" was added 2026-07-14: Claude Code now documents it (default model,
+# full low..max effort range) and the catalog cron is adding claude-sonnet-5 to
+# <model-options>, so the effort tracker acknowledges it here.
+KNOWN_MODELS = frozenset({"Fable 5", "Sonnet 5", "Opus 4.8", "Opus 4.7", "Opus 4.6", "Sonnet 4.6"})
 
 # Sentinel substrings that MUST survive in the in-scope span. Their absence
 # means the docs were restructured and the deterministic parse can no longer
@@ -128,8 +131,12 @@ def verify_anchors(in_scope: str) -> None:
 def parse_effort_table(in_scope: str) -> dict[str, list[str]]:
     """Parse the ``| Model | Levels |`` per-model effort matrix.
 
-    A model cell may name several models joined by " and " (e.g.
-    "Opus 4.8 and Opus 4.7"); each gets the row's level list. Levels are the
+    A model cell may name several models as a comma / "and" list — either
+    "Opus 4.8 and Opus 4.7" or an Oxford-comma list like
+    "Sonnet 5, Opus 4.8, and Opus 4.7"; each model gets the row's level list.
+    Splitting on "and" alone mangled the comma form into one bogus name
+    ("Sonnet 5, Opus 4.8,"), which the tracker then flagged daily as a new
+    model — so split on both, mirroring ``parse_defaults``. Levels are the
     backtick-wrapped tokens of the second cell.
     """
     lines = in_scope.splitlines()
@@ -154,8 +161,8 @@ def parse_effort_table(in_scope: str) -> dict[str, list[str]]:
         levels = [tok.lower() for tok in re.findall(r"`([^`]+)`", levels_cell)]
         if not levels:
             continue
-        for model in re.split(r"\s+and\s+", model_cell):
-            model = model.strip()
+        for model in re.split(r",|\band\b", model_cell):
+            model = model.strip().strip(",").strip()
             if model:
                 per_model[model] = levels
 

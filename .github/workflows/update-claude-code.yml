@@ -94,7 +94,13 @@ jobs:
         # A model in the docs effort table this tracker hasn't seen is the
         # catalog cron's lane. Open a DEDUPLICATED tracking issue (never edit
         # model lists here) so the flag survives the auto-merge — the PR body
-        # also notes it. Deduped by title so a re-run doesn't spam.
+        # also notes it. Dedup lists OPEN issues via the REST issues API
+        # (`gh issue list`, no `--search`) and matches the EXACT title. The old
+        # `--search '... in:title'` hit the search INDEX, whose lag returned
+        # empty in-run and filed a fresh dup almost every day (11 dupes
+        # 07-01..07-14). Not label-based: `gh issue create --label` has not been
+        # applying cc-new-model to these App-token-authored issues, so a label
+        # filter would silently match nothing and re-dup forever.
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -107,15 +113,16 @@ jobs:
           fi
           gh label create cc-new-model --color FBCA04 \
             --description "Claude Code docs introduced a model the catalog cron should route" 2>/dev/null || true
-          existing="$(gh issue list --state open --search 'Claude Code docs introduced model in:title' --json title -q '.[].title' || true)"
+          existing="$(gh issue list --state open --limit 200 --json title -q '.[].title' || true)"
           for model in "${models[@]}"; do
             [ -z "$model" ] && continue
-            if printf '%s\n' "$existing" | grep -Fq "$model"; then
+            title="chore(catalog): Claude Code docs introduced model \"${model}\""
+            if printf '%s\n' "$existing" | grep -Fqx "$title"; then
               echo "Tracking issue already open for: ${model}"
               continue
             fi
             gh issue create \
-              --title "chore(catalog): Claude Code docs introduced model \"${model}\"" \
+              --title "$title" \
               --label cc-new-model \
               --body "$(printf 'The Claude Code model-config docs effort table now lists **%s**, which the effort/thinking tracker has not seen before (recorded in `update/claude-code-effort.json` under `unexpected_models`).\n\nThis tracker only FLAGS new models — it never edits selector model lists; that is the catalog cron'"'"'s lane. **Action:** confirm whether **%s** should be added to `<model-options>` / `supports-models` via the catalog refresh.\n\nOpened automatically by the Claude Code refresh cron (`.github/workflows/update-claude-code.yml`).' "${model}" "${model}")"
             echo "Opened tracking issue for: ${model}"

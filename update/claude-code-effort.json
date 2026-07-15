@@ -22,7 +22,14 @@
       "xhigh",
       "max"
     ],
-    "Sonnet 5, Opus 4.8,": [
+    "Sonnet 5": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "Opus 4.8": [
       "low",
       "medium",
       "high",
@@ -94,8 +101,6 @@
       "Fable 5"
     ]
   },
-  "unexpected_models": [
-    "Sonnet 5, Opus 4.8,"
-  ],
+  "unexpected_models": [],
   "section_sha256": "3e80d57aedfe4d517114c7e97912696bcddb095bf92a71653a9fe959f31f61d1"
 }
