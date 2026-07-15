@@ -105,3 +105,11 @@ strict = true
 [[tool.mypy.overrides]]
 module = ["google.genai.*"]
 ignore_missing_imports = true
+
+# pyarrow ships no py.typed marker, so mypy --strict raises import-untyped
+# wherever it is imported (update/update_models.py's LMArena parquet parse).
+# The installed build varies: some wheels carry partial stubs, some none —
+# so treat it as untyped everywhere for a deterministic strict check.
+[[tool.mypy.overrides]]
+module = ["pyarrow.*"]
+ignore_missing_imports = true
