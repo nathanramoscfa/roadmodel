@@ -28,7 +28,8 @@ def recommend(
         from anthropic import Anthropic, APIError
     except Exception as exc:  # pragma: no cover - dependency/runtime guard
         raise ProviderCallError(
-            "Anthropic SDK is unavailable; install the 'anthropic' package."
+            "The Anthropic SDK is required for `roadmodel recommend` but is not "
+            "installed. Install the engine extra: pip install 'roadmodel[recommend]'."
         ) from exc
 
     try:

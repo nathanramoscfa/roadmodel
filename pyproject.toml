@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "roadmodel"
-version = "0.2.21"
+version = "0.2.22"
 description = "BYO-key CLI that recommends the right AI model, platform, and settings for a prompt."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -26,14 +26,23 @@ classifiers = [
     "Topic :: Utilities",
 ]
 dependencies = [
-    "anthropic>=0.97.0",
-    "openai>=2.33.0",
-    "google-genai>=1.74.0",
     "click>=8.3.3",
 ]
 
 [project.optional-dependencies]
+# Provider SDKs — needed ONLY for `roadmodel recommend` (live API calls to a
+# provider). The offline planning-kit workflow (export-kit, catalog, context,
+# version) imports none of them, so they are an opt-in extra: `pip install
+# roadmodel` stays lightweight and free of dependency conflicts with whatever
+# project you drop it into; `pip install "roadmodel[recommend]"` adds the
+# engine. See providers/*.py — each SDK is imported lazily at call time.
+recommend = [
+    "anthropic>=0.97.0",
+    "openai>=2.33.0",
+    "google-genai>=1.74.0",
+]
 dev = [
+    "roadmodel[recommend]",
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "ruff>=0.6",
@@ -43,7 +52,8 @@ dev = [
     "bandit>=1.7",
     "pip-audit>=2.7",
 ]
-mcp = ["mcp>=1.0"]
+# The MCP server serves recommendations, so it needs the engine extra too.
+mcp = ["mcp>=1.0", "roadmodel[recommend]"]
 
 [project.scripts]
 roadmodel = "roadmodel.cli:main"
