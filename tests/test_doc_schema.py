@@ -277,9 +277,11 @@ def _unavailable_model_ids() -> list[str]:
 
 def test_availability_context_lists_valid_model_ids() -> None:
     """Every model id flagged unavailable in <availability-context> must be a
-    real <model-options> id; a typo would silently disable nothing."""
+    real <model-options> id; a typo would silently disable nothing. The
+    cold-start fallback list may legitimately be EMPTY (no model under a
+    standing restriction — the normal state once a probe self-heals), so this
+    validates the ids that ARE listed without requiring the list to be non-empty."""
     unavailable = _unavailable_model_ids()
-    assert unavailable, "<availability-context> lists no unavailable model ids"
     catalog_ids = {attrs.get("id", "") for _, attrs in _parse_models()}
     unknown = [i for i in unavailable if i not in catalog_ids]
     assert not unknown, f"<availability-context> references unknown model ids: {unknown}"

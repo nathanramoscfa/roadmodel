@@ -445,14 +445,16 @@
     availability service was unreachable); it is intentionally conservative so
     an outage fails closed rather than recommending a possibly-restricted model.
 
-    Cold-start fallback — treat as unavailable ONLY when no runtime override is
-    present (enforced at Step 0a of `<selection-algorithm>`):
-
-    - `claude-fable-5` (Fable 5) — access restricted by Anthropic under an
-      export-control directive as of 2026-06-12. The runtime override lifts
-      this automatically once verification confirms access is restored; this
-      fallback line is the fail-closed default for when the availability
-      service can't be reached, and does not itself need editing.
+    Cold-start fallback — treat the models listed here as unavailable ONLY when
+    no runtime override is present (enforced at Step 0a of
+    `<selection-algorithm>`). This list is currently EMPTY: no catalogued model
+    is under a standing provider access restriction, so at cold-start every
+    catalogued model is treated as available. (Fable 5's 2026-06-12
+    export-control restriction was lifted and confirmed by grounded AI
+    verification on 2026-07-02, removing it from both the runtime override and
+    this fallback.) If a provider later restricts a model, add a bullet here —
+    `- \`model-id\` (Name) — reason` — so the fail-closed default benches it
+    before the daily probe catches up.
 
     When an unavailable model would otherwise have been the best fit, return
     the next-best AVAILABLE model and disclose the substitution in the
