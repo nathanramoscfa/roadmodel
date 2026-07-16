@@ -71,12 +71,16 @@ jobs:
             echo "No availability change — nothing to open."
             exit 0
           fi
+          # Mirror the change into the bundled static <availability-context>
+          # fallback so the offline CLI + planning kit (which never read the
+          # runtime table) carry the correct state into the next release.
+          python update/sync_static_availability.py
           DATE="$(date -u +%Y-%m-%d)"
           BRANCH="auto/availability-${DATE}-${{ github.run_id }}"
           git config user.name "roadmodel-bot"
           git config user.email "roadmodel-bot@users.noreply.github.com"
           git checkout -b "$BRANCH"
-          git add infra/model-availability.json
+          git add infra/model-availability.json docs/model-selector.txt docs/model-selector.md
           git commit -m "chore(availability): probe-detected availability change (${DATE})"
           git push -u origin "$BRANCH"
           PR_URL="$(gh pr create \
