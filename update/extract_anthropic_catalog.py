@@ -29,6 +29,7 @@ import hashlib
 import json
 import re
 import sys
+from datetime import date, datetime
 from pathlib import Path
 
 import requests
@@ -51,6 +52,7 @@ NAME_TO_ID = {
     "Claude Fable 5": "claude-fable-5",
     "Claude Opus 4.8": "opus-4.8",
     "Claude Opus 4.7": "opus-4.7",
+    "Claude Sonnet 5": "claude-sonnet-5",
     "Claude Sonnet 4.6": "sonnet-4.6",
     "Claude Haiku 4.5": "claude-4.5-haiku",
 }
@@ -94,6 +96,43 @@ def _dollars(cell: str) -> float | None:
     return float(m.group(1)) if m else None
 
 
+# Anthropic time-boxes introductory pricing by splitting a model across TWO rows
+# and labelling the period IN THE NAME CELL, e.g.
+#   "Claude Sonnet 5 [through August 31, 2026](…#claude-sonnet-5-introductory-pricing)"
+#   "Claude Sonnet 5 starting September 1, 2026"
+# A plain NAME_TO_ID lookup misses both (the label is part of the cell), which is
+# why Sonnet 5 was silently absent from this snapshot — and therefore from the
+# catalog — even though it is Claude Code's default model. Strip the label to get
+# the base name, then keep only the row in effect TODAY so the snapshot always
+# carries the price actually being charged, and rolls over on its own.
+_THROUGH_RE = re.compile(r"^(?P<base>.*?)\s*\[through\s+(?P<date>[^\]]+)\]\([^)]*\)\s*$")
+_STARTING_RE = re.compile(r"^(?P<base>.*?)\s+starting\s+(?P<date>[A-Za-z]+\s+\d{1,2},\s*\d{4})\s*$")
+
+
+def _parse_period_date(text: str) -> date | None:
+    try:
+        return datetime.strptime(text.strip(), "%B %d, %Y").date()
+    except ValueError:
+        return None
+
+
+def _split_period(cell: str) -> tuple[str, str | None, date | None]:
+    """Split a pricing-row name cell into (base_name, kind, boundary_date)."""
+    for kind, pattern in (("through", _THROUGH_RE), ("starting", _STARTING_RE)):
+        m = pattern.match(cell)
+        if m:
+            return m.group("base").strip(), kind, _parse_period_date(m.group("date"))
+    return cell.strip(), None, None
+
+
+def _is_effective(kind: str | None, boundary: date | None, today: date) -> bool:
+    if kind is None or boundary is None:
+        return True
+    if kind == "through":
+        return today <= boundary
+    return today >= boundary
+
+
 def _col(header: list[str], *needles: str) -> int | None:
     for i, h in enumerate(header):
         if all(n.lower() in h.lower() for n in needles):
@@ -101,12 +140,16 @@ def _col(header: list[str], *needles: str) -> int | None:
     return None
 
 
-def parse_pricing_table(md: str) -> list[dict[str, object]]:
+def parse_pricing_table(md: str, *, today: date | None = None) -> list[dict[str, object]]:
     """Parse the standard per-token pricing table (header ``Base Input Tokens`` …
     ``Output Tokens``) and return per-model canonical pricing facts for the mapped
     models. The fast-mode / batch tables (which lack a ``Base Input Tokens``
     header) are ignored.
+
+    ``today`` selects between time-boxed price rows (introductory vs standard);
+    it is injectable so the choice is testable rather than clock-dependent.
     """
+    today = today or date.today()
     header: list[str] | None = None
     data: list[list[str]] = []
     for line in md.splitlines():
@@ -143,10 +186,16 @@ def parse_pricing_table(md: str) -> list[dict[str, object]]:
     for row in data:
         if not row:
             continue
-        name = row[0].strip()
+        name, period_kind, boundary = _split_period(row[0].strip())
         mid = NAME_TO_ID.get(name)
         if mid is None or mid in seen:
             continue
+        if period_kind is not None and boundary is None:
+            raise ExtractError(
+                f"could not parse the effective date in pricing row {row[0].strip()!r}"
+            )
+        if not _is_effective(period_kind, boundary, today):
+            continue  # a time-boxed price that is not the one being charged today
         in_price = _dollars(row[in_col]) if in_col < len(row) else None
         out_price = _dollars(row[out_col]) if out_col < len(row) else None
         if in_price is None or out_price is None:
@@ -179,9 +228,9 @@ def canonical_facts(models: list[dict[str, object]]) -> str:
     )
 
 
-def build_snapshot(md: str, *, source_url: str) -> dict[str, object]:
+def build_snapshot(md: str, *, source_url: str, today: date | None = None) -> dict[str, object]:
     verify_anchors(md)
-    models = parse_pricing_table(md)
+    models = parse_pricing_table(md, today=today)
 
     found = {str(m["id"]) for m in models}
     missing = sorted(set(NAME_TO_ID.values()) - found)
