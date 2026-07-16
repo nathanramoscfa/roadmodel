@@ -15,7 +15,6 @@ import importlib
 import json
 import subprocess
 import sys
-from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -482,11 +481,7 @@ def test_catalog_gate_fails_on_two_source_conflict(tmp_path: Path) -> None:
 
 def test_anthropic_extractor_parses_standard_table() -> None:
     mod = _load("extract_anthropic_catalog")
-    # `today` is pinned: the fixture carries Sonnet 5's time-boxed rows, so a
-    # real-clock read would silently change this test's meaning on 2026-09-01.
-    snap = mod.build_snapshot(
-        ANTHROPIC_MD.read_text(), source_url="file://sample", today=date(2026, 7, 16)
-    )
+    snap = mod.build_snapshot(ANTHROPIC_MD.read_text(), source_url="file://sample")
     models = {m["id"]: m for m in snap["models"]}
     assert set(models) == {
         "claude-fable-5",
@@ -515,37 +510,36 @@ def test_anthropic_extractor_raises_on_restructure() -> None:
         mod.build_snapshot("# Pricing\n\nNo table here.\n", source_url="x")
 
 
-@pytest.mark.parametrize(
-    ("today", "expected"),
-    [
-        (date(2026, 7, 16), (2.0, 10.0)),  # inside the introductory window
-        (date(2026, 8, 31), (2.0, 10.0)),  # last day of it — still introductory
-        (date(2026, 9, 1), (3.0, 15.0)),  # standard pricing begins
-        (date(2027, 1, 1), (3.0, 15.0)),
-    ],
-)
-def test_anthropic_extractor_picks_the_price_in_effect_today(
-    today: date, expected: tuple[float, float]
-) -> None:
-    """Anthropic time-boxes introductory pricing across TWO rows, labelling the
-    period inside the NAME cell. The snapshot must carry the price actually being
-    charged on ``today`` — and roll over to standard pricing on its own.
+def test_anthropic_extractor_prefers_the_standard_price_over_a_promo() -> None:
+    """Sonnet 5 occupies TWO rows that label the period inside the NAME cell:
+    an introductory `[through …]` row and a `starting …` row.
+
+    The snapshot must carry the STANDARD ($3/$15), not the promo ($2/$10): the
+    catalog is a steady-state reference (a promo price would flap the whole
+    catalog the day it lapses), and the G4 gate requires this snapshot to EQUAL
+    the selector, which the editorial pass sets from the standard price and
+    records the promo in the cost-scale Notes column.
     """
     mod = _load("extract_anthropic_catalog")
-    snap = mod.build_snapshot(ANTHROPIC_MD.read_text(), source_url="file://sample", today=today)
+    snap = mod.build_snapshot(ANTHROPIC_MD.read_text(), source_url="file://sample")
     s5 = {m["id"]: m for m in snap["models"]}["claude-sonnet-5"]
-    assert (s5["input_price_per_1m"], s5["output_price_per_1m"]) == expected
-    # The period label is stripped — the snapshot's name/slug is the model, not the window.
+    assert (s5["input_price_per_1m"], s5["output_price_per_1m"]) == (3.0, 15.0)
+    assert s5["cache_read_per_1m"] == 0.30
+    # The period label is stripped — the name/slug is the model, not the window.
     assert s5["name"] == "Claude Sonnet 5"
     assert snap["slug_to_id"]["Claude Sonnet 5"] == "claude-sonnet-5"
 
 
-def test_anthropic_extractor_fails_loud_on_unparseable_period_date() -> None:
-    """A date-format change must fail rather than silently pick the wrong row."""
+def test_anthropic_extractor_falls_back_when_only_a_promo_row_exists() -> None:
+    """With no `starting …` row, the single time-boxed row is the only price."""
     mod = _load("extract_anthropic_catalog")
-    md = ANTHROPIC_MD.read_text().replace("through August 31, 2026", "through whenever")
-    with pytest.raises(mod.ExtractError):
-        mod.build_snapshot(md, source_url="file://sample", today=date(2026, 7, 16))
+    md = "\n".join(
+        line
+        for line in ANTHROPIC_MD.read_text().splitlines()
+        if "Claude Sonnet 5 starting" not in line
+    )
+    s5 = {m["id"]: m for m in mod.parse_pricing_table(md)}["claude-sonnet-5"]
+    assert (s5["input_price_per_1m"], s5["output_price_per_1m"]) == (2.0, 10.0)
 
 
 def test_anthropic_committed_snapshot_matches_selector_prices() -> None:

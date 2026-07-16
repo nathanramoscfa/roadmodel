@@ -29,7 +29,6 @@ import hashlib
 import json
 import re
 import sys
-from datetime import date, datetime
 from pathlib import Path
 
 import requests
@@ -102,35 +101,29 @@ def _dollars(cell: str) -> float | None:
 #   "Claude Sonnet 5 starting September 1, 2026"
 # A plain NAME_TO_ID lookup misses both (the label is part of the cell), which is
 # why Sonnet 5 was silently absent from this snapshot — and therefore from the
-# catalog — even though it is Claude Code's default model. Strip the label to get
-# the base name, then keep only the row in effect TODAY so the snapshot always
-# carries the price actually being charged, and rolls over on its own.
+# catalog — even though it is Claude Code's default model.
+#
+# Which row is THE price? The STANDARD (enduring) one — the promo goes in the
+# cost-scale Notes column, not the price field. Two reasons: the catalog is a
+# steady-state reference (a promo price would flap the whole catalog the day it
+# expires), and the G4 price-provenance gate requires this snapshot to EQUAL the
+# selector, which the editorial pass sets from the standard price. So: prefer a
+# `starting <date>` row when one exists, else fall back to the only row present.
 _THROUGH_RE = re.compile(r"^(?P<base>.*?)\s*\[through\s+(?P<date>[^\]]+)\]\([^)]*\)\s*$")
 _STARTING_RE = re.compile(r"^(?P<base>.*?)\s+starting\s+(?P<date>[A-Za-z]+\s+\d{1,2},\s*\d{4})\s*$")
 
 
-def _parse_period_date(text: str) -> date | None:
-    try:
-        return datetime.strptime(text.strip(), "%B %d, %Y").date()
-    except ValueError:
-        return None
+def _split_period(cell: str) -> tuple[str, str | None]:
+    """Split a pricing-row name cell into (base_name, period_kind).
 
-
-def _split_period(cell: str) -> tuple[str, str | None, date | None]:
-    """Split a pricing-row name cell into (base_name, kind, boundary_date)."""
+    ``period_kind`` is ``"through"`` (a time-boxed promotional price),
+    ``"starting"`` (the standard price that takes over), or None (untimed).
+    """
     for kind, pattern in (("through", _THROUGH_RE), ("starting", _STARTING_RE)):
         m = pattern.match(cell)
         if m:
-            return m.group("base").strip(), kind, _parse_period_date(m.group("date"))
-    return cell.strip(), None, None
-
-
-def _is_effective(kind: str | None, boundary: date | None, today: date) -> bool:
-    if kind is None or boundary is None:
-        return True
-    if kind == "through":
-        return today <= boundary
-    return today >= boundary
+            return m.group("base").strip(), kind
+    return cell.strip(), None
 
 
 def _col(header: list[str], *needles: str) -> int | None:
@@ -140,16 +133,15 @@ def _col(header: list[str], *needles: str) -> int | None:
     return None
 
 
-def parse_pricing_table(md: str, *, today: date | None = None) -> list[dict[str, object]]:
+def parse_pricing_table(md: str) -> list[dict[str, object]]:
     """Parse the standard per-token pricing table (header ``Base Input Tokens`` …
     ``Output Tokens``) and return per-model canonical pricing facts for the mapped
     models. The fast-mode / batch tables (which lack a ``Base Input Tokens``
     header) are ignored.
 
-    ``today`` selects between time-boxed price rows (introductory vs standard);
-    it is injectable so the choice is testable rather than clock-dependent.
+    A model split across time-boxed rows resolves to its STANDARD price — see
+    ``_split_period``.
     """
-    today = today or date.today()
     header: list[str] | None = None
     data: list[list[str]] = []
     for line in md.splitlines():
@@ -181,26 +173,35 @@ def parse_pricing_table(md: str, *, today: date | None = None) -> list[dict[str,
     if in_col is None or out_col is None:
         raise ExtractError("pricing table missing an Input or Output column")
 
-    models: list[dict[str, object]] = []
-    seen: set[str] = set()
+    # Group every row per model first: a model can occupy several time-boxed rows,
+    # and the enduring price may not be the first one listed.
+    rows_by_id: dict[str, list[tuple[str | None, list[str]]]] = {}
+    order: list[str] = []
     for row in data:
         if not row:
             continue
-        name, period_kind, boundary = _split_period(row[0].strip())
+        name, period_kind = _split_period(row[0].strip())
         mid = NAME_TO_ID.get(name)
-        if mid is None or mid in seen:
+        if mid is None:
             continue
-        if period_kind is not None and boundary is None:
-            raise ExtractError(
-                f"could not parse the effective date in pricing row {row[0].strip()!r}"
-            )
-        if not _is_effective(period_kind, boundary, today):
-            continue  # a time-boxed price that is not the one being charged today
+        if mid not in rows_by_id:
+            rows_by_id[mid] = []
+            order.append(mid)
+        rows_by_id[mid].append((period_kind, row))
+
+    models: list[dict[str, object]] = []
+    for mid in order:
+        candidates = rows_by_id[mid]
+        # The standard price wins over a `through <date>` promotional row.
+        period_kind, row = next(
+            (c for c in candidates if c[0] == "starting"),
+            candidates[0],
+        )
+        name = _split_period(row[0].strip())[0]
         in_price = _dollars(row[in_col]) if in_col < len(row) else None
         out_price = _dollars(row[out_col]) if out_col < len(row) else None
         if in_price is None or out_price is None:
             raise ExtractError(f"could not parse input/output price for {name!r}")
-        seen.add(mid)
         models.append(
             {
                 "id": mid,
@@ -228,9 +229,9 @@ def canonical_facts(models: list[dict[str, object]]) -> str:
     )
 
 
-def build_snapshot(md: str, *, source_url: str, today: date | None = None) -> dict[str, object]:
+def build_snapshot(md: str, *, source_url: str) -> dict[str, object]:
     verify_anchors(md)
-    models = parse_pricing_table(md, today=today)
+    models = parse_pricing_table(md)
 
     found = {str(m["id"]) for m in models}
     missing = sorted(set(NAME_TO_ID.values()) - found)
