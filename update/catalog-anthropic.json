@@ -30,6 +30,14 @@
       "cache_read_per_1m": 0.5
     },
     {
+      "id": "claude-sonnet-5",
+      "slug": "Claude Sonnet 5",
+      "name": "Claude Sonnet 5",
+      "input_price_per_1m": 2.0,
+      "output_price_per_1m": 10.0,
+      "cache_read_per_1m": 0.2
+    },
+    {
       "id": "sonnet-4.6",
       "slug": "Claude Sonnet 4.6",
       "name": "Claude Sonnet 4.6",
@@ -50,10 +58,11 @@
     "Claude Fable 5": "claude-fable-5",
     "Claude Opus 4.8": "opus-4.8",
     "Claude Opus 4.7": "opus-4.7",
+    "Claude Sonnet 5": "claude-sonnet-5",
     "Claude Sonnet 4.6": "sonnet-4.6",
     "Claude Haiku 4.5": "claude-4.5-haiku"
   },
   "unexpected_slugs": [],
   "missing_mapped_models": [],
-  "section_sha256": "3bd14930e5be1288390638b8404f458ff5bc89bf7c0e9db83c20fc9f9bbd3e33"
+  "section_sha256": "02a58ff1f852b8c59ea7bd025210db234d06f8ef7538084f47f62a8289531286"
 }
