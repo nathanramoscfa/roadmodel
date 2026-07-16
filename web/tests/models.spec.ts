@@ -14,7 +14,7 @@ test("renders the catalog table, legend, and model links", async ({ page }) => {
   await expect(page.getByTestId("model-catalog")).toBeVisible();
 
   // Every catalog model renders as a row.
-  await expect(page.getByTestId("model-row")).toHaveCount(34);
+  await expect(page.getByTestId("model-row")).toHaveCount(40);
 
   // Model names link to their provider's docs in a new tab.
   const fable = page.getByRole("link", { name: /^Fable 5$/ });
@@ -37,7 +37,8 @@ test("the jurisdiction filter narrows the rows", async ({ page }) => {
   await page.goto("/models");
 
   await page.getByLabel("Filter by jurisdiction").selectOption("cn");
-  // The six cn-jurisdiction models: 2× DeepSeek, 3× GLM, Kimi K2.5.
+  // The six cn-jurisdiction models: 2× DeepSeek, 3× GLM, Kimi K2.7 Code
+  // (Kimi K2.5 was delisted from Cursor 2026-07-15 and replaced by K2.7 Code).
   await expect(page.getByTestId("model-row")).toHaveCount(6);
   await expect(page.getByText("No models match")).toHaveCount(0);
 });

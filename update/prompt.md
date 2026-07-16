@@ -622,8 +622,21 @@ A `<model …/>` element MAY be removed only when one of these strict
 conditions holds:
 
   1. The model is no longer present on the Cursor pricing page
-     (Cursor discontinued it). Emit a warning of the form
+     (Cursor discontinued it) AND it is NOT a provider-direct model.
+     Emit a warning of the form
      `discontinued by Cursor: <id> removed from model-selector.txt`.
+
+     EXCEPTION — provider-direct models: if a delisted model belongs to a
+     provider whose snapshot is `overlay_mode: whole-element` (its price
+     already comes from the provider's own page, not Cursor — see the
+     Federation rule; xAI/Grok is such a provider), it has merely LEFT THE
+     CURSOR POOL, not been discontinued — the provider still serves it via
+     its own API. Do NOT remove it: KEEP its `<model>` element and its
+     provider-direct `<method>` supports-models entry, and only drop it from
+     the `cursor` method's supports-models. Emit
+     `left Cursor pool: <id> now provider-direct-only`. (The federation
+     overlay re-adds a dropped whole-element element deterministically, so
+     never hand-remove one — that only churns the diff.)
   2. A newer version IN THE SAME SERIES exists in `<model-options>`
      AND its `output-price-per-1m` is less than or equal to the
      older version's `output-price-per-1m`. Emit a warning of the

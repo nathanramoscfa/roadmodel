@@ -144,9 +144,16 @@ def test_recommend_structured_no_backup_is_unchanged(
 
 
 def test_suggest_cross_provider_picks_comparable_tier() -> None:
-    # Anthropic very-high primary → an OpenAI very-high backup (us).
-    assert cost.suggest_cross_provider_backup("Fable 5", allowed_jurisdictions=["us"]) == "GPT-5.5"
-    assert cost.suggest_cross_provider_backup("Opus 4.8", allowed_jurisdictions=["us"]) == "GPT-5.5"
+    # Anthropic very-high primary → an OpenAI very-high backup (us). GPT-5.6 Sol
+    # and GPT-5.5 tie on tier/output-price; the deterministic model-id tiebreak
+    # takes the newer gpt-5.6-sol (both added by the 2026-07-15 catalog refresh).
+    assert (
+        cost.suggest_cross_provider_backup("Fable 5", allowed_jurisdictions=["us"]) == "GPT-5.6 Sol"
+    )
+    assert (
+        cost.suggest_cross_provider_backup("Opus 4.8", allowed_jurisdictions=["us"])
+        == "GPT-5.6 Sol"
+    )
 
 
 def test_suggest_cross_provider_respects_jurisdiction() -> None:
@@ -186,12 +193,12 @@ def test_recommend_structured_substitutes_same_provider_backup(
     payload = recommend_module.recommend_structured(
         "audit this", _config(tmp_path), allowed_jurisdictions=["us"]
     )
-    assert payload["backup"] == "GPT-5.5"
+    assert payload["backup"] == "GPT-5.6 Sol"
     assert cost.model_provider(payload["backup"]) != "anthropic"
     guard = payload["backup_guard"]
     assert guard["action"] == "substituted"
     assert guard["original_backup"] == "Opus 4.8"
-    assert guard["substitute"] == "GPT-5.5"
+    assert guard["substitute"] == "GPT-5.6 Sol"
 
 
 def test_recommend_structured_drops_when_no_jurisdiction(

@@ -199,10 +199,13 @@ def build_snapshot(md: str, *, source_url: str) -> dict[str, object]:
         "source_url": source_url,
         "provider": PROVIDER,
         "jurisdiction": JURISDICTION,
-        # price-only: Grok is on Cursor's page; its <model> element + benchmark
-        # ratings stay Cursor-maintained. This source is authoritative for PRICE
-        # only (G4). The federation overlay must NOT force these elements.
-        "overlay_mode": "price-only",
+        # whole-element: Cursor delisted xAI from its pricing page on 2026-07-14,
+        # but xAI still serves these models via its own API (the xai-api method),
+        # so — like DeepSeek / Mistral — this snapshot now OWNS the <model>
+        # element. The federation overlay re-adds it whenever the Opus rewrite
+        # (driven by Cursor's page) drops it, so a Cursor-only delisting can no
+        # longer discontinue a still-available provider-direct model.
+        "overlay_mode": "whole-element",
         "models": models,
         "slug_to_id": {str(m["slug"]): str(m["id"]) for m in models},
         "unexpected_slugs": [],

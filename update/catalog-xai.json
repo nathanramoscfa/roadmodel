@@ -3,7 +3,7 @@
   "source_url": "https://docs.x.ai/developers/models.md",
   "provider": "xai",
   "jurisdiction": "us",
-  "overlay_mode": "price-only",
+  "overlay_mode": "whole-element",
   "models": [
     {
       "id": "grok-4.3",
