@@ -186,6 +186,8 @@ differently:
   reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
   `xhigh` (the top "Extra High" tier; model-dependent). Higher
   effort spends more reasoning tokens before visible output.
+  Codex's plan-mode reasoning-effort variant additionally accepts
+  `none` (plan-mode-only, off).
 - Gemini (Google API, Gemini CLI): a discrete thinking-level
   knob — `low`, `medium`, `high` — across both the 3.x and 2.5
   model generations (not every model supports every level; e.g.
@@ -437,6 +439,8 @@ as primary; the other becomes the secondary category for tie-breaking.
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
+      Codex's plan-mode reasoning-effort variant additionally accepts
+      `none` (plan-mode-only, off).
     - Gemini (Google API, Gemini CLI): a discrete thinking-level
       knob — `low`, `medium`, `high` — across both the 3.x and 2.5
       model generations (not every model supports every level; e.g.
@@ -1135,6 +1139,8 @@ as primary; the other becomes the secondary category for tie-breaking.
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
+      Codex's plan-mode reasoning-effort variant additionally accepts
+      `none` (plan-mode-only, off).
     - Gemini (Google API, Gemini CLI): a discrete thinking-level
       knob — `low`, `medium`, `high` — across both the 3.x and 2.5
       model generations (not every model supports every level; e.g.
@@ -1612,6 +1618,8 @@ as primary; the other becomes the secondary category for tie-breaking.
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
+      Codex's plan-mode reasoning-effort variant additionally accepts
+      `none` (plan-mode-only, off).
     - Gemini (Google API, Gemini CLI): a discrete thinking-level
       knob — `low`, `medium`, `high` — across both the 3.x and 2.5
       model generations (not every model supports every level; e.g.
@@ -2702,6 +2710,8 @@ as primary; the other becomes the secondary category for tie-breaking.
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
+      Codex's plan-mode reasoning-effort variant additionally accepts
+      `none` (plan-mode-only, off).
     - Gemini (Google API, Gemini CLI): a discrete thinking-level
       knob — `low`, `medium`, `high` — across both the 3.x and 2.5
       model generations (not every model supports every level; e.g.
