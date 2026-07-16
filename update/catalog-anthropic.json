@@ -33,9 +33,9 @@
       "id": "claude-sonnet-5",
       "slug": "Claude Sonnet 5",
       "name": "Claude Sonnet 5",
-      "input_price_per_1m": 2.0,
-      "output_price_per_1m": 10.0,
-      "cache_read_per_1m": 0.2
+      "input_price_per_1m": 3.0,
+      "output_price_per_1m": 15.0,
+      "cache_read_per_1m": 0.3
     },
     {
       "id": "sonnet-4.6",
@@ -64,5 +64,5 @@
   },
   "unexpected_slugs": [],
   "missing_mapped_models": [],
-  "section_sha256": "02a58ff1f852b8c59ea7bd025210db234d06f8ef7538084f47f62a8289531286"
+  "section_sha256": "f5d1319d0b37eab3d71213b7eae4d58dd2eed5261e45dda89b014f3e3394d3b1"
 }
