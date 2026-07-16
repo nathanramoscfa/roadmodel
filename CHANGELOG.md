@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.25] — 2026-07-16
+
+### Changed
+
+- **Bundled catalog refreshed to 40 models.** The 2026-07-15 Cursor pricing-page
+  refresh (the first to land after a week-long cron outage) adds Claude Sonnet 5,
+  GPT-5.6 Sol / Terra / Luna, GPT-5.2 Codex, GPT-5.1 Codex Max, Kimi K2.7 Code,
+  and Grok 4.5; and drops Composer 2, Composer 1.5, Grok 4.20, Grok Build 0.1,
+  and Kimi K2.5, which Cursor delisted. Because the selector and `catalog.json`
+  ship inside the wheel, this release is what carries those models to the CLI,
+  the MCP `read_catalog`, and the recommender service.
+
+### Fixed
+
+- **A Cursor delisting no longer discontinues a still-available provider-direct
+  model.** Cursor removed its xAI section on 2026-07-14, so the refresh applied
+  the "discontinued by Cursor" rule and dropped **grok-4.3** entirely — even
+  though xAI still serves it on its own API ($1.25/$2.50), i.e. it had merely
+  become provider-direct-only, exactly like DeepSeek. grok-4.3 is restored and
+  reachable via the `xai-api` method.
+
+  The root cause was `catalog-xai.json` carrying `overlay_mode: price-only`
+  (correct only while Grok was *on* Cursor's page), which excluded it from the
+  federation overlay that re-adds DeepSeek/Mistral when the Cursor-driven
+  rewrite drops them. xAI is now `overlay_mode: whole-element`, so the overlay
+  owns its `<model>` element, and the refresh prompt gained an explicit
+  provider-direct **exception** to the removal rule — so this cannot recur for
+  any federated provider Cursor drops.
+
 ## [0.2.24] — 2026-07-16
 
 ### Added
