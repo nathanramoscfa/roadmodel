@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "roadmodel"
-version = "0.2.23"
+version = "0.2.24"
 description = "BYO-key CLI that recommends the right AI model, platform, and settings for a prompt."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -77,6 +77,7 @@ include = [
     "src/roadmodel/**",
     "docs/model-selector.txt",
     "docs/model-tier-cost-scale.md",
+    "docs/settings-display.md",
     "docs/templates/phase-roadmap-template.md",
     "docs/templates/project-roadmap-template.md",
     "docs/templates/planning-kit-how-to-use.md",

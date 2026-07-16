@@ -213,6 +213,14 @@ def test_generate_phase_roadmap_uses_template(
 
 
 def test_read_catalog_returns_three_keys() -> None:
+    """The offline reasoning payload — everything a consumer needs WITHOUT an
+    API call: the selector, the cost scale, the catalog, and the per-surface
+    settings-display rules (which live in `_structured_settings` rather than the
+    selector, and are otherwise unknowable from `read_catalog` alone).
+
+    (Name kept: it is pinned by scripts/verify-phase02.sh Check 19 as a Step 4
+    acceptance artifact. The payload has grown past three keys since.)
+    """
     app = mcp_server.create_app()
 
     async def _run() -> dict[str, Any]:
@@ -228,10 +236,14 @@ def test_read_catalog_returns_three_keys() -> None:
     assert set(payload.keys()) == {
         selector_key,
         "model_tier_cost_scale_md",
+        "settings_display_md",
         "catalog_json",
         "source_doc_sha256",
     }
     assert isinstance(payload["catalog_json"], dict)
+    # The rule the raw selector cannot express: Claude Code folds
+    # ORCHESTRATION:Ultracode into the effort VALUE and Thinking is a toggle.
+    assert "effort=Ultracode; thinking=On" in payload["settings_display_md"]
 
 
 def test_main_exits_2_when_mcp_sdk_absent(

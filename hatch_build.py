@@ -33,6 +33,7 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 BUNDLED_DOCS: dict[str, str] = {
     "model-selector.txt": "model-selector.txt",
     "model-tier-cost-scale.md": "model-tier-cost-scale.md",
+    "settings-display.md": "settings-display.md",
     "user-context.example.md": "user-context.example.md",
     "catalog.json": "catalog.json",
     "templates/phase-roadmap-template.md": "phase-roadmap-template.md",

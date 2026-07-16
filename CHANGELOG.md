@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.24] — 2026-07-16
+
+### Added
+
+- **`settings-display.md` — the per-surface settings contract, now shipped to
+  offline consumers.** The selector emits platform-neutral axes (`MAX MODE` /
+  `THINKING` / `ORCHESTRATION`); turning those into a surface's real controls
+  lives in `recommend._structured_settings` and is deliberately NOT in the
+  selector (the daily effort/thinking conformance tracker pins the selector's
+  vocabulary and would revert it). So anything reasoning from the selector alone
+  — `read_catalog` via MCP, or an exported planning kit — had no way to know the
+  rules, and emitted raw selector vocabulary: e.g. `Effort: Extra High /
+  Thinking: XHigh` for Claude Code, which actually folds `ORCHESTRATION:
+  Ultracode` into `Effort: Ultracode` and has a Thinking **toggle** (`On`/`Off`).
+
+  The rules are now a bundled doc:
+  - `read_catalog` returns it as `settings_display_md`.
+  - `roadmodel export-kit` writes `planning/settings-display.md`.
+  - A conformance table in the doc is **machine-checked against
+    `_structured_settings`** every test run, so the doc cannot rot.
+
+  Covers Claude Code (Effort + Thinking, Ultracode fold, no Max Mode), Codex
+  (Intelligence), Cursor (Max Mode + Thinking `On`), and every other surface
+  (Max Mode + Thinking).
+
 ## [0.2.23] — 2026-07-16
 
 ### Added
