@@ -30,7 +30,8 @@ def recommend(
         from google.genai.errors import APIError
     except Exception as exc:  # pragma: no cover - dependency/runtime guard
         raise ProviderCallError(
-            "Google GenAI SDK is unavailable; install the 'google-genai' package."
+            "The Google GenAI SDK is required for `roadmodel recommend` but is "
+            "not installed. Install the engine extra: pip install 'roadmodel[recommend]'."
         ) from exc
 
     try:

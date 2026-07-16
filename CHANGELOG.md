@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.22] — 2026-07-16
+
+### Changed
+
+- **Provider SDKs are now an opt-in `recommend` extra, not hard dependencies.**
+  `anthropic`, `openai`, and `google-genai` moved from `dependencies` to
+  `optional-dependencies.recommend`; the only hard runtime dependency is now
+  `click`. The offline planning-kit workflow (`export-kit`, `catalog`,
+  `context`, `version`) imports none of the SDKs, so `pip install roadmodel`
+  is now lightweight and does not conflict with other packages in a shared
+  environment (e.g. a project pinning an older `openai`).
+  - **Action required for `roadmodel recommend` users:** install the engine
+    extra — `pip install "roadmodel[recommend]"`. Running `recommend` without
+    it now fails with a message telling you exactly that. The `mcp` extra and
+    the FastAPI service pull `recommend` in automatically.
+  - Each provider already imported its SDK lazily at call time, so this is a
+    packaging change only — no import-time behavior changed for offline use.
+
 ## [0.2.21] — 2026-07-16
 
 ### Fixed
