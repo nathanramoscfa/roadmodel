@@ -18,6 +18,11 @@ from roadmodel.providers import openai as openai_provider
 
 BUNDLED_SELECTOR_PATH: Traversable = resources.files("roadmodel.data") / "model-selector.txt"
 BUNDLED_TIER_COST_PATH: Traversable = resources.files("roadmodel.data") / "model-tier-cost-scale.md"
+# The per-surface display rules for the selector's MAX MODE / THINKING /
+# ORCHESTRATION axes — see _structured_settings, which implements them.
+BUNDLED_SETTINGS_DISPLAY_PATH: Traversable = (
+    resources.files("roadmodel.data") / "settings-display.md"
+)
 BUNDLED_USER_CONTEXT_TEMPLATE_PATH: Traversable = (
     resources.files("roadmodel.data") / "user-context.example.md"
 )
