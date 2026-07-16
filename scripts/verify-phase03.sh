@@ -214,10 +214,10 @@ run_static_checks() {
   # bumps within the 0.2 line are acceptable, e.g. Phase 4 Step 7b
   # bumped the floor to 0.2.1).
   if [[ -f service/pyproject.toml ]] &&
-    grep -Eq 'roadmodel>=0\.2\.[0-9]+,<0\.3' service/pyproject.toml; then
-    record_pass 13 "service/pyproject.toml pins roadmodel>=0.2.x,<0.3"
+    grep -Eq 'roadmodel(\[recommend\])?>=0\.2\.[0-9]+,<0\.3' service/pyproject.toml; then
+    record_pass 13 "service/pyproject.toml pins roadmodel[recommend]>=0.2.x,<0.3"
   else
-    record_fail 13 "service/pyproject.toml pins roadmodel>=0.2.x,<0.3" \
+    record_fail 13 "service/pyproject.toml pins roadmodel[recommend]>=0.2.x,<0.3" \
       "pin missing or wrong"
   fi
 
