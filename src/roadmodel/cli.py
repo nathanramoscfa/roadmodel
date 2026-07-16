@@ -1,8 +1,13 @@
 # src/roadmodel/cli.py
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
+import shlex
+import shutil
+import subprocess  # nosec B404 - only used to invoke the `claude` CLI with fixed argv
+import sysconfig
 import textwrap
 import traceback
 from dataclasses import asdict
@@ -596,6 +601,109 @@ def export_kit(target: Path, dest: str, force: bool, user_context_path: Path | N
         f"step's model with @{dest}/model-selector.txt against @{dest}/user-context.md "
         f"(it is the engine — no external API). See @{dest}/HOW-TO-USE.md."
     )
+
+
+def _mcp_server_executable() -> Path:
+    """Absolute path to THIS interpreter's ``roadmodel-mcp`` launcher.
+
+    Resolved from the interpreter's own scripts dir rather than PATH. Inside a
+    conda env / venv the launcher usually is NOT on PATH, which is exactly what
+    makes a bare ``roadmodel-mcp`` registration resolve to nothing ("term not
+    recognized") from other projects. Registering the absolute path means the
+    client can launch it from anywhere without activating this environment.
+    """
+    name = "roadmodel-mcp.exe" if os.name == "nt" else "roadmodel-mcp"
+    candidate = Path(sysconfig.get_path("scripts")) / name
+    if candidate.is_file():
+        return candidate
+    found = shutil.which("roadmodel-mcp")
+    if found:
+        return Path(found)
+    raise click.ClickException(
+        f"Could not find the {name} launcher for this interpreter "
+        f"(looked in {sysconfig.get_path('scripts')}). Install the MCP extra "
+        'into this environment:\n  pip install -U "roadmodel[mcp]"'
+    )
+
+
+def _render_command(argv: list[str]) -> str:
+    """Copy-pasteable rendering of ``argv`` for the current platform."""
+    if os.name == "nt":
+        return subprocess.list2cmdline(argv)
+    return shlex.join(argv)
+
+
+@cli.command("setup-mcp")
+@click.option(
+    "--scope",
+    type=click.Choice(["user", "project", "local"]),
+    default="user",
+    show_default=True,
+    help="Claude Code scope. 'user' makes roadmodel available in EVERY project on this machine.",
+)
+@click.option(
+    "--name", default="roadmodel", show_default=True, help="Name to register the server as."
+)
+@click.option(
+    "--force", is_flag=True, help="Re-register if NAME already exists (re-points it here)."
+)
+@click.option("--dry-run", is_flag=True, help="Print the command that would run; change nothing.")
+@_error_mapped
+def setup_mcp(scope: str, name: str, force: bool, dry_run: bool) -> None:
+    """Register roadmodel's MCP server with Claude Code — one command, every project.
+
+    Registers this environment's `roadmodel-mcp` by ABSOLUTE path, so it works
+    from any project without activating this env or editing PATH. Afterwards
+    every project can call `read_catalog` (the whole selector + catalog, offline
+    and keyless) with no per-project install and no `planning/` folder to export
+    or refresh — `pip install -U "roadmodel[mcp]"` becomes the entire update story.
+    """
+    if importlib.util.find_spec("mcp") is None:
+        raise click.ClickException(
+            "The MCP SDK is not installed in this environment. Install the extra:\n"
+            '  pip install -U "roadmodel[mcp]"'
+        )
+    server = _mcp_server_executable()
+    add_argv = ["claude", "mcp", "add", "--scope", scope, name, "--", str(server)]
+
+    if dry_run:
+        click.echo(_render_command(add_argv))
+        return
+
+    claude = shutil.which("claude")
+    if claude is None:
+        raise click.ClickException(
+            "The `claude` CLI is not on PATH, so the server could not be registered "
+            "automatically. Run this yourself:\n\n  " + _render_command(add_argv)
+        )
+    add_argv[0] = claude
+
+    if force:
+        subprocess.run(  # noqa: S603  # nosec B603 - fixed argv, resolved path, never shell=True
+            [claude, "mcp", "remove", "--scope", scope, name],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    result = subprocess.run(  # noqa: S603  # nosec B603 - fixed argv, never shell=True
+        add_argv, capture_output=True, text=True, check=False
+    )
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "").strip()
+        if "already exists" in detail.lower() and not force:
+            raise click.ClickException(
+                f"An MCP server named '{name}' is already registered at {scope} scope.\n"
+                "Re-run with --force to re-point it at this environment."
+            )
+        raise click.ClickException(f"`claude mcp add` failed:\n{detail}")
+
+    click.echo(f"Registered MCP server '{name}' ({scope} scope) -> {server}")
+    click.echo("")
+    click.echo("Every project on this machine can now use roadmodel — no per-project setup.")
+    click.echo("  Verify:  claude mcp list")
+    click.echo('  Use:     ask an AI in any project to "call roadmodel\'s read_catalog"')
+    click.echo('  Update:  pip install -U "roadmodel[mcp]"   (all projects, instantly)')
 
 
 @cli.command()

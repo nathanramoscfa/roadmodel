@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.23] — 2026-07-16
+
+### Added
+
+- **`roadmodel setup-mcp` — one command to make roadmodel available in every
+  project on a machine.** Registers this environment's `roadmodel-mcp` with
+  Claude Code at `user` scope, resolving the launcher's **absolute path** from
+  the interpreter's own scripts dir. That is the fix for the "term not
+  recognized" failure: inside a conda env / venv the launcher is not on PATH, so
+  a bare-name registration resolves to nothing from other projects.
+
+  ```bash
+  pip install -U "roadmodel[mcp]"
+  roadmodel setup-mcp
+  ```
+
+  Afterwards every project — current and future — can call `read_catalog` (the
+  whole selector + tier-cost scale + catalog, **offline and keyless**) with no
+  per-project install and no `planning/` folder to export or refresh.
+  `pip install -U "roadmodel[mcp]"` becomes the entire update story.
+
+  Options: `--scope user|project|local` (default `user`), `--name`, `--force`
+  (re-point an existing registration here), `--dry-run` (print the command).
+  If the `claude` CLI isn't on PATH, it prints the exact command to run.
+
 ## [0.2.22] — 2026-07-16
 
 ### Changed
