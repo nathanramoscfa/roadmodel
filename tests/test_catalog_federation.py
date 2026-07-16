@@ -542,11 +542,12 @@ def test_overlay_only_targets_whole_element_providers() -> None:
 def test_real_overlay_excludes_price_only_providers() -> None:
     mod = _load("merge_catalog")
     ids = mod.provider_direct_ids(mod.provider_snapshots())
-    # Anthropic / OpenAI / Google / xAI are price-only — never force-overlaid.
-    for price_only_id in ("opus-4.8", "gpt-5.5", "gemini-3.5-flash", "grok-4.3"):
+    # Anthropic / OpenAI / Google are price-only — never force-overlaid.
+    for price_only_id in ("opus-4.8", "gpt-5.5", "gemini-3.5-flash"):
         assert price_only_id not in ids
-    # Only the off-Cursor whole-element provider (DeepSeek) is overlaid.
-    assert {"deepseek-v4-flash", "deepseek-v4-pro"} <= ids
+    # Off-Cursor whole-element providers ARE overlaid: DeepSeek, and xAI/grok-4.3
+    # since Cursor delisted it 2026-07-14 (still on xAI's own API).
+    assert {"deepseek-v4-flash", "deepseek-v4-pro", "grok-4.3"} <= ids
 
 
 def test_price_provenance_fails_on_selector_drift(tmp_path: Path) -> None:
@@ -636,7 +637,9 @@ def test_xai_extractor_parses_token_table_not_image() -> None:
     assert set(models) == {"grok-4.3"}  # only the selector model; grok-4.20/build/image skipped
     assert models["grok-4.3"]["input_price_per_1m"] == 1.25
     assert models["grok-4.3"]["output_price_per_1m"] == 2.5
-    assert snap["overlay_mode"] == "price-only"
+    # whole-element since Cursor delisted xAI (2026-07-14); grok-4.3 stays
+    # reachable via xAI's own API, so the overlay owns its element (like DeepSeek).
+    assert snap["overlay_mode"] == "whole-element"
     assert snap["jurisdiction"] == "us"
 
 
@@ -648,7 +651,7 @@ def test_xai_extractor_raises_on_restructure() -> None:
 
 def test_xai_committed_snapshot_matches_selector_prices() -> None:
     cat = json.loads(REAL_XAI_CATALOG.read_text())
-    assert cat["overlay_mode"] == "price-only"
+    assert cat["overlay_mode"] == "whole-element"
     mc = _load("merge_catalog")
     base = mc.base_models(REAL_SELECTOR.read_text())
     for m in cat["models"]:
