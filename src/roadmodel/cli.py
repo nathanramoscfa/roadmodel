@@ -562,6 +562,7 @@ def export_kit(target: Path, dest: str, force: bool, user_context_path: Path | N
     bundled: list[tuple[Traversable, Path]] = [
         (recommender.BUNDLED_SELECTOR_PATH, planning / "model-selector.txt"),
         (recommender.BUNDLED_TIER_COST_PATH, planning / "model-tier-cost-scale.md"),
+        (recommender.BUNDLED_SETTINGS_DISPLAY_PATH, planning / "settings-display.md"),
         (
             recommender.BUNDLED_PROJECT_ROADMAP_TEMPLATE_PATH,
             templates / "project-roadmap-template.md",

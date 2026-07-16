@@ -17,6 +17,9 @@ from roadmodel.providers import ProviderAdapter
 BUNDLED_SELECTOR_PATH: Traversable = resources.files("roadmodel.data") / "model-selector.txt"
 BUNDLED_TIER_COST_PATH: Traversable = resources.files("roadmodel.data") / "model-tier-cost-scale.md"
 BUNDLED_CATALOG_PATH: Traversable = resources.files("roadmodel.data") / "catalog.json"
+BUNDLED_SETTINGS_DISPLAY_PATH: Traversable = (
+    resources.files("roadmodel.data") / "settings-display.md"
+)
 BUNDLED_PHASE_TEMPLATE_PATH: Traversable = (
     resources.files("roadmodel.data") / "phase-roadmap-template.md"
 )
@@ -156,10 +159,19 @@ def create_app() -> Any:
         if not isinstance(catalog_json, dict):
             raise ValueError("Bundled catalog.json payload is not a JSON object.")
         source_doc_sha256 = catalog_json.get("source_doc_sha256")
+        # The selector emits platform-neutral axes (MAX MODE / THINKING /
+        # ORCHESTRATION). Ship the per-surface display rules alongside it, or an
+        # offline consumer has no way to render a surface's real controls and
+        # emits raw selector vocabulary (e.g. "Thinking: XHigh" for Claude Code,
+        # which has a Thinking TOGGLE and folds Ultracode into Effort).
+        settings_display_text = _read_bundled_doc(
+            BUNDLED_SETTINGS_DISPLAY_PATH, "settings-display.md"
+        )
         selector_key = "model" + "_selector_txt"
         return {
             selector_key: selector_text,
             "model_tier_cost_scale_md": model_tier_cost_scale_text,
+            "settings_display_md": settings_display_text,
             "catalog_json": catalog_json,
             "source_doc_sha256": source_doc_sha256,
         }
