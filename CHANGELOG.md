@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.21] — 2026-07-16
+
+### Fixed
+
+- **Fable 5 is no longer benched in the bundled static availability fallback.**
+  The runtime availability layer autonomously un-benched Fable 5 on 2026-07-02
+  (its 2026-06-12 export-control restriction was lifted, confirmed by grounded
+  AI web-search verification), so the production recommender already offers it.
+  But the offline paths — the `roadmodel recommend` CLI and the exported
+  planning kit (`export-kit`) — read the bundled `<availability-context>`
+  cold-start fallback, which still hardcoded the bench. That fallback list is
+  now empty, matching the confirmed-live runtime state, so offline
+  recommendations can select Fable 5 again. (Selector data change only; the
+  runtime/authoritative path was already correct.)
+
 ## [0.2.20] — 2026-07-05
 
 ### Changed
