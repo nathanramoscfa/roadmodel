@@ -44,7 +44,10 @@ def recommend(
     try:
         from openai import APIError, OpenAI
     except Exception as exc:  # pragma: no cover - dependency/runtime guard
-        raise ProviderCallError("OpenAI SDK is unavailable; install the 'openai' package.") from exc
+        raise ProviderCallError(
+            "The OpenAI SDK is required for `roadmodel recommend` but is not "
+            "installed. Install the engine extra: pip install 'roadmodel[recommend]'."
+        ) from exc
 
     try:
         client = OpenAI(api_key=api_key)

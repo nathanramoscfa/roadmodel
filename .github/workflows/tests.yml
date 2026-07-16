@@ -127,13 +127,21 @@ jobs:
           python -m pip install --upgrade pip
           pip install build
           python -m build
-      - name: Install wheel in a fresh venv
+      - name: Install BARE wheel in a fresh venv (no recommend extra)
         run: |
           python -m venv .pkg-smoke-venv
           . .pkg-smoke-venv/bin/activate
           python -m pip install --upgrade pip
           pip install dist/*.whl
+          # The base install must stay lightweight: none of the provider SDKs
+          # (the opt-in `recommend` extra) may be pulled in. This is the whole
+          # point of 0.2.22 — `pip install roadmodel` must not conflict with a
+          # host project's pinned openai/pydantic/etc.
+          python -c "import importlib.util as u; leaked=[m for m in ('anthropic','openai','google') if u.find_spec(m)]; assert not leaked, f'provider SDK leaked into base install: {leaked}'; print('base install is SDK-free')"
+          # Offline commands must work with zero SDKs installed.
           roadmodel --help
+          roadmodel version
+          roadmodel export-kit "$(mktemp -d)"
 
   security-scan:
     runs-on: ubuntu-latest
@@ -262,7 +270,10 @@ jobs:
           # waiting on a PyPI publish (relevant during PRs that bump
           # the roadmodel version + service pin in the same commit —
           # the new version doesn't exist on PyPI yet at CI time).
-          pip install -e .
+          # Install WITH the recommend extra: the service serves live
+          # recommendations, so it needs the provider SDKs (0.2.22 made them
+          # opt-in), mirroring the production `roadmodel[recommend]` pin.
+          pip install -e ".[recommend]"
           pip install -e "service[dev]"
       - name: Ruff lint (service)
         run: ruff check service/
