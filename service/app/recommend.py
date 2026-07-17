@@ -20,7 +20,12 @@ from roadmodel.recommend import (  # type: ignore[import-untyped]
     recommend_structured_ladder,
 )
 
-from .funding import resolve_allowed_jurisdictions, user_context_from_request
+from .funding import (
+    FundingGuard,
+    funding_guard_from_request,
+    resolve_allowed_jurisdictions,
+    user_context_from_request,
+)
 from .models import LadderResponse, RecommendRequest, RecommendResponse
 
 logger = logging.getLogger(__name__)
@@ -273,6 +278,10 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
     # declares no funding (anon/free) -> recommend_structured falls back to the
     # bundled template, leaving that path unchanged.
     user_context_text = user_context_from_request(req.context)
+    # Funded-platform honesty guard (#444) — built from the SAME declared
+    # funding the user-context above renders, active on exactly the same
+    # requests (None on the anon / bundled-template path).
+    funding_guard = funding_guard_from_request(req.context)
     # Runtime availability override (Phase 4.9 B2): the web edge forwards the
     # model_availability unavailable-ids so a benched model is excluded without a
     # roadmodel release. Provider-independent, so resolve once. None for legacy /
@@ -320,7 +329,7 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
                 thinking_budget=thinking_budget,
                 temperature=temperature,
             )
-            return _pick_response(result, req.task_description)
+            return _pick_response(result, req.task_description, funding_guard)
         except (MissingProviderKeyError, ProviderCallError, MalformedResponseError) as exc:
             last_error = exc
             if isinstance(exc, MalformedResponseError):
@@ -342,7 +351,11 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
     raise ProviderCallError("No provider available for recommendation.")
 
 
-def _pick_response(result: dict[str, Any], task_description: str) -> RecommendResponse:
+def _pick_response(
+    result: dict[str, Any],
+    task_description: str,
+    funding_guard: FundingGuard | None = None,
+) -> RecommendResponse:
     """Build a RecommendResponse from one structured pick payload, computing its
     cost separately + best-effort (#164) so a cost-catalog miss degrades to "no
     cost panel" rather than failing the recommendation. Shared by the single-pick
@@ -350,6 +363,15 @@ def _pick_response(result: dict[str, Any], task_description: str) -> RecommendRe
     session_cost_estimate, comparison_table = _session_cost(
         result["model"], result["platform"], task_description
     )
+    rationale = result.get("rationale") or None
+    rationale_sections = result.get("rationale_sections") or None
+    # Funded-platform honesty guard (#444): rewrite a run-note that claims
+    # subscription/$0 funding the requesting user never declared. Only active
+    # when the per-user funding context was injected; pure text surgery.
+    if funding_guard is not None:
+        rationale, rationale_sections = funding_guard.sanitize(
+            result["platform"], rationale, rationale_sections
+        )
     return RecommendResponse(
         model=result["model"],
         platform=result["platform"],
@@ -357,11 +379,11 @@ def _pick_response(result: dict[str, Any], task_description: str) -> RecommendRe
         settings=_normalize_no_thinking(result["platform"], result["settings"]),
         # Carry the model's reasoning across the service boundary (#173);
         # empty string -> None so the web edge falls back cleanly.
-        rationale=result.get("rationale") or None,
+        rationale=rationale,
         # Carry the best-effort structured rationale sections (task/pick/run) so
         # the web panel can render sub-headings; absent -> None and the edge
         # falls back to the raw `rationale` string above.
-        rationale_sections=result.get("rationale_sections") or None,
+        rationale_sections=rationale_sections,
         # Carry the conversation-handling decision across the boundary (#190).
         conversation=result.get("conversation") or None,
         # Carry the fallback model (Step 7) across the boundary.
@@ -385,6 +407,9 @@ def recommend_ladder(req: RecommendRequest) -> LadderResponse:
     last_error: Exception | None = None
 
     user_context_text = user_context_from_request(req.context)
+    # Funded-platform honesty guard (#444) — same activation condition as the
+    # per-user context above; applied to every rung of the ladder.
+    funding_guard = funding_guard_from_request(req.context)
     unavailable_models = _unavailable_models_from_request(req.context)
     availability_authoritative = _availability_authoritative_from_request(req.context)
     # The user's permitted jurisdictions (or the baseline) — forwarded to the
@@ -421,7 +446,7 @@ def recommend_ladder(req: RecommendRequest) -> LadderResponse:
                 temperature=temperature,
             )
             picks = {
-                tier: _pick_response(pick, req.task_description)
+                tier: _pick_response(pick, req.task_description, funding_guard)
                 for tier, pick in ladder["picks"].items()
             }
             return LadderResponse(picks=picks, guard=ladder.get("guard", {}))

@@ -51,6 +51,7 @@ _PROVIDER_LABELS: dict[str, str] = {
     "deepseek": "DeepSeek",
     "xai": "xAI",
     "cursor": "Cursor",
+    "zai": "z.ai",
 }
 
 # Stable ids for the three pre-#152 subscription tiers (mirror web/lib/
@@ -334,6 +335,167 @@ latency requirement.
 
 `{", ".join(juris)}`
 """
+
+
+# --- Funded-platform honesty guard (#444) -----------------------------------
+#
+# The recommendation engine intermittently narrates funding the user never
+# declared ("This runs on your claude.ai Max subscription") even though the
+# per-user user-context says "None declared" and "do not assume". Prompt rules
+# alone don't close this (same instruction-adherence class as #185-#190), so —
+# like the deterministic THINKING=N/A override (#188) and the BACKUP guard
+# (0.2.19) — we enforce it in code: when the picked platform is NOT
+# subscription-funded for THIS user and the run-note claims subscription / $0
+# funding, replace the run-note with deterministic honest text. Selection is
+# never changed; only the false narration is.
+
+# Phrasings that assert the user's funding covers the pick. \bfunded\b does
+# not match "unfunded" (no word boundary inside it), so honest disclaimers
+# survive; replacing an honest note that mentions e.g. "$0" with our own
+# honest wording is harmless.
+_FUNDED_CLAIM_RE = re.compile(
+    r"\byour\b[^.!\n]{0,60}\b(?:subscription|plan|pool)\b"
+    r"|\bruns? on your\b"
+    r"|\bfunded\b"
+    r"|\$0\b"
+    r"|\bsubscription pool\b"
+    r"|\bclaude\.ai max\b"
+    r"|\bincluded (?:in|with) your\b",
+    re.IGNORECASE,
+)
+
+
+class FundingGuard:
+    """Deterministic post-check of a pick's run-note against declared funding.
+
+    Built once per request from the SAME declared funding the user-context is
+    rendered from, then applied to every pick (single and ladder). Pure text
+    surgery: never changes the model, platform, or settings.
+    """
+
+    def __init__(
+        self,
+        subscriptions: list[str],
+        api_providers: list[str],
+        *,
+        catalog: dict[str, Any] | None = None,
+    ) -> None:
+        cat = catalog if catalog is not None else load_catalog()
+        tiers: Any = cat.get("subscription_tiers", []) or []
+        methods: Any = cat.get("access_methods", []) or []
+        sub_set = {s for s in subscriptions if isinstance(s, str)}
+        self._api_set = {p for p in api_providers if isinstance(p, str)}
+
+        # Access-method surfaces the held subscriptions fund at $0.
+        self._sub_funded_ids: set[str] = set()
+        for tier in tiers:
+            provider = tier.get("provider")
+            name = tier.get("tier")
+            if not isinstance(provider, str) or not isinstance(name, str):
+                continue
+            if _tier_id(provider, name) not in sub_set:
+                continue
+            self._sub_funded_ids.update(
+                s for s in (tier.get("surface_funded") or []) if isinstance(s, str)
+            )
+
+        # Platform-string lookup: the LLM emits catalog access-method NAMES
+        # ("Claude Code", "Cursor", "xAI API"); index by lowercased name + id.
+        self._methods: dict[str, dict[str, Any]] = {}
+        for method in methods:
+            mid = method.get("id")
+            name = method.get("name")
+            if isinstance(mid, str):
+                self._methods[mid.strip().lower()] = method
+            if isinstance(name, str):
+                self._methods[name.strip().lower()] = method
+
+    def _replacement(self, platform: str, method: dict[str, Any] | None) -> str:
+        provider = method.get("provider") if method else None
+        key_reachable = (
+            method is not None
+            and method.get("billing") in _API_BILLING
+            and isinstance(provider, str)
+            and provider in self._api_set
+        )
+        if key_reachable and isinstance(provider, str):
+            return (
+                f"Run this on {platform} pay-per-token with your "
+                f"{_provider_label(provider)} API key — no subscription in your "
+                f"Settings funds it at $0."
+            )
+        return (
+            f"{platform} is not covered by any subscription or API access "
+            f"declared in your Settings — running this pick requires access "
+            f"you have not declared."
+        )
+
+    def sanitize(
+        self,
+        platform: str,
+        rationale: str | None,
+        rationale_sections: dict[str, str] | None,
+    ) -> tuple[str | None, dict[str, str] | None]:
+        """Return (rationale, rationale_sections) with false funded claims
+        replaced. Fail-safe: any internal error returns the inputs unchanged —
+        the guard must never turn a good recommendation into a failed one."""
+        try:
+            method = self._methods.get(platform.strip().lower())
+            method_id = method.get("id") if method else None
+            if isinstance(method_id, str) and method_id in self._sub_funded_ids:
+                # A held subscription funds this surface: "your subscription"
+                # claims are true — leave the engine's narration alone.
+                return rationale, rationale_sections
+
+            if rationale_sections and rationale_sections.get("run"):
+                run = rationale_sections["run"]
+                if not _FUNDED_CLAIM_RE.search(run):
+                    return rationale, rationale_sections
+                honest = self._replacement(platform, method)
+                sections = {**rationale_sections, "run": honest}
+                # Rebuild the flat rationale in the same TASK/PICK/RUN shape so
+                # the edge's unsplit fallback rendering stays consistent.
+                task = sections.get("task", "")
+                pick = sections.get("pick", "")
+                rebuilt = (
+                    f"TASK: {task} PICK: {pick} RUN: {honest}" if task and pick else rationale
+                )
+                return rebuilt, sections
+
+            # No structured sections: append a correction rather than attempt
+            # surgical prose edits on free-form text.
+            if rationale and _FUNDED_CLAIM_RE.search(rationale):
+                honest = self._replacement(platform, method)
+                return f"{rationale} Correction: {honest}", rationale_sections
+            return rationale, rationale_sections
+        except Exception:  # noqa: BLE001 - guard is best-effort, never fatal
+            logger.warning("funding honesty guard failed (non-fatal)", exc_info=True)
+            return rationale, rationale_sections
+
+
+def funding_guard_from_request(context: dict[str, Any] | None) -> FundingGuard | None:
+    """Build the per-request FundingGuard, or None when the guard must not run.
+
+    Mirrors user_context_from_request's short-circuit exactly: the guard is
+    active precisely when the per-user funding context was injected (i.e. the
+    engine was TOLD the user's real funding). The anon / bundled-template path
+    returns None so its narration — written against the bundled example
+    funding by design — is never rewritten.
+    """
+    if not context:
+        return None
+    subscriptions = _str_list(context.get("subscriptions"))
+    api_providers = _str_list(context.get("api_providers"))
+    budget_raw = context.get("budget_priority")
+    budget_priority = budget_raw if isinstance(budget_raw, str) else None
+    budget_is_default = budget_priority is None or budget_priority == _DEFAULT_BUDGET_PRIORITY
+    if not subscriptions and not api_providers and budget_is_default:
+        return None
+    try:
+        return FundingGuard(subscriptions, api_providers)
+    except Exception:  # noqa: BLE001 - guard is best-effort, never fatal
+        logger.warning("funding guard build failed (non-fatal)", exc_info=True)
+        return None
 
 
 def resolve_allowed_jurisdictions(context: dict[str, Any] | None) -> list[str]:

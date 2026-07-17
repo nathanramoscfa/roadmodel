@@ -260,3 +260,148 @@ def test_from_request_builds_against_real_catalog(monkeypatch: pytest.MonkeyPatc
     assert "Claude Max" in text
     assert "claude-code" in text
     assert "DeepSeek" in text
+
+
+# --- FundingGuard: funded-platform honesty guard (#444) ---
+
+# The _FAKE_CATALOG above has: cursor (subscription-pool), claude-code
+# (subscription-or-key), anthropic-api / deepseek-api (per-token).
+
+_SECTIONS_CURSOR_FABRICATED = {
+    "task": "A multi-file coding task.",
+    "pick": "Fable 5 is S-tier in coding.",
+    "run": "This runs on your Cursor subscription pool with Max Mode on.",
+}
+
+
+def _guard(subs: list[str], apis: list[str]) -> funding.FundingGuard:
+    return funding.FundingGuard(subs, apis, catalog=_FAKE_CATALOG)
+
+
+def test_guard_replaces_fabricated_subscription_claim() -> None:
+    g = _guard([], ["deepseek"])
+    rationale = (
+        "TASK: A multi-file coding task. PICK: Fable 5 is S-tier in coding. "
+        "RUN: This runs on your Cursor subscription pool with Max Mode on."
+    )
+    new_rationale, new_sections = g.sanitize(
+        "Cursor", rationale, dict(_SECTIONS_CURSOR_FABRICATED)
+    )
+    assert new_sections is not None
+    assert "your Cursor subscription" not in new_sections["run"]
+    assert "not covered by any subscription or API access" in new_sections["run"]
+    # Flat rationale is rebuilt in the same TASK/PICK/RUN shape.
+    assert new_rationale is not None
+    assert new_rationale.startswith("TASK: A multi-file coding task.")
+    assert "your Cursor subscription" not in new_rationale
+    # task/pick narration is untouched.
+    assert new_sections["task"] == _SECTIONS_CURSOR_FABRICATED["task"]
+    assert new_sections["pick"] == _SECTIONS_CURSOR_FABRICATED["pick"]
+
+
+def test_guard_keeps_true_subscription_claim() -> None:
+    # User actually holds claude-max, which funds claude-code: "your
+    # subscription" narration on Claude Code is TRUE and must survive.
+    g = _guard(["claude-max"], [])
+    sections = {
+        "task": "t",
+        "pick": "p",
+        "run": "This runs on your claude.ai Max subscription with High thinking.",
+    }
+    rationale = "TASK: t PICK: p RUN: This runs on your claude.ai Max subscription."
+    new_rationale, new_sections = g.sanitize("Claude Code", rationale, sections)
+    assert new_sections == sections
+    assert new_rationale == rationale
+
+
+def test_guard_leaves_honest_unfunded_note_alone() -> None:
+    g = _guard([], ["deepseek"])
+    sections = {
+        "task": "t",
+        "pick": "p",
+        "run": "This requires an anthropic-api-key for pay-per-token use; unfunded pick.",
+    }
+    rationale = "TASK: t PICK: p RUN: honest."
+    new_rationale, new_sections = g.sanitize("Anthropic API", rationale, sections)
+    assert new_sections == sections
+    assert new_rationale == rationale
+
+
+def test_guard_key_reachable_replacement_names_the_provider() -> None:
+    # DeepSeek API is per-token and the user enabled deepseek: a fabricated $0
+    # claim is replaced with the honest pay-per-token-with-your-key wording.
+    g = _guard([], ["deepseek"])
+    sections = {"task": "t", "pick": "p", "run": "Runs at $0 marginal on your plan."}
+    _, new_sections = g.sanitize("DeepSeek API", "TASK: t PICK: p RUN: r", sections)
+    assert new_sections is not None
+    assert "DeepSeek API key" in new_sections["run"]
+    assert "pay-per-token" in new_sections["run"]
+
+
+def test_guard_unknown_platform_gets_generic_replacement() -> None:
+    g = _guard([], [])
+    sections = {"task": "t", "pick": "p", "run": "Included in your Ultra plan."}
+    _, new_sections = g.sanitize("Mystery Surface", None, sections)
+    assert new_sections is not None
+    assert "not covered by any subscription or API access" in new_sections["run"]
+
+
+def test_guard_appends_correction_without_sections() -> None:
+    g = _guard([], [])
+    rationale = "Use Cursor; this is funded by the Cursor subscription pool."
+    new_rationale, new_sections = g.sanitize("Cursor", rationale, None)
+    assert new_sections is None
+    assert new_rationale is not None
+    assert new_rationale.startswith(rationale)
+    assert "Correction:" in new_rationale
+
+
+def test_guard_unfunded_word_is_not_a_claim() -> None:
+    # \bfunded\b must not match "unfunded" — the honest disclaimer survives.
+    g = _guard([], [])
+    sections = {"task": "t", "pick": "p", "run": "This is an unfunded pick."}
+    rationale = "TASK: t PICK: p RUN: This is an unfunded pick."
+    new_rationale, new_sections = g.sanitize("Cursor", rationale, sections)
+    assert new_sections == sections
+    assert new_rationale == rationale
+
+
+def test_guard_from_request_mirrors_context_short_circuit() -> None:
+    # Anon / bundled-template path: guard OFF (that narration is by design).
+    assert funding.funding_guard_from_request(None) is None
+    assert funding.funding_guard_from_request({}) is None
+    assert (
+        funding.funding_guard_from_request({"budget_priority": "balanced"}) is None
+    )
+
+
+def test_guard_from_request_active_when_funding_declared(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("ROADMODEL_CATALOG_PATH", str(REAL_CATALOG))
+    g = funding.funding_guard_from_request({"api_providers": ["xai"]})
+    assert g is not None
+    # Real-catalog resolution: platform "xAI API" is key-reachable for this user.
+    sections = {"task": "t", "pick": "p", "run": "Runs on your xAI subscription."}
+    _, new_sections = g.sanitize("xAI API", None, sections)
+    assert new_sections is not None
+    assert "xAI API key" in new_sections["run"]
+
+
+def test_guard_from_request_active_on_explicit_budget_alone(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Non-default budget with no funding: the per-user doc IS injected (it says
+    # "None declared"), so a funded claim there is a fabrication too.
+    monkeypatch.setenv("ROADMODEL_CATALOG_PATH", str(REAL_CATALOG))
+    g = funding.funding_guard_from_request({"budget_priority": "best"})
+    assert g is not None
+    sections = {"task": "t", "pick": "p", "run": "Runs on your Cursor subscription."}
+    _, new_sections = g.sanitize("Cursor", None, sections)
+    assert new_sections is not None
+    assert "not covered by any subscription or API access" in new_sections["run"]
+
+
+def test_guard_zai_provider_label() -> None:
+    # z.ai renders as "z.ai", not the capitalized fallback "Zai" (#444 rider).
+    assert funding._provider_label("zai") == "z.ai"
