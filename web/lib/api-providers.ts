@@ -23,11 +23,17 @@ export interface ApiProviderOption {
   id: string;
   // Display name for the picker (e.g. "Anthropic").
   label: string;
+  // Provider's home jurisdiction (catalog `provider_jurisdiction`, e.g. "us",
+  // "eu", "cn"). Lets the Settings form hide higher-risk providers when the
+  // "restrict to low-risk jurisdictions" filter is on (#445). "unknown" when
+  // the catalog omits it.
+  jurisdiction: string;
 }
 
 interface AccessMethod {
   provider: string;
   billing: string;
+  provider_jurisdiction?: string;
 }
 
 // Billing kinds that mean "reachable with the user's own API key /
@@ -68,7 +74,11 @@ export function getApiProviderOptions(): ApiProviderOption[] {
     if (!API_BILLING.has(method.billing)) continue;
     if (seen.has(method.provider)) continue;
     seen.add(method.provider);
-    options.push({ id: method.provider, label: providerLabel(method.provider) });
+    options.push({
+      id: method.provider,
+      label: providerLabel(method.provider),
+      jurisdiction: method.provider_jurisdiction ?? "unknown",
+    });
   }
   return options;
 }

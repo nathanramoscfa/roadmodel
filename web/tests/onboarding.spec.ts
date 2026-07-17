@@ -141,10 +141,11 @@ test("forwards held subscriptions + enabled API providers to the recommender (Ph
   await page.getByPlaceholder(/Input the prompt/i).fill("forwarding smoke");
   await page.getByRole("button", { name: /Submit/i }).click();
   // The page now renders three priority cards; the forwarded funding is echoed
-  // in every card's rationale. Scope to the Cost card (the mock's cheap pick is
-  // Claude 4.5 Haiku) so the "Why this model" region is unambiguous.
+  // in every card's rationale. The default jurisdictions include cn (#445), so
+  // the mock's cn-precedence pick (Kimi K2.5) fills every card; scope to the
+  // Cost card so the "Why this model" region is unambiguous.
   const card = page.locator('[data-priority="cheap"]');
-  await expect(card.getByText(/Claude 4\.5 Haiku/i)).toBeVisible();
+  await expect(card.getByText(/Kimi K2\.5/i)).toBeVisible();
   // The edge forwards the user's declared funding to the service; the E2E mock
   // echoes it back, proving subscriptions + api_providers reach the upstream
   // (where the real service builds the per-user user-context that biases model
@@ -163,6 +164,12 @@ test("cost table is personalized to the signed-in user's funding (Phase 4.8 T3)"
 }) => {
   await signInViaCallback(page);
   await page.getByLabel(/Claude Max.*\$200\/mo/i).check();
+  // Opt into the low-risk restriction so cn is excluded and the mock returns
+  // its deterministic western per-budget picks (cheap = Claude 4.5 Haiku),
+  // keeping the cost-table assertions below unambiguous. This test is about
+  // funding personalization, not jurisdiction.
+  await page.getByText(/Advanced: jurisdiction filter/i).click();
+  await page.getByLabel(/Restrict to low-risk jurisdictions/i).check();
   await page.getByRole("button", { name: /Save and continue/i }).click();
   await expect(page).toHaveURL("/");
 
@@ -198,6 +205,8 @@ test("skip persists defaults and sets onboarded_at", async ({ page }) => {
   const profile = await saveResponse.json();
   expect(profile.subscriptions).toEqual([]);
   expect(profile.budget_priority).toBe("balanced");
+  // Default INCLUDES cn (#445): the restrict toggle now ships OFF, so a
+  // skip-through keeps the full default set (low-risk + cn).
   expect(profile.allowed_jurisdictions).toEqual([
     "us",
     "eu",
@@ -206,6 +215,7 @@ test("skip persists defaults and sets onboarded_at", async ({ page }) => {
     "au",
     "jp",
     "kr",
+    "cn",
   ]);
   expect(profile.onboarded_at).toBeTruthy();
   await expect(page).toHaveURL("/");
@@ -224,10 +234,14 @@ test("already-onboarded user signing in again lands on /", async ({
   await expect(page).not.toHaveURL(/\/onboarding/);
 });
 
-test("default-restrict path excludes Kimi K2.5 from recommendations", async ({
+test("restrict path excludes Kimi K2.5 from recommendations", async ({
   page,
 }) => {
   await signInViaCallback(page);
+  // Opt IN to the low-risk restriction (#445 flipped the default OFF), which
+  // narrows jurisdictions to the low-risk set (no cn).
+  await page.getByText(/Advanced: jurisdiction filter/i).click();
+  await page.getByLabel(/Restrict to low-risk jurisdictions/i).check();
   await page.getByRole("button", { name: /Save and continue/i }).click();
   await expect(page).toHaveURL("/");
 
@@ -242,13 +256,10 @@ test("default-restrict path excludes Kimi K2.5 from recommendations", async ({
   await expect(page.getByText(/Kimi K2\.5/i)).toHaveCount(0);
 });
 
-test("widen path includes cn and surfaces Kimi K2.5", async ({ page }) => {
+test("default path (cn included) surfaces Kimi K2.5", async ({ page }) => {
   await signInViaCallback(page);
-  await page.getByText(/Advanced: jurisdiction filter/i).click();
-  await page
-    .getByLabel(/Restrict to low-risk jurisdictions/i)
-    .uncheck();
-  await page.getByLabel(/China \(cn\)/i).check();
+  // No jurisdiction change: the default now INCLUDES cn (#445), so a plain
+  // save-through allows Chinese-jurisdiction models.
   await page.getByRole("button", { name: /Save and continue/i }).click();
   await expect(page).toHaveURL("/");
 
@@ -260,6 +271,22 @@ test("widen path includes cn and surfaces Kimi K2.5", async ({ page }) => {
   await expect(
     page.locator("[data-priority]").filter({ hasText: /Kimi K2\.5/i }).first(),
   ).toBeVisible();
+});
+
+test("checking restrict hides cn-based API providers from the picker", async ({
+  page,
+}) => {
+  await signInViaCallback(page);
+  // Default is unrestricted, so cn-based vendors are offered.
+  await expect(page.getByLabel("DeepSeek")).toBeVisible();
+  await expect(page.getByLabel("z.ai")).toBeVisible();
+  // Opt into the low-risk restriction -> cn-based vendors disappear.
+  await page.getByText(/Advanced: jurisdiction filter/i).click();
+  await page.getByLabel(/Restrict to low-risk jurisdictions/i).check();
+  await expect(page.getByLabel("DeepSeek")).toHaveCount(0);
+  await expect(page.getByLabel("z.ai")).toHaveCount(0);
+  // A low-risk vendor (Mistral, eu) stays visible.
+  await expect(page.getByLabel("Mistral")).toBeVisible();
 });
 
 test.describe("profile API", () => {
