@@ -352,10 +352,14 @@ latency requirement.
 # Phrasings that assert the user's funding covers the pick. \bfunded\b does
 # not match "unfunded" (no word boundary inside it), so honest disclaimers
 # survive; replacing an honest note that mentions e.g. "$0" with our own
-# honest wording is harmless.
+# honest wording is harmless. The verb+"the" alternation catches the
+# possessive-free variant seen in prod ("This uses the ChatGPT subscription
+# via the Codex CLI") while "requires a subscription or API key" — the honest
+# unfunded phrasing — stays unmatched (article "a", and no verb+"the").
 _FUNDED_CLAIM_RE = re.compile(
     r"\byour\b[^.!\n]{0,60}\b(?:subscription|plan|pool)\b"
     r"|\bruns? on your\b"
+    r"|\b(?:uses?|using|on|via|through|with|by)\s+the\s+[\w .+-]{0,30}\b(?:subscription|plan|pool)\b"
     r"|\bfunded\b"
     r"|\$0\b"
     r"|\bsubscription pool\b"

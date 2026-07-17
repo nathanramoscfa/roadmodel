@@ -405,3 +405,35 @@ def test_guard_from_request_active_on_explicit_budget_alone(
 def test_guard_zai_provider_label() -> None:
     # z.ai renders as "z.ai", not the capitalized fallback "Zai" (#444 rider).
     assert funding._provider_label("zai") == "z.ai"
+
+
+def test_guard_catches_possessive_free_subscription_claim() -> None:
+    # Prod escape (2026-07-17): "the ChatGPT subscription" carries no "your",
+    # so the possessive patterns missed it. The verb+"the" alternation must
+    # catch it — and its Cursor/plan siblings.
+    g = _guard([], ["deepseek"])
+    for run in (
+        "This uses the ChatGPT subscription via the Codex CLI with High thinking.",
+        "This runs on the Cursor subscription with default thinking.",
+        "Covered by the Max plan at no extra cost.",
+    ):
+        _, new_sections = g.sanitize(
+            "Cursor", None, {"task": "t", "pick": "p", "run": run}
+        )
+        assert new_sections is not None
+        assert "not covered by any subscription or API access" in new_sections["run"], run
+
+
+def test_guard_honest_requires_a_subscription_phrasing_survives() -> None:
+    # The engine's honest unfunded wording uses the article "a" and no
+    # verb+"the" — it must NOT be treated as a funded claim.
+    g = _guard([], [])
+    sections = {
+        "task": "t",
+        "pick": "p",
+        "run": "This is an unfunded pick requiring a pay-per-token API key or subscription.",
+    }
+    rationale = "TASK: t PICK: p RUN: unchanged."
+    new_rationale, new_sections = g.sanitize("Anthropic API", rationale, sections)
+    assert new_sections == sections
+    assert new_rationale == rationale
