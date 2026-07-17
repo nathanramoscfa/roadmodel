@@ -199,6 +199,114 @@ def _str_list(value: object) -> list[str]:
     return [item for item in value if isinstance(item, str)]
 
 
+# --- Accessible-model set (access restriction, #445) ------------------------
+#
+# When the user has declared any funding, the recommender must recommend ONLY
+# models the user can actually run: reachable via an enabled API provider
+# (pay-per-token with their own key) or a held-subscription surface, AND in an
+# allowed jurisdiction. This computes that set; the caller feeds the names into
+# the user-context as a hard allowlist (bias) and the AccessGuard enforces it
+# deterministically after the pick (hard guarantee).
+
+
+def _funded_surface_ids(tiers: Any, sub_set: set[str]) -> set[str]:
+    """Access-method ids funded at $0 by the user's held subscriptions."""
+    funded: set[str] = set()
+    for tier in tiers:
+        provider = tier.get("provider")
+        name = tier.get("tier")
+        if not isinstance(provider, str) or not isinstance(name, str):
+            continue
+        if _tier_id(provider, name) not in sub_set:
+            continue
+        funded.update(s for s in (tier.get("surface_funded") or []) if isinstance(s, str))
+    return funded
+
+
+def accessible_model_ids(
+    subscriptions: list[str],
+    api_providers: list[str],
+    *,
+    allowed_jurisdictions: list[str] | None = None,
+    catalog: dict[str, Any] | None = None,
+) -> set[str] | None:
+    """Model ids the user can actually run, or ``None`` for "no restriction".
+
+    A model qualifies when some access method that supports it is reachable by
+    the user — an API-billing method whose provider is enabled, or a
+    subscription surface the user funds — AND the model's jurisdiction is
+    allowed. Returns ``None`` (no funding declared) so the caller skips the
+    filter entirely (anon / free path unchanged). Never raises.
+    """
+    api_set = {p for p in api_providers if isinstance(p, str)}
+    sub_set = {s for s in subscriptions if isinstance(s, str)}
+    if not api_set and not sub_set:
+        return None
+    cat = catalog if catalog is not None else load_catalog()
+    methods: Any = cat.get("access_methods", []) or []
+    tiers: Any = cat.get("subscription_tiers", []) or []
+    models: Any = cat.get("models", []) or []
+
+    funded_surface_ids = _funded_surface_ids(tiers, sub_set)
+
+    reachable_model_ids: set[str] = set()
+    for method in methods:
+        provider = method.get("provider")
+        mid = method.get("id")
+        by_api = method.get("billing") in _API_BILLING and provider in api_set
+        by_sub = isinstance(mid, str) and mid in funded_surface_ids
+        if not (by_api or by_sub):
+            continue
+        for supported in method.get("supports_models") or []:
+            if isinstance(supported, str):
+                reachable_model_ids.add(supported)
+
+    allowed = {j.strip().lower() for j in (allowed_jurisdictions or _BASELINE_JURISDICTIONS)}
+    accessible: set[str] = set()
+    for model in models:
+        model_id = model.get("id")
+        if not isinstance(model_id, str) or model_id not in reachable_model_ids:
+            continue
+        juris = str(model.get("jurisdiction", "")).strip().lower()
+        if juris and juris not in allowed:
+            continue
+        accessible.add(model_id)
+    return accessible
+
+
+def _accessible_model_names(accessible_ids: set[str], catalog: dict[str, Any]) -> list[str]:
+    """Catalog display names for accessible ids, in catalog order (stable)."""
+    names: list[str] = []
+    for model in catalog.get("models", []) or []:
+        mid = model.get("id")
+        if isinstance(mid, str) and mid in accessible_ids:
+            name = model.get("name")
+            names.append(name if isinstance(name, str) else mid)
+    return names
+
+
+def _access_restriction_block(accessible_names: list[str]) -> str:
+    """The hard allowlist section appended to the user-context (#445 bias)."""
+    if accessible_names:
+        listed = ", ".join(accessible_names)
+        return (
+            "**Access restriction (HARD):** recommend ONLY models the user can "
+            "actually run given the access declared above. For THIS request the "
+            f"ONLY permitted models are: {listed}. Every MODEL and BACKUP you "
+            "emit MUST be one of these — never recommend any model outside this "
+            "list, even if a stronger model exists, because the user has no way "
+            "to run it. If none is a perfect fit, pick the closest one from the "
+            "list and say so. This overrides the selector's default frontier-"
+            "first posture."
+        )
+    return (
+        "**Access restriction (HARD):** the user's declared access resolves to "
+        "NO catalogued model in an allowed jurisdiction. Recommend the closest "
+        "single model to the task and state plainly that it is outside the "
+        "user's declared access, so they can enable a provider that can run it."
+    )
+
+
 def build_user_context(
     subscriptions: list[str],
     api_providers: list[str],
@@ -289,6 +397,21 @@ def build_user_context(
     held_block = "\n".join(held_lines) if held_lines else "- None declared."
     api_block = "\n".join(api_lines) if api_lines else "- None declared."
 
+    # Access restriction (#445): the hard allowlist of models the user can run.
+    # Only rendered when the user actually declared funding (held/api lines) —
+    # an explicit-budget-only request with no funding declares no access, so it
+    # keeps the frontier-first posture (nothing to restrict to).
+    access_block = ""
+    if held_lines or api_lines:
+        accessible = accessible_model_ids(
+            list(sub_set),
+            list(api_set),
+            allowed_jurisdictions=juris,
+            catalog=cat,
+        )
+        names = _accessible_model_names(accessible, cat) if accessible else []
+        access_block = "\n\n## Access restriction\n\n" + _access_restriction_block(names)
+
     return f"""# User Context
 
 This is the requesting user's declared funding, used by `<access-selection>`
@@ -333,7 +456,7 @@ latency requirement.
 
 ## Allowed jurisdictions
 
-`{", ".join(juris)}`
+`{", ".join(juris)}`{access_block}
 """
 
 
@@ -499,6 +622,224 @@ def funding_guard_from_request(context: dict[str, Any] | None) -> FundingGuard |
         return FundingGuard(subscriptions, api_providers)
     except Exception:  # noqa: BLE001 - guard is best-effort, never fatal
         logger.warning("funding guard build failed (non-fatal)", exc_info=True)
+        return None
+
+
+# --- Access-restriction guard (#445) ----------------------------------------
+#
+# Hard backstop for the user-context allowlist: the bias tells the engine to
+# recommend only accessible models, but adherence isn't guaranteed (the #444
+# lesson). After a pick is parsed, if its MODEL (or BACKUP) is outside the
+# accessible set, substitute the best accessible model deterministically and
+# rewrite the rationale — so an inaccessible model can NEVER reach the user.
+# No-op when the accessible set is empty (nothing to substitute to) — the
+# user-context already instructs the engine to flag that case in prose.
+
+# Letter tier -> capability points, summed across categories for a coarse
+# quality score used only to rank substitutes deterministically.
+_TIER_POINTS: dict[str, int] = {"S": 4, "A": 3, "B": 2, "C": 1, "D": 0}
+
+
+class AccessGuard:
+    """Deterministic enforcement of the accessible-model allowlist on a pick.
+
+    Built per request from the user's declared access; applied to every pick
+    (single + ladder). Substitutes an inaccessible MODEL/BACKUP with the best
+    accessible one for the rung and rewrites the rationale honestly. Pure over
+    the catalog; never raises (fails open to the engine's pick).
+    """
+
+    def __init__(
+        self,
+        accessible_ids: set[str],
+        api_providers: list[str],
+        funded_surface_ids: set[str],
+        *,
+        catalog: dict[str, Any] | None = None,
+    ) -> None:
+        cat = catalog if catalog is not None else load_catalog()
+        self._accessible_ids = set(accessible_ids)
+        self._api_set = {p for p in api_providers if isinstance(p, str)}
+        self._funded_surface_ids = set(funded_surface_ids)
+        models: Any = cat.get("models", []) or []
+        methods: Any = cat.get("access_methods", []) or []
+
+        # name/id -> id, and per-model metadata for ranking + display.
+        self._id_of: dict[str, str] = {}
+        self._meta: dict[str, dict[str, Any]] = {}
+        for model in models:
+            mid = model.get("id")
+            if not isinstance(mid, str):
+                continue
+            name = model.get("name") if isinstance(model.get("name"), str) else mid
+            self._id_of[mid.strip().lower()] = mid
+            self._id_of[str(name).strip().lower()] = mid
+            try:
+                out_price = float(model.get("output_price_per_1m") or 0.0)
+            except (TypeError, ValueError):
+                out_price = 0.0
+            tiers = model.get("tiers") if isinstance(model.get("tiers"), dict) else {}
+            quality = sum(
+                _TIER_POINTS.get(str(v).strip().upper(), 0) for v in tiers.values()
+            )
+            self._meta[mid] = {"name": name, "out_price": out_price, "quality": quality}
+
+        # model id -> a user-usable access-method display name (prefer the
+        # declared API per-token surface, else a funded subscription surface).
+        self._platform_of: dict[str, str] = {}
+        self._maker_of: dict[str, str] = {}
+        for method in methods:
+            provider = method.get("provider")
+            mid = method.get("id")
+            name = method.get("name")
+            usable = (
+                method.get("billing") in _API_BILLING and provider in self._api_set
+            ) or (isinstance(mid, str) and mid in self._funded_surface_ids)
+            for supported in method.get("supports_models") or []:
+                if not isinstance(supported, str):
+                    continue
+                if isinstance(provider, str) and supported not in self._maker_of:
+                    self._maker_of[supported] = provider
+                if usable and supported not in self._platform_of:
+                    self._platform_of[supported] = (
+                        name if isinstance(name, str) else str(mid)
+                    )
+
+    def _resolve_id(self, model_ref: str | None) -> str | None:
+        if not model_ref:
+            return None
+        return self._id_of.get(model_ref.strip().lower())
+
+    def is_accessible(self, model_ref: str | None) -> bool:
+        mid = self._resolve_id(model_ref)
+        return mid is not None and mid in self._accessible_ids
+
+    def _rank_key(self, priority: str, model_id: str) -> tuple[Any, ...]:
+        meta = self._meta.get(model_id, {})
+        quality = int(meta.get("quality", 0))
+        price = float(meta.get("out_price", 0.0))
+        prio = priority.strip().lower()
+        if prio == "cheap":
+            # Cheapest, then higher quality, then id (ascending) — min() key.
+            return (price, -quality, model_id)
+        if prio == "best":
+            # Highest quality, then pricier (proxy capability), then id — max().
+            return (quality, price, _neg_str(model_id))
+        # balanced: best value = quality per dollar, then quality, then id — max().
+        value = quality / price if price > 0 else float(quality)
+        return (value, quality, _neg_str(model_id))
+
+    def _best_substitute(
+        self, priority: str, *, exclude_maker: str | None = None
+    ) -> str | None:
+        candidates = [
+            mid
+            for mid in self._accessible_ids
+            if mid in self._meta
+            and (exclude_maker is None or self._maker_of.get(mid) != exclude_maker)
+        ]
+        if not candidates:
+            return None
+        prio = priority.strip().lower()
+        if prio == "cheap":
+            return min(candidates, key=lambda m: self._rank_key(prio, m))
+        return max(candidates, key=lambda m: self._rank_key(prio, m))
+
+    def enforce(self, result: dict[str, Any], priority: str) -> bool:
+        """Substitute an inaccessible MODEL/BACKUP in ``result`` (mutated in
+        place). Returns True when the primary MODEL was substituted."""
+        try:
+            changed = False
+            if not self.is_accessible(result.get("model")):
+                sub_id = self._best_substitute(priority)
+                if sub_id is not None:
+                    self._apply_primary_substitution(result, sub_id)
+                    changed = True
+            # Backup must also be accessible AND a different maker than the
+            # (possibly new) primary; substitute or drop otherwise.
+            backup = result.get("backup")
+            if backup:
+                primary_id = self._resolve_id(result.get("model"))
+                primary_maker = self._maker_of.get(primary_id) if primary_id else None
+                if not self.is_accessible(backup) or (
+                    primary_maker is not None
+                    and self._maker_of.get(self._resolve_id(backup) or "") == primary_maker
+                ):
+                    sub_backup = self._best_substitute(priority, exclude_maker=primary_maker)
+                    result["backup"] = (
+                        self._meta[sub_backup]["name"] if sub_backup else None
+                    )
+            return changed
+        except Exception:  # noqa: BLE001 - guard is best-effort, never fatal
+            logger.warning("access guard failed (non-fatal)", exc_info=True)
+            return False
+
+    def _apply_primary_substitution(self, result: dict[str, Any], sub_id: str) -> None:
+        name = str(self._meta[sub_id]["name"])
+        platform = self._platform_of.get(sub_id, result.get("platform", ""))
+        original = result.get("model", "the engine's pick")
+        result["model"] = name
+        result["platform"] = platform
+        # Rewrite rationale to a deterministic, honest note. Keep the engine's
+        # task framing when structured; replace pick/run.
+        sections = result.get("rationale_sections")
+        task = ""
+        if isinstance(sections, dict) and isinstance(sections.get("task"), str):
+            task = sections["task"]
+        pick = (
+            f"{name} is the strongest model your declared access can run for this "
+            f"task; {original} was outside your access and was not recommendable."
+        )
+        run = (
+            f"Run this on {platform} pay-per-token with your own API key — it is "
+            f"the accessible substitute for {original}."
+        )
+        result["rationale_sections"] = {
+            "task": task or "Matched to the models your declared access can run.",
+            "pick": pick,
+            "run": run,
+        }
+        result["rationale"] = (
+            f"TASK: {task or 'Matched to your declared access.'} PICK: {pick} RUN: {run}"
+        )
+        result["access_guard"] = {"action": "substituted", "original": original, "substitute": name}
+
+
+def _neg_str(value: str) -> tuple[int, ...]:
+    """A key that inverts string ordering for use inside a max() tuple, so a
+    LOWER id wins ties (stable, deterministic) even while maximizing."""
+    return tuple(-ord(c) for c in value)
+
+
+def access_guard_from_request(context: dict[str, Any] | None) -> AccessGuard | None:
+    """Build the per-request AccessGuard, or None when no restriction applies.
+
+    Active exactly when the user declared funding (api providers or held
+    subscriptions). Anon / no-funding -> None (frontier-first posture, no
+    restriction). Never raises.
+    """
+    if not context:
+        return None
+    subscriptions = _str_list(context.get("subscriptions"))
+    api_providers = _str_list(context.get("api_providers"))
+    if not subscriptions and not api_providers:
+        return None
+    try:
+        cat = load_catalog()
+        allowed = resolve_allowed_jurisdictions(context)
+        accessible = accessible_model_ids(
+            subscriptions,
+            api_providers,
+            allowed_jurisdictions=allowed,
+            catalog=cat,
+        )
+        if accessible is None:
+            return None
+        tiers: Any = cat.get("subscription_tiers", []) or []
+        funded = _funded_surface_ids(tiers, set(subscriptions))
+        return AccessGuard(accessible, api_providers, funded, catalog=cat)
+    except Exception:  # noqa: BLE001 - guard is best-effort, never fatal
+        logger.warning("access guard build failed (non-fatal)", exc_info=True)
         return None
 
 
