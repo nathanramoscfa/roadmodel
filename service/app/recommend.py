@@ -21,7 +21,9 @@ from roadmodel.recommend import (  # type: ignore[import-untyped]
 )
 
 from .funding import (
+    AccessGuard,
     FundingGuard,
+    access_guard_from_request,
     funding_guard_from_request,
     resolve_allowed_jurisdictions,
     user_context_from_request,
@@ -254,6 +256,14 @@ def _unavailable_models_from_request(context: dict[str, Any] | None) -> list[str
     return ids or None
 
 
+def _budget_priority_of(context: dict[str, Any] | None) -> str:
+    """The request's budget-priority id (cheap/balanced/best), defaulting to
+    balanced. Drives the AccessGuard's tier-appropriate substitute ranking on
+    the single-pick path (the ladder maps its tier labels instead)."""
+    raw = (context or {}).get("budget_priority")
+    return raw if isinstance(raw, str) and raw else "balanced"
+
+
 def _availability_authoritative_from_request(context: dict[str, Any] | None) -> bool:
     """Whether the web edge read the availability table SUCCESSFULLY this request.
 
@@ -282,6 +292,10 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
     # funding the user-context above renders, active on exactly the same
     # requests (None on the anon / bundled-template path).
     funding_guard = funding_guard_from_request(req.context)
+    # Access-restriction guard (#445) — enforces the accessible-model allowlist
+    # deterministically; None (no restriction) on the anon / no-funding path.
+    access_guard = access_guard_from_request(req.context)
+    budget_priority = _budget_priority_of(req.context)
     # Runtime availability override (Phase 4.9 B2): the web edge forwards the
     # model_availability unavailable-ids so a benched model is excluded without a
     # roadmodel release. Provider-independent, so resolve once. None for legacy /
@@ -329,7 +343,9 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
                 thinking_budget=thinking_budget,
                 temperature=temperature,
             )
-            return _pick_response(result, req.task_description, funding_guard)
+            return _pick_response(
+                result, req.task_description, funding_guard, access_guard, budget_priority
+            )
         except (MissingProviderKeyError, ProviderCallError, MalformedResponseError) as exc:
             last_error = exc
             if isinstance(exc, MalformedResponseError):
@@ -351,15 +367,29 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
     raise ProviderCallError("No provider available for recommendation.")
 
 
+# Ladder tier label -> the budget-priority id the AccessGuard ranks substitutes
+# by (quality/balanced/cost order). The single-pick path passes the request's
+# budget_priority directly.
+_TIER_TO_PRIORITY: dict[str, str] = {"quality": "best", "balanced": "balanced", "cost": "cheap"}
+
+
 def _pick_response(
     result: dict[str, Any],
     task_description: str,
     funding_guard: FundingGuard | None = None,
+    access_guard: AccessGuard | None = None,
+    priority: str = "balanced",
 ) -> RecommendResponse:
     """Build a RecommendResponse from one structured pick payload, computing its
     cost separately + best-effort (#164) so a cost-catalog miss degrades to "no
     cost panel" rather than failing the recommendation. Shared by the single-pick
     path and each rung of the ladder."""
+    # Access-restriction guard (#445): if the engine picked a model outside the
+    # user's declared access, substitute the best accessible one BEFORE cost /
+    # settings / funding are derived, so every downstream field describes the
+    # model actually returned. Mutates `result` in place; no-op when unset.
+    if access_guard is not None:
+        access_guard.enforce(result, priority)
     session_cost_estimate, comparison_table = _session_cost(
         result["model"], result["platform"], task_description
     )
@@ -410,6 +440,9 @@ def recommend_ladder(req: RecommendRequest) -> LadderResponse:
     # Funded-platform honesty guard (#444) — same activation condition as the
     # per-user context above; applied to every rung of the ladder.
     funding_guard = funding_guard_from_request(req.context)
+    # Access-restriction guard (#445) — applied per rung with that rung's
+    # priority so substitutes are tier-appropriate (quality->best, cost->cheap).
+    access_guard = access_guard_from_request(req.context)
     unavailable_models = _unavailable_models_from_request(req.context)
     availability_authoritative = _availability_authoritative_from_request(req.context)
     # The user's permitted jurisdictions (or the baseline) — forwarded to the
@@ -446,7 +479,13 @@ def recommend_ladder(req: RecommendRequest) -> LadderResponse:
                 temperature=temperature,
             )
             picks = {
-                tier: _pick_response(pick, req.task_description, funding_guard)
+                tier: _pick_response(
+                    pick,
+                    req.task_description,
+                    funding_guard,
+                    access_guard,
+                    _TIER_TO_PRIORITY.get(tier, "balanced"),
+                )
                 for tier, pick in ladder["picks"].items()
             }
             return LadderResponse(picks=picks, guard=ladder.get("guard", {}))
