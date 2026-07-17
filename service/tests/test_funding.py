@@ -437,3 +437,194 @@ def test_guard_honest_requires_a_subscription_phrasing_survives() -> None:
     new_rationale, new_sections = g.sanitize("Anthropic API", rationale, sections)
     assert new_sections == sections
     assert new_rationale == rationale
+
+
+# --- Access restriction: accessible-set + AccessGuard (#445) ---
+
+# Extend the synthetic catalog with models + access-method supports so the
+# accessible-set logic is hermetic. mistral-api (per-token, eu) supports two
+# models; a cn model is present to exercise jurisdiction intersection.
+_ACCESS_CATALOG: dict[str, Any] = {
+    "subscription_tiers": _FAKE_CATALOG["subscription_tiers"],
+    "access_methods": [
+        {
+            "id": "mistral-api",
+            "provider": "mistral",
+            "billing": "per-token",
+            "name": "Mistral API",
+            "provider_jurisdiction": "eu",
+            "supports_models": ["mistral-small", "mistral-large"],
+        },
+        {
+            "id": "deepseek-api",
+            "provider": "deepseek",
+            "billing": "per-token",
+            "name": "DeepSeek API",
+            "provider_jurisdiction": "cn",
+            "supports_models": ["deepseek-pro"],
+        },
+        {
+            "id": "claude-code",
+            "provider": "anthropic",
+            "billing": "subscription-or-key",
+            "name": "Claude Code",
+            "provider_jurisdiction": "us",
+            "supports_models": ["opus"],
+        },
+    ],
+    "models": [
+        {"id": "mistral-small", "name": "Mistral Small", "jurisdiction": "eu",
+         "output_price_per_1m": 0.3, "tiers": {"coding": "C", "planning": "C"}},
+        {"id": "mistral-large", "name": "Mistral Large", "jurisdiction": "eu",
+         "output_price_per_1m": 1.5, "tiers": {"coding": "B", "planning": "A"}},
+        {"id": "deepseek-pro", "name": "DeepSeek Pro", "jurisdiction": "cn",
+         "output_price_per_1m": 0.9, "tiers": {"coding": "A", "planning": "A"}},
+        {"id": "opus", "name": "Opus", "jurisdiction": "us",
+         "output_price_per_1m": 25.0, "tiers": {"coding": "S", "planning": "S"}},
+    ],
+}
+
+
+def test_accessible_ids_none_without_funding() -> None:
+    assert funding.accessible_model_ids([], [], catalog=_ACCESS_CATALOG) is None
+
+
+def test_accessible_ids_by_api_provider_intersects_jurisdiction() -> None:
+    # mistral declared, default (non-cn) jurisdictions -> both eu mistral models;
+    # deepseek NOT declared, and cn excluded anyway.
+    acc = funding.accessible_model_ids(
+        [], ["mistral"], allowed_jurisdictions=["us", "eu"], catalog=_ACCESS_CATALOG
+    )
+    assert acc == {"mistral-small", "mistral-large"}
+
+
+def test_accessible_ids_cn_dropped_by_default_jurisdiction() -> None:
+    # deepseek declared but its model is cn; default jurisdiction excludes cn.
+    acc = funding.accessible_model_ids(
+        [], ["deepseek"], allowed_jurisdictions=["us", "eu"], catalog=_ACCESS_CATALOG
+    )
+    assert acc == set()
+
+
+def test_accessible_ids_cn_included_when_allowed() -> None:
+    acc = funding.accessible_model_ids(
+        [], ["deepseek"], allowed_jurisdictions=["us", "eu", "cn"], catalog=_ACCESS_CATALOG
+    )
+    assert acc == {"deepseek-pro"}
+
+
+def test_accessible_ids_by_subscription_surface() -> None:
+    # Holding claude-max funds claude-code, which supports opus.
+    acc = funding.accessible_model_ids(
+        ["claude-max"], [], allowed_jurisdictions=["us"], catalog=_ACCESS_CATALOG
+    )
+    assert acc == {"opus"}
+
+
+def test_user_context_includes_access_restriction_allowlist() -> None:
+    text = funding.build_user_context(
+        [], ["mistral"], allowed_jurisdictions=["us", "eu"], catalog=_ACCESS_CATALOG
+    )
+    assert text is not None
+    assert "## Access restriction" in text
+    assert "Access restriction (HARD)" in text
+    assert "Mistral Small" in text and "Mistral Large" in text
+    # A model the user cannot access is not listed as permitted.
+    assert "Opus" not in text
+
+
+def test_user_context_access_restriction_empty_set_message() -> None:
+    # deepseek declared but cn excluded -> no accessible model -> the "enable a
+    # provider" guidance instead of an allowlist.
+    text = funding.build_user_context(
+        [], ["deepseek"], allowed_jurisdictions=["us", "eu"], catalog=_ACCESS_CATALOG
+    )
+    assert text is not None
+    assert "NO catalogued model in an allowed jurisdiction" in text
+
+
+def _access_guard(subs: list[str], apis: list[str], juris: list[str]) -> funding.AccessGuard:
+    acc = funding.accessible_model_ids(subs, apis, allowed_jurisdictions=juris, catalog=_ACCESS_CATALOG)
+    assert acc is not None
+    tiers = _ACCESS_CATALOG["subscription_tiers"]
+    funded = funding._funded_surface_ids(tiers, set(subs))
+    return funding.AccessGuard(acc, apis, funded, catalog=_ACCESS_CATALOG)
+
+
+def test_access_guard_substitutes_inaccessible_primary() -> None:
+    g = _access_guard([], ["mistral"], ["us", "eu"])
+    r: dict[str, Any] = {"model": "Opus", "platform": "Claude Code", "settings": {}, "backup": None,
+         "rationale_sections": {"task": "t", "pick": "p", "run": "r"}}
+    changed = g.enforce(r, "best")
+    assert changed is True
+    assert r["model"] in {"Mistral Small", "Mistral Large"}
+    assert r["platform"] == "Mistral API"
+    assert "outside your access" in r["rationale_sections"]["pick"]
+    assert r["access_guard"]["action"] == "substituted"
+
+
+def test_access_guard_best_picks_highest_quality_accessible() -> None:
+    g = _access_guard([], ["mistral"], ["us", "eu"])
+    r: dict[str, Any] = {"model": "Opus", "platform": "Claude Code", "settings": {}, "backup": None,
+         "rationale_sections": None}
+    g.enforce(r, "best")
+    # Mistral Large outranks Mistral Small on tier points.
+    assert r["model"] == "Mistral Large"
+
+
+def test_access_guard_cheap_picks_cheapest_accessible() -> None:
+    g = _access_guard([], ["mistral"], ["us", "eu"])
+    r: dict[str, Any] = {"model": "Opus", "platform": "Claude Code", "settings": {}, "backup": None}
+    g.enforce(r, "cheap")
+    assert r["model"] == "Mistral Small"  # $0.3 < $1.5
+
+
+def test_access_guard_leaves_accessible_pick_untouched() -> None:
+    g = _access_guard([], ["mistral"], ["us", "eu"])
+    r: dict[str, Any] = {"model": "Mistral Large", "platform": "Mistral API", "settings": {},
+         "backup": None, "rationale_sections": {"task": "t", "pick": "p", "run": "r"}}
+    changed = g.enforce(r, "best")
+    assert changed is False
+    assert r["model"] == "Mistral Large"
+    assert r["rationale_sections"] == {"task": "t", "pick": "p", "run": "r"}
+
+
+def test_access_guard_substitutes_inaccessible_backup() -> None:
+    g = _access_guard([], ["mistral"], ["us", "eu"])
+    r: dict[str, Any] = {"model": "Mistral Large", "platform": "Mistral API", "settings": {},
+         "backup": "Opus", "rationale_sections": None}
+    g.enforce(r, "best")
+    # Backup Opus is inaccessible -> substituted to a different-maker accessible
+    # model; only mistral is accessible here, same maker -> dropped.
+    assert r["backup"] is None
+
+
+def test_access_guard_empty_accessible_set_is_noop() -> None:
+    # deepseek declared, cn excluded -> empty accessible set -> cannot substitute.
+    g = _access_guard([], ["deepseek"], ["us", "eu"])
+    r: dict[str, Any] = {"model": "Opus", "platform": "Claude Code", "settings": {}, "backup": None,
+         "rationale_sections": {"task": "t", "pick": "p", "run": "r"}}
+    changed = g.enforce(r, "best")
+    assert changed is False
+    assert r["model"] == "Opus"  # unchanged; user-context prose flags it
+
+
+def test_access_guard_from_request_none_without_funding() -> None:
+    assert funding.access_guard_from_request(None) is None
+    assert funding.access_guard_from_request({}) is None
+    assert funding.access_guard_from_request({"budget_priority": "best"}) is None
+
+
+def test_access_guard_from_request_active_with_funding(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ROADMODEL_CATALOG_PATH", str(REAL_CATALOG))
+    g = funding.access_guard_from_request(
+        {"api_providers": ["mistral", "xai"], "allowed_jurisdictions": ["us", "eu"]}
+    )
+    assert g is not None
+    # A real-catalog frontier leak is substituted to an accessible low-tier model.
+    r: dict[str, Any] = {"model": "Fable 5", "platform": "Claude Code", "settings": {}, "backup": None,
+         "rationale_sections": {"task": "t", "pick": "p", "run": "r"}}
+    changed = g.enforce(r, "best")
+    assert changed is True
+    assert not g.is_accessible("Fable 5")
+    assert g.is_accessible(r["model"])
