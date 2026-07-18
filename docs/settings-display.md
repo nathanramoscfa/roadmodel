@@ -33,9 +33,12 @@ either.
 - `THINKING` of `Off` / `N/A` / `None` / `No` → **Effort `Low`**, **Thinking `Off`**.
 - Otherwise → **Effort = the `THINKING` value**, **Thinking `On`**.
 
-## Codex → **Intelligence**
+## Codex + OpenAI API → **Intelligence**
 
 - **Intelligence = the `THINKING` value.** No Max Mode row, no separate Thinking row.
+- Applies to both Codex and the direct **OpenAI API** — OpenAI's reasoning
+  surfaces expose a reasoning-effort dial (surfaced as Intelligence), never Max
+  Mode. (ChatGPT the consumer app has no fine dial and stays in the catch-all.)
 
 ## Cursor → **Max Mode** + **Thinking**
 
@@ -69,6 +72,8 @@ table and the code ever disagree, the test suite fails.
 | Claude Code | Off | N/A | None | effort=Low; thinking=Off |
 | Codex | Off | High | None | intelligence=High |
 | Codex | Off | XHigh | None | intelligence=XHigh |
+| OpenAI API | Off | High | None | intelligence=High |
+| OpenAI API | Off | XHigh | None | intelligence=XHigh |
 | Cursor | On | N/A | None | max_mode=ON; thinking=On |
 | Cursor | Off | N/A | None | max_mode=OFF; thinking=On |
 | Anthropic API | On | High | None | max_mode=ON; thinking=High |

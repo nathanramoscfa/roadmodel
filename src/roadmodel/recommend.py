@@ -522,7 +522,13 @@ def _structured_settings(base: dict[str, str]) -> dict[str, str]:
             return {"effort": "Low", "thinking": "Off"}
         return {"effort": thinking_raw, "thinking": "On"}
 
-    if plat == "codex" or plat.endswith(" codex"):
+    # OpenAI's reasoning surfaces — Codex AND the direct OpenAI API — expose the
+    # reasoning-effort dial (minimal/low/medium/high/xhigh) and NO Max Mode.
+    # Surface it as Intelligence (the GPT-family reasoning row). Without the
+    # explicit `openai api` case a GPT pick fell through to the Max-Mode fallback
+    # below, so a Cost pick on the OpenAI API showed a spurious "Max Mode: On" and
+    # hid its actual effort (the dogfood display bug).
+    if plat == "codex" or plat.endswith(" codex") or plat == "openai api":
         return {"intelligence": thinking_raw}
 
     max_label = "ON" if max_mode_on() else "OFF"
