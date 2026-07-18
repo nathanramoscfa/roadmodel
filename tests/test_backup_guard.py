@@ -211,3 +211,108 @@ def test_recommend_structured_drops_when_no_jurisdiction(
     assert "backup" not in payload
     assert payload["backup_guard"]["action"] == "dropped"
     assert payload["backup_guard"]["original_backup"] == "Opus 4.8"
+
+
+# --- anon/unfunded backstop: cross-provider backup that is region-blocked or
+# --- benched must NOT slip through on prompt prose alone --------------------
+
+
+def test_reject_reason_ordering_and_fail_safe() -> None:
+    """The deterministic reject check: same-maker > unavailable > jurisdiction,
+    and every check fails SAFE (keep) when the catalog can't prove a violation."""
+    from roadmodel.recommend import _backup_reject_reason
+
+    ok = {"same_provider": False}
+    same = {"same_provider": True}
+    # Same-maker wins regardless of the other fields.
+    assert (
+        _backup_reject_reason("Opus 4.8", same, allowed_jurisdictions=["us"], unavailable_models=None)
+        == "same_provider"
+    )
+    # Cross-provider, region-allowed, available → keep.
+    assert (
+        _backup_reject_reason("GPT-5.5", ok, allowed_jurisdictions=["us"], unavailable_models=None)
+        is None
+    )
+    # Benched (Step 0a) — matched by catalog id.
+    assert (
+        _backup_reject_reason(
+            "GPT-5.5", ok, allowed_jurisdictions=["us"], unavailable_models=["gpt-5.5"]
+        )
+        == "unavailable"
+    )
+    # Region-blocked (Step 0b): a CN model for a us-only user.
+    assert (
+        _backup_reject_reason(
+            "DeepSeek-V4-Pro", ok, allowed_jurisdictions=["us"], unavailable_models=None
+        )
+        == "jurisdiction"
+    )
+    # Unknown model / no allowed set → fail safe (keep).
+    assert (
+        _backup_reject_reason("NotAReal", ok, allowed_jurisdictions=["us"], unavailable_models=None)
+        is None
+    )
+    assert (
+        _backup_reject_reason(
+            "DeepSeek-V4-Pro", ok, allowed_jurisdictions=None, unavailable_models=None
+        )
+        is None
+    )
+
+
+def test_recommend_structured_substitutes_region_blocked_cross_provider_backup(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """THE ANON GAP: the LLM emits a cross-provider backup (different maker, so the
+    old maker-only guard kept it verbatim) that is OUTSIDE the us-only user's
+    regions. It is now rejected and substituted with a region-valid cross-provider
+    model, instead of surfacing a backup the user legally cannot use."""
+    monkeypatch.setattr(
+        recommend_module, "recommend", _fake_base_with(backup="DeepSeek-V4-Pro")
+    )
+    payload = recommend_module.recommend_structured(
+        "audit this", _config(tmp_path), allowed_jurisdictions=["us"]
+    )
+    assert payload["backup"] == "GPT-5.6 Sol"
+    guard = payload["backup_guard"]
+    assert guard["action"] == "substituted"
+    assert guard["reason"] == "jurisdiction"
+    assert guard["original_backup"] == "DeepSeek-V4-Pro"
+
+
+def test_recommend_structured_substitutes_benched_cross_provider_backup(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A cross-provider backup that is benched at runtime (Step 0a) is rejected and
+    substituted with the next available cross-provider model — previously it rode
+    through verbatim for anon callers with no AccessGuard."""
+    monkeypatch.setattr(recommend_module, "recommend", _fake_base_with(backup="GPT-5.5"))
+    payload = recommend_module.recommend_structured(
+        "audit this",
+        _config(tmp_path),
+        allowed_jurisdictions=["us"],
+        unavailable_models=["gpt-5.5"],
+    )
+    assert payload["backup"] is not None
+    assert cost.model_provider(payload["backup"]) != "anthropic"
+    assert cost.model_id_of(payload["backup"]) != "gpt-5.5"
+    guard = payload["backup_guard"]
+    assert guard["action"] == "substituted"
+    assert guard["reason"] == "unavailable"
+    assert guard["original_backup"] == "GPT-5.5"
+
+
+def test_recommend_structured_drops_region_blocked_backup_without_jurisdiction(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Region-blocked can't be evaluated without an allowed set, but a benched
+    cross-provider backup still drops when no jurisdiction is supplied (no
+    substitute possible → dropping is the safe call)."""
+    monkeypatch.setattr(recommend_module, "recommend", _fake_base_with(backup="GPT-5.5"))
+    payload = recommend_module.recommend_structured(
+        "audit this", _config(tmp_path), unavailable_models=["gpt-5.5"]
+    )
+    assert "backup" not in payload
+    assert payload["backup_guard"]["action"] == "dropped"
+    assert payload["backup_guard"]["reason"] == "unavailable"

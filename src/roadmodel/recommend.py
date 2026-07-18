@@ -571,6 +571,50 @@ def _backup_provider_guard(primary_model: str, backup_model: str) -> dict[str, A
     }
 
 
+def _backup_reject_reason(
+    backup_model: str,
+    guard: dict[str, Any],
+    *,
+    allowed_jurisdictions: list[str] | None,
+    unavailable_models: list[str] | None,
+) -> str | None:
+    """Deterministic acceptability check for a parsed BACKUP, returning the first
+    reason it is unusable or ``None`` when it may be kept as-is.
+
+    The Step 7 prompt prose *asks* the model for a backup that is cross-provider,
+    jurisdiction-allowed (Step 0b) and available (Step 0a), but for an
+    anonymous / unfunded caller the service-side ``AccessGuard`` never runs, so a
+    cross-provider backup the LLM emits was previously kept verbatim with NO
+    deterministic region/availability check — a benched or region-blocked backup
+    could slip through on prose alone. This closes that gap while preserving the
+    same fail-safe stance as the maker guard: each check REJECTS only on a
+    positively-proven violation and keeps the backup whenever the catalog can't
+    prove it bad (unknown maker / jurisdiction / id → keep).
+
+    Reasons (in priority order): ``"same_provider"`` (zero resilience),
+    ``"unavailable"`` (benched at runtime), ``"jurisdiction"`` (outside the
+    user's permitted regions)."""
+    if guard["same_provider"]:
+        return "same_provider"
+    # Availability (Step 0a): a benched backup is unusable. The runtime list is
+    # keyed by catalog id, but tolerate a name-keyed entry too. Unknown id → keep.
+    if unavailable_models:
+        excluded = {m.strip() for m in unavailable_models if isinstance(m, str) and m.strip()}
+        backup_id = cost.model_id_of(backup_model)
+        if (backup_id is not None and backup_id in excluded) or backup_model.strip() in excluded:
+            return "unavailable"
+    # Jurisdiction (Step 0b): only checkable when the caller supplied the allowed
+    # set. Unknown jurisdiction fails SAFE (keep), matching the maker guard.
+    if allowed_jurisdictions:
+        allowed = {
+            j.strip().lower() for j in allowed_jurisdictions if isinstance(j, str) and j.strip()
+        }
+        juris = cost.model_jurisdiction(backup_model)
+        if allowed and juris is not None and juris not in allowed:
+            return "jurisdiction"
+    return None
+
+
 def _base_to_payload(
     base: dict[str, str],
     *,
@@ -623,15 +667,27 @@ def _base_to_payload(
     if base.get("backup"):
         canonical_backup = cost.canonical_model_name(base["backup"])
         guard = _backup_provider_guard(payload["model"], canonical_backup)
-        if not guard["same_provider"]:
-            # Cross-provider (or unknown → fail-safe): keep the LLM's backup.
+        # DETERMINISTIC enforcement of the Step 7 rules the #4 prompt hardening can
+        # only *ask* for. Reject a backup that is same-maker (zero resilience — the
+        # observed Fable 5 → Opus 4.8, both Anthropic), benched at runtime (Step
+        # 0a), or outside the user's regions (Step 0b). The maker case was always
+        # caught here; the availability/jurisdiction cases previously only applied
+        # on the same-maker SUBSTITUTE path, so a cross-provider backup the LLM
+        # emitted that was benched or region-blocked rode through verbatim for
+        # anon/unfunded callers (no service-side AccessGuard). Now every rejected
+        # backup takes the same recovery path.
+        reject_reason = _backup_reject_reason(
+            canonical_backup,
+            guard,
+            allowed_jurisdictions=allowed_jurisdictions,
+            unavailable_models=unavailable_models,
+        )
+        if reject_reason is None:
+            # Different maker, region-allowed, available (or unprovable → fail-safe
+            # keep): keep the LLM's backup.
             payload["backup"] = canonical_backup
         else:
-            # DETERMINISTIC cross-provider enforcement of the Step 7 rule that the
-            # #4 prompt hardening can only *ask* for. The LLM emitted a backup from
-            # the SAME maker as the primary (e.g. Fable 5 → Opus 4.8, both
-            # Anthropic) — zero resilience, since one provider outage takes out
-            # both. SUBSTITUTE a jurisdiction-valid, available cross-provider model
+            # SUBSTITUTE a jurisdiction-valid, available cross-provider model
             # (option A: a weaker cross-provider backup beats none); only DROP when
             # no such candidate exists, or when the caller supplied no jurisdiction
             # (in which case a substitute could be region-invalid — dropping is the
@@ -651,6 +707,7 @@ def _base_to_payload(
                 payload["backup_guard"] = {
                     **guard,
                     "action": "substituted",
+                    "reason": reject_reason,
                     "original_backup": canonical_backup,
                     "substitute": substitute,
                 }
@@ -658,6 +715,7 @@ def _base_to_payload(
                 payload["backup_guard"] = {
                     **guard,
                     "action": "dropped",
+                    "reason": reject_reason,
                     "original_backup": canonical_backup,
                 }
     return payload
