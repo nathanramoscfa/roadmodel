@@ -135,6 +135,7 @@ function profileWith(
     subscriptions: [],
     api_providers: [],
     budget_priority: "balanced",
+    consumption_headroom: "auto",
     allowed_jurisdictions: ["us"],
     onboarded_at: now,
     created_at: now,

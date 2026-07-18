@@ -141,6 +141,81 @@ def _budget_block(budget: str) -> str:
     )
 
 
+# --- Consumption headroom (effort axis) -------------------------------------
+#
+# Reasoning EFFORT and capability TIER are two separate axes. The budget-priority
+# posture above scales BOTH down the Cost/Balanced/Quality ladder, but scaling
+# effort only helps when effort actually COSTS the user something — per-token
+# dollars, a usage cap they can exhaust, or latency they value. A user on a
+# top-tier flat subscription who never exhausts the budget and does not value
+# speed pays NOTHING for max effort, so scaling it down on the Cost pick buys
+# them nothing and only lowers quality. This posture governs the effort axis
+# ORTHOGONALLY to which model is chosen.
+#
+# Hybrid activation (matches the Settings control):
+#   - `uncapped` / `capped`: explicit user override, honored as-is.
+#   - `auto` (default): DERIVE from funded tiers — a subscription in the top
+#     consumer price band (>= $200/mo, the "maximum available under consumer
+#     subscriptions") resolves to `uncapped`; anything else (lower sub, or
+#     per-token only) stays `capped`, the conservative behavior-unchanged default.
+# Only the behavior-CHANGING `uncapped` posture is rendered into the context
+# (see _consumption_block); `capped` is the selector's existing default, so it
+# emits nothing and keeps the prompt lean.
+_TOP_TIER_MONTHLY_USD: float = 200.0
+
+_CONSUMPTION_HEADROOM_VALUES: frozenset[str] = frozenset({"auto", "uncapped", "capped"})
+
+
+def _effective_consumption_headroom(stored: str | None, sub_set: set[str], tiers: Any) -> str:
+    """Resolve the stored headroom setting to an effective posture (`uncapped` /
+    `capped`). Explicit values pass through; `auto` (or any unknown/absent value)
+    derives from the user's funded subscription tiers — `uncapped` iff one sits in
+    the top consumer price band, else `capped` (conservative)."""
+    value = (stored or "auto").strip().lower()
+    if value == "uncapped":
+        return "uncapped"
+    if value == "capped":
+        return "capped"
+    # auto (and any unrecognized value): derive from funded-tier prices.
+    for tier in tiers:
+        provider = tier.get("provider")
+        name = tier.get("tier")
+        if not isinstance(provider, str) or not isinstance(name, str):
+            continue
+        if _tier_id(provider, name) not in sub_set:
+            continue
+        try:
+            monthly = float(tier.get("monthly_usd") or 0.0)
+        except (TypeError, ValueError):
+            monthly = 0.0
+        if monthly >= _TOP_TIER_MONTHLY_USD:
+            return "uncapped"
+    return "capped"
+
+
+def _consumption_block() -> str:
+    """The self-asserting `uncapped` consumption-headroom posture. Rendered only
+    when the effective posture is `uncapped` (the behavior-changing case), so it
+    takes effect from the appended user-context alone — even before the matching
+    docs/model-selector.txt <objective> "CONSUMPTION-HEADROOM OVERRIDE" clause
+    ships in a roadmodel release (mirrors the budget-posture precedent)."""
+    return (
+        "**Consumption headroom:** uncapped — this user runs a flat subscription "
+        "whose usage budget they do not exhaust, so spending more reasoning EFFORT "
+        "costs them nothing (no per-token dollars, no usage cap they hit, latency "
+        "not valued). This OVERRIDES the effort-scaling in the budget priority "
+        "above on the reasoning-effort / thinking-LEVEL axis ONLY: emit the "
+        "HIGHEST USEFUL reasoning effort the model + surface support (top of the "
+        "effort dial — `max`, or `xhigh` where the model has no `max` step) on ALL "
+        "THREE priorities INCLUDING Cost, and keep extended thinking ON (never "
+        "emit an Off thinking / effort). The Cost/Balanced/Quality picks must "
+        "still differ, but by CAPABILITY TIER ALONE (Cost = the smallest adequate "
+        "model at MAX effort; Quality = the frontier model at MAX effort), NOT by "
+        "effort. This changes only how much effort each pick runs at, never WHICH "
+        "model is chosen."
+    )
+
+
 def load_catalog() -> dict[str, Any]:
     """Load the catalog (env override -> bundled), mirroring roadmodel.cost.
 
@@ -312,6 +387,7 @@ def build_user_context(
     api_providers: list[str],
     *,
     budget_priority: str | None = None,
+    consumption_headroom: str | None = None,
     allowed_jurisdictions: list[str] | None = None,
     catalog: dict[str, Any] | None = None,
 ) -> str | None:
@@ -382,6 +458,13 @@ def build_user_context(
     if isinstance(budget_priority, str) and budget_priority:
         budget = budget_priority
 
+    # Consumption-headroom posture (effort axis): rendered only when it resolves
+    # to `uncapped` (the behavior-changing case); `capped`/default emits nothing
+    # so the prompt and the highest-volume default path stay unchanged. A leading
+    # blank line keeps the block visually separated from the budget block above.
+    headroom = _effective_consumption_headroom(consumption_headroom, sub_set, tiers)
+    consumption_line = "\n" + _consumption_block() + "\n" if headroom == "uncapped" else ""
+
     # No funding declared:
     #   - DEFAULT (balanced) budget -> None: the anon / free path is unchanged
     #     (the bundled template governs, exactly as before this lever existed),
@@ -450,7 +533,7 @@ key that is not listed above.
 ## Budget priority and speed posture
 
 {_budget_block(budget)}
-
+{consumption_line}
 **Speed posture:** not a valued dimension unless the prompt states an explicit
 latency requirement.
 
@@ -584,9 +667,7 @@ class FundingGuard:
                 # the edge's unsplit fallback rendering stays consistent.
                 task = sections.get("task", "")
                 pick = sections.get("pick", "")
-                rebuilt = (
-                    f"TASK: {task} PICK: {pick} RUN: {honest}" if task and pick else rationale
-                )
+                rebuilt = f"TASK: {task} PICK: {pick} RUN: {honest}" if task and pick else rationale
                 return rebuilt, sections
 
             # No structured sections: append a correction rather than attempt
@@ -679,9 +760,7 @@ class AccessGuard:
             except (TypeError, ValueError):
                 out_price = 0.0
             tiers = model.get("tiers") if isinstance(model.get("tiers"), dict) else {}
-            quality = sum(
-                _TIER_POINTS.get(str(v).strip().upper(), 0) for v in tiers.values()
-            )
+            quality = sum(_TIER_POINTS.get(str(v).strip().upper(), 0) for v in tiers.values())
             self._meta[mid] = {"name": name, "out_price": out_price, "quality": quality}
 
         # model id -> a user-usable access-method display name (prefer the
@@ -692,18 +771,16 @@ class AccessGuard:
             provider = method.get("provider")
             mid = method.get("id")
             name = method.get("name")
-            usable = (
-                method.get("billing") in _API_BILLING and provider in self._api_set
-            ) or (isinstance(mid, str) and mid in self._funded_surface_ids)
+            usable = (method.get("billing") in _API_BILLING and provider in self._api_set) or (
+                isinstance(mid, str) and mid in self._funded_surface_ids
+            )
             for supported in method.get("supports_models") or []:
                 if not isinstance(supported, str):
                     continue
                 if isinstance(provider, str) and supported not in self._maker_of:
                     self._maker_of[supported] = provider
                 if usable and supported not in self._platform_of:
-                    self._platform_of[supported] = (
-                        name if isinstance(name, str) else str(mid)
-                    )
+                    self._platform_of[supported] = name if isinstance(name, str) else str(mid)
 
     def _resolve_id(self, model_ref: str | None) -> str | None:
         if not model_ref:
@@ -729,9 +806,7 @@ class AccessGuard:
         value = quality / price if price > 0 else float(quality)
         return (value, quality, _neg_str(model_id))
 
-    def _best_substitute(
-        self, priority: str, *, exclude_maker: str | None = None
-    ) -> str | None:
+    def _best_substitute(self, priority: str, *, exclude_maker: str | None = None) -> str | None:
         candidates = [
             mid
             for mid in self._accessible_ids
@@ -766,9 +841,7 @@ class AccessGuard:
                     and self._maker_of.get(self._resolve_id(backup) or "") == primary_maker
                 ):
                     sub_backup = self._best_substitute(priority, exclude_maker=primary_maker)
-                    result["backup"] = (
-                        self._meta[sub_backup]["name"] if sub_backup else None
-                    )
+                    result["backup"] = self._meta[sub_backup]["name"] if sub_backup else None
             return changed
         except Exception:  # noqa: BLE001 - guard is best-effort, never fatal
             logger.warning("access guard failed (non-fatal)", exc_info=True)
@@ -866,6 +939,8 @@ def user_context_from_request(context: dict[str, Any] | None) -> str | None:
 
     budget_raw = context.get("budget_priority")
     budget_priority = budget_raw if isinstance(budget_raw, str) else None
+    headroom_raw = context.get("consumption_headroom")
+    consumption_headroom = headroom_raw if isinstance(headroom_raw, str) else None
     allowed_jurisdictions = _str_list(context.get("allowed_jurisdictions")) or None
 
     # No funding declared -> short-circuit to the bundled template (free path
@@ -883,6 +958,7 @@ def user_context_from_request(context: dict[str, Any] | None) -> str | None:
             subscriptions,
             api_providers,
             budget_priority=budget_priority,
+            consumption_headroom=consumption_headroom,
             allowed_jurisdictions=allowed_jurisdictions,
         )
     except Exception:  # noqa: BLE001 - funding context is best-effort, never fatal

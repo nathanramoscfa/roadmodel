@@ -201,6 +201,7 @@ const handler = async (req: Request): Promise<Response> =>
     let userId: string | undefined;
     let allowedJurisdictions: JurisdictionCode[];
     let budgetPriority: string;
+    let consumptionHeadroom: string;
     let subscriptions: string[];
     let apiProviders: string[];
     let taskDescription: string;
@@ -276,6 +277,12 @@ const handler = async (req: Request): Promise<Response> =>
           profile?.subscriptions ?? [...DEFAULT_PROFILE.subscriptions];
         const localApiProviders =
           profile?.api_providers ?? [...DEFAULT_PROFILE.api_providers];
+        // Effort-axis control: whether reasoning effort stays maxed across all
+        // picks or scales down the ladder. `auto` (default) is resolved from
+        // funded-tier price service-side (funding.py); forwarded verbatim here.
+        const localConsumptionHeadroom =
+          profile?.consumption_headroom ??
+          DEFAULT_PROFILE.consumption_headroom;
 
         try {
           // T3b: signed-in users get the frontier engine ONLY when the gate is
@@ -294,6 +301,7 @@ const handler = async (req: Request): Promise<Response> =>
             incomingContext: ctx,
             allowedJurisdictions: localJurisdictions,
             budgetPriority: localBudget,
+            consumptionHeadroom: localConsumptionHeadroom,
             subscriptions: localSubscriptions,
             apiProviders: localApiProviders,
             engine,
@@ -340,6 +348,7 @@ const handler = async (req: Request): Promise<Response> =>
       incomingContext = dispatched.incomingContext;
       allowedJurisdictions = dispatched.allowedJurisdictions;
       budgetPriority = dispatched.budgetPriority;
+      consumptionHeadroom = dispatched.consumptionHeadroom;
       subscriptions = dispatched.subscriptions;
       apiProviders = dispatched.apiProviders;
       recommenderEngine = dispatched.engine;
@@ -469,6 +478,7 @@ const handler = async (req: Request): Promise<Response> =>
           unavailable_models: unavailableModels,
           availability_authoritative: availabilityAuthoritative,
           budget_priority: priority,
+          consumption_headroom: consumptionHeadroom,
           allowed_jurisdictions: allowedJurisdictions,
           // Phase 4.8 T2b (#163): forward declared funding so the service biases
           // SELECTION toward a $0-funded surface on a quality tie. No keys sent.
@@ -537,6 +547,7 @@ const handler = async (req: Request): Promise<Response> =>
           unavailable_models: unavailableModels,
           availability_authoritative: availabilityAuthoritative,
           // No budget_priority — the ladder emits all three tiers itself.
+          consumption_headroom: consumptionHeadroom,
           allowed_jurisdictions: allowedJurisdictions,
           subscriptions,
           api_providers: apiProviders,

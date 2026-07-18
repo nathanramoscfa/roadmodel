@@ -197,6 +197,95 @@ def test_unknown_budget_id_falls_back_to_balanced_posture() -> None:
     assert "best VALUE" in text  # balanced posture body
 
 
+# --- consumption-headroom effort axis ---
+
+
+_HEADROOM_MARK = "**Consumption headroom:** uncapped"
+
+
+def test_headroom_auto_uncapped_for_top_tier_subscription() -> None:
+    """A funded top-consumer-band tier (>= $200/mo, e.g. claude.ai Max $200)
+    resolves `auto` to `uncapped`: the block is emitted and instructs MAX effort
+    on all three picks with the picks differing by capability tier alone."""
+    text = funding.build_user_context(["claude-max"], [], catalog=_FAKE_CATALOG)
+    assert text is not None
+    assert _HEADROOM_MARK in text
+    assert "HIGHEST USEFUL reasoning effort" in text
+    assert "ALL THREE priorities INCLUDING Cost" in text
+    assert "CAPABILITY TIER ALONE" in text
+    assert "never WHICH model is chosen" in text
+
+
+def test_headroom_auto_capped_for_lower_tier_subscription() -> None:
+    """A sub-$200 tier (Claude Pro at $20) stays `capped` under auto — no block,
+    so effort keeps scaling down the ladder (the conservative default)."""
+    text = funding.build_user_context(
+        ["anthropic-claude-pro"], [], catalog=_FAKE_CATALOG
+    )
+    assert text is not None
+    assert "Consumption headroom" not in text
+
+
+def test_headroom_explicit_uncapped_overrides_lower_tier() -> None:
+    """Explicit `uncapped` forces the block even on a sub-$200 tier (the user
+    declares they never hit their cap)."""
+    text = funding.build_user_context(
+        ["anthropic-claude-pro"],
+        [],
+        consumption_headroom="uncapped",
+        catalog=_FAKE_CATALOG,
+    )
+    assert text is not None
+    assert _HEADROOM_MARK in text
+
+
+def test_headroom_explicit_capped_overrides_top_tier() -> None:
+    """Explicit `capped` suppresses the block even on a $200 tier auto would
+    call uncapped — the user opted to conserve budget."""
+    text = funding.build_user_context(
+        ["claude-max"], [], consumption_headroom="capped", catalog=_FAKE_CATALOG
+    )
+    assert text is not None
+    assert "Consumption headroom" not in text
+
+
+def test_headroom_block_coexists_with_budget_block() -> None:
+    """The headroom block is additive: the budget-priority posture is still
+    present, and the headroom override sits alongside it (effort axis vs the
+    model/tier axis)."""
+    text = funding.build_user_context(
+        ["claude-max"], [], budget_priority="cheap", catalog=_FAKE_CATALOG
+    )
+    assert text is not None
+    assert "**Budget priority:** cheap" in text
+    assert _HEADROOM_MARK in text
+
+
+def test_headroom_from_request_threads_through() -> None:
+    """user_context_from_request reads consumption_headroom from the context dict
+    and threads it into build_user_context."""
+    monkey_ctx = {
+        "subscriptions": ["anthropic-claude-pro"],
+        "consumption_headroom": "uncapped",
+        "allowed_jurisdictions": ["us"],
+    }
+    text = funding.user_context_from_request(monkey_ctx) or ""
+    assert _HEADROOM_MARK in text
+
+
+def test_effective_headroom_helper() -> None:
+    tiers = _FAKE_CATALOG["subscription_tiers"]
+    f = funding._effective_consumption_headroom
+    assert f("uncapped", set(), tiers) == "uncapped"
+    assert f("capped", {"claude-max"}, tiers) == "capped"
+    assert f("auto", {"claude-max"}, tiers) == "uncapped"
+    assert f(None, {"claude-max"}, tiers) == "uncapped"
+    assert f("auto", {"anthropic-claude-pro"}, tiers) == "capped"
+    assert f("auto", set(), tiers) == "capped"
+    # Unknown/garbage value degrades to auto-derivation (conservative here).
+    assert f("garbage", {"anthropic-claude-pro"}, tiers) == "capped"
+
+
 def test_no_funding_explicit_budget_still_builds() -> None:
     # A signed-out user who actively picks Cost/Quality (non-default) must still
     # get the posture in the prompt even with zero declared funding — the lever
