@@ -698,6 +698,89 @@ def test_access_guard_empty_accessible_set_is_noop() -> None:
     assert r["model"] == "Opus"  # unchanged; user-context prose flags it
 
 
+# --- Aggregator-aware maker + funded-cost-aware Cost substitution (dogfood) ---
+
+# `nano` is reachable via BOTH the Cursor pool (listed FIRST) and OpenAI's own
+# API, so the OLD first-method-wins maker resolution returned "cursor"; the fix
+# must return the real maker "openai". `composer` is Cursor-only (aggregator IS
+# the maker). `haiku` is funded at $0 via claude-max; `nano` is cheaper on RAW
+# price but pay-per-token — the Cost pick must prefer the funded one.
+_AGG_CATALOG: dict[str, Any] = {
+    "subscription_tiers": [
+        {"provider": "Anthropic", "tier": "claude.ai Max ($200)", "monthly_usd": 200.0,
+         "surface_funded": ["claude-code"]},
+        {"provider": "OpenAI", "tier": "ChatGPT Plus", "monthly_usd": 20.0,
+         "surface_funded": ["chatgpt-app"]},
+    ],
+    "access_methods": [
+        {"id": "cursor", "provider": "cursor", "billing": "subscription-pool", "name": "Cursor",
+         "provider_jurisdiction": "us", "supports_models": ["nano", "composer"]},
+        {"id": "openai-api", "provider": "openai", "billing": "per-token", "name": "OpenAI API",
+         "provider_jurisdiction": "us", "supports_models": ["nano", "mini"]},
+        {"id": "chatgpt-app", "provider": "openai", "billing": "subscription-included",
+         "name": "ChatGPT", "provider_jurisdiction": "us", "supports_models": ["mini"]},
+        {"id": "claude-code", "provider": "anthropic", "billing": "subscription-or-key",
+         "name": "Claude Code", "provider_jurisdiction": "us", "supports_models": ["haiku"]},
+    ],
+    "models": [
+        {"id": "nano", "name": "Nano", "jurisdiction": "us", "output_price_per_1m": 0.4,
+         "tiers": {"coding": "C"}},
+        {"id": "mini", "name": "Mini", "jurisdiction": "us", "output_price_per_1m": 2.0,
+         "tiers": {"coding": "B"}},
+        {"id": "composer", "name": "Composer", "jurisdiction": "us", "output_price_per_1m": 2.5,
+         "tiers": {"coding": "B"}},
+        {"id": "haiku", "name": "Haiku", "jurisdiction": "us", "output_price_per_1m": 4.0,
+         "tiers": {"coding": "B"}},
+    ],
+}
+
+
+def _agg_guard(subs: list[str], apis: list[str]) -> funding.AccessGuard:
+    acc = funding.accessible_model_ids(subs, apis, allowed_jurisdictions=["us"], catalog=_AGG_CATALOG)
+    assert acc is not None
+    funded = funding._funded_surface_ids(_AGG_CATALOG["subscription_tiers"], set(subs))
+    return funding.AccessGuard(acc, apis, funded, catalog=_AGG_CATALOG)
+
+
+def test_maker_resolution_excludes_pool_aggregator() -> None:
+    """Fix 1: a model reachable via the Cursor pool (listed FIRST) AND its own
+    provider resolves to its REAL maker, not the aggregator — so this guard's
+    cross-provider check agrees with roadmodel.cost.model_provider."""
+    g = _agg_guard(["claude-max", "openai-chatgpt-plus"], ["openai", "anthropic"])
+    assert g._maker_of[g._resolve_id("Nano")] == "openai"  # not "cursor"
+    assert g._maker_of[g._resolve_id("Composer")] == "cursor"  # aggregator-only
+
+
+def test_backup_same_maker_via_aggregator_is_caught() -> None:
+    """Fix 1 end-to-end: primary Nano (openai, reachable via the Cursor pool) +
+    backup Mini (openai) is a same-REAL-maker pair the old resolver missed
+    (Nano->cursor != Mini->openai). Now caught and substituted cross-provider."""
+    g = _agg_guard(["claude-max", "openai-chatgpt-plus"], ["openai", "anthropic"])
+    r: dict[str, Any] = {"model": "Nano", "platform": "OpenAI API", "settings": {}, "backup": "Mini"}
+    g.enforce(r, "cheap")
+    assert r["backup"] is not None
+    assert g._maker_of.get(g._resolve_id(r["backup"]) or "") != "openai"
+
+
+def test_cheap_substitute_prefers_funded_over_cheaper_paid() -> None:
+    """Fix 3: the Cost substitute prefers a $0-funded model (Haiku via claude-max)
+    over a cheaper-on-raw-price pay-per-token one (Nano $0.4). Before, raw price
+    won and the Cost pick charged real cash when a funded model was free."""
+    g = _agg_guard(["claude-max"], ["openai"])  # funds Haiku; OpenAI API = paid Nano/Mini
+    r: dict[str, Any] = {"model": "Composer", "platform": "Cursor", "settings": {}, "backup": None}
+    g.enforce(r, "cheap")  # Composer (Cursor) inaccessible -> substitute
+    assert r["model"] == "Haiku"
+
+
+def test_cheap_substitute_unchanged_without_any_funded_model() -> None:
+    """Regression: with no funded subscription (API-only), the Cost substitute is
+    still the cheapest raw-price accessible model — Fix 3 is a no-op here."""
+    g = _agg_guard([], ["openai"])  # OpenAI API only: Nano ($0.4) + Mini ($2.0)
+    r: dict[str, Any] = {"model": "Composer", "platform": "Cursor", "settings": {}, "backup": None}
+    g.enforce(r, "cheap")
+    assert r["model"] == "Nano"
+
+
 def test_access_guard_from_request_none_without_funding() -> None:
     assert funding.access_guard_from_request(None) is None
     assert funding.access_guard_from_request({}) is None

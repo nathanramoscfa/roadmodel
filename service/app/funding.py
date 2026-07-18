@@ -32,6 +32,11 @@ from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Any
 
+# The pool-aggregator provider set (Cursor) — SHARED with the package's
+# roadmodel.cost.model_provider so this service-side maker resolution can never
+# drift from it (the drift was the aggregator-maker backup bug).
+from roadmodel.cost import _AGGREGATOR_PROVIDERS
+
 logger = logging.getLogger(__name__)
 
 _BUNDLED_CATALOG_PATH: Traversable = resources.files("roadmodel.data") / "catalog.json"
@@ -767,6 +772,13 @@ class AccessGuard:
         # declared API per-token surface, else a funded subscription surface).
         self._platform_of: dict[str, str] = {}
         self._maker_of: dict[str, str] = {}
+        # Models reachable at $0 via a funded SUBSCRIPTION surface — their
+        # effective cost to the user is $0, used to prefer them for the Cost pick
+        # (a $0 Claude Haiku beats a $0.003 GPT Nano on "your cost to you").
+        self._funded_model_ids: set[str] = set()
+        # All provider makers that support each model, so the MAKER can be
+        # resolved aggregator-aware below (a first pass; resolution follows).
+        providers_by_model: dict[str, set[str]] = {}
         for method in methods:
             provider = method.get("provider")
             mid = method.get("id")
@@ -774,13 +786,32 @@ class AccessGuard:
             usable = (method.get("billing") in _API_BILLING and provider in self._api_set) or (
                 isinstance(mid, str) and mid in self._funded_surface_ids
             )
+            funded_sub = isinstance(mid, str) and mid in self._funded_surface_ids
             for supported in method.get("supports_models") or []:
                 if not isinstance(supported, str):
                     continue
-                if isinstance(provider, str) and supported not in self._maker_of:
-                    self._maker_of[supported] = provider
+                if isinstance(provider, str):
+                    providers_by_model.setdefault(supported, set()).add(provider)
+                if funded_sub:
+                    self._funded_model_ids.add(supported)
                 if usable and supported not in self._platform_of:
                     self._platform_of[supported] = name if isinstance(name, str) else str(mid)
+        # Resolve each model's MAKER excluding pool aggregators (Cursor), mirroring
+        # roadmodel.cost.model_provider so THIS guard's cross-provider backup check
+        # agrees with the package's. A model reachable via Cursor's pool AND its
+        # own provider resolves to its real maker; one reachable ONLY via an
+        # aggregator keeps the aggregator. Fixes the aggregator-drift bug: taking
+        # the FIRST method's provider resolved GPT-5.4 Nano (via Cursor's pool) to
+        # "cursor" instead of "openai", so a same-maker OpenAI backup passed the
+        # different-maker check (observed in prod: GPT-5.4 Nano + GPT-5 Mini).
+        for supported, provs in providers_by_model.items():
+            first_party = provs - _AGGREGATOR_PROVIDERS
+            if len(first_party) == 1:
+                self._maker_of[supported] = next(iter(first_party))
+            elif not first_party and len(provs) == 1:
+                self._maker_of[supported] = next(iter(provs))
+            # Ambiguous (multiple first-party makers) -> unknown, matching
+            # model_provider — the different-maker guard then fails safe.
 
     def _resolve_id(self, model_ref: str | None) -> str | None:
         if not model_ref:
@@ -797,8 +828,13 @@ class AccessGuard:
         price = float(meta.get("out_price", 0.0))
         prio = priority.strip().lower()
         if prio == "cheap":
-            # Cheapest, then higher quality, then id (ascending) — min() key.
-            return (price, -quality, model_id)
+            # Prefer a $0-funded model (effective cost $0 to the user) over a
+            # cheap pay-per-token one, THEN cheapest raw price (smallest adequate),
+            # higher quality, id — min() key. Before this, a $0-funded Claude Haiku
+            # (raw ~$4/M) lost to a $0.003 GPT Nano on raw price, so the Cost
+            # substitute charged real cash when a funded model was free (dogfood).
+            funded_rank = 0 if model_id in self._funded_model_ids else 1
+            return (funded_rank, price, -quality, model_id)
         if prio == "best":
             # Highest quality, then pricier (proxy capability), then id — max().
             return (quality, price, _neg_str(model_id))
