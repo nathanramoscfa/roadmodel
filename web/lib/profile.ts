@@ -58,6 +58,11 @@ export const DEFAULT_PROFILE = {
   subscriptions: [] as SubscriptionId[],
   api_providers: [] as ApiProviderId[],
   budget_priority: "balanced" as BudgetPriority,
+  // Default INCLUDES cn (#445): Chinese open-weight models (DeepSeek, GLM via
+  // z.ai) are mainstream, so they're available by default. Users opt IN to
+  // hiding higher-risk jurisdictions via the "restrict to low-risk" toggle,
+  // which narrows to LOW_RISK_JURISDICTIONS (the 7 below without cn). ru /
+  // unknown remain opt-in through the custom jurisdiction picker.
   allowed_jurisdictions: [
     "us",
     "eu",
@@ -66,6 +71,7 @@ export const DEFAULT_PROFILE = {
     "au",
     "jp",
     "kr",
+    "cn",
   ] as JurisdictionCode[],
 };
 

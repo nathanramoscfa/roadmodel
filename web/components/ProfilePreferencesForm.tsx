@@ -19,10 +19,10 @@ import type { ApiProviderOption } from "@/lib/api-providers";
 import type { SubscriptionOption } from "@/lib/subscriptions";
 import { BUDGET_PRIORITY_OPTIONS } from "@/lib/budget-priority";
 
-// Mirrors DEFAULT_PROFILE.allowed_jurisdictions (kept as a literal here so
-// this client component doesn't import a value from the server-coupled
-// lib/profile). Exported for the onboarding wrapper's default.
-export const DEFAULT_JURISDICTIONS: JurisdictionCode[] = [
+// The "low-risk" jurisdiction set — what the "Restrict to low-risk
+// jurisdictions" toggle narrows to, and the chips shown when it's on. Excludes
+// cn / ru / unknown.
+export const LOW_RISK_JURISDICTIONS: JurisdictionCode[] = [
   "us",
   "eu",
   "uk",
@@ -31,6 +31,23 @@ export const DEFAULT_JURISDICTIONS: JurisdictionCode[] = [
   "jp",
   "kr",
 ];
+
+// The DEFAULT allowed set for a new profile / onboarding — low-risk PLUS cn
+// (#445), so mainstream Chinese open-weight models are available by default and
+// the restrict toggle starts OFF. Mirrors DEFAULT_PROFILE.allowed_jurisdictions
+// (kept as a literal so this client component doesn't import a server-coupled
+// value). Exported for the onboarding wrapper's default.
+export const DEFAULT_JURISDICTIONS: JurisdictionCode[] = [
+  ...LOW_RISK_JURISDICTIONS,
+  "cn",
+];
+
+// Provider home-jurisdictions considered low-risk — the set an API provider
+// must fall in to remain visible when the restrict toggle is on. Mirrors
+// LOW_RISK_JURISDICTIONS (provider_jurisdiction uses the same country codes).
+const LOW_RISK_PROVIDER_JURISDICTIONS: ReadonlySet<string> = new Set(
+  LOW_RISK_JURISDICTIONS,
+);
 
 const ALL_JURISDICTIONS: { id: JurisdictionCode; label: string }[] = [
   { id: "us", label: "United States" },
@@ -123,7 +140,7 @@ export function ProfilePreferencesForm({
   const [budgetPriority, setBudgetPriority] =
     useState<BudgetPriority>(initialBudgetPriority);
   const [restrictLowRisk, setRestrictLowRisk] = useState(
-    sameJurisdictionSet(initialJurisdictions, DEFAULT_JURISDICTIONS),
+    sameJurisdictionSet(initialJurisdictions, LOW_RISK_JURISDICTIONS),
   );
   const [customJurisdictions, setCustomJurisdictions] = useState<
     JurisdictionCode[]
@@ -159,7 +176,42 @@ export function ProfilePreferencesForm({
   }
 
   function allowedJurisdictions(): JurisdictionCode[] {
-    return restrictLowRisk ? DEFAULT_JURISDICTIONS : customJurisdictions;
+    return restrictLowRisk ? LOW_RISK_JURISDICTIONS : customJurisdictions;
+  }
+
+  // API providers whose home jurisdiction survives the low-risk filter. When
+  // the toggle is on, higher-risk providers (e.g. DeepSeek / z.ai, both cn) are
+  // hidden — offering a vendor the jurisdiction filter will then exclude is
+  // misleading (#445).
+  const visibleApiProviderOptions = restrictLowRisk
+    ? apiProviderOptions.filter((o) =>
+        LOW_RISK_PROVIDER_JURISDICTIONS.has(o.jurisdiction),
+      )
+    : apiProviderOptions;
+
+  // Effective API-provider selection: never persist a provider that is hidden
+  // by the active jurisdiction filter, so a stale cn selection can't linger.
+  function effectiveApiProviders(): ApiProviderId[] {
+    if (!restrictLowRisk) return apiProviders;
+    const visible = new Set(visibleApiProviderOptions.map((o) => o.id));
+    return apiProviders.filter((id) => visible.has(id));
+  }
+
+  // Toggling the restrict filter ON prunes any now-hidden provider from the
+  // live selection so the checkboxes and the saved value stay consistent.
+  function handleRestrictLowRiskChange(checked: boolean): void {
+    setSaved(false);
+    setRestrictLowRisk(checked);
+    if (checked) {
+      setApiProviders((prev) =>
+        prev.filter((id) => {
+          const option = apiProviderOptions.find((o) => o.id === id);
+          return option
+            ? LOW_RISK_PROVIDER_JURISDICTIONS.has(option.jurisdiction)
+            : true;
+        }),
+      );
+    }
   }
 
   async function saveProfile(body: Record<string, unknown>): Promise<void> {
@@ -187,7 +239,7 @@ export function ProfilePreferencesForm({
     event.preventDefault();
     await saveProfile({
       subscriptions,
-      api_providers: apiProviders,
+      api_providers: effectiveApiProviders(),
       budget_priority: budgetPriority,
       allowed_jurisdictions: allowedJurisdictions(),
       skip: false,
@@ -263,7 +315,7 @@ export function ProfilePreferencesForm({
             API cost against the subscriptions you already pay for.
           </p>
           <div className="mt-4 flex flex-col gap-2">
-            {apiProviderOptions.map((option) => (
+            {visibleApiProviderOptions.map((option) => (
               <label
                 key={option.id}
                 className="flex items-center gap-2 text-sm text-brand-slate-800 dark:text-brand-slate-100"
@@ -277,6 +329,14 @@ export function ProfilePreferencesForm({
                 {option.label}
               </label>
             ))}
+            {restrictLowRisk &&
+            visibleApiProviderOptions.length < apiProviderOptions.length ? (
+              <p className="text-xs text-brand-slate-500 dark:text-brand-slate-400">
+                Some providers are hidden because “Restrict to low-risk
+                jurisdictions” is on. Uncheck it below to use providers based in
+                other jurisdictions.
+              </p>
+            ) : null}
           </div>
         </fieldset>
       ) : null}
@@ -326,17 +386,19 @@ export function ProfilePreferencesForm({
             <input
               type="checkbox"
               checked={restrictLowRisk}
-              onChange={(event) => {
-                setSaved(false);
-                setRestrictLowRisk(event.target.checked);
-              }}
+              onChange={(event) =>
+                handleRestrictLowRiskChange(event.target.checked)
+              }
               className="mt-0.5 rounded border-brand-slate-300 dark:border-brand-slate-700 accent-brand-accent"
             />
-            <span>Restrict to low-risk jurisdictions (recommended)</span>
+            <span>
+              Restrict to low-risk jurisdictions — hides providers based in
+              China and other higher-risk regions
+            </span>
           </label>
           {restrictLowRisk ? (
             <div className="flex flex-wrap gap-2">
-              {DEFAULT_JURISDICTIONS.map((code) => (
+              {LOW_RISK_JURISDICTIONS.map((code) => (
                 <span
                   key={code}
                   className={
