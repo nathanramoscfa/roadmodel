@@ -30,6 +30,23 @@ class RecommendRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class BackupPick(BaseModel):
+    """The Step 7 fallback model, enriched so it ADHERES to the user's settings
+    like the primary pick: the surface the user runs it on (`platform`) and its
+    per-surface `settings` at the same reasoning posture as the pick. Both are
+    best-effort — `platform` is None / `settings` is empty when they can't be
+    resolved (e.g. an anonymous request with no declared funding), and the client
+    then shows just the model name (the pre-enrichment behavior). `model` is the
+    catalog display name, already cross-provider + access/jurisdiction-checked by
+    the AccessGuard before it reaches here."""
+
+    model: str
+    platform: str | None = None
+    settings: dict[str, Any] = Field(default_factory=dict)
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class RecommendResponse(BaseModel):
     model: str
     platform: str
@@ -53,12 +70,12 @@ class RecommendResponse(BaseModel):
     # service boundary (extra="forbid" + never passed through) — issue #190. Carry
     # it so the field survives end-to-end; empty -> None for a clean web fallback.
     conversation: str | None = None
-    # The fallback model (Step 7 of the selection algorithm), surfaced so the web
-    # "Backup" line can show an alternative if the primary is unavailable to the
-    # user. Optional in recommend_structured (absent when the LLM emits no BACKUP
-    # or "None") — same service-boundary carry-through as rationale (#173) and
-    # conversation (#190); empty -> None for a clean web fallback.
-    backup: str | None = None
+    # The fallback model (Step 7), enriched into a BackupPick — model + its own
+    # funded platform + per-surface settings — so the backup adheres to the user's
+    # settings like the primary (not just a bare name). Absent when the LLM emits
+    # no BACKUP / "None"; platform + settings are best-effort within it (None / {}
+    # when unresolvable), so the client degrades to showing just the model name.
+    backup: BackupPick | None = None
     session_cost_estimate: dict[str, Any] | None = None
     comparison_table: list[dict[str, Any]] = Field(default_factory=list)
 

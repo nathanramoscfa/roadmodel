@@ -203,6 +203,7 @@ test(
         subscriptions: ["claude-max"],
         api_providers: [],
         budget_priority: "cheap",
+        consumption_headroom: "auto",
         allowed_jurisdictions: ["us"],
         onboarded_at: new Date().toISOString(),
         created_at: new Date().toISOString(),

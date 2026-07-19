@@ -53,6 +53,10 @@ export default async function SettingsPage() {
           initialBudgetPriority={
             profile?.budget_priority ?? DEFAULT_PROFILE.budget_priority
           }
+          initialConsumptionHeadroom={
+            profile?.consumption_headroom ??
+            DEFAULT_PROFILE.consumption_headroom
+          }
           initialJurisdictions={
             profile?.allowed_jurisdictions ?? [
               ...DEFAULT_PROFILE.allowed_jurisdictions,

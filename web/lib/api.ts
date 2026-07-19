@@ -35,10 +35,16 @@ export interface RecommendResponse {
   // falls back to splitting the single `rationale` string. Carried verbatim by
   // the edge (no budget/funding notes appended, unlike settings.rationale).
   rationale_sections?: Record<string, string> | null;
-  // Fallback model (Step 7 of the selector) — rendered as the "Backup" line so
-  // the user has an alternative if the primary is unavailable to them. Optional:
-  // absent/null when the recommender emitted no backup.
-  backup?: string | null;
+  // Fallback model (Step 7) — a structured BackupPick so the "Backup" line shows
+  // the model, its own funded platform, and its per-surface settings (same
+  // reasoning posture as the pick), i.e. it adheres to the user's settings like
+  // the primary. Absent/null when the recommender emitted no backup; within it,
+  // platform is null / settings is {} when unresolved (anon / no funding).
+  backup?: {
+    model: string;
+    platform: string | null;
+    settings: Record<string, string>;
+  } | null;
 }
 
 // One recommendation computed at a specific budget priority. The /recommend

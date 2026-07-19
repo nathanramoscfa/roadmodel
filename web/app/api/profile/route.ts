@@ -10,6 +10,7 @@ import {
   isE2eAuthEnabled,
   type ApiProviderId,
   type BudgetPriority,
+  type ConsumptionHeadroom,
   type JurisdictionCode,
   type SubscriptionId,
 } from "@/lib/profile";
@@ -45,6 +46,7 @@ const patchSchema = z.object({
     .array(z.string().refine((id) => API_PROVIDER_IDS.has(id)))
     .optional(),
   budget_priority: z.enum(["cheap", "balanced", "best"]).optional(),
+  consumption_headroom: z.enum(["auto", "uncapped", "capped"]).optional(),
   allowed_jurisdictions: z.array(jurisdictionEnum).min(1).optional(),
   skip: z.boolean().default(false),
 });
@@ -86,6 +88,8 @@ export async function PATCH(req: Request): Promise<Response> {
       base.api_providers) as ApiProviderId[],
     budget_priority: (payload.budget_priority ??
       base.budget_priority) as BudgetPriority,
+    consumption_headroom: (payload.consumption_headroom ??
+      base.consumption_headroom) as ConsumptionHeadroom,
     allowed_jurisdictions: (payload.allowed_jurisdictions ??
       base.allowed_jurisdictions) as JurisdictionCode[],
     onboarded_at: new Date().toISOString(),

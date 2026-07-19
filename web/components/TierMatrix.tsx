@@ -56,6 +56,45 @@ function isMeaningful(value: string): boolean {
   return !MEANINGLESS_VALUES.has(value.trim().toLowerCase());
 }
 
+// The backup's reasoning effort for display: the LEVEL from its per-surface
+// settings — effort / intelligence, or a thinking level (not the On/Off toggle).
+function backupEffortLabel(
+  settings: Record<string, string> | undefined,
+): string | null {
+  if (!settings) return null;
+  const effort = settings.effort ?? settings.intelligence;
+  if (effort && isMeaningful(effort)) return formatSettingValue(effort);
+  const thinking = settings.thinking;
+  if (
+    thinking &&
+    !["on", "off"].includes(thinking.trim().toLowerCase()) &&
+    isMeaningful(thinking)
+  ) {
+    return formatSettingValue(thinking);
+  }
+  return null;
+}
+
+// The Backup cell: model name + its own funded platform pill (with effort), so
+// the fallback shows HOW to run it — mirroring a pick's model + platform header
+// and adhering to the user's settings. Degrades to just the name (or an em dash)
+// when platform/settings are unresolved (anon / no funding).
+function backupCell(backup: PriorityRecommendation["backup"]): ReactNode {
+  if (!backup?.model) return "—";
+  const effort = backupEffortLabel(backup.settings);
+  return (
+    <span className="flex flex-col items-start gap-1">
+      <span>{backup.model}</span>
+      {backup.platform ? (
+        <span className="inline-flex w-fit rounded-full bg-brand-accent-muted px-2 py-0.5 text-[10px] font-medium text-brand-accent">
+          {backup.platform}
+          {effort ? ` · ${effort}` : ""}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 // The union of setting keys across the picks, in first-seen order, so every
 // surface-specific dimension (effort, thinking, max_mode, intelligence …) gets
 // a row even when only one pick emits it — EXCEPT a key whose value is
@@ -119,7 +158,7 @@ export function TierMatrix({
   onSelect,
 }: TierMatrixProps) {
   const keys = settingKeys(recommendations);
-  const showBackup = recommendations.some((r) => typeof r.backup === "string" && r.backup);
+  const showBackup = recommendations.some((r) => r.backup?.model);
   const n = recommendations.length;
   const gridStyle = {
     gridTemplateColumns: `minmax(92px, 116px) repeat(${n}, minmax(0, 1fr))`,
@@ -170,8 +209,7 @@ export function TierMatrix({
             key: "__backup",
             label: "Backup",
             cell: (rec: PriorityRecommendation) => ({
-              node:
-                typeof rec.backup === "string" && rec.backup ? rec.backup : "—",
+              node: backupCell(rec.backup),
             }),
           } satisfies MatrixRow,
         ]

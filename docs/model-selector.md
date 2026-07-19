@@ -74,7 +74,9 @@ posture above. Honor whichever it states:
   still beats new per-token spend. This is the ONE case where the user's
   funding may change WHICH model is chosen (a deliberate, scoped exception
   to the `<access-selection>` rule that funding changes only the platform).
-  Never emit `Max`; never over-buy tier or effort beyond what the task needs.
+  Never emit `Max` effort — UNLESS the CONSUMPTION-HEADROOM OVERRIDE below is
+  `uncapped`, which suspends this effort floor (see it for the full rule).
+  Never over-buy the capability TIER beyond what the task needs.
 - `balanced` (Balanced) — recommend the best value, landing BETWEEN the
   Cost and Quality picks in capability and effort: prefer a $0-funded model
   when competitive, prefer the cheaper model when two are CLOSE in expected
@@ -88,6 +90,35 @@ $0-funded model fit for the task), reasoning effort / thinking is the
 cost-vs-quality axis: Cost = lowest-adequate, Balanced = sensible, Quality
 = highest-useful. When no posture is declared (legacy / direct callers),
 the default posture governs.
+
+CONSUMPTION-HEADROOM OVERRIDE (the EFFORT axis): reasoning-effort / thinking
+LEVEL and capability TIER are TWO SEPARATE dimensions, not one. The
+budget-priority rules above scale BOTH down the ladder, but scaling effort is
+only worthwhile when spending effort actually COSTS the user something —
+out-of-pocket dollars (a per-token path), a usage cap they can exhaust, or
+latency they value. When the appended user-context declares a
+"Consumption headroom" posture, THAT states whether effort is a real cost for
+this user and governs the effort axis ORTHOGONALLY to which model is chosen:
+- `uncapped` — the user faces NO consumption cost: a flat subscription whose
+  usage budget they do not exhaust ($0 marginal AND effectively no cap), and
+  no valued latency cost. Effort is therefore FREE, so emit the HIGHEST USEFUL
+  reasoning effort the model + surface support (top of the effort dial —
+  `max`, or `xhigh` on a model with no `max` step) on ALL THREE priorities,
+  INCLUDING Cost. Under this posture the Cost/Balanced/Quality picks differ by
+  CAPABILITY TIER ALONE: Cost = the smallest adequate model at MAX effort;
+  Balanced = a mid model at MAX effort; Quality = the frontier model at MAX
+  effort. Do NOT scale effort down for Cost or Balanced, and keep extended
+  thinking ON — never emit an `Off` thinking / effort under this posture. This
+  OVERRIDES the "Never emit `Max` effort" floor in the `cheap` rule above; the
+  capability-tier ladder still applies unchanged.
+- `capped` (and the DEFAULT when no headroom posture is declared) — consumption
+  IS a real cost (a usage cap the user can hit, or per-token spend), so effort
+  stays the cost-vs-quality lever exactly as the budget-priority rules above
+  define it: Cost = lowest-adequate, Balanced = sensible, Quality =
+  highest-useful.
+This posture NEVER changes WHICH model is picked (that remains the
+budget-priority + `<access-selection>` decision) — it only sets how much
+reasoning effort each already-chosen pick runs at.
 
 ## Pricing Context
 
@@ -1554,7 +1585,9 @@ as primary; the other becomes the secondary category for tie-breaking.
       still beats new per-token spend. This is the ONE case where the user's
       funding may change WHICH model is chosen (a deliberate, scoped exception
       to the `<access-selection>` rule that funding changes only the platform).
-      Never emit `Max`; never over-buy tier or effort beyond what the task needs.
+      Never emit `Max` effort — UNLESS the CONSUMPTION-HEADROOM OVERRIDE below is
+      `uncapped`, which suspends this effort floor (see it for the full rule).
+      Never over-buy the capability TIER beyond what the task needs.
     - `balanced` (Balanced) — recommend the best value, landing BETWEEN the
       Cost and Quality picks in capability and effort: prefer a $0-funded model
       when competitive, prefer the cheaper model when two are CLOSE in expected
@@ -1568,6 +1601,35 @@ as primary; the other becomes the secondary category for tie-breaking.
     cost-vs-quality axis: Cost = lowest-adequate, Balanced = sensible, Quality
     = highest-useful. When no posture is declared (legacy / direct callers),
     the default posture governs.
+
+    CONSUMPTION-HEADROOM OVERRIDE (the EFFORT axis): reasoning-effort / thinking
+    LEVEL and capability TIER are TWO SEPARATE dimensions, not one. The
+    budget-priority rules above scale BOTH down the ladder, but scaling effort is
+    only worthwhile when spending effort actually COSTS the user something —
+    out-of-pocket dollars (a per-token path), a usage cap they can exhaust, or
+    latency they value. When the appended user-context declares a
+    "Consumption headroom" posture, THAT states whether effort is a real cost for
+    this user and governs the effort axis ORTHOGONALLY to which model is chosen:
+    - `uncapped` — the user faces NO consumption cost: a flat subscription whose
+      usage budget they do not exhaust ($0 marginal AND effectively no cap), and
+      no valued latency cost. Effort is therefore FREE, so emit the HIGHEST USEFUL
+      reasoning effort the model + surface support (top of the effort dial —
+      `max`, or `xhigh` on a model with no `max` step) on ALL THREE priorities,
+      INCLUDING Cost. Under this posture the Cost/Balanced/Quality picks differ by
+      CAPABILITY TIER ALONE: Cost = the smallest adequate model at MAX effort;
+      Balanced = a mid model at MAX effort; Quality = the frontier model at MAX
+      effort. Do NOT scale effort down for Cost or Balanced, and keep extended
+      thinking ON — never emit an `Off` thinking / effort under this posture. This
+      OVERRIDES the "Never emit `Max` effort" floor in the `cheap` rule above; the
+      capability-tier ladder still applies unchanged.
+    - `capped` (and the DEFAULT when no headroom posture is declared) — consumption
+      IS a real cost (a usage cap the user can hit, or per-token spend), so effort
+      stays the cost-vs-quality lever exactly as the budget-priority rules above
+      define it: Cost = lowest-adequate, Balanced = sensible, Quality =
+      highest-useful.
+    This posture NEVER changes WHICH model is picked (that remains the
+    budget-priority + `<access-selection>` decision) — it only sets how much
+    reasoning effort each already-chosen pick runs at.
   </objective>
 
   <pricing-context>
@@ -2700,7 +2762,9 @@ as primary; the other becomes the secondary category for tie-breaking.
       still beats new per-token spend. This is the ONE case where the user's
       funding may change WHICH model is chosen (a deliberate, scoped exception
       to the `<access-selection>` rule that funding changes only the platform).
-      Never emit `Max`; never over-buy tier or effort beyond what the task needs.
+      Never emit `Max` effort — UNLESS the CONSUMPTION-HEADROOM OVERRIDE below is
+      `uncapped`, which suspends this effort floor (see it for the full rule).
+      Never over-buy the capability TIER beyond what the task needs.
     - `balanced` (Balanced) — recommend the best value, landing BETWEEN the
       Cost and Quality picks in capability and effort: prefer a $0-funded model
       when competitive, prefer the cheaper model when two are CLOSE in expected
@@ -2714,6 +2778,35 @@ as primary; the other becomes the secondary category for tie-breaking.
     cost-vs-quality axis: Cost = lowest-adequate, Balanced = sensible, Quality
     = highest-useful. When no posture is declared (legacy / direct callers),
     the default posture governs.
+
+    CONSUMPTION-HEADROOM OVERRIDE (the EFFORT axis): reasoning-effort / thinking
+    LEVEL and capability TIER are TWO SEPARATE dimensions, not one. The
+    budget-priority rules above scale BOTH down the ladder, but scaling effort is
+    only worthwhile when spending effort actually COSTS the user something —
+    out-of-pocket dollars (a per-token path), a usage cap they can exhaust, or
+    latency they value. When the appended user-context declares a
+    "Consumption headroom" posture, THAT states whether effort is a real cost for
+    this user and governs the effort axis ORTHOGONALLY to which model is chosen:
+    - `uncapped` — the user faces NO consumption cost: a flat subscription whose
+      usage budget they do not exhaust ($0 marginal AND effectively no cap), and
+      no valued latency cost. Effort is therefore FREE, so emit the HIGHEST USEFUL
+      reasoning effort the model + surface support (top of the effort dial —
+      `max`, or `xhigh` on a model with no `max` step) on ALL THREE priorities,
+      INCLUDING Cost. Under this posture the Cost/Balanced/Quality picks differ by
+      CAPABILITY TIER ALONE: Cost = the smallest adequate model at MAX effort;
+      Balanced = a mid model at MAX effort; Quality = the frontier model at MAX
+      effort. Do NOT scale effort down for Cost or Balanced, and keep extended
+      thinking ON — never emit an `Off` thinking / effort under this posture. This
+      OVERRIDES the "Never emit `Max` effort" floor in the `cheap` rule above; the
+      capability-tier ladder still applies unchanged.
+    - `capped` (and the DEFAULT when no headroom posture is declared) — consumption
+      IS a real cost (a usage cap the user can hit, or per-token spend), so effort
+      stays the cost-vs-quality lever exactly as the budget-priority rules above
+      define it: Cost = lowest-adequate, Balanced = sensible, Quality =
+      highest-useful.
+    This posture NEVER changes WHICH model is picked (that remains the
+    budget-priority + `<access-selection>` decision) — it only sets how much
+    reasoning effort each already-chosen pick runs at.
   </objective>
 
   <pricing-context>

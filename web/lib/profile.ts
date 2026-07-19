@@ -25,6 +25,13 @@ export type ApiProviderId = string;
 
 export type BudgetPriority = "cheap" | "balanced" | "best";
 
+// Consumption-headroom effort axis: whether the recommender keeps reasoning
+// EFFORT maxed across all three picks or scales it down the Cost/Balanced/
+// Quality ladder. `auto` derives from the user's funded tier price (top consumer
+// band => uncapped); `uncapped`/`capped` are explicit overrides. Governs effort
+// level only, never which model is chosen.
+export type ConsumptionHeadroom = "auto" | "uncapped" | "capped";
+
 export type JurisdictionCode =
   | "us"
   | "eu"
@@ -44,6 +51,8 @@ export interface Profile {
   // Additive; defaults to [] for pre-4.8 rows.
   api_providers: ApiProviderId[];
   budget_priority: BudgetPriority;
+  // Effort-axis control (additive; defaults to 'auto' for pre-existing rows).
+  consumption_headroom: ConsumptionHeadroom;
   allowed_jurisdictions: JurisdictionCode[];
   onboarded_at: string | null;
   created_at: string;
@@ -58,6 +67,7 @@ export const DEFAULT_PROFILE = {
   subscriptions: [] as SubscriptionId[],
   api_providers: [] as ApiProviderId[],
   budget_priority: "balanced" as BudgetPriority,
+  consumption_headroom: "auto" as ConsumptionHeadroom,
   // Default INCLUDES cn (#445): Chinese open-weight models (DeepSeek, GLM via
   // z.ai) are mainstream, so they're available by default. Users opt IN to
   // hiding higher-risk jurisdictions via the "restrict to low-risk" toggle,
@@ -93,8 +103,15 @@ export function e2eUpsertProfile(
   userId: string,
   row: Omit<
     Profile,
-    "user_id" | "created_at" | "updated_at" | "frontier_roadmap_override"
-  > & { frontier_roadmap_override?: boolean | null },
+    | "user_id"
+    | "created_at"
+    | "updated_at"
+    | "frontier_roadmap_override"
+    | "consumption_headroom"
+  > & {
+    frontier_roadmap_override?: boolean | null;
+    consumption_headroom?: ConsumptionHeadroom;
+  },
 ): Profile {
   const existing = e2eProfiles.get(userId);
   const now = new Date().toISOString();
@@ -103,6 +120,7 @@ export function e2eUpsertProfile(
     subscriptions: row.subscriptions,
     api_providers: row.api_providers,
     budget_priority: row.budget_priority,
+    consumption_headroom: row.consumption_headroom ?? "auto",
     allowed_jurisdictions: row.allowed_jurisdictions,
     onboarded_at: row.onboarded_at,
     created_at: existing?.created_at ?? now,
@@ -134,6 +152,8 @@ function mapRow(row: Record<string, unknown>): Profile {
     subscriptions: (row.subscriptions ?? []) as SubscriptionId[],
     api_providers: (row.api_providers ?? []) as ApiProviderId[],
     budget_priority: row.budget_priority as BudgetPriority,
+    consumption_headroom: (row.consumption_headroom ??
+      "auto") as ConsumptionHeadroom,
     allowed_jurisdictions: (row.allowed_jurisdictions ??
       DEFAULT_PROFILE.allowed_jurisdictions) as JurisdictionCode[],
     onboarded_at: (row.onboarded_at as string | null) ?? null,

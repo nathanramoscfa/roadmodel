@@ -16,6 +16,7 @@ from roadmodel.errors import (  # type: ignore[import-untyped]
     ProviderCallError,
 )
 from roadmodel.recommend import (  # type: ignore[import-untyped]
+    _structured_settings,
     recommend_structured,
     recommend_structured_ladder,
 )
@@ -28,7 +29,7 @@ from .funding import (
     resolve_allowed_jurisdictions,
     user_context_from_request,
 )
-from .models import LadderResponse, RecommendRequest, RecommendResponse
+from .models import BackupPick, LadderResponse, RecommendRequest, RecommendResponse
 
 logger = logging.getLogger(__name__)
 
@@ -373,6 +374,59 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
 _TIER_TO_PRIORITY: dict[str, str] = {"quality": "best", "balanced": "balanced", "cost": "cheap"}
 
 
+# Settings keys that carry the reasoning-EFFORT LEVEL a pick runs at, in the
+# order we trust them. `effort` (Claude Code) / `intelligence` (Codex, OpenAI)
+# hold the level directly; `thinking` is a fallback (a level on some surfaces, a
+# bare On/Off toggle on others — filtered below).
+_LEVEL_KEYS = ("effort", "intelligence", "thinking")
+_NON_LEVEL_VALUES = frozenset({"on", "off", "n/a", "na", "none", ""})
+
+
+def _reasoning_level(settings: dict[str, Any]) -> str | None:
+    """The reasoning-effort LEVEL a pick runs at (e.g. `Max`, `XHigh`, `High`,
+    `Ultracode`), read from its structured settings, or None when the surface
+    carries no dial-able level (e.g. Cursor, whose thinking is a bare `On`)."""
+    for key in _LEVEL_KEYS:
+        value = settings.get(key)
+        if isinstance(value, str) and value.strip().lower() not in _NON_LEVEL_VALUES:
+            return value.strip()
+    return None
+
+
+def _build_backup(result: dict[str, Any], access_guard: AccessGuard | None) -> BackupPick | None:
+    """Enrich the Step 7 backup name into a BackupPick that adheres to the user's
+    settings: the funded surface they run it on, plus its per-surface settings at
+    the SAME reasoning posture as the pick (effort is a per-user axis, applied
+    uniformly). Best-effort — platform/settings stay unset when unresolvable
+    (anon / no funding), so the client falls back to showing just the model name.
+
+    Called AFTER ``access_guard.enforce`` so it enriches the FINAL backup name
+    (post-substitution), never a name the guard already replaced."""
+    name = result.get("backup")
+    if not name:
+        return None
+    platform = access_guard.platform_for(name) if access_guard is not None else None
+    settings: dict[str, Any] = {}
+    if platform:
+        level = _reasoning_level(result.get("settings") or {})
+        if level is not None:
+            # Ultracode is a Claude-Code session mode; on a cross-provider backup
+            # it reads as that surface's top effort -> Max.
+            thinking = "Max" if level.lower() == "ultracode" else level
+            settings = _normalize_no_thinking(
+                platform,
+                _structured_settings(
+                    {
+                        "platform": platform,
+                        "max_mode": "Off",
+                        "thinking": thinking,
+                        "orchestration": "None",
+                    }
+                ),
+            )
+    return BackupPick(model=name, platform=platform, settings=settings)
+
+
 def _pick_response(
     result: dict[str, Any],
     task_description: str,
@@ -416,8 +470,9 @@ def _pick_response(
         rationale_sections=rationale_sections,
         # Carry the conversation-handling decision across the boundary (#190).
         conversation=result.get("conversation") or None,
-        # Carry the fallback model (Step 7) across the boundary.
-        backup=result.get("backup") or None,
+        # Carry the fallback model (Step 7), enriched with its own funded platform
+        # + per-surface settings so the backup adheres to the user's settings too.
+        backup=_build_backup(result, access_guard),
         session_cost_estimate=session_cost_estimate,
         comparison_table=comparison_table,
     )

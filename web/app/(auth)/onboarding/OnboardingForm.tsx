@@ -31,6 +31,7 @@ export function OnboardingForm({
       apiProviderOptions={apiProviderOptions}
       initialApiProviders={[]}
       initialBudgetPriority="balanced"
+      initialConsumptionHeadroom="auto"
       initialJurisdictions={DEFAULT_JURISDICTIONS}
       submitLabel="Save and continue"
       redirectOnSave={next}

@@ -151,7 +151,7 @@ test("renders the backup model line when the recommendation includes one", async
         model: "Opus 4.8",
         platform: "Claude Code",
         settings: { max_mode: "OFF", thinking: "High" },
-        backup: "GPT-5.5",
+        backup: { model: "GPT-5.5", platform: "Codex", settings: { intelligence: "High" } },
         comparison_table: [],
       }),
     }),
