@@ -32,6 +32,11 @@ from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Any
 
+# The pool-aggregator provider set (Cursor) — SHARED with the package's
+# roadmodel.cost.model_provider so this service-side maker resolution can never
+# drift from it (the drift was the aggregator-maker backup bug).
+from roadmodel.cost import _AGGREGATOR_PROVIDERS  # type: ignore[import-untyped]
+
 logger = logging.getLogger(__name__)
 
 _BUNDLED_CATALOG_PATH: Traversable = resources.files("roadmodel.data") / "catalog.json"
@@ -138,6 +143,81 @@ def _budget_block(budget: str) -> str:
         f"quality-first posture in the selector objective. For this request, "
         f"{posture} On a quality tie a $0 held subscription beats new "
         f"pay-per-token spend; treat the subscriptions above as sunk cost."
+    )
+
+
+# --- Consumption headroom (effort axis) -------------------------------------
+#
+# Reasoning EFFORT and capability TIER are two separate axes. The budget-priority
+# posture above scales BOTH down the Cost/Balanced/Quality ladder, but scaling
+# effort only helps when effort actually COSTS the user something — per-token
+# dollars, a usage cap they can exhaust, or latency they value. A user on a
+# top-tier flat subscription who never exhausts the budget and does not value
+# speed pays NOTHING for max effort, so scaling it down on the Cost pick buys
+# them nothing and only lowers quality. This posture governs the effort axis
+# ORTHOGONALLY to which model is chosen.
+#
+# Hybrid activation (matches the Settings control):
+#   - `uncapped` / `capped`: explicit user override, honored as-is.
+#   - `auto` (default): DERIVE from funded tiers — a subscription in the top
+#     consumer price band (>= $200/mo, the "maximum available under consumer
+#     subscriptions") resolves to `uncapped`; anything else (lower sub, or
+#     per-token only) stays `capped`, the conservative behavior-unchanged default.
+# Only the behavior-CHANGING `uncapped` posture is rendered into the context
+# (see _consumption_block); `capped` is the selector's existing default, so it
+# emits nothing and keeps the prompt lean.
+_TOP_TIER_MONTHLY_USD: float = 200.0
+
+_CONSUMPTION_HEADROOM_VALUES: frozenset[str] = frozenset({"auto", "uncapped", "capped"})
+
+
+def _effective_consumption_headroom(stored: str | None, sub_set: set[str], tiers: Any) -> str:
+    """Resolve the stored headroom setting to an effective posture (`uncapped` /
+    `capped`). Explicit values pass through; `auto` (or any unknown/absent value)
+    derives from the user's funded subscription tiers — `uncapped` iff one sits in
+    the top consumer price band, else `capped` (conservative)."""
+    value = (stored or "auto").strip().lower()
+    if value == "uncapped":
+        return "uncapped"
+    if value == "capped":
+        return "capped"
+    # auto (and any unrecognized value): derive from funded-tier prices.
+    for tier in tiers:
+        provider = tier.get("provider")
+        name = tier.get("tier")
+        if not isinstance(provider, str) or not isinstance(name, str):
+            continue
+        if _tier_id(provider, name) not in sub_set:
+            continue
+        try:
+            monthly = float(tier.get("monthly_usd") or 0.0)
+        except (TypeError, ValueError):
+            monthly = 0.0
+        if monthly >= _TOP_TIER_MONTHLY_USD:
+            return "uncapped"
+    return "capped"
+
+
+def _consumption_block() -> str:
+    """The self-asserting `uncapped` consumption-headroom posture. Rendered only
+    when the effective posture is `uncapped` (the behavior-changing case), so it
+    takes effect from the appended user-context alone — even before the matching
+    docs/model-selector.txt <objective> "CONSUMPTION-HEADROOM OVERRIDE" clause
+    ships in a roadmodel release (mirrors the budget-posture precedent)."""
+    return (
+        "**Consumption headroom:** uncapped — this user runs a flat subscription "
+        "whose usage budget they do not exhaust, so spending more reasoning EFFORT "
+        "costs them nothing (no per-token dollars, no usage cap they hit, latency "
+        "not valued). This OVERRIDES the effort-scaling in the budget priority "
+        "above on the reasoning-effort / thinking-LEVEL axis ONLY: emit the "
+        "HIGHEST USEFUL reasoning effort the model + surface support (top of the "
+        "effort dial — `max`, or `xhigh` where the model has no `max` step) on ALL "
+        "THREE priorities INCLUDING Cost, and keep extended thinking ON (never "
+        "emit an Off thinking / effort). The Cost/Balanced/Quality picks must "
+        "still differ, but by CAPABILITY TIER ALONE (Cost = the smallest adequate "
+        "model at MAX effort; Quality = the frontier model at MAX effort), NOT by "
+        "effort. This changes only how much effort each pick runs at, never WHICH "
+        "model is chosen."
     )
 
 
@@ -312,6 +392,7 @@ def build_user_context(
     api_providers: list[str],
     *,
     budget_priority: str | None = None,
+    consumption_headroom: str | None = None,
     allowed_jurisdictions: list[str] | None = None,
     catalog: dict[str, Any] | None = None,
 ) -> str | None:
@@ -382,6 +463,13 @@ def build_user_context(
     if isinstance(budget_priority, str) and budget_priority:
         budget = budget_priority
 
+    # Consumption-headroom posture (effort axis): rendered only when it resolves
+    # to `uncapped` (the behavior-changing case); `capped`/default emits nothing
+    # so the prompt and the highest-volume default path stay unchanged. A leading
+    # blank line keeps the block visually separated from the budget block above.
+    headroom = _effective_consumption_headroom(consumption_headroom, sub_set, tiers)
+    consumption_line = "\n" + _consumption_block() + "\n" if headroom == "uncapped" else ""
+
     # No funding declared:
     #   - DEFAULT (balanced) budget -> None: the anon / free path is unchanged
     #     (the bundled template governs, exactly as before this lever existed),
@@ -450,7 +538,7 @@ key that is not listed above.
 ## Budget priority and speed posture
 
 {_budget_block(budget)}
-
+{consumption_line}
 **Speed posture:** not a valued dimension unless the prompt states an explicit
 latency requirement.
 
@@ -584,9 +672,7 @@ class FundingGuard:
                 # the edge's unsplit fallback rendering stays consistent.
                 task = sections.get("task", "")
                 pick = sections.get("pick", "")
-                rebuilt = (
-                    f"TASK: {task} PICK: {pick} RUN: {honest}" if task and pick else rationale
-                )
+                rebuilt = f"TASK: {task} PICK: {pick} RUN: {honest}" if task and pick else rationale
                 return rebuilt, sections
 
             # No structured sections: append a correction rather than attempt
@@ -679,31 +765,62 @@ class AccessGuard:
             except (TypeError, ValueError):
                 out_price = 0.0
             tiers = model.get("tiers") if isinstance(model.get("tiers"), dict) else {}
-            quality = sum(
-                _TIER_POINTS.get(str(v).strip().upper(), 0) for v in tiers.values()
-            )
+            quality = sum(_TIER_POINTS.get(str(v).strip().upper(), 0) for v in tiers.values())
             self._meta[mid] = {"name": name, "out_price": out_price, "quality": quality}
 
-        # model id -> a user-usable access-method display name (prefer the
-        # declared API per-token surface, else a funded subscription surface).
+        # model id -> a user-usable access-method display name. A $0-funded
+        # subscription surface is PREFERRED over a pay-per-token API surface (the
+        # "your cost to you" ordering also documented in the user-context Platform
+        # preference), so e.g. Claude Haiku shows "Claude Code" ($0 via Max), not
+        # "Anthropic API". Was first-usable-in-catalog-order, which could label a
+        # $0-funded model with a paid API surface.
         self._platform_of: dict[str, str] = {}
+        _funded_platform_of: dict[str, str] = {}
+        _api_platform_of: dict[str, str] = {}
         self._maker_of: dict[str, str] = {}
+        # Models reachable at $0 via a funded SUBSCRIPTION surface — their
+        # effective cost to the user is $0, used to prefer them for the Cost pick
+        # (a $0 Claude Haiku beats a $0.003 GPT Nano on "your cost to you").
+        self._funded_model_ids: set[str] = set()
+        # All provider makers that support each model, so the MAKER can be
+        # resolved aggregator-aware below (a first pass; resolution follows).
+        providers_by_model: dict[str, set[str]] = {}
         for method in methods:
             provider = method.get("provider")
             mid = method.get("id")
             name = method.get("name")
-            usable = (
-                method.get("billing") in _API_BILLING and provider in self._api_set
-            ) or (isinstance(mid, str) and mid in self._funded_surface_ids)
+            display = name if isinstance(name, str) else str(mid)
+            api_usable = method.get("billing") in _API_BILLING and provider in self._api_set
+            funded_sub = isinstance(mid, str) and mid in self._funded_surface_ids
             for supported in method.get("supports_models") or []:
                 if not isinstance(supported, str):
                     continue
-                if isinstance(provider, str) and supported not in self._maker_of:
-                    self._maker_of[supported] = provider
-                if usable and supported not in self._platform_of:
-                    self._platform_of[supported] = (
-                        name if isinstance(name, str) else str(mid)
-                    )
+                if isinstance(provider, str):
+                    providers_by_model.setdefault(supported, set()).add(provider)
+                if funded_sub:
+                    self._funded_model_ids.add(supported)
+                    _funded_platform_of.setdefault(supported, display)
+                if api_usable:
+                    _api_platform_of.setdefault(supported, display)
+        # Funded ($0) surface first, then a declared pay-per-token API surface.
+        for mid_ in {*_funded_platform_of, *_api_platform_of}:
+            self._platform_of[mid_] = _funded_platform_of.get(mid_) or _api_platform_of[mid_]
+        # Resolve each model's MAKER excluding pool aggregators (Cursor), mirroring
+        # roadmodel.cost.model_provider so THIS guard's cross-provider backup check
+        # agrees with the package's. A model reachable via Cursor's pool AND its
+        # own provider resolves to its real maker; one reachable ONLY via an
+        # aggregator keeps the aggregator. Fixes the aggregator-drift bug: taking
+        # the FIRST method's provider resolved GPT-5.4 Nano (via Cursor's pool) to
+        # "cursor" instead of "openai", so a same-maker OpenAI backup passed the
+        # different-maker check (observed in prod: GPT-5.4 Nano + GPT-5 Mini).
+        for supported, provs in providers_by_model.items():
+            first_party = provs - _AGGREGATOR_PROVIDERS
+            if len(first_party) == 1:
+                self._maker_of[supported] = next(iter(first_party))
+            elif not first_party and len(provs) == 1:
+                self._maker_of[supported] = next(iter(provs))
+            # Ambiguous (multiple first-party makers) -> unknown, matching
+            # model_provider — the different-maker guard then fails safe.
 
     def _resolve_id(self, model_ref: str | None) -> str | None:
         if not model_ref:
@@ -714,14 +831,27 @@ class AccessGuard:
         mid = self._resolve_id(model_ref)
         return mid is not None and mid in self._accessible_ids
 
+    def platform_for(self, model_ref: str | None) -> str | None:
+        """The user-usable access-method DISPLAY NAME for a model (the declared
+        API per-token surface, else a funded subscription surface), or None when
+        the model isn't in the catalog / has no usable surface. Used to give the
+        Step 7 backup its own funded platform, mirroring the primary pick."""
+        mid = self._resolve_id(model_ref)
+        return self._platform_of.get(mid) if mid is not None else None
+
     def _rank_key(self, priority: str, model_id: str) -> tuple[Any, ...]:
         meta = self._meta.get(model_id, {})
         quality = int(meta.get("quality", 0))
         price = float(meta.get("out_price", 0.0))
         prio = priority.strip().lower()
         if prio == "cheap":
-            # Cheapest, then higher quality, then id (ascending) — min() key.
-            return (price, -quality, model_id)
+            # Prefer a $0-funded model (effective cost $0 to the user) over a
+            # cheap pay-per-token one, THEN cheapest raw price (smallest adequate),
+            # higher quality, id — min() key. Before this, a $0-funded Claude Haiku
+            # (raw ~$4/M) lost to a $0.003 GPT Nano on raw price, so the Cost
+            # substitute charged real cash when a funded model was free (dogfood).
+            funded_rank = 0 if model_id in self._funded_model_ids else 1
+            return (funded_rank, price, -quality, model_id)
         if prio == "best":
             # Highest quality, then pricier (proxy capability), then id — max().
             return (quality, price, _neg_str(model_id))
@@ -729,9 +859,7 @@ class AccessGuard:
         value = quality / price if price > 0 else float(quality)
         return (value, quality, _neg_str(model_id))
 
-    def _best_substitute(
-        self, priority: str, *, exclude_maker: str | None = None
-    ) -> str | None:
+    def _best_substitute(self, priority: str, *, exclude_maker: str | None = None) -> str | None:
         candidates = [
             mid
             for mid in self._accessible_ids
@@ -766,9 +894,7 @@ class AccessGuard:
                     and self._maker_of.get(self._resolve_id(backup) or "") == primary_maker
                 ):
                     sub_backup = self._best_substitute(priority, exclude_maker=primary_maker)
-                    result["backup"] = (
-                        self._meta[sub_backup]["name"] if sub_backup else None
-                    )
+                    result["backup"] = self._meta[sub_backup]["name"] if sub_backup else None
             return changed
         except Exception:  # noqa: BLE001 - guard is best-effort, never fatal
             logger.warning("access guard failed (non-fatal)", exc_info=True)
@@ -866,6 +992,8 @@ def user_context_from_request(context: dict[str, Any] | None) -> str | None:
 
     budget_raw = context.get("budget_priority")
     budget_priority = budget_raw if isinstance(budget_raw, str) else None
+    headroom_raw = context.get("consumption_headroom")
+    consumption_headroom = headroom_raw if isinstance(headroom_raw, str) else None
     allowed_jurisdictions = _str_list(context.get("allowed_jurisdictions")) or None
 
     # No funding declared -> short-circuit to the bundled template (free path
@@ -883,6 +1011,7 @@ def user_context_from_request(context: dict[str, Any] | None) -> str | None:
             subscriptions,
             api_providers,
             budget_priority=budget_priority,
+            consumption_headroom=consumption_headroom,
             allowed_jurisdictions=allowed_jurisdictions,
         )
     except Exception:  # noqa: BLE001 - funding context is best-effort, never fatal

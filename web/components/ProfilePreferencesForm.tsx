@@ -12,12 +12,14 @@ import { useState } from "react";
 import type {
   ApiProviderId,
   BudgetPriority,
+  ConsumptionHeadroom,
   JurisdictionCode,
   SubscriptionId,
 } from "@/lib/profile";
 import type { ApiProviderOption } from "@/lib/api-providers";
 import type { SubscriptionOption } from "@/lib/subscriptions";
 import { BUDGET_PRIORITY_OPTIONS } from "@/lib/budget-priority";
+import { CONSUMPTION_HEADROOM_OPTIONS } from "@/lib/consumption-headroom";
 
 // The "low-risk" jurisdiction set — what the "Restrict to low-risk
 // jurisdictions" toggle narrows to, and the chips shown when it's on. Excludes
@@ -112,6 +114,7 @@ export interface ProfilePreferencesFormProps {
   apiProviderOptions: ApiProviderOption[];
   initialApiProviders: ApiProviderId[];
   initialBudgetPriority: BudgetPriority;
+  initialConsumptionHeadroom: ConsumptionHeadroom;
   initialJurisdictions: JurisdictionCode[];
   submitLabel: string;
   // Onboarding redirects to `next` after save. Settings stays on the page
@@ -127,6 +130,7 @@ export function ProfilePreferencesForm({
   apiProviderOptions,
   initialApiProviders,
   initialBudgetPriority,
+  initialConsumptionHeadroom,
   initialJurisdictions,
   submitLabel,
   redirectOnSave,
@@ -139,6 +143,8 @@ export function ProfilePreferencesForm({
     useState<ApiProviderId[]>(initialApiProviders);
   const [budgetPriority, setBudgetPriority] =
     useState<BudgetPriority>(initialBudgetPriority);
+  const [consumptionHeadroom, setConsumptionHeadroom] =
+    useState<ConsumptionHeadroom>(initialConsumptionHeadroom);
   const [restrictLowRisk, setRestrictLowRisk] = useState(
     sameJurisdictionSet(initialJurisdictions, LOW_RISK_JURISDICTIONS),
   );
@@ -241,6 +247,7 @@ export function ProfilePreferencesForm({
       subscriptions,
       api_providers: effectiveApiProviders(),
       budget_priority: budgetPriority,
+      consumption_headroom: consumptionHeadroom,
       allowed_jurisdictions: allowedJurisdictions(),
       skip: false,
     });
@@ -366,6 +373,43 @@ export function ProfilePreferencesForm({
                 className="accent-brand-accent"
               />
               {option.label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend className="text-sm font-semibold text-brand-slate-900 dark:text-brand-slate-50">
+          Reasoning effort
+        </legend>
+        <p className="mt-1 text-sm text-brand-slate-600 dark:text-brand-slate-300">
+          Effort is separate from which model we pick. Higher effort is only
+          worth trading away when it costs you — per-token spend or a usage limit
+          you actually hit.
+        </p>
+        <div className="mt-4 flex flex-col gap-3">
+          {CONSUMPTION_HEADROOM_OPTIONS.map((option) => (
+            <label
+              key={option.id}
+              className="flex items-start gap-2 text-sm text-brand-slate-800 dark:text-brand-slate-100"
+            >
+              <input
+                type="radio"
+                name="consumption_headroom"
+                value={option.id}
+                checked={consumptionHeadroom === option.id}
+                onChange={() => {
+                  setSaved(false);
+                  setConsumptionHeadroom(option.id);
+                }}
+                className="mt-0.5 accent-brand-accent"
+              />
+              <span className="flex flex-col">
+                <span className="font-medium">{option.label}</span>
+                <span className="text-xs text-brand-slate-500 dark:text-brand-slate-400">
+                  {option.hint}
+                </span>
+              </span>
             </label>
           ))}
         </div>

@@ -225,7 +225,13 @@ def test_recommend_carries_backup(
     response = client.post("/v1/recommend", json=_request_payload())
 
     assert response.status_code == 200
-    assert response.json()["backup"] == "GPT-5.5"
+    backup = response.json()["backup"]
+    # Backup is now a structured BackupPick {model, platform, settings}; anon
+    # request declares no funding, so platform/settings are unresolved (the
+    # client then shows just the model name).
+    assert backup["model"] == "GPT-5.5"
+    assert backup["platform"] is None
+    assert backup["settings"] == {}
 
 
 def test_recommend_normalizes_thinking_na_on_no_thinking_surface(
@@ -1027,5 +1033,5 @@ def test_ladder_endpoint_carries_backup_and_guard(
     monkeypatch.setattr(recommend_module, "recommend_structured_ladder", _fake_ladder)
 
     body = client.post("/v1/recommend/ladder", json=_request_payload()).json()
-    assert body["picks"]["quality"]["backup"] == "GPT-5.5"
+    assert body["picks"]["quality"]["backup"]["model"] == "GPT-5.5"
     assert body["guard"]["distinct_tiers"] is True
