@@ -379,6 +379,32 @@ def same_provider(model_a: str, model_b: str) -> bool:
     return provider_a is not None and provider_a == provider_b
 
 
+def model_id_of(model_ref: str) -> str | None:
+    """Resolve a model id-or-name to its catalog ``id`` (the stable slug), or
+    ``None`` on a catalog miss (never raises). The runtime availability list
+    (Step 0a) is keyed by id, so callers checking whether a model is benched
+    canonicalize a free-form ref to its id first."""
+    try:
+        return str(_resolve_model(model_ref, _load_catalog())["id"])
+    except (ValueError, BundledDocNotFoundError, KeyError):
+        return None
+
+
+def model_jurisdiction(model_ref: str) -> str | None:
+    """Resolve a model id-or-name to its catalog ``jurisdiction`` (lowercased),
+    or ``None`` on a catalog miss / missing field (never raises).
+
+    Mirrors the fail-safe stance of :func:`model_provider`: a caller using this
+    to REJECT a region-blocked backup should keep the backup when this returns
+    ``None`` (we never assert a jurisdiction violation we can't prove)."""
+    try:
+        model = _resolve_model(model_ref, _load_catalog())
+    except (ValueError, BundledDocNotFoundError):
+        return None
+    juris = str(model.get("jurisdiction", "")).strip().lower()
+    return juris or None
+
+
 def suggest_cross_provider_backup(
     primary_model: str,
     *,
