@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.27] — 2026-07-19
+
+### Fixed
+
+- **OpenAI reasoning models (`gpt-5*`) now return output.** These models count
+  reasoning tokens against `max_output_tokens`, so without a reasoning cap the
+  reasoning consumed the entire budget and the recommend call returned NO visible
+  text (observed: `gpt-5-mini` ~32s, empty). The OpenAI provider now forwards
+  `thinking_budget` as `reasoning.effort` for `gpt-5*` models (0 → minimal, else
+  low), so `gpt-5-mini` runs in ~7s and emits a valid recommendation — enabling
+  GPT-5 mini as a recommender engine (best instruction-adherence + ~3× cheaper
+  with OpenAI automatic prefix caching, per the differential engine eval).
+
 ## [0.2.26] — 2026-07-19
 
 ### Fixed
