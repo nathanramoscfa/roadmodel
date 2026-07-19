@@ -226,7 +226,9 @@ def test_reject_reason_ordering_and_fail_safe() -> None:
     same = {"same_provider": True}
     # Same-maker wins regardless of the other fields.
     assert (
-        _backup_reject_reason("Opus 4.8", same, allowed_jurisdictions=["us"], unavailable_models=None)
+        _backup_reject_reason(
+            "Opus 4.8", same, allowed_jurisdictions=["us"], unavailable_models=None
+        )
         == "same_provider"
     )
     # Cross-provider, region-allowed, available → keep.
@@ -268,9 +270,7 @@ def test_recommend_structured_substitutes_region_blocked_cross_provider_backup(
     old maker-only guard kept it verbatim) that is OUTSIDE the us-only user's
     regions. It is now rejected and substituted with a region-valid cross-provider
     model, instead of surfacing a backup the user legally cannot use."""
-    monkeypatch.setattr(
-        recommend_module, "recommend", _fake_base_with(backup="DeepSeek-V4-Pro")
-    )
+    monkeypatch.setattr(recommend_module, "recommend", _fake_base_with(backup="DeepSeek-V4-Pro"))
     payload = recommend_module.recommend_structured(
         "audit this", _config(tmp_path), allowed_jurisdictions=["us"]
     )
