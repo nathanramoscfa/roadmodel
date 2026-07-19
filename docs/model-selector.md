@@ -4164,4 +4164,4 @@ Ladder construction rules (the WHOLE POINT of this mode — obey strictly):
      QUALITY pick.
   6. Each pick independently obeys every algorithm rule (availability,
      jurisdiction, the Step 7 cross-provider BACKUP requirement, platform
-     funding, thinking/max-mode/orchestration mapping).
+     funding, thinking/max-mode/orchestration bounded by exposure).
