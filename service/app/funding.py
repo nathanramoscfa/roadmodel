@@ -35,7 +35,7 @@ from typing import Any
 # The pool-aggregator provider set (Cursor) — SHARED with the package's
 # roadmodel.cost.model_provider so this service-side maker resolution can never
 # drift from it (the drift was the aggregator-maker backup bug).
-from roadmodel.cost import _AGGREGATOR_PROVIDERS
+from roadmodel.cost import _AGGREGATOR_PROVIDERS  # type: ignore[import-untyped]
 
 logger = logging.getLogger(__name__)
 

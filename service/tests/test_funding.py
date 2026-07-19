@@ -840,8 +840,11 @@ def test_maker_resolution_excludes_pool_aggregator() -> None:
     provider resolves to its REAL maker, not the aggregator — so this guard's
     cross-provider check agrees with roadmodel.cost.model_provider."""
     g = _agg_guard(["claude-max", "openai-chatgpt-plus"], ["openai", "anthropic"])
-    assert g._maker_of[g._resolve_id("Nano")] == "openai"  # not "cursor"
-    assert g._maker_of[g._resolve_id("Composer")] == "cursor"  # aggregator-only
+    nano_id = g._resolve_id("Nano")
+    composer_id = g._resolve_id("Composer")
+    assert nano_id and composer_id
+    assert g._maker_of[nano_id] == "openai"  # not "cursor"
+    assert g._maker_of[composer_id] == "cursor"  # aggregator-only
 
 
 def test_backup_same_maker_via_aggregator_is_caught() -> None:
