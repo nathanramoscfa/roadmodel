@@ -34,7 +34,7 @@ table and surface material cost / availability / capability constraints.
 | Model            | Input | Cache Write | Cache Read | Output | Tier | Notes |
 | ---------------- | ----- | ----------- | ---------- | ------ | ---- | ----- |
 | Composer 2.5     | $0.50 | –           | $0.20      | $2.50  | Low  | -     |
-| Grok 4.5         | $2.00 | –           | $0.50      | $6.00  | Low  | Jointly trained by Cursor and SpaceXAI; Not yet available in the European Union |
+| Grok 4.5         | $2.00 | –           | $0.50      | $6.00  | Low  | Jointly trained by Cursor and SpaceXAI |
 | Auto (pool rate) | $1.25 | $1.25       | $0.25      | $6.00  | Low  | Cursor-managed routing across the Auto + Composer pool; not a fixed model |
 
 
@@ -46,15 +46,15 @@ table and surface material cost / availability / capability constraints.
 | Claude 4 Sonnet             | $3.00  | $3.75       | $0.30      | $15.00  | High      | Hidden by default; Thinking variant counts as 2 requests in legacy pricing |
 | Claude 4 Sonnet 1M          | $6.00  | $7.50       | $0.60      | $22.50  | High      | Hidden by default; Thinking variant counts as 2 requests in legacy pricing; This model can be very expensive due to the large context window; The cost is 2x when the input exceeds 200k tokens |
 | Claude 4.5 Haiku            | $1.00  | $1.25       | $0.10      | $5.00   | Low       | Hidden by default; Bedrock/Vertex: regional endpoints +10% surcharge; Cache: writes 1.25x, reads 0.1x |
-| Claude 4.5 Opus             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Hidden by default; Requires Max Mode on request-based plans |
-| Claude 4.5 Sonnet           | $3.00  | $3.75       | $0.30      | $15.00  | High      | Hidden by default; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
-| Claude 4.6 Opus             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Hidden by default; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
-| Claude 4.6 Sonnet           | $3.00  | $3.75       | $0.30      | $15.00  | High      | Hidden by default; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
-| Claude 4.7 Opus             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Hidden by default; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
-| Claude Fable 5              | $10.00 | $12.50      | $1.00      | $50.00  | Very High | Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; About 2x the cost of Claude Opus 4.8; Requires Max Mode on request-based plans |
-| Claude Opus 4.7 (fast mode) | $30.00 | $37.50      | $3.00      | $150.00 | Very High | Hidden by default; Requires Max Mode on request-based plans; Limited research preview; Up to 1M tokens in Max Mode at the same per-token rates as shorter context |
-| Claude Opus 4.8             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Requires Max Mode on request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge) |
-| Claude Sonnet 5             | $3.00  | $3.75       | $0.30      | $15.00  | High      | Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens |
+| Claude 4.5 Opus             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Hidden by default; Requires Max Mode on legacy request-based plans |
+| Claude 4.5 Sonnet           | $3.00  | $3.75       | $0.30      | $15.00  | High      | Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
+| Claude 4.6 Opus             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
+| Claude 4.6 Sonnet           | $3.00  | $3.75       | $0.30      | $15.00  | High      | Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
+| Claude 4.7 Opus             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
+| Claude Fable 5              | $10.00 | $12.50      | $1.00      | $50.00  | Very High | Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; About 2x the cost of Claude Opus 4.8; Requires Max Mode on legacy request-based plans |
+| Claude Opus 4.7 (fast mode) | $30.00 | $37.50      | $3.00      | $150.00 | Very High | Hidden by default; Requires Max Mode on legacy request-based plans; Limited research preview; Up to 1M tokens with extended context at the same per-token rates as shorter context |
+| Claude Opus 4.8             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode on legacy request-based plans; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
+| Claude Sonnet 5             | $3.00  | $3.75       | $0.30      | $15.00  | High      | Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens |
 
 
 ### API Pool — Cursor Composer
@@ -93,13 +93,13 @@ table and surface material cost / availability / capability constraints.
 | GPT-5.1 Codex Mini | $0.25 | –           | $0.025     | $2.00  | Low       | Hidden by default; Agentic and reasoning capabilities; 4x rate limits compared to GPT-5.1 Codex |
 | GPT-5.2            | $1.75 | –           | $0.175     | $14.00 | Medium    | Hidden by default; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.2-high |
 | GPT-5.2 Codex      | $1.75 | –           | $0.175     | $14.00 | Medium    | Hidden by default; Agentic and reasoning capabilities |
-| GPT-5.3 Codex      | $1.75 | –           | $0.175     | $14.00 | Medium    | Hidden by default; Requires Max Mode on request-based plans; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.3-codex-high |
-| GPT-5.4            | $2.50 | –           | $0.25      | $15.00 | High      | Hidden by default; Requires Max Mode on request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context (Max Mode) supports up to 1M tokens with 2x input pricing |
+| GPT-5.3 Codex      | $1.75 | –           | $0.175     | $14.00 | Medium    | Hidden by default; Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.3-codex-high |
+| GPT-5.4            | $2.50 | –           | $0.25      | $15.00 | High      | Hidden by default; Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context supports up to 1M tokens with 2x input pricing |
 | GPT-5.4 Mini       | $0.75 | –           | $0.075     | $4.50  | Low       | Hidden by default; Smaller, faster variant of GPT-5.4; 90% discount on cached input tokens |
 | GPT-5.4 Nano       | $0.20 | –           | $0.02      | $1.25  | Low       | Hidden by default; Smallest GPT-5.4 variant, optimized for cost; 90% discount on cached input tokens |
-| GPT-5.5            | $5.00 | –           | $0.50      | $30.00 | Very High | Hidden by default; Requires Max Mode on request-based plans; Agentic and reasoning capabilities; More token-efficient than GPT-5.4 on comparable tasks; Improved persistence on long-running tasks; Fast mode is available at higher rates; Long context (Max Mode) supports up to 1M tokens with 2x input pricing |
+| GPT-5.5            | $5.00 | –           | $0.50      | $30.00 | Very High | Hidden by default; Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; More token-efficient than GPT-5.4 on comparable tasks; Improved persistence on long-running tasks; Fast mode is available at higher rates; Long context supports up to 1M tokens with 2x input pricing |
 | GPT-5.6 Luna       | $1.00 | $1.25       | $0.10      | $6.00  | Low       | Smallest GPT-5.6 variant, optimized for cost and speed; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Cache writes are billed at 1.25x the uncached input rate |
-| GPT-5.6 Sol        | $5.00 | $6.25       | $0.50      | $30.00 | Very High | Requires Max Mode on request-based plans; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context (Max Mode) supports up to 1M tokens with 2x input pricing; Cache writes are billed at 1.25x the uncached input rate |
+| GPT-5.6 Sol        | $5.00 | $6.25       | $0.50      | $30.00 | Very High | Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Cache writes are billed at 1.25x the uncached input rate |
 | GPT-5.6 Terra      | $2.50 | $3.125      | $0.25      | $15.00 | High      | Mid-tier GPT-5.6 variant between Sol and Luna; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Cache writes are billed at 1.25x the uncached input rate |
 
 
@@ -121,7 +121,7 @@ table and surface material cost / availability / capability constraints.
 
 ---
 
-<!-- subscription-tiers-reviewed: 2026-07-15 -->
+<!-- subscription-tiers-reviewed: 2026-07-19 -->
 
 ## Subscription Tiers and Access Methods
 
@@ -169,22 +169,22 @@ parse cleanly. When that happens, eyeball the failing provider's page
 and adjust the rebuild rules in [`update/prompt.md`](../update/prompt.md).
 
 
-| Subscription           | Monthly | Annual | Provider  | Access methods unlocked      | Coverage                                                                                                  |
-| ---------------------- | ------- | ------ | --------- | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Claude Pro             | $20     | $200   | Anthropic | claude-code, claude-web      | Opus 4.7, Sonnet 4.6, and Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE), with roughly 5x the usage of the Free tier. |
-| claude.ai Max ($100)   | $100    | —      | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 5x the Pro usage budget; priority access during peak traffic.       |
-| claude.ai Max ($200)   | $200    | —      | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 20x the Pro usage budget; highest consumer-tier Claude budget.      |
-| ChatGPT Go             | $8      | —      | OpenAI    | chatgpt-app, codex-cli       | Budget tier with GPT-5.3 Instant unlimited and GPT-5.3 quota, more uploads and image generation than Free; ads still shown; lacks advanced reasoning models, Sora, Codex full access, Agent Mode, and Deep Research. |
-| ChatGPT Plus           | $20     | —      | OpenAI    | chatgpt-app, codex-cli       | GPT-5.5 default model with full feature suite — Deep Research (10 runs/mo), Sora video, Codex, Agent Mode; GPT-5.4 Thinking and GPT-5.4 Mini also available. |
-| ChatGPT Pro ($100)     | $100    | —      | OpenAI    | chatgpt-app, codex-cli       | Same model suite as Pro $200 (GPT-5.5, GPT-5.5 Pro, o1 Pro mode) at 5x Plus usage limits; Codex access included with promotional 10x multiplier through May 31, 2026. |
-| ChatGPT Pro ($200)     | $200    | —      | OpenAI    | chatgpt-app, codex-cli       | Same coverage as Pro $100 with much higher caps (20x Plus limits), 1M-token context window, Sora access, and GPT-5.4 Pro / GPT-5.5 Pro priority. |
-| Google AI Plus         | $4.99   | —      | Google    | gemini-app, gemini-cli       | Entry-paid Google AI tier with 2x higher usage limits than Free in the Gemini app, access to Gemini 3.1 Pro / Nano Banana Pro / Daily Brief / Gemini Omni video generation, 200 Google Flow Credits, and 400 GB of cloud storage (price cut from $7.99 to $4.99 on 2026-06-08; storage doubled from 200 GB to 400 GB). |
-| Google AI Pro          | $20     | $199.99 | Google   | gemini-app, gemini-cli       | Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus Deep Research, Nano Banana Pro, Veo 3.1 access, 1,000 monthly AI credits, and 2 TB of Google One storage; includes YouTube Premium Lite. |
-| Google AI Ultra ($100) | $100    | —      | Google    | gemini-app, gemini-cli       | New developer-focused Ultra tier (May 2026): 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan. |
-| Google AI Ultra ($200) | $200    | —      | Google    | gemini-app, gemini-cli       | Highest access to Gemini 3.1 Pro, Deep Think, Project Genie, Veo 3.1 with 25,000 monthly AI credits, $100/month Google Cloud credits, and 30 TB Google One storage (price reduced from $250 to $200). |
-| Cursor Pro             | $20     | $192   | Cursor    | cursor                       | $20 monthly model-usage credit pool across every model in Cursor's catalog; on-demand overage billed at API rates. |
-| Cursor Pro+            | $60     | $576   | Cursor    | cursor                       | Same model coverage as Pro at roughly 3x the OpenAI / Claude / Gemini usage budget.                       |
-| Cursor Ultra           | $200    | $1920  | Cursor    | cursor                       | Same model coverage as Pro at roughly 20x the OpenAI / Claude / Gemini usage budget; priority access to new features. |
+| Subscription           | Monthly | Annual  | Provider  | Access methods unlocked      | Coverage                                                                                                  |
+| ---------------------- | ------- | ------- | --------- | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Claude Pro             | $20     | $200    | Anthropic | claude-code, claude-web      | Opus 4.7, Sonnet 4.6, and Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE), with roughly 5x the usage of the Free tier. |
+| claude.ai Max ($100)   | $100    | —       | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 5x the Pro usage budget; priority access during peak traffic.       |
+| claude.ai Max ($200)   | $200    | —       | Anthropic | claude-code, claude-web      | Same model coverage as Pro at roughly 20x the Pro usage budget; highest consumer-tier Claude budget.      |
+| ChatGPT Go             | $8      | —       | OpenAI    | chatgpt-app, codex-cli       | Budget tier with GPT-5.3 Instant unlimited and GPT-5.3 quota, more uploads and image generation than Free; ads still shown; lacks advanced reasoning models, Sora, Codex full access, Agent Mode, and Deep Research. |
+| ChatGPT Plus           | $20     | —       | OpenAI    | chatgpt-app, codex-cli       | GPT-5.5 default model with full feature suite — Deep Research (10 runs/mo), Sora video, Codex, Agent Mode; GPT-5.4 Thinking and GPT-5.4 Mini also available. |
+| ChatGPT Pro ($100)     | $100    | —       | OpenAI    | chatgpt-app, codex-cli       | Same model suite as Pro $200 (GPT-5.5, GPT-5.5 Pro, o1 Pro mode) at 5x Plus usage limits; Codex access included with promotional 10x multiplier through May 31, 2026. |
+| ChatGPT Pro ($200)     | $200    | —       | OpenAI    | chatgpt-app, codex-cli       | Same coverage as Pro $100 with much higher caps (20x Plus limits), 1M-token context window, Sora access, and GPT-5.4 Pro / GPT-5.5 Pro priority. |
+| Google AI Plus         | $4.99   | —       | Google    | gemini-app, gemini-cli       | Entry-paid Google AI tier with 2x higher usage limits than Free in the Gemini app, access to Gemini 3.1 Pro / Nano Banana Pro / Daily Brief / Gemini Omni video generation, 200 Google Flow Credits, and 400 GB of cloud storage (price cut from $7.99 to $4.99 on 2026-06-08; storage doubled from 200 GB to 400 GB). |
+| Google AI Pro          | $19.99  | $199.99 | Google    | gemini-app, gemini-cli       | Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus Deep Research, Nano Banana Pro, Veo 3.1 access, 1,000 monthly AI credits, and 2 TB of Google One storage; includes YouTube Premium Lite. |
+| Google AI Ultra ($100) | $99.99  | —       | Google    | gemini-app, gemini-cli       | New developer-focused Ultra tier (May 2026): 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan. |
+| Google AI Ultra ($200) | $199.99 | —       | Google    | gemini-app, gemini-cli       | Highest access to Gemini 3.1 Pro, Deep Think, Project Genie, Veo 3.1 with 25,000 monthly AI credits, $100/month Google Cloud credits, and 30 TB Google One storage (price reduced from $250 to $200). |
+| Cursor Pro             | $20     | $192    | Cursor    | cursor                       | $20 monthly model-usage credit pool across every model in Cursor's catalog; on-demand overage billed at API rates. |
+| Cursor Pro+            | $60     | $576    | Cursor    | cursor                       | Same model coverage as Pro at roughly 3x the OpenAI / Claude / Gemini usage budget.                       |
+| Cursor Ultra           | $200    | $1920   | Cursor    | cursor                       | Same model coverage as Pro at roughly 20x the OpenAI / Claude / Gemini usage budget; priority access to new features. |
 
 
 The "Access methods unlocked" column references method ids enumerated in
@@ -203,42 +203,48 @@ appear here.
 ## Existing model-selector.txt Classification Audit
 
 
-| Model (file id)  | Output  | Correct Tier | Current Tier | Status |
-| ---------------- | ------- | ------------ | ------------ | ------ |
-| opus-4.7         | $25.00  | Very High    | Very High    | ✓      |
-| opus-4.8         | $25.00  | Very High    | Very High    | ✓      |
-| claude-fable-5   | $50.00  | Very High    | Very High    | ✓      |
-| gpt-5.5          | $30.00  | Very High    | Very High    | ✓      |
-| sonnet-4.6       | $15.00  | High         | High         | ✓      |
-| gpt-5.4          | $15.00  | High         | High         | ✓      |
-| gpt-5.3-codex    | $14.00  | Medium       | Medium       | ✓      |
-| gpt-5.2          | $14.00  | Medium       | Medium       | ✓      |
-| gemini-3.1-pro   | $12.00  | Medium       | Medium       | ✓      |
-| gemini-3-pro     | $12.00  | Medium       | Medium       | ✓      |
-| gpt-5            | $10.00  | Medium       | Medium       | ✓      |
-| gpt-5.1-codex    | $10.00  | Medium       | Medium       | ✓      |
-| gemini-3.5-flash | $9.00   | Low          | Low          | ✓      |
-| composer-2       | $2.50   | Low          | Low          | ✓      |
-| composer-2.5     | $2.50   | Low          | Low          | ✓      |
-| gemini-2.5-flash | $2.50   | Low          | Low          | ✓      |
-| gemini-3-flash   | $3.00   | Low          | Low          | ✓      |
-| grok-4.3         | $2.50   | Low          | Low          | ✓      |
-| kimi-k2.5        | $3.00   | Low          | Low          | ✓      |
-| claude-4.5-haiku | $5.00   | Low          | Low          | ✓      |
-| gpt-5-mini       | $2.00   | Low          | Low          | ✓      |
-| gpt-5.4-mini     | $4.50   | Low          | Low          | ✓      |
-| gpt-5.4-nano     | $1.25   | Low          | Low          | ✓      |
-| glm-5.2          | $4.40   | Low          | Low          | ✓      |
-| glm-4.6          | $2.20   | Low          | Low          | ✓      |
-| glm-4.5-air      | $1.10   | Low          | Low          | ✓      |
-| deepseek-v4-pro  | $0.87   | Low          | Low          | ✓      |
-| deepseek-v4-flash | $0.28  | Low          | Low          | ✓      |
-| mistral-medium-3.5 | $7.50 | Low          | Low          | ✓      |
-| mistral-small-4  | $0.30   | Low          | Low          | ✓      |
-| mistral-large-3  | $1.50   | Low          | Low          | ✓      |
-| codestral        | $0.90   | Low          | Low          | ✓      |
-| gpt-oss-120b     | $0.60   | Low          | Low          | ✓      |
-| gpt-oss-20b      | $0.30   | Low          | Low          | ✓      |
+| Model (file id)    | Output  | Correct Tier | Current Tier | Status |
+| ------------------ | ------- | ------------ | ------------ | ------ |
+| opus-4.7           | $25.00  | Very High    | Very High    | ✓      |
+| opus-4.8           | $25.00  | Very High    | Very High    | ✓      |
+| claude-fable-5     | $50.00  | Very High    | Very High    | ✓      |
+| gpt-5.5            | $30.00  | Very High    | Very High    | ✓      |
+| gpt-5.6-sol        | $30.00  | Very High    | Very High    | ✓      |
+| sonnet-4.6         | $15.00  | High         | High         | ✓      |
+| claude-sonnet-5    | $15.00  | High         | High         | ✓      |
+| gpt-5.4            | $15.00  | High         | High         | ✓      |
+| gpt-5.6-terra      | $15.00  | High         | High         | ✓      |
+| gpt-5.3-codex      | $14.00  | Medium       | Medium       | ✓      |
+| gpt-5.2            | $14.00  | Medium       | Medium       | ✓      |
+| gpt-5.2-codex      | $14.00  | Medium       | Medium       | ✓      |
+| gemini-3.1-pro     | $12.00  | Medium       | Medium       | ✓      |
+| gemini-3-pro       | $12.00  | Medium       | Medium       | ✓      |
+| gpt-5              | $10.00  | Medium       | Medium       | ✓      |
+| gpt-5.1-codex      | $10.00  | Medium       | Medium       | ✓      |
+| gpt-5.1-codex-max  | $10.00  | Medium       | Medium       | ✓      |
+| gemini-3.5-flash   | $9.00   | Low          | Low          | ✓      |
+| mistral-medium-3.5 | $7.50   | Low          | Low          | ✓      |
+| gpt-5.6-luna       | $6.00   | Low          | Low          | ✓      |
+| grok-4.5           | $6.00   | Low          | Low          | ✓      |
+| claude-4.5-haiku   | $5.00   | Low          | Low          | ✓      |
+| gpt-5.4-mini       | $4.50   | Low          | Low          | ✓      |
+| glm-5.2            | $4.40   | Low          | Low          | ✓      |
+| kimi-k2.7-code     | $4.00   | Low          | Low          | ✓      |
+| gemini-3-flash     | $3.00   | Low          | Low          | ✓      |
+| composer-2.5       | $2.50   | Low          | Low          | ✓      |
+| gemini-2.5-flash   | $2.50   | Low          | Low          | ✓      |
+| grok-4.3           | $2.50   | Low          | Low          | ✓      |
+| glm-4.6            | $2.20   | Low          | Low          | ✓      |
+| gpt-5-mini         | $2.00   | Low          | Low          | ✓      |
+| mistral-large-3    | $1.50   | Low          | Low          | ✓      |
+| gpt-5.4-nano       | $1.25   | Low          | Low          | ✓      |
+| glm-4.5-air        | $1.10   | Low          | Low          | ✓      |
+| codestral          | $0.90   | Low          | Low          | ✓      |
+| deepseek-v4-pro    | $0.87   | Low          | Low          | ✓      |
+| gpt-oss-120b       | $0.60   | Low          | Low          | ✓      |
+| mistral-small-4    | $0.30   | Low          | Low          | ✓      |
+| gpt-oss-20b        | $0.30   | Low          | Low          | ✓      |
+| deepseek-v4-flash  | $0.28   | Low          | Low          | ✓      |
 
 
 Routing meta-models (Cursor's "Auto" / "Premium" modes; analogous
@@ -301,12 +307,12 @@ this table.
 
 | Provider HQ name              | Jurisdiction code | Models in catalog                                                                                                       |
 | ----------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Anthropic (San Francisco, US) | `us`              | opus-4.8, opus-4.7, sonnet-4.6, claude-4.5-haiku                                                                        |
-| OpenAI (San Francisco, US)    | `us`              | gpt-5.5, gpt-5.4, gpt-5.3-codex, gpt-5.2, gpt-5.1-codex, gpt-5, gpt-5.4-mini, gpt-5.4-nano, gpt-5-mini                  |
+| Anthropic (San Francisco, US) | `us`              | opus-4.8, opus-4.7, claude-fable-5, claude-sonnet-5, sonnet-4.6, claude-4.5-haiku                                       |
+| OpenAI (San Francisco, US)    | `us`              | gpt-5.6-sol, gpt-5.5, gpt-5.6-terra, gpt-5.4, gpt-5.3-codex, gpt-5.2, gpt-5.2-codex, gpt-5.1-codex-max, gpt-5.1-codex, gpt-5, gpt-5.6-luna, gpt-5.4-mini, gpt-5.4-nano, gpt-5-mini |
 | Google (Mountain View, US)    | `us`              | gemini-3.1-pro, gemini-3-pro, gemini-3.5-flash, gemini-3-flash, gemini-2.5-flash                                        |
 | xAI (Palo Alto, US)           | `us`              | grok-4.3                                                                                                                |
-| Cursor (San Francisco, US)    | `us`              | composer-2, composer-2.5 — note: base weights for these Composer models derive from Moonshot's Kimi K2 series; Cursor's operator status determines the jurisdiction code per `<jurisdiction-context>` (data flow governed by Cursor's privacy policy and US law) |
-| Moonshot AI (Beijing, CN)     | `cn`              | kimi-k2.5                                                                                                               |
+| Cursor (San Francisco, US)    | `us`              | composer-2.5, grok-4.5 — note: Composer 2.5 base weights derive from Moonshot's Kimi K2 series; Grok 4.5 is jointly trained by Cursor and SpaceXAI; Cursor's operator status determines the jurisdiction code per `<jurisdiction-context>` (data flow governed by Cursor's privacy policy and US law) |
+| Moonshot AI (Beijing, CN)     | `cn`              | kimi-k2.7-code                                                                                                          |
 | DeepSeek (Hangzhou, CN)       | `cn`              | deepseek-v4-pro, deepseek-v4-flash                                                                                      |
 | z.ai / Zhipu AI (Beijing, CN) | `cn`              | glm-5.2, glm-4.6, glm-4.5-air                                                                                           |
 | Mistral AI (Paris, FR/EU)     | `eu`              | mistral-medium-3.5, mistral-small-4, mistral-large-3, codestral                                                         |
