@@ -86,3 +86,15 @@ def test_claude_code_never_surfaces_a_max_mode_or_orchestration_row() -> None:
     assert set(got) == {"effort", "thinking"}
     assert got["effort"] == "Ultracode"  # folded, not a separate row
     assert got["thinking"] == "On"  # a toggle — never "XHigh"
+
+
+def test_openai_api_surfaces_intelligence_not_max_mode() -> None:
+    """The dogfood display bug: a GPT pick on the direct OpenAI API showed a
+    spurious "Max Mode: On" and hid its reasoning effort. OpenAI's reasoning
+    surface must render as Intelligence (like Codex), with NO max_mode key —
+    even if the selector erroneously emitted MAX MODE On."""
+    got = _structured_settings(
+        {"platform": "OpenAI API", "max_mode": "On", "thinking": "High", "orchestration": "None"}
+    )
+    assert got == {"intelligence": "High"}
+    assert "max_mode" not in got
