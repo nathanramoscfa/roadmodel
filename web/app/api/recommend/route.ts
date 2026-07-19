@@ -44,6 +44,10 @@ const ENGINE_RATES: Record<
 > = {
   "gemini-2.5-flash": { inPer1m: 0.3, outPer1m: 2.5, outTokens: 512 },
   "gemini-2.5-pro": { inPer1m: 1.25, outPer1m: 10, outTokens: 900 },
+  // GPT-5 mini (eval-backed anon engine). outTokens includes minimal reasoning
+  // (reasoning.effort=minimal) plus the visible block; reasoning is billed at the
+  // output rate on these models.
+  "gpt-5-mini": { inPer1m: 0.25, outPer1m: 2.0, outTokens: 700 },
 };
 // MEASURED at ~39.5k (google usage_metadata.prompt_token_count on the real
 // header+selector+tier-cost prompt, 2026-07), NOT the earlier 20k guess — so the

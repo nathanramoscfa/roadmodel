@@ -52,4 +52,11 @@ export const FREE_RECOMMEND_MIN_TIER: TaskTier = "B";
 export const ENGINE_OVERRIDES: {
   recommend?: string;
   roadmap?: string;
-} = {};
+} = {
+  // GPT-5-mini canary (eval-backed engine move). Pins the free/anon /recommend
+  // engine to gpt-5-mini (force_provider "openai-gpt-5-mini") — best
+  // instruction-adherence + ~3x cheaper with OpenAI automatic prefix caching.
+  // The signed-in frontier stays on gemini-2.5-pro until this anon canary is
+  // confirmed in prod (cost + adherence), then it flips too (full cutover).
+  recommend: "gpt-5-mini",
+};
