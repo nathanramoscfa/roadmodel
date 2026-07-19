@@ -249,17 +249,30 @@ def test_openai_omits_max_output_tokens_when_unset(
     assert "max_output_tokens" not in _FakeOpenAIClient.captured
 
 
-def test_openai_ignores_thinking_budget(monkeypatch: pytest.MonkeyPatch) -> None:
-    """thinking_budget is Gemini-specific (issue #132). OpenAI accepts the
-    keyword for ProviderAdapter parity but must NOT forward it — OpenAI
-    reasoning control uses reasoning.effort, out of scope for the free-tier
-    recommender, which runs on Gemini Flash."""
+def test_openai_maps_thinking_budget_to_reasoning_effort(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """gpt-5* reasoning models count reasoning tokens against max_output_tokens,
+    so the provider MUST cap reasoning via reasoning.effort — otherwise the
+    reasoning consumes the whole budget and returns no text (observed:
+    gpt-5-mini 32s, empty). thinking_budget maps 0 -> minimal (anon), else low.
+    The Gemini-specific keys (thinking_budget / thinking_config) are never sent."""
     _install_openai_fake(monkeypatch)
-    openai_provider.recommend("prompt", "system", api_key="key", thinking_budget=0)
-    captured = _FakeOpenAIClient.captured
-    assert "thinking_budget" not in captured
-    assert "thinking_config" not in captured
-    assert "reasoning" not in captured
+    openai_provider.recommend("p", "s", api_key="k", model="gpt-5-mini", thinking_budget=0)
+    assert _FakeOpenAIClient.captured["reasoning"] == {"effort": "minimal"}
+    assert "thinking_budget" not in _FakeOpenAIClient.captured
+    assert "thinking_config" not in _FakeOpenAIClient.captured
+
+    openai_provider.recommend("p", "s", api_key="k", model="gpt-5-mini", thinking_budget=None)
+    assert _FakeOpenAIClient.captured["reasoning"] == {"effort": "low"}
+
+
+def test_openai_no_reasoning_for_non_gpt5_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Only gpt-5* models get the reasoning.effort cap; a non-reasoning model is
+    left untouched (no reasoning key)."""
+    _install_openai_fake(monkeypatch)
+    openai_provider.recommend("p", "s", api_key="k", model="gpt-4o", thinking_budget=0)
+    assert "reasoning" not in _FakeOpenAIClient.captured
 
 
 def test_openai_ignores_temperature(monkeypatch: pytest.MonkeyPatch) -> None:

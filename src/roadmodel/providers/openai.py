@@ -34,13 +34,15 @@ def recommend(
     thinking_budget: int | None = None,
     temperature: float | None = None,
 ) -> str:
-    # thinking_budget and temperature are accepted for ProviderAdapter Protocol
-    # parity but intentionally NOT forwarded: both are Gemini-specific knobs for
-    # the recommender latency/determinism work (issues #132, #176). OpenAI
-    # reasoning control uses a different mechanism (`reasoning.effort` on
-    # reasoning models), out of scope for the free-tier recommender, which runs
-    # on Gemini Flash.
-    _ = (thinking_budget, temperature)
+    # temperature is a Gemini-specific determinism knob (#176) and reasoning
+    # models reject it — not forwarded. thinking_budget IS forwarded for OpenAI
+    # reasoning models (gpt-5*) as reasoning.effort: those models count reasoning
+    # tokens against max_output_tokens, so without an effort cap the reasoning can
+    # consume the ENTIRE budget and return no visible text (observed: gpt-5-mini
+    # 32s, empty output). The recommender is a structured-classification task
+    # where the pick is easy (T1), so a low effort is fast + cheap + sufficient;
+    # 0 -> minimal for the highest-volume anon path.
+    _ = temperature
     try:
         from openai import APIError, OpenAI
     except Exception as exc:  # pragma: no cover - dependency/runtime guard
@@ -54,8 +56,9 @@ def recommend(
         # `kwargs` is typed `Any` so mypy strict doesn't reject the
         # mixed-value-type dict against the SDK's overloaded `create`
         # signature; the runtime call accepts plain dicts identically.
+        model_id = model or DEFAULT_MODEL
         kwargs: Any = {
-            "model": model or DEFAULT_MODEL,
+            "model": model_id,
             "input": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": prompt},
@@ -63,6 +66,11 @@ def recommend(
         }
         if max_output_tokens is not None:
             kwargs["max_output_tokens"] = max_output_tokens
+        # Cap reasoning on gpt-5* models so it doesn't eat the whole
+        # max_output_tokens budget (see the note above). Default low; a
+        # thinking_budget of 0 selects minimal for the anon tier.
+        if model_id.startswith("gpt-5"):
+            kwargs["reasoning"] = {"effort": "minimal" if thinking_budget == 0 else "low"}
         response = client.responses.create(**kwargs)
         text = _extract_output_text(response)
         if text:
