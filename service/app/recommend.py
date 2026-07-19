@@ -101,6 +101,11 @@ _PROVIDER_HINTS: dict[str, tuple[str, str]] = {
     # (params below). The free/anon tier stays on 2.5 Flash; the web edge only
     # routes signed-in users here when RECOMMENDER_FRONTIER_ENABLED is on.
     "google-gemini-2.5-pro": ("google", "gemini-2.5-pro"),
+    # GPT-5 mini — the eval-backed recommender engine (best instruction-adherence
+    # + ~3x cheaper with OpenAI automatic prefix caching). Reachable via
+    # force_provider "openai-gpt-5-mini" (set by the web ENGINE_OVERRIDES canary);
+    # runs at minimal reasoning (params below).
+    "openai-gpt-5-mini": ("openai", "gpt-5-mini"),
 }
 
 # The frontier model id — keyed on directly so its thinking-ON params apply
@@ -185,6 +190,14 @@ _GEMINI_TEMPERATURE = 0.0
 # the visible six-field block, hence 2048 (vs the free tier's 512).
 _GEMINI_FRONTIER_THINKING_BUDGET = 512
 _GEMINI_FRONTIER_MAX_OUTPUT_TOKENS = 2048
+
+# GPT-5* reasoning-model engine params. The OpenAI provider maps thinking_budget
+# -> reasoning.effort (0 -> minimal); minimal keeps the structured-classification
+# recommender task fast (~7s vs ~33s at low effort) and cheap. The output cap is
+# generous because reasoning tokens ALSO count against max_output_tokens on these
+# models — too tight and the reasoning empties the budget, returning no text.
+_GPT5_THINKING_BUDGET = 0
+_GPT5_MAX_OUTPUT_TOKENS = 2048
 
 # Ladder mode (tasks #1/#3) emits THREE six/seven-field blocks in one response,
 # so the visible-output cap must scale ~3x the single-block cap or the third
@@ -320,6 +333,7 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
         # untouched on both (#128).
         is_gemini = config.provider == "google"
         is_frontier = is_gemini and config.model == _GEMINI_FRONTIER_MODEL
+        is_openai_gpt5 = config.provider == "openai" and (config.model or "").startswith("gpt-5")
         if is_frontier:
             # Quality tier: reasoning ON, larger combined cap (T3b).
             thinking_budget: int | None = _GEMINI_FRONTIER_THINKING_BUDGET
@@ -328,6 +342,10 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
             # Free tier: reasoning OFF (#132), tight visible cap (#146).
             thinking_budget = _GEMINI_THINKING_BUDGET
             max_output_tokens = _GEMINI_MAX_OUTPUT_TOKENS
+        elif is_openai_gpt5:
+            # GPT-5 engine: minimal reasoning (fast/cheap), generous output cap.
+            thinking_budget = _GPT5_THINKING_BUDGET
+            max_output_tokens = _GPT5_MAX_OUTPUT_TOKENS
         else:
             thinking_budget = None
             max_output_tokens = None
@@ -509,6 +527,7 @@ def recommend_ladder(req: RecommendRequest) -> LadderResponse:
         config = _config_for_hint(hint)
         is_gemini = config.provider == "google"
         is_frontier = is_gemini and config.model == _GEMINI_FRONTIER_MODEL
+        is_openai_gpt5 = config.provider == "openai" and (config.model or "").startswith("gpt-5")
         if is_frontier:
             thinking_budget: int | None = _GEMINI_FRONTIER_THINKING_BUDGET
             # The ladder emits ~3x the visible tokens (three blocks), so lift the
@@ -517,6 +536,10 @@ def recommend_ladder(req: RecommendRequest) -> LadderResponse:
         elif is_gemini:
             thinking_budget = _GEMINI_THINKING_BUDGET
             max_output_tokens = _ladder_output_cap(_GEMINI_MAX_OUTPUT_TOKENS)
+        elif is_openai_gpt5:
+            # GPT-5 engine: minimal reasoning; lift the cap for the 3-block ladder.
+            thinking_budget = _GPT5_THINKING_BUDGET
+            max_output_tokens = _ladder_output_cap(_GPT5_MAX_OUTPUT_TOKENS)
         else:
             thinking_budget = None
             max_output_tokens = None
