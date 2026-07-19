@@ -219,9 +219,7 @@ def test_headroom_auto_uncapped_for_top_tier_subscription() -> None:
 def test_headroom_auto_capped_for_lower_tier_subscription() -> None:
     """A sub-$200 tier (Claude Pro at $20) stays `capped` under auto — no block,
     so effort keeps scaling down the ladder (the conservative default)."""
-    text = funding.build_user_context(
-        ["anthropic-claude-pro"], [], catalog=_FAKE_CATALOG
-    )
+    text = funding.build_user_context(["anthropic-claude-pro"], [], catalog=_FAKE_CATALOG)
     assert text is not None
     assert "Consumption headroom" not in text
 
@@ -373,9 +371,7 @@ def test_guard_replaces_fabricated_subscription_claim() -> None:
         "TASK: A multi-file coding task. PICK: Fable 5 is S-tier in coding. "
         "RUN: This runs on your Cursor subscription pool with Max Mode on."
     )
-    new_rationale, new_sections = g.sanitize(
-        "Cursor", rationale, dict(_SECTIONS_CURSOR_FABRICATED)
-    )
+    new_rationale, new_sections = g.sanitize("Cursor", rationale, dict(_SECTIONS_CURSOR_FABRICATED))
     assert new_sections is not None
     assert "your Cursor subscription" not in new_sections["run"]
     assert "not covered by any subscription or API access" in new_sections["run"]
@@ -459,9 +455,7 @@ def test_guard_from_request_mirrors_context_short_circuit() -> None:
     # Anon / bundled-template path: guard OFF (that narration is by design).
     assert funding.funding_guard_from_request(None) is None
     assert funding.funding_guard_from_request({}) is None
-    assert (
-        funding.funding_guard_from_request({"budget_priority": "balanced"}) is None
-    )
+    assert funding.funding_guard_from_request({"budget_priority": "balanced"}) is None
 
 
 def test_guard_from_request_active_when_funding_declared(
@@ -506,9 +500,7 @@ def test_guard_catches_possessive_free_subscription_claim() -> None:
         "This runs on the Cursor subscription with default thinking.",
         "Covered by the Max plan at no extra cost.",
     ):
-        _, new_sections = g.sanitize(
-            "Cursor", None, {"task": "t", "pick": "p", "run": run}
-        )
+        _, new_sections = g.sanitize("Cursor", None, {"task": "t", "pick": "p", "run": run})
         assert new_sections is not None
         assert "not covered by any subscription or API access" in new_sections["run"], run
 
@@ -562,14 +554,34 @@ _ACCESS_CATALOG: dict[str, Any] = {
         },
     ],
     "models": [
-        {"id": "mistral-small", "name": "Mistral Small", "jurisdiction": "eu",
-         "output_price_per_1m": 0.3, "tiers": {"coding": "C", "planning": "C"}},
-        {"id": "mistral-large", "name": "Mistral Large", "jurisdiction": "eu",
-         "output_price_per_1m": 1.5, "tiers": {"coding": "B", "planning": "A"}},
-        {"id": "deepseek-pro", "name": "DeepSeek Pro", "jurisdiction": "cn",
-         "output_price_per_1m": 0.9, "tiers": {"coding": "A", "planning": "A"}},
-        {"id": "opus", "name": "Opus", "jurisdiction": "us",
-         "output_price_per_1m": 25.0, "tiers": {"coding": "S", "planning": "S"}},
+        {
+            "id": "mistral-small",
+            "name": "Mistral Small",
+            "jurisdiction": "eu",
+            "output_price_per_1m": 0.3,
+            "tiers": {"coding": "C", "planning": "C"},
+        },
+        {
+            "id": "mistral-large",
+            "name": "Mistral Large",
+            "jurisdiction": "eu",
+            "output_price_per_1m": 1.5,
+            "tiers": {"coding": "B", "planning": "A"},
+        },
+        {
+            "id": "deepseek-pro",
+            "name": "DeepSeek Pro",
+            "jurisdiction": "cn",
+            "output_price_per_1m": 0.9,
+            "tiers": {"coding": "A", "planning": "A"},
+        },
+        {
+            "id": "opus",
+            "name": "Opus",
+            "jurisdiction": "us",
+            "output_price_per_1m": 25.0,
+            "tiers": {"coding": "S", "planning": "S"},
+        },
     ],
 }
 
@@ -633,7 +645,9 @@ def test_user_context_access_restriction_empty_set_message() -> None:
 
 
 def _access_guard(subs: list[str], apis: list[str], juris: list[str]) -> funding.AccessGuard:
-    acc = funding.accessible_model_ids(subs, apis, allowed_jurisdictions=juris, catalog=_ACCESS_CATALOG)
+    acc = funding.accessible_model_ids(
+        subs, apis, allowed_jurisdictions=juris, catalog=_ACCESS_CATALOG
+    )
     assert acc is not None
     tiers = _ACCESS_CATALOG["subscription_tiers"]
     funded = funding._funded_surface_ids(tiers, set(subs))
@@ -642,8 +656,13 @@ def _access_guard(subs: list[str], apis: list[str], juris: list[str]) -> funding
 
 def test_access_guard_substitutes_inaccessible_primary() -> None:
     g = _access_guard([], ["mistral"], ["us", "eu"])
-    r: dict[str, Any] = {"model": "Opus", "platform": "Claude Code", "settings": {}, "backup": None,
-         "rationale_sections": {"task": "t", "pick": "p", "run": "r"}}
+    r: dict[str, Any] = {
+        "model": "Opus",
+        "platform": "Claude Code",
+        "settings": {},
+        "backup": None,
+        "rationale_sections": {"task": "t", "pick": "p", "run": "r"},
+    }
     changed = g.enforce(r, "best")
     assert changed is True
     assert r["model"] in {"Mistral Small", "Mistral Large"}
@@ -654,8 +673,13 @@ def test_access_guard_substitutes_inaccessible_primary() -> None:
 
 def test_access_guard_best_picks_highest_quality_accessible() -> None:
     g = _access_guard([], ["mistral"], ["us", "eu"])
-    r: dict[str, Any] = {"model": "Opus", "platform": "Claude Code", "settings": {}, "backup": None,
-         "rationale_sections": None}
+    r: dict[str, Any] = {
+        "model": "Opus",
+        "platform": "Claude Code",
+        "settings": {},
+        "backup": None,
+        "rationale_sections": None,
+    }
     g.enforce(r, "best")
     # Mistral Large outranks Mistral Small on tier points.
     assert r["model"] == "Mistral Large"
@@ -670,8 +694,13 @@ def test_access_guard_cheap_picks_cheapest_accessible() -> None:
 
 def test_access_guard_leaves_accessible_pick_untouched() -> None:
     g = _access_guard([], ["mistral"], ["us", "eu"])
-    r: dict[str, Any] = {"model": "Mistral Large", "platform": "Mistral API", "settings": {},
-         "backup": None, "rationale_sections": {"task": "t", "pick": "p", "run": "r"}}
+    r: dict[str, Any] = {
+        "model": "Mistral Large",
+        "platform": "Mistral API",
+        "settings": {},
+        "backup": None,
+        "rationale_sections": {"task": "t", "pick": "p", "run": "r"},
+    }
     changed = g.enforce(r, "best")
     assert changed is False
     assert r["model"] == "Mistral Large"
@@ -680,8 +709,13 @@ def test_access_guard_leaves_accessible_pick_untouched() -> None:
 
 def test_access_guard_substitutes_inaccessible_backup() -> None:
     g = _access_guard([], ["mistral"], ["us", "eu"])
-    r: dict[str, Any] = {"model": "Mistral Large", "platform": "Mistral API", "settings": {},
-         "backup": "Opus", "rationale_sections": None}
+    r: dict[str, Any] = {
+        "model": "Mistral Large",
+        "platform": "Mistral API",
+        "settings": {},
+        "backup": "Opus",
+        "rationale_sections": None,
+    }
     g.enforce(r, "best")
     # Backup Opus is inaccessible -> substituted to a different-maker accessible
     # model; only mistral is accessible here, same maker -> dropped.
@@ -691,8 +725,13 @@ def test_access_guard_substitutes_inaccessible_backup() -> None:
 def test_access_guard_empty_accessible_set_is_noop() -> None:
     # deepseek declared, cn excluded -> empty accessible set -> cannot substitute.
     g = _access_guard([], ["deepseek"], ["us", "eu"])
-    r: dict[str, Any] = {"model": "Opus", "platform": "Claude Code", "settings": {}, "backup": None,
-         "rationale_sections": {"task": "t", "pick": "p", "run": "r"}}
+    r: dict[str, Any] = {
+        "model": "Opus",
+        "platform": "Claude Code",
+        "settings": {},
+        "backup": None,
+        "rationale_sections": {"task": "t", "pick": "p", "run": "r"},
+    }
     changed = g.enforce(r, "best")
     assert changed is False
     assert r["model"] == "Opus"  # unchanged; user-context prose flags it
@@ -707,36 +746,90 @@ def test_access_guard_empty_accessible_set_is_noop() -> None:
 # price but pay-per-token — the Cost pick must prefer the funded one.
 _AGG_CATALOG: dict[str, Any] = {
     "subscription_tiers": [
-        {"provider": "Anthropic", "tier": "claude.ai Max ($200)", "monthly_usd": 200.0,
-         "surface_funded": ["claude-code"]},
-        {"provider": "OpenAI", "tier": "ChatGPT Plus", "monthly_usd": 20.0,
-         "surface_funded": ["chatgpt-app"]},
+        {
+            "provider": "Anthropic",
+            "tier": "claude.ai Max ($200)",
+            "monthly_usd": 200.0,
+            "surface_funded": ["claude-code"],
+        },
+        {
+            "provider": "OpenAI",
+            "tier": "ChatGPT Plus",
+            "monthly_usd": 20.0,
+            "surface_funded": ["chatgpt-app"],
+        },
     ],
     "access_methods": [
-        {"id": "cursor", "provider": "cursor", "billing": "subscription-pool", "name": "Cursor",
-         "provider_jurisdiction": "us", "supports_models": ["nano", "composer"]},
-        {"id": "openai-api", "provider": "openai", "billing": "per-token", "name": "OpenAI API",
-         "provider_jurisdiction": "us", "supports_models": ["nano", "mini"]},
-        {"id": "chatgpt-app", "provider": "openai", "billing": "subscription-included",
-         "name": "ChatGPT", "provider_jurisdiction": "us", "supports_models": ["mini"]},
-        {"id": "claude-code", "provider": "anthropic", "billing": "subscription-or-key",
-         "name": "Claude Code", "provider_jurisdiction": "us", "supports_models": ["haiku"]},
+        {
+            "id": "cursor",
+            "provider": "cursor",
+            "billing": "subscription-pool",
+            "name": "Cursor",
+            "provider_jurisdiction": "us",
+            "supports_models": ["nano", "composer"],
+        },
+        {
+            "id": "openai-api",
+            "provider": "openai",
+            "billing": "per-token",
+            "name": "OpenAI API",
+            "provider_jurisdiction": "us",
+            "supports_models": ["nano", "mini"],
+        },
+        {
+            "id": "chatgpt-app",
+            "provider": "openai",
+            "billing": "subscription-included",
+            "name": "ChatGPT",
+            "provider_jurisdiction": "us",
+            "supports_models": ["mini"],
+        },
+        {
+            "id": "claude-code",
+            "provider": "anthropic",
+            "billing": "subscription-or-key",
+            "name": "Claude Code",
+            "provider_jurisdiction": "us",
+            "supports_models": ["haiku"],
+        },
     ],
     "models": [
-        {"id": "nano", "name": "Nano", "jurisdiction": "us", "output_price_per_1m": 0.4,
-         "tiers": {"coding": "C"}},
-        {"id": "mini", "name": "Mini", "jurisdiction": "us", "output_price_per_1m": 2.0,
-         "tiers": {"coding": "B"}},
-        {"id": "composer", "name": "Composer", "jurisdiction": "us", "output_price_per_1m": 2.5,
-         "tiers": {"coding": "B"}},
-        {"id": "haiku", "name": "Haiku", "jurisdiction": "us", "output_price_per_1m": 4.0,
-         "tiers": {"coding": "B"}},
+        {
+            "id": "nano",
+            "name": "Nano",
+            "jurisdiction": "us",
+            "output_price_per_1m": 0.4,
+            "tiers": {"coding": "C"},
+        },
+        {
+            "id": "mini",
+            "name": "Mini",
+            "jurisdiction": "us",
+            "output_price_per_1m": 2.0,
+            "tiers": {"coding": "B"},
+        },
+        {
+            "id": "composer",
+            "name": "Composer",
+            "jurisdiction": "us",
+            "output_price_per_1m": 2.5,
+            "tiers": {"coding": "B"},
+        },
+        {
+            "id": "haiku",
+            "name": "Haiku",
+            "jurisdiction": "us",
+            "output_price_per_1m": 4.0,
+            "tiers": {"coding": "B"},
+        },
     ],
 }
 
 
 def _agg_guard(subs: list[str], apis: list[str]) -> funding.AccessGuard:
-    acc = funding.accessible_model_ids(subs, apis, allowed_jurisdictions=["us"], catalog=_AGG_CATALOG)
+    acc = funding.accessible_model_ids(
+        subs, apis, allowed_jurisdictions=["us"], catalog=_AGG_CATALOG
+    )
     assert acc is not None
     funded = funding._funded_surface_ids(_AGG_CATALOG["subscription_tiers"], set(subs))
     return funding.AccessGuard(acc, apis, funded, catalog=_AGG_CATALOG)
@@ -756,7 +849,12 @@ def test_backup_same_maker_via_aggregator_is_caught() -> None:
     backup Mini (openai) is a same-REAL-maker pair the old resolver missed
     (Nano->cursor != Mini->openai). Now caught and substituted cross-provider."""
     g = _agg_guard(["claude-max", "openai-chatgpt-plus"], ["openai", "anthropic"])
-    r: dict[str, Any] = {"model": "Nano", "platform": "OpenAI API", "settings": {}, "backup": "Mini"}
+    r: dict[str, Any] = {
+        "model": "Nano",
+        "platform": "OpenAI API",
+        "settings": {},
+        "backup": "Mini",
+    }
     g.enforce(r, "cheap")
     assert r["backup"] is not None
     assert g._maker_of.get(g._resolve_id(r["backup"]) or "") != "openai"
@@ -781,6 +879,68 @@ def test_cheap_substitute_unchanged_without_any_funded_model() -> None:
     assert r["model"] == "Nano"
 
 
+def test_platform_for_prefers_funded_surface_over_paid_api() -> None:
+    """A model reachable via BOTH a $0-funded subscription surface and a
+    pay-per-token API surface shows the FUNDED one ("your cost to you") — Haiku on
+    Claude Code (via Max), never a paid API. `mini` (funded via ChatGPT app) also
+    resolves to the funded surface over the OpenAI API."""
+    g = _agg_guard(["claude-max", "openai-chatgpt-plus"], ["openai", "anthropic"])
+    assert g.platform_for("Haiku") == "Claude Code"
+    assert g.platform_for("Mini") == "ChatGPT"  # funded via ChatGPT Plus, not "OpenAI API"
+
+
+# --- Backup enrichment (its own funded platform + per-surface settings) -------
+
+
+def test_reasoning_level_reads_the_pick_effort() -> None:
+    from app.recommend import _reasoning_level
+
+    assert _reasoning_level({"effort": "Max", "thinking": "On"}) == "Max"
+    assert _reasoning_level({"intelligence": "XHigh"}) == "XHigh"
+    assert _reasoning_level({"effort": "Ultracode", "thinking": "On"}) == "Ultracode"
+    assert _reasoning_level({"max_mode": "OFF", "thinking": "High"}) == "High"
+    assert _reasoning_level({"max_mode": "ON", "thinking": "On"}) is None  # Cursor: no level
+    assert _reasoning_level({}) is None
+
+
+def test_build_backup_enriches_with_funded_platform_and_posture_settings() -> None:
+    """The backup gets its OWN funded platform + per-surface settings at the same
+    reasoning posture as the pick — so it adheres to the user's settings, not a
+    bare name."""
+    from app.recommend import _build_backup
+
+    g = _agg_guard(["claude-max"], ["openai"])
+    result = {"model": "Nano", "settings": {"intelligence": "XHigh"}, "backup": "Haiku"}
+    b = _build_backup(result, g)
+    assert b is not None
+    assert b.model == "Haiku"
+    assert b.platform == "Claude Code"  # $0 funded, not a paid API
+    # The pick's XHigh posture rendered for the backup's Claude Code surface.
+    assert b.settings == {"effort": "XHigh", "thinking": "On"}
+
+
+def test_build_backup_ultracode_clamps_to_max_on_cross_provider_surface() -> None:
+    from app.recommend import _build_backup
+
+    g = _agg_guard(["claude-max"], ["openai"])
+    result = {
+        "model": "Nano",
+        "settings": {"effort": "Ultracode", "thinking": "On"},
+        "backup": "Haiku",
+    }
+    b = _build_backup(result, g)
+    assert b is not None and b.settings.get("effort") == "Max"
+
+
+def test_build_backup_none_and_anon() -> None:
+    from app.recommend import _build_backup
+
+    assert _build_backup({"backup": None}, None) is None
+    # Anon (no AccessGuard): name only, platform/settings unresolved.
+    b = _build_backup({"model": "X", "settings": {"effort": "Max"}, "backup": "GPT-5.5"}, None)
+    assert b is not None and b.model == "GPT-5.5" and b.platform is None and b.settings == {}
+
+
 def test_access_guard_from_request_none_without_funding() -> None:
     assert funding.access_guard_from_request(None) is None
     assert funding.access_guard_from_request({}) is None
@@ -794,8 +954,13 @@ def test_access_guard_from_request_active_with_funding(monkeypatch: pytest.Monke
     )
     assert g is not None
     # A real-catalog frontier leak is substituted to an accessible low-tier model.
-    r: dict[str, Any] = {"model": "Fable 5", "platform": "Claude Code", "settings": {}, "backup": None,
-         "rationale_sections": {"task": "t", "pick": "p", "run": "r"}}
+    r: dict[str, Any] = {
+        "model": "Fable 5",
+        "platform": "Claude Code",
+        "settings": {},
+        "backup": None,
+        "rationale_sections": {"task": "t", "pick": "p", "run": "r"},
+    }
     changed = g.enforce(r, "best")
     assert changed is True
     assert not g.is_accessible("Fable 5")

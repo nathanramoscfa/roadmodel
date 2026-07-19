@@ -768,9 +768,15 @@ class AccessGuard:
             quality = sum(_TIER_POINTS.get(str(v).strip().upper(), 0) for v in tiers.values())
             self._meta[mid] = {"name": name, "out_price": out_price, "quality": quality}
 
-        # model id -> a user-usable access-method display name (prefer the
-        # declared API per-token surface, else a funded subscription surface).
+        # model id -> a user-usable access-method display name. A $0-funded
+        # subscription surface is PREFERRED over a pay-per-token API surface (the
+        # "your cost to you" ordering also documented in the user-context Platform
+        # preference), so e.g. Claude Haiku shows "Claude Code" ($0 via Max), not
+        # "Anthropic API". Was first-usable-in-catalog-order, which could label a
+        # $0-funded model with a paid API surface.
         self._platform_of: dict[str, str] = {}
+        _funded_platform_of: dict[str, str] = {}
+        _api_platform_of: dict[str, str] = {}
         self._maker_of: dict[str, str] = {}
         # Models reachable at $0 via a funded SUBSCRIPTION surface — their
         # effective cost to the user is $0, used to prefer them for the Cost pick
@@ -783,9 +789,8 @@ class AccessGuard:
             provider = method.get("provider")
             mid = method.get("id")
             name = method.get("name")
-            usable = (method.get("billing") in _API_BILLING and provider in self._api_set) or (
-                isinstance(mid, str) and mid in self._funded_surface_ids
-            )
+            display = name if isinstance(name, str) else str(mid)
+            api_usable = method.get("billing") in _API_BILLING and provider in self._api_set
             funded_sub = isinstance(mid, str) and mid in self._funded_surface_ids
             for supported in method.get("supports_models") or []:
                 if not isinstance(supported, str):
@@ -794,8 +799,12 @@ class AccessGuard:
                     providers_by_model.setdefault(supported, set()).add(provider)
                 if funded_sub:
                     self._funded_model_ids.add(supported)
-                if usable and supported not in self._platform_of:
-                    self._platform_of[supported] = name if isinstance(name, str) else str(mid)
+                    _funded_platform_of.setdefault(supported, display)
+                if api_usable:
+                    _api_platform_of.setdefault(supported, display)
+        # Funded ($0) surface first, then a declared pay-per-token API surface.
+        for mid_ in {*_funded_platform_of, *_api_platform_of}:
+            self._platform_of[mid_] = _funded_platform_of.get(mid_) or _api_platform_of[mid_]
         # Resolve each model's MAKER excluding pool aggregators (Cursor), mirroring
         # roadmodel.cost.model_provider so THIS guard's cross-provider backup check
         # agrees with the package's. A model reachable via Cursor's pool AND its
@@ -821,6 +830,14 @@ class AccessGuard:
     def is_accessible(self, model_ref: str | None) -> bool:
         mid = self._resolve_id(model_ref)
         return mid is not None and mid in self._accessible_ids
+
+    def platform_for(self, model_ref: str | None) -> str | None:
+        """The user-usable access-method DISPLAY NAME for a model (the declared
+        API per-token surface, else a funded subscription surface), or None when
+        the model isn't in the catalog / has no usable surface. Used to give the
+        Step 7 backup its own funded platform, mirroring the primary pick."""
+        mid = self._resolve_id(model_ref)
+        return self._platform_of.get(mid) if mid is not None else None
 
     def _rank_key(self, priority: str, model_id: str) -> tuple[Any, ...]:
         meta = self._meta.get(model_id, {})
