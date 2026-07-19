@@ -86,7 +86,7 @@ function backupCell(backup: PriorityRecommendation["backup"]): ReactNode {
     <span className="flex flex-col items-start gap-1">
       <span>{backup.model}</span>
       {backup.platform ? (
-        <span className="inline-flex w-fit rounded-full bg-brand-accent-muted px-2 py-0.5 text-[10px] font-medium text-brand-accent">
+        <span className="text-[10px] font-medium leading-snug text-brand-accent">
           {backup.platform}
           {effort ? ` · ${effort}` : ""}
         </span>
@@ -257,7 +257,7 @@ export function TierMatrix({
             <span className="mt-0.5 text-lg font-bold leading-tight text-brand-slate-900 dark:text-brand-slate-50">
               {rec.model}
             </span>
-            <span className="mt-0.5 inline-flex w-fit rounded-full bg-brand-accent-muted px-2.5 py-0.5 text-[11px] font-medium text-brand-accent">
+            <span className="mt-0.5 text-[11px] font-medium leading-snug text-brand-accent">
               {rec.platform}
             </span>
           </button>
