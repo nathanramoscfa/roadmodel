@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.26] — 2026-07-19
+
+### Fixed
+
+- **Backup resilience: a cross-provider fallback that is benched or outside the
+  user's jurisdiction is now deterministically rejected** (substituted, else
+  dropped) in `_base_to_payload`, closing the gap where an anonymous caller — with
+  no service-side access guard — could be handed a benched or region-blocked
+  backup. Adds the fail-safe `cost.model_jurisdiction` and `cost.model_id_of`
+  catalog primitives.
+- **A model reached via the direct OpenAI API renders its reasoning-effort dial
+  (Intelligence), not a spurious "Max Mode".** OpenAI's reasoning surfaces (Codex
+  and the OpenAI API) share the effort dial and expose no Max Mode, so the settings
+  display no longer falls through to the Cursor-only Max Mode mapping.
+
+### Changed
+
+- **Consumption-headroom effort axis reaches the offline CLI + planning kit.** The
+  bundled selector's objective gains a CONSUMPTION-HEADROOM override so reasoning
+  effort is an axis SEPARATE from capability tier: a user whose flat subscription
+  has ample usage headroom keeps effort maxed across all picks, which then differ
+  by model tier alone. (The recommender service already applies this per user; this
+  release carries the rule to offline consumers.)
+
 ## [0.2.25] — 2026-07-16
 
 ### Changed
