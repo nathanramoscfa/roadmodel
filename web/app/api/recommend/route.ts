@@ -36,8 +36,8 @@ const DEFAULT_RECOMMENDER_URL =
 // cost_usd over signed-in rows = frontier spend). This is OUR cost, distinct
 // from the recommended model's user-facing session_cost_estimate. Rates are per
 // 1M tokens; the static system prompt (header + selector + tier-cost +
-// user-context) dominates input at ~20k tokens. outTokens is the visible +
-// (frontier) reasoning estimate. Engines absent here yield no ledger fields.
+// user-context) dominates input. outTokens is the visible + (frontier)
+// reasoning estimate. Engines absent here yield no ledger fields.
 const ENGINE_RATES: Record<
   string,
   { inPer1m: number; outPer1m: number; outTokens: number }
@@ -45,7 +45,14 @@ const ENGINE_RATES: Record<
   "gemini-2.5-flash": { inPer1m: 0.3, outPer1m: 2.5, outTokens: 512 },
   "gemini-2.5-pro": { inPer1m: 1.25, outPer1m: 10, outTokens: 900 },
 };
-const STATIC_PROMPT_TOKENS = 20000;
+// MEASURED at ~39.5k (google usage_metadata.prompt_token_count on the real
+// header+selector+tier-cost prompt, 2026-07), NOT the earlier 20k guess — so the
+// ledger + the daily spend-guard (web/lib/spend-guard.ts) reflect true engine
+// spend rather than ~half of it. Excludes per-request context caching (Gemini
+// implicit caching is present but unreliable per the 2026-07 probe), so this is
+// a conservative, budget-protective upper bound until real cached-token usage is
+// captured from the provider.
+const STATIC_PROMPT_TOKENS = 39500;
 
 // Cost ledger for the engine call(s). `inputCalls` / `outputCalls` scale the
 // static-prompt input and the visible output independently: the fan-out sends
