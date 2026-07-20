@@ -53,10 +53,11 @@ export const ENGINE_OVERRIDES: {
   recommend?: string;
   roadmap?: string;
 } = {
-  // GPT-5-mini canary (eval-backed engine move). Pins the free/anon /recommend
-  // engine to gpt-5-mini (force_provider "openai-gpt-5-mini") — best
-  // instruction-adherence + ~3x cheaper with OpenAI automatic prefix caching.
-  // The signed-in frontier stays on gemini-2.5-pro until this anon canary is
-  // confirmed in prod (cost + adherence), then it flips too (full cutover).
+  // GPT-5-mini (eval-backed engine move). Pins the free/anon /recommend engine
+  // to gpt-5-mini (force_provider "openai-gpt-5-mini") — best instruction-
+  // adherence + ~3x cheaper with OpenAI automatic prefix caching. As of the
+  // 2026-07-19 full cutover the signed-in frontier also runs gpt-5-mini
+  // (FRONTIER_RECOMMENDER_ENGINE in model-routing.ts), so both tiers now share
+  // this engine; this override keeps the anon path pinned independently.
   recommend: "gpt-5-mini",
 };
