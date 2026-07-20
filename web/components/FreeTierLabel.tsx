@@ -22,8 +22,10 @@ export type FreeTierSurface = "recommend" | "roadmap";
 const ENGINE_DISPLAY: Record<string, string> = {
   "gemini-2.5-flash": "Gemini 2.5 Flash",
   "gemini-3-flash": "Gemini 3 Flash",
-  // T3b signed-in quality-tier engine.
+  // Prior signed-in quality-tier engine (kept for historical audit rows).
   "gemini-2.5-pro": "Gemini 2.5 Pro",
+  // Signed-in quality-tier engine + anon canary (2026-07-19 eval-backed cutover).
+  "gpt-5-mini": "GPT-5 mini",
 };
 
 function engineDisplayName(engine: string | undefined): string | null {

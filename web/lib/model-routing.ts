@@ -359,14 +359,18 @@ interface ResolveRecommenderEngineArgs {
   frontierEnabled?: boolean;
 }
 
-// Phase 4.5 T3b signed-in quality-tier engine: Gemini 2.5 Pro on the Google
-// key, run with reasoning ON by the FastAPI service (which keys its thinking-ON
-// params off this model id — see service/app/recommend.py). The 2026-06-06
-// bake-off picked it as the lowest-coupling engine that clears the #185/#188
-// adherence residuals the free-tier Flash engine left open. max_tokens mirrors
-// the service's frontier combined cap; use_frontier marks the audit row for the
-// per-call cost ledger.
-const FRONTIER_RECOMMENDER_ENGINE = "gemini-2.5-pro";
+// Signed-in quality-tier engine: GPT-5 mini on the OpenAI key, run with
+// reasoning at minimal effort by the FastAPI service (which keys its GPT-5
+// params — thinking_budget=0 → reasoning.effort=minimal — off the "gpt-5"
+// model-id prefix; see service/app/recommend.py + providers/openai.py). The
+// 2026-07-19 differential eval (scripts/eval_recommend_engines.py) picked it
+// over the prior Gemini 2.5 Pro frontier: perfect cost-demotion adherence
+// (1.0 vs 0.83) and ~3x cheaper with OpenAI automatic prefix caching. This
+// completes the full cutover after the anon canary (ENGINE_OVERRIDES.recommend)
+// was verified in prod. max_tokens mirrors the service GPT-5 output cap;
+// use_frontier marks the audit row for the per-call cost ledger.
+const FRONTIER_RECOMMENDER_ENGINE = "gpt-5-mini";
+const FRONTIER_RECOMMENDER_PROVIDER = "openai";
 
 // Recommender-surface entry point. Free engine (catalog-derived Flash) by
 // default; routes signed-in requests to the frontier engine ONLY when
@@ -379,8 +383,8 @@ export function resolveRecommenderEngine(
   if (signedIn && frontierEnabled) {
     return {
       engine: FRONTIER_RECOMMENDER_ENGINE,
-      provider: "google",
-      force_provider: `google-${FRONTIER_RECOMMENDER_ENGINE}`,
+      provider: FRONTIER_RECOMMENDER_PROVIDER,
+      force_provider: `${FRONTIER_RECOMMENDER_PROVIDER}-${FRONTIER_RECOMMENDER_ENGINE}`,
       max_tokens: 2048,
       use_frontier: true,
     };
