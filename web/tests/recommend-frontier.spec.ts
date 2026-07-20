@@ -1,12 +1,12 @@
 // web/tests/recommend-frontier.spec.ts
 //
-// Phase 4.5 T3b — signed-in quality-tier engine routing. Playwright test()
-// blocks run Node-side (no `page` fixture) — the repo's unit-test idiom.
-// resolveRecommenderEngine returns the Gemini 2.5 Pro frontier engine ONLY for
-// signed-in requests when the RECOMMENDER_FRONTIER_ENABLED gate is on; anonymous
-// requests and the gated-off (increment-1 dark-ship) state always get the free
-// catalog engine. seed-test-env first so web/lib/env.ts parses (model-routing
-// imports the bundled catalog).
+// Signed-in quality-tier engine routing. Playwright test() blocks run Node-side
+// (no `page` fixture) — the repo's unit-test idiom. resolveRecommenderEngine
+// returns the GPT-5 mini frontier engine (2026-07-19 eval-backed cutover from
+// Gemini 2.5 Pro) ONLY for signed-in requests when the RECOMMENDER_FRONTIER_ENABLED
+// gate is on; anonymous requests and the gated-off (increment-1 dark-ship) state
+// always get the free catalog engine. seed-test-env first so web/lib/env.ts
+// parses (model-routing imports the bundled catalog).
 
 import "./fixtures/seed-test-env";
 
@@ -15,15 +15,15 @@ import { test, expect } from "@playwright/test";
 import { resolveRecommenderEngine } from "../lib/model-routing";
 import { env } from "../lib/env";
 
-test("signed-in + frontier gate on → Gemini 2.5 Pro frontier engine", () => {
+test("signed-in + frontier gate on → GPT-5 mini frontier engine", () => {
   const e = resolveRecommenderEngine({
     profile: null,
     signedIn: true,
     frontierEnabled: true,
   });
-  expect(e.engine).toBe("gemini-2.5-pro");
-  expect(e.provider).toBe("google");
-  expect(e.force_provider).toBe("google-gemini-2.5-pro");
+  expect(e.engine).toBe("gpt-5-mini");
+  expect(e.provider).toBe("openai");
+  expect(e.force_provider).toBe("openai-gpt-5-mini");
   expect(e.use_frontier).toBe(true);
 });
 
