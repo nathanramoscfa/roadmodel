@@ -250,8 +250,9 @@ test("renders the rationale as readable lines with glossary popovers (#270, #269
 test("renders sub-headed rationale sections when the service supplies them", async ({
   page,
 }) => {
-  // When the recommender emits structured rationale (task/pick/run), the panel
-  // renders sub-headings instead of splitting one prose string.
+  // When the recommender emits structured rationale (task/pick/effort), the panel
+  // renders sub-headings instead of splitting one prose string. The third segment
+  // justifies the EFFORT (why this thinking level) — NOT how to run it.
   await page.route("**/api/recommend", (route) =>
     route.fulfill({
       status: 200,
@@ -261,12 +262,12 @@ test("renders sub-headed rationale sections when the service supplies them", asy
         platform: "Claude Code",
         settings: {
           rationale:
-            "TASK: Ship a report. PICK: Opus 4.8 is S-tier. RUN: Claude Code, Max effort.",
+            "TASK: Ship a report. PICK: Opus 4.8 is S-tier. EFFORT: Max fits the deep reasoning.",
         },
         rationale_sections: {
           task: "Ship an institutional-grade equity research report.",
           pick: "Opus 4.8 is S-tier for coding.",
-          run: "Run on Claude Code at Max effort, funded by Claude Max.",
+          effort: "Max thinking fits the deep, long-context reasoning this audit demands.",
         },
         comparison_table: [],
       }),
@@ -277,13 +278,13 @@ test("renders sub-headed rationale sections when the service supplies them", asy
   await page.getByRole("button", { name: /Submit/i }).click();
   const why = page.getByRole("region", { name: /Why this model/i });
   await expect(why).toBeVisible();
-  // The task + pick sub-headings render; the how-to-run segment is intentionally
-  // dropped (roadmodel answers what to run, not how) — its heading and text must
-  // NOT appear even when the service still supplies a `run` section.
+  // Three sub-heads: task, pick, and the new "Why this effort" — but never the
+  // old "How to run it" (roadmodel answers what to run + settings, not how).
   await expect(why.getByRole("heading", { name: "The task" })).toBeVisible();
   await expect(why.getByRole("heading", { name: "Why this pick" })).toBeVisible();
+  await expect(why.getByRole("heading", { name: "Why this effort" })).toBeVisible();
   await expect(why.getByRole("heading", { name: "How to run it" })).toHaveCount(0);
-  await expect(why.getByText(/funded by Claude Max/i)).toHaveCount(0);
+  await expect(why.getByText(/Max thinking fits the deep, long-context reasoning/i)).toBeVisible();
   await expect(why.getByText(/institutional-grade equity research report/i)).toBeVisible();
 });
 

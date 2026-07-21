@@ -25,12 +25,14 @@ interface WhyDisclosureProps {
 
 // The rationale sub-heads, in display order, mapped from the service's section
 // keys. roadmodel answers WHAT to run + with which settings, not HOW to run it —
-// so the engine's third "run" segment (funding/how-to-invoke) is intentionally
-// NOT rendered here. A follow-up release repurposes that segment into a "Why
-// this effort" justification, which will slot in as the third sub-head.
+// so the engine's third segment justifies the chosen EFFORT (why this thinking/
+// effort level fits the task), NOT funding or how-to-invoke. `effort` is emitted
+// by roadmodel >=0.2.28; older engines emit no effort key and this sub-head
+// simply doesn't render (graceful two-section fallback).
 const SECTIONS: { key: string; label: string }[] = [
   { key: "task", label: "The task" },
   { key: "pick", label: "Why this pick" },
+  { key: "effort", label: "Why this effort" },
 ];
 
 function sectionText(

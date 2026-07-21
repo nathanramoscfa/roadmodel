@@ -482,7 +482,7 @@ def _pick_response(
         # Carry the model's reasoning across the service boundary (#173);
         # empty string -> None so the web edge falls back cleanly.
         rationale=rationale,
-        # Carry the best-effort structured rationale sections (task/pick/run) so
+        # Carry the best-effort structured rationale sections (task/pick/effort) so
         # the web panel can render sub-headings; absent -> None and the edge
         # falls back to the raw `rationale` string above.
         rationale_sections=rationale_sections,

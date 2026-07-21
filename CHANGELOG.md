@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.28] — 2026-07-21
+
+### Changed
+
+- **Rationale's third segment is now `EFFORT:` (was `RUN:`).** The recommender
+  answers WHAT to run and with which settings, not HOW to run it. The third
+  labelled RATIONALE segment now justifies the chosen **effort/thinking level**
+  for the task ("Why this effort") instead of narrating funding/how-to-invoke.
+  The parser accepts the legacy `RUN:` label (mapping it to the `effort` key) so
+  responses cached across the rename still parse; the web "Why {model}?" panel
+  renders **The task / Why this pick / Why this effort**.
+
+### Fixed
+
+- **Frontier anchor: the flagship is no longer skipped for a tied sibling.** When
+  the top capability tier holds two same-provider peers tied for the task (e.g.
+  Anthropic's Opus 4.8 and Fable 5), the ladder now anchors QUALITY on the
+  established flagship (for Anthropic, Opus 4.8) and never drops it from the
+  result for a tied sibling; Fable 5 is used only when the task specifically
+  favors its strengths. Fixes the case where a Quality-default hard task
+  collapsed the Cost rung to a low tier and pushed Opus 4.8 out of the ladder
+  entirely.
+
 ## [0.2.27] — 2026-07-19
 
 ### Fixed

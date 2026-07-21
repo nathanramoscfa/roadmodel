@@ -4071,9 +4071,10 @@ RATIONALE: [Emit THREE labelled segments in this EXACT order and format, so
               plus ONE headline benchmark or named leaderboard from
               <benchmark-sources> supporting it (note the cost tie-breaker
               only if step 5 actually applied)>
-              RUN: <the subscription or API key funding the PLATFORM, the
-              THINKING and ORCHESTRATION choices, and the conversation
-              decision — stated tersely, not one clause per item>
+              EFFORT: <WHY the chosen THINKING/effort level and, where it
+              applies, ORCHESTRATION fit THIS task's difficulty — a
+              justification of the settings, NEVER funding, how-to-run, or
+              setup instructions>
             Each label is upper-case followed by a colon and a space; keep
             every segment short and justifying the pick only, and NEVER
             perform the task.]
@@ -4097,9 +4098,10 @@ RATIONALE: [Emit THREE labelled segments in this EXACT order and format, so
               plus ONE headline benchmark or named leaderboard from
               <benchmark-sources> supporting it (note the cost tie-breaker
               only if step 5 actually applied)>
-              RUN: <the subscription or API key funding the PLATFORM, the
-              THINKING and ORCHESTRATION choices, and the conversation
-              decision — stated tersely, not one clause per item>
+              EFFORT: <WHY the chosen THINKING/effort level and, where it
+              applies, ORCHESTRATION fit THIS task's difficulty — a
+              justification of the settings, NEVER funding, how-to-run, or
+              setup instructions>
             Each label is upper-case followed by a colon and a segment; keep
             every segment short and justifying the pick only, and NEVER
             perform the task.]
@@ -4119,7 +4121,7 @@ MAX MODE: [On/Off]
 THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]
 ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
 CONVERSATION: [New/Continue]
-RATIONALE: [THREE labelled segments — TASK: / PICK: / RUN: — exactly as in
+RATIONALE: [THREE labelled segments — TASK: / PICK: / EFFORT: — exactly as in
             single-prompt mode.]
 
 TIER: BALANCED
@@ -4130,7 +4132,7 @@ MAX MODE: [On/Off]
 THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]
 ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
 CONVERSATION: [New/Continue]
-RATIONALE: [TASK: / PICK: / RUN: as above.]
+RATIONALE: [TASK: / PICK: / EFFORT: as above.]
 
 TIER: COST
 MODEL: [Model Name]
@@ -4140,7 +4142,7 @@ MAX MODE: [On/Off]
 THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]
 ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
 CONVERSATION: [New/Continue]
-RATIONALE: [TASK: / PICK: / RUN: as above.]
+RATIONALE: [TASK: / PICK: / EFFORT: as above.]
 
 Ladder construction rules (the WHOLE POINT of this mode — obey strictly):
   1. Determine the QUALITY pick FIRST, by running the full selection

@@ -36,38 +36,39 @@ def test_full_labelled_rationale_splits_into_three() -> None:
     raw = (
         "TASK: Multi-file refactor of a Python service. "
         "PICK: Opus 4.8 is S-tier for coding and leads SWE-bench Verified. "
-        "RUN: Claude Code at Max effort, funded by Claude Max; conversation New."
+        "EFFORT: Max thinking fits the deep multi-file reasoning this refactor demands."
     )
     assert _split_rationale_sections(raw) == {
         "task": "Multi-file refactor of a Python service.",
         "pick": "Opus 4.8 is S-tier for coding and leads SWE-bench Verified.",
-        "run": "Claude Code at Max effort, funded by Claude Max; conversation New.",
+        "effort": "Max thinking fits the deep multi-file reasoning this refactor demands.",
     }
 
 
-def test_labelled_rationale_split_across_newlines() -> None:
-    # The model may put each segment on its own line; the capture is DOTALL.
+def test_legacy_run_label_maps_to_effort_key() -> None:
+    # Responses cached across the RUN->EFFORT rename still parse: the legacy
+    # "RUN:" label is accepted and captured into the `effort` key.
     raw = "TASK: Plan a SQL agent.\nPICK: Fable 5 is S-tier.\nRUN: Ultracode on Claude Code."
     assert _split_rationale_sections(raw) == {
         "task": "Plan a SQL agent.",
         "pick": "Fable 5 is S-tier.",
-        "run": "Ultracode on Claude Code.",
+        "effort": "Ultracode on Claude Code.",
     }
 
 
 def test_labels_are_case_insensitive() -> None:
-    raw = "task: Coding. pick: Opus 4.8 is S-tier. run: Claude Code, Max effort."
+    raw = "task: Coding. pick: Opus 4.8 is S-tier. effort: Max thinking fits the hard task."
     sections = _split_rationale_sections(raw)
     assert sections is not None
     assert sections["task"] == "Coding."
 
 
 def test_markdown_emphasis_and_bullets_are_trimmed() -> None:
-    raw = "TASK: **Coding task.** PICK: - Opus 4.8 S-tier. RUN: *Claude Code.*"
+    raw = "TASK: **Coding task.** PICK: - Opus 4.8 S-tier. EFFORT: *Max for hard reasoning.*"
     assert _split_rationale_sections(raw) == {
         "task": "Coding task.",
         "pick": "Opus 4.8 S-tier.",
-        "run": "Claude Code.",
+        "effort": "Max for hard reasoning.",
     }
 
 
@@ -79,7 +80,7 @@ def test_unlabelled_prose_yields_no_sections() -> None:
 
 
 def test_partial_labels_yield_no_sections() -> None:
-    # Missing RUN -> treat the whole thing as unstructured (no empty sub-heading).
+    # Missing EFFORT -> treat the whole thing as unstructured (no empty sub-heading).
     assert _split_rationale_sections("TASK: Coding. PICK: Opus 4.8 S-tier.") is None
 
 
@@ -119,13 +120,13 @@ def test_recommend_structured_attaches_sections_when_labelled(
     monkeypatch.setattr(
         recommend_module,
         "recommend",
-        _fake_base("TASK: Coding. PICK: Opus 4.8 is S-tier. RUN: Claude Code, Max effort."),
+        _fake_base("TASK: Coding. PICK: Opus 4.8 is S-tier. EFFORT: Max fits this hard task."),
     )
     payload = recommend_module.recommend_structured("build a SQL agent", _config(tmp_path))
     assert payload["rationale_sections"] == {
         "task": "Coding.",
         "pick": "Opus 4.8 is S-tier.",
-        "run": "Claude Code, Max effort.",
+        "effort": "Max fits this hard task.",
     }
     # The raw string is still carried for the fallback path.
     assert payload["rationale"].startswith("TASK:")

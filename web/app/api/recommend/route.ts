@@ -128,7 +128,7 @@ interface RecommenderPayload {
   comparison_table?: Record<string, unknown>[];
   // The model's reasoning, carried as a top-level field by the service (#173).
   rationale?: string;
-  // Structured rationale sections (task/pick/run), carried verbatim to the
+  // Structured rationale sections (task/pick/effort), carried verbatim to the
   // client so the "Why this model?" panel can render sub-headings. Best-effort
   // from the service (absent on an older service or a non-conforming model);
   // it flows through shapePick's spreads untouched — no budget/funding notes
