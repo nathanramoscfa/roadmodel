@@ -69,18 +69,20 @@ _RESPONSE_BLOCK_RE: Final = re.compile(
 )
 
 # The RATIONALE value is emitted as three labelled segments — "TASK: ... PICK:
-# ... RUN: ..." — so the web "Why this model?" panel can render sub-headed
+# ... EFFORT: ..." — so the web "Why this model?" panel can render sub-headed
 # sections instead of splitting one prose blob (the redesign). This is a
 # BEST-EFFORT parse over the already-captured rationale STRING: the single
 # RATIONALE field stays required and unchanged (_REQUIRED_KEYS /
 # _RESPONSE_BLOCK_RE are untouched), so a model that ignores the labelled format
 # still yields a valid recommendation — it just carries no structured sections
 # and the web edge falls back to rendering the raw string. Anchored on the three
-# labels in order; a lazy match bounds each segment at the next label.
+# labels in order; a lazy match bounds each segment at the next label. The third
+# label accepts the legacy "RUN:" alongside "EFFORT:" so responses cached across
+# the rename still parse (both map to the `effort` key).
 _RATIONALE_SECTION_RE: Final = re.compile(
     r"\bTASK:\s*(?P<task>.+?)\s*"
     r"\bPICK:\s*(?P<pick>.+?)\s*"
-    r"\bRUN:\s*(?P<run>.+)",
+    r"\b(?:EFFORT|RUN):\s*(?P<effort>.+)",
     flags=re.IGNORECASE | re.DOTALL,
 )
 
@@ -91,9 +93,9 @@ def _clean_segment(value: str) -> str:
 
 
 def _split_rationale_sections(rationale: str) -> dict[str, str] | None:
-    """Best-effort split of the labelled RATIONALE into task/pick/run sections.
+    """Best-effort split of the labelled RATIONALE into task/pick/effort sections.
 
-    Returns a ``{"task", "pick", "run"}`` dict when the model emitted all three
+    Returns a ``{"task", "pick", "effort"}`` dict when the model emitted all three
     labelled segments in order; otherwise ``None`` (the caller then carries only
     the raw ``rationale`` string and the web edge renders it unsplit). Never
     raises — a non-conforming rationale simply yields no sections, so this can
@@ -194,11 +196,16 @@ _SAAS_HEADER: Final = (
     "- RATIONALE is three labelled segments, in this exact order, each starting "
     "with its upper-case label and a colon: 'TASK:' (the prompt's PRIMARY task "
     "category), then 'PICK:' (the model's tier rating in that category plus a "
-    "headline benchmark/leaderboard supporting it), then 'RUN:' (the funding "
-    "subscription/API, the THINKING and ORCHESTRATION choices, and the "
-    "conversation decision). Keep EACH segment to ONE crisp sentence of ~15-25 "
-    "words — no lists, no second sentence; justify the pick only, never perform "
-    "the task.\n"
+    "headline benchmark/leaderboard supporting it), then 'EFFORT:' (WHY the "
+    "chosen THINKING/effort level and, where it applies, ORCHESTRATION fit THIS "
+    "task's difficulty — never funding, how-to-run, or setup instructions). Keep "
+    "EACH segment to ONE crisp sentence of ~15-25 words — no lists, no second "
+    "sentence; justify the pick only, never perform the task.\n"
+    "- FRONTIER ANCHOR: when the top capability tier holds two same-provider "
+    "models tied for the task (e.g. Anthropic's Opus 4.8 and Fable 5), prefer the "
+    "established FLAGSHIP as the top pick and NEVER drop it from the result for a "
+    "tied sibling — for Anthropic, Opus 4.8 is the frontier anchor; recommend "
+    "Fable 5 only when the task SPECIFICALLY favors its strengths.\n"
 )
 
 # Ladder-mode header (tasks #1/#3): the recommender emits the WHOLE Cost /
@@ -231,11 +238,19 @@ _SAAS_LADDER_HEADER: Final = (
     "- Only if the candidate set truly cannot supply three distinct tiers may two "
     "rungs share a tier — then they MUST differ by EFFORT and each RATIONALE must "
     "say so.\n"
+    "- FRONTIER ANCHOR: when the QUALITY tier holds two same-provider models tied "
+    "for the task (e.g. Anthropic's Opus 4.8 and Fable 5), anchor QUALITY on the "
+    "established FLAGSHIP and NEVER skip it — for Anthropic, Opus 4.8 is the "
+    "frontier anchor; use Fable 5 only when the task SPECIFICALLY favors its "
+    "strengths. Do NOT collapse the ladder to a much lower tier (e.g. dropping "
+    "COST to a Low-tier model) in a way that pushes the flagship out of the "
+    "result entirely.\n"
     "- Every pick independently obeys the algorithm: availability (Step 0a), "
     "jurisdiction (Step 0b), the funded-platform posture, the thinking / max-mode "
     "mapping, and the Step 7 HARD cross-provider BACKUP rule.\n"
     "- Each block's RATIONALE is the same three labelled segments (TASK: / PICK: "
-    "/ RUN:), one crisp sentence each, justifying that pick only.\n"
+    "/ EFFORT:), one crisp sentence each, justifying that pick only; EFFORT states "
+    "WHY the chosen thinking/effort fits the task, never funding or how-to-run.\n"
 )
 
 
@@ -629,7 +644,7 @@ def _base_to_payload(
 ) -> dict[str, Any]:
     """Turn one parsed six-field ``base`` into the structured payload the
     service/web consume: canonical model + platform, per-surface settings,
-    rationale (+ best-effort task/pick/run sections), conversation, optional
+    rationale (+ best-effort task/pick/effort sections), conversation, optional
     backup, and cost fields left None (the service fills those separately). Used
     by both :func:`recommend_structured` and :func:`recommend_structured_ladder`
     so every pick — single or laddered — is shaped identically.
