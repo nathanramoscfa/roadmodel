@@ -384,6 +384,30 @@ def test_guard_replaces_fabricated_subscription_claim() -> None:
     assert new_sections["pick"] == _SECTIONS_CURSOR_FABRICATED["pick"]
 
 
+def test_guard_scrubs_fabricated_claim_in_effort_section() -> None:
+    # Since 0.2.28 the third rationale segment is `effort`; a stray funded claim
+    # there (a hallucination — EFFORT should never narrate funding) is still
+    # scrubbed, and the rebuilt flat rationale uses the EFFORT label.
+    g = _guard([], ["deepseek"])
+    sections = {
+        "task": "A multi-file coding task.",
+        "pick": "Fable 5 is S-tier in coding.",
+        "effort": "Max effort on your Cursor subscription pool suits the deep task.",
+    }
+    rationale = (
+        "TASK: A multi-file coding task. PICK: Fable 5 is S-tier in coding. "
+        "EFFORT: Max effort on your Cursor subscription pool suits the deep task."
+    )
+    new_rationale, new_sections = g.sanitize("Cursor", rationale, sections)
+    assert new_sections is not None
+    assert "your Cursor subscription" not in new_sections["effort"]
+    assert "not covered by any subscription or API access" in new_sections["effort"]
+    assert new_rationale is not None
+    assert new_rationale.startswith("TASK: A multi-file coding task.")
+    assert "EFFORT:" in new_rationale
+    assert "your Cursor subscription" not in new_rationale
+
+
 def test_guard_keeps_true_subscription_claim() -> None:
     # User actually holds claude-max, which funds claude-code: "your
     # subscription" narration on Claude Code is TRUE and must survive.

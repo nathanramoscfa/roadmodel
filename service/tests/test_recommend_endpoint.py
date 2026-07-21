@@ -177,7 +177,7 @@ def test_recommend_returns_200(
         "settings": {"effort": "High", "thinking": "On"},
         # #173: the model's rationale now survives the service boundary.
         "rationale": "Best for coding tasks.",
-        # Structured rationale sections (task/pick/run) default to None when the
+        # Structured rationale sections (task/pick/effort) default to None when the
         # selector payload omits them (this fake carries only the raw string).
         "rationale_sections": None,
         # #190: the conversation-handling decision now survives too.
@@ -371,7 +371,7 @@ def test_response_schema_matches_phase2_contract(
         "platform",
         "settings",
         "rationale",  # #173 — carried through the service boundary
-        "rationale_sections",  # structured task/pick/run — carried through, None when absent
+        "rationale_sections",  # structured task/pick/effort — carried through, None when absent
         "conversation",  # #190 — same boundary, now carried through
         "backup",  # fallback model (Step 7) — same boundary, carried through
         "session_cost_estimate",
@@ -660,7 +660,7 @@ def test_recommend_passes_through_rationale_sections(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The /recommend redesign: recommend_structured emits best-effort structured
-    rationale (task/pick/run) alongside the raw string; the service must carry it
+    rationale (task/pick/effort) alongside the raw string; the service must carry it
     into RecommendResponse so the web panel can render sub-headings. Same
     service-boundary carry-through as rationale (#173)."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
@@ -668,7 +668,7 @@ def test_recommend_passes_through_rationale_sections(
     sections = {
         "task": "Ship an equity research report.",
         "pick": "Fable 5 is S-tier; leads HLE.",
-        "run": "Claude Code, XHigh effort, funded by Claude Max.",
+        "effort": "Max thinking fits an audit that needs deep long-context reasoning.",
     }
 
     def _fake(prompt: str, config: Any, **_kwargs: Any) -> dict[str, Any]:

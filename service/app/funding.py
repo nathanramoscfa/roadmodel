@@ -662,17 +662,25 @@ class FundingGuard:
                 # claims are true — leave the engine's narration alone.
                 return rationale, rationale_sections
 
-            if rationale_sections and rationale_sections.get("run"):
-                run = rationale_sections["run"]
-                if not _FUNDED_CLAIM_RE.search(run):
+            # The third rationale segment is EFFORT (a settings justification, no
+            # funding narration) since 0.2.28; a stray funded claim there is a
+            # hallucination we still scrub. `run` is accepted as the legacy key
+            # for responses cached across the rename.
+            effort_key = "effort" if (rationale_sections or {}).get("effort") else "run"
+            if rationale_sections and rationale_sections.get(effort_key):
+                effort = rationale_sections[effort_key]
+                if not _FUNDED_CLAIM_RE.search(effort):
                     return rationale, rationale_sections
                 honest = self._replacement(platform, method)
-                sections = {**rationale_sections, "run": honest}
-                # Rebuild the flat rationale in the same TASK/PICK/RUN shape so
+                sections = {**rationale_sections, effort_key: honest}
+                # Rebuild the flat rationale in the same TASK/PICK/EFFORT shape so
                 # the edge's unsplit fallback rendering stays consistent.
                 task = sections.get("task", "")
                 pick = sections.get("pick", "")
-                rebuilt = f"TASK: {task} PICK: {pick} RUN: {honest}" if task and pick else rationale
+                label = "EFFORT" if effort_key == "effort" else "RUN"
+                rebuilt = (
+                    f"TASK: {task} PICK: {pick} {label}: {honest}" if task and pick else rationale
+                )
                 return rebuilt, sections
 
             # No structured sections: append a correction rather than attempt
