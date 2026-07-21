@@ -56,43 +56,13 @@ function isMeaningful(value: string): boolean {
   return !MEANINGLESS_VALUES.has(value.trim().toLowerCase());
 }
 
-// The backup's reasoning effort for display: the LEVEL from its per-surface
-// settings — effort / intelligence, or a thinking level (not the On/Off toggle).
-function backupEffortLabel(
-  settings: Record<string, string> | undefined,
-): string | null {
-  if (!settings) return null;
-  const effort = settings.effort ?? settings.intelligence;
-  if (effort && isMeaningful(effort)) return formatSettingValue(effort);
-  const thinking = settings.thinking;
-  if (
-    thinking &&
-    !["on", "off"].includes(thinking.trim().toLowerCase()) &&
-    isMeaningful(thinking)
-  ) {
-    return formatSettingValue(thinking);
-  }
-  return null;
-}
-
-// The Backup cell: model name + its own funded platform pill (with effort), so
-// the fallback shows HOW to run it — mirroring a pick's model + platform header
-// and adhering to the user's settings. Degrades to just the name (or an em dash)
-// when platform/settings are unresolved (anon / no funding).
+// The Backup cell: just the fallback model's name. roadmodel names WHAT to run,
+// not how — the user knows how to run the backup, so its platform/effort
+// "how-to-run" sub-label is intentionally omitted. Degrades to an em dash when
+// no backup is resolved (anon / no cross-provider candidate).
 function backupCell(backup: PriorityRecommendation["backup"]): ReactNode {
   if (!backup?.model) return "—";
-  const effort = backupEffortLabel(backup.settings);
-  return (
-    <span className="flex flex-col items-start gap-1">
-      <span>{backup.model}</span>
-      {backup.platform ? (
-        <span className="text-[10px] font-medium leading-snug text-brand-accent">
-          {backup.platform}
-          {effort ? ` · ${effort}` : ""}
-        </span>
-      ) : null}
-    </span>
-  );
+  return backup.model;
 }
 
 // The union of setting keys across the picks, in first-seen order, so every
