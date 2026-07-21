@@ -277,10 +277,13 @@ test("renders sub-headed rationale sections when the service supplies them", asy
   await page.getByRole("button", { name: /Submit/i }).click();
   const why = page.getByRole("region", { name: /Why this model/i });
   await expect(why).toBeVisible();
-  // Three sub-headings, one per section.
+  // The task + pick sub-headings render; the how-to-run segment is intentionally
+  // dropped (roadmodel answers what to run, not how) — its heading and text must
+  // NOT appear even when the service still supplies a `run` section.
   await expect(why.getByRole("heading", { name: "The task" })).toBeVisible();
   await expect(why.getByRole("heading", { name: "Why this pick" })).toBeVisible();
-  await expect(why.getByRole("heading", { name: "How to run it" })).toBeVisible();
+  await expect(why.getByRole("heading", { name: "How to run it" })).toHaveCount(0);
+  await expect(why.getByText(/funded by Claude Max/i)).toHaveCount(0);
   await expect(why.getByText(/institutional-grade equity research report/i)).toBeVisible();
 });
 
