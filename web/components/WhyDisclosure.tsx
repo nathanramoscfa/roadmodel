@@ -23,11 +23,14 @@ interface WhyDisclosureProps {
   model?: string | null;
 }
 
-// The three sub-heads, in display order, mapped from the service's section keys.
+// The rationale sub-heads, in display order, mapped from the service's section
+// keys. roadmodel answers WHAT to run + with which settings, not HOW to run it —
+// so the engine's third "run" segment (funding/how-to-invoke) is intentionally
+// NOT rendered here. A follow-up release repurposes that segment into a "Why
+// this effort" justification, which will slot in as the third sub-head.
 const SECTIONS: { key: string; label: string }[] = [
   { key: "task", label: "The task" },
   { key: "pick", label: "Why this pick" },
-  { key: "run", label: "How to run it" },
 ];
 
 function sectionText(
@@ -53,7 +56,11 @@ function toLines(rationale: string): string[] {
     .split(/\n+/)
     .flatMap((para) => para.split(/(?<=[.!?])\s+(?=[A-Z"'(])/))
     .map((line) => line.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    // Drop a labelled "RUN: …" sentence if the flat rationale carries one — the
+    // how-to-run segment is not shown (see SECTIONS). Only strips the explicit
+    // label form, so ordinary prose that happens to start with "Run" is kept.
+    .filter((line) => !/^run:/i.test(line));
   return lines.length > 0 ? lines : [rationale.trim()];
 }
 
