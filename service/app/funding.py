@@ -59,6 +59,23 @@ _PROVIDER_LABELS: dict[str, str] = {
     "zai": "z.ai",
 }
 
+# Leading maker / product-line words an engine may prepend to a bare catalog
+# name ("Claude Fable 5" for catalog "Fable 5"). Stripped on a resolve MISS
+# (direct match is always tried first) so a correctly-named, accessible pick is
+# not misread as inaccessible — which triggered a bogus self-substitution and
+# the self-contradictory "<pick> is strongest; <pick> was outside your access"
+# rationale (the pick and its "substitute" were the same model under two names).
+_VENDOR_NAME_PREFIXES: tuple[str, ...] = (
+    "claude ",
+    "gemini ",
+    "anthropic ",
+    "openai ",
+    "google ",
+    "mistral ",
+    "deepseek ",
+    "xai ",
+)
+
 # Stable ids for the three pre-#152 subscription tiers (mirror web/lib/
 # subscriptions.ts LEGACY_IDS). Keyed by `${provider}|${tier}`.
 _LEGACY_TIER_IDS: dict[str, str] = {
@@ -833,7 +850,19 @@ class AccessGuard:
     def _resolve_id(self, model_ref: str | None) -> str | None:
         if not model_ref:
             return None
-        return self._id_of.get(model_ref.strip().lower())
+        key = model_ref.strip().lower()
+        mid = self._id_of.get(key)
+        if mid is not None:
+            return mid
+        # Resolve miss: the engine sometimes prepends the maker/product line
+        # ("Claude Fable 5" for catalog "Fable 5"). Strip a leading vendor word
+        # and retry so an accessible pick isn't misread as inaccessible.
+        for prefix in _VENDOR_NAME_PREFIXES:
+            if key.startswith(prefix):
+                stripped = self._id_of.get(key[len(prefix) :].strip())
+                if stripped is not None:
+                    return stripped
+        return None
 
     def is_accessible(self, model_ref: str | None) -> bool:
         mid = self._resolve_id(model_ref)
@@ -888,7 +917,20 @@ class AccessGuard:
             changed = False
             if not self.is_accessible(result.get("model")):
                 sub_id = self._best_substitute(priority)
-                if sub_id is not None:
+                # Never "substitute" a model with itself: if the best accessible
+                # substitute IS the model the engine named (a name mismatch the
+                # resolver didn't catch, e.g. an unregistered prefix), keep the
+                # pick rather than emit "<X> is strongest; <X> was outside access."
+                original_ref = str(result.get("model") or "").strip().lower()
+                sub_name = (
+                    str(self._meta.get(sub_id, {}).get("name", "")).strip().lower()
+                    if sub_id
+                    else ""
+                )
+                same_model = bool(sub_name) and (
+                    sub_name in original_ref or original_ref in sub_name
+                )
+                if sub_id is not None and not same_model:
                     self._apply_primary_substitution(result, sub_id)
                     changed = True
             # Backup must also be accessible AND a different maker than the

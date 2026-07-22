@@ -731,6 +731,35 @@ def test_access_guard_leaves_accessible_pick_untouched() -> None:
     assert r["rationale_sections"] == {"task": "t", "pick": "p", "run": "r"}
 
 
+def test_resolve_id_strips_leading_maker_prefix() -> None:
+    # The engine sometimes prefixes a bare catalog name with its maker
+    # ("Claude Opus" for catalog "Opus"). is_accessible must still resolve it,
+    # else the guard bogus-substitutes an accessible pick with itself.
+    g = _access_guard([], ["anthropic"], ["us"])
+    assert g.is_accessible("Opus") is True
+    assert g.is_accessible("Claude Opus") is True
+
+
+def test_access_guard_no_self_substitution_on_maker_prefixed_pick() -> None:
+    # Regression (the "Claude Fable 5 was outside your access" contradiction):
+    # the engine picks "Claude Opus" (accessible as "opus"). The guard must NOT
+    # rewrite it to "Opus is strongest; Claude Opus was outside your access" —
+    # the pick and its would-be substitute are the same model under two names.
+    g = _access_guard([], ["anthropic"], ["us"])
+    r: dict[str, Any] = {
+        "model": "Claude Opus",
+        "platform": "Claude Code",
+        "settings": {},
+        "backup": None,
+        "rationale_sections": {"task": "t", "pick": "genuine pick rationale", "run": "r"},
+    }
+    changed = g.enforce(r, "best")
+    assert changed is False
+    assert r["model"] == "Claude Opus"
+    assert r["rationale_sections"]["pick"] == "genuine pick rationale"
+    assert "outside your access" not in r["rationale_sections"]["pick"]
+
+
 def test_access_guard_substitutes_inaccessible_backup() -> None:
     g = _access_guard([], ["mistral"], ["us", "eu"])
     r: dict[str, Any] = {
