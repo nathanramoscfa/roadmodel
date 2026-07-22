@@ -206,6 +206,12 @@ _SAAS_HEADER: Final = (
     "established FLAGSHIP as the top pick and NEVER drop it from the result for a "
     "tied sibling — for Anthropic, Opus 4.8 is the frontier anchor; recommend "
     "Fable 5 only when the task SPECIFICALLY favors its strengths.\n"
+    "- NEVER describe the model you ARE recommending (MODEL or BACKUP) as "
+    "unavailable, outside the user's access, or 'not recommendable' — by "
+    "construction it is a model the user can run, so such a claim is "
+    "self-contradictory. Only an access/jurisdiction/availability DISCLOSURE about "
+    "a DIFFERENT, DROPPED model belongs in the RATIONALE, and it must name that "
+    "dropped model, never the one you return.\n"
 )
 
 # Ladder-mode header (tasks #1/#3): the recommender emits the WHOLE Cost /
@@ -251,6 +257,11 @@ _SAAS_LADDER_HEADER: Final = (
     "- Each block's RATIONALE is the same three labelled segments (TASK: / PICK: "
     "/ EFFORT:), one crisp sentence each, justifying that pick only; EFFORT states "
     "WHY the chosen thinking/effort fits the task, never funding or how-to-run.\n"
+    "- NEVER describe the model you ARE recommending (MODEL or BACKUP) in any rung "
+    "as unavailable, outside the user's access, or 'not recommendable' — by "
+    "construction it is a model the user can run, so such a claim is "
+    "self-contradictory. An access/jurisdiction/availability DISCLOSURE may name "
+    "only a DIFFERENT, DROPPED model, never the one you return.\n"
 )
 
 

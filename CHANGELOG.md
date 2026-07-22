@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.29] — 2026-07-22
+
+### Fixed
+
+- **Rationale no longer calls the recommended model "unavailable / outside your
+  access."** The `<availability-context>` substitution example literally used
+  "Fable 5" as its unavailable-model example, so when the engine picked Fable 5
+  it parroted the example verbatim — producing a self-contradictory rationale
+  ("Fable 5 is the strongest fit … Fable 5 was outside your access and was not
+  recommendable"). The example is now model-neutral, and both SAAS headers +
+  the selector carry a hard guard: the RATIONALE must NEVER describe the model
+  it is RETURNING (MODEL or BACKUP) as unavailable, outside access, or not
+  recommendable — an availability/jurisdiction/access disclosure may name only a
+  DIFFERENT, dropped model. Verified with gpt-5-mini (3/3 clean rationales on the
+  Fable-5 trigger prompt).
+
 ## [0.2.28] — 2026-07-21
 
 ### Changed
