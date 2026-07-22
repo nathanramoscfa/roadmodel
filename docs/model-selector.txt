@@ -1080,9 +1080,13 @@
       regardless of its tier ratings — its provider has restricted or
       withdrawn end-user access, so the recommendation would not be
       actionable. When an unavailable model would otherwise have been the
-      best fit, the RATIONALE MUST disclose it — e.g., "Fable 5 was the
-      strongest fit but is currently unavailable (access restricted by
-      Anthropic); next-best available model returned instead."
+      best fit, the RATIONALE MUST disclose it — naming the DROPPED model,
+      NEVER the one you return — e.g., "the strongest fit was unavailable
+      (provider access restricted), so the next-best available model was
+      returned instead." NEVER describe the model you ARE recommending
+      (MODEL or BACKUP) as unavailable, outside the user's access, or not
+      recommendable: by construction it is a model the user can run, so any
+      such claim is self-contradictory.
 
     Step 0b — Filter candidate models by allowed jurisdictions.
       Read the user's allowed-jurisdictions list from
