@@ -731,6 +731,18 @@ def test_access_guard_leaves_accessible_pick_untouched() -> None:
     assert r["rationale_sections"] == {"task": "t", "pick": "p", "run": "r"}
 
 
+def test_canonical_model_name_normalizes_maker_prefix() -> None:
+    # An accepted pick the engine names "Claude Opus" displays as catalog "Opus".
+    assert funding.canonical_model_name("Claude Opus", catalog=_ACCESS_CATALOG) == "Opus"
+    assert funding.canonical_model_name("Opus", catalog=_ACCESS_CATALOG) == "Opus"
+    # id also resolves; unknown/new model + None pass through unchanged.
+    assert funding.canonical_model_name("opus", catalog=_ACCESS_CATALOG) == "Opus"
+    assert (
+        funding.canonical_model_name("Some New Model", catalog=_ACCESS_CATALOG) == "Some New Model"
+    )
+    assert funding.canonical_model_name(None, catalog=_ACCESS_CATALOG) is None
+
+
 def test_resolve_id_strips_leading_maker_prefix() -> None:
     # The engine sometimes prefixes a bare catalog name with its maker
     # ("Claude Opus" for catalog "Opus"). is_accessible must still resolve it,

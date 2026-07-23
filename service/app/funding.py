@@ -255,6 +255,41 @@ def load_catalog() -> dict[str, Any]:
     return parsed
 
 
+def canonical_model_name(
+    model_ref: str | None, *, catalog: dict[str, Any] | None = None
+) -> str | None:
+    """Map an engine-emitted model name to its catalog DISPLAY name.
+
+    The engine sometimes prepends a maker/product-line word ("Claude Fable 5"
+    for catalog "Fable 5"); normalizing accepted picks to the catalog name keeps
+    the UI consistent with how the model is named everywhere else. Tolerates a
+    leading vendor prefix (mirrors AccessGuard._resolve_id) and matches on id too.
+    Returns the ref UNCHANGED when it doesn't resolve — never invents or drops a
+    name, so an unknown/new model still shows exactly what the engine emitted.
+    """
+    if not model_ref:
+        return model_ref
+    cat = catalog if catalog is not None else load_catalog()
+    index: dict[str, str] = {}
+    for model in cat.get("models", []) or []:
+        name = model.get("name")
+        if not isinstance(name, str):
+            continue
+        index[name.strip().lower()] = name
+        mid = model.get("id")
+        if isinstance(mid, str):
+            index[mid.strip().lower()] = name
+    key = model_ref.strip().lower()
+    if key in index:
+        return index[key]
+    for prefix in _VENDOR_NAME_PREFIXES:
+        if key.startswith(prefix):
+            hit = index.get(key[len(prefix) :].strip())
+            if hit is not None:
+                return hit
+    return model_ref
+
+
 def _slugify(value: str) -> str:
     # Faithful port of web/lib/subscriptions.ts slugify(); ORDER MATTERS.
     value = value.lower()
