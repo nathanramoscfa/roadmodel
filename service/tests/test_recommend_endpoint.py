@@ -16,8 +16,12 @@ _MODULES_TO_RESET = (
     "app.recommend",
 )
 
+# A deliberately NON-catalog model name so these boundary tests stay catalog-
+# independent: canonical_model_name() is a no-op on it and _session_cost() finds
+# no price (session_cost None), keeping the assertions below stable. Tests that
+# exercise normalization/cost use real catalog names explicitly.
 _RECOMMEND_DICT: dict[str, Any] = {
-    "model": "Claude Sonnet 4.6",
+    "model": "Test Frontier Model",
     "platform": "Claude Code",
     "settings": {"effort": "High", "thinking": "On"},
     "rationale": "Best for coding tasks.",
@@ -170,7 +174,7 @@ def test_recommend_returns_200(
         "max_mode": False,
     }
     assert body == {
-        "model": "Claude Sonnet 4.6",
+        "model": "Test Frontier Model",
         "platform": "Claude Code",
         # Claude Code is NOT a no-thinking surface, so settings pass through
         # unchanged (#188 only normalizes Cursor / xAI API).
@@ -626,12 +630,14 @@ def test_recommend_cost_degrades_gracefully_when_platform_unresolvable(
     monkeypatch.setattr(
         recommend_module,
         "recommend_structured",
-        _fake_returning("gemini-2.5-flash", "gemini-api"),
+        # Non-catalog model + platform: canonical_model_name() is a no-op and the
+        # cost catalog has no entry, so the panel degrades to empty (the point).
+        _fake_returning("Unlisted Model X", "unlisted-platform"),
     )
     resp = recommend_module.recommend(
         recommend_module.RecommendRequest(task_description="pick a model")
     )
-    assert resp.model == "gemini-2.5-flash"
+    assert resp.model == "Unlisted Model X"
     assert resp.session_cost_estimate is None
     assert resp.comparison_table == []
 
