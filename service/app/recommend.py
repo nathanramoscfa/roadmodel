@@ -25,6 +25,7 @@ from .funding import (
     AccessGuard,
     FundingGuard,
     access_guard_from_request,
+    canonical_model_name,
     funding_guard_from_request,
     resolve_allowed_jurisdictions,
     user_context_from_request,
@@ -420,7 +421,7 @@ def _build_backup(result: dict[str, Any], access_guard: AccessGuard | None) -> B
 
     Called AFTER ``access_guard.enforce`` so it enriches the FINAL backup name
     (post-substitution), never a name the guard already replaced."""
-    name = result.get("backup")
+    name = canonical_model_name(result.get("backup"))
     if not name:
         return None
     platform = access_guard.platform_for(name) if access_guard is not None else None
@@ -462,6 +463,11 @@ def _pick_response(
     # model actually returned. Mutates `result` in place; no-op when unset.
     if access_guard is not None:
         access_guard.enforce(result, priority)
+    # Normalize an ACCEPTED pick to its catalog display name ("Claude Fable 5" ->
+    # "Fable 5"): when the guard substitutes it's already canonical, but when it
+    # accepts the engine's pick the raw maker-prefixed name would otherwise leak
+    # to the UI. No-op for anon (still runs; catalog-only lookup).
+    result["model"] = canonical_model_name(result.get("model"))
     session_cost_estimate, comparison_table = _session_cost(
         result["model"], result["platform"], task_description
     )
