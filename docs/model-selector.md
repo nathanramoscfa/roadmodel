@@ -205,14 +205,17 @@ differently:
 - Claude (Anthropic API, Claude Code, claude.ai): per-session
   `/effort` level with documented values `low`, `medium`, `high`,
   `xhigh`, `max` (shown in the UI as Low / Medium / High / Extra
-  High / Max). Not every model supports every level — Opus 4.7,
-  Opus 4.8, Sonnet 5, and Fable 5 expose the full
+  High / Max). Not every model supports every level — Opus 5,
+  Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full
   low/medium/high/xhigh/max range; Opus 4.6 and Sonnet 4.6 top out
   at `max` without an `xhigh` step. An effort level a model does
   not support falls back to the highest supported level at or
-  below it. Extended thinking can also be toggled with Option+T /
+  below it. Default effort is `high` on every model that supports
+  effort. Extended thinking can also be toggled with Option+T /
   Alt+T, `alwaysThinkingEnabled`, or `MAX_THINKING_TOKENS=0`
-  (Fable 5 cannot disable extended thinking).
+  (Fable 5 cannot disable extended thinking). Claude Code 2.1.219
+  ships Claude Opus 5 as the default Opus model (1M context, fast
+  mode at $10/$50 per Mtok).
 - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
   reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
   `xhigh` (the top "Extra High" tier; model-dependent). Higher
@@ -250,17 +253,16 @@ Output mapping (the THINKING field of the output format):
 provider-native scales onto this 7-state field:
 
 - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
-  `high` → `High` (the docs' default effort on Opus 4.6, Opus 4.8,
-  Sonnet 5, Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the
-  "Extra High" UI label, and the default for Opus 4.7); `max` →
-  `Max` (the top "Max" UI level, ABOVE "Extra High") ONLY on
-  models whose documented row exposes a `max` step above `xhigh`
-  — Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5. On models that
-  reach `max` with NO `xhigh` step (Opus 4.6, Sonnet 4.6), `max`
-  is their Extra-High top and maps to `XHigh`, not `Max`.
-  Extended thinking disabled (Option+T / Alt+T,
-  `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled` false) →
-  `Off`; Fable 5 cannot map to `Off`.
+  `high` → `High` (the docs' default effort on every model that
+  supports effort); `xhigh` → `XHigh` (the "Extra High" UI
+  label); `max` → `Max` (the top "Max" UI level, ABOVE "Extra
+  High") ONLY on models whose documented row exposes a `max` step
+  above `xhigh` — Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, and
+  Fable 5. On models that reach `max` with NO `xhigh` step (Opus
+  4.6, Sonnet 4.6), `max` is their Extra-High top and maps to
+  `XHigh`, not `Max`. Extended thinking disabled (Option+T /
+  Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
+  false) → `Off`; Fable 5 cannot map to `Off`.
 - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
   `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
   Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
@@ -299,7 +301,11 @@ Two Claude Code controls that must NOT be conflated:
   size" setting (small / medium / large agent counts) that guides
   how large Claude generally makes dynamic workflows — advisory
   only, not an enforced cap, and orthogonal to the ORCHESTRATION
-  value emitted here.
+  value emitted here. Claude Code 2.1.219 changes the default
+  dynamic workflow size to medium (aim for fewer than 15 agents),
+  selectable via `/config` including an unrestricted option, and
+  the `workflowSizeGuideline` settings key can set it from any
+  settings file (hiding the `/config` row when set there).
 - `ultrathink` is a PER-TURN prompt keyword: include it anywhere in a
   single prompt for deeper reasoning on that turn only; it does NOT
   change the session effort level and does NOT orchestrate workflows.
@@ -321,11 +327,11 @@ Decision rule (applied during `<access-selection>` Step E):
   (`Off` → `Low`, `Low` → `Medium`, `Medium` → `High`, `High` →
   `XHigh`).
 - Ceiling — `Max`: the top output level, used ONLY on models whose
-  `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus
-  4.7, Opus 4.8, Sonnet 5, Fable 5). On such a model, prefer `Max`
-  over `XHigh` when the appended user-context declares a Quality
-  (`best`) budget posture, or for the most demanding tasks (the
-  `XHigh` conditions above taken to their limit). Under a Cost
+  `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus 5,
+  Opus 4.7, Opus 4.8, Sonnet 5, Fable 5). On such a model, prefer
+  `Max` over `XHigh` when the appended user-context declares a
+  Quality (`best`) budget posture, or for the most demanding tasks
+  (the `XHigh` conditions above taken to their limit). Under a Cost
   (`cheap`) budget posture, never emit `Max` and do not exceed the
   lowest level that clears the task. Absent any budget posture,
   `XHigh` stays the default ceiling and `Max` is reserved for the
@@ -458,14 +464,17 @@ as primary; the other becomes the secondary category for tie-breaking.
     - Claude (Anthropic API, Claude Code, claude.ai): per-session
       `/effort` level with documented values `low`, `medium`, `high`,
       `xhigh`, `max` (shown in the UI as Low / Medium / High / Extra
-      High / Max). Not every model supports every level — Opus 4.7,
-      Opus 4.8, Sonnet 5, and Fable 5 expose the full
+      High / Max). Not every model supports every level — Opus 5,
+      Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full
       low/medium/high/xhigh/max range; Opus 4.6 and Sonnet 4.6 top out
       at `max` without an `xhigh` step. An effort level a model does
       not support falls back to the highest supported level at or
-      below it. Extended thinking can also be toggled with Option+T /
+      below it. Default effort is `high` on every model that supports
+      effort. Extended thinking can also be toggled with Option+T /
       Alt+T, `alwaysThinkingEnabled`, or `MAX_THINKING_TOKENS=0`
-      (Fable 5 cannot disable extended thinking).
+      (Fable 5 cannot disable extended thinking). Claude Code 2.1.219
+      ships Claude Opus 5 as the default Opus model (1M context, fast
+      mode at $10/$50 per Mtok).
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
@@ -503,17 +512,16 @@ as primary; the other becomes the secondary category for tie-breaking.
     provider-native scales onto this 7-state field:
 
     - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
-      `high` → `High` (the docs' default effort on Opus 4.6, Opus 4.8,
-      Sonnet 5, Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the
-      "Extra High" UI label, and the default for Opus 4.7); `max` →
-      `Max` (the top "Max" UI level, ABOVE "Extra High") ONLY on
-      models whose documented row exposes a `max` step above `xhigh`
-      — Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5. On models that
-      reach `max` with NO `xhigh` step (Opus 4.6, Sonnet 4.6), `max`
-      is their Extra-High top and maps to `XHigh`, not `Max`.
-      Extended thinking disabled (Option+T / Alt+T,
-      `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled` false) →
-      `Off`; Fable 5 cannot map to `Off`.
+      `high` → `High` (the docs' default effort on every model that
+      supports effort); `xhigh` → `XHigh` (the "Extra High" UI
+      label); `max` → `Max` (the top "Max" UI level, ABOVE "Extra
+      High") ONLY on models whose documented row exposes a `max` step
+      above `xhigh` — Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, and
+      Fable 5. On models that reach `max` with NO `xhigh` step (Opus
+      4.6, Sonnet 4.6), `max` is their Extra-High top and maps to
+      `XHigh`, not `Max`. Extended thinking disabled (Option+T /
+      Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
+      false) → `Off`; Fable 5 cannot map to `Off`.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
@@ -552,7 +560,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       size" setting (small / medium / large agent counts) that guides
       how large Claude generally makes dynamic workflows — advisory
       only, not an enforced cap, and orthogonal to the ORCHESTRATION
-      value emitted here.
+      value emitted here. Claude Code 2.1.219 changes the default
+      dynamic workflow size to medium (aim for fewer than 15 agents),
+      selectable via `/config` including an unrestricted option, and
+      the `workflowSizeGuideline` settings key can set it from any
+      settings file (hiding the `/config` row when set there).
     - `ultrathink` is a PER-TURN prompt keyword: include it anywhere in a
       single prompt for deeper reasoning on that turn only; it does NOT
       change the session effort level and does NOT orchestrate workflows.
@@ -574,11 +586,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       (`Off` → `Low`, `Low` → `Medium`, `Medium` → `High`, `High` →
       `XHigh`).
     - Ceiling — `Max`: the top output level, used ONLY on models whose
-      `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus
-      4.7, Opus 4.8, Sonnet 5, Fable 5). On such a model, prefer `Max`
-      over `XHigh` when the appended user-context declares a Quality
-      (`best`) budget posture, or for the most demanding tasks (the
-      `XHigh` conditions above taken to their limit). Under a Cost
+      `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus 5,
+      Opus 4.7, Opus 4.8, Sonnet 5, Fable 5). On such a model, prefer
+      `Max` over `XHigh` when the appended user-context declares a
+      Quality (`best`) budget posture, or for the most demanding tasks
+      (the `XHigh` conditions above taken to their limit). Under a Cost
       (`cheap`) budget posture, never emit `Max` and do not exceed the
       lowest level that clears the task. Absent any budget posture,
       `XHigh` stays the default ceiling and `Max` is reserved for the
@@ -1206,14 +1218,17 @@ as primary; the other becomes the secondary category for tie-breaking.
     - Claude (Anthropic API, Claude Code, claude.ai): per-session
       `/effort` level with documented values `low`, `medium`, `high`,
       `xhigh`, `max` (shown in the UI as Low / Medium / High / Extra
-      High / Max). Not every model supports every level — Opus 4.7,
-      Opus 4.8, Sonnet 5, and Fable 5 expose the full
+      High / Max). Not every model supports every level — Opus 5,
+      Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full
       low/medium/high/xhigh/max range; Opus 4.6 and Sonnet 4.6 top out
       at `max` without an `xhigh` step. An effort level a model does
       not support falls back to the highest supported level at or
-      below it. Extended thinking can also be toggled with Option+T /
+      below it. Default effort is `high` on every model that supports
+      effort. Extended thinking can also be toggled with Option+T /
       Alt+T, `alwaysThinkingEnabled`, or `MAX_THINKING_TOKENS=0`
-      (Fable 5 cannot disable extended thinking).
+      (Fable 5 cannot disable extended thinking). Claude Code 2.1.219
+      ships Claude Opus 5 as the default Opus model (1M context, fast
+      mode at $10/$50 per Mtok).
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
@@ -1251,17 +1266,16 @@ as primary; the other becomes the secondary category for tie-breaking.
     provider-native scales onto this 7-state field:
 
     - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
-      `high` → `High` (the docs' default effort on Opus 4.6, Opus 4.8,
-      Sonnet 5, Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the
-      "Extra High" UI label, and the default for Opus 4.7); `max` →
-      `Max` (the top "Max" UI level, ABOVE "Extra High") ONLY on
-      models whose documented row exposes a `max` step above `xhigh`
-      — Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5. On models that
-      reach `max` with NO `xhigh` step (Opus 4.6, Sonnet 4.6), `max`
-      is their Extra-High top and maps to `XHigh`, not `Max`.
-      Extended thinking disabled (Option+T / Alt+T,
-      `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled` false) →
-      `Off`; Fable 5 cannot map to `Off`.
+      `high` → `High` (the docs' default effort on every model that
+      supports effort); `xhigh` → `XHigh` (the "Extra High" UI
+      label); `max` → `Max` (the top "Max" UI level, ABOVE "Extra
+      High") ONLY on models whose documented row exposes a `max` step
+      above `xhigh` — Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, and
+      Fable 5. On models that reach `max` with NO `xhigh` step (Opus
+      4.6, Sonnet 4.6), `max` is their Extra-High top and maps to
+      `XHigh`, not `Max`. Extended thinking disabled (Option+T /
+      Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
+      false) → `Off`; Fable 5 cannot map to `Off`.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
@@ -1300,7 +1314,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       size" setting (small / medium / large agent counts) that guides
       how large Claude generally makes dynamic workflows — advisory
       only, not an enforced cap, and orthogonal to the ORCHESTRATION
-      value emitted here.
+      value emitted here. Claude Code 2.1.219 changes the default
+      dynamic workflow size to medium (aim for fewer than 15 agents),
+      selectable via `/config` including an unrestricted option, and
+      the `workflowSizeGuideline` settings key can set it from any
+      settings file (hiding the `/config` row when set there).
     - `ultrathink` is a PER-TURN prompt keyword: include it anywhere in a
       single prompt for deeper reasoning on that turn only; it does NOT
       change the session effort level and does NOT orchestrate workflows.
@@ -1322,11 +1340,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       (`Off` → `Low`, `Low` → `Medium`, `Medium` → `High`, `High` →
       `XHigh`).
     - Ceiling — `Max`: the top output level, used ONLY on models whose
-      `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus
-      4.7, Opus 4.8, Sonnet 5, Fable 5). On such a model, prefer `Max`
-      over `XHigh` when the appended user-context declares a Quality
-      (`best`) budget posture, or for the most demanding tasks (the
-      `XHigh` conditions above taken to their limit). Under a Cost
+      `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus 5,
+      Opus 4.7, Opus 4.8, Sonnet 5, Fable 5). On such a model, prefer
+      `Max` over `XHigh` when the appended user-context declares a
+      Quality (`best`) budget posture, or for the most demanding tasks
+      (the `XHigh` conditions above taken to their limit). Under a Cost
       (`cheap`) budget posture, never emit `Max` and do not exceed the
       lowest level that clears the task. Absent any budget posture,
       `XHigh` stays the default ceiling and `Max` is reserved for the
@@ -1435,7 +1453,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Billing:** subscription-or-key (requires claude-max-subscription OR anthropic-api-key)
 - **Supports models:** opus-4.8,claude-fable-5,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku
 - **Toggles:** Max Mode — no · Thinking — yes
-- **Best for:** Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context. Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\
+- **Best for:** Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context; as of 2.1.219 Claude Opus 5 ships as the new default Opus (1M context, fast mode at $10/$50 per Mtok). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\
 
 #### claude.ai web / desktop — `claude-web`
 
@@ -1716,14 +1734,17 @@ as primary; the other becomes the secondary category for tie-breaking.
     - Claude (Anthropic API, Claude Code, claude.ai): per-session
       `/effort` level with documented values `low`, `medium`, `high`,
       `xhigh`, `max` (shown in the UI as Low / Medium / High / Extra
-      High / Max). Not every model supports every level — Opus 4.7,
-      Opus 4.8, Sonnet 5, and Fable 5 expose the full
+      High / Max). Not every model supports every level — Opus 5,
+      Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full
       low/medium/high/xhigh/max range; Opus 4.6 and Sonnet 4.6 top out
       at `max` without an `xhigh` step. An effort level a model does
       not support falls back to the highest supported level at or
-      below it. Extended thinking can also be toggled with Option+T /
+      below it. Default effort is `high` on every model that supports
+      effort. Extended thinking can also be toggled with Option+T /
       Alt+T, `alwaysThinkingEnabled`, or `MAX_THINKING_TOKENS=0`
-      (Fable 5 cannot disable extended thinking).
+      (Fable 5 cannot disable extended thinking). Claude Code 2.1.219
+      ships Claude Opus 5 as the default Opus model (1M context, fast
+      mode at $10/$50 per Mtok).
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
@@ -1761,17 +1782,16 @@ as primary; the other becomes the secondary category for tie-breaking.
     provider-native scales onto this 7-state field:
 
     - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
-      `high` → `High` (the docs' default effort on Opus 4.6, Opus 4.8,
-      Sonnet 5, Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the
-      "Extra High" UI label, and the default for Opus 4.7); `max` →
-      `Max` (the top "Max" UI level, ABOVE "Extra High") ONLY on
-      models whose documented row exposes a `max` step above `xhigh`
-      — Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5. On models that
-      reach `max` with NO `xhigh` step (Opus 4.6, Sonnet 4.6), `max`
-      is their Extra-High top and maps to `XHigh`, not `Max`.
-      Extended thinking disabled (Option+T / Alt+T,
-      `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled` false) →
-      `Off`; Fable 5 cannot map to `Off`.
+      `high` → `High` (the docs' default effort on every model that
+      supports effort); `xhigh` → `XHigh` (the "Extra High" UI
+      label); `max` → `Max` (the top "Max" UI level, ABOVE "Extra
+      High") ONLY on models whose documented row exposes a `max` step
+      above `xhigh` — Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, and
+      Fable 5. On models that reach `max` with NO `xhigh` step (Opus
+      4.6, Sonnet 4.6), `max` is their Extra-High top and maps to
+      `XHigh`, not `Max`. Extended thinking disabled (Option+T /
+      Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
+      false) → `Off`; Fable 5 cannot map to `Off`.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
@@ -1810,7 +1830,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       size" setting (small / medium / large agent counts) that guides
       how large Claude generally makes dynamic workflows — advisory
       only, not an enforced cap, and orthogonal to the ORCHESTRATION
-      value emitted here.
+      value emitted here. Claude Code 2.1.219 changes the default
+      dynamic workflow size to medium (aim for fewer than 15 agents),
+      selectable via `/config` including an unrestricted option, and
+      the `workflowSizeGuideline` settings key can set it from any
+      settings file (hiding the `/config` row when set there).
     - `ultrathink` is a PER-TURN prompt keyword: include it anywhere in a
       single prompt for deeper reasoning on that turn only; it does NOT
       change the session effort level and does NOT orchestrate workflows.
@@ -1832,11 +1856,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       (`Off` → `Low`, `Low` → `Medium`, `Medium` → `High`, `High` →
       `XHigh`).
     - Ceiling — `Max`: the top output level, used ONLY on models whose
-      `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus
-      4.7, Opus 4.8, Sonnet 5, Fable 5). On such a model, prefer `Max`
-      over `XHigh` when the appended user-context declares a Quality
-      (`best`) budget posture, or for the most demanding tasks (the
-      `XHigh` conditions above taken to their limit). Under a Cost
+      `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus 5,
+      Opus 4.7, Opus 4.8, Sonnet 5, Fable 5). On such a model, prefer
+      `Max` over `XHigh` when the appended user-context declares a
+      Quality (`best`) budget posture, or for the most demanding tasks
+      (the `XHigh` conditions above taken to their limit). Under a Cost
       (`cheap`) budget posture, never emit `Max` and do not exceed the
       lowest level that clears the task. Absent any budget posture,
       `XHigh` stays the default ceiling and `Max` is reserved for the
@@ -2483,7 +2507,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="opus-4.8,claude-fable-5,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="yes"
-            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context. Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\"ultracode\": true`; 2.1.202+ adds a `/config` \"Dynamic workflow size\" advisory guideline) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized). As of 2.1.200 the default permission mode is `Manual` across the CLI, VS Code, and JetBrains; 2.1.205 adds an auto-mode rule blocking tampering with session transcript files and reserves the `Claude Browser` MCP server name (alongside `Claude Preview`) ahead of the Claude Desktop pane rename; 2.1.210 adds a live elapsed-time counter on long-running tool calls and startup warnings for `Write(path)`/`NotebookEdit(path)`/`Glob(path)` permission rules; 2.1.211 adds the `--forward-subagent-text` flag / `CLAUDE_CODE_FORWARD_SUBAGENT_TEXT` env var to include subagent text and thinking in stream-json output; 2.1.212 adds `/fork` background-session copies, `/subtask` in-session subagent, `/resume` background picker, per-session WebSearch/subagent caps, and long-running MCP auto-backgrounding; 2.1.214 adds the EndConversation tool and Podman/docker daemon-redirect permission prompts; 2.1.215 makes `/verify` and `/code-review` skills explicit-invocation only; 2.1.216 adds a `sandbox.filesystem.disabled` setting to skip filesystem isolation while keeping network egress control; 2.1.218 moves `/code-review` to a background subagent, adds screen-reader deletion announcements in `--ax-screen-reader` mode, `/ultrareview` now supports descriptive arguments, and skills with `context: fork` default to running in the background." />
+            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context; as of 2.1.219 Claude Opus 5 ships as the new default Opus (1M context, fast mode at $10/$50 per Mtok). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\"ultracode\": true`; 2.1.202+ adds a `/config` \"Dynamic workflow size\" advisory guideline, and 2.1.219 defaults it to medium (aim for fewer than 15 agents) with the `workflowSizeGuideline` settings key to set it from any settings file) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized). As of 2.1.200 the default permission mode is `Manual` across the CLI, VS Code, and JetBrains; 2.1.205 adds an auto-mode rule blocking tampering with session transcript files and reserves the `Claude Browser` MCP server name (alongside `Claude Preview`) ahead of the Claude Desktop pane rename; 2.1.210 adds a live elapsed-time counter on long-running tool calls and startup warnings for `Write(path)`/`NotebookEdit(path)`/`Glob(path)` permission rules; 2.1.211 adds the `--forward-subagent-text` flag / `CLAUDE_CODE_FORWARD_SUBAGENT_TEXT` env var to include subagent text and thinking in stream-json output; 2.1.212 adds `/fork` background-session copies, `/subtask` in-session subagent, `/resume` background picker, per-session WebSearch/subagent caps, and long-running MCP auto-backgrounding; 2.1.214 adds the EndConversation tool and Podman/docker daemon-redirect permission prompts; 2.1.215 makes `/verify` and `/code-review` skills explicit-invocation only; 2.1.216 adds a `sandbox.filesystem.disabled` setting to skip filesystem isolation while keeping network egress control; 2.1.218 moves `/code-review` to a background subagent, adds screen-reader deletion announcements in `--ax-screen-reader` mode, `/ultrareview` now supports descriptive arguments, and skills with `context: fork` default to running in the background; 2.1.219 adds the `DirectoryAdded` hook, subagents can spawn nested subagents up to depth 3 by default (opt out via `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1`), `mcp_server_errors` reporting in the headless stream-json init event, and removes Opus 4.7 from fast mode so `/fast` now applies to Opus 5 and Opus 4.8." />
     <method id="claude-web" name="claude.ai web / desktop"
             provider="anthropic" billing="subscription-included"
             provider-jurisdiction="us"
@@ -2897,14 +2921,17 @@ as primary; the other becomes the secondary category for tie-breaking.
     - Claude (Anthropic API, Claude Code, claude.ai): per-session
       `/effort` level with documented values `low`, `medium`, `high`,
       `xhigh`, `max` (shown in the UI as Low / Medium / High / Extra
-      High / Max). Not every model supports every level — Opus 4.7,
-      Opus 4.8, Sonnet 5, and Fable 5 expose the full
+      High / Max). Not every model supports every level — Opus 5,
+      Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full
       low/medium/high/xhigh/max range; Opus 4.6 and Sonnet 4.6 top out
       at `max` without an `xhigh` step. An effort level a model does
       not support falls back to the highest supported level at or
-      below it. Extended thinking can also be toggled with Option+T /
+      below it. Default effort is `high` on every model that supports
+      effort. Extended thinking can also be toggled with Option+T /
       Alt+T, `alwaysThinkingEnabled`, or `MAX_THINKING_TOKENS=0`
-      (Fable 5 cannot disable extended thinking).
+      (Fable 5 cannot disable extended thinking). Claude Code 2.1.219
+      ships Claude Opus 5 as the default Opus model (1M context, fast
+      mode at $10/$50 per Mtok).
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
       reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
@@ -2942,17 +2969,16 @@ as primary; the other becomes the secondary category for tie-breaking.
     provider-native scales onto this 7-state field:
 
     - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
-      `high` → `High` (the docs' default effort on Opus 4.6, Opus 4.8,
-      Sonnet 5, Fable 5, and Sonnet 4.6); `xhigh` → `XHigh` (the
-      "Extra High" UI label, and the default for Opus 4.7); `max` →
-      `Max` (the top "Max" UI level, ABOVE "Extra High") ONLY on
-      models whose documented row exposes a `max` step above `xhigh`
-      — Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5. On models that
-      reach `max` with NO `xhigh` step (Opus 4.6, Sonnet 4.6), `max`
-      is their Extra-High top and maps to `XHigh`, not `Max`.
-      Extended thinking disabled (Option+T / Alt+T,
-      `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled` false) →
-      `Off`; Fable 5 cannot map to `Off`.
+      `high` → `High` (the docs' default effort on every model that
+      supports effort); `xhigh` → `XHigh` (the "Extra High" UI
+      label); `max` → `Max` (the top "Max" UI level, ABOVE "Extra
+      High") ONLY on models whose documented row exposes a `max` step
+      above `xhigh` — Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, and
+      Fable 5. On models that reach `max` with NO `xhigh` step (Opus
+      4.6, Sonnet 4.6), `max` is their Extra-High top and maps to
+      `XHigh`, not `Max`. Extended thinking disabled (Option+T /
+      Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
+      false) → `Off`; Fable 5 cannot map to `Off`.
     - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
       Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
@@ -2991,7 +3017,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       size" setting (small / medium / large agent counts) that guides
       how large Claude generally makes dynamic workflows — advisory
       only, not an enforced cap, and orthogonal to the ORCHESTRATION
-      value emitted here.
+      value emitted here. Claude Code 2.1.219 changes the default
+      dynamic workflow size to medium (aim for fewer than 15 agents),
+      selectable via `/config` including an unrestricted option, and
+      the `workflowSizeGuideline` settings key can set it from any
+      settings file (hiding the `/config` row when set there).
     - `ultrathink` is a PER-TURN prompt keyword: include it anywhere in a
       single prompt for deeper reasoning on that turn only; it does NOT
       change the session effort level and does NOT orchestrate workflows.
@@ -3013,11 +3043,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       (`Off` → `Low`, `Low` → `Medium`, `Medium` → `High`, `High` →
       `XHigh`).
     - Ceiling — `Max`: the top output level, used ONLY on models whose
-      `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus
-      4.7, Opus 4.8, Sonnet 5, Fable 5). On such a model, prefer `Max`
-      over `XHigh` when the appended user-context declares a Quality
-      (`best`) budget posture, or for the most demanding tasks (the
-      `XHigh` conditions above taken to their limit). Under a Cost
+      `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus 5,
+      Opus 4.7, Opus 4.8, Sonnet 5, Fable 5). On such a model, prefer
+      `Max` over `XHigh` when the appended user-context declares a
+      Quality (`best`) budget posture, or for the most demanding tasks
+      (the `XHigh` conditions above taken to their limit). Under a Cost
       (`cheap`) budget posture, never emit `Max` and do not exceed the
       lowest level that clears the task. Absent any budget posture,
       `XHigh` stays the default ceiling and `Max` is reserved for the
@@ -3664,7 +3694,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="opus-4.8,claude-fable-5,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="yes"
-            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context. Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\"ultracode\": true`; 2.1.202+ adds a `/config` \"Dynamic workflow size\" advisory guideline) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized). As of 2.1.200 the default permission mode is `Manual` across the CLI, VS Code, and JetBrains; 2.1.205 adds an auto-mode rule blocking tampering with session transcript files and reserves the `Claude Browser` MCP server name (alongside `Claude Preview`) ahead of the Claude Desktop pane rename; 2.1.210 adds a live elapsed-time counter on long-running tool calls and startup warnings for `Write(path)`/`NotebookEdit(path)`/`Glob(path)` permission rules; 2.1.211 adds the `--forward-subagent-text` flag / `CLAUDE_CODE_FORWARD_SUBAGENT_TEXT` env var to include subagent text and thinking in stream-json output; 2.1.212 adds `/fork` background-session copies, `/subtask` in-session subagent, `/resume` background picker, per-session WebSearch/subagent caps, and long-running MCP auto-backgrounding; 2.1.214 adds the EndConversation tool and Podman/docker daemon-redirect permission prompts; 2.1.215 makes `/verify` and `/code-review` skills explicit-invocation only; 2.1.216 adds a `sandbox.filesystem.disabled` setting to skip filesystem isolation while keeping network egress control; 2.1.218 moves `/code-review` to a background subagent, adds screen-reader deletion announcements in `--ax-screen-reader` mode, `/ultrareview` now supports descriptive arguments, and skills with `context: fork` default to running in the background." />
+            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context; as of 2.1.219 Claude Opus 5 ships as the new default Opus (1M context, fast mode at $10/$50 per Mtok). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\"ultracode\": true`; 2.1.202+ adds a `/config` \"Dynamic workflow size\" advisory guideline, and 2.1.219 defaults it to medium (aim for fewer than 15 agents) with the `workflowSizeGuideline` settings key to set it from any settings file) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized). As of 2.1.200 the default permission mode is `Manual` across the CLI, VS Code, and JetBrains; 2.1.205 adds an auto-mode rule blocking tampering with session transcript files and reserves the `Claude Browser` MCP server name (alongside `Claude Preview`) ahead of the Claude Desktop pane rename; 2.1.210 adds a live elapsed-time counter on long-running tool calls and startup warnings for `Write(path)`/`NotebookEdit(path)`/`Glob(path)` permission rules; 2.1.211 adds the `--forward-subagent-text` flag / `CLAUDE_CODE_FORWARD_SUBAGENT_TEXT` env var to include subagent text and thinking in stream-json output; 2.1.212 adds `/fork` background-session copies, `/subtask` in-session subagent, `/resume` background picker, per-session WebSearch/subagent caps, and long-running MCP auto-backgrounding; 2.1.214 adds the EndConversation tool and Podman/docker daemon-redirect permission prompts; 2.1.215 makes `/verify` and `/code-review` skills explicit-invocation only; 2.1.216 adds a `sandbox.filesystem.disabled` setting to skip filesystem isolation while keeping network egress control; 2.1.218 moves `/code-review` to a background subagent, adds screen-reader deletion announcements in `--ax-screen-reader` mode, `/ultrareview` now supports descriptive arguments, and skills with `context: fork` default to running in the background; 2.1.219 adds the `DirectoryAdded` hook, subagents can spawn nested subagents up to depth 3 by default (opt out via `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1`), `mcp_server_errors` reporting in the headless stream-json init event, and removes Opus 4.7 from fast mode so `/fast` now applies to Opus 5 and Opus 4.8." />
     <method id="claude-web" name="claude.ai web / desktop"
             provider="anthropic" billing="subscription-included"
             provider-jurisdiction="us"
