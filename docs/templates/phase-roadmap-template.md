@@ -81,6 +81,18 @@ STYLE RULES (the AI MUST follow)
     each dial value using the surface's native vocabulary
     (Effort vs Intelligence vs Max Mode; On/Off vs
     Low/Medium/High/Extra High/Max vs reasoning level).
+  - Clean stopping point (the AI MUST honor this). When a step's
+    work is done and EVERY acceptance criterion is affirmatively
+    met, the AI's final response MUST end with an explicit,
+    unhedged completion line of the verbatim shape "Step N is
+    complete. You can now move on to Step N+1." — never buried
+    under caveats, newly found issues, or suggested improvements
+    (those go in a short "Follow-ups (non-blocking)" note placed
+    AFTER the completion line). If any criterion is unmet, the AI
+    says plainly the step is NOT complete, names what failed, and
+    omits the completion line. This is Stage 6 of the Step
+    lifecycle and is binding; see the Overview "Step lifecycle"
+    paragraph and each step's XML `<lifecycle>` block.
   - End the document with a Post-Implementation Verification
     section (V1-Vn check tables), a Summary Table, optional
     Model-selection blocks, and a Not-in-scope section.
@@ -247,12 +259,25 @@ before declaring a step complete.
    Confirm with `git branch -vv` that only `main` and any
    intentional long-lived branches remain locally.
 
-6. **New conversation, next step.** Phase-boundary hygiene:
-   close this Claude Code / Cursor / Codex session and open a
-   fresh one before starting Step {{M+1}}. The new conversation
-   begins again at Stage 1 of this lifecycle, with the next
-   step's `**Branch:**` line driving the `git checkout -b`
-   command. No work straddles two steps.
+6. **Declare completion, then new conversation.** Once the PR is
+   merged and every one of this step's acceptance criteria is
+   affirmatively met, say so plainly. End your final response
+   with an explicit, unhedged completion line — verbatim shape
+   "Step {{M}} is complete. You can now move on to Step {{M+1}}."
+   — so the operator has a clean stopping point at which to close
+   this conversation. Do NOT bury that line under caveats, newly
+   discovered issues, or suggested improvements: if you have any,
+   report them in a short, clearly labelled "Follow-ups
+   (non-blocking)" note placed AFTER the completion line, and
+   never let them reopen the step or blur whether it is done. If
+   any acceptance criterion is NOT met, do the opposite — state
+   plainly that the step is NOT complete, name the failing
+   criteria, and do not emit the completion line. Then, for
+   phase-boundary hygiene, the operator closes this Claude Code /
+   Cursor / Codex session and opens a fresh one before starting
+   Step {{M+1}}; the new conversation begins again at Stage 1 of
+   this lifecycle, with the next step's `**Branch:**` line driving
+   the `git checkout -b` command. No work straddles two steps.
 
 ---
 
@@ -564,10 +589,12 @@ always "New per phase-boundary hygiene").}}
   <lifecycle>
     This step MUST follow all six
     stages, in order. Stages 1, 3,
-    4, 5 are AS BINDING as any
+    4, 5, 6 are AS BINDING as any
     `<requirement>` below. Do not
-    declare the step complete
-    until Stage 5 finishes.
+    emit the Stage 6 completion
+    line until the PR is merged and
+    every acceptance criterion for
+    this step is affirmatively met.
 
     1. CREATE THE BRANCH. Before
        any Read / Edit / Bash, run
@@ -612,11 +639,36 @@ always "New per phase-boundary hygiene").}}
        origin`. Prune any local
        `[gone]` branches.
 
-    6. NEW CONVERSATION, NEXT
-       STEP. Phase-boundary
-       hygiene: close this session
-       and open a fresh one before
-       Step {{M+1}}.
+    6. DECLARE COMPLETION, THEN
+       NEW CONVERSATION. Once the
+       PR is merged and every
+       acceptance criterion for
+       this step is affirmatively
+       met, say so plainly: end
+       your final response with an
+       explicit, unhedged
+       completion line — verbatim
+       shape "Step {{M}} is
+       complete. You can now move
+       on to Step {{M+1}}." — so the
+       operator has a clean
+       stopping point. Do NOT bury
+       it under caveats, newly
+       found issues, or suggested
+       improvements; put any of
+       those in a short "Follow-ups
+       (non-blocking)" note AFTER
+       the completion line, and
+       never let them reopen the
+       step. If any criterion is
+       unmet, state plainly that
+       the step is NOT complete,
+       name what failed, and omit
+       the completion line. Then,
+       for phase-boundary hygiene,
+       the operator closes this
+       session and opens a fresh
+       one before Step {{M+1}}.
   </lifecycle>
 
   <context>
