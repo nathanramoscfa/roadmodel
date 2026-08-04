@@ -48,7 +48,10 @@ STYLE RULES (the AI MUST follow)
     anything in the step, follows the six-stage lifecycle for
     the rest of the step, and starts the next step in a fresh
     conversation), Settings table, Model rationale paragraph,
-    XML <task> prompt, and an Acceptance Criteria bullet list. The Settings table is
+    XML <task> prompt (which MUST carry a <security> block
+    alongside its <lifecycle> block — see below), and an
+    Acceptance Criteria bullet list whose FINAL bullet is
+    always a security check. The Settings table is
     PLATFORM-specific so it mirrors the actual surface the
     operator will see — each surface exposes a different
     dial, and the table rows must match the panel labels
@@ -196,6 +199,27 @@ over to the new branch), then continue. AI coding agents executing
 a step from this roadmap must treat the branch checkout as Step 0
 of every step.
 
+**Security-first execution rule.** Security is not a phase — it is
+a gate on every commit of every step. Before each `git commit`,
+the step's work must pass the local, fail-closed security gate:
+secret/PII scan clean, SAST clean, dependency audit clean, and a
+diff review confirming no sensitive data (PII, credentials,
+tokens) and no new insecure pattern (injection, weak crypto,
+over-broad scope, secret in a client bundle or log line). This
+gate is wired into the pre-commit hook and re-run in CI, so a
+security issue introduced while implementing a step is caught
+during development — before it reaches the branch, the PR, or
+`main`. See the parent project's ROADMAP "Security & privacy
+strategy" → "Per-step security gate" for the canonical checks and
+tooling; each step's XML `<task>` carries a `<security>` block
+restating them for the agent, and each step's Acceptance Criteria
+ends with a security check. AI coding agents executing a step MUST
+treat the security gate as part of the step's definition of done,
+exactly like its tests. This matters most on projects handling
+client PII or secrets: the operator running a step's prompt must
+not be able to introduce a data-exposure risk that only surfaces
+after merge.
+
 **Step lifecycle.** Every step in this phase follows the exact
 same six-stage lifecycle, in order, with no exceptions. Each
 stage is a hard checkpoint — if a stage is skipped, branch
@@ -208,9 +232,15 @@ before declaring a step complete.
    clean, up-to-date `main`. The exact branch name comes from
    this step's `**Branch:**` line.
 
-2. **Work on the branch.** All commits land here. Never push to
-   `main` directly — branch protection (`enforce_admins: true`)
-   rejects it.
+2. **Work on the branch, passing the security gate before every
+   commit.** All commits land here. Never push to `main` directly
+   — branch protection (`enforce_admins: true`) rejects it. Before
+   each `git commit`, run the local security gate (secret/PII
+   scan, SAST, dependency audit, sensitive-data diff review — see
+   the step's `<security>` block and the parent ROADMAP "Per-step
+   security gate"). It is fail-closed: a finding blocks the commit,
+   so a security issue in this step's work is caught here, before
+   the PR and before `main`.
 
 3. **Open the PR.** `gh pr create --base main --head <branch>`
    with a Conventional Commits title and a body that references
@@ -269,7 +299,18 @@ will touch. Typical surface names:
   - Schema / data model surface
   - Observability surface
   - Payment / entitlement surface
+  - Security & sensitive-data surface
   - Verification surfaces
+
+Include a "Security & sensitive-data surface" whenever the
+phase touches auth, secrets, PII, payments, or any external
+input. It states what sensitive data the phase's steps will
+handle, what the current controls are (secret manager, authz
+checks, input validation, the pre-commit security gate + CI
+security checks), and what pattern each step must mirror so it
+does not regress them. This is what lets each step's
+`<security>` block name a concrete, project-specific check
+instead of a generic one.
   - Documentation surface
 
 Each surface answers: what exists today, what is missing,
@@ -619,6 +660,64 @@ always "New per phase-boundary hygiene").}}
        Step {{M+1}}.
   </lifecycle>
 
+  <security>
+    Security is a gate on THIS
+    step, not a later phase. It is
+    AS BINDING as any
+    `<requirement>` below. Before
+    the Stage-2 commit, this
+    step's work MUST pass the
+    local, fail-closed security
+    gate — the SAME gate wired
+    into the pre-commit hook and
+    re-run in CI:
+
+    1. SECRET / PII SCAN. No
+       credentials, API keys,
+       tokens, or real PII in the
+       diff (gitleaks /
+       detect-secrets or the
+       project's equivalent).
+       Secrets go in the secrets
+       manager, never in source or
+       committed env files.
+
+    2. SAST. No new injection,
+       unsafe deserialization,
+       weak crypto, path
+       traversal, or unsafe-eval
+       pattern (bandit / semgrep /
+       eslint-plugin-security per
+       the stack). Suppress a
+       finding ONLY with an inline
+       justification comment.
+
+    3. DEPENDENCY AUDIT. Any new
+       or bumped dependency passes
+       the audit (pip-audit / npm
+       audit / osv-scanner); no
+       known-vulnerable, yanked,
+       or typo-squatted package.
+
+    4. SENSITIVE-DATA REVIEW.
+       Whatever this step touches
+       stays least-privilege,
+       encrypted in transit + at
+       rest, and out of logs and
+       client bundles. If the step
+       adds a data path, name how
+       PII/secrets are protected.
+
+    A finding blocks the commit —
+    fix it in this step, do not
+    defer. Do not declare the step
+    complete until the gate is
+    clean. This is the safety net
+    that stops a security issue
+    from reaching the branch, the
+    PR, or `main`.
+  </security>
+
   <context>
     {{Project name}}. Phase {{N}}.
     Step 1: {{step title}}.
@@ -706,6 +805,14 @@ always "New per phase-boundary hygiene").}}
 - Testable statement.
 - Testable statement.
 - `{{test file}}.swift` / `{{test file}}.test.ts` pass.
+- **Security gate clean** (always the final criterion): the
+  pre-commit security gate passed on this step's diff — secret/
+  PII scan clean, SAST clean, dependency audit clean, and the
+  {{surface this step touches}} handles sensitive data per the
+  project ROADMAP "Security & privacy strategy" ({{name the
+  concrete check — e.g. "no PII in the new log lines", "the new
+  endpoint enforces authz", "the added dependency passes
+  pip-audit"}}).
 
 ---
 
@@ -741,8 +848,29 @@ MAX MODE is on or off and why THINKING is at the stated
 level (or N/A because the surface does not expose the
 toggle).
 
+{{Every step's `<task>` opens with the SAME `<lifecycle>` and
+`<security>` blocks shown in full in Step 1 — copy both
+verbatim (updating the branch slug). They are omitted here only
+to keep the template short; a finished roadmap MUST include
+both in every step so the agent gates security on every
+commit.}}
+
 ```xml
 <task>
+  <lifecycle>
+    {{Six-stage lifecycle — copy
+    verbatim from Step 1.}}
+  </lifecycle>
+
+  <security>
+    {{Security gate — copy
+    verbatim from Step 1. Add any
+    check specific to what THIS
+    step touches, e.g. "the new
+    endpoint enforces authz" or
+    "no PII in the new events".}}
+  </security>
+
   <context>
     Always restate the project,
     the phase, the step, and the
@@ -782,6 +910,10 @@ toggle).
 
 - ...
 - ...
+- **Security gate clean** (always the final criterion): the
+  pre-commit security gate passed on this step's diff, with the
+  concrete check for the surface this step touches named
+  explicitly.
 
 ---
 
@@ -789,6 +921,12 @@ toggle).
 Repeat the Step pattern for Step 3, Step 4, ... as many as
 the phase requires. Typical phase has 4-7 steps. The final
 step is ALWAYS "QA + verify-phaseN.sh".
+
+EVERY step, without exception, carries: the <lifecycle> and
+<security> blocks in its <task> (both copied from Step 1), and
+a final "Security gate clean" acceptance-criterion bullet. This
+is how "security at every step" is enforced mechanically rather
+than left to memory.
 -->
 
 ## Step {{N}} — QA & Verification Script
@@ -834,6 +972,20 @@ does not expose the toggle).
 
 ```xml
 <task>
+  <lifecycle>
+    {{Six-stage lifecycle — copy
+    verbatim from Step 1.}}
+  </lifecycle>
+
+  <security>
+    {{Security gate — copy
+    verbatim from Step 1. This
+    step also AUTHORS the
+    --security verify mode, so its
+    own diff must still pass the
+    gate before commit.}}
+  </security>
+
   <context>
     {{Project}}. Phase {{N}}.
     Step {{N}}: QA + verification
@@ -949,8 +1101,18 @@ does not expose the toggle).
         slice.
       - --ui: phase-specific UI
         smoke configuration.
+      - --security: the security
+        gate for this phase's
+        surface — secret/PII scan,
+        SAST, and dependency audit
+        over the phase's files
+        (the same checks the
+        pre-commit hook and CI
+        run). CI-safe on Ubuntu;
+        exits non-zero on any
+        finding.
       - --all: static + swift +
-        node + ui.
+        node + ui + security.
       - --post: static + V1-V{{N}}
         + phase-specific post
         invocations (lighthouse,
@@ -969,6 +1131,24 @@ does not expose the toggle).
       line referencing the
       deliverable number; be
       independent.
+
+      At least ONE static check
+      must be security-oriented and
+      confirm the security gate is
+      wired, not bypassed: e.g. the
+      pre-commit hook config exists
+      and runs the secret/SAST/dep
+      scans, the phase's security
+      checks appear in CI
+      (phase-verify.yml / a
+      security workflow), and no
+      obvious secret pattern is
+      committed under the phase's
+      paths (grep for private-key
+      headers, `AKIA`, `-----BEGIN`,
+      etc.). This is the CI-side
+      backstop to the per-commit
+      gate.
     </requirement>
 
     <requirement>
@@ -991,7 +1171,8 @@ does not expose the toggle).
 
       ...
 
-      V{{N}} — CI integration
+      V{{N}} — CI integration +
+      security
       - V{{N}}.1 verify-phase{{N}}
         .sh --fast exits 0 on
         Ubuntu CI.
@@ -999,6 +1180,11 @@ does not expose the toggle).
         matrix includes `{{N}}`.
       - V{{N}}.3 All static checks
         pass.
+      - V{{N}}.4 verify-phase{{N}}
+        .sh --security exits 0
+        (secret/PII scan, SAST, and
+        dependency audit clean over
+        the phase's surface).
     </requirement>
 
     <requirement>
@@ -1091,7 +1277,13 @@ does not expose the toggle).
   rollup section.
 - `.github/workflows/phase-verify.yml` matrix includes
   `{{N}}`; the new check appears on every PR.
+- `--security` mode exists and exits 0 (secret/PII scan,
+  SAST, and dependency audit clean over the phase's surface);
+  V{{N}}.4 is green.
 - Branch protection still passes on the resulting PR.
+- **Security gate clean** (always the final criterion): the
+  pre-commit security gate passed on this step's diff and the
+  security workflow is green.
 
 ---
 
@@ -1128,6 +1320,7 @@ exceptions here).
 | `--node`         | `phase{{N}}-post.yml` (or `phase-post.yml`)           | Ubuntu | V1.3, V2.3, ... (Phase {{N}} Jest slice + functions ESLint)               |
 | `--swift`        | Xcode Cloud (`{{scheme}}` scheme)                     | macOS  | V1.2, V2.2, ... (XCTest)                                                  |
 | `--ui`           | Xcode Cloud (`{{UI scheme}}` scheme)                  | macOS  | One-shot smoke / soak / etc.                                              |
+| `--security`     | `phase-verify.yml` / security workflow                | Ubuntu | V{{N}}.4 (secret/PII scan + SAST + dependency audit)                      |
 | `--post`         | {{workflow or local on macOS}}                        | {{OS}} | V{{n}}.{{m}} (phase-specific post check) + the full V-check sweep         |
 
 Local invocations remain available for ad-hoc runs and
@@ -1148,7 +1341,8 @@ Other modes:
 ./scripts/verify-phase{{N}}.sh --node       # static + functions Jest + lint
 ./scripts/verify-phase{{N}}.sh --swift      # static + Swift XCTest
 ./scripts/verify-phase{{N}}.sh --ui         # static + UI smoke
-./scripts/verify-phase{{N}}.sh --all        # static + Swift + Node + UI
+./scripts/verify-phase{{N}}.sh --security   # secret/PII scan + SAST + dep audit
+./scripts/verify-phase{{N}}.sh --all        # static + Swift + Node + UI + security
 ```
 
 The script reports each V-check by id (V1.1, V2.1, ...) so
@@ -1182,16 +1376,17 @@ corresponding row below.
      blockquote that maps the V-checks to the workflows
      that run them. -->
 
-### V{{N}} — CI integration
+### V{{N}} — CI integration + security
 
 > **Automated in CI.** `phase-verify.yml` → V{{N}}.1
-> through V{{N}}.3 on every push/PR.
+> through V{{N}}.4 on every push/PR.
 
 | ID         | Check                                                          | Automation                                                                |
 | ---------- | -------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | V{{N}}.1   | `verify-phase{{N}}.sh --fast` exits 0 on Ubuntu CI.            | `phase-verify.yml` matrix entry `{{N}}`.                                  |
 | V{{N}}.2   | `phase-verify.yml` matrix includes `{{N}}`.                    | `phase-verify.yml --fast` static check.                                   |
 | V{{N}}.3   | All static checks in `verify-phase{{N}}.sh` pass.              | `phase-verify.yml --fast` records pass only when `STATIC_DELIVERABLE_FAIL == 0`. |
+| V{{N}}.4   | `verify-phase{{N}}.sh --security` exits 0 (secret/PII scan + SAST + dep audit clean). | `phase-verify.yml` / security workflow runs `--security` on every push/PR. |
 
 ---
 
