@@ -16,8 +16,19 @@ STYLE RULES (the AI MUST follow)
   - Use ASCII boxes (┌ ┐ └ ┘ │ ─ ▶) for architecture diagrams.
   - Every phase ends with an "Acceptance criteria" section
     written as a bulleted list of testable statements.
+  - Every phase's "Acceptance criteria" MUST include at least
+    one security check (secret scan clean, SAST + dependency
+    audit green, sensitive-data handling verified). Security is
+    a per-phase exit gate, never a final-phase afterthought —
+    an issue introduced in Phase 2 must be caught in Phase 2,
+    before its work is committed, pushed, or merged.
   - Every phase carries a one-line metadata badge:
-      **Complexity:** … · **Risk:** … · **Cloud cost:** …
+      **Complexity:** … · **Risk:** … · **Cloud cost:** … ·
+      **Handles sensitive data:** <Yes/No — PII, secrets, auth>
+  - §5 "Security & privacy strategy" is MANDATORY for any
+    project touching user data, secrets, PII, credentials, or
+    auth. Only omit it for a throwaway with zero sensitive
+    surface, and say so explicitly if you do.
   - Prefer short, declarative sentences over hedged paragraphs.
   - Never invent numbers; mark unknowns as "TBD".
   - Output the finished document in raw Markdown only.
@@ -143,11 +154,13 @@ have:
   1. ### Phase N — <Title>
   2. **Goal:** one sentence.
   3. Metadata line: **Complexity:** … · **Risk:** … ·
-     **Cloud cost:** …
+     **Cloud cost:** … · **Handles sensitive data:** …
   4. Numbered sub-sections (#### N.1, #### N.2, …) describing
      concrete work.
   5. Tables, code blocks, or schema dumps where they clarify.
-  6. **Acceptance criteria** — bulleted, testable list.
+  6. **Acceptance criteria** — bulleted, testable list that
+     INCLUDES at least one security check for the surface the
+     phase touches (see §5 "Security & privacy strategy").
 Phases are ordered so each is independently shippable and the
 dependency graph in §5 is honoured.
 -->
@@ -157,7 +170,8 @@ dependency graph in §5 is honoured.
 **Goal:** <One sentence describing the outcome of this phase.>
 
 **Complexity:** <Low | Medium | High> · **Risk:**
-<Low | Medium | High> · **Cloud cost:** <$0 | …>
+<Low | Medium | High> · **Cloud cost:** <$0 | …> ·
+**Handles sensitive data:** <Yes/No — PII, secrets, auth>
 
 #### 1.1 <Sub-section title>
 - <Action item>.
@@ -173,6 +187,11 @@ dependency graph in §5 is honoured.
 - <Testable statement 1>.
 - <Testable statement 2>.
 - <Testable statement 3>.
+- **Security:** the §5 security gate ran clean on this
+  phase's work — no secrets/PII committed, SAST + dependency
+  audit green, and the new/changed surface handles sensitive
+  data per §5 (least privilege, encrypted in transit + at
+  rest, no PII in logs). <Name the concrete check.>
 
 ---
 
@@ -274,8 +293,11 @@ pull request. `main` must always be:
 1. **Scope discipline.** One PR per phase sub-section.
 2. **PR template.** Roadmap reference, summary, test plan,
    screenshots for UI, breaking-change notes, rollback plan.
-3. **CI green required.** Lint, type-check, tests, security
-   scans all pass before merge.
+3. **CI green required.** Lint, type-check, tests, and the
+   security scans (secret scan, SAST, dependency audit) all
+   pass before merge. CI re-runs the same security gate the
+   pre-commit hook ran locally — defense in depth, so a bypassed
+   or skipped local hook still cannot land an issue on `main`.
 4. **No force-push to `main`.** Allowed on personal branches
    only before review opens.
 5. **Squash-merge** to `main` so each phase reads as one
@@ -297,8 +319,17 @@ complete all six stages before declaring the step done.
    The branch name comes from the roadmap step's `**Branch:**`
    line, or from the naming convention above for ad-hoc work.
 
-2. **Work on the branch.** All commits land here. Never push
-   to `main` directly — branch protection rejects it.
+2. **Work on the branch, and pass the security gate before
+   every commit.** All commits land here. Never push to `main`
+   directly — branch protection rejects it. Before each
+   `git commit`, the local security gate (see §5 "Security &
+   privacy strategy" → "Per-step security gate") must run and
+   pass: secret scan clean, SAST clean, dependency audit clean,
+   and no sensitive data (PII, credentials, tokens) in the
+   diff. The gate is wired into the pre-commit hook and is
+   fail-closed — a finding blocks the commit, so a security
+   issue introduced while implementing this step is caught here,
+   before it ever reaches the branch, the PR, or `main`.
 
 3. **Open the PR.** `gh pr create --base main --head <branch>`
    with a Conventional Commits title and a body referencing the
@@ -343,6 +374,108 @@ complete all six stages before declaring the step done.
 | `v0.20.0-phase-2`       | <Phase 2 deliverable>                 |
 | …                       | …                                     |
 | `v1.0.0`                | <Production launch>                   |
+
+### Security & privacy strategy
+
+<!--
+MANDATORY for any project that touches user data, secrets,
+PII, credentials, payments, or auth. The point of this
+section is that security is woven into EVERY step of every
+phase — not bolted on at the end — so an issue introduced
+while implementing a step is caught during development,
+before the commit, push, and merge. Fill in the data
+classification and the controls; keep the "Per-step security
+gate" subsection intact — it is the mechanism the whole
+roadmap relies on.
+-->
+
+#### Data classification
+
+What sensitive data does this project touch, and how is each
+class protected? Fill one row per class actually present;
+delete rows that do not apply.
+
+| Data class                     | Present? | Handling requirement                                  |
+|--------------------------------|----------|-------------------------------------------------------|
+| Client / user PII              | <Yes/No> | Encrypt in transit + at rest; least-privilege access; never in logs. |
+| Authentication secrets / creds | <Yes/No> | Secrets manager only; never in source, env files, or client bundles. |
+| API keys / service tokens      | <Yes/No> | Server-side only; rotate on exposure; scoped minimally.              |
+| Payment / financial data       | <Yes/No> | Delegate to a PCI-compliant processor; never store PANs.            |
+| Health / regulated data        | <Yes/No> | Meet the governing regime (HIPAA/GDPR/…); document the basis.       |
+
+#### Threat model (one-paragraph)
+
+<Name the assets worth protecting (the data classes above),
+the trust boundaries from §3, the realistic adversaries
+(external attacker, malicious insider, a compromised
+dependency, a leaked coding-agent transcript), and the top
+3-5 abuse cases the design must resist. Keep it to a
+paragraph plus the risk rows below.>
+
+#### Per-step security gate
+
+This is the core control. Every step of every phase runs the
+SAME local, fail-closed security gate before any commit, so a
+security issue introduced while implementing a step is caught
+in development — before it reaches the branch, the PR, or
+`main`. A coding agent handed a phase step must treat this
+gate as part of the step's definition of done, exactly like
+tests.
+
+The gate is wired into the repo's pre-commit hook (`.githooks/`
++ `git config core.hooksPath .githooks`, or a `pre-commit`
+framework config) so it runs automatically, and it is
+re-run in CI so a bypassed hook cannot land an issue on `main`.
+It has four checks; all must be clean:
+
+| Check                | What it catches                                   | Example tooling                                        |
+|----------------------|---------------------------------------------------|--------------------------------------------------------|
+| Secret / PII scan    | Committed credentials, tokens, keys, real PII     | `gitleaks`, `detect-secrets`, `trufflehog`             |
+| SAST (static a.)     | Injection, unsafe deserialization, weak crypto, path traversal | `bandit` (Py), `semgrep`, `eslint-plugin-security` (JS/TS) |
+| Dependency audit     | Known-vulnerable / yanked / typo-squatted deps    | `pip-audit`, `npm audit --audit-level=high`, `osv-scanner` |
+| Sensitive-data review| PII in logs, secrets in client bundles, over-broad scopes, missing encryption | Diff review against the data-classification table above |
+
+Rules for the gate:
+
+1. **Fail-closed.** Any finding blocks the commit. The bypass
+   (e.g. an env var) is for genuine emergencies only and every
+   use is recorded in the PR body with a justification.
+2. **Runs per commit, not per phase.** Because it is a
+   pre-commit hook, the developer/agent cannot defer security
+   to "the end" — the smallest unit of work is already gated.
+3. **Mirrored in CI.** The same four checks run as required
+   status checks so the merge is blocked even if the local
+   hook was skipped (PR rule 3).
+4. **Owned by acceptance criteria.** Every phase's Acceptance
+   criteria names the concrete security check for its surface;
+   the phase is not "done" until the gate is green on its work.
+
+#### Security controls by layer
+
+<!-- Skip rows that do not apply. These are the standing
+controls the design must carry, distinct from the per-commit
+gate above. -->
+
+| Layer               | Control                                                       |
+|---------------------|--------------------------------------------------------------|
+| Identity / auth     | <MFA, session policy, token lifetime, least-privilege roles> |
+| Transport           | <TLS everywhere, HSTS, cert management>                       |
+| Data at rest        | <Encryption, key management, backup encryption>              |
+| Secrets             | <Manager (Vault/cloud KMS/keychain); never in source/env>    |
+| Network / edge      | <WAF, rate limits, allow-lists, private networking>          |
+| Dependencies        | <Pinned + audited; automated update + audit cadence>         |
+| Logging / audit     | <No PII/secrets in logs; tamper-evident audit trail>         |
+| Incident response   | <Rotation runbook, disclosure path, on-call owner>           |
+
+#### Vulnerability handling
+
+Security findings — from the gate, CI, a scanner, or a report
+— follow the same discover → triage → track → fix → verify
+loop as any other defect, but jump the queue by severity:
+Critical/High are fixed on a `hotfix/` or `fix/` branch before
+new feature work continues; Medium/Low are tracked as issues
+with an owner and a due date. Never silence a finding without a
+recorded justification.
 
 ### Risks & mitigations
 
