@@ -3,20 +3,19 @@
   "source_url": "https://api-docs.deepseek.com/guides/thinking_mode",
   "reasoning_effort": [
     "high",
-    "max"
+    "max",
+    "low"
   ],
   "thinking_toggle": [
     "enabled",
     "disabled"
   ],
-  "toggle_default": "enabled",
-  "effort_default": "high",
-  "effort_aliases": {
-    "low": "high",
-    "medium": "high",
-    "xhigh": "max"
-  },
-  "unexpected_effort": [],
+  "toggle_default": null,
+  "effort_default": null,
+  "effort_aliases": {},
+  "unexpected_effort": [
+    "low"
+  ],
   "unexpected_toggle": [],
-  "section_sha256": "861fd8e2ff782c80df337bc3357ac1746b4ed5728efab78ccd1c1ab88971a1ce"
+  "section_sha256": "8d969fb7604f5a56f7b37aa0510f0077c6759b56407a3a694d9854f6710a5634"
 }
