@@ -27,6 +27,7 @@ from .funding import (
     access_guard_from_request,
     canonical_model_name,
     funding_guard_from_request,
+    platform_dials,
     resolve_allowed_jurisdictions,
     user_context_from_request,
 )
@@ -212,25 +213,83 @@ def _ladder_output_cap(single_block_cap: int) -> int:
     return single_block_cap * _LADDER_OUTPUT_MULTIPLIER
 
 
-# Issue #188: the selector's <access-methods> mark `cursor` and `xai-api` with
-# exposes-thinking="no", and <thinking-context> makes that an OVERRIDE — THINKING
-# must be N/A on those surfaces regardless of task complexity. Gemini 2.5 Flash
-# fills a THINKING value anyway (6 of 7 Cursor probes in the Task-1 sweep), so the
-# structured `thinking` field the UI renders is wrong. Normalize it deterministically
-# here. This governs the actionable structured field only; the model's rationale
-# PROSE is corrected separately by the A0 prompt-hardening pass. Folding the override
-# into the package's _structured_settings is a follow-up (would need a release).
-_NO_THINKING_PLATFORMS = frozenset({"Cursor", "xAI API"})
+# Output contract v2 — the structured `settings` a pick carries must match the
+# PLATFORM-CONDITIONAL emission rule: EFFORT / THINKING exist only where the
+# access method's `exposes_thinking` is `yes`, MAX MODE only where
+# `exposes_max_mode` is `yes`, and a dial the surface LACKS is ABSENT — never
+# `Off`, never `N/A` ("this control exists and is off" is a different claim from
+# "this surface has no such control", and the UI renders the difference).
+#
+# This normalization stays in the SERVICE because the settings dict reaching it
+# is whatever the DEPLOYED roadmodel emits: the package ships to prod only via a
+# PyPI release + floor bump, so during migration the service sees BOTH shapes —
+# v1 (`thinking` carrying an effort word, `max_mode` present on every surface)
+# and v2 (`effort` + a two-position `thinking`). It DUAL-ACCEPTS both and emits
+# the v2 shape either way. It also supersedes the old #188 hard-coded
+# `_NO_THINKING_PLATFORMS` set, whose Cursor entry force-reverted the package's
+# deliberate Cursor value (fixed in #387, silently re-introduced by #389) — the
+# catalog's own attributes are the single source now.
+
+# `thinking` values that read as "no reasoning" on either contract version — v1
+# also spelled "no dial" as `N/A` here, which v2 replaces with an absent line.
+_OFFISH_THINKING = frozenset({"off", "no", "none", "n/a", "na", "-", ""})
+
+# The two-position TOGGLE values v2's THINKING field may carry. Anything outside
+# these ∪ _OFFISH_THINKING is a reasoning LEVEL wearing the v1 field name.
+_TOGGLE_ON_VALUES = frozenset({"on", "yes", "true", "enabled"})
+
+# Settings keys that carry a reasoning LEVEL rather than a toggle.
+_LEVEL_SETTING_KEYS = ("effort", "intelligence")
 
 
-def _normalize_no_thinking(platform: str, settings: dict[str, Any]) -> dict[str, Any]:
-    """Force settings['thinking'] to N/A on surfaces that expose no thinking dial."""
-    if platform not in _NO_THINKING_PLATFORMS:
-        return settings
-    thinking = settings.get("thinking")
-    if thinking is None or str(thinking).strip().upper() in {"N/A", "NA"}:
-        return settings
-    return {**settings, "thinking": "N/A"}
+def _is_level_value(value: str) -> bool:
+    """Whether a `thinking` value is an effort LEVEL rather than an On/Off toggle."""
+    lowered = value.strip().lower()
+    return lowered not in _OFFISH_THINKING and lowered not in _TOGGLE_ON_VALUES
+
+
+def _normalize_settings_contract(platform: str, settings: dict[str, Any]) -> dict[str, Any]:
+    """Coerce a pick's structured settings into the v2 platform-conditional shape.
+
+    Each rule fires only when the catalog actually describes that dial (an
+    unknown platform / attribute is left untouched — fail-open, never invent a
+    shape for a surface we can't describe):
+
+    - Surface with NO reasoning dial: drop `effort` / `intelligence`, and drop a
+      `thinking` value that is a reasoning LEVEL. A level is meaningless where no
+      dial exists (#188: Gemini filled one on 6 of 7 Cursor probes) and v2 says
+      such a line is ABSENT, never `N/A`. An On/Off value is deliberately KEPT —
+      that is the package's display reframe for Cursor ("reasoning happens, it
+      just isn't user-dialable"), and the package OWNS it: a service override
+      that force-reverted it was the #387 bug, silently re-introduced by #389.
+    - Surface with NO Max Mode dial: drop `max_mode` (v1 pinned it "Off"
+      everywhere, so an Anthropic-API pick showed a dial it does not have).
+    - Thinking-capable surface carrying the v1 shape (`thinking` holding the
+      LEVEL, no `effort`/`intelligence` key): split it into `effort` (the level)
+      + `thinking` (the On/Off toggle). "THINKING: Max" is the bug v2 split.
+    """
+    dials = platform_dials(platform)
+    out = dict(settings)
+    thinking = out.get("thinking")
+
+    if dials.get("thinking") is False:
+        for key in _LEVEL_SETTING_KEYS:
+            out.pop(key, None)
+        if not isinstance(thinking, str) or _is_level_value(thinking):
+            out.pop("thinking", None)
+    elif dials.get("thinking") is True and isinstance(thinking, str):
+        value = thinking.strip()
+        if value.lower() in _OFFISH_THINKING:
+            # On a surface that HAS the dial, the honest two-position reading of
+            # any off-ish value (including v1's `N/A`) is Off.
+            out["thinking"] = "Off"
+        elif _is_level_value(value) and not any(k in out for k in _LEVEL_SETTING_KEYS):
+            out["effort"] = value
+            out["thinking"] = "On"
+
+    if dials.get("max_mode") is False:
+        out.pop("max_mode", None)
+    return out
 
 
 def _config_for_hint(hint: str) -> Any:
@@ -308,7 +367,11 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
     # requests (None on the anon / bundled-template path).
     funding_guard = funding_guard_from_request(req.context)
     # Access-restriction guard (#445) — enforces the accessible-model allowlist
-    # deterministically; None (no restriction) on the anon / no-funding path.
+    # deterministically; None (no restriction) on the anon / no-funding path. It
+    # also carries the operator's platform allow/deny list (Step A00), read from
+    # the SAME req.context: unlike allowed_jurisdictions there is no package
+    # kwarg to forward it through, so it reaches the engine as prompt bias (the
+    # user-context "Allowed / excluded platforms" section) and is ENFORCED here.
     access_guard = access_guard_from_request(req.context)
     budget_priority = _budget_priority_of(req.context)
     # Runtime availability override (Phase 4.9 B2): the web edge forwards the
@@ -404,7 +467,11 @@ _NON_LEVEL_VALUES = frozenset({"on", "off", "n/a", "na", "none", ""})
 def _reasoning_level(settings: dict[str, Any]) -> str | None:
     """The reasoning-effort LEVEL a pick runs at (e.g. `Max`, `XHigh`, `High`,
     `Ultracode`), read from its structured settings, or None when the surface
-    carries no dial-able level (e.g. Cursor, whose thinking is a bare `On`)."""
+    carries no dial-able level (e.g. Cursor, whose thinking is a bare `On`).
+
+    Dual-accepts both output contracts by construction: v2 puts the level in
+    `effort`, v1 put it in `thinking`, and the toggle values v2 uses there
+    (`On`/`Off`) are filtered out as non-levels."""
     for key in _LEVEL_KEYS:
         value = settings.get(key)
         if isinstance(value, str) and value.strip().lower() not in _NON_LEVEL_VALUES:
@@ -432,13 +499,19 @@ def _build_backup(result: dict[str, Any], access_guard: AccessGuard | None) -> B
             # Ultracode is a Claude-Code session mode; on a cross-provider backup
             # it reads as that surface's top effort -> Max.
             thinking = "Max" if level.lower() == "ultracode" else level
-            settings = _normalize_no_thinking(
+            settings = _normalize_settings_contract(
                 platform,
                 _structured_settings(
                     {
                         "platform": platform,
                         "max_mode": "Off",
+                        # `thinking` is the v1 input key _structured_settings
+                        # reads the LEVEL from; `effort` is its v2 name. Pass
+                        # both so this call keeps working across the package
+                        # release that flips the contract (the package ships to
+                        # prod separately from this service).
                         "thinking": thinking,
+                        "effort": thinking,
                         "orchestration": "None",
                     }
                 ),
@@ -483,8 +556,10 @@ def _pick_response(
     return RecommendResponse(
         model=result["model"],
         platform=result["platform"],
-        # Deterministic THINKING=N/A override on no-thinking surfaces (#188).
-        settings=_normalize_no_thinking(result["platform"], result["settings"]),
+        # Deterministic PLATFORM-CONDITIONAL settings shape (output contract v2):
+        # dials the chosen surface does not expose are DROPPED, and a v1
+        # effort-in-THINKING value is split into EFFORT + the On/Off toggle.
+        settings=_normalize_settings_contract(result["platform"], result["settings"]),
         # Carry the model's reasoning across the service boundary (#173);
         # empty string -> None so the web edge falls back cleanly.
         rationale=rationale,
@@ -521,6 +596,8 @@ def recommend_ladder(req: RecommendRequest) -> LadderResponse:
     funding_guard = funding_guard_from_request(req.context)
     # Access-restriction guard (#445) — applied per rung with that rung's
     # priority so substitutes are tier-appropriate (quality->best, cost->cheap).
+    # Carries the operator's platform allow/deny list (Step A00) too, so every
+    # rung is filtered and relabelled identically.
     access_guard = access_guard_from_request(req.context)
     unavailable_models = _unavailable_models_from_request(req.context)
     availability_authoritative = _availability_authoritative_from_request(req.context)

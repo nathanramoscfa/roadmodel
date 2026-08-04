@@ -39,13 +39,22 @@ controls)** material:
   ``high``, ``xhigh``) — no documented value omitted, no undocumented value
   added.
 - The **Output mapping** subsection's OpenAI line must map each documented
-  reasoning value onto the existing 7-state THINKING field
+  reasoning value onto the existing 7-state EFFORT field
   (`Off`/`Low`/`Medium`/`High`/`XHigh`/`Max`/`N/A`). The established mapping is
   `minimal → Off`, `low → Low`, `medium → Medium`, `high → High`,
   `xhigh` / `extra-high` → `XHigh`. OpenAI's scale tops out at `xhigh`, so no
   OpenAI level maps to `Max` (the `Max` slot is for an above-`xhigh` step, which
   only the Claude `max` models reach). `extra-high` is the UI synonym for the
   `xhigh` config token; keep both readable but they mean the same tier.
+
+The output contract is v2 (see `<output-format>`'s `OUTPUT CONTRACT VERSION: 2`
+header): the reasoning LEVEL lives in the `EFFORT` field, and `THINKING` is a
+separate two-position On/Off toggle that never carries an effort word. The two
+mapping targets `Off` and `N/A` in the 7-state scale are CONTROL states, not
+effort levels: a mapping that lands on `Off` means `THINKING: Off`, and one that
+lands on `N/A` means the surface has no dial, so the line is OMITTED entirely.
+Keep that wording intact; never rewrite an OpenAI level as a `THINKING` value,
+and never invent an 8th state.
 
 Do NOT touch the Claude, Gemini, or Cursor bullets, the Claude extended-thinking
 mapping, the Claude Code effort prose, or the ultracode / ultrathink material —
@@ -73,6 +82,11 @@ OWNED by the Cursor catalog cron. You MUST NOT touch any other attribute
 - Every `<method>` element OTHER THAN `codex-cli` / `openai-api`.
 - The Claude / Gemini / Cursor reasoning bullets and mappings, the Claude Code
   effort prose, `<orchestration-context>`, `<max-mode-context>`.
+- The v2 output contract and its fenced-off neighbours: `<output-format>`
+  (the `OUTPUT CONTRACT VERSION: 2` header, the v1 → v2 migration note, the
+  PLATFORM-CONDITIONAL emission table, the block templates), `<objective>`'s
+  FLAT-FUNDING GATE, `<access-selection>`'s Step A00 platform allow/deny
+  filter and its Steps E / E2 / F / G emission wording, and `<usage>`.
 - All other sections of the selector, and its structure / schema. Update values
   inside the existing schema; do not add or remove sections, attributes,
   elements, or columns.

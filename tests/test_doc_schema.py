@@ -97,7 +97,9 @@ SELECTOR_TO_COST_SCALE_NAME = {
 _OPTIONS_RE = re.compile(r"<model-options>(.*?)</model-options>", re.DOTALL)
 _TIER_RE = re.compile(r'<tier\s+cost="([^"]+)"\s*>(.*?)</tier>', re.DOTALL)
 _MODEL_RE = re.compile(r"<model\s+([^>]+?)\s*/>", re.DOTALL)
-_ATTR_RE = re.compile(r'([\w-]+)="([^"]*)"')
+# Attribute values may embed backslash-escaped quotes (claude-code's best-for
+# quotes `\"ultracode\": true`); `[^"]*` would truncate the value there.
+_ATTR_RE = re.compile(r'([\w-]+)="((?:[^"\\]|\\.)*)"', re.DOTALL)
 _METHOD_RE = re.compile(r"<method\s+([^>]+?)\s*/>", re.DOTALL)
 _ACCESS_METHODS_RE = re.compile(r"<access-methods>(.*?)</access-methods>", re.DOTALL)
 

@@ -195,8 +195,9 @@ that provider's access-method id list as the union of the matching
 DOES refresh each `<method>`'s `supports-models` attribute per the
 "Supports-models refresh in `<access-methods>`" section below
 (additive-only, sanity-guarded). All other `<method>` attributes
-(id, name, provider, billing, requires, exposes-max-mode,
-exposes-thinking, best-for) remain preserved verbatim.
+(id, name, provider, billing, provider-jurisdiction, requires,
+exposes-max-mode, exposes-thinking, exposes-orchestration, best-for)
+remain preserved verbatim.
 
 ### Rebuild procedure (per provider)
 
@@ -329,8 +330,12 @@ from blog posts, third-party comparisons, vendor marketing, or
 training-data recall). NEVER add or remove `<method>` elements in
 `<access-methods>` of `model-selector.txt`, NEVER rename their `id`
 or `name` attributes, and NEVER edit their `provider`, `billing`,
-`requires`, `exposes-max-mode`, `exposes-thinking`, or `best-for`
-attributes — those structural fields are editorial. The
+`provider-jurisdiction`, `requires`, `exposes-max-mode`,
+`exposes-thinking`, `exposes-orchestration`, or `best-for`
+attributes — those structural fields are editorial. The three
+`exposes-*` attributes DRIVE which runtime-setting lines the output
+block emits at all (see `<output-format>`'s per-field emission rule),
+so flipping one silently rewrites the output contract. The
 `supports-models` attribute IS refreshed each run per the
 "Supports-models refresh in `<access-methods>`" section below
 (additive-only, sanity-guarded). NEVER write tiers for providers
@@ -726,8 +731,8 @@ procedure below.
 
 This refresh is ADDITIVE-ONLY with strict sanity guards. The
 `<method>` element's other attributes (id, name, provider, billing,
-requires, exposes-max-mode, exposes-thinking, best-for) remain
-preserved verbatim — `<method>` elements are never added, removed,
+provider-jurisdiction, requires, exposes-max-mode, exposes-thinking,
+exposes-orchestration, best-for) remain preserved verbatim — `<method>` elements are never added, removed,
 or renamed by this automation. Only the `supports-models` value
 changes.
 
@@ -846,13 +851,15 @@ warning per skipped method.
   tier-planning, tier-agentic, tier-multimodal, tier-long-context,
   tier-knowledge, tier-speed, headline-benchmarks, pricing-notes,
   best-for`. The current schema for `<method>` elements in
-  `<access-methods>` is `id, name, provider, billing, requires,
-  supports-models, exposes-max-mode, exposes-thinking, best-for`.
+  `<access-methods>` is `id, name, provider, billing,
+  provider-jurisdiction, requires, supports-models, exposes-max-mode,
+  exposes-thinking, exposes-orchestration, best-for`.
   The `supports-models` attribute is refreshed each run per the
   "Supports-models refresh in `<access-methods>`" section above
   (additive-only with sanity guards). Every OTHER attribute (id,
-  name, provider, billing, requires, exposes-max-mode,
-  exposes-thinking, best-for) is preserved verbatim; `<method>`
+  name, provider, billing, provider-jurisdiction, requires,
+  exposes-max-mode, exposes-thinking, exposes-orchestration, best-for)
+  is preserved verbatim; `<method>`
   elements may not be added, removed, or renamed by this
   automation.
 - The "Subscription Tiers and Access Methods" section of

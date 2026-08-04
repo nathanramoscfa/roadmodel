@@ -67,7 +67,14 @@ _EMPTY_TAIL = (
 _BULLET_ID_RE = re.compile(r"^\s*-\s*`([a-z0-9.\-]+)`", re.MULTILINE)
 # Parses every "<model id=... name=.../>" declaration in the selector.
 _MODEL_RE = re.compile(r"<model\s+([^>]+?)\s*/>", re.DOTALL)
-_ATTR_RE = re.compile(r'([\w-]+)="([^"]*)"')
+# Attribute values may contain BACKSLASH-ESCAPED quotes (the claude-code method's
+# best-for embeds `\"ultracode\": true`). A naive `"([^"]*)"` stops at the first
+# escaped quote and silently truncates the value — that bug shipped a
+# claude-code best_for cut from 3120 to 1147 chars in docs/catalog.json. This
+# module only reads `id`/`name` today, which precede any escaped attribute, so it
+# was latent rather than live; keep the escape-aware pattern so it stays that way
+# if a model attribute ever gains an escape. Mirrors update/build_catalog.py.
+_ATTR_RE = re.compile(r'([\w-]+)="((?:[^"\\]|\\.)*)"')
 
 
 def _fill(text: str, *, hanging: bool = False) -> str:

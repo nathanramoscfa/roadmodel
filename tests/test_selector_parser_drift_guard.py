@@ -34,7 +34,11 @@ SRC_ROOT = REPO_ROOT / "src"
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
-from roadmodel.recommend import _REQUIRED_KEYS, parse_response  # noqa: E402
+from roadmodel.recommend import (  # noqa: E402
+    _REQUIRED_KEYS,
+    OUTPUT_CONTRACT_VERSION,
+    parse_response,
+)
 
 SELECTOR_PATH = REPO_ROOT / "docs" / "model-selector.txt"
 
@@ -48,29 +52,52 @@ _OUTPUT_FORMAT_RE = re.compile(r"<output-format>(.*?)</output-format>", re.DOTAL
 # have no bracketed placeholder.
 _FIELD_LINE_RE = re.compile(r"^[ \t]*([A-Z][A-Z ]*[A-Z]):[ \t]*\[", re.MULTILINE)
 
-# Field names parse_response accepts beyond the strictly-required six.
-# ORCHESTRATION is captured-then-dropped (added in the #130 fix); BACKUP is the
+# Field names parse_response accepts beyond the strictly-required four.
+# Since output contract v2 EVERY setting field is optional, because it is emitted
+# only on a platform that exposes that dial: MAX MODE (Cursor), EFFORT + THINKING
+# (any reasoning-dial surface), ORCHESTRATION (Claude Code). BACKUP is the
 # optional fallback model (Step 7), surfaced when present; PROMPT is handled as
 # an optional leading prefix / rationale terminator for roadmap-annotation mode.
 # A field declared in the selector that is NOT in this set union _REQUIRED_KEYS
 # is exactly the 2026-05-31 drift class.
-_KNOWN_OPTIONAL_FIELDS = frozenset({"orchestration", "backup", "prompt"})
+_KNOWN_OPTIONAL_FIELDS = frozenset(
+    {"max_mode", "effort", "thinking", "orchestration", "backup", "prompt"}
+)
 
 # Realistic single-line values for synthesizing a response that follows the
 # template. Unknown/new fields fall back to a generic token so a freshly-added
 # selector field still produces a parseable-looking line — letting
-# parse_response decide whether the field breaks the regex.
+# parse_response decide whether the field breaks the regex. Values follow the v2
+# vocabulary: EFFORT carries the level, THINKING is an On/Off toggle, and
+# ORCHESTRATION is None/PerPrompt only.
 _SAMPLE_VALUES = {
     "model": "Opus 4.8",
     "backup": "GPT-5.5",
     "platform": "Claude Code",
     "max_mode": "Off",
-    "thinking": "XHigh",
-    "orchestration": "Ultracode",
+    "effort": "Ultracode",
+    "thinking": "On",
+    "orchestration": "PerPrompt",
     "conversation": "New",
     "rationale": "Synthesized from the selector output-format template.",
     "prompt": "1",
 }
+
+# The v1 block shape, kept as an explicit legacy-acceptance fixture: MAX MODE
+# always present, no EFFORT line, THINKING carrying the effort level. Cached
+# engine responses, older roadmodel releases in prod, and previously-exported
+# offline planning kits all still emit exactly this, so it must never stop
+# parsing no matter how far the selector template moves on.
+_V1_BLOCK = """\
+MODEL: Opus 4.8
+BACKUP: GPT-5.5
+PLATFORM: Claude Code
+MAX MODE: Off
+THINKING: XHigh
+ORCHESTRATION: Ultracode
+CONVERSATION: New
+RATIONALE: A version-1 block, as still emitted by cached responses and old kits.
+"""
 
 
 def _normalize(field_label: str) -> str:
@@ -138,15 +165,39 @@ def test_full_template_response_parses() -> None:
 
 
 def test_required_only_template_response_parses() -> None:
-    """The legacy shape — only the required six fields, optional fields
-    (ORCHESTRATION, PROMPT) omitted — must still parse, so a provider that
-    omits an optional field never breaks the parser."""
+    """The minimal shape — only the required four fields, every optional field
+    (all four SETTING dials, BACKUP, PROMPT) omitted — must still parse, so a
+    provider that omits an optional field never breaks the parser. Under v2 this
+    is no longer a hypothetical: a platform that exposes no dial at all emits
+    exactly this block."""
     fields = [f for f in _declared_fields() if f in _REQUIRED_KEYS]
     block = _synthesize_block(fields)
     result = parse_response(block)
     assert all(result.get(key) for key in _REQUIRED_KEYS), (
         f"Required-only block failed to yield all required keys:\n{block}"
     )
+
+
+def test_contract_version_matches_the_selector_doc() -> None:
+    """OUTPUT_CONTRACT_VERSION mirrors the <output-format> "OUTPUT CONTRACT
+    VERSION:" line, which is the source of truth. Bumping one without the other
+    would let a consumer negotiate against a contract the doc never shipped."""
+    block = _output_format_block()
+    match = re.search(r"OUTPUT CONTRACT VERSION:\s*(\d+)", block)
+    assert match, "<output-format> no longer declares an 'OUTPUT CONTRACT VERSION:' line"
+    assert int(match.group(1)) == OUTPUT_CONTRACT_VERSION
+
+
+def test_v1_legacy_block_still_parses() -> None:
+    """BACKWARD COMPATIBILITY, pinned. The v1 shape keeps arriving from caches,
+    older releases and exported planning kits long after the doc moved to v2."""
+    result = parse_response(_V1_BLOCK)
+    assert result["model"] == "Opus 4.8"
+    assert result["platform"] == "Claude Code"
+    assert result["max_mode"] == "Off"
+    assert result["thinking"] == "XHigh"  # v1 overloaded THINKING with the level
+    assert result["orchestration"] == "Ultracode"
+    assert "effort" not in result  # v1 has no EFFORT field at all
 
 
 def test_every_declared_field_is_recognized() -> None:

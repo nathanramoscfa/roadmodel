@@ -146,20 +146,95 @@ _BUDGET_POSTURE: dict[str, str] = {
 }
 
 
-def _budget_block(budget: str) -> str:
+def _budget_block(budget: str, *, flat_funding: bool = False) -> str:
     """Render the value-dependent budget-priority posture for the user-context.
 
     ``budget`` is echoed verbatim in the bold header so the persisted id is
     visible, while the POSTURE sentence (the part the selector acts on) is keyed
     off it via _BUDGET_POSTURE — unknown ids degrade to the balanced posture.
+
+    ``flat_funding`` appends the gate's precedence note (mirroring the selector's
+    "SUSPENDED by the FLAT-FUNDING GATE below when it applies"), so the posture
+    can never be read as contradicting the gate block rendered underneath it.
     """
     posture = _BUDGET_POSTURE.get(budget, _BUDGET_POSTURE["balanced"])
+    suspension = (
+        " NOTE: the FLAT-FUNDING GATE below applies to THIS request and takes "
+        "precedence over this posture — its tier-down and effort-down parts are "
+        "SUSPENDED wherever the gate is open."
+        if flat_funding
+        else ""
+    )
     return (
         f"**Budget priority:** {budget} — this is the user's explicit "
         f"quality-vs-cost instruction for THIS request and OVERRIDES any default "
         f"quality-first posture in the selector objective. For this request, "
         f"{posture} On a quality tie a $0 held subscription beats new "
         f"pay-per-token spend; treat the subscriptions above as sunk cost."
+        f"{suspension}"
+    )
+
+
+# --- Flat-funding gate (tier axis) ------------------------------------------
+#
+# Scaling the capability TIER down, or the reasoning EFFORT down, is only worth
+# doing when it SAVES the user something — and under a flat subscription it does
+# not. When one plan funds the whole candidate family at the SAME $0 marginal
+# price, out-of-pocket price is FLAT across every tier, so tiering down buys the
+# user nothing and costs real quality. This is the service-side half of the
+# selector's <objective> FLAT-FUNDING GATE; the two are written to agree, and
+# this one is SELF-ASSERTING (it declares its own precedence) so the gate takes
+# effect from this appended user-context alone — even before the matching
+# docs/model-selector.txt clause ships in a roadmodel release. Mirrors the
+# budget-posture and consumption-headroom precedents above.
+#
+# Service-side gate condition (the engine re-checks family coverage per
+# candidate, which is the part only it can see):
+#   (a) the user holds >= 1 subscription that funds >= 1 access-method surface
+#       at $0 marginal (the **Active subscriptions** section is non-empty), AND
+#   (b) the effective consumption headroom is `uncapped` — i.e. the user does
+#       not exhaust that plan's budget, so consumption is not a real cost. A
+#       `capped` plan keeps the gate CLOSED: there, tiering/effort down really
+#       does conserve a budget the user can hit.
+# Anything else — per-token paths, an exhausted/capped budget, a candidate set
+# straddling funded and unfunded models — leaves the budget posture unchanged.
+
+
+def _flat_funding_block() -> str:
+    """The self-asserting FLAT-FUNDING GATE, rendered only when the gate is open."""
+    return (
+        "**Flat funding (GATE OPEN):** the subscriptions above fund their whole "
+        "covered model family at the SAME $0 marginal price and this user does "
+        "not exhaust that budget, so out-of-pocket price is FLAT across the "
+        "candidates and CANNOT differentiate them. This gate has the HIGHEST "
+        "precedence for this request — it OVERRIDES the budget priority above on "
+        "BOTH the capability-TIER and the reasoning-EFFORT axis whenever the "
+        "chosen PLATFORM is subscription-funded, the candidate model family is "
+        "COVERED by that same subscription, and the budget is not reported "
+        "exhausted:\n"
+        "- HOLD the capability TIER — recommend the model the task actually "
+        "warrants, on EVERY priority INCLUDING Cost. Do NOT down-tier to a "
+        "smaller model on cost grounds when the stronger model is funded at the "
+        "same $0.\n"
+        "- DEFAULT the reasoning EFFORT to the TOP USEFUL rung the model + "
+        "surface support (`max`, or the surface's top step where there is no "
+        "`max`), on EVERY priority INCLUDING Cost. The Cost posture's "
+        '"never emit the top `max` effort" floor is SUSPENDED outright.\n'
+        "- DIFFERENTIATE the three priorities on the axes that still cost "
+        "something — LATENCY (a smaller/faster model when the user is waiting on "
+        "it), CONTEXT (a model whose native window fits the task without "
+        "truncation), and BLAST RADIUS (a narrower-scoped or more steerable pick "
+        "for an autonomous, hard-to-review change) — never on a price that is "
+        "identical across the set.\n"
+        "- If, after applying those axes, two or more priorities land on the SAME "
+        "model and settings, EMIT THEM AS THE SAME PICK and SAY SO in the "
+        'RATIONALE ("flat funding — same $0 marginal cost at every tier, so Cost '
+        'and Quality converge here"). NEVER manufacture an artificial spread by '
+        "recommending a model the task does not warrant.\n"
+        "The gate is CLOSED for any pay-per-token path, an exhausted subscription "
+        "budget, or a candidate that the subscriptions above do not cover — there "
+        "the budget priority applies UNCHANGED, because tiering down saves real "
+        "dollars."
     )
 
 
@@ -215,12 +290,31 @@ def _effective_consumption_headroom(stored: str | None, sub_set: set[str], tiers
     return "capped"
 
 
-def _consumption_block() -> str:
+def _consumption_block(*, flat_funding: bool = False) -> str:
     """The self-asserting `uncapped` consumption-headroom posture. Rendered only
     when the effective posture is `uncapped` (the behavior-changing case), so it
     takes effect from the appended user-context alone — even before the matching
     docs/model-selector.txt <objective> "CONSUMPTION-HEADROOM OVERRIDE" clause
-    ships in a roadmodel release (mirrors the budget-posture precedent)."""
+    ships in a roadmodel release (mirrors the budget-posture precedent).
+
+    ``flat_funding`` swaps the final differentiation sentence: this posture owns
+    the EFFORT axis and the FLAT-FUNDING GATE owns the TIER axis, and the two
+    COMPOSE. With the gate CLOSED the picks still differ by capability tier
+    alone; with it OPEN the tier ladder is held too, so saying "differ by tier
+    alone" here would flatly contradict the gate block above it."""
+    if flat_funding:
+        differentiation = (
+            "The FLAT-FUNDING GATE above additionally HOLDS the capability TIER, "
+            "so the three picks differentiate on latency / context / blast radius "
+            "rather than on tier or effort — and may legitimately CONVERGE, which "
+            "the RATIONALE must then state outright."
+        )
+    else:
+        differentiation = (
+            "The Cost/Balanced/Quality picks must still differ, but by CAPABILITY "
+            "TIER ALONE (Cost = the smallest adequate model at MAX effort; "
+            "Quality = the frontier model at MAX effort), NOT by effort."
+        )
     return (
         "**Consumption headroom:** uncapped — this user runs a flat subscription "
         "whose usage budget they do not exhaust, so spending more reasoning EFFORT "
@@ -230,11 +324,8 @@ def _consumption_block() -> str:
         "HIGHEST USEFUL reasoning effort the model + surface support (top of the "
         "effort dial — `max`, or `xhigh` where the model has no `max` step) on ALL "
         "THREE priorities INCLUDING Cost, and keep extended thinking ON (never "
-        "emit an Off thinking / effort). The Cost/Balanced/Quality picks must "
-        "still differ, but by CAPABILITY TIER ALONE (Cost = the smallest adequate "
-        "model at MAX effort; Quality = the frontier model at MAX effort), NOT by "
-        "effort. This changes only how much effort each pick runs at, never WHICH "
-        "model is chosen."
+        f"emit an Off thinking / effort). {differentiation} This changes only how "
+        "much effort each pick runs at, never WHICH model is chosen."
     )
 
 
@@ -290,6 +381,77 @@ def canonical_model_name(
     return model_ref
 
 
+# --- Platform dial exposure (output contract v2) -----------------------------
+#
+# Output-contract v2 made every runtime-setting field PLATFORM-CONDITIONAL: a
+# block emits EFFORT / THINKING only where the access method's
+# `exposes_thinking` is `yes`, and MAX MODE only where `exposes_max_mode` is
+# `yes`. A dial the surface lacks means the LINE IS ABSENT — never `Off`, never
+# `N/A`. The catalog already carries both attributes, so the service reads them
+# from there instead of hard-coding platform names (which drifted: a
+# hard-coded set force-reverted Cursor's package-owned thinking value in #387,
+# and the revert then silently came back in #389).
+#
+# UNKNOWN is a third state on purpose: a platform the catalog does not describe
+# (or an attribute it omits) leaves the dial ABSENT from the map, and the caller
+# then leaves those settings untouched — fail-open, never invent a shape.
+_DIAL_ATTRS: dict[str, str] = {"thinking": "exposes_thinking", "max_mode": "exposes_max_mode"}
+
+# Pre-catalog fallback: the two surfaces that expose no reasoning dial today.
+# Used only when the catalog cannot be read, so a load failure degrades to the
+# previously hard-coded knowledge rather than to no normalization at all.
+_DIAL_FALLBACK: dict[str, dict[str, bool]] = {
+    "cursor": {"thinking": False, "max_mode": True},
+    "xai-api": {"thinking": False, "max_mode": False},
+    "xai api": {"thinking": False, "max_mode": False},
+}
+
+# Catalog-derived dial map, cached per catalog source (the ROADMODEL_CATALOG_PATH
+# override, or "" for the bundled one) so a warm Function never re-parses the
+# ~200KB catalog on the request path, while tests pointing at a fixture catalog
+# still get their own entry.
+_DIAL_CACHE: dict[str, dict[str, dict[str, bool]]] = {}
+
+
+def _build_dial_map(catalog: dict[str, Any]) -> dict[str, dict[str, bool]]:
+    """Index access methods by lowercased id AND display name -> exposed dials."""
+    dials: dict[str, dict[str, bool]] = {}
+    for method in catalog.get("access_methods", []) or []:
+        entry: dict[str, bool] = {}
+        for dial, attr in _DIAL_ATTRS.items():
+            raw = method.get(attr)
+            if isinstance(raw, str) and raw.strip().lower() in {"yes", "no"}:
+                entry[dial] = raw.strip().lower() == "yes"
+        if not entry:
+            continue
+        for key in (method.get("id"), method.get("name")):
+            if isinstance(key, str) and key.strip():
+                dials[key.strip().lower()] = entry
+    return dials
+
+
+def platform_dials(platform: str, *, catalog: dict[str, Any] | None = None) -> dict[str, bool]:
+    """Which runtime dials an access method EXPOSES, keyed `thinking`/`max_mode`.
+
+    A missing key means "unknown" (the catalog does not describe this platform,
+    or omits the attribute) — callers must leave the corresponding setting
+    untouched rather than guess. Never raises: a catalog failure degrades to the
+    small known-surfaces fallback.
+    """
+    if catalog is not None:
+        return _build_dial_map(catalog).get(platform.strip().lower(), {})
+    key = os.environ.get("ROADMODEL_CATALOG_PATH", "")
+    cached = _DIAL_CACHE.get(key)
+    if cached is None:
+        try:
+            cached = _build_dial_map(load_catalog()) or dict(_DIAL_FALLBACK)
+        except Exception:  # noqa: BLE001 - dial lookup is best-effort, never fatal
+            logger.warning("platform dial map build failed (non-fatal)", exc_info=True)
+            cached = dict(_DIAL_FALLBACK)
+        _DIAL_CACHE[key] = cached
+    return cached.get(platform.strip().lower(), {})
+
+
 def _slugify(value: str) -> str:
     # Faithful port of web/lib/subscriptions.ts slugify(); ORDER MATTERS.
     value = value.lower()
@@ -331,6 +493,100 @@ def _str_list(value: object) -> list[str]:
     return [item for item in value if isinstance(item, str)]
 
 
+# --- Platform allowlist / denylist (selector <access-selection> Step A00) ----
+#
+# The operator may declare which access METHODS they will actually operate:
+#   - platforms_allowed  — when non-empty, ONLY these access-method ids are usable.
+#   - platforms_excluded — access-method ids the operator has opted out of.
+# Both are HARD filters applied BEFORE any scoring (unlike the SOFT platform
+# preference ORDER), and they OUTRANK the "never hard-exclude an unfunded access
+# method" guardrail: unfunded means "costs money the user may still choose to
+# spend", excluded means "produces settings the user cannot apply".
+#
+# An ABSENT or EMPTY allowlist means "no opt-out declared" — NEVER "allow
+# nothing". Every helper below treats an empty list as unset, so a missing field
+# can never silently zero out the accessible set (the same defensive shape as
+# allowed_jurisdictions, which falls back to the documented baseline).
+
+
+def _platform_id_set(values: list[str] | None) -> set[str]:
+    """Normalize a declared platform list to lowercase ids, dropping blanks."""
+    return {v.strip().lower() for v in (values or []) if isinstance(v, str) and v.strip()}
+
+
+def _method_permitted(method_id: object, allowed: set[str], excluded: set[str]) -> bool:
+    """Whether one access METHOD survives the operator's allow/deny list."""
+    if not allowed and not excluded:
+        return True  # nothing declared -> no-op, never "allow nothing"
+    if not isinstance(method_id, str):
+        # An unidentifiable method can't be matched against an allowlist, so it
+        # survives only in deny-list-only mode (fail-open on a malformed entry).
+        return not allowed
+    mid = method_id.strip().lower()
+    if mid in excluded:
+        return False
+    return not allowed or mid in allowed
+
+
+def known_platform_ids(catalog: dict[str, Any] | None = None) -> set[str]:
+    """Lowercased access-method ids the catalog actually describes."""
+    try:
+        cat = catalog if catalog is not None else load_catalog()
+    except Exception:  # pragma: no cover - catalog load already fails soft elsewhere
+        return set()
+    known: set[str] = set()
+    for method in cat.get("access_methods", []) or []:
+        mid = method.get("id")
+        if isinstance(mid, str) and mid.strip():
+            known.add(mid.strip().lower())
+    return known
+
+
+def _known_platforms_only(values: list[str], known: set[str], field: str) -> list[str]:
+    """Drop declared platform ids the catalog does not describe.
+
+    These values arrive in the request body and are rendered VERBATIM into the
+    user-context document that becomes the engine's system prompt, so they are
+    constrained to a closed, catalog-derived vocabulary rather than passed
+    through as free text. This mirrors how `api_providers` is validated against
+    a catalog-derived set server-side instead of trusting the client, and it
+    also makes a typo'd id a no-op rather than something that empties the
+    accessible set and trips the fail-safe. An empty ``known`` set means the
+    catalog could not be read; pass the values through unchanged rather than
+    silently discarding a legitimate filter.
+    """
+    if not known:
+        return values
+    kept = [v for v in values if v.strip().lower() in known]
+    dropped = [v for v in values if v.strip().lower() not in known]
+    if dropped:
+        logger.warning(
+            "ignoring unknown %s entries not present in the catalog: %s", field, sorted(dropped)
+        )
+    return kept
+
+
+def resolve_platform_filters(
+    context: dict[str, Any] | None, *, catalog: dict[str, Any] | None = None
+) -> tuple[list[str], list[str]]:
+    """The request's declared (platforms_allowed, platforms_excluded).
+
+    Read with the same defensive ``_str_list`` treatment as
+    ``allowed_jurisdictions``; an absent / malformed field yields an EMPTY list,
+    which every consumer reads as "unset" (no filtering), not "allow nothing".
+    Entries are then narrowed to ids the catalog actually describes, so an
+    arbitrary client-supplied string never reaches the prompt or the filter."""
+    ctx = context or {}
+    known = known_platform_ids(catalog)
+    allowed = _known_platforms_only(
+        _str_list(ctx.get("platforms_allowed")), known, "platforms_allowed"
+    )
+    excluded = _known_platforms_only(
+        _str_list(ctx.get("platforms_excluded")), known, "platforms_excluded"
+    )
+    return allowed, excluded
+
+
 # --- Accessible-model set (access restriction, #445) ------------------------
 #
 # When the user has declared any funding, the recommender must recommend ONLY
@@ -360,15 +616,25 @@ def accessible_model_ids(
     api_providers: list[str],
     *,
     allowed_jurisdictions: list[str] | None = None,
+    platforms_allowed: list[str] | None = None,
+    platforms_excluded: list[str] | None = None,
     catalog: dict[str, Any] | None = None,
 ) -> set[str] | None:
     """Model ids the user can actually run, or ``None`` for "no restriction".
 
     A model qualifies when some access method that supports it is reachable by
     the user — an API-billing method whose provider is enabled, or a
-    subscription surface the user funds — AND the model's jurisdiction is
-    allowed. Returns ``None`` (no funding declared) so the caller skips the
+    subscription surface the user funds — AND that method survives the
+    operator's platform allow/deny list (Step A00) AND the model's jurisdiction
+    is allowed. Returns ``None`` (no funding declared) so the caller skips the
     filter entirely (anon / free path unchanged). Never raises.
+
+    This loop is the ONE place a platform id is accepted (``method["id"]``), so
+    applying the allow/deny filter here propagates it to BOTH consumers of the
+    accessible set: the user-context allowlist that BIASES the engine, and the
+    deterministic AccessGuard that ENFORCES the pick. The #444 lesson — prompt
+    bias alone is not adherence — is why the filter belongs at this choke point
+    and not only in the prompt prose.
     """
     api_set = {p for p in api_providers if isinstance(p, str)}
     sub_set = {s for s in subscriptions if isinstance(s, str)}
@@ -380,29 +646,55 @@ def accessible_model_ids(
     models: Any = cat.get("models", []) or []
 
     funded_surface_ids = _funded_surface_ids(tiers, sub_set)
-
-    reachable_model_ids: set[str] = set()
-    for method in methods:
-        provider = method.get("provider")
-        mid = method.get("id")
-        by_api = method.get("billing") in _API_BILLING and provider in api_set
-        by_sub = isinstance(mid, str) and mid in funded_surface_ids
-        if not (by_api or by_sub):
-            continue
-        for supported in method.get("supports_models") or []:
-            if isinstance(supported, str):
-                reachable_model_ids.add(supported)
-
     allowed = {j.strip().lower() for j in (allowed_jurisdictions or _BASELINE_JURISDICTIONS)}
-    accessible: set[str] = set()
-    for model in models:
-        model_id = model.get("id")
-        if not isinstance(model_id, str) or model_id not in reachable_model_ids:
-            continue
-        juris = str(model.get("jurisdiction", "")).strip().lower()
-        if juris and juris not in allowed:
-            continue
-        accessible.add(model_id)
+
+    def _resolve(allow: set[str], deny: set[str]) -> set[str]:
+        reachable_model_ids: set[str] = set()
+        for method in methods:
+            provider = method.get("provider")
+            mid = method.get("id")
+            if not _method_permitted(mid, allow, deny):
+                continue
+            by_api = method.get("billing") in _API_BILLING and provider in api_set
+            by_sub = isinstance(mid, str) and mid in funded_surface_ids
+            if not (by_api or by_sub):
+                continue
+            for supported in method.get("supports_models") or []:
+                if isinstance(supported, str):
+                    reachable_model_ids.add(supported)
+
+        resolved: set[str] = set()
+        for model in models:
+            model_id = model.get("id")
+            if not isinstance(model_id, str) or model_id not in reachable_model_ids:
+                continue
+            juris = str(model.get("jurisdiction", "")).strip().lower()
+            if juris and juris not in allowed:
+                continue
+            resolved.add(model_id)
+        return resolved
+
+    allow_platforms = _platform_id_set(platforms_allowed)
+    deny_platforms = _platform_id_set(platforms_excluded)
+    accessible = _resolve(allow_platforms, deny_platforms)
+
+    # FAIL SAFE: a platform filter that empties an otherwise non-empty accessible
+    # set is a misconfiguration (a stale/typo'd id, or a list naming only
+    # surfaces this user doesn't fund). Producing ZERO recommendations from it
+    # would be strictly worse than ignoring it, so fall back to the unfiltered
+    # set and log the drop instead. The jurisdiction filter deliberately does NOT
+    # get this treatment — it is a compliance constraint, this one is a
+    # preference.
+    if (allow_platforms or deny_platforms) and not accessible:
+        unfiltered = _resolve(set(), set())
+        if unfiltered:
+            logger.warning(
+                "platform filter emptied the accessible set (allowed=%s excluded=%s); "
+                "falling back to the unfiltered set",
+                sorted(allow_platforms),
+                sorted(deny_platforms),
+            )
+            return unfiltered
     return accessible
 
 
@@ -439,6 +731,42 @@ def _access_restriction_block(accessible_names: list[str]) -> str:
     )
 
 
+def _platforms_block(allowed: list[str], excluded: list[str]) -> str:
+    """The operator's platform allow/deny list, as the selector's Step A00 states
+    it. Rendered ONLY when at least one list is declared (an absent list is a
+    no-op, and the default path must not pay for prose that says nothing)."""
+    lines: list[str] = []
+    if allowed:
+        lines.append(
+            "**Allowed platforms (HARD):** `platforms.allowed` — the operator "
+            f"will only operate these access methods: `{', '.join(allowed)}`. "
+            "DROP every access method whose id is not in that list before any "
+            "scoring; never recommend a PLATFORM outside it."
+        )
+    if excluded:
+        lines.append(
+            "**Excluded platforms (HARD):** `platforms.excluded` — the operator "
+            f"has opted OUT of these access methods: `{', '.join(excluded)}`. "
+            "DROP every one of them before any scoring; never recommend one as "
+            "the PLATFORM."
+        )
+    lines.append(
+        "These are HARD filters applied BEFORE scoring, exactly like the "
+        "jurisdiction filter and unlike the SOFT platform preference ORDER above. "
+        "They OUTRANK the guardrail that says never to hard-exclude an UNFUNDED "
+        'access method: unfunded means "costs money the user may still choose to '
+        'spend", while excluded means "produces settings the user cannot apply" — '
+        "so never re-admit an excluded platform on the grounds that it is merely "
+        "unfunded. DISCLOSURE: when a dropped platform would otherwise have won, "
+        "add ONE clause to the RATIONALE naming it and the fact that the "
+        "operator's list excluded it (e.g. \"Cursor would rank first on pool "
+        'economics but is not in the declared platform allowlist"). If the filter '
+        "leaves no method that reaches the model, say so plainly in the RATIONALE "
+        "rather than silently re-admitting a dropped one."
+    )
+    return "\n\n".join(lines)
+
+
 def build_user_context(
     subscriptions: list[str],
     api_providers: list[str],
@@ -446,6 +774,8 @@ def build_user_context(
     budget_priority: str | None = None,
     consumption_headroom: str | None = None,
     allowed_jurisdictions: list[str] | None = None,
+    platforms_allowed: list[str] | None = None,
+    platforms_excluded: list[str] | None = None,
     catalog: dict[str, Any] | None = None,
 ) -> str | None:
     """Render the user's declared funding as a roadmodel user-context document.
@@ -520,7 +850,18 @@ def build_user_context(
     # so the prompt and the highest-volume default path stay unchanged. A leading
     # blank line keeps the block visually separated from the budget block above.
     headroom = _effective_consumption_headroom(consumption_headroom, sub_set, tiers)
-    consumption_line = "\n" + _consumption_block() + "\n" if headroom == "uncapped" else ""
+
+    # FLAT-FUNDING GATE (tier axis): open only when a held subscription actually
+    # funds a surface at $0 AND the user does not exhaust that budget. Both the
+    # gate block and the consumption block are then rendered, and each is written
+    # to reference the other's axis so the two can never read as contradictory.
+    flat_funding = bool(held_lines) and headroom == "uncapped"
+    flat_funding_line = "\n" + _flat_funding_block() + "\n" if flat_funding else ""
+    consumption_line = (
+        "\n" + _consumption_block(flat_funding=flat_funding) + "\n"
+        if headroom == "uncapped"
+        else ""
+    )
 
     # No funding declared:
     #   - DEFAULT (balanced) budget -> None: the anon / free path is unchanged
@@ -547,10 +888,23 @@ def build_user_context(
             list(sub_set),
             list(api_set),
             allowed_jurisdictions=juris,
+            platforms_allowed=platforms_allowed,
+            platforms_excluded=platforms_excluded,
             catalog=cat,
         )
         names = _accessible_model_names(accessible, cat) if accessible else []
         access_block = "\n\n## Access restriction\n\n" + _access_restriction_block(names)
+
+    # Operator platform allow/deny list (Step A00). Rendered only when declared,
+    # so the default request keeps the leaner prompt; the HARD-filter semantics
+    # and the RATIONALE disclosure requirement live in the block itself.
+    plat_allowed = _str_list(platforms_allowed)
+    plat_excluded = _str_list(platforms_excluded)
+    platforms_block = ""
+    if plat_allowed or plat_excluded:
+        platforms_block = "\n\n## Allowed / excluded platforms\n\n" + _platforms_block(
+            plat_allowed, plat_excluded
+        )
 
     return f"""# User Context
 
@@ -589,14 +943,14 @@ key that is not listed above.
 
 ## Budget priority and speed posture
 
-{_budget_block(budget)}
-{consumption_line}
+{_budget_block(budget, flat_funding=flat_funding)}
+{flat_funding_line}{consumption_line}
 **Speed posture:** not a valued dimension unless the prompt states an explicit
 latency requirement.
 
 ## Allowed jurisdictions
 
-`{", ".join(juris)}`{access_block}
+`{", ".join(juris)}`{platforms_block}{access_block}
 """
 
 
@@ -801,10 +1155,26 @@ class AccessGuard:
         api_providers: list[str],
         funded_surface_ids: set[str],
         *,
+        platforms_allowed: list[str] | None = None,
+        platforms_excluded: list[str] | None = None,
         catalog: dict[str, Any] | None = None,
     ) -> None:
         cat = catalog if catalog is not None else load_catalog()
         self._accessible_ids = set(accessible_ids)
+        # Operator platform allow/deny list (Step A00). The accessible SET was
+        # already filtered by it upstream; this second application governs which
+        # surface a substituted pick is NAMED with, so the guard can never label
+        # a model with a platform the operator declared they do not use.
+        allow_platforms = _platform_id_set(platforms_allowed)
+        deny_platforms = _platform_id_set(platforms_excluded)
+        self._allow_platforms = allow_platforms
+        self._deny_platforms = deny_platforms
+        # Access-method NAME (as the engine emits it) -> id, so a PLATFORM string
+        # can be matched against the operator's id-based allow/deny list.
+        self._method_id_of: dict[str, str] = {}
+        # Models whose platform label came from a PERMITTED surface — the only
+        # relabel targets when the engine names an excluded platform.
+        self._permitted_platform_of: dict[str, str] = {}
         self._api_set = {p for p in api_providers if isinstance(p, str)}
         self._funded_surface_ids = set(funded_surface_ids)
         models: Any = cat.get("models", []) or []
@@ -837,6 +1207,12 @@ class AccessGuard:
         self._platform_of: dict[str, str] = {}
         _funded_platform_of: dict[str, str] = {}
         _api_platform_of: dict[str, str] = {}
+        # Same two maps built from the methods the platform filter DROPPED, used
+        # only as a last-resort label so a filtered-out surface never leaves an
+        # accessible model with no platform at all (fail-safe, mirroring
+        # accessible_model_ids' fallback).
+        _funded_dropped_of: dict[str, str] = {}
+        _api_dropped_of: dict[str, str] = {}
         self._maker_of: dict[str, str] = {}
         # Models reachable at $0 via a funded SUBSCRIPTION surface — their
         # effective cost to the user is $0, used to prefer them for the Cost pick
@@ -850,21 +1226,52 @@ class AccessGuard:
             mid = method.get("id")
             name = method.get("name")
             display = name if isinstance(name, str) else str(mid)
+            if isinstance(mid, str):
+                self._method_id_of[mid.strip().lower()] = mid
+                if isinstance(name, str) and name.strip():
+                    self._method_id_of[name.strip().lower()] = mid
             api_usable = method.get("billing") in _API_BILLING and provider in self._api_set
             funded_sub = isinstance(mid, str) and mid in self._funded_surface_ids
+            permitted = _method_permitted(mid, allow_platforms, deny_platforms)
             for supported in method.get("supports_models") or []:
                 if not isinstance(supported, str):
                     continue
                 if isinstance(provider, str):
+                    # Maker resolution is deliberately NOT platform-filtered: a
+                    # model's maker is a property of the model, not of which
+                    # surfaces this operator happens to use.
                     providers_by_model.setdefault(supported, set()).add(provider)
                 if funded_sub:
-                    self._funded_model_ids.add(supported)
-                    _funded_platform_of.setdefault(supported, display)
+                    # A $0 surface the operator excluded is not operable, so it
+                    # must not make the model count as "free to you" for the
+                    # Cost ranking either.
+                    if permitted:
+                        self._funded_model_ids.add(supported)
+                        _funded_platform_of.setdefault(supported, display)
+                    else:
+                        _funded_dropped_of.setdefault(supported, display)
                 if api_usable:
-                    _api_platform_of.setdefault(supported, display)
-        # Funded ($0) surface first, then a declared pay-per-token API surface.
+                    if permitted:
+                        _api_platform_of.setdefault(supported, display)
+                    else:
+                        _api_dropped_of.setdefault(supported, display)
+        # Funded ($0) surface first, then a declared pay-per-token API surface;
+        # a platform-filtered-out surface only as a last resort (see above).
         for mid_ in {*_funded_platform_of, *_api_platform_of}:
-            self._platform_of[mid_] = _funded_platform_of.get(mid_) or _api_platform_of[mid_]
+            self._permitted_platform_of[mid_] = (
+                _funded_platform_of.get(mid_) or _api_platform_of[mid_]
+            )
+        for mid_ in {
+            *_funded_platform_of,
+            *_api_platform_of,
+            *_funded_dropped_of,
+            *_api_dropped_of,
+        }:
+            self._platform_of[mid_] = (
+                self._permitted_platform_of.get(mid_)
+                or _funded_dropped_of.get(mid_)
+                or _api_dropped_of[mid_]
+            )
         # Resolve each model's MAKER excluding pool aggregators (Cursor), mirroring
         # roadmodel.cost.model_provider so THIS guard's cross-provider backup check
         # agrees with the package's. A model reachable via Cursor's pool AND its
@@ -980,10 +1387,66 @@ class AccessGuard:
                 ):
                     sub_backup = self._best_substitute(priority, exclude_maker=primary_maker)
                     result["backup"] = self._meta[sub_backup]["name"] if sub_backup else None
+            # Platform allow/deny list (Step A00): the model can be perfectly
+            # accessible and still be routed through a surface the operator
+            # declared they do not use — prompt bias alone doesn't stop that
+            # (the #444 lesson), so relabel it deterministically here.
+            self._enforce_platform(result)
             return changed
         except Exception:  # noqa: BLE001 - guard is best-effort, never fatal
             logger.warning("access guard failed (non-fatal)", exc_info=True)
             return False
+
+    def platform_permitted(self, platform: str | None) -> bool:
+        """Whether a PLATFORM string survives the operator's allow/deny list.
+
+        Resolves the engine-emitted display name back to its catalog id first.
+        An unresolvable platform is permitted only in deny-list-only mode — the
+        same fail-open rule ``_method_permitted`` applies to a nameless method.
+        """
+        if not self._allow_platforms and not self._deny_platforms:
+            return True
+        key = (platform or "").strip().lower()
+        return _method_permitted(
+            self._method_id_of.get(key, key), self._allow_platforms, self._deny_platforms
+        )
+
+    def _enforce_platform(self, result: dict[str, Any]) -> None:
+        """Relabel a pick routed through an excluded platform onto a permitted
+        surface that reaches the SAME model, disclosing the swap in the rationale.
+
+        No-op when nothing is declared, when the platform is already permitted,
+        or when no permitted surface reaches the model (the user-context prose
+        already instructs the engine to say so plainly in that case — silently
+        re-admitting the excluded surface would be worse)."""
+        platform = result.get("platform")
+        if self.platform_permitted(platform if isinstance(platform, str) else None):
+            return
+        model_id = self._resolve_id(result.get("model"))
+        replacement = self._permitted_platform_of.get(model_id) if model_id else None
+        if not replacement or replacement == platform:
+            return
+        result["platform"] = replacement
+        result["platform_guard"] = {
+            "action": "relabelled",
+            "original": platform,
+            "substitute": replacement,
+        }
+        disclosure = (
+            f"{platform} is not in the operator's declared platform list, so this "
+            f"runs on {replacement} instead."
+        )
+        sections = result.get("rationale_sections")
+        if isinstance(sections, dict):
+            key = "effort" if sections.get("effort") else "run"
+            existing = sections.get(key) or ""
+            result["rationale_sections"] = {
+                **sections,
+                key: f"{existing} {disclosure}".strip(),
+            }
+        rationale = result.get("rationale")
+        if isinstance(rationale, str) and rationale:
+            result["rationale"] = f"{rationale} {disclosure}"
 
     def _apply_primary_substitution(self, result: dict[str, Any], sub_id: str) -> None:
         name = str(self._meta[sub_id]["name"])
@@ -1038,17 +1501,27 @@ def access_guard_from_request(context: dict[str, Any] | None) -> AccessGuard | N
     try:
         cat = load_catalog()
         allowed = resolve_allowed_jurisdictions(context)
+        plat_allowed, plat_excluded = resolve_platform_filters(context)
         accessible = accessible_model_ids(
             subscriptions,
             api_providers,
             allowed_jurisdictions=allowed,
+            platforms_allowed=plat_allowed,
+            platforms_excluded=plat_excluded,
             catalog=cat,
         )
         if accessible is None:
             return None
         tiers: Any = cat.get("subscription_tiers", []) or []
         funded = _funded_surface_ids(tiers, set(subscriptions))
-        return AccessGuard(accessible, api_providers, funded, catalog=cat)
+        return AccessGuard(
+            accessible,
+            api_providers,
+            funded,
+            platforms_allowed=plat_allowed,
+            platforms_excluded=plat_excluded,
+            catalog=cat,
+        )
     except Exception:  # noqa: BLE001 - guard is best-effort, never fatal
         logger.warning("access guard build failed (non-fatal)", exc_info=True)
         return None
@@ -1080,6 +1553,10 @@ def user_context_from_request(context: dict[str, Any] | None) -> str | None:
     headroom_raw = context.get("consumption_headroom")
     consumption_headroom = headroom_raw if isinstance(headroom_raw, str) else None
     allowed_jurisdictions = _str_list(context.get("allowed_jurisdictions")) or None
+    # Operator platform allow/deny list (Step A00). Same defensive read as
+    # allowed_jurisdictions, and the same "empty list means UNSET" semantics —
+    # an absent allowlist must never be read as "allow nothing".
+    platforms_allowed, platforms_excluded = resolve_platform_filters(context)
 
     # No funding declared -> short-circuit to the bundled template (free path
     # unchanged) UNLESS the user explicitly chose a non-default budget priority:
@@ -1098,6 +1575,8 @@ def user_context_from_request(context: dict[str, Any] | None) -> str | None:
             budget_priority=budget_priority,
             consumption_headroom=consumption_headroom,
             allowed_jurisdictions=allowed_jurisdictions,
+            platforms_allowed=platforms_allowed or None,
+            platforms_excluded=platforms_excluded or None,
         )
     except Exception:  # noqa: BLE001 - funding context is best-effort, never fatal
         # A catalog read/parse failure must not turn a good request into a 500;

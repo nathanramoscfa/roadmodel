@@ -134,9 +134,13 @@ Once you have a key set, set up your user-context file per
 roadmodel recommend "hello"
 ```
 
-A successful call exits with status `0` and prints a six-field
-`MODEL / PLATFORM / MAX MODE / THINKING / CONVERSATION / RATIONALE`
-block to stdout. If you see:
+A successful call exits with status `0` and prints a labeled
+`MODEL / BACKUP / PLATFORM / CONVERSATION / RATIONALE` block to
+stdout, plus the setting fields the chosen platform exposes — e.g.
+`EFFORT` + `THINKING` on Claude Code or Codex, `MAX MODE` on Cursor.
+A dial the platform does not have is simply absent from the block, so
+the exact field list varies with the platform that got picked; the
+five fields above are the ones always present. If you see:
 
 - **`No provider key found. Set one of ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_API_KEY.`**
   — the env var is not exported in the shell you ran the command
@@ -148,4 +152,4 @@ block to stdout. If you see:
   the user-context file has not been bootstrapped yet. Follow the
   prompt and re-run.
 
-If exit `0` and a parsed six-field block: you are done.
+If exit `0` and a parsed recommendation block: you are done.

@@ -1,8 +1,9 @@
 {
-  "schema_version": "2",
-  "generated_at_utc": "2026-07-16T22:23:38Z",
+  "schema_version": "3",
+  "output_contract_version": 2,
+  "generated_at_utc": "2026-08-06T17:10:29Z",
   "source_doc_sha256": {
-    "model-selector.txt": "1a1b269674c71ee7d133103a7b71c3d121a1990b4a51653dcc247d432073c522",
+    "model-selector.txt": "fa1be4b27f4a77fed0f688e4057830f2f508b99bd16713dc72513f67d40af0dc",
     "model-tier-cost-scale.md": "cfca0aa6dd333325be726e174f35b84b2ac6efaa9311f4d091329301e9ed2805"
   },
   "models": [
@@ -865,6 +866,7 @@
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
+      "exposes_orchestration": "no",
       "best_for": "Programmatic / scripted Claude use outside Claude Code \u2014 raw API headers, batch endpoints, or features not surfaced by Claude Code. Falls back here when claude.ai Max budget is exhausted."
     },
     {
@@ -886,6 +888,7 @@
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
+      "exposes_orchestration": "no",
       "best_for": "Chat-driven GPT use without terminal or IDE integration; subscription-funded so marginal cost is $0 until ChatGPT's usage limits kick in."
     },
     {
@@ -905,7 +908,8 @@
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
-      "best_for": "Default for Claude coding or terminal tasks when a claude.ai Max subscription is active \u2014 $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context. Exposes the full `/effort` dial (low/medium/high/xhigh/max \u2014 Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\\"
+      "exposes_orchestration": "yes",
+      "best_for": "Default for Claude coding or terminal tasks when a claude.ai Max subscription is active \u2014 $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context; as of 2.1.219 Claude Opus 5 ships as the new default Opus (1M context, fast mode at $10/$50 per Mtok) and Opus 4.7 is removed from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.220\u20132.1.222 are bug-fix / reliability releases with no surface-parameter changes. Exposes the full `/effort` dial (low/medium/high/xhigh/max \u2014 Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\"ultracode\": true`; 2.1.202+ adds a `/config` \"Dynamic workflow size\" advisory guideline, and 2.1.219 defaults it to medium (aim for fewer than 15 agents) with the `workflowSizeGuideline` settings key to set it from any settings file) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized). As of 2.1.200 the default permission mode is `Manual` across the CLI, VS Code, and JetBrains; 2.1.205 adds an auto-mode rule blocking tampering with session transcript files and reserves the `Claude Browser` MCP server name (alongside `Claude Preview`) ahead of the Claude Desktop pane rename; 2.1.210 adds a live elapsed-time counter on long-running tool calls and startup warnings for `Write(path)`/`NotebookEdit(path)`/`Glob(path)` permission rules; 2.1.211 adds the `--forward-subagent-text` flag / `CLAUDE_CODE_FORWARD_SUBAGENT_TEXT` env var to include subagent text and thinking in stream-json output; 2.1.212 adds `/fork` background-session copies, `/subtask` in-session subagent, `/resume` background picker, per-session WebSearch/subagent caps, and long-running MCP auto-backgrounding; 2.1.214 adds the EndConversation tool and Podman/docker daemon-redirect permission prompts; 2.1.215 makes `/verify` and `/code-review` skills explicit-invocation only; 2.1.216 adds a `sandbox.filesystem.disabled` setting to skip filesystem isolation while keeping network egress control; 2.1.218 moves `/code-review` to a background subagent, adds screen-reader deletion announcements in `--ax-screen-reader` mode, `/ultrareview` now supports descriptive arguments, and skills with `context: fork` default to running in the background; 2.1.219 adds the `DirectoryAdded` hook, subagents can spawn nested subagents up to depth 3 by default (opt out via `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1`), `mcp_server_errors` reporting in the headless stream-json init event, and removes Opus 4.7 from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.221 adds a VS Code Focus view (`Ctrl+Alt+F`), a `mode: \"mask\"` sandbox credential option on Linux/WSL, `claude plugin validate` warnings for names Claude Desktop would reject, and a `prompt-audit` subcommand in the `claude-api` skill; 2.1.222 fixes a worktree-isolation escape and hardens auto-mode `SendMessage` classifier evaluation."
     },
     {
       "id": "claude-web",
@@ -923,6 +927,7 @@
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
+      "exposes_orchestration": "no",
       "best_for": "Chat-driven Claude use (no terminal, no codebase tool use) under the same Max budget that funds Claude Code \u2014 pick when the task is conversational rather than code-editing."
     },
     {
@@ -949,6 +954,7 @@
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
+      "exposes_orchestration": "no",
       "best_for": "Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active \u2014 pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work. Exposes the full Codex `model_reasoning_effort` dial (`minimal`, `low`, `medium`, `high`, `xhigh` \u2014 top `xhigh` tier is model-dependent) plus the plan-mode reasoning-effort variant that additionally accepts `none`."
     },
     {
@@ -991,6 +997,7 @@
       ],
       "exposes_max_mode": "yes",
       "exposes_thinking": "no",
+      "exposes_orchestration": "no",
       "best_for": "Cursor IDE \u2014 single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / composer-2.5 imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. Cursor's own Auto and Premium routing modes are deliberately NOT enumerated as roadmodel-recommendable models because their routing is opaque (see `jurisdiction-context` for the rationale) \u2014 operators who want routing behavior pick a specific fixed model and let Cursor's pool handle the call. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)."
     },
     {
@@ -1006,6 +1013,7 @@
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
+      "exposes_orchestration": "no",
       "best_for": "Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models \u2014 cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn."
     },
     {
@@ -1024,6 +1032,7 @@
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
+      "exposes_orchestration": "no",
       "best_for": "Chat-driven Gemini use under the Gemini Advanced subscription budget."
     },
     {
@@ -1042,6 +1051,7 @@
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
+      "exposes_orchestration": "no",
       "best_for": "Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool."
     },
     {
@@ -1060,6 +1070,7 @@
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
+      "exposes_orchestration": "no",
       "best_for": "Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)."
     },
     {
@@ -1075,6 +1086,7 @@
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
+      "exposes_orchestration": "no",
       "best_for": "Direct Groq API access (provider-direct per-token; OpenAI-format at api.groq.com) hosting OpenAI's open-weight gpt-oss (Apache-2.0) models \u2014 very low-cost, very high-throughput reasoning / coding under the us jurisdiction. Exposes the gpt-oss reasoning-effort dial. Groq is the pinned host that defines gpt-oss price + access (price = f(model, platform)); the open weights can also be self-hosted or run on another host. NOTE Groq is not among the operator's current subscriptions, so gpt-oss is catalog-present but only recommendable once a groq-api-key is configured."
     },
     {
@@ -1092,6 +1104,7 @@
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
+      "exposes_orchestration": "no",
       "best_for": "Direct Mistral API access (provider-direct per-token; La Plateforme at api.mistral.ai) for the Mistral models \u2014 the EU-jurisdiction option for data-sovereignty / EU-regulatory workloads at low cost. Exposes a reasoning dial on the unified models (Mistral Small 4 / Medium 3.5) via the `reasoning_effort` parameter. Not routed via the Cursor pool. eu-jurisdiction is in the default allowed-jurisdictions list, so Mistral surfaces for any user with a mistral-api-key configured (no jurisdiction opt-in required, unlike cn providers)."
     },
     {
@@ -1119,6 +1132,7 @@
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
+      "exposes_orchestration": "no",
       "best_for": "Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates. Exposes the full Codex/OpenAI `reasoning_effort` dial (`minimal`, `low`, `medium`, `high`, `xhigh` \u2014 the top `xhigh` tier is model-dependent)."
     },
     {
@@ -1133,6 +1147,7 @@
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "no",
+      "exposes_orchestration": "no",
       "best_for": "Direct Grok API access for 2M-context or hallucination-resistant tasks; pay-per-token at xAI's published rates."
     },
     {
@@ -1149,6 +1164,7 @@
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
+      "exposes_orchestration": "no",
       "best_for": "Direct z.ai (Zhipu AI) API access (provider-direct per-token; OpenAI-format and Anthropic-format endpoints at api.z.ai) for the GLM models \u2014 cost-conscious coding / reasoning / agentic work when the cn jurisdiction is acceptable and a zai-api-key is configured. Exposes the GLM thinking dial. Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn."
     }
   ],

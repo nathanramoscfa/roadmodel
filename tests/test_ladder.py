@@ -60,6 +60,39 @@ CONVERSATION: New
 RATIONALE: TASK: Coding. PICK: Composer 2.5 is A-tier at low cost. RUN: Cursor pool.
 """
 
+# Output contract v2 ladder: the three rungs land on three different platforms
+# and therefore emit three DIFFERENT field sets — Claude Code has no MAX MODE,
+# Codex has neither MAX MODE nor ORCHESTRATION, and Cursor has no reasoning dial
+# at all. Every rung must parse through the same parse_response.
+_V2_LADDER = """\
+TIER: QUALITY
+MODEL: Opus 4.8
+BACKUP: GPT-5.5
+PLATFORM: Claude Code
+EFFORT: Ultracode
+THINKING: On
+ORCHESTRATION: PerPrompt
+CONVERSATION: New
+RATIONALE: TASK: Coding. PICK: Opus 4.8 is S-tier. EFFORT: Ultracode for a hard refactor.
+
+TIER: BALANCED
+MODEL: GPT-5.5
+BACKUP: Opus 4.8
+PLATFORM: Codex
+EFFORT: High
+THINKING: On
+CONVERSATION: New
+RATIONALE: TASK: Coding. PICK: GPT-5.5 is A-tier. EFFORT: High clears the task.
+
+TIER: COST
+MODEL: Composer 2.5
+BACKUP: GPT-5.4-mini
+PLATFORM: Cursor
+MAX MODE: Off
+CONVERSATION: New
+RATIONALE: TASK: Coding. PICK: Composer 2.5 is A-tier at low cost. EFFORT: no dial on Cursor.
+"""
+
 
 def test_parse_ladder_splits_three_blocks() -> None:
     ladder = parse_ladder_response(_GOOD_LADDER)
@@ -70,6 +103,30 @@ def test_parse_ladder_splits_three_blocks() -> None:
     # Each block parses like a single-prompt block, so optional BACKUP surfaces.
     assert ladder["quality"]["backup"] == "GPT-5.5"
     assert ladder["cost"]["platform"] == "Cursor"
+
+
+def test_parse_ladder_v2_rungs_carry_different_field_sets() -> None:
+    """The v2 ladder's whole shape change: each rung emits only ITS platform's
+    dials, so the three parsed dicts legitimately differ in which keys exist.
+    Under v1 the Claude Code and Codex rungs (no MAX MODE) would have failed."""
+    ladder = parse_ladder_response(_V2_LADDER)
+    assert set(ladder) == {"quality", "balanced", "cost"}
+
+    quality = ladder["quality"]
+    assert quality["effort"] == "Ultracode"
+    assert quality["thinking"] == "On"
+    assert quality["orchestration"] == "PerPrompt"
+    assert "max_mode" not in quality  # Claude Code has no Max Mode
+
+    balanced = ladder["balanced"]
+    assert balanced["effort"] == "High"
+    assert "max_mode" not in balanced
+    assert "orchestration" not in balanced  # Codex exposes no orchestration
+
+    cost_rung = ladder["cost"]
+    assert cost_rung["max_mode"] == "Off"
+    assert "effort" not in cost_rung  # Cursor exposes no reasoning dial
+    assert "thinking" not in cost_rung
 
 
 def test_parse_ladder_is_case_insensitive_on_labels() -> None:
@@ -159,6 +216,9 @@ def _config(tmp_path: Path) -> Config:
 
 
 def _fake_ladder(*_args: object, **_kwargs: object) -> dict[str, dict[str, str]]:
+    """v1 legacy rungs (MAX MODE always present, THINKING carrying the level) —
+    still what cached ladder responses and older releases hand back."""
+
     def block(model: str, platform: str, thinking: str, max_mode: str = "Off") -> dict[str, str]:
         return {
             "model": model,
@@ -176,9 +236,40 @@ def _fake_ladder(*_args: object, **_kwargs: object) -> dict[str, dict[str, str]]
     }
 
 
+def _fake_ladder_v2(*_args: object, **_kwargs: object) -> dict[str, dict[str, str]]:
+    """v2 rungs: each carries only its own platform's dials."""
+    return {
+        "quality": {
+            "model": "opus-4.8",
+            "platform": "Claude Code",
+            "effort": "Ultracode",
+            "thinking": "On",
+            "conversation": "New",
+            "rationale": "TASK: Coding. PICK: Opus fits. EFFORT: Ultracode.",
+        },
+        "balanced": {
+            "model": "sonnet-4.6",
+            "platform": "Claude Code",
+            "effort": "High",
+            "thinking": "On",
+            "conversation": "New",
+            "rationale": "TASK: Coding. PICK: Sonnet fits. EFFORT: High.",
+        },
+        "cost": {
+            "model": "composer-2.5",
+            "platform": "Cursor",
+            "max_mode": "Off",
+            "conversation": "New",
+            "rationale": "TASK: Coding. PICK: Composer fits. EFFORT: no dial on Cursor.",
+        },
+    }
+
+
 def test_recommend_structured_ladder_shapes_three_picks(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
+    """LEGACY ACCEPTANCE: a v1 ladder must produce the same settings it always
+    did, including folding the effort level out of THINKING."""
     monkeypatch.setattr(recommend_module, "recommend_ladder", _fake_ladder)
     result = recommend_structured_ladder("build a SQL agent", _config(tmp_path))
 
@@ -195,3 +286,25 @@ def test_recommend_structured_ladder_shapes_three_picks(
     # The deterministic guard confirms a healthy, distinct-tier ladder.
     assert result["guard"]["healthy"] is True
     assert result["guard"]["distinct_tiers"] is True
+
+
+def test_recommend_structured_ladder_v2_settings_are_platform_conditional(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A v2 ladder's rungs display different control sets — and the Claude Code
+    rungs must show NO max_mode row while the Cursor rung shows no effort row."""
+    monkeypatch.setattr(recommend_module, "recommend_ladder", _fake_ladder_v2)
+    result = recommend_structured_ladder("build a SQL agent", _config(tmp_path))
+
+    quality = result["picks"]["quality"]["settings"]
+    assert quality == {"effort": "Ultracode", "thinking": "On"}
+    assert "max_mode" not in quality
+
+    balanced = result["picks"]["balanced"]["settings"]
+    assert balanced == {"effort": "High", "thinking": "On"}
+
+    cost_rung = result["picks"]["cost"]["settings"]
+    assert cost_rung == {"max_mode": "OFF", "thinking": "On"}
+    assert "effort" not in cost_rung
+
+    assert result["guard"]["healthy"] is True

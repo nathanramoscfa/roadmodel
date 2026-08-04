@@ -45,17 +45,65 @@ def test_build_prompt_header_front_loads_binding_rules() -> None:
     system, _task = build_prompt("pick a model", user_context_text=_UCTX)
     assert "PROMPT TO CLASSIFY" in system  # classify, don't execute (#187)
     # The objective now FOLLOWS the budget priority (Cost/Balanced/Quality)
-    # instead of hard quality-first, and the Cost posture must lower TIER/EFFORT
-    # even when every candidate is $0-funded (the all-Max collapse fix).
+    # instead of hard quality-first — and the budget priority itself yields to
+    # the FLAT-FUNDING GATE (see the dedicated test below).
     assert "THE BUDGET PRIORITY IS THE OBJECTIVE" in system
     assert "LOWER capability tier" in system
-    assert "never collapse the Cost pick onto the Quality pick" in system
     assert "FUNDED surface" in system  # platform cost posture (#186)
-    assert "no thinking dial" in system  # THINKING N/A on Cursor/xAI (#188)
+    assert "no thinking dial" in system  # Cursor/xAI expose neither dial (#188)
     assert "multi-file" in system  # category worked example (#189)
     assert "BACKUP is the fallback model" in system  # backup elicited (Step 7)
     # The user context is still appended.
     assert "placeholder user context" in system
+
+
+def test_build_prompt_header_states_the_conditional_field_set() -> None:
+    """Output contract v2: the header must tell the model WHICH lines to emit —
+    the four always-on fields, plus only the dials the chosen platform exposes,
+    in the fixed order MAX MODE / EFFORT / THINKING / ORCHESTRATION."""
+    system, _task = build_prompt("pick a model", user_context_text=_UCTX)
+    for field in ("MODEL", "BACKUP", "PLATFORM", "CONVERSATION", "RATIONALE"):
+        assert field in system
+    assert "MAX MODE" in system
+    assert "EFFORT" in system
+    assert "ORCHESTRATION" in system
+    # D1 — an unexposed dial is an ABSENT line, never a placeholder value.
+    assert "OMIT A DIAL THE PLATFORM LACKS" in system
+    assert "Never 'Off', never 'N/A'" in system
+    # D2 — THINKING is a toggle; the effort word belongs in EFFORT.
+    assert "'THINKING: Max' is invalid" in system
+    # D3 — Ultracode is the top EFFORT rung, not an orchestration value.
+    assert "Ultracode is the TOP rung" in system
+
+
+def test_build_prompt_header_carries_the_flat_funding_gate() -> None:
+    """D4: on a funded flat subscription a lower rung saves the user NOTHING, so
+    the header must tell the model to hold the tier and top effort on EVERY
+    posture — including Cost — and to SAY SO when the rungs converge instead of
+    manufacturing a spread."""
+    system, _task = build_prompt("pick a model", user_context_text=_UCTX)
+    assert "FLAT-FUNDING GATE" in system
+    assert "top useful rung on EVERY posture INCLUDING Cost" in system
+    assert "latency, context fit, or blast radius" in system
+    assert "SAY SO plainly in the RATIONALE" in system
+    # ...while a real per-token path keeps the ordinary tier-down behavior.
+    assert "Per-token (pay-per-use) paths keep the ordinary tier-down" in system
+
+
+def test_build_prompt_ladder_header_is_v2_and_gated() -> None:
+    """Ladder mode emits three blocks that may land on three DIFFERENT platforms
+    and therefore three different field sets — and the flat-funding gate has to
+    outrank the "three distinct tiers" rule, or a $0-funded ladder gets forced
+    into a spread that costs quality and saves nothing."""
+    system, _ = build_prompt("pick a model", user_context_text=_UCTX, ladder=True)
+    assert "LADDER MODE" in system
+    assert "OMIT A DIAL THE PLATFORM LACKS" in system
+    assert "emit DIFFERENT field sets; that is correct" in system
+    assert "THINKING is an On/Off toggle ONLY" in system
+    assert "FLAT-FUNDING GATE (see <objective>) OVERRIDES the three rules above" in system
+    assert "emit the SAME model and settings for the converged rungs" in system
+    # The ordinary ladder rules survive underneath the gate.
+    assert "three DISTINCT pricing tiers" in system
 
 
 def test_build_prompt_wraps_user_prompt_as_input() -> None:
@@ -79,17 +127,24 @@ def test_build_prompt_injects_runtime_availability_override() -> None:
 
 def test_build_prompt_budget_override_steers_cost_below_quality() -> None:
     """The selector's <objective> BUDGET-PRIORITY OVERRIDE must tell the model to
-    lower the Cost pick's CAPABILITY TIER and EFFORT (not just its price) and hold
-    the frontier for Quality — the fix for the all-$0-funded collapse where Cost,
-    Balanced, and Quality all returned the same frontier model at max effort."""
+    lower the Cost pick's CAPABILITY TIER and EFFORT (not just its price) where
+    the spend is real, and hold the frontier for Quality."""
     system, _ = build_prompt("pick a model", user_context_text=_UCTX)
     assert "BUDGET-PRIORITY OVERRIDE" in system
-    # Cost lowers TIER + EFFORT even when out-of-pocket price is flat at $0.
-    assert "out-of-pocket price is FLAT" in system
-    assert "differentiate by CAPABILITY TIER and EFFORT" in system
-    assert "clearly BELOW it in both capability tier and effort" in system
+    assert "lowest-tier model that is still an ADEQUATE fit" in system
     # Quality still holds the frontier at top useful effort.
     assert "highest USEFUL reasoning effort" in system
+
+
+def test_build_prompt_selector_flat_funding_gate_outranks_the_postures() -> None:
+    """D4 in the SELECTOR body (not just the header): when funding is flat the
+    gate suspends the Cost posture's tier/effort floors instead of letting it
+    trade quality for a saving that does not exist."""
+    system, _ = build_prompt("pick a model", user_context_text=_UCTX)
+    assert "FLAT-FUNDING GATE" in system
+    assert "out-of-pocket price is FLAT across the candidates" in system
+    assert "HOLD the capability tier" in system
+    assert "on EVERY posture including `cheap`" in system
 
 
 def test_build_prompt_no_override_without_unavailable_models() -> None:
