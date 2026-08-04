@@ -53,7 +53,12 @@ dev = [
     "pip-audit>=2.7",
 ]
 # The MCP server serves recommendations, so it needs the engine extra too.
-mcp = ["mcp>=1.0", "roadmodel[recommend]"]
+# Pin below 2.0: mcp 2.0.0 (2026-07-28) removed the FastMCP class that
+# mcp_server.create_app() is built on (renamed to MCPServer) and dropped the
+# mcp.shared.memory.create_connected_server_and_client_session test helper.
+# Migrating to the 2.x MCPServer API is tracked as a separate follow-up; until
+# then this cap keeps the server and its tests on the 1.x API they target.
+mcp = ["mcp>=1.0,<2", "roadmodel[recommend]"]
 
 [project.scripts]
 roadmodel = "roadmodel.cli:main"

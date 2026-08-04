@@ -340,8 +340,9 @@ run_static_checks() {
       "console script entry missing"
   fi
 
-  # 18 — mcp optional dependency
-  if grep -Eq 'mcp[[:space:]]*=[[:space:]]*\[[[:space:]]*"mcp>=1\.0"' pyproject.toml; then
+  # 18 — mcp optional dependency (floor mcp>=1.0; an optional upper cap such as
+  # ",<2" is allowed — see the pyproject comment on the 2.0.0 FastMCP removal)
+  if grep -Eq 'mcp[[:space:]]*=[[:space:]]*\[[[:space:]]*"mcp>=1\.0[^"]*"' pyproject.toml; then
     record_pass 18 "pyproject.toml [project.optional-dependencies] mcp lists \"mcp>=1.0\""
   else
     record_fail 18 "pyproject.toml [project.optional-dependencies] mcp lists \"mcp>=1.0\"" \
