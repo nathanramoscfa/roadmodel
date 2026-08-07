@@ -5,6 +5,80 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Output contract version 2: every setting field is now PLATFORM-CONDITIONAL,
+  and the reasoning LEVEL moved out of `THINKING` into a new `EFFORT` field.**
+  `<output-format>` in the bundled selector now opens with
+  `OUTPUT CONTRACT VERSION: 2`. A block always emits `MODEL`, `BACKUP`,
+  `PLATFORM`, `CONVERSATION`, and `RATIONALE`; the runtime dials are emitted
+  only where the chosen platform actually has them:
+  - `MAX MODE` iff the access method's `exposes-max-mode="yes"` — today Cursor
+    alone. v1 emitted the line on every block and pinned it `Off` off-Cursor,
+    which is how the README's own front-page example ended up advertising
+    "MAX MODE: On" under "PLATFORM: Claude Code" — a setting no Claude Code user
+    can apply.
+  - `EFFORT` and `THINKING` iff `exposes-thinking="yes"`. `EFFORT` carries the
+    level (`Low/Medium/High/XHigh/Max/Ultracode`); `THINKING` is now a
+    two-position toggle (`On`/`Off`) and never carries an effort word. v1's
+    single `THINKING` field carried both meanings.
+  - `ORCHESTRATION` iff `exposes-orchestration="yes"` — today Claude Code alone
+    — and its value set narrows to `None`/`PerPrompt`.
+  A dial the surface lacks means **the line is absent**: never `Off`, never
+  `N/A`, never an em-dash. Every line a block emits must be a control the
+  operator can literally set on the named platform.
+- **Supersedes the 0.2.14–0.2.17 settings narrative.** Those entries describe the
+  v1 axes as the intended design and now read as contradictory, so read them as
+  history:
+  - 0.2.15 introduced `ORCHESTRATION` with `Ultracode` among its values and
+    `N/A` off Claude Code. In v2 `Ultracode` is not an orchestration value at
+    all (it is the top rung of `EFFORT`), and a platform without orchestration
+    omits the line instead of emitting `N/A`.
+  - 0.2.16 folded `ORCHESTRATION: Ultracode` into the effort value **at the
+    display layer only**, explicitly leaving the selector's vocabulary
+    unchanged. v2 promotes that fold into the contract itself: `Ultracode` is an
+    `EFFORT` value emitted by the selector, not a presentation-time rewrite.
+  - 0.2.17 reframed a Cursor pick as `thinking: "On"` so it would not render as
+    "Thinking: N/A". v2 removes the question: Cursor exposes no reasoning dial,
+    so a Cursor block emits `MAX MODE` and carries no `EFFORT` or `THINKING`
+    line to reframe.
+  - 0.2.26's "OpenAI API renders Intelligence, not a spurious Max Mode" fix is
+    now the general rule rather than a per-surface patch — no non-Cursor surface
+    emits `MAX MODE` under v2.
+- **Downstream parsers keyed on field names must dual-accept.** Cached engine
+  responses, older `roadmodel` releases running in production, and previously
+  exported offline planning kits all still emit v1 blocks. A v1-only consumer
+  will not find `MAX MODE` on most v2 blocks and will mis-read a v2 `THINKING`
+  value as an effort level. Treat every setting field as optional, and when
+  `EFFORT` is absent but `THINKING` carries an effort word, read that as the v1
+  level.
+- **Platform allowlist / denylist (`<access-selection>` Step A00).**
+  `user-context.md` may declare `platforms.allowed` / `platforms.excluded` —
+  access-method ids applied as HARD filters before scoring, outranking the
+  "never hard-exclude an unfunded access method" guardrail (an operator opting
+  out of a surface is not the same as that surface being unfunded). Both keys
+  are optional and an absent or empty section means "no opt-out declared", never
+  "allow nothing", so existing hand-edited context files are unaffected. See
+  `docs/user-context.example.md`.
+- **Flat-funding gate (`<objective>`).** When the platform is
+  subscription-funded, the family is covered, and the budget is not exhausted,
+  the selector HOLDS the capability tier and defaults `EFFORT` to the top useful
+  rung on every posture including Cost, differentiating Cost/Balanced/Quality on
+  latency, context, and blast radius instead — and saying so in the RATIONALE
+  when they converge rather than manufacturing a spread. Per-token paths keep
+  the previous tier-down behavior.
+- **User-facing docs, templates, and the planning kit follow the contract.** The
+  README example, `docs/mcp-tools.md`, `docs/byo-key-setup.md`, and the roadmap
+  templates now describe "`MODEL` / `BACKUP` / `PLATFORM` / `CONVERSATION` /
+  `RATIONALE` plus the setting fields the chosen platform exposes" instead of a
+  fixed six-field list; the phase-roadmap template's Settings-table variants
+  drop Max Mode everywhere except Cursor. `scripts/export-planning-kit.sh` also
+  now ships `settings-display.md`, which `roadmodel export-kit` already
+  included — shell-exported kits previously carried the selector without its
+  display contract.
+
 ## [0.2.29] — 2026-07-22
 
 ### Fixed

@@ -27,6 +27,7 @@ BUILD_SCRIPT = REPO_ROOT / "update" / "build_catalog.py"
 
 EXPECTED_TOP_LEVEL_KEYS = {
     "schema_version",
+    "output_contract_version",
     "generated_at_utc",
     "source_doc_sha256",
     "models",
@@ -39,26 +40,52 @@ _OPTIONS_RE = re.compile(r"<model-options>(.*?)</model-options>", re.DOTALL)
 _MODEL_RE = re.compile(r"<model\s+([^>]+?)\s*/>", re.DOTALL)
 _METHOD_RE = re.compile(r"<method\s+([^>]+?)\s*/>", re.DOTALL)
 _ACCESS_METHODS_RE = re.compile(r"<access-methods>(.*?)</access-methods>", re.DOTALL)
-_ATTR_RE = re.compile(r'([\w-]+)="([^"]*)"')
+# Attribute values may embed backslash-escaped quotes; see
+# test_claude_code_best_for_is_not_truncated for what a naive `[^"]*` costs.
+_ATTR_RE = re.compile(r'([\w-]+)="((?:[^"\\]|\\.)*)"', re.DOTALL)
+_ESCAPE_RE = re.compile(r"\\(.)", re.DOTALL)
 _LEADING_DOLLAR_RE = re.compile(r"\$\s*(\d+(?:\.\d+)?)")
+_CONTRACT_VERSION_RE = re.compile(r"OUTPUT CONTRACT VERSION:\s*(\d+)")
 
 
 def _load_catalog() -> dict:
     return json.loads(CATALOG_PATH.read_text())
 
 
+def _attrs(blob: str) -> dict[str, str]:
+    return {name: _ESCAPE_RE.sub(r"\1", value) for name, value in _ATTR_RE.findall(blob)}
+
+
+def _raw_attr_value(element_text: str, attr: str) -> str:
+    """Scan out one attribute value WITHOUT the shared regex.
+
+    Deliberately hand-rolled: the truncation test must not lean on the same
+    pattern the generator uses, or a regression in that pattern would break
+    both sides in lockstep and the test would still pass.
+    """
+    start = element_text.index(f'{attr}="') + len(attr) + 2
+    out: list[str] = []
+    i = start
+    while element_text[i] != '"':
+        if element_text[i] == "\\":
+            i += 1  # take the escaped character literally
+        out.append(element_text[i])
+        i += 1
+    return "".join(out)
+
+
 def _parse_selector_models() -> list[dict[str, str]]:
     text = SELECTOR_PATH.read_text()
     options_match = _OPTIONS_RE.search(text)
     assert options_match, "<model-options> not found"
-    return [dict(_ATTR_RE.findall(m.group(1))) for m in _MODEL_RE.finditer(options_match.group(1))]
+    return [_attrs(m.group(1)) for m in _MODEL_RE.finditer(options_match.group(1))]
 
 
 def _parse_selector_methods() -> list[dict[str, str]]:
     text = SELECTOR_PATH.read_text()
     access_match = _ACCESS_METHODS_RE.search(text)
     assert access_match, "<access-methods> not found"
-    return [dict(_ATTR_RE.findall(m.group(1))) for m in _METHOD_RE.finditer(access_match.group(1))]
+    return [_attrs(m.group(1)) for m in _METHOD_RE.finditer(access_match.group(1))]
 
 
 def _parse_subscription_section_rows() -> list[dict[str, str]]:
@@ -109,7 +136,10 @@ def test_schema_top_level_keys() -> None:
     extra = set(catalog.keys()) - EXPECTED_TOP_LEVEL_KEYS
     assert not missing, f"catalog.json missing top-level keys: {missing}"
     assert not extra, f"catalog.json has unexpected top-level keys: {extra}"
-    assert catalog["schema_version"] == "2"
+    # 3 since the method elements gained `exposes_orchestration` and the
+    # document gained `output_contract_version` (output-contract v2).
+    assert catalog["schema_version"] == "3"
+    assert isinstance(catalog["output_contract_version"], int)
     assert isinstance(catalog["models"], list) and catalog["models"]
     assert isinstance(catalog["access_methods"], list) and catalog["access_methods"]
     assert isinstance(catalog["subscription_tiers"], list)
@@ -179,18 +209,82 @@ def test_access_methods_round_trip() -> None:
             mismatches.append(
                 f"{mid} supports-models: selector={sel_supports} catalog={cat['supports_models']}"
             )
-        for sel_attr, cat_key in (
-            ("provider", "provider"),
-            ("billing", "billing"),
-            ("requires", "requires"),
-            ("exposes-max-mode", "exposes_max_mode"),
-            ("exposes-thinking", "exposes_thinking"),
+        for sel_attr, cat_key, default in (
+            ("provider", "provider", ""),
+            # provider-jurisdiction and exposes-orchestration drive real
+            # behaviour (jurisdiction filtering; whether a block may emit an
+            # ORCHESTRATION line at all), so they are round-tripped too — the
+            # generator silently dropped exposes-orchestration until 2026-08.
+            ("provider-jurisdiction", "provider_jurisdiction", "unknown"),
+            ("billing", "billing", ""),
+            ("requires", "requires", ""),
+            ("exposes-max-mode", "exposes_max_mode", ""),
+            ("exposes-thinking", "exposes_thinking", ""),
+            ("exposes-orchestration", "exposes_orchestration", ""),
+            ("best-for", "best_for", ""),
         ):
-            if sel.get(sel_attr, "") != cat[cat_key]:
+            if sel.get(sel_attr, default) != cat[cat_key]:
                 mismatches.append(
-                    f"{mid} {sel_attr}: selector={sel.get(sel_attr, '')!r} catalog={cat[cat_key]!r}"
+                    f"{mid} {sel_attr}: selector="
+                    f"{sel.get(sel_attr, default)!r} catalog={cat[cat_key]!r}"
                 )
     assert not mismatches, "Access-method mismatches:\n  " + "\n  ".join(mismatches)
+
+
+def test_every_method_declares_orchestration_exposure() -> None:
+    """`exposes_orchestration` must be present and yes/no on every method.
+
+    Output-contract v2 emits the ORCHESTRATION line iff this is "yes"; an
+    empty value would read as "no" and silently strip the line from the one
+    platform (Claude Code) that has the dial.
+    """
+    bad = [
+        f"{m['id']}={m.get('exposes_orchestration')!r}"
+        for m in _load_catalog()["access_methods"]
+        if m.get("exposes_orchestration") not in {"yes", "no"}
+    ]
+    assert not bad, "access_methods with a bad exposes_orchestration: " + ", ".join(bad)
+
+
+def test_claude_code_best_for_is_not_truncated() -> None:
+    r"""The claude-code best-for embeds escaped quotes (`\"ultracode\": true`).
+
+    A `"([^"]*)"` attribute regex stops at that first inner quote, so the
+    shipped JSON carried ~1147 of 3120 characters ending on a dangling
+    backslash — dropping the whole Ultracode / `/effort` dial description that
+    downstream consumers read. Compare against a hand-scanned ground truth.
+    """
+    selector = SELECTOR_PATH.read_text()
+    start = selector.index('<method id="claude-code"')
+    element = selector[start : selector.index("/>", start)]
+    expected = _raw_attr_value(element, "best-for")
+
+    catalog_methods = {m["id"]: m for m in _load_catalog()["access_methods"]}
+    actual = catalog_methods["claude-code"]["best_for"]
+
+    assert actual == expected, (
+        f"claude-code best_for is truncated: catalog={len(actual)} chars, "
+        f"selector={len(expected)} chars. Regenerate with "
+        "`python update/build_catalog.py`."
+    )
+    assert "ultracode" in actual, "Ultracode / /effort material missing from best_for"
+    assert '"ultracode": true' in actual, "escaped quotes were not unescaped in the JSON value"
+    assert not actual.endswith("\\"), "best_for ends on a dangling escape (truncated mid-token)"
+
+
+def test_output_contract_version_matches_selector() -> None:
+    """The catalog's `output_contract_version` mirrors the selector's own
+    `OUTPUT CONTRACT VERSION: N` declaration in <output-format>. Parsers use
+    it to decide whether a block may omit MAX MODE / carry a split
+    EFFORT+THINKING pair, so a stale value silently mis-reads live output.
+    """
+    text = SELECTOR_PATH.read_text()
+    declared = _CONTRACT_VERSION_RE.search(text)
+    assert declared, "<output-format> does not declare 'OUTPUT CONTRACT VERSION: N'"
+    assert _load_catalog()["output_contract_version"] == int(declared.group(1)), (
+        "catalog.json output_contract_version is stale. Regenerate with "
+        "`python update/build_catalog.py`."
+    )
 
 
 # --- Subscription tiers round-trip ---

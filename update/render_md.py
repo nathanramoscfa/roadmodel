@@ -54,7 +54,12 @@ PROVIDER_LABELS = {
 _TIER_RE = re.compile(r'<tier\s+cost="([^"]+)"\s*>(.*?)</tier>', re.DOTALL)
 _MODEL_RE = re.compile(r"<model\s+([^>]+?)\s*/>", re.DOTALL)
 _METHOD_RE = re.compile(r"<method\s+([^>]+?)\s*/>", re.DOTALL)
-_ATTR_RE = re.compile(r'([\w-]+)="([^"]*)"')
+# Attribute values may embed BACKSLASH-ESCAPED quotes (the claude-code
+# method's best-for quotes `\"ultracode\": true`). `"([^"]*)"` would stop at
+# the first inner quote and render a value truncated mid-sentence, so match
+# escape sequences explicitly and unescape them for the human-readable .md.
+_ATTR_RE = re.compile(r'([\w-]+)="((?:[^"\\]|\\.)*)"', re.DOTALL)
+_ESCAPE_RE = re.compile(r"\\(.)", re.DOTALL)
 _PRINCIPLE_RE = re.compile(r"<principle>(.*?)</principle>", re.DOTALL)
 
 
@@ -66,7 +71,7 @@ def _section(content: str, tag: str) -> str:
 
 
 def _parse_attrs(blob: str) -> dict[str, str]:
-    return dict(_ATTR_RE.findall(blob))
+    return {name: _ESCAPE_RE.sub(r"\1", value) for name, value in _ATTR_RE.findall(blob)}
 
 
 def render_header() -> str:
@@ -202,6 +207,9 @@ def _render_method_card(attrs: dict[str, str]) -> str:
     supports = attrs.get("supports-models", "-")
     max_mode = attrs.get("exposes-max-mode", "?")
     thinking = attrs.get("exposes-thinking", "?")
+    # Output-contract v2 gates the ORCHESTRATION line on this attribute, so the
+    # human-readable mirror lists it alongside the other two platform dials.
+    orchestration = attrs.get("exposes-orchestration", "?")
     best_for = attrs.get("best-for", "").strip()
 
     return "\n".join(
@@ -210,7 +218,10 @@ def _render_method_card(attrs: dict[str, str]) -> str:
             "",
             f"- **Billing:** {billing} (requires {requires})",
             f"- **Supports models:** {supports}",
-            f"- **Toggles:** Max Mode — {max_mode} · Thinking — {thinking}",
+            (
+                f"- **Toggles:** Max Mode — {max_mode} · Thinking — {thinking} "
+                f"· Orchestration — {orchestration}"
+            ),
             f"- **Best for:** {best_for}",
         ]
     )

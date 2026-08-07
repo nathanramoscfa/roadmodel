@@ -16,10 +16,22 @@ network) — the canonical docs facts come from ``update/claude-code-effort.json
 
 Six hard checks:
 
-  A. Effort-vocabulary subset (Claude Code). Every effort-bearing value the
-     selector's ``THINKING`` field can emit (i.e. excluding the control states
-     ``Off`` / ``N/A``) must, normalized, be a documented Claude Code effort
-     level.
+  A. Effort-vocabulary subset + THINKING-is-a-toggle (Claude Code). Output
+     contract v2 SPLIT the old ``THINKING`` field in two: ``EFFORT`` carries the
+     reasoning LEVEL and ``THINKING`` is a two-position On/Off toggle. The gate
+     follows the split.
+       A1: every effort-bearing value the selector's ``EFFORT`` field can emit
+       (i.e. excluding the legacy control states ``Off`` / ``N/A``) must,
+       normalized, be a documented Claude Code effort level — plus
+       ``Ultracode``, which is licensed ONLY by the snapshot's own ultracode
+       facts (see ``ultracode_licensed_as_effort``), never by a hardcoded
+       allowance.
+       A2: every value the ``THINKING`` field can emit must be control
+       vocabulary (``On`` / ``Off``, with ``N/A`` tolerated for v1 blocks). An
+       EFFORT WORD in ``THINKING`` is reported by name — ``THINKING: Max`` is
+       the exact v1 regression the split exists to prevent, and a cron that
+       re-merges the two fields must go red rather than silently ship a
+       setting no operator can apply.
   B. Per-model effort support (Claude Code). Where the selector AFFIRMATIVELY
      ties a specific Claude model to an effort level (within a short span in the
      Claude Code blocks, and not a negation/fallback statement), that level must
@@ -92,9 +104,17 @@ REQUIRED_DEEPSEEK_SNAPSHOT_KEYS = ("reasoning_effort", "thinking_toggle")
 # check compares config tokens to config tokens.
 CODEX_REASONING_SYNONYMS = {"extra-high": "xhigh", "extrahigh": "xhigh"}
 
-# THINKING values that are NOT effort levels (exempt from the subset check):
-# thinking disabled, and surface-does-not-expose.
-THINKING_CONTROL_STATES = {"off", "n/a"}
+# EFFORT values that are NOT effort levels (exempt from the subset check):
+# thinking disabled, and surface-does-not-expose. Output contract v2 carries
+# levels ONLY in EFFORT, but a v1-shaped selector folded these two control
+# states into the same field, so they stay exempt rather than being reported as
+# undocumented effort levels (dual-accept during the v1 -> v2 migration).
+EFFORT_CONTROL_STATES = {"off", "n/a"}
+
+# THINKING is a two-position TOGGLE under v2 — these are the ONLY values it may
+# carry. ``n/a`` is tolerated because a pre-split (v1) selector spelled
+# "this surface exposes no dial" as `N/A` in this same field.
+THINKING_TOGGLE_STATES = {"on", "off", "n/a"}
 
 # Fallback effort vocabulary if the snapshot somehow lacks effort_levels.
 FALLBACK_EFFORT_TOKENS = ("low", "medium", "high", "xhigh", "max")
@@ -360,27 +380,87 @@ def affirmative_in(stmt: str, term: str) -> bool:
     return False
 
 
+def ultracode_licensed_as_effort(snapshot: dict[str, object], documented_set: set[str]) -> bool:
+    """True when the docs snapshot licenses ``Ultracode`` as an EFFORT value.
+
+    ``Ultracode`` is the TOP value of the v2 EFFORT field, but it is NOT a row
+    in the docs' effort-level table — it is the session SETTING set through the
+    SAME ``/effort`` command as every level, which is precisely why the output
+    contract folds it into EFFORT instead of giving it a control of its own.
+
+    So the acceptance is EVIDENCE-BASED, not a blanket allowance: it holds only
+    while the snapshot still records ultracode as a real setting
+    (``is_setting``) whose ``sends_effort`` is itself a documented level. If a
+    docs change retires ultracode, demotes it from a setting, or reworks what it
+    sends, this goes False and an ``Ultracode`` value in the EFFORT enum fails
+    check A like any other undocumented token.
+    """
+    ucode = snapshot.get("ultracode")
+    if not isinstance(ucode, dict):
+        return False
+    if not ucode.get("is_setting"):
+        return False
+    sends = ucode.get("sends_effort")
+    return isinstance(sends, str) and sends.strip().lower() in documented_set
+
+
 def check_thinking_vocab(selector: str, snapshot: dict[str, object]) -> list[str]:
-    """Check A — effort-bearing THINKING values must be documented levels."""
+    """Check A — EFFORT carries documented levels; THINKING carries a toggle.
+
+    A1 validates the EFFORT enum against the documented Claude Code effort
+    levels (the field the v1 gate never looked at, so undocumented effort values
+    used to pass unseen). A2 validates that THINKING stayed a two-position
+    toggle — re-merging an effort word into it is the regression this check
+    exists to catch.
+    """
     documented = snapshot.get("effort_levels")
     if not isinstance(documented, list):
         return ["snapshot is missing the 'effort_levels' list"]
     documented_set = {str(lv).lower() for lv in documented}
-
-    thinking_values = parse_enum(selector, "THINKING")
-    if not thinking_values:
-        return ["could not find a THINKING: [...] enum in the selector"]
+    allowed_effort = set(documented_set)
+    if ultracode_licensed_as_effort(snapshot, documented_set):
+        allowed_effort.add("ultracode")
 
     failures: list[str] = []
+
+    # --- A1: the EFFORT enum is the reasoning-level vocabulary ---------------
+    effort_values = parse_enum(selector, "EFFORT")
+    if not effort_values:
+        # Fail closed: a selector with no EFFORT enum is unparseable by this
+        # gate, and silently passing it is how a contract regression ships.
+        return ["could not find an EFFORT: [...] enum in the selector"]
+    for value in sorted(effort_values):
+        norm = value.lower()
+        if norm in EFFORT_CONTROL_STATES:
+            continue
+        if norm not in allowed_effort:
+            failures.append(
+                f"check A (effort vocabulary): EFFORT value {value!r} is not a "
+                f"documented Claude Code effort level "
+                f"(documented: {sorted(allowed_effort)})"
+            )
+
+    # --- A2: THINKING is a toggle, and never carries an effort word ----------
+    thinking_values = parse_enum(selector, "THINKING")
+    if not thinking_values:
+        failures.append("could not find a THINKING: [...] enum in the selector")
+        return failures
     for value in sorted(thinking_values):
         norm = value.lower()
-        if norm in THINKING_CONTROL_STATES:
+        if norm in THINKING_TOGGLE_STATES:
             continue
-        if norm not in documented_set:
+        if norm in allowed_effort:
             failures.append(
-                f"check A (effort vocabulary): THINKING value {value!r} is not a "
-                f"documented Claude Code effort level "
-                f"(documented: {sorted(documented_set)})"
+                f"check A (thinking toggle): THINKING value {value!r} is an EFFORT "
+                f"level, but THINKING is a two-position toggle "
+                f"({sorted(THINKING_TOGGLE_STATES)}) — an effort level belongs in "
+                f"EFFORT, and no surface's thinking toggle has a {value!r} position"
+            )
+        else:
+            failures.append(
+                f"check A (thinking toggle): THINKING value {value!r} is not a "
+                f"documented thinking-toggle state "
+                f"(expected one of {sorted(THINKING_TOGGLE_STATES)})"
             )
     return failures
 
@@ -870,8 +950,9 @@ def main() -> int:
         return 1
 
     print(
-        "validate_effort_conformance: PASS (Claude Code effort vocabulary is a "
-        "documented subset; no model tied to an unsupported effort level; ultracode "
+        "validate_effort_conformance: PASS (the EFFORT vocabulary is a documented "
+        "Claude Code subset and THINKING stayed a two-position toggle; no model "
+        "tied to an unsupported effort level; ultracode "
         "and ultrathink kept distinct; Codex reasoning vocabulary matches the docs; "
         "Gemini thinking levels match the docs; DeepSeek "
         "thinking toggle + reasoning-effort vocabulary and mapping match the docs)"

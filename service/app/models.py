@@ -14,6 +14,22 @@ class RecommendRequest(BaseModel):
     # inputs stays gated to a future paid tier (see #142) — at ~$0.31/call
     # for a 1M-token context it is a founder-paid free-tier abuse risk.
     task_description: str = Field(min_length=1, max_length=50000)
+    # Free-form per-request context forwarded by the web edge. Deliberately an
+    # untyped dict (NOT a model with extra="forbid"): the edge and the service
+    # deploy independently, so a key added on one side must never 400 on the
+    # other. Every consumer reads it defensively. Recognized keys today:
+    #   subscriptions[], api_providers[]      — declared funding (Phase 4.8 T2b)
+    #   budget_priority, consumption_headroom — the quality-vs-cost + effort axes
+    #   allowed_jurisdictions[]               — hard compliance filter (Step 0b/A0)
+    #   platforms_allowed[], platforms_excluded[]
+    #                                         — the operator's HARD platform
+    #                                           allow/deny list (<access-selection>
+    #                                           Step A00). An ABSENT or empty list
+    #                                           means "unset", never "allow
+    #                                           nothing"; see funding.
+    #                                           resolve_platform_filters.
+    #   unavailable_models[], availability_authoritative — runtime Step-0a override
+    #   force_provider                        — engine pin (canary / probes)
     context: dict[str, Any] | None = None
 
     @field_validator("task_description")

@@ -2,8 +2,9 @@
 
 A BYO-key command-line tool that recommends **which AI model on which
 platform with which settings** for a given prompt. Point it at a task
-description, and it returns a six-field block — `MODEL / PLATFORM /
-MAX MODE / THINKING / CONVERSATION / RATIONALE` — grounded in a
+description, and it returns a labeled block — `MODEL / BACKUP /
+PLATFORM / CONVERSATION / RATIONALE`, plus the setting fields the
+chosen platform actually exposes — grounded in a
 bundled benchmark and pricing catalog (Cursor pricing, Artificial
 Analysis, LiveCodeBench, τ²-bench, SWE-bench, MMMU, LMArena) and
 filtered against your own subscriptions and API keys. Built for
@@ -24,6 +25,38 @@ pip install roadmodel
 ```
 
 Python 3.11 or newer.
+
+## Updating to the latest models
+
+roadmodel's benchmark and pricing catalog is **bundled inside the installed
+wheel** — the CLI, MCP server, and planning kit all read that offline copy, and
+they only know about the models that shipped with the version you have. New
+models, price changes, and availability edits land in the catalog upstream (a
+daily job keeps it current) and reach you when a **new release ships them**. To
+pull the latest catalog, upgrade the package:
+
+```sh
+pip install -U roadmodel
+```
+
+That single command covers every usage mode — do it at the start of each
+planning phase, or whenever a model you care about has changed:
+
+- **CLI** — upgrade and the next `roadmodel recommend` uses the fresh catalog.
+  Confirm what you have with `roadmodel version` and inspect the bundled catalog
+  with `roadmodel catalog show`.
+- **MCP server** — upgrade in the **same environment** where `roadmodel-mcp` is
+  installed (`pip install -U "roadmodel[mcp]"`), then restart your MCP client
+  (Cursor / Claude Code / Claude Desktop) so it reloads the server. If you
+  registered the server once at user scope via `roadmodel setup-mcp`, upgrading
+  that one environment updates every project.
+- **Planning kit** — the exported kit is a snapshot of the catalog at export
+  time, so upgrade **then** re-run `roadmodel export-kit` to refresh it. The
+  shell alternative (`scripts/export-planning-kit.sh`) instead fetches the
+  catalog fresh from this repo's `main` branch on every run, so it always
+  writes the newest catalog without a `pip` upgrade.
+
+See [CHANGELOG.md](CHANGELOG.md) for what each release changed.
 
 ## MCP server
 
@@ -107,24 +140,34 @@ $EDITOR ~/.config/roadmodel/user-context.md
 ```
 
 **3. Re-run.** With the user-context filled in, the same command
-calls your chosen provider and prints a parsed six-field block:
+calls your chosen provider and prints a parsed recommendation block:
 
 ```sh
 roadmodel recommend "Refactor auth middleware across 12 files"
 ```
 
-```
+```text
 MODEL: claude-opus-4-7
+BACKUP: claude-sonnet-5
 PLATFORM: Claude Code
-MAX MODE: On
-THINKING: High
+EFFORT: High
+THINKING: On
 CONVERSATION: New
-RATIONALE: Coding PRIMARY with cross-file scope and High complexity.
-Opus 4.7 is S-tier on coding-agent benchmarks and the only model in
-the catalog rated S for long-context recall. PLATFORM Claude Code
-is funded by claude.ai Max ($0 marginal); THINKING High per the
-selection-algorithm rule for High-complexity coding.
+RATIONALE: TASK: Cross-file coding refactor spanning twelve modules.
+PICK: Opus 4.7 is S-tier on coding-agent benchmarks and the only
+model in the catalog rated S for long-context recall.
+EFFORT: High effort with extended thinking on matches the
+multi-file blast radius without over-buying the ceiling.
 ```
+
+The **setting fields are platform-conditional**: a block carries only
+the dials the chosen platform actually has. Claude Code exposes an
+effort dial and a thinking toggle, so the example emits `EFFORT` and
+`THINKING` and no `MAX MODE` line at all — Claude Code has no Max Mode
+control, and a dial a surface lacks is omitted rather than reported as
+`Off`. Cursor is the inverse: it emits `MAX MODE` and no `EFFORT` /
+`THINKING`. `MODEL`, `BACKUP`, `PLATFORM`, `CONVERSATION`, and
+`RATIONALE` are always present.
 
 Pass `--json` to emit the same fields as machine-readable JSON, or
 `--file PATH` to read the prompt from disk.
@@ -150,9 +193,10 @@ precedence rules, and verifying with a smoke call — is
 ## User context setup
 
 roadmodel reads a per-user Markdown file describing your active
-subscriptions, API keys, platform preference order, and budget
-posture so the `<access-selection>` step can pick a **platform** and
-**thinking level** alongside the model. The resolved default path is
+subscriptions, API keys, platform preference order (and optional
+platform allow/deny list), and budget posture so the
+`<access-selection>` step can pick a **platform** and **the settings
+that platform exposes** alongside the model. The resolved default path is
 `~/.config/roadmodel/user-context.md` (or
 `$XDG_CONFIG_HOME/roadmodel/user-context.md` when `XDG_CONFIG_HOME`
 is set); override it for a single run with `--user-context PATH` or
@@ -165,9 +209,9 @@ field-by-field schema, when to update — is
 
 | Command                          | What it does                                                                       |
 | -------------------------------- | ---------------------------------------------------------------------------------- |
-| `roadmodel recommend PROMPT`     | Recommend a six-field block for the given prompt.                                  |
+| `roadmodel recommend PROMPT`     | Recommend a model / platform / settings block for the given prompt.                |
 | `roadmodel recommend --file P`   | Same, but read the prompt text from file `P`.                                      |
-| `roadmodel recommend --json`     | Emit the parsed six fields as JSON instead of the labeled text block.              |
+| `roadmodel recommend --json`     | Emit the parsed fields as JSON instead of the labeled text block.                  |
 | `roadmodel recommend --provider` | Override which provider answers (`anthropic` / `openai` / `google`).               |
 | `roadmodel recommend --model`    | Override the specific model ID on the chosen provider.                             |
 | `roadmodel recommend --user-context PATH` | Override the user-context.md location for this invocation.                |
@@ -189,13 +233,18 @@ prices and tier ratings), and
 user-state template). At recommendation time, `roadmodel recommend`
 reads your filled-in `user-context.md` from disk, concatenates the
 three docs into a single system prompt, and calls the provider you
-configured. The provider returns a `MODEL / PLATFORM / MAX MODE /
-THINKING / CONVERSATION / RATIONALE` block following the
-`<output-format>` specification inside `model-selector.txt`. `MODEL`
-is chosen by `<selection-algorithm>` against your prompt's task
-category and complexity; `PLATFORM` and `THINKING` are filled by the
-`<access-selection>` step, which depends on the subscriptions and
-API-key state declared in your `user-context.md`.
+configured. The provider returns a `MODEL / BACKUP / PLATFORM /
+CONVERSATION / RATIONALE` block — plus the setting fields the chosen
+platform exposes — following the `<output-format>` specification
+inside `model-selector.txt`. `MODEL` is chosen by
+`<selection-algorithm>` against your prompt's task category and
+complexity; `PLATFORM` and the settings that come with it are filled
+by the `<access-selection>` step, which depends on the subscriptions
+and API-key state declared in your `user-context.md`. Because the
+platform decides which dials exist, the field set varies per block:
+an effort/thinking surface emits `EFFORT` + `THINKING`, Cursor emits
+`MAX MODE`, and a dial the surface does not have is left out entirely
+instead of being reported as `Off` or `N/A`.
 
 ## Benchmarks & ratings
 

@@ -27,8 +27,13 @@ from roadmodel.providers import anthropic as anthropic_provider
 from roadmodel.providers import google as google_provider
 from roadmodel.providers import openai as openai_provider
 
+# An output-contract-v2 stub: only the four always-on fields plus the dials a
+# reasoning surface exposes. The provider adapters are contract-agnostic — they
+# return the raw text and never parse it — so the minimal shape is the honest
+# stub, and it doubles as proof that no adapter has quietly grown a dependency
+# on the v1 "MAX MODE is always present" assumption.
 _RECOMMENDER_RESPONSE = (
-    "MODEL: x\nPLATFORM: y\nMAX MODE: Off\nTHINKING: Off\nCONVERSATION: New\nRATIONALE: stub\n"
+    "MODEL: x\nPLATFORM: y\nEFFORT: Low\nTHINKING: Off\nCONVERSATION: New\nRATIONALE: stub\n"
 )
 
 

@@ -71,9 +71,14 @@ DEST="$(cd "$TARGET" && pwd)/$DEST_SUBDIR"
 
 # --- source -> destination map -------------------------------------------
 # Each entry: "<repo-relative source>::<destination path under $DEST>"
+# settings-display.md is the DISPLAY CONTRACT — how the selector's setting
+# fields map to the real controls each surface exposes (which dials to show,
+# which to omit). `roadmodel export-kit` has always shipped it; omitting it here
+# meant shell-exported kits carried the selector without its display rules.
 FILES=(
   "docs/model-selector.txt::model-selector.txt"
   "docs/model-tier-cost-scale.md::model-tier-cost-scale.md"
+  "docs/settings-display.md::settings-display.md"
   "docs/templates/project-roadmap-template.md::templates/project-roadmap-template.md"
   "docs/templates/phase-roadmap-template.md::templates/phase-roadmap-template.md"
   "docs/templates/planning-kit-how-to-use.md::HOW-TO-USE.md"

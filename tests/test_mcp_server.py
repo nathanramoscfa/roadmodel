@@ -239,11 +239,40 @@ def test_read_catalog_returns_three_keys() -> None:
         "settings_display_md",
         "catalog_json",
         "source_doc_sha256",
+        "output_contract_version",
     }
     assert isinstance(payload["catalog_json"], dict)
-    # The rule the raw selector cannot express: Claude Code folds
+    # The rule the raw selector cannot express: Claude Code folds a legacy
     # ORCHESTRATION:Ultracode into the effort VALUE and Thinking is a toggle.
     assert "effort=Ultracode; thinking=On" in payload["settings_display_md"]
+    # ...and the v2 emission rule the offline consumer must honour: a dial the
+    # platform lacks is an ABSENT line, never "Off"/"N/A".
+    assert "the LINE IS ABSENT" in payload["settings_display_md"]
+
+
+def test_read_catalog_declares_the_output_contract_version() -> None:
+    """An offline consumer (planning kit, exported catalog) has to know WHICH
+    block contract the bundled selector emits — v1 (MAX MODE always present,
+    THINKING carrying the effort level) or v2 (platform-conditional dials, EFFORT
+    and THINKING split). Diffing the doc is not a contract; this key is."""
+    app = mcp_server.create_app()
+
+    async def _run() -> dict[str, Any]:
+        async with create_connected_server_and_client_session(app) as session:
+            result = await session.call_tool("read_catalog", {})
+            payload = _tool_payload(result)
+            if not isinstance(payload, dict):
+                raise TypeError(f"Expected dict payload, got {type(payload)!r}")
+            return payload
+
+    payload = anyio.run(_run)
+    assert payload["output_contract_version"] == recommend_module.OUTPUT_CONTRACT_VERSION
+    assert payload["output_contract_version"] == 2
+    # The bundled selector must actually declare the same version it advertises.
+    assert (
+        f"OUTPUT CONTRACT VERSION: {payload['output_contract_version']}"
+        in payload["model" + "_selector_txt"]
+    )
 
 
 def test_main_exits_2_when_mcp_sdk_absent(

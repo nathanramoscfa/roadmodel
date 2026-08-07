@@ -13,6 +13,7 @@ paid API.
 | ---- | ------- |
 | `model-selector.txt` | The recommendation **algorithm** + the inline model **catalog** (ratings, `best-for`, availability exclusions) + `<benchmark-sources>`. |
 | `model-tier-cost-scale.md` | Per-token **prices** and **subscription tiers** — the funding/cost data the selector's access-selection step consumes. |
+| `settings-display.md` | The **display contract**: how the selector's setting fields map to the real controls each surface exposes (which dials to show, which to omit). Read it before writing any Settings table. |
 | `user-context.md` | The operator's **subscriptions + API keys + platform preference order** — decides *which platform pays* for each pick. |
 | `templates/project-roadmap-template.md` | Skeleton for a whole-project `ROADMAP.md`. |
 | `templates/phase-roadmap-template.md` | Skeleton for one `phaseNN-roadmap.md`. |
@@ -40,9 +41,16 @@ Concretely, for each roadmap step:
    given the operator's active subscriptions (a Claude pick → "Claude Code"
    funded by Max; a GPT pick → "Codex" funded by ChatGPT Pro; etc.).
 4. **Emit** the step's Settings table using the **platform-specific variant**
-   the template defines (Claude Code → Effort + Thinking; Codex → Intelligence;
-   Cursor/ChatGPT/API → Max Mode + Thinking), a Model-rationale paragraph that
-   names the funding source and justifies each dial in the surface's native
+   the template defines. Every table carries Model / Platform / Conversation
+   plus **only the dials the chosen surface actually exposes** — Claude Code →
+   Effort + Thinking(On/Off); Codex and the other reasoning-dial surfaces
+   (ChatGPT app, provider APIs, Gemini CLI) → the effort dial under that
+   surface's own label (Codex calls it Intelligence) + Thinking where it has a
+   separate toggle; Cursor → Max Mode alone, since Cursor exposes no reasoning
+   dial. A dial the surface lacks is **omitted**, never written as `Off` or
+   `N/A`; Max Mode in particular is a Cursor-only row and must not appear on a
+   Claude Code or Codex table. Add a Model-rationale paragraph that names the
+   funding source and justifies each emitted dial in the surface's native
    vocabulary, and a **backup** model in case the primary is unavailable to the
    operator.
 

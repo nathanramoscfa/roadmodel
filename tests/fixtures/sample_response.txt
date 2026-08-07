@@ -1,6 +1,6 @@
 MODEL: GPT-5.3 Codex
 PLATFORM: Codex
-MAX MODE: Off
-THINKING: High
+EFFORT: High
+THINKING: On
 CONVERSATION: New
 RATIONALE: PRIMARY task category is coding with S-tier demand, so GPT-5.3 Codex is selected. CursorBench and SWE-bench evidence support the choice, and Codex is funded by subscription before per-token API fallback.

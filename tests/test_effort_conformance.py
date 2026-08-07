@@ -10,9 +10,13 @@ Claude Code effort/thinking vocabulary stays consistent with the docs):
 - Extractor fails loudly when the docs are restructured.
 - Conformance PASSES on the committed selector + committed docs snapshot
   (this is the real CI gate — a drifting selector edit makes it red).
-- Conformance FAILS on an undocumented effort level (check A), an unsupported
-  per-model effort claim (check B), and ultracode/ultrathink conflation
-  (check C).
+- Conformance FAILS on an undocumented value in the EFFORT enum (check A1), an
+  effort word smuggled back into the THINKING toggle (check A2 — the v1
+  ``THINKING: Max`` regression), an unsupported per-model effort claim
+  (check B), and ultracode/ultrathink conflation (check C).
+- ``Ultracode`` passes check A only while the docs snapshot still documents
+  ultracode as a real ``/effort`` setting — the acceptance is evidence-based,
+  not a hardcoded allowance.
 """
 
 from __future__ import annotations
@@ -172,10 +176,14 @@ def test_conformance_passes_on_committed_artifacts() -> None:
 
 
 def test_conformance_flags_undocumented_effort_level(tmp_path: Path) -> None:
-    """Check A: an undocumented value in the THINKING enum → FAIL."""
+    """Check A1: an undocumented value in the EFFORT enum → FAIL.
+
+    Output contract v2 moved the reasoning scale out of THINKING and into
+    EFFORT, so EFFORT is the enum the vocabulary check must police.
+    """
     drifted = REAL_SELECTOR.read_text().replace(
-        "THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]",
-        "THINKING: [Off/Low/Medium/High/XHigh/Max/Ultra/N/A]",
+        "EFFORT: [Low/Medium/High/XHigh/Max/Ultracode]",
+        "EFFORT: [Low/Medium/High/XHigh/Max/Ultracode/Ultra]",
     )
     selector = tmp_path / "selector.txt"
     selector.write_text(drifted)
@@ -184,6 +192,46 @@ def test_conformance_flags_undocumented_effort_level(tmp_path: Path) -> None:
     assert result.returncode == 1
     assert "check A" in result.stderr
     assert "Ultra" in result.stderr
+
+
+def test_conformance_flags_effort_word_in_thinking_toggle(tmp_path: Path) -> None:
+    """Check A2: an effort word back in the THINKING enum → FAIL.
+
+    ``THINKING: Max`` is the v1 bug the EFFORT/THINKING split exists to kill: no
+    surface's thinking toggle has a `Max` position, so it is a setting no
+    operator can apply. A cron re-merging the two fields must go red.
+    """
+    drifted = REAL_SELECTOR.read_text().replace(
+        "THINKING: [On/Off]",
+        "THINKING: [On/Off/Max]",
+    )
+    selector = tmp_path / "selector.txt"
+    selector.write_text(drifted)
+
+    result = _run_conformance(selector, REAL_SNAPSHOT)
+    assert result.returncode == 1
+    assert "check A (thinking toggle)" in result.stderr
+    assert "Max" in result.stderr
+
+
+def test_conformance_ultracode_acceptance_is_snapshot_gated(tmp_path: Path) -> None:
+    """``Ultracode`` is accepted in EFFORT only on the snapshot's own evidence.
+
+    It is not a row in the docs' effort table — it is the session SETTING set
+    through the same `/effort` command. Demote it in the snapshot (docs retire
+    it) and the selector's `Ultracode` value must fail check A rather than ride
+    a hardcoded allowance.
+    """
+    snapshot = json.loads(REAL_SNAPSHOT.read_text())
+    assert snapshot["ultracode"]["is_setting"] is True  # the fact being relied on
+    snapshot["ultracode"]["is_setting"] = False
+    drifted_snapshot = tmp_path / "effort.json"
+    drifted_snapshot.write_text(json.dumps(snapshot))
+
+    result = _run_conformance(REAL_SELECTOR, drifted_snapshot)
+    assert result.returncode == 1
+    assert "check A (effort vocabulary)" in result.stderr
+    assert "Ultracode" in result.stderr
 
 
 def test_conformance_flags_unsupported_per_model_effort(tmp_path: Path) -> None:

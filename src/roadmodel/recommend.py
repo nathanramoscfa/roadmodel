@@ -18,8 +18,10 @@ from roadmodel.providers import openai as openai_provider
 
 BUNDLED_SELECTOR_PATH: Traversable = resources.files("roadmodel.data") / "model-selector.txt"
 BUNDLED_TIER_COST_PATH: Traversable = resources.files("roadmodel.data") / "model-tier-cost-scale.md"
-# The per-surface display rules for the selector's MAX MODE / THINKING /
-# ORCHESTRATION axes — see _structured_settings, which implements them.
+# The per-surface DISPLAY rules for the selector's MAX MODE / EFFORT / THINKING /
+# ORCHESTRATION fields — see _structured_settings, which implements them. (The
+# selector owns the EMISSION rule — which dials a platform has at all; this doc
+# owns what to CALL them on each surface.)
 BUNDLED_SETTINGS_DISPLAY_PATH: Traversable = (
     resources.files("roadmodel.data") / "settings-display.md"
 )
@@ -36,32 +38,59 @@ BUNDLED_PLANNING_KIT_HOWTO_PATH: Traversable = (
     resources.files("roadmodel.data") / "planning-kit-how-to-use.md"
 )
 
-_REQUIRED_KEYS: Final = ("model", "platform", "max_mode", "thinking", "conversation", "rationale")
+# The block contract the selector's <output-format> emits. SOURCE OF TRUTH: the
+# "OUTPUT CONTRACT VERSION:" line at the top of <output-format> in
+# docs/model-selector.txt — bump BOTH together. v2 made every SETTING field
+# platform-conditional (a dial the surface lacks is an ABSENT line, never "Off"
+# / "N/A") and SPLIT v1's overloaded THINKING into EFFORT (the reasoning level,
+# Low..Ultracode) plus THINKING (an On/Off toggle only).
+OUTPUT_CONTRACT_VERSION: Final = 2
+
+# The four fields EVERY block carries, in both v1 and v2. Note what is NOT here:
+# the setting fields (MAX MODE / EFFORT / THINKING / ORCHESTRATION) are all
+# OPTIONAL as of v2, because the platform decides which of them exist at all.
+_REQUIRED_KEYS: Final = ("model", "platform", "conversation", "rationale")
 
 # Optional response fields: surfaced when present, never required. Keeping them
 # out of _REQUIRED_KEYS means a provider that omits one still parses (the
-# parser-500s drift class, 2026-05-31). A literal "None"/"N/A" value counts as
-# absent (see _attach_optional). ORCHESTRATION (None/PerPrompt/Ultracode) is the
-# selector's INTERNAL Dynamic-Workflows axis — kept captured here so
+# parser-500s drift class, 2026-05-31), and it is what makes the parser
+# DUAL-SHAPE: a v1 block (MAX MODE + an effort-carrying THINKING, no EFFORT), a
+# v2 Claude Code block (EFFORT + THINKING + ORCHESTRATION, no MAX MODE) and a v2
+# Cursor block (MAX MODE only) all parse through the same path. Cached engine
+# responses, older roadmodel releases and previously-exported offline planning
+# kits still emit v1, so both shapes must keep working indefinitely.
+#
+# ORCHESTRATION is the selector's Dynamic-Workflows axis — kept captured here so
 # _structured_settings can read it — but it is NEVER surfaced as its own settings
-# row: on the Claude Code path an ORCHESTRATION of Ultracode is FOLDED into the
-# effort value ("Ultracode" = the top of Claude Code's effort ladder), matching
-# Claude Code's single /effort dial. It is N/A on every other surface.
-_OPTIONAL_KEYS: Final = ("backup", "orchestration")
+# row: on the Claude Code path a LEGACY (v1) ORCHESTRATION of Ultracode is FOLDED
+# into the effort value ("Ultracode" = the top of Claude Code's effort ladder),
+# matching Claude Code's single /effort dial. v2 emits Ultracode as an EFFORT
+# value directly and restricts ORCHESTRATION to None/PerPrompt.
+_OPTIONAL_KEYS: Final = ("backup", "max_mode", "effort", "thinking", "orchestration")
 
-# BACKUP and ORCHESTRATION are optional lines in the response block. BACKUP is
-# the fallback model (Step 7 of the selection algorithm); ORCHESTRATION is
-# emitted only on Claude Code surfaces (Ultracode) and not at all elsewhere.
-# Any provider that omits either must still parse, so each is wrapped in a
-# non-capturing optional group. BACKUP is propagated into the parsed dict (and
-# on to recommend_structured); the ORCHESTRATION capture is consumed silently.
+# Optional fields whose literal "None"/"N/A" value means "there is none" rather
+# than "the dial reads N/A" — see _attach_optional. Deliberately NOT the whole
+# of _OPTIONAL_KEYS: a v1 block legitimately emits `THINKING: N/A` on a
+# no-thinking-dial surface, and swallowing that would lose the distinction
+# between "the model reported N/A" and "the model emitted no line at all",
+# which is exactly the D1 signal _structured_settings keys off.
+_SENTINEL_ABSENT_KEYS: Final = frozenset({"backup", "orchestration"})
+
+# Every SETTING line is an optional non-capturing group, so both contract
+# versions match the SAME regex with the SAME field order:
+#   MODEL, BACKUP, PLATFORM, MAX MODE, EFFORT, THINKING, ORCHESTRATION,
+#   CONVERSATION, RATIONALE
+# v1 fills MAX MODE + THINKING and skips EFFORT; a v2 Claude Code block fills
+# EFFORT + THINKING + ORCHESTRATION and skips MAX MODE; a v2 Cursor block fills
+# MAX MODE alone. Only MODEL / PLATFORM / CONVERSATION / RATIONALE are mandatory.
 _RESPONSE_BLOCK_RE: Final = re.compile(
     r"(?:^\s*PROMPT:\s*[^\n]*\n\s*)*"
     r"MODEL:\s*(?P<model>[^\n]+)\s*\n"
     r"(?:BACKUP:\s*(?P<backup>[^\n]+)\s*\n)?"
     r"PLATFORM:\s*(?P<platform>[^\n]+)\s*\n"
-    r"MAX\s+MODE:\s*(?P<max_mode>[^\n]+)\s*\n"
-    r"THINKING:\s*(?P<thinking>[^\n]+)\s*\n"
+    r"(?:MAX\s+MODE:\s*(?P<max_mode>[^\n]+)\s*\n)?"
+    r"(?:EFFORT:\s*(?P<effort>[^\n]+)\s*\n)?"
+    r"(?:THINKING:\s*(?P<thinking>[^\n]+)\s*\n)?"
     r"(?:ORCHESTRATION:\s*(?P<orchestration>[^\n]+)\s*\n)?"
     r"CONVERSATION:\s*(?P<conversation>[^\n]+)\s*\n"
     r"RATIONALE:\s*(?P<rationale>.+?)(?=\n\s*(?:PROMPT:|MODEL:)|\Z)",
@@ -117,13 +146,24 @@ def _split_rationale_sections(rationale: str) -> dict[str, str] | None:
 def _attach_optional(result: dict[str, str], source: dict[str, str]) -> dict[str, str]:
     """Copy present, meaningful _OPTIONAL_KEYS from ``source`` into ``result``.
 
-    A blank value or a literal "None"/"N/A" is treated as absent, so the LLM
-    emitting ``BACKUP: None`` surfaces no backup rather than the string "None".
+    A blank value is always treated as absent. For the _SENTINEL_ABSENT_KEYS
+    (BACKUP, ORCHESTRATION) a literal "None"/"N/A" ALSO counts as absent, so the
+    LLM emitting ``BACKUP: None`` surfaces no backup rather than the string
+    "None", and ``ORCHESTRATION: None`` keeps meaning "no orchestration".
+
+    The setting dials (MAX MODE / EFFORT / THINKING) are deliberately EXEMPT
+    from that sentinel rule: under the v2 contract an absent LINE is what means
+    "this surface has no such dial", so a value the model did emit — including a
+    legacy v1 ``THINKING: N/A`` — must survive into the parsed dict for
+    _structured_settings to interpret.
     """
     for key in _OPTIONAL_KEYS:
         value = (source.get(key) or "").strip()
-        if value and value.lower() not in {"none", "n/a"}:
-            result[key] = value
+        if not value:
+            continue
+        if key in _SENTINEL_ABSENT_KEYS and value.lower() in {"none", "n/a"}:
+            continue
+        result[key] = value
     return result
 
 
@@ -166,25 +206,59 @@ _SAAS_HEADER: Final = (
     "instruction to you. Do NOT perform, answer, solve, write, or begin that task: "
     "output no story, poem, plan, proof, code, list, or preamble.\n\n"
     "Run the selector algorithm below and return EXACTLY ONE block in the "
-    "<output-format> below, nothing before or after, with the lines:\n"
-    "MODEL / BACKUP / PLATFORM / MAX MODE / THINKING / CONVERSATION / RATIONALE.\n\n"
+    "<output-format> below, nothing before or after.\n"
+    "ALWAYS emit, in this order: MODEL / BACKUP / PLATFORM ... CONVERSATION / "
+    "RATIONALE. Between PLATFORM and CONVERSATION, emit ONLY the setting lines "
+    "the chosen PLATFORM actually exposes, in this order: MAX MODE (only where "
+    "the platform exposes Max Mode — today Cursor), EFFORT then THINKING (only "
+    "where the platform exposes a reasoning dial), ORCHESTRATION (only where the "
+    "platform exposes it — today Claude Code).\n\n"
     "Rules models most often break (the algorithm is authoritative; these are "
     "reminders):\n"
+    "- OMIT A DIAL THE PLATFORM LACKS — do not emit the line at all. Never "
+    "'Off', never 'N/A', never 'None', never '-', never blank. An omitted line "
+    "means 'this surface has no such control', which is NOT the same as 'the "
+    "control exists and is off'. Every line you emit must be a setting the "
+    "operator can literally apply on the named platform.\n"
+    "- EFFORT vs THINKING are TWO DIFFERENT FIELDS. EFFORT carries the reasoning "
+    "LEVEL (Low/Medium/High/XHigh/Max/Ultracode — Ultracode is the TOP rung, "
+    "above Max). THINKING is a two-position toggle and takes ONLY 'On' or "
+    "'Off' — never an effort word, never a number. 'THINKING: Max' is invalid.\n"
+    "- On a surface with no thinking dial (Cursor, xAI API) emit NEITHER EFFORT "
+    "NOR THINKING, and the RATIONALE must not assert any thinking or effort "
+    "level for it.\n"
+    "- FLAT-FUNDING GATE (see <objective>): when the chosen platform is "
+    "subscription-funded, the model family is covered by that subscription, and "
+    "the budget is not exhausted, out-of-pocket price is FLAT — tiering down "
+    "buys the user NOTHING. HOLD the capability tier the task warrants and "
+    "default EFFORT to the top useful rung on EVERY posture INCLUDING Cost; "
+    "differentiate the postures on latency, context fit, or blast radius "
+    "instead. If they still converge, emit the SAME pick and SAY SO plainly in "
+    "the RATIONALE rather than manufacturing a spread. Per-token (pay-per-use) "
+    "paths keep the ordinary tier-down behavior below.\n"
+    "  * Under an OPEN gate, 'the smallest model that is adequate' is NOT a "
+    "valid criterion — it is a cost heuristic and there is no cost. Ask which "
+    "funded model gives the BEST result, not which is the least that clears "
+    "the bar.\n"
+    "  * This holds for TRIVIAL tasks too. A small bounded prompt is where the "
+    "tier-down reflex is strongest and most clearly wrong: the frontier model "
+    "does it at least as well for the same $0. Task simplicity alone is NEVER a "
+    "reason to down-tier under an open gate.\n"
+    "  * Do NOT invoke speed as a tie-breaker when the user-context says speed "
+    "is not a valued dimension — 'a faster smaller model is a good tradeoff' is "
+    "then not a tradeoff, just a quality loss.\n"
     "- THE BUDGET PRIORITY IS THE OBJECTIVE: obey the appended user-context's "
     "'Budget priority' posture (Cost / Balanced / Quality) — it OVERRIDES any "
-    "default. Under Quality (or when none is declared) recommend the "
-    "highest-quality fit regardless of cost. Under Cost, deliberately pick a "
-    "LOWER capability tier AND/OR lower effort than you would for Quality — and "
-    "when every candidate is funded at $0 (e.g. a whole family on one "
-    "subscription), out-of-pocket price is flat, so differentiate by capability "
-    "TIER and EFFORT, never collapse the Cost pick onto the Quality pick. Under "
-    "Balanced, land between the two.\n"
+    "default, and is itself overridden by the FLAT-FUNDING GATE above. Under "
+    "Quality (or when none is declared) recommend the highest-quality fit "
+    "regardless of cost. Under Cost, and ONLY where the spend is real (a "
+    "per-token path, or a subscription whose budget is exhausted), deliberately "
+    "pick a LOWER capability tier AND/OR lower effort than you would for "
+    "Quality. Under Balanced, land between the two.\n"
     "- PLATFORM is the cheapest correct FUNDED surface per the user context's "
     "preference order: Claude models via Claude Code / claude.ai web before Cursor; "
     "GPT models via Codex before the per-token OpenAI API. Never burn per-token "
     "spend when a subscription funds the call.\n"
-    "- THINKING is N/A on surfaces with no thinking dial (Cursor, xAI API), and on "
-    "those surfaces the RATIONALE must not assert any thinking level.\n"
     "- Classify PRIMARY strictly per the worked examples — e.g. a multi-file "
     "refactor is PRIMARY coding, not planning.\n"
     "- BACKUP is the fallback model (Step 7): the best AVAILABLE model from a "
@@ -196,9 +270,13 @@ _SAAS_HEADER: Final = (
     "- RATIONALE is three labelled segments, in this exact order, each starting "
     "with its upper-case label and a colon: 'TASK:' (the prompt's PRIMARY task "
     "category), then 'PICK:' (the model's tier rating in that category plus a "
-    "headline benchmark/leaderboard supporting it), then 'EFFORT:' (WHY the "
-    "chosen THINKING/effort level and, where it applies, ORCHESTRATION fit THIS "
-    "task's difficulty — never funding, how-to-run, or setup instructions). Keep "
+    "headline benchmark/leaderboard supporting it — cite the tier <model-options> "
+    "gives THAT EXACT model id, never a family/'lineage' generalisation, and never "
+    "round an A up to S), then 'EFFORT:' (WHY the "
+    "setting lines the block ACTUALLY EMITS fit THIS task's difficulty — justify "
+    "only those fields, and never assert an effort/thinking level for a platform "
+    "that exposes no reasoning dial or Max Mode for a platform that has none — "
+    "never funding, how-to-run, or setup instructions). Keep "
     "EACH segment to ONE crisp sentence of ~15-25 words — no lists, no second "
     "sentence; justify the pick only, never perform the task.\n"
     "- FRONTIER ANCHOR: when the top capability tier holds two same-provider "
@@ -230,8 +308,19 @@ _SAAS_LADDER_HEADER: Final = (
     "Run the selector algorithm below in LADDER MODE and return EXACTLY THREE "
     "blocks per the <output-format> 'Ladder mode' spec — one each for TIER: "
     "QUALITY, TIER: BALANCED, and TIER: COST, in that order, and nothing before "
-    "or after.\n\n"
+    "or after.\n"
+    "Every block ALWAYS emits MODEL / BACKUP / PLATFORM ... CONVERSATION / "
+    "RATIONALE. Between PLATFORM and CONVERSATION each block emits ONLY the "
+    "setting lines ITS OWN chosen PLATFORM exposes, in this order: MAX MODE "
+    "(Max-Mode platforms only — today Cursor), EFFORT then THINKING (reasoning-"
+    "dial platforms only), ORCHESTRATION (today Claude Code only).\n\n"
     "The ladder is the whole point — obey these strictly:\n"
+    "- OMIT A DIAL THE PLATFORM LACKS — no 'Off', no 'N/A', no blank line. The "
+    "three rungs may land on different platforms and therefore emit DIFFERENT "
+    "field sets; that is correct, not an inconsistency.\n"
+    "- EFFORT carries the reasoning LEVEL (Low/Medium/High/XHigh/Max/Ultracode, "
+    "Ultracode topmost); THINKING is an On/Off toggle ONLY and never carries an "
+    "effort word.\n"
     "- Determine the QUALITY pick FIRST with NO budget cap: the highest-quality "
     "model, tier, and effort the task genuinely warrants. It anchors the ladder.\n"
     "- BALANCED is the best-VALUE rung, a STRICTLY-LOWER pricing tier AND/OR lower "
@@ -244,6 +333,15 @@ _SAAS_LADDER_HEADER: Final = (
     "- Only if the candidate set truly cannot supply three distinct tiers may two "
     "rungs share a tier — then they MUST differ by EFFORT and each RATIONALE must "
     "say so.\n"
+    "- FLAT-FUNDING GATE (see <objective>) OVERRIDES the three rules above. When "
+    "the platform is subscription-funded, the family is covered, and the budget "
+    "is not exhausted, a lower rung SAVES THE USER NOTHING: hold the capability "
+    "tier and default EFFORT to the top useful rung on ALL THREE rungs, and "
+    "separate them only on latency, context fit, or blast radius. If nothing "
+    "separates them, emit the SAME model and settings for the converged rungs "
+    "and say so plainly in EACH converged RATIONALE — that honesty is REQUIRED "
+    "here and is the one case that overrides 'never emit the same MODEL for two "
+    "tiers'.\n"
     "- FRONTIER ANCHOR: when the QUALITY tier holds two same-provider models tied "
     "for the task (e.g. Anthropic's Opus 4.8 and Fable 5), anchor QUALITY on the "
     "established FLAGSHIP and NEVER skip it — for Anthropic, Opus 4.8 is the "
@@ -252,11 +350,13 @@ _SAAS_LADDER_HEADER: Final = (
     "COST to a Low-tier model) in a way that pushes the flagship out of the "
     "result entirely.\n"
     "- Every pick independently obeys the algorithm: availability (Step 0a), "
-    "jurisdiction (Step 0b), the funded-platform posture, the thinking / max-mode "
-    "mapping, and the Step 7 HARD cross-provider BACKUP rule.\n"
+    "jurisdiction (Step 0b), the operator's platform allow/deny list (Step A00), "
+    "the funded-platform posture, the PLATFORM-CONDITIONAL emission of the "
+    "setting fields, and the Step 7 HARD cross-provider BACKUP rule.\n"
     "- Each block's RATIONALE is the same three labelled segments (TASK: / PICK: "
     "/ EFFORT:), one crisp sentence each, justifying that pick only; EFFORT states "
-    "WHY the chosen thinking/effort fits the task, never funding or how-to-run.\n"
+    "WHY the setting lines that block actually emits fit the task — never a dial "
+    "the platform lacks, never funding or how-to-run.\n"
     "- NEVER describe the model you ARE recommending (MODEL or BACKUP) in any rung "
     "as unavailable, outside the user's access, or 'not recommendable' — by "
     "construction it is a model the user can run, so such a claim is "
@@ -376,9 +476,11 @@ def parse_response(text: str) -> dict[str, str]:
 
     regex_match = _RESPONSE_BLOCK_RE.search(text)
     if regex_match:
-        # The BACKUP and ORCHESTRATION groups are optional and capture None when
-        # absent; coerce None → "" so .strip() doesn't crash. BACKUP is surfaced
-        # via _attach_optional; the ORCHESTRATION capture is consumed silently.
+        # Every optional group (BACKUP, MAX MODE, EFFORT, THINKING,
+        # ORCHESTRATION) captures None when its line is absent; coerce None → ""
+        # so .strip() doesn't crash. _attach_optional then decides which of them
+        # survive into the parsed dict — and an absent setting line staying out
+        # of that dict IS the v2 "this surface has no such dial" signal.
         parsed_block = {
             key: (value.strip() if value else "") for key, value in regex_match.groupdict().items()
         }
@@ -520,14 +622,42 @@ def recommend_ladder(
 
 
 def _structured_settings(base: dict[str, str]) -> dict[str, str]:
-    """Map the six-field block to per-surface settings (phase roadmap table)."""
+    """Map a parsed block to the chosen surface's REAL controls (the phase-roadmap
+    settings table, the web settings panel, the CLI text block).
+
+    Dual-shape by design — see docs/settings-display.md, which pins every row of
+    this mapping in a machine-checked conformance table:
+
+    - v2 blocks carry the dials explicitly: ``effort`` is the reasoning LEVEL and
+      ``thinking`` is an On/Off TOGGLE, and a dial the platform lacks has NO key
+      at all (D1/D2). Those explicit fields WIN whenever present.
+    - v1 blocks overload ``thinking`` with the effort level and always carry
+      ``max_mode``. The legacy derivation below reproduces the pre-v2 output for
+      them byte-for-byte, including folding ``ORCHESTRATION: Ultracode`` into the
+      Claude Code effort value.
+
+    The one thing this function must NEVER do is invent a dial: an absent MAX
+    MODE line yields no ``max_mode`` key rather than a fabricated "OFF".
+    """
     plat = base["platform"].strip().lower()
-    max_mode_raw = base["max_mode"].strip()
-    thinking_raw = base["thinking"].strip()
+    # Absent key vs. present-but-empty are both "no line emitted" (D1).
+    max_mode_raw = (base.get("max_mode") or "").strip()
+    thinking_raw = (base.get("thinking") or "").strip()
+    effort_raw = (base.get("effort") or "").strip()
+    # Values that read as "the toggle is off" on either contract version. v1's
+    # `THINKING: N/A` (no dial) landed here too and became Effort Low / Thinking
+    # Off; v2 emits no line at all in that case.
+    offish = {"off", "n/a", "none", "no"}
 
     def max_mode_on() -> bool:
         lowered = max_mode_raw.lower()
         return lowered in {"on", "yes", "true", "enabled"}
+
+    def thinking_toggle(default: str = "On") -> str:
+        """The v2 THINKING toggle: strictly "On"/"Off", never an effort word."""
+        if not thinking_raw:
+            return default
+        return "Off" if thinking_raw.lower() in offish else "On"
 
     if "claude code" in plat.replace("_", " "):
         # Claude Code exposes a SINGLE effort dial — Low / Medium / High / XHigh /
@@ -540,22 +670,34 @@ def _structured_settings(base: dict[str, str]) -> dict[str, str]:
         # ORCHESTRATION of Ultracode into the effort VALUE here and never surface a
         # separate "orchestration" row (the 0.2.15 row didn't match Claude Code's
         # UI and produced incoherent "Effort: High + Orchestration: Ultracode").
+        # NOTE the emission rule: Claude Code has NO Max Mode, so this branch
+        # never returns a max_mode key even if a (v1) block wrongly carried one.
         orch = (base.get("orchestration") or "").strip().lower()
-        offish = {"off", "n/a", "none", "no"}
+        if effort_raw:
+            # v2: EFFORT carries the level (including "Ultracode", its top rung)
+            # and THINKING is only ever the toggle. "THINKING: Max" — the bug this
+            # split exists to kill — can no longer reach the display.
+            return {"effort": effort_raw, "thinking": thinking_toggle()}
+        # --- v1 legacy derivation (no EFFORT line) ---
         if orch == "ultracode":
             return {"effort": "Ultracode", "thinking": "On"}
         if thinking_raw.lower() in offish:
             return {"effort": "Low", "thinking": "Off"}
-        return {"effort": thinking_raw, "thinking": "On"}
+        if thinking_raw:
+            return {"effort": thinking_raw, "thinking": "On"}
+        # Neither dial reported: emit no reasoning rows rather than a blank one.
+        return {}
 
     # OpenAI's reasoning surfaces — Codex AND the direct OpenAI API — expose the
     # reasoning-effort dial (minimal/low/medium/high/xhigh) and NO Max Mode.
     # Surface it as Intelligence (the GPT-family reasoning row). Without the
     # explicit `openai api` case a GPT pick fell through to the Max-Mode fallback
     # below, so a Cost pick on the OpenAI API showed a spurious "Max Mode: On" and
-    # hid its actual effort (the dogfood display bug).
+    # hid its actual effort (the dogfood display bug). v2 supplies the level in
+    # EFFORT; v1 hid it in THINKING.
     if plat == "codex" or plat.endswith(" codex") or plat == "openai api":
-        return {"intelligence": thinking_raw}
+        intelligence = effort_raw or thinking_raw
+        return {"intelligence": intelligence} if intelligence else {}
 
     max_label = "ON" if max_mode_on() else "OFF"
 
@@ -569,9 +711,32 @@ def _structured_settings(base: dict[str, str]) -> dict[str, str]:
         # Max Mode (its own matrix row). Done HERE at the display layer, not in
         # the selector vocabulary, so the daily effort/thinking conformance cron
         # (which pins Cursor's THINKING=N/A) can never revert it.
-        return {"max_mode": max_label, "thinking": "On"}
+        #
+        # A v2 Cursor block carries NO EFFORT and NO THINKING line at all — Cursor
+        # exposes no reasoning dial — so never emit an (empty) effort key here;
+        # the Thinking "On" is the display reframe, not a parsed value.
+        cursor: dict[str, str] = {}
+        if max_mode_raw:
+            cursor["max_mode"] = max_label
+        cursor["thinking"] = "On"
+        return cursor
 
-    return {"max_mode": max_label, "thinking": thinking_raw}
+    # Every other surface. The D1 fix at the display layer: max_mode appears ONLY
+    # when the block actually carried a MAX MODE line. Under v1 that line was
+    # always present (pinned "Off" off-Cursor), which is why an Anthropic-API or
+    # ChatGPT pick used to show a Max Mode row for a dial those surfaces do not
+    # have; a v2 block simply omits the line and so do we.
+    settings: dict[str, str] = {}
+    if max_mode_raw:
+        settings["max_mode"] = max_label
+    if effort_raw:
+        # v2: explicit level + toggle.
+        settings["effort"] = effort_raw
+        settings["thinking"] = thinking_toggle()
+    elif thinking_raw:
+        # v1: THINKING carried the level, and the display showed it verbatim.
+        settings["thinking"] = thinking_raw
+    return settings
 
 
 def _backup_provider_guard(primary_model: str, backup_model: str) -> dict[str, Any]:

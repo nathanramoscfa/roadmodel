@@ -2,7 +2,8 @@
 
 This guide walks through `user-context.md` — the per-user file
 roadmodel reads at every `recommend` invocation to pick a
-**platform** and **thinking level** alongside the model. If you have
+**platform** and the **runtime settings that platform exposes**
+alongside the model. If you have
 not yet set an API key, start with
 [byo-key-setup.md](byo-key-setup.md) and come back here.
 
@@ -15,9 +16,11 @@ and complexity. The `<access-selection>` step is **user-specific**:
 it takes the candidate model and asks "which access method is
 cheapest for *this* user given *which* subscriptions they pay for?"
 A generic algorithm cannot pick `PLATFORM` (Claude Code vs. Cursor
-vs. raw API) or `THINKING` (whether and how much extended reasoning
-to enable) without that subscription state, which is what
-`user-context.md` provides.
+vs. raw API) without that subscription state, which is what
+`user-context.md` provides — and the PLATFORM in turn decides which
+setting fields the recommendation even carries, since a block emits
+only the dials the chosen surface exposes (`EFFORT` + `THINKING` on a
+reasoning-dial surface, `MAX MODE` on Cursor, and so on).
 
 ## First-run bootstrap
 
@@ -67,15 +70,17 @@ default home is returned as the bootstrap target.
    `XDG_CONFIG_HOME` env var is set, this is the resolved default.
 4. **`~/.config/roadmodel/user-context.md`** — when
    `XDG_CONFIG_HOME` is **not** set, this is the resolved default.
-5. **Repo fallback** — if the current working directory is inside
-   a git repository, `<repo-root>/docs/user-context.md` is
-   consulted last. This exists so the maintainer's
-   in-repo setup keeps working; third-party users should not rely
-   on it.
 
 Sources 3 and 4 are mutually exclusive — they are the same
 "default config home", branching only on whether `XDG_CONFIG_HOME`
 is set in your environment.
+
+There is **no repo fallback**: `user_context.resolve` never inspects
+the current working directory or a surrounding git checkout, so a
+`docs/user-context.md` sitting in a clone is not picked up. Point at
+an in-repo copy explicitly with `--user-context docs/user-context.md`
+or `ROADMODEL_USER_CONTEXT=docs/user-context.md` if you want that
+file used.
 
 ## Field-by-field walk-through
 
@@ -136,17 +141,72 @@ API → Google API) is a good starting point if you hold the same
 subscription bundle the template describes; otherwise re-order to
 match your actual cost picture.
 
-### Default Max Mode and thinking levels
+This list is a **soft** preference: it reorders access methods that
+already survived filtering, and a strong enough fit can outrank it.
+To rule a platform **out** entirely, use the hard filter below.
 
-Four bulleted policies — one each for Max Mode, Claude thinking, GPT
-reasoning effort, and Gemini thinking budget — that describe the
-default `THINKING` value the selector should emit per provider and
-how to escalate it with prompt complexity. The recommended starting
-point is the template's policy: thinking Off for routine prompts,
-`Medium` for Medium-complexity prompts, `High` for High-complexity,
-`XHigh` for the gnarliest novel-problem / multi-step-proof prompts.
-Edit only if you have a strong cost or latency preference that
-diverges (e.g. always-on thinking, or always-off for budget reasons).
+### Allowed / excluded platforms
+
+Two optional keys — `platforms.allowed` and `platforms.excluded` —
+naming **access-method ids** from the `<access-methods>` block of
+`model-selector.txt` (`claude-code`, `cursor`, `codex-cli`,
+`chatgpt-app`, `anthropic-api`, `openai-api`, `google-api`, …), not
+display names and not provider names:
+
+```text
+platforms.allowed:   claude-code, codex-cli, anthropic-api
+platforms.excluded:  cursor
+```
+
+`<access-selection>` **Step A00** applies both as **hard filters
+before any scoring**, the same way the jurisdiction list filters
+models. A non-empty `platforms.allowed` drops every access method not
+on it; `platforms.excluded` drops every method on it. This is the
+difference from *Platform preference order* above: that list changes
+the ORDER of the candidates, this one changes WHO the candidates are.
+
+The filter also **outranks** the selector's "never hard-exclude an
+unfunded access method" guardrail. That guardrail keeps a lack of
+money from suppressing a better pick — an unfunded method is still
+recommended, with the spend disclosed, because you might choose to pay
+it. Declaring a platform excluded says something else: you do not
+operate that surface, so a recommendation routed through it would hand
+you dials you cannot set. When they conflict, your list wins, and the
+selector must disclose the drop in its RATIONALE rather than
+substituting silently.
+
+**The section is optional and safe to omit.** If your
+`user-context.md` predates these keys — every hand-edited file does —
+Step A00 is a no-op, every access method stays eligible, and behavior
+is identical to before the keys existed. An absent or empty allowlist
+means "no opt-out declared", never "allow nothing". Bootstrapping a
+fresh file with `roadmodel context init` (into a temp path, then
+copying the section over) is the easy way to pick up the template's
+current wording.
+
+### Default effort, thinking, and Max Mode
+
+Bulleted policies describing the default runtime settings the selector
+should emit, and how to escalate them with prompt complexity. Output
+contract v2 keeps these as SEPARATE fields, so state them separately:
+
+- **`EFFORT`** carries the reasoning LEVEL — `Low` / `Medium` / `High` /
+  `XHigh` / `Max`, plus `Ultracode` on Claude Code only. Recommended
+  starting point: `Low` for routine prompts, `Medium` for
+  Medium-complexity, `High` for High-complexity, `XHigh` for the
+  gnarliest novel-problem / multi-step-proof prompts.
+- **`THINKING`** is a two-position toggle — `On` or `Off`, nothing else.
+  It never carries an effort word: `THINKING: Max` is not a setting any
+  surface can apply, which is why the level lives in `EFFORT`.
+- **`MAX MODE`** applies to Cursor alone. On every other platform no Max
+  Mode line is emitted at all.
+
+Edit only if you have a strong cost or latency preference that diverges
+(e.g. always-on thinking, or always-off for budget reasons). Note that a
+flat, unexhausted subscription declared above opens the `<objective>`
+FLAT-FUNDING GATE, which raises effort to the top useful rung on every
+budget posture — so an effort-lowering policy here will not fire while
+nothing is actually being saved.
 
 ### Budget priority and speed posture
 

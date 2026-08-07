@@ -20,6 +20,11 @@ SCRIPT = REPO_ROOT / "scripts" / "export-planning-kit.sh"
 EXPECTED_FILES = [
     "model-selector.txt",
     "model-tier-cost-scale.md",
+    # The display contract travels with the selector: `roadmodel export-kit`
+    # ships it, so the shell exporter must too or a shell-exported kit has the
+    # algorithm without the rules for rendering its platform-conditional
+    # setting fields.
+    "settings-display.md",
     "user-context.md",
     "HOW-TO-USE.md",
     "templates/project-roadmap-template.md",

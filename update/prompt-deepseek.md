@@ -48,17 +48,24 @@ enum. The selector must describe both:
   `low` / `medium` native tier (the `effort_aliases` show the API accepts them
   for compatibility, mapping `low`/`medium` → `high` and `xhigh` → `max`).
 - The **Output mapping** subsection maps provider-native scales onto the existing
-  7-state THINKING field (`Off`/`Low`/`Medium`/`High`/`XHigh`/`Max`/`N/A`). Keep:
+  7-state EFFORT field (`Off`/`Low`/`Medium`/`High`/`XHigh`/`Max`/`N/A`). Keep:
   thinking `disabled` → `Off`; `enabled` + effort `high` → `High`; `enabled` +
   effort `max` → `XHigh` (DeepSeek has no `xhigh` step, so its `max` is the
   Extra-High top, not the above-`xhigh` `Max`). DeepSeek has no `low` / `medium`
   tier, so no DeepSeek level maps to `Low` or `Medium`. A consumer DeepThink on/off toggle (no effort
-  enum) maps `On` → `High` (default effort) / `Off` → `Off`. Never invent a 7th
+  enum) maps `On` → `High` (default effort) / `Off` → `Off`. Never invent an 8th
   state.
+
+The output contract is v2 (see `<output-format>`'s `OUTPUT CONTRACT VERSION: 2`
+header): the reasoning LEVEL lives in the `EFFORT` field, and `THINKING` is a
+separate two-position On/Off toggle that never carries an effort word. `Off` and
+`N/A` in the 7-state scale are CONTROL states, not effort levels — DeepSeek's
+thinking `disabled` therefore resolves to `THINKING: Off`, and `N/A` means the
+surface has no dial so the line is OMITTED entirely. Keep that wording intact.
 
 If `<docs_facts>` introduces a reasoning-effort value beyond `high`/`max` (it
 appears in both `reasoning_effort` and `unexpected_effort`), ADD that value to
-the bullet enumeration AND give it a THINKING mapping — a new top-of-scale tier
+the bullet enumeration AND give it an EFFORT mapping — a new top-of-scale tier
 maps to `XHigh` — and add a warning naming the new tier so the maintainer reviews
 it. Likewise add a docs-added `thinking_toggle` value (`unexpected_toggle`). Do
 NOT silently omit it: the conformance gate requires the selector's DeepSeek
@@ -79,6 +86,11 @@ Claude Code effort / ultracode / ultrathink material.
 - The Claude / OpenAI / Gemini / Cursor reasoning bullets and mappings, the
   Claude Code effort prose, `<orchestration-context>`, `<max-mode-context>`,
   `<jurisdiction-context>`.
+- The v2 output contract and its fenced-off neighbours: `<output-format>`
+  (the `OUTPUT CONTRACT VERSION: 2` header, the v1 → v2 migration note, the
+  PLATFORM-CONDITIONAL emission table, the block templates), `<objective>`'s
+  FLAT-FUNDING GATE, `<access-selection>`'s Step A00 platform allow/deny
+  filter and its Steps E / E2 / F / G emission wording, and `<usage>`.
 - All other sections of the selector, and its structure / schema. Update values
   inside the existing schema; do not add or remove sections, attributes,
   elements, or columns.

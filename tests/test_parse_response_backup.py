@@ -64,6 +64,29 @@ CONVERSATION: New
 RATIONALE: Full schema — BACKUP and ORCHESTRATION both present.
 """
 
+# Output contract v2: the setting fields are platform-conditional, so this
+# Claude Code block carries EFFORT + THINKING and NO MAX MODE line. BACKUP's
+# position (between MODEL and PLATFORM) and its optionality are unchanged.
+_V2_WITH_BACKUP = """\
+MODEL: Opus 4.8
+BACKUP: GPT-5.5
+PLATFORM: Claude Code
+EFFORT: Max
+THINKING: On
+ORCHESTRATION: None
+CONVERSATION: New
+RATIONALE: v2 block — BACKUP survives the platform-conditional setting fields.
+"""
+
+_V2_BACKUP_NONE_NO_DIALS = """\
+MODEL: Composer 2.5
+BACKUP: None
+PLATFORM: Cursor
+MAX MODE: Off
+CONVERSATION: New
+RATIONALE: v2 Cursor block — no EFFORT/THINKING lines, and BACKUP is None.
+"""
+
 
 def test_backup_row_is_surfaced() -> None:
     """A present, meaningful BACKUP is captured and returned."""
@@ -101,6 +124,29 @@ def test_backup_coexists_with_orchestration() -> None:
     # Both optional fields are now surfaced (0.2.15): BACKUP and a meaningful
     # ORCHESTRATION value (Ultracode) both appear in the returned dict.
     assert result["orchestration"] == "Ultracode"
+
+
+def test_backup_survives_a_v2_block_with_no_max_mode_line() -> None:
+    """BACKUP is orthogonal to the v2 platform-conditional setting fields: a
+    Claude Code block that omits MAX MODE entirely must still surface it."""
+    result = parse_response(_V2_WITH_BACKUP)
+    assert result["backup"] == "GPT-5.5"
+    assert result["effort"] == "Max"
+    assert result["thinking"] == "On"
+    assert "max_mode" not in result
+    # ORCHESTRATION: None keeps meaning "no orchestration", not the string "None".
+    assert "orchestration" not in result
+
+
+def test_backup_none_still_absent_on_a_dial_less_v2_block() -> None:
+    """The sentinel rule is scoped to BACKUP/ORCHESTRATION, not to the dials: a
+    v2 Cursor block (no EFFORT/THINKING at all) still drops "BACKUP: None" while
+    keeping its real MAX MODE value."""
+    result = parse_response(_V2_BACKUP_NONE_NO_DIALS)
+    assert "backup" not in result
+    assert result["max_mode"] == "Off"
+    assert "effort" not in result
+    assert "thinking" not in result
 
 
 def test_required_fields_still_enforced_with_backup_present() -> None:

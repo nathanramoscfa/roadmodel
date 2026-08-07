@@ -32,7 +32,11 @@ SELECTOR_PATH = DOCS_DIR / "model-selector.txt"
 COST_SCALE_PATH = DOCS_DIR / "model-tier-cost-scale.md"
 CATALOG_PATH = DOCS_DIR / "catalog.json"
 
-SCHEMA_VERSION = "2"
+# Bumped 2->3 when the catalog SHAPE changed: <method> elements gained an
+# `exposes_orchestration` key and the document gained the top-level
+# `output_contract_version` key (v2 of the emission contract). Consumers that
+# pin the schema version must be updated in the same change.
+SCHEMA_VERSION = "3"
 
 TASK_CATEGORIES = (
     "coding",
@@ -87,12 +91,35 @@ _MODEL_RE = re.compile(r"<model\s+([^>]+?)\s*/>", re.DOTALL)
 _METHOD_RE = re.compile(r"<method\s+([^>]+?)\s*/>", re.DOTALL)
 _ACCESS_METHODS_RE = re.compile(r"<access-methods>(.*?)</access-methods>", re.DOTALL)
 _MAX_MODE_CTX_RE = re.compile(r"<max-mode-context>(.*?)</max-mode-context>", re.DOTALL)
-_ATTR_RE = re.compile(r'([\w-]+)="([^"]*)"')
+_OUTPUT_FORMAT_RE = re.compile(r"<output-format>(.*?)</output-format>", re.DOTALL)
+_CONTRACT_VERSION_RE = re.compile(r"OUTPUT CONTRACT VERSION:\s*(\d+)")
+# Attribute values may embed BACKSLASH-ESCAPED quotes — the claude-code
+# method's best-for quotes a JSON snippet (`\"ultracode\": true`). A naive
+# `"([^"]*)"` stops at the first inner quote and silently ships a value
+# truncated to a third of its length, ending on a dangling backslash. Match
+# escape sequences explicitly instead, then unescape via _unescape_attr.
+_ATTR_RE = re.compile(r'([\w-]+)="((?:[^"\\]|\\.)*)"', re.DOTALL)
+_ESCAPE_RE = re.compile(r"\\(.)", re.DOTALL)
 _LEADING_DOLLAR_RE = re.compile(r"\$\s*(\d+(?:\.\d+)?)")
 
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _unescape_attr(value: str) -> str:
+    r"""Turn source-level escape sequences into their literal characters.
+
+    The doc only ever escapes the quote that would otherwise terminate the
+    attribute (`\"` -> `"`), but the rule is applied generally so `\\` -> `\`
+    also round-trips. Consumers get the text an operator would actually read.
+    """
+    return _ESCAPE_RE.sub(r"\1", value)
+
+
+def _parse_attrs(blob: str) -> dict[str, str]:
+    """Parse an element's attribute blob into {name: unescaped value}."""
+    return {name: _unescape_attr(value) for name, value in _ATTR_RE.findall(blob)}
 
 
 def _parse_price(value: str) -> float | None:
@@ -119,7 +146,7 @@ def _parse_models(selector_text: str) -> list[dict[str, Any]]:
     for tier_m in _TIER_RE.finditer(options_match.group(1)):
         tier_cost = tier_m.group(1)
         for model_m in _MODEL_RE.finditer(tier_m.group(2)):
-            attrs = dict(_ATTR_RE.findall(model_m.group(1)))
+            attrs = _parse_attrs(model_m.group(1))
             tiers = {cat: attrs.get(f"tier-{cat}", "") for cat in TASK_CATEGORIES}
             models.append(
                 {
@@ -145,7 +172,7 @@ def _parse_access_methods(selector_text: str) -> list[dict[str, Any]]:
         raise ValueError("<access-methods> block not found in selector text")
     methods: list[dict[str, Any]] = []
     for method_m in _METHOD_RE.finditer(access_match.group(1)):
-        attrs = dict(_ATTR_RE.findall(method_m.group(1)))
+        attrs = _parse_attrs(method_m.group(1))
         supports = [s.strip() for s in attrs.get("supports-models", "").split(",") if s.strip()]
         methods.append(
             {
@@ -158,6 +185,10 @@ def _parse_access_methods(selector_text: str) -> list[dict[str, Any]]:
                 "supports_models": sorted(supports),
                 "exposes_max_mode": attrs.get("exposes-max-mode", ""),
                 "exposes_thinking": attrs.get("exposes-thinking", ""),
+                # Output-contract v2 makes the ORCHESTRATION line conditional on
+                # this attribute, so consumers need it in the machine-readable
+                # view — not just in the prose.
+                "exposes_orchestration": attrs.get("exposes-orchestration", ""),
                 "best_for": attrs.get("best-for", ""),
             }
         )
@@ -177,6 +208,23 @@ def _parse_max_mode_rules(selector_text: str, models: list[dict[str, Any]]) -> d
             "rule": CURSOR_2X_PHRASE,
         }
     }
+
+
+def _parse_output_contract_version(selector_text: str) -> int:
+    """Return the emission-contract version <output-format> declares.
+
+    The block opens with a literal ``OUTPUT CONTRACT VERSION: N`` line. It is
+    emitted as an INT (not a string like ``schema_version``) precisely so a
+    dual-accepting parser can branch on ``>= 2`` while still handling cached
+    v1 blocks from older releases and previously-exported planning kits.
+    """
+    fmt_match = _OUTPUT_FORMAT_RE.search(selector_text)
+    if not fmt_match:
+        raise ValueError("<output-format> block not found in selector text")
+    version_match = _CONTRACT_VERSION_RE.search(fmt_match.group(1))
+    if not version_match:
+        raise ValueError("'OUTPUT CONTRACT VERSION: N' not declared in <output-format>")
+    return int(version_match.group(1))
 
 
 def _parse_cost_scale_rows(cost_scale_text: str) -> dict[str, dict[str, str]]:
@@ -326,6 +374,7 @@ def build_catalog() -> dict[str, Any]:
 
     return {
         "schema_version": SCHEMA_VERSION,
+        "output_contract_version": _parse_output_contract_version(selector_text),
         "generated_at_utc": _derive_generated_at(),
         "source_doc_sha256": {
             "model-selector.txt": _sha256(SELECTOR_PATH),

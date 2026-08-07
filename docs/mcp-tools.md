@@ -50,8 +50,8 @@ def recommend_model(
 | ----------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `model`                 | `str`           | The recommended model ID (e.g. `claude-opus-4-7`).                                                                                                |
 | `platform`              | `str`           | The recommended access platform (e.g. `Claude Code`, `Cursor`, `Anthropic API direct`).                                                           |
-| `settings`              | `dict[str, str]`| Per-platform settings dict. Shape varies by platform: Claude Code → `{effort, thinking}`; Codex → `{intelligence}`; other → `{max_mode, thinking}`. |
-| `rationale`             | `str`           | One-paragraph justification from the selection algorithm, citing user-context fields and benchmark tiers.                                         |
+| `settings`              | `dict[str, str]`| Per-platform settings dict, carrying **only the dials the chosen platform exposes** — a dial the surface lacks is absent from the dict, never present with `Off` or `N/A`. Claude Code → `{effort, thinking}` (no Max Mode on that surface); Codex → `{intelligence}` (Codex's UI name for the effort dial); Cursor → `{max_mode}` (Cursor exposes no reasoning dial). The full surface-by-surface mapping is [docs/settings-display.md](settings-display.md). |
+| `rationale`             | `str`           | Justification from the selection algorithm as three labelled segments — `TASK: … PICK: … EFFORT: …` — citing benchmark tiers and justifying only the setting fields the chosen platform emits. |
 | `conversation`          | `str`           | Suggested conversation handling (`New`, `Continue`, etc.) per the `<output-format>` spec in `model-selector.txt`.                                 |
 | `session_cost_estimate` | `null`          | Always `null` over the MCP transport — cost estimation requires token counts not exposed by the tool surface.                                     |
 | `comparison_table`      | `null`          | Always `null` over the MCP transport, for the same reason.                                                                                        |
@@ -76,12 +76,19 @@ Response excerpt:
     "effort": "High",
     "thinking": "On"
   },
-  "rationale": "Coding PRIMARY with cross-file scope and High complexity. Opus 4.7 is S-tier on coding-agent benchmarks ...",
+  "rationale": "TASK: Agentic coding — a SQL agent translating natural language to PostgreSQL. PICK: Opus 4.7 is S-tier on coding-agent benchmarks ... EFFORT: High effort with thinking on fits multi-step query planning ...",
   "conversation": "New",
   "session_cost_estimate": null,
   "comparison_table": null
 }
 ```
+
+Note what the `settings` dict does **not** contain: no `max_mode` key.
+Claude Code has no Max Mode control, so the dial is omitted rather than
+reported as off. A Cursor recommendation is the mirror image —
+`{"max_mode": "ON"}` with no `effort` or `thinking`, because Cursor
+exposes no reasoning dial. Consumers should treat every settings key as
+optional and render whatever is present.
 
 ## `generate_phase_roadmap`
 

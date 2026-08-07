@@ -238,15 +238,18 @@ def test_recommend_carries_backup(
     assert backup["settings"] == {}
 
 
-def test_recommend_normalizes_thinking_na_on_no_thinking_surface(
+def test_recommend_drops_thinking_on_no_thinking_surface(
     client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Issue #188: Cursor and xAI API expose no thinking dial
-    (exposes-thinking="no"), so the structured THINKING field must be N/A
-    regardless of what the model emitted. Gemini 2.5 Flash filled a value on
-    6/7 Cursor probes in the Task-1 sweep. max_mode (a real Cursor dial) and
-    the conversation passthrough (#190) are left intact."""
+    """Output contract v2: Cursor's catalog entry is exposes_thinking="no", so
+    the EFFORT / THINKING fields must be ABSENT — not `N/A` (the v1 behavior
+    this replaces), because "this surface has no such control" is a different
+    claim from "this control exists and is off". max_mode (Cursor's one real
+    dial, exposes_max_mode="yes") and the conversation passthrough (#190) stay
+    intact. A v1 engine still emits an effort word in `thinking` here (Gemini
+    2.5 Flash filled one on 6/7 Cursor probes in the Task-1 sweep), so the
+    dual-accept path has to drop that too."""
     recommend_module = importlib.import_module("app.recommend")
     cursor_dict = dict(_RECOMMEND_DICT)
     cursor_dict["platform"] = "Cursor"
@@ -275,9 +278,101 @@ def test_recommend_normalizes_thinking_na_on_no_thinking_surface(
 
     body = client.post("/v1/recommend", json=_request_payload()).json()
     assert body["platform"] == "Cursor"
-    assert body["settings"]["thinking"] == "N/A"
-    assert body["settings"]["max_mode"] == "OFF"
+    # Whole-dict equality: the dial Cursor lacks is GONE, never re-spelled as
+    # "N/A"/"Off", and the dial it has survives untouched.
+    assert body["settings"] == {"max_mode": "OFF"}
     assert body["conversation"] == "New"
+
+
+def test_recommend_keeps_the_package_owned_cursor_thinking_toggle(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Regression guard for #387 (silently re-introduced by #389): the PACKAGE
+    deliberately emits Cursor's thinking as a bare "On" — Cursor's models reason,
+    the IDE just exposes no LEVEL dial. The service drops a bogus LEVEL there,
+    but must NOT touch that package-owned On/Off toggle, or it force-reverts the
+    package's display decision all over again."""
+    recommend_module = importlib.import_module("app.recommend")
+    cursor_dict = dict(_RECOMMEND_DICT)
+    cursor_dict["platform"] = "Cursor"
+    cursor_dict["settings"] = {"max_mode": "ON", "thinking": "On"}
+
+    def _fake(prompt: str, config: Any, **_kwargs: Any) -> dict[str, Any]:
+        return dict(cursor_dict)
+
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake)
+
+    body = client.post("/v1/recommend", json=_request_payload()).json()
+    assert body["settings"] == {"max_mode": "ON", "thinking": "On"}
+
+
+def test_recommend_splits_v1_effort_in_thinking_into_v2_fields(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Output contract v2 D2 + BACKWARD COMPATIBILITY: a v1 block carries the
+    reasoning LEVEL in THINKING ("THINKING: Max" was the bug) and a `max_mode`
+    line on every surface. Cached engine responses and older roadmodel releases
+    in prod still emit exactly that, so the service must dual-accept it and
+    still return the v2 shape: the level moves to EFFORT, THINKING becomes the
+    two-position toggle, and MAX MODE disappears on a surface whose catalog
+    entry says exposes_max_mode="no"."""
+    recommend_module = importlib.import_module("app.recommend")
+    v1_dict = dict(_RECOMMEND_DICT)
+    v1_dict["platform"] = "Anthropic API"  # exposes_thinking=yes, exposes_max_mode=no
+    v1_dict["settings"] = {"max_mode": "OFF", "thinking": "Max"}
+
+    def _fake(prompt: str, config: Any, **_kwargs: Any) -> dict[str, Any]:
+        return dict(v1_dict)
+
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake)
+
+    body = client.post("/v1/recommend", json=_request_payload()).json()
+    assert body["settings"] == {"effort": "Max", "thinking": "On"}
+
+
+def test_recommend_leaves_v2_settings_untouched(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The other half of dual-accept: a settings dict already in the v2 shape
+    (EFFORT holds the level, THINKING is the On/Off toggle) passes through
+    byte-identical — the normalization must be idempotent, or a package release
+    that starts emitting v2 would get its values rewritten."""
+    recommend_module = importlib.import_module("app.recommend")
+    v2_dict = dict(_RECOMMEND_DICT)
+    v2_dict["platform"] = "Claude Code"
+    v2_dict["settings"] = {"effort": "Ultracode", "thinking": "On"}
+
+    def _fake(prompt: str, config: Any, **_kwargs: Any) -> dict[str, Any]:
+        return dict(v2_dict)
+
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake)
+
+    body = client.post("/v1/recommend", json=_request_payload()).json()
+    assert body["settings"] == {"effort": "Ultracode", "thinking": "On"}
+
+
+def test_recommend_leaves_unknown_platform_settings_untouched(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fail-open: a platform the catalog does not describe has UNKNOWN dials, so
+    the service must not guess a shape for it — the settings pass through as
+    emitted rather than being stripped."""
+    recommend_module = importlib.import_module("app.recommend")
+    unknown = dict(_RECOMMEND_DICT)
+    unknown["platform"] = "Some Future Surface"
+    unknown["settings"] = {"max_mode": "ON", "thinking": "High"}
+
+    def _fake(prompt: str, config: Any, **_kwargs: Any) -> dict[str, Any]:
+        return dict(unknown)
+
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake)
+
+    body = client.post("/v1/recommend", json=_request_payload()).json()
+    assert body["settings"] == {"max_mode": "ON", "thinking": "High"}
 
 
 def test_recommend_input_length_cap(client: TestClient) -> None:
@@ -790,6 +885,66 @@ def test_funding_context_is_threaded_to_recommend_structured(
     assert response.status_code == 200
     assert seen["context"] == ctx
     assert captured["user_context_text"] == "SENTINEL-FUNDING-CONTEXT"
+
+
+def test_platform_filter_is_enforced_end_to_end(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Step A00 through the real request path: the operator excludes `cursor`,
+    the engine picks an accessible model but routes it through Cursor anyway
+    (prompt bias is not adherence — the #444 lesson), and the response must come
+    back on a permitted surface with the swap disclosed. Exercises the REAL
+    funding builder + AccessGuard against the repo catalog, not a monkeypatch."""
+    recommend_module = importlib.import_module("app.recommend")
+
+    def _fake(prompt: str, config: Any, **_kwargs: Any) -> dict[str, Any]:
+        payload = dict(_RECOMMEND_DICT)
+        payload["model"] = "Opus 4.8"  # reachable via BOTH cursor and claude-code
+        payload["platform"] = "Cursor"
+        return payload
+
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake)
+
+    ctx = {
+        "subscriptions": ["claude-max"],
+        "allowed_jurisdictions": ["us"],
+        "platforms_excluded": ["cursor"],
+    }
+    body = client.post(
+        "/v1/recommend", json={"task_description": "pick a model", "context": ctx}
+    ).json()
+
+    assert body["model"] == "Opus 4.8"  # the MODEL itself was accessible
+    assert body["platform"] != "Cursor"
+    assert body["platform"] == "Claude Code"
+    assert "not in the operator's declared platform list" in body["rationale"]
+
+
+def test_absent_platform_filter_leaves_the_pick_alone(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The same request WITHOUT a declared platform list is a no-op: an absent
+    allowlist means "no opt-out declared", never "allow nothing"."""
+    recommend_module = importlib.import_module("app.recommend")
+
+    def _fake(prompt: str, config: Any, **_kwargs: Any) -> dict[str, Any]:
+        payload = dict(_RECOMMEND_DICT)
+        payload["model"] = "Opus 4.8"
+        payload["platform"] = "Cursor"
+        return payload
+
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake)
+
+    ctx = {"subscriptions": ["claude-max"], "allowed_jurisdictions": ["us"]}
+    body = client.post(
+        "/v1/recommend", json={"task_description": "pick a model", "context": ctx}
+    ).json()
+
+    assert body["model"] == "Opus 4.8"
+    assert body["platform"] == "Cursor"
+    assert "not in the operator's declared platform list" not in (body["rationale"] or "")
 
 
 def test_unavailable_models_threaded_to_recommend_structured(
