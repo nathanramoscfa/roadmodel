@@ -246,16 +246,36 @@ run_static_checks() {
   if [[ -f tests/test_cli.py ]]; then record_pass 18 "tests/test_cli.py exists"
   else record_fail 18 "tests/test_cli.py exists" "missing"; fi
 
-  if [[ -f tests/fixtures/sample_response.txt ]] &&
-    grep -Fq "MODEL:" tests/fixtures/sample_response.txt &&
-    grep -Fq "PLATFORM:" tests/fixtures/sample_response.txt &&
-    grep -Fq "MAX MODE:" tests/fixtures/sample_response.txt &&
-    grep -Fq "THINKING:" tests/fixtures/sample_response.txt &&
-    grep -Fq "CONVERSATION:" tests/fixtures/sample_response.txt &&
-    grep -Fq "RATIONALE:" tests/fixtures/sample_response.txt; then
-    record_pass 19 "sample_response.txt has all six field labels"
+  # OUTPUT CONTRACT VERSION 2 (docs/model-selector.txt `<output-format>`):
+  # MODEL / PLATFORM / CONVERSATION / RATIONALE are always emitted, but the
+  # SETTING fields are PLATFORM-CONDITIONAL — a dial the platform lacks has no
+  # line at all. So this gate no longer demands a fixed six-label set (the v1
+  # shape, which pinned MAX MODE on every block): it requires the always-on
+  # labels plus AT LEAST ONE setting line, and it enforces the v1->v2 split
+  # where THINKING became a two-position toggle and the reasoning LEVEL moved
+  # to EFFORT. A "THINKING: High" fixture is the v1 bug and must fail here.
+  fixture="tests/fixtures/sample_response.txt"
+  ok19=1
+  if [[ -f "${fixture}" ]]; then
+    for label in "MODEL:" "PLATFORM:" "CONVERSATION:" "RATIONALE:"; do
+      grep -Fq "${label}" "${fixture}" || ok19=0
+    done
+    # At least one platform-conditional setting field must be present: EFFORT on
+    # a reasoning-dial surface, MAX MODE on Cursor.
+    grep -Eq '^[[:space:]]*(EFFORT|MAX MODE):' "${fixture}" || ok19=0
+    # When THINKING is emitted it is the extended-thinking toggle, On or Off.
+    if grep -Eq '^[[:space:]]*THINKING:' "${fixture}" &&
+      ! grep -Eiq '^[[:space:]]*THINKING:[[:space:]]*(On|Off)[[:space:]]*$' "${fixture}"; then
+      ok19=0
+    fi
   else
-    record_fail 19 "sample_response.txt has all six field labels" "missing file or label"
+    ok19=0
+  fi
+  if [[ "${ok19}" -eq 1 ]]; then
+    record_pass 19 "sample_response.txt matches output contract v2"
+  else
+    record_fail 19 "sample_response.txt matches output contract v2" \
+      "missing file/label, no EFFORT or MAX MODE line, or THINKING carrying an effort level instead of On/Off"
   fi
 
   if [[ -f tests/fixtures/sample_user_context.md ]]; then

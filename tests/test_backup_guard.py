@@ -140,6 +140,32 @@ def test_recommend_structured_no_backup_is_unchanged(
     assert "backup_guard" not in payload
 
 
+def test_backup_guard_is_orthogonal_to_the_output_contract_version(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The Step 7 cross-provider guard reads MODEL and BACKUP only, so making the
+    SETTING fields platform-conditional (contract v2) must not change any of its
+    decisions. Same same-maker pair, a v2 base with no ``max_mode`` key at all."""
+
+    def _v2_base(prompt: str, config: Config, **_kwargs: object) -> dict[str, str]:
+        return {
+            "model": "Fable 5",
+            "backup": "Opus 4.8",
+            "platform": "Claude Code",
+            "effort": "Max",
+            "thinking": "On",
+            "conversation": "New",
+            "rationale": "Fable 5 is S-tier.",
+        }
+
+    monkeypatch.setattr(recommend_module, "recommend", _v2_base)
+    payload = recommend_module.recommend_structured("audit this", _config(tmp_path))
+    assert "backup" not in payload
+    assert payload["backup_guard"]["same_provider"] is True
+    # ...and the v2 settings ride through untouched.
+    assert payload["settings"] == {"effort": "Max", "thinking": "On"}
+
+
 # --- cost.suggest_cross_provider_backup (0.2.20 substitution) ----------------
 
 

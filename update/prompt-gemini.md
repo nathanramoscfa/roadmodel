@@ -48,15 +48,22 @@ across the 3.x and 2.5 model generations. The selector must describe it:
   `off` (or that otherwise allow disabling).
 
 The **Output mapping** subsection maps provider-native scales onto the existing
-7-state THINKING field (`Off`/`Low`/`Medium`/`High`/`XHigh`/`Max`/`N/A`). Keep:
+7-state EFFORT field (`Off`/`Low`/`Medium`/`High`/`XHigh`/`Max`/`N/A`). Keep:
 `low → Low`, `medium → Medium`, `high → High` (Gemini currently has NO `xhigh`
 or `max` tier — do not map any Gemini level to `XHigh` or `Max`); thinking
 turned off → `Off`.
-Never invent a 7th state.
+Never invent an 8th state.
+
+The output contract is v2 (see `<output-format>`'s `OUTPUT CONTRACT VERSION: 2`
+header): the reasoning LEVEL lives in the `EFFORT` field, and `THINKING` is a
+separate two-position On/Off toggle that never carries an effort word. `Off` and
+`N/A` in the 7-state scale are CONTROL states, not effort levels — a mapping
+landing on `Off` means `THINKING: Off`, and one landing on `N/A` means the
+surface has no dial so the line is OMITTED entirely. Keep that wording intact.
 
 If `<docs_facts>` introduces a thinking level beyond `low`/`medium`/`high` (it
 appears in both `thinking_levels` and `unexpected_levels`), ADD that level to the
-bullet enumeration AND give it a THINKING mapping — a new top-of-scale tier maps
+bullet enumeration AND give it an EFFORT mapping — a new top-of-scale tier maps
 to `XHigh` — and add a warning naming the new tier so the maintainer reviews the
 new reasoning level. Do NOT silently omit it: the conformance gate requires the
 selector's Gemini vocabulary to EQUAL the documented `thinking_levels`.
@@ -86,6 +93,11 @@ OWNED by the Cursor catalog cron. You MUST NOT touch any other attribute
 - Every `<method>` element OTHER THAN `google-api` / `gemini-cli`.
 - The Claude / OpenAI / Cursor reasoning bullets and mappings, the Claude Code
   effort prose, `<orchestration-context>`, `<max-mode-context>`.
+- The v2 output contract and its fenced-off neighbours: `<output-format>`
+  (the `OUTPUT CONTRACT VERSION: 2` header, the v1 → v2 migration note, the
+  PLATFORM-CONDITIONAL emission table, the block templates), `<objective>`'s
+  FLAT-FUNDING GATE, `<access-selection>`'s Step A00 platform allow/deny
+  filter and its Steps E / E2 / F / G emission wording, and `<usage>`.
 - All other sections of the selector, and its structure / schema. Update values
   inside the existing schema; do not add or remove sections, attributes,
   elements, or columns.

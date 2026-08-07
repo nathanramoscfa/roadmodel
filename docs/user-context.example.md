@@ -119,37 +119,39 @@ two heavy-use providers and Cursor's pool absorbs the rest.
    selector should not recommend these access methods while this
    section says no.
 
-## Default Max Mode and thinking levels
+## Default effort, thinking, and Max Mode
 
-- **Max Mode** — token-based plan, so no per-request surcharge. Apply
-  `<max-mode-context>` rules verbatim; do not under-enable Max Mode for
-  cost reasons.
-- **Claude thinking** — default Off for routine prompts; On (mapped to
-  THINKING `Medium`) for any prompt whose `<selection-algorithm>`
-  complexity score is Medium; On with a large budget (mapped to
-  THINKING `High`) for High-complexity; On with a very large budget
-  (mapped to THINKING `XHigh`) for the gnarliest High-complexity
-  prompts where novel problem-solving, multi-step proof, or
-  chain-of-thought across many files is required. The rationale
-  paragraph must name whether thinking is on and at what level.
-- **GPT reasoning effort** — when a GPT model is selected and the
-  access method exposes the toggle (Codex / OpenAI API / ChatGPT
-  app advanced controls), default to `medium`; escalate to `high` for
-  any High-complexity prompt; escalate further to `xhigh` /
-  `extra-high` (mapped to THINKING `XHigh` in the output format) for
-  High-complexity prompts that ALSO involve novel problem-solving,
-  multi-step proof, or chain-of-thought across many files — these are
-  the prompts that warrant the slower, more expensive Codex variant
-  (e.g., `gpt-5.3-codex-high`, `gpt-5.4-high`). Drop to `low` only for
-  explicit `speed` PRIMARY tasks. Not applicable when the access
-  method is Cursor's pool (Cursor does not expose the toggle).
-- **Gemini thinking budget** — when a Gemini model is selected and the
-  access method exposes the budget (Gemini CLI / Google API), default
-  to the model's medium budget; escalate to a large budget (THINKING
-  `High`) for High-complexity prompts; escalate to the model's
-  largest budget (THINKING `XHigh`) for the same novel-problem /
-  multi-step-proof / cross-file chain-of-thought triggers as GPT
-  xhigh. Not applicable via Cursor's pool.
+Output contract v2 emits these as SEPARATE fields, and only on a platform
+that exposes them: `EFFORT` carries the reasoning LEVEL, `THINKING` is a
+two-position `On`/`Off` toggle, and `MAX MODE` appears on Cursor alone. A
+dial the chosen platform lacks gets NO line at all — never `Off`, never
+`N/A`. State defaults below in those terms.
+
+- **Effort** — default to the level `<thinking-context>`'s decision rule
+  derives from complexity (Low → `Low`, Medium → `Medium`, High →
+  `High`, High plus novel problem-solving / multi-step proof /
+  cross-file chain-of-thought → `XHigh`, ceiling-class tasks → `Max`).
+  `Ultracode` is the top rung and is Claude Code only. NOTE: if this
+  file declares a flat, unexhausted subscription, the `<objective>`
+  FLAT-FUNDING GATE raises effort to the top useful rung on every budget
+  posture — effort costs nothing there, so there is no reason to hold it
+  down.
+- **Thinking** — default `On` wherever extended reasoning helps; `Off`
+  only for purely mechanical steps where latency matters. It never
+  carries an effort word or a number; `THINKING: Max` is not a setting
+  any surface can apply. Claude Fable 5 cannot disable extended
+  thinking, so never declare `Off` for it.
+- **Codex / OpenAI** — the surface labels its dial "Intelligence" in its
+  own UI, but the emitted field is still `EFFORT` (same value, different
+  name). It exposes no separate thinking toggle and no Max Mode.
+- **Gemini / DeepSeek** — Google retired the numeric `thinkingBudget` in
+  favour of discrete levels; DeepSeek exposes a thinking toggle plus a
+  `high`/`max` effort enum. Both map onto `EFFORT` + `THINKING` the same
+  way. Declare defaults as levels, never as token budgets.
+- **Max Mode** — Cursor only. If this file declares no Cursor
+  subscription, or excludes `cursor` under "Allowed / excluded
+  platforms", no recommendation will carry a Max Mode line at all and
+  this bullet is moot.
 
 ## Budget priority and speed posture
 
@@ -221,6 +223,74 @@ allow unverified models, add `unknown` to the list above.
 When the filter eliminates the otherwise-best model, the selector's
 output MUST disclose the substitution in its RATIONALE — silent
 filters are worse than transparent ones.
+
+---
+
+## Allowed / excluded platforms
+
+Step A00 of `<access-selection>` in
+[`model-selector.txt`](model-selector.txt) drives this filter — read
+that step first for the full rule. Two optional keys declare which
+access methods (platforms) the selector may recommend at all:
+
+- **`platforms.allowed`** — access-method ids the operator will
+  actually use. When present and non-empty, Step A00 drops every
+  access method whose id is **not** on the list.
+- **`platforms.excluded`** — access-method ids the operator has opted
+  out of. Step A00 drops every listed method.
+
+Both are **HARD filters applied before any scoring**, exactly like the
+jurisdiction filter above — and unlike *Platform preference order*,
+which is a **soft** ranking that only reorders methods that already
+survived filtering. A soft preference can be overridden by a better
+fit; these two cannot.
+
+**Declared for this file's user, today:**
+
+```text
+platforms.allowed:   (none declared)
+platforms.excluded:  (none declared)
+```
+
+Values are **access-method ids** from the `<access-methods>` block in
+`model-selector.txt` — e.g. `claude-code`, `cursor`, `codex-cli`,
+`chatgpt-app`, `claude-web`, `anthropic-api`, `openai-api`,
+`google-api`, `gemini-cli`, `deepseek-api`, `mistral-api` — not
+display names ("Claude Code") and not provider names ("Anthropic").
+An operator who works only in the terminal might declare:
+
+```text
+platforms.allowed:   claude-code, codex-cli, anthropic-api
+platforms.excluded:  cursor
+```
+
+**An absent or empty section means "no opt-out declared" — never
+"allow nothing."** This section is optional. A `user-context.md`
+hand-edited from an older template will not have it, and that is fine:
+Step A00 becomes a no-op, every access method stays in the running,
+and the selector behaves exactly as it did before these keys existed.
+Only an explicitly declared, non-empty list narrows the field, so the
+feature degrades safely to the previous behavior when it is missing.
+
+**This filter outranks the "never hard-exclude an unfunded access
+method" guardrail** in `<access-selection>`. Those two rules are about
+different things. The guardrail exists so a lack of MONEY never
+suppresses a better pick — an unfunded method still gets recommended,
+with the pay-per-token spend disclosed, because the operator might
+choose to spend it. An excluded method is not unfunded; it is a
+surface the operator has said they do not operate. Recommending it
+would produce a model, a platform, and a set of dials the operator
+cannot apply at all — a recommendation that costs money is useful,
+one that cannot be executed is not. When the two rules conflict, this
+list wins, and an excluded platform is never re-admitted on the
+grounds that it is merely unfunded.
+
+**Disclosure.** As with jurisdictions, the filter must not be silent:
+when an excluded (or non-allowlisted) method would otherwise have won
+platform selection, the selector's RATIONALE MUST name the dropped
+platform and say the operator's list excluded it (e.g. "Cursor would
+rank first on pool economics but is not in the declared platform
+allowlist").
 
 ---
 

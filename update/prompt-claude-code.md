@@ -62,16 +62,37 @@ Examples of in-scope edits:
 - A release adds a new top-of-scale extended-thinking budget bucket
   with a user-visible name → add it to the enumerated levels.
 
-Then propagate the change to the **Output mapping** subsection ONLY if
-the new level needs a slot in the existing 7-state field
-(`Off`/`Low`/`Medium`/`High`/`XHigh`/`Max`/`N/A`). The established
-mapping is `xhigh` → `XHigh` and `max` → `Max` — the latter ONLY on
-models whose row exposes a `max` step ABOVE `xhigh` (Opus 4.7/4.8,
-Fable 5); a model whose top is `max` with no `xhigh` step maps
-`max` → `XHigh`. Do NOT add an 8th state for `ultracode`: it is
-ORCHESTRATION (the `Ultracode` value of the ORCHESTRATION field), not a
-THINKING level. If the change is just a label rename, do NOT touch the
-output mapping.
+**The output contract is v2: EFFORT and THINKING are TWO fields.**
+Read `<output-format>`'s "OUTPUT CONTRACT VERSION: 2" header before
+touching any mapping. The v1 single `THINKING` field that carried the
+whole reasoning scale is GONE, and re-merging it is a regression, not a
+tidy-up:
+
+- `EFFORT` carries the discrete reasoning LEVEL —
+  `Low`/`Medium`/`High`/`XHigh`/`Max`/`Ultracode`. This is the field a
+  new Claude Code effort level lands in.
+- `THINKING` is the extended-thinking TOGGLE and NOTHING else — `On` or
+  `Off`. It never carries an effort word and never carries a number.
+  `THINKING: Max` is not a setting any operator can apply, because no
+  surface's thinking toggle has a `Max` position.
+- Both lines are PLATFORM-CONDITIONAL: they are emitted only when the
+  chosen access method's `exposes-thinking` is `yes`, and OMITTED
+  ENTIRELY otherwise. Never re-introduce `N/A` as a value of either
+  field — an absent dial has no line at all.
+
+Propagate a change to the **Output mapping** subsection ONLY if the new
+level needs a slot in the EFFORT field. The established mapping is
+`xhigh` → `XHigh` and `max` → `Max` — the latter ONLY on models whose
+row exposes a `max` step ABOVE `xhigh` (Opus 4.7/4.8, Fable 5); a model
+whose top is `max` with no `xhigh` step maps `max` → `XHigh`. Extended
+thinking disabled maps to `THINKING: Off`, not to an effort value.
+
+`ultracode` is the TOP value of `EFFORT`, ABOVE `Max` — it is set
+through the SAME `/effort` command as every other level, so it is an
+effort value, not a separate control. Do NOT move it back into
+ORCHESTRATION (whose values are now only `None` / `PerPrompt`), and do
+NOT describe it as "an ORCHESTRATION value" anywhere. If the change is
+just a label rename, do NOT touch the output mapping.
 
 **Reconcile with `<docs_facts>` (authoritative for effort/thinking).**
 When `<docs_facts>` is present, make `<thinking-context>` consistent
@@ -82,6 +103,11 @@ with it using the SMALLEST edit:
 - `ultracode` must read as a SESSION setting that sends `xhigh` and
   orchestrates Dynamic Workflows; `ultrathink` as a PER-TURN prompt
   keyword that does NOT change session effort. Never conflate them.
+  `ultracode`'s acceptance as the top `EFFORT` value depends on those
+  exact `<docs_facts>` (`ultracode.is_setting` + `ultracode.sends_effort`)
+  — the gate reads them, so keep the prose faithful to them.
+- `THINKING` must stay a two-position toggle. Never widen its enum, and
+  never map a provider-native reasoning level onto it.
 - Do NOT add a per-model effort claim that names a model alongside an
   effort level its `per_model_effort` row lacks (e.g. never imply
   Sonnet 4.6 supports `xhigh`).
@@ -96,13 +122,28 @@ the docs imply.
 
 ## Scope 2 — `<max-mode-context>`
 
-This section is mostly Cursor-specific. The closing paragraph lists
+This section is mostly Cursor-specific. The closing paragraphs list
 non-Cursor access methods (Anthropic API, Claude Code, Codex, etc.)
-that do NOT expose a Max Mode toggle. Update this section ONLY if a
-Claude Code release adds a Claude-Code-native equivalent of Cursor's
-Max Mode (an extended-context toggle, a Max-style surcharge model).
-A new long-context window default does NOT qualify — only a toggle
-that the user explicitly enables on a per-call basis is in scope.
+that do NOT expose a Max Mode toggle, and state the **EMISSION RULE**:
+the `MAX MODE` line is emitted ONLY when the chosen access method's
+`exposes-max-mode` attribute is `yes`, and is OMITTED ENTIRELY —
+not `Off`, not `N/A`, not blank — on every other platform. Today
+exactly one method qualifies: `cursor`.
+
+Update this section ONLY if a Claude Code release adds a
+Claude-Code-native equivalent of Cursor's Max Mode (an extended-context
+toggle, a Max-style surcharge model). A new long-context window default
+does NOT qualify — only a toggle that the user explicitly enables on a
+per-call basis is in scope. If such a release DOES land, the correct
+edit is to note the new Claude Code control and to flag (in `warnings`)
+that `exposes-max-mode` on `<method id="claude-code">` may need an
+editorial flip — you MUST NOT flip the attribute yourself.
+
+The EMISSION RULE itself, and the "omit-when-absent principle is
+GENERAL" paragraph that follows it, are NOT yours to edit. Do not
+soften them into "emit `Off`", do not reintroduce an unconditional
+`MAX MODE` line, and do not delete the rule while making an unrelated
+edit.
 
 If no such release lands, leave this section verbatim.
 
@@ -131,7 +172,10 @@ will create a merge race between the two crons.
 You MUST NOT touch any other attribute on the `<method
 id="claude-code">` element (`id`, `name`, `provider`, `billing`,
 `provider-jurisdiction`, `requires`, `exposes-max-mode`,
-`exposes-thinking`). Those are editorial.
+`exposes-thinking`, `exposes-orchestration`). Those are editorial —
+and the three `exposes-*` attributes now DRIVE which setting lines the
+output block emits at all, so flipping one silently changes the
+contract.
 
 # What NOT to change
 
@@ -152,10 +196,12 @@ id="claude-code">` element (`id`, `name`, `provider`, `billing`,
   `anthropic-api`, `codex-cli`, `chatgpt-app`, `gemini-cli`,
   `gemini-app`, `cursor-chat`, `cursor-composer`, `openai-api`,
   `google-api`, and `xai-api` are out of scope.
-- `<orchestration-context>` — the ORCHESTRATION (`None`/`PerPrompt`/
-  `Ultracode`/`N/A`) mapping lives here and is NOT this cron's lane.
-  `<thinking-context>` may REFERENCE it (e.g. "see
-  `<orchestration-context>`") but you MUST NOT edit the
+- `<orchestration-context>` — the ORCHESTRATION (`None`/`PerPrompt`)
+  mapping lives here and is NOT this cron's lane. That section also
+  carries the "ULTRACODE IS AN EFFORT VALUE, NOT AN ORCHESTRATION
+  VALUE" paragraph and the `EFFORT: Ultracode` decision rule; both are
+  out of scope. `<thinking-context>` may REFERENCE the section (e.g.
+  "see `<orchestration-context>`") but you MUST NOT edit the
   `<orchestration-context>` element itself.
 - All other sections of `model-selector.txt`:
   `<instruction>`, `<usage>`, `<objective>`, `<pricing-context>`,
@@ -163,6 +209,27 @@ id="claude-code">` element (`id`, `name`, `provider`, `billing`,
   `<benchmark-sources>`, `<selection-algorithm>`,
   `<access-selection>`, `<conversation-principles>`,
   `<output-format>`.
+- Named fence-offs inside those sections, called out because they are
+  the parts most likely to look like tidy-up targets. These are
+  editorial and a diff touching any of them will be reverted:
+  - `<output-format>`'s `OUTPUT CONTRACT VERSION: 2` header and the
+    v1 → v2 migration note under it; the PLATFORM-CONDITIONAL emission
+    table (`EFFORT` / `THINKING` / `MAX MODE` / `ORCHESTRATION`); the
+    per-mode block templates; and the RATIONALE `TASK:` / `PICK:` /
+    `EFFORT:` segment spec.
+  - `<objective>`'s **FLAT-FUNDING GATE** — the rule that HOLDS the
+    capability tier and defaults EFFORT to the top useful rung on every
+    posture (including Cost) when the platform is subscription-funded,
+    the family is covered, and the budget is not exhausted. Do not
+    re-tighten it into a cost-down rule, and do not delete its
+    interaction with the `cheap` / `balanced` postures.
+  - `<access-selection>`'s **Step A00** platform allowlist / denylist
+    (`platforms.allowed` / `platforms.excluded`), including its
+    PRECEDENCE paragraph over the "never hard-exclude an unfunded
+    method" guardrail and its DISCLOSURE paragraph. Also its Steps E /
+    E2 / F / G emission wording.
+  - `<usage>`'s RUNTIME-SETTING paragraph describing the same
+    platform-conditional emission rule.
 - The structure or schema of `model-selector.txt`. Update values
   inside the existing schema; do not add or remove sections,
   attributes, elements, or columns.

@@ -43,6 +43,20 @@ RESPONSE_WITH_BACKUP = (
     "RATIONALE: Fixture rationale with a backup model.\n"
 )
 
+# Output contract v2: the setting fields are PLATFORM-CONDITIONAL. Claude Code
+# has no Max Mode, so the block emits no MAX MODE line at all; the reasoning
+# LEVEL lives in EFFORT and THINKING is a two-position toggle.
+RESPONSE_V2_CLAUDE_CODE = (
+    "MODEL: Opus 4.8\n"
+    "BACKUP: GPT-5.5\n"
+    "PLATFORM: Claude Code\n"
+    "EFFORT: Ultracode\n"
+    "THINKING: On\n"
+    "ORCHESTRATION: None\n"
+    "CONVERSATION: New\n"
+    "RATIONALE: v2 fixture — no MAX MODE line, effort carries the level.\n"
+)
+
 
 def _runner() -> CliRunner:
     return CliRunner()
@@ -102,14 +116,20 @@ def test_recommend_invokes_build_prompt_and_parser(
         user_context_path=context_path,
     )
     parsed = recommend_module.recommend("build a SQL agent", config)
+    # sample_response.txt is an output-contract-v2 Codex block: Codex exposes a
+    # reasoning dial and NO Max Mode, so it emits EFFORT + THINKING and no MAX
+    # MODE line. Only model / platform / conversation / rationale are required —
+    # effort and thinking appear because the BLOCK carried them, and max_mode is
+    # absent because the platform has no such dial (never "Off").
     assert set(parsed.keys()) == {
         "model",
         "platform",
-        "max_mode",
+        "effort",
         "thinking",
         "conversation",
         "rationale",
     }
+    assert "max_mode" not in parsed
     assert adapter.calls, "provider adapter was not called"
     assert "<model-selector>" in str(adapter.calls[0]["system"])
     # The user prompt is wrapped as delimited input (classify-don't-execute, #187).
@@ -161,6 +181,10 @@ def test_recommend_user_context_text_overrides_file(
         user_context_text="OVERRIDE_CONTEXT_MARKER",
     )
 
+    # LEGACY ACCEPTANCE: RESPONSE_GPT_TEST_CODEX is a v1 block (MAX MODE always
+    # present, THINKING carrying the effort level) — the shape still arriving
+    # from cached responses, older releases and exported planning kits — so
+    # max_mode/thinking appear here where the v2 fixture yields effort/thinking.
     assert set(parsed.keys()) == {
         "model",
         "platform",
@@ -433,6 +457,7 @@ def test_context_init_creates_file_and_respects_force(
 
 
 def test_parse_response_json_path() -> None:
+    """The JSON path, v1 shape (max_mode + an effort-carrying thinking)."""
     payload = json.dumps(
         {
             "model": "GPT-5.3 Codex",
@@ -446,6 +471,81 @@ def test_parse_response_json_path() -> None:
     parsed = recommend_module.parse_response(payload)
     assert parsed["model"] == "GPT-5.3 Codex"
     assert parsed["platform"] == "Codex"
+
+
+def test_parse_response_json_path_v2_shape() -> None:
+    """The JSON path must stay consistent with the regex path: the four
+    always-on fields are enough, and an explicit `effort` is carried through."""
+    payload = json.dumps(
+        {
+            "model": "Opus 4.8",
+            "platform": "Claude Code",
+            "effort": "Max",
+            "thinking": "On",
+            "conversation": "New",
+            "rationale": "test rationale",
+        }
+    )
+    parsed = recommend_module.parse_response(payload)
+    assert parsed["effort"] == "Max"
+    assert parsed["thinking"] == "On"
+    assert "max_mode" not in parsed
+
+
+def test_parse_response_json_path_requires_the_four_always_on_fields() -> None:
+    """A JSON payload missing a required field must NOT be accepted just because
+    the setting fields became optional (it falls through to the regex path and
+    then raises)."""
+    payload = json.dumps(
+        {"model": "Opus 4.8", "platform": "Claude Code", "effort": "Max", "thinking": "On"}
+    )
+    with pytest.raises(MalformedResponseError):
+        recommend_module.parse_response(payload)
+
+
+def test_recommend_parses_a_v2_block_with_no_max_mode_line(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """End-to-end through `recommend`: a v2 Claude Code block omits MAX MODE
+    entirely and must yield the v2 key set — no max_mode key, effort holding the
+    level, thinking holding the toggle."""
+
+    class V2Adapter:
+        def recommend(
+            self,
+            prompt: str,
+            system: str,
+            *,
+            model: str | None = None,
+            api_key: str,
+            max_output_tokens: int | None = None,
+            thinking_budget: int | None = None,
+            temperature: float | None = None,
+        ) -> str:
+            return RESPONSE_V2_CLAUDE_CODE
+
+    monkeypatch.setitem(recommend_module.PROVIDER_ADAPTERS, "anthropic", V2Adapter())
+    context_path = tmp_path / "user-context.md"
+    context_path.write_text("# ctx\n", encoding="utf-8")
+    config = Config(
+        provider="anthropic",
+        model=None,
+        api_key="test-key",
+        user_context_path=context_path,
+    )
+
+    parsed = recommend_module.recommend("build a SQL agent", config)
+    assert set(parsed.keys()) == {
+        "model",
+        "backup",
+        "platform",
+        "effort",
+        "thinking",
+        "conversation",
+        "rationale",
+    }
+    assert parsed["effort"] == "Ultracode"
+    assert parsed["thinking"] == "On"
 
 
 def test_parse_response_regex_path() -> None:

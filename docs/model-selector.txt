@@ -4,16 +4,16 @@
     1. Execute the requested task in full — write the roadmap, plan, or
        whatever the user asked for
     2. Read docs/user-context.md to learn the user-specific subscription
-       state, API keys, and platform preference order. These are the
-       inputs the access-selection step consumes; without them the
-       PLATFORM and THINKING fields in the output cannot be filled
-       truthfully
+       state, API keys, platform allow/deny list, and platform preference
+       order. These are the inputs the access-selection step consumes;
+       without them the PLATFORM field — and therefore WHICH setting
+       fields the block may emit at all — cannot be filled truthfully
     3. For every prompt or step you write as part of that task, append a
        model selection block immediately before it using the criteria in
-       this file (objective, pricing, Max Mode, thinking, benchmark
-       sources, task categories, model options, access methods,
-       selection algorithm, access selection, and conversation
-       principles)
+       this file (objective, pricing, Max Mode, effort and thinking,
+       orchestration, benchmark sources, task categories, model options,
+       access methods, selection algorithm, access selection, and
+       conversation principles)
     4. The selection block is part of the task output, not a replacement
        for it
   </instruction>
@@ -22,17 +22,41 @@
     Reference this file alongside any task. The AI performs the task and
     annotates each prompt it writes with the appropriate model selection
     block drawn from the criteria in this file. Each block reports
-    MODEL, PLATFORM, MAX MODE, THINKING, CONVERSATION, and RATIONALE —
-    model choice from `<selection-algorithm>`, platform (access method)
-    choice from `<access-selection>`, with the user-specific subscription
-    and API-key state read from docs/user-context.md.
+    MODEL, BACKUP, PLATFORM, CONVERSATION, and RATIONALE — model choice
+    from `<selection-algorithm>`, platform (access method) choice from
+    `<access-selection>`, with the user-specific subscription and API-key
+    state read from docs/user-context.md.
+
+    The RUNTIME-SETTING fields are PLATFORM-CONDITIONAL: a block emits
+    only the dials the chosen PLATFORM actually exposes, and OMITS the
+    line entirely for a dial that surface does not have. EFFORT and
+    THINKING are emitted when the platform exposes them; MAX MODE is
+    emitted ONLY on a platform whose `exposes-max-mode` is `yes`;
+    ORCHESTRATION only where `exposes-orchestration` is `yes`. An
+    operator must be able to set every line the block emits — so a dial
+    the surface lacks is absent, never `Off` and never `N/A`. See
+    `<output-format>` for the exact per-field emission rule.
   </usage>
 
   <objective>
     DEFAULT POSTURE — Maximize quality. Recommend the highest-quality model
-    whose strengths match the prompt's task type, regardless of cost. If Opus
-    4.7 in Max Mode is the most appropriate fit for a given prompt, recommend
-    Opus 4.7 in Max Mode.
+    whose strengths match the prompt's task type, regardless of cost, AT the
+    runtime configuration that fit calls for — then express that configuration
+    in the dials the CHOSEN PLATFORM actually exposes, never in dials borrowed
+    from a surface the operator is not on.
+
+    Worked examples, one per surface shape (the pick is the same class of
+    decision; only the settings vocabulary differs):
+    - Frontier Claude model on Claude Code — the surface exposes a discrete
+      effort dial and an extended-thinking toggle, so recommend the model at
+      `EFFORT: Max` (or `Ultracode` when the task warrants it) with
+      `THINKING: On`. Emit NO Max Mode line: Claude Code has no such control.
+    - Frontier GPT model on Codex — the surface exposes reasoning effort only,
+      so recommend the model at `EFFORT: XHigh`. Emit no Max Mode line.
+    - Frontier model on Cursor — the surface exposes Max Mode and NO thinking
+      dial, so recommend the model with `MAX MODE: On` and emit no EFFORT line.
+    In every case the rule is identical: name the best-fit model, then emit
+    exactly the dials that surface has.
 
     SECONDARY (tie-breaker only): When two or more models are tied in
     expected quality for the prompt's task type, recommend the one with the
@@ -46,38 +70,97 @@
     "Budget priority and speed posture", THAT posture is the user's explicit
     quality-vs-cost instruction for the request and OVERRIDES the default
     posture above. Honor whichever it states:
-    - `cheap` (Cost) — minimize the RESOURCES the task consumes; that is the
-      cost signal even when the user pays $0 out of pocket. When several models
-      are funded at $0 (e.g. a whole family via one subscription like claude.ai
-      Max), out-of-pocket price is FLAT across them and CANNOT differentiate
-      them — so differentiate by CAPABILITY TIER and EFFORT. Pick the SMALLEST /
+    - `cheap` (Cost) — FIRST check the FLAT-FUNDING GATE below; if it is OPEN,
+      apply the gate instead of this bullet and STOP — none of the tier-down or
+      effort-down instructions in this bullet apply. Otherwise: minimize the
+      RESOURCES the task consumes; that is the cost signal even when the user
+      pays $0 out of pocket. Pick the SMALLEST /
       lowest-tier model that is still an ADEQUATE fit for the task (a mid-tier
       Sonnet-class model over a frontier Opus-/Fable-class one when the mid-tier
-      clears the bar), and the LOWEST reasoning effort / thinking level that
-      still clears it. Do NOT keep the most capable model just because it is
-      also $0-funded — that is the Quality pick, and the Cost pick MUST land
-      clearly BELOW it in both capability tier and effort. Only drop to a
-      cheaper-tier model the user pays per-token for when it is genuinely
-      cheaper in real dollars AND adequate; on a quality tie a $0-funded model
-      still beats new per-token spend. This is the ONE case where the user's
-      funding may change WHICH model is chosen (a deliberate, scoped exception
-      to the `<access-selection>` rule that funding changes only the platform).
-      Never emit `Max` effort — UNLESS the CONSUMPTION-HEADROOM OVERRIDE below is
-      `uncapped`, which suspends this effort floor (see it for the full rule).
-      Never over-buy the capability TIER beyond what the task needs.
+      clears the bar), and the LOWEST reasoning effort that still clears it.
+      Only drop to a cheaper-tier model the user pays per-token for when it is
+      genuinely cheaper in real dollars AND adequate; on a quality tie a
+      $0-funded model still beats new per-token spend. This is the ONE case
+      where the user's funding may change WHICH model is chosen (a deliberate,
+      scoped exception to the `<access-selection>` rule that funding changes
+      only the platform). Never emit `Max` effort, and never over-buy the
+      capability TIER beyond what the task needs — BOTH of those floors are
+      SUSPENDED by the FLAT-FUNDING GATE below when it applies.
     - `balanced` (Balanced) — recommend the best value, landing BETWEEN the
       Cost and Quality picks in capability and effort: prefer a $0-funded model
       when competitive, prefer the cheaper model when two are CLOSE in expected
       quality (not only on an exact tie), and use a sensible (not maxed-out)
       effort level; reserve the most expensive tiers and top effort for tasks
-      that require them.
+      that require them. This too yields to the FLAT-FUNDING GATE below.
     - `best` (Quality) — the default quality-first posture above, at the
       highest USEFUL reasoning effort (`xhigh` / `max` where supported).
-    Across the three priorities, when the chosen model is HELD (e.g. a
-    $0-funded model fit for the task), reasoning effort / thinking is the
-    cost-vs-quality axis: Cost = lowest-adequate, Balanced = sensible, Quality
-    = highest-useful. When no posture is declared (legacy / direct callers),
-    the default posture governs.
+    When no posture is declared (legacy / direct callers), the default posture
+    governs.
+
+    FLAT-FUNDING GATE (highest precedence over the three postures above).
+    Scaling the capability TIER down, or the reasoning EFFORT down, is only
+    worth doing when it SAVES the user something. It does not always. Apply
+    this gate FIRST, before the posture rules:
+
+    Gate condition — ALL THREE must hold:
+      (a) the chosen PLATFORM is subscription-funded (its `billing` is
+          `subscription-included`, `subscription-pool`, or `subscription-or-key`
+          satisfied by an ACTIVE subscription, not by an API key), AND
+      (b) the model family under consideration is COVERED by that same
+          subscription (so every candidate tier is reached at the same $0
+          marginal price), AND
+      (c) the user-context does not report that subscription's budget as
+          exhausted or near-exhausted.
+
+    When the gate is OPEN: out-of-pocket price is FLAT across the candidates and
+    therefore CANNOT differentiate them. Tiering down buys the user NOTHING and
+    costs real quality, so:
+      - "SMALLEST ADEQUATE" IS RETIRED AS A CRITERION. It is a cost heuristic,
+        and there is no cost here. Do not ask "what is the least model that
+        clears this bar?" — that question only makes sense when a smaller model
+        is cheaper, and it is not. Ask "which funded model produces the BEST
+        result for this task?" and recommend that.
+      - HOLD the capability tier — recommend the model the task actually
+        warrants, on EVERY posture including `cheap`. Do NOT down-tier a pick
+        to a Sonnet-/Haiku-class model on cost grounds when the frontier model
+        is funded at the same $0.
+      - THIS APPLIES TO TRIVIAL TASKS TOO. A small, bounded, low-complexity
+        prompt is the case where the tier-down reflex is strongest and where it
+        is most clearly wrong: the frontier model does the trivial task at
+        least as well, at the same $0, so there is nothing to trade. Task
+        SIMPLICITY is not a reason to down-tier under an open gate — it is only
+        a reason to down-tier when a smaller model is genuinely CHEAPER. Absent
+        a latency requirement the operator actually values, a trivial task on a
+        flat plan takes the same funded working model as any other task.
+      - SPEED IS NOT A TIE-BREAKER UNLESS THE OPERATOR VALUES IT. A
+        "faster/smaller model is a good tradeoff here" argument is invalid when
+        the user-context declares speed is not a valued dimension — there is
+        then no tradeoff, only a quality loss. Check the declared speed posture
+        before invoking latency at all.
+      - DEFAULT EFFORT to the TOP USEFUL rung the model + surface support
+        (`Max`, or the surface's top step where there is no `Max`), on EVERY
+        posture including `cheap`. This suspends the `cheap` "never emit `Max`"
+        floor outright.
+      - DIFFERENTIATE the postures on the axes that still cost something —
+        LATENCY (a smaller/faster model when the operator is waiting on it),
+        CONTEXT (a model whose native window fits without truncation), and
+        BLAST RADIUS (a narrower-scoped or more steerable pick for an
+        autonomous, hard-to-review change) — never on a price that is
+        identical across the set.
+      - If, after applying those axes, two or more postures land on the SAME
+        model and settings, EMIT THEM AS THE SAME PICK and SAY SO in the
+        RATIONALE ("flat funding — same $0 marginal cost at every tier, so
+        Cost and Quality converge here"). NEVER manufacture an artificial
+        spread by recommending a model the task does not warrant.
+
+    When the gate is CLOSED — any per-token path, an exhausted subscription
+    budget, or a candidate set that straddles funded and unfunded models — the
+    three posture rules above apply UNCHANGED. Tiering down and effort-down are
+    correct there, because they save real dollars.
+
+    Across the three priorities, when the gate is CLOSED and the chosen model is
+    HELD, reasoning effort is the cost-vs-quality axis: Cost = lowest-adequate,
+    Balanced = sensible, Quality = highest-useful.
 
     CONSUMPTION-HEADROOM OVERRIDE (the EFFORT axis): reasoning-effort / thinking
     LEVEL and capability TIER are TWO SEPARATE dimensions, not one. The
@@ -92,13 +175,18 @@
       no valued latency cost. Effort is therefore FREE, so emit the HIGHEST USEFUL
       reasoning effort the model + surface support (top of the effort dial —
       `max`, or `xhigh` on a model with no `max` step) on ALL THREE priorities,
-      INCLUDING Cost. Under this posture the Cost/Balanced/Quality picks differ by
-      CAPABILITY TIER ALONE: Cost = the smallest adequate model at MAX effort;
+      INCLUDING Cost. Do NOT scale effort down for Cost or Balanced, and keep
+      extended thinking ON — never emit an `Off` thinking / effort under this
+      posture. This OVERRIDES the "Never emit `Max` effort" floor in the `cheap`
+      rule above.
+      Interaction with the FLAT-FUNDING GATE: this posture governs the EFFORT
+      axis, the gate governs the TIER axis, and they compose. When the gate is
+      CLOSED, the capability-tier ladder still applies unchanged and the picks
+      differ by TIER ALONE (Cost = the smallest adequate model at MAX effort;
       Balanced = a mid model at MAX effort; Quality = the frontier model at MAX
-      effort. Do NOT scale effort down for Cost or Balanced, and keep extended
-      thinking ON — never emit an `Off` thinking / effort under this posture. This
-      OVERRIDES the "Never emit `Max` effort" floor in the `cheap` rule above; the
-      capability-tier ladder still applies unchanged.
+      effort). When the gate is OPEN, the tier ladder is HELD as well, so the
+      picks differentiate on latency / context / blast radius — and may
+      legitimately converge, which the RATIONALE must then state outright.
     - `capped` (and the DEFAULT when no headroom posture is declared) — consumption
       IS a real cost (a usage cap the user can hit, or per-token spend), so effort
       stays the cost-vs-quality lever exactly as the budget-priority rules above
@@ -162,7 +250,9 @@
       Cursor Token Rate.
     - Legacy request-based plans: Max Mode adds a 20% surcharge.
 
-    Enable Max Mode when ANY of the following hold:
+    The task WARRANTS extended context — which becomes a `MAX MODE: On`
+    line only on a platform that exposes the toggle — when ANY of the
+    following hold:
     - Complexity is High on the selection-algorithm scoring.
     - Primary or secondary task category is `long-context` (large repo,
       multi-file ingestion, full-codebase reasoning).
@@ -171,7 +261,8 @@
     - Prompt explicitly requires extended reasoning, deep multi-step
       analysis, or chain-of-thought across many files.
 
-    Disable Max Mode for direct, bounded prompts — single-file edits,
+    The warrant is absent — so `MAX MODE: Off` where the toggle exists —
+    for direct, bounded prompts: single-file edits,
     isolated bug fixes, well-defined refactors, simple questions, or any
     task where default context comfortably fits the inputs.
 
@@ -179,9 +270,24 @@
     (Anthropic API, Claude Code, Codex, Google API, Gemini CLI,
     direct provider APIs) do not expose a Max Mode toggle; they either
     accept the model's full native context window by default or expose
-    a different long-context surface. When the chosen PLATFORM is not
-    a Cursor surface, MAX MODE in the output should read `Off` (or
-    `N/A` if the model offers no equivalent extended-context mode).
+    a different long-context surface.
+
+    EMISSION RULE — the MAX MODE line is emitted ONLY when the chosen
+    access method's `exposes-max-mode` attribute is `yes`. On every other
+    platform the line is OMITTED ENTIRELY from the output block: not
+    `Off`, not `N/A`, not an empty value. `Off` would be a lie of a
+    different kind — it reads as a control that exists and was declined,
+    when the surface has no such control at all, and it is the value an
+    operator would then hunt for and fail to find. The long-context
+    REASONING that would have enabled Max Mode (large repo, cross-cutting
+    analysis) still holds off-Cursor; it simply manifests as native
+    context-window use and belongs in the RATIONALE, not in a phantom
+    dial. Today exactly one access method qualifies: `cursor`.
+
+    This omit-when-absent principle is GENERAL. Any platform-specific
+    field the output contract gains later obeys the same rule: emit it
+    only where the chosen platform exposes it, and omit the line
+    entirely everywhere else.
   </max-mode-context>
 
   <thinking-context>
@@ -241,9 +347,41 @@
       behavior but does not expose the toggle in the IDE surface
       (true in both Composer mode and Chat mode).
 
-    Output mapping (the THINKING field of the output format):
+    TWO INDEPENDENT CONTROLS, TWO FIELDS. Reasoning effort and extended
+    thinking are separate dials wherever a surface exposes both, and the
+    output contract keeps them separate:
+
+    - EFFORT — the discrete reasoning-effort LEVEL:
+      `Low` / `Medium` / `High` / `XHigh` / `Max` / `Ultracode`. Emitted
+      when the chosen access method exposes a discrete effort dial
+      (Claude Code's `/effort`, OpenAI's reasoning effort, Gemini's
+      thinking level, DeepSeek's effort enum, Mistral's
+      `reasoning_effort`). OMITTED entirely on a surface with no such
+      dial — Cursor exposes none, so a Cursor block carries no EFFORT
+      line at all.
+    - THINKING — the extended-thinking TOGGLE, and nothing else:
+      `On` / `Off`. Emitted when the surface exposes an on/off control
+      (Claude Code's Option+T / Alt+T, `alwaysThinkingEnabled`,
+      `MAX_THINKING_TOKENS=0`; DeepSeek's `enabled` / `disabled`;
+      Gemini's thinking-off on models that allow it). OMITTED entirely
+      where no toggle exists.
+
+    THINKING has exactly two positions. It NEVER carries an effort word
+    and never carries a number: `THINKING: Max` is not a setting any
+    operator can apply, because no surface's thinking toggle has a `Max`
+    position. An effort level belongs in EFFORT; the toggle belongs in
+    THINKING.
+
+    Output mapping (the EFFORT field of the output format):
     `Off` / `Low` / `Medium` / `High` / `XHigh` / `Max` / `N/A`. Map
-    provider-native scales onto this 7-state field:
+    provider-native scales onto this 7-state field. Two of those seven
+    are CONTROL states rather than effort levels, and they resolve to the
+    THINKING toggle instead: a mapping that lands on `Off` means
+    `THINKING: Off` (with EFFORT at the surface's floor, or omitted where
+    turning thinking off retires the dial), and a mapping that lands on
+    `N/A` means the surface has no dial, so the corresponding line is
+    OMITTED. Every other value is an EFFORT level emitted verbatim, with
+    `THINKING: On` alongside it wherever the surface has a toggle.
 
     - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
       `high` → `High` (the docs' default effort on every model that
@@ -287,9 +425,13 @@
     Two Claude Code controls that must NOT be conflated:
     - `ultracode` is a SESSION setting (set with `/effort ultracode` or
       `"ultracode": true`): it sends `xhigh` to the model AND has Claude
-      orchestrate Dynamic Workflows for substantive tasks. It is the
-      ORCHESTRATION `Ultracode` value (see `<orchestration-context>`),
-      not a per-turn keyword and not an effort level in its own right.
+      orchestrate Dynamic Workflows for substantive tasks. It is not a
+      per-turn keyword. Because it is set through the SAME `/effort`
+      command as every other level, it is emitted as the TOP value of the
+      EFFORT field — above `Max` — and NOT as a separate control; see
+      `<orchestration-context>`, which agrees. Its session-wide scope and
+      workflow-authoring behavior are exactly what make it the top rung
+      rather than a peer of `Max`.
       As of Claude Code 2.1.202, `/config` exposes a "Dynamic workflow
       size" setting (small / medium / large agent counts) that guides
       how large Claude generally makes dynamic workflows — advisory
@@ -305,38 +447,64 @@
       The phrases "think", "think hard", and "think more" are NOT
       recognized keywords.
 
-    Decision rule (applied during `<access-selection>` Step E):
+    Decision rule (applied during `<access-selection>` Step E). This
+    rule sets the EFFORT field; the THINKING toggle follows from it, as
+    the last two bullets state:
     - Overall complexity from `<selection-algorithm>` Step 2 Low →
-      THINKING `Off`.
-    - Overall complexity Medium → THINKING `Medium`.
-    - Overall complexity High → THINKING `High`.
+      EFFORT `Low`.
+    - Overall complexity Medium → EFFORT `Medium`.
+    - Overall complexity High → EFFORT `High`.
     - High complexity AND the prompt involves novel problem-solving,
       multi-step proof / verification, or chain-of-thought across
       many files (i.e., the conditions that would push
       `<selection-algorithm>` Step 3 to require S-tier in PRIMARY) →
-      THINKING `XHigh`.
+      EFFORT `XHigh`.
     - PRIMARY task category `planning` or `knowledge` with
-      cross-cutting scope → bump THINKING up at least one level
-      (`Off` → `Low`, `Low` → `Medium`, `Medium` → `High`, `High` →
-      `XHigh`).
-    - Ceiling — `Max`: the top output level, used ONLY on models whose
+      cross-cutting scope → bump EFFORT up at least one level
+      (`Low` → `Medium`, `Medium` → `High`, `High` → `XHigh`).
+    - Ceiling — `Max`: the top per-call level, used ONLY on models whose
       `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus 5,
       Opus 4.7, Opus 4.8, Sonnet 5, Fable 5). On such a model, prefer
       `Max` over `XHigh` when the appended user-context declares a
       Quality (`best`) budget posture, or for the most demanding tasks
       (the `XHigh` conditions above taken to their limit). Under a Cost
       (`cheap`) budget posture, never emit `Max` and do not exceed the
-      lowest level that clears the task. Absent any budget posture,
-      `XHigh` stays the default ceiling and `Max` is reserved for the
-      genuinely hardest tasks on max-capable models. Never emit `Max`
-      for a model whose row lacks a `max`-above-`xhigh` step.
+      lowest level that clears the task — UNLESS the `<objective>`
+      FLAT-FUNDING GATE is OPEN or the CONSUMPTION-HEADROOM posture is
+      `uncapped`, EITHER of which suspends that floor and makes the top
+      useful rung the default on every posture. Absent any budget
+      posture, `XHigh` stays the default ceiling and `Max` is reserved
+      for the genuinely hardest tasks on max-capable models. Never emit
+      `Max` for a model whose row lacks a `max`-above-`xhigh` step.
+    - Top rung — `Ultracode`: above `Max`, Claude Code only, per the
+      `<orchestration-context>` decision rule.
+    - FLAT-FUNDING / UNCAPPED OVERRIDE (apply LAST, and apply it every time —
+      do not stop at the complexity bullets above). When the `<objective>`
+      FLAT-FUNDING GATE is OPEN, or the CONSUMPTION-HEADROOM posture is
+      `uncapped`, RAISE the level selected above to the TOP USEFUL rung the
+      chosen model and surface support (`Max`, or the surface's top step where
+      there is no `Max`). Under either condition the complexity ladder above
+      sets only a FLOOR, never the final value: effort costs the operator
+      nothing, so there is no reason to stop at `High` on a High-complexity
+      task. Ultracode remains gated on task warrant (see
+      `<orchestration-context>`) rather than on funding, so this override
+      raises to `Max`, not automatically to `Ultracode`.
+    - THINKING follows: emit `THINKING: On` whenever the surface has a
+      toggle and reasoning is wanted (every case above). Emit
+      `THINKING: Off` only when the task genuinely wants extended
+      thinking suppressed — a `speed` PRIMARY, or a trivial bounded edit
+      where the latency of thinking is not worth it — and pair it with
+      the surface's floor EFFORT. Fable 5 cannot disable extended
+      thinking, so never emit `THINKING: Off` for it.
     - Chosen access method's `exposes-thinking` attribute is `no` →
-      THINKING `N/A`, overriding the above.
+      OMIT both the EFFORT and THINKING lines entirely, overriding the
+      above. Do not emit `N/A`; a dial the surface lacks has no line.
 
-    Thinking and Max Mode are orthogonal: a Cursor call may have
-    Max Mode On and THINKING `N/A` (Cursor does not expose the
-    thinking toggle); a Claude Code call may have Max Mode Off and
-    THINKING `High` (Anthropic's surface exposes thinking, not Max
+    EFFORT, THINKING, and Max Mode are orthogonal, and each is emitted
+    only where its surface has it: a Cursor call carries `MAX MODE: On`
+    and NO effort or thinking line (Cursor exposes no dial); a Claude
+    Code call carries `EFFORT: Max` + `THINKING: On` and NO Max Mode
+    line (Anthropic's surface exposes effort and thinking, not Max
     Mode).
   </thinking-context>
 
@@ -360,40 +528,54 @@
       web, ChatGPT app, direct APIs): no equivalent built-in
       orchestration primitive at time of writing.
 
+    ULTRACODE IS AN EFFORT VALUE, NOT AN ORCHESTRATION VALUE. Because
+    `/effort ultracode` is set through the SAME single `/effort` command
+    as every other level — it pins xhigh AND auto-authors workflows for
+    the session — it is emitted as the TOP value of the EFFORT field,
+    above `Max`, never as a separate control. `<thinking-context>` says
+    the same thing; the two sections agree. It out-ranks a plain `Max`
+    pick in capability and consumption, so recommend it sparingly.
+
+    ORCHESTRATION therefore retains ONLY what EFFORT cannot express: the
+    PER-PROMPT `workflow` keyword, which is a property of the prompt
+    text rather than a session setting.
+
     Output mapping (the ORCHESTRATION field of the output format):
-    `None` / `PerPrompt` / `Ultracode` / `N/A`.
+    `None` / `PerPrompt`.
 
     - Claude Code default → `None` (single-agent turn-by-turn).
-    - Claude Code with `workflow` keyword on this prompt only →
+    - Claude Code with the `workflow` keyword on this prompt only →
       `PerPrompt`.
-    - Claude Code with `/effort ultracode` session-wide → `Ultracode`.
-    - Any non-Claude-Code platform → `N/A`.
+    - Chosen access method's `exposes-orchestration` attribute is `no`
+      (every platform except Claude Code) → OMIT the ORCHESTRATION line
+      entirely. Do not emit `N/A`.
+    - A session-wide ultracode recommendation is NOT expressed here. It
+      is `EFFORT: Ultracode`, and ORCHESTRATION is then `None` (or
+      omitted) — an ultracode session already authors workflows, so a
+      separate PerPrompt keyword adds nothing.
 
-    Note: because `/effort ultracode` IS the top of Claude Code's
-    single effort dial (it pins xhigh AND auto-authors workflows for
-    the session), a downstream recommender presents an Ultracode
-    orchestration as the TOP `Effort` value — above `Max` — not as a
-    separate control. It must therefore out-rank a plain `Max` pick
-    in capability and cost, so recommend it sparingly.
-
-    Decision rule (applied during <access-selection>):
+    Decision rule for recommending `EFFORT: Ultracode` (applied during
+    <access-selection>):
     - BUDGET-PRIORITY GATE (highest precedence): under a Cost
       (`cheap`) budget posture NEVER recommend `Ultracode` (it is the
       most resource-intensive mode); under Balanced recommend it ONLY
       when the task genuinely requires autonomous multi-agent
       orchestration; reserve it primarily for the Quality (`best`)
-      posture on the most demanding tasks.
+      posture on the most demanding tasks. NOTE: the `<objective>`
+      FLAT-FUNDING GATE suspends the `cheap` EFFORT floor, but it does
+      NOT suspend this bar — Ultracode's cost is session-budget burn and
+      blast radius, which stay real even when the marginal dollar cost is
+      $0. Hold Ultracode to task warrant, not to funding.
     - PRIMARY task category `planning` with cross-cutting scope AND
       overall complexity High AND chosen access method is Claude
-      Code → recommend `ORCHESTRATION: Ultracode`.
+      Code → recommend `EFFORT: Ultracode`.
     - PRIMARY task category `long-context` with multi-source
       cross-checking required (e.g., codebase audit, migration
       sweep, cited research) AND chosen access method is Claude
-      Code → recommend `ORCHESTRATION: Ultracode`.
+      Code → recommend `EFFORT: Ultracode`.
     - Single well-scoped deliverable (one file, one bug fix, one
-      refactor) → `None` even on Claude Code.
-    - Chosen access method's `exposes-orchestration` attribute is
-      `no` → `N/A` regardless of the above.
+      refactor) → not Ultracode; use the ordinary EFFORT ceiling and
+      `ORCHESTRATION: None` even on Claude Code.
 
     Cost note: Ultracode lifts the per-prompt token-cost ceiling
     ("token cost is not a constraint" per Anthropic's built-in
@@ -403,12 +585,15 @@
     a default — pair with a session-budget-awareness clause in
     the rationale.
 
-    Orchestration, thinking, and Max Mode are three orthogonal
-    axes. Cursor + Max Mode + THINKING N/A + ORCHESTRATION N/A
-    is valid. Claude Code + THINKING XHigh + ORCHESTRATION
-    Ultracode is valid. Claude Code + THINKING XHigh +
-    ORCHESTRATION None is also valid (Extra high effort, no
-    auto-workflow).
+    Orchestration, effort, thinking, and Max Mode are orthogonal axes,
+    and each appears only on a surface that has it. Valid blocks:
+    Cursor + `MAX MODE: On` and no other setting line. Claude Code +
+    `EFFORT: Ultracode` + `THINKING: On` + `ORCHESTRATION: None` (the
+    session already auto-authors workflows). Claude Code +
+    `EFFORT: XHigh` + `THINKING: On` + `ORCHESTRATION: None` (Extra high
+    effort, no auto-workflow). Claude Code + `EFFORT: XHigh` +
+    `THINKING: On` + `ORCHESTRATION: PerPrompt` (one workflow-keyword
+    prompt inside an ordinary session).
   </orchestration-context>
 
   <jurisdiction-context>
@@ -938,7 +1123,9 @@
     `<model-options>`. Methods differ in (a) which models they expose,
     (b) how billing works (per-token, subscription-included,
     subscription-pool, subscription-or-key), (c) which capability
-    toggles (Max Mode, thinking) they expose, and (d) what credentials
+    toggles (Max Mode, effort/thinking, orchestration) they expose — which
+    is exactly what decides WHICH setting lines a block for that platform
+    may emit, per `<output-format>` — and (d) what credentials
     the user must hold.
 
     The `<access-selection>` algorithm consumes this list together with
@@ -1164,13 +1351,18 @@
       `output-price-per-1m`. Never use cost to demote a higher-quality
       model.
 
-    Step 6 — Decide Max Mode.
-      Enable Max Mode iff any of these hold:
+    Step 6 — Decide the long-context posture (Max Mode, where it exists).
+      The task WARRANTS extended context iff any of these hold:
         - Overall complexity is High
         - PRIMARY or SECONDARY is `long-context`
         - PRIMARY is `planning` with cross-cutting scope
         - Prompt explicitly requires extended reasoning across many files
-      Otherwise leave Max Mode Off.
+      This is a statement about the TASK, not yet about a dial. It becomes a
+      `MAX MODE: On` line ONLY if `<access-selection>` later chooses a platform
+      whose `exposes-max-mode` is `yes`; on every other platform the warrant is
+      satisfied by the model's native context window, no MAX MODE line is
+      emitted at all, and the reasoning belongs in the RATIONALE instead. See
+      `<max-mode-context>`'s EMISSION RULE.
 
     Step 7 — Name a backup model (the BACKUP output field).
       After the primary MODEL is fixed, also name a BACKUP: a second model
@@ -1196,7 +1388,8 @@
           primary.
       Emit `None` ONLY when the surviving candidate set contains no model at
       all from a provider/family other than the primary's. The BACKUP does
-      not change the primary MODEL, MAX MODE, THINKING, or PLATFORM — it is
+      not change the primary MODEL, PLATFORM, or any of the emitted runtime
+      setting fields (EFFORT / THINKING / MAX MODE / ORCHESTRATION) — it is
       advisory.
 
     Guardrails:
@@ -1216,11 +1409,44 @@
   </selection-algorithm>
 
   <access-selection>
-    After `<selection-algorithm>` picks a MODEL and a Max Mode setting,
-    run this procedure to pick a PLATFORM (access method) and a
-    THINKING level. Read docs/user-context.md first to learn the user's
-    subscription state, API keys, and platform preference order — the
-    PLATFORM choice is meaningless without that input.
+    After `<selection-algorithm>` picks a MODEL and a long-context
+    warrant, run this procedure to pick a PLATFORM (access method) and
+    the runtime setting fields that platform exposes. Read
+    docs/user-context.md first to learn the user's subscription state,
+    API keys, platform allow/deny list, and platform preference order —
+    the PLATFORM choice is meaningless without that input.
+
+    Step A00 — Apply the user's PLATFORM ALLOWLIST / DENYLIST (hard filter).
+      docs/user-context.md may declare, under its "Allowed / excluded
+      platforms" section:
+        - `platforms.allowed` — an explicit list of access-method ids the
+          operator will actually use. When present and non-empty, DROP
+          every access method whose id is not in the list.
+        - `platforms.excluded` — access-method ids the operator has opted
+          out of. DROP every listed method.
+      Both are HARD filters applied BEFORE any scoring, exactly like the
+      jurisdiction filter and unlike the soft preference ORDER of Step D.
+      When neither key is present, this step is a no-op — an absent
+      allowlist means "no opt-out declared", NEVER "allow nothing".
+
+      PRECEDENCE — this filter OUTRANKS the guardrail below that says to
+      never hard-exclude an unfunded access method. The two are about
+      different things: that guardrail exists so a lack of MONEY never
+      suppresses a better pick, whereas this list is the operator stating
+      which surfaces they are willing to operate at all. A surface the
+      operator does not use is not a surface they might pay to reach —
+      it is out of scope, and recommending it produces settings they
+      cannot apply. When the two conflict, the operator's list WINS.
+
+      DISCLOSURE — when an excluded (or non-allowlisted) method would
+      otherwise have WON Step C/D, do not substitute silently: add one
+      clause to the RATIONALE naming the dropped platform and the fact
+      that the operator's list excluded it (e.g. "Cursor would rank
+      first on pool economics but is not in the declared platform
+      allowlist"). If the filter empties the candidate set entirely,
+      do NOT silently re-admit a dropped method: recommend the best
+      allowed method that reaches the model, and if none exists, say so
+      plainly in the RATIONALE.
 
     Step A0 — Filter access methods by allowed jurisdictions.
       Reduce `<access-methods>` to those whose
@@ -1285,37 +1511,55 @@
       OpenAI / Google calls that have no other paid path on this
       account).
 
-    Step E — Determine the THINKING level.
+    Step E — Determine EFFORT and THINKING.
       Apply the decision rule in `<thinking-context>` against the
-      overall complexity from `<selection-algorithm>` Step 2. If the
-      chosen access method's `exposes-thinking` attribute is `no`,
-      set THINKING `N/A` regardless of complexity.
+      overall complexity from `<selection-algorithm>` Step 2 to get the
+      EFFORT level, then set the THINKING toggle per that rule's last
+      bullets. If the chosen access method's `exposes-thinking`
+      attribute is `no`, OMIT BOTH LINES from the block regardless of
+      complexity — do not emit `N/A`, and do not assert any effort or
+      thinking level for that pick anywhere in the RATIONALE.
 
     Step E2 — ORCHESTRATION: apply the decision rule from
       <orchestration-context>. If the chosen method has
-      `exposes-orchestration="no"`, emit ORCHESTRATION: N/A.
-      Otherwise consider PRIMARY task category, scope, and
-      complexity per the rule list. Default ORCHESTRATION: None
-      for well-scoped single deliverables on Claude Code.
+      `exposes-orchestration="no"`, OMIT the ORCHESTRATION line.
+      Otherwise emit `None` or `PerPrompt` — a session-wide ultracode
+      recommendation is carried by `EFFORT: Ultracode`, not here.
+      Default `ORCHESTRATION: None` for well-scoped single deliverables
+      on Claude Code.
 
     Step F — Resolve MAX MODE against the chosen PLATFORM.
-      Max Mode is a Cursor-surface concept. If the chosen access
-      method's `exposes-max-mode` attribute is `no`, set MAX MODE
-      `Off` in the output even when `<selection-algorithm>` Step 6
-      enabled it — Max Mode does not apply outside Cursor. The
-      `<selection-algorithm>` rationale for enabling Max Mode (long
-      context, cross-cutting reasoning) still holds; it just manifests
-      as native context-window use on non-Cursor surfaces.
+      Emit `MAX MODE` ONLY when the chosen access method's
+      `exposes-max-mode` attribute is `yes`; then set it On/Off from the
+      Step 6 long-context warrant. If the attribute is `no`, OMIT THE
+      LINE ENTIRELY — do not emit `Off`, `N/A`, or a blank. `Off` on a
+      surface with no Max Mode is misinformation: it presents a control
+      that does not exist as one that exists and was declined. The Step 6
+      warrant still holds; off-Cursor it manifests as native
+      context-window use and is stated in the RATIONALE, not as a dial.
+      Today `cursor` is the only qualifying method.
 
-    Step G — Emit PLATFORM, THINKING, ORCHESTRATION, and MAX MODE
-      in the output. The PLATFORM field is the `name` attribute of
-      the chosen access method. The RATIONALE must name (a) the
-      subscription or API key that pays for the call (or note the
-      lack thereof), (b) why the THINKING level was chosen (or why
-      it is `N/A`), and (c) why ORCHESTRATION was chosen — and when
-      ORCHESTRATION is `Ultracode`, the rationale must call out the
-      session-budget caveat (claude.ai Max budget burns 10-100x
-      faster than at High effort).
+    Step G — Emit PLATFORM plus EXACTLY the setting fields the chosen
+      platform exposes. The PLATFORM field is the `name` attribute of the
+      chosen access method. Determine each setting line from that
+      method's attributes:
+        - `exposes-thinking="yes"` → emit EFFORT and THINKING.
+        - `exposes-max-mode="yes"` → emit MAX MODE.
+        - `exposes-orchestration="yes"` → emit ORCHESTRATION.
+        - every attribute that is `no` → emit NO line for that field.
+      Never emit a setting line for a dial the platform lacks, and never
+      substitute `Off` or `N/A` for an absent dial. An operator must be
+      able to apply every line the block emits.
+
+      The RATIONALE must name (a) the subscription or API key that pays
+      for the call (or note the lack thereof), (b) why the EFFORT level
+      and THINKING toggle were chosen — omitted entirely when the
+      platform exposes neither — and (c) why ORCHESTRATION was chosen
+      where it is emitted. When EFFORT is `Ultracode`, the rationale must
+      call out the session-budget caveat (claude.ai Max budget burns
+      10-100x faster than at High effort). When Step A00 dropped a
+      platform that would otherwise have won, add the disclosure clause
+      that step requires.
 
     Guardrails:
     - Prefer a FUNDED access method, but NEVER hard-exclude an unfunded
@@ -1326,10 +1570,18 @@
       pay-per-token spend — and, when the user has not declared that
       credential, noting that reaching this pick needs an API key or
       subscription they have not listed. Consider every model, surface
-      the cheaper path, never suppress the better pick. (Jurisdiction is
-      the one hard filter — Step A0 / `<selection-algorithm>` Step 0 —
-      because it is a compliance constraint, not a cost one; funding is
-      always a soft, tie-break preference.)
+      the cheaper path, never suppress the better pick. (There are TWO
+      hard filters, and this guardrail yields to both: jurisdiction —
+      Step A0 / `<selection-algorithm>` Step 0, a compliance constraint —
+      and the operator's platform allowlist / denylist, Step A00. Neither
+      is a cost constraint, which is why they outrank a guardrail written
+      to stop COST from suppressing a pick. Funding itself remains a
+      soft, tie-break preference. An operator declaring they do not use a
+      surface is NOT the same as that surface being unfunded: unfunded
+      means "costs money the user may still choose to spend", while
+      excluded means "produces settings the user cannot apply". Never
+      re-admit an excluded platform on the grounds that it is merely
+      unfunded.)
     - On a quality tie, do not burn pay-per-token spend when an already-
       paid subscription can serve the call: subscriptions are sunk cost,
       a per-token call is real cash out. This is a tie-break only — it
@@ -1360,6 +1612,36 @@
   </conversation-principles>
 
   <output-format>
+    OUTPUT CONTRACT VERSION: 2
+
+    Downstream documents and tools parse these blocks BY FIELD NAME, so the
+    field set is a versioned contract. Version 2 (this document) differs from
+    version 1 as follows:
+      - MAX MODE is now PLATFORM-CONDITIONAL. v1 emitted it unconditionally
+        and pinned it `Off` off-Cursor; v2 omits the line entirely on any
+        platform whose `exposes-max-mode` is not `yes`.
+      - THINKING was SPLIT into two fields. v1's `THINKING` carried the effort
+        scale (`Off/Low/Medium/High/XHigh/Max/N/A`); v2 emits `EFFORT`
+        (`Low/Medium/High/XHigh/Max/Ultracode`) for the reasoning level and
+        `THINKING` (`On/Off`) for the extended-thinking toggle only.
+      - ORCHESTRATION lost its `Ultracode` and `N/A` values. Ultracode is now
+        the top value of `EFFORT`; a platform without orchestration omits the
+        line instead of emitting `N/A`.
+    A consumer written against v1 will not find `MAX MODE` on most blocks and
+    will mis-read a v2 `THINKING` value as an effort level. Parsers should
+    accept BOTH shapes during migration: treat every setting field as optional,
+    and when `EFFORT` is absent but `THINKING` carries an effort word, read that
+    as the v1 effort level.
+
+    PARSING CAVEAT — the label `EFFORT:` appears TWICE in a block: once as the
+    setting field, and once as the third labelled segment INSIDE the RATIONALE
+    value. They are unambiguous because the field ORDER is fixed and RATIONALE
+    is always LAST: the setting field is the `EFFORT:` that appears BEFORE
+    `CONVERSATION:`, and anything after `RATIONALE:` is rationale prose. Parse
+    the setting fields first and treat the RATIONALE as an opaque tail. A naive
+    line-wise "last EFFORT: wins" scan will read the rationale sentence as the
+    effort level.
+
     CRITICAL: Respond in EXACTLY this format and ABSOLUTELY NOTHING ELSE.
     Do not add any preamble, explanation, or perform any actions.
 
@@ -1368,14 +1650,47 @@
     primary MODEL is unavailable to the user. Emit `None` when no distinct
     alternative qualifies; never emit an unavailable model (Step 0a) here.
 
+    THE SETTING FIELDS ARE PLATFORM-CONDITIONAL — read this before emitting
+    any block. Four fields describe runtime dials, and each is emitted ONLY
+    when the chosen PLATFORM exposes that dial (per `<access-selection>`
+    Step G, driven by the access method's attributes):
+
+      EFFORT         emit iff `exposes-thinking="yes"`
+      THINKING       emit iff `exposes-thinking="yes"`
+      MAX MODE       emit iff `exposes-max-mode="yes"`  (today: Cursor only)
+      ORCHESTRATION  emit iff `exposes-orchestration="yes"` (today: Claude
+                     Code only)
+
+    When a platform does not expose a dial, OMIT THE WHOLE LINE. Do not
+    emit the field with `Off`, `N/A`, `None`, `-`, or an empty value — an
+    omitted line means "this surface has no such control", which is
+    different from, and must not be spelled like, "this control exists and
+    is off". Every line a block emits must be a setting the operator can
+    literally apply on the named platform.
+
+    Concretely, on today's catalog:
+      - Claude Code  → MODEL, BACKUP, PLATFORM, EFFORT, THINKING,
+                       ORCHESTRATION, CONVERSATION, RATIONALE. No MAX MODE.
+      - Codex / OpenAI API / Gemini / DeepSeek / Anthropic API / most others
+                     → MODEL, BACKUP, PLATFORM, EFFORT, THINKING,
+                       CONVERSATION, RATIONALE. No MAX MODE, no
+                       ORCHESTRATION.
+      - Cursor       → MODEL, BACKUP, PLATFORM, MAX MODE, CONVERSATION,
+                       RATIONALE. No EFFORT, no THINKING (Cursor exposes
+                       no reasoning dial), no ORCHESTRATION.
+
+    The field ORDER below is fixed; omitted lines simply do not appear and
+    the remaining lines keep their relative order.
+
     Single-prompt mode — output one block:
 
     MODEL: [Model Name]
     BACKUP: [Model Name or None]
     PLATFORM: [Access Method Name]
     MAX MODE: [On/Off]
-    THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]
-    ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
+    EFFORT: [Low/Medium/High/XHigh/Max/Ultracode]
+    THINKING: [On/Off]
+    ORCHESTRATION: [None/PerPrompt]
     CONVERSATION: [New/Continue]
     RATIONALE: [Emit THREE labelled segments in this EXACT order and format, so
                 the UI can split them into sub-headings. Keep EACH segment to
@@ -1385,11 +1700,21 @@
                   PICK: <the recommended model's tier rating in that category
                   plus ONE headline benchmark or named leaderboard from
                   <benchmark-sources> supporting it (note the cost tie-breaker
-                  only if step 5 actually applied)>
-                  EFFORT: <WHY the chosen THINKING/effort level and, where it
-                  applies, ORCHESTRATION fit THIS task's difficulty — a
-                  justification of the settings, NEVER funding, how-to-run, or
-                  setup instructions>
+                  only if step 5 actually applied). The tier you cite MUST be
+                  the one <model-options> gives THAT EXACT model id for THAT
+                  exact category — read it off the row, never infer it. Do NOT
+                  generalise from a model FAMILY or "lineage" (e.g. claiming
+                  "S-tier for the Sonnet lineage"): tiers are per-model, and a
+                  sibling's rating says nothing about this one. If the row's
+                  rating is A, write A — never round it up to S>
+                  EFFORT: <WHY the emitted setting fields fit THIS task's
+                  difficulty — the EFFORT level and THINKING toggle where the
+                  platform exposes them, MAX MODE where it does, ORCHESTRATION
+                  where it applies. Justify only the fields the block actually
+                  emits: never assert an effort or thinking level for a
+                  platform that exposes no reasoning dial, and never mention
+                  Max Mode for a platform that has none. NEVER funding,
+                  how-to-run, or setup instructions>
                 Each label is upper-case followed by a colon and a space; keep
                 every segment short and justifying the pick only, and NEVER
                 perform the task.]
@@ -1401,8 +1726,9 @@
     BACKUP: [Model Name or None]
     PLATFORM: [Access Method Name]
     MAX MODE: [On/Off]
-    THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]
-    ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
+    EFFORT: [Low/Medium/High/XHigh/Max/Ultracode]
+    THINKING: [On/Off]
+    ORCHESTRATION: [None/PerPrompt]
     CONVERSATION: [New/Continue]
     RATIONALE: [Emit THREE labelled segments in this EXACT order and format, so
                 the UI can split them into sub-headings. Keep EACH segment to
@@ -1412,11 +1738,21 @@
                   PICK: <the recommended model's tier rating in that category
                   plus ONE headline benchmark or named leaderboard from
                   <benchmark-sources> supporting it (note the cost tie-breaker
-                  only if step 5 actually applied)>
-                  EFFORT: <WHY the chosen THINKING/effort level and, where it
-                  applies, ORCHESTRATION fit THIS task's difficulty — a
-                  justification of the settings, NEVER funding, how-to-run, or
-                  setup instructions>
+                  only if step 5 actually applied). The tier you cite MUST be
+                  the one <model-options> gives THAT EXACT model id for THAT
+                  exact category — read it off the row, never infer it. Do NOT
+                  generalise from a model FAMILY or "lineage" (e.g. claiming
+                  "S-tier for the Sonnet lineage"): tiers are per-model, and a
+                  sibling's rating says nothing about this one. If the row's
+                  rating is A, write A — never round it up to S>
+                  EFFORT: <WHY the emitted setting fields fit THIS task's
+                  difficulty — the EFFORT level and THINKING toggle where the
+                  platform exposes them, MAX MODE where it does, ORCHESTRATION
+                  where it applies. Justify only the fields the block actually
+                  emits: never assert an effort or thinking level for a
+                  platform that exposes no reasoning dial, and never mention
+                  Max Mode for a platform that has none. NEVER funding,
+                  how-to-run, or setup instructions>
                 Each label is upper-case followed by a colon and a segment; keep
                 every segment short and justifying the pick only, and NEVER
                 perform the task.]
@@ -1433,8 +1769,9 @@
     BACKUP: [Model Name or None]
     PLATFORM: [Access Method Name]
     MAX MODE: [On/Off]
-    THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]
-    ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
+    EFFORT: [Low/Medium/High/XHigh/Max/Ultracode]
+    THINKING: [On/Off]
+    ORCHESTRATION: [None/PerPrompt]
     CONVERSATION: [New/Continue]
     RATIONALE: [THREE labelled segments — TASK: / PICK: / EFFORT: — exactly as in
                 single-prompt mode.]
@@ -1444,8 +1781,9 @@
     BACKUP: [Model Name or None]
     PLATFORM: [Access Method Name]
     MAX MODE: [On/Off]
-    THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]
-    ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
+    EFFORT: [Low/Medium/High/XHigh/Max/Ultracode]
+    THINKING: [On/Off]
+    ORCHESTRATION: [None/PerPrompt]
     CONVERSATION: [New/Continue]
     RATIONALE: [TASK: / PICK: / EFFORT: as above.]
 
@@ -1454,8 +1792,9 @@
     BACKUP: [Model Name or None]
     PLATFORM: [Access Method Name]
     MAX MODE: [On/Off]
-    THINKING: [Off/Low/Medium/High/XHigh/Max/N/A]
-    ORCHESTRATION: [None/PerPrompt/Ultracode/N/A]
+    EFFORT: [Low/Medium/High/XHigh/Max/Ultracode]
+    THINKING: [On/Off]
+    ORCHESTRATION: [None/PerPrompt]
     CONVERSATION: [New/Continue]
     RATIONALE: [TASK: / PICK: / EFFORT: as above.]
 
@@ -1471,17 +1810,37 @@
          model (and lowest effort) that still clears the task.
       4. The three picks MUST occupy three DISTINCT pricing tiers whenever the
          surviving candidate set (post Steps 0a/0b + funding) contains models at
-         three or more tiers. Target end state, e.g.: COST = a Low-tier model,
-         BALANCED = a High-tier model, QUALITY = a Very-High-tier model.
+         three or more tiers AND the `<objective>` FLAT-FUNDING GATE is CLOSED.
+         Target end state, e.g.: COST = a Low-tier model, BALANCED = a High-tier
+         model, QUALITY = a Very-High-tier model.
       5. Only when the candidate set genuinely cannot supply three distinct
          tiers (e.g. every funded candidate sits in one tier) may two picks share
          a tier — and then they MUST differ by EFFORT, and each RATIONALE must
          state the tie ("same tier; differentiated by effort"). NEVER emit the
          same MODEL for two tiers, and NEVER collapse BALANCED or COST onto the
          QUALITY pick.
+      5a. FLAT-FUNDING EXCEPTION — rules 2 through 5 assume that a lower rung
+         SAVES the user something. When the `<objective>` FLAT-FUNDING GATE is
+         OPEN, it does not: every candidate costs the same $0 marginal, so a
+         forced spread would trade real quality for no saving. In that case:
+           - Do NOT down-tier or down-effort to manufacture a spread. Hold the
+             tier the task warrants and default EFFORT to the top useful rung on
+             all three rungs.
+           - Differentiate the rungs ONLY on axes that still cost something —
+             latency, context fit, blast radius — and only where those genuinely
+             separate the candidates for THIS task.
+           - If nothing separates them, EMIT THE SAME MODEL AND SETTINGS for the
+             converged rungs and state it plainly in EACH converged RATIONALE
+             (e.g. "flat subscription funding — identical $0 marginal cost at
+             every tier, so the Cost rung converges on the Quality pick").
+             Emitting the same pick with an honest explanation is REQUIRED here;
+             this is the one case that overrides rule 5's "NEVER emit the same
+             MODEL for two tiers".
       6. Each pick independently obeys every algorithm rule (availability,
-         jurisdiction, the Step 7 cross-provider BACKUP requirement, platform
-         funding, thinking/max-mode/orchestration bounded by exposure).
+         jurisdiction, the operator's platform allow/deny list (Step A00), the
+         Step 7 cross-provider BACKUP requirement, platform funding, and the
+         PLATFORM-CONDITIONAL emission of EFFORT / THINKING / MAX MODE /
+         ORCHESTRATION bounded by what the chosen platform exposes).
   </output-format>
 
 </model-selector>
