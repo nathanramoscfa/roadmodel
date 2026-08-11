@@ -172,6 +172,25 @@ jobs:
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         run: python update/render_md.py
 
+      - name: Rebuild docs/catalog.json (deterministic)
+        # catalog.json mirrors selector prose this cron edits (notably the
+        # <access-methods> best-for), so it MUST be regenerated in the SAME
+        # commit. Skipping it lands a selector/JSON mismatch that the
+        # test_catalog_json drift test fails on the PR — and because this cron
+        # enables auto-merge, that leaves the PR stuck open forever instead of
+        # self-merging.
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
+        run: |
+          set -euo pipefail
+          python update/build_catalog.py
+          cp docs/catalog.json /tmp/catalog-run1.json
+          python update/build_catalog.py
+          if ! diff -q /tmp/catalog-run1.json docs/catalog.json >/dev/null; then
+            echo "::error::build_catalog.py is not deterministic — outputs differ across consecutive runs."
+            diff /tmp/catalog-run1.json docs/catalog.json || true
+            exit 1
+          fi
+
       - name: Conformance gate (thinking vocabulary vs docs)
         # Deterministic backstop: the (Opus-edited) selector must conform to the
         # (freshly-extracted) docs snapshot — DeepSeek check F plus the Claude
@@ -187,7 +206,7 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
-          if git diff --quiet -- docs/model-selector.txt docs/model-selector.md update/deepseek-thinking.json; then
+          if git diff --quiet -- docs/model-selector.txt docs/model-selector.md docs/catalog.json update/deepseek-thinking.json; then
             echo "No selector / snapshot changes — nothing to commit."
             exit 0
           fi
@@ -215,7 +234,7 @@ jobs:
           if [ -n "$unextiers" ]; then
             newtier="$(printf '\n\n## New reasoning-effort tier(s) detected\n\nThe DeepSeek thinking docs introduced tier(s): %s. The selector was reconciled to enumerate and map them (new top-of-scale tier -> XHigh); the conformance gate enforced it. A tracking issue was opened for review.' "$unextiers")"
           fi
-          git add docs/model-selector.txt docs/model-selector.md update/deepseek-thinking.json
+          git add docs/model-selector.txt docs/model-selector.md docs/catalog.json update/deepseek-thinking.json
           git commit -m "Automated DeepSeek refresh: ${DATE}" -m "${summary}${warnings}${newmodel}${newtier}"
           git push -u origin "$BRANCH"
           PR_URL="$(gh pr create \

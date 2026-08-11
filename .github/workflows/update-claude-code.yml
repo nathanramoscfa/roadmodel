@@ -153,6 +153,25 @@ jobs:
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         run: python update/render_md.py
 
+      - name: Rebuild docs/catalog.json (deterministic)
+        # catalog.json mirrors selector prose this cron edits (notably the
+        # claude-code <access-methods> best-for), so it MUST be regenerated in
+        # the SAME commit. Skipping it lands a selector/JSON mismatch that the
+        # test_catalog_json drift test fails on the PR — and because this cron
+        # enables auto-merge, that leaves the PR stuck open forever instead of
+        # self-merging (PRs #512 / #513).
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
+        run: |
+          set -euo pipefail
+          python update/build_catalog.py
+          cp docs/catalog.json /tmp/catalog-run1.json
+          python update/build_catalog.py
+          if ! diff -q /tmp/catalog-run1.json docs/catalog.json >/dev/null; then
+            echo "::error::build_catalog.py is not deterministic — outputs differ across consecutive runs."
+            diff /tmp/catalog-run1.json docs/catalog.json || true
+            exit 1
+          fi
+
       - name: Validate diff (coverage + citation)
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         run: |
@@ -181,7 +200,7 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
-          if git diff --quiet -- docs/model-selector.txt docs/model-selector.md update/claude-code-effort.json; then
+          if git diff --quiet -- docs/model-selector.txt docs/model-selector.md docs/catalog.json update/claude-code-effort.json; then
             echo "No selector / snapshot changes — nothing to commit."
             exit 0
           fi
@@ -202,7 +221,7 @@ jobs:
           if [ -n "$unexpected" ]; then
             newmodel="$(printf '\n\n## New model(s) detected — route to the catalog cron\n\nThe docs effort table introduced: %s. This tracker only FLAGS new models; do NOT add them to selector model lists here. Open an issue for the catalog refresh.' "$unexpected")"
           fi
-          git add docs/model-selector.txt docs/model-selector.md update/claude-code-effort.json
+          git add docs/model-selector.txt docs/model-selector.md docs/catalog.json update/claude-code-effort.json
           git commit -m "Automated Claude Code refresh: ${DATE}" -m "${summary}${warnings}${newmodel}"
           git push -u origin "$BRANCH"
           PR_URL="$(gh pr create \
