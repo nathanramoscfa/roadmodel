@@ -344,12 +344,12 @@ differently:
   favor of these levels.
 - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
   `disabled`, default `enabled`) plus a reasoning-effort enum —
-  `high`, `max` (default `high`; `max` for some complex agentic
-  requests). DeepSeek's effort scale has no `low` / `medium` tier
-  (for compatibility the API accepts `low` / `medium`, mapping
-  both to `high`, and `xhigh`, mapping it to `max`). A consumer
-  DeepThink app toggle exposes only thinking on/off, not the
-  effort enum.
+  `low`, `high`, `max` (default `high`; `max` for some complex
+  agentic requests). DeepSeek's effort scale has no `medium`
+  native tier (for compatibility the API accepts `medium`,
+  mapping it to `high`, and `xhigh`, mapping it to `max`). A
+  consumer DeepThink app toggle exposes only thinking on/off,
+  not the effort enum.
 - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
   parameter on the unified models (Mistral Small 4 and Medium 3.5).
   The docs surface `none` (reasoning off / fast) and `high` (full
@@ -419,13 +419,13 @@ OMITTED. Every other value is an EFFORT level emitted verbatim, with
   Thinking turned off, on models that allow it (e.g. Gemini 2.5
   Flash-Lite), → `Off`.
 - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
-  `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
-  no `xhigh` step, so its `max` is the Extra-High top, not the
-  above-`xhigh` cross-provider `Max`). DeepSeek effort has no
-  `low` / `medium` tier, so no DeepSeek level maps to `Low` or
-  `Medium`. A consumer DeepThink on/off toggle (no
-  effort enum) maps `On` → `High` (default effort) and `Off` →
-  `Off`.
+  `low` → `Low`; `enabled` + effort `high` → `High`; `enabled` +
+  effort `max` → `XHigh` (DeepSeek has no `xhigh` step, so its
+  `max` is the Extra-High top, not the above-`xhigh` cross-provider
+  `Max`). DeepSeek effort has no `medium` native tier, so no
+  DeepSeek level maps to `Medium`. A consumer DeepThink on/off
+  toggle (no effort enum) maps `On` → `High` (default effort) and
+  `Off` → `Off`.
 - Mistral: `reasoning_effort` `none` → `Off`; `high` → `High`
   (Mistral's documented scale tops out at `high`, so no `XHigh`).
   If the OpenAI-compatible `low` / `medium` values are accepted
@@ -690,12 +690,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       favor of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
-      `high`, `max` (default `high`; `max` for some complex agentic
-      requests). DeepSeek's effort scale has no `low` / `medium` tier
-      (for compatibility the API accepts `low` / `medium`, mapping
-      both to `high`, and `xhigh`, mapping it to `max`). A consumer
-      DeepThink app toggle exposes only thinking on/off, not the
-      effort enum.
+      `low`, `high`, `max` (default `high`; `max` for some complex
+      agentic requests). DeepSeek's effort scale has no `medium`
+      native tier (for compatibility the API accepts `medium`,
+      mapping it to `high`, and `xhigh`, mapping it to `max`). A
+      consumer DeepThink app toggle exposes only thinking on/off,
+      not the effort enum.
     - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
       parameter on the unified models (Mistral Small 4 and Medium 3.5).
       The docs surface `none` (reasoning off / fast) and `high` (full
@@ -765,13 +765,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       Thinking turned off, on models that allow it (e.g. Gemini 2.5
       Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
-      `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
-      no `xhigh` step, so its `max` is the Extra-High top, not the
-      above-`xhigh` cross-provider `Max`). DeepSeek effort has no
-      `low` / `medium` tier, so no DeepSeek level maps to `Low` or
-      `Medium`. A consumer DeepThink on/off toggle (no
-      effort enum) maps `On` → `High` (default effort) and `Off` →
-      `Off`.
+      `low` → `Low`; `enabled` + effort `high` → `High`; `enabled` +
+      effort `max` → `XHigh` (DeepSeek has no `xhigh` step, so its
+      `max` is the Extra-High top, not the above-`xhigh` cross-provider
+      `Max`). DeepSeek effort has no `medium` native tier, so no
+      DeepSeek level maps to `Medium`. A consumer DeepThink on/off
+      toggle (no effort enum) maps `On` → `High` (default effort) and
+      `Off` → `Off`.
     - Mistral: `reasoning_effort` `none` → `Off`; `high` → `High`
       (Mistral's documented scale tops out at `high`, so no `XHigh`).
       If the OpenAI-compatible `low` / `medium` values are accepted
@@ -1572,12 +1572,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       favor of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
-      `high`, `max` (default `high`; `max` for some complex agentic
-      requests). DeepSeek's effort scale has no `low` / `medium` tier
-      (for compatibility the API accepts `low` / `medium`, mapping
-      both to `high`, and `xhigh`, mapping it to `max`). A consumer
-      DeepThink app toggle exposes only thinking on/off, not the
-      effort enum.
+      `low`, `high`, `max` (default `high`; `max` for some complex
+      agentic requests). DeepSeek's effort scale has no `medium`
+      native tier (for compatibility the API accepts `medium`,
+      mapping it to `high`, and `xhigh`, mapping it to `max`). A
+      consumer DeepThink app toggle exposes only thinking on/off,
+      not the effort enum.
     - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
       parameter on the unified models (Mistral Small 4 and Medium 3.5).
       The docs surface `none` (reasoning off / fast) and `high` (full
@@ -1647,13 +1647,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       Thinking turned off, on models that allow it (e.g. Gemini 2.5
       Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
-      `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
-      no `xhigh` step, so its `max` is the Extra-High top, not the
-      above-`xhigh` cross-provider `Max`). DeepSeek effort has no
-      `low` / `medium` tier, so no DeepSeek level maps to `Low` or
-      `Medium`. A consumer DeepThink on/off toggle (no
-      effort enum) maps `On` → `High` (default effort) and `Off` →
-      `Off`.
+      `low` → `Low`; `enabled` + effort `high` → `High`; `enabled` +
+      effort `max` → `XHigh` (DeepSeek has no `xhigh` step, so its
+      `max` is the Extra-High top, not the above-`xhigh` cross-provider
+      `Max`). DeepSeek effort has no `medium` native tier, so no
+      DeepSeek level maps to `Medium`. A consumer DeepThink on/off
+      toggle (no effort enum) maps `On` → `High` (default effort) and
+      `Off` → `Off`.
     - Mistral: `reasoning_effort` `none` → `Off`; `high` → `High`
       (Mistral's documented scale tops out at `high`, so no `XHigh`).
       If the OpenAI-compatible `low` / `medium` values are accepted
@@ -1931,7 +1931,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Billing:** per-token (requires deepseek-api-key)
 - **Supports models:** deepseek-v4-flash,deepseek-v4-pro
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
-- **Best for:** Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn.
+- **Best for:** Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `low`/`high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn.
 
 ### Mistral
 
@@ -2280,12 +2280,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       favor of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
-      `high`, `max` (default `high`; `max` for some complex agentic
-      requests). DeepSeek's effort scale has no `low` / `medium` tier
-      (for compatibility the API accepts `low` / `medium`, mapping
-      both to `high`, and `xhigh`, mapping it to `max`). A consumer
-      DeepThink app toggle exposes only thinking on/off, not the
-      effort enum.
+      `low`, `high`, `max` (default `high`; `max` for some complex
+      agentic requests). DeepSeek's effort scale has no `medium`
+      native tier (for compatibility the API accepts `medium`,
+      mapping it to `high`, and `xhigh`, mapping it to `max`). A
+      consumer DeepThink app toggle exposes only thinking on/off,
+      not the effort enum.
     - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
       parameter on the unified models (Mistral Small 4 and Medium 3.5).
       The docs surface `none` (reasoning off / fast) and `high` (full
@@ -2355,13 +2355,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       Thinking turned off, on models that allow it (e.g. Gemini 2.5
       Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
-      `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
-      no `xhigh` step, so its `max` is the Extra-High top, not the
-      above-`xhigh` cross-provider `Max`). DeepSeek effort has no
-      `low` / `medium` tier, so no DeepSeek level maps to `Low` or
-      `Medium`. A consumer DeepThink on/off toggle (no
-      effort enum) maps `On` → `High` (default effort) and `Off` →
-      `Off`.
+      `low` → `Low`; `enabled` + effort `high` → `High`; `enabled` +
+      effort `max` → `XHigh` (DeepSeek has no `xhigh` step, so its
+      `max` is the Extra-High top, not the above-`xhigh` cross-provider
+      `Max`). DeepSeek effort has no `medium` native tier, so no
+      DeepSeek level maps to `Medium`. A consumer DeepThink on/off
+      toggle (no effort enum) maps `On` → `High` (default effort) and
+      `Off` → `Off`.
     - Mistral: `reasoning_effort` `none` → `Off`; `high` → `High`
       (Mistral's documented scale tops out at `high`, so no `XHigh`).
       If the OpenAI-compatible `low` / `medium` values are accepted
@@ -3207,7 +3207,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="deepseek-v4-flash,deepseek-v4-pro"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn." />
+            best-for="Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `low`/`high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn." />
     <method id="mistral-api" name="Mistral API"
             provider="mistral" billing="per-token"
             provider-jurisdiction="eu"
@@ -3694,12 +3694,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       favor of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
-      `high`, `max` (default `high`; `max` for some complex agentic
-      requests). DeepSeek's effort scale has no `low` / `medium` tier
-      (for compatibility the API accepts `low` / `medium`, mapping
-      both to `high`, and `xhigh`, mapping it to `max`). A consumer
-      DeepThink app toggle exposes only thinking on/off, not the
-      effort enum.
+      `low`, `high`, `max` (default `high`; `max` for some complex
+      agentic requests). DeepSeek's effort scale has no `medium`
+      native tier (for compatibility the API accepts `medium`,
+      mapping it to `high`, and `xhigh`, mapping it to `max`). A
+      consumer DeepThink app toggle exposes only thinking on/off,
+      not the effort enum.
     - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
       parameter on the unified models (Mistral Small 4 and Medium 3.5).
       The docs surface `none` (reasoning off / fast) and `high` (full
@@ -3769,13 +3769,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       Thinking turned off, on models that allow it (e.g. Gemini 2.5
       Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
-      `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
-      no `xhigh` step, so its `max` is the Extra-High top, not the
-      above-`xhigh` cross-provider `Max`). DeepSeek effort has no
-      `low` / `medium` tier, so no DeepSeek level maps to `Low` or
-      `Medium`. A consumer DeepThink on/off toggle (no
-      effort enum) maps `On` → `High` (default effort) and `Off` →
-      `Off`.
+      `low` → `Low`; `enabled` + effort `high` → `High`; `enabled` +
+      effort `max` → `XHigh` (DeepSeek has no `xhigh` step, so its
+      `max` is the Extra-High top, not the above-`xhigh` cross-provider
+      `Max`). DeepSeek effort has no `medium` native tier, so no
+      DeepSeek level maps to `Medium`. A consumer DeepThink on/off
+      toggle (no effort enum) maps `On` → `High` (default effort) and
+      `Off` → `Off`.
     - Mistral: `reasoning_effort` `none` → `Off`; `high` → `High`
       (Mistral's documented scale tops out at `high`, so no `XHigh`).
       If the OpenAI-compatible `low` / `medium` values are accepted
@@ -4621,7 +4621,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="deepseek-v4-flash,deepseek-v4-pro"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn." />
+            best-for="Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `low`/`high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn." />
     <method id="mistral-api" name="Mistral API"
             provider="mistral" billing="per-token"
             provider-jurisdiction="eu"
@@ -5300,12 +5300,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       favor of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
-      `high`, `max` (default `high`; `max` for some complex agentic
-      requests). DeepSeek's effort scale has no `low` / `medium` tier
-      (for compatibility the API accepts `low` / `medium`, mapping
-      both to `high`, and `xhigh`, mapping it to `max`). A consumer
-      DeepThink app toggle exposes only thinking on/off, not the
-      effort enum.
+      `low`, `high`, `max` (default `high`; `max` for some complex
+      agentic requests). DeepSeek's effort scale has no `medium`
+      native tier (for compatibility the API accepts `medium`,
+      mapping it to `high`, and `xhigh`, mapping it to `max`). A
+      consumer DeepThink app toggle exposes only thinking on/off,
+      not the effort enum.
     - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
       parameter on the unified models (Mistral Small 4 and Medium 3.5).
       The docs surface `none` (reasoning off / fast) and `high` (full
@@ -5375,13 +5375,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       Thinking turned off, on models that allow it (e.g. Gemini 2.5
       Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
-      `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
-      no `xhigh` step, so its `max` is the Extra-High top, not the
-      above-`xhigh` cross-provider `Max`). DeepSeek effort has no
-      `low` / `medium` tier, so no DeepSeek level maps to `Low` or
-      `Medium`. A consumer DeepThink on/off toggle (no
-      effort enum) maps `On` → `High` (default effort) and `Off` →
-      `Off`.
+      `low` → `Low`; `enabled` + effort `high` → `High`; `enabled` +
+      effort `max` → `XHigh` (DeepSeek has no `xhigh` step, so its
+      `max` is the Extra-High top, not the above-`xhigh` cross-provider
+      `Max`). DeepSeek effort has no `medium` native tier, so no
+      DeepSeek level maps to `Medium`. A consumer DeepThink on/off
+      toggle (no effort enum) maps `On` → `High` (default effort) and
+      `Off` → `Off`.
     - Mistral: `reasoning_effort` `none` → `Off`; `high` → `High`
       (Mistral's documented scale tops out at `high`, so no `XHigh`).
       If the OpenAI-compatible `low` / `medium` values are accepted
@@ -6227,7 +6227,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="deepseek-v4-flash,deepseek-v4-pro"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn." />
+            best-for="Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `low`/`high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn." />
     <method id="mistral-api" name="Mistral API"
             provider="mistral" billing="per-token"
             provider-jurisdiction="eu"
