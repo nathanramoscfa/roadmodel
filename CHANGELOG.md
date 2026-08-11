@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.30] — 2026-08-11
+
+### Added
+
+- **Claude Opus 5, Gemini 3.6 Flash, and Kimi K3 enter the catalog.** Opus 5
+  lands in the very-high cost tier ($5/$25 per Mtok) rated S for coding,
+  planning, agentic, long-context, and knowledge, grounded in AA Intelligence
+  Index 60.7 (max), HLE 52.6%, and Terminal-Bench 2.1 89.1; it is reachable via
+  `anthropic-api`, `claude-code`, `claude-web`, and `cursor`. Gemini 3.6 Flash
+  joins the low-cost tier ($1.50/$7.50) and Kimi K3 the high-cost tier ($3/$15).
+  The catalog now carries 43 models.
+
 ### Changed
 
 - **Output contract version 2: every setting field is now PLATFORM-CONDITIONAL,
