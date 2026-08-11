@@ -93,10 +93,18 @@ jobs:
         with:
           name: dist
           path: dist
-      # Pinned to v1.14.0 (commit 2026-04-07) instead of the mutable
+      # Pinned to v1.14.2 (commit 2026-07-28) instead of the mutable
       # release/v1 branch ref so a compromised publisher cannot silently
       # change the action under us.
-      - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
+      #
+      # Was v1.14.0, whose bundled twine rejects core metadata 2.5:
+      #   InvalidDistribution: '2.5' is not a valid metadata version
+      # hatchling is floated (`hatchling>=1.25.0`), so the backend started
+      # emitting Metadata-Version 2.5 on its own and broke publishing between
+      # 0.2.29 and 0.2.30 with no change on our side. v1.14.2 ships twine v7,
+      # which accepts 2.5. Bumping the pin (not unpinning it) keeps the
+      # supply-chain property above.
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
           repository-url: https://test.pypi.org/legacy/
           packages-dir: dist/
@@ -137,7 +145,7 @@ jobs:
         with:
           name: dist
           path: dist
-      - uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
           packages-dir: dist/
 
