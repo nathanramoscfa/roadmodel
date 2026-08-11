@@ -1,9 +1,9 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-08-10T18:34:49Z",
+  "generated_at_utc": "2026-08-11T15:22:09Z",
   "source_doc_sha256": {
-    "model-selector.txt": "345e519b4de756d4e66c3c5613f610438a51eb94dff25f6912f5c4e9049a80ae",
+    "model-selector.txt": "fe535276eed0119aec7209f18246eecb4d9238e6e4480f1461fb458d89232911",
     "model-tier-cost-scale.md": "320ffa43b56f37608f5cdbcda48147b585e1c79a427e4be71ccb69bd9f05bc44"
   },
   "models": [
@@ -1123,7 +1123,7 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
-      "best_for": "Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool."
+      "best_for": "Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes Gemini's discrete thinking-level dial (`minimal`, `low`, `medium`, `high`) with per-model support varying across the 3.x and 2.5 generations."
     },
     {
       "id": "google-api",
@@ -1143,7 +1143,7 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
-      "best_for": "Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)."
+      "best_for": "Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Exposes Gemini's discrete thinking-level dial (`minimal`, `low`, `medium`, `high`) \u2014 shared across both the 3.x and 2.5 generations; per-model support varies (e.g. Gemini 3 Pro is low/high only, Gemini 2.5 Flash is low/medium/high). Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)."
     },
     {
       "id": "groq-api",
