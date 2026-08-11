@@ -8,7 +8,7 @@
     {
       "id": "deepseek-v4-flash",
       "slug": "deepseek-v4-flash",
-      "name": "DeepSeek-V4-Flash",
+      "name": "DeepSeek-V4-Flash-0731",
       "input_price_per_1m": 0.14,
       "output_price_per_1m": 0.28,
       "cache_read_per_1m": 0.0028,
@@ -31,5 +31,5 @@
     "deepseek-v4-pro": "deepseek-v4-pro"
   },
   "unexpected_slugs": [],
-  "section_sha256": "44719a53c0d3759264542b8e12bcab683228b3f51d80f0083b822daf638725c6"
+  "section_sha256": "00bdcebf220b80fcd440f7ed464e179f34b9181d13753238123cd6d58e040483"
 }

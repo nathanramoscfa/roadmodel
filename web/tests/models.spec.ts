@@ -4,7 +4,37 @@
 // the "how to read this" legend, sortable columns, the jurisdiction filter, the
 // ratings/benchmarks view toggle, and benchmark + provider-doc links.
 
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import { test, expect } from "@playwright/test";
+
+// Expected row counts are DERIVED from the catalog the page renders, never
+// hardcoded. The catalog grows whenever the daily refresh cron picks up a new
+// upstream model, and a hardcoded count turns every one of those cron PRs red
+// — which is what stranded the catalog-refresh PRs from #392 onward. Reading
+// the same JSON the page imports keeps this a rendering test (does every
+// catalog model reach the table?) instead of a snapshot of a moving number.
+//
+// `data/catalog.json` is the build-time copy of docs/catalog.json that
+// web/scripts/sync-catalog.mjs writes; the `pretest` npm hook refreshes it
+// before Playwright starts, so it always matches the server under test.
+interface CatalogModel {
+  jurisdiction?: string;
+  name: string;
+  output_price_per_1m: number;
+}
+const catalog = JSON.parse(
+  readFileSync(path.join(process.cwd(), "data", "catalog.json"), "utf8"),
+) as { models: CatalogModel[] };
+
+const MODEL_COUNT = catalog.models.length;
+const CN_MODEL_COUNT = catalog.models.filter((m) => m.jurisdiction === "cn").length;
+const byOutputPrice = [...catalog.models].sort(
+  (a, b) => a.output_price_per_1m - b.output_price_per_1m,
+);
+const CHEAPEST_MODEL = byOutputPrice[0].name;
+const PRICIEST_MODEL = byOutputPrice[byOutputPrice.length - 1].name;
 
 test("renders the catalog table, legend, and model links", async ({ page }) => {
   await page.goto("/models");
@@ -14,7 +44,7 @@ test("renders the catalog table, legend, and model links", async ({ page }) => {
   await expect(page.getByTestId("model-catalog")).toBeVisible();
 
   // Every catalog model renders as a row.
-  await expect(page.getByTestId("model-row")).toHaveCount(40);
+  await expect(page.getByTestId("model-row")).toHaveCount(MODEL_COUNT);
 
   // Model names link to their provider's docs in a new tab.
   const fable = page.getByRole("link", { name: /^Fable 5$/ });
@@ -25,21 +55,21 @@ test("renders the catalog table, legend, and model links", async ({ page }) => {
 test("default sort is output price descending; the header toggles ascending", async ({ page }) => {
   await page.goto("/models");
 
-  // Highest output price first (Fable 5, $50/1M).
-  await expect(page.getByTestId("model-row").first()).toContainText("Fable 5");
+  // Highest output price first.
+  await expect(page.getByTestId("model-row").first()).toContainText(PRICIEST_MODEL);
 
   await page.getByRole("button", { name: /Output/ }).click();
-  // Cheapest output first (DeepSeek-V4-Flash, $0.28/1M).
-  await expect(page.getByTestId("model-row").first()).toContainText("DeepSeek-V4-Flash");
+  // Cheapest output first.
+  await expect(page.getByTestId("model-row").first()).toContainText(CHEAPEST_MODEL);
 });
 
 test("the jurisdiction filter narrows the rows", async ({ page }) => {
   await page.goto("/models");
 
   await page.getByLabel("Filter by jurisdiction").selectOption("cn");
-  // The six cn-jurisdiction models: 2× DeepSeek, 3× GLM, Kimi K2.7 Code
-  // (Kimi K2.5 was delisted from Cursor 2026-07-15 and replaced by K2.7 Code).
-  await expect(page.getByTestId("model-row")).toHaveCount(6);
+  // Exactly the catalog's cn-jurisdiction models (DeepSeek, GLM, Kimi) — the
+  // count follows the catalog rather than pinning today's lineup.
+  await expect(page.getByTestId("model-row")).toHaveCount(CN_MODEL_COUNT);
   await expect(page.getByText("No models match")).toHaveCount(0);
 });
 
