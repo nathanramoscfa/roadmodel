@@ -13,7 +13,14 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 STALE_DAYS_THRESHOLD = 14
-BOT_AUTHOR = "roadmodel-bot"
+# The cron's commit identity. This is the GitHub App (`roadmodel-cron-bot`)
+# that replaced the retired maintainer PAT; commits land as
+# "roadmodel-cron-bot[bot]". The value here was still the PAT-era
+# "roadmodel-bot", which is NOT a substring of the App's name, so
+# `git log --author=` matched nothing and this guard silently skipped from the
+# App migration onward — through the exact stall it exists to catch (26 cron
+# PRs unmerged, the catalog missing Claude Opus 5 for two weeks).
+BOT_AUTHOR = "roadmodel-cron-bot"
 
 
 def _last_bot_commit_timestamp() -> dt.datetime | None:
@@ -38,12 +45,38 @@ def _last_bot_commit_timestamp() -> dt.datetime | None:
     return dt.datetime.fromtimestamp(int(output), tz=dt.timezone.utc)
 
 
+def _is_shallow_clone() -> bool:
+    result = subprocess.run(
+        ["git", "rev-parse", "--is-shallow-repository"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.stdout.strip() == "true"
+
+
 def test_automation_recently_committed() -> None:
     last = _last_bot_commit_timestamp()
     if last is None:
-        pytest.skip(
-            f"No '{BOT_AUTHOR}' commits found in git history yet. "
-            "First automated run hasn't happened, or git history is shallow."
+        # A shallow clone genuinely cannot see the history, so skipping is
+        # correct there. With FULL history (tests.yml gives test-matrix
+        # fetch-depth: 0), "no bot commits at all" is itself the alarm: either
+        # the cron has never landed anything, or BOT_AUTHOR no longer matches
+        # the identity it commits under. Skipping that case is how this guard
+        # went quiet for weeks — fail instead.
+        if _is_shallow_clone():
+            pytest.skip(
+                f"Shallow clone: cannot search history for '{BOT_AUTHOR}' commits. "
+                "Run with fetch-depth: 0 for this guard to mean anything."
+            )
+        raise AssertionError(
+            f"No '{BOT_AUTHOR}' commits touching docs/ found in full git history. "
+            "Either the automated refresh has never landed, or its commit identity "
+            "changed and BOT_AUTHOR is now stale — check the author on recent cron "
+            "commits (`git log --format='%an' -- docs/`) and update it. Do NOT "
+            "relax this into a skip: a silently-skipping freshness guard is "
+            "indistinguishable from a healthy one."
         )
     age = dt.datetime.now(tz=dt.timezone.utc) - last
     assert age <= dt.timedelta(days=STALE_DAYS_THRESHOLD), (
