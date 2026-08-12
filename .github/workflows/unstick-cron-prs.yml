@@ -1,5 +1,6 @@
 # .github/workflows/unstick-cron-prs.yml
-name: Unstick cron PRs
+# (Filename kept as unstick-cron-prs.yml so the run history stays continuous.)
+name: Unstick stalled auto-merge PRs
 
 # `main` requires branches to be up to date (`strict`) AND linear history.
 # Under that pair, auto-merge cannot recover a PR once it falls BEHIND:
@@ -10,9 +11,23 @@ name: Unstick cron PRs
 # reasons the backlog reached 26 open PRs (issue #523; the other was the
 # catalog.json drift fixed in #514).
 #
-# This sweeper does the rebase the crons cannot do for themselves. It ONLY
-# touches PRs opened by the cron GitHub App, so a human PR is never rebased
-# out from under its author.
+# This sweeper does the rebase auto-merge cannot do for itself.
+#
+# It is not only the crons that get stuck. Clearing the backlog meant landing
+# four PRs, and each merge pushed the other three BEHIND — three rounds of
+# manual rebasing for three PRs. The stall is a property of the protection
+# rules, not of who opened the PR.
+#
+# Scope is therefore "PRs whose author has already asked for them to land
+# unattended", which is exactly two groups:
+#   1. PRs opened by the cron GitHub App (which always enables auto-merge).
+#   2. ANY PR with auto-merge enabled — enabling it IS the author saying
+#      "merge this once it is green". A rebase is how that intent gets
+#      honoured under linear history, so it is within what they asked for,
+#      not something done behind their back.
+# A PR with auto-merge OFF is never touched: nobody asked for it to land on
+# its own, so silently rewriting its branch would be rewriting someone's work
+# without consent.
 
 on:
   push:
@@ -42,7 +57,7 @@ jobs:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - name: Rebase BEHIND cron PRs
+      - name: Rebase BEHIND PRs awaiting an unattended merge
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_REPO: ${{ github.repository }}
@@ -68,16 +83,22 @@ jobs:
           # only used to find the App's open PRs; the BEHIND decision is made
           # one PR at a time via `gh pr view`, which does compute it.
           candidates="$(gh pr list --state open --limit 100 \
-            --json number,author,isDraft,title \
+            --json number,author,isDraft,title,autoMergeRequest \
             | jq -r --arg slug "$BOT_SLUG" '
                 .[]
                 | select(.isDraft == false)
-                # Normalise "app/<slug>", "<slug>[bot]" and bare "<slug>".
-                | select((.author.login | ltrimstr("app/") | rtrimstr("[bot]")) == $slug)
+                # Either the cron App opened it, or its author enabled
+                # auto-merge — both mean "land this unattended". Anything else
+                # is left alone. Author logins are normalised because the API
+                # spells the App as "app/<slug>", "<slug>[bot]", or bare.
+                | select(
+                    (.author.login | ltrimstr("app/") | rtrimstr("[bot]")) == $slug
+                    or .autoMergeRequest != null
+                  )
                 | .number')"
 
           if [ -z "$candidates" ]; then
-            echo "No open cron PRs. Nothing to do."
+            echo "No open PRs awaiting an unattended merge. Nothing to do."
             exit 0
           fi
 
