@@ -962,5 +962,133 @@ def test_check_additions_cli_emits_proposed_additions() -> None:
     assert emitted == set()  # federation complete today — no unfederated models
 
 
+# --------------------------------------------------------------------------- #
+# G5 — price COVERAGE (the inverse of G4)
+#
+# G4 walks SNAPSHOT models and reconciles the ones that reached the selector, so
+# a selector model ABSENT from its own maker's snapshot is invisible to it: G4
+# passes for lack of anything to compare, not because the price agreed. Claude
+# Opus 5 shipped exactly that way — catalogued at $5/$25 from the aggregator
+# mirror while Anthropic's own pricing page still listed five models and no
+# Opus 5.
+# --------------------------------------------------------------------------- #
+
+_G5_SELECTOR = """
+  <model-options>
+    <tier cost="low">
+      <model id="acme-1" name="Acme One"
+             input-price-per-1m="$1.00" output-price-per-1m="$10.00"
+             jurisdiction="us"
+             tier-coding="A" tier-planning="A" tier-agentic="A"
+             tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
+             tier-speed="A" />
+    </tier>
+    <tier cost="high">
+      <model id="acme-2" name="Acme Two"
+             input-price-per-1m="$2.00" output-price-per-1m="$20.00"
+             jurisdiction="us"
+             tier-coding="A" tier-planning="A" tier-agentic="A"
+             tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
+             tier-speed="A" />
+      <model id="pool-only" name="Pool Only"
+             input-price-per-1m="$3.00" output-price-per-1m="$30.00"
+             jurisdiction="us"
+             tier-coding="A" tier-planning="A" tier-agentic="A"
+             tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
+             tier-speed="A" />
+    </tier>
+  </model-options>
+  <access-methods>
+      <method id="acme-api" name="Acme API" provider="acme"
+              provider-jurisdiction="us" billing="per-token" requires="key"
+              supports-models="acme-1,acme-2" />
+      <method id="cursor" name="Cursor" provider="cursor"
+              provider-jurisdiction="us" billing="subscription-pool" requires="sub"
+              supports-models="acme-1,acme-2,pool-only" />
+  </access-methods>
+"""
+
+# Acme publishes a snapshot, but it prices only acme-1.
+_G5_SNAPSHOT = {
+    "provider": "acme",
+    "jurisdiction": "us",
+    "models": [
+        {"id": "acme-1", "input_price_per_1m": 1.0, "output_price_per_1m": 10.0},
+    ],
+}
+
+
+def _g5_notes(selector: str = _G5_SELECTOR, snapshot: dict[str, Any] | None = None) -> list[str]:
+    mod = _load("validate_catalog_conformance")
+    snap = _G5_SNAPSHOT if snapshot is None else snapshot
+    base = mod.base_models(selector)
+    return mod.check_price_coverage(selector, base, [snap])
+
+
+def test_g5_flags_model_absent_from_its_makers_snapshot() -> None:
+    """The Opus 5 case: maker publishes prices, but not for THIS model."""
+    notes = _g5_notes()
+    assert len(notes) == 1, notes
+    assert "'acme-2'" in notes[0]
+    assert "UNVERIFIED" in notes[0]
+    assert "acme" in notes[0]
+
+
+def test_g5_silent_for_models_the_snapshot_does_price() -> None:
+    """A model G4 actually reconciled must not be reported as uncovered."""
+    assert all("'acme-1'" not in note for note in _g5_notes())
+
+
+def test_g5_ignores_models_with_no_first_party_maker() -> None:
+    """Aggregator-only models have no provider page that SHOULD have priced them.
+
+    `pool-only` is reachable through Cursor alone, so there is no maker snapshot
+    it is missing from — reporting it would be noise, not a provenance gap.
+    """
+    assert all("'pool-only'" not in note for note in _g5_notes())
+
+
+def test_g5_silent_when_the_maker_publishes_no_snapshot_at_all() -> None:
+    """No snapshot means nothing was ever claimed to be verified.
+
+    G4 makes no assurance about this provider, so there is no false confidence
+    for G5 to correct.
+    """
+    other = {"provider": "othercorp", "jurisdiction": "us", "models": []}
+    assert _g5_notes(snapshot=other) == []
+
+
+def test_g5_is_not_fatal_by_default_but_escalates_under_strict() -> None:
+    """Advisory by default; --strict-provenance turns the notes into failures.
+
+    Not fatal by default on purpose: providers ship models before pricing them
+    publicly, and blocking the catalog refresh on an upstream publishing lag
+    would strand the lane.
+    """
+    result = subprocess.run(
+        [sys.executable, str(CATALOG_GATE)],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    strict = subprocess.run(
+        [sys.executable, str(CATALOG_GATE), "--strict-provenance"],
+        capture_output=True,
+        text=True,
+    )
+    # The committed catalog currently carries un-cross-checked prices, so strict
+    # mode must reject it — proving the flag actually escalates.
+    assert strict.returncode == 1, strict.stdout
+    assert "G5 (price coverage)" in strict.stderr
+
+
+def test_g5_reports_the_committed_catalogs_real_gaps() -> None:
+    """Guards the finding itself: Opus 5's price is mirror-only today."""
+    result = subprocess.run([sys.executable, str(CATALOG_GATE)], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert "claude-opus-5" in result.stdout
+    assert "price-coverage note(s)" in result.stdout
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
