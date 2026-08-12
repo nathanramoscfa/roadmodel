@@ -192,14 +192,32 @@ def parse_footnotes(soup: BeautifulSoup) -> tuple[str | None, str | None, dict[s
     # newlines) is parsed as one logical sentence — the span/alias regexes below
     # otherwise stop at a newline.
     text = re.sub(r"\s+", " ", soup.get_text(" ", strip=True))
+    # Phrase FAMILIES, not single literals. These anchors were written against
+    # one wording ("thinking toggle defaults to X" / "default effort is X") and
+    # DeepSeek has since reworded the same facts as "Thinking mode is enabled by
+    # default, with the default effort being high" — so both silently became
+    # None. Same failure class as the conformance prose anchors (#517): an
+    # extractor pinned to phrasing the upstream author is free to change.
     toggle_default: str | None = None
-    m = re.search(r"thinking toggle defaults to\s+(\w+)", text, re.IGNORECASE)
-    if m:
-        toggle_default = m.group(1).lower()
+    for pattern in (
+        r"thinking (?:mode|toggle)[^.]{0,60}?\bis\s+(enabled|disabled)\s+by default",
+        r"thinking (?:mode|toggle)[^.]{0,60}?defaults?\s+to\s+(enabled|disabled)",
+        r"\b(enabled|disabled)\s+by default",
+    ):
+        m = re.search(pattern, text, re.IGNORECASE)
+        if m:
+            toggle_default = m.group(1).lower()
+            break
     effort_default: str | None = None
-    m = re.search(r"default effort is\s+(\w+)", text, re.IGNORECASE)
-    if m:
-        effort_default = m.group(1).lower()
+    for pattern in (
+        r"default effort\s+(?:is|being)\s+(\w+)",
+        r"effort\s+defaults?\s+to\s+(\w+)",
+        r"default\s+(?:reasoning\s+)?effort[^.\w]{0,10}(\w+)",
+    ):
+        m = re.search(pattern, text, re.IGNORECASE)
+        if m:
+            effort_default = m.group(1).lower()
+            break
 
     aliases: dict[str, str] = {}
     span_m = re.search(r"for compatibility,?\s*(.*?)(?:\.|When using|$)", text, re.IGNORECASE)

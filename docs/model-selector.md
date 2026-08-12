@@ -338,18 +338,23 @@ differently:
   Codex's plan-mode reasoning-effort variant additionally accepts
   `none` (plan-mode-only, off).
 - Gemini (Google API, Gemini CLI): a discrete thinking-level
-  knob — `low`, `medium`, `high` — across both the 3.x and 2.5
-  model generations (not every model supports every level; e.g.
-  Gemini 3 Pro is low/high only). Thinking can be turned off on
+  knob — `minimal`, `low`, `medium`, `high` — across both the 3.x
+  and 2.5 model generations (not every model supports every level;
+  e.g. Gemini 3 Pro is low/high only). The `minimal` tier is
+  Flash-line only, documented on Gemini 3.6 Flash, 3.5 Flash-Lite,
+  3.1 Flash-Lite Image, and 3 Flash. Thinking can be turned off on
   models that allow it (e.g. Gemini 2.5 Flash-Lite defaults off);
   Google retired the numeric `thinkingBudget` from the docs in
   favor of these levels.
 - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
   `disabled`, default `enabled`) plus a reasoning-effort enum —
-  `high`, `max` (default `high`; `max` for some complex agentic
-  requests). DeepSeek's effort scale has no `low` / `medium` tier
-  (for compatibility the API accepts `low` / `medium`, mapping
-  both to `high`, and `xhigh`, mapping it to `max`). A consumer
+  `low`, `high`, `max` (default `high`; `max` for some complex
+  agentic requests). DeepSeek documents no `medium` tier (for
+  compatibility the API accepts `medium`, mapping it to `high`).
+  Requested `xhigh` resolves per model — `high` on
+  deepseek-v4-flash, `max` on deepseek-v4-pro — and requested
+  `low` likewise runs at `low` on deepseek-v4-flash but `high` on
+  deepseek-v4-pro. A consumer
   DeepThink app toggle exposes only thinking on/off, not the
   effort enum.
 - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
@@ -416,15 +421,19 @@ OMITTED. Every other value is an EFFORT level emitted verbatim, with
   OpenAI's scale tops out at `xhigh`, so no OpenAI level maps to
   `Max` (the `Max` slot is reserved for the above-`xhigh` step
   that only the Claude `max`-capable models reach).
-- Gemini thinking levels: `low` → `Low`; `medium` → `Medium`;
-  `high` → `High` (Gemini tops out at `high` — no `xhigh` tier).
-  Thinking turned off, on models that allow it (e.g. Gemini 2.5
-  Flash-Lite), → `Off`.
+- Gemini thinking levels: `minimal` → `Off`; `low` → `Low`;
+  `medium` → `Medium`; `high` → `High` (Gemini tops out at `high`
+  — no `xhigh` tier). `minimal` maps to `Off` for the same reason
+  OpenAI's `minimal` does: it sits BELOW the lowest EFFORT rung, so
+  reporting it as `Low` would overstate the reasoning the operator
+  actually gets. Thinking turned off, on models that allow it (e.g.
+  Gemini 2.5 Flash-Lite), → `Off`.
 - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
+  `low` → `Low`; `enabled` + effort
   `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
   no `xhigh` step, so its `max` is the Extra-High top, not the
-  above-`xhigh` cross-provider `Max`). DeepSeek effort has no
-  `low` / `medium` tier, so no DeepSeek level maps to `Low` or
+  above-`xhigh` cross-provider `Max`). DeepSeek documents no
+  `medium` tier, so no DeepSeek level maps to
   `Medium`. A consumer DeepThink on/off toggle (no
   effort enum) maps `On` → `High` (default effort) and `Off` →
   `Off`.
@@ -686,18 +695,23 @@ as primary; the other becomes the secondary category for tie-breaking.
       Codex's plan-mode reasoning-effort variant additionally accepts
       `none` (plan-mode-only, off).
     - Gemini (Google API, Gemini CLI): a discrete thinking-level
-      knob — `low`, `medium`, `high` — across both the 3.x and 2.5
-      model generations (not every model supports every level; e.g.
-      Gemini 3 Pro is low/high only). Thinking can be turned off on
+      knob — `minimal`, `low`, `medium`, `high` — across both the 3.x
+      and 2.5 model generations (not every model supports every level;
+      e.g. Gemini 3 Pro is low/high only). The `minimal` tier is
+      Flash-line only, documented on Gemini 3.6 Flash, 3.5 Flash-Lite,
+      3.1 Flash-Lite Image, and 3 Flash. Thinking can be turned off on
       models that allow it (e.g. Gemini 2.5 Flash-Lite defaults off);
       Google retired the numeric `thinkingBudget` from the docs in
       favor of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
-      `high`, `max` (default `high`; `max` for some complex agentic
-      requests). DeepSeek's effort scale has no `low` / `medium` tier
-      (for compatibility the API accepts `low` / `medium`, mapping
-      both to `high`, and `xhigh`, mapping it to `max`). A consumer
+      `low`, `high`, `max` (default `high`; `max` for some complex
+      agentic requests). DeepSeek documents no `medium` tier (for
+      compatibility the API accepts `medium`, mapping it to `high`).
+      Requested `xhigh` resolves per model — `high` on
+      deepseek-v4-flash, `max` on deepseek-v4-pro — and requested
+      `low` likewise runs at `low` on deepseek-v4-flash but `high` on
+      deepseek-v4-pro. A consumer
       DeepThink app toggle exposes only thinking on/off, not the
       effort enum.
     - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
@@ -764,15 +778,19 @@ as primary; the other becomes the secondary category for tie-breaking.
       OpenAI's scale tops out at `xhigh`, so no OpenAI level maps to
       `Max` (the `Max` slot is reserved for the above-`xhigh` step
       that only the Claude `max`-capable models reach).
-    - Gemini thinking levels: `low` → `Low`; `medium` → `Medium`;
-      `high` → `High` (Gemini tops out at `high` — no `xhigh` tier).
-      Thinking turned off, on models that allow it (e.g. Gemini 2.5
-      Flash-Lite), → `Off`.
+    - Gemini thinking levels: `minimal` → `Off`; `low` → `Low`;
+      `medium` → `Medium`; `high` → `High` (Gemini tops out at `high`
+      — no `xhigh` tier). `minimal` maps to `Off` for the same reason
+      OpenAI's `minimal` does: it sits BELOW the lowest EFFORT rung, so
+      reporting it as `Low` would overstate the reasoning the operator
+      actually gets. Thinking turned off, on models that allow it (e.g.
+      Gemini 2.5 Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
+      `low` → `Low`; `enabled` + effort
       `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
       no `xhigh` step, so its `max` is the Extra-High top, not the
-      above-`xhigh` cross-provider `Max`). DeepSeek effort has no
-      `low` / `medium` tier, so no DeepSeek level maps to `Low` or
+      above-`xhigh` cross-provider `Max`). DeepSeek documents no
+      `medium` tier, so no DeepSeek level maps to
       `Medium`. A consumer DeepThink on/off toggle (no
       effort enum) maps `On` → `High` (default effort) and `Off` →
       `Off`.
@@ -1570,18 +1588,23 @@ as primary; the other becomes the secondary category for tie-breaking.
       Codex's plan-mode reasoning-effort variant additionally accepts
       `none` (plan-mode-only, off).
     - Gemini (Google API, Gemini CLI): a discrete thinking-level
-      knob — `low`, `medium`, `high` — across both the 3.x and 2.5
-      model generations (not every model supports every level; e.g.
-      Gemini 3 Pro is low/high only). Thinking can be turned off on
+      knob — `minimal`, `low`, `medium`, `high` — across both the 3.x
+      and 2.5 model generations (not every model supports every level;
+      e.g. Gemini 3 Pro is low/high only). The `minimal` tier is
+      Flash-line only, documented on Gemini 3.6 Flash, 3.5 Flash-Lite,
+      3.1 Flash-Lite Image, and 3 Flash. Thinking can be turned off on
       models that allow it (e.g. Gemini 2.5 Flash-Lite defaults off);
       Google retired the numeric `thinkingBudget` from the docs in
       favor of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
-      `high`, `max` (default `high`; `max` for some complex agentic
-      requests). DeepSeek's effort scale has no `low` / `medium` tier
-      (for compatibility the API accepts `low` / `medium`, mapping
-      both to `high`, and `xhigh`, mapping it to `max`). A consumer
+      `low`, `high`, `max` (default `high`; `max` for some complex
+      agentic requests). DeepSeek documents no `medium` tier (for
+      compatibility the API accepts `medium`, mapping it to `high`).
+      Requested `xhigh` resolves per model — `high` on
+      deepseek-v4-flash, `max` on deepseek-v4-pro — and requested
+      `low` likewise runs at `low` on deepseek-v4-flash but `high` on
+      deepseek-v4-pro. A consumer
       DeepThink app toggle exposes only thinking on/off, not the
       effort enum.
     - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
@@ -1648,15 +1671,19 @@ as primary; the other becomes the secondary category for tie-breaking.
       OpenAI's scale tops out at `xhigh`, so no OpenAI level maps to
       `Max` (the `Max` slot is reserved for the above-`xhigh` step
       that only the Claude `max`-capable models reach).
-    - Gemini thinking levels: `low` → `Low`; `medium` → `Medium`;
-      `high` → `High` (Gemini tops out at `high` — no `xhigh` tier).
-      Thinking turned off, on models that allow it (e.g. Gemini 2.5
-      Flash-Lite), → `Off`.
+    - Gemini thinking levels: `minimal` → `Off`; `low` → `Low`;
+      `medium` → `Medium`; `high` → `High` (Gemini tops out at `high`
+      — no `xhigh` tier). `minimal` maps to `Off` for the same reason
+      OpenAI's `minimal` does: it sits BELOW the lowest EFFORT rung, so
+      reporting it as `Low` would overstate the reasoning the operator
+      actually gets. Thinking turned off, on models that allow it (e.g.
+      Gemini 2.5 Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
+      `low` → `Low`; `enabled` + effort
       `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
       no `xhigh` step, so its `max` is the Extra-High top, not the
-      above-`xhigh` cross-provider `Max`). DeepSeek effort has no
-      `low` / `medium` tier, so no DeepSeek level maps to `Low` or
+      above-`xhigh` cross-provider `Max`). DeepSeek documents no
+      `medium` tier, so no DeepSeek level maps to
       `Medium`. A consumer DeepThink on/off toggle (no
       effort enum) maps `On` → `High` (default effort) and `Off` →
       `Off`.
@@ -2280,18 +2307,23 @@ as primary; the other becomes the secondary category for tie-breaking.
       Codex's plan-mode reasoning-effort variant additionally accepts
       `none` (plan-mode-only, off).
     - Gemini (Google API, Gemini CLI): a discrete thinking-level
-      knob — `low`, `medium`, `high` — across both the 3.x and 2.5
-      model generations (not every model supports every level; e.g.
-      Gemini 3 Pro is low/high only). Thinking can be turned off on
+      knob — `minimal`, `low`, `medium`, `high` — across both the 3.x
+      and 2.5 model generations (not every model supports every level;
+      e.g. Gemini 3 Pro is low/high only). The `minimal` tier is
+      Flash-line only, documented on Gemini 3.6 Flash, 3.5 Flash-Lite,
+      3.1 Flash-Lite Image, and 3 Flash. Thinking can be turned off on
       models that allow it (e.g. Gemini 2.5 Flash-Lite defaults off);
       Google retired the numeric `thinkingBudget` from the docs in
       favor of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
-      `high`, `max` (default `high`; `max` for some complex agentic
-      requests). DeepSeek's effort scale has no `low` / `medium` tier
-      (for compatibility the API accepts `low` / `medium`, mapping
-      both to `high`, and `xhigh`, mapping it to `max`). A consumer
+      `low`, `high`, `max` (default `high`; `max` for some complex
+      agentic requests). DeepSeek documents no `medium` tier (for
+      compatibility the API accepts `medium`, mapping it to `high`).
+      Requested `xhigh` resolves per model — `high` on
+      deepseek-v4-flash, `max` on deepseek-v4-pro — and requested
+      `low` likewise runs at `low` on deepseek-v4-flash but `high` on
+      deepseek-v4-pro. A consumer
       DeepThink app toggle exposes only thinking on/off, not the
       effort enum.
     - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
@@ -2358,15 +2390,19 @@ as primary; the other becomes the secondary category for tie-breaking.
       OpenAI's scale tops out at `xhigh`, so no OpenAI level maps to
       `Max` (the `Max` slot is reserved for the above-`xhigh` step
       that only the Claude `max`-capable models reach).
-    - Gemini thinking levels: `low` → `Low`; `medium` → `Medium`;
-      `high` → `High` (Gemini tops out at `high` — no `xhigh` tier).
-      Thinking turned off, on models that allow it (e.g. Gemini 2.5
-      Flash-Lite), → `Off`.
+    - Gemini thinking levels: `minimal` → `Off`; `low` → `Low`;
+      `medium` → `Medium`; `high` → `High` (Gemini tops out at `high`
+      — no `xhigh` tier). `minimal` maps to `Off` for the same reason
+      OpenAI's `minimal` does: it sits BELOW the lowest EFFORT rung, so
+      reporting it as `Low` would overstate the reasoning the operator
+      actually gets. Thinking turned off, on models that allow it (e.g.
+      Gemini 2.5 Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
+      `low` → `Low`; `enabled` + effort
       `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
       no `xhigh` step, so its `max` is the Extra-High top, not the
-      above-`xhigh` cross-provider `Max`). DeepSeek effort has no
-      `low` / `medium` tier, so no DeepSeek level maps to `Low` or
+      above-`xhigh` cross-provider `Max`). DeepSeek documents no
+      `medium` tier, so no DeepSeek level maps to
       `Medium`. A consumer DeepThink on/off toggle (no
       effort enum) maps `On` → `High` (default effort) and `Off` →
       `Off`.
@@ -3696,18 +3732,23 @@ as primary; the other becomes the secondary category for tie-breaking.
       Codex's plan-mode reasoning-effort variant additionally accepts
       `none` (plan-mode-only, off).
     - Gemini (Google API, Gemini CLI): a discrete thinking-level
-      knob — `low`, `medium`, `high` — across both the 3.x and 2.5
-      model generations (not every model supports every level; e.g.
-      Gemini 3 Pro is low/high only). Thinking can be turned off on
+      knob — `minimal`, `low`, `medium`, `high` — across both the 3.x
+      and 2.5 model generations (not every model supports every level;
+      e.g. Gemini 3 Pro is low/high only). The `minimal` tier is
+      Flash-line only, documented on Gemini 3.6 Flash, 3.5 Flash-Lite,
+      3.1 Flash-Lite Image, and 3 Flash. Thinking can be turned off on
       models that allow it (e.g. Gemini 2.5 Flash-Lite defaults off);
       Google retired the numeric `thinkingBudget` from the docs in
       favor of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
-      `high`, `max` (default `high`; `max` for some complex agentic
-      requests). DeepSeek's effort scale has no `low` / `medium` tier
-      (for compatibility the API accepts `low` / `medium`, mapping
-      both to `high`, and `xhigh`, mapping it to `max`). A consumer
+      `low`, `high`, `max` (default `high`; `max` for some complex
+      agentic requests). DeepSeek documents no `medium` tier (for
+      compatibility the API accepts `medium`, mapping it to `high`).
+      Requested `xhigh` resolves per model — `high` on
+      deepseek-v4-flash, `max` on deepseek-v4-pro — and requested
+      `low` likewise runs at `low` on deepseek-v4-flash but `high` on
+      deepseek-v4-pro. A consumer
       DeepThink app toggle exposes only thinking on/off, not the
       effort enum.
     - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
@@ -3774,15 +3815,19 @@ as primary; the other becomes the secondary category for tie-breaking.
       OpenAI's scale tops out at `xhigh`, so no OpenAI level maps to
       `Max` (the `Max` slot is reserved for the above-`xhigh` step
       that only the Claude `max`-capable models reach).
-    - Gemini thinking levels: `low` → `Low`; `medium` → `Medium`;
-      `high` → `High` (Gemini tops out at `high` — no `xhigh` tier).
-      Thinking turned off, on models that allow it (e.g. Gemini 2.5
-      Flash-Lite), → `Off`.
+    - Gemini thinking levels: `minimal` → `Off`; `low` → `Low`;
+      `medium` → `Medium`; `high` → `High` (Gemini tops out at `high`
+      — no `xhigh` tier). `minimal` maps to `Off` for the same reason
+      OpenAI's `minimal` does: it sits BELOW the lowest EFFORT rung, so
+      reporting it as `Low` would overstate the reasoning the operator
+      actually gets. Thinking turned off, on models that allow it (e.g.
+      Gemini 2.5 Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
+      `low` → `Low`; `enabled` + effort
       `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
       no `xhigh` step, so its `max` is the Extra-High top, not the
-      above-`xhigh` cross-provider `Max`). DeepSeek effort has no
-      `low` / `medium` tier, so no DeepSeek level maps to `Low` or
+      above-`xhigh` cross-provider `Max`). DeepSeek documents no
+      `medium` tier, so no DeepSeek level maps to
       `Medium`. A consumer DeepThink on/off toggle (no
       effort enum) maps `On` → `High` (default effort) and `Off` →
       `Off`.
@@ -5304,18 +5349,23 @@ as primary; the other becomes the secondary category for tie-breaking.
       Codex's plan-mode reasoning-effort variant additionally accepts
       `none` (plan-mode-only, off).
     - Gemini (Google API, Gemini CLI): a discrete thinking-level
-      knob — `low`, `medium`, `high` — across both the 3.x and 2.5
-      model generations (not every model supports every level; e.g.
-      Gemini 3 Pro is low/high only). Thinking can be turned off on
+      knob — `minimal`, `low`, `medium`, `high` — across both the 3.x
+      and 2.5 model generations (not every model supports every level;
+      e.g. Gemini 3 Pro is low/high only). The `minimal` tier is
+      Flash-line only, documented on Gemini 3.6 Flash, 3.5 Flash-Lite,
+      3.1 Flash-Lite Image, and 3 Flash. Thinking can be turned off on
       models that allow it (e.g. Gemini 2.5 Flash-Lite defaults off);
       Google retired the numeric `thinkingBudget` from the docs in
       favor of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
-      `high`, `max` (default `high`; `max` for some complex agentic
-      requests). DeepSeek's effort scale has no `low` / `medium` tier
-      (for compatibility the API accepts `low` / `medium`, mapping
-      both to `high`, and `xhigh`, mapping it to `max`). A consumer
+      `low`, `high`, `max` (default `high`; `max` for some complex
+      agentic requests). DeepSeek documents no `medium` tier (for
+      compatibility the API accepts `medium`, mapping it to `high`).
+      Requested `xhigh` resolves per model — `high` on
+      deepseek-v4-flash, `max` on deepseek-v4-pro — and requested
+      `low` likewise runs at `low` on deepseek-v4-flash but `high` on
+      deepseek-v4-pro. A consumer
       DeepThink app toggle exposes only thinking on/off, not the
       effort enum.
     - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
@@ -5382,15 +5432,19 @@ as primary; the other becomes the secondary category for tie-breaking.
       OpenAI's scale tops out at `xhigh`, so no OpenAI level maps to
       `Max` (the `Max` slot is reserved for the above-`xhigh` step
       that only the Claude `max`-capable models reach).
-    - Gemini thinking levels: `low` → `Low`; `medium` → `Medium`;
-      `high` → `High` (Gemini tops out at `high` — no `xhigh` tier).
-      Thinking turned off, on models that allow it (e.g. Gemini 2.5
-      Flash-Lite), → `Off`.
+    - Gemini thinking levels: `minimal` → `Off`; `low` → `Low`;
+      `medium` → `Medium`; `high` → `High` (Gemini tops out at `high`
+      — no `xhigh` tier). `minimal` maps to `Off` for the same reason
+      OpenAI's `minimal` does: it sits BELOW the lowest EFFORT rung, so
+      reporting it as `Low` would overstate the reasoning the operator
+      actually gets. Thinking turned off, on models that allow it (e.g.
+      Gemini 2.5 Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
+      `low` → `Low`; `enabled` + effort
       `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
       no `xhigh` step, so its `max` is the Extra-High top, not the
-      above-`xhigh` cross-provider `Max`). DeepSeek effort has no
-      `low` / `medium` tier, so no DeepSeek level maps to `Low` or
+      above-`xhigh` cross-provider `Max`). DeepSeek documents no
+      `medium` tier, so no DeepSeek level maps to
       `Medium`. A consumer DeepThink on/off toggle (no
       effort enum) maps `On` → `High` (default effort) and `Off` →
       `Off`.

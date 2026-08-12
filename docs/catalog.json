@@ -1,9 +1,9 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-08-11T18:07:01Z",
+  "generated_at_utc": "2026-08-12T03:36:04Z",
   "source_doc_sha256": {
-    "model-selector.txt": "df8a6aa38461fae17a016f2e3566ce4a921c1dc29adc7a1506887a769d4f3a9a",
+    "model-selector.txt": "0f4f12748a80904530ec142724f3d3abd80e2f7f71cb92fd89258d29b9555d7a",
     "model-tier-cost-scale.md": "320ffa43b56f37608f5cdbcda48147b585e1c79a427e4be71ccb69bd9f05bc44"
   },
   "models": [

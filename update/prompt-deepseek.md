@@ -43,16 +43,21 @@ enum. The selector must describe both:
 
 - The **DeepSeek bullet** must enumerate exactly the documented `thinking_toggle`
   values (`enabled` / `disabled`, default `enabled`) and exactly the documented
-  `reasoning_effort` values (`high`, `max`, default `high`) — no documented value
-  omitted, no undocumented value added. Keep the note that DeepSeek has no
-  `low` / `medium` native tier (the `effort_aliases` show the API accepts them
-  for compatibility, mapping `low`/`medium` → `high` and `xhigh` → `max`).
+  `reasoning_effort` values **as they appear in the snapshot you were given** —
+  no documented value omitted, no undocumented value added. Do NOT treat any
+  particular vocabulary as fixed: DeepSeek has already promoted `low` from a
+  compatibility alias to a NATIVE tier, so the snapshot, not this prompt, is the
+  authority on the set. Describe only the aliases the snapshot's
+  `effort_aliases` actually still carries — a tier that became native is no
+  longer an alias, and repeating a stale "DeepSeek has no `low` tier" note would
+  contradict the docs.
 - The **Output mapping** subsection maps provider-native scales onto the existing
   7-state EFFORT field (`Off`/`Low`/`Medium`/`High`/`XHigh`/`Max`/`N/A`). Keep:
   thinking `disabled` → `Off`; `enabled` + effort `high` → `High`; `enabled` +
   effort `max` → `XHigh` (DeepSeek has no `xhigh` step, so its `max` is the
-  Extra-High top, not the above-`xhigh` `Max`). DeepSeek has no `low` / `medium`
-  tier, so no DeepSeek level maps to `Low` or `Medium`. A consumer DeepThink on/off toggle (no effort
+  Extra-High top, not the above-`xhigh` `Max`). Map any native tier whose name
+  matches an EFFORT rung to that rung (`low` → `Low`), and state the absence
+  only for tiers the snapshot genuinely lacks. A consumer DeepThink on/off toggle (no effort
   enum) maps `On` → `High` (default effort) / `Off` → `Off`. Never invent an 8th
   state.
 
@@ -63,11 +68,21 @@ separate two-position On/Off toggle that never carries an effort word. `Off` and
 thinking `disabled` therefore resolves to `THINKING: Off`, and `N/A` means the
 surface has no dial so the line is OMITTED entirely. Keep that wording intact.
 
-If `<docs_facts>` introduces a reasoning-effort value beyond `high`/`max` (it
-appears in both `reasoning_effort` and `unexpected_effort`), ADD that value to
-the bullet enumeration AND give it an EFFORT mapping — a new top-of-scale tier
-maps to `XHigh` — and add a warning naming the new tier so the maintainer reviews
-it. Likewise add a docs-added `thinking_toggle` value (`unexpected_toggle`). Do
+If `<docs_facts>` introduces a reasoning-effort value the selector does not yet
+carry (it appears in both `reasoning_effort` and `unexpected_effort`), ADD that
+value to the bullet enumeration AND give it an EFFORT mapping, then add a warning
+naming the new tier so the maintainer reviews it. Place it by these rules, in
+order — they are deterministic, so do not deliberate:
+
+1. The name matches an EFFORT rung (`low`/`medium`/`high`/`xhigh`/`max`) → that
+   rung.
+2. It sits BELOW the lowest rung (near-zero reasoning, e.g. `minimal`) → `Off`,
+   matching the established treatment of OpenAI's `minimal`. Reporting a
+   sub-`low` tier as `Low` would overstate the reasoning the operator gets.
+3. A new TOP-of-scale tier → `XHigh` (DeepSeek has no above-`xhigh` step, so
+   never `Max`).
+4. Otherwise → the nearest LOWER rung, said plainly in the prose. Never round
+   UP. Likewise add a docs-added `thinking_toggle` value (`unexpected_toggle`). Do
 NOT silently omit it: the conformance gate requires the selector's DeepSeek
 vocabulary to EQUAL the documented sets.
 
