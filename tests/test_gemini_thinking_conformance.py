@@ -111,10 +111,27 @@ def test_extractor_cli_writes_snapshot(tmp_path: Path) -> None:
 
 
 def test_committed_snapshot_invariants() -> None:
-    """The committed snapshot must carry the headline facts the gate relies on."""
+    """The committed snapshot must carry the SHAPE the gate relies on.
+
+    Deliberately asserts structure, not the level list itself. Pinning the exact
+    vocabulary (``["low", "medium", "high"]``) meant that the day Google
+    documented a new tier, this test went red and the DeepSeek/Gemini lanes
+    stopped — the tracker had correctly detected a real upstream change and CI
+    read it as breakage. Completeness of the selector's mapping for whatever
+    levels ARE documented is enforced by conformance check E, which fails loudly
+    and specifically; that is the right place for it.
+    """
     snap = json.loads(REAL_GEMINI_SNAPSHOT.read_text())
-    assert snap["thinking_levels"] == ["low", "medium", "high"]
-    assert snap["per_model_levels"]["Gemini 3 Pro"] == ["low", "high"]
+    levels = snap["thinking_levels"]
+    assert isinstance(levels, list) and levels, "thinking_levels must be non-empty"
+    assert len(levels) == len(set(levels)), f"duplicate levels: {levels}"
+    per_model = snap["per_model_levels"]
+    assert isinstance(per_model, dict) and per_model
+    for model, rows in per_model.items():
+        assert rows, f"{model} has an empty level row"
+        assert set(rows) <= set(levels), (
+            f"{model} row {rows} contains a level absent from thinking_levels {levels}"
+        )
     # The retired numeric-budget keys must NOT come back.
     assert "per_model_budget" not in snap
     assert "budget_sentinels" not in snap
@@ -175,7 +192,11 @@ def test_level_vocab_extraction_on_real_selector() -> None:
     selector = REAL_SELECTOR.read_text()
     thinking_flat = mod._collapse(mod.extract_block(selector, mod.THINKING_BLOCK))
     vocab = mod.gemini_level_tokens(thinking_flat)
-    assert vocab == {"low", "medium", "high"}
+    documented = {
+        lv.lower() for lv in json.loads(REAL_GEMINI_SNAPSHOT.read_text())["thinking_levels"]
+    }
+    # The CONTRACT is selector == docs, not selector == a list frozen in a test.
+    assert vocab == documented
 
 
 # --------------------------------------------------------------------------- #
@@ -189,12 +210,30 @@ def test_conformance_passes_on_committed_artifacts() -> None:
     assert "PASS" in result.stdout
 
 
+def _documented_levels() -> list[str]:
+    """The committed snapshot's level list, in documented order."""
+    return [
+        str(lv).lower() for lv in json.loads(REAL_GEMINI_SNAPSHOT.read_text())["thinking_levels"]
+    ]
+
+
+def _committed_enumeration() -> str:
+    """The selector's level enumeration, rebuilt from the snapshot.
+
+    These drift tests used to splice a LITERAL slice of the selector
+    (``"`low`, `medium`, `high` — across"``). That silently becomes a no-op the
+    moment the vocabulary changes — the "drifted" selector would be byte-identical
+    to the real one, the gate would pass, and the test would fail for a reason
+    that has nothing to do with what it is checking. Deriving the string keeps
+    the drift real whatever the documented vocabulary is.
+    """
+    return ", ".join(f"`{lv}`" for lv in _documented_levels())
+
+
 def test_conformance_flags_undocumented_gemini_level(tmp_path: Path) -> None:
     """E1 subset: an undocumented level in the Gemini bullet enumeration -> FAIL."""
-    drifted = REAL_SELECTOR.read_text().replace(
-        "`low`, `medium`, `high` — across",
-        "`low`, `medium`, `high`, `ultra` — across",
-    )
+    enumeration = _committed_enumeration()
+    drifted = REAL_SELECTOR.read_text().replace(enumeration, enumeration + ", `ultra`")
     selector = tmp_path / "selector.txt"
     selector.write_text(drifted)
     result = _run_conformance(selector)
@@ -204,17 +243,22 @@ def test_conformance_flags_undocumented_gemini_level(tmp_path: Path) -> None:
 
 
 def test_conformance_flags_documented_level_missing(tmp_path: Path) -> None:
-    """E1 completeness: dropping `high` from the bullet enumeration -> FAIL."""
+    """E1 completeness: dropping a documented level from the bullet -> FAIL."""
+    enumeration = _committed_enumeration()
+    # Drop the LAST documented level from the bullet, and name that same level in
+    # the assertion — hardcoding it would silently stop testing what it claims
+    # the moment the vocabulary changes.
+    levels = _documented_levels()
+    dropped = levels[-1]
     drifted = REAL_SELECTOR.read_text().replace(
-        "`low`, `medium`, `high` — across",
-        "`low`, `medium` — across",
+        enumeration, ", ".join(f"`{lv}`" for lv in levels[:-1])
     )
     selector = tmp_path / "selector.txt"
     selector.write_text(drifted)
     result = _run_conformance(selector)
     assert result.returncode == 1
     assert "check E" in result.stderr
-    assert "high" in result.stderr
+    assert dropped in result.stderr
 
 
 def test_conformance_flags_unsupported_per_model_level(tmp_path: Path) -> None:
