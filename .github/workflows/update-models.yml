@@ -184,6 +184,30 @@ jobs:
             exit 1
           fi
 
+      - name: Catalog conformance + price-coverage report
+        # G1-G4 are fatal here (schema, positive prices, tier mapping, composition,
+        # and price provenance against each provider's own page).
+        #
+        # G5 is the advisory half: models whose maker publishes a provider-direct
+        # snapshot but which are ABSENT from it, so their price came from the
+        # aggregator mirror alone and G4 had nothing to reconcile — it passed for
+        # lack of a comparison, not because the price agreed. Claude Opus 5
+        # shipped that way. Those notes are folded into the PR body's Warnings
+        # section so the un-cross-checked prices get human eyes at review time
+        # instead of being indistinguishable from verified ones.
+        #
+        # Deliberately NOT fatal: providers ship models before pricing them
+        # publicly, and blocking the refresh on an upstream publishing lag would
+        # strand the lane the way the prose-anchor gate stranded Codex (#517).
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
+        run: |
+          set -euo pipefail
+          python update/validate_catalog_conformance.py | tee /tmp/catalog-gate.out
+          if grep -qE '^[[:space:]]*- G5 ' /tmp/catalog-gate.out; then
+            sed -n 's/^[[:space:]]*-[[:space:]]*\(G5 .*\)$/\1/p' /tmp/catalog-gate.out \
+              >> update/.last-warnings.txt
+          fi
+
       - name: Open PR if catalog changed
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         env:

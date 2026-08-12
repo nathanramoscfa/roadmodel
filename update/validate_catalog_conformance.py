@@ -24,6 +24,20 @@ Checks:
       for its prices (decision 1) — Cursor's pricing-page mirror can no longer be
       the authority; a Cursor↔provider divergence fails this gate so a human
       reconciles the selector to the provider-direct truth.
+  G5. Price COVERAGE (advisory, not fatal). The inverse of G4. G4 walks SNAPSHOT
+      models, so a ``<model-options>`` model ABSENT from its own maker's snapshot
+      is invisible to it: G4 passes for lack of anything to compare, not because
+      the price agreed. G5 names those models, so "unverified" is distinguishable
+      from "verified". Claude Opus 5 shipped exactly this way — catalogued at
+      $5/$25 from the aggregator mirror while Anthropic's own pricing page still
+      listed five models and no Opus 5.
+
+      Advisory on purpose: a provider legitimately ships a model before pricing
+      it publicly, and failing the gate would block the whole catalog refresh on
+      an upstream publishing lag — recreating the deadlock class that stranded
+      the Codex lane (#517). ``--strict-provenance`` escalates the notes to
+      failures for callers that want it fatal. The catalog cron folds them into
+      its PR body's Warnings section so they get human eyes at review time.
 
 Exit codes: 0 PASS, 1 conformance failure, 2 input/config error.
 """
@@ -42,6 +56,7 @@ _UPDATE_DIR = Path(__file__).resolve().parent
 if str(_UPDATE_DIR) not in sys.path:
     sys.path.insert(0, str(_UPDATE_DIR))
 # E402/I001 are expected after the path guard above.
+from build_catalog import _parse_access_methods  # noqa: E402, I001
 from merge_catalog import (  # noqa: E402, I001
     VALID_JURISDICTIONS,
     base_models,
@@ -153,7 +168,92 @@ def check_price_provenance(
     return failures
 
 
-def run_checks(selector_text: str, snapshot_paths: list[Path]) -> list[str]:
+def _model_makers(selector_text: str) -> dict[str, str]:
+    """Map each ``<model-options>`` id to its MAKER provider.
+
+    Mirrors ``roadmodel.cost.model_provider``: the maker is the provider of a
+    first-party access method supporting the model, excluding pool aggregators
+    (a model reachable via both its own provider's API and Cursor's pool is made
+    by the former). Reimplemented here rather than imported so ``update/`` stays
+    standalone. Models with no unambiguous first-party maker are omitted, which
+    makes them invisible to G5 — deliberately, since "which provider should have
+    published this price" has no answer for them.
+    """
+    aggregators = {"cursor"}
+    supporters: dict[str, set[str]] = {}
+    for method in _parse_access_methods(selector_text):
+        provider = str(method.get("provider") or "")
+        if not provider:
+            continue
+        for mid in method.get("supports_models", []):
+            supporters.setdefault(str(mid), set()).add(provider)
+    makers: dict[str, str] = {}
+    for mid, provs in supporters.items():
+        first_party = provs - aggregators
+        if len(first_party) == 1:
+            makers[mid] = next(iter(first_party))
+    return makers
+
+
+def check_price_coverage(
+    selector_text: str, base: dict[str, dict[str, Any]], snapshots: list[dict[str, Any]]
+) -> list[str]:
+    """G5 — report selector models their own provider's snapshot does not price.
+
+    G4 walks SNAPSHOT models and reconciles the ones that reached the selector.
+    The inverse case is invisible to it: a model in ``<model-options>`` whose
+    maker HAS a provider-direct snapshot, but which does not appear in that
+    snapshot. Its price came from Cursor's mirror alone and was never
+    cross-checked — G4 passes not because the price agrees but because there was
+    nothing to compare it against.
+
+    Claude Opus 5 shipped exactly this way: catalogued at $5/$25 from Cursor's
+    page while Anthropic's own pricing docs still listed five models and no Opus
+    5, so ``catalog-anthropic.json`` had no row to reconcile.
+
+    Reported, never fatal. A provider legitimately ships a model before pricing
+    it publicly, and failing the gate would block the whole catalog refresh on an
+    upstream publishing lag — recreating the deadlock class that stranded the
+    Codex lane (#517). The point is that "unverified" stops being *silent*.
+    """
+    makers = _model_makers(selector_text)
+    priced: dict[str, set[str]] = {}
+    for snap in snapshots:
+        provider = str(snap.get("provider", ""))
+        models = snap.get("models", [])
+        if not provider or not isinstance(models, list):
+            continue
+        priced.setdefault(provider, set()).update(
+            str(m.get("id", "")) for m in models if isinstance(m, dict)
+        )
+
+    notes: list[str] = []
+    for mid in sorted(base):
+        maker = makers.get(mid)
+        if maker is None or maker not in priced:
+            # No maker, or that maker publishes no snapshot at all — nothing
+            # was claimed to be verified, so there is no false assurance.
+            continue
+        if mid in priced[maker]:
+            continue
+        sel = base[mid]
+        notes.append(
+            f"G5 (price coverage): {mid!r} is priced "
+            f"${sel.get('input_price_per_1m')}/${sel.get('output_price_per_1m')} per Mtok "
+            f"from the aggregator mirror only — {maker} publishes a provider-direct "
+            f"snapshot but does not list this model, so G4 had nothing to reconcile "
+            f"and the price is UNVERIFIED against {maker}'s own page"
+        )
+    return notes
+
+
+def run_checks(selector_text: str, snapshot_paths: list[Path]) -> tuple[list[str], list[str]]:
+    """Returns ``(failures, notes)``.
+
+    ``failures`` are fatal (G1-G4). ``notes`` are G5 price-coverage advisories:
+    real information, but never a reason to block a refresh — see
+    :func:`check_price_coverage`.
+    """
     failures: list[str] = []
     snapshots: list[dict[str, Any]] = []
     for path in snapshot_paths:
@@ -175,7 +275,10 @@ def run_checks(selector_text: str, snapshot_paths: list[Path]) -> list[str]:
 
     # G4 — price provenance: selector prices match the provider-direct source.
     failures += check_price_provenance(base, snapshots)
-    return failures
+
+    # G5 — price COVERAGE: which selector prices G4 could not check at all.
+    notes = check_price_coverage(selector_text, base, snapshots)
+    return failures, notes
 
 
 def main() -> int:
@@ -189,6 +292,16 @@ def main() -> int:
         nargs="*",
         default=None,
         help="catalog-<provider>.json files (default: every update/catalog-*.json)",
+    )
+    parser.add_argument(
+        "--strict-provenance",
+        action="store_true",
+        help=(
+            "escalate G5 price-coverage notes to failures. Off by default: a "
+            "provider legitimately ships a model before pricing it publicly, and "
+            "blocking the catalog refresh on an upstream publishing lag would "
+            "strand the lane."
+        ),
     )
     args = parser.parse_args()
 
@@ -210,18 +323,30 @@ def main() -> int:
         )
         return 2
 
-    failures = run_checks(selector_text, snapshot_paths)
+    failures, notes = run_checks(selector_text, snapshot_paths)
+    if args.strict_provenance:
+        failures += notes
+        notes = []
+
     if failures:
         print(f"validate_catalog_conformance: {len(failures)} failure(s):", file=sys.stderr)
         for msg in failures:
             print(f"  - {msg}", file=sys.stderr)
         return 1
 
+    # G5 notes print on the PASS path so the cron log and the PR body both carry
+    # them. An unverified price is not a defect — leaving it unsaid is.
+    if notes:
+        print(f"validate_catalog_conformance: {len(notes)} price-coverage note(s):")
+        for msg in notes:
+            print(f"  - {msg}")
+
     print(
         f"validate_catalog_conformance: PASS ({len(snapshot_paths)} provider-direct "
         "catalog snapshot(s): schema well-formed; prices positive; output prices map to "
         "documented cost tiers; composition has no two-source id conflict; selector prices "
-        "match the provider-direct source for every migrated model)"
+        f"match the provider-direct source for every migrated model; {len(notes)} model(s) "
+        "priced from the aggregator mirror only)"
     )
     return 0
 
