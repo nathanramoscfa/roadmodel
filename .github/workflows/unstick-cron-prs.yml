@@ -1,0 +1,114 @@
+# .github/workflows/unstick-cron-prs.yml
+name: Unstick cron PRs
+
+# `main` requires branches to be up to date (`strict`) AND linear history.
+# Under that pair, auto-merge cannot recover a PR once it falls BEHIND:
+# `allow_update_branch` is off, and even enabled it produces a MERGE commit
+# that linear history rejects. Only a rebase works, and auto-merge never
+# rebases. So whichever cron PR merges first each day strands every other
+# open cron PR at BEHIND with green checks, indefinitely — one of the two
+# reasons the backlog reached 26 open PRs (issue #523; the other was the
+# catalog.json drift fixed in #514).
+#
+# This sweeper does the rebase the crons cannot do for themselves. It ONLY
+# touches PRs opened by the cron GitHub App, so a human PR is never rebased
+# out from under its author.
+
+on:
+  push:
+    # The moment anything lands on main is exactly when open PRs go BEHIND.
+    branches: [main]
+  schedule:
+    # Backstop for PRs that fell behind via a route that did not push main
+    # (e.g. a branch-protection change), and for runs that raced a merge.
+    - cron: "35 */3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unstick-cron-prs
+  cancel-in-progress: false
+
+jobs:
+  unstick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Rebase BEHIND cron PRs
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          # Bare App slug. The API spells this identity three ways depending on
+          # endpoint — `app/roadmodel-cron-bot` (gh pr list/view),
+          # `roadmodel-cron-bot[bot]` (commit author), and the bare slug — so
+          # the comparison below normalises both sides rather than matching one
+          # spelling. Verified against the live API: `gh pr list` reports
+          # `app/roadmodel-cron-bot`. If the App is renamed, this is the single
+          # line to change; that same rename silently disabled the freshness
+          # guard once already (#520).
+          BOT_SLUG: roadmodel-cron-bot
+          # Cap per run. A rebase re-triggers the full required-check suite, so
+          # an unbounded sweep after a busy merge could start a CI storm.
+          # Remaining PRs are picked up by the next push or the 3-hourly cron.
+          MAX_REBASES: "5"
+        run: |
+          set -euo pipefail
+
+          # `gh pr list` does NOT compute mergeStateStatus — it returns UNKNOWN
+          # for every row, because GitHub calculates mergeability lazily per
+          # pull request. Verified against the live API. So the list call is
+          # only used to find the App's open PRs; the BEHIND decision is made
+          # one PR at a time via `gh pr view`, which does compute it.
+          candidates="$(gh pr list --state open --limit 100 \
+            --json number,author,isDraft,title \
+            | jq -r --arg slug "$BOT_SLUG" '
+                .[]
+                | select(.isDraft == false)
+                # Normalise "app/<slug>", "<slug>[bot]" and bare "<slug>".
+                | select((.author.login | ltrimstr("app/") | rtrimstr("[bot]")) == $slug)
+                | .number')"
+
+          if [ -z "$candidates" ]; then
+            echo "No open cron PRs. Nothing to do."
+            exit 0
+          fi
+
+          count=0
+          failed=0
+          for pr in $candidates; do
+            state="$(gh pr view "$pr" --json mergeStateStatus -q .mergeStateStatus)"
+            if [ "$state" = "UNKNOWN" ]; then
+              # Mergeability not computed yet (common right after a push).
+              # Ask once more rather than reading "not yet known" as "fine".
+              sleep 10
+              state="$(gh pr view "$pr" --json mergeStateStatus -q .mergeStateStatus)"
+            fi
+            if [ "$state" != "BEHIND" ]; then
+              echo "#${pr}: ${state} — skipping."
+              continue
+            fi
+            if [ "$count" -ge "$MAX_REBASES" ]; then
+              echo "::notice::Hit MAX_REBASES=$MAX_REBASES; remaining BEHIND PRs will be picked up by the next run."
+              break
+            fi
+            title="$(gh pr view "$pr" --json title -q .title)"
+            echo "Rebasing #${pr} — ${title}"
+            # Fail-soft per PR: a conflicting rebase is a real signal that the
+            # PR needs a human, not a reason to abandon the rest of the sweep.
+            if gh pr update-branch --rebase "$pr"; then
+              count=$((count + 1))
+            else
+              failed=$((failed + 1))
+              echo "::warning::Could not rebase #${pr} — likely a conflict with main. Needs manual attention."
+            fi
+          done
+
+          echo "Rebased ${count} PR(s); ${failed} needed manual attention."
