@@ -18,7 +18,7 @@
     {
       "id": "deepseek-v4-pro",
       "slug": "deepseek-v4-pro",
-      "name": "DeepSeek-V4-Pro",
+      "name": "DeepSeek-V4-Pro-0813",
       "input_price_per_1m": 0.435,
       "output_price_per_1m": 0.87,
       "cache_read_per_1m": 0.003625,
@@ -31,5 +31,5 @@
     "deepseek-v4-pro": "deepseek-v4-pro"
   },
   "unexpected_slugs": [],
-  "section_sha256": "00bdcebf220b80fcd440f7ed464e179f34b9181d13753238123cd6d58e040483"
+  "section_sha256": "ee77e622de7dcaab789143a9e8c4dafbbdfdd3c7ec326dde14bff9542d72b6ff"
 }
