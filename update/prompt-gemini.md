@@ -39,8 +39,11 @@ using the SMALLEST edit. There are exactly TWO narrow scopes.
 Gemini exposes ONE reasoning surface: a discrete thinking-LEVEL knob shared
 across the 3.x and 2.5 model generations. The selector must describe it:
 
-- The bullet must enumerate exactly the documented `thinking_levels` (`low`,
-  `medium`, `high`) — no documented level omitted, no undocumented level added.
+- The bullet must enumerate exactly the documented `thinking_levels` **as they
+  appear in the snapshot you were given** — no documented level omitted, no
+  undocumented level added. Do NOT treat any particular vocabulary as fixed:
+  Google has already extended it once (adding `minimal` below `low`), and the
+  snapshot, not this prompt, is the authority on what the set is today.
   If the selector makes a per-model claim, it must not tie a model to a level its
   `per_model_levels` row lacks (e.g. never imply Gemini 3 Pro supports `medium`);
   the docs-faithful way to mention a gap is the explicit subset ("Gemini 3 Pro is
@@ -53,6 +56,26 @@ The **Output mapping** subsection maps provider-native scales onto the existing
 or `max` tier — do not map any Gemini level to `XHigh` or `Max`); thinking
 turned off → `Off`.
 Never invent an 8th state.
+
+**Placing a level the mapping does not yet cover.** Every documented level MUST
+appear on the left of an arrow, so a newly documented tier needs a home. Apply
+these rules in order — they are deterministic, so do not deliberate:
+
+1. The level's name matches an EFFORT rung (`low`/`medium`/`high`/`xhigh`/`max`)
+   → map it to that rung.
+2. The level sits BELOW the lowest rung — it denotes near-zero reasoning, e.g.
+   `minimal` → map it to `Off`. This matches the established treatment of
+   OpenAI's `minimal`, and it is deliberate: reporting a sub-`low` tier as `Low`
+   would overstate the reasoning the operator actually gets.
+3. Otherwise → map it to the nearest LOWER rung, and say so plainly in the
+   prose. Never round UP: a mapping that overstates effort silently misreports
+   what the operator is buying.
+
+If a level genuinely fits none of these, still enumerate it, map it per rule 3,
+and note the ambiguity in your summary so a human can revisit — do NOT leave it
+unmapped. An unmapped documented level fails conformance check E, and because
+that gate runs BEFORE the PR is opened, it does not merely delay the refresh, it
+stops this lane entirely until someone intervenes.
 
 The output contract is v2 (see `<output-format>`'s `OUTPUT CONTRACT VERSION: 2`
 header): the reasoning LEVEL lives in the `EFFORT` field, and `THINKING` is a

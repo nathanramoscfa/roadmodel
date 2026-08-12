@@ -109,10 +109,20 @@ def test_extractor_cli_writes_snapshot(tmp_path: Path) -> None:
 def test_committed_snapshot_invariants() -> None:
     """The committed snapshot must carry the headline facts the gate relies on."""
     snap = json.loads(REAL_DEEPSEEK_SNAPSHOT.read_text())
-    assert snap["reasoning_effort"] == ["high", "max"]
-    assert snap["thinking_toggle"] == ["enabled", "disabled"]
-    assert snap["effort_default"] == "high"
-    assert snap["toggle_default"] == "enabled"
+    effort = snap["reasoning_effort"]
+    assert isinstance(effort, list) and effort, "reasoning_effort must be non-empty"
+    assert len(effort) == len(set(effort)), f"duplicate effort tiers: {effort}"
+    # The toggle is a two-position control by definition — that IS an invariant,
+    # unlike the effort vocabulary, which upstream may extend at any time.
+    assert set(snap["thinking_toggle"]) == {"enabled", "disabled"}
+    # Defaults are informational (the gate does not depend on them), so require
+    # only that they are drawn from the documented vocabulary when present. They
+    # silently became None once already when DeepSeek reworded the footnote the
+    # extractor anchored on.
+    if snap.get("effort_default") is not None:
+        assert snap["effort_default"] in effort
+    if snap.get("toggle_default") is not None:
+        assert snap["toggle_default"] in snap["thinking_toggle"]
 
 
 def test_extractor_raises_on_restructured_docs() -> None:
@@ -164,7 +174,14 @@ def test_effort_and_toggle_vocab_extraction_on_real_selector() -> None:
     mod = _load("validate_effort_conformance")
     selector = REAL_SELECTOR.read_text()
     thinking_flat = mod._collapse(mod.extract_block(selector, mod.THINKING_BLOCK))
-    assert mod.deepseek_effort_tokens(thinking_flat) == {"high", "max"}
+    # The CONTRACT is selector == docs, not selector == a list frozen in a test.
+    # (The two fixture-based tests above DO pin exact values, correctly: they
+    # parse a checked-in HTML sample, so their expected output cannot move
+    # underneath them. This one reads the live snapshot, so it must derive.)
+    documented = {
+        lv.lower() for lv in json.loads(REAL_DEEPSEEK_SNAPSHOT.read_text())["reasoning_effort"]
+    }
+    assert mod.deepseek_effort_tokens(thinking_flat) == documented
     assert mod.deepseek_toggle_tokens(thinking_flat) == {"disabled", "enabled"}
 
 
