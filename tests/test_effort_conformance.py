@@ -347,5 +347,155 @@ def test_extractor_flags_unexpected_model() -> None:
     assert "Haiku 5" in snap["per_model_effort"]
 
 
+# --------------------------------------------------------------------------- #
+# Provider-bullet locators (issue #517)
+#
+# Checks D/E/F used to find each provider's enumeration by grepping a prose
+# phrase out of the whole <thinking-context>. That prose is written by the same
+# cron Opus pass the checks gate, so a legitimate reword ("reasoning-effort
+# knob" -> "`reasoning_effort` knob") made the anchor miss, check D report
+# "could not find the enumeration", and the Codex lane deadlock: the gate is
+# fatal and runs BEFORE the PR-open step, so every later run retried the same
+# edit and failed the same way.
+#
+# These pin the two properties that fix requires: TOLERANT to rewording, still
+# STRICT about content.
+# --------------------------------------------------------------------------- #
+
+# A miniature <thinking-context> with the same bullet shape as the real one:
+# a dial-description list, then an output-mapping list.
+_BULLETS = """    - OpenAI (Codex, OpenAI API): {openai_dial} — `minimal`, `low`,
+      `medium`, `high`, `xhigh` (the top tier; model-dependent).
+    - Gemini (Google API, Gemini CLI): a discrete {gemini_dial} —
+      `low`, `medium`, `high` — across generations.
+    - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
+      `disabled`, default `enabled`) plus a {deepseek_dial} —
+      `high`, `max` (default `high`).
+    - OpenAI `minimal` \u2192 `Off`; `low` \u2192 `Low`; `medium` \u2192 `Medium`;
+      `high` \u2192 `High`; `xhigh` (e.g. `gpt-5.3-codex-high`) \u2192 `XHigh`.
+"""
+
+
+def _thinking(
+    openai_dial="reasoning-effort knob",
+    gemini_dial="thinking-level knob",
+    deepseek_dial="reasoning-effort enum",
+):
+    mod = _load_conformance()
+    text = _BULLETS.format(
+        openai_dial=openai_dial, gemini_dial=gemini_dial, deepseek_dial=deepseek_dial
+    )
+    return mod, mod._collapse(text)
+
+
+@pytest.mark.parametrize(
+    "dial",
+    [
+        "reasoning-effort knob",  # the original wording
+        "`reasoning_effort` knob",  # the exact reword that deadlocked the lane
+        "reasoning_effort control",
+        "reasoning effort levels",
+        "reasoning-effort dial",
+    ],
+)
+def test_codex_enumeration_survives_dial_rewording(dial: str) -> None:
+    mod, flat = _thinking(openai_dial=dial)
+    assert mod.openai_bullet_reasoning_tokens(flat) == {
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+    }, f"dial wording {dial!r} broke the OpenAI enumeration locator"
+
+
+@pytest.mark.parametrize(
+    "dial",
+    [
+        "thinking-level knob",
+        "thinking level control",
+        "`thinking_level` setting",
+        "thinking levels",
+    ],
+)
+def test_gemini_enumeration_survives_dial_rewording(dial: str) -> None:
+    mod, flat = _thinking(gemini_dial=dial)
+    assert mod.gemini_level_tokens(flat) == {"low", "medium", "high"}
+
+
+def test_deepseek_enumeration_survives_rename_that_collides_with_openai() -> None:
+    """DeepSeek renamed to OpenAI's noun must NOT pick up OpenAI's levels.
+
+    The old code told the two apart by "knob" (OpenAI) vs "enum" (DeepSeek), so
+    this rename would have silently cross-contaminated them. Bullet scoping
+    makes the noun irrelevant.
+    """
+    mod, flat = _thinking(deepseek_dial="reasoning-effort knob")
+    assert mod.deepseek_effort_tokens(flat) == {"high", "max"}
+    assert mod.openai_bullet_reasoning_tokens(flat) == {
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+    }
+
+
+def test_deepseek_toggle_scoped_to_its_own_bullet() -> None:
+    mod, flat = _thinking()
+    assert mod.deepseek_toggle_tokens(flat) == {"enabled", "disabled"}
+
+
+def test_openai_mapping_not_pinned_to_vocabulary_endpoints() -> None:
+    """The mapping locator must not hardcode the first/last level.
+
+    The old anchor was ``OpenAI `minimal` ... \u2192 `XHigh```, so adding a tier at
+    either end emptied the set and the check reported "could not find the
+    mapping" instead of the real disagreement.
+    """
+    mod, flat = _thinking()
+    assert mod.openai_mapping_reasoning_tokens(flat) == {
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+    }
+
+
+def test_enumeration_falls_back_when_no_dial_phrase_matches() -> None:
+    """An unrecognisable dial noun degrades to the structural locator, not to empty.
+
+    Empty is what deadlocked the lane; a slightly-less-precise read keeps it moving.
+    """
+    mod, flat = _thinking(openai_dial="wibble")
+    assert mod.openai_bullet_reasoning_tokens(flat) == {
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+    }
+
+
+def test_fallback_ignores_lone_backticked_non_levels() -> None:
+    """A single backticked config key or model id is not an enumeration."""
+    mod = _load_conformance()
+    assert (
+        mod._fallback_enumeration("- Foo (bar): set `MAX_THINKING_TOKENS=0` to disable.") == set()
+    )
+    assert mod._fallback_enumeration("- Foo (bar): `low`, `high` are the levels.") == {
+        "low",
+        "high",
+    }
+
+
+def test_missing_provider_bullet_is_still_a_failure() -> None:
+    """Tolerance is about WORDING only — a genuinely absent bullet must be caught."""
+    mod = _load_conformance()
+    flat = mod._collapse("    - Gemini (Google API): a thinking-level knob — `low`, `high`.\n")
+    assert mod.openai_bullet_reasoning_tokens(flat) == set()
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
