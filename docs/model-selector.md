@@ -349,14 +349,8 @@ differently:
 - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
   `disabled`, default `enabled`) plus a reasoning-effort enum —
   `low`, `high`, `max` (default `high`; `max` for some complex
-  agentic requests). DeepSeek documents no `medium` tier (for
-  compatibility the API accepts `medium`, mapping it to `high`).
-  Requested `xhigh` resolves per model — `high` on
-  deepseek-v4-flash, `max` on deepseek-v4-pro — and requested
-  `low` likewise runs at `low` on deepseek-v4-flash but `high` on
-  deepseek-v4-pro. A consumer
-  DeepThink app toggle exposes only thinking on/off, not the
-  effort enum.
+  agentic requests). A consumer DeepThink app toggle exposes only
+  thinking on/off, not the effort enum.
 - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
   parameter on the unified models (Mistral Small 4 and Medium 3.5).
   The docs surface `none` (reasoning off / fast) and `high` (full
@@ -706,14 +700,8 @@ as primary; the other becomes the secondary category for tie-breaking.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
       `low`, `high`, `max` (default `high`; `max` for some complex
-      agentic requests). DeepSeek documents no `medium` tier (for
-      compatibility the API accepts `medium`, mapping it to `high`).
-      Requested `xhigh` resolves per model — `high` on
-      deepseek-v4-flash, `max` on deepseek-v4-pro — and requested
-      `low` likewise runs at `low` on deepseek-v4-flash but `high` on
-      deepseek-v4-pro. A consumer
-      DeepThink app toggle exposes only thinking on/off, not the
-      effort enum.
+      agentic requests). A consumer DeepThink app toggle exposes only
+      thinking on/off, not the effort enum.
     - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
       parameter on the unified models (Mistral Small 4 and Medium 3.5).
       The docs surface `none` (reasoning off / fast) and `high` (full
@@ -1599,14 +1587,8 @@ as primary; the other becomes the secondary category for tie-breaking.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
       `low`, `high`, `max` (default `high`; `max` for some complex
-      agentic requests). DeepSeek documents no `medium` tier (for
-      compatibility the API accepts `medium`, mapping it to `high`).
-      Requested `xhigh` resolves per model — `high` on
-      deepseek-v4-flash, `max` on deepseek-v4-pro — and requested
-      `low` likewise runs at `low` on deepseek-v4-flash but `high` on
-      deepseek-v4-pro. A consumer
-      DeepThink app toggle exposes only thinking on/off, not the
-      effort enum.
+      agentic requests). A consumer DeepThink app toggle exposes only
+      thinking on/off, not the effort enum.
     - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
       parameter on the unified models (Mistral Small 4 and Medium 3.5).
       The docs surface `none` (reasoning off / fast) and `high` (full
@@ -2318,14 +2300,8 @@ as primary; the other becomes the secondary category for tie-breaking.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
       `low`, `high`, `max` (default `high`; `max` for some complex
-      agentic requests). DeepSeek documents no `medium` tier (for
-      compatibility the API accepts `medium`, mapping it to `high`).
-      Requested `xhigh` resolves per model — `high` on
-      deepseek-v4-flash, `max` on deepseek-v4-pro — and requested
-      `low` likewise runs at `low` on deepseek-v4-flash but `high` on
-      deepseek-v4-pro. A consumer
-      DeepThink app toggle exposes only thinking on/off, not the
-      effort enum.
+      agentic requests). A consumer DeepThink app toggle exposes only
+      thinking on/off, not the effort enum.
     - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
       parameter on the unified models (Mistral Small 4 and Medium 3.5).
       The docs surface `none` (reasoning off / fast) and `high` (full
@@ -3743,14 +3719,8 @@ as primary; the other becomes the secondary category for tie-breaking.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
       `low`, `high`, `max` (default `high`; `max` for some complex
-      agentic requests). DeepSeek documents no `medium` tier (for
-      compatibility the API accepts `medium`, mapping it to `high`).
-      Requested `xhigh` resolves per model — `high` on
-      deepseek-v4-flash, `max` on deepseek-v4-pro — and requested
-      `low` likewise runs at `low` on deepseek-v4-flash but `high` on
-      deepseek-v4-pro. A consumer
-      DeepThink app toggle exposes only thinking on/off, not the
-      effort enum.
+      agentic requests). A consumer DeepThink app toggle exposes only
+      thinking on/off, not the effort enum.
     - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
       parameter on the unified models (Mistral Small 4 and Medium 3.5).
       The docs surface `none` (reasoning off / fast) and `high` (full
@@ -5360,14 +5330,8 @@ as primary; the other becomes the secondary category for tie-breaking.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
       `low`, `high`, `max` (default `high`; `max` for some complex
-      agentic requests). DeepSeek documents no `medium` tier (for
-      compatibility the API accepts `medium`, mapping it to `high`).
-      Requested `xhigh` resolves per model — `high` on
-      deepseek-v4-flash, `max` on deepseek-v4-pro — and requested
-      `low` likewise runs at `low` on deepseek-v4-flash but `high` on
-      deepseek-v4-pro. A consumer
-      DeepThink app toggle exposes only thinking on/off, not the
-      effort enum.
+      agentic requests). A consumer DeepThink app toggle exposes only
+      thinking on/off, not the effort enum.
     - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
       parameter on the unified models (Mistral Small 4 and Medium 3.5).
       The docs surface `none` (reasoning off / fast) and `high` (full
@@ -6836,8 +6800,32 @@ as primary; the other becomes the secondary category for tie-breaking.
     THINKING: [On/Off]
     ORCHESTRATION: [None/PerPrompt]
     CONVERSATION: [New/Continue]
-    RATIONALE: [THREE labelled segments — TASK: / PICK: / EFFORT: — exactly as in
-                single-prompt mode.]
+    RATIONALE: [Emit THREE labelled segments in this EXACT order and format, so
+                the UI can split them into sub-headings. Keep EACH segment to
+                ONE crisp sentence of roughly 15-25 words — no lists, no second
+                sentence, no restating the prompt:
+                  TASK: <the prompt's PRIMARY task category, one clause>
+                  PICK: <the recommended model's tier rating in that category
+                  plus ONE headline benchmark or named leaderboard from
+                  <benchmark-sources> supporting it (note the cost tie-breaker
+                  only if step 5 actually applied). The tier you cite MUST be
+                  the one <model-options> gives THAT EXACT model id for THAT
+                  exact category — read it off the row, never infer it. Do NOT
+                  generalise from a model FAMILY or "lineage" (e.g. claiming
+                  "S-tier for the Sonnet lineage"): tiers are per-model, and a
+                  sibling's rating says nothing about this one. If the row's
+                  rating is A, write A — never round it up to S>
+                  EFFORT: <WHY the emitted setting fields fit THIS task's
+                  difficulty — the EFFORT level and THINKING toggle where the
+                  platform exposes them, MAX MODE where it does, ORCHESTRATION
+                  where it applies. Justify only the fields the block actually
+                  emits: never assert an effort or thinking level for a
+                  platform that exposes no reasoning dial, and never mention
+                  Max Mode for a platform that has none. NEVER funding,
+                  how-to-run, or setup instructions>
+                Each label is upper-case followed by a colon and a space; keep
+                every segment short and justifying the pick only, and NEVER
+                perform the task.]
 
     TIER: BALANCED
     MODEL: [Model Name]
@@ -6848,7 +6836,8 @@ as primary; the other becomes the secondary category for tie-breaking.
     THINKING: [On/Off]
     ORCHESTRATION: [None/PerPrompt]
     CONVERSATION: [New/Continue]
-    RATIONALE: [TASK: / PICK: / EFFORT: as above.]
+    RATIONALE: [THREE labelled segments — TASK: / PICK: / EFFORT: — exactly as in
+                single-prompt mode.]
 
     TIER: COST
     MODEL: [Model Name]
