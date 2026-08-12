@@ -43,8 +43,8 @@ Six hard checks:
      ``ultrathink`` as a PER-TURN prompt keyword that does not change session
      effort. Neither may be described with the other's semantics.
   D. Codex reasoning-effort vocabulary (Codex/OpenAI). The reasoning values the
-     selector enumerates for OpenAI/Codex — both on the ``reasoning-effort
-     knob`` bullet of ``<thinking-context>`` and in its OpenAI → THINKING output
+     selector enumerates for OpenAI/Codex — both on the OpenAI dial bullet of
+     ``<thinking-context>`` and in its OpenAI → THINKING output
      mapping — must EQUAL the documented Codex ``model_reasoning_effort`` set
      (``minimal | low | medium | high | xhigh``): no undocumented reasoning
      value (subset) and no documented value left unencoded (completeness). The
@@ -68,6 +68,18 @@ Six hard checks:
      XHigh (scoped to the DeepSeek mapping clause, so the OpenAI mapping's own
      ``high`` -> High is not mistaken for it). DeepSeek publishes no per-model
      reasoning matrix, so there is no per-model sub-check.
+
+Locating the provider enumerations (D/E/F): each provider's levels are found by
+first isolating its ``- <Provider> ...`` BULLET in ``<thinking-context>``, then
+reading the enumeration inside it. Checks D/E/F previously grepped prose phrases
+("reasoning-effort knob", "thinking-level knob", "reasoning-effort enum") out of
+the whole block — prose written by the same cron Opus pass these checks gate. A
+Codex run renamed its bullet to the documented ``reasoning_effort`` spelling, the
+anchor stopped matching, and check D failed "could not find the enumeration"
+fatally and BEFORE the PR-open step, so every later run retried the same edit and
+failed identically (issue #517). Bullet scoping also removes the old need to tell
+OpenAI's and DeepSeek's enumerations apart by "knob" vs "enum", which one reword
+on either side would have silently collided.
 
 Exit codes: 0 PASS, 1 conformance failure, 2 input/config error.
 """
@@ -599,6 +611,140 @@ def _normalize_codex_token(token: str) -> str:
     return CODEX_REASONING_SYNONYMS.get(norm, norm)
 
 
+# --------------------------------------------------------------------------- #
+# Provider-bullet locators
+#
+# Checks D/E/F used to find each provider's level enumeration by grepping a
+# PROSE PHRASE out of the whole <thinking-context> block — "reasoning-effort
+# knob", "thinking-level knob", "reasoning-effort enum". That prose is written
+# by the same cron Opus pass these checks gate, so the checks were anchored on
+# text their own subject is licensed to rewrite. It happened: the Codex tracker
+# renamed its bullet to the documented `reasoning_effort` spelling, the anchor
+# stopped matching, and check D failed "could not find the enumeration" —
+# fatally, BEFORE the PR-open step, so every subsequent run retried the same
+# edit and failed identically. The lane deadlocked (issue #517).
+#
+# Whole-block phrase matching was also why OpenAI's and DeepSeek's enumerations
+# had to be told apart by "knob" vs "enum": a single reword on either side
+# would have made them collide silently.
+#
+# Both problems go away by locating the PROVIDER BULLET structurally first —
+# list items in <thinking-context> are `- <Provider> (<surfaces>): ...` — and
+# only then looking for the enumeration inside that one bullet. Phrase matching
+# is kept as the precise path but widened to a family, and a structural
+# fallback takes over when no phrase matches, so a future reword degrades to
+# "slightly less precise" instead of "lane stops".
+# --------------------------------------------------------------------------- #
+
+# Noun the provider bullets have used, or plausibly will, for the dial itself.
+_DIAL_NOUN = r"(?:knob|enum|control|dial|setting|parameter|selector|values?|levels?|tiers?)"
+
+# "reasoning-effort knob", "`reasoning_effort` knob", "reasoning effort values"...
+# The optional backticks matter: the reword that deadlocked the lane wrapped the
+# dial name in them, and consuming the closing backtick keeps the enumeration's
+# own backtick pairs aligned. Without it the parser reads the CLOSING backtick of
+# the dial as an OPENING one and every token after it is off by one.
+REASONING_DIAL_RE = rf"`?reasoning[-_ ]effort`?(?:\s+{_DIAL_NOUN})?"
+# "thinking-level knob", "thinking levels", "`thinking_level` setting", ...
+THINKING_DIAL_RE = rf"`?thinking[-_ ]level(?:s)?`?(?:\s+{_DIAL_NOUN})?"
+
+# A level token is a short lowercase identifier — `minimal`, `xhigh`, `max`.
+# Used by the structural fallback to tell an enumeration apart from incidental
+# backticked prose like `MAX_THINKING_TOKENS=0` or `gpt-5.3-codex-high`.
+_LEVEL_TOKEN_RE = re.compile(r"^[a-z][a-z0-9_-]{1,12}$")
+
+
+def provider_bullets(thinking_flat: str, provider: str) -> list[str]:
+    """Every ``- <Provider> ...`` bullet in ``<thinking-context>``.
+
+    ``thinking_flat`` is the whitespace-collapsed block, so bullets read
+    ``- OpenAI (Codex, ...): ...`` separated by ``" - "``. A provider appears in
+    TWO lists — the dial descriptions and the output mappings — so this returns
+    all of them and the callers pick by shape.
+    """
+    parts = re.split(r"(?:^|\s)-\s+(?=[A-Z])", thinking_flat)
+    out: list[str] = []
+    for part in parts:
+        # The provider name leads the bullet, before the surface list or the
+        # first mapped value; cap the window so a later mention of another
+        # provider inside the prose cannot claim the bullet.
+        head = re.split(r"[:`]", part, maxsplit=1)[0][:80].lower()
+        if re.search(rf"\b{re.escape(provider.lower())}\b", head):
+            out.append(part)
+    return out
+
+
+def provider_bullet(thinking_flat: str, provider: str) -> str:
+    """The provider's DIAL bullet — the one describing its levels, not mapping them.
+
+    Returns "" when the provider has no bullet, which callers report as a real
+    failure: a missing provider bullet IS a conformance problem, unlike a
+    reworded phrase inside one.
+    """
+    bullets = provider_bullets(thinking_flat, provider)
+    # The mapping bullets are the ones carrying arrows; the dial bullet is not.
+    for bullet in bullets:
+        if "→" not in bullet and "->" not in bullet:
+            return bullet
+    return bullets[0] if bullets else ""
+
+
+def mapping_bullet(thinking_flat: str, provider: str) -> str:
+    """The provider's OUTPUT-MAPPING bullet — the one carrying ``native → EFFORT``.
+
+    Identified structurally by the presence of arrows rather than by the old
+    literal anchor (``OpenAI `minimal` ... → `XHigh```), which hardcoded the
+    vocabulary's two endpoints and so broke the moment either end moved.
+    """
+    for bullet in provider_bullets(thinking_flat, provider):
+        if "→" in bullet or "->" in bullet:
+            return bullet
+    return ""
+
+
+def _tokens_after(segment: str, stop: str = ".") -> set[str]:
+    """Backtick tokens in ``segment`` up to the first ``stop`` character."""
+    cut = re.split(rf"[{re.escape(stop)}]", segment, maxsplit=1)[0]
+    return {t.strip().lower() for t in re.findall(r"`([^`]+)`", cut)}
+
+
+def _fallback_enumeration(bullet: str) -> set[str]:
+    """First run of >=2 plausible level tokens in a bullet.
+
+    The structural safety net for when no dial phrase matches. Requires at
+    least two adjacent level-shaped tokens so a lone backticked word (a default
+    value, a config key, a model id) is never mistaken for an enumeration.
+    """
+    run: list[str] = []
+    for tok in re.findall(r"`([^`]+)`", bullet):
+        norm = tok.strip().lower()
+        if _LEVEL_TOKEN_RE.match(norm):
+            run.append(norm)
+        elif len(run) >= 2:
+            break
+        else:
+            run = []
+    return set(run) if len(run) >= 2 else set()
+
+
+def enumeration_in_bullet(bullet: str, dial_re: str, stop: str = ".(") -> set[str]:
+    """Level tokens enumerated on a provider bullet.
+
+    Precise path: the tokens following the dial phrase, up to the sentence end
+    or the first parenthetical caveat. Fallback: the first run of level-shaped
+    tokens anywhere in the bullet. Returns an empty set only when the bullet
+    carries no enumeration at all.
+    """
+    if not bullet:
+        return set()
+    m = re.search(rf"{dial_re}\s*[—–\-:]*\s*(.*)", bullet, re.IGNORECASE)
+    if m:
+        tokens = _tokens_after(m.group(1), stop)
+        if tokens:
+            return tokens
+    return _fallback_enumeration(bullet)
+
+
 def openai_bullet_reasoning_tokens(thinking_flat: str) -> set[str]:
     """Reasoning tokens enumerated on the OpenAI ``reasoning-effort knob`` bullet.
 
@@ -607,10 +753,10 @@ def openai_bullet_reasoning_tokens(thinking_flat: str) -> set[str]:
     uses pure config tokens (e.g. ```minimal``, ``low``, ...``), captured up to
     the sentence-ending period after the knob phrase.
     """
-    m = re.search(r"reasoning-effort knob\s*[—–\-]+\s*([^.]*)", thinking_flat)
-    if not m:
-        return set()
-    return {_normalize_codex_token(t) for t in re.findall(r"`([^`]+)`", m.group(1))}
+    bullet = provider_bullet(thinking_flat, "OpenAI")
+    return {
+        _normalize_codex_token(t) for t in enumeration_in_bullet(bullet, REASONING_DIAL_RE, ".")
+    }
 
 
 def openai_mapping_reasoning_tokens(thinking_flat: str) -> set[str]:
@@ -621,11 +767,16 @@ def openai_mapping_reasoning_tokens(thinking_flat: str) -> set[str]:
     reasoning value (the token after is the unified THINKING output state).
     Parenthetical asides — e.g. ``(... e.g. `gpt-5.3-codex-high`)`` — are
     stripped first so a model-id example is not mistaken for a reasoning value.
+
+    The bullet is located structurally (see :func:`mapping_bullet`). The old
+    anchor pinned both ends of the vocabulary (``OpenAI `minimal` ... `XHigh```),
+    so adding a tier at either end silently emptied this set and the check
+    reported "could not find the mapping" instead of the real disagreement.
     """
-    m = re.search(r"OpenAI\s+`minimal`(.*?→\s*`XHigh`)", thinking_flat)
-    if not m:
+    seg = mapping_bullet(thinking_flat, "OpenAI")
+    if not seg:
         return set()
-    seg = "OpenAI `minimal`" + re.sub(r"\([^)]*\)", "", m.group(1))
+    seg = re.sub(r"\([^)]*\)", "", seg)
     tokens: set[str] = set()
     parts = seg.split("→")
     # Each part except the last feeds an arrow; its trailing backtick token is
@@ -652,8 +803,10 @@ def check_codex_reasoning_vocab(selector: str, codex_snapshot: dict[str, object]
 
     if not bullet:
         return [
-            "check D (codex reasoning): could not find the OpenAI 'reasoning-effort "
-            "knob' enumeration in <thinking-context>"
+            "check D (codex reasoning): no level enumeration found on the OpenAI bullet "
+            "in <thinking-context>. The bullet itself is missing or carries no "
+            "backticked levels — the dial's WORDING no longer matters (the locator "
+            "is the `- OpenAI ...` bullet), so this means real content is absent."
         ]
     if not mapping:
         return [
@@ -674,7 +827,7 @@ def check_codex_reasoning_vocab(selector: str, codex_snapshot: dict[str, object]
     for token in sorted(documented - bullet):
         failures.append(
             f"check D (codex reasoning): documented Codex reasoning value {token!r} is "
-            "missing from the selector's OpenAI 'reasoning-effort knob' enumeration"
+            "missing from the selector's OpenAI level enumeration"
         )
     for token in sorted(documented - mapping):
         failures.append(
@@ -691,10 +844,8 @@ def gemini_level_tokens(thinking_flat: str) -> set[str]:
     capture the backtick tokens up to the first ``.`` or ``(`` (the per-model
     caveat that follows is a parenthetical / new sentence).
     """
-    m = re.search(r"thinking-level knob\s*[—–\-]+\s*([^.(]*)", thinking_flat)
-    if not m:
-        return set()
-    return {t.lower() for t in re.findall(r"`([^`]+)`", m.group(1))}
+    bullet = provider_bullet(thinking_flat, "Gemini")
+    return enumeration_in_bullet(bullet, THINKING_DIAL_RE, ".(")
 
 
 def check_gemini_thinking(selector: str, gemini_snapshot: dict[str, object]) -> list[str]:
@@ -728,8 +879,10 @@ def check_gemini_thinking(selector: str, gemini_snapshot: dict[str, object]) -> 
     vocab = gemini_level_tokens(flat)
     if not vocab:
         failures.append(
-            "check E (gemini levels): could not find the Gemini 3.x 'thinking-level "
-            "knob' enumeration in <thinking-context>"
+            "check E (gemini levels): no level enumeration found on the Gemini bullet "
+            "in <thinking-context>. The bullet itself is missing or carries no "
+            "backticked levels — the dial's WORDING no longer matters (the locator "
+            "is the `- Gemini ...` bullet), so this means real content is absent."
         )
     else:
         for token in sorted(vocab - documented):
@@ -741,7 +894,7 @@ def check_gemini_thinking(selector: str, gemini_snapshot: dict[str, object]) -> 
         for token in sorted(documented - vocab):
             failures.append(
                 f"check E (gemini levels): documented Gemini 3.x level {token!r} is "
-                "missing from the selector's thinking-level enumeration"
+                "missing from the selector's Gemini level enumeration"
             )
 
     # E2 — per-model support (clause-scoped, negation-aware).
@@ -780,10 +933,8 @@ def deepseek_effort_tokens(thinking_flat: str) -> set[str]:
     "reasoning-effort **enum**", distinct from OpenAI's "reasoning-effort **knob**"
     (check D), so the two never collide.
     """
-    m = re.search(r"reasoning-effort enum\s*[—–\-]+\s*([^.(]*)", thinking_flat)
-    if not m:
-        return set()
-    return {t.lower() for t in re.findall(r"`([^`]+)`", m.group(1))}
+    bullet = provider_bullet(thinking_flat, "DeepSeek")
+    return enumeration_in_bullet(bullet, REASONING_DIAL_RE, ".(")
 
 
 def deepseek_toggle_tokens(thinking_flat: str) -> set[str]:
@@ -792,10 +943,11 @@ def deepseek_toggle_tokens(thinking_flat: str) -> set[str]:
     The bullet reads "... a thinking toggle (``enabled`` / ``disabled``, default
     ``enabled``) ..."; capture the backtick tokens inside that first parenthetical.
     """
-    m = re.search(r"thinking toggle\s*\(([^)]*)\)", thinking_flat)
+    bullet = provider_bullet(thinking_flat, "DeepSeek")
+    m = re.search(r"thinking[- ]toggle\s*\(([^)]*)\)", bullet, re.IGNORECASE)
     if not m:
         return set()
-    return {t.lower() for t in re.findall(r"`([^`]+)`", m.group(1))}
+    return {t.strip().lower() for t in re.findall(r"`([^`]+)`", m.group(1))}
 
 
 def deepseek_mapping_segment(thinking_flat_low: str) -> str:
@@ -838,8 +990,11 @@ def check_deepseek_thinking(selector: str, deepseek_snapshot: dict[str, object])
     effort_vocab = deepseek_effort_tokens(flat)
     if not effort_vocab:
         failures.append(
-            "check F (deepseek effort): could not find the DeepSeek 'reasoning-effort "
-            "enum' enumeration in <thinking-context>"
+            "check F (deepseek effort): no level enumeration found on the DeepSeek "
+            "bullet in <thinking-context>. The bullet itself is missing or carries "
+            "no backticked levels — the dial's WORDING no longer matters (the "
+            "locator is the `- DeepSeek ...` bullet), so this means real content "
+            "is absent."
         )
     else:
         for token in sorted(effort_vocab - documented_effort):
