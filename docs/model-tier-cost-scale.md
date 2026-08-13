@@ -31,11 +31,14 @@ table and surface material cost / availability / capability constraints.
 ### Auto + Composer Pool
 
 
-| Model            | Input | Cache Write | Cache Read | Output | Tier | Notes |
-| ---------------- | ----- | ----------- | ---------- | ------ | ---- | ----- |
-| Composer 2.5     | $0.50 | –           | $0.20      | $2.50  | Low  | -     |
-| Grok 4.5         | $2.00 | –           | $0.50      | $6.00  | Low  | Jointly trained by Cursor and SpaceXAI; Not yet available in the European Union |
-| Auto (pool rate) | $1.25 | $1.25       | $0.25      | $6.00  | Low  | Cursor-managed routing across the Auto + Composer pool; not a fixed model |
+| Model               | Input | Cache Write | Cache Read | Output | Tier   | Notes |
+| ------------------- | ----- | ----------- | ---------- | ------ | ------ | ----- |
+| Composer 2.5        | $0.50 | –           | $0.20      | $2.50  | Low    | -     |
+| Composer 2.5 (Fast) | $3.00 | –           | $0.50      | $15.00 | High   | -     |
+| Grok 4.5            | $2.00 | –           | $0.50      | $6.00  | Low    | Jointly trained by Cursor and SpaceXAI |
+| Grok 4.5 (Fast)     | $4.00 | –           | $1.00      | $12.00 | Medium | Jointly trained by Cursor and SpaceXAI |
+| Grok 4.6            | $2.00 | –           | $0.50      | $6.00  | Low    | Jointly trained by Cursor and SpaceXAI; 50% launch discount for one week starting August 12, 2026 |
+| Grok 4.6 (Fast)     | $4.00 | –           | $1.00      | $12.00 | Medium | Jointly trained by Cursor and SpaceXAI; 50% launch discount for one week starting August 12, 2026 |
 
 
 ### API Pool — Anthropic (Claude)
@@ -55,7 +58,7 @@ table and surface material cost / availability / capability constraints.
 | Claude Opus 4.7 (fast mode) | $30.00 | $37.50      | $3.00      | $150.00 | Very High | Hidden by default; Requires Max Mode on legacy request-based plans; Limited research preview; Up to 1M tokens with extended context at the same per-token rates as shorter context |
 | Claude Opus 4.8             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode on legacy request-based plans; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
 | Claude Opus 5               | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-fast`) requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
-| Claude Sonnet 5             | $3.00  | $3.75       | $0.30      | $15.00  | High      | Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens |
+| Claude Sonnet 5             | $3.00  | $3.75       | $0.30      | $15.00  | High      | Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens |
 
 
 ### API Pool — Cursor Composer
@@ -124,7 +127,7 @@ table and surface material cost / availability / capability constraints.
 
 ---
 
-<!-- subscription-tiers-reviewed: 2026-08-05 -->
+<!-- subscription-tiers-reviewed: 2026-08-13 -->
 
 ## Subscription Tiers and Access Methods
 
@@ -210,6 +213,7 @@ appear here.
 | ---------------- | ------- | ------------ | ------------ | ------ |
 | opus-4.7         | $25.00  | Very High    | Very High    | ✓      |
 | opus-4.8         | $25.00  | Very High    | Very High    | ✓      |
+| claude-opus-5    | $25.00  | Very High    | Very High    | ✓      |
 | claude-fable-5   | $50.00  | Very High    | Very High    | ✓      |
 | gpt-5.5          | $30.00  | Very High    | Very High    | ✓      |
 | gpt-5.6-sol      | $30.00  | Very High    | Very High    | ✓      |
@@ -217,6 +221,7 @@ appear here.
 | claude-sonnet-5  | $15.00  | High         | High         | ✓      |
 | gpt-5.4          | $15.00  | High         | High         | ✓      |
 | gpt-5.6-terra    | $15.00  | High         | High         | ✓      |
+| kimi-k3          | $15.00  | High         | High         | ✓      |
 | gpt-5.3-codex    | $14.00  | Medium       | Medium       | ✓      |
 | gpt-5.2          | $14.00  | Medium       | Medium       | ✓      |
 | gpt-5.2-codex    | $14.00  | Medium       | Medium       | ✓      |
@@ -227,6 +232,7 @@ appear here.
 | gpt-5.1-codex-max | $10.00 | Medium       | Medium       | ✓      |
 | gemini-3.5-flash | $9.00   | Low          | Low          | ✓      |
 | mistral-medium-3.5 | $7.50 | Low          | Low          | ✓      |
+| gemini-3.6-flash | $7.50   | Low          | Low          | ✓      |
 | gpt-5.6-luna     | $6.00   | Low          | Low          | ✓      |
 | grok-4.5         | $6.00   | Low          | Low          | ✓      |
 | claude-4.5-haiku | $5.00   | Low          | Low          | ✓      |
@@ -268,19 +274,24 @@ ids no longer appear as recommendable engines.
 
 | Model id         | Output | Tier      | Change                                                                                                                     |
 | ---------------- | ------ | --------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Grok 4.6         | $6.00  | Low       | New 2026-08-13 on Cursor's pricing page — SpaceXAI's Grok 4.6 flagship (released August 12, 2026 by SpaceXAI) jointly trained by Cursor and SpaceXAI at $2/$6 (same price as Grok 4.5); 50% launch discount for one week starting August 12, 2026. Ties GPT-5.6 Sol at 61 on AA Intelligence Index per SpaceXAI's launch table. Not yet added to `<model-options>` (selector-pass will handle) |
+| Grok 4.6 (Fast)  | $12.00 | Medium    | New 2026-08-13 on Cursor's pricing page — Grok 4.6 Fast variant at $4/$12; same 50% launch discount |
+| Grok 4.5 (Fast)  | $12.00 | Medium    | New 2026-08-13 on Cursor's pricing page — Grok 4.5 Fast variant at $4/$12 (previously not enumerated as a separate row) |
+| Composer 2.5 (Fast) | $15.00 | High   | New 2026-08-13 on Cursor's pricing page — Composer 2.5 Fast variant at $3/$15 (previously not enumerated as a separate row) |
 | Claude Opus 5    | $25.00 | Very High | New 2026-08-05 on Cursor's pricing page — Anthropic's Opus 5 successor at $5/$25 (same tier pricing as Opus 4.7/4.8); requires Max Mode on legacy request-based plans; native 1M context via extended-context toggle. Not yet added to `<model-options>` (selector-pass will handle) |
 | Gemini 3.6 Flash | $7.50  | Low       | New 2026-08-05 on Cursor's pricing page — Google's Gemini 3.6 Flash at $1.50/$7.50 (visible, not Hidden by default). Reportedly released 2026-07-21. Not yet added to `<model-options>` |
 | Kimi K3          | $15.00 | High      | New 2026-08-05 on Cursor's pricing page — Moonshot's Kimi K3 at $3/$15 with 1M extended-context support at flat per-token rates. Not yet added to `<model-options>` |
-| claude-sonnet-5  | $15.00 | High      | New 2026-07-15 on Cursor's pricing page — Anthropic's Claude Sonnet 5 with $3/M input and $15/M output; launch promotion $2/$10 through August 31, 2026; not yet added to `<model-options>` (selector-pass will handle) |
+| claude-sonnet-5  | $15.00 | High      | New 2026-07-15 on Cursor's pricing page — Anthropic's Claude Sonnet 5 with $3/M input and $15/M output (Federation rule: provider-direct price preserved verbatim in cost-scale; Anthropic made the introductory $2/$10 pricing PERMANENT on 2026-08-10, canceling the September step-up — provider-direct extractor owns that update, cost-scale price flagged as stale pending sync); notes updated 2026-08-13 to drop the now-obsolete launch-promotion clause since Cursor's page no longer lists it |
 | gpt-5.6-sol      | $30.00 | Very High | New 2026-07-15 on Cursor's pricing page — OpenAI's GPT-5.6 Sol flagship at $5/$30 (mirrors GPT-5.5 pricing); requires Max Mode on request-based plans |
 | gpt-5.6-terra    | $15.00 | High      | New 2026-07-15 on Cursor's pricing page — GPT-5.6 Terra mid-tier variant at $2.50/$15                                       |
-| gpt-5.6-luna     | $6.00  | Low       | New 2026-07-15 on Cursor's pricing page — smallest GPT-5.6 variant at $1/$6, optimized for cost and speed                   |
+| gpt-5.6-luna     | $6.00  | Low       | New 2026-07-15 on Cursor's pricing page — smallest GPT-5.6 variant at $1/$6, optimized for cost and speed (Federation rule: Cursor's page now shows $0.2/$1.2 output, but OpenAI provider-direct price preserved verbatim — cost-scale $6/M output flagged as stale pending provider-direct sync) |
 | gpt-5.2-codex    | $14.00 | Medium    | New 2026-07-15 on Cursor's pricing page — Codex variant of GPT-5.2 at $1.75/$14 (same pricing as GPT-5.2, agentic + reasoning) |
 | gpt-5.1-codex-max | $10.00 | Medium   | New 2026-07-15 on Cursor's pricing page — GPT-5.1 Codex Max at $1.25/$10                                                    |
 | kimi-k2.7-code   | $4.00  | Low       | New 2026-07-15 on Cursor's pricing page — Moonshot's Kimi K2.7 Code at $0.95/$4 (supersedes Kimi K2.5 row; K2.5 no longer on Cursor's pricing page) |
-| grok-4.5         | $6.00  | Low       | New 2026-07-15 on Cursor's pricing page — jointly trained by Cursor and SpaceXAI, first-party model; not yet available in the EU |
+| grok-4.5         | $6.00  | Low       | New 2026-07-15 on Cursor's pricing page — jointly trained by Cursor and SpaceXAI, first-party model; notes updated 2026-08-13 to drop the "Not yet available in the European Union" clause since Cursor's current page no longer lists it |
 | glm-5.2          | $4.40  | Low       | New 2026-06-27 in cost-scale — z.ai's GLM 5.2 now visible on Cursor's pricing page (provider header "Z.ai"); already present in `<model-options>` via provider-direct `zai-api` method, prices preserved per the Federation rule (provider-direct catalog owns input/output) |
 | grok-4.3         | $2.50  | Low       | LEFT Cursor's pricing page 2026-07-15 (Grok 4.5 is Cursor's first-party replacement) but RETAINED in `<model-options>` as provider-direct via the `xai-api` method — still on xAI's own API at $1.25/$2.50; prices owned by `catalog-xai.json` per the Federation rule (xAI is now `overlay_mode: whole-element`, like DeepSeek) |
+| Auto (pool rate) | —      | —         | REMOVED 2026-08-13 from cost-scale — Cursor's updated pricing page no longer publishes a discrete Auto pool rate row (the page describes Auto Cost / Auto Balance / Auto Intelligence modes but does not enumerate per-token rates as a model row); the routing pool billing behavior is still documented prosaically on the pricing page |
 | grok-build-0.1   | —      | —         | REMOVED 2026-07-15 from Cursor's pricing page — Grok Build 0.1 no longer listed                                             |
 | composer-2       | —      | —         | REMOVED 2026-07-15 from Cursor's pricing page — Composer 2 removed in favor of Composer 2.5 (2.5 supersedes 2 in Cursor's own listing) |
 | composer-1.5     | —      | —         | REMOVED 2026-07-15 from Cursor's pricing page — Composer 1.5 no longer listed (Composer 1 still visible as legacy)          |
@@ -313,12 +324,12 @@ this table.
 
 | Provider HQ name              | Jurisdiction code | Models in catalog                                                                                                       |
 | ----------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Anthropic (San Francisco, US) | `us`              | opus-4.8, opus-4.7, sonnet-4.6, claude-4.5-haiku                                                                        |
-| OpenAI (San Francisco, US)    | `us`              | gpt-5.5, gpt-5.4, gpt-5.3-codex, gpt-5.2, gpt-5.1-codex, gpt-5, gpt-5.4-mini, gpt-5.4-nano, gpt-5-mini                  |
-| Google (Mountain View, US)    | `us`              | gemini-3.1-pro, gemini-3-pro, gemini-3.5-flash, gemini-3-flash, gemini-2.5-flash                                        |
-| xAI (Palo Alto, US)           | `us`              | grok-4.3                                                                                                                |
-| Cursor (San Francisco, US)    | `us`              | composer-2, composer-2.5 — note: base weights for these Composer models derive from Moonshot's Kimi K2 series; Cursor's operator status determines the jurisdiction code per `<jurisdiction-context>` (data flow governed by Cursor's privacy policy and US law) |
-| Moonshot AI (Beijing, CN)     | `cn`              | kimi-k2.5                                                                                                               |
+| Anthropic (San Francisco, US) | `us`              | claude-opus-5, opus-4.8, opus-4.7, claude-fable-5, claude-sonnet-5, sonnet-4.6, claude-4.5-haiku                        |
+| OpenAI (San Francisco, US)    | `us`              | gpt-5.6-sol, gpt-5.5, gpt-5.6-terra, gpt-5.4, gpt-5.3-codex, gpt-5.2, gpt-5.2-codex, gpt-5.1-codex-max, gpt-5.1-codex, gpt-5, gpt-5.6-luna, gpt-5.4-mini, gpt-5.4-nano, gpt-5-mini |
+| Google (Mountain View, US)    | `us`              | gemini-3.1-pro, gemini-3-pro, gemini-3.6-flash, gemini-3.5-flash, gemini-3-flash, gemini-2.5-flash                      |
+| xAI (Palo Alto, US)           | `us`              | grok-4.5, grok-4.3                                                                                                      |
+| Cursor (San Francisco, US)    | `us`              | composer-2.5 — note: base weights for these Composer models derive from Moonshot's Kimi K2 series; Cursor's operator status determines the jurisdiction code per `<jurisdiction-context>` (data flow governed by Cursor's privacy policy and US law) |
+| Moonshot AI (Beijing, CN)     | `cn`              | kimi-k3, kimi-k2.7-code                                                                                                 |
 | DeepSeek (Hangzhou, CN)       | `cn`              | deepseek-v4-pro, deepseek-v4-flash                                                                                      |
 | z.ai / Zhipu AI (Beijing, CN) | `cn`              | glm-5.2, glm-4.6, glm-4.5-air                                                                                           |
 | Mistral AI (Paris, FR/EU)     | `eu`              | mistral-medium-3.5, mistral-small-4, mistral-large-3, codestral                                                         |
