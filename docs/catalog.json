@@ -1,9 +1,9 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-08-12T20:54:24Z",
+  "generated_at_utc": "2026-08-15T19:32:58Z",
   "source_doc_sha256": {
-    "model-selector.txt": "346a8a79da1f2eea0235676d435aa77c28ec82c1e5b8a3478f610d6334bdb5ca",
+    "model-selector.txt": "9894b5ee98b6934ab7b3252f8864e02e62b2a5ef4bc93c42d77520a5bbe69ef3",
     "model-tier-cost-scale.md": "320ffa43b56f37608f5cdbcda48147b585e1c79a427e4be71ccb69bd9f05bc44"
   },
   "models": [
@@ -1123,7 +1123,7 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
-      "best_for": "Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool."
+      "best_for": "Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) \u2014 per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro is low/medium/high; the 2.5 generation is low/medium/high; `minimal` is Flash-line)."
     },
     {
       "id": "google-api",
@@ -1143,7 +1143,7 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
-      "best_for": "Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)."
+      "best_for": "Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) shared across the 3.x and 2.5 generations \u2014 per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro is low/medium/high; the 2.5 generation is low/medium/high). Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)."
     },
     {
       "id": "groq-api",
