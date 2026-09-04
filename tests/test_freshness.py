@@ -1,6 +1,24 @@
 """Freshness check: warn loudly if the automated refresh hasn't run
-in too long. The weekly cron is the project's heartbeat; this test
+in too long. The daily cron is the project's heartbeat; this test
 catches a stuck or disabled workflow before silent doc rot.
+
+WHERE THIS RUNS (and why it is not a per-PR gate). This guard is marked
+``freshness`` and is DESELECTED from the per-PR test matrix and from
+verify-phase01's V2.2 lane; it runs in the daily alarm
+(``.github/workflows/cron-health.yml``), which files a tracking issue when
+it fires.
+
+That split exists because the guard's old wiring deadlocked the repo. When
+the catalog cron broke (2026-08-21, Opus output truncated at max_tokens),
+this test went red on EVERY pull request — including the PRs that fix the
+cron. A stale catalog then blocked its own repair, and five cron PRs rotted
+into conflicts behind it. An alarm that blocks the fix for the thing it is
+alarming about is worse than no alarm.
+
+Deselecting is NOT the same as skipping: the assertion still runs daily, at
+full strength, on a schedule, and its failure is loud (a filed issue) rather
+than silent. Do not weaken the assertion itself, and do not turn the
+``None`` branch below into a skip on a full clone.
 """
 
 from __future__ import annotations
@@ -56,6 +74,7 @@ def _is_shallow_clone() -> bool:
     return result.stdout.strip() == "true"
 
 
+@pytest.mark.freshness
 def test_automation_recently_committed() -> None:
     last = _last_bot_commit_timestamp()
     if last is None:

@@ -1,0 +1,151 @@
+# .github/workflows/cron-health.yml
+name: Cron health
+
+# The refresh pipeline's alarm. Two independent questions, once a day:
+#
+#   1. Did every daily cron's LAST run succeed?  (detects a broken cron the
+#      day it breaks — the catalog cron failed 15 days straight in
+#      2026-08/09 and nothing said so)
+#   2. Has an automated refresh actually LANDED on main recently?  (detects
+#      the other failure mode: crons that go green but whose PRs never
+#      merge — the "cron PR merge backlog")
+#
+# A green cron that opens PRs nobody merges is still doc rot, so (2) is not
+# redundant with (1). Failure files a single deduplicated tracking issue and
+# fails the run; recovery closes the issue automatically.
+#
+# This is where tests/test_freshness.py's staleness assertion lives now. It
+# used to run in the per-PR matrix, where a broken cron turned every pull
+# request red — including the PR fixing the cron. See that module's docstring.
+
+on:
+  schedule:
+    # 22:30 UTC — after the last daily cron in the chain (availability probe
+    # at 21:00), so a same-day failure is caught the same day.
+    - cron: "30 22 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: cron-health
+  cancel-in-progress: false
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v5
+        with:
+          # fetch-depth: 0 — the staleness guard searches full history for
+          # the cron bot's commits. On a shallow clone it skips itself.
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: Refresh staleness (tests/test_freshness.py)
+        id: freshness
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          # `-m freshness` overrides the project-wide `not freshness` default
+          # in pyproject.toml — this workflow is the alarm's only caller.
+          pytest -m freshness tests/test_freshness.py -q 2>&1 | tee /tmp/freshness.txt
+
+      - name: Last run of every scheduled cron
+        id: crons
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # Every workflow that carries a `schedule:` trigger, minus this one.
+          mapfile -t files < <(grep -rl "schedule:" .github/workflows --include='*.yml' \
+            | grep -v cron-health.yml | sort)
+          failing=""
+          for f in "${files[@]}"; do
+            wf="$(basename "$f")"
+            row="$(gh run list --workflow="$wf" --limit 1 \
+              --json conclusion,createdAt,url \
+              -q '.[0] | "\(.conclusion)\t\(.createdAt)\t\(.url)"' 2>/dev/null || true)"
+            if [ -z "$row" ]; then
+              echo "$wf: no runs recorded — skipping."
+              continue
+            fi
+            concl="${row%%$'\t'*}"
+            echo "$wf: $concl"
+            # `cancelled` and `skipped` are normal (concurrency, gate no-ops).
+            if [ "$concl" = "failure" ] || [ "$concl" = "timed_out" ]; then
+              failing="${failing}- \`${wf}\` — ${row}"$'\n'
+            fi
+          done
+          {
+            echo "failing<<EOF"
+            printf '%s' "$failing"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: File or clear the tracking issue
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          FRESHNESS_OUTCOME: ${{ steps.freshness.outcome }}
+          FAILING_CRONS: ${{ steps.crons.outputs.failing }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          TITLE="chore(cron): automated refresh pipeline is unhealthy"
+
+          healthy=1
+          if [ "$FRESHNESS_OUTCOME" = "failure" ]; then healthy=0; fi
+          if [ -n "$FAILING_CRONS" ]; then healthy=0; fi
+
+          # Dedup by EXACT title over OPEN issues via the REST list (never
+          # `--search`, whose index lag files a fresh duplicate daily — the
+          # bug that produced 11 dupes in 2026-07).
+          number="$(gh issue list --state open --limit 200 --json number,title \
+            -q "map(select(.title == \"$TITLE\")) | .[0].number // empty")"
+
+          if [ "$healthy" = "1" ]; then
+            echo "Refresh pipeline healthy."
+            if [ -n "$number" ]; then
+              gh issue comment "$number" --body "Recovered: every scheduled cron's last run succeeded and an automated refresh has landed within the freshness threshold. Closing. ($RUN_URL)"
+              gh issue close "$number"
+              echo "Closed #$number."
+            fi
+            exit 0
+          fi
+
+          body="$(printf 'The daily cron-health check failed.\n\n')"
+          if [ -n "$FAILING_CRONS" ]; then
+            body="${body}$(printf '## Crons whose last run failed\n\n%s\n' "$FAILING_CRONS")"
+          fi
+          if [ "$FRESHNESS_OUTCOME" = "failure" ]; then
+            body="${body}$(printf '\n## Refresh staleness\n\n```\n%s\n```\n' "$(tail -20 /tmp/freshness.txt)")"
+          fi
+          body="${body}$(printf '\nCheck run: %s\n\nOpened automatically by `.github/workflows/cron-health.yml`. It closes itself once the pipeline recovers.\n' "$RUN_URL")"
+
+          if [ -n "$number" ]; then
+            gh issue comment "$number" --body "$body"
+            echo "Commented on existing #$number."
+          else
+            gh label create cron-health --color B60205 \
+              --description "Automated refresh pipeline health alarm" 2>/dev/null || true
+            gh issue create --title "$TITLE" --label cron-health --body "$body"
+            echo "Opened tracking issue."
+          fi
+          exit 1

@@ -102,7 +102,15 @@ jobs:
         # LMArena parquet, etc.) that rate-limit (429), flaking CI and
         # blocking unrelated PRs. Live-source drift is covered by the weekly
         # cron (which carries AA_API_KEY); the verify scripts deselect it too.
-        run: pytest -x --cov=roadmodel tests/ --ignore=tests/test_sources_live.py
+        #
+        # Deselect `freshness` for the same reason, one level up: it asserts
+        # the refresh crons have committed recently, so a broken cron turns
+        # EVERY pull request red — including the PR that repairs the cron.
+        # That deadlock stalled the repo for three weeks (catalog cron broke
+        # 2026-08-21; five cron PRs rotted behind the red check). The
+        # assertion still runs daily at full strength in
+        # .github/workflows/cron-health.yml, which files a tracking issue.
+        run: pytest -x --cov=roadmodel tests/ --ignore=tests/test_sources_live.py -m "not freshness"
 
   package-smoke:
     runs-on: ubuntu-latest

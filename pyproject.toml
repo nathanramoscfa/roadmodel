@@ -97,6 +97,21 @@ include = [
 [tool.hatch.build.hooks.custom]
 path = "hatch_build.py"
 
+[tool.pytest.ini_options]
+# Deselect the cron staleness alarm from EVERY default pytest run — CI
+# matrix, phase-verify lanes, and local runs alike — so a broken refresh
+# cron can never block the pull request that repairs it. The alarm opts
+# back in explicitly with `-m freshness` (cron-health.yml). A command-line
+# `-m` overrides this default, which is how that opt-in works.
+addopts = '-m "not freshness"'
+markers = [
+    # Staleness alarm for the automated refresh crons. DESELECTED from the
+    # per-PR matrix (`-m "not freshness"`) and run daily by
+    # .github/workflows/cron-health.yml — a broken cron must not block the
+    # PR that fixes it. See tests/test_freshness.py for the full rationale.
+    "freshness: cron staleness alarm; runs in the daily cron-health workflow, not per-PR",
+]
+
 [tool.ruff]
 target-version = "py311"
 line-length = 100
