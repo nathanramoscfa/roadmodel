@@ -332,7 +332,7 @@ differently:
   2.1.227 is a bug-fix / UI-polish release with no changes to the
   effort or thinking surface.
 - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
-  reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
+  `reasoning_effort` knob — `minimal`, `low`, `medium`, `high`,
   `xhigh` (the top "Extra High" tier; model-dependent). Higher
   effort spends more reasoning tokens before visible output.
   Codex's plan-mode reasoning-effort variant additionally accepts
@@ -412,12 +412,13 @@ OMITTED. Every other value is an EFFORT level emitted verbatim, with
   `XHigh`, not `Max`. Extended thinking disabled (Option+T /
   Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
   false) → `Off`; Fable 5 cannot map to `Off`.
-- OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
-  `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
-  Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
-  OpenAI's scale tops out at `xhigh`, so no OpenAI level maps to
-  `Max` (the `Max` slot is reserved for the above-`xhigh` step
-  that only the Claude `max`-capable models reach).
+- OpenAI `reasoning_effort`: `minimal` → `Off`; `low` → `Low`;
+  `medium` → `Medium`; `high` → `High`; `xhigh` / `extra-high`
+  (the top "Extra High" tier, model-dependent — the UI synonym
+  `extra-high` and the config token `xhigh` are the same tier) →
+  `XHigh`. OpenAI's scale tops out at `xhigh`, so no OpenAI level
+  maps to `Max` (the `Max` slot is reserved for the above-`xhigh`
+  step that only the Claude `max`-capable models reach).
 - Gemini thinking levels: `minimal` → `Off`; `low` → `Low`;
   `medium` → `Medium`; `high` → `High` (Gemini tops out at `high`
   — no `xhigh` or `max` tier). `minimal` maps to `Off` for the
@@ -686,7 +687,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       2.1.227 is a bug-fix / UI-polish release with no changes to the
       effort or thinking surface.
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
-      reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
+      `reasoning_effort` knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
       Codex's plan-mode reasoning-effort variant additionally accepts
@@ -766,12 +767,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       `XHigh`, not `Max`. Extended thinking disabled (Option+T /
       Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
       false) → `Off`; Fable 5 cannot map to `Off`.
-    - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
-      `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
-      Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
-      OpenAI's scale tops out at `xhigh`, so no OpenAI level maps to
-      `Max` (the `Max` slot is reserved for the above-`xhigh` step
-      that only the Claude `max`-capable models reach).
+    - OpenAI `reasoning_effort`: `minimal` → `Off`; `low` → `Low`;
+      `medium` → `Medium`; `high` → `High`; `xhigh` / `extra-high`
+      (the top "Extra High" tier, model-dependent — the UI synonym
+      `extra-high` and the config token `xhigh` are the same tier) →
+      `XHigh`. OpenAI's scale tops out at `xhigh`, so no OpenAI level
+      maps to `Max` (the `Max` slot is reserved for the above-`xhigh`
+      step that only the Claude `max`-capable models reach).
     - Gemini thinking levels: `minimal` → `Off`; `low` → `Low`;
       `medium` → `Medium`; `high` → `High` (Gemini tops out at `high`
       — no `xhigh` or `max` tier). `minimal` maps to `Off` for the
@@ -1576,7 +1578,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       2.1.227 is a bug-fix / UI-polish release with no changes to the
       effort or thinking surface.
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
-      reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
+      `reasoning_effort` knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
       Codex's plan-mode reasoning-effort variant additionally accepts
@@ -1656,12 +1658,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       `XHigh`, not `Max`. Extended thinking disabled (Option+T /
       Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
       false) → `Off`; Fable 5 cannot map to `Off`.
-    - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
-      `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
-      Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
-      OpenAI's scale tops out at `xhigh`, so no OpenAI level maps to
-      `Max` (the `Max` slot is reserved for the above-`xhigh` step
-      that only the Claude `max`-capable models reach).
+    - OpenAI `reasoning_effort`: `minimal` → `Off`; `low` → `Low`;
+      `medium` → `Medium`; `high` → `High`; `xhigh` / `extra-high`
+      (the top "Extra High" tier, model-dependent — the UI synonym
+      `extra-high` and the config token `xhigh` are the same tier) →
+      `XHigh`. OpenAI's scale tops out at `xhigh`, so no OpenAI level
+      maps to `Max` (the `Max` slot is reserved for the above-`xhigh`
+      step that only the Claude `max`-capable models reach).
     - Gemini thinking levels: `minimal` → `Off`; `low` → `Low`;
       `medium` → `Medium`; `high` → `High` (Gemini tops out at `high`
       — no `xhigh` or `max` tier). `minimal` maps to `Off` for the
@@ -1907,7 +1910,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Billing:** subscription-or-key (requires chatgpt-subscription OR openai-api-key)
 - **Supports models:** gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5-mini
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
-- **Best for:** Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work. Exposes the full Codex `model_reasoning_effort` dial (`minimal`, `low`, `medium`, `high`, `xhigh` — top `xhigh` tier is model-dependent) plus the plan-mode reasoning-effort variant that additionally accepts `none`.
+- **Best for:** Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work. Exposes the full Codex `model_reasoning_effort` dial (`minimal`, `low`, `medium`, `high`, `xhigh` — top `xhigh` tier is model-dependent) plus the plan-mode `plan_mode_reasoning_effort` variant that additionally accepts `none`.
 
 #### ChatGPT (web / desktop) — `chatgpt-app`
 
@@ -2292,7 +2295,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       2.1.227 is a bug-fix / UI-polish release with no changes to the
       effort or thinking surface.
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
-      reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
+      `reasoning_effort` knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
       Codex's plan-mode reasoning-effort variant additionally accepts
@@ -2372,12 +2375,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       `XHigh`, not `Max`. Extended thinking disabled (Option+T /
       Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
       false) → `Off`; Fable 5 cannot map to `Off`.
-    - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
-      `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
-      Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
-      OpenAI's scale tops out at `xhigh`, so no OpenAI level maps to
-      `Max` (the `Max` slot is reserved for the above-`xhigh` step
-      that only the Claude `max`-capable models reach).
+    - OpenAI `reasoning_effort`: `minimal` → `Off`; `low` → `Low`;
+      `medium` → `Medium`; `high` → `High`; `xhigh` / `extra-high`
+      (the top "Extra High" tier, model-dependent — the UI synonym
+      `extra-high` and the config token `xhigh` are the same tier) →
+      `XHigh`. OpenAI's scale tops out at `xhigh`, so no OpenAI level
+      maps to `Max` (the `Max` slot is reserved for the above-`xhigh`
+      step that only the Claude `max`-capable models reach).
     - Gemini thinking levels: `minimal` → `Off`; `low` → `Low`;
       `medium` → `Medium`; `high` → `High` (Gemini tops out at `high`
       — no `xhigh` or `max` tier). `minimal` maps to `Off` for the
@@ -3191,7 +3195,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work. Exposes the full Codex `model_reasoning_effort` dial (`minimal`, `low`, `medium`, `high`, `xhigh` — top `xhigh` tier is model-dependent) plus the plan-mode reasoning-effort variant that additionally accepts `none`." />
+            best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work. Exposes the full Codex `model_reasoning_effort` dial (`minimal`, `low`, `medium`, `high`, `xhigh` — top `xhigh` tier is model-dependent) plus the plan-mode `plan_mode_reasoning_effort` variant that additionally accepts `none`." />
     <method id="chatgpt-app" name="ChatGPT (web / desktop)"
             provider="openai" billing="subscription-included"
             provider-jurisdiction="us"
@@ -3714,7 +3718,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       2.1.227 is a bug-fix / UI-polish release with no changes to the
       effort or thinking surface.
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
-      reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
+      `reasoning_effort` knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
       Codex's plan-mode reasoning-effort variant additionally accepts
@@ -3794,12 +3798,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       `XHigh`, not `Max`. Extended thinking disabled (Option+T /
       Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
       false) → `Off`; Fable 5 cannot map to `Off`.
-    - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
-      `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
-      Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
-      OpenAI's scale tops out at `xhigh`, so no OpenAI level maps to
-      `Max` (the `Max` slot is reserved for the above-`xhigh` step
-      that only the Claude `max`-capable models reach).
+    - OpenAI `reasoning_effort`: `minimal` → `Off`; `low` → `Low`;
+      `medium` → `Medium`; `high` → `High`; `xhigh` / `extra-high`
+      (the top "Extra High" tier, model-dependent — the UI synonym
+      `extra-high` and the config token `xhigh` are the same tier) →
+      `XHigh`. OpenAI's scale tops out at `xhigh`, so no OpenAI level
+      maps to `Max` (the `Max` slot is reserved for the above-`xhigh`
+      step that only the Claude `max`-capable models reach).
     - Gemini thinking levels: `minimal` → `Off`; `low` → `Low`;
       `medium` → `Medium`; `high` → `High` (Gemini tops out at `high`
       — no `xhigh` or `max` tier). `minimal` maps to `Off` for the
@@ -4613,7 +4618,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work. Exposes the full Codex `model_reasoning_effort` dial (`minimal`, `low`, `medium`, `high`, `xhigh` — top `xhigh` tier is model-dependent) plus the plan-mode reasoning-effort variant that additionally accepts `none`." />
+            best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work. Exposes the full Codex `model_reasoning_effort` dial (`minimal`, `low`, `medium`, `high`, `xhigh` — top `xhigh` tier is model-dependent) plus the plan-mode `plan_mode_reasoning_effort` variant that additionally accepts `none`." />
     <method id="chatgpt-app" name="ChatGPT (web / desktop)"
             provider="openai" billing="subscription-included"
             provider-jurisdiction="us"
@@ -5328,7 +5333,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       2.1.227 is a bug-fix / UI-polish release with no changes to the
       effort or thinking surface.
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
-      reasoning-effort knob — `minimal`, `low`, `medium`, `high`,
+      `reasoning_effort` knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
       effort spends more reasoning tokens before visible output.
       Codex's plan-mode reasoning-effort variant additionally accepts
@@ -5408,12 +5413,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       `XHigh`, not `Max`. Extended thinking disabled (Option+T /
       Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
       false) → `Off`; Fable 5 cannot map to `Off`.
-    - OpenAI `minimal` → `Off`; `low` → `Low`; `medium` → `Medium`;
-      `high` → `High`; `xhigh` / `extra-high` (the high-reasoning
-      Codex / GPT variant, e.g. `gpt-5.3-codex-high`) → `XHigh`.
-      OpenAI's scale tops out at `xhigh`, so no OpenAI level maps to
-      `Max` (the `Max` slot is reserved for the above-`xhigh` step
-      that only the Claude `max`-capable models reach).
+    - OpenAI `reasoning_effort`: `minimal` → `Off`; `low` → `Low`;
+      `medium` → `Medium`; `high` → `High`; `xhigh` / `extra-high`
+      (the top "Extra High" tier, model-dependent — the UI synonym
+      `extra-high` and the config token `xhigh` are the same tier) →
+      `XHigh`. OpenAI's scale tops out at `xhigh`, so no OpenAI level
+      maps to `Max` (the `Max` slot is reserved for the above-`xhigh`
+      step that only the Claude `max`-capable models reach).
     - Gemini thinking levels: `minimal` → `Off`; `low` → `Low`;
       `medium` → `Medium`; `high` → `High` (Gemini tops out at `high`
       — no `xhigh` or `max` tier). `minimal` maps to `Off` for the
@@ -6227,7 +6233,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work. Exposes the full Codex `model_reasoning_effort` dial (`minimal`, `low`, `medium`, `high`, `xhigh` — top `xhigh` tier is model-dependent) plus the plan-mode reasoning-effort variant that additionally accepts `none`." />
+            best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work. Exposes the full Codex `model_reasoning_effort` dial (`minimal`, `low`, `medium`, `high`, `xhigh` — top `xhigh` tier is model-dependent) plus the plan-mode `plan_mode_reasoning_effort` variant that additionally accepts `none`." />
     <method id="chatgpt-app" name="ChatGPT (web / desktop)"
             provider="openai" billing="subscription-included"
             provider-jurisdiction="us"
