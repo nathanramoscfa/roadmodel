@@ -137,15 +137,22 @@ jobs:
           fi
           gh label create catalog-unfederated-model --color FBCA04 \
             --description "A provider-direct snapshot lists a model not yet in <model-options>" 2>/dev/null || true
-          existing="$(gh issue list --state open --search 'provider-direct model in:title' --json title -q '.[].title' || true)"
+          # REST issues API + EXACT title, not --search: the search index lags
+          # behind issue creation, so `--search '... in:title'` returned empty
+          # in-run and re-filed the same issue on every run — four copies of
+          # "deepseek-v4-flash-vision-exp" (#542, #543, #544, #545) between
+          # 2026-08-24 and 2026-09-02. The other four crons were fixed in #420;
+          # this one was missed.
+          existing="$(gh issue list --state open --limit 200 --json title -q '.[].title' || true)"
           for model in "${additions[@]}"; do
             [ -z "${model}" ] && continue
-            if grep -Fq "${model}" <<< "${existing}"; then
+            title="chore(catalog): provider-direct model \"${model}\" not in <model-options>"
+            if printf '%s\n' "${existing}" | grep -Fqx "${title}"; then
               echo "Issue already open for ${model}; skipping."
               continue
             fi
             gh issue create \
-              --title "chore(catalog): provider-direct model \"${model}\" not in <model-options>" \
+              --title "${title}" \
               --label catalog-unfederated-model \
               --body "A committed provider-direct catalog snapshot (\`update/catalog-*.json\`) lists \`${model}\`, which is not yet in \`<model-options>\` of \`docs/model-selector.txt\`. Add it editorially with tier ratings (the DeepSeek / Mistral path) so it becomes recommendable. Phase 4.6 model-list federation flags discovery only; it never auto-adds an unrated model." \
               || echo "issue create failed for ${model}"
