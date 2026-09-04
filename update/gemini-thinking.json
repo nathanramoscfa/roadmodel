@@ -8,6 +8,11 @@
     "high"
   ],
   "per_model_levels": {
+    "Gemini 3.8 Flash": [
+      "low",
+      "medium",
+      "high"
+    ],
     "Gemini 3.7 Flash": [
       "low",
       "medium",
@@ -67,6 +72,7 @@
     ]
   },
   "level_defaults": {
+    "Gemini 3.8 Flash": "medium",
     "Gemini 3.7 Flash": "medium",
     "Gemini 3.6 Flash": "medium",
     "Gemini 3.5 Flash-Lite": "minimal",
@@ -83,8 +89,9 @@
     "Gemini 3.1 Flash-Lite Image",
     "Gemini 3.5 Flash-Lite",
     "Gemini 3.6 Flash",
-    "Gemini 3.7 Flash"
+    "Gemini 3.7 Flash",
+    "Gemini 3.8 Flash"
   ],
   "unexpected_levels": [],
-  "section_sha256": "eb6a0b8f68303d4efff5aef4299a8b4cffcb7fdbb136bf0119ad6ccbb9a3d873"
+  "section_sha256": "77272e8ca70550b53c54a2c61eb475d106133e9bd5d716c70e3cdaf282870967"
 }
