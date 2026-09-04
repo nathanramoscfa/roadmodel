@@ -72,16 +72,29 @@ EFFORT_ORDER = ("low", "medium", "high", "xhigh", "max")
 # "Sonnet 5" was added 2026-07-14: Claude Code now documents it (default model,
 # full low..max effort range) and the catalog cron is adding claude-sonnet-5 to
 # <model-options>, so the effort tracker acknowledges it here.
-KNOWN_MODELS = frozenset({"Fable 5", "Sonnet 5", "Opus 4.8", "Opus 4.7", "Opus 4.6", "Sonnet 4.6"})
+# "Opus 5" added 2026-09-04: it has been in <model-options> as claude-opus-5
+# since the 2026-08 catalog refresh, so flagging it daily was noise. Models the
+# catalog does NOT carry yet (Fable 5.1, as of this commit) stay unlisted on
+# purpose — that flag is the handoff to the catalog cron.
+KNOWN_MODELS = frozenset(
+    {"Fable 5", "Opus 5", "Sonnet 5", "Opus 4.8", "Opus 4.7", "Opus 4.6", "Sonnet 4.6"}
+)
 
 # Sentinel substrings that MUST survive in the in-scope span. Their absence
 # means the docs were restructured and the deterministic parse can no longer
 # be trusted — fail loudly instead of emitting a partial snapshot.
+#
+# Anchor on the FACTS this file extracts, not on the sentence grammar that
+# happens to carry them. "not recognized as keywords" was a prose fragment,
+# and when the docs reworded the same fact to "doesn't recognize them as
+# keywords" the extractor failed for 24 straight days (2026-08-12 onward)
+# over a rewrite that changed nothing it parses. `"think hard"` is the
+# pass-through keyword list itself — it moves only when the fact moves.
 REQUIRED_ANCHORS = (
     "Adjust effort level",
     "Ultracode is a Claude Code setting",
     "ultrathink",
-    "not recognized as keywords",
+    '"think hard"',
     "Extended thinking",
 )
 
@@ -181,24 +194,41 @@ def build_effort_levels(per_model: dict[str, list[str]]) -> list[str]:
 
 
 def parse_defaults(in_scope: str) -> dict[str, str]:
-    """Best-effort parse of "The default effort is `high` on ..." prose.
+    """Best-effort parse of the documented default effort level.
 
-    Informational only — the conformance check does not depend on it — so a
-    miss returns ``{}`` rather than raising.
+    Two shapes, because the docs changed form in 2026-08 without changing the
+    fact:
+
+    - sentence: "The default effort is `high` on ..., and `xhigh` on Opus 4.7"
+    - list item: "The model's default effort: `high` on every model that
+      supports effort, except that Opus 4.7 defaults to `xhigh`"
+
+    The blanket default lands under the key ``"*"``; per-model exceptions land
+    under their model name. Informational only — the conformance check does not
+    depend on it — so a miss returns ``{}`` rather than raising.
     """
+    defaults: dict[str, str] = {}
+
     # Capture to end-of-line, not to the first ".", because model names carry
     # version dots (e.g. "Opus 4.8"). Strip only the trailing sentence period.
     m = re.search(r"The default effort is ([^\n]+)", in_scope)
-    if not m:
-        return {}
-    sentence = m.group(1).rstrip().rstrip(".")
-    defaults: dict[str, str] = {}
-    for lm in re.finditer(r"`(\w+)`\s+on\s+([^`]+?)(?=,?\s+and\s+`|`|$)", sentence):
-        level = lm.group(1).lower()
-        for model in re.split(r",|\band\b", lm.group(2)):
-            model = model.strip().strip(",").strip()
-            if model:
-                defaults[model] = level
+    if m:
+        sentence = m.group(1).rstrip().rstrip(".")
+        for lm in re.finditer(r"`(\w+)`\s+on\s+([^`]+?)(?=,?\s+and\s+`|`|$)", sentence):
+            level = lm.group(1).lower()
+            for model in re.split(r",|\band\b", lm.group(2)):
+                model = model.strip().strip(",").strip()
+                if model:
+                    defaults[model] = level
+        if defaults:
+            return defaults
+
+    # List form: a blanket default plus "<Model> defaults to `<level>`" carve-outs.
+    blanket = re.search(r"default effort: `(\w+)` on every model that supports effort", in_scope)
+    if blanket:
+        defaults["*"] = blanket.group(1).lower()
+    for em in re.finditer(r"([A-Z][A-Za-z0-9 .]*?) defaults to `(\w+)`", in_scope):
+        defaults[em.group(1).strip()] = em.group(2).lower()
     return defaults
 
 
@@ -242,11 +272,23 @@ def parse_extended_thinking(in_scope: str) -> dict[str, object]:
     present = [c for c in known_controls if c in in_scope]
     # Derive the no-disable models generically (regex) rather than hardcoding
     # "Fable 5", so a second such model is captured instead of silently missed.
-    cannot = re.findall(r"cannot be turned off on ([A-Z][A-Za-z0-9 .]+?)[.\n]", in_scope)
+    #
+    # Take the whole clause to the end of the sentence, then split the model
+    # list. Stopping at the first "." dropped every model but the last: the
+    # 2026-09 docs read "cannot be turned off on Fable 5.1 or Fable 5", and the
+    # old pattern cut at the dot inside "5.1" and returned just ["Fable 5"] —
+    # silently missing the model the sentence was added for. A sentence ends at
+    # a period followed by whitespace, which a version dot never is.
+    cannot: list[str] = []
+    for clause in re.findall(r"cannot be turned off on ([^\n]+?)(?=\.(?:\s|$)|\n)", in_scope):
+        for model in re.split(r",|\bor\b|\band\b", clause):
+            model = model.strip()
+            if model:
+                cannot.append(model)
     return {
         "primary_control_is_effort": "effort level is the primary control" in in_scope,
         "on_off_controls": present,
-        "cannot_disable_on": [c.strip() for c in cannot],
+        "cannot_disable_on": cannot,
     }
 
 

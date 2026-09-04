@@ -34,6 +34,12 @@ UPDATE_DIR = REPO_ROOT / "update"
 EXTRACTOR = UPDATE_DIR / "extract_claude_code_effort.py"
 CONFORMANCE = UPDATE_DIR / "validate_effort_conformance.py"
 SAMPLE_MD = REPO_ROOT / "tests" / "fixtures" / "model-config-sample.md"
+# The live in-scope span as published 2026-09-04, captured verbatim. The docs
+# reworded the ultrathink pass-through sentence in mid-August, which the
+# extractor's prose-fragment anchor treated as a restructure — it failed every
+# day from 2026-08-12 to 2026-09-04 over a rewrite that changed no fact it
+# parses. SAMPLE_MD keeps the older wording, so the pair pins both.
+LIVE_MD = REPO_ROOT / "tests" / "fixtures" / "model-config-sample-2026-09.md"
 
 # The real committed artifacts the per-PR gate runs against.
 REAL_SELECTOR = REPO_ROOT / "docs" / "model-selector.txt"
@@ -320,6 +326,64 @@ def test_conformance_flags_semantic_conflation(tmp_path: Path) -> None:
     result = _run_conformance(selector, REAL_SNAPSHOT)
     assert result.returncode == 1
     assert "conflation" in result.stderr
+
+
+def test_extractor_parses_the_current_live_docs_wording() -> None:
+    """Regression for the 24-day outage: the 2026-09 docs must parse.
+
+    The docs reworded '... are not recognized as keywords' to '... doesn't
+    recognize them as keywords'. The extractor anchored on the prose fragment
+    rather than the fact, so it exited 4 ("expected docs anchors missing
+    (restructure?)") every day while the facts it extracts were unchanged.
+    """
+    mod = _load_extractor()
+    snapshot = mod.build_snapshot(LIVE_MD.read_text(), source_url="file://live")
+
+    # Every model row the current table lists, including the two added since
+    # the older fixture was captured.
+    assert snapshot["per_model_effort"]["Fable 5.1"] == ["low", "medium", "high", "xhigh", "max"]
+    assert snapshot["per_model_effort"]["Opus 5"] == ["low", "medium", "high", "xhigh", "max"]
+    assert snapshot["per_model_effort"]["Sonnet 4.6"] == ["low", "medium", "high", "max"]
+    assert snapshot["effort_levels"] == ["low", "medium", "high", "xhigh", "max"]
+
+    # The reworded sentence still yields the pass-through keyword facts.
+    assert snapshot["ultrathink"]["is_per_turn_keyword"] is True
+    assert snapshot["ultrathink"]["changes_session_effort"] is False
+    assert "think hard" in snapshot["ultrathink"]["not_recognized"]
+
+    # ultracode stays a setting that sends xhigh — the gate depends on it.
+    assert snapshot["ultracode"]["is_setting"] is True
+    assert snapshot["ultracode"]["sends_effort"] == "xhigh"
+
+    # Both no-disable models, not just the last one in the sentence.
+    assert snapshot["extended_thinking"]["cannot_disable_on"] == ["Fable 5.1", "Fable 5"]
+
+    # The docs moved the default-effort fact from a sentence into a list item;
+    # "*" is the blanket default, with per-model carve-outs beside it.
+    assert snapshot["default_effort"] == {"*": "high", "Opus 4.7": "xhigh"}
+
+    # Opus 5 is in the catalog already; Fable 5.1 is not, so it — and only it —
+    # is handed to the catalog cron.
+    assert snapshot["unexpected_models"] == ["Fable 5.1"]
+
+
+def test_extractor_survives_prose_rewording_around_its_facts() -> None:
+    """Anchors must track facts, not sentence grammar.
+
+    Paraphrasing the sentences that carry the in-scope facts, while leaving
+    the facts themselves intact, must NOT read as a restructure.
+    """
+    mod = _load_extractor()
+    md = (
+        LIVE_MD.read_text()
+        .replace(
+            "Claude Code passes other phrases such as",
+            "Claude Code treats other phrases, among them",
+        )
+        .replace("and doesn't recognize them as keywords.", "as plain text.")
+    )
+    snapshot = mod.build_snapshot(md, source_url="x")
+    assert "think hard" in snapshot["ultrathink"]["not_recognized"]
 
 
 def test_extractor_raises_when_ultracode_xhigh_link_lost() -> None:

@@ -15,6 +15,13 @@
     "max"
   ],
   "per_model_effort": {
+    "Fable 5.1": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
     "Fable 5": [
       "low",
       "medium",
@@ -64,9 +71,8 @@
     ]
   },
   "default_effort": {
-    "every model that supports effort": "high",
-    "except Opus 4.7": "high",
-    "which defaults to": "high"
+    "*": "high",
+    "Opus 4.7": "xhigh"
   },
   "fallback_rule": "highest supported level at or below the requested level",
   "ultracode": {
@@ -102,11 +108,12 @@
       "MAX_THINKING_TOKENS=0"
     ],
     "cannot_disable_on": [
+      "Fable 5.1",
       "Fable 5"
     ]
   },
   "unexpected_models": [
-    "Opus 5"
+    "Fable 5.1"
   ],
-  "section_sha256": "c87fc8a196f40d7c2e03a20cdebc89c490cde69ac6d6bf319262387f6b006449"
+  "section_sha256": "c32e91701d3b2962dfab6bf75954238bd6bfbf31ff659397fb4d503cf81a55da"
 }
