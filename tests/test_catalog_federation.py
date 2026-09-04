@@ -454,6 +454,55 @@ def test_catalog_gate_fails_on_nonpositive_price(tmp_path: Path) -> None:
     assert "positive number" in result.stderr
 
 
+def test_catalog_gate_accepts_a_flagged_new_provider_model(tmp_path: Path) -> None:
+    """Discovery flags a new model; it must not halt the whole refresh.
+
+    A provider that ships a model roadmodel has not rated yet lands in
+    ``models`` with its slug as id and its name in ``unexpected_slugs`` — the
+    flag-only path that opens a tracking issue and waits for editorial tier
+    ratings. G1 used to demand a ``slug_to_id`` entry anyway, which made that
+    flag fatal: `deepseek-v4-flash-vision-exp` appeared 2026-08-24 and every
+    catalog refresh after it died at this gate (run 33928974448), so one
+    unrated provider model stopped all curation.
+    """
+    snap = json.loads(REAL_DEEPSEEK_CATALOG.read_text())
+    snap["models"].append(
+        {
+            "id": "deepseek-v4-flash-vision-exp",
+            "slug": "deepseek-v4-flash-vision-exp",
+            "name": "DeepSeek V4 Flash Vision (experimental)",
+            "input_price_per_1m": 0.1,
+            "output_price_per_1m": 0.3,
+        }
+    )
+    snap["unexpected_slugs"] = ["deepseek-v4-flash-vision-exp"]
+    flagged = tmp_path / "catalog-deepseek.json"
+    flagged.write_text(json.dumps(snap))
+
+    result = _run_gate(flagged)
+    assert result.returncode == 0, f"stdout={result.stdout}\nstderr={result.stderr}"
+
+
+def test_catalog_gate_still_fails_on_a_silently_unmapped_slug(tmp_path: Path) -> None:
+    """The invariant that survives: no slug may be unmapped AND unflagged."""
+    snap = json.loads(REAL_DEEPSEEK_CATALOG.read_text())
+    snap["models"].append(
+        {
+            "id": "deepseek-v4-mystery",
+            "slug": "deepseek-v4-mystery",
+            "input_price_per_1m": 0.1,
+            "output_price_per_1m": 0.3,
+        }
+    )
+    snap["unexpected_slugs"] = []
+    drifted = tmp_path / "catalog-deepseek.json"
+    drifted.write_text(json.dumps(snap))
+
+    result = _run_gate(drifted)
+    assert result.returncode == 1
+    assert "neither in slug_to_id nor declared" in result.stderr
+
+
 def test_catalog_gate_fails_on_two_source_conflict(tmp_path: Path) -> None:
     a = tmp_path / "catalog-deepseek.json"
     b = tmp_path / "catalog-mistral.json"
