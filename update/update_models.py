@@ -15,8 +15,19 @@ from typing import Any, cast
 
 import requests
 from anthropic import Anthropic
-from anthropic.types import TextBlock
 from bs4 import BeautifulSoup
+
+# Sibling import (update/ is not a package) — one shared definition of "the
+# turn actually finished", used by this cron and the four surface trackers.
+_UPDATE_DIR = Path(__file__).resolve().parent
+if str(_UPDATE_DIR) not in sys.path:
+    sys.path.insert(0, str(_UPDATE_DIR))
+# E402/I001 are expected after the path guard above.
+from opus_turn import (  # noqa: E402, I001
+    MAX_OUTPUT_TOKENS,
+    OpusTurnIncomplete,
+    stream_until_complete,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = REPO_ROOT / "docs"
@@ -27,16 +38,10 @@ COST_SCALE_PATH = DOCS_DIR / "model-tier-cost-scale.md"
 
 MODEL_ID = "claude-opus-4-7"
 # The selector pass emits docs/model-selector.txt whole (~41k tokens) inside a
-# JSON string, plus a planning preamble. 64000 left too little headroom; Opus
-# 4.7 accepts up to 128K output tokens, and the SDK requires streaming at that
-# size (call_opus streams). Raising the ceiling is free — it caps, not spends.
-MAX_TOKENS = 128000
+# JSON string, plus a planning preamble — measured at 66,690 output tokens on
+# 2026-09-04, above the 64000 this used to carry. See update/opus_turn.py.
+MAX_TOKENS = MAX_OUTPUT_TOKENS
 WEB_SEARCH_MAX_USES = 30
-# With server-side tools the API runs its own sampling loop and returns
-# `stop_reason: "pause_turn"` when that loop hits its iteration limit. The turn
-# is unfinished: resume it by re-sending the conversation with the paused
-# assistant turn appended. Bounded so a pathological run cannot loop forever.
-MAX_TURN_CONTINUATIONS = 4
 USER_AGENT = "roadmodel-updater/1.0 (+https://github.com/nathanramoscfa/roadmodel)"
 FETCH_TIMEOUT = 30
 DEFAULT_MAX_BYTES = 150_000
@@ -517,102 +522,40 @@ def build_user_message(
     return "\n\n".join(blocks)
 
 
-class OpusTurnIncomplete(RuntimeError):
-    """Opus stopped before finishing its answer (truncated / paused / refused).
-
-    Distinct from a JSON parse failure: the output is not malformed, it is
-    UNFINISHED. Conflating the two is what made the 2026-08-21 breakage read
-    as "Model did not return valid JSON" for 15 straight days.
-    """
-
-
 def call_opus(system_prompt: str, user_message: str, api_key: str) -> str:
     """Return assistant text from Opus via streaming (long-request policy).
 
-    The web_search server-side tool is enabled so Opus can adaptively
-    look up subscription pricing for the "Subscription Tiers and Access
-    Methods" section of model-tier-cost-scale.md. The tool runs entirely
-    server-side; the SDK returns interleaved text + server_tool_use +
-    web_search_tool_result blocks. We concatenate only the text blocks
-    — the final JSON response Opus emits per `# Output format` in
-    prompt.md.
-
-    A turn using server-side tools does not always finish in one response.
-    When the API's own sampling loop hits its iteration limit it returns
-    ``stop_reason: "pause_turn"`` with the partial answer and no error; the
-    caller resumes by re-sending the conversation with the paused assistant
-    turn appended (the trailing server_tool_use block tells the server where
-    to pick up — do NOT add a "Continue." user message). The previous code
-    ignored ``stop_reason`` entirely and returned the partial text, which the
-    parser then reported as invalid JSON — the daily catalog-cron failure
-    from 2026-08-21 onward, where the output ended at "```json\\n{".
-
-    Raises:
-        OpusTurnIncomplete: the turn ended without a complete answer
-            (``max_tokens`` truncation, a refusal, or still paused after
-            ``MAX_TURN_CONTINUATIONS`` resumes).
+    The web_search server-side tool is enabled so Opus can adaptively look up
+    subscription pricing for the "Subscription Tiers and Access Methods" section
+    of model-tier-cost-scale.md. The tool runs entirely server-side; the SDK
+    returns interleaved text + server_tool_use + web_search_tool_result blocks.
+    ``stream_until_complete`` concatenates only the text blocks — the final JSON
+    response Opus emits per `# Output format` in prompt.md — and insists the
+    turn actually finished (see update/opus_turn.py for the two ways it may
+    not have).
     """
     client = Anthropic(api_key=api_key)
-    system_blocks = [
-        {
-            "type": "text",
-            "text": system_prompt,
-            "cache_control": {"type": "ephemeral"},
-        }
-    ]
-    messages: list[dict[str, Any]] = [{"role": "user", "content": user_message}]
-    tools = [
-        {
-            "type": "web_search_20250305",
-            "name": "web_search",
-            "max_uses": WEB_SEARCH_MAX_USES,
-        }
-    ]
-
-    chunks: list[str] = []
-    for turn in range(MAX_TURN_CONTINUATIONS + 1):
-        # The SDK accepts these plain dict shapes at runtime; its param types
-        # (TextBlockParam / MessageParam / ToolParam) are stricter than what we
-        # pass.
-        with client.messages.stream(
-            model=MODEL_ID,
-            max_tokens=MAX_TOKENS,
-            system=system_blocks,  # type: ignore[arg-type]
-            messages=messages,  # type: ignore[arg-type]
-            tools=tools,  # type: ignore[arg-type]
-        ) as stream:
-            response = stream.get_final_message()
-
-        chunks.append(
-            "".join(block.text for block in response.content if isinstance(block, TextBlock))
-        )
-        sys.stderr.write(
-            f"call_opus: turn {turn + 1} stop_reason={response.stop_reason!r} "
-            f"output_tokens={response.usage.output_tokens} "
-            f"(max_tokens={MAX_TOKENS})\n"
-        )
-
-        if response.stop_reason == "pause_turn":
-            # Re-send the original request plus the paused turn; the server
-            # resumes its tool loop where it left off. Same shape the
-            # availability verifier already uses (update/verify_availability.py).
-            messages = [messages[0], {"role": "assistant", "content": response.content}]
-            continue
-        if response.stop_reason == "max_tokens":
-            raise OpusTurnIncomplete(
-                f"output hit max_tokens={MAX_TOKENS} — the answer is truncated. "
-                "Raise MAX_TOKENS (Opus 4.7 allows 128000) or split the pass."
-            )
-        if response.stop_reason == "refusal":
-            raise OpusTurnIncomplete("the model refused this request (stop_reason='refusal').")
-        break
-    else:
-        raise OpusTurnIncomplete(
-            f"still paused after {MAX_TURN_CONTINUATIONS} continuations "
-            "(stop_reason='pause_turn') — the server-side tool loop never converged."
-        )
-
-    return "".join(chunks)
+    return stream_until_complete(
+        client,
+        model=MODEL_ID,
+        max_tokens=MAX_TOKENS,
+        system=[
+            {
+                "type": "text",
+                "text": system_prompt,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ],
+        user_message=user_message,
+        tools=[
+            {
+                "type": "web_search_20250305",
+                "name": "web_search",
+                "max_uses": WEB_SEARCH_MAX_USES,
+            }
+        ],
+        label="catalog",
+    )
 
 
 _FENCED_BLOCK_RE = re.compile(r"```[a-zA-Z]*\n(.*?)\n```", re.DOTALL)
