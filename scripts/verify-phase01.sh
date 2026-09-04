@@ -523,7 +523,11 @@ run_post_matrix() {
   fi
 
   # V2.2
-  if "${PYTHON_BIN}" -m pytest tests/test_doc_schema.py tests/test_freshness.py; then
+  # `-m "not freshness"` matches the per-PR matrix in tests.yml: the cron
+  # staleness alarm must not fail this PR-blocking lane, or a broken refresh
+  # cron blocks its own fix. The alarm runs daily in cron-health.yml instead.
+  if "${PYTHON_BIN}" -m pytest tests/test_doc_schema.py tests/test_freshness.py \
+    -m "not freshness"; then
     printf '[PASS] V2.2: schema + freshness pytest targets passed\n'
     STEP_POST_PASS+=1
   else
