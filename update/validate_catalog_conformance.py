@@ -97,6 +97,18 @@ def check_snapshot_schema(path: Path, snap: dict[str, Any]) -> list[str]:
     slug_to_id = snap.get("slug_to_id")
     slug_to_id = slug_to_id if isinstance(slug_to_id, dict) else {}
 
+    # A provider that ships a NEW model puts it in `models` (id falls back to
+    # the slug) and names it in `unexpected_slugs` — the flag-only discovery
+    # path, which opens a tracking issue and waits for editorial tier ratings
+    # before the model becomes recommendable. Requiring slug_to_id to cover it
+    # made that flag FATAL: `deepseek-v4-flash-vision-exp` appeared on
+    # 2026-08-24 and every catalog refresh after it died here, so one unrated
+    # provider model halted all curation. The invariant worth keeping is that
+    # no slug is SILENTLY unmapped — an explicitly flagged one is accounted
+    # for, and G4 still ignores it because it is not in <model-options>.
+    flagged_raw = snap.get("unexpected_slugs")
+    flagged = {str(s) for s in flagged_raw} if isinstance(flagged_raw, list) else set()
+
     for model in models:
         mid = str(model.get("id", "")).strip()
         if not mid:
@@ -115,8 +127,11 @@ def check_snapshot_schema(path: Path, snap: dict[str, Any]) -> list[str]:
         if cache is not None and not _is_positive_number(cache):
             failures.append(f"G1 ({name}): {mid} cache_read_per_1m, when present, must be positive")
         slug = str(model.get("slug", mid))
-        if slug not in slug_to_id:
-            failures.append(f"G1 ({name}): slug {slug!r} missing from slug_to_id map")
+        if slug not in slug_to_id and slug not in flagged and mid not in flagged:
+            failures.append(
+                f"G1 ({name}): slug {slug!r} is neither in slug_to_id nor declared "
+                "in unexpected_slugs"
+            )
 
     if not isinstance(snap.get("unexpected_slugs"), list):
         failures.append(f"G1 ({name}): 'unexpected_slugs' must be a list")
