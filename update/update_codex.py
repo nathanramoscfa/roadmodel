@@ -30,7 +30,14 @@ from pathlib import Path
 from typing import Any, cast
 
 from anthropic import Anthropic
-from anthropic.types import TextBlock
+
+# Sibling import (update/ is not a package) — one shared definition of "the
+# turn actually finished", shared with the catalog cron.
+_UPDATE_DIR = Path(__file__).resolve().parent
+if str(_UPDATE_DIR) not in sys.path:
+    sys.path.insert(0, str(_UPDATE_DIR))
+# E402/I001 are expected after the path guard above.
+from opus_turn import MAX_OUTPUT_TOKENS, OpusTurnIncomplete, stream_until_complete  # noqa: E402, I001
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = REPO_ROOT / "docs"
@@ -46,7 +53,7 @@ LAST_WARNINGS_PATH = UPDATE_DIR / ".last-codex-warnings.txt"
 DOCS_URL = "https://developers.openai.com/codex/config-reference.md"
 
 MODEL_ID = "claude-opus-4-7"
-MAX_TOKENS = 64000
+MAX_TOKENS = MAX_OUTPUT_TOKENS
 
 
 def read_docs_facts() -> str | None:
@@ -74,24 +81,20 @@ def call_opus(system_prompt: str, user_message: str, api_key: str) -> str:
     inputs would only invite drift.
     """
     client = Anthropic(api_key=api_key)
-    system_blocks = [
-        {
-            "type": "text",
-            "text": system_prompt,
-            "cache_control": {"type": "ephemeral"},
-        }
-    ]
-    user_blocks = [{"role": "user", "content": user_message}]
-    # The SDK accepts these plain dict shapes at runtime; its param types
-    # (TextBlockParam / MessageParam) are stricter than what we pass.
-    with client.messages.stream(
+    return stream_until_complete(
+        client,
         model=MODEL_ID,
         max_tokens=MAX_TOKENS,
-        system=system_blocks,  # type: ignore[arg-type]
-        messages=user_blocks,  # type: ignore[arg-type]
-    ) as stream:
-        response = stream.get_final_message()
-    return "".join(block.text for block in response.content if isinstance(block, TextBlock))
+        system=[
+            {
+                "type": "text",
+                "text": system_prompt,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ],
+        user_message=user_message,
+        label="codex",
+    )
 
 
 _FENCED_BLOCK_RE = re.compile(r"```[a-zA-Z]*\n(.*?)\n```", re.DOTALL)
@@ -210,13 +213,18 @@ def main() -> int:
 
     user_message = build_user_message(selector_text, docs_facts)
 
-    raw = call_opus(system_prompt, user_message, api_key)
+    try:
+        raw = call_opus(system_prompt, user_message, api_key)
+    except OpusTurnIncomplete as exc:
+        sys.stderr.write(f"Opus did not finish the turn: {exc}\n")
+        return 2
     try:
         result = parse_result(raw)
     except json.JSONDecodeError:
-        sys.stderr.write("Model did not return valid JSON. Raw output:\n")
-        sys.stderr.write(raw)
-        sys.stderr.write("\n")
+        # Bound the dump: the payload is the whole selector on one line, which
+        # buries the diagnosis and gets dropped by log viewers outright.
+        sys.stderr.write(f"Model did not return valid JSON ({len(raw)} chars). Head and tail:\n")
+        sys.stderr.write(raw[:2000] + "\n[... elided ...]\n" + raw[-2000:] + "\n")
         return 2
 
     new_selector = result["roadmodel_txt"]
