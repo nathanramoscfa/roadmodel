@@ -1,9 +1,9 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-02T19:22:35Z",
+  "generated_at_utc": "2026-09-04T23:06:54Z",
   "source_doc_sha256": {
-    "model-selector.txt": "b2d37f406e27fdc7615059c9b7aba2c48b81551203d48874391e3fd30515e88c",
+    "model-selector.txt": "5f54849f24b484f2243812a412cd8b4aadd986a18ad09240f38ca1ae06a7a5e9",
     "model-tier-cost-scale.md": "320ffa43b56f37608f5cdbcda48147b585e1c79a427e4be71ccb69bd9f05bc44"
   },
   "models": [
@@ -1021,7 +1021,7 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
-      "best_for": "Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active \u2014 pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work. Exposes the full Codex `model_reasoning_effort` dial (`minimal`, `low`, `medium`, `high`, `xhigh` \u2014 top `xhigh` tier is model-dependent) plus the plan-mode reasoning-effort variant that additionally accepts `none`."
+      "best_for": "Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active \u2014 pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work. Exposes the full Codex `model_reasoning_effort` dial (`minimal`, `low`, `medium`, `high`, `xhigh` \u2014 top `xhigh` tier is model-dependent) plus the plan-mode `plan_mode_reasoning_effort` variant that additionally accepts `none`."
     },
     {
       "id": "cursor",

@@ -210,10 +210,21 @@ def test_conformance_flags_documented_level_missing_from_bullet(tmp_path: Path) 
     This is exactly the drift this tracker reconciled — the docs document
     ``xhigh`` but the bullet omitted it.
     """
-    drifted = REAL_SELECTOR.read_text().replace(
-        "reasoning-effort knob — `minimal`, `low`, `medium`, `high`,\n"
+    original = REAL_SELECTOR.read_text()
+    # Anchor on the LEVEL ENUMERATION, not on the prose that introduces it.
+    # This used to include the words "reasoning-effort knob — ", so when the
+    # Codex cron renamed that to "`reasoning_effort` knob" the replace matched
+    # nothing, `drifted` came back identical to the committed selector, and the
+    # test asserted that a PASSING gate fails — it stopped testing drift and
+    # started testing the prose. Same failure mode as #526.
+    drifted = original.replace(
+        "`minimal`, `low`, `medium`, `high`,\n"
         '      `xhigh` (the top "Extra High" tier; model-dependent). Higher',
-        "reasoning-effort knob — `minimal`, `low`, `medium`, `high`. Higher",
+        "`minimal`, `low`, `medium`, `high`. Higher",
+    )
+    assert drifted != original, (
+        "the drift edit matched nothing — the selector's OpenAI level "
+        "enumeration was reworded, so this test is no longer exercising check D"
     )
     selector = tmp_path / "selector.txt"
     selector.write_text(drifted)
