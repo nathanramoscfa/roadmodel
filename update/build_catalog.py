@@ -87,8 +87,20 @@ CURSOR_2X_PHRASE = "Long context (Max Mode) supports up to 1M tokens with 2x inp
 
 _OPTIONS_RE = re.compile(r"<model-options>(.*?)</model-options>", re.DOTALL)
 _TIER_RE = re.compile(r'<tier\s+cost="([^"]+)"\s*>(.*?)</tier>', re.DOTALL)
-_MODEL_RE = re.compile(r"<model\s+([^>]+?)\s*/>", re.DOTALL)
-_METHOD_RE = re.compile(r"<method\s+([^>]+?)\s*/>", re.DOTALL)
+# An element's attribute blob is a run of `name="value"` pairs whose values are
+# PROSE: they contain whatever the docs say, angle brackets included. `[^>]+?`
+# could not span a `>`, so on 2026-09-05 the Claude Code refresh quoted the
+# command form `/advisor <model>` in the claude-code best-for and the whole
+# <method> element stopped matching — docs/catalog.json shipped WITHOUT the
+# Claude Code platform, silently. Consume either a non-quote character or a
+# complete quoted string (escapes included, per _ATTR_RE), so `>` and even `/>`
+# inside a value are data rather than a terminator.
+_ELEMENT_BODY = r'(?:[^"]|"(?:[^"\\]|\\.)*")*?'
+_MODEL_RE = re.compile(rf"<model\s+({_ELEMENT_BODY})\s*/>", re.DOTALL)
+_METHOD_RE = re.compile(rf"<method\s+({_ELEMENT_BODY})\s*/>", re.DOTALL)
+# Openers, for the "did we lose one?" guard below.
+_MODEL_OPEN_RE = re.compile(r"<model\s")
+_METHOD_OPEN_RE = re.compile(r"<method\s")
 _ACCESS_METHODS_RE = re.compile(r"<access-methods>(.*?)</access-methods>", re.DOTALL)
 _MAX_MODE_CTX_RE = re.compile(r"<max-mode-context>(.*?)</max-mode-context>", re.DOTALL)
 _OUTPUT_FORMAT_RE = re.compile(r"<output-format>(.*?)</output-format>", re.DOTALL)
@@ -138,14 +150,34 @@ def _parse_price(value: str) -> float | None:
     return float(match.group(1))
 
 
+def _assert_no_element_lost(block: str, matched: int, opener: "re.Pattern[str]", what: str) -> None:
+    """Fail if the element regex matched fewer elements than the doc declares.
+
+    A regex that stops matching mid-document does not error — it just returns
+    less. That is how docs/catalog.json shipped without the Claude Code
+    platform: one `<model>` inside a best-for value and the <method> element
+    silently vanished from the machine-readable catalog, the website, and the
+    recommender's platform data. Losing an element must be fatal, not quiet.
+    """
+    declared = len(opener.findall(block))
+    if matched != declared:
+        raise ValueError(
+            f"{what}: parsed {matched} element(s) but the selector declares "
+            f"{declared}. An attribute value probably contains something the "
+            f"element regex cannot span — do NOT ship a catalog missing an entry."
+        )
+
+
 def _parse_models(selector_text: str) -> list[dict[str, Any]]:
     options_match = _OPTIONS_RE.search(selector_text)
     if not options_match:
         raise ValueError("<model-options> block not found in selector text")
     models: list[dict[str, Any]] = []
+    matched = 0
     for tier_m in _TIER_RE.finditer(options_match.group(1)):
         tier_cost = tier_m.group(1)
         for model_m in _MODEL_RE.finditer(tier_m.group(2)):
+            matched += 1
             attrs = _parse_attrs(model_m.group(1))
             tiers = {cat: attrs.get(f"tier-{cat}", "") for cat in TASK_CATEGORIES}
             models.append(
@@ -163,6 +195,7 @@ def _parse_models(selector_text: str) -> list[dict[str, Any]]:
                     "best_for": attrs.get("best-for", ""),
                 }
             )
+    _assert_no_element_lost(options_match.group(1), matched, _MODEL_OPEN_RE, "<model-options>")
     return models
 
 
@@ -192,6 +225,9 @@ def _parse_access_methods(selector_text: str) -> list[dict[str, Any]]:
                 "best_for": attrs.get("best-for", ""),
             }
         )
+    _assert_no_element_lost(
+        access_match.group(1), len(methods), _METHOD_OPEN_RE, "<access-methods>"
+    )
     return methods
 
 
