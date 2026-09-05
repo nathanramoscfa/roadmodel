@@ -30,11 +30,22 @@ const catalog = JSON.parse(
 
 const MODEL_COUNT = catalog.models.length;
 const CN_MODEL_COUNT = catalog.models.filter((m) => m.jurisdiction === "cn").length;
+// Mirror the table's comparator exactly: price, then name ascending on a tie
+// (ModelCatalog.tsx applies `localeCompare` WITHOUT the sort direction, so ties
+// read A→Z in both directions). Sorting on price alone left ties to Array.sort's
+// stability, which is catalog order — fine until 2026-09-05, when Fable 5.1
+// landed at the same $50 output price as Fable 5 and the two models disagreed
+// about which row comes first.
 const byOutputPrice = [...catalog.models].sort(
-  (a, b) => a.output_price_per_1m - b.output_price_per_1m,
+  (a, b) =>
+    a.output_price_per_1m - b.output_price_per_1m || a.name.localeCompare(b.name),
 );
 const CHEAPEST_MODEL = byOutputPrice[0].name;
-const PRICIEST_MODEL = byOutputPrice[byOutputPrice.length - 1].name;
+const priciestPrice =
+  byOutputPrice[byOutputPrice.length - 1].output_price_per_1m;
+const PRICIEST_MODEL = byOutputPrice.find(
+  (m) => m.output_price_per_1m === priciestPrice,
+)!.name;
 
 test("renders the catalog table, legend, and model links", async ({ page }) => {
   await page.goto("/models");

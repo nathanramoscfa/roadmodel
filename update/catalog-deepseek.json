@@ -9,19 +9,29 @@
       "id": "deepseek-v4-flash",
       "slug": "deepseek-v4-flash",
       "name": "DeepSeek-V4-Flash-0731",
-      "input_price_per_1m": 0.14,
-      "output_price_per_1m": 0.28,
-      "cache_read_per_1m": 0.0028,
+      "input_price_per_1m": 0.22,
+      "output_price_per_1m": 0.66,
+      "cache_read_per_1m": 0.007,
       "context_tokens": 1000000,
       "max_output_tokens": 384000
     },
     {
       "id": "deepseek-v4-pro",
       "slug": "deepseek-v4-pro",
-      "name": "DeepSeek-V4-Pro",
-      "input_price_per_1m": 0.435,
-      "output_price_per_1m": 0.87,
-      "cache_read_per_1m": 0.003625,
+      "name": "DeepSeek-V4-Pro-0813",
+      "input_price_per_1m": 0.66,
+      "output_price_per_1m": 1.98,
+      "cache_read_per_1m": 0.022,
+      "context_tokens": 1000000,
+      "max_output_tokens": 384000
+    },
+    {
+      "id": "deepseek-v4-flash-vision-exp",
+      "slug": "deepseek-v4-flash-vision-exp",
+      "name": "DeepSeek-V4-Flash-Vision-Exp",
+      "input_price_per_1m": 0.22,
+      "output_price_per_1m": 0.66,
+      "cache_read_per_1m": 0.007,
       "context_tokens": 1000000,
       "max_output_tokens": 384000
     }
@@ -30,6 +40,8 @@
     "deepseek-v4-flash": "deepseek-v4-flash",
     "deepseek-v4-pro": "deepseek-v4-pro"
   },
-  "unexpected_slugs": [],
-  "section_sha256": "00bdcebf220b80fcd440f7ed464e179f34b9181d13753238123cd6d58e040483"
+  "unexpected_slugs": [
+    "deepseek-v4-flash-vision-exp"
+  ],
+  "section_sha256": "7bc64afcc334abc113e8bf1e9108f2769c90200696e1cf676fa9298cddc19775"
 }
