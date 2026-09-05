@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.31] — 2026-09-05
+
+### Fixed
+
+- **Claude Sonnet 5 was priced 50% too high.** The catalog carried $3/$15 per
+  Mtok from the aggregator mirror; Anthropic's own pricing page lists $2/$10,
+  and has since the launch promotion became the standard rate. The model moves
+  from the high cost tier to medium as a result. Two silent failures hid it:
+  `update/extract_anthropic_catalog.py` had been raising on every run since
+  Anthropic restyled a table header (`Base Input Tokens` -> `Base input
+  tokens`) against a case-sensitive anchor check, and the catalog cron's
+  per-provider fail-open swallowed the error; and `claude-opus-5`,
+  `claude-sonnet-5` and `claude-fable-5.1` were never added to that
+  extractor's name map, so no Anthropic price the selector quotes for them was
+  ever reconciled against Anthropic's own page.
+- **The refresh crons were failing daily and nothing said so.** The catalog
+  cron had failed 15 days running and the Claude Code cron 24, both because
+  their shared output ceiling (`max_tokens = 64000`) had grown too small for
+  the payloads they emit — measured at 66,690 and 64,099 output tokens. The
+  staleness guard that should have caught it ran as a per-PR test, so it
+  turned every pull request red, including the ones that would fix the crons.
+- **A `>` in provider prose deleted catalog entries.** Six modules each
+  carried their own element regex that could not span a `>`. Cursor's
+  "long context (>272k)" note dropped `gpt-5.6-sol`, `gpt-5.6-terra` and
+  `gpt-5.6-luna` from `catalog.json`; Anthropic's `/advisor <model>` dropped
+  the entire Claude Code platform. Element matching is now shared, quote-aware,
+  and fatal when a parse loses an entry.
+
+### Added
+
+- **Claude Fable 5.1, Grok 4.6, Gemini 3.7 Flash and Gemini 3.8 Flash enter the
+  catalog**, which now carries 47 models across
+  15 access methods. Tier ratings are inherited from
+  each model's series predecessor and flagged for editorial review.
+- **`.github/workflows/cron-health.yml`**: a daily alarm that checks every
+  scheduled cron's last completed run *and* whether an automated refresh has
+  landed recently, files one deduplicated tracking issue, and closes it on
+  recovery.
+
+### Changed
+
+- **GPT-5.6 price cuts flow through to tiers**: Sol $5/$30 -> $4/$20 (very
+  high -> high), Terra $2.50/$15 -> $2/$12 (high -> medium), Luna $1/$6 ->
+  $0.20/$1.20.
+- **Claude Code surface parameters catch up on 24 days of releases**
+  (2.1.235 - 2.1.261), including Fable 5.1 as the new default Fable.
+
 ## [0.2.30] — 2026-08-11
 
 ### Added
