@@ -346,10 +346,11 @@ differently:
   Flash-Lite) uses low/medium/high without `minimal`. The
   `minimal` tier appears on Flash-line models (e.g. Gemini 3.6
   Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, 3 Flash, 3.5
-  Flash). Thinking can be turned off on models that allow it
-  (e.g. Gemini 2.5 Flash-Lite defaults off); Google retired the
-  numeric `thinkingBudget` from the docs in favor of these
-  levels.
+  Flash); Gemini 3.7 Flash and 3.8 Flash are low/medium/high
+  without `minimal`. Thinking can be turned off on models that
+  allow it (e.g. Gemini 2.5 Flash-Lite defaults off); Google
+  retired the numeric `thinkingBudget` from the docs in favor
+  of these levels.
 - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
   `disabled`, default `enabled`) plus a reasoning-effort enum —
   `low`, `high`, `max` (default `high`; `max` for some complex
@@ -702,10 +703,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       Flash-Lite) uses low/medium/high without `minimal`. The
       `minimal` tier appears on Flash-line models (e.g. Gemini 3.6
       Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, 3 Flash, 3.5
-      Flash). Thinking can be turned off on models that allow it
-      (e.g. Gemini 2.5 Flash-Lite defaults off); Google retired the
-      numeric `thinkingBudget` from the docs in favor of these
-      levels.
+      Flash); Gemini 3.7 Flash and 3.8 Flash are low/medium/high
+      without `minimal`. Thinking can be turned off on models that
+      allow it (e.g. Gemini 2.5 Flash-Lite defaults off); Google
+      retired the numeric `thinkingBudget` from the docs in favor
+      of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
       `low`, `high`, `max` (default `high`; `max` for some complex
@@ -1626,10 +1628,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       Flash-Lite) uses low/medium/high without `minimal`. The
       `minimal` tier appears on Flash-line models (e.g. Gemini 3.6
       Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, 3 Flash, 3.5
-      Flash). Thinking can be turned off on models that allow it
-      (e.g. Gemini 2.5 Flash-Lite defaults off); Google retired the
-      numeric `thinkingBudget` from the docs in favor of these
-      levels.
+      Flash); Gemini 3.7 Flash and 3.8 Flash are low/medium/high
+      without `minimal`. Thinking can be turned off on models that
+      allow it (e.g. Gemini 2.5 Flash-Lite defaults off); Google
+      retired the numeric `thinkingBudget` from the docs in favor
+      of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
       `low`, `high`, `max` (default `high`; `max` for some complex
@@ -1961,14 +1964,14 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Billing:** per-token (requires google-api-key)
 - **Supports models:** gemini-3.1-pro,gemini-3-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
-- **Best for:** Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) shared across the 3.x and 2.5 generations — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro is low/medium/high; the 2.5 generation is low/medium/high without `minimal`; `minimal` is Flash-line). Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation).
+- **Best for:** Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) shared across the 3.x and 2.5 generations — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro / 3.7 Flash / 3.8 Flash are low/medium/high; the 2.5 generation is low/medium/high without `minimal`; `minimal` appears on Flash-line models such as 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, and 3 Flash). Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation).
 
 #### Gemini CLI — `gemini-cli`
 
 - **Billing:** subscription-or-key (requires gemini-advanced-subscription OR google-api-key)
 - **Supports models:** gemini-3.1-pro,gemini-3-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
-- **Best for:** Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro is low/medium/high; the 2.5 generation is low/medium/high without `minimal`; `minimal` is Flash-line).
+- **Best for:** Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro / 3.7 Flash / 3.8 Flash are low/medium/high; the 2.5 generation is low/medium/high without `minimal`; `minimal` appears on Flash-line models such as 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, and 3 Flash).
 
 #### Gemini (web / app) — `gemini-app`
 
@@ -2344,10 +2347,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       Flash-Lite) uses low/medium/high without `minimal`. The
       `minimal` tier appears on Flash-line models (e.g. Gemini 3.6
       Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, 3 Flash, 3.5
-      Flash). Thinking can be turned off on models that allow it
-      (e.g. Gemini 2.5 Flash-Lite defaults off); Google retired the
-      numeric `thinkingBudget` from the docs in favor of these
-      levels.
+      Flash); Gemini 3.7 Flash and 3.8 Flash are low/medium/high
+      without `minimal`. Thinking can be turned off on models that
+      allow it (e.g. Gemini 2.5 Flash-Lite defaults off); Google
+      retired the numeric `thinkingBudget` from the docs in favor
+      of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
       `low`, `high`, `max` (default `high`; `max` for some complex
@@ -3284,7 +3288,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) shared across the 3.x and 2.5 generations — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro is low/medium/high; the 2.5 generation is low/medium/high without `minimal`; `minimal` is Flash-line). Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)." />
+            best-for="Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) shared across the 3.x and 2.5 generations — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro / 3.7 Flash / 3.8 Flash are low/medium/high; the 2.5 generation is low/medium/high without `minimal`; `minimal` appears on Flash-line models such as 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, and 3 Flash). Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)." />
     <method id="gemini-cli" name="Gemini CLI"
             provider="google" billing="subscription-or-key"
             provider-jurisdiction="us"
@@ -3292,7 +3296,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro is low/medium/high; the 2.5 generation is low/medium/high without `minimal`; `minimal` is Flash-line)." />
+            best-for="Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro / 3.7 Flash / 3.8 Flash are low/medium/high; the 2.5 generation is low/medium/high without `minimal`; `minimal` appears on Flash-line models such as 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, and 3 Flash)." />
     <method id="gemini-app" name="Gemini (web / app)"
             provider="google" billing="subscription-included"
             provider-jurisdiction="us"
@@ -3805,10 +3809,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       Flash-Lite) uses low/medium/high without `minimal`. The
       `minimal` tier appears on Flash-line models (e.g. Gemini 3.6
       Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, 3 Flash, 3.5
-      Flash). Thinking can be turned off on models that allow it
-      (e.g. Gemini 2.5 Flash-Lite defaults off); Google retired the
-      numeric `thinkingBudget` from the docs in favor of these
-      levels.
+      Flash); Gemini 3.7 Flash and 3.8 Flash are low/medium/high
+      without `minimal`. Thinking can be turned off on models that
+      allow it (e.g. Gemini 2.5 Flash-Lite defaults off); Google
+      retired the numeric `thinkingBudget` from the docs in favor
+      of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
       `low`, `high`, `max` (default `high`; `max` for some complex
@@ -4745,7 +4750,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) shared across the 3.x and 2.5 generations — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro is low/medium/high; the 2.5 generation is low/medium/high without `minimal`; `minimal` is Flash-line). Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)." />
+            best-for="Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) shared across the 3.x and 2.5 generations — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro / 3.7 Flash / 3.8 Flash are low/medium/high; the 2.5 generation is low/medium/high without `minimal`; `minimal` appears on Flash-line models such as 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, and 3 Flash). Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)." />
     <method id="gemini-cli" name="Gemini CLI"
             provider="google" billing="subscription-or-key"
             provider-jurisdiction="us"
@@ -4753,7 +4758,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro is low/medium/high; the 2.5 generation is low/medium/high without `minimal`; `minimal` is Flash-line)." />
+            best-for="Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro / 3.7 Flash / 3.8 Flash are low/medium/high; the 2.5 generation is low/medium/high without `minimal`; `minimal` appears on Flash-line models such as 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, and 3 Flash)." />
     <method id="gemini-app" name="Gemini (web / app)"
             provider="google" billing="subscription-included"
             provider-jurisdiction="us"
@@ -5458,10 +5463,11 @@ as primary; the other becomes the secondary category for tie-breaking.
       Flash-Lite) uses low/medium/high without `minimal`. The
       `minimal` tier appears on Flash-line models (e.g. Gemini 3.6
       Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, 3 Flash, 3.5
-      Flash). Thinking can be turned off on models that allow it
-      (e.g. Gemini 2.5 Flash-Lite defaults off); Google retired the
-      numeric `thinkingBudget` from the docs in favor of these
-      levels.
+      Flash); Gemini 3.7 Flash and 3.8 Flash are low/medium/high
+      without `minimal`. Thinking can be turned off on models that
+      allow it (e.g. Gemini 2.5 Flash-Lite defaults off); Google
+      retired the numeric `thinkingBudget` from the docs in favor
+      of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
       `low`, `high`, `max` (default `high`; `max` for some complex
@@ -6398,7 +6404,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) shared across the 3.x and 2.5 generations — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro is low/medium/high; the 2.5 generation is low/medium/high without `minimal`; `minimal` is Flash-line). Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)." />
+            best-for="Programmatic / scripted Gemini use with a Google API key. Pay-per-token at Google's published rates. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) shared across the 3.x and 2.5 generations — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro / 3.7 Flash / 3.8 Flash are low/medium/high; the 2.5 generation is low/medium/high without `minimal`; `minimal` appears on Flash-line models such as 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, and 3 Flash). Powers the roadmodel SaaS free-tier surfaces (/recommend on Gemini 2.5 Flash; /roadmap on Gemini 2.5 Flash with 3.1 Pro escalation)." />
     <method id="gemini-cli" name="Gemini CLI"
             provider="google" billing="subscription-or-key"
             provider-jurisdiction="us"
@@ -6406,7 +6412,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="gemini-3.1-pro,gemini-3-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro is low/medium/high; the 2.5 generation is low/medium/high without `minimal`; `minimal` is Flash-line)." />
+            best-for="Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro / 3.7 Flash / 3.8 Flash are low/medium/high; the 2.5 generation is low/medium/high without `minimal`; `minimal` appears on Flash-line models such as 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, and 3 Flash)." />
     <method id="gemini-app" name="Gemini (web / app)"
             provider="google" billing="subscription-included"
             provider-jurisdiction="us"
