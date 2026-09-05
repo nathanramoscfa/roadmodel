@@ -1,7 +1,7 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-05T00:04:58Z",
+  "generated_at_utc": "2026-09-05T02:53:04Z",
   "source_doc_sha256": {
     "model-selector.txt": "432e64cf8f809d67ad978ae1fc6a08566502db10d933befba6dc3e2eb1bf2078",
     "model-tier-cost-scale.md": "945f7f054c1cb5e730d42747394b5ecaee16db8abc7673cdddb9fde6501a086b"
@@ -657,6 +657,69 @@
       "headline_benchmarks": "AA Intelligence Index 54.8 (#1); LMArena Text Elo 1465.4 (#22); HLE 44.3%; AA-Omniscience 20.1 (#3)",
       "pricing_notes": "Hidden by default; Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; More token-efficient than GPT-5.4 on comparable tasks; Improved persistence on long-running tasks; Fast mode is available at higher rates; Long context supports up to 1M tokens with 2x input pricing",
       "best_for": "OpenAI's most capable frontier model and highest-cost GPT offering, best suited for the most demanding reasoning, long-horizon planning, and tasks where maximum intelligence is required regardless of cost \u2014 strongest single model for hard coding, agentic execution, and reasoning, but verify factual claims due to elevated hallucination"
+    },
+    {
+      "id": "gpt-5.6-luna",
+      "name": "GPT-5.6 Luna",
+      "input_price_per_1m": 0.2,
+      "output_price_per_1m": 1.2,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "A",
+        "agentic": "A",
+        "multimodal": "B",
+        "long-context": "B",
+        "knowledge": "A",
+        "speed": "S"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "AA Intelligence Index 51.2 (max) / 49.1 (xhigh); HLE 37.2% (max); Output Speed 174.7 tokens/s (max) / 173.8 (xhigh)",
+      "pricing_notes": "Requires Max Mode on legacy request-based plans; Smallest GPT-5.6 variant, optimized for cost and speed; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate",
+      "best_for": "OpenAI's smallest GPT-5.6 variant at low-tier pricing ($0.20/$1.20, 5x cheaper output than at initial listing) \u2014 strong AA Intelligence Index (51.2 max) for the price and very high output throughput (~175 tokens/s), positioning it as a very cost-efficient near-frontier alternative to Gemini 3.5 Flash and other cheap Flash-class models when GPT-family behavior is preferred; pick when latency and cost dominate but broader reasoning quality than smaller mini/nano variants is required."
+    },
+    {
+      "id": "gpt-5.6-sol",
+      "name": "GPT-5.6 Sol",
+      "input_price_per_1m": 4.0,
+      "output_price_per_1m": 20.0,
+      "cache_read_per_1m": null,
+      "tier_cost": "high",
+      "tiers": {
+        "coding": "S",
+        "planning": "S",
+        "agentic": "S",
+        "multimodal": "A",
+        "long-context": "A",
+        "knowledge": "S",
+        "speed": "D"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "AA Intelligence Index 58.9 (max) / 57.7 (xhigh); HLE 47.2% (max); Terminal-Bench 2.1 88.0; \u03c4\u00b2-bench banking pass_1 33.0%",
+      "pricing_notes": "Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate; Promotional pricing through November 21, 2026",
+      "best_for": "OpenAI's GPT-5.6 Sol flagship \u2014 now at high-tier pricing ($4/$20) under promotional pricing through November 21, 2026 (was $5/$30 at initial listing), leading Artificial Analysis Intelligence Index (58.9) and posting Terminal-Bench 2.1 88.0 and HLE 47.2% at max effort; pick for the most demanding reasoning, agentic execution, and knowledge work at the high tier when a GPT-family top model is preferred over Anthropic's Opus/Fable lineage."
+    },
+    {
+      "id": "gpt-5.6-terra",
+      "name": "GPT-5.6 Terra",
+      "input_price_per_1m": 2.0,
+      "output_price_per_1m": 12.0,
+      "cache_read_per_1m": null,
+      "tier_cost": "medium",
+      "tiers": {
+        "coding": "A",
+        "planning": "A",
+        "agentic": "A",
+        "multimodal": "A",
+        "long-context": "A",
+        "knowledge": "A",
+        "speed": "A"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "AA Intelligence Index 55.0 (max); HLE 41.8%; Terminal-Bench 2.1 88.0; Output Speed 126.9 tokens/s",
+      "pricing_notes": "Requires Max Mode on legacy request-based plans; Mid-tier GPT-5.6 variant between Sol and Luna; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate",
+      "best_for": "OpenAI's mid-tier GPT-5.6 variant between Sol (flagship) and Luna (mini) at medium-tier pricing ($2/$12) \u2014 Artificial Analysis Intelligence Index 55.0 (max) matches near-frontier reasoning while output speed (~127 tokens/s) is faster than most peers; pick for balanced near-frontier reasoning, agentic execution, and speed when Sol's high tier isn't justified but stronger throughput than GPT-5.4 is desired."
     },
     {
       "id": "gpt-oss-120b",

@@ -1178,6 +1178,14 @@ as primary; the other becomes the secondary category for tie-breaking.
 
 ### High Cost Tier
 
+#### GPT-5.6 Sol — `gpt-5.6-sol`
+
+- **Pricing:** Input $4.00/M · Output $20.00/M
+- **Tier ratings:** Coding **S** · Planning **S** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **S** · Speed **D**
+- **Headline benchmarks:** AA Intelligence Index 58.9 (max) / 57.7 (xhigh); HLE 47.2% (max); Terminal-Bench 2.1 88.0; τ²-bench banking pass_1 33.0%
+- **Pricing notes:** Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate; Promotional pricing through November 21, 2026
+- **Best for:** OpenAI's GPT-5.6 Sol flagship — now at high-tier pricing ($4/$20) under promotional pricing through November 21, 2026 (was $5/$30 at initial listing), leading Artificial Analysis Intelligence Index (58.9) and posting Terminal-Bench 2.1 88.0 and HLE 47.2% at max effort; pick for the most demanding reasoning, agentic execution, and knowledge work at the high tier when a GPT-family top model is preferred over Anthropic's Opus/Fable lineage.
+
 #### Sonnet 4.6 — `sonnet-4.6`
 
 - **Pricing:** Input $3.00/M · Output $15.00/M
@@ -1235,6 +1243,14 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Headline benchmarks:** AA Intelligence Index 40.1 (xhigh); τ²-bench retail pass_1 92.1%; SWE-bench Verified (mini-SWE-agent) 72.8%; SWE-bench Multilingual 66.3%
 - **Pricing notes:** Hidden by default; Agentic and reasoning capabilities
 - **Best for:** OpenAI's Codex variant of GPT-5.2 at the same medium-tier pricing as gpt-5.3-codex ($1.75/$14) — placeholder Codex-lineage S-tier coding + agentic ratings pending an independent gpt-5.2-codex vs gpt-5.3-codex head-to-head; fits when a specific gpt-5.2 codebase behavior is preferred or when 5.3-codex is unavailable, otherwise prefer gpt-5.3-codex as the newer generation in the same series.
+
+#### GPT-5.6 Terra — `gpt-5.6-terra`
+
+- **Pricing:** Input $2.00/M · Output $12.00/M
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **A**
+- **Headline benchmarks:** AA Intelligence Index 55.0 (max); HLE 41.8%; Terminal-Bench 2.1 88.0; Output Speed 126.9 tokens/s
+- **Pricing notes:** Requires Max Mode on legacy request-based plans; Mid-tier GPT-5.6 variant between Sol and Luna; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate
+- **Best for:** OpenAI's mid-tier GPT-5.6 variant between Sol (flagship) and Luna (mini) at medium-tier pricing ($2/$12) — Artificial Analysis Intelligence Index 55.0 (max) matches near-frontier reasoning while output speed (~127 tokens/s) is faster than most peers; pick for balanced near-frontier reasoning, agentic execution, and speed when Sol's high tier isn't justified but stronger throughput than GPT-5.4 is desired.
 
 #### Gemini 3.1 Pro — `gemini-3.1-pro`
 
@@ -1317,6 +1333,14 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Headline benchmarks:** AA Intelligence Index 47.1 (high); HLE 47.8% (high); Terminal-Bench 2.1 87.6; Output Speed 429.2 tokens/s
 - **Pricing notes:** -
 - **Best for:** Google's Gemini 3.8 Flash — the visible-by-default successor to 3.7 Flash at the same low-tier pricing ($0.75/$3.50), with placeholder tier ratings inherited from the Flash series and AA Intelligence Index 47.1 (high), Terminal-Bench 2.1 87.6, and exceptional output speed (~429 tokens/s). Pick over 3.7 Flash when both are available since 3.8 supersedes 3.7 in the same series at equal output price.
+
+#### GPT-5.6 Luna — `gpt-5.6-luna`
+
+- **Pricing:** Input $0.20/M · Output $1.20/M
+- **Tier ratings:** Coding **B** · Planning **A** · Agentic **A** · Multimodal **B** · Long-context **B** · Knowledge **A** · Speed **S**
+- **Headline benchmarks:** AA Intelligence Index 51.2 (max) / 49.1 (xhigh); HLE 37.2% (max); Output Speed 174.7 tokens/s (max) / 173.8 (xhigh)
+- **Pricing notes:** Requires Max Mode on legacy request-based plans; Smallest GPT-5.6 variant, optimized for cost and speed; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate
+- **Best for:** OpenAI's smallest GPT-5.6 variant at low-tier pricing ($0.20/$1.20, 5x cheaper output than at initial listing) — strong AA Intelligence Index (51.2 max) for the price and very high output throughput (~175 tokens/s), positioning it as a very cost-efficient near-frontier alternative to Gemini 3.5 Flash and other cheap Flash-class models when GPT-family behavior is preferred; pick when latency and cost dominate but broader reasoning quality than smaller mini/nano variants is required.
 
 #### Grok 4.5 — `grok-4.5`
 

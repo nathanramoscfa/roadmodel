@@ -171,15 +171,12 @@ def test_backup_guard_is_orthogonal_to_the_output_contract_version(
 
 def test_suggest_cross_provider_picks_comparable_tier() -> None:
     # Anthropic very-high primary → an OpenAI very-high backup (us). GPT-5.6 Sol
-    # and GPT-5.5 tie on tier/output-price; the deterministic model-id tiebreak
-    # takes the newer gpt-5.6-sol (both added by the 2026-07-15 catalog refresh).
-    assert (
-        cost.suggest_cross_provider_backup("Fable 5", allowed_jurisdictions=["us"]) == "GPT-5.6 Sol"
-    )
-    assert (
-        cost.suggest_cross_provider_backup("Opus 4.8", allowed_jurisdictions=["us"])
-        == "GPT-5.6 Sol"
-    )
+    # used to tie with GPT-5.5 here and won on the model-id tiebreak, but the
+    # 2026-09-04 catalog refresh cut its output price $30 → $20, which moved it
+    # to the HIGH tier. GPT-5.5 ($30) is now the only OpenAI very-high model, so
+    # it is the comparable-tier answer — the catalog moved, not the rule.
+    assert cost.suggest_cross_provider_backup("Fable 5", allowed_jurisdictions=["us"]) == "GPT-5.5"
+    assert cost.suggest_cross_provider_backup("Opus 4.8", allowed_jurisdictions=["us"]) == "GPT-5.5"
 
 
 def test_suggest_cross_provider_respects_jurisdiction() -> None:
@@ -219,12 +216,12 @@ def test_recommend_structured_substitutes_same_provider_backup(
     payload = recommend_module.recommend_structured(
         "audit this", _config(tmp_path), allowed_jurisdictions=["us"]
     )
-    assert payload["backup"] == "GPT-5.6 Sol"
+    assert payload["backup"] == "GPT-5.5"
     assert cost.model_provider(payload["backup"]) != "anthropic"
     guard = payload["backup_guard"]
     assert guard["action"] == "substituted"
     assert guard["original_backup"] == "Opus 4.8"
-    assert guard["substitute"] == "GPT-5.6 Sol"
+    assert guard["substitute"] == "GPT-5.5"
 
 
 def test_recommend_structured_drops_when_no_jurisdiction(
@@ -300,7 +297,7 @@ def test_recommend_structured_substitutes_region_blocked_cross_provider_backup(
     payload = recommend_module.recommend_structured(
         "audit this", _config(tmp_path), allowed_jurisdictions=["us"]
     )
-    assert payload["backup"] == "GPT-5.6 Sol"
+    assert payload["backup"] == "GPT-5.5"
     guard = payload["backup_guard"]
     assert guard["action"] == "substituted"
     assert guard["reason"] == "jurisdiction"
