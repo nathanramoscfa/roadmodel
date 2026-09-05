@@ -623,8 +623,13 @@ discovering the gap weeks later.
 
 ### Removing models
 
-A `<model …/>` element MAY be removed only when one of these strict
-conditions holds:
+A `<model …/>` element MUST be removed when one of these strict
+conditions holds, and MUST NOT be removed for any other reason. The
+conditions are both necessary and sufficient: when one holds, retire the
+model in the same refresh rather than leaving it to a later judgement
+call. (This was "MAY be removed only when" until 2026-09-05, which read
+as "removal is optional" — refreshes kept every predecessor and the
+catalog accumulated superseded models indefinitely.)
 
   1. The model is no longer present on the Cursor pricing page
      (Cursor discontinued it) AND it is NOT a provider-direct model.
@@ -657,7 +662,7 @@ not just the latest release in each series.
 
 Same series = same vendor family AND same variant tier. Variant
 tiers currently in use: `flagship`, `mini`, `nano`, `codex`, `haiku`,
-`sonnet`, `opus`, `pro`, `fast`. Worked examples:
+`sonnet`, `opus`, `pro`, `fast`, `flash`, `fable`. Worked examples:
 
 - `gpt-5.4` and `gpt-5.5` — same series (both OpenAI flagship); newer
   supersedes only if its output price ≤ the older's.
@@ -669,6 +674,22 @@ tiers currently in use: `flagship`, `mini`, `nano`, `codex`, `haiku`,
   newer supersedes only if its output price ≤ the older's.
 - `gpt-5.3-codex` and a future `gpt-5.4-codex` — same series (both
   OpenAI codex); a non-codex flagship never supersedes a codex.
+- `gemini-3.7-flash` and `gemini-3.8-flash` — same series (both Google
+  flash); newer supersedes at equal output price, so 3.7 retires.
+- `claude-fable-5` and `claude-fable-5.1` — same series (both Anthropic
+  fable); newer supersedes at equal output price, so Fable 5 retires.
+- `gemini-3-flash` ($3.00) and `gemini-3.5-flash` ($9.00) — same series,
+  but the successor is COSTLIER, so both are kept. Retirement follows the
+  price rule, not the version number.
+- `mistral-small-4` and `mistral-large-3` — DIFFERENT series. `small` /
+  `medium` / `large` are size variants, the Mistral equivalent of
+  `mini` / `flagship`; a cheaper small model never supersedes a large
+  one just because its version number is higher. Both kept.
+- `gpt-5.6-sol` / `-terra` / `-luna` — a brand-new variant-tier naming
+  whose mapping onto `flagship` / `mini` is not established. AMBIGUOUS:
+  keep every model and emit the ambiguity warning rather than guessing a
+  lineage. Add these names to the variant-tier list above only once the
+  mapping is deliberate.
 
 Routing meta-models (`premium`, `auto`) are no longer enumerated
 in `<model-options>` — this supersession rule does not apply to
