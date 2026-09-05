@@ -572,6 +572,50 @@ def test_anthropic_extractor_raises_on_restructure() -> None:
         mod.build_snapshot("# Pricing\n\nNo table here.\n", source_url="x")
 
 
+def test_anthropic_extractor_tolerates_header_restyling() -> None:
+    """A restyled heading is not a restructure.
+
+    Anthropic changed "Base Input Tokens" to "Base input tokens" in 2026-08.
+    The exact-case check treated that as a page restructure and raised on every
+    run; the cron's per-provider fail-open swallowed it, so the snapshot froze
+    silently and claude-sonnet-5 kept the aggregator mirror's $3/$15 while
+    Anthropic's own page said $2/$10.
+    """
+    mod = _load("extract_anthropic_catalog")
+    restyled = (
+        ANTHROPIC_MD.read_text()
+        .replace("Base Input Tokens", "Base input tokens")
+        .replace("Output Tokens", "Output tokens")
+    )
+    snap = mod.build_snapshot(restyled, source_url="x")
+    assert snap["models"], "a case change must not empty the snapshot"
+
+
+def test_anthropic_name_map_covers_every_anthropic_model_in_the_selector() -> None:
+    """Every Anthropic model roadmodel recommends must be price-verifiable.
+
+    The map is hand-maintained, and it silently missed Opus 5, Sonnet 5 and
+    Fable 5.1 — all three recommended, none verified against Anthropic's own
+    page. An unmapped model is not an error at extraction time (it is simply
+    skipped), so the gap has to be caught here.
+    """
+    mod = _load("extract_anthropic_catalog")
+    mapped = set(mod.NAME_TO_ID.values())
+    catalog = json.loads((REPO_ROOT / "docs" / "catalog.json").read_text())
+    anthropic_methods = {
+        m["id"] for m in catalog["access_methods"] if m.get("provider") == "anthropic"
+    }
+    recommended: set[str] = set()
+    for method in catalog["access_methods"]:
+        if method["id"] in anthropic_methods:
+            recommended.update(method.get("supports_models", []))
+    missing = sorted(recommended - mapped)
+    assert not missing, (
+        f"Anthropic models in <model-options> with no entry in NAME_TO_ID: {missing}. "
+        "Their prices come from the aggregator mirror with nothing to reconcile against."
+    )
+
+
 def test_anthropic_committed_snapshot_matches_selector_prices() -> None:
     cat = json.loads(REAL_ANTHROPIC_CATALOG.read_text())
     assert cat["overlay_mode"] == "price-only"
@@ -1154,11 +1198,31 @@ def test_g5_is_not_fatal_by_default_but_escalates_under_strict() -> None:
 
 
 def test_g5_reports_the_committed_catalogs_real_gaps() -> None:
-    """Guards the finding itself: Opus 5's price is mirror-only today."""
+    """G5 must name every model priced from the aggregator mirror only.
+
+    This used to pin `claude-opus-5` as the example gap. That gap is CLOSED:
+    the Anthropic extractor's name map gained Opus 5 / Sonnet 5 / Fable 5.1 on
+    2026-09-05, so their prices are now verified against Anthropic's own page
+    (and doing so caught claude-sonnet-5 sitting at the mirror's $3/$15 while
+    Anthropic charges $2/$10). Pin the INVARIANT instead of one model, so
+    closing a gap is not a test failure and opening one still is.
+    """
     result = subprocess.run([sys.executable, str(CATALOG_GATE)], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
-    assert "claude-opus-5" in result.stdout
     assert "price-coverage note(s)" in result.stdout
+
+    # Every model a provider-direct snapshot DOES cover must be absent from the
+    # G5 list — that is what "verified" means.
+    mod = _load("merge_catalog")
+    covered = {m["id"] for snap in mod.provider_snapshots() for m in snap.get("models", [])}
+    flagged = {
+        line.split("'")[1]
+        for line in result.stdout.splitlines()
+        if "G5 (price coverage)" in line and "'" in line
+    }
+    assert not (flagged & covered), (
+        f"G5 flags models their own provider snapshot covers: {sorted(flagged & covered)}"
+    )
 
 
 if __name__ == "__main__":

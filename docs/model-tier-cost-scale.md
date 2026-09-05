@@ -221,7 +221,7 @@ appear here.
 | gpt-5.5          | $30.00  | Very High    | Very High    | ✓      |
 | gpt-5.6-sol      | $20.00  | High         | Very High    | ✗      |
 | sonnet-4.6       | $15.00  | High         | High         | ✓      |
-| claude-sonnet-5  | $15.00  | High         | High         | ✓      |
+| claude-sonnet-5  | $10.00  | Medium       | Medium       | ✓      |
 | gpt-5.4          | $15.00  | High         | High         | ✓      |
 | gpt-5.6-terra    | $12.00  | Medium       | High         | ✗      |
 | gpt-5.3-codex    | $14.00  | Medium       | Medium       | ✓      |
@@ -292,7 +292,7 @@ engines.
 | Claude Opus 5    | $25.00 | Very High | New 2026-08-05 on Cursor's pricing page — Anthropic's Opus 5 successor at $5/$25 (same tier pricing as Opus 4.7/4.8); requires Max Mode on legacy request-based plans; native 1M context via extended-context toggle |
 | Gemini 3.6 Flash | $7.50  | Low       | New 2026-08-05 on Cursor's pricing page — Google's Gemini 3.6 Flash at $1.50/$7.50. Reportedly released 2026-07-21. Now Hidden by default (was visible on initial listing) |
 | Kimi K3          | $15.00 | High      | New 2026-08-05 on Cursor's pricing page — Moonshot's Kimi K3 at $3/$15 with 1M extended-context support at flat per-token rates |
-| claude-sonnet-5  | $15.00 | High      | New 2026-07-15 on Cursor's pricing page — Anthropic's Claude Sonnet 5 with $3/M input and $15/M output; launch promotion $2/$10 through August 31, 2026 |
+| claude-sonnet-5  | $10.00 | Medium    | Price CORRECTED 2026-09-05 to $2/$10 from Anthropic's own pricing page, which is authoritative for Anthropic models per the Federation rule; tier High → Medium. The catalog had carried the aggregator mirror's $3/$15 because update/extract_anthropic_catalog.py had been failing silently since the page restyled its "Base input tokens" header, and claude-sonnet-5 was never in that extractor's name map — so G4 had nothing to reconcile. The July note called $2/$10 a promotion through 2026-08-31; Anthropic lists it as the standard rate today |
 | gpt-5.6-sol      | $30.00 | Very High | Initial listing 2026-07-15 on Cursor's pricing page — OpenAI's GPT-5.6 Sol flagship at $5/$30 (mirrors GPT-5.5 pricing); requires Max Mode on request-based plans |
 | gpt-5.6-terra    | $15.00 | High      | Initial listing 2026-07-15 on Cursor's pricing page — GPT-5.6 Terra mid-tier variant at $2.50/$15                           |
 | gpt-5.6-luna     | $6.00  | Low       | Initial listing 2026-07-15 on Cursor's pricing page — smallest GPT-5.6 variant at $1/$6, optimized for cost and speed       |
