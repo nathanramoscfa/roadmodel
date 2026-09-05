@@ -1225,5 +1225,48 @@ def test_g5_reports_the_committed_catalogs_real_gaps() -> None:
     )
 
 
+# --------------------------------------------------------------------------- #
+# G6 — a benched model must still exist to be benched
+# --------------------------------------------------------------------------- #
+
+
+def test_g6_flags_a_benched_model_missing_from_the_catalog(tmp_path: Path) -> None:
+    """Retiring a model that is still benched silently un-benches it.
+
+    infra/model-availability.json benches a CATALOGUED id so the runtime
+    Step-0a override can exclude it without a package release. If a refresh
+    retires that model, the override references an id the catalog no longer
+    carries — the exclusion stops applying and a model pulled for
+    export-control or access reasons becomes recommendable again. Mandatory
+    supersession makes that reachable, so the gate has to catch it.
+    """
+    mod = _load("validate_catalog_conformance")
+    selector = REAL_SELECTOR.read_text()
+    base = mod.base_models(selector)
+
+    # Nothing benched -> nothing to say.
+    assert mod.check_benched_models_still_exist(selector, base) == []
+
+    # Bench an id the catalog does not carry -> fatal.
+    availability = mod.REPO_ROOT / "infra" / "model-availability.json"
+    original = availability.read_text()
+    try:
+        data = json.loads(original)
+        data["unavailable"] = [{"id": "opus-4.8-retired-by-mistake"}]
+        availability.write_text(json.dumps(data))
+        failures = mod.check_benched_models_still_exist(selector, base)
+        assert len(failures) == 1
+        assert "no longer in" in failures[0]
+    finally:
+        availability.write_text(original)
+
+
+def test_prompt_defers_supersession_when_the_successor_is_unavailable() -> None:
+    """The rule that keeps a series recommendable when its newest is benched."""
+    prompt = (REPO_ROOT / "update" / "prompt.md").read_text()
+    for phrase in ("supersession deferred:", "UNAVAILABLE successor does NOT displace"):
+        assert phrase in prompt, f"update/prompt.md lost the availability guard: {phrase!r}"
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))

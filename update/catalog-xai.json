@@ -6,6 +6,14 @@
   "overlay_mode": "whole-element",
   "models": [
     {
+      "id": "grok-4.6",
+      "slug": "grok-4.6",
+      "name": "grok-4.6",
+      "input_price_per_1m": 2.0,
+      "output_price_per_1m": 6.0,
+      "cache_read_per_1m": null
+    },
+    {
       "id": "grok-4.3",
       "slug": "grok-4.3",
       "name": "grok-4.3",
@@ -15,9 +23,10 @@
     }
   ],
   "slug_to_id": {
+    "grok-4.6": "grok-4.6",
     "grok-4.3": "grok-4.3"
   },
   "unexpected_slugs": [],
   "missing_mapped_models": [],
-  "section_sha256": "20bd1eb56cbb3129955e4a886b2c4a817927dc81d866fc0afe1034890766cdba"
+  "section_sha256": "087b61168c7c80da6cbe17239fd89619c4520245188eb6ba49eff128cb16cbf5"
 }

@@ -653,6 +653,16 @@ catalog accumulated superseded models indefinitely.)
      form `superseded: <old-id> removed in favor of <new-id> (output
      $<old>/M → $<new>/M, same series)`.
 
+An UNAVAILABLE successor does NOT displace its predecessor either. If
+the candidate successor is benched — listed in `<availability-context>`
+as unavailable, or flagged as such by the runtime availability override —
+KEEP the predecessor and emit
+`supersession deferred: <old-id> kept because <new-id> is unavailable`.
+Retiring the only usable model in a series is worse than carrying one
+model too many: Claude Fable 5 was benched for months on export-control
+grounds, and had a successor retired it in that window the whole series
+would have been unrecommendable.
+
 A costlier successor does NOT displace its predecessor — both must
 be kept so the predecessor remains available on the cost/quality
 frontier. The model-selector.txt entry list reflects that frontier,

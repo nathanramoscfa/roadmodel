@@ -262,6 +262,42 @@ def check_price_coverage(
     return notes
 
 
+def check_benched_models_still_exist(selector_text: str, base: dict[str, Any]) -> list[str]:
+    """G6. Every benched model id must still be in ``<model-options>``.
+
+    ``infra/model-availability.json`` benches a CATALOGUED model so the runtime
+    Step-0a override can exclude it without a package release. If a refresh
+    retires a model that is still on that list, the override silently starts
+    referencing an id the catalog no longer has: the bench becomes a no-op, and
+    a model that was pulled for export-control or access reasons is quietly
+    recommendable again.
+
+    Mandatory supersession (2026-09-05) makes that reachable for the first
+    time — before it, retirement was optional and rare.
+    """
+    availability = REPO_ROOT / "infra" / "model-availability.json"
+    if not availability.exists():
+        return []
+    try:
+        data = json.loads(availability.read_text())
+    except json.JSONDecodeError as exc:
+        return [f"G6 (availability): infra/model-availability.json is not valid JSON ({exc})"]
+    benched = data.get("unavailable")
+    if not isinstance(benched, list):
+        return ["G6 (availability): 'unavailable' must be a list"]
+    failures = []
+    for entry in benched:
+        mid = entry.get("id") if isinstance(entry, dict) else entry
+        if mid and str(mid) not in base:
+            failures.append(
+                f"G6 (availability): benched model {str(mid)!r} is no longer in "
+                "<model-options> — the runtime bench now references an id the catalog "
+                "does not carry, so the exclusion silently stops applying. Either keep "
+                "the model or un-bench it deliberately."
+            )
+    return failures
+
+
 def run_checks(selector_text: str, snapshot_paths: list[Path]) -> tuple[list[str], list[str]]:
     """Returns ``(failures, notes)``.
 
@@ -290,6 +326,9 @@ def run_checks(selector_text: str, snapshot_paths: list[Path]) -> tuple[list[str
 
     # G4 — price provenance: selector prices match the provider-direct source.
     failures += check_price_provenance(base, snapshots)
+
+    # G6 — a benched model must still exist to be benched.
+    failures += check_benched_models_still_exist(selector_text, base)
 
     # G5 — price COVERAGE: which selector prices G4 could not check at all.
     notes = check_price_coverage(selector_text, base, snapshots)

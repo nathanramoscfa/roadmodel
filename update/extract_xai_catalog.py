@@ -62,6 +62,16 @@ _BROWSER_HEADERS = {
 # selector recommends; grok-4.20-* / grok-build / image / audio are not mapped.
 NAME_TO_ID = {
     "grok-4.3": "grok-4.3",
+    # grok-4.6 added 2026-09-05: it is in <model-options> and was priced from
+    # the aggregator mirror only, so G4 had nothing to reconcile.
+    "grok-4.6": "grok-4.6",
+    # grok-4.5 is deliberately NOT mapped, though docs.x.ai lists it. This
+    # snapshot is overlay_mode "whole-element", so every id here is force
+    # re-added to the selector when a refresh drops it — and mandatory
+    # supersession retires grok-4.5 in favour of grok-4.6 at an equal $6/M
+    # output price. Mapping it would make the refresh remove the element and
+    # the overlay put it straight back, every run. Map a model here only if it
+    # is meant to SURVIVE supersession.
 }
 
 REQUIRED_ANCHORS = (
