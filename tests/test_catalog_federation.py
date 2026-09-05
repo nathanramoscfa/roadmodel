@@ -342,9 +342,16 @@ def test_compose_on_real_artifacts_is_clean() -> None:
     assert composed["deepseek-v4-flash"].source == "deepseek"
     assert composed["deepseek-v4-flash"].cost_tier == "low"
     assert composed["deepseek-v4-pro"].source == "deepseek"
-    # DeepSeek is now IN <model-options> (the wiring slice landed it), so it is no
-    # longer a "proposed" (not-yet-in-selector) addition.
-    assert mod.proposed_additions(base, snaps) == []
+    # DeepSeek's rated models are IN <model-options> (the wiring slice landed
+    # them), so they are no longer "proposed" additions. A model the provider
+    # ships that roadmodel has not rated yet IS proposed — that is the
+    # flag-only discovery path, and it must not be asserted away: pin the
+    # invariant (nothing rated is proposed) rather than today's empty list.
+    proposed = mod.proposed_additions(base, snaps)
+    assert "deepseek-v4-flash" not in proposed
+    assert "deepseek-v4-pro" not in proposed
+    for candidate in proposed:
+        assert candidate not in base, f"{candidate} is already in <model-options>"
 
 
 # --------------------------------------------------------------------------- #
@@ -465,17 +472,24 @@ def test_catalog_gate_accepts_a_flagged_new_provider_model(tmp_path: Path) -> No
     catalog refresh after it died at this gate (run 33928974448), so one
     unrated provider model stopped all curation.
     """
+    # A synthetic id, deliberately: the real snapshot now carries
+    # deepseek-v4-flash-vision-exp, and appending an id the snapshot already
+    # holds reads as one source claiming a model twice (a G3 conflict) rather
+    # than as the flagged-new-model case under test.
     snap = json.loads(REAL_DEEPSEEK_CATALOG.read_text())
     snap["models"].append(
         {
-            "id": "deepseek-v4-flash-vision-exp",
-            "slug": "deepseek-v4-flash-vision-exp",
-            "name": "DeepSeek V4 Flash Vision (experimental)",
+            "id": "deepseek-v4-notyetrated-exp",
+            "slug": "deepseek-v4-notyetrated-exp",
+            "name": "DeepSeek V4 Not Yet Rated (experimental)",
             "input_price_per_1m": 0.1,
             "output_price_per_1m": 0.3,
         }
     )
-    snap["unexpected_slugs"] = ["deepseek-v4-flash-vision-exp"]
+    # APPEND: the committed snapshot already flags deepseek-v4-flash-vision-exp,
+    # and replacing the list would un-declare it — G1 would then fail for the
+    # real model instead of exercising the synthetic one.
+    snap["unexpected_slugs"] = [*snap.get("unexpected_slugs", []), "deepseek-v4-notyetrated-exp"]
     flagged = tmp_path / "catalog-deepseek.json"
     flagged.write_text(json.dumps(snap))
 
@@ -1010,7 +1024,13 @@ def test_check_additions_cli_emits_proposed_additions() -> None:
     assert result.returncode == 0, result.stderr
     emitted = {line for line in result.stdout.splitlines() if line.strip()}
     assert emitted == expected
-    assert emitted == set()  # federation complete today — no unfederated models
+    # NOT `== set()`: a provider shipping a model roadmodel has not rated yet is
+    # the flag-only discovery path working (deepseek-v4-flash-vision-exp, 2026-08-24).
+    # Pin the invariant — nothing already in <model-options> is proposed — rather
+    # than a lineup that any provider release invalidates.
+    base = mod.base_models(REAL_SELECTOR.read_text())
+    for candidate in emitted:
+        assert candidate not in base, f"{candidate} is already in <model-options>"
 
 
 # --------------------------------------------------------------------------- #
