@@ -1,10 +1,10 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-04T23:06:54Z",
+  "generated_at_utc": "2026-09-05T00:04:58Z",
   "source_doc_sha256": {
-    "model-selector.txt": "5f54849f24b484f2243812a412cd8b4aadd986a18ad09240f38ca1ae06a7a5e9",
-    "model-tier-cost-scale.md": "320ffa43b56f37608f5cdbcda48147b585e1c79a427e4be71ccb69bd9f05bc44"
+    "model-selector.txt": "432e64cf8f809d67ad978ae1fc6a08566502db10d933befba6dc3e2eb1bf2078",
+    "model-tier-cost-scale.md": "945f7f054c1cb5e730d42747394b5ecaee16db8abc7673cdddb9fde6501a086b"
   },
   "models": [
     {
@@ -46,8 +46,29 @@
       },
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 59.9 (#1); HLE 53.3% (#1); Terminal-Bench Hard 62.9 (#1)",
-      "pricing_notes": "Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; About 2x the cost of Claude Opus 5; Requires Max Mode on legacy request-based plans",
+      "pricing_notes": "Hidden by default; Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; About 2x the cost of Claude Opus 5; Requires Max Mode on legacy request-based plans",
       "best_for": "Anthropic's new top-of-line Fable family flagship (no predecessor) \u2014 S-tier across coding, planning, agentic, multimodal, long-context, and knowledge, leading HLE (53.3%) and Terminal-Bench Hard (62.9) with state-of-the-art vision and a 1M default context; about 2x the cost of Opus 5 and latency-slow (output ~64 tokens/s), so reserve for the hardest reasoning, agentic, and vision work where maximum capability outweighs cost and speed; security-guardrail trips auto-route to Opus. Tier profile sourced from the catalog cron's 2026-06-11 dry-run reconciliation against the live benchmark sources (\u03c4\u00b2-bench retail not yet published for this model), pending editorial confirmation in the next refresh."
+    },
+    {
+      "id": "claude-fable-5.1",
+      "name": "Fable 5.1",
+      "input_price_per_1m": 10.0,
+      "output_price_per_1m": 50.0,
+      "cache_read_per_1m": null,
+      "tier_cost": "very-high",
+      "tiers": {
+        "coding": "S",
+        "planning": "S",
+        "agentic": "S",
+        "multimodal": "S",
+        "long-context": "S",
+        "knowledge": "S",
+        "speed": "D"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "AA Intelligence Index 56.8 (max); HLE 59.1% (max); Terminal-Bench 2.1 91.4 (max); \u03c4\u00b2-bench banking pass_1 47.2%",
+      "pricing_notes": "Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; Prompt-cache reads are $0.25/M, 75% below the standard cache-read rate; About 2x the cost of Claude Opus 5 on input and output; Requires Max Mode on legacy request-based plans",
+      "best_for": "Anthropic's Fable 5 successor at the same very-high tier pricing ($10/$50) \u2014 placeholder S-tier ratings inherited from fable-5 pending broader editorial review, with benchmark-grounded confirmation from AA Intelligence Index (56.8 max), HLE (59.1% max), and Terminal-Bench 2.1 (91.4 max). The headline cost-structure change is a 75% reduction in prompt-cache-read pricing ($0.25/M vs Fable 5's $1/M), making sustained-context sessions materially cheaper; pick over fable-5 when both are available since 5.1 supersedes 5 in the same series per the equal-output-price replacement rule."
     },
     {
       "id": "claude-opus-5",
@@ -136,8 +157,8 @@
     {
       "id": "deepseek-v4-flash",
       "name": "DeepSeek-V4-Flash",
-      "input_price_per_1m": 0.14,
-      "output_price_per_1m": 0.28,
+      "input_price_per_1m": 0.22,
+      "output_price_per_1m": 0.66,
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
@@ -157,8 +178,8 @@
     {
       "id": "deepseek-v4-pro",
       "name": "DeepSeek-V4-Pro",
-      "input_price_per_1m": 0.435,
-      "output_price_per_1m": 0.87,
+      "input_price_per_1m": 0.66,
+      "output_price_per_1m": 1.98,
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
@@ -298,8 +319,50 @@
       },
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 50.1 (high); HLE 38.3% (high); Terminal-Bench 2.1 77.5; Output Speed 235.8 tokens/s",
-      "pricing_notes": "-",
+      "pricing_notes": "Hidden by default",
       "best_for": "Google's Gemini 3.5 Flash successor at low-tier pricing ($1.50/$7.50, cheaper than 3.5 Flash's $9/M output) \u2014 placeholder tier ratings inherited from gemini-3.5-flash pending an independent 3.5-vs-3.6 head-to-head, with Artificial Analysis Intelligence Index 50.1 (high) confirming near-frontier reasoning for a cheap-tier Flash model and output speed ~236 tokens/s; pick over gemini-3.5-flash when both are visible since 3.6 supersedes 3.5 in the same series at a lower output price."
+    },
+    {
+      "id": "gemini-3.7-flash",
+      "name": "Gemini 3.7 Flash",
+      "input_price_per_1m": 0.75,
+      "output_price_per_1m": 3.5,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "A",
+        "agentic": "A",
+        "multimodal": "B",
+        "long-context": "B",
+        "knowledge": "A",
+        "speed": "S"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "AA Intelligence Index 45.2 (high); HLE 47.9% (high); Terminal-Bench 2.1 85.8; Output Speed 294.8 tokens/s",
+      "pricing_notes": "Hidden by default",
+      "best_for": "Google's Gemini 3.7 Flash \u2014 a low-tier ($0.75/$3.50) Flash variant with placeholder tier ratings inherited from the 3.6 Flash line, with AA Intelligence Index 45.2 (high) and Terminal-Bench 2.1 85.8 confirming strong near-frontier reasoning at throughput-optimized inference (~295 tokens/s). Hidden by default on Cursor's pricing page; superseded by Gemini 3.8 Flash at the same output price."
+    },
+    {
+      "id": "gemini-3.8-flash",
+      "name": "Gemini 3.8 Flash",
+      "input_price_per_1m": 0.75,
+      "output_price_per_1m": 3.5,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "A",
+        "agentic": "A",
+        "multimodal": "B",
+        "long-context": "B",
+        "knowledge": "A",
+        "speed": "S"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "AA Intelligence Index 47.1 (high); HLE 47.8% (high); Terminal-Bench 2.1 87.6; Output Speed 429.2 tokens/s",
+      "pricing_notes": "-",
+      "best_for": "Google's Gemini 3.8 Flash \u2014 the visible-by-default successor to 3.7 Flash at the same low-tier pricing ($0.75/$3.50), with placeholder tier ratings inherited from the Flash series and AA Intelligence Index 47.1 (high), Terminal-Bench 2.1 87.6, and exceptional output speed (~429 tokens/s). Pick over 3.7 Flash when both are available since 3.8 supersedes 3.7 in the same series at equal output price."
     },
     {
       "id": "glm-4.5-air",
@@ -596,69 +659,6 @@
       "best_for": "OpenAI's most capable frontier model and highest-cost GPT offering, best suited for the most demanding reasoning, long-horizon planning, and tasks where maximum intelligence is required regardless of cost \u2014 strongest single model for hard coding, agentic execution, and reasoning, but verify factual claims due to elevated hallucination"
     },
     {
-      "id": "gpt-5.6-luna",
-      "name": "GPT-5.6 Luna",
-      "input_price_per_1m": 1.0,
-      "output_price_per_1m": 6.0,
-      "cache_read_per_1m": null,
-      "tier_cost": "low",
-      "tiers": {
-        "coding": "B",
-        "planning": "A",
-        "agentic": "A",
-        "multimodal": "B",
-        "long-context": "B",
-        "knowledge": "A",
-        "speed": "S"
-      },
-      "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 51.2 (max) / 49.1 (xhigh); HLE 37.2% (max); Output Speed 174.7 tokens/s (max) / 173.8 (xhigh)",
-      "pricing_notes": "Smallest GPT-5.6 variant, optimized for cost and speed; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Cache writes are billed at 1.25x the uncached input rate",
-      "best_for": "OpenAI's smallest GPT-5.6 variant at low-tier pricing ($6/M output) \u2014 strong AA Intelligence Index (51.2 max) for the price and very high output throughput (~175 tokens/s), positioning it as a cost-efficient near-frontier alternative to Gemini 3.5 Flash on the same tier when GPT-family behavior is preferred; pick when latency and cost dominate but broader reasoning quality than smaller mini/nano variants is required."
-    },
-    {
-      "id": "gpt-5.6-sol",
-      "name": "GPT-5.6 Sol",
-      "input_price_per_1m": 5.0,
-      "output_price_per_1m": 30.0,
-      "cache_read_per_1m": null,
-      "tier_cost": "very-high",
-      "tiers": {
-        "coding": "S",
-        "planning": "S",
-        "agentic": "S",
-        "multimodal": "A",
-        "long-context": "A",
-        "knowledge": "S",
-        "speed": "D"
-      },
-      "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 58.9 (max) / 57.7 (xhigh); HLE 47.2% (max); Terminal-Bench 2.1 88.0; \u03c4\u00b2-bench banking pass_1 33.0%",
-      "pricing_notes": "Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Cache writes are billed at 1.25x the uncached input rate",
-      "best_for": "OpenAI's GPT-5.6 Sol flagship \u2014 the top-of-line GPT-5.6 family variant at the same very-high tier pricing as GPT-5.5 ($30/M output), leading Artificial Analysis Intelligence Index (58.9) and posting Terminal-Bench 2.1 88.0 and HLE 47.2% at max effort; pick for the most demanding reasoning, agentic execution, and knowledge work at the frontier tier when a GPT-family top model is preferred over Anthropic's Opus/Fable lineage."
-    },
-    {
-      "id": "gpt-5.6-terra",
-      "name": "GPT-5.6 Terra",
-      "input_price_per_1m": 2.5,
-      "output_price_per_1m": 15.0,
-      "cache_read_per_1m": null,
-      "tier_cost": "high",
-      "tiers": {
-        "coding": "A",
-        "planning": "A",
-        "agentic": "A",
-        "multimodal": "A",
-        "long-context": "A",
-        "knowledge": "A",
-        "speed": "A"
-      },
-      "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 55.0 (max); HLE 41.8%; Terminal-Bench 2.1 88.0; Output Speed 126.9 tokens/s",
-      "pricing_notes": "Mid-tier GPT-5.6 variant between Sol and Luna; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Cache writes are billed at 1.25x the uncached input rate",
-      "best_for": "OpenAI's mid-tier GPT-5.6 variant between Sol (flagship) and Luna (mini) at the same high-tier pricing as GPT-5.4 ($15/M output) \u2014 Artificial Analysis Intelligence Index 55.0 (max) matches near-frontier reasoning while output speed (~127 tokens/s) is faster than most peers; pick for balanced near-frontier reasoning, agentic execution, and speed when Sol's very-high tier isn't justified but stronger throughput than GPT-5.4 is desired."
-    },
-    {
       "id": "gpt-oss-120b",
       "name": "gpt-oss-120b",
       "input_price_per_1m": 0.15,
@@ -741,6 +741,27 @@
       "headline_benchmarks": "AA Intelligence Index 53.8 (high); Terminal-Bench 2.1 81.6; \u03c4\u00b2-bench banking pass_1 47.9%; LMArena Text Elo 1452",
       "pricing_notes": "Jointly trained by Cursor and SpaceXAI; Not yet available in the European Union",
       "best_for": "Grok family's latest release at low-tier pricing ($6/M output), jointly trained by Cursor and SpaceXAI \u2014 Artificial Analysis Intelligence Index 53.8 (high) and Terminal-Bench 2.1 81.6 make it a strong near-frontier value; carries the Grok lineage's signature very-large-context capability, useful for long-context coding, planning, and agentic work when cost efficiency matters. Not yet available in the EU per Cursor's pricing notes; jurisdiction=us (Cursor operator)."
+    },
+    {
+      "id": "grok-4.6",
+      "name": "Grok 4.6",
+      "input_price_per_1m": 2.0,
+      "output_price_per_1m": 6.0,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "A",
+        "planning": "A",
+        "agentic": "A",
+        "multimodal": "B",
+        "long-context": "S",
+        "knowledge": "A",
+        "speed": "B"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "AA Intelligence Index 50.6 (high) / 49.3 (xhigh); HLE 42.9% (high); Terminal-Bench 2.1 88.4 (high); \u03c4\u00b2-bench banking pass_1 50.7%",
+      "pricing_notes": "Jointly trained by Cursor and SpaceXAI",
+      "best_for": "Cursor and SpaceXAI's Grok 4.5 successor at the same low-tier pricing ($2/$6) \u2014 placeholder tier ratings inherited from grok-4.5 with benchmark-grounded confirmation from AA Intelligence Index (50.6 high), Terminal-Bench 2.1 (88.4 high), and \u03c4\u00b2-bench banking (50.7% pass_1). Pick over grok-4.5 when both are available since 4.6 supersedes 4.5 in the same series at equal output price."
     },
     {
       "id": "kimi-k2.7-code",
@@ -922,6 +943,7 @@
       "supports_models": [
         "claude-4.5-haiku",
         "claude-fable-5",
+        "claude-fable-5.1",
         "claude-opus-5",
         "claude-sonnet-5",
         "opus-4.7",
@@ -965,6 +987,7 @@
       "supports_models": [
         "claude-4.5-haiku",
         "claude-fable-5",
+        "claude-fable-5.1",
         "claude-opus-5",
         "claude-sonnet-5",
         "opus-4.7",
@@ -974,7 +997,7 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "exposes_orchestration": "yes",
-      "best_for": "Default for Claude coding or terminal tasks when a claude.ai Max subscription is active \u2014 $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context; as of 2.1.219 Claude Opus 5 ships as the new default Opus (1M context, fast mode at $10/$50 per Mtok) and Opus 4.7 is removed from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.220\u20132.1.227 are bug-fix / reliability / self-hosted-runner / UI-polish releases with no surface-parameter changes (2.1.224 adds `claude self-hosted-runner` for turning your own machines into places where Claude Code web/mobile/desktop sessions can run, cross-session `SendMessage`, and archive-plugin sources; 2.1.225 adds gateway spend-limit reporting to the usage warning; 2.1.227 polishes the slash-command menu and fixes feature-flag evaluation for expired login tokens). Exposes the full `/effort` dial (low/medium/high/xhigh/max \u2014 Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, and Fable 5 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\"ultracode\": true`; 2.1.202+ adds a `/config` \"Dynamic workflow size\" advisory guideline, and 2.1.219 defaults it to medium (aim for fewer than 15 agents) with the `workflowSizeGuideline` settings key to set it from any settings file) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized). As of 2.1.200 the default permission mode is `Manual` across the CLI, VS Code, and JetBrains; 2.1.205 adds an auto-mode rule blocking tampering with session transcript files and reserves the `Claude Browser` MCP server name (alongside `Claude Preview`) ahead of the Claude Desktop pane rename; 2.1.210 adds a live elapsed-time counter on long-running tool calls and startup warnings for `Write(path)`/`NotebookEdit(path)`/`Glob(path)` permission rules; 2.1.211 adds the `--forward-subagent-text` flag / `CLAUDE_CODE_FORWARD_SUBAGENT_TEXT` env var to include subagent text and thinking in stream-json output; 2.1.212 adds `/fork` background-session copies, `/subtask` in-session subagent, `/resume` background picker, per-session WebSearch/subagent caps, and long-running MCP auto-backgrounding; 2.1.214 adds the EndConversation tool and Podman/docker daemon-redirect permission prompts; 2.1.215 makes `/verify` and `/code-review` skills explicit-invocation only; 2.1.216 adds a `sandbox.filesystem.disabled` setting to skip filesystem isolation while keeping network egress control; 2.1.218 moves `/code-review` to a background subagent, adds screen-reader deletion announcements in `--ax-screen-reader` mode, `/ultrareview` now supports descriptive arguments, and skills with `context: fork` default to running in the background; 2.1.219 adds the `DirectoryAdded` hook, subagents can spawn nested subagents up to depth 3 by default (opt out via `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1`), `mcp_server_errors` reporting in the headless stream-json init event, and removes Opus 4.7 from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.221 adds a VS Code Focus view (`Ctrl+Alt+F`), a `mode: \"mask\"` sandbox credential option on Linux/WSL, `claude plugin validate` warnings for names Claude Desktop would reject, and a `prompt-audit` subcommand in the `claude-api` skill; 2.1.222 fixes a worktree-isolation escape and hardens auto-mode `SendMessage` classifier evaluation; 2.1.224 adds self-hosted environments (`claude self-hosted-runner`), `archive` plugin sources, cross-session `SendMessage` with `ListAgents`, sandbox credential-masking options, and a `crossSessionInbound` / `dialogExpiry` cross-session-message settings block on Team and Enterprise plans; 2.1.225 adds gateway spend-limit-reached messaging to the usage warning, a `claude agents` workspace-trust prompt, and `SendMessage` starting conversations with named Remote Control sessions on other machines; 2.1.227 polishes the slash-command menu (only the selected row is highlighted, matched characters are bolded), fixes feature-flag evaluation with expired login tokens so Max users are no longer wrongly prompted to enable Fable usage credits, and improves performance of file-not-found suggestions and at-mention size checks."
+      "best_for": "Default for Claude coding or terminal tasks when a claude.ai Max subscription is active \u2014 $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context; as of 2.1.219 Claude Opus 5 ships as the new default Opus (1M context, fast mode at $10/$50 per Mtok) and Opus 4.7 is removed from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.220\u20132.1.227 are bug-fix / reliability / self-hosted-runner / UI-polish releases with no surface-parameter changes (2.1.224 adds `claude self-hosted-runner` for turning your own machines into places where Claude Code web/mobile/desktop sessions can run, cross-session `SendMessage`, and archive-plugin sources; 2.1.225 adds gateway spend-limit reporting to the usage warning; 2.1.227 polishes the slash-command menu and fixes feature-flag evaluation for expired login tokens). Exposes the full `/effort` dial (low/medium/high/xhigh/max \u2014 Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, Fable 5, and Fable 5.1 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\"ultracode\": true`; 2.1.202+ adds a `/config` \"Dynamic workflow size\" advisory guideline, and 2.1.219 defaults it to medium (aim for fewer than 15 agents) with the `workflowSizeGuideline` settings key to set it from any settings file) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized). As of 2.1.200 the default permission mode is `Manual` across the CLI, VS Code, and JetBrains; 2.1.205 adds an auto-mode rule blocking tampering with session transcript files and reserves the `Claude Browser` MCP server name (alongside `Claude Preview`) ahead of the Claude Desktop pane rename; 2.1.210 adds a live elapsed-time counter on long-running tool calls and startup warnings for `Write(path)`/`NotebookEdit(path)`/`Glob(path)` permission rules; 2.1.211 adds the `--forward-subagent-text` flag / `CLAUDE_CODE_FORWARD_SUBAGENT_TEXT` env var to include subagent text and thinking in stream-json output; 2.1.212 adds `/fork` background-session copies, `/subtask` in-session subagent, `/resume` background picker, per-session WebSearch/subagent caps, and long-running MCP auto-backgrounding; 2.1.214 adds the EndConversation tool and Podman/docker daemon-redirect permission prompts; 2.1.215 makes `/verify` and `/code-review` skills explicit-invocation only; 2.1.216 adds a `sandbox.filesystem.disabled` setting to skip filesystem isolation while keeping network egress control; 2.1.218 moves `/code-review` to a background subagent, adds screen-reader deletion announcements in `--ax-screen-reader` mode, `/ultrareview` now supports descriptive arguments, and skills with `context: fork` default to running in the background; 2.1.219 adds the `DirectoryAdded` hook, subagents can spawn nested subagents up to depth 3 by default (opt out via `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1`), `mcp_server_errors` reporting in the headless stream-json init event, and removes Opus 4.7 from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.221 adds a VS Code Focus view (`Ctrl+Alt+F`), a `mode: \"mask\"` sandbox credential option on Linux/WSL, `claude plugin validate` warnings for names Claude Desktop would reject, and a `prompt-audit` subcommand in the `claude-api` skill; 2.1.222 fixes a worktree-isolation escape and hardens auto-mode `SendMessage` classifier evaluation; 2.1.224 adds self-hosted environments (`claude self-hosted-runner`), `archive` plugin sources, cross-session `SendMessage` with `ListAgents`, sandbox credential-masking options, and a `crossSessionInbound` / `dialogExpiry` cross-session-message settings block on Team and Enterprise plans; 2.1.225 adds gateway spend-limit-reached messaging to the usage warning, a `claude agents` workspace-trust prompt, and `SendMessage` starting conversations with named Remote Control sessions on other machines; 2.1.227 polishes the slash-command menu (only the selected row is highlighted, matched characters are bolded), fixes feature-flag evaluation with expired login tokens so Max users are no longer wrongly prompted to enable Fable usage credits, and improves performance of file-not-found suggestions and at-mention size checks."
     },
     {
       "id": "claude-web",
@@ -985,6 +1008,7 @@
       "requires": "claude-max-subscription",
       "supports_models": [
         "claude-4.5-haiku",
+        "claude-fable-5.1",
         "claude-opus-5",
         "claude-sonnet-5",
         "opus-4.7",
@@ -1033,6 +1057,7 @@
       "supports_models": [
         "claude-4.5-haiku",
         "claude-fable-5",
+        "claude-fable-5.1",
         "claude-opus-5",
         "claude-sonnet-5",
         "composer-2.5",
@@ -1042,6 +1067,8 @@
         "gemini-3.1-pro",
         "gemini-3.5-flash",
         "gemini-3.6-flash",
+        "gemini-3.7-flash",
+        "gemini-3.8-flash",
         "glm-5.2",
         "gpt-5",
         "gpt-5-mini",
@@ -1058,6 +1085,7 @@
         "gpt-5.6-sol",
         "gpt-5.6-terra",
         "grok-4.5",
+        "grok-4.6",
         "kimi-k2.7-code",
         "kimi-k3",
         "opus-4.7",
@@ -1098,7 +1126,9 @@
         "gemini-3-pro",
         "gemini-3.1-pro",
         "gemini-3.5-flash",
-        "gemini-3.6-flash"
+        "gemini-3.6-flash",
+        "gemini-3.7-flash",
+        "gemini-3.8-flash"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
@@ -1118,7 +1148,9 @@
         "gemini-3-pro",
         "gemini-3.1-pro",
         "gemini-3.5-flash",
-        "gemini-3.6-flash"
+        "gemini-3.6-flash",
+        "gemini-3.7-flash",
+        "gemini-3.8-flash"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
@@ -1138,7 +1170,9 @@
         "gemini-3-pro",
         "gemini-3.1-pro",
         "gemini-3.5-flash",
-        "gemini-3.6-flash"
+        "gemini-3.6-flash",
+        "gemini-3.7-flash",
+        "gemini-3.8-flash"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
@@ -1215,7 +1249,9 @@
       "billing": "per-token",
       "requires": "xai-api-key",
       "supports_models": [
-        "grok-4.3"
+        "grok-4.3",
+        "grok-4.5",
+        "grok-4.6"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "no",
