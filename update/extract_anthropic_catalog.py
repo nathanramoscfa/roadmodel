@@ -48,6 +48,12 @@ FETCH_TIMEOUT = 30
 # the selector recommends are mapped; the page lists many more that are
 # deliberately not in <model-options>.
 NAME_TO_ID = {
+    # Added 2026-09-05: all three are IN <model-options> and recommended, but
+    # were never mapped here, so their prices came from the aggregator mirror
+    # with no provider-direct verification (exactly what G5 flags).
+    "Claude Fable 5.1": "claude-fable-5.1",
+    "Claude Opus 5": "claude-opus-5",
+    "Claude Sonnet 5": "claude-sonnet-5",
     "Claude Fable 5": "claude-fable-5",
     "Claude Opus 4.8": "opus-4.8",
     "Claude Opus 4.7": "opus-4.7",
@@ -58,7 +64,7 @@ NAME_TO_ID = {
 # Literal substrings that MUST survive in the Markdown. Their absence means a
 # restructure -> fail loud rather than emit a partial/empty snapshot.
 REQUIRED_ANCHORS = (
-    "Base Input Tokens",
+    "ase input tokens",  # case-insensitively; the page restyled this in 2026-08
     "Output Tokens",
     "Claude Opus 4.8",
     "Claude Sonnet 4.6",
@@ -84,9 +90,15 @@ def fetch_text(url: str) -> str:
 
 
 def verify_anchors(md: str) -> None:
-    missing = [a for a in REQUIRED_ANCHORS if a not in md]
+    """Fail loud if the page no longer looks like the pricing doc.
+
+    Matched case-insensitively: a restyled heading is not a restructure, and
+    treating it as one cost this source three weeks of silent staleness.
+    """
+    lowered = md.lower()
+    missing = [a for a in REQUIRED_ANCHORS if a.lower() not in lowered]
     if missing:
-        raise ExtractError(f"expected pricing anchors missing (restructure?): {missing}")
+        raise ExtractError(f"expected anchors missing (restructure?): {missing}")
 
 
 def _dollars(cell: str) -> float | None:
@@ -117,7 +129,15 @@ def parse_pricing_table(md: str) -> list[dict[str, object]]:
             continue
         cells = [c.strip() for c in s.strip("|").split("|")]
         if header is None:
-            if "Base Input Tokens" in cells and "Output Tokens" in cells:
+            # Case-INSENSITIVE: Anthropic restyled the header to "Base input
+            # tokens" in 2026-08, and the exact-case check then failed for every
+            # run. The cron's per-provider fail-open swallowed it, so the
+            # committed snapshot silently froze — which is how claude-sonnet-5
+            # kept an aggregator-mirror price of $3/$15 while Anthropic's own
+            # page said $2/$10, and how Opus 5 / Sonnet 5 / Fable 5.1 stayed
+            # absent from the provider-direct source entirely.
+            lowered = [c.lower() for c in cells]
+            if "base input tokens" in lowered and "output tokens" in lowered:
                 header = cells
             continue
         if all(set(c) <= set("-: ") for c in cells):  # the |---|---| separator

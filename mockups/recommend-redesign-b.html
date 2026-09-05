@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>roadmodel — /recommend redesign B (hero + alternatives)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ============================================================
+       roadmodel /recommend — DIRECTION B: one hero pick + two
+       compact alternatives. Palette mirrors web/tailwind.config.ts.
+       ============================================================ */
+    :root {
+      --accent: #2563eb; --accent-hover: #1d4ed8;
+      --accent-soft: rgba(37, 99, 235, 0.14); --accent-ring: rgba(37, 99, 235, 0.35);
+      --radius-xl: 14px; --radius-lg: 10px; --radius-md: 8px; --maxw: 1180px;
+    }
+    html.dark {
+      --bg: #0f172a; --bg-grad: radial-gradient(1200px 620px at 78% -8%, rgba(37,99,235,0.10), transparent 60%);
+      --card: #1e293b; --card-2: #172033; --panel: #0f172a; --border: #334155; --border-soft: #263449;
+      --text: #f8fafc; --text-2: #e2e8f0; --muted: #94a3b8; --muted-2: #64748b;
+      --badge-bg: rgba(37, 99, 235, 0.16); --badge-text: #93c5fd; --funded: #4ade80;
+      --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 10px 30px -18px rgba(0,0,0,0.7);
+      --hero-grad: linear-gradient(180deg, rgba(37,99,235,0.10), transparent 120px), var(--card);
+    }
+    html:not(.dark) {
+      --bg: #f8fafc; --bg-grad: radial-gradient(1100px 560px at 80% -10%, rgba(37,99,235,0.10), transparent 60%);
+      --card: #ffffff; --card-2: #f8fafc; --panel: #f8fafc; --border: #e2e8f0; --border-soft: #eef2f7;
+      --text: #0f172a; --text-2: #1e293b; --muted: #64748b; --muted-2: #94a3b8;
+      --badge-bg: #dbeafe; --badge-text: #2563eb; --funded: #16a34a;
+      --shadow: 0 1px 2px rgba(15,23,42,0.06), 0 12px 28px -20px rgba(15,23,42,0.35);
+      --hero-grad: linear-gradient(180deg, rgba(37,99,235,0.06), transparent 120px), var(--card);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg-grad), var(--bg); color: var(--text);
+      font-family: "Inter", system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      -webkit-font-smoothing: antialiased; min-height: 100vh; font-size: 14px; line-height: 1.5;
+    }
+    h1,h2,h3,h4 { margin: 0; } button { font-family: inherit; cursor: pointer; } a { color: inherit; }
+
+    /* nav */
+    .nav { border-bottom: 1px solid var(--border); background: var(--card); }
+    .nav-inner { max-width: var(--maxw); margin: 0 auto; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .brand { font-weight: 700; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); text-decoration: none; }
+    .nav-links { display: flex; align-items: center; gap: 4px; }
+    .nav-links a { padding: 6px 12px; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; color: var(--muted); text-decoration: none; }
+    .nav-links a:hover, .nav-links a.active { color: var(--text); background: var(--border-soft); }
+    .icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-md); border: 1px solid transparent; background: transparent; color: var(--muted); }
+    .icon-btn:hover { background: var(--border-soft); color: var(--text); }
+
+    .wrap { max-width: var(--maxw); margin: 0 auto; padding: 28px 24px 56px; }
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+    .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 6px; }
+    .page-head h1 { font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+    .page-head p { margin: 6px 0 0; color: var(--muted); max-width: 560px; }
+    .btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--card); color: var(--text-2); font-weight: 600; font-size: 13px; }
+    .btn:hover { border-color: var(--muted-2); }
+
+    /* prompt summary bar */
+    .prompt-bar { margin-top: 20px; display: flex; align-items: center; gap: 14px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px 16px; box-shadow: var(--shadow); }
+    .prompt-bar .label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted-2); white-space: nowrap; }
+    .prompt-bar .text { flex: 1; min-width: 0; color: var(--text-2); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--muted); background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+
+    /* ---- results grid: hero (left) + alternatives rail (right) ---- */
+    .results { margin-top: 18px; display: grid; grid-template-columns: 1.72fr 1fr; gap: 18px; align-items: start; }
+
+    /* HERO */
+    .hero { background: var(--hero-grad); border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: var(--shadow); padding: 20px 22px 22px; position: relative; overflow: hidden; }
+    .hero::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: linear-gradient(90deg, var(--accent), #7c3aed); }
+    .hero-eyebrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .hero-eyebrow .tier { font-size: 12px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--accent); }
+    .hero-eyebrow .tier span { color: var(--muted-2); font-weight: 500; letter-spacing: 0; text-transform: none; margin-left: 8px; }
+    .default-pill { font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 3px 9px; }
+    .hero-id { display: flex; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+    .hero-id .model { font-size: 30px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1; }
+    .badge { display: inline-flex; align-items: center; background: var(--badge-bg); color: var(--badge-text); font-size: 11px; font-weight: 600; border-radius: 999px; padding: 3px 10px; }
+    .hero-cost { font-size: 16px; font-weight: 700; color: var(--funded); display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+    .hero-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+    .schip { font-size: 12px; font-weight: 600; color: var(--text-2); background: var(--panel); border: 1px solid var(--border); border-radius: 999px; padding: 4px 11px; }
+    .schip b { color: var(--muted); font-weight: 600; margin-right: 5px; }
+    .hero-divider { height: 1px; background: var(--border-soft); margin: 18px 0; }
+
+    /* Why (shared with direction A) */
+    .why > h3 { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 14px; }
+    .why-section { position: relative; padding: 0 0 15px 15px; margin-bottom: 13px; border-left: 2px solid var(--border); }
+    .why-section:last-child { padding-bottom: 0; margin-bottom: 0; }
+    .why-section::before { content: ""; position: absolute; left: -5px; top: 2px; width: 8px; height: 8px; border-radius: 999px; background: var(--accent); }
+    .why-section h4 { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+    .why-section p { margin: 0; color: var(--text-2); font-size: 13.5px; line-height: 1.62; }
+    .term { text-decoration: underline dotted; text-underline-offset: 3px; text-decoration-color: var(--muted-2); cursor: help; color: var(--text); }
+
+    /* hero cost breakdown */
+    .hero-costwrap { margin-top: 18px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; }
+    .hero-costwrap .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .hero-costwrap h4 { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+    table.cost { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    table.cost th { text-align: left; font-weight: 600; color: var(--muted); padding: 0 8px 7px 0; border-bottom: 1px solid var(--border); font-size: 11.5px; }
+    table.cost td { padding: 7px 8px 7px 0; border-bottom: 1px solid var(--border-soft); color: var(--text-2); }
+    table.cost tr:last-child td { border-bottom: none; }
+    table.cost .yc { font-weight: 600; }
+    table.cost .yc.ok { color: var(--funded); }
+    table.cost .yc.no { color: var(--muted-2); font-weight: 500; }
+    .link-btn { font-size: 12px; font-weight: 600; color: var(--muted); background: transparent; border: 0; padding: 0; }
+    .link-btn:hover { color: var(--accent); }
+    .link-btn[disabled] { color: var(--funded); cursor: default; }
+
+    /* RAIL — alternatives */
+    .rail { display: flex; flex-direction: column; gap: 12px; }
+    .rail-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 2px 2px 0; }
+    .alt { text-align: left; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; display: flex; flex-direction: column; gap: 7px; transition: border-color .12s, transform .12s, box-shadow .12s; }
+    .alt:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: var(--shadow); }
+    .alt-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .alt-dir { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+    .alt-dir svg { color: var(--accent); }
+    .alt-tier { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 8px; }
+    .alt-id { display: flex; align-items: baseline; gap: 10px; }
+    .alt-id .model { font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
+    .alt-id .badge { align-self: center; }
+    .alt-cost { font-size: 12.5px; font-weight: 600; color: var(--funded); display: inline-flex; align-items: center; gap: 5px; }
+    .alt-why { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+    .alt-use { align-self: flex-start; margin-top: 2px; font-size: 12px; font-weight: 700; color: var(--accent); display: inline-flex; align-items: center; gap: 5px; }
+
+    .engine { margin: 16px 4px 0; font-size: 12.5px; color: var(--muted); }
+    details.ref { margin-top: 16px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 0 18px; }
+    details.ref > summary { list-style: none; cursor: pointer; padding: 14px 0; font-size: 13px; font-weight: 600; color: var(--text-2); display: flex; align-items: center; justify-content: space-between; }
+    details.ref > summary::-webkit-details-marker { display: none; }
+    details.ref[open] > summary { border-bottom: 1px solid var(--border-soft); }
+    .ref-body { padding: 14px 0 18px; display: grid; grid-template-columns: 1fr 1.4fr; gap: 22px; }
+    .scale { display: flex; flex-direction: column; gap: 7px; }
+    .scale-row { display: flex; gap: 10px; align-items: baseline; font-size: 12.5px; }
+    .scale-row .g { font-weight: 800; color: var(--accent); width: 14px; }
+    .scale-row .d { color: var(--muted); }
+    .bench-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+    .mock-note { max-width: var(--maxw); margin: 18px auto 0; padding: 0 24px; color: var(--muted-2); font-size: 11.5px; }
+
+    @media (max-width: 900px) {
+      .results { grid-template-columns: 1fr; }
+      .ref-body { grid-template-columns: 1fr; }
+      .nav-links a:not(.active) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="#">roadmodel</a>
+      <div class="nav-links">
+        <a class="active" href="#">Recommend</a><a href="#">Models</a><a href="#">Settings</a><a href="#">Docs</a>
+        <button class="icon-btn" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        </button>
+        <a href="#" style="margin-left:4px;">Sign out</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="wrap">
+    <div class="page-head">
+      <div>
+        <div class="eyebrow">roadmodel</div>
+        <h1>Get a model recommendation</h1>
+        <p>Your best-value pick, in full — with a cheaper and a higher-quality alternative one click away.</p>
+      </div>
+      <button class="btn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>New recommendation</button>
+    </div>
+
+    <div class="prompt-bar">
+      <span class="label">Your prompt</span>
+      <span class="text">&lt;equity_research_handoff&gt; Produce an institutional-grade equity research report on Blackridge/Peak — clean pagination, no orphaned headers, full compliance disclosures…</span>
+      <span class="chip"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>2 files</span>
+      <button class="btn" style="padding:7px 12px;">Edit</button>
+    </div>
+
+    <!-- results: hero + rail (rendered by JS) -->
+    <div class="results">
+      <div class="hero" id="hero"></div>
+      <div class="rail" id="rail"></div>
+    </div>
+
+    <p class="engine">Recommendation generated by Gemini 2.5 Pro.</p>
+
+    <details class="ref">
+      <summary><span>Benchmarks &amp; ratings — how these picks are graded</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+      <div class="ref-body">
+        <div>
+          <h4 style="color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:10px;">Rating scale</h4>
+          <div class="scale">
+            <div class="scale-row"><span class="g">S</span><span class="d">Top-1 or top-2 globally in this category</span></div>
+            <div class="scale-row"><span class="g">A</span><span class="d">Strong, reliable, near-frontier</span></div>
+            <div class="scale-row"><span class="g">B</span><span class="d">Competent</span></div>
+            <div class="scale-row"><span class="g">C</span><span class="d">Limited — usable only for trivial work</span></div>
+            <div class="scale-row"><span class="g">D</span><span class="d">Not suited for this category</span></div>
+          </div>
+        </div>
+        <div>
+          <h4 style="color:var(--muted);font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:10px;">Benchmarks the rationale cites</h4>
+          <div class="bench-chips">
+            <span class="chip">LMArena</span><span class="chip">Artificial Analysis Intelligence Index</span><span class="chip">Aider polyglot</span><span class="chip">SWE-bench Verified</span><span class="chip">LiveCodeBench</span><span class="chip">τ²-bench</span><span class="chip">LiveBench</span><span class="chip">Terminal-Bench</span><span class="chip">GPQA Diamond</span><span class="chip">AIME</span><span class="chip">MMMU</span><span class="chip">Humanity's Last Exam</span><span class="chip">CursorBench</span>
+          </div>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <p class="mock-note">Static UI/UX mockup — not wired to the recommender. Click an alternative to promote it to the hero; toggle light/dark with the ☀ icon.</p>
+
+  <script>
+    // model of the three picks. In the real app this is MultiRecommendResponse.
+    const ORDER = ["cost", "balanced", "quality"];
+    const PICKS = {
+      cost: {
+        tier: "Cost", hint: "cheapest that can do the job", model: "Sonnet 4.6", platform: "Claude Code",
+        cost: "$0", fund: "Claude Max", effort: "High", thinking: "On", orch: "Standard", backup: "Gemini 2.5 Flash",
+        oneLiner: "Cheapest model that clears the bar — solid A-tier coding & reasoning.",
+        why: {
+          task: "A multi-step agentic workflow — coding, planning and knowledge work — to produce an institutional-grade equity research report under strict formatting and compliance constraints.",
+          pick: "Sonnet 4.6 rates <span class='term' title='A: strong, reliable, near-frontier'>A</span> for coding and reasoning and clears the bar for structured long-form writing (<span class='term' title='SWE-bench Verified'>SWE-bench</span> 71%, <span class='term' title='GPQA Diamond'>GPQA</span> 78%). It's the cheapest model that reliably holds the formatting and compliance rules.",
+          run: "Claude Code at <b>High</b> effort with thinking on — enough headroom for a multi-section handoff without frontier cost. Funded at $0 by your Claude Max plan."
+        },
+        costs: [ {p:"Claude Code", per:"$0.0140", yc:"✓ $0 · Max", ok:true}, {p:"Anthropic API", per:"$0.0140", yc:"~$28/M out"}, {p:"Cursor", per:"$0.0140", yc:"pay-per-token"} ]
+      },
+      balanced: {
+        tier: "Balanced", hint: "best value for the task", model: "Fable 5", platform: "Claude Code",
+        cost: "$0", fund: "Claude Max", effort: "XHigh", thinking: "On", orch: "Ultracode", backup: "Opus 4.8",
+        oneLiner: "Frontier-class execution at $0 to you — the best value here.",
+        why: {
+          task: "A multi-step agentic workflow — coding, planning and knowledge work — to produce an institutional-grade equity research report under strict formatting and compliance constraints.",
+          pick: "Fable 5 posts <span class='term' title='S: top-1 or top-2 globally'>S-tier</span> ratings across all three categories, with leading <span class='term' title=\"Humanity's Last Exam\">HLE</span> (53.3%) and <span class='term' title='Terminal-Bench Hard'>Terminal-Bench Hard</span> (62.9). Best value here: frontier-class execution at no marginal cost to you.",
+          run: "<b>Ultracode</b> orchestration on Claude Code with <b>XHigh</b> thinking handles the autonomous sub-tasks. Funded at $0 by Claude Max."
+        },
+        costs: [ {p:"Claude Code", per:"$0.0220", yc:"✓ $0 · Max", ok:true}, {p:"Anthropic API", per:"$0.0220", yc:"~$50/M out"}, {p:"Cursor", per:"$0.0220", yc:"pay-per-token"} ]
+      },
+      quality: {
+        tier: "Quality", hint: "highest-quality model", model: "Opus 4.8", platform: "Claude Code",
+        cost: "$0", fund: "Claude Max", effort: "Max", thinking: "On", orch: "Ultracode", backup: "GPT-5.2",
+        oneLiner: "Tops the hardest agentic & reasoning benchmarks — safest for high-stakes.",
+        why: {
+          task: "A multi-step agentic workflow — coding, planning and knowledge work — to produce an institutional-grade equity research report under strict formatting and compliance constraints.",
+          pick: "Opus 4.8 leads the hardest agentic and reasoning benchmarks (<span class='term' title='Terminal-Bench Hard'>Terminal-Bench Hard</span> 68, <span class='term' title=\"Humanity's Last Exam\">HLE</span> 55). For a high-stakes, client-facing report where an error is costly, it's the safest pick.",
+          run: "<b>Ultracode</b> on Claude Code at <b>Max</b> effort, thinking on. Funded at $0 by Claude Max — no reason not to take the top tier here."
+        },
+        costs: [ {p:"Claude Code", per:"$0.0900", yc:"✓ $0 · Max", ok:true}, {p:"Anthropic API", per:"$0.0900", yc:"~$75/M out"}, {p:"Cursor", per:"$0.0900", yc:"pay-per-token"} ]
+      }
+    };
+
+    let heroKey = "balanced";   // which pick is promoted
+    let defaultKey = "balanced"; // the pinned default
+
+    const check = "<svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='3' stroke-linecap='round'><path d='M20 6 9 17l-5-5'/></svg>";
+    const arrowDown = "<svg width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M12 5v14M19 12l-7 7-7-7'/></svg>";
+    const arrowUp = "<svg width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M12 19V5M5 12l7-7 7 7'/></svg>";
+    const arrowRight = "<svg width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12h14M12 5l7 7-7 7'/></svg>";
+
+    function renderHero() {
+      const p = PICKS[heroKey];
+      const isDefault = heroKey === defaultKey;
+      const costRows = p.costs.map(c =>
+        `<tr><td>${c.p}</td><td>${c.per}</td><td class="yc ${c.ok ? "ok" : "no"}">${c.yc}</td></tr>`
+      ).join("");
+      document.getElementById("hero").innerHTML = `
+        <div class="hero-eyebrow">
+          <div class="tier">Your pick — ${p.tier}<span>${p.hint}</span></div>
+          ${isDefault ? '<span class="default-pill">Default</span>' : ''}
+        </div>
+        <div class="hero-id">
+          <span class="model">${p.model}</span>
+          <span class="badge">${p.platform}</span>
+          <span class="hero-cost">${check}${p.cost} · ${p.fund}</span>
+        </div>
+        <div class="hero-chips">
+          <span class="schip"><b>Effort</b>${p.effort}</span>
+          <span class="schip"><b>Thinking</b>${p.thinking}</span>
+          <span class="schip"><b>Orchestration</b>${p.orch}</span>
+          <span class="schip"><b>Backup</b>${p.backup}</span>
+        </div>
+        <div class="hero-divider"></div>
+        <div class="why">
+          <h3>Why ${p.model}?</h3>
+          <div class="why-section"><h4>The task</h4><p>${p.why.task}</p></div>
+          <div class="why-section"><h4>Why this pick</h4><p>${p.why.pick}</p></div>
+          <div class="why-section"><h4>How to run it</h4><p>${p.why.run}</p></div>
+        </div>
+        <div class="hero-costwrap">
+          <div class="head">
+            <h4>Your cost</h4>
+            <button class="link-btn" ${isDefault ? "disabled" : ""} data-setdefault>${isDefault ? "✓ Current default" : "Set as default"}</button>
+          </div>
+          <table class="cost">
+            <thead><tr><th>Platform</th><th>Per 1k</th><th>Your cost</th></tr></thead>
+            <tbody>${costRows}</tbody>
+          </table>
+        </div>`;
+      document.querySelector("[data-setdefault]")?.addEventListener("click", () => {
+        defaultKey = heroKey; render();
+      });
+    }
+
+    function renderRail() {
+      const heroIdx = ORDER.indexOf(heroKey);
+      const alts = ORDER.filter(k => k !== heroKey);
+      const cards = alts.map(k => {
+        const p = PICKS[k];
+        const idx = ORDER.indexOf(k);
+        const cheaper = idx < heroIdx;
+        const dir = cheaper ? `${arrowDown} Cheaper` : `${arrowUp} Higher quality`;
+        return `
+          <button class="alt" data-pick="${k}">
+            <div class="alt-top">
+              <span class="alt-dir">${dir}</span>
+              <span class="alt-tier">${p.tier}</span>
+            </div>
+            <div class="alt-id"><span class="model">${p.model}</span><span class="badge">${p.platform}</span></div>
+            <span class="alt-cost">${check}${p.cost} · ${p.fund} &nbsp;·&nbsp; ${p.effort} effort</span>
+            <p class="alt-why">${p.oneLiner}</p>
+            <span class="alt-use">Use this${arrowRight}</span>
+          </button>`;
+      }).join("");
+      document.getElementById("rail").innerHTML = `<div class="rail-label">Other options</div>${cards}`;
+      document.querySelectorAll("[data-pick]").forEach(b =>
+        b.addEventListener("click", () => { heroKey = b.getAttribute("data-pick"); render(); })
+      );
+    }
+
+    function render() { renderHero(); renderRail(); }
+    render();
+
+    document.getElementById("themeToggle").addEventListener("click", () => {
+      document.documentElement.classList.toggle("dark");
+    });
+  </script>
+</body>
+</html>

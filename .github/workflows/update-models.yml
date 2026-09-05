@@ -102,13 +102,20 @@ jobs:
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         run: |
           set -uo pipefail
-          python update/extract_anthropic_catalog.py || echo "anthropic catalog refresh failed; keeping committed snapshot"
-          python update/extract_openai_catalog.py || echo "openai catalog refresh failed; keeping committed snapshot"
-          python update/extract_google_catalog.py || echo "google catalog refresh failed; keeping committed snapshot"
-          python update/extract_xai_catalog.py || echo "xai catalog refresh failed; keeping committed snapshot"
-          python update/extract_deepseek_catalog.py || echo "deepseek catalog refresh failed; keeping committed snapshot"
+          # ::warning:: not a bare echo. Fail-open is deliberate — one provider's
+          # fetch blip must not break the whole refresh — but a SILENT fail-open
+          # is how update/extract_anthropic_catalog.py stayed broken for weeks
+          # after Anthropic restyled a table header: the snapshot froze, G4 had
+          # nothing current to reconcile against, and claude-sonnet-5 kept the
+          # aggregator mirror's $3/$15 while Anthropic charged $2/$10. A warning
+          # surfaces in the run summary and in the job annotations.
+          python update/extract_anthropic_catalog.py || echo "::warning::anthropic catalog refresh FAILED; keeping the committed (now stale) snapshot — its prices are no longer verified"
+          python update/extract_openai_catalog.py || echo "::warning::openai catalog refresh FAILED; keeping the committed (now stale) snapshot — its prices are no longer verified"
+          python update/extract_google_catalog.py || echo "::warning::google catalog refresh FAILED; keeping the committed (now stale) snapshot — its prices are no longer verified"
+          python update/extract_xai_catalog.py || echo "::warning::xai catalog refresh FAILED; keeping the committed (now stale) snapshot — its prices are no longer verified"
+          python update/extract_deepseek_catalog.py || echo "::warning::deepseek catalog refresh FAILED; keeping the committed (now stale) snapshot — its prices are no longer verified"
           # z.ai (Zhipu / GLM): real extractor parsing the Mintlify .md pricing source.
-          python update/extract_zai_catalog.py || echo "zai catalog refresh failed; keeping committed snapshot"
+          python update/extract_zai_catalog.py || echo "::warning::zai catalog refresh FAILED; keeping the committed (now stale) snapshot — its prices are no longer verified"
           # Mistral has no machine-readable price source, so this is a DRIFT-CHECK
           # (model-name presence), not a price refresh; it never rewrites the
           # manually-maintained snapshot. Fail-open: a drift (exit 4) is logged.

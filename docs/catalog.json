@@ -1,10 +1,10 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-05T03:20:15Z",
+  "generated_at_utc": "2026-09-05T03:34:47Z",
   "source_doc_sha256": {
-    "model-selector.txt": "6522c9f4cd86b2da88ed542045eaad707dd83841d85a8069fedf74083c9c354f",
-    "model-tier-cost-scale.md": "945f7f054c1cb5e730d42747394b5ecaee16db8abc7673cdddb9fde6501a086b"
+    "model-selector.txt": "cf71d8edef7c000b96c0cc262d47e370c27883e5a58ee08ee4d94eb1e85a42a0",
+    "model-tier-cost-scale.md": "9d97d0fc4796cfa0a52b8525f98c9af923a26cc7f7250318ef27916f7502af18"
   },
   "models": [
     {
@@ -94,10 +94,10 @@
     {
       "id": "claude-sonnet-5",
       "name": "Claude Sonnet 5",
-      "input_price_per_1m": 3.0,
-      "output_price_per_1m": 15.0,
+      "input_price_per_1m": 2.0,
+      "output_price_per_1m": 10.0,
       "cache_read_per_1m": null,
-      "tier_cost": "high",
+      "tier_cost": "medium",
       "tiers": {
         "coding": "A",
         "planning": "A",
