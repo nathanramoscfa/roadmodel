@@ -46,6 +46,7 @@ if str(_UPDATE_DIR) not in sys.path:
     sys.path.insert(0, str(_UPDATE_DIR))
 # E402/I001 are expected after the path guard above.
 from build_catalog import SELECTOR_TO_COST_SCALE_NAME, _parse_models  # noqa: E402, I001
+from selector_re import model_element_re  # noqa: E402, I001
 
 REPO_ROOT = _UPDATE_DIR.parent
 SELECTOR_PATH = REPO_ROOT / "docs" / "model-selector.txt"
@@ -185,13 +186,14 @@ _TIER_BLOCK_RE = re.compile(r'(<tier\s+cost="([^"]+)"\s*>)(.*?)(</tier>)', re.DO
 def _element_re(mid: str) -> re.Pattern[str]:
     """Match a full, indented ``<model ... id="mid" ... />`` element.
 
-    A model element contains no ``>`` until its closing ``/>``, so ``[^>]*?``
-    safely spans its multi-line attributes without crossing into a sibling.
+    This used to assume "a model element contains no ``>`` until its closing
+    ``/>``". Provider prose disproved it: GPT-5.6's pricing note says Fast mode
+    covers "long context (>272k)", and the overlay then could not find those
+    elements — so it silently stopped forcing provider-direct prices onto them,
+    a price-integrity hole rather than a display bug. The quote-aware pattern
+    is shared in update/selector_re.py.
     """
-    return re.compile(
-        r'^[ \t]*<model\s+[^>]*?\bid="' + re.escape(mid) + r'"[^>]*?/>[ \t]*$',
-        re.MULTILINE,
-    )
+    return model_element_re(mid)
 
 
 def extract_element(selector_text: str, mid: str) -> str | None:

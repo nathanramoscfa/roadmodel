@@ -21,6 +21,15 @@ import sys
 import textwrap
 from pathlib import Path
 
+# Sibling import (update/ is not a package) — ONE definition of how to match a
+# selector element; see update/selector_re.py for why prose broke the old one.
+_UPDATE_DIR = Path(__file__).resolve().parent
+if str(_UPDATE_DIR) not in sys.path:
+    sys.path.insert(0, str(_UPDATE_DIR))
+# E402/I001 are expected after the path guard above.
+from selector_re import METHOD_RE as _METHOD_RE  # noqa: E402, I001
+from selector_re import MODEL_RE as _MODEL_RE  # noqa: E402, I001
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SELECTOR_TXT = REPO_ROOT / "docs" / "model-selector.txt"
 SELECTOR_MD = REPO_ROOT / "docs" / "model-selector.md"
@@ -52,8 +61,6 @@ PROVIDER_LABELS = {
 }
 
 _TIER_RE = re.compile(r'<tier\s+cost="([^"]+)"\s*>(.*?)</tier>', re.DOTALL)
-_MODEL_RE = re.compile(r"<model\s+([^>]+?)\s*/>", re.DOTALL)
-_METHOD_RE = re.compile(r"<method\s+([^>]+?)\s*/>", re.DOTALL)
 # Attribute values may embed BACKSLASH-ESCAPED quotes (the claude-code
 # method's best-for quotes `\"ultracode\": true`). `"([^"]*)"` would stop at
 # the first inner quote and render a value truncated mid-sentence, so match
