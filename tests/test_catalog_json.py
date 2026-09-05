@@ -18,6 +18,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = REPO_ROOT / "docs"
 SELECTOR_PATH = DOCS_DIR / "model-selector.txt"
@@ -37,8 +39,12 @@ EXPECTED_TOP_LEVEL_KEYS = {
 }
 
 _OPTIONS_RE = re.compile(r"<model-options>(.*?)</model-options>", re.DOTALL)
-_MODEL_RE = re.compile(r"<model\s+([^>]+?)\s*/>", re.DOTALL)
-_METHOD_RE = re.compile(r"<method\s+([^>]+?)\s*/>", re.DOTALL)
+# Same element-body pattern the generator uses. The old `[^>]+?` copy here
+# could not span a `>` either, so this module would have mis-counted the
+# selector's own elements in exactly the case it is meant to police.
+_ELEMENT_BODY = r'(?:[^"]|"(?:[^"\\]|\\.)*")*?'
+_MODEL_RE = re.compile(rf"<model\s+({_ELEMENT_BODY})\s*/>", re.DOTALL)
+_METHOD_RE = re.compile(rf"<method\s+({_ELEMENT_BODY})\s*/>", re.DOTALL)
 _ACCESS_METHODS_RE = re.compile(r"<access-methods>(.*?)</access-methods>", re.DOTALL)
 # Attribute values may embed backslash-escaped quotes; see
 # test_claude_code_best_for_is_not_truncated for what a naive `[^"]*` costs.
@@ -365,3 +371,62 @@ def test_build_catalog_is_deterministic(tmp_path: Path) -> None:
     first = run()
     second = run()
     assert first == second, "build_catalog.py is not deterministic"
+
+
+# --- Element parsing: prose values must not be able to delete an entry ---
+
+
+def _load_generator():  # type: ignore[no-untyped-def]
+    sys.path.insert(0, str(REPO_ROOT / "update"))
+    try:
+        import importlib
+
+        return importlib.reload(importlib.import_module("build_catalog"))
+    finally:
+        sys.path.pop(0)
+
+
+def test_method_value_may_contain_angle_brackets() -> None:
+    """A `>` in prose must not delete the element that carries it.
+
+    The 2026-09-05 Claude Code refresh documented the command form
+    `/advisor <model>` in the claude-code best-for. The element regex was
+    `<method\\s+([^>]+?)\\s*/>`, which cannot span a `>`, so the whole
+    <method> stopped matching and docs/catalog.json shipped WITHOUT the
+    Claude Code platform — no error, just a missing entry the website and
+    the recommender both read.
+    """
+    mod = _load_generator()
+    selector = (
+        "<access-methods>\n"
+        '  <method id="a" name="A" provider="p" billing="b" requires="r" '
+        'supports-models="m" exposes-max-mode="no" exposes-thinking="yes" '
+        'exposes-orchestration="no" best-for="plain" />\n'
+        '  <method id="claude-code" name="Claude Code" provider="anthropic" '
+        'billing="subscription-or-key" requires="sub" supports-models="m" '
+        'exposes-max-mode="no" exposes-thinking="yes" exposes-orchestration="yes" '
+        'best-for="a text form of `/advisor` (`/advisor <model>`, `/advisor off`)" />\n'
+        "</access-methods>\n"
+    )
+    methods = mod._parse_access_methods(selector)
+
+    assert [m["id"] for m in methods] == ["a", "claude-code"]
+    assert "<model>" in methods[1]["best_for"], "the prose itself must survive intact"
+
+
+def test_parser_refuses_to_lose_an_element() -> None:
+    """Losing an element is fatal, not quiet.
+
+    Belt to the braces above: whatever future prose defeats the regex, the
+    generator must refuse to emit a catalog missing an entry rather than
+    silently shipping a shorter list.
+    """
+    mod = _load_generator()
+    selector = (
+        "<access-methods>\n"
+        '  <method id="a" name="A" best-for="fine" />\n'
+        '  <method id="broken" name="B" best-for="never closed\n'
+        "</access-methods>\n"
+    )
+    with pytest.raises(ValueError, match="declares"):
+        mod._parse_access_methods(selector)
