@@ -358,6 +358,9 @@ def test_build_catalog_is_deterministic(tmp_path: Path) -> None:
     shutil.copy2(SELECTOR_PATH, work / "docs" / "model-selector.txt")
     shutil.copy2(COST_SCALE_PATH, work / "docs" / "model-tier-cost-scale.md")
     shutil.copy2(BUILD_SCRIPT, work / "update" / "build_catalog.py")
+    # build_catalog imports its element regexes from a sibling module, so the
+    # isolated copy needs it too.
+    shutil.copy2(BUILD_SCRIPT.parent / "selector_re.py", work / "update" / "selector_re.py")
 
     def run() -> bytes:
         subprocess.run(
@@ -430,3 +433,44 @@ def test_parser_refuses_to_lose_an_element() -> None:
     )
     with pytest.raises(ValueError, match="declares"):
         mod._parse_access_methods(selector)
+
+
+def test_every_selector_consumer_survives_prose_angle_brackets() -> None:
+    """One `>` in a pricing note must not quietly shrink anything.
+
+    Cursor described GPT-5.6's "Fast mode ... for long context (>272k)" on
+    2026-09-04. Five modules each carried their own `<model\\s+([^>]+?)\\s*/>`,
+    so that single character dropped three models from docs/catalog.json, from
+    the rendered model-selector.md, and from the availability sync — and made
+    the federation overlay unable to locate them, silently ending price
+    enforcement on them. This pins the shared matcher against that prose.
+    """
+    sys.path.insert(0, str(REPO_ROOT / "update"))
+    try:
+        import importlib
+
+        selector_re = importlib.import_module("selector_re")
+    finally:
+        sys.path.pop(0)
+
+    selector = (
+        "<model-options>\n"
+        '  <tier cost="high">\n'
+        '      <model id="a" name="A" output-price-per-1m="$9.00"\n'
+        '             pricing-notes="plain" />\n'
+        '      <model id="gpt-5.6-sol" name="GPT-5.6 Sol" output-price-per-1m="$20.00"\n'
+        '             pricing-notes="Fast mode is available for long context (>272k) at 2x" />\n'
+        '      <model id="z" name="Z" output-price-per-1m="$1.00" pricing-notes="plain" />\n'
+        "  </tier>\n"
+        "</model-options>\n"
+    )
+    ids = [
+        re.search(r'id="([^"]+)"', m.group(1)).group(1)  # type: ignore[union-attr]
+        for m in selector_re.MODEL_RE.finditer(selector)
+    ]
+    assert ids == ["a", "gpt-5.6-sol", "z"], "a `>` in prose swallowed an element"
+
+    # The overlay locates the affected element, and exactly that element.
+    hit = selector_re.model_element_re("gpt-5.6-sol").search(selector)
+    assert hit is not None, "the federation overlay cannot find the element"
+    assert hit.group(0).count("<model") == 1, "matched across an element boundary"

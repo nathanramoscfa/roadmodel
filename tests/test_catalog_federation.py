@@ -917,7 +917,9 @@ def _model_jurisdictions(selector_text: str) -> dict[str, str]:
     assert opts is not None
     out: dict[str, str] = {}
     for m in _re.finditer(
-        r'<model\s+id="([^"]+)"[^>]*?jurisdiction="([^"]+)"', opts.group(1), _re.DOTALL
+        r'<model\s+id="([^"]+)"(?:[^"]|"(?:[^"\\]|\\.)*")*?jurisdiction="([^"]+)"',
+        opts.group(1),
+        _re.DOTALL,
     ):
         out[m.group(1)] = m.group(2)
     return out
