@@ -756,8 +756,12 @@ run_post_matrix() {
   mkdir -p "${d1}/docs" "${d1}/update" "${d2}/docs" "${d2}/update"
   cp docs/model-selector.txt docs/model-tier-cost-scale.md "${d1}/docs/"
   cp docs/model-selector.txt docs/model-tier-cost-scale.md "${d2}/docs/"
-  cp update/build_catalog.py "${d1}/update/"
-  cp update/build_catalog.py "${d2}/update/"
+  # selector_re.py too: build_catalog imports its element matcher from that
+  # sibling (#561), so an isolated copy without it fails to import — which this
+  # check reports as "output differs", pointing at determinism instead of a
+  # missing file.
+  cp update/build_catalog.py update/selector_re.py "${d1}/update/"
+  cp update/build_catalog.py update/selector_re.py "${d2}/update/"
   if (cd "${d1}" && "${PYTHON_BIN}" update/build_catalog.py >/dev/null) &&
     (cd "${d2}" && "${PYTHON_BIN}" update/build_catalog.py >/dev/null) &&
     cmp -s "${d1}/docs/catalog.json" "${d2}/docs/catalog.json"; then
