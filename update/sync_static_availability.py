@@ -36,6 +36,14 @@ import textwrap
 from pathlib import Path
 from typing import Any, Callable
 
+# Sibling import (update/ is not a package) — ONE definition of how to match a
+# selector element; see update/selector_re.py for why prose broke the old one.
+_UPDATE_DIR = Path(__file__).resolve().parent
+if str(_UPDATE_DIR) not in sys.path:
+    sys.path.insert(0, str(_UPDATE_DIR))
+# E402/I001 are expected after the path guard above.
+from selector_re import MODEL_RE as _MODEL_RE  # noqa: E402, I001
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SELECTOR_TXT = REPO_ROOT / "docs" / "model-selector.txt"
 AVAILABILITY_JSON = REPO_ROOT / "infra" / "model-availability.json"
@@ -66,7 +74,6 @@ _EMPTY_TAIL = (
 # Matches a generated bullet: "- `<id>` (Name) — reason".
 _BULLET_ID_RE = re.compile(r"^\s*-\s*`([a-z0-9.\-]+)`", re.MULTILINE)
 # Parses every "<model id=... name=.../>" declaration in the selector.
-_MODEL_RE = re.compile(r"<model\s+([^>]+?)\s*/>", re.DOTALL)
 # Attribute values may contain BACKSLASH-ESCAPED quotes (the claude-code method's
 # best-for embeds `\"ultracode\": true`). A naive `"([^"]*)"` stops at the first
 # escaped quote and silently truncates the value — that bug shipped a

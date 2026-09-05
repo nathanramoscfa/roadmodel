@@ -96,11 +96,15 @@ SELECTOR_TO_COST_SCALE_NAME = {
 
 _OPTIONS_RE = re.compile(r"<model-options>(.*?)</model-options>", re.DOTALL)
 _TIER_RE = re.compile(r'<tier\s+cost="([^"]+)"\s*>(.*?)</tier>', re.DOTALL)
-_MODEL_RE = re.compile(r"<model\s+([^>]+?)\s*/>", re.DOTALL)
+# Shared with the generator: an attribute value is PROSE and may contain `>`
+# (GPT-5.6's "long context (>272k)"), which `[^>]+?` could not span — this
+# module then reported the models it had lost as "unknown" references.
+_ELEMENT_BODY = r'(?:[^"]|"(?:[^"\\]|\\.)*")*?'
+_MODEL_RE = re.compile(rf"<model\s+({_ELEMENT_BODY})\s*/>", re.DOTALL)
 # Attribute values may embed backslash-escaped quotes (claude-code's best-for
 # quotes `\"ultracode\": true`); `[^"]*` would truncate the value there.
 _ATTR_RE = re.compile(r'([\w-]+)="((?:[^"\\]|\\.)*)"', re.DOTALL)
-_METHOD_RE = re.compile(r"<method\s+([^>]+?)\s*/>", re.DOTALL)
+_METHOD_RE = re.compile(rf"<method\s+({_ELEMENT_BODY})\s*/>", re.DOTALL)
 _ACCESS_METHODS_RE = re.compile(r"<access-methods>(.*?)</access-methods>", re.DOTALL)
 
 
