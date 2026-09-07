@@ -1,9 +1,9 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-06T17:19:45Z",
+  "generated_at_utc": "2026-09-07T20:23:06Z",
   "source_doc_sha256": {
-    "model-selector.txt": "77153d6a4ecbf7225cf24305da37f783d1a4c0a3a9dd08858330e15643b9fec6",
+    "model-selector.txt": "9410334fd472d9bb95848b3863c275d8cd32a6e82cbb0d9eaf5f25f1a185977c",
     "model-tier-cost-scale.md": "9d97d0fc4796cfa0a52b8525f98c9af923a26cc7f7250318ef27916f7502af18"
   },
   "models": [
@@ -1174,7 +1174,7 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
-      "best_for": "Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models \u2014 cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn."
+      "best_for": "Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models \u2014 cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `low`/`high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn."
     },
     {
       "id": "gemini-app",
