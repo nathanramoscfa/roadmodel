@@ -1996,7 +1996,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Billing:** per-token (requires deepseek-api-key)
 - **Supports models:** deepseek-v4-flash,deepseek-v4-pro
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
-- **Best for:** Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn.
+- **Best for:** Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `low`/`high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn.
 
 ### Mistral
 
@@ -3320,7 +3320,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="deepseek-v4-flash,deepseek-v4-pro"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn." />
+            best-for="Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `low`/`high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn." />
     <method id="mistral-api" name="Mistral API"
             provider="mistral" billing="per-token"
             provider-jurisdiction="eu"
@@ -4782,7 +4782,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="deepseek-v4-flash,deepseek-v4-pro"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn." />
+            best-for="Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `low`/`high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn." />
     <method id="mistral-api" name="Mistral API"
             provider="mistral" billing="per-token"
             provider-jurisdiction="eu"
@@ -6436,7 +6436,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="deepseek-v4-flash,deepseek-v4-pro"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn." />
+            best-for="Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models — cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `low`/`high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn." />
     <method id="mistral-api" name="Mistral API"
             provider="mistral" billing="per-token"
             provider-jurisdiction="eu"
