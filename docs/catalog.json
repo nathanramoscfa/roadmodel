@@ -1,10 +1,10 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-07T20:23:06Z",
+  "generated_at_utc": "2026-09-08T16:25:41Z",
   "source_doc_sha256": {
-    "model-selector.txt": "9410334fd472d9bb95848b3863c275d8cd32a6e82cbb0d9eaf5f25f1a185977c",
-    "model-tier-cost-scale.md": "9d97d0fc4796cfa0a52b8525f98c9af923a26cc7f7250318ef27916f7502af18"
+    "model-selector.txt": "63be2319c38e3121be688425b2cc1f801cbb486d4ac982403598c8506261d942",
+    "model-tier-cost-scale.md": "dba73477751a04b247dc6a97c449c973f05d8e67d17b9ddec9e2b797ef548a02"
   },
   "models": [
     {
@@ -109,7 +109,7 @@
       },
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 53.4 (adaptive max); Terminal-Bench 2.1 80.5; \u03c4\u00b2-bench banking pass_1 28.2%; native 1M context",
-      "pricing_notes": "Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens",
+      "pricing_notes": "Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens",
       "best_for": "Anthropic's Sonnet 4.6 successor at the same high-tier pricing \u2014 placeholder tier ratings inherited from sonnet-4.6 pending editorial refresh; native 1M context, updated tokenizer, and a launch promotion pricing ($2/$10) through Aug 31, 2026 that makes it a strong value pick for near-frontier coding and agentic work at the mid-cost tier when the Anthropic lineage is preferred."
     },
     {
@@ -1348,6 +1348,28 @@
   "subscription_tiers": [
     {
       "provider": "Anthropic",
+      "tier": "Claude Max 20x",
+      "monthly_usd": 200.0,
+      "annual_usd": null,
+      "surface_funded": [
+        "claude-code",
+        "claude-web"
+      ],
+      "notes": "Everything in Pro plus 20x the usage per 5-hour session versus Pro; highest consumer-tier Claude budget with higher output limits; monthly billing only."
+    },
+    {
+      "provider": "Anthropic",
+      "tier": "Claude Max 5x",
+      "monthly_usd": 100.0,
+      "annual_usd": null,
+      "surface_funded": [
+        "claude-code",
+        "claude-web"
+      ],
+      "notes": "Everything in Pro plus 5x the usage per 5-hour session versus Pro, higher output limits, and longer uninterrupted sessions; monthly billing only."
+    },
+    {
+      "provider": "Anthropic",
       "tier": "Claude Pro",
       "monthly_usd": 20.0,
       "annual_usd": 200.0,
@@ -1355,29 +1377,7 @@
         "claude-code",
         "claude-web"
       ],
-      "notes": "Opus 4.7, Sonnet 4.6, and Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE), with roughly 5x the usage of the Free tier."
-    },
-    {
-      "provider": "Anthropic",
-      "tier": "claude.ai Max ($100)",
-      "monthly_usd": 100.0,
-      "annual_usd": null,
-      "surface_funded": [
-        "claude-code",
-        "claude-web"
-      ],
-      "notes": "Same model coverage as Pro at roughly 5x the Pro usage budget; priority access during peak traffic."
-    },
-    {
-      "provider": "Anthropic",
-      "tier": "claude.ai Max ($200)",
-      "monthly_usd": 200.0,
-      "annual_usd": null,
-      "surface_funded": [
-        "claude-code",
-        "claude-web"
-      ],
-      "notes": "Same model coverage as Pro at roughly 20x the Pro usage budget; highest consumer-tier Claude budget."
+      "notes": "Full Claude capabilities including Claude Code, Claude Cowork, Claude Design, projects, and access to more Claude models, with at least 5x the usage per 5-hour session compared to Free; monthly or annual billing."
     },
     {
       "provider": "Cursor",
@@ -1387,17 +1387,17 @@
       "surface_funded": [
         "cursor"
       ],
-      "notes": "$20 monthly model-usage credit pool across every model in Cursor's catalog; on-demand overage billed at API rates."
+      "notes": "$20 monthly credit pool for third-party model usage (Claude, GPT, Gemini) at API rates plus generous Cursor Models pool (Grok 4.6, Grok 4.5, Composer 2.5); unlimited Tab completions and Auto mode; annual billing takes 20% off."
     },
     {
       "provider": "Cursor",
-      "tier": "Cursor Pro+",
+      "tier": "Cursor Pro Plus",
       "monthly_usd": 60.0,
-      "annual_usd": 576.0,
+      "annual_usd": null,
       "surface_funded": [
         "cursor"
       ],
-      "notes": "Same model coverage as Pro at roughly 3x the OpenAI / Claude / Gemini usage budget."
+      "notes": "Same coverage as Pro with $70 of third-party model usage (3x Pro's included agent limits) and higher Cursor Models pool allocations; suited for daily Agent users."
     },
     {
       "provider": "Cursor",
@@ -1407,7 +1407,7 @@
       "surface_funded": [
         "cursor"
       ],
-      "notes": "Same model coverage as Pro at roughly 20x the OpenAI / Claude / Gemini usage budget; priority access to new features."
+      "notes": "Same coverage as Pro with $400 of third-party model usage (20x Pro's included agent limits) plus priority access to new features; targeted at Agent power users running continuous multi-agent workflows."
     },
     {
       "provider": "Google",
@@ -1418,7 +1418,7 @@
         "gemini-app",
         "gemini-cli"
       ],
-      "notes": "Entry-paid Google AI tier with 2x higher usage limits than Free in the Gemini app, access to Gemini 3.1 Pro / Nano Banana Pro / Daily Brief / Gemini Omni video generation, 200 Google Flow Credits, and 400 GB of cloud storage (price cut from $7.99 to $4.99 on 2026-06-08; storage doubled from 200 GB to 400 GB)."
+      "notes": "Entry-paid Google AI tier (formerly Gemini Advanced entry) \u2014 2x higher usage limits than Free in the Gemini app with access to Gemini 3.1 Pro features and Google One cloud storage; cheapest way off the free tier."
     },
     {
       "provider": "Google",
@@ -1429,7 +1429,7 @@
         "gemini-app",
         "gemini-cli"
       ],
-      "notes": "Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus Deep Research, Nano Banana Pro, Veo 3.1 access, 1,000 monthly AI credits, and 5 TB of Google One storage; includes YouTube Premium Lite; 50% off the first year for new subscribers."
+      "notes": "Formerly Gemini Advanced \u2014 the $19.99 flagship tier with Gemini 3.1 Pro access, deep Workspace integration (Gmail/Docs), 5 TB of Google One cloud storage, and roughly 4x Free's usage allotment."
     },
     {
       "provider": "Google",
@@ -1440,7 +1440,7 @@
         "gemini-app",
         "gemini-cli"
       ],
-      "notes": "Developer-focused Ultra tier (May 2026): 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan."
+      "notes": "Developer-focused Ultra tier (May 2026): 5x Pro usage limits in the Gemini app and Google Antigravity, Gemini 3.5 Flash integration for fast iteration, priority access to Google Antigravity, 20 TB cloud storage, and YouTube Premium individual plan."
     },
     {
       "provider": "Google",
@@ -1451,7 +1451,7 @@
         "gemini-app",
         "gemini-cli"
       ],
-      "notes": "Highest access to Gemini 3.1 Pro, Deep Think, Project Genie, Veo 3.1 with 25,000 monthly AI credits, $100/month Google Cloud credits, and 30 TB Google One storage (price reduced from $249.99 to $199.99 at Google I/O 2026)."
+      "notes": "Top tier with 20x Pro usage limits, Deep Think for hardest reasoning tasks, Gemini Spark (24/7 background agent), Project Mariner agentic browser control, image generation with Nano Banana 2, 20 TB cloud storage, and YouTube Premium (price reduced from $249.99 to $199.99)."
     },
     {
       "provider": "OpenAI",
@@ -1462,7 +1462,7 @@
         "chatgpt-app",
         "codex-cli"
       ],
-      "notes": "Budget tier with GPT-5.3 Instant unlimited and GPT-5.3 quota, more uploads and image generation than Free; ads still shown; lacks advanced reasoning models, Sora, Codex full access, Agent Mode, and Deep Research."
+      "notes": "Everything in Free plus more access to GPT-5.5 Instant, more messages, more uploads, more image creation, and longer memory; may include ads; billed monthly."
     },
     {
       "provider": "OpenAI",
@@ -1473,7 +1473,7 @@
         "chatgpt-app",
         "codex-cli"
       ],
-      "notes": "GPT-5.5 default model with full feature suite \u2014 Deep Research (10 runs/mo), Sora video, Codex, Agent Mode; GPT-5.4 Thinking and GPT-5.4 Mini also available."
+      "notes": "Enhanced access to the ChatGPT web app with priority access during high-traffic periods, higher model and message limits, advanced reasoning access for coding/planning/multi-step analysis, and faster response speeds."
     },
     {
       "provider": "OpenAI",
@@ -1484,7 +1484,7 @@
         "chatgpt-app",
         "codex-cli"
       ],
-      "notes": "Same model suite as Pro $200 (GPT-5.5, GPT-5.5 Pro, o1 Pro mode) at 5x Plus usage limits; Codex access included with promotional 10x multiplier through May 31, 2026."
+      "notes": "Pro at 5x Plus usage limits with the same core capabilities as the $200 tier; targeted at power users whose workday runs inside ChatGPT and Codex."
     },
     {
       "provider": "OpenAI",
@@ -1495,7 +1495,7 @@
         "chatgpt-app",
         "codex-cli"
       ],
-      "notes": "Same coverage as Pro $100 with much higher caps (20x Plus limits), 1M-token context window, Sora access, and GPT-5.4 Pro / GPT-5.5 Pro priority."
+      "notes": "Highest usage tier at 20x Plus limits with the largest allowances (around 250 Deep Research tasks) and priority compute; same core capabilities as the $100 tier."
     }
   ]
 }

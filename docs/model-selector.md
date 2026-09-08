@@ -1221,7 +1221,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Pricing:** Input $2.00/M · Output $10.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 53.4 (adaptive max); Terminal-Bench 2.1 80.5; τ²-bench banking pass_1 28.2%; native 1M context
-- **Pricing notes:** Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens
+- **Pricing notes:** Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens
 - **Best for:** Anthropic's Sonnet 4.6 successor at the same high-tier pricing — placeholder tier ratings inherited from sonnet-4.6 pending editorial refresh; native 1M context, updated tokenizer, and a launch promotion pricing ($2/$10) through Aug 31, 2026 that makes it a strong value pick for near-frontier coding and agentic work at the mid-cost tier when the Anthropic lineage is preferred.
 
 #### GPT-5.3 Codex — `gpt-5.3-codex`
@@ -2877,7 +2877,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
              headline-benchmarks="AA Intelligence Index 53.4 (adaptive max); Terminal-Bench 2.1 80.5; τ²-bench banking pass_1 28.2%; native 1M context"
-             pricing-notes="Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens"
+             pricing-notes="Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens"
              best-for="Anthropic's Sonnet 4.6 successor at the same high-tier pricing — placeholder tier ratings inherited from sonnet-4.6 pending editorial refresh; native 1M context, updated tokenizer, and a launch promotion pricing ($2/$10) through Aug 31, 2026 that makes it a strong value pick for near-frontier coding and agentic work at the mid-cost tier when the Anthropic lineage is preferred." />
       <model id="gpt-5.3-codex" name="GPT-5.3 Codex"
              input-price-per-1m="$1.75" output-price-per-1m="$14.00"
@@ -4339,7 +4339,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
              headline-benchmarks="AA Intelligence Index 53.4 (adaptive max); Terminal-Bench 2.1 80.5; τ²-bench banking pass_1 28.2%; native 1M context"
-             pricing-notes="Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens"
+             pricing-notes="Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens"
              best-for="Anthropic's Sonnet 4.6 successor at the same high-tier pricing — placeholder tier ratings inherited from sonnet-4.6 pending editorial refresh; native 1M context, updated tokenizer, and a launch promotion pricing ($2/$10) through Aug 31, 2026 that makes it a strong value pick for near-frontier coding and agentic work at the mid-cost tier when the Anthropic lineage is preferred." />
       <model id="gpt-5.3-codex" name="GPT-5.3 Codex"
              input-price-per-1m="$1.75" output-price-per-1m="$14.00"
@@ -5993,7 +5993,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
              headline-benchmarks="AA Intelligence Index 53.4 (adaptive max); Terminal-Bench 2.1 80.5; τ²-bench banking pass_1 28.2%; native 1M context"
-             pricing-notes="Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens"
+             pricing-notes="Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens"
              best-for="Anthropic's Sonnet 4.6 successor at the same high-tier pricing — placeholder tier ratings inherited from sonnet-4.6 pending editorial refresh; native 1M context, updated tokenizer, and a launch promotion pricing ($2/$10) through Aug 31, 2026 that makes it a strong value pick for near-frontier coding and agentic work at the mid-cost tier when the Anthropic lineage is preferred." />
       <model id="gpt-5.3-codex" name="GPT-5.3 Codex"
              input-price-per-1m="$1.75" output-price-per-1m="$14.00"
