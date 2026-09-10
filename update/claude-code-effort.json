@@ -107,13 +107,10 @@
       "alwaysThinkingEnabled",
       "MAX_THINKING_TOKENS=0"
     ],
-    "cannot_disable_on": [
-      "Fable 5.1",
-      "Fable 5"
-    ]
+    "cannot_disable_on": []
   },
   "unexpected_models": [
     "Fable 5.1"
   ],
-  "section_sha256": "c32e91701d3b2962dfab6bf75954238bd6bfbf31ff659397fb4d503cf81a55da"
+  "section_sha256": "cda514645335dd6fde1ca3b4988f209b16a7f6e86f6039862fce6cb2ba9611c7"
 }
