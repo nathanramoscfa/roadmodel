@@ -7,6 +7,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.32] — 2026-09-12
+
+### Added
+
+- **The roadmap templates gain worktree, release & deployment, defect-triage,
+  and operations strategies.** The bundled project template's §5
+  Cross-Cutting Concerns previously carried a branch strategy and a per-step
+  security gate but stopped at squash-merge. It now adds a "Worktree
+  strategy" (one working tree by default; `git worktree add` is sanctioned
+  for exactly three cases — a hotfix interrupting a step, steps the
+  sequencing diagram draws in parallel, and worktree-isolated subagents —
+  with location, bootstrap, and retirement rules; `git branch -D` refuses a
+  branch still checked out in a worktree, so Stage 5 removes the worktree
+  first), a "Release & deployment strategy" (merged is not deployed and
+  deployed is not released: a deployable-surfaces table, staged rollout, a
+  readiness gate before irreversible cutovers, secrets proven by an
+  authenticated round-trip, migrations on the deploy path, post-deploy
+  verification, rollback, and version floors), a "Defect handling & triage"
+  section (spec rot, upstream gap, implementation bug, architectural
+  question, process improvement, security finding — one destination each,
+  plus scope discipline, track-before-defer, verify-the-close, and
+  prevent-the-class), and an "Operations & observability strategy" (health
+  signals, a heartbeat for scheduled automation, a ledger and cap for metered
+  dependencies, runbooks, and an alarm-must-fire acceptance rule). The
+  per-step security gate gains rule 5: the CI/CD pipeline is a trust
+  boundary (SHA-pinned actions, least-privilege permissions, OIDC publish,
+  protected environments, no secrets on untrusted triggers). The phase
+  template mirrors all of it: "Worktree rule", "Deploy-and-verify rule", and
+  "Triage rule" paragraphs in the Overview, a `**Deploys:**` line on every
+  step, Stage 1/4/5 hooks in both the prose lifecycle and the per-step XML
+  `<lifecycle>` block, a "Deployed & verified" acceptance bullet whenever a
+  step's merge reaches a deployed surface, and an operations bullet on the
+  final QA step.
+- **Phase template: an explicit step-completion signal.** Stage 6 of the
+  step lifecycle now requires the agent to end its final response with the
+  verbatim line "Step N is complete. You can now move on to Step N+1." — and
+  only once the PR is merged and every acceptance criterion is affirmatively
+  met. Caveats and newly found issues go in a "Follow-ups (non-blocking)"
+  note after that line, never around it; an unmet criterion means the agent
+  says the step is NOT complete and withholds the line. Operators running a
+  roadmap one step per conversation get a clean stopping point instead of
+  an "are we done?" round-trip.
+
+### Changed
+
+- **Claude Code surface parameters catch up through 2.1.269.** 2.1.263 to
+  2.1.266 change nothing on the effort/thinking surface. 2.1.267 adds a
+  `maxEffortLevel` setting (top-level or per model under `modelSettings`)
+  that caps the reachable effort level on every provider, including Bedrock,
+  Vertex, and Foundry; the selector documents it as an admin upper bound on
+  the existing `/effort` vocabulary, not a new dial. It also fixes `effort:`
+  frontmatter on custom commands, skills, and subagents being ignored on
+  models whose default effort is still pinned. 2.1.269 adds
+  `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise the Workflow
+  tool's per-run concurrent-agent cap; it does not change the `/effort`
+  vocabulary or the `ORCHESTRATION` mapping.
+- **Fable 5 and Fable 5.1 may now map to `THINKING: Off`.** The selector
+  previously said both models could not disable extended thinking and
+  forbade emitting `Off` for them; Anthropic's model-config docs list no
+  model under `cannot_disable_on`, so the tracker reconciled the rule to
+  match the docs. Flagged for editorial confirmation against Anthropic's own
+  model pages.
+- **Gemini 3.7 Flash and 3.8 Flash thinking levels** are recorded as
+  low/medium/high without `minimal`, and the Flash-line models that do expose
+  `minimal` are now listed by name.
+- **DeepSeek `reasoning_effort` gains `low`** alongside `high` and `max` on
+  the deepseek-api method.
+- **Catalog refresh retires superseded models automatically.** The removal
+  rule the catalog cron follows moved from MAY to MUST: when a same-series
+  successor is available at equal or lower output price, the predecessor is
+  retired in the same refresh, with `flash` and `fable` added to the
+  variant-tier list so those lines stop reading as ambiguous series. Two
+  guards land with it: retirement is deferred when the successor is benched
+  in `infra/model-availability.json`, and a new gate check (G6) makes it
+  fatal to retire a model that is itself benched, since the runtime override
+  references ids by name and would silently become a no-op. No model left
+  the catalog between 0.2.31 and 0.2.32.
+
 ## [0.2.31] — 2026-09-05
 
 ### Fixed
