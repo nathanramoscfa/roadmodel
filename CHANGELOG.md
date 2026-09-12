@@ -52,14 +52,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Claude Code surface parameters catch up through 2.1.267.** 2.1.263 to
+- **Claude Code surface parameters catch up through 2.1.269.** 2.1.263 to
   2.1.266 change nothing on the effort/thinking surface. 2.1.267 adds a
   `maxEffortLevel` setting (top-level or per model under `modelSettings`)
   that caps the reachable effort level on every provider, including Bedrock,
   Vertex, and Foundry; the selector documents it as an admin upper bound on
   the existing `/effort` vocabulary, not a new dial. It also fixes `effort:`
   frontmatter on custom commands, skills, and subagents being ignored on
-  models whose default effort is still pinned.
+  models whose default effort is still pinned. 2.1.269 adds
+  `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise the Workflow
+  tool's per-run concurrent-agent cap; it does not change the `/effort`
+  vocabulary or the `ORCHESTRATION` mapping.
+- **Fable 5 and Fable 5.1 may now map to `THINKING: Off`.** The selector
+  previously said both models could not disable extended thinking and
+  forbade emitting `Off` for them; Anthropic's model-config docs list no
+  model under `cannot_disable_on`, so the tracker reconciled the rule to
+  match the docs. Flagged for editorial confirmation against Anthropic's own
+  model pages.
 - **Gemini 3.7 Flash and 3.8 Flash thinking levels** are recorded as
   low/medium/high without `minimal`, and the Flash-line models that do expose
   `minimal` are now listed by name.
