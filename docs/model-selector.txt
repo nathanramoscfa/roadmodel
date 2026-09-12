@@ -892,7 +892,7 @@
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
              headline-benchmarks="AA Intelligence Index 53.4 (adaptive max); Terminal-Bench 2.1 80.5; τ²-bench banking pass_1 28.2%; native 1M context"
-             pricing-notes="Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens"
+             pricing-notes="Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens"
              best-for="Anthropic's Sonnet 4.6 successor at the same high-tier pricing — placeholder tier ratings inherited from sonnet-4.6 pending editorial refresh; native 1M context, updated tokenizer, and a launch promotion pricing ($2/$10) through Aug 31, 2026 that makes it a strong value pick for near-frontier coding and agentic work at the mid-cost tier when the Anthropic lineage is preferred." />
       <model id="gpt-5.3-codex" name="GPT-5.3 Codex"
              input-price-per-1m="$1.75" output-price-per-1m="$14.00"
@@ -1124,12 +1124,12 @@
       <model id="gpt-5.1-codex-mini" name="GPT-5.1 Codex Mini"
              input-price-per-1m="$0.25" output-price-per-1m="$2.00"
              jurisdiction="us"
-             tier-coding="S" tier-planning="B" tier-agentic="A"
+             tier-coding="A" tier-planning="C" tier-agentic="C"
              tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
              tier-speed="S"
              headline-benchmarks="Auto-added pending editorial tier review; specific benchmark numbers pending next refresh"
              pricing-notes="Hidden by default; Agentic and reasoning capabilities; 4x rate limits compared to GPT-5.1 Codex"
-             best-for="OpenAI's smaller GPT-5.1 Codex variant at low-tier pricing ($0.25/$2.00) — placeholder Codex-lineage ratings inherited from gpt-5.1-codex with tier-speed=S per the Mini-variant convention; offers 4x rate limits vs gpt-5.1-codex for high-throughput autonomous coding at a fraction of the medium-tier price. Pending editorial confirmation via a gpt-5.1-codex vs gpt-5.1-codex-mini head-to-head." />
+             best-for="OpenAI's smaller GPT-5.1 Codex variant at low-tier pricing ($0.25/$2.00) — placeholder ratings set one tier below gpt-5.1-codex on coding and two below on planning/agentic per the catalog's Mini-variant convention (gpt-5-mini, gpt-5.4-mini), with tier-speed=S; offers 4x rate limits vs gpt-5.1-codex for high-throughput routine coding at a fraction of the medium-tier price. Not an S-tier coder until a gpt-5.1-codex vs gpt-5.1-codex-mini head-to-head says so." />
       <model id="gpt-5.4-nano" name="GPT-5.4 Nano"
              input-price-per-1m="$0.20" output-price-per-1m="$1.25"
              jurisdiction="us"
@@ -1524,8 +1524,8 @@
         context (opus-4.7 1M, opus-4.8 1M, claude-opus-5 1M, gemini-3.1-pro 1M) over forcing
         a smaller-context model into Max Mode truncation.
       - For PRIMARY = `coding` at S-tier requirement, the candidate set is
-        gpt-5.1-codex, gpt-5.1-codex-max, gpt-5.1-codex-mini, gpt-5.3-codex, gpt-5.2-codex, opus-4.7, opus-4.8, claude-opus-5, claude-fable-5, claude-fable-5.1, gpt-5.5, gpt-5.6-sol; cost tie-breaker favors
-        gpt-5.1-codex-mini when the ratings are equivalent for the prompt.
+        gpt-5.1-codex, gpt-5.1-codex-max, gpt-5.3-codex, gpt-5.2-codex, opus-4.7, opus-4.8, claude-opus-5, claude-fable-5, claude-fable-5.1, gpt-5.5, gpt-5.6-sol; cost tie-breaker favors
+        gpt-5.1-codex when the ratings are equivalent for the prompt.
       - Default to composer-2.5 for routine multi-file implementation when a
         coding-A rating suffices; escalate only on a concrete capability
         gap.

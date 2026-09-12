@@ -6,12 +6,12 @@
   "overlay_mode": "whole-element",
   "models": [
     {
-      "id": "deepseek-flash",
-      "slug": "deepseek-flash",
-      "name": "DeepSeek-V4.1-Flash",
-      "input_price_per_1m": 0.15,
-      "output_price_per_1m": 0.6,
-      "cache_read_per_1m": 0.003,
+      "id": "deepseek-v4-flash",
+      "slug": "deepseek-v4-flash",
+      "name": "DeepSeek-V4-Flash-0731",
+      "input_price_per_1m": 0.22,
+      "output_price_per_1m": 0.66,
+      "cache_read_per_1m": 0.007,
       "context_tokens": 1000000,
       "max_output_tokens": 384000
     },
@@ -24,6 +24,16 @@
       "cache_read_per_1m": 0.022,
       "context_tokens": 1000000,
       "max_output_tokens": 384000
+    },
+    {
+      "id": "deepseek-v4-flash-vision-exp",
+      "slug": "deepseek-v4-flash-vision-exp",
+      "name": "DeepSeek-V4-Flash-Vision-Exp",
+      "input_price_per_1m": 0.22,
+      "output_price_per_1m": 0.66,
+      "cache_read_per_1m": 0.007,
+      "context_tokens": 1000000,
+      "max_output_tokens": 384000
     }
   ],
   "slug_to_id": {
@@ -31,7 +41,7 @@
     "deepseek-v4-pro": "deepseek-v4-pro"
   },
   "unexpected_slugs": [
-    "deepseek-flash"
+    "deepseek-v4-flash-vision-exp"
   ],
-  "section_sha256": "7fe956d0eff60e3aaee0b3bd7d6157a4f86ee8cf4145be21aa1f6b5e0efe71c1"
+  "section_sha256": "7bc64afcc334abc113e8bf1e9108f2769c90200696e1cf676fa9298cddc19775"
 }
