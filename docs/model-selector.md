@@ -319,32 +319,35 @@ differently:
   below it. Default effort is `high` on every model that supports
   effort (Opus 4.7's default is `xhigh`). Extended thinking can
   also be toggled with Option+T / Alt+T, `alwaysThinkingEnabled`,
-  or `MAX_THINKING_TOKENS=0` (Fable 5 and Fable 5.1 cannot disable
-  extended thinking). Claude Code 2.1.257 ships Claude Fable 5.1
-  as the new default Fable model (1M context, $10/$50 per Mtok
-  with $0.25/Mtok cache reads); 2.1.258 is a hotfix for a launch
-  crash on macOS 12. 2.1.259 adds `managedMcpServers` policy,
-  `--permission-prompts none` for unattended headless hosts, and
-  GitLab MR recognition. 2.1.260 adds an inline `/diff` panel,
-  prompt-cache-miss diagnostics in `/cost`, and a text form of
-  `/advisor` for headless sessions. 2.1.261 adds `/skill-doctor`
-  for skill context accounting, `bashOutputMaxChars` and
-  `taskOutputMaxChars` settings, and organization-policy load
-  diagnostics in `/status`. 2.1.263 is a bug-fix / reliability
-  release with no effort/thinking surface changes. 2.1.265 adds a
-  `--plugin-dir` folder-of-plugins mode, tightens plugin path
-  containment, and improves `/model` picker labels for Bedrock /
-  Vertex / LLM-gateway IDs; no effort/thinking surface changes.
-  2.1.266 is a hotfix restoring gateway/proxy behavior when the
-  undocumented `CLAUDE_CODE_USE_GATEWAY` env var is set alongside an
-  API key or `apiKeyHelper`; no effort/thinking surface changes.
-  2.1.267 adds a `maxEffortLevel` setting (top-level or per model
-  under `modelSettings`) that CAPS the effort level on every
-  provider — including Bedrock, Vertex, and Foundry — while still
-  letting users pick any LOWER level; also fixes `effort:`
-  frontmatter on custom commands, skills, and subagents being
-  ignored on models whose default effort is still pinned (Opus 4.7,
-  Opus 4.8, Fable 5). The `/effort` vocabulary itself is unchanged.
+  or `MAX_THINKING_TOKENS=0`. Claude Code 2.1.257 ships Claude
+  Fable 5.1 as the new default Fable model (1M context, $10/$50
+  per Mtok with $0.25/Mtok cache reads); 2.1.258 is a hotfix for
+  a launch crash on macOS 12. 2.1.259 adds `managedMcpServers`
+  policy, `--permission-prompts none` for unattended headless
+  hosts, and GitLab MR recognition. 2.1.260 adds an inline
+  `/diff` panel, prompt-cache-miss diagnostics in `/cost`, and a
+  text form of `/advisor` for headless sessions. 2.1.261 adds
+  `/skill-doctor` for skill context accounting,
+  `bashOutputMaxChars` and `taskOutputMaxChars` settings, and
+  organization-policy load diagnostics in `/status`. 2.1.263 is a
+  bug-fix / reliability release with no effort/thinking surface
+  changes. 2.1.265 adds a `--plugin-dir` folder-of-plugins mode,
+  tightens plugin path containment, and improves `/model` picker
+  labels for Bedrock / Vertex / LLM-gateway IDs; no effort/thinking
+  surface changes. 2.1.266 is a hotfix restoring gateway/proxy
+  behavior when the undocumented `CLAUDE_CODE_USE_GATEWAY` env var
+  is set alongside an API key or `apiKeyHelper`; no effort/thinking
+  surface changes. 2.1.267 adds a `maxEffortLevel` setting
+  (top-level or per model under `modelSettings`) that CAPS the
+  effort level on every provider — including Bedrock, Vertex, and
+  Foundry — while still letting users pick any LOWER level; also
+  fixes `effort:` frontmatter on custom commands, skills, and
+  subagents being ignored on models whose default effort is still
+  pinned (Opus 4.7, Opus 4.8, Fable 5). Claude Code 2.1.269 adds
+  `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise
+  the Workflow tool's per-run concurrent agent limit; no
+  effort/thinking surface changes. The `/effort` vocabulary itself
+  is unchanged.
 - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
   `reasoning_effort` knob — `minimal`, `low`, `medium`, `high`,
   `xhigh` (the top "Extra High" tier; model-dependent). Higher
@@ -426,7 +429,7 @@ OMITTED. Every other value is an EFFORT level emitted verbatim, with
   (Opus 4.6, Sonnet 4.6), `max` is their Extra-High top and maps
   to `XHigh`, not `Max`. Extended thinking disabled (Option+T /
   Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
-  false) → `Off`; Fable 5 and Fable 5.1 cannot map to `Off`.
+  false) → `Off`.
 - OpenAI `reasoning_effort`: `minimal` → `Off`; `low` → `Low`;
   `medium` → `Medium`; `high` → `High`; `xhigh` / `extra-high`
   (the top "Extra High" tier, model-dependent — the UI synonym
@@ -478,7 +481,12 @@ Two Claude Code controls that must NOT be conflated:
   dynamic workflow size to medium (aim for fewer than 15 agents),
   selectable via `/config` including an unrestricted option, and
   the `workflowSizeGuideline` settings key can set it from any
-  settings file (hiding the `/config` row when set there).
+  settings file (hiding the `/config` row when set there). Claude
+  Code 2.1.269 further adds `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS`
+  (1–256) to raise the Workflow tool's per-run concurrent agent
+  limit for inference-bound fan-outs; this raises a per-run cap and
+  does not change the `/effort` vocabulary or the ORCHESTRATION
+  mapping here.
 - `ultrathink` is a PER-TURN prompt keyword: include it anywhere in a
   single prompt for deeper reasoning on that turn only; it does NOT
   change the session effort level and does NOT orchestrate workflows.
@@ -540,8 +548,7 @@ the last two bullets state:
   `THINKING: Off` only when the task genuinely wants extended
   thinking suppressed — a `speed` PRIMARY, or a trivial bounded edit
   where the latency of thinking is not worth it — and pair it with
-  the surface's floor EFFORT. Fable 5 and Fable 5.1 cannot disable
-  extended thinking, so never emit `THINKING: Off` for them.
+  the surface's floor EFFORT.
 - Chosen access method's `exposes-thinking` attribute is `no` →
   OMIT both the EFFORT and THINKING lines entirely, overriding the
   above. Do not emit `N/A`; a dial the surface lacks has no line.
@@ -697,32 +704,35 @@ as primary; the other becomes the secondary category for tie-breaking.
       below it. Default effort is `high` on every model that supports
       effort (Opus 4.7's default is `xhigh`). Extended thinking can
       also be toggled with Option+T / Alt+T, `alwaysThinkingEnabled`,
-      or `MAX_THINKING_TOKENS=0` (Fable 5 and Fable 5.1 cannot disable
-      extended thinking). Claude Code 2.1.257 ships Claude Fable 5.1
-      as the new default Fable model (1M context, $10/$50 per Mtok
-      with $0.25/Mtok cache reads); 2.1.258 is a hotfix for a launch
-      crash on macOS 12. 2.1.259 adds `managedMcpServers` policy,
-      `--permission-prompts none` for unattended headless hosts, and
-      GitLab MR recognition. 2.1.260 adds an inline `/diff` panel,
-      prompt-cache-miss diagnostics in `/cost`, and a text form of
-      `/advisor` for headless sessions. 2.1.261 adds `/skill-doctor`
-      for skill context accounting, `bashOutputMaxChars` and
-      `taskOutputMaxChars` settings, and organization-policy load
-      diagnostics in `/status`. 2.1.263 is a bug-fix / reliability
-      release with no effort/thinking surface changes. 2.1.265 adds a
-      `--plugin-dir` folder-of-plugins mode, tightens plugin path
-      containment, and improves `/model` picker labels for Bedrock /
-      Vertex / LLM-gateway IDs; no effort/thinking surface changes.
-      2.1.266 is a hotfix restoring gateway/proxy behavior when the
-      undocumented `CLAUDE_CODE_USE_GATEWAY` env var is set alongside an
-      API key or `apiKeyHelper`; no effort/thinking surface changes.
-      2.1.267 adds a `maxEffortLevel` setting (top-level or per model
-      under `modelSettings`) that CAPS the effort level on every
-      provider — including Bedrock, Vertex, and Foundry — while still
-      letting users pick any LOWER level; also fixes `effort:`
-      frontmatter on custom commands, skills, and subagents being
-      ignored on models whose default effort is still pinned (Opus 4.7,
-      Opus 4.8, Fable 5). The `/effort` vocabulary itself is unchanged.
+      or `MAX_THINKING_TOKENS=0`. Claude Code 2.1.257 ships Claude
+      Fable 5.1 as the new default Fable model (1M context, $10/$50
+      per Mtok with $0.25/Mtok cache reads); 2.1.258 is a hotfix for
+      a launch crash on macOS 12. 2.1.259 adds `managedMcpServers`
+      policy, `--permission-prompts none` for unattended headless
+      hosts, and GitLab MR recognition. 2.1.260 adds an inline
+      `/diff` panel, prompt-cache-miss diagnostics in `/cost`, and a
+      text form of `/advisor` for headless sessions. 2.1.261 adds
+      `/skill-doctor` for skill context accounting,
+      `bashOutputMaxChars` and `taskOutputMaxChars` settings, and
+      organization-policy load diagnostics in `/status`. 2.1.263 is a
+      bug-fix / reliability release with no effort/thinking surface
+      changes. 2.1.265 adds a `--plugin-dir` folder-of-plugins mode,
+      tightens plugin path containment, and improves `/model` picker
+      labels for Bedrock / Vertex / LLM-gateway IDs; no effort/thinking
+      surface changes. 2.1.266 is a hotfix restoring gateway/proxy
+      behavior when the undocumented `CLAUDE_CODE_USE_GATEWAY` env var
+      is set alongside an API key or `apiKeyHelper`; no effort/thinking
+      surface changes. 2.1.267 adds a `maxEffortLevel` setting
+      (top-level or per model under `modelSettings`) that CAPS the
+      effort level on every provider — including Bedrock, Vertex, and
+      Foundry — while still letting users pick any LOWER level; also
+      fixes `effort:` frontmatter on custom commands, skills, and
+      subagents being ignored on models whose default effort is still
+      pinned (Opus 4.7, Opus 4.8, Fable 5). Claude Code 2.1.269 adds
+      `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise
+      the Workflow tool's per-run concurrent agent limit; no
+      effort/thinking surface changes. The `/effort` vocabulary itself
+      is unchanged.
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
       `reasoning_effort` knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
@@ -804,7 +814,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       (Opus 4.6, Sonnet 4.6), `max` is their Extra-High top and maps
       to `XHigh`, not `Max`. Extended thinking disabled (Option+T /
       Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
-      false) → `Off`; Fable 5 and Fable 5.1 cannot map to `Off`.
+      false) → `Off`.
     - OpenAI `reasoning_effort`: `minimal` → `Off`; `low` → `Low`;
       `medium` → `Medium`; `high` → `High`; `xhigh` / `extra-high`
       (the top "Extra High" tier, model-dependent — the UI synonym
@@ -856,7 +866,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       dynamic workflow size to medium (aim for fewer than 15 agents),
       selectable via `/config` including an unrestricted option, and
       the `workflowSizeGuideline` settings key can set it from any
-      settings file (hiding the `/config` row when set there).
+      settings file (hiding the `/config` row when set there). Claude
+      Code 2.1.269 further adds `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS`
+      (1–256) to raise the Workflow tool's per-run concurrent agent
+      limit for inference-bound fan-outs; this raises a per-run cap and
+      does not change the `/effort` vocabulary or the ORCHESTRATION
+      mapping here.
     - `ultrathink` is a PER-TURN prompt keyword: include it anywhere in a
       single prompt for deeper reasoning on that turn only; it does NOT
       change the session effort level and does NOT orchestrate workflows.
@@ -918,8 +933,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       `THINKING: Off` only when the task genuinely wants extended
       thinking suppressed — a `speed` PRIMARY, or a trivial bounded edit
       where the latency of thinking is not worth it — and pair it with
-      the surface's floor EFFORT. Fable 5 and Fable 5.1 cannot disable
-      extended thinking, so never emit `THINKING: Off` for them.
+      the surface's floor EFFORT.
     - Chosen access method's `exposes-thinking` attribute is `no` →
       OMIT both the EFFORT and THINKING lines entirely, overriding the
       above. Do not emit `N/A`; a dial the surface lacks has no line.
@@ -1643,32 +1657,35 @@ as primary; the other becomes the secondary category for tie-breaking.
       below it. Default effort is `high` on every model that supports
       effort (Opus 4.7's default is `xhigh`). Extended thinking can
       also be toggled with Option+T / Alt+T, `alwaysThinkingEnabled`,
-      or `MAX_THINKING_TOKENS=0` (Fable 5 and Fable 5.1 cannot disable
-      extended thinking). Claude Code 2.1.257 ships Claude Fable 5.1
-      as the new default Fable model (1M context, $10/$50 per Mtok
-      with $0.25/Mtok cache reads); 2.1.258 is a hotfix for a launch
-      crash on macOS 12. 2.1.259 adds `managedMcpServers` policy,
-      `--permission-prompts none` for unattended headless hosts, and
-      GitLab MR recognition. 2.1.260 adds an inline `/diff` panel,
-      prompt-cache-miss diagnostics in `/cost`, and a text form of
-      `/advisor` for headless sessions. 2.1.261 adds `/skill-doctor`
-      for skill context accounting, `bashOutputMaxChars` and
-      `taskOutputMaxChars` settings, and organization-policy load
-      diagnostics in `/status`. 2.1.263 is a bug-fix / reliability
-      release with no effort/thinking surface changes. 2.1.265 adds a
-      `--plugin-dir` folder-of-plugins mode, tightens plugin path
-      containment, and improves `/model` picker labels for Bedrock /
-      Vertex / LLM-gateway IDs; no effort/thinking surface changes.
-      2.1.266 is a hotfix restoring gateway/proxy behavior when the
-      undocumented `CLAUDE_CODE_USE_GATEWAY` env var is set alongside an
-      API key or `apiKeyHelper`; no effort/thinking surface changes.
-      2.1.267 adds a `maxEffortLevel` setting (top-level or per model
-      under `modelSettings`) that CAPS the effort level on every
-      provider — including Bedrock, Vertex, and Foundry — while still
-      letting users pick any LOWER level; also fixes `effort:`
-      frontmatter on custom commands, skills, and subagents being
-      ignored on models whose default effort is still pinned (Opus 4.7,
-      Opus 4.8, Fable 5). The `/effort` vocabulary itself is unchanged.
+      or `MAX_THINKING_TOKENS=0`. Claude Code 2.1.257 ships Claude
+      Fable 5.1 as the new default Fable model (1M context, $10/$50
+      per Mtok with $0.25/Mtok cache reads); 2.1.258 is a hotfix for
+      a launch crash on macOS 12. 2.1.259 adds `managedMcpServers`
+      policy, `--permission-prompts none` for unattended headless
+      hosts, and GitLab MR recognition. 2.1.260 adds an inline
+      `/diff` panel, prompt-cache-miss diagnostics in `/cost`, and a
+      text form of `/advisor` for headless sessions. 2.1.261 adds
+      `/skill-doctor` for skill context accounting,
+      `bashOutputMaxChars` and `taskOutputMaxChars` settings, and
+      organization-policy load diagnostics in `/status`. 2.1.263 is a
+      bug-fix / reliability release with no effort/thinking surface
+      changes. 2.1.265 adds a `--plugin-dir` folder-of-plugins mode,
+      tightens plugin path containment, and improves `/model` picker
+      labels for Bedrock / Vertex / LLM-gateway IDs; no effort/thinking
+      surface changes. 2.1.266 is a hotfix restoring gateway/proxy
+      behavior when the undocumented `CLAUDE_CODE_USE_GATEWAY` env var
+      is set alongside an API key or `apiKeyHelper`; no effort/thinking
+      surface changes. 2.1.267 adds a `maxEffortLevel` setting
+      (top-level or per model under `modelSettings`) that CAPS the
+      effort level on every provider — including Bedrock, Vertex, and
+      Foundry — while still letting users pick any LOWER level; also
+      fixes `effort:` frontmatter on custom commands, skills, and
+      subagents being ignored on models whose default effort is still
+      pinned (Opus 4.7, Opus 4.8, Fable 5). Claude Code 2.1.269 adds
+      `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise
+      the Workflow tool's per-run concurrent agent limit; no
+      effort/thinking surface changes. The `/effort` vocabulary itself
+      is unchanged.
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
       `reasoning_effort` knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
@@ -1750,7 +1767,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       (Opus 4.6, Sonnet 4.6), `max` is their Extra-High top and maps
       to `XHigh`, not `Max`. Extended thinking disabled (Option+T /
       Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
-      false) → `Off`; Fable 5 and Fable 5.1 cannot map to `Off`.
+      false) → `Off`.
     - OpenAI `reasoning_effort`: `minimal` → `Off`; `low` → `Low`;
       `medium` → `Medium`; `high` → `High`; `xhigh` / `extra-high`
       (the top "Extra High" tier, model-dependent — the UI synonym
@@ -1802,7 +1819,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       dynamic workflow size to medium (aim for fewer than 15 agents),
       selectable via `/config` including an unrestricted option, and
       the `workflowSizeGuideline` settings key can set it from any
-      settings file (hiding the `/config` row when set there).
+      settings file (hiding the `/config` row when set there). Claude
+      Code 2.1.269 further adds `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS`
+      (1–256) to raise the Workflow tool's per-run concurrent agent
+      limit for inference-bound fan-outs; this raises a per-run cap and
+      does not change the `/effort` vocabulary or the ORCHESTRATION
+      mapping here.
     - `ultrathink` is a PER-TURN prompt keyword: include it anywhere in a
       single prompt for deeper reasoning on that turn only; it does NOT
       change the session effort level and does NOT orchestrate workflows.
@@ -1864,8 +1886,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       `THINKING: Off` only when the task genuinely wants extended
       thinking suppressed — a `speed` PRIMARY, or a trivial bounded edit
       where the latency of thinking is not worth it — and pair it with
-      the surface's floor EFFORT. Fable 5 and Fable 5.1 cannot disable
-      extended thinking, so never emit `THINKING: Off` for them.
+      the surface's floor EFFORT.
     - Chosen access method's `exposes-thinking` attribute is `no` →
       OMIT both the EFFORT and THINKING lines entirely, overriding the
       above. Do not emit `N/A`; a dial the surface lacks has no line.
@@ -1988,7 +2009,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Billing:** subscription-or-key (requires claude-max-subscription OR anthropic-api-key)
 - **Supports models:** claude-opus-5,opus-4.8,claude-fable-5.1,claude-fable-5,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — yes
-- **Best for:** Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context; as of 2.1.219 Claude Opus 5 ships as the new default Opus (1M context, fast mode at $10/$50 per Mtok) and Opus 4.7 is removed from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.220–2.1.267 are bug-fix / reliability / self-hosted-runner / UI-polish / plugin-safety releases with no effort/thinking surface changes beyond the 2.1.267 `maxEffortLevel` cap noted below (2.1.224 adds `claude self-hosted-runner` for turning your own machines into places where Claude Code web/mobile/desktop sessions can run, cross-session `SendMessage`, and archive-plugin sources; 2.1.225 adds gateway spend-limit reporting to the usage warning; 2.1.227 polishes the slash-command menu and fixes feature-flag evaluation for expired login tokens; 2.1.257 ships Claude Fable 5.1 as the new default Fable at 1M context and $10/$50 per Mtok; 2.1.259 adds `managedMcpServers` policy and `--permission-prompts none` for unattended headless hosts; 2.1.260 adds an inline `/diff` panel and a headless text form of `/advisor`; 2.1.261 adds `/skill-doctor` and `bashOutputMaxChars` / `taskOutputMaxChars` settings; 2.1.263 is a reliability release; 2.1.265 adds a `--plugin-dir` folder-of-plugins mode and tightens plugin path containment; 2.1.266 restores gateway/proxy behavior when `CLAUDE_CODE_USE_GATEWAY` is set alongside an API key or `apiKeyHelper`; 2.1.267 adds a `maxEffortLevel` setting — top-level or per model under `modelSettings` — that CAPS the effort level on every provider including Bedrock, Vertex, and Foundry while still letting users pick any lower level, plus `--system-prompt-snapshot off` for iterating on prompt text and a fix for `effort:` frontmatter on custom commands, skills, and subagents being ignored on models whose default effort is still pinned). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, Fable 5, and Fable 5.1 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one; deployments may set `maxEffortLevel` to cap the maximum reachable level on every provider), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 and Fable 5.1 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `"ultracode": true`; 2.1.202+ adds a `/config` "Dynamic workflow size" advisory guideline, and 2.1.219 defaults it to medium (aim for fewer than 15 agents) with the `workflowSizeGuideline` settings key to set it from any settings file) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized). As of 2.1.200 the default permission mode is `Manual` across the CLI, VS Code, and JetBrains; 2.1.205 adds an auto-mode rule blocking tampering with session transcript files and reserves the `Claude Browser` MCP server name (alongside `Claude Preview`) ahead of the Claude Desktop pane rename; 2.1.210 adds a live elapsed-time counter on long-running tool calls and startup warnings for `Write(path)`/`NotebookEdit(path)`/`Glob(path)` permission rules; 2.1.211 adds the `--forward-subagent-text` flag / `CLAUDE_CODE_FORWARD_SUBAGENT_TEXT` env var to include subagent text and thinking in stream-json output; 2.1.212 adds `/fork` background-session copies, `/subtask` in-session subagent, `/resume` background picker, per-session WebSearch/subagent caps, and long-running MCP auto-backgrounding; 2.1.214 adds the EndConversation tool and Podman/docker daemon-redirect permission prompts; 2.1.215 makes `/verify` and `/code-review` skills explicit-invocation only; 2.1.216 adds a `sandbox.filesystem.disabled` setting to skip filesystem isolation while keeping network egress control; 2.1.218 moves `/code-review` to a background subagent, adds screen-reader deletion announcements in `--ax-screen-reader` mode, `/ultrareview` now supports descriptive arguments, and skills with `context: fork` default to running in the background; 2.1.219 adds the `DirectoryAdded` hook, subagents can spawn nested subagents up to depth 3 by default (opt out via `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1`), `mcp_server_errors` reporting in the headless stream-json init event, and removes Opus 4.7 from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.221 adds a VS Code Focus view (`Ctrl+Alt+F`), a `mode: "mask"` sandbox credential option on Linux/WSL, `claude plugin validate` warnings for names Claude Desktop would reject, and a `prompt-audit` subcommand in the `claude-api` skill; 2.1.222 fixes a worktree-isolation escape and hardens auto-mode `SendMessage` classifier evaluation; 2.1.224 adds self-hosted environments (`claude self-hosted-runner`), `archive` plugin sources, cross-session `SendMessage` with `ListAgents`, sandbox credential-masking options, and a `crossSessionInbound` / `dialogExpiry` cross-session-message settings block on Team and Enterprise plans; 2.1.225 adds gateway spend-limit-reached messaging to the usage warning, a `claude agents` workspace-trust prompt, and `SendMessage` starting conversations with named Remote Control sessions on other machines; 2.1.227 polishes the slash-command menu (only the selected row is highlighted, matched characters are bolded), fixes feature-flag evaluation with expired login tokens so Max users are no longer wrongly prompted to enable Fable usage credits, and improves performance of file-not-found suggestions and at-mention size checks; 2.1.257 ships Claude Fable 5.1 as the new default Fable (1M context, $10/$50 per Mtok, $0.25/Mtok cache reads) and adds `timeFormat` / `timeZone` settings, a Containment Escape auto-mode rule, `CLAUDE_CODE_SUBAGENT_MODEL_FORCE`, and a one-time prompt before the first file read outside the working directories; 2.1.258 hotfixes a launch crash on macOS 12; 2.1.259 adds `managedMcpServers` policy for org-provided HTTP/SSE MCP servers, `--permission-prompts none` for unattended headless hosts, GitLab MR recognition in the collapsed tool summary, and `--json` for `claude plugin validate`; 2.1.260 adds an inline `/diff` panel that opens beside the conversation in fullscreen mode, prompt-cache-miss diagnostics in `/cost` and the status line, `/reload-plugins` in headless sessions, and a text form of `/advisor` (`/advisor`, `/advisor <model>`, `/advisor off`) for headless Desktop, Remote Control, and SDK sessions; 2.1.261 adds an "Organization policy" line to `/status` and `claude doctor`, `bashOutputMaxChars` and `taskOutputMaxChars` settings to raise inline command/background-task output up to 128K characters, `--append-subagent-system-prompt-file` to read the subagent system prompt from a file, and `/skill-doctor` to show which loaded skills go unused and what they cost in context; 2.1.263 is a bug-fix / reliability release with no surface-parameter changes; 2.1.265 adds a `--plugin-dir` folder-of-plugins mode (children with a manifest are loaded, additions/removals picked up while running), caps tool results saved to disk at 1 GB, and tightens plugin path containment on macOS/Linux; 2.1.266 is a hotfix restoring gateway/proxy behavior for setups that set the undocumented `CLAUDE_CODE_USE_GATEWAY` env var alongside an API key, `apiKeyHelper`, or custom auth headers (the variable on its own is ignored again); 2.1.267 adds a `maxEffortLevel` setting (top-level or per model under `modelSettings`) that caps the effort level on every provider — including Bedrock, Vertex, and Foundry — while still letting users pick any lower level, plus `--system-prompt-snapshot off` to render the system prompt fresh on every request and a fix for `effort:` frontmatter on custom commands, skills, and subagents being ignored on models whose default effort is still pinned (Opus 4.7, Opus 4.8, Fable 5).
+- **Best for:** Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context; as of 2.1.219 Claude Opus 5 ships as the new default Opus (1M context, fast mode at $10/$50 per Mtok) and Opus 4.7 is removed from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.220–2.1.269 are bug-fix / reliability / self-hosted-runner / UI-polish / plugin-safety releases with no effort/thinking surface changes beyond the 2.1.267 `maxEffortLevel` cap and the 2.1.269 `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) knob for the Workflow tool's per-run concurrent-agent limit noted below (2.1.224 adds `claude self-hosted-runner` for turning your own machines into places where Claude Code web/mobile/desktop sessions can run, cross-session `SendMessage`, and archive-plugin sources; 2.1.225 adds gateway spend-limit reporting to the usage warning; 2.1.227 polishes the slash-command menu and fixes feature-flag evaluation for expired login tokens; 2.1.257 ships Claude Fable 5.1 as the new default Fable at 1M context and $10/$50 per Mtok; 2.1.259 adds `managedMcpServers` policy and `--permission-prompts none` for unattended headless hosts; 2.1.260 adds an inline `/diff` panel and a headless text form of `/advisor`; 2.1.261 adds `/skill-doctor` and `bashOutputMaxChars` / `taskOutputMaxChars` settings; 2.1.263 is a reliability release; 2.1.265 adds a `--plugin-dir` folder-of-plugins mode and tightens plugin path containment; 2.1.266 restores gateway/proxy behavior when `CLAUDE_CODE_USE_GATEWAY` is set alongside an API key or `apiKeyHelper`; 2.1.267 adds a `maxEffortLevel` setting — top-level or per model under `modelSettings` — that CAPS the effort level on every provider including Bedrock, Vertex, and Foundry while still letting users pick any lower level, plus `--system-prompt-snapshot off` for iterating on prompt text and a fix for `effort:` frontmatter on custom commands, skills, and subagents being ignored on models whose default effort is still pinned; 2.1.269 adds `claude plugin eval` for scored plugin eval suites, `/output-style [name]` to list and switch output styles (including over Remote Control and in headless sessions), a Bash-tool file-edit diff (setting `bashEditDiffEnabled`), `OTEL_METRICS_INCLUDE_REPOSITORY` for tagging OpenTelemetry metrics and events with `vcs.*` attributes, `CLAUDE_CODE_GATEWAY_MODEL_DISCOVERY_TIMEOUT_MS` to extend the LLM gateway `/v1/models` discovery timeout, and `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise the Workflow tool's per-run concurrent-agent limit for inference-bound fan-outs — none of which change the `/effort` vocabulary). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, Fable 5, and Fable 5.1 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one; deployments may set `maxEffortLevel` to cap the maximum reachable level on every provider), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls, plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `"ultracode": true`; 2.1.202+ adds a `/config` "Dynamic workflow size" advisory guideline, 2.1.219 defaults it to medium (aim for fewer than 15 agents) with the `workflowSizeGuideline` settings key to set it from any settings file, and 2.1.269 adds `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise the per-run concurrent-agent cap for the Workflow tool) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized).
 
 #### claude.ai web / desktop — `claude-web`
 
@@ -2383,32 +2404,35 @@ as primary; the other becomes the secondary category for tie-breaking.
       below it. Default effort is `high` on every model that supports
       effort (Opus 4.7's default is `xhigh`). Extended thinking can
       also be toggled with Option+T / Alt+T, `alwaysThinkingEnabled`,
-      or `MAX_THINKING_TOKENS=0` (Fable 5 and Fable 5.1 cannot disable
-      extended thinking). Claude Code 2.1.257 ships Claude Fable 5.1
-      as the new default Fable model (1M context, $10/$50 per Mtok
-      with $0.25/Mtok cache reads); 2.1.258 is a hotfix for a launch
-      crash on macOS 12. 2.1.259 adds `managedMcpServers` policy,
-      `--permission-prompts none` for unattended headless hosts, and
-      GitLab MR recognition. 2.1.260 adds an inline `/diff` panel,
-      prompt-cache-miss diagnostics in `/cost`, and a text form of
-      `/advisor` for headless sessions. 2.1.261 adds `/skill-doctor`
-      for skill context accounting, `bashOutputMaxChars` and
-      `taskOutputMaxChars` settings, and organization-policy load
-      diagnostics in `/status`. 2.1.263 is a bug-fix / reliability
-      release with no effort/thinking surface changes. 2.1.265 adds a
-      `--plugin-dir` folder-of-plugins mode, tightens plugin path
-      containment, and improves `/model` picker labels for Bedrock /
-      Vertex / LLM-gateway IDs; no effort/thinking surface changes.
-      2.1.266 is a hotfix restoring gateway/proxy behavior when the
-      undocumented `CLAUDE_CODE_USE_GATEWAY` env var is set alongside an
-      API key or `apiKeyHelper`; no effort/thinking surface changes.
-      2.1.267 adds a `maxEffortLevel` setting (top-level or per model
-      under `modelSettings`) that CAPS the effort level on every
-      provider — including Bedrock, Vertex, and Foundry — while still
-      letting users pick any LOWER level; also fixes `effort:`
-      frontmatter on custom commands, skills, and subagents being
-      ignored on models whose default effort is still pinned (Opus 4.7,
-      Opus 4.8, Fable 5). The `/effort` vocabulary itself is unchanged.
+      or `MAX_THINKING_TOKENS=0`. Claude Code 2.1.257 ships Claude
+      Fable 5.1 as the new default Fable model (1M context, $10/$50
+      per Mtok with $0.25/Mtok cache reads); 2.1.258 is a hotfix for
+      a launch crash on macOS 12. 2.1.259 adds `managedMcpServers`
+      policy, `--permission-prompts none` for unattended headless
+      hosts, and GitLab MR recognition. 2.1.260 adds an inline
+      `/diff` panel, prompt-cache-miss diagnostics in `/cost`, and a
+      text form of `/advisor` for headless sessions. 2.1.261 adds
+      `/skill-doctor` for skill context accounting,
+      `bashOutputMaxChars` and `taskOutputMaxChars` settings, and
+      organization-policy load diagnostics in `/status`. 2.1.263 is a
+      bug-fix / reliability release with no effort/thinking surface
+      changes. 2.1.265 adds a `--plugin-dir` folder-of-plugins mode,
+      tightens plugin path containment, and improves `/model` picker
+      labels for Bedrock / Vertex / LLM-gateway IDs; no effort/thinking
+      surface changes. 2.1.266 is a hotfix restoring gateway/proxy
+      behavior when the undocumented `CLAUDE_CODE_USE_GATEWAY` env var
+      is set alongside an API key or `apiKeyHelper`; no effort/thinking
+      surface changes. 2.1.267 adds a `maxEffortLevel` setting
+      (top-level or per model under `modelSettings`) that CAPS the
+      effort level on every provider — including Bedrock, Vertex, and
+      Foundry — while still letting users pick any LOWER level; also
+      fixes `effort:` frontmatter on custom commands, skills, and
+      subagents being ignored on models whose default effort is still
+      pinned (Opus 4.7, Opus 4.8, Fable 5). Claude Code 2.1.269 adds
+      `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise
+      the Workflow tool's per-run concurrent agent limit; no
+      effort/thinking surface changes. The `/effort` vocabulary itself
+      is unchanged.
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
       `reasoning_effort` knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
@@ -2490,7 +2514,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       (Opus 4.6, Sonnet 4.6), `max` is their Extra-High top and maps
       to `XHigh`, not `Max`. Extended thinking disabled (Option+T /
       Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
-      false) → `Off`; Fable 5 and Fable 5.1 cannot map to `Off`.
+      false) → `Off`.
     - OpenAI `reasoning_effort`: `minimal` → `Off`; `low` → `Low`;
       `medium` → `Medium`; `high` → `High`; `xhigh` / `extra-high`
       (the top "Extra High" tier, model-dependent — the UI synonym
@@ -2542,7 +2566,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       dynamic workflow size to medium (aim for fewer than 15 agents),
       selectable via `/config` including an unrestricted option, and
       the `workflowSizeGuideline` settings key can set it from any
-      settings file (hiding the `/config` row when set there).
+      settings file (hiding the `/config` row when set there). Claude
+      Code 2.1.269 further adds `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS`
+      (1–256) to raise the Workflow tool's per-run concurrent agent
+      limit for inference-bound fan-outs; this raises a per-run cap and
+      does not change the `/effort` vocabulary or the ORCHESTRATION
+      mapping here.
     - `ultrathink` is a PER-TURN prompt keyword: include it anywhere in a
       single prompt for deeper reasoning on that turn only; it does NOT
       change the session effort level and does NOT orchestrate workflows.
@@ -2604,8 +2633,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       `THINKING: Off` only when the task genuinely wants extended
       thinking suppressed — a `speed` PRIMARY, or a trivial bounded edit
       where the latency of thinking is not worth it — and pair it with
-      the surface's floor EFFORT. Fable 5 and Fable 5.1 cannot disable
-      extended thinking, so never emit `THINKING: Off` for them.
+      the surface's floor EFFORT.
     - Chosen access method's `exposes-thinking` attribute is `no` →
       OMIT both the EFFORT and THINKING lines entirely, overriding the
       above. Do not emit `N/A`; a dial the surface lacks has no line.
@@ -3332,7 +3360,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="claude-opus-5,opus-4.8,claude-fable-5.1,claude-fable-5,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="yes"
-            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context; as of 2.1.219 Claude Opus 5 ships as the new default Opus (1M context, fast mode at $10/$50 per Mtok) and Opus 4.7 is removed from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.220–2.1.267 are bug-fix / reliability / self-hosted-runner / UI-polish / plugin-safety releases with no effort/thinking surface changes beyond the 2.1.267 `maxEffortLevel` cap noted below (2.1.224 adds `claude self-hosted-runner` for turning your own machines into places where Claude Code web/mobile/desktop sessions can run, cross-session `SendMessage`, and archive-plugin sources; 2.1.225 adds gateway spend-limit reporting to the usage warning; 2.1.227 polishes the slash-command menu and fixes feature-flag evaluation for expired login tokens; 2.1.257 ships Claude Fable 5.1 as the new default Fable at 1M context and $10/$50 per Mtok; 2.1.259 adds `managedMcpServers` policy and `--permission-prompts none` for unattended headless hosts; 2.1.260 adds an inline `/diff` panel and a headless text form of `/advisor`; 2.1.261 adds `/skill-doctor` and `bashOutputMaxChars` / `taskOutputMaxChars` settings; 2.1.263 is a reliability release; 2.1.265 adds a `--plugin-dir` folder-of-plugins mode and tightens plugin path containment; 2.1.266 restores gateway/proxy behavior when `CLAUDE_CODE_USE_GATEWAY` is set alongside an API key or `apiKeyHelper`; 2.1.267 adds a `maxEffortLevel` setting — top-level or per model under `modelSettings` — that CAPS the effort level on every provider including Bedrock, Vertex, and Foundry while still letting users pick any lower level, plus `--system-prompt-snapshot off` for iterating on prompt text and a fix for `effort:` frontmatter on custom commands, skills, and subagents being ignored on models whose default effort is still pinned). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, Fable 5, and Fable 5.1 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one; deployments may set `maxEffortLevel` to cap the maximum reachable level on every provider), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 and Fable 5.1 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\"ultracode\": true`; 2.1.202+ adds a `/config` \"Dynamic workflow size\" advisory guideline, and 2.1.219 defaults it to medium (aim for fewer than 15 agents) with the `workflowSizeGuideline` settings key to set it from any settings file) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized). As of 2.1.200 the default permission mode is `Manual` across the CLI, VS Code, and JetBrains; 2.1.205 adds an auto-mode rule blocking tampering with session transcript files and reserves the `Claude Browser` MCP server name (alongside `Claude Preview`) ahead of the Claude Desktop pane rename; 2.1.210 adds a live elapsed-time counter on long-running tool calls and startup warnings for `Write(path)`/`NotebookEdit(path)`/`Glob(path)` permission rules; 2.1.211 adds the `--forward-subagent-text` flag / `CLAUDE_CODE_FORWARD_SUBAGENT_TEXT` env var to include subagent text and thinking in stream-json output; 2.1.212 adds `/fork` background-session copies, `/subtask` in-session subagent, `/resume` background picker, per-session WebSearch/subagent caps, and long-running MCP auto-backgrounding; 2.1.214 adds the EndConversation tool and Podman/docker daemon-redirect permission prompts; 2.1.215 makes `/verify` and `/code-review` skills explicit-invocation only; 2.1.216 adds a `sandbox.filesystem.disabled` setting to skip filesystem isolation while keeping network egress control; 2.1.218 moves `/code-review` to a background subagent, adds screen-reader deletion announcements in `--ax-screen-reader` mode, `/ultrareview` now supports descriptive arguments, and skills with `context: fork` default to running in the background; 2.1.219 adds the `DirectoryAdded` hook, subagents can spawn nested subagents up to depth 3 by default (opt out via `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1`), `mcp_server_errors` reporting in the headless stream-json init event, and removes Opus 4.7 from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.221 adds a VS Code Focus view (`Ctrl+Alt+F`), a `mode: \"mask\"` sandbox credential option on Linux/WSL, `claude plugin validate` warnings for names Claude Desktop would reject, and a `prompt-audit` subcommand in the `claude-api` skill; 2.1.222 fixes a worktree-isolation escape and hardens auto-mode `SendMessage` classifier evaluation; 2.1.224 adds self-hosted environments (`claude self-hosted-runner`), `archive` plugin sources, cross-session `SendMessage` with `ListAgents`, sandbox credential-masking options, and a `crossSessionInbound` / `dialogExpiry` cross-session-message settings block on Team and Enterprise plans; 2.1.225 adds gateway spend-limit-reached messaging to the usage warning, a `claude agents` workspace-trust prompt, and `SendMessage` starting conversations with named Remote Control sessions on other machines; 2.1.227 polishes the slash-command menu (only the selected row is highlighted, matched characters are bolded), fixes feature-flag evaluation with expired login tokens so Max users are no longer wrongly prompted to enable Fable usage credits, and improves performance of file-not-found suggestions and at-mention size checks; 2.1.257 ships Claude Fable 5.1 as the new default Fable (1M context, $10/$50 per Mtok, $0.25/Mtok cache reads) and adds `timeFormat` / `timeZone` settings, a Containment Escape auto-mode rule, `CLAUDE_CODE_SUBAGENT_MODEL_FORCE`, and a one-time prompt before the first file read outside the working directories; 2.1.258 hotfixes a launch crash on macOS 12; 2.1.259 adds `managedMcpServers` policy for org-provided HTTP/SSE MCP servers, `--permission-prompts none` for unattended headless hosts, GitLab MR recognition in the collapsed tool summary, and `--json` for `claude plugin validate`; 2.1.260 adds an inline `/diff` panel that opens beside the conversation in fullscreen mode, prompt-cache-miss diagnostics in `/cost` and the status line, `/reload-plugins` in headless sessions, and a text form of `/advisor` (`/advisor`, `/advisor <model>`, `/advisor off`) for headless Desktop, Remote Control, and SDK sessions; 2.1.261 adds an \"Organization policy\" line to `/status` and `claude doctor`, `bashOutputMaxChars` and `taskOutputMaxChars` settings to raise inline command/background-task output up to 128K characters, `--append-subagent-system-prompt-file` to read the subagent system prompt from a file, and `/skill-doctor` to show which loaded skills go unused and what they cost in context; 2.1.263 is a bug-fix / reliability release with no surface-parameter changes; 2.1.265 adds a `--plugin-dir` folder-of-plugins mode (children with a manifest are loaded, additions/removals picked up while running), caps tool results saved to disk at 1 GB, and tightens plugin path containment on macOS/Linux; 2.1.266 is a hotfix restoring gateway/proxy behavior for setups that set the undocumented `CLAUDE_CODE_USE_GATEWAY` env var alongside an API key, `apiKeyHelper`, or custom auth headers (the variable on its own is ignored again); 2.1.267 adds a `maxEffortLevel` setting (top-level or per model under `modelSettings`) that caps the effort level on every provider — including Bedrock, Vertex, and Foundry — while still letting users pick any lower level, plus `--system-prompt-snapshot off` to render the system prompt fresh on every request and a fix for `effort:` frontmatter on custom commands, skills, and subagents being ignored on models whose default effort is still pinned (Opus 4.7, Opus 4.8, Fable 5)." />
+            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context; as of 2.1.219 Claude Opus 5 ships as the new default Opus (1M context, fast mode at $10/$50 per Mtok) and Opus 4.7 is removed from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.220–2.1.269 are bug-fix / reliability / self-hosted-runner / UI-polish / plugin-safety releases with no effort/thinking surface changes beyond the 2.1.267 `maxEffortLevel` cap and the 2.1.269 `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) knob for the Workflow tool's per-run concurrent-agent limit noted below (2.1.224 adds `claude self-hosted-runner` for turning your own machines into places where Claude Code web/mobile/desktop sessions can run, cross-session `SendMessage`, and archive-plugin sources; 2.1.225 adds gateway spend-limit reporting to the usage warning; 2.1.227 polishes the slash-command menu and fixes feature-flag evaluation for expired login tokens; 2.1.257 ships Claude Fable 5.1 as the new default Fable at 1M context and $10/$50 per Mtok; 2.1.259 adds `managedMcpServers` policy and `--permission-prompts none` for unattended headless hosts; 2.1.260 adds an inline `/diff` panel and a headless text form of `/advisor`; 2.1.261 adds `/skill-doctor` and `bashOutputMaxChars` / `taskOutputMaxChars` settings; 2.1.263 is a reliability release; 2.1.265 adds a `--plugin-dir` folder-of-plugins mode and tightens plugin path containment; 2.1.266 restores gateway/proxy behavior when `CLAUDE_CODE_USE_GATEWAY` is set alongside an API key or `apiKeyHelper`; 2.1.267 adds a `maxEffortLevel` setting — top-level or per model under `modelSettings` — that CAPS the effort level on every provider including Bedrock, Vertex, and Foundry while still letting users pick any lower level, plus `--system-prompt-snapshot off` for iterating on prompt text and a fix for `effort:` frontmatter on custom commands, skills, and subagents being ignored on models whose default effort is still pinned; 2.1.269 adds `claude plugin eval` for scored plugin eval suites, `/output-style [name]` to list and switch output styles (including over Remote Control and in headless sessions), a Bash-tool file-edit diff (setting `bashEditDiffEnabled`), `OTEL_METRICS_INCLUDE_REPOSITORY` for tagging OpenTelemetry metrics and events with `vcs.*` attributes, `CLAUDE_CODE_GATEWAY_MODEL_DISCOVERY_TIMEOUT_MS` to extend the LLM gateway `/v1/models` discovery timeout, and `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise the Workflow tool's per-run concurrent-agent limit for inference-bound fan-outs — none of which change the `/effort` vocabulary). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, Fable 5, and Fable 5.1 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one; deployments may set `maxEffortLevel` to cap the maximum reachable level on every provider), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls, plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\"ultracode\": true`; 2.1.202+ adds a `/config` \"Dynamic workflow size\" advisory guideline, 2.1.219 defaults it to medium (aim for fewer than 15 agents) with the `workflowSizeGuideline` settings key to set it from any settings file, and 2.1.269 adds `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise the per-run concurrent-agent cap for the Workflow tool) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized)." />
     <method id="claude-web" name="claude.ai web / desktop"
             provider="anthropic" billing="subscription-included"
             provider-jurisdiction="us"
@@ -3866,32 +3894,35 @@ as primary; the other becomes the secondary category for tie-breaking.
       below it. Default effort is `high` on every model that supports
       effort (Opus 4.7's default is `xhigh`). Extended thinking can
       also be toggled with Option+T / Alt+T, `alwaysThinkingEnabled`,
-      or `MAX_THINKING_TOKENS=0` (Fable 5 and Fable 5.1 cannot disable
-      extended thinking). Claude Code 2.1.257 ships Claude Fable 5.1
-      as the new default Fable model (1M context, $10/$50 per Mtok
-      with $0.25/Mtok cache reads); 2.1.258 is a hotfix for a launch
-      crash on macOS 12. 2.1.259 adds `managedMcpServers` policy,
-      `--permission-prompts none` for unattended headless hosts, and
-      GitLab MR recognition. 2.1.260 adds an inline `/diff` panel,
-      prompt-cache-miss diagnostics in `/cost`, and a text form of
-      `/advisor` for headless sessions. 2.1.261 adds `/skill-doctor`
-      for skill context accounting, `bashOutputMaxChars` and
-      `taskOutputMaxChars` settings, and organization-policy load
-      diagnostics in `/status`. 2.1.263 is a bug-fix / reliability
-      release with no effort/thinking surface changes. 2.1.265 adds a
-      `--plugin-dir` folder-of-plugins mode, tightens plugin path
-      containment, and improves `/model` picker labels for Bedrock /
-      Vertex / LLM-gateway IDs; no effort/thinking surface changes.
-      2.1.266 is a hotfix restoring gateway/proxy behavior when the
-      undocumented `CLAUDE_CODE_USE_GATEWAY` env var is set alongside an
-      API key or `apiKeyHelper`; no effort/thinking surface changes.
-      2.1.267 adds a `maxEffortLevel` setting (top-level or per model
-      under `modelSettings`) that CAPS the effort level on every
-      provider — including Bedrock, Vertex, and Foundry — while still
-      letting users pick any LOWER level; also fixes `effort:`
-      frontmatter on custom commands, skills, and subagents being
-      ignored on models whose default effort is still pinned (Opus 4.7,
-      Opus 4.8, Fable 5). The `/effort` vocabulary itself is unchanged.
+      or `MAX_THINKING_TOKENS=0`. Claude Code 2.1.257 ships Claude
+      Fable 5.1 as the new default Fable model (1M context, $10/$50
+      per Mtok with $0.25/Mtok cache reads); 2.1.258 is a hotfix for
+      a launch crash on macOS 12. 2.1.259 adds `managedMcpServers`
+      policy, `--permission-prompts none` for unattended headless
+      hosts, and GitLab MR recognition. 2.1.260 adds an inline
+      `/diff` panel, prompt-cache-miss diagnostics in `/cost`, and a
+      text form of `/advisor` for headless sessions. 2.1.261 adds
+      `/skill-doctor` for skill context accounting,
+      `bashOutputMaxChars` and `taskOutputMaxChars` settings, and
+      organization-policy load diagnostics in `/status`. 2.1.263 is a
+      bug-fix / reliability release with no effort/thinking surface
+      changes. 2.1.265 adds a `--plugin-dir` folder-of-plugins mode,
+      tightens plugin path containment, and improves `/model` picker
+      labels for Bedrock / Vertex / LLM-gateway IDs; no effort/thinking
+      surface changes. 2.1.266 is a hotfix restoring gateway/proxy
+      behavior when the undocumented `CLAUDE_CODE_USE_GATEWAY` env var
+      is set alongside an API key or `apiKeyHelper`; no effort/thinking
+      surface changes. 2.1.267 adds a `maxEffortLevel` setting
+      (top-level or per model under `modelSettings`) that CAPS the
+      effort level on every provider — including Bedrock, Vertex, and
+      Foundry — while still letting users pick any LOWER level; also
+      fixes `effort:` frontmatter on custom commands, skills, and
+      subagents being ignored on models whose default effort is still
+      pinned (Opus 4.7, Opus 4.8, Fable 5). Claude Code 2.1.269 adds
+      `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise
+      the Workflow tool's per-run concurrent agent limit; no
+      effort/thinking surface changes. The `/effort` vocabulary itself
+      is unchanged.
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
       `reasoning_effort` knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
@@ -3973,7 +4004,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       (Opus 4.6, Sonnet 4.6), `max` is their Extra-High top and maps
       to `XHigh`, not `Max`. Extended thinking disabled (Option+T /
       Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
-      false) → `Off`; Fable 5 and Fable 5.1 cannot map to `Off`.
+      false) → `Off`.
     - OpenAI `reasoning_effort`: `minimal` → `Off`; `low` → `Low`;
       `medium` → `Medium`; `high` → `High`; `xhigh` / `extra-high`
       (the top "Extra High" tier, model-dependent — the UI synonym
@@ -4025,7 +4056,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       dynamic workflow size to medium (aim for fewer than 15 agents),
       selectable via `/config` including an unrestricted option, and
       the `workflowSizeGuideline` settings key can set it from any
-      settings file (hiding the `/config` row when set there).
+      settings file (hiding the `/config` row when set there). Claude
+      Code 2.1.269 further adds `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS`
+      (1–256) to raise the Workflow tool's per-run concurrent agent
+      limit for inference-bound fan-outs; this raises a per-run cap and
+      does not change the `/effort` vocabulary or the ORCHESTRATION
+      mapping here.
     - `ultrathink` is a PER-TURN prompt keyword: include it anywhere in a
       single prompt for deeper reasoning on that turn only; it does NOT
       change the session effort level and does NOT orchestrate workflows.
@@ -4087,8 +4123,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       `THINKING: Off` only when the task genuinely wants extended
       thinking suppressed — a `speed` PRIMARY, or a trivial bounded edit
       where the latency of thinking is not worth it — and pair it with
-      the surface's floor EFFORT. Fable 5 and Fable 5.1 cannot disable
-      extended thinking, so never emit `THINKING: Off` for them.
+      the surface's floor EFFORT.
     - Chosen access method's `exposes-thinking` attribute is `no` →
       OMIT both the EFFORT and THINKING lines entirely, overriding the
       above. Do not emit `N/A`; a dial the surface lacks has no line.
@@ -4815,7 +4850,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="claude-opus-5,opus-4.8,claude-fable-5.1,claude-fable-5,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="yes"
-            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context; as of 2.1.219 Claude Opus 5 ships as the new default Opus (1M context, fast mode at $10/$50 per Mtok) and Opus 4.7 is removed from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.220–2.1.267 are bug-fix / reliability / self-hosted-runner / UI-polish / plugin-safety releases with no effort/thinking surface changes beyond the 2.1.267 `maxEffortLevel` cap noted below (2.1.224 adds `claude self-hosted-runner` for turning your own machines into places where Claude Code web/mobile/desktop sessions can run, cross-session `SendMessage`, and archive-plugin sources; 2.1.225 adds gateway spend-limit reporting to the usage warning; 2.1.227 polishes the slash-command menu and fixes feature-flag evaluation for expired login tokens; 2.1.257 ships Claude Fable 5.1 as the new default Fable at 1M context and $10/$50 per Mtok; 2.1.259 adds `managedMcpServers` policy and `--permission-prompts none` for unattended headless hosts; 2.1.260 adds an inline `/diff` panel and a headless text form of `/advisor`; 2.1.261 adds `/skill-doctor` and `bashOutputMaxChars` / `taskOutputMaxChars` settings; 2.1.263 is a reliability release; 2.1.265 adds a `--plugin-dir` folder-of-plugins mode and tightens plugin path containment; 2.1.266 restores gateway/proxy behavior when `CLAUDE_CODE_USE_GATEWAY` is set alongside an API key or `apiKeyHelper`; 2.1.267 adds a `maxEffortLevel` setting — top-level or per model under `modelSettings` — that CAPS the effort level on every provider including Bedrock, Vertex, and Foundry while still letting users pick any lower level, plus `--system-prompt-snapshot off` for iterating on prompt text and a fix for `effort:` frontmatter on custom commands, skills, and subagents being ignored on models whose default effort is still pinned). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, Fable 5, and Fable 5.1 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one; deployments may set `maxEffortLevel` to cap the maximum reachable level on every provider), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 and Fable 5.1 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\"ultracode\": true`; 2.1.202+ adds a `/config` \"Dynamic workflow size\" advisory guideline, and 2.1.219 defaults it to medium (aim for fewer than 15 agents) with the `workflowSizeGuideline` settings key to set it from any settings file) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized). As of 2.1.200 the default permission mode is `Manual` across the CLI, VS Code, and JetBrains; 2.1.205 adds an auto-mode rule blocking tampering with session transcript files and reserves the `Claude Browser` MCP server name (alongside `Claude Preview`) ahead of the Claude Desktop pane rename; 2.1.210 adds a live elapsed-time counter on long-running tool calls and startup warnings for `Write(path)`/`NotebookEdit(path)`/`Glob(path)` permission rules; 2.1.211 adds the `--forward-subagent-text` flag / `CLAUDE_CODE_FORWARD_SUBAGENT_TEXT` env var to include subagent text and thinking in stream-json output; 2.1.212 adds `/fork` background-session copies, `/subtask` in-session subagent, `/resume` background picker, per-session WebSearch/subagent caps, and long-running MCP auto-backgrounding; 2.1.214 adds the EndConversation tool and Podman/docker daemon-redirect permission prompts; 2.1.215 makes `/verify` and `/code-review` skills explicit-invocation only; 2.1.216 adds a `sandbox.filesystem.disabled` setting to skip filesystem isolation while keeping network egress control; 2.1.218 moves `/code-review` to a background subagent, adds screen-reader deletion announcements in `--ax-screen-reader` mode, `/ultrareview` now supports descriptive arguments, and skills with `context: fork` default to running in the background; 2.1.219 adds the `DirectoryAdded` hook, subagents can spawn nested subagents up to depth 3 by default (opt out via `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1`), `mcp_server_errors` reporting in the headless stream-json init event, and removes Opus 4.7 from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.221 adds a VS Code Focus view (`Ctrl+Alt+F`), a `mode: \"mask\"` sandbox credential option on Linux/WSL, `claude plugin validate` warnings for names Claude Desktop would reject, and a `prompt-audit` subcommand in the `claude-api` skill; 2.1.222 fixes a worktree-isolation escape and hardens auto-mode `SendMessage` classifier evaluation; 2.1.224 adds self-hosted environments (`claude self-hosted-runner`), `archive` plugin sources, cross-session `SendMessage` with `ListAgents`, sandbox credential-masking options, and a `crossSessionInbound` / `dialogExpiry` cross-session-message settings block on Team and Enterprise plans; 2.1.225 adds gateway spend-limit-reached messaging to the usage warning, a `claude agents` workspace-trust prompt, and `SendMessage` starting conversations with named Remote Control sessions on other machines; 2.1.227 polishes the slash-command menu (only the selected row is highlighted, matched characters are bolded), fixes feature-flag evaluation with expired login tokens so Max users are no longer wrongly prompted to enable Fable usage credits, and improves performance of file-not-found suggestions and at-mention size checks; 2.1.257 ships Claude Fable 5.1 as the new default Fable (1M context, $10/$50 per Mtok, $0.25/Mtok cache reads) and adds `timeFormat` / `timeZone` settings, a Containment Escape auto-mode rule, `CLAUDE_CODE_SUBAGENT_MODEL_FORCE`, and a one-time prompt before the first file read outside the working directories; 2.1.258 hotfixes a launch crash on macOS 12; 2.1.259 adds `managedMcpServers` policy for org-provided HTTP/SSE MCP servers, `--permission-prompts none` for unattended headless hosts, GitLab MR recognition in the collapsed tool summary, and `--json` for `claude plugin validate`; 2.1.260 adds an inline `/diff` panel that opens beside the conversation in fullscreen mode, prompt-cache-miss diagnostics in `/cost` and the status line, `/reload-plugins` in headless sessions, and a text form of `/advisor` (`/advisor`, `/advisor <model>`, `/advisor off`) for headless Desktop, Remote Control, and SDK sessions; 2.1.261 adds an \"Organization policy\" line to `/status` and `claude doctor`, `bashOutputMaxChars` and `taskOutputMaxChars` settings to raise inline command/background-task output up to 128K characters, `--append-subagent-system-prompt-file` to read the subagent system prompt from a file, and `/skill-doctor` to show which loaded skills go unused and what they cost in context; 2.1.263 is a bug-fix / reliability release with no surface-parameter changes; 2.1.265 adds a `--plugin-dir` folder-of-plugins mode (children with a manifest are loaded, additions/removals picked up while running), caps tool results saved to disk at 1 GB, and tightens plugin path containment on macOS/Linux; 2.1.266 is a hotfix restoring gateway/proxy behavior for setups that set the undocumented `CLAUDE_CODE_USE_GATEWAY` env var alongside an API key, `apiKeyHelper`, or custom auth headers (the variable on its own is ignored again); 2.1.267 adds a `maxEffortLevel` setting (top-level or per model under `modelSettings`) that caps the effort level on every provider — including Bedrock, Vertex, and Foundry — while still letting users pick any lower level, plus `--system-prompt-snapshot off` to render the system prompt fresh on every request and a fix for `effort:` frontmatter on custom commands, skills, and subagents being ignored on models whose default effort is still pinned (Opus 4.7, Opus 4.8, Fable 5)." />
+            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context; as of 2.1.219 Claude Opus 5 ships as the new default Opus (1M context, fast mode at $10/$50 per Mtok) and Opus 4.7 is removed from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.220–2.1.269 are bug-fix / reliability / self-hosted-runner / UI-polish / plugin-safety releases with no effort/thinking surface changes beyond the 2.1.267 `maxEffortLevel` cap and the 2.1.269 `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) knob for the Workflow tool's per-run concurrent-agent limit noted below (2.1.224 adds `claude self-hosted-runner` for turning your own machines into places where Claude Code web/mobile/desktop sessions can run, cross-session `SendMessage`, and archive-plugin sources; 2.1.225 adds gateway spend-limit reporting to the usage warning; 2.1.227 polishes the slash-command menu and fixes feature-flag evaluation for expired login tokens; 2.1.257 ships Claude Fable 5.1 as the new default Fable at 1M context and $10/$50 per Mtok; 2.1.259 adds `managedMcpServers` policy and `--permission-prompts none` for unattended headless hosts; 2.1.260 adds an inline `/diff` panel and a headless text form of `/advisor`; 2.1.261 adds `/skill-doctor` and `bashOutputMaxChars` / `taskOutputMaxChars` settings; 2.1.263 is a reliability release; 2.1.265 adds a `--plugin-dir` folder-of-plugins mode and tightens plugin path containment; 2.1.266 restores gateway/proxy behavior when `CLAUDE_CODE_USE_GATEWAY` is set alongside an API key or `apiKeyHelper`; 2.1.267 adds a `maxEffortLevel` setting — top-level or per model under `modelSettings` — that CAPS the effort level on every provider including Bedrock, Vertex, and Foundry while still letting users pick any lower level, plus `--system-prompt-snapshot off` for iterating on prompt text and a fix for `effort:` frontmatter on custom commands, skills, and subagents being ignored on models whose default effort is still pinned; 2.1.269 adds `claude plugin eval` for scored plugin eval suites, `/output-style [name]` to list and switch output styles (including over Remote Control and in headless sessions), a Bash-tool file-edit diff (setting `bashEditDiffEnabled`), `OTEL_METRICS_INCLUDE_REPOSITORY` for tagging OpenTelemetry metrics and events with `vcs.*` attributes, `CLAUDE_CODE_GATEWAY_MODEL_DISCOVERY_TIMEOUT_MS` to extend the LLM gateway `/v1/models` discovery timeout, and `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise the Workflow tool's per-run concurrent-agent limit for inference-bound fan-outs — none of which change the `/effort` vocabulary). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, Fable 5, and Fable 5.1 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one; deployments may set `maxEffortLevel` to cap the maximum reachable level on every provider), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls, plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\"ultracode\": true`; 2.1.202+ adds a `/config` \"Dynamic workflow size\" advisory guideline, 2.1.219 defaults it to medium (aim for fewer than 15 agents) with the `workflowSizeGuideline` settings key to set it from any settings file, and 2.1.269 adds `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise the per-run concurrent-agent cap for the Workflow tool) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized)." />
     <method id="claude-web" name="claude.ai web / desktop"
             provider="anthropic" billing="subscription-included"
             provider-jurisdiction="us"
@@ -5541,32 +5576,35 @@ as primary; the other becomes the secondary category for tie-breaking.
       below it. Default effort is `high` on every model that supports
       effort (Opus 4.7's default is `xhigh`). Extended thinking can
       also be toggled with Option+T / Alt+T, `alwaysThinkingEnabled`,
-      or `MAX_THINKING_TOKENS=0` (Fable 5 and Fable 5.1 cannot disable
-      extended thinking). Claude Code 2.1.257 ships Claude Fable 5.1
-      as the new default Fable model (1M context, $10/$50 per Mtok
-      with $0.25/Mtok cache reads); 2.1.258 is a hotfix for a launch
-      crash on macOS 12. 2.1.259 adds `managedMcpServers` policy,
-      `--permission-prompts none` for unattended headless hosts, and
-      GitLab MR recognition. 2.1.260 adds an inline `/diff` panel,
-      prompt-cache-miss diagnostics in `/cost`, and a text form of
-      `/advisor` for headless sessions. 2.1.261 adds `/skill-doctor`
-      for skill context accounting, `bashOutputMaxChars` and
-      `taskOutputMaxChars` settings, and organization-policy load
-      diagnostics in `/status`. 2.1.263 is a bug-fix / reliability
-      release with no effort/thinking surface changes. 2.1.265 adds a
-      `--plugin-dir` folder-of-plugins mode, tightens plugin path
-      containment, and improves `/model` picker labels for Bedrock /
-      Vertex / LLM-gateway IDs; no effort/thinking surface changes.
-      2.1.266 is a hotfix restoring gateway/proxy behavior when the
-      undocumented `CLAUDE_CODE_USE_GATEWAY` env var is set alongside an
-      API key or `apiKeyHelper`; no effort/thinking surface changes.
-      2.1.267 adds a `maxEffortLevel` setting (top-level or per model
-      under `modelSettings`) that CAPS the effort level on every
-      provider — including Bedrock, Vertex, and Foundry — while still
-      letting users pick any LOWER level; also fixes `effort:`
-      frontmatter on custom commands, skills, and subagents being
-      ignored on models whose default effort is still pinned (Opus 4.7,
-      Opus 4.8, Fable 5). The `/effort` vocabulary itself is unchanged.
+      or `MAX_THINKING_TOKENS=0`. Claude Code 2.1.257 ships Claude
+      Fable 5.1 as the new default Fable model (1M context, $10/$50
+      per Mtok with $0.25/Mtok cache reads); 2.1.258 is a hotfix for
+      a launch crash on macOS 12. 2.1.259 adds `managedMcpServers`
+      policy, `--permission-prompts none` for unattended headless
+      hosts, and GitLab MR recognition. 2.1.260 adds an inline
+      `/diff` panel, prompt-cache-miss diagnostics in `/cost`, and a
+      text form of `/advisor` for headless sessions. 2.1.261 adds
+      `/skill-doctor` for skill context accounting,
+      `bashOutputMaxChars` and `taskOutputMaxChars` settings, and
+      organization-policy load diagnostics in `/status`. 2.1.263 is a
+      bug-fix / reliability release with no effort/thinking surface
+      changes. 2.1.265 adds a `--plugin-dir` folder-of-plugins mode,
+      tightens plugin path containment, and improves `/model` picker
+      labels for Bedrock / Vertex / LLM-gateway IDs; no effort/thinking
+      surface changes. 2.1.266 is a hotfix restoring gateway/proxy
+      behavior when the undocumented `CLAUDE_CODE_USE_GATEWAY` env var
+      is set alongside an API key or `apiKeyHelper`; no effort/thinking
+      surface changes. 2.1.267 adds a `maxEffortLevel` setting
+      (top-level or per model under `modelSettings`) that CAPS the
+      effort level on every provider — including Bedrock, Vertex, and
+      Foundry — while still letting users pick any LOWER level; also
+      fixes `effort:` frontmatter on custom commands, skills, and
+      subagents being ignored on models whose default effort is still
+      pinned (Opus 4.7, Opus 4.8, Fable 5). Claude Code 2.1.269 adds
+      `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise
+      the Workflow tool's per-run concurrent agent limit; no
+      effort/thinking surface changes. The `/effort` vocabulary itself
+      is unchanged.
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
       `reasoning_effort` knob — `minimal`, `low`, `medium`, `high`,
       `xhigh` (the top "Extra High" tier; model-dependent). Higher
@@ -5648,7 +5686,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       (Opus 4.6, Sonnet 4.6), `max` is their Extra-High top and maps
       to `XHigh`, not `Max`. Extended thinking disabled (Option+T /
       Alt+T, `MAX_THINKING_TOKENS=0`, or `alwaysThinkingEnabled`
-      false) → `Off`; Fable 5 and Fable 5.1 cannot map to `Off`.
+      false) → `Off`.
     - OpenAI `reasoning_effort`: `minimal` → `Off`; `low` → `Low`;
       `medium` → `Medium`; `high` → `High`; `xhigh` / `extra-high`
       (the top "Extra High" tier, model-dependent — the UI synonym
@@ -5700,7 +5738,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       dynamic workflow size to medium (aim for fewer than 15 agents),
       selectable via `/config` including an unrestricted option, and
       the `workflowSizeGuideline` settings key can set it from any
-      settings file (hiding the `/config` row when set there).
+      settings file (hiding the `/config` row when set there). Claude
+      Code 2.1.269 further adds `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS`
+      (1–256) to raise the Workflow tool's per-run concurrent agent
+      limit for inference-bound fan-outs; this raises a per-run cap and
+      does not change the `/effort` vocabulary or the ORCHESTRATION
+      mapping here.
     - `ultrathink` is a PER-TURN prompt keyword: include it anywhere in a
       single prompt for deeper reasoning on that turn only; it does NOT
       change the session effort level and does NOT orchestrate workflows.
@@ -5762,8 +5805,7 @@ as primary; the other becomes the secondary category for tie-breaking.
       `THINKING: Off` only when the task genuinely wants extended
       thinking suppressed — a `speed` PRIMARY, or a trivial bounded edit
       where the latency of thinking is not worth it — and pair it with
-      the surface's floor EFFORT. Fable 5 and Fable 5.1 cannot disable
-      extended thinking, so never emit `THINKING: Off` for them.
+      the surface's floor EFFORT.
     - Chosen access method's `exposes-thinking` attribute is `no` →
       OMIT both the EFFORT and THINKING lines entirely, overriding the
       above. Do not emit `N/A`; a dial the surface lacks has no line.
@@ -6490,7 +6532,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="claude-opus-5,opus-4.8,claude-fable-5.1,claude-fable-5,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="yes"
-            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context; as of 2.1.219 Claude Opus 5 ships as the new default Opus (1M context, fast mode at $10/$50 per Mtok) and Opus 4.7 is removed from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.220–2.1.267 are bug-fix / reliability / self-hosted-runner / UI-polish / plugin-safety releases with no effort/thinking surface changes beyond the 2.1.267 `maxEffortLevel` cap noted below (2.1.224 adds `claude self-hosted-runner` for turning your own machines into places where Claude Code web/mobile/desktop sessions can run, cross-session `SendMessage`, and archive-plugin sources; 2.1.225 adds gateway spend-limit reporting to the usage warning; 2.1.227 polishes the slash-command menu and fixes feature-flag evaluation for expired login tokens; 2.1.257 ships Claude Fable 5.1 as the new default Fable at 1M context and $10/$50 per Mtok; 2.1.259 adds `managedMcpServers` policy and `--permission-prompts none` for unattended headless hosts; 2.1.260 adds an inline `/diff` panel and a headless text form of `/advisor`; 2.1.261 adds `/skill-doctor` and `bashOutputMaxChars` / `taskOutputMaxChars` settings; 2.1.263 is a reliability release; 2.1.265 adds a `--plugin-dir` folder-of-plugins mode and tightens plugin path containment; 2.1.266 restores gateway/proxy behavior when `CLAUDE_CODE_USE_GATEWAY` is set alongside an API key or `apiKeyHelper`; 2.1.267 adds a `maxEffortLevel` setting — top-level or per model under `modelSettings` — that CAPS the effort level on every provider including Bedrock, Vertex, and Foundry while still letting users pick any lower level, plus `--system-prompt-snapshot off` for iterating on prompt text and a fix for `effort:` frontmatter on custom commands, skills, and subagents being ignored on models whose default effort is still pinned). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, Fable 5, and Fable 5.1 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one; deployments may set `maxEffortLevel` to cap the maximum reachable level on every provider), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls (Fable 5 and Fable 5.1 cannot disable extended thinking), plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\"ultracode\": true`; 2.1.202+ adds a `/config` \"Dynamic workflow size\" advisory guideline, and 2.1.219 defaults it to medium (aim for fewer than 15 agents) with the `workflowSizeGuideline` settings key to set it from any settings file) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized). As of 2.1.200 the default permission mode is `Manual` across the CLI, VS Code, and JetBrains; 2.1.205 adds an auto-mode rule blocking tampering with session transcript files and reserves the `Claude Browser` MCP server name (alongside `Claude Preview`) ahead of the Claude Desktop pane rename; 2.1.210 adds a live elapsed-time counter on long-running tool calls and startup warnings for `Write(path)`/`NotebookEdit(path)`/`Glob(path)` permission rules; 2.1.211 adds the `--forward-subagent-text` flag / `CLAUDE_CODE_FORWARD_SUBAGENT_TEXT` env var to include subagent text and thinking in stream-json output; 2.1.212 adds `/fork` background-session copies, `/subtask` in-session subagent, `/resume` background picker, per-session WebSearch/subagent caps, and long-running MCP auto-backgrounding; 2.1.214 adds the EndConversation tool and Podman/docker daemon-redirect permission prompts; 2.1.215 makes `/verify` and `/code-review` skills explicit-invocation only; 2.1.216 adds a `sandbox.filesystem.disabled` setting to skip filesystem isolation while keeping network egress control; 2.1.218 moves `/code-review` to a background subagent, adds screen-reader deletion announcements in `--ax-screen-reader` mode, `/ultrareview` now supports descriptive arguments, and skills with `context: fork` default to running in the background; 2.1.219 adds the `DirectoryAdded` hook, subagents can spawn nested subagents up to depth 3 by default (opt out via `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1`), `mcp_server_errors` reporting in the headless stream-json init event, and removes Opus 4.7 from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.221 adds a VS Code Focus view (`Ctrl+Alt+F`), a `mode: \"mask\"` sandbox credential option on Linux/WSL, `claude plugin validate` warnings for names Claude Desktop would reject, and a `prompt-audit` subcommand in the `claude-api` skill; 2.1.222 fixes a worktree-isolation escape and hardens auto-mode `SendMessage` classifier evaluation; 2.1.224 adds self-hosted environments (`claude self-hosted-runner`), `archive` plugin sources, cross-session `SendMessage` with `ListAgents`, sandbox credential-masking options, and a `crossSessionInbound` / `dialogExpiry` cross-session-message settings block on Team and Enterprise plans; 2.1.225 adds gateway spend-limit-reached messaging to the usage warning, a `claude agents` workspace-trust prompt, and `SendMessage` starting conversations with named Remote Control sessions on other machines; 2.1.227 polishes the slash-command menu (only the selected row is highlighted, matched characters are bolded), fixes feature-flag evaluation with expired login tokens so Max users are no longer wrongly prompted to enable Fable usage credits, and improves performance of file-not-found suggestions and at-mention size checks; 2.1.257 ships Claude Fable 5.1 as the new default Fable (1M context, $10/$50 per Mtok, $0.25/Mtok cache reads) and adds `timeFormat` / `timeZone` settings, a Containment Escape auto-mode rule, `CLAUDE_CODE_SUBAGENT_MODEL_FORCE`, and a one-time prompt before the first file read outside the working directories; 2.1.258 hotfixes a launch crash on macOS 12; 2.1.259 adds `managedMcpServers` policy for org-provided HTTP/SSE MCP servers, `--permission-prompts none` for unattended headless hosts, GitLab MR recognition in the collapsed tool summary, and `--json` for `claude plugin validate`; 2.1.260 adds an inline `/diff` panel that opens beside the conversation in fullscreen mode, prompt-cache-miss diagnostics in `/cost` and the status line, `/reload-plugins` in headless sessions, and a text form of `/advisor` (`/advisor`, `/advisor <model>`, `/advisor off`) for headless Desktop, Remote Control, and SDK sessions; 2.1.261 adds an \"Organization policy\" line to `/status` and `claude doctor`, `bashOutputMaxChars` and `taskOutputMaxChars` settings to raise inline command/background-task output up to 128K characters, `--append-subagent-system-prompt-file` to read the subagent system prompt from a file, and `/skill-doctor` to show which loaded skills go unused and what they cost in context; 2.1.263 is a bug-fix / reliability release with no surface-parameter changes; 2.1.265 adds a `--plugin-dir` folder-of-plugins mode (children with a manifest are loaded, additions/removals picked up while running), caps tool results saved to disk at 1 GB, and tightens plugin path containment on macOS/Linux; 2.1.266 is a hotfix restoring gateway/proxy behavior for setups that set the undocumented `CLAUDE_CODE_USE_GATEWAY` env var alongside an API key, `apiKeyHelper`, or custom auth headers (the variable on its own is ignored again); 2.1.267 adds a `maxEffortLevel` setting (top-level or per model under `modelSettings`) that caps the effort level on every provider — including Bedrock, Vertex, and Foundry — while still letting users pick any lower level, plus `--system-prompt-snapshot off` to render the system prompt fresh on every request and a fix for `effort:` frontmatter on custom commands, skills, and subagents being ignored on models whose default effort is still pinned (Opus 4.7, Opus 4.8, Fable 5)." />
+            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context; as of 2.1.219 Claude Opus 5 ships as the new default Opus (1M context, fast mode at $10/$50 per Mtok) and Opus 4.7 is removed from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.220–2.1.269 are bug-fix / reliability / self-hosted-runner / UI-polish / plugin-safety releases with no effort/thinking surface changes beyond the 2.1.267 `maxEffortLevel` cap and the 2.1.269 `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) knob for the Workflow tool's per-run concurrent-agent limit noted below (2.1.224 adds `claude self-hosted-runner` for turning your own machines into places where Claude Code web/mobile/desktop sessions can run, cross-session `SendMessage`, and archive-plugin sources; 2.1.225 adds gateway spend-limit reporting to the usage warning; 2.1.227 polishes the slash-command menu and fixes feature-flag evaluation for expired login tokens; 2.1.257 ships Claude Fable 5.1 as the new default Fable at 1M context and $10/$50 per Mtok; 2.1.259 adds `managedMcpServers` policy and `--permission-prompts none` for unattended headless hosts; 2.1.260 adds an inline `/diff` panel and a headless text form of `/advisor`; 2.1.261 adds `/skill-doctor` and `bashOutputMaxChars` / `taskOutputMaxChars` settings; 2.1.263 is a reliability release; 2.1.265 adds a `--plugin-dir` folder-of-plugins mode and tightens plugin path containment; 2.1.266 restores gateway/proxy behavior when `CLAUDE_CODE_USE_GATEWAY` is set alongside an API key or `apiKeyHelper`; 2.1.267 adds a `maxEffortLevel` setting — top-level or per model under `modelSettings` — that CAPS the effort level on every provider including Bedrock, Vertex, and Foundry while still letting users pick any lower level, plus `--system-prompt-snapshot off` for iterating on prompt text and a fix for `effort:` frontmatter on custom commands, skills, and subagents being ignored on models whose default effort is still pinned; 2.1.269 adds `claude plugin eval` for scored plugin eval suites, `/output-style [name]` to list and switch output styles (including over Remote Control and in headless sessions), a Bash-tool file-edit diff (setting `bashEditDiffEnabled`), `OTEL_METRICS_INCLUDE_REPOSITORY` for tagging OpenTelemetry metrics and events with `vcs.*` attributes, `CLAUDE_CODE_GATEWAY_MODEL_DISCOVERY_TIMEOUT_MS` to extend the LLM gateway `/v1/models` discovery timeout, and `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise the Workflow tool's per-run concurrent-agent limit for inference-bound fan-outs — none of which change the `/effort` vocabulary). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 5, Opus 4.7, Opus 4.8, Sonnet 5, Fable 5, and Fable 5.1 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one; deployments may set `maxEffortLevel` to cap the maximum reachable level on every provider), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls, plus Ultracode (session-wide xhigh + Dynamic Workflows via `/effort ultracode` or `\"ultracode\": true`; 2.1.202+ adds a `/config` \"Dynamic workflow size\" advisory guideline, 2.1.219 defaults it to medium (aim for fewer than 15 agents) with the `workflowSizeGuideline` settings key to set it from any settings file, and 2.1.269 adds `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise the per-run concurrent-agent cap for the Workflow tool) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized)." />
     <method id="claude-web" name="claude.ai web / desktop"
             provider="anthropic" billing="subscription-included"
             provider-jurisdiction="us"
