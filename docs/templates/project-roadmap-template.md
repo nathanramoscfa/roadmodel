@@ -29,6 +29,16 @@ STYLE RULES (the AI MUST follow)
     project touching user data, secrets, PII, credentials, or
     auth. Only omit it for a throwaway with zero sensitive
     surface, and say so explicitly if you do.
+  - §5 "Release & deployment strategy" is MANDATORY for any
+    project with a deployed or published surface (web app,
+    service, registry package, scheduled automation, database).
+    Merged is not deployed and deployed is not released: a
+    phase that touches such a surface names its post-deploy
+    verification in its acceptance criteria.
+  - §5 "Operations & observability strategy" is MANDATORY for
+    any project that runs a service or scheduled automation.
+  - §5 "Worktree strategy" and "Defect handling & triage" are
+    kept whenever the branch strategy is kept.
   - Prefer short, declarative sentences over hedged paragraphs.
   - Never invent numbers; mark unknowns as "TBD".
   - Output the finished document in raw Markdown only.
@@ -160,7 +170,9 @@ have:
   5. Tables, code blocks, or schema dumps where they clarify.
   6. **Acceptance criteria** — bulleted, testable list that
      INCLUDES at least one security check for the surface the
-     phase touches (see §5 "Security & privacy strategy").
+     phase touches (see §5 "Security & privacy strategy") and,
+     when the phase touches a deployed surface, a deployed-and-
+     verified check (see §5 "Release & deployment strategy").
 Phases are ordered so each is independently shippable and the
 dependency graph in §5 is honoured.
 -->
@@ -187,6 +199,11 @@ dependency graph in §5 is honoured.
 - <Testable statement 1>.
 - <Testable statement 2>.
 - <Testable statement 3>.
+- **Deployed & verified** (when the phase touches a deployed
+  surface): <the surface's version/health endpoint reports
+  this phase's build, and the changed behaviour was exercised
+  in the target environment with real authentication — name
+  the endpoint, the request, and the expected result>.
 - **Security:** the §5 security gate ran clean on this
   phase's work — no secrets/PII committed, SAST + dependency
   audit green, and the new/changed surface handles sensitive
@@ -257,7 +274,11 @@ Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 ──▶ Phase 5
 
 - <One bullet per dependency or sequencing rule.>
 - <Note any phase that can be done locally with zero spend.>
-- <Note the cutover phase (the irreversible one).>
+- <Note the cutover phase (the irreversible one) and its
+  readiness-gate sub-step — see "Release & deployment
+  strategy".>
+- <Name any phases that may run in parallel — they are the
+  only concurrency the "Worktree strategy" permits.>
 
 ### Branch management strategy
 
@@ -318,6 +339,11 @@ complete all six stages before declaring the step done.
    up-to-date `main` (e.g. `feature/phase-2-cost-estimator`).
    The branch name comes from the roadmap step's `**Branch:**`
    line, or from the naming convention above for ad-hoc work.
+   When the step runs in its own working tree (one of the
+   three cases in "Worktree strategy" below), the equivalent
+   is `git fetch origin && git worktree add -b <prefix>/<slug>
+   <worktree-path> origin/main`, followed by that worktree's
+   bootstrap.
 
 2. **Work on the branch, and pass the security gate before
    every commit.** All commits land here. Never push to `main`
@@ -345,6 +371,11 @@ complete all six stages before declaring the step done.
    gh pr merge <PR_NUMBER> --squash --delete-branch
    ```
 
+   Merged is not done for a step that touches a deployed
+   surface: complete the post-deploy verification named in the
+   step's acceptance criteria (see "Release & deployment
+   strategy") before Stage 6.
+
 5. **Retire the branch (remote + local).** The
    `--delete-branch` flag and the repo's
    `delete_branch_on_merge: true` setting retire the remote
@@ -359,12 +390,80 @@ complete all six stages before declaring the step done.
      | xargs -r git branch -D
    ```
 
+   If the step ran in its own working tree, remove that
+   worktree FIRST — `git worktree remove <worktree-path>`, then
+   `git worktree prune` — because `git branch -D` refuses to
+   delete a branch that is still checked out in a worktree.
+   Between steps, `git worktree list` shows only the primary
+   tree.
+
 6. **New conversation, next step.** Phase-boundary hygiene:
    close the current Claude Code / Cursor / Codex session and
    open a fresh one before starting the next step. The new
    conversation begins again at Stage 1 with the next step's
    `**Branch:**` line driving the `git checkout -b` command.
    No work straddles two steps.
+
+#### Worktree strategy
+
+<!--
+Keep this subsection whenever the branch strategy is kept. It
+bounds the ONE sanctioned way to have more than one working
+tree, so parallel work cannot quietly bypass the serial step
+lifecycle above.
+-->
+
+The default is one working tree — the primary checkout — and
+one step in flight at a time; the six-stage lifecycle assumes
+it. A second working tree is created only with
+`git worktree add` (never a second clone, which would not
+share branches, hooks, or config), and only in these cases:
+
+| Case                         | Rule                                                                 |
+|------------------------------|----------------------------------------------------------------------|
+| Hotfix interrupting a step   | A Critical/High finding (see "Vulnerability handling") gets its `hotfix/` branch in a worktree cut from `origin/main`. The in-flight step's tree is left untouched — nothing stashed, nothing half-committed. |
+| Declared-independent steps   | Only steps the "Sequencing & dependencies" diagram (or a phase roadmap's Execution Order) draws in parallel. Each gets its own worktree AND its own conversation; each branches from the same `origin/main` and rebases before merge. Undeclared parallelism is a lifecycle violation, not a shortcut. |
+| Subagent isolation in a step | Multi-agent runs inside one step (an agent harness's worktree-isolated subagents) work in throwaway worktrees. Results merge back into the step branch locally; only the step branch opens a PR, and every subagent worktree is removed before Stage 3. |
+
+Rules that apply to every worktree:
+
+1. **Location.** Worktrees live in one recorded place per
+   project: a sibling directory (`../<repo>--<branch-slug>`)
+   or a git-ignored `.worktrees/<branch-slug>/` inside the
+   repo. Agent tooling that creates its own worktrees keeps
+   its own location. Never nest a worktree under a tracked
+   path. This project uses: <sibling | .worktrees/>.
+2. **Bootstrap before use.** A new worktree has NONE of the
+   primary tree's untracked state: dependency directories
+   (virtualenv, `node_modules`), local env files, tool link
+   directories, build caches. Run the project's bootstrap in
+   the worktree — install dependencies into a worktree-local
+   environment, re-pull env files — before any test or build.
+   Never point a worktree at the primary tree's editable
+   install or shared environment: tests in the worktree would
+   silently import the primary tree's source.
+3. **Hooks and config carry over.** `core.hooksPath` and the
+   rest of the repo config are per-repository, so the
+   pre-commit security gate and branch guard run in every
+   worktree without setup. Confirm once per worktree with
+   `git config core.hooksPath`.
+4. **One conversation, one worktree.** Stage 6 still holds:
+   each step (and each hotfix) is its own conversation, and a
+   conversation never touches more than one worktree.
+   Parallel steps run as parallel conversations, never as one
+   conversation switching trees.
+5. **Merge from the primary tree.** Run the Stage 4 merge
+   command from the primary checkout. Inside a linked
+   worktree, `--delete-branch` tries to check out `main`
+   locally and fails (it is checked out in the primary tree);
+   the merge itself still lands, but the local cleanup is
+   left to Stage 5.
+6. **Retire with the branch.** No worktree outlives its PR.
+   Stage 5 removes it (`git worktree remove <path>`, then
+   `git worktree prune`) BEFORE the branch prune, because
+   `git branch -D` refuses a branch that is still checked out
+   in a worktree. Between steps, `git worktree list` shows
+   only the primary tree.
 
 #### Release & tagging
 
@@ -374,6 +473,119 @@ complete all six stages before declaring the step done.
 | `v0.20.0-phase-2`       | <Phase 2 deliverable>                 |
 | …                       | …                                     |
 | `v1.0.0`                | <Production launch>                   |
+
+### Release & deployment strategy
+
+<!--
+MANDATORY for any project with a deployed or published
+surface — a web app, a service, a package on a registry,
+scheduled automation, a database. Skip only for a library
+with no runtime footprint, and say so explicitly if you do.
+The point: the step lifecycle above ends at squash-merge, and
+for a deployed surface the merge is NOT the finish line.
+-->
+
+**Merged is not deployed, and deployed is not released.**
+Three distinct events with three distinct triggers. Name all
+three for every surface this project ships, so no step can
+mistake "the PR merged" for "the change is live".
+
+#### Deployable surfaces
+
+| Surface          | Environments          | Deploy trigger                          | "Released" means                          | Verify with                                  |
+|------------------|-----------------------|-----------------------------------------|-------------------------------------------|----------------------------------------------|
+| <Web app>        | <preview, production> | <merge to `main` auto-deploys>          | <production build serves the commit>      | <version/health endpoint reports the SHA>    |
+| <Service>        | <staging, production> | <redeploy after the package floor bump> | <health endpoint reports the new version> | <authenticated request exercises the change> |
+| <Package / CLI>  | <registry>            | <tagged release workflow>               | <version installable from the registry>   | <fresh install + smoke command>              |
+| <Database>       | <staging, production> | <migration applied by <who/what>>       | <schema version matches the code's>       | <migration status query>                     |
+| <Scheduled jobs> | <production>          | <merge to `main` (workflow file)>       | <next scheduled run succeeds>             | <run log + health alarm green>               |
+
+Fill one row per real surface; delete the rest. A change that
+lands in a surface whose deploy trigger is NOT "merge to
+`main`" needs its own roadmap step (or an explicit sub-step)
+for the release — never assume it happened.
+
+#### Promotion path and cutovers
+
+- Changes move <preview/staging → production>; promotion is
+  gated on CI green plus the phase's verification checks
+  passing against the pre-production environment.
+- **Staged rollout.** When a step spans layers (infrastructure
+  → pipeline → application, or schema → backend → frontend),
+  deploy and verify each layer before starting the next. Never
+  ship all layers in one push: a failure in layer three with
+  layers one and two unverified has no clean rollback.
+- **Readiness gate before an irreversible cutover.** A DNS or
+  domain cut, a data migration with no down path, a key
+  rotation, a public launch: each gets its own explicit
+  readiness-gate sub-step in the roadmap with a checklist
+  (access control, indexing/robots, monitoring in place,
+  rollback rehearsed, attribution and legal), separate from
+  the cutover step itself. Going live is a decision, not a
+  side effect of a merge.
+
+#### Configuration and secrets provisioning
+
+- A step that introduces a required environment variable or
+  secret verifies at step kickoff — before writing code that
+  fails closed without it — that the value exists in EVERY
+  target environment, using the platform's env listing.
+- A shared secret (two systems must hold the same value) is
+  proven by an **authenticated round-trip**: a real request
+  from one system to the other that uses the secret. Listing
+  env names or hitting an unauthenticated health endpoint does
+  not prove the values match.
+- Sensitive values never transit chat or a PR. Hand the
+  operator a command to run, never a value to paste back.
+
+#### Data and schema migrations
+
+- Migrations are part of the deploy path, not the merge path.
+  State who or what applies them to each environment, in what
+  order relative to the code (expand → deploy code → contract),
+  and how each is rolled back.
+- A merged migration that has not been applied to production
+  is a tracked gap, not a done step. Verify with the migration
+  status query in the surfaces table.
+
+#### Post-deploy verification
+
+A step that touches a deployed surface is not done at merge.
+Its acceptance criteria include a check in the target
+environment, and Stage 4 of the step lifecycle runs it:
+
+- The surface's version/health endpoint reports the expected
+  build, and
+- The changed behaviour is exercised end-to-end with real
+  authentication, using a hands-off recipe the roadmap names
+  (minted credentials, a rate-limit bypass token, a service
+  probe) rather than an ad-hoc manual click-through.
+
+Where a PR that references an issue auto-closes it on merge,
+verification is what earns the close: if a gap remains after
+the environment check, reopen the issue or open a follow-up.
+
+#### Rollback
+
+| Surface     | Rollback                                     | Time to execute |
+|-------------|----------------------------------------------|-----------------|
+| <Web app>   | <promote the previous deployment>            | <minutes>       |
+| <Service>   | <pin the previous package version, redeploy> | <minutes>       |
+| <Package>   | <yank + release a patch; consumers pin>      | <TBD>           |
+| <Database>  | <down-migration or restore from snapshot>    | <TBD>           |
+
+Every deploy has a named rollback the operator can run in
+minutes; the PR body's "rollback plan" field (PR rule 2)
+names which one. Reversible cutovers ship behind a switch (a
+feature flag or environment variable) so rollback is a config
+change, not a redeploy.
+
+#### Versioning
+
+Releases are tagged per the "Release & tagging" table above.
+A consumer that pins a produced package declares a minimum
+version floor and bumps it in its own step when a change must
+reach it — the bump is the deploy trigger, not the merge.
 
 ### Security & privacy strategy
 
@@ -408,7 +620,8 @@ delete rows that do not apply.
 <Name the assets worth protecting (the data classes above),
 the trust boundaries from §3, the realistic adversaries
 (external attacker, malicious insider, a compromised
-dependency, a leaked coding-agent transcript), and the top
+dependency or CI action, a leaked coding-agent transcript),
+and the top
 3-5 abuse cases the design must resist. Keep it to a
 paragraph plus the risk rows below.>
 
@@ -449,6 +662,15 @@ Rules for the gate:
 4. **Owned by acceptance criteria.** Every phase's Acceptance
    criteria names the concrete security check for its surface;
    the phase is not "done" until the gate is green on its work.
+5. **The pipeline is a trust boundary.** The gate is only as
+   strong as the CI that mirrors it. Pin third-party actions
+   to a commit SHA, grant each workflow the minimum
+   `permissions:`, never expose secrets to workflows triggered
+   by untrusted pull requests, put deploy and publish jobs
+   behind a protected environment, and prefer short-lived
+   OIDC credentials over stored long-lived tokens. A change to
+   a workflow file is a security-relevant diff and gets the
+   sensitive-data review.
 
 #### Security controls by layer
 
@@ -464,6 +686,7 @@ gate above. -->
 | Secrets             | <Manager (Vault/cloud KMS/keychain); never in source/env>    |
 | Network / edge      | <WAF, rate limits, allow-lists, private networking>          |
 | Dependencies        | <Pinned + audited; automated update + audit cadence>         |
+| CI/CD pipeline      | <SHA-pinned actions; least-privilege permissions; OIDC publish; protected environments; no secrets on untrusted triggers> |
 | Logging / audit     | <No PII/secrets in logs; tamper-evident audit trail>         |
 | Incident response   | <Rotation runbook, disclosure path, on-call owner>           |
 
@@ -476,6 +699,113 @@ Critical/High are fixed on a `hotfix/` or `fix/` branch before
 new feature work continues; Medium/Low are tracked as issues
 with an owner and a due date. Never silence a finding without a
 recorded justification.
+
+### Defect handling & triage
+
+<!--
+Keep this section. It generalises the discover → triage →
+track → fix → verify loop from "Vulnerability handling" to
+every finding a step surfaces, and it is what keeps PR rule 1
+("one PR per step") true under pressure.
+-->
+
+Executing a step surfaces findings that are not the step: a
+failing adjacent test, a wrong assumption in the step's own
+spec, a gap an earlier step left, a product question, a lesson
+about the process. Every finding is classified before it is
+acted on, and each class has exactly one destination. Never
+conflate classes in a single fix.
+
+| Class                  | Definition                                                                                   | Destination                                                                                                            |
+|------------------------|----------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------|
+| Spec rot               | The step's own prompt or spec was wrong (wrong API, wrong threshold, a prerequisite claimed but never done) | Edit the step's `<task>` block in the phase roadmap now, before the next conversation.                                  |
+| Upstream gap           | An earlier step missed something that belonged to it                                         | Patch the earlier step's prompt so a re-run does not repeat it; add it to the phase's carry-over checklist.             |
+| Implementation bug     | The code is wrong                                                                            | If it blocks this step's acceptance criteria, fix it in this step. Otherwise open an issue; fix on its own branch in a fresh conversation. |
+| Architectural question | A broader product or design decision was exposed                                             | Open an issue for a future phase. Never fold it into the immediate fix.                                                |
+| Process improvement    | A lesson about how the work is done                                                          | Record it where the next conversation will read it (this roadmap, the project's agent-instructions file). If it is a rule, make it a check. |
+| Security finding       | Any of the four gate checks, or a threat-model abuse case                                    | Jumps the queue by severity — see "Vulnerability handling".                                                            |
+
+Rules:
+
+1. **Scope discipline.** A step's PR contains the step plus
+   only the blocking fixes from the table. Everything else is
+   tracked, not smuggled in. The PR body lists the issues it
+   opened.
+2. **Track before you defer.** A deferred finding exists as an
+   issue with a class label, an owner, and the phase or step
+   that will absorb it, before the current step is declared
+   complete. "We'll remember" is not tracking.
+3. **Verify the close.** A PR that references an issue with a
+   closing keyword closes it on merge — the first such PR
+   wins, even if it fixed only part. Verification in the
+   target environment is what earns the close; reopen or open
+   a follow-up if a gap remains.
+4. **Prevent the class, not the instance.** Every defect that
+   escaped a gate gets a guard in the same or the next step —
+   a test, a lint rule, a CI check, a verify-script check — so
+   the class cannot recur. The phase's QA findings doc records
+   the finding and its guard together.
+
+### Operations & observability strategy
+
+<!--
+MANDATORY for any project that runs a service, scheduled
+automation, or a published package that consumers depend on.
+Skip for a library or CLI with no runtime footprint, and say
+so explicitly if you do. The failure mode this section
+prevents is silent failure: a cron that stopped running, a
+deploy that never happened, a cost that ran unchecked.
+-->
+
+Every runtime surface is observable before it is considered
+live, and every signal has an owner and a response.
+
+#### Health signals
+
+| Surface          | Signal                                       | Checked by                          | Alerts       |
+|------------------|----------------------------------------------|-------------------------------------|--------------|
+| <Service>        | <health endpoint reporting version + status> | <uptime probe + post-deploy check>  | <owner/chan> |
+| <Scheduled jobs> | <last successful run within cadence>         | <health workflow that fails loudly> | <owner/chan> |
+| <Web app>        | <error rate, latency, build status>          | <platform dashboard / alert rule>   | <owner/chan> |
+| <Metered deps>   | <spend ledger vs cap>                        | <daily ledger check + hard cap>     | <owner/chan> |
+
+#### Rules
+
+1. **Version + health on every deployed surface.** The health
+   endpoint reports the running version; post-deploy
+   verification (see "Release & deployment strategy") reads
+   it, and so does the uptime check.
+2. **Scheduled automation has a heartbeat.** A job that runs
+   on a schedule has an alarm that fires when it has NOT
+   succeeded within its cadence. Detection without a consumer
+   is not health: automation that opens PRs or issues has a
+   named merge owner and a staleness policy (the newest
+   supersedes older ones; the rest are closed).
+3. **Metered dependencies have a ledger and a cap.** Any
+   pay-per-use dependency (an AI API, a metered platform
+   feature) records per-call cost to an audit ledger,
+   enforces a hard cap with a kill switch, and shows the
+   worst-case arithmetic in the cost projection above.
+4. **Logs are safe by construction.** No PII or secrets in
+   logs (see "Security controls by layer"); structured fields
+   so an incident can be queried, not grepped.
+5. **Every alert has a runbook.** An alert with no owner or
+   no runbook is noise; delete it or complete it.
+
+#### Runbooks
+
+| Scenario                   | Runbook                                                  |
+|----------------------------|----------------------------------------------------------|
+| <Deploy regressed>         | <rollback per "Release & deployment strategy">           |
+| <Scheduled job silent>     | <check the run log; re-run manually; fix the trigger>    |
+| <Secret leaked / rotated>  | <rotation order + authenticated round-trip to confirm>   |
+| <Upstream dependency down> | <degrade path; user-facing message; retry policy>        |
+
+**Acceptance.** A phase that adds a runtime surface is not
+done until the surface's health signal and its alarm exist
+and have been seen to fire once (or a synthetic failure was
+injected to prove they do). Put that in the phase's
+acceptance criteria.
 
 ### Risks & mitigations
 
