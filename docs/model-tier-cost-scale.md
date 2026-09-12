@@ -59,7 +59,7 @@ table and surface material cost / availability / capability constraints.
 | Claude Opus 4.7 (fast mode) | $30.00 | $37.50      | $3.00      | $150.00 | Very High | Hidden by default; Requires Max Mode on legacy request-based plans; Limited research preview; Up to 1M tokens with extended context at the same per-token rates as shorter context |
 | Claude Opus 4.8             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode on legacy request-based plans; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
 | Claude Opus 5               | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-fast`) requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
-| Claude Sonnet 5             | $3.00  | $3.75       | $0.30      | $15.00  | High      | Launch promotion: $2/M input and $10/M output through August 31, 2026; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens |
+| Claude Sonnet 5             | $2.00  | $2.50       | $0.20      | $10.00  | Medium    | Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens |
 
 
 ### API Pool — Cursor Composer
@@ -85,6 +85,14 @@ table and surface material cost / availability / capability constraints.
 | Gemini 3.6 Flash           | $1.50 | –           | $0.15      | $7.50  | Low    | Hidden by default |
 | Gemini 3.7 Flash           | $0.75 | –           | $0.075     | $3.50  | Low    | Hidden by default |
 | Gemini 3.8 Flash           | $0.75 | –           | $0.075     | $3.50  | Low    | -                 |
+
+
+### API Pool — Meta
+
+
+| Model          | Input | Cache Write | Cache Read | Output | Tier | Notes |
+| -------------- | ----- | ----------- | ---------- | ------ | ---- | ----- |
+| Muse Spark 1.3 | $1.25 | –           | $0.15      | $4.25  | Low  | Requires Max Mode on legacy request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge); Cached input is billed at $0.15 per million tokens with no separate cache-write charge |
 
 
 ### API Pool — OpenAI (GPT)
@@ -130,7 +138,7 @@ table and surface material cost / availability / capability constraints.
 
 ---
 
-<!-- subscription-tiers-reviewed: 2026-08-05 -->
+<!-- subscription-tiers-reviewed: 2026-09-10 -->
 
 ## Subscription Tiers and Access Methods
 
@@ -180,13 +188,13 @@ and adjust the rebuild rules in [`update/prompt.md`](../update/prompt.md).
 
 | Subscription           | Monthly | Annual  | Provider  | Access methods unlocked | Coverage                                                                                                  |
 | ---------------------- | ------- | ------- | --------- | ----------------------- | --------------------------------------------------------------------------------------------------------- |
-| Claude Pro             | $20     | $200    | Anthropic | claude-code, claude-web | Opus 4.7, Sonnet 4.6, and Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE), with roughly 5x the usage of the Free tier. |
+| Claude Pro             | $20     | $200    | Anthropic | claude-code, claude-web | Opus 5, Sonnet 5, Fable 5.1, and Claude 4.5 Haiku on web / desktop and inside Claude Code (CLI + IDE), with roughly 5x the usage of the Free tier. |
 | claude.ai Max ($100)   | $100    | —       | Anthropic | claude-code, claude-web | Same model coverage as Pro at roughly 5x the Pro usage budget; priority access during peak traffic.       |
 | claude.ai Max ($200)   | $200    | —       | Anthropic | claude-code, claude-web | Same model coverage as Pro at roughly 20x the Pro usage budget; highest consumer-tier Claude budget.      |
 | ChatGPT Go             | $8      | —       | OpenAI    | chatgpt-app, codex-cli  | Budget tier with GPT-5.3 Instant unlimited and GPT-5.3 quota, more uploads and image generation than Free; ads still shown; lacks advanced reasoning models, Sora, Codex full access, Agent Mode, and Deep Research. |
-| ChatGPT Plus           | $20     | —       | OpenAI    | chatgpt-app, codex-cli  | GPT-5.5 default model with full feature suite — Deep Research (10 runs/mo), Sora video, Codex, Agent Mode; GPT-5.4 Thinking and GPT-5.4 Mini also available. |
-| ChatGPT Pro ($100)     | $100    | —       | OpenAI    | chatgpt-app, codex-cli  | Same model suite as Pro $200 (GPT-5.5, GPT-5.5 Pro, o1 Pro mode) at 5x Plus usage limits; Codex access included with promotional 10x multiplier through May 31, 2026. |
-| ChatGPT Pro ($200)     | $200    | —       | OpenAI    | chatgpt-app, codex-cli  | Same coverage as Pro $100 with much higher caps (20x Plus limits), 1M-token context window, Sora access, and GPT-5.4 Pro / GPT-5.5 Pro priority. |
+| ChatGPT Plus           | $20     | —       | OpenAI    | chatgpt-app, codex-cli  | GPT-5.6 Sol default model with full feature suite — Deep Research, Sora video, Codex, Agent Mode; GPT-5.6 Terra and GPT-5.6 Luna also available. |
+| ChatGPT Pro ($100)     | $100    | —       | OpenAI    | chatgpt-app, codex-cli  | Same model suite as Pro $200 (GPT-5.6 Sol, GPT-5.5, o1 Pro mode) at 5x Plus usage limits; Codex access included with promotional 10x multiplier through May 31, 2026. |
+| ChatGPT Pro ($200)     | $200    | —       | OpenAI    | chatgpt-app, codex-cli  | Same coverage as Pro $100 with much higher caps (20x Plus limits), 1M-token context window, unlimited Sora video, Operator agent, and priority access to top-tier models. |
 | Google AI Plus         | $4.99   | —       | Google    | gemini-app, gemini-cli  | Entry-paid Google AI tier with 2x higher usage limits than Free in the Gemini app, access to Gemini 3.1 Pro / Nano Banana Pro / Daily Brief / Gemini Omni video generation, 200 Google Flow Credits, and 400 GB of cloud storage (price cut from $7.99 to $4.99 on 2026-06-08; storage doubled from 200 GB to 400 GB). |
 | Google AI Pro          | $19.99  | $199.99 | Google    | gemini-app, gemini-cli  | Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus Deep Research, Nano Banana Pro, Veo 3.1 access, 1,000 monthly AI credits, and 5 TB of Google One storage; includes YouTube Premium Lite; 50% off the first year for new subscribers. |
 | Google AI Ultra ($100) | $99.99  | —       | Google    | gemini-app, gemini-cli  | Developer-focused Ultra tier (May 2026): 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan. |
@@ -218,12 +226,13 @@ appear here.
 | opus-4.8         | $25.00  | Very High    | Very High    | ✓      |
 | claude-opus-5    | $25.00  | Very High    | Very High    | ✓      |
 | claude-fable-5   | $50.00  | Very High    | Very High    | ✓      |
+| claude-fable-5.1 | $50.00  | Very High    | Very High    | ✓      |
 | gpt-5.5          | $30.00  | Very High    | Very High    | ✓      |
-| gpt-5.6-sol      | $20.00  | High         | Very High    | ✗      |
+| gpt-5.6-sol      | $20.00  | High         | High         | ✓      |
 | sonnet-4.6       | $15.00  | High         | High         | ✓      |
 | claude-sonnet-5  | $10.00  | Medium       | Medium       | ✓      |
 | gpt-5.4          | $15.00  | High         | High         | ✓      |
-| gpt-5.6-terra    | $12.00  | Medium       | High         | ✗      |
+| gpt-5.6-terra    | $12.00  | Medium       | Medium       | ✓      |
 | gpt-5.3-codex    | $14.00  | Medium       | Medium       | ✓      |
 | gpt-5.2          | $14.00  | Medium       | Medium       | ✓      |
 | gpt-5.2-codex    | $14.00  | Medium       | Medium       | ✓      |
@@ -235,8 +244,11 @@ appear here.
 | gpt-5.1-codex-max | $10.00 | Medium       | Medium       | ✓      |
 | gemini-3.5-flash | $9.00   | Low          | Low          | ✓      |
 | gemini-3.6-flash | $7.50   | Low          | Low          | ✓      |
+| gemini-3.7-flash | $3.50   | Low          | Low          | ✓      |
+| gemini-3.8-flash | $3.50   | Low          | Low          | ✓      |
 | mistral-medium-3.5 | $7.50 | Low          | Low          | ✓      |
 | grok-4.5         | $6.00   | Low          | Low          | ✓      |
+| grok-4.6         | $6.00   | Low          | Low          | ✓      |
 | gpt-5.6-luna     | $1.20   | Low          | Low          | ✓      |
 | claude-4.5-haiku | $5.00   | Low          | Low          | ✓      |
 | gpt-5.4-mini     | $4.50   | Low          | Low          | ✓      |
@@ -275,48 +287,50 @@ engines.
 ## Recently Added / Updated Models
 
 
-| Model id         | Output | Tier      | Change                                                                                                                     |
-| ---------------- | ------ | --------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Grok 4.6         | $6.00  | Low       | New 2026-09-04 on Cursor's pricing page — Cursor first-party model at $2/$6 (mirrors Grok 4.5 pricing), jointly trained by Cursor and SpaceXAI. Fast variant $4/$12 (Medium tier). Not yet added to `<model-options>` (selector-pass will handle) |
-| Claude Fable 5.1 | $50.00 | Very High | New 2026-09-04 on Cursor's pricing page — Anthropic's Fable 5 successor at $10/$50 (same tier pricing as Fable 5); cache-read reduced 75% to $0.25/M vs Fable 5's $1/M. Not yet added to `<model-options>` (selector-pass will handle) |
-| Gemini 3.7 Flash | $3.50  | Low       | New 2026-09-04 on Cursor's pricing page — Google's Gemini 3.7 Flash at $0.75/$3.50 (Hidden by default). Not yet added to `<model-options>` |
-| Gemini 3.8 Flash | $3.50  | Low       | New 2026-09-04 on Cursor's pricing page — Google's Gemini 3.8 Flash at $0.75/$3.50 (visible, not Hidden by default); supersedes Gemini 3.7 in same series at equal output price. Not yet added to `<model-options>` |
-| gpt-5.6-sol      | $20.00 | High      | Price DROPPED 2026-09-04 on Cursor's pricing page from $5/$30 to $4/$20 (promotional pricing through November 21, 2026); tier moves Very High → High as a result. Notes updated to add long-context clauses and promotional-pricing disclosure |
-| gpt-5.6-terra    | $12.00 | Medium    | Price DROPPED 2026-09-04 on Cursor's pricing page from $2.50/$15 to $2/$12; tier moves High → Medium. Notes updated to add "Requires Max Mode on legacy request-based plans" prefix and long-context clauses |
-| gpt-5.6-luna     | $1.20  | Low       | Price DROPPED 2026-09-04 on Cursor's pricing page from $1/$6 to $0.20/$1.20 (5x cheaper output); Notes updated to add "Requires Max Mode on legacy request-based plans" prefix and long-context clauses; still Low tier |
-| Claude Sonnet 5  | $15.00 | High      | Cursor's page now lists Sonnet 5 at $2/$10 (matching the launch promotion) — per the Federation rule, provider-direct Anthropic prices are owned by `catalog-anthropic.json`, so the $3/$15 cost-scale row is preserved verbatim; a follow-up in the Anthropic snapshot may bring the two into alignment |
-| Grok 4.6 (Fast)  | $12.00 | Medium    | New 2026-09-04 Cursor first-party Fast variant of Grok 4.6                                                                 |
-| Grok 4.5 (Fast)  | $18.00 | High      | New 2026-09-04 Cursor first-party Fast variant of Grok 4.5                                                                 |
+| Model id           | Output | Tier | Change                                                                                                                     |
+| ------------------ | ------ | ---- | -------------------------------------------------------------------------------------------------------------------------- |
+| Muse Spark 1.3     | $4.25  | Low  | New 2026-09-10 on Cursor's pricing page — Meta's Muse Spark 1.3 at $1.25/$4.25 (first Meta-provider entry in the cost scale); requires Max Mode on legacy request-based plans with 1M context available in Max Mode |
+| GPT-5.1 Codex Mini | $2.00  | Low  | New 2026-09-10 on Cursor's pricing page — smaller/cheaper GPT-5.1 Codex variant at $0.25/$2.00 (4x rate limits vs GPT-5.1 Codex, Hidden by default) |
+| Grok 4.6           | $6.00  | Low       | New 2026-09-04 on Cursor's pricing page — Cursor first-party model at $2/$6 (mirrors Grok 4.5 pricing), jointly trained by Cursor and SpaceXAI. Fast variant $4/$12 (Medium tier). Not yet added to `<model-options>` (selector-pass will handle) |
+| Claude Fable 5.1   | $50.00 | Very High | New 2026-09-04 on Cursor's pricing page — Anthropic's Fable 5 successor at $10/$50 (same tier pricing as Fable 5); cache-read reduced 75% to $0.25/M vs Fable 5's $1/M. Not yet added to `<model-options>` (selector-pass will handle) |
+| Gemini 3.7 Flash   | $3.50  | Low       | New 2026-09-04 on Cursor's pricing page — Google's Gemini 3.7 Flash at $0.75/$3.50 (Hidden by default). Not yet added to `<model-options>` |
+| Gemini 3.8 Flash   | $3.50  | Low       | New 2026-09-04 on Cursor's pricing page — Google's Gemini 3.8 Flash at $0.75/$3.50 (visible, not Hidden by default); supersedes Gemini 3.7 in same series at equal output price. Not yet added to `<model-options>` |
+| gpt-5.6-sol        | $20.00 | High      | Price DROPPED 2026-09-04 on Cursor's pricing page from $5/$30 to $4/$20 (promotional pricing through November 21, 2026); tier moves Very High → High as a result. Notes updated to add long-context clauses and promotional-pricing disclosure |
+| gpt-5.6-terra      | $12.00 | Medium    | Price DROPPED 2026-09-04 on Cursor's pricing page from $2.50/$15 to $2/$12; tier moves High → Medium. Notes updated to add "Requires Max Mode on legacy request-based plans" prefix and long-context clauses |
+| gpt-5.6-luna       | $1.20  | Low       | Price DROPPED 2026-09-04 on Cursor's pricing page from $1/$6 to $0.20/$1.20 (5x cheaper output); Notes updated to add "Requires Max Mode on legacy request-based plans" prefix and long-context clauses; still Low tier |
+| Claude Sonnet 5    | $10.00 | Medium    | Corrected 2026-09-12 from $3/$15 (High) to $2/$10 (Medium): Anthropic's own pricing page, mirrored in `catalog-anthropic.json`, lists $2/$10 as the standard rate, so the launch-promotion clause is retired from the Notes column; the selector was corrected in roadmodel 0.2.31 and the cost scale now matches it |
+| Grok 4.6 (Fast)    | $12.00 | Medium    | New 2026-09-04 Cursor first-party Fast variant of Grok 4.6                                                                 |
+| Grok 4.5 (Fast)    | $18.00 | High      | New 2026-09-04 Cursor first-party Fast variant of Grok 4.5                                                                 |
 | Composer 2.5 (Fast) | $15.00 | High   | New 2026-09-04 Cursor first-party Fast variant of Composer 2.5                                                             |
-| Auto (pool rate) | —      | —         | REMOVED 2026-09-04 — Cursor's pricing page no longer lists a separate "Auto" billed line item; the Cursor Models pool now enumerates the covered first-party models (Grok 4.6, Grok 4.5, Composer 2.5) directly, and Auto routing bills at the routed model's list price |
-| Claude Opus 5    | $25.00 | Very High | New 2026-08-05 on Cursor's pricing page — Anthropic's Opus 5 successor at $5/$25 (same tier pricing as Opus 4.7/4.8); requires Max Mode on legacy request-based plans; native 1M context via extended-context toggle |
-| Gemini 3.6 Flash | $7.50  | Low       | New 2026-08-05 on Cursor's pricing page — Google's Gemini 3.6 Flash at $1.50/$7.50. Reportedly released 2026-07-21. Now Hidden by default (was visible on initial listing) |
-| Kimi K3          | $15.00 | High      | New 2026-08-05 on Cursor's pricing page — Moonshot's Kimi K3 at $3/$15 with 1M extended-context support at flat per-token rates |
-| claude-sonnet-5  | $10.00 | Medium    | Price CORRECTED 2026-09-05 to $2/$10 from Anthropic's own pricing page, which is authoritative for Anthropic models per the Federation rule; tier High → Medium. The catalog had carried the aggregator mirror's $3/$15 because update/extract_anthropic_catalog.py had been failing silently since the page restyled its "Base input tokens" header, and claude-sonnet-5 was never in that extractor's name map — so G4 had nothing to reconcile. The July note called $2/$10 a promotion through 2026-08-31; Anthropic lists it as the standard rate today |
-| gpt-5.6-sol      | $30.00 | Very High | Initial listing 2026-07-15 on Cursor's pricing page — OpenAI's GPT-5.6 Sol flagship at $5/$30 (mirrors GPT-5.5 pricing); requires Max Mode on request-based plans |
-| gpt-5.6-terra    | $15.00 | High      | Initial listing 2026-07-15 on Cursor's pricing page — GPT-5.6 Terra mid-tier variant at $2.50/$15                           |
-| gpt-5.6-luna     | $6.00  | Low       | Initial listing 2026-07-15 on Cursor's pricing page — smallest GPT-5.6 variant at $1/$6, optimized for cost and speed       |
-| gpt-5.2-codex    | $14.00 | Medium    | New 2026-07-15 on Cursor's pricing page — Codex variant of GPT-5.2 at $1.75/$14 (same pricing as GPT-5.2, agentic + reasoning) |
-| gpt-5.1-codex-max | $10.00 | Medium   | New 2026-07-15 on Cursor's pricing page — GPT-5.1 Codex Max at $1.25/$10                                                    |
-| kimi-k2.7-code   | $4.00  | Low       | New 2026-07-15 on Cursor's pricing page — Moonshot's Kimi K2.7 Code at $0.95/$4 (supersedes Kimi K2.5 row; K2.5 no longer on Cursor's pricing page) |
-| grok-4.5         | $6.00  | Low       | New 2026-07-15 on Cursor's pricing page — jointly trained by Cursor and SpaceXAI, first-party model; not yet available in the EU |
-| glm-5.2          | $4.40  | Low       | New 2026-06-27 in cost-scale — z.ai's GLM 5.2 now visible on Cursor's pricing page (provider header "Z.ai"); already present in `<model-options>` via provider-direct `zai-api` method, prices preserved per the Federation rule (provider-direct catalog owns input/output) |
-| grok-4.3         | $2.50  | Low       | LEFT Cursor's pricing page 2026-07-15 (Grok 4.5 is Cursor's first-party replacement) but RETAINED in `<model-options>` as provider-direct via the `xai-api` method — still on xAI's own API at $1.25/$2.50; prices owned by `catalog-xai.json` per the Federation rule (xAI is now `overlay_mode: whole-element`, like DeepSeek) |
-| grok-build-0.1   | —      | —         | REMOVED 2026-07-15 from Cursor's pricing page — Grok Build 0.1 no longer listed                                             |
-| composer-2       | —      | —         | REMOVED 2026-07-15 from Cursor's pricing page — Composer 2 removed in favor of Composer 2.5 (2.5 supersedes 2 in Cursor's own listing) |
-| composer-1.5     | —      | —         | REMOVED 2026-07-15 from Cursor's pricing page — Composer 1.5 no longer listed (Composer 1 still visible as legacy)          |
-| gemini-2.5-flash | $2.50  | Low       | New — added 2026-05-21; cheap multimodal Flash model now visible in `<model-options>` for SaaS-backend free-tier picks      |
-| gemini-3-flash   | $3.00  | Low       | New — added 2026-05-21; Gemini 3 generation Flash variant; previously Hidden-by-default on Cursor's pricing page            |
-| gemini-3-pro     | $12.00 | Medium    | New — added 2026-05-21; Gemini 3 generation Pro variant alongside gemini-3.1-pro                                            |
-| gemini-3.5-flash | $9.00  | Low       | New — added 2026-05-24; Gemini 3.5 Flash visible (un-hidden) on Cursor's pricing page; AA Intelligence Index 55.3 (high reasoning) places it as the strongest Flash-tier Gemini |
-| gpt-5            | $10.00 | Medium    | New — added 2026-05-21; baseline GPT-5 family flagship                                                                      |
-| gpt-5-mini       | $2.00  | Low       | New — added 2026-05-21; cheapest GPT-5 family variant ($2.00/M output)                                                      |
-| gpt-5.1-codex    | $10.00 | Medium    | New — added 2026-05-21; earlier-generation Codex variant at $10/M output                                                    |
-| composer-2.5     | $2.50  | Low       | New — added 2026-05-21; Composer 2 successor (same output price, equal-output-price replacement rule)                       |
-| kimi-k2.5        | $3.00  | Low       | New — added 2026-05-21; Moonshot's Kimi K2.5 (routed via Cursor pool; no direct Moonshot access method enumerated yet)      |
-| opus-4.8         | $25.00 | Very High | Benchmarks indexed 2026-06-04 — AA Intelligence Index 61.4 (#1), HLE 45.7%, Terminal-Bench Hard 58.3, τ²-bench retail 94.4%; tier-agentic bumped from A to S based on Terminal-Bench Hard + τ²-bench evidence |
-| auto             | —      | —         | REMOVED 2026-05-21; Cursor-managed routing meta-model. Opaque routing conflicts with per-model tier ratings + jurisdiction filter |
-| premium          | —      | —         | REMOVED 2026-05-21; Cursor-managed routing meta-model. Same rationale as `auto` removal                                     |
+| Auto (pool rate)   | —      | —         | REMOVED 2026-09-04 — Cursor's pricing page no longer lists a separate "Auto" billed line item; the Cursor Models pool now enumerates the covered first-party models (Grok 4.6, Grok 4.5, Composer 2.5) directly, and Auto routing bills at the routed model's list price |
+| Claude Opus 5      | $25.00 | Very High | New 2026-08-05 on Cursor's pricing page — Anthropic's Opus 5 successor at $5/$25 (same tier pricing as Opus 4.7/4.8); requires Max Mode on legacy request-based plans; native 1M context via extended-context toggle |
+| Gemini 3.6 Flash   | $7.50  | Low       | New 2026-08-05 on Cursor's pricing page — Google's Gemini 3.6 Flash at $1.50/$7.50. Reportedly released 2026-07-21. Now Hidden by default (was visible on initial listing) |
+| Kimi K3            | $15.00 | High      | New 2026-08-05 on Cursor's pricing page — Moonshot's Kimi K3 at $3/$15 with 1M extended-context support at flat per-token rates |
+| claude-sonnet-5    | $10.00 | Medium    | Price CORRECTED 2026-09-05 to $2/$10 from Anthropic's own pricing page, which is authoritative for Anthropic models per the Federation rule; tier High → Medium. The catalog had carried the aggregator mirror's $3/$15 because update/extract_anthropic_catalog.py had been failing silently since the page restyled its "Base input tokens" header, and claude-sonnet-5 was never in that extractor's name map — so G4 had nothing to reconcile. The July note called $2/$10 a promotion through 2026-08-31; Anthropic lists it as the standard rate today |
+| gpt-5.6-sol        | $30.00 | Very High | Initial listing 2026-07-15 on Cursor's pricing page — OpenAI's GPT-5.6 Sol flagship at $5/$30 (mirrors GPT-5.5 pricing); requires Max Mode on request-based plans |
+| gpt-5.6-terra      | $15.00 | High      | Initial listing 2026-07-15 on Cursor's pricing page — GPT-5.6 Terra mid-tier variant at $2.50/$15                           |
+| gpt-5.6-luna       | $6.00  | Low       | Initial listing 2026-07-15 on Cursor's pricing page — smallest GPT-5.6 variant at $1/$6, optimized for cost and speed       |
+| gpt-5.2-codex      | $14.00 | Medium    | New 2026-07-15 on Cursor's pricing page — Codex variant of GPT-5.2 at $1.75/$14 (same pricing as GPT-5.2, agentic + reasoning) |
+| gpt-5.1-codex-max  | $10.00 | Medium   | New 2026-07-15 on Cursor's pricing page — GPT-5.1 Codex Max at $1.25/$10                                                    |
+| kimi-k2.7-code     | $4.00  | Low       | New 2026-07-15 on Cursor's pricing page — Moonshot's Kimi K2.7 Code at $0.95/$4 (supersedes Kimi K2.5 row; K2.5 no longer on Cursor's pricing page) |
+| grok-4.5           | $6.00  | Low       | New 2026-07-15 on Cursor's pricing page — jointly trained by Cursor and SpaceXAI, first-party model; not yet available in the EU |
+| glm-5.2            | $4.40  | Low       | New 2026-06-27 in cost-scale — z.ai's GLM 5.2 now visible on Cursor's pricing page (provider header "Z.ai"); already present in `<model-options>` via provider-direct `zai-api` method, prices preserved per the Federation rule (provider-direct catalog owns input/output) |
+| grok-4.3           | $2.50  | Low       | LEFT Cursor's pricing page 2026-07-15 (Grok 4.5 is Cursor's first-party replacement) but RETAINED in `<model-options>` as provider-direct via the `xai-api` method — still on xAI's own API at $1.25/$2.50; prices owned by `catalog-xai.json` per the Federation rule (xAI is now `overlay_mode: whole-element`, like DeepSeek) |
+| grok-build-0.1     | —      | —         | REMOVED 2026-07-15 from Cursor's pricing page — Grok Build 0.1 no longer listed                                             |
+| composer-2         | —      | —         | REMOVED 2026-07-15 from Cursor's pricing page — Composer 2 removed in favor of Composer 2.5 (2.5 supersedes 2 in Cursor's own listing) |
+| composer-1.5       | —      | —         | REMOVED 2026-07-15 from Cursor's pricing page — Composer 1.5 no longer listed (Composer 1 still visible as legacy)          |
+| gemini-2.5-flash   | $2.50  | Low       | New — added 2026-05-21; cheap multimodal Flash model now visible in `<model-options>` for SaaS-backend free-tier picks      |
+| gemini-3-flash     | $3.00  | Low       | New — added 2026-05-21; Gemini 3 generation Flash variant; previously Hidden-by-default on Cursor's pricing page            |
+| gemini-3-pro       | $12.00 | Medium    | New — added 2026-05-21; Gemini 3 generation Pro variant alongside gemini-3.1-pro                                            |
+| gemini-3.5-flash   | $9.00  | Low       | New — added 2026-05-24; Gemini 3.5 Flash visible (un-hidden) on Cursor's pricing page; AA Intelligence Index 55.3 (high reasoning) places it as the strongest Flash-tier Gemini |
+| gpt-5              | $10.00 | Medium    | New — added 2026-05-21; baseline GPT-5 family flagship                                                                      |
+| gpt-5-mini         | $2.00  | Low       | New — added 2026-05-21; cheapest GPT-5 family variant ($2.00/M output)                                                      |
+| gpt-5.1-codex      | $10.00 | Medium    | New — added 2026-05-21; earlier-generation Codex variant at $10/M output                                                    |
+| composer-2.5       | $2.50  | Low       | New — added 2026-05-21; Composer 2 successor (same output price, equal-output-price replacement rule)                       |
+| kimi-k2.5          | $3.00  | Low       | New — added 2026-05-21; Moonshot's Kimi K2.5 (routed via Cursor pool; no direct Moonshot access method enumerated yet)      |
+| opus-4.8           | $25.00 | Very High | Benchmarks indexed 2026-06-04 — AA Intelligence Index 61.4 (#1), HLE 45.7%, Terminal-Bench Hard 58.3, τ²-bench retail 94.4%; tier-agentic bumped from A to S based on Terminal-Bench Hard + τ²-bench evidence |
+| auto               | —      | —         | REMOVED 2026-05-21; Cursor-managed routing meta-model. Opaque routing conflicts with per-model tier ratings + jurisdiction filter |
+| premium            | —      | —         | REMOVED 2026-05-21; Cursor-managed routing meta-model. Same rationale as `auto` removal                                     |
 
 
 ---
@@ -339,6 +353,7 @@ this table.
 | Google (Mountain View, US)    | `us`              | gemini-3.1-pro, gemini-3-pro, gemini-3.5-flash, gemini-3-flash, gemini-2.5-flash                                        |
 | xAI (Palo Alto, US)           | `us`              | grok-4.3                                                                                                                |
 | Cursor (San Francisco, US)    | `us`              | composer-2, composer-2.5 — note: base weights for these Composer models derive from Moonshot's Kimi K2 series; Cursor's operator status determines the jurisdiction code per `<jurisdiction-context>` (data flow governed by Cursor's privacy policy and US law) |
+| Meta (Menlo Park, US)         | `us`              | (Muse Spark 1.3 auto-added to `<model-options>` 2026-09-10 with placeholder B tiers pending editorial review)                                                       |
 | Moonshot AI (Beijing, CN)     | `cn`              | kimi-k2.5                                                                                                               |
 | DeepSeek (Hangzhou, CN)       | `cn`              | deepseek-v4-pro, deepseek-v4-flash                                                                                      |
 | z.ai / Zhipu AI (Beijing, CN) | `cn`              | glm-5.2, glm-4.6, glm-4.5-air                                                                                           |
