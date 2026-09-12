@@ -42,16 +42,21 @@ STYLE RULES (the AI MUST follow)
     self-contained Cursor / Claude Code session.
   - Every step carries: Goal blockquote, Branch line
     (`feature/phaseNN-stepM-<slug>` — see the Overview
-    "Branch strategy", "Branch-first execution rule", and
-    "Step lifecycle" paragraphs; the operator runs
-    `git checkout -b <branch>` BEFORE reading files or editing
-    anything in the step, follows the six-stage lifecycle for
-    the rest of the step, and starts the next step in a fresh
-    conversation), Settings table, Model rationale paragraph,
-    XML <task> prompt (which MUST carry a <security> block
-    alongside its <lifecycle> block — see below), and an
-    Acceptance Criteria bullet list whose FINAL bullet is
-    always a security check. The Settings table is
+    "Branch strategy", "Branch-first execution rule",
+    "Worktree rule", and "Step lifecycle" paragraphs; the
+    operator runs `git checkout -b <branch>` BEFORE reading
+    files or editing anything in the step, follows the
+    six-stage lifecycle for the rest of the step, and starts
+    the next step in a fresh conversation), Deploys line
+    (`**Deploys:**` — the surface and environment the step's
+    merge reaches, or `nothing beyond merge`; see the Overview
+    "Deploy-and-verify rule"), Settings table, Model rationale
+    paragraph, XML <task> prompt (which MUST carry a <security>
+    block alongside its <lifecycle> block — see below), and an
+    Acceptance Criteria bullet list that carries a "Deployed &
+    verified" bullet whenever the Deploys line names a surface
+    and whose FINAL bullet is always a security check. The
+    Settings table is
     PLATFORM-specific so it mirrors the actual surface the
     operator will see. THE GOVERNING RULE: every table
     carries Model / Platform / Conversation, PLUS ONLY the
@@ -99,6 +104,14 @@ STYLE RULES (the AI MUST follow)
     High/Max/Ultracode for the effort level). Never justify
     a dial the table does not carry — no effort level for
     Cursor, no Max Mode for Claude Code or Codex.
+  - Findings surfaced while executing a step are classified
+    per the Overview "Triage rule" before they are acted on;
+    a step's PR contains the step plus blocking fixes only.
+  - A phase that adds or changes a runtime surface (service,
+    scheduled job, deployed app) carries an "Operations &
+    observability surface" in Current State and an operations
+    bullet in the final QA step's acceptance criteria (health
+    signal + alarm exist and have been seen to fire).
   - End the document with a Post-Implementation Verification
     section (V1-Vn check tables), a Summary Table, optional
     Model-selection blocks, and a Not-in-scope section.
@@ -214,6 +227,28 @@ over to the new branch), then continue. AI coding agents executing
 a step from this roadmap must treat the branch checkout as Step 0
 of every step.
 
+**Worktree rule.** One working tree, one step in flight — the
+lifecycle below assumes the primary checkout. A second working
+tree is created only with `git worktree add`, and only for the
+three cases the parent ROADMAP "Worktree strategy" sanctions: a
+`hotfix/` branch interrupting this step (cut from `origin/main` in
+its own worktree so this step's tree is untouched); steps the
+Execution Order below explicitly draws in parallel (each in its
+own worktree AND its own conversation); and worktree-isolated
+subagents inside a step (throwaway trees that merge back into the
+step branch locally and are removed before the PR opens). In those
+cases Stage 1 becomes `git fetch origin && git worktree add -b
+feature/phase{{N}}-step{{M}}-<slug> <worktree-path> origin/main`,
+the worktree is bootstrapped before any test or build (fresh
+dependency install and env files — a worktree has none of the
+primary tree's untracked state, and it must never borrow the
+primary tree's editable install), the Stage 4 merge runs from the
+primary tree, and Stage 5 removes the worktree BEFORE pruning the
+branch. Undeclared parallelism is a lifecycle violation, not a
+shortcut. Worktree location for this project: {{sibling directory
+`../<repo>--<slug>` or git-ignored `.worktrees/<slug>/` — one
+convention per project, matching the parent ROADMAP}}.
+
 **Security-first execution rule.** Security is not a phase — it is
 a gate on every commit of every step. Before each `git commit`,
 the step's work must pass the local, fail-closed security gate:
@@ -235,6 +270,43 @@ client PII or secrets: the operator running a step's prompt must
 not be able to introduce a data-exposure risk that only surfaces
 after merge.
 
+**Deploy-and-verify rule.** Merged is not deployed, and deployed
+is not released. Every step header carries a `**Deploys:**` line
+naming the surface and environment the step's merge reaches — or
+`nothing beyond merge` — and when going live needs a release, a
+version-floor bump, a migration, or a redeploy, the line says so
+and this step (or a named follow-on step) owns that event. For a
+step whose Deploys line names a surface, Stage 4 of the lifecycle
+does not end at the squash-merge: the step's acceptance criteria
+carry a **Deployed & verified** bullet (the surface's
+version/health endpoint reports this build, and the changed
+behaviour is exercised in the target environment with real
+authentication via the hands-off recipe the step names), and that
+bullet must be green before the step is declared complete. A step
+that introduces a required environment variable or shared secret
+verifies at kickoff that it exists in every target environment and
+proves shared values by an authenticated round-trip — never by
+listing env names. See the parent ROADMAP "Release & deployment
+strategy" for the surfaces table, promotion path, staged-rollout
+rule, migrations, and rollback.
+
+**Triage rule.** Findings surfaced while executing a step are
+classified before they are acted on, per the parent ROADMAP
+"Defect handling & triage": spec rot → edit this roadmap's
+affected `<task>` block now; upstream gap → patch the earlier
+step's prompt and add it to the carry-over checklist;
+implementation bug → fix in-step only if it blocks this step's
+acceptance criteria, otherwise an issue and its own branch in a
+fresh conversation; architectural question → an issue for a future
+phase; process improvement → recorded where the next conversation
+will read it; security finding → jumps the queue by severity. A
+step's PR contains the step plus blocking fixes only, and lists the
+issues it opened. When a merged PR auto-closes an issue, the
+environment check is what earns the close — reopen or follow up if
+a gap remains. `docs/phase{{N}}-qa-findings.md` is the rollup:
+every finding, its class, and the guard added so the class cannot
+recur.
+
 **Step lifecycle.** Every step in this phase follows the exact
 same six-stage lifecycle, in order, with no exceptions. Each
 stage is a hard checkpoint — if a stage is skipped, branch
@@ -245,7 +317,10 @@ before declaring a step complete.
 1. **Create the branch.** Before any Read / Edit / Bash, run
    `git checkout -b feature/phase{{N}}-step{{M}}-<slug>` from a
    clean, up-to-date `main`. The exact branch name comes from
-   this step's `**Branch:**` line.
+   this step's `**Branch:**` line. When the Worktree rule
+   applies, the equivalent is `git fetch origin && git worktree
+   add -b <branch> <worktree-path> origin/main`, followed by
+   the worktree's bootstrap.
 
 2. **Work on the branch, passing the security gate before every
    commit.** All commits land here. Never push to `main` directly
@@ -275,6 +350,12 @@ before declaring a step complete.
    gh pr merge <PR_NUMBER> --squash --delete-branch
    ```
 
+   If this step's `**Deploys:**` line names a surface, the merge
+   is not the finish line: run the Deployed & verified check from
+   the acceptance criteria against the target environment now
+   (see the Deploy-and-verify rule) before declaring the step
+   complete.
+
 5. **Retire the branch (remote + local).** The
    `--delete-branch` flag plus the repo's
    `delete_branch_on_merge: true` setting retire the remote
@@ -289,8 +370,13 @@ before declaring a step complete.
      | xargs -r git branch -D
    ```
 
-   Confirm with `git branch -vv` that only `main` and any
-   intentional long-lived branches remain locally.
+   If this step ran in its own worktree, remove it FIRST —
+   `git worktree remove <worktree-path>`, then `git worktree
+   prune` — because `git branch -D` refuses a branch still
+   checked out in a worktree. Confirm with `git branch -vv` that
+   only `main` and any intentional long-lived branches remain
+   locally, and with `git worktree list` that only the primary
+   tree remains.
 
 6. **New conversation, next step.** Phase-boundary hygiene:
    close this Claude Code / Cursor / Codex session and open a
@@ -312,7 +398,7 @@ will touch. Typical surface names:
   - Server / Cloud Functions surface
   - iOS app surface
   - Schema / data model surface
-  - Observability surface
+  - Operations & observability surface
   - Payment / entitlement surface
   - Security & sensitive-data surface
   - Verification surfaces
@@ -326,6 +412,15 @@ security checks), and what pattern each step must mirror so it
 does not regress them. This is what lets each step's
 `<security>` block name a concrete, project-specific check
 instead of a generic one.
+
+Include an "Operations & observability surface" whenever the
+phase adds or changes a runtime surface (a service, a scheduled
+job, a deployed app, a metered dependency). It states what
+health signal and alarm exist today, where the cost ledger and
+cap live, how the surface is deployed and rolled back, and what
+the new surface must expose before it counts as live. This is
+what lets each step's `**Deploys:**` line and the final QA
+step's operations bullet name a concrete check.
   - Documentation surface
 
 Each surface answers: what exists today, what is missing,
@@ -379,7 +474,10 @@ steps. Use box characters consistently. After the steps,
 include a "post-implementation" section listing the
 V-checks at a glance. Below the diagram, a short prose
 paragraph explains WHY the steps are sequential (which
-step depends on which prior step's output).
+step depends on which prior step's output). Steps that may
+run concurrently are drawn side by side with ┌─ branches;
+they are the ONLY steps the Worktree rule allows in flight
+at once. If there are none, the prose says so.
 -->
 
 ```
@@ -418,7 +516,9 @@ which step's output the next step consumes (e.g. "Step 2's
 escalation ladder must exist before Step 3's bot spawn
 callable can target the bot-fill leaf; Step 4 is ordered
 after Step 3 to keep the schema migrations clean; Step N is
-sequential after every prior step.").
+sequential after every prior step."). Name any steps drawn in
+parallel — they are the only concurrency the Worktree rule
+permits — or state that this phase has none.
 
 ---
 
@@ -471,6 +571,12 @@ arrows:
 > sentences.}}
 
 **Branch:** `feature/phase{{N}}-step1-{{slug}}`
+
+**Deploys:** {{surface → environment this step's merge reaches,
+e.g. "web app → production (auto-deploy on merge)" — or "nothing
+beyond merge". If going live needs a release, a version-floor
+bump, a migration, or a redeploy, say so here and name the step
+that owns it.}}
 
 <!-- Typical model values: GPT-5.3 Codex (long-running
      autonomous agentic sessions), GPT-5.4 (knowledge
@@ -660,6 +766,12 @@ hygiene").}}
        `main`. The exact branch
        name is in this step's
        `**Branch:**` line above.
+       If the Worktree rule
+       applies, use `git fetch
+       origin && git worktree add
+       -b <branch> <path>
+       origin/main` instead, then
+       bootstrap the worktree.
 
     2. WORK ON THE BRANCH. All
        commits land here. `main`
@@ -686,14 +798,26 @@ hygiene").}}
        (`required_linear_history:
        true`). Once green:
        `gh pr merge <PR> --squash
-       --delete-branch`.
+       --delete-branch`. If this
+       step's `**Deploys:**` line
+       names a surface, the merge
+       is not the finish line: run
+       the Deployed & verified
+       check against the target
+       environment before
+       declaring the step complete.
 
     5. RETIRE THE BRANCH. Sync
        local: `git switch main &&
        git pull --ff-only origin
        main && git fetch --prune
        origin`. Prune any local
-       `[gone]` branches.
+       `[gone]` branches. If the
+       step ran in a worktree,
+       `git worktree remove <path>`
+       FIRST — the branch prune
+       fails while the branch is
+       checked out there.
 
     6. NEW CONVERSATION, NEXT
        STEP. Phase-boundary
@@ -847,6 +971,12 @@ hygiene").}}
 - Testable statement.
 - Testable statement.
 - `{{test file}}.swift` / `{{test file}}.test.ts` pass.
+- **Deployed & verified** (include only when the `**Deploys:**`
+  line names a surface): {{the surface's version/health endpoint
+  reports this step's build, and the changed behaviour was
+  exercised in the target environment with real authentication
+  via the hands-off recipe — name the endpoint, the request, and
+  the expected result}}.
 - **Security gate clean** (always the final criterion): the
   pre-commit security gate passed on this step's diff — secret/
   PII scan clean, SAST clean, dependency audit clean, and the
@@ -863,6 +993,8 @@ hygiene").}}
 > **Goal:** One paragraph.
 
 **Branch:** `feature/phase{{N}}-step2-{{slug}}`
+
+**Deploys:** {{surface → environment, or "nothing beyond merge"}}
 
 {{Settings table — pick the variant that matches PLATFORM
 per the Step 1 guidance, and carry ONLY the rows that
@@ -956,6 +1088,8 @@ commit.}}
 
 - ...
 - ...
+- **Deployed & verified** (only when the Deploys line names a
+  surface): {{endpoint, request, expected result}}.
 - **Security gate clean** (always the final criterion): the
   pre-commit security gate passed on this step's diff, with the
   concrete check for the surface this step touches named
@@ -968,11 +1102,13 @@ Repeat the Step pattern for Step 3, Step 4, ... as many as
 the phase requires. Typical phase has 4-7 steps. The final
 step is ALWAYS "QA + verify-phaseN.sh".
 
-EVERY step, without exception, carries: the <lifecycle> and
-<security> blocks in its <task> (both copied from Step 1), and
-a final "Security gate clean" acceptance-criterion bullet. This
-is how "security at every step" is enforced mechanically rather
-than left to memory.
+EVERY step, without exception, carries: a `**Deploys:**` line,
+the <lifecycle> and <security> blocks in its <task> (both
+copied from Step 1), a "Deployed & verified" bullet whenever
+the Deploys line names a surface, and a final "Security gate
+clean" acceptance-criterion bullet. This is how "security at
+every step" and "merged is not deployed" are enforced
+mechanically rather than left to memory.
 -->
 
 ## Step {{N}} — QA & Verification Script
@@ -989,6 +1125,9 @@ than left to memory.
 > validator, readiness report consolidator, etc.).
 
 **Branch:** `feature/phase{{N}}-step{{N}}-verify`
+
+**Deploys:** nothing beyond merge — the CI matrix entry is live
+on merge.
 
 {{Settings table — pick the variant that matches PLATFORM
 per the Step 1 guidance, carrying ONLY the rows that
@@ -1329,6 +1468,12 @@ that surface has neither dial.
   SAST, and dependency audit clean over the phase's surface);
   V{{N}}.4 is green.
 - Branch protection still passes on the resulting PR.
+- **Operations** (only when this phase added or changed a
+  runtime surface): every such surface has a health signal and
+  an alarm that has been seen to fire once (or a synthetic
+  failure was injected to prove it) — per the parent ROADMAP
+  "Operations & observability strategy". {{Name the signal,
+  the alarm, and how it was exercised.}}
 - **Security gate clean** (always the final criterion): the
   pre-commit security gate passed on this step's diff and the
   security workflow is green.
