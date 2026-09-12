@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.33] — 2026-09-12
+
+### Fixed
+
+- **The cost scale still priced Claude Sonnet 5 at $3/$15 (High).** 0.2.31
+  corrected the selector to Anthropic's $2/$10, but the bundled
+  `model-tier-cost-scale.md` — which the recommender prompt also carries —
+  kept the stale row and a "launch promotion through August 31, 2026" note,
+  so the engine was reading two contradictory prices for the same model. The
+  row now reads $2/$10 (Medium), the promotion clause is retired, and the
+  selector's `pricing-notes` are re-synced byte-for-byte with the Notes
+  column.
+
+### Added
+
+- **Muse Spark 1.3 and GPT-5.1 Codex Mini enter the catalog** (49 models).
+  Muse Spark 1.3 is the first Meta model — a new "API Pool — Meta"
+  cost-scale section and a `us` row in the provider-jurisdiction table come
+  with it — at $1.25/$4.25 (low tier) with placeholder B ratings pending
+  editorial review. GPT-5.1 Codex Mini lands at $0.25/$2.00 (low tier, hidden by
+  default on the aggregator) with placeholder ratings set one tier below
+  `gpt-5.1-codex` on coding and two below on planning/agentic per the
+  catalog's Mini-variant convention, speed S. It is deliberately NOT an
+  S-tier coder: the refresh had inherited the parent's S rating and made the
+  Mini the cost tie-breaker favourite for S-tier coding picks, which the
+  audit reverted until a head-to-head says otherwise.
+
+### Changed
+
+- **Subscription-tier descriptions refreshed (reviewed 2026-09-10):** Claude
+  Pro names Opus 5 / Sonnet 5 / Fable 5.1; ChatGPT Plus and Pro name the
+  GPT-5.6 family. The classification audit adds Fable 5.1, Grok 4.6, and
+  Gemini 3.7/3.8 Flash and marks the GPT-5.6 Sol/Terra tier moves resolved.
+- **Held back:** DeepSeek's page replaced `deepseek-v4-flash` with a new
+  `deepseek-flash` (V4.1-Flash, $0.15/$0.60) slug. The provider snapshot is
+  kept at its previous state until the successor is added and V4 Flash is
+  retired together (#583); `deepseek-v4-flash` stays priced from the
+  aggregator mirror meanwhile.
+
 ## [0.2.32] — 2026-09-12
 
 ### Added
