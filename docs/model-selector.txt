@@ -878,34 +878,34 @@
              tier-coding="S" tier-planning="S" tier-agentic="S"
              tier-multimodal="A" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 60.7 (max); HLE 52.6% (max); Terminal-Bench 2.1 89.1 (max); τ²-bench banking pass_1 48.7%"
+             headline-benchmarks="AA Intelligence Index 50.7 (max); HLE 54.9% (max); Terminal-Bench 2.1 89.1 (max); τ²-bench banking pass_1 48.7%"
              pricing-notes="Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-fast`) requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)"
-             best-for="Anthropic's Opus 4.8 successor at the same very-high tier pricing — the new default Opus in Claude Code 2.1.219+ (1M context, fast mode at $10/$50 per Mtok) that Anthropic positions as approaching Fable 5's frontier intelligence at half the price; placeholder tier ratings inherited from opus-4.8 with benchmark-grounded confirmation from AA Intelligence Index (60.7 max), HLE (52.6% max), Terminal-Bench 2.1 (89.1), and τ²-bench banking (48.7% pass_1). Pick over opus-4.8 when both are available since Opus 5 supersedes 4.8 in the same series per the equal-output-price replacement rule." />
+             best-for="Anthropic's Opus 4.8 successor at the same very-high tier pricing — the new default Opus in Claude Code 2.1.219+ (1M context, fast mode at $10/$50 per Mtok) that Anthropic positions as approaching Fable 5's frontier intelligence at half the price; placeholder tier ratings inherited from opus-4.8 with benchmark-grounded confirmation from AA Intelligence Index (50.7 max), HLE (54.9% max), Terminal-Bench 2.1 (89.1), and τ²-bench banking (48.7% pass_1). Pick over opus-4.8 when both are available since Opus 5 supersedes 4.8 in the same series per the equal-output-price replacement rule." />
       <model id="claude-fable-5" name="Fable 5"
              input-price-per-1m="$10.00" output-price-per-1m="$50.00"
              jurisdiction="us"
              tier-coding="S" tier-planning="S" tier-agentic="S"
              tier-multimodal="S" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 59.9 (#1); HLE 53.3% (#1); Terminal-Bench Hard 62.9 (#1)"
+             headline-benchmarks="AA Intelligence Index 49.7 (#1); HLE 55.5% (#1); Terminal-Bench Hard 62.9 (#1)"
              pricing-notes="Hidden by default; Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; About 2x the cost of Claude Opus 5; Requires Max Mode on legacy request-based plans"
-             best-for="Anthropic's new top-of-line Fable family flagship (no predecessor) — S-tier across coding, planning, agentic, multimodal, long-context, and knowledge, leading HLE (53.3%) and Terminal-Bench Hard (62.9) with state-of-the-art vision and a 1M default context; about 2x the cost of Opus 5 and latency-slow (output ~64 tokens/s), so reserve for the hardest reasoning, agentic, and vision work where maximum capability outweighs cost and speed; security-guardrail trips auto-route to Opus. Tier profile sourced from the catalog cron's 2026-06-11 dry-run reconciliation against the live benchmark sources (τ²-bench retail not yet published for this model), pending editorial confirmation in the next refresh." />
+             best-for="Anthropic's new top-of-line Fable family flagship (no predecessor) — S-tier across coding, planning, agentic, multimodal, long-context, and knowledge, leading HLE (55.5%) and Terminal-Bench Hard (62.9) with state-of-the-art vision and a 1M default context; about 2x the cost of Opus 5 and latency-slow (output ~69 tokens/s), so reserve for the hardest reasoning, agentic, and vision work where maximum capability outweighs cost and speed; security-guardrail trips auto-route to Opus. Tier profile sourced from the catalog cron's 2026-06-11 dry-run reconciliation against the live benchmark sources (τ²-bench retail not yet published for this model), pending editorial confirmation in the next refresh." />
       <model id="claude-fable-5.1" name="Fable 5.1"
              input-price-per-1m="$10.00" output-price-per-1m="$50.00"
              jurisdiction="us"
              tier-coding="S" tier-planning="S" tier-agentic="S"
              tier-multimodal="S" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 56.8 (max); HLE 59.1% (max); Terminal-Bench 2.1 91.4 (max); τ²-bench banking pass_1 47.2%"
+             headline-benchmarks="AA Intelligence Index 53.4 (max); HLE 59.1% (max); Terminal-Bench 2.1 91.4 (max); τ²-bench banking pass_1 47.2%"
              pricing-notes="Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; Prompt-cache reads are $0.25/M, 75% below the standard cache-read rate; About 2x the cost of Claude Opus 5 on input and output; Requires Max Mode on legacy request-based plans"
-             best-for="Anthropic's Fable 5 successor at the same very-high tier pricing ($10/$50) — placeholder S-tier ratings inherited from fable-5 pending broader editorial review, with benchmark-grounded confirmation from AA Intelligence Index (56.8 max), HLE (59.1% max), and Terminal-Bench 2.1 (91.4 max). The headline cost-structure change is a 75% reduction in prompt-cache-read pricing ($0.25/M vs Fable 5's $1/M), making sustained-context sessions materially cheaper; pick over fable-5 when both are available since 5.1 supersedes 5 in the same series per the equal-output-price replacement rule." />
+             best-for="Anthropic's Fable 5 successor at the same very-high tier pricing ($10/$50) — placeholder S-tier ratings inherited from fable-5 pending broader editorial review, with benchmark-grounded confirmation from AA Intelligence Index (53.4 max), HLE (59.1% max), and Terminal-Bench 2.1 (91.4 max). The headline cost-structure change is a 75% reduction in prompt-cache-read pricing ($0.25/M vs Fable 5's $1/M), making sustained-context sessions materially cheaper; pick over fable-5 when both are available since 5.1 supersedes 5 in the same series per the equal-output-price replacement rule." />
       <model id="gpt-5.5" name="GPT-5.5"
              input-price-per-1m="$5.00" output-price-per-1m="$30.00"
              jurisdiction="us"
              tier-coding="S" tier-planning="S" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 54.8 (#1); LMArena Text Elo 1465.4 (#22); HLE 44.3%; AA-Omniscience 20.1 (#3)"
+             headline-benchmarks="AA Intelligence Index 38.6 (#1); LMArena Text Elo 1465.6 (#31); HLE 45.8%; AA-Omniscience 20.1 (#3)"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; More token-efficient than GPT-5.4 on comparable tasks; Improved persistence on long-running tasks; Fast mode is available at higher rates; Long context supports up to 1M tokens with 2x input pricing"
              best-for="OpenAI's most capable frontier model and highest-cost GPT offering, best suited for the most demanding reasoning, long-horizon planning, and tasks where maximum intelligence is required regardless of cost — strongest single model for hard coding, agentic execution, and reasoning, but verify factual claims due to elevated hallucination" />
     </tier>
@@ -916,16 +916,16 @@
              tier-coding="S" tier-planning="S" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="S"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 58.9 (max) / 57.7 (xhigh); HLE 47.2% (max); Terminal-Bench 2.1 88.0; τ²-bench banking pass_1 33.0%"
+             headline-benchmarks="AA Intelligence Index 47.1 (max) / 44.1 (xhigh); HLE 49.5% (max); Terminal-Bench 2.1 88.0; τ²-bench banking pass_1 44.3%"
              pricing-notes="Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate; Promotional pricing through November 21, 2026"
-             best-for="OpenAI's GPT-5.6 Sol flagship — now at high-tier pricing ($4/$20) under promotional pricing through November 21, 2026 (was $5/$30 at initial listing), leading Artificial Analysis Intelligence Index (58.9) and posting Terminal-Bench 2.1 88.0 and HLE 47.2% at max effort; pick for the most demanding reasoning, agentic execution, and knowledge work at the high tier when a GPT-family top model is preferred over Anthropic's Opus/Fable lineage." />
+             best-for="OpenAI's GPT-5.6 Sol flagship — now at high-tier pricing ($4/$20) under promotional pricing through November 21, 2026 (was $5/$30 at initial listing), leading Artificial Analysis Intelligence Index (47.1 max) and posting Terminal-Bench 2.1 88.0 and HLE 49.5% at max effort; pick for the most demanding reasoning, agentic execution, and knowledge work at the high tier when a GPT-family top model is preferred over Anthropic's Opus/Fable lineage." />
       <model id="sonnet-4.6" name="Sonnet 4.6"
              input-price-per-1m="$3.00" output-price-per-1m="$15.00"
              jurisdiction="us"
              tier-coding="A" tier-planning="A" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 47.2; LMArena Text Elo 1457.0 (#29); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage"
+             headline-benchmarks="AA Intelligence Index 30.5; LMArena Text Elo 1458.3 (#35); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)"
              best-for="Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation" />
 
@@ -935,7 +935,7 @@
              tier-coding="A" tier-planning="A" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="S"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 51.4 (#4); LMArena Text Elo 1451.9 (#34); HLE 41.6% (xhigh); τ²-bench banking pass_1 30.3%"
+             headline-benchmarks="AA Intelligence Index 39.0 (xhigh); LMArena Text Elo 1452.6 (#41); HLE 43.7% (xhigh); τ²-bench banking pass_1 39.6%"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context supports up to 1M tokens with 2x input pricing"
              best-for="Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding" />
       <model id="kimi-k3" name="Kimi K3"
@@ -944,9 +944,9 @@
              tier-coding="A" tier-planning="A" tier-agentic="A"
              tier-multimodal="D" tier-long-context="A" tier-knowledge="A"
              tier-speed="C"
-             headline-benchmarks="AA Intelligence Index 57.1 (max); HLE 44.3% (max); Terminal-Bench 2.1 85.0; τ²-bench banking pass_1 37.1%"
+             headline-benchmarks="AA Intelligence Index 43.8 (max); HLE 46.9% (max); Terminal-Bench 2.1 85.0; τ²-bench banking pass_1 45.9%"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); No separate cache-write fee"
-             best-for="Moonshot's Kimi K3 flagship at high-tier pricing ($3/$15) — a strong near-frontier reasoning + coding model with 1M extended-context support at flat per-token rates and AA Intelligence Index 57.1 (max), competitive with GPT-5.6 Sol and Opus 5 on knowledge/coding indices; text-only (no multimodal) and notably slow (~37 tokens/s). Routed via Cursor's pool only; cn-jurisdiction excluded by the default allowed-jurisdictions list unless the user opts into cn." />
+             best-for="Moonshot's Kimi K3 flagship at high-tier pricing ($3/$15) — a strong near-frontier reasoning + coding model with 1M extended-context support at flat per-token rates and AA Intelligence Index 43.8 (max), competitive with GPT-5.6 Sol and Opus 5 on knowledge/coding indices; text-only (no multimodal) and notably slow (~38 tokens/s). Routed via Cursor's pool only; cn-jurisdiction excluded by the default allowed-jurisdictions list unless the user opts into cn." />
     </tier>
     <tier cost="medium">
       <model id="claude-sonnet-5" name="Claude Sonnet 5"
@@ -955,7 +955,7 @@
              tier-coding="A" tier-planning="A" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 53.4 (adaptive max); Terminal-Bench 2.1 80.5; τ²-bench banking pass_1 28.2%; native 1M context"
+             headline-benchmarks="AA Intelligence Index 38.4 (adaptive max); Terminal-Bench 2.1 80.5; τ²-bench banking pass_1 37.3%; native 1M context"
              pricing-notes="Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens"
              best-for="Anthropic's Sonnet 4.6 successor at the same high-tier pricing — placeholder tier ratings inherited from sonnet-4.6 pending editorial refresh; native 1M context, updated tokenizer, and a launch promotion pricing ($2/$10) through Aug 31, 2026 that makes it a strong value pick for near-frontier coding and agentic work at the mid-cost tier when the Anthropic lineage is preferred." />
       <model id="gpt-5.3-codex" name="GPT-5.3 Codex"
@@ -964,7 +964,7 @@
              tier-coding="S" tier-planning="B" tier-agentic="S"
              tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 44.3 (xhigh); HLE 39.9%; Codex lineage retains strong Terminal-Bench and SWE-bench Verified performance for autonomous coding"
+             headline-benchmarks="AA Intelligence Index 32.5 (xhigh); HLE 42.5%; Codex lineage retains strong Terminal-Bench and SWE-bench Verified performance for autonomous coding"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.3-codex-high"
              best-for="Highest terminal and tool-use proficiency at the medium tier, most token-efficient autonomous coding, excels at long-running agentic sessions spanning debugging through deployment, and hard algorithmic problems requiring sustained code reasoning across languages — the cost-efficient pick for pure coding and agentic execution when an S-tier coding rating is needed" />
       <model id="gpt-5.2" name="GPT-5.2"
@@ -973,7 +973,7 @@
              tier-coding="B" tier-planning="A" tier-agentic="B"
              tier-multimodal="C" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 42.2 (xhigh); GPQA 90.3; LiveCodeBench 88.9; HLE 35.4%; released 2025-12-10"
+             headline-benchmarks="AA Intelligence Index 30.4 (xhigh); GPQA 90.3; LiveCodeBench 88.9; HLE 37.7%; released 2025-12-10"
              pricing-notes="Hidden by default; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.2-high"
              best-for="Earlier-flagship GPT reasoning model (December 2025) with 400K context and broad knowledge coverage (GPQA 71.2, MMLU Pro 81.4); same medium-tier pricing as GPT-5.3 Codex but lacks Codex's autonomous-coding specialization — pick gpt-5.3-codex over gpt-5.2 for coding/agentic tasks; gpt-5.2 fits when broad reasoning at A-tier knowledge and a 400K context window are the primary need at the medium price tier" />
       <model id="gpt-5.2-codex" name="GPT-5.2 Codex"
@@ -982,7 +982,7 @@
              tier-coding="S" tier-planning="B" tier-agentic="S"
              tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 40.1 (xhigh); τ²-bench retail pass_1 92.1%; SWE-bench Verified (mini-SWE-agent) 72.8%; SWE-bench Multilingual 66.3%"
+             headline-benchmarks="AA Intelligence Index 28.5 (xhigh); τ²-bench retail pass_1 92.1%; SWE-bench Verified (mini-SWE-agent) 72.8%; SWE-bench Multilingual 66.3%"
              pricing-notes="Hidden by default; Agentic and reasoning capabilities"
              best-for="OpenAI's Codex variant of GPT-5.2 at the same medium-tier pricing as gpt-5.3-codex ($1.75/$14) — placeholder Codex-lineage S-tier coding + agentic ratings pending an independent gpt-5.2-codex vs gpt-5.3-codex head-to-head; fits when a specific gpt-5.2 codebase behavior is preferred or when 5.3-codex is unavailable, otherwise prefer gpt-5.3-codex as the newer generation in the same series." />
       <model id="gpt-5.6-terra" name="GPT-5.6 Terra"
@@ -991,16 +991,16 @@
              tier-coding="A" tier-planning="A" tier-agentic="A"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="A"
-             headline-benchmarks="AA Intelligence Index 55.0 (max); HLE 41.8%; Terminal-Bench 2.1 88.0; Output Speed 126.9 tokens/s"
+             headline-benchmarks="AA Intelligence Index 42.3 (max); HLE 42.9%; Terminal-Bench 2.1 88.0; Output Speed 100.5 tokens/s"
              pricing-notes="Requires Max Mode on legacy request-based plans; Mid-tier GPT-5.6 variant between Sol and Luna; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate"
-             best-for="OpenAI's mid-tier GPT-5.6 variant between Sol (flagship) and Luna (mini) at medium-tier pricing ($2/$12) — Artificial Analysis Intelligence Index 55.0 (max) matches near-frontier reasoning while output speed (~127 tokens/s) is faster than most peers; pick for balanced near-frontier reasoning, agentic execution, and speed when Sol's high tier isn't justified but stronger throughput than GPT-5.4 is desired." />
+             best-for="OpenAI's mid-tier GPT-5.6 variant between Sol (flagship) and Luna (mini) at medium-tier pricing ($2/$12) — Artificial Analysis Intelligence Index 42.3 (max) matches near-frontier reasoning while output speed (~100 tokens/s) is faster than most peers; pick for balanced near-frontier reasoning, agentic execution, and speed when Sol's high tier isn't justified but stronger throughput than GPT-5.4 is desired." />
       <model id="gemini-3.1-pro" name="Gemini 3.1 Pro"
              input-price-per-1m="$2.00" output-price-per-1m="$12.00"
              jurisdiction="us"
              tier-coding="A" tier-planning="A" tier-agentic="A"
              tier-multimodal="S" tier-long-context="S" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 46.5 (#3); AA-Omniscience 32.9 (#1); HLE 44.7% (#1); LMArena Text Elo 1478.9 (#11); 1M-token context"
+             headline-benchmarks="AA Intelligence Index 30.4 (#3); AA-Omniscience 32.9 (#1); HLE 47.0% (#1); LMArena Text Elo 1480.1 (#16); 1M-token context"
              pricing-notes="-"
              best-for="True native multimodal understanding (text, image, video, audio, and code in a single pass), 1M-token context optimized for heterogeneous inputs, strong agentic multi-step tool use, and synthesizing insights across large mixed-media datasets or sprawling document corpora — the obvious choice whenever multimodal or long-context is the primary category" />
       <model id="gemini-3-pro" name="Gemini 3 Pro"
@@ -1047,7 +1047,7 @@
              tier-coding="B" tier-planning="A" tier-agentic="A"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="A"
              tier-speed="S"
-             headline-benchmarks="AA Intelligence Index 50.2 (high reasoning); τ²-bench banking pass_1 25.4%; Output Speed 267.9 tokens/s"
+             headline-benchmarks="AA Intelligence Index 33.0 (high reasoning); τ²-bench banking pass_1 32.2%; Output Speed 250.6 tokens/s"
              pricing-notes="Hidden by default"
              best-for="Auto-added cheap-tier Google model; pending editorial best-for refinement." />
       <model id="mistral-medium-3.5" name="Mistral Medium 3.5"
@@ -1065,45 +1065,45 @@
              tier-coding="B" tier-planning="A" tier-agentic="A"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="A"
              tier-speed="S"
-             headline-benchmarks="AA Intelligence Index 50.1 (high); HLE 38.3% (high); Terminal-Bench 2.1 77.5; Output Speed 235.8 tokens/s"
+             headline-benchmarks="AA Intelligence Index 34.3 (high); HLE 40.8% (high); Terminal-Bench 2.1 77.5; Output Speed 188.5 tokens/s"
              pricing-notes="Hidden by default"
-             best-for="Google's Gemini 3.5 Flash successor at low-tier pricing ($1.50/$7.50, cheaper than 3.5 Flash's $9/M output) — placeholder tier ratings inherited from gemini-3.5-flash pending an independent 3.5-vs-3.6 head-to-head, with Artificial Analysis Intelligence Index 50.1 (high) confirming near-frontier reasoning for a cheap-tier Flash model and output speed ~236 tokens/s; pick over gemini-3.5-flash when both are visible since 3.6 supersedes 3.5 in the same series at a lower output price." />
+             best-for="Google's Gemini 3.5 Flash successor at low-tier pricing ($1.50/$7.50, cheaper than 3.5 Flash's $9/M output) — placeholder tier ratings inherited from gemini-3.5-flash pending an independent 3.5-vs-3.6 head-to-head, with Artificial Analysis Intelligence Index 34.3 (high) confirming near-frontier reasoning for a cheap-tier Flash model and output speed ~188 tokens/s; pick over gemini-3.5-flash when both are visible since 3.6 supersedes 3.5 in the same series at a lower output price." />
       <model id="gemini-3.7-flash" name="Gemini 3.7 Flash"
              input-price-per-1m="$0.75" output-price-per-1m="$3.50"
              jurisdiction="us"
              tier-coding="B" tier-planning="A" tier-agentic="A"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="A"
              tier-speed="S"
-             headline-benchmarks="AA Intelligence Index 45.2 (high); HLE 47.9% (high); Terminal-Bench 2.1 85.8; Output Speed 294.8 tokens/s"
+             headline-benchmarks="AA Intelligence Index 39.4 (high); HLE 47.9% (high); Terminal-Bench 2.1 85.8; Output Speed 325.4 tokens/s"
              pricing-notes="Hidden by default"
-             best-for="Google's Gemini 3.7 Flash — a low-tier ($0.75/$3.50) Flash variant with placeholder tier ratings inherited from the 3.6 Flash line, with AA Intelligence Index 45.2 (high) and Terminal-Bench 2.1 85.8 confirming strong near-frontier reasoning at throughput-optimized inference (~295 tokens/s). Hidden by default on Cursor's pricing page; superseded by Gemini 3.8 Flash at the same output price." />
+             best-for="Google's Gemini 3.7 Flash — a low-tier ($0.75/$3.50) Flash variant with placeholder tier ratings inherited from the 3.6 Flash line, with AA Intelligence Index 39.4 (high) and Terminal-Bench 2.1 85.8 confirming strong near-frontier reasoning at throughput-optimized inference (~325 tokens/s). Hidden by default on Cursor's pricing page; superseded by Gemini 3.8 Flash at the same output price." />
       <model id="gemini-3.8-flash" name="Gemini 3.8 Flash"
              input-price-per-1m="$0.75" output-price-per-1m="$3.50"
              jurisdiction="us"
              tier-coding="B" tier-planning="A" tier-agentic="A"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="A"
              tier-speed="S"
-             headline-benchmarks="AA Intelligence Index 47.1 (high); HLE 47.8% (high); Terminal-Bench 2.1 87.6; Output Speed 429.2 tokens/s"
+             headline-benchmarks="AA Intelligence Index 41.2 (high); HLE 47.8% (high); Terminal-Bench 2.1 87.6; Output Speed 301.3 tokens/s"
              pricing-notes="-"
-             best-for="Google's Gemini 3.8 Flash — the visible-by-default successor to 3.7 Flash at the same low-tier pricing ($0.75/$3.50), with placeholder tier ratings inherited from the Flash series and AA Intelligence Index 47.1 (high), Terminal-Bench 2.1 87.6, and exceptional output speed (~429 tokens/s). Pick over 3.7 Flash when both are available since 3.8 supersedes 3.7 in the same series at equal output price." />
+             best-for="Google's Gemini 3.8 Flash — the visible-by-default successor to 3.7 Flash at the same low-tier pricing ($0.75/$3.50), with placeholder tier ratings inherited from the Flash series and AA Intelligence Index 41.2 (high), Terminal-Bench 2.1 87.6, and exceptional output speed (~301 tokens/s). Pick over 3.7 Flash when both are available since 3.8 supersedes 3.7 in the same series at equal output price." />
       <model id="gpt-5.6-luna" name="GPT-5.6 Luna"
              input-price-per-1m="$0.20" output-price-per-1m="$1.20"
              jurisdiction="us"
              tier-coding="B" tier-planning="A" tier-agentic="A"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="A"
              tier-speed="S"
-             headline-benchmarks="AA Intelligence Index 51.2 (max) / 49.1 (xhigh); HLE 37.2% (max); Output Speed 174.7 tokens/s (max) / 173.8 (xhigh)"
+             headline-benchmarks="AA Intelligence Index 37.5 (max) / 34.8 (xhigh); HLE 39.5% (max); Output Speed 123.5 tokens/s (max) / 119.0 (xhigh)"
              pricing-notes="Requires Max Mode on legacy request-based plans; Smallest GPT-5.6 variant, optimized for cost and speed; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate"
-             best-for="OpenAI's smallest GPT-5.6 variant at low-tier pricing ($0.20/$1.20, 5x cheaper output than at initial listing) — strong AA Intelligence Index (51.2 max) for the price and very high output throughput (~175 tokens/s), positioning it as a very cost-efficient near-frontier alternative to Gemini 3.5 Flash and other cheap Flash-class models when GPT-family behavior is preferred; pick when latency and cost dominate but broader reasoning quality than smaller mini/nano variants is required." />
+             best-for="OpenAI's smallest GPT-5.6 variant at low-tier pricing ($0.20/$1.20, 5x cheaper output than at initial listing) — strong AA Intelligence Index (37.5 max) for the price and very high output throughput (~124 tokens/s), positioning it as a very cost-efficient near-frontier alternative to Gemini 3.5 Flash and other cheap Flash-class models when GPT-family behavior is preferred; pick when latency and cost dominate but broader reasoning quality than smaller mini/nano variants is required." />
       <model id="grok-4.5" name="Grok 4.5"
              input-price-per-1m="$2.00" output-price-per-1m="$6.00"
              jurisdiction="us"
              tier-coding="A" tier-planning="A" tier-agentic="A"
              tier-multimodal="B" tier-long-context="S" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 53.8 (high); Terminal-Bench 2.1 81.6; τ²-bench banking pass_1 47.9%; LMArena Text Elo 1452"
+             headline-benchmarks="AA Intelligence Index 39.1 (high); Terminal-Bench 2.1 81.6; τ²-bench banking pass_1 47.9%; LMArena Text Elo 1450.1"
              pricing-notes="Jointly trained by Cursor and SpaceXAI; Not yet available in the European Union"
-             best-for="Grok family's latest release at low-tier pricing ($6/M output), jointly trained by Cursor and SpaceXAI — Artificial Analysis Intelligence Index 53.8 (high) and Terminal-Bench 2.1 81.6 make it a strong near-frontier value; carries the Grok lineage's signature very-large-context capability, useful for long-context coding, planning, and agentic work when cost efficiency matters. Not yet available in the EU per Cursor's pricing notes; jurisdiction=us (Cursor operator)." />
+             best-for="Grok family's latest release at low-tier pricing ($6/M output), jointly trained by Cursor and SpaceXAI — Artificial Analysis Intelligence Index 39.1 (high) and Terminal-Bench 2.1 81.6 make it a strong near-frontier value; carries the Grok lineage's signature very-large-context capability, useful for long-context coding, planning, and agentic work when cost efficiency matters. Not yet available in the EU per Cursor's pricing notes; jurisdiction=us (Cursor operator)." />
       <model id="grok-4.6" name="Grok 4.6"
              input-price-per-1m="$2.00" output-price-per-1m="$6.00"
              jurisdiction="us"
@@ -1119,7 +1119,7 @@
              tier-coding="B" tier-planning="B" tier-agentic="B"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
              tier-speed="S"
-             headline-benchmarks="AA Intelligence Index 29.6; Output Speed 151.4 tokens/s; AA-Omniscience -4.2; latency leader among Claude family"
+             headline-benchmarks="AA Intelligence Index 17.6 (reasoning); Output Speed 109.6 tokens/s; AA-Omniscience -4.2; latency leader among Claude family"
              pricing-notes="Hidden by default; Bedrock/Vertex: regional endpoints +10% surcharge; Cache: writes 1.25x, reads 0.1x"
              best-for="Speed-optimized lowest-cost Claude model, ideal for simple completions, high-volume repetitive tasks, and latency-sensitive workflows where a lightweight capable response matters more than deep reasoning" />
       <model id="muse-spark-1.3" name="Muse Spark 1.3"
@@ -1137,7 +1137,7 @@
              tier-coding="B" tier-planning="C" tier-agentic="C"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
              tier-speed="A"
-             headline-benchmarks="AA Intelligence Index 40 (xhigh); HLE 26.6% (xhigh); τ²-bench banking pass_1 21.4%"
+             headline-benchmarks="AA Intelligence Index 24.6 (xhigh); HLE 28.1% (xhigh); τ²-bench banking pass_1 25.6%"
              pricing-notes="Hidden by default; Smaller, faster variant of GPT-5.4; 90% discount on cached input tokens"
              best-for="Lightweight GPT-5.4 variant balancing quality and cost, well-suited for straightforward coding, short-form generation, and high-throughput workloads needing solid GPT reasoning at a fraction of the flagship price" />
       <model id="kimi-k2.7-code" name="Kimi K2.7 Code"
@@ -1146,7 +1146,7 @@
              tier-coding="B" tier-planning="B" tier-agentic="B"
              tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 41.9; τ²-bench retail pass_1 90.1%; LMArena WebDev Elo 1471"
+             headline-benchmarks="AA Intelligence Index 26.3; τ²-bench retail pass_1 90.1%; LMArena WebDev Elo 1471"
              pricing-notes="Hidden by default"
              best-for="Moonshot's Kimi K2.7 Code — Kimi K2 successor specialized for coding at low-tier pricing ($4/M output), placeholder tier ratings inherited from kimi-k2.5 (its predecessor) pending independent benchmark validation of the K2.7 series; routed via Cursor's pool only, cn-jurisdiction excluded by the default allowed-jurisdictions list unless the user opts into cn." />
       <model id="gemini-3-flash" name="Gemini 3 Flash"
@@ -1191,7 +1191,7 @@
              tier-coding="A" tier-planning="C" tier-agentic="C"
              tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
              tier-speed="S"
-             headline-benchmarks="Auto-added pending editorial tier review; specific benchmark numbers pending next refresh"
+             headline-benchmarks="AA Intelligence Index 20.4 (high); HLE 18.5%; carries the Codex-lineage strong terminal / tool-use profile at a fraction of the medium-tier price"
              pricing-notes="Hidden by default; Agentic and reasoning capabilities; 4x rate limits compared to GPT-5.1 Codex"
              best-for="OpenAI's smaller GPT-5.1 Codex variant at low-tier pricing ($0.25/$2.00) — placeholder ratings set one tier below gpt-5.1-codex on coding and two below on planning/agentic per the catalog's Mini-variant convention (gpt-5-mini, gpt-5.4-mini), with tier-speed=S; offers 4x rate limits vs gpt-5.1-codex for high-throughput routine coding at a fraction of the medium-tier price. Not an S-tier coder until a gpt-5.1-codex vs gpt-5.1-codex-mini head-to-head says so." />
       <model id="gpt-5.4-nano" name="GPT-5.4 Nano"
