@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Roadmap templates: "done" means done — no more "Follow-ups" trailer.**
+  0.2.32's step-completion signal told the agent to put caveats and newly
+  found issues in a "Follow-ups (non-blocking)" note *after* the "Step N is
+  complete" line. In practice every completion arrived with a paragraph of
+  undisposed findings, which reads as "not actually done". Stage 6 in both
+  templates (STYLE RULES, the Overview lifecycle, and the per-step XML
+  `<lifecycle>` block) is now dispose-before-declare: every finding reaches
+  its Triage destination first — a note for a later step is edited into
+  that step's `<task>` block, a judgement call goes in the PR body, a bug is
+  fixed or is an issue number — and a finding that is only described counts
+  as an unmet criterion. The completion line is the last line of the
+  response; nothing follows it. The final QA step gains a "Phase closed,
+  nothing carried" criterion and the phase-level line "Phase N is complete.
+  You can now move on to Phase N+1." `tests/test_roadmap_templates.py`
+  guards the wording in both templates.
+
 ## [0.2.33] — 2026-09-12
 
 ### Fixed

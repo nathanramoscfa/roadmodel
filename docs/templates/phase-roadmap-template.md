@@ -116,14 +116,22 @@ STYLE RULES (the AI MUST follow)
     work is done and EVERY acceptance criterion is affirmatively
     met, the AI's final response MUST end with an explicit,
     unhedged completion line of the verbatim shape "Step N is
-    complete. You can now move on to Step N+1." — never buried
-    under caveats, newly found issues, or suggested improvements
-    (those go in a short "Follow-ups (non-blocking)" note placed
-    AFTER the completion line). If any criterion is unmet, the AI
-    says plainly the step is NOT complete, names what failed, and
-    omits the completion line. This is Stage 6 of the Step
-    lifecycle and is binding; see the Overview "Step lifecycle"
-    paragraph and each step's XML `<lifecycle>` block.
+    complete. You can now move on to Step N+1." That line is the
+    LAST line of the response. Nothing follows it — no
+    "Follow-ups", "Notes", "Next", "worth a glance", or any
+    other trailer. Every finding surfaced during the step is
+    disposed of BEFORE the line, per the Overview "Triage rule":
+    a note for a later step is edited into that step's `<task>`
+    block, not narrated; a judgement call on the diff goes in the
+    PR body, not the chat; a bug is fixed or is an issue number.
+    A finding that has not reached its destination is an unmet
+    criterion — the AI says plainly the step is NOT complete,
+    names what is outstanding, and omits the completion line.
+    "Done" means done. This is Stage 6 of the Step lifecycle and
+    is binding; see the Overview "Step lifecycle" paragraph and
+    each step's XML `<lifecycle>` block. The same rule applies to
+    the phase-level line "Phase N is complete. You can now move
+    on to Phase N+1." emitted by the final QA step.
   - End the document with a Post-Implementation Verification
     section (V1-Vn check tables), a Summary Table, optional
     Model-selection blocks, and a Not-in-scope section.
@@ -390,25 +398,39 @@ before declaring a step complete.
    locally, and with `git worktree list` that only the primary
    tree remains.
 
-6. **Declare completion, then new conversation.** Once the PR is
-   merged and every one of this step's acceptance criteria is
-   affirmatively met, say so plainly. End your final response
-   with an explicit, unhedged completion line — verbatim shape
+6. **Dispose of every finding, declare completion, then new
+   conversation.** Before you declare anything, walk the findings
+   this step surfaced and send each to its destination per the
+   Triage rule below — a note that a later step needs is edited
+   into that step's `<task>` block now; a wrong claim in this
+   step's spec is fixed in this roadmap now; an implementation
+   bug is fixed in-step or exists as an issue with a number; a
+   judgement call you made in the diff is explained in the PR
+   body; a process lesson is written where the next conversation
+   reads it. A finding you can only *describe* has not been
+   disposed of, and an undisposed finding is an unmet acceptance
+   criterion. Only once the PR is merged, every acceptance
+   criterion is affirmatively met, and every finding has a
+   destination, say so plainly: end your final response with an
+   explicit, unhedged completion line — verbatim shape
    "Step {{M}} is complete. You can now move on to Step {{M+1}}."
    — so the operator has a clean stopping point at which to close
-   this conversation. Do NOT bury that line under caveats, newly
-   discovered issues, or suggested improvements: if you have any,
-   report them in a short, clearly labelled "Follow-ups
-   (non-blocking)" note placed AFTER the completion line, and
-   never let them reopen the step or blur whether it is done. If
-   any acceptance criterion is NOT met, do the opposite — state
-   plainly that the step is NOT complete, name the failing
-   criteria, and do not emit the completion line. Then, for
-   phase-boundary hygiene, the operator closes this Claude Code /
-   Cursor / Codex session and opens a fresh one before starting
-   Step {{M+1}}; the new conversation begins again at Stage 1 of
-   this lifecycle, with the next step's `**Branch:**` line driving
-   the `git checkout -b` command. No work straddles two steps.
+   this conversation. That line is the LAST line of the response.
+   Nothing follows it: no "Follow-ups (non-blocking)", no "Notes",
+   no "Next", no "worth a glance", no suggested improvements. If
+   you want to show your work, a short ledger may PRECEDE the
+   line, one entry per finding naming its destination (an issue
+   number, a file you edited, the PR body) — never an open item.
+   If any acceptance criterion is NOT met, or any finding has no
+   destination yet, do the opposite — state plainly that the step
+   is NOT complete, name what is outstanding, and do not emit the
+   completion line. "Done" means done, not "done, but here is
+   what you still have to do". Then, for phase-boundary hygiene,
+   the operator closes this Claude Code / Cursor / Codex session
+   and opens a fresh one before starting Step {{M+1}}; the new
+   conversation begins again at Stage 1 of this lifecycle, with
+   the next step's `**Branch:**` line driving the
+   `git checkout -b` command. No work straddles two steps.
 
 ---
 
@@ -846,34 +868,57 @@ hygiene").}}
        fails while the branch is
        checked out there.
 
-    6. DECLARE COMPLETION, THEN
-       NEW CONVERSATION. Once the
-       PR is merged and every
-       acceptance criterion for
-       this step is affirmatively
-       met, say so plainly: end
-       your final response with an
+    6. DISPOSE OF EVERY FINDING,
+       DECLARE COMPLETION, THEN
+       NEW CONVERSATION. First
+       send every finding this
+       step surfaced to its
+       destination (Triage rule):
+       a note for a later step →
+       edit that step's <task>
+       block now; spec rot → edit
+       this roadmap now; a bug →
+       fixed in-step or an issue
+       number; a judgement call in
+       the diff → the PR body; a
+       process lesson → written
+       where the next conversation
+       reads it. A finding you can
+       only describe is NOT
+       disposed of, and counts as
+       an unmet criterion. Only
+       once the PR is merged, every
+       acceptance criterion is
+       affirmatively met, and every
+       finding has a destination,
+       say so plainly: end your
+       final response with an
        explicit, unhedged
        completion line — verbatim
        shape "Step {{M}} is
        complete. You can now move
-       on to Step {{M+1}}." — so the
-       operator has a clean
-       stopping point. Do NOT bury
-       it under caveats, newly
-       found issues, or suggested
-       improvements; put any of
-       those in a short "Follow-ups
-       (non-blocking)" note AFTER
-       the completion line, and
-       never let them reopen the
-       step. If any criterion is
-       unmet, state plainly that
-       the step is NOT complete,
-       name what failed, and omit
-       the completion line. Then,
-       for phase-boundary hygiene,
-       the operator closes this
+       on to Step {{M+1}}." That
+       line is the LAST line of
+       the response. NOTHING
+       follows it — no "Follow-ups
+       (non-blocking)", "Notes",
+       "Next", "worth a glance",
+       or suggested improvements.
+       A short ledger may PRECEDE
+       it, one entry per finding
+       naming its destination
+       (issue #, file edited, PR
+       body) — never an open item.
+       If any criterion is unmet
+       or any finding has no
+       destination, state plainly
+       that the step is NOT
+       complete, name what is
+       outstanding, and omit the
+       completion line. "Done"
+       means done. Then, for
+       phase-boundary hygiene, the
+       operator closes this
        session and opens a fresh
        one before Step {{M+1}}.
   </lifecycle>
@@ -1529,6 +1574,15 @@ that surface has neither dial.
 - **Security gate clean** (always the final criterion): the
   pre-commit security gate passed on this step's diff and the
   security workflow is green.
+- **Phase closed, nothing carried.** Every finding recorded in
+  `docs/phase{{N}}-qa-findings.md` has a destination (fixed,
+  an issue number, or a named phase that owns it), the "Not in
+  scope" section below is current, and no un-tracked item
+  remains. This step's final response ends with two lines and
+  nothing after them: "Step {{N}} is complete. You can now move
+  on to Step {{N+1}}." is replaced by "Step {{N}} is complete.
+  Phase {{N}} is complete. You can now move on to Phase
+  {{N+1}}." — same Stage 6 rule: no "Follow-ups", no trailer.
 
 ---
 
@@ -1822,9 +1876,12 @@ Additionally not in scope for this phase:
 
 _This roadmap is the execution plan for Phase {{N}}. Update
 step status as each is completed. After all steps and
-verification pass, Phase {{N}} is complete and Phase
-{{N+1}} ({{title}}) inherits {{one-sentence summary of the
-deliverables the next phase consumes from this one}}._
+verification pass, and every finding has a destination, Phase
+{{N}} is complete — declared with the line "Phase {{N}} is
+complete. You can now move on to Phase {{N+1}}." and nothing
+after it — and Phase {{N+1}} ({{title}}) inherits
+{{one-sentence summary of the deliverables the next phase
+consumes from this one}}._
 
 <!--
 =============================================================
