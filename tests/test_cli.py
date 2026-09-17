@@ -1049,6 +1049,8 @@ def test_export_kit_writes_full_kit(monkeypatch: pytest.MonkeyPatch, tmp_path: P
         "user-context.md",
         "templates/project-roadmap-template.md",
         "templates/phase-roadmap-template.md",
+        "prompts/project-roadmap.md",
+        "prompts/phase-roadmap.md",
     ]:
         assert (planning / rel).is_file(), f"missing {rel}"
 

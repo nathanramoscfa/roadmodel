@@ -29,6 +29,10 @@ EXPECTED_FILES = [
     "HOW-TO-USE.md",
     "templates/project-roadmap-template.md",
     "templates/phase-roadmap-template.md",
+    # Fill-in paste-prompts: the operator copies one, fills the placeholders,
+    # and submits — instead of retyping the ask each phase.
+    "prompts/project-roadmap.md",
+    "prompts/phase-roadmap.md",
 ]
 
 

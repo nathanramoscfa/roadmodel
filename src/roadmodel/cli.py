@@ -558,6 +558,7 @@ def export_kit(target: Path, dest: str, force: bool, user_context_path: Path | N
     """
     planning = target / dest
     templates = planning / "templates"
+    prompts = planning / "prompts"
 
     bundled: list[tuple[Traversable, Path]] = [
         (recommender.BUNDLED_SELECTOR_PATH, planning / "model-selector.txt"),
@@ -569,6 +570,8 @@ def export_kit(target: Path, dest: str, force: bool, user_context_path: Path | N
         ),
         (recommender.BUNDLED_PHASE_ROADMAP_TEMPLATE_PATH, templates / "phase-roadmap-template.md"),
         (recommender.BUNDLED_PLANNING_KIT_HOWTO_PATH, planning / "HOW-TO-USE.md"),
+        (recommender.BUNDLED_PROMPT_PROJECT_ROADMAP_PATH, prompts / "project-roadmap.md"),
+        (recommender.BUNDLED_PROMPT_PHASE_ROADMAP_PATH, prompts / "phase-roadmap.md"),
     ]
     written: list[Path] = []
     for resource, out in bundled:
@@ -597,10 +600,10 @@ def export_kit(target: Path, dest: str, force: bool, user_context_path: Path | N
     click.echo(uc_note)
     click.echo("")
     click.echo(
-        f"Next: open an AI chat in this project and ask it to write your phase "
-        f"roadmap using @{dest}/templates/phase-roadmap-template.md, selecting each "
-        f"step's model with @{dest}/model-selector.txt against @{dest}/user-context.md "
-        f"(it is the engine — no external API). See @{dest}/HOW-TO-USE.md."
+        f"Next: open {dest}/prompts/phase-roadmap.md (or project-roadmap.md), fill "
+        f"the placeholders, and paste it into a new AI chat in this project. The "
+        f"AI runs @{dest}/model-selector.txt against @{dest}/user-context.md as the "
+        f"engine — no external API. See @{dest}/HOW-TO-USE.md."
     )
 
 

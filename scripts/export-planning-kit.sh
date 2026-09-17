@@ -82,6 +82,8 @@ FILES=(
   "docs/templates/project-roadmap-template.md::templates/project-roadmap-template.md"
   "docs/templates/phase-roadmap-template.md::templates/phase-roadmap-template.md"
   "docs/templates/planning-kit-how-to-use.md::HOW-TO-USE.md"
+  "docs/templates/prompt-project-roadmap.md::prompts/project-roadmap.md"
+  "docs/templates/prompt-phase-roadmap.md::prompts/phase-roadmap.md"
 )
 
 fetch_one() {  # <src_rel> <dest_abs>
@@ -148,14 +150,10 @@ fi
 
 cat <<EOF
 
-Done. Next, in that project open a new AI chat and paste:
-
-  Write the Phase 1 roadmap .md using @${DEST_SUBDIR}/templates/phase-roadmap-template.md
-  as the template. For each step's Settings table and Model rationale, run the
-  model selector in @${DEST_SUBDIR}/model-selector.txt (prices from
-  @${DEST_SUBDIR}/model-tier-cost-scale.md) against @${DEST_SUBDIR}/user-context.md
-  — you are the engine, do not call any external API. Honor every availability
-  exclusion in the selector, and include a backup model per step.
+Done. Next, in that project open ${DEST_SUBDIR}/prompts/phase-roadmap.md (or
+project-roadmap.md), fill the placeholders, and paste it into a new AI chat.
+The AI runs @${DEST_SUBDIR}/model-selector.txt against
+@${DEST_SUBDIR}/user-context.md as the engine — no external API.
 
 See @${DEST_SUBDIR}/HOW-TO-USE.md for the full workflow. Re-run this exporter at
 the start of each phase to stay current with the catalog.
