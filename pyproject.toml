@@ -86,6 +86,8 @@ include = [
     "docs/templates/phase-roadmap-template.md",
     "docs/templates/project-roadmap-template.md",
     "docs/templates/planning-kit-how-to-use.md",
+    "docs/templates/prompt-project-roadmap.md",
+    "docs/templates/prompt-phase-roadmap.md",
     "docs/user-context.example.md",
     "docs/catalog.json",
     "hatch_build.py",

@@ -39,6 +39,8 @@ BUNDLED_DOCS: dict[str, str] = {
     "templates/phase-roadmap-template.md": "phase-roadmap-template.md",
     "templates/project-roadmap-template.md": "project-roadmap-template.md",
     "templates/planning-kit-how-to-use.md": "planning-kit-how-to-use.md",
+    "templates/prompt-project-roadmap.md": "prompt-project-roadmap.md",
+    "templates/prompt-phase-roadmap.md": "prompt-phase-roadmap.md",
 }
 
 
