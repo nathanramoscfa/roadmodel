@@ -397,12 +397,30 @@ complete all six stages before declaring the step done.
    Between steps, `git worktree list` shows only the primary
    tree.
 
-6. **New conversation, next step.** Phase-boundary hygiene:
-   close the current Claude Code / Cursor / Codex session and
-   open a fresh one before starting the next step. The new
-   conversation begins again at Stage 1 with the next step's
-   `**Branch:**` line driving the `git checkout -b` command.
-   No work straddles two steps.
+6. **Dispose of every finding, declare completion, then new
+   conversation.** Before declaring anything, send every
+   finding the step surfaced to its destination per "Defect
+   handling & triage" below — a note for a later step is edited
+   into that step's prompt now, a bug is fixed or is an issue
+   number, a judgement call in the diff is explained in the PR
+   body. A finding that is only described is not disposed of,
+   and counts as an unmet acceptance criterion. Only once the
+   PR is merged, every acceptance criterion is affirmatively
+   met, and every finding has a destination, end the final
+   response with the verbatim line "Step N is complete. You
+   can now move on to Step N+1." (or, on the phase's last
+   step, "Phase N is complete. You can now move on to Phase
+   N+1."). That line is the LAST line of the response. Nothing
+   follows it — no "Follow-ups (non-blocking)", "Notes",
+   "Next", or suggested improvements. If any criterion is unmet
+   or any finding has no destination, say plainly that the step
+   is NOT complete, name what is outstanding, and withhold the
+   line. "Done" means done. Then, for phase-boundary hygiene,
+   the operator closes the current Claude Code / Cursor / Codex
+   session and opens a fresh one before starting the next step.
+   The new conversation begins again at Stage 1 with the next
+   step's `**Branch:**` line driving the `git checkout -b`
+   command. No work straddles two steps.
 
 #### Worktree strategy
 
@@ -745,6 +763,13 @@ Rules:
    a test, a lint rule, a CI check, a verify-script check — so
    the class cannot recur. The phase's QA findings doc records
    the finding and its guard together.
+5. **Dispose before you declare.** The table above is the only
+   place a finding may go. A step is not declared complete
+   while any finding is merely described — in the chat, in a
+   "follow-ups" note, in a "worth a glance" aside — rather than
+   sitting at its destination. The completion line (Stage 6)
+   is the last line of the response; a finding that would need
+   to follow it means the step is not done yet.
 
 ### Operations & observability strategy
 
