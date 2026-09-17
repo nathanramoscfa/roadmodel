@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.34] — 2026-09-17
+
+### Changed
+
+- **Bundled Claude Code notes refreshed through 2.1.273** (#594, #595,
+  #596): version notes only; the `/effort` vocabulary and extended-thinking
+  controls are unchanged.
+
 ### Fixed
 
 - **Roadmap templates: "done" means done — no more "Follow-ups" trailer.**
