@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   --force`) and checks the template's Stage 6 is current before writing, so a
   stale kit fails loudly rather than baking an old step lifecycle into every
   step. HOW-TO-USE.md and both exporters' "Next:" hints point at the prompts.
+- **`docs/planning-workflow.md` + `docs/claude-commands/`.** The reference for
+  the whole planning workflow, and the two user-scope Claude Code commands
+  (`/roadmap-project`, `/roadmap-phase N`) that execute the kit's prompts —
+  copy them to `~/.claude/commands/` once per machine.
 
 ## [0.2.34] — 2026-09-17
 
