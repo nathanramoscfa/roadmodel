@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Planning kit: fill-in paste-prompts.** `roadmodel export-kit` and
+  `scripts/export-planning-kit.sh` now ship `planning/prompts/project-roadmap.md`
+  and `planning/prompts/phase-roadmap.md` — copy one, fill the `{{placeholders}}`
+  table, paste into a new chat, submit — instead of retyping "use roadmodel to
+  write the Phase N roadmap" each phase. Each prompt opens with a Step 0 that
+  refreshes the kit (`pip install -U roadmodel && roadmodel export-kit .
+  --force`) and checks the template's Stage 6 is current before writing, so a
+  stale kit fails loudly rather than baking an old step lifecycle into every
+  step. HOW-TO-USE.md and both exporters' "Next:" hints point at the prompts.
+- **`docs/planning-workflow.md` + `docs/claude-commands/`.** The reference for
+  the whole planning workflow, and the two user-scope Claude Code commands
+  (`/roadmap-project`, `/roadmap-phase N`) that execute the kit's prompts —
+  copy them to `~/.claude/commands/` once per machine.
+
 ## [0.2.34] — 2026-09-17
 
 ### Changed

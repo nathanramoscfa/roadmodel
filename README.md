@@ -104,6 +104,11 @@ checkout instead of GitHub), `--user-context <path>`. On Windows
 PowerShell, call `curl.exe` (not the `curl` alias) if you fetch files by
 hand; the `export-kit` command above avoids that entirely.
 
+**Day-to-day:** see [docs/planning-workflow.md](docs/planning-workflow.md)
+— `/roadmap-project` and `/roadmap-phase N` (user-scope Claude Code
+commands shipped in `docs/claude-commands/`) refresh the kit and run its
+fill-in paste-prompts (`planning/prompts/`) so you never retype the ask.
+
 Either way the in-editor AI runs the algorithm itself rather than calling
 the recommender service. Use the MCP server above instead when you want
 deterministic, structured recommendations in a script or CI.

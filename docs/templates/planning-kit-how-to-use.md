@@ -17,6 +17,8 @@ paid API.
 | `user-context.md` | The operator's **subscriptions + API keys + platform preference order** — decides *which platform pays* for each pick. |
 | `templates/project-roadmap-template.md` | Skeleton for a whole-project `ROADMAP.md`. |
 | `templates/phase-roadmap-template.md` | Skeleton for one `phaseNN-roadmap.md`. |
+| `prompts/project-roadmap.md` | **Fill-in paste-prompt** that writes `ROADMAP.md` from the project template — refreshes the kit first. |
+| `prompts/phase-roadmap.md` | **Fill-in paste-prompt** that writes one `phaseNN-roadmap.md` — refreshes the kit first. |
 
 ## The one rule: **you are the engine**
 
@@ -56,18 +58,23 @@ Concretely, for each roadmap step:
 
 ## Paste-prompt
 
-Open a new chat in this project and paste:
+Do not type the ask each time. Open `prompts/phase-roadmap.md` (or
+`prompts/project-roadmap.md`), fill the `{{placeholders}}` in its table, paste
+everything below its rule into a **new** chat in this project, and submit.
 
-> Write the Phase 1 roadmap `.md` using `@planning/templates/phase-roadmap-template.md`
+Each prompt starts with a Step 0 that refreshes this kit
+(`pip install -U roadmodel && roadmodel export-kit . --force`) and checks the
+template's Stage 6 is current before anything is written, so a stale kit fails
+loudly instead of baking an old step lifecycle into every step. The ask itself
+is the one below — the prompt files carry it with the placeholders filled:
+
+> Write the Phase N roadmap `.md` using `@planning/templates/phase-roadmap-template.md`
 > as the template. For **each step's** Settings table and Model rationale, run
 > the model selector in `@planning/model-selector.txt` (with prices from
 > `@planning/model-tier-cost-scale.md`) against `@planning/user-context.md` — you
 > are the engine, do not call any external API. Honor every availability
 > exclusion in the selector. Fill the rest of the template from the project
 > roadmap, and include a backup model per step.
-
-Swap `phase-roadmap-template.md` → `project-roadmap-template.md` (and adjust the
-ask) to author the top-level project roadmap instead.
 
 ## Staying current
 

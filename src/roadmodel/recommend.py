@@ -37,6 +37,12 @@ BUNDLED_PROJECT_ROADMAP_TEMPLATE_PATH: Traversable = (
 BUNDLED_PLANNING_KIT_HOWTO_PATH: Traversable = (
     resources.files("roadmodel.data") / "planning-kit-how-to-use.md"
 )
+BUNDLED_PROMPT_PROJECT_ROADMAP_PATH: Traversable = (
+    resources.files("roadmodel.data") / "prompt-project-roadmap.md"
+)
+BUNDLED_PROMPT_PHASE_ROADMAP_PATH: Traversable = (
+    resources.files("roadmodel.data") / "prompt-phase-roadmap.md"
+)
 
 # The block contract the selector's <output-format> emits. SOURCE OF TRUTH: the
 # "OUTPUT CONTRACT VERSION:" line at the top of <output-format> in
