@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.35] — 2026-09-17
+
 ### Added
 
 - **Planning kit: fill-in paste-prompts.** `roadmodel export-kit` and
