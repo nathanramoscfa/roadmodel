@@ -5,17 +5,41 @@ project. Two asks, two commands, no retyping.
 
 ## 1. One-time setup per machine
 
+Slash commands are **per machine** (Claude Code reads them from your
+home directory), so do this once on every machine you plan on — the
+Mac and the PC each need their own copy.
+
+macOS / Linux, from a roadmodel checkout:
+
 ```sh
 pip install -U roadmodel          # in the env your `roadmodel` runs from
 mkdir -p ~/.claude/commands
 cp docs/claude-commands/roadmap-*.md ~/.claude/commands/
 ```
 
+Windows PowerShell, no checkout needed (fetches from `main`):
+
+```powershell
+$base = "https://raw.githubusercontent.com/nathanramoscfa/roadmodel/main/docs/claude-commands"
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude\commands" | Out-Null
+foreach ($n in "roadmap-phase","roadmap-project") {
+  curl.exe -fsSL "$base/$n.md" -o "$env:USERPROFILE\.claude\commands\$n.md"
+}
+```
+
+Then **reload the editor window** (VS Code: `Developer: Reload Window`)
+— the Claude Code extension scans commands when it starts, not when
+you open a new chat. Type `/` in a chat; `roadmap-phase` and
+`roadmap-project` should be listed.
+
 The two files in [`docs/claude-commands/`](claude-commands/) become the
 user-scope Claude Code slash commands `/roadmap-project` and
-`/roadmap-phase`, available in every project. They are thin: each one
-executes the paste-prompt that the planning kit ships, so they never
-drift from the kit.
+`/roadmap-phase`, available in every project on that machine. They are
+thin: each one executes the paste-prompt that the planning kit ships,
+so they never drift from the kit. Newer Claude Code builds also accept
+them as skills — copy each file to
+`~/.claude/skills/<name>/SKILL.md` with a `name: <name>` frontmatter
+line if `commands/` is not picked up.
 
 ## 2. Write the project roadmap
 
@@ -69,13 +93,15 @@ it — every finding has been dispatched (roadmap edited, issue opened,
 PR body) before that line is emitted. If the AI reports the step is NOT
 complete, it names what is outstanding; nothing is silently carried.
 
-## Without slash commands (Windows PC, Cursor, other clients)
+## Without slash commands (Cursor, other clients)
 
 Open `planning/prompts/phase-roadmap.md` (or `project-roadmap.md`), fill
 the `{{placeholders}}` in its table, paste everything below the rule into
-a new chat, submit. The Windows planning-kit scheduled task keeps
-`planning/` current from GitHub `main`; with roadmodel installed, the
-prompt's Step 0 refreshes it instead.
+a new chat, submit. Where a scheduled task keeps `planning/` current from
+GitHub `main`, the prompt's Step 0 still refreshes it when roadmodel is
+installed; on Windows, run Step 0 in the project's conda env
+(`pip install -U roadmodel; roadmodel export-kit . --force`) — the
+`scripts/export-planning-kit.sh` fallback needs bash.
 
 ## Requirements
 
