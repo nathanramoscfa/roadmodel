@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`/roadmap-*` for Cursor and OpenCode.** Cursor reads `~/.agents/skills/`
+  directly, so the skills the updater already installs for Codex are Cursor's
+  `/roadmap-step` etc. — the updater now detects `~/.cursor/` and labels the
+  install for both. OpenCode gets generated Markdown commands
+  (`~/.config/opencode/commands/<name>.md`, `$ARGUMENTS` native; its
+  `` !`cmd` `` and `@path` syntaxes refused). Five agents total: Claude
+  Code, Gemini CLI, Codex, Cursor, OpenCode.
 - **User-context template lists every federated provider.** The "Active API
   keys" table in `user-context.example.md` (what `roadmodel context init`
   bootstraps) now carries DeepSeek, Mistral, Groq and Z.ai rows alongside

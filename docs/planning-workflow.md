@@ -207,10 +207,10 @@ reach the schedule the next time `/roadmodel-update` is run by hand
    summary. It does not start Step 1 — every step is its own
    conversation, per the step lifecycle in the template.
 
-## Other agents: Gemini CLI and Codex
+## Other agents: Gemini CLI, Codex, Cursor, OpenCode
 
-The same four commands exist for Gemini CLI and Codex, generated from
-the Claude Code files so they never drift. `/roadmodel-update` (or
+The same four commands exist for Gemini CLI, Codex, Cursor and
+OpenCode, generated from the Claude Code files so they never drift. `/roadmodel-update` (or
 `python ~/.config/roadmodel/update_projects.py --commands-only`)
 installs them wherever it finds the tool:
 
@@ -218,8 +218,10 @@ installs them wherever it finds the tool:
 | ---------- | --------------- | ------------------------------------ | ---------------------- |
 | Gemini CLI | `~/.gemini/`    | `~/.gemini/commands/<name>.toml`     | `/roadmap-step 1 3`    |
 | Codex      | `~/.codex/`     | `~/.agents/skills/<name>/SKILL.md`   | `$roadmap-step 1 3`    |
+| Cursor     | `~/.cursor/`    | same `~/.agents/skills/` file (Cursor reads it) | `/roadmap-step 1 3` |
+| OpenCode   | `~/.config/opencode/` | `~/.config/opencode/commands/<name>.md` | `/roadmap-step 1 3` |
 
-`--agents gemini,codex` forces a set. The commands behave the same:
+`--agents gemini,codex,cursor,opencode` forces a set. The commands behave the same:
 `/roadmap-step` checks the step's Platform against the surface it is
 running on and stops if they differ, so a step the roadmap assigns to
 Codex is executed with `$roadmap-step` in Codex, not in Claude Code.
