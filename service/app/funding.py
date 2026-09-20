@@ -35,7 +35,10 @@ from typing import Any
 # The pool-aggregator provider set (Cursor) — SHARED with the package's
 # roadmodel.cost.model_provider so this service-side maker resolution can never
 # drift from it (the drift was the aggregator-maker backup bug).
-from roadmodel.cost import _AGGREGATOR_PROVIDERS  # type: ignore[import-untyped]
+from roadmodel.cost import (  # type: ignore[import-untyped]
+    _AGGREGATOR_FALLBACK_ORDER,
+    _AGGREGATOR_PROVIDERS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +60,7 @@ _PROVIDER_LABELS: dict[str, str] = {
     "xai": "xAI",
     "cursor": "Cursor",
     "zai": "z.ai",
+    "openrouter": "OpenRouter",
 }
 
 # Leading maker / product-line words an engine may prepend to a bare catalog
@@ -1284,8 +1288,14 @@ class AccessGuard:
             first_party = provs - _AGGREGATOR_PROVIDERS
             if len(first_party) == 1:
                 self._maker_of[supported] = next(iter(first_party))
-            elif not first_party and len(provs) == 1:
-                self._maker_of[supported] = next(iter(provs))
+            elif not first_party and provs:
+                # Aggregator-only (Composer; Kimi via Cursor + OpenRouter +
+                # Ollama since Phase 4.10): the package's preference order picks
+                # the maker so both guards agree.
+                self._maker_of[supported] = next(
+                    (a for a in _AGGREGATOR_FALLBACK_ORDER if a in provs),
+                    next(iter(sorted(provs))),
+                )
             # Ambiguous (multiple first-party makers) -> unknown, matching
             # model_provider — the different-maker guard then fails safe.
 

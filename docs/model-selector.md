@@ -90,6 +90,14 @@ posture above. Honor whichever it states:
   lowest-tier model that is still an ADEQUATE fit for the task (a mid-tier
   Sonnet-class model over a frontier Opus-/Fable-class one when the mid-tier
   clears the bar), and the LOWEST reasoning effort that still clears it.
+  A model the user has pulled onto their OWN hardware (a FUNDED `local`
+  access method — docs/user-context.md "Local models (Ollama)") is the
+  minimum-resource path of all: $0, no subscription budget, no provider
+  tokens, no data leaving the machine. Under this posture an ADEQUATE
+  locally-pulled model beats every hosted candidate, funded or not, and
+  the gate below is CLOSED whenever such a candidate exists (condition
+  (d)); judge "adequate" one tier below the listed ratings and carry the
+  quantization caveat clause in the RATIONALE.
   Only drop to a cheaper-tier model the user pays per-token for when it is
   genuinely cheaper in real dollars AND adequate; on a quality tie a
   $0-funded model still beats new per-token spend. This is the ONE case
@@ -114,7 +122,7 @@ Scaling the capability TIER down, or the reasoning EFFORT down, is only
 worth doing when it SAVES the user something. It does not always. Apply
 this gate FIRST, before the posture rules:
 
-Gate condition — ALL THREE must hold:
+Gate condition — ALL FOUR must hold:
   (a) the chosen PLATFORM is subscription-funded (its `billing` is
       `subscription-included`, `subscription-pool`, or `subscription-or-key`
       satisfied by an ACTIVE subscription, not by an API key), AND
@@ -122,7 +130,12 @@ Gate condition — ALL THREE must hold:
       subscription (so every candidate tier is reached at the same $0
       marginal price), AND
   (c) the user-context does not report that subscription's budget as
-      exhausted or near-exhausted.
+      exhausted or near-exhausted, AND
+  (d) NO FUNDED `local` access method reaches a model that is ADEQUATE
+      for the task — see "LOCAL MODELS AND THE GATE" below. A locally-
+      pulled model is $0 with no usage pool behind it, a different
+      funding class; when one is adequate the set is not flat and the
+      gate is CLOSED.
 
 When the gate is OPEN: out-of-pocket price is FLAT across the candidates and
 therefore CANNOT differentiate them. Tiering down buys the user NOTHING and
@@ -169,6 +182,22 @@ When the gate is CLOSED — any per-token path, an exhausted subscription
 budget, or a candidate set that straddles funded and unfunded models — the
 three posture rules above apply UNCHANGED. Tiering down and effort-down are
 correct there, because they save real dollars.
+
+LOCAL MODELS AND THE GATE. A FUNDED `local` access method (billing `local`
+in `<access-methods>`: weights the operator has pulled onto their own
+hardware, declared in docs/user-context.md) is NOT subscription funding —
+it is $0 with no usage pool behind it, a DIFFERENT funding class. A
+candidate set that contains an ADEQUATE locally-pulled model therefore
+straddles two funding classes, and the gate is CLOSED for it: tiering
+down to that model does save something (every subscription or per-token
+token the task would otherwise consume, and the data never leaves the
+machine). So under `cheap`, an adequate locally-pulled model reached via
+its funded `local` method IS the minimum-resource pick and wins over a
+subscription-funded model of a higher tier; under `balanced` it competes
+as a $0-funded model per that bullet; under `best` quality wins as usual.
+Every local pick carries the quantization caveat clause
+(`<access-selection>` Step C) — "adequate" is judged one tier below the
+listed ratings.
 
 Across the three priorities, when the gate is CLOSED and the chosen model is
 HELD, reasoning effort is the cost-vs-quality axis: Cost = lowest-adequate,
@@ -1094,6 +1123,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       Newly-auto-added models receive this code until the maintainer
       fills it in; the auto-add rule in `update/prompt.md` emits a
       warning so these don't ship silently.
+    - `local` — valid on a `<method>`'s `provider-jurisdiction` ONLY,
+      never on a `<model>`: the weights run on the operator's own
+      hardware and no data leaves the machine, so the method passes
+      every allowed-jurisdictions list (`<access-selection>` Step A0).
+      The MODEL keeps its maker's jurisdiction and Step 0b still
+      applies to it.
 
     Default allowed list (assumed when `docs/user-context.md` carries
     no `<allowed-jurisdictions>` section):
@@ -1121,7 +1156,11 @@ as primary; the other becomes the secondary category for tie-breaking.
     2026-05-21 roadmodel exposes only fixed-engine models. Users
     who want routing behavior should pick a specific fixed engine
     directly and accept that the underlying provider may pool-route
-    among models of the same family.
+    among models of the same family. An aggregator as an ACCESS METHOD
+    (the `openrouter` entry in `<access-methods>`) is a different
+    matter: the MODEL is still a fixed catalogued engine chosen by
+    `<selection-algorithm>`, only the endpoint that serves it is the
+    aggregator's, so the model-level filter keeps its meaning.
   </jurisdiction-context>
 
   <availability-context>
@@ -1598,7 +1637,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **D** · Long-context **C** · Knowledge **B** · Speed **A**
 - **Headline benchmarks:** OpenAI gpt-oss-120b — open-weight (Apache-2.0) Mixture-of-Experts reasoning model (~117B total / ~5B active) with configurable reasoning effort; OpenAI positions it near o4-mini on reasoning; 128K context; hosted by Groq (~500 tokens/s); us-jurisdiction
 - **Pricing notes:** Provider-direct Groq-hosted pricing for OpenAI's open-weight gpt-oss (Apache-2.0); us-jurisdiction; prices manually maintained from groq.com/pricing
-- **Best for:** OpenAI's open-weight gpt-oss-120b (Apache-2.0) hosted by Groq — a very low-cost ($0.60/M output), fast (~500 tokens/s), us-jurisdiction reasoning model with an adjustable reasoning dial, for cost / throughput-sensitive reasoning and coding where an open-weight, self-hostable model (data-sovereignty, on-prem portability) is preferred. OpenAI positions it near o4-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key — note this host is not among the operator's current subscriptions, so it is catalog-present but only recommendable once a groq-api-key (or another gpt-oss host) is configured.
+- **Best for:** OpenAI's open-weight gpt-oss-120b (Apache-2.0) hosted by Groq — a very low-cost ($0.60/M output), fast (~500 tokens/s), us-jurisdiction reasoning model with an adjustable reasoning dial, for cost / throughput-sensitive reasoning and coding where an open-weight, self-hostable model (data-sovereignty, on-prem portability) is preferred. OpenAI positions it near o4-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key, or via the `ollama` method when docs/user-context.md declares it pulled locally (Apache-2.0 weights; ~65 GB at MXFP4) — recommendable whenever EITHER host is declared.
 
 #### gpt-oss-20b — `gpt-oss-20b`
 
@@ -1606,7 +1645,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Tier ratings:** Coding **C** · Planning **C** · Agentic **C** · Multimodal **D** · Long-context **C** · Knowledge **C** · Speed **S**
 - **Headline benchmarks:** OpenAI gpt-oss-20b — smaller open-weight (Apache-2.0) Mixture-of-Experts reasoning model (~21B total / ~3.6B active); OpenAI positions it near o3-mini; 128K context; very fast on Groq (~1000 tokens/s); us-jurisdiction
 - **Pricing notes:** Provider-direct Groq-hosted pricing for OpenAI's open-weight gpt-oss (Apache-2.0); us-jurisdiction; prices manually maintained from groq.com/pricing
-- **Best for:** OpenAI's smaller open-weight gpt-oss-20b (Apache-2.0) hosted by Groq — the cheapest gpt-oss ($0.30/M output) and extremely fast (~1000 tokens/s), for high-throughput / latency-sensitive light reasoning, classification, and simple code under the us jurisdiction, or as an on-device / self-hostable open-weight option. OpenAI positions it near o3-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key — catalog-present but only recommendable once a groq-api-key (or another gpt-oss host) is configured. Prefer gpt-oss-120b when reasoning quality matters more than raw speed / cost.
+- **Best for:** OpenAI's smaller open-weight gpt-oss-20b (Apache-2.0) hosted by Groq — the cheapest gpt-oss ($0.30/M output) and extremely fast (~1000 tokens/s), for high-throughput / latency-sensitive light reasoning, classification, and simple code under the us jurisdiction, or as an on-device / self-hostable open-weight option. OpenAI positions it near o3-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key, or via the `ollama` method when docs/user-context.md declares it pulled locally (Apache-2.0 weights; ~13 GB at MXFP4, fits 16 GB unified memory) — recommendable whenever EITHER host is declared. Prefer gpt-oss-120b when reasoning quality matters more than raw speed / cost.
 
 #### Grok 4.3 — `grok-4.3`
 
@@ -1618,7 +1657,86 @@ as primary; the other becomes the secondary category for tie-breaking.
 
 ## Access Methods
 
-`) bundle the same models behind
+`: weights the operator has pulled onto their own
+    hardware, declared in docs/user-context.md) is NOT subscription funding —
+    it is $0 with no usage pool behind it, a DIFFERENT funding class. A
+    candidate set that contains an ADEQUATE locally-pulled model therefore
+    straddles two funding classes, and the gate is CLOSED for it: tiering
+    down to that model does save something (every subscription or per-token
+    token the task would otherwise consume, and the data never leaves the
+    machine). So under `cheap`, an adequate locally-pulled model reached via
+    its funded `local` method IS the minimum-resource pick and wins over a
+    subscription-funded model of a higher tier; under `balanced` it competes
+    as a $0-funded model per that bullet; under `best` quality wins as usual.
+    Every local pick carries the quantization caveat clause
+    (`<access-selection>` Step C) — "adequate" is judged one tier below the
+    listed ratings.
+
+    Across the three priorities, when the gate is CLOSED and the chosen model is
+    HELD, reasoning effort is the cost-vs-quality axis: Cost = lowest-adequate,
+    Balanced = sensible, Quality = highest-useful.
+
+    CONSUMPTION-HEADROOM OVERRIDE (the EFFORT axis): reasoning-effort / thinking
+    LEVEL and capability TIER are TWO SEPARATE dimensions, not one. The
+    budget-priority rules above scale BOTH down the ladder, but scaling effort is
+    only worthwhile when spending effort actually COSTS the user something —
+    out-of-pocket dollars (a per-token path), a usage cap they can exhaust, or
+    latency they value. When the appended user-context declares a
+    "Consumption headroom" posture, THAT states whether effort is a real cost for
+    this user and governs the effort axis ORTHOGONALLY to which model is chosen:
+    - `uncapped` — the user faces NO consumption cost: a flat subscription whose
+      usage budget they do not exhaust ($0 marginal AND effectively no cap), and
+      no valued latency cost. Effort is therefore FREE, so emit the HIGHEST USEFUL
+      reasoning effort the model + surface support (top of the effort dial —
+      `max`, or `xhigh` on a model with no `max` step) on ALL THREE priorities,
+      INCLUDING Cost. Do NOT scale effort down for Cost or Balanced, and keep
+      extended thinking ON — never emit an `Off` thinking / effort under this
+      posture. This OVERRIDES the "Never emit `Max` effort" floor in the `cheap`
+      rule above.
+      Interaction with the FLAT-FUNDING GATE: this posture governs the EFFORT
+      axis, the gate governs the TIER axis, and they compose. When the gate is
+      CLOSED, the capability-tier ladder still applies unchanged and the picks
+      differ by TIER ALONE (Cost = the smallest adequate model at MAX effort;
+      Balanced = a mid model at MAX effort; Quality = the frontier model at MAX
+      effort). When the gate is OPEN, the tier ladder is HELD as well, so the
+      picks differentiate on latency / context / blast radius — and may
+      legitimately converge, which the RATIONALE must then state outright.
+    - `capped` (and the DEFAULT when no headroom posture is declared) — consumption
+      IS a real cost (a usage cap the user can hit, or per-token spend), so effort
+      stays the cost-vs-quality lever exactly as the budget-priority rules above
+      define it: Cost = lowest-adequate, Balanced = sensible, Quality =
+      highest-useful.
+    This posture NEVER changes WHICH model is picked (that remains the
+    budget-priority + `<access-selection>` decision) — it only sets how much
+    reasoning effort each already-chosen pick runs at.
+  </objective>
+
+  <pricing-context>
+    All prices below are per 1M tokens, sourced from Cursor's published API
+    pricing. Use these prices solely as a tie-breaker after the quality
+    decision is made.
+
+    Cost interpretation:
+    - Output price is the dominant cost driver for code generation, full
+      implementations, comprehensive plans, and any long-form response.
+    - Input price matters most when feeding large context — long files,
+      repo-wide search results, multimodal payloads, or sprawling document
+      corpora.
+    - Cache-read price (typically ~10% of input) only matters for sustained
+      sessions with reusable system prompts or persistent context.
+    - Tier placement is based solely on output price per 1M tokens:
+      Low &lt; $10, Medium $10–$14.99, High $15–$24.99, Very High ≥ $25.
+
+    Routing meta-models (Cursor's "Auto" / "Premium" modes; analogous
+    routers from other providers) are NOT enumerated in `<model-options>`.
+    The catalog tracks fixed-engine models only — a routing model's
+    benchmarks, jurisdiction, and cost are by construction unknowable in
+    advance, which conflicts with the selector's per-model tier ratings
+    and the `<jurisdiction-context>` filter. Users who want routing
+    behavior should pick a specific fixed engine directly.
+
+    The per-token rates above are only one dimension of cost. Access
+    methods (see `<access-methods>`) bundle the same models behind
     subscriptions and shared token pools where the marginal cost per
     call is effectively $0 until the subscription budget is exhausted.
     docs/model-tier-cost-scale.md carries a "Subscription Tiers" section
@@ -2168,7 +2286,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Billing:** per-token (requires groq-api-key)
 - **Supports models:** gpt-oss-120b,gpt-oss-20b
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
-- **Best for:** Direct Groq API access (provider-direct per-token; OpenAI-format at api.groq.com) hosting OpenAI's open-weight gpt-oss (Apache-2.0) models — very low-cost, very high-throughput reasoning / coding under the us jurisdiction. Exposes the gpt-oss reasoning-effort dial. Groq is the pinned host that defines gpt-oss price + access (price = f(model, platform)); the open weights can also be self-hosted or run on another host. NOTE Groq is not among the operator's current subscriptions, so gpt-oss is catalog-present but only recommendable once a groq-api-key is configured.
+- **Best for:** Direct Groq API access (provider-direct per-token; OpenAI-format at api.groq.com) hosting OpenAI's open-weight gpt-oss (Apache-2.0) models — very low-cost, very high-throughput reasoning / coding under the us jurisdiction. Exposes the gpt-oss reasoning-effort dial. Groq is the pinned host that defines gpt-oss price + access (price = f(model, platform)); the open weights can also be self-hosted or run on another host. NOTE this method is funded only by a groq-api-key; the same open weights are also reachable through the `ollama` method when the operator declares a local pull in docs/user-context.md.
 
 ### Cursor
 
@@ -2178,6 +2296,24 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Supports models:** claude-opus-5,opus-4.8,claude-fable-5.1,claude-fable-5,opus-4.7,gpt-5.5,gpt-5.6-sol,claude-sonnet-5,sonnet-4.6,gpt-5.4,kimi-k3,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.6-terra,gemini-3.1-pro,gemini-3-pro,gpt-5,gpt-5.1-codex-max,gpt-5.1-codex,gemini-3.5-flash,gemini-3.6-flash,claude-4.5-haiku,muse-spark-1.3,gpt-5.4-mini,gpt-5.4-nano,grok-4.6,grok-4.5,kimi-k2.7-code,gemini-3.7-flash,gemini-3.8-flash,gemini-3-flash,composer-2.5,gemini-2.5-flash,gpt-5-mini,gpt-5.1-codex-mini,gpt-5.6-luna,glm-5.2
 - **Toggles:** Max Mode — yes · Thinking — no · Orchestration — no
 - **Best for:** Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / composer-2.5 imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. Cursor's own Auto and Premium routing modes are deliberately NOT enumerated as roadmodel-recommendable models because their routing is opaque (see `jurisdiction-context` for the rationale) — operators who want routing behavior pick a specific fixed model and let Cursor's pool handle the call. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path).
+
+### Ollama (local)
+
+#### Ollama (local) — `ollama`
+
+- **Billing:** local (requires ollama-local)
+- **Supports models:** gpt-oss-120b,gpt-oss-20b,deepseek-v4-pro,deepseek-v4-flash,glm-5.2,glm-4.6,glm-4.5-air,kimi-k3,kimi-k2.7-code,mistral-large-3,mistral-small-4
+- **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
+- **Best for:** Open-weight models pulled and served on the operator's OWN hardware through a local Ollama runtime — $0 per token, no data leaves the machine, no subscription budget consumed. supports-models lists ONLY catalogued models whose weights are downloadable under a licence that permits local use (Apache-2.0: gpt-oss-120b / gpt-oss-20b / mistral-large-3 / mistral-small-4; MIT: deepseek-v4-pro / deepseek-v4-flash / glm-5.2 / glm-4.6 / glm-4.5-air; Modified MIT: kimi-k2.7-code; Kimi K3 License: kimi-k3) — the MODEL-level jurisdiction filter (Step 0b) still governs which of them are eligible. HARDWARE CAVEAT: the catalog's tier ratings describe the provider-hosted weights; a quantized local pull (4-bit GGUF, MXFP4, and similar) runs about one tier below them for coding and reasoning, throughput is bounded by the operator's GPU / unified memory, and the largest entries (kimi-k3, deepseek-v4-pro) do not fit consumer hardware at all — the selector funds this method ONLY for models the operator has actually listed as pulled in docs/user-context.md, so a listed model is one that fits. Thinking is forwarded as `reasoning_effort` for models that support it (gpt-oss, GLM, DeepSeek, Kimi); the per-model dial is the model's, not the runtime's. Reached via the `ollama` access method when docs/user-context.md declares `Ollama installed | Yes` and the model in its pulled-models table.
+
+### OpenRouter
+
+#### OpenRouter — `openrouter`
+
+- **Billing:** per-token (requires openrouter-api-key)
+- **Supports models:** claude-opus-5,opus-4.8,claude-fable-5.1,claude-fable-5,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku,gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5.4-nano,gpt-5-mini,gemini-3.1-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash,grok-4.6,grok-4.5,grok-4.3,deepseek-v4-pro,deepseek-v4-flash,mistral-medium-3.5,mistral-small-4,codestral,glm-5.2,glm-4.6,glm-4.5-air,gpt-oss-120b,gpt-oss-20b,kimi-k3,kimi-k2.7-code,muse-spark-1.3
+- **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
+- **Best for:** Per-token AGGREGATOR that resells other makers' models behind one OpenAI-format endpoint and one key (openrouter.ai) — like Cursor's pool but paid per call, not a subscription. Reaches most of the catalog: supports-models is a POINT-IN-TIME snapshot of openrouter.ai/models at authoring (2026-09-20; absent: composer-2.5 which is Cursor-only, gemini-3-pro which OpenRouter serves only as an image endpoint, mistral-large-3 which it serves only as a batch endpoint) that the operator should trust LESS than a provider-direct method — prefer the maker's own method when the operator holds that key. BILLING: OpenRouter charges the maker's list price plus its platform fee (~5% on credit purchases at authoring), so the catalog price is a FLOOR for this method, never an exact estimate. ROUTING: a request may be served by any of OpenRouter's upstream hosts for that model; the MODEL-level jurisdiction filter (Step 0b) still governs which models are eligible, and this method's `us` code is OpenRouter's own (the operator's counterparty), NOT the upstream host's. Exposes the maker's reasoning dial where the routed model documents one (`reasoning_effort` on OpenAI / gpt-oss / GLM / DeepSeek families). Never the maker of any model it resells: the cross-provider BACKUP guard resolves makers through provider-direct methods, exactly as it does for Cursor.
 
 ## Selection Algorithm
 
@@ -2236,6 +2372,14 @@ as primary; the other becomes the secondary category for tie-breaking.
       lowest-tier model that is still an ADEQUATE fit for the task (a mid-tier
       Sonnet-class model over a frontier Opus-/Fable-class one when the mid-tier
       clears the bar), and the LOWEST reasoning effort that still clears it.
+      A model the user has pulled onto their OWN hardware (a FUNDED `local`
+      access method — docs/user-context.md "Local models (Ollama)") is the
+      minimum-resource path of all: $0, no subscription budget, no provider
+      tokens, no data leaving the machine. Under this posture an ADEQUATE
+      locally-pulled model beats every hosted candidate, funded or not, and
+      the gate below is CLOSED whenever such a candidate exists (condition
+      (d)); judge "adequate" one tier below the listed ratings and carry the
+      quantization caveat clause in the RATIONALE.
       Only drop to a cheaper-tier model the user pays per-token for when it is
       genuinely cheaper in real dollars AND adequate; on a quality tie a
       $0-funded model still beats new per-token spend. This is the ONE case
@@ -2260,7 +2404,7 @@ as primary; the other becomes the secondary category for tie-breaking.
     worth doing when it SAVES the user something. It does not always. Apply
     this gate FIRST, before the posture rules:
 
-    Gate condition — ALL THREE must hold:
+    Gate condition — ALL FOUR must hold:
       (a) the chosen PLATFORM is subscription-funded (its `billing` is
           `subscription-included`, `subscription-pool`, or `subscription-or-key`
           satisfied by an ACTIVE subscription, not by an API key), AND
@@ -2268,7 +2412,12 @@ as primary; the other becomes the secondary category for tie-breaking.
           subscription (so every candidate tier is reached at the same $0
           marginal price), AND
       (c) the user-context does not report that subscription's budget as
-          exhausted or near-exhausted.
+          exhausted or near-exhausted, AND
+      (d) NO FUNDED `local` access method reaches a model that is ADEQUATE
+          for the task — see "LOCAL MODELS AND THE GATE" below. A locally-
+          pulled model is $0 with no usage pool behind it, a different
+          funding class; when one is adequate the set is not flat and the
+          gate is CLOSED.
 
     When the gate is OPEN: out-of-pocket price is FLAT across the candidates and
     therefore CANNOT differentiate them. Tiering down buys the user NOTHING and
@@ -2315,6 +2464,22 @@ as primary; the other becomes the secondary category for tie-breaking.
     budget, or a candidate set that straddles funded and unfunded models — the
     three posture rules above apply UNCHANGED. Tiering down and effort-down are
     correct there, because they save real dollars.
+
+    LOCAL MODELS AND THE GATE. A FUNDED `local` access method (billing `local`
+    in `<access-methods>`: weights the operator has pulled onto their own
+    hardware, declared in docs/user-context.md) is NOT subscription funding —
+    it is $0 with no usage pool behind it, a DIFFERENT funding class. A
+    candidate set that contains an ADEQUATE locally-pulled model therefore
+    straddles two funding classes, and the gate is CLOSED for it: tiering
+    down to that model does save something (every subscription or per-token
+    token the task would otherwise consume, and the data never leaves the
+    machine). So under `cheap`, an adequate locally-pulled model reached via
+    its funded `local` method IS the minimum-resource pick and wins over a
+    subscription-funded model of a higher tier; under `balanced` it competes
+    as a $0-funded model per that bullet; under `best` quality wins as usual.
+    Every local pick carries the quantization caveat clause
+    (`<access-selection>` Step C) — "adequate" is judged one tier below the
+    listed ratings.
 
     Across the three priorities, when the gate is CLOSED and the chosen model is
     HELD, reasoning effort is the cost-vs-quality axis: Cost = lowest-adequate,
@@ -2840,6 +3005,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       Newly-auto-added models receive this code until the maintainer
       fills it in; the auto-add rule in `update/prompt.md` emits a
       warning so these don't ship silently.
+    - `local` — valid on a `<method>`'s `provider-jurisdiction` ONLY,
+      never on a `<model>`: the weights run on the operator's own
+      hardware and no data leaves the machine, so the method passes
+      every allowed-jurisdictions list (`<access-selection>` Step A0).
+      The MODEL keeps its maker's jurisdiction and Step 0b still
+      applies to it.
 
     Default allowed list (assumed when `docs/user-context.md` carries
     no `<allowed-jurisdictions>` section):
@@ -2867,7 +3038,11 @@ as primary; the other becomes the secondary category for tie-breaking.
     2026-05-21 roadmodel exposes only fixed-engine models. Users
     who want routing behavior should pick a specific fixed engine
     directly and accept that the underlying provider may pool-route
-    among models of the same family.
+    among models of the same family. An aggregator as an ACCESS METHOD
+    (the `openrouter` entry in `<access-methods>`) is a different
+    matter: the MODEL is still a fixed catalogued engine chosen by
+    `<selection-algorithm>`, only the endpoint that serves it is the
+    aggregator's, so the model-level filter keeps its meaning.
   </jurisdiction-context>
 
   <availability-context>
@@ -3392,7 +3567,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-speed="A"
              headline-benchmarks="OpenAI gpt-oss-120b — open-weight (Apache-2.0) Mixture-of-Experts reasoning model (~117B total / ~5B active) with configurable reasoning effort; OpenAI positions it near o4-mini on reasoning; 128K context; hosted by Groq (~500 tokens/s); us-jurisdiction"
              pricing-notes="Provider-direct Groq-hosted pricing for OpenAI's open-weight gpt-oss (Apache-2.0); us-jurisdiction; prices manually maintained from groq.com/pricing"
-             best-for="OpenAI's open-weight gpt-oss-120b (Apache-2.0) hosted by Groq — a very low-cost ($0.60/M output), fast (~500 tokens/s), us-jurisdiction reasoning model with an adjustable reasoning dial, for cost / throughput-sensitive reasoning and coding where an open-weight, self-hostable model (data-sovereignty, on-prem portability) is preferred. OpenAI positions it near o4-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key — note this host is not among the operator's current subscriptions, so it is catalog-present but only recommendable once a groq-api-key (or another gpt-oss host) is configured." />
+             best-for="OpenAI's open-weight gpt-oss-120b (Apache-2.0) hosted by Groq — a very low-cost ($0.60/M output), fast (~500 tokens/s), us-jurisdiction reasoning model with an adjustable reasoning dial, for cost / throughput-sensitive reasoning and coding where an open-weight, self-hostable model (data-sovereignty, on-prem portability) is preferred. OpenAI positions it near o4-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key, or via the `ollama` method when docs/user-context.md declares it pulled locally (Apache-2.0 weights; ~65 GB at MXFP4) — recommendable whenever EITHER host is declared." />
       <model id="gpt-oss-20b" name="gpt-oss-20b"
              input-price-per-1m="$0.075" output-price-per-1m="$0.30"
              jurisdiction="us"
@@ -3401,7 +3576,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-speed="S"
              headline-benchmarks="OpenAI gpt-oss-20b — smaller open-weight (Apache-2.0) Mixture-of-Experts reasoning model (~21B total / ~3.6B active); OpenAI positions it near o3-mini; 128K context; very fast on Groq (~1000 tokens/s); us-jurisdiction"
              pricing-notes="Provider-direct Groq-hosted pricing for OpenAI's open-weight gpt-oss (Apache-2.0); us-jurisdiction; prices manually maintained from groq.com/pricing"
-             best-for="OpenAI's smaller open-weight gpt-oss-20b (Apache-2.0) hosted by Groq — the cheapest gpt-oss ($0.30/M output) and extremely fast (~1000 tokens/s), for high-throughput / latency-sensitive light reasoning, classification, and simple code under the us jurisdiction, or as an on-device / self-hostable open-weight option. OpenAI positions it near o3-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key — catalog-present but only recommendable once a groq-api-key (or another gpt-oss host) is configured. Prefer gpt-oss-120b when reasoning quality matters more than raw speed / cost." />
+             best-for="OpenAI's smaller open-weight gpt-oss-20b (Apache-2.0) hosted by Groq — the cheapest gpt-oss ($0.30/M output) and extremely fast (~1000 tokens/s), for high-throughput / latency-sensitive light reasoning, classification, and simple code under the us jurisdiction, or as an on-device / self-hostable open-weight option. OpenAI positions it near o3-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key, or via the `ollama` method when docs/user-context.md declares it pulled locally (Apache-2.0 weights; ~13 GB at MXFP4, fits 16 GB unified memory) — recommendable whenever EITHER host is declared. Prefer gpt-oss-120b when reasoning quality matters more than raw speed / cost." />
       <model id="grok-4.3" name="Grok 4.3"
              input-price-per-1m="$1.25" output-price-per-1m="$2.50"
              jurisdiction="us"
@@ -3418,7 +3593,7 @@ as primary; the other becomes the secondary category for tie-breaking.
     Each access method is a way to run one or more models from
     `<model-options>`. Methods differ in (a) which models they expose,
     (b) how billing works (per-token, subscription-included,
-    subscription-pool, subscription-or-key), (c) which capability
+    subscription-pool, subscription-or-key, local), (c) which capability
     toggles (Max Mode, effort/thinking, orchestration) they expose — which
     is exactly what decides WHICH setting lines a block for that platform
     may emit, per `<output-format>` — and (d) what credentials
@@ -3438,6 +3613,13 @@ as primary; the other becomes the secondary category for tie-breaking.
     - subscription-or-key — surface accepts either a subscription OR a
       direct API key; if a subscription is active, prefer it.
     - per-token — pay-per-token at the provider's published API rate.
+    - local — self-hosted weights on the operator's own hardware; $0 per
+      token; throughput bounded by that hardware; quality bounded by the
+      quantization actually pulled, which the tier ratings do NOT
+      describe (they rate the provider-hosted weights). FUNDED only when
+      docs/user-context.md declares the runtime present AND lists the
+      chosen model among the pulled models — see `<access-selection>`
+      Step B.
 
     <method id="anthropic-api" name="Anthropic API"
             provider="anthropic" billing="per-token"
@@ -3550,7 +3732,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="gpt-oss-120b,gpt-oss-20b"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Direct Groq API access (provider-direct per-token; OpenAI-format at api.groq.com) hosting OpenAI's open-weight gpt-oss (Apache-2.0) models — very low-cost, very high-throughput reasoning / coding under the us jurisdiction. Exposes the gpt-oss reasoning-effort dial. Groq is the pinned host that defines gpt-oss price + access (price = f(model, platform)); the open weights can also be self-hosted or run on another host. NOTE Groq is not among the operator's current subscriptions, so gpt-oss is catalog-present but only recommendable once a groq-api-key is configured." />
+            best-for="Direct Groq API access (provider-direct per-token; OpenAI-format at api.groq.com) hosting OpenAI's open-weight gpt-oss (Apache-2.0) models — very low-cost, very high-throughput reasoning / coding under the us jurisdiction. Exposes the gpt-oss reasoning-effort dial. Groq is the pinned host that defines gpt-oss price + access (price = f(model, platform)); the open weights can also be self-hosted or run on another host. NOTE this method is funded only by a groq-api-key; the same open weights are also reachable through the `ollama` method when the operator declares a local pull in docs/user-context.md." />
     <method id="cursor" name="Cursor"
             provider="cursor" billing="subscription-pool"
             provider-jurisdiction="us"
@@ -3559,6 +3741,22 @@ as primary; the other becomes the secondary category for tie-breaking.
             exposes-max-mode="yes" exposes-thinking="no"
             exposes-orchestration="no"
             best-for="Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / composer-2.5 imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. Cursor's own Auto and Premium routing modes are deliberately NOT enumerated as roadmodel-recommendable models because their routing is opaque (see `jurisdiction-context` for the rationale) — operators who want routing behavior pick a specific fixed model and let Cursor's pool handle the call. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)." />
+    <method id="ollama" name="Ollama (local)"
+            provider="ollama" billing="local"
+            provider-jurisdiction="local"
+            requires="ollama-local"
+            supports-models="gpt-oss-120b,gpt-oss-20b,deepseek-v4-pro,deepseek-v4-flash,glm-5.2,glm-4.6,glm-4.5-air,kimi-k3,kimi-k2.7-code,mistral-large-3,mistral-small-4"
+            exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
+            best-for="Open-weight models pulled and served on the operator's OWN hardware through a local Ollama runtime — $0 per token, no data leaves the machine, no subscription budget consumed. supports-models lists ONLY catalogued models whose weights are downloadable under a licence that permits local use (Apache-2.0: gpt-oss-120b / gpt-oss-20b / mistral-large-3 / mistral-small-4; MIT: deepseek-v4-pro / deepseek-v4-flash / glm-5.2 / glm-4.6 / glm-4.5-air; Modified MIT: kimi-k2.7-code; Kimi K3 License: kimi-k3) — the MODEL-level jurisdiction filter (Step 0b) still governs which of them are eligible. HARDWARE CAVEAT: the catalog's tier ratings describe the provider-hosted weights; a quantized local pull (4-bit GGUF, MXFP4, and similar) runs about one tier below them for coding and reasoning, throughput is bounded by the operator's GPU / unified memory, and the largest entries (kimi-k3, deepseek-v4-pro) do not fit consumer hardware at all — the selector funds this method ONLY for models the operator has actually listed as pulled in docs/user-context.md, so a listed model is one that fits. Thinking is forwarded as `reasoning_effort` for models that support it (gpt-oss, GLM, DeepSeek, Kimi); the per-model dial is the model's, not the runtime's. Reached via the `ollama` access method when docs/user-context.md declares `Ollama installed | Yes` and the model in its pulled-models table." />
+    <method id="openrouter" name="OpenRouter"
+            provider="openrouter" billing="per-token"
+            provider-jurisdiction="us"
+            requires="openrouter-api-key"
+            supports-models="claude-opus-5,opus-4.8,claude-fable-5.1,claude-fable-5,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku,gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5.4-nano,gpt-5-mini,gemini-3.1-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash,grok-4.6,grok-4.5,grok-4.3,deepseek-v4-pro,deepseek-v4-flash,mistral-medium-3.5,mistral-small-4,codestral,glm-5.2,glm-4.6,glm-4.5-air,gpt-oss-120b,gpt-oss-20b,kimi-k3,kimi-k2.7-code,muse-spark-1.3"
+            exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
+            best-for="Per-token AGGREGATOR that resells other makers' models behind one OpenAI-format endpoint and one key (openrouter.ai) — like Cursor's pool but paid per call, not a subscription. Reaches most of the catalog: supports-models is a POINT-IN-TIME snapshot of openrouter.ai/models at authoring (2026-09-20; absent: composer-2.5 which is Cursor-only, gemini-3-pro which OpenRouter serves only as an image endpoint, mistral-large-3 which it serves only as a batch endpoint) that the operator should trust LESS than a provider-direct method — prefer the maker's own method when the operator holds that key. BILLING: OpenRouter charges the maker's list price plus its platform fee (~5% on credit purchases at authoring), so the catalog price is a FLOOR for this method, never an exact estimate. ROUTING: a request may be served by any of OpenRouter's upstream hosts for that model; the MODEL-level jurisdiction filter (Step 0b) still governs which models are eligible, and this method's `us` code is OpenRouter's own (the operator's counterparty), NOT the upstream host's. Exposes the maker's reasoning dial where the routed model documents one (`reasoning_effort` on OpenAI / gpt-oss / GLM / DeepSeek families). Never the maker of any model it resells: the cross-provider BACKUP guard resolves makers through provider-direct methods, exactly as it does for Cursor." />
   </access-methods>
 
   <selection-algorithm>
@@ -3759,6 +3957,14 @@ as primary; the other becomes the secondary category for tie-breaking.
       lowest-tier model that is still an ADEQUATE fit for the task (a mid-tier
       Sonnet-class model over a frontier Opus-/Fable-class one when the mid-tier
       clears the bar), and the LOWEST reasoning effort that still clears it.
+      A model the user has pulled onto their OWN hardware (a FUNDED `local`
+      access method — docs/user-context.md "Local models (Ollama)") is the
+      minimum-resource path of all: $0, no subscription budget, no provider
+      tokens, no data leaving the machine. Under this posture an ADEQUATE
+      locally-pulled model beats every hosted candidate, funded or not, and
+      the gate below is CLOSED whenever such a candidate exists (condition
+      (d)); judge "adequate" one tier below the listed ratings and carry the
+      quantization caveat clause in the RATIONALE.
       Only drop to a cheaper-tier model the user pays per-token for when it is
       genuinely cheaper in real dollars AND adequate; on a quality tie a
       $0-funded model still beats new per-token spend. This is the ONE case
@@ -3783,7 +3989,7 @@ as primary; the other becomes the secondary category for tie-breaking.
     worth doing when it SAVES the user something. It does not always. Apply
     this gate FIRST, before the posture rules:
 
-    Gate condition — ALL THREE must hold:
+    Gate condition — ALL FOUR must hold:
       (a) the chosen PLATFORM is subscription-funded (its `billing` is
           `subscription-included`, `subscription-pool`, or `subscription-or-key`
           satisfied by an ACTIVE subscription, not by an API key), AND
@@ -3791,7 +3997,12 @@ as primary; the other becomes the secondary category for tie-breaking.
           subscription (so every candidate tier is reached at the same $0
           marginal price), AND
       (c) the user-context does not report that subscription's budget as
-          exhausted or near-exhausted.
+          exhausted or near-exhausted, AND
+      (d) NO FUNDED `local` access method reaches a model that is ADEQUATE
+          for the task — see "LOCAL MODELS AND THE GATE" below. A locally-
+          pulled model is $0 with no usage pool behind it, a different
+          funding class; when one is adequate the set is not flat and the
+          gate is CLOSED.
 
     When the gate is OPEN: out-of-pocket price is FLAT across the candidates and
     therefore CANNOT differentiate them. Tiering down buys the user NOTHING and
@@ -3838,6 +4049,22 @@ as primary; the other becomes the secondary category for tie-breaking.
     budget, or a candidate set that straddles funded and unfunded models — the
     three posture rules above apply UNCHANGED. Tiering down and effort-down are
     correct there, because they save real dollars.
+
+    LOCAL MODELS AND THE GATE. A FUNDED `local` access method (billing `local`
+    in `<access-methods>`: weights the operator has pulled onto their own
+    hardware, declared in docs/user-context.md) is NOT subscription funding —
+    it is $0 with no usage pool behind it, a DIFFERENT funding class. A
+    candidate set that contains an ADEQUATE locally-pulled model therefore
+    straddles two funding classes, and the gate is CLOSED for it: tiering
+    down to that model does save something (every subscription or per-token
+    token the task would otherwise consume, and the data never leaves the
+    machine). So under `cheap`, an adequate locally-pulled model reached via
+    its funded `local` method IS the minimum-resource pick and wins over a
+    subscription-funded model of a higher tier; under `balanced` it competes
+    as a $0-funded model per that bullet; under `best` quality wins as usual.
+    Every local pick carries the quantization caveat clause
+    (`<access-selection>` Step C) — "adequate" is judged one tier below the
+    listed ratings.
 
     Across the three priorities, when the gate is CLOSED and the chosen model is
     HELD, reasoning effort is the cost-vs-quality axis: Cost = lowest-adequate,
@@ -4363,6 +4590,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       Newly-auto-added models receive this code until the maintainer
       fills it in; the auto-add rule in `update/prompt.md` emits a
       warning so these don't ship silently.
+    - `local` — valid on a `<method>`'s `provider-jurisdiction` ONLY,
+      never on a `<model>`: the weights run on the operator's own
+      hardware and no data leaves the machine, so the method passes
+      every allowed-jurisdictions list (`<access-selection>` Step A0).
+      The MODEL keeps its maker's jurisdiction and Step 0b still
+      applies to it.
 
     Default allowed list (assumed when `docs/user-context.md` carries
     no `<allowed-jurisdictions>` section):
@@ -4390,7 +4623,11 @@ as primary; the other becomes the secondary category for tie-breaking.
     2026-05-21 roadmodel exposes only fixed-engine models. Users
     who want routing behavior should pick a specific fixed engine
     directly and accept that the underlying provider may pool-route
-    among models of the same family.
+    among models of the same family. An aggregator as an ACCESS METHOD
+    (the `openrouter` entry in `<access-methods>`) is a different
+    matter: the MODEL is still a fixed catalogued engine chosen by
+    `<selection-algorithm>`, only the endpoint that serves it is the
+    aggregator's, so the model-level filter keeps its meaning.
   </jurisdiction-context>
 
   <availability-context>
@@ -4915,7 +5152,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-speed="A"
              headline-benchmarks="OpenAI gpt-oss-120b — open-weight (Apache-2.0) Mixture-of-Experts reasoning model (~117B total / ~5B active) with configurable reasoning effort; OpenAI positions it near o4-mini on reasoning; 128K context; hosted by Groq (~500 tokens/s); us-jurisdiction"
              pricing-notes="Provider-direct Groq-hosted pricing for OpenAI's open-weight gpt-oss (Apache-2.0); us-jurisdiction; prices manually maintained from groq.com/pricing"
-             best-for="OpenAI's open-weight gpt-oss-120b (Apache-2.0) hosted by Groq — a very low-cost ($0.60/M output), fast (~500 tokens/s), us-jurisdiction reasoning model with an adjustable reasoning dial, for cost / throughput-sensitive reasoning and coding where an open-weight, self-hostable model (data-sovereignty, on-prem portability) is preferred. OpenAI positions it near o4-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key — note this host is not among the operator's current subscriptions, so it is catalog-present but only recommendable once a groq-api-key (or another gpt-oss host) is configured." />
+             best-for="OpenAI's open-weight gpt-oss-120b (Apache-2.0) hosted by Groq — a very low-cost ($0.60/M output), fast (~500 tokens/s), us-jurisdiction reasoning model with an adjustable reasoning dial, for cost / throughput-sensitive reasoning and coding where an open-weight, self-hostable model (data-sovereignty, on-prem portability) is preferred. OpenAI positions it near o4-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key, or via the `ollama` method when docs/user-context.md declares it pulled locally (Apache-2.0 weights; ~65 GB at MXFP4) — recommendable whenever EITHER host is declared." />
       <model id="gpt-oss-20b" name="gpt-oss-20b"
              input-price-per-1m="$0.075" output-price-per-1m="$0.30"
              jurisdiction="us"
@@ -4924,7 +5161,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-speed="S"
              headline-benchmarks="OpenAI gpt-oss-20b — smaller open-weight (Apache-2.0) Mixture-of-Experts reasoning model (~21B total / ~3.6B active); OpenAI positions it near o3-mini; 128K context; very fast on Groq (~1000 tokens/s); us-jurisdiction"
              pricing-notes="Provider-direct Groq-hosted pricing for OpenAI's open-weight gpt-oss (Apache-2.0); us-jurisdiction; prices manually maintained from groq.com/pricing"
-             best-for="OpenAI's smaller open-weight gpt-oss-20b (Apache-2.0) hosted by Groq — the cheapest gpt-oss ($0.30/M output) and extremely fast (~1000 tokens/s), for high-throughput / latency-sensitive light reasoning, classification, and simple code under the us jurisdiction, or as an on-device / self-hostable open-weight option. OpenAI positions it near o3-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key — catalog-present but only recommendable once a groq-api-key (or another gpt-oss host) is configured. Prefer gpt-oss-120b when reasoning quality matters more than raw speed / cost." />
+             best-for="OpenAI's smaller open-weight gpt-oss-20b (Apache-2.0) hosted by Groq — the cheapest gpt-oss ($0.30/M output) and extremely fast (~1000 tokens/s), for high-throughput / latency-sensitive light reasoning, classification, and simple code under the us jurisdiction, or as an on-device / self-hostable open-weight option. OpenAI positions it near o3-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key, or via the `ollama` method when docs/user-context.md declares it pulled locally (Apache-2.0 weights; ~13 GB at MXFP4, fits 16 GB unified memory) — recommendable whenever EITHER host is declared. Prefer gpt-oss-120b when reasoning quality matters more than raw speed / cost." />
       <model id="grok-4.3" name="Grok 4.3"
              input-price-per-1m="$1.25" output-price-per-1m="$2.50"
              jurisdiction="us"
@@ -4941,7 +5178,7 @@ as primary; the other becomes the secondary category for tie-breaking.
     Each access method is a way to run one or more models from
     `<model-options>`. Methods differ in (a) which models they expose,
     (b) how billing works (per-token, subscription-included,
-    subscription-pool, subscription-or-key), (c) which capability
+    subscription-pool, subscription-or-key, local), (c) which capability
     toggles (Max Mode, effort/thinking, orchestration) they expose — which
     is exactly what decides WHICH setting lines a block for that platform
     may emit, per `<output-format>` — and (d) what credentials
@@ -4961,6 +5198,13 @@ as primary; the other becomes the secondary category for tie-breaking.
     - subscription-or-key — surface accepts either a subscription OR a
       direct API key; if a subscription is active, prefer it.
     - per-token — pay-per-token at the provider's published API rate.
+    - local — self-hosted weights on the operator's own hardware; $0 per
+      token; throughput bounded by that hardware; quality bounded by the
+      quantization actually pulled, which the tier ratings do NOT
+      describe (they rate the provider-hosted weights). FUNDED only when
+      docs/user-context.md declares the runtime present AND lists the
+      chosen model among the pulled models — see `<access-selection>`
+      Step B.
 
     <method id="anthropic-api" name="Anthropic API"
             provider="anthropic" billing="per-token"
@@ -5073,7 +5317,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="gpt-oss-120b,gpt-oss-20b"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Direct Groq API access (provider-direct per-token; OpenAI-format at api.groq.com) hosting OpenAI's open-weight gpt-oss (Apache-2.0) models — very low-cost, very high-throughput reasoning / coding under the us jurisdiction. Exposes the gpt-oss reasoning-effort dial. Groq is the pinned host that defines gpt-oss price + access (price = f(model, platform)); the open weights can also be self-hosted or run on another host. NOTE Groq is not among the operator's current subscriptions, so gpt-oss is catalog-present but only recommendable once a groq-api-key is configured." />
+            best-for="Direct Groq API access (provider-direct per-token; OpenAI-format at api.groq.com) hosting OpenAI's open-weight gpt-oss (Apache-2.0) models — very low-cost, very high-throughput reasoning / coding under the us jurisdiction. Exposes the gpt-oss reasoning-effort dial. Groq is the pinned host that defines gpt-oss price + access (price = f(model, platform)); the open weights can also be self-hosted or run on another host. NOTE this method is funded only by a groq-api-key; the same open weights are also reachable through the `ollama` method when the operator declares a local pull in docs/user-context.md." />
     <method id="cursor" name="Cursor"
             provider="cursor" billing="subscription-pool"
             provider-jurisdiction="us"
@@ -5082,6 +5326,22 @@ as primary; the other becomes the secondary category for tie-breaking.
             exposes-max-mode="yes" exposes-thinking="no"
             exposes-orchestration="no"
             best-for="Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / composer-2.5 imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. Cursor's own Auto and Premium routing modes are deliberately NOT enumerated as roadmodel-recommendable models because their routing is opaque (see `jurisdiction-context` for the rationale) — operators who want routing behavior pick a specific fixed model and let Cursor's pool handle the call. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)." />
+    <method id="ollama" name="Ollama (local)"
+            provider="ollama" billing="local"
+            provider-jurisdiction="local"
+            requires="ollama-local"
+            supports-models="gpt-oss-120b,gpt-oss-20b,deepseek-v4-pro,deepseek-v4-flash,glm-5.2,glm-4.6,glm-4.5-air,kimi-k3,kimi-k2.7-code,mistral-large-3,mistral-small-4"
+            exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
+            best-for="Open-weight models pulled and served on the operator's OWN hardware through a local Ollama runtime — $0 per token, no data leaves the machine, no subscription budget consumed. supports-models lists ONLY catalogued models whose weights are downloadable under a licence that permits local use (Apache-2.0: gpt-oss-120b / gpt-oss-20b / mistral-large-3 / mistral-small-4; MIT: deepseek-v4-pro / deepseek-v4-flash / glm-5.2 / glm-4.6 / glm-4.5-air; Modified MIT: kimi-k2.7-code; Kimi K3 License: kimi-k3) — the MODEL-level jurisdiction filter (Step 0b) still governs which of them are eligible. HARDWARE CAVEAT: the catalog's tier ratings describe the provider-hosted weights; a quantized local pull (4-bit GGUF, MXFP4, and similar) runs about one tier below them for coding and reasoning, throughput is bounded by the operator's GPU / unified memory, and the largest entries (kimi-k3, deepseek-v4-pro) do not fit consumer hardware at all — the selector funds this method ONLY for models the operator has actually listed as pulled in docs/user-context.md, so a listed model is one that fits. Thinking is forwarded as `reasoning_effort` for models that support it (gpt-oss, GLM, DeepSeek, Kimi); the per-model dial is the model's, not the runtime's. Reached via the `ollama` access method when docs/user-context.md declares `Ollama installed | Yes` and the model in its pulled-models table." />
+    <method id="openrouter" name="OpenRouter"
+            provider="openrouter" billing="per-token"
+            provider-jurisdiction="us"
+            requires="openrouter-api-key"
+            supports-models="claude-opus-5,opus-4.8,claude-fable-5.1,claude-fable-5,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku,gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5.4-nano,gpt-5-mini,gemini-3.1-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash,grok-4.6,grok-4.5,grok-4.3,deepseek-v4-pro,deepseek-v4-flash,mistral-medium-3.5,mistral-small-4,codestral,glm-5.2,glm-4.6,glm-4.5-air,gpt-oss-120b,gpt-oss-20b,kimi-k3,kimi-k2.7-code,muse-spark-1.3"
+            exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
+            best-for="Per-token AGGREGATOR that resells other makers' models behind one OpenAI-format endpoint and one key (openrouter.ai) — like Cursor's pool but paid per call, not a subscription. Reaches most of the catalog: supports-models is a POINT-IN-TIME snapshot of openrouter.ai/models at authoring (2026-09-20; absent: composer-2.5 which is Cursor-only, gemini-3-pro which OpenRouter serves only as an image endpoint, mistral-large-3 which it serves only as a batch endpoint) that the operator should trust LESS than a provider-direct method — prefer the maker's own method when the operator holds that key. BILLING: OpenRouter charges the maker's list price plus its platform fee (~5% on credit purchases at authoring), so the catalog price is a FLOOR for this method, never an exact estimate. ROUTING: a request may be served by any of OpenRouter's upstream hosts for that model; the MODEL-level jurisdiction filter (Step 0b) still governs which models are eligible, and this method's `us` code is OpenRouter's own (the operator's counterparty), NOT the upstream host's. Exposes the maker's reasoning dial where the routed model documents one (`reasoning_effort` on OpenAI / gpt-oss / GLM / DeepSeek families). Never the maker of any model it resells: the cross-provider BACKUP guard resolves makers through provider-direct methods, exactly as it does for Cursor." />
   </access-methods>
 
   <selection-algorithm>
@@ -5280,7 +5540,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       In practice the two filters usually agree, but the two-step
       structure handles the edge case cleanly. Methods with
       `provider-jurisdiction="unknown"` are treated as forbidden
-      under the default allowed list.
+      under the default allowed list. A method with
+      `provider-jurisdiction="local"` passes EVERY allowed-jurisdictions
+      list, whatever it contains — no data leaves the machine, so there
+      is no counterparty jurisdiction to check (the chosen MODEL's own
+      jurisdiction was already filtered at Step 0b); `unknown` stays
+      forbidden.
 
     Step A — Filter access methods by model support.
       Reduce the candidate set from Step A0 to those whose
@@ -5298,11 +5563,27 @@ as primary; the other becomes the secondary category for tie-breaking.
       disclosure in the RATIONALE (consider every model, surface the
       cheaper path, never suppress the better pick).
 
+      EXCEPTION — `local` billing. A `local` method is FUNDED when
+      docs/user-context.md declares the runtime present (its "Local
+      models (Ollama)" section says `Ollama installed | Yes`) AND lists
+      the chosen model among the pulled models; otherwise DROP it.
+      Hardware the operator does not have is not money they might
+      spend, so the never-hard-exclude guardrail does not apply — this
+      has the same precedence as the Step A00 operator list. DISCLOSURE
+      (same clause as Step A00): when the dropped local method would
+      otherwise have WON Step C/D on cost, add one RATIONALE clause
+      naming it and the fact that the runtime or the pulled model is
+      not declared (e.g. "Ollama would be the $0 path for this model
+      but user-context lists no such pull").
+
     Step C — Rank by effective marginal cost.
       Order survivors lowest-cost first:
         1. `subscription-included` and `subscription-or-key` methods
            backed by an active subscription (marginal cost $0 until
-           the subscription's usage budget is exhausted).
+           the subscription's usage budget is exhausted), and a
+           FUNDED `local` method (marginal cost $0, no usage budget
+           behind it at all — bounded only by the operator's
+           hardware).
         2. `subscription-pool` methods backed by an active pool
            (marginal cost $0 until the pool is exhausted).
         3. `subscription-or-key` methods backed only by an API key,
@@ -5313,7 +5594,16 @@ as primary; the other becomes the secondary category for tie-breaking.
       Composer vs Chat UI modes are both reached via the single
       `cursor` access method — the operator picks the mode at task
       time based on the chosen Model (composer-2 / composer-2.5
-      imply Composer mode; frontier models imply Chat mode).
+      imply Composer mode; frontier models imply Chat mode). A coding
+      agent surface beats a bare local endpoint for agentic work on
+      the same tie.
+      LOCAL QUANTIZATION CAVEAT — any pick whose PLATFORM is a `local`
+      method MUST carry in its RATIONALE this verbatim clause:
+      "local quantized weights run below the catalog tier ratings; treat coding and reasoning as one tier lower than listed"
+      The tier ratings describe the provider-hosted weights; a quantized local
+      pull does not reach them, and the reader must see that where the
+      pick is justified (Step G lists it among the RATIONALE
+      obligations).
       If every survivor is UNFUNDED (the user holds no credential for
       any method that reaches the chosen model), still pick the cheapest
       of them by published per-token rate and disclose in the RATIONALE
@@ -5374,11 +5664,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       for the call (or note the lack thereof), (b) why the EFFORT level
       and THINKING toggle were chosen — omitted entirely when the
       platform exposes neither — and (c) why ORCHESTRATION was chosen
-      where it is emitted. When EFFORT is `Ultracode`, the rationale must
-      call out the session-budget caveat (claude.ai Max budget burns
-      10-100x faster than at High effort). When Step A00 dropped a
-      platform that would otherwise have won, add the disclosure clause
-      that step requires.
+      where it is emitted, and (d) when the PLATFORM is a `local` method,
+      the verbatim quantization caveat clause from Step C. When EFFORT is
+      `Ultracode`, the rationale must call out the session-budget caveat
+      (claude.ai Max budget burns 10-100x faster than at High effort).
+      When Step A00 dropped a platform that would otherwise have won, or
+      Step B dropped an unfunded `local` method that would have, add the
+      disclosure clause that step requires.
 
     Guardrails:
     - Prefer a FUNDED access method, but NEVER hard-exclude an unfunded
@@ -5389,11 +5681,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       pay-per-token spend — and, when the user has not declared that
       credential, noting that reaching this pick needs an API key or
       subscription they have not listed. Consider every model, surface
-      the cheaper path, never suppress the better pick. (There are TWO
-      hard filters, and this guardrail yields to both: jurisdiction —
-      Step A0 / `<selection-algorithm>` Step 0, a compliance constraint —
-      and the operator's platform allowlist / denylist, Step A00. Neither
-      is a cost constraint, which is why they outrank a guardrail written
+      the cheaper path, never suppress the better pick. (There are THREE
+      hard filters, and this guardrail yields to all of them: jurisdiction
+      — Step A0 / `<selection-algorithm>` Step 0, a compliance constraint
+      — the operator's platform allowlist / denylist, Step A00, and the
+      Step B `local` exception, which drops a local method whose runtime
+      or pulled model the operator has not declared. None is a cost
+      constraint, which is why they outrank a guardrail written
       to stop COST from suppressing a pick. Funding itself remains a
       soft, tie-break preference. An operator declaring they do not use a
       surface is NOT the same as that surface being unfunded: unfunded
@@ -5474,6 +5768,14 @@ as primary; the other becomes the secondary category for tie-breaking.
       lowest-tier model that is still an ADEQUATE fit for the task (a mid-tier
       Sonnet-class model over a frontier Opus-/Fable-class one when the mid-tier
       clears the bar), and the LOWEST reasoning effort that still clears it.
+      A model the user has pulled onto their OWN hardware (a FUNDED `local`
+      access method — docs/user-context.md "Local models (Ollama)") is the
+      minimum-resource path of all: $0, no subscription budget, no provider
+      tokens, no data leaving the machine. Under this posture an ADEQUATE
+      locally-pulled model beats every hosted candidate, funded or not, and
+      the gate below is CLOSED whenever such a candidate exists (condition
+      (d)); judge "adequate" one tier below the listed ratings and carry the
+      quantization caveat clause in the RATIONALE.
       Only drop to a cheaper-tier model the user pays per-token for when it is
       genuinely cheaper in real dollars AND adequate; on a quality tie a
       $0-funded model still beats new per-token spend. This is the ONE case
@@ -5498,7 +5800,7 @@ as primary; the other becomes the secondary category for tie-breaking.
     worth doing when it SAVES the user something. It does not always. Apply
     this gate FIRST, before the posture rules:
 
-    Gate condition — ALL THREE must hold:
+    Gate condition — ALL FOUR must hold:
       (a) the chosen PLATFORM is subscription-funded (its `billing` is
           `subscription-included`, `subscription-pool`, or `subscription-or-key`
           satisfied by an ACTIVE subscription, not by an API key), AND
@@ -5506,7 +5808,12 @@ as primary; the other becomes the secondary category for tie-breaking.
           subscription (so every candidate tier is reached at the same $0
           marginal price), AND
       (c) the user-context does not report that subscription's budget as
-          exhausted or near-exhausted.
+          exhausted or near-exhausted, AND
+      (d) NO FUNDED `local` access method reaches a model that is ADEQUATE
+          for the task — see "LOCAL MODELS AND THE GATE" below. A locally-
+          pulled model is $0 with no usage pool behind it, a different
+          funding class; when one is adequate the set is not flat and the
+          gate is CLOSED.
 
     When the gate is OPEN: out-of-pocket price is FLAT across the candidates and
     therefore CANNOT differentiate them. Tiering down buys the user NOTHING and
@@ -5553,6 +5860,22 @@ as primary; the other becomes the secondary category for tie-breaking.
     budget, or a candidate set that straddles funded and unfunded models — the
     three posture rules above apply UNCHANGED. Tiering down and effort-down are
     correct there, because they save real dollars.
+
+    LOCAL MODELS AND THE GATE. A FUNDED `local` access method (billing `local`
+    in `<access-methods>`: weights the operator has pulled onto their own
+    hardware, declared in docs/user-context.md) is NOT subscription funding —
+    it is $0 with no usage pool behind it, a DIFFERENT funding class. A
+    candidate set that contains an ADEQUATE locally-pulled model therefore
+    straddles two funding classes, and the gate is CLOSED for it: tiering
+    down to that model does save something (every subscription or per-token
+    token the task would otherwise consume, and the data never leaves the
+    machine). So under `cheap`, an adequate locally-pulled model reached via
+    its funded `local` method IS the minimum-resource pick and wins over a
+    subscription-funded model of a higher tier; under `balanced` it competes
+    as a $0-funded model per that bullet; under `best` quality wins as usual.
+    Every local pick carries the quantization caveat clause
+    (`<access-selection>` Step C) — "adequate" is judged one tier below the
+    listed ratings.
 
     Across the three priorities, when the gate is CLOSED and the chosen model is
     HELD, reasoning effort is the cost-vs-quality axis: Cost = lowest-adequate,
@@ -6078,6 +6401,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       Newly-auto-added models receive this code until the maintainer
       fills it in; the auto-add rule in `update/prompt.md` emits a
       warning so these don't ship silently.
+    - `local` — valid on a `<method>`'s `provider-jurisdiction` ONLY,
+      never on a `<model>`: the weights run on the operator's own
+      hardware and no data leaves the machine, so the method passes
+      every allowed-jurisdictions list (`<access-selection>` Step A0).
+      The MODEL keeps its maker's jurisdiction and Step 0b still
+      applies to it.
 
     Default allowed list (assumed when `docs/user-context.md` carries
     no `<allowed-jurisdictions>` section):
@@ -6105,7 +6434,11 @@ as primary; the other becomes the secondary category for tie-breaking.
     2026-05-21 roadmodel exposes only fixed-engine models. Users
     who want routing behavior should pick a specific fixed engine
     directly and accept that the underlying provider may pool-route
-    among models of the same family.
+    among models of the same family. An aggregator as an ACCESS METHOD
+    (the `openrouter` entry in `<access-methods>`) is a different
+    matter: the MODEL is still a fixed catalogued engine chosen by
+    `<selection-algorithm>`, only the endpoint that serves it is the
+    aggregator's, so the model-level filter keeps its meaning.
   </jurisdiction-context>
 
   <availability-context>
@@ -6630,7 +6963,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-speed="A"
              headline-benchmarks="OpenAI gpt-oss-120b — open-weight (Apache-2.0) Mixture-of-Experts reasoning model (~117B total / ~5B active) with configurable reasoning effort; OpenAI positions it near o4-mini on reasoning; 128K context; hosted by Groq (~500 tokens/s); us-jurisdiction"
              pricing-notes="Provider-direct Groq-hosted pricing for OpenAI's open-weight gpt-oss (Apache-2.0); us-jurisdiction; prices manually maintained from groq.com/pricing"
-             best-for="OpenAI's open-weight gpt-oss-120b (Apache-2.0) hosted by Groq — a very low-cost ($0.60/M output), fast (~500 tokens/s), us-jurisdiction reasoning model with an adjustable reasoning dial, for cost / throughput-sensitive reasoning and coding where an open-weight, self-hostable model (data-sovereignty, on-prem portability) is preferred. OpenAI positions it near o4-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key — note this host is not among the operator's current subscriptions, so it is catalog-present but only recommendable once a groq-api-key (or another gpt-oss host) is configured." />
+             best-for="OpenAI's open-weight gpt-oss-120b (Apache-2.0) hosted by Groq — a very low-cost ($0.60/M output), fast (~500 tokens/s), us-jurisdiction reasoning model with an adjustable reasoning dial, for cost / throughput-sensitive reasoning and coding where an open-weight, self-hostable model (data-sovereignty, on-prem portability) is preferred. OpenAI positions it near o4-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key, or via the `ollama` method when docs/user-context.md declares it pulled locally (Apache-2.0 weights; ~65 GB at MXFP4) — recommendable whenever EITHER host is declared." />
       <model id="gpt-oss-20b" name="gpt-oss-20b"
              input-price-per-1m="$0.075" output-price-per-1m="$0.30"
              jurisdiction="us"
@@ -6639,7 +6972,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-speed="S"
              headline-benchmarks="OpenAI gpt-oss-20b — smaller open-weight (Apache-2.0) Mixture-of-Experts reasoning model (~21B total / ~3.6B active); OpenAI positions it near o3-mini; 128K context; very fast on Groq (~1000 tokens/s); us-jurisdiction"
              pricing-notes="Provider-direct Groq-hosted pricing for OpenAI's open-weight gpt-oss (Apache-2.0); us-jurisdiction; prices manually maintained from groq.com/pricing"
-             best-for="OpenAI's smaller open-weight gpt-oss-20b (Apache-2.0) hosted by Groq — the cheapest gpt-oss ($0.30/M output) and extremely fast (~1000 tokens/s), for high-throughput / latency-sensitive light reasoning, classification, and simple code under the us jurisdiction, or as an on-device / self-hostable open-weight option. OpenAI positions it near o3-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key — catalog-present but only recommendable once a groq-api-key (or another gpt-oss host) is configured. Prefer gpt-oss-120b when reasoning quality matters more than raw speed / cost." />
+             best-for="OpenAI's smaller open-weight gpt-oss-20b (Apache-2.0) hosted by Groq — the cheapest gpt-oss ($0.30/M output) and extremely fast (~1000 tokens/s), for high-throughput / latency-sensitive light reasoning, classification, and simple code under the us jurisdiction, or as an on-device / self-hostable open-weight option. OpenAI positions it near o3-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key, or via the `ollama` method when docs/user-context.md declares it pulled locally (Apache-2.0 weights; ~13 GB at MXFP4, fits 16 GB unified memory) — recommendable whenever EITHER host is declared. Prefer gpt-oss-120b when reasoning quality matters more than raw speed / cost." />
       <model id="grok-4.3" name="Grok 4.3"
              input-price-per-1m="$1.25" output-price-per-1m="$2.50"
              jurisdiction="us"
@@ -6656,7 +6989,7 @@ as primary; the other becomes the secondary category for tie-breaking.
     Each access method is a way to run one or more models from
     `<model-options>`. Methods differ in (a) which models they expose,
     (b) how billing works (per-token, subscription-included,
-    subscription-pool, subscription-or-key), (c) which capability
+    subscription-pool, subscription-or-key, local), (c) which capability
     toggles (Max Mode, effort/thinking, orchestration) they expose — which
     is exactly what decides WHICH setting lines a block for that platform
     may emit, per `<output-format>` — and (d) what credentials
@@ -6676,6 +7009,13 @@ as primary; the other becomes the secondary category for tie-breaking.
     - subscription-or-key — surface accepts either a subscription OR a
       direct API key; if a subscription is active, prefer it.
     - per-token — pay-per-token at the provider's published API rate.
+    - local — self-hosted weights on the operator's own hardware; $0 per
+      token; throughput bounded by that hardware; quality bounded by the
+      quantization actually pulled, which the tier ratings do NOT
+      describe (they rate the provider-hosted weights). FUNDED only when
+      docs/user-context.md declares the runtime present AND lists the
+      chosen model among the pulled models — see `<access-selection>`
+      Step B.
 
     <method id="anthropic-api" name="Anthropic API"
             provider="anthropic" billing="per-token"
@@ -6788,7 +7128,7 @@ as primary; the other becomes the secondary category for tie-breaking.
             supports-models="gpt-oss-120b,gpt-oss-20b"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Direct Groq API access (provider-direct per-token; OpenAI-format at api.groq.com) hosting OpenAI's open-weight gpt-oss (Apache-2.0) models — very low-cost, very high-throughput reasoning / coding under the us jurisdiction. Exposes the gpt-oss reasoning-effort dial. Groq is the pinned host that defines gpt-oss price + access (price = f(model, platform)); the open weights can also be self-hosted or run on another host. NOTE Groq is not among the operator's current subscriptions, so gpt-oss is catalog-present but only recommendable once a groq-api-key is configured." />
+            best-for="Direct Groq API access (provider-direct per-token; OpenAI-format at api.groq.com) hosting OpenAI's open-weight gpt-oss (Apache-2.0) models — very low-cost, very high-throughput reasoning / coding under the us jurisdiction. Exposes the gpt-oss reasoning-effort dial. Groq is the pinned host that defines gpt-oss price + access (price = f(model, platform)); the open weights can also be self-hosted or run on another host. NOTE this method is funded only by a groq-api-key; the same open weights are also reachable through the `ollama` method when the operator declares a local pull in docs/user-context.md." />
     <method id="cursor" name="Cursor"
             provider="cursor" billing="subscription-pool"
             provider-jurisdiction="us"
@@ -6797,6 +7137,22 @@ as primary; the other becomes the secondary category for tie-breaking.
             exposes-max-mode="yes" exposes-thinking="no"
             exposes-orchestration="no"
             best-for="Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / composer-2.5 imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. Cursor's own Auto and Premium routing modes are deliberately NOT enumerated as roadmodel-recommendable models because their routing is opaque (see `jurisdiction-context` for the rationale) — operators who want routing behavior pick a specific fixed model and let Cursor's pool handle the call. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path)." />
+    <method id="ollama" name="Ollama (local)"
+            provider="ollama" billing="local"
+            provider-jurisdiction="local"
+            requires="ollama-local"
+            supports-models="gpt-oss-120b,gpt-oss-20b,deepseek-v4-pro,deepseek-v4-flash,glm-5.2,glm-4.6,glm-4.5-air,kimi-k3,kimi-k2.7-code,mistral-large-3,mistral-small-4"
+            exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
+            best-for="Open-weight models pulled and served on the operator's OWN hardware through a local Ollama runtime — $0 per token, no data leaves the machine, no subscription budget consumed. supports-models lists ONLY catalogued models whose weights are downloadable under a licence that permits local use (Apache-2.0: gpt-oss-120b / gpt-oss-20b / mistral-large-3 / mistral-small-4; MIT: deepseek-v4-pro / deepseek-v4-flash / glm-5.2 / glm-4.6 / glm-4.5-air; Modified MIT: kimi-k2.7-code; Kimi K3 License: kimi-k3) — the MODEL-level jurisdiction filter (Step 0b) still governs which of them are eligible. HARDWARE CAVEAT: the catalog's tier ratings describe the provider-hosted weights; a quantized local pull (4-bit GGUF, MXFP4, and similar) runs about one tier below them for coding and reasoning, throughput is bounded by the operator's GPU / unified memory, and the largest entries (kimi-k3, deepseek-v4-pro) do not fit consumer hardware at all — the selector funds this method ONLY for models the operator has actually listed as pulled in docs/user-context.md, so a listed model is one that fits. Thinking is forwarded as `reasoning_effort` for models that support it (gpt-oss, GLM, DeepSeek, Kimi); the per-model dial is the model's, not the runtime's. Reached via the `ollama` access method when docs/user-context.md declares `Ollama installed | Yes` and the model in its pulled-models table." />
+    <method id="openrouter" name="OpenRouter"
+            provider="openrouter" billing="per-token"
+            provider-jurisdiction="us"
+            requires="openrouter-api-key"
+            supports-models="claude-opus-5,opus-4.8,claude-fable-5.1,claude-fable-5,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku,gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5.4-nano,gpt-5-mini,gemini-3.1-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash,grok-4.6,grok-4.5,grok-4.3,deepseek-v4-pro,deepseek-v4-flash,mistral-medium-3.5,mistral-small-4,codestral,glm-5.2,glm-4.6,glm-4.5-air,gpt-oss-120b,gpt-oss-20b,kimi-k3,kimi-k2.7-code,muse-spark-1.3"
+            exposes-max-mode="no" exposes-thinking="yes"
+            exposes-orchestration="no"
+            best-for="Per-token AGGREGATOR that resells other makers' models behind one OpenAI-format endpoint and one key (openrouter.ai) — like Cursor's pool but paid per call, not a subscription. Reaches most of the catalog: supports-models is a POINT-IN-TIME snapshot of openrouter.ai/models at authoring (2026-09-20; absent: composer-2.5 which is Cursor-only, gemini-3-pro which OpenRouter serves only as an image endpoint, mistral-large-3 which it serves only as a batch endpoint) that the operator should trust LESS than a provider-direct method — prefer the maker's own method when the operator holds that key. BILLING: OpenRouter charges the maker's list price plus its platform fee (~5% on credit purchases at authoring), so the catalog price is a FLOOR for this method, never an exact estimate. ROUTING: a request may be served by any of OpenRouter's upstream hosts for that model; the MODEL-level jurisdiction filter (Step 0b) still governs which models are eligible, and this method's `us` code is OpenRouter's own (the operator's counterparty), NOT the upstream host's. Exposes the maker's reasoning dial where the routed model documents one (`reasoning_effort` on OpenAI / gpt-oss / GLM / DeepSeek families). Never the maker of any model it resells: the cross-provider BACKUP guard resolves makers through provider-direct methods, exactly as it does for Cursor." />
   </access-methods>
 
   <selection-algorithm>
@@ -6995,7 +7351,12 @@ as primary; the other becomes the secondary category for tie-breaking.
       In practice the two filters usually agree, but the two-step
       structure handles the edge case cleanly. Methods with
       `provider-jurisdiction="unknown"` are treated as forbidden
-      under the default allowed list.
+      under the default allowed list. A method with
+      `provider-jurisdiction="local"` passes EVERY allowed-jurisdictions
+      list, whatever it contains — no data leaves the machine, so there
+      is no counterparty jurisdiction to check (the chosen MODEL's own
+      jurisdiction was already filtered at Step 0b); `unknown` stays
+      forbidden.
 
     Step A — Filter access methods by model support.
       Reduce the candidate set from Step A0 to those whose
@@ -7013,11 +7374,27 @@ as primary; the other becomes the secondary category for tie-breaking.
       disclosure in the RATIONALE (consider every model, surface the
       cheaper path, never suppress the better pick).
 
+      EXCEPTION — `local` billing. A `local` method is FUNDED when
+      docs/user-context.md declares the runtime present (its "Local
+      models (Ollama)" section says `Ollama installed | Yes`) AND lists
+      the chosen model among the pulled models; otherwise DROP it.
+      Hardware the operator does not have is not money they might
+      spend, so the never-hard-exclude guardrail does not apply — this
+      has the same precedence as the Step A00 operator list. DISCLOSURE
+      (same clause as Step A00): when the dropped local method would
+      otherwise have WON Step C/D on cost, add one RATIONALE clause
+      naming it and the fact that the runtime or the pulled model is
+      not declared (e.g. "Ollama would be the $0 path for this model
+      but user-context lists no such pull").
+
     Step C — Rank by effective marginal cost.
       Order survivors lowest-cost first:
         1. `subscription-included` and `subscription-or-key` methods
            backed by an active subscription (marginal cost $0 until
-           the subscription's usage budget is exhausted).
+           the subscription's usage budget is exhausted), and a
+           FUNDED `local` method (marginal cost $0, no usage budget
+           behind it at all — bounded only by the operator's
+           hardware).
         2. `subscription-pool` methods backed by an active pool
            (marginal cost $0 until the pool is exhausted).
         3. `subscription-or-key` methods backed only by an API key,
@@ -7028,7 +7405,16 @@ as primary; the other becomes the secondary category for tie-breaking.
       Composer vs Chat UI modes are both reached via the single
       `cursor` access method — the operator picks the mode at task
       time based on the chosen Model (composer-2 / composer-2.5
-      imply Composer mode; frontier models imply Chat mode).
+      imply Composer mode; frontier models imply Chat mode). A coding
+      agent surface beats a bare local endpoint for agentic work on
+      the same tie.
+      LOCAL QUANTIZATION CAVEAT — any pick whose PLATFORM is a `local`
+      method MUST carry in its RATIONALE this verbatim clause:
+      "local quantized weights run below the catalog tier ratings; treat coding and reasoning as one tier lower than listed"
+      The tier ratings describe the provider-hosted weights; a quantized local
+      pull does not reach them, and the reader must see that where the
+      pick is justified (Step G lists it among the RATIONALE
+      obligations).
       If every survivor is UNFUNDED (the user holds no credential for
       any method that reaches the chosen model), still pick the cheapest
       of them by published per-token rate and disclose in the RATIONALE
@@ -7089,11 +7475,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       for the call (or note the lack thereof), (b) why the EFFORT level
       and THINKING toggle were chosen — omitted entirely when the
       platform exposes neither — and (c) why ORCHESTRATION was chosen
-      where it is emitted. When EFFORT is `Ultracode`, the rationale must
-      call out the session-budget caveat (claude.ai Max budget burns
-      10-100x faster than at High effort). When Step A00 dropped a
-      platform that would otherwise have won, add the disclosure clause
-      that step requires.
+      where it is emitted, and (d) when the PLATFORM is a `local` method,
+      the verbatim quantization caveat clause from Step C. When EFFORT is
+      `Ultracode`, the rationale must call out the session-budget caveat
+      (claude.ai Max budget burns 10-100x faster than at High effort).
+      When Step A00 dropped a platform that would otherwise have won, or
+      Step B dropped an unfunded `local` method that would have, add the
+      disclosure clause that step requires.
 
     Guardrails:
     - Prefer a FUNDED access method, but NEVER hard-exclude an unfunded
@@ -7104,11 +7492,13 @@ as primary; the other becomes the secondary category for tie-breaking.
       pay-per-token spend — and, when the user has not declared that
       credential, noting that reaching this pick needs an API key or
       subscription they have not listed. Consider every model, surface
-      the cheaper path, never suppress the better pick. (There are TWO
-      hard filters, and this guardrail yields to both: jurisdiction —
-      Step A0 / `<selection-algorithm>` Step 0, a compliance constraint —
-      and the operator's platform allowlist / denylist, Step A00. Neither
-      is a cost constraint, which is why they outrank a guardrail written
+      the cheaper path, never suppress the better pick. (There are THREE
+      hard filters, and this guardrail yields to all of them: jurisdiction
+      — Step A0 / `<selection-algorithm>` Step 0, a compliance constraint
+      — the operator's platform allowlist / denylist, Step A00, and the
+      Step B `local` exception, which drops a local method whose runtime
+      or pulled model the operator has not declared. None is a cost
+      constraint, which is why they outrank a guardrail written
       to stop COST from suppressing a pick. Funding itself remains a
       soft, tie-break preference. An operator declaring they do not use a
       surface is NOT the same as that surface being unfunded: unfunded

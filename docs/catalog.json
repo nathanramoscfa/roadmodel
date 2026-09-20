@@ -1,9 +1,9 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-19T20:22:33Z",
+  "generated_at_utc": "2026-09-20T23:18:34Z",
   "source_doc_sha256": {
-    "model-selector.txt": "427ace45421e6e690ed6bb743730269246d8e39ef1a2903b0083f7915c87e8fb",
+    "model-selector.txt": "6f89b542de1c9b4853515c1b58448d71dd4a024e4c786537455d25830054db77",
     "model-tier-cost-scale.md": "8a5a359c009b5a802dd0977c2a0765aac5e21acb1e49904ac1ed2859ffa52974"
   },
   "models": [
@@ -761,7 +761,7 @@
       "jurisdiction": "us",
       "headline_benchmarks": "OpenAI gpt-oss-120b \u2014 open-weight (Apache-2.0) Mixture-of-Experts reasoning model (~117B total / ~5B active) with configurable reasoning effort; OpenAI positions it near o4-mini on reasoning; 128K context; hosted by Groq (~500 tokens/s); us-jurisdiction",
       "pricing_notes": "Provider-direct Groq-hosted pricing for OpenAI's open-weight gpt-oss (Apache-2.0); us-jurisdiction; prices manually maintained from groq.com/pricing",
-      "best_for": "OpenAI's open-weight gpt-oss-120b (Apache-2.0) hosted by Groq \u2014 a very low-cost ($0.60/M output), fast (~500 tokens/s), us-jurisdiction reasoning model with an adjustable reasoning dial, for cost / throughput-sensitive reasoning and coding where an open-weight, self-hostable model (data-sovereignty, on-prem portability) is preferred. OpenAI positions it near o4-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key \u2014 note this host is not among the operator's current subscriptions, so it is catalog-present but only recommendable once a groq-api-key (or another gpt-oss host) is configured."
+      "best_for": "OpenAI's open-weight gpt-oss-120b (Apache-2.0) hosted by Groq \u2014 a very low-cost ($0.60/M output), fast (~500 tokens/s), us-jurisdiction reasoning model with an adjustable reasoning dial, for cost / throughput-sensitive reasoning and coding where an open-weight, self-hostable model (data-sovereignty, on-prem portability) is preferred. OpenAI positions it near o4-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key, or via the `ollama` method when docs/user-context.md declares it pulled locally (Apache-2.0 weights; ~65 GB at MXFP4) \u2014 recommendable whenever EITHER host is declared."
     },
     {
       "id": "gpt-oss-20b",
@@ -782,7 +782,7 @@
       "jurisdiction": "us",
       "headline_benchmarks": "OpenAI gpt-oss-20b \u2014 smaller open-weight (Apache-2.0) Mixture-of-Experts reasoning model (~21B total / ~3.6B active); OpenAI positions it near o3-mini; 128K context; very fast on Groq (~1000 tokens/s); us-jurisdiction",
       "pricing_notes": "Provider-direct Groq-hosted pricing for OpenAI's open-weight gpt-oss (Apache-2.0); us-jurisdiction; prices manually maintained from groq.com/pricing",
-      "best_for": "OpenAI's smaller open-weight gpt-oss-20b (Apache-2.0) hosted by Groq \u2014 the cheapest gpt-oss ($0.30/M output) and extremely fast (~1000 tokens/s), for high-throughput / latency-sensitive light reasoning, classification, and simple code under the us jurisdiction, or as an on-device / self-hostable open-weight option. OpenAI positions it near o3-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key \u2014 catalog-present but only recommendable once a groq-api-key (or another gpt-oss host) is configured. Prefer gpt-oss-120b when reasoning quality matters more than raw speed / cost."
+      "best_for": "OpenAI's smaller open-weight gpt-oss-20b (Apache-2.0) hosted by Groq \u2014 the cheapest gpt-oss ($0.30/M output) and extremely fast (~1000 tokens/s), for high-throughput / latency-sensitive light reasoning, classification, and simple code under the us jurisdiction, or as an on-device / self-hostable open-weight option. OpenAI positions it near o3-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key, or via the `ollama` method when docs/user-context.md declares it pulled locally (Apache-2.0 weights; ~13 GB at MXFP4, fits 16 GB unified memory) \u2014 recommendable whenever EITHER host is declared. Prefer gpt-oss-120b when reasoning quality matters more than raw speed / cost."
     },
     {
       "id": "grok-4.3",
@@ -1301,7 +1301,7 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
-      "best_for": "Direct Groq API access (provider-direct per-token; OpenAI-format at api.groq.com) hosting OpenAI's open-weight gpt-oss (Apache-2.0) models \u2014 very low-cost, very high-throughput reasoning / coding under the us jurisdiction. Exposes the gpt-oss reasoning-effort dial. Groq is the pinned host that defines gpt-oss price + access (price = f(model, platform)); the open weights can also be self-hosted or run on another host. NOTE Groq is not among the operator's current subscriptions, so gpt-oss is catalog-present but only recommendable once a groq-api-key is configured."
+      "best_for": "Direct Groq API access (provider-direct per-token; OpenAI-format at api.groq.com) hosting OpenAI's open-weight gpt-oss (Apache-2.0) models \u2014 very low-cost, very high-throughput reasoning / coding under the us jurisdiction. Exposes the gpt-oss reasoning-effort dial. Groq is the pinned host that defines gpt-oss price + access (price = f(model, platform)); the open weights can also be self-hosted or run on another host. NOTE this method is funded only by a groq-api-key; the same open weights are also reachable through the `ollama` method when the operator declares a local pull in docs/user-context.md."
     },
     {
       "id": "mistral-api",
@@ -1320,6 +1320,31 @@
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
       "best_for": "Direct Mistral API access (provider-direct per-token; La Plateforme at api.mistral.ai) for the Mistral models \u2014 the EU-jurisdiction option for data-sovereignty / EU-regulatory workloads at low cost. Exposes a reasoning dial on the unified models (Mistral Small 4 / Medium 3.5) via the `reasoning_effort` parameter. Not routed via the Cursor pool. eu-jurisdiction is in the default allowed-jurisdictions list, so Mistral surfaces for any user with a mistral-api-key configured (no jurisdiction opt-in required, unlike cn providers)."
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama (local)",
+      "provider": "ollama",
+      "provider_jurisdiction": "local",
+      "billing": "local",
+      "requires": "ollama-local",
+      "supports_models": [
+        "deepseek-v4-flash",
+        "deepseek-v4-pro",
+        "glm-4.5-air",
+        "glm-4.6",
+        "glm-5.2",
+        "gpt-oss-120b",
+        "gpt-oss-20b",
+        "kimi-k2.7-code",
+        "kimi-k3",
+        "mistral-large-3",
+        "mistral-small-4"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "exposes_orchestration": "no",
+      "best_for": "Open-weight models pulled and served on the operator's OWN hardware through a local Ollama runtime \u2014 $0 per token, no data leaves the machine, no subscription budget consumed. supports-models lists ONLY catalogued models whose weights are downloadable under a licence that permits local use (Apache-2.0: gpt-oss-120b / gpt-oss-20b / mistral-large-3 / mistral-small-4; MIT: deepseek-v4-pro / deepseek-v4-flash / glm-5.2 / glm-4.6 / glm-4.5-air; Modified MIT: kimi-k2.7-code; Kimi K3 License: kimi-k3) \u2014 the MODEL-level jurisdiction filter (Step 0b) still governs which of them are eligible. HARDWARE CAVEAT: the catalog's tier ratings describe the provider-hosted weights; a quantized local pull (4-bit GGUF, MXFP4, and similar) runs about one tier below them for coding and reasoning, throughput is bounded by the operator's GPU / unified memory, and the largest entries (kimi-k3, deepseek-v4-pro) do not fit consumer hardware at all \u2014 the selector funds this method ONLY for models the operator has actually listed as pulled in docs/user-context.md, so a listed model is one that fits. Thinking is forwarded as `reasoning_effort` for models that support it (gpt-oss, GLM, DeepSeek, Kimi); the per-model dial is the model's, not the runtime's. Reached via the `ollama` access method when docs/user-context.md declares `Ollama installed | Yes` and the model in its pulled-models table."
     },
     {
       "id": "openai-api",
@@ -1349,6 +1374,66 @@
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
       "best_for": "Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates. Exposes the full Codex/OpenAI `reasoning_effort` dial (`minimal`, `low`, `medium`, `high`, `xhigh` \u2014 the top `xhigh` tier is model-dependent)."
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "provider": "openrouter",
+      "provider_jurisdiction": "us",
+      "billing": "per-token",
+      "requires": "openrouter-api-key",
+      "supports_models": [
+        "claude-4.5-haiku",
+        "claude-fable-5",
+        "claude-fable-5.1",
+        "claude-opus-5",
+        "claude-sonnet-5",
+        "codestral",
+        "deepseek-v4-flash",
+        "deepseek-v4-pro",
+        "gemini-2.5-flash",
+        "gemini-3-flash",
+        "gemini-3.1-pro",
+        "gemini-3.5-flash",
+        "gemini-3.6-flash",
+        "gemini-3.7-flash",
+        "gemini-3.8-flash",
+        "glm-4.5-air",
+        "glm-4.6",
+        "glm-5.2",
+        "gpt-5",
+        "gpt-5-mini",
+        "gpt-5.1-codex",
+        "gpt-5.1-codex-max",
+        "gpt-5.1-codex-mini",
+        "gpt-5.2",
+        "gpt-5.2-codex",
+        "gpt-5.3-codex",
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "gpt-5.4-nano",
+        "gpt-5.5",
+        "gpt-5.6-luna",
+        "gpt-5.6-sol",
+        "gpt-5.6-terra",
+        "gpt-oss-120b",
+        "gpt-oss-20b",
+        "grok-4.3",
+        "grok-4.5",
+        "grok-4.6",
+        "kimi-k2.7-code",
+        "kimi-k3",
+        "mistral-medium-3.5",
+        "mistral-small-4",
+        "muse-spark-1.3",
+        "opus-4.7",
+        "opus-4.8",
+        "sonnet-4.6"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "exposes_orchestration": "no",
+      "best_for": "Per-token AGGREGATOR that resells other makers' models behind one OpenAI-format endpoint and one key (openrouter.ai) \u2014 like Cursor's pool but paid per call, not a subscription. Reaches most of the catalog: supports-models is a POINT-IN-TIME snapshot of openrouter.ai/models at authoring (2026-09-20; absent: composer-2.5 which is Cursor-only, gemini-3-pro which OpenRouter serves only as an image endpoint, mistral-large-3 which it serves only as a batch endpoint) that the operator should trust LESS than a provider-direct method \u2014 prefer the maker's own method when the operator holds that key. BILLING: OpenRouter charges the maker's list price plus its platform fee (~5% on credit purchases at authoring), so the catalog price is a FLOOR for this method, never an exact estimate. ROUTING: a request may be served by any of OpenRouter's upstream hosts for that model; the MODEL-level jurisdiction filter (Step 0b) still governs which models are eligible, and this method's `us` code is OpenRouter's own (the operator's counterparty), NOT the upstream host's. Exposes the maker's reasoning dial where the routed model documents one (`reasoning_effort` on OpenAI / gpt-oss / GLM / DeepSeek families). Never the maker of any model it resells: the cross-provider BACKUP guard resolves makers through provider-direct methods, exactly as it does for Cursor."
     },
     {
       "id": "xai-api",

@@ -194,7 +194,8 @@ def _model_makers(selector_text: str) -> dict[str, str]:
     makes them invisible to G5 — deliberately, since "which provider should have
     published this price" has no answer for them.
     """
-    aggregators = {"cursor"}
+    # MUST equal roadmodel.cost._AGGREGATOR_PROVIDERS (tests pin the two).
+    aggregators = {"cursor", "openrouter", "ollama"}
     supporters: dict[str, set[str]] = {}
     for method in _parse_access_methods(selector_text):
         provider = str(method.get("provider") or "")

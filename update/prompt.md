@@ -186,6 +186,9 @@ verbatim:
 - `xai` → (no consumer-facing subscription access methods enumerated
   in `<access-methods>`; xai tiers MUST be skipped this run — see
   unmappable-tier rule below)
+- `ollama` / `openrouter` → (no subscription tiers: `ollama` is a
+  local runtime with `billing="local"`, `openrouter` is per-token; never
+  map a tier onto either)
 
 If `<access-methods>` in this run's `<current_file path="docs/model-selector.txt">`
 contains a `<method>` element for a provider not listed above, treat
@@ -767,9 +770,22 @@ exposes-orchestration, best-for) remain preserved verbatim — `<method>` elemen
 or renamed by this automation. Only the `supports-models` value
 changes.
 
-### Per-method refresh procedure
+### Hand-maintained methods (skip entirely)
 
-For each `<method>` element M in `<access-methods>`:
+Two `<method>` elements are EDITORIAL and MUST be retained verbatim —
+`supports-models` included — on every run, exactly like the attributes
+this section never touches:
+
+- `ollama` (`billing="local"`): its `supports-models` lists only
+  catalogued models whose weights are downloadable under a licence that
+  permits local use, verified per model against the maker's licence
+  page. A web-search refresh cannot verify a licence, so an addition
+  here would be a false recommendation.
+- `openrouter`: its `supports-models` is a dated point-in-time snapshot
+  of openrouter.ai/models taken by hand; the cron does not refresh it.
+
+Emit no warning for skipping them. Then, for each OTHER `<method>`
+element M in `<access-methods>`:
 
 1. Issue `web_search` queries to locate M's provider's currently
    advertised model availability on M's specific surface. Example

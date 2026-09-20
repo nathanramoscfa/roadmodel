@@ -52,8 +52,12 @@ REPO_ROOT = _UPDATE_DIR.parent
 SELECTOR_PATH = REPO_ROOT / "docs" / "model-selector.txt"
 COST_SCALE_PATH = REPO_ROOT / "docs" / "model-tier-cost-scale.md"
 
-# Jurisdiction codes accepted by the selector's <jurisdiction-context>.
+# Jurisdiction codes accepted by the selector's <jurisdiction-context> for a
+# <model> and for a provider snapshot (G1).
 VALID_JURISDICTIONS = frozenset({"us", "eu", "uk", "ca", "au", "jp", "kr", "cn", "ru", "unknown"})
+# A <method>'s provider-jurisdiction additionally admits `local` (weights on the
+# operator's own hardware — the `ollama` method); never valid on a <model>.
+VALID_METHOD_JURISDICTIONS = VALID_JURISDICTIONS | {"local"}
 
 
 class MergeError(RuntimeError):

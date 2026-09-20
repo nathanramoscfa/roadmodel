@@ -171,6 +171,20 @@ requests reuse the cached prefix. `ollama` and `custom` calls get a
 30-minute timeout with no automatic retries (the SDK default of 10
 minutes plus two retries silently redid slow generations).
 
+Two different things can involve Ollama, and they are configured in
+two different places. `--provider ollama` (above) makes a local model
+the **engine** that answers `roadmodel recommend` — that is what the
+64k-context requirement is about. Being **recommended** to run a model
+locally is the catalog side: the `ollama` access method in
+`<access-methods>` (`PLATFORM: Ollama (local)`, $0 per token) is
+funded only for the models you list in the "Local models (Ollama)"
+table of your user-context file, and any such pick carries a
+quantization caveat in its rationale. The two are independent — you
+can be recommended `gpt-oss-20b` on Ollama while a hosted engine did
+the recommending, and vice versa. See
+[`user-context-setup.md`](user-context-setup.md), "Local models
+(Ollama)".
+
 **Custom endpoint.** Any other OpenAI-compatible server — vLLM, LM
 Studio, llama.cpp's server, a corporate gateway:
 

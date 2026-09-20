@@ -127,7 +127,17 @@ def _settings_text_lines(settings: dict[str, str]) -> list[str]:
     return [f"  {key}: {value}" for key, value in settings.items()]
 
 
+def _cost_cell(row: dict[str, Any]) -> str:
+    """The Total cell: a dollar figure, or the fixed local-hardware label for a
+    funded ``local`` platform, which has no per-token estimate at all."""
+    if row.get("funding_source") == cost.FUNDING_LOCAL:
+        return cost.LOCAL_COST_LABEL
+    return f"${float(row['total_usd']):.2f}"
+
+
 def _session_cost_estimate_line(estimate: dict[str, Any]) -> str:
+    if estimate.get("funding_source") == cost.FUNDING_LOCAL:
+        return f"Session cost estimate: {cost.LOCAL_COST_LABEL} (no per-token estimate)"
     total = float(estimate["total_usd"])
     fund = str(estimate["funding_source"]).replace("-", " ")
     sub = estimate.get("subscription_label")
@@ -141,7 +151,7 @@ def _ascii_cost_table(rows: list[dict[str, Any]]) -> str:
     body: list[list[str]] = [
         [
             str(row["platform_name"]),
-            f"${float(row['total_usd']):.2f}",
+            _cost_cell(row),
             str(row["funding_source"]),
         ]
         for row in rows
@@ -203,7 +213,10 @@ def _format_cost_command_text(est: cost.SessionCostEstimate) -> str:
     if est.subscription_label:
         meta.append(est.subscription_label)
     tail = "; ".join(est.notes) if est.notes else ""
-    base = f"Total ${est.total_usd:.2f} ({', '.join(meta)})"
+    if est.funding_source == cost.FUNDING_LOCAL:
+        base = f"Total {cost.LOCAL_COST_LABEL} ({', '.join(meta)})"
+    else:
+        base = f"Total ${est.total_usd:.2f} ({', '.join(meta)})"
     return f"{base} {tail}".strip() if tail else base
 
 

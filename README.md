@@ -262,9 +262,12 @@ have been eval-verified — is
 
 roadmodel reads a per-user Markdown file describing your active
 subscriptions, API keys, platform preference order (and optional
-platform allow/deny list), and budget posture so the
-`<access-selection>` step can pick a **platform** and **the settings
-that platform exposes** alongside the model. The resolved default path is
+platform allow/deny list), budget posture, and — in its "Local models
+(Ollama)" table — which open-weight models you have pulled onto your
+own machine, so the `<access-selection>` step can pick a **platform**
+(including `Ollama (local)` at $0 per token, or the `OpenRouter`
+aggregator when you declare that key) and **the settings that platform
+exposes** alongside the model. The resolved default path is
 `~/.config/roadmodel/user-context.md` (or
 `$XDG_CONFIG_HOME/roadmodel/user-context.md` when `XDG_CONFIG_HOME`
 is set); override it for a single run with `--user-context PATH` or
