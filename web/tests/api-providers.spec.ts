@@ -15,8 +15,9 @@ import {
 
 test("derives every provider with an API path, excluding pool-only ones", () => {
   const ids = new Set(getApiProviderOptions().map((o) => o.id));
-  // The 8 federated providers reachable via a direct API key (z.ai + Groq
-  // joined in #296 — GLM and Groq-hosted gpt-oss).
+  // The 9 providers reachable via a direct API key (z.ai + Groq joined in
+  // #296 — GLM and Groq-hosted gpt-oss; the OpenRouter per-token aggregator
+  // joined in Phase 4.10).
   expect(ids).toEqual(
     new Set([
       "anthropic",
@@ -27,10 +28,14 @@ test("derives every provider with an API path, excluding pool-only ones", () => 
       "xai",
       "zai",
       "groq",
+      "openrouter",
     ]),
   );
   // Cursor is subscription-pool only (no bring-your-own-key path) → excluded.
   expect(ids.has("cursor")).toBe(false);
+  // Ollama is billing `local` (weights on the operator's own hardware, not a
+  // key) → never an API-provider option; the hosted app cannot fund it.
+  expect(ids.has("ollama")).toBe(false);
 });
 
 test("labels each provider with its display name", () => {
@@ -41,6 +46,7 @@ test("labels each provider with its display name", () => {
   expect(byId.get("xai")).toBe("xAI");
   expect(byId.get("zai")).toBe("z.ai");
   expect(byId.get("groq")).toBe("Groq");
+  expect(byId.get("openrouter")).toBe("OpenRouter");
 });
 
 test("API_PROVIDER_IDS matches the derived options", () => {
