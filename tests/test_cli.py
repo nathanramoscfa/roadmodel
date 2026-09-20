@@ -1115,6 +1115,31 @@ def test_export_kit_preserves_user_context_without_force(
     assert "SECOND" in uc_out.read_text(encoding="utf-8")
 
 
+def test_export_kit_force_never_clobbers_with_template(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """--force on a machine WITHOUT the curated user-context must keep the
+    kit's real file, not overwrite it with the bundled template. The kit
+    prompts' Step 0 runs `export-kit . --force` on every machine."""
+    _export_kit_env(monkeypatch, tmp_path)
+    project = tmp_path / "proj"
+    project.mkdir()
+    uc1 = tmp_path / "uc1.md"
+    uc1.write_text("# User Context\n\nMY_REAL_SUBS_MARKER\n", encoding="utf-8")
+    _runner().invoke(cli, ["export-kit", str(project), "--user-context", str(uc1)])
+    uc_out = project / "planning" / "user-context.md"
+    assert "MY_REAL_SUBS_MARKER" in uc_out.read_text(encoding="utf-8")
+
+    missing = tmp_path / "nope" / "user-context.md"
+    result = _runner().invoke(
+        cli, ["export-kit", str(project), "--user-context", str(missing), "--force"]
+    )
+    assert result.exit_code == 0, result.output
+    assert "MY_REAL_SUBS_MARKER" in uc_out.read_text(encoding="utf-8")
+    assert "TEMPLATE" not in result.output
+    assert "kept" in result.output
+
+
 def test_export_kit_missing_target_errors(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     _export_kit_env(monkeypatch, tmp_path)
     result = _runner().invoke(cli, ["export-kit", str(tmp_path / "does-not-exist")])

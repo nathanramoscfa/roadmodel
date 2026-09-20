@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`export-kit --force` could replace a real kit `user-context.md` with the
+  blank template.** On a machine without the curated
+  `~/.config/roadmodel/user-context.md` (a second PC, CI), `--force` fell
+  through to "seed the template" and clobbered the project's real file. Now
+  `--force` means "refresh from my curated file" only: with nothing to copy
+  from, the kit's existing user-context is kept and the output says so. The
+  kit prompts' Step 0 runs `export-kit . --force` on every machine, so this
+  path is hit routinely. Regression test
+  `test_export_kit_force_never_clobbers_with_template`.
+
 ### Added
 
 - **`/roadmap-step P M`** (`docs/claude-commands/roadmap-step.md`): executes

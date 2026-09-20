@@ -535,8 +535,9 @@ def context_init(force: bool) -> None:
 @click.option(
     "--force",
     is_flag=True,
-    help="Overwrite an existing user-context.md in the kit "
-    "(the catalog docs and templates are always refreshed).",
+    help="Overwrite an existing user-context.md in the kit from your resolved "
+    "user-context (the catalog docs, templates, and prompts are always "
+    "refreshed; a kit user-context is never replaced by the blank template).",
 )
 @click.option(
     "--user-context",
@@ -584,6 +585,14 @@ def export_kit(target: Path, dest: str, force: bool, user_context_path: Path | N
     resolved = user_context.resolve(cli_path=user_context_path)
     if uc_out.exists() and not force:
         uc_note = f"  = {uc_out.relative_to(target)} (kept; --force to overwrite)"
+    elif uc_out.exists() and not resolved.exists():
+        # --force means "refresh from my curated user-context", never "replace
+        # a real file with the blank template". A machine without the curated
+        # file (a second PC, CI) keeps the kit's existing one.
+        uc_note = (
+            f"  = {uc_out.relative_to(target)} (kept; --force had nothing to copy "
+            f"from — no user-context at {resolved})"
+        )
     elif resolved.exists():
         uc_out.parent.mkdir(parents=True, exist_ok=True)
         uc_out.write_text(user_context.read(resolved), encoding="utf-8", newline="\n")
