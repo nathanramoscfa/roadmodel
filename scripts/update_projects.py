@@ -54,9 +54,14 @@ DEFAULT_PROJECTS_FILE = CONFIG_DIR / "projects.txt"
 CLAUDE_DIR = Path.home() / ".claude"
 GEMINI_DIR = Path.home() / ".gemini"  # Gemini CLI: commands/<name>.toml -> /<name>
 CODEX_DIR = Path.home() / ".codex"  # presence marks a Codex install
-AGENTS_SKILLS_DIR = Path.home() / ".agents" / "skills"  # Codex skills: <name>/SKILL.md -> $<name>
+AGENTS_SKILLS_DIR = (
+    Path.home() / ".agents" / "skills"
+)  # skills: <name>/SKILL.md (Codex $name, Cursor /name)
 CODEX_LEGACY_SKILLS_DIR = CODEX_DIR / "skills"  # pre-.agents location; current builds read BOTH
-AGENTS = ("claude", "gemini", "codex")
+CURSOR_DIR = Path.home() / ".cursor"  # Cursor reads ~/.agents/skills too; nothing else to install
+OPENCODE_DIR = Path.home() / ".config" / "opencode"  # OpenCode: commands/<name>.md -> /<name>
+AGENTS = ("claude", "gemini", "codex", "cursor", "opencode")
+SKILLS_CONSUMERS = ("codex", "cursor")  # both read ~/.agents/skills/<name>/SKILL.md
 VENV_DIRS = (".venv", "venv", "env")
 WINDOWS = os.name == "nt"
 PIP_TIMEOUT = 900
@@ -449,6 +454,18 @@ def _install(target: Path, content: str, dry_run: bool) -> str:
     return state
 
 
+def port_opencode(name: str, body: str) -> str:
+    """OpenCode custom command (Markdown + frontmatter, ``$ARGUMENTS`` as-is).
+    Refuses OpenCode's shell-injection (!`cmd`) and file-inclusion (@path)
+    syntaxes, which the Claude Code sources never use."""
+    description, text = _split_frontmatter(body)
+    for token in ("!`", "@"):
+        if token in text:
+            raise ValueError(f"{name}: prompt contains {token!r}, which OpenCode would interpret")
+    desc = description.replace('"', "'")
+    return f'---\ndescription: "{desc}"\n---\n{text.rstrip()}\n'
+
+
 def detect_agents() -> list[str]:
     """Agents present on this machine. Claude Code is assumed (this script
     ships with its commands); the others only if their config dir exists."""
@@ -457,13 +474,18 @@ def detect_agents() -> list[str]:
         found.append("gemini")
     if CODEX_DIR.is_dir() or AGENTS_SKILLS_DIR.is_dir():
         found.append("codex")
+    if CURSOR_DIR.is_dir():
+        found.append("cursor")
+    if OPENCODE_DIR.is_dir():
+        found.append("opencode")
     return found
 
 
 def refresh_commands(dry_run: bool = False, agents: Optional[list[str]] = None) -> list[str]:
     """Re-download docs/claude-commands/*.md and install them for every agent
     on this machine: Claude Code as-is (mirroring any ~/.claude/skills copy),
-    Gemini CLI as TOML custom commands, Codex as skills. Returns report lines."""
+    Gemini CLI as TOML custom commands, Codex + Cursor as ~/.agents skills,
+    OpenCode as Markdown commands. Returns report lines."""
     agents = agents or detect_agents()
     report: list[str] = [f"agents: {', '.join(agents)}"]
     for name in COMMANDS:
@@ -491,7 +513,8 @@ def refresh_commands(dry_run: bool = False, agents: Optional[list[str]] = None) 
             else:
                 target = GEMINI_DIR / "commands" / f"{name}.toml"
                 states.append(f"gemini {_install(target, toml, dry_run)}")
-        if "codex" in agents:
+        consumers = [a for a in SKILLS_CONSUMERS if a in agents]
+        if consumers:
             skill_md = port_codex(name, body)
             state = _install(AGENTS_SKILLS_DIR / name / "SKILL.md", skill_md, dry_run)
             # Current Codex reads ~/.codex/skills as well, so a copy there
@@ -504,7 +527,15 @@ def refresh_commands(dry_run: bool = False, agents: Optional[list[str]] = None) 
                     legacy.unlink()
                     with contextlib.suppress(OSError):
                         legacy.parent.rmdir()
-            states.append(f"codex {state}")
+            states.append(f"{'/'.join(consumers)} {state}")
+        if "opencode" in agents:
+            try:
+                cmd_md = port_opencode(name, body)
+            except ValueError as exc:
+                states.append(f"opencode SKIPPED ({exc})")
+            else:
+                target = OPENCODE_DIR / "commands" / f"{name}.md"
+                states.append(f"opencode {_install(target, cmd_md, dry_run)}")
         report.append(f"{name}: " + " · ".join(states))
     return report
 
@@ -713,12 +744,12 @@ def main(argv: Optional[list[str]] = None) -> int:
     ap.add_argument(
         "--commands-only",
         action="store_true",
-        help="refresh the agents' command files (Claude Code / Gemini CLI / Codex) and exit",
+        help="refresh the agents' command files (Claude Code / Gemini CLI / Codex / Cursor / OpenCode) and exit",
     )
     ap.add_argument(
         "--agents",
         metavar="LIST",
-        help="comma-separated subset of claude,gemini,codex to install commands for (default: detect)",
+        help="comma-separated subset of claude,gemini,codex,cursor,opencode to install for (default: detect)",
     )
     ap.add_argument("--dry-run", action="store_true", help="show the plan; change nothing")
     ap.add_argument(

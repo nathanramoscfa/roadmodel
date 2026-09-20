@@ -150,9 +150,11 @@ records what is done exactly when it merges (no "update the roadmap"
 chore, and the next step refuses to start until the previous one reads
 Complete); `/roadmodel-update` keeps roadmodel current in every project
 at once (see "Staying current"). The same four commands are generated
-for **Gemini CLI** (`~/.gemini/commands/*.toml`) and **Codex**
-(`~/.agents/skills/*/SKILL.md`, invoked as `$roadmap-step 1 3`) and
-installed by `/roadmodel-update` wherever those tools are present.
+for **Gemini CLI** (`~/.gemini/commands/*.toml`), **Codex** and
+**Cursor** (one `~/.agents/skills/*/SKILL.md` both read; `$roadmap-step`
+in Codex, `/roadmap-step` in Cursor), and **OpenCode**
+(`~/.config/opencode/commands/*.md`), installed by `/roadmodel-update`
+wherever those tools are present.
 
 Either way the in-editor AI runs the algorithm itself rather than calling
 the recommender service. Use the MCP server above instead when you want

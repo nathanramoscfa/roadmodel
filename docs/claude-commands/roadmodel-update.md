@@ -49,8 +49,10 @@ where one exists (`--init-kit` to create one everywhere), and
 re-downloads the four command files for every agent installed on this
 machine: `~/.claude/commands` (mirroring any `~/.claude/skills/<name>/
 SKILL.md` copies), `~/.gemini/commands/<name>.toml` for Gemini CLI, and
-`~/.agents/skills/<name>/SKILL.md` for Codex (invoked there as
-`$roadmap-step 1 3`). `--agents claude,gemini,codex` overrides the
+`~/.agents/skills/<name>/SKILL.md` for Codex and Cursor (both read that
+directory; `$roadmap-step 1 3` in Codex, `/roadmap-step 1 3` in Cursor),
+and `~/.config/opencode/commands/<name>.md` for OpenCode.
+`--agents claude,gemini,codex,cursor,opencode` overrides the
 auto-detection; `--commands-only` refreshes commands and nothing else.
 `--dry-run` shows the plan.
 
