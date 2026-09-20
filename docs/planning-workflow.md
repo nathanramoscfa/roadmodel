@@ -173,11 +173,19 @@ re-exports `planning/` where a kit exists, and re-downloads the four
 command files. One table at the end; a project whose env cannot be
 detected is reported, never guessed into `base`.
 
-First run: `/roadmodel-update E:\Code\bot-farm E:\Code\nexiform-ai …`
+First run: `/roadmodel-update E:\Code\app-one E:\Code\app-two …`
 registers the dirs and runs. Later runs: `/roadmodel-update` alone. The
 registry and updater live under `~/.config/roadmodel/`; nothing is
 committed to any project. Without Claude Code:
 `python ~/.config/roadmodel/update_projects.py [--dry-run]`.
+
+**Hands-off:** `/roadmodel-update --install-schedule 09:00` (once per
+machine) registers a daily run — launchd on macOS, Task Scheduler on
+Windows, cron on Linux — so every registered project follows each
+release within a day, logged to `~/.config/roadmodel/update.log`.
+`--uninstall-schedule` removes it. Fixes to the updater script itself
+reach the schedule the next time `/roadmodel-update` is run by hand
+(that is what re-fetches the script).
 
 ## What `/roadmap-project` and `/roadmap-phase` do
 
