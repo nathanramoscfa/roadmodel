@@ -50,11 +50,16 @@ STYLE RULES (the AI MUST follow)
     the next step in a fresh conversation), Deploys line
     (`**Deploys:**` — the surface and environment the step's
     merge reaches, or `nothing beyond merge`; see the Overview
-    "Deploy-and-verify rule"), Settings table, Model rationale
-    paragraph, XML <task> prompt (which MUST carry a <security>
-    block alongside its <lifecycle> block — see below), and an
-    Acceptance Criteria bullet list that carries a "Deployed &
-    verified" bullet whenever the Deploys line names a surface
+    "Deploy-and-verify rule"), Status line (`**Status:**` —
+    `Not started` when this roadmap is written; the step's OWN
+    PR flips it to `Complete — PR #n (YYYY-MM-DD)` at Stage 3,
+    so the roadmap on `main` marks a step complete exactly when
+    its PR merges; see the Overview "Status rule"), Settings
+    table, Model rationale paragraph, XML <task> prompt (which
+    MUST carry a <security> block alongside its <lifecycle>
+    block — see below), and an Acceptance Criteria bullet list
+    that carries a "Deployed & verified" bullet whenever the
+    Deploys line names a surface
     and whose FINAL bullet is always a security check. The
     Settings table is
     PLATFORM-specific so it mirrors the actual surface the
@@ -129,9 +134,14 @@ STYLE RULES (the AI MUST follow)
     names what is outstanding, and omits the completion line.
     "Done" means done. This is Stage 6 of the Step lifecycle and
     is binding; see the Overview "Step lifecycle" paragraph and
-    each step's XML `<lifecycle>` block. The same rule applies to
+    each step's XML `<lifecycle>` block. The completion line also
+    presupposes the Status rule: the merged PR carried this
+    step's `**Status:** Complete — PR #n (…)` line, so the
+    roadmap on `main` already records what the chat declares.
+    The same rule applies to
     the phase-level line "Phase N is complete. You can now move
-    on to Phase N+1." emitted by the final QA step.
+    on to Phase N+1." emitted by the final QA step, which marks
+    the phase in the parent project roadmap the same way.
   - End the document with a Post-Implementation Verification
     section (V1-Vn check tables), a Summary Table, optional
     Model-selection blocks, and a Not-in-scope section.
@@ -327,6 +337,33 @@ a gap remains. `docs/phase{{N}}-qa-findings.md` is the rollup:
 every finding, its class, and the guard added so the class cannot
 recur.
 
+**Status rule.** Every step header carries a `**Status:**` line,
+and this file on `main` is the ledger of what is done — never a
+chat transcript, never a later conversation reconstructing
+history from `git log`. The line reads `Not started` when this
+roadmap is written and is flipped by the step's OWN pull request:
+at Stage 3, right after `gh pr create` returns the PR number, the
+agent sets it to `Complete — PR #<n> (<YYYY-MM-DD>)`, commits that
+edit on the step branch, and pushes. The PR therefore carries its
+own completion mark, and the roadmap on `main` says a step is
+complete exactly when that step's PR merges — never before. The
+parent project roadmap is marked the same way, in the same
+commit: Step 1's PR flips its `### Phase {{N}}` `**Status:**`
+line from `Not started` to `In progress — phase{{N}}-roadmap.md`,
+and the final step's PR flips it to `Complete — …` (with its row
+in the "Phase Complexity Summary" table and the header
+`> **Status:**` line). There is no separate
+"update the roadmaps" chore: a step whose PR merged without its
+Status line is a lifecycle violation, and the next step's Stage 1
+(and `/roadmap-step`) refuses to start until the previous step
+reads `Complete`. If a post-merge check fails — a Deployed &
+verified bullet, an alarm that never fired — the step is NOT
+complete despite the merged line; say so, and the `hotfix/` PR
+that completes it appends its own number to the line. If this
+roadmap is git-excluded (e.g. `private/`), the edit itself is the
+mark and there is nothing to commit. `grep -n '^\*\*Status:\*\*'`
+on this file is the phase's progress report.
+
 **Step lifecycle.** Every step in this phase follows the exact
 same six-stage lifecycle, in order, with no exceptions. Each
 stage is a hard checkpoint — if a stage is skipped, branch
@@ -352,10 +389,20 @@ before declaring a step complete.
    so a security issue in this step's work is caught here, before
    the PR and before `main`.
 
-3. **Open the PR.** `gh pr create --base main --head <branch>`
-   with a Conventional Commits title and a body that references
-   this roadmap step and its acceptance criteria. One PR per
-   step; never bundle two steps into one PR.
+3. **Open the PR, then mark the step.** `gh pr create --base
+   main --head <branch>` with a Conventional Commits title and a
+   body that references this roadmap step and its acceptance
+   criteria. One PR per step; never bundle two steps into one
+   PR. Then, with the PR number in hand, set this step's
+   `**Status:**` line in this roadmap to
+   `Complete — PR #<n> (<YYYY-MM-DD>)`, commit that edit on the
+   step branch (`docs: mark Phase {{N}} Step {{M}} complete`),
+   and push — the PR now carries its own completion mark, so the
+   roadmap on `main` will say the step is complete exactly when
+   the PR merges (Status rule). On the phase's first step, the
+   same commit sets the parent project roadmap's Phase {{N}}
+   `**Status:**` to `In progress`; on the final step, to
+   `Complete`.
 
 4. **Wait for green checks, then squash-merge.** Every required
    status check (lint, type-check, test-matrix, package-smoke,
@@ -409,7 +456,8 @@ before declaring a step complete.
    body; a process lesson is written where the next conversation
    reads it. A finding you can only *describe* has not been
    disposed of, and an undisposed finding is an unmet acceptance
-   criterion. Only once the PR is merged, every acceptance
+   criterion. Only once the PR is merged — and `main` therefore
+   carries this step's `Complete` Status line — every acceptance
    criterion is affirmatively met, and every finding has a
    destination, say so plainly: end your final response with an
    explicit, unhedged completion line — verbatim shape
@@ -625,6 +673,8 @@ beyond merge". If going live needs a release, a version-floor
 bump, a migration, or a redeploy, say so here and name the step
 that owns it.}}
 
+**Status:** Not started
+
 <!-- Typical model values: GPT-5.3 Codex (long-running
      autonomous agentic sessions), GPT-5.4 (knowledge
      work / writing / domain expertise), Sonnet 4.6
@@ -829,13 +879,30 @@ hygiene").}}
        direct pushes will be
        rejected.
 
-    3. OPEN THE PR. `gh pr create
-       --base main --head <branch>`
-       with a Conventional Commits
-       title and a body that
-       references this roadmap step
-       and its acceptance criteria.
-       One PR per step.
+    3. OPEN THE PR, THEN MARK THE
+       STEP. `gh pr create --base
+       main --head <branch>` with a
+       Conventional Commits title
+       and a body that references
+       this roadmap step and its
+       acceptance criteria. One PR
+       per step. Then set this
+       step's `**Status:**` line in
+       this roadmap file to
+       `Complete — PR #<n>
+       (<YYYY-MM-DD>)`, commit that
+       edit on the step branch, and
+       push — the PR carries its
+       own completion mark, so the
+       roadmap on `main` marks this
+       step complete exactly when
+       the PR merges (Status rule).
+       Same commit, parent project
+       roadmap: on the phase's
+       first step set its Phase
+       {{N}} `**Status:**` to `In
+       progress`; on the final
+       step, to `Complete`.
 
     4. WAIT FOR GREEN CHECKS, THEN
        SQUASH-MERGE. Every required
@@ -887,7 +954,10 @@ hygiene").}}
        only describe is NOT
        disposed of, and counts as
        an unmet criterion. Only
-       once the PR is merged, every
+       once the PR is merged — and
+       `main` therefore carries
+       this step's `Complete`
+       Status line — every
        acceptance criterion is
        affirmatively met, and every
        finding has a destination,
@@ -1200,11 +1270,12 @@ the phase requires. Typical phase has 4-7 steps. The final
 step is ALWAYS "QA + verify-phaseN.sh".
 
 EVERY step, without exception, carries: a `**Deploys:**` line,
-the <lifecycle> and <security> blocks in its <task> (both
-copied from Step 1), a "Deployed & verified" bullet whenever
-the Deploys line names a surface, and a final "Security gate
-clean" acceptance-criterion bullet. This is how "security at
-every step" and "merged is not deployed" are enforced
+a `**Status:** Not started` line, the <lifecycle> and
+<security> blocks in its <task> (both copied from Step 1), a
+"Deployed & verified" bullet whenever the Deploys line names a
+surface, and a final "Security gate clean" acceptance-criterion
+bullet. This is how "security at every step", "merged is not
+deployed", and "the roadmap on main is the ledger" are enforced
 mechanically rather than left to memory.
 -->
 
@@ -1225,6 +1296,8 @@ mechanically rather than left to memory.
 
 **Deploys:** nothing beyond merge — the CI matrix entry is live
 on merge.
+
+**Status:** Not started
 
 {{Settings table — pick the variant that matches PLATFORM
 per the Step 1 guidance, carrying ONLY the rows that
@@ -1509,16 +1582,31 @@ that surface has neither dial.
     </requirement>
 
     <requirement>
-      Update docs/ROADMAP.md:
-      - Verify the Phase {{N}}
-        entry's "Acceptance
-        criteria" section matches
-        this roadmap's V1-V{{N}}
-        checks (consistency
-        audit).
-      - Update the closing-
-        paragraph status line
-        after Phase {{N}} ships.
+      Mark the phase complete in
+      the parent project roadmap
+      (docs/ROADMAP.md, or
+      wherever this project keeps
+      it) in the SAME Stage-3
+      commit that marks this step
+      (Status rule):
+      - `### Phase {{N}}` gets
+        `**Status:** Complete —
+        <YYYY-MM-DD>; PR #<n>;
+        {{milestone tag}};
+        phase{{N}}-roadmap.md`.
+      - Its row in the "Phase
+        Complexity Summary" table
+        reads `Complete` (Step 1's
+        PR set it to `In
+        progress`).
+      - The header `> **Status:**`
+        line names Phase {{N}} as
+        shipped and Phase {{N+1}}
+        as next.
+      - Consistency audit: the
+        Phase {{N}} "Acceptance
+        criteria" there match this
+        roadmap's V1-V{{N}} checks.
     </requirement>
 
     <requirement>
@@ -1578,7 +1666,11 @@ that surface has neither dial.
   `docs/phase{{N}}-qa-findings.md` has a destination (fixed,
   an issue number, or a named phase that owns it), the "Not in
   scope" section below is current, and no un-tracked item
-  remains. This step's final response ends with two lines and
+  remains. Every step of this roadmap, this one included,
+  reads `**Status:** Complete — PR #…` on `main`, and the parent
+  project roadmap's Phase {{N}} entry, its summary-table row,
+  and its header status line say `Complete` — all landed in
+  this step's PR. This step's final response ends with two lines and
   nothing after them: "Step {{N}} is complete. You can now move
   on to Step {{N+1}}." is replaced by "Step {{N}} is complete.
   Phase {{N}} is complete. You can now move on to Phase
@@ -1874,8 +1966,10 @@ Additionally not in scope for this phase:
 
 ---
 
-_This roadmap is the execution plan for Phase {{N}}. Update
-step status as each is completed. After all steps and
+_This roadmap is the execution plan for Phase {{N}}. Each
+step's `**Status:**` line is flipped by that step's own PR
+(Status rule), so this file on `main` is the phase's ledger —
+`grep -n '^\*\*Status:\*\*'` reports progress. After all steps and
 verification pass, and every finding has a destination, Phase
 {{N}} is complete — declared with the line "Phase {{N}} is
 complete. You can now move on to Phase {{N+1}}." and nothing
