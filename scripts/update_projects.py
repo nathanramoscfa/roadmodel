@@ -122,6 +122,21 @@ def add_to_registry(file: Path, paths: list[str]) -> list[Path]:
 # --------------------------------------------------------------------------
 
 
+def _python_path(prefix: Path) -> Optional[Path]:
+    """The interpreter inside an env prefix, or None.
+
+    Windows: venvs put it at ``Scripts\\python.exe``; conda envs at the prefix
+    root (``python.exe``). POSIX: ``bin/python`` (``bin/python3`` on a few
+    conda builds).
+    """
+    rels = ("Scripts/python.exe", "python.exe") if WINDOWS else ("bin/python", "bin/python3")
+    for rel in rels:
+        candidate = prefix / rel
+        if candidate.exists():
+            return candidate
+    return None
+
+
 @dataclass
 class Env:
     kind: str  # "venv" | "conda"
@@ -130,11 +145,12 @@ class Env:
 
     @property
     def python(self) -> Path:
-        return self.prefix / ("Scripts/python.exe" if WINDOWS else "bin/python")
+        found = _python_path(self.prefix)
+        return found if found else self.prefix / ("python.exe" if WINDOWS else "bin/python")
 
 
 def _python_in(prefix: Path) -> bool:
-    return (prefix / ("Scripts/python.exe" if WINDOWS else "bin/python")).exists()
+    return _python_path(prefix) is not None
 
 
 def _conda_exe() -> Optional[str]:
@@ -402,6 +418,165 @@ def refresh_commands(dry_run: bool = False) -> list[str]:
 
 
 # --------------------------------------------------------------------------
+# Unattended runs: a per-machine schedule that runs this script daily
+# --------------------------------------------------------------------------
+
+SCHEDULE_LABEL = "com.roadmodel.update-projects"  # launchd label / cron marker
+TASK_NAME = "roadmodel-update-projects"  # Windows Task Scheduler name
+LOG_FILE = CONFIG_DIR / "update.log"
+LOG_MAX_BYTES = 1_000_000
+
+
+def _parse_time(value: str) -> tuple[int, int]:
+    m = re.fullmatch(r"(\d{1,2}):(\d{2})", value.strip())
+    if not m or not (0 <= int(m.group(1)) <= 23 and 0 <= int(m.group(2)) <= 59):
+        raise SystemExit(f"--install-schedule: time must be HH:MM (24h), got {value!r}")
+    return int(m.group(1)), int(m.group(2))
+
+
+def launchd_plist(python: Path, script: Path, hour: int, minute: int, log: Path) -> str:
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>{SCHEDULE_LABEL}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>{python}</string>
+    <string>{script}</string>
+    <string>--log</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>{hour}</integer><key>Minute</key><integer>{minute}</integer></dict>
+  <key>RunAtLoad</key><false/>
+  <key>StandardOutPath</key><string>{log}</string>
+  <key>StandardErrorPath</key><string>{log}</string>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string></dict>
+</dict>
+</plist>
+"""
+
+
+def schtasks_create_argv(python: Path, script: Path, hour: int, minute: int) -> list[str]:
+    # /TR takes one command string; inner quotes protect paths with spaces.
+    return [
+        "schtasks", "/Create", "/F",
+        "/TN", TASK_NAME,
+        "/SC", "DAILY",
+        "/ST", f"{hour:02d}:{minute:02d}",
+        "/TR", f'"{python}" "{script}" --log',
+    ]  # fmt: skip
+
+
+def cron_line(python: Path, script: Path, hour: int, minute: int) -> str:
+    return f"{minute} {hour} * * * {python} {script} --log  # {SCHEDULE_LABEL}"
+
+
+def _sys(argv: list[str], stdin: Optional[str] = None) -> subprocess.CompletedProcess[str]:
+    """Run a fixed-argv system tool (launchctl / schtasks / crontab); never a shell."""
+    return subprocess.run(  # noqa: S603 — argv is a literal list built here, not user input
+        argv, input=stdin, capture_output=True, text=True
+    )
+
+
+def _launchd_plist_path() -> Path:
+    return Path.home() / "Library" / "LaunchAgents" / f"{SCHEDULE_LABEL}.plist"
+
+
+def _crontab_without_ours() -> list[str]:
+    current = _sys(["crontab", "-l"])
+    text = current.stdout if current.returncode == 0 else ""
+    return [ln for ln in text.splitlines() if SCHEDULE_LABEL not in ln]
+
+
+def install_schedule(when: str, dry_run: bool = False) -> str:
+    """Register a daily run of this script for the current user. Returns a
+    one-line description of what was (or would be) installed."""
+    hour, minute = _parse_time(when)
+    python = Path(sys.executable).resolve()
+    script = Path(__file__).resolve()
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = f"daily at {hour:02d}:{minute:02d} via {python} {script} (log: {LOG_FILE})"
+
+    if sys.platform == "darwin":
+        plist = _launchd_plist_path()
+        if dry_run:
+            return f"launchd agent {plist} — {stamp}"
+        plist.parent.mkdir(parents=True, exist_ok=True)
+        domain = f"gui/{os.getuid()}"
+        _sys(["launchctl", "bootout", f"{domain}/{SCHEDULE_LABEL}"])  # ok if not loaded
+        plist.write_text(launchd_plist(python, script, hour, minute, LOG_FILE), encoding="utf-8")
+        cp = _sys(["launchctl", "bootstrap", domain, str(plist)])
+        if cp.returncode != 0:
+            raise SystemExit(
+                f"launchctl bootstrap failed: {cp.stderr.strip() or cp.stdout.strip()}"
+            )
+        return f"launchd agent {plist} — {stamp}"
+
+    if WINDOWS:
+        argv = schtasks_create_argv(python, script, hour, minute)
+        if dry_run:
+            return f"Task Scheduler task {TASK_NAME} — {stamp}\n  {subprocess.list2cmdline(argv)}"
+        cp = _sys(argv)
+        if cp.returncode != 0:
+            raise SystemExit(f"schtasks failed: {cp.stderr.strip() or cp.stdout.strip()}")
+        return f"Task Scheduler task {TASK_NAME} — {stamp}"
+
+    line = cron_line(python, script, hour, minute)
+    if dry_run:
+        return f"crontab entry — {line}"
+    cp = _sys(["crontab", "-"], stdin="\n".join(_crontab_without_ours() + [line]) + "\n")
+    if cp.returncode != 0:
+        raise SystemExit(f"crontab failed: {cp.stderr.strip()}")
+    return f"crontab entry — {stamp}"
+
+
+def uninstall_schedule(dry_run: bool = False) -> str:
+    if sys.platform == "darwin":
+        plist = _launchd_plist_path()
+        if not dry_run:
+            _sys(["launchctl", "bootout", f"gui/{os.getuid()}/{SCHEDULE_LABEL}"])
+            plist.unlink(missing_ok=True)
+        return f"removed launchd agent {plist}"
+    if WINDOWS:
+        if not dry_run:
+            _sys(["schtasks", "/Delete", "/F", "/TN", TASK_NAME])
+        return f"removed Task Scheduler task {TASK_NAME}"
+    if not dry_run:
+        _sys(["crontab", "-"], stdin="\n".join(_crontab_without_ours()) + "\n")
+    return "removed crontab entry"
+
+
+class _Tee:
+    """Write to the console and append to the log (scheduled runs)."""
+
+    def __init__(self, *streams: object) -> None:
+        self._streams = streams
+
+    def write(self, data: str) -> int:
+        for s in self._streams:
+            s.write(data)  # type: ignore[attr-defined]
+        return len(data)
+
+    def flush(self) -> None:
+        for s in self._streams:
+            s.flush()  # type: ignore[attr-defined]
+
+
+def _open_log() -> object:
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    if LOG_FILE.exists() and LOG_FILE.stat().st_size > LOG_MAX_BYTES:
+        tail = LOG_FILE.read_bytes()[-LOG_MAX_BYTES // 5 :]
+        LOG_FILE.write_bytes(tail)
+    fh = LOG_FILE.open("a", encoding="utf-8")
+    import datetime as _dt
+
+    fh.write(f"\n===== {_dt.datetime.now().isoformat(timespec='seconds')} =====\n")
+    return fh
+
+
+# --------------------------------------------------------------------------
 # CLI
 # --------------------------------------------------------------------------
 
@@ -442,7 +617,26 @@ def main(argv: Optional[list[str]] = None) -> int:
     )
     ap.add_argument("--no-commands", action="store_true", help="do not refresh ~/.claude/commands")
     ap.add_argument("--dry-run", action="store_true", help="show the plan; change nothing")
+    ap.add_argument(
+        "--install-schedule",
+        nargs="?",
+        const="09:00",
+        metavar="HH:MM",
+        help="also register a daily unattended run at HH:MM (default 09:00) for this user",
+    )
+    ap.add_argument("--uninstall-schedule", action="store_true", help="remove the daily run")
+    ap.add_argument("--log", action="store_true", help=f"also append output to {LOG_FILE}")
     args = ap.parse_args(argv)
+
+    if args.log:
+        log_fh = _open_log()
+        sys.stdout = _Tee(sys.__stdout__, log_fh)
+        sys.stderr = _Tee(sys.__stderr__, log_fh)
+
+    if args.uninstall_schedule:
+        print("Schedule:", uninstall_schedule(dry_run=args.dry_run))
+        if not args.projects and not args.add:
+            return 0
 
     if args.add:
         added = add_to_registry(args.projects_file, args.add)
@@ -489,6 +683,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         print("\nClaude Code commands (~/.claude/commands):")
         for line in refresh_commands(dry_run=args.dry_run):
             print(f"  {line}")
+
+    if args.install_schedule:
+        print("\nSchedule:", install_schedule(args.install_schedule, dry_run=args.dry_run))
 
     failed = [r for r in results if not r.ok]
     if failed:
