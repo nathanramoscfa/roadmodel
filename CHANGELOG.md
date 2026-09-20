@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **User-context template lists every federated provider.** The "Active API
+  keys" table in `user-context.example.md` (what `roadmodel context init`
+  bootstraps) now carries DeepSeek, Mistral, Groq and Z.ai rows alongside
+  Anthropic / OpenAI / Google / xAI, each `No` by default with the method it
+  unlocks and the jurisdiction it needs — so the `deepseek-api`, `mistral-api`,
+  `groq-api` and `zai-api` methods the selector already knows are reachable
+  without reading the selector source. `docs/user-context-setup.md` says the
+  same in prose.
+
 - **`/roadmap-*` and `/roadmodel-update` for Gemini CLI and Codex.** The
   updater now generates the four commands from `docs/claude-commands/*.md`
   at refresh time — Gemini CLI custom commands (`~/.gemini/commands/
