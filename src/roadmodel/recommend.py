@@ -15,6 +15,7 @@ from roadmodel.providers import ProviderAdapter
 from roadmodel.providers import anthropic as anthropic_provider
 from roadmodel.providers import google as google_provider
 from roadmodel.providers import openai as openai_provider
+from roadmodel.providers.openai_compatible import ADAPTERS as _compatible_adapters
 
 BUNDLED_SELECTOR_PATH: Traversable = resources.files("roadmodel.data") / "model-selector.txt"
 BUNDLED_TIER_COST_PATH: Traversable = resources.files("roadmodel.data") / "model-tier-cost-scale.md"
@@ -177,6 +178,9 @@ PROVIDER_ADAPTERS: dict[str, ProviderAdapter] = {
     "anthropic": anthropic_provider,
     "openai": openai_provider,
     "google": google_provider,
+    # deepseek / xai / groq / mistral / zai / openrouter / together / ollama /
+    # custom — one Chat-Completions adapter per registry entry.
+    **_compatible_adapters,
 }
 
 

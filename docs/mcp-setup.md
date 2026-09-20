@@ -38,8 +38,13 @@ moving on.
 `roadmodel-mcp` calls **your** provider account on every
 `recommend_model` invocation — the same as the CLI. It resolves a
 key from `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GOOGLE_API_KEY`
-(env var preferred), then from `~/.config/roadmodel/config.toml`,
-then auto-selects a provider in fixed order. The full precedence
+(or any other supported provider's key — DeepSeek, xAI, Groq,
+Mistral, Z.ai, OpenRouter, Together; env var preferred), then from
+`~/.config/roadmodel/config.toml`, then auto-selects a provider in
+fixed order. `ROADMODEL_PROVIDER=ollama` + `ROADMODEL_MODEL=<tag>`
+in the `env` block points the server at a local Ollama model
+instead (no key); `ROADMODEL_PROVIDER=custom` adds
+`ROADMODEL_BASE_URL` + `ROADMODEL_API_KEY`. The full precedence
 chain, where to generate keys, and how to verify a smoke call live in
 [docs/byo-key-setup.md](byo-key-setup.md). MCP clients invoke
 `roadmodel-mcp` as a subprocess, so the key must be reachable from

@@ -227,19 +227,35 @@ Pass `--json` to emit the same fields as machine-readable JSON, or
 ## BYO-key setup
 
 roadmodel ships with no provider key built in — it calls
-**your** Anthropic / OpenAI / Google account on every recommendation
-and charges your account. Set any one of the three environment
-variables and the CLI auto-selects that provider:
+**your** provider account on every recommendation and charges that
+account. Set any one of these environment variables and the CLI
+auto-selects that provider (the first present, in table order):
 
-| Provider  | Env var             |
-| --------- | ------------------- |
-| Anthropic | `ANTHROPIC_API_KEY` |
-| OpenAI    | `OPENAI_API_KEY`    |
-| Google    | `GOOGLE_API_KEY`    |
+| Provider   | Env var              | Engine API        |
+| ---------- | -------------------- | ----------------- |
+| Anthropic  | `ANTHROPIC_API_KEY`  | native            |
+| OpenAI     | `OPENAI_API_KEY`     | native            |
+| Google     | `GOOGLE_API_KEY`     | native            |
+| DeepSeek   | `DEEPSEEK_API_KEY`   | OpenAI-compatible |
+| xAI        | `XAI_API_KEY`        | OpenAI-compatible |
+| Groq       | `GROQ_API_KEY`       | OpenAI-compatible |
+| Mistral    | `MISTRAL_API_KEY`    | OpenAI-compatible |
+| Z.ai       | `ZAI_API_KEY`        | OpenAI-compatible |
+| OpenRouter | `OPENROUTER_API_KEY` | OpenAI-compatible (`--model` required) |
+| Together   | `TOGETHER_API_KEY`   | OpenAI-compatible (`--model` required) |
+
+Two more are explicit-only (`--provider` / `ROADMODEL_PROVIDER`):
+**`ollama`** — a local [Ollama](https://ollama.com) server, no key,
+`ROADMODEL_MODEL` (or `--model`) names the pulled model — and
+**`custom`** — any other OpenAI-compatible endpoint via
+`ROADMODEL_BASE_URL` + `ROADMODEL_API_KEY` + `ROADMODEL_MODEL`
+(vLLM, LM Studio, a corporate gateway). The recommender prompt is
+~55k tokens, so a local model needs a ≥64k context window.
 
 The full guide — generating keys in each provider's console, storing
 them in a shell profile or `~/.config/roadmodel/config.toml`,
-precedence rules, and verifying with a smoke call — is
+precedence rules, verifying with a smoke call, and which engines
+have been eval-verified — is
 [docs/byo-key-setup.md](docs/byo-key-setup.md).
 
 ## User context setup

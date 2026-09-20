@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **OpenAI-compatible recommender engines.** `roadmodel recommend` / the MCP
+  server / `recommend_structured*` can now run on DeepSeek, xAI, Groq,
+  Mistral, Z.ai, OpenRouter, Together, a local Ollama server, or any
+  `custom` OpenAI-compatible endpoint — one Chat-Completions adapter
+  (`providers/openai_compatible.py`, reusing the `openai` SDK from the
+  `recommend` extra; no new dependency) bound to a provider table
+  (`providers/registry.py`: base URL, key env, default model, and which
+  reasoning dial the provider documents). `--provider` / `ROADMODEL_PROVIDER`
+  accept the new names; each hosted provider auto-selects from its
+  `<PROVIDER>_API_KEY` after the native three; `ollama` (no key) and
+  `custom` (`ROADMODEL_BASE_URL` + `ROADMODEL_API_KEY`) are explicit-only.
+  `ROADMODEL_MODEL` is the env form of `--model` for every provider and is
+  required where there is no default (ollama, custom, aggregators).
+  `--thinking-budget` maps onto DeepSeek/Z.ai `thinking` + `reasoning_effort`,
+  Groq/Mistral/Ollama `reasoning_effort`, and nothing where undocumented; a
+  thinking model that spends its whole output budget reasoning is reported by
+  name, and `ollama` / `custom` calls get a 30-minute no-retry timeout instead
+  of the SDK's 10 minutes + 2 silent retries. The three native adapters are
+  untouched. `docs/byo-key-setup.md`
+  gains per-provider setup, the doc-cited base-URL table, and a "Verified
+  engines" table from `scripts/eval_recommend_engines.py` (which now takes
+  any provider plus `--extra provider:model[:budget]`); the README key table
+  lists every env var.
+
 - **`/roadmap-*` for Cursor and OpenCode.** Cursor reads `~/.agents/skills/`
   directly, so the skills the updater already installs for Codex are Cursor's
   `/roadmap-step` etc. — the updater now detects `~/.cursor/` and labels the
