@@ -20,9 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   commands without a project registry). `/roadmap-step`'s settings gate is
   now surface-agnostic: it compares the step's Platform to the surface it is
   running on and names that surface's model/effort controls.
-  `docs/planning-workflow.md` "Other agents" documents it. Codex skills are
-  written to both `~/.agents/skills/` (documented) and `~/.codex/skills/`
-  (what older builds read via `CODEX_HOME`) when `~/.codex/` exists.
+  `docs/planning-workflow.md` "Other agents" documents it. Codex skills go to
+  `~/.agents/skills/` only: current Codex (verified on 0.155) reads that AND
+  `~/.codex/skills/` as skill roots, so a second copy lists every skill
+  twice — the updater removes its own legacy copies (content-checked; a
+  hand-written skill of the same name is left alone).
 
 - **`/roadmodel-update` + `scripts/update_projects.py` — upgrade roadmodel in
   every project at once.** The script (stdlib only, Python 3.9+, fetched fresh
