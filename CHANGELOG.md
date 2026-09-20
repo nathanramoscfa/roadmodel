@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`/roadmap-step P M`** (`docs/claude-commands/roadmap-step.md`): executes
+  step M of phase P straight from the phase roadmap — finds `## Step M`, reads
+  its Branch line, Settings table, `<task>` block and acceptance criteria,
+  gates on the session model / platform (prints the required Effort and
+  Thinking as the operator's cue), applies the current Stage 6 even to
+  pre-0.2.34 roadmaps, then runs the task from Stage 1. No more copying the
+  XML block by hand. `docs/planning-workflow.md` §4 documents it.
+
 ## [0.2.35] — 2026-09-17
 
 ### Added
