@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Roadmap templates: the roadmap on `main` is the ledger (Status rule).**
+  Both templates now give every step (phase template) and every phase
+  (project template) a `**Status:**` line — `Not started` when the roadmap
+  is written — and Stage 3 of the step lifecycle becomes "Open the PR, then
+  mark the step": right after `gh pr create` returns the number, the agent
+  flips the line to `Complete — PR #n (date)`, commits it on the step branch,
+  and pushes, so the roadmap on `main` marks a step complete exactly when its
+  PR merges — never before, and never by a later chat reconstructing history
+  from `git log`. A phase's final QA step marks the phase the same way in the
+  parent roadmap (its `**Status:**` line, a new Status column in the §8
+  summary table, the header status line). Stage 6's completion line now
+  presupposes the mark. This retires the "update ROADMAP.md and the phase
+  roadmaps so completed steps are marked complete" reconciliation ask.
+- **`/roadmap-step` Status gate + legacy backfill.** The command refuses to
+  start a step that already reads `Complete`, and refuses to start Step M
+  while Step M-1 does not (unless the Execution Order draws them in
+  parallel) — reporting whether the previous PR is unmerged or its mark was
+  skipped via `gh pr list --state merged --head <branch>`. Roadmaps written
+  before this release (no Status lines) are backfilled once, in the current
+  step's PR, from the same deterministic lookup. `docs/planning-workflow.md`
+  documents the gate, the mark, and the backfill.
+
+### Changed
+
+- **Paste-prompts' kit-currency check** (Step 0) now also requires the
+  template's Stage 3 to read "OPEN THE PR, THEN MARK THE STEP", so a
+  pre-0.2.37 kit fails loudly instead of producing roadmaps without Status
+  lines. `tests/test_roadmap_templates.py` guards the new wording across both
+  templates, both prompts, and the command.
+
 ## [0.2.36] — 2026-09-20
 
 ### Fixed
