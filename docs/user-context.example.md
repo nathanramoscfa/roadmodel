@@ -52,6 +52,10 @@ pool → subscription-included → per-token API → pay-as-you-go).
 | OpenAI    | Yes         | Direct API key for pay-as-you-go fallback when ChatGPT Pro caps are hit or when a script needs programmatic access outside Codex. |
 | Google    | No          | No paid Gemini Advanced; no Google AI Studio API key configured. Gemini accounts for ~1% of usage and runs via Cursor's pool only. |
 | xAI       | No          | No direct API key. Grok usage is negligible; Cursor's pool covers it if needed. |
+| DeepSeek  | No          | No direct API key (`api.deepseek.com`, OpenAI-format). Unlocks the `deepseek-api` method — the cheapest A-tier coding / reasoning option — but the models are cn-jurisdiction, so `cn` must also be in the allowed-jurisdictions list below. |
+| Mistral   | No          | No direct API key (`api.mistral.ai`). Unlocks the `mistral-api` method — the EU-jurisdiction (sovereignty) picks. |
+| Groq      | No          | No direct API key (`api.groq.com`, OpenAI-format). Unlocks the `groq-api` method — Groq-hosted open-weight gpt-oss models, very low cost and very high throughput, us-jurisdiction. |
+| Z.ai      | No          | No direct API key (`api.z.ai`, OpenAI-format). Unlocks the `zai-api` method — the GLM coding / agentic models; cn-jurisdiction like DeepSeek. |
 
 ## Inactive / not subscribed
 

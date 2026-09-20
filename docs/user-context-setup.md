@@ -115,9 +115,13 @@ A Markdown table of provider API keys you have configured locally
 (`Provider | Key present | Notes`). `Yes` / `No` in the middle
 column is what the selector reads; the notes column documents why
 (e.g. "pay-as-you-go fallback when Max budget is spent"). This
-gates whether `PLATFORM` can ever be "Anthropic API direct",
-"OpenAI API direct", or "Google AI Studio" — the selector will not
-recommend a platform you have no key for.
+gates whether `PLATFORM` can ever be a provider-direct API — the
+selector will not recommend a platform you have no key for. One row
+per provider the catalog federates: Anthropic, OpenAI, Google, xAI,
+DeepSeek, Mistral, Groq (which hosts the open-weight gpt-oss models),
+and Z.ai (GLM). A `Yes` on DeepSeek or Z.ai only takes effect once
+`cn` is also in your allowed-jurisdictions list (see below); a `Yes`
+on Mistral is what makes the EU-sovereignty picks recommendable.
 
 ### Inactive / not subscribed
 
