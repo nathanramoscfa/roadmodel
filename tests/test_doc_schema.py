@@ -58,6 +58,10 @@ VALID_JURISDICTIONS = {
     "ru",
     "unknown",
 }
+# `local` is valid for METHODS only (the `ollama` method: weights on the
+# operator's own hardware, no counterparty jurisdiction). A <model> keeps its
+# maker's jurisdiction — test_no_model_uses_the_local_jurisdiction pins that.
+VALID_METHOD_JURISDICTIONS = VALID_JURISDICTIONS | {"local"}
 COST_SCALE_REQUIRED_COLUMNS = (
     "Model",
     "Input",
@@ -200,6 +204,20 @@ def test_every_model_jurisdiction_is_valid() -> None:
     assert not failures, "Jurisdiction code regressions:\n  " + "\n  ".join(failures)
 
 
+def test_no_model_uses_the_local_jurisdiction() -> None:
+    """`local` is a METHOD-only jurisdiction (the `ollama` access method). A
+    <model jurisdiction="local"> would bypass the Step 0b maker-jurisdiction
+    filter for a cn-maker model just because it can be run locally — the
+    model is chosen BEFORE the platform, so that is out of scope by design
+    (Phase 4.10 "Not in scope")."""
+    offenders = [
+        attrs.get("id", "<unknown>")
+        for _, attrs in _parse_models()
+        if attrs.get("jurisdiction", "") == "local"
+    ]
+    assert not offenders, f"<model> elements must never use jurisdiction='local': {offenders}"
+
+
 def test_every_method_provider_jurisdiction_is_valid() -> None:
     """Every <method> provider-jurisdiction attribute must use a known
     code. Mirrors test_every_model_jurisdiction_is_valid for the
@@ -213,10 +231,10 @@ def test_every_method_provider_jurisdiction_is_valid() -> None:
         attrs = dict(_ATTR_RE.findall(method_m.group(1)))
         method_id = attrs.get("id", "<unknown>")
         jurisdiction = attrs.get("provider-jurisdiction", "")
-        if jurisdiction not in VALID_JURISDICTIONS:
+        if jurisdiction not in VALID_METHOD_JURISDICTIONS:
             failures.append(
                 f"<method id='{method_id}'> provider-jurisdiction='{jurisdiction}' "
-                f"not in {sorted(VALID_JURISDICTIONS)}"
+                f"not in {sorted(VALID_METHOD_JURISDICTIONS)}"
             )
     assert not failures, "Method jurisdiction code regressions:\n  " + "\n  ".join(failures)
 

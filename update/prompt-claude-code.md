@@ -230,6 +230,12 @@ contract.
     E2 / F / G emission wording.
   - `<usage>`'s RUNTIME-SETTING paragraph describing the same
     platform-conditional emission rule.
+  - `<access-selection>`'s **`local` billing rules** (Phase 4.10): Step
+    A0's "`local` passes every allowed-jurisdictions list" sentence,
+    Step B's "EXCEPTION — `local` billing" DROP paragraph, Step C's
+    FUNDED-`local` $0 tier and its LOCAL QUANTIZATION CAVEAT verbatim
+    clause, and `<objective>`'s "LOCAL MODELS AND THE GATE" paragraph.
+    Also the `ollama` and `openrouter` `<method>` elements.
 - The structure or schema of `model-selector.txt`. Update values
   inside the existing schema; do not add or remove sections,
   attributes, elements, or columns.

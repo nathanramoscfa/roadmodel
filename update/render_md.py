@@ -58,6 +58,8 @@ PROVIDER_LABELS = {
     "google": "Google",
     "xai": "xAI",
     "cursor": "Cursor",
+    "ollama": "Ollama (local)",
+    "openrouter": "OpenRouter",
 }
 
 _TIER_RE = re.compile(r'<tier\s+cost="([^"]+)"\s*>(.*?)</tier>', re.DOTALL)

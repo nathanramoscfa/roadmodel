@@ -1465,3 +1465,46 @@ def test_platform_filter_fallback_still_applies_the_jurisdiction_filter() -> Non
     assert all(str(by_id[mid].get("jurisdiction", "")).lower() in {"", "us"} for mid in fallback), (
         "jurisdiction filter must still apply on the platform-filter fallback path"
     )
+
+
+def test_maker_resolution_aggregator_only_via_several_resellers() -> None:
+    """Phase 4.10: a model reachable ONLY through resellers (Cursor + OpenRouter
+    + Ollama — the shipped Kimi rows) resolves to the package's preferred
+    aggregator (`cursor`), matching roadmodel.cost.model_provider, instead of
+    dropping to unknown and letting a same-family backup through."""
+    import copy
+
+    catalog = copy.deepcopy(_AGG_CATALOG)
+    catalog["access_methods"].append(
+        {
+            "id": "openrouter",
+            "name": "OpenRouter",
+            "provider": "openrouter",
+            "billing": "per-token",
+            "provider_jurisdiction": "us",
+            "supports_models": ["composer"],
+        }
+    )
+    catalog["access_methods"].append(
+        {
+            "id": "ollama",
+            "name": "Ollama (local)",
+            "provider": "ollama",
+            "billing": "local",
+            "provider_jurisdiction": "local",
+            "supports_models": ["composer"],
+        }
+    )
+    acc = funding.accessible_model_ids(
+        ["claude-max"], ["anthropic"], allowed_jurisdictions=["us"], catalog=catalog
+    )
+    assert acc is not None
+    funded = funding._funded_surface_ids(catalog["subscription_tiers"], {"claude-max"})
+    g = funding.AccessGuard(acc, ["anthropic"], funded, catalog=catalog)
+    composer_id = g._resolve_id("Composer")
+    assert composer_id
+    assert g._maker_of[composer_id] == "cursor"
+    # And the package agrees on the real catalog's aggregator-only rows.
+    from roadmodel import cost  # type: ignore[import-untyped]
+
+    assert cost._AGGREGATOR_FALLBACK_ORDER[0] == "cursor"

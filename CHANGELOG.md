@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`ollama` and `openrouter` access methods.** The catalog can now
+  recommend two access classes it could not express: `Ollama (local)` —
+  open-weight models pulled onto the operator's own hardware — and the
+  `OpenRouter` per-token aggregator. `docs/model-selector.txt` gains a fifth
+  billing type, `local` ($0 per token, throughput bounded by the hardware,
+  quality bounded by the quantization pulled, which the tier ratings do not
+  describe) and a `local` provider-jurisdiction valid on methods only. The
+  `ollama` method lists only catalogued models whose weights are downloadable
+  under a licence that permits local use (Apache-2.0 gpt-oss / Mistral; MIT
+  DeepSeek V4 / GLM; Modified-MIT Kimi K2.7 Code; Kimi K3 License), verified
+  per model; the `openrouter` method lists the catalogued models OpenRouter
+  served on 2026-09-20 as a point-in-time snapshot, with its fee-inclusive
+  price floor and cross-host routing disclosed. `<access-selection>` changes:
+  Step A0 passes a `local` method under every allowed-jurisdictions list;
+  Step B **drops** an unfunded `local` method outright (hardware the operator
+  does not have is not money they might spend — same precedence and
+  disclosure as the Step A00 operator list) while still keeping an unfunded
+  `openrouter`; Step C ranks a funded `local` method in the $0 tier; and every
+  local pick's RATIONALE must carry the verbatim caveat "local quantized
+  weights run below the catalog tier ratings; treat coding and reasoning as
+  one tier lower than listed". The `<objective>` FLAT-FUNDING GATE treats a
+  funded local candidate as a separate funding class (no usage pool behind
+  it), so a Cost-priority prompt can reach a local pick. `cost.py`:
+  `_AGGREGATOR_PROVIDERS` gains `openrouter` and `ollama` (neither is ever a
+  model's maker; aggregator-only models keep resolving to `cursor`),
+  `_resolve_funding` returns `local` / `unfunded-local` from the new
+  `_local_runtime_present` / `_parse_local_models` user-context parsers, the
+  cost panel renders a funded local platform as `$0 — local hardware` with no
+  per-token estimate and omits an unfunded one, and the cross-provider backup
+  substitution skips local-only candidates. `docs/user-context.example.md`
+  gains an `OpenRouter` key row and a "Local models (Ollama)" section
+  (presence row + pulled-models table, shipped empty); the catalog cron treats
+  both methods' `supports-models` as hand-maintained; `tests/test_doc_schema.py`
+  admits `local` for methods only. Hosted service behaviour is unchanged by
+  design (its funding context never funds `local`; `openrouter` becomes a
+  valid API-provider declaration automatically).
+
 - **OpenAI-compatible recommender engines.** `roadmodel recommend` / the MCP
   server / `recommend_structured*` can now run on DeepSeek, xAI, Groq,
   Mistral, Z.ai, OpenRouter, Together, a local Ollama server, or any

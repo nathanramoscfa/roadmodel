@@ -10,7 +10,11 @@ from typing import Any, Final
 
 from roadmodel import cost, user_context
 from roadmodel.config import Config
-from roadmodel.errors import BundledDocNotFoundError, MalformedResponseError
+from roadmodel.errors import (
+    BundledDocNotFoundError,
+    MalformedResponseError,
+    UserContextNotFoundError,
+)
 from roadmodel.providers import ProviderAdapter
 from roadmodel.providers import anthropic as anthropic_provider
 from roadmodel.providers import google as google_provider
@@ -206,6 +210,29 @@ def _strip_ide_framing(selector_text: str) -> str:
     return selector_text
 
 
+# Phase 4.10: the `local` funding class. Shared by both headers so a Cost-priority
+# prompt can reach a locally-pulled model — without it the FLAT-FUNDING bullet
+# above opens the gate on a Max-funded Claude candidate and the rule buried in
+# <objective> never wins (measured 0/5 local picks before this bullet).
+_LOCAL_MODELS_BULLET: Final = (
+    "- LOCAL MODELS — a DIFFERENT funding class (<objective> gate condition (d); "
+    "<access-selection> Step B). If the appended user-context's 'Local models "
+    "(Ollama)' section says `Ollama installed | Yes` AND its pulled-models table "
+    "lists catalog model ids, then for THOSE models the `ollama` method "
+    "(PLATFORM: Ollama (local)) is FUNDED at $0 with NO usage pool behind it. "
+    "PROCEDURE: under Cost priority (`cheap`), BEFORE applying any flat-funding "
+    "reasoning, check whether a listed pulled model is ADEQUATE for the task "
+    "(judge it one tier below its catalog ratings); if one is, the FLAT-FUNDING "
+    "GATE is CLOSED, MODEL is that pulled model and PLATFORM is Ollama (local) — "
+    "it consumes no subscription budget and no provider tokens, so it is the "
+    "minimum-resource pick and WINS over a subscription-funded frontier model. "
+    "Under Balanced it competes as a $0 candidate; under Quality, quality wins. "
+    "A local method that is NOT declared (runtime absent, or the model not in "
+    "the table) is DROPPED, never merely unfunded. Every local pick's RATIONALE "
+    "MUST include verbatim: 'local quantized weights run below the catalog tier "
+    "ratings; treat coding and reasoning as one tier lower than listed'.\n"
+)
+
 # SaaS recommender header. Front-loads the rules Gemini 2.5 Flash most often
 # violates against the deep spec (issues #185/#186/#187/#188/#189): classify-
 # don't-execute, quality-over-cost, funded-platform posture, no-thinking on
@@ -237,9 +264,12 @@ _SAAS_HEADER: Final = (
     "- On a surface with no thinking dial (Cursor, xAI API) emit NEITHER EFFORT "
     "NOR THINKING, and the RATIONALE must not assert any thinking or effort "
     "level for it.\n"
-    "- FLAT-FUNDING GATE (see <objective>): when the chosen platform is "
-    "subscription-funded, the model family is covered by that subscription, and "
-    "the budget is not exhausted, out-of-pocket price is FLAT — tiering down "
+    + _LOCAL_MODELS_BULLET
+    + "- FLAT-FUNDING GATE (see <objective>): when the chosen platform is "
+    "subscription-funded, the model family is covered by that subscription, "
+    "the budget is not exhausted, AND no adequate locally-pulled model is "
+    "declared (gate condition (d) — see LOCAL MODELS above), out-of-pocket "
+    "price is FLAT — tiering down "
     "buys the user NOTHING. HOLD the capability tier the task warrants and "
     "default EFFORT to the top useful rung on EVERY posture INCLUDING Cost; "
     "differentiate the postures on latency, context fit, or blast radius "
@@ -262,7 +292,9 @@ _SAAS_HEADER: Final = (
     "default, and is itself overridden by the FLAT-FUNDING GATE above. Under "
     "Quality (or when none is declared) recommend the highest-quality fit "
     "regardless of cost. Under Cost, and ONLY where the spend is real (a "
-    "per-token path, or a subscription whose budget is exhausted), deliberately "
+    "per-token path, a subscription whose budget is exhausted, OR an adequate "
+    "locally-pulled model that would consume no subscription budget at all — "
+    "LOCAL MODELS above), deliberately "
     "pick a LOWER capability tier AND/OR lower effort than you would for "
     "Quality. Under Balanced, land between the two.\n"
     "- PLATFORM is the cheapest correct FUNDED surface per the user context's "
@@ -343,9 +375,12 @@ _SAAS_LADDER_HEADER: Final = (
     "- Only if the candidate set truly cannot supply three distinct tiers may two "
     "rungs share a tier — then they MUST differ by EFFORT and each RATIONALE must "
     "say so.\n"
-    "- FLAT-FUNDING GATE (see <objective>) OVERRIDES the three rules above. When "
-    "the platform is subscription-funded, the family is covered, and the budget "
-    "is not exhausted, a lower rung SAVES THE USER NOTHING: hold the capability "
+    + _LOCAL_MODELS_BULLET
+    + "- FLAT-FUNDING GATE (see <objective>) OVERRIDES the three rules above. When "
+    "the platform is subscription-funded, the family is covered, the budget "
+    "is not exhausted, and no adequate locally-pulled model is declared (gate "
+    "condition (d) — see LOCAL MODELS below), a lower rung SAVES THE USER "
+    "NOTHING: hold the capability "
     "tier and default EFFORT to the top useful rung on ALL THREE rungs, and "
     "separate them only on latency, context fit, or blast radius. If nothing "
     "separates them, emit the SAME model and settings for the converged rungs "
@@ -976,12 +1011,23 @@ def recommend_structured(
         return payload
     base = {**base, "model": canonical_model, "platform": canonical_platform}
 
+    # Price funding against the SAME user-context the recommendation used: the
+    # explicit text when given, else the file the config resolved (the CLI's
+    # --user-context). Without this the cost panel read the env/default path
+    # and could show a `--user-context`-funded local platform as unfunded.
+    cost_context = user_context_text
+    if cost_context is None:
+        try:
+            cost_context = user_context.read(config.user_context_path)
+        except UserContextNotFoundError:
+            cost_context = None
     primary = cost.estimate_session_cost(
         base["model"],
         base["platform"],
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         max_mode=max_mode,
+        user_context_text=cost_context,
     )
     payload["session_cost_estimate"] = asdict(primary)
     ranked = cost.compare_alternatives_funding_rank(
@@ -989,6 +1035,7 @@ def recommend_structured(
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         max_mode=max_mode,
+        user_context_text=cost_context,
     )
     payload["comparison_table"] = [asdict(est) for est in ranked]
     return payload
