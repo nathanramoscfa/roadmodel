@@ -46,8 +46,13 @@ It detects each project's env (`.venv`/`venv`/`env` dir → `environment.yml`
 name → conda env named like the folder → conda env inside the project),
 upgrades `roadmodel` in all of them concurrently, re-exports `planning/`
 where one exists (`--init-kit` to create one everywhere), and
-re-downloads the four command files into `~/.claude/commands` (mirroring
-any `~/.claude/skills/<name>/SKILL.md` copies). `--dry-run` shows the plan.
+re-downloads the four command files for every agent installed on this
+machine: `~/.claude/commands` (mirroring any `~/.claude/skills/<name>/
+SKILL.md` copies), `~/.gemini/commands/<name>.toml` for Gemini CLI, and
+`~/.agents/skills/<name>/SKILL.md` for Codex (invoked there as
+`$roadmap-step 1 3`). `--agents claude,gemini,codex` overrides the
+auto-detection; `--commands-only` refreshes commands and nothing else.
+`--dry-run` shows the plan.
 
 ## 4. Unattended runs (optional, once per machine)
 

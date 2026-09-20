@@ -36,7 +36,8 @@ you open a new chat. Type `/` in a chat; `roadmap-project`,
 The four files in [`docs/claude-commands/`](claude-commands/) become
 the user-scope Claude Code slash commands `/roadmap-project`,
 `/roadmap-phase`, `/roadmap-step`, and `/roadmodel-update`, available
-in every project on that machine. The first two are thin: each executes
+in every project on that machine. They are also the source for the
+Gemini CLI and Codex versions — see "Other agents" below. The first two are thin: each executes
 the paste-prompt the planning kit ships, so they never drift from the
 kit. The third reads the step straight out of the phase roadmap. The
 fourth re-fetches the other three (and itself) every time it runs, so
@@ -205,6 +206,28 @@ reach the schedule the next time `/roadmodel-update` is run by hand
 4. **Writes the file and stops.** It replies with the path and a short
    summary. It does not start Step 1 — every step is its own
    conversation, per the step lifecycle in the template.
+
+## Other agents: Gemini CLI and Codex
+
+The same four commands exist for Gemini CLI and Codex, generated from
+the Claude Code files so they never drift. `/roadmodel-update` (or
+`python ~/.config/roadmodel/update_projects.py --commands-only`)
+installs them wherever it finds the tool:
+
+| Agent      | Detected by     | Installed as                         | Invoke as              |
+| ---------- | --------------- | ------------------------------------ | ---------------------- |
+| Gemini CLI | `~/.gemini/`    | `~/.gemini/commands/<name>.toml`     | `/roadmap-step 1 3`    |
+| Codex      | `~/.codex/`     | `~/.agents/skills/<name>/SKILL.md`   | `$roadmap-step 1 3`    |
+
+`--agents gemini,codex` forces a set. The commands behave the same:
+`/roadmap-step` checks the step's Platform against the surface it is
+running on and stops if they differ, so a step the roadmap assigns to
+Codex is executed with `$roadmap-step` in Codex, not in Claude Code.
+The `<task>` blocks, the paste-prompts, and the Status rule are
+surface-independent — any agent that follows the instructions
+branches, opens the PR, marks the step, and ends with the completion
+line. Expect more re-prompting from smaller models on the ~1,900-line
+phase template.
 
 ## Without slash commands (Cursor, other clients)
 

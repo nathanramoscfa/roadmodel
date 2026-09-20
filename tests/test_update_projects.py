@@ -257,3 +257,111 @@ def test_install_schedule_dry_run_touches_nothing(
     assert "daily at 09:00" in desc and "update_projects.py" in desc
     assert calls == []  # dry run never calls launchctl / schtasks / crontab
     assert not (tmp_path / "cfg" / "update.log").exists()
+
+
+# --------------------------------------------------------------------------
+# Gemini CLI / Codex ports — generated from the Claude Code sources
+# --------------------------------------------------------------------------
+
+COMMANDS_DIR = ROOT / "docs" / "claude-commands"
+
+
+@pytest.mark.parametrize(
+    "name", ["roadmap-project", "roadmap-phase", "roadmap-step", "roadmodel-update"]
+)
+def test_gemini_port_is_valid_toml_with_args(up: ModuleType, name: str) -> None:
+    import tomllib
+
+    body = (COMMANDS_DIR / f"{name}.md").read_text()
+    parsed = tomllib.loads(up.port_gemini(name, body))
+    assert set(parsed) == {"description", "prompt"}
+    assert parsed["description"]  # the frontmatter description carried over
+    assert "$ARGUMENTS" not in parsed["prompt"]
+    assert "{{args}}" in parsed["prompt"]  # every command takes arguments
+    assert "!{" not in parsed["prompt"] and "@{" not in parsed["prompt"]
+    # Literal string: backslashes in Windows paths survive verbatim.
+    if "\\" in body:
+        assert "\\" in parsed["prompt"]
+
+
+@pytest.mark.parametrize(
+    "name", ["roadmap-project", "roadmap-phase", "roadmap-step", "roadmodel-update"]
+)
+def test_codex_port_is_a_skill(up: ModuleType, name: str) -> None:
+    body = (COMMANDS_DIR / f"{name}.md").read_text()
+    skill = up.port_codex(name, body)
+    head, _, text = skill[4:].partition("\n---\n")
+    assert f"name: {name}" in head and "description:" in head
+    assert "usage: $" in head and "usage: /" not in head  # skills are $-invoked
+    assert "$ARGUMENTS" not in text and "the text after the skill mention" in text
+
+
+def test_gemini_port_refuses_injection_syntax(up: ModuleType) -> None:
+    with pytest.raises(ValueError):
+        up.port_gemini("x", "---\ndescription: d\n---\nrun !{rm -rf /}")
+
+
+def test_refresh_installs_per_detected_agent(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "home"
+    monkeypatch.setattr(up, "CLAUDE_DIR", home / ".claude")
+    monkeypatch.setattr(up, "GEMINI_DIR", home / ".gemini")
+    monkeypatch.setattr(up, "CODEX_DIR", home / ".codex")
+    monkeypatch.setattr(up, "AGENTS_SKILLS_DIR", home / ".agents" / "skills")
+    monkeypatch.setattr(up, "COMMANDS", ("roadmap-step",))
+    body = (COMMANDS_DIR / "roadmap-step.md").read_text()
+
+    class _Resp:
+        def __enter__(self) -> "_Resp":
+            return self
+
+        def __exit__(self, *a: object) -> None:
+            pass
+
+        def read(self) -> bytes:
+            return body.encode()
+
+    monkeypatch.setattr(up.urllib.request, "urlopen", lambda url, timeout=30: _Resp())
+
+    # Only Claude Code assumed when no other agent dir exists.
+    assert up.detect_agents() == ["claude"]
+    report = up.refresh_commands()
+    assert report[0] == "agents: claude" and "claude installed" in report[1]
+    assert (home / ".claude" / "commands" / "roadmap-step.md").read_text() == body
+    assert not (home / ".gemini").exists() and not (home / ".agents").exists()
+
+    # Gemini + Codex present -> their ports land in their own dirs; Claude unchanged.
+    (home / ".gemini").mkdir()
+    (home / ".codex").mkdir()
+    assert up.detect_agents() == ["claude", "gemini", "codex"]
+    report = up.refresh_commands()
+    assert "claude unchanged" in report[1] and "gemini installed" in report[1]
+    assert "codex installed" in report[1]
+    assert (home / ".gemini" / "commands" / "roadmap-step.toml").exists()
+    assert (home / ".agents" / "skills" / "roadmap-step" / "SKILL.md").exists()
+    # Second run: everything unchanged; dry-run never writes.
+    assert all(
+        s in up.refresh_commands()[1]
+        for s in ("claude unchanged", "gemini unchanged", "codex unchanged")
+    )
+
+
+def test_commands_only_cli_needs_no_registry(tmp_path: Path) -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--projects-file",
+            str(tmp_path / "none.txt"),
+            "--commands-only",
+            "--dry-run",
+            "--agents",
+            "claude",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "agents: claude" in result.stdout
