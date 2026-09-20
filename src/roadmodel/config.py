@@ -9,19 +9,65 @@ from typing import Any, Literal
 
 from roadmodel import user_context
 from roadmodel.errors import MissingProviderKeyError
+from roadmodel.providers.registry import (
+    COMPATIBLE_PROVIDERS,
+    CUSTOM_BASE_URL_ENV,
+    MODEL_ENV,
+    OLLAMA_PLACEHOLDER_KEY,
+)
 
-ProviderName = Literal["anthropic", "openai", "google"]
+# The three native adapters, then the OpenAI-compatible table
+# (providers/registry.py) and the `custom` escape hatch.
+ProviderName = Literal[
+    "anthropic",
+    "openai",
+    "google",
+    "deepseek",
+    "xai",
+    "groq",
+    "mistral",
+    "zai",
+    "openrouter",
+    "together",
+    "ollama",
+    "custom",
+]
 
 PROVIDER_KEY_ENV: dict[ProviderName, str] = {
     "anthropic": "ANTHROPIC_API_KEY",
     "openai": "OPENAI_API_KEY",
     "google": "GOOGLE_API_KEY",
+    "deepseek": "DEEPSEEK_API_KEY",
+    "xai": "XAI_API_KEY",
+    "groq": "GROQ_API_KEY",
+    "mistral": "MISTRAL_API_KEY",
+    "zai": "ZAI_API_KEY",
+    "openrouter": "OPENROUTER_API_KEY",
+    "together": "TOGETHER_API_KEY",
+    "ollama": "OLLAMA_API_KEY",
+    "custom": "ROADMODEL_API_KEY",
 }
-PROVIDER_ORDER: tuple[ProviderName, ...] = ("anthropic", "openai", "google")
+# Auto-detection order when ROADMODEL_PROVIDER / --provider is absent: the
+# first of these whose key is present wins. `ollama` (no key) and `custom`
+# (needs ROADMODEL_BASE_URL too) are explicit-only and deliberately absent.
+PROVIDER_ORDER: tuple[ProviderName, ...] = (
+    "anthropic",
+    "openai",
+    "google",
+    "deepseek",
+    "xai",
+    "groq",
+    "mistral",
+    "zai",
+    "openrouter",
+    "together",
+)
+PROVIDER_CHOICES: tuple[str, ...] = (*PROVIDER_ORDER, "ollama", "custom")
 
 _MISSING_KEY_REMEDIATION = (
-    "No provider key found. Set one of ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_API_KEY. "
-    "Try: export ANTHROPIC_API_KEY=..."
+    "No provider key found. Set one of ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_API_KEY "
+    "(or another supported provider's key, or ROADMODEL_PROVIDER=ollama|custom — see "
+    "`roadmodel recommend --help`). Try: export ANTHROPIC_API_KEY=..."
 )
 
 
@@ -58,7 +104,7 @@ def _normalize_provider(value: str | None) -> ProviderName | None:
     if normalized in PROVIDER_KEY_ENV:
         return normalized
     raise MissingProviderKeyError(
-        f"Invalid provider {value!r}. Use one of: anthropic, openai, google."
+        f"Invalid provider {value!r}. Use one of: {', '.join(PROVIDER_CHOICES)}."
     )
 
 
@@ -122,6 +168,10 @@ def load_config(
     else:
         config_data = _read_config_toml()
         api_key = _config_api_key(config_data, provider) or ""
+    compatible = COMPATIBLE_PROVIDERS.get(provider)
+    if not api_key and compatible is not None and not compatible.key_required:
+        # Local Ollama ignores the key but the SDK requires a non-empty one.
+        api_key = OLLAMA_PLACEHOLDER_KEY
     if not api_key:
         if explicit_provider is not None:
             raise MissingProviderKeyError(
@@ -130,6 +180,22 @@ def load_config(
             )
         raise MissingProviderKeyError(_MISSING_KEY_REMEDIATION)
 
+    # --model wins; ROADMODEL_MODEL is its env form (any provider). The two
+    # providers without a default model (ollama, custom) must name one here.
+    model = cli_model.strip() if isinstance(cli_model, str) and cli_model.strip() else None
+    if model is None:
+        model = os.environ.get(MODEL_ENV, "").strip() or None
+    if compatible is not None:
+        if model is None and compatible.default_model is None:
+            raise MissingProviderKeyError(
+                f"Provider {provider!r} has no default model: pass --model or set {MODEL_ENV}."
+            )
+        if provider == "custom" and not os.environ.get(CUSTOM_BASE_URL_ENV, "").strip():
+            raise MissingProviderKeyError(
+                f"Provider 'custom' selected but {CUSTOM_BASE_URL_ENV} is not set. "
+                f"Try: export {CUSTOM_BASE_URL_ENV}=http://localhost:8000/v1"
+            )
+
     resolved_cli_path = cli_user_context
     if resolved_cli_path is None and not os.environ.get("ROADMODEL_USER_CONTEXT") and config_data:
         resolved_cli_path = _config_user_context_override(config_data)
@@ -137,7 +203,7 @@ def load_config(
     resolved_path = user_context.resolve(cli_path=resolved_cli_path)
     return Config(
         provider=provider,
-        model=cli_model.strip() if isinstance(cli_model, str) and cli_model.strip() else None,
+        model=model,
         api_key=api_key,
         user_context_path=resolved_path,
     )

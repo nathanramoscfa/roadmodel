@@ -21,7 +21,7 @@ import click
 
 from roadmodel import __version__, cost, user_context
 from roadmodel import recommend as recommender
-from roadmodel.config import load_config
+from roadmodel.config import PROVIDER_CHOICES, load_config
 from roadmodel.errors import (
     AlternativeRejectedError,
     BundledDocNotFoundError,
@@ -279,8 +279,11 @@ def cli() -> None:
 )
 @click.option(
     "--provider",
-    type=click.Choice(["anthropic", "openai", "google"], case_sensitive=False),
-    help="Provider override (anthropic/openai/google).",
+    type=click.Choice(list(PROVIDER_CHOICES), case_sensitive=False),
+    help=(
+        "Engine provider override. ollama and custom need --model (or "
+        "ROADMODEL_MODEL); custom also needs ROADMODEL_BASE_URL + ROADMODEL_API_KEY."
+    ),
 )
 @click.option(
     "--model", type=str, help="Optional explicit model id override for the selected provider."
