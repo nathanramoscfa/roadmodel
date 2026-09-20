@@ -21,7 +21,12 @@ When [`model-selector.txt`](model-selector.txt) is referenced, the AI
 treats this file as the user-state input to the `<access-selection>`
 step: it reads the model recommendation produced by `<selection-algorithm>`,
 then filters the `<access-methods>` block by what this file says the user
-can actually pay for, and picks the cheapest survivor.
+can actually pay for, and picks the cheapest survivor. Two access classes
+are declared here and nowhere else: the *Local models (Ollama)* section
+funds the `ollama` method only for the models it lists (an undeclared
+local method is dropped, never merely "unfunded"), and the `OpenRouter`
+row in *Active API keys* funds the `openrouter` aggregator like any other
+per-token key.
 
 If this file is absent, the AI falls back to the default platform
 preference order encoded in `<access-selection>` (currently: subscription
@@ -56,6 +61,41 @@ pool → subscription-included → per-token API → pay-as-you-go).
 | Mistral   | No          | No direct API key (`api.mistral.ai`). Unlocks the `mistral-api` method — the EU-jurisdiction (sovereignty) picks. |
 | Groq      | No          | No direct API key (`api.groq.com`, OpenAI-format). Unlocks the `groq-api` method — Groq-hosted open-weight gpt-oss models, very low cost and very high throughput, us-jurisdiction. |
 | Z.ai      | No          | No direct API key (`api.z.ai`, OpenAI-format). Unlocks the `zai-api` method — the GLM coding / agentic models; cn-jurisdiction like DeepSeek. |
+| OpenRouter | No         | No aggregator key (`openrouter.ai`, OpenAI-format). Unlocks the `openrouter` method — one key that reaches most of the catalog per-token at the maker's list price plus OpenRouter's platform fee, so the catalog price is a floor. Cross-jurisdiction routing: OpenRouter may serve a request from any of its upstream hosts; the model-level jurisdiction filter still governs which models are eligible. Prefer a maker's own key when you hold it. |
+
+## Local models (Ollama)
+
+Weights you have pulled onto THIS machine through a local
+[Ollama](https://ollama.com) runtime. The selector funds the `ollama`
+access method (`PLATFORM: Ollama (local)`, $0 per token, no data leaves
+the machine) **only** for the models listed in the pulled-models table
+below, and only when the presence row says `Yes` — an undeclared local
+method is dropped outright, not merely marked unfunded (`<access-
+selection>` Step B). Every local pick carries the quantization caveat:
+the catalog's tier ratings describe the provider-hosted weights, and a
+quantized local pull runs about one tier below them for coding and
+reasoning.
+
+This table is about being RECOMMENDED to run a model locally. Using a
+local model as the recommender's own engine (`roadmodel recommend
+--provider ollama`) is a separate matter with its own constraints — the
+~55k-token prompt needs a model loaded at ≥64k context — see
+[`byo-key-setup.md`](byo-key-setup.md) "Local Ollama".
+
+| Runtime          | Present |
+| ---------------- | ------- |
+| Ollama installed | No      |
+
+| Catalog model id | Tag pulled | Quantization | Notes |
+| ---------------- | ---------- | ------------ | ----- |
+<!-- | gpt-oss-20b | gpt-oss:20b | MXFP4 (default tag, ~13 GB) | Apache-2.0; fits 16 GB unified memory; reasoning_effort forwarded. | -->
+
+The first column is the **catalog model id** from `<model-options>`
+(`gpt-oss-20b`, `glm-4.6`, …), not the Ollama tag; the second is the
+exact tag you pulled (`ollama list`). Only models the `ollama` method's
+`supports-models` lists — open weights under a licence that permits
+local use — are ever recommended here; listing anything else has no
+effect. Uncomment the example row and edit it, or add rows beneath it.
 
 ## Inactive / not subscribed
 
@@ -303,6 +343,10 @@ allowlist").
 Hand-edit this file when a subscription is added, renewed at a different
 tier, cancelled, or when an API key is rotated in or out. Commit the
 change separately from any catalog refresh so the diff is readable.
+Update the *Local models (Ollama)* section when you install or remove
+Ollama and whenever you `ollama pull` or `ollama rm` a catalogued model —
+the recommender does not probe the runtime, so the table is the only
+thing that makes a local pick actionable.
 
 Do **not** add or remove the schema sections above; the selector relies
 on their presence. To add a new field (e.g. a per-provider monthly cap

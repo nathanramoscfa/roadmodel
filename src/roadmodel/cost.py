@@ -34,11 +34,23 @@ from roadmodel.errors import (
 BUNDLED_CATALOG_PATH: Traversable = resources.files("roadmodel.data") / "catalog.json"
 
 _FUNDING_PRIORITY: Final[dict[str, int]] = {
+    # A FUNDED local method is $0 with no usage pool behind it at all — it
+    # ranks with the subscription tier (<access-selection> Step C tier 1).
+    "local": 0,
     "subscription-included": 0,
     "subscription-pool": 1,
     "subscription-or-key": 2,
     "per-token": 3,
 }
+
+# Funding labels for `billing="local"` access methods (Phase 4.10). `local` is
+# the funded case — the user-context declares the runtime present AND lists the
+# model as pulled; `unfunded-local` means the hardware / pull is not declared,
+# and <access-selection> Step B DROPS such a method (it is not money the user
+# might spend), so the comparison panel omits it rather than pricing it.
+FUNDING_LOCAL: Final = "local"
+FUNDING_UNFUNDED_LOCAL: Final = "unfunded-local"
+LOCAL_COST_LABEL: Final = "$0 — local hardware"
 
 _FAST_SUFFIX_RE: Final = re.compile(r"\s+Fast\s*$", re.IGNORECASE)
 _TIER_PAREN_RE: Final = re.compile(r"\s*\(\$\d+(?:\.\d+)?\)\s*$")
@@ -69,8 +81,15 @@ def estimate_session_cost(
     input_tokens: int,
     output_tokens: int,
     max_mode: bool = False,
+    user_context_text: str | None = None,
 ) -> SessionCostEstimate:
-    """Estimate a single (model, platform) session cost."""
+    """Estimate a single (model, platform) session cost.
+
+    ``user_context_text`` overrides the on-disk user-context (env override or
+    default path) so a caller that already resolved the operator's file — the
+    CLI's ``--user-context``, the service's per-request context — prices
+    funding against the SAME text the recommendation was made from.
+    """
     catalog = _load_catalog()
     _reject_fast_variant(model_id, catalog)
     model = _resolve_model(model_id, catalog)
@@ -88,15 +107,32 @@ def estimate_session_cost(
                 "(access method does not expose Max Mode)."
             )
 
-    input_price = float(model["input_price_per_1m"])
-    output_price = float(model["output_price_per_1m"])
-    input_usd = input_tokens * input_price / 1_000_000.0 * input_multiplier
-    output_usd = output_tokens * output_price / 1_000_000.0
-    total_usd = input_usd + output_usd
-
-    user_context_text = _load_user_context_text()
-    funding_source, active_tier = _resolve_funding(method, catalog, user_context_text)
+    if user_context_text is None:
+        user_context_text = _load_user_context_text()
+    funding_source, active_tier = _resolve_funding(
+        _with_model(method, str(model["id"])), catalog, user_context_text
+    )
     subscription_label = _format_subscription_label(active_tier) if active_tier else None
+
+    if funding_source in {FUNDING_LOCAL, FUNDING_UNFUNDED_LOCAL}:
+        # Self-hosted weights: the model's hosted per-token price does not
+        # apply, so there is NO per-token estimate — only the fixed label. An
+        # unfunded local platform is additionally flagged as not reachable.
+        input_usd = output_usd = total_usd = 0.0
+        if funding_source == FUNDING_LOCAL:
+            notes.append(f"{LOCAL_COST_LABEL} (no per-token estimate)")
+        else:
+            notes.append(
+                "Not reachable: user-context does not declare the Ollama runtime "
+                f"and/or {model['id']} among the pulled models (dropped by "
+                "<access-selection> Step B)."
+            )
+    else:
+        input_price = float(model["input_price_per_1m"])
+        output_price = float(model["output_price_per_1m"])
+        input_usd = input_tokens * input_price / 1_000_000.0 * input_multiplier
+        output_usd = output_tokens * output_price / 1_000_000.0
+        total_usd = input_usd + output_usd
 
     return SessionCostEstimate(
         model_id=str(model["id"]),
@@ -122,6 +158,7 @@ def compare_alternatives(
     output_tokens: int,
     alternatives: list[str] | None = None,
     max_mode: bool = False,
+    user_context_text: str | None = None,
 ) -> list[SessionCostEstimate]:
     """Compare a model across access methods, cheapest-first."""
     catalog = _load_catalog()
@@ -136,6 +173,7 @@ def compare_alternatives(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             max_mode=max_mode,
+            user_context_text=user_context_text,
         )
         estimates.sort(
             key=lambda est: (est.total_usd, _FUNDING_PRIORITY.get(est.funding_source, 99))
@@ -149,6 +187,7 @@ def compare_alternatives(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             max_mode=max_mode,
+            user_context_text=user_context_text,
         )
         for platform_id in alternatives
     ]
@@ -161,13 +200,21 @@ def _default_alternative_estimates(
     input_tokens: int,
     output_tokens: int,
     max_mode: bool = False,
+    user_context_text: str | None = None,
 ) -> list[SessionCostEstimate]:
-    user_context_text = _load_user_context_text()
+    if user_context_text is None:
+        user_context_text = _load_user_context_text()
     candidates: list[tuple[dict[str, Any], str]] = []
     for method in catalog.get("access_methods", []):
         if model_id not in method.get("supports_models", []):
             continue
-        funding_source, _ = _resolve_funding(method, catalog, user_context_text)
+        funding_source, _ = _resolve_funding(
+            _with_model(method, model_id), catalog, user_context_text
+        )
+        if funding_source == FUNDING_UNFUNDED_LOCAL:
+            # Step B drops an undeclared local method outright; it is not a
+            # platform the user could pay to reach, so it gets no row.
+            continue
         candidates.append((method, funding_source))
     candidates.sort(
         key=lambda entry: (
@@ -183,6 +230,7 @@ def _default_alternative_estimates(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             max_mode=max_mode,
+            user_context_text=user_context_text,
         )
         for method, _ in top_three
     ]
@@ -194,6 +242,7 @@ def compare_alternatives_funding_rank(
     input_tokens: int,
     output_tokens: int,
     max_mode: bool = False,
+    user_context_text: str | None = None,
 ) -> list[SessionCostEstimate]:
     """Return up to three estimates for *model_id* in funding-priority order."""
     catalog = _load_catalog()
@@ -206,6 +255,7 @@ def compare_alternatives_funding_rank(
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         max_mode=max_mode,
+        user_context_text=user_context_text,
     )
 
 
@@ -319,14 +369,31 @@ def pricing_tier_rank(tier: str | None) -> int | None:
     return _PRICING_TIER_RANK.get(tier)
 
 
-# Pool aggregators — access-method providers that RESELL other companies' models
-# rather than making them (Cursor's subscription pool). They must NOT be treated
-# as a model's "maker" when resolving provider for the cross-provider backup
-# guard: Opus 4.8 is reachable via Cursor, but its maker is Anthropic, and an
-# Anthropic outage is what a backup must survive. A model reachable ONLY through
-# an aggregator (e.g. Cursor's own Composer models) falls back to the aggregator
-# provider, since in that case the aggregator IS the maker.
-_AGGREGATOR_PROVIDERS: frozenset[str] = frozenset({"cursor"})
+# Pool aggregators — access-method providers that RESELL or RE-HOST other
+# companies' models rather than making them: Cursor's subscription pool,
+# OpenRouter's per-token aggregator, and the local Ollama runtime (which serves
+# open weights whose maker is OpenAI / DeepSeek / z.ai / …). They must NOT be
+# treated as a model's "maker" when resolving provider for the cross-provider
+# backup guard: Opus 4.8 is reachable via Cursor and OpenRouter, but its maker
+# is Anthropic, and an Anthropic outage is what a backup must survive; gpt-oss
+# is reachable via Groq, OpenRouter and Ollama, and its maker is Groq's method
+# (the pinned host that defines its price + access). A model reachable ONLY
+# through an aggregator (e.g. Cursor's own Composer models) falls back to the
+# aggregator provider, since in that case the aggregator IS the maker — exactly
+# as a model reachable only via OpenRouter would resolve to `openrouter`.
+_AGGREGATOR_PROVIDERS: frozenset[str] = frozenset({"cursor", "openrouter", "ollama"})
+# When a model is reachable through SEVERAL aggregators and no first-party
+# method (today: Kimi K3 / K2.7 Code and Muse Spark, which have no catalogued
+# maker method), resolve to the first of these so the answer stays the one the
+# pre-4.10 catalog gave (`cursor`) and the same-family backup guard keeps
+# catching Kimi-vs-Kimi. A per-model `maker` attribute would be the real fix.
+_AGGREGATOR_FALLBACK_ORDER: tuple[str, ...] = ("cursor", "openrouter", "ollama")
+
+# Providers whose access method is a LOCAL runtime (billing `local`). A model
+# whose only reachable platform is one of these is never a usable backup
+# unless the user has pulled it, which the catalog cannot know — so the
+# cross-provider backup substitution skips such candidates.
+_LOCAL_PROVIDERS: frozenset[str] = frozenset({"ollama"})
 
 
 def model_provider(model_ref: str) -> str | None:
@@ -362,9 +429,13 @@ def model_provider(model_ref: str) -> str | None:
     first_party = supporting - _AGGREGATOR_PROVIDERS
     if len(first_party) == 1:
         return next(iter(first_party))
-    if not first_party and len(supporting) == 1:
-        # Reachable only through an aggregator → the aggregator is the maker.
-        return next(iter(supporting))
+    if not first_party and supporting:
+        # Reachable only through aggregators → the (preferred) aggregator is
+        # the maker (Cursor's own Composer; see _AGGREGATOR_FALLBACK_ORDER).
+        for aggregator in _AGGREGATOR_FALLBACK_ORDER:
+            if aggregator in supporting:
+                return aggregator
+        return next(iter(sorted(supporting)))
     # No supporting method, or an ambiguous multi-provider mapping (should not
     # happen for a real maker) → unknown.
     return None
@@ -454,6 +525,9 @@ def suggest_cross_provider_backup(
         provider = model_provider(model_id)
         if provider is None or provider == primary_provider:
             continue
+        if provider in _LOCAL_PROVIDERS:
+            # Reachable only through a local runtime the user may not have.
+            continue
         rank = pricing_tier_rank(pricing_tier(model_id))
         if rank is None:
             continue
@@ -507,6 +581,11 @@ def _resolve_funding(
     billing = str(method.get("billing", ""))
     if billing == "per-token":
         return "per-token", None
+    if billing == "local":
+        # Funded iff the user-context declares the runtime present AND lists
+        # the model as pulled (the model id is the estimate's subject; callers
+        # pass it through `method["_model_id"]` — see _local_funding).
+        return _local_funding(method, user_context_text), None
 
     funding_tiers = _tiers_funding_surface(catalog.get("subscription_tiers", []), str(method["id"]))
     active_subscriptions = _parse_active_subscriptions(user_context_text)
@@ -586,6 +665,69 @@ def _parse_active_api_keys(text: str) -> dict[str, bool]:
     return keys
 
 
+def _local_funding(method: dict[str, Any], user_context_text: str) -> str:
+    """``local`` when the runtime is declared present AND the model the caller
+    is estimating (``method["_model_id"]``, set by :func:`_with_model`) is in the
+    pulled-models table; ``unfunded-local`` otherwise."""
+    if not _local_runtime_present(user_context_text):
+        return FUNDING_UNFUNDED_LOCAL
+    model_id = str(method.get("_model_id", "")).strip()
+    if model_id and model_id in _parse_local_models(user_context_text):
+        return FUNDING_LOCAL
+    return FUNDING_UNFUNDED_LOCAL
+
+
+def _with_model(method: dict[str, Any], model_id: str) -> dict[str, Any]:
+    """Return a copy of ``method`` annotated with the model being estimated, so
+    the funding resolver can check the pulled-models table for it."""
+    return {**method, "_model_id": model_id}
+
+
+# The user-context is UNTRUSTED text: every parser below is a bounded regex
+# over Markdown table rows — no eval, no path derived from its contents.
+_LOCAL_MODELS_HEADING: Final = "Local models (Ollama)"
+_LOCAL_RUNTIME_ROW_RE: Final = re.compile(r"^\s*ollama\s+installed\s*$", re.IGNORECASE)
+_LOCAL_MODEL_ID_RE: Final = re.compile(r"^[a-z0-9][a-z0-9.\-]{0,63}$")
+_YES_VALUES: Final = frozenset({"yes", "y", "true", "✓", "x"})
+# First-cell values of the section's header rows (both tables) — never a model.
+_LOCAL_HEADER_CELLS: Final = frozenset({"runtime", "catalog model id", "model", "model id"})
+
+
+def _local_runtime_present(text: str) -> bool:
+    """True iff the "Local models (Ollama)" section carries an
+    ``| Ollama installed | Yes |`` row. Absent section, absent row, or any
+    non-yes value → False (the bundled example declares ``No``)."""
+    section = _extract_section(text, _LOCAL_MODELS_HEADING)
+    for row in _parse_markdown_table(section, keep_headers=True):
+        if len(row) >= 2 and _LOCAL_RUNTIME_ROW_RE.match(row[0]):
+            return row[1].strip().lower() in _YES_VALUES
+    return False
+
+
+def _parse_local_models(text: str) -> dict[str, str]:
+    """Map catalog model id → pulled Ollama tag from the pulled-models table of
+    the "Local models (Ollama)" section (``| Catalog model id | Tag pulled |
+    Quantization | Notes |``). Tolerant of prose edits: any table row whose
+    first cell looks like a catalog id counts; header rows, the presence row,
+    separator rows and the commented example are skipped. Empty when the
+    section is absent or lists nothing (the bundled example)."""
+    section = _extract_section(text, _LOCAL_MODELS_HEADING)
+    pulled: dict[str, str] = {}
+    for row in _parse_markdown_table(section, keep_headers=True):
+        if len(row) < 2:
+            continue
+        model_id = row[0].strip().strip("`").lower()
+        if model_id in _LOCAL_HEADER_CELLS or _LOCAL_RUNTIME_ROW_RE.match(model_id):
+            continue
+        if not _LOCAL_MODEL_ID_RE.match(model_id):
+            continue
+        tag = row[1].strip().strip("`")
+        if not tag or tag.lower() in {"tag pulled", "—", "-", "none", "n/a"}:
+            continue
+        pulled[model_id] = tag
+    return pulled
+
+
 def _extract_section(text: str, heading: str) -> str:
     pattern = re.compile(
         rf"^#+\s+{re.escape(heading)}\s*\n(.*?)(?=^#+\s|\Z)",
@@ -595,7 +737,11 @@ def _extract_section(text: str, heading: str) -> str:
     return match.group(1) if match else ""
 
 
-def _parse_markdown_table(section: str) -> list[list[str]]:
+def _parse_markdown_table(section: str, *, keep_headers: bool = False) -> list[list[str]]:
+    """Return the table rows of ``section`` (cells stripped, separator rows
+    dropped). By default the FIRST row is dropped as the header, which assumes
+    one table per section; ``keep_headers=True`` returns every row so a caller
+    that reads a section with several tables can classify rows itself."""
     rows: list[list[str]] = []
     for line in section.splitlines():
         match = _TABLE_ROW_RE.match(line)
@@ -605,6 +751,8 @@ def _parse_markdown_table(section: str) -> list[list[str]]:
         if not cells or all(set(cell) <= {"-", ":", " "} for cell in cells):
             continue
         rows.append(cells)
+    if keep_headers:
+        return rows
     return rows[1:] if rows else rows
 
 

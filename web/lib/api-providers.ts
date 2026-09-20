@@ -55,6 +55,7 @@ const PROVIDER_LABELS: Record<string, string> = {
   xai: "xAI",
   zai: "z.ai",
   groq: "Groq",
+  openrouter: "OpenRouter",
   cursor: "Cursor",
 };
 

@@ -119,9 +119,54 @@ gates whether `PLATFORM` can ever be a provider-direct API — the
 selector will not recommend a platform you have no key for. One row
 per provider the catalog federates: Anthropic, OpenAI, Google, xAI,
 DeepSeek, Mistral, Groq (which hosts the open-weight gpt-oss models),
-and Z.ai (GLM). A `Yes` on DeepSeek or Z.ai only takes effect once
-`cn` is also in your allowed-jurisdictions list (see below); a `Yes`
-on Mistral is what makes the EU-sovereignty picks recommendable.
+Z.ai (GLM), and OpenRouter. A `Yes` on DeepSeek or Z.ai only takes
+effect once `cn` is also in your allowed-jurisdictions list (see
+below); a `Yes` on Mistral is what makes the EU-sovereignty picks
+recommendable.
+
+The **OpenRouter** row is different in kind: it is an aggregator key
+(one key, most of the catalog, paid per token) rather than a maker's
+key. A `Yes` unlocks the `openrouter` access method — `PLATFORM:
+OpenRouter` — for every model its `supports-models` lists, at the
+maker's list price plus OpenRouter's platform fee, so the catalog
+price is a floor for that platform. OpenRouter may serve a request
+from any of its upstream hosts; the model-level jurisdiction filter
+still decides which models are eligible, and the selector prefers a
+maker's own method when you hold that key too.
+
+### Local models (Ollama)
+
+Two small tables declaring what you can run **on this machine**
+through a local [Ollama](https://ollama.com) runtime:
+
+```
+| Runtime          | Present |
+| ---------------- | ------- |
+| Ollama installed | Yes     |
+
+| Catalog model id | Tag pulled  | Quantization | Notes |
+| ---------------- | ----------- | ------------ | ----- |
+| gpt-oss-20b      | gpt-oss:20b | MXFP4        | fits 16 GB |
+```
+
+The first column is the **catalog model id** (from `<model-options>`),
+not the Ollama tag; the second is the exact tag `ollama list` shows.
+The selector funds the `ollama` access method — `PLATFORM: Ollama
+(local)`, $0 per token, no data leaves the machine — **only** for the
+models listed here and only while the presence row says `Yes`. Unlike
+an API key you have not configured (which stays a valid, merely
+unfunded, path), an undeclared local method is **dropped**: hardware
+you do not have is not money you might spend. Every local pick carries
+a quantization caveat in its rationale, because the catalog's tier
+ratings describe the provider-hosted weights and a quantized local
+pull runs about one tier below them for coding and reasoning. Only
+models the `ollama` method's `supports-models` lists — open weights
+under a licence that permits local use — are ever recommended here.
+
+This section is about being *recommended* to run a model locally. Using
+a local model as the recommender's own engine (`roadmodel recommend
+--provider ollama`) is a separate setup with its own constraints — see
+[`byo-key-setup.md`](byo-key-setup.md), "Local Ollama".
 
 ### Inactive / not subscribed
 
