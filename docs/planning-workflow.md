@@ -1,7 +1,8 @@
 # Planning workflow — project and phase roadmaps
 
 The reference for authoring planning documents with roadmodel in **any**
-project. Three asks, three commands, no retyping.
+project. Three asks, three commands, no retyping — plus one command that
+keeps roadmodel current in every project at once (§5).
 
 ## 1. One-time setup per machine
 
@@ -14,7 +15,7 @@ macOS / Linux, from a roadmodel checkout:
 ```sh
 pip install -U roadmodel          # in the env your `roadmodel` runs from
 mkdir -p ~/.claude/commands
-cp docs/claude-commands/roadmap-*.md ~/.claude/commands/   # project, phase, step
+cp docs/claude-commands/roadm*.md ~/.claude/commands/   # project, phase, step, update
 ```
 
 Windows PowerShell, no checkout needed (fetches from `main`):
@@ -22,7 +23,7 @@ Windows PowerShell, no checkout needed (fetches from `main`):
 ```powershell
 $base = "https://raw.githubusercontent.com/nathanramoscfa/roadmodel/main/docs/claude-commands"
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude\commands" | Out-Null
-foreach ($n in "roadmap-project","roadmap-phase","roadmap-step") {
+foreach ($n in "roadmap-project","roadmap-phase","roadmap-step","roadmodel-update") {
   curl.exe -fsSL "$base/$n.md" -o "$env:USERPROFILE\.claude\commands\$n.md"
 }
 ```
@@ -32,12 +33,14 @@ Then **reload the editor window** (VS Code: `Developer: Reload Window`)
 you open a new chat. Type `/` in a chat; `roadmap-project`,
 `roadmap-phase`, and `roadmap-step` should be listed.
 
-The three files in [`docs/claude-commands/`](claude-commands/) become
+The four files in [`docs/claude-commands/`](claude-commands/) become
 the user-scope Claude Code slash commands `/roadmap-project`,
-`/roadmap-phase`, and `/roadmap-step`, available in every project on
-that machine. The first two are thin: each executes the paste-prompt
-the planning kit ships, so they never drift from the kit. The third
-reads the step straight out of the phase roadmap. Newer Claude Code
+`/roadmap-phase`, `/roadmap-step`, and `/roadmodel-update`, available
+in every project on that machine. The first two are thin: each executes
+the paste-prompt the planning kit ships, so they never drift from the
+kit. The third reads the step straight out of the phase roadmap. The
+fourth re-fetches the other three (and itself) every time it runs, so
+this copy step is a one-time bootstrap. Newer Claude Code
 builds also accept them as skills — copy each file to
 `~/.claude/skills/<name>/SKILL.md` with a `name: <name>` frontmatter
 line if `commands/` is not picked up.
@@ -147,6 +150,34 @@ that in a new chat: "add `**Status:**` lines to ROADMAP.md and
 docs/phase01-roadmap.md per the Status rule in
 planning/templates/phase-roadmap-template.md" — same lookup, same
 result.
+
+## 5. Keep roadmodel current everywhere
+
+Projects each carry roadmodel in their own conda env or venv (Step 0 of
+the prompts installs it there), so a release like 0.2.37 would mean
+upgrading one project at a time. Instead, from any Claude Code chat on
+the machine:
+
+```
+/roadmodel-update
+```
+
+The command fetches [`scripts/update_projects.py`](../scripts/update_projects.py)
+fresh from the repo and runs it. The script reads the registry
+`~/.config/roadmodel/projects.txt` (one project dir per line), detects
+each project's env — a `.venv`/`venv`/`env` dir, the `name:` in
+`environment.yml`, a conda env named like the folder, or a conda env
+inside the project; `<dir> | conda:<name>` / `<dir> | venv:<subdir>`
+overrides — then, **concurrently**, upgrades `roadmodel` in every env,
+re-exports `planning/` where a kit exists, and re-downloads the four
+command files. One table at the end; a project whose env cannot be
+detected is reported, never guessed into `base`.
+
+First run: `/roadmodel-update E:\Code\bot-farm E:\Code\nexiform-ai …`
+registers the dirs and runs. Later runs: `/roadmodel-update` alone. The
+registry and updater live under `~/.config/roadmodel/`; nothing is
+committed to any project. Without Claude Code:
+`python ~/.config/roadmodel/update_projects.py [--dry-run]`.
 
 ## What `/roadmap-project` and `/roadmap-phase` do
 
