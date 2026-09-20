@@ -12,6 +12,14 @@ developers who use several AI subscriptions (Claude Code, Cursor,
 Codex / ChatGPT, raw provider APIs) and want a deterministic answer
 to "what should I use for this?" instead of guessing.
 
+The same package ships three surfaces, all reading one bundled catalog:
+
+| Surface | What it is | Entry point |
+| --- | --- | --- |
+| **CLI** | BYO-key recommender: prompt in, `MODEL / PLATFORM / settings` block out | `roadmodel recommend` |
+| **MCP server** | The same recommender (plus the catalog and a roadmap generator) exposed as tools to any MCP client — Claude Code, Cursor, Claude Desktop | `roadmodel-mcp` / `roadmodel setup-mcp` |
+| **Planning kit** | Project- and phase-roadmap templates with a per-step model recommendation and an enforced step lifecycle, run by the AI already open in your editor at $0 marginal cost | `roadmodel export-kit` + the `/roadmap-*` commands |
+
 [![PyPI version](https://img.shields.io/pypi/v/roadmodel.svg)](https://pypi.org/project/roadmodel/)
 [![Python versions](https://img.shields.io/pypi/pyversions/roadmodel.svg)](https://pypi.org/project/roadmodel/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
@@ -26,39 +34,66 @@ pip install roadmodel
 
 Python 3.11 or newer.
 
-## Updating to the latest models
+## Staying current
 
-roadmodel's benchmark and pricing catalog is **bundled inside the installed
-wheel** — the CLI, MCP server, and planning kit all read that offline copy, and
-they only know about the models that shipped with the version you have. New
-models, price changes, and availability edits land in the catalog upstream (a
-daily job keeps it current) and reach you when a **new release ships them**. To
-pull the latest catalog, upgrade the package:
+roadmodel's benchmark and pricing catalog — and the planning templates — are
+**bundled inside the installed wheel**. The CLI, MCP server, and planning kit
+all read that offline copy, so they only know about the models and the
+template rules that shipped with the version you have. New models, price
+changes, availability edits, and template changes land upstream (a daily job
+keeps the catalog current) and reach you when a **new release ships them**.
+
+### One environment
 
 ```sh
 pip install -U roadmodel
 ```
 
-That single command covers every usage mode — do it at the start of each
-planning phase, or whenever a model you care about has changed:
+- **CLI** — the next `roadmodel recommend` uses the fresh catalog. Confirm with
+  `roadmodel version`; inspect with `roadmodel catalog show`.
+- **MCP server** — upgrade in the environment where `roadmodel-mcp` lives
+  (`pip install -U "roadmodel[mcp]"`) and restart the MCP client. Registered
+  once at user scope via `roadmodel setup-mcp`, that one environment serves
+  every project.
+- **Planning kit** — the exported kit is a snapshot at export time, so upgrade
+  **then** `roadmodel export-kit . --force` to refresh it. The `/roadmap-project`
+  and `/roadmap-phase` commands do both as their Step 0.
 
-- **CLI** — upgrade and the next `roadmodel recommend` uses the fresh catalog.
-  Confirm what you have with `roadmodel version` and inspect the bundled catalog
-  with `roadmodel catalog show`.
-- **MCP server** — upgrade in the **same environment** where `roadmodel-mcp` is
-  installed (`pip install -U "roadmodel[mcp]"`), then restart your MCP client
-  (Cursor / Claude Code / Claude Desktop) so it reloads the server. If you
-  registered the server once at user scope via `roadmodel setup-mcp`, upgrading
-  that one environment updates every project.
-- **Planning kit** — the exported kit is a snapshot of the catalog at export
-  time, so upgrade **then** re-run `roadmodel export-kit` to refresh it. The
-  shell alternative (`scripts/export-planning-kit.sh`) instead fetches the
-  catalog fresh from this repo's `main` branch on every run, so it always
-  writes the newest catalog without a `pip` upgrade.
+### Every project on a machine — `/roadmodel-update`
+
+Projects that each carry roadmodel in their **own** conda env or venv would
+otherwise be upgraded one at a time. Instead, from any Claude Code chat:
+
+```
+/roadmodel-update                       # every registered project
+/roadmodel-update ~/code/app-one …      # register these dirs, then run
+/roadmodel-update --install-schedule    # once: also run daily, unattended
+```
+
+The command fetches [`scripts/update_projects.py`](scripts/update_projects.py)
+(stdlib only, Python 3.9+) and runs it. The script reads
+`~/.config/roadmodel/projects.txt` — one project dir per line, optional
+`| conda:<name>` / `| venv:<dir>` override — detects each project's environment
+(a `.venv`/`venv`/`env` dir, the `name:` in `environment.yml`, a conda env named
+like the folder, or a conda env inside the project; never `base` by guesswork),
+then **concurrently** upgrades `roadmodel` in every one, re-exports `planning/`
+where a kit exists, re-downloads the `/roadmap-*` command files, and prints one
+table. Same script on Windows, macOS, and Linux; `--install-schedule [HH:MM]`
+registers a daily run (Task Scheduler / launchd / cron, logged to
+`~/.config/roadmodel/update.log`) so every project follows each release within a
+day. Details: [docs/planning-workflow.md §5](docs/planning-workflow.md).
 
 See [CHANGELOG.md](CHANGELOG.md) for what each release changed.
 
 ## MCP server
+
+[MCP](https://modelcontextprotocol.io) (Model Context Protocol) is the open
+standard that lets an AI client — Claude Code, Cursor, Claude Desktop — call
+tools that live in a separate program: the client starts the server as a
+subprocess, asks it what tools it has, and calls them by name while you chat.
+roadmodel's server turns the recommender into such a tool, so the AI in your
+editor can ask "which model for this task?" and get a structured, deterministic
+answer instead of guessing.
 
 Install the MCP runtime with `pip install "roadmodel[mcp]"` to enable
 the `roadmodel-mcp` stdio server entrypoint; plain `pip install
@@ -104,10 +139,17 @@ checkout instead of GitHub), `--user-context <path>`. On Windows
 PowerShell, call `curl.exe` (not the `curl` alias) if you fetch files by
 hand; the `export-kit` command above avoids that entirely.
 
-**Day-to-day:** see [docs/planning-workflow.md](docs/planning-workflow.md)
-— `/roadmap-project` and `/roadmap-phase N` (user-scope Claude Code
-commands shipped in `docs/claude-commands/`) refresh the kit and run its
-fill-in paste-prompts (`planning/prompts/`) so you never retype the ask.
+**Day-to-day:** see [docs/planning-workflow.md](docs/planning-workflow.md).
+Four user-scope Claude Code commands ship in `docs/claude-commands/`:
+`/roadmap-project` and `/roadmap-phase N` refresh the kit and run its
+fill-in paste-prompts (`planning/prompts/`); `/roadmap-step P M` executes
+one step straight from the phase roadmap — branch, work, PR, merge — and
+marks it: every step and phase carries a `**Status:**` line that the
+step's **own PR** flips to `Complete — PR #n`, so the roadmap on `main`
+records what is done exactly when it merges (no "update the roadmap"
+chore, and the next step refuses to start until the previous one reads
+Complete); `/roadmodel-update` keeps roadmodel current in every project
+at once (see "Staying current").
 
 Either way the in-editor AI runs the algorithm itself rather than calling
 the recommender service. Use the MCP server above instead when you want
@@ -262,13 +304,18 @@ app, each benchmark term in a recommendation's rationale links straight to its s
 
 ## Project status
 
-roadmodel is in **Phase 1** — the open-source CLI release. Phase 2
-adds an MCP server alongside the CLI; later phases add a hosted
-SaaS at `roadmodel.ai`. The project was previously named `model-selector`
-and was renamed to `roadmodel` ahead of the public release; the
-canonical bundled-doc filename `model-selector.txt` is preserved so
-existing references in other projects keep working. Until v1.0.0,
-expect breaking changes to the CLI surface as Phase 2 lands.
+Phases 1–3 have shipped: the open-source CLI (Phase 1), the MCP server and
+catalog v2 (Phase 2), and the marketing site with an anonymous web recommender
+at `roadmodel.ai` (Phase 3 — currently pre-launch, behind a gate). Phase 4
+(accounts and the AI-assisted roadmap builder) is in progress; the planning
+kit and its `/roadmap-*` workflow are the open-source half of that builder and
+are what this repo's own phases are executed with. The project was
+previously named `model-selector` and was renamed to `roadmodel` ahead of
+the public release; the bundled-doc filename `model-selector.txt` is
+preserved so existing references in other projects keep working. Until
+v1.0.0, expect breaking
+changes to the CLI surface between minor versions; each is listed in
+[CHANGELOG.md](CHANGELOG.md).
 
 See [ROADMAP.md](ROADMAP.md) for the phase plan and shipping order.
 

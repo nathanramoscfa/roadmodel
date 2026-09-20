@@ -1502,8 +1502,10 @@ that surface has neither dial.
       obvious secret pattern is
       committed under the phase's
       paths (grep for private-key
-      headers, `AKIA`, `-----BEGIN`,
-      etc.). This is the CI-side
+      PEM headers — the five-dash
+      BEGIN line — `AKIA` key
+      prefixes, etc.). This is the
+      CI-side
       backstop to the per-commit
       gate.
     </requirement>

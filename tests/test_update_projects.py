@@ -187,3 +187,73 @@ def test_roadmodel_update_command_points_at_the_script(up: ModuleType) -> None:
     # The updater refreshes itself and its siblings; the tuple must name them all.
     for name in up.COMMANDS:
         assert (ROOT / "docs" / "claude-commands" / f"{name}.md").exists(), name
+
+
+# --------------------------------------------------------------------------
+# Windows conda layout — python.exe at the env root, not under Scripts\
+# --------------------------------------------------------------------------
+
+
+def test_windows_conda_env_root_python(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression: the first PC run marked every conda project FAILED because
+    only Scripts\\python.exe (the venv layout) was probed."""
+    monkeypatch.setattr(up, "WINDOWS", True)
+    conda_prefix = tmp_path / "envs" / "proj"
+    (conda_prefix / "python.exe").parent.mkdir(parents=True)
+    (conda_prefix / "python.exe").write_text("")
+    venv_prefix = tmp_path / "v"
+    (venv_prefix / "Scripts").mkdir(parents=True)
+    (venv_prefix / "Scripts" / "python.exe").write_text("")
+
+    assert up._python_path(conda_prefix) == conda_prefix / "python.exe"
+    assert up._python_path(venv_prefix) == venv_prefix / "Scripts" / "python.exe"
+    assert up._python_path(tmp_path / "empty") is None
+    assert up.Env("conda", "proj", conda_prefix).python == conda_prefix / "python.exe"
+
+
+# --------------------------------------------------------------------------
+# Unattended schedule — plans per platform, without installing anything
+# --------------------------------------------------------------------------
+
+
+def test_parse_time(up: ModuleType) -> None:
+    assert up._parse_time("09:00") == (9, 0)
+    assert up._parse_time("23:59") == (23, 59)
+    for bad in ("9", "24:00", "09:60", "nine"):
+        with pytest.raises(SystemExit):
+            up._parse_time(bad)
+
+
+def test_schedule_artifacts(up: ModuleType, tmp_path: Path) -> None:
+    py, script, log = Path("/usr/bin/python3"), Path("/x/update_projects.py"), Path("/x/u.log")
+    plist = up.launchd_plist(py, script, 7, 30, log)
+    assert f"<string>{up.SCHEDULE_LABEL}</string>" in plist
+    assert "<string>--log</string>" in plist
+    assert "<key>Hour</key><integer>7</integer><key>Minute</key><integer>30</integer>" in plist
+    assert "<key>RunAtLoad</key><false/>" in plist
+
+    wpy, wscript = Path("C:/py/python.exe"), Path("C:/u/update_projects.py")
+    argv = up.schtasks_create_argv(wpy, wscript, 9, 5)
+    assert argv[:2] == ["schtasks", "/Create"] and "/F" in argv
+    assert argv[argv.index("/TN") + 1] == up.TASK_NAME
+    assert argv[argv.index("/ST") + 1] == "09:05"
+    assert argv[argv.index("/TR") + 1] == f'"{wpy}" "{wscript}" --log'  # quoted for spaces
+
+    line = up.cron_line(py, script, 9, 0)
+    assert line.startswith("0 9 * * * /usr/bin/python3 /x/update_projects.py --log")
+    assert line.endswith(f"# {up.SCHEDULE_LABEL}")
+
+
+def test_install_schedule_dry_run_touches_nothing(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(up, "CONFIG_DIR", tmp_path / "cfg")
+    monkeypatch.setattr(up, "LOG_FILE", tmp_path / "cfg" / "update.log")
+    calls: list[list[str]] = []
+    monkeypatch.setattr(up, "_sys", lambda argv, stdin=None: calls.append(argv))
+    desc = up.install_schedule("09:00", dry_run=True)
+    assert "daily at 09:00" in desc and "update_projects.py" in desc
+    assert calls == []  # dry run never calls launchctl / schtasks / crontab
+    assert not (tmp_path / "cfg" / "update.log").exists()

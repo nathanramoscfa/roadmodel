@@ -1,5 +1,5 @@
 ---
-description: Upgrade roadmodel in every registered project at once — each project's own env, its planning/ kit, and these commands (usage: /roadmodel-update [project dirs to register…])
+description: Upgrade roadmodel in every registered project at once — each project's own env, its planning/ kit, and these commands (usage: /roadmodel-update [project dirs to register…] [--install-schedule HH:MM])
 ---
 Update roadmodel everywhere on this machine in one run: every registered
 project's own conda env or venv, each project's `planning/` kit, and the
@@ -26,7 +26,10 @@ The registry is `~/.config/roadmodel/projects.txt` — one project dir per
 line, `#` comments, optional env override: `<dir> | conda:<name>` or
 `<dir> | venv:<subdir>`.
 
-- If "$ARGUMENTS" names project dirs, pass them: `--add <dir> …`.
+- Split "$ARGUMENTS": tokens starting with `--` (and their values, e.g.
+  `--install-schedule 09:00`, `--jobs 8`, `--dry-run`) are passed to the
+  script as-is; everything else is a project dir to register with
+  `--add <dir> …`.
 - If the registry is missing or empty and no dirs were given, ask the
   operator which projects to register. If they answer with names rather
   than paths, locate the folders yourself (search their usual code root —
@@ -46,7 +49,18 @@ where one exists (`--init-kit` to create one everywhere), and
 re-downloads the four command files into `~/.claude/commands` (mirroring
 any `~/.claude/skills/<name>/SKILL.md` copies). `--dry-run` shows the plan.
 
-## 4. Report
+## 4. Unattended runs (optional, once per machine)
+
+`--install-schedule [HH:MM]` also registers a daily run for this user —
+a launchd agent on macOS, a Task Scheduler task on Windows, a crontab
+entry on Linux — that executes the same script with `--log`, appending
+to `~/.config/roadmodel/update.log`. From then on every registered
+project follows each roadmodel release within a day without anyone
+running anything. `--uninstall-schedule` removes it. The scheduled run
+uses the copy of the script on disk; running `/roadmodel-update` by hand
+re-fetches it, so script fixes reach the schedule at the next manual run.
+
+## 5. Report
 
 Show the result table verbatim. For any project marked FAILED:
 
@@ -57,5 +71,6 @@ Show the result table verbatim. For any project marked FAILED:
 
 If any command file reports `updated` or `installed`, say that the editor
 window needs a reload (`Developer: Reload Window`) before the new command
-text is used. The registry and the updater stay on this machine; nothing
-here is committed to any project.
+text is used. If a schedule was installed, show the "Schedule:" line and
+where the log lives. The registry, the updater, and the schedule stay on
+this machine; nothing here is committed to any project.

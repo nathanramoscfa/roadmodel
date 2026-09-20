@@ -21,6 +21,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `docs/planning-workflow.md` §5 documents it; `tests/test_update_projects.py`
   covers registry parsing, detection, and the `--dry-run` CLI. Not part of the
   PyPI package — no release needed.
+- **`/roadmodel-update --install-schedule [HH:MM]`** registers a daily
+  unattended run of the updater for the current user — a launchd agent on
+  macOS, a Task Scheduler task on Windows, a crontab entry on Linux — logging
+  to `~/.config/roadmodel/update.log` (`--log`, auto-rotated), so every
+  registered project follows each release within a day. `--uninstall-schedule`
+  removes it. Flags after the command name pass straight through to the script.
+- **README** rewritten to the current state: the three surfaces (CLI, MCP
+  server, planning kit), a "Staying current" section that leads with
+  `/roadmodel-update` for multi-project machines, a plain-language MCP
+  paragraph, the `/roadmap-step` + Status-rule workflow, and a Phase 1–3
+  shipped / Phase 4 in progress status (was still "Phase 1").
+
+### Fixed
+
+- **`update_projects.py` on Windows conda envs.** Only `Scripts\python.exe`
+  (the venv layout) was probed, so every conda project on Windows — where the
+  interpreter sits at the env root as `python.exe` — was reported as "not
+  created" and skipped, and a `| conda:<name>` override failed the same way.
+  `_python_path()` now tries both layouts (and `bin/python3` on POSIX).
+  Regression test `test_windows_conda_env_root_python`.
+- **Phase template no longer plants a PEM-looking token.** The final QA step's
+  secret-scan requirement listed the private-key header pattern literally, so
+  every `export-kit` re-introduced a string that projects' own secret scanners
+  flag. It now describes the pattern ("the five-dash BEGIN line") instead.
 
 ## [0.2.37] — 2026-09-20
 
