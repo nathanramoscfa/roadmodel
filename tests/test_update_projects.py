@@ -341,8 +341,17 @@ def test_refresh_installs_per_detected_agent(
     assert "codex installed" in report[1]
     assert (home / ".gemini" / "commands" / "roadmap-step.toml").exists()
     assert (home / ".agents" / "skills" / "roadmap-step" / "SKILL.md").exists()
-    # ~/.codex exists -> the legacy skills dir is kept in step too.
-    assert (home / ".codex" / "skills" / "roadmap-step" / "SKILL.md").exists()
+    # Current Codex reads ~/.codex/skills too: a copy there would list the
+    # skill twice, so our copy is removed — a user's own skill is not.
+    ours = home / ".codex" / "skills" / "roadmap-step" / "SKILL.md"
+    ours.parent.mkdir(parents=True)
+    ours.write_text(up.port_codex("roadmap-step", body))
+    theirs = home / ".codex" / "skills" / "roadmap-phase" / "SKILL.md"
+    theirs.parent.mkdir(parents=True)
+    theirs.write_text("---\nname: roadmap-phase\ndescription: mine\n---\nhand-written\n")
+    assert "legacy copy removed" in up.refresh_commands()[1]
+    assert not ours.exists() and not ours.parent.exists()
+    assert theirs.read_text().endswith("hand-written\n")
     # Second run: everything unchanged; dry-run never writes.
     assert all(
         s in up.refresh_commands()[1]
