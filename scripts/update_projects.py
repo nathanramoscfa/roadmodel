@@ -54,6 +54,7 @@ CLAUDE_DIR = Path.home() / ".claude"
 GEMINI_DIR = Path.home() / ".gemini"  # Gemini CLI: commands/<name>.toml -> /<name>
 CODEX_DIR = Path.home() / ".codex"  # presence marks a Codex install
 AGENTS_SKILLS_DIR = Path.home() / ".agents" / "skills"  # Codex skills: <name>/SKILL.md -> $<name>
+CODEX_LEGACY_SKILLS_DIR = CODEX_DIR / "skills"  # older Codex builds read skills from CODEX_HOME
 AGENTS = ("claude", "gemini", "codex")
 VENV_DIRS = (".venv", "venv", "env")
 WINDOWS = os.name == "nt"
@@ -484,8 +485,15 @@ def refresh_commands(dry_run: bool = False, agents: Optional[list[str]] = None) 
                 target = GEMINI_DIR / "commands" / f"{name}.toml"
                 states.append(f"gemini {_install(target, toml, dry_run)}")
         if "codex" in agents:
-            target = AGENTS_SKILLS_DIR / name / "SKILL.md"
-            states.append(f"codex {_install(target, port_codex(name, body), dry_run)}")
+            skill_md = port_codex(name, body)
+            state = _install(AGENTS_SKILLS_DIR / name / "SKILL.md", skill_md, dry_run)
+            # Older Codex builds read ~/.codex/skills; keep both in step while
+            # the documented ~/.agents/skills location finishes rolling out.
+            if CODEX_DIR.is_dir():
+                legacy = _install(CODEX_LEGACY_SKILLS_DIR / name / "SKILL.md", skill_md, dry_run)
+                if legacy != state:
+                    state += f" (legacy dir {legacy})"
+            states.append(f"codex {state}")
         report.append(f"{name}: " + " · ".join(states))
     return report
 
