@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`/roadmodel-update` + `scripts/update_projects.py` — upgrade roadmodel in
+  every project at once.** The script (stdlib only, Python 3.9+, fetched fresh
+  from the repo by the command) reads `~/.config/roadmodel/projects.txt`,
+  detects each project's conda env or venv (venv dir → `environment.yml`
+  name → conda env named like the folder → conda env inside the project, with
+  `| conda:<name>` / `| venv:<dir>` overrides), upgrades `roadmodel` in all of
+  them concurrently, re-exports `planning/` where a kit exists, and
+  re-downloads the four user-scope command files (mirroring any skills
+  copies). Undetectable envs are reported, never guessed into `base`.
+  `docs/planning-workflow.md` §5 documents it; `tests/test_update_projects.py`
+  covers registry parsing, detection, and the `--dry-run` CLI. Not part of the
+  PyPI package — no release needed.
+
 ## [0.2.37] — 2026-09-20
 
 ### Added
