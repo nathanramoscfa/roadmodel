@@ -310,6 +310,8 @@ def test_refresh_installs_per_detected_agent(
     monkeypatch.setattr(up, "CODEX_DIR", home / ".codex")
     monkeypatch.setattr(up, "AGENTS_SKILLS_DIR", home / ".agents" / "skills")
     monkeypatch.setattr(up, "CODEX_LEGACY_SKILLS_DIR", home / ".codex" / "skills")
+    monkeypatch.setattr(up, "CURSOR_DIR", home / ".cursor")
+    monkeypatch.setattr(up, "OPENCODE_DIR", home / ".config" / "opencode")
     monkeypatch.setattr(up, "COMMANDS", ("roadmap-step",))
     body = (COMMANDS_DIR / "roadmap-step.md").read_text()
 
@@ -377,3 +379,64 @@ def test_commands_only_cli_needs_no_registry(tmp_path: Path) -> None:
     )
     assert result.returncode == 0, result.stdout + result.stderr
     assert "agents: claude" in result.stdout
+
+
+# --------------------------------------------------------------------------
+# OpenCode port + Cursor as a consumer of ~/.agents/skills
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "name", ["roadmap-project", "roadmap-phase", "roadmap-step", "roadmodel-update"]
+)
+def test_opencode_port_keeps_arguments_and_refuses_injection(up: ModuleType, name: str) -> None:
+    body = (COMMANDS_DIR / f"{name}.md").read_text()
+    cmd = up.port_opencode(name, body)
+    head, _, text = cmd[4:].partition("\n---\n")
+    assert head.startswith("description: ")
+    assert "$ARGUMENTS" in text  # OpenCode substitutes it natively
+    assert "!`" not in text and "@" not in text
+    with pytest.raises(ValueError):
+        up.port_opencode("x", "---\ndescription: d\n---\nsee @README.md")
+
+
+def test_cursor_and_opencode_detection_and_install(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "home"
+    monkeypatch.setattr(up, "CLAUDE_DIR", home / ".claude")
+    monkeypatch.setattr(up, "GEMINI_DIR", home / ".gemini")
+    monkeypatch.setattr(up, "CODEX_DIR", home / ".codex")
+    monkeypatch.setattr(up, "CODEX_LEGACY_SKILLS_DIR", home / ".codex" / "skills")
+    monkeypatch.setattr(up, "AGENTS_SKILLS_DIR", home / ".agents" / "skills")
+    monkeypatch.setattr(up, "CURSOR_DIR", home / ".cursor")
+    monkeypatch.setattr(up, "OPENCODE_DIR", home / ".config" / "opencode")
+    monkeypatch.setattr(up, "COMMANDS", ("roadmap-step",))
+    body = (COMMANDS_DIR / "roadmap-step.md").read_text()
+
+    class _Resp:
+        def __enter__(self) -> "_Resp":
+            return self
+
+        def __exit__(self, *a: object) -> None:
+            pass
+
+        def read(self) -> bytes:
+            return body.encode()
+
+    monkeypatch.setattr(up.urllib.request, "urlopen", lambda url, timeout=30: _Resp())
+
+    # Cursor alone (no Codex): the shared skill lands once, labelled for Cursor.
+    (home / ".cursor").mkdir(parents=True)
+    assert up.detect_agents() == ["claude", "cursor"]
+    line = up.refresh_commands()[1]
+    assert "cursor installed" in line and "codex" not in line
+    assert (home / ".agents" / "skills" / "roadmap-step" / "SKILL.md").exists()
+
+    # Codex + Cursor: still one file, labelled for both; OpenCode gets its own.
+    (home / ".codex").mkdir()
+    (home / ".config" / "opencode").mkdir(parents=True)
+    assert up.detect_agents() == ["claude", "codex", "cursor", "opencode"]
+    line = up.refresh_commands()[1]
+    assert "codex/cursor unchanged" in line and "opencode installed" in line
+    assert (home / ".config" / "opencode" / "commands" / "roadmap-step.md").exists()
