@@ -25,6 +25,16 @@ STYLE RULES (the AI MUST follow)
   - Every phase carries a one-line metadata badge:
       **Complexity:** … · **Risk:** … · **Cloud cost:** … ·
       **Handles sensitive data:** <Yes/No — PII, secrets, auth>
+  - Every phase carries a `**Status:**` line directly under its
+    **Goal:** — `Not started` when this roadmap is written. The
+    phase's FIRST step flips it to `In progress — <phase
+    roadmap file>` and its FINAL step to `Complete —
+    <YYYY-MM-DD>; PR #<n>; <tag>; <phase roadmap file>`, each in
+    that step's own PR, so this file on `main` marks a phase
+    complete exactly when its last PR merges (see §5 "Step
+    lifecycle" Stage 3). The §8 summary table carries the same
+    state in its Status column, and the header `> **Status:**`
+    line agrees with both. Nothing else records completion.
   - §5 "Security & privacy strategy" is MANDATORY for any
     project touching user data, secrets, PII, credentials, or
     auth. Only omit it for a throwaway with zero sensitive
@@ -48,7 +58,8 @@ STYLE RULES (the AI MUST follow)
 
 # <PROJECT_NAME> — <ROADMAP_SUBTITLE>
 
-> **Status:** <Draft v1 | Approved | In progress>
+> **Status:** <Draft v1 | Approved | In progress — Phases 1–k
+> complete, Phase k+1 next>
 > **Owner:** <NAME, ROLE>
 > **Audience:** <Internal team | External stakeholders | …>
 > **Target environment:** <Local | AWS | Azure | GCP | …>
@@ -163,12 +174,15 @@ The heart of the document. Produce 3–8 phases. Each phase MUST
 have:
   1. ### Phase N — <Title>
   2. **Goal:** one sentence.
-  3. Metadata line: **Complexity:** … · **Risk:** … ·
+  3. **Status:** Not started (flipped to In progress by the
+     phase's first step and to Complete by its final step —
+     see the STYLE RULES and §5 "Step lifecycle").
+  4. Metadata line: **Complexity:** … · **Risk:** … ·
      **Cloud cost:** … · **Handles sensitive data:** …
-  4. Numbered sub-sections (#### N.1, #### N.2, …) describing
+  5. Numbered sub-sections (#### N.1, #### N.2, …) describing
      concrete work.
-  5. Tables, code blocks, or schema dumps where they clarify.
-  6. **Acceptance criteria** — bulleted, testable list that
+  6. Tables, code blocks, or schema dumps where they clarify.
+  7. **Acceptance criteria** — bulleted, testable list that
      INCLUDES at least one security check for the surface the
      phase touches (see §5 "Security & privacy strategy") and,
      when the phase touches a deployed surface, a deployed-and-
@@ -180,6 +194,8 @@ dependency graph in §5 is honoured.
 ### Phase 1 — <Phase Title>
 
 **Goal:** <One sentence describing the outcome of this phase.>
+
+**Status:** Not started
 
 **Complexity:** <Low | Medium | High> · **Risk:**
 <Low | Medium | High> · **Cloud cost:** <$0 | …> ·
@@ -216,6 +232,8 @@ dependency graph in §5 is honoured.
 
 **Goal:** <one sentence>.
 
+**Status:** Not started
+
 **Complexity:** … · **Risk:** … · **Cloud cost:** …
 
 #### 2.1 <Sub-section title>
@@ -234,6 +252,8 @@ dependency graph in §5 is honoured.
 ### Phase N — <Final Phase Title>
 
 **Goal:** <one sentence>.
+
+**Status:** Not started
 
 **Complexity:** … · **Risk:** … · **Cloud cost:** …
 
@@ -357,9 +377,22 @@ complete all six stages before declaring the step done.
    issue introduced while implementing this step is caught here,
    before it ever reaches the branch, the PR, or `main`.
 
-3. **Open the PR.** `gh pr create --base main --head <branch>`
-   with a Conventional Commits title and a body referencing the
-   roadmap step and its acceptance criteria. One PR per step.
+3. **Open the PR, then mark the step.** `gh pr create --base
+   main --head <branch>` with a Conventional Commits title and a
+   body referencing the roadmap step and its acceptance
+   criteria. One PR per step. Then, with the PR number in hand,
+   set the step's `**Status:**` line in its phase roadmap to
+   `Complete — PR #<n> (<YYYY-MM-DD>)`, commit that edit on the
+   step branch (`docs: mark Phase N Step M complete`), and push.
+   The PR carries its own completion mark, so the roadmap on
+   `main` says the step is complete exactly when the PR merges —
+   never before, and never by a later conversation
+   reconstructing history from `git log`. The same commit marks
+   the phase here: on a phase's first step its `**Status:**`
+   line becomes `In progress — <phase roadmap file>`; on its
+   final step, `Complete — …`, together with its §8 summary row
+   and the header `> **Status:**` line. A roadmap that is
+   git-excluded needs the edit only.
 
 4. **Wait for green checks, then squash-merge.** Every required
    status check must report success. If the PR goes BEHIND
@@ -405,19 +438,21 @@ complete all six stages before declaring the step done.
    number, a judgement call in the diff is explained in the PR
    body. A finding that is only described is not disposed of,
    and counts as an unmet acceptance criterion. Only once the
-   PR is merged, every acceptance criterion is affirmatively
-   met, and every finding has a destination, end the final
-   response with the verbatim line "Step N is complete. You
-   can now move on to Step N+1." (or, on the phase's last
-   step, "Phase N is complete. You can now move on to Phase
-   N+1."). That line is the LAST line of the response. Nothing
-   follows it — no "Follow-ups (non-blocking)", "Notes",
-   "Next", or suggested improvements. If any criterion is unmet
-   or any finding has no destination, say plainly that the step
-   is NOT complete, name what is outstanding, and withhold the
-   line. "Done" means done. Then, for phase-boundary hygiene,
-   the operator closes the current Claude Code / Cursor / Codex
-   session and opens a fresh one before starting the next step.
+   PR is merged — and `main` therefore carries the step's
+   `Complete` Status line — every acceptance criterion is
+   affirmatively met, and every finding has a destination, end
+   the final response with the verbatim line "Step N is
+   complete. You can now move on to Step N+1." (or, on the
+   phase's last step, "Phase N is complete. You can now move on to
+   Phase N+1."). That line is the LAST line of the response.
+   Nothing follows it — no "Follow-ups (non-blocking)",
+   "Notes", "Next", or suggested improvements. If any
+   criterion is unmet or any finding has no destination, say
+   plainly that the step is NOT complete, name what is
+   outstanding, and withhold the line. "Done" means done. Then,
+   for phase-boundary hygiene, the operator closes the current
+   Claude Code / Cursor / Codex session and opens a fresh one
+   before starting the next step.
    The new conversation begins again at Stage 1 with the next
    step's `**Branch:**` line driving the `git checkout -b`
    command. No work straddles two steps.
@@ -865,9 +900,16 @@ The following are deliberately deferred to a future version:
 
 ## 8. Phase Complexity Summary
 
-| Phase | Description                       | Complexity   |
-|-------|-----------------------------------|--------------|
-| 1     | <Phase 1 title>                   | <Low/Med/Hi> |
-| 2     | <Phase 2 title>                   | <Low/Med/Hi> |
-| 3     | <Phase 3 title>                   | <Low/Med/Hi> |
-| …     | …                                 | …            |
+<!--
+The Status column mirrors each phase's `**Status:**` line and is
+updated in the same commit (Stage 3 of the phase's first and
+final steps). Values: Not started | In progress | Complete —
+<YYYY-MM-DD>.
+-->
+
+| Phase | Description                       | Complexity   | Status      |
+|-------|-----------------------------------|--------------|-------------|
+| 1     | <Phase 1 title>                   | <Low/Med/Hi> | Not started |
+| 2     | <Phase 2 title>                   | <Low/Med/Hi> | Not started |
+| 3     | <Phase 3 title>                   | <Low/Med/Hi> | Not started |
+| …     | …                                 | …            | …           |

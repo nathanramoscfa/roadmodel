@@ -68,3 +68,77 @@ def test_phase_template_lifecycle_copies_agree() -> None:
     assert flat.count("LAST line of the response") >= 2
     assert "DISPOSE OF EVERY FINDING" in flat
     assert "Phase {{N}} is complete. You can now move on to Phase {{N+1}}." in flat
+
+
+# ---------------------------------------------------------------------------
+# Status rule (0.2.37): the roadmap on main is the ledger. Each step / phase
+# carries a `**Status:**` line that the step's OWN PR flips at Stage 3, so a
+# step reads Complete on main exactly when its PR merged. These guards keep
+# the three lifecycle copies (and the paste-prompts' currency check) agreeing
+# on that — a template that drops the Stage-3 mark silently reverts every
+# project to "ask the AI to mark things complete" reconciliation passes.
+# ---------------------------------------------------------------------------
+
+PROMPT_PHASE = TEMPLATES / "prompt-phase-roadmap.md"
+PROMPT_PROJECT = TEMPLATES / "prompt-project-roadmap.md"
+STEP_COMMAND = ROOT / "docs" / "claude-commands" / "roadmap-step.md"
+
+
+def test_phase_template_status_rule_in_all_lifecycle_copies() -> None:
+    text = PHASE.read_text()
+    flat = re.sub(r"\s+", " ", text)
+    # STYLE RULES + Overview rule paragraph.
+    assert "Status rule" in text
+    assert "**Status rule.**" in text
+    # Overview prose lifecycle, Stage 3.
+    assert "**Open the PR, then mark the step.**" in text
+    # Per-step XML <lifecycle>, Stage 3 (wrapped at ~30 columns).
+    assert "OPEN THE PR, THEN MARK THE STEP" in flat
+    # Stage 6 presupposes the mark, in both the prose and the XML copy.
+    assert flat.count("carries this step's `Complete` Status line") >= 2
+    # Every step skeleton (Step 1 and the final QA step) starts Not started.
+    assert text.count("**Status:** Not started") >= 2
+    # The final QA step marks the phase in the parent roadmap.
+    assert "Mark the phase complete in the parent project roadmap" in flat
+
+
+def test_project_template_status_ledger() -> None:
+    text = PROJECT.read_text()
+    flat = re.sub(r"\s+", " ", text)
+    assert "**Open the PR, then mark the step.**" in text
+    assert "carries the step's `Complete` Status line" in flat
+    # Phase 1, Phase 2, and Phase N skeletons.
+    assert text.count("**Status:** Not started") >= 3
+    # §8 summary table carries the Status column.
+    assert "| Complexity   | Status      |" in text
+
+
+@pytest.mark.parametrize(
+    ("path", "phrase"),
+    [
+        (PROMPT_PHASE, "OPEN THE PR, THEN MARK THE STEP"),
+        (PROMPT_PROJECT, "Open the PR, then mark the step"),
+    ],
+    ids=["phase-prompt", "project-prompt"],
+)
+def test_prompt_currency_check_covers_stage_3(path: Path, phrase: str) -> None:
+    """Step 0 of each paste-prompt stops on a stale kit. It must check the
+    Stage-3 wording too, or a pre-0.2.37 kit (no Status lines) passes the
+    Stage-6 check and bakes the old lifecycle into every step."""
+    assert phrase in path.read_text()
+
+
+def test_roadmap_step_command_gates_on_status() -> None:
+    text = STEP_COMMAND.read_text()
+    flat = re.sub(r"\s+", " ", text)
+    assert "## 2. Status gate" in text
+    # Idempotency + sequencing.
+    assert "already reads `Complete`" in text
+    assert "does not read `Complete`" in text
+    # Legacy backfill is deterministic: merged PR by head branch.
+    assert "gh pr list --state merged" in text
+    assert "--head" in text
+    # Never invent completion from git history.
+    assert "Never mark a step complete on your own judgement" in flat
+    # The Stage-3 mark itself.
+    assert "docs: mark Phase {{PHASE}} Step {{STEP}} complete" in text

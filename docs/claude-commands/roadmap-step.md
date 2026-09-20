@@ -11,13 +11,49 @@ Execute Step $ARGUMENTS of this project's phase roadmap. Parse
   any `**/phase{{PP}}-roadmap.md` (PP = PHASE zero-padded to two
   digits). If none exists, stop and say so — do not improvise a step.
 - The step is the section headed `## Step {{STEP}} — …` up to the next
-  `## ` heading. From it, read: the `**Branch:**` line, the Settings
-  table (Model / Platform / Effort / Thinking), the single
-  ```` ```xml ```` fenced `<task>…</task>` block, and the
-  `### Step {{STEP}} acceptance criteria` list. If any of these is
-  missing, stop and report which.
+  `## ` heading. From it, read: the `**Branch:**` line, the
+  `**Status:**` line, the Settings table (Model / Platform / Effort /
+  Thinking), the single ```` ```xml ```` fenced `<task>…</task>` block,
+  and the `### Step {{STEP}} acceptance criteria` list. If the Branch
+  line, Settings table, task block, or criteria are missing, stop and
+  report which. A missing Status line is handled in §2.
 
-## 2. Settings gate — before any other action
+## 2. Status gate — the roadmap on `main` is the ledger
+
+Each step's `**Status:**` line is `Not started` until the step's own
+PR flips it to `Complete — PR #n (YYYY-MM-DD)` (Stage 3 of the
+lifecycle), so the roadmap on `main` says a step is done exactly when
+its PR merged. Check it before touching anything:
+
+- **Step {{STEP}} already reads `Complete`** → stop. It has shipped;
+  re-running would redo merged work. Say so, name the PR, and suggest
+  `/roadmap-step {{PHASE}} {{STEP+1}}`. Proceed only if the operator
+  replies that they want the step redone.
+- **Step {{STEP-1}} does not read `Complete`** (STEP > 1, and the
+  Execution Order does not draw the two steps in parallel) → stop.
+  Either the previous step's PR has not merged, or its session
+  skipped the mark. Check which with `gh pr list --state merged
+  --head <Step {{STEP-1}} Branch line> --json number,mergedAt`, and
+  report it. No merged PR → the operator finishes that step first
+  (`/roadmap-step {{PHASE}} {{STEP-1}}`). Merged PR but no mark → the
+  mark was skipped; when the operator says to proceed, backfill that
+  one line in THIS step's PR (Stage 3) and continue. Never mark a step
+  complete on your own judgement of the git history.
+- **No step in the roadmap carries a `**Status:**` line at all** →
+  the roadmap predates roadmodel 0.2.37. Backfill once, as part of
+  this step's PR: for every step, run the same `gh pr list --state
+  merged --head <its Branch line>` lookup — a merged PR ⇒
+  `Complete — PR #n (<mergedAt date>)`, none ⇒ `Not started`. Insert
+  `**Status:** …` after each step's `**Deploys:**` line (after
+  `**Branch:**` if there is none), print the resulting step/status
+  table, then re-apply the two bullets above. Backfill the parent
+  ROADMAP.md in the same pass: every `### Phase` gets a `**Status:**`
+  line under its Goal and a Status column in the summary table — a
+  phase whose roadmap's steps are all Complete ⇒ `Complete — <last
+  merge date>`; some ⇒ `In progress — <phase roadmap file>`; none, or
+  no phase roadmap yet ⇒ `Not started`.
+
+## 3. Settings gate — before any work
 
 Print one line: `Step {{STEP}} requires: Model <M> · Platform <P> ·
 Effort <E> · Thinking <T>. This session: <your own model>.`
@@ -31,17 +67,21 @@ Effort <E> · Thinking <T>. This session: <your own model>.`
 - You cannot verify Effort or Thinking yourself; the printed line is
   the operator's cue to check them. Continue.
 
-## 3. Lifecycle currency
+## 4. Lifecycle currency
 
-If the `<lifecycle>` in the task block still says findings go in a
-"Follow-ups (non-blocking)" note after the completion line, the
-roadmap predates roadmodel 0.2.34. Execute the step under the
-CURRENT Stage 6 anyway: dispose of every finding before the
-completion line, and make "Step {{STEP}} is complete. You can now
-move on to Step {{STEP+1}}." the last line of your final response.
-Mention the stale lifecycle once, in the PR body, not in chat.
+The roadmap's `<lifecycle>` may predate the current contract. Execute
+the step under the CURRENT lifecycle regardless, and mention the stale
+block once, in the PR body, not in chat:
 
-## 4. Execute
+- If Stage 6 still says findings go in a "Follow-ups (non-blocking)"
+  note after the completion line (pre-0.2.34): dispose of every finding
+  before the completion line, and make "Step {{STEP}} is complete. You
+  can now move on to Step {{STEP+1}}." the last line of your final
+  response.
+- If Stage 3 is just "OPEN THE PR" with no mark (pre-0.2.37): apply
+  §5 anyway — the step's own PR flips its `**Status:**` line.
+
+## 5. Execute
 
 Run the `<task>` block exactly as if the operator had pasted it,
 starting at Stage 1 — `git checkout -b <the Branch line>` from a
@@ -49,3 +89,16 @@ clean, up-to-date `main` is your first tool call. Treat every
 `<requirement>`, the `<security>` block, and the acceptance criteria
 as binding. Do not read ahead into other steps except where the task
 block tells you to.
+
+At Stage 3, right after `gh pr create` returns the PR number: set this
+step's `**Status:**` line to `Complete — PR #<n> (<today, YYYY-MM-DD>)`
+(plus any §2 backfill), commit on the step branch as
+`docs: mark Phase {{PHASE}} Step {{STEP}} complete`, and push. If this
+is the phase's final step, the same commit marks the phase in the
+parent ROADMAP.md: its `**Status:**` line under `### Phase {{PHASE}}`
+becomes `Complete — …`, with its row in the summary table and the
+header `> **Status:**` line; if this is Step 1, that line becomes
+`In progress — <this roadmap>` instead. A git-excluded roadmap (e.g.
+`private/`) needs the edit only. Stage 6's
+completion line presupposes this mark: do not emit it unless `main`
+now carries the step's `Complete` line.

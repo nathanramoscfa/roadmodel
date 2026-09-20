@@ -64,8 +64,10 @@ everything below its rule into a **new** chat in this project, and submit.
 
 Each prompt starts with a Step 0 that refreshes this kit
 (`pip install -U roadmodel && roadmodel export-kit . --force`) and checks the
-template's Stage 6 is current before anything is written, so a stale kit fails
-loudly instead of baking an old step lifecycle into every step. The ask itself
+template's step lifecycle is current (Stage 3 marks the step's `**Status:**`
+line in its own PR; Stage 6 disposes of every finding before the completion
+line) before anything is written, so a stale kit fails loudly instead of baking
+an old step lifecycle into every step. The ask itself
 is the one below — the prompt files carry it with the placeholders filled:
 
 > Write the Phase N roadmap `.md` using `@planning/templates/phase-roadmap-template.md`

@@ -21,9 +21,10 @@ Step 0 — refresh the planning kit so the templates and catalog are
 current. Run `pip install -U roadmodel && roadmodel export-kit . --force`
 (where roadmodel is not installed, run
 `scripts/export-planning-kit.sh .` instead). Then open
-`planning/templates/phase-roadmap-template.md` and confirm its Stage 6
-reads "DISPOSE OF EVERY FINDING, DECLARE COMPLETION, THEN NEW
-CONVERSATION". If it instead tells you to put findings in a
+`planning/templates/phase-roadmap-template.md` and confirm its Stage 3
+reads "OPEN THE PR, THEN MARK THE STEP" and its Stage 6 reads "DISPOSE
+OF EVERY FINDING, DECLARE COMPLETION, THEN NEW CONVERSATION". If Stage
+3 is a bare "OPEN THE PR", or Stage 6 tells you to put findings in a
 "Follow-ups (non-blocking)" note after the completion line, STOP and
 tell me the kit is stale — do not write the roadmap from it.
 
@@ -43,9 +44,10 @@ availability exclusion in the selector, and include a backup model per
 step.
 
 Honor the template's style rules: 80-column prose, zero `{{...}}`
-tokens left, every `<task>` block carrying the full `<lifecycle>` and
-`<security>` blocks verbatim, and a Post-Implementation Verification
-section.
+tokens left, every step header carrying `**Status:** Not started`
+(the step's own PR flips it — Status rule), every `<task>` block
+carrying the full `<lifecycle>` and `<security>` blocks verbatim, and
+a Post-Implementation Verification section.
 
 When the file is written, reply with its path and a one-paragraph
 summary of the steps and their models. Do not start Step 1 of the

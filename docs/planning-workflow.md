@@ -80,21 +80,40 @@ not at `docs/` or `private/`). No copying the `<task>` block by hand.
 The command:
 
 1. **Finds the step** — `## Step 3 — …` in `docs/phase01-roadmap.md`
-   (or `private/`), and reads its `**Branch:**` line, Settings table,
-   `<task>` block, and acceptance criteria.
-2. **Gates on settings.** It prints `Step 3 requires: Model … ·
+   (or `private/`), and reads its `**Branch:**` line, `**Status:**`
+   line, Settings table, `<task>` block, and acceptance criteria.
+2. **Gates on status.** The roadmap on `main` is the ledger: each
+   step's `**Status:**` line is `Not started` until the step's own PR
+   flips it to `Complete — PR #n (date)`. Step 3 already Complete →
+   it stops (re-running would redo merged work). Step 2 not Complete
+   → it stops and says whether Step 2's PR is unmerged or its mark
+   was skipped (`gh pr list --state merged --head <branch>`); you
+   finish Step 2, or say "proceed" and it backfills that one line in
+   Step 3's PR. It never marks a step complete from git history on
+   its own judgement.
+3. **Gates on settings.** It prints `Step 3 requires: Model … ·
    Platform … · Effort … · Thinking …` next to the session's own
    model. Wrong model or a non-Claude-Code platform → it stops and
    tells you what to run (`/model`, `/effort`). It cannot read your
    Effort/Thinking settings, so that line is your cue to check them
    before it proceeds — set them first if you know them:
    `/model <M>` then `/effort <E>`, then `/roadmap-step 1 3`.
-3. **Applies the current Stage 6** even if the roadmap was generated
-   before roadmodel 0.2.34 (old "Follow-ups" lifecycle): findings are
-   disposed of before the completion line, and that line is the last
-   line of the response.
-4. **Runs the `<task>` block** exactly as if pasted, starting with
+4. **Applies the current lifecycle** even if the roadmap was generated
+   by an older kit: pre-0.2.34 "Follow-ups" roadmaps still dispose of
+   findings before the completion line; pre-0.2.37 roadmaps (bare
+   "OPEN THE PR", no Status lines) still get the Stage 3 mark.
+5. **Runs the `<task>` block** exactly as if pasted, starting with
    `git checkout -b <Branch>` from clean `main`.
+6. **Marks the step in its own PR.** At Stage 3, right after
+   `gh pr create` returns the number, it sets the step's
+   `**Status:**` line to `Complete — PR #n (date)`, commits
+   `docs: mark Phase 1 Step 3 complete` on the step branch, and
+   pushes. So `docs/phase01-roadmap.md` on `main` says Step 3 is done
+   exactly when PR #n merges — never before, and never by a later
+   chat reconstructing history. The same commit marks the phase in
+   `ROADMAP.md`: Step 1 flips its `**Status:**` line to `In progress`,
+   the final step to `Complete` (with its summary-table row and the
+   header status line).
 
 The step ends with "Step 3 is complete. You can now move on to
 Step 4." and nothing after it — every finding has been dispatched
@@ -103,6 +122,32 @@ If the AI reports the step is NOT complete, it names what is
 outstanding; nothing is silently carried. Then close the chat and
 `/roadmap-step 1 4` in a new one.
 
+### Progress at a glance
+
+No "update the roadmaps" chore exists — the marks land with the
+work. To read progress:
+
+```sh
+grep -n '^\*\*Status:\*\*' docs/phase01-roadmap.md   # one line per step
+grep -n '^\*\*Status:\*\*' ROADMAP.md                # one line per phase
+```
+
+### Roadmaps written before roadmodel 0.2.37
+
+Older roadmaps have no `**Status:**` lines. The first
+`/roadmap-step` you run against one backfills them in that step's
+PR: every step whose `**Branch:**` has a merged PR
+(`gh pr list --state merged --head <branch>`) becomes
+`Complete — PR #n (merge date)`, the rest `Not started`, and the
+parent `ROADMAP.md` gains a `**Status:**` line per phase (`Complete`
+/ `In progress` / `Not started` from its steps) plus a Status column
+in its summary table. Review that diff in the PR like
+any other. To backfill without executing a step, ask for exactly
+that in a new chat: "add `**Status:**` lines to ROADMAP.md and
+docs/phase01-roadmap.md per the Status rule in
+planning/templates/phase-roadmap-template.md" — same lookup, same
+result.
+
 ## What `/roadmap-project` and `/roadmap-phase` do
 
 1. **Refreshes the kit** — `pip install -U roadmodel && roadmodel
@@ -110,9 +155,10 @@ outstanding; nothing is silently carried. Then close the chat and
    `~/.config/roadmodel/user-context.md` are current. Creates
    `planning/` if the project has none.
 2. **Checks the template is current** — the exported phase template's
-   Stage 6 must read "DISPOSE OF EVERY FINDING, DECLARE COMPLETION,
-   THEN NEW CONVERSATION". A stale kit stops with a message instead of
-   baking an old step lifecycle into every step.
+   Stage 3 must read "OPEN THE PR, THEN MARK THE STEP" and its Stage 6
+   "DISPOSE OF EVERY FINDING, DECLARE COMPLETION, THEN NEW
+   CONVERSATION". A stale kit stops with a message instead of baking
+   an old step lifecycle into every step.
 3. **Executes `planning/prompts/{project,phase}-roadmap.md`** with your
    argument filled in and every other placeholder at its default. The
    AI runs `planning/model-selector.txt` against `planning/user-context.md`
@@ -133,6 +179,8 @@ installed; on Windows, run Step 0 in the project's conda env
 
 ## Requirements
 
-- roadmodel **>= 0.2.35** — the first release whose kit ships
-  `planning/prompts/`. Older kits have the templates but not the prompts.
+- roadmodel **>= 0.2.37** — the first release whose templates carry the
+  Status rule (per-step / per-phase `**Status:**` lines flipped by the
+  step's own PR). 0.2.35 introduced `planning/prompts/`; older kits
+  have the templates but not the prompts.
 - Claude Code for the slash commands; any AI chat for the paste-prompts.
