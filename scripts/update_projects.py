@@ -147,6 +147,17 @@ def _conda_exe() -> Optional[str]:
         home / "anaconda3" / ("Scripts/conda.exe" if WINDOWS else "bin/conda"),
         home / "miniforge3" / ("Scripts/conda.exe" if WINDOWS else "bin/conda"),
     ]
+    if sys.platform == "darwin":
+        # Homebrew casks (Apple Silicon under /opt/homebrew, Intel under /usr/local)
+        # and the pkg installers' /opt locations.
+        for brew in ("/opt/homebrew/Caskroom", "/usr/local/Caskroom"):
+            for cask in ("miniconda", "miniforge", "anaconda", "mambaforge"):
+                candidates.append(Path(brew) / cask / "base" / "bin" / "conda")
+        candidates += [
+            Path("/opt/miniconda3/bin/conda"),
+            Path("/opt/anaconda3/bin/conda"),
+            Path("/opt/homebrew/anaconda3/bin/conda"),
+        ]
     if WINDOWS:
         local = Path(os.environ.get("LOCALAPPDATA", home / "AppData/Local"))
         candidates += [
