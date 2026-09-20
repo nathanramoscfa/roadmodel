@@ -51,6 +51,10 @@ COMMANDS = ("roadmap-project", "roadmap-phase", "roadmap-step", "roadmodel-updat
 CONFIG_DIR = Path.home() / ".config" / "roadmodel"
 DEFAULT_PROJECTS_FILE = CONFIG_DIR / "projects.txt"
 CLAUDE_DIR = Path.home() / ".claude"
+GEMINI_DIR = Path.home() / ".gemini"  # Gemini CLI: commands/<name>.toml -> /<name>
+CODEX_DIR = Path.home() / ".codex"  # presence marks a Codex install
+AGENTS_SKILLS_DIR = Path.home() / ".agents" / "skills"  # Codex skills: <name>/SKILL.md -> $<name>
+AGENTS = ("claude", "gemini", "codex")
 VENV_DIRS = (".venv", "venv", "env")
 WINDOWS = os.name == "nt"
 PIP_TIMEOUT = 900
@@ -385,11 +389,75 @@ def update_project(entry: Entry, *, kit: bool, init_kit: bool, dry_run: bool) ->
 # --------------------------------------------------------------------------
 
 
-def refresh_commands(dry_run: bool = False) -> list[str]:
-    """Re-download docs/claude-commands/*.md into ~/.claude/commands and mirror
-    any existing ~/.claude/skills/<name>/SKILL.md copies. Returns report lines."""
-    report: list[str] = []
-    commands_dir = CLAUDE_DIR / "commands"
+def _split_frontmatter(body: str) -> tuple[str, str]:
+    """(description, markdown body) of a docs/claude-commands/*.md file."""
+    description = ""
+    text = body
+    if body.startswith("---\n"):
+        head, _, text = body[4:].partition("\n---\n")
+        for line in head.splitlines():
+            if line.startswith("description:"):
+                description = line.partition(":")[2].strip()
+    return description, text.lstrip("\n")
+
+
+TOML_LITERAL_FENCE = "'" * 3
+
+
+def port_gemini(name: str, body: str) -> str:
+    """Gemini CLI custom command (TOML). ``$ARGUMENTS`` becomes ``{{args}}``;
+    the prompt is a literal multi-line string so backslashes survive."""
+    description, text = _split_frontmatter(body)
+    text = text.replace("$ARGUMENTS", "{{args}}")
+    for token in ("!{", "@{", TOML_LITERAL_FENCE):
+        if token in text:  # shell/file injection syntax, or would end the literal string
+            raise ValueError(f"{name}: prompt contains {token!r}, which Gemini CLI would interpret")
+    desc = description.replace("\\", "\\\\").replace('"', '\\"')
+    return (
+        f'description = "{desc}"\n'
+        f"prompt = {TOML_LITERAL_FENCE}\n{text.rstrip()}\n{TOML_LITERAL_FENCE}\n"
+    )
+
+
+def port_codex(name: str, body: str) -> str:
+    """Codex skill (SKILL.md). Skills take no placeholders: the text after
+    ``$name`` reaches the model as context, so say so where the Claude Code
+    version reads ``$ARGUMENTS``."""
+    description, text = _split_frontmatter(body)
+    text = text.replace('"$ARGUMENTS"', "the text after the skill mention").replace(
+        "$ARGUMENTS", "the text after the skill mention"
+    )
+    desc = description.replace('"', "'").replace("usage: /", "usage: $")  # skills are $-invoked
+    return f'---\nname: {name}\ndescription: "{desc}"\n---\n{text.rstrip()}\n'
+
+
+def _install(target: Path, content: str, dry_run: bool) -> str:
+    if target.exists() and target.read_text(encoding="utf-8") == content:
+        return "unchanged"
+    state = "updated" if target.exists() else "installed"
+    if not dry_run:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+    return state
+
+
+def detect_agents() -> list[str]:
+    """Agents present on this machine. Claude Code is assumed (this script
+    ships with its commands); the others only if their config dir exists."""
+    found = ["claude"]
+    if GEMINI_DIR.is_dir():
+        found.append("gemini")
+    if CODEX_DIR.is_dir() or AGENTS_SKILLS_DIR.is_dir():
+        found.append("codex")
+    return found
+
+
+def refresh_commands(dry_run: bool = False, agents: Optional[list[str]] = None) -> list[str]:
+    """Re-download docs/claude-commands/*.md and install them for every agent
+    on this machine: Claude Code as-is (mirroring any ~/.claude/skills copy),
+    Gemini CLI as TOML custom commands, Codex as skills. Returns report lines."""
+    agents = agents or detect_agents()
+    report: list[str] = [f"agents: {', '.join(agents)}"]
     for name in COMMANDS:
         url = f"{REPO_RAW}/docs/claude-commands/{name}.md"
         try:
@@ -398,22 +466,27 @@ def refresh_commands(dry_run: bool = False) -> list[str]:
         except (urllib.error.URLError, OSError) as exc:
             report.append(f"{name}: FETCH FAILED ({exc})")
             continue
-        target = commands_dir / f"{name}.md"
-        state = "unchanged"
-        if not target.exists() or target.read_text(encoding="utf-8") != body:
-            state = "updated" if target.exists() else "installed"
-            if not dry_run:
-                commands_dir.mkdir(parents=True, exist_ok=True)
-                target.write_text(body, encoding="utf-8")
-        skill = CLAUDE_DIR / "skills" / name / "SKILL.md"
-        if skill.exists():
-            # Same body, with the `name:` frontmatter line skills require.
-            skill_body = body.replace("---\n", f"---\nname: {name}\n", 1)
-            if skill.read_text(encoding="utf-8") != skill_body:
-                state += " (+skill)"
-                if not dry_run:
-                    skill.write_text(skill_body, encoding="utf-8")
-        report.append(f"{name}: {state}")
+        states: list[str] = []
+        if "claude" in agents:
+            state = _install(CLAUDE_DIR / "commands" / f"{name}.md", body, dry_run)
+            skill = CLAUDE_DIR / "skills" / name / "SKILL.md"
+            if skill.exists():  # same body, with the `name:` line skills require
+                mirrored = body.replace("---\n", f"---\nname: {name}\n", 1)
+                if _install(skill, mirrored, dry_run) != "unchanged":
+                    state += " (+skill)"
+            states.append(f"claude {state}")
+        if "gemini" in agents:
+            try:
+                toml = port_gemini(name, body)
+            except ValueError as exc:
+                states.append(f"gemini SKIPPED ({exc})")
+            else:
+                target = GEMINI_DIR / "commands" / f"{name}.toml"
+                states.append(f"gemini {_install(target, toml, dry_run)}")
+        if "codex" in agents:
+            target = AGENTS_SKILLS_DIR / name / "SKILL.md"
+            states.append(f"codex {_install(target, port_codex(name, body), dry_run)}")
+        report.append(f"{name}: " + " · ".join(states))
     return report
 
 
@@ -615,7 +688,19 @@ def main(argv: Optional[list[str]] = None) -> int:
     ap.add_argument(
         "--init-kit", action="store_true", help="export a planning/ kit even where none exists"
     )
-    ap.add_argument("--no-commands", action="store_true", help="do not refresh ~/.claude/commands")
+    ap.add_argument(
+        "--no-commands", action="store_true", help="do not refresh the agents' command files"
+    )
+    ap.add_argument(
+        "--commands-only",
+        action="store_true",
+        help="refresh the agents' command files (Claude Code / Gemini CLI / Codex) and exit",
+    )
+    ap.add_argument(
+        "--agents",
+        metavar="LIST",
+        help="comma-separated subset of claude,gemini,codex to install commands for (default: detect)",
+    )
     ap.add_argument("--dry-run", action="store_true", help="show the plan; change nothing")
     ap.add_argument(
         "--install-schedule",
@@ -632,6 +717,19 @@ def main(argv: Optional[list[str]] = None) -> int:
         log_fh = _open_log()
         sys.stdout = _Tee(sys.__stdout__, log_fh)
         sys.stderr = _Tee(sys.__stderr__, log_fh)
+
+    agents: Optional[list[str]] = None
+    if args.agents:
+        agents = [a.strip() for a in args.agents.split(",") if a.strip()]
+        unknown = [a for a in agents if a not in AGENTS]
+        if unknown:
+            raise SystemExit(f"--agents: unknown {unknown}; choose from {', '.join(AGENTS)}")
+
+    if args.commands_only:
+        print("Agent command files:")
+        for line in refresh_commands(dry_run=args.dry_run, agents=agents):
+            print(f"  {line}")
+        return 0
 
     if args.uninstall_schedule:
         print("Schedule:", uninstall_schedule(dry_run=args.dry_run))
@@ -680,8 +778,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     print("\n" + _table(results))
 
     if not args.no_commands:
-        print("\nClaude Code commands (~/.claude/commands):")
-        for line in refresh_commands(dry_run=args.dry_run):
+        print("\nAgent command files:")
+        for line in refresh_commands(dry_run=args.dry_run, agents=agents):
             print(f"  {line}")
 
     if args.install_schedule:

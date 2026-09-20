@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`/roadmap-*` and `/roadmodel-update` for Gemini CLI and Codex.** The
+  updater now generates the four commands from `docs/claude-commands/*.md`
+  at refresh time — Gemini CLI custom commands (`~/.gemini/commands/
+  <name>.toml`, `$ARGUMENTS` → `{{args}}`, literal TOML string so Windows
+  paths survive, injection syntax refused) and Codex skills
+  (`~/.agents/skills/<name>/SKILL.md`, invoked as `$roadmap-step 1 3`; Codex
+  custom prompts are deprecated upstream) — and installs them wherever the
+  tool's config dir exists (`--agents` to force, `--commands-only` to refresh
+  commands without a project registry). `/roadmap-step`'s settings gate is
+  now surface-agnostic: it compares the step's Platform to the surface it is
+  running on and names that surface's model/effort controls.
+  `docs/planning-workflow.md` "Other agents" documents it.
+
 - **`/roadmodel-update` + `scripts/update_projects.py` — upgrade roadmodel in
   every project at once.** The script (stdlib only, Python 3.9+, fetched fresh
   from the repo by the command) reads `~/.config/roadmodel/projects.txt`,
