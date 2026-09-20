@@ -33,6 +33,7 @@ never goes stale.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import re
@@ -54,7 +55,7 @@ CLAUDE_DIR = Path.home() / ".claude"
 GEMINI_DIR = Path.home() / ".gemini"  # Gemini CLI: commands/<name>.toml -> /<name>
 CODEX_DIR = Path.home() / ".codex"  # presence marks a Codex install
 AGENTS_SKILLS_DIR = Path.home() / ".agents" / "skills"  # Codex skills: <name>/SKILL.md -> $<name>
-CODEX_LEGACY_SKILLS_DIR = CODEX_DIR / "skills"  # older Codex builds read skills from CODEX_HOME
+CODEX_LEGACY_SKILLS_DIR = CODEX_DIR / "skills"  # pre-.agents location; current builds read BOTH
 AGENTS = ("claude", "gemini", "codex")
 VENV_DIRS = (".venv", "venv", "env")
 WINDOWS = os.name == "nt"
@@ -432,6 +433,12 @@ def port_codex(name: str, body: str) -> str:
     return f'---\nname: {name}\ndescription: "{desc}"\n---\n{text.rstrip()}\n'
 
 
+def _is_our_skill(text: str, name: str) -> bool:
+    """True for a SKILL.md this updater generated (any version) for ``name``."""
+    head = text[:400]
+    return head.startswith(f"---\nname: {name}\n") and "(usage: $" in head
+
+
 def _install(target: Path, content: str, dry_run: bool) -> str:
     if target.exists() and target.read_text(encoding="utf-8") == content:
         return "unchanged"
@@ -487,12 +494,16 @@ def refresh_commands(dry_run: bool = False, agents: Optional[list[str]] = None) 
         if "codex" in agents:
             skill_md = port_codex(name, body)
             state = _install(AGENTS_SKILLS_DIR / name / "SKILL.md", skill_md, dry_run)
-            # Older Codex builds read ~/.codex/skills; keep both in step while
-            # the documented ~/.agents/skills location finishes rolling out.
-            if CODEX_DIR.is_dir():
-                legacy = _install(CODEX_LEGACY_SKILLS_DIR / name / "SKILL.md", skill_md, dry_run)
-                if legacy != state:
-                    state += f" (legacy dir {legacy})"
+            # Current Codex reads ~/.codex/skills as well, so a copy there
+            # lists every skill twice. Remove OUR copy only (content-checked);
+            # a user-authored skill with the same name is left alone.
+            legacy = CODEX_LEGACY_SKILLS_DIR / name / "SKILL.md"
+            if legacy.exists() and _is_our_skill(legacy.read_text(encoding="utf-8"), name):
+                state += " (legacy copy removed)"
+                if not dry_run:
+                    legacy.unlink()
+                    with contextlib.suppress(OSError):
+                        legacy.parent.rmdir()
             states.append(f"codex {state}")
         report.append(f"{name}: " + " · ".join(states))
     return report

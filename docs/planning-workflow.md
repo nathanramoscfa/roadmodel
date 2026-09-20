@@ -217,7 +217,7 @@ installs them wherever it finds the tool:
 | Agent      | Detected by     | Installed as                         | Invoke as              |
 | ---------- | --------------- | ------------------------------------ | ---------------------- |
 | Gemini CLI | `~/.gemini/`    | `~/.gemini/commands/<name>.toml`     | `/roadmap-step 1 3`    |
-| Codex      | `~/.codex/`     | `~/.agents/skills/<name>/SKILL.md` (+ `~/.codex/skills/`, read by older builds) | `$roadmap-step 1 3` |
+| Codex      | `~/.codex/`     | `~/.agents/skills/<name>/SKILL.md`   | `$roadmap-step 1 3`    |
 
 `--agents gemini,codex` forces a set. The commands behave the same:
 `/roadmap-step` checks the step's Platform against the surface it is
