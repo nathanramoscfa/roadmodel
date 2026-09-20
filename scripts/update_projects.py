@@ -525,7 +525,7 @@ def install_schedule(when: str, dry_run: bool = False) -> str:
 
     line = cron_line(python, script, hour, minute)
     if dry_run:
-        return f"crontab entry — {line}"
+        return f"crontab entry — {stamp}\n  {line}"
     cp = _sys(["crontab", "-"], stdin="\n".join(_crontab_without_ours() + [line]) + "\n")
     if cp.returncode != 0:
         raise SystemExit(f"crontab failed: {cp.stderr.strip()}")
