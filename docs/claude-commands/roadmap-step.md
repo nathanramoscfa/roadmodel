@@ -56,15 +56,18 @@ its PR merged. Check it before touching anything:
 ## 3. Settings gate — before any work
 
 Print one line: `Step {{STEP}} requires: Model <M> · Platform <P> ·
-Effort <E> · Thinking <T>. This session: <your own model>.`
+<the dials the table carries, e.g. Effort <E> · Thinking <T>, or
+Intelligence <I>>. This session: <your own model> on <this surface>.`
 
-- If Platform is not Claude Code, stop: this step is meant to run on
+- If Platform is not the surface you are running on (Claude Code,
+  Codex, Gemini CLI, Cursor, …), stop: this step is meant to run on
   another surface; tell the operator which.
 - If the step's Model is not the model you are running as, stop and
-  tell the operator to run `/model <M>` and `/effort <E>` (and set
-  thinking to <T>), then re-run `/roadmap-step $ARGUMENTS`. Do not
-  start the step on the wrong model.
-- You cannot verify Effort or Thinking yourself; the printed line is
+  tell the operator how to switch on this surface (Claude Code:
+  `/model <M>` then `/effort <E>`; Codex and Gemini CLI: their `/model`
+  picker and reasoning setting), then re-run this command with the
+  same arguments. Do not start the step on the wrong model.
+- You cannot verify the reasoning dials yourself; the printed line is
   the operator's cue to check them. Continue.
 
 ## 4. Lifecycle currency
