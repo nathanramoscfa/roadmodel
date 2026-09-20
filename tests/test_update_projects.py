@@ -309,6 +309,7 @@ def test_refresh_installs_per_detected_agent(
     monkeypatch.setattr(up, "GEMINI_DIR", home / ".gemini")
     monkeypatch.setattr(up, "CODEX_DIR", home / ".codex")
     monkeypatch.setattr(up, "AGENTS_SKILLS_DIR", home / ".agents" / "skills")
+    monkeypatch.setattr(up, "CODEX_LEGACY_SKILLS_DIR", home / ".codex" / "skills")
     monkeypatch.setattr(up, "COMMANDS", ("roadmap-step",))
     body = (COMMANDS_DIR / "roadmap-step.md").read_text()
 
@@ -340,6 +341,8 @@ def test_refresh_installs_per_detected_agent(
     assert "codex installed" in report[1]
     assert (home / ".gemini" / "commands" / "roadmap-step.toml").exists()
     assert (home / ".agents" / "skills" / "roadmap-step" / "SKILL.md").exists()
+    # ~/.codex exists -> the legacy skills dir is kept in step too.
+    assert (home / ".codex" / "skills" / "roadmap-step" / "SKILL.md").exists()
     # Second run: everything unchanged; dry-run never writes.
     assert all(
         s in up.refresh_commands()[1]
