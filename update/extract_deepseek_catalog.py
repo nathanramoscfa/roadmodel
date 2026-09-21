@@ -51,18 +51,41 @@ JURISDICTION = "cn"
 USER_AGENT = "roadmodel-updater/1.0 (+https://github.com/nathanramoscfa/roadmodel)"
 FETCH_TIMEOUT = 30
 
-# Canonical model ids this source has seen (2026-06-11). A pricing-table model
-# outside this set is FLAGGED in ``unexpected_slugs`` (a new model is reviewed
-# editorially before it becomes recommendable — it needs tier ratings), never
-# silently treated as canonical. Mirrors the reasoning extractor's guard.
-KNOWN_MODELS = frozenset({"deepseek-v4-flash", "deepseek-v4-pro"})
+# Canonical model ids this source has seen (2026-06-11; deepseek-flash added
+# 2026-09-21). A pricing-table model outside this set is FLAGGED in
+# ``unexpected_slugs`` (a new model is reviewed editorially before it becomes
+# recommendable — it needs tier ratings), never silently treated as canonical.
+# Mirrors the reasoning extractor's guard. deepseek-v4-flash stays listed as
+# seen: DeepSeek retired it 2026-09-17 (the legacy name is served by
+# DeepSeek-V4.1-Flash, API name ``deepseek-flash``), so if it ever reappears in
+# the MODEL row it is not "new" — merge_catalog's proposed-additions path still
+# flags it because it is no longer in <model-options>.
+KNOWN_MODELS = frozenset({"deepseek-flash", "deepseek-v4-flash", "deepseek-v4-pro"})
 
 # Slug (as printed in the pricing table MODEL row) -> canonical selector id.
 # Committed + auditable per Phase 4.6 refinement 5a; identity today.
 SLUG_TO_ID = {
+    "deepseek-flash": "deepseek-flash",
     "deepseek-v4-flash": "deepseek-v4-flash",
     "deepseek-v4-pro": "deepseek-v4-pro",
 }
+
+# DeepSeek bills two rates since 2026-09: PEAK (01:00-04:00 and 06:00-10:00 UTC,
+# Monday-Friday, excluding Chinese public holidays) and OFF-PEAK (every other
+# hour, i.e. ~79% of the week and all US/EU working hours) at half the peak
+# rate. The catalog's listed price is the OFF-PEAK rate — the rate the
+# catalog's audience actually pays — chosen deliberately here (not by table
+# row order) and recorded in the snapshot as ``price_basis`` with the peak
+# figures kept alongside, because aggregators (e.g. OpenRouter) list the PEAK
+# rate and the two must not be compared as if they were the same number.
+PRICE_BASIS_SPLIT = "off-peak"
+PRICE_BASIS_FLAT = "flat"
+PRICE_BASIS_NOTE = (
+    "Listed prices are DeepSeek's OFF-PEAK rate (all hours except 01:00-04:00 and "
+    "06:00-10:00 UTC Mon-Fri, ex Chinese public holidays); PEAK is 2x and is "
+    "carried in the peak_* fields. Aggregators such as OpenRouter list the PEAK "
+    "rate."
+)
 
 # Literal server-rendered substrings that MUST survive on the page (verified in
 # the raw HTML 2026-06-11). Their absence means a restructure -> fail loud.
@@ -147,6 +170,46 @@ def _row_by_label(rows: list[Tag], *needles: str) -> list[str] | None:
     return None
 
 
+_PEAK_TAGS = ("off-peak", "peak")
+
+
+def _price_rows(
+    rows: list[Tag], m: int, *needles: str
+) -> tuple[list[str] | None, list[str] | None, str | None]:
+    """Per-model ``$`` cells of a labelled price row: ``(listed, peak, basis)``.
+
+    Since 2026-09 the DeepSeek table splits each price row into an ``OFF-PEAK``
+    sub-row (carrying the label cell, ``rowspan=2``) and a ``PEAK`` sub-row
+    directly beneath it with no label. The listed price is the OFF-PEAK rate by
+    DESIGN (see ``PRICE_BASIS_NOTE``) — selected by its tag, never by row order
+    — and the PEAK rate is returned alongside. A row with neither tag is the
+    older single-rate layout: ``(values, None, None)``. A split row whose PEAK
+    sub-row is missing or unparsable fails loud (a restructure).
+    """
+    for idx, row in enumerate(rows):
+        cells = _row_cells(row)
+        joined = " ".join(cells).lower()
+        if not (cells and all(n.lower() in joined for n in needles)):
+            continue
+        tagged = {t for t in _PEAK_TAGS if any(c.strip().lower() == t for c in cells)}
+        if not tagged:
+            return _per_model_values(cells, _DOLLAR_RE, m), None, None
+        sibling = _row_cells(rows[idx + 1]) if idx + 1 < len(rows) else []
+        sibling_tags = {t for t in _PEAK_TAGS if any(c.strip().lower() == t for c in sibling)}
+        by_tag: dict[str, list[str] | None] = {}
+        for tag_set, row_cells in ((tagged, cells), (sibling_tags, sibling)):
+            for tag in tag_set:
+                by_tag[tag] = _per_model_values(row_cells, _DOLLAR_RE, m)
+        listed, peak = by_tag.get("off-peak"), by_tag.get("peak")
+        if listed is None or peak is None:
+            raise ExtractError(
+                f"price row {needles!r} is split into peak/off-peak sub-rows but one of "
+                f"them is missing or unparsable (found {sorted(by_tag)})"
+            )
+        return listed, peak, PRICE_BASIS_SPLIT
+    return None, None, None
+
+
 def _per_model_values(
     cells: list[str] | None, pattern: re.Pattern[str], m: int
 ) -> list[str] | None:
@@ -185,9 +248,12 @@ def parse_pricing_table(soup: BeautifulSoup) -> list[dict[str, object]]:
         raise ExtractError("pricing MODEL row has no model columns")
     m = len(slugs)
 
-    inputs = _per_model_values(_row_by_label(rows, "input", "cache miss"), _DOLLAR_RE, m)
-    outputs = _per_model_values(_row_by_label(rows, "output", "tokens"), _DOLLAR_RE, m)
-    cache_hits = _per_model_values(_row_by_label(rows, "input", "cache hit"), _DOLLAR_RE, m)
+    inputs, peak_inputs, basis_in = _price_rows(rows, m, "input", "cache miss")
+    outputs, peak_outputs, basis_out = _price_rows(rows, m, "output", "tokens")
+    cache_hits, peak_cache_hits, basis_cache = _price_rows(rows, m, "input", "cache hit")
+    bases = {b for b in (basis_in, basis_out, basis_cache) if b is not None}
+    if len(bases) > 1:
+        raise ExtractError(f"pricing rows disagree on peak/off-peak layout: {sorted(bases)}")
     contexts = _per_model_values(_row_by_label(rows, "context length"), _TOKENS_RE, m)
     max_outs = _per_model_values(_row_by_label(rows, "max output"), _TOKENS_RE, m)
     version_row = _row_by_label(rows, "model version")
@@ -212,11 +278,25 @@ def parse_pricing_table(soup: BeautifulSoup) -> list[dict[str, object]]:
                 "input_price_per_1m": in_price,
                 "output_price_per_1m": out_price,
                 "cache_read_per_1m": _dollars(cache_hits[i]) if cache_hits else None,
+                # PEAK-rate counterparts of the three listed (off-peak) prices;
+                # None when the page shows a single flat rate.
+                "peak_input_price_per_1m": _dollars(peak_inputs[i]) if peak_inputs else None,
+                "peak_output_price_per_1m": _dollars(peak_outputs[i]) if peak_outputs else None,
+                "peak_cache_read_per_1m": (
+                    _dollars(peak_cache_hits[i]) if peak_cache_hits else None
+                ),
                 "context_tokens": _tokens(contexts[i]) if contexts else None,
                 "max_output_tokens": _tokens(max_outs[i]) if max_outs else None,
             }
         )
     return models
+
+
+def price_basis(models: list[dict[str, object]]) -> str:
+    """``off-peak`` when the page splits rates (peak figures captured), else ``flat``."""
+    if any(m.get("peak_output_price_per_1m") is not None for m in models):
+        return PRICE_BASIS_SPLIT
+    return PRICE_BASIS_FLAT
 
 
 def canonical_facts(models: list[dict[str, object]]) -> str:
@@ -261,6 +341,9 @@ def build_snapshot(html: str, *, source_url: str) -> dict[str, object]:
         # (on Cursor's page) whose elements stay Cursor-maintained and are gated
         # only on price (G4).
         "overlay_mode": "whole-element",
+        # Which of DeepSeek's two rates the listed prices are (see PRICE_BASIS_NOTE).
+        "price_basis": price_basis(models),
+        "price_basis_note": PRICE_BASIS_NOTE if price_basis(models) == PRICE_BASIS_SPLIT else None,
         "models": models,
         "slug_to_id": dict(sorted(SLUG_TO_ID.items())),
         "unexpected_slugs": unexpected,
