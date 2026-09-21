@@ -46,6 +46,9 @@ export interface ModelRow {
   // The uniform Artificial Analysis figures (lib/benchmark-grid.ts), or null
   // when AA has not measured the model at all.
   bench: BenchRow | null;
+  // On the cost/quality Pareto frontier: no catalog model is both cheaper
+  // (output price) and higher on the AA Index. See paretoFrontier().
+  value_frontier: boolean;
 }
 
 export interface FieldDef {
@@ -129,6 +132,7 @@ export type FieldKey =
   | "cache_read_per_1m"
   | "tier_cost"
   | "aa_index"
+  | "value"
   | "benchmarks";
 
 export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
@@ -181,6 +185,13 @@ export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
     fullName: "Artificial Analysis Intelligence Index",
     definition:
       "The one published composite number: Artificial Analysis's index over ten evaluations (v4.3: Humanity's Last Exam, GPQA Diamond, SciCode, Terminal-Bench, τ²-bench, AA-LCR, IFBench, AA-Omniscience, …), independently measured on a 0–100 scale. The closest thing to a single numeric rating — use it to separate models that share a letter. '—' means AA has not measured the model.",
+    url: "https://artificialanalysis.ai/",
+  },
+  value: {
+    label: "Value",
+    fullName: "Best value (cost/quality frontier)",
+    definition:
+      "Marked when no model in the catalog is both cheaper (output price) and higher on the AA Intelligence Index — the Pareto frontier of cost vs. quality, with no weights to argue about. Sorting puts frontier models first, by index. Unmarked means a cheaper model scores at least as high.",
     url: "https://artificialanalysis.ai/",
   },
   benchmarks: {
