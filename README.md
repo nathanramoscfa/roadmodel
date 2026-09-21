@@ -319,9 +319,12 @@ instead of being reported as `Off` or `N/A`.
 
 ## Benchmarks & ratings
 
-Each model carries a per-category capability rating on an **S → D** scale, and the
-recommender grounds its rationale in public benchmarks (SWE-bench Verified, τ²-bench,
-Terminal-Bench, Humanity's Last Exam, and more). See
+Each model carries a per-category capability rating on an **S → D** scale — a rating
+is a class several models can share, and the `/models` catalog shows each category's
+headline benchmark figure plus the Artificial Analysis Intelligence Index next to the
+letters so models within a class can be told apart — and the recommender grounds its
+rationale in public benchmarks (SWE-bench Verified, τ²-bench, Terminal-Bench,
+Humanity's Last Exam, and more). See
 [**docs/benchmarks-and-ratings.md**](docs/benchmarks-and-ratings.md) for what the
 scale means and a linked index of every benchmark the recommender cites — in the web
 app, each benchmark term in a recommendation's rationale links straight to its source.

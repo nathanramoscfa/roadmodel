@@ -10,10 +10,12 @@ import {
   CATEGORY_ORDER,
   modelProvider,
   type Category,
+  type CellScore,
   type CostTier,
   type ModelRow,
   type Rating,
 } from "@/lib/catalog-fields";
+import { scoresFor } from "@/lib/benchmark-scores";
 import { BENCHMARKS } from "@/lib/glossary";
 
 interface RawModel {
@@ -33,19 +35,30 @@ interface RawModel {
 const MODELS = (catalog as { models?: RawModel[] }).models ?? [];
 
 export function getModelRows(): ModelRow[] {
-  return MODELS.map((m) => ({
-    id: m.id,
-    name: m.name,
-    input_price_per_1m: m.input_price_per_1m,
-    output_price_per_1m: m.output_price_per_1m,
-    cache_read_per_1m: m.cache_read_per_1m ?? null,
-    tier_cost: m.tier_cost as CostTier,
-    tiers: m.tiers as Record<Category, Rating>,
-    jurisdiction: m.jurisdiction,
-    headline_benchmarks: m.headline_benchmarks ?? "",
-    pricing_notes: m.pricing_notes ?? "",
-    best_for: m.best_for ?? "",
-  }));
+  return MODELS.map((m) => {
+    const prose = m.headline_benchmarks ?? "";
+    const { aaIndex, byCategory } = scoresFor(prose);
+    return {
+      id: m.id,
+      name: m.name,
+      input_price_per_1m: m.input_price_per_1m,
+      output_price_per_1m: m.output_price_per_1m,
+      cache_read_per_1m: m.cache_read_per_1m ?? null,
+      tier_cost: m.tier_cost as CostTier,
+      tiers: m.tiers as Record<Category, Rating>,
+      jurisdiction: m.jurisdiction,
+      headline_benchmarks: prose,
+      pricing_notes: m.pricing_notes ?? "",
+      best_for: m.best_for ?? "",
+      aa_index: aaIndex,
+      scores: Object.fromEntries(
+        Object.entries(byCategory).map(([cat, s]) => [
+          cat,
+          { term: s.term, label: s.label, short: s.short, value: s.value, display: s.display, url: s.url },
+        ]),
+      ) as Partial<Record<Category, CellScore>>,
+    };
+  });
 }
 
 // "2026-06-21T12:53:54Z" → "2026-06-21 12:53 UTC". Falls back to the raw value.

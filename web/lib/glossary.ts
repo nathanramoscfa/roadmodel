@@ -31,7 +31,11 @@ export interface RatingRow {
   meaning: string;
 }
 export const RATING_SCALE: RatingRow[] = [
-  { rating: "S", meaning: "Top-1 or top-2 globally in this category." },
+  {
+    rating: "S",
+    meaning:
+      "Frontier-class: at or within reach of the best in this category on the cited benchmarks — a class several models can share, so compare within it by the benchmark figures.",
+  },
   { rating: "A", meaning: "Strong, reliable, near-frontier." },
   { rating: "B", meaning: "Competent." },
   { rating: "C", meaning: "Limited — usable only for trivial work." },

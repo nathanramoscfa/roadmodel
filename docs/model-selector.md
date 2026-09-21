@@ -1249,7 +1249,9 @@ as primary; the other becomes the secondary category for tie-breaking.
     sources above, and a free-text best-for description.
 
     Tier ratings:
-    - S — top-1 or top-2 globally in this category
+    - S — frontier-class: at or within reach of the best in this category
+      on the benchmarks in `<benchmark-sources>`; a class several models
+      share, never a single winner
     - A — strong, reliable, near-frontier
     - B — competent for the category
     - C — limited; usable only for trivial work in the category
@@ -3131,7 +3133,9 @@ as primary; the other becomes the secondary category for tie-breaking.
     sources above, and a free-text best-for description.
 
     Tier ratings:
-    - S — top-1 or top-2 globally in this category
+    - S — frontier-class: at or within reach of the best in this category
+      on the benchmarks in `<benchmark-sources>`; a class several models
+      share, never a single winner
     - A — strong, reliable, near-frontier
     - B — competent for the category
     - C — limited; usable only for trivial work in the category
@@ -4716,7 +4720,9 @@ as primary; the other becomes the secondary category for tie-breaking.
     sources above, and a free-text best-for description.
 
     Tier ratings:
-    - S — top-1 or top-2 globally in this category
+    - S — frontier-class: at or within reach of the best in this category
+      on the benchmarks in `<benchmark-sources>`; a class several models
+      share, never a single winner
     - A — strong, reliable, near-frontier
     - B — competent for the category
     - C — limited; usable only for trivial work in the category
@@ -6527,7 +6533,9 @@ as primary; the other becomes the secondary category for tie-breaking.
     sources above, and a free-text best-for description.
 
     Tier ratings:
-    - S — top-1 or top-2 globally in this category
+    - S — frontier-class: at or within reach of the best in this category
+      on the benchmarks in `<benchmark-sources>`; a class several models
+      share, never a single winner
     - A — strong, reliable, near-frontier
     - B — competent for the category
     - C — limited; usable only for trivial work in the category
