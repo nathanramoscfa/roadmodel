@@ -213,11 +213,11 @@ export function jurisdictionDef(code: string): string {
 export const RATING_RANK: Record<Rating, number> = { S: 5, A: 4, B: 3, C: 2, D: 1 };
 
 export const RATING_COLORS: Record<Rating, string> = {
-  S: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
-  A: "bg-sky-100 text-sky-800 dark:bg-sky-500/15 dark:text-sky-300",
+  S: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/35 dark:text-emerald-300",
+  A: "bg-sky-100 text-sky-800 dark:bg-sky-500/35 dark:text-sky-300",
   B: "bg-brand-slate-100 text-brand-slate-700 dark:bg-brand-slate-700 dark:text-brand-slate-200",
-  C: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-  D: "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+  C: "bg-amber-100 text-amber-800 dark:bg-amber-500/35 dark:text-amber-300",
+  D: "bg-rose-100 text-rose-700 dark:bg-rose-500/35 dark:text-rose-300",
 };
 
 export const COST_TIER_RANK: Record<CostTier, number> = {
@@ -229,9 +229,9 @@ export const COST_TIER_RANK: Record<CostTier, number> = {
 
 export const COST_TIER_COLORS: Record<CostTier, string> = {
   low: "bg-brand-slate-100 text-brand-slate-700 dark:bg-brand-slate-700 dark:text-brand-slate-200",
-  medium: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-  high: "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300",
-  "very-high": "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300",
+  medium: "bg-amber-100 text-amber-800 dark:bg-amber-500/35 dark:text-amber-300",
+  high: "bg-orange-100 text-orange-800 dark:bg-orange-500/35 dark:text-orange-300",
+  "very-high": "bg-rose-100 text-rose-700 dark:bg-rose-500/35 dark:text-rose-300",
 };
 
 // Provider → documentation. modelProvider() infers the provider from the model id
