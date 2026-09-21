@@ -9,6 +9,8 @@ import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
+import { scoresFor } from "../lib/benchmark-scores";
+
 // Expected row counts are DERIVED from the catalog the page renders, never
 // hardcoded. The catalog grows whenever the daily refresh cron picks up a new
 // upstream model, and a hardcoded count turns every one of those cron PRs red
@@ -92,4 +94,98 @@ test("the benchmark view linkifies scores to their source leaderboards", async (
   const aa = page.locator('a[href="https://artificialanalysis.ai/"]').first();
   await expect(aa).toBeVisible();
   await expect(aa).toHaveAttribute("target", "_blank");
+});
+
+// --- Numbers next to letters (the honest numeric scale) ---------------------
+
+interface ScoredModel extends CatalogModel {
+  headline_benchmarks?: string;
+}
+const scored = catalog.models as ScoredModel[];
+// A row the cron prices with an AA Index, and one with no figure at all (the
+// same extractor the page uses decides, so the pick follows the catalog).
+const WITH_AA = scored.find((m) => /AA Intelligence Index \d/.test(m.headline_benchmarks ?? ""))!;
+const WITHOUT_ANY = scored.find((m) => {
+  const s = scoresFor(m.headline_benchmarks ?? "");
+  return s.aaIndex === null && s.all.length === 0;
+})!;
+const AA_VALUE = /Intelligence Index (\d+(?:\.\d+)?)/.exec(WITH_AA.headline_benchmarks ?? "")![1];
+
+test("the AA Index column shows the composite where measured and a dash where not", async ({ page }) => {
+  await page.goto("/models");
+
+  const withRow = page.getByTestId("model-row").filter({ hasText: WITH_AA.name }).first();
+  await expect(withRow.getByTestId("aa-index")).toHaveText(AA_VALUE);
+  const withoutRow = page.getByTestId("model-row").filter({ hasText: WITHOUT_ANY.name }).first();
+  await expect(withoutRow.getByTestId("aa-index")).toHaveText("—");
+
+  // Sortable: the header puts the highest index first.
+  await page.getByRole("button", { name: /AA Index/ }).click();
+  const values = scored
+    .map((m) => /Intelligence Index (\d+(?:\.\d+)?)/.exec(m.headline_benchmarks ?? ""))
+    .filter((m): m is RegExpExecArray => m !== null)
+    .map((m) => Number(m[1]));
+  const top = Math.max(...values);
+  await expect(page.getByTestId("model-row").first().getByTestId("aa-index")).toHaveText(String(top));
+});
+
+test("rating cells carry the category's headline benchmark figure, labelled as cited", async ({ page }) => {
+  await page.goto("/models");
+
+  // A row citing Terminal-Bench 2.1 shows the figure with its version label —
+  // "Terminal-Bench 2.1" and "Terminal-Bench Hard" are different tests.
+  const tb = scored.find((m) => /Terminal-Bench 2\.1 (\d+(?:\.\d+)?)/.test(m.headline_benchmarks ?? ""))!;
+  const tbScore = /Terminal-Bench 2\.1 (\d+(?:\.\d+)?)/.exec(tb.headline_benchmarks ?? "")![1];
+  const row = page.getByTestId("model-row").filter({ hasText: tb.name }).first();
+  const cell = row.getByTestId("cell-score").filter({ hasText: "TB 2.1" });
+  await expect(cell).toHaveCount(1);
+  await expect(cell).toContainText(tbScore);
+  await expect(cell).toHaveAttribute("title", /Terminal-Bench 2\.1 .* — source: https:\/\/www\.tbench\.ai\//);
+
+  // A row with no figures shows letters only.
+  const bare = page.getByTestId("model-row").filter({ hasText: WITHOUT_ANY.name }).first();
+  await expect(bare.getByTestId("cell-score")).toHaveCount(0);
+});
+
+test("sorting a category orders by letter, then figure, then AA Index", async ({ page }) => {
+  await page.goto("/models");
+  await page.getByRole("button", { name: /^Knowledge/ }).click();
+
+  // Column order: chevron, model, juris, input, output, cache, cost tier, AA
+  // index, then the seven categories — knowledge is the sixth category.
+  const KNOWLEDGE_TD = 8 + 5;
+  const rows = page.getByTestId("model-row");
+  const count = await rows.count();
+  const seen: { rating: string; figure: { label: string; value: number } | null; aa: number | null }[] = [];
+  for (let i = 0; i < count; i += 1) {
+    const r = rows.nth(i);
+    const cell = r.locator("td").nth(KNOWLEDGE_TD);
+    const rating = (await cell.locator("span").first().innerText()).trim();
+    const score = cell.getByTestId("cell-score");
+    let figure: { label: string; value: number } | null = null;
+    if ((await score.count()) === 1) {
+      const title = (await score.getAttribute("title")) ?? "";
+      // "<label> <display> — source: <url>"
+      const m = /^(.*) (\S+) — source:/.exec(title);
+      if (m) figure = { label: m[1], value: Number.parseFloat(m[2]) };
+    }
+    const aaText = (await r.getByTestId("aa-index").innerText()).trim();
+    seen.push({ rating, figure, aa: aaText === "—" ? null : Number(aaText) });
+  }
+  const order = "SABCD";
+  for (let i = 1; i < seen.length; i += 1) {
+    const prev = seen[i - 1];
+    const cur = seen[i];
+    expect(order.indexOf(cur.rating)).toBeGreaterThanOrEqual(order.indexOf(prev.rating));
+    if (cur.rating !== prev.rating) continue;
+    // Same letter: like-for-like figures are non-increasing; otherwise the AA
+    // Index is (rows without one sort last).
+    if (prev.figure && cur.figure && prev.figure.label === cur.figure.label) {
+      expect(cur.figure.value).toBeLessThanOrEqual(prev.figure.value);
+    } else if (prev.aa !== null && cur.aa !== null) {
+      expect(cur.aa).toBeLessThanOrEqual(prev.aa);
+    } else {
+      expect(prev.aa === null && cur.aa !== null).toBe(false);
+    }
+  }
 });

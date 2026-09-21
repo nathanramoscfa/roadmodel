@@ -5,6 +5,14 @@
 // (field name + definition + source via GlossaryTerm), per-cell hovertext, and
 // benchmark names auto-linkified through the glossary (segmentRationale). Pure
 // presentation — the server page passes the rows; no catalog import here.
+//
+// Numbers next to letters: the AA Index column carries the one published
+// composite score, and each rating cell shows the category's headline benchmark
+// figure (with the benchmark named, because "Terminal-Bench 2.1" and
+// "Terminal-Bench Hard" are different tests). Sorting a category orders by the
+// letter first, then by that figure — but only between rows citing the SAME
+// benchmark — then by AA Index, so a tie inside a letter resolves on evidence
+// rather than on catalog order.
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
@@ -39,6 +47,7 @@ type SortKey =
   | "output_price_per_1m"
   | "cache_read_per_1m"
   | "tier_cost"
+  | "aa_index"
   | Category;
 type SortDir = "asc" | "desc";
 type View = "ratings" | "benchmarks";
@@ -71,9 +80,32 @@ function valueFor(row: ModelRow, key: SortKey): number | string {
       return row.cache_read_per_1m ?? -1;
     case "tier_cost":
       return COST_TIER_RANK[row.tier_cost];
+    case "aa_index":
+      return row.aa_index ?? -1;
     default:
       return RATING_RANK[row.tiers[key]];
   }
+}
+
+// Within one letter of a category column: the category's benchmark figure when
+// both rows cite the same benchmark (higher first, in the sort direction), then
+// the AA Index (missing last), then the name. Returns 0 when nothing separates.
+function categoryTieBreak(a: ModelRow, b: ModelRow, cat: Category, dir: 1 | -1): number {
+  const sa = a.scores[cat];
+  const sb = b.scores[cat];
+  if (sa && sb && sa.label === sb.label && sa.value !== sb.value) {
+    return (sa.value < sb.value ? -1 : 1) * dir;
+  }
+  const aa = a.aa_index;
+  const ab = b.aa_index;
+  if (aa !== null && ab !== null && aa !== ab) return (aa < ab ? -1 : 1) * dir;
+  if (aa !== null && ab === null) return -1;
+  if (aa === null && ab !== null) return 1;
+  return 0;
+}
+
+function isCategory(key: SortKey): key is Category {
+  return (CATEGORY_ORDER as string[]).includes(key);
 }
 
 export function ModelCatalog({
@@ -115,6 +147,10 @@ export function ModelCatalog({
       const bv = valueFor(b, sortKey);
       if (av < bv) return -1 * dir;
       if (av > bv) return 1 * dir;
+      if (isCategory(sortKey)) {
+        const tie = categoryTieBreak(a, b, sortKey, dir);
+        if (tie !== 0) return tie;
+      }
       return a.name.localeCompare(b.name);
     });
   }, [models, search, juris, cost, sortKey, sortDir]);
@@ -133,7 +169,7 @@ export function ModelCatalog({
     });
   }
 
-  const leftColSpan = 6; // chevron + model + juris + input + output + cost
+  const leftColSpan = 7; // chevron + model + juris + input + output + cost + AA index
   const colSpan = leftColSpan + (view === "ratings" ? CATEGORY_ORDER.length : 1) + 1; // + cache
 
   return (
@@ -258,6 +294,13 @@ export function ModelCatalog({
                 align="right"
               />
               <SortHeader field="tier_cost" sortKey={sortKey} dir={sortDir} onSort={toggleSort} />
+              <SortHeader
+                field="aa_index"
+                sortKey={sortKey}
+                dir={sortDir}
+                onSort={toggleSort}
+                align="right"
+              />
               {view === "ratings" ? (
                 CATEGORY_ORDER.map((cat) => (
                   <CategoryHeader
@@ -355,17 +398,47 @@ export function ModelCatalog({
                           </span>
                         </GlossaryTerm>
                       </td>
+                      <td
+                        data-testid="aa-index"
+                        className="whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums text-brand-slate-900 dark:text-brand-slate-50"
+                        title={
+                          m.aa_index === null
+                            ? "Not measured by Artificial Analysis"
+                            : `${FIELD_DEFS.aa_index.fullName}: ${m.aa_index}`
+                        }
+                      >
+                        {m.aa_index === null ? (
+                          <span className="text-brand-slate-400 dark:text-brand-slate-500">—</span>
+                        ) : (
+                          m.aa_index
+                        )}
+                      </td>
                       {view === "ratings" ? (
                         CATEGORY_ORDER.map((cat) => {
                           const r = m.tiers[cat];
+                          const score = m.scores[cat];
                           return (
-                            <td key={cat} className="px-2 py-2 text-center">
+                            <td key={cat} className="px-2 py-2 text-center align-top">
                               <span
                                 className={BADGE_CLASS + " " + RATING_COLORS[r]}
                                 title={`${CATEGORY_DEFS[cat].fullName}: ${r} — ${RATING_MEANING[r]}`}
                               >
                                 {r}
                               </span>
+                              {score && (
+                                <span
+                                  data-testid="cell-score"
+                                  className="mt-0.5 block whitespace-nowrap text-[10px] leading-tight tabular-nums text-brand-slate-500 dark:text-brand-slate-400"
+                                  title={`${score.label} ${score.display}${score.url ? ` — source: ${score.url}` : ""}`}
+                                >
+                                  {score.display}
+                                  {score.short && (
+                                    <span className="ml-0.5 text-brand-slate-400 dark:text-brand-slate-500">
+                                      {score.short}
+                                    </span>
+                                  )}
+                                </span>
+                              )}
                             </td>
                           );
                         })
@@ -406,8 +479,11 @@ export function ModelCatalog({
       </div>
 
       <p className="mt-3 text-xs text-brand-slate-400 dark:text-brand-slate-500">
-        Catalog snapshot {generatedAt}. Prices are USD per 1M tokens. Ratings and benchmarks are
-        curated by the project&rsquo;s daily automation; see the{" "}
+        Catalog snapshot {generatedAt}. Prices are USD per 1M tokens. A rating is a class, not a
+        rank within it &mdash; the small figure under a letter is that category&rsquo;s headline
+        benchmark score (named, since versions and subsets differ), and the AA Index column is
+        the one published composite; both are read from the same curated benchmark text. Ratings
+        and benchmarks are curated by the project&rsquo;s daily automation; see the{" "}
         <a href="/docs" className="text-brand-accent hover:underline">
           docs
         </a>{" "}

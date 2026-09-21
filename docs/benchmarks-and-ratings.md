@@ -17,7 +17,7 @@ genuine best), then A, B, C, D:
 
 | Rating | Meaning |
 |:------:|---------|
-| **S** | Top-1 or top-2 globally in this category. |
+| **S** | Frontier-class: at or within reach of the best in this category on the cited benchmarks — a class several models can share, so compare within it by the benchmark figures. |
 | **A** | Strong, reliable, near-frontier. |
 | **B** | Competent. |
 | **C** | Limited — usable only for trivial work. |

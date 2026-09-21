@@ -54,6 +54,15 @@ export function CatalogLegend() {
               </div>
             ))}
           </dl>
+          <p className="mt-3 text-xs text-brand-slate-500 dark:text-brand-slate-400">
+            The small figure under a rating is that category&rsquo;s headline benchmark score
+            (SWE-bench Verified for coding, Terminal-Bench / τ²-bench for agentic, HLE for
+            knowledge, LMArena Elo for planning, tokens/s for speed), labelled because versions
+            and subsets differ &mdash; compare only like with like. The{" "}
+            <strong>AA Index</strong> column is the Artificial Analysis Intelligence Index, the one
+            published composite number; &ldquo;&mdash;&rdquo; means not measured. Sorting a
+            category orders by letter, then by that figure, then by AA Index.
+          </p>
         </div>
 
         {/* Categories */}

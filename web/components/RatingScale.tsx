@@ -31,9 +31,16 @@ export function RatingScale({ id, compact = false }: { id?: string; compact?: bo
         multimodal, long-context, knowledge, and speed &mdash; on an{" "}
         <strong>S&nbsp;&rarr;&nbsp;D</strong> scale &mdash; <strong>S</strong> is the
         top &ldquo;tier-list&rdquo; rank, a step above A (the gaming convention for
-        the genuine best), then A, B, C, D. The selection algorithm sets a minimum
-        required rating from the prompt&rsquo;s complexity, then picks the
-        highest-rated available model that clears it.
+        the genuine best), then A, B, C, D. A rating is a <em>class</em>, not a
+        ranking within it: several frontier models share S in most categories. The
+        selection algorithm sets a minimum required rating from the prompt&rsquo;s
+        complexity, then picks the highest-rated available model that clears it &mdash;
+        ties inside a class resolve on the benchmark evidence, which is why the{" "}
+        <a href="/models" className="text-brand-accent hover:underline">
+          model catalog
+        </a>{" "}
+        shows each category&rsquo;s headline benchmark figure and the Artificial
+        Analysis Intelligence Index next to the letters.
       </p>
       <dl className="mt-4 divide-y divide-brand-slate-200 dark:divide-brand-slate-700 rounded-lg border border-brand-slate-200 dark:border-brand-slate-700">
         {RATING_SCALE.map((row) => (

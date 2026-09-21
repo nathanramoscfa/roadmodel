@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Numbers next to the letters on `/models`.** The catalog table gains an
+  **AA Index** column (the Artificial Analysis Intelligence Index — the one
+  published composite number, sortable, `—` where AA has not measured the
+  model) and shows each category's headline benchmark figure under its S→D
+  letter, labelled as cited (`89.1 TB 2.1` vs `62.9 TB Hard`, `1465 Elo`,
+  `~500 tok/s`) because versions and subsets differ. Figures are read from the
+  curated `headline_benchmarks` text by `web/lib/benchmark-scores.ts` (pure,
+  tested against every prose shape the cron writes; `%` only where the prose
+  has it) using the same benchmark→category mapping the cron's tier-update
+  rule uses. Sorting a category now orders by letter, then by like-for-like
+  figure, then by AA Index, so the eleven S-tier coders no longer sit in
+  catalog order.
+
+### Changed
+
+- **S is defined honestly.** The rating scale's single source
+  (`web/lib/glossary.ts`, mirrored in `docs/model-selector.txt`,
+  `docs/benchmarks-and-ratings.md` and `update/prompt.md`) defined S as
+  "top-1 or top-2 globally" while 11 coding, 12 agentic and 13 speed models
+  carried it. S now reads "frontier-class: at or within reach of the best in
+  this category on the cited benchmarks — a class several models can share";
+  the selector's S-tier floors and the letters themselves are unchanged. The
+  catalog cron gains a tier-inflation guard: a promotion into S needs a result
+  within 5 points of the category's current best on the same benchmark, and a
+  category with more than 8 S-tier models emits a
+  `tier inflation` warning for editorial review (never an automated demotion).
+
 - **`ollama` and `openrouter` access methods.** The catalog can now
   recommend two access classes it could not express: `Ollama (local)` —
   open-weight models pulled onto the operator's own hardware — and the

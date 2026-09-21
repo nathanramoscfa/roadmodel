@@ -13,7 +13,7 @@ test("detects an S-tier mention with its definition", () => {
   );
   expect(term?.term).toBe("S-tier");
   expect(term?.text).toBe("S-tier");
-  expect(term?.definition).toMatch(/Top-1 or top-2/);
+  expect(term?.definition).toMatch(/Frontier-class/);
 });
 
 test("prefers the longest benchmark match", () => {

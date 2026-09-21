@@ -235,7 +235,7 @@ test("renders the rationale as readable lines with glossary popovers (#270, #269
   const tooltips = why.locator('[role="tooltip"]');
   await expect(tooltips).toHaveCount(2);
   await expect(
-    tooltips.filter({ hasText: "Top-1 or top-2 globally" }),
+    tooltips.filter({ hasText: "Frontier-class" }),
   ).toHaveCount(1);
   await expect(
     tooltips.filter({ hasText: "gold standard for software-engineering" }),
