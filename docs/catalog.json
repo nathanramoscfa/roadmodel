@@ -1,15 +1,15 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-21T03:47:53Z",
+  "generated_at_utc": "2026-09-21T16:20:16Z",
   "source_doc_sha256": {
-    "model-selector.txt": "20864178ae24b7daa3080ec5c34bd134740b923b44091e07dd79ac5826756715",
+    "model-selector.txt": "d53cbd8a3db8fca0c9f648ce71f77ceb5693a96b3f554fbb1f5915dd9774ea92",
     "model-tier-cost-scale.md": "e22df028b1ee8dae87a520cad427e97b43a79a4918afa6a038c914f9d1e7cf54"
   },
   "models": [
     {
       "id": "claude-4.5-haiku",
-      "name": "Claude 4.5 Haiku",
+      "name": "Haiku 4.5",
       "input_price_per_1m": 1.0,
       "output_price_per_1m": 5.0,
       "cache_read_per_1m": 0.1,
@@ -72,7 +72,7 @@
     },
     {
       "id": "claude-opus-5",
-      "name": "Claude Opus 5",
+      "name": "Opus 5",
       "input_price_per_1m": 5.0,
       "output_price_per_1m": 25.0,
       "cache_read_per_1m": null,
@@ -93,7 +93,7 @@
     },
     {
       "id": "claude-sonnet-5",
-      "name": "Claude Sonnet 5",
+      "name": "Sonnet 5",
       "input_price_per_1m": 2.0,
       "output_price_per_1m": 10.0,
       "cache_read_per_1m": null,

@@ -22,21 +22,12 @@ export type Category =
 export type Rating = "S" | "A" | "B" | "C" | "D";
 export type CostTier = "low" | "medium" | "high" | "very-high";
 
-// A published leaderboard figure pulled from the row's headline_benchmarks prose
-// (see lib/benchmark-scores.ts). `label` names the benchmark AS CITED, variant
-// included, so two rows compare only when their labels match.
-export interface CellScore {
-  term: string;
-  label: string;
-  short: string;
-  value: number;
-  display: string;
-  url?: string;
-}
-
 export interface ModelRow {
   id: string;
   name: string;
+  // Provider display label ("Anthropic", "OpenAI", …) inferred from the id, or
+  // null when no provider matches — the Provider column and filter read this.
+  provider: string | null;
   input_price_per_1m: number;
   output_price_per_1m: number;
   cache_read_per_1m: number | null;
@@ -48,13 +39,13 @@ export interface ModelRow {
   best_for: string;
   // Artificial Analysis Intelligence Index, or null when AA has not measured it.
   aa_index: number | null;
-  // The headline benchmark figure per category, where the prose carries one.
-  scores: Partial<Record<Category, CellScore>>;
 }
 
 export interface FieldDef {
   // Short visible column label.
   label: string;
+  // Even shorter form for a narrow, centered table header (defaults to label).
+  short?: string;
   // Full name spelled out for the tooltip heading.
   fullName: string;
   // Plain-English definition.
@@ -95,12 +86,14 @@ export const CATEGORY_DEFS: Record<Category, FieldDef> = {
   },
   multimodal: {
     label: "Multimodal",
+    short: "Multi-modal",
     fullName: "Multimodal",
     definition: "Understanding non-text input such as images and diagrams.",
     url: "/docs#ratings",
   },
   "long-context": {
     label: "Long-context",
+    short: "Long ctx",
     fullName: "Long-context",
     definition: "Working accurately over very large inputs (long files, big repos).",
     url: "/docs#ratings",
@@ -122,6 +115,7 @@ export const CATEGORY_DEFS: Record<Category, FieldDef> = {
 // Non-category columns.
 export type FieldKey =
   | "name"
+  | "provider"
   | "jurisdiction"
   | "input_price_per_1m"
   | "output_price_per_1m"
@@ -135,7 +129,13 @@ export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
     label: "Model",
     fullName: "Model",
     definition:
-      "The model name. Links to the provider's documentation. Hover a row's chevron for what it is best for.",
+      "The model name as the provider brands it, without the family prefix (Opus 4.8, not Claude Opus 4.8). Links to the provider's documentation; expand the row for what it is best for, full pricing, and the benchmarks cited.",
+  },
+  provider: {
+    label: "Provider",
+    fullName: "Provider",
+    definition:
+      "The company that trains and serves the model (Anthropic, OpenAI, Google, …). Open-weight models list the host that serves them here (gpt-oss → Groq).",
   },
   jurisdiction: {
     label: "Juris.",
@@ -154,7 +154,7 @@ export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
     label: "Output",
     fullName: "Output price (USD per 1M tokens)",
     definition:
-      "Cost of 1M generated tokens — the dominant cost driver for code, plans, and long answers. Sets the cost tier.",
+      "Cost of 1M generated tokens — the dominant cost driver for code, plans, and long answers. The dot beside it is the cost tier: Low < $10, Medium $10–14.99, High $15–24.99, Very High ≥ $25.",
   },
   cache_read_per_1m: {
     label: "Cache",
@@ -225,6 +225,14 @@ export const COST_TIER_RANK: Record<CostTier, number> = {
   medium: 2,
   high: 3,
   "very-high": 4,
+};
+
+// Solid swatch for the tier dot beside the output price.
+export const COST_TIER_DOT: Record<CostTier, string> = {
+  low: "bg-emerald-500",
+  medium: "bg-amber-500",
+  high: "bg-orange-500",
+  "very-high": "bg-rose-500",
 };
 
 export const COST_TIER_COLORS: Record<CostTier, string> = {
