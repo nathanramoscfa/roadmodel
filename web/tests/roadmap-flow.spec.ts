@@ -28,6 +28,10 @@ import {
   setE2eSessionCookie,
 } from "./fixtures/onboarding-auth";
 
+// Mirrors playwright.config.ts's PLAYWRIGHT_PORT override for the raw
+// request-context calls below (they bypass baseURL).
+const PORT = process.env.PLAYWRIGHT_PORT ?? "3000";
+
 const COMPOSER_PLACEHOLDER =
   /Describe your project\. Paste, type, or attach anything\./i;
 
@@ -145,7 +149,7 @@ test(
   "unauthenticated POST /api/roadmap returns 401",
   async ({ playwright }) => {
     const ctx = await playwright.request.newContext();
-    const res = await ctx.post("http://localhost:3000/api/roadmap", {
+    const res = await ctx.post(`http://localhost:${PORT}/api/roadmap`, {
       data: {
         messages: [
           {
@@ -166,8 +170,8 @@ test(
   "Zod rejects empty messages array with 400",
   async ({ playwright }) => {
     const ctx = await playwright.request.newContext();
-    await ctx.post("http://localhost:3000/api/test/e2e-reset");
-    const res = await ctx.post("http://localhost:3000/api/roadmap", {
+    await ctx.post(`http://localhost:${PORT}/api/test/e2e-reset`);
+    const res = await ctx.post(`http://localhost:${PORT}/api/roadmap`, {
       headers: {
         Cookie:
           "rm-e2e-uid=00000000-0000-4000-8000-000000000001",

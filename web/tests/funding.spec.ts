@@ -33,6 +33,16 @@ test("a held subscription beats an enabled API key", () => {
   expect(note).toContain("$0 path");
 });
 
+test("the legacy family-prefixed name still resolves (service releases lag the catalog)", () => {
+  // The catalog says "Haiku 4.5"; a service built from an older PyPI release
+  // still answers "Claude 4.5 Haiku". Both must reach the same $0 path.
+  const legacy = fundingNoteForModel("Claude 4.5 Haiku", ["claude-max"], []);
+  const current = fundingNoteForModel("Haiku 4.5", ["claude-max"], []);
+  expect(legacy).toContain("$0 path");
+  expect(current).toContain("$0 path");
+  expect(fundingNoteForModel("haiku 4.5", ["claude-max"], [])).toContain("$0 path");
+});
+
 test("no declared funding → no note (recommendation still shown)", () => {
   expect(fundingNoteForModel("Claude 4.5 Haiku", [], [])).toBeNull();
 });

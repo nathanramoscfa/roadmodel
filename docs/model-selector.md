@@ -1293,7 +1293,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode on legacy request-based plans; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
 - **Best for:** Anthropic's Opus 4.7 successor at the same very-high tier pricing — placeholder tier ratings inherited from opus-4.7 pending benchmark coverage; the 3x cheaper fast-mode per-token rate (vs opus-4.7 fast mode) is the headline cost-structure change to surface in the next editorial pass
 
-#### Claude Opus 5 — `claude-opus-5`
+#### Opus 5 — `claude-opus-5`
 
 - **Pricing:** Input $5.00/M · Output $25.00/M
 - **Tier ratings:** Coding **S** · Planning **S** · Agentic **S** · Multimodal **A** · Long-context **S** · Knowledge **S** · Speed **D**
@@ -1361,7 +1361,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 
 ### Medium Cost Tier
 
-#### Claude Sonnet 5 — `claude-sonnet-5`
+#### Sonnet 5 — `claude-sonnet-5`
 
 - **Pricing:** Input $2.00/M · Output $10.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **B**
@@ -1507,7 +1507,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 - **Pricing notes:** Jointly trained by Cursor and SpaceXAI
 - **Best for:** Cursor and SpaceXAI's Grok 4.5 successor at the same low-tier pricing ($2/$6) — placeholder tier ratings inherited from grok-4.5 with benchmark-grounded confirmation from AA Intelligence Index (44.3 high), Terminal-Bench 2.1 (88.4 high), and τ²-bench banking (50.7% pass_1). Pick over grok-4.5 when both are available since 4.6 supersedes 4.5 in the same series at equal output price.
 
-#### Claude 4.5 Haiku — `claude-4.5-haiku`
+#### Haiku 4.5 — `claude-4.5-haiku`
 
 - **Pricing:** Input $1.00/M · Output $5.00/M
 - **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **B** · Long-context **B** · Knowledge **B** · Speed **S**
@@ -3195,7 +3195,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              headline-benchmarks="AA Intelligence Index 41.8 (max); HLE 45.7%; Terminal-Bench Hard 58.3 (top-tier); τ²-bench retail pass_1 94.4%"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode on legacy request-based plans; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)"
              best-for="Anthropic's Opus 4.7 successor at the same very-high tier pricing — placeholder tier ratings inherited from opus-4.7 pending benchmark coverage; the 3x cheaper fast-mode per-token rate (vs opus-4.7 fast mode) is the headline cost-structure change to surface in the next editorial pass" />
-      <model id="claude-opus-5" name="Claude Opus 5"
+      <model id="claude-opus-5" name="Opus 5"
              input-price-per-1m="$5.00" output-price-per-1m="$25.00"
              jurisdiction="us"
              tier-coding="S" tier-planning="S" tier-agentic="S"
@@ -3272,7 +3272,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              best-for="Moonshot's Kimi K3 flagship at high-tier pricing ($3/$15) — a strong near-frontier reasoning + coding model with 1M extended-context support at flat per-token rates and AA Intelligence Index 43.8 (max), competitive with GPT-5.6 Sol and Opus 5 on knowledge/coding indices; text-only (no multimodal) and notably slow (~38 tokens/s). Routed via Cursor's pool only; cn-jurisdiction excluded by the default allowed-jurisdictions list unless the user opts into cn." />
     </tier>
     <tier cost="medium">
-      <model id="claude-sonnet-5" name="Claude Sonnet 5"
+      <model id="claude-sonnet-5" name="Sonnet 5"
              input-price-per-1m="$2.00" output-price-per-1m="$10.00"
              jurisdiction="us"
              tier-coding="A" tier-planning="A" tier-agentic="S"
@@ -3436,7 +3436,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              headline-benchmarks="AA Intelligence Index 44.3 (high); HLE 42.9% (high); Terminal-Bench 2.1 88.4 (high); τ²-bench banking pass_1 50.7%"
              pricing-notes="Jointly trained by Cursor and SpaceXAI"
              best-for="Cursor and SpaceXAI's Grok 4.5 successor at the same low-tier pricing ($2/$6) — placeholder tier ratings inherited from grok-4.5 with benchmark-grounded confirmation from AA Intelligence Index (44.3 high), Terminal-Bench 2.1 (88.4 high), and τ²-bench banking (50.7% pass_1). Pick over grok-4.5 when both are available since 4.6 supersedes 4.5 in the same series at equal output price." />
-      <model id="claude-4.5-haiku" name="Claude 4.5 Haiku"
+      <model id="claude-4.5-haiku" name="Haiku 4.5"
              input-price-per-1m="$1.00" output-price-per-1m="$5.00"
              jurisdiction="us"
              tier-coding="B" tier-planning="B" tier-agentic="B"
@@ -4791,7 +4791,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              headline-benchmarks="AA Intelligence Index 41.8 (max); HLE 45.7%; Terminal-Bench Hard 58.3 (top-tier); τ²-bench retail pass_1 94.4%"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode on legacy request-based plans; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)"
              best-for="Anthropic's Opus 4.7 successor at the same very-high tier pricing — placeholder tier ratings inherited from opus-4.7 pending benchmark coverage; the 3x cheaper fast-mode per-token rate (vs opus-4.7 fast mode) is the headline cost-structure change to surface in the next editorial pass" />
-      <model id="claude-opus-5" name="Claude Opus 5"
+      <model id="claude-opus-5" name="Opus 5"
              input-price-per-1m="$5.00" output-price-per-1m="$25.00"
              jurisdiction="us"
              tier-coding="S" tier-planning="S" tier-agentic="S"
@@ -4868,7 +4868,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              best-for="Moonshot's Kimi K3 flagship at high-tier pricing ($3/$15) — a strong near-frontier reasoning + coding model with 1M extended-context support at flat per-token rates and AA Intelligence Index 43.8 (max), competitive with GPT-5.6 Sol and Opus 5 on knowledge/coding indices; text-only (no multimodal) and notably slow (~38 tokens/s). Routed via Cursor's pool only; cn-jurisdiction excluded by the default allowed-jurisdictions list unless the user opts into cn." />
     </tier>
     <tier cost="medium">
-      <model id="claude-sonnet-5" name="Claude Sonnet 5"
+      <model id="claude-sonnet-5" name="Sonnet 5"
              input-price-per-1m="$2.00" output-price-per-1m="$10.00"
              jurisdiction="us"
              tier-coding="A" tier-planning="A" tier-agentic="S"
@@ -5032,7 +5032,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              headline-benchmarks="AA Intelligence Index 44.3 (high); HLE 42.9% (high); Terminal-Bench 2.1 88.4 (high); τ²-bench banking pass_1 50.7%"
              pricing-notes="Jointly trained by Cursor and SpaceXAI"
              best-for="Cursor and SpaceXAI's Grok 4.5 successor at the same low-tier pricing ($2/$6) — placeholder tier ratings inherited from grok-4.5 with benchmark-grounded confirmation from AA Intelligence Index (44.3 high), Terminal-Bench 2.1 (88.4 high), and τ²-bench banking (50.7% pass_1). Pick over grok-4.5 when both are available since 4.6 supersedes 4.5 in the same series at equal output price." />
-      <model id="claude-4.5-haiku" name="Claude 4.5 Haiku"
+      <model id="claude-4.5-haiku" name="Haiku 4.5"
              input-price-per-1m="$1.00" output-price-per-1m="$5.00"
              jurisdiction="us"
              tier-coding="B" tier-planning="B" tier-agentic="B"
@@ -6613,7 +6613,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              headline-benchmarks="AA Intelligence Index 41.8 (max); HLE 45.7%; Terminal-Bench Hard 58.3 (top-tier); τ²-bench retail pass_1 94.4%"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode on legacy request-based plans; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)"
              best-for="Anthropic's Opus 4.7 successor at the same very-high tier pricing — placeholder tier ratings inherited from opus-4.7 pending benchmark coverage; the 3x cheaper fast-mode per-token rate (vs opus-4.7 fast mode) is the headline cost-structure change to surface in the next editorial pass" />
-      <model id="claude-opus-5" name="Claude Opus 5"
+      <model id="claude-opus-5" name="Opus 5"
              input-price-per-1m="$5.00" output-price-per-1m="$25.00"
              jurisdiction="us"
              tier-coding="S" tier-planning="S" tier-agentic="S"
@@ -6690,7 +6690,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              best-for="Moonshot's Kimi K3 flagship at high-tier pricing ($3/$15) — a strong near-frontier reasoning + coding model with 1M extended-context support at flat per-token rates and AA Intelligence Index 43.8 (max), competitive with GPT-5.6 Sol and Opus 5 on knowledge/coding indices; text-only (no multimodal) and notably slow (~38 tokens/s). Routed via Cursor's pool only; cn-jurisdiction excluded by the default allowed-jurisdictions list unless the user opts into cn." />
     </tier>
     <tier cost="medium">
-      <model id="claude-sonnet-5" name="Claude Sonnet 5"
+      <model id="claude-sonnet-5" name="Sonnet 5"
              input-price-per-1m="$2.00" output-price-per-1m="$10.00"
              jurisdiction="us"
              tier-coding="A" tier-planning="A" tier-agentic="S"
@@ -6854,7 +6854,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              headline-benchmarks="AA Intelligence Index 44.3 (high); HLE 42.9% (high); Terminal-Bench 2.1 88.4 (high); τ²-bench banking pass_1 50.7%"
              pricing-notes="Jointly trained by Cursor and SpaceXAI"
              best-for="Cursor and SpaceXAI's Grok 4.5 successor at the same low-tier pricing ($2/$6) — placeholder tier ratings inherited from grok-4.5 with benchmark-grounded confirmation from AA Intelligence Index (44.3 high), Terminal-Bench 2.1 (88.4 high), and τ²-bench banking (50.7% pass_1). Pick over grok-4.5 when both are available since 4.6 supersedes 4.5 in the same series at equal output price." />
-      <model id="claude-4.5-haiku" name="Claude 4.5 Haiku"
+      <model id="claude-4.5-haiku" name="Haiku 4.5"
              input-price-per-1m="$1.00" output-price-per-1m="$5.00"
              jurisdiction="us"
              tier-coding="B" tier-planning="B" tier-agentic="B"

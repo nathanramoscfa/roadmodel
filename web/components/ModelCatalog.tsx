@@ -1,18 +1,19 @@
 // web/components/ModelCatalog.tsx
 //
 // The interactive catalog table for /models: client-side sort + filter, a toggle
-// between the S→D ratings columns and the benchmark-score column, header tooltips
-// (field name + definition + source via GlossaryTerm), per-cell hovertext, and
-// benchmark names auto-linkified through the glossary (segmentRationale). Pure
+// between the S→D ratings columns and the benchmark-notes column, header
+// tooltips (field name + definition + source via GlossaryTerm), and benchmark
+// names auto-linkified through the glossary (segmentRationale). Pure
 // presentation — the server page passes the rows; no catalog import here.
 //
-// Numbers next to letters: the AA Index column carries the one published
-// composite score, and each rating cell shows the category's headline benchmark
-// figure (with the benchmark named, because "Terminal-Bench 2.1" and
-// "Terminal-Bench Hard" are different tests). Sorting a category orders by the
-// letter first, then by that figure — but only between rows citing the SAME
-// benchmark — then by AA Index, so a tie inside a letter resolves on evidence
-// rather than on catalog order.
+// Layout: the table is sized to fit a 1024px viewport without horizontal
+// scroll in the ratings view — Model (sticky), Provider, Jurisdiction, Input,
+// Output (with the cost tier as a colored dot), AA Index, then seven fixed-
+// width letter cells. Cache-read price, tier name, pricing notes, "best for",
+// and the benchmarks the cron cited live in the expanded row so they add no
+// width. Sorting a category orders by letter, then by AA Index (the one
+// published composite), then by name, so a tie inside a letter resolves on
+// evidence rather than on catalog order.
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
@@ -24,7 +25,7 @@ import {
   CATEGORY_ORDER,
   COST_TIER_COLORS,
   COST_TIER_DEFS,
-  COST_TIER_RANK,
+  COST_TIER_DOT,
   FIELD_DEFS,
   formatPrice,
   jurisdictionDef,
@@ -42,11 +43,10 @@ const RATING_MEANING: Record<string, string> = Object.fromEntries(
 
 type SortKey =
   | "name"
+  | "provider"
   | "jurisdiction"
   | "input_price_per_1m"
   | "output_price_per_1m"
-  | "cache_read_per_1m"
-  | "tier_cost"
   | "aa_index"
   | Category;
 type SortDir = "asc" | "desc";
@@ -57,29 +57,38 @@ const INPUT_CLASS =
   "bg-white dark:bg-brand-slate-800 px-3 py-2 text-sm shadow-sm " +
   "focus:border-brand-accent focus:outline-none focus:ring-1 focus:ring-brand-accent";
 
+const LABEL_CLASS =
+  "flex flex-col gap-1 text-xs font-medium text-brand-slate-600 dark:text-brand-slate-300";
+
 const BADGE_CLASS =
   "inline-flex min-w-[2rem] items-center justify-center rounded px-1.5 py-0.5 text-xs font-semibold";
+
+// The sticky Model column needs an opaque background so rows scrolling under it
+// (narrow viewports only) do not bleed through; it matches the row hover tint.
+// The row is a NAMED group (group/row): a bare `group` would also satisfy the
+// `group-hover` selectors inside GlossaryTerm and pop every tooltip in the row.
+const STICKY_CELL =
+  "sticky left-0 z-10 bg-white group-hover/row:bg-brand-slate-50 dark:bg-brand-slate-900 dark:group-hover/row:bg-brand-slate-800";
+const STICKY_HEAD = "sticky left-0 z-10 bg-brand-slate-50 dark:bg-brand-slate-800";
 
 function nextDir(key: SortKey, active: SortKey, dir: SortDir): SortDir {
   if (key === active) return dir === "asc" ? "desc" : "asc";
   // New column: text sorts A→Z, everything numeric/ranked sorts best-first.
-  return key === "name" || key === "jurisdiction" ? "asc" : "desc";
+  return key === "name" || key === "provider" || key === "jurisdiction" ? "asc" : "desc";
 }
 
 function valueFor(row: ModelRow, key: SortKey): number | string {
   switch (key) {
     case "name":
       return row.name.toLowerCase();
+    case "provider":
+      return (row.provider ?? "\uffff").toLowerCase(); // unknown provider sorts last
     case "jurisdiction":
       return row.jurisdiction;
     case "input_price_per_1m":
       return row.input_price_per_1m;
     case "output_price_per_1m":
       return row.output_price_per_1m;
-    case "cache_read_per_1m":
-      return row.cache_read_per_1m ?? -1;
-    case "tier_cost":
-      return COST_TIER_RANK[row.tier_cost];
     case "aa_index":
       return row.aa_index ?? -1;
     default:
@@ -87,15 +96,9 @@ function valueFor(row: ModelRow, key: SortKey): number | string {
   }
 }
 
-// Within one letter of a category column: the category's benchmark figure when
-// both rows cite the same benchmark (higher first, in the sort direction), then
-// the AA Index (missing last), then the name. Returns 0 when nothing separates.
-function categoryTieBreak(a: ModelRow, b: ModelRow, cat: Category, dir: 1 | -1): number {
-  const sa = a.scores[cat];
-  const sb = b.scores[cat];
-  if (sa && sb && sa.label === sb.label && sa.value !== sb.value) {
-    return (sa.value < sb.value ? -1 : 1) * dir;
-  }
+// Within one letter of a category column: the AA Index (missing last, in
+// either direction), then nothing — the caller falls through to the name.
+function aaTieBreak(a: ModelRow, b: ModelRow, dir: 1 | -1): number {
   const aa = a.aa_index;
   const ab = b.aa_index;
   if (aa !== null && ab !== null && aa !== ab) return (aa < ab ? -1 : 1) * dir;
@@ -119,10 +122,18 @@ export function ModelCatalog({
   const [sortKey, setSortKey] = useState<SortKey>("output_price_per_1m");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [search, setSearch] = useState("");
+  const [provider, setProvider] = useState("all");
   const [juris, setJuris] = useState("all");
   const [cost, setCost] = useState("all");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
+  const providers = useMemo(
+    () =>
+      Array.from(new Set(models.map((m) => m.provider).filter((p): p is string => p !== null))).sort(
+        (a, b) => a.localeCompare(b),
+      ),
+    [models],
+  );
   const jurisdictions = useMemo(
     () => Array.from(new Set(models.map((m) => m.jurisdiction))).sort(),
     [models],
@@ -131,11 +142,13 @@ export function ModelCatalog({
   const rows = useMemo(() => {
     const needle = search.trim().toLowerCase();
     const filtered = models.filter((m) => {
+      if (provider !== "all" && m.provider !== provider) return false;
       if (juris !== "all" && m.jurisdiction !== juris) return false;
       if (cost !== "all" && m.tier_cost !== cost) return false;
       if (
         needle &&
         !m.name.toLowerCase().includes(needle) &&
+        !(m.provider ?? "").toLowerCase().includes(needle) &&
         !m.headline_benchmarks.toLowerCase().includes(needle)
       )
         return false;
@@ -148,12 +161,12 @@ export function ModelCatalog({
       if (av < bv) return -1 * dir;
       if (av > bv) return 1 * dir;
       if (isCategory(sortKey)) {
-        const tie = categoryTieBreak(a, b, sortKey, dir);
+        const tie = aaTieBreak(a, b, dir);
         if (tie !== 0) return tie;
       }
       return a.name.localeCompare(b.name);
     });
-  }, [models, search, juris, cost, sortKey, sortDir]);
+  }, [models, search, provider, juris, cost, sortKey, sortDir]);
 
   function toggleSort(key: SortKey) {
     setSortDir(nextDir(key, sortKey, sortDir));
@@ -169,26 +182,42 @@ export function ModelCatalog({
     });
   }
 
-  const leftColSpan = 7; // chevron + model + juris + input + output + cost + AA index
-  const colSpan = leftColSpan + (view === "ratings" ? CATEGORY_ORDER.length : 1) + 1; // + cache
+  const leftColSpan = 7; // chevron + model + provider + juris + input + output + AA index
+  const colSpan = leftColSpan + (view === "ratings" ? CATEGORY_ORDER.length : 1);
 
   return (
     <div data-testid="model-catalog">
       {/* Controls */}
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-          <label className="flex flex-col gap-1 text-xs font-medium text-brand-slate-600 dark:text-brand-slate-300">
+          <label className={LABEL_CLASS}>
             Search
             <input
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Model or benchmark…"
-              aria-label="Search models or benchmarks"
-              className={INPUT_CLASS + " sm:w-56"}
+              placeholder="Model, provider, or benchmark…"
+              aria-label="Search models, providers, or benchmarks"
+              className={INPUT_CLASS + " sm:w-60"}
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium text-brand-slate-600 dark:text-brand-slate-300">
+          <label className={LABEL_CLASS}>
+            Provider
+            <select
+              value={provider}
+              onChange={(e) => setProvider(e.target.value)}
+              aria-label="Filter by provider"
+              className={INPUT_CLASS}
+            >
+              <option value="all">All</option>
+              {providers.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className={LABEL_CLASS}>
             Jurisdiction
             <select
               value={juris}
@@ -204,7 +233,7 @@ export function ModelCatalog({
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium text-brand-slate-600 dark:text-brand-slate-300">
+          <label className={LABEL_CLASS}>
             Cost tier
             <select
               value={cost}
@@ -230,8 +259,8 @@ export function ModelCatalog({
         >
           {(
             [
-              ["ratings", "Pricing & ratings"],
-              ["benchmarks", "Benchmark scores"],
+              ["ratings", "Ratings"],
+              ["benchmarks", "Benchmark notes"],
             ] as const
           ).map(([v, label]) => (
             <button
@@ -255,17 +284,24 @@ export function ModelCatalog({
 
       <p className="mt-3 text-xs text-brand-slate-500 dark:text-brand-slate-400">
         Showing <span className="font-semibold">{rows.length}</span> of {models.length} models.
-        Click a column header to sort; click a model name for its docs; hover any label or
-        benchmark for its definition and source.
+        Click a column header to sort, a model name for its docs, and the chevron for pricing
+        detail, best-for notes, and the benchmarks behind its ratings.
       </p>
 
       {/* Table */}
       <div className="mt-4 overflow-x-auto rounded-xl border border-brand-slate-200 dark:border-brand-slate-700">
-        <table className="w-full min-w-[860px] border-collapse text-left text-sm">
-          <thead className="bg-brand-slate-50 text-xs uppercase tracking-wide text-brand-slate-500 dark:bg-brand-slate-800/60 dark:text-brand-slate-400">
+        <table className="w-full border-collapse text-left text-sm">
+          <thead className="bg-brand-slate-50 text-[11px] uppercase tracking-wide text-brand-slate-500 dark:bg-brand-slate-800/60 dark:text-brand-slate-400">
             <tr className="border-b border-brand-slate-200 dark:border-brand-slate-700">
-              <th className="w-8 px-2 py-2" aria-hidden />
-              <SortHeader field="name" sortKey={sortKey} dir={sortDir} onSort={toggleSort} />
+              <th className="w-8 px-1 py-2" aria-hidden />
+              <SortHeader
+                field="name"
+                sortKey={sortKey}
+                dir={sortDir}
+                onSort={toggleSort}
+                className={"min-w-[9rem] " + STICKY_HEAD}
+              />
+              <SortHeader field="provider" sortKey={sortKey} dir={sortDir} onSort={toggleSort} />
               <SortHeader
                 field="jurisdiction"
                 sortKey={sortKey}
@@ -286,14 +322,6 @@ export function ModelCatalog({
                 onSort={toggleSort}
                 align="right"
               />
-              <SortHeader
-                field="cache_read_per_1m"
-                sortKey={sortKey}
-                dir={sortDir}
-                onSort={toggleSort}
-                align="right"
-              />
-              <SortHeader field="tier_cost" sortKey={sortKey} dir={sortDir} onSort={toggleSort} />
               <SortHeader
                 field="aa_index"
                 sortKey={sortKey}
@@ -339,13 +367,14 @@ export function ModelCatalog({
               rows.map((m) => {
                 const provider = modelProvider(m.id);
                 const isOpen = expanded.has(m.id);
+                const tier = COST_TIER_DEFS[m.tier_cost];
                 return (
                   <Fragment key={m.id}>
                     <tr
                       data-testid="model-row"
-                      className="align-middle hover:bg-brand-slate-50 dark:hover:bg-brand-slate-800/40"
+                      className="group/row align-middle hover:bg-brand-slate-50 dark:hover:bg-brand-slate-800/40"
                     >
-                      <td className="px-2 py-2">
+                      <td className="px-1 py-2 text-center">
                         <button
                           type="button"
                           onClick={() => toggleExpand(m.id)}
@@ -360,7 +389,12 @@ export function ModelCatalog({
                           )}
                         </button>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-2 font-medium text-brand-slate-900 dark:text-brand-slate-50">
+                      <td
+                        className={
+                          "whitespace-nowrap px-3 py-2 font-medium text-brand-slate-900 dark:text-brand-slate-50 " +
+                          STICKY_CELL
+                        }
+                      >
                         {provider ? (
                           <a
                             href={provider.docUrl}
@@ -375,9 +409,12 @@ export function ModelCatalog({
                           m.name
                         )}
                       </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-xs text-brand-slate-600 dark:text-brand-slate-300">
+                        {m.provider ?? <span className="text-brand-slate-400">—</span>}
+                      </td>
                       <td className="px-3 py-2">
                         <GlossaryTerm definition={jurisdictionDef(m.jurisdiction)}>
-                          <span className="text-xs font-medium uppercase text-brand-slate-600 dark:text-brand-slate-300">
+                          <span className="text-[11px] font-semibold uppercase tracking-wide text-brand-slate-600 dark:text-brand-slate-300">
                             {m.jurisdiction}
                           </span>
                         </GlossaryTerm>
@@ -386,17 +423,16 @@ export function ModelCatalog({
                         {formatPrice(m.input_price_per_1m)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums text-brand-slate-900 dark:text-brand-slate-50">
+                        <span
+                          data-testid="cost-tier-dot"
+                          data-tier={m.tier_cost}
+                          title={`${tier.label} cost tier — ${tier.definition}`}
+                          className={
+                            "mr-1.5 inline-block h-2 w-2 rounded-full align-middle " +
+                            COST_TIER_DOT[m.tier_cost]
+                          }
+                        />
                         {formatPrice(m.output_price_per_1m)}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums text-brand-slate-500 dark:text-brand-slate-400">
-                        {formatPrice(m.cache_read_per_1m)}
-                      </td>
-                      <td className="px-3 py-2">
-                        <GlossaryTerm definition={COST_TIER_DEFS[m.tier_cost].definition}>
-                          <span className={BADGE_CLASS + " " + COST_TIER_COLORS[m.tier_cost]}>
-                            {COST_TIER_DEFS[m.tier_cost].label}
-                          </span>
-                        </GlossaryTerm>
                       </td>
                       <td
                         data-testid="aa-index"
@@ -416,57 +452,31 @@ export function ModelCatalog({
                       {view === "ratings" ? (
                         CATEGORY_ORDER.map((cat) => {
                           const r = m.tiers[cat];
-                          const score = m.scores[cat];
                           return (
-                            <td key={cat} className="px-2 py-2 text-center align-top">
+                            <td key={cat} className="w-14 px-1 py-2 text-center">
                               <span
                                 className={BADGE_CLASS + " " + RATING_COLORS[r]}
                                 title={`${CATEGORY_DEFS[cat].fullName}: ${r} — ${RATING_MEANING[r]}`}
                               >
                                 {r}
                               </span>
-                              {score && (
-                                <span
-                                  data-testid="cell-score"
-                                  className="mt-0.5 block whitespace-nowrap text-[10px] leading-tight tabular-nums text-brand-slate-500 dark:text-brand-slate-400"
-                                  title={`${score.label} ${score.display}${score.url ? ` — source: ${score.url}` : ""}`}
-                                >
-                                  {score.display}
-                                  {score.short && (
-                                    <span className="ml-0.5 text-brand-slate-400 dark:text-brand-slate-500">
-                                      {score.short}
-                                    </span>
-                                  )}
-                                </span>
-                              )}
                             </td>
                           );
                         })
                       ) : (
-                        <td className="px-3 py-2 text-brand-slate-700 dark:text-brand-slate-200">
-                          <BenchmarkCell text={m.headline_benchmarks} />
+                        <td className="px-3 py-2 text-xs leading-relaxed text-brand-slate-700 dark:text-brand-slate-200">
+                          <BenchmarkProse text={m.headline_benchmarks} />
                         </td>
                       )}
                     </tr>
                     {isOpen && (
-                      <tr className="bg-brand-slate-50/60 dark:bg-brand-slate-800/30">
+                      <tr
+                        data-testid="model-detail"
+                        className="bg-brand-slate-50/60 dark:bg-brand-slate-800/30"
+                      >
                         <td />
-                        <td
-                          colSpan={colSpan - 1}
-                          className="px-3 pb-4 pt-1 text-sm text-brand-slate-600 dark:text-brand-slate-300"
-                        >
-                          <p>
-                            <span className="font-semibold text-brand-slate-700 dark:text-brand-slate-200">
-                              Best for:
-                            </span>{" "}
-                            {m.best_for}
-                          </p>
-                          {m.pricing_notes && m.pricing_notes !== "-" && (
-                            <p className="mt-1.5 text-xs text-brand-slate-500 dark:text-brand-slate-400">
-                              <span className="font-semibold">Pricing notes:</span>{" "}
-                              {m.pricing_notes}
-                            </p>
-                          )}
+                        <td colSpan={colSpan - 1} className="px-3 pb-4 pt-2">
+                          <ModelDetail model={m} />
                         </td>
                       </tr>
                     )}
@@ -480,15 +490,73 @@ export function ModelCatalog({
 
       <p className="mt-3 text-xs text-brand-slate-400 dark:text-brand-slate-500">
         Catalog snapshot {generatedAt}. Prices are USD per 1M tokens. A rating is a class, not a
-        rank within it &mdash; the small figure under a letter is that category&rsquo;s headline
-        benchmark score (named, since versions and subsets differ), and the AA Index column is
-        the one published composite; both are read from the same curated benchmark text. Ratings
-        and benchmarks are curated by the project&rsquo;s daily automation; see the{" "}
+        rank within it &mdash; sorting a category orders by letter, then by the AA Index, the one
+        published composite. Ratings and the benchmark notes are curated by the project&rsquo;s
+        daily automation; see the{" "}
         <a href="/docs" className="text-brand-accent hover:underline">
           docs
         </a>{" "}
         for the full method.
       </p>
+    </div>
+  );
+}
+
+// The expanded row: what the model is best for, the full price card (input /
+// output / cache-read / tier + the provider's pricing notes), and the benchmark
+// figures the cron cited when it set the ratings — linkified to their sources.
+function ModelDetail({ model: m }: { model: ModelRow }) {
+  const tier = COST_TIER_DEFS[m.tier_cost];
+  const notes = m.pricing_notes && m.pricing_notes !== "-" ? m.pricing_notes : "";
+  return (
+    <div className="grid grid-cols-1 gap-4 text-sm text-brand-slate-600 dark:text-brand-slate-300 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] md:gap-6">
+      <div className="space-y-3">
+        <div>
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
+            Best for
+          </h4>
+          <p className="mt-1 max-w-prose whitespace-normal">{m.best_for || "—"}</p>
+        </div>
+        <div>
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
+            Benchmarks cited
+          </h4>
+          <p className="mt-1 max-w-prose whitespace-normal text-xs leading-relaxed">
+            <BenchmarkProse text={m.headline_benchmarks || "—"} />
+          </p>
+        </div>
+      </div>
+      <div>
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
+          Pricing (USD per 1M tokens)
+        </h4>
+        <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 tabular-nums">
+          <dt>Input</dt>
+          <dd className="text-brand-slate-900 dark:text-brand-slate-50">
+            {formatPrice(m.input_price_per_1m)}
+          </dd>
+          <dt>Output</dt>
+          <dd className="text-brand-slate-900 dark:text-brand-slate-50">
+            {formatPrice(m.output_price_per_1m)}
+          </dd>
+          <dt>Cache read</dt>
+          <dd className="text-brand-slate-900 dark:text-brand-slate-50">
+            {m.cache_read_per_1m === null ? "not published" : formatPrice(m.cache_read_per_1m)}
+          </dd>
+          <dt>Cost tier</dt>
+          <dd>
+            <span className={BADGE_CLASS + " " + COST_TIER_COLORS[m.tier_cost]}>{tier.label}</span>{" "}
+            <span className="text-xs text-brand-slate-500 dark:text-brand-slate-400">
+              {tier.definition}
+            </span>
+          </dd>
+        </dl>
+        {notes && (
+          <p className="mt-2 whitespace-normal text-xs text-brand-slate-500 dark:text-brand-slate-400">
+            <span className="font-semibold">Notes:</span> {notes}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -499,18 +567,24 @@ function SortHeader({
   dir,
   onSort,
   align = "left",
+  className = "",
 }: {
   field: Exclude<SortKey, Category>;
   sortKey: SortKey;
   dir: SortDir;
   onSort: (k: SortKey) => void;
   align?: "left" | "right";
+  className?: string;
 }) {
   const def = FIELD_DEFS[field];
   const active = sortKey === field;
   return (
     <th
-      className={"px-3 py-2 font-semibold " + (align === "right" ? "text-right" : "text-left")}
+      className={
+        "whitespace-nowrap px-3 py-2 font-semibold " +
+        (align === "right" ? "text-right " : "text-left ") +
+        className
+      }
       aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
     >
       <span
@@ -526,11 +600,20 @@ function SortHeader({
           {def.label}
           <SortArrow active={active} dir={dir} />
         </button>
-        <FieldInfo fullName={def.fullName} definition={def.definition} url={def.url} />
+        <FieldInfo
+          fullName={def.fullName}
+          definition={def.definition}
+          url={def.url}
+          align={align}
+        />
       </span>
     </th>
   );
 }
+
+// The last few category columns sit at the table's right edge, where a
+// left-anchored popover would be clipped by the scroll wrapper.
+const RIGHT_EDGE_CATEGORIES = new Set<Category>(CATEGORY_ORDER.slice(-3));
 
 function CategoryHeader({
   cat,
@@ -547,19 +630,25 @@ function CategoryHeader({
   const active = sortKey === cat;
   return (
     <th
-      className="px-2 py-2 text-center font-semibold"
+      className="w-14 px-1 py-2 text-center align-bottom font-semibold"
       aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
     >
-      <span className="inline-flex items-center gap-0.5">
+      <span className="inline-flex flex-col items-center gap-0.5">
         <button
           type="button"
           onClick={() => onSort(cat)}
-          className="inline-flex items-center gap-0.5 uppercase tracking-wide hover:text-brand-accent"
+          aria-label={`Sort by ${def.label}`}
+          className="inline-flex items-center gap-0.5 uppercase leading-tight tracking-wide hover:text-brand-accent"
         >
-          {def.label}
+          {def.short ?? def.label}
           <SortArrow active={active} dir={dir} />
         </button>
-        <FieldInfo fullName={def.fullName} definition={def.definition} url={def.url} />
+        <FieldInfo
+          fullName={def.fullName}
+          definition={def.definition}
+          url={def.url}
+          align={RIGHT_EDGE_CATEGORIES.has(cat) ? "right" : "left"}
+        />
       </span>
     </th>
   );
@@ -578,20 +667,22 @@ function FieldInfo({
   fullName,
   definition,
   url,
+  align = "left",
 }: {
   fullName: string;
   definition: string;
   url?: string;
+  align?: "left" | "right";
 }) {
   return (
-    <GlossaryTerm definition={`${fullName} — ${definition}`} url={url}>
+    <GlossaryTerm definition={`${fullName} — ${definition}`} url={url} align={align}>
       <Info className="h-3 w-3 text-brand-slate-400" aria-hidden />
       <span className="sr-only">{fullName} definition</span>
     </GlossaryTerm>
   );
 }
 
-function BenchmarkCell({ text }: { text: string }) {
+function BenchmarkProse({ text }: { text: string }) {
   return (
     <span className="leading-relaxed">
       {segmentRationale(text).map((segment, i) =>

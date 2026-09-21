@@ -39,8 +39,8 @@ export function RatingScale({ id, compact = false }: { id?: string; compact?: bo
         <a href="/models" className="text-brand-accent hover:underline">
           model catalog
         </a>{" "}
-        shows each category&rsquo;s headline benchmark figure and the Artificial
-        Analysis Intelligence Index next to the letters.
+        shows the Artificial Analysis Intelligence Index next to the letters and,
+        in each row&rsquo;s detail, the benchmarks cited for its ratings.
       </p>
       <dl className="mt-4 divide-y divide-brand-slate-200 dark:divide-brand-slate-700 rounded-lg border border-brand-slate-200 dark:border-brand-slate-700">
         {RATING_SCALE.map((row) => (

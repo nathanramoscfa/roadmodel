@@ -3,7 +3,9 @@
 // Inline "definable term" with a CSS-only popover (#269). The definition shows
 // on hover AND on keyboard focus (focus also fires on tap, so touch is covered)
 // via group-hover / group-focus — no client JS. The definition lives in the DOM
-// (hidden until revealed) so assistive tech can reach it after the term.
+// (display:none until revealed, so a hidden popover never widens an
+// overflow-x container — `invisible` still occupies layout, and the /models
+// table wrapper grew a horizontal scrollbar from tooltips it wasn't showing).
 import type { ReactNode } from "react";
 
 interface GlossaryTermProps {
@@ -11,17 +13,23 @@ interface GlossaryTermProps {
   // Canonical source. When set, the term is a link (hover/focus still reveals the
   // definition; click opens the source). When absent, it stays a definable span.
   url?: string;
+  // Which edge the popover hangs from. "right" for terms near the right edge of
+  // a scroll container, where a left-anchored 16rem popover would be clipped.
+  align?: "left" | "right";
   children: ReactNode;
 }
 
 const BASE_CLASS =
   "group relative inline-block border-b border-dotted border-brand-slate-400 outline-none dark:border-brand-slate-500";
 const TOOLTIP_CLASS =
-  "invisible absolute left-0 top-full z-20 mt-1 w-64 rounded-md border border-brand-slate-200 bg-white p-2 text-xs font-normal leading-snug text-brand-slate-700 opacity-0 shadow-lg transition-opacity duration-100 group-hover:visible group-hover:opacity-100 group-focus:visible group-focus:opacity-100 dark:border-brand-slate-600 dark:bg-brand-slate-800 dark:text-brand-slate-200";
+  "hidden absolute top-full z-20 mt-1 w-64 rounded-md border border-brand-slate-200 bg-white p-2 text-xs font-normal leading-snug text-brand-slate-700 shadow-lg group-hover:block group-focus:block dark:border-brand-slate-600 dark:bg-brand-slate-800 dark:text-brand-slate-200";
 
-export function GlossaryTerm({ definition, url, children }: GlossaryTermProps) {
+export function GlossaryTerm({ definition, url, align = "left", children }: GlossaryTermProps) {
   const tooltip = (
-    <span role="tooltip" className={TOOLTIP_CLASS}>
+    <span
+      role="tooltip"
+      className={`${TOOLTIP_CLASS} ${align === "right" ? "right-0 text-right" : "left-0"}`}
+    >
       {definition}
       {url ? (
         <span className="mt-1 block font-medium text-brand-accent">View source ↗</span>
