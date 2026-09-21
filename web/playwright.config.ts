@@ -38,6 +38,8 @@ export default defineConfig({
       // (where no .env.local exists and VERCEL is unset).
       VERCEL: "",
       NEXT_PUBLIC_SITE_URL: BASE_URL,
+      // Where /api/recommend finds the E2E mock (defaults to :3000 in code).
+      ROADMODEL_E2E_SITE_URL: BASE_URL,
       SUPABASE_URL: "https://ci-placeholder.supabase.co",
       SUPABASE_SERVICE_ROLE_KEY: "ci-placeholder-service-role-key",
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "ci-placeholder-anon-key",

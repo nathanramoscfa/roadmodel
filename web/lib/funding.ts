@@ -53,10 +53,29 @@ const PROVIDER_LABELS: Record<string, string> = {
 // Map both the catalog display name and the id to the model id, since the
 // recommender canonicalizes its `model` to the catalog display name (#174)
 // but supports_models is keyed by id.
+//
+// Keyed by a NORMALIZED name, not the literal: the service ships the selector
+// via PyPI release while this catalog deploys with main, so the two can name
+// the same model differently for days ("Claude 4.5 Haiku" vs "Haiku 4.5").
+// Sorting the word tokens and dropping the family prefix makes both spellings
+// (and either casing) resolve to claude-4.5-haiku.
+const FAMILY_PREFIXES = new Set(["claude"]);
+function nameKey(name: string): string {
+  return name
+    .toLowerCase()
+    .split(/[\s_-]+/)
+    .filter((t) => t && !FAMILY_PREFIXES.has(t))
+    .sort()
+    .join(" ");
+}
 const NAME_TO_ID = new Map<string, string>();
 for (const m of MODELS) {
-  NAME_TO_ID.set(m.name, m.id);
+  NAME_TO_ID.set(nameKey(m.name), m.id);
+  NAME_TO_ID.set(nameKey(m.id), m.id);
   NAME_TO_ID.set(m.id, m.id);
+}
+function modelIdFor(name: string): string | undefined {
+  return NAME_TO_ID.get(name) ?? NAME_TO_ID.get(nameKey(name));
 }
 const ID_TO_MODEL = new Map(MODELS.map((m) => [m.id, m]));
 const METHOD_BY_ID = new Map(METHODS.map((m) => [m.id, m]));
@@ -89,7 +108,7 @@ export function fundingNoteForModel(
   subscriptions: readonly string[],
   apiProviders: readonly string[],
 ): string | null {
-  const id = NAME_TO_ID.get(modelName);
+  const id = modelIdFor(modelName);
   if (!id) return null;
 
   const reaching = METHODS.filter((m) => m.supports_models.includes(id));
@@ -163,7 +182,7 @@ export function personalizeComparison(
       typeof row.model_id === "string"
         ? row.model_id
         : typeof row.model === "string"
-          ? (NAME_TO_ID.get(row.model) ?? "")
+          ? (modelIdFor(row.model) ?? "")
           : "";
 
     let rank: number = RANK_UNFUNDED;
