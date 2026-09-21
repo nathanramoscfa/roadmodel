@@ -110,19 +110,93 @@ def test_catalog_extractor_flags_unexpected_model() -> None:
     assert "deepseek-v5-pro" in snap["unexpected_slugs"]
 
 
+PEAK_OFFPEAK_HTML = REPO_ROOT / "tests" / "fixtures" / "deepseek-pricing-peak-offpeak-sample.html"
+
+
+def test_catalog_extractor_lists_off_peak_and_keeps_peak() -> None:
+    """2026-09 layout: every price row is an OFF-PEAK sub-row (with the label)
+    over a PEAK sub-row. The listed price must be the OFF-PEAK rate chosen by
+    its tag — not by row order — with the PEAK rate carried alongside."""
+    mod = _load("extract_deepseek_catalog")
+    snap = mod.build_snapshot(PEAK_OFFPEAK_HTML.read_text(), source_url="x")
+    assert snap["price_basis"] == "off-peak"
+    assert snap["unexpected_slugs"] == []
+    models = {m["id"]: m for m in snap["models"]}
+    assert set(models) == {"deepseek-flash", "deepseek-v4-pro"}
+    flash = models["deepseek-flash"]
+    assert flash["name"] == "DeepSeek-V4.1-Flash"
+    assert (flash["input_price_per_1m"], flash["output_price_per_1m"]) == (0.15, 0.6)
+    assert flash["cache_read_per_1m"] == 0.003
+    assert (flash["peak_input_price_per_1m"], flash["peak_output_price_per_1m"]) == (0.3, 1.2)
+    assert flash["peak_cache_read_per_1m"] == 0.006
+    pro = models["deepseek-v4-pro"]
+    assert (pro["input_price_per_1m"], pro["output_price_per_1m"]) == (0.66, 1.98)
+    assert (pro["peak_input_price_per_1m"], pro["peak_output_price_per_1m"]) == (1.32, 3.96)
+
+
+def _retag_cells(html: str, mapping: dict[str, str], *, limit: int | None = None) -> str:
+    """Rewrite table cells whose whole text is a key of ``mapping`` (the fixture is
+    prettified, one cell text per line); ``limit`` caps the number of rewrites."""
+    out: list[str] = []
+    done = 0
+    for line in html.split("\n"):
+        key = line.strip()
+        if key in mapping and (limit is None or done < limit):
+            line = line.replace(key, mapping[key])
+            done += 1
+        out.append(line)
+    assert done, "fixture has no cell to retag"
+    return "\n".join(out)
+
+
+def test_catalog_extractor_off_peak_is_chosen_by_tag_not_row_order() -> None:
+    """Swap the PEAK / OFF-PEAK tags (so PEAK is the sub-row carrying the label):
+    the listed price must follow the OFF-PEAK tag, not the row order."""
+    mod = _load("extract_deepseek_catalog")
+    swapped = _retag_cells(PEAK_OFFPEAK_HTML.read_text(), {"OFF-PEAK": "PEAK", "PEAK": "OFF-PEAK"})
+    snap = mod.build_snapshot(swapped, source_url="x")
+    flash = {m["id"]: m for m in snap["models"]}["deepseek-flash"]
+    # The rows now read PEAK $0.15 / OFF-PEAK $0.3 — so off-peak (listed) is $0.3.
+    assert flash["input_price_per_1m"] == 0.3
+    assert flash["peak_input_price_per_1m"] == 0.15
+
+
+def test_catalog_extractor_flat_layout_has_no_peak() -> None:
+    """The older single-rate table still parses, with no peak figures and a flat basis."""
+    mod = _load("extract_deepseek_catalog")
+    snap = mod.build_snapshot(PRICING_HTML.read_text(), source_url="x")
+    assert snap["price_basis"] == "flat"
+    assert snap["price_basis_note"] is None
+    assert all(m["peak_output_price_per_1m"] is None for m in snap["models"])
+
+
+def test_catalog_extractor_fails_loud_on_half_split_row() -> None:
+    """A split row whose PEAK sub-row vanished is a restructure, not a silent single rate."""
+    mod = _load("extract_deepseek_catalog")
+    broken = _retag_cells(PEAK_OFFPEAK_HTML.read_text(), {"PEAK": "PEEK"}, limit=1)
+    with pytest.raises(mod.ExtractError):
+        mod.build_snapshot(broken, source_url="x")
+
+
 def test_committed_catalog_snapshot_invariants() -> None:
     snap = json.loads(REAL_DEEPSEEK_CATALOG.read_text())
     assert snap["jurisdiction"] == "cn"
     ids = {m["id"] for m in snap["models"]}
     # 2026-09-17: DeepSeek retired deepseek-v4-flash (+ -vision-exp); the
-    # pricing table now lists its successor under the API name deepseek-flash
-    # (DeepSeek-V4.1-Flash). It stays in unexpected_slugs until it is added to
-    # <model-options> editorially with tier ratings (#583 / #606).
+    # pricing table lists its successor under the API name deepseek-flash
+    # (DeepSeek-V4.1-Flash), added editorially 2026-09-21 (#583 / #606).
     assert {"deepseek-flash", "deepseek-v4-pro"} <= ids
-    assert "deepseek-flash" in snap["unexpected_slugs"]
+    assert "deepseek-v4-flash" not in ids
+    assert snap["unexpected_slugs"] == []
+    # The page splits every rate into OFF-PEAK / PEAK; the listed price is the
+    # off-peak rate BY DESIGN and the peak rate rides alongside (2x).
+    assert snap["price_basis"] == "off-peak"
+    assert "OFF-PEAK" in snap["price_basis_note"]
     for m in snap["models"]:
         assert m["input_price_per_1m"] > 0
         assert m["output_price_per_1m"] > 0
+        assert m["peak_output_price_per_1m"] == pytest.approx(2 * m["output_price_per_1m"])
+        assert m["peak_input_price_per_1m"] == pytest.approx(2 * m["input_price_per_1m"])
 
 
 # --------------------------------------------------------------------------- #
@@ -347,20 +421,21 @@ def test_compose_on_real_artifacts_is_clean() -> None:
     assert composed["deepseek-v4-pro"].source == "deepseek"
     assert composed["deepseek-v4-pro"].cost_tier == "low"
     # 2026-09-17: DeepSeek retired deepseek-v4-flash from its pricing table (the
-    # legacy API name is served by the successor DeepSeek-V4.1-Flash). Until the
-    # successor is added editorially (#583 / #606) the rated element stays in
-    # <model-options> and falls back to the aggregator mirror for its price.
-    assert composed["deepseek-v4-flash"].source == "cursor"
-    assert composed["deepseek-v4-flash"].cost_tier == "low"
+    # legacy API name is served by the successor DeepSeek-V4.1-Flash, API name
+    # deepseek-flash, added editorially 2026-09-21 in its place). The successor
+    # composes provider-direct; the retired id is gone from <model-options>.
+    assert composed["deepseek-flash"].source == "deepseek"
+    assert composed["deepseek-flash"].cost_tier == "low"
+    assert "deepseek-v4-flash" not in composed
+    assert "deepseek-v4-flash" not in base
     # DeepSeek's rated models are IN <model-options> (the wiring slice landed
     # them), so they are no longer "proposed" additions. A model the provider
     # ships that roadmodel has not rated yet IS proposed — that is the
-    # flag-only discovery path, and it must not be asserted away: the unrated
-    # successor deepseek-flash exercises it today.
+    # flag-only discovery path, and it must not be asserted away: pin the
+    # invariant (nothing rated is proposed) rather than today's empty list.
     proposed = mod.proposed_additions(base, snaps)
-    assert "deepseek-v4-flash" not in proposed
+    assert "deepseek-flash" not in proposed
     assert "deepseek-v4-pro" not in proposed
-    assert "deepseek-flash" in proposed
     for candidate in proposed:
         assert candidate not in base, f"{candidate} is already in <model-options>"
 
@@ -665,8 +740,8 @@ def test_real_overlay_excludes_price_only_providers() -> None:
         assert price_only_id not in ids
     # Off-Cursor whole-element providers ARE overlaid: DeepSeek, and xAI/grok-4.3
     # since Cursor delisted it 2026-07-14 (still on xAI's own API). DeepSeek
-    # retired deepseek-v4-flash 2026-09-17; its successor deepseek-flash is in
-    # the snapshot (unrated, so flagged rather than added — #583 / #606).
+    # retired deepseek-v4-flash 2026-09-17; its successor deepseek-flash took
+    # its place in the snapshot and in <model-options> (2026-09-21).
     assert {"deepseek-flash", "deepseek-v4-pro", "grok-4.3"} <= ids
     assert "deepseek-v4-flash" not in ids
 

@@ -24,6 +24,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **DeepSeek V4.1-Flash succeeds V4-Flash (#583, #606).** DeepSeek retired
+  `deepseek-v4-flash` (and `-vision-exp`) from its pricing page on
+  2026-09-17; the legacy API names are still accepted but served by
+  DeepSeek-V4.1-Flash under the new name `deepseek-flash`. The catalog now
+  carries `deepseek-flash` in V4-Flash's place — $0.15/$0.60 off-peak, 1M
+  context, native image input, AA Intelligence Index 39.5 (v4.3) — with tier
+  ratings inherited from V4-Flash except multimodal D→C (image input is now
+  native; MMMU-Pro 56.5 is DeepSeek-reported). `deepseek-api`, `ollama` and
+  `openrouter` list it; the DeepSeek extractors know the new slug, so the
+  successor is federated provider-direct instead of flagged.
+- **DeepSeek price basis is explicit.** DeepSeek's page now splits every
+  rate into OFF-PEAK / PEAK (peak = 2×, only 01:00–04:00 and 06:00–10:00 UTC
+  Mon–Fri). The catalog lists the OFF-PEAK rate — ~79% of the week and all
+  US/EU working hours — chosen by its tag in `extract_deepseek_catalog.py`
+  rather than by table-row order, recorded in the snapshot as `price_basis`
+  with the peak figures kept in `peak_*` fields, and stated in both DeepSeek
+  models' pricing notes. Aggregators such as OpenRouter list the PEAK rate,
+  so the two are not directly comparable. V4-Pro's stale `$0.87/M` and
+  cache-hit figures are refreshed to the current $1.98/M and $0.022/M.
 - **S is defined honestly.** The rating scale's single source
   (`web/lib/glossary.ts`, mirrored in `docs/model-selector.txt`,
   `docs/benchmarks-and-ratings.md` and `update/prompt.md`) defined S as

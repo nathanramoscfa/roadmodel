@@ -35,10 +35,11 @@ SOURCES_PATH = UPDATE_DIR / "sources-deepseek.json"
 USER_AGENT = "roadmodel-updater/1.0 (+https://github.com/nathanramoscfa/roadmodel)"
 FETCH_TIMEOUT = 30
 
-# The DeepSeek model lineup this tracker has seen (2026-06-11). A model in the
-# pricing table's MODEL row outside this set is FLAGGED. Legacy aliases
-# (deepseek-chat / deepseek-reasoner) are not listed in the MODEL row.
-KNOWN_MODELS = frozenset({"deepseek-v4-flash", "deepseek-v4-pro"})
+# The DeepSeek model lineup this tracker has seen (2026-06-11; deepseek-flash =
+# DeepSeek-V4.1-Flash added 2026-09-21, succeeding the retired deepseek-v4-flash).
+# A model in the pricing table's MODEL row outside this set is FLAGGED. Legacy
+# aliases (deepseek-chat / deepseek-reasoner) are not listed in the MODEL row.
+KNOWN_MODELS = frozenset({"deepseek-flash", "deepseek-v4-flash", "deepseek-v4-pro"})
 
 _FOOTNOTE_RE = re.compile(r"\s*\(.*?\)\s*")
 
