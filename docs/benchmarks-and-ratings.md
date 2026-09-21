@@ -38,7 +38,7 @@ The recommender grounds its rationale in these leaderboards. Links verified
 | Benchmark | What it measures | Source |
 |-----------|------------------|--------|
 | LMArena | Human-preference Elo across general chat | <https://lmarena.ai/> |
-| Artificial Analysis Intelligence Index | Composite of 10 evaluations (GPQA Diamond, Humanity's Last Exam, SciCode, Terminal-Bench Hard, …) | <https://artificialanalysis.ai/> |
+| Artificial Analysis Intelligence Index | Composite of 10 evaluations (v4.3: Humanity's Last Exam, SciCode, Terminal-Bench 4.0, AA-Omniscience, AutomationBench-AA, …); scores are not comparable across index versions | <https://artificialanalysis.ai/> |
 | Aider polyglot | Coding across C++, Go, Java, JavaScript, Python, Rust | <https://aider.chat/docs/leaderboards/> |
 | SWE-bench Verified | Real GitHub issues (500-instance human-filtered subset) — the gold standard for software-engineering capability | <https://www.swebench.com/> |
 | LiveCodeBench | Contamination-free coding with rolling problems from LeetCode / AtCoder / Codeforces | <https://livecodebench.github.io/> |
