@@ -183,6 +183,11 @@ jobs:
           set -euo pipefail
           git show HEAD:docs/model-selector.txt > /tmp/base-selector.txt
           python update/merge_catalog.py --write --base /tmp/base-selector.txt
+          # Derived ratings overlay: tier-coding/agentic/long-context/knowledge
+          # are a function of docs/benchmarks.json (update/derive_ratings.py),
+          # so any Opus edit to them is reverted here and the coding S-tier
+          # enumeration is regenerated. The report rides in the PR body.
+          python update/derive_ratings.py --write
           python update/render_md.py
 
       - name: Rebuild docs/catalog.json (deterministic)
@@ -243,6 +248,9 @@ jobs:
           warnings=""
           if [ -f update/.last-warnings.txt ] && [ -s update/.last-warnings.txt ]; then
             warnings="$(printf '\n\n## Warnings\n')$(sed 's/^/- /' update/.last-warnings.txt)"
+          fi
+          if [ -f update/.last-ratings-report.md ] && grep -q '^| ' update/.last-ratings-report.md; then
+            warnings="${warnings}$(printf '\n\n')$(cat update/.last-ratings-report.md)"
           fi
           git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
           git commit -m "Automated catalog refresh: ${DATE}" -m "${summary}${warnings}"

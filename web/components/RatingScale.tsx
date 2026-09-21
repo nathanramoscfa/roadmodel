@@ -32,15 +32,22 @@ export function RatingScale({ id, compact = false }: { id?: string; compact?: bo
         <strong>S&nbsp;&rarr;&nbsp;D</strong> scale &mdash; <strong>S</strong> is the
         top &ldquo;tier-list&rdquo; rank, a step above A (the gaming convention for
         the genuine best), then A, B, C, D. A rating is a <em>class</em>, not a
-        ranking within it: several frontier models share S in most categories. The
-        selection algorithm sets a minimum required rating from the prompt&rsquo;s
-        complexity, then picks the highest-rated available model that clears it &mdash;
-        ties inside a class resolve on the benchmark evidence, which is why the{" "}
+        ranking within it: several frontier models share S in most categories. Four
+        of the seven letters &mdash; coding, agentic, long-context, and knowledge
+        &mdash; are <em>derived</em> from a single Artificial Analysis benchmark each
+        (Coding Index, Terminal-Bench 2.1, AA-LCR, HLE) as the model&rsquo;s gap to
+        the category leader: S within 5 points, A within 20, B within 35, C within
+        50, else D. They refresh with the data and cannot be hand-edited. Planning,
+        multimodal, and speed are editorial, set from cited evidence one step at a
+        time. The selection algorithm sets a minimum required rating from the
+        prompt&rsquo;s complexity, then picks the highest-rated available model that
+        clears it &mdash; ties inside a class resolve on the benchmark evidence, which
+        the{" "}
         <a href="/models" className="text-brand-accent hover:underline">
           model catalog
         </a>{" "}
-        shows the Artificial Analysis Intelligence Index next to the letters and,
-        in each row&rsquo;s detail, the benchmarks cited for its ratings.
+        shows as the Artificial Analysis Intelligence Index and the full benchmark
+        grid.
       </p>
       <dl className="mt-4 divide-y divide-brand-slate-200 dark:divide-brand-slate-700 rounded-lg border border-brand-slate-200 dark:border-brand-slate-700">
         {RATING_SCALE.map((row) => (

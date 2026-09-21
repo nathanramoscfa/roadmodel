@@ -158,6 +158,29 @@ export const CATEGORY_FIGURE: Partial<Record<Category, BenchKey>> = Object.fromE
   GRID_COLUMNS.filter((c) => c.category).map((c) => [c.category, c.key]),
 );
 
+// The four categories whose letter is DERIVED from its evidence column by
+// update/derive_ratings.py (gap to the category leader, in points:
+// S ≤ 5, A ≤ 20, B ≤ 35, C ≤ 50, else D) for every model AA measures.
+// Speed has an evidence column for display but stays editorial: AA's tokens/s
+// is measured on the provider's first-party endpoint at max effort.
+export const DERIVED_CATEGORIES: ReadonlySet<Category> = new Set<Category>([
+  "coding",
+  "agentic",
+  "long-context",
+  "knowledge",
+]);
+export const DERIVATION_BANDS: readonly { max: number; letter: string }[] = [
+  { max: 5, letter: "S" },
+  { max: 20, letter: "A" },
+  { max: 35, letter: "B" },
+  { max: 50, letter: "C" },
+];
+
+// Points on the derivation scale: indices as-is, fractions ×100.
+export function benchPoints(value: number, unit: BenchUnit): number {
+  return unit === "fraction" ? value * 100 : value;
+}
+
 // Within-column quintile band for a measured value: 5 = top 20% of measured
 // models on that column … 1 = bottom 20%. Every grid column is higher-is-
 // better on one scale, so the band is comparable across columns even though
