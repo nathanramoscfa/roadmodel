@@ -5,6 +5,7 @@
 // catalog.json here (not in the client component) keeps it out of the client
 // bundle — the same pattern as lib/api-providers.ts and lib/subscriptions.ts.
 import catalog from "@/data/catalog.json";
+import benchmarks from "@/data/benchmarks.json";
 
 import {
   CATEGORY_ORDER,
@@ -15,6 +16,7 @@ import {
   type Rating,
 } from "@/lib/catalog-fields";
 import { extractAaIndex } from "@/lib/benchmark-scores";
+import { GRID_COLUMNS, type BenchKey, type BenchRow } from "@/lib/benchmark-grid";
 import { BENCHMARKS } from "@/lib/glossary";
 
 interface RawModel {
@@ -33,9 +35,39 @@ interface RawModel {
 
 const MODELS = (catalog as { models?: RawModel[] }).models ?? [];
 
+interface RawBench {
+  aa_slug: string;
+  aa_name: string;
+  evaluations: Record<string, number | null>;
+  median_output_tokens_per_second: number | null;
+  median_time_to_first_token_seconds: number | null;
+}
+const BENCH = (benchmarks as { models?: Record<string, RawBench> }).models ?? {};
+
+// Project a benchmarks.json entry to exactly the grid's columns. AA reports
+// 0 tokens/s for endpoints it has not throughput-tested; that is "not
+// measured", not a speed, so it becomes null like any other gap.
+function benchRowFor(id: string): BenchRow | null {
+  const raw = BENCH[id];
+  if (!raw) return null;
+  const values = {} as Record<BenchKey, number | null>;
+  for (const col of GRID_COLUMNS) {
+    let v: number | null | undefined;
+    if (col.key === "median_output_tokens_per_second") {
+      v = raw.median_output_tokens_per_second;
+      if (v !== null && v !== undefined && v <= 0) v = null;
+    } else {
+      v = raw.evaluations[col.key];
+    }
+    values[col.key] = typeof v === "number" && Number.isFinite(v) ? v : null;
+  }
+  return { aa_slug: raw.aa_slug, aa_name: raw.aa_name, values };
+}
+
 export function getModelRows(): ModelRow[] {
   return MODELS.map((m) => {
     const prose = m.headline_benchmarks ?? "";
+    const bench = benchRowFor(m.id);
     return {
       id: m.id,
       name: m.name,
@@ -49,16 +81,33 @@ export function getModelRows(): ModelRow[] {
       headline_benchmarks: prose,
       pricing_notes: m.pricing_notes ?? "",
       best_for: m.best_for ?? "",
-      aa_index: extractAaIndex(prose),
+      aa_index: bench?.values.artificial_analysis_intelligence_index ?? extractAaIndex(prose),
+      bench,
     };
   });
 }
 
 // "2026-06-21T12:53:54Z" → "2026-06-21 12:53 UTC". Falls back to the raw value.
-export function getCatalogGeneratedAt(): string {
-  const raw = (catalog as { generated_at_utc?: string }).generated_at_utc ?? "";
+function formatStamp(raw: string): string {
   const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(raw);
   return m ? `${m[1]} ${m[2]} UTC` : raw;
+}
+
+export function getCatalogGeneratedAt(): string {
+  return formatStamp((catalog as { generated_at_utc?: string }).generated_at_utc ?? "");
+}
+
+export interface BenchmarkMeta {
+  generatedAt: string;
+  // Catalog models with at least one AA figure.
+  measuredCount: number;
+}
+
+export function getBenchmarkMeta(): BenchmarkMeta {
+  return {
+    generatedAt: formatStamp((benchmarks as { generated_at_utc?: string }).generated_at_utc ?? ""),
+    measuredCount: MODELS.filter((m) => BENCH[m.id]).length,
+  };
 }
 
 export interface CatalogStats {
