@@ -620,8 +620,9 @@ category, ground the rationale in one of these sources by name.
 
 - LMArena — human-preference Elo across general chat (chatbot-arena.com)
 - Artificial Analysis Intelligence Index — composite of 10 evaluations
-  including GPQA Diamond, Humanity's Last Exam, SciCode,
-  Terminal-Bench Hard, and AA-Omniscience
+  (v4.3: Humanity's Last Exam, SciCode, Terminal-Bench 4.0,
+  AA-Omniscience, AA-LCR, AA-Briefcase, GDPval-AA, AutomationBench-AA,
+  GDP.pdf, CritPt); scores are NOT comparable across index versions
 - Aider polyglot — coding across C++, Go, Java, JavaScript, Python, Rust
 - SWE-bench Verified — real GitHub issues, 500-instance human-filtered
   subset; gold standard for software-engineering capability
@@ -1217,8 +1218,9 @@ as primary; the other becomes the secondary category for tie-breaking.
 
     - LMArena — human-preference Elo across general chat (chatbot-arena.com)
     - Artificial Analysis Intelligence Index — composite of 10 evaluations
-      including GPQA Diamond, Humanity's Last Exam, SciCode,
-      Terminal-Bench Hard, and AA-Omniscience
+      (v4.3: Humanity's Last Exam, SciCode, Terminal-Bench 4.0,
+      AA-Omniscience, AA-LCR, AA-Briefcase, GDPval-AA, AutomationBench-AA,
+      GDP.pdf, CritPt); scores are NOT comparable across index versions
     - Aider polyglot — coding across C++, Go, Java, JavaScript, Python, Rust
     - SWE-bench Verified — real GitHub issues, 500-instance human-filtered
       subset; gold standard for software-engineering capability
@@ -1279,7 +1281,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 
 - **Pricing:** Input $5.00/M · Output $25.00/M
 - **Tier ratings:** Coding **S** · Planning **S** · Agentic **A** · Multimodal **A** · Long-context **S** · Knowledge **S** · Speed **D**
-- **Headline benchmarks:** AA Intelligence Index 53.5 (#2); LMArena Text #5 (Elo 1481.7); LMArena WebDev #5 (Elo 1556.9); AA-Omniscience 26.2 (#2)
+- **Headline benchmarks:** AA Intelligence Index 40.7 (max); LMArena Text #5 (Elo 1481.7); LMArena WebDev #5 (Elo 1556.9); AA-Omniscience 26.2 (#2)
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
 - **Best for:** Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching
 
@@ -1287,7 +1289,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 
 - **Pricing:** Input $5.00/M · Output $25.00/M
 - **Tier ratings:** Coding **S** · Planning **S** · Agentic **S** · Multimodal **A** · Long-context **S** · Knowledge **S** · Speed **D**
-- **Headline benchmarks:** AA Intelligence Index 55.7 (#1); HLE 45.7%; Terminal-Bench Hard 58.3 (top-tier); τ²-bench retail pass_1 94.4%
+- **Headline benchmarks:** AA Intelligence Index 41.8 (max); HLE 45.7%; Terminal-Bench Hard 58.3 (top-tier); τ²-bench retail pass_1 94.4%
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode on legacy request-based plans; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
 - **Best for:** Anthropic's Opus 4.7 successor at the same very-high tier pricing — placeholder tier ratings inherited from opus-4.7 pending benchmark coverage; the 3x cheaper fast-mode per-token rate (vs opus-4.7 fast mode) is the headline cost-structure change to surface in the next editorial pass
 
@@ -1453,9 +1455,9 @@ as primary; the other becomes the secondary category for tie-breaking.
 
 - **Pricing:** Input $1.50/M · Output $7.50/M
 - **Tier ratings:** Coding **B** · Planning **B** · Agentic **C** · Multimodal **B** · Long-context **B** · Knowledge **B** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 39 (independently measured by Artificial Analysis); unified chat / reasoning / code model with an adjustable reasoning dial (reasoning_effort); multimodal (text + image input)
+- **Headline benchmarks:** AA Intelligence Index 14.2 (independently measured by Artificial Analysis); unified chat / reasoning / code model with an adjustable reasoning dial (reasoning_effort); multimodal (text + image input)
 - **Pricing notes:** Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)
-- **Best for:** Mistral's flagship unified model — the EU-jurisdiction choice for data-sovereignty / EU-regulatory workloads at low cost ($7.50/M output), with adjustable reasoning and multimodal (vision) input. Artificial Analysis Intelligence Index 39 places it mid-pack (below the US/cn frontier such as Gemini 3.1 Pro or DeepSeek V4-Pro) — pick it when the operator's EU jurisdiction is the deciding constraint, not when raw capability is. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key.
+- **Best for:** Mistral's flagship unified model — the EU-jurisdiction choice for data-sovereignty / EU-regulatory workloads at low cost ($7.50/M output), with adjustable reasoning and multimodal (vision) input. Artificial Analysis Intelligence Index 14.2 places it well below the US/cn frontier (behind models such as Gemini 3.1 Pro or DeepSeek V4-Pro) — pick it when the operator's EU jurisdiction is the deciding constraint, not when raw capability is. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key.
 
 #### Gemini 3.6 Flash — `gemini-3.6-flash`
 
@@ -1501,9 +1503,9 @@ as primary; the other becomes the secondary category for tie-breaking.
 
 - **Pricing:** Input $2.00/M · Output $6.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **B** · Long-context **S** · Knowledge **A** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 50.6 (high) / 49.3 (xhigh); HLE 42.9% (high); Terminal-Bench 2.1 88.4 (high); τ²-bench banking pass_1 50.7%
+- **Headline benchmarks:** AA Intelligence Index 44.3 (high); HLE 42.9% (high); Terminal-Bench 2.1 88.4 (high); τ²-bench banking pass_1 50.7%
 - **Pricing notes:** Jointly trained by Cursor and SpaceXAI
-- **Best for:** Cursor and SpaceXAI's Grok 4.5 successor at the same low-tier pricing ($2/$6) — placeholder tier ratings inherited from grok-4.5 with benchmark-grounded confirmation from AA Intelligence Index (50.6 high), Terminal-Bench 2.1 (88.4 high), and τ²-bench banking (50.7% pass_1). Pick over grok-4.5 when both are available since 4.6 supersedes 4.5 in the same series at equal output price.
+- **Best for:** Cursor and SpaceXAI's Grok 4.5 successor at the same low-tier pricing ($2/$6) — placeholder tier ratings inherited from grok-4.5 with benchmark-grounded confirmation from AA Intelligence Index (44.3 high), Terminal-Bench 2.1 (88.4 high), and τ²-bench banking (50.7% pass_1). Pick over grok-4.5 when both are available since 4.6 supersedes 4.5 in the same series at equal output price.
 
 #### Claude 4.5 Haiku — `claude-4.5-haiku`
 
@@ -1589,33 +1591,33 @@ as primary; the other becomes the secondary category for tie-breaking.
 
 - **Pricing:** Input $0.66/M · Output $1.98/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **D** · Long-context **A** · Knowledge **A** · Speed **C**
-- **Headline benchmarks:** AA Intelligence Index 52 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 80.6%, LiveCodeBench 93.5, Terminal-Bench 2.0 67.9, Codeforces CodeElo 3206, Putnam-2025 120/120 (DeepSeek-reported); 1M-token context; text-only (no image input); ~46 tokens/s (notably slow)
+- **Headline benchmarks:** AA Intelligence Index 36.0 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 80.6%, LiveCodeBench 93.5, Terminal-Bench 2.0 67.9, Codeforces CodeElo 3206, Putnam-2025 120/120 (DeepSeek-reported); 1M-token context; text-only (no image input); ~46 tokens/s (notably slow)
 - **Pricing notes:** Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.003625/M
-- **Best for:** DeepSeek's V4-Pro flagship — a very low-cost ($0.87/M output), cn-jurisdiction reasoning model with a 1M-token context window and thinking mode on by default. Strong general intelligence (Artificial Analysis Intelligence Index 52, just below Grok 4.3) and a frontier-approaching coding profile (SWE-bench Verified 80.6%, LiveCodeBench 93.5, Codeforces CodeElo 3206) — these coding numbers are DeepSeek-reported, so it is rated coding-A rather than S pending an independent SWE-bench leaderboard entry. Text-only (no multimodal) and notably slow (~46 tokens/s), so not for latency-sensitive or image work. Reached via the `deepseek-api` method (provider-direct per-token, not the Cursor pool) when the cn jurisdiction is acceptable and a deepseek-api-key is configured — the cheapest A-tier coding / reasoning option in the catalog.
+- **Best for:** DeepSeek's V4-Pro flagship — a very low-cost ($0.87/M output), cn-jurisdiction reasoning model with a 1M-token context window and thinking mode on by default. Strong general intelligence (Artificial Analysis Intelligence Index 36.0) and a frontier-approaching coding profile (SWE-bench Verified 80.6%, LiveCodeBench 93.5, Codeforces CodeElo 3206) — these coding numbers are DeepSeek-reported, so it is rated coding-A rather than S pending an independent SWE-bench leaderboard entry. Text-only (no multimodal) and notably slow (~46 tokens/s), so not for latency-sensitive or image work. Reached via the `deepseek-api` method (provider-direct per-token, not the Cursor pool) when the cn jurisdiction is acceptable and a deepseek-api-key is configured — the cheapest A-tier coding / reasoning option in the catalog.
 
 #### DeepSeek-V4-Flash — `deepseek-v4-flash`
 
 - **Pricing:** Input $0.22/M · Output $0.66/M
 - **Tier ratings:** Coding **A** · Planning **B** · Agentic **B** · Multimodal **D** · Long-context **B** · Knowledge **B** · Speed **A**
-- **Headline benchmarks:** AA Intelligence Index 47 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 79.0% (DeepSeek-reported); 1M-token context; text-only (no image input); ~90 tokens/s
+- **Headline benchmarks:** AA Intelligence Index 34.3 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 79.0% (DeepSeek-reported); 1M-token context; text-only (no image input); ~90 tokens/s
 - **Pricing notes:** Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.0028/M
-- **Best for:** DeepSeek's V4-Flash — the fast (~90 tokens/s), cheapest DeepSeek variant ($0.28/M output) with a 1M-token context window, for high-throughput / latency-sensitive text and code work under the cn jurisdiction with a deepseek-api-key. Mid-pack general intelligence (Artificial Analysis Intelligence Index 47) paired with a strong, DeepSeek-reported coding result (SWE-bench Verified 79.0%) — rated coding-A on that basis with the rest of its profile B-tier; text-only (no multimodal). Reached via the `deepseek-api` method (provider-direct per-token). Pick V4-Pro over V4-Flash when reasoning depth or the strongest coding matters; pick V4-Flash when speed and the lowest cost dominate.
+- **Best for:** DeepSeek's V4-Flash — the fast (~90 tokens/s), cheapest DeepSeek variant ($0.28/M output) with a 1M-token context window, for high-throughput / latency-sensitive text and code work under the cn jurisdiction with a deepseek-api-key. Mid-pack general intelligence (Artificial Analysis Intelligence Index 34.3) paired with a strong, DeepSeek-reported coding result (SWE-bench Verified 79.0%) — rated coding-A on that basis with the rest of its profile B-tier; text-only (no multimodal). Reached via the `deepseek-api` method (provider-direct per-token). Pick V4-Pro over V4-Flash when reasoning depth or the strongest coding matters; pick V4-Flash when speed and the lowest cost dominate.
 
 #### Mistral Small 4 — `mistral-small-4`
 
 - **Pricing:** Input $0.10/M · Output $0.30/M
 - **Tier ratings:** Coding **C** · Planning **C** · Agentic **C** · Multimodal **B** · Long-context **C** · Knowledge **C** · Speed **A**
-- **Headline benchmarks:** AA Intelligence Index 28 (independently measured by Artificial Analysis); compact Mixture-of-Experts unifying the former Small / Magistral / Pixtral / Devstral lines; adjustable reasoning_effort; multimodal (text + image)
+- **Headline benchmarks:** AA Intelligence Index 11.3 (independently measured by Artificial Analysis); compact Mixture-of-Experts unifying the former Small / Magistral / Pixtral / Devstral lines; adjustable reasoning_effort; multimodal (text + image)
 - **Pricing notes:** Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)
-- **Best for:** Mistral's cheapest fast model ($0.30/M output) — a small EU-jurisdiction MoE with multimodal input and an optional reasoning dial, for high-throughput / latency-sensitive text and light multimodal work where the EU operator matters and a mistral-api-key is configured. Artificial Analysis Intelligence Index 28 is low, so it is a cost / sovereignty pick rather than a capability pick. Reached via the `mistral-api` method (provider-direct per-token).
+- **Best for:** Mistral's cheapest fast model ($0.30/M output) — a small EU-jurisdiction MoE with multimodal input and an optional reasoning dial, for high-throughput / latency-sensitive text and light multimodal work where the EU operator matters and a mistral-api-key is configured. Artificial Analysis Intelligence Index 11.3 is low, so it is a cost / sovereignty pick rather than a capability pick. Reached via the `mistral-api` method (provider-direct per-token).
 
 #### Mistral Large 3 — `mistral-large-3`
 
 - **Pricing:** Input $0.50/M · Output $1.50/M
 - **Tier ratings:** Coding **C** · Planning **C** · Agentic **C** · Multimodal **D** · Long-context **C** · Knowledge **C** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 23 (independently measured by Artificial Analysis); open-weight Mixture-of-Experts (self-hostable); text-only
+- **Headline benchmarks:** AA Intelligence Index 9.3 (independently measured by Artificial Analysis); open-weight Mixture-of-Experts (self-hostable); text-only
 - **Pricing notes:** Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)
-- **Best for:** Mistral's open-weight Large 3 (MoE) — an EU-jurisdiction, self-hostable option at very low cost ($1.50/M output) for data-sovereignty workloads or teams that want to run the weights themselves. Artificial Analysis Intelligence Index 23 sits below the frontier and even below Mistral's own Medium 3.5 (Mistral repositioned Large as an open community model) — pick it for the open-weights / EU-operator profile, not raw capability. Reached via the `mistral-api` method (provider-direct per-token) or self-hosting.
+- **Best for:** Mistral's open-weight Large 3 (MoE) — an EU-jurisdiction, self-hostable option at very low cost ($1.50/M output) for data-sovereignty workloads or teams that want to run the weights themselves. Artificial Analysis Intelligence Index 9.3 sits below the frontier and even below Mistral's own Medium 3.5 (Mistral repositioned Large as an open community model) — pick it for the open-weights / EU-operator profile, not raw capability. Reached via the `mistral-api` method (provider-direct per-token) or self-hosting.
 
 #### Codestral — `codestral`
 
@@ -1669,7 +1671,7 @@ as primary; the other becomes the secondary category for tie-breaking.
 
 - **Pricing:** Input $1.25/M · Output $2.50/M
 - **Tier ratings:** Coding **B** · Planning **A** · Agentic **S** · Multimodal **B** · Long-context **S** · Knowledge **A** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 37.6 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1165.3
+- **Headline benchmarks:** AA Intelligence Index 24.9 (high); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1165.3
 - **Pricing notes:** Hidden by default; Requires Max Mode on request-based plans
 - **Best for:** Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding — leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist
 
@@ -3117,8 +3119,9 @@ as primary; the other becomes the secondary category for tie-breaking.
 
     - LMArena — human-preference Elo across general chat (chatbot-arena.com)
     - Artificial Analysis Intelligence Index — composite of 10 evaluations
-      including GPQA Diamond, Humanity's Last Exam, SciCode,
-      Terminal-Bench Hard, and AA-Omniscience
+      (v4.3: Humanity's Last Exam, SciCode, Terminal-Bench 4.0,
+      AA-Omniscience, AA-LCR, AA-Briefcase, GDPval-AA, AutomationBench-AA,
+      GDP.pdf, CritPt); scores are NOT comparable across index versions
     - Aider polyglot — coding across C++, Go, Java, JavaScript, Python, Rust
     - SWE-bench Verified — real GitHub issues, 500-instance human-filtered
       subset; gold standard for software-engineering capability
@@ -3180,7 +3183,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="S" tier-planning="S" tier-agentic="A"
              tier-multimodal="A" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 53.5 (#2); LMArena Text #5 (Elo 1481.7); LMArena WebDev #5 (Elo 1556.9); AA-Omniscience 26.2 (#2)"
+             headline-benchmarks="AA Intelligence Index 40.7 (max); LMArena Text #5 (Elo 1481.7); LMArena WebDev #5 (Elo 1556.9); AA-Omniscience 26.2 (#2)"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)"
              best-for="Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching" />
       <model id="opus-4.8" name="Opus 4.8"
@@ -3189,7 +3192,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="S" tier-planning="S" tier-agentic="S"
              tier-multimodal="A" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 55.7 (#1); HLE 45.7%; Terminal-Bench Hard 58.3 (top-tier); τ²-bench retail pass_1 94.4%"
+             headline-benchmarks="AA Intelligence Index 41.8 (max); HLE 45.7%; Terminal-Bench Hard 58.3 (top-tier); τ²-bench retail pass_1 94.4%"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode on legacy request-based plans; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)"
              best-for="Anthropic's Opus 4.7 successor at the same very-high tier pricing — placeholder tier ratings inherited from opus-4.7 pending benchmark coverage; the 3x cheaper fast-mode per-token rate (vs opus-4.7 fast mode) is the headline cost-structure change to surface in the next editorial pass" />
       <model id="claude-opus-5" name="Claude Opus 5"
@@ -3376,9 +3379,9 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="B" tier-planning="B" tier-agentic="C"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 39 (independently measured by Artificial Analysis); unified chat / reasoning / code model with an adjustable reasoning dial (reasoning_effort); multimodal (text + image input)"
+             headline-benchmarks="AA Intelligence Index 14.2 (independently measured by Artificial Analysis); unified chat / reasoning / code model with an adjustable reasoning dial (reasoning_effort); multimodal (text + image input)"
              pricing-notes="Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)"
-             best-for="Mistral's flagship unified model — the EU-jurisdiction choice for data-sovereignty / EU-regulatory workloads at low cost ($7.50/M output), with adjustable reasoning and multimodal (vision) input. Artificial Analysis Intelligence Index 39 places it mid-pack (below the US/cn frontier such as Gemini 3.1 Pro or DeepSeek V4-Pro) — pick it when the operator's EU jurisdiction is the deciding constraint, not when raw capability is. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key." />
+             best-for="Mistral's flagship unified model — the EU-jurisdiction choice for data-sovereignty / EU-regulatory workloads at low cost ($7.50/M output), with adjustable reasoning and multimodal (vision) input. Artificial Analysis Intelligence Index 14.2 places it well below the US/cn frontier (behind models such as Gemini 3.1 Pro or DeepSeek V4-Pro) — pick it when the operator's EU jurisdiction is the deciding constraint, not when raw capability is. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key." />
       <model id="gemini-3.6-flash" name="Gemini 3.6 Flash"
              input-price-per-1m="$1.50" output-price-per-1m="$7.50"
              jurisdiction="us"
@@ -3430,9 +3433,9 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="A" tier-planning="A" tier-agentic="A"
              tier-multimodal="B" tier-long-context="S" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 50.6 (high) / 49.3 (xhigh); HLE 42.9% (high); Terminal-Bench 2.1 88.4 (high); τ²-bench banking pass_1 50.7%"
+             headline-benchmarks="AA Intelligence Index 44.3 (high); HLE 42.9% (high); Terminal-Bench 2.1 88.4 (high); τ²-bench banking pass_1 50.7%"
              pricing-notes="Jointly trained by Cursor and SpaceXAI"
-             best-for="Cursor and SpaceXAI's Grok 4.5 successor at the same low-tier pricing ($2/$6) — placeholder tier ratings inherited from grok-4.5 with benchmark-grounded confirmation from AA Intelligence Index (50.6 high), Terminal-Bench 2.1 (88.4 high), and τ²-bench banking (50.7% pass_1). Pick over grok-4.5 when both are available since 4.6 supersedes 4.5 in the same series at equal output price." />
+             best-for="Cursor and SpaceXAI's Grok 4.5 successor at the same low-tier pricing ($2/$6) — placeholder tier ratings inherited from grok-4.5 with benchmark-grounded confirmation from AA Intelligence Index (44.3 high), Terminal-Bench 2.1 (88.4 high), and τ²-bench banking (50.7% pass_1). Pick over grok-4.5 when both are available since 4.6 supersedes 4.5 in the same series at equal output price." />
       <model id="claude-4.5-haiku" name="Claude 4.5 Haiku"
              input-price-per-1m="$1.00" output-price-per-1m="$5.00"
              jurisdiction="us"
@@ -3529,36 +3532,36 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="A" tier-planning="A" tier-agentic="A"
              tier-multimodal="D" tier-long-context="A" tier-knowledge="A"
              tier-speed="C"
-             headline-benchmarks="AA Intelligence Index 52 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 80.6%, LiveCodeBench 93.5, Terminal-Bench 2.0 67.9, Codeforces CodeElo 3206, Putnam-2025 120/120 (DeepSeek-reported); 1M-token context; text-only (no image input); ~46 tokens/s (notably slow)"
+             headline-benchmarks="AA Intelligence Index 36.0 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 80.6%, LiveCodeBench 93.5, Terminal-Bench 2.0 67.9, Codeforces CodeElo 3206, Putnam-2025 120/120 (DeepSeek-reported); 1M-token context; text-only (no image input); ~46 tokens/s (notably slow)"
              pricing-notes="Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.003625/M"
-             best-for="DeepSeek's V4-Pro flagship — a very low-cost ($0.87/M output), cn-jurisdiction reasoning model with a 1M-token context window and thinking mode on by default. Strong general intelligence (Artificial Analysis Intelligence Index 52, just below Grok 4.3) and a frontier-approaching coding profile (SWE-bench Verified 80.6%, LiveCodeBench 93.5, Codeforces CodeElo 3206) — these coding numbers are DeepSeek-reported, so it is rated coding-A rather than S pending an independent SWE-bench leaderboard entry. Text-only (no multimodal) and notably slow (~46 tokens/s), so not for latency-sensitive or image work. Reached via the `deepseek-api` method (provider-direct per-token, not the Cursor pool) when the cn jurisdiction is acceptable and a deepseek-api-key is configured — the cheapest A-tier coding / reasoning option in the catalog." />
+             best-for="DeepSeek's V4-Pro flagship — a very low-cost ($0.87/M output), cn-jurisdiction reasoning model with a 1M-token context window and thinking mode on by default. Strong general intelligence (Artificial Analysis Intelligence Index 36.0) and a frontier-approaching coding profile (SWE-bench Verified 80.6%, LiveCodeBench 93.5, Codeforces CodeElo 3206) — these coding numbers are DeepSeek-reported, so it is rated coding-A rather than S pending an independent SWE-bench leaderboard entry. Text-only (no multimodal) and notably slow (~46 tokens/s), so not for latency-sensitive or image work. Reached via the `deepseek-api` method (provider-direct per-token, not the Cursor pool) when the cn jurisdiction is acceptable and a deepseek-api-key is configured — the cheapest A-tier coding / reasoning option in the catalog." />
       <model id="deepseek-v4-flash" name="DeepSeek-V4-Flash"
              input-price-per-1m="$0.22" output-price-per-1m="$0.66"
              jurisdiction="cn"
              tier-coding="A" tier-planning="B" tier-agentic="B"
              tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
              tier-speed="A"
-             headline-benchmarks="AA Intelligence Index 47 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 79.0% (DeepSeek-reported); 1M-token context; text-only (no image input); ~90 tokens/s"
+             headline-benchmarks="AA Intelligence Index 34.3 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 79.0% (DeepSeek-reported); 1M-token context; text-only (no image input); ~90 tokens/s"
              pricing-notes="Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.0028/M"
-             best-for="DeepSeek's V4-Flash — the fast (~90 tokens/s), cheapest DeepSeek variant ($0.28/M output) with a 1M-token context window, for high-throughput / latency-sensitive text and code work under the cn jurisdiction with a deepseek-api-key. Mid-pack general intelligence (Artificial Analysis Intelligence Index 47) paired with a strong, DeepSeek-reported coding result (SWE-bench Verified 79.0%) — rated coding-A on that basis with the rest of its profile B-tier; text-only (no multimodal). Reached via the `deepseek-api` method (provider-direct per-token). Pick V4-Pro over V4-Flash when reasoning depth or the strongest coding matters; pick V4-Flash when speed and the lowest cost dominate." />
+             best-for="DeepSeek's V4-Flash — the fast (~90 tokens/s), cheapest DeepSeek variant ($0.28/M output) with a 1M-token context window, for high-throughput / latency-sensitive text and code work under the cn jurisdiction with a deepseek-api-key. Mid-pack general intelligence (Artificial Analysis Intelligence Index 34.3) paired with a strong, DeepSeek-reported coding result (SWE-bench Verified 79.0%) — rated coding-A on that basis with the rest of its profile B-tier; text-only (no multimodal). Reached via the `deepseek-api` method (provider-direct per-token). Pick V4-Pro over V4-Flash when reasoning depth or the strongest coding matters; pick V4-Flash when speed and the lowest cost dominate." />
       <model id="mistral-small-4" name="Mistral Small 4"
              input-price-per-1m="$0.10" output-price-per-1m="$0.30"
              jurisdiction="eu"
              tier-coding="C" tier-planning="C" tier-agentic="C"
              tier-multimodal="B" tier-long-context="C" tier-knowledge="C"
              tier-speed="A"
-             headline-benchmarks="AA Intelligence Index 28 (independently measured by Artificial Analysis); compact Mixture-of-Experts unifying the former Small / Magistral / Pixtral / Devstral lines; adjustable reasoning_effort; multimodal (text + image)"
+             headline-benchmarks="AA Intelligence Index 11.3 (independently measured by Artificial Analysis); compact Mixture-of-Experts unifying the former Small / Magistral / Pixtral / Devstral lines; adjustable reasoning_effort; multimodal (text + image)"
              pricing-notes="Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)"
-             best-for="Mistral's cheapest fast model ($0.30/M output) — a small EU-jurisdiction MoE with multimodal input and an optional reasoning dial, for high-throughput / latency-sensitive text and light multimodal work where the EU operator matters and a mistral-api-key is configured. Artificial Analysis Intelligence Index 28 is low, so it is a cost / sovereignty pick rather than a capability pick. Reached via the `mistral-api` method (provider-direct per-token)." />
+             best-for="Mistral's cheapest fast model ($0.30/M output) — a small EU-jurisdiction MoE with multimodal input and an optional reasoning dial, for high-throughput / latency-sensitive text and light multimodal work where the EU operator matters and a mistral-api-key is configured. Artificial Analysis Intelligence Index 11.3 is low, so it is a cost / sovereignty pick rather than a capability pick. Reached via the `mistral-api` method (provider-direct per-token)." />
       <model id="mistral-large-3" name="Mistral Large 3"
              input-price-per-1m="$0.50" output-price-per-1m="$1.50"
              jurisdiction="eu"
              tier-coding="C" tier-planning="C" tier-agentic="C"
              tier-multimodal="D" tier-long-context="C" tier-knowledge="C"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 23 (independently measured by Artificial Analysis); open-weight Mixture-of-Experts (self-hostable); text-only"
+             headline-benchmarks="AA Intelligence Index 9.3 (independently measured by Artificial Analysis); open-weight Mixture-of-Experts (self-hostable); text-only"
              pricing-notes="Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)"
-             best-for="Mistral's open-weight Large 3 (MoE) — an EU-jurisdiction, self-hostable option at very low cost ($1.50/M output) for data-sovereignty workloads or teams that want to run the weights themselves. Artificial Analysis Intelligence Index 23 sits below the frontier and even below Mistral's own Medium 3.5 (Mistral repositioned Large as an open community model) — pick it for the open-weights / EU-operator profile, not raw capability. Reached via the `mistral-api` method (provider-direct per-token) or self-hosting." />
+             best-for="Mistral's open-weight Large 3 (MoE) — an EU-jurisdiction, self-hostable option at very low cost ($1.50/M output) for data-sovereignty workloads or teams that want to run the weights themselves. Artificial Analysis Intelligence Index 9.3 sits below the frontier and even below Mistral's own Medium 3.5 (Mistral repositioned Large as an open community model) — pick it for the open-weights / EU-operator profile, not raw capability. Reached via the `mistral-api` method (provider-direct per-token) or self-hosting." />
       <model id="codestral" name="Codestral"
              input-price-per-1m="$0.30" output-price-per-1m="$0.90"
              jurisdiction="eu"
@@ -3619,7 +3622,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="B" tier-planning="A" tier-agentic="S"
              tier-multimodal="B" tier-long-context="S" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 37.6 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1165.3"
+             headline-benchmarks="AA Intelligence Index 24.9 (high); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1165.3"
              pricing-notes="Hidden by default; Requires Max Mode on request-based plans"
              best-for="Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding — leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist" />
     </tier>
@@ -4712,8 +4715,9 @@ as primary; the other becomes the secondary category for tie-breaking.
 
     - LMArena — human-preference Elo across general chat (chatbot-arena.com)
     - Artificial Analysis Intelligence Index — composite of 10 evaluations
-      including GPQA Diamond, Humanity's Last Exam, SciCode,
-      Terminal-Bench Hard, and AA-Omniscience
+      (v4.3: Humanity's Last Exam, SciCode, Terminal-Bench 4.0,
+      AA-Omniscience, AA-LCR, AA-Briefcase, GDPval-AA, AutomationBench-AA,
+      GDP.pdf, CritPt); scores are NOT comparable across index versions
     - Aider polyglot — coding across C++, Go, Java, JavaScript, Python, Rust
     - SWE-bench Verified — real GitHub issues, 500-instance human-filtered
       subset; gold standard for software-engineering capability
@@ -4775,7 +4779,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="S" tier-planning="S" tier-agentic="A"
              tier-multimodal="A" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 53.5 (#2); LMArena Text #5 (Elo 1481.7); LMArena WebDev #5 (Elo 1556.9); AA-Omniscience 26.2 (#2)"
+             headline-benchmarks="AA Intelligence Index 40.7 (max); LMArena Text #5 (Elo 1481.7); LMArena WebDev #5 (Elo 1556.9); AA-Omniscience 26.2 (#2)"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)"
              best-for="Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching" />
       <model id="opus-4.8" name="Opus 4.8"
@@ -4784,7 +4788,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="S" tier-planning="S" tier-agentic="S"
              tier-multimodal="A" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 55.7 (#1); HLE 45.7%; Terminal-Bench Hard 58.3 (top-tier); τ²-bench retail pass_1 94.4%"
+             headline-benchmarks="AA Intelligence Index 41.8 (max); HLE 45.7%; Terminal-Bench Hard 58.3 (top-tier); τ²-bench retail pass_1 94.4%"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode on legacy request-based plans; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)"
              best-for="Anthropic's Opus 4.7 successor at the same very-high tier pricing — placeholder tier ratings inherited from opus-4.7 pending benchmark coverage; the 3x cheaper fast-mode per-token rate (vs opus-4.7 fast mode) is the headline cost-structure change to surface in the next editorial pass" />
       <model id="claude-opus-5" name="Claude Opus 5"
@@ -4971,9 +4975,9 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="B" tier-planning="B" tier-agentic="C"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 39 (independently measured by Artificial Analysis); unified chat / reasoning / code model with an adjustable reasoning dial (reasoning_effort); multimodal (text + image input)"
+             headline-benchmarks="AA Intelligence Index 14.2 (independently measured by Artificial Analysis); unified chat / reasoning / code model with an adjustable reasoning dial (reasoning_effort); multimodal (text + image input)"
              pricing-notes="Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)"
-             best-for="Mistral's flagship unified model — the EU-jurisdiction choice for data-sovereignty / EU-regulatory workloads at low cost ($7.50/M output), with adjustable reasoning and multimodal (vision) input. Artificial Analysis Intelligence Index 39 places it mid-pack (below the US/cn frontier such as Gemini 3.1 Pro or DeepSeek V4-Pro) — pick it when the operator's EU jurisdiction is the deciding constraint, not when raw capability is. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key." />
+             best-for="Mistral's flagship unified model — the EU-jurisdiction choice for data-sovereignty / EU-regulatory workloads at low cost ($7.50/M output), with adjustable reasoning and multimodal (vision) input. Artificial Analysis Intelligence Index 14.2 places it well below the US/cn frontier (behind models such as Gemini 3.1 Pro or DeepSeek V4-Pro) — pick it when the operator's EU jurisdiction is the deciding constraint, not when raw capability is. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key." />
       <model id="gemini-3.6-flash" name="Gemini 3.6 Flash"
              input-price-per-1m="$1.50" output-price-per-1m="$7.50"
              jurisdiction="us"
@@ -5025,9 +5029,9 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="A" tier-planning="A" tier-agentic="A"
              tier-multimodal="B" tier-long-context="S" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 50.6 (high) / 49.3 (xhigh); HLE 42.9% (high); Terminal-Bench 2.1 88.4 (high); τ²-bench banking pass_1 50.7%"
+             headline-benchmarks="AA Intelligence Index 44.3 (high); HLE 42.9% (high); Terminal-Bench 2.1 88.4 (high); τ²-bench banking pass_1 50.7%"
              pricing-notes="Jointly trained by Cursor and SpaceXAI"
-             best-for="Cursor and SpaceXAI's Grok 4.5 successor at the same low-tier pricing ($2/$6) — placeholder tier ratings inherited from grok-4.5 with benchmark-grounded confirmation from AA Intelligence Index (50.6 high), Terminal-Bench 2.1 (88.4 high), and τ²-bench banking (50.7% pass_1). Pick over grok-4.5 when both are available since 4.6 supersedes 4.5 in the same series at equal output price." />
+             best-for="Cursor and SpaceXAI's Grok 4.5 successor at the same low-tier pricing ($2/$6) — placeholder tier ratings inherited from grok-4.5 with benchmark-grounded confirmation from AA Intelligence Index (44.3 high), Terminal-Bench 2.1 (88.4 high), and τ²-bench banking (50.7% pass_1). Pick over grok-4.5 when both are available since 4.6 supersedes 4.5 in the same series at equal output price." />
       <model id="claude-4.5-haiku" name="Claude 4.5 Haiku"
              input-price-per-1m="$1.00" output-price-per-1m="$5.00"
              jurisdiction="us"
@@ -5124,36 +5128,36 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="A" tier-planning="A" tier-agentic="A"
              tier-multimodal="D" tier-long-context="A" tier-knowledge="A"
              tier-speed="C"
-             headline-benchmarks="AA Intelligence Index 52 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 80.6%, LiveCodeBench 93.5, Terminal-Bench 2.0 67.9, Codeforces CodeElo 3206, Putnam-2025 120/120 (DeepSeek-reported); 1M-token context; text-only (no image input); ~46 tokens/s (notably slow)"
+             headline-benchmarks="AA Intelligence Index 36.0 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 80.6%, LiveCodeBench 93.5, Terminal-Bench 2.0 67.9, Codeforces CodeElo 3206, Putnam-2025 120/120 (DeepSeek-reported); 1M-token context; text-only (no image input); ~46 tokens/s (notably slow)"
              pricing-notes="Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.003625/M"
-             best-for="DeepSeek's V4-Pro flagship — a very low-cost ($0.87/M output), cn-jurisdiction reasoning model with a 1M-token context window and thinking mode on by default. Strong general intelligence (Artificial Analysis Intelligence Index 52, just below Grok 4.3) and a frontier-approaching coding profile (SWE-bench Verified 80.6%, LiveCodeBench 93.5, Codeforces CodeElo 3206) — these coding numbers are DeepSeek-reported, so it is rated coding-A rather than S pending an independent SWE-bench leaderboard entry. Text-only (no multimodal) and notably slow (~46 tokens/s), so not for latency-sensitive or image work. Reached via the `deepseek-api` method (provider-direct per-token, not the Cursor pool) when the cn jurisdiction is acceptable and a deepseek-api-key is configured — the cheapest A-tier coding / reasoning option in the catalog." />
+             best-for="DeepSeek's V4-Pro flagship — a very low-cost ($0.87/M output), cn-jurisdiction reasoning model with a 1M-token context window and thinking mode on by default. Strong general intelligence (Artificial Analysis Intelligence Index 36.0) and a frontier-approaching coding profile (SWE-bench Verified 80.6%, LiveCodeBench 93.5, Codeforces CodeElo 3206) — these coding numbers are DeepSeek-reported, so it is rated coding-A rather than S pending an independent SWE-bench leaderboard entry. Text-only (no multimodal) and notably slow (~46 tokens/s), so not for latency-sensitive or image work. Reached via the `deepseek-api` method (provider-direct per-token, not the Cursor pool) when the cn jurisdiction is acceptable and a deepseek-api-key is configured — the cheapest A-tier coding / reasoning option in the catalog." />
       <model id="deepseek-v4-flash" name="DeepSeek-V4-Flash"
              input-price-per-1m="$0.22" output-price-per-1m="$0.66"
              jurisdiction="cn"
              tier-coding="A" tier-planning="B" tier-agentic="B"
              tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
              tier-speed="A"
-             headline-benchmarks="AA Intelligence Index 47 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 79.0% (DeepSeek-reported); 1M-token context; text-only (no image input); ~90 tokens/s"
+             headline-benchmarks="AA Intelligence Index 34.3 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 79.0% (DeepSeek-reported); 1M-token context; text-only (no image input); ~90 tokens/s"
              pricing-notes="Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.0028/M"
-             best-for="DeepSeek's V4-Flash — the fast (~90 tokens/s), cheapest DeepSeek variant ($0.28/M output) with a 1M-token context window, for high-throughput / latency-sensitive text and code work under the cn jurisdiction with a deepseek-api-key. Mid-pack general intelligence (Artificial Analysis Intelligence Index 47) paired with a strong, DeepSeek-reported coding result (SWE-bench Verified 79.0%) — rated coding-A on that basis with the rest of its profile B-tier; text-only (no multimodal). Reached via the `deepseek-api` method (provider-direct per-token). Pick V4-Pro over V4-Flash when reasoning depth or the strongest coding matters; pick V4-Flash when speed and the lowest cost dominate." />
+             best-for="DeepSeek's V4-Flash — the fast (~90 tokens/s), cheapest DeepSeek variant ($0.28/M output) with a 1M-token context window, for high-throughput / latency-sensitive text and code work under the cn jurisdiction with a deepseek-api-key. Mid-pack general intelligence (Artificial Analysis Intelligence Index 34.3) paired with a strong, DeepSeek-reported coding result (SWE-bench Verified 79.0%) — rated coding-A on that basis with the rest of its profile B-tier; text-only (no multimodal). Reached via the `deepseek-api` method (provider-direct per-token). Pick V4-Pro over V4-Flash when reasoning depth or the strongest coding matters; pick V4-Flash when speed and the lowest cost dominate." />
       <model id="mistral-small-4" name="Mistral Small 4"
              input-price-per-1m="$0.10" output-price-per-1m="$0.30"
              jurisdiction="eu"
              tier-coding="C" tier-planning="C" tier-agentic="C"
              tier-multimodal="B" tier-long-context="C" tier-knowledge="C"
              tier-speed="A"
-             headline-benchmarks="AA Intelligence Index 28 (independently measured by Artificial Analysis); compact Mixture-of-Experts unifying the former Small / Magistral / Pixtral / Devstral lines; adjustable reasoning_effort; multimodal (text + image)"
+             headline-benchmarks="AA Intelligence Index 11.3 (independently measured by Artificial Analysis); compact Mixture-of-Experts unifying the former Small / Magistral / Pixtral / Devstral lines; adjustable reasoning_effort; multimodal (text + image)"
              pricing-notes="Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)"
-             best-for="Mistral's cheapest fast model ($0.30/M output) — a small EU-jurisdiction MoE with multimodal input and an optional reasoning dial, for high-throughput / latency-sensitive text and light multimodal work where the EU operator matters and a mistral-api-key is configured. Artificial Analysis Intelligence Index 28 is low, so it is a cost / sovereignty pick rather than a capability pick. Reached via the `mistral-api` method (provider-direct per-token)." />
+             best-for="Mistral's cheapest fast model ($0.30/M output) — a small EU-jurisdiction MoE with multimodal input and an optional reasoning dial, for high-throughput / latency-sensitive text and light multimodal work where the EU operator matters and a mistral-api-key is configured. Artificial Analysis Intelligence Index 11.3 is low, so it is a cost / sovereignty pick rather than a capability pick. Reached via the `mistral-api` method (provider-direct per-token)." />
       <model id="mistral-large-3" name="Mistral Large 3"
              input-price-per-1m="$0.50" output-price-per-1m="$1.50"
              jurisdiction="eu"
              tier-coding="C" tier-planning="C" tier-agentic="C"
              tier-multimodal="D" tier-long-context="C" tier-knowledge="C"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 23 (independently measured by Artificial Analysis); open-weight Mixture-of-Experts (self-hostable); text-only"
+             headline-benchmarks="AA Intelligence Index 9.3 (independently measured by Artificial Analysis); open-weight Mixture-of-Experts (self-hostable); text-only"
              pricing-notes="Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)"
-             best-for="Mistral's open-weight Large 3 (MoE) — an EU-jurisdiction, self-hostable option at very low cost ($1.50/M output) for data-sovereignty workloads or teams that want to run the weights themselves. Artificial Analysis Intelligence Index 23 sits below the frontier and even below Mistral's own Medium 3.5 (Mistral repositioned Large as an open community model) — pick it for the open-weights / EU-operator profile, not raw capability. Reached via the `mistral-api` method (provider-direct per-token) or self-hosting." />
+             best-for="Mistral's open-weight Large 3 (MoE) — an EU-jurisdiction, self-hostable option at very low cost ($1.50/M output) for data-sovereignty workloads or teams that want to run the weights themselves. Artificial Analysis Intelligence Index 9.3 sits below the frontier and even below Mistral's own Medium 3.5 (Mistral repositioned Large as an open community model) — pick it for the open-weights / EU-operator profile, not raw capability. Reached via the `mistral-api` method (provider-direct per-token) or self-hosting." />
       <model id="codestral" name="Codestral"
              input-price-per-1m="$0.30" output-price-per-1m="$0.90"
              jurisdiction="eu"
@@ -5214,7 +5218,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="B" tier-planning="A" tier-agentic="S"
              tier-multimodal="B" tier-long-context="S" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 37.6 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1165.3"
+             headline-benchmarks="AA Intelligence Index 24.9 (high); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1165.3"
              pricing-notes="Hidden by default; Requires Max Mode on request-based plans"
              best-for="Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding — leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist" />
     </tier>
@@ -6533,8 +6537,9 @@ as primary; the other becomes the secondary category for tie-breaking.
 
     - LMArena — human-preference Elo across general chat (chatbot-arena.com)
     - Artificial Analysis Intelligence Index — composite of 10 evaluations
-      including GPQA Diamond, Humanity's Last Exam, SciCode,
-      Terminal-Bench Hard, and AA-Omniscience
+      (v4.3: Humanity's Last Exam, SciCode, Terminal-Bench 4.0,
+      AA-Omniscience, AA-LCR, AA-Briefcase, GDPval-AA, AutomationBench-AA,
+      GDP.pdf, CritPt); scores are NOT comparable across index versions
     - Aider polyglot — coding across C++, Go, Java, JavaScript, Python, Rust
     - SWE-bench Verified — real GitHub issues, 500-instance human-filtered
       subset; gold standard for software-engineering capability
@@ -6596,7 +6601,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="S" tier-planning="S" tier-agentic="A"
              tier-multimodal="A" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 53.5 (#2); LMArena Text #5 (Elo 1481.7); LMArena WebDev #5 (Elo 1556.9); AA-Omniscience 26.2 (#2)"
+             headline-benchmarks="AA Intelligence Index 40.7 (max); LMArena Text #5 (Elo 1481.7); LMArena WebDev #5 (Elo 1556.9); AA-Omniscience 26.2 (#2)"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)"
              best-for="Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching" />
       <model id="opus-4.8" name="Opus 4.8"
@@ -6605,7 +6610,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="S" tier-planning="S" tier-agentic="S"
              tier-multimodal="A" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 55.7 (#1); HLE 45.7%; Terminal-Bench Hard 58.3 (top-tier); τ²-bench retail pass_1 94.4%"
+             headline-benchmarks="AA Intelligence Index 41.8 (max); HLE 45.7%; Terminal-Bench Hard 58.3 (top-tier); τ²-bench retail pass_1 94.4%"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode on legacy request-based plans; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)"
              best-for="Anthropic's Opus 4.7 successor at the same very-high tier pricing — placeholder tier ratings inherited from opus-4.7 pending benchmark coverage; the 3x cheaper fast-mode per-token rate (vs opus-4.7 fast mode) is the headline cost-structure change to surface in the next editorial pass" />
       <model id="claude-opus-5" name="Claude Opus 5"
@@ -6792,9 +6797,9 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="B" tier-planning="B" tier-agentic="C"
              tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 39 (independently measured by Artificial Analysis); unified chat / reasoning / code model with an adjustable reasoning dial (reasoning_effort); multimodal (text + image input)"
+             headline-benchmarks="AA Intelligence Index 14.2 (independently measured by Artificial Analysis); unified chat / reasoning / code model with an adjustable reasoning dial (reasoning_effort); multimodal (text + image input)"
              pricing-notes="Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)"
-             best-for="Mistral's flagship unified model — the EU-jurisdiction choice for data-sovereignty / EU-regulatory workloads at low cost ($7.50/M output), with adjustable reasoning and multimodal (vision) input. Artificial Analysis Intelligence Index 39 places it mid-pack (below the US/cn frontier such as Gemini 3.1 Pro or DeepSeek V4-Pro) — pick it when the operator's EU jurisdiction is the deciding constraint, not when raw capability is. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key." />
+             best-for="Mistral's flagship unified model — the EU-jurisdiction choice for data-sovereignty / EU-regulatory workloads at low cost ($7.50/M output), with adjustable reasoning and multimodal (vision) input. Artificial Analysis Intelligence Index 14.2 places it well below the US/cn frontier (behind models such as Gemini 3.1 Pro or DeepSeek V4-Pro) — pick it when the operator's EU jurisdiction is the deciding constraint, not when raw capability is. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key." />
       <model id="gemini-3.6-flash" name="Gemini 3.6 Flash"
              input-price-per-1m="$1.50" output-price-per-1m="$7.50"
              jurisdiction="us"
@@ -6846,9 +6851,9 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="A" tier-planning="A" tier-agentic="A"
              tier-multimodal="B" tier-long-context="S" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 50.6 (high) / 49.3 (xhigh); HLE 42.9% (high); Terminal-Bench 2.1 88.4 (high); τ²-bench banking pass_1 50.7%"
+             headline-benchmarks="AA Intelligence Index 44.3 (high); HLE 42.9% (high); Terminal-Bench 2.1 88.4 (high); τ²-bench banking pass_1 50.7%"
              pricing-notes="Jointly trained by Cursor and SpaceXAI"
-             best-for="Cursor and SpaceXAI's Grok 4.5 successor at the same low-tier pricing ($2/$6) — placeholder tier ratings inherited from grok-4.5 with benchmark-grounded confirmation from AA Intelligence Index (50.6 high), Terminal-Bench 2.1 (88.4 high), and τ²-bench banking (50.7% pass_1). Pick over grok-4.5 when both are available since 4.6 supersedes 4.5 in the same series at equal output price." />
+             best-for="Cursor and SpaceXAI's Grok 4.5 successor at the same low-tier pricing ($2/$6) — placeholder tier ratings inherited from grok-4.5 with benchmark-grounded confirmation from AA Intelligence Index (44.3 high), Terminal-Bench 2.1 (88.4 high), and τ²-bench banking (50.7% pass_1). Pick over grok-4.5 when both are available since 4.6 supersedes 4.5 in the same series at equal output price." />
       <model id="claude-4.5-haiku" name="Claude 4.5 Haiku"
              input-price-per-1m="$1.00" output-price-per-1m="$5.00"
              jurisdiction="us"
@@ -6945,36 +6950,36 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="A" tier-planning="A" tier-agentic="A"
              tier-multimodal="D" tier-long-context="A" tier-knowledge="A"
              tier-speed="C"
-             headline-benchmarks="AA Intelligence Index 52 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 80.6%, LiveCodeBench 93.5, Terminal-Bench 2.0 67.9, Codeforces CodeElo 3206, Putnam-2025 120/120 (DeepSeek-reported); 1M-token context; text-only (no image input); ~46 tokens/s (notably slow)"
+             headline-benchmarks="AA Intelligence Index 36.0 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 80.6%, LiveCodeBench 93.5, Terminal-Bench 2.0 67.9, Codeforces CodeElo 3206, Putnam-2025 120/120 (DeepSeek-reported); 1M-token context; text-only (no image input); ~46 tokens/s (notably slow)"
              pricing-notes="Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.003625/M"
-             best-for="DeepSeek's V4-Pro flagship — a very low-cost ($0.87/M output), cn-jurisdiction reasoning model with a 1M-token context window and thinking mode on by default. Strong general intelligence (Artificial Analysis Intelligence Index 52, just below Grok 4.3) and a frontier-approaching coding profile (SWE-bench Verified 80.6%, LiveCodeBench 93.5, Codeforces CodeElo 3206) — these coding numbers are DeepSeek-reported, so it is rated coding-A rather than S pending an independent SWE-bench leaderboard entry. Text-only (no multimodal) and notably slow (~46 tokens/s), so not for latency-sensitive or image work. Reached via the `deepseek-api` method (provider-direct per-token, not the Cursor pool) when the cn jurisdiction is acceptable and a deepseek-api-key is configured — the cheapest A-tier coding / reasoning option in the catalog." />
+             best-for="DeepSeek's V4-Pro flagship — a very low-cost ($0.87/M output), cn-jurisdiction reasoning model with a 1M-token context window and thinking mode on by default. Strong general intelligence (Artificial Analysis Intelligence Index 36.0) and a frontier-approaching coding profile (SWE-bench Verified 80.6%, LiveCodeBench 93.5, Codeforces CodeElo 3206) — these coding numbers are DeepSeek-reported, so it is rated coding-A rather than S pending an independent SWE-bench leaderboard entry. Text-only (no multimodal) and notably slow (~46 tokens/s), so not for latency-sensitive or image work. Reached via the `deepseek-api` method (provider-direct per-token, not the Cursor pool) when the cn jurisdiction is acceptable and a deepseek-api-key is configured — the cheapest A-tier coding / reasoning option in the catalog." />
       <model id="deepseek-v4-flash" name="DeepSeek-V4-Flash"
              input-price-per-1m="$0.22" output-price-per-1m="$0.66"
              jurisdiction="cn"
              tier-coding="A" tier-planning="B" tier-agentic="B"
              tier-multimodal="D" tier-long-context="B" tier-knowledge="B"
              tier-speed="A"
-             headline-benchmarks="AA Intelligence Index 47 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 79.0% (DeepSeek-reported); 1M-token context; text-only (no image input); ~90 tokens/s"
+             headline-benchmarks="AA Intelligence Index 34.3 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 79.0% (DeepSeek-reported); 1M-token context; text-only (no image input); ~90 tokens/s"
              pricing-notes="Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.0028/M"
-             best-for="DeepSeek's V4-Flash — the fast (~90 tokens/s), cheapest DeepSeek variant ($0.28/M output) with a 1M-token context window, for high-throughput / latency-sensitive text and code work under the cn jurisdiction with a deepseek-api-key. Mid-pack general intelligence (Artificial Analysis Intelligence Index 47) paired with a strong, DeepSeek-reported coding result (SWE-bench Verified 79.0%) — rated coding-A on that basis with the rest of its profile B-tier; text-only (no multimodal). Reached via the `deepseek-api` method (provider-direct per-token). Pick V4-Pro over V4-Flash when reasoning depth or the strongest coding matters; pick V4-Flash when speed and the lowest cost dominate." />
+             best-for="DeepSeek's V4-Flash — the fast (~90 tokens/s), cheapest DeepSeek variant ($0.28/M output) with a 1M-token context window, for high-throughput / latency-sensitive text and code work under the cn jurisdiction with a deepseek-api-key. Mid-pack general intelligence (Artificial Analysis Intelligence Index 34.3) paired with a strong, DeepSeek-reported coding result (SWE-bench Verified 79.0%) — rated coding-A on that basis with the rest of its profile B-tier; text-only (no multimodal). Reached via the `deepseek-api` method (provider-direct per-token). Pick V4-Pro over V4-Flash when reasoning depth or the strongest coding matters; pick V4-Flash when speed and the lowest cost dominate." />
       <model id="mistral-small-4" name="Mistral Small 4"
              input-price-per-1m="$0.10" output-price-per-1m="$0.30"
              jurisdiction="eu"
              tier-coding="C" tier-planning="C" tier-agentic="C"
              tier-multimodal="B" tier-long-context="C" tier-knowledge="C"
              tier-speed="A"
-             headline-benchmarks="AA Intelligence Index 28 (independently measured by Artificial Analysis); compact Mixture-of-Experts unifying the former Small / Magistral / Pixtral / Devstral lines; adjustable reasoning_effort; multimodal (text + image)"
+             headline-benchmarks="AA Intelligence Index 11.3 (independently measured by Artificial Analysis); compact Mixture-of-Experts unifying the former Small / Magistral / Pixtral / Devstral lines; adjustable reasoning_effort; multimodal (text + image)"
              pricing-notes="Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)"
-             best-for="Mistral's cheapest fast model ($0.30/M output) — a small EU-jurisdiction MoE with multimodal input and an optional reasoning dial, for high-throughput / latency-sensitive text and light multimodal work where the EU operator matters and a mistral-api-key is configured. Artificial Analysis Intelligence Index 28 is low, so it is a cost / sovereignty pick rather than a capability pick. Reached via the `mistral-api` method (provider-direct per-token)." />
+             best-for="Mistral's cheapest fast model ($0.30/M output) — a small EU-jurisdiction MoE with multimodal input and an optional reasoning dial, for high-throughput / latency-sensitive text and light multimodal work where the EU operator matters and a mistral-api-key is configured. Artificial Analysis Intelligence Index 11.3 is low, so it is a cost / sovereignty pick rather than a capability pick. Reached via the `mistral-api` method (provider-direct per-token)." />
       <model id="mistral-large-3" name="Mistral Large 3"
              input-price-per-1m="$0.50" output-price-per-1m="$1.50"
              jurisdiction="eu"
              tier-coding="C" tier-planning="C" tier-agentic="C"
              tier-multimodal="D" tier-long-context="C" tier-knowledge="C"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 23 (independently measured by Artificial Analysis); open-weight Mixture-of-Experts (self-hostable); text-only"
+             headline-benchmarks="AA Intelligence Index 9.3 (independently measured by Artificial Analysis); open-weight Mixture-of-Experts (self-hostable); text-only"
              pricing-notes="Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)"
-             best-for="Mistral's open-weight Large 3 (MoE) — an EU-jurisdiction, self-hostable option at very low cost ($1.50/M output) for data-sovereignty workloads or teams that want to run the weights themselves. Artificial Analysis Intelligence Index 23 sits below the frontier and even below Mistral's own Medium 3.5 (Mistral repositioned Large as an open community model) — pick it for the open-weights / EU-operator profile, not raw capability. Reached via the `mistral-api` method (provider-direct per-token) or self-hosting." />
+             best-for="Mistral's open-weight Large 3 (MoE) — an EU-jurisdiction, self-hostable option at very low cost ($1.50/M output) for data-sovereignty workloads or teams that want to run the weights themselves. Artificial Analysis Intelligence Index 9.3 sits below the frontier and even below Mistral's own Medium 3.5 (Mistral repositioned Large as an open community model) — pick it for the open-weights / EU-operator profile, not raw capability. Reached via the `mistral-api` method (provider-direct per-token) or self-hosting." />
       <model id="codestral" name="Codestral"
              input-price-per-1m="$0.30" output-price-per-1m="$0.90"
              jurisdiction="eu"
@@ -7035,7 +7040,7 @@ as primary; the other becomes the secondary category for tie-breaking.
              tier-coding="B" tier-planning="A" tier-agentic="S"
              tier-multimodal="B" tier-long-context="S" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 37.6 (#7); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1165.3"
+             headline-benchmarks="AA Intelligence Index 24.9 (high); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1165.3"
              pricing-notes="Hidden by default; Requires Max Mode on request-based plans"
              best-for="Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding — leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist" />
     </tier>

@@ -62,7 +62,7 @@ const BENCHMARK_ENTRIES: GlossaryEntry[] = [
   {
     term: "Artificial Analysis Intelligence Index",
     definition:
-      "A composite of 10 evaluations (incl. GPQA Diamond, Humanity's Last Exam, SciCode, and Terminal-Bench Hard).",
+      "A composite of 10 evaluations (v4.3: incl. Humanity's Last Exam, SciCode, Terminal-Bench 4.0, AA-Omniscience, and AutomationBench-AA). Scores are not comparable across index versions.",
     phrases: ["Artificial Analysis Intelligence Index", "AA Intelligence Index"],
     url: "https://artificialanalysis.ai/",
   },
