@@ -16,7 +16,7 @@ import {
   type Rating,
 } from "@/lib/catalog-fields";
 import { extractAaIndex } from "@/lib/benchmark-scores";
-import { GRID_COLUMNS, type BenchKey, type BenchRow } from "@/lib/benchmark-grid";
+import { GRID_COLUMNS, paretoFrontier, type BenchKey, type BenchRow } from "@/lib/benchmark-grid";
 import { BENCHMARKS } from "@/lib/glossary";
 
 interface RawModel {
@@ -65,7 +65,7 @@ function benchRowFor(id: string): BenchRow | null {
 }
 
 export function getModelRows(): ModelRow[] {
-  return MODELS.map((m) => {
+  const rows = MODELS.map((m) => {
     const prose = m.headline_benchmarks ?? "";
     const bench = benchRowFor(m.id);
     return {
@@ -83,8 +83,14 @@ export function getModelRows(): ModelRow[] {
       best_for: m.best_for ?? "",
       aa_index: bench?.values.artificial_analysis_intelligence_index ?? extractAaIndex(prose),
       bench,
+      value_frontier: false,
     };
   });
+  const frontier = paretoFrontier(
+    rows.map((r) => ({ row: r, price: r.output_price_per_1m, index: r.aa_index })),
+  );
+  for (const f of frontier) f.row.value_frontier = true;
+  return rows;
 }
 
 // "2026-06-21T12:53:54Z" → "2026-06-21 12:53 UTC". Falls back to the raw value.

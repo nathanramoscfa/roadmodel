@@ -56,14 +56,12 @@ export function CatalogLegend() {
             ))}
           </dl>
           <p className="mt-3 text-xs text-brand-slate-500 dark:text-brand-slate-400">
-            A rating is a class several models can share. The small figure under a letter is
-            that category&rsquo;s <strong>uniform</strong> benchmark &mdash; the same Artificial
-            Analysis test, on the same scale, for every row (Coding Index for coding,
-            Terminal-Bench 2.1 for agentic, AA-LCR for long-context, HLE for knowledge, tokens/s
-            for speed) &mdash; so figures compare straight down a column. Planning and multimodal
-            have no single-source public benchmark and stay letters only. &ldquo;&mdash;&rdquo;
-            means not measured, never zero. The <strong>AA Index</strong> column is the one
-            published composite. Sorting a category orders by letter, then figure, then AA Index.
+            A rating is a class several models can share; it is set editorially from cited
+            benchmark evidence, one step at a time (see the docs). The <strong>AA Index</strong>{" "}
+            column is the one published composite and the default sort. <strong>Best value</strong>{" "}
+            marks the cost/quality frontier: no catalog model is both cheaper and higher on the
+            AA Index. Hover a category header for which Benchmark-scores column is its uniform
+            evidence.
           </p>
         </div>
 
@@ -126,8 +124,10 @@ export function CatalogLegend() {
           </dl>
           <p className="mt-3 text-xs text-brand-slate-500 dark:text-brand-slate-400">
             The &ldquo;Benchmark scores&rdquo; view is the full Artificial Analysis grid, one
-            column per evaluation. Expand a row for the (mixed-source) figures the curation cited
-            when it set the letters. Hover any header for a definition; click for the source.
+            column per evaluation, each cell colored by its quintile within that column on the
+            same palette as the letters (green = top 20%, blue, grey, amber, rose = bottom 20%).
+            Expand a row for the (mixed-source) figures the curation cited when it set the
+            letters. Hover any header for a definition; click for the source.
           </p>
         </div>
       </div>

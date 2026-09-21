@@ -8,14 +8,15 @@
 //
 // Two views, one numeric layer:
 //   Ratings — Model (sticky), Provider, Jurisdiction, Input, Output (cost tier
-//     as a colored dot), AA Index, then seven letter cells. Under each letter
-//     sits that category's UNIFORM figure from lib/benchmark-grid.ts (the same
-//     Artificial Analysis column for every row, so the small numbers compare
-//     across rows); categories without a single-source benchmark stay letters
-//     only. Sorting a category orders by letter, then by that figure, then by
-//     AA Index, then by name.
+//     as a colored dot), AA Index, Value (Pareto-frontier badge), then seven
+//     letter cells. Letters only: the uniform figures live in the grid, and the
+//     category header's tooltip names which grid column is evidence for it.
+//     Sorting a category orders by letter, then AA Index, then name.
 //   Benchmark scores — the full AA grid: one column per evaluation, every value
 //     on that column's scale, "—" only where AA has not measured the model.
+//     Cells are colored by within-column quintile (lib/benchmark-grid bandFor)
+//     so a glance reads the same way the letter badges do.
+// Default sort is AA Index descending — the one published composite.
 // Cache-read price, tier name, pricing notes, "best for", and the benchmarks
 // the cron cited (mixed sources — evidence for the letters, not a scale) live
 // in the expanded row so they add no width. Fits a 1024px viewport.
@@ -27,11 +28,13 @@ import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Info } from "lucide-reac
 import { RATING_SCALE, segmentRationale } from "@/lib/glossary";
 import {
   AA_HOME,
+  bandFor,
   benchSortValue,
   CATEGORY_FIGURE,
   formatBench,
   GRID_COLUMN_BY_KEY,
   GRID_COLUMNS,
+  type Band,
   type BenchColumn,
   type BenchKey,
 } from "@/lib/benchmark-grid";
@@ -56,6 +59,23 @@ const RATING_MEANING: Record<string, string> = Object.fromEntries(
   RATING_SCALE.map((r) => [r.rating, r.meaning]),
 );
 
+// Grid cell tint by within-column quintile, on the same palette as the letter
+// badges so green/blue/grey/amber/rose mean the same thing in both views.
+const BAND_CLASS: Record<Band, string> = {
+  5: RATING_COLORS.S,
+  4: RATING_COLORS.A,
+  3: RATING_COLORS.B,
+  2: RATING_COLORS.C,
+  1: RATING_COLORS.D,
+};
+const BAND_LABEL: Record<Band, string> = {
+  5: "top 20% of measured models",
+  4: "60–80th percentile",
+  3: "40–60th percentile",
+  2: "20–40th percentile",
+  1: "bottom 20% of measured models",
+};
+
 type SortKey =
   | "name"
   | "provider"
@@ -63,6 +83,7 @@ type SortKey =
   | "input_price_per_1m"
   | "output_price_per_1m"
   | "aa_index"
+  | "value"
   | Category
   | BenchKey;
 type SortDir = "asc" | "desc";
@@ -116,6 +137,9 @@ function valueFor(row: ModelRow, key: SortKey): number | string {
       return row.output_price_per_1m;
     case "aa_index":
       return row.aa_index ?? -1;
+    case "value":
+      // Frontier first, then by index inside each group.
+      return (row.value_frontier ? 1000 : 0) + (row.aa_index ?? -1);
     default:
       return RATING_RANK[row.tiers[key]];
   }
@@ -130,15 +154,9 @@ function compareNullable(x: number | null, y: number | null, dir: 1 | -1): numbe
   return 0;
 }
 
-// Within one letter of a category column: that category's uniform figure
-// (the same AA column for every row), then the AA Index; the caller falls
-// through to the name.
-function categoryTieBreak(a: ModelRow, b: ModelRow, cat: Category, dir: 1 | -1): number {
-  const key = CATEGORY_FIGURE[cat];
-  if (key) {
-    const t = compareNullable(benchSortValue(a.bench, key), benchSortValue(b.bench, key), dir);
-    if (t !== 0) return t;
-  }
+// Within one letter of a category column: the AA Index (missing last); the
+// caller falls through to the name.
+function categoryTieBreak(a: ModelRow, b: ModelRow, dir: 1 | -1): number {
   return compareNullable(a.aa_index, b.aa_index, dir);
 }
 
@@ -158,7 +176,7 @@ export function ModelCatalog({
   measuredCount: number;
 }) {
   const [view, setView] = useState<View>("ratings");
-  const [sortKey, setSortKey] = useState<SortKey>("output_price_per_1m");
+  const [sortKey, setSortKey] = useState<SortKey>("aa_index");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [search, setSearch] = useState("");
   const [provider, setProvider] = useState("all");
@@ -177,6 +195,19 @@ export function ModelCatalog({
     () => Array.from(new Set(models.map((m) => m.jurisdiction))).sort(),
     [models],
   );
+
+  // Sorted measured values per grid column, over the WHOLE catalog (not the
+  // filtered rows), so a cell's band does not change when a filter is applied.
+  const columnValues = useMemo(() => {
+    const out = {} as Record<BenchKey, number[]>;
+    for (const col of GRID_COLUMNS) {
+      out[col.key] = models
+        .map((m) => benchSortValue(m.bench, col.key))
+        .filter((v): v is number => v !== null)
+        .sort((x, y) => x - y);
+    }
+    return out;
+  }, [models]);
 
   const rows = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -200,12 +231,17 @@ export function ModelCatalog({
         if (t !== 0) return t;
         return a.name.localeCompare(b.name);
       }
+      if (sortKey === "aa_index") {
+        const t = compareNullable(a.aa_index, b.aa_index, dir);
+        if (t !== 0) return t;
+        return a.name.localeCompare(b.name);
+      }
       const av = valueFor(a, sortKey);
       const bv = valueFor(b, sortKey);
       if (av < bv) return -1 * dir;
       if (av > bv) return 1 * dir;
       if (isCategory(sortKey)) {
-        const tie = categoryTieBreak(a, b, sortKey, dir);
+        const tie = categoryTieBreak(a, b, dir);
         if (tie !== 0) return tie;
       }
       return a.name.localeCompare(b.name);
@@ -223,7 +259,7 @@ export function ModelCatalog({
     // fall back to the shared default.
     const hiddenInGrid = ["provider", "jurisdiction", "input_price_per_1m"].includes(sortKey);
     if ((v === "benchmarks" && (isCategory(sortKey) || hiddenInGrid)) || (v === "ratings" && isBenchKey(sortKey))) {
-      setSortKey("output_price_per_1m");
+      setSortKey("aa_index");
       setSortDir("desc");
     }
   }
@@ -242,8 +278,8 @@ export function ModelCatalog({
   // and pricing is the ratings view's job) so the evaluation columns fit.
   const colSpan =
     view === "ratings"
-      ? 7 + CATEGORY_ORDER.length
-      : 4 + GRID_COLUMNS.length - 1;
+      ? 8 + CATEGORY_ORDER.length
+      : 5 + GRID_COLUMNS.length - 1;
 
   return (
     <div data-testid="model-catalog">
@@ -347,11 +383,13 @@ export function ModelCatalog({
         {view === "benchmarks" && (
           <>
             {" "}&middot; {measuredCount} measured by Artificial Analysis; &ldquo;&mdash;&rdquo; is
-            not measured, never a zero
+            not measured, never a zero; cell color is the value&rsquo;s quintile within its
+            column (green = top 20%, rose = bottom 20%)
           </>
         )}
-        . Click a column header to sort, a model name for its docs, and the chevron for pricing
-        detail, best-for notes, and the benchmarks the curation cited.
+        . Sorted by AA Index by default; click a column header to sort, a model name for its
+        docs, and the chevron for pricing detail, best-for notes, and the benchmarks the curation
+        cited.
       </p>
 
       {/* Table */}
@@ -404,6 +442,7 @@ export function ModelCatalog({
                 onSort={toggleSort}
                 align="right"
               />
+              <SortHeader field="value" sortKey={sortKey} dir={sortDir} onSort={toggleSort} />
               {view === "ratings"
                 ? CATEGORY_ORDER.map((cat) => (
                     <CategoryHeader
@@ -526,62 +565,58 @@ export function ModelCatalog({
                           m.aa_index
                         )}
                       </td>
+                      <td className="px-2 py-2" data-testid="value-cell" data-frontier={m.value_frontier ? "1" : "0"}>
+                        {m.value_frontier && (
+                          <span
+                            className="inline-flex items-center rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800 dark:bg-emerald-500/35 dark:text-emerald-300"
+                            title={`${FIELD_DEFS.value.fullName} — ${FIELD_DEFS.value.definition}`}
+                          >
+                            Best value
+                          </span>
+                        )}
+                      </td>
                       {view === "ratings"
                         ? CATEGORY_ORDER.map((cat) => {
                             const r = m.tiers[cat];
-                            const key = CATEGORY_FIGURE[cat];
-                            const col = key ? GRID_COLUMN_BY_KEY[key] : null;
-                            const v = key ? benchSortValue(m.bench, key) : null;
                             return (
-                              <td key={cat} className="w-14 px-1 py-1.5 text-center align-top">
+                              <td key={cat} className="w-14 px-1 py-2 text-center">
                                 <span
                                   className={BADGE_CLASS + " " + RATING_COLORS[r]}
                                   title={`${CATEGORY_DEFS[cat].fullName}: ${r} — ${RATING_MEANING[r]}`}
                                 >
                                   {r}
                                 </span>
-                                {col && (
-                                  <span
-                                    data-testid="cell-figure"
-                                    data-bench={col.key}
-                                    className={
-                                      "mt-0.5 block text-[10px] leading-tight tabular-nums " +
-                                      (v === null
-                                        ? "text-brand-slate-300 dark:text-brand-slate-600"
-                                        : "text-brand-slate-500 dark:text-brand-slate-400")
-                                    }
-                                    title={
-                                      v === null
-                                        ? `${col.label}: not measured by Artificial Analysis`
-                                        : `${col.label}: ${formatBench(v, col.unit)} (Artificial Analysis)`
-                                    }
-                                  >
-                                    {formatBench(v, col.unit)}
-                                  </span>
-                                )}
                               </td>
                             );
                           })
                         : GRID_BODY_COLUMNS.map((col) => {
                             const v = benchSortValue(m.bench, col.key);
+                            const band = bandFor(v, columnValues[col.key]);
                             return (
                               <td
                                 key={col.key}
                                 data-testid="bench-cell"
                                 data-bench={col.key}
-                                className={
-                                  "whitespace-nowrap px-2 py-2 text-right tabular-nums " +
-                                  (v === null
-                                    ? "text-brand-slate-300 dark:text-brand-slate-600"
-                                    : "text-brand-slate-800 dark:text-brand-slate-100")
-                                }
+                                data-band={band ?? ""}
+                                className="whitespace-nowrap px-1.5 py-1.5 text-right tabular-nums"
                                 title={
                                   v === null
                                     ? `${col.label}: not measured by Artificial Analysis`
-                                    : `${col.label}: ${formatBench(v, col.unit)} (Artificial Analysis${m.bench ? `, ${m.bench.aa_name}` : ""})`
+                                    : `${col.label}: ${formatBench(v, col.unit)} — ${BAND_LABEL[band!]} (Artificial Analysis${m.bench ? `, ${m.bench.aa_name}` : ""})`
                                 }
                               >
-                                {formatBench(v, col.unit)}
+                                {v === null ? (
+                                  <span className="text-brand-slate-300 dark:text-brand-slate-600">—</span>
+                                ) : (
+                                  <span
+                                    className={
+                                      "inline-block min-w-[3.25rem] rounded px-1.5 py-0.5 text-xs font-semibold " +
+                                      BAND_CLASS[band!]
+                                    }
+                                  >
+                                    {formatBench(v, col.unit)}
+                                  </span>
+                                )}
                               </td>
                             );
                           })}
@@ -616,9 +651,10 @@ export function ModelCatalog({
           Artificial Analysis
         </a>{" "}
         (snapshot {benchmarksGeneratedAt}; {measuredCount} of {models.length} models measured) —
-        one lab, one harness, so every column is comparable down the page. A rating is a class,
-        not a rank within it; sorting a category orders by letter, then by that category&rsquo;s
-        figure, then by the AA Index. Ratings are curated by the project&rsquo;s daily automation;
+        one lab, one harness, so every column is comparable down the page. &ldquo;Best
+        value&rdquo; marks the cost/quality frontier: no catalog model is both cheaper and higher
+        on the AA Index. A rating is a class, not a rank within it; sorting a category orders by
+        letter, then by the AA Index. Ratings are curated by the project&rsquo;s daily automation;
         see the{" "}
         <a href="/docs" className="text-brand-accent hover:underline">
           docs
@@ -758,8 +794,8 @@ function CategoryHeader({
   const figureKey = CATEGORY_FIGURE[cat];
   const figure = figureKey ? GRID_COLUMN_BY_KEY[figureKey] : null;
   const definition = figure
-    ? `${def.definition} The figure under each letter is ${figure.label} (Artificial Analysis).`
-    : `${def.definition} No single-source public benchmark covers this category, so it is rated by letter only.`;
+    ? `${def.definition} Uniform evidence: the ${figure.label} column in the Benchmark scores view (Artificial Analysis).`
+    : `${def.definition} No single-source public benchmark covers this category; the rating is editorial.`;
   return (
     <th
       className="w-14 px-1 py-2 text-center align-bottom font-semibold"

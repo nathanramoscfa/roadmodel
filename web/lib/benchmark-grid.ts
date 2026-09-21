@@ -151,12 +151,50 @@ export const GRID_COLUMN_BY_KEY: Record<BenchKey, BenchColumn> = Object.fromEntr
   GRID_COLUMNS.map((c) => [c.key, c]),
 ) as Record<BenchKey, BenchColumn>;
 
-// Category → the uniform column shown under that category's letter. Planning
-// and multimodal have no single-lab public benchmark in this dataset, so they
-// stay letters-only (the legend says so rather than inventing a number).
+// Category → the uniform column that is evidence for that category's letter
+// (named in the category header's tooltip). Planning and multimodal have no
+// single-lab public benchmark in this dataset.
 export const CATEGORY_FIGURE: Partial<Record<Category, BenchKey>> = Object.fromEntries(
   GRID_COLUMNS.filter((c) => c.category).map((c) => [c.category, c.key]),
 );
+
+// Within-column quintile band for a measured value: 5 = top 20% of measured
+// models on that column … 1 = bottom 20%. Every grid column is higher-is-
+// better on one scale, so the band is comparable across columns even though
+// the units are not — that is what the cell colors encode. Ranks among
+// MEASURED values only; a "—" has no band.
+export type Band = 1 | 2 | 3 | 4 | 5;
+
+export function bandFor(value: number | null, sortedMeasured: number[]): Band | null {
+  if (value === null || sortedMeasured.length === 0) return null;
+  // Share of measured values strictly below this one → quintile.
+  let below = 0;
+  while (below < sortedMeasured.length && sortedMeasured[below] < value) below += 1;
+  const pct = below / sortedMeasured.length;
+  return (Math.min(4, Math.floor(pct * 5)) + 1) as Band;
+}
+
+// Cost/quality Pareto frontier: a model is on it when NO other model is both
+// cheaper (output price) and higher on the AA Intelligence Index. Zero
+// tunable weights — the standard answer to "what is the best value" that a
+// quality ÷ price ratio gets wrong (a ratio is dominated by the two-orders-of-
+// magnitude price range and crowns the cheapest weak model). Ties on price
+// resolve to the higher index; ties on index to the cheaper price.
+export function paretoFrontier<T extends { price: number; index: number | null }>(
+  rows: readonly T[],
+): Set<T> {
+  const measured = rows.filter((r): r is T & { index: number } => r.index !== null);
+  const sorted = [...measured].sort((a, b) => a.price - b.price || b.index - a.index);
+  const frontier = new Set<T>();
+  let best = Number.NEGATIVE_INFINITY;
+  for (const r of sorted) {
+    if (r.index > best) {
+      frontier.add(r);
+      best = r.index;
+    }
+  }
+  return frontier;
+}
 
 // What the page carries per model: just the column values (null = not
 // measured) plus the AA identity for the tooltip/attribution.
