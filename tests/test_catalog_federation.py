@@ -114,7 +114,12 @@ def test_committed_catalog_snapshot_invariants() -> None:
     snap = json.loads(REAL_DEEPSEEK_CATALOG.read_text())
     assert snap["jurisdiction"] == "cn"
     ids = {m["id"] for m in snap["models"]}
-    assert {"deepseek-v4-flash", "deepseek-v4-pro"} <= ids
+    # 2026-09-17: DeepSeek retired deepseek-v4-flash (+ -vision-exp); the
+    # pricing table now lists its successor under the API name deepseek-flash
+    # (DeepSeek-V4.1-Flash). It stays in unexpected_slugs until it is added to
+    # <model-options> editorially with tier ratings (#583 / #606).
+    assert {"deepseek-flash", "deepseek-v4-pro"} <= ids
+    assert "deepseek-flash" in snap["unexpected_slugs"]
     for m in snap["models"]:
         assert m["input_price_per_1m"] > 0
         assert m["output_price_per_1m"] > 0
@@ -337,19 +342,25 @@ def test_compose_on_real_artifacts_is_clean() -> None:
     snaps = mod.provider_snapshots()
     composed, flags = mod.compose(base, snaps)
     assert flags == []
-    # DeepSeek is the only provider-direct source today; both models compose at low
-    # tier, and provider-direct wins over the (now-present) <model-options> base entry.
-    assert composed["deepseek-v4-flash"].source == "deepseek"
-    assert composed["deepseek-v4-flash"].cost_tier == "low"
+    # DeepSeek's rated model composes at low tier, and provider-direct wins over
+    # the (now-present) <model-options> base entry.
     assert composed["deepseek-v4-pro"].source == "deepseek"
+    assert composed["deepseek-v4-pro"].cost_tier == "low"
+    # 2026-09-17: DeepSeek retired deepseek-v4-flash from its pricing table (the
+    # legacy API name is served by the successor DeepSeek-V4.1-Flash). Until the
+    # successor is added editorially (#583 / #606) the rated element stays in
+    # <model-options> and falls back to the aggregator mirror for its price.
+    assert composed["deepseek-v4-flash"].source == "cursor"
+    assert composed["deepseek-v4-flash"].cost_tier == "low"
     # DeepSeek's rated models are IN <model-options> (the wiring slice landed
     # them), so they are no longer "proposed" additions. A model the provider
     # ships that roadmodel has not rated yet IS proposed — that is the
-    # flag-only discovery path, and it must not be asserted away: pin the
-    # invariant (nothing rated is proposed) rather than today's empty list.
+    # flag-only discovery path, and it must not be asserted away: the unrated
+    # successor deepseek-flash exercises it today.
     proposed = mod.proposed_additions(base, snaps)
     assert "deepseek-v4-flash" not in proposed
     assert "deepseek-v4-pro" not in proposed
+    assert "deepseek-flash" in proposed
     for candidate in proposed:
         assert candidate not in base, f"{candidate} is already in <model-options>"
 
@@ -653,8 +664,11 @@ def test_real_overlay_excludes_price_only_providers() -> None:
     for price_only_id in ("opus-4.8", "gpt-5.5", "gemini-3.5-flash"):
         assert price_only_id not in ids
     # Off-Cursor whole-element providers ARE overlaid: DeepSeek, and xAI/grok-4.3
-    # since Cursor delisted it 2026-07-14 (still on xAI's own API).
-    assert {"deepseek-v4-flash", "deepseek-v4-pro", "grok-4.3"} <= ids
+    # since Cursor delisted it 2026-07-14 (still on xAI's own API). DeepSeek
+    # retired deepseek-v4-flash 2026-09-17; its successor deepseek-flash is in
+    # the snapshot (unrated, so flagged rather than added — #583 / #606).
+    assert {"deepseek-flash", "deepseek-v4-pro", "grok-4.3"} <= ids
+    assert "deepseek-v4-flash" not in ids
 
 
 def test_price_provenance_fails_on_selector_drift(tmp_path: Path) -> None:
