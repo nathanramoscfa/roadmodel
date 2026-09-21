@@ -22,6 +22,18 @@ export type Category =
 export type Rating = "S" | "A" | "B" | "C" | "D";
 export type CostTier = "low" | "medium" | "high" | "very-high";
 
+// A published leaderboard figure pulled from the row's headline_benchmarks prose
+// (see lib/benchmark-scores.ts). `label` names the benchmark AS CITED, variant
+// included, so two rows compare only when their labels match.
+export interface CellScore {
+  term: string;
+  label: string;
+  short: string;
+  value: number;
+  display: string;
+  url?: string;
+}
+
 export interface ModelRow {
   id: string;
   name: string;
@@ -34,6 +46,10 @@ export interface ModelRow {
   headline_benchmarks: string;
   pricing_notes: string;
   best_for: string;
+  // Artificial Analysis Intelligence Index, or null when AA has not measured it.
+  aa_index: number | null;
+  // The headline benchmark figure per category, where the prose carries one.
+  scores: Partial<Record<Category, CellScore>>;
 }
 
 export interface FieldDef {
@@ -111,6 +127,7 @@ export type FieldKey =
   | "output_price_per_1m"
   | "cache_read_per_1m"
   | "tier_cost"
+  | "aa_index"
   | "benchmarks";
 
 export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
@@ -151,6 +168,13 @@ export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
     definition:
       "Bucket by output price: Low < $10, Medium $10–14.99, High $15–24.99, Very High ≥ $25 per 1M tokens.",
     url: "/docs",
+  },
+  aa_index: {
+    label: "AA Index",
+    fullName: "Artificial Analysis Intelligence Index",
+    definition:
+      "The one published composite number: Artificial Analysis's index over 10 evaluations (GPQA Diamond, Humanity's Last Exam, SciCode, Terminal-Bench Hard, …), independently measured. The closest thing to a single numeric rating — use it to separate models that share a letter. '—' means AA has not measured the model.",
+    url: "https://artificialanalysis.ai/",
   },
   benchmarks: {
     label: "Benchmark scores",

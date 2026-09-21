@@ -6,7 +6,7 @@ import { getCatalogGeneratedAt, getModelRows } from "@/lib/catalog-models";
 export const metadata = {
   title: "Models — roadmodel",
   description:
-    "The full AI-model catalog roadmodel recommends from: pricing, the S→D per-category ratings, and the benchmark scores behind them — sortable, filterable, and sourced.",
+    "The full AI-model catalog roadmodel recommends from: pricing, the S→D per-category ratings with their benchmark figures, and the Artificial Analysis Intelligence Index — sortable, filterable, and sourced.",
 };
 
 export default function ModelsPage() {
@@ -22,10 +22,11 @@ export default function ModelsPage() {
         </h1>
         <p className="mt-3 text-brand-slate-600 dark:text-brand-slate-300">
           Every model roadmodel recommends from — with pricing, the per-category{" "}
-          <strong>S&nbsp;&rarr;&nbsp;D</strong> ratings, and the public-benchmark scores those
-          ratings synthesize. The catalog is curated and re-priced automatically every day. Sort any
-          column, filter by jurisdiction or cost, and hover any label or benchmark for its
-          definition and source.
+          <strong>S&nbsp;&rarr;&nbsp;D</strong> ratings with their headline benchmark figures, and
+          the Artificial Analysis Intelligence Index as the one composite number. A rating is a
+          class several models can share; the figures separate them within it. The catalog is
+          curated and re-priced automatically every day. Sort any column, filter by jurisdiction
+          or cost, and hover any label or benchmark for its definition and source.
         </p>
       </header>
 

@@ -481,10 +481,16 @@ existing model MAY move when ALL of these hold:
   `tier-knowledge`; LMArena Elo → `tier-planning`; output tokens/sec
   → `tier-speed`.
 - The shift is large enough to cross the S/A/B/C/D boundaries
-  defined in `<model-options>` (S = top-1 or top-2 globally;
-  A = strong near-frontier; B = competent; C = limited; D = not
-  suited). A change within the same tier band is NOT grounds to
-  edit.
+  defined in `<model-options>` (S = frontier-class, at or within
+  reach of the category's best on a named benchmark; A = strong
+  near-frontier; B = competent; C = limited; D = not suited). A
+  change within the same tier band is NOT grounds to edit.
+- A promotion INTO S additionally requires the cited result to sit
+  within 5 points (index points, or percentage points on the same
+  benchmark) of the best result any current `<model-options>` model
+  holds in that category on that same benchmark — S is the class the
+  frontier shares, not a reward for a strong result. State the
+  leader's figure in the warning.
 - The change is at most ONE step (S↔A, A↔B, B↔C, C↔D). Multi-step
   jumps are NOT authorized — emit a warning recommending human
   review instead and leave the rating unchanged.
@@ -498,6 +504,14 @@ from this run's fetched sources, leave the rating verbatim. NEVER
 update a tier rating based on general reputation, vendor marketing,
 pricing changes, sources outside `<benchmark-sources>`, or
 aggregation across runs.
+
+Tier-inflation guard. After applying this run's updates, count the
+models rated S in each of the seven categories. For every category
+whose count exceeds 8, emit
+`tier inflation: tier-<category> now carries <N> S-tier models — editorial re-rating review recommended`.
+This is a warning for the human reviewer, never an edit: demoting
+models to restore the class is editorial (it changes which models the
+selector's S-tier floors admit) and is out of this automation's scope.
 
 ### `best-for` updates
 
@@ -588,7 +602,7 @@ auto-add rule in the Pricing section above:
     2. **Benchmark-grounded ratings.** If the fetched sources DO
        contain concrete numeric results for the model, assign each
        category's rating from that evidence per the same boundaries
-       that govern tier rating updates (S = top-1 or top-2 globally;
+       that govern tier rating updates (S = frontier-class, within reach of the category's best;
        A = strong near-frontier; B = competent; C = limited; D =
        not suited). Override the same-series placeholder for any
        category with benchmark evidence; leave the other categories
