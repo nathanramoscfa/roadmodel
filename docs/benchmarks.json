@@ -6,7 +6,7 @@
     "endpoint": "https://artificialanalysis.ai/api/v2/data/llms/models",
     "attribution": "Benchmark data © Artificial Analysis, used under its API terms with attribution."
   },
-  "generated_at_utc": "2026-09-21T19:36:34Z",
+  "generated_at_utc": "2026-09-21T22:10:35Z",
   "model_count": 46,
   "unmapped": [],
   "missing_slugs": [],
@@ -36,7 +36,7 @@
         "tau2": 0.546783625730994,
         "tau_banking": 0.0927835051546392
       },
-      "median_output_tokens_per_second": 147.571,
+      "median_output_tokens_per_second": 144.637,
       "median_time_to_first_token_seconds": 13.923
     },
     "claude-fable-5": {
@@ -92,8 +92,8 @@
         "tau2": null,
         "tau_banking": 0.472164948453608
       },
-      "median_output_tokens_per_second": 72.989,
-      "median_time_to_first_token_seconds": 116.992
+      "median_output_tokens_per_second": 72.183,
+      "median_time_to_first_token_seconds": 110.955
     },
     "claude-opus-5": {
       "aa_id": "b8fc61f7-5e9a-49e6-8547-6ac56db24627",
@@ -176,8 +176,8 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 235.81,
-      "median_time_to_first_token_seconds": 0.805
+      "median_output_tokens_per_second": 235.396,
+      "median_time_to_first_token_seconds": 0.79
     },
     "deepseek-v4-pro": {
       "aa_id": "83173329-c09a-41f1-a028-a282a5f908d7",
@@ -205,7 +205,7 @@
         "tau_banking": 0.395876288659794
       },
       "median_output_tokens_per_second": 96.953,
-      "median_time_to_first_token_seconds": 1.11
+      "median_time_to_first_token_seconds": 1.1
     },
     "gemini-2.5-flash": {
       "aa_id": "219ed587-60c5-4a48-9517-8480e08d0ca1",
@@ -316,8 +316,8 @@
         "tau2": 0.956140350877193,
         "tau_banking": 0.214432989690722
       },
-      "median_output_tokens_per_second": 145.514,
-      "median_time_to_first_token_seconds": 28.122
+      "median_output_tokens_per_second": 142.601,
+      "median_time_to_first_token_seconds": 25.562
     },
     "gemini-3.5-flash": {
       "aa_id": "0097ebf5-124f-42f6-9463-33b00e711f03",
@@ -428,8 +428,8 @@
         "tau2": null,
         "tau_banking": 0.449484536082474
       },
-      "median_output_tokens_per_second": 370.763,
-      "median_time_to_first_token_seconds": 12.504
+      "median_output_tokens_per_second": 365.042,
+      "median_time_to_first_token_seconds": 12.218
     },
     "glm-4.5-air": {
       "aa_id": "5d303dc9-c027-401f-9803-4e9aa3331007",
@@ -848,8 +848,8 @@
         "tau2": null,
         "tau_banking": 0.311340206185567
       },
-      "median_output_tokens_per_second": 153.667,
-      "median_time_to_first_token_seconds": 80.766
+      "median_output_tokens_per_second": 155.77,
+      "median_time_to_first_token_seconds": 83.997
     },
     "gpt-5.6-sol": {
       "aa_id": "d93edfe8-bf35-49ad-b56e-b18116142a1c",
@@ -904,8 +904,8 @@
         "tau2": 0.862573099415205,
         "tau_banking": 0.402061855670103
       },
-      "median_output_tokens_per_second": 107.221,
-      "median_time_to_first_token_seconds": 165.862
+      "median_output_tokens_per_second": 108.271,
+      "median_time_to_first_token_seconds": 169.783
     },
     "gpt-oss-120b": {
       "aa_id": "f0083258-8646-45b8-8082-7aaf6c2ea82a",
@@ -960,8 +960,8 @@
         "tau2": 0.60233918128655,
         "tau_banking": 0.0701030927835052
       },
-      "median_output_tokens_per_second": 180.791,
-      "median_time_to_first_token_seconds": 0.472
+      "median_output_tokens_per_second": 178.594,
+      "median_time_to_first_token_seconds": 0.475
     },
     "grok-4.3": {
       "aa_id": "948892b5-db03-4118-a4a8-ccd51ed871ea",
@@ -1044,7 +1044,7 @@
         "tau2": null,
         "tau_banking": 0.507216494845361
       },
-      "median_output_tokens_per_second": 70.99,
+      "median_output_tokens_per_second": 70.33,
       "median_time_to_first_token_seconds": 42.306
     },
     "kimi-k2.7-code": {
@@ -1072,8 +1072,8 @@
         "tau2": 0.900584795321637,
         "tau_banking": 0.202061855670103
       },
-      "median_output_tokens_per_second": 49.934,
-      "median_time_to_first_token_seconds": 1.223
+      "median_output_tokens_per_second": 49.144,
+      "median_time_to_first_token_seconds": 1.191
     },
     "kimi-k3": {
       "aa_id": "f7d2fc3e-1f7b-405f-818c-07952a4af78f",
@@ -1100,8 +1100,8 @@
         "tau2": null,
         "tau_banking": 0.45979381443299
       },
-      "median_output_tokens_per_second": 39.012,
-      "median_time_to_first_token_seconds": 2.748
+      "median_output_tokens_per_second": 38.027,
+      "median_time_to_first_token_seconds": 2.796
     },
     "mistral-large-3": {
       "aa_id": "4928e950-7f37-4475-b0dc-c5bad781a321",
@@ -1156,8 +1156,8 @@
         "tau2": 0.941520467836257,
         "tau_banking": 0.150515463917526
       },
-      "median_output_tokens_per_second": 164.454,
-      "median_time_to_first_token_seconds": 0.594
+      "median_output_tokens_per_second": 166.982,
+      "median_time_to_first_token_seconds": 0.588
     },
     "mistral-small-4": {
       "aa_id": "3fd96175-4ef1-434c-8795-f873aec2abc1",
@@ -1185,7 +1185,7 @@
         "tau_banking": 0.0494845360824742
       },
       "median_output_tokens_per_second": 172.234,
-      "median_time_to_first_token_seconds": 0.502
+      "median_time_to_first_token_seconds": 0.506
     },
     "muse-spark-1.3": {
       "aa_id": "9999672c-b687-4026-9c15-5cef02ff53bb",
@@ -1212,8 +1212,8 @@
         "tau2": null,
         "tau_banking": 0.505154639175258
       },
-      "median_output_tokens_per_second": 312.16,
-      "median_time_to_first_token_seconds": 27.586
+      "median_output_tokens_per_second": 281.377,
+      "median_time_to_first_token_seconds": 27.03
     },
     "opus-4.7": {
       "aa_id": "e9a09db3-8fd6-41dd-ba2f-20e0a2bff7f2",
