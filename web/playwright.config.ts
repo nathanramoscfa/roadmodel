@@ -1,6 +1,12 @@
 // web/playwright.config.ts
 import { defineConfig, devices } from "@playwright/test";
 
+// Local override for when something else already owns :3000 (the config
+// reuses an existing server outside CI, so a stranger on that port breaks
+// every spec with a 404). CI leaves it unset.
+const PORT = process.env.PLAYWRIGHT_PORT ?? "3000";
+const BASE_URL = `http://localhost:${PORT}`;
+
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: true,
@@ -9,7 +15,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: "list",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: BASE_URL,
     trace: "on-first-retry",
   },
   projects: [
@@ -19,8 +25,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run start",
-    url: "http://localhost:3000",
+    command: `npm run start -- --port ${PORT}`,
+    url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     env: {
@@ -31,7 +37,7 @@ export default defineConfig({
       // to empty here so the local test webServer matches CI
       // (where no .env.local exists and VERCEL is unset).
       VERCEL: "",
-      NEXT_PUBLIC_SITE_URL: "http://localhost:3000",
+      NEXT_PUBLIC_SITE_URL: BASE_URL,
       SUPABASE_URL: "https://ci-placeholder.supabase.co",
       SUPABASE_SERVICE_ROLE_KEY: "ci-placeholder-service-role-key",
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "ci-placeholder-anon-key",

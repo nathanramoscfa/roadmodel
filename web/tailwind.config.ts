@@ -3,7 +3,14 @@ import type { Config } from "tailwindcss";
 
 const config: Config = {
   darkMode: "class",
-  content: ["./app/**/*.{js,ts,jsx,tsx}", "./components/**/*.{js,ts,jsx,tsx}"],
+  // lib/ holds class-name tables (RATING_COLORS, COST_TIER_COLORS in
+  // lib/catalog-fields.ts); leaving it out of the scan purged those classes
+  // from the CSS, which is why only the neutral B/Low pills ever rendered.
+  content: [
+    "./app/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}",
+    "./lib/**/*.{js,ts,jsx,tsx}",
+  ],
   theme: {
     extend: {
       colors: {

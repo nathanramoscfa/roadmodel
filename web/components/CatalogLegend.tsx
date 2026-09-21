@@ -10,6 +10,7 @@ import {
   CATEGORY_ORDER,
   COST_TIER_COLORS,
   COST_TIER_DEFS,
+  COST_TIER_DOT,
   JURISDICTION_DEFS,
   RATING_COLORS,
   type CostTier,
@@ -38,7 +39,7 @@ export function CatalogLegend() {
         </span>
       </summary>
 
-      <div className="grid grid-cols-1 gap-6 border-t border-brand-slate-200 px-5 py-5 dark:border-brand-slate-700 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 border-t border-brand-slate-200 px-5 py-5 dark:border-brand-slate-700 md:grid-cols-2 xl:grid-cols-4">
         {/* Rating scale */}
         <div>
           <h3 className={SECTION_HEADING}>Rating scale (per category)</h3>
@@ -55,13 +56,10 @@ export function CatalogLegend() {
             ))}
           </dl>
           <p className="mt-3 text-xs text-brand-slate-500 dark:text-brand-slate-400">
-            The small figure under a rating is that category&rsquo;s headline benchmark score
-            (SWE-bench Verified for coding, Terminal-Bench / τ²-bench for agentic, HLE for
-            knowledge, LMArena Elo for planning, tokens/s for speed), labelled because versions
-            and subsets differ &mdash; compare only like with like. The{" "}
-            <strong>AA Index</strong> column is the Artificial Analysis Intelligence Index, the one
-            published composite number; &ldquo;&mdash;&rdquo; means not measured. Sorting a
-            category orders by letter, then by that figure, then by AA Index.
+            A rating is a class several models can share. The <strong>AA Index</strong> column
+            (Artificial Analysis Intelligence Index) is the one published composite that
+            separates them; &ldquo;&mdash;&rdquo; means not yet measured. Sorting a category
+            orders by letter, then by AA Index.
           </p>
         </div>
 
@@ -88,7 +86,11 @@ export function CatalogLegend() {
           <dl className="mt-2 space-y-1.5 text-sm">
             {(["low", "medium", "high", "very-high"] as CostTier[]).map((t) => (
               <div key={t} className="flex items-center gap-2">
-                <dt className="w-24 shrink-0">
+                <dt className="flex w-24 shrink-0 items-center gap-1.5">
+                  <span
+                    className={"inline-block h-2 w-2 shrink-0 rounded-full " + COST_TIER_DOT[t]}
+                    aria-hidden
+                  />
                   <span className={BADGE + " " + COST_TIER_COLORS[t]}>{COST_TIER_DEFS[t].label}</span>
                 </dt>
                 <dd className="text-brand-slate-600 dark:text-brand-slate-300">
@@ -97,6 +99,10 @@ export function CatalogLegend() {
               </div>
             ))}
           </dl>
+          <p className="mt-3 text-xs text-brand-slate-500 dark:text-brand-slate-400">
+            The dot beside each output price is its tier. Cache-read prices and the
+            provider&rsquo;s pricing notes are in the expanded row.
+          </p>
         </div>
 
         {/* Jurisdictions */}
@@ -115,8 +121,9 @@ export function CatalogLegend() {
             ))}
           </dl>
           <p className="mt-3 text-xs text-brand-slate-500 dark:text-brand-slate-400">
-            Benchmark names in the &ldquo;Benchmark scores&rdquo; view are clickable — hover for a
-            definition, click for the source leaderboard. Full list at the bottom of the page.
+            Benchmark names in the &ldquo;Benchmark notes&rdquo; view and the expanded rows are
+            clickable — hover for a definition, click for the source leaderboard. Full list at
+            the bottom of the page.
           </p>
         </div>
       </div>

@@ -1,8 +1,9 @@
 // web/tests/models.spec.ts
 //
 // The /models catalog reference page (public): renders the full model table,
-// the "how to read this" legend, sortable columns, the jurisdiction filter, the
-// ratings/benchmarks view toggle, and benchmark + provider-doc links.
+// the "how to read this" legend, sortable columns, the provider + jurisdiction
+// filters, the ratings/benchmark-notes view toggle, the expanded row, and
+// benchmark + provider-doc links.
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -96,7 +97,7 @@ test("the benchmark view linkifies scores to their source leaderboards", async (
   await expect(aa).toHaveAttribute("target", "_blank");
 });
 
-// --- Numbers next to letters (the honest numeric scale) ---------------------
+// --- The one composite number (AA Index) --------------------------------------
 
 interface ScoredModel extends CatalogModel {
   headline_benchmarks?: string;
@@ -129,48 +130,81 @@ test("the AA Index column shows the composite where measured and a dash where no
   await expect(page.getByTestId("model-row").first().getByTestId("aa-index")).toHaveText(String(top));
 });
 
-test("rating cells carry the category's headline benchmark figure, labelled as cited", async ({ page }) => {
+test("rating cells are letters only; the expanded row carries the cited benchmarks", async ({ page }) => {
   await page.goto("/models");
 
-  // A row citing Terminal-Bench 2.1 shows the figure with its version label —
-  // "Terminal-Bench 2.1" and "Terminal-Bench Hard" are different tests.
+  // A row citing Terminal-Bench 2.1: the letter cell shows no sub-figure, and
+  // expanding the row reveals the figure, linkified to its source leaderboard.
   const tb = scored.find((m) => /Terminal-Bench 2\.1 (\d+(?:\.\d+)?)/.test(m.headline_benchmarks ?? ""))!;
   const tbScore = /Terminal-Bench 2\.1 (\d+(?:\.\d+)?)/.exec(tb.headline_benchmarks ?? "")![1];
   const row = page.getByTestId("model-row").filter({ hasText: tb.name }).first();
-  const cell = row.getByTestId("cell-score").filter({ hasText: "TB 2.1" });
-  await expect(cell).toHaveCount(1);
-  await expect(cell).toContainText(tbScore);
-  await expect(cell).toHaveAttribute("title", /Terminal-Bench 2\.1 .* — source: https:\/\/www\.tbench\.ai\//);
+  await expect(row.getByTestId("cell-score")).toHaveCount(0);
+  await expect(page.getByTestId("model-detail")).toHaveCount(0);
 
-  // A row with no figures shows letters only.
-  const bare = page.getByTestId("model-row").filter({ hasText: WITHOUT_ANY.name }).first();
-  await expect(bare.getByTestId("cell-score")).toHaveCount(0);
+  await row.getByRole("button", { name: `Show details for ${tb.name}` }).click();
+  const detail = page.getByTestId("model-detail");
+  await expect(detail).toHaveCount(1);
+  await expect(detail).toContainText("Benchmarks cited");
+  // The benchmark name is a glossary link (its hidden tooltip sits between the
+  // name and the figure in the DOM), so check the two halves separately.
+  await expect(detail.locator('a[href="https://www.tbench.ai/"]')).toHaveCount(1);
+  await expect(detail).toContainText(`2.1 ${tbScore}`);
+  // Pricing detail moved out of the main table into the row.
+  await expect(detail).toContainText("Cache read");
+  await expect(detail).toContainText(/Cost tier/);
 });
 
-test("sorting a category orders by letter, then figure, then AA Index", async ({ page }) => {
+test("the cost tier is a dot beside the output price, not a column", async ({ page }) => {
   await page.goto("/models");
-  await page.getByRole("button", { name: /^Knowledge/ }).click();
 
-  // Column order: chevron, model, juris, input, output, cache, cost tier, AA
-  // index, then the seven categories — knowledge is the sixth category.
-  const KNOWLEDGE_TD = 8 + 5;
+  const priciest = page.getByTestId("model-row").filter({ hasText: PRICIEST_MODEL }).first();
+  await expect(priciest.getByTestId("cost-tier-dot")).toHaveAttribute("data-tier", "very-high");
+  const cheapest = page.getByTestId("model-row").filter({ hasText: CHEAPEST_MODEL }).first();
+  await expect(cheapest.getByTestId("cost-tier-dot")).toHaveAttribute("data-tier", "low");
+});
+
+test("the provider column and filter follow the model id", async ({ page }) => {
+  await page.goto("/models");
+
+  const fable = page.getByTestId("model-row").filter({ hasText: /Fable 5/ }).first();
+  await expect(fable).toContainText("Anthropic");
+
+  await page.getByLabel("Filter by provider").selectOption("Anthropic");
+  const rows = page.getByTestId("model-row");
+  const n = await rows.count();
+  expect(n).toBeGreaterThan(0);
+  for (let i = 0; i < n; i += 1) await expect(rows.nth(i)).toContainText("Anthropic");
+});
+
+test("the ratings view fits a 1280px viewport without horizontal scroll", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/models");
+
+  const overflow = await page
+    .getByTestId("model-catalog")
+    .locator("table")
+    .evaluate((t) => {
+      const wrap = t.parentElement!;
+      return wrap.scrollWidth - wrap.clientWidth;
+    });
+  expect(overflow).toBe(0);
+});
+
+test("sorting a category orders by letter, then AA Index", async ({ page }) => {
+  await page.goto("/models");
+  await page.getByRole("button", { name: /^Sort by Knowledge/ }).click();
+
+  // Column order: chevron, model, provider, juris, input, output, AA index,
+  // then the seven categories — knowledge is the sixth category.
+  const KNOWLEDGE_TD = 7 + 5;
   const rows = page.getByTestId("model-row");
   const count = await rows.count();
-  const seen: { rating: string; figure: { label: string; value: number } | null; aa: number | null }[] = [];
+  const seen: { rating: string; aa: number | null }[] = [];
   for (let i = 0; i < count; i += 1) {
     const r = rows.nth(i);
-    const cell = r.locator("td").nth(KNOWLEDGE_TD);
-    const rating = (await cell.locator("span").first().innerText()).trim();
-    const score = cell.getByTestId("cell-score");
-    let figure: { label: string; value: number } | null = null;
-    if ((await score.count()) === 1) {
-      const title = (await score.getAttribute("title")) ?? "";
-      // "<label> <display> — source: <url>"
-      const m = /^(.*) (\S+) — source:/.exec(title);
-      if (m) figure = { label: m[1], value: Number.parseFloat(m[2]) };
-    }
+    const rating = (await r.locator("td").nth(KNOWLEDGE_TD).innerText()).trim();
     const aaText = (await r.getByTestId("aa-index").innerText()).trim();
-    seen.push({ rating, figure, aa: aaText === "—" ? null : Number(aaText) });
+    seen.push({ rating, aa: aaText === "—" ? null : Number(aaText) });
   }
   const order = "SABCD";
   for (let i = 1; i < seen.length; i += 1) {
@@ -178,11 +212,8 @@ test("sorting a category orders by letter, then figure, then AA Index", async ({
     const cur = seen[i];
     expect(order.indexOf(cur.rating)).toBeGreaterThanOrEqual(order.indexOf(prev.rating));
     if (cur.rating !== prev.rating) continue;
-    // Same letter: like-for-like figures are non-increasing; otherwise the AA
-    // Index is (rows without one sort last).
-    if (prev.figure && cur.figure && prev.figure.label === cur.figure.label) {
-      expect(cur.figure.value).toBeLessThanOrEqual(prev.figure.value);
-    } else if (prev.aa !== null && cur.aa !== null) {
+    // Same letter: AA Index is non-increasing; rows without one sort last.
+    if (prev.aa !== null && cur.aa !== null) {
       expect(cur.aa).toBeLessThanOrEqual(prev.aa);
     } else {
       expect(prev.aa === null && cur.aa !== null).toBe(false);
