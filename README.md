@@ -10,7 +10,11 @@ Analysis, LiveCodeBench, τ²-bench, SWE-bench, MMMU, LMArena) and
 filtered against your own subscriptions and API keys. Built for
 developers who use several AI subscriptions (Claude Code, Cursor,
 Codex / ChatGPT, raw provider APIs) and want a deterministic answer
-to "what should I use for this?" instead of guessing.
+to "what should I use for this?" instead of guessing. The same
+answer drives a **project-agnostic planning workflow** — roadmap →
+phase roadmaps → one step per AI conversation, each with its own
+model, branch, PR, and a completion that means done — described in
+[The planning workflow](#the-planning-workflow) below.
 
 The same package ships three surfaces, all reading one bundled catalog:
 
@@ -25,6 +29,53 @@ The same package ships three surfaces, all reading one bundled catalog:
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![CI](https://github.com/nathanramoscfa/roadmodel/actions/workflows/tests.yml/badge.svg)](https://github.com/nathanramoscfa/roadmodel/actions/workflows/tests.yml)
 [![Phase verify](https://github.com/nathanramoscfa/roadmodel/actions/workflows/phase-verify.yml/badge.svg)](https://github.com/nathanramoscfa/roadmodel/actions/workflows/phase-verify.yml)
+
+## The planning workflow
+
+roadmodel's second job is a **repeatable loop for running a project
+with AI coding agents**, in which the recommender is the step that
+picks the model. The loop is the same in every repo, in every
+language, on every machine where the commands are installed:
+
+```
+/roadmap-project        ROADMAP.md — phases, acceptance criteria, and
+                        the security / release / operations strategy
+/roadmap-phase 1        docs/phase01-roadmap.md — Phase 1 broken into
+                        steps; each names its branch, its model and
+                        settings, and carries a <task> prompt
+/roadmap-step 1 1       a NEW chat runs Step 1: branch → work → PR →
+/roadmap-step 1 2       merge → "Step 1 is complete." One step per
+…                       conversation; no work straddles two steps
+```
+
+What the loop guarantees, independent of the project:
+
+- **One step, one conversation, one PR.** A step is the unit of work
+  an agent can finish and a human can review. Its `<task>` block
+  carries a six-stage lifecycle — branch, work behind a security
+  gate, PR, green checks + squash-merge, retire the branch, declare —
+  that the agent must complete before it may call the step done.
+- **The model is chosen per step, not per project.** Each step's
+  Settings table (model, platform, effort, thinking) comes from
+  running the bundled selector against your own subscriptions and
+  keys — by the AI already open in your editor, at $0 marginal cost.
+- **"Done" means done.** A step ends with "Step N is complete. You
+  can now move on to Step N+1." and nothing after it. Every finding
+  the step surfaced has already been dispatched — roadmap edited,
+  issue opened, note in the PR body — or the agent says the step is
+  NOT complete and names what is outstanding.
+- **The roadmap on `main` is the ledger.** The step's own PR flips
+  its `**Status:**` line to `Complete — PR #n`, so progress is
+  recorded exactly when the work merges, and the next step refuses
+  to start until the previous one reads Complete.
+- **Security, release, and operations are per-step gates, not a
+  final phase.** Every step runs the same pre-commit security gate,
+  and a step that touches a deployed surface is done at post-deploy
+  verification, not at merge.
+
+Setup is once per machine (`/roadmodel-update` keeps every project's
+copy current after that); the commands then work in any project.
+Step-by-step: [docs/planning-workflow.md](docs/planning-workflow.md).
 
 ## Install
 
@@ -139,20 +190,15 @@ checkout instead of GitHub), `--user-context <path>`. On Windows
 PowerShell, call `curl.exe` (not the `curl` alias) if you fetch files by
 hand; the `export-kit` command above avoids that entirely.
 
-**Day-to-day:** see [docs/planning-workflow.md](docs/planning-workflow.md).
-Four user-scope Claude Code commands ship in `docs/claude-commands/`:
-`/roadmap-project` and `/roadmap-phase N` refresh the kit and run its
-fill-in paste-prompts (`planning/prompts/`); `/roadmap-step P M` executes
-one step straight from the phase roadmap — branch, work, PR, merge — and
-marks it: every step and phase carries a `**Status:**` line that the
-step's **own PR** flips to `Complete — PR #n`, so the roadmap on `main`
-records what is done exactly when it merges (no "update the roadmap"
-chore, and the next step refuses to start until the previous one reads
-Complete); `/roadmodel-update` keeps roadmodel current in every project
-at once (see "Staying current"). The same four commands are generated
-for **Gemini CLI** (`~/.gemini/commands/*.toml`), **Codex** and
-**Cursor** (one `~/.agents/skills/*/SKILL.md` both read; `$roadmap-step`
-in Codex, `/roadmap-step` in Cursor), and **OpenCode**
+**Day-to-day:** the kit is driven by the four user-scope commands in
+`docs/claude-commands/` — `/roadmap-project`, `/roadmap-phase N`,
+`/roadmap-step P M`, `/roadmodel-update` — see
+[The planning workflow](#the-planning-workflow) above for the loop and
+[docs/planning-workflow.md](docs/planning-workflow.md) for setup and
+per-command detail. The same four are generated for **Gemini CLI**
+(`~/.gemini/commands/*.toml`), **Codex** and **Cursor** (one
+`~/.agents/skills/*/SKILL.md` both read; `$roadmap-step` in Codex,
+`/roadmap-step` in Cursor), and **OpenCode**
 (`~/.config/opencode/commands/*.md`), installed by `/roadmodel-update`
 wherever those tools are present.
 
