@@ -29,8 +29,10 @@ import { RATING_SCALE, segmentRationale } from "@/lib/glossary";
 import {
   AA_HOME,
   bandFor,
+  benchPoints,
   benchSortValue,
   CATEGORY_FIGURE,
+  DERIVED_CATEGORIES,
   formatBench,
   GRID_COLUMN_BY_KEY,
   GRID_COLUMNS,
@@ -578,11 +580,28 @@ export function ModelCatalog({
                       {view === "ratings"
                         ? CATEGORY_ORDER.map((cat) => {
                             const r = m.tiers[cat];
+                            const key = CATEGORY_FIGURE[cat];
+                            const v = key ? benchSortValue(m.bench, key) : null;
+                            const derived = DERIVED_CATEGORIES.has(cat) && key && v !== null;
+                            let basis = "Editorial rating.";
+                            if (derived) {
+                              const col = GRID_COLUMN_BY_KEY[key];
+                              const leader = columnValues[key][columnValues[key].length - 1];
+                              const gap = benchPoints(leader, col.unit) - benchPoints(v, col.unit);
+                              basis = `Derived from ${col.label} ${formatBench(v, col.unit)}: ${gap.toFixed(1)} points behind the category leader (${formatBench(leader, col.unit)}).`;
+                            }
                             return (
                               <td key={cat} className="w-14 px-1 py-2 text-center">
                                 <span
-                                  className={BADGE_CLASS + " " + RATING_COLORS[r]}
-                                  title={`${CATEGORY_DEFS[cat].fullName}: ${r} — ${RATING_MEANING[r]}`}
+                                  data-testid="rating-cell"
+                                  data-basis={derived ? "derived" : "editorial"}
+                                  className={
+                                    BADGE_CLASS +
+                                    " " +
+                                    RATING_COLORS[r] +
+                                    (derived ? "" : " ring-1 ring-inset ring-brand-slate-400/60 dark:ring-brand-slate-500/60")
+                                  }
+                                  title={`${CATEGORY_DEFS[cat].fullName}: ${r} — ${RATING_MEANING[r]} ${basis}`}
                                 >
                                   {r}
                                 </span>
@@ -794,7 +813,9 @@ function CategoryHeader({
   const figureKey = CATEGORY_FIGURE[cat];
   const figure = figureKey ? GRID_COLUMN_BY_KEY[figureKey] : null;
   const definition = figure
-    ? `${def.definition} Uniform evidence: the ${figure.label} column in the Benchmark scores view (Artificial Analysis).`
+    ? DERIVED_CATEGORIES.has(cat)
+      ? `${def.definition} Letters here are DERIVED from ${figure.label} (Artificial Analysis) as the gap to the category leader: S ≤ 5, A ≤ 20, B ≤ 35, C ≤ 50 points, else D. A ringed letter is editorial (AA has not measured that model).`
+      : `${def.definition} Editorial rating; the ${figure.label} column in the Benchmark scores view is first-party-endpoint throughput and is shown for reference only.`
     : `${def.definition} No single-source public benchmark covers this category; the rating is editorial.`;
   return (
     <th

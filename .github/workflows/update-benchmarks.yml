@@ -12,6 +12,11 @@ name: Update benchmark layer (Artificial Analysis)
 # audit-L4 prose review. A catalog model with no map entry is reported in the
 # PR body (and as a workflow warning) rather than failing the run — the row
 # shows dashes until someone maps it.
+#
+# The four derived ratings (update/derive_ratings.py) are re-applied to the
+# selector in the same run, so a benchmark move that crosses a band ships the
+# letter change with the number that caused it — structured attributes only,
+# with the change table in the PR body.
 
 on:
   schedule:
@@ -75,14 +80,22 @@ jobs:
           print(f"{d['model_count']} measured; unmapped={d['unmapped']}; missing={d['missing_slugs']}")
           EOF
 
+      - name: Re-derive ratings from the refreshed layer
+        run: |
+          set -euo pipefail
+          python update/derive_ratings.py --write
+          python update/render_md.py
+          python update/build_catalog.py
+          python update/derive_ratings.py --check
+
       - name: Open auto-merging PR if the layer changed
         if: github.event.inputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
-          if git diff --quiet -- docs/benchmarks.json; then
-            echo "No benchmark changes — nothing to commit."
+          if git diff --quiet -- docs/benchmarks.json docs/model-selector.txt docs/model-selector.md docs/catalog.json; then
+            echo "No benchmark or rating changes — nothing to commit."
             exit 0
           fi
           git config user.name "roadmodel-bot"
@@ -109,13 +122,16 @@ jobs:
           print("\n".join(lines))
           EOF
           )"
-          git add docs/benchmarks.json
+          if grep -q '^| ' update/.last-ratings-report.md 2>/dev/null; then
+            notes="${notes}$(printf '\n\n')$(cat update/.last-ratings-report.md)"
+          fi
+          git add docs/benchmarks.json docs/model-selector.txt docs/model-selector.md docs/catalog.json
           git commit -m "Automated benchmark refresh: ${DATE}" -m "${notes}"
           git push -u origin "$BRANCH"
           PR_URL="$(gh pr create \
             --base main \
             --head "$BRANCH" \
             --title "Automated benchmark refresh: ${DATE}" \
-            --body "$(printf '## Summary\n\n%s\n\n---\n\nOpened automatically by `.github/workflows/update-benchmarks.yml`: one fetch of the Artificial Analysis Insights API joined to catalog ids via `update/aa-model-map.json`. Numbers only, no prose, so auto-merge is enabled — GitHub squash-merges once checks pass. To stop it: `gh pr merge --disable-auto`.' "$notes")")"
+            --body "$(printf '## Summary\n\n%s\n\n---\n\nOpened automatically by `.github/workflows/update-benchmarks.yml`: one fetch of the Artificial Analysis Insights API joined to catalog ids via `update/aa-model-map.json`. Numbers and derived rating letters only, no prose, so auto-merge is enabled — GitHub squash-merges once checks pass. To stop it: `gh pr merge --disable-auto`.' "$notes")")"
           echo "Opened: $PR_URL"
           gh pr merge --auto --squash --delete-branch "$PR_URL"
