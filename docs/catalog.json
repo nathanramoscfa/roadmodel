@@ -1,10 +1,10 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-21T03:32:44Z",
+  "generated_at_utc": "2026-09-21T03:47:53Z",
   "source_doc_sha256": {
-    "model-selector.txt": "d73c62448df3e022134c0c519b5ac3dbb0c482af4bf3b39f6f724446c23bd1a1",
-    "model-tier-cost-scale.md": "05de47d02b2e81b708f3d188ed05c4873f7c50bbc2846409ac9af563b3a224b5"
+    "model-selector.txt": "20864178ae24b7daa3080ec5c34bd134740b923b44091e07dd79ac5826756715",
+    "model-tier-cost-scale.md": "e22df028b1ee8dae87a520cad427e97b43a79a4918afa6a038c914f9d1e7cf54"
   },
   "models": [
     {
@@ -155,25 +155,25 @@
       "best_for": "Composer 2's successor at the same output price \u2014 Cursor's purpose-built multi-file agentic editor with frontier-level coding quality and speed-optimized inference; prefer over Composer 2 when both are available since 2.5 supersedes 2 within the same series per the equal-output-price replacement rule (Composer 2 is now Hidden by default on Cursor's pricing page)"
     },
     {
-      "id": "deepseek-v4-flash",
-      "name": "DeepSeek-V4-Flash",
-      "input_price_per_1m": 0.22,
-      "output_price_per_1m": 0.66,
+      "id": "deepseek-flash",
+      "name": "DeepSeek-V4.1-Flash",
+      "input_price_per_1m": 0.15,
+      "output_price_per_1m": 0.6,
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
         "coding": "A",
         "planning": "B",
         "agentic": "B",
-        "multimodal": "D",
+        "multimodal": "C",
         "long-context": "B",
         "knowledge": "B",
         "speed": "A"
       },
       "jurisdiction": "cn",
-      "headline_benchmarks": "AA Intelligence Index 34.3 (reasoning, max effort) \u2014 independently measured by Artificial Analysis; SWE-bench Verified 79.0% (DeepSeek-reported); 1M-token context; text-only (no image input); ~90 tokens/s",
-      "pricing_notes": "Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.0028/M",
-      "best_for": "DeepSeek's V4-Flash \u2014 the fast (~90 tokens/s), cheapest DeepSeek variant ($0.28/M output) with a 1M-token context window, for high-throughput / latency-sensitive text and code work under the cn jurisdiction with a deepseek-api-key. Mid-pack general intelligence (Artificial Analysis Intelligence Index 34.3) paired with a strong, DeepSeek-reported coding result (SWE-bench Verified 79.0%) \u2014 rated coding-A on that basis with the rest of its profile B-tier; text-only (no multimodal). Reached via the `deepseek-api` method (provider-direct per-token). Pick V4-Pro over V4-Flash when reasoning depth or the strongest coding matters; pick V4-Flash when speed and the lowest cost dominate."
+      "headline_benchmarks": "AA Intelligence Index 39.5 (max) \u2014 independently measured by Artificial Analysis (v4.3; the retired V4-Flash-0731 scored 34.3 and V4-Pro 36.0 on the same index); ~229 tokens/s median output (AA); Terminal-Bench 2.1 90.6, Terminal-Bench 4.0 31.2, DeepSWE v1.1 74.2, HLE 36.8%, GPQA Diamond 90.9, Codeforces 3471, MMMU-Pro 56.5 (all DeepSeek-reported, max effort); 1M-token context; image input supported (V4-Flash-Vision-Exp folded in)",
+      "pricing_notes": "Provider-direct DeepSeek API per-token pricing (not via the Cursor pool). Listed price is DeepSeek's OFF-PEAK rate (all hours except 01:00\u201304:00 and 06:00\u201310:00 UTC Mon\u2013Fri, i.e. ~79% of the week incl. all US/EU working hours); peak is 2\u00d7: $0.30 input / $1.20 output per 1M \u2014 aggregators such as OpenRouter list the peak rate. Cache-hit input $0.003/M off-peak ($0.006/M peak). The legacy model names deepseek-v4-flash and deepseek-v4-flash-vision-exp are still accepted by the API but are served by this model at this price.",
+      "best_for": "DeepSeek's V4.1-Flash (API name deepseek-flash) \u2014 the 2026-09-17 successor to the retired V4-Flash: the fast (~229 tokens/s), cheapest DeepSeek variant ($0.60/M output off-peak) with a 1M-token context window and now native image input, for high-throughput / latency-sensitive text, code, and light vision work under the cn jurisdiction with a deepseek-api-key. Tier ratings are inherited from V4-Flash pending the cron's benchmark-grounded pass, except multimodal lifted from D to C because image input is now native (MMMU-Pro 56.5 is DeepSeek-reported, so no higher yet). Independently it now out-scores V4-Pro on the AA Intelligence Index (39.5 vs 36.0) and DeepSeek reports frontier-class agentic-coding numbers (Terminal-Bench 2.1 90.6, DeepSWE v1.1 74.2) \u2014 self-reported, so it stays coding-A rather than S pending an independent leaderboard entry. Reached via the `deepseek-api` method (provider-direct per-token); MIT open weights on Hugging Face for the `ollama` path. Pick V4-Pro over V4.1-Flash only when its deeper reasoning profile matters; pick V4.1-Flash when speed, cost, or image input dominate."
     },
     {
       "id": "deepseek-v4-pro",
@@ -193,8 +193,8 @@
       },
       "jurisdiction": "cn",
       "headline_benchmarks": "AA Intelligence Index 36.0 (reasoning, max effort) \u2014 independently measured by Artificial Analysis; SWE-bench Verified 80.6%, LiveCodeBench 93.5, Terminal-Bench 2.0 67.9, Codeforces CodeElo 3206, Putnam-2025 120/120 (DeepSeek-reported); 1M-token context; text-only (no image input); ~46 tokens/s (notably slow)",
-      "pricing_notes": "Provider-direct DeepSeek API per-token pricing (not via the Cursor pool); cache-hit input $0.003625/M",
-      "best_for": "DeepSeek's V4-Pro flagship \u2014 a very low-cost ($0.87/M output), cn-jurisdiction reasoning model with a 1M-token context window and thinking mode on by default. Strong general intelligence (Artificial Analysis Intelligence Index 36.0) and a frontier-approaching coding profile (SWE-bench Verified 80.6%, LiveCodeBench 93.5, Codeforces CodeElo 3206) \u2014 these coding numbers are DeepSeek-reported, so it is rated coding-A rather than S pending an independent SWE-bench leaderboard entry. Text-only (no multimodal) and notably slow (~46 tokens/s), so not for latency-sensitive or image work. Reached via the `deepseek-api` method (provider-direct per-token, not the Cursor pool) when the cn jurisdiction is acceptable and a deepseek-api-key is configured \u2014 the cheapest A-tier coding / reasoning option in the catalog."
+      "pricing_notes": "Provider-direct DeepSeek API per-token pricing (not via the Cursor pool). Listed price is DeepSeek's OFF-PEAK rate (all hours except 01:00\u201304:00 and 06:00\u201310:00 UTC Mon\u2013Fri, i.e. ~79% of the week incl. all US/EU working hours); peak is 2\u00d7: $1.32 input / $3.96 output per 1M \u2014 aggregators such as OpenRouter list the peak rate. Cache-hit input $0.022/M off-peak ($0.044/M peak).",
+      "best_for": "DeepSeek's V4-Pro flagship \u2014 a very low-cost ($1.98/M output off-peak), cn-jurisdiction reasoning model with a 1M-token context window and thinking mode on by default. Strong general intelligence (Artificial Analysis Intelligence Index 36.0) and a frontier-approaching coding profile (SWE-bench Verified 80.6%, LiveCodeBench 93.5, Codeforces CodeElo 3206) \u2014 these coding numbers are DeepSeek-reported, so it is rated coding-A rather than S pending an independent SWE-bench leaderboard entry. Text-only (no multimodal) and notably slow (~46 tokens/s), so not for latency-sensitive or image work. Reached via the `deepseek-api` method (provider-direct per-token, not the Cursor pool) when the cn jurisdiction is acceptable and a deepseek-api-key is configured \u2014 the cheapest option in the catalog with an A-tier planning / agentic / long-context / knowledge profile (V4.1-Flash is cheaper and faster for A-tier coding alone)."
     },
     {
       "id": "gemini-2.5-flash",
@@ -1213,13 +1213,13 @@
       "billing": "per-token",
       "requires": "deepseek-api-key",
       "supports_models": [
-        "deepseek-v4-flash",
+        "deepseek-flash",
         "deepseek-v4-pro"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
-      "best_for": "Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the deepseek-v4 models \u2014 cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `low`/`high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn."
+      "best_for": "Direct DeepSeek API access (provider-direct per-token; OpenAI-format at api.deepseek.com and Anthropic-format at api.deepseek.com/anthropic) for the DeepSeek V4-series models (deepseek-flash = DeepSeek-V4.1-Flash, deepseek-v4-pro) \u2014 cost-conscious coding / reasoning / long-context (1M) work when the cn jurisdiction is acceptable and a deepseek-api-key is configured. Exposes the full thinking dial (toggle + reasoning_effort `low`/`high`/`max`). Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn."
     },
     {
       "id": "gemini-app",
@@ -1329,7 +1329,7 @@
       "billing": "local",
       "requires": "ollama-local",
       "supports_models": [
-        "deepseek-v4-flash",
+        "deepseek-flash",
         "deepseek-v4-pro",
         "glm-4.5-air",
         "glm-4.6",
@@ -1344,7 +1344,7 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
-      "best_for": "Open-weight models pulled and served on the operator's OWN hardware through a local Ollama runtime \u2014 $0 per token, no data leaves the machine, no subscription budget consumed. supports-models lists ONLY catalogued models whose weights are downloadable under a licence that permits local use (Apache-2.0: gpt-oss-120b / gpt-oss-20b / mistral-large-3 / mistral-small-4; MIT: deepseek-v4-pro / deepseek-v4-flash / glm-5.2 / glm-4.6 / glm-4.5-air; Modified MIT: kimi-k2.7-code; Kimi K3 License: kimi-k3) \u2014 the MODEL-level jurisdiction filter (Step 0b) still governs which of them are eligible. HARDWARE CAVEAT: the catalog's tier ratings describe the provider-hosted weights; a quantized local pull (4-bit GGUF, MXFP4, and similar) runs about one tier below them for coding and reasoning, throughput is bounded by the operator's GPU / unified memory, and the largest entries (kimi-k3, deepseek-v4-pro) do not fit consumer hardware at all \u2014 the selector funds this method ONLY for models the operator has actually listed as pulled in docs/user-context.md, so a listed model is one that fits. Thinking is forwarded as `reasoning_effort` for models that support it (gpt-oss, GLM, DeepSeek, Kimi); the per-model dial is the model's, not the runtime's. Reached via the `ollama` access method when docs/user-context.md declares `Ollama installed | Yes` and the model in its pulled-models table."
+      "best_for": "Open-weight models pulled and served on the operator's OWN hardware through a local Ollama runtime \u2014 $0 per token, no data leaves the machine, no subscription budget consumed. supports-models lists ONLY catalogued models whose weights are downloadable under a licence that permits local use (Apache-2.0: gpt-oss-120b / gpt-oss-20b / mistral-large-3 / mistral-small-4; MIT: deepseek-v4-pro / deepseek-flash / glm-5.2 / glm-4.6 / glm-4.5-air; Modified MIT: kimi-k2.7-code; Kimi K3 License: kimi-k3) \u2014 the MODEL-level jurisdiction filter (Step 0b) still governs which of them are eligible. HARDWARE CAVEAT: the catalog's tier ratings describe the provider-hosted weights; a quantized local pull (4-bit GGUF, MXFP4, and similar) runs about one tier below them for coding and reasoning, throughput is bounded by the operator's GPU / unified memory, and the largest entries (kimi-k3, deepseek-v4-pro) do not fit consumer hardware at all \u2014 the selector funds this method ONLY for models the operator has actually listed as pulled in docs/user-context.md, so a listed model is one that fits. Thinking is forwarded as `reasoning_effort` for models that support it (gpt-oss, GLM, DeepSeek, Kimi); the per-model dial is the model's, not the runtime's. Reached via the `ollama` access method when docs/user-context.md declares `Ollama installed | Yes` and the model in its pulled-models table."
     },
     {
       "id": "openai-api",
@@ -1389,7 +1389,7 @@
         "claude-opus-5",
         "claude-sonnet-5",
         "codestral",
-        "deepseek-v4-flash",
+        "deepseek-flash",
         "deepseek-v4-pro",
         "gemini-2.5-flash",
         "gemini-3-flash",

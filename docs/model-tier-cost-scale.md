@@ -263,11 +263,11 @@ appear here.
 | gpt-5.4-nano     | $1.25   | Low          | Low          | ✓      |
 | glm-4.5-air      | $1.10   | Low          | Low          | ✓      |
 | codestral        | $0.90   | Low          | Low          | ✓      |
-| deepseek-v4-pro  | $0.87   | Low          | Low          | ✓      |
+| deepseek-v4-pro  | $1.98   | Low          | Low          | ✓      |
 | gpt-oss-120b     | $0.60   | Low          | Low          | ✓      |
 | mistral-small-4  | $0.30   | Low          | Low          | ✓      |
 | gpt-oss-20b      | $0.30   | Low          | Low          | ✓      |
-| deepseek-v4-flash | $0.28  | Low          | Low          | ✓      |
+| deepseek-flash   | $0.60   | Low          | Low          | ✓      |
 
 
 Routing meta-models (Cursor's "Auto" / "Premium" modes; analogous
@@ -288,6 +288,9 @@ engines.
 
 | Model id           | Output | Tier | Change                                                                                                                     |
 | ------------------ | ------ | ---- | -------------------------------------------------------------------------------------------------------------------------- |
+| deepseek-flash     | $0.60  | Low  | New 2026-09-21 (editorial, closes #583 / #606) — DeepSeek-V4.1-Flash under the API name `deepseek-flash`, the provider-direct successor to `deepseek-v4-flash`: $0.15/$0.60 off-peak ($0.30/$1.20 peak), 1M context, native image input (V4-Flash-Vision-Exp folded in), AA Intelligence Index 39.5 (v4.3). Tier ratings inherited from V4-Flash except multimodal D→C; MIT weights on Hugging Face |
+| deepseek-v4-flash  | —      | —    | RETIRED 2026-09-21 from `<model-options>` — DeepSeek retired DeepSeek-V4-Flash-0731 (and -Vision-Exp) from its pricing page 2026-09-17; the legacy API names are still accepted but served by DeepSeek-V4.1-Flash at the Flash price, so the element is replaced by `deepseek-flash` rather than kept |
+| deepseek-v4-pro    | $1.98  | Low  | Price basis made explicit 2026-09-21 — DeepSeek's pricing page splits every rate into OFF-PEAK / PEAK (peak = 2×, 01:00–04:00 and 06:00–10:00 UTC Mon–Fri only); the catalog lists the OFF-PEAK rate for both DeepSeek models (~79% of the week, all US/EU working hours) and the snapshot records `price_basis` + the peak figures. Aggregators such as OpenRouter list the PEAK rate ($1.32/$3.96) |
 | Composer 1         | —      | —    | REMOVED 2026-09-17 from cost scale — Cursor's pricing page no longer lists Composer 1 in any pool (Composer 2.5 supersedes it in the Cursor Models pool) |
 | Muse Spark 1.3     | $4.25  | Low  | New 2026-09-10 on Cursor's pricing page — Meta's Muse Spark 1.3 at $1.25/$4.25 (first Meta-provider entry in the cost scale); requires Max Mode on legacy request-based plans with 1M context available in Max Mode |
 | GPT-5.1 Codex Mini | $2.00  | Low  | New 2026-09-10 on Cursor's pricing page — smaller/cheaper GPT-5.1 Codex variant at $0.25/$2.00 (4x rate limits vs GPT-5.1 Codex, Hidden by default) |
@@ -355,7 +358,7 @@ this table.
 | Cursor (San Francisco, US)    | `us`              | composer-2, composer-2.5 — note: base weights for these Composer models derive from Moonshot's Kimi K2 series; Cursor's operator status determines the jurisdiction code per `<jurisdiction-context>` (data flow governed by Cursor's privacy policy and US law) |
 | Meta (Menlo Park, US)         | `us`              | (Muse Spark 1.3 auto-added to `<model-options>` 2026-09-10 with placeholder B tiers pending editorial review)                                                       |
 | Moonshot AI (Beijing, CN)     | `cn`              | kimi-k2.5                                                                                                               |
-| DeepSeek (Hangzhou, CN)       | `cn`              | deepseek-v4-pro, deepseek-v4-flash                                                                                      |
+| DeepSeek (Hangzhou, CN)       | `cn`              | deepseek-v4-pro, deepseek-flash                                                                                         |
 | z.ai / Zhipu AI (Beijing, CN) | `cn`              | glm-5.2, glm-4.6, glm-4.5-air                                                                                           |
 | Mistral AI (Paris, FR/EU)     | `eu`              | mistral-medium-3.5, mistral-small-4, mistral-large-3, codestral                                                         |
 | Groq (Mountain View, US)      | `us`              | gpt-oss-120b, gpt-oss-20b (hosts OpenAI's open-weight gpt-oss; pinned host that defines per-token price + access)        |

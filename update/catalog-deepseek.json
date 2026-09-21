@@ -4,6 +4,8 @@
   "provider": "deepseek",
   "jurisdiction": "cn",
   "overlay_mode": "whole-element",
+  "price_basis": "off-peak",
+  "price_basis_note": "Listed prices are DeepSeek's OFF-PEAK rate (all hours except 01:00-04:00 and 06:00-10:00 UTC Mon-Fri, ex Chinese public holidays); PEAK is 2x and is carried in the peak_* fields. Aggregators such as OpenRouter list the PEAK rate.",
   "models": [
     {
       "id": "deepseek-flash",
@@ -12,6 +14,9 @@
       "input_price_per_1m": 0.15,
       "output_price_per_1m": 0.6,
       "cache_read_per_1m": 0.003,
+      "peak_input_price_per_1m": 0.3,
+      "peak_output_price_per_1m": 1.2,
+      "peak_cache_read_per_1m": 0.006,
       "context_tokens": 1000000,
       "max_output_tokens": 384000
     },
@@ -22,16 +27,18 @@
       "input_price_per_1m": 0.66,
       "output_price_per_1m": 1.98,
       "cache_read_per_1m": 0.022,
+      "peak_input_price_per_1m": 1.32,
+      "peak_output_price_per_1m": 3.96,
+      "peak_cache_read_per_1m": 0.044,
       "context_tokens": 1000000,
       "max_output_tokens": 384000
     }
   ],
   "slug_to_id": {
+    "deepseek-flash": "deepseek-flash",
     "deepseek-v4-flash": "deepseek-v4-flash",
     "deepseek-v4-pro": "deepseek-v4-pro"
   },
-  "unexpected_slugs": [
-    "deepseek-flash"
-  ],
-  "section_sha256": "7fe956d0eff60e3aaee0b3bd7d6157a4f86ee8cf4145be21aa1f6b5e0efe71c1"
+  "unexpected_slugs": [],
+  "section_sha256": "e32fcceb83e03f8380de4989097855271fd1007d96756773e34ba6e9348190e2"
 }
