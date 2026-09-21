@@ -1,17 +1,18 @@
 import { BenchmarkReference } from "@/components/BenchmarkReference";
 import { CatalogLegend } from "@/components/CatalogLegend";
 import { ModelCatalog } from "@/components/ModelCatalog";
-import { getCatalogGeneratedAt, getModelRows } from "@/lib/catalog-models";
+import { getBenchmarkMeta, getCatalogGeneratedAt, getModelRows } from "@/lib/catalog-models";
 
 export const metadata = {
   title: "Models — roadmodel",
   description:
-    "The full AI-model catalog roadmodel recommends from: pricing, the S→D per-category ratings, and the Artificial Analysis Intelligence Index — sortable, filterable, and sourced.",
+    "The full AI-model catalog roadmodel recommends from: pricing, the S→D per-category ratings, and Artificial Analysis's uniform benchmark scores for every model — sortable, filterable, and sourced.",
 };
 
 export default function ModelsPage() {
   const models = getModelRows();
   const generatedAt = getCatalogGeneratedAt();
+  const bench = getBenchmarkMeta();
 
   return (
     <section className="mx-auto max-w-7xl px-6 py-12 sm:py-16">
@@ -22,17 +23,23 @@ export default function ModelsPage() {
         </h1>
         <p className="mt-3 text-brand-slate-600 dark:text-brand-slate-300">
           Every model roadmodel recommends from — with pricing, the per-category{" "}
-          <strong>S&nbsp;&rarr;&nbsp;D</strong> ratings, and the Artificial Analysis Intelligence
-          Index as the one composite number. A rating is a class several models can share; the
-          index separates them within it. The catalog is curated and re-priced automatically
-          every day. Sort any column, filter by provider, jurisdiction, or cost, and hover any
-          label for its definition and source.
+          <strong>S&nbsp;&rarr;&nbsp;D</strong> ratings, and one uniform set of numbers under
+          them: Artificial Analysis&rsquo;s independently measured benchmarks, the same test on
+          the same scale for every model, refreshed daily. A rating is a class several models can
+          share; the figures separate them within it. Sort any column, filter by provider,
+          jurisdiction, or cost, switch to the full benchmark grid, and hover any label for its
+          definition and source.
         </p>
       </header>
 
       <div className="mt-10 space-y-8">
         <CatalogLegend />
-        <ModelCatalog models={models} generatedAt={generatedAt} />
+        <ModelCatalog
+          models={models}
+          generatedAt={generatedAt}
+          benchmarksGeneratedAt={bench.generatedAt}
+          measuredCount={bench.measuredCount}
+        />
         <BenchmarkReference id="benchmarks" />
       </div>
     </section>

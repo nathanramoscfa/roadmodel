@@ -1,25 +1,40 @@
 // web/components/ModelCatalog.tsx
 //
 // The interactive catalog table for /models: client-side sort + filter, a toggle
-// between the S→D ratings columns and the benchmark-notes column, header
+// between the S→D ratings view and the uniform benchmark-scores grid, header
 // tooltips (field name + definition + source via GlossaryTerm), and benchmark
-// names auto-linkified through the glossary (segmentRationale). Pure
-// presentation — the server page passes the rows; no catalog import here.
+// names auto-linkified through the glossary (segmentRationale) in the expanded
+// row. Pure presentation — the server page passes the rows; no data import.
 //
-// Layout: the table is sized to fit a 1024px viewport without horizontal
-// scroll in the ratings view — Model (sticky), Provider, Jurisdiction, Input,
-// Output (with the cost tier as a colored dot), AA Index, then seven fixed-
-// width letter cells. Cache-read price, tier name, pricing notes, "best for",
-// and the benchmarks the cron cited live in the expanded row so they add no
-// width. Sorting a category orders by letter, then by AA Index (the one
-// published composite), then by name, so a tie inside a letter resolves on
-// evidence rather than on catalog order.
+// Two views, one numeric layer:
+//   Ratings — Model (sticky), Provider, Jurisdiction, Input, Output (cost tier
+//     as a colored dot), AA Index, then seven letter cells. Under each letter
+//     sits that category's UNIFORM figure from lib/benchmark-grid.ts (the same
+//     Artificial Analysis column for every row, so the small numbers compare
+//     across rows); categories without a single-source benchmark stay letters
+//     only. Sorting a category orders by letter, then by that figure, then by
+//     AA Index, then by name.
+//   Benchmark scores — the full AA grid: one column per evaluation, every value
+//     on that column's scale, "—" only where AA has not measured the model.
+// Cache-read price, tier name, pricing notes, "best for", and the benchmarks
+// the cron cited (mixed sources — evidence for the letters, not a scale) live
+// in the expanded row so they add no width. Fits a 1024px viewport.
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Info } from "lucide-react";
 
 import { RATING_SCALE, segmentRationale } from "@/lib/glossary";
+import {
+  AA_HOME,
+  benchSortValue,
+  CATEGORY_FIGURE,
+  formatBench,
+  GRID_COLUMN_BY_KEY,
+  GRID_COLUMNS,
+  type BenchColumn,
+  type BenchKey,
+} from "@/lib/benchmark-grid";
 import {
   CATEGORY_DEFS,
   CATEGORY_ORDER,
@@ -48,9 +63,15 @@ type SortKey =
   | "input_price_per_1m"
   | "output_price_per_1m"
   | "aa_index"
-  | Category;
+  | Category
+  | BenchKey;
 type SortDir = "asc" | "desc";
 type View = "ratings" | "benchmarks";
+
+const BENCH_KEYS = new Set<string>(GRID_COLUMNS.map((c) => c.key));
+function isBenchKey(key: SortKey): key is BenchKey {
+  return BENCH_KEYS.has(key);
+}
 
 const INPUT_CLASS =
   "rounded-md border border-brand-slate-300 dark:border-brand-slate-700 " +
@@ -78,6 +99,10 @@ function nextDir(key: SortKey, active: SortKey, dir: SortDir): SortDir {
 }
 
 function valueFor(row: ModelRow, key: SortKey): number | string {
+  if (isBenchKey(key)) {
+    // Missing figures sort last in BOTH directions (handled in the comparator).
+    return benchSortValue(row.bench, key) ?? Number.NaN;
+  }
   switch (key) {
     case "name":
       return row.name.toLowerCase();
@@ -96,15 +121,25 @@ function valueFor(row: ModelRow, key: SortKey): number | string {
   }
 }
 
-// Within one letter of a category column: the AA Index (missing last, in
-// either direction), then nothing — the caller falls through to the name.
-function aaTieBreak(a: ModelRow, b: ModelRow, dir: 1 | -1): number {
-  const aa = a.aa_index;
-  const ab = b.aa_index;
-  if (aa !== null && ab !== null && aa !== ab) return (aa < ab ? -1 : 1) * dir;
-  if (aa !== null && ab === null) return -1;
-  if (aa === null && ab !== null) return 1;
+// Compare two nullable figures in the sort direction with nulls LAST either
+// way (a missing measurement is not a low score). 0 when nothing separates.
+function compareNullable(x: number | null, y: number | null, dir: 1 | -1): number {
+  if (x !== null && y !== null) return x === y ? 0 : (x < y ? -1 : 1) * dir;
+  if (x !== null) return -1;
+  if (y !== null) return 1;
   return 0;
+}
+
+// Within one letter of a category column: that category's uniform figure
+// (the same AA column for every row), then the AA Index; the caller falls
+// through to the name.
+function categoryTieBreak(a: ModelRow, b: ModelRow, cat: Category, dir: 1 | -1): number {
+  const key = CATEGORY_FIGURE[cat];
+  if (key) {
+    const t = compareNullable(benchSortValue(a.bench, key), benchSortValue(b.bench, key), dir);
+    if (t !== 0) return t;
+  }
+  return compareNullable(a.aa_index, b.aa_index, dir);
 }
 
 function isCategory(key: SortKey): key is Category {
@@ -114,9 +149,13 @@ function isCategory(key: SortKey): key is Category {
 export function ModelCatalog({
   models,
   generatedAt,
+  benchmarksGeneratedAt,
+  measuredCount,
 }: {
   models: ModelRow[];
   generatedAt: string;
+  benchmarksGeneratedAt: string;
+  measuredCount: number;
 }) {
   const [view, setView] = useState<View>("ratings");
   const [sortKey, setSortKey] = useState<SortKey>("output_price_per_1m");
@@ -156,12 +195,17 @@ export function ModelCatalog({
     });
     const dir = sortDir === "asc" ? 1 : -1;
     return [...filtered].sort((a, b) => {
+      if (isBenchKey(sortKey)) {
+        const t = compareNullable(benchSortValue(a.bench, sortKey), benchSortValue(b.bench, sortKey), dir);
+        if (t !== 0) return t;
+        return a.name.localeCompare(b.name);
+      }
       const av = valueFor(a, sortKey);
       const bv = valueFor(b, sortKey);
       if (av < bv) return -1 * dir;
       if (av > bv) return 1 * dir;
       if (isCategory(sortKey)) {
-        const tie = aaTieBreak(a, b, dir);
+        const tie = categoryTieBreak(a, b, sortKey, dir);
         if (tie !== 0) return tie;
       }
       return a.name.localeCompare(b.name);
@@ -173,6 +217,17 @@ export function ModelCatalog({
     setSortKey(key);
   }
 
+  function switchView(v: View) {
+    setView(v);
+    // A sort on a column the other view does not show would be invisible;
+    // fall back to the shared default.
+    const hiddenInGrid = ["provider", "jurisdiction", "input_price_per_1m"].includes(sortKey);
+    if ((v === "benchmarks" && (isCategory(sortKey) || hiddenInGrid)) || (v === "ratings" && isBenchKey(sortKey))) {
+      setSortKey("output_price_per_1m");
+      setSortDir("desc");
+    }
+  }
+
   function toggleExpand(id: string) {
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -182,8 +237,13 @@ export function ModelCatalog({
     });
   }
 
-  const leftColSpan = 7; // chevron + model + provider + juris + input + output + AA index
-  const colSpan = leftColSpan + (view === "ratings" ? CATEGORY_ORDER.length : 1);
+  // Ratings: chevron + model + provider + juris + input + output + AA index +
+  // seven categories. Grid: provider/juris/input step aside (they are filters,
+  // and pricing is the ratings view's job) so the evaluation columns fit.
+  const colSpan =
+    view === "ratings"
+      ? 7 + CATEGORY_ORDER.length
+      : 4 + GRID_COLUMNS.length - 1;
 
   return (
     <div data-testid="model-catalog">
@@ -260,7 +320,7 @@ export function ModelCatalog({
           {(
             [
               ["ratings", "Ratings"],
-              ["benchmarks", "Benchmark notes"],
+              ["benchmarks", "Benchmark scores"],
             ] as const
           ).map(([v, label]) => (
             <button
@@ -268,7 +328,7 @@ export function ModelCatalog({
               type="button"
               data-testid={`view-${v}`}
               aria-pressed={view === v}
-              onClick={() => setView(v)}
+              onClick={() => switchView(v)}
               className={
                 "rounded-md px-3 py-1.5 text-xs font-semibold transition-colors " +
                 (view === v
@@ -283,9 +343,15 @@ export function ModelCatalog({
       </div>
 
       <p className="mt-3 text-xs text-brand-slate-500 dark:text-brand-slate-400">
-        Showing <span className="font-semibold">{rows.length}</span> of {models.length} models.
-        Click a column header to sort, a model name for its docs, and the chevron for pricing
-        detail, best-for notes, and the benchmarks behind its ratings.
+        Showing <span className="font-semibold">{rows.length}</span> of {models.length} models
+        {view === "benchmarks" && (
+          <>
+            {" "}&middot; {measuredCount} measured by Artificial Analysis; &ldquo;&mdash;&rdquo; is
+            not measured, never a zero
+          </>
+        )}
+        . Click a column header to sort, a model name for its docs, and the chevron for pricing
+        detail, best-for notes, and the benchmarks the curation cited.
       </p>
 
       {/* Table */}
@@ -301,20 +367,29 @@ export function ModelCatalog({
                 onSort={toggleSort}
                 className={"min-w-[9rem] " + STICKY_HEAD}
               />
-              <SortHeader field="provider" sortKey={sortKey} dir={sortDir} onSort={toggleSort} />
-              <SortHeader
-                field="jurisdiction"
-                sortKey={sortKey}
-                dir={sortDir}
-                onSort={toggleSort}
-              />
-              <SortHeader
-                field="input_price_per_1m"
-                sortKey={sortKey}
-                dir={sortDir}
-                onSort={toggleSort}
-                align="right"
-              />
+              {view === "ratings" && (
+                <>
+                  <SortHeader
+                    field="provider"
+                    sortKey={sortKey}
+                    dir={sortDir}
+                    onSort={toggleSort}
+                  />
+                  <SortHeader
+                    field="jurisdiction"
+                    sortKey={sortKey}
+                    dir={sortDir}
+                    onSort={toggleSort}
+                  />
+                  <SortHeader
+                    field="input_price_per_1m"
+                    sortKey={sortKey}
+                    dir={sortDir}
+                    onSort={toggleSort}
+                    align="right"
+                  />
+                </>
+              )}
               <SortHeader
                 field="output_price_per_1m"
                 sortKey={sortKey}
@@ -329,28 +404,26 @@ export function ModelCatalog({
                 onSort={toggleSort}
                 align="right"
               />
-              {view === "ratings" ? (
-                CATEGORY_ORDER.map((cat) => (
-                  <CategoryHeader
-                    key={cat}
-                    cat={cat}
-                    sortKey={sortKey}
-                    dir={sortDir}
-                    onSort={toggleSort}
-                  />
-                ))
-              ) : (
-                <th className="px-3 py-2 font-semibold">
-                  <span className="inline-flex items-center gap-1">
-                    {FIELD_DEFS.benchmarks.label}
-                    <FieldInfo
-                      fullName={FIELD_DEFS.benchmarks.fullName}
-                      definition={FIELD_DEFS.benchmarks.definition}
-                      url={FIELD_DEFS.benchmarks.url}
+              {view === "ratings"
+                ? CATEGORY_ORDER.map((cat) => (
+                    <CategoryHeader
+                      key={cat}
+                      cat={cat}
+                      sortKey={sortKey}
+                      dir={sortDir}
+                      onSort={toggleSort}
                     />
-                  </span>
-                </th>
-              )}
+                  ))
+                : GRID_BODY_COLUMNS.map((col, i) => (
+                    <BenchHeader
+                      key={col.key}
+                      col={col}
+                      sortKey={sortKey}
+                      dir={sortDir}
+                      onSort={toggleSort}
+                      align={i >= GRID_BODY_COLUMNS.length - 3 ? "right" : "left"}
+                    />
+                  ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-brand-slate-100 dark:divide-brand-slate-800">
@@ -409,19 +482,23 @@ export function ModelCatalog({
                           m.name
                         )}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-xs text-brand-slate-600 dark:text-brand-slate-300">
-                        {m.provider ?? <span className="text-brand-slate-400">—</span>}
-                      </td>
-                      <td className="px-3 py-2">
-                        <GlossaryTerm definition={jurisdictionDef(m.jurisdiction)}>
-                          <span className="text-[11px] font-semibold uppercase tracking-wide text-brand-slate-600 dark:text-brand-slate-300">
-                            {m.jurisdiction}
-                          </span>
-                        </GlossaryTerm>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums text-brand-slate-700 dark:text-brand-slate-200">
-                        {formatPrice(m.input_price_per_1m)}
-                      </td>
+                      {view === "ratings" && (
+                        <>
+                          <td className="whitespace-nowrap px-3 py-2 text-xs text-brand-slate-600 dark:text-brand-slate-300">
+                            {m.provider ?? <span className="text-brand-slate-400">—</span>}
+                          </td>
+                          <td className="px-3 py-2">
+                            <GlossaryTerm definition={jurisdictionDef(m.jurisdiction)}>
+                              <span className="text-[11px] font-semibold uppercase tracking-wide text-brand-slate-600 dark:text-brand-slate-300">
+                                {m.jurisdiction}
+                              </span>
+                            </GlossaryTerm>
+                          </td>
+                          <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums text-brand-slate-700 dark:text-brand-slate-200">
+                            {formatPrice(m.input_price_per_1m)}
+                          </td>
+                        </>
+                      )}
                       <td className="whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums text-brand-slate-900 dark:text-brand-slate-50">
                         <span
                           data-testid="cost-tier-dot"
@@ -449,25 +526,65 @@ export function ModelCatalog({
                           m.aa_index
                         )}
                       </td>
-                      {view === "ratings" ? (
-                        CATEGORY_ORDER.map((cat) => {
-                          const r = m.tiers[cat];
-                          return (
-                            <td key={cat} className="w-14 px-1 py-2 text-center">
-                              <span
-                                className={BADGE_CLASS + " " + RATING_COLORS[r]}
-                                title={`${CATEGORY_DEFS[cat].fullName}: ${r} — ${RATING_MEANING[r]}`}
+                      {view === "ratings"
+                        ? CATEGORY_ORDER.map((cat) => {
+                            const r = m.tiers[cat];
+                            const key = CATEGORY_FIGURE[cat];
+                            const col = key ? GRID_COLUMN_BY_KEY[key] : null;
+                            const v = key ? benchSortValue(m.bench, key) : null;
+                            return (
+                              <td key={cat} className="w-14 px-1 py-1.5 text-center align-top">
+                                <span
+                                  className={BADGE_CLASS + " " + RATING_COLORS[r]}
+                                  title={`${CATEGORY_DEFS[cat].fullName}: ${r} — ${RATING_MEANING[r]}`}
+                                >
+                                  {r}
+                                </span>
+                                {col && (
+                                  <span
+                                    data-testid="cell-figure"
+                                    data-bench={col.key}
+                                    className={
+                                      "mt-0.5 block text-[10px] leading-tight tabular-nums " +
+                                      (v === null
+                                        ? "text-brand-slate-300 dark:text-brand-slate-600"
+                                        : "text-brand-slate-500 dark:text-brand-slate-400")
+                                    }
+                                    title={
+                                      v === null
+                                        ? `${col.label}: not measured by Artificial Analysis`
+                                        : `${col.label}: ${formatBench(v, col.unit)} (Artificial Analysis)`
+                                    }
+                                  >
+                                    {formatBench(v, col.unit)}
+                                  </span>
+                                )}
+                              </td>
+                            );
+                          })
+                        : GRID_BODY_COLUMNS.map((col) => {
+                            const v = benchSortValue(m.bench, col.key);
+                            return (
+                              <td
+                                key={col.key}
+                                data-testid="bench-cell"
+                                data-bench={col.key}
+                                className={
+                                  "whitespace-nowrap px-2 py-2 text-right tabular-nums " +
+                                  (v === null
+                                    ? "text-brand-slate-300 dark:text-brand-slate-600"
+                                    : "text-brand-slate-800 dark:text-brand-slate-100")
+                                }
+                                title={
+                                  v === null
+                                    ? `${col.label}: not measured by Artificial Analysis`
+                                    : `${col.label}: ${formatBench(v, col.unit)} (Artificial Analysis${m.bench ? `, ${m.bench.aa_name}` : ""})`
+                                }
                               >
-                                {r}
-                              </span>
-                            </td>
-                          );
-                        })
-                      ) : (
-                        <td className="px-3 py-2 text-xs leading-relaxed text-brand-slate-700 dark:text-brand-slate-200">
-                          <BenchmarkProse text={m.headline_benchmarks} />
-                        </td>
-                      )}
+                                {formatBench(v, col.unit)}
+                              </td>
+                            );
+                          })}
                     </tr>
                     {isOpen && (
                       <tr
@@ -489,10 +606,20 @@ export function ModelCatalog({
       </div>
 
       <p className="mt-3 text-xs text-brand-slate-400 dark:text-brand-slate-500">
-        Catalog snapshot {generatedAt}. Prices are USD per 1M tokens. A rating is a class, not a
-        rank within it &mdash; sorting a category orders by letter, then by the AA Index, the one
-        published composite. Ratings and the benchmark notes are curated by the project&rsquo;s
-        daily automation; see the{" "}
+        Catalog snapshot {generatedAt}; prices are USD per 1M tokens. Benchmark figures are from{" "}
+        <a
+          href={AA_HOME}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-brand-accent hover:underline"
+        >
+          Artificial Analysis
+        </a>{" "}
+        (snapshot {benchmarksGeneratedAt}; {measuredCount} of {models.length} models measured) —
+        one lab, one harness, so every column is comparable down the page. A rating is a class,
+        not a rank within it; sorting a category orders by letter, then by that category&rsquo;s
+        figure, then by the AA Index. Ratings are curated by the project&rsquo;s daily automation;
+        see the{" "}
         <a href="/docs" className="text-brand-accent hover:underline">
           docs
         </a>{" "}
@@ -569,7 +696,7 @@ function SortHeader({
   align = "left",
   className = "",
 }: {
-  field: Exclude<SortKey, Category>;
+  field: Exclude<SortKey, Category | BenchKey>;
   sortKey: SortKey;
   dir: SortDir;
   onSort: (k: SortKey) => void;
@@ -628,6 +755,11 @@ function CategoryHeader({
 }) {
   const def = CATEGORY_DEFS[cat];
   const active = sortKey === cat;
+  const figureKey = CATEGORY_FIGURE[cat];
+  const figure = figureKey ? GRID_COLUMN_BY_KEY[figureKey] : null;
+  const definition = figure
+    ? `${def.definition} The figure under each letter is ${figure.label} (Artificial Analysis).`
+    : `${def.definition} No single-source public benchmark covers this category, so it is rated by letter only.`;
   return (
     <th
       className="w-14 px-1 py-2 text-center align-bottom font-semibold"
@@ -645,9 +777,55 @@ function CategoryHeader({
         </button>
         <FieldInfo
           fullName={def.fullName}
-          definition={def.definition}
-          url={def.url}
+          definition={definition}
+          url={figure ? figure.url : def.url}
           align={RIGHT_EDGE_CATEGORIES.has(cat) ? "right" : "left"}
+        />
+      </span>
+    </th>
+  );
+}
+
+// The grid omits the Intelligence Index column because the ratings/benchmarks
+// views share the AA Index column to its left.
+const GRID_BODY_COLUMNS: BenchColumn[] = GRID_COLUMNS.filter(
+  (c) => c.key !== "artificial_analysis_intelligence_index",
+);
+
+function BenchHeader({
+  col,
+  sortKey,
+  dir,
+  onSort,
+  align,
+}: {
+  col: BenchColumn;
+  sortKey: SortKey;
+  dir: SortDir;
+  onSort: (k: SortKey) => void;
+  align: "left" | "right";
+}) {
+  const active = sortKey === col.key;
+  return (
+    <th
+      className="whitespace-nowrap px-2 py-2 text-right font-semibold"
+      aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+    >
+      <span className="inline-flex flex-row-reverse items-center gap-1">
+        <button
+          type="button"
+          onClick={() => onSort(col.key)}
+          aria-label={`Sort by ${col.label}`}
+          className="inline-flex items-center gap-0.5 uppercase tracking-wide hover:text-brand-accent"
+        >
+          {col.short}
+          <SortArrow active={active} dir={dir} />
+        </button>
+        <FieldInfo
+          fullName={col.label}
+          definition={`${col.definition} Source: Artificial Analysis.`}
+          url={col.url}
+          align={align}
         />
       </span>
     </th>

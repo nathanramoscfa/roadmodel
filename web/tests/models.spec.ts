@@ -2,8 +2,9 @@
 //
 // The /models catalog reference page (public): renders the full model table,
 // the "how to read this" legend, sortable columns, the provider + jurisdiction
-// filters, the ratings/benchmark-notes view toggle, the expanded row, and
-// benchmark + provider-doc links.
+// filters, the ratings/benchmark-scores view toggle, the uniform Artificial
+// Analysis figures (under the letters and as the full grid), the expanded row,
+// and benchmark + provider-doc links.
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -11,6 +12,7 @@ import path from "node:path";
 import { test, expect } from "@playwright/test";
 
 import { scoresFor } from "../lib/benchmark-scores";
+import { CATEGORY_FIGURE, formatBench, GRID_COLUMN_BY_KEY, GRID_COLUMNS } from "../lib/benchmark-grid";
 
 // Expected row counts are DERIVED from the catalog the page renders, never
 // hardcoded. The catalog grows whenever the daily refresh cron picks up a new
@@ -23,6 +25,7 @@ import { scoresFor } from "../lib/benchmark-scores";
 // web/scripts/sync-catalog.mjs writes; the `pretest` npm hook refreshes it
 // before Playwright starts, so it always matches the server under test.
 interface CatalogModel {
+  id: string;
   jurisdiction?: string;
   name: string;
   output_price_per_1m: number;
@@ -32,6 +35,18 @@ const catalog = JSON.parse(
 ) as { models: CatalogModel[] };
 
 const MODEL_COUNT = catalog.models.length;
+
+// The structured benchmark layer the grid reads (data/benchmarks.json is the
+// synced copy of docs/benchmarks.json, like the catalog).
+interface BenchModel {
+  aa_name: string;
+  evaluations: Record<string, number | null>;
+  median_output_tokens_per_second: number | null;
+}
+const benchmarks = JSON.parse(
+  readFileSync(path.join(process.cwd(), "data", "benchmarks.json"), "utf8"),
+) as { models: Record<string, BenchModel> };
+const MEASURED_COUNT = catalog.models.filter((m) => benchmarks.models[m.id]).length;
 const CN_MODEL_COUNT = catalog.models.filter((m) => m.jurisdiction === "cn").length;
 // Mirror the table's comparator exactly: price, then name ascending on a tie
 // (ModelCatalog.tsx applies `localeCompare` WITHOUT the sort direction, so ties
@@ -87,14 +102,67 @@ test("the jurisdiction filter narrows the rows", async ({ page }) => {
   await expect(page.getByText("No models match")).toHaveCount(0);
 });
 
-test("the benchmark view linkifies scores to their source leaderboards", async ({ page }) => {
+test("the benchmark-scores view is a uniform grid: one AA column per evaluation", async ({ page }) => {
+  await page.goto("/models");
+  await page.getByTestId("view-benchmarks").click();
+
+  // Every grid column (minus the Intelligence Index, which keeps its own AA
+  // Index column) renders for every row, on its own scale.
+  const bodyCols = GRID_COLUMNS.filter((c) => c.key !== "artificial_analysis_intelligence_index");
+  await expect(page.getByTestId("model-row")).toHaveCount(MODEL_COUNT);
+  await expect(page.getByTestId("bench-cell")).toHaveCount(MODEL_COUNT * bodyCols.length);
+  await expect(page.getByText(`${MEASURED_COUNT} measured by Artificial Analysis`)).toBeVisible();
+
+  // A measured model shows the API's value formatted on the column's scale;
+  // an unmeasured model shows a dash in every column.
+  const measuredId = catalog.models.find((m) => benchmarks.models[m.id]?.evaluations.hle !== null && benchmarks.models[m.id])!;
+  const hle = benchmarks.models[measuredId.id].evaluations.hle!;
+  const row = page.getByTestId("model-row").filter({ hasText: measuredId.name }).first();
+  await expect(row.locator('[data-bench="hle"]')).toHaveText(formatBench(hle, "fraction"));
+  const unmeasured = catalog.models.find((m) => !benchmarks.models[m.id]);
+  if (unmeasured) {
+    const bare = page.getByTestId("model-row").filter({ hasText: unmeasured.name }).first();
+    for (const c of bodyCols) await expect(bare.locator(`[data-bench="${c.key}"]`)).toHaveText("—");
+  }
+
+  // Headers link to the source and are sortable; sorting Coding Index puts the
+  // top value first and rows without one last.
+  await page.getByRole("button", { name: "Sort by Artificial Analysis Coding Index" }).click();
+  const values = Object.values(benchmarks.models)
+    .map((m) => m.evaluations.artificial_analysis_coding_index)
+    .filter((v): v is number => typeof v === "number");
+  const top = Math.max(...values);
+  await expect(
+    page.getByTestId("model-row").first().locator('[data-bench="artificial_analysis_coding_index"]'),
+  ).toHaveText(formatBench(top, "index"));
+  await expect(page.getByTestId("model-row").last().locator('[data-bench="artificial_analysis_coding_index"]')).toHaveText("—");
+
+  // The grid fits the same 1280px budget as the ratings view.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const overflow = await page
+    .getByTestId("model-catalog")
+    .locator("table")
+    .evaluate((t) => t.parentElement!.scrollWidth - t.parentElement!.clientWidth);
+  expect(overflow).toBe(0);
+});
+
+test("rating cells carry the category's UNIFORM figure — the same AA column for every row", async ({ page }) => {
   await page.goto("/models");
 
-  await page.getByTestId("view-benchmarks").click();
-  // "AA Intelligence Index" (cited by many models) becomes a link to its source.
-  const aa = page.locator('a[href="https://artificialanalysis.ai/"]').first();
-  await expect(aa).toBeVisible();
-  await expect(aa).toHaveAttribute("target", "_blank");
+  // Coding shows the AA Coding Index under every row's letter (a dash where AA
+  // has not measured it); planning/multimodal have no uniform benchmark and
+  // show no figure at all.
+  const codingKey = CATEGORY_FIGURE.coding!;
+  await expect(page.locator(`[data-testid="cell-figure"][data-bench="${codingKey}"]`)).toHaveCount(MODEL_COUNT);
+  expect(CATEGORY_FIGURE.planning).toBeUndefined();
+  expect(CATEGORY_FIGURE.multimodal).toBeUndefined();
+
+  const measured = catalog.models.find((m) => typeof benchmarks.models[m.id]?.evaluations[codingKey] === "number")!;
+  const v = benchmarks.models[measured.id].evaluations[codingKey]!;
+  const row = page.getByTestId("model-row").filter({ hasText: measured.name }).first();
+  await expect(row.locator(`[data-testid="cell-figure"][data-bench="${codingKey}"]`)).toHaveText(
+    formatBench(v, GRID_COLUMN_BY_KEY[codingKey].unit),
+  );
 });
 
 // --- The one composite number (AA Index) --------------------------------------
@@ -103,14 +171,16 @@ interface ScoredModel extends CatalogModel {
   headline_benchmarks?: string;
 }
 const scored = catalog.models as ScoredModel[];
-// A row the cron prices with an AA Index, and one with no figure at all (the
-// same extractor the page uses decides, so the pick follows the catalog).
-const WITH_AA = scored.find((m) => /AA Intelligence Index \d/.test(m.headline_benchmarks ?? ""))!;
-const WITHOUT_ANY = scored.find((m) => {
-  const s = scoresFor(m.headline_benchmarks ?? "");
-  return s.aaIndex === null && s.all.length === 0;
-})!;
-const AA_VALUE = /Intelligence Index (\d+(?:\.\d+)?)/.exec(WITH_AA.headline_benchmarks ?? "")![1];
+// The AA Index column reads the structured layer first and falls back to the
+// cron's prose citation, so mirror that here to derive the expected values.
+function aaIndexFor(m: ScoredModel): number | null {
+  const structured = benchmarks.models[m.id]?.evaluations.artificial_analysis_intelligence_index;
+  if (typeof structured === "number") return structured;
+  return scoresFor(m.headline_benchmarks ?? "").aaIndex;
+}
+const WITH_AA = scored.find((m) => aaIndexFor(m) !== null)!;
+const WITHOUT_ANY = scored.find((m) => aaIndexFor(m) === null)!;
+const AA_VALUE = String(aaIndexFor(WITH_AA));
 
 test("the AA Index column shows the composite where measured and a dash where not", async ({ page }) => {
   await page.goto("/models");
@@ -122,23 +192,20 @@ test("the AA Index column shows the composite where measured and a dash where no
 
   // Sortable: the header puts the highest index first.
   await page.getByRole("button", { name: /AA Index/ }).click();
-  const values = scored
-    .map((m) => /Intelligence Index (\d+(?:\.\d+)?)/.exec(m.headline_benchmarks ?? ""))
-    .filter((m): m is RegExpExecArray => m !== null)
-    .map((m) => Number(m[1]));
+  const values = scored.map(aaIndexFor).filter((v): v is number => v !== null);
   const top = Math.max(...values);
   await expect(page.getByTestId("model-row").first().getByTestId("aa-index")).toHaveText(String(top));
 });
 
-test("rating cells are letters only; the expanded row carries the cited benchmarks", async ({ page }) => {
+test("the expanded row carries the cited (mixed-source) benchmarks and pricing detail", async ({ page }) => {
   await page.goto("/models");
 
-  // A row citing Terminal-Bench 2.1: the letter cell shows no sub-figure, and
-  // expanding the row reveals the figure, linkified to its source leaderboard.
+  // A row whose curation cited Terminal-Bench 2.1: expanding it reveals the
+  // citation, linkified to its source leaderboard — evidence for the letters,
+  // kept out of the main table because citations differ in source and scale.
   const tb = scored.find((m) => /Terminal-Bench 2\.1 (\d+(?:\.\d+)?)/.test(m.headline_benchmarks ?? ""))!;
   const tbScore = /Terminal-Bench 2\.1 (\d+(?:\.\d+)?)/.exec(tb.headline_benchmarks ?? "")![1];
   const row = page.getByTestId("model-row").filter({ hasText: tb.name }).first();
-  await expect(row.getByTestId("cell-score")).toHaveCount(0);
   await expect(page.getByTestId("model-detail")).toHaveCount(0);
 
   await row.getByRole("button", { name: `Show details for ${tb.name}` }).click();
@@ -190,7 +257,7 @@ test("the ratings view fits a 1280px viewport without horizontal scroll", async 
   expect(overflow).toBe(0);
 });
 
-test("sorting a category orders by letter, then AA Index", async ({ page }) => {
+test("sorting a category orders by letter, then its uniform figure, then AA Index", async ({ page }) => {
   await page.goto("/models");
   await page.getByRole("button", { name: /^Sort by Knowledge/ }).click();
 
@@ -199,12 +266,15 @@ test("sorting a category orders by letter, then AA Index", async ({ page }) => {
   const KNOWLEDGE_TD = 7 + 5;
   const rows = page.getByTestId("model-row");
   const count = await rows.count();
-  const seen: { rating: string; aa: number | null }[] = [];
+  const seen: { rating: string; fig: number | null; aa: number | null }[] = [];
+  const parse = (t: string) => (t.trim() === "—" ? null : Number.parseFloat(t));
   for (let i = 0; i < count; i += 1) {
     const r = rows.nth(i);
-    const rating = (await r.locator("td").nth(KNOWLEDGE_TD).innerText()).trim();
-    const aaText = (await r.getByTestId("aa-index").innerText()).trim();
-    seen.push({ rating, aa: aaText === "—" ? null : Number(aaText) });
+    const cell = r.locator("td").nth(KNOWLEDGE_TD);
+    const rating = (await cell.locator("span").first().innerText()).trim();
+    const fig = parse(await cell.getByTestId("cell-figure").innerText());
+    const aa = parse(await r.getByTestId("aa-index").innerText());
+    seen.push({ rating, fig, aa });
   }
   const order = "SABCD";
   for (let i = 1; i < seen.length; i += 1) {
@@ -212,7 +282,15 @@ test("sorting a category orders by letter, then AA Index", async ({ page }) => {
     const cur = seen[i];
     expect(order.indexOf(cur.rating)).toBeGreaterThanOrEqual(order.indexOf(prev.rating));
     if (cur.rating !== prev.rating) continue;
-    // Same letter: AA Index is non-increasing; rows without one sort last.
+    // Same letter: the uniform figure (HLE) is non-increasing, rows without
+    // one after rows with one; then the AA Index the same way.
+    if (prev.fig !== null && cur.fig !== null) {
+      expect(cur.fig).toBeLessThanOrEqual(prev.fig);
+      if (cur.fig !== prev.fig) continue;
+    } else if (prev.fig !== cur.fig) {
+      expect(prev.fig === null && cur.fig !== null).toBe(false);
+      continue;
+    }
     if (prev.aa !== null && cur.aa !== null) {
       expect(cur.aa).toBeLessThanOrEqual(prev.aa);
     } else {

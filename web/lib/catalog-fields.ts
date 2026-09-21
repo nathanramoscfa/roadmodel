@@ -10,6 +10,8 @@
 // import from the client `ModelCatalog` component. The server page reads the
 // catalog, maps it to ModelRow[], and passes the rows down as props.
 
+import type { BenchRow } from "@/lib/benchmark-grid";
+
 export type Category =
   | "coding"
   | "planning"
@@ -38,7 +40,12 @@ export interface ModelRow {
   pricing_notes: string;
   best_for: string;
   // Artificial Analysis Intelligence Index, or null when AA has not measured it.
+  // Read from the structured benchmark layer when the model is mapped there,
+  // else from the catalog prose (the cron's citation) as a fallback.
   aa_index: number | null;
+  // The uniform Artificial Analysis figures (lib/benchmark-grid.ts), or null
+  // when AA has not measured the model at all.
+  bench: BenchRow | null;
 }
 
 export interface FieldDef {
@@ -173,14 +180,14 @@ export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
     label: "AA Index",
     fullName: "Artificial Analysis Intelligence Index",
     definition:
-      "The one published composite number: Artificial Analysis's index over 10 evaluations (v4.3: Humanity's Last Exam, SciCode, Terminal-Bench 4.0, AA-Omniscience, AutomationBench-AA, …), independently measured. The closest thing to a single numeric rating — use it to separate models that share a letter. '—' means AA has not measured the model.",
+      "The one published composite number: Artificial Analysis's index over ten evaluations (v4.3: Humanity's Last Exam, GPQA Diamond, SciCode, Terminal-Bench, τ²-bench, AA-LCR, IFBench, AA-Omniscience, …), independently measured on a 0–100 scale. The closest thing to a single numeric rating — use it to separate models that share a letter. '—' means AA has not measured the model.",
     url: "https://artificialanalysis.ai/",
   },
   benchmarks: {
-    label: "Benchmark scores",
-    fullName: "Headline benchmarks",
+    label: "Benchmarks cited",
+    fullName: "Benchmarks cited by the catalog",
     definition:
-      "Curated public-leaderboard scores the rating synthesizes. Each benchmark name links to its source; some new models read 'pending refresh' until the daily benchmark pass fills them in.",
+      "The public-leaderboard figures the daily curation cited when it set this row's ratings — mixed sources and versions, so compare them only like with like. The Benchmark scores grid is the uniform, single-source alternative.",
     url: "/docs#benchmarks",
   },
 };
@@ -193,7 +200,7 @@ export const COST_TIER_DEFS: Record<CostTier, { label: string; definition: strin
 };
 
 export const JURISDICTION_DEFS: Record<string, string> = {
-  us: "United States — Anthropic, OpenAI, Google, xAI, Cursor, Groq.",
+  us: "United States — Anthropic, OpenAI, Google, xAI, Meta, Cursor, Groq.",
   eu: "European Union — Mistral (data-sovereignty / EU-regulatory workloads).",
   cn: "China — DeepSeek, z.ai (Zhipu), Moonshot. Excluded by default unless opted in.",
   uk: "United Kingdom.",
@@ -270,6 +277,7 @@ const PROVIDERS: Record<string, ProviderInfo> = {
   groq: { key: "groq", label: "Groq", docUrl: "https://console.groq.com/docs/models" },
   cursor: { key: "cursor", label: "Cursor", docUrl: "https://cursor.com/docs/models" },
   moonshot: { key: "moonshot", label: "Moonshot", docUrl: "https://platform.moonshot.ai/docs" },
+  meta: { key: "meta", label: "Meta", docUrl: "https://ai.meta.com/" },
 };
 
 // Order matters: gpt-oss must be tested before "gpt".
@@ -285,6 +293,7 @@ export function modelProvider(id: string): ProviderInfo | null {
   if (s.includes("glm")) return PROVIDERS.zai;
   if (s.includes("composer")) return PROVIDERS.cursor;
   if (s.includes("kimi")) return PROVIDERS.moonshot;
+  if (s.includes("muse")) return PROVIDERS.meta;
   return null;
 }
 
