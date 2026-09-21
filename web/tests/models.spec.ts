@@ -210,6 +210,46 @@ test("rating cells are letters only; the Value column marks the cost/quality fro
   await expect(rows.nth(frontier.size).getByTestId("value-cell")).toHaveAttribute("data-frontier", "0");
 });
 
+test("derived letters match the published bands; unmeasured letters are marked editorial", async ({ page }) => {
+  await page.goto("/models");
+
+  // Column order: chevron, model, provider, juris, input, output, AA index,
+  // value, then coding, planning, agentic, multimodal, long-context, knowledge, speed.
+  const CODING_TD = 8;
+  const KNOWLEDGE_TD = 8 + 5;
+  const hleAll = Object.values(benchmarks.models)
+    .map((m) => m.evaluations.hle)
+    .filter((v): v is number => typeof v === "number");
+  const leader = Math.max(...hleAll) * 100;
+  const band = (gap: number) => (gap <= 5 ? "S" : gap <= 20 ? "A" : gap <= 35 ? "B" : gap <= 50 ? "C" : "D");
+
+  const rows = page.getByTestId("model-row");
+  const n = await rows.count();
+  let derivedSeen = 0;
+  let editorialSeen = 0;
+  for (let i = 0; i < n; i += 1) {
+    const r = rows.nth(i);
+    const name = (await r.locator("td").nth(1).innerText()).trim();
+    const model = catalog.models.find((m) => m.name === name)!;
+    const hle = benchmarks.models[model.id]?.evaluations.hle;
+    const cell = r.locator("td").nth(KNOWLEDGE_TD).getByTestId("rating-cell");
+    if (typeof hle === "number") {
+      await expect(cell).toHaveAttribute("data-basis", "derived");
+      await expect(cell).toHaveText(band(leader - hle * 100));
+      await expect(cell).toHaveAttribute("title", /Derived from Humanity's Last Exam .* points behind the category leader/);
+      derivedSeen += 1;
+    } else {
+      await expect(cell).toHaveAttribute("data-basis", "editorial");
+      await expect(cell).toHaveAttribute("title", /Editorial rating\./);
+      editorialSeen += 1;
+    }
+    // Planning is never derived.
+    await expect(r.locator("td").nth(CODING_TD + 1).getByTestId("rating-cell")).toHaveAttribute("data-basis", "editorial");
+  }
+  expect(derivedSeen).toBeGreaterThan(30);
+  expect(editorialSeen).toBeGreaterThan(0);
+});
+
 test("the expanded row carries the cited (mixed-source) benchmarks and pricing detail", async ({ page }) => {
   await page.goto("/models");
 

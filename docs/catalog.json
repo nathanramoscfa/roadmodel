@@ -1,9 +1,9 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-21T20:24:41Z",
+  "generated_at_utc": "2026-09-21T20:54:14Z",
   "source_doc_sha256": {
-    "model-selector.txt": "d53cbd8a3db8fca0c9f648ce71f77ceb5693a96b3f554fbb1f5915dd9774ea92",
+    "model-selector.txt": "9bb97a60bc3b5eae4fa7707283775e6627d6f0417dadbdb9bf7f284615c36570",
     "model-tier-cost-scale.md": "e22df028b1ee8dae87a520cad427e97b43a79a4918afa6a038c914f9d1e7cf54"
   },
   "models": [
@@ -15,12 +15,12 @@
       "cache_read_per_1m": 0.1,
       "tier_cost": "low",
       "tiers": {
-        "coding": "B",
+        "coding": "C",
         "planning": "B",
-        "agentic": "B",
+        "agentic": "C",
         "multimodal": "B",
-        "long-context": "B",
-        "knowledge": "B",
+        "long-context": "A",
+        "knowledge": "C",
         "speed": "S"
       },
       "jurisdiction": "us",
@@ -36,11 +36,11 @@
       "cache_read_per_1m": null,
       "tier_cost": "very-high",
       "tiers": {
-        "coding": "S",
+        "coding": "A",
         "planning": "S",
-        "agentic": "S",
+        "agentic": "A",
         "multimodal": "S",
-        "long-context": "S",
+        "long-context": "A",
         "knowledge": "S",
         "speed": "D"
       },
@@ -82,7 +82,7 @@
         "planning": "S",
         "agentic": "S",
         "multimodal": "A",
-        "long-context": "S",
+        "long-context": "A",
         "knowledge": "S",
         "speed": "D"
       },
@@ -101,7 +101,7 @@
       "tiers": {
         "coding": "A",
         "planning": "A",
-        "agentic": "S",
+        "agentic": "A",
         "multimodal": "A",
         "long-context": "A",
         "knowledge": "A",
@@ -166,8 +166,8 @@
         "planning": "B",
         "agentic": "B",
         "multimodal": "C",
-        "long-context": "B",
-        "knowledge": "B",
+        "long-context": "S",
+        "knowledge": "A",
         "speed": "A"
       },
       "jurisdiction": "cn",
@@ -208,8 +208,8 @@
         "planning": "B",
         "agentic": "B",
         "multimodal": "A",
-        "long-context": "A",
-        "knowledge": "B",
+        "long-context": "B",
+        "knowledge": "C",
         "speed": "S"
       },
       "jurisdiction": "us",
@@ -229,8 +229,8 @@
         "planning": "A",
         "agentic": "A",
         "multimodal": "S",
-        "long-context": "S",
-        "knowledge": "A",
+        "long-context": "A",
+        "knowledge": "B",
         "speed": "S"
       },
       "jurisdiction": "us",
@@ -250,7 +250,7 @@
         "planning": "A",
         "agentic": "A",
         "multimodal": "S",
-        "long-context": "S",
+        "long-context": "A",
         "knowledge": "A",
         "speed": "B"
       },
@@ -271,7 +271,7 @@
         "planning": "A",
         "agentic": "A",
         "multimodal": "S",
-        "long-context": "S",
+        "long-context": "A",
         "knowledge": "A",
         "speed": "B"
       },
@@ -288,11 +288,11 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "B",
+        "coding": "A",
         "planning": "A",
         "agentic": "A",
         "multimodal": "B",
-        "long-context": "B",
+        "long-context": "A",
         "knowledge": "A",
         "speed": "S"
       },
@@ -309,11 +309,11 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "B",
+        "coding": "A",
         "planning": "A",
         "agentic": "A",
         "multimodal": "B",
-        "long-context": "B",
+        "long-context": "A",
         "knowledge": "A",
         "speed": "S"
       },
@@ -330,11 +330,11 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "B",
+        "coding": "A",
         "planning": "A",
         "agentic": "A",
         "multimodal": "B",
-        "long-context": "B",
+        "long-context": "A",
         "knowledge": "A",
         "speed": "S"
       },
@@ -351,11 +351,11 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "B",
+        "coding": "A",
         "planning": "A",
-        "agentic": "A",
+        "agentic": "S",
         "multimodal": "B",
-        "long-context": "B",
+        "long-context": "A",
         "knowledge": "A",
         "speed": "S"
       },
@@ -377,7 +377,7 @@
         "agentic": "C",
         "multimodal": "D",
         "long-context": "C",
-        "knowledge": "C",
+        "knowledge": "D",
         "speed": "A"
       },
       "jurisdiction": "cn",
@@ -393,12 +393,12 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "A",
+        "coding": "C",
         "planning": "B",
-        "agentic": "B",
+        "agentic": "C",
         "multimodal": "D",
         "long-context": "B",
-        "knowledge": "B",
+        "knowledge": "C",
         "speed": "B"
       },
       "jurisdiction": "cn",
@@ -418,7 +418,7 @@
         "planning": "A",
         "agentic": "A",
         "multimodal": "D",
-        "long-context": "B",
+        "long-context": "A",
         "knowledge": "A",
         "speed": "B"
       },
@@ -435,12 +435,12 @@
       "cache_read_per_1m": 0.125,
       "tier_cost": "medium",
       "tiers": {
-        "coding": "A",
+        "coding": "C",
         "planning": "A",
-        "agentic": "A",
+        "agentic": "D",
         "multimodal": "B",
         "long-context": "A",
-        "knowledge": "A",
+        "knowledge": "B",
         "speed": "B"
       },
       "jurisdiction": "us",
@@ -456,12 +456,12 @@
       "cache_read_per_1m": 0.025,
       "tier_cost": "low",
       "tiers": {
-        "coding": "B",
+        "coding": "D",
         "planning": "C",
-        "agentic": "C",
+        "agentic": "D",
         "multimodal": "B",
-        "long-context": "B",
-        "knowledge": "B",
+        "long-context": "A",
+        "knowledge": "C",
         "speed": "S"
       },
       "jurisdiction": "us",
@@ -481,7 +481,7 @@
         "planning": "B",
         "agentic": "A",
         "multimodal": "D",
-        "long-context": "B",
+        "long-context": "A",
         "knowledge": "B",
         "speed": "B"
       },
@@ -524,7 +524,7 @@
         "agentic": "C",
         "multimodal": "D",
         "long-context": "B",
-        "knowledge": "B",
+        "knowledge": "C",
         "speed": "S"
       },
       "jurisdiction": "us",
@@ -545,7 +545,7 @@
         "agentic": "B",
         "multimodal": "C",
         "long-context": "A",
-        "knowledge": "A",
+        "knowledge": "B",
         "speed": "B"
       },
       "jurisdiction": "us",
@@ -565,7 +565,7 @@
         "planning": "B",
         "agentic": "S",
         "multimodal": "D",
-        "long-context": "B",
+        "long-context": "A",
         "knowledge": "B",
         "speed": "B"
       },
@@ -586,8 +586,8 @@
         "planning": "B",
         "agentic": "S",
         "multimodal": "D",
-        "long-context": "B",
-        "knowledge": "B",
+        "long-context": "A",
+        "knowledge": "A",
         "speed": "B"
       },
       "jurisdiction": "us",
@@ -605,10 +605,10 @@
       "tiers": {
         "coding": "A",
         "planning": "A",
-        "agentic": "S",
+        "agentic": "A",
         "multimodal": "A",
         "long-context": "A",
-        "knowledge": "S",
+        "knowledge": "A",
         "speed": "B"
       },
       "jurisdiction": "us",
@@ -626,9 +626,9 @@
       "tiers": {
         "coding": "B",
         "planning": "C",
-        "agentic": "C",
+        "agentic": "B",
         "multimodal": "B",
-        "long-context": "B",
+        "long-context": "A",
         "knowledge": "B",
         "speed": "A"
       },
@@ -645,12 +645,12 @@
       "cache_read_per_1m": 0.02,
       "tier_cost": "low",
       "tiers": {
-        "coding": "C",
+        "coding": "B",
         "planning": "D",
-        "agentic": "D",
+        "agentic": "B",
         "multimodal": "C",
-        "long-context": "C",
-        "knowledge": "C",
+        "long-context": "A",
+        "knowledge": "B",
         "speed": "S"
       },
       "jurisdiction": "us",
@@ -666,11 +666,11 @@
       "cache_read_per_1m": 0.5,
       "tier_cost": "very-high",
       "tiers": {
-        "coding": "S",
+        "coding": "A",
         "planning": "S",
-        "agentic": "S",
+        "agentic": "A",
         "multimodal": "A",
-        "long-context": "A",
+        "long-context": "S",
         "knowledge": "A",
         "speed": "D"
       },
@@ -687,11 +687,11 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "B",
+        "coding": "A",
         "planning": "A",
         "agentic": "A",
         "multimodal": "B",
-        "long-context": "B",
+        "long-context": "S",
         "knowledge": "A",
         "speed": "S"
       },
@@ -712,8 +712,8 @@
         "planning": "S",
         "agentic": "S",
         "multimodal": "A",
-        "long-context": "A",
-        "knowledge": "S",
+        "long-context": "S",
+        "knowledge": "A",
         "speed": "D"
       },
       "jurisdiction": "us",
@@ -729,9 +729,9 @@
       "cache_read_per_1m": null,
       "tier_cost": "medium",
       "tiers": {
-        "coding": "A",
+        "coding": "S",
         "planning": "A",
-        "agentic": "A",
+        "agentic": "S",
         "multimodal": "A",
         "long-context": "A",
         "knowledge": "A",
@@ -750,12 +750,12 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "B",
+        "coding": "D",
         "planning": "B",
-        "agentic": "B",
+        "agentic": "D",
         "multimodal": "D",
         "long-context": "C",
-        "knowledge": "B",
+        "knowledge": "C",
         "speed": "A"
       },
       "jurisdiction": "us",
@@ -771,11 +771,11 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "C",
+        "coding": "D",
         "planning": "C",
-        "agentic": "C",
+        "agentic": "D",
         "multimodal": "D",
-        "long-context": "C",
+        "long-context": "D",
         "knowledge": "C",
         "speed": "S"
       },
@@ -792,12 +792,12 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "B",
+        "coding": "C",
         "planning": "A",
-        "agentic": "S",
+        "agentic": "D",
         "multimodal": "B",
-        "long-context": "S",
-        "knowledge": "A",
+        "long-context": "A",
+        "knowledge": "B",
         "speed": "B"
       },
       "jurisdiction": "us",
@@ -817,7 +817,7 @@
         "planning": "A",
         "agentic": "A",
         "multimodal": "B",
-        "long-context": "S",
+        "long-context": "A",
         "knowledge": "A",
         "speed": "B"
       },
@@ -834,11 +834,11 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "A",
+        "coding": "S",
         "planning": "A",
-        "agentic": "A",
+        "agentic": "S",
         "multimodal": "B",
-        "long-context": "S",
+        "long-context": "A",
         "knowledge": "A",
         "speed": "B"
       },
@@ -859,7 +859,7 @@
         "planning": "B",
         "agentic": "B",
         "multimodal": "D",
-        "long-context": "B",
+        "long-context": "A",
         "knowledge": "B",
         "speed": "B"
       },
@@ -880,7 +880,7 @@
         "planning": "A",
         "agentic": "A",
         "multimodal": "D",
-        "long-context": "A",
+        "long-context": "S",
         "knowledge": "A",
         "speed": "C"
       },
@@ -897,12 +897,12 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "C",
+        "coding": "D",
         "planning": "C",
-        "agentic": "C",
+        "agentic": "D",
         "multimodal": "D",
-        "long-context": "C",
-        "knowledge": "C",
+        "long-context": "D",
+        "knowledge": "D",
         "speed": "B"
       },
       "jurisdiction": "eu",
@@ -922,8 +922,8 @@
         "planning": "B",
         "agentic": "C",
         "multimodal": "B",
-        "long-context": "B",
-        "knowledge": "B",
+        "long-context": "A",
+        "knowledge": "C",
         "speed": "B"
       },
       "jurisdiction": "eu",
@@ -939,9 +939,9 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "C",
+        "coding": "D",
         "planning": "C",
-        "agentic": "C",
+        "agentic": "D",
         "multimodal": "B",
         "long-context": "C",
         "knowledge": "C",
@@ -960,12 +960,12 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "B",
+        "coding": "A",
         "planning": "B",
-        "agentic": "B",
+        "agentic": "A",
         "multimodal": "B",
-        "long-context": "B",
-        "knowledge": "B",
+        "long-context": "A",
+        "knowledge": "A",
         "speed": "B"
       },
       "jurisdiction": "us",
@@ -981,12 +981,12 @@
       "cache_read_per_1m": 0.5,
       "tier_cost": "very-high",
       "tiers": {
-        "coding": "S",
+        "coding": "A",
         "planning": "S",
         "agentic": "A",
         "multimodal": "A",
-        "long-context": "S",
-        "knowledge": "S",
+        "long-context": "A",
+        "knowledge": "A",
         "speed": "D"
       },
       "jurisdiction": "us",
@@ -1002,12 +1002,12 @@
       "cache_read_per_1m": 0.5,
       "tier_cost": "very-high",
       "tiers": {
-        "coding": "S",
+        "coding": "A",
         "planning": "S",
-        "agentic": "S",
+        "agentic": "A",
         "multimodal": "A",
-        "long-context": "S",
-        "knowledge": "S",
+        "long-context": "A",
+        "knowledge": "A",
         "speed": "D"
       },
       "jurisdiction": "us",
@@ -1025,10 +1025,10 @@
       "tiers": {
         "coding": "A",
         "planning": "A",
-        "agentic": "S",
+        "agentic": "B",
         "multimodal": "A",
         "long-context": "A",
-        "knowledge": "A",
+        "knowledge": "B",
         "speed": "B"
       },
       "jurisdiction": "us",

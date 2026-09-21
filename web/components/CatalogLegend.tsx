@@ -56,12 +56,16 @@ export function CatalogLegend() {
             ))}
           </dl>
           <p className="mt-3 text-xs text-brand-slate-500 dark:text-brand-slate-400">
-            A rating is a class several models can share; it is set editorially from cited
-            benchmark evidence, one step at a time (see the docs). The <strong>AA Index</strong>{" "}
-            column is the one published composite and the default sort. <strong>Best value</strong>{" "}
-            marks the cost/quality frontier: no catalog model is both cheaper and higher on the
-            AA Index. Hover a category header for which Benchmark-scores column is its uniform
-            evidence.
+            A rating is a class several models can share. <strong>Coding, agentic,
+            long-context, and knowledge</strong> letters are <em>derived</em> from one Artificial
+            Analysis benchmark each (Coding Index, Terminal-Bench 2.1, AA-LCR, HLE) as the gap to
+            the category leader &mdash; S within 5 points, A within 20, B within 35, C within 50,
+            else D &mdash; and refresh with the data. Planning, multimodal, and speed are editorial;
+            a <span className="rounded px-1 ring-1 ring-inset ring-brand-slate-400/60">ringed</span>{" "}
+            letter is editorial because AA has not measured that model. The{" "}
+            <strong>AA Index</strong> column is the one published composite and the default sort.{" "}
+            <strong>Best value</strong> marks the cost/quality frontier: no catalog model is both
+            cheaper and higher on the AA Index.
           </p>
         </div>
 
