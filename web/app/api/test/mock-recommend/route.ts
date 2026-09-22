@@ -1,7 +1,13 @@
 // web/app/api/test/mock-recommend/route.ts
 import { NextResponse } from "next/server";
 
+import { modelNamesInJurisdiction } from "@/lib/catalog-models";
 import { isE2eAuthEnabled } from "@/lib/profile";
+
+// The cn-jurisdiction pick, taken from the catalog rather than typed in: the
+// literal "Kimi K2.5" outlived the model and stranded the tests that assert on
+// it. web/tests/onboarding.spec.ts derives the same name the same way.
+const CN_PICK = modelNamesInJurisdiction("cn")[0] ?? "Kimi K3";
 
 export async function POST(req: Request): Promise<Response> {
   if (!isE2eAuthEnabled()) {
@@ -37,7 +43,7 @@ export async function POST(req: Request): Promise<Response> {
     best: { model: "Claude Opus 4.8", platform: "Claude Code" },
   };
   const pick = includeKimi
-    ? { model: "Kimi K2.5", platform: "Cursor" }
+    ? { model: CN_PICK, platform: "Cursor" }
     : (byBudget[budget] ?? byBudget.balanced);
 
   // Phase 4.8 T2b: echo the forwarded funding so the edge -> service forwarding
@@ -65,8 +71,8 @@ export async function POST(req: Request): Promise<Response> {
       total_usd: 0.01,
     },
     {
-      model_name: "Kimi K2.5",
-      model_id: "kimi-k2.5",
+      model_name: CN_PICK,
+      model_id: CN_PICK.toLowerCase().replace(/ /g, "-"),
       platform_name: "Cursor",
       platform_id: "cursor",
       total_usd: 0.005,
@@ -79,7 +85,7 @@ export async function POST(req: Request): Promise<Response> {
     settings: {
       rationale:
         (includeKimi
-          ? "Candidates include Kimi K2.5."
+          ? `Candidates include ${CN_PICK}.`
           : "Default western-market pick.") + fundingEcho,
     },
     session_cost_estimate: { total_usd: 0.01 },
