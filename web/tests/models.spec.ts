@@ -12,7 +12,16 @@ import path from "node:path";
 import { test, expect } from "@playwright/test";
 
 import { scoresFor } from "../lib/benchmark-scores";
-import { bandFor, formatBench, GRID_COLUMNS, paretoFrontier } from "../lib/benchmark-grid";
+import {
+  bandFor,
+  blendedPrice,
+  fitValueLine,
+  formatBench,
+  formatValueScore,
+  GRID_COLUMNS,
+  paretoFrontier,
+  valueScore,
+} from "../lib/benchmark-grid";
 
 // Expected row counts are DERIVED from the catalog the page renders, never
 // hardcoded. The catalog grows whenever the daily refresh cron picks up a new
@@ -28,6 +37,7 @@ interface CatalogModel {
   id: string;
   jurisdiction?: string;
   name: string;
+  input_price_per_1m: number;
   output_price_per_1m: number;
 }
 const catalog = JSON.parse(
@@ -181,33 +191,64 @@ test("the benchmark-scores view is a uniform grid: one AA column per evaluation"
   expect(overflow).toBe(0);
 });
 
-test("rating cells are letters only; the Value column marks the cost/quality frontier", async ({ page }) => {
+test("rating cells are letters only; the Value column is the cost-adjusted score", async ({ page }) => {
   await page.goto("/models");
 
   await expect(page.getByTestId("cell-figure")).toHaveCount(0);
 
   // Frontier = no catalog model is both cheaper and higher on the AA Index;
-  // recompute from the same inputs and compare row by row.
+  // recompute from the same inputs and compare row by row (it is now a dot).
   const inputs = scored.map((m) => ({ m, price: m.output_price_per_1m, index: aaIndexFor(m) }));
   const frontier = new Set([...paretoFrontier(inputs)].map((r) => r.m.name));
   expect(frontier.size).toBeGreaterThan(2);
   await expect(page.locator('[data-testid="value-cell"][data-frontier="1"]')).toHaveCount(frontier.size);
-  for (const name of frontier) {
-    const row = page.getByTestId("model-row").filter({ hasText: name }).first();
-    await expect(row.getByTestId("value-cell")).toContainText("Best value");
-  }
-  // The priciest model is on the frontier only if it also has the top index;
-  // the cheapest measured model always is.
   const cheapestMeasured = [...inputs].filter((r) => r.index !== null).sort((a, b) => a.price - b.price || b.index! - a.index!)[0];
   expect(frontier.has(cheapestMeasured.m.name)).toBe(true);
 
-  // Sorting by Value puts frontier rows first, by index.
-  await page.getByRole("button", { name: /^Value/ }).click();
-  const rows = page.getByTestId("model-row");
-  for (let i = 0; i < frontier.size; i += 1) {
-    await expect(rows.nth(i).getByTestId("value-cell")).toHaveAttribute("data-frontier", "1");
+  // The score = AA Index minus the market line (index ~ log10 blended price)
+  // fitted over every measured model. Recompute from the same inputs and
+  // compare the rendered figure for every measured model.
+  const fitInputs = scored.map((m) => ({
+    price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m),
+    index: aaIndexFor(m),
+  }));
+  const fit = fitValueLine(fitInputs);
+  expect(fit).not.toBeNull();
+  expect(fit!.n).toBeGreaterThan(10);
+  expect(fit!.slope).toBeGreaterThan(0); // pricier models do score higher, on average
+  expect(fit!.sigma).toBeGreaterThan(0);
+  for (const m of scored) {
+    const idx = aaIndexFor(m);
+    // Match on the id: a name filter for "Fable 5" would also hit "Fable 5.1".
+    const row = page.locator(`[data-testid="model-row"][data-model-id="${m.id}"]`);
+    const expected = formatValueScore(
+      valueScore(fit, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), idx),
+    );
+    await expect(row.getByTestId("value-cell")).toContainText(idx === null ? "—" : expected);
   }
-  await expect(rows.nth(frontier.size).getByTestId("value-cell")).toHaveAttribute("data-frontier", "0");
+  // The residuals of a least-squares fit sum to ~0: the column is centred, not
+  // a ratio that crowns the cheapest model.
+  const residuals = scored
+    .map((m) => valueScore(fit, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), aaIndexFor(m)))
+    .filter((v): v is number => v !== null);
+  const mean = residuals.reduce((a, b) => a + b, 0) / residuals.length;
+  expect(Math.abs(mean)).toBeLessThan(1e-6);
+
+  // The header's definition tooltip carries the live fit statistics (the
+  // tooltip is hover-revealed, so assert its content rather than visibility).
+  await expect(
+    page.locator('[role="tooltip"]').filter({ hasText: `Fit over ${fit!.n} measured models` }),
+  ).toHaveCount(1);
+
+  // Sorting by Value orders by the score, descending, unmeasured last.
+  await page.getByRole("button", { name: /^Value/ }).click();
+  const values = await page.getByTestId("value-cell").evaluateAll((cells) =>
+    cells.map((c) => c.getAttribute("data-value") ?? ""),
+  );
+  const measured = values.filter((v) => v !== "").map(Number);
+  expect(measured.length).toBe(fit!.n);
+  for (let i = 1; i < measured.length; i += 1) expect(measured[i - 1]).toBeGreaterThanOrEqual(measured[i]);
+  expect(values.slice(measured.length).every((v) => v === "")).toBe(true);
 });
 
 test("derived letters match the published bands; unmeasured letters are marked editorial", async ({ page }) => {

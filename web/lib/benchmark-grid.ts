@@ -219,6 +219,76 @@ export function paretoFrontier<T extends { price: number; index: number | null }
   return frontier;
 }
 
+// Cost-adjusted value score. A quality ÷ price ratio is useless across a
+// price range spanning two orders of magnitude (it crowns the cheapest weak
+// model), and a hand-picked weight is a number to argue about. So the weight is
+// ESTIMATED from the market instead: fit index = a + b·log10(price) by ordinary
+// least squares over every AA-measured model, and score each model by its
+// residual — how many index points it delivers above (+) or below (−) what its
+// price predicts. Price is AA's blended figure (3 input : 1 output tokens).
+// The fit's n, R² and residual σ ship with the column so the reader can judge
+// how much a gap means: two models within ~σ of each other are a tie.
+export interface ValueFit {
+  n: number;
+  slope: number; // index points per decade (10×) of price
+  intercept: number;
+  r2: number;
+  sigma: number; // residual standard deviation, in index points
+}
+
+export function blendedPrice(inputPer1m: number, outputPer1m: number): number {
+  return (3 * inputPer1m + outputPer1m) / 4;
+}
+
+export function fitValueLine(
+  rows: readonly { price: number; index: number | null }[],
+): ValueFit | null {
+  const pts = rows.filter(
+    (r): r is { price: number; index: number } =>
+      r.index !== null && Number.isFinite(r.index) && r.price > 0,
+  );
+  const n = pts.length;
+  if (n < 3) return null;
+  const xs = pts.map((p) => Math.log10(p.price));
+  const ys = pts.map((p) => p.index);
+  const mx = xs.reduce((a, b) => a + b, 0) / n;
+  const my = ys.reduce((a, b) => a + b, 0) / n;
+  let sxx = 0;
+  let sxy = 0;
+  let syy = 0;
+  for (let i = 0; i < n; i += 1) {
+    sxx += (xs[i] - mx) ** 2;
+    sxy += (xs[i] - mx) * (ys[i] - my);
+    syy += (ys[i] - my) ** 2;
+  }
+  if (sxx === 0 || syy === 0) return null;
+  const slope = sxy / sxx;
+  const intercept = my - slope * mx;
+  let ssRes = 0;
+  for (let i = 0; i < n; i += 1) ssRes += (ys[i] - (intercept + slope * xs[i])) ** 2;
+  return {
+    n,
+    slope,
+    intercept,
+    r2: 1 - ssRes / syy,
+    sigma: Math.sqrt(ssRes / (n - 2)),
+  };
+}
+
+// The residual for one model, or null when it is unmeasured / the fit failed.
+export function valueScore(fit: ValueFit | null, price: number, index: number | null): number | null {
+  if (!fit || index === null || !(price > 0)) return null;
+  return index - (fit.intercept + fit.slope * Math.log10(price));
+}
+
+// "+9.8" / "−3.4" / "0.0" — one decimal, explicit sign, typographic minus.
+export function formatValueScore(score: number | null): string {
+  if (score === null) return "—";
+  const rounded = Math.round(score * 10) / 10;
+  if (rounded === 0) return "0.0";
+  return (rounded > 0 ? "+" : "−") + Math.abs(rounded).toFixed(1);
+}
+
 // What the page carries per model: just the column values (null = not
 // measured) plus the AA identity for the tooltip/attribution.
 export interface BenchRow {

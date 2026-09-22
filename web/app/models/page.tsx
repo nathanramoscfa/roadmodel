@@ -1,7 +1,7 @@
 import { BenchmarkReference } from "@/components/BenchmarkReference";
 import { CatalogLegend } from "@/components/CatalogLegend";
 import { ModelCatalog } from "@/components/ModelCatalog";
-import { getBenchmarkMeta, getCatalogGeneratedAt, getModelRows } from "@/lib/catalog-models";
+import { getBenchmarkMeta, getCatalogGeneratedAt, getModelRows, getValueFit } from "@/lib/catalog-models";
 
 export const metadata = {
   title: "Models — roadmodel",
@@ -13,6 +13,7 @@ export default function ModelsPage() {
   const models = getModelRows();
   const generatedAt = getCatalogGeneratedAt();
   const bench = getBenchmarkMeta();
+  const valueFit = getValueFit(models);
 
   return (
     <section className="mx-auto max-w-7xl px-6 py-12 sm:py-16">
@@ -39,6 +40,7 @@ export default function ModelsPage() {
           generatedAt={generatedAt}
           benchmarksGeneratedAt={bench.generatedAt}
           measuredCount={bench.measuredCount}
+          valueFit={valueFit}
         />
         <BenchmarkReference id="benchmarks" />
       </div>
