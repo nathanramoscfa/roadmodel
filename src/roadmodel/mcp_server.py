@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from importlib import resources
 from importlib.resources.abc import Traversable
@@ -175,6 +176,19 @@ def _recommend_structured_with_prompts(
         recommender.build_prompt = original_build_prompt
 
 
+def _user_context_text_without_provider() -> str:
+    """The operator's user-context text for tools that make no engine call:
+    ``$ROADMODEL_USER_CONTEXT`` → ``[paths].user_context`` in config.toml → the
+    default config-home file; empty when none exists."""
+    from roadmodel.config import _config_user_context_override, _read_config_toml
+
+    override = None
+    if not os.environ.get("ROADMODEL_USER_CONTEXT"):
+        override = _config_user_context_override(_read_config_toml())
+    resolved = user_context.resolve(cli_path=override)
+    return user_context.read(resolved) if resolved.exists() else ""
+
+
 def create_app() -> Any:
     from mcp.server.fastmcp import FastMCP
 
@@ -215,6 +229,43 @@ def create_app() -> Any:
         system_prompt = _phase_roadmap_system_prompt(user_context_text)
         user_prompt = _phase_roadmap_user_prompt(project_brief, phase_number, prior_phases)
         return _provider_recommend(config, user_prompt, system_prompt)
+
+    @app.tool()
+    def score_candidates(
+        category: str,
+        complexity: str,
+        novel: bool = False,
+        budget: str | None = None,
+        top: int = 10,
+    ) -> dict[str, Any]:
+        """Rank (model, platform, effort) candidates in CODE — no engine call.
+
+        ``category`` is one of coding / planning / agentic / multimodal /
+        long-context / knowledge / speed (the selector's Step 1); ``complexity``
+        is low / medium / high (Step 2); ``novel`` marks a High task that is
+        novel problem-solving or multi-step proof. ``budget`` overrides the
+        user-context's declared Budget priority. Returns the primary, the
+        funded cross-provider backup (or ``backup_warning`` when the
+        user-context funds only one provider), and every candidate with its
+        quality / requirement-penalty / cost-penalty terms, so the pick can be
+        audited term by term. Call it after classifying the task; use the
+        result to write the rationale.
+        """
+        from roadmodel import scoring
+
+        # No engine call, so no provider key is needed: resolve the user-context
+        # the way the CLI does (env override → config.toml → default home).
+        text = _user_context_text_without_provider()
+        posture = (budget or scoring.declared_budget(text)).strip().lower()
+        task = scoring.Task(
+            category=category.strip().lower(),
+            complexity=complexity.strip().lower(),
+            novel=novel,
+            budget=posture,
+        )
+        payload = scoring.rank(task, text).to_dict()
+        payload["candidates"] = payload["candidates"][: max(0, top)]
+        return payload
 
     @app.tool()
     def read_catalog() -> dict[str, Any]:

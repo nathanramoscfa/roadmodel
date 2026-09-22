@@ -90,6 +90,7 @@ include = [
     "docs/templates/prompt-phase-roadmap.md",
     "docs/user-context.example.md",
     "docs/catalog.json",
+    "docs/benchmarks.json",
     "hatch_build.py",
     "README.md",
     "LICENSE",

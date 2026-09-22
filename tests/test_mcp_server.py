@@ -60,7 +60,7 @@ def _tool_payload(result: Any) -> Any:
         return text
 
 
-def test_tools_list_exactly_three() -> None:
+def test_tools_list_exactly_four() -> None:
     app = mcp_server.create_app()
 
     async def _run() -> list[str]:
@@ -69,7 +69,12 @@ def test_tools_list_exactly_three() -> None:
             return sorted(tool.name for tool in tools.tools)
 
     names = anyio.run(_run)
-    assert names == ["generate_phase_roadmap", "read_catalog", "recommend_model"]
+    assert names == [
+        "generate_phase_roadmap",
+        "read_catalog",
+        "recommend_model",
+        "score_candidates",
+    ]
 
 
 def test_recommend_model_calls_recommend_structured(
@@ -290,3 +295,87 @@ def test_main_exits_2_when_mcp_sdk_absent(
         "roadmodel-mcp: install with 'pip install roadmodel[mcp]' to enable the MCP server"
         in captured.err
     )
+
+
+# --------------------------------------------------------------------------- #
+# score_candidates — the deterministic scoring core over MCP (no engine call)
+# --------------------------------------------------------------------------- #
+
+TWO_PROVIDERS_CONTEXT = """# User Context
+
+## Active subscriptions
+
+| Subscription | Monthly | Provider | What it pays for |
+| --- | --- | --- | --- |
+| claude.ai Max ($200) | $200 | Anthropic | Claude Code |
+| ChatGPT Pro ($100) | $100 | OpenAI | Codex |
+
+## Active API keys
+
+| Provider | Key present | Notes |
+| --- | --- | --- |
+
+## Budget priority and speed posture
+
+**Budget priority:** `cheap`
+
+**Consumption headroom:** `capped`
+"""
+
+
+def _call_score(args: dict[str, Any]) -> tuple[bool, Any]:
+    app = mcp_server.create_app()
+
+    async def _run() -> tuple[bool, Any]:
+        async with create_connected_server_and_client_session(app) as session:
+            result = await session.call_tool("score_candidates", args)
+            return bool(getattr(result, "isError", False)), _tool_payload(result)
+
+    return anyio.run(_run)
+
+
+def test_score_candidates_ranks_without_a_provider_key(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The scorer makes no engine call, so it must work with NO provider key
+    configured at all — only the user-context resolution chain."""
+    for var in ("ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY", "ROADMODEL_PROVIDER"):
+        monkeypatch.delenv(var, raising=False)
+    ctx = tmp_path / "user-context.md"
+    ctx.write_text(TWO_PROVIDERS_CONTEXT, encoding="utf-8")
+    monkeypatch.setenv("ROADMODEL_USER_CONTEXT", str(ctx))
+
+    is_error, payload = _call_score({"category": "coding", "complexity": "medium", "top": 5})
+    assert not is_error, payload
+    assert payload["task"] == {
+        "category": "coding",
+        "complexity": "medium",
+        "novel": False,
+        "budget": "cheap",  # read from the user-context's Budget priority
+    }
+    assert payload["primary"]["funding"] == "subscription"
+    assert payload["backup"] is not None
+    assert payload["backup"]["provider"] != payload["primary"]["provider"]
+    assert payload["backup_warning"] is None
+    assert len(payload["candidates"]) == 5
+    assert {"quality", "requirement_penalty", "cost_penalty", "effort", "score"} <= set(
+        payload["candidates"][0]
+    )
+
+
+def test_score_candidates_is_case_insensitive_and_warns_without_a_second_provider(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    ctx = tmp_path / "user-context.md"
+    ctx.write_text(
+        TWO_PROVIDERS_CONTEXT.replace("| ChatGPT Pro ($100) | $100 | OpenAI | Codex |\n", ""),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("ROADMODEL_USER_CONTEXT", str(ctx))
+    is_error, payload = _call_score(
+        {"category": "Coding", "complexity": "HIGH", "novel": True, "budget": "Best", "top": 3}
+    )
+    assert not is_error, payload
+    assert payload["task"]["budget"] == "best"
+    assert payload["backup"] is None
+    assert "funds only anthropic" in payload["backup_warning"]

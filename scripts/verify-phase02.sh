@@ -351,7 +351,7 @@ run_static_checks() {
 
   # 19 — every Step 4 named test present in test_mcp_server.py
   local step4_tests=(
-    test_tools_list_exactly_three
+    test_tools_list_exactly_four
     test_recommend_model_calls_recommend_structured
     test_recommend_model_with_context
     test_generate_phase_roadmap_uses_template
@@ -376,10 +376,10 @@ run_static_checks() {
       "missing file or named test"
   fi
 
-  # 20 — exactly three tool functions, each appearing exactly once
+  # 20 — exactly four tool functions, each appearing exactly once
   local ok20=1
   local bad20=""
-  for fn in recommend_model generate_phase_roadmap read_catalog; do
+  for fn in recommend_model generate_phase_roadmap read_catalog score_candidates; do
     local count
     count="$(grep -Ec "^[[:space:]]*def ${fn}\(" src/roadmodel/mcp_server.py 2>/dev/null || true)"
     if [[ "${count}" != "1" ]]; then
@@ -389,9 +389,9 @@ run_static_checks() {
     fi
   done
   if [[ "${ok20}" -eq 1 ]]; then
-    record_pass 20 "mcp_server.py registers exactly three tools (recommend_model, generate_phase_roadmap, read_catalog)"
+    record_pass 20 "mcp_server.py registers exactly four tools (recommend_model, generate_phase_roadmap, read_catalog, score_candidates)"
   else
-    record_fail 20 "mcp_server.py registers exactly three tools" "${bad20}"
+    record_fail 20 "mcp_server.py registers exactly four tools" "${bad20}"
   fi
 
   # 21 — filesystem-walking guard
@@ -428,14 +428,15 @@ run_static_checks() {
     record_fail 23 "docs/mcp-setup.md has all required sections" "missing file or section heading"
   fi
 
-  # 24 — mcp-tools.md names the three tools
+  # 24 — mcp-tools.md names the four tools
   if [[ -f docs/mcp-tools.md ]] &&
     grep -Fq "recommend_model" docs/mcp-tools.md &&
     grep -Fq "generate_phase_roadmap" docs/mcp-tools.md &&
-    grep -Fq "read_catalog" docs/mcp-tools.md; then
-    record_pass 24 "docs/mcp-tools.md names recommend_model, generate_phase_roadmap, read_catalog"
+    grep -Fq "read_catalog" docs/mcp-tools.md &&
+    grep -Fq "score_candidates" docs/mcp-tools.md; then
+    record_pass 24 "docs/mcp-tools.md names recommend_model, generate_phase_roadmap, read_catalog, score_candidates"
   else
-    record_fail 24 "docs/mcp-tools.md names recommend_model, generate_phase_roadmap, read_catalog" \
+    record_fail 24 "docs/mcp-tools.md names recommend_model, generate_phase_roadmap, read_catalog, score_candidates" \
       "missing file or tool name"
   fi
 
@@ -671,7 +672,7 @@ _mcp_tools_list_smoke_py() {
 import asyncio
 import sys
 
-EXPECTED = sorted(["recommend_model", "generate_phase_roadmap", "read_catalog"])
+EXPECTED = sorted(["recommend_model", "generate_phase_roadmap", "read_catalog", "score_candidates"])
 
 
 async def main() -> int:
