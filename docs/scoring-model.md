@@ -15,7 +15,7 @@ roadmodel score --category planning --complexity medium --budget cheap --output 
 ```
 
 or from an agent via the MCP tool `score_candidates(category, complexity,
-novel, budget, top)`.
+novel, budget, top)` — neither needs a provider key.
 
 ## The formula
 
@@ -27,12 +27,12 @@ score = quality − requirement_penalty − λ · K · decades(effective_cost)
 
 | Term | What it is | Source |
 | --- | --- | --- |
-| `quality` (0–100) | The model's standing in the task's category. The Artificial Analysis evidence figure for that category, min-max scaled across the measured catalog, blended 70/30 with the editorial S→D letter. Unmeasured models use the letter alone, discounted by 5 points (a letter without evidence is a prior, not a measurement). | `docs/benchmarks.json` (AA) + `docs/catalog.json` letters |
+| `quality` (0–100) | The model's standing in the task's category. The Artificial Analysis evidence figure for that category, min-max scaled across the measured catalog, blended 70/30 with the editorial S→D letter. Unmeasured models use the letter alone, discounted by 5 points (a letter without evidence is a prior, not a measurement) — except in a category with no evidence at all (multimodal), where every model is on its letter. An AA figure of exactly 0 is "not measured" (AA reports 0 tokens/s for endpoints it has not throughput-tested). | `docs/benchmarks.json` (AA) + `docs/catalog.json` letters |
 | `requirement_penalty` | 1.5 points per point the model falls short of the quality the task requires: Low → 30 (C band), Medium → 50 (B), High → 70 (A), High + novel / multi-step proof → 85 (S). Soft, not a filter, so a thin candidate set still ranks. | complexity |
 | `effective_cost` | Blended list price (3 input : 1 output tokens per 1M) × *scarcity* of the platform's funding × the effort level's expected token multiplier. | catalog prices, user-context funding |
 | `decades` | log₁₀(effective_cost / $0.02), floored at 0 — a 10× price step costs the same points anywhere on the range, and $0 is "free", not infinitely good. | — |
-| `K` | The market exchange rate between price and quality: OLS slope of the AA Intelligence Index on log₁₀(blended price) over every measured model (≈ 16 index points per decade at the time of writing). Recomputed from the bundled data on every call. | fitted |
-| `λ` | How much of the market's exchange rate this operator applies to a decade of spend: budget posture `cheap` 1.25 / `balanced` 0.75 / `best` 0.3, multiplied by the stakes — Low 1.25 / Medium 1.0 / High 0.75 / High + novel 0.5 (a failed attempt at a hard task costs far more than the price gap between two models). | budget + complexity |
+| `K` | The market exchange rate between price and quality, **in the score's own quality units**: the OLS slope of this category's blended quality on log₁₀(blended price) over every measured model (≈ 33–37 points per decade for coding / planning at the time of writing). Fitting on raw AA-index units and applying it to the stretched quality would understate the market line 2× and more. A category with no positive slope (speed — faster models are cheaper) anchors on the general-intelligence (planning) fit. Recomputed from the bundled data on every call. | fitted |
+| `λ` | The share of `K` this operator applies to a decade of spend. λ = 1 ranks purely by value (the market-line residual — the same quantity the `/models` Score shows); λ → 0 ranks purely by quality. It is a budget factor (`cheap` 0.9 / `balanced` 0.5 / `best` 0.1) times a stakes factor (Low 1.6 / Medium 1.0 / High 0.55 / High + novel 0.27 — a failed attempt at a hard task costs far more than the price gap between two models). Under `balanced` that is roughly **30 / 18 / 10 / 5 quality points per decade of spend** for Low / Medium / High / novel: a routine task is a value decision, a novel hard one is a quality decision. | budget + complexity |
 
 Coding-agent surfaces (Claude Code, Codex, Cursor) receive a +0.5 nudge on
 coding / agentic / planning work, purely to break otherwise-tied costs toward
@@ -63,13 +63,16 @@ Funding is read from `user-context.md` the way `roadmodel.cost` reads it
 | subscription, `capped` (default) with pool `headroom` | 0.35 |
 | subscription, pool `tight` | 0.7 |
 | subscription, pool `exhausted` (overflow on) | 1.0 — usage credits bill at list price |
-| subscription, pool `exhausted`, `overflow off` | unfunded |
+| subscription, pool `exhausted`, `overflow off` | unfunded — unless the provider's API key is declared, in which case the surface runs on the key at list price |
 | API key / per-token | 1.0 |
 | no subscription and no key | unfunded — never chosen while a funded path exists |
 
 A pool row matches a subscription when the row's name contains the tier's
-name (minus its price tag) or the provider; the worst state among matching
-rows wins.
+name minus its price tag (`claude.ai Max — weekly` ↔ `claude.ai Max ($200)`),
+or names the provider together with a plan word (`Anthropic Max weekly`); a
+bare provider mention (an "Anthropic API budget" row) does not attach. A row
+that names a model family (`… Fable 50% sub-cap`) applies only to that
+family. The worst state among matching rows wins.
 
 ### Effort
 
@@ -84,9 +87,13 @@ effort on a metered pool is priced, not free.
 ### Hard filters (before scoring)
 
 Availability (`unavailable_models`), allowed jurisdictions (user-context, or
-the `us, eu, uk, ca, au, jp, kr` baseline), the operator's
-`platforms.allowed` / `platforms.excluded` lists, and the access method's
-own provider jurisdiction. Excluded models are reported with the reason.
+the `us, eu, uk, ca, au, jp, kr` baseline; a `local` access method passes
+every list), the operator's `platforms.allowed` / `platforms.excluded` lists
+(both the template's fenced form and the bold form; tokens that are not
+access-method ids, such as `(none declared)`, are dropped, and an unknown id
+is reported and ignored rather than read as "allow nothing"), and the access
+method's own provider jurisdiction. Excluded models are reported with the
+reason.
 
 ### Backup
 

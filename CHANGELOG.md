@@ -89,8 +89,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from the Artificial Analysis evidence for the task's category (blended with
   the editorial letter; unmeasured letters discounted), a soft penalty for
   missing the complexity's requirement, and a cost term whose exchange rate
-  `K` is fitted from the market (AA Index vs. log price) and scaled by budget
-  posture and by the stakes (hard / novel tasks weigh cost less). Funding,
+  `K` is fitted from the market in the score's own quality units (category
+  quality vs. log price) and scaled by budget posture and by the stakes
+  (under `balanced` ≈ 30 / 18 / 10 / 5 points per decade of spend for Low /
+  Medium / High / novel tasks). Funding,
   `Consumption headroom` and the `Usage-pool status` table are read from the
   user-context, so a subscription pool with headroom, a tight pool, an
   exhausted pool (list price) and a pay-per-token key all price into one

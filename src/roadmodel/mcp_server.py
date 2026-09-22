@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-import re
+import os
 import sys
 from importlib import resources
 from importlib.resources.abc import Traversable
@@ -176,12 +176,17 @@ def _recommend_structured_with_prompts(
         recommender.build_prompt = original_build_prompt
 
 
-_BUDGET_LINE_RE = re.compile(r"\*\*Budget priority:\*\*\s*`?(cheap|balanced|best)`?", re.IGNORECASE)
+def _user_context_text_without_provider() -> str:
+    """The operator's user-context text for tools that make no engine call:
+    ``$ROADMODEL_USER_CONTEXT`` → ``[paths].user_context`` in config.toml → the
+    default config-home file; empty when none exists."""
+    from roadmodel.config import _config_user_context_override, _read_config_toml
 
-
-def _declared_budget(text: str) -> str:
-    m = _BUDGET_LINE_RE.search(text or "")
-    return m.group(1).lower() if m else "balanced"
+    override = None
+    if not os.environ.get("ROADMODEL_USER_CONTEXT"):
+        override = _config_user_context_override(_read_config_toml())
+    resolved = user_context.resolve(cli_path=override)
+    return user_context.read(resolved) if resolved.exists() else ""
 
 
 def create_app() -> Any:
@@ -248,12 +253,13 @@ def create_app() -> Any:
         """
         from roadmodel import scoring
 
-        config = _load_runtime_config()
-        text = user_context.read(config.user_context_path)
-        posture = budget or _declared_budget(text)
+        # No engine call, so no provider key is needed: resolve the user-context
+        # the way the CLI does (env override → config.toml → default home).
+        text = _user_context_text_without_provider()
+        posture = (budget or scoring.declared_budget(text)).strip().lower()
         task = scoring.Task(
-            category=category.lower(),
-            complexity=complexity.lower(),
+            category=category.strip().lower(),
+            complexity=complexity.strip().lower(),
             novel=novel,
             budget=posture,
         )

@@ -219,3 +219,21 @@ def test_unknown_platform() -> None:
             output_tokens=1_000,
         )
     assert "no-such-platform" in str(excinfo.value)
+
+
+def test_active_tier_matches_an_operator_parenthetical_by_name_and_price() -> None:
+    """An operator may label a plan "(5x)" where the catalog says "($100)": the
+    trailing parenthetical is not part of the tier's identity — the name stem
+    AND the monthly price must match."""
+    from roadmodel import cost as cost_module
+
+    tiers = [
+        {"provider": "OpenAI", "tier": "ChatGPT Pro ($100)", "monthly_usd": 100.0},
+        {"provider": "OpenAI", "tier": "ChatGPT Pro ($200)", "monthly_usd": 200.0},
+    ]
+    assert cost_module._canonical_tier_name("ChatGPT Pro (5x)") == "chatgpt pro"
+    assert cost_module._canonical_tier_name("ChatGPT Pro ($100)") == "chatgpt pro"
+    matched = cost_module._match_active_tier(tiers, [("ChatGPT Pro (5x)", "openai", 100.0)])
+    assert matched is not None and matched["tier"] == "ChatGPT Pro ($100)"
+    # Same stem, wrong price -> no match (the price disambiguates the tiers).
+    assert cost_module._match_active_tier(tiers, [("ChatGPT Pro (5x)", "openai", 150.0)]) is None

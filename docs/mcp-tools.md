@@ -1,6 +1,6 @@
 # MCP Tool Reference
 
-`roadmodel-mcp` exposes three tools over the
+`roadmodel-mcp` exposes four tools over the
 [Model Context Protocol](https://modelcontextprotocol.io/). This
 document is the schema reference — signatures, parameters, return
 shapes, and worked examples. For installation and per-client
@@ -14,12 +14,14 @@ registration walk-throughs, see [docs/mcp-setup.md](mcp-setup.md).
   a phase-roadmap Markdown block from a project brief.
 - [`read_catalog`](#read_catalog) — return the bundled
   selector, tier-cost-scale doc, and catalog JSON verbatim.
+- [`score_candidates`](#score_candidates) — rank (model, platform,
+  effort) candidates in code for a classified task; no engine call.
 
-Every tool reads provider configuration and the user-context file
-through the same resolution chain the CLI uses
-([docs/byo-key-setup.md](byo-key-setup.md),
-[docs/user-context-setup.md](user-context-setup.md)). The MCP
-transport adds no extra configuration surface.
+Every tool reads the user-context file through the same resolution
+chain the CLI uses ([docs/user-context-setup.md](user-context-setup.md));
+the two that call an engine (`recommend_model`, `generate_phase_roadmap`)
+also read provider configuration ([docs/byo-key-setup.md](byo-key-setup.md)).
+The MCP transport adds no extra configuration surface.
 
 ## `recommend_model`
 
@@ -148,6 +150,51 @@ other MCP-compatible client...
 ## Steps
 1. Wire the `[mcp]` extra and the `roadmodel-mcp` console script.
 2. ...
+```
+
+## `score_candidates`
+
+Rank every (model, platform, effort) candidate for an already-classified
+task using the deterministic scoring core
+([docs/scoring-model.md](scoring-model.md)) — no provider key, no
+engine call. Call it after classifying a task (the selector's Step 1
+category and Step 2 complexity) to audit or replace a prompt-driven pick;
+every term of the score is returned.
+
+### Signature
+
+```python
+def score_candidates(
+    category: str,            # coding | planning | agentic | multimodal | long-context | knowledge | speed
+    complexity: str,          # low | medium | high
+    novel: bool = False,      # High task that is novel problem-solving / multi-step proof
+    budget: str | None = None,  # cheap | balanced | best; default = user-context's Budget priority
+    top: int = 10,
+) -> dict
+```
+
+### Returns
+
+`task`, `k_points_per_decade` (the market exchange rate used), `lambda`,
+`primary`, `backup` (the best *funded* other-provider candidate) or
+`backup_warning` (the user-context funds only one provider), `candidates`
+(top-N, each with `quality`, `quality_source`, `requirement_penalty`,
+`funding`, `pool_state`, `effective_cost_usd`, `cost_penalty`, `effort`,
+`score`, `notes`), and `excluded` (models dropped by a hard filter, with
+the reason).
+
+### Example
+
+```json
+{"category": "coding", "complexity": "high", "novel": true}
+```
+
+```json
+{
+  "primary": {"model_name": "Fable 5.1", "platform_name": "Claude Code", "effort": "xhigh", "score": 83.8},
+  "backup": {"model_name": "GPT-5.6 Terra", "platform_name": "Codex", "effort": "xhigh", "score": 81.9},
+  "backup_warning": null
+}
 ```
 
 ## `read_catalog`

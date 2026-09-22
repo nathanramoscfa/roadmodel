@@ -4,7 +4,6 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
-import re
 import shlex
 import shutil
 import subprocess  # nosec B404 - only used to invoke the `claude` CLI with fixed argv
@@ -467,9 +466,18 @@ def score_command(
     funding, consumption headroom and Usage-pool status from user-context.md.
     Every term is printed so a pick can be audited line by line.
     """
+    if user_context_path is not None and not user_context_path.expanduser().exists():
+        raise UserContextNotFoundError(user_context_path.expanduser())
+    env_user_context = os.environ.get("ROADMODEL_USER_CONTEXT")
+    if (
+        user_context_path is None
+        and env_user_context
+        and not Path(env_user_context).expanduser().exists()
+    ):
+        raise UserContextNotFoundError(Path(env_user_context).expanduser())
     resolved = user_context.resolve(cli_path=user_context_path)
     text = user_context.read(resolved) if resolved.exists() else ""
-    posture = budget or _declared_budget(text)
+    posture = (budget or scoring.declared_budget(text)).lower()
     try:
         task = scoring.Task(
             category=category.lower(),
@@ -486,14 +494,6 @@ def score_command(
         click.echo(json.dumps(payload, indent=2))
         return
     click.echo(scoring.render_text(ranking, limit=top))
-
-
-_BUDGET_LINE_RE = re.compile(r"\*\*Budget priority:\*\*\s*`?(cheap|balanced|best)`?", re.IGNORECASE)
-
-
-def _declared_budget(text: str) -> str:
-    m = _BUDGET_LINE_RE.search(text or "")
-    return m.group(1).lower() if m else "balanced"
 
 
 @cli.command("cost")

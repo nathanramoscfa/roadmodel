@@ -10,6 +10,7 @@ warning, deterministic, and explainable term by term.
 from __future__ import annotations
 
 import json
+import math
 import subprocess
 import sys
 from pathlib import Path
@@ -240,21 +241,30 @@ def test_second_subscription_becomes_the_backup_and_it_is_cross_provider() -> No
 
 
 def test_exhausted_pool_moves_routine_work_to_the_other_funded_pool() -> None:
-    # Opus leads Sol by half a coding-index point; with both pools fresh that lead
-    # wins. Once the Claude pool is exhausted (list price) a routine task moves
-    # to the funded Codex pool — the novel-hard case keeps weighing quality
-    # more, which test_harder_tasks_weigh_cost_less pins.
-    fresh = _rank(scoring.Task("coding", "low"), MAX_AND_PRO)
-    assert fresh.primary is not None
-    assert fresh.primary.model_id == "claude-opus-5"
-    exhausted = _context(
-        subs="| claude.ai Max ($200) | $200 | Anthropic | Claude Code |\n| ChatGPT Pro ($100) | $100 | OpenAI | Codex |",
-        pools="| claude.ai Max — weekly | 7 days | `exhausted` | Tue 20:00 | overflow on |",
+    """Exhausting the Claude pool (list price) must move routine work toward
+    the funded Codex pool: the Opus-vs-Sol gap shrinks and Sol wins. (The
+    fixture's evidence range is narrow, so absolute winners with both pools
+    fresh are not asserted here — the movement is the property.)"""
+    subs = (
+        "| claude.ai Max ($200) | $200 | Anthropic | Claude Code |\n"
+        "| ChatGPT Pro ($100) | $100 | OpenAI | Codex |"
     )
-    r = _rank(scoring.Task("coding", "low"), exhausted)
-    assert r.primary is not None
-    assert r.primary.provider == "openai"
-    opus = next(c for c in r.candidates if c.model_id == "claude-opus-5")
+    fresh = _rank(scoring.Task("coding", "low"), _context(subs=subs))
+    exhausted = _rank(
+        scoring.Task("coding", "low"),
+        _context(
+            subs=subs,
+            pools="| claude.ai Max — weekly | 7 days | `exhausted` | Tue 20:00 | overflow on |",
+        ),
+    )
+
+    def gap(r: scoring.Ranking) -> float:
+        by = {c.model_id: c for c in r.candidates}
+        return by["claude-opus-5"].score - by["gpt-5.6-sol"].score
+
+    assert gap(exhausted) < gap(fresh)
+    assert exhausted.primary is not None and exhausted.primary.provider == "openai"
+    opus = next(c for c in exhausted.candidates if c.model_id == "claude-opus-5")
     assert opus.pool_state == "exhausted" and opus.scarcity == 1.0
     assert any("overflow bills at list price" in n for n in opus.notes)
 
@@ -501,3 +511,213 @@ def test_cli_score_json(tmp_path: Path) -> None:
     }
     assert len(payload["candidates"]) == 3
     assert payload["primary"]["provider"] != payload["backup"]["provider"]
+
+
+# --------------------------------------------------------------------------- #
+# Review-driven edge cases
+# --------------------------------------------------------------------------- #
+
+
+def test_zero_evidence_is_unmeasured_not_a_score() -> None:
+    """AA reports 0 tokens/s for endpoints it has not throughput-tested; a 0
+    must read as 'not measured', not as the slowest model in the catalog."""
+    bench = {
+        "claude-opus-5": {"median_output_tokens_per_second": 0, "evaluations": {}},
+        "gpt-5.6-sol": {"median_output_tokens_per_second": 80, "evaluations": {}},
+        "gpt-5.6-luna": {"median_output_tokens_per_second": 200, "evaluations": {}},
+        "gemini-3.8-flash": {"median_output_tokens_per_second": 300, "evaluations": {}},
+    }
+    r = scoring.rank(scoring.Task("speed", "low"), MAX_AND_PRO, catalog=CATALOG, benchmarks=bench)
+    opus = next(c for c in r.candidates if c.model_id == "claude-opus-5")
+    assert opus.quality_source == "letter"
+    assert opus.quality == pytest.approx(scoring.LETTER_QUALITY["B"] - scoring.UNMEASURED_DISCOUNT)
+    assert scoring._evidence(bench, "claude-opus-5", "median_output_tokens_per_second") is None
+    assert scoring._evidence(bench, "gpt-5.6-sol", "median_output_tokens_per_second") == 80
+
+
+def test_k_is_fitted_in_the_scores_own_quality_units() -> None:
+    """K must be the slope of the blended quality the score uses (0–100,
+    stretched), not of the raw AA index — otherwise λ = 1 is far below the
+    market line. Recompute the fit by hand from _quality."""
+    task = scoring.Task("coding", "medium")
+    scale = scoring._evidence_scale(CATALOG, BENCH, "artificial_analysis_coding_index")
+    pts = []
+    for m in CATALOG["models"]:
+        q, source, _ = scoring._quality(m, task, BENCH, scale)
+        if source != "letter":
+            pts.append((math.log10(scoring.blended_price(m)), q))
+    n = len(pts)
+    mx = sum(x for x, _ in pts) / n
+    my = sum(y for _, y in pts) / n
+    slope = sum((x - mx) * (y - my) for x, y in pts) / sum((x - mx) ** 2 for x, _ in pts)
+    assert scoring.market_exchange_rate(CATALOG, BENCH, task, scale) == pytest.approx(slope)
+    # Speed anti-correlates with price → falls back to the planning fit.
+    assert scoring.market_exchange_rate(
+        CATALOG, BENCH, scoring.Task("speed", "low")
+    ) == pytest.approx(
+        scoring.market_exchange_rate(CATALOG, BENCH, scoring.Task("planning", "low"))
+    )
+
+
+def test_local_ollama_model_is_a_free_candidate() -> None:
+    cat = json.loads(json.dumps(CATALOG))
+    cat["models"].append(_model("gemma3", "Gemma 3 27B", 0.0, 0.0, {"coding": "B"}))
+    cat["access_methods"].append(
+        {
+            "id": "ollama",
+            "name": "Ollama (local)",
+            "provider": "ollama",
+            "provider_jurisdiction": "local",
+            "billing": "local",
+            "supports_models": ["gemma3"],
+        }
+    )
+    text = _context(
+        subs="| claude.ai Max ($200) | $200 | Anthropic | Claude Code |",
+        extra=(
+            "\n## Local models (Ollama)\n\n| Runtime | Present |\n| --- | --- |\n| Ollama installed | Yes |\n\n"
+            "| Catalog model id | Ollama tag |\n| --- | --- |\n| gemma3 | gemma3:27b |\n"
+        ),
+    )
+    r = scoring.rank(scoring.Task("coding", "low"), text, catalog=cat, benchmarks=BENCH)
+    local = next(c for c in r.candidates if c.model_id == "gemma3")
+    assert local.funding == "local" and local.scarcity == 0.0 and local.cost_penalty == 0.0
+    assert local.platform_id == "ollama"
+
+
+def test_platform_filters_accept_the_templates_fenced_form_and_drop_prose() -> None:
+    fenced = "```text\nplatforms.allowed:   claude-code, codex-cli, anthropic-api\nplatforms.excluded:  cursor\n```"
+    assert scoring.platform_filters(fenced) == (
+        {"claude-code", "codex-cli", "anthropic-api"},
+        {"cursor"},
+    )
+    placeholder = (
+        "```text\nplatforms.allowed:   (none declared)\nplatforms.excluded:  (none declared)\n```"
+    )
+    assert scoring.platform_filters(placeholder) == (set(), set())
+    bold = "**platforms.allowed:** `claude-code`\n\n**platforms.excluded:** `cursor`"
+    assert scoring.platform_filters(bold) == ({"claude-code"}, {"cursor"})
+    assert scoring.platform_filters("") == (set(), set())
+
+
+def test_unknown_platform_ids_are_reported_and_ignored_not_allow_nothing() -> None:
+    text = _context(
+        subs="| claude.ai Max ($200) | $200 | Anthropic | Claude Code |",
+        extra="\n**platforms.allowed:** `claud-code`\n",  # typo
+    )
+    r = _rank(scoring.Task("coding", "low"), text)
+    assert r.candidates, "a typo'd allowlist must not empty the candidate set"
+    assert any(
+        "unknown access-method id in platforms.allowed: claud-code" in e["reason"]
+        for e in r.excluded
+    )
+
+
+def test_model_scoped_pool_row_applies_only_to_that_family() -> None:
+    cat = json.loads(json.dumps(CATALOG))
+    cat["models"].append(_model("claude-fable-5.1", "Fable 5.1", 10.0, 50.0, {"coding": "S"}))
+    cat["access_methods"][0]["supports_models"].append("claude-fable-5.1")
+    text = _context(
+        subs="| claude.ai Max ($200) | $200 | Anthropic | Claude Code |",
+        pools=(
+            "| claude.ai Max — weekly (all models) | 7 days | `headroom` | — | |\n"
+            "| claude.ai Max — Fable 50% sub-cap | 7 days | **`tight`** (74%) | Tue | |"
+        ),
+    )
+    r = scoring.rank(scoring.Task("coding", "high"), text, catalog=cat, benchmarks=BENCH)
+    by_id = {c.model_id: c for c in r.candidates}
+    assert by_id["claude-fable-5.1"].pool_state == "tight"
+    assert by_id["claude-opus-5"].pool_state == "headroom"
+    assert by_id["claude-sonnet-5"].pool_state == "headroom"
+
+
+def test_provider_word_alone_does_not_attach_a_pool_row() -> None:
+    text = _context(
+        subs="| claude.ai Max ($200) | $200 | Anthropic | Claude Code |",
+        pools="| Anthropic API monthly budget | 30 days | `exhausted` | — | |",
+    )
+    r = _rank(scoring.Task("coding", "low"), text)
+    opus = next(c for c in r.candidates if c.model_id == "claude-opus-5")
+    assert opus.pool_state == "headroom"  # an API budget row is not the Max pool
+    plan = _context(
+        subs="| claude.ai Max ($200) | $200 | Anthropic | Claude Code |",
+        pools="| Anthropic Max weekly | 7 days | `tight` | — | |",
+    )
+    r2 = _rank(scoring.Task("coding", "low"), plan)
+    assert next(c for c in r2.candidates if c.model_id == "claude-opus-5").pool_state == "tight"
+
+
+def test_exhausted_overflow_off_falls_back_to_a_declared_key() -> None:
+    text = _context(
+        subs="| claude.ai Max ($200) | $200 | Anthropic | Claude Code |",
+        keys="| Anthropic | Yes | |",
+        pools="| claude.ai Max — weekly | 7 days | `exhausted` | Tue 20:00 | overflow off |",
+    )
+    r = _rank(scoring.Task("coding", "low"), text)
+    opus = next(c for c in r.candidates if c.model_id == "claude-opus-5")
+    assert opus.funding == "api-key" and opus.scarcity == 1.0
+    assert any("running on the declared key" in n for n in opus.notes)
+
+
+def test_effort_max_only_on_a_free_uncapped_path() -> None:
+    assert (
+        scoring.effort_for(scoring.Task("planning", "high", budget="best"), "uncapped", 1.0)
+        == "xhigh"
+    )
+    assert (
+        scoring.effort_for(scoring.Task("planning", "high", budget="best"), "uncapped", 0.7)
+        == "xhigh"
+    )
+    assert (
+        scoring.effort_for(scoring.Task("planning", "high", budget="best"), "uncapped", 0.0)
+        == "max"
+    )
+
+
+def test_letter_only_category_is_not_discounted() -> None:
+    r = _rank(scoring.Task("multimodal", "high"), MAX_AND_PRO)
+    for c in r.candidates:
+        assert c.quality_source == "letter"
+        assert c.quality == pytest.approx(scoring.LETTER_QUALITY[c.letter])
+
+
+def test_declared_budget_accepts_selector_aliases() -> None:
+    assert scoring.declared_budget("**Budget priority:** `balanced` — quality wins") == "balanced"
+    assert scoring.declared_budget("**Budget priority:** `quality`") == "best"
+    assert scoring.declared_budget("**Budget priority:** cost") == "cheap"
+    assert scoring.declared_budget("") == "balanced"
+
+
+def test_jurisdiction_list_on_the_same_line_and_decorated_pool_states() -> None:
+    assert scoring.allowed_jurisdictions("**Allowed jurisdictions:** `us, eu`") == {"us", "eu"}
+    assert scoring.allowed_jurisdictions(
+        "**Allowed jurisdictions (in this file's user, today):**\n\n`us, eu, uk`"
+    ) == {"us", "eu", "uk"}
+    assert scoring.allowed_jurisdictions("") == set(scoring.BASELINE_JURISDICTIONS)
+    rows = scoring.pool_states(
+        "## Usage-pool status\n\n| Pool | Window | State | Resets | Notes |\n| --- | --- | --- | --- | --- |\n"
+        "| claude.ai Max — weekly | 7 days | **`exhausted`** (since Sun) | Tue | overflow on |\n"
+    )
+    assert rows == [("claude.ai Max — weekly", "exhausted", "overflow on")]
+
+
+def test_cli_rejects_a_missing_user_context_path(tmp_path: Path) -> None:
+    out = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "roadmodel",
+            "score",
+            "--category",
+            "coding",
+            "--complexity",
+            "low",
+            "--user-context",
+            str(tmp_path / "nope.md"),
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    assert out.returncode != 0
+    assert "nope.md" in (out.stderr + out.stdout)

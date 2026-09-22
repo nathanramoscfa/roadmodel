@@ -106,14 +106,19 @@ REQUIREMENT: Final[dict[str, float]] = {"low": 30.0, "medium": 50.0, "high": 70.
 REQUIREMENT_NOVEL: Final[float] = 85.0
 # Points lost per point of shortfall below the requirement (steep, but soft).
 SHORTFALL_SLOPE: Final[float] = 1.5
-# λ by budget posture: how many market-decades of quality a decade of spend is
-# worth to this operator. 1.0 = indifferent along the market line.
-BUDGET_LAMBDA: Final[dict[str, float]] = {"cheap": 1.25, "balanced": 0.75, "best": 0.3}
+# λ: the share of the market's exchange rate K this operator applies to a
+# decade of spend. λ = 1 ranks purely by value (the market-line residual, the
+# same quantity the /models Score shows); λ → 0 ranks purely by quality. It is
+# the product of a budget-posture factor and a stakes factor. With today's
+# K ≈ 35 quality points per decade, `balanced` works out to roughly 30 / 18 /
+# 10 / 5 points per decade of spend for Low / Medium / High / High+novel — a
+# routine task is a value decision, a novel hard one is a quality decision.
+BUDGET_LAMBDA: Final[dict[str, float]] = {"cheap": 0.9, "balanced": 0.5, "best": 0.1}
 # The stakes scale the cost term: a failed attempt at a hard task costs far
 # more (retries, rework, review) than the price gap between two models, so a
-# decade of spend weighs less as complexity rises. Multiplies λ.
-COMPLEXITY_COST_WEIGHT: Final[dict[str, float]] = {"low": 1.25, "medium": 1.0, "high": 0.75}
-NOVEL_COST_WEIGHT: Final[float] = 0.5
+# decade of spend weighs less as complexity rises. Multiplies the budget λ.
+COMPLEXITY_COST_WEIGHT: Final[dict[str, float]] = {"low": 1.6, "medium": 1.0, "high": 0.55}
+NOVEL_COST_WEIGHT: Final[float] = 0.27
 # Scarcity: the share of list price a token effectively costs on each funding
 # path. Subscription pools: `uncapped` headroom is free; `capped` (default)
 # draws a pool the operator can run out of; `tight` / `exhausted` per the
@@ -138,8 +143,10 @@ EFFORT_TOKEN_MULTIPLIER: Final[dict[str, float]] = {
 }
 # Floor for the cost log so a $0 path is "free", not −∞ (USD per 1M blended).
 COST_FLOOR_USD: Final[float] = 0.02
-# Fallback exchange rate if the market fit cannot be computed (points/decade).
-DEFAULT_K: Final[float] = 16.0
+# Last-resort exchange rate when no market fit can be computed at all (quality
+# points per decade); a category with no positive slope (speed) first falls
+# back to the general-intelligence (planning) fit.
+DEFAULT_K: Final[float] = 30.0
 # Coding-agent surfaces get a nudge on coding / agentic / planning work (that
 # is where roadmap steps run) when costs tie; chat apps and raw APIs do not.
 AGENT_SURFACES: Final[frozenset[str]] = frozenset(
@@ -260,7 +267,12 @@ def _evidence(bench: dict[str, Any], model_id: str, key: str | None) -> float | 
     else:
         evals = row.get("evaluations")
         v = evals.get(key) if isinstance(evals, dict) else None
-    return float(v) if isinstance(v, (int, float)) and math.isfinite(float(v)) else None
+    if not isinstance(v, (int, float)) or not math.isfinite(float(v)):
+        return None
+    # AA reports 0 tokens/s for endpoints it has not throughput-tested, and no
+    # evaluation legitimately scores exactly 0: treat 0 as "not measured"
+    # (mirrors web/lib/catalog-models.ts).
+    return float(v) if float(v) > 0 else None
 
 
 def blended_price(model: dict[str, Any]) -> float:
@@ -269,30 +281,54 @@ def blended_price(model: dict[str, Any]) -> float:
     return (3.0 * inp + out) / 4.0
 
 
-def market_exchange_rate(catalog: dict[str, Any], bench: dict[str, Any]) -> float:
-    """K: OLS slope of the AA Intelligence Index on log10(blended price) over
-    every measured catalog model — index points per decade of price."""
+def market_exchange_rate(
+    catalog: dict[str, Any],
+    bench: dict[str, Any],
+    task: Task | None = None,
+    scale: tuple[float, float] | None = None,
+) -> float:
+    """K: the market's exchange rate between price and quality, in the SCORE'S
+    OWN quality units — the OLS slope of this category's blended quality (the
+    same ``_quality`` the score uses) on log10(blended price) over every
+    measured catalog model. Fitting on raw AA-index units and applying it to a
+    min-max-stretched quality would understate the market line by the stretch
+    factor (2× and more), so the fit is done on the stretched values. Falls
+    back to ``DEFAULT_K`` when fewer than three models are measured or the
+    slope is not positive (speed: faster models are cheaper, so there is no
+    market line to anchor on)."""
+    if task is None:
+        task = Task("planning", "medium")
+    if scale is None:
+        scale = _evidence_scale(catalog, bench, CATEGORY_EVIDENCE[task.category])
     xs: list[float] = []
     ys: list[float] = []
     for m in catalog.get("models", []):
         if not isinstance(m, dict):
             continue
-        idx = _evidence(bench, str(m.get("id", "")), "artificial_analysis_intelligence_index")
         price = blended_price(m)
-        if idx is None or price <= 0:
+        if price <= 0:
+            continue
+        q, source, _letter = _quality(m, task, bench, scale)
+        if source == "letter":
             continue
         xs.append(math.log10(price))
-        ys.append(idx)
+        ys.append(q)
     n = len(xs)
-    if n < 3:
-        return DEFAULT_K
-    mx, my = sum(xs) / n, sum(ys) / n
-    sxx = sum((x - mx) ** 2 for x in xs)
-    sxy = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=True))
-    if sxx <= 0:
-        return DEFAULT_K
-    slope = sxy / sxx
-    return slope if slope > 0 else DEFAULT_K
+    slope: float | None = None
+    if n >= 3:
+        mx, my = sum(xs) / n, sum(ys) / n
+        sxx = sum((x - mx) ** 2 for x in xs)
+        sxy = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=True))
+        if sxx > 0:
+            slope = sxy / sxx
+    if slope is not None and slope > 0:
+        return slope
+    if task.category != "planning":
+        # No usable market line in this category (too few measured models, or
+        # price and quality anti-correlate as they do for speed): anchor on the
+        # general-intelligence fit instead of a raw constant.
+        return market_exchange_rate(catalog, bench, Task("planning", task.complexity))
+    return DEFAULT_K
 
 
 # --------------------------------------------------------------------------- #
@@ -302,10 +338,25 @@ def market_exchange_rate(catalog: dict[str, Any], bench: dict[str, Any]) -> floa
 _HEADROOM_RE: Final = re.compile(
     r"\*\*Consumption headroom:\*\*\s*`?(uncapped|capped)`?", re.IGNORECASE
 )
-_PLATFORMS_RE: Final = re.compile(r"\*\*platforms\.(allowed|excluded):\*\*\s*(.+)", re.IGNORECASE)
-_JURIS_RE: Final = re.compile(
-    r"\*\*Allowed jurisdictions[^*]*\*\*\s*\n+\s*`([^`]+)`", re.IGNORECASE
+# Both documented forms: the template's fenced ``platforms.allowed:   a, b``
+# and the bold ``**platforms.allowed:** `a`, `b```. Values must look like
+# access-method ids; prose such as ``(none declared)`` is dropped.
+_PLATFORMS_RE: Final = re.compile(
+    r"^[ \t]*(?:\*\*)?platforms\.(allowed|excluded)(?:\*\*)?[ \t]*:(?:\*\*)?[ \t]*(.+?)[ \t]*$",
+    re.IGNORECASE | re.MULTILINE,
 )
+_PLATFORM_ID_RE: Final = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+# The list may sit on the heading's own line or on the next non-blank line,
+# backticked or bare.
+_JURIS_RE: Final = re.compile(
+    r"\*\*Allowed jurisdictions[^*\n]*\*\*[ \t]*:?[ \t]*\n*[ \t]*`?([a-z]{2,7}(?:[ \t]*,[ \t]*[a-z]{2,7})*)`?",
+    re.IGNORECASE,
+)
+_POOL_STATE_RE: Final = re.compile(r"\b(headroom|tight|exhausted)\b", re.IGNORECASE)
+_BUDGET_RE: Final = re.compile(
+    r"\*\*Budget priority:\*\*\s*`?(cheap|cost|balanced|best|quality)`?", re.IGNORECASE
+)
+_BUDGET_ALIASES: Final[dict[str, str]] = {"cost": "cheap", "quality": "best"}
 
 
 def consumption_headroom(text: str) -> str:
@@ -313,12 +364,26 @@ def consumption_headroom(text: str) -> str:
     return m.group(1).lower() if m else "capped"
 
 
+def declared_budget(text: str) -> str:
+    """The user-context's ``Budget priority`` (cheap / balanced / best), with
+    the selector's Cost / Quality labels accepted as aliases; ``balanced`` when
+    absent."""
+    m = _BUDGET_RE.search(text or "")
+    if not m:
+        return "balanced"
+    value = m.group(1).lower()
+    return _BUDGET_ALIASES.get(value, value)
+
+
 def platform_filters(text: str) -> tuple[set[str], set[str]]:
     allowed: set[str] = set()
     excluded: set[str] = set()
     for kind, rest in _PLATFORMS_RE.findall(text):
-        ids = {t.strip().strip("`").lower() for t in re.split(r"[,\s]+", rest) if t.strip("` ")}
-        ids.discard("")
+        ids = {
+            t.strip().strip("`").lower()
+            for t in re.split(r"[,\s]+", rest)
+            if _PLATFORM_ID_RE.match(t.strip().strip("`").lower())
+        }
         (allowed if kind.lower() == "allowed" else excluded).update(ids)
     return allowed, excluded
 
@@ -327,43 +392,79 @@ def allowed_jurisdictions(text: str) -> set[str]:
     m = _JURIS_RE.search(text)
     if not m:
         return set(BASELINE_JURISDICTIONS)
-    codes = {c.strip().lower() for c in m.group(1).split(",") if c.strip()}
+    codes = {c.strip().lower() for c in re.split(r"[,\s]+", m.group(1)) if c.strip()}
     return codes or set(BASELINE_JURISDICTIONS)
 
 
 def pool_states(text: str) -> list[tuple[str, str, str]]:
-    """Rows of the ``Usage-pool status`` table as (pool name, state, notes)."""
+    """Rows of the ``Usage-pool status`` table as (pool name, state, notes).
+    The State cell may be decorated (backticks, bold, a trailing note); the
+    first headroom / tight / exhausted word wins."""
     section = _cost._extract_section(text, "Usage-pool status")
     rows: list[tuple[str, str, str]] = []
     for row in _cost._parse_markdown_table(section):
         if len(row) < 3:
             continue
         name = row[0].strip()
-        state = row[2].strip().strip("`").lower()
+        m = _POOL_STATE_RE.search(row[2])
         notes = row[4].strip() if len(row) > 4 else ""
-        if state in {"headroom", "tight", "exhausted"}:
-            rows.append((name, state, notes))
+        if m and name.lower() != "pool":
+            rows.append((name, m.group(1).lower(), notes))
     return rows
 
 
+_PLAN_WORDS: Final[frozenset[str]] = frozenset(
+    {"max", "pro", "plus", "ultra", "go", "team", "premium"}
+)
+
+
+def _family_words(catalog: dict[str, Any]) -> set[str]:
+    """Lower-case first words of catalog model names ("fable", "opus", "gpt-5.6",
+    …) — the vocabulary a pool row uses to scope itself to one model family."""
+    words: set[str] = set()
+    for m in catalog.get("models", []):
+        if not isinstance(m, dict):
+            continue
+        first = str(m.get("name", "")).split(" ")[0].strip().lower()
+        if len(first) >= 3:
+            words.add(first)
+    return words
+
+
 def _pool_state_for(
-    tier: dict[str, Any] | None, pools: list[tuple[str, str, str]]
+    tier: dict[str, Any] | None,
+    pools: list[tuple[str, str, str]],
+    *,
+    model_name: str = "",
+    family_words: frozenset[str] | set[str] = frozenset(),
 ) -> tuple[str, str]:
-    """Worst declared state among pool rows that name this subscription tier
-    (e.g. a "claude.ai Max — weekly" row matches the "claude.ai Max ($200)"
-    tier), and that row's notes. Unknown → headroom."""
+    """Worst declared state among pool rows that belong to this subscription
+    tier, and that row's notes. A row belongs to the tier when its name
+    contains the tier's name minus its price tag (a "claude.ai Max — weekly"
+    row matches "claude.ai Max ($200)"), or names the provider together with a
+    plan word ("Anthropic Max weekly"). A row that names a model family ("…
+    Fable 50% sub-cap") applies only to models of that family. Unknown →
+    headroom."""
     if tier is None or not pools:
         return "headroom", ""
     tier_name = str(tier.get("tier", "")).lower()
     provider = str(tier.get("provider", "")).lower()
-    stem = re.sub(r"\s*\(.*\)\s*$", "", tier_name).strip()
+    stem = _cost._canonical_tier_name(tier_name)
     order = {"headroom": 0, "tight": 1, "exhausted": 2}
+    model_low = model_name.lower()
     worst, worst_notes = "headroom", ""
     for name, state, notes in pools:
         low = name.lower()
-        if (stem and stem in low) or (provider and provider in low):
-            if order[state] > order[worst]:
-                worst, worst_notes = state, notes
+        tokens = set(re.split(r"[^a-z0-9.]+", low))
+        by_stem = bool(stem) and stem in low
+        by_provider = bool(provider) and provider in tokens and bool(tokens & _PLAN_WORDS)
+        if not (by_stem or by_provider):
+            continue
+        scoped = tokens & set(family_words)
+        if scoped and not any(w in model_low for w in scoped):
+            continue  # a row about another model family on the same tier
+        if order[state] > order[worst]:
+            worst, worst_notes = state, notes
     return worst, worst_notes
 
 
@@ -386,9 +487,10 @@ def effort_for(task: Task, headroom: str, scarcity: float) -> str:
         rung += 1
     if task.budget == "cheap" and scarcity > 0:
         rung -= 1
-    if headroom == "uncapped" and scarcity == 0:
+    free = headroom == "uncapped" and scarcity == 0
+    if free:
         rung = 4
-    rung = max(0, min(3 if headroom != "uncapped" else 4, rung))
+    rung = max(0, min(4 if free else 3, rung))
     return EFFORT_LADDER[rung]
 
 
@@ -404,7 +506,11 @@ def _quality(
     letter_q = LETTER_QUALITY.get(letter, 30.0)
     key = CATEGORY_EVIDENCE[task.category]
     v = _evidence(bench, str(model.get("id", "")), key)
-    if v is None or scale is None or scale[1] <= scale[0]:
+    if scale is None or scale[1] <= scale[0]:
+        # No evidence exists for this category at all (multimodal): every model
+        # is on its letter, so there is nothing to discount against.
+        return letter_q, "letter", letter
+    if v is None:
         return max(0.0, letter_q - UNMEASURED_DISCOUNT), "letter", letter
     scaled = 100.0 * (v - scale[0]) / (scale[1] - scale[0])
     scaled = max(0.0, min(100.0, scaled))
@@ -435,6 +541,9 @@ def _funding_for(
     text: str,
     headroom: str,
     pools: list[tuple[str, str, str]],
+    *,
+    model_name: str = "",
+    family_words: frozenset[str] | set[str] = frozenset(),
 ) -> tuple[str, str, float, str]:
     """(funding class, pool state, scarcity, note) for one access method."""
     kind, tier = _cost._resolve_funding(method, catalog, text)
@@ -455,8 +564,18 @@ def _funding_for(
     if tier is None:
         # subscription-or-key satisfied by an API key.
         return "api-key", "n/a", SCARCITY["api-key"], ""
-    state, notes = _pool_state_for(tier, pools)
+    state, notes = _pool_state_for(tier, pools, model_name=model_name, family_words=family_words)
     if state == "exhausted" and "overflow off" in notes.lower():
+        api_keys = _cost._parse_active_api_keys(text)
+        if str(method.get("billing", "")) == "subscription-or-key" and api_keys.get(
+            str(method.get("provider", "")).lower(), False
+        ):
+            return (
+                "api-key",
+                "exhausted",
+                SCARCITY["api-key"],
+                "pool exhausted (overflow off): running on the declared key at list price",
+            )
         return "unfunded", "exhausted", SCARCITY["unfunded"], "pool exhausted, overflow off"
     if state == "exhausted":
         return (
@@ -500,13 +619,13 @@ def rank(
     allowed_p, excluded_p = platform_filters(text)
     juris = allowed_jurisdictions(text)
     unavailable = {m.strip() for m in (unavailable_models or [])}
-    k = market_exchange_rate(cat, bench)
+    scale = _evidence_scale(cat, bench, CATEGORY_EVIDENCE[task.category])
+    k = market_exchange_rate(cat, bench, task, scale)
     lam = BUDGET_LAMBDA[task.budget] * (
         NOVEL_COST_WEIGHT
         if (task.novel and task.complexity == "high")
         else COMPLEXITY_COST_WEIGHT[task.complexity]
     )
-    scale = _evidence_scale(cat, bench, CATEGORY_EVIDENCE[task.category])
     requirement = (
         REQUIREMENT_NOVEL
         if (task.novel and task.complexity == "high")
@@ -514,8 +633,20 @@ def rank(
     )
 
     methods = [m for m in cat.get("access_methods", []) if isinstance(m, dict)]
+    method_ids = {str(m.get("id", "")) for m in methods}
+    families = frozenset(_family_words(cat))
     candidates: list[Candidate] = []
     excluded: list[dict[str, str]] = []
+    # A platform list is only as good as its ids: unknown tokens are reported
+    # and ignored, and a list with no known id is treated as undeclared rather
+    # than as "allow nothing".
+    for label, ids in (("platforms.allowed", allowed_p), ("platforms.excluded", excluded_p)):
+        for unknown in sorted(ids - method_ids):
+            excluded.append(
+                {"model": "", "reason": f"unknown access-method id in {label}: {unknown}"}
+            )
+    allowed_p &= method_ids
+    excluded_p &= method_ids
 
     for model in cat.get("models", []):
         if not isinstance(model, dict):
@@ -545,10 +676,17 @@ def rank(
                 continue
             if pid in excluded_p:
                 continue
-            if str(method.get("provider_jurisdiction", "us")).lower() not in juris:
-                continue
+            pj = str(method.get("provider_jurisdiction", "us")).lower()
+            if pj != "local" and pj not in juris:
+                continue  # `local` runs on the operator's hardware: passes every list
             funding, state, scarcity, note = _funding_for(
-                _cost._with_model(method, model_id), cat, text, headroom, pools
+                _cost._with_model(method, model_id),
+                cat,
+                text,
+                headroom,
+                pools,
+                model_name=str(model.get("name", model_id)),
+                family_words=families,
             )
             effort = effort_for(task, headroom, scarcity)
             mult = EFFORT_TOKEN_MULTIPLIER[effort]
