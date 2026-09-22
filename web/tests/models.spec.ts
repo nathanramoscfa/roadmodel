@@ -15,12 +15,12 @@ import { scoresFor } from "../lib/benchmark-scores";
 import {
   bandFor,
   blendedPrice,
-  fitValueLine,
+  fitScoreModel,
   formatBench,
-  formatValueScore,
+  formatScore,
   GRID_COLUMNS,
   paretoFrontier,
-  valueScore,
+  scoreFor,
 } from "../lib/benchmark-grid";
 
 // Expected row counts are DERIVED from the catalog the page renders, never
@@ -39,6 +39,7 @@ interface CatalogModel {
   name: string;
   input_price_per_1m: number;
   output_price_per_1m: number;
+  tier_cost: string;
 }
 const catalog = JSON.parse(
   readFileSync(path.join(process.cwd(), "data", "catalog.json"), "utf8"),
@@ -191,7 +192,7 @@ test("the benchmark-scores view is a uniform grid: one AA column per evaluation"
   expect(overflow).toBe(0);
 });
 
-test("rating cells are letters only; the Value column is the cost-adjusted score", async ({ page }) => {
+test("rating cells are letters only; the Score column is the cost-adjusted score, grouped by cost tier", async ({ page }) => {
   await page.goto("/models");
 
   await expect(page.getByTestId("cell-figure")).toHaveCount(0);
@@ -205,34 +206,35 @@ test("rating cells are letters only; the Value column is the cost-adjusted score
   const cheapestMeasured = [...inputs].filter((r) => r.index !== null).sort((a, b) => a.price - b.price || b.index! - a.index!)[0];
   expect(frontier.has(cheapestMeasured.m.name)).toBe(true);
 
-  // The score = AA Index minus the market line (index ~ log10 blended price)
-  // fitted over every measured model. Recompute from the same inputs and
-  // compare the rendered figure for every measured model.
+  // The score = AA Index minus the market fit (index ~ α_tier + b·log10 blended
+  // price, one pooled slope, one intercept per cost tier) over every measured
+  // model. Recompute from the same inputs and compare every rendered figure.
   const fitInputs = scored.map((m) => ({
     price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m),
     index: aaIndexFor(m),
+    tier: m.tier_cost,
   }));
-  const fit = fitValueLine(fitInputs);
+  const fit = fitScoreModel(fitInputs);
   expect(fit).not.toBeNull();
   expect(fit!.n).toBeGreaterThan(10);
   expect(fit!.slope).toBeGreaterThan(0); // pricier models do score higher, on average
   expect(fit!.sigma).toBeGreaterThan(0);
+  const scoreOf = (m: ScoredModel) =>
+    scoreFor(fit, m.tier_cost, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), aaIndexFor(m));
   for (const m of scored) {
-    const idx = aaIndexFor(m);
     // Match on the id: a name filter for "Fable 5" would also hit "Fable 5.1".
     const row = page.locator(`[data-testid="model-row"][data-model-id="${m.id}"]`);
-    const expected = formatValueScore(
-      valueScore(fit, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), idx),
-    );
-    await expect(row.getByTestId("value-cell")).toContainText(idx === null ? "—" : expected);
+    const sc = scoreOf(m);
+    await expect(row.getByTestId("value-cell")).toContainText(sc === null ? "—" : formatScore(sc));
   }
-  // The residuals of a least-squares fit sum to ~0: the column is centred, not
-  // a ratio that crowns the cheapest model.
-  const residuals = scored
-    .map((m) => valueScore(fit, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), aaIndexFor(m)))
-    .filter((v): v is number => v !== null);
-  const mean = residuals.reduce((a, b) => a + b, 0) / residuals.length;
-  expect(Math.abs(mean)).toBeLessThan(1e-6);
+  // Least-squares residuals sum to ~0 WITHIN EVERY TIER: each tier is centred
+  // on its own peers, not a ratio that crowns the cheapest model overall.
+  for (const tier of Object.keys(fit!.tiers)) {
+    const residuals = scored.filter((m) => m.tier_cost === tier).map(scoreOf).filter((v): v is number => v !== null);
+    expect(residuals.length).toBe(fit!.tiers[tier].n);
+    const mean = residuals.reduce((a, b) => a + b, 0) / residuals.length;
+    expect(Math.abs(mean)).toBeLessThan(1e-6);
+  }
 
   // The header's definition tooltip carries the live fit statistics (the
   // tooltip is hover-revealed, so assert its content rather than visibility).
@@ -240,15 +242,31 @@ test("rating cells are letters only; the Value column is the cost-adjusted score
     page.locator('[role="tooltip"]').filter({ hasText: `Fit over ${fit!.n} measured models` }),
   ).toHaveCount(1);
 
-  // Sorting by Value orders by the score, descending, unmeasured last.
-  await page.getByRole("button", { name: /^Value/ }).click();
-  const values = await page.getByTestId("value-cell").evaluateAll((cells) =>
-    cells.map((c) => c.getAttribute("data-value") ?? ""),
+  // Sorting by Score groups by cost tier (priciest first), one header row per
+  // tier present, and orders by score inside each tier with unmeasured last.
+  await page.getByRole("button", { name: /^Score/ }).click();
+  const tiersPresent = new Set(scored.map((m) => m.tier_cost));
+  await expect(page.getByTestId("score-group")).toHaveCount(tiersPresent.size);
+  const groupOrder = await page.getByTestId("score-group").evaluateAll((rows) => rows.map((r) => r.getAttribute("data-tier")));
+  const rank: Record<string, number> = { low: 1, medium: 2, high: 3, "very-high": 4 };
+  for (let i = 1; i < groupOrder.length; i += 1) expect(rank[groupOrder[i - 1]!]).toBeGreaterThan(rank[groupOrder[i]!]);
+  const cells = await page.getByTestId("model-row").evaluateAll((rows) =>
+    rows.map((r) => ({
+      tier: r.getAttribute("data-tier-cost") ?? "",
+      value: r.querySelector('[data-testid="value-cell"]')?.getAttribute("data-value") ?? "",
+    })),
   );
-  const measured = values.filter((v) => v !== "").map(Number);
-  expect(measured.length).toBe(fit!.n);
-  for (let i = 1; i < measured.length; i += 1) expect(measured[i - 1]).toBeGreaterThanOrEqual(measured[i]);
-  expect(values.slice(measured.length).every((v) => v === "")).toBe(true);
+  let measuredSeen = 0;
+  for (const tier of groupOrder) {
+    const group = cells.filter((c) => c.tier === tier);
+    const measured = group.filter((c) => c.value !== "").map((c) => Number(c.value));
+    measuredSeen += measured.length;
+    for (let i = 1; i < measured.length; i += 1) expect(measured[i - 1]).toBeGreaterThanOrEqual(measured[i]);
+    // Unmeasured rows trail their tier's measured rows.
+    const firstBlank = group.findIndex((c) => c.value === "");
+    if (firstBlank !== -1) expect(group.slice(firstBlank).every((c) => c.value === "")).toBe(true);
+  }
+  expect(measuredSeen).toBe(fit!.n);
 });
 
 test("derived letters match the published bands; unmeasured letters are marked editorial", async ({ page }) => {

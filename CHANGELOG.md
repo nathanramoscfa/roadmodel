@@ -9,17 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **`/models` Value is a number, not a badge.** The column used to mark five
-  rows "Best value" (the cost/quality Pareto frontier) and leave the rest
-  blank. It is now a cost-adjusted score for every AA-measured model: the AA
-  Intelligence Index minus the index its price predicts, where the prediction
-  is a least-squares line of index against log10(blended price, 3 input : 1
-  output) fitted over all measured models — so the cost weight is estimated
-  from the market (today ≈ 16 index points per 10× price) rather than picked.
-  Positive means more intelligence than that price usually buys; the header
-  tooltip and legend carry the fit's n, R² and residual σ, and a gap under σ
-  is a tie (cells beyond ±σ are tinted). The frontier survives as a dot beside
-  the score. Sorting by Value orders by score with unmeasured models last.
+- **`/models` Score: a cost-adjusted number for every model, grouped by cost
+  tier.** The column (formerly "Value") used to mark five rows "Best value"
+  (the cost/quality Pareto frontier) and leave the rest blank. It is now a
+  score for every AA-measured model: the AA Intelligence Index minus the index
+  its price predicts *among its own cost tier*. The prediction is one
+  least-squares fit of index against log10(blended price, 3 input : 1 output)
+  over all measured models with a single pooled price slope (a slope per tier
+  would rest on a handful of points) and a separate baseline per cost tier —
+  so the cost weight is estimated from the market (today ≈ 16 index points per
+  10× price) rather than picked, and residuals sum to zero within every tier.
+  Positive means more intelligence than a same-tier model at that price
+  usually delivers. Sorting by Score groups the table under one header row per
+  tier (count, measured, blended price range); the header tooltip and legend
+  carry the fit's n, R² and residual σ, and a gap under σ is a tie (cells
+  beyond ±σ are tinted). The frontier survives as a dot beside the score.
+  Also fixed: a glossary tooltip inside a table header inherited the header's
+  `whitespace-nowrap` / `uppercase`, so its text ran off the right edge of the
+  box in one line.
 - **Effort and tier now calibrate to the task when a usage cap can bind
   (quota-aware effort).** The selector's FLAT-FUNDING GATE — which holds the
   frontier tier and defaults EFFORT to the top rung on every posture — used to
