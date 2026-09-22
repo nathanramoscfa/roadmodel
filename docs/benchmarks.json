@@ -7,7 +7,7 @@
     "attribution": "Benchmark data © Artificial Analysis, used under its API terms with attribution."
   },
   "generated_at_utc": "2026-09-21T22:10:35Z",
-  "model_count": 46,
+  "model_count": 45,
   "unmapped": [],
   "missing_slugs": [],
   "models": {
@@ -987,34 +987,6 @@
         "terminalbench_v2_1": 0.397003745318352,
         "tau2": 0.976608187134503,
         "tau_banking": 0.123711340206186
-      },
-      "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
-    },
-    "grok-4.5": {
-      "aa_id": "794f69b5-cede-482b-b1cc-d769478497cd",
-      "aa_slug": "grok-4-5",
-      "aa_name": "Grok 4.5 (high)",
-      "aa_creator": "SpaceXAI",
-      "release_date": "2026-07-08",
-      "evaluations": {
-        "artificial_analysis_intelligence_index": 38.8,
-        "artificial_analysis_coding_index": 72.4,
-        "artificial_analysis_math_index": null,
-        "mmlu_pro": null,
-        "gpqa": 0.931,
-        "hle": 0.427,
-        "livecodebench": null,
-        "scicode": 0.55,
-        "math_500": null,
-        "aime": null,
-        "aime_25": null,
-        "ifbench": null,
-        "lcr": 0.793333333333333,
-        "terminalbench_hard": null,
-        "terminalbench_v2_1": 0.816479400749064,
-        "tau2": null,
-        "tau_banking": 0.420618556701031
       },
       "median_output_tokens_per_second": 0,
       "median_time_to_first_token_seconds": 0

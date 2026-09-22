@@ -1,9 +1,9 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-22T21:16:08Z",
+  "generated_at_utc": "2026-09-22T21:16:13Z",
   "source_doc_sha256": {
-    "model-selector.txt": "d7a38e4961a5aed64cf648c6b51dae836c88d36d6dbd41887c633163a817b9b5",
+    "model-selector.txt": "2719aaf876d11fd0242d5d2ad7c3f4f8ef542e54a9602850ac734066039b717c",
     "model-tier-cost-scale.md": "8c364ff7dc0080cd9705c32a1f0fd820a352f5298b351253399c7fc214d97637"
   },
   "models": [
@@ -1214,6 +1214,7 @@
         "gpt-5.6-luna",
         "gpt-5.6-sol",
         "gpt-5.6-terra",
+        "grok-4.6",
         "grok-4.7",
         "kimi-k2.7-code",
         "kimi-k3",
@@ -1441,6 +1442,7 @@
         "gpt-oss-120b",
         "gpt-oss-20b",
         "grok-4.3",
+        "grok-4.6",
         "grok-4.7",
         "kimi-k2.7-code",
         "kimi-k3",
@@ -1465,6 +1467,7 @@
       "requires": "xai-api-key",
       "supports_models": [
         "grok-4.3",
+        "grok-4.6",
         "grok-4.7"
       ],
       "exposes_max_mode": "no",
