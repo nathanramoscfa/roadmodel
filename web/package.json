@@ -13,7 +13,9 @@
     "typecheck": "tsc --noEmit",
     "pretest": "node scripts/sync-catalog.mjs",
     "test": "playwright test",
-    "test:install": "playwright install chromium"
+    "test:install": "playwright install chromium",
+    "build:ci": "node scripts/with-env.mjs .env.ci npm run build",
+    "test:ci": "node scripts/with-env.mjs .env.ci npm run test"
   },
   "dependencies": {
     "@google/genai": "^2.6.0",
