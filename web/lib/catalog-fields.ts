@@ -46,6 +46,10 @@ export interface ModelRow {
   // The uniform Artificial Analysis figures (lib/benchmark-grid.ts), or null
   // when AA has not measured the model at all.
   bench: BenchRow | null;
+  // Cost-adjusted value: AA Index minus the index the market-fitted
+  // index-vs-log(blended price) line predicts for this model's price, in index
+  // points (null when AA has not measured it). See fitValueLine().
+  value_score: number | null;
   // On the cost/quality Pareto frontier: no catalog model is both cheaper
   // (output price) and higher on the AA Index. See paretoFrontier().
   value_frontier: boolean;
@@ -189,9 +193,9 @@ export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
   },
   value: {
     label: "Value",
-    fullName: "Best value (cost/quality frontier)",
+    fullName: "Value (cost-adjusted intelligence)",
     definition:
-      "Marked when no model in the catalog is both cheaper (output price) and higher on the AA Intelligence Index — the Pareto frontier of cost vs. quality, with no weights to argue about. Sorting puts frontier models first, by index. Unmarked means a cheaper model scores at least as high.",
+      "AA Intelligence Index minus the index a model's price predicts, in index points. The prediction is a least-squares line of index against log10(blended price — 3 input : 1 output tokens) fitted over every AA-measured model, so the cost weight is estimated from the market rather than chosen. +10 means ten more index points than models at that price typically deliver; negative means less. The fit's n, R² and residual σ are shown in the header — treat two models within about σ of each other as a tie. A dot marks the cost/quality frontier: no catalog model is both cheaper and higher on the index.",
     url: "https://artificialanalysis.ai/",
   },
   benchmarks: {

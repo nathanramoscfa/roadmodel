@@ -16,7 +16,16 @@ import {
   type Rating,
 } from "@/lib/catalog-fields";
 import { extractAaIndex } from "@/lib/benchmark-scores";
-import { GRID_COLUMNS, paretoFrontier, type BenchKey, type BenchRow } from "@/lib/benchmark-grid";
+import {
+  blendedPrice,
+  fitValueLine,
+  GRID_COLUMNS,
+  paretoFrontier,
+  valueScore,
+  type BenchKey,
+  type BenchRow,
+  type ValueFit,
+} from "@/lib/benchmark-grid";
 import { BENCHMARKS } from "@/lib/glossary";
 
 interface RawModel {
@@ -65,7 +74,7 @@ function benchRowFor(id: string): BenchRow | null {
 }
 
 export function getModelRows(): ModelRow[] {
-  const rows = MODELS.map((m) => {
+  const rows: ModelRow[] = MODELS.map((m) => {
     const prose = m.headline_benchmarks ?? "";
     const bench = benchRowFor(m.id);
     return {
@@ -83,6 +92,7 @@ export function getModelRows(): ModelRow[] {
       best_for: m.best_for ?? "",
       aa_index: bench?.values.artificial_analysis_intelligence_index ?? extractAaIndex(prose),
       bench,
+      value_score: null,
       value_frontier: false,
     };
   });
@@ -90,7 +100,28 @@ export function getModelRows(): ModelRow[] {
     rows.map((r) => ({ row: r, price: r.output_price_per_1m, index: r.aa_index })),
   );
   for (const f of frontier) f.row.value_frontier = true;
+  const fit = getValueFit(rows);
+  for (const r of rows) {
+    r.value_score = valueScore(
+      fit,
+      blendedPrice(r.input_price_per_1m, r.output_price_per_1m),
+      r.aa_index,
+    );
+  }
   return rows;
+}
+
+// The market line behind the Value column, fitted over the rows given (the
+// page passes the same rows it renders so the header stats match the cells).
+export function getValueFit(
+  rows: readonly Pick<ModelRow, "input_price_per_1m" | "output_price_per_1m" | "aa_index">[],
+): ValueFit | null {
+  return fitValueLine(
+    rows.map((r) => ({
+      price: blendedPrice(r.input_price_per_1m, r.output_price_per_1m),
+      index: r.aa_index,
+    })),
+  );
 }
 
 // "2026-06-21T12:53:54Z" → "2026-06-21 12:53 UTC". Falls back to the raw value.

@@ -64,8 +64,12 @@ export function CatalogLegend() {
             a <span className="rounded px-1 ring-1 ring-inset ring-brand-slate-400/60">ringed</span>{" "}
             letter is editorial because AA has not measured that model. The{" "}
             <strong>AA Index</strong> column is the one published composite and the default sort.{" "}
-            <strong>Best value</strong> marks the cost/quality frontier: no catalog model is both
-            cheaper and higher on the AA Index.
+            <strong>Value</strong> is the cost-adjusted score: the AA Index minus what a model&rsquo;s
+            price predicts, from a line fitted over every measured model (index against
+            log&nbsp;price), in index points &mdash; positive means more intelligence than that
+            price usually buys. The header shows the fit&rsquo;s n, R&sup2; and residual σ; gaps
+            smaller than σ are ties. A dot marks the cost/quality frontier (no catalog model is
+            both cheaper and higher on the index).
           </p>
         </div>
 
