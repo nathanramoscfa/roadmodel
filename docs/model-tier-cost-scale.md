@@ -31,14 +31,18 @@ table and surface material cost / availability / capability constraints.
 ### Cursor Models Pool
 
 
-| Model               | Input | Cache Write | Cache Read | Output | Tier   | Notes |
-| ------------------- | ----- | ----------- | ---------- | ------ | ------ | ----- |
-| Composer 2.5        | $0.50 | –           | $0.20      | $2.50  | Low    | -     |
-| Composer 2.5 (Fast) | $3.00 | –           | $0.50      | $15.00 | High   | -     |
-| Grok 4.5            | $2.00 | –           | $0.50      | $6.00  | Low    | Jointly trained by Cursor and SpaceXAI |
-| Grok 4.5 (Fast)     | $4.00 | –           | $1.00      | $18.00 | High   | Jointly trained by Cursor and SpaceXAI |
-| Grok 4.6            | $2.00 | –           | $0.50      | $6.00  | Low    | Jointly trained by Cursor and SpaceXAI |
-| Grok 4.6 (Fast)     | $4.00 | –           | $1.00      | $12.00 | Medium | Jointly trained by Cursor and SpaceXAI |
+| Model                | Input | Cache Write | Cache Read | Output | Tier   | Notes |
+| -------------------- | ----- | ----------- | ---------- | ------ | ------ | ----- |
+| Composer 2.5         | $0.50 | –           | $0.20      | $2.50  | Low    | -     |
+| Composer 2.5 (Fast)  | $3.00 | –           | $0.50      | $15.00 | High   | -     |
+| Grok 4.5             | $2.00 | –           | $0.50      | $6.00  | Low    | Jointly trained by Cursor and SpaceXAI |
+| Grok 4.5 (Fast)      | $4.00 | –           | $1.00      | $18.00 | High   | Jointly trained by Cursor and SpaceXAI |
+| Grok 4.6             | $2.00 | –           | $0.50      | $6.00  | Low    | Jointly trained by Cursor and SpaceXAI |
+| Grok 4.6 (Fast)      | $4.00 | –           | $1.00      | $12.00 | Medium | Jointly trained by Cursor and SpaceXAI |
+| Grok 4.7             | $2.00 | –           | $0.50      | $6.00  | Low    | Jointly trained by Cursor and SpaceXAI; Long context (>256k input tokens) is billed at 2x standard rates, up to 500k; Fast mode is available at 2x pricing; Fast mode for long context (>256k) is billed at 3x standard rates |
+| Grok 4.7 (Fast)      | $4.00 | –           | $1.00      | $12.00 | Medium | Jointly trained by Cursor and SpaceXAI; Long context (>256k input tokens) is billed at 2x standard rates, up to 500k; Fast mode is available at 2x pricing; Fast mode for long context (>256k) is billed at 3x standard rates |
+| Grok 4.7 500k        | $4.00 | –           | $1.00      | $12.00 | Medium | Jointly trained by Cursor and SpaceXAI; Long context (>256k input tokens) is billed at 2x standard rates, up to 500k; Fast mode is available at 2x pricing; Fast mode for long context (>256k) is billed at 3x standard rates |
+| Grok 4.7 500k (Fast) | $6.00 | –           | $1.50      | $18.00 | High   | Jointly trained by Cursor and SpaceXAI; Long context (>256k input tokens) is billed at 2x standard rates, up to 500k; Fast mode is available at 2x pricing; Fast mode for long context (>256k) is billed at 3x standard rates |
 
 
 ### API Pool — Anthropic (Claude)
@@ -137,7 +141,7 @@ table and surface material cost / availability / capability constraints.
 
 ---
 
-<!-- subscription-tiers-reviewed: 2026-09-17 -->
+<!-- subscription-tiers-reviewed: 2026-09-22 -->
 
 ## Subscription Tiers and Access Methods
 
@@ -279,15 +283,19 @@ the selector's per-model tier ratings and the jurisdiction filter
 (see `<jurisdiction-context>` in `docs/model-selector.txt` for the
 rationale). The "Cursor Models Pool" table at the top of this
 document continues to document Cursor's first-party model pricing for
-reference (Grok 4.5, Grok 4.6, Composer 2.5, plus their Fast variants),
-but the `auto` and `premium` model ids no longer appear as recommendable
-engines.
+reference (Grok 4.5, Grok 4.6, Grok 4.7, Composer 2.5, plus their Fast
+variants), but the `auto` and `premium` model ids no longer appear as
+recommendable engines.
 
 ## Recently Added / Updated Models
 
 
 | Model id           | Output | Tier | Change                                                                                                                     |
 | ------------------ | ------ | ---- | -------------------------------------------------------------------------------------------------------------------------- |
+| Grok 4.7           | $6.00  | Low  | New 2026-09-22 in the Cursor Models pool — xAI/SpaceXAI released Grok 4.7 on 2026-09-21 as a same-price, same-speed upgrade over Grok 4.6 at $2/$6 (2.1T parameters, 500K context, xhigh reasoning). Fast variant $4/$12 (Medium tier); 500k long-context variant $4/$12 (Medium tier); 500k Fast variant $6/$18 (High tier). Not yet added to `<model-options>` (selector-pass will handle) |
+| Grok 4.7 (Fast)    | $12.00 | Medium | New 2026-09-22 Cursor first-party Fast variant of Grok 4.7 (2x standard rates for higher output speed)                     |
+| Grok 4.7 500k      | $12.00 | Medium | New 2026-09-22 Cursor first-party long-context (>256k) variant of Grok 4.7 (2x standard rates apply to all tokens)         |
+| Grok 4.7 500k (Fast) | $18.00 | High | New 2026-09-22 Cursor first-party long-context Fast variant of Grok 4.7 (3x standard rates for combined fast + long context) |
 | deepseek-flash     | $0.60  | Low  | New 2026-09-21 (editorial, closes #583 / #606) — DeepSeek-V4.1-Flash under the API name `deepseek-flash`, the provider-direct successor to `deepseek-v4-flash`: $0.15/$0.60 off-peak ($0.30/$1.20 peak), 1M context, native image input (V4-Flash-Vision-Exp folded in), AA Intelligence Index 39.5 (v4.3). Tier ratings inherited from V4-Flash except multimodal D→C; MIT weights on Hugging Face |
 | deepseek-v4-flash  | —      | —    | RETIRED 2026-09-21 from `<model-options>` — DeepSeek retired DeepSeek-V4-Flash-0731 (and -Vision-Exp) from its pricing page 2026-09-17; the legacy API names are still accepted but served by DeepSeek-V4.1-Flash at the Flash price, so the element is replaced by `deepseek-flash` rather than kept |
 | deepseek-v4-pro    | $1.98  | Low  | Price basis made explicit 2026-09-21 — DeepSeek's pricing page splits every rate into OFF-PEAK / PEAK (peak = 2×, 01:00–04:00 and 06:00–10:00 UTC Mon–Fri only); the catalog lists the OFF-PEAK rate for both DeepSeek models (~79% of the week, all US/EU working hours) and the snapshot records `price_basis` + the peak figures. Aggregators such as OpenRouter list the PEAK rate ($1.32/$3.96) |
