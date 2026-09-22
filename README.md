@@ -322,11 +322,14 @@ walk-through — first-run bootstrap, full precedence chain,
 field-by-field schema, when to update — is
 [docs/user-context-setup.md](docs/user-context-setup.md).
 
-Running a second coding agent as a fallback for when your primary
-subscription's pool runs out? [docs/codex-parity.md](docs/codex-parity.md)
-maps every Claude Code surface (instructions, memory, skills, MCP servers,
-model + effort) onto its Codex equivalent and carries a paste-in prompt that
-makes Codex sync itself.
+Running more than one coding agent — because a usage pool runs out, a
+provider goes down, or a task suits a different model?
+[docs/agent-parity.md](docs/agent-parity.md) maps every surface
+(instructions, memory, skills, slash commands, MCP servers, model, effort,
+permissions) across Claude, Codex, Gemini and open-source clients in any
+direction, and carries one parameterised prompt that makes the target agent
+sync itself. `roadmodel-update` keeps the roadmap commands, the roadmodel MCP
+server and the reasoning-effort default in parity automatically.
 
 ## Subcommands
 

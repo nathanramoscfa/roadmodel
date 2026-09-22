@@ -60,7 +60,26 @@ AGENTS_SKILLS_DIR = (
 CODEX_LEGACY_SKILLS_DIR = CODEX_DIR / "skills"  # pre-.agents location; current builds read BOTH
 CURSOR_DIR = Path.home() / ".cursor"  # Cursor reads ~/.agents/skills too; nothing else to install
 OPENCODE_DIR = Path.home() / ".config" / "opencode"  # OpenCode: commands/<name>.md -> /<name>
-AGENTS = ("claude", "gemini", "codex", "cursor", "opencode")
+CODEX_PROMPTS_DIR = CODEX_DIR / "prompts"  # Codex: prompts/<name>.md -> /prompts:<name>
+
+
+def _vscode_user_dirs() -> list[Path]:
+    """VS Code (and Insiders) user-data directories for this OS. Prompt files
+    live in ``<user dir>/prompts/<name>.prompt.md`` and are invoked ``/<name>``
+    in the native chat panel."""
+    if WINDOWS:
+        base = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+        roots = [base / "Code", base / "Code - Insiders"]
+    elif sys.platform == "darwin":
+        base = Path.home() / "Library" / "Application Support"
+        roots = [base / "Code", base / "Code - Insiders"]
+    else:
+        base = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+        roots = [base / "Code", base / "Code - Insiders"]
+    return [r / "User" for r in roots if (r / "User").is_dir()]
+
+
+AGENTS = ("claude", "gemini", "codex", "cursor", "opencode", "vscode")
 SKILLS_CONSUMERS = ("codex", "cursor")  # both read ~/.agents/skills/<name>/SKILL.md
 VENV_DIRS = (".venv", "venv", "env")
 WINDOWS = os.name == "nt"
@@ -466,6 +485,30 @@ def port_opencode(name: str, body: str) -> str:
     return f'---\ndescription: "{desc}"\n---\n{text.rstrip()}\n'
 
 
+def port_codex_prompt(name: str, body: str) -> str:
+    """Codex custom prompt (``~/.codex/prompts/<name>.md``), invoked
+    ``/prompts:<name> <args>``. Keeps ``$ARGUMENTS`` — Codex expands it, and
+    ``$1``..``$9`` besides — so the same typed arguments reach the same place
+    as in Claude Code."""
+    description, text = _split_frontmatter(body)
+    desc = description.replace('"', "'")
+    hint = 'argument-hint: "[arguments]"\n' if "$ARGUMENTS" in text else ""
+    return f'---\ndescription: "{desc}"\n{hint}---\n{text.rstrip()}\n'
+
+
+def port_vscode(name: str, body: str) -> str:
+    """VS Code prompt file (``<user dir>/prompts/<name>.prompt.md``), invoked
+    ``/<name>`` in the native chat panel. Prompt files take no placeholder —
+    whatever the user types after the command is appended to the request — so
+    ``$ARGUMENTS`` becomes a sentence saying exactly that."""
+    description, text = _split_frontmatter(body)
+    text = text.replace('"$ARGUMENTS"', "the text after the command").replace(
+        "$ARGUMENTS", "the text after the command"
+    )
+    desc = description.replace('"', "'")
+    return f'---\nname: {name}\ndescription: "{desc}"\nagent: agent\n---\n{text.rstrip()}\n'
+
+
 def detect_agents() -> list[str]:
     """Agents present on this machine. Claude Code is assumed (this script
     ships with its commands); the others only if their config dir exists."""
@@ -478,7 +521,162 @@ def detect_agents() -> list[str]:
         found.append("cursor")
     if OPENCODE_DIR.is_dir():
         found.append("opencode")
+    if _vscode_user_dirs():
+        found.append("vscode")
     return found
+
+
+# --------------------------------------------------------------------------
+# Runtime parity: the same MCP tools and a calibrated reasoning effort on every
+# agent. Claude Code is configured by `roadmodel setup-mcp`; the others are
+# plain config files, and without this they silently run with fewer tools and
+# (worse) a reasoning effort pinned to the top rung, which is what exhausts a
+# weekly usage pool. See docs/agent-parity.md.
+# --------------------------------------------------------------------------
+
+# The calibrated default: high enough for real work, not the ceiling. Effort is
+# metered against a subscription's usage pool on every provider, so a pinned
+# top rung is a standing cost. Per-task escalation stays a per-session choice.
+CALIBRATED_EFFORT = {
+    "claude": "high",  # ~/.claude/settings.json effortLevel (ladder tops at max)
+    "codex": "medium",  # ~/.codex/config.toml model_reasoning_effort (tops at xhigh)
+}
+TOP_RUNGS = {"claude": {"max", "xhigh"}, "codex": {"xhigh"}}
+MCP_SERVER_NAME = "roadmodel"
+
+
+def _roadmodel_mcp_command() -> Optional[list[str]]:
+    """The argv Claude Code already uses for the roadmodel MCP server, so every
+    other agent launches it exactly the same way (including any launcher script
+    that injects provider keys). None when Claude has no registration to mirror."""
+    config = Path.home() / ".claude.json"
+    try:
+        data = json.loads(config.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    entry = (data.get("mcpServers") or {}).get(MCP_SERVER_NAME)
+    if not isinstance(entry, dict):
+        return None
+    command = entry.get("command")
+    if not isinstance(command, str) or not command:
+        return None
+    args = entry.get("args") if isinstance(entry.get("args"), list) else []
+    return [command, *[str(a) for a in args]]
+
+
+def _sync_codex(argv: Optional[list[str]], calibrate: bool, dry_run: bool) -> list[str]:
+    """[mcp_servers.roadmodel] + a calibrated model_reasoning_effort in
+    ~/.codex/config.toml, edited line-wise so nothing else in the file moves."""
+    out: list[str] = []
+    path = CODEX_DIR / "config.toml"
+    text = path.read_text(encoding="utf-8") if path.exists() else ""
+    original = text
+
+    if argv and f"[mcp_servers.{MCP_SERVER_NAME}]" not in text:
+        block = (
+            f"\n[mcp_servers.{MCP_SERVER_NAME}]\n"
+            f"command = {json.dumps(argv[0])}\n"
+            f"args = {json.dumps(argv[1:])}\n"
+        )
+        text = text.rstrip("\n") + "\n" + block
+        out.append("codex mcp: added roadmodel")
+    elif argv:
+        out.append("codex mcp: present")
+    else:
+        out.append("codex mcp: SKIPPED (no roadmodel entry in ~/.claude.json to mirror)")
+
+    if calibrate:
+        want = CALIBRATED_EFFORT["codex"]
+        match = re.search(r'(?m)^model_reasoning_effort\s*=\s*"([^"]*)"', text)
+        current = match.group(1) if match else None
+        if current in TOP_RUNGS["codex"]:
+            text = (
+                text[: match.start()] + f'model_reasoning_effort = "{want}"' + text[match.end() :]
+            )
+            out.append(f"codex effort: {current} -> {want}")
+        elif current is None:
+            head = f'model_reasoning_effort = "{want}"\n'
+            text = (
+                head + text
+                if not text.startswith("model")
+                else text.replace("model", head + "model", 1)
+            )
+            out.append(f"codex effort: unset -> {want}")
+        else:
+            out.append(f"codex effort: {current} (left alone)")
+
+    if text != original and not dry_run:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    return out
+
+
+def _sync_json_mcp(path: Path, argv: Optional[list[str]], label: str, dry_run: bool) -> list[str]:
+    """Add the roadmodel stdio server to a JSON settings file that carries an
+    ``mcpServers`` map (Gemini CLI, OpenCode), leaving everything else intact."""
+    if not argv:
+        return [f"{label} mcp: SKIPPED (nothing to mirror)"]
+    try:
+        data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    except ValueError:
+        return [f"{label} mcp: SKIPPED (unparseable {path})"]
+    if not isinstance(data, dict):
+        return [f"{label} mcp: SKIPPED (unexpected shape in {path})"]
+    servers = data.setdefault("mcpServers", {})
+    if not isinstance(servers, dict):
+        return [f"{label} mcp: SKIPPED (mcpServers is not an object)"]
+    if MCP_SERVER_NAME in servers:
+        return [f"{label} mcp: present"]
+    servers[MCP_SERVER_NAME] = {"command": argv[0], "args": argv[1:]}
+    if not dry_run:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    return [f"{label} mcp: added roadmodel"]
+
+
+def _sync_claude_effort(calibrate: bool, dry_run: bool) -> list[str]:
+    """Claude Code's own effort default. A ceiling (maxEffortLevel) is left
+    alone — it bounds escalation, which is the point; only a pinned DEFAULT at
+    the top rung is calibrated down."""
+    if not calibrate:
+        return []
+    path = CLAUDE_DIR / "settings.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    except (OSError, ValueError):
+        return ["claude effort: SKIPPED (unreadable settings.json)"]
+    if not isinstance(data, dict):
+        return ["claude effort: SKIPPED (unexpected settings.json shape)"]
+    current = data.get("effortLevel")
+    want = CALIBRATED_EFFORT["claude"]
+    if current not in TOP_RUNGS["claude"]:
+        return [f"claude effort: {current or 'unset'} (left alone)"]
+    data["effortLevel"] = want
+    if not dry_run:
+        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    return [f"claude effort: {current} -> {want}"]
+
+
+def sync_agent_runtime(
+    dry_run: bool = False,
+    agents: Optional[list[str]] = None,
+    calibrate: bool = True,
+) -> list[str]:
+    """Give every agent on this machine the same roadmodel MCP tools and a
+    reasoning effort that is not pinned to the top rung. Returns report lines."""
+    agents = agents or detect_agents()
+    argv = _roadmodel_mcp_command()
+    report: list[str] = []
+    report += _sync_claude_effort(calibrate, dry_run)
+    if "codex" in agents and (CODEX_DIR.is_dir() or not dry_run):
+        report += _sync_codex(argv, calibrate, dry_run)
+    if "gemini" in agents:
+        report += _sync_json_mcp(GEMINI_DIR / "settings.json", argv, "gemini", dry_run)
+    if "opencode" in agents:
+        report += _sync_json_mcp(OPENCODE_DIR / "opencode.json", argv, "opencode", dry_run)
+    if not report:
+        report.append("nothing to sync")
+    return report
 
 
 def refresh_commands(dry_run: bool = False, agents: Optional[list[str]] = None) -> list[str]:
@@ -513,6 +711,18 @@ def refresh_commands(dry_run: bool = False, agents: Optional[list[str]] = None) 
             else:
                 target = GEMINI_DIR / "commands" / f"{name}.toml"
                 states.append(f"gemini {_install(target, toml, dry_run)}")
+        if "codex" in agents:
+            # Skills are model-invocable; a prompt is what makes the SAME slash
+            # command the operator types in Claude Code work here too.
+            target = CODEX_PROMPTS_DIR / f"{name}.md"
+            states.append(
+                f"codex-prompt {_install(target, port_codex_prompt(name, body), dry_run)}"
+            )
+        if "vscode" in agents:
+            for user_dir in _vscode_user_dirs():
+                target = user_dir / "prompts" / f"{name}.prompt.md"
+                label = "vscode-insiders" if "Insiders" in str(user_dir) else "vscode"
+                states.append(f"{label} {_install(target, port_vscode(name, body), dry_run)}")
         consumers = [a for a in SKILLS_CONSUMERS if a in agents]
         if consumers:
             skill_md = port_codex(name, body)
@@ -761,6 +971,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     )
     ap.add_argument("--uninstall-schedule", action="store_true", help="remove the daily run")
     ap.add_argument("--log", action="store_true", help=f"also append output to {LOG_FILE}")
+    ap.add_argument(
+        "--no-calibrate",
+        action="store_true",
+        help="skip the reasoning-effort calibration (MCP registration still runs)",
+    )
     args = ap.parse_args(argv)
 
     if args.log:
@@ -778,6 +993,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     if args.commands_only:
         print("Agent command files:")
         for line in refresh_commands(dry_run=args.dry_run, agents=agents):
+            print(f"  {line}")
+        print("Agent runtime:")
+        for line in sync_agent_runtime(
+            dry_run=args.dry_run, agents=agents, calibrate=not args.no_calibrate
+        ):
             print(f"  {line}")
         return 0
 
@@ -830,6 +1050,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     if not args.no_commands:
         print("\nAgent command files:")
         for line in refresh_commands(dry_run=args.dry_run, agents=agents):
+            print(f"  {line}")
+        print("\nAgent runtime:")
+        for line in sync_agent_runtime(
+            dry_run=args.dry_run, agents=agents, calibrate=not args.no_calibrate
+        ):
             print(f"  {line}")
 
     if args.install_schedule:

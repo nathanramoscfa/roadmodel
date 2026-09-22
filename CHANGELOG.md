@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The recommender engine moves to GPT-5.6 Luna.** A 12-probe differential
+  eval (`scripts/eval_recommend_engines.py`, anon path) against the incumbent
+  gpt-5-mini and the tier above it: all three parse 12/12 with every
+  structured field and rationale section present and no task leak, but
+  gpt-5-mini demotes the Quality pick on cost grounds on the `cost-bulk` probe
+  (no-demote 0.92) where Luna and Terra do not (1.00) — and Luna is ~40%
+  cheaper per output token ($0.20/$1.20 vs $0.25/$2.00 per Mtok) while Terra
+  costs 1.8× the latency for no adherence gain. Anon and signed-in frontier
+  both cut to `gpt-5.6-luna`; the gpt-5-mini provider hint stays registered so
+  rollback is a one-line change. The OpenAI adapter now picks each model's
+  reasoning FLOOR rather than assuming `minimal`: the GPT-5.6 generation
+  rejects `minimal` outright, which is what the first eval run discovered.
 - **`/models` Score: a cost-adjusted number for every model, grouped by cost
   tier.** The column (formerly "Value") used to mark five rows "Best value"
   (the cost/quality Pareto frontier) and leave the rest blank. It is now a
@@ -117,6 +129,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is computed from the same rows and fit the table uses.
   `scripts/plot_score_model.py` renders the same figure offline with matplotlib
   for docs and review.
+- **The same slash commands on every agent, and runtime parity with them.**
+  `roadmodel-update` already generated the four roadmap commands for Claude
+  Code, Gemini CLI, Cursor and OpenCode; it now also writes **Codex prompt
+  files** (`~/.codex/prompts/<name>.md`, invoked `/prompts:roadmap-phase 1`,
+  keeping the `$ARGUMENTS` placeholder Codex expands) and **VS Code prompt
+  files** (`<user profile>/prompts/<name>.prompt.md`, invoked
+  `/roadmap-phase 1` in the native chat panel). Beyond commands it now syncs
+  the **runtime**: the roadmodel MCP server is mirrored from the Claude
+  registration into Codex's `config.toml`, Gemini's `settings.json` and
+  OpenCode's config — launched exactly as Claude launches it, wrapper script
+  and all — and a **reasoning-effort default pinned to the top rung**
+  (`effortLevel: max`, `model_reasoning_effort: xhigh`) is stepped down to the
+  calibrated default, because that pin is a standing cost on every provider
+  that meters a usage pool. Ceilings and deliberate lower values are left
+  alone; `--no-calibrate` opts out.
+- **`docs/agent-parity.md`** replaces `docs/codex-parity.md` and covers every
+  direction, not just Claude → Codex: a symmetric surface map across Claude,
+  Codex, Gemini (Antigravity) and open-source clients, and one parameterised
+  prompt ("You are TARGET, bring yourself to parity with SOURCE") instead of
+  one file per pair.
 - **A scoring core in code: `roadmodel score` and the `score_candidates` MCP
   tool.** `roadmodel.scoring` ranks every (model, platform, effort) candidate
   deterministically — no engine call — as

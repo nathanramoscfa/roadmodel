@@ -29,9 +29,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(REPO_ROOT / "tests"))
 
+from test_user_stack_contract import EFFORT_WORDS, TASKS, USER_CONTEXT  # noqa: E402
+
 from roadmodel import recommend as recommend_module  # noqa: E402
 from roadmodel.config import Config  # noqa: E402
-from test_user_stack_contract import EFFORT_WORDS, TASKS, USER_CONTEXT  # noqa: E402
 
 DEFAULT_MODELS = {"openai": "gpt-5-mini", "google": "gemini-3-flash", "anthropic": None}
 
