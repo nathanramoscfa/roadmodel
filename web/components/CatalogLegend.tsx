@@ -4,6 +4,13 @@
 // rating categories, the cost-tier boundaries, and the jurisdiction codes — using
 // the same badge colors as the table. A native <details> disclosure (open by
 // default), so it needs no client JS. Data comes from the glossary + catalog-fields.
+import {
+  CATEGORY_FIGURE,
+  DERIVATION_BANDS,
+  DERIVED_CATEGORIES,
+  GRID_COLUMN_BY_KEY,
+  type BenchKey,
+} from "@/lib/benchmark-grid";
 import { RATING_SCALE } from "@/lib/glossary";
 import {
   CATEGORY_DEFS,
@@ -16,6 +23,17 @@ import {
   type CostTier,
   type Rating,
 } from "@/lib/catalog-fields";
+
+// The four derived categories and the bands, read from the same constants the
+// letters are derived with — so this sentence cannot go stale when a band or an
+// evidence benchmark changes (a new AA version renames Terminal-Bench, say).
+const DERIVED_EVIDENCE: string = CATEGORY_ORDER.filter(
+  (c) => DERIVED_CATEGORIES.has(c) && CATEGORY_FIGURE[c],
+)
+  .map((c) => GRID_COLUMN_BY_KEY[CATEGORY_FIGURE[c] as BenchKey].label)
+  .join(", ");
+const DERIVED_NAMES: string = CATEGORY_ORDER.filter((c) => DERIVED_CATEGORIES.has(c)).join(", ");
+const BAND_RULE: string = DERIVATION_BANDS.map((b) => `${b.letter} within ${b.max}`).join(", ");
 
 const BADGE =
   "inline-flex min-w-[1.75rem] items-center justify-center rounded px-1.5 py-0.5 text-xs font-semibold";
@@ -56,19 +74,19 @@ export function CatalogLegend() {
             ))}
           </dl>
           <p className="mt-3 text-xs text-brand-slate-500 dark:text-brand-slate-400">
-            A rating is a class several models can share. <strong>Coding, agentic,
-            long-context, and knowledge</strong> letters are <em>derived</em> from one Artificial
-            Analysis benchmark each (Coding Index, Terminal-Bench 2.1, AA-LCR, HLE) as the gap to
-            the category leader &mdash; S within 5 points, A within 20, B within 35, C within 50,
-            else D &mdash; and refresh with the data. Planning, multimodal, and speed are editorial;
+            A rating is a class several models can share. The <strong>{DERIVED_NAMES}</strong>{" "}
+            letters are <em>derived</em> from one Artificial Analysis benchmark each ({DERIVED_EVIDENCE})
+            as the gap to the category leader &mdash; {BAND_RULE} points, else D &mdash; and refresh
+            with the data. The rest are editorial;
             a <span className="rounded px-1 ring-1 ring-inset ring-brand-slate-400/60">ringed</span>{" "}
             letter is editorial because AA has not measured that model. The{" "}
-            <strong>AA Index</strong> column is the one published composite and the default sort.{" "}
+            <strong>AA Index</strong> column is the one published composite.{" "}
             <strong>Score</strong> is the cost-adjusted figure: the AA Index minus what a
             model&rsquo;s price predicts <em>among its own cost tier</em>, from one market fit
             over every measured model (index against log&nbsp;price, with a baseline per tier),
             in index points &mdash; positive means more intelligence than a same-tier model at
-            that price usually delivers. Sorting by Score groups the table by cost tier. The
+            that price usually delivers. It is the <strong>default sort</strong>, which groups the
+            table by cost tier so each model is read against its own price band. The
             header shows the fit&rsquo;s n, R&sup2; and residual σ; gaps smaller than σ are ties.
             A dot marks the cost/quality frontier (no catalog model is both cheaper and higher
             on the index).

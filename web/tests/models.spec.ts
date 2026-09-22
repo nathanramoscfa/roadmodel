@@ -112,12 +112,25 @@ test("renders the catalog table, legend, and model links", async ({ page }) => {
   await expect(fable).toHaveAttribute("target", "_blank");
 });
 
-test("default sort is AA Index descending (unmeasured last); Output toggles to cheapest-first", async ({ page }) => {
+test("default sort is Score, grouped by cost tier (priciest first); Output toggles to cheapest-first", async ({ page }) => {
   await page.goto("/models");
 
+  // Default = Score: the table opens grouped, one header row per cost tier,
+  // priciest tier first, so a cheap model's high score cannot read as
+  // "better than the frontier model" three rows above it.
+  const tiersPresent = new Set(scored.map((m) => m.tier_cost));
+  await expect(page.getByTestId("score-group")).toHaveCount(tiersPresent.size);
+  const groupOrder = await page
+    .getByTestId("score-group")
+    .evaluateAll((rows) => rows.map((r) => r.getAttribute("data-tier")));
+  const rank: Record<string, number> = { low: 1, medium: 2, high: 3, "very-high": 4 };
+  for (let i = 1; i < groupOrder.length; i += 1) {
+    expect(rank[groupOrder[i - 1]!]).toBeGreaterThan(rank[groupOrder[i]!]);
+  }
+  // Sorting by AA Index still puts the highest-index model on top, unmeasured last.
+  await page.getByRole("button", { name: /^AA Index/ }).click();
   const top = [...scored].filter((m) => aaIndexFor(m) !== null).sort((a, b) => aaIndexFor(b)! - aaIndexFor(a)!)[0];
   await expect(page.getByTestId("model-row").first()).toContainText(top.name);
-  // Rows AA has not measured sort last.
   await expect(page.getByTestId("model-row").last().getByTestId("aa-index")).toHaveText("—");
 
   await page.getByRole("button", { name: /Output/ }).click();
@@ -236,15 +249,19 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
     expect(Math.abs(mean)).toBeLessThan(1e-6);
   }
 
-  // The header's definition tooltip carries the live fit statistics (the
-  // tooltip is hover-revealed, so assert its content rather than visibility).
+  // The header tooltips carry live statistics, never a typed-in figure: the
+  // Score fit it just computed, and the AA snapshot the page just read.
   await expect(
     page.locator('[role="tooltip"]').filter({ hasText: `Fit over ${fit!.n} measured models` }),
   ).toHaveCount(1);
+  await expect(
+    page
+      .locator('[role="tooltip"]')
+      .filter({ hasText: `${MEASURED_COUNT} of ${MODEL_COUNT} catalog models measured` }),
+  ).toHaveCount(1);
 
-  // Sorting by Score groups by cost tier (priciest first), one header row per
-  // tier present, and orders by score inside each tier with unmeasured last.
-  await page.getByRole("button", { name: /^Score/ }).click();
+  // Score is the default sort: groups by cost tier (priciest first), one header
+  // row per tier present, ordered by score inside each tier, unmeasured last.
   const tiersPresent = new Set(scored.map((m) => m.tier_cost));
   await expect(page.getByTestId("score-group")).toHaveCount(tiersPresent.size);
   const groupOrder = await page.getByTestId("score-group").evaluateAll((rows) => rows.map((r) => r.getAttribute("data-tier")));

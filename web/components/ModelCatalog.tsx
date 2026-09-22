@@ -18,7 +18,10 @@
 //     on that column's scale, "—" only where AA has not measured the model.
 //     Cells are colored by within-column quintile (lib/benchmark-grid bandFor)
 //     so a glance reads the same way the letter badges do.
-// Default sort is AA Index descending — the one published composite.
+// Default sort is Score descending — the cost-adjusted figure, which groups the
+// rows by cost tier so every model is read against its own price band (a raw
+// AA Index sort puts seven cheap models on top and invites "is this flash model
+// really better than the frontier one?").
 // Cache-read price, tier name, pricing notes, "best for", and the benchmarks
 // the cron cited (mixed sources — evidence for the letters, not a scale) live
 // in the expanded row so they add no width. Fits a 1024px viewport.
@@ -202,7 +205,7 @@ export function ModelCatalog({
   scoreFit: ScoreFit | null;
 }) {
   const [view, setView] = useState<View>("ratings");
-  const [sortKey, setSortKey] = useState<SortKey>("aa_index");
+  const [sortKey, setSortKey] = useState<SortKey>("value");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [search, setSearch] = useState("");
   const [provider, setProvider] = useState("all");
@@ -423,7 +426,8 @@ export function ModelCatalog({
             column (green = top 20%, rose = bottom 20%)
           </>
         )}
-        . Sorted by AA Index by default; click a column header to sort, a model name for its
+        . Sorted by Score by default, which groups the rows by cost tier; click a column header
+        to sort, a model name for its
         docs, and the chevron for pricing detail, best-for notes, and the benchmarks the curation
         cited.
       </p>
@@ -477,6 +481,7 @@ export function ModelCatalog({
                 dir={sortDir}
                 onSort={toggleSort}
                 align="right"
+                detail={`This page carries the Artificial Analysis snapshot of ${benchmarksGeneratedAt}: ${measuredCount} of ${models.length} catalog models measured, ${GRID_COLUMNS.length - 1} of its evaluations shown as columns in the benchmark-scores view.`}
               />
               <SortHeader
                 field="value"
