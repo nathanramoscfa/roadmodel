@@ -70,6 +70,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A new OpenAI model could not reach the catalog (`gpt-6-astra`).** Model
+  DISCOVERY had exactly one lane — the Cursor pricing page — and the
+  provider-direct snapshots were price-only overlays keyed by a hand-written
+  name map that dropped every unmapped row in silence. OpenAI has priced
+  `gpt-6-astra` ($10/$50) and the GPT-5.6 family on its own page since early
+  September; Cursor never listed Astra, so roadmodel never learned it exists.
+  Two fixes: (a) the OpenAI and Anthropic extractors now report every priced
+  row they neither map nor explicitly decline in `unexpected_slugs` (the field
+  the G1 conformance contract already required), each extractor carrying a
+  documented `DECLINED` map so the flag list stays signal — today that
+  surfaces `gpt-6-astra` on the OpenAI page and `Claude Mythos 5 / 5.1` on
+  Anthropic's; (b) `update/prompt.md` makes those flags a first-class
+  discovery lane for the daily catalog cron, which must now add each flagged
+  model or record why it declines.
+- **The OpenAI price lane was silently broken by a docs migration.**
+  `platform.openai.com/docs/pricing.md` now redirects to
+  `developers.openai.com/api/docs/pricing.md`, which replaced the JS
+  `rows={[…]}` arrays with Markdown tables; the extractor's anchors no longer
+  matched, so OpenAI prices had frozen at whatever the last successful run
+  wrote. The parser reads the `### Standard pricing data` table (short-context
+  columns, `$`-formatted, `-` for "not offered"), and the GPT-5.6 family is
+  now price-federated from OpenAI instead of riding on Cursor's mirror.
 - **`update/render_md.py` matched inline tag mentions.** `_section()` took
   the first `<tag>…</tag>` match anywhere in the file, so a backticked
   reference such as `` `<access-selection>` `` in the `<usage>` prose started
