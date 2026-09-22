@@ -71,6 +71,22 @@ would then reject.
     Low &lt; $10, Medium $10–$14.99, High $15–$24.99, Very High ≥ $25.
 - If new models appear on the Cursor pricing page that are not in
   `model-tier-cost-scale.md`, add them to the appropriate provider table.
+- **Provider snapshots are the SECOND discovery lane — treat them like the
+  Cursor page.** Read every `update/catalog-*.json` snapshot's
+  `unexpected_slugs`. Each entry is a model the provider's OWN pricing page
+  prices and this catalog does not carry — Cursor lists a subset of what the
+  providers ship, and a model that never reaches Cursor (OpenAI's
+  `gpt-6-astra` sat unlisted here for weeks that way) would otherwise never be
+  discovered at all. For each flagged slug:
+    - ADD it to `model-tier-cost-scale.md` and to `<model-options>` exactly as
+      for a new Cursor model, with the provider-direct price from that same
+      snapshot's `models` array (verbatim; the Federation rule owns it), OR
+    - if it should NOT be carried (a retired generation, a long-running `pro`
+      batch variant of a model already carried, a limited-availability model
+      the operator cannot reach), say so in the PR body and add it to that
+      extractor's `DECLINED` map WITH the reason, so it stops being flagged.
+  Never ignore a flagged slug silently: the point of the flag is that
+  ignoring it is what made the catalog stale.
 - If models are removed from the Cursor pricing page, remove them from
   `model-tier-cost-scale.md`.
 - For every model that also appears in the `<model-options>` block of

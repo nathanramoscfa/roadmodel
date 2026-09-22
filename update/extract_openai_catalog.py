@@ -46,7 +46,8 @@ UPDATE_DIR = Path(__file__).resolve().parent
 DEFAULT_OUTPUT = UPDATE_DIR / "catalog-openai.json"
 CACHE_SNAPSHOT_PATH = UPDATE_DIR / ".cache" / "catalog-openai.json"
 
-DOCS_URL = "https://platform.openai.com/docs/pricing.md"
+# platform.openai.com/docs/pricing.md 301s here; pin the canonical target.
+DOCS_URL = "https://developers.openai.com/api/docs/pricing.md"
 PROVIDER = "openai"
 JURISDICTION = "us"
 
@@ -56,7 +57,53 @@ FETCH_TIMEOUT = 30
 # Standard-pane model name (parenthetical context suffix stripped) -> selector id.
 # ONLY the NON-codex GPT models the selector recommends. The Codex variants are
 # not on this page (see module docstring).
+# DISCOVERY (the reason gpt-6-astra sat unnoticed for weeks): every row this
+# page prices that is NOT in NAME_TO_ID used to be dropped in silence, so a
+# brand-new OpenAI model could only reach the catalog if CURSOR happened to
+# list it. A text row that is neither mapped below nor declined here is now
+# reported in ``unexpected_slugs`` — the catalog cron's discovery input
+# (update/prompt.md) and the G1 conformance contract already understand that
+# field. Keep DECLINED explicit: each entry is a model OpenAI prices that the
+# catalog deliberately does not carry, with the reason, so the flag list stays
+# signal.
+DECLINED = {
+    # Superseded generations the selector no longer recommends.
+    "gpt-4.1": "superseded by the GPT-5 line",
+    "gpt-4.1-mini": "superseded by the GPT-5 line",
+    "gpt-4.1-nano": "superseded by the GPT-5 line",
+    "gpt-4o": "superseded by the GPT-5 line",
+    "gpt-4o-mini": "superseded by the GPT-5 line",
+    "gpt-4-turbo": "superseded by the GPT-5 line",
+    "gpt-4": "superseded by the GPT-5 line",
+    "gpt-3.5-turbo": "superseded by the GPT-5 line",
+    "gpt-3.5-turbo-instruct": "superseded by the GPT-5 line",
+    "davinci-002": "legacy completions model",
+    "babbage-002": "legacy completions model",
+    "o1": "superseded reasoning series",
+    "o1-pro": "superseded reasoning series",
+    "o3": "superseded reasoning series",
+    "o3-pro": "superseded reasoning series",
+    "o3-mini": "superseded reasoning series",
+    "o4-mini": "superseded reasoning series",
+    # `-pro` variants are a long-running batch mode of a model already carried,
+    # not a separate model the selector picks between.
+    "gpt-5-pro": "pro long-running variant of a carried model",
+    "gpt-5.2-pro": "pro long-running variant of a carried model",
+    "gpt-5.4-pro": "pro long-running variant of a carried model",
+    "gpt-5.5-pro": "pro long-running variant of a carried model",
+    # Carried only as their Codex variants (OpenAI prices Codex in credits).
+    "gpt-5.1": "catalogued as gpt-5.1-codex / gpt-5.1-codex-max",
+    "gpt-5-nano": "catalogued as gpt-5.4-nano's predecessor; not recommended",
+}
+
+# A dated pin ("gpt-4o-2024-05-13", "gpt-4-0613") is the same model as its base
+# row; strip the pin before deciding whether the slug is news.
+_DATED_PIN_RE = re.compile(r"-(?:\d{4}-\d{2}-\d{2}|\d{4})$")
+
 NAME_TO_ID = {
+    "gpt-5.6-sol": "gpt-5.6-sol",
+    "gpt-5.6-terra": "gpt-5.6-terra",
+    "gpt-5.6-luna": "gpt-5.6-luna",
     "gpt-5.5": "gpt-5.5",
     "gpt-5.4": "gpt-5.4",
     "gpt-5.4-mini": "gpt-5.4-mini",
@@ -69,8 +116,8 @@ NAME_TO_ID = {
 # Literal substrings that MUST survive in the docs. Their absence means a
 # restructure -> fail loud rather than emit a partial/empty snapshot.
 REQUIRED_ANCHORS = (
-    'data-value="standard"',
-    'tier="standard"',
+    "### Standard pricing data",
+    "Short context input",
     "gpt-5.5",
     "gpt-5.4-mini",
     "per 1M",
@@ -103,7 +150,11 @@ def verify_anchors(md: str) -> None:
 
 
 def _num(token: str) -> float | None:
-    token = token.strip().strip('"')
+    """A price cell to a float. The table writes money ("$12.50") and marks a
+    rate that does not apply with a dash."""
+    token = token.strip().strip('"').replace("$", "").replace(",", "")
+    if token in {"", "-", "—", "n/a", "N/A"}:
+        return None
     try:
         return float(token)
     except ValueError:
@@ -111,34 +162,83 @@ def _num(token: str) -> float | None:
 
 
 def _standard_rows_blob(md: str) -> str:
-    """The ``rows={[ ... ]}`` content of the STANDARD pricing table.
+    """The rows of the STANDARD text-pricing table.
 
-    Anchored on ``tier="standard"`` immediately followed by its ``rows`` array —
-    NOT a bare ``data-value="standard"`` (which can appear in prose/comments) —
-    and captured only up to that array's ``]}`` close, so the batch / priority /
-    flex panes (discounted prices for the SAME model names) are excluded.
+    The docs moved from a JS ``rows={[...]}`` array to a Markdown table under a
+    ``### Standard pricing data`` heading (developers.openai.com, 2026-09).
+    Anchored on that heading and read to the end of the table, so the Batch /
+    Flex / Fast panes below — discounted or premium prices for the SAME model
+    names — are excluded.
     """
-    m = re.search(r'tier="standard".*?rows=\{\[(.*?)\]\s*\}', md, re.DOTALL)
+    m = re.search(r"^###\s+Standard pricing data\s*$", md, re.MULTILINE)
     if not m:
-        raise ExtractError('standard pricing rows (tier="standard" rows={[...]}) not found')
-    return m.group(1)
+        raise ExtractError('"### Standard pricing data" heading not found (restructure?)')
+    rows: list[str] = []
+    for line in md[m.end() :].splitlines():
+        stripped = line.strip()
+        if not stripped:
+            if rows:
+                break
+            continue
+        if not stripped.startswith("|"):
+            if rows:
+                break
+            continue
+        rows.append(stripped)
+    if not rows:
+        raise ExtractError("standard pricing table has no rows (restructure?)")
+    return "\n".join(rows)
+
+
+def _table_rows(span: str) -> list[tuple[str, list[str]]]:
+    """(model name, value cells) for each data row of a Markdown table, minus
+    its header and separator rows."""
+    out: list[tuple[str, list[str]]] = []
+    for line in span.splitlines():
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if len(cells) < 2:
+            continue
+        head = cells[0].lower()
+        if head in {"model", ""} or set(cells[0]) <= {"-", ":", " "}:
+            continue
+        out.append((cells[0], cells[1:]))
+    return out
+
+
+def discover_unmapped(md: str) -> list[str]:
+    """Text rows the standard pane prices that the catalog neither maps
+    (``NAME_TO_ID``) nor declines (``DECLINED``) — i.e. models that exist and
+    are priced but that roadmodel has never heard of. Sorted, de-duplicated."""
+    span = _standard_rows_blob(md)
+    found: set[str] = set()
+    for name, _cells in _table_rows(span):
+        canonical = _SUFFIX_RE.sub("", name).strip()
+        base = _DATED_PIN_RE.sub("", canonical)
+        if canonical in NAME_TO_ID or base in NAME_TO_ID:
+            continue
+        if canonical in DECLINED or base in DECLINED:
+            continue
+        found.add(canonical)
+    return sorted(found)
 
 
 def parse_pricing(md: str) -> list[dict[str, object]]:
     span = _standard_rows_blob(md)
     models: list[dict[str, object]] = []
     seen: set[str] = set()
-    for name, rest in _ROW_RE.findall(span):
+    for name, cells in _table_rows(span):
         canonical = _SUFFIX_RE.sub("", name).strip()
         mid = NAME_TO_ID.get(canonical)
         if mid is None or mid in seen:
             continue
-        parts = [p.strip() for p in rest.split(",")]
-        if len(parts) < 3:
+        # Short-context columns: input, cached input, cache writes, output.
+        # The long-context columns that follow price the same model above the
+        # context threshold and are not what the catalog quotes.
+        if len(cells) < 4:
             continue
-        in_price = _num(parts[0])
-        cache_price = _num(parts[1])
-        out_price = _num(parts[-1])
+        in_price = _num(cells[0])
+        cache_price = _num(cells[1])
+        out_price = _num(cells[3])
         if in_price is None or out_price is None:
             raise ExtractError(f"could not parse input/output price for {name!r}")
         seen.add(mid)
@@ -178,6 +278,17 @@ def build_snapshot(md: str, *, source_url: str) -> dict[str, object]:
             file=sys.stderr,
         )
 
+    unexpected = discover_unmapped(md)
+    if unexpected:
+        print(
+            "extract_openai_catalog: DISCOVERY — the standard pane prices "
+            f"model(s) the catalog does not carry: {unexpected}. They are "
+            "reported in unexpected_slugs for the catalog cron to add or "
+            "decline (do NOT ignore: this is how a new OpenAI model reaches "
+            "the catalog when Cursor has not listed it).",
+            file=sys.stderr,
+        )
+
     facts = canonical_facts(models)
     return {
         "_comment": (
@@ -200,7 +311,7 @@ def build_snapshot(md: str, *, source_url: str) -> dict[str, object]:
         "overlay_mode": "price-only",
         "models": models,
         "slug_to_id": {str(m["slug"]): str(m["id"]) for m in models},
-        "unexpected_slugs": [],
+        "unexpected_slugs": unexpected,
         "missing_mapped_models": missing,
         "section_sha256": hashlib.sha256(facts.encode("utf-8")).hexdigest(),
     }

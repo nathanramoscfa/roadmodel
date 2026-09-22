@@ -774,6 +774,9 @@ def test_openai_extractor_parses_standard_pane_not_batch() -> None:
     snap = mod.build_snapshot(OPENAI_MD.read_text(), source_url="file://sample")
     models = {m["id"]: m for m in snap["models"]}
     assert set(models) == {
+        "gpt-5.6-sol",
+        "gpt-5.6-terra",
+        "gpt-5.6-luna",
         "gpt-5.5",
         "gpt-5.4",
         "gpt-5.4-mini",
@@ -783,6 +786,9 @@ def test_openai_extractor_parses_standard_pane_not_batch() -> None:
         "gpt-5-mini",
     }
     # STANDARD pane prices, NOT the half-price Batch pane below.
+    assert models["gpt-5.6-sol"]["input_price_per_1m"] == 4.0
+    assert models["gpt-5.6-sol"]["output_price_per_1m"] == 20.0
+    assert models["gpt-5.6-luna"]["cache_read_per_1m"] == 0.02
     assert models["gpt-5.5"]["input_price_per_1m"] == 5.0
     assert models["gpt-5.5"]["output_price_per_1m"] == 30.0
     assert models["gpt-5.4"]["output_price_per_1m"] == 15.0
@@ -795,6 +801,30 @@ def test_openai_extractor_parses_standard_pane_not_batch() -> None:
     # gpt-5.1-codex, not gpt-5.1) — confirm they are skipped.
     assert "gpt-5.1" not in models
     assert "gpt-5.5-pro" not in {m["name"] for m in snap["models"]}
+
+
+def test_openai_extractor_flags_a_model_the_catalog_does_not_carry() -> None:
+    """The gpt-6-astra lesson: a priced row that is neither mapped nor DECLINED
+    must surface in unexpected_slugs — that flag is the catalog cron's only
+    discovery lane for a model Cursor has not listed."""
+    mod = _load("extract_openai_catalog")
+    snap = mod.build_snapshot(OPENAI_MD.read_text(), source_url="file://sample")
+    # The synthetic unknown model and astra are flagged...
+    assert snap["unexpected_slugs"] == ["gpt-6-astra", "gpt-7-nova"]
+    # ...while deliberately-declined rows (legacy families, -pro batch variants,
+    # dated pins of a carried base model) stay quiet.
+    for quiet in ("gpt-5.1", "gpt-5.5-pro", "o3", "gpt-4o-2024-05-13"):
+        assert quiet not in snap["unexpected_slugs"]
+
+
+def test_anthropic_extractor_flags_a_model_the_catalog_does_not_carry() -> None:
+    mod = _load("extract_anthropic_catalog")
+    md = ANTHROPIC_MD.read_text()
+    flagged = mod.discover_unmapped(md)
+    mapped = set(mod.NAME_TO_ID)
+    assert not (set(flagged) & mapped), "a mapped model must never be flagged"
+    for name in flagged:
+        assert name not in mod.DECLINED
 
 
 def test_openai_extractor_raises_on_restructure() -> None:

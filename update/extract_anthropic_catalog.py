@@ -113,12 +113,50 @@ def _col(header: list[str], *needles: str) -> int | None:
     return None
 
 
-def parse_pricing_table(md: str) -> list[dict[str, object]]:
-    """Parse the standard per-token pricing table (header ``Base Input Tokens`` …
-    ``Output Tokens``) and return per-model canonical pricing facts for the mapped
-    models. The fast-mode / batch tables (which lack a ``Base Input Tokens``
-    header) are ignored.
-    """
+# DISCOVERY: a priced row this page carries that the catalog neither maps
+# (``NAME_TO_ID``) nor declines below is reported in ``unexpected_slugs`` — the
+# catalog cron's model-discovery input (update/prompt.md). Without it a new
+# Claude model reaches the catalog only if Cursor happens to list it, which is
+# how gpt-6-astra went unnoticed on the OpenAI lane. Each DECLINED entry is a
+# model Anthropic prices that the catalog deliberately does not carry.
+DECLINED = {
+    "Claude Opus 4.6": "superseded by Opus 4.7 / 4.8 / 5",
+    "Claude Opus 4.5": "superseded by Opus 4.7 / 4.8 / 5",
+    "Claude Sonnet 4.5": "superseded by Sonnet 4.6 / 5",
+    "Claude Opus 4": "retired",
+    "Claude Opus 4.1": "retired",
+    "Claude Sonnet 4": "retired",
+    "Claude Haiku 3.5": "retired",
+}
+
+# "Claude Haiku 3.5 ([retired, …](…))" → "Claude Haiku 3.5".
+_ROW_NOTE_RE = re.compile(r"\s*\(\[.*$")
+
+
+def discover_unmapped(md: str) -> list[str]:
+    """Priced rows the catalog neither maps nor declines — models that exist
+    and are priced but that roadmodel has never heard of."""
+    header, data = _pricing_table(md)
+    del header
+    found: set[str] = set()
+    for row in data:
+        if not row:
+            continue
+        name = _ROW_NOTE_RE.sub("", row[0].strip()).strip()
+        # Footnote rows list several models in one cell ("Opus 5, Opus 4.8, and
+        # Claude Opus 4.7"); they price nothing new.
+        if not name or "," in name or "/" in name or " and " in name:
+            continue
+        if name in NAME_TO_ID or name in DECLINED:
+            continue
+        found.add(name)
+    return sorted(found)
+
+
+def _pricing_table(md: str) -> tuple[list[str], list[list[str]]]:
+    """(header cells, data rows) of the standard per-token pricing table —
+    the one whose header carries ``Base Input Tokens`` … ``Output Tokens``.
+    The fast-mode / batch tables (which lack that header) are ignored."""
     header: list[str] | None = None
     data: list[list[str]] = []
     for line in md.splitlines():
@@ -148,6 +186,12 @@ def parse_pricing_table(md: str) -> list[dict[str, object]]:
         raise ExtractError(
             "standard Anthropic pricing table not found (no 'Base Input Tokens' header)"
         )
+    return header, data
+
+
+def parse_pricing_table(md: str) -> list[dict[str, object]]:
+    """Per-model canonical pricing facts for the models the catalog maps."""
+    header, data = _pricing_table(md)
     in_col = _col(header, "Input")
     out_col = _col(header, "Output")
     # The cache-READ column is "Cache Hits & Refreshes" — NOT the "… Cache Writes"
@@ -202,6 +246,14 @@ def canonical_facts(models: list[dict[str, object]]) -> str:
 def build_snapshot(md: str, *, source_url: str) -> dict[str, object]:
     verify_anchors(md)
     models = parse_pricing_table(md)
+    unexpected = discover_unmapped(md)
+    if unexpected:
+        print(
+            "extract_anthropic_catalog: DISCOVERY — the pricing table prices "
+            f"model(s) the catalog does not carry: {unexpected}. They are "
+            "reported in unexpected_slugs for the catalog cron to add or decline.",
+            file=sys.stderr,
+        )
 
     found = {str(m["id"]) for m in models}
     missing = sorted(set(NAME_TO_ID.values()) - found)
@@ -233,7 +285,7 @@ def build_snapshot(md: str, *, source_url: str) -> dict[str, object]:
         "overlay_mode": "price-only",
         "models": models,
         "slug_to_id": {str(m["slug"]): str(m["id"]) for m in models},
-        "unexpected_slugs": [],
+        "unexpected_slugs": unexpected,
         "missing_mapped_models": missing,
         "section_sha256": hashlib.sha256(facts.encode("utf-8")).hexdigest(),
     }
