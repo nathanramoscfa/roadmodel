@@ -19,7 +19,7 @@ from typing import Any, Callable, TypeVar, cast
 
 import click
 
-from roadmodel import __version__, cost, user_context
+from roadmodel import __version__, cost, scoring, user_context
 from roadmodel import recommend as recommender
 from roadmodel.config import PROVIDER_CHOICES, load_config
 from roadmodel.errors import (
@@ -408,6 +408,92 @@ def recommend(
         click.echo(json.dumps(structured, indent=2))
         return
     click.echo(_format_structured_text(structured), nl=False)
+
+
+@cli.command("score")
+@click.option(
+    "--category",
+    required=True,
+    type=click.Choice(list(scoring.CATEGORIES), case_sensitive=False),
+    help="PRIMARY task category (what the selector's Step 1 classifies).",
+)
+@click.option(
+    "--complexity",
+    required=True,
+    type=click.Choice(list(scoring.COMPLEXITIES), case_sensitive=False),
+    help="Overall complexity (the selector's Step 2).",
+)
+@click.option(
+    "--novel",
+    is_flag=True,
+    default=False,
+    help="High complexity AND novel problem-solving / multi-step proof (raises the bar to S).",
+)
+@click.option(
+    "--budget",
+    type=click.Choice(list(scoring.BUDGETS), case_sensitive=False),
+    default=None,
+    help="Budget posture; defaults to the user-context's declared Budget priority.",
+)
+@click.option("--top", type=int, default=12, show_default=True, help="Rows to print.")
+@click.option(
+    "--output",
+    type=click.Choice(["text", "json"], case_sensitive=False),
+    default="text",
+    show_default=True,
+)
+@click.option(
+    "--user-context",
+    "user_context_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Path to user-context.md override.",
+)
+def score_command(
+    category: str,
+    complexity: str,
+    novel: bool,
+    budget: str | None,
+    top: int,
+    output: str,
+    user_context_path: Path | None,
+) -> None:
+    """Rank (model, platform, effort) candidates in code — no engine call.
+
+    The deterministic scoring core behind the selector: quality from the
+    Artificial Analysis evidence for the category, a penalty for missing the
+    complexity's requirement, and a market-priced cost term that reads your
+    funding, consumption headroom and Usage-pool status from user-context.md.
+    Every term is printed so a pick can be audited line by line.
+    """
+    if user_context_path is not None and not user_context_path.expanduser().exists():
+        raise UserContextNotFoundError(user_context_path.expanduser())
+    env_user_context = os.environ.get("ROADMODEL_USER_CONTEXT")
+    if (
+        user_context_path is None
+        and env_user_context
+        and not Path(env_user_context).expanduser().exists()
+    ):
+        raise UserContextNotFoundError(Path(env_user_context).expanduser())
+    resolved = user_context.resolve(cli_path=user_context_path)
+    text = user_context.read(resolved) if resolved.exists() else ""
+    posture = (budget or scoring.declared_budget(text)).lower()
+    try:
+        task = scoring.Task(
+            category=category.lower(),
+            complexity=complexity.lower(),
+            novel=novel,
+            budget=posture,
+        )
+        ranking = scoring.rank(task, text, top=None)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+    if output.lower() == "json":
+        payload = ranking.to_dict()
+        payload["candidates"] = payload["candidates"][: max(0, top)]
+        click.echo(json.dumps(payload, indent=2))
+        return
+    click.echo(scoring.render_text(ranking, limit=top))
 
 
 @cli.command("cost")

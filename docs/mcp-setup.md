@@ -81,8 +81,8 @@ the bare command name.
 **Verify in Cursor.** Open Settings (`Cmd+Shift+J` on macOS,
 `Ctrl+Shift+J` on Linux/Windows) → **Features → Model Context
 Protocol**. The `roadmodel` server should appear with a green
-indicator and three tools listed: `recommend_model`,
-`generate_phase_roadmap`, `read_catalog`. If it does not connect,
+indicator and four tools listed: `recommend_model`,
+`generate_phase_roadmap`, `read_catalog`, `score_candidates`. If it does not connect,
 open the Output panel (`Cmd+Shift+U`) and pick **MCP Logs** from the
 dropdown to read the stderr stream from `roadmodel-mcp`.
 
@@ -136,7 +136,7 @@ developer's shell so the file does not embed a key.
 see registered servers and their scope, or run `/mcp` inside a
 Claude Code session for live status — the panel shows the tool
 count next to each connected server. A healthy `roadmodel` entry
-reports three tools.
+reports four tools.
 
 ## Other MCP clients
 

@@ -53,7 +53,10 @@ FUNDING_UNFUNDED_LOCAL: Final = "unfunded-local"
 LOCAL_COST_LABEL: Final = "$0 — local hardware"
 
 _FAST_SUFFIX_RE: Final = re.compile(r"\s+Fast\s*$", re.IGNORECASE)
-_TIER_PAREN_RE: Final = re.compile(r"\s*\(\$\d+(?:\.\d+)?\)\s*$")
+# A trailing parenthetical on a tier name — the catalog's "($100)" price tag
+# or an operator's own "(5x)" — is not part of the tier's identity; the
+# monthly price is compared separately.
+_TIER_PAREN_RE: Final = re.compile(r"\s*\([^()]*\)\s*$")
 _TABLE_ROW_RE: Final = re.compile(r"^\s*\|(.+)\|\s*$")
 
 

@@ -149,8 +149,8 @@ answer instead of guessing.
 Install the MCP runtime with `pip install "roadmodel[mcp]"` to enable
 the `roadmodel-mcp` stdio server entrypoint; plain `pip install
 roadmodel` keeps the SDK optional and does not install `mcp`. The
-server exposes three tools — `recommend_model`,
-`generate_phase_roadmap`, and `read_catalog` — to any MCP-compatible
+server exposes four tools — `recommend_model`,
+`generate_phase_roadmap`, `read_catalog`, and `score_candidates` — to any MCP-compatible
 client (Cursor, Claude Code, Claude Desktop, VS Code + Continue).
 Per-client registration walk-throughs live in
 [docs/mcp-setup.md](docs/mcp-setup.md); tool signatures and return
