@@ -1,9 +1,9 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-21T22:10:25Z",
+  "generated_at_utc": "2026-09-22T17:56:15Z",
   "source_doc_sha256": {
-    "model-selector.txt": "9bb97a60bc3b5eae4fa7707283775e6627d6f0417dadbdb9bf7f284615c36570",
+    "model-selector.txt": "302f3da4bdd91562c7ef1495dab078f55a6443e683436855f8e33db2b98b5132",
     "model-tier-cost-scale.md": "e22df028b1ee8dae87a520cad427e97b43a79a4918afa6a038c914f9d1e7cf54"
   },
   "models": [
@@ -1126,12 +1126,12 @@
       "best_for": "Chat-driven Claude use (no terminal, no codebase tool use) under the same Max budget that funds Claude Code \u2014 pick when the task is conversational rather than code-editing."
     },
     {
-      "id": "codex-cli",
-      "name": "Codex",
+      "id": "codex-api",
+      "name": "Codex (API key)",
       "provider": "openai",
       "provider_jurisdiction": "us",
-      "billing": "subscription-or-key",
-      "requires": "chatgpt-subscription OR openai-api-key",
+      "billing": "per-token",
+      "requires": "openai-api-key",
       "supports_models": [
         "gpt-5",
         "gpt-5-mini",
@@ -1151,7 +1151,30 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
-      "best_for": "Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active \u2014 pays from the ChatGPT budget instead of the per-token API rate. Best surface for gpt-5.3-codex / gpt-5.1-codex on long-running terminal / agentic work. Exposes the full Codex `model_reasoning_effort` dial (`minimal`, `low`, `medium`, `high`, `xhigh` \u2014 top `xhigh` tier is model-dependent) plus the plan-mode `plan_mode_reasoning_effort` variant that additionally accepts `none`."
+      "best_for": "The same Codex surface driven by an OpenAI API key instead of a ChatGPT sign-in: the ONLY way to run the coding-specialised `-codex` variants (gpt-5.3-codex and the gpt-5.1-codex family), and the fallback for GPT work once the ChatGPT plan&apos;s limits bind. Billed per token at list price, so prefer `codex-cli` while the subscription still has headroom."
+    },
+    {
+      "id": "codex-cli",
+      "name": "Codex",
+      "provider": "openai",
+      "provider_jurisdiction": "us",
+      "billing": "subscription-included",
+      "requires": "chatgpt-subscription",
+      "supports_models": [
+        "gpt-5",
+        "gpt-5-mini",
+        "gpt-5.2",
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "gpt-5.5",
+        "gpt-5.6-luna",
+        "gpt-5.6-sol",
+        "gpt-5.6-terra"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "exposes_orchestration": "no",
+      "best_for": "Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active \u2014 pays from the ChatGPT budget instead of the per-token API rate, in the CLI and the IDE extension. A ChatGPT-account sign-in CANNOT run the `-codex` model variants: Codex answers 400 &quot;The &apos;gpt-5.3-codex&apos; model is not supported when using Codex with a ChatGPT account.&quot; Those variants are reachable only through `codex-api` (an OpenAI API key), so recommending one here would name a model the operator&apos;s subscription cannot run. Exposes reasoning effort (labelled Intelligence: Low / Medium / High / Extra High) and no Max Mode."
     },
     {
       "id": "cursor",
