@@ -196,10 +196,11 @@ def _budget_block(budget: str, *, flat_funding: bool = False) -> str:
 # candidate, which is the part only it can see):
 #   (a) the user holds >= 1 subscription that funds >= 1 access-method surface
 #       at $0 marginal (the **Active subscriptions** section is non-empty), AND
-#   (b) the effective consumption headroom is `uncapped` — i.e. the user does
-#       not exhaust that plan's budget, so consumption is not a real cost. A
-#       `capped` plan keeps the gate CLOSED: there, tiering/effort down really
-#       does conserve a budget the user can hit.
+#   (b) the effective consumption headroom is `uncapped` — the user has opted
+#       in to "I never hit my limits", so consumption is not a real cost. A
+#       `capped` plan (the default, including `auto`) keeps the gate CLOSED:
+#       there, tiering/effort down really does conserve a budget the user can
+#       hit — and the weekly pool is metered by model AND effort.
 # Anything else — per-token paths, an exhausted/capped budget, a candidate set
 # straddling funded and unfunded models — leaves the budget posture unchanged.
 
@@ -208,14 +209,15 @@ def _flat_funding_block() -> str:
     """The self-asserting FLAT-FUNDING GATE, rendered only when the gate is open."""
     return (
         "**Flat funding (GATE OPEN):** the subscriptions above fund their whole "
-        "covered model family at the SAME $0 marginal price and this user does "
-        "not exhaust that budget, so out-of-pocket price is FLAT across the "
+        "covered model family at the SAME $0 marginal price and this user has "
+        "declared an `uncapped` consumption headroom (they do not exhaust that "
+        "budget), so out-of-pocket price is FLAT across the "
         "candidates and CANNOT differentiate them. This gate has the HIGHEST "
         "precedence for this request — it OVERRIDES the budget priority above on "
         "BOTH the capability-TIER and the reasoning-EFFORT axis whenever the "
         "chosen PLATFORM is subscription-funded, the candidate model family is "
-        "COVERED by that same subscription, and the budget is not reported "
-        "exhausted:\n"
+        "COVERED by that same subscription, and the headroom posture is "
+        "`uncapped`:\n"
         "- HOLD the capability TIER — recommend the model the task actually "
         "warrants, on EVERY priority INCLUDING Cost. Do NOT down-tier to a "
         "smaller model on cost grounds when the stronger model is funded at the "
@@ -235,10 +237,11 @@ def _flat_funding_block() -> str:
         'RATIONALE ("flat funding — same $0 marginal cost at every tier, so Cost '
         'and Quality converge here"). NEVER manufacture an artificial spread by '
         "recommending a model the task does not warrant.\n"
-        "The gate is CLOSED for any pay-per-token path, an exhausted subscription "
-        "budget, or a candidate that the subscriptions above do not cover — there "
-        "the budget priority applies UNCHANGED, because tiering down saves real "
-        "dollars."
+        "The gate is CLOSED for any pay-per-token path, a `capped` consumption "
+        "headroom, an exhausted subscription budget, or a candidate that the "
+        "subscriptions above do not cover — there the budget priority applies "
+        "UNCHANGED, because tiering down saves real dollars or real usage-pool "
+        "budget."
     )
 
 
@@ -253,44 +256,34 @@ def _flat_funding_block() -> str:
 # them nothing and only lowers quality. This posture governs the effort axis
 # ORTHOGONALLY to which model is chosen.
 #
-# Hybrid activation (matches the Settings control):
-#   - `uncapped` / `capped`: explicit user override, honored as-is.
-#   - `auto` (default): DERIVE from funded tiers — a subscription in the top
-#     consumer price band (>= $200/mo, the "maximum available under consumer
-#     subscriptions") resolves to `uncapped`; anything else (lower sub, or
-#     per-token only) stays `capped`, the conservative behavior-unchanged default.
+# Activation (matches the Settings control):
+#   - `uncapped`: explicit user opt-in — "I never hit my plan's limits". Only
+#     this value renders the block below AND opens the flat-funding gate.
+#   - `capped`: explicit; effort and tier follow the complexity ladder.
+#   - `auto` (default): resolves to `capped`. It USED to derive `uncapped` from
+#     any funded tier >= $200/mo ("top consumer band => effort is free"); that
+#     premise failed in practice — a Max ($200) operator running several
+#     projects concurrently at Max effort exhausted the weekly pool and fell
+#     onto pay-per-token usage credits (2026-09-21). Whether a cap binds is a
+#     fact about the user's consumption, not their tier price, and only the
+#     user knows it, so the conservative posture is the default and `uncapped`
+#     is a deliberate opt-in.
 # Only the behavior-CHANGING `uncapped` posture is rendered into the context
 # (see _consumption_block); `capped` is the selector's existing default, so it
 # emits nothing and keeps the prompt lean.
-_TOP_TIER_MONTHLY_USD: float = 200.0
-
 _CONSUMPTION_HEADROOM_VALUES: frozenset[str] = frozenset({"auto", "uncapped", "capped"})
 
 
 def _effective_consumption_headroom(stored: str | None, sub_set: set[str], tiers: Any) -> str:
     """Resolve the stored headroom setting to an effective posture (`uncapped` /
-    `capped`). Explicit values pass through; `auto` (or any unknown/absent value)
-    derives from the user's funded subscription tiers — `uncapped` iff one sits in
-    the top consumer price band, else `capped` (conservative)."""
+    `capped`). Only an explicit `uncapped` opens the effort axis; `capped`,
+    `auto`, and any unknown/absent value resolve to `capped` (conservative).
+    ``sub_set`` / ``tiers`` are kept in the signature so callers and the request
+    threading are unchanged; they no longer influence the result."""
+    del sub_set, tiers
     value = (stored or "auto").strip().lower()
     if value == "uncapped":
         return "uncapped"
-    if value == "capped":
-        return "capped"
-    # auto (and any unrecognized value): derive from funded-tier prices.
-    for tier in tiers:
-        provider = tier.get("provider")
-        name = tier.get("tier")
-        if not isinstance(provider, str) or not isinstance(name, str):
-            continue
-        if _tier_id(provider, name) not in sub_set:
-            continue
-        try:
-            monthly = float(tier.get("monthly_usd") or 0.0)
-        except (TypeError, ValueError):
-            monthly = 0.0
-        if monthly >= _TOP_TIER_MONTHLY_USD:
-            return "uncapped"
     return "capped"
 
 
@@ -328,8 +321,11 @@ def _consumption_block(*, flat_funding: bool = False) -> str:
         "HIGHEST USEFUL reasoning effort the model + surface support (top of the "
         "effort dial — `max`, or `xhigh` where the model has no `max` step) on ALL "
         "THREE priorities INCLUDING Cost, and keep extended thinking ON (never "
-        f"emit an Off thinking / effort). {differentiation} This changes only how "
-        "much effort each pick runs at, never WHICH model is chosen."
+        f"emit an Off thinking / effort). {differentiation} This posture sets how "
+        "much effort each pick runs at; whether the capability TIER is also held "
+        "is the FLAT-FUNDING GATE's call (its condition (c) is this very "
+        "declaration), so the picks may converge on the same model only when "
+        "that gate is open."
     )
 
 

@@ -398,3 +398,89 @@ def test_roadmap_path_front_loads_the_contract_rules(
     assert "HARD filter" in system
     # The header must lead, so it is not buried behind the whole template.
     assert system.index("PLATFORM-CONDITIONAL SETTINGS") < 2000
+
+
+# --------------------------------------------------------------------------- #
+# Quota-aware effort (2026-09-21): the gate opens ONLY under `uncapped`
+# --------------------------------------------------------------------------- #
+
+# The same operator after a week in which the Max weekly pool ran out: the
+# posture is `capped` (the default) and the pool is reported exhausted.
+USER_CONTEXT_CAPPED = USER_CONTEXT.replace(
+    "**Consumption headroom:** `uncapped` — the Max plan's usage budget is not\n"
+    "exhausted and has never rate-limited this operator, so effort is free.",
+    "**Consumption headroom:** `capped` — the weekly Max pool was exhausted this\n"
+    "week; usage is metered by model and effort, so both follow the ladder.",
+)
+assert USER_CONTEXT_CAPPED != USER_CONTEXT
+
+
+def test_gate_condition_c_is_the_headroom_posture() -> None:
+    """The gate must not open merely because a budget is 'not reported
+    exhausted' — condition (c) is a declared `uncapped` headroom, and `capped` /
+    undeclared / a tight or exhausted pool CLOSE it."""
+    system, _ = recommend_module.build_prompt(TASKS["trivial"], user_context_text=USER_CONTEXT)
+    c = system.find('(c) the appended user-context declares a "Consumption headroom" posture')
+    assert c != -1
+    window = system[c : c + 900]
+    assert "`uncapped`" in window
+    assert "NO declared posture (the default)" in window
+    assert "`tight` or `exhausted`" in window
+    assert "CLOSE the gate" in window
+
+
+def test_capped_posture_makes_the_ladder_final_not_a_floor() -> None:
+    """Under `capped` the <thinking-context> ladder value is the final EFFORT,
+    the gate is CLOSED, and the front-loaded header says so in the same breath
+    as it states the gate (so a long prompt cannot lose the qualifier)."""
+    system, _ = recommend_module.build_prompt(
+        TASKS["trivial"], user_context_text=USER_CONTEXT_CAPPED
+    )
+    # The selector's override bullet fires only under `uncapped`.
+    assert "UNCAPPED OVERRIDE (apply LAST, and ONLY when" in system
+    assert "the ladder value above IS the final value" in system
+    # The `capped` bullet spells out the ladder and closes the gate.
+    assert "the FINAL value, not a floor" in system
+    assert "`capped` also CLOSES the FLAT-FUNDING GATE" in system
+    # The header's gate bullet carries its own `capped` qualifier.
+    hdr = system.find("- FLAT-FUNDING GATE (see <objective>)")
+    assert hdr != -1
+    assert "'capped' or undeclared headroom posture (the default)" in system[hdr : hdr + 1600]
+    # The old unconditional forms are gone.
+    assert "FLAT-FUNDING / UNCAPPED OVERRIDE" not in system
+    assert "EITHER of which suspends that floor" not in system
+    assert "the budget is not exhausted, AND no adequate" not in system
+
+
+def test_usage_pool_status_reranks_an_exhausted_pool() -> None:
+    """Step C must know how to read a `Usage-pool status` table: an exhausted
+    pool ranks as pay-per-token for the window (that is what usage credits
+    are), a tight pool is reserved for High-complexity work."""
+    system, _ = recommend_module.build_prompt(TASKS["mid"], user_context_text=USER_CONTEXT_CAPPED)
+    i = system.find("USAGE-POOL STATUS (docs/user-context.md")
+    assert i != -1
+    window = system[i : i + 1800]
+    for needle in (
+        "`headroom`",
+        "`tight`",
+        "`exhausted`",
+        "rank it in tier 3",
+        "UNFUNDED for the window",
+    ):
+        assert needle in window, needle
+
+
+def test_roadmap_header_states_the_capped_default(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The roadmap path's front-loaded gate is conditional on `uncapped` and
+    carries the CAPPED HEADROOM rule for every step, so a phase roadmap written
+    for a capped operator no longer lands every step at Max."""
+    captured = _roadmap_prompts(monkeypatch, tmp_path)
+    system = captured["adapter"].calls[0]["system"]
+    gate = system.find("- FLAT-FUNDING GATE: when the chosen platform is subscription-funded")
+    assert gate != -1
+    assert "'Consumption headroom: uncapped'" in system[gate : gate + 700]
+    assert "- CAPPED HEADROOM (the DEFAULT" in system
+    assert "Never raise a step to Max 'because it is funded'" in system
+    assert system.index("- CAPPED HEADROOM (the DEFAULT") < 3500

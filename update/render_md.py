@@ -73,7 +73,15 @@ _PRINCIPLE_RE = re.compile(r"<principle>(.*?)</principle>", re.DOTALL)
 
 
 def _section(content: str, tag: str) -> str:
-    m = re.search(rf"<{tag}>(.*?)</{tag}>", content, re.DOTALL)
+    # Anchor the tags to the start of their own line (mirrors
+    # validate_effort_conformance._section) so an inline backtick reference
+    # such as ``the `<thinking-context>` ladder`` earlier in the file is not
+    # mistaken for the element's opening tag.
+    m = re.search(
+        rf"^[ \t]*<{tag}>[ \t]*\n(.*?)^[ \t]*</{tag}>[ \t]*$",
+        content,
+        re.MULTILINE | re.DOTALL,
+    )
     if not m:
         raise ValueError(f"<{tag}> not found in source")
     return textwrap.dedent(m.group(1)).strip()

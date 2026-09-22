@@ -49,10 +49,15 @@
     decision; only the settings vocabulary differs):
     - Frontier Claude model on Claude Code — the surface exposes a discrete
       effort dial and an extended-thinking toggle, so recommend the model at
-      `EFFORT: Max` (or `Ultracode` when the task warrants it) with
-      `THINKING: On`. Emit NO Max Mode line: Claude Code has no such control.
+      the EFFORT the `<thinking-context>` complexity ladder yields (e.g.
+      `EFFORT: High` for a High-complexity task; `Max` only for ceiling-class
+      work or under an `uncapped` consumption-headroom posture; `Ultracode`
+      only when the task warrants it) with `THINKING: On`. Emit NO Max Mode
+      line: Claude Code has no such control.
     - Frontier GPT model on Codex — the surface exposes reasoning effort only,
-      so recommend the model at `EFFORT: XHigh`. Emit no Max Mode line.
+      so recommend the model at the ladder's level (e.g. `EFFORT: High`, or
+      `XHigh` for the novel-problem / multi-step-proof conditions). Emit no
+      Max Mode line.
     - Frontier model on Cursor — the surface exposes Max Mode and NO thinking
       dial, so recommend the model with `MAX MODE: On` and emit no EFFORT line.
     In every case the rule is identical: name the best-fit model, then emit
@@ -117,8 +122,15 @@
       (b) the model family under consideration is COVERED by that same
           subscription (so every candidate tier is reached at the same $0
           marginal price), AND
-      (c) the user-context does not report that subscription's budget as
-          exhausted or near-exhausted, AND
+      (c) the appended user-context declares a "Consumption headroom" posture
+          of `uncapped` (one declaration, covering the operator's flat
+          subscriptions) — the operator does NOT exhaust their usage pools, so
+          drawing on them costs nothing. A `capped` posture,
+          NO declared posture (the default), or a "Usage-pool status" entry
+          that reports the pool `tight` or `exhausted` all CLOSE the gate:
+          the pool is then a real budget the operator can run out of, and
+          every token a bigger model or a higher effort spends draws it down
+          faster (usage is metered by model and by effort level), AND
       (d) NO FUNDED `local` access method reaches a model that is ADEQUATE
           for the task — see "LOCAL MODELS AND THE GATE" below. A locally-
           pulled model is $0 with no usage pool behind it, a different
@@ -166,10 +178,18 @@
         Cost and Quality converge here"). NEVER manufacture an artificial
         spread by recommending a model the task does not warrant.
 
-    When the gate is CLOSED — any per-token path, an exhausted subscription
-    budget, or a candidate set that straddles funded and unfunded models — the
-    three posture rules above apply UNCHANGED. Tiering down and effort-down are
-    correct there, because they save real dollars.
+    When the gate is CLOSED — any per-token path, a `capped` (or undeclared)
+    consumption headroom, a pool reported `tight` or `exhausted`, or a
+    candidate set that straddles funded and unfunded models — the three
+    posture rules above apply UNCHANGED. Tiering down and effort-down are
+    correct there, because they save something real: dollars on a per-token
+    path, or weekly usage-pool budget on a flat subscription whose cap the
+    operator can hit. Under a binding cap and a `cheap` or `balanced`
+    posture, task SIMPLICITY IS the primary reason to down-tier AND
+    down-effort — a bounded, well-specified step on a mid-tier model at a
+    moderate effort leaves pool for the steps that genuinely need the
+    frontier model at a high effort. Under `best` the frontier model is
+    still held and only EFFORT follows the ladder.
 
     LOCAL MODELS AND THE GATE. A FUNDED `local` access method (billing `local`
     in `<access-methods>`: weights the operator has pulled onto their own
@@ -220,10 +240,25 @@
       IS a real cost (a usage cap the user can hit, or per-token spend), so effort
       stays the cost-vs-quality lever exactly as the budget-priority rules above
       define it: Cost = lowest-adequate, Balanced = sensible, Quality =
-      highest-useful.
-    This posture NEVER changes WHICH model is picked (that remains the
-    budget-priority + `<access-selection>` decision) — it only sets how much
-    reasoning effort each already-chosen pick runs at.
+      highest-useful. Concretely, the `<thinking-context>` complexity ladder
+      is the FINAL value, not a floor: Low → `Low`, Medium → `Medium`, High →
+      `High`, novel-problem / multi-step-proof → `XHigh`; `Max` is reserved
+      for ceiling-class tasks (or a Quality posture on a max-capable model),
+      and `Ultracode` stays gated on task warrant. A flat subscription is
+      `capped` whenever its operator has hit, or projects to hit, its weekly
+      or session cap in the current period — a top-price tier does NOT by
+      itself make a user `uncapped`; only their actual consumption does.
+      `capped` also CLOSES the FLAT-FUNDING GATE (condition (c)), because a
+      pool the operator can exhaust is drawn down faster by a bigger model
+      just as it is by a higher effort.
+    The headroom posture governs the EFFORT axis directly. It touches WHICH
+    model is picked only through the FLAT-FUNDING GATE: `uncapped` satisfies
+    gate condition (c), so on a covered subscription the gate may open and HOLD
+    the capability tier on every posture (the Cost and Quality picks may then
+    legitimately converge on the frontier model); `capped` closes the gate so
+    the ordinary budget-priority tier ladder applies. Neither posture picks a
+    model by itself — that remains the budget-priority + `<access-selection>`
+    decision.
   </objective>
 
   <pricing-context>
@@ -563,26 +598,30 @@
       Quality (`best`) budget posture, or for the most demanding tasks
       (the `XHigh` conditions above taken to their limit). Under a Cost
       (`cheap`) budget posture, never emit `Max` and do not exceed the
-      lowest level that clears the task — UNLESS the `<objective>`
-      FLAT-FUNDING GATE is OPEN or the CONSUMPTION-HEADROOM posture is
-      `uncapped`, EITHER of which suspends that floor and makes the top
-      useful rung the default on every posture. Absent any budget
+      lowest level that clears the task — UNLESS the CONSUMPTION-HEADROOM
+      posture is `uncapped` (which is also the only thing that OPENS the
+      `<objective>` FLAT-FUNDING GATE), in which case that floor is
+      suspended and the top useful rung is the default on every posture.
+      Under `capped` (the default) the floor stands even when the platform
+      is subscription-funded: the weekly pool is what is being spent, and
+      effort is metered against it. Absent any budget
       posture, `XHigh` stays the default ceiling and `Max` is reserved
       for the genuinely hardest tasks on max-capable models. Never emit
       `Max` for a model whose row lacks a `max`-above-`xhigh` step.
     - Top rung — `Ultracode`: above `Max`, Claude Code only, per the
       `<orchestration-context>` decision rule.
-    - FLAT-FUNDING / UNCAPPED OVERRIDE (apply LAST, and apply it every time —
-      do not stop at the complexity bullets above). When the `<objective>`
-      FLAT-FUNDING GATE is OPEN, or the CONSUMPTION-HEADROOM posture is
-      `uncapped`, RAISE the level selected above to the TOP USEFUL rung the
+    - UNCAPPED OVERRIDE (apply LAST, and ONLY when the appended user-context
+      declares a CONSUMPTION-HEADROOM posture of `uncapped`). Under that
+      posture RAISE the level selected above to the TOP USEFUL rung the
       chosen model and surface support (`Max`, or the surface's top step where
-      there is no `Max`). Under either condition the complexity ladder above
-      sets only a FLOOR, never the final value: effort costs the operator
-      nothing, so there is no reason to stop at `High` on a High-complexity
-      task. Ultracode remains gated on task warrant (see
-      `<orchestration-context>`) rather than on funding, so this override
-      raises to `Max`, not automatically to `Ultracode`.
+      there is no `Max`): the complexity ladder above is then only a FLOOR,
+      because effort costs that operator nothing. Under `capped`, or when no
+      posture is declared, the ladder value above IS the final value — do not
+      raise it, even when the FLAT-FUNDING GATE's other conditions hold and
+      even on a subscription-funded platform: the gate is CLOSED there and
+      the weekly pool is metered by effort. Ultracode remains gated on task
+      warrant (see `<orchestration-context>`) rather than on funding, so this
+      override raises to `Max`, not automatically to `Ultracode`.
     - THINKING follows: emit `THINKING: On` whenever the surface has a
       toggle and reasoning is wanted (every case above). Emit
       `THINKING: Off` only when the task genuinely wants extended
@@ -596,7 +635,7 @@
     EFFORT, THINKING, and Max Mode are orthogonal, and each is emitted
     only where its surface has it: a Cursor call carries `MAX MODE: On`
     and NO effort or thinking line (Cursor exposes no dial); a Claude
-    Code call carries `EFFORT: Max` + `THINKING: On` and NO Max Mode
+    Code call carries `EFFORT: High` + `THINKING: On` and NO Max Mode
     line (Anthropic's surface exposes effort and thinking, not Max
     Mode).
   </thinking-context>
@@ -1720,6 +1759,26 @@
            (marginal cost $0 until the pool is exhausted).
         3. `subscription-or-key` methods backed only by an API key,
            and `per-token` methods (real dollars per call).
+      USAGE-POOL STATUS (docs/user-context.md "Usage-pool status", when
+      present) adjusts the tier a subscription-funded method sits in for
+      the current window:
+        - `headroom` — as ranked above.
+        - `tight` — stays in its tier for High-complexity work, but for a
+          Low- or Medium-complexity task prefer another FUNDED pool with
+          `headroom` that reaches an ADEQUATE model (a second coding-agent
+          subscription, a local model), so the tight pool is kept for the
+          steps that need it. Say so in the RATIONALE.
+        - `exhausted` (until the stated reset) — the method is NOT $0 for
+          this window: overflow bills at provider list price per token
+          (usage credits), so rank it in tier 3 at that model's per-token
+          rate; if the entry says overflow is OFF, treat the method as
+          UNFUNDED for the window. A model reachable through another funded
+          pool then wins on cost when it is adequate for the task; the
+          RATIONALE must name the reset time and the pool that was skipped.
+      A `tight` or `exhausted` entry also CLOSES the `<objective>`
+      FLAT-FUNDING GATE for every candidate that subscription funds
+      (condition (c)) — the per-pool table overrides the single headroom
+      declaration for the current window.
       Within a tier, prefer the access method whose surface matches
       the task — Claude Code over claude.ai web for coding, Codex
       over ChatGPT app for autonomous coding sessions. Cursor's

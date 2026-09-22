@@ -251,22 +251,53 @@ contract v2 keeps these as SEPARATE fields, so state them separately:
   Mode line is emitted at all.
 
 Edit only if you have a strong cost or latency preference that diverges
-(e.g. always-on thinking, or always-off for budget reasons). Note that a
-flat, unexhausted subscription declared above opens the `<objective>`
-FLAT-FUNDING GATE, which raises effort to the top useful rung on every
-budget posture — so an effort-lowering policy here will not fire while
-nothing is actually being saved.
+(e.g. always-on thinking, or always-off for budget reasons). The
+complexity ladder is the final effort value under the default `capped`
+consumption headroom (next section). Only a declared `uncapped`
+headroom opens the `<objective>` FLAT-FUNDING GATE, which holds the
+frontier tier and raises effort to the top useful rung on every budget
+posture — so an effort-lowering policy here is a no-op only for a user
+who has said they never hit their limits.
 
 ### Budget priority and speed posture
 
-Two short paragraphs declaring your `Budget priority` (one of
-`cheap | balanced | best`) and your `Speed posture` (whether speed
+Three short paragraphs declaring your `Budget priority` (one of
+`cheap | balanced | best`), your `Consumption headroom` (one of
+`capped | uncapped`) and your `Speed posture` (whether speed
 is a valued dimension at all). The template defaults to
-`balanced` budget + speed-not-valued, which suppresses "Fast" model
-variants in favour of standard variants at half the per-token
-price. Change to `cheap` to bias toward `composer-2` / Haiku /
-Flash on tie-breaks, or to `best` to bias toward Opus / Sonnet /
-GPT-5 frontier picks regardless of marginal cost.
+`balanced` budget + `capped` headroom + speed-not-valued, which
+suppresses "Fast" model variants in favour of standard variants at
+half the per-token price and keeps reasoning effort at the
+complexity-ladder value. Change budget to `cheap` to bias toward
+`composer-2` / Haiku / Flash on tie-breaks, or to `best` to bias
+toward Opus / Sonnet / GPT-5 frontier picks regardless of marginal
+cost.
+
+`Consumption headroom` is the effort axis. `capped` (default) says the
+subscription's session / weekly usage pools can bind, so effort AND
+tier follow the ladders — a weekly pool is metered by both the model
+and the effort level, and a bounded step on a mid-tier model at
+`Medium`/`High` leaves budget for the steps that need the frontier
+model at `XHigh`/`Max`. `uncapped` is an opt-in for users who have
+never hit a limit on that plan: it emits the top useful effort on
+every pick and opens the `<objective>` FLAT-FUNDING GATE (frontier
+tier held on every posture). A top-price tier is not by itself a
+reason to declare `uncapped`.
+
+### Usage-pool status
+
+An optional table with one row per subscription usage pool (for
+example the claude.ai weekly pool and its 5-hour session pool) and a
+`State` of `headroom | tight | exhausted` plus the reset time.
+`<access-selection>` Step C uses it to decide which funded paths are
+really $0 in the current window: a `tight` pool is reserved for
+High-complexity work and routine tasks go to another funded pool that
+reaches an adequate model; an `exhausted` pool's platforms rank as
+pay-per-token (usage credits bill at list price) until the reset, or
+as unfunded if the row says `overflow off`. This is the hook that
+makes a second coding-agent subscription (Codex on ChatGPT, Antigravity
+on Google AI) an automatic fallback when the primary pool runs dry.
+Hand-edit it when a cap binds; clear it when the window resets.
 
 ## When to update
 
@@ -283,6 +314,11 @@ state changes:
   subscriptions*, demote or remove the platform from the
   preference order, and move the entry into *Inactive / not
   subscribed* with a rationale.
+- **Hitting a usage cap** — set the pool's row in *Usage-pool status*
+  to `tight` (before) or `exhausted` (after) with the reset time; put
+  it back to `headroom` when the window resets. If you find yourself
+  doing this most weeks, the `Consumption headroom` posture should be
+  `capped` (it is the default) — not `uncapped`.
 - **Rotating an API key** — flip the `Key present` cell to `No`
   while the key is unset, then back to `Yes` after the new key is
   configured per [byo-key-setup.md](byo-key-setup.md). The
