@@ -55,7 +55,7 @@ export const GRID_COLUMNS: BenchColumn[] = [
     short: "AA Index",
     label: "Artificial Analysis Intelligence Index",
     definition:
-      "AA's composite over ten evaluations (v4.3: HLE, GPQA Diamond, SciCode, Terminal-Bench, τ²-bench, AA-LCR, IFBench, AA-Omniscience, …). The one published overall number; 0–100.",
+      "AA's composite over its evaluation suite — the one published overall number; 0–100. Scores are not comparable across index versions.",
     unit: "index",
     url: "https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index",
   },
