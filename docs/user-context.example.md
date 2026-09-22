@@ -175,11 +175,14 @@ dial the chosen platform lacks gets NO line at all — never `Off`, never
   derives from complexity (Low → `Low`, Medium → `Medium`, High →
   `High`, High plus novel problem-solving / multi-step proof /
   cross-file chain-of-thought → `XHigh`, ceiling-class tasks → `Max`).
-  `Ultracode` is the top rung and is Claude Code only. NOTE: if this
-  file declares a flat, unexhausted subscription, the `<objective>`
-  FLAT-FUNDING GATE raises effort to the top useful rung on every budget
-  posture — effort costs nothing there, so there is no reason to hold it
-  down.
+  `Ultracode` is the top rung and is Claude Code only. NOTE: this ladder
+  is the FINAL value under the default `capped` consumption headroom
+  below. Only a declared `uncapped` headroom (you never hit your plan's
+  limits) opens the `<objective>` FLAT-FUNDING GATE and raises effort to
+  the top useful rung on every budget posture — on a plan whose weekly
+  or session cap you can reach, usage is metered by effort level as
+  well as by model, so holding effort at the ladder value is what keeps
+  the pool from running out mid-week.
 - **Thinking** — default `On` wherever extended reasoning helps; `Off`
   only for purely mechanical steps where latency matters. It never
   carries an effort word or a number; `THINKING: Max` is not a setting
@@ -204,6 +207,20 @@ never burn pay-as-you-go spend when a subscription that is already
 paid can serve the call. The selector should treat Cursor Ultra,
 claude.ai Max, and ChatGPT Pro as sunk cost when ranking access
 methods.
+
+**Consumption headroom:** `capped` — the default, and the right value
+for almost everyone. It means the subscriptions above have usage caps
+(session and weekly pools) that can bind, so reasoning EFFORT and the
+capability TIER both follow the ordinary Cost / Balanced / Quality
+ladder and the `<thinking-context>` complexity ladder: routine steps on
+a mid-tier model at a moderate effort, the frontier model at `XHigh` /
+`Max` only where the task warrants it. Declare `uncapped` ONLY if you
+have never hit a weekly or session limit on the plan in question — a
+top-price tier is not evidence of that (a $200/mo operator running
+several projects concurrently at `Max` effort exhausted the weekly pool
+in a single week). `uncapped` makes the selector emit the top useful
+effort on every pick and opens the FLAT-FUNDING GATE, which also holds
+the frontier tier on every posture.
 
 **Speed posture:** speed is NOT a valued dimension — workflows are
 batch / asynchronous, not latency-sensitive. Apply these rules:
@@ -232,6 +249,41 @@ batch / asynchronous, not latency-sensitive. Apply these rules:
   `coding` or `knowledge` at Low complexity — that still lets the
   algorithm pick a cheap fast-by-default model like composer-2 when
   it fits, without elevating speed itself to a goal.
+
+---
+
+## Usage-pool status
+
+Optional, hand-maintained. One row per subscription usage pool, so the
+selector knows which funded paths are actually $0 THIS window. It is
+consumed by `<access-selection>` Step C ("USAGE-POOL STATUS") and by the
+`<objective>` FLAT-FUNDING GATE (a `tight` / `exhausted` pool closes the
+gate). Delete the table to declare every pool `headroom`.
+
+| Pool                                  | Window  | State      | Resets (local time)        | Notes                                                                 |
+| ------------------------------------- | ------- | ---------- | -------------------------- | --------------------------------------------------------------------- |
+| claude.ai Max — weekly (all models)   | 7 days  | `headroom` | —                          | Shared by Claude Code + claude.ai; Fable draws from it under a 50% sub-cap. |
+| claude.ai Max — 5-hour session        | 5 hours | `headroom` | —                          | Rolling; rarely the binding constraint.                               |
+| ChatGPT Plus — Codex 5-hour / weekly  | 5h / 7d | `headroom` | —                          | Low ceiling; see Platform preference order.                           |
+
+States:
+
+- `headroom` — pool is fine; rank the pool's platforms as $0 per Step C.
+- `tight` — you expect to hit the cap before it resets. The pool stays
+  $0 for High-complexity work, but Low- / Medium-complexity tasks should
+  go to another funded pool that reaches an adequate model, so this one
+  is kept for the steps that need it.
+- `exhausted` — the cap is hit until the reset time. Overflow (usage
+  credits / extra usage) bills at provider list price per token, so the
+  pool's platforms rank as pay-per-token for the window; if you have
+  overflow turned OFF, add `overflow off` to Notes and the selector
+  treats those platforms as unfunded until the reset.
+
+Update the State and Resets cells when a cap binds, and clear them when
+the window resets. The `Consumption headroom` line above is one global
+declaration; this table is the per-pool override for the current window,
+and any `tight` or `exhausted` row closes the FLAT-FUNDING GATE for every
+candidate that pool funds, whatever the line above says.
 
 ---
 

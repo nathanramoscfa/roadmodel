@@ -82,34 +82,43 @@ export default function DocsPage() {
               care about.
             </p>
             <p>
-              So roadmodel keeps effort high by default and lowers it only when doing so
-              saves you real cost. Each of the three picks &mdash; Cost, Balanced,
-              Quality &mdash; can therefore run at full effort while still differing by
-              model, so the Cost pick is a <em>smaller</em> model thinking hard, not a
-              hobbled one.
+              On a flat subscription the thing being spent is your weekly usage pool,
+              and it is metered by <em>both</em> levers: a bigger model draws it down
+              faster, and so does a higher effort level. So by default roadmodel
+              calibrates effort to the task &mdash; routine steps at a moderate level,
+              hard problems at the top &mdash; and reserves &ldquo;maximum effort on
+              everything&rdquo; for users who tell it they never hit their limits. Each of
+              the three picks &mdash; Cost, Balanced, Quality &mdash; then differs by model
+              and by effort, and the pool lasts the week.
             </p>
             <p>
               You control this under <strong>Settings &rarr; Reasoning effort</strong>:
             </p>
             <ul className="ml-5 list-disc space-y-1">
               <li>
-                <strong>Automatic</strong> &mdash; match effort to your plan. A top-tier
-                subscription with headroom keeps effort maxed; a smaller plan scales it
-                down to protect your usage budget.
+                <strong>Automatic</strong> &mdash; match effort and model to the task.
+                Routine work runs at a lower effort on a smaller model where that is
+                enough, hard problems at the top, so a weekly usage limit does not run
+                out early.
               </li>
               <li>
-                <strong>Always maximum effort</strong> &mdash; if you rarely or never hit
-                your usage limits, keep reasoning maxed on every pick.
+                <strong>Always maximum effort</strong> &mdash; if you never hit your
+                usage limits, keep reasoning maxed on every pick regardless of task and
+                hold the strongest funded model too (the picks may then converge). This
+                is the fastest way to burn a weekly limit, so opt in deliberately.
               </li>
               <li>
-                <strong>Scale effort to save budget</strong> &mdash; dial reasoning down
-                on the cheaper picks to conserve your usage.
+                <strong>Scale effort to save budget</strong> &mdash; you hit or get close
+                to your limits. Today this is the same task calibration as Automatic,
+                stated explicitly.
               </li>
             </ul>
             <p>
-              This changes only how much a pick reasons, never which model is chosen
-              &mdash; and the named <strong>backup</strong> follows the same setting,
-              shown with its own platform and effort.
+              The calibrated postures let the ordinary Cost/Balanced/Quality model ladder
+              apply on a flat plan; &ldquo;Always maximum effort&rdquo; is what lets a
+              flat plan hold the frontier model on every pick. The named{" "}
+              <strong>backup</strong> follows the same setting, shown with its own
+              platform and effort.
             </p>
           </div>
         </section>
