@@ -29,6 +29,13 @@
       "xhigh",
       "max"
     ],
+    "Opus 5.5": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
     "Opus 5": [
       "low",
       "medium",
@@ -72,6 +79,7 @@
   },
   "default_effort": {
     "*": "high",
+    "Opus 5.5": "medium",
     "Opus 4.7": "xhigh"
   },
   "fallback_rule": "highest supported level at or below the requested level",
@@ -110,7 +118,8 @@
     "cannot_disable_on": []
   },
   "unexpected_models": [
-    "Fable 5.1"
+    "Fable 5.1",
+    "Opus 5.5"
   ],
-  "section_sha256": "1976980bfc00899df668f1b819bf39dcd2f61e19cc9d49dffc75f0d3c9ea8f2d"
+  "section_sha256": "26e46eef8f11cf12b4ee8533666fa6d13ef57e0b3ede7b0e47e8a6de8c04d07d"
 }
