@@ -82,6 +82,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A Codex config pinned to a `*-codex` model is dead on a ChatGPT account.**
+  Codex answers `400 … "The 'gpt-5.3-codex' model is not supported when using
+  Codex with a ChatGPT account"`, which nothing surfaces until someone actually
+  runs it. `roadmodel-update` now repairs that pin to a model the account can
+  run (`gpt-5.6-terra`) when `~/.codex/auth.json` exists and no
+  `OPENAI_API_KEY` is set, and leaves an API-key setup — where the variants
+  still work — alone.
+
 - **The `/recommend` jurisdiction filter had stopped filtering.** The edge's
   cn-jurisdiction guard was a hardcoded pair naming `kimi-k2.5` — a model
   retired in favour of K2.7 / K3 — so for a user who excludes `cn`, every
