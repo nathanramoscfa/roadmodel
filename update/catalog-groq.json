@@ -1,8 +1,8 @@
 {
-  "_comment": "Canonical Groq-hosted gpt-oss catalog (pricing) facts. MANUALLY MAINTAINED — Groq's pricing page is a hashed-CSS div-grid with no machine-readable table, so prices in the MODELS constant of update/extract_groq_catalog.py are verified by hand from groq.com/pricing; running that script re-writes this file (with a correct section_sha256) and drift-checks that the model names still appear on the live page (it does NOT parse prices). The models are OpenAI's open-weight gpt-oss (Apache-2.0); Groq is the pinned host that defines price + the groq-api access method (price = f(model, platform)). Consumed OFFLINE by update/merge_catalog.py + update/validate_catalog_conformance.py. overlay_mode whole-element: not on Cursor's page, so the cron's Opus pass drops these and the de-clobber overlay re-adds them from the committed selector.",
+  "_comment": "Canonical Groq-hosted gpt-oss catalog (pricing) facts. MANUALLY MAINTAINED — Groq's pricing page is a hashed-CSS div-grid with no machine-readable table, so prices in the MODELS constant of update/extract_groq_catalog.py are verified by hand from groq.com/pricing; running that script re-writes this file (with a correct section_sha256), drift-checks that the model names still appear on console.groq.com/docs/models, and reports gpt-oss models that page lists but this snapshot lacks in unexpected_slugs (it does NOT parse prices; groq.com/pricing is client-rendered and carries no model names, which is why the check reads the docs page). The models are OpenAI's open-weight gpt-oss (Apache-2.0); Groq is the pinned host that defines price + the groq-api access method (price = f(model, platform)). Consumed OFFLINE by update/merge_catalog.py + update/validate_catalog_conformance.py. overlay_mode whole-element: not on Cursor's page, so the cron's Opus pass drops these and the de-clobber overlay re-adds them from the committed selector.",
   "price_maintenance": "manual",
   "prices_verified_date": "2026-06-21",
-  "source_url": "https://groq.com/pricing",
+  "source_url": "https://console.groq.com/docs/models",
   "provider": "groq",
   "jurisdiction": "us",
   "overlay_mode": "whole-element",
