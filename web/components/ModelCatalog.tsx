@@ -8,8 +8,9 @@
 //
 // Two views, one numeric layer:
 //   Ratings — Model (sticky), Provider, Jurisdiction, Input, Output (cost tier
-//     as a colored dot), AA Index, Value (cost-adjusted index residual, with a
-//     dot for the Pareto frontier), then seven
+//     as a colored dot), AA Index, Score (cost-adjusted index residual within
+//     the cost tier, with a dot for the Pareto frontier; sorting by it groups
+//     the rows by cost tier under a header row per tier), then seven
 //     letter cells. Letters only: the uniform figures live in the grid, and the
 //     category header's tooltip names which grid column is evidence for it.
 //     Sorting a category orders by letter, then AA Index, then name.
@@ -35,12 +36,12 @@ import {
   CATEGORY_FIGURE,
   DERIVED_CATEGORIES,
   formatBench,
-  formatValueScore,
+  formatScore,
   GRID_COLUMN_BY_KEY,
   GRID_COLUMNS,
   type Band,
   type BenchColumn,
-  type ValueFit,
+  type ScoreFit,
   type BenchKey,
 } from "@/lib/benchmark-grid";
 import {
@@ -49,6 +50,7 @@ import {
   COST_TIER_COLORS,
   COST_TIER_DEFS,
   COST_TIER_DOT,
+  COST_TIER_RANK,
   FIELD_DEFS,
   formatPrice,
   jurisdictionDef,
@@ -170,10 +172,16 @@ function isCategory(key: SortKey): key is Category {
   return (CATEGORY_ORDER as string[]).includes(key);
 }
 
+// "$0.26" / "$10" — the blended price in a group header, trimmed like the
+// price columns.
+function formatBlended(v: number): string {
+  return Number(v.toFixed(2)).toString();
+}
+
 // Color the score by how far outside the fit's noise band it sits: beyond +σ
 // reads green, beyond −σ reads muted; inside the band is plain — the same
 // "within σ is a tie" rule the header states.
-function valueTone(score: number | null, fit: ValueFit | null): string {
+function scoreTone(score: number | null, fit: ScoreFit | null): string {
   if (score === null || !fit) return "";
   if (score >= fit.sigma) return "font-semibold text-emerald-700 dark:text-emerald-300";
   if (score <= -fit.sigma) return "text-brand-slate-400 dark:text-brand-slate-500";
@@ -185,13 +193,13 @@ export function ModelCatalog({
   generatedAt,
   benchmarksGeneratedAt,
   measuredCount,
-  valueFit,
+  scoreFit,
 }: {
   models: ModelRow[];
   generatedAt: string;
   benchmarksGeneratedAt: string;
   measuredCount: number;
-  valueFit: ValueFit | null;
+  scoreFit: ScoreFit | null;
 }) {
   const [view, setView] = useState<View>("ratings");
   const [sortKey, setSortKey] = useState<SortKey>("aa_index");
@@ -249,12 +257,18 @@ export function ModelCatalog({
         if (t !== 0) return t;
         return a.name.localeCompare(b.name);
       }
-      if (sortKey === "aa_index" || sortKey === "value") {
-        // Nullable figures: unmeasured rows last in either direction.
-        const t =
-          sortKey === "aa_index"
-            ? compareNullable(a.aa_index, b.aa_index, dir)
-            : compareNullable(a.value_score, b.value_score, dir);
+      if (sortKey === "aa_index") {
+        // Nullable figure: unmeasured rows last in either direction.
+        const t = compareNullable(a.aa_index, b.aa_index, dir);
+        if (t !== 0) return t;
+        return a.name.localeCompare(b.name);
+      }
+      if (sortKey === "value") {
+        // Grouped by cost tier (priciest tier first when descending), then by
+        // score within the tier with unmeasured rows last in either direction.
+        const tierDiff = (COST_TIER_RANK[a.tier_cost] - COST_TIER_RANK[b.tier_cost]) * dir;
+        if (tierDiff !== 0) return tierDiff;
+        const t = compareNullable(a.value_score, b.value_score, dir);
         if (t !== 0) return t;
         return a.name.localeCompare(b.name);
       }
@@ -471,8 +485,8 @@ export function ModelCatalog({
                 onSort={toggleSort}
                 align="right"
                 detail={
-                  valueFit
-                    ? `Fit over ${valueFit.n} measured models: ${valueFit.slope.toFixed(1)} index points per 10× price, R² ${valueFit.r2.toFixed(2)}, residual σ ${valueFit.sigma.toFixed(1)} — treat gaps under about ${Math.round(valueFit.sigma)} points as ties.`
+                  scoreFit
+                    ? `Fit over ${scoreFit.n} measured models in ${Object.keys(scoreFit.tiers).length} cost tiers: ${scoreFit.slope.toFixed(1)} index points per 10× price, R² ${scoreFit.r2.toFixed(2)}, residual σ ${scoreFit.sigma.toFixed(1)} — treat gaps under about ${Math.round(scoreFit.sigma)} points as ties.`
                     : "Not enough measured models to fit the market line."
                 }
               />
@@ -509,15 +523,36 @@ export function ModelCatalog({
                 </td>
               </tr>
             ) : (
-              rows.map((m) => {
+              rows.map((m, i) => {
                 const provider = modelProvider(m.id);
                 const isOpen = expanded.has(m.id);
                 const tier = COST_TIER_DEFS[m.tier_cost];
+                // Sorted by Score, a header row opens each cost-tier group.
+                const groupStart = sortKey === "value" && (i === 0 || rows[i - 1].tier_cost !== m.tier_cost);
+                const tierFit = scoreFit?.tiers[m.tier_cost];
+                const groupSize = rows.filter((r) => r.tier_cost === m.tier_cost).length;
                 return (
                   <Fragment key={m.id}>
+                    {groupStart && (
+                      <tr data-testid="score-group" data-tier={m.tier_cost}>
+                        <td
+                          colSpan={colSpan}
+                          className="bg-brand-slate-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-brand-slate-600 dark:bg-brand-slate-800/60 dark:text-brand-slate-300"
+                        >
+                          <span className={"mr-1.5 inline-block h-2 w-2 rounded-full align-middle " + COST_TIER_DOT[m.tier_cost]} />
+                          {tier.label} cost · {groupSize} {groupSize === 1 ? "model" : "models"}
+                          {tierFit && (
+                            <span className="ml-2 font-normal normal-case tracking-normal text-brand-slate-500 dark:text-brand-slate-400">
+                              {tierFit.n} measured · blended ${formatBlended(tierFit.minPrice)}–${formatBlended(tierFit.maxPrice)} per 1M · score is vs. this tier&rsquo;s own price line
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    )}
                     <tr
                       data-testid="model-row"
                       data-model-id={m.id}
+                      data-tier-cost={m.tier_cost}
                       className="group/row align-middle hover:bg-brand-slate-50 dark:hover:bg-brand-slate-800/40"
                     >
                       <td className="px-1 py-2 text-center">
@@ -600,14 +635,14 @@ export function ModelCatalog({
                         )}
                       </td>
                       <td
-                        className={"whitespace-nowrap px-3 py-2 text-right tabular-nums " + valueTone(m.value_score, valueFit)}
+                        className={"whitespace-nowrap px-3 py-2 text-right tabular-nums " + scoreTone(m.value_score, scoreFit)}
                         data-testid="value-cell"
                         data-frontier={m.value_frontier ? "1" : "0"}
                         data-value={m.value_score === null ? "" : m.value_score.toFixed(3)}
                         title={
                           m.value_score === null
                             ? "Not measured by Artificial Analysis"
-                            : `${FIELD_DEFS.value.fullName}: ${formatValueScore(m.value_score)} index points vs. the price line` +
+                            : `${FIELD_DEFS.value.fullName}: ${formatScore(m.value_score)} index points vs. the ${COST_TIER_DEFS[m.tier_cost].label}-tier price line` +
                               (m.value_frontier
                                 ? " · on the cost/quality frontier (no catalog model is both cheaper and higher on the index)"
                                 : "")
@@ -617,7 +652,7 @@ export function ModelCatalog({
                           <span className="text-brand-slate-400 dark:text-brand-slate-500">—</span>
                         ) : (
                           <>
-                            {formatValueScore(m.value_score)}
+                            {formatScore(m.value_score)}
                             {m.value_frontier && (
                               <span
                                 aria-label="on the cost/quality frontier"
@@ -720,10 +755,10 @@ export function ModelCatalog({
           Artificial Analysis
         </a>{" "}
         (snapshot {benchmarksGeneratedAt}; {measuredCount} of {models.length} models measured) —
-        one lab, one harness, so every column is comparable down the page. Value is the AA
-        Index minus what the model&rsquo;s price predicts (a line fitted over every measured
-        model), in index points; the dot marks the cost/quality frontier. A rating is a class,
-        not a rank within it; sorting a category orders by
+        one lab, one harness, so every column is comparable down the page. Score is the AA
+        Index minus what the model&rsquo;s price predicts among its own cost tier (one market
+        fit, a baseline per tier), in index points; the dot marks the cost/quality frontier. A
+        rating is a class, not a rank within it; sorting a category orders by
         letter, then by the AA Index. Ratings are curated by the project&rsquo;s daily automation;
         see the{" "}
         <a href="/docs" className="text-brand-accent hover:underline">
