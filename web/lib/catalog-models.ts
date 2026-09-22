@@ -142,6 +142,30 @@ export interface BenchmarkMeta {
   measuredCount: number;
 }
 
+// Models the catalog places in a given jurisdiction, by BOTH id and display
+// name — the two spellings an API payload can carry. Derived, never listed:
+// a hardcoded set silently stops filtering when the catalog moves on (the cn
+// guard named only `kimi-k2.5`, retired in favour of K2.7 / K3, so every other
+// cn model would have slipped through a "no cn" preference).
+export function modelsInJurisdiction(code: string): Set<string> {
+  const out = new Set<string>();
+  for (const m of MODELS) {
+    if (m.jurisdiction !== code) continue;
+    out.add(m.id);
+    out.add(m.name);
+  }
+  return out;
+}
+
+// Display names only, for a caller that needs to NAME a model of a given
+// jurisdiction (the E2E mock and the test that asserts on it derive the same
+// name from this, so they cannot drift apart).
+export function modelNamesInJurisdiction(code: string): string[] {
+  return MODELS.filter((m) => m.jurisdiction === code)
+    .map((m) => m.name)
+    .sort();
+}
+
 export function getBenchmarkMeta(): BenchmarkMeta {
   return {
     generatedAt: formatStamp((benchmarks as { generated_at_utc?: string }).generated_at_utc ?? ""),

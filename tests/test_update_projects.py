@@ -611,3 +611,106 @@ def test_runtime_sync_is_a_no_op_under_dry_run(
     assert (
         _json.loads((claude / "settings.json").read_text(encoding="utf-8"))["effortLevel"] == "max"
     )
+
+
+# --------------------------------------------------------------------------
+# Project parity: the same instructions + memory for every agent
+# --------------------------------------------------------------------------
+
+
+def _memory_dir(up: ModuleType, project: Path, home: Path) -> Path:
+    slug = str(project.resolve()).replace("/", "-").replace("\\", "-").replace(":", "")
+    d = home / ".claude" / "projects" / slug / "memory"
+    d.mkdir(parents=True)
+    return d
+
+
+def test_parity_writes_a_pointer_and_exports_memory_git_excluded(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "home"
+    project = tmp_path / "proj"
+    (project / ".git" / "info").mkdir(parents=True)
+    (project / "CLAUDE.md").write_text("# rules\n", encoding="utf-8")
+    monkeypatch.setattr(up, "CLAUDE_DIR", home / ".claude")
+    mem = _memory_dir(up, project, home)
+    (mem / "MEMORY.md").write_text("- [A fact](a.md) — hook\n", encoding="utf-8")
+    (mem / "a.md").write_text("---\nname: a\n---\n\nThe fact body.\n", encoding="utf-8")
+
+    lines = up.sync_project_parity(project, dry_run=False)
+
+    agents = (project / "AGENTS.md").read_text(encoding="utf-8")
+    assert "CLAUDE.md" in agents, "a repo with CLAUDE.md must be pointed at it, not have it copied"
+    assert "The fact body." not in agents, "AGENTS.md is tracked — no personal memory in it"
+    exported = (project / up.AGENTS_MEMORY_REL).read_text(encoding="utf-8")
+    assert exported.startswith(up._MEMORY_HEADER)
+    assert "A fact" in exported and "The fact body." in exported
+    # Personal: excluded LOCALLY so it cannot be committed, without a .gitignore diff.
+    assert ".agents/" in (project / ".git" / "info" / "exclude").read_text(encoding="utf-8")
+    assert not (project / ".gitignore").exists()
+    assert any("memory:" in ln for ln in lines)
+
+    # Idempotent, and an existing AGENTS.md is never overwritten.
+    (project / "AGENTS.md").write_text("# mine\n", encoding="utf-8")
+    again = up.sync_project_parity(project, dry_run=False)
+    assert (project / "AGENTS.md").read_text(encoding="utf-8") == "# mine\n"
+    assert any("present (left alone)" in ln for ln in again)
+
+
+def test_memory_export_keeps_the_index_and_caps_the_bodies(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A whole memory dir can be 400 KB. The index always ships; bodies ship
+    newest-first to a budget, and the rest are named so nothing vanishes."""
+    home = tmp_path / "home"
+    project = tmp_path / "proj"
+    project.mkdir()
+    monkeypatch.setattr(up, "CLAUDE_DIR", home / ".claude")
+    monkeypatch.setattr(up, "MEMORY_EXPORT_BUDGET_BYTES", 2_000)
+    mem = _memory_dir(up, project, home)
+    (mem / "MEMORY.md").write_text("- index line\n", encoding="utf-8")
+    for i in range(6):
+        f = mem / f"entry{i}.md"
+        f.write_text("x" * 900 + f"\nunique-{i}\n", encoding="utf-8")
+        os.utime(f, (1_000 + i, 1_000 + i))  # entry5 newest
+
+    out = up.export_claude_memory(project)
+    assert out is not None
+    assert "- index line" in out
+    assert "unique-5" in out, "newest entry must survive the cap"
+    assert "unique-0" not in out, "oldest entry should be cut first"
+    assert "Older entries (index only)" in out
+    assert "`entry0`" in out
+    assert len(out) < 6_000
+
+
+def test_parity_does_not_clobber_a_hand_written_memory_file(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "home"
+    project = tmp_path / "proj"
+    project.mkdir()
+    monkeypatch.setattr(up, "CLAUDE_DIR", home / ".claude")
+    mem = _memory_dir(up, project, home)
+    (mem / "MEMORY.md").write_text("- x\n", encoding="utf-8")
+    target = project / up.AGENTS_MEMORY_REL
+    target.parent.mkdir(parents=True)
+    target.write_text("# my own notes\n", encoding="utf-8")
+
+    lines = up.sync_project_parity(project, dry_run=False)
+    assert target.read_text(encoding="utf-8") == "# my own notes\n"
+    assert any("hand-written" in ln for ln in lines)
+
+
+def test_parity_dry_run_writes_nothing(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "home"
+    project = tmp_path / "proj"
+    project.mkdir()
+    monkeypatch.setattr(up, "CLAUDE_DIR", home / ".claude")
+    mem = _memory_dir(up, project, home)
+    (mem / "MEMORY.md").write_text("- x\n", encoding="utf-8")
+    up.sync_project_parity(project, dry_run=True)
+    assert not (project / "AGENTS.md").exists()
+    assert not (project / up.AGENTS_MEMORY_REL).exists()
