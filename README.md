@@ -322,6 +322,12 @@ walk-through — first-run bootstrap, full precedence chain,
 field-by-field schema, when to update — is
 [docs/user-context-setup.md](docs/user-context-setup.md).
 
+Running a second coding agent as a fallback for when your primary
+subscription's pool runs out? [docs/codex-parity.md](docs/codex-parity.md)
+maps every Claude Code surface (instructions, memory, skills, MCP servers,
+model + effort) onto its Codex equivalent and carries a paste-in prompt that
+makes Codex sync itself.
+
 ## Subcommands
 
 | Command                          | What it does                                                                       |
@@ -332,6 +338,7 @@ field-by-field schema, when to update — is
 | `roadmodel recommend --provider` | Override which provider answers (`anthropic` / `openai` / `google`).               |
 | `roadmodel recommend --model`    | Override the specific model ID on the chosen provider.                             |
 | `roadmodel recommend --user-context PATH` | Override the user-context.md location for this invocation.                |
+| `roadmodel score --category C --complexity X` | Rank (model, platform, effort) candidates in code for a classified task — no engine call. See [docs/scoring-model.md](docs/scoring-model.md). |
 | `roadmodel catalog show`         | Print the bundled `model-selector.txt` (use `--doc tier-cost-scale` for the price doc). |
 | `roadmodel catalog path`         | Print the on-disk path of the bundled catalog document (same `--doc` flag).        |
 | `roadmodel context show`         | Print the resolved `user-context.md` file.                                         |
