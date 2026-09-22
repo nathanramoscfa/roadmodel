@@ -740,3 +740,50 @@ def test_codex_model_pin_is_repaired_for_a_chatgpt_account(
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     up._sync_codex(None, calibrate=True, dry_run=False)
     assert 'model = "gpt-5.3-codex"' in (codex / "config.toml").read_text(encoding="utf-8")
+
+
+def test_gemini_reads_the_same_instructions_files_as_the_others(
+    up: ModuleType, tmp_path: Path
+) -> None:
+    """A project should need ONE instructions file, not one per agent: the
+    Gemini CLI defaults to GEMINI.md, so point it at AGENTS.md / CLAUDE.md too."""
+    import json as _json
+
+    settings = tmp_path / "settings.json"
+    settings.write_text(_json.dumps({"mcpServers": {"roadmodel": {}}}), encoding="utf-8")
+    lines = up._sync_gemini_settings(settings, dry_run=False)
+    data = _json.loads(settings.read_text(encoding="utf-8"))
+    assert data["contextFileName"] == ["AGENTS.md", "CLAUDE.md", "GEMINI.md"]
+    assert data["mcpServers"] == {"roadmodel": {}}  # untouched
+    assert any("reads AGENTS.md" in ln for ln in lines)
+    # An operator's own list is never overwritten.
+    settings.write_text(_json.dumps({"contextFileName": "MINE.md"}), encoding="utf-8")
+    assert up._sync_gemini_settings(settings, dry_run=False) == ["gemini instructions: present"]
+    assert _json.loads(settings.read_text(encoding="utf-8"))["contextFileName"] == "MINE.md"
+
+
+def test_gemini_trusts_every_registered_project(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Untrusted is the state that silently disables BOTH project context and
+    MCP servers in the Gemini CLI — `gemini mcp list` just says "Disabled"."""
+    import json as _json
+
+    trusted = tmp_path / "trustedFolders.json"
+    monkeypatch.setattr(up, "GEMINI_TRUSTED_FOLDERS", trusted)
+    a, b = tmp_path / "a", tmp_path / "b"
+    a.mkdir()
+    b.mkdir()
+    trusted.write_text(_json.dumps({str(a.resolve()): "TRUST_FOLDER"}), encoding="utf-8")
+
+    lines = up._sync_gemini_trust([a, b], dry_run=False)
+    data = _json.loads(trusted.read_text(encoding="utf-8"))
+    assert data[str(a.resolve())] == "TRUST_FOLDER"  # preserved
+    assert data[str(b.resolve())] == "TRUST_FOLDER"  # added
+    assert any("trusted 1 project" in ln for ln in lines)
+    assert any("all 2 project(s) trusted" in ln for ln in up._sync_gemini_trust([a, b], False))
+    # Dry run writes nothing.
+    c = tmp_path / "c"
+    c.mkdir()
+    up._sync_gemini_trust([c], dry_run=True)
+    assert str(c.resolve()) not in _json.loads(trusted.read_text(encoding="utf-8"))
