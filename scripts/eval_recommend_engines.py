@@ -176,6 +176,26 @@ ENGINES: list[Engine] = [
         ga=True,
         note="cheapest; needs OPENAI_API_KEY",
     ),
+    # The GPT-5.6 generation: cheaper AND far higher on the AA index than
+    # gpt-5-mini (Luna $0.20/$1.20, index 37.3 vs mini $0.25/$2.00, index 16.8),
+    # which is exactly the claim an adherence eval has to check rather than
+    # assume — a smarter model is not automatically a more obedient one.
+    Engine(
+        "gpt-5.6-luna",
+        "openai",
+        "gpt-5.6-luna",
+        thinking_budget=0,
+        ga=True,
+        note="cheaper + stronger than gpt-5-mini on paper; needs OPENAI_API_KEY",
+    ),
+    Engine(
+        "gpt-5.6-terra",
+        "openai",
+        "gpt-5.6-terra",
+        thinking_budget=0,
+        ga=True,
+        note="one tier up from Luna; needs OPENAI_API_KEY",
+    ),
     # OpenAI-compatible engines (providers/openai_compatible.py). Local Ollama
     # models are the ones runnable with no hosted key; the hosted entries run
     # only when their key is present. thinking_budget=0 maps to each provider's

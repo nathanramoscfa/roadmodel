@@ -103,11 +103,17 @@ _PROVIDER_HINTS: dict[str, tuple[str, str]] = {
     # (params below). The free/anon tier stays on 2.5 Flash; the web edge only
     # routes signed-in users here when RECOMMENDER_FRONTIER_ENABLED is on.
     "google-gemini-2.5-pro": ("google", "gemini-2.5-pro"),
-    # GPT-5 mini — the eval-backed recommender engine (best instruction-adherence
-    # + ~3x cheaper with OpenAI automatic prefix caching). Reachable via
-    # force_provider "openai-gpt-5-mini" (set by the web ENGINE_OVERRIDES canary);
-    # runs at minimal reasoning (params below).
+    # GPT-5 mini — the previous eval-backed engine (superseded 2026-09-22 by
+    # gpt-5.6-luna; kept reachable for rollback and comparison).
     "openai-gpt-5-mini": ("openai", "gpt-5-mini"),
+    # GPT-5.6 Luna — the eval-backed recommender engine. Cheaper than gpt-5-mini
+    # ($0.20/$1.20 vs $0.25/$2.00 per Mtok) AND cleaner on the 12-probe
+    # differential: 12/12 parsed, every structured field and rationale section
+    # present, no task leak, and no cost-demotion of the Quality pick (gpt-5-mini
+    # demotes it on the cost-bulk probe). Runs at its ladder floor, which is
+    # `low` — the 5.6 generation rejects `minimal` outright.
+    "openai-gpt-5.6-luna": ("openai", "gpt-5.6-luna"),
+    "openai-gpt-5.6-terra": ("openai", "gpt-5.6-terra"),
 }
 
 # The frontier model id — keyed on directly so its thinking-ON params apply

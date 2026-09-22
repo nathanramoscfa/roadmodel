@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The recommender engine moves to GPT-5.6 Luna.** A 12-probe differential
+  eval (`scripts/eval_recommend_engines.py`, anon path) against the incumbent
+  gpt-5-mini and the tier above it: all three parse 12/12 with every
+  structured field and rationale section present and no task leak, but
+  gpt-5-mini demotes the Quality pick on cost grounds on the `cost-bulk` probe
+  (no-demote 0.92) where Luna and Terra do not (1.00) — and Luna is ~40%
+  cheaper per output token ($0.20/$1.20 vs $0.25/$2.00 per Mtok) while Terra
+  costs 1.8× the latency for no adherence gain. Anon and signed-in frontier
+  both cut to `gpt-5.6-luna`; the gpt-5-mini provider hint stays registered so
+  rollback is a one-line change. The OpenAI adapter now picks each model's
+  reasoning FLOOR rather than assuming `minimal`: the GPT-5.6 generation
+  rejects `minimal` outright, which is what the first eval run discovered.
 - **`/models` Score: a cost-adjusted number for every model, grouped by cost
   tier.** The column (formerly "Value") used to mark five rows "Best value"
   (the cost/quality Pareto frontier) and leave the rest blank. It is now a
