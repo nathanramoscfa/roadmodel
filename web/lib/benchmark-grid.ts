@@ -219,70 +219,116 @@ export function paretoFrontier<T extends { price: number; index: number | null }
   return frontier;
 }
 
-// Cost-adjusted value score. A quality ÷ price ratio is useless across a
-// price range spanning two orders of magnitude (it crowns the cheapest weak
-// model), and a hand-picked weight is a number to argue about. So the weight is
-// ESTIMATED from the market instead: fit index = a + b·log10(price) by ordinary
-// least squares over every AA-measured model, and score each model by its
-// residual — how many index points it delivers above (+) or below (−) what its
-// price predicts. Price is AA's blended figure (3 input : 1 output tokens).
-// The fit's n, R² and residual σ ship with the column so the reader can judge
-// how much a gap means: two models within ~σ of each other are a tie.
-export interface ValueFit {
+// Cost-adjusted score, grouped by cost tier. A quality ÷ price ratio is
+// useless across a price range spanning two orders of magnitude (it crowns the
+// cheapest weak model), and a hand-picked weight is a number to argue about. So
+// the weight is ESTIMATED from the market: index = α_tier + b·log10(price),
+// fitted by least squares over every AA-measured model with ONE pooled slope b
+// (a separate slope per tier would rest on a handful of points) and a separate
+// intercept α per cost tier (Low / Medium / High / Very High). A model's score
+// is its residual — index points above (+) or below (−) what its price predicts
+// AMONG ITS OWN TIER, so residuals sum to zero within every tier and the score
+// answers "which model is the best buy in this price band", not "which cheap
+// model beats an expensive one". Price is AA's blended figure (3 input : 1
+// output tokens). n, R² and residual σ ship with the column so the reader can
+// judge how much a gap means: two models within ~σ of each other are a tie.
+export interface TierFit {
   n: number;
-  slope: number; // index points per decade (10×) of price
   intercept: number;
+  meanIndex: number;
+  minPrice: number;
+  maxPrice: number;
+}
+
+export interface ScoreFit {
+  n: number;
+  slope: number; // index points per decade (10×) of price, pooled across tiers
   r2: number;
-  sigma: number; // residual standard deviation, in index points
+  sigma: number; // pooled residual standard deviation, in index points
+  tiers: Record<string, TierFit>;
 }
 
 export function blendedPrice(inputPer1m: number, outputPer1m: number): number {
   return (3 * inputPer1m + outputPer1m) / 4;
 }
 
-export function fitValueLine(
-  rows: readonly { price: number; index: number | null }[],
-): ValueFit | null {
+export function fitScoreModel(
+  rows: readonly { price: number; index: number | null; tier: string }[],
+): ScoreFit | null {
   const pts = rows.filter(
-    (r): r is { price: number; index: number } =>
+    (r): r is { price: number; index: number; tier: string } =>
       r.index !== null && Number.isFinite(r.index) && r.price > 0,
   );
   const n = pts.length;
   if (n < 3) return null;
   const xs = pts.map((p) => Math.log10(p.price));
   const ys = pts.map((p) => p.index);
-  const mx = xs.reduce((a, b) => a + b, 0) / n;
-  const my = ys.reduce((a, b) => a + b, 0) / n;
+  // Per-tier means (the fixed effects), then the pooled within-tier slope.
+  const groups = new Map<string, number[]>();
+  pts.forEach((p, i) => {
+    const g = groups.get(p.tier);
+    if (g) g.push(i);
+    else groups.set(p.tier, [i]);
+  });
+  const mean = (idx: number[], v: number[]) => idx.reduce((a, i) => a + v[i], 0) / idx.length;
   let sxx = 0;
   let sxy = 0;
-  let syy = 0;
-  for (let i = 0; i < n; i += 1) {
-    sxx += (xs[i] - mx) ** 2;
-    sxy += (xs[i] - mx) * (ys[i] - my);
-    syy += (ys[i] - my) ** 2;
+  for (const idx of groups.values()) {
+    const mx = mean(idx, xs);
+    const my = mean(idx, ys);
+    for (const i of idx) {
+      sxx += (xs[i] - mx) ** 2;
+      sxy += (xs[i] - mx) * (ys[i] - my);
+    }
   }
-  if (sxx === 0 || syy === 0) return null;
+  if (sxx === 0) return null;
   const slope = sxy / sxx;
-  const intercept = my - slope * mx;
+  const tiers: Record<string, TierFit> = {};
+  for (const [tier, idx] of groups) {
+    const mx = mean(idx, xs);
+    const my = mean(idx, ys);
+    tiers[tier] = {
+      n: idx.length,
+      intercept: my - slope * mx,
+      meanIndex: my,
+      minPrice: Math.min(...idx.map((i) => pts[i].price)),
+      maxPrice: Math.max(...idx.map((i) => pts[i].price)),
+    };
+  }
+  const grand = ys.reduce((a, b) => a + b, 0) / n;
   let ssRes = 0;
-  for (let i = 0; i < n; i += 1) ssRes += (ys[i] - (intercept + slope * xs[i])) ** 2;
+  let ssTot = 0;
+  pts.forEach((p, i) => {
+    ssRes += (ys[i] - (tiers[p.tier].intercept + slope * xs[i])) ** 2;
+    ssTot += (ys[i] - grand) ** 2;
+  });
+  if (ssTot === 0) return null;
+  const dof = n - groups.size - 1; // one slope + one intercept per tier
   return {
     n,
     slope,
-    intercept,
-    r2: 1 - ssRes / syy,
-    sigma: Math.sqrt(ssRes / (n - 2)),
+    r2: 1 - ssRes / ssTot,
+    sigma: Math.sqrt(ssRes / Math.max(1, dof)),
+    tiers,
   };
 }
 
-// The residual for one model, or null when it is unmeasured / the fit failed.
-export function valueScore(fit: ValueFit | null, price: number, index: number | null): number | null {
+// The residual for one model, or null when it is unmeasured / its tier has no
+// fit / the fit failed.
+export function scoreFor(
+  fit: ScoreFit | null,
+  tier: string,
+  price: number,
+  index: number | null,
+): number | null {
   if (!fit || index === null || !(price > 0)) return null;
-  return index - (fit.intercept + fit.slope * Math.log10(price));
+  const t = fit.tiers[tier];
+  if (!t) return null;
+  return index - (t.intercept + fit.slope * Math.log10(price));
 }
 
 // "+9.8" / "−3.4" / "0.0" — one decimal, explicit sign, typographic minus.
-export function formatValueScore(score: number | null): string {
+export function formatScore(score: number | null): string {
   if (score === null) return "—";
   const rounded = Math.round(score * 10) / 10;
   if (rounded === 0) return "0.0";

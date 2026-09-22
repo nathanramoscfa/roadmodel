@@ -21,14 +21,18 @@ interface GlossaryTermProps {
 
 const BASE_CLASS =
   "group relative inline-block border-b border-dotted border-brand-slate-400 outline-none dark:border-brand-slate-500";
+// `whitespace-normal` + `break-words` + `normal-case tracking-normal` are
+// load-bearing: a term inside a table header inherits that header's
+// `whitespace-nowrap` / `uppercase tracking-wide`, which ran the definition
+// off the right edge of the box in one unbroken line.
 const TOOLTIP_CLASS =
-  "hidden absolute top-full z-20 mt-1 w-64 rounded-md border border-brand-slate-200 bg-white p-2 text-xs font-normal leading-snug text-brand-slate-700 shadow-lg group-hover:block group-focus:block dark:border-brand-slate-600 dark:bg-brand-slate-800 dark:text-brand-slate-200";
+  "hidden absolute top-full z-20 mt-1 w-72 whitespace-normal break-words rounded-md border border-brand-slate-200 bg-white p-2 text-left text-xs font-normal normal-case leading-snug tracking-normal text-brand-slate-700 shadow-lg group-hover:block group-focus:block dark:border-brand-slate-600 dark:bg-brand-slate-800 dark:text-brand-slate-200";
 
 export function GlossaryTerm({ definition, url, align = "left", children }: GlossaryTermProps) {
   const tooltip = (
     <span
       role="tooltip"
-      className={`${TOOLTIP_CLASS} ${align === "right" ? "right-0 text-right" : "left-0"}`}
+      className={`${TOOLTIP_CLASS} ${align === "right" ? "right-0" : "left-0"}`}
     >
       {definition}
       {url ? (

@@ -18,13 +18,13 @@ import {
 import { extractAaIndex } from "@/lib/benchmark-scores";
 import {
   blendedPrice,
-  fitValueLine,
+  fitScoreModel,
   GRID_COLUMNS,
   paretoFrontier,
-  valueScore,
+  scoreFor,
   type BenchKey,
   type BenchRow,
-  type ValueFit,
+  type ScoreFit,
 } from "@/lib/benchmark-grid";
 import { BENCHMARKS } from "@/lib/glossary";
 
@@ -100,10 +100,11 @@ export function getModelRows(): ModelRow[] {
     rows.map((r) => ({ row: r, price: r.output_price_per_1m, index: r.aa_index })),
   );
   for (const f of frontier) f.row.value_frontier = true;
-  const fit = getValueFit(rows);
+  const fit = getScoreFit(rows);
   for (const r of rows) {
-    r.value_score = valueScore(
+    r.value_score = scoreFor(
       fit,
+      r.tier_cost,
       blendedPrice(r.input_price_per_1m, r.output_price_per_1m),
       r.aa_index,
     );
@@ -111,15 +112,16 @@ export function getModelRows(): ModelRow[] {
   return rows;
 }
 
-// The market line behind the Value column, fitted over the rows given (the
-// page passes the same rows it renders so the header stats match the cells).
-export function getValueFit(
-  rows: readonly Pick<ModelRow, "input_price_per_1m" | "output_price_per_1m" | "aa_index">[],
-): ValueFit | null {
-  return fitValueLine(
+// The market fit behind the Score column, over the rows given (the page passes
+// the same rows it renders so the header stats match the cells).
+export function getScoreFit(
+  rows: readonly Pick<ModelRow, "input_price_per_1m" | "output_price_per_1m" | "aa_index" | "tier_cost">[],
+): ScoreFit | null {
+  return fitScoreModel(
     rows.map((r) => ({
       price: blendedPrice(r.input_price_per_1m, r.output_price_per_1m),
       index: r.aa_index,
+      tier: r.tier_cost,
     })),
   );
 }
