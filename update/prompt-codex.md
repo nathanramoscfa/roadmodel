@@ -60,7 +60,7 @@ Do NOT touch the Claude, Gemini, or Cursor bullets, the Claude extended-thinking
 mapping, the Claude Code effort prose, or the ultracode / ultrathink material —
 those are owned by the Claude Code cron and the catalog cron.
 
-## Scope 2 — `<method id="codex-cli">` and `<method id="openai-api">` best-for
+## Scope 2 — `<method id="codex-cli">`, `<method id="codex-api">` and `<method id="openai-api">` best-for
 
 Update the `best-for` text on these two `<method>` elements ONLY when
 `<docs_facts>` implies a materially new positioning fact about the Codex /
@@ -79,7 +79,12 @@ OWNED by the Cursor catalog cron. You MUST NOT touch any other attribute
   `docs/model-tier-cost-scale.md` — the Cursor catalog cron's lane. A NEW Codex
   model (e.g. a new `gpt-5.x`) is FLAGGED separately by the cron; do NOT add it
   to any model list here.
-- Every `<method>` element OTHER THAN `codex-cli` / `openai-api`.
+- Every `<method>` element OTHER THAN `codex-cli` / `codex-api` / `openai-api`.
+- The SPLIT between `codex-cli` (ChatGPT sign-in, subscription-included) and
+  `codex-api` (OpenAI API key, per-token). A ChatGPT-account sign-in cannot run
+  the `-codex` model variants — Codex answers 400 "not supported when using
+  Codex with a ChatGPT account" — so `codex-cli`'s supports-models must NOT
+  list them and `codex-api`'s must. Do not merge the two methods back.
 - The Claude / Gemini / Cursor reasoning bullets and mappings, the Claude Code
   effort prose, `<orchestration-context>`, `<max-mode-context>`.
 - The v2 output contract and its fenced-off neighbours: `<output-format>`

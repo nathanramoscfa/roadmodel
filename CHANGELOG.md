@@ -82,6 +82,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The catalog offered Codex models a ChatGPT subscription cannot run.** The
+  single `codex-cli` method listed the `-codex` variants (`gpt-5.3-codex`, the
+  `gpt-5.1-codex` family) among its supported models, but a ChatGPT-account
+  sign-in answers `400 … "not supported when using Codex with a ChatGPT
+  account"` for every one of them — they need an OpenAI API key. The method is
+  now split: `codex-cli` (subscription-included, ChatGPT sign-in, GPT-5.x /
+  5.6 line only) and `codex-api` (per-token, API key, the `-codex` variants
+  included), so the selector can no longer recommend a model the operator's
+  funding cannot reach. The Codex tracker cron's anti-revert list protects the
+  split.
+
 - **A Codex config pinned to a `*-codex` model is dead on a ChatGPT account.**
   Codex answers `400 … "The 'gpt-5.3-codex' model is not supported when using
   Codex with a ChatGPT account"`, which nothing surfaces until someone actually
