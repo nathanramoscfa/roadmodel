@@ -1403,3 +1403,20 @@ def test_xai_extractor_flags_only_models_the_catalog_lacks() -> None:
         assert mod._slug(name) not in known, f"{name} is already in the catalog"
         assert name not in mod.DECLINED
     assert mod._slug("Grok 4.5") == "grok-4.5"
+
+
+def test_google_extractor_flags_text_models_the_catalog_lacks() -> None:
+    """Google's page is the only discovery lane for a Gemini model Cursor never
+    lists. Page furniture ("Gemini Developer API pricing") and non-text models
+    (image / video / transcribe) must not be flagged, or the flag gets ignored."""
+    mod = _load("extract_google_catalog")
+    snap = json.loads(REAL_GOOGLE_CATALOG.read_text())
+    flagged = snap["unexpected_slugs"]
+    known = mod._catalog_ids()
+    for name in flagged:
+        assert mod._MODEL_HEADING_RE.match(name), f"{name} is not a model heading"
+        assert not mod._NON_TEXT_RE.search(name), f"{name} is not a text model"
+        assert name not in mod.NAME_TO_ID and name not in mod.DECLINED
+        assert mod._slug(name) not in known
+    assert not mod._MODEL_HEADING_RE.match("Gemini Developer API pricing")
+    assert mod._NON_TEXT_RE.search("Gemini 3.5 Transcribe")
