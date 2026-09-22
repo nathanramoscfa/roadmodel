@@ -217,19 +217,28 @@ def test_lmarena_parquet_loads_with_expected_schema() -> None:
     assert table.num_rows >= 100, f"LMArena parquet has only {table.num_rows} rows"
 
 
-def test_lmarena_transform_produces_overall_and_siblings() -> None:
-    """End-to-end smoke of the LMArena transform: text/overall,
-    webdev/overall, and search/overall must all be present in the
-    output. Catches a sibling-subset URL going 404.
+def test_lmarena_transform_produces_every_board_it_is_configured_to_keep() -> None:
+    """End-to-end smoke of the LMArena transform: EVERY (subset, category)
+    in the transform's own keep map must come back with rows.
+
+    Derived from the keep map rather than a literal list, so retiring a board
+    is a one-line config edit instead of a test that goes red on a change
+    that is not a regression. What it still catches is what it should: a
+    sibling-subset URL going 404, and a board silently emitting nothing
+    (the 2026-09 webdev case — see tests/test_lmarena_transform.py).
     """
     src = next(s for s in SOURCES["benchmarks"] if "LMArena" in s["name"])
-    content = um.TRANSFORMS[src["transform"]](src["url"])
-    payload = json.loads(content)
+    payload = json.loads(um.TRANSFORMS[src["transform"]](src["url"]))
     rows = payload.get("leaderboard", [])
     assert rows, "LMArena transform produced no leaderboard rows"
     pairs = {(r["subset"], r["category"]) for r in rows}
-    for required in (("text", "overall"), ("webdev", "overall"), ("search", "overall")):
-        assert required in pairs, f"LMArena transform missing {required}"
+    configured = set(um.LMARENA_KEEP)
+    missing = configured - pairs
+    assert not missing, (
+        f"LMArena transform kept no rows for {sorted(missing)}. Either the "
+        f"subset URL is failing, or that board's category was renamed "
+        f"upstream — check update/update_models.py's LMARENA_KEEP."
+    )
 
 
 @pytest.mark.skipif(
