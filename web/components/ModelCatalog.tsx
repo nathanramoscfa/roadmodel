@@ -8,7 +8,8 @@
 //
 // Two views, one numeric layer:
 //   Ratings — Model (sticky), Provider, Jurisdiction, Input, Output (cost tier
-//     as a colored dot), AA Index, Value (Pareto-frontier badge), then seven
+//     as a colored dot), AA Index, Value (cost-adjusted index residual, with a
+//     dot for the Pareto frontier), then seven
 //     letter cells. Letters only: the uniform figures live in the grid, and the
 //     category header's tooltip names which grid column is evidence for it.
 //     Sorting a category orders by letter, then AA Index, then name.
@@ -34,10 +35,12 @@ import {
   CATEGORY_FIGURE,
   DERIVED_CATEGORIES,
   formatBench,
+  formatValueScore,
   GRID_COLUMN_BY_KEY,
   GRID_COLUMNS,
   type Band,
   type BenchColumn,
+  type ValueFit,
   type BenchKey,
 } from "@/lib/benchmark-grid";
 import {
@@ -140,8 +143,9 @@ function valueFor(row: ModelRow, key: SortKey): number | string {
     case "aa_index":
       return row.aa_index ?? -1;
     case "value":
-      // Frontier first, then by index inside each group.
-      return (row.value_frontier ? 1000 : 0) + (row.aa_index ?? -1);
+      // Sorted via compareNullable above; this branch is only reached by the
+      // generic path, where a missing score must sort last.
+      return row.value_score ?? Number.NEGATIVE_INFINITY;
     default:
       return RATING_RANK[row.tiers[key]];
   }
@@ -166,16 +170,28 @@ function isCategory(key: SortKey): key is Category {
   return (CATEGORY_ORDER as string[]).includes(key);
 }
 
+// Color the score by how far outside the fit's noise band it sits: beyond +σ
+// reads green, beyond −σ reads muted; inside the band is plain — the same
+// "within σ is a tie" rule the header states.
+function valueTone(score: number | null, fit: ValueFit | null): string {
+  if (score === null || !fit) return "";
+  if (score >= fit.sigma) return "font-semibold text-emerald-700 dark:text-emerald-300";
+  if (score <= -fit.sigma) return "text-brand-slate-400 dark:text-brand-slate-500";
+  return "text-brand-slate-700 dark:text-brand-slate-200";
+}
+
 export function ModelCatalog({
   models,
   generatedAt,
   benchmarksGeneratedAt,
   measuredCount,
+  valueFit,
 }: {
   models: ModelRow[];
   generatedAt: string;
   benchmarksGeneratedAt: string;
   measuredCount: number;
+  valueFit: ValueFit | null;
 }) {
   const [view, setView] = useState<View>("ratings");
   const [sortKey, setSortKey] = useState<SortKey>("aa_index");
@@ -233,8 +249,12 @@ export function ModelCatalog({
         if (t !== 0) return t;
         return a.name.localeCompare(b.name);
       }
-      if (sortKey === "aa_index") {
-        const t = compareNullable(a.aa_index, b.aa_index, dir);
+      if (sortKey === "aa_index" || sortKey === "value") {
+        // Nullable figures: unmeasured rows last in either direction.
+        const t =
+          sortKey === "aa_index"
+            ? compareNullable(a.aa_index, b.aa_index, dir)
+            : compareNullable(a.value_score, b.value_score, dir);
         if (t !== 0) return t;
         return a.name.localeCompare(b.name);
       }
@@ -444,7 +464,18 @@ export function ModelCatalog({
                 onSort={toggleSort}
                 align="right"
               />
-              <SortHeader field="value" sortKey={sortKey} dir={sortDir} onSort={toggleSort} />
+              <SortHeader
+                field="value"
+                sortKey={sortKey}
+                dir={sortDir}
+                onSort={toggleSort}
+                align="right"
+                detail={
+                  valueFit
+                    ? `Fit over ${valueFit.n} measured models: ${valueFit.slope.toFixed(1)} index points per 10× price, R² ${valueFit.r2.toFixed(2)}, residual σ ${valueFit.sigma.toFixed(1)} — treat gaps under about ${Math.round(valueFit.sigma)} points as ties.`
+                    : "Not enough measured models to fit the market line."
+                }
+              />
               {view === "ratings"
                 ? CATEGORY_ORDER.map((cat) => (
                     <CategoryHeader
@@ -486,6 +517,7 @@ export function ModelCatalog({
                   <Fragment key={m.id}>
                     <tr
                       data-testid="model-row"
+                      data-model-id={m.id}
                       className="group/row align-middle hover:bg-brand-slate-50 dark:hover:bg-brand-slate-800/40"
                     >
                       <td className="px-1 py-2 text-center">
@@ -567,14 +599,32 @@ export function ModelCatalog({
                           m.aa_index
                         )}
                       </td>
-                      <td className="px-2 py-2" data-testid="value-cell" data-frontier={m.value_frontier ? "1" : "0"}>
-                        {m.value_frontier && (
-                          <span
-                            className="inline-flex items-center rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800 dark:bg-emerald-500/35 dark:text-emerald-300"
-                            title={`${FIELD_DEFS.value.fullName} — ${FIELD_DEFS.value.definition}`}
-                          >
-                            Best value
-                          </span>
+                      <td
+                        className={"whitespace-nowrap px-3 py-2 text-right tabular-nums " + valueTone(m.value_score, valueFit)}
+                        data-testid="value-cell"
+                        data-frontier={m.value_frontier ? "1" : "0"}
+                        data-value={m.value_score === null ? "" : m.value_score.toFixed(3)}
+                        title={
+                          m.value_score === null
+                            ? "Not measured by Artificial Analysis"
+                            : `${FIELD_DEFS.value.fullName}: ${formatValueScore(m.value_score)} index points vs. the price line` +
+                              (m.value_frontier
+                                ? " · on the cost/quality frontier (no catalog model is both cheaper and higher on the index)"
+                                : "")
+                        }
+                      >
+                        {m.value_score === null ? (
+                          <span className="text-brand-slate-400 dark:text-brand-slate-500">—</span>
+                        ) : (
+                          <>
+                            {formatValueScore(m.value_score)}
+                            {m.value_frontier && (
+                              <span
+                                aria-label="on the cost/quality frontier"
+                                className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 align-middle"
+                              />
+                            )}
+                          </>
                         )}
                       </td>
                       {view === "ratings"
@@ -670,9 +720,10 @@ export function ModelCatalog({
           Artificial Analysis
         </a>{" "}
         (snapshot {benchmarksGeneratedAt}; {measuredCount} of {models.length} models measured) —
-        one lab, one harness, so every column is comparable down the page. &ldquo;Best
-        value&rdquo; marks the cost/quality frontier: no catalog model is both cheaper and higher
-        on the AA Index. A rating is a class, not a rank within it; sorting a category orders by
+        one lab, one harness, so every column is comparable down the page. Value is the AA
+        Index minus what the model&rsquo;s price predicts (a line fitted over every measured
+        model), in index points; the dot marks the cost/quality frontier. A rating is a class,
+        not a rank within it; sorting a category orders by
         letter, then by the AA Index. Ratings are curated by the project&rsquo;s daily automation;
         see the{" "}
         <a href="/docs" className="text-brand-accent hover:underline">
@@ -750,6 +801,7 @@ function SortHeader({
   onSort,
   align = "left",
   className = "",
+  detail,
 }: {
   field: Exclude<SortKey, Category | BenchKey>;
   sortKey: SortKey;
@@ -757,6 +809,8 @@ function SortHeader({
   onSort: (k: SortKey) => void;
   align?: "left" | "right";
   className?: string;
+  // Extra sentence appended to the definition (e.g. live fit statistics).
+  detail?: string;
 }) {
   const def = FIELD_DEFS[field];
   const active = sortKey === field;
@@ -784,7 +838,7 @@ function SortHeader({
         </button>
         <FieldInfo
           fullName={def.fullName}
-          definition={def.definition}
+          definition={detail ? `${def.definition} ${detail}` : def.definition}
           url={def.url}
           align={align}
         />
