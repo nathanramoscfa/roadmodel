@@ -372,6 +372,18 @@ def _transform_swebench(url: str) -> str:
     return json.dumps(out, indent=None)
 
 
+# (subset, category) → top-N to keep. Categories chosen to match claims
+# actually cited in headline-benchmarks; expand if a new claim type appears
+# (e.g. "LMArena Vision Elo X"). Module-level because tests/test_sources_live.py
+# derives its expectations from it — a second copy of this list would drift.
+LMARENA_KEEP: dict[tuple[str, str], int] = {
+    ("text", "overall"): 60,
+    ("text", "coding"): 40,
+    ("webdev", "overall"): 40,
+    ("search", "overall"): 30,
+}
+
+
 def _transform_lmarena(url: str) -> str:
     """Read LMArena parquet snapshots and return a compact JSON view.
 
@@ -379,8 +391,9 @@ def _transform_lmarena(url: str) -> str:
     pull `webdev` and `search` from sibling paths because the existing
     `headline-benchmarks` strings cite all three (e.g. "LMArena Text Elo
     1503", "LMArena WebDev Elo 1570", "LMArena Search Elo 1205"). For
-    each (subset, category) pair we keep the latest publish date and
-    the top N models by rank — that covers the entire frontier cited
+    each (subset, category) pair we keep THAT PAIR's own latest publish
+    date — a subset does not republish every category on the same day —
+    and the top N models by rank — that covers the entire frontier cited
     in prompts while staying well under the prompt budget. pyarrow is
     lazy-imported so the rest of the pipeline doesn't pay the import
     cost when LMArena isn't being fetched.
@@ -389,15 +402,7 @@ def _transform_lmarena(url: str) -> str:
 
     import pyarrow.parquet as pq
 
-    # (subset, category) → top-N to keep. Categories chosen to match
-    # claims actually cited in headline-benchmarks; expand if a new
-    # claim type appears (e.g. "LMArena Vision Elo X").
-    keep: dict[tuple[str, str], int] = {
-        ("text", "overall"): 60,
-        ("text", "coding"): 40,
-        ("webdev", "overall"): 40,
-        ("search", "overall"): 30,
-    }
+    keep = LMARENA_KEEP
 
     base, _, _ = url.rpartition("/text/")
     subset_urls = {
@@ -418,14 +423,25 @@ def _transform_lmarena(url: str) -> str:
         rows = table.to_pylist()
         if not rows:
             continue
-        latest_date = max(r["leaderboard_publish_date"] for r in rows)
-        snapshot[subset_label] = latest_date
+        # Latest publish date PER (subset, category), not per subset. A subset
+        # does not always republish every category on the same day: on
+        # 2026-09-13 `webdev` published ONLY `image_to_webdev`, while its
+        # `overall` board last published on 2026-09-11. One latest date for the
+        # whole subset threw away every `overall` row and emitted the subset
+        # empty — silently, because an empty subset is not an error.
+        latest_by_category: dict[str, str] = {}
         for r in rows:
-            if r["leaderboard_publish_date"] != latest_date:
+            category, date = str(r["category"]), str(r["leaderboard_publish_date"])
+            if date > latest_by_category.get(category, ""):
+                latest_by_category[category] = date
+        for r in rows:
+            category = str(r["category"])
+            if str(r["leaderboard_publish_date"]) != latest_by_category[category]:
                 continue
-            limit = keep.get((subset_label, r["category"]))
+            limit = keep.get((subset_label, category))
             if limit is None or int(r["rank"]) > limit:
                 continue
+            snapshot[f"{subset_label}/{category}"] = latest_by_category[category]
             combined.append(
                 {
                     "subset": subset_label,
