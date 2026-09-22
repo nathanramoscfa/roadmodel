@@ -15,15 +15,15 @@ import { test, expect } from "@playwright/test";
 import { resolveRecommenderEngine } from "../lib/model-routing";
 import { env } from "../lib/env";
 
-test("signed-in + frontier gate on → GPT-5 mini frontier engine", () => {
+test("signed-in + frontier gate on → GPT-5.6 Luna frontier engine", () => {
   const e = resolveRecommenderEngine({
     profile: null,
     signedIn: true,
     frontierEnabled: true,
   });
-  expect(e.engine).toBe("gpt-5-mini");
+  expect(e.engine).toBe("gpt-5.6-luna");
   expect(e.provider).toBe("openai");
-  expect(e.force_provider).toBe("openai-gpt-5-mini");
+  expect(e.force_provider).toBe("openai-gpt-5.6-luna");
   expect(e.use_frontier).toBe(true);
 });
 

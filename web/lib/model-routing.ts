@@ -369,7 +369,7 @@ interface ResolveRecommenderEngineArgs {
 // completes the full cutover after the anon canary (ENGINE_OVERRIDES.recommend)
 // was verified in prod. max_tokens mirrors the service GPT-5 output cap;
 // use_frontier marks the audit row for the per-call cost ledger.
-const FRONTIER_RECOMMENDER_ENGINE = "gpt-5-mini";
+const FRONTIER_RECOMMENDER_ENGINE = "gpt-5.6-luna";
 const FRONTIER_RECOMMENDER_PROVIDER = "openai";
 
 // Recommender-surface entry point. Free engine (catalog-derived Flash) by

@@ -1,11 +1,16 @@
 # src/roadmodel/providers/openai.py
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from roadmodel.errors import ProviderCallError
 
 DEFAULT_MODEL = "gpt-5.4"
+
+
+# gpt-5.6 and later dropped the `minimal` reasoning rung; their floor is `low`.
+_NO_MINIMAL_RE = re.compile(r"^gpt-(?:5\.[6-9]|5\.\d\d|[6-9])")
 
 
 def _extract_output_text(response: object) -> str | None:
@@ -68,9 +73,13 @@ def recommend(
             kwargs["max_output_tokens"] = max_output_tokens
         # Cap reasoning on gpt-5* models so it doesn't eat the whole
         # max_output_tokens budget (see the note above). Default low; a
-        # thinking_budget of 0 selects minimal for the anon tier.
+        # thinking_budget of 0 selects the FLOOR of that model's ladder for the
+        # anon tier — `minimal` on the gpt-5.0-5.5 generation, `low` on the
+        # gpt-5.6 generation, which rejects `minimal` outright ("Unsupported
+        # value: 'minimal' is not supported with the 'gpt-5.6-luna' model").
         if model_id.startswith("gpt-5"):
-            kwargs["reasoning"] = {"effort": "minimal" if thinking_budget == 0 else "low"}
+            floor = "low" if _NO_MINIMAL_RE.match(model_id) else "minimal"
+            kwargs["reasoning"] = {"effort": floor if thinking_budget == 0 else "low"}
         response = client.responses.create(**kwargs)
         text = _extract_output_text(response)
         if text:

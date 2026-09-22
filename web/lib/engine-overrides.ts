@@ -53,11 +53,15 @@ export const ENGINE_OVERRIDES: {
   recommend?: string;
   roadmap?: string;
 } = {
-  // GPT-5-mini (eval-backed engine move). Pins the free/anon /recommend engine
-  // to gpt-5-mini (force_provider "openai-gpt-5-mini") — best instruction-
-  // adherence + ~3x cheaper with OpenAI automatic prefix caching. As of the
-  // 2026-07-19 full cutover the signed-in frontier also runs gpt-5-mini
-  // (FRONTIER_RECOMMENDER_ENGINE in model-routing.ts), so both tiers now share
-  // this engine; this override keeps the anon path pinned independently.
-  recommend: "gpt-5-mini",
+  // GPT-5.6 Luna (eval-backed engine move, 2026-09-22 — supersedes gpt-5-mini).
+  // Pins the free/anon /recommend engine to gpt-5.6-luna (force_provider
+  // "openai-gpt-5.6-luna"). The 12-probe differential: both engines parse 12/12
+  // with every structured field and rationale section present and no task leak,
+  // but gpt-5-mini demotes the Quality pick on cost grounds on the cost-bulk
+  // probe (0.92 no-demote) where Luna does not (1.00) — and Luna is ~40%
+  // cheaper per output token ($1.20 vs $2.00 per Mtok). The signed-in frontier
+  // uses the same engine (FRONTIER_RECOMMENDER_ENGINE in model-routing.ts);
+  // this override keeps the anon path pinned independently. Rollback: set this
+  // back to "gpt-5-mini" — its provider hint is still registered service-side.
+  recommend: "gpt-5.6-luna",
 };

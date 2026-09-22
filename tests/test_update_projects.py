@@ -33,6 +33,13 @@ def up() -> ModuleType:
     return mod
 
 
+@pytest.fixture(autouse=True)
+def _no_real_vscode(up: ModuleType, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Agent detection must not depend on whether the DEVELOPER has VS Code
+    installed; tests that care about the vscode lane patch this themselves."""
+    monkeypatch.setattr(up, "_vscode_user_dirs", lambda: [])
+
+
 def _fake_venv(project: Path, name: str) -> Path:
     """A venv-shaped directory with a python launcher where the script looks."""
     prefix = project / name
@@ -440,3 +447,157 @@ def test_cursor_and_opencode_detection_and_install(
     line = up.refresh_commands()[1]
     assert "codex/cursor unchanged" in line and "opencode installed" in line
     assert (home / ".config" / "opencode" / "commands" / "roadmap-step.md").exists()
+
+
+# --------------------------------------------------------------------------
+# One command convention on every agent (Codex prompts, VS Code prompt files)
+# --------------------------------------------------------------------------
+
+_SOURCE_COMMAND = """---
+description: Write the phase N roadmap (usage: /roadmap-phase 6 [output-path])
+---
+
+Write the Phase "$ARGUMENTS" roadmap for this project.
+"""
+
+
+def test_codex_prompt_keeps_the_placeholder_codex_expands(up: ModuleType) -> None:
+    """Codex expands $ARGUMENTS / $1..$9 in a prompt file, so the same typed
+    arguments reach the same place as in Claude Code — unlike a skill, where
+    the text merely arrives as context."""
+    out = up.port_codex_prompt("roadmap-phase", _SOURCE_COMMAND)
+    assert out.startswith("---\n")
+    assert 'description: "Write the phase N roadmap' in out
+    assert "argument-hint:" in out  # the source takes arguments
+    assert "$ARGUMENTS" in out
+    # No `name:` key: Codex keys a prompt by its filename.
+    assert "\nname:" not in out
+
+
+def test_codex_prompt_omits_the_hint_when_there_are_no_arguments(up: ModuleType) -> None:
+    out = up.port_codex_prompt("roadmap-project", "---\ndescription: Write it\n---\n\nGo.\n")
+    assert "argument-hint:" not in out
+
+
+def test_vscode_prompt_file_shape(up: ModuleType) -> None:
+    """VS Code prompt files have no placeholder — what the user types after
+    /name is appended — so the port says that in words instead of leaving a
+    token that would render literally."""
+    out = up.port_vscode("roadmap-phase", _SOURCE_COMMAND)
+    assert out.startswith("---\nname: roadmap-phase\n")
+    assert "agent: agent" in out
+    assert "$ARGUMENTS" not in out
+    assert "the text after the command" in out
+
+
+def test_detect_agents_reports_vscode_only_when_a_user_dir_exists(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(up, "_vscode_user_dirs", lambda: [])
+    assert "vscode" not in up.detect_agents()
+    monkeypatch.setattr(up, "_vscode_user_dirs", lambda: [tmp_path / "User"])
+    assert "vscode" in up.detect_agents()
+
+
+# --------------------------------------------------------------------------
+# Runtime parity: same MCP tools, a calibrated effort, on every agent
+# --------------------------------------------------------------------------
+
+_ARGV = ["/Users/x/.config/roadmodel/mcp-launch.sh"]
+
+
+def test_codex_sync_adds_mcp_and_calibrates_a_pinned_top_rung(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import json as _json
+
+    codex = tmp_path / ".codex"
+    codex.mkdir()
+    (codex / "config.toml").write_text(
+        'model = "gpt-5.3-codex"\nmodel_reasoning_effort = "xhigh"\n\n'
+        '[mcp_servers.railway]\ncommand = "railway"\nargs = ["mcp"]\n',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(up, "CODEX_DIR", codex)
+    lines = up._sync_codex(_ARGV, calibrate=True, dry_run=False)
+    text = (codex / "config.toml").read_text(encoding="utf-8")
+
+    assert "[mcp_servers.roadmodel]" in text
+    assert _json.dumps(_ARGV[0]) in text
+    assert 'model_reasoning_effort = "medium"' in text
+    assert 'model = "gpt-5.3-codex"' in text  # untouched
+    assert "[mcp_servers.railway]" in text  # untouched
+    assert any("effort: xhigh -> medium" in ln for ln in lines)
+
+    # Idempotent: a second run changes nothing and says so.
+    again = up._sync_codex(_ARGV, calibrate=True, dry_run=False)
+    assert (codex / "config.toml").read_text(encoding="utf-8") == text
+    assert any("mcp: present" in ln for ln in again)
+    assert any("medium (left alone)" in ln for ln in again)
+
+
+def test_codex_sync_leaves_a_deliberate_lower_effort_alone(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    codex = tmp_path / ".codex"
+    codex.mkdir()
+    (codex / "config.toml").write_text('model_reasoning_effort = "low"\n', encoding="utf-8")
+    monkeypatch.setattr(up, "CODEX_DIR", codex)
+    up._sync_codex(None, calibrate=True, dry_run=False)
+    assert 'model_reasoning_effort = "low"' in (codex / "config.toml").read_text(encoding="utf-8")
+
+
+def test_json_mcp_sync_preserves_the_rest_of_the_file(up: ModuleType, tmp_path: Path) -> None:
+    import json as _json
+
+    settings = tmp_path / "settings.json"
+    settings.write_text(
+        _json.dumps({"theme": "dark", "mcpServers": {"other": {}}}), encoding="utf-8"
+    )
+    up._sync_json_mcp(settings, _ARGV, "gemini", dry_run=False)
+    data = _json.loads(settings.read_text(encoding="utf-8"))
+    assert data["theme"] == "dark"
+    assert set(data["mcpServers"]) == {"other", "roadmodel"}
+    assert data["mcpServers"]["roadmodel"]["command"] == _ARGV[0]
+    assert up._sync_json_mcp(settings, _ARGV, "gemini", dry_run=False) == ["gemini mcp: present"]
+
+
+def test_claude_effort_calibration_touches_only_a_pinned_default(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import json as _json
+
+    claude = tmp_path / ".claude"
+    claude.mkdir()
+    settings = claude / "settings.json"
+    settings.write_text(
+        _json.dumps({"effortLevel": "max", "maxEffortLevel": "xhigh", "model": "opus[1m]"}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(up, "CLAUDE_DIR", claude)
+    lines = up._sync_claude_effort(calibrate=True, dry_run=False)
+    data = _json.loads(settings.read_text(encoding="utf-8"))
+    assert data["effortLevel"] == "high"
+    assert data["maxEffortLevel"] == "xhigh"  # a CEILING is not a pinned default
+    assert data["model"] == "opus[1m]"
+    assert lines == ["claude effort: max -> high"]
+    assert up._sync_claude_effort(calibrate=True, dry_run=False) == [
+        "claude effort: high (left alone)"
+    ]
+
+
+def test_runtime_sync_is_a_no_op_under_dry_run(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import json as _json
+
+    claude = tmp_path / ".claude"
+    claude.mkdir()
+    (claude / "settings.json").write_text(_json.dumps({"effortLevel": "max"}), encoding="utf-8")
+    monkeypatch.setattr(up, "CLAUDE_DIR", claude)
+    monkeypatch.setattr(up, "_roadmodel_mcp_command", lambda: None)
+    lines = up.sync_agent_runtime(dry_run=True, agents=["claude"], calibrate=True)
+    assert lines == ["claude effort: max -> high"]
+    assert (
+        _json.loads((claude / "settings.json").read_text(encoding="utf-8"))["effortLevel"] == "max"
+    )
