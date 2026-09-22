@@ -188,7 +188,7 @@ export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
     label: "AA Index",
     fullName: "Artificial Analysis Intelligence Index",
     definition:
-      "The one published composite number: Artificial Analysis's index over ten evaluations (v4.3: Humanity's Last Exam, GPQA Diamond, SciCode, Terminal-Bench, τ²-bench, AA-LCR, IFBench, AA-Omniscience, …), independently measured on a 0–100 scale. The closest thing to a single numeric rating — use it to separate models that share a letter. '—' means AA has not measured the model.",
+      "The one published composite number: Artificial Analysis's index over its evaluation suite, independently measured on a 0–100 scale. The closest thing to a single numeric rating — use it to separate models that share a letter. '—' means AA has not measured the model. Index versions are not comparable with each other; the snapshot this page carries is named below.",
     url: "https://artificialanalysis.ai/",
   },
   value: {
