@@ -117,7 +117,34 @@ def _col(header: list[str], *needles: str) -> int | None:
     return None
 
 
-def parse_pricing_table(md: str) -> list[dict[str, object]]:
+def _catalog_ids() -> set[str]:
+    """Model ids the catalog already carries (best-effort, offline). A page row
+    is only NEWS when the catalog has no model for it — grok-4.5 is carried via
+    the aggregator mirror without being in NAME_TO_ID, and flagging it every run
+    would train the reader to ignore the flag."""
+    catalog = Path(__file__).resolve().parent.parent / "docs" / "catalog.json"
+    try:
+        data = json.loads(catalog.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return set()
+    return {str(m.get("id", "")) for m in data.get("models", []) if isinstance(m, dict)}
+
+
+def _slug(name: str) -> str:
+    return re.sub(r"[^a-z0-9.]+", "-", name.strip().lower()).strip("-")
+
+
+DECLINED: dict[str, str] = {
+    # Rows xAI prices that the catalog deliberately does not carry. Each entry
+    # states why, so the discovery flag above stays signal rather than noise.
+    "Grok 3": "superseded by the Grok 4 line",
+    "Grok 3 Mini": "superseded by the Grok 4 line",
+    "Grok 2": "retired",
+    "Grok 2 Vision": "retired",
+}
+
+
+def parse_pricing_table(md: str) -> tuple[list[dict[str, object]], list[str]]:
     """Parse the token-pricing table (header ``Input / 1M tokens`` … ``Output /
     1M tokens``); the image / audio tables (header ``Model | Cost``) are ignored.
     """
@@ -149,11 +176,20 @@ def parse_pricing_table(md: str) -> list[dict[str, object]]:
 
     models: list[dict[str, object]] = []
     seen: set[str] = set()
+    unexpected: set[str] = set()
+    known_ids = _catalog_ids()
     for row in data:
         if not row:
             continue
         name = _FOOTNOTE_RE.sub("", row[0]).strip()
         mid = NAME_TO_ID.get(name)
+        if mid is None and name and name not in DECLINED and _slug(name) not in known_ids:
+            # DISCOVERY: a priced row the catalog neither maps nor declines is
+            # a model xAI ships that roadmodel has never heard of. Reported in
+            # unexpected_slugs (the G1 contract's field) so the catalog cron
+            # adds or declines it — Cursor listing a model is not the only way
+            # one can exist (see gpt-6-astra, update/prompt.md).
+            unexpected.add(name)
         if mid is None or mid in seen:
             continue
         in_price = _dollars(row[in_col]) if in_col < len(row) else None
@@ -173,7 +209,7 @@ def parse_pricing_table(md: str) -> list[dict[str, object]]:
         )
     if not models:
         raise ExtractError("no mapped xAI models found in the token-pricing table")
-    return models
+    return models, sorted(unexpected)
 
 
 def canonical_facts(models: list[dict[str, object]]) -> str:
@@ -186,7 +222,14 @@ def canonical_facts(models: list[dict[str, object]]) -> str:
 
 def build_snapshot(md: str, *, source_url: str) -> dict[str, object]:
     verify_anchors(md)
-    models = parse_pricing_table(md)
+    models, unexpected = parse_pricing_table(md)
+    if unexpected:
+        print(
+            "extract_xai_catalog: DISCOVERY — the pricing table prices model(s) "
+            f"the catalog does not carry: {unexpected}. They are reported in "
+            "unexpected_slugs for the catalog cron to add or decline.",
+            file=sys.stderr,
+        )
 
     found = {str(m["id"]) for m in models}
     missing = sorted(set(NAME_TO_ID.values()) - found)
@@ -218,7 +261,7 @@ def build_snapshot(md: str, *, source_url: str) -> dict[str, object]:
         "overlay_mode": "whole-element",
         "models": models,
         "slug_to_id": {str(m["slug"]): str(m["id"]) for m in models},
-        "unexpected_slugs": [],
+        "unexpected_slugs": unexpected,
         "missing_mapped_models": missing,
         "section_sha256": hashlib.sha256(facts.encode("utf-8")).hexdigest(),
     }

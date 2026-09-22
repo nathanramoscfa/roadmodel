@@ -1389,3 +1389,17 @@ def test_prompt_defers_supersession_when_the_successor_is_unavailable() -> None:
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+def test_xai_extractor_flags_only_models_the_catalog_lacks() -> None:
+    """Discovery has to stay signal: a row whose model the catalog already
+    carries (grok-4.5 rides the aggregator mirror without being in NAME_TO_ID)
+    must NOT be flagged, or the flag gets ignored."""
+    mod = _load("extract_xai_catalog")
+    known = mod._catalog_ids()
+    assert known, "the committed catalog should be readable"
+    snap = json.loads(REAL_XAI_CATALOG.read_text())
+    for name in snap["unexpected_slugs"]:
+        assert mod._slug(name) not in known, f"{name} is already in the catalog"
+        assert name not in mod.DECLINED
+    assert mod._slug("Grok 4.5") == "grok-4.5"

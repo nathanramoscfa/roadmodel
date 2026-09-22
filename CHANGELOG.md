@@ -82,6 +82,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The `/recommend` jurisdiction filter had stopped filtering.** The edge's
+  cn-jurisdiction guard was a hardcoded pair naming `kimi-k2.5` — a model
+  retired in favour of K2.7 / K3 — so for a user who excludes `cn`, every
+  current Chinese-jurisdiction model (DeepSeek, GLM, Kimi) passed the edge
+  untouched. It is now derived from the catalog (`modelsInJurisdiction`), ids
+  and display names both, and the E2E mock and its tests derive the model they
+  assert on the same way, so a catalog refresh can never strand them again.
+- **xAI joins the model-discovery lane.** `extract_xai_catalog` reports priced
+  rows the catalog neither maps nor declines, skipping any whose slug the
+  catalog already carries (grok-4.5 rides the aggregator mirror without being
+  in the name map, and flagging it every run would train the reader to ignore
+  the flag). Today it surfaces `grok-4.7` and the grok-4.20 / grok-build rows.
+
 - **A new OpenAI model could not reach the catalog (`gpt-6-astra`).** Model
   DISCOVERY had exactly one lane — the Cursor pricing page — and the
   provider-direct snapshots were price-only overlays keyed by a hand-written

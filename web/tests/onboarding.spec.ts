@@ -4,12 +4,28 @@
 // test harness (see web/lib/auth.ts) because CI runs against placeholder
 // Supabase credentials and cannot drive a live magic-link round-trip.
 
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import { test, expect } from "@playwright/test";
 
 import {
   resetE2eState,
   signInViaCallback,
 } from "./fixtures/onboarding-auth";
+
+// The cn-jurisdiction model the mock picks, derived from the same catalog the
+// app reads, by the same rule (modelNamesInJurisdiction: names, sorted, first)
+// — a literal here ("Kimi K2.5") outlived the model and stranded these tests
+// when the catalog moved on.
+const CN_CATALOG = JSON.parse(
+  readFileSync(path.join(process.cwd(), "data", "catalog.json"), "utf8"),
+) as { models: { id: string; name: string; jurisdiction?: string }[] };
+const CN_PICK =
+  CN_CATALOG.models
+    .filter((m) => m.jurisdiction === "cn")
+    .map((m) => m.name)
+    .sort()[0] ?? "Kimi K3";
 
 test.describe.configure({ mode: "serial" });
 
@@ -142,10 +158,11 @@ test("forwards held subscriptions + enabled API providers to the recommender (Ph
   await page.getByRole("button", { name: /Submit/i }).click();
   // The page now renders three priority cards; the forwarded funding is echoed
   // in every card's rationale. The default jurisdictions include cn (#445), so
-  // the mock's cn-precedence pick (Kimi K2.5) fills every card; scope to the
+  // the mock's cn-precedence pick (a cn model from the catalog) fills every
+  // card; scope to the
   // Cost card so the "Why this model" region is unambiguous.
   const card = page.locator('[data-priority="cheap"]');
-  await expect(card.getByText(/Kimi K2\.5/i)).toBeVisible();
+  await expect(card.getByText(CN_PICK)).toBeVisible();
   // The edge forwards the user's declared funding to the service; the E2E mock
   // echoes it back, proving subscriptions + api_providers reach the upstream
   // (where the real service builds the per-user user-context that biases model
@@ -234,7 +251,7 @@ test("already-onboarded user signing in again lands on /", async ({
   await expect(page).not.toHaveURL(/\/onboarding/);
 });
 
-test("restrict path excludes Kimi K2.5 from recommendations", async ({
+test("restrict path excludes cn-jurisdiction models from recommendations", async ({
   page,
 }) => {
   await signInViaCallback(page);
@@ -250,13 +267,13 @@ test("restrict path excludes Kimi K2.5 from recommendations", async ({
   await page.getByRole("button", { name: /Submit/i }).click();
   // Claude 4.5 Haiku is a recommended pick.
   await expect(page.getByText(/Claude 4\.5 Haiku/i).first()).toBeVisible();
-  // Kimi K2.5 is jurisdiction-excluded EVERYWHERE — not a pick and not a
-  // cost-table alternative (the edge filter now matches the cost row's
+  // The cn pick is jurisdiction-excluded EVERYWHERE — not a pick and not a
+  // cost-table alternative (the edge filter matches the cost row's
   // `model_name`, not just `model`).
-  await expect(page.getByText(/Kimi K2\.5/i)).toHaveCount(0);
+  await expect(page.getByText(CN_PICK)).toHaveCount(0);
 });
 
-test("default path (cn included) surfaces Kimi K2.5", async ({ page }) => {
+test("default path (cn included) surfaces the cn pick", async ({ page }) => {
   await signInViaCallback(page);
   // No jurisdiction change: the default now INCLUDES cn (#445), so a plain
   // save-through allows Chinese-jurisdiction models.
@@ -266,10 +283,10 @@ test("default path (cn included) surfaces Kimi K2.5", async ({ page }) => {
   await page.goto("/recommend");
   await page.getByPlaceholder(/Input the prompt/i).fill("allow cn");
   await page.getByRole("button", { name: /Submit/i }).click();
-  // With cn allowed the mock returns Kimi K2.5 for every priority, so the model
-  // appears as a pick in all three matrix columns — assert the first is visible.
+  // With cn allowed the mock returns the cn pick for every priority, so the
+  // model appears in all three matrix columns — assert the first is visible.
   await expect(
-    page.locator("[data-priority]").filter({ hasText: /Kimi K2\.5/i }).first(),
+    page.locator("[data-priority]").filter({ hasText: CN_PICK }).first(),
   ).toBeVisible();
 });
 

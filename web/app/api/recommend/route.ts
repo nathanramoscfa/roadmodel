@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server";
 import { writeAudit, type AuditOutcome } from "@/lib/audit";
 import { getModelAvailability } from "@/lib/availability";
+import { modelsInJurisdiction } from "@/lib/catalog-models";
 import { getServerSession } from "@/lib/auth";
 import { isE2eAuthEnabled } from "@/lib/e2e-mode";
 import {
@@ -118,10 +119,11 @@ const LADDER_TIER_TO_PRIORITY: ReadonlyArray<
   ["quality", "best"],
 ];
 
-const CN_JURISDICTION_MODELS = new Set([
-  "kimi-k2.5",
-  "Kimi K2.5",
-]);
+// Derived from the catalog at build time (ids AND display names), so a model
+// that enters or leaves the cn jurisdiction is filtered correctly without a
+// code change. The previous hardcoded pair named a retired model, which left
+// every current cn model unfiltered for a user who excludes cn.
+const CN_JURISDICTION_MODELS = modelsInJurisdiction("cn");
 
 interface RecommenderPayload {
   model?: string;
