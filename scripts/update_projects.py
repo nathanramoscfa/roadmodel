@@ -53,6 +53,14 @@ CONFIG_DIR = Path.home() / ".config" / "roadmodel"
 DEFAULT_PROJECTS_FILE = CONFIG_DIR / "projects.txt"
 CLAUDE_DIR = Path.home() / ".claude"
 GEMINI_DIR = Path.home() / ".gemini"  # Gemini CLI: commands/<name>.toml -> /<name>
+# Antigravity (the Gemini CLI's successor) shares ~/.gemini but uses its OWN
+# layout underneath: a customization root at ~/.gemini/config holding
+# skills/<name>/SKILL.md (each one also a first-class /<name> slash command)
+# and mcp_config.json. The legacy commands/*.toml are invisible to it.
+ANTIGRAVITY_STATE_DIR = GEMINI_DIR / "antigravity-cli"  # presence marks an `agy` install
+ANTIGRAVITY_CONFIG_DIR = GEMINI_DIR / "config"
+ANTIGRAVITY_SKILLS_DIR = ANTIGRAVITY_CONFIG_DIR / "skills"
+ANTIGRAVITY_MCP = ANTIGRAVITY_CONFIG_DIR / "mcp_config.json"
 CODEX_DIR = Path.home() / ".codex"  # presence marks a Codex install
 AGENTS_SKILLS_DIR = (
     Path.home() / ".agents" / "skills"
@@ -79,7 +87,7 @@ def _vscode_user_dirs() -> list[Path]:
     return [r / "User" for r in roots if (r / "User").is_dir()]
 
 
-AGENTS = ("claude", "gemini", "codex", "cursor", "opencode", "vscode")
+AGENTS = ("claude", "gemini", "antigravity", "codex", "cursor", "opencode", "vscode")
 SKILLS_CONSUMERS = ("codex", "cursor")  # both read ~/.agents/skills/<name>/SKILL.md
 VENV_DIRS = (".venv", "venv", "env")
 WINDOWS = os.name == "nt"
@@ -445,6 +453,31 @@ def port_gemini(name: str, body: str) -> str:
     )
 
 
+def port_antigravity(name: str, body: str) -> str:
+    """Antigravity skill (``~/.gemini/config/skills/<name>/SKILL.md``). Skills
+    there are both model-invocable AND first-class slash commands, so the
+    operator types the same ``/roadmap-phase 1`` as in Claude Code — but there
+    is nothing that expands a placeholder: the arguments arrive as message
+    text.
+
+    ``$ARGUMENTS`` therefore becomes a visible ``<arguments>`` slot rather than
+    a prose substitution, which a mid-sentence placeholder needs: "Write the
+    Phase <arguments> roadmap" reads as a template, where "Write the Phase the
+    text after the command roadmap" reads as a typo. The appended note says
+    what fills the slot."""
+    description, text = _split_frontmatter(body)
+    has_args = "$ARGUMENTS" in text
+    text = text.replace('"$ARGUMENTS"', "<arguments>").replace("$ARGUMENTS", "<arguments>")
+    if has_args:
+        text = text.rstrip() + (
+            f"\n\n`<arguments>` above is the text typed after the command. If this "
+            f"request already carries it (for example `/{name} 1`), use that "
+            f"verbatim and do not ask for it again."
+        )
+    desc = description.replace('"', "'")
+    return f'---\nname: {name}\ndescription: "{desc}"\n---\n{text.rstrip()}\n'
+
+
 def port_codex(name: str, body: str) -> str:
     """Codex skill (SKILL.md). Skills take no placeholders: the text after
     ``$name`` reaches the model as context, so say so where the Claude Code
@@ -523,8 +556,13 @@ def detect_agents() -> list[str]:
     """Agents present on this machine. Claude Code is assumed (this script
     ships with its commands); the others only if their config dir exists."""
     found = ["claude"]
-    if GEMINI_DIR.is_dir():
+    # ~/.gemini alone no longer implies the legacy CLI — Antigravity creates it
+    # too. Key off the binary (a CLI not on PATH cannot be run anyway), or off
+    # a commands dir a previous run already installed into.
+    if shutil.which("gemini") or (GEMINI_DIR / "commands").is_dir():
         found.append("gemini")
+    if shutil.which("agy") or ANTIGRAVITY_STATE_DIR.is_dir():
+        found.append("antigravity")
     if CODEX_DIR.is_dir() or AGENTS_SKILLS_DIR.is_dir():
         found.append("codex")
     if CURSOR_DIR.is_dir():
@@ -703,8 +741,11 @@ def _sync_json_mcp(path: Path, argv: Optional[list[str]], label: str, dry_run: b
     ``mcpServers`` map (Gemini CLI, OpenCode), leaving everything else intact."""
     if not argv:
         return [f"{label} mcp: SKIPPED (nothing to mirror)"]
+    raw = path.read_text(encoding="utf-8") if path.exists() else ""
     try:
-        data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+        # Antigravity ships mcp_config.json as a ZERO-BYTE file; an empty file
+        # means "no servers", not "corrupt".
+        data = json.loads(raw) if raw.strip() else {}
     except ValueError:
         return [f"{label} mcp: SKIPPED (unparseable {path})"]
     if not isinstance(data, dict):
@@ -762,6 +803,8 @@ def sync_agent_runtime(
         report += _sync_json_mcp(GEMINI_DIR / "settings.json", argv, "gemini", dry_run)
         report += _sync_gemini_settings(GEMINI_DIR / "settings.json", dry_run)
         report += _sync_gemini_trust(projects or [], dry_run)
+    if "antigravity" in agents:
+        report += _sync_json_mcp(ANTIGRAVITY_MCP, argv, "antigravity", dry_run)
     if "opencode" in agents:
         report += _sync_json_mcp(OPENCODE_DIR / "opencode.json", argv, "opencode", dry_run)
     if not report:
@@ -953,8 +996,9 @@ def sync_project_parity(project: Path, dry_run: bool = False) -> list[str]:
 def refresh_commands(dry_run: bool = False, agents: Optional[list[str]] = None) -> list[str]:
     """Re-download docs/claude-commands/*.md and install them for every agent
     on this machine: Claude Code as-is (mirroring any ~/.claude/skills copy),
-    Gemini CLI as TOML custom commands, Codex + Cursor as ~/.agents skills,
-    OpenCode as Markdown commands. Returns report lines."""
+    Gemini CLI as TOML custom commands, Antigravity as ~/.gemini/config
+    skills, Codex + Cursor as ~/.agents skills, OpenCode as Markdown commands.
+    Returns report lines."""
     agents = agents or detect_agents()
     report: list[str] = [f"agents: {', '.join(agents)}"]
     for name in COMMANDS:
@@ -982,6 +1026,9 @@ def refresh_commands(dry_run: bool = False, agents: Optional[list[str]] = None) 
             else:
                 target = GEMINI_DIR / "commands" / f"{name}.toml"
                 states.append(f"gemini {_install(target, toml, dry_run)}")
+        if "antigravity" in agents:
+            target = ANTIGRAVITY_SKILLS_DIR / name / "SKILL.md"
+            states.append(f"antigravity {_install(target, port_antigravity(name, body), dry_run)}")
         if "codex" in agents:
             # Skills are model-invocable; a prompt is what makes the SAME slash
             # command the operator types in Claude Code work here too.
