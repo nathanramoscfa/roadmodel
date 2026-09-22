@@ -92,6 +92,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   included), so the selector can no longer recommend a model the operator's
   funding cannot reach. The Codex tracker cron's anti-revert list protects the
   split.
+- **Google joins the model-discovery lane (#652).** `extract_google_catalog`
+  now reports Gemini TEXT models the pricing page prices that the catalog
+  neither maps nor declines, filtering page furniture ("Gemini Developer API
+  pricing") and non-text models (image / video / transcribe / embedding) so the
+  flag stays signal. Today it surfaces `Gemini 3.1 Flash-Lite`,
+  `Gemini 3.5 Flash-Lite` and `Gemini 2.5 Computer Use`. Groq is now the only
+  lane without discovery — its snapshot is a static model list rather than a
+  scrape, so it needs its own pass; #652 stays open for that alone.
 
 - **A Codex config pinned to a `*-codex` model is dead on a ChatGPT account.**
   Codex answers `400 … "The 'gpt-5.3-codex' model is not supported when using

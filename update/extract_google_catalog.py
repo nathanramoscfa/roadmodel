@@ -132,6 +132,63 @@ def _model_id_for(table: Tag) -> str | None:
     return None
 
 
+DECLINED: dict[str, str] = {
+    # Priced sections the catalog deliberately does not carry, with the reason,
+    # so the discovery flag below stays signal. Image / video / audio / embedding
+    # models are out of scope for a text-model catalog.
+    "Gemini 2.5 Pro": "superseded by Gemini 3.x",
+    "Gemini 2.0 Flash": "superseded by Gemini 3.x",
+    "Gemini 2.0 Flash-Lite": "superseded by Gemini 3.x",
+    "Gemini 2.5 Flash-Lite": "superseded by Gemini 3.x",
+    "Gemini 1.5 Pro": "retired",
+    "Gemini 1.5 Flash": "retired",
+}
+_NON_TEXT_RE = re.compile(
+    r"\b(image|imagen|veo|video|audio|tts|speech|transcribe|embedding|embed|live|"
+    r"nano banana|robotics)\b",
+    re.IGNORECASE,
+)
+# A model heading names a version ("Gemini 3.1 Flash-Lite"); page furniture does
+# not ("Gemini Developer API pricing").
+_MODEL_HEADING_RE = re.compile(r"^Gemini \d")
+
+
+def _catalog_ids() -> set[str]:
+    """Model ids the catalog already carries (best-effort, offline) — a section
+    whose model is carried under another name is not news."""
+    catalog = Path(__file__).resolve().parent.parent / "docs" / "catalog.json"
+    try:
+        data = json.loads(catalog.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return set()
+    return {str(m.get("id", "")) for m in data.get("models", []) if isinstance(m, dict)}
+
+
+def _slug(name: str) -> str:
+    return re.sub(r"[^a-z0-9.]+", "-", name.strip().lower()).strip("-")
+
+
+def discover_unmapped(soup: BeautifulSoup) -> list[str]:
+    """Gemini TEXT models the pricing page prices that the catalog neither maps
+    (``NAME_TO_ID``) nor declines. This is the discovery lane Cursor cannot
+    provide — a model Google ships that never reaches Cursor's page would
+    otherwise be invisible (see gpt-6-astra, update/prompt.md)."""
+    known = _catalog_ids()
+    found: set[str] = set()
+    for heading in soup.find_all(["h1", "h2", "h3"]):
+        if not isinstance(heading, Tag):
+            continue
+        name = _PREVIEW_RE.sub("", heading.get_text(" ", strip=True)).strip()
+        if not _MODEL_HEADING_RE.match(name):
+            continue
+        if name in NAME_TO_ID or name in DECLINED or _NON_TEXT_RE.search(name):
+            continue
+        if _slug(name) in known:
+            continue
+        found.add(name)
+    return sorted(found)
+
+
 def parse_pricing(soup: BeautifulSoup) -> list[dict[str, object]]:
     models: list[dict[str, object]] = []
     seen: set[str] = set()
@@ -187,6 +244,14 @@ def build_snapshot(html: str, *, source_url: str) -> dict[str, object]:
     verify_anchors(html)
     soup = BeautifulSoup(html, "html.parser")
     models = parse_pricing(soup)
+    unexpected = discover_unmapped(soup)
+    if unexpected:
+        print(
+            "extract_google_catalog: DISCOVERY — the pricing page prices Gemini "
+            f"text model(s) the catalog does not carry: {unexpected}. They are "
+            "reported in unexpected_slugs for the catalog cron to add or decline.",
+            file=sys.stderr,
+        )
 
     found = {str(m["id"]) for m in models}
     missing = sorted(set(NAME_TO_ID.values()) - found)
@@ -218,7 +283,7 @@ def build_snapshot(html: str, *, source_url: str) -> dict[str, object]:
         "overlay_mode": "price-only",
         "models": models,
         "slug_to_id": {str(m["slug"]): str(m["id"]) for m in models},
-        "unexpected_slugs": [],
+        "unexpected_slugs": unexpected,
         "missing_mapped_models": missing,
         "section_sha256": hashlib.sha256(facts.encode("utf-8")).hexdigest(),
     }
