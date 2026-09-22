@@ -418,3 +418,47 @@ test("sorting a category orders by letter, then AA Index", async ({ page }) => {
     }
   }
 });
+
+test("the Score explainer draws the fit for a tier and says what the band means", async ({ page }) => {
+  await page.goto("/models");
+  const panel = page.getByTestId("score-explainer");
+  await panel.getByRole("group").first().isVisible().catch(() => {});
+  await panel.locator("summary").click();
+
+  const fit = fitScoreModel(
+    scored.map((m) => ({
+      price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m),
+      index: aaIndexFor(m),
+      tier: m.tier_cost,
+    })),
+  );
+  expect(fit).not.toBeNull();
+
+  // One point per measured model of the selected tier, each labelled with the
+  // same figure the table shows.
+  const tierOf = async () =>
+    await panel
+      .locator('[data-testid="score-explainer-tier"][aria-pressed="true"]')
+      .getAttribute("data-tier");
+  const selected = (await tierOf())!;
+  const inTier = scored.filter((m) => m.tier_cost === selected && aaIndexFor(m) !== null);
+  await expect(panel.getByTestId("score-explainer-point")).toHaveCount(inTier.length);
+  for (const m of inTier) {
+    const expected = formatScore(
+      scoreFor(fit, m.tier_cost, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), aaIndexFor(m)),
+    );
+    await expect(
+      panel.locator(`[data-testid="score-explainer-point"][data-model-id="${m.id}"]`),
+    ).toContainText(expected);
+  }
+
+  // The caption carries the live fit and the tie-band count, not typed figures.
+  await expect(panel).toContainText(`Fit over ${fit!.n} measured models`);
+  await expect(panel).toContainText("sit inside that band");
+
+  // Switching tier redraws with that tier's models.
+  const other = selected === "low" ? "medium" : "low";
+  await panel.locator(`[data-testid="score-explainer-tier"][data-tier="${other}"]`).click();
+  const otherCount = scored.filter((m) => m.tier_cost === other && aaIndexFor(m) !== null).length;
+  await expect(panel.getByTestId("score-explainer-point")).toHaveCount(otherCount);
+});

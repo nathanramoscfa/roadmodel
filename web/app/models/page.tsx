@@ -1,6 +1,7 @@
 import { BenchmarkReference } from "@/components/BenchmarkReference";
 import { CatalogLegend } from "@/components/CatalogLegend";
 import { ModelCatalog } from "@/components/ModelCatalog";
+import { ScoreExplainer } from "@/components/ScoreExplainer";
 import { getBenchmarkMeta, getCatalogGeneratedAt, getModelRows, getScoreFit } from "@/lib/catalog-models";
 
 export const metadata = {
@@ -35,6 +36,7 @@ export default function ModelsPage() {
 
       <div className="mt-10 space-y-8">
         <CatalogLegend />
+        <ScoreExplainer rows={models} fit={scoreFit} />
         <ModelCatalog
           models={models}
           generatedAt={generatedAt}

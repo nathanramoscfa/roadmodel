@@ -104,6 +104,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`/models` explains its own Score.** A new collapsible panel draws the fit:
+  for one cost tier at a time, every measured model as a point (blended price
+  on a log axis against the AA Intelligence Index), the tier's fitted price
+  line, and each model's Score as the vertical distance from its point to that
+  line — so "+6.7" reads as "6.7 index points more than this price usually
+  buys" rather than as a rank. The shaded band is ±1 residual σ and the caption
+  says how many of the tier's models sit inside it (today: all six Very High
+  models — those scores are a tie, not a ranking), which is the honest answer
+  to "why is Fable 5.1 +4.6 and Opus 5 +6.7?". The frontier ● is explained in
+  the same place as a catalog-wide statement, not a within-tier one. Everything
+  is computed from the same rows and fit the table uses.
+  `scripts/plot_score_model.py` renders the same figure offline with matplotlib
+  for docs and review.
 - **A scoring core in code: `roadmodel score` and the `score_candidates` MCP
   tool.** `roadmodel.scoring` ranks every (model, platform, effort) candidate
   deterministically — no engine call — as
