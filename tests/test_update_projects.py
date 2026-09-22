@@ -714,3 +714,29 @@ def test_parity_dry_run_writes_nothing(
     up.sync_project_parity(project, dry_run=True)
     assert not (project / "AGENTS.md").exists()
     assert not (project / up.AGENTS_MEMORY_REL).exists()
+
+
+def test_codex_model_pin_is_repaired_for_a_chatgpt_account(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Codex signed in with a ChatGPT account answers 400 for the `*-codex`
+    variants, so a config pinned to one is dead until someone runs it."""
+    codex = tmp_path / ".codex"
+    codex.mkdir()
+    (codex / "auth.json").write_text("{}", encoding="utf-8")
+    (codex / "config.toml").write_text(
+        'model = "gpt-5.3-codex"\nmodel_reasoning_effort = "medium"\n', encoding="utf-8"
+    )
+    monkeypatch.setattr(up, "CODEX_DIR", codex)
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    lines = up._sync_codex(None, calibrate=True, dry_run=False)
+    text = (codex / "config.toml").read_text(encoding="utf-8")
+    assert f'model = "{up.CODEX_CHATGPT_DEFAULT}"' in text
+    assert any("ChatGPT sign-in" in ln for ln in lines)
+    # Idempotent, and an API-key setup (where the variants still work) is left alone.
+    assert not any("codex model:" in ln for ln in up._sync_codex(None, True, False))
+    (codex / "config.toml").write_text('model = "gpt-5.3-codex"\n', encoding="utf-8")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    up._sync_codex(None, calibrate=True, dry_run=False)
+    assert 'model = "gpt-5.3-codex"' in (codex / "config.toml").read_text(encoding="utf-8")

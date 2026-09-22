@@ -552,6 +552,11 @@ CALIBRATED_EFFORT = {
     "codex": "medium",  # ~/.codex/config.toml model_reasoning_effort (tops at xhigh)
 }
 TOP_RUNGS = {"claude": {"max", "xhigh"}, "codex": {"xhigh"}}
+# Codex signed in with a ChatGPT account cannot run the `*-codex` model
+# variants: it answers 400 "The 'gpt-5.3-codex' model is not supported when
+# using Codex with a ChatGPT account." A config pinned to one is silently dead
+# until someone runs it, so repair it to a model that account CAN run.
+CODEX_CHATGPT_DEFAULT = "gpt-5.6-terra"
 MCP_SERVER_NAME = "roadmodel"
 
 
@@ -600,6 +605,19 @@ def _sync_codex(argv: Optional[list[str]], calibrate: bool, dry_run: bool) -> li
         out.append("codex mcp: present")
     else:
         out.append("codex mcp: SKIPPED (no roadmodel entry in ~/.claude.json to mirror)")
+
+    # A ChatGPT-account sign-in (auth.json, no API key) cannot use the codex
+    # variants; leave an API-key setup alone, where they still work.
+    chatgpt_auth = (CODEX_DIR / "auth.json").exists() and not os.environ.get("OPENAI_API_KEY")
+    model_match = re.search(r'(?m)^model\s*=\s*"([^"]*)"', text)
+    if chatgpt_auth and model_match and model_match.group(1).endswith("-codex"):
+        broken = model_match.group(1)
+        text = (
+            text[: model_match.start()]
+            + f'model = "{CODEX_CHATGPT_DEFAULT}"'
+            + text[model_match.end() :]
+        )
+        out.append(f"codex model: {broken} -> {CODEX_CHATGPT_DEFAULT} (ChatGPT sign-in)")
 
     if calibrate:
         want = CALIBRATED_EFFORT["codex"]
