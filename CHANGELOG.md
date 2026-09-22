@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Effort and tier now calibrate to the task when a usage cap can bind
+  (quota-aware effort).** The selector's FLAT-FUNDING GATE — which holds the
+  frontier tier and defaults EFFORT to the top rung on every posture — used to
+  open whenever a subscription was "not reported exhausted", and the service
+  derived the `uncapped` consumption-headroom posture from any funded tier at
+  or above $200/mo. Both rested on the premise that a top-tier plan's cap
+  never binds. It does: a claude.ai Max ($200) operator running eight
+  projects concurrently with Fable 5.1 / Opus 5 at `Max` effort exhausted the
+  weekly pool with a day and a half left and fell onto pay-per-token usage
+  credits (2026-09-21), and Anthropic meters plan usage by model **and** by
+  effort level. Now:
+  - Gate condition (c) is the declared `Consumption headroom`: only
+    `uncapped` ("I never hit my limits") opens the gate; `capped`, no
+    declaration (the default), or a `Usage-pool status` of `tight` /
+    `exhausted` closes it. The `<thinking-context>` complexity ladder is then
+    the **final** EFFORT value, not a floor — the "raise to the top useful
+    rung" override fires only under `uncapped`. The `<objective>` worked
+    examples no longer anchor Claude Code at `EFFORT: Max`.
+  - The service's `auto` headroom resolves to `capped` on every tier;
+    `uncapped` is an explicit opt-in. Settings / docs copy describes the
+    control as task calibration, and the "Always maximum effort" hint says
+    it burns a weekly limit fastest.
+  - The front-loaded gate rules in `roadmodel.recommend` (single and ladder
+    modes) and the MCP roadmap header carry the `uncapped` condition inline,
+    and the roadmap header gains a CAPPED HEADROOM bullet so a phase roadmap
+    written for a capped operator no longer lands every step at `Max`.
+  - The four daily tracker crons' anti-revert clauses protect the new wording
+    (and would otherwise have reverted it).
+- **`Usage-pool status` — a new user-context section.** One row per
+  subscription pool (e.g. the claude.ai weekly pool, its 5-hour session pool,
+  the Fable 50% sub-cap, Codex) with `headroom` / `tight` / `exhausted` and
+  the reset time. `<access-selection>` Step C reads it: a `tight` pool is
+  kept for High-complexity work and routine tasks go to another funded pool
+  that reaches an adequate model; an `exhausted` pool's platforms rank as
+  pay-per-token (usage credits bill at list price) until the reset, or as
+  unfunded when the row says `overflow off`. This is the hook that turns a
+  second coding-agent subscription (Codex on ChatGPT, Antigravity on Google
+  AI) into an automatic fallback when the primary pool runs dry. The bundled
+  `user-context.example.md` and `docs/user-context-setup.md` document both
+  the posture and the table; `docs/model-selector.md` is regenerated.
+
+### Fixed
+
+- **`update/render_md.py` matched inline tag mentions.** `_section()` took
+  the first `<tag>…</tag>` match anywhere in the file, so a backticked
+  reference such as `` `<access-selection>` `` in the `<usage>` prose started
+  a section thousands of lines early; the committed `docs/model-selector.md`
+  had a "Selection Algorithm" section that began mid-sentence and was ~4x the
+  size of the real content. Tags are now anchored to the start of their own
+  line (as `validate_effort_conformance.py` already did); the regenerated
+  Markdown carries the same 49 model and 17 method cards in a quarter of the
+  lines.
+
 ### Added
 
 - **Numbers next to the letters on `/models`.** The catalog table gains an

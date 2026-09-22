@@ -217,12 +217,22 @@ contract.
     table (`EFFORT` / `THINKING` / `MAX MODE` / `ORCHESTRATION`); the
     per-mode block templates; and the RATIONALE `TASK:` / `PICK:` /
     `EFFORT:` segment spec.
-  - `<objective>`'s **FLAT-FUNDING GATE** — the rule that HOLDS the
-    capability tier and defaults EFFORT to the top useful rung on every
-    posture (including Cost) when the platform is subscription-funded,
-    the family is covered, and the budget is not exhausted. Do not
-    re-tighten it into a cost-down rule, and do not delete its
-    interaction with the `cheap` / `balanced` postures.
+  - `<objective>`'s **FLAT-FUNDING GATE** and **CONSUMPTION-HEADROOM
+    OVERRIDE** — the gate HOLDS the capability tier and defaults EFFORT
+    to the top useful rung on every posture (including Cost) when the
+    platform is subscription-funded, the family is covered, AND the
+    user-context declares `Consumption headroom: uncapped` (gate
+    condition (c)); a `capped` or undeclared posture (the default) or a
+    "Usage-pool status" of `tight` / `exhausted` CLOSES it, and the
+    `<thinking-context>` complexity ladder is then the FINAL effort
+    value (the "UNCAPPED OVERRIDE" bullet fires ONLY under `uncapped`).
+    Do not loosen the gate back to "open whenever the budget is not
+    exhausted", do not re-tighten it into an unconditional cost-down
+    rule, and do not delete its interaction with the `cheap` /
+    `balanced` postures.
+  - `<access-selection>`'s **USAGE-POOL STATUS** paragraph in Step C
+    (`headroom` / `tight` / `exhausted` re-ranking of a subscription-
+    funded method for the current window).
   - `<access-selection>`'s **Step A00** platform allowlist / denylist
     (`platforms.allowed` / `platforms.excluded`), including its
     PRECEDENCE paragraph over the "never hard-exclude an unfunded

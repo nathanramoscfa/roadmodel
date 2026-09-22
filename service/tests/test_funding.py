@@ -204,18 +204,33 @@ _HEADROOM_MARK = "**Consumption headroom:** uncapped"
 _FLAT_FUNDING_MARK = "**Flat funding (GATE OPEN):**"
 
 
-def test_headroom_auto_uncapped_for_top_tier_subscription() -> None:
-    """A funded top-consumer-band tier (>= $200/mo, e.g. claude.ai Max $200)
-    resolves `auto` to `uncapped`: the block is emitted and instructs MAX effort
-    on all three picks. Held subscriptions + uncapped headroom ALSO opens the
-    flat-funding gate, so the differentiation sentence must defer to the gate's
-    held tier ladder instead of claiming the picks differ by tier alone."""
+def test_headroom_auto_is_capped_even_for_top_tier_subscription() -> None:
+    """`auto` on a top-consumer-band tier (claude.ai Max $200) resolves to
+    `capped`, NOT `uncapped`: a $200 operator running several projects at Max
+    effort exhausted the weekly pool (2026-09-21), so tier price is not evidence
+    that effort is free. No headroom block, no open gate — the complexity ladder
+    governs both axes until the user opts in to `uncapped`."""
     text = funding.build_user_context(["claude-max"], [], catalog=_FAKE_CATALOG)
+    assert text is not None
+    assert "Consumption headroom" not in text
+    assert _FLAT_FUNDING_MARK not in text
+    assert "TOP USEFUL rung" not in text
+
+
+def test_headroom_explicit_uncapped_on_top_tier_opens_effort_and_gate() -> None:
+    """An explicit `uncapped` opt-in on a held subscription emits the block and
+    instructs MAX effort on all three picks. Held subscriptions + uncapped
+    headroom ALSO opens the flat-funding gate, so the differentiation sentence
+    must defer to the gate's held tier ladder instead of claiming the picks
+    differ by tier alone."""
+    text = funding.build_user_context(
+        ["claude-max"], [], consumption_headroom="uncapped", catalog=_FAKE_CATALOG
+    )
     assert text is not None
     assert _HEADROOM_MARK in text
     assert "HIGHEST USEFUL reasoning effort" in text
     assert "ALL THREE priorities INCLUDING Cost" in text
-    assert "never WHICH model is chosen" in text
+    assert "is the FLAT-FUNDING GATE's call" in text
     # Gate OPEN -> the tier ladder is held too, so the two blocks must not
     # contradict each other.
     assert "CAPABILITY TIER ALONE" not in text
@@ -236,7 +251,7 @@ def test_headroom_uncapped_without_subscription_keeps_tier_ladder() -> None:
 
 
 def test_headroom_auto_capped_for_lower_tier_subscription() -> None:
-    """A sub-$200 tier (Claude Pro at $20) stays `capped` under auto — no block,
+    """A sub-$200 tier (Claude Pro at $20) is `capped` under auto — no block,
     so effort keeps scaling down the ladder (the conservative default)."""
     text = funding.build_user_context(["anthropic-claude-pro"], [], catalog=_FAKE_CATALOG)
     assert text is not None
@@ -256,9 +271,9 @@ def test_headroom_explicit_uncapped_overrides_lower_tier() -> None:
     assert _HEADROOM_MARK in text
 
 
-def test_headroom_explicit_capped_overrides_top_tier() -> None:
-    """Explicit `capped` suppresses the block even on a $200 tier auto would
-    call uncapped — the user opted to conserve budget."""
+def test_headroom_explicit_capped_on_top_tier() -> None:
+    """Explicit `capped` on a $200 tier behaves exactly like `auto` — no block;
+    the user is conserving budget."""
     text = funding.build_user_context(
         ["claude-max"], [], consumption_headroom="capped", catalog=_FAKE_CATALOG
     )
@@ -271,7 +286,11 @@ def test_headroom_block_coexists_with_budget_block() -> None:
     present, and the headroom override sits alongside it (effort axis vs the
     model/tier axis)."""
     text = funding.build_user_context(
-        ["claude-max"], [], budget_priority="cheap", catalog=_FAKE_CATALOG
+        ["claude-max"],
+        [],
+        budget_priority="cheap",
+        consumption_headroom="uncapped",
+        catalog=_FAKE_CATALOG,
     )
     assert text is not None
     assert "**Budget priority:** cheap" in text
@@ -294,13 +313,16 @@ def test_effective_headroom_helper() -> None:
     tiers = _FAKE_CATALOG["subscription_tiers"]
     f = funding._effective_consumption_headroom
     assert f("uncapped", set(), tiers) == "uncapped"
+    assert f("UNCAPPED ", {"claude-max"}, tiers) == "uncapped"
     assert f("capped", {"claude-max"}, tiers) == "capped"
-    assert f("auto", {"claude-max"}, tiers) == "uncapped"
-    assert f(None, {"claude-max"}, tiers) == "uncapped"
+    # `auto` / absent resolve to `capped` regardless of tier price — the top
+    # consumer band no longer implies the cap never binds.
+    assert f("auto", {"claude-max"}, tiers) == "capped"
+    assert f(None, {"claude-max"}, tiers) == "capped"
     assert f("auto", {"anthropic-claude-pro"}, tiers) == "capped"
     assert f("auto", set(), tiers) == "capped"
-    # Unknown/garbage value degrades to auto-derivation (conservative here).
-    assert f("garbage", {"anthropic-claude-pro"}, tiers) == "capped"
+    # Unknown/garbage value degrades to the conservative default.
+    assert f("garbage", {"claude-max"}, tiers) == "capped"
 
 
 # --- Flat-funding gate (tier axis) ------------------------------------------
@@ -313,7 +335,11 @@ def test_flat_funded_cost_request_is_not_told_to_down_tier() -> None:
     priority, and the Cost posture's own tier-down/effort-down rules must be
     explicitly marked as suspended so the two can't be read as contradictory."""
     text = funding.build_user_context(
-        ["claude-max"], [], budget_priority="cheap", catalog=_FAKE_CATALOG
+        ["claude-max"],
+        [],
+        budget_priority="cheap",
+        consumption_headroom="uncapped",
+        catalog=_FAKE_CATALOG,
     )
     assert text is not None
     assert _FLAT_FUNDING_MARK in text
@@ -347,30 +373,34 @@ def test_flat_funding_gate_closed_on_per_token_only_funding() -> None:
 
 
 def test_flat_funding_gate_closed_when_headroom_capped() -> None:
-    """A held subscription whose budget the user DOES exhaust (`capped`, and the
-    auto-derived default for a sub-$200 plan) keeps the gate closed: there,
-    tiering and effort down really do conserve something."""
+    """A held subscription whose budget the user can exhaust (`capped`, and the
+    `auto` default on EVERY tier) keeps the gate closed: there, tiering and
+    effort down really do conserve something."""
     explicit = funding.build_user_context(
         ["claude-max"], [], consumption_headroom="capped", catalog=_FAKE_CATALOG
     )
     assert explicit is not None
     assert _FLAT_FUNDING_MARK not in explicit
-    # auto on a $20 plan derives `capped` -> gate closed too.
-    derived = funding.build_user_context(["anthropic-claude-pro"], [], catalog=_FAKE_CATALOG)
-    assert derived is not None
-    assert _FLAT_FUNDING_MARK not in derived
+    # auto on a $20 plan and on a $200 plan -> gate closed too.
+    for sub in ("anthropic-claude-pro", "claude-max"):
+        derived = funding.build_user_context([sub], [], catalog=_FAKE_CATALOG)
+        assert derived is not None
+        assert _FLAT_FUNDING_MARK not in derived
 
 
 def test_flat_funding_gate_states_its_own_precedence() -> None:
     """The service synthesizes this document per request and deploys WITHOUT a
     PyPI release, so the gate must be self-asserting — it takes effect from the
     appended user-context alone, before the matching <objective> clause ships."""
-    text = funding.build_user_context(["claude-max"], [], catalog=_FAKE_CATALOG)
+    text = funding.build_user_context(
+        ["claude-max"], [], consumption_headroom="uncapped", catalog=_FAKE_CATALOG
+    )
     assert text is not None
     assert "HIGHEST precedence for this request" in text
     assert "OVERRIDES the budget priority above" in text
     # And it names the CLOSED conditions, so the engine can't over-apply it.
     assert "gate is CLOSED for any pay-per-token path" in text
+    assert "`capped` consumption" in text
 
 
 def test_no_funding_explicit_budget_still_builds() -> None:

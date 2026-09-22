@@ -85,8 +85,11 @@ OWNED by the Cursor catalog cron. You MUST NOT touch any other attribute
 - The v2 output contract and its fenced-off neighbours: `<output-format>`
   (the `OUTPUT CONTRACT VERSION: 2` header, the v1 → v2 migration note, the
   PLATFORM-CONDITIONAL emission table, the block templates), `<objective>`'s
-  FLAT-FUNDING GATE, `<access-selection>`'s Step A00 platform allow/deny
-  filter and its Steps E / E2 / F / G emission wording, and `<usage>`.
+  FLAT-FUNDING GATE and CONSUMPTION-HEADROOM OVERRIDE (the gate opens
+  only under a declared `uncapped` headroom), `<thinking-context>`'s
+  UNCAPPED OVERRIDE bullet, `<access-selection>`'s USAGE-POOL STATUS
+  paragraph in Step C, its Step A00 platform allow/deny filter and its
+  Steps E / E2 / F / G emission wording, and `<usage>`.
 - `<access-selection>`'s `local` billing rules (Phase 4.10: Step A0's
   `local` pass sentence, Step B's "EXCEPTION — `local` billing" DROP
   paragraph, Step C's FUNDED-`local` $0 tier and LOCAL QUANTIZATION

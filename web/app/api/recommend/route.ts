@@ -295,8 +295,9 @@ const handler = async (req: Request): Promise<Response> =>
         const localApiProviders =
           profile?.api_providers ?? [...DEFAULT_PROFILE.api_providers];
         // Effort-axis control: whether reasoning effort stays maxed across all
-        // picks or scales down the ladder. `auto` (default) is resolved from
-        // funded-tier price service-side (funding.py); forwarded verbatim here.
+        // picks (`uncapped`, explicit opt-in) or calibrates to the task. `auto`
+        // (default) resolves to `capped` service-side (funding.py); forwarded
+        // verbatim here.
         const localConsumptionHeadroom =
           profile?.consumption_headroom ??
           DEFAULT_PROFILE.consumption_headroom;
