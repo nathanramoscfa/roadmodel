@@ -82,6 +82,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A scoring core in code: `roadmodel score` and the `score_candidates` MCP
+  tool.** `roadmodel.scoring` ranks every (model, platform, effort) candidate
+  deterministically — no engine call — as
+  `quality − requirement_penalty − λ · K · decades(effective cost)`: quality
+  from the Artificial Analysis evidence for the task's category (blended with
+  the editorial letter; unmeasured letters discounted), a soft penalty for
+  missing the complexity's requirement, and a cost term whose exchange rate
+  `K` is fitted from the market (AA Index vs. log price) and scaled by budget
+  posture and by the stakes (hard / novel tasks weigh cost less). Funding,
+  `Consumption headroom` and the `Usage-pool status` table are read from the
+  user-context, so a subscription pool with headroom, a tight pool, an
+  exhausted pool (list price) and a pay-per-token key all price into one
+  formula; unfunded paths never win while a funded one exists. The BACKUP is
+  the best *funded* other-provider candidate, and a single-provider
+  user-context yields an explicit `backup_warning` instead of an unreachable
+  name (#642). Every term is returned so a pick can be audited line by line;
+  every constant is a named prior for a future usage ledger to calibrate.
+  `docs/benchmarks.json` is now bundled in the wheel. Design and integration
+  path: `docs/scoring-model.md`. Tier-name matching in `roadmodel.cost` now
+  ignores any trailing parenthetical (`(5x)` as well as `($100)`).
 - **Numbers next to the letters on `/models`.** The catalog table gains an
   **AA Index** column (the Artificial Analysis Intelligence Index — the one
   published composite number, sortable, `—` where AA has not measured the

@@ -60,7 +60,7 @@ def _tool_payload(result: Any) -> Any:
         return text
 
 
-def test_tools_list_exactly_three() -> None:
+def test_tools_list_exactly_four() -> None:
     app = mcp_server.create_app()
 
     async def _run() -> list[str]:
@@ -69,7 +69,12 @@ def test_tools_list_exactly_three() -> None:
             return sorted(tool.name for tool in tools.tools)
 
     names = anyio.run(_run)
-    assert names == ["generate_phase_roadmap", "read_catalog", "recommend_model"]
+    assert names == [
+        "generate_phase_roadmap",
+        "read_catalog",
+        "recommend_model",
+        "score_candidates",
+    ]
 
 
 def test_recommend_model_calls_recommend_structured(

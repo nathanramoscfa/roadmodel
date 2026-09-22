@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from importlib import resources
 from importlib.resources.abc import Traversable
@@ -175,6 +176,14 @@ def _recommend_structured_with_prompts(
         recommender.build_prompt = original_build_prompt
 
 
+_BUDGET_LINE_RE = re.compile(r"\*\*Budget priority:\*\*\s*`?(cheap|balanced|best)`?", re.IGNORECASE)
+
+
+def _declared_budget(text: str) -> str:
+    m = _BUDGET_LINE_RE.search(text or "")
+    return m.group(1).lower() if m else "balanced"
+
+
 def create_app() -> Any:
     from mcp.server.fastmcp import FastMCP
 
@@ -215,6 +224,42 @@ def create_app() -> Any:
         system_prompt = _phase_roadmap_system_prompt(user_context_text)
         user_prompt = _phase_roadmap_user_prompt(project_brief, phase_number, prior_phases)
         return _provider_recommend(config, user_prompt, system_prompt)
+
+    @app.tool()
+    def score_candidates(
+        category: str,
+        complexity: str,
+        novel: bool = False,
+        budget: str | None = None,
+        top: int = 10,
+    ) -> dict[str, Any]:
+        """Rank (model, platform, effort) candidates in CODE — no engine call.
+
+        ``category`` is one of coding / planning / agentic / multimodal /
+        long-context / knowledge / speed (the selector's Step 1); ``complexity``
+        is low / medium / high (Step 2); ``novel`` marks a High task that is
+        novel problem-solving or multi-step proof. ``budget`` overrides the
+        user-context's declared Budget priority. Returns the primary, the
+        funded cross-provider backup (or ``backup_warning`` when the
+        user-context funds only one provider), and every candidate with its
+        quality / requirement-penalty / cost-penalty terms, so the pick can be
+        audited term by term. Call it after classifying the task; use the
+        result to write the rationale.
+        """
+        from roadmodel import scoring
+
+        config = _load_runtime_config()
+        text = user_context.read(config.user_context_path)
+        posture = budget or _declared_budget(text)
+        task = scoring.Task(
+            category=category.lower(),
+            complexity=complexity.lower(),
+            novel=novel,
+            budget=posture,
+        )
+        payload = scoring.rank(task, text).to_dict()
+        payload["candidates"] = payload["candidates"][: max(0, top)]
+        return payload
 
     @app.tool()
     def read_catalog() -> dict[str, Any]:

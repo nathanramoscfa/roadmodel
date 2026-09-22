@@ -22,6 +22,8 @@ BUNDLED_DOCS = (
     "model-selector.txt",
     "model-tier-cost-scale.md",
     "user-context.example.md",
+    "catalog.json",
+    "benchmarks.json",
 )
 
 
