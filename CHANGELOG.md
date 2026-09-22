@@ -117,6 +117,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   is computed from the same rows and fit the table uses.
   `scripts/plot_score_model.py` renders the same figure offline with matplotlib
   for docs and review.
+- **The same slash commands on every agent, and runtime parity with them.**
+  `roadmodel-update` already generated the four roadmap commands for Claude
+  Code, Gemini CLI, Cursor and OpenCode; it now also writes **Codex prompt
+  files** (`~/.codex/prompts/<name>.md`, invoked `/prompts:roadmap-phase 1`,
+  keeping the `$ARGUMENTS` placeholder Codex expands) and **VS Code prompt
+  files** (`<user profile>/prompts/<name>.prompt.md`, invoked
+  `/roadmap-phase 1` in the native chat panel). Beyond commands it now syncs
+  the **runtime**: the roadmodel MCP server is mirrored from the Claude
+  registration into Codex's `config.toml`, Gemini's `settings.json` and
+  OpenCode's config — launched exactly as Claude launches it, wrapper script
+  and all — and a **reasoning-effort default pinned to the top rung**
+  (`effortLevel: max`, `model_reasoning_effort: xhigh`) is stepped down to the
+  calibrated default, because that pin is a standing cost on every provider
+  that meters a usage pool. Ceilings and deliberate lower values are left
+  alone; `--no-calibrate` opts out.
+- **`docs/agent-parity.md`** replaces `docs/codex-parity.md` and covers every
+  direction, not just Claude → Codex: a symmetric surface map across Claude,
+  Codex, Gemini (Antigravity) and open-source clients, and one parameterised
+  prompt ("You are TARGET, bring yourself to parity with SOURCE") instead of
+  one file per pair.
 - **A scoring core in code: `roadmodel score` and the `score_candidates` MCP
   tool.** `roadmodel.scoring` ranks every (model, platform, effort) candidate
   deterministically — no engine call — as
