@@ -14,12 +14,13 @@ Ecosystems covered:
 | --- | --- |
 | **Claude** | Claude Code (CLI + IDE extension), Claude Desktop |
 | **Codex** | Codex CLI + Codex IDE extension (VS Code / Cursor / Windsurf) |
-| **Gemini** | Antigravity CLI + Antigravity IDE (the Gemini CLI's successor), Jules |
+| **Gemini** | Antigravity CLI (`agy`) + Antigravity IDE — the Gemini CLI's successor, which shares `~/.gemini` but reads a different layout underneath — and Jules |
 | **Open source** | OpenCode, Cline, Continue, Aider and other clients over Ollama / vLLM / an OpenAI-compatible endpoint |
 
 `roadmodel-update` already keeps the *roadmap commands*, the *roadmodel MCP
 server* and the *reasoning-effort default* in parity across every agent it
-detects — see [After the sync](#after-the-sync). This document covers
+detects — see [After the sync](#after-the-sync). A bare `~/.gemini` no longer
+counts as the legacy Gemini CLI, since Antigravity creates that directory too. This document covers
 everything it cannot: your own instructions, memory, skills and permissions.
 
 ---
@@ -32,13 +33,13 @@ column, apply the mechanism.
 | Surface | Claude | Codex | Gemini (Antigravity) | Open source |
 | --- | --- | --- | --- | --- |
 | **Project instructions** | `CLAUDE.md` (falls back to `AGENTS.md`) | `AGENTS.md`, or any name in `project_doc_fallback_filenames` | `AGENTS.md` / `GEMINI.md` | `AGENTS.md` (OpenCode, Cline, Aider all read it) |
-| **User instructions** | `~/.claude/CLAUDE.md` | `~/.codex/AGENTS.md` | `~/.gemini/GEMINI.md` | client-specific; usually a global rules file |
+| **User instructions** | `~/.claude/CLAUDE.md` | `~/.codex/AGENTS.md` | `~/.gemini/GEMINI.md`; Antigravity also reads `~/.gemini/config/` | client-specific; usually a global rules file |
 | **Memory** | auto-memory: `~/.claude/projects/<slug>/memory/*.md` + `MEMORY.md` | `features.memories` → `~/.codex/memories` | agent memories / `GEMINI.md` | usually none — fold into the instructions file |
-| **Skills** (model-invocable) | `~/.claude/skills/<name>/SKILL.md` | `~/.agents/skills/<name>/SKILL.md` | plugin/extension skills | `~/.agents/skills` where supported |
-| **Slash commands** (you type them) | `~/.claude/commands/<name>.md` → `/name` | `~/.codex/prompts/<name>.md` → `/prompts:name` | `~/.gemini/commands/<name>.toml` → `/name` | OpenCode `~/.config/opencode/commands/<name>.md` → `/name`; VS Code chat `<user>/prompts/<name>.prompt.md` → `/name` |
-| **MCP servers** | `~/.claude.json` → `mcpServers` (or `claude mcp add`) | `[mcp_servers.<id>]` in `~/.codex/config.toml` | `mcpServers` in `~/.gemini/settings.json` | `mcpServers` in the client's JSON config |
+| **Skills** (model-invocable) | `~/.claude/skills/<name>/SKILL.md` | `~/.agents/skills/<name>/SKILL.md` | `~/.gemini/config/skills/<name>/SKILL.md` globally, `<repo>/.agents/skills/` per project | `~/.agents/skills` where supported |
+| **Slash commands** (you type them) | `~/.claude/commands/<name>.md` → `/name` | `~/.codex/prompts/<name>.md` → `/prompts:name` | Antigravity: a skill IS the command, `/name`; legacy Gemini CLI: `~/.gemini/commands/<name>.toml` → `/name` | OpenCode `~/.config/opencode/commands/<name>.md` → `/name`; VS Code chat `<user>/prompts/<name>.prompt.md` → `/name` |
+| **MCP servers** | `~/.claude.json` → `mcpServers` (or `claude mcp add`) | `[mcp_servers.<id>]` in `~/.codex/config.toml` | `mcpServers` in `~/.gemini/config/mcp_config.json` (Antigravity, or `agy mcp add`); `~/.gemini/settings.json` (legacy CLI) | `mcpServers` in the client's JSON config |
 | **Model** | `settings.json` → `model` | `config.toml` → `model` | client setting | client setting / `ROADMODEL_MODEL`-style env |
-| **Reasoning effort** | `effortLevel` (low…max), `maxEffortLevel` as a ceiling | `model_reasoning_effort` (minimal…xhigh), `plan_mode_reasoning_effort` | thinking level | `reasoning_effort` where the endpoint exposes it |
+| **Reasoning effort** | `effortLevel` (low…max), `maxEffortLevel` as a ceiling | `model_reasoning_effort` (minimal…xhigh), `plan_mode_reasoning_effort` | `agy --effort low\|medium\|high`, per session | `reasoning_effort` where the endpoint exposes it |
 | **Permissions** | `permissions`, `defaultMode` | `approval_policy`, `sandbox_mode` | approval setting | client setting |
 | **Hooks / subagents / statusline / plugins** | yes | partial (hooks: no; subagents: yes) | partial | varies |
 
@@ -151,12 +152,17 @@ the VS Code chat panel:
 - **The roadmap commands**, generated from one Claude Code source into each
   agent's own format, so `/roadmap-phase 1` means the same thing everywhere.
   Codex spells it `/prompts:roadmap-phase 1`, because that is how Codex
-  addresses a prompt file; everywhere else it is `/roadmap-phase 1`.
+  addresses a prompt file; everywhere else it is `/roadmap-phase 1`. In
+  Antigravity a skill and a slash command are the same object, so the four
+  land once in `~/.gemini/config/skills/` and are both typed and
+  model-invoked.
 - **The roadmodel MCP server**, mirrored from your Claude registration into
   Codex's `config.toml`, Gemini's `settings.json` and OpenCode's config — so
   every agent gets `recommend_model`, `score_candidates`, `read_catalog` and
   `generate_phase_roadmap`, launched exactly the way Claude launches it
-  (including any wrapper script that injects provider keys).
+  (including any wrapper script that injects provider keys). Antigravity ships
+  its `mcp_config.json` as a zero-byte file, which means "no servers", not
+  "corrupt" — the updater treats it that way.
 - **The reasoning-effort default**, calibrated. A default pinned to the top
   rung (`effortLevel: max`, `model_reasoning_effort: xhigh`) is a standing cost
   on every provider that meters a usage pool, and it is the single easiest way

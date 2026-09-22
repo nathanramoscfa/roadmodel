@@ -319,7 +319,10 @@ def test_refresh_installs_per_detected_agent(
     monkeypatch.setattr(up, "CODEX_LEGACY_SKILLS_DIR", home / ".codex" / "skills")
     monkeypatch.setattr(up, "CURSOR_DIR", home / ".cursor")
     monkeypatch.setattr(up, "OPENCODE_DIR", home / ".config" / "opencode")
+    monkeypatch.setattr(up, "ANTIGRAVITY_STATE_DIR", home / ".gemini" / "antigravity-cli")
+    monkeypatch.setattr(up, "ANTIGRAVITY_SKILLS_DIR", home / ".gemini" / "config" / "skills")
     monkeypatch.setattr(up, "COMMANDS", ("roadmap-step",))
+    monkeypatch.setattr(up.shutil, "which", lambda _cmd: None)
     body = (COMMANDS_DIR / "roadmap-step.md").read_text()
 
     class _Resp:
@@ -341,8 +344,12 @@ def test_refresh_installs_per_detected_agent(
     assert (home / ".claude" / "commands" / "roadmap-step.md").read_text() == body
     assert not (home / ".gemini").exists() and not (home / ".agents").exists()
 
-    # Gemini + Codex present -> their ports land in their own dirs; Claude unchanged.
+    # A bare ~/.gemini is NOT the legacy CLI — Antigravity creates that too.
     (home / ".gemini").mkdir()
+    assert up.detect_agents() == ["claude"]
+
+    # Gemini + Codex present -> their ports land in their own dirs; Claude unchanged.
+    (home / ".gemini" / "commands").mkdir()
     (home / ".codex").mkdir()
     assert up.detect_agents() == ["claude", "gemini", "codex"]
     report = up.refresh_commands()
@@ -418,7 +425,10 @@ def test_cursor_and_opencode_detection_and_install(
     monkeypatch.setattr(up, "AGENTS_SKILLS_DIR", home / ".agents" / "skills")
     monkeypatch.setattr(up, "CURSOR_DIR", home / ".cursor")
     monkeypatch.setattr(up, "OPENCODE_DIR", home / ".config" / "opencode")
+    monkeypatch.setattr(up, "ANTIGRAVITY_STATE_DIR", home / ".gemini" / "antigravity-cli")
+    monkeypatch.setattr(up, "ANTIGRAVITY_SKILLS_DIR", home / ".gemini" / "config" / "skills")
     monkeypatch.setattr(up, "COMMANDS", ("roadmap-step",))
+    monkeypatch.setattr(up.shutil, "which", lambda _cmd: None)
     body = (COMMANDS_DIR / "roadmap-step.md").read_text()
 
     class _Resp:
@@ -787,3 +797,72 @@ def test_gemini_trusts_every_registered_project(
     c.mkdir()
     up._sync_gemini_trust([c], dry_run=True)
     assert str(c.resolve()) not in _json.loads(trusted.read_text(encoding="utf-8"))
+
+
+# --------------------------------------------------------------------------
+# Antigravity: the Gemini CLI's successor shares ~/.gemini but nothing else.
+# Its customization root is ~/.gemini/config, where a skill is ALSO a
+# first-class /<name> slash command — so the operator types the same thing
+# here as in Claude Code, and the legacy commands/*.toml are invisible to it.
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "name", ["roadmap-project", "roadmap-phase", "roadmap-step", "roadmodel-update"]
+)
+def test_antigravity_port_is_a_slash_invocable_skill(up: ModuleType, name: str) -> None:
+    body = (COMMANDS_DIR / f"{name}.md").read_text()
+    out = up.port_antigravity(name, body)
+    head, _, text = out[4:].partition("\n---\n")
+    assert f"name: {name}" in head and head.count("description: ") == 1
+    # Slash commands are typed with a leading /, so the usage line stays as-is
+    # (unlike the Codex skill port, which rewrites it to $).
+    assert "usage: $" not in head
+    # Skills take no placeholder: the arguments arrive as message text.
+    assert "$ARGUMENTS" not in text
+
+
+def test_antigravity_port_tells_the_model_to_use_inline_arguments(up: ModuleType) -> None:
+    out = up.port_antigravity("roadmap-phase", "---\ndescription: d\n---\n\nWrite $ARGUMENTS.\n")
+    # A mid-sentence placeholder stays a visible slot, not prose.
+    assert "Write <arguments>." in out
+    assert "`/roadmap-phase 1`" in out
+    # A command with no arguments gets no note.
+    assert "already carries the arguments" not in up.port_antigravity(
+        "roadmap-project", "---\ndescription: d\n---\n\nGo.\n"
+    )
+
+
+def test_antigravity_detected_by_its_own_state_dir_not_a_bare_gemini_dir(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "home"
+    monkeypatch.setattr(up, "GEMINI_DIR", home / ".gemini")
+    monkeypatch.setattr(up, "ANTIGRAVITY_STATE_DIR", home / ".gemini" / "antigravity-cli")
+    monkeypatch.setattr(up, "CODEX_DIR", home / ".codex")
+    monkeypatch.setattr(up, "AGENTS_SKILLS_DIR", home / ".agents" / "skills")
+    monkeypatch.setattr(up, "CURSOR_DIR", home / ".cursor")
+    monkeypatch.setattr(up, "OPENCODE_DIR", home / ".config" / "opencode")
+    monkeypatch.setattr(up, "_vscode_user_dirs", lambda: [])
+    monkeypatch.setattr(up.shutil, "which", lambda _cmd: None)
+
+    (home / ".gemini").mkdir(parents=True)
+    assert up.detect_agents() == ["claude"]  # Antigravity has not run here yet
+
+    (home / ".gemini" / "antigravity-cli").mkdir()
+    assert up.detect_agents() == ["claude", "antigravity"]  # and still not "gemini"
+
+
+def test_antigravity_mcp_accepts_the_zero_byte_file_it_ships(
+    up: ModuleType, tmp_path: Path
+) -> None:
+    """Antigravity creates mcp_config.json empty. An empty file means "no
+    servers"; treating it as corrupt would silently skip the sync."""
+    import json as _json
+
+    path = tmp_path / "mcp_config.json"
+    path.write_text("")
+    assert up._sync_json_mcp(path, _ARGV, "antigravity", dry_run=False) == [
+        "antigravity mcp: added roadmodel"
+    ]
+    assert _json.loads(path.read_text())["mcpServers"]["roadmodel"]["command"] == _ARGV[0]
