@@ -487,7 +487,17 @@ def test_vscode_prompt_file_shape(up: ModuleType) -> None:
     assert out.startswith("---\nname: roadmap-phase\n")
     assert "agent: agent" in out
     assert "$ARGUMENTS" not in out
-    assert "the text after the command" in out
+    # VS Code's own variable keeps the sentence grammatical; the note lets the
+    # operator type `/roadmap-phase 1` instead of answering the input box.
+    assert 'Write the Phase "${input:arguments}" roadmap' in out or "${input:arguments}" in out
+    assert "already carries the arguments" in out
+    assert "`/roadmap-phase 1`" in out
+
+
+def test_vscode_prompt_without_arguments_gets_no_note(up: ModuleType) -> None:
+    out = up.port_vscode("roadmap-project", "---\ndescription: Write it\n---\n\nGo.\n")
+    assert "already carries the arguments" not in out
+    assert "${input:" not in out
 
 
 def test_detect_agents_reports_vscode_only_when_a_user_dir_exists(

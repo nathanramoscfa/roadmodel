@@ -498,13 +498,23 @@ def port_codex_prompt(name: str, body: str) -> str:
 
 def port_vscode(name: str, body: str) -> str:
     """VS Code prompt file (``<user dir>/prompts/<name>.prompt.md``), invoked
-    ``/<name>`` in the native chat panel. Prompt files take no placeholder —
-    whatever the user types after the command is appended to the request — so
-    ``$ARGUMENTS`` becomes a sentence saying exactly that."""
+    ``/<name>`` in the native chat panel.
+
+    ``$ARGUMENTS`` becomes ``${input:arguments}`` — VS Code's own variable, so
+    the sentence stays grammatical where a bare substitution would read "Write
+    the Phase the text after the command roadmap". Typing the arguments inline
+    (``/roadmap-phase 1``) works too: VS Code appends them to the request, and
+    the trailing note tells the model to prefer them over asking again."""
     description, text = _split_frontmatter(body)
-    text = text.replace('"$ARGUMENTS"', "the text after the command").replace(
-        "$ARGUMENTS", "the text after the command"
+    has_args = "$ARGUMENTS" in text
+    text = text.replace('"$ARGUMENTS"', "${input:arguments}").replace(
+        "$ARGUMENTS", "${input:arguments}"
     )
+    if has_args:
+        text = text.rstrip() + (
+            "\n\nIf this request already carries the arguments (for example "
+            "`/{name} 1`), use those verbatim and do not ask for them again.".format(name=name)
+        )
     desc = description.replace('"', "'")
     return f'---\nname: {name}\ndescription: "{desc}"\nagent: agent\n---\n{text.rstrip()}\n'
 
