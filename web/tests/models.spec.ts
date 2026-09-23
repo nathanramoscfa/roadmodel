@@ -419,11 +419,10 @@ test("sorting a category orders by letter, then AA Index", async ({ page }) => {
   }
 });
 
-test("the Score explainer draws the fit for a tier and says what the band means", async ({ page }) => {
+test("one Score chart per cost tier, every measured model plotted with the table's figure", async ({ page }) => {
   await page.goto("/models");
-  const panel = page.getByTestId("score-explainer");
-  await panel.getByRole("group").first().isVisible().catch(() => {});
-  await panel.locator("summary").click();
+  const panel = page.getByTestId("score-charts");
+  await expect(panel).toBeVisible(); // open by default: the charts are the explanation
 
   const fit = fitScoreModel(
     scored.map((m) => ({
@@ -433,32 +432,173 @@ test("the Score explainer draws the fit for a tier and says what the band means"
     })),
   );
   expect(fit).not.toBeNull();
+  const tiers = Object.entries(fit!.tiers).filter(([, t]) => t.n >= 2).map(([tier]) => tier);
+  await expect(panel.getByTestId("score-chart")).toHaveCount(tiers.length);
 
-  // One point per measured model of the selected tier, each labelled with the
-  // same figure the table shows.
-  const tierOf = async () =>
-    await panel
-      .locator('[data-testid="score-explainer-tier"][aria-pressed="true"]')
-      .getAttribute("data-tier");
-  const selected = (await tierOf())!;
-  const inTier = scored.filter((m) => m.tier_cost === selected && aaIndexFor(m) !== null);
-  await expect(panel.getByTestId("score-explainer-point")).toHaveCount(inTier.length);
-  for (const m of inTier) {
-    const expected = formatScore(
-      scoreFor(fit, m.tier_cost, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), aaIndexFor(m)),
-    );
-    await expect(
-      panel.locator(`[data-testid="score-explainer-point"][data-model-id="${m.id}"]`),
-    ).toContainText(expected);
+  for (const tier of tiers) {
+    const chart = panel.locator(`[data-testid="score-chart"][data-tier="${tier}"]`);
+    const inTier = scored.filter((m) => m.tier_cost === tier && aaIndexFor(m) !== null);
+    await expect(chart.getByTestId("score-chart-point")).toHaveCount(inTier.length);
+    for (const m of inTier) {
+      const expected = formatScore(
+        scoreFor(fit, m.tier_cost, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), aaIndexFor(m)),
+      );
+      await expect(
+        chart.locator(`[data-testid="score-chart-point"][data-model-id="${m.id}"]`),
+      ).toHaveAttribute("aria-label", new RegExp(`Score ${expected.replace("+", "\\+")}`));
+    }
   }
 
-  // The caption carries the live fit and the tie-band count, not typed figures.
-  await expect(panel).toContainText(`Fit over ${fit!.n} measured models`);
-  await expect(panel).toContainText("sit inside that band");
+  // The footnote carries the live fit, not typed figures.
+  await expect(panel).toContainText(`One least-squares fit over all ${fit!.n} AA-measured models`);
+  await expect(panel).toContainText(`β = ${fit!.slope.toFixed(1)}`);
+});
 
-  // Switching tier redraws with that tier's models.
-  const other = selected === "low" ? "medium" : "low";
-  await panel.locator(`[data-testid="score-explainer-tier"][data-tier="${other}"]`).click();
-  const otherCount = scored.filter((m) => m.tier_cost === other && aaIndexFor(m) !== null).length;
-  await expect(panel.getByTestId("score-explainer-point")).toHaveCount(otherCount);
+test("hovering a chart dot shows its model, Score, AA Index and prices; the line shows its equation", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/models");
+  const fit = fitScoreModel(
+    scored.map((m) => ({
+      price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m),
+      index: aaIndexFor(m),
+      tier: m.tier_cost,
+    })),
+  )!;
+  // The charts draw once they have measured their width (after hydration).
+  await expect(page.getByTestId("score-chart-point")).toHaveCount(fit.n);
+  // A dot no other dot overlaps, so the pointer lands on it and nothing else.
+  const centres = await page.getByTestId("score-chart-point").evaluateAll((els) =>
+    els.map((el) => {
+      const r = el.getBoundingClientRect();
+      return { id: el.getAttribute("data-model-id")!, x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    }),
+  );
+  const clearId = centres.find((c) =>
+    centres.every((o) => o === c || Math.hypot(o.x - c.x, o.y - c.y) > 28),
+  )!.id;
+  const m = scored.find((x) => x.id === clearId)!;
+  const price = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
+  const sc = scoreFor(fit, m.tier_cost, price, aaIndexFor(m));
+
+  const dot = page.locator(`[data-testid="score-chart-point"][data-model-id="${m.id}"]`);
+  await dot.scrollIntoViewIfNeeded();
+  await dot.hover({ force: true });
+  const card = page.getByTestId("chart-card");
+  await expect(card).toBeVisible();
+  await expect(card).toContainText(m.name);
+  await expect(card.getByTestId("point-card-score")).toHaveText(formatScore(sc));
+  await expect(card).toContainText(`$${m.input_price_per_1m.toFixed(2)} per 1M tokens`);
+  await expect(card).toContainText(`$${m.output_price_per_1m.toFixed(2)} per 1M tokens`);
+  // It sits inside the viewport, whatever the dot's position.
+  const box = (await card.boundingBox())!;
+  const vw = await page.evaluate(() => document.documentElement.clientWidth);
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(vw);
+
+  // Leaving the dot closes the card.
+  await page.mouse.move(2, 2);
+  await expect(card).toHaveCount(0);
+
+  // The line: its equation, with the tier's own intercept and the pooled slope.
+  const tier = m.tier_cost;
+  const line = page.locator(`[data-testid="score-chart"][data-tier="${tier}"] [data-testid="score-chart-line"]`);
+  // A point ON the line, away from every dot (dots sit above the line's
+  // hover target, so the pointer must be clear of them).
+  const onLine = await line.evaluate((node) => {
+    const el = node as unknown as SVGLineElement;
+    const svg = el.ownerSVGElement!.getBoundingClientRect();
+    const [x1, y1, x2, y2] = ["x1", "y1", "x2", "y2"].map((a) => Number(el.getAttribute(a)));
+    const dots = [...el.ownerSVGElement!.querySelectorAll('[data-testid="score-chart-point"]')].map(
+      (d) => {
+        const r = d.getBoundingClientRect();
+        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      },
+    );
+    for (let f = 0.1; f <= 0.9; f += 0.05) {
+      const x = svg.x + x1 + (x2 - x1) * f;
+      const y = svg.y + y1 + (y2 - y1) * f;
+      if (dots.every((d) => Math.hypot(d.x - x, d.y - y) > 20)) return { x, y };
+    }
+    return null;
+  });
+  expect(onLine).not.toBeNull();
+  await page.mouse.move(onLine!.x, onLine!.y);
+  await expect(card).toBeVisible();
+  const t = fit.tiers[tier];
+  const num = (v: number) => (Math.round(v * 10) / 10 < 0 ? "−" : "") + Math.abs(Math.round(v * 10) / 10).toFixed(1);
+  await expect(card.getByTestId("line-equation")).toContainText(
+    `Expected AA Index = ${num(t.intercept)} + ${num(fit.slope)} × log`,
+  );
+  await expect(card.getByTestId("line-readout")).toContainText("expected");
+});
+
+test("the Score cell opens a breakdown whose parts add up to the printed Score", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/models");
+  const fit = fitScoreModel(
+    scored.map((m) => ({
+      price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m),
+      index: aaIndexFor(m),
+      tier: m.tier_cost,
+    })),
+  )!;
+  const parse = (t: string) => Number(t.replace("−", "-").replace("+", "").replace(/[^\d.-]/g, ""));
+  for (const m of scored.filter((x) => aaIndexFor(x) !== null)) {
+    const row = page.locator(`[data-testid="model-row"][data-model-id="${m.id}"]`);
+    const trigger = row.getByTestId("score-trigger");
+    await trigger.scrollIntoViewIfNeeded();
+    await trigger.hover();
+    const card = page.getByTestId("score-card");
+    await expect(card).toBeVisible();
+    await expect(card).toContainText(m.name);
+    const total = card.getByTestId("score-breakdown-total");
+    const printed = (await row.getByTestId("value-cell").innerText()).trim();
+    await expect(total).toHaveText(printed);
+    // The ledger's rows, read back from the card as a person would.
+    const values = await card
+      .locator('[data-testid="score-breakdown"] .tabular-nums')
+      .allInnerTexts();
+    const [index, subtracted, vsAvg, adj, score] = values.slice(0, 5).map(parse);
+    const tierMean = Math.abs(subtracted); // printed "− 43.5": a subtraction, not a sign
+    expect(Math.round((index - tierMean) * 10)).toBe(Math.round(vsAvg * 10));
+    expect(Math.round((vsAvg + adj) * 10)).toBe(Math.round(score * 10));
+    expect(formatScore(score)).toBe(
+      formatScore(scoreFor(fit, m.tier_cost, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), aaIndexFor(m))),
+    );
+    await page.mouse.move(2, 2);
+    await expect(card).toHaveCount(0);
+  }
+});
+
+test("the Score card opens from the keyboard, and an unmeasured model says why it has none", async ({ page }) => {
+  await page.goto("/models");
+  const trigger = page
+    .locator(`[data-testid="model-row"][data-model-id="${WITH_AA.id}"]`)
+    .getByTestId("score-trigger");
+  await trigger.focus();
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  await expect(trigger).toBeFocused();
+  await expect(page.getByTestId("score-card")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("score-card")).toHaveCount(0);
+
+  if (WITHOUT_ANY) {
+    const cell = page
+      .locator(`[data-testid="model-row"][data-model-id="${WITHOUT_ANY.id}"]`)
+      .getByTestId("value-cell");
+    await cell.getByRole("button").hover();
+    await expect(page.getByRole("tooltip")).toContainText(`No Score for ${WITHOUT_ANY.name}`);
+  }
+});
+
+test("the page never scrolls sideways, from a phone to a desktop", async ({ page }) => {
+  for (const width of [360, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/models");
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    );
+    expect(overflow, `page overflow at ${width}px`).toBe(0);
+  }
 });

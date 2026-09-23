@@ -63,7 +63,9 @@ import {
   type Category,
   type ModelRow,
 } from "@/lib/catalog-fields";
+import { HoverCard } from "./FloatingCard";
 import { GlossaryTerm } from "./GlossaryTerm";
+import { ScoreBreakdownCard } from "./ScoreCards";
 
 const RATING_MEANING: Record<string, string> = Object.fromEntries(
   RATING_SCALE.map((r) => [r.rating, r.meaning]),
@@ -644,27 +646,45 @@ export function ModelCatalog({
                         data-testid="value-cell"
                         data-frontier={m.value_frontier ? "1" : "0"}
                         data-value={m.value_score === null ? "" : m.value_score.toFixed(3)}
-                        title={
-                          m.value_score === null
-                            ? "Not measured by Artificial Analysis"
-                            : `${FIELD_DEFS.value.fullName}: ${formatScore(m.value_score)} index points vs. the ${COST_TIER_DEFS[m.tier_cost].label}-tier price line` +
-                              (m.value_frontier
-                                ? " · on the cost/quality frontier (no catalog model is both cheaper and higher on the index)"
-                                : "")
-                        }
                       >
-                        {m.value_score === null ? (
-                          <span className="text-brand-slate-400 dark:text-brand-slate-500">—</span>
+                        {m.value_score === null || !scoreFit ? (
+                          <HoverCard
+                            label={`${m.name} has no Score`}
+                            card={
+                              <p className="w-64 max-w-full text-[13px] leading-5">
+                                <span className="font-semibold text-brand-slate-900 dark:text-brand-slate-50">
+                                  No Score for {m.name}.
+                                </span>{" "}
+                                Artificial Analysis has not measured its Intelligence Index, and
+                                the Score is that index measured against price.
+                              </p>
+                            }
+                            className="text-brand-slate-400 dark:text-brand-slate-500"
+                          >
+                            —
+                          </HoverCard>
                         ) : (
-                          <>
+                          <HoverCard
+                            label={`${m.name}: Score ${formatScore(m.value_score)}. Show how it adds up`}
+                            card={
+                              <ScoreBreakdownCard
+                                model={m}
+                                fit={scoreFit}
+                                snapshot={benchmarksGeneratedAt}
+                              />
+                            }
+                            triggerTestId="score-trigger"
+                            cardTestId="score-card"
+                            className="tabular-nums"
+                          >
                             {formatScore(m.value_score)}
                             {m.value_frontier && (
                               <span
-                                aria-label="on the cost/quality frontier"
+                                aria-hidden
                                 className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 align-middle"
                               />
                             )}
-                          </>
+                          </HoverCard>
                         )}
                       </td>
                       {view === "ratings"

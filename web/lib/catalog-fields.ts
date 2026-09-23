@@ -43,6 +43,9 @@ export interface ModelRow {
   // Read from the structured benchmark layer when the model is mapped there,
   // else from the catalog prose (the cron's citation) as a fallback.
   aa_index: number | null;
+  // Where aa_index came from: the structured Artificial Analysis snapshot, or
+  // the figure the catalog cites for a model not yet mapped into it.
+  aa_index_source: "snapshot" | "cited" | null;
   // The uniform Artificial Analysis figures (lib/benchmark-grid.ts), or null
   // when AA has not measured the model at all.
   bench: BenchRow | null;
