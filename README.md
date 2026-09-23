@@ -190,12 +190,14 @@ checkout instead of GitHub), `--user-context <path>`. On Windows
 PowerShell, call `curl.exe` (not the `curl` alias) if you fetch files by
 hand; the `export-kit` command above avoids that entirely.
 
-**Day-to-day:** the kit is driven by the four user-scope commands in
+**Day-to-day:** the kit is driven by the five user-scope commands in
 `docs/claude-commands/` — `/roadmap-project`, `/roadmap-phase N`,
-`/roadmap-step P M`, `/roadmodel-update` — see
+`/roadmap-step P M` (executes a step), `/roadmap-refresh` (bookkeeping
+only: marks shipped steps and re-selects upcoming Settings, runs
+nothing), `/roadmodel-update` — see
 [The planning workflow](#the-planning-workflow) above for the loop and
 [docs/planning-workflow.md](docs/planning-workflow.md) for setup and
-per-command detail. The same four are generated for **Gemini CLI**
+per-command detail. The same five are generated for **Gemini CLI**
 (`~/.gemini/commands/*.toml`), **Codex** and **Cursor** (one
 `~/.agents/skills/*/SKILL.md` both read; `$roadmap-step` in Codex,
 `/roadmap-step` in Cursor), and **OpenCode**

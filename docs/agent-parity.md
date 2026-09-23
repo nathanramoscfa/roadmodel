@@ -127,7 +127,7 @@ before/after of every key you change.
 STEP 7 — Verify and report.
 Restart yourself if needed, then confirm out loud: which instructions file you
 are actually reading here; how many skills and slash commands you can see, and
-that the four roadmap-* ones are among them; which MCP servers connected and
+that the roadmap-* ones are among them; which MCP servers connected and
 which failed; and your active model, reasoning effort and permission posture.
 Finish with the list of <SOURCE> features you have NO equivalent for, so I know
 exactly what I lose by switching to you.

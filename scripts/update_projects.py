@@ -48,7 +48,13 @@ from pathlib import Path
 from typing import Optional
 
 REPO_RAW = "https://raw.githubusercontent.com/nathanramoscfa/roadmodel/main"
-COMMANDS = ("roadmap-project", "roadmap-phase", "roadmap-step", "roadmodel-update")
+COMMANDS = (
+    "roadmap-project",
+    "roadmap-phase",
+    "roadmap-step",
+    "roadmap-refresh",
+    "roadmodel-update",
+)
 CONFIG_DIR = Path.home() / ".config" / "roadmodel"
 DEFAULT_PROJECTS_FILE = CONFIG_DIR / "projects.txt"
 CLAUDE_DIR = Path.home() / ".claude"

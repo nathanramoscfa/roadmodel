@@ -46,7 +46,7 @@ It detects each project's env (`.venv`/`venv`/`env` dir → `environment.yml`
 name → conda env named like the folder → conda env inside the project),
 upgrades `roadmodel` in all of them concurrently, re-exports `planning/`
 where one exists (`--init-kit` to create one everywhere), and
-re-downloads the four command files for every agent installed on this
+re-downloads the five command files for every agent installed on this
 machine: `~/.claude/commands` (mirroring any `~/.claude/skills/<name>/
 SKILL.md` copies), `~/.gemini/commands/<name>.toml` for Gemini CLI, and
 `~/.agents/skills/<name>/SKILL.md` for Codex and Cursor (both read that

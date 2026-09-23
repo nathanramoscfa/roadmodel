@@ -33,18 +33,35 @@ Then **reload the editor window** (VS Code: `Developer: Reload Window`)
 you open a new chat. Type `/` in a chat; `roadmap-project`,
 `roadmap-phase`, and `roadmap-step` should be listed.
 
-The four files in [`docs/claude-commands/`](claude-commands/) become
+The five files in [`docs/claude-commands/`](claude-commands/) become
 the user-scope Claude Code slash commands `/roadmap-project`,
-`/roadmap-phase`, `/roadmap-step`, and `/roadmodel-update`, available
+`/roadmap-phase`, `/roadmap-step`, `/roadmap-refresh`, and
+`/roadmodel-update`, available
 in every project on that machine. They are also the source for the
 Gemini CLI and Codex versions — see "Other agents" below. The first two are thin: each executes
 the paste-prompt the planning kit ships, so they never drift from the
-kit. The third reads the step straight out of the phase roadmap. The
-fourth re-fetches the other three (and itself) every time it runs, so
+kit. The third reads the step straight out of the phase roadmap and
+EXECUTES it — code, tests, PR, merge. The fourth is bookkeeping only
+(below). The fifth re-fetches the others (and itself) every time it runs, so
 this copy step is a one-time bootstrap. Newer Claude Code
 builds also accept them as skills — copy each file to
 `~/.claude/skills/<name>/SKILL.md` with a `name: <name>` frontmatter
 line if `commands/` is not picked up.
+
+### Bookkeeping without running a step: `/roadmap-refresh`
+
+`/roadmap-step` does the work of a step; `/roadmap-refresh` does none.
+It marks every step that has already shipped (a merged PR on the step's
+own Branch ⇒ `Complete — PR #n`), then re-runs the model selector for the
+current step and every step after it, so their Settings reflect today's
+catalog and your user-context. Completed steps are never touched — their
+Settings are the record of what ran. It delivers one docs-only PR and
+starts nothing.
+
+Use it after a model generation ships, after your subscriptions change,
+or once to bring an older roadmap up to date. Refresh AFTER the planning
+kit is current (`/roadmodel-update`), since the selector it runs is the
+kit's.
 
 ## 2. Write the project roadmap
 
@@ -209,7 +226,7 @@ reach the schedule the next time `/roadmodel-update` is run by hand
 
 ## Other agents: Gemini CLI, Codex, Cursor, OpenCode
 
-The same four commands exist for Gemini CLI, Codex, Cursor and
+The same five commands exist for Gemini CLI, Codex, Cursor and
 OpenCode, generated from the Claude Code files so they never drift. `/roadmodel-update` (or
 `python ~/.config/roadmodel/update_projects.py --commands-only`)
 installs them wherever it finds the tool:
