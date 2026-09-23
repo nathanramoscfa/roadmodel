@@ -55,20 +55,47 @@ its PR merged. Check it before touching anything:
 
 ## 3. Settings gate — before any work
 
+A step's Settings table is a recommendation frozen on the day the roadmap
+was written. Providers supersede models within weeks and the operator's
+posture changes, so read the table as **intent**, not as a string to
+match exactly — and record what actually ran.
+
 Print one line: `Step {{STEP}} requires: Model <M> · Platform <P> ·
 <the dials the table carries, e.g. Effort <E> · Thinking <T>, or
 Intelligence <I>>. This session: <your own model> on <this surface>.`
 
 - If Platform is not the surface you are running on (Claude Code,
-  Codex, Gemini CLI, Cursor, …), stop: this step is meant to run on
+  Codex, Antigravity, Cursor, …), stop: this step is meant to run on
   another surface; tell the operator which.
-- If the step's Model is not the model you are running as, stop and
-  tell the operator how to switch on this surface (Claude Code:
-  `/model <M>` then `/effort <E>`; Codex and Gemini CLI: their `/model`
-  picker and reasoning setting), then re-run this command with the
-  same arguments. Do not start the step on the wrong model.
+- **Model.** Continue if you are the table's model. Also continue if you
+  are a **newer version in the same line** — Claude Opus 5 → Opus 5.5,
+  Fable 5 → Fable 5.1, Sonnet 5 → Sonnet 5.1: a provider supersedes
+  within a line, and the newer version is what the operator's client now
+  opens on. Say so on the printed line (`… · superseded by <yours>`).
+  Anything else — a different line (Opus → Sonnet, Fable → Opus), an
+  older version, or a name you cannot place — stop and tell the operator
+  how to switch on this surface (Claude Code: `/model <M>` then
+  `/effort <E>`; Codex and Antigravity: their model picker and reasoning
+  setting), then re-run this command with the same arguments. Do not
+  start the step on a model it did not intend.
+- **Effort.** If the table's effort is a top rung — `Max`, `Ultracode`,
+  or Codex `max` / `ultra` — and `planning/user-context.md` declares
+  `Consumption headroom: capped`, the table predates that posture: it is
+  the pinned-top-rung default that exhausted a weekly pool. Use the
+  user-context's complexity ladder for this step instead (High-complexity
+  coding → `High`; `XHigh` only for novel problem-solving, multi-step
+  proof, or chain-of-thought across many files) and tell the operator the
+  value to set. Keep a top rung only when the step's own rationale names
+  reasoning depth as the demonstrated bottleneck.
 - You cannot verify the reasoning dials yourself; the printed line is
-  the operator's cue to check them. Continue.
+  the operator's cue to set them. Continue.
+
+**Record what ran.** If the model or effort you proceed with differs from
+the table, the step's own PR rewrites its Settings table to match (§5),
+with one line beneath it:
+`> Settings updated <YYYY-MM-DD>: was <old model> · <old effort>. <why>.`
+The roadmap on `main` is the ledger, so it must say what actually ran.
+Never rewrite the table of a step that reads `Complete`: that is history.
 
 ## 4. Lifecycle currency
 
@@ -95,7 +122,8 @@ block tells you to.
 
 At Stage 3, right after `gh pr create` returns the PR number: set this
 step's `**Status:**` line to `Complete — PR #<n> (<today, YYYY-MM-DD>)`
-(plus any §2 backfill), commit on the step branch as
+(plus any §2 backfill, and the §3 Settings update when the step ran on
+different settings than its table), commit on the step branch as
 `docs: mark Phase {{PHASE}} Step {{STEP}} complete`, and push. If this
 is the phase's final step, the same commit marks the phase in the
 parent ROADMAP.md: its `**Status:**` line under `### Phase {{PHASE}}`
