@@ -49,6 +49,18 @@ For every step in every phase roadmap, look up its `**Branch:**` line:
   fine. Record each answer as
   `**Status:** Complete — confirmed by the operator <YYYY-MM-DD> (no PR on record)`,
   `In progress`, or `Not started`, and only then continue.
+- If the operator hands the call back ("I don't know — you figure it
+  out"), settle each unverified step from evidence instead, and cite it:
+  a merged PR that shipped the step under another branch (its title or
+  diff names the step or its deliverables); for a roadmap older than
+  per-step PRs, the phase's release tag or its closing QA deliverables
+  (`verify-phaseN.sh`, `phaseN-qa-findings.md`) on `main`, with later
+  phases built on top of it; the files the step's Goal names, present on
+  `main`; a live check for a deploy or gate step. Record
+  `**Status:** Complete — verified <YYYY-MM-DD>: <evidence>`. Evidence
+  that it did NOT happen — a gate still up, a deliverable absent — means
+  `Not started` or `In progress`, with that evidence beside it. A step
+  with no evidence either way is `Not started`, never a guess.
 - Put the line directly under the step's `## Step N — …` heading, before
   its Goal. Move an existing `**Status:**` line there (roadmaps written
   before roadmodel 0.2.40 carry it after `**Deploys:**`), so each step

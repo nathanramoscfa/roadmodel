@@ -50,7 +50,8 @@ its PR merged. Check it before touching anything:
   BEHIND verified work, or in a phase roadmap with no `**Branch:**`
   lines, is unverified: list those, ask the operator which are done,
   and record `Complete — confirmed by the operator <YYYY-MM-DD> (no PR on
-  record)` for each they confirm — the same rule as `/roadmap-refresh`
+  record)` for each they confirm; if they hand the call back, settle
+  each from cited evidence instead — the same rule as `/roadmap-refresh`
   §2. Insert
   `**Status:** …` directly under each step's `## Step` heading, append
   ` ✅` to the heading of every Complete step, and give the roadmap its

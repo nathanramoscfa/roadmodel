@@ -258,6 +258,11 @@ def test_roadmap_refresh_is_bookkeeping_that_runs_no_step() -> None:
     assert "Do not decide either way, and do not write `Not started`" in flat
     assert "Complete — confirmed by the operator <YYYY-MM-DD> (no PR on record)" in flat
     assert "only then continue" in flat
+    # … and when the operator hands it back, evidence decides, cited — the
+    # operator could not answer for reversi's 221 pre-Branch steps either.
+    assert "If the operator hands the call back" in flat
+    assert "Complete — verified <YYYY-MM-DD>: <evidence>" in flat
+    assert "never a guess" in flat
     # Settings are re-selected the same way the roadmap was written …
     assert "planning/model-selector.txt" in text and "planning/user-context.md" in text
     assert "do not call any external API" in flat
