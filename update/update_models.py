@@ -28,6 +28,7 @@ from opus_turn import (  # noqa: E402, I001
     OpusTurnIncomplete,
     stream_until_complete,
 )
+from selector_re import repair_attribute_quotes  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = REPO_ROOT / "docs"
@@ -929,6 +930,9 @@ def main() -> int:
     for r in (result_cs, result_sel):
         warnings.extend(w for w in (r.get("warnings") or []) if isinstance(w, str))
     warnings.extend(annual_warnings)
+    # An LLM-written value with a raw quote would end its attribute early.
+    new_selector, quote_notes = repair_attribute_quotes(new_selector)
+    warnings.extend(quote_notes)
     if fetch_errors:
         warnings.extend(f"Fetch error: {err}" for err in fetch_errors)
 

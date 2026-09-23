@@ -75,3 +75,62 @@ def assert_no_element_lost(block: str, matched: int, opener: re.Pattern[str], wh
             f"{declared}. An attribute value probably contains something the "
             f"element regex cannot span — do NOT ship a catalog missing an entry."
         )
+
+
+# ---------------------------------------------------------------------------
+# Raw quotes in LLM-written attribute values
+#
+# The daily trackers have an LLM return the WHOLE selector, and prose about a
+# UI keeps wanting quotes around a control name: `configurable under
+# "Project instructions"`. Written raw inside a `"`-delimited attribute, that
+# quote ENDS the attribute — build_catalog then ships the value cut off
+# mid-sentence (#663, #692: the same three phrases, twice). The guard test
+# catches it, but only after the PR is open, and the PR then sits failing.
+#
+# So repair it before the file is written. Deliberately narrow: only a line
+# that holds ONE attribute and does not already parse cleanly is touched, the
+# raw quotes inside its value are escaped (`\"`, the doc's own convention),
+# and the edit is kept only if the line then parses as exactly that one
+# attribute. Anything else is left for the guard test to report.
+# ---------------------------------------------------------------------------
+
+# Mirrors build_catalog's _ATTR_RE: a value may embed \" and \\.
+ATTR_RE = re.compile(r'([\w-]+)="((?:[^"\\]|\\.)*)"', re.DOTALL)
+# `<tag ` is optional so a first attribute sharing its element's line counts.
+_ONE_ATTR_LINE = re.compile(
+    r'^(?P<head>[ \t]*(?:<[\w-]+[ \t]+)?[\w-]+=")(?P<value>.*)(?P<tail>"[ \t]*(?:/?>)?[ \t]*)$'
+)
+_TAG_OPEN = re.compile(r"^[ \t]*<[\w-]+[ \t]+")
+_NEXT_ATTR = re.compile(r'"\s+[\w-]+="')
+_TAG_CLOSE = re.compile(r"[ \t]*/?>[ \t]*$")
+
+
+def _residue(line: str) -> str:
+    """What is left of an attribute line once every well-formed pair is gone."""
+    blob = _TAG_CLOSE.sub("", _TAG_OPEN.sub("", line))
+    return ATTR_RE.sub(" ", blob).strip()
+
+
+def repair_attribute_quotes(text: str) -> tuple[str, list[str]]:
+    """Escape raw quotes that would end a one-attribute line's value early.
+
+    Returns (text, notes); each note names a repaired line, for the PR's
+    warnings so a reviewer sees what was touched."""
+    notes: list[str] = []
+    lines = text.split("\n")
+    for n, line in enumerate(lines):
+        if '="' not in line or not _residue(line):
+            continue  # no attribute here, or it already parses whole
+        m = _ONE_ATTR_LINE.match(line)
+        # `" name="` inside the "value" is the next attribute, not prose: the
+        # line holds several attributes and which quote ends which is a guess.
+        if not m or _NEXT_ATTR.search(m.group("value")):
+            continue
+        value = re.sub(r'(?<!\\)"', r'\\"', m.group("value"))
+        fixed = m.group("head") + value + m.group("tail")
+        pairs = ATTR_RE.findall(_TAG_CLOSE.sub("", _TAG_OPEN.sub("", fixed)))
+        if _residue(fixed) or len(pairs) != 1:
+            continue
+        lines[n] = fixed
+        notes.append(f"escaped a raw quote in `{pairs[0][0]}` on line {n + 1}")
+    return "\n".join(lines), notes
