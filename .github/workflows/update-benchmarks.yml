@@ -94,7 +94,7 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
-          if git diff --quiet -- docs/benchmarks.json docs/model-selector.txt docs/model-selector.md docs/catalog.json; then
+          if git diff --quiet -- docs/benchmarks.json docs/model-selector.txt docs/model-selector.md docs/catalog.json update/aa-model-map.json; then
             echo "No benchmark or rating changes — nothing to commit."
             exit 0
           fi
@@ -112,9 +112,14 @@ jobs:
           git branch -D "$BRANCH" 2>/dev/null || true
           git checkout -b "$BRANCH"
           notes="$(python - <<'EOF'
-          import json
+          import json, os
           d = json.load(open("docs/benchmarks.json"))
           lines = [f"- {d['model_count']} catalog models carry Artificial Analysis measurements."]
+          auto = []
+          if os.path.exists("/tmp/bench.out"):
+              auto = [ln.split(" ", 1)[1].strip() for ln in open("/tmp/bench.out") if ln.startswith("AUTO_MAPPED ")]
+          if auto:
+              lines.append("- **Auto-mapped new catalog ids** (exact AA slug match, written to `update/aa-model-map.json`): " + ", ".join(f"`{a}`" for a in auto))
           if d["unmapped"]:
               lines.append("- **Unmapped catalog ids** (add to `update/aa-model-map.json`, `--suggest` lists candidates): " + ", ".join(f"`{m}`" for m in d["unmapped"]))
           if d["missing_slugs"]:
@@ -125,7 +130,7 @@ jobs:
           if grep -q '^| ' update/.last-ratings-report.md 2>/dev/null; then
             notes="${notes}$(printf '\n\n')$(cat update/.last-ratings-report.md)"
           fi
-          git add docs/benchmarks.json docs/model-selector.txt docs/model-selector.md docs/catalog.json
+          git add docs/benchmarks.json docs/model-selector.txt docs/model-selector.md docs/catalog.json update/aa-model-map.json
           git commit -m "Automated benchmark refresh: ${DATE}" -m "${notes}"
           git push -u origin "$BRANCH"
           PR_URL="$(gh pr create \
