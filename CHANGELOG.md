@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Step completion shows at the step heading.** In a phase roadmap, each
+  step's `**Status:**` line now sits directly under its `## Step N — …`
+  heading, before the Goal, instead of below Goal, Branch and Deploys. A
+  step's own PR appends ` ✅` to its heading when it marks the step
+  `Complete`, so progress shows in the rendered preview, the outline and
+  the table of contents. The phase roadmap gains its own `**Status:**` line
+  under the title (`Not started` → `In progress` → `Complete`, set by the
+  first and final steps' PRs) and a Status column in its Summary Table.
+  `/roadmap-refresh` migrates existing roadmaps to this layout without
+  changing any status; `/roadmap-step` does the same in its own PR if it
+  meets the old layout first. The template's Step 2 skeleton, which had no
+  Status line at all, now has one.
+
 ## [0.2.39] — 2026-09-23
 
 ### Changed
