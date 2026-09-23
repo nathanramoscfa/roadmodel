@@ -35,9 +35,6 @@
     "high"
   ],
   "xhigh_model_dependent": false,
-  "unexpected_effort_values": [
-    "max",
-    "ultra"
-  ],
+  "unexpected_effort_values": [],
   "section_sha256": "980fd97f5c644faff956af9c30cf08b8be8c9d910fc071a8ecd3f671e1d30c5f"
 }

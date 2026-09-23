@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -39,6 +40,17 @@ SAMPLE_MD = REPO_ROOT / "tests" / "fixtures" / "codex-config-reference-sample.md
 REAL_SELECTOR = REPO_ROOT / "docs" / "model-selector.txt"
 REAL_CC_SNAPSHOT = UPDATE_DIR / "claude-code-effort.json"
 REAL_CODEX_SNAPSHOT = UPDATE_DIR / "codex-reasoning.json"
+REAL_CODEX_SOURCE = UPDATE_DIR / "codex-reasoning-source.md"
+
+
+def _documented_levels() -> list[str]:
+    """Codex's reasoning levels as the committed snapshot records them, so these
+    tests follow the docs instead of pinning one day's vocabulary."""
+    return list(json.loads(REAL_CODEX_SNAPSHOT.read_text())["reasoning_effort"])
+
+
+# The selector's OpenAI bullet: "`reasoning_effort` knob — `low`, `medium`, …".
+_BULLET_LEVELS = re.compile(r"(`reasoning_effort` knob —\s*)((?:`[a-z]+`,?\s*)+)")
 
 
 def _load(name: str):  # type: ignore[no-untyped-def]
@@ -117,17 +129,26 @@ def test_extractor_cli_writes_snapshot(tmp_path: Path) -> None:
     assert data["reasoning_effort"] == ["minimal", "low", "medium", "high", "xhigh"]
 
 
-def test_committed_snapshot_matches_extractor_on_fixture() -> None:
-    """The committed snapshot's reasoning vocabulary must equal what the
-    extractor produces from the faithful fixture slice — a guard that the
-    committed copy was not hand-edited away from the docs."""
+def test_committed_snapshot_rederives_from_its_committed_docs_slice() -> None:
+    """The committed snapshot must equal what the extractor produces from the
+    docs span committed beside it (update/codex-reasoning-source.md, written by
+    the same run) — a guard that the snapshot was not hand-edited away from
+    the docs. The frozen sample fixture above tests the PARSER; it cannot vouch
+    for a snapshot of today's docs, and pinning one to the other failed every
+    refresh PR the day Codex changed its docs (#693)."""
     mod = _load("extract_codex_reasoning")
-    fixture = mod.build_snapshot(SAMPLE_MD.read_text(), source_url="file://sample")
+    source = REAL_CODEX_SOURCE.read_text()
+    rederived = mod.build_snapshot(source, source_url="file://committed-source")
     committed = json.loads(REAL_CODEX_SNAPSHOT.read_text())
-    for key in ("reasoning_effort", "plan_mode_reasoning_effort", "model_verbosity"):
-        assert committed[key] == fixture[key], key
-    # The fixture is a byte-faithful slice, so the in-scope span hash matches.
-    assert committed["section_sha256"] == fixture["section_sha256"]
+    for key in (
+        "reasoning_effort",
+        "plan_mode_reasoning_effort",
+        "model_reasoning_summary",
+        "model_verbosity",
+        "unexpected_effort_values",
+    ):
+        assert committed[key] == rederived[key], key
+    assert committed["section_sha256"] == rederived["section_sha256"]
 
 
 def test_extractor_raises_on_restructured_docs() -> None:
@@ -149,12 +170,12 @@ def test_extractor_flags_unexpected_effort_value() -> None:
     mod = _load("extract_codex_reasoning")
     md = SAMPLE_MD.read_text().replace(
         '"minimal | low | medium | high | xhigh"',
-        '"minimal | low | medium | high | xhigh | ultra"',
+        '"minimal | low | medium | high | xhigh | hyper"',
         1,
     )
     snap = mod.build_snapshot(md, source_url="x")
-    assert "ultra" in snap["unexpected_effort_values"]
-    assert "ultra" in snap["reasoning_effort"]
+    assert "hyper" in snap["unexpected_effort_values"]
+    assert "hyper" in snap["reasoning_effort"]
 
 
 # --------------------------------------------------------------------------- #
@@ -170,7 +191,7 @@ def test_bullet_and_mapping_token_extraction_on_real_selector() -> None:
     bullet = mod.openai_bullet_reasoning_tokens(thinking_flat)
     mapping = mod.openai_mapping_reasoning_tokens(thinking_flat)
 
-    expected = {"minimal", "low", "medium", "high", "xhigh"}
+    expected = set(_documented_levels())
     assert bullet == expected
     # The mapping must NOT pick up the `gpt-5.3-codex-high` model-id example in
     # the parenthetical, and `extra-high` must normalize to `xhigh`.
@@ -191,9 +212,10 @@ def test_conformance_passes_on_committed_artifacts() -> None:
 
 def test_conformance_flags_undocumented_codex_reasoning_token(tmp_path: Path) -> None:
     """Check D subset: an undocumented reasoning value in the OpenAI bullet → FAIL."""
-    drifted = REAL_SELECTOR.read_text().replace(
-        "`xhigh` (the top",
-        "`xhigh`, `ultra` (the top",
+    original = REAL_SELECTOR.read_text()
+    drifted = _BULLET_LEVELS.sub(lambda m: m.group(1) + "`hyper`, " + m.group(2), original, count=1)
+    assert drifted != original, (
+        "the OpenAI bullet was not found; this test is not exercising check D"
     )
     selector = tmp_path / "selector.txt"
     selector.write_text(drifted)
@@ -201,7 +223,7 @@ def test_conformance_flags_undocumented_codex_reasoning_token(tmp_path: Path) ->
     result = _run_conformance(selector, REAL_CC_SNAPSHOT, REAL_CODEX_SNAPSHOT)
     assert result.returncode == 1
     assert "check D" in result.stderr
-    assert "ultra" in result.stderr
+    assert "hyper" in result.stderr
 
 
 def test_conformance_flags_documented_level_missing_from_bullet(tmp_path: Path) -> None:
@@ -211,17 +233,17 @@ def test_conformance_flags_documented_level_missing_from_bullet(tmp_path: Path) 
     ``xhigh`` but the bullet omitted it.
     """
     original = REAL_SELECTOR.read_text()
-    # Anchor on the LEVEL ENUMERATION, not on the prose that introduces it.
-    # This used to include the words "reasoning-effort knob — ", so when the
-    # Codex cron renamed that to "`reasoning_effort` knob" the replace matched
-    # nothing, `drifted` came back identical to the committed selector, and the
-    # test asserted that a PASSING gate fails — it stopped testing drift and
-    # started testing the prose. Same failure mode as #526.
-    drifted = original.replace(
-        "`minimal`, `low`, `medium`, `high`,\n"
-        '      `xhigh` (the top "Extra High" tier; model-dependent). Higher',
-        "`minimal`, `low`, `medium`, `high`. Higher",
-    )
+    # Anchor on the LEVEL ENUMERATION, not on the prose around it, and drop
+    # whatever the docs' top level is today: an anchor on literal prose once
+    # matched nothing after a rewording, and the test then asserted that a
+    # PASSING gate fails (same failure mode as #526).
+    top = _documented_levels()[-1]
+
+    def drop_top(m: re.Match[str]) -> str:
+        kept = [t for t in re.findall(r"`([a-z]+)`", m.group(2)) if t != top]
+        return m.group(1) + ", ".join(f"`{t}`" for t in kept) + ". "
+
+    drifted = _BULLET_LEVELS.sub(drop_top, original, count=1)
     assert drifted != original, (
         "the drift edit matched nothing — the selector's OpenAI level "
         "enumeration was reworded, so this test is no longer exercising check D"
@@ -232,7 +254,7 @@ def test_conformance_flags_documented_level_missing_from_bullet(tmp_path: Path) 
     result = _run_conformance(selector, REAL_CC_SNAPSHOT, REAL_CODEX_SNAPSHOT)
     assert result.returncode == 1
     assert "check D" in result.stderr
-    assert "xhigh" in result.stderr
+    assert top in result.stderr
 
 
 def test_conformance_flags_undocumented_token_in_mapping(tmp_path: Path) -> None:
@@ -327,11 +349,14 @@ def test_enum_typed_keys_are_unaffected_by_the_reshape() -> None:
 
 
 def test_new_top_rungs_are_flagged_so_the_selector_gets_a_mapping(tmp_path: Path) -> None:
-    """`max` and `ultra` are outside the known baseline. They must be FLAGGED,
-    not silently absorbed: each needs a THINKING/EFFORT mapping in the
-    selector, which the cron's review pass adds and check D then enforces."""
+    """A rung outside the known baseline must be FLAGGED, not silently
+    absorbed: it needs a THINKING/EFFORT mapping in the selector, which the
+    cron's review pass adds and check D then enforces. (`max` and `ultra`
+    went through exactly that and are in the baseline now; `hyper` stands in
+    for the next one.)"""
     mod = _load("extract_codex_reasoning")
-    md = "## config.toml\n<ConfigTable\n  options={[" + _RESHAPED_SPAN + "  ]}\n/>\n"
+    span = _RESHAPED_SPAN.replace("`max`, or `ultra`", "`max`, `ultra`, or `hyper`")
+    md = "## config.toml\n<ConfigTable\n  options={[" + span + "  ]}\n/>\n"
     snap = mod.build_snapshot(md, source_url="https://example.invalid/cfg.md")
-    assert snap["reasoning_effort"] == ["low", "medium", "high", "xhigh", "max", "ultra"]
-    assert snap["unexpected_effort_values"] == ["max", "ultra"]
+    assert snap["reasoning_effort"] == ["low", "medium", "high", "xhigh", "max", "ultra", "hyper"]
+    assert snap["unexpected_effort_values"] == ["hyper"]
