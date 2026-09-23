@@ -1,10 +1,10 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-22T22:08:54Z",
+  "generated_at_utc": "2026-09-23T13:00:21Z",
   "source_doc_sha256": {
-    "model-selector.txt": "2719aaf876d11fd0242d5d2ad7c3f4f8ef542e54a9602850ac734066039b717c",
-    "model-tier-cost-scale.md": "8c364ff7dc0080cd9705c32a1f0fd820a352f5298b351253399c7fc214d97637"
+    "model-selector.txt": "a7c1ea1e974deb368525c146e904081703bf9dc32ac1913665a34852b9858eee",
+    "model-tier-cost-scale.md": "910b470bb7ad41e2be9b84e389eb55384420eb7918bc37cdb6968f75c56024a0"
   },
   "models": [
     {
@@ -67,7 +67,7 @@
       },
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 53.4 (max); HLE 59.1% (max); Terminal-Bench 2.1 91.4 (max); \u03c4\u00b2-bench banking pass_1 47.2%",
-      "pricing_notes": "Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; Prompt-cache reads are $0.25/M, 75% below the standard cache-read rate; About 2x the cost of Claude Opus 5 on input and output; Requires Max Mode on legacy request-based plans",
+      "pricing_notes": "Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; Prompt-cache reads are $0.25/M, 75% below the standard cache-read rate; About 2.5x the cost of Claude Opus 5.5 on input and output; Requires Max Mode on legacy request-based plans",
       "best_for": "Anthropic's Fable 5 successor at the same very-high tier pricing ($10/$50) \u2014 placeholder S-tier ratings inherited from fable-5 pending broader editorial review, with benchmark-grounded confirmation from AA Intelligence Index (53.4 max), HLE (59.1% max), and Terminal-Bench 2.1 (91.4 max). The headline cost-structure change is a 75% reduction in prompt-cache-read pricing ($0.25/M vs Fable 5's $1/M), making sustained-context sessions materially cheaper; pick over fable-5 when both are available since 5.1 supersedes 5 in the same series per the equal-output-price replacement rule."
     },
     {
@@ -90,6 +90,27 @@
       "headline_benchmarks": "AA Intelligence Index 50.8 (max); HLE 54.9% (max); Terminal-Bench 2.1 89.1 (max); \u03c4\u00b2-bench banking pass_1 42.1%",
       "pricing_notes": "Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-fast`) requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)",
       "best_for": "Anthropic's Opus 4.8 successor at the same very-high tier pricing \u2014 the new default Opus in Claude Code 2.1.219+ (1M context, fast mode at $10/$50 per Mtok) that Anthropic positions as approaching Fable 5's frontier intelligence at half the price; placeholder tier ratings inherited from opus-4.8 with benchmark-grounded confirmation from AA Intelligence Index (50.8 max), HLE (54.9% max), Terminal-Bench 2.1 (89.1), and \u03c4\u00b2-bench banking (42.1% pass_1). Pick over opus-4.8 when both are available since Opus 5 supersedes 4.8 in the same series per the equal-output-price replacement rule."
+    },
+    {
+      "id": "claude-opus-5-5",
+      "name": "Opus 5.5",
+      "input_price_per_1m": 4.0,
+      "output_price_per_1m": 20.0,
+      "cache_read_per_1m": null,
+      "tier_cost": "high",
+      "tiers": {
+        "coding": "S",
+        "planning": "S",
+        "agentic": "S",
+        "multimodal": "A",
+        "long-context": "A",
+        "knowledge": "S",
+        "speed": "D"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "AA Intelligence Index 57.6 (max); HLE 61.4% (max); SciCode 66.9 (max); AA-LCR 0.847",
+      "pricing_notes": "Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-5-fast`) requires Max Mode on legacy request-based plans; 20% cheaper than Claude Opus 5 on input and output; Prompt-cache reads are $0.20/M (0.05x input), down from 0.10x input on Claude Opus 5; Regional and US-only endpoints are priced 10% higher ($4.40/M input, $22/M output); Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)",
+      "best_for": "Anthropic's Opus 5 successor at high-tier pricing ($4/$20, 20% cheaper than Opus 5) \u2014 the new default Opus in Claude Code 2.1.280+ (1M context, $0.20/M cache reads). Placeholder S-tier ratings inherited from opus-5 with benchmark-grounded confirmation from AA Intelligence Index (57.6 max, currently the highest-scoring Anthropic model at max effort), HLE (61.4% max), and SciCode (66.9); pick over opus-5 when both are available since 5.5 supersedes 5 in the same series at a lower output price per the equal-or-lower-output-price replacement rule."
     },
     {
       "id": "claude-sonnet-5",
@@ -1050,6 +1071,7 @@
         "claude-fable-5",
         "claude-fable-5.1",
         "claude-opus-5",
+        "claude-opus-5-5",
         "claude-sonnet-5",
         "opus-4.7",
         "opus-4.8",
@@ -1094,6 +1116,7 @@
         "claude-fable-5",
         "claude-fable-5.1",
         "claude-opus-5",
+        "claude-opus-5-5",
         "claude-sonnet-5",
         "opus-4.7",
         "opus-4.8",
@@ -1115,6 +1138,7 @@
         "claude-4.5-haiku",
         "claude-fable-5.1",
         "claude-opus-5",
+        "claude-opus-5-5",
         "claude-sonnet-5",
         "opus-4.7",
         "opus-4.8",
@@ -1188,6 +1212,7 @@
         "claude-fable-5",
         "claude-fable-5.1",
         "claude-opus-5",
+        "claude-opus-5-5",
         "claude-sonnet-5",
         "composer-2.5",
         "gemini-2.5-flash",
@@ -1410,6 +1435,7 @@
         "claude-fable-5",
         "claude-fable-5.1",
         "claude-opus-5",
+        "claude-opus-5-5",
         "claude-sonnet-5",
         "codestral",
         "deepseek-flash",
