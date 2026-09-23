@@ -84,7 +84,11 @@ Then the project roadmap: every `### Phase` gets a `**Status:**` line
 under its Goal, and its summary table a Status column. All of a phase's
 steps Complete ⇒ `Complete — <last merge date>`; some ⇒
 `In progress — <phase roadmap file>`; none, or no phase roadmap yet ⇒
-`Not started`.
+`Not started`. A phase roadmap with no `### Phase` section of its own (a
+sub-phase such as 4.5 or 31.5, written after the project roadmap) gets
+one, in phase order: its title, a one-paragraph Goal drawn from the
+phase roadmap's own overview, the Status line, and a pointer to the
+file. Without it, the project ledger hides the phase that is underway.
 
 Print the phase · step · status table.
 
