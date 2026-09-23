@@ -59,10 +59,11 @@ table and surface material cost / availability / capability constraints.
 | Claude 4.6 Sonnet           | $3.00  | $3.75       | $0.30      | $15.00  | High      | Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
 | Claude 4.7 Opus             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
 | Claude Fable 5              | $10.00 | $12.50      | $1.00      | $50.00  | Very High | Hidden by default; Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; About 2x the cost of Claude Opus 5; Requires Max Mode on legacy request-based plans |
-| Claude Fable 5.1            | $10.00 | $12.50      | $0.25      | $50.00  | Very High | Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; Prompt-cache reads are $0.25/M, 75% below the standard cache-read rate; About 2x the cost of Claude Opus 5 on input and output; Requires Max Mode on legacy request-based plans |
+| Claude Fable 5.1            | $10.00 | $12.50      | $0.25      | $50.00  | Very High | Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; Prompt-cache reads are $0.25/M, 75% below the standard cache-read rate; About 2.5x the cost of Claude Opus 5.5 on input and output; Requires Max Mode on legacy request-based plans |
 | Claude Opus 4.7 (fast mode) | $30.00 | $37.50      | $3.00      | $150.00 | Very High | Hidden by default; Requires Max Mode on legacy request-based plans; Limited research preview; Up to 1M tokens with extended context at the same per-token rates as shorter context |
 | Claude Opus 4.8             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode on legacy request-based plans; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
-| Claude Opus 5               | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-fast`) requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
+| Claude Opus 5               | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-fast`) requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
+| Claude Opus 5.5             | $4.00  | $5.00       | $0.20      | $20.00  | High      | Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-5-fast`) requires Max Mode on legacy request-based plans; 20% cheaper than Claude Opus 5 on input and output; Prompt-cache reads are $0.20/M (0.05x input), down from 0.10x input on Claude Opus 5; Regional and US-only endpoints are priced 10% higher ($4.40/M input, $22/M output); Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
 | Claude Sonnet 5             | $2.00  | $2.50       | $0.20      | $10.00  | Medium    | Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens |
 
 
@@ -141,7 +142,7 @@ table and surface material cost / availability / capability constraints.
 
 ---
 
-<!-- subscription-tiers-reviewed: 2026-09-22 -->
+<!-- subscription-tiers-reviewed: 2026-09-23 -->
 
 ## Subscription Tiers and Access Methods
 
@@ -228,6 +229,7 @@ appear here.
 | opus-4.7         | $25.00  | Very High    | Very High    | ✓      |
 | opus-4.8         | $25.00  | Very High    | Very High    | ✓      |
 | claude-opus-5    | $25.00  | Very High    | Very High    | ✓      |
+| claude-opus-5-5  | $20.00  | High         | —            | NEW    |
 | claude-fable-5   | $50.00  | Very High    | Very High    | ✓      |
 | claude-fable-5.1 | $50.00  | Very High    | Very High    | ✓      |
 | gpt-5.5          | $30.00  | Very High    | Very High    | ✓      |
@@ -252,6 +254,7 @@ appear here.
 | mistral-medium-3.5 | $7.50 | Low          | Low          | ✓      |
 | grok-4.5         | $6.00   | Low          | Low          | ✓      |
 | grok-4.6         | $6.00   | Low          | Low          | ✓      |
+| grok-4.7         | $6.00   | Low          | —            | NEW    |
 | gpt-5.6-luna     | $1.20   | Low          | Low          | ✓      |
 | claude-4.5-haiku | $5.00   | Low          | Low          | ✓      |
 | gpt-5.4-mini     | $4.50   | Low          | Low          | ✓      |
@@ -292,6 +295,8 @@ recommendable engines.
 
 | Model id           | Output | Tier | Change                                                                                                                     |
 | ------------------ | ------ | ---- | -------------------------------------------------------------------------------------------------------------------------- |
+| Claude Opus 5.5    | $20.00 | High | New 2026-09-23 on Cursor's pricing page — Anthropic's Opus 5 successor at $4/$20 (20% cheaper than Opus 5 on input and output); prompt-cache reads $0.20/M (0.05x input, down from 0.10x on Opus 5); regional and US-only endpoints priced 10% higher ($4.40/$22); visible by default (not Hidden). Selector-pass will add to `<model-options>` per the Anthropic Federation rule (input/output owned by `catalog-anthropic.json`) |
+| Claude Fable 5.1   | $50.00 | Very High | Notes refreshed 2026-09-23 — Cursor updated the Fable 5.1 hovertext from "About 2x the cost of Claude Opus 5" to "About 2.5x the cost of Claude Opus 5.5 on input and output" following the Opus 5.5 launch (Fable 5.1 pricing itself unchanged at $10/$50) |
 | Grok 4.7           | $6.00  | Low  | New 2026-09-22 in the Cursor Models pool — xAI/SpaceXAI released Grok 4.7 on 2026-09-21 as a same-price, same-speed upgrade over Grok 4.6 at $2/$6 (2.1T parameters, 500K context, xhigh reasoning). Fast variant $4/$12 (Medium tier); 500k long-context variant $4/$12 (Medium tier); 500k Fast variant $6/$18 (High tier). Not yet added to `<model-options>` (selector-pass will handle) |
 | Grok 4.7 (Fast)    | $12.00 | Medium | New 2026-09-22 Cursor first-party Fast variant of Grok 4.7 (2x standard rates for higher output speed)                     |
 | Grok 4.7 500k      | $12.00 | Medium | New 2026-09-22 Cursor first-party long-context (>256k) variant of Grok 4.7 (2x standard rates apply to all tokens)         |

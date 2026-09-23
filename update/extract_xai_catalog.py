@@ -141,6 +141,11 @@ DECLINED: dict[str, str] = {
     "Grok 3 Mini": "superseded by the Grok 4 line",
     "Grok 2": "retired",
     "Grok 2 Vision": "retired",
+    # Retired from the catalog 2026-09-22 when grok-4.7 was promoted: grok-4.6
+    # supersedes it at an equal $6/M output price. It is deliberately absent
+    # from NAME_TO_ID too (see there) — under whole-element overlay, mapping it
+    # would make every refresh put the retired element straight back.
+    "Grok 4.5": "superseded by grok-4.6 at an equal output price",
 }
 
 
@@ -183,7 +188,11 @@ def parse_pricing_table(md: str) -> tuple[list[dict[str, object]], list[str]]:
             continue
         name = _FOOTNOTE_RE.sub("", row[0]).strip()
         mid = NAME_TO_ID.get(name)
-        if mid is None and name and name not in DECLINED and _slug(name) not in known_ids:
+        # Compare slugs, not raw names: xAI's page moved from display names
+        # ("Grok 4.5") to slug-form rows ("grok-4.5"), which silently
+        # disarmed every DECLINED entry keyed the old way.
+        declined = {_slug(d) for d in DECLINED}
+        if mid is None and name and _slug(name) not in declined and _slug(name) not in known_ids:
             # DISCOVERY: a priced row the catalog neither maps nor declines is
             # a model xAI ships that roadmodel has never heard of. Reported in
             # unexpected_slugs (the G1 contract's field) so the catalog cron

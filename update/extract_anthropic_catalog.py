@@ -52,6 +52,11 @@ NAME_TO_ID = {
     # were never mapped here, so their prices came from the aggregator mirror
     # with no provider-direct verification (exactly what G5 flags).
     "Claude Fable 5.1": "claude-fable-5.1",
+    # Added 2026-09-23 with its catalog entry: the Opus 5 successor ($4/$20),
+    # Claude Code's default Opus from 2.1.280. Mapping it is what makes its
+    # price provider-verified (G4) instead of trusted from the aggregator, and
+    # what stops the extractor flagging a model the catalog now carries.
+    "Claude Opus 5.5": "claude-opus-5-5",
     "Claude Opus 5": "claude-opus-5",
     "Claude Sonnet 5": "claude-sonnet-5",
     "Claude Fable 5": "claude-fable-5",

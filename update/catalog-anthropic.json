@@ -22,6 +22,14 @@
       "cache_read_per_1m": 1.0
     },
     {
+      "id": "claude-opus-5-5",
+      "slug": "Claude Opus 5.5",
+      "name": "Claude Opus 5.5",
+      "input_price_per_1m": 4.0,
+      "output_price_per_1m": 20.0,
+      "cache_read_per_1m": 0.2
+    },
+    {
       "id": "claude-opus-5",
       "slug": "Claude Opus 5",
       "name": "Claude Opus 5",
@@ -73,6 +81,7 @@
   "slug_to_id": {
     "Claude Fable 5.1": "claude-fable-5.1",
     "Claude Fable 5": "claude-fable-5",
+    "Claude Opus 5.5": "claude-opus-5-5",
     "Claude Opus 5": "claude-opus-5",
     "Claude Opus 4.8": "opus-4.8",
     "Claude Opus 4.7": "opus-4.7",
@@ -85,5 +94,5 @@
     "Claude Mythos 5.1"
   ],
   "missing_mapped_models": [],
-  "section_sha256": "d4faa19b98b4480f166945dc529e6d36bb2f003341df48c8244e653162cf09b3"
+  "section_sha256": "12d23dc435eb96be5010092579ecce06a10f904351e2be7c5f8216e8a2e121fc"
 }

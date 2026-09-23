@@ -99,7 +99,9 @@
     "gpt-5-mini": "gpt-5-mini"
   },
   "unexpected_slugs": [
-    "gpt-6-astra"
+    "gpt-6-astra",
+    "gpt-6-luna",
+    "gpt-6-sol"
   ],
   "missing_mapped_models": [],
   "section_sha256": "63c6fecdf2bb78249b65448c9798a88ac3fe8c05b5bd1f296f1c0ddfce7adea5"
