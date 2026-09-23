@@ -82,7 +82,8 @@
   },
   "unexpected_slugs": [
     "Claude Mythos 5",
-    "Claude Mythos 5.1"
+    "Claude Mythos 5.1",
+    "Claude Opus 5.5"
   ],
   "missing_mapped_models": [],
   "section_sha256": "d4faa19b98b4480f166945dc529e6d36bb2f003341df48c8244e653162cf09b3"
