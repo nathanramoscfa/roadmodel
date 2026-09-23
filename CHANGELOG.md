@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.39] — 2026-09-23
+
 ### Changed
 
-- **The updater keeps itself current.** `scripts/update_projects.py` now
+- **The updater keeps itself current (#689).** `scripts/update_projects.py` now
   also ships in the package as `roadmodel.update_projects`. The copy each
   machine's schedule runs (`~/.config/roadmodel/update_projects.py`)
   upgrades roadmodel in a venv of its own (`~/.config/roadmodel/venv`),
@@ -21,10 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **The first run after a release picks it up.** The per-project upgrade
+- **The first run after a release picks it up (#689).** The per-project upgrade
   bypasses pip's HTTP cache, which could serve an index page from before
   the release and report `0.2.37 -> 0.2.37 ok`.
-- **The Windows task catches up** after a start it missed because the PC
+- **The Windows task catches up (#689)** after a start it missed because the PC
   was off, and on macOS each run is recorded once in `update.log`, not
   twice.
 
