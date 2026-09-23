@@ -1,10 +1,10 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-23T13:00:21Z",
+  "generated_at_utc": "2026-09-23T16:27:44Z",
   "source_doc_sha256": {
-    "model-selector.txt": "a7c1ea1e974deb368525c146e904081703bf9dc32ac1913665a34852b9858eee",
-    "model-tier-cost-scale.md": "910b470bb7ad41e2be9b84e389eb55384420eb7918bc37cdb6968f75c56024a0"
+    "model-selector.txt": "377854d03bf85cf08d6f5a6e741a278d5ef3495c917917976b9aa522c827b2c4",
+    "model-tier-cost-scale.md": "1d4b6a100bf4cfce13fe0be6586104859e6f79eefa20e6c6cb32a74ef8eab93a"
   },
   "models": [
     {
@@ -88,7 +88,7 @@
       },
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 50.8 (max); HLE 54.9% (max); Terminal-Bench 2.1 89.1 (max); \u03c4\u00b2-bench banking pass_1 42.1%",
-      "pricing_notes": "Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-fast`) requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)",
+      "pricing_notes": "Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-fast`) requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)",
       "best_for": "Anthropic's Opus 4.8 successor at the same very-high tier pricing \u2014 the new default Opus in Claude Code 2.1.219+ (1M context, fast mode at $10/$50 per Mtok) that Anthropic positions as approaching Fable 5's frontier intelligence at half the price; placeholder tier ratings inherited from opus-4.8 with benchmark-grounded confirmation from AA Intelligence Index (50.8 max), HLE (54.9% max), Terminal-Bench 2.1 (89.1), and \u03c4\u00b2-bench banking (42.1% pass_1). Pick over opus-4.8 when both are available since Opus 5 supersedes 4.8 in the same series per the equal-output-price replacement rule."
     },
     {

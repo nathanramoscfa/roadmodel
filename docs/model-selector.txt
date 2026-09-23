@@ -929,7 +929,7 @@
              tier-multimodal="A" tier-long-context="A" tier-knowledge="S"
              tier-speed="D"
              headline-benchmarks="AA Intelligence Index 50.8 (max); HLE 54.9% (max); Terminal-Bench 2.1 89.1 (max); τ²-bench banking pass_1 42.1%"
-             pricing-notes="Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-fast`) requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)"
+             pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-fast`) requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)"
              best-for="Anthropic's Opus 4.8 successor at the same very-high tier pricing — the new default Opus in Claude Code 2.1.219+ (1M context, fast mode at $10/$50 per Mtok) that Anthropic positions as approaching Fable 5's frontier intelligence at half the price; placeholder tier ratings inherited from opus-4.8 with benchmark-grounded confirmation from AA Intelligence Index (50.8 max), HLE (54.9% max), Terminal-Bench 2.1 (89.1), and τ²-bench banking (42.1% pass_1). Pick over opus-4.8 when both are available since Opus 5 supersedes 4.8 in the same series per the equal-output-price replacement rule." />
       <model id="claude-fable-5" name="Fable 5"
              input-price-per-1m="$10.00" output-price-per-1m="$50.00"

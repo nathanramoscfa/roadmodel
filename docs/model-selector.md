@@ -749,7 +749,7 @@ Tier ratings:
 - **Pricing:** Input $5.00/M · Output $25.00/M
 - **Tier ratings:** Coding **S** · Planning **S** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **S** · Speed **D**
 - **Headline benchmarks:** AA Intelligence Index 50.8 (max); HLE 54.9% (max); Terminal-Bench 2.1 89.1 (max); τ²-bench banking pass_1 42.1%
-- **Pricing notes:** Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-fast`) requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
+- **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-fast`) requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
 - **Best for:** Anthropic's Opus 4.8 successor at the same very-high tier pricing — the new default Opus in Claude Code 2.1.219+ (1M context, fast mode at $10/$50 per Mtok) that Anthropic positions as approaching Fable 5's frontier intelligence at half the price; placeholder tier ratings inherited from opus-4.8 with benchmark-grounded confirmation from AA Intelligence Index (50.8 max), HLE (54.9% max), Terminal-Bench 2.1 (89.1), and τ²-bench banking (42.1% pass_1). Pick over opus-4.8 when both are available since Opus 5 supersedes 4.8 in the same series per the equal-output-price replacement rule.
 
 #### Fable 5 — `claude-fable-5`
