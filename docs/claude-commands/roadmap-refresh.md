@@ -33,8 +33,22 @@ For every step in every phase roadmap, look up its `**Branch:**` line:
 `gh pr list --state merged --head <branch> --json number,mergedAt --limit 1`.
 
 - A merged PR ⇒ `**Status:** Complete — PR #<n> (<mergedAt date>)`.
-- None ⇒ `**Status:** Not started`, unless the step already reads
-  `In progress` and its branch has an OPEN PR — then leave it.
+- No merged PR, and no verified `Complete` step comes after it in phase
+  order ⇒ `**Status:** Not started` — it is simply ahead — unless it
+  already reads `In progress` and its branch has an OPEN PR; then leave
+  it.
+- No merged PR, but verified work comes AFTER it, or its phase roadmap
+  has no `**Branch:**` lines at all (written before that convention) ⇒
+  unverified. Such a step may have shipped under another branch name, or
+  been operator work that never had a PR (a `→ operate` step). Do not
+  decide either way, and do not write `Not started`: collect every
+  unverified step, then ask the operator which are done, listing them
+  by phase with any hint you found (a merged PR whose branch names the
+  step, the step's `→ operate` verb, an open PR). One question for the
+  whole list; a range answer ("everything before Phase 12 is done") is
+  fine. Record each answer as
+  `**Status:** Complete — confirmed by the operator <YYYY-MM-DD> (no PR on record)`,
+  `In progress`, or `Not started`, and only then continue.
 - Put the line directly under the step's `## Step N — …` heading, before
   its Goal. Move an existing `**Status:**` line there (roadmaps written
   before roadmodel 0.2.40 carry it after `**Deploys:**`), so each step
@@ -44,7 +58,8 @@ For every step in every phase roadmap, look up its `**Branch:**` line:
   mark is what shows completion in the preview, the outline, and the
   table of contents.
 - Never mark a step complete on your own judgement of the git history.
-  Only a merged PR on the step's own Branch counts.
+  Only a merged PR on the step's own Branch, or the operator's word,
+  counts.
 
 Then each phase roadmap itself: a `**Status:**` line directly under its
 `# ` title (all its steps Complete ⇒ `Complete — <last merge date>`;
