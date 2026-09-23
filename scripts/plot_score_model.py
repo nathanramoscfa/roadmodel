@@ -11,7 +11,7 @@ tier — and plots the chosen tier: each model as a point, the tier's fitted lin
 and each model's SCORE as the vertical distance from the point to that line.
 
 Maintainer tool (matplotlib is not a package dependency); the site renders the
-same figure from the same numbers in web/components/ScoreExplainer.tsx.
+same figures, one per cost tier and interactive, in web/components/ScoreCharts.tsx.
 """
 
 from __future__ import annotations
