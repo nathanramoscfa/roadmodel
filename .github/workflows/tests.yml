@@ -150,6 +150,8 @@ jobs:
           roadmodel --help
           roadmodel version
           roadmodel export-kit "$(mktemp -d)"
+          # Every machine's scheduled updater hands its run to this module.
+          python -m roadmodel.update_projects --self-check
 
   security-scan:
     runs-on: ubuntu-latest
