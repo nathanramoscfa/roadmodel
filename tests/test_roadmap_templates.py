@@ -166,3 +166,50 @@ def test_roadmap_step_reads_a_settings_table_as_intent() -> None:
     assert "Settings updated <YYYY-MM-DD>: was" in flat
     assert "Never rewrite the table of a step that reads `Complete`" in flat
     assert "the §3 Settings update" in flat
+
+
+REFRESH_COMMAND = ROOT / "docs" / "claude-commands" / "roadmap-refresh.md"
+
+
+def test_roadmap_refresh_is_bookkeeping_that_runs_no_step() -> None:
+    """On 2026-09-22 the operator ran /roadmap-step expecting bookkeeping and
+    got a whole step implemented. /roadmap-refresh is the command they meant:
+    it marks what shipped and re-selects upcoming Settings, and must never
+    execute a task block or touch a completed step."""
+    text = REFRESH_COMMAND.read_text()
+    flat = re.sub(r"\s+", " ", text)
+    # Runs nothing, edits only roadmaps.
+    assert "without executing any step" in flat
+    assert "Do NOT run any step's `<task>` block" in flat
+    assert "Do not start any step" in flat
+    # The ledger comes from merged PRs on each step's own Branch, never judgement.
+    assert "gh pr list --state merged --head" in text
+    assert "Never mark a step complete on your own judgement" in flat
+    # Settings are re-selected the same way the roadmap was written …
+    assert "planning/model-selector.txt" in text and "planning/user-context.md" in text
+    assert "do not call any external API" in flat
+    # … for the current step onward only; completed steps are history.
+    assert "The current step is the first step" in flat
+    assert "Never touch a step that reads `Complete`" in flat
+    assert "Settings updated <YYYY-MM-DD> (refresh): was" in flat
+    # OpenCode refuses '@' and Gemini refuses '!{' / '@{' — keep it portable.
+    assert "@" not in text and "!{" not in text
+
+
+def test_every_command_ships_to_every_agent() -> None:
+    """A command file in docs/claude-commands/ that the updater does not
+    list never reaches Codex, Antigravity or VS Code."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "update_projects", ROOT / "scripts" / "update_projects.py"
+    )
+    assert spec and spec.loader
+    up = importlib.util.module_from_spec(spec)
+    import sys as _sys
+
+    # A dataclass resolves its module through sys.modules by the SPEC's name.
+    _sys.modules.setdefault(spec.name, up)
+    spec.loader.exec_module(up)
+    on_disk = {p.stem for p in (ROOT / "docs" / "claude-commands").glob("*.md")}
+    assert on_disk == set(up.COMMANDS)
