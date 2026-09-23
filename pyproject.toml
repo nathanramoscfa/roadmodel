@@ -122,7 +122,10 @@ line-length = 100
 [tool.ruff.lint]
 # Keep ruff defaults (E4/E7/E9 + F) and add I (import order), B (likely
 # bugs), and S (flake8-bandit security rules).
-select = ["E4", "E7", "E9", "F", "I", "B", "S"]
+# W605: an invalid escape (`"\\s"` in a non-raw string) is a SyntaxWarning today and a
+# SyntaxError in a future Python. scripts/update_projects.py is fetched and run
+# standalone under whatever interpreter each machine has, so it must not load with one.
+select = ["E4", "E7", "E9", "F", "I", "B", "S", "W605"]
 # S404 (subprocess imports) is fine project-wide; each call site is
 # audited and shells out only to controlled binaries.
 ignore = ["S404"]

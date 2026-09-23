@@ -638,7 +638,7 @@ def _toml_top_level_end(text: str) -> int:
 
 
 def _unpin_toml(text: str, keys: tuple[str, ...]) -> tuple[str, dict[str, str]]:
-    """Remove top-level ``key = "value"`` lines; return the new text and what
+    r"""Remove top-level ``key = "value"`` lines; return the new text and what
     was removed. `^model\s*=` cannot match `model_reasoning_effort`."""
     end = _toml_top_level_end(text)
     head, tail = text[:end], text[end:]
