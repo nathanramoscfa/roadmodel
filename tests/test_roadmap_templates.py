@@ -171,6 +171,69 @@ def test_roadmap_step_reads_a_settings_table_as_intent() -> None:
 REFRESH_COMMAND = ROOT / "docs" / "claude-commands" / "roadmap-refresh.md"
 
 
+# ---------------------------------------------------------------------------
+# Completion is shown where a reader looks (0.2.40): the Status line sits
+# directly under each step heading, a Complete step's heading ends in ✅ (so
+# the preview, the outline and the table of contents show progress), the
+# phase roadmap carries its own Status line under the title, and its Summary
+# Table a Status column. Before this, the line hid below Goal/Branch/Deploys.
+# ---------------------------------------------------------------------------
+
+
+def test_phase_template_puts_status_at_the_step_heading() -> None:
+    text = PHASE.read_text()
+    flat = re.sub(r"\s+", " ", text)
+    headings = re.findall(r"^## Step [^\n]*$", text, re.M)
+    assert len(headings) >= 3  # Step 1, Step 2, the QA step
+    for heading in headings:
+        after = text[text.index(heading) :]
+        assert re.match(
+            re.escape(heading) + r"\n\n\*\*Status:\*\* Not started\n\n> \*\*Goal:\*\*", after
+        ), f"Status is not directly under: {heading}"
+    # No step keeps its Status line in the old place, after Deploys.
+    assert not re.search(
+        r"^\*\*Deploys:\*\*[^\n]*(?:\n(?!\n)[^\n]*)*\n\n\*\*Status:\*\*", text, re.M
+    )
+    # The phase's own Status line, under the title.
+    assert re.search(
+        r"^# Phase \{\{N\}\} Roadmap — [^\n]*\n\n\*\*Status:\*\* Not started\n", text, re.M
+    )
+    # ✅ on completion: the Status rule, both Stage-3 copies, the QA step.
+    assert "`## Step 3 — {{Step Title}} ✅`" in text
+    assert "append ` ✅` to the step's `## Step` heading" in flat
+    assert flat.count("✅") >= 6
+    # The Summary Table's Status column, set by the same Stage-3 commit.
+    assert "| Conv | Status      |" in text
+    assert "Summary Table Status cell" in flat
+
+
+def test_roadmap_step_marks_completion_at_the_heading() -> None:
+    flat = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
+    assert "(directly under its heading)" in flat
+    assert "append ` ✅` to its `## Step {{STEP}}` heading" in flat
+    assert "Summary Table Status cell" in flat
+    assert "phase-level `**Status:**`" in flat
+    # An old-layout roadmap is migrated in the step's PR, never left mixed.
+    assert "Status lines sit after `**Deploys:**`" in flat
+    assert "Change no Status value while moving it" in flat
+
+
+def test_roadmap_refresh_migrates_status_to_the_heading() -> None:
+    flat = re.sub(r"\s+", " ", REFRESH_COMMAND.read_text())
+    assert "directly under the step's `## Step N — …` heading" in flat
+    assert "Move an existing `**Status:**` line there" in flat
+    assert "`## Step 3 — 4B Estimators ✅`" in flat
+    assert "a step that does not, has none" in flat
+    assert "a `**Status:**` line directly under its `# ` title" in flat
+    assert "a Status column in its Summary Table" in flat
+
+
+def test_phase_prompt_refuses_a_kit_with_the_old_status_layout() -> None:
+    flat = re.sub(r"\s+", " ", PROMPT_PHASE.read_text())
+    assert "a step's Status line sits after its `**Deploys:**` line" in flat
+    assert "directly under every `## Step` heading" in flat
+
+
 def test_roadmap_refresh_is_bookkeeping_that_runs_no_step() -> None:
     """On 2026-09-22 the operator ran /roadmap-step expecting bookkeeping and
     got a whole step implemented. /roadmap-refresh is the command they meant:

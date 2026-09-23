@@ -10,9 +10,11 @@ Execute Step $ARGUMENTS of this project's phase roadmap. Parse
   `docs/phase{{PP}}-roadmap.md`, `private/phase{{PP}}-roadmap.md`, or
   any `**/phase{{PP}}-roadmap.md` (PP = PHASE zero-padded to two
   digits). If none exists, stop and say so — do not improvise a step.
-- The step is the section headed `## Step {{STEP}} — …` up to the next
-  `## ` heading. From it, read: the `**Branch:**` line, the
-  `**Status:**` line, the Settings table (Model / Platform / Effort /
+- The step is the section headed `## Step {{STEP}} — …` (a Complete
+  step's heading ends in ✅) up to the next `## ` heading. From it,
+  read: the `**Branch:**` line, the `**Status:**` line (directly under
+  the heading; a roadmap written before roadmodel 0.2.40 has it after
+  `**Deploys:**`), the Settings table (Model / Platform / Effort /
   Thinking), the single ```` ```xml ```` fenced `<task>…</task>` block,
   and the `### Step {{STEP}} acceptance criteria` list. If the Branch
   line, Settings table, task block, or criteria are missing, stop and
@@ -44,14 +46,27 @@ its PR merged. Check it before touching anything:
   this step's PR: for every step, run the same `gh pr list --state
   merged --head <its Branch line>` lookup — a merged PR ⇒
   `Complete — PR #n (<mergedAt date>)`, none ⇒ `Not started`. Insert
-  `**Status:** …` after each step's `**Deploys:**` line (after
-  `**Branch:**` if there is none), print the resulting step/status
-  table, then re-apply the two bullets above. Backfill the parent
+  `**Status:** …` directly under each step's `## Step` heading, append
+  ` ✅` to the heading of every Complete step, and give the roadmap its
+  phase-level `**Status:**` line under the title and a Status column in
+  its Summary Table (the layout in the next bullet). Print the resulting
+  step/status table, then re-apply the two bullets above. Backfill the parent
   ROADMAP.md in the same pass: every `### Phase` gets a `**Status:**`
   line under its Goal and a Status column in the summary table — a
   phase whose roadmap's steps are all Complete ⇒ `Complete — <last
   merge date>`; some ⇒ `In progress — <phase roadmap file>`; none, or
   no phase roadmap yet ⇒ `Not started`.
+- **Status lines sit after `**Deploys:**`** → the roadmap predates
+  roadmodel 0.2.40, which moved completion to where it is seen. Migrate
+  the layout in this step's Stage-3 commit, the same edit
+  `/roadmap-refresh` makes: move every step's `**Status:**` line
+  directly under its `## Step` heading, before the Goal; append ` ✅` to
+  the heading of every step that reads `Complete` (and to no other);
+  add a `**Status:**` line directly under the roadmap's `# ` title
+  (all steps Complete ⇒ `Complete — <last merge date>`, some ⇒
+  `In progress`, none ⇒ `Not started`); add a Status column to the
+  Summary Table (each step's row mirrors its Status line, verification
+  rows read `--`). Change no Status value while moving it.
 
 ## 3. Settings gate — before any work
 
@@ -121,15 +136,19 @@ as binding. Do not read ahead into other steps except where the task
 block tells you to.
 
 At Stage 3, right after `gh pr create` returns the PR number: set this
-step's `**Status:**` line to `Complete — PR #<n> (<today, YYYY-MM-DD>)`
-(plus any §2 backfill, and the §3 Settings update when the step ran on
-different settings than its table), commit on the step branch as
+step's `**Status:**` line (directly under its heading) to
+`Complete — PR #<n> (<today, YYYY-MM-DD>)`, append ` ✅` to its
+`## Step {{STEP}}` heading, and set its Summary Table Status cell to
+`Complete — PR #<n>` (plus any §2 backfill or layout migration, and the
+§3 Settings update when the step ran on different settings than its
+table); commit on the step branch as
 `docs: mark Phase {{PHASE}} Step {{STEP}} complete`, and push. If this
-is the phase's final step, the same commit marks the phase in the
-parent ROADMAP.md: its `**Status:**` line under `### Phase {{PHASE}}`
-becomes `Complete — …`, with its row in the summary table and the
-header `> **Status:**` line; if this is Step 1, that line becomes
-`In progress — <this roadmap>` instead. A git-excluded roadmap (e.g.
+is Step 1, the same commit sets the roadmap's phase-level `**Status:**`
+line (under its title) to `In progress`, and the parent ROADMAP.md's
+`**Status:**` line under `### Phase {{PHASE}}` to `In progress — <this
+roadmap>`. If this is the phase's final step, the same commit sets
+both to `Complete — …`, the parent's with its row in the summary table
+and the header `> **Status:**` line. A git-excluded roadmap (e.g.
 `private/`) needs the edit only. Stage 6's
 completion line presupposes this mark: do not emit it unless `main`
 now carries the step's `Complete` line.
