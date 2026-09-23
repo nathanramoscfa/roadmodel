@@ -253,3 +253,85 @@ def test_conformance_flags_undocumented_token_in_mapping(tmp_path: Path) -> None
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+# --------------------------------------------------------------------------- #
+# The 2026-09-22 docs reshape: vocabulary moved from `type` into prose
+# --------------------------------------------------------------------------- #
+
+# The exact post-reshape shape OpenAI published: `model_reasoning_effort` and
+# `plan_mode_reasoning_effort` typed as a bare `string`, the reasoning values
+# living in the description; summary / verbosity unchanged.
+_RESHAPED_SPAN = """
+    {
+      key: "model_reasoning_effort",
+      type: "string",
+      description:
+        "Reasoning effort advertised by the selected model, such as `low`, `medium`, `high`, `xhigh`, `max`, or `ultra`. Available levels depend on the model and client.",
+    },
+    {
+      key: "plan_mode_reasoning_effort",
+      type: "string",
+      description:
+        "Plan-mode-specific reasoning override using a level supported by the selected model. When unset, Plan mode uses its built-in preset default.",
+    },
+    {
+      key: "model_reasoning_summary",
+      type: "auto | concise | detailed | none",
+      description: "Select reasoning summary detail or disable summaries entirely.",
+    },
+    {
+      key: "model_verbosity",
+      type: "low | medium | high",
+      description: "Optional GPT-5 Responses API verbosity override.",
+    },
+"""
+
+
+def test_extractor_reads_a_vocabulary_that_moved_into_the_description() -> None:
+    """The bug that failed the 2026-09-22 cron: reading the bare `type` of a
+    `string`-typed key yields ["string"] — a type NAME, not a value — and the
+    extractor then wrote that as the entire Codex reasoning vocabulary."""
+    mod = _load("extract_codex_reasoning")
+    effort = mod.parse_type_enum(_RESHAPED_SPAN, "model_reasoning_effort")
+    assert effort == ["low", "medium", "high", "xhigh", "max", "ultra"]
+    assert "string" not in effort
+
+
+def test_a_key_that_defers_to_the_selected_model_inherits_its_vocabulary() -> None:
+    """Plan mode now takes "a level supported by the selected model" and names
+    none itself; it inherits the reasoning set rather than failing or guessing."""
+    mod = _load("extract_codex_reasoning")
+    effort = mod.parse_type_enum(_RESHAPED_SPAN, "model_reasoning_effort")
+    plan = mod.parse_type_enum(_RESHAPED_SPAN, "plan_mode_reasoning_effort", inherit=effort)
+    assert plan == effort
+
+
+def test_a_string_key_with_no_values_and_nothing_to_inherit_fails_loud() -> None:
+    """Never guess a vocabulary. Without values in the prose AND without an
+    inherited set, the docs changed shape again and a human should look."""
+    mod = _load("extract_codex_reasoning")
+    with pytest.raises(mod.ExtractError, match="names no values"):
+        mod.parse_type_enum(_RESHAPED_SPAN, "plan_mode_reasoning_effort")
+
+
+def test_enum_typed_keys_are_unaffected_by_the_reshape() -> None:
+    mod = _load("extract_codex_reasoning")
+    assert mod.parse_type_enum(_RESHAPED_SPAN, "model_reasoning_summary") == [
+        "auto",
+        "concise",
+        "detailed",
+        "none",
+    ]
+    assert mod.parse_type_enum(_RESHAPED_SPAN, "model_verbosity") == ["low", "medium", "high"]
+
+
+def test_new_top_rungs_are_flagged_so_the_selector_gets_a_mapping(tmp_path: Path) -> None:
+    """`max` and `ultra` are outside the known baseline. They must be FLAGGED,
+    not silently absorbed: each needs a THINKING/EFFORT mapping in the
+    selector, which the cron's review pass adds and check D then enforces."""
+    mod = _load("extract_codex_reasoning")
+    md = "## config.toml\n<ConfigTable\n  options={[" + _RESHAPED_SPAN + "  ]}\n/>\n"
+    snap = mod.build_snapshot(md, source_url="https://example.invalid/cfg.md")
+    assert snap["reasoning_effort"] == ["low", "medium", "high", "xhigh", "max", "ultra"]
+    assert snap["unexpected_effort_values"] == ["max", "ultra"]
