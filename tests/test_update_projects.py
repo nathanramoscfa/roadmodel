@@ -1014,3 +1014,72 @@ def test_antigravity_trust_dry_run_writes_nothing(
         "antigravity trust: trusted 1 project(s)"
     ]
     assert not settings.exists()
+
+
+# --------------------------------------------------------------------------
+# Staleness: warn, never self-update
+# --------------------------------------------------------------------------
+
+
+class _Body:
+    def __init__(self, data: bytes) -> None:
+        self._data = data
+
+    def __enter__(self) -> "_Body":
+        return self
+
+    def __exit__(self, *a: object) -> None:
+        pass
+
+    def read(self) -> bytes:
+        return self._data
+
+
+def test_a_stale_updater_says_so_and_names_the_refetch(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The Mac's scheduled copy was 32 KB against a 64 KB main for months, and
+    nothing said so. A differing local copy must produce a warning carrying
+    the exact command that fixes it."""
+    local = tmp_path / "update_projects.py"
+    local.write_bytes(b"old updater\n")
+    monkeypatch.setattr(up.urllib.request, "urlopen", lambda u, timeout=15: _Body(b"new!\n"))
+    warning = up.staleness_warning(local)
+    assert warning and "STALE" in warning
+    assert up.SELF_URL in warning and str(local) in warning
+
+
+def test_a_current_updater_is_quiet_even_across_line_endings(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A Windows checkout may carry CRLF; that is not staleness."""
+    local = tmp_path / "update_projects.py"
+    local.write_bytes(b"same\r\nfile\r\n")
+    monkeypatch.setattr(up.urllib.request, "urlopen", lambda u, timeout=15: _Body(b"same\nfile\n"))
+    assert up.staleness_warning(local) is None
+
+
+def test_an_offline_run_does_not_nag(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    local = tmp_path / "update_projects.py"
+    local.write_bytes(b"anything\n")
+
+    def boom(u: str, timeout: int = 15) -> _Body:
+        raise up.urllib.error.URLError("offline")
+
+    monkeypatch.setattr(up.urllib.request, "urlopen", boom)
+    assert up.staleness_warning(local) is None
+
+
+def test_the_check_never_writes_what_it_fetched(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Deliberately not self-updating: fetch-and-execute on a daily schedule is
+    its own supply-chain risk. The fetched bytes are compared, then dropped."""
+    local = tmp_path / "update_projects.py"
+    local.write_bytes(b"local\n")
+    monkeypatch.setattr(up.urllib.request, "urlopen", lambda u, timeout=15: _Body(b"remote\n"))
+    up.staleness_warning(local)
+    assert local.read_bytes() == b"local\n"
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["update_projects.py"]
