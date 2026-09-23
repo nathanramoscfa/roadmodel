@@ -7,20 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.40] — 2026-09-23
+
 ### Changed
 
-- **Step completion shows at the step heading.** In a phase roadmap, each
-  step's `**Status:**` line now sits directly under its `## Step N — …`
+- **Step completion shows at the step heading (#699).** In a phase roadmap,
+  each step's `**Status:**` line now sits directly under its `## Step N — …`
   heading, before the Goal, instead of below Goal, Branch and Deploys. A
   step's own PR appends ` ✅` to its heading when it marks the step
-  `Complete`, so progress shows in the rendered preview, the outline and
-  the table of contents. The phase roadmap gains its own `**Status:**` line
+  `Complete`, so progress shows in the rendered preview, the outline and the
+  table of contents. The phase roadmap gains its own `**Status:**` line
   under the title (`Not started` → `In progress` → `Complete`, set by the
   first and final steps' PRs) and a Status column in its Summary Table.
   `/roadmap-refresh` migrates existing roadmaps to this layout without
   changing any status; `/roadmap-step` does the same in its own PR if it
   meets the old layout first. The template's Step 2 skeleton, which had no
   Status line at all, now has one.
+- **Codex's six effort levels (#693).** Codex's config reference now lists
+  `low`, `medium`, `high`, `xhigh`, `max` and `ultra` (`minimal` is gone);
+  the selector's OpenAI/Codex vocabulary and its effort mapping follow it.
+  The Codex tracker now commits the exact docs span it parsed beside its
+  snapshot and re-derives the snapshot from it, so a Codex docs change no
+  longer strands its refresh PR on a hand-cut fixture.
+- **Claude Code 2.1.280 (#692).** Opus 5.5 joins the models that reach
+  `Max` effort, with `medium` as its default.
+- **Opus 5.5 and Grok 4.7 carry Artificial Analysis data (#694, #695).**
+  Both were added to the catalog unmapped; mapped to AA's own entries
+  (Opus 5.5: AA Index 57.6, HLE 61.4%, AA-LCR 84.7%), their measurable
+  letters are now derived instead of inherited. Opus 5.5's HLE is the new
+  Knowledge leader, so 13 models moved down one Knowledge band (Fable 5
+  and Opus 5 S→A), and Opus 5.5's Long-context letter is S.
+- **Catalog (#691):** Claude Opus 5 is hidden by default in Cursor now
+  that Opus 5.5 is its default Opus.
+
+### Fixed
+
+- **LLM-written attribute values can no longer truncate themselves
+  (#697).** The daily trackers escape a raw quote inside a one-attribute
+  line before saving the selector, so prose like `configurable under
+  "Project instructions"` no longer cuts a value off mid-sentence (#663,
+  #692).
+- **A new catalog model links itself to Artificial Analysis (#698).** The
+  nightly benchmark job maps an unmapped catalog id to the AA entry whose
+  slug matches it exactly, and lists each one in its PR.
 
 ## [0.2.39] — 2026-09-23
 
