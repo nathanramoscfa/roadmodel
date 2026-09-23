@@ -168,7 +168,7 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
-          if git diff --quiet -- docs/model-selector.txt docs/model-selector.md docs/catalog.json update/codex-reasoning.json; then
+          if git diff --quiet -- docs/model-selector.txt docs/model-selector.md docs/catalog.json update/codex-reasoning.json update/codex-reasoning-source.md; then
             echo "No selector / snapshot changes — nothing to commit."
             exit 0
           fi
@@ -183,7 +183,7 @@ jobs:
           if [ -f update/.last-codex-warnings.txt ] && [ -s update/.last-codex-warnings.txt ]; then
             warnings="$(printf '\n\n## Warnings\n')$(sed 's/^/- /' update/.last-codex-warnings.txt)"
           fi
-          git add docs/model-selector.txt docs/model-selector.md docs/catalog.json update/codex-reasoning.json
+          git add docs/model-selector.txt docs/model-selector.md docs/catalog.json update/codex-reasoning.json update/codex-reasoning-source.md
           git commit -m "Automated Codex refresh: ${DATE}" -m "${summary}${warnings}"
           git push -u origin "$BRANCH"
           PR_URL="$(gh pr create \
