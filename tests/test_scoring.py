@@ -721,3 +721,74 @@ def test_cli_rejects_a_missing_user_context_path(tmp_path: Path) -> None:
     )
     assert out.returncode != 0
     assert "nope.md" in (out.stderr + out.stdout)
+
+
+# --------------------------------------------------------------------------
+# A Usage-pool row must not outlive its own reset.
+#
+# The operator writes `exhausted` when a cap binds and cannot be relied on to
+# flip it back when the window rolls. On 2026-09-22 a row stamped
+# "Tue 2026-09-22 20:00 EDT" was still routing every coding step off Claude a
+# day after the pool had reset. Expiry is deliberately ASYMMETRIC: keeping a
+# stale row costs quality, but expiring a LIVE one costs money (overflow bills
+# at list price), so only a certainly-past reset expires a row.
+# --------------------------------------------------------------------------
+
+from datetime import datetime, timezone  # noqa: E402
+
+
+def _pools(reset: str, state: str = "exhausted") -> str:
+    return (
+        "## Usage-pool status\n\n"
+        "| Pool | Window | State | Resets (local time) | Notes |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        f"| claude.ai Max — weekly | 7 days | `{state}` | {reset} | overflow on |\n"
+    )
+
+
+def _utc(*args: int) -> datetime:
+    return datetime(*args, tzinfo=timezone.utc)
+
+
+def test_a_row_past_its_reset_reads_as_headroom_and_says_why() -> None:
+    # 20:00 EDT on the 22nd is 00:00 UTC on the 23rd.
+    rows = scoring.pool_states(_pools("Tue 2026-09-22 20:00 EDT"), now=_utc(2026, 9, 23, 0, 1))
+    assert rows[0][1] == "headroom"
+    assert "reset (Tue 2026-09-22 20:00 EDT) has passed" in rows[0][2]
+
+
+def test_a_row_before_its_reset_keeps_its_declared_state() -> None:
+    """One minute BEFORE 20:00 EDT: still exhausted. The zone is honoured —
+    read as UTC this would already look past."""
+    rows = scoring.pool_states(_pools("Tue 2026-09-22 20:00 EDT"), now=_utc(2026, 9, 22, 23, 59))
+    assert rows[0][1] == "exhausted"
+
+
+@pytest.mark.parametrize("reset", ["rolling", "Tue 20:00", "next week", ""])
+def test_an_undated_reset_never_expires_a_row(reset: str) -> None:
+    """Expiring a LIVE exhausted pool bills overflow at list price — the $500
+    failure. Anything that does not name a date keeps its declared state."""
+    rows = scoring.pool_states(_pools(reset), now=_utc(2030, 1, 1))
+    assert rows[0][1] == "exhausted"
+
+
+def test_an_unrecognised_zone_needs_a_full_day_of_margin() -> None:
+    """No guessing at an unlisted zone: it counts only once no offset on earth
+    could still leave the reset in the future."""
+    cell = "2026-09-22 20:00 XYZ"
+    assert scoring.pool_states(_pools(cell), now=_utc(2026, 9, 23, 1))[0][1] == "exhausted"
+    assert scoring.pool_states(_pools(cell), now=_utc(2026, 9, 23, 21))[0][1] == "headroom"
+
+
+def test_a_bare_date_waits_until_that_day_is_over_everywhere() -> None:
+    cell = "2026-09-22"
+    assert scoring.pool_states(_pools(cell), now=_utc(2026, 9, 23, 12))[0][1] == "exhausted"
+    assert scoring.pool_states(_pools(cell), now=_utc(2026, 9, 24, 1))[0][1] == "headroom"
+
+
+def test_tight_expires_like_exhausted_and_headroom_is_untouched() -> None:
+    past = _utc(2026, 9, 30)
+    tight = scoring.pool_states(_pools("2026-09-22 20:00 EDT", "tight"), now=past)
+    assert tight[0][1] == "headroom"
+    fresh = scoring.pool_states(_pools("2026-09-22 20:00 EDT", "headroom"), now=past)
+    assert fresh[0] == ("claude.ai Max — weekly", "headroom", "overflow on")
