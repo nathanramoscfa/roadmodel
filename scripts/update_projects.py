@@ -61,6 +61,9 @@ ANTIGRAVITY_STATE_DIR = GEMINI_DIR / "antigravity-cli"  # presence marks an `agy
 ANTIGRAVITY_CONFIG_DIR = GEMINI_DIR / "config"
 ANTIGRAVITY_SKILLS_DIR = ANTIGRAVITY_CONFIG_DIR / "skills"
 ANTIGRAVITY_MCP = ANTIGRAVITY_CONFIG_DIR / "mcp_config.json"
+# Antigravity keeps its own per-workspace trust list, separate from the legacy
+# CLI's trustedFolders.json, in the CLI state dir.
+ANTIGRAVITY_SETTINGS = ANTIGRAVITY_STATE_DIR / "settings.json"
 CODEX_DIR = Path.home() / ".codex"  # presence marks a Codex install
 AGENTS_SKILLS_DIR = (
     Path.home() / ".agents" / "skills"
@@ -736,6 +739,41 @@ def _sync_gemini_settings(path: Path, dry_run: bool) -> list[str]:
     return [f"gemini instructions: reads {', '.join(GEMINI_CONTEXT_FILES)}"]
 
 
+def _sync_antigravity_trust(projects: list[Path], dry_run: bool) -> list[str]:
+    """Trust every registered project in Antigravity.
+
+    Antigravity records trust as a list of absolute paths under
+    ``trustedWorkspaces`` in its own settings file — NOT in the legacy CLI's
+    ``trustedFolders.json``, which it never reads. A project missing from this
+    list is one the operator has to approve by hand on first open, which is
+    exactly the friction `roadmodel-update` exists to remove when a machine
+    carries seven or eight active projects."""
+    if not projects:
+        return []
+    try:
+        data = (
+            json.loads(ANTIGRAVITY_SETTINGS.read_text(encoding="utf-8"))
+            if ANTIGRAVITY_SETTINGS.exists()
+            else {}
+        )
+    except ValueError:
+        return ["antigravity trust: SKIPPED (unparseable settings.json)"]
+    if not isinstance(data, dict):
+        return ["antigravity trust: SKIPPED (unexpected shape)"]
+    trusted = data.get("trustedWorkspaces", [])
+    if not isinstance(trusted, list):
+        return ["antigravity trust: SKIPPED (trustedWorkspaces is not a list)"]
+    known = {str(p) for p in trusted}
+    added = [str(p.resolve()) for p in projects if str(p.resolve()) not in known]
+    if not added:
+        return [f"antigravity trust: all {len(projects)} project(s) trusted"]
+    data["trustedWorkspaces"] = list(trusted) + added
+    if not dry_run:
+        ANTIGRAVITY_SETTINGS.parent.mkdir(parents=True, exist_ok=True)
+        ANTIGRAVITY_SETTINGS.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    return [f"antigravity trust: trusted {len(added)} project(s)"]
+
+
 def _sync_json_mcp(path: Path, argv: Optional[list[str]], label: str, dry_run: bool) -> list[str]:
     """Add the roadmodel stdio server to a JSON settings file that carries an
     ``mcpServers`` map (Gemini CLI, OpenCode), leaving everything else intact."""
@@ -805,6 +843,7 @@ def sync_agent_runtime(
         report += _sync_gemini_trust(projects or [], dry_run)
     if "antigravity" in agents:
         report += _sync_json_mcp(ANTIGRAVITY_MCP, argv, "antigravity", dry_run)
+        report += _sync_antigravity_trust(projects or [], dry_run)
     if "opencode" in agents:
         report += _sync_json_mcp(OPENCODE_DIR / "opencode.json", argv, "opencode", dry_run)
     if not report:

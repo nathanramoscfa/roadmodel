@@ -866,3 +866,63 @@ def test_antigravity_mcp_accepts_the_zero_byte_file_it_ships(
         "antigravity mcp: added roadmodel"
     ]
     assert _json.loads(path.read_text())["mcpServers"]["roadmodel"]["command"] == _ARGV[0]
+
+
+def test_antigravity_trust_uses_its_own_settings_not_the_legacy_file(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Antigravity records trust as `trustedWorkspaces` in its OWN settings
+    file. The legacy CLI's trustedFolders.json is a different file that
+    Antigravity never reads, so trusting there leaves it untrusted here."""
+    import json as _json
+
+    settings = tmp_path / "antigravity-cli" / "settings.json"
+    settings.parent.mkdir(parents=True)
+    settings.write_text(_json.dumps({"trustedWorkspaces": [str(tmp_path / "already")]}))
+    monkeypatch.setattr(up, "ANTIGRAVITY_SETTINGS", settings)
+
+    a, b = tmp_path / "already", tmp_path / "fresh"
+    a.mkdir()
+    b.mkdir()
+    assert up._sync_antigravity_trust([a, b], dry_run=False) == [
+        "antigravity trust: trusted 1 project(s)"
+    ]
+    trusted = _json.loads(settings.read_text())["trustedWorkspaces"]
+    assert str(b.resolve()) in trusted
+    assert trusted.count(str(a.resolve())) == 1, "an already-trusted path must not duplicate"
+
+    # Idempotent: a second run adds nothing.
+    assert up._sync_antigravity_trust([a, b], dry_run=False) == [
+        "antigravity trust: all 2 project(s) trusted"
+    ]
+
+
+def test_antigravity_trust_preserves_other_settings_keys(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The same file carries defaultAgentModelId; trusting must not drop it."""
+    import json as _json
+
+    settings = tmp_path / "settings.json"
+    settings.write_text(_json.dumps({"defaultAgentModelId": "gemini-3.8-flash-medium"}))
+    monkeypatch.setattr(up, "ANTIGRAVITY_SETTINGS", settings)
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    up._sync_antigravity_trust([project], dry_run=False)
+    data = _json.loads(settings.read_text())
+    assert data["defaultAgentModelId"] == "gemini-3.8-flash-medium"
+    assert data["trustedWorkspaces"] == [str(project.resolve())]
+
+
+def test_antigravity_trust_dry_run_writes_nothing(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings = tmp_path / "settings.json"
+    monkeypatch.setattr(up, "ANTIGRAVITY_SETTINGS", settings)
+    project = tmp_path / "proj"
+    project.mkdir()
+    assert up._sync_antigravity_trust([project], dry_run=True) == [
+        "antigravity trust: trusted 1 project(s)"
+    ]
+    assert not settings.exists()
