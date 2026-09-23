@@ -91,6 +91,7 @@ include = [
     "docs/user-context.example.md",
     "docs/catalog.json",
     "docs/benchmarks.json",
+    "scripts/update_projects.py",
     "hatch_build.py",
     "README.md",
     "LICENSE",

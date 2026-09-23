@@ -26,14 +26,16 @@ inside the project. Nothing is guessed into ``base`` — an undetectable env
 is reported, never updated.
 
 Stdlib only (Python 3.9+), so it runs from any interpreter on the machine.
-It is fetched fresh from the roadmodel repo by ``/roadmodel-update``, so it
-never goes stale.
+The copy at ``~/.config/roadmodel/update_projects.py`` keeps itself current:
+each run upgrades roadmodel in a venv of its own and hands over to the
+updater that ships inside that release (see "Self-update" below).
 """
 
 from __future__ import annotations
 
 import argparse
 import contextlib
+import datetime as _dt
 import json
 import os
 import re
@@ -46,6 +48,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
+from xml.sax.saxutils import escape
 
 REPO_RAW = "https://raw.githubusercontent.com/nathanramoscfa/roadmodel/main"
 COMMANDS = (
@@ -371,6 +374,22 @@ def _tail(text: str, n: int = 6) -> str:
     return "\n".join(lines[-n:])
 
 
+def _pip_upgrade(python: Path) -> list[str]:
+    # --no-cache-dir: pip's HTTP cache can serve an index page fetched before
+    # a release existed, so a run minutes after publishing reported
+    # "0.2.37 -> 0.2.37 ok" (2026-09-23) and the new version waited a day.
+    return [
+        str(python),
+        "-m",
+        "pip",
+        "install",
+        "--upgrade",
+        "--no-cache-dir",
+        "--quiet",
+        "roadmodel",
+    ]
+
+
 def update_project(entry: Entry, *, kit: bool, init_kit: bool, dry_run: bool) -> Result:
     env, note = resolve_env(entry)
     res = Result(entry=entry, env=env, note=note)
@@ -383,10 +402,7 @@ def update_project(entry: Entry, *, kit: bool, init_kit: bool, dry_run: bool) ->
 
     res.before = installed_version(env.python)
     try:
-        cp = _run(
-            [str(env.python), "-m", "pip", "install", "--upgrade", "--quiet", "roadmodel"],
-            timeout=PIP_TIMEOUT,
-        )
+        cp = _run(_pip_upgrade(env.python), timeout=PIP_TIMEOUT)
     except subprocess.TimeoutExpired:
         res.error = f"pip install timed out after {PIP_TIMEOUT}s"
         return res
@@ -1199,6 +1215,9 @@ def _parse_time(value: str) -> tuple[int, int]:
 
 
 def launchd_plist(python: Path, script: Path, hour: int, minute: int, log: Path) -> str:
+    # stdout goes nowhere: `--log` already writes the run to the log, and
+    # launchd capturing stdout into the same file recorded every run twice.
+    # stderr stays captured, so a crash before the log opens still lands there.
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -1213,13 +1232,66 @@ def launchd_plist(python: Path, script: Path, hour: int, minute: int, log: Path)
   <key>StartCalendarInterval</key>
   <dict><key>Hour</key><integer>{hour}</integer><key>Minute</key><integer>{minute}</integer></dict>
   <key>RunAtLoad</key><false/>
-  <key>StandardOutPath</key><string>{log}</string>
+  <key>StandardOutPath</key><string>/dev/null</string>
   <key>StandardErrorPath</key><string>{log}</string>
   <key>EnvironmentVariables</key>
   <dict><key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string></dict>
 </dict>
 </plist>
 """
+
+
+def schtasks_xml(python: Path, script: Path, hour: int, minute: int, start: _dt.date) -> str:
+    """The daily task as a Task Scheduler definition. Unlike `schtasks /SC
+    DAILY`, it can set StartWhenAvailable: a PC that is off or asleep at HH:MM
+    runs the job once it is back, instead of skipping that day."""
+    command = escape(str(python))
+    arguments = escape(f'"{script}" --log')
+    return f"""<?xml version="1.0" encoding="UTF-16"?>
+<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Description>roadmodel-update: upgrade roadmodel in every registered project</Description>
+  </RegistrationInfo>
+  <Triggers>
+    <CalendarTrigger>
+      <StartBoundary>{start.isoformat()}T{hour:02d}:{minute:02d}:00</StartBoundary>
+      <Enabled>true</Enabled>
+      <ScheduleByDay>
+        <DaysInterval>1</DaysInterval>
+      </ScheduleByDay>
+    </CalendarTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id="Author">
+      <LogonType>InteractiveToken</LogonType>
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <Enabled>true</Enabled>
+    <ExecutionTimeLimit>PT2H</ExecutionTimeLimit>
+  </Settings>
+  <Actions Context="Author">
+    <Exec>
+      <Command>{command}</Command>
+      <Arguments>{arguments}</Arguments>
+    </Exec>
+  </Actions>
+</Task>
+"""
+
+
+def _next_start(hour: int, minute: int, now: Optional[_dt.datetime] = None) -> _dt.date:
+    """Today if HH:MM is still ahead, else tomorrow — a start boundary already
+    in the past must not read as a missed run to catch up on."""
+    now = now or _dt.datetime.now()
+    if (now.hour, now.minute) < (hour, minute):
+        return now.date()
+    return now.date() + _dt.timedelta(days=1)
 
 
 def schtasks_create_argv(python: Path, script: Path, hour: int, minute: int) -> list[str]:
@@ -1254,12 +1326,43 @@ def _crontab_without_ours() -> list[str]:
     return [ln for ln in text.splitlines() if SCHEDULE_LABEL not in ln]
 
 
+def _install_windows_task(
+    python: Path, script: Path, hour: int, minute: int, stamp: str, dry_run: bool
+) -> str:
+    caught_up = (
+        f"Task Scheduler task {TASK_NAME} — {stamp}; a missed start runs when the PC is back"
+    )
+    if dry_run:
+        return caught_up
+    definition = CONFIG_DIR / "schedule-task.xml"
+    # schtasks reads a task definition as UTF-16, which is what it declares.
+    definition.write_text(
+        schtasks_xml(python, script, hour, minute, _next_start(hour, minute)), encoding="utf-16"
+    )
+    try:
+        cp = _sys(["schtasks", "/Create", "/F", "/TN", TASK_NAME, "/XML", str(definition)])
+    finally:
+        definition.unlink(missing_ok=True)
+    if cp.returncode == 0:
+        return caught_up
+    # A Task Scheduler that refuses the definition still takes the plain daily
+    # task; it just skips a day the PC was off at HH:MM.
+    refused = (cp.stderr or cp.stdout).strip()
+    cp = _sys(schtasks_create_argv(python, script, hour, minute))
+    if cp.returncode != 0:
+        raise SystemExit(f"schtasks failed: {cp.stderr.strip() or cp.stdout.strip()}")
+    return (
+        f"Task Scheduler task {TASK_NAME} — {stamp}; no catch-up after a missed start "
+        f"(the full definition was refused: {refused})"
+    )
+
+
 def install_schedule(when: str, dry_run: bool = False) -> str:
-    """Register a daily run of this script for the current user. Returns a
+    """Register a daily run of the launcher for the current user. Returns a
     one-line description of what was (or would be) installed."""
     hour, minute = _parse_time(when)
-    python = Path(sys.executable).resolve()
-    script = Path(__file__).resolve()
+    python = _launcher_python()
+    script = _install_launcher(dry_run)
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     stamp = f"daily at {hour:02d}:{minute:02d} via {python} {script} (log: {LOG_FILE})"
 
@@ -1279,13 +1382,7 @@ def install_schedule(when: str, dry_run: bool = False) -> str:
         return f"launchd agent {plist} — {stamp}"
 
     if WINDOWS:
-        argv = schtasks_create_argv(python, script, hour, minute)
-        if dry_run:
-            return f"Task Scheduler task {TASK_NAME} — {stamp}\n  {subprocess.list2cmdline(argv)}"
-        cp = _sys(argv)
-        if cp.returncode != 0:
-            raise SystemExit(f"schtasks failed: {cp.stderr.strip() or cp.stdout.strip()}")
-        return f"Task Scheduler task {TASK_NAME} — {stamp}"
+        return _install_windows_task(python, script, hour, minute, stamp, dry_run)
 
     line = cron_line(python, script, hour, minute)
     if dry_run:
@@ -1330,13 +1427,14 @@ class _Tee:
 
 def _open_log() -> object:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    if LOG_FILE.exists() and LOG_FILE.stat().st_size > LOG_MAX_BYTES:
+    # A handed-over run continues the section its launcher opened.
+    handed_over = bool(os.environ.get(DELEGATED_ENV))
+    if not handed_over and LOG_FILE.exists() and LOG_FILE.stat().st_size > LOG_MAX_BYTES:
         tail = LOG_FILE.read_bytes()[-LOG_MAX_BYTES // 5 :]
         LOG_FILE.write_bytes(tail)
     fh = LOG_FILE.open("a", encoding="utf-8")
-    import datetime as _dt
-
-    fh.write(f"\n===== {_dt.datetime.now().isoformat(timespec='seconds')} =====\n")
+    if not handed_over:
+        fh.write(f"\n===== {_dt.datetime.now().isoformat(timespec='seconds')} =====\n")
     return fh
 
 
@@ -1506,49 +1604,202 @@ def sync_user_context(dry_run: bool = False) -> list[str]:
 
 
 # --------------------------------------------------------------------------
-# Staleness: this script is deliberately NOT self-updating. A daily job that
-# fetches code from the internet and executes it is its own supply-chain risk,
-# so the scheduled task runs whatever local copy exists. The cost is drift: a
-# machine keeps running an old updater until someone re-fetches it, and nothing
-# said so. On 2026-09-22 the Mac Studio's scheduled copy was 32 KB against a
-# 64 KB main — months of fixes (Antigravity, per-project parity, workspace
-# trust) never ran there. So compare, and WARN. The fetched bytes are compared
-# and discarded — never written, never executed.
+# Self-update. The scheduled job runs a copy of this file on disk, and that
+# copy used to never change by itself: every fix to the updater meant a manual
+# re-fetch on every machine, and a machine nobody re-fetched ran old code
+# while reporting success (the Mac, 2026-09-22: 32 KB against a 64 KB main;
+# Antigravity, parity and trust had never run there).
+#
+# So this file also ships INSIDE the roadmodel package, and the copy at
+# ~/.config/roadmodel/update_projects.py is a launcher. Each run it upgrades
+# roadmodel in a venv of its own (~/.config/roadmodel/venv), replaces itself
+# with the copy in that release, and hands the run over to it. What executes
+# is always a published release — a signed tag, artifacts with provenance,
+# the channel every registered project already upgrades through each
+# morning — never whatever happens to be on main. Nothing is fetched from the
+# repo and executed. If a step fails, the run carries on with the local copy
+# and says why.
 # --------------------------------------------------------------------------
 
-SELF_URL = f"{REPO_RAW}/scripts/update_projects.py"
+UPDATER_VENV = CONFIG_DIR / "venv"
+LAUNCHER = CONFIG_DIR / "update_projects.py"
+PACKAGED_MODULE = "roadmodel.update_projects"
+# Set on the run a launcher hands over to. Its value is the launcher's own
+# interpreter, so a schedule installed from inside the venv never points there.
+DELEGATED_ENV = "ROADMODEL_UPDATER_LAUNCHER_PYTHON"
+MIN_PYTHON = (3, 11)  # roadmodel's requires-python
 
 
-def _refetch_command(target: Path) -> str:
-    if WINDOWS:
-        return f'curl.exe -fsSL "{SELF_URL}" -o "{target}"'
-    return f'curl -fsSL "{SELF_URL}" -o "{target}"'
+def _packaged() -> bool:
+    return __package__ == "roadmodel"
 
 
-def staleness_warning(self_path: Optional[Path] = None) -> Optional[str]:
-    """A warning when this file differs from main, else None. Read-only: the
-    fetched copy is compared, then dropped. A network failure is not a warning
-    — an offline run must not nag."""
-    self_path = self_path or Path(__file__).resolve()
+def _same_file(a: Path, b: Path) -> bool:
     try:
-        with urllib.request.urlopen(SELF_URL, timeout=15) as resp:  # noqa: S310 — fixed https URL
-            upstream = resp.read()
-    except (urllib.error.URLError, OSError):
-        return None
-    try:
-        local = self_path.read_bytes()
+        return os.path.samefile(a, b)
     except OSError:
-        return None
-    if local.replace(b"\r\n", b"\n") == upstream.replace(b"\r\n", b"\n"):
-        return None
-    return (
-        f"THIS UPDATER IS STALE ({len(local):,} bytes here, {len(upstream):,} on main). "
-        f"Fixes on main are not running on this machine. Re-fetch it:\n"
-        f"    {_refetch_command(self_path)}"
+        return False
+
+
+def should_self_update(self_path: Optional[Path] = None) -> bool:
+    """Only the machine's installed copy hands over. A repo checkout runs its
+    own code (development, tests), and neither the packaged copy nor a run
+    handed over to it ever hands over again."""
+    if _packaged() or os.environ.get(DELEGATED_ENV):
+        return False
+    return _same_file(self_path or Path(__file__), LAUNCHER)
+
+
+def _launcher_python() -> Path:
+    """The interpreter a schedule runs the launcher with. The launcher is
+    stdlib-only, so it needs no venv — and must not use the updater's, or a
+    rebuilt venv would take the schedule down with it."""
+    handed = os.environ.get(DELEGATED_ENV)
+    if handed:
+        return Path(handed).resolve()
+    return Path(getattr(sys, "_base_executable", "") or sys.executable).resolve()
+
+
+def _replace_bytes(path: Path, data: bytes) -> None:
+    staged = path.with_name(path.name + ".new")
+    staged.write_bytes(data)
+    os.replace(staged, path)
+
+
+def _install_launcher(dry_run: bool) -> Path:
+    """A schedule always runs LAUNCHER. Put this file there when this run is
+    not already it (say, `--install-schedule` from a repo checkout). A run a
+    launcher handed over to leaves it alone: the launcher just refreshed
+    itself."""
+    here = Path(__file__).resolve()
+    if os.environ.get(DELEGATED_ENV) or _same_file(here, LAUNCHER) or dry_run:
+        return LAUNCHER
+    LAUNCHER.parent.mkdir(parents=True, exist_ok=True)
+    _replace_bytes(LAUNCHER, here.read_bytes())
+    return LAUNCHER
+
+
+def _python_ok(python: Path) -> bool:
+    """`python` runs and is new enough to install roadmodel."""
+    probe = f"import sys; sys.exit(sys.version_info[:2] < {MIN_PYTHON!r})"
+    try:
+        return _run([str(python), "-c", probe], timeout=60).returncode == 0
+    except (subprocess.SubprocessError, OSError):
+        return False
+
+
+def _venv_base(projects_file: Path) -> Optional[Path]:
+    """An interpreter to build the venv from: this one when it is new enough,
+    else a registered project's env (each one already runs roadmodel)."""
+    if sys.version_info[:2] >= MIN_PYTHON:
+        return Path(sys.executable)
+    for entry in read_registry(projects_file):
+        env, _ = resolve_env(entry)
+        if env is not None and _python_ok(env.python):
+            return env.python
+    return None
+
+
+def ensure_updater_venv(projects_file: Path) -> tuple[Optional[Path], str]:
+    """(the venv's interpreter, "") — or (None, why there is none)."""
+    python = _python_path(UPDATER_VENV)
+    if python is not None and _python_ok(python):
+        return python, ""
+    if UPDATER_VENV.exists() and not (UPDATER_VENV / "pyvenv.cfg").is_file():
+        return None, f"{UPDATER_VENV} exists but is not a venv; move it aside"
+    base = _venv_base(projects_file)
+    if base is None:
+        return None, f"no Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]}+ to build {UPDATER_VENV} from"
+    # --clear also rebuilds a venv whose base interpreter was removed or upgraded.
+    try:
+        cp = _run([str(base), "-m", "venv", "--clear", str(UPDATER_VENV)], timeout=PIP_TIMEOUT)
+    except (subprocess.SubprocessError, OSError) as exc:
+        return None, f"could not create {UPDATER_VENV}: {exc}"
+    python = _python_path(UPDATER_VENV)
+    if cp.returncode != 0 or python is None:
+        return None, f"could not create {UPDATER_VENV}: {_tail(cp.stderr or cp.stdout, 2)}"
+    return python, ""
+
+
+def _packaged_updater(python: Path) -> Optional[Path]:
+    """Where the release installed in that venv keeps this file — None before
+    the first release that ships it."""
+    probe = (
+        "import importlib.util as u, sys; s = u.find_spec('roadmodel.update_projects'); "
+        "sys.stdout.write(s.origin if s and s.origin else '')"
     )
+    try:
+        cp = _run([str(python), "-c", probe], timeout=60)
+    except (subprocess.SubprocessError, OSError):
+        return None
+    found = cp.stdout.strip()
+    return Path(found) if cp.returncode == 0 and found and Path(found).is_file() else None
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def _self_check(command: list[str]) -> bool:
+    """The updater at `command` loads and builds its CLI on that interpreter."""
+    try:
+        return _run([*command, "--self-check"], timeout=120).returncode == 0
+    except (subprocess.SubprocessError, OSError):
+        return False
+
+
+def _handover(argv: list[str], env: dict[str, str]) -> int:
+    done = subprocess.run(argv, env=env)  # noqa: S603 — the updater venv's interpreter, a fixed module
+    return done.returncode if done.returncode >= 0 else 1
+
+
+def self_update(argv: list[str], projects_file: Path) -> Optional[int]:
+    """Upgrade the updater venv, refresh this launcher from the release, then
+    run that release's updater with `argv` and return its exit code. None
+    means: carry on with this local copy (the reason has been printed)."""
+    python, why = ensure_updater_venv(projects_file)
+    if python is None:
+        print(f"*** self-update FAILED: {why}. Running the local copy, which may be out of date.")
+        return None
+    before = installed_version(python)
+    try:
+        cp = _run(_pip_upgrade(python), timeout=PIP_TIMEOUT)
+        pip_error = "" if cp.returncode == 0 else _tail(cp.stderr or cp.stdout, 2)
+    except (subprocess.SubprocessError, OSError) as exc:
+        pip_error = str(exc)
+    after = installed_version(python)
+    packaged = _packaged_updater(python)
+    if packaged is None:
+        if pip_error:
+            print(f"*** self-update FAILED: pip: {pip_error}. Running the local copy.")
+        else:
+            print(
+                f"self-update: roadmodel {after} has no packaged updater yet; running the local copy"
+            )
+        return None
+    if not _self_check([str(python), "-m", PACKAGED_MODULE]):
+        print(
+            f"*** self-update FAILED: the updater in roadmodel {after} does not start. "
+            "Running the local copy."
+        )
+        return None
+
+    done = [f"roadmodel {after}" + (f" (was {before})" if before not in ("-", after) else "")]
+    if pip_error:
+        done.append(f"upgrade failed, so this is the release already installed: {pip_error}")
+    try:
+        fresh, mine = packaged.read_bytes(), LAUNCHER.read_bytes()
+    except OSError:
+        fresh = mine = b""
+    # The launcher runs on the schedule's interpreter, which may be older than
+    # the venv's; replace it only with a copy proven to start there.
+    if fresh != mine and _self_check([sys.executable, str(packaged)]):
+        _replace_bytes(LAUNCHER, fresh)
+        done.append("launcher refreshed")
+    print(f"self-update: {'; '.join(done)}. Running the updater from that release.")
+    sys.stdout.flush()
+    sys.stderr.flush()
+    env = {**os.environ, DELEGATED_ENV: sys.executable}
+    return _handover([str(python), "-m", PACKAGED_MODULE, *argv], env)
+
+
+def _parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], prog="update_projects.py")
     ap.add_argument(
         "projects", nargs="*", help="project dirs for this run only (default: the registry)"
@@ -1618,12 +1869,38 @@ def main(argv: Optional[list[str]] = None) -> int:
             "removing it so the provider's own default applies (MCP and trust still sync)"
         ),
     )
-    args = ap.parse_args(argv)
+    # A launcher's proof that a copy loads and builds its CLI; see self_update.
+    ap.add_argument("--self-check", action="store_true", help=argparse.SUPPRESS)
+    return ap
 
-    if args.log:
+
+def main(argv: Optional[list[str]] = None) -> int:
+    raw = list(sys.argv[1:] if argv is None else argv)
+    ap = _parser()
+    if "--self-check" in raw:
+        return 0
+
+    # Read only what must act before the hand-over, and leave every other
+    # flag to the updater that takes the run: a newer release may accept
+    # flags this copy has never heard of.
+    early = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    early.add_argument("--log", action="store_true")
+    early.add_argument("--dry-run", action="store_true")
+    early.add_argument("--projects-file", type=Path, default=DEFAULT_PROJECTS_FILE)
+    pre, _ = early.parse_known_args(raw)
+    if pre.log:
         log_fh = _open_log()
         sys.stdout = _Tee(sys.__stdout__, log_fh)
         sys.stderr = _Tee(sys.__stderr__, log_fh)
+    if should_self_update() and not {"-h", "--help"} & set(raw):
+        if pre.dry_run:
+            print("self-update: skipped (dry run); this is the local copy's plan")
+        else:
+            code = self_update(raw, pre.projects_file)
+            if code is not None:
+                return code
+
+    args = ap.parse_args(raw)
 
     if args.context_source and not args.context_sync:
         raise SystemExit("--context-source needs --context-sync OWNER/REPO")
@@ -1651,9 +1928,6 @@ def main(argv: Optional[list[str]] = None) -> int:
             projects=[e.path for e in read_registry(args.projects_file)],
         ):
             print(f"  {line}")
-        stale = staleness_warning()
-        if stale:
-            print(f"\n*** {stale}")
         return 0
 
     if args.uninstall_schedule:
@@ -1728,10 +2002,6 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     if args.install_schedule:
         print("\nSchedule:", install_schedule(args.install_schedule, dry_run=args.dry_run))
-
-    stale = staleness_warning()
-    if stale:
-        print(f"\n*** {stale}")
 
     failed = [r for r in results if not r.ok]
     if failed:

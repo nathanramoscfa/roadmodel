@@ -50,12 +50,16 @@ def test_data_dir_in_wheel(tmp_path: Path) -> None:
     assert len(wheels) == 1, f"Expected exactly one wheel; got {wheels}"
     with zipfile.ZipFile(wheels[0]) as zf:
         members = set(zf.namelist())
+        # Each machine's scheduled updater hands over to this copy, so it must
+        # ship, and be the repo's file byte for byte (one source of truth).
+        updater = zf.read("roadmodel/update_projects.py")
     for name in BUNDLED_DOCS:
         expected = f"roadmodel/data/{name}"
         assert expected in members, (
             f"{expected!r} missing from wheel; members starting with "
             f"'roadmodel/data/': {sorted(m for m in members if m.startswith('roadmodel/data/'))}"
         )
+    assert updater == (REPO_ROOT / "scripts" / "update_projects.py").read_bytes()
 
 
 def test_data_dir_not_in_git() -> None:

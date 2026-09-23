@@ -201,9 +201,18 @@ committed to any project. Without Claude Code:
 machine) registers a daily run — launchd on macOS, Task Scheduler on
 Windows, cron on Linux — so every registered project follows each
 release within a day, logged to `~/.config/roadmodel/update.log`.
-`--uninstall-schedule` removes it. Fixes to the updater script itself
-reach the schedule the next time `/roadmodel-update` is run by hand
-(that is what re-fetches the script).
+`--uninstall-schedule` removes it. On Windows the task runs after a start
+missed while the PC was off.
+
+**The updater keeps itself current.** It also ships inside the roadmodel
+package, and the copy the schedule runs is a launcher: each run upgrades
+roadmodel in a venv of its own (`~/.config/roadmodel/venv`), replaces
+itself with the updater in that release, and hands the run over to it. A
+fix to the updater reaches every machine with the next release, and
+nobody re-fetches anything. It only ever runs a published release (a
+signed tag, artifacts with provenance), never whatever is on `main`. If a
+step fails, the run carries on with the local copy and its first line
+says `*** self-update FAILED` with the reason.
 
 ## What `/roadmap-project` and `/roadmap-phase` do
 

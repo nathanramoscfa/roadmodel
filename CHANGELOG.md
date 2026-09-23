@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The updater keeps itself current.** `scripts/update_projects.py` now
+  also ships in the package as `roadmodel.update_projects`. The copy each
+  machine's schedule runs (`~/.config/roadmodel/update_projects.py`)
+  upgrades roadmodel in a venv of its own (`~/.config/roadmodel/venv`),
+  replaces itself with the copy in that release, and hands the run over to
+  it. An updater fix now reaches every machine with the next release, with
+  no re-fetch. It only runs published releases, never `main`, and falls
+  back to the local copy (saying why) if any step fails. This replaces the
+  stale-copy warning from 0.2.38.
+
+### Fixed
+
+- **The first run after a release picks it up.** The per-project upgrade
+  bypasses pip's HTTP cache, which could serve an index page from before
+  the release and report `0.2.37 -> 0.2.37 ok`.
+- **The Windows task catches up** after a start it missed because the PC
+  was off, and on macOS each run is recorded once in `update.log`, not
+  twice.
+
 ## [0.2.38] — 2026-09-23
 
 ### Added
