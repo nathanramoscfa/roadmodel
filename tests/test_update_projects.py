@@ -1083,3 +1083,132 @@ def test_the_check_never_writes_what_it_fetched(
     up.staleness_warning(local)
     assert local.read_bytes() == b"local\n"
     assert sorted(p.name for p in tmp_path.iterdir()) == ["update_projects.py"]
+
+
+# --------------------------------------------------------------------------
+# User-context sync: one source, published through a private repo, pulled by
+# every other machine. A local bare repo stands in for GitHub so these run
+# offline and exercise the real git paths.
+# --------------------------------------------------------------------------
+
+
+@pytest.fixture
+def ctx(up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
+    """Two machines' config dirs and a bare 'remote', with a deterministic git
+    identity and default branch so the test does not depend on the host's."""
+    gitconfig = tmp_path / "gitconfig"
+    gitconfig.write_text(
+        "[user]\n\tname = Test\n\temail = test@example.invalid\n[init]\n\tdefaultBranch = main\n"
+    )
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(gitconfig))
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    remote = tmp_path / "remote.git"
+    subprocess.run(["git", "init", "--bare", "--quiet", str(remote)], check=True)
+    return {"remote": remote, "mac": tmp_path / "mac", "pc": tmp_path / "pc"}
+
+
+def _as_machine(up: ModuleType, monkeypatch: pytest.MonkeyPatch, cfg_dir: Path) -> None:
+    monkeypatch.setattr(up, "CONFIG_DIR", cfg_dir)
+    monkeypatch.setattr(up, "CONTEXT_SYNC_CONFIG", cfg_dir / "context-sync.json")
+    monkeypatch.setattr(up, "CONTEXT_CLONE", cfg_dir / "context-repo")
+    monkeypatch.setattr(up, "USER_CONTEXT", cfg_dir / "user-context.md")
+
+
+def test_an_unconfigured_machine_sees_nothing(
+    up: ModuleType, ctx: dict[str, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An operator with one machine must not get a new line of noise."""
+    _as_machine(up, monkeypatch, ctx["mac"])
+    assert up.sync_user_context() == []
+
+
+def test_the_source_publishes_and_a_replica_pulls_the_same_bytes(
+    up: ModuleType, ctx: dict[str, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = ctx["mac"] / "project" / "user-context.md"
+    source.parent.mkdir(parents=True)
+    source.write_text("# User Context\n\nClaude Max · ChatGPT Pro · Google AI Pro\n")
+
+    _as_machine(up, monkeypatch, ctx["mac"])
+    up.configure_context_sync(str(ctx["remote"]), str(source))
+    published = up.sync_user_context()
+    assert published[-1].startswith("user-context sync: published")
+    assert up.sync_user_context()[-1].startswith("user-context sync: source unchanged")
+
+    _as_machine(up, monkeypatch, ctx["pc"])
+    up.configure_context_sync(str(ctx["remote"]), None)
+    assert up.sync_user_context()[0].startswith("user-context sync: pulled")
+    assert (ctx["pc"] / "user-context.md").read_bytes() == source.read_bytes()
+    assert up.sync_user_context()[0].startswith("user-context sync: current")
+
+
+def test_an_edit_at_the_source_reaches_the_replica_next_run(
+    up: ModuleType, ctx: dict[str, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The whole point: a pool binds, the operator edits ONE file, and the
+    other machine plans against it the next morning — no paste."""
+    source = ctx["mac"] / "uc.md"
+    source.parent.mkdir(parents=True)
+    source.write_text("pool: headroom\n")
+    _as_machine(up, monkeypatch, ctx["mac"])
+    up.configure_context_sync(str(ctx["remote"]), str(source))
+    up.sync_user_context()
+    _as_machine(up, monkeypatch, ctx["pc"])
+    up.configure_context_sync(str(ctx["remote"]), None)
+    up.sync_user_context()
+
+    source.write_text("pool: exhausted\n")
+    _as_machine(up, monkeypatch, ctx["mac"])
+    assert up.sync_user_context()[-1].startswith("user-context sync: published")
+    _as_machine(up, monkeypatch, ctx["pc"])
+    assert up.sync_user_context()[0].startswith("user-context sync: pulled")
+    assert (ctx["pc"] / "user-context.md").read_text() == "pool: exhausted\n"
+    # What a replica overwrote is kept, not silently lost.
+    assert (ctx["pc"] / "user-context.md.prev").read_text() == "pool: headroom\n"
+
+
+def test_a_replica_before_anything_is_published_says_so(
+    up: ModuleType, ctx: dict[str, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _as_machine(up, monkeypatch, ctx["pc"])
+    up.configure_context_sync(str(ctx["remote"]), None)
+    assert up.sync_user_context() == [
+        "user-context sync: nothing published yet (run the source machine first)"
+    ]
+    assert not (ctx["pc"] / "user-context.md").exists()
+
+
+def test_the_source_warns_about_a_separate_copy_that_would_never_publish(
+    up: ModuleType, ctx: dict[str, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """On the source machine the default path should POINT AT the source. A
+    separate file there is a trap: edits to it go nowhere."""
+    source = ctx["mac"] / "project" / "uc.md"
+    source.parent.mkdir(parents=True)
+    source.write_text("the source\n")
+    _as_machine(up, monkeypatch, ctx["mac"])
+    (ctx["mac"] / "user-context.md").write_text("a stale separate copy\n")
+    up.configure_context_sync(str(ctx["remote"]), str(source))
+    lines = up.sync_user_context()
+    assert any("WARNING" in ln and "NOT published" in ln for ln in lines)
+
+
+def test_configure_rejects_a_bad_repo_or_a_missing_source(
+    up: ModuleType, ctx: dict[str, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _as_machine(up, monkeypatch, ctx["mac"])
+    with pytest.raises(SystemExit):
+        up.configure_context_sync("not a repo", None)
+    with pytest.raises(SystemExit):
+        up.configure_context_sync("owner/repo", str(ctx["mac"] / "absent.md"))
+    assert "REPLICA" in up.configure_context_sync("owner/repo", None, dry_run=True)
+
+
+def test_the_personal_user_context_can_never_be_committed_to_this_public_repo() -> None:
+    """docs/user-context.md is the operator's real context — subscriptions and
+    account names — and the SOURCE the private sync publishes. This repo is
+    public. If the .gitignore line that keeps it out is ever removed, fail."""
+    ignored = subprocess.run(
+        ["git", "check-ignore", "-q", "docs/user-context.md"], cwd=ROOT, check=False
+    )
+    assert ignored.returncode == 0, "docs/user-context.md must stay gitignored"

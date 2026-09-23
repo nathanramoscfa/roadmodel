@@ -82,6 +82,40 @@ an in-repo copy explicitly with `--user-context docs/user-context.md`
 or `ROADMODEL_USER_CONTEXT=docs/user-context.md` if you want that
 file used.
 
+## Keeping it the same on every machine
+
+If you plan from more than one machine, give the file ONE home and let
+`roadmodel-update` carry it. Hand-copying drifts on the first edit — and the
+file changes every time a usage pool binds.
+
+One machine is the **source**: it publishes its file to a **private** GitHub
+repo. Every other machine is a **replica**: it pulls that file before
+refreshing its planning kits, so every machine plans against the same context
+each morning.
+
+```bash
+# once, on the source machine
+gh repo create <you>/roadmodel-context --private
+python update_projects.py --context-sync <you>/roadmodel-context \
+    --context-source /path/to/your/user-context.md
+
+# once, on each other machine
+python update_projects.py --context-sync <you>/roadmodel-context
+```
+
+After that, every run — including the daily schedule — publishes (source) or
+pulls (replica). Edit only on the source: a replica keeps the copy it
+replaced as `user-context.md.prev`, but it will be overwritten.
+
+Point the source machine's default path at the source file
+(`ln -s /path/to/your/user-context.md ~/.config/roadmodel/user-context.md`) so
+the CLI, the MCP server and the kits all read the one file. The updater warns
+when a separate copy at the default path would never be published.
+
+**Keep the repo private.** This file names your subscriptions and accounts.
+Never commit it to a public repository — in this repo, `docs/user-context.md`
+is gitignored, and a test fails if that ever changes.
+
 ## Field-by-field walk-through
 
 The sections below mirror

@@ -1355,6 +1355,151 @@ def _table(results: list[Result]) -> str:
 
 
 # --------------------------------------------------------------------------
+# User-context sync: ONE source of truth, carried to every other machine.
+#
+# The user-context is the operator's own state — what they pay for, which pool
+# is exhausted — and it changes whenever a cap binds. Two machines each holding
+# a hand-copied file drift apart on the first edit (2026-09-22: three manual
+# paste-transfers in one day). So one machine is the SOURCE — it publishes its
+# file to a PRIVATE GitHub repo — and every other machine is a REPLICA that
+# pulls it before refreshing its kits, so both plan against the same context.
+#
+# The repo is private because this file is personal (subscriptions, account
+# names); it must never reach the public roadmodel repo. What travels is
+# markdown DATA read by the selector — it is written, never executed.
+# --------------------------------------------------------------------------
+
+CONTEXT_SYNC_CONFIG = CONFIG_DIR / "context-sync.json"
+CONTEXT_CLONE = CONFIG_DIR / "context-repo"
+USER_CONTEXT = CONFIG_DIR / "user-context.md"
+CONTEXT_FILE = "user-context.md"
+_REPO_SLUG_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+
+
+def _git(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
+    argv = ["git", *args]  # noqa: S607 — git resolved from PATH, like every other git call
+    return subprocess.run(  # noqa: S603 — literal argv built here, no shell
+        argv, cwd=cwd, capture_output=True, text=True, timeout=120
+    )
+
+
+def _read_context_config() -> Optional[dict[str, str]]:
+    try:
+        data = json.loads(CONTEXT_SYNC_CONFIG.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or data.get("role") not in ("source", "replica"):
+        return None
+    return {k: str(v) for k, v in data.items()}
+
+
+def configure_context_sync(repo: str, source: Optional[str], dry_run: bool = False) -> str:
+    """Record this machine's role. `source` given → it publishes that file;
+    omitted → it pulls. `repo` is `owner/name` (or a git URL / path)."""
+    if not (_REPO_SLUG_RE.match(repo) or "://" in repo or repo.startswith(("git@", "/"))):
+        raise SystemExit(f"--context-sync: expected OWNER/REPO, got {repo!r}")
+    cfg: dict[str, str] = {"repo": repo, "role": "replica"}
+    if source:
+        src = Path(source).expanduser().resolve()
+        if not src.is_file():
+            raise SystemExit(f"--context-source: no such file {src}")
+        cfg.update(role="source", source=str(src))
+    if not dry_run:
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        CONTEXT_SYNC_CONFIG.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+    where = f"publishing {cfg['source']}" if source else f"pulling into {USER_CONTEXT}"
+    return f"this machine is the user-context {cfg['role'].upper()}, {where}, via {repo}"
+
+
+def _ensure_clone(repo: str) -> Optional[str]:
+    """None on success, else why it failed. A slug clones through `gh` (which
+    carries the operator's GitHub auth for a PRIVATE repo); a URL or path
+    clones with plain git."""
+    if (CONTEXT_CLONE / ".git").is_dir():
+        return None
+    CONTEXT_CLONE.parent.mkdir(parents=True, exist_ok=True)
+    if _REPO_SLUG_RE.match(repo) and shutil.which("gh"):
+        cmd = ["gh", "repo", "clone", repo, str(CONTEXT_CLONE)]
+    else:
+        url = f"https://github.com/{repo}.git" if _REPO_SLUG_RE.match(repo) else repo
+        cmd = ["git", "clone", url, str(CONTEXT_CLONE)]
+    done = subprocess.run(  # noqa: S603 — literal argv built above from a validated repo, no shell
+        cmd, capture_output=True, text=True, timeout=180
+    )
+    return None if done.returncode == 0 else _tail(done.stderr or done.stdout, 2)
+
+
+def _digest(data: bytes) -> str:
+    import hashlib
+
+    return hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest()[:8]
+
+
+def sync_user_context(dry_run: bool = False) -> list[str]:
+    """Publish (source) or pull (replica) the user-context. Silent when this
+    machine was never configured, so an operator with one machine sees
+    nothing new."""
+    cfg = _read_context_config()
+    if cfg is None:
+        return []
+    if dry_run:
+        return [f"user-context sync: {cfg['role']} via {cfg['repo']} (dry run: nothing sent)"]
+    failed = _ensure_clone(cfg["repo"])
+    if failed:
+        return [f"user-context sync: SKIPPED (clone of {cfg['repo']} failed: {failed})"]
+    has_history = _git("rev-parse", "--verify", "HEAD", cwd=CONTEXT_CLONE).returncode == 0
+    if has_history:
+        pulled = _git("pull", "--ff-only", "--quiet", cwd=CONTEXT_CLONE)
+        if pulled.returncode != 0:
+            return [f"user-context sync: SKIPPED (pull failed: {_tail(pulled.stderr, 2)})"]
+    carried = CONTEXT_CLONE / CONTEXT_FILE
+
+    if cfg["role"] == "source":
+        src = Path(cfg["source"])
+        if not src.is_file():
+            return [f"user-context sync: SKIPPED (source {src} is missing)"]
+        out: list[str] = []
+        # An edit to a separate copy at the default path would never publish.
+        if USER_CONTEXT.exists() and not USER_CONTEXT.is_symlink():
+            if USER_CONTEXT.read_bytes() != src.read_bytes():
+                out.append(
+                    f"user-context sync: WARNING {USER_CONTEXT} is a separate copy that "
+                    f"differs from the source; edits there are NOT published. Point it at "
+                    f"{src}."
+                )
+        data = src.read_bytes()
+        if carried.exists() and carried.read_bytes() == data:
+            return [*out, f"user-context sync: source unchanged ({_digest(data)})"]
+        carried.write_bytes(data)
+        steps = (
+            ("add", CONTEXT_FILE),
+            ("commit", "--quiet", "-m", f"sync user-context {_digest(data)}"),
+            ("push", "--quiet", "-u", "origin", "HEAD"),
+        )
+        for step in steps:
+            done = _git(*step, cwd=CONTEXT_CLONE)
+            if done.returncode != 0:
+                return [
+                    *out,
+                    f"user-context sync: FAILED at git {step[0]}: {_tail(done.stderr, 2)}",
+                ]
+        return [*out, f"user-context sync: published ({_digest(data)})"]
+
+    if not carried.is_file():
+        return ["user-context sync: nothing published yet (run the source machine first)"]
+    data = carried.read_bytes()
+    if USER_CONTEXT.exists() and USER_CONTEXT.read_bytes() == data:
+        return [f"user-context sync: current ({_digest(data)})"]
+    if USER_CONTEXT.exists():
+        # Keep what is being replaced: a replica should not be edited, but if it
+        # was, the edit is recoverable rather than silently gone.
+        shutil.copy2(USER_CONTEXT, USER_CONTEXT.with_name("user-context.md.prev"))
+    USER_CONTEXT.parent.mkdir(parents=True, exist_ok=True)
+    USER_CONTEXT.write_bytes(data)
+    return [f"user-context sync: pulled ({_digest(data)})"]
+
+
+# --------------------------------------------------------------------------
 # Staleness: this script is deliberately NOT self-updating. A daily job that
 # fetches code from the internet and executes it is its own supply-chain risk,
 # so the scheduled task runs whatever local copy exists. The cost is drift: a
@@ -1445,6 +1590,19 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="skip the per-project agent parity (AGENTS.md pointer + exported memory)",
     )
     ap.add_argument(
+        "--context-sync",
+        metavar="OWNER/REPO",
+        help=(
+            "sync the user-context through this PRIVATE repo: this machine pulls it "
+            "daily (a replica), or publishes it if --context-source is also given"
+        ),
+    )
+    ap.add_argument(
+        "--context-source",
+        metavar="PATH",
+        help="with --context-sync: this machine is the SOURCE and publishes PATH",
+    )
+    ap.add_argument(
         "--keep-pins",
         "--no-calibrate",  # the pre-anchoring name, kept so old invocations still work
         dest="keep_pins",
@@ -1461,6 +1619,11 @@ def main(argv: Optional[list[str]] = None) -> int:
         sys.stdout = _Tee(sys.__stdout__, log_fh)
         sys.stderr = _Tee(sys.__stderr__, log_fh)
 
+    if args.context_source and not args.context_sync:
+        raise SystemExit("--context-source needs --context-sync OWNER/REPO")
+    if args.context_sync:
+        print(configure_context_sync(args.context_sync, args.context_source, args.dry_run))
+
     agents: Optional[list[str]] = None
     if args.agents:
         agents = [a.strip() for a in args.agents.split(",") if a.strip()]
@@ -1469,6 +1632,8 @@ def main(argv: Optional[list[str]] = None) -> int:
             raise SystemExit(f"--agents: unknown {unknown}; choose from {', '.join(AGENTS)}")
 
     if args.commands_only:
+        for line in sync_user_context(dry_run=args.dry_run):
+            print(line)
         print("Agent command files:")
         for line in refresh_commands(dry_run=args.dry_run, agents=agents):
             print(f"  {line}")
@@ -1505,6 +1670,11 @@ def main(argv: Optional[list[str]] = None) -> int:
             file=sys.stderr,
         )
         return 2
+
+    # Before the kits refresh: each project's planning/ kit copies the
+    # user-context in, so it must already be this morning's.
+    for line in sync_user_context(dry_run=args.dry_run):
+        print(line)
 
     verb = "Plan" if args.dry_run else "Updating"
     print(f"{verb}: {len(entries)} project(s), {args.jobs} at a time\n")
