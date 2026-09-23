@@ -7,6 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.38] — 2026-09-23
+
+### Added
+
+- **`/roadmap-refresh` — bring roadmaps current without running a step
+  (#686).** Marks every step whose own Branch has a merged PR as `Complete`,
+  then re-runs the model selector for the current step and every step after
+  it. Completed steps are never touched, no task block runs, and it delivers
+  one docs-only PR. `/roadmap-step` executes a step; this one does none.
+- **One user-context across machines (#685).** A source machine publishes
+  its file to a PRIVATE repo and every other machine pulls it before
+  refreshing its planning kits: `--context-sync OWNER/REPO` (replica), plus
+  `--context-source PATH` (source). Markdown data, written never executed; a
+  replica keeps the copy it replaced as `user-context.md.prev`.
+- **Antigravity is a first-class agent (#670, #678).** It shares `~/.gemini`
+  with the retired Gemini CLI but reads its own layout: the `/roadmap-*`
+  commands install as skills under `~/.gemini/config/skills/` (a skill there
+  IS a `/name` command), the roadmodel MCP server into
+  `~/.gemini/config/mcp_config.json`, and every registered project is trusted
+  in `trustedWorkspaces`.
+- **The updater says when it is stale (#681).** It is deliberately not
+  self-updating; it now compares itself to `main` after a run and prints the
+  exact re-fetch command. The fetched copy is compared, never written or run.
+
+### Changed
+
+- **Every agent runs on its provider's own default model and effort (#679).**
+  The runtime sync removes pinned defaults instead of writing roadmodel's
+  opinion, so each client resolves its provider's live default — Codex
+  documents none as a value, only its client knows it. Ceilings
+  (`maxEffortLevel`) are kept. `--keep-pins` opts out (`--no-calibrate` still
+  works).
+- **`/roadmap-step` reads a Settings table as intent (#684).** A newer version
+  in the same line (Opus 5 → Opus 5.5) passes the gate, a top-rung effort
+  written before a `capped` posture is treated as stale, and the step's own PR
+  records what actually ran. A different line still stops.
+- **Catalog: Claude Opus 5.5 (#687) and Grok 4.7 (#658).** Opus 5.5 is
+  Anthropic's Opus 5 successor at $4 / $20 (20% cheaper), in the High cost
+  tier, and the default Opus in Claude Code from 2.1.280; it tops the
+  Artificial Analysis Intelligence Index at 57.6 (max effort). Its price is
+  verified against Anthropic's own pricing page. Its letter ratings are
+  placeholders inherited from Opus 5 until measured.
+- **A declined model stays declined (#687).** xAI's page moved from display
+  names to slug-form rows, which silently disarmed every entry in the xAI
+  extractor's DECLINED map; the lookup now compares slugs.
+
+### Fixed
+
+- **A Usage-pool row now expires at its own reset time (#683).** A stale
+  `exhausted` row was routing coding work off a pool that had already reset.
+  Only a certainly-past DATED reset expires a row: wrongly unlocking a live
+  exhausted pool bills overflow at list price.
+- **A raw quote inside a selector attribute truncated it (#663, #672).** The
+  claude-code `best_for` shipped cut at "configurable under ", losing its
+  Ultracode tail; a general structural test now catches any such attribute.
+- **grok-4.6 had no access method after a refresh (#658).** The refresh
+  replaced the grok list instead of inserting into it.
+- **LMArena's WebDev leaderboard shipped empty (#673).** One latest date per
+  subset discarded every `overall` row when a narrower board published later;
+  each board now keeps its own date.
+- **The Groq price check read a page with no models on it (#675).** It now
+  reads `console.groq.com/docs/models`, and reports gpt-oss models the catalog
+  lacks.
+- **The Codex reasoning tracker wrote `["string"]` as the vocabulary (#680).**
+  OpenAI moved the values into the description; the extractor now reads them
+  (`low` … `ultra`).
+- **An invalid escape in the updater (#682).** A SyntaxWarning on every run
+  and a future SyntaxError; `W605` is now linted.
+- **A local Playwright run now matches CI (#676).** One committed placeholder
+  env (`web/.env.ci`), and the test server is never adopted from a stranger on
+  the port.
+
 ### Changed
 
 - **The recommender engine moves to GPT-5.6 Luna.** A 12-probe differential
