@@ -145,21 +145,50 @@ def verify_anchors(in_scope: str) -> None:
         raise ExtractError(f"expected docs anchors missing (restructure?): {missing}")
 
 
-def parse_type_enum(in_scope: str, key: str) -> list[str]:
-    """Parse a config key's ``type: "a | b | c"`` enumeration into a token list.
+# A lowercase single-word value, as the docs write them in backticks.
+_VALUE_TOKEN_RE = re.compile(r"`([a-z]+)`")
 
-    The key and its ``type`` may sit on separate lines inside the JS object
-    literal, so the match spans newlines. The pipe-delimited type string is the
-    canonical vocabulary for that key.
+
+def parse_type_enum(in_scope: str, key: str, *, inherit: list[str] | None = None) -> list[str]:
+    """Parse a config key's vocabulary into a token list.
+
+    Two shapes are in the wild, and the docs moved between them without notice:
+
+    - ``type: "a | b | c"`` — the vocabulary IS the type (the original shape,
+      still used by ``model_reasoning_summary`` / ``model_verbosity``).
+    - ``type: "string"`` — the vocabulary moved into the description's prose.
+      OpenAI switched ``model_reasoning_effort`` to this on 2026-09-22: its
+      description now reads *"such as `low`, `medium`, `high`, `xhigh`, `max`,
+      or `ultra`"*. Reading the bare ``type`` there yields ``["string"]`` —
+      a type name, not a value — which is what broke the daily cron.
+
+    A ``string`` key whose description names no values at all
+    (``plan_mode_reasoning_effort``: *"using a level supported by the selected
+    model"*) defers to another key's vocabulary; pass that as ``inherit``.
+    Anything else still fails loud — never guess a vocabulary.
     """
     m = re.search(
-        rf'key:\s*"{re.escape(key)}"\s*,\s*type:\s*"([^"]*)"',
+        rf'key:\s*"{re.escape(key)}"\s*,\s*type:\s*"([^"]*)"'
+        rf'(?:\s*,\s*description:\s*"((?:[^"\\]|\\.)*)")?',
         in_scope,
         re.DOTALL,
     )
     if not m:
         raise ExtractError(f"could not parse type enumeration for key {key!r}")
-    tokens = [tok.strip().lower() for tok in m.group(1).split("|")]
+    type_str, description = m.group(1).strip(), m.group(2) or ""
+
+    if type_str.lower() == "string":
+        tokens = list(dict.fromkeys(_VALUE_TOKEN_RE.findall(description)))
+        if tokens:
+            return tokens
+        if inherit:
+            return list(inherit)
+        raise ExtractError(
+            f"key {key!r} is typed `string` and its description names no values "
+            f"(and no vocabulary to inherit) — the docs changed shape again"
+        )
+
+    tokens = [tok.strip().lower() for tok in type_str.split("|")]
     tokens = [t for t in tokens if t]
     if not tokens:
         raise ExtractError(f"type enumeration for key {key!r} parsed empty")
@@ -175,7 +204,8 @@ def build_snapshot(markdown: str, *, source_url: str) -> dict[str, object]:
     verify_anchors(in_scope)
 
     reasoning_effort = parse_type_enum(in_scope, REASONING_EFFORT_KEY)
-    plan_mode = parse_type_enum(in_scope, PLAN_MODE_KEY)
+    # Plan mode takes "a level supported by the selected model" — the same set.
+    plan_mode = parse_type_enum(in_scope, PLAN_MODE_KEY, inherit=reasoning_effort)
     summary = parse_type_enum(in_scope, SUMMARY_KEY)
     verbosity = parse_type_enum(in_scope, VERBOSITY_KEY)
 
