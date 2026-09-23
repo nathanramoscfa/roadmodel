@@ -1,9 +1,9 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-23T16:27:44Z",
+  "generated_at_utc": "2026-09-23T20:37:32Z",
   "source_doc_sha256": {
-    "model-selector.txt": "377854d03bf85cf08d6f5a6e741a278d5ef3495c917917976b9aa522c827b2c4",
+    "model-selector.txt": "4744eb4c4de17e187e44d80aa0ee00b77d8a626168651f39508ff2a4f7b8bd96",
     "model-tier-cost-scale.md": "1d4b6a100bf4cfce13fe0be6586104859e6f79eefa20e6c6cb32a74ef8eab93a"
   },
   "models": [
@@ -20,7 +20,7 @@
         "agentic": "C",
         "multimodal": "B",
         "long-context": "A",
-        "knowledge": "C",
+        "knowledge": "D",
         "speed": "S"
       },
       "jurisdiction": "us",
@@ -41,7 +41,7 @@
         "agentic": "A",
         "multimodal": "S",
         "long-context": "A",
-        "knowledge": "S",
+        "knowledge": "A",
         "speed": "D"
       },
       "jurisdiction": "us",
@@ -83,7 +83,7 @@
         "agentic": "S",
         "multimodal": "A",
         "long-context": "A",
-        "knowledge": "S",
+        "knowledge": "A",
         "speed": "D"
       },
       "jurisdiction": "us",
@@ -103,7 +103,7 @@
         "planning": "S",
         "agentic": "S",
         "multimodal": "A",
-        "long-context": "A",
+        "long-context": "S",
         "knowledge": "S",
         "speed": "D"
       },
@@ -125,7 +125,7 @@
         "agentic": "A",
         "multimodal": "A",
         "long-context": "A",
-        "knowledge": "A",
+        "knowledge": "B",
         "speed": "B"
       },
       "jurisdiction": "us",
@@ -188,7 +188,7 @@
         "agentic": "B",
         "multimodal": "C",
         "long-context": "S",
-        "knowledge": "A",
+        "knowledge": "B",
         "speed": "A"
       },
       "jurisdiction": "cn",
@@ -209,7 +209,7 @@
         "agentic": "A",
         "multimodal": "D",
         "long-context": "A",
-        "knowledge": "A",
+        "knowledge": "B",
         "speed": "C"
       },
       "jurisdiction": "cn",
@@ -272,7 +272,7 @@
         "agentic": "A",
         "multimodal": "S",
         "long-context": "A",
-        "knowledge": "A",
+        "knowledge": "B",
         "speed": "B"
       },
       "jurisdiction": "us",
@@ -335,7 +335,7 @@
         "agentic": "A",
         "multimodal": "B",
         "long-context": "A",
-        "knowledge": "A",
+        "knowledge": "B",
         "speed": "S"
       },
       "jurisdiction": "us",
@@ -440,7 +440,7 @@
         "agentic": "A",
         "multimodal": "D",
         "long-context": "A",
-        "knowledge": "A",
+        "knowledge": "B",
         "speed": "B"
       },
       "jurisdiction": "cn",
@@ -503,7 +503,7 @@
         "agentic": "A",
         "multimodal": "D",
         "long-context": "A",
-        "knowledge": "B",
+        "knowledge": "C",
         "speed": "B"
       },
       "jurisdiction": "us",
@@ -713,7 +713,7 @@
         "agentic": "A",
         "multimodal": "B",
         "long-context": "S",
-        "knowledge": "A",
+        "knowledge": "B",
         "speed": "S"
       },
       "jurisdiction": "us",
@@ -797,7 +797,7 @@
         "agentic": "D",
         "multimodal": "D",
         "long-context": "D",
-        "knowledge": "C",
+        "knowledge": "D",
         "speed": "S"
       },
       "jurisdiction": "us",
@@ -965,7 +965,7 @@
         "agentic": "D",
         "multimodal": "B",
         "long-context": "C",
-        "knowledge": "C",
+        "knowledge": "D",
         "speed": "A"
       },
       "jurisdiction": "eu",
