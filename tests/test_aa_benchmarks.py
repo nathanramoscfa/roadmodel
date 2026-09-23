@@ -111,3 +111,42 @@ def test_committed_layer_matches_the_committed_map_and_catalog() -> None:
         assert mapping.get(cid) == row["aa_slug"]
     assert doc["model_count"] == len(doc["models"]) > 0
     assert doc["source"]["url"] == "https://artificialanalysis.ai/"
+
+
+# --------------------------------------------------------------------------- #
+# Auto-map: a new catalog id links itself to an exact AA slug match
+# --------------------------------------------------------------------------- #
+
+_AA = [
+    {"slug": "claude-opus-5-5"},
+    {"slug": "grok-4-7"},
+    {"slug": "gpt-5-high"},
+    {"slug": "codestral-2508"},
+]
+
+
+def test_a_new_id_with_an_exact_slug_match_is_mapped() -> None:
+    added = fab.auto_map(["claude-opus-5-5", "grok-4.7"], {}, _AA)
+    assert added == {"claude-opus-5-5": "claude-opus-5-5", "grok-4.7": "grok-4-7"}
+
+
+def test_anything_short_of_exact_stays_unmapped() -> None:
+    """`gpt-5` is not `gpt-5-high`, and `codestral` is not `codestral-2508`:
+    close is a person's call, so those stay on the unmapped list."""
+    assert fab.auto_map(["gpt-5", "codestral"], {}, _AA) == {}
+
+
+def test_an_existing_entry_is_never_touched() -> None:
+    """A deliberate `null` (AA has not measured it) and an explicit slug both
+    stand, even when an exact match exists."""
+    mapping = {"claude-opus-5-5": None, "grok-4.7": "grok-4-6"}
+    assert fab.auto_map(["claude-opus-5-5", "grok-4.7"], mapping, _AA) == {}
+
+
+def test_save_map_keeps_the_files_layout(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    path = tmp_path / "aa-model-map.json"
+    path.write_text(json.dumps({"_comment": "keep me", "b": "b", "a": None}, indent=2) + "\n")
+    monkeypatch.setattr(fab, "MAP_PATH", path)
+    fab.save_map({"b": "b", "a": None, "c": "c-1"})
+    assert list(json.loads(path.read_text())) == ["_comment", "a", "b", "c"]
+    assert json.loads(path.read_text())["_comment"] == "keep me"

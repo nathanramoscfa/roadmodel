@@ -105,6 +105,38 @@ def suggest(
             print(f"    {s}")
 
 
+def _as_slug(catalog_id: str) -> str:
+    """The slug AA would give a catalog id: lower case, dots as dashes
+    (`grok-4.7` -> `grok-4-7`, `claude-opus-5-5` unchanged)."""
+    return catalog_id.lower().replace(".", "-")
+
+
+def auto_map(
+    catalog_ids: list[str], mapping: dict[str, str | None], aa: list[dict[str, Any]]
+) -> dict[str, str]:
+    """Map a catalog id that has NO map entry to the AA model whose slug is
+    exactly that id (dots as dashes). Returns only the new entries.
+
+    A model the daily catalog refresh adds used to sit unmapped — its grid row
+    all dashes, its letters inherited placeholders — until someone noticed
+    (Opus 5.5 and Grok 4.7, #694). An exact slug match is the choice a person
+    makes anyway; anything short of exact stays unmapped and is still
+    reported, and an existing entry (a deliberate `null` included) is never
+    touched."""
+    slugs = {m.get("slug") for m in aa if m.get("slug")}
+    return {
+        cid: _as_slug(cid) for cid in catalog_ids if cid not in mapping and _as_slug(cid) in slugs
+    }
+
+
+def save_map(mapping: dict[str, str | None]) -> None:
+    """Rewrite the map in its own layout: `_comment` first, then ids sorted."""
+    raw = json.loads(MAP_PATH.read_text())
+    notes = {k: v for k, v in raw.items() if k.startswith("_")}
+    ordered = {**notes, **{k: mapping[k] for k in sorted(mapping)}}
+    MAP_PATH.write_text(json.dumps(ordered, indent=2, ensure_ascii=False) + "\n")
+
+
 def build(
     catalog_ids: list[str],
     mapping: dict[str, str | None],
@@ -192,6 +224,15 @@ def main() -> int:
     if args.suggest:
         suggest(catalog_ids, mapping, aa)
         return 0
+
+    if not args.check:
+        added = auto_map(catalog_ids, mapping, aa)
+        if added:
+            mapping.update(added)
+            save_map(mapping)
+            for cid, slug in added.items():
+                # Parsed by update-benchmarks.yml into the PR description.
+                print(f"AUTO_MAPPED {cid} -> {slug}")
 
     doc = build(catalog_ids, mapping, aa, now=dt.datetime.now(dt.timezone.utc))
     for cid in doc["unmapped"]:
