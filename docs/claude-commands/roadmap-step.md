@@ -45,7 +45,13 @@ its PR merged. Check it before touching anything:
   the roadmap predates roadmodel 0.2.37. Backfill once, as part of
   this step's PR: for every step, run the same `gh pr list --state
   merged --head <its Branch line>` lookup — a merged PR ⇒
-  `Complete — PR #n (<mergedAt date>)`, none ⇒ `Not started`. Insert
+  `Complete — PR #n (<mergedAt date>)`; none ⇒ `Not started` only when
+  no verified `Complete` step comes after it. A step with no merged PR
+  BEHIND verified work, or in a phase roadmap with no `**Branch:**`
+  lines, is unverified: list those, ask the operator which are done,
+  and record `Complete — confirmed by the operator <YYYY-MM-DD> (no PR on
+  record)` for each they confirm — the same rule as `/roadmap-refresh`
+  §2. Insert
   `**Status:** …` directly under each step's `## Step` heading, append
   ` ✅` to the heading of every Complete step, and give the roadmap its
   phase-level `**Status:**` line under the title and a Status column in

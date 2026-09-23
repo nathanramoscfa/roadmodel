@@ -175,7 +175,12 @@ Older roadmaps have no `**Status:**` lines. The first
 `/roadmap-step` you run against one backfills them in that step's
 PR: every step whose `**Branch:**` has a merged PR
 (`gh pr list --state merged --head <branch>`) becomes
-`Complete — PR #n (merge date)`, the rest `Not started`, and the
+`Complete — PR #n (merge date)`, and a step still ahead of all
+verified work becomes `Not started`. A step with no PR on record
+that sits behind shipped work — or in a roadmap written before
+`**Branch:**` lines existed — is never guessed: it asks you which of
+those are done and records your answer as `Complete — confirmed by
+the operator <date> (no PR on record)`. Then the
 parent `ROADMAP.md` gains a `**Status:**` line per phase (`Complete`
 / `In progress` / `Not started` from its steps) plus a Status column
 in its summary table. Review that diff in the PR like

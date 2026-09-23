@@ -132,6 +132,8 @@ def test_roadmap_step_command_gates_on_status() -> None:
     text = STEP_COMMAND.read_text()
     flat = re.sub(r"\s+", " ", text)
     assert "## 2. Status gate" in text
+    # Legacy backfill never guesses a step behind shipped work.
+    assert "confirmed by the operator" in flat
     # Idempotency + sequencing.
     assert "already reads `Complete`" in text
     assert "does not read `Complete`" in text
@@ -248,6 +250,14 @@ def test_roadmap_refresh_is_bookkeeping_that_runs_no_step() -> None:
     # The ledger comes from merged PRs on each step's own Branch, never judgement.
     assert "gh pr list --state merged --head" in text
     assert "Never mark a step complete on your own judgement" in flat
+    # A step with no PR on record BEHIND shipped work is the operator's call,
+    # never "Not started" by default: on 2026-09-23 a literal reading would
+    # have marked ~220 shipped reversi steps (roadmaps older than Branch
+    # lines) Not started, then re-planned every one of them.
+    assert "unverified" in flat
+    assert "Do not decide either way, and do not write `Not started`" in flat
+    assert "Complete — confirmed by the operator <YYYY-MM-DD> (no PR on record)" in flat
+    assert "only then continue" in flat
     # Settings are re-selected the same way the roadmap was written …
     assert "planning/model-selector.txt" in text and "planning/user-context.md" in text
     assert "do not call any external API" in flat
