@@ -132,7 +132,9 @@ where a kit exists, re-downloads the `/roadmap-*` command files, and prints one
 table. Same script on Windows, macOS, and Linux; `--install-schedule [HH:MM]`
 registers a daily run (Task Scheduler / launchd / cron, logged to
 `~/.config/roadmodel/update.log`) so every project follows each release within a
-day. Details: [docs/planning-workflow.md §5](docs/planning-workflow.md).
+day. The updater keeps itself current the same way: it ships in the package, and
+each run hands over to the copy in the latest release. Details:
+[docs/planning-workflow.md §5](docs/planning-workflow.md).
 
 See [CHANGELOG.md](CHANGELOG.md) for what each release changed.
 

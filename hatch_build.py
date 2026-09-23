@@ -73,3 +73,14 @@ class BundleDocsHook(BuildHookInterface):  # type: ignore[misc]
                 )
             shutil.copy2(src, dest)
             force_include[str(dest)] = f"roadmodel/data/{dest_name}"
+
+        # The multi-project updater ships in the wheel as a module, so each
+        # machine's scheduled copy can upgrade roadmodel and hand over to the
+        # updater in that release (`python -m roadmodel.update_projects`). One
+        # source file: scripts/update_projects.py, which is also the bootstrap
+        # URL, so it is mapped in rather than copied under src/.
+        if self.target_name == "wheel":
+            updater = root / "scripts" / "update_projects.py"
+            if not updater.is_file():
+                raise FileNotFoundError(f"hatch_build.py: {updater} is missing")
+            force_include[str(updater)] = "roadmodel/update_projects.py"

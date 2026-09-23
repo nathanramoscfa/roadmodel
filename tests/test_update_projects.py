@@ -240,6 +240,9 @@ def test_schedule_artifacts(up: ModuleType, tmp_path: Path) -> None:
     assert "<string>--log</string>" in plist
     assert "<key>Hour</key><integer>7</integer><key>Minute</key><integer>30</integer>" in plist
     assert "<key>RunAtLoad</key><false/>" in plist
+    # --log writes the run; launchd capturing stdout too recorded it twice.
+    assert "<key>StandardOutPath</key><string>/dev/null</string>" in plist
+    assert f"<key>StandardErrorPath</key><string>{log}</string>" in plist
 
     wpy, wscript = Path("C:/py/python.exe"), Path("C:/u/update_projects.py")
     argv = up.schtasks_create_argv(wpy, wscript, 9, 5)
@@ -253,17 +256,75 @@ def test_schedule_artifacts(up: ModuleType, tmp_path: Path) -> None:
     assert line.endswith(f"# {up.SCHEDULE_LABEL}")
 
 
+def test_the_windows_task_catches_up_after_a_missed_start(up: ModuleType) -> None:
+    """A PC that is off at 09:00 must run the job when it is back, not skip
+    the day — which only a task definition can say (schtasks /SC cannot)."""
+    import datetime as dt
+    import xml.etree.ElementTree as ET
+
+    py, script = Path("C:/Program Files/Py & Co/python.exe"), Path("C:/u/update_projects.py")
+    xml = up.schtasks_xml(py, script, 9, 5, dt.date(2026, 9, 24))
+    ns = {"t": "http://schemas.microsoft.com/windows/2004/02/mit/task"}
+    root = ET.fromstring(xml.encode("utf-16"))  # noqa: S314 — XML this module just generated
+    assert root.findtext("t:Settings/t:StartWhenAvailable", namespaces=ns) == "true"
+    assert root.findtext("t:Settings/t:DisallowStartIfOnBatteries", namespaces=ns) == "false"
+    assert root.findtext("t:Triggers/t:CalendarTrigger/t:StartBoundary", namespaces=ns) == (
+        "2026-09-24T09:05:00"
+    )
+    assert root.findtext(".//t:ScheduleByDay/t:DaysInterval", namespaces=ns) == "1"
+    assert root.findtext(".//t:Exec/t:Command", namespaces=ns) == str(py)  # & survives escaping
+    assert root.findtext(".//t:Exec/t:Arguments", namespaces=ns) == f'"{script}" --log'
+
+    # A boundary already behind us today would read as a run to make up at once.
+    assert up._next_start(9, 0, dt.datetime(2026, 9, 23, 8, 59)) == dt.date(2026, 9, 23)
+    assert up._next_start(9, 0, dt.datetime(2026, 9, 23, 9, 0)) == dt.date(2026, 9, 24)
+
+
+def test_a_refused_task_definition_falls_back_to_the_plain_daily_task(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(up, "CONFIG_DIR", tmp_path)
+    calls: list[list[str]] = []
+    definitions: list[str] = []
+
+    def fake_sys(argv: list[str], stdin: object = None) -> subprocess.CompletedProcess[str]:
+        calls.append(argv)
+        if "/XML" in argv:
+            definitions.append(Path(argv[argv.index("/XML") + 1]).read_text(encoding="utf-16"))
+            return subprocess.CompletedProcess(argv, 1, "", "ERROR: task XML is malformed")
+        return subprocess.CompletedProcess(argv, 0, "SUCCESS", "")
+
+    monkeypatch.setattr(up, "_sys", fake_sys)
+    py, script = Path("C:/py/python.exe"), Path("C:/u/update_projects.py")
+    desc = up._install_windows_task(py, script, 9, 0, "daily at 09:00", dry_run=False)
+    assert "<StartWhenAvailable>true</StartWhenAvailable>" in definitions[0]
+    assert calls[1] == up.schtasks_create_argv(py, script, 9, 0)
+    assert "no catch-up" in desc and "malformed" in desc
+    assert list(tmp_path.iterdir()) == []  # the definition file is not left behind
+
+    calls.clear()
+    monkeypatch.setattr(
+        up,
+        "_sys",
+        lambda argv, stdin=None: calls.append(argv) or subprocess.CompletedProcess(argv, 0),
+    )
+    desc = up._install_windows_task(py, script, 9, 0, "daily at 09:00", dry_run=False)
+    assert len(calls) == 1 and "/XML" in calls[0] and "missed start runs" in desc
+
+
 def test_install_schedule_dry_run_touches_nothing(
     up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(up, "CONFIG_DIR", tmp_path / "cfg")
     monkeypatch.setattr(up, "LOG_FILE", tmp_path / "cfg" / "update.log")
+    monkeypatch.setattr(up, "LAUNCHER", tmp_path / "cfg" / "update_projects.py")
     calls: list[list[str]] = []
     monkeypatch.setattr(up, "_sys", lambda argv, stdin=None: calls.append(argv))
     desc = up.install_schedule("09:00", dry_run=True)
     assert "daily at 09:00" in desc and "update_projects.py" in desc
     assert calls == []  # dry run never calls launchctl / schtasks / crontab
     assert not (tmp_path / "cfg" / "update.log").exists()
+    assert not (tmp_path / "cfg" / "update_projects.py").exists()  # nor installs the launcher
 
 
 # --------------------------------------------------------------------------
@@ -1017,72 +1078,275 @@ def test_antigravity_trust_dry_run_writes_nothing(
 
 
 # --------------------------------------------------------------------------
-# Staleness: warn, never self-update
+# Self-update: the machine's copy is a launcher that upgrades roadmodel in its
+# own venv and hands the run to the updater inside that release. Every
+# subprocess is faked here; nothing reaches PyPI.
 # --------------------------------------------------------------------------
 
 
-class _Body:
-    def __init__(self, data: bytes) -> None:
-        self._data = data
+class _Machine:
+    """Fakes the launcher's subprocess calls (venv, pip, probes, self-checks)
+    against a tmp CONFIG_DIR, and records what ran."""
 
-    def __enter__(self) -> "_Body":
-        return self
+    def __init__(self, up: ModuleType, tmp: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        self.cfg = tmp / "cfg"
+        self.cfg.mkdir()
+        self.venv = self.cfg / "venv"
+        self.launcher = self.cfg / "update_projects.py"
+        self.launcher.write_bytes(b"# the launcher as last fetched\n")
+        self.packaged = tmp / "site-packages" / "roadmodel" / "update_projects.py"
+        self.packaged.parent.mkdir(parents=True)
+        self.packaged.write_bytes(b"# the updater in the release\n")
+        self.versions = ["0.2.38", "0.2.39"]  # before / after the pip upgrade
+        self.ships_module = True
+        self.pip_rc = 0
+        self.venv_rc = 0
+        self.module_check_rc = 0
+        self.script_check_rc = 0
+        self.calls: list[list[str]] = []
+        self.handed: list[tuple[list[str], dict[str, str]]] = []
+        for name, value in (
+            ("CONFIG_DIR", self.cfg),
+            ("UPDATER_VENV", self.venv),
+            ("LAUNCHER", self.launcher),
+        ):
+            monkeypatch.setattr(up, name, value)
+        monkeypatch.setattr(up, "_run", self._run)
+        monkeypatch.setattr(up, "_handover", self._handover)
+        monkeypatch.delenv(up.DELEGATED_ENV, raising=False)
 
-    def __exit__(self, *a: object) -> None:
-        pass
+    def python(self) -> Path:
+        return self.venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
 
-    def read(self) -> bytes:
-        return self._data
+    def _run(
+        self, argv: list[str], timeout: int, cwd: object = None
+    ) -> subprocess.CompletedProcess[str]:
+        self.calls.append(argv)
+
+        def done(rc: int = 0, out: str = "") -> subprocess.CompletedProcess[str]:
+            return subprocess.CompletedProcess(argv, rc, out, "boom" if rc else "")
+
+        if argv[1:3] == ["-m", "venv"]:
+            if self.venv_rc == 0:
+                (self.venv / "pyvenv.cfg").parent.mkdir(parents=True, exist_ok=True)
+                (self.venv / "pyvenv.cfg").write_text("home = x\n")
+                self.python().parent.mkdir(parents=True, exist_ok=True)
+                self.python().write_text("")
+            return done(self.venv_rc)
+        if "pip" in argv:
+            if self.pip_rc == 0 and len(self.versions) > 1:
+                self.versions.pop(0)
+            return done(self.pip_rc)
+        if argv[-1] == "--self-check":
+            module = "-m" in argv
+            return done(self.module_check_rc if module else self.script_check_rc)
+        code = argv[-1]
+        if "find_spec" in code:
+            return done(0, str(self.packaged) if self.ships_module else "")
+        if "__version__" in code:
+            return done(0, self.versions[0])
+        return done(0)  # the "new enough Python" probe
+
+    def _handover(self, argv: list[str], env: dict[str, str]) -> int:
+        self.handed.append((argv, env))
+        return 0
 
 
-def test_a_stale_updater_says_so_and_names_the_refetch(
+def test_the_launcher_upgrades_refreshes_itself_and_hands_over(
+    up: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    m = _Machine(up, tmp_path, monkeypatch)
+    code = up.self_update(["--log", "--brand-new-flag"], tmp_path / "projects.txt")
+
+    assert code == 0
+    assert [c for c in m.calls if c[1:3] == ["-m", "venv"]], "a missing venv is built"
+    pip = next(c for c in m.calls if "pip" in c)
+    assert pip[0] == str(m.python()) and "--no-cache-dir" in pip and pip[-1] == "roadmodel"
+    # The launcher becomes the release's copy of itself: no more re-fetching.
+    assert m.launcher.read_bytes() == m.packaged.read_bytes()
+    ((argv, env),) = m.handed
+    assert argv == [str(m.python()), "-m", "roadmodel.update_projects", "--log", "--brand-new-flag"]
+    assert env[up.DELEGATED_ENV] == sys.executable  # the handed-over run never hands over again
+    out = capsys.readouterr().out
+    assert "roadmodel 0.2.39 (was 0.2.38)" in out and "launcher refreshed" in out
+
+
+def test_a_release_without_the_packaged_updater_keeps_the_local_copy(
+    up: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Until the first release that ships it, the launcher runs itself —
+    so a machine can switch over before that release exists."""
+    m = _Machine(up, tmp_path, monkeypatch)
+    m.ships_module = False
+    before = m.launcher.read_bytes()
+    assert up.self_update([], tmp_path / "projects.txt") is None
+    assert m.handed == [] and m.launcher.read_bytes() == before
+    assert "no packaged updater yet" in capsys.readouterr().out
+
+
+def test_a_release_whose_updater_does_not_start_is_never_run_or_installed(
+    up: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    m = _Machine(up, tmp_path, monkeypatch)
+    m.module_check_rc = 1
+    before = m.launcher.read_bytes()
+    assert up.self_update([], tmp_path / "projects.txt") is None
+    assert m.handed == [] and m.launcher.read_bytes() == before
+    assert "does not start" in capsys.readouterr().out
+
+
+def test_the_launcher_is_replaced_only_by_a_copy_that_starts_on_its_interpreter(
     up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The Mac's scheduled copy was 32 KB against a 64 KB main for months, and
-    nothing said so. A differing local copy must produce a warning carrying
-    the exact command that fixes it."""
-    local = tmp_path / "update_projects.py"
-    local.write_bytes(b"old updater\n")
-    monkeypatch.setattr(up.urllib.request, "urlopen", lambda u, timeout=15: _Body(b"new!\n"))
-    warning = up.staleness_warning(local)
-    assert warning and "STALE" in warning
-    assert up.SELF_URL in warning and str(local) in warning
+    """The schedule's interpreter may be older than the venv's. A release that
+    runs in the venv but not there still takes the run, and the launcher that
+    can still start stays."""
+    m = _Machine(up, tmp_path, monkeypatch)
+    m.script_check_rc = 1
+    before = m.launcher.read_bytes()
+    assert up.self_update([], tmp_path / "projects.txt") == 0
+    assert m.launcher.read_bytes() == before
+    assert len(m.handed) == 1
 
 
-def test_a_current_updater_is_quiet_even_across_line_endings(
+def test_an_offline_morning_still_hands_over_to_the_installed_release(
+    up: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    m = _Machine(up, tmp_path, monkeypatch)
+    m.pip_rc = 1
+    assert up.self_update([], tmp_path / "projects.txt") == 0
+    assert len(m.handed) == 1
+    assert "upgrade failed" in capsys.readouterr().out
+
+
+def test_a_venv_that_cannot_be_built_falls_back_loudly(
+    up: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    m = _Machine(up, tmp_path, monkeypatch)
+    m.venv_rc = 1
+    assert up.self_update([], tmp_path / "projects.txt") is None
+    assert m.handed == []
+    assert "*** self-update FAILED" in capsys.readouterr().out
+
+
+def test_a_foreign_directory_at_the_venv_path_is_never_cleared(
     up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A Windows checkout may carry CRLF; that is not staleness."""
-    local = tmp_path / "update_projects.py"
-    local.write_bytes(b"same\r\nfile\r\n")
-    monkeypatch.setattr(up.urllib.request, "urlopen", lambda u, timeout=15: _Body(b"same\nfile\n"))
-    assert up.staleness_warning(local) is None
+    m = _Machine(up, tmp_path, monkeypatch)
+    m.venv.mkdir()
+    (m.venv / "precious.txt").write_text("not a venv")
+    assert up.self_update([], tmp_path / "projects.txt") is None
+    assert not [c for c in m.calls if c[1:3] == ["-m", "venv"]]
+    assert (m.venv / "precious.txt").read_text() == "not a venv"
 
 
-def test_an_offline_run_does_not_nag(
+def test_only_the_installed_copy_hands_over(
     up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    local = tmp_path / "update_projects.py"
-    local.write_bytes(b"anything\n")
+    """A repo checkout runs its own code (development, these tests); the
+    installed copy hands over; a run it handed over to never does."""
+    launcher = tmp_path / "update_projects.py"
+    launcher.write_text("x")
+    monkeypatch.setattr(up, "LAUNCHER", launcher)
+    monkeypatch.delenv(up.DELEGATED_ENV, raising=False)
+    assert up.should_self_update(SCRIPT) is False
+    assert up.should_self_update(launcher) is True
+    monkeypatch.setenv(up.DELEGATED_ENV, sys.executable)
+    assert up.should_self_update(launcher) is False
 
-    def boom(u: str, timeout: int = 15) -> _Body:
-        raise up.urllib.error.URLError("offline")
 
-    monkeypatch.setattr(up.urllib.request, "urlopen", boom)
-    assert up.staleness_warning(local) is None
+def test_main_hands_over_before_parsing_flags_it_does_not_know(
+    up: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A launcher one release behind must not reject a flag the release added."""
+    seen: list[list[str]] = []
+    monkeypatch.setattr(up, "should_self_update", lambda self_path=None: True)
+    monkeypatch.setattr(up, "self_update", lambda raw, pf: seen.append(raw) or 7)
+    assert up.main(["--brand-new-flag"]) == 7
+    assert seen == [["--brand-new-flag"]]
 
 
-def test_the_check_never_writes_what_it_fetched(
+def test_a_dry_run_never_self_updates(
+    up: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(up, "should_self_update", lambda self_path=None: True)
+    monkeypatch.setattr(up, "self_update", lambda raw, pf: pytest.fail("self_update ran"))
+    empty = tmp_path / "projects.txt"
+    empty.write_text("")
+    assert up.main(["--dry-run", "--projects-file", str(empty)]) == 2
+    assert "self-update: skipped (dry run)" in capsys.readouterr().out
+
+
+def test_self_check_loads_and_builds_the_cli_without_side_effects(
+    up: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(up, "self_update", lambda raw, pf: pytest.fail("self_update ran"))
+    assert up.main(["--self-check"]) == 0
+    done = subprocess.run(
+        [sys.executable, str(SCRIPT), "--self-check"], capture_output=True, text=True, timeout=60
+    )
+    assert done.returncode == 0 and done.stdout == ""
+
+
+def test_a_handed_over_run_continues_its_launchers_log_section(
     up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Deliberately not self-updating: fetch-and-execute on a daily schedule is
-    its own supply-chain risk. The fetched bytes are compared, then dropped."""
-    local = tmp_path / "update_projects.py"
-    local.write_bytes(b"local\n")
-    monkeypatch.setattr(up.urllib.request, "urlopen", lambda u, timeout=15: _Body(b"remote\n"))
-    up.staleness_warning(local)
-    assert local.read_bytes() == b"local\n"
-    assert sorted(p.name for p in tmp_path.iterdir()) == ["update_projects.py"]
+    log = tmp_path / "update.log"
+    monkeypatch.setattr(up, "CONFIG_DIR", tmp_path)
+    monkeypatch.setattr(up, "LOG_FILE", log)
+    monkeypatch.setattr(up, "LOG_MAX_BYTES", 10)
+    log.write_text("x" * 100)
+    monkeypatch.setenv(up.DELEGATED_ENV, sys.executable)
+    up._open_log().close()
+    assert log.read_text() == "x" * 100  # no second header, no rotation mid-run
+    monkeypatch.delenv(up.DELEGATED_ENV)
+    up._open_log().close()
+    assert "=====" in log.read_text() and len(log.read_text()) < 100
+
+
+def test_a_schedule_runs_the_launcher_on_the_interpreter_that_started_it(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Installed from inside the venv (a handed-over run), the schedule must
+    still name the launcher's interpreter, or rebuilding the venv would take
+    the schedule down with it."""
+    launcher = tmp_path / "cfg" / "update_projects.py"
+    monkeypatch.setattr(up, "LAUNCHER", launcher)
+    monkeypatch.setenv(up.DELEGATED_ENV, sys.executable)
+    assert up._launcher_python() == Path(sys.executable).resolve()
+    assert up._install_launcher(dry_run=False) == launcher
+    assert not launcher.exists()  # the launcher that started the run is left alone
+
+    monkeypatch.delenv(up.DELEGATED_ENV)
+    assert up._install_launcher(dry_run=True) == launcher and not launcher.exists()
+    assert up._install_launcher(dry_run=False) == launcher
+    assert launcher.read_bytes() == SCRIPT.read_bytes()  # installed from a checkout
+
+
+def test_the_launcher_stays_python_3_9_compatible() -> None:
+    """The launcher runs on whatever interpreter the schedule names, which can
+    be older than roadmodel's own floor."""
+    import ast
+
+    ast.parse(SCRIPT.read_text(encoding="utf-8"), feature_version=(3, 9))
 
 
 # --------------------------------------------------------------------------

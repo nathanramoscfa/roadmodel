@@ -8,10 +8,12 @@ terminal — you run everything.
 
 ## 1. Fetch the updater fresh
 
-It lives in the roadmodel repo, so it is never stale. Save it to
-`~/.config/roadmodel/update_projects.py` (Windows:
+Save it to `~/.config/roadmodel/update_projects.py` (Windows:
 `%USERPROFILE%\.config\roadmodel\update_projects.py`), creating the
-directory if needed, from:
+directory if needed. Fetching it every time is harmless: at run start it
+upgrades roadmodel in a venv of its own (`~/.config/roadmodel/venv`),
+replaces itself with the updater inside that release, and hands the run
+over to it. Download it from:
 
 `https://raw.githubusercontent.com/nathanramoscfa/roadmodel/main/scripts/update_projects.py`
 
@@ -63,13 +65,16 @@ a launchd agent on macOS, a Task Scheduler task on Windows, a crontab
 entry on Linux — that executes the same script with `--log`, appending
 to `~/.config/roadmodel/update.log`. From then on every registered
 project follows each roadmodel release within a day without anyone
-running anything. `--uninstall-schedule` removes it. The scheduled run
-uses the copy of the script on disk; running `/roadmodel-update` by hand
-re-fetches it, so script fixes reach the schedule at the next manual run.
+running anything, and so does the updater itself: each run upgrades its
+venv and runs the updater from that release, so nothing needs
+re-fetching. On Windows a start missed while the PC was off runs once it
+is back. `--uninstall-schedule` removes it.
 
 ## 5. Report
 
-Show the result table verbatim. For any project marked FAILED:
+Show the result table verbatim. If the first line reads `*** self-update
+FAILED`, show it with its reason: the run still happened, but on the
+local copy of the updater. For any project marked FAILED:
 
 - `no env found` → tell the operator the override syntax and offer to add
   it to the registry for them once they name the env.
