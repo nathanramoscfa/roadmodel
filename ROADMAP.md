@@ -1,15 +1,17 @@
 # roadmodel — From CLI Prototype to Bundled SaaS MVP
 
-> **Status:** Phases 1 and 2 shipped on PyPI (`roadmodel` v0.1.x and
-> v0.2.0 — the latter adds the cost estimator, structured CLI output,
-> and the `roadmodel-mcp` MCP server); Phases 3–9 below remain the
-> forward execution plan.
+> **Status:** Phases 1–3 are complete: the open-source CLI and the
+> `roadmodel-mcp` MCP server are on PyPI (`roadmodel` 0.2.x), and the site
+> and web recommender are built and running privately ahead of launch.
+> Phase 4 is complete except for its public launch (Step 8), which waits
+> on a pre-launch quality push. Phases 5–9 below remain the forward
+> execution plan.
 > **Owner:** Nathan Ramos, founder and sole maintainer
 > **Target environment:** Local through Phase 2; managed cloud from
 > Phase 3 onward (managed Next.js host for the web tier, managed
 > Python runtime for the recommender service, managed Postgres + Auth
 > + Storage)
-> **Last updated:** May 2026
+> **Last updated:** September 2026
 
 This roadmap takes roadmodel from a local Python CLI that ranks AI
 models by prompt fit to a bundled SaaS at `roadmodel.ai`. The SaaS
