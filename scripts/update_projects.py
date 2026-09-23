@@ -578,27 +578,36 @@ def detect_agents() -> list[str]:
 
 
 # --------------------------------------------------------------------------
-# Runtime parity: the same MCP tools and a calibrated reasoning effort on every
-# agent. Claude Code is configured by `roadmodel setup-mcp`; the others are
-# plain config files, and without this they silently run with fewer tools and
-# (worse) a reasoning effort pinned to the top rung, which is what exhausts a
-# weekly usage pool. See docs/agent-parity.md.
+# Runtime parity: the same MCP tools on every agent, and every agent at its
+# PROVIDER'S OWN default model and reasoning effort. See docs/agent-parity.md.
+#
+# Anchoring works by NOT pinning. Each client resolves its own default when
+# its config names none, and that resolution is the provider's live decision:
+#
+#   Claude Code  per-model default effort from Anthropic's docs
+#                (Opus 5.5 -> medium, Opus 4.7 -> xhigh, the rest -> high),
+#                default model from the client (Opus 5.5 on Max today).
+#   Codex        `default_reasoning_level` per model in the catalog Codex
+#                fetches from OpenAI (~/.codex/models_cache.json) — Codex
+#                documents NO default as a value; only the client knows it.
+#   Antigravity  the client's own default model id, which carries the rung.
+#
+# So a pin is the only thing that can make an agent disagree with its
+# provider, and the only way to follow a provider's change the day it ships
+# is to carry no pin at all. The earlier design wrote roadmodel's OWN
+# opinion (`high` / `medium`) back in instead, which drifts the moment a
+# provider moves: Anthropic shipped Opus 5.5 with a `medium` default that a
+# pinned `high` would have overridden.
+#
+# Ceilings are NOT defaults and are left exactly as found — `maxEffortLevel`
+# bounds escalation, it does not choose a starting point.
 # --------------------------------------------------------------------------
 
-# The calibrated default: high enough for real work, not the ceiling. Effort is
-# metered against a subscription's usage pool on every provider, so a pinned
-# top rung is a standing cost. Per-task escalation stays a per-session choice.
-CALIBRATED_EFFORT = {
-    "claude": "high",  # ~/.claude/settings.json effortLevel (ladder tops at max)
-    "codex": "medium",  # ~/.codex/config.toml model_reasoning_effort (tops at xhigh)
-}
-TOP_RUNGS = {"claude": {"max", "xhigh"}, "codex": {"xhigh"}}
-# Codex signed in with a ChatGPT account cannot run the `*-codex` model
-# variants: it answers 400 "The 'gpt-5.3-codex' model is not supported when
-# using Codex with a ChatGPT account." A config pinned to one is silently dead
-# until someone runs it, so repair it to a model that account CAN run.
-CODEX_CHATGPT_DEFAULT = "gpt-5.6-terra"
 MCP_SERVER_NAME = "roadmodel"
+# The keys that pin a DEFAULT (and so override the provider) on each agent.
+CODEX_PIN_KEYS = ("model", "model_reasoning_effort")
+CLAUDE_PIN_KEYS = ("model", "effortLevel")
+ANTIGRAVITY_PIN_KEYS = ("defaultAgentModelId",)
 
 
 def _roadmodel_mcp_command() -> Optional[list[str]]:
@@ -620,9 +629,31 @@ def _roadmodel_mcp_command() -> Optional[list[str]]:
     return [command, *[str(a) for a in args]]
 
 
-def _sync_codex(argv: Optional[list[str]], calibrate: bool, dry_run: bool) -> list[str]:
-    """[mcp_servers.roadmodel] + a calibrated model_reasoning_effort in
-    ~/.codex/config.toml, edited line-wise so nothing else in the file moves."""
+def _toml_top_level_end(text: str) -> int:
+    """Offset of the first ``[table]`` header. A key is top-level only above it
+    — `model` inside ``[profiles.x]`` or ``[models.new_thread]`` is a
+    different setting and must never be touched."""
+    m = re.search(r"(?m)^[ \t]*\[", text)
+    return m.start() if m else len(text)
+
+
+def _unpin_toml(text: str, keys: tuple[str, ...]) -> tuple[str, dict[str, str]]:
+    """Remove top-level ``key = "value"`` lines; return the new text and what
+    was removed. `^model\s*=` cannot match `model_reasoning_effort`."""
+    end = _toml_top_level_end(text)
+    head, tail = text[:end], text[end:]
+    removed: dict[str, str] = {}
+    for key in keys:
+        m = re.search(rf'(?m)^{re.escape(key)}[ \t]*=[ \t]*"([^"]*)"[^\n]*\n?', head)
+        if m:
+            removed[key] = m.group(1)
+            head = head[: m.start()] + head[m.end() :]
+    return head + tail, removed
+
+
+def _sync_codex(argv: Optional[list[str]], anchor: bool, dry_run: bool) -> list[str]:
+    """[mcp_servers.roadmodel] in ~/.codex/config.toml, and no pinned default
+    model or effort — edited line-wise so nothing else in the file moves."""
     out: list[str] = []
     path = CODEX_DIR / "config.toml"
     text = path.read_text(encoding="utf-8") if path.exists() else ""
@@ -647,38 +678,28 @@ def _sync_codex(argv: Optional[list[str]], calibrate: bool, dry_run: bool) -> li
     else:
         out.append("codex mcp: SKIPPED (no roadmodel entry in ~/.claude.json to mirror)")
 
-    # A ChatGPT-account sign-in (auth.json, no API key) cannot use the codex
-    # variants; leave an API-key setup alone, where they still work.
+    # A ChatGPT-account sign-in (auth.json, no API key) cannot run the `*-codex`
+    # variants — it answers 400 "not supported when using Codex with a ChatGPT
+    # account". That pin is dead, not a preference, so it goes even under
+    # --keep-pins; an API-key setup, where the variants still work, keeps it.
     chatgpt_auth = (CODEX_DIR / "auth.json").exists() and not os.environ.get("OPENAI_API_KEY")
-    model_match = re.search(r'(?m)^model\s*=\s*"([^"]*)"', text)
-    if chatgpt_auth and model_match and model_match.group(1).endswith("-codex"):
-        broken = model_match.group(1)
-        text = (
-            text[: model_match.start()]
-            + f'model = "{CODEX_CHATGPT_DEFAULT}"'
-            + text[model_match.end() :]
-        )
-        out.append(f"codex model: {broken} -> {CODEX_CHATGPT_DEFAULT} (ChatGPT sign-in)")
+    if not anchor and chatgpt_auth:
+        end = _toml_top_level_end(text)
+        dead = re.search(r'(?m)^model[ \t]*=[ \t]*"([^"]*-codex)"', text[:end])
+        if dead:
+            text, _ = _unpin_toml(text, ("model",))
+            out.append(
+                f"codex model: {dead.group(1)} (unrunnable on ChatGPT sign-in) -> provider default"
+            )
 
-    if calibrate:
-        want = CALIBRATED_EFFORT["codex"]
-        match = re.search(r'(?m)^model_reasoning_effort\s*=\s*"([^"]*)"', text)
-        current = match.group(1) if match else None
-        if current in TOP_RUNGS["codex"]:
-            text = (
-                text[: match.start()] + f'model_reasoning_effort = "{want}"' + text[match.end() :]
-            )
-            out.append(f"codex effort: {current} -> {want}")
-        elif current is None:
-            head = f'model_reasoning_effort = "{want}"\n'
-            text = (
-                head + text
-                if not text.startswith("model")
-                else text.replace("model", head + "model", 1)
-            )
-            out.append(f"codex effort: unset -> {want}")
-        else:
-            out.append(f"codex effort: {current} (left alone)")
+    if anchor:
+        text, removed = _unpin_toml(text, CODEX_PIN_KEYS)
+        for key in CODEX_PIN_KEYS:
+            label = "model" if key == "model" else "effort"
+            if key in removed:
+                out.append(f"codex {label}: {removed[key]} (pinned) -> provider default")
+            else:
+                out.append(f"codex {label}: provider default")
 
     if text != original and not dry_run:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -800,43 +821,89 @@ def _sync_json_mcp(path: Path, argv: Optional[list[str]], label: str, dry_run: b
     return [f"{label} mcp: added roadmodel"]
 
 
-def _sync_claude_effort(calibrate: bool, dry_run: bool) -> list[str]:
-    """Claude Code's own effort default. A ceiling (maxEffortLevel) is left
-    alone — it bounds escalation, which is the point; only a pinned DEFAULT at
-    the top rung is calibrated down."""
-    if not calibrate:
+def _sync_claude_defaults(anchor: bool, dry_run: bool) -> list[str]:
+    """No pinned default model or effort in ~/.claude/settings.json, so Claude
+    Code applies each model's documented default.
+
+    Two places pin a default: the top-level `effortLevel` / `model`, and a
+    per-model `modelSettings.<model>.effortLevel` — which `/effort` writes when
+    you pick a level in a session, so it outlives the session that chose it.
+    Both go. Every `maxEffortLevel` (top-level or per-model) STAYS: a ceiling
+    bounds escalation, it does not choose a starting point."""
+    if not anchor:
         return []
     path = CLAUDE_DIR / "settings.json"
     try:
         data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     except (OSError, ValueError):
-        return ["claude effort: SKIPPED (unreadable settings.json)"]
+        return ["claude defaults: SKIPPED (unreadable settings.json)"]
     if not isinstance(data, dict):
-        return ["claude effort: SKIPPED (unexpected settings.json shape)"]
-    current = data.get("effortLevel")
-    want = CALIBRATED_EFFORT["claude"]
-    if current not in TOP_RUNGS["claude"]:
-        return [f"claude effort: {current or 'unset'} (left alone)"]
-    data["effortLevel"] = want
-    if not dry_run:
+        return ["claude defaults: SKIPPED (unexpected settings.json shape)"]
+
+    removed: list[str] = []
+    for key in CLAUDE_PIN_KEYS:
+        if key in data:
+            removed.append(f"{key}={data.pop(key)}")
+    per_model = data.get("modelSettings")
+    if isinstance(per_model, dict):
+        for model in list(per_model):
+            cfg = per_model[model]
+            if isinstance(cfg, dict) and "effortLevel" in cfg:
+                removed.append(f"{model}.effortLevel={cfg.pop('effortLevel')}")
+                if not cfg:
+                    del per_model[model]
+        if not per_model:
+            del data["modelSettings"]
+
+    out = (
+        [f"claude defaults: {', '.join(removed)} (pinned) -> provider default"]
+        if removed
+        else ["claude defaults: provider default"]
+    )
+    ceiling = data.get("maxEffortLevel")
+    out.append(
+        f"claude ceiling: maxEffortLevel={ceiling} (kept)" if ceiling else "claude ceiling: none"
+    )
+    if removed and not dry_run:
         path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-    return [f"claude effort: {current} -> {want}"]
+    return out
+
+
+def _sync_antigravity_defaults(anchor: bool, dry_run: bool) -> list[str]:
+    """No `defaultAgentModelId` pin, so Antigravity opens on its own default.
+    The rung is part of the model id, so this one key pins model AND effort."""
+    if not anchor or not ANTIGRAVITY_SETTINGS.exists():
+        return []
+    try:
+        data = json.loads(ANTIGRAVITY_SETTINGS.read_text(encoding="utf-8"))
+    except ValueError:
+        return ["antigravity defaults: SKIPPED (unparseable settings.json)"]
+    if not isinstance(data, dict):
+        return ["antigravity defaults: SKIPPED (unexpected shape)"]
+    removed = {k: data.pop(k) for k in ANTIGRAVITY_PIN_KEYS if k in data}
+    if not removed:
+        return ["antigravity defaults: provider default"]
+    if not dry_run:
+        ANTIGRAVITY_SETTINGS.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    pinned = ", ".join(str(v) for v in removed.values())
+    return [f"antigravity defaults: {pinned} (pinned) -> provider default"]
 
 
 def sync_agent_runtime(
     dry_run: bool = False,
     agents: Optional[list[str]] = None,
-    calibrate: bool = True,
+    anchor: bool = True,
     projects: Optional[list[Path]] = None,
 ) -> list[str]:
-    """Give every agent on this machine the same roadmodel MCP tools and a
-    reasoning effort that is not pinned to the top rung. Returns report lines."""
+    """Give every agent on this machine the same roadmodel MCP tools, and leave
+    each one on its provider's own default model and effort. Returns report
+    lines. `anchor=False` (--keep-pins) leaves every pin as found."""
     agents = agents or detect_agents()
     argv = _roadmodel_mcp_command()
     report: list[str] = []
-    report += _sync_claude_effort(calibrate, dry_run)
+    report += _sync_claude_defaults(anchor, dry_run)
     if "codex" in agents and (CODEX_DIR.is_dir() or not dry_run):
-        report += _sync_codex(argv, calibrate, dry_run)
+        report += _sync_codex(argv, anchor, dry_run)
     if "gemini" in agents:
         report += _sync_json_mcp(GEMINI_DIR / "settings.json", argv, "gemini", dry_run)
         report += _sync_gemini_settings(GEMINI_DIR / "settings.json", dry_run)
@@ -844,6 +911,7 @@ def sync_agent_runtime(
     if "antigravity" in agents:
         report += _sync_json_mcp(ANTIGRAVITY_MCP, argv, "antigravity", dry_run)
         report += _sync_antigravity_trust(projects or [], dry_run)
+        report += _sync_antigravity_defaults(anchor, dry_run)
     if "opencode" in agents:
         report += _sync_json_mcp(OPENCODE_DIR / "opencode.json", argv, "opencode", dry_run)
     if not report:
@@ -1334,9 +1402,14 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="skip the per-project agent parity (AGENTS.md pointer + exported memory)",
     )
     ap.add_argument(
-        "--no-calibrate",
+        "--keep-pins",
+        "--no-calibrate",  # the pre-anchoring name, kept so old invocations still work
+        dest="keep_pins",
         action="store_true",
-        help="skip the reasoning-effort calibration (MCP registration still runs)",
+        help=(
+            "leave each agent's pinned default model/effort as found, instead of "
+            "removing it so the provider's own default applies (MCP and trust still sync)"
+        ),
     )
     args = ap.parse_args(argv)
 
@@ -1360,7 +1433,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         for line in sync_agent_runtime(
             dry_run=args.dry_run,
             agents=agents,
-            calibrate=not args.no_calibrate,
+            anchor=not args.keep_pins,
             projects=[e.path for e in read_registry(args.projects_file)],
         ):
             print(f"  {line}")
@@ -1426,7 +1499,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         for line in sync_agent_runtime(
             dry_run=args.dry_run,
             agents=agents,
-            calibrate=not args.no_calibrate,
+            anchor=not args.keep_pins,
             projects=[e.path for e in entries],
         ):
             print(f"  {line}")
