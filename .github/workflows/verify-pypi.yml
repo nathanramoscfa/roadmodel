@@ -58,22 +58,27 @@ jobs:
           . .venv-verify/bin/activate
           python -m pip install --upgrade pip
           if [ "${SOURCE}" = "testpypi" ]; then
-            # TestPyPI's CDN can lag a few seconds behind a fresh
-            # upload, so retry up to 3 times with a 10s gap.
+            # TestPyPI's /simple/ page sits behind a CDN that caches
+            # it for up to 600s per edge (Cache-Control: max-age=600),
+            # so a job that starts right after the upload can see the
+            # previous version for ~10 minutes — the JSON API is
+            # current at once, but pip reads /simple/. 3 tries 10s
+            # apart failed a leg on both 2026-09-23 releases. Retry
+            # for up to ~12 minutes, inside the job's 15-minute limit.
             # --extra-index-url so runtime deps (anthropic, openai, ...)
             # resolve from production PyPI; TestPyPI only carries
             # roadmodel itself.
-            attempts=3
+            attempts=25
             for attempt in $(seq 1 $attempts); do
-              if pip install \
+              if pip install --no-cache-dir \
                 --index-url https://test.pypi.org/simple/ \
                 --extra-index-url https://pypi.org/simple/ \
                 "roadmodel==${VERSION}"; then
                 exit 0
               fi
               if [ "$attempt" -lt "$attempts" ]; then
-                echo "TestPyPI install attempt ${attempt}/${attempts} failed; retry in 10s..."
-                sleep 10
+                echo "TestPyPI install attempt ${attempt}/${attempts} failed; retry in 30s..."
+                sleep 30
               fi
             done
             echo "TestPyPI install failed after ${attempts} attempts" >&2
