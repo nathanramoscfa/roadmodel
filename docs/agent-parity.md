@@ -18,7 +18,7 @@ Ecosystems covered:
 | **Open source** | OpenCode, Cline, Continue, Aider and other clients over Ollama / vLLM / an OpenAI-compatible endpoint |
 
 `roadmodel-update` already keeps the *roadmap commands*, the *roadmodel MCP
-server* and the *reasoning-effort default* in parity across every agent it
+server* and the *default model and effort* in parity across every agent it
 detects — see [After the sync](#after-the-sync). A bare `~/.gemini` no longer
 counts as the legacy Gemini CLI, since Antigravity creates that directory too. This document covers
 everything it cannot: your own instructions, memory, skills and permissions.
@@ -50,8 +50,10 @@ Three rules that save work in every direction:
    `AGENTS.md`. A repo that carries one file plus a one-line pointer in the
    other never drifts. Copy only what cannot be pointed at.
 2. **Mirror the intent of a setting, not its letter.** Ladders differ (Claude
-   has `max` above `xhigh`; Codex stops at `xhigh`). Mirror the *calibrated
-   default*, never a ceiling.
+   tops out at `max`; Codex now runs `low` through `ultra`; Antigravity's
+   rung lives in the model id). Parity is every agent on its OWN provider's
+   default — not the same rung everywhere — and a ceiling is never mirrored
+   as a default.
 3. **Name what has no equivalent** instead of approximating it. An operator who
    thinks a hook still runs is worse off than one who knows it does not.
 
@@ -163,12 +165,26 @@ the VS Code chat panel:
   (including any wrapper script that injects provider keys). Antigravity ships
   its `mcp_config.json` as a zero-byte file, which means "no servers", not
   "corrupt" — the updater treats it that way.
-- **The reasoning-effort default**, calibrated. A default pinned to the top
-  rung (`effortLevel: max`, `model_reasoning_effort: xhigh`) is a standing cost
-  on every provider that meters a usage pool, and it is the single easiest way
-  to exhaust one mid-week. The updater steps a pinned top rung down to the
-  calibrated default and leaves any deliberate lower value — and any *ceiling*
-  — alone. Opt out with `--no-calibrate`.
+- **The default model and effort, anchored to each provider.** The updater
+  removes any pinned default — `effortLevel` / `model` and every per-model
+  `modelSettings.<m>.effortLevel` in Claude Code, top-level `model` /
+  `model_reasoning_effort` in Codex, `defaultAgentModelId` in Antigravity —
+  so each client resolves its provider's own current default:
+
+  | Agent | Where the default comes from |
+  | --- | --- |
+  | Claude Code | Anthropic's documented per-model default (Opus 5.5 → `medium`, Opus 4.7 → `xhigh`, the rest → `high`) |
+  | Codex | `default_reasoning_level` per model in the catalog Codex fetches from OpenAI — Codex documents no default as a value |
+  | Antigravity | the client's own default model id, which carries the rung |
+
+  Carrying no pin is the only way to follow a provider the day it changes a
+  default: a pin written from roadmodel's own opinion drifts the moment the
+  provider moves (Opus 5.5 shipped with a `medium` default a pinned `high`
+  would have overridden). **Ceilings are kept exactly as found** —
+  `maxEffortLevel` bounds escalation, it does not pick a starting point. A
+  `*-codex` model pin on a ChatGPT sign-in is removed even under
+  `--keep-pins`, because that account cannot run it at all. Opt out with
+  `--keep-pins` (the old `--no-calibrate` still works).
 
 What still needs the prompt above: your own `CLAUDE.md` / `AGENTS.md`, your
 memory, your own skills and commands, and your permission posture. Re-run the
