@@ -142,3 +142,27 @@ def test_roadmap_step_command_gates_on_status() -> None:
     assert "Never mark a step complete on your own judgement" in flat
     # The Stage-3 mark itself.
     assert "docs: mark Phase {{PHASE}} Step {{STEP}} complete" in text
+
+
+def test_roadmap_step_reads_a_settings_table_as_intent() -> None:
+    """A Settings table freezes the model and effort on the day the roadmap
+    was written. On 2026-09-22 a jackson-opt step stalled because its table
+    said `Claude Opus 5 · Max` while the session ran Opus 5.5 — the model its
+    provider had just made the default, and a Max written under the old
+    uncapped posture. The gate must not block on either, and must not lose
+    the record of what actually ran."""
+    text = STEP_COMMAND.read_text()
+    flat = re.sub(r"\s+", " ", text)
+    # A newer version in the same line satisfies the gate …
+    assert "newer version in the same line" in flat
+    assert "Opus 5 → Opus 5.5" in flat
+    # … but a different line still stops: never start on an unintended model.
+    assert "a different line" in flat
+    assert "Do not start the step on a model it did not intend" in flat
+    # A pre-capped top rung is stale, not binding.
+    assert "Consumption headroom: capped" in flat
+    assert "Keep a top rung only when" in flat
+    # What ran is recorded in the step's own PR; history is never rewritten.
+    assert "Settings updated <YYYY-MM-DD>: was" in flat
+    assert "Never rewrite the table of a step that reads `Complete`" in flat
+    assert "the §3 Settings update" in flat
