@@ -229,7 +229,7 @@ appear here.
 | opus-4.7         | $25.00  | Very High    | Very High    | ✓      |
 | opus-4.8         | $25.00  | Very High    | Very High    | ✓      |
 | claude-opus-5    | $25.00  | Very High    | Very High    | ✓      |
-| claude-opus-5-5  | $20.00  | High         | —            | NEW    |
+| claude-opus-5-5  | $20.00  | High         | High         | ✓      |
 | claude-fable-5   | $50.00  | Very High    | Very High    | ✓      |
 | claude-fable-5.1 | $50.00  | Very High    | Very High    | ✓      |
 | gpt-5.5          | $30.00  | Very High    | Very High    | ✓      |
@@ -254,7 +254,7 @@ appear here.
 | mistral-medium-3.5 | $7.50 | Low          | Low          | ✓      |
 | grok-4.5         | $6.00   | Low          | Low          | ✓      |
 | grok-4.6         | $6.00   | Low          | Low          | ✓      |
-| grok-4.7         | $6.00   | Low          | —            | NEW    |
+| grok-4.7         | $6.00   | Low          | Low          | ✓      |
 | gpt-5.6-luna     | $1.20   | Low          | Low          | ✓      |
 | claude-4.5-haiku | $5.00   | Low          | Low          | ✓      |
 | gpt-5.4-mini     | $4.50   | Low          | Low          | ✓      |
