@@ -230,6 +230,16 @@ def test_roadmap_refresh_migrates_status_to_the_heading() -> None:
     assert "a Status column in its Summary Table" in flat
 
 
+def test_roadmap_refresh_gives_every_phase_roadmap_a_project_section() -> None:
+    """On 2026-09-23 both refreshed projects had phase roadmaps the project
+    roadmap never listed (reversi's 31.5, roadmodel's 4.5-4.10), so the
+    ledger showed nothing underway while 31.5 was mid-beta."""
+    flat = re.sub(r"\s+", " ", REFRESH_COMMAND.read_text())
+    assert "A phase roadmap with no `### Phase` section of its own" in flat
+    assert "a one-paragraph Goal drawn from the phase roadmap's own overview" in flat
+    assert "the project ledger hides the phase that is underway" in flat
+
+
 def test_phase_prompt_refuses_a_kit_with_the_old_status_layout() -> None:
     flat = re.sub(r"\s+", " ", PROMPT_PHASE.read_text())
     assert "a step's Status line sits after its `**Deploys:**` line" in flat
