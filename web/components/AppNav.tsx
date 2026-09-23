@@ -49,14 +49,19 @@ export function AppNav({ roadmapEnabled }: { roadmapEnabled: boolean }) {
       aria-label="Primary"
       className="border-b border-brand-slate-200 dark:border-brand-slate-700 bg-white dark:bg-brand-slate-800"
     >
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
+      {/* The brand, every link, and the actions need ~730px in one row (~890px
+          with Roadmap and History), and a phone has 390: every app page
+          scrolled sideways. Below `lg` the links take a full-width row of their
+          own, wrapping rather than scrolling so every link stays in view; from
+          `lg` up it is the one row it always was. One set of links either way. */}
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-2 gap-y-1 px-4 py-2 sm:px-6 lg:flex-nowrap lg:py-3">
         <Link
           href="/"
-          className="text-sm font-semibold uppercase tracking-wide text-brand-accent"
+          className="order-1 text-sm font-semibold uppercase tracking-wide text-brand-accent"
         >
           roadmodel
         </Link>
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="order-3 -mx-1 flex w-full flex-wrap items-center gap-1 lg:order-2 lg:mx-0 lg:ml-auto lg:w-auto lg:flex-nowrap lg:gap-2">
           {links.map((link) => {
             const active =
               pathname === link.href || pathname.startsWith(`${link.href}/`);
@@ -66,7 +71,7 @@ export function AppNav({ roadmapEnabled }: { roadmapEnabled: boolean }) {
                 href={link.href}
                 aria-current={active ? "page" : undefined}
                 className={
-                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
+                  "shrink-0 rounded-md px-3 py-1.5 text-sm font-medium transition-colors " +
                   (active
                     ? "bg-brand-slate-100 dark:bg-brand-slate-800 text-brand-slate-900 dark:text-brand-slate-50"
                     : "text-brand-slate-600 dark:text-brand-slate-300 hover:bg-brand-slate-50 dark:hover:bg-brand-slate-800 hover:text-brand-slate-900 dark:hover:text-brand-slate-50")
@@ -76,6 +81,8 @@ export function AppNav({ roadmapEnabled }: { roadmapEnabled: boolean }) {
               </Link>
             );
           })}
+        </div>
+        <div className="order-2 flex items-center gap-1 lg:order-3 lg:gap-2">
           <ThemeToggle />
           <form action="/signout" method="post" className="ml-1">
             <button

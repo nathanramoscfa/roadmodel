@@ -77,6 +77,8 @@ export function getModelRows(): ModelRow[] {
   const rows: ModelRow[] = MODELS.map((m) => {
     const prose = m.headline_benchmarks ?? "";
     const bench = benchRowFor(m.id);
+    const measured = bench?.values.artificial_analysis_intelligence_index ?? null;
+    const cited = measured === null ? extractAaIndex(prose) : null;
     return {
       id: m.id,
       name: m.name,
@@ -90,7 +92,8 @@ export function getModelRows(): ModelRow[] {
       headline_benchmarks: prose,
       pricing_notes: m.pricing_notes ?? "",
       best_for: m.best_for ?? "",
-      aa_index: bench?.values.artificial_analysis_intelligence_index ?? extractAaIndex(prose),
+      aa_index: measured ?? cited,
+      aa_index_source: measured !== null ? "snapshot" : cited !== null ? "cited" : null,
       bench,
       value_score: null,
       value_frontier: false,

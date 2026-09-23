@@ -46,8 +46,13 @@ export default async function RootLayout({
             renders <html class="dark"> (zero flash for the common case). Only
             an explicit "light" choice removes it before paint; "dark" or an
             unset preference stay dark. */}
+        {/* suppressHydrationWarning: browsers blank a nonce attribute once the
+            script is parsed (nonce hiding, so page scripts cannot read it), so
+            the hydrating client sees nonce="" where the server sent the value.
+            That is the browser's security feature, not a mismatch to fix. */}
         <script
           nonce={nonce}
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html:
               "try{if(localStorage.getItem('theme')==='light')document.documentElement.classList.remove('dark')}catch(e){}",

@@ -236,6 +236,10 @@ export interface TierFit {
   n: number;
   intercept: number;
   meanIndex: number;
+  // Mean of log10(blended price) over the tier — the line passes through
+  // (meanLogPrice, meanIndex), so 10^meanLogPrice is the tier's typical
+  // (geometric-mean) price and the natural centre for reading the line.
+  meanLogPrice: number;
   minPrice: number;
   maxPrice: number;
 }
@@ -291,6 +295,7 @@ export function fitScoreModel(
       n: idx.length,
       intercept: my - slope * mx,
       meanIndex: my,
+      meanLogPrice: mx,
       minPrice: Math.min(...idx.map((i) => pts[i].price)),
       maxPrice: Math.max(...idx.map((i) => pts[i].price)),
     };
@@ -333,6 +338,117 @@ export function formatScore(score: number | null): string {
   const rounded = Math.round(score * 10) / 10;
   if (rounded === 0) return "0.0";
   return (rounded > 0 ? "+" : "−") + Math.abs(rounded).toFixed(1);
+}
+
+// The expected index the tier's line gives at a blended price.
+export function expectedIndex(fit: ScoreFit, tier: string, price: number): number | null {
+  const t = fit.tiers[tier];
+  if (!t || !(price > 0)) return null;
+  return t.intercept + fit.slope * Math.log10(price);
+}
+
+// A Score, taken apart into two signed parts that add up to it:
+//
+//   Score = (AA Index − tier average)            how far above its peers
+//         + (−slope × log10(price ÷ typical))    the handicap (or credit) for
+//                                                 costing more (or less) than
+//                                                 the tier's typical model
+//
+// which is the fitted line read around the tier's centre, the point
+// (typical price, tier average) that every least-squares line passes through.
+//
+// Every figure a reader sees is rounded to one decimal, and rounded parts do
+// not always sum to a rounded total. So the displayed parts are derived in
+// whole tenths from the displayed total, and the ledger always adds up to
+// the figure printed in the table. The price adjustment absorbs the rounding
+// (it is at most 0.1 from its unrounded value).
+export interface ScoreBreakdown {
+  score: number;
+  index: number;
+  tierMean: number;
+  expected: number;
+  price: number;
+  typicalPrice: number;
+  priceRatio: number;
+  slope: number;
+  tierN: number;
+  // One-decimal figures that add up exactly:
+  //   vsAverage = index − tierMean
+  //   score     = vsAverage + priceAdjustment
+  //   expected  = index − score = tierMean − priceAdjustment
+  shown: {
+    index: number;
+    tierMean: number;
+    vsAverage: number;
+    priceAdjustment: number;
+    expected: number;
+    score: number;
+  };
+}
+
+const tenths = (v: number) => Math.round(v * 10);
+
+export function scoreBreakdown(
+  fit: ScoreFit | null,
+  tier: string,
+  price: number,
+  index: number | null,
+): ScoreBreakdown | null {
+  const score = scoreFor(fit, tier, price, index);
+  if (score === null || !fit || index === null) return null;
+  const t = fit.tiers[tier];
+  const typicalPrice = 10 ** t.meanLogPrice;
+  const iT = tenths(index);
+  const mT = tenths(t.meanIndex);
+  const sT = tenths(score);
+  const vT = iT - mT;
+  return {
+    score,
+    index,
+    tierMean: t.meanIndex,
+    expected: index - score,
+    price,
+    typicalPrice,
+    priceRatio: price / typicalPrice,
+    slope: fit.slope,
+    tierN: t.n,
+    shown: {
+      index: iT / 10,
+      tierMean: mT / 10,
+      vsAverage: vT / 10,
+      priceAdjustment: (sT - vT) / 10,
+      expected: (iT - sT) / 10,
+      score: sT / 10,
+    },
+  };
+}
+
+// Candidate tick values for a log10 price axis between two prices, coarsest
+// series first: 1-2-5 when that already gives four ticks, else a finer
+// "round price" series (so a tier spanning $9–$24 reads $10 $12 $15 $20
+// rather than one lonely $10). The chart thins them further so no two labels
+// touch at the width it is drawn.
+export function priceTicks(lo: number, hi: number): number[] {
+  const series = (steps: number[]) => {
+    const ticks: number[] = [];
+    for (let e = Math.floor(Math.log10(lo)) - 1; e <= Math.ceil(Math.log10(hi)) + 1; e += 1) {
+      for (const s of steps) {
+        const v = s * 10 ** e;
+        if (v >= lo * 0.999 && v <= hi * 1.001) ticks.push(Number(v.toPrecision(6)));
+      }
+    }
+    return ticks;
+  };
+  const coarse = series([1, 2, 5]);
+  if (coarse.length >= 4) return coarse;
+  return series([1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 7, 8, 9]);
+}
+
+// "$0.13", "$1.25", "$10", "$19.95" — a price as an axis or card reads it.
+export function formatUsd(v: number): string {
+  if (v >= 100) return `$${Math.round(v)}`;
+  if (Number.isInteger(v)) return `$${v}`;
+  return `$${v.toFixed(2)}`;
 }
 
 // What the page carries per model: just the column values (null = not
