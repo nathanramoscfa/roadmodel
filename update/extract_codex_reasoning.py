@@ -50,6 +50,11 @@ import requests
 
 UPDATE_DIR = Path(__file__).resolve().parent
 DEFAULT_OUTPUT = UPDATE_DIR / "codex-reasoning.json"
+# The exact span of the docs the snapshot was parsed from, committed beside it
+# so a test can re-derive the snapshot offline. A hand-cut fixture cannot play
+# that role: it goes stale the first time the docs change, and every Codex
+# refresh PR then fails the check until someone re-cuts it by hand (#693).
+DEFAULT_SLICE = UPDATE_DIR / "codex-reasoning-source.md"
 CACHE_SNAPSHOT_PATH = UPDATE_DIR / ".cache" / "codex-reasoning.json"
 
 DOCS_URL = "https://developers.openai.com/codex/config-reference.md"
@@ -88,7 +93,9 @@ REQUIRED_ANCHORS = (
 # The reasoning-effort enumeration this tracker has seen. A documented value
 # outside this baseline is FLAGGED (recorded in ``unexpected_effort_values``)
 # so a docs-added reasoning tier surfaces rather than being silently absorbed.
-KNOWN_EFFORT_VALUES = frozenset({"minimal", "low", "medium", "high", "xhigh"})
+# `max` and `ultra` joined on 2026-09-23 (#693), once the selector mapped them
+# and check D enforced it; `minimal` stays so an older docs slice still parses.
+KNOWN_EFFORT_VALUES = frozenset({"minimal", "low", "medium", "high", "xhigh", "max", "ultra"})
 
 
 class ExtractError(RuntimeError):
@@ -265,7 +272,20 @@ def main() -> int:
         default=DEFAULT_OUTPUT,
         help="where to write the JSON snapshot (default: committed canonical copy)",
     )
+    parser.add_argument(
+        "--slice-output",
+        type=Path,
+        default=None,
+        help=(
+            "where to write the docs span the snapshot was parsed from "
+            f"(default: {DEFAULT_SLICE.name} beside the canonical snapshot; "
+            "none for any other --output)"
+        ),
+    )
     args = parser.parse_args()
+    slice_out = args.slice_output
+    if slice_out is None and args.output.resolve() == DEFAULT_OUTPUT.resolve():
+        slice_out = DEFAULT_SLICE
 
     try:
         markdown = args.input.read_text() if args.input else fetch_markdown(args.url)
@@ -282,6 +302,11 @@ def main() -> int:
     payload = json.dumps(snapshot, indent=2, ensure_ascii=False) + "\n"
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(payload)
+    if slice_out is not None:
+        # isolate_in_scope() of this span is the span itself, so the snapshot
+        # (hash included) re-derives from it byte for byte.
+        slice_out.parent.mkdir(parents=True, exist_ok=True)
+        slice_out.write_text(isolate_in_scope(markdown) + "\n")
     # Mirror an ephemeral copy for the cron's hash comparison (gitignored).
     if args.output.resolve() != CACHE_SNAPSHOT_PATH.resolve():
         CACHE_SNAPSHOT_PATH.parent.mkdir(parents=True, exist_ok=True)
