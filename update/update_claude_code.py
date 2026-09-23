@@ -33,6 +33,7 @@ if str(_UPDATE_DIR) not in sys.path:
     sys.path.insert(0, str(_UPDATE_DIR))
 # E402/I001 are expected after the path guard above.
 from opus_turn import MAX_OUTPUT_TOKENS, OpusTurnIncomplete, stream_until_complete  # noqa: E402, I001
+from selector_re import repair_attribute_quotes  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = REPO_ROOT / "docs"
@@ -389,6 +390,9 @@ def main() -> int:
     new_selector = result["roadmodel_txt"]
     summary = result.get("summary") or "Refresh Claude Code surface parameters"
     warnings = list(result.get("warnings") or [])
+    # An LLM-written value with a raw quote would end its attribute early.
+    new_selector, quote_notes = repair_attribute_quotes(new_selector)
+    warnings += quote_notes
     consumed_versions = list(result.get("consumed_versions") or [])
 
     if args.dry_run:
