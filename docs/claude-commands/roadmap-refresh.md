@@ -35,10 +35,23 @@ For every step in every phase roadmap, look up its `**Branch:**` line:
 - A merged PR ⇒ `**Status:** Complete — PR #<n> (<mergedAt date>)`.
 - None ⇒ `**Status:** Not started`, unless the step already reads
   `In progress` and its branch has an OPEN PR — then leave it.
-- Put the line after the step's `**Deploys:**` line (after `**Branch:**`
-  if there is none), replacing any existing `**Status:**` line.
+- Put the line directly under the step's `## Step N — …` heading, before
+  its Goal. Move an existing `**Status:**` line there (roadmaps written
+  before roadmodel 0.2.40 carry it after `**Deploys:**`), so each step
+  ends up with exactly one.
+- A step that reads `Complete` gets ` ✅` at the end of its heading
+  (`## Step 3 — 4B Estimators ✅`); a step that does not, has none. The
+  mark is what shows completion in the preview, the outline, and the
+  table of contents.
 - Never mark a step complete on your own judgement of the git history.
   Only a merged PR on the step's own Branch counts.
+
+Then each phase roadmap itself: a `**Status:**` line directly under its
+`# ` title (all its steps Complete ⇒ `Complete — <last merge date>`;
+some ⇒ `In progress`; none ⇒ `Not started`), and a Status column in its
+Summary Table (add it if missing): each step's row mirrors that step's
+line (`Complete — PR #<n>` or `Not started`), verification rows read
+`--`.
 
 Then the project roadmap: every `### Phase` gets a `**Status:**` line
 under its Goal, and its summary table a Status column. All of a phase's

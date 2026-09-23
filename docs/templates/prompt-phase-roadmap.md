@@ -22,11 +22,13 @@ current. Run `pip install -U roadmodel && roadmodel export-kit . --force`
 (where roadmodel is not installed, run
 `scripts/export-planning-kit.sh .` instead). Then open
 `planning/templates/phase-roadmap-template.md` and confirm its Stage 3
-reads "OPEN THE PR, THEN MARK THE STEP" and its Stage 6 reads "DISPOSE
-OF EVERY FINDING, DECLARE COMPLETION, THEN NEW CONVERSATION". If Stage
-3 is a bare "OPEN THE PR", or Stage 6 tells you to put findings in a
-"Follow-ups (non-blocking)" note after the completion line, STOP and
-tell me the kit is stale — do not write the roadmap from it.
+reads "OPEN THE PR, THEN MARK THE STEP", its Stage 6 reads "DISPOSE
+OF EVERY FINDING, DECLARE COMPLETION, THEN NEW CONVERSATION", and its
+Step 1 has `**Status:** Not started` directly under the `## Step 1`
+heading. If Stage 3 is a bare "OPEN THE PR", Stage 6 tells you to put
+findings in a "Follow-ups (non-blocking)" note after the completion
+line, or a step's Status line sits after its `**Deploys:**` line, STOP
+and tell me the kit is stale — do not write the roadmap from it.
 
 Step 1 — write `{{OUTPUT}}` from
 `@planning/templates/phase-roadmap-template.md`, expanding the
@@ -44,8 +46,10 @@ availability exclusion in the selector, and include a backup model per
 step.
 
 Honor the template's style rules: 80-column prose, zero `{{...}}`
-tokens left, every step header carrying `**Status:** Not started`
-(the step's own PR flips it — Status rule), every `<task>` block
+tokens left, `**Status:** Not started` directly under the title and
+directly under every `## Step` heading (the step's own PR flips it and
+adds ✅ to the heading — Status rule), a Status column in the Summary
+Table, every `<task>` block
 carrying the full `<lifecycle>` and `<security>` blocks verbatim, and
 a Post-Implementation Verification section.
 

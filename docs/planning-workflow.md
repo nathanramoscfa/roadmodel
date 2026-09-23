@@ -127,14 +127,17 @@ The command:
    `git checkout -b <Branch>` from clean `main`.
 6. **Marks the step in its own PR.** At Stage 3, right after
    `gh pr create` returns the number, it sets the step's
-   `**Status:**` line to `Complete — PR #n (date)`, commits
+   `**Status:**` line — directly under its `## Step 3` heading — to
+   `Complete — PR #n (date)`, appends ✅ to that heading, sets the
+   step's Summary Table Status cell, commits
    `docs: mark Phase 1 Step 3 complete` on the step branch, and
    pushes. So `docs/phase01-roadmap.md` on `main` says Step 3 is done
    exactly when PR #n merges — never before, and never by a later
-   chat reconstructing history. The same commit marks the phase in
-   `ROADMAP.md`: Step 1 flips its `**Status:**` line to `In progress`,
-   the final step to `Complete` (with its summary-table row and the
-   header status line).
+   chat reconstructing history. The same commit marks the phase:
+   Step 1 flips the phase roadmap's own `**Status:**` line (under its
+   title) and `ROADMAP.md`'s to `In progress`, the final step both to
+   `Complete` (with its summary-table row and the header status
+   line).
 
 The step ends with "Step 3 is complete. You can now move on to
 Step 4." and nothing after it — every finding has been dispatched
@@ -146,12 +149,25 @@ outstanding; nothing is silently carried. Then close the chat and
 ### Progress at a glance
 
 No "update the roadmaps" chore exists — the marks land with the
-work. To read progress:
+work. A completed step's heading ends in ✅, so the rendered preview,
+the outline, and the table of contents show progress without opening
+anything; the phase roadmap's Summary Table has a Status column, and
+its title carries the phase's own Status line. To read it as text:
 
 ```sh
 grep -n '^\*\*Status:\*\*' docs/phase01-roadmap.md   # one line per step
 grep -n '^\*\*Status:\*\*' ROADMAP.md                # one line per phase
 ```
+
+### Roadmaps written before roadmodel 0.2.40
+
+Roadmodel 0.2.37 to 0.2.39 put each step's `**Status:**` line after
+its `**Deploys:**` line, with no ✅ and no phase-level line. Run
+`/roadmap-refresh` once: it moves every Status line under its step
+heading, adds ✅ to the steps that shipped, and adds the phase Status
+line and the Summary Table's Status column. It changes no status and
+runs no step. `/roadmap-step` makes the same migration in its own PR
+if it meets the old layout first.
 
 ### Roadmaps written before roadmodel 0.2.37
 
