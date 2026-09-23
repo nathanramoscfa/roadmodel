@@ -56,6 +56,7 @@ import json
 import math
 import re
 from dataclasses import asdict, dataclass, field
+from datetime import datetime, timedelta, timezone
 from importlib import resources
 from typing import Any, Final
 
@@ -396,10 +397,66 @@ def allowed_jurisdictions(text: str) -> set[str]:
     return codes or set(BASELINE_JURISDICTIONS)
 
 
-def pool_states(text: str) -> list[tuple[str, str, str]]:
+# The Resets cell of a Usage-pool row: "Tue 2026-09-22 20:00 EDT", "2026-09-22",
+# or free text such as "rolling". Only a dated cell can expire a row.
+_RESET_RE: Final = re.compile(r"(\d{4}-\d{2}-\d{2})(?:[ T]+(\d{1,2}):(\d{2}))?(?:\s*([A-Z]{2,4}))?")
+# The zones an operator writes by hand. An unlisted one is NOT guessed at.
+_TZ_OFFSETS: Final[dict[str, int]] = {
+    "UTC": 0,
+    "GMT": 0,
+    "Z": 0,
+    "EDT": -4,
+    "EST": -5,
+    "CDT": -5,
+    "CST": -6,
+    "MDT": -6,
+    "MST": -7,
+    "PDT": -7,
+    "PST": -8,
+    "BST": 1,
+    "CET": 1,
+    "CEST": 2,
+}
+
+
+def _reset_passed(cell: str, now: datetime) -> bool:
+    """True only when the Resets cell names a moment that is CERTAINLY past.
+
+    The asymmetry is the point. Keeping a stale `exhausted` row costs
+    quality — the selector routes work off a pool that has in fact reset
+    (seen 2026-09-22: every coding step went to Codex a day after Claude's
+    weekly pool rolled). Wrongly expiring a LIVE row costs money — an
+    exhausted pool's overflow bills at list price, the failure that burned
+    ~$500 in a day. So anything unreadable keeps its declared state, and a
+    time in an unrecognised zone must be a full day past before it counts."""
+    m = _RESET_RE.search(cell or "")
+    if not m:
+        return False
+    try:
+        day = datetime.strptime(m.group(1), "%Y-%m-%d")
+    except ValueError:
+        return False
+    hour, minute, zone = m.group(2), m.group(3), (m.group(4) or "").upper()
+    if hour is None:
+        # A bare date: the reset is at some point that day, in some zone.
+        return now >= day.replace(tzinfo=timezone.utc) + timedelta(days=2)
+    local = day.replace(hour=int(hour), minute=int(minute))
+    if zone in _TZ_OFFSETS:
+        at = local.replace(tzinfo=timezone(timedelta(hours=_TZ_OFFSETS[zone])))
+        return now >= at
+    return now >= local.replace(tzinfo=timezone.utc) + timedelta(days=1)
+
+
+def pool_states(text: str, *, now: datetime | None = None) -> list[tuple[str, str, str]]:
     """Rows of the ``Usage-pool status`` table as (pool name, state, notes).
     The State cell may be decorated (backticks, bold, a trailing note); the
-    first headroom / tight / exhausted word wins."""
+    first headroom / tight / exhausted word wins.
+
+    A `tight` / `exhausted` row whose Resets time has passed reads as
+    `headroom`: the operator writes the row when a cap binds and cannot be
+    relied on to flip it back when the window rolls, so the table must not
+    outlive its own reset. The note records why, for the audit line."""
+    now = now or datetime.now(timezone.utc)
     section = _cost._extract_section(text, "Usage-pool status")
     rows: list[tuple[str, str, str]] = []
     for row in _cost._parse_markdown_table(section):
@@ -408,8 +465,14 @@ def pool_states(text: str) -> list[tuple[str, str, str]]:
         name = row[0].strip()
         m = _POOL_STATE_RE.search(row[2])
         notes = row[4].strip() if len(row) > 4 else ""
-        if m and name.lower() != "pool":
-            rows.append((name, m.group(1).lower(), notes))
+        if not m or name.lower() == "pool":
+            continue
+        state = m.group(1).lower()
+        reset = row[3].strip() if len(row) > 3 else ""
+        if state in ("tight", "exhausted") and _reset_passed(reset, now):
+            notes = f"declared {state}, but its reset ({reset}) has passed"
+            state = "headroom"
+        rows.append((name, state, notes))
     return rows
 
 
