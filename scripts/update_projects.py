@@ -1354,6 +1354,49 @@ def _table(results: list[Result]) -> str:
     return "\n".join(lines)
 
 
+# --------------------------------------------------------------------------
+# Staleness: this script is deliberately NOT self-updating. A daily job that
+# fetches code from the internet and executes it is its own supply-chain risk,
+# so the scheduled task runs whatever local copy exists. The cost is drift: a
+# machine keeps running an old updater until someone re-fetches it, and nothing
+# said so. On 2026-09-22 the Mac Studio's scheduled copy was 32 KB against a
+# 64 KB main — months of fixes (Antigravity, per-project parity, workspace
+# trust) never ran there. So compare, and WARN. The fetched bytes are compared
+# and discarded — never written, never executed.
+# --------------------------------------------------------------------------
+
+SELF_URL = f"{REPO_RAW}/scripts/update_projects.py"
+
+
+def _refetch_command(target: Path) -> str:
+    if WINDOWS:
+        return f'curl.exe -fsSL "{SELF_URL}" -o "{target}"'
+    return f'curl -fsSL "{SELF_URL}" -o "{target}"'
+
+
+def staleness_warning(self_path: Optional[Path] = None) -> Optional[str]:
+    """A warning when this file differs from main, else None. Read-only: the
+    fetched copy is compared, then dropped. A network failure is not a warning
+    — an offline run must not nag."""
+    self_path = self_path or Path(__file__).resolve()
+    try:
+        with urllib.request.urlopen(SELF_URL, timeout=15) as resp:  # noqa: S310 — fixed https URL
+            upstream = resp.read()
+    except (urllib.error.URLError, OSError):
+        return None
+    try:
+        local = self_path.read_bytes()
+    except OSError:
+        return None
+    if local.replace(b"\r\n", b"\n") == upstream.replace(b"\r\n", b"\n"):
+        return None
+    return (
+        f"THIS UPDATER IS STALE ({len(local):,} bytes here, {len(upstream):,} on main). "
+        f"Fixes on main are not running on this machine. Re-fetch it:\n"
+        f"    {_refetch_command(self_path)}"
+    )
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], prog="update_projects.py")
     ap.add_argument(
@@ -1437,6 +1480,9 @@ def main(argv: Optional[list[str]] = None) -> int:
             projects=[e.path for e in read_registry(args.projects_file)],
         ):
             print(f"  {line}")
+        stale = staleness_warning()
+        if stale:
+            print(f"\n*** {stale}")
         return 0
 
     if args.uninstall_schedule:
@@ -1506,6 +1552,10 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     if args.install_schedule:
         print("\nSchedule:", install_schedule(args.install_schedule, dry_run=args.dry_run))
+
+    stale = staleness_warning()
+    if stale:
+        print(f"\n*** {stale}")
 
     failed = [r for r in results if not r.ok]
     if failed:
