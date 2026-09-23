@@ -526,45 +526,74 @@ def test_detect_agents_reports_vscode_only_when_a_user_dir_exists(
 _ARGV = ["/Users/x/.config/roadmodel/mcp-launch.sh"]
 
 
-def test_codex_sync_adds_mcp_and_calibrates_a_pinned_top_rung(
+def test_codex_sync_adds_mcp_and_removes_pinned_defaults(
     up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Anchoring = no pin. Codex documents NO default model or effort as a
+    value — the client resolves them from the catalog it fetches from OpenAI —
+    so the only way to land on the provider's default is to name none."""
     import json as _json
 
     codex = tmp_path / ".codex"
     codex.mkdir()
     (codex / "config.toml").write_text(
-        'model = "gpt-5.3-codex"\nmodel_reasoning_effort = "xhigh"\n\n'
+        'model = "gpt-6-astra"\nmodel_reasoning_effort = "xhigh"\n\n'
         '[mcp_servers.railway]\ncommand = "railway"\nargs = ["mcp"]\n',
         encoding="utf-8",
     )
     monkeypatch.setattr(up, "CODEX_DIR", codex)
-    lines = up._sync_codex(_ARGV, calibrate=True, dry_run=False)
+    lines = up._sync_codex(_ARGV, anchor=True, dry_run=False)
     text = (codex / "config.toml").read_text(encoding="utf-8")
 
     assert "[mcp_servers.roadmodel]" in text
     assert _json.dumps(_ARGV[0]) in text
-    assert 'model_reasoning_effort = "medium"' in text
-    assert 'model = "gpt-5.3-codex"' in text  # untouched
+    assert "model_reasoning_effort" not in text
+    assert 'model = "gpt-6-astra"' not in text
     assert "[mcp_servers.railway]" in text  # untouched
-    assert any("effort: xhigh -> medium" in ln for ln in lines)
+    assert "codex model: gpt-6-astra (pinned) -> provider default" in lines
+    assert "codex effort: xhigh (pinned) -> provider default" in lines
 
     # Idempotent: a second run changes nothing and says so.
-    again = up._sync_codex(_ARGV, calibrate=True, dry_run=False)
+    again = up._sync_codex(_ARGV, anchor=True, dry_run=False)
     assert (codex / "config.toml").read_text(encoding="utf-8") == text
-    assert any("mcp: present" in ln for ln in again)
-    assert any("medium (left alone)" in ln for ln in again)
+    assert "codex mcp: present" in again
+    assert "codex effort: provider default" in again
 
 
-def test_codex_sync_leaves_a_deliberate_lower_effort_alone(
+def test_codex_unpin_never_touches_a_model_key_inside_a_table(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`model` under [profiles.x] or [models.new_thread] is a DIFFERENT
+    setting. Only a top-level key — above the first table header — is a pin."""
+    codex = tmp_path / ".codex"
+    codex.mkdir()
+    body = (
+        'model = "gpt-6-astra"\n\n'
+        '[profiles.deep]\nmodel = "gpt-6-sol"\nmodel_reasoning_effort = "high"\n\n'
+        '[models.new_thread]\nmodel = "gpt-6-luna"\n'
+    )
+    (codex / "config.toml").write_text(body, encoding="utf-8")
+    monkeypatch.setattr(up, "CODEX_DIR", codex)
+    up._sync_codex(None, anchor=True, dry_run=False)
+    text = (codex / "config.toml").read_text(encoding="utf-8")
+    assert not text.startswith('model = "gpt-6-astra"')
+    assert '[profiles.deep]\nmodel = "gpt-6-sol"\nmodel_reasoning_effort = "high"' in text
+    assert '[models.new_thread]\nmodel = "gpt-6-luna"' in text
+
+
+def test_keep_pins_leaves_a_deliberate_codex_pin_alone(
     up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     codex = tmp_path / ".codex"
     codex.mkdir()
-    (codex / "config.toml").write_text('model_reasoning_effort = "low"\n', encoding="utf-8")
+    body = 'model = "gpt-6-sol"\nmodel_reasoning_effort = "low"\n'
+    (codex / "config.toml").write_text(body, encoding="utf-8")
     monkeypatch.setattr(up, "CODEX_DIR", codex)
-    up._sync_codex(None, calibrate=True, dry_run=False)
-    assert 'model_reasoning_effort = "low"' in (codex / "config.toml").read_text(encoding="utf-8")
+    up._sync_codex(None, anchor=False, dry_run=False)
+    text = (codex / "config.toml").read_text(encoding="utf-8")
+    # Both pins survive; the sync may still add unrelated lines (the
+    # instructions fallback), which is why this is not an equality check.
+    assert 'model = "gpt-6-sol"' in text and 'model_reasoning_effort = "low"' in text
 
 
 def test_json_mcp_sync_preserves_the_rest_of_the_file(up: ModuleType, tmp_path: Path) -> None:
@@ -582,28 +611,62 @@ def test_json_mcp_sync_preserves_the_rest_of_the_file(up: ModuleType, tmp_path: 
     assert up._sync_json_mcp(settings, _ARGV, "gemini", dry_run=False) == ["gemini mcp: present"]
 
 
-def test_claude_effort_calibration_touches_only_a_pinned_default(
+def test_claude_defaults_unpin_both_places_and_keep_every_ceiling(
     up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """A default is pinned in TWO places: top-level `effortLevel`/`model`, and a
+    per-model `modelSettings.<m>.effortLevel` that `/effort` writes and that
+    outlives the session that chose it. Both go. A ceiling bounds escalation,
+    it does not choose a starting point, so every `maxEffortLevel` stays."""
     import json as _json
 
     claude = tmp_path / ".claude"
     claude.mkdir()
     settings = claude / "settings.json"
     settings.write_text(
-        _json.dumps({"effortLevel": "max", "maxEffortLevel": "xhigh", "model": "opus[1m]"}),
+        _json.dumps(
+            {
+                "effortLevel": "high",
+                "model": "opus[1m]",
+                "maxEffortLevel": "xhigh",
+                "theme": "dark",
+                "modelSettings": {
+                    "claude-opus-5": {"effortLevel": "xhigh"},
+                    "claude-fable-5-1": {"effortLevel": "max", "maxEffortLevel": "xhigh"},
+                },
+            }
+        ),
         encoding="utf-8",
     )
     monkeypatch.setattr(up, "CLAUDE_DIR", claude)
-    lines = up._sync_claude_effort(calibrate=True, dry_run=False)
+    lines = up._sync_claude_defaults(anchor=True, dry_run=False)
     data = _json.loads(settings.read_text(encoding="utf-8"))
-    assert data["effortLevel"] == "high"
-    assert data["maxEffortLevel"] == "xhigh"  # a CEILING is not a pinned default
-    assert data["model"] == "opus[1m]"
-    assert lines == ["claude effort: max -> high"]
-    assert up._sync_claude_effort(calibrate=True, dry_run=False) == [
-        "claude effort: high (left alone)"
-    ]
+
+    assert "effortLevel" not in data and "model" not in data
+    assert data["maxEffortLevel"] == "xhigh"  # top-level ceiling kept
+    assert data["theme"] == "dark"  # unrelated keys kept
+    # Emptied per-model entry dropped; a per-model CEILING survives on its own.
+    assert data["modelSettings"] == {"claude-fable-5-1": {"maxEffortLevel": "xhigh"}}
+    assert "provider default" in lines[0] and "claude-opus-5.effortLevel=xhigh" in lines[0]
+    assert lines[1] == "claude ceiling: maxEffortLevel=xhigh (kept)"
+
+    # Idempotent.
+    assert up._sync_claude_defaults(anchor=True, dry_run=False)[0] == (
+        "claude defaults: provider default"
+    )
+
+
+def test_claude_keep_pins_is_a_no_op(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import json as _json
+
+    claude = tmp_path / ".claude"
+    claude.mkdir()
+    (claude / "settings.json").write_text(_json.dumps({"effortLevel": "max"}), encoding="utf-8")
+    monkeypatch.setattr(up, "CLAUDE_DIR", claude)
+    assert up._sync_claude_defaults(anchor=False, dry_run=False) == []
+    assert _json.loads((claude / "settings.json").read_text())["effortLevel"] == "max"
 
 
 def test_runtime_sync_is_a_no_op_under_dry_run(
@@ -616,11 +679,35 @@ def test_runtime_sync_is_a_no_op_under_dry_run(
     (claude / "settings.json").write_text(_json.dumps({"effortLevel": "max"}), encoding="utf-8")
     monkeypatch.setattr(up, "CLAUDE_DIR", claude)
     monkeypatch.setattr(up, "_roadmodel_mcp_command", lambda: None)
-    lines = up.sync_agent_runtime(dry_run=True, agents=["claude"], calibrate=True)
-    assert lines == ["claude effort: max -> high"]
+    lines = up.sync_agent_runtime(dry_run=True, agents=["claude"], anchor=True)
+    assert lines[0] == "claude defaults: effortLevel=max (pinned) -> provider default"
     assert (
         _json.loads((claude / "settings.json").read_text(encoding="utf-8"))["effortLevel"] == "max"
     )
+
+
+def test_antigravity_default_model_pin_is_removed(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The rung is part of the model id, so `defaultAgentModelId` pins model
+    AND effort. Trust in the same file is untouched."""
+    import json as _json
+
+    settings = tmp_path / "settings.json"
+    settings.write_text(
+        _json.dumps(
+            {"defaultAgentModelId": "gemini-3.8-flash-medium", "trustedWorkspaces": ["/p"]}
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(up, "ANTIGRAVITY_SETTINGS", settings)
+    assert up._sync_antigravity_defaults(anchor=True, dry_run=False) == [
+        "antigravity defaults: gemini-3.8-flash-medium (pinned) -> provider default"
+    ]
+    assert _json.loads(settings.read_text()) == {"trustedWorkspaces": ["/p"]}
+    assert up._sync_antigravity_defaults(anchor=True, dry_run=False) == [
+        "antigravity defaults: provider default"
+    ]
 
 
 # --------------------------------------------------------------------------
@@ -726,11 +813,12 @@ def test_parity_dry_run_writes_nothing(
     assert not (project / up.AGENTS_MEMORY_REL).exists()
 
 
-def test_codex_model_pin_is_repaired_for_a_chatgpt_account(
+def test_an_unrunnable_codex_pin_goes_even_under_keep_pins(
     up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Codex signed in with a ChatGPT account answers 400 for the `*-codex`
-    variants, so a config pinned to one is dead until someone runs it."""
+    """Codex on a ChatGPT sign-in answers 400 for the `*-codex` variants. That
+    pin is dead, not a preference, so --keep-pins does not protect it; an
+    API-key setup, where the variants still run, keeps it."""
     codex = tmp_path / ".codex"
     codex.mkdir()
     (codex / "auth.json").write_text("{}", encoding="utf-8")
@@ -740,15 +828,15 @@ def test_codex_model_pin_is_repaired_for_a_chatgpt_account(
     monkeypatch.setattr(up, "CODEX_DIR", codex)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
 
-    lines = up._sync_codex(None, calibrate=True, dry_run=False)
+    lines = up._sync_codex(None, anchor=False, dry_run=False)
     text = (codex / "config.toml").read_text(encoding="utf-8")
-    assert f'model = "{up.CODEX_CHATGPT_DEFAULT}"' in text
-    assert any("ChatGPT sign-in" in ln for ln in lines)
-    # Idempotent, and an API-key setup (where the variants still work) is left alone.
-    assert not any("codex model:" in ln for ln in up._sync_codex(None, True, False))
+    assert 'model = "gpt-5.3-codex"' not in text
+    assert 'model_reasoning_effort = "medium"' in text  # a live pin, kept
+    assert any("unrunnable on ChatGPT sign-in" in ln for ln in lines)
+
     (codex / "config.toml").write_text('model = "gpt-5.3-codex"\n', encoding="utf-8")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    up._sync_codex(None, calibrate=True, dry_run=False)
+    up._sync_codex(None, anchor=False, dry_run=False)
     assert 'model = "gpt-5.3-codex"' in (codex / "config.toml").read_text(encoding="utf-8")
 
 
