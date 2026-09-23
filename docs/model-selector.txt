@@ -434,11 +434,10 @@
       over an explicit `/effort`, `effortLevel`, project or managed
       setting; the `/effort` vocabulary itself is unchanged.
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
-      `reasoning_effort` knob — `minimal`, `low`, `medium`, `high`,
-      `xhigh` (the top "Extra High" tier; model-dependent). Higher
-      effort spends more reasoning tokens before visible output.
-      Codex's plan-mode reasoning-effort variant additionally accepts
-      `none` (plan-mode-only, off).
+      `reasoning_effort` knob — `low`, `medium`, `high`, `xhigh`, `max`,
+      `ultra`. Codex's plan-mode `plan_mode_reasoning_effort` variant
+      accepts the same six values. Higher effort spends more reasoning
+      tokens before visible output.
     - Gemini (Google API, Gemini CLI): a discrete thinking-level
       knob — `minimal`, `low`, `medium`, `high` — shared across the
       3.x and 2.5 model generations. Not every model supports every
@@ -515,20 +514,21 @@
       Extra-High top and maps to `XHigh`, not `Max`. Extended thinking
       disabled (Option+T / Alt+T, `MAX_THINKING_TOKENS=0`, or
       `alwaysThinkingEnabled` false) → `Off`.
-    - OpenAI `reasoning_effort`: `minimal` → `Off`; `low` → `Low`;
-      `medium` → `Medium`; `high` → `High`; `xhigh` / `extra-high`
-      (the top "Extra High" tier, model-dependent — the UI synonym
-      `extra-high` and the config token `xhigh` are the same tier) →
-      `XHigh`. OpenAI's scale tops out at `xhigh`, so no OpenAI level
-      maps to `Max` (the `Max` slot is reserved for the above-`xhigh`
-      step that only the Claude `max`-capable models reach).
+    - OpenAI `reasoning_effort`: `low` → `Low`; `medium` → `Medium`;
+      `high` → `High`; `xhigh` / `extra-high` (the "Extra High" tier —
+      the UI synonym `extra-high` and the config token `xhigh` are the
+      same tier) → `XHigh`; `max` → `Max` (the top step above `xhigh`
+      on the Codex `reasoning_effort` scale, on par with the Claude
+      `max`-capable models); `ultra` → `Ultracode` (the above-`max` top
+      rung on the Codex scale, session-wide multi-agent orchestration
+      analogous to Claude Code's `ultracode`).
     - Gemini thinking levels: `minimal` → `Off`; `low` → `Low`;
       `medium` → `Medium`; `high` → `High` (Gemini tops out at `high`
       — no `xhigh` or `max` tier). `minimal` maps to `Off` for the
-      same reason OpenAI's `minimal` does: it sits BELOW the lowest
-      EFFORT rung, so reporting it as `Low` would overstate the
-      reasoning the operator actually gets. Thinking turned off, on
-      models that allow it (e.g. Gemini 2.5 Flash-Lite), → `Off`.
+      same reason it sits BELOW the lowest EFFORT rung: reporting it
+      as `Low` would overstate the reasoning the operator actually
+      gets. Thinking turned off, on models that allow it (e.g. Gemini
+      2.5 Flash-Lite), → `Off`.
     - DeepSeek: thinking `disabled` → `Off`; `enabled` + effort
       `low` → `Low`; `enabled` + effort
       `high` → `High`; `enabled` + effort `max` → `XHigh` (DeepSeek has
@@ -1427,7 +1427,7 @@
             supports-models="gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5.4-nano,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates. Exposes the full Codex/OpenAI `reasoning_effort` dial (`minimal`, `low`, `medium`, `high`, `xhigh` — the top `xhigh` tier is model-dependent)." />
+            best-for="Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates. Exposes the full Codex/OpenAI `reasoning_effort` dial (`low`, `medium`, `high`, `xhigh`, `max`, `ultra` — the top `ultra` step is a session-wide multi-agent orchestration mode analogous to Claude Code's `ultracode`)." />
     <method id="codex-cli" name="Codex"
             provider="openai" billing="subscription-included"
             provider-jurisdiction="us"
@@ -1435,7 +1435,7 @@
             supports-models="gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.2,gpt-5,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate, in the CLI and the IDE extension. A ChatGPT-account sign-in CANNOT run the `-codex` model variants: Codex answers 400 &quot;The &apos;gpt-5.3-codex&apos; model is not supported when using Codex with a ChatGPT account.&quot; Those variants are reachable only through `codex-api` (an OpenAI API key), so recommending one here would name a model the operator&apos;s subscription cannot run. Exposes reasoning effort (labelled Intelligence: Low / Medium / High / Extra High) and no Max Mode." />
+            best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate, in the CLI and the IDE extension. A ChatGPT-account sign-in CANNOT run the `-codex` model variants: Codex answers 400 &quot;The &apos;gpt-5.3-codex&apos; model is not supported when using Codex with a ChatGPT account.&quot; Those variants are reachable only through `codex-api` (an OpenAI API key), so recommending one here would name a model the operator&apos;s subscription cannot run. Exposes the full Codex `reasoning_effort` dial (`low`, `medium`, `high`, `xhigh`, `max`, `ultra` — the top `ultra` step is session-wide multi-agent orchestration on par with Claude Code&apos;s `ultracode`) and no Max Mode." />
     <method id="codex-api" name="Codex (API key)"
             provider="openai" billing="per-token"
             provider-jurisdiction="us"
@@ -1443,7 +1443,7 @@
             supports-models="gpt-5.3-codex,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.2,gpt-5,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
-            best-for="The same Codex surface driven by an OpenAI API key instead of a ChatGPT sign-in: the ONLY way to run the coding-specialised `-codex` variants (gpt-5.3-codex and the gpt-5.1-codex family), and the fallback for GPT work once the ChatGPT plan&apos;s limits bind. Billed per token at list price, so prefer `codex-cli` while the subscription still has headroom." />
+            best-for="The same Codex surface driven by an OpenAI API key instead of a ChatGPT sign-in: the ONLY way to run the coding-specialised `-codex` variants (gpt-5.3-codex and the gpt-5.1-codex family), and the fallback for GPT work once the ChatGPT plan&apos;s limits bind. Billed per token at list price, so prefer `codex-cli` while the subscription still has headroom. Exposes the full Codex `reasoning_effort` dial (`low`, `medium`, `high`, `xhigh`, `max`, `ultra`)." />
     <method id="chatgpt-app" name="ChatGPT (web / desktop)"
             provider="openai" billing="subscription-included"
             provider-jurisdiction="us"
@@ -2140,8 +2140,32 @@
     THINKING: [On/Off]
     ORCHESTRATION: [None/PerPrompt]
     CONVERSATION: [New/Continue]
-    RATIONALE: [THREE labelled segments — TASK: / PICK: / EFFORT: — exactly as in
-                single-prompt mode.]
+    RATIONALE: [Emit THREE labelled segments in this EXACT order and format, so
+                the UI can split them into sub-headings. Keep EACH segment to
+                ONE crisp sentence of roughly 15-25 words — no lists, no second
+                sentence, no restating the prompt:
+                  TASK: <the prompt's PRIMARY task category, one clause>
+                  PICK: <the recommended model's tier rating in that category
+                  plus ONE headline benchmark or named leaderboard from
+                  <benchmark-sources> supporting it (note the cost tie-breaker
+                  only if step 5 actually applied). The tier you cite MUST be
+                  the one <model-options> gives THAT EXACT model id for THAT
+                  exact category — read it off the row, never infer it. Do NOT
+                  generalise from a model FAMILY or "lineage" (e.g. claiming
+                  "S-tier for the Sonnet lineage"): tiers are per-model, and a
+                  sibling's rating says nothing about this one. If the row's
+                  rating is A, write A — never round it up to S>
+                  EFFORT: <WHY the emitted setting fields fit THIS task's
+                  difficulty — the EFFORT level and THINKING toggle where the
+                  platform exposes them, MAX MODE where it does, ORCHESTRATION
+                  where it applies. Justify only the fields the block actually
+                  emits: never assert an effort or thinking level for a
+                  platform that exposes no reasoning dial, and never mention
+                  Max Mode for a platform that has none. NEVER funding,
+                  how-to-run, or setup instructions>
+                Each label is upper-case followed by a colon and a space; keep
+                every segment short and justifying the pick only, and NEVER
+                perform the task.]
 
     TIER: COST
     MODEL: [Model Name]

@@ -8,19 +8,20 @@
     "model_verbosity"
   ],
   "reasoning_effort": [
-    "minimal",
     "low",
     "medium",
     "high",
-    "xhigh"
+    "xhigh",
+    "max",
+    "ultra"
   ],
   "plan_mode_reasoning_effort": [
-    "none",
-    "minimal",
     "low",
     "medium",
     "high",
-    "xhigh"
+    "xhigh",
+    "max",
+    "ultra"
   ],
   "model_reasoning_summary": [
     "auto",
@@ -33,7 +34,10 @@
     "medium",
     "high"
   ],
-  "xhigh_model_dependent": true,
-  "unexpected_effort_values": [],
-  "section_sha256": "808bd0bbecf41b5f637015a724e3d09161d1a89fddcd7c8947e4b1e079982dd2"
+  "xhigh_model_dependent": false,
+  "unexpected_effort_values": [
+    "max",
+    "ultra"
+  ],
+  "section_sha256": "980fd97f5c644faff956af9c30cf08b8be8c9d910fc071a8ecd3f671e1d30c5f"
 }
