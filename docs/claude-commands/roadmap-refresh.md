@@ -20,6 +20,13 @@ wherever this project keeps them (the repo root, `docs/`, or
   `git checkout -b chore/roadmap-refresh-<YYYY-MM-DD>` from a clean,
   up-to-date `main`. If they are git-excluded (e.g. `private/`), edit
   them in place — there is no branch or PR.
+- If the only uncommitted edits to tracked files are under `planning/`,
+  they are roadmodel's kit, re-exported by the daily updater. Carry them
+  onto the branch and commit them first, on their own, as
+  `chore(planning): refresh the roadmodel kit to <version>`
+  (`roadmodel --version`), so no separate kit PR is needed. Kit files
+  the repo does not track stay untracked. An uncommitted edit to any
+  other tracked file: stop and report it.
 - If `planning/model-selector.txt` does not exist, first run
   `roadmodel export-kit . --force` so §3 uses the current selector.
 
@@ -116,7 +123,8 @@ Print the step · was · now · changed table.
 
 ## 4. Deliver
 
-Commit once, as `docs: refresh roadmap status and upcoming settings`.
+Commit once, as `docs: refresh roadmap status and upcoming settings`
+(after the kit commit from §0, if there was one).
 Then open the PR and take it through this project's own lifecycle — the
 same CI gates a step's PR passes — to merge. For git-excluded roadmaps,
 the edits are the delivery.
