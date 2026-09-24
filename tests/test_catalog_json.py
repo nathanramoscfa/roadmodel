@@ -157,8 +157,14 @@ def test_schema_top_level_keys() -> None:
 # --- Models: bidirectional cross-reference ---
 
 
+def _retired_ids() -> set[str]:
+    """Models update/supersede.py retired: they stay in the selector as a record
+    and leave catalog.json on purpose."""
+    return {m["id"] for m in _parse_selector_models() if m.get("retired-on")}
+
+
 def test_every_model_in_selector_is_in_json() -> None:
-    selector_ids = {m["id"] for m in _parse_selector_models()}
+    selector_ids = {m["id"] for m in _parse_selector_models()} - _retired_ids()
     json_ids = {m["id"] for m in _load_catalog()["models"]}
     missing = selector_ids - json_ids
     assert not missing, (
@@ -206,10 +212,13 @@ def test_access_methods_round_trip() -> None:
         f"{sorted(selector_methods)}\n  catalog={sorted(json_methods)}"
     )
     mismatches: list[str] = []
+    retired = _retired_ids()
     for mid, sel in selector_methods.items():
         cat = json_methods[mid]
         sel_supports = sorted(
-            s.strip() for s in sel.get("supports-models", "").split(",") if s.strip()
+            s.strip()
+            for s in sel.get("supports-models", "").split(",")
+            if s.strip() and s.strip() not in retired
         )
         if sel_supports != cat["supports_models"]:
             mismatches.append(

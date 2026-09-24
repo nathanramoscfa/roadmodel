@@ -12,6 +12,7 @@ from __future__ import annotations
 import datetime as dt
 import importlib.util
 import json
+import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -106,7 +107,16 @@ def test_committed_layer_matches_the_committed_map_and_catalog() -> None:
     catalog_ids = {
         m["id"] for m in json.loads((REPO_ROOT / "docs" / "catalog.json").read_text())["models"]
     }
-    assert set(doc["models"]) <= catalog_ids
+    # A retired model (update/supersede.py) leaves catalog.json but keeps its
+    # measurements until the map drops it; it is still a real catalog id.
+    retired_ids = set(
+        re.findall(
+            r'<model\s+id="([^"]+)"[^>]*?retired-on="',
+            (REPO_ROOT / "docs" / "model-selector.txt").read_text(),
+            re.DOTALL,
+        )
+    )
+    assert set(doc["models"]) <= catalog_ids | retired_ids
     for cid, row in doc["models"].items():
         assert mapping.get(cid) == row["aa_slug"]
     assert doc["model_count"] == len(doc["models"]) > 0

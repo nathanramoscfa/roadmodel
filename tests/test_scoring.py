@@ -19,6 +19,19 @@ import pytest
 
 from roadmodel import scoring
 
+# These tests assert scenarios on specific models (a Fable 5 primary, an Opus 4.8
+# same-maker backup, GPT-5.5 as the cross-provider substitute, ...). The live
+# catalog retires models as newer ones supersede them (update/supersede.py), so
+# the scenarios run against a frozen copy of the catalog, loaded through the
+# package's own ROADMODEL_CATALOG_PATH override.
+FROZEN_CATALOG = Path(__file__).resolve().parent / "fixtures" / "catalog-frozen.json"
+
+
+@pytest.fixture(autouse=True)
+def _frozen_catalog(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ROADMODEL_CATALOG_PATH", str(FROZEN_CATALOG))
+
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 

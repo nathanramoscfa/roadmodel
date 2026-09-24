@@ -40,6 +40,9 @@ interface RawModel {
   headline_benchmarks?: string;
   pricing_notes?: string;
   best_for?: string;
+  superseded_by?: string | null;
+  superseded_on?: string | null;
+  retires_on?: string | null;
 }
 
 const MODELS = (catalog as { models?: RawModel[] }).models ?? [];
@@ -98,6 +101,9 @@ export function getModelRows(): ModelRow[] {
       value_score: null,
       value_frontier: false,
       value_beaten_by: null,
+      superseded_by: m.superseded_by ?? null,
+      superseded_on: m.superseded_on ?? null,
+      retires_on: m.retires_on ?? null,
     };
   });
   // The frontier is priced like the Score and the charts (blended), so every

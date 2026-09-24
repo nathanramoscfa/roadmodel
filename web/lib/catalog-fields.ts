@@ -61,6 +61,12 @@ export interface ModelRow {
   // highest AA Index at this model's blended price or less. Null on the
   // frontier and for an unmeasured model.
   value_beaten_by: string | null;
+  // The catalog's lifecycle tags (update/supersede.py): the newer model from
+  // the same maker that beats this one on every count, the day that began,
+  // and the day this model leaves the catalog. Null when not superseded.
+  superseded_by: string | null;
+  superseded_on: string | null;
+  retires_on: string | null;
 }
 
 export interface FieldDef {

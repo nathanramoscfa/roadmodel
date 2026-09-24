@@ -77,7 +77,7 @@ import {
 } from "@/lib/catalog-fields";
 import { HoverCard } from "./FloatingCard";
 import { GlossaryTerm } from "./GlossaryTerm";
-import { IndexCard, ScoreBreakdownCard, topScoreSentence } from "./ScoreCards";
+import { IndexCard, ScoreBreakdownCard, SupersededCard, topScoreSentence } from "./ScoreCards";
 
 const RATING_MEANING: Record<string, string> = Object.fromEntries(
   RATING_SCALE.map((r) => [r.rating, r.meaning]),
@@ -809,6 +809,9 @@ export function ModelCatalog({
                         ) : (
                           m.name
                         )}
+                        {m.superseded_by && (
+                          <SupersededTag model={m} successor={byId.get(m.superseded_by) ?? null} />
+                        )}
                       </td>
                       {view === "ratings" && (
                         <>
@@ -1020,6 +1023,35 @@ export function ModelCatalog({
       </p>
     </div>
   );
+}
+
+// "Superseded by Opus 5.5 · leaves Oct 24" under a superseded model's name
+// (update/supersede.py): hover or tap it for what the successor beats it on.
+function SupersededTag({ model: m, successor }: { model: ModelRow; successor: ModelRow | null }) {
+  const name = successor?.name ?? m.superseded_by ?? "";
+  return (
+    <span
+      className="mt-0.5 block max-w-[11rem] whitespace-normal text-[11px] font-normal leading-4 text-brand-slate-500 dark:text-brand-slate-400"
+      data-testid="superseded-tag"
+      data-superseded-by={m.superseded_by ?? ""}
+    >
+      <HoverCard
+        label={`${m.name} is superseded by ${name}. Show why`}
+        card={<SupersededCard model={m} successor={successor} />}
+        triggerTestId="superseded-trigger"
+        cardTestId="superseded-card"
+      >
+        Superseded by {name}
+      </HoverCard>
+      {m.retires_on && <> · leaves {formatDay(m.retires_on)}</>}
+    </span>
+  );
+}
+
+// "2026-10-24" → "Oct 24".
+function formatDay(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
 // The expanded row: what the model is best for, the full price card (input /
