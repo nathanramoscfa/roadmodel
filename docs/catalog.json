@@ -1,7 +1,7 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-24T16:54:06Z",
+  "generated_at_utc": "2026-09-24T22:10:02Z",
   "source_doc_sha256": {
     "model-selector.txt": "7bb1ece281583a4a332ea39e5fdfa8c8f1182b722d06df28d7189e26f8bc3d1d",
     "model-tier-cost-scale.md": "77792a8ac8313b401532c43b65b7db80c60a1cefd4e8c36bf175e89ce36c5c9d"
