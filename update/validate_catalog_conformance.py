@@ -135,6 +135,26 @@ def check_snapshot_schema(path: Path, snap: dict[str, Any]) -> list[str]:
 
     if not isinstance(snap.get("unexpected_slugs"), list):
         failures.append(f"G1 ({name}): 'unexpected_slugs' must be a list")
+    # Optional: the flagged rows' prices (update/discovery.py). Each entry names
+    # a flagged slug, and a price, when given, is a positive number.
+    discovered = snap.get("discovered")
+    if discovered is not None:
+        if not isinstance(discovered, list):
+            failures.append(f"G1 ({name}): 'discovered', when present, must be a list")
+        else:
+            for row in discovered:
+                found_slug = row.get("slug") if isinstance(row, dict) else None
+                if not isinstance(found_slug, str) or found_slug not in flagged:
+                    failures.append(
+                        f"G1 ({name}): discovered entry {row!r} must name a slug "
+                        "listed in unexpected_slugs"
+                    )
+                    continue
+                for field in ("input_price_per_1m", "output_price_per_1m"):
+                    if field in row and not _is_positive_number(row[field]):
+                        failures.append(
+                            f"G1 ({name}): discovered {found_slug} {field} must be a positive number"
+                        )
     overlay_mode = snap.get("overlay_mode")
     if overlay_mode is not None and overlay_mode not in ("whole-element", "price-only"):
         failures.append(
