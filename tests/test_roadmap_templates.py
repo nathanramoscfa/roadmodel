@@ -240,6 +240,19 @@ def test_roadmap_refresh_gives_every_phase_roadmap_a_project_section() -> None:
     assert "the project ledger hides the phase that is underway" in flat
 
 
+def test_roadmap_commands_carry_the_kit_refresh_in_their_own_pr() -> None:
+    """The daily updater re-exports roadmodel's kit into planning/. Four
+    projects track it, so every release left their working trees dirty and
+    each needed a hand-made chore(planning) PR (jackson-opt #40, paperlock
+    #75). The step or refresh PR now carries it as its own commit."""
+    for command in (STEP_COMMAND, REFRESH_COMMAND):
+        flat = re.sub(r"\s+", " ", command.read_text())
+        assert "the only uncommitted edits to tracked files are under `planning/`" in flat
+        assert "`chore(planning): refresh the roadmodel kit to <version>`" in flat
+        assert "Kit files the repo does not track stay untracked" in flat
+        assert "An uncommitted edit to any other tracked file: stop and report it" in flat
+
+
 def test_phase_prompt_refuses_a_kit_with_the_old_status_layout() -> None:
     flat = re.sub(r"\s+", " ", PROMPT_PHASE.read_text())
     assert "a step's Status line sits after its `**Deploys:**` line" in flat
