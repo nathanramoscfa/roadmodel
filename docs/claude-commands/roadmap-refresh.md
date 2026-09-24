@@ -113,6 +113,16 @@ exclusion in the selector, and include a backup model.
 - If the result differs from the step's Settings table, rewrite the
   table and its Model rationale, and add one line beneath the table:
   `> Settings updated <YYYY-MM-DD> (refresh): was <old model> · <old effort>. <why>.`
+  A changed backup alone counts as a difference; name it in that line.
+- Every table carries a `Backup` row directly under `Model`: the
+  selector's BACKUP with its own platform and dial in one cell
+  (`GPT-5.6 Terra — Codex · Intelligence Medium`), or `None`. A table
+  written before roadmodel 0.2.41 has no such row: add it from the
+  backup the step already names (its Model rationale's closing
+  sentence, or its entry in the Model selection blocks) — a layout
+  fix, not a new pick, so it takes no `Settings updated` line.
+- Keep the step's `BACKUP:` line in the Model selection blocks equal to
+  its table's Backup row.
 - If it matches, leave the step exactly as it is.
 - **Never touch a step that reads `Complete`.** Its settings are the
   record of what ran.

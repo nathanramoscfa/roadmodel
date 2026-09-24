@@ -731,13 +731,22 @@ that owns it.}}
      MUST mirror what the operator will actually see in
      that surface so reviewers can audit the choice
      1:1 against the panel. Every table carries Model /
-     Platform / Conversation plus ONLY the dials that
-     surface has; a dial the surface lacks gets NO ROW at
+     Backup / Platform / Conversation plus ONLY the dials
+     that surface has; a dial the surface lacks gets NO ROW at
      all — do not write "N/A", "Off", or "--" for a
      control that does not exist. There are exactly THREE
      shapes — one per dial set a surface can expose, and
      they line up 1:1 with the three branches of
      `roadmodel.recommend._structured_settings`:
+
+     BACKUP row (every variant): the selector's BACKUP —
+     the model to run when the primary is unavailable, from
+     a different provider family — written as ONE cell
+     carrying its own platform and dial in that surface's
+     vocabulary, because the backup usually runs somewhere
+     else: `GPT-5.6 Terra — Codex · Intelligence Medium`,
+     `Claude Opus 5.5 — Claude Code · Effort Medium`. When
+     the selector returns no backup, write `None`.
 
      EFFORT + THINKING variant (use when PLATFORM is
      "Claude Code" or any other surface exposing a
@@ -746,8 +755,8 @@ that owns it.}}
      DeepSeek API, etc.). The Settings panel exposes Model,
      Effort, and a Thinking on/off toggle — there is NO Max
      Mode dial and NO Intelligence dial on these surfaces.
-     Table rows: Model / Platform / Effort / Thinking /
-     Conversation.
+     Table rows: Model / Backup / Platform / Effort /
+     Thinking / Conversation.
      EFFORT values: Low / Medium / High / Extra High /
      Max — plus Ultracode, which is CLAUDE CODE ONLY (it is
      set with `/effort ultracode`, so no other surface has
@@ -773,7 +782,8 @@ that owns it.}}
      picks the surface at task time. It labels its
      reasoning dial "Intelligence" and exposes no separate
      thinking toggle, and it has no Max Mode dial. Table
-     rows: Model / Platform / Intelligence / Conversation.
+     rows: Model / Backup / Platform / Intelligence /
+     Conversation.
      INTELLIGENCE values: Low / Medium / High / Extra High.
      Map from overall complexity per `<thinking-context>`:
      Low → Low, Medium → Medium, High → High, S-tier
@@ -788,8 +798,8 @@ that owns it.}}
 
      CURSOR variant (use when PLATFORM is "Cursor" —
      single Platform covering both Composer mode and Chat
-     mode). Table rows: Model / Platform / Max Mode /
-     Conversation. MAX MODE values: ON / OFF. Max Mode is
+     mode). Table rows: Model / Backup / Platform / Max
+     Mode / Conversation. MAX MODE values: ON / OFF. Max Mode is
      a CURSOR-ONLY dial and must not appear on any other
      platform's table. Cursor exposes NO reasoning-level
      control in either UI mode, so this variant has NO
@@ -811,6 +821,7 @@ when Platform is Claude Code}}):
 | Setting      | Value                          |
 | ------------ | ------------------------------ |
 | Model        | {{Model name}}                 |
+| Backup       | {{Backup model — its platform · its dial, or None}} |
 | Platform     | {{Claude Code or other reasoning-dial access method}} |
 | Effort       | {{Low/Medium/High/Extra High/Max — or Ultracode, Claude Code only}} |
 | Thinking     | {{On or Off}}                  |
@@ -826,6 +837,7 @@ rows}}):
 | Setting      | Value                          |
 | ------------ | ------------------------------ |
 | Model        | {{Model name}}                 |
+| Backup       | {{Backup model — its platform · its dial, or None}} |
 | Platform     | Codex                          |
 | Intelligence | {{Low/Medium/High/Extra High}} |
 | Conversation | **{{New or Continue}}**        |
@@ -840,6 +852,7 @@ row and no Thinking row}}):
 | Setting      | Value                       |
 | ------------ | --------------------------- |
 | Model        | {{Model name}}              |
+| Backup       | {{Backup model — its platform · its dial, or None}} |
 | Platform     | Cursor                      |
 | Max Mode     | {{ON or OFF}}               |
 | Conversation | **{{New or Continue}}**     |
@@ -1211,6 +1224,7 @@ the surface does not have.}}
 | Setting      | Value                          |
 | ------------ | ------------------------------ |
 | Model        | {{Model name}}                 |
+| Backup       | {{Backup model — its platform · its dial, or None}} |
 | Platform     | {{Access method name}}         |
 | Effort       | {{Low/Medium/High/Extra High/Max/Ultracode}} |
 | Thinking     | {{On or Off}}                  |
@@ -1345,6 +1359,7 @@ The shape below is the Effort + Thinking variant.}}
 | Setting      | Value                          |
 | ------------ | ------------------------------ |
 | Model        | {{Model}}                      |
+| Backup       | {{Backup model — its platform · its dial, or None}} |
 | Platform     | {{Access method name}}         |
 | Effort       | {{Low/Medium/High/Extra High/Max/Ultracode}} |
 | Thinking     | {{On or Off}}                  |
