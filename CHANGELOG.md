@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The roadmap-writing commands set their own effort.** `/roadmap-phase`
+  runs at `xhigh` and `/roadmap-project` at `max` in Claude Code, from an
+  `effort:` line in each command's frontmatter, so writing a roadmap no
+  longer depends on the operator typing `/effort` first. A roadmap is
+  written once per phase and shapes every step in it; the extra rung costs
+  little. The ports for Codex, Gemini, Antigravity, Cursor and OpenCode
+  carry only the description, as before.
+
 ### Fixed
 
 - **The catalog cron adds the models it discovers on providers' own pricing

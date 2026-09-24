@@ -1,5 +1,6 @@
 ---
 description: Write phase N roadmap via the roadmodel planning kit (usage: /roadmap-phase 6 [output-path])
+effort: xhigh
 ---
 Write the Phase $ARGUMENTS roadmap for this project using the roadmodel
 planning kit's paste-prompt.
