@@ -27,7 +27,8 @@ OF EVERY FINDING, DECLARE COMPLETION, THEN NEW CONVERSATION", and its
 Step 1 has `**Status:** Not started` directly under the `## Step 1`
 heading. If Stage 3 is a bare "OPEN THE PR", Stage 6 tells you to put
 findings in a "Follow-ups (non-blocking)" note after the completion
-line, or a step's Status line sits after its `**Deploys:**` line, STOP
+line, a step's Status line sits after its `**Deploys:**` line, or its
+Settings tables have no `Backup` row, STOP
 and tell me the kit is stale — do not write the roadmap from it.
 
 Step 1 — write `{{OUTPUT}}` from
@@ -42,8 +43,9 @@ selector in `@planning/model-selector.txt` (prices from
 `@planning/model-tier-cost-scale.md`, display rules from
 `@planning/settings-display.md`) against `@planning/user-context.md`.
 You are the engine — do not call any external API. Honor every
-availability exclusion in the selector, and include a backup model per
-step.
+availability exclusion in the selector, and write each step's backup
+model into its Settings table's Backup row, with the backup's own
+platform and dial.
 
 Honor the template's style rules: 80-column prose, zero `{{...}}`
 tokens left, `**Status:** Not started` directly under the title and

@@ -14,8 +14,8 @@ Execute Step $ARGUMENTS of this project's phase roadmap. Parse
   step's heading ends in ✅) up to the next `## ` heading. From it,
   read: the `**Branch:**` line, the `**Status:**` line (directly under
   the heading; a roadmap written before roadmodel 0.2.40 has it after
-  `**Deploys:**`), the Settings table (Model / Platform / Effort /
-  Thinking), the single ```` ```xml ```` fenced `<task>…</task>` block,
+  `**Deploys:**`), the Settings table (Model / Backup / Platform /
+  Effort / Thinking), the single ```` ```xml ```` fenced `<task>…</task>` block,
   and the `### Step {{STEP}} acceptance criteria` list. If the Branch
   line, Settings table, task block, or criteria are missing, stop and
   report which. A missing Status line is handled in §2.
@@ -86,9 +86,15 @@ Print one line: `Step {{STEP}} requires: Model <M> · Platform <P> ·
 <the dials the table carries, e.g. Effort <E> · Thinking <T>, or
 Intelligence <I>>. This session: <your own model> on <this surface>.`
 
+- **Backup.** The table's `Backup` row (roadmaps from roadmodel 0.2.41
+  on) names the model to run when the primary is unavailable, with its
+  own platform and dial. If you are that backup model on that platform,
+  continue: the operator has switched to it. Say so on the printed line
+  (`… · running the backup`) and record it as a model change below.
 - If Platform is not the surface you are running on (Claude Code,
-  Codex, Antigravity, Cursor, …), stop: this step is meant to run on
-  another surface; tell the operator which.
+  Codex, Antigravity, Cursor, …), and you are not the backup on its
+  platform, stop: this step is meant to run on another surface; tell
+  the operator which.
 - **Model.** Continue if you are the table's model. Also continue if you
   are a **newer version in the same line** — Claude Opus 5 → Opus 5.5,
   Fable 5 → Fable 5.1, Sonnet 5 → Sonnet 5.1: a provider supersedes

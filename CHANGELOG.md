@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Every Settings table names its backup.** A phase roadmap step's
+  Settings table gains a `Backup` row directly under `Model`: the model to
+  run when the primary is unavailable, from a different provider family,
+  with its own platform and dial in one cell (`GPT-5.6 Terra — Codex ·
+  Intelligence Medium`). The backup used to appear only at the end of the
+  Model rationale and in the Model selection blocks at the foot of the
+  file. `/roadmap-refresh` adds the row to existing roadmaps from the backup
+  each step already names, as a layout fix rather than a new pick, and
+  `/roadmap-step` lets a step run on its backup when the operator has
+  switched to it.
+
 ## [0.2.40] — 2026-09-23
 
 ### Changed
