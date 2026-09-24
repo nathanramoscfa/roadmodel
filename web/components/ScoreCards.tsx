@@ -1,15 +1,18 @@
 // web/components/ScoreCards.tsx
 //
-// What the /models hover cards say. Four cards, one visual language:
+// What the /models hover cards say. One visual language:
 //   ScoreBreakdownCard — a table Score, taken apart into parts that add up to
 //                        the printed figure (lib/benchmark-grid scoreBreakdown)
-//   IndexCard          — a table AA Index: the figure, its source, and whether
-//                        anything in the catalog beats it (the frontier)
+//   IndexCard          — a table AA Index: the figure, its source, and the top
+//                        score at its price or less (the frontier)
 //   ModelPointCard     — a chart dot: the model, its Score, AA Index and prices
 //   PriceLineCard      — a chart's fitted line: the equation, what each term
 //                        means, and the expected index at the pointer
-// Every card that shows a Score also shows FrontierStatus, because the Score
-// only compares a model with its own cost tier.
+//   FrontierPointCard  — a dot on the frontier chart: AA Index, blended price,
+//                        and where it stands across the whole catalog
+//   FrontierStepCard   — the frontier line: the top score a price buys
+// Every card that shows a Score also shows FrontierStatus: the Score compares
+// a model with its own cost tier, and FrontierStatus with the whole catalog.
 // Figures come from the same ScoreFit the table and charts use, so a card can
 // never disagree with the cell or the dot it explains.
 import type { ReactNode } from "react";
@@ -18,6 +21,7 @@ import {
   blendedPrice,
   formatScore,
   formatUsd,
+  groupBeatenBy,
   scoreBreakdown,
   type ScoreFit,
 } from "@/lib/benchmark-grid";
@@ -82,10 +86,11 @@ function Row({
   );
 }
 
-// The cross-tier half of the story, in every card: is anything in the WHOLE
-// catalog both cheaper and higher on the AA Index? The Score cannot say — it
-// compares a model with its own tier only — so a card that shows a Score
-// shows this too, naming the model that beats it when one does.
+// The whole-catalog half of the story, in every card. A green ring marks a
+// model on the cost/quality frontier: the top AA Index at its price or less.
+// Any other model is shown with the model that holds the top score at its
+// price or less. The Score compares a model with its own tier, so a card that
+// shows a Score shows this too.
 export function FrontierStatus({
   model: m,
   leader,
@@ -97,7 +102,7 @@ export function FrontierStatus({
   if (m.aa_index === null) return null;
   const heading = (
     <p className={"mb-1 text-[11px] font-semibold uppercase tracking-wide " + MUTED}>
-      Across every cost tier
+      Across the whole catalog
     </p>
   );
   if (m.value_frontier || !leader || leader.aa_index === null) {
@@ -111,8 +116,8 @@ export function FrontierStatus({
         <p className="flex items-start gap-2">
           <span className="mt-[4px] inline-block h-2.5 w-2.5 shrink-0 rounded-full border-2 border-emerald-500" />
           <span>
-            <span className={"font-semibold " + STRONG}>On the cost/quality frontier.</span> Nothing
-            in the catalog, in any cost tier, costs less and scores higher on the AA Index.
+            <span className={"font-semibold " + STRONG}>On the cost/quality frontier.</span> It
+            scores higher on the AA Index than every other model at its price or less.
           </span>
         </p>
       </div>
@@ -120,9 +125,8 @@ export function FrontierStatus({
   }
   const price = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
   const leaderPrice = blendedPrice(leader.input_price_per_1m, leader.output_price_per_1m);
-  const higher = leader.aa_index > m.aa_index;
-  const cheaper = leaderPrice < price;
-  const how = `${higher ? "scores higher" : "scores the same"} ${cheaper ? "for less" : "at the same price"}`;
+  const scores = leader.aa_index > m.aa_index ? "scores higher" : "scores the same";
+  const costs = leaderPrice < price ? "costs less" : "costs the same";
   return (
     <div
       className="rounded-md border border-brand-slate-200 bg-brand-slate-50 px-3 py-2 text-xs leading-[1.125rem] dark:border-brand-slate-600 dark:bg-brand-slate-900/70"
@@ -132,8 +136,10 @@ export function FrontierStatus({
     >
       {heading}
       <p>
-        <span className={"font-semibold " + STRONG}>Off the frontier:</span>{" "}
-        {leader.name} ({COST_TIER_DEFS[leader.tier_cost].label} cost) {how}.
+        <span className={"font-semibold " + STRONG}>
+          Top score at this price or less: {leader.name}
+        </span>{" "}
+        ({COST_TIER_DEFS[leader.tier_cost].label} cost). It {scores} and {costs}.
       </p>
       <Row
         className="mt-1"
@@ -146,28 +152,85 @@ export function FrontierStatus({
   );
 }
 
-// A group (a cost tier, a quality band) with nothing on the frontier, in one
-// sentence: "None on the frontier: all 6 are beaten by Opus 5.5 (High cost)".
-// The table's group header and the tier's chart both say it, so a whole tier
-// beaten by a cheaper one shows without hovering anything.
-export function beatenSentence(
-  beaten: { measured: number; leaders: string[] },
+// A group (a cost tier, a quality band) whose top score at its prices belongs
+// to a model outside it, in plain words: "The top score at these prices or
+// less is Opus 5.5 (High cost): it scores higher than all 6 models here and
+// costs less." The table's group header and the tier's chart both say it, so
+// it shows without hovering anything. Null when a model in the group holds
+// the top score at its own price (it wears the green ring).
+export function topScoreSentence(
+  members: readonly ModelRow[],
   byId: Map<string, ModelRow>,
-): string {
-  const names = beaten.leaders
+  // What to hover for the figures: "an AA Index" (table) or "a dot" (chart).
+  hover: string,
+): string | null {
+  const group = groupBeatenBy(members);
+  if (!group) return null;
+  const leaders = group.leaders
     .map((id) => byId.get(id))
-    .filter((r): r is ModelRow => r !== undefined)
-    .map((r) => `${r.name} (${COST_TIER_DEFS[r.tier_cost].label} cost)`);
-  if (names.length === 0) return "None on the frontier.";
-  const who =
-    names.length === 1
-      ? names[0]
-      : names.length === 2
-        ? `${names[0]} or ${names[1]}`
-        : `${names.slice(0, 2).join(", ")} or ${names.length - 2} more`;
-  if (beaten.measured === 1) return `None on the frontier: it is beaten by ${who}.`;
-  if (names.length === 1) return `None on the frontier: all ${beaten.measured} are beaten by ${who}.`;
-  return `None on the frontier: each is beaten by ${who}.`;
+    .filter((r): r is ModelRow => r !== undefined && r.aa_index !== null);
+  if (leaders.length === 0) return null;
+  const name = (r: ModelRow) => `${r.name} (${COST_TIER_DEFS[r.tier_cost].label} cost)`;
+  if (leaders.length > 1) {
+    const shown = leaders.slice(0, 3).map(name);
+    const rest = leaders.length - shown.length;
+    const list = rest > 0 ? `${shown.join(", ")} and ${rest} more` : `${shown.slice(0, -1).join(", ")} and ${shown[shown.length - 1]}`;
+    return `The top scores at these prices or less are ${list}. Hover ${hover} to see the top score at each model's price.`;
+  }
+  const lead = leaders[0];
+  const leadPrice = blendedPrice(lead.input_price_per_1m, lead.output_price_per_1m);
+  const measured = members.filter((r) => r.aa_index !== null);
+  const higher = measured.every((r) => (r.aa_index as number) < (lead.aa_index as number));
+  const cheaper = measured.every((r) => blendedPrice(r.input_price_per_1m, r.output_price_per_1m) > leadPrice);
+  const scores = higher ? "scores higher than" : "scores as high as";
+  const costs = cheaper ? "costs less" : "costs the same or less";
+  const whom = group.measured === 1 ? "the model here" : `all ${group.measured} models here`;
+  const where = group.measured === 1 ? "this price or less" : "these prices or less";
+  return `The top score at ${where} is ${name(lead)}: it ${scores} ${whom} and ${costs}. Hover ${hover} for the figures.`;
+}
+
+// A dot on the frontier chart: the model, its AA Index and blended price, and
+// where it stands across the whole catalog.
+export function FrontierPointCard({ model: m, leader }: { model: ModelRow; leader: ModelRow | null }) {
+  if (m.aa_index === null) return null;
+  const price = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
+  return (
+    <div className="w-[19rem] max-w-full" data-testid="frontier-point-card">
+      <CardHeader name={m.name} tier={m.tier_cost} />
+      <div className="mt-2 space-y-0.5">
+        <Row label="AA Index" value={num(m.aa_index)} valueClass={"font-semibold " + STRONG} />
+        <Row label="Blended price" value={`${usd(price)} per 1M tokens`} valueClass={STRONG} />
+        <p className={"text-right text-xs tabular-nums " + MUTED}>
+          (3 × {formatUsd(m.input_price_per_1m)} input + {formatUsd(m.output_price_per_1m)} output) ÷ 4
+        </p>
+      </div>
+      <div className="mt-2.5">
+        <FrontierStatus model={m} leader={leader} />
+      </div>
+    </div>
+  );
+}
+
+// The frontier line under the pointer: the top AA Index that price buys, and
+// the model that holds it.
+export function FrontierStepCard({ atPrice, model: m }: { atPrice: number; model: ModelRow }) {
+  if (m.aa_index === null) return null;
+  const price = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
+  return (
+    <div className="w-[19rem] max-w-full" data-testid="frontier-step-card">
+      <p className={"text-sm font-semibold " + STRONG}>Top score at {usd(atPrice)} or less</p>
+      <div className="mt-2 rounded-md border border-emerald-500/40 bg-emerald-50 px-3 py-2 dark:bg-emerald-500/10">
+        <CardHeader name={m.name} tier={m.tier_cost} />
+        <div className="mt-1.5 space-y-0.5 text-xs">
+          <Row label="AA Index" value={num(m.aa_index)} valueClass={"font-semibold " + STRONG} />
+          <Row label="Blended price" value={`${usd(price)} per 1M tokens`} valueClass={STRONG} />
+        </div>
+      </div>
+      <p className={"mt-2 text-xs leading-[1.125rem] " + MUTED}>
+        The line holds this height until the next ringed model, where it steps up.
+      </p>
+    </div>
+  );
 }
 
 // The AA Index cell's card: the figure, where it came from, and the frontier.

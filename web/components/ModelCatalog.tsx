@@ -27,9 +27,9 @@
 //     the frontier one?").
 //   Quality — ten-point AA Index bands, cheapest first: the cheapest way to
 //     reach each level.
-// Either way, a group with nothing on the frontier says what beats it: every
-// tier's Scores average zero however overpriced the whole tier is, and the
-// header is where that shows without a hover.
+// Either way, when the top score at a group's prices belongs to a model
+// outside it, the group's header names that model (topScoreSentence): each
+// tier's Scores average zero, and the header shows it without a hover.
 // Cache-read price, tier name, pricing notes, "best for", and the benchmarks
 // the cron cited (mixed sources — evidence for the letters, not a scale) live
 // in the expanded row so they add no width. Fits a 1024px viewport.
@@ -52,7 +52,6 @@ import {
   formatScore,
   GRID_COLUMN_BY_KEY,
   GRID_COLUMNS,
-  groupBeatenBy,
   QUALITY_BAND_WIDTH,
   qualityBand,
   type Band,
@@ -78,7 +77,7 @@ import {
 } from "@/lib/catalog-fields";
 import { HoverCard } from "./FloatingCard";
 import { GlossaryTerm } from "./GlossaryTerm";
-import { beatenSentence, IndexCard, ScoreBreakdownCard } from "./ScoreCards";
+import { IndexCard, ScoreBreakdownCard, topScoreSentence } from "./ScoreCards";
 
 const RATING_MEANING: Record<string, string> = Object.fromEntries(
   RATING_SCALE.map((r) => [r.rating, r.meaning]),
@@ -218,8 +217,9 @@ interface GroupStats {
   outHi: number;
   blendLo: number;
   blendHi: number;
-  // Set when no measured model in the group is on the frontier.
-  beaten: { measured: number; leaders: string[] } | null;
+  // Set when the top score at the group's prices belongs to a model outside
+  // it: the sentence the header shows (topScoreSentence).
+  note: string | null;
 }
 
 // The two groupings the table can show, and the key a row falls under.
@@ -382,11 +382,11 @@ export function ModelCatalog({
         outHi: Math.max(...outs),
         blendLo: Math.min(...blends),
         blendHi: Math.max(...blends),
-        beaten: groupBeatenBy(list),
+        note: topScoreSentence(list, byId, "an AA Index"),
       });
     }
     return out;
-  }, [rows, grouping]);
+  }, [rows, grouping, byId]);
 
   function groupBy(next: Grouping) {
     setSortKey(next === "tier" ? "value" : "quality");
@@ -592,12 +592,12 @@ export function ModelCatalog({
         <p className="rounded-lg border border-emerald-500/40 bg-emerald-50/70 px-3 py-2 text-brand-slate-700 dark:bg-emerald-500/10 dark:text-brand-slate-200">
           <span aria-hidden className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full border-2 border-emerald-500 align-middle" />
           <strong className="text-brand-slate-900 dark:text-brand-slate-50">
-            Cost/quality frontier: is anything cheaper and better, anywhere?
+            Cost/quality frontier: the top score at every price.
           </strong>{" "}
-          A green ring beside an AA Index means no: nothing in the catalog, in any tier, costs less
-          and scores higher. The Score can&rsquo;t tell you this. It compares a model only with its
-          own tier, so every tier&rsquo;s Scores average zero however overpriced the whole tier is;
-          a group with no ring says so in its header. Hover an AA Index to see what beats it.
+          A green ring marks a model that scores higher on the AA Index than every other model at
+          its price or less. The ring compares every model in the catalog; the Score compares a
+          model with its own cost tier. Hover any AA Index for the top score at that price, and see
+          the frontier chart below the Score charts for the whole line.
         </p>
         <p className="rounded-lg border border-brand-slate-200 bg-brand-slate-50 px-3 py-2 text-brand-slate-700 dark:border-brand-slate-700 dark:bg-brand-slate-800/60 dark:text-brand-slate-200">
           <strong className="text-brand-slate-900 dark:text-brand-slate-50">
@@ -725,12 +725,12 @@ export function ModelCatalog({
                     per 1M
                   </>
                 );
-                const beatenNote = group?.beaten && (
+                const beatenNote = group?.note && (
                   <span
-                    className="mt-0.5 block font-medium normal-case tracking-normal text-orange-700 dark:text-orange-300"
+                    className="mt-0.5 block font-medium normal-case tracking-normal text-emerald-700 dark:text-emerald-300"
                     data-testid="group-beaten"
                   >
-                    {beatenSentence(group.beaten, byId)} Hover an AA Index for the figures.
+                    {group.note}
                   </span>
                 );
                 return (
@@ -1008,9 +1008,9 @@ export function ModelCatalog({
         (snapshot {benchmarksGeneratedAt}; {measuredCount} of {models.length} models measured) —
         one lab, one harness, so every column is comparable down the page. Score is the AA
         Index minus what the model&rsquo;s price predicts among its own cost tier (one market
-        fit, a baseline per tier), in index points. <strong>The green ring beside an AA Index is
-        the cost/quality frontier, across every tier</strong>: nothing in the catalog costs less
-        (blended) and scores higher. A rating is a class, not a rank within it; sorting a category orders by
+        fit, a baseline per tier), in index points. <strong>The green ring beside an AA Index
+        marks the cost/quality frontier</strong>: each ringed model scores higher than every other
+        model in the catalog at its price or less (blended). A rating is a class, not a rank within it; sorting a category orders by
         letter, then by the AA Index. Ratings are curated by the project&rsquo;s daily automation;
         see the{" "}
         <a href="/docs" className="text-brand-accent hover:underline">

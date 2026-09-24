@@ -132,22 +132,24 @@ test("renders the catalog table, legend, and model links", async ({ page }) => {
   await expect(fable).toHaveAttribute("target", "_blank");
 });
 
-test("the page leads with the table, then the Score charts, then the full key", async ({ page }) => {
+test("the page leads with the table, then the Score charts, the frontier chart, then the full key", async ({ page }) => {
   await page.goto("/models");
   const top = async (loc: ReturnType<typeof page.locator>) => (await loc.boundingBox())!.y;
   const table = await top(page.getByTestId("model-catalog"));
   const charts = await top(page.getByTestId("score-charts"));
+  const frontierPanel = await top(page.getByTestId("frontier-panel"));
   const legend = await top(page.getByTestId("catalog-legend"));
   const reference = await top(page.locator("#benchmarks"));
   expect(table).toBeLessThan(charts);
-  expect(charts).toBeLessThan(legend);
+  expect(charts).toBeLessThan(frontierPanel);
+  expect(frontierPanel).toBeLessThan(legend);
   expect(legend).toBeLessThan(reference);
   // The table's caption points down to the key, and the key above the table
   // defines the two things readers trip on.
   await expect(page.getByTestId("model-catalog").locator('a[href="#how-to-read"]')).toHaveCount(1);
   await expect(page.getByTestId("catalog-legend")).toHaveAttribute("id", "how-to-read");
   await expect(page.getByTestId("table-key")).toContainText(
-    "Cost/quality frontier: is anything cheaper and better, anywhere?",
+    "Cost/quality frontier: the top score at every price.",
   );
   await expect(page.getByTestId("table-key")).toContainText("Blended price = (3 × input + 1 × output) ÷ 4.");
 });
@@ -427,7 +429,9 @@ test("every model off the frontier names the model that beats it, from any cost 
   const indexCard = page.getByTestId("aa-index-card");
   await expect(indexCard).toContainText(beaten.m.name);
   await expect(indexCard.getByTestId("frontier-status")).toHaveAttribute("data-beaten-by", lead.m.id);
-  await expect(indexCard.getByTestId("frontier-status")).toContainText(`Off the frontier: ${lead.m.name}`);
+  await expect(indexCard.getByTestId("frontier-status")).toContainText(
+    `Top score at this price or less: ${lead.m.name}`,
+  );
   await page.mouse.move(2, 2);
   await expect(indexCard).toHaveCount(0);
   await row.getByTestId("score-trigger").hover();
@@ -502,11 +506,12 @@ test("a group with nothing on the frontier says so in its header and its chart, 
     const most = Math.max(...counts.values());
     const tops = [...counts.keys()].filter((name) => counts.get(name) === most);
     const note = header.getByTestId("group-beaten");
-    await expect(note).toContainText("None on the frontier:");
+    await expect(note).toContainText(counts.size === 1 ? "The top score at th" : "The top scores at these prices or less are");
     const text = await note.innerText();
     expect(tops.some((name) => text.includes(name))).toBe(true);
     if (counts.size === 1 && members.length > 1) {
-      await expect(note).toContainText(`all ${members.length} are beaten by ${tops[0]}`);
+      await expect(note).toContainText(`The top score at these prices or less is ${tops[0]}`);
+      await expect(note).toContainText(`all ${members.length} models here`);
     }
     return true;
   };
@@ -532,6 +537,81 @@ test("a group with nothing on the frontier says so in its header and its chart, 
     const header = page.locator(`[data-testid="quality-group"][data-band="${band}"]`);
     await check(header, MEASURED.filter((r) => bandOf(r.index) === band));
   }
+});
+
+test("the frontier chart plots every measured model and joins the frontier with a step line", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/models");
+  const panel = page.getByTestId("frontier-panel");
+  await expect(panel).toBeVisible();
+
+  // Every measured model is a dot; the green ones are exactly the frontier.
+  await expect(panel.getByTestId("frontier-chart-point")).toHaveCount(MEASURED.length);
+  const onFrontier = MEASURED.filter((r) => leaderOf(r) === r).sort((a, b) => a.price - b.price);
+  await expect(panel.locator('[data-testid="frontier-chart-point"][data-frontier="1"]')).toHaveCount(onFrontier.length);
+  for (const r of onFrontier) {
+    await expect(panel.locator(`[data-testid="frontier-chart-point"][data-model-id="${r.m.id}"]`)).toHaveAttribute(
+      "data-frontier",
+      "1",
+    );
+  }
+  // The line joins them cheapest to priciest, each one scoring higher than the last.
+  await expect(panel.getByTestId("frontier-line")).toHaveAttribute(
+    "data-frontier-ids",
+    onFrontier.map((r) => r.m.id).join(","),
+  );
+  for (let i = 1; i < onFrontier.length; i += 1) {
+    expect(onFrontier[i].index).toBeGreaterThan(onFrontier[i - 1].index);
+  }
+  // One grey Score line per cost tier the fit covers.
+  await expect(panel.getByTestId("frontier-tier-line")).toHaveCount(
+    new Set(MEASURED.map((r) => r.m.tier_cost)).size,
+  );
+  await expect(panel).toContainText(`That keeps ${onFrontier.length} of the ${MEASURED.length} models plotted.`);
+
+  // Dot centres on screen, to hover only where nothing else sits.
+  await panel.getByTestId("frontier-chart").scrollIntoViewIfNeeded();
+  const centres = await panel.getByTestId("frontier-chart-point").evaluateAll((els) =>
+    els.map((el) => {
+      const r = el.getBoundingClientRect();
+      return { id: el.getAttribute("data-model-id")!, x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    }),
+  );
+  const clearOf = (x: number, y: number, except?: string) =>
+    centres.every((c) => c.id === except || Math.hypot(c.x - x, c.y - y) > 24);
+
+  // A model off the frontier: its card names the top score at its price.
+  const offId = centres.find(
+    (c) => MEASURED.some((r) => r.m.id === c.id && leaderOf(r) !== r) && clearOf(c.x, c.y, c.id),
+  )!.id;
+  const off = MEASURED.find((r) => r.m.id === offId)!;
+  await panel.locator(`[data-testid="frontier-chart-point"][data-model-id="${off.m.id}"]`).hover({ force: true });
+  const card = page.getByTestId("frontier-card");
+  await expect(card).toContainText(off.m.name);
+  await expect(card.getByTestId("frontier-status")).toContainText(
+    `Top score at this price or less: ${leaderOf(off).m.name}`,
+  );
+  await page.mouse.move(2, 2);
+  await expect(card).toHaveCount(0);
+
+  // The line: a point on a flat stretch, clear of every dot, names the ringed
+  // model at that stretch's left end — the top score that price buys.
+  const svgBox = (await panel.getByTestId("frontier-chart").locator("svg").boundingBox())!;
+  let spot: { x: number; y: number; holder: string } | null = null;
+  for (let i = 0; i < onFrontier.length && !spot; i += 1) {
+    const from = centres.find((c) => c.id === onFrontier[i].m.id)!;
+    const to =
+      i + 1 < onFrontier.length
+        ? centres.find((c) => c.id === onFrontier[i + 1].m.id)!.x
+        : svgBox.x + svgBox.width - 30;
+    for (let x = from.x + 14; x < to - 14 && !spot; x += 6) {
+      if (clearOf(x, from.y)) spot = { x, y: from.y, holder: onFrontier[i].m.name };
+    }
+  }
+  expect(spot).not.toBeNull();
+  await page.mouse.move(spot!.x, spot!.y);
+  await expect(card).toBeVisible();
+  await expect(card.getByTestId("frontier-step-card")).toContainText(spot!.holder);
 });
 
 test("the expanded row carries the cited (mixed-source) benchmarks and pricing detail", async ({ page }) => {

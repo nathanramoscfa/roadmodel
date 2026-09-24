@@ -1,5 +1,6 @@
 import { BenchmarkReference } from "@/components/BenchmarkReference";
 import { CatalogLegend } from "@/components/CatalogLegend";
+import { FrontierChart } from "@/components/FrontierChart";
 import { ModelCatalog } from "@/components/ModelCatalog";
 import { ScoreCharts } from "@/components/ScoreCharts";
 import { getBenchmarkMeta, getCatalogGeneratedAt, getModelRows, getScoreFit } from "@/lib/catalog-models";
@@ -35,7 +36,8 @@ export default function ModelsPage() {
       </header>
 
       {/* Most used first: the catalog itself, then the charts that explain its
-          Score column, then the full key (the table's caption links to it). */}
+          Score column, then the frontier drawn across every model, then the
+          full key (the table's caption links to it). */}
       <div className="mt-10 space-y-8">
         <ModelCatalog
           models={models}
@@ -45,6 +47,7 @@ export default function ModelsPage() {
           scoreFit={scoreFit}
         />
         <ScoreCharts rows={models} fit={scoreFit} />
+        <FrontierChart rows={models} fit={scoreFit} />
         <CatalogLegend id="how-to-read" />
         <BenchmarkReference id="benchmarks" />
       </div>
