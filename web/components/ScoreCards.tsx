@@ -146,6 +146,30 @@ export function FrontierStatus({
   );
 }
 
+// A group (a cost tier, a quality band) with nothing on the frontier, in one
+// sentence: "None on the frontier: all 6 are beaten by Opus 5.5 (High cost)".
+// The table's group header and the tier's chart both say it, so a whole tier
+// beaten by a cheaper one shows without hovering anything.
+export function beatenSentence(
+  beaten: { measured: number; leaders: string[] },
+  byId: Map<string, ModelRow>,
+): string {
+  const names = beaten.leaders
+    .map((id) => byId.get(id))
+    .filter((r): r is ModelRow => r !== undefined)
+    .map((r) => `${r.name} (${COST_TIER_DEFS[r.tier_cost].label} cost)`);
+  if (names.length === 0) return "None on the frontier.";
+  const who =
+    names.length === 1
+      ? names[0]
+      : names.length === 2
+        ? `${names[0]} or ${names[1]}`
+        : `${names.slice(0, 2).join(", ")} or ${names.length - 2} more`;
+  if (beaten.measured === 1) return `None on the frontier: it is beaten by ${who}.`;
+  if (names.length === 1) return `None on the frontier: all ${beaten.measured} are beaten by ${who}.`;
+  return `None on the frontier: each is beaten by ${who}.`;
+}
+
 // The AA Index cell's card: the figure, where it came from, and the frontier.
 export function IndexCard({
   model: m,

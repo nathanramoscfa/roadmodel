@@ -242,6 +242,46 @@ export function frontierLeaders<T extends { price: number; index: number | null 
   return leaders;
 }
 
+// A group of rows (a cost tier, a quality band) in which NO measured model is
+// on the frontier: each is beaten by a model that costs no more and scores
+// higher. Returns how many are measured and the models that beat them, most
+// frequent first; null when any measured model in the group is on the
+// frontier, or none is measured. This is how a whole cost tier can be beaten
+// by one cheaper model while its Scores still average zero.
+export function groupBeatenBy(
+  rows: readonly { aa_index: number | null; value_frontier: boolean; value_beaten_by: string | null }[],
+): { measured: number; leaders: string[] } | null {
+  const measured = rows.filter((r) => r.aa_index !== null);
+  if (measured.length === 0 || measured.some((r) => r.value_frontier)) return null;
+  const counts = new Map<string, number>();
+  for (const r of measured) {
+    if (r.value_beaten_by) counts.set(r.value_beaten_by, (counts.get(r.value_beaten_by) ?? 0) + 1);
+  }
+  if (counts.size === 0) return null;
+  return {
+    measured: measured.length,
+    leaders: [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id),
+  };
+}
+
+// Quality bands for the table's "group by quality" view: the AA Intelligence
+// Index in fixed ten-point bands (50–59.9, 40–49.9, …), labelled by their
+// literal range, so a band means exactly what it says. Fixed rather than
+// relative to the leader, so a model changes band only when its own index
+// moves (or AA re-versions the index, which moves every model at once). An
+// unmeasured model has no band.
+export const QUALITY_BAND_WIDTH = 10;
+
+export function qualityBand(index: number | null): number | null {
+  if (index === null || !Number.isFinite(index)) return null;
+  return Math.floor(index / QUALITY_BAND_WIDTH) * QUALITY_BAND_WIDTH;
+}
+
+// "40–49.9" (the AA Index is published to one decimal).
+export function formatQualityBand(lo: number): string {
+  return `${lo}–${(lo + QUALITY_BAND_WIDTH - 0.1).toFixed(1)}`;
+}
+
 // Cost-adjusted score, grouped by cost tier. A quality ÷ price ratio is
 // useless across a price range spanning two orders of magnitude (it crowns the
 // cheapest weak model), and a hand-picked weight is a number to argue about. So

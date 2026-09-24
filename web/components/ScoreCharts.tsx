@@ -26,12 +26,13 @@ import {
   blendedPrice,
   formatScore,
   formatUsd,
+  groupBeatenBy,
   priceTicks,
   type ScoreFit,
 } from "@/lib/benchmark-grid";
 import { COST_TIER_DEFS, COST_TIER_DOT, type CostTier, type ModelRow } from "@/lib/catalog-fields";
 import { FloatingCard, type AnchorRect } from "./FloatingCard";
-import { ModelPointCard, PriceLineCard } from "./ScoreCards";
+import { beatenSentence, ModelPointCard, PriceLineCard } from "./ScoreCards";
 
 // Sign is also carried by direction and by the printed Score, so colour is
 // never the only cue. Sky/orange stays distinct under protan and deutan
@@ -214,6 +215,9 @@ function TierChart({
   const outs = pts.map((p) => p.row.output_price_per_1m);
   const range = (lo: number, hi: number) =>
     lo === hi ? formatUsd(lo) : `${formatUsd(lo)}–${formatUsd(hi)}`;
+  // A tier with no ring at all: its Scores still average zero, so the chart
+  // says in words what the line cannot show.
+  const beaten = groupBeatenBy(pts.map((p) => p.row));
 
   const height = width > 0 && width < 480 ? 340 : 320;
   const plotW = Math.max(40, width - M.left - M.right);
@@ -357,6 +361,14 @@ function TierChart({
           </span>
         </span>
       </figcaption>
+      {beaten && (
+        <p
+          className="mt-1 text-xs font-medium text-orange-700 dark:text-orange-300"
+          data-testid="chart-beaten"
+        >
+          {beatenSentence(beaten, byId)}
+        </p>
+      )}
 
       <div ref={wrap} className="mt-2 w-full" style={{ height }}>
         {width > 0 && (
@@ -728,7 +740,9 @@ export function ScoreCharts({ rows, fit }: { rows: ModelRow[]; fit: ScoreFit | n
             The frontier ring is catalog-wide, not per tier: nothing in any cost tier costs less
             and scores higher.
           </strong>{" "}
-          A chart can have no ring at all when a cheaper tier&rsquo;s model beats every model in it.
+          A chart with no ring says so under its title, naming the model that beats its tier: the
+          Score can&rsquo;t show that, because every tier&rsquo;s Scores average zero however
+          overpriced the whole tier is.
         </p>
       </div>
     </details>
