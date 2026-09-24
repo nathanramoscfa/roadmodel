@@ -1,5 +1,6 @@
 ---
 description: Write the project ROADMAP.md via the roadmodel planning kit (usage: /roadmap-project [brief files...])
+effort: max
 ---
 Write this project's roadmap using the roadmodel planning kit's
 paste-prompt.

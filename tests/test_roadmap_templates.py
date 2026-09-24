@@ -339,3 +339,28 @@ def test_roadmap_commands_handle_the_backup_row() -> None:
     assert "If you are that backup model on that platform, continue" in step
     prompt = re.sub(r"\s+", " ", PROMPT_PHASE.read_text())
     assert "its Settings tables have no `Backup` row" in prompt
+
+
+def test_roadmap_writing_commands_set_their_own_effort() -> None:
+    """Writing a roadmap is the planning work the operator wants done at a
+    fixed rung, without typing /effort first: a phase roadmap at xhigh, the
+    project roadmap at max. Claude Code reads `effort:` from a command's
+    frontmatter; the ports for other agents carry only the description."""
+    import importlib.util
+    import sys as _sys
+
+    spec = importlib.util.spec_from_file_location(
+        "update_projects", ROOT / "scripts" / "update_projects.py"
+    )
+    assert spec and spec.loader
+    up = importlib.util.module_from_spec(spec)
+    _sys.modules.setdefault(spec.name, up)
+    spec.loader.exec_module(up)
+    commands = ROOT / "docs" / "claude-commands"
+    for name, effort in (("roadmap-phase", "xhigh"), ("roadmap-project", "max")):
+        body = (commands / f"{name}.md").read_text()
+        head = body.split("\n---\n", 1)[0]
+        assert f"\neffort: {effort}" in head, name
+        description, text = up._split_frontmatter(body)
+        assert description and "effort:" not in text
+        assert "effort:" not in up.port_gemini(name, body)
