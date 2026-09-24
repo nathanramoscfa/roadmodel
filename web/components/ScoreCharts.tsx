@@ -168,7 +168,18 @@ function placeLabels(
   return out;
 }
 
-function TierChart({ tier, rows, fit }: { tier: CostTier; rows: ModelRow[]; fit: ScoreFit }) {
+function TierChart({
+  tier,
+  rows,
+  fit,
+  byId,
+}: {
+  tier: CostTier;
+  rows: ModelRow[];
+  fit: ScoreFit;
+  // Every catalog row by id, for the model that beats a dot's model.
+  byId: Map<string, ModelRow>;
+}) {
   const wrap = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const width = useWidth(wrap);
@@ -198,6 +209,11 @@ function TierChart({ tier, rows, fit }: { tier: CostTier; rows: ModelRow[]; fit:
     [rows, tier, fit, t],
   );
   const inTier = rows.filter((r) => r.tier_cost === tier).length;
+  // The caption's price ranges, over the plotted models: output (which sets
+  // the tier) and blended (the x axis).
+  const outs = pts.map((p) => p.row.output_price_per_1m);
+  const range = (lo: number, hi: number) =>
+    lo === hi ? formatUsd(lo) : `${formatUsd(lo)}–${formatUsd(hi)}`;
 
   const height = width > 0 && width < 480 ? 340 : 320;
   const plotW = Math.max(40, width - M.left - M.right);
@@ -333,7 +349,11 @@ function TierChart({ tier, rows, fit }: { tier: CostTier; rows: ModelRow[]; fit:
           </span>
           {" · "}
           <span className="whitespace-nowrap">
-            blended ${t.minPrice.toFixed(2)}–${t.maxPrice.toFixed(2)} per 1M
+            output {range(Math.min(...outs), Math.max(...outs))}
+          </span>
+          {" · "}
+          <span className="whitespace-nowrap">
+            blended {range(t.minPrice, t.maxPrice)} per 1M
           </span>
         </span>
       </figcaption>
@@ -593,7 +613,15 @@ function TierChart({ tier, rows, fit }: { tier: CostTier; rows: ModelRow[]; fit:
       {active && (
         <FloatingCard getAnchor={getAnchor} placement="side" testId="chart-card">
           {active.kind === "point" && activePoint ? (
-            <ModelPointCard model={activePoint.row} fit={fit} />
+            <ModelPointCard
+              model={activePoint.row}
+              fit={fit}
+              leader={
+                activePoint.row.value_beaten_by
+                  ? (byId.get(activePoint.row.value_beaten_by) ?? null)
+                  : null
+              }
+            />
           ) : active.kind === "line" ? (
             <PriceLineCard tier={tier} fit={fit} atPrice={10 ** active.x} />
           ) : null}
@@ -614,6 +642,7 @@ function LegendSwatch({ children }: { children: ReactNode }) {
 export function ScoreCharts({ rows, fit }: { rows: ModelRow[]; fit: ScoreFit | null }) {
   if (!fit) return null;
   const tiers = TIER_ORDER.filter((t) => (fit.tiers[t]?.n ?? 0) >= 2);
+  const byId = new Map(rows.map((r) => [r.id, r]));
   if (tiers.length === 0) return null;
   const sigma = fit.sigma.toFixed(1);
 
@@ -639,7 +668,9 @@ export function ScoreCharts({ rows, fit }: { rows: ModelRow[]; fit: ScoreFit | n
           &ldquo;is it good <em>for its price</em>?&rdquo; are different questions. Each chart
           answers the second for one cost tier: every model sits at its blended price (across) and
           AA Intelligence Index (up), and the line is what a model of that tier typically scores
-          at each price. <strong>A model&rsquo;s Score is its vertical distance from the line</strong>
+          at each price. The blended price is (3&nbsp;&times;&nbsp;input + 1&nbsp;&times;&nbsp;output)
+          &divide;&nbsp;4, one price per model, which is why it reads below the output prices
+          that set the tier. <strong>A model&rsquo;s Score is its vertical distance from the line</strong>
           , in index points: above it (+) buys more intelligence than the price predicts, below it
           (&minus;) buys less.
         </p>
@@ -661,7 +692,7 @@ export function ScoreCharts({ rows, fit }: { rows: ModelRow[]; fit: ScoreFit | n
             <LegendSwatch>
               <circle cx={11} cy={7} r={5.5} fill="none" stroke={FRONTIER} strokeWidth={2} />
             </LegendSwatch>
-            Cost/quality frontier
+            Cost/quality frontier (whole catalog)
           </li>
           <li className="inline-flex items-center gap-1.5">
             <LegendSwatch>
@@ -682,7 +713,7 @@ export function ScoreCharts({ rows, fit }: { rows: ModelRow[]; fit: ScoreFit | n
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {tiers.map((t) => (
-            <TierChart key={t} tier={t} rows={rows} fit={fit} />
+            <TierChart key={t} tier={t} rows={rows} fit={fit} byId={byId} />
           ))}
         </div>
 
@@ -692,8 +723,12 @@ export function ScoreCharts({ rows, fit }: { rows: ModelRow[]; fit: ScoreFit | n
           α for each cost tier and one shared slope β&nbsp;=&nbsp;{fit.slope.toFixed(1)} index
           points per 10&times; price (R&sup2;&nbsp;{fit.r2.toFixed(2)}, residual
           σ&nbsp;{sigma}). A dot inside the shaded band is level with its line: treat scores that
-          close together as a tie, not a ranking. The frontier ring means nothing in the whole
-          catalog is both cheaper and higher on the AA Index.
+          close together as a tie, not a ranking.{" "}
+          <strong className="text-brand-slate-700 dark:text-brand-slate-200">
+            The frontier ring is catalog-wide, not per tier: nothing in any cost tier costs less
+            and scores higher.
+          </strong>{" "}
+          A chart can have no ring at all when a cheaper tier&rsquo;s model beats every model in it.
         </p>
       </div>
     </details>

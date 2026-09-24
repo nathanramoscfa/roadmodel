@@ -1,11 +1,15 @@
 // web/components/ScoreCards.tsx
 //
-// What the /models hover cards say. Three cards, one visual language:
+// What the /models hover cards say. Four cards, one visual language:
 //   ScoreBreakdownCard — a table Score, taken apart into parts that add up to
 //                        the printed figure (lib/benchmark-grid scoreBreakdown)
+//   IndexCard          — a table AA Index: the figure, its source, and whether
+//                        anything in the catalog beats it (the frontier)
 //   ModelPointCard     — a chart dot: the model, its Score, AA Index and prices
 //   PriceLineCard      — a chart's fitted line: the equation, what each term
 //                        means, and the expected index at the pointer
+// Every card that shows a Score also shows FrontierStatus, because the Score
+// only compares a model with its own cost tier.
 // Figures come from the same ScoreFit the table and charts use, so a card can
 // never disagree with the cell or the dot it explains.
 import type { ReactNode } from "react";
@@ -78,15 +82,101 @@ function Row({
   );
 }
 
-function FrontierNote() {
-  return (
-    <p className="flex items-start gap-2">
-      <span className="mt-[7px] inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
-      <span>
-        On the cost/quality frontier: no model in the catalog is both cheaper and higher on the
-        AA Index.
-      </span>
+// The cross-tier half of the story, in every card: is anything in the WHOLE
+// catalog both cheaper and higher on the AA Index? The Score cannot say — it
+// compares a model with its own tier only — so a card that shows a Score
+// shows this too, naming the model that beats it when one does.
+export function FrontierStatus({
+  model: m,
+  leader,
+}: {
+  model: ModelRow;
+  // The row m.value_beaten_by names; null on the frontier.
+  leader: ModelRow | null;
+}) {
+  if (m.aa_index === null) return null;
+  const heading = (
+    <p className={"mb-1 text-[11px] font-semibold uppercase tracking-wide " + MUTED}>
+      Across every cost tier
     </p>
+  );
+  if (m.value_frontier || !leader || leader.aa_index === null) {
+    return (
+      <div
+        className="rounded-md border border-emerald-500/40 bg-emerald-50 px-3 py-2 text-xs leading-[1.125rem] dark:bg-emerald-500/10"
+        data-testid="frontier-status"
+        data-frontier="1"
+      >
+        {heading}
+        <p className="flex items-start gap-2">
+          <span className="mt-[4px] inline-block h-2.5 w-2.5 shrink-0 rounded-full border-2 border-emerald-500" />
+          <span>
+            <span className={"font-semibold " + STRONG}>On the cost/quality frontier.</span> Nothing
+            in the catalog, in any cost tier, costs less and scores higher on the AA Index.
+          </span>
+        </p>
+      </div>
+    );
+  }
+  const price = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
+  const leaderPrice = blendedPrice(leader.input_price_per_1m, leader.output_price_per_1m);
+  const higher = leader.aa_index > m.aa_index;
+  const cheaper = leaderPrice < price;
+  const how = `${higher ? "scores higher" : "scores the same"} ${cheaper ? "for less" : "at the same price"}`;
+  return (
+    <div
+      className="rounded-md border border-brand-slate-200 bg-brand-slate-50 px-3 py-2 text-xs leading-[1.125rem] dark:border-brand-slate-600 dark:bg-brand-slate-900/70"
+      data-testid="frontier-status"
+      data-frontier="0"
+      data-beaten-by={leader.id}
+    >
+      {heading}
+      <p>
+        <span className={"font-semibold " + STRONG}>Off the frontier:</span>{" "}
+        {leader.name} ({COST_TIER_DEFS[leader.tier_cost].label} cost) {how}.
+      </p>
+      <Row
+        className="mt-1"
+        label="AA Index"
+        value={`${num(leader.aa_index)}${leader.aa_index_source === "cited" ? " (cited)" : ""} vs ${num(m.aa_index)}`}
+        valueClass={STRONG}
+      />
+      <Row label="Blended price" value={`${usd(leaderPrice)} vs ${usd(price)}`} valueClass={STRONG} />
+    </div>
+  );
+}
+
+// The AA Index cell's card: the figure, where it came from, and the frontier.
+export function IndexCard({
+  model: m,
+  leader,
+  snapshot,
+}: {
+  model: ModelRow;
+  leader: ModelRow | null;
+  snapshot: string;
+}) {
+  if (m.aa_index === null) return null;
+  return (
+    <div className="w-[20rem] max-w-full" data-testid="index-card">
+      <CardHeader name={m.name} tier={m.tier_cost} />
+      <div className="mt-2">
+        <Row
+          label={<span className={"font-semibold " + STRONG}>AA Intelligence Index</span>}
+          value={num(m.aa_index)}
+          valueClass={"text-sm font-bold " + STRONG}
+        />
+      </div>
+      <p className={"mt-1 text-xs leading-[1.125rem] " + MUTED}>
+        Artificial Analysis&rsquo;s weighted average over its evaluation suite, 0&ndash;100.{" "}
+        {m.aa_index_source === "cited"
+          ? "As cited in the catalog; this model is not in the Artificial Analysis data snapshot yet."
+          : `From the snapshot of ${snapshot}.`}
+      </p>
+      <div className="mt-2.5">
+        <FrontierStatus model={m} leader={leader} />
+      </div>
+    </div>
   );
 }
 
@@ -94,11 +184,14 @@ export function ScoreBreakdownCard({
   model: m,
   fit,
   snapshot,
+  leader,
 }: {
   model: ModelRow;
   fit: ScoreFit;
   // Artificial Analysis snapshot stamp, e.g. "2026-09-22 22:09 UTC".
   snapshot: string;
+  // The model that beats this one across the whole catalog (null on the frontier).
+  leader: ModelRow | null;
 }) {
   const price = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
   const b = scoreBreakdown(fit, m.tier_cost, price, m.aa_index);
@@ -177,18 +270,29 @@ export function ScoreBreakdownCard({
 
       <div className={"mt-3 space-y-1.5 border-t pt-2.5 text-xs leading-[1.125rem] " + RULE}>
         <p>{bandSentence}</p>
-        {m.value_frontier && <FrontierNote />}
         <p className={MUTED}>
           {m.aa_index_source === "cited"
             ? "AA Index as cited in the catalog; this model is not in the Artificial Analysis data snapshot yet."
             : `AA Index from the Artificial Analysis snapshot of ${snapshot}.`}
         </p>
       </div>
+
+      <div className="mt-3">
+        <FrontierStatus model={m} leader={leader} />
+      </div>
     </div>
   );
 }
 
-export function ModelPointCard({ model: m, fit }: { model: ModelRow; fit: ScoreFit }) {
+export function ModelPointCard({
+  model: m,
+  fit,
+  leader,
+}: {
+  model: ModelRow;
+  fit: ScoreFit;
+  leader: ModelRow | null;
+}) {
   const price = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
   const b = scoreBreakdown(fit, m.tier_cost, price, m.aa_index);
   if (!b) return null;
@@ -213,11 +317,9 @@ export function ModelPointCard({ model: m, fit }: { model: ModelRow; fit: ScoreF
         <Row label="Output" value={`${usd(m.output_price_per_1m)} per 1M tokens`} valueClass={STRONG} />
         <Row label="Blended (3 : 1)" value={`${usd(b.price)} per 1M tokens`} valueClass={STRONG} />
       </div>
-      {m.value_frontier && (
-        <div className={"mt-2.5 border-t pt-2 text-xs leading-[1.125rem] " + RULE}>
-          <FrontierNote />
-        </div>
-      )}
+      <div className="mt-2.5">
+        <FrontierStatus model={m} leader={leader} />
+      </div>
     </div>
   );
 }

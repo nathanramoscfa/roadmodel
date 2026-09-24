@@ -112,6 +112,24 @@ test("renders the catalog table, legend, and model links", async ({ page }) => {
   await expect(fable).toHaveAttribute("target", "_blank");
 });
 
+test("the page leads with the table, then the Score charts, then the full key", async ({ page }) => {
+  await page.goto("/models");
+  const top = async (loc: ReturnType<typeof page.locator>) => (await loc.boundingBox())!.y;
+  const table = await top(page.getByTestId("model-catalog"));
+  const charts = await top(page.getByTestId("score-charts"));
+  const legend = await top(page.getByTestId("catalog-legend"));
+  const reference = await top(page.locator("#benchmarks"));
+  expect(table).toBeLessThan(charts);
+  expect(charts).toBeLessThan(legend);
+  expect(legend).toBeLessThan(reference);
+  // The table's caption points down to the key, and the key above the table
+  // defines the two things readers trip on.
+  await expect(page.getByTestId("model-catalog").locator('a[href="#how-to-read"]')).toHaveCount(1);
+  await expect(page.getByTestId("catalog-legend")).toHaveAttribute("id", "how-to-read");
+  await expect(page.getByTestId("table-key")).toContainText("Cost/quality frontier, across every cost tier.");
+  await expect(page.getByTestId("table-key")).toContainText("Blended price = (3 × input + 1 × output) ÷ 4.");
+});
+
 test("default sort is Score, grouped by cost tier (priciest first); Output toggles to cheapest-first", async ({ page }) => {
   await page.goto("/models");
 
@@ -126,6 +144,22 @@ test("default sort is Score, grouped by cost tier (priciest first); Output toggl
   const rank: Record<string, number> = { low: 1, medium: 2, high: 3, "very-high": 4 };
   for (let i = 1; i < groupOrder.length; i += 1) {
     expect(rank[groupOrder[i - 1]!]).toBeGreaterThan(rank[groupOrder[i]!]);
+  }
+  // Each header prices its rows on both scales: output (which sets the tier,
+  // and matches the Output column) and blended (which the Score is fitted on).
+  const money = (v: number, digits: number) => `$${Number(v.toFixed(digits)).toString()}`;
+  for (const tier of tiersPresent) {
+    const inTier = scored.filter((m) => m.tier_cost === tier);
+    const outs = inTier.map((m) => m.output_price_per_1m);
+    const blends = inTier.map((m) => blendedPrice(m.input_price_per_1m, m.output_price_per_1m));
+    const range = (vals: number[], digits: number) => {
+      const lo = money(Math.min(...vals), digits);
+      const hi = money(Math.max(...vals), digits);
+      return lo === hi ? lo : `${lo}–${hi}`;
+    };
+    const header = page.locator(`[data-testid="score-group"][data-tier="${tier}"]`);
+    await expect(header.getByTestId("score-group-prices")).toContainText(`output ${range(outs, 4)}`);
+    await expect(header.getByTestId("score-group-prices")).toContainText(`blended ${range(blends, 2)}`);
   }
   // Sorting by AA Index still puts the highest-index model on top, unmeasured last.
   await page.getByRole("button", { name: /^AA Index/ }).click();
@@ -210,14 +244,27 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
 
   await expect(page.getByTestId("cell-figure")).toHaveCount(0);
 
-  // Frontier = no catalog model is both cheaper and higher on the AA Index;
-  // recompute from the same inputs and compare row by row (it is now a dot).
-  const inputs = scored.map((m) => ({ m, price: m.output_price_per_1m, index: aaIndexFor(m) }));
-  const frontier = new Set([...paretoFrontier(inputs)].map((r) => r.m.name));
+  // Frontier = no catalog model, in any cost tier, is both cheaper and higher
+  // on the AA Index, priced blended like the Score; recompute from the same
+  // inputs and compare row by row. The ring sits beside the AA Index, never on
+  // the within-tier Score.
+  const inputs = scored.map((m) => ({
+    m,
+    price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m),
+    index: aaIndexFor(m),
+  }));
+  const frontier = new Set([...paretoFrontier(inputs)].map((r) => r.m.id));
   expect(frontier.size).toBeGreaterThan(2);
-  await expect(page.locator('[data-testid="value-cell"][data-frontier="1"]')).toHaveCount(frontier.size);
+  await expect(page.locator('[data-testid="aa-index"][data-frontier="1"]')).toHaveCount(frontier.size);
+  await expect(page.getByTestId("frontier-mark")).toHaveCount(frontier.size);
+  for (const id of frontier) {
+    await expect(
+      page.locator(`[data-testid="model-row"][data-model-id="${id}"] [data-testid="frontier-mark"]`),
+    ).toHaveCount(1);
+  }
+  await expect(page.locator('[data-testid="value-cell"] [data-testid="frontier-mark"]')).toHaveCount(0);
   const cheapestMeasured = [...inputs].filter((r) => r.index !== null).sort((a, b) => a.price - b.price || b.index! - a.index!)[0];
-  expect(frontier.has(cheapestMeasured.m.name)).toBe(true);
+  expect(frontier.has(cheapestMeasured.m.id)).toBe(true);
 
   // The score = AA Index minus the market fit (index ~ α_tier + b·log10 blended
   // price, one pooled slope, one intercept per cost tier) over every measured
@@ -326,6 +373,68 @@ test("derived letters match the published bands; unmeasured letters are marked e
   expect(editorialSeen).toBeGreaterThan(0);
 });
 
+test("every model off the frontier names the model that beats it, from any cost tier", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/models");
+
+  // Independently of the page: the leader of m is the highest AA Index at m's
+  // blended price or less, the cheapest of those on a tie, catalog order last.
+  const measured = scored
+    .map((m) => ({ m, price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m), index: aaIndexFor(m) }))
+    .filter((r): r is { m: ScoredModel; price: number; index: number } => r.index !== null);
+  const leaderOf = (r: (typeof measured)[number]) => {
+    const pool = measured.filter((o) => o.price <= r.price);
+    const top = Math.max(...pool.map((o) => o.index));
+    const tied = pool.filter((o) => o.index === top);
+    const cheapest = Math.min(...tied.map((o) => o.price));
+    return tied.find((o) => o.price === cheapest)!;
+  };
+  let offFrontier = 0;
+  let crossTier = 0;
+  for (const r of measured) {
+    const lead = leaderOf(r);
+    const cell = page.locator(`[data-testid="model-row"][data-model-id="${r.m.id}"] [data-testid="aa-index"]`);
+    await expect(cell).toHaveAttribute("data-beaten-by", lead === r ? "" : lead.m.id);
+    if (lead !== r) {
+      offFrontier += 1;
+      expect(lead.price).toBeLessThanOrEqual(r.price);
+      expect(lead.index).toBeGreaterThanOrEqual(r.index);
+      if (lead.m.tier_cost !== r.m.tier_cost) crossTier += 1;
+    }
+  }
+  expect(offFrontier).toBeGreaterThan(0);
+
+  // The case that reads as a contradiction without this: the best Score in the
+  // table that has no dot. Its AA Index card and its Score card both name the
+  // model that beats it; a frontier model's cards say it is on the frontier.
+  const fit = fitScoreModel(measured.map((o) => ({ price: o.price, index: o.index, tier: o.m.tier_cost })));
+  const scoreOf = (o: (typeof measured)[number]) => scoreFor(fit, o.m.tier_cost, o.price, o.index) ?? -Infinity;
+  const beaten = measured.filter((r) => leaderOf(r) !== r).sort((a, b) => scoreOf(b) - scoreOf(a))[0];
+  const lead = leaderOf(beaten);
+  const row = page.locator(`[data-testid="model-row"][data-model-id="${beaten.m.id}"]`);
+  await row.getByTestId("aa-index-trigger").hover();
+  const indexCard = page.getByTestId("aa-index-card");
+  await expect(indexCard).toContainText(beaten.m.name);
+  await expect(indexCard.getByTestId("frontier-status")).toHaveAttribute("data-beaten-by", lead.m.id);
+  await expect(indexCard.getByTestId("frontier-status")).toContainText(`Off the frontier: ${lead.m.name}`);
+  await page.mouse.move(2, 2);
+  await expect(indexCard).toHaveCount(0);
+  await row.getByTestId("score-trigger").hover();
+  await expect(page.getByTestId("score-card").getByTestId("frontier-status")).toContainText(lead.m.name);
+  await page.mouse.move(2, 2);
+
+  const onFrontier = measured.find((r) => leaderOf(r) === r)!;
+  await page
+    .locator(`[data-testid="model-row"][data-model-id="${onFrontier.m.id}"]`)
+    .getByTestId("aa-index-trigger")
+    .hover();
+  await expect(page.getByTestId("aa-index-card").getByTestId("frontier-status")).toContainText(
+    "On the cost/quality frontier.",
+  );
+  // Recorded, not asserted: whether today's leaders cross tiers is data.
+  test.info().annotations.push({ type: "cross-tier leaders", description: String(crossTier) });
+});
+
 test("the expanded row carries the cited (mixed-source) benchmarks and pricing detail", async ({ page }) => {
   await page.goto("/models");
 
@@ -348,6 +457,8 @@ test("the expanded row carries the cited (mixed-source) benchmarks and pricing d
   // Pricing detail moved out of the main table into the row.
   await expect(detail).toContainText("Cache read");
   await expect(detail).toContainText(/Cost tier/);
+  const blended = blendedPrice(tb.input_price_per_1m, tb.output_price_per_1m);
+  await expect(detail).toContainText(`Blended$${Number(blended.toFixed(2)).toString()}`);
 });
 
 test("the cost tier is a dot beside the output price, not a column", async ({ page }) => {

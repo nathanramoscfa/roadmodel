@@ -19,8 +19,8 @@ import { extractAaIndex } from "@/lib/benchmark-scores";
 import {
   blendedPrice,
   fitScoreModel,
+  frontierLeaders,
   GRID_COLUMNS,
-  paretoFrontier,
   scoreFor,
   type BenchKey,
   type BenchRow,
@@ -97,12 +97,22 @@ export function getModelRows(): ModelRow[] {
       bench,
       value_score: null,
       value_frontier: false,
+      value_beaten_by: null,
     };
   });
-  const frontier = paretoFrontier(
-    rows.map((r) => ({ row: r, price: r.output_price_per_1m, index: r.aa_index })),
+  // The frontier is priced like the Score and the charts (blended), so every
+  // value figure on the page reads one price per model.
+  const leaders = frontierLeaders(
+    rows.map((r) => ({
+      row: r,
+      price: blendedPrice(r.input_price_per_1m, r.output_price_per_1m),
+      index: r.aa_index,
+    })),
   );
-  for (const f of frontier) f.row.value_frontier = true;
+  for (const [p, leader] of leaders) {
+    if (leader === p) p.row.value_frontier = true;
+    else p.row.value_beaten_by = leader.row.id;
+  }
   const fit = getScoreFit(rows);
   for (const r of rows) {
     r.value_score = scoreFor(

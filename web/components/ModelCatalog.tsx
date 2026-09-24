@@ -8,10 +8,12 @@
 //
 // Two views, one numeric layer:
 //   Ratings — Model (sticky), Provider, Jurisdiction, Input, Output (cost tier
-//     as a colored dot), AA Index, Score (cost-adjusted index residual within
-//     the cost tier, with a dot for the Pareto frontier; sorting by it groups
-//     the rows by cost tier under a header row per tier), then seven
-//     letter cells. Letters only: the uniform figures live in the grid, and the
+//     as a colored dot), AA Index (with a green ring for the cost/quality
+//     frontier, which is catalog-wide), Score (cost-adjusted index residual within the
+//     cost tier; sorting by it groups the rows by cost tier under a header row
+//     per tier), then seven letter cells. The frontier ring sits on the AA
+//     Index, not the Score, so a within-tier figure never carries a whole-catalog
+//     mark; it is a ring, not a dot, so it never reads as the Low tier's dot. Letters only: the uniform figures live in the grid, and the
 //     category header's tooltip names which grid column is evidence for it.
 //     Sorting a category orders by letter, then AA Index, then name.
 //   Benchmark scores — the full AA grid: one column per evaluation, every value
@@ -35,6 +37,7 @@ import {
   AA_HOME,
   bandFor,
   benchPoints,
+  blendedPrice,
   benchSortValue,
   CATEGORY_FIGURE,
   DERIVED_CATEGORIES,
@@ -65,7 +68,7 @@ import {
 } from "@/lib/catalog-fields";
 import { HoverCard } from "./FloatingCard";
 import { GlossaryTerm } from "./GlossaryTerm";
-import { ScoreBreakdownCard } from "./ScoreCards";
+import { IndexCard, ScoreBreakdownCard } from "./ScoreCards";
 
 const RATING_MEANING: Record<string, string> = Object.fromEntries(
   RATING_SCALE.map((r) => [r.rating, r.meaning]),
@@ -180,7 +183,20 @@ function isCategory(key: SortKey): key is Category {
 // "$0.26" / "$10" — the blended price in a group header, trimmed like the
 // price columns.
 function formatBlended(v: number): string {
-  return Number(v.toFixed(2)).toString();
+  return `$${Number(v.toFixed(2)).toString()}`;
+}
+
+// "$25–$50", or "$25" when every row in the group costs the same.
+function priceRange(lo: number, hi: number, fmt: (v: number) => string): string {
+  return lo === hi ? fmt(lo) : `${fmt(lo)}–${fmt(hi)}`;
+}
+
+interface GroupStats {
+  count: number;
+  outLo: number;
+  outHi: number;
+  blendLo: number;
+  blendHi: number;
 }
 
 // Color the score by how far outside the fit's noise band it sits: beyond +σ
@@ -288,6 +304,33 @@ export function ModelCatalog({
       return a.name.localeCompare(b.name);
     });
   }, [models, search, provider, juris, cost, sortKey, sortDir]);
+
+  // The model that beats each off-frontier model, looked up by id for the cards.
+  const byId = useMemo(() => new Map(models.map((m) => [m.id, m])), [models]);
+  const leaderOf = (m: ModelRow): ModelRow | null =>
+    m.value_beaten_by ? (byId.get(m.value_beaten_by) ?? null) : null;
+
+  // What each cost-tier header says about the rows under it: how many, and
+  // their prices on both scales the page uses — output, which sets the tier,
+  // and blended, which the Score, the charts and the frontier use.
+  const groupStats = useMemo(() => {
+    const out = new Map<string, GroupStats>();
+    for (const r of rows) {
+      const o = r.output_price_per_1m;
+      const b = blendedPrice(r.input_price_per_1m, r.output_price_per_1m);
+      const g = out.get(r.tier_cost);
+      if (!g) {
+        out.set(r.tier_cost, { count: 1, outLo: o, outHi: o, blendLo: b, blendHi: b });
+      } else {
+        g.count += 1;
+        g.outLo = Math.min(g.outLo, o);
+        g.outHi = Math.max(g.outHi, o);
+        g.blendLo = Math.min(g.blendLo, b);
+        g.blendHi = Math.max(g.blendHi, b);
+      }
+    }
+    return out;
+  }, [rows]);
 
   function toggleSort(key: SortKey) {
     setSortDir(nextDir(key, sortKey, sortDir));
@@ -431,8 +474,34 @@ export function ModelCatalog({
         . Sorted by Score by default, which groups the rows by cost tier; click a column header
         to sort, a model name for its
         docs, and the chevron for pricing detail, best-for notes, and the benchmarks the curation
-        cited.
+        cited. The{" "}
+        <a href="#how-to-read" className="text-brand-accent hover:underline">
+          full key
+        </a>{" "}
+        is below the charts.
       </p>
+
+      {/* The two things the table cannot say for itself. */}
+      <div className="mt-3 grid grid-cols-1 gap-2 text-xs leading-5 md:grid-cols-2" data-testid="table-key">
+        <p className="rounded-lg border border-emerald-500/40 bg-emerald-50/70 px-3 py-2 text-brand-slate-700 dark:bg-emerald-500/10 dark:text-brand-slate-200">
+          <span aria-hidden className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full border-2 border-emerald-500 align-middle" />
+          <strong className="text-brand-slate-900 dark:text-brand-slate-50">
+            Cost/quality frontier, across every cost tier.
+          </strong>{" "}
+          A green ring beside an AA Index means nothing in the catalog, in any tier, costs less and
+          scores higher. It is separate from the Score, which compares a model only with its own
+          tier. Hover an AA Index to see what beats it.
+        </p>
+        <p className="rounded-lg border border-brand-slate-200 bg-brand-slate-50 px-3 py-2 text-brand-slate-700 dark:border-brand-slate-700 dark:bg-brand-slate-800/60 dark:text-brand-slate-200">
+          <strong className="text-brand-slate-900 dark:text-brand-slate-50">
+            Blended price = (3 &times; input + 1 &times; output) &divide; 4.
+          </strong>{" "}
+          One price per model: what 1M tokens cost when three of every four are input, Artificial
+          Analysis&rsquo;s standard mix. It sits between the Input and Output prices ($5 in and $25
+          out blend to $10). Cost tiers go by output price; the Score, the charts and the frontier
+          use blended.
+        </p>
+      </div>
 
       {/* Table */}
       <div className="mt-4 overflow-x-auto rounded-xl border border-brand-slate-200 dark:border-brand-slate-700">
@@ -537,7 +606,7 @@ export function ModelCatalog({
                 // Sorted by Score, a header row opens each cost-tier group.
                 const groupStart = sortKey === "value" && (i === 0 || rows[i - 1].tier_cost !== m.tier_cost);
                 const tierFit = scoreFit?.tiers[m.tier_cost];
-                const groupSize = rows.filter((r) => r.tier_cost === m.tier_cost).length;
+                const group = groupStats.get(m.tier_cost)!;
                 return (
                   <Fragment key={m.id}>
                     {groupStart && (
@@ -547,12 +616,16 @@ export function ModelCatalog({
                           className="bg-brand-slate-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-brand-slate-600 dark:bg-brand-slate-800/60 dark:text-brand-slate-300"
                         >
                           <span className={"mr-1.5 inline-block h-2 w-2 rounded-full align-middle " + COST_TIER_DOT[m.tier_cost]} />
-                          {tier.label} cost · {groupSize} {groupSize === 1 ? "model" : "models"}
-                          {tierFit && (
-                            <span className="ml-2 font-normal normal-case tracking-normal text-brand-slate-500 dark:text-brand-slate-400">
-                              {tierFit.n} measured · blended ${formatBlended(tierFit.minPrice)}–${formatBlended(tierFit.maxPrice)} per 1M · score is vs. this tier&rsquo;s own price line
-                            </span>
-                          )}
+                          {tier.label} cost · {group.count} {group.count === 1 ? "model" : "models"}
+                          <span
+                            className="ml-2 font-normal normal-case tracking-normal text-brand-slate-500 dark:text-brand-slate-400"
+                            data-testid="score-group-prices"
+                          >
+                            output {priceRange(group.outLo, group.outHi, formatPrice)} · blended{" "}
+                            {priceRange(group.blendLo, group.blendHi, formatBlended)} (3 input : 1
+                            output) per 1M
+                            {tierFit && <> · Score is vs. this tier&rsquo;s own price line</>}
+                          </span>
                         </td>
                       </tr>
                     )}
@@ -628,23 +701,41 @@ export function ModelCatalog({
                       </td>
                       <td
                         data-testid="aa-index"
+                        data-frontier={m.value_frontier ? "1" : "0"}
+                        data-beaten-by={m.value_beaten_by ?? ""}
                         className="whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums text-brand-slate-900 dark:text-brand-slate-50"
-                        title={
-                          m.aa_index === null
-                            ? "Not measured by Artificial Analysis"
-                            : `${FIELD_DEFS.aa_index.fullName}: ${m.aa_index}`
-                        }
                       >
                         {m.aa_index === null ? (
-                          <span className="text-brand-slate-400 dark:text-brand-slate-500">—</span>
+                          <span
+                            className="text-brand-slate-400 dark:text-brand-slate-500"
+                            title="Not measured by Artificial Analysis"
+                          >
+                            —
+                          </span>
                         ) : (
-                          m.aa_index
+                          <HoverCard
+                            label={`${m.name}: AA Index ${m.aa_index}${m.value_frontier ? ", on the cost/quality frontier" : ""}. Show where it stands across every cost tier`}
+                            card={
+                              <IndexCard model={m} leader={leaderOf(m)} snapshot={benchmarksGeneratedAt} />
+                            }
+                            triggerTestId="aa-index-trigger"
+                            cardTestId="aa-index-card"
+                            className="tabular-nums"
+                          >
+                            {m.value_frontier && (
+                              <span
+                                aria-hidden
+                                data-testid="frontier-mark"
+                                className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full border-2 border-emerald-500 align-middle"
+                              />
+                            )}
+                            {m.aa_index}
+                          </HoverCard>
                         )}
                       </td>
                       <td
                         className={"whitespace-nowrap px-3 py-2 text-right tabular-nums " + scoreTone(m.value_score, scoreFit)}
                         data-testid="value-cell"
-                        data-frontier={m.value_frontier ? "1" : "0"}
                         data-value={m.value_score === null ? "" : m.value_score.toFixed(3)}
                       >
                         {m.value_score === null || !scoreFit ? (
@@ -671,6 +762,7 @@ export function ModelCatalog({
                                 model={m}
                                 fit={scoreFit}
                                 snapshot={benchmarksGeneratedAt}
+                                leader={leaderOf(m)}
                               />
                             }
                             triggerTestId="score-trigger"
@@ -678,12 +770,6 @@ export function ModelCatalog({
                             className="tabular-nums"
                           >
                             {formatScore(m.value_score)}
-                            {m.value_frontier && (
-                              <span
-                                aria-hidden
-                                className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 align-middle"
-                              />
-                            )}
                           </HoverCard>
                         )}
                       </td>
@@ -782,8 +868,9 @@ export function ModelCatalog({
         (snapshot {benchmarksGeneratedAt}; {measuredCount} of {models.length} models measured) —
         one lab, one harness, so every column is comparable down the page. Score is the AA
         Index minus what the model&rsquo;s price predicts among its own cost tier (one market
-        fit, a baseline per tier), in index points; the dot marks the cost/quality frontier. A
-        rating is a class, not a rank within it; sorting a category orders by
+        fit, a baseline per tier), in index points. <strong>The green ring beside an AA Index is
+        the cost/quality frontier, across every tier</strong>: nothing in the catalog costs less
+        (blended) and scores higher. A rating is a class, not a rank within it; sorting a category orders by
         letter, then by the AA Index. Ratings are curated by the project&rsquo;s daily automation;
         see the{" "}
         <a href="/docs" className="text-brand-accent hover:underline">
@@ -831,6 +918,13 @@ function ModelDetail({ model: m }: { model: ModelRow }) {
           <dt>Output</dt>
           <dd className="text-brand-slate-900 dark:text-brand-slate-50">
             {formatPrice(m.output_price_per_1m)}
+          </dd>
+          <dt>Blended</dt>
+          <dd className="text-brand-slate-900 dark:text-brand-slate-50">
+            {formatBlended(blendedPrice(m.input_price_per_1m, m.output_price_per_1m))}{" "}
+            <span className="text-xs text-brand-slate-500 dark:text-brand-slate-400">
+              (3 &times; input + 1 &times; output) &divide; 4
+            </span>
           </dd>
           <dt>Cache read</dt>
           <dd className="text-brand-slate-900 dark:text-brand-slate-50">

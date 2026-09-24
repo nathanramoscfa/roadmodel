@@ -198,11 +198,12 @@ export function bandFor(value: number | null, sortedMeasured: number[]): Band | 
 }
 
 // Cost/quality Pareto frontier: a model is on it when NO other model is both
-// cheaper (output price) and higher on the AA Intelligence Index. Zero
-// tunable weights — the standard answer to "what is the best value" that a
-// quality ÷ price ratio gets wrong (a ratio is dominated by the two-orders-of-
-// magnitude price range and crowns the cheapest weak model). Ties on price
-// resolve to the higher index; ties on index to the cheaper price.
+// cheaper and higher on the AA Intelligence Index. Zero tunable weights — the
+// standard answer to "what is the best value" that a quality ÷ price ratio
+// gets wrong (a ratio is dominated by the two-orders-of-magnitude price range
+// and crowns the cheapest weak model). Ties on price resolve to the higher
+// index; ties on index to the cheaper price. The page passes the blended
+// price, the same one the Score and the charts use.
 export function paretoFrontier<T extends { price: number; index: number | null }>(
   rows: readonly T[],
 ): Set<T> {
@@ -217,6 +218,28 @@ export function paretoFrontier<T extends { price: number; index: number | null }
     }
   }
   return frontier;
+}
+
+// The frontier, read per model: for every measured row, the highest AA Index
+// on sale at that row's price or less, across the WHOLE catalog (a tie on
+// index goes to the cheaper model). A row that is its own leader is on the
+// frontier, the same set paretoFrontier returns; any other row is beaten
+// outright by its leader, which costs no more and scores higher. This is the
+// cross-tier check the Score cannot make: the Score compares a model with its
+// own tier, so every tier averages zero even when one cheaper model beats the
+// whole tier.
+export function frontierLeaders<T extends { price: number; index: number | null }>(
+  rows: readonly T[],
+): Map<T, T> {
+  const measured = rows.filter((r): r is T & { index: number } => r.index !== null);
+  const sorted = [...measured].sort((a, b) => a.price - b.price || b.index - a.index);
+  const leaders = new Map<T, T>();
+  let best: (T & { index: number }) | null = null;
+  for (const r of sorted) {
+    if (best === null || r.index > best.index) best = r;
+    leaders.set(r, best);
+  }
+  return leaders;
 }
 
 // Cost-adjusted score, grouped by cost tier. A quality ÷ price ratio is

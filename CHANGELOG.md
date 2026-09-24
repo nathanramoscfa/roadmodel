@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **/models leads with the catalog, and says what its frontier mark and its
+  prices mean.** The table now comes first, then the per-tier Score charts,
+  then the full key, which the table links to. The cost/quality frontier is
+  now priced on the blended price, like the Score and the charts. It is drawn
+  as a green ring beside the AA Index instead of a dot on the within-tier
+  Score, and every AA Index, Score and chart card names the model from any
+  tier that beats it. Each cost-tier header gives both its output and its
+  blended price range, and a key above the table defines the frontier and
+  the blended price, (3 × input + 1 × output) ÷ 4.
+
 ## [0.2.41] — 2026-09-23
 
 ### Changed
