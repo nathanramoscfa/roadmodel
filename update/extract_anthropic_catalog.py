@@ -158,6 +158,33 @@ def discover_unmapped(md: str) -> list[str]:
     return sorted(found)
 
 
+def discovered_prices(md: str, names: list[str]) -> list[dict[str, object]]:
+    """Each flagged row with the base input and output price the standard
+    table quotes for it, so the catalog cron can add it at Anthropic's own
+    price. A row whose cells do not parse is listed without a price."""
+    header, data = _pricing_table(md)
+    in_col = _col(header, "Input")
+    out_col = _col(header, "Output")
+    wanted = set(names)
+    out: list[dict[str, object]] = []
+    seen: set[str] = set()
+    for row in data:
+        if not row:
+            continue
+        name = _ROW_NOTE_RE.sub("", row[0].strip()).strip()
+        if name not in wanted or name in seen:
+            continue
+        seen.add(name)
+        entry: dict[str, object] = {"slug": name}
+        in_price = _dollars(row[in_col]) if in_col is not None and in_col < len(row) else None
+        out_price = _dollars(row[out_col]) if out_col is not None and out_col < len(row) else None
+        if in_price is not None and out_price is not None:
+            entry["input_price_per_1m"] = in_price
+            entry["output_price_per_1m"] = out_price
+        out.append(entry)
+    return out
+
+
 def _pricing_table(md: str) -> tuple[list[str], list[list[str]]]:
     """(header cells, data rows) of the standard per-token pricing table —
     the one whose header carries ``Base Input Tokens`` … ``Output Tokens``.
@@ -291,6 +318,9 @@ def build_snapshot(md: str, *, source_url: str) -> dict[str, object]:
         "models": models,
         "slug_to_id": {str(m["slug"]): str(m["id"]) for m in models},
         "unexpected_slugs": unexpected,
+        # The flagged rows' own prices, for the catalog cron's discovery lane
+        # (update/discovery.py hands them to the curation model).
+        "discovered": discovered_prices(md, unexpected),
         "missing_mapped_models": missing,
         "section_sha256": hashlib.sha256(facts.encode("utf-8")).hexdigest(),
     }

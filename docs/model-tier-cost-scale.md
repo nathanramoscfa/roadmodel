@@ -392,3 +392,11 @@ Notes on the mapping:
   attribute and the per-method `provider-jurisdiction` attribute
   in `model-selector.txt` MUST match the codes in this table
   byte-for-byte. CI tests enforce the cross-doc invariant.
+
+## Declined Models (discovery lane)
+
+Models a provider's own pricing page lists that this catalog deliberately
+does not carry. When the catalog cron declines a model the discovery lane
+flags (`update/discovery.py`), it adds a line here and the flag stops. One
+model per line, in exactly this form:
+`- <provider>/<slug> — <reason> (declined YYYY-MM-DD)`.

@@ -29,6 +29,7 @@ from opus_turn import (  # noqa: E402, I001
     stream_until_complete,
 )
 from selector_re import repair_attribute_quotes  # noqa: E402
+import discovery  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = REPO_ROOT / "docs"
@@ -512,6 +513,7 @@ def build_user_message(
     fetched: list[dict[str, str]],
     fetch_errors: list[str],
     target: str | None = None,
+    discovery_block: str = "",
 ) -> str:
     """Assemble the Opus user message.
 
@@ -521,6 +523,11 @@ def build_user_message(
     new model family is added). ``None`` keeps the legacy two-file contract.
     For ``"selector"``, ``cost_scale_text`` is the ALREADY-updated cost scale
     from the first call, so ``<model-options>`` is synced to fresh tiers.
+
+    ``discovery_block`` is the ``<provider_discovery>`` block from
+    ``update/discovery.py``: the models the providers' own pricing pages list
+    that the catalog neither carries nor declines. The instructions tell the
+    model to add or decline each one; without this block it had nothing to act on.
     """
     blocks: list[str] = [
         f'<current_file path="docs/model-selector.txt">\n{selector_text}\n</current_file>',
@@ -534,6 +541,8 @@ def build_user_message(
         )
     if fetch_errors:
         blocks.append("<fetch_errors>\n" + "\n".join(fetch_errors) + "\n</fetch_errors>")
+    if discovery_block:
+        blocks.append(discovery_block)
     if target is not None:
         blocks.append(f"<emit_target>{target}</emit_target>")
     return "\n\n".join(blocks)
@@ -875,7 +884,15 @@ def main() -> int:
     def run_call(
         target: str, cost_scale_in: str, srcs: list[dict[str, str]], key: str
     ) -> dict[str, Any] | None:
-        msg = build_user_message(selector_text, cost_scale_in, srcs, fetch_errors, target=target)
+        # The discovery lane: each pass sees what the providers price that the
+        # catalog still neither carries nor declines (the selector pass, after
+        # the cost-scale pass has declined some of them).
+        block = discovery.render_block(
+            discovery.load(discovery.snapshot_paths(), selector_text, cost_scale_in)
+        )
+        msg = build_user_message(
+            selector_text, cost_scale_in, srcs, fetch_errors, target=target, discovery_block=block
+        )
         try:
             raw = call_opus(system_prompt, msg, api_key)
         except OpusTurnIncomplete as exc:

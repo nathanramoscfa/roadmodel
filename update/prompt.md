@@ -72,21 +72,28 @@ would then reject.
 - If new models appear on the Cursor pricing page that are not in
   `model-tier-cost-scale.md`, add them to the appropriate provider table.
 - **Provider snapshots are the SECOND discovery lane — treat them like the
-  Cursor page.** Read every `update/catalog-*.json` snapshot's
-  `unexpected_slugs`. Each entry is a model the provider's OWN pricing page
-  prices and this catalog does not carry — Cursor lists a subset of what the
-  providers ship, and a model that never reaches Cursor (OpenAI's
-  `gpt-6-astra` sat unlisted here for weeks that way) would otherwise never be
-  discovered at all. For each flagged slug:
-    - ADD it to `model-tier-cost-scale.md` and to `<model-options>` exactly as
-      for a new Cursor model, with the provider-direct price from that same
-      snapshot's `models` array (verbatim; the Federation rule owns it), OR
-    - if it should NOT be carried (a retired generation, a long-running `pro`
-      batch variant of a model already carried, a limited-availability model
-      the operator cannot reach), say so in the PR body and add it to that
-      extractor's `DECLINED` map WITH the reason, so it stops being flagged.
-  Never ignore a flagged slug silently: the point of the flag is that
-  ignoring it is what made the catalog stale.
+  Cursor page.** The `<provider_discovery>` block in your input lists every
+  model a provider's OWN pricing page prices that this catalog neither carries
+  nor declines, with that provider's input/output price where its extractor
+  could read it. Cursor lists a subset of what the providers ship, and a model
+  that never reaches Cursor (OpenAI's `gpt-6-astra` sat unlisted here for
+  weeks that way) is discovered only here. For EVERY entry, do one of:
+    - ADD it to `model-tier-cost-scale.md` (the provider's table) and to
+      `<model-options>`, exactly as for a new Cursor model. Use the price the
+      block gives, verbatim: the Federation rule makes the provider's own page
+      the authority. When the block says to read the price from the provider
+      page, take it from that page (its URL is in the entry), not from a mirror.
+    - DECLINE it, when the catalog should not carry it (a retired generation, a
+      long-running `pro` batch variant of a model already carried, a
+      non-text or computer-use variant, a limited-availability model the
+      operator cannot reach, a dated snapshot of a model already carried): add
+      one line to the `## Declined Models (discovery lane)` section at the end
+      of `model-tier-cost-scale.md`, in exactly this form:
+      `- <provider>/<slug> — <reason> (declined YYYY-MM-DD)`, with the
+      provider and slug as the block writes them. Keep every line already in
+      that section. A declined model stops being flagged.
+  Name every add and every decline in your summary. Never leave an entry
+  unhandled: an ignored flag is what kept the catalog stale.
 - If models are removed from the Cursor pricing page, remove them from
   `model-tier-cost-scale.md`.
 - For every model that also appears in the `<model-options>` block of

@@ -93,6 +93,18 @@
     "Claude Mythos 5",
     "Claude Mythos 5.1"
   ],
+  "discovered": [
+    {
+      "slug": "Claude Mythos 5.1",
+      "input_price_per_1m": 10.0,
+      "output_price_per_1m": 50.0
+    },
+    {
+      "slug": "Claude Mythos 5",
+      "input_price_per_1m": 10.0,
+      "output_price_per_1m": 50.0
+    }
+  ],
   "missing_mapped_models": [],
   "section_sha256": "12d23dc435eb96be5010092579ecce06a10f904351e2be7c5f8216e8a2e121fc"
 }
