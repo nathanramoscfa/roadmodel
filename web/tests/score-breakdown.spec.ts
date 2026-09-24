@@ -18,9 +18,12 @@ import {
   expectedIndex,
   fitScoreModel,
   formatScore,
+  formatQualityBand,
   frontierLeaders,
+  groupBeatenBy,
   paretoFrontier,
   priceTicks,
+  qualityBand,
   scoreBreakdown,
   scoreFor,
 } from "../lib/benchmark-grid";
@@ -123,5 +126,39 @@ test("frontier leaders: a model leads itself exactly when it is on the Pareto fr
     for (const o of pts) {
       if (o.index !== null && o.price <= p.price) expect(o.index).toBeLessThanOrEqual(lead.index!);
     }
+  }
+});
+
+test("quality bands are fixed ten-point ranges labelled by what they hold", () => {
+  expect(qualityBand(57.6)).toBe(50);
+  expect(qualityBand(50)).toBe(50);
+  expect(qualityBand(49.9)).toBe(40);
+  expect(qualityBand(9)).toBe(0);
+  expect(qualityBand(null)).toBeNull();
+  expect(formatQualityBand(40)).toBe("40–49.9");
+  expect(formatQualityBand(0)).toBe("0–9.9");
+});
+
+test("a group is 'beaten' only when none of its measured models is on the frontier", () => {
+  const row = (aa: number | null, frontier: boolean, by: string | null) => ({
+    aa_index: aa,
+    value_frontier: frontier,
+    value_beaten_by: by,
+  });
+  // One model on the frontier: the group is not beaten.
+  expect(groupBeatenBy([row(50, true, null), row(40, false, "x")])).toBeNull();
+  // Nothing measured: nothing to say.
+  expect(groupBeatenBy([row(null, false, null)])).toBeNull();
+  // All beaten: the leaders, most frequent first, unmeasured rows ignored.
+  expect(
+    groupBeatenBy([row(40, false, "b"), row(41, false, "a"), row(42, false, "a"), row(null, false, null)]),
+  ).toEqual({ measured: 3, leaders: ["a", "b"] });
+
+  // On the catalog: a group's leaders are always frontier models.
+  const pts = catalog.models.map((m) => ({ id: m.id, price: priceOf(m), index: aaIndexFor(m) }));
+  const leaders = frontierLeaders(pts);
+  const frontierIds = new Set([...paretoFrontier(pts)].map((p) => p.id));
+  for (const [p, lead] of leaders) {
+    if (lead !== p) expect(frontierIds.has(lead.id)).toBe(true);
   }
 });

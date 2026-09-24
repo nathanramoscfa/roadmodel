@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **/models can group by quality as well as by cost tier.** A new Group by
+  switch sits beside the filters. Cost tier stays the default and answers
+  "what's the best buy at my budget?". Quality groups the table into
+  ten-point AA Index bands, cheapest first, and answers "what's the
+  cheapest way to reach this level?". Either way, a group with nothing on
+  the cost/quality frontier says so in its header, and a cost tier says it
+  in its chart too, naming the model that beats it. For example: "None on
+  the frontier: all 6 are beaten by Opus 5.5 (High cost)". Every tier's
+  Scores average zero however overpriced the whole tier is, so the page now
+  states outright what the Score cannot show.
+
 ### Changed
 
 - **/models leads with the catalog, and says what its frontier mark and its

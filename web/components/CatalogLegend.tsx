@@ -12,6 +12,7 @@ import {
   DERIVATION_BANDS,
   DERIVED_CATEGORIES,
   GRID_COLUMN_BY_KEY,
+  QUALITY_BAND_WIDTH,
   type BenchKey,
 } from "@/lib/benchmark-grid";
 import { RATING_SCALE } from "@/lib/glossary";
@@ -74,15 +75,17 @@ export function CatalogLegend({ id }: { id?: string }) {
                 aria-hidden
                 className="mr-2 inline-block h-3 w-3 rounded-full border-2 border-emerald-500 align-middle"
               />
-              Cost/quality frontier: across every cost tier, not within one
+              Cost/quality frontier: is anything cheaper and better, anywhere?
             </p>
             <p className="mt-1">
               A green ring beside an AA Index means <strong>no model in the whole catalog costs
               less (blended price) and scores higher</strong>. It is not a best-in-tier award, and
               it is separate from the Score: a model can top its own tier and still lose the ring to
               a cheaper model from another tier, and a modest model can hold it by being the
-              cheapest at its level. A tier can have no ring at all. Hover any AA Index for the model
-              that beats it.
+              cheapest at its level. <strong>Every tier&rsquo;s Scores average zero, however
+              overpriced the whole tier is</strong>, so a tier can have no ring at all; when it
+              does, its header and its chart name the model that beats it. Hover any AA Index for
+              the figures.
             </p>
           </div>
           <div
@@ -130,9 +133,11 @@ export function CatalogLegend({ id }: { id?: string }) {
             over every measured model (index against log&nbsp;price, with a baseline per tier),
             in index points &mdash; positive means more intelligence than a same-tier model at
             that price usually delivers. It is the <strong>default sort</strong>, which groups the
-            table by cost tier so each model is read against its own price band. The
-            header shows the fit&rsquo;s n, R&sup2; and residual σ; gaps smaller than σ are ties.
-            The Score never looks across tiers; the frontier ring (above) does.
+            table by cost tier so each model is read against its own price band: the best buy at
+            your budget. <strong>Group by &rarr; Quality</strong> regroups it into{" "}
+            {QUALITY_BAND_WIDTH}-point AA Index bands, cheapest first: the cheapest way to each
+            level. The header shows the fit&rsquo;s n, R&sup2; and residual σ; gaps smaller than σ
+            are ties. The Score never looks across tiers; the frontier ring (above) does.
           </p>
         </div>
 

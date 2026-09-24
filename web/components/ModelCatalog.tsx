@@ -9,21 +9,27 @@
 // Two views, one numeric layer:
 //   Ratings — Model (sticky), Provider, Jurisdiction, Input, Output (cost tier
 //     as a colored dot), AA Index (with a green ring for the cost/quality
-//     frontier, which is catalog-wide), Score (cost-adjusted index residual within the
-//     cost tier; sorting by it groups the rows by cost tier under a header row
-//     per tier), then seven letter cells. The frontier ring sits on the AA
-//     Index, not the Score, so a within-tier figure never carries a whole-catalog
-//     mark; it is a ring, not a dot, so it never reads as the Low tier's dot. Letters only: the uniform figures live in the grid, and the
+//     frontier, which is catalog-wide), Score (cost-adjusted index residual
+//     within the cost tier), then seven letter cells. The frontier ring sits
+//     on the AA Index, not the Score, so a within-tier figure never carries a
+//     whole-catalog mark; it is a ring, not a dot, so it never reads as the Low
+//     tier's dot. Letters only: the uniform figures live in the grid, and the
 //     category header's tooltip names which grid column is evidence for it.
 //     Sorting a category orders by letter, then AA Index, then name.
 //   Benchmark scores — the full AA grid: one column per evaluation, every value
 //     on that column's scale, "—" only where AA has not measured the model.
 //     Cells are colored by within-column quintile (lib/benchmark-grid bandFor)
 //     so a glance reads the same way the letter badges do.
-// Default sort is Score descending — the cost-adjusted figure, which groups the
-// rows by cost tier so every model is read against its own price band (a raw
-// AA Index sort puts seven cheap models on top and invites "is this flash model
-// really better than the frontier one?").
+// Two groupings, each under a header row per group (the "Group by" switch):
+//   Cost tier (the default: sorting by Score) — the best buy at your budget;
+//     each model is read against its own price band (a raw AA Index sort puts
+//     cheap models on top and invites "is this flash model really better than
+//     the frontier one?").
+//   Quality — ten-point AA Index bands, cheapest first: the cheapest way to
+//     reach each level.
+// Either way, a group with nothing on the frontier says what beats it: every
+// tier's Scores average zero however overpriced the whole tier is, and the
+// header is where that shows without a hover.
 // Cache-read price, tier name, pricing notes, "best for", and the benchmarks
 // the cron cited (mixed sources — evidence for the letters, not a scale) live
 // in the expanded row so they add no width. Fits a 1024px viewport.
@@ -42,9 +48,13 @@ import {
   CATEGORY_FIGURE,
   DERIVED_CATEGORIES,
   formatBench,
+  formatQualityBand,
   formatScore,
   GRID_COLUMN_BY_KEY,
   GRID_COLUMNS,
+  groupBeatenBy,
+  QUALITY_BAND_WIDTH,
+  qualityBand,
   type Band,
   type BenchColumn,
   type ScoreFit,
@@ -68,7 +78,7 @@ import {
 } from "@/lib/catalog-fields";
 import { HoverCard } from "./FloatingCard";
 import { GlossaryTerm } from "./GlossaryTerm";
-import { IndexCard, ScoreBreakdownCard } from "./ScoreCards";
+import { beatenSentence, IndexCard, ScoreBreakdownCard } from "./ScoreCards";
 
 const RATING_MEANING: Record<string, string> = Object.fromEntries(
   RATING_SCALE.map((r) => [r.rating, r.meaning]),
@@ -99,6 +109,8 @@ type SortKey =
   | "output_price_per_1m"
   | "aa_index"
   | "value"
+  // Not a column: the "Group by: Quality" switch (AA Index band, cheapest first).
+  | "quality"
   | Category
   | BenchKey;
 type SortDir = "asc" | "desc";
@@ -128,6 +140,12 @@ const STICKY_CELL =
   "sticky left-0 z-10 bg-white group-hover/row:bg-brand-slate-50 dark:bg-brand-slate-900 dark:group-hover/row:bg-brand-slate-800";
 const STICKY_HEAD = "sticky left-0 z-10 bg-brand-slate-50 dark:bg-brand-slate-800";
 
+// The header row that opens a group (a cost tier, a quality band).
+const GROUP_HEADER_CELL =
+  "bg-brand-slate-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-brand-slate-600 dark:bg-brand-slate-800/60 dark:text-brand-slate-300";
+const GROUP_HEADER_DETAIL =
+  "ml-2 font-normal normal-case tracking-normal text-brand-slate-500 dark:text-brand-slate-400";
+
 function nextDir(key: SortKey, active: SortKey, dir: SortDir): SortDir {
   if (key === active) return dir === "asc" ? "desc" : "asc";
   // New column: text sorts A→Z, everything numeric/ranked sorts best-first.
@@ -156,6 +174,9 @@ function valueFor(row: ModelRow, key: SortKey): number | string {
       // Sorted via compareNullable above; this branch is only reached by the
       // generic path, where a missing score must sort last.
       return row.value_score ?? Number.NEGATIVE_INFINITY;
+    case "quality":
+      // Sorted by its own branch in the comparator; here for completeness.
+      return qualityBand(row.aa_index) ?? -1;
     default:
       return RATING_RANK[row.tiers[key]];
   }
@@ -197,6 +218,15 @@ interface GroupStats {
   outHi: number;
   blendLo: number;
   blendHi: number;
+  // Set when no measured model in the group is on the frontier.
+  beaten: { measured: number; leaders: string[] } | null;
+}
+
+// The two groupings the table can show, and the key a row falls under.
+type Grouping = "tier" | "quality";
+
+function groupKey(m: ModelRow, grouping: Grouping): string {
+  return grouping === "tier" ? m.tier_cost : String(qualityBand(m.aa_index) ?? "none");
 }
 
 // Color the score by how far outside the fit's noise band it sits: beyond +σ
@@ -284,6 +314,20 @@ export function ModelCatalog({
         if (t !== 0) return t;
         return a.name.localeCompare(b.name);
       }
+      if (sortKey === "quality") {
+        // Grouped by AA Index band, best band first; within a band, cheapest
+        // (blended) first, the higher index breaking a price tie; unmeasured
+        // rows last, in their own group.
+        const band = compareNullable(qualityBand(a.aa_index), qualityBand(b.aa_index), -1);
+        if (band !== 0) return band;
+        const price =
+          blendedPrice(a.input_price_per_1m, a.output_price_per_1m) -
+          blendedPrice(b.input_price_per_1m, b.output_price_per_1m);
+        if (price !== 0) return price;
+        const index = compareNullable(a.aa_index, b.aa_index, -1);
+        if (index !== 0) return index;
+        return a.name.localeCompare(b.name);
+      }
       if (sortKey === "value") {
         // Grouped by cost tier (priciest tier first when descending), then by
         // score within the tier with unmeasured rows last in either direction.
@@ -310,27 +354,44 @@ export function ModelCatalog({
   const leaderOf = (m: ModelRow): ModelRow | null =>
     m.value_beaten_by ? (byId.get(m.value_beaten_by) ?? null) : null;
 
-  // What each cost-tier header says about the rows under it: how many, and
-  // their prices on both scales the page uses — output, which sets the tier,
-  // and blended, which the Score, the charts and the frontier use.
+  // Sorting by Score groups the rows by cost tier; the Quality switch groups
+  // them by AA Index band. Any other sort is a plain ranking.
+  const grouping: Grouping | null =
+    sortKey === "value" ? "tier" : sortKey === "quality" ? "quality" : null;
+
+  // What each group header says about the rows under it: how many, their
+  // prices on both scales the page uses (output, which sets the tier, and
+  // blended, which the Score, the charts and the frontier use), and whether
+  // anything in the group is on the frontier.
   const groupStats = useMemo(() => {
     const out = new Map<string, GroupStats>();
+    if (!grouping) return out;
+    const members = new Map<string, ModelRow[]>();
     for (const r of rows) {
-      const o = r.output_price_per_1m;
-      const b = blendedPrice(r.input_price_per_1m, r.output_price_per_1m);
-      const g = out.get(r.tier_cost);
-      if (!g) {
-        out.set(r.tier_cost, { count: 1, outLo: o, outHi: o, blendLo: b, blendHi: b });
-      } else {
-        g.count += 1;
-        g.outLo = Math.min(g.outLo, o);
-        g.outHi = Math.max(g.outHi, o);
-        g.blendLo = Math.min(g.blendLo, b);
-        g.blendHi = Math.max(g.blendHi, b);
-      }
+      const k = groupKey(r, grouping);
+      const list = members.get(k);
+      if (list) list.push(r);
+      else members.set(k, [r]);
+    }
+    for (const [k, list] of members) {
+      const outs = list.map((r) => r.output_price_per_1m);
+      const blends = list.map((r) => blendedPrice(r.input_price_per_1m, r.output_price_per_1m));
+      out.set(k, {
+        count: list.length,
+        outLo: Math.min(...outs),
+        outHi: Math.max(...outs),
+        blendLo: Math.min(...blends),
+        blendHi: Math.max(...blends),
+        beaten: groupBeatenBy(list),
+      });
     }
     return out;
-  }, [rows]);
+  }, [rows, grouping]);
+
+  function groupBy(next: Grouping) {
+    setSortKey(next === "tier" ? "value" : "quality");
+    setSortDir("desc");
+  }
 
   function toggleSort(key: SortKey) {
     setSortDir(nextDir(key, sortKey, sortDir));
@@ -429,6 +490,37 @@ export function ModelCatalog({
               ))}
             </select>
           </label>
+          <div className={LABEL_CLASS}>
+            <span id="group-by-label">Group by</span>
+            <div
+              role="group"
+              aria-labelledby="group-by-label"
+              className="inline-flex self-start rounded-md border border-brand-slate-300 bg-white p-0.5 shadow-sm dark:border-brand-slate-700 dark:bg-brand-slate-800"
+            >
+              {(
+                [
+                  ["tier", "Cost tier"],
+                  ["quality", "Quality"],
+                ] as const
+              ).map(([g, label]) => (
+                <button
+                  key={g}
+                  type="button"
+                  data-testid={`group-by-${g}`}
+                  aria-pressed={grouping === g}
+                  onClick={() => groupBy(g)}
+                  className={
+                    "rounded px-3 py-1.5 text-sm font-medium transition-colors " +
+                    (grouping === g
+                      ? "bg-brand-accent text-white"
+                      : "text-brand-slate-600 hover:text-brand-accent dark:text-brand-slate-300")
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* View toggle */}
@@ -471,10 +563,24 @@ export function ModelCatalog({
             column (green = top 20%, rose = bottom 20%)
           </>
         )}
-        . Sorted by Score by default, which groups the rows by cost tier; click a column header
-        to sort, a model name for its
-        docs, and the chevron for pricing detail, best-for notes, and the benchmarks the curation
-        cited. The{" "}
+        .{" "}
+        <span data-testid="grouping-note">
+          {grouping === "tier" ? (
+            <>
+              <strong className="font-semibold">Grouped by cost tier: the best buy at your budget.</strong>{" "}
+              Each Score is read against its own tier.
+            </>
+          ) : grouping === "quality" ? (
+            <>
+              <strong className="font-semibold">Grouped by quality: the cheapest way to each level.</strong>{" "}
+              Models in the same {QUALITY_BAND_WIDTH}-point AA Index band, cheapest (blended) first.
+            </>
+          ) : (
+            <>Sorted by the column you chose; Group by puts the header rows back.</>
+          )}
+        </span>{" "}
+        Click a column header to sort, a model name for its docs, and the chevron for pricing
+        detail, best-for notes, and the benchmarks the curation cited. The{" "}
         <a href="#how-to-read" className="text-brand-accent hover:underline">
           full key
         </a>{" "}
@@ -486,11 +592,12 @@ export function ModelCatalog({
         <p className="rounded-lg border border-emerald-500/40 bg-emerald-50/70 px-3 py-2 text-brand-slate-700 dark:bg-emerald-500/10 dark:text-brand-slate-200">
           <span aria-hidden className="mr-1.5 inline-block h-2.5 w-2.5 rounded-full border-2 border-emerald-500 align-middle" />
           <strong className="text-brand-slate-900 dark:text-brand-slate-50">
-            Cost/quality frontier, across every cost tier.
+            Cost/quality frontier: is anything cheaper and better, anywhere?
           </strong>{" "}
-          A green ring beside an AA Index means nothing in the catalog, in any tier, costs less and
-          scores higher. It is separate from the Score, which compares a model only with its own
-          tier. Hover an AA Index to see what beats it.
+          A green ring beside an AA Index means no: nothing in the catalog, in any tier, costs less
+          and scores higher. The Score can&rsquo;t tell you this. It compares a model only with its
+          own tier, so every tier&rsquo;s Scores average zero however overpriced the whole tier is;
+          a group with no ring says so in its header. Hover an AA Index to see what beats it.
         </p>
         <p className="rounded-lg border border-brand-slate-200 bg-brand-slate-50 px-3 py-2 text-brand-slate-700 dark:border-brand-slate-700 dark:bg-brand-slate-800/60 dark:text-brand-slate-200">
           <strong className="text-brand-slate-900 dark:text-brand-slate-50">
@@ -603,29 +710,62 @@ export function ModelCatalog({
                 const provider = modelProvider(m.id);
                 const isOpen = expanded.has(m.id);
                 const tier = COST_TIER_DEFS[m.tier_cost];
-                // Sorted by Score, a header row opens each cost-tier group.
-                const groupStart = sortKey === "value" && (i === 0 || rows[i - 1].tier_cost !== m.tier_cost);
+                // Grouped (by cost tier or by quality), a header row opens each group.
+                const key = grouping ? groupKey(m, grouping) : null;
+                const groupStart =
+                  grouping !== null && (i === 0 || groupKey(rows[i - 1], grouping) !== key);
+                const group = key !== null ? groupStats.get(key) : undefined;
                 const tierFit = scoreFit?.tiers[m.tier_cost];
-                const group = groupStats.get(m.tier_cost)!;
+                const band = qualityBand(m.aa_index);
+                const count = group ? `${group.count} ${group.count === 1 ? "model" : "models"}` : "";
+                const prices = group && (
+                  <>
+                    output {priceRange(group.outLo, group.outHi, formatPrice)} · blended{" "}
+                    {priceRange(group.blendLo, group.blendHi, formatBlended)} (3 input : 1 output)
+                    per 1M
+                  </>
+                );
+                const beatenNote = group?.beaten && (
+                  <span
+                    className="mt-0.5 block font-medium normal-case tracking-normal text-orange-700 dark:text-orange-300"
+                    data-testid="group-beaten"
+                  >
+                    {beatenSentence(group.beaten, byId)} Hover an AA Index for the figures.
+                  </span>
+                );
                 return (
                   <Fragment key={m.id}>
-                    {groupStart && (
+                    {groupStart && group && grouping === "tier" && (
                       <tr data-testid="score-group" data-tier={m.tier_cost}>
-                        <td
-                          colSpan={colSpan}
-                          className="bg-brand-slate-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-brand-slate-600 dark:bg-brand-slate-800/60 dark:text-brand-slate-300"
-                        >
+                        <td colSpan={colSpan} className={GROUP_HEADER_CELL}>
                           <span className={"mr-1.5 inline-block h-2 w-2 rounded-full align-middle " + COST_TIER_DOT[m.tier_cost]} />
-                          {tier.label} cost · {group.count} {group.count === 1 ? "model" : "models"}
-                          <span
-                            className="ml-2 font-normal normal-case tracking-normal text-brand-slate-500 dark:text-brand-slate-400"
-                            data-testid="score-group-prices"
-                          >
-                            output {priceRange(group.outLo, group.outHi, formatPrice)} · blended{" "}
-                            {priceRange(group.blendLo, group.blendHi, formatBlended)} (3 input : 1
-                            output) per 1M
+                          {tier.label} cost · {count}
+                          <span className={GROUP_HEADER_DETAIL} data-testid="score-group-prices">
+                            {prices}
                             {tierFit && <> · Score is vs. this tier&rsquo;s own price line</>}
                           </span>
+                          {beatenNote}
+                        </td>
+                      </tr>
+                    )}
+                    {groupStart && group && grouping === "quality" && (
+                      <tr data-testid="quality-group" data-band={band === null ? "none" : String(band)}>
+                        <td colSpan={colSpan} className={GROUP_HEADER_CELL}>
+                          {band === null ? (
+                            <>Not measured · {count}</>
+                          ) : (
+                            <>AA Index {formatQualityBand(band)} · {count}</>
+                          )}
+                          <span className={GROUP_HEADER_DETAIL} data-testid="quality-group-prices">
+                            {band === null ? (
+                              <>No AA Index yet, so no quality band</>
+                            ) : (
+                              <>
+                                {prices} · cheapest first
+                              </>
+                            )}
+                          </span>
+                          {beatenNote}
                         </td>
                       </tr>
                     )}
@@ -957,7 +1097,7 @@ function SortHeader({
   className = "",
   detail,
 }: {
-  field: Exclude<SortKey, Category | BenchKey>;
+  field: Exclude<SortKey, Category | BenchKey | "quality">;
   sortKey: SortKey;
   dir: SortDir;
   onSort: (k: SortKey) => void;
