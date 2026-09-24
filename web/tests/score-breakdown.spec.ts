@@ -18,6 +18,8 @@ import {
   expectedIndex,
   fitScoreModel,
   formatScore,
+  frontierLeaders,
+  paretoFrontier,
   priceTicks,
   scoreBreakdown,
   scoreFor,
@@ -103,6 +105,23 @@ test("price ticks: round values inside the range, enough of them for a narrow ti
     for (const v of priceTicks(lo, hi)) {
       expect(v).toBeGreaterThanOrEqual(lo * 0.999);
       expect(v).toBeLessThanOrEqual(hi * 1.001);
+    }
+  }
+});
+
+test("frontier leaders: a model leads itself exactly when it is on the Pareto frontier", () => {
+  const pts = catalog.models.map((m) => ({ id: m.id, price: priceOf(m), index: aaIndexFor(m) }));
+  const leaders = frontierLeaders(pts);
+  const frontier = paretoFrontier(pts);
+  expect(leaders.size).toBe(pts.filter((p) => p.index !== null).length);
+  for (const [p, lead] of leaders) {
+    expect(lead === p).toBe(frontier.has(p));
+    // The leader costs no more and scores no less…
+    expect(lead.price).toBeLessThanOrEqual(p.price);
+    expect(lead.index!).toBeGreaterThanOrEqual(p.index!);
+    // …and nothing at or below this model's price scores higher than it.
+    for (const o of pts) {
+      if (o.index !== null && o.price <= p.price) expect(o.index).toBeLessThanOrEqual(lead.index!);
     }
   }
 });

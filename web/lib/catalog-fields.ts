@@ -53,9 +53,14 @@ export interface ModelRow {
   // this model's price WITHIN ITS COST TIER (pooled slope, per-tier intercept),
   // in index points; null when AA has not measured it. See fitScoreModel().
   value_score: number | null;
-  // On the cost/quality Pareto frontier: no catalog model is both cheaper
-  // (output price) and higher on the AA Index. See paretoFrontier().
+  // On the cost/quality Pareto frontier: no catalog model, in any cost tier,
+  // is both cheaper (blended price) and higher on the AA Index. See
+  // frontierLeaders().
   value_frontier: boolean;
+  // Off the frontier: the id of the model that beats this one outright, the
+  // highest AA Index at this model's blended price or less. Null on the
+  // frontier and for an unmeasured model.
+  value_beaten_by: string | null;
 }
 
 export interface FieldDef {
@@ -172,7 +177,7 @@ export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
     label: "Output",
     fullName: "Output price (USD per 1M tokens)",
     definition:
-      "Cost of 1M generated tokens — the dominant cost driver for code, plans, and long answers. The dot beside it is the cost tier: Low < $10, Medium $10–14.99, High $15–24.99, Very High ≥ $25.",
+      "Cost of 1M generated tokens — the dominant cost driver for code, plans, and long answers. The dot beside it is the cost tier: Low < $10, Medium $10–14.99, High $15–24.99, Very High ≥ $25. The Score, the charts and the frontier use one blended price per model instead, (3 × input + 1 × output) ÷ 4, which sits between the input and the output price.",
   },
   cache_read_per_1m: {
     label: "Cache",
@@ -191,14 +196,14 @@ export const FIELD_DEFS: Record<FieldKey, FieldDef> = {
     label: "AA Index",
     fullName: "Artificial Analysis Intelligence Index",
     definition:
-      "The one published composite number: Artificial Analysis's index over its evaluation suite, independently measured on a 0–100 scale. The closest thing to a single numeric rating — use it to separate models that share a letter. '—' means AA has not measured the model. Index versions are not comparable with each other; the snapshot this page carries is named below.",
+      "The one published composite number: Artificial Analysis's index over its evaluation suite, independently measured on a 0–100 scale. The closest thing to a single numeric rating — use it to separate models that share a letter. '—' means AA has not measured the model. Index versions are not comparable with each other; the snapshot this page carries is named below. A green ring beside the figure marks the cost/quality frontier: no model in any cost tier costs less (blended price) and scores higher. Hover a figure to see what beats it.",
     url: "https://artificialanalysis.ai/",
   },
   value: {
     label: "Score",
     fullName: "Score (cost-adjusted intelligence within the cost tier)",
     definition:
-      "AA Intelligence Index minus the index a model's price predicts among models in its own cost tier, in index points. The prediction is a least-squares fit of index against log10(blended price — 3 input : 1 output tokens) over every AA-measured model, with one pooled price slope and a separate baseline per cost tier, so the cost weight is estimated from the market rather than chosen and each tier is centred on its own peers. +10 means ten more index points than a same-tier model at that price typically delivers; negative means less. Sorting by Score groups the table by cost tier. Treat two models within about σ (shown below) of each other as a tie. A dot marks the cost/quality frontier: no catalog model is both cheaper and higher on the index.",
+      "AA Intelligence Index minus the index a model's price predicts among models in its own cost tier, in index points. The prediction is a least-squares fit of index against log10(blended price — 3 input : 1 output tokens) over every AA-measured model, with one pooled price slope and a separate baseline per cost tier, so the cost weight is estimated from the market rather than chosen and each tier is centred on its own peers. +10 means ten more index points than a same-tier model at that price typically delivers; negative means less. Sorting by Score groups the table by cost tier. Treat two models within about σ (shown below) of each other as a tie. The Score never compares across tiers; the green ring beside the AA Index does (the cost/quality frontier).",
     url: "https://artificialanalysis.ai/",
   },
   benchmarks: {
