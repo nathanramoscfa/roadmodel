@@ -62,6 +62,8 @@ update/.cache/
 # Hand-authored fixtures (cost_catalog.json) are whitelisted below.
 tests/fixtures/*.json
 !tests/fixtures/cost_catalog.json
+# The frozen catalog the scenario tests run against (tests/test_backup_guard.py).
+!tests/fixtures/catalog-frozen.json
 
 # Local user-specific selector config (real subscription values, API-key state).
 # The committed template is docs/user-context.example.md — copy it to

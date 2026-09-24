@@ -74,6 +74,8 @@ function aaIndexFor(m: ScoredModel): number | null {
 }
 
 const WITH_AA = scored.find((m) => aaIndexFor(m) !== null)!;
+// An Anthropic model from today's catalog, for tests that need one by maker.
+const ANTHROPIC_MODEL = catalog.models.find((m) => /^(claude-|opus-|sonnet-|haiku-)/.test(m.id))!;
 const WITHOUT_ANY = scored.find((m) => aaIndexFor(m) === null)!;
 const AA_VALUE = String(aaIndexFor(WITH_AA));
 
@@ -126,10 +128,13 @@ test("renders the catalog table, legend, and model links", async ({ page }) => {
   // Every catalog model renders as a row.
   await expect(page.getByTestId("model-row")).toHaveCount(MODEL_COUNT);
 
-  // Model names link to their provider's docs in a new tab.
-  const fable = page.getByRole("link", { name: /^Fable 5$/ });
-  await expect(fable).toHaveAttribute("href", /docs\.claude\.com/);
-  await expect(fable).toHaveAttribute("target", "_blank");
+  // Model names link to their provider's docs in a new tab. Any Anthropic
+  // model the catalog carries today (models retire as newer ones supersede them).
+  const claude = page
+    .locator(`[data-testid="model-row"][data-model-id="${ANTHROPIC_MODEL.id}"]`)
+    .getByRole("link", { name: ANTHROPIC_MODEL.name, exact: true });
+  await expect(claude).toHaveAttribute("href", /docs\.claude\.com/);
+  await expect(claude).toHaveAttribute("target", "_blank");
 });
 
 test("the page leads with the table, then the Score charts, the frontier chart, then the full key", async ({ page }) => {
@@ -376,8 +381,9 @@ test("derived letters match the published bands; unmeasured letters are marked e
   let editorialSeen = 0;
   for (let i = 0; i < n; i += 1) {
     const r = rows.nth(i);
-    const name = (await r.locator("td").nth(1).innerText()).trim();
-    const model = catalog.models.find((m) => m.name === name)!;
+    // The row's id, not the name cell's text (which can carry a superseded tag).
+    const id = await r.getAttribute("data-model-id");
+    const model = catalog.models.find((m) => m.id === id)!;
     const hle = benchmarks.models[model.id]?.evaluations.hle;
     const cell = r.locator("td").nth(KNOWLEDGE_TD).getByTestId("rating-cell");
     if (typeof hle === "number") {
@@ -393,7 +399,13 @@ test("derived letters match the published bands; unmeasured letters are marked e
     // Planning is never derived.
     await expect(r.locator("td").nth(CODING_TD + 1).getByTestId("rating-cell")).toHaveAttribute("data-basis", "editorial");
   }
-  expect(derivedSeen).toBeGreaterThan(30);
+  // Every measured model's letter is derived: as many as the catalog measures
+  // on HLE (the count moves as models arrive and retire).
+  const measuredOnHle = catalog.models.filter(
+    (m) => typeof benchmarks.models[m.id]?.evaluations.hle === "number",
+  ).length;
+  expect(derivedSeen).toBe(measuredOnHle);
+  expect(derivedSeen).toBeGreaterThan(0);
   expect(editorialSeen).toBeGreaterThan(0);
 });
 
@@ -614,6 +626,27 @@ test("the frontier chart plots every measured model and joins the frontier with 
   await expect(card.getByTestId("frontier-step-card")).toContainText(spot!.holder);
 });
 
+test("a superseded model is tagged with its successor and the day it leaves", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/models");
+  const superseded = (catalog.models as (CatalogModel & {
+    superseded_by?: string | null;
+    retires_on?: string | null;
+  })[]).filter((m) => m.superseded_by);
+  await expect(page.getByTestId("superseded-tag")).toHaveCount(superseded.length);
+  if (superseded.length === 0) return;
+  const m = superseded[0];
+  const successor = catalog.models.find((x) => x.id === m.superseded_by)!;
+  const tag = page.locator(`[data-testid="model-row"][data-model-id="${m.id}"] [data-testid="superseded-tag"]`);
+  await expect(tag).toHaveAttribute("data-superseded-by", successor.id);
+  await expect(tag).toContainText(`Superseded by ${successor.name}`);
+  await expect(tag).toContainText("leaves");
+  await tag.getByTestId("superseded-trigger").hover();
+  const card = page.getByTestId("superseded-card");
+  await expect(card).toContainText(`Superseded by ${successor.name}.`);
+  await expect(card).toContainText(`leaves the catalog on ${m.retires_on}`);
+});
+
 test("the expanded row carries the cited (mixed-source) benchmarks and pricing detail", async ({ page }) => {
   await page.goto("/models");
 
@@ -652,8 +685,8 @@ test("the cost tier is a dot beside the output price, not a column", async ({ pa
 test("the provider column and filter follow the model id", async ({ page }) => {
   await page.goto("/models");
 
-  const fable = page.getByTestId("model-row").filter({ hasText: /Fable 5/ }).first();
-  await expect(fable).toContainText("Anthropic");
+  const claude = page.locator(`[data-testid="model-row"][data-model-id="${ANTHROPIC_MODEL.id}"]`);
+  await expect(claude).toContainText("Anthropic");
 
   await page.getByLabel("Filter by provider").selectOption("Anthropic");
   const rows = page.getByTestId("model-row");
@@ -755,7 +788,9 @@ test("hovering a chart dot shows its model, Score, AA Index and prices; the line
     })),
   )!;
   // The charts draw once they have measured their width (after hydration).
-  await expect(page.getByTestId("score-chart-point")).toHaveCount(fit.n);
+  // A tier with a single measured model has no chart (no line to fit).
+  const charted = Object.values(fit.tiers).reduce((sum, t) => sum + (t.n >= 2 ? t.n : 0), 0);
+  await expect(page.getByTestId("score-chart-point")).toHaveCount(charted);
   // A dot no other dot overlaps, so the pointer lands on it and nothing else.
   const centres = await page.getByTestId("score-chart-point").evaluateAll((els) =>
     els.map((el) => {

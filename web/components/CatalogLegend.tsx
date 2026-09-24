@@ -181,6 +181,13 @@ export function CatalogLegend({ id }: { id?: string }) {
             its blended range, which the Score is fitted on. Cache-read and blended prices and the
             provider&rsquo;s pricing notes are in the expanded row.
           </p>
+          <p className="mt-3 text-xs text-brand-slate-500 dark:text-brand-slate-400" data-testid="legend-superseded">
+            <strong className="text-brand-slate-700 dark:text-brand-slate-200">Superseded</strong>{" "}
+            marks a model whose newer sibling, from the same maker, costs the same or less, scores
+            higher on the AA Index, rates at least as high in every category, and runs on every
+            platform that offers it. The tag names that successor and the day the model leaves the
+            catalog, 30 days after it was first superseded.
+          </p>
         </div>
 
         {/* Jurisdictions */}

@@ -210,6 +210,44 @@ def _strip_ide_framing(selector_text: str) -> str:
     return selector_text
 
 
+# The catalog's lifecycle tags (update/supersede.py). A model tagged
+# superseded-by is one a newer model from the same maker beats on every count:
+# it costs the same or less, scores higher on the AA Intelligence Index, rates
+# at least as high in every category, and is offered on every platform that
+# offers this one. It can only ever be the worse pick, so the engine never sees
+# it while its successor is available; when the successor is benched at
+# runtime, the superseded model stays in as the fallback. A retired model
+# (retired-on) is always left out. Each dropped element also saves its tokens
+# on every call.
+_MODEL_ELEMENT_RE: Final = re.compile(
+    r'[ \t]*<model\s+((?:[^"]|"(?:[^"\\]|\\.)*")*?)\s*/>\n?', re.DOTALL
+)
+_ELEMENT_ATTR_RE: Final = re.compile(r'([\w-]+)="((?:[^"\\]|\\.)*)"', re.DOTALL)
+_SUPPORTS_MODELS_RE: Final = re.compile(r'(supports-models=")([^"]*)(")')
+
+
+def _drop_superseded(selector_text: str, unavailable_models: list[str] | None) -> str:
+    benched = {m.strip() for m in (unavailable_models or []) if m.strip()}
+    drop: set[str] = set()
+    for element in _MODEL_ELEMENT_RE.finditer(selector_text):
+        attrs = dict(_ELEMENT_ATTR_RE.findall(element.group(1)))
+        mid = attrs.get("id", "")
+        successor = attrs.get("superseded-by", "")
+        if mid and (attrs.get("retired-on") or (successor and successor not in benched)):
+            drop.add(mid)
+    if not drop:
+        return selector_text
+
+    def _element(m: re.Match[str]) -> str:
+        return "" if dict(_ELEMENT_ATTR_RE.findall(m.group(1))).get("id") in drop else m.group(0)
+
+    def _supports(m: re.Match[str]) -> str:
+        kept = [x.strip() for x in m.group(2).split(",") if x.strip() and x.strip() not in drop]
+        return m.group(1) + ",".join(kept) + m.group(3)
+
+    return _SUPPORTS_MODELS_RE.sub(_supports, _MODEL_ELEMENT_RE.sub(_element, selector_text))
+
+
 # Phase 4.10: the `local` funding class. Shared by both headers so a Cost-priority
 # prompt can reach a locally-pulled model — without it the FLAT-FUNDING bullet
 # above opens the gate on a Max-funded Claude candidate and the rule buried in
@@ -479,8 +517,9 @@ def build_prompt(
     availability_authoritative: bool = False,
     ladder: bool = False,
 ) -> tuple[str, str]:
-    selector_text = _strip_ide_framing(
-        _read_bundled_doc(BUNDLED_SELECTOR_PATH, "model-selector.txt")
+    selector_text = _drop_superseded(
+        _strip_ide_framing(_read_bundled_doc(BUNDLED_SELECTOR_PATH, "model-selector.txt")),
+        unavailable_models,
     )
     tier_cost_text = _read_bundled_doc(BUNDLED_TIER_COST_PATH, "model-tier-cost-scale.md")
     _ = _read_bundled_doc(BUNDLED_USER_CONTEXT_TEMPLATE_PATH, "user-context.example.md")

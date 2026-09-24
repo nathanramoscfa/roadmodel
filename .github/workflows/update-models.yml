@@ -215,6 +215,9 @@ jobs:
           # so any Opus edit to them is reverted here and the coding S-tier
           # enumeration is regenerated. The report rides in the PR body.
           python update/derive_ratings.py --write
+          # Lifecycle tags: re-apply the supersession rule, restoring any tag
+          # (and its date) the curation pass dropped from the committed file.
+          python update/supersede.py --write --base /tmp/base-selector.txt
           python update/render_md.py
 
       - name: Rebuild docs/catalog.json (deterministic)

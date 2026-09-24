@@ -22,7 +22,7 @@ import json
 import os
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -51,6 +51,9 @@ CATALOG_PATH = DOCS_DIR / "catalog.json"
 # `output_contract_version` key (v2 of the emission contract). Consumers that
 # pin the schema version must be updated in the same change.
 SCHEMA_VERSION = "3"
+
+# Days a superseded model stays before it retires (update/supersede.py).
+RETIRE_AFTER_DAYS = 30
 
 TASK_CATEGORIES = (
     "coding",
@@ -175,6 +178,11 @@ def _parse_models(selector_text: str) -> list[dict[str, Any]]:
                     "headline_benchmarks": attrs.get("headline-benchmarks", ""),
                     "pricing_notes": attrs.get("pricing-notes", ""),
                     "best_for": attrs.get("best-for", ""),
+                    # The lifecycle tags update/supersede.py writes: the model
+                    # a newer same-maker model beats on every count, and when.
+                    "superseded_by": attrs.get("superseded-by") or None,
+                    "superseded_on": attrs.get("superseded-on") or None,
+                    "retired_on": attrs.get("retired-on") or None,
                 }
             )
     assert_no_element_lost(options_match.group(1), matched, MODEL_OPEN_RE, "<model-options>")
@@ -377,10 +385,28 @@ def build_catalog() -> dict[str, Any]:
     cost_scale_text = COST_SCALE_PATH.read_text()
 
     models = _parse_models(selector_text)
+    # A retired model (update/supersede.py) keeps its element in the selector as
+    # the record of what replaced it, but leaves the catalog: the website, the
+    # MCP catalog and every consumer of this file stop seeing it.
+    retired = {m["id"] for m in models if m["retired_on"]}
+    models = [
+        {k: v for k, v in m.items() if k != "retired_on"} for m in models if m["id"] not in retired
+    ]
+    # The day a superseded model leaves the catalog, if it is still superseded
+    # then (update/supersede.py owns the rule and the delay).
+    for m in models:
+        since = m["superseded_on"]
+        m["retires_on"] = (
+            (date.fromisoformat(since) + timedelta(days=RETIRE_AFTER_DAYS)).isoformat()
+            if since
+            else None
+        )
     _attach_cache_read(models, cost_scale_text)
     models.sort(key=lambda m: m["id"])
 
     access_methods = _parse_access_methods(selector_text)
+    for method in access_methods:
+        method["supports_models"] = [x for x in method["supports_models"] if x not in retired]
     access_methods.sort(key=lambda m: m["id"])
 
     max_mode_rules = _parse_max_mode_rules(selector_text, models)
