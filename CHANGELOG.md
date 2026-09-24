@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **/models draws the cost/quality frontier across every model.** A new
+  chart sits below the per-tier Score charts. It plots every model with an
+  AA Index at its blended price and score. The frontier models are green and
+  joined by a dotted green line that steps up at each one, so the line's
+  height at any price is the top AA Index that price buys. Behind it, the
+  Score's four tier lines appear in grey for comparison. Hovering a dot
+  shows the top score at that model's price; hovering the line shows the
+  top score at that price.
+- **Every explanation of the frontier says what it is.** A green ring marks
+  a model that scores higher on the AA Index than every other model at its
+  price or less. The cards name the top score at a model's price, and group
+  headers name the top score at the group's prices.
+
 - **/models can group by quality as well as by cost tier.** A new Group by
   switch sits beside the filters. Cost tier stays the default and answers
   "what's the best buy at my budget?". Quality groups the table into

@@ -75,17 +75,15 @@ export function CatalogLegend({ id }: { id?: string }) {
                 aria-hidden
                 className="mr-2 inline-block h-3 w-3 rounded-full border-2 border-emerald-500 align-middle"
               />
-              Cost/quality frontier: is anything cheaper and better, anywhere?
+              Cost/quality frontier: the top score at every price
             </p>
             <p className="mt-1">
-              A green ring beside an AA Index means <strong>no model in the whole catalog costs
-              less (blended price) and scores higher</strong>. It is not a best-in-tier award, and
-              it is separate from the Score: a model can top its own tier and still lose the ring to
-              a cheaper model from another tier, and a modest model can hold it by being the
-              cheapest at its level. <strong>Every tier&rsquo;s Scores average zero, however
-              overpriced the whole tier is</strong>, so a tier can have no ring at all; when it
-              does, its header and its chart name the model that beats it. Hover any AA Index for
-              the figures.
+              A green ring marks a model that <strong>scores higher on the AA Index than every
+              other model at its price or less</strong> (blended price). Lined up from cheapest to
+              priciest, the ringed models trace the frontier: the top score each budget buys,
+              drawn as a line in the frontier chart. The ring compares every model in the catalog;
+              the Score compares a model with its own cost tier. Hover any AA Index for the top
+              score at its price.
             </p>
           </div>
           <div
@@ -137,7 +135,8 @@ export function CatalogLegend({ id }: { id?: string }) {
             your budget. <strong>Group by &rarr; Quality</strong> regroups it into{" "}
             {QUALITY_BAND_WIDTH}-point AA Index bands, cheapest first: the cheapest way to each
             level. The header shows the fit&rsquo;s n, R&sup2; and residual σ; gaps smaller than σ
-            are ties. The Score never looks across tiers; the frontier ring (above) does.
+            are ties. The Score compares a model with its own tier; the frontier ring (above) compares the
+            whole catalog.
           </p>
         </div>
 
