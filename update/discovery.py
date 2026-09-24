@@ -35,6 +35,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from selector_re import MODEL_RE  # noqa: E402
+
 UPDATE_DIR = Path(__file__).resolve().parent
 REPO_ROOT = UPDATE_DIR.parent
 SELECTOR_PATH = REPO_ROOT / "docs" / "model-selector.txt"
@@ -45,7 +50,8 @@ DECLINED_LINE_RE = re.compile(
     r"^- (?P<provider>[a-z0-9.-]+)/(?P<slug>\S(?:.*?\S)?) — (?P<reason>.+?) "
     r"\(declined (?P<date>\d{4}-\d{2}-\d{2})\)\s*$"
 )
-_MODEL_TAG_RE = re.compile(r"<model\s+[^>]*?\bid=\"([^\"]+)\"[^>]*?\bname=\"([^\"]+)\"", re.S)
+# Attribute name="value" pairs; values may embed escaped quotes (selector_re).
+_ATTR_RE = re.compile(r'([\w-]+)="((?:[^"\\]|\\.)*)"', re.S)
 # A maker prefix a provider's page puts on a name the catalog drops ("Claude
 # Mythos 5" is catalogued as "Mythos 5" or "claude-mythos-5").
 _MAKER_PREFIXES = ("claude-", "anthropic-", "openai-", "google-", "xai-")
@@ -68,11 +74,15 @@ def _variants(name: str) -> set[str]:
 
 
 def catalog_keys(selector_text: str) -> set[str]:
-    """Every ``<model>`` id and name in the selector, normalized."""
+    """Every ``<model>`` id and name in the selector, normalized. Elements are
+    matched quote-aware (``selector_re.MODEL_RE``): the prose in a model's
+    attributes can contain ``>``."""
     keys: set[str] = set()
-    for mid, name in _MODEL_TAG_RE.findall(selector_text):
-        keys.add(normalize(mid))
-        keys.add(normalize(name))
+    for body in MODEL_RE.findall(selector_text):
+        attrs = dict(_ATTR_RE.findall(body))
+        for field in ("id", "name"):
+            if attrs.get(field):
+                keys.add(normalize(attrs[field]))
     return keys
 
 
