@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.41] — 2026-09-23
+
 ### Changed
 
 - **Every Settings table names its backup.** A phase roadmap step's
