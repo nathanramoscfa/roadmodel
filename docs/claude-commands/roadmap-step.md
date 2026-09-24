@@ -142,6 +142,14 @@ clean, up-to-date `main` is your first tool call. Treat every
 as binding. Do not read ahead into other steps except where the task
 block tells you to.
 
+If the only uncommitted edits to tracked files are under `planning/`,
+they are roadmodel's kit, re-exported by the daily updater. Carry them
+onto the branch and commit them first, on their own, as
+`chore(planning): refresh the roadmodel kit to <version>`
+(`roadmodel --version`), so no separate kit PR is needed. Kit files the
+repo does not track stay untracked. An uncommitted edit to any other
+tracked file: stop and report it.
+
 At Stage 3, right after `gh pr create` returns the PR number: set this
 step's `**Status:**` line (directly under its heading) to
 `Complete — PR #<n> (<today, YYYY-MM-DD>)`, append ` ✅` to its
