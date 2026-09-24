@@ -104,6 +104,13 @@ would then reject.
   Google, xAI, DeepSeek, z.ai, Mistral, Groq) do NOT update `input-price-per-1m` /
   `output-price-per-1m` — preserve them verbatim; only the tier-group move (driven
   by the preserved Output price) may still apply.
+- **Lifecycle tags are not yours to edit.** Some `<model>` elements carry
+  `superseded-by`, `superseded-on` and `retired-on`. `update/supersede.py`
+  writes them after your pass, from prices, the Artificial Analysis index and
+  the ratings: a newer model from the same maker beats the tagged one on
+  every count. Copy those attributes verbatim; never add, change or remove
+  them. Leave a model that carries `retired-on` exactly as it is: it stays
+  in the file as a record and is no longer in the catalog.
 - **`<model-options>` is comprehensive, not hand-curated.** If a model
   appears in `model-tier-cost-scale.md`'s price tables but NOT in
   `<model-options>` of `model-selector.txt`, ADD it to `<model-options>`

@@ -233,6 +233,36 @@ export function FrontierStepCard({ atPrice, model: m }: { atPrice: number; model
   );
 }
 
+// A superseded model's card: what its successor, from the same maker, beats it
+// on, and the day it leaves the catalog (update/supersede.py).
+export function SupersededCard({ model: m, successor }: { model: ModelRow; successor: ModelRow | null }) {
+  const name = successor?.name ?? m.superseded_by ?? "";
+  const price = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
+  const successorPrice = successor
+    ? blendedPrice(successor.input_price_per_1m, successor.output_price_per_1m)
+    : null;
+  return (
+    <div className="w-[20rem] max-w-full" data-testid="superseded-card-body">
+      <CardHeader name={m.name} tier={m.tier_cost} />
+      <p className={"mt-2 text-xs leading-[1.125rem] " + STRONG}>
+        <span className="font-semibold">Superseded by {name}.</span> {name}, from the same
+        maker, costs the same or less, scores higher on the AA Index, rates at least as high in
+        every category, and runs on every platform that offers {m.name}.
+      </p>
+      {successor && successor.aa_index !== null && m.aa_index !== null && successorPrice !== null && (
+        <div className="mt-2 space-y-0.5 text-xs">
+          <Row label="AA Index" value={`${num(successor.aa_index)} vs ${num(m.aa_index)}`} valueClass={STRONG} />
+          <Row label="Blended price" value={`${usd(successorPrice)} vs ${usd(price)}`} valueClass={STRONG} />
+        </div>
+      )}
+      <p className={"mt-2 text-xs leading-[1.125rem] " + MUTED}>
+        The recommender considers {name} in its place.
+        {m.retires_on ? ` ${m.name} leaves the catalog on ${m.retires_on}.` : ""}
+      </p>
+    </div>
+  );
+}
+
 // The AA Index cell's card: the figure, where it came from, and the frontier.
 export function IndexCard({
   model: m,

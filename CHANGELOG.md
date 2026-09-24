@@ -7,34 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- **The roadmap-writing commands set their own effort.** `/roadmap-phase`
-  runs at `xhigh` and `/roadmap-project` at `max` in Claude Code, from an
-  `effort:` line in each command's frontmatter, so writing a roadmap no
-  longer depends on the operator typing `/effort` first. A roadmap is
-  written once per phase and shapes every step in it; the extra rung costs
-  little. The ports for Codex, Gemini, Antigravity, Cursor and OpenCode
-  carry only the description, as before.
-
-### Fixed
-
-- **The catalog cron adds the models it discovers on providers' own pricing
-  pages.** The extractors have flagged models that Cursor never lists
-  (`unexpected_slugs`) since #650, and the curation prompt told the model to
-  add or decline each one. But the model's input never included the snapshots,
-  so GPT-6 Astra, Sol and Luna, Claude Mythos 5 and 5.1, and seven others
-  stayed flagged while every run reported the catalog complete. Now:
-  - `update/discovery.py` hands the curation model a `<provider_discovery>`
-    block with each such model and its provider-page price.
-  - A decline is a line in the new "Declined Models (discovery lane)" section
-    of `docs/model-tier-cost-scale.md`, which the cron restores if the
-    regenerated file drops it.
-  - A model the run neither adds nor declines gets a tracking issue.
-  - The OpenAI and Anthropic extractors record each flagged model's price
-    (`discovered`), and the conformance gate checks it.
-
 ### Added
+
+- **The catalog retires models that a newer sibling beats on every count.**
+  A model is superseded when another model from the same maker meets all of
+  these:
+  - it costs the same or less (blended price);
+  - it scores higher on the AA Intelligence Index;
+  - it rates at least as high in all seven categories;
+  - it runs on every platform that offers the older model.
+
+  What happens:
+  - `update/supersede.py` tags a superseded model with `superseded-by` and
+    `superseded-on`. The benchmarks cron and the catalog cron run it daily.
+  - The recommender leaves the model out of its candidates while its
+    successor is available.
+  - /models shows "Superseded by X · leaves <date>".
+  - 30 days on it is retired. It leaves `docs/catalog.json`, and with it the
+    website and the MCP catalog, but stays in `model-selector.txt` as the
+    record.
+
+  Today 21 of 50 models are superseded, including Opus 4.7, 4.8 and 5 (by
+  Opus 5.5), and ten GPT-5.x models (by GPT-5.6 Sol, Terra and Luna). The
+  scenario tests that name specific models run against a frozen catalog
+  (`tests/fixtures/catalog-frozen.json`), so retirements cannot strand the
+  cron's PR.
 
 - **/models draws the cost/quality frontier across every model.** A new
   chart sits below the per-tier Score charts. It plots every model with an
@@ -62,6 +59,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The roadmap-writing commands set their own effort.** `/roadmap-phase`
+  runs at `xhigh` and `/roadmap-project` at `max` in Claude Code, from an
+  `effort:` line in each command's frontmatter, so writing a roadmap no
+  longer depends on the operator typing `/effort` first. A roadmap is
+  written once per phase and shapes every step in it; the extra rung costs
+  little. The ports for Codex, Gemini, Antigravity, Cursor and OpenCode
+  carry only the description, as before.
+
 - **/models leads with the catalog, and says what its frontier mark and its
   prices mean.** The table now comes first, then the per-tier Score charts,
   then the full key, which the table links to. The cost/quality frontier is
@@ -71,6 +76,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   tier that beats it. Each cost-tier header gives both its output and its
   blended price range, and a key above the table defines the frontier and
   the blended price, (3 × input + 1 × output) ÷ 4.
+
+### Fixed
+
+- **The catalog cron adds the models it discovers on providers' own pricing
+  pages.** The extractors have flagged models that Cursor never lists
+  (`unexpected_slugs`) since #650, and the curation prompt told the model to
+  add or decline each one. But the model's input never included the snapshots,
+  so GPT-6 Astra, Sol and Luna, Claude Mythos 5 and 5.1, and seven others
+  stayed flagged while every run reported the catalog complete. Now:
+  - `update/discovery.py` hands the curation model a `<provider_discovery>`
+    block with each such model and its provider-page price.
+  - A decline is a line in the new "Declined Models (discovery lane)" section
+    of `docs/model-tier-cost-scale.md`, which the cron restores if the
+    regenerated file drops it.
+  - A model the run neither adds nor declines gets a tracking issue.
+  - The OpenAI and Anthropic extractors record each flagged model's price
+    (`discovered`), and the conformance gate checks it.
 
 ## [0.2.41] — 2026-09-23
 

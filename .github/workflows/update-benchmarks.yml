@@ -84,6 +84,9 @@ jobs:
         run: |
           set -euo pipefail
           python update/derive_ratings.py --write
+          # The lifecycle rule (update/supersede.py): tag models a newer
+          # same-maker model beats on every count, retire them 30 days on.
+          python update/supersede.py --write | tee /tmp/supersede.out
           python update/render_md.py
           python update/build_catalog.py
           python update/derive_ratings.py --check
@@ -129,6 +132,9 @@ jobs:
           )"
           if grep -q '^| ' update/.last-ratings-report.md 2>/dev/null; then
             notes="${notes}$(printf '\n\n')$(cat update/.last-ratings-report.md)"
+          fi
+          if [ -s /tmp/supersede.out ]; then
+            notes="${notes}$(printf '\n\n### Catalog lifecycle (update/supersede.py)\n\n')$(sed 's/^/- /' /tmp/supersede.out)"
           fi
           git add docs/benchmarks.json docs/model-selector.txt docs/model-selector.md docs/catalog.json update/aa-model-map.json
           git commit -m "Automated benchmark refresh: ${DATE}" -m "${notes}"
