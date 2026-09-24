@@ -222,6 +222,30 @@ def discover_unmapped(md: str) -> list[str]:
     return sorted(found)
 
 
+def discovered_prices(md: str, names: list[str]) -> list[dict[str, object]]:
+    """Each flagged row with the price the standard pane quotes for it (the
+    short-context input and output columns ``parse_pricing`` reads), so the
+    catalog cron can add it at the provider's own price without searching for
+    it. A row whose cells do not parse is listed without a price."""
+    span = _standard_rows_blob(md)
+    wanted = set(names)
+    out: list[dict[str, object]] = []
+    seen: set[str] = set()
+    for name, cells in _table_rows(span):
+        canonical = _SUFFIX_RE.sub("", name).strip()
+        if canonical not in wanted or canonical in seen:
+            continue
+        seen.add(canonical)
+        entry: dict[str, object] = {"slug": canonical}
+        if len(cells) >= 4:
+            in_price, out_price = _num(cells[0]), _num(cells[3])
+            if in_price is not None and out_price is not None:
+                entry["input_price_per_1m"] = in_price
+                entry["output_price_per_1m"] = out_price
+        out.append(entry)
+    return out
+
+
 def parse_pricing(md: str) -> list[dict[str, object]]:
     span = _standard_rows_blob(md)
     models: list[dict[str, object]] = []
@@ -312,6 +336,9 @@ def build_snapshot(md: str, *, source_url: str) -> dict[str, object]:
         "models": models,
         "slug_to_id": {str(m["slug"]): str(m["id"]) for m in models},
         "unexpected_slugs": unexpected,
+        # The flagged rows' own prices, for the catalog cron's discovery lane
+        # (update/discovery.py hands them to the curation model).
+        "discovered": discovered_prices(md, unexpected),
         "missing_mapped_models": missing,
         "section_sha256": hashlib.sha256(facts.encode("utf-8")).hexdigest(),
     }

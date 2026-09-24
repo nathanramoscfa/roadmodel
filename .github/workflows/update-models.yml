@@ -125,6 +125,16 @@ jobs:
           # gpt-oss model names against groq.com/pricing (it does not parse prices).
           python update/extract_groq_catalog.py || echo "groq drift-check flagged or failed; catalog-groq.json prices are manually maintained — review"
 
+      - name: Keep the declined-models list (discovery lane)
+        # The curation model regenerates docs/model-tier-cost-scale.md whole, so
+        # restore any "## Declined Models (discovery lane)" line it dropped
+        # before anything below reads the list (update/discovery.py).
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
+        run: |
+          set -euo pipefail
+          git show HEAD:docs/model-tier-cost-scale.md > /tmp/base-cost-scale.md
+          python update/discovery.py --preserve-declined /tmp/base-cost-scale.md
+
       - name: Flag unfederated provider-direct models (model-list federation)
         # Phase 4.6 model-list federation (FLAG-ONLY): each provider-direct snapshot
         # is the discovery source for ITS models. Any snapshot model not yet in
@@ -138,8 +148,9 @@ jobs:
         run: |
           set -uo pipefail
           mapfile -t additions < <(python update/merge_catalog.py --check-additions 2>/dev/null || true)
-          if [ ${#additions[@]} -eq 0 ]; then
-            echo "No unfederated provider-direct models; nothing to flag."
+          mapfile -t undisposed < <(python update/discovery.py --check 2>/dev/null || true)
+          if [ ${#additions[@]} -eq 0 ] && [ ${#undisposed[@]} -eq 0 ]; then
+            echo "No unfederated provider-direct models and no undisposed discoveries; nothing to flag."
             exit 0
           fi
           gh label create catalog-unfederated-model --color FBCA04 \
@@ -162,6 +173,22 @@ jobs:
               --title "${title}" \
               --label catalog-unfederated-model \
               --body "A committed provider-direct catalog snapshot (\`update/catalog-*.json\`) lists \`${model}\`, which is not yet in \`<model-options>\` of \`docs/model-selector.txt\`. Add it editorially with tier ratings (the DeepSeek / Mistral path) so it becomes recommendable. Phase 4.6 model-list federation flags discovery only; it never auto-adds an unrated model." \
+              || echo "issue create failed for ${model}"
+          done
+          # The discovery lane: a model a provider's own page prices that this
+          # run's curation neither added nor declined gets a deduped issue, so
+          # an ignored flag is visible instead of silent (update/discovery.py).
+          for model in "${undisposed[@]}"; do
+            [ -z "${model}" ] && continue
+            title="chore(catalog): provider page prices \"${model}\"; the catalog neither added nor declined it"
+            if printf '%s\n' "${existing}" | grep -Fqx "${title}"; then
+              echo "Issue already open for ${model}; skipping."
+              continue
+            fi
+            gh issue create \
+              --title "${title}" \
+              --label catalog-unfederated-model \
+              --body "The provider's own pricing page prices \`${model}\` (listed in \`unexpected_slugs\` of its \`update/catalog-*.json\` snapshot), and this run's curation neither added it to \`<model-options>\` nor declined it in the \`## Declined Models (discovery lane)\` section of \`docs/model-tier-cost-scale.md\`. Add it with tier ratings, or decline it with a reason." \
               || echo "issue create failed for ${model}"
           done
 
