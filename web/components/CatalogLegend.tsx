@@ -1,9 +1,12 @@
 // web/components/CatalogLegend.tsx
 //
-// The "How to read this" cheat sheet for /models: the S→D rating scale, the seven
-// rating categories, the cost-tier boundaries, and the jurisdiction codes — using
-// the same badge colors as the table. A native <details> disclosure (open by
-// default), so it needs no client JS. Data comes from the glossary + catalog-fields.
+// The "How to read this" cheat sheet for /models: the two definitions readers
+// trip on (the cost/quality frontier and the blended price), then the S→D
+// rating scale, the seven rating categories, the cost-tier boundaries, and the
+// jurisdiction codes — using the same badge colors as the table. It sits below
+// the table and the charts (the page leads with the catalog itself), and the
+// table's caption links here. A native <details> disclosure (open by default),
+// so it needs no client JS. Data comes from the glossary + catalog-fields.
 import {
   CATEGORY_FIGURE,
   DERIVATION_BANDS,
@@ -41,11 +44,13 @@ const BADGE =
 const SECTION_HEADING =
   "text-xs font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400";
 
-export function CatalogLegend() {
+export function CatalogLegend({ id }: { id?: string }) {
   return (
     <details
       open
-      className="group rounded-xl border border-brand-slate-200 bg-brand-slate-50/60 dark:border-brand-slate-700 dark:bg-brand-slate-800/40"
+      id={id}
+      data-testid="catalog-legend"
+      className="group scroll-mt-20 rounded-xl border border-brand-slate-200 bg-brand-slate-50/60 dark:border-brand-slate-700 dark:bg-brand-slate-800/40"
     >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-5 py-3 text-sm font-semibold text-brand-slate-800 dark:text-brand-slate-100">
         How to read this table
@@ -58,6 +63,45 @@ export function CatalogLegend() {
       </summary>
 
       <div className="grid grid-cols-1 gap-6 border-t border-brand-slate-200 px-5 py-5 dark:border-brand-slate-700 md:grid-cols-2 xl:grid-cols-4">
+        {/* The two definitions the figures depend on, called out. */}
+        <div className="grid grid-cols-1 gap-3 md:col-span-2 lg:grid-cols-2 xl:col-span-4">
+          <div
+            className="rounded-lg border border-emerald-500/40 bg-emerald-50/70 px-4 py-3 text-sm leading-6 text-brand-slate-700 dark:bg-emerald-500/10 dark:text-brand-slate-200"
+            data-testid="legend-frontier"
+          >
+            <p className="font-semibold text-brand-slate-900 dark:text-brand-slate-50">
+              <span
+                aria-hidden
+                className="mr-2 inline-block h-3 w-3 rounded-full border-2 border-emerald-500 align-middle"
+              />
+              Cost/quality frontier: across every cost tier, not within one
+            </p>
+            <p className="mt-1">
+              A green ring beside an AA Index means <strong>no model in the whole catalog costs
+              less (blended price) and scores higher</strong>. It is not a best-in-tier award, and
+              it is separate from the Score: a model can top its own tier and still lose the ring to
+              a cheaper model from another tier, and a modest model can hold it by being the
+              cheapest at its level. A tier can have no ring at all. Hover any AA Index for the model
+              that beats it.
+            </p>
+          </div>
+          <div
+            className="rounded-lg border border-brand-slate-300 bg-white px-4 py-3 text-sm leading-6 text-brand-slate-700 dark:border-brand-slate-600 dark:bg-brand-slate-900/60 dark:text-brand-slate-200"
+            data-testid="legend-blended"
+          >
+            <p className="font-semibold text-brand-slate-900 dark:text-brand-slate-50">
+              Blended price = (3 &times; input + 1 &times; output) &divide; 4
+            </p>
+            <p className="mt-1">
+              <strong>One price per model</strong>: what 1M tokens cost when three of every four
+              are input, the standard mix Artificial Analysis prices with. It always sits between
+              the Input and Output columns, so it reads well below the output price: $5 input and
+              $25 output blend to $10. Cost tiers are set by output price; the Score, the charts
+              and the frontier all use the blended price.
+            </p>
+          </div>
+        </div>
+
         {/* Rating scale */}
         <div>
           <h3 className={SECTION_HEADING}>Rating scale (per category)</h3>
@@ -88,8 +132,7 @@ export function CatalogLegend() {
             that price usually delivers. It is the <strong>default sort</strong>, which groups the
             table by cost tier so each model is read against its own price band. The
             header shows the fit&rsquo;s n, R&sup2; and residual σ; gaps smaller than σ are ties.
-            A dot marks the cost/quality frontier (no catalog model is both cheaper and higher
-            on the index).
+            The Score never looks across tiers; the frontier ring (above) does.
           </p>
         </div>
 
@@ -130,7 +173,8 @@ export function CatalogLegend() {
             ))}
           </dl>
           <p className="mt-3 text-xs text-brand-slate-500 dark:text-brand-slate-400">
-            The dot beside each output price is its tier. Cache-read prices and the
+            The dot beside each output price is its tier. A tier&rsquo;s header row also gives
+            its blended range, which the Score is fitted on. Cache-read and blended prices and the
             provider&rsquo;s pricing notes are in the expanded row.
           </p>
         </div>

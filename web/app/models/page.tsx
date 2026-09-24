@@ -34,9 +34,9 @@ export default function ModelsPage() {
         </p>
       </header>
 
+      {/* Most used first: the catalog itself, then the charts that explain its
+          Score column, then the full key (the table's caption links to it). */}
       <div className="mt-10 space-y-8">
-        <CatalogLegend />
-        <ScoreCharts rows={models} fit={scoreFit} />
         <ModelCatalog
           models={models}
           generatedAt={generatedAt}
@@ -44,6 +44,8 @@ export default function ModelsPage() {
           measuredCount={bench.measuredCount}
           scoreFit={scoreFit}
         />
+        <ScoreCharts rows={models} fit={scoreFit} />
+        <CatalogLegend id="how-to-read" />
         <BenchmarkReference id="benchmarks" />
       </div>
     </section>
