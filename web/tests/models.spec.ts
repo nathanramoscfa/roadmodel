@@ -77,6 +77,26 @@ const WITH_AA = scored.find((m) => aaIndexFor(m) !== null)!;
 const WITHOUT_ANY = scored.find((m) => aaIndexFor(m) === null)!;
 const AA_VALUE = String(aaIndexFor(WITH_AA));
 
+// The frontier, computed independently of the page: every measured model at
+// its blended price, and its leader — the highest AA Index at its price or
+// less, the cheapest of those on a tie, catalog order last. A model that is
+// its own leader is on the frontier.
+interface Measured {
+  m: ScoredModel;
+  price: number;
+  index: number;
+}
+const MEASURED: Measured[] = scored
+  .map((m) => ({ m, price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m), index: aaIndexFor(m) }))
+  .filter((r): r is Measured => r.index !== null);
+function leaderOf(r: Measured): Measured {
+  const pool = MEASURED.filter((o) => o.price <= r.price);
+  const top = Math.max(...pool.map((o) => o.index));
+  const tied = pool.filter((o) => o.index === top);
+  const cheapest = Math.min(...tied.map((o) => o.price));
+  return tied.find((o) => o.price === cheapest)!;
+}
+
 
 const CN_MODEL_COUNT = catalog.models.filter((m) => m.jurisdiction === "cn").length;
 // Mirror the table's comparator exactly: price, then name ascending on a tie
@@ -126,7 +146,9 @@ test("the page leads with the table, then the Score charts, then the full key", 
   // defines the two things readers trip on.
   await expect(page.getByTestId("model-catalog").locator('a[href="#how-to-read"]')).toHaveCount(1);
   await expect(page.getByTestId("catalog-legend")).toHaveAttribute("id", "how-to-read");
-  await expect(page.getByTestId("table-key")).toContainText("Cost/quality frontier, across every cost tier.");
+  await expect(page.getByTestId("table-key")).toContainText(
+    "Cost/quality frontier: is anything cheaper and better, anywhere?",
+  );
   await expect(page.getByTestId("table-key")).toContainText("Blended price = (3 × input + 1 × output) ÷ 4.");
 });
 
@@ -377,18 +399,7 @@ test("every model off the frontier names the model that beats it, from any cost 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/models");
 
-  // Independently of the page: the leader of m is the highest AA Index at m's
-  // blended price or less, the cheapest of those on a tie, catalog order last.
-  const measured = scored
-    .map((m) => ({ m, price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m), index: aaIndexFor(m) }))
-    .filter((r): r is { m: ScoredModel; price: number; index: number } => r.index !== null);
-  const leaderOf = (r: (typeof measured)[number]) => {
-    const pool = measured.filter((o) => o.price <= r.price);
-    const top = Math.max(...pool.map((o) => o.index));
-    const tied = pool.filter((o) => o.index === top);
-    const cheapest = Math.min(...tied.map((o) => o.price));
-    return tied.find((o) => o.price === cheapest)!;
-  };
+  const measured = MEASURED;
   let offFrontier = 0;
   let crossTier = 0;
   for (const r of measured) {
@@ -433,6 +444,94 @@ test("every model off the frontier names the model that beats it, from any cost 
   );
   // Recorded, not asserted: whether today's leaders cross tiers is data.
   test.info().annotations.push({ type: "cross-tier leaders", description: String(crossTier) });
+});
+
+test("Group by Quality bands the table by AA Index, cheapest first; Cost tier puts the tiers back", async ({ page }) => {
+  await page.goto("/models");
+  // Cost tier is the default grouping, and the caption says what it answers.
+  await expect(page.getByTestId("group-by-tier")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("grouping-note")).toContainText("the best buy at your budget");
+
+  await page.getByTestId("group-by-quality").click();
+  await expect(page.getByTestId("group-by-quality")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("grouping-note")).toContainText("the cheapest way to each level");
+  await expect(page.getByTestId("score-group")).toHaveCount(0);
+
+  // Ten-point bands, best first, an unmeasured group last; within a band the
+  // cheapest (blended) model first, the higher index breaking a price tie.
+  const bandOf = (v: number | null) => (v === null ? null : Math.floor(v / 10) * 10);
+  const rowsIn = scored.map((m) => ({
+    m,
+    band: bandOf(aaIndexFor(m)),
+    price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m),
+    index: aaIndexFor(m),
+  }));
+  const bands = [...new Set(rowsIn.map((r) => r.band).filter((b): b is number => b !== null))].sort((a, b) => b - a);
+  const groups = await page.getByTestId("quality-group").evaluateAll((els) => els.map((e) => e.getAttribute("data-band")));
+  expect(groups).toEqual([...bands.map(String), ...(rowsIn.some((r) => r.band === null) ? ["none"] : [])]);
+  const expected = [...rowsIn]
+    .sort((a, b) => {
+      if (a.band !== b.band) return a.band === null ? 1 : b.band === null ? -1 : b.band - a.band;
+      if (a.price !== b.price) return a.price - b.price;
+      if (a.index !== b.index) return (b.index ?? -1) - (a.index ?? -1);
+      return a.m.name.localeCompare(b.m.name);
+    })
+    .map((r) => r.m.id);
+  const actual = await page.getByTestId("model-row").evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")));
+  expect(actual).toEqual(expected);
+  const top = page.locator(`[data-testid="quality-group"][data-band="${bands[0]}"]`);
+  await expect(top).toContainText(`AA Index ${bands[0]}–${(bands[0] + 9.9).toFixed(1)}`);
+  await expect(top.getByTestId("quality-group-prices")).toContainText("cheapest first");
+
+  await page.getByTestId("group-by-tier").click();
+  await expect(page.getByTestId("quality-group")).toHaveCount(0);
+  await expect(page.getByTestId("score-group")).toHaveCount(new Set(scored.map((m) => m.tier_cost)).size);
+});
+
+test("a group with nothing on the frontier says so in its header and its chart, naming what beats it", async ({ page }) => {
+  await page.goto("/models");
+  const frontier = new Set(MEASURED.filter((r) => leaderOf(r) === r).map((r) => r.m.id));
+  const check = async (header: ReturnType<typeof page.locator>, members: Measured[]) => {
+    const beaten = members.length > 0 && members.every((r) => !frontier.has(r.m.id));
+    await expect(header.getByTestId("group-beaten")).toHaveCount(beaten ? 1 : 0);
+    if (!beaten) return false;
+    // The most frequent leader is named (a tie for most frequent may name
+    // either); a single leader for the whole group names the count too.
+    const counts = new Map<string, number>();
+    for (const r of members) counts.set(leaderOf(r).m.name, (counts.get(leaderOf(r).m.name) ?? 0) + 1);
+    const most = Math.max(...counts.values());
+    const tops = [...counts.keys()].filter((name) => counts.get(name) === most);
+    const note = header.getByTestId("group-beaten");
+    await expect(note).toContainText("None on the frontier:");
+    const text = await note.innerText();
+    expect(tops.some((name) => text.includes(name))).toBe(true);
+    if (counts.size === 1 && members.length > 1) {
+      await expect(note).toContainText(`all ${members.length} are beaten by ${tops[0]}`);
+    }
+    return true;
+  };
+
+  // Cost tiers (the default grouping) and their charts.
+  let beatenTiers = 0;
+  for (const tier of new Set(scored.map((m) => m.tier_cost))) {
+    const members = MEASURED.filter((r) => r.m.tier_cost === tier);
+    const header = page.locator(`[data-testid="score-group"][data-tier="${tier}"]`);
+    if (await check(header, members)) beatenTiers += 1;
+    if (members.length >= 2) {
+      const chart = page.locator(`[data-testid="score-chart"][data-tier="${tier}"]`);
+      const beaten = members.every((r) => !frontier.has(r.m.id));
+      await expect(chart.getByTestId("chart-beaten")).toHaveCount(beaten ? 1 : 0);
+    }
+  }
+  test.info().annotations.push({ type: "tiers with nothing on the frontier", description: String(beatenTiers) });
+
+  // Quality bands.
+  await page.getByTestId("group-by-quality").click();
+  const bandOf = (v: number) => Math.floor(v / 10) * 10;
+  for (const band of new Set(MEASURED.map((r) => bandOf(r.index)))) {
+    const header = page.locator(`[data-testid="quality-group"][data-band="${band}"]`);
+    await check(header, MEASURED.filter((r) => bandOf(r.index) === band));
+  }
 });
 
 test("the expanded row carries the cited (mixed-source) benchmarks and pricing detail", async ({ page }) => {
