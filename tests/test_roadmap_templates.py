@@ -314,3 +314,28 @@ def test_every_command_ships_to_every_agent() -> None:
     spec.loader.exec_module(up)
     on_disk = {p.stem for p in (ROOT / "docs" / "claude-commands").glob("*.md")}
     assert on_disk == set(up.COMMANDS)
+
+
+def test_every_settings_table_carries_a_backup_row() -> None:
+    """The backup lived only in the rationale's last sentence and the
+    selection blocks at the foot of the file, so an operator looking at a
+    step's Settings table could not see what to switch to. Every table in
+    the template — the three platform variants and the step skeletons —
+    carries a Backup row directly under Model."""
+    lines = PHASE.read_text().splitlines()
+    model_rows = [i for i, line in enumerate(lines) if line.startswith("| Model ")]
+    assert len(model_rows) >= 5
+    for i in model_rows:
+        assert lines[i + 1].startswith("| Backup "), lines[i]
+    flat = re.sub(r"\s+", " ", PHASE.read_text())
+    assert "Every table carries Model / Backup / Platform / Conversation" in flat
+
+
+def test_roadmap_commands_handle_the_backup_row() -> None:
+    refresh = re.sub(r"\s+", " ", REFRESH_COMMAND.read_text())
+    assert "Every table carries a `Backup` row directly under `Model`" in refresh
+    assert "a layout fix, not a new pick" in refresh
+    step = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
+    assert "If you are that backup model on that platform, continue" in step
+    prompt = re.sub(r"\s+", " ", PROMPT_PHASE.read_text())
+    assert "its Settings tables have no `Backup` row" in prompt
