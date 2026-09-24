@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.42] — 2026-09-24
+
 ### Added
 
 - **The catalog retires models that a newer sibling beats on every count.**
