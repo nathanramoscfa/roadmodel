@@ -20,13 +20,14 @@
 //     on that column's scale, "—" only where AA has not measured the model.
 //     Cells are colored by within-column quintile (lib/benchmark-grid bandFor)
 //     so a glance reads the same way the letter badges do.
-// Two groupings, each under a header row per group (the "Group by" switch):
-//   Cost tier (the default: sorting by Score) — the best buy at your budget;
-//     each model is read against its own price band (a raw AA Index sort puts
-//     cheap models on top and invites "is this flash model really better than
-//     the frontier one?").
-//   Quality — ten-point AA Index bands, cheapest first: the cheapest way to
-//     reach each level.
+// Two groupings, each under a header row per group (the "Group by" switch),
+// both sorted by Score (highest first) inside every group:
+//   Quality (the default) — ten-point AA Index bands, best band first: the
+//     best buy at each level.
+//   Cost tier — priciest tier first: the best buy at your budget; each model
+//     is read against its own price band (a raw AA Index sort puts cheap
+//     models on top and invites "is this flash model really better than the
+//     frontier one?").
 // Either way, when the top score at a group's prices belongs to a model
 // outside it, the group's header names that model (topScoreSentence): each
 // tier's Scores average zero, and the header shows it without a hover.
@@ -120,8 +121,6 @@ type SortKey =
   | "output_price_per_1m"
   | "aa_index"
   | "value"
-  // Not a column: the "Group by: Quality" switch (AA Index band, cheapest first).
-  | "quality"
   | Category
   | BenchKey;
 type SortDir = "asc" | "desc";
@@ -184,9 +183,6 @@ function valueFor(row: ModelRow, key: SortKey): number | string {
       // Sorted via compareNullable above; this branch is only reached by the
       // generic path, where a missing score must sort last.
       return row.value_score ?? Number.NEGATIVE_INFINITY;
-    case "quality":
-      // Sorted by its own branch in the comparator; here for completeness.
-      return qualityBand(row.aa_index) ?? -1;
     default:
       return RATING_RANK[row.tiers[key]];
   }
@@ -287,7 +283,9 @@ export function ModelCatalog({
   initialView: View;
 }) {
   const [view, setView] = useState<View>(initialView);
-  const [sortKey, setSortKey] = useState<SortKey>(initialGroupBy === "quality" ? "quality" : "value");
+  // The Group by choice; it applies while the table is sorted by Score.
+  const [groupChoice, setGroupChoice] = useState<Grouping>(initialGroupBy);
+  const [sortKey, setSortKey] = useState<SortKey>("value");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -342,25 +340,15 @@ export function ModelCatalog({
         if (t !== 0) return t;
         return a.name.localeCompare(b.name);
       }
-      if (sortKey === "quality") {
-        // Grouped by AA Index band, best band first; within a band, cheapest
-        // (blended) first, the higher index breaking a price tie; unmeasured
-        // rows last, in their own group.
-        const band = compareNullable(qualityBand(a.aa_index), qualityBand(b.aa_index), -1);
-        if (band !== 0) return band;
-        const price =
-          blendedPrice(a.input_price_per_1m, a.output_price_per_1m) -
-          blendedPrice(b.input_price_per_1m, b.output_price_per_1m);
-        if (price !== 0) return price;
-        const index = compareNullable(a.aa_index, b.aa_index, -1);
-        if (index !== 0) return index;
-        return a.name.localeCompare(b.name);
-      }
       if (sortKey === "value") {
-        // Grouped by cost tier (priciest tier first when descending), then by
-        // score within the tier with unmeasured rows last in either direction.
-        const tierDiff = (COST_TIER_RANK[a.tier_cost] - COST_TIER_RANK[b.tier_cost]) * dir;
-        if (tierDiff !== 0) return tierDiff;
+        // Grouped first, in a fixed order either direction: best AA Index band
+        // first with the unmeasured group last, or priciest cost tier first.
+        // Then by score within the group, unmeasured rows last.
+        const group =
+          groupChoice === "quality"
+            ? compareNullable(qualityBand(a.aa_index), qualityBand(b.aa_index), -1)
+            : COST_TIER_RANK[b.tier_cost] - COST_TIER_RANK[a.tier_cost];
+        if (group !== 0) return group;
         const t = compareNullable(a.value_score, b.value_score, dir);
         if (t !== 0) return t;
         return a.name.localeCompare(b.name);
@@ -375,17 +363,17 @@ export function ModelCatalog({
       }
       return a.name.localeCompare(b.name);
     });
-  }, [shown, search, sortKey, sortDir]);
+  }, [shown, search, sortKey, sortDir, groupChoice]);
 
   // The model that beats each off-frontier model, looked up by id for the cards.
   const byId = useMemo(() => new Map(models.map((m) => [m.id, m])), [models]);
   const leaderOf = (m: ModelRow): ModelRow | null =>
     m.value_beaten_by ? (byId.get(m.value_beaten_by) ?? null) : null;
 
-  // Sorting by Score groups the rows by cost tier; the Quality switch groups
-  // them by AA Index band. Any other sort is a plain ranking.
-  const grouping: Grouping | null =
-    sortKey === "value" ? "tier" : sortKey === "quality" ? "quality" : null;
+  // Sorting by Score groups the rows the Group by switch chose (AA Index band
+  // or cost tier). Any other sort is a plain ranking.
+  const grouping: Grouping | null = sortKey === "value" ? groupChoice : null;
+  const scoreOrder = sortDir === "desc" ? "highest Score first" : "lowest Score first";
 
   // What each group header says about the rows under it: how many, their
   // prices on both scales the page uses (output, which sets the tier, and
@@ -417,9 +405,10 @@ export function ModelCatalog({
   }, [rows, grouping, byId]);
 
   function groupBy(next: Grouping) {
-    setSortKey(next === "tier" ? "value" : "quality");
+    setGroupChoice(next);
+    setSortKey("value");
     setSortDir("desc");
-    savePrefs({ groupBy: next });
+    savePrefs({ grouping: next });
   }
 
   function toggleSort(key: SortKey) {
@@ -547,8 +536,8 @@ export function ModelCatalog({
             >
               {(
                 [
-                  ["tier", "Cost tier"],
                   ["quality", "Quality"],
+                  ["tier", "Cost tier"],
                 ] as const
               ).map(([g, label]) => (
                 <button
@@ -627,15 +616,15 @@ export function ModelCatalog({
         )}
         .{" "}
         <span data-testid="grouping-note">
-          {grouping === "tier" ? (
+          {grouping === "quality" ? (
+            <>
+              <strong className="font-semibold">Grouped by quality: the best buy at each level.</strong>{" "}
+              Models in the same {QUALITY_BAND_WIDTH}-point AA Index band, {scoreOrder}.
+            </>
+          ) : grouping === "tier" ? (
             <>
               <strong className="font-semibold">Grouped by cost tier: the best buy at your budget.</strong>{" "}
-              Each Score is read against its own tier.
-            </>
-          ) : grouping === "quality" ? (
-            <>
-              <strong className="font-semibold">Grouped by quality: the cheapest way to each level.</strong>{" "}
-              Models in the same {QUALITY_BAND_WIDTH}-point AA Index band, cheapest (blended) first.
+              Each Score is read against its own tier, {scoreOrder}.
             </>
           ) : (
             <>Sorted by the column you chose; Group by puts the header rows back.</>
@@ -831,7 +820,7 @@ export function ModelCatalog({
                               <>No AA Index yet, so no quality band</>
                             ) : (
                               <>
-                                {prices} · cheapest first
+                                {prices} · {scoreOrder}
                               </>
                             )}
                           </span>
@@ -1201,7 +1190,7 @@ function SortHeader({
   className = "",
   detail,
 }: {
-  field: Exclude<SortKey, Category | BenchKey | "quality">;
+  field: Exclude<SortKey, Category | BenchKey>;
   sortKey: SortKey;
   dir: SortDir;
   onSort: (k: SortKey) => void;

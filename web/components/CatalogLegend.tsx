@@ -130,12 +130,12 @@ export function CatalogLegend({ id }: { id?: string }) {
             model&rsquo;s price predicts <em>among its own cost tier</em>, from one market fit
             over every measured model (index against log&nbsp;price, with a baseline per tier),
             in index points &mdash; positive means more intelligence than a same-tier model at
-            that price usually delivers. It is the <strong>default sort</strong>, which groups the
-            table by cost tier so each model is read against its own price band: the best buy at
-            your budget. <strong>Group by &rarr; Quality</strong> regroups it into{" "}
-            {QUALITY_BAND_WIDTH}-point AA Index bands, cheapest first: the cheapest way to each
-            level. The header shows the fit&rsquo;s n, R&sup2; and residual σ; gaps smaller than σ
-            are ties. The Score compares a model with its own tier; the frontier ring (above) compares the
+            that price usually delivers. It is the <strong>default sort</strong> inside every group,
+            highest first. The table opens grouped by <strong>Quality</strong>:{" "}
+            {QUALITY_BAND_WIDTH}-point AA Index bands, best first: the best buy at each level.{" "}
+            <strong>Group by &rarr; Cost tier</strong> regroups it by price band, priciest first, so
+            each model is read against its own tier: the best buy at your budget. The header shows
+            the fit&rsquo;s n, R&sup2; and residual σ; gaps smaller than σ are ties. The Score compares a model with its own tier; the frontier ring (above) compares the
             whole catalog.
           </p>
         </div>
