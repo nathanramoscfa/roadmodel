@@ -732,7 +732,7 @@ Tier ratings:
 
 - **Pricing:** Input $5.00/M · Output $25.00/M
 - **Tier ratings:** Coding **A** · Planning **S** · Agentic **A** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **D**
-- **Headline benchmarks:** AA Intelligence Index 40.7 (max); LMArena Text #12 (Elo 1483.4); LMArena WebDev #5 (Elo 1556.9); AA-Omniscience 26.2 (#2)
+- **Headline benchmarks:** AA Intelligence Index 40.7 (max); LMArena Text #12 (Elo 1483.4); LMArena WebDev #29 (Elo 1557.2); AA-Omniscience 26.2 (#2)
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
 - **Best for:** Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching
 
@@ -776,6 +776,14 @@ Tier ratings:
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; More token-efficient than GPT-5.4 on comparable tasks; Improved persistence on long-running tasks; Fast mode is available at higher rates; Long context supports up to 1M tokens with 2x input pricing
 - **Best for:** OpenAI's most capable frontier model and highest-cost GPT offering, best suited for the most demanding reasoning, long-horizon planning, and tasks where maximum intelligence is required regardless of cost — strongest single model for hard coding, agentic execution, and reasoning, but verify factual claims due to elevated hallucination
 
+#### GPT-6 Astra — `gpt-6-astra`
+
+- **Pricing:** Input $10.00/M · Output $50.00/M
+- **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **B** · Long-context **B** · Knowledge **B** · Speed **B**
+- **Headline benchmarks:** LMArena WebDev #2 (Elo 1792.2); LMArena Text coding Elo 1488.6 (#31); LMArena Text Elo 1443.7 (#59)
+- **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
+- **Best for:** Auto-added very-high-cost OpenAI model; pending editorial best-for refinement.
+
 ### High Cost Tier
 
 #### Opus 5.5 — `claude-opus-5-5`
@@ -814,7 +822,7 @@ Tier ratings:
 
 - **Pricing:** Input $3.00/M · Output $15.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **D** · Long-context **S** · Knowledge **A** · Speed **C**
-- **Headline benchmarks:** AA Intelligence Index 43.6 (max); HLE 46.9% (max); Terminal-Bench 2.1 85.0; τ²-bench banking pass_1 45.9%
+- **Headline benchmarks:** AA Intelligence Index 43.6 (max); HLE 46.9% (max); Terminal-Bench 2.1 85.0; τ²-bench banking pass_1 46.0%
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); No separate cache-write fee
 - **Best for:** Moonshot's Kimi K3 flagship at high-tier pricing ($3/$15) — a strong near-frontier reasoning + coding model with 1M extended-context support at flat per-token rates and AA Intelligence Index 43.6 (max), competitive with GPT-5.6 Sol and Opus 5 on knowledge/coding indices; text-only (no multimodal) and notably slow (~38 tokens/s). Routed via Cursor's pool only; cn-jurisdiction excluded by the default allowed-jurisdictions list unless the user opts into cn.
 
@@ -856,7 +864,7 @@ Tier ratings:
 
 - **Pricing:** Input $2.00/M · Output $12.00/M
 - **Tier ratings:** Coding **S** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **A**
-- **Headline benchmarks:** AA Intelligence Index 42.1 (max); HLE 42.9%; Terminal-Bench 2.1 88.0; Output Speed 104.8 tokens/s
+- **Headline benchmarks:** AA Intelligence Index 42.1 (max); HLE 42.9%; Terminal-Bench 2.1 88.0; Output Speed 86.2 tokens/s
 - **Pricing notes:** Requires Max Mode on legacy request-based plans; Mid-tier GPT-5.6 variant between Sol and Luna; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate
 - **Best for:** OpenAI's mid-tier GPT-5.6 variant between Sol (flagship) and Luna (mini) at medium-tier pricing ($2/$12) — Artificial Analysis Intelligence Index 42.1 (max) matches near-frontier reasoning while output speed (~105 tokens/s) is faster than most peers; pick for balanced near-frontier reasoning, agentic execution, and speed when Sol's high tier isn't justified but stronger throughput than GPT-5.4 is desired.
 
@@ -900,6 +908,14 @@ Tier ratings:
 - **Pricing notes:** Hidden by default
 - **Best for:** OpenAI's GPT-5.1 Codex Max — a Codex variant at the same medium-tier pricing as gpt-5.1-codex ($1.25/$10), inheriting the same Codex-lineage S-tier coding and A-tier agentic ratings pending an independent Max-vs-base head-to-head; fits when the Max variant's extended-context / higher-reasoning behavior is preferred over the base gpt-5.1-codex.
 
+#### GPT-6 Sol — `gpt-6-sol`
+
+- **Pricing:** Input $2.00/M · Output $10.00/M
+- **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **B** · Long-context **B** · Knowledge **B** · Speed **B**
+- **Headline benchmarks:** LMArena WebDev #5 (Elo 1685.9)
+- **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
+- **Best for:** Auto-added medium-cost OpenAI model; pending editorial best-for refinement.
+
 ### Low Cost Tier
 
 #### Gemini 3.5 Flash — `gemini-3.5-flash`
@@ -938,7 +954,7 @@ Tier ratings:
 
 - **Pricing:** Input $0.75/M · Output $3.50/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **S**
-- **Headline benchmarks:** AA Intelligence Index 40.9 (high); HLE 47.8% (high); Terminal-Bench 2.1 87.6; Output Speed 315.7 tokens/s
+- **Headline benchmarks:** AA Intelligence Index 40.9 (high); HLE 47.8% (high); Terminal-Bench 2.1 87.6; Output Speed 277.5 tokens/s
 - **Pricing notes:** -
 - **Best for:** Google's Gemini 3.8 Flash — the visible-by-default successor to 3.7 Flash at the same low-tier pricing ($0.75/$3.50), with placeholder tier ratings inherited from the Flash series and AA Intelligence Index 40.9 (high), Terminal-Bench 2.1 87.6, and exceptional output speed (~316 tokens/s). Pick over 3.7 Flash when both are available since 3.8 supersedes 3.7 in the same series at equal output price.
 
@@ -946,7 +962,7 @@ Tier ratings:
 
 - **Pricing:** Input $0.20/M · Output $1.20/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **B** · Long-context **S** · Knowledge **B** · Speed **S**
-- **Headline benchmarks:** AA Intelligence Index 37.3 (max) / 34.6 (xhigh); HLE 39.5% (max); Output Speed 151.0 tokens/s (max) / 146.3 (xhigh)
+- **Headline benchmarks:** AA Intelligence Index 37.3 (max) / 34.6 (xhigh); HLE 39.5% (max); Output Speed 104.7 tokens/s (max) / 106.1 (xhigh)
 - **Pricing notes:** Requires Max Mode on legacy request-based plans; Smallest GPT-5.6 variant, optimized for cost and speed; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate
 - **Best for:** OpenAI's smallest GPT-5.6 variant at low-tier pricing ($0.20/$1.20, 5x cheaper output than at initial listing) — strong AA Intelligence Index (37.3 max) for the price and very high output throughput (~151 tokens/s), positioning it as a very cost-efficient near-frontier alternative to Gemini 3.5 Flash and other cheap Flash-class models when GPT-family behavior is preferred; pick when latency and cost dominate but broader reasoning quality than smaller mini/nano variants is required.
 
@@ -962,7 +978,7 @@ Tier ratings:
 
 - **Pricing:** Input $1.00/M · Output $5.00/M
 - **Tier ratings:** Coding **C** · Planning **B** · Agentic **C** · Multimodal **B** · Long-context **A** · Knowledge **D** · Speed **S**
-- **Headline benchmarks:** AA Intelligence Index 16.9 (reasoning); Output Speed 144.6 tokens/s; AA-Omniscience -4.2; latency leader among Claude family
+- **Headline benchmarks:** AA Intelligence Index 16.9 (reasoning); Output Speed 115.0 tokens/s; AA-Omniscience -4.2; latency leader among Claude family
 - **Pricing notes:** Hidden by default; Bedrock/Vertex: regional endpoints +10% surcharge; Cache: writes 1.25x, reads 0.1x
 - **Best for:** Speed-optimized lowest-cost Claude model, ideal for simple completions, high-volume repetitive tasks, and latency-sensitive workflows where a lightweight capable response matters more than deep reasoning
 
@@ -1037,6 +1053,14 @@ Tier ratings:
 - **Headline benchmarks:** AA Intelligence Index 20.7 (xhigh); HLE 28.3% (xhigh); cheapest GPT-5.4 family variant; throughput-optimized inference
 - **Pricing notes:** Hidden by default; Smallest GPT-5.4 variant, optimized for cost; 90% discount on cached input tokens
 - **Best for:** Ultra-low-cost GPT variant for trivial text tasks, simple lookups, rapid classification, and extreme-throughput pipelines where cost efficiency is the sole constraint and task complexity is minimal
+
+#### GPT-6 Luna — `gpt-6-luna`
+
+- **Pricing:** Input $0.10/M · Output $0.50/M
+- **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **B** · Long-context **B** · Knowledge **B** · Speed **B**
+- **Headline benchmarks:** LMArena WebDev #24 (Elo 1593.2)
+- **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
+- **Best for:** Auto-added cheap-tier OpenAI model; pending editorial best-for refinement.
 
 #### DeepSeek-V4-Pro — `deepseek-v4-pro`
 
@@ -1195,28 +1219,28 @@ Billing types:
 #### OpenAI API — `openai-api`
 
 - **Billing:** per-token (requires openai-api-key)
-- **Supports models:** gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5.4-nano,gpt-5-mini
+- **Supports models:** gpt-6-astra,gpt-6-sol,gpt-6-luna,gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5.4-nano,gpt-5-mini
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
 - **Best for:** Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates. Exposes the full Codex/OpenAI `reasoning_effort` dial (`low`, `medium`, `high`, `xhigh`, `max`, `ultra` — the top `ultra` step is a session-wide multi-agent orchestration mode analogous to Claude Code's `ultracode`).
 
 #### Codex — `codex-cli`
 
 - **Billing:** subscription-included (requires chatgpt-subscription)
-- **Supports models:** gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.2,gpt-5,gpt-5-mini
+- **Supports models:** gpt-6-astra,gpt-6-sol,gpt-6-luna,gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.2,gpt-5,gpt-5-mini
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
 - **Best for:** Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate, in the CLI and the IDE extension. A ChatGPT-account sign-in CANNOT run the `-codex` model variants: Codex answers 400 &quot;The &apos;gpt-5.3-codex&apos; model is not supported when using Codex with a ChatGPT account.&quot; Those variants are reachable only through `codex-api` (an OpenAI API key), so recommending one here would name a model the operator&apos;s subscription cannot run. Exposes the full Codex `reasoning_effort` dial (`low`, `medium`, `high`, `xhigh`, `max`, `ultra` — the top `ultra` step is session-wide multi-agent orchestration on par with Claude Code&apos;s `ultracode`) and no Max Mode.
 
 #### Codex (API key) — `codex-api`
 
 - **Billing:** per-token (requires openai-api-key)
-- **Supports models:** gpt-5.3-codex,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.2,gpt-5,gpt-5-mini
+- **Supports models:** gpt-6-astra,gpt-6-sol,gpt-6-luna,gpt-5.3-codex,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.2,gpt-5,gpt-5-mini
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
 - **Best for:** The same Codex surface driven by an OpenAI API key instead of a ChatGPT sign-in: the ONLY way to run the coding-specialised `-codex` variants (gpt-5.3-codex and the gpt-5.1-codex family), and the fallback for GPT work once the ChatGPT plan&apos;s limits bind. Billed per token at list price, so prefer `codex-cli` while the subscription still has headroom. Exposes the full Codex `reasoning_effort` dial (`low`, `medium`, `high`, `xhigh`, `max`, `ultra`).
 
 #### ChatGPT (web / desktop) — `chatgpt-app`
 
 - **Billing:** subscription-included (requires chatgpt-subscription)
-- **Supports models:** gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5-mini
+- **Supports models:** gpt-6-astra,gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5-mini
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
 - **Best for:** Chat-driven GPT use without terminal or IDE integration; subscription-funded so marginal cost is $0 until ChatGPT's usage limits kick in.
 
