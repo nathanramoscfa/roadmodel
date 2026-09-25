@@ -401,6 +401,77 @@ def apply_cost_scale_price_overlay(
     return "\n".join(lines), applied, flags
 
 
+_MODEL_ID_RE = re.compile(r'<model\s+id="([^"]+)"')
+
+
+def _method_supports_re(method_id: str) -> re.Pattern[str]:
+    return re.compile(
+        r'(<method\s+id="' + re.escape(method_id) + r'"[^>]*?supports-models=")([^"]*)(")',
+        re.S,
+    )
+
+
+def ensure_supported(selector_text: str, method_id: str, ids: list[str]) -> tuple[str, list[str]]:
+    """Add ``ids`` to ``method_id``'s supports-models — additive only.
+
+    Only ids already in ``<model-options>`` are added (a method may never name an
+    unrated model); new ones go first, in the order given. Returns the text and
+    the ids actually added. An unknown method is a no-op.
+
+    Deterministic on purpose: the catalog prompt's supports-models sanity guard
+    refuses three or more new models at once as "likely false positives", which
+    is exactly the shape of a family launch (GPT-6 Astra/Sol/Luna, 2026-09-25) —
+    that left two new models with no method at all and the refresh PR red.
+    """
+    m = _method_supports_re(method_id).search(selector_text)
+    if m is None:
+        return selector_text, []
+    catalogued = set(_MODEL_ID_RE.findall(selector_text))
+    existing = [x for x in m.group(2).split(",") if x]
+    added = [i for i in dict.fromkeys(ids) if i in catalogued and i not in existing]
+    if not added:
+        return selector_text, []
+    new = ",".join(added + existing)
+    return selector_text[: m.start(2)] + new + selector_text[m.end(2) :], added
+
+
+def snapshot_model_ids(snap: dict[str, Any]) -> list[str]:
+    """Every id a provider's own price list carries: priced models + discoveries."""
+    ids = [str(m["id"]) for m in snap.get("models") or [] if m.get("id")]
+    for d in snap.get("discovered") or []:
+        ident = d if isinstance(d, str) else (d.get("id") or d.get("slug"))
+        if ident:
+            ids.append(str(ident))
+    return ids
+
+
+def apply_method_sync(
+    selector_text: str, snapshots: list[dict[str, Any]]
+) -> tuple[str, dict[str, list[str]]]:
+    """A catalogued model on provider P's own price list is reachable on P's API:
+    make ``<P>-api`` list it."""
+    added_by_method: dict[str, list[str]] = {}
+    for snap in snapshots:
+        provider = snap.get("provider")
+        if not provider:
+            continue
+        method_id = f"{provider}-api"
+        selector_text, added = ensure_supported(selector_text, method_id, snapshot_model_ids(snap))
+        if added:
+            added_by_method[method_id] = added
+    return selector_text, added_by_method
+
+
+def _run_sync_method(selector_path: Path, method_id: str, ids_csv: str) -> int:
+    ids = [i.strip() for i in ids_csv.split(",") if i.strip()]
+    text = selector_path.read_text()
+    new, added = ensure_supported(text, method_id, ids)
+    if added:
+        selector_path.write_text(new)
+    print(f"merge_catalog: {method_id} supports-models added: {added or 'none'}")
+    return 0
+
+
 def _run_report(selector_path: Path) -> int:
     base = base_models(selector_path.read_text())
     snaps = provider_snapshots()
@@ -465,6 +536,9 @@ def _run_write(selector_path: Path, base_path: Path, cost_scale_path: Path) -> i
         original, base_path.read_text(), provider_direct_ids(snaps)
     )
     current, px_applied, px_flags = apply_price_overlay(current, prices)
+    current, synced = apply_method_sync(current, snaps)
+    for method_id, added in synced.items():
+        print(f"merge_catalog: {method_id} supports-models added (provider price list): {added}")
     flags.extend(el_flags)
     flags.extend(px_flags)
     if current != original:
@@ -519,8 +593,16 @@ def main() -> int:
         help="Flag-only model-list federation: print provider-direct snapshot models "
         "not yet in <model-options> (one id per line) for a deduped editorial-add issue.",
     )
+    parser.add_argument(
+        "--sync-method",
+        default=None,
+        help="Add --ids to this method's supports-models (additive; catalogued ids only).",
+    )
+    parser.add_argument("--ids", default="", help="Comma-separated model ids for --sync-method.")
     args = parser.parse_args()
 
+    if args.sync_method:
+        return _run_sync_method(args.selector, args.sync_method, args.ids)
     if args.check_additions:
         return _run_check_additions(args.selector)
     if args.write:

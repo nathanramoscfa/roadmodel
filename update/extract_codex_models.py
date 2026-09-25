@@ -107,6 +107,11 @@ def main() -> int:
         default=None,
         help="read Markdown from a local file instead of fetching (for tests)",
     )
+    parser.add_argument(
+        "--recommended",
+        action="store_true",
+        help="print EVERY recommended slug (for the catalog's codex method sync), not just unexpected ones",
+    )
     args = parser.parse_args()
 
     try:
@@ -127,7 +132,7 @@ def main() -> int:
         f"extract_codex_models: recommended={recommended}; unexpected={unexpected}",
         file=sys.stderr,
     )
-    for slug in unexpected:
+    for slug in recommended if args.recommended else unexpected:
         print(slug)
     return 0
 
