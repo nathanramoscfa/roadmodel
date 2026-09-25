@@ -140,7 +140,7 @@ test("renders the catalog table, legend, and model links", async ({ page }) => {
   await expect(claude).toHaveAttribute("target", "_blank");
 });
 
-test("the page leads with the table, then the Score charts, the frontier chart, then the full key", async ({ page }) => {
+test("the page leads with the table, then the frontier chart, the Score charts, then the full key", async ({ page }) => {
   await page.goto("/models");
   const top = async (loc: ReturnType<typeof page.locator>) => (await loc.boundingBox())!.y;
   const table = await top(page.getByTestId("model-catalog"));
@@ -148,9 +148,9 @@ test("the page leads with the table, then the Score charts, the frontier chart, 
   const frontierPanel = await top(page.getByTestId("frontier-panel"));
   const legend = await top(page.getByTestId("catalog-legend"));
   const reference = await top(page.locator("#benchmarks"));
-  expect(table).toBeLessThan(charts);
-  expect(charts).toBeLessThan(frontierPanel);
-  expect(frontierPanel).toBeLessThan(legend);
+  expect(table).toBeLessThan(frontierPanel);
+  expect(frontierPanel).toBeLessThan(charts);
+  expect(charts).toBeLessThan(legend);
   expect(legend).toBeLessThan(reference);
   // The table's caption points down to the key, and the key above the table
   // defines the two things readers trip on.

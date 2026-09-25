@@ -39,7 +39,9 @@
 // the controls and receives the rows they keep (frontier re-marked over the
 // Provider + Jurisdiction pool, lib/catalog-filter). Jurisdiction is a
 // checkbox per code, all checked to start, so any combination (US + EU, say)
-// is one click away. Search stays the table's own.
+// is one click away. Search stays the table's own. Group by and the
+// Ratings / Benchmark scores view are saved for the next visit
+// (lib/models-prefs), like the filters.
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
@@ -84,6 +86,7 @@ import {
   type ModelRow,
 } from "@/lib/catalog-fields";
 import type { CatalogFilters } from "@/lib/catalog-filter";
+import { savePrefs, type Grouping, type View } from "@/lib/models-prefs";
 import { HoverCard } from "./FloatingCard";
 import { GlossaryTerm } from "./GlossaryTerm";
 import { IndexCard, ScoreBreakdownCard, SupersededCard, topScoreSentence } from "./ScoreCards";
@@ -122,7 +125,6 @@ type SortKey =
   | Category
   | BenchKey;
 type SortDir = "asc" | "desc";
-type View = "ratings" | "benchmarks";
 
 const BENCH_KEYS = new Set<string>(GRID_COLUMNS.map((c) => c.key));
 function isBenchKey(key: SortKey): key is BenchKey {
@@ -231,9 +233,7 @@ interface GroupStats {
   note: string | null;
 }
 
-// The two groupings the table can show, and the key a row falls under.
-type Grouping = "tier" | "quality";
-
+// The key a row falls under in each of the two groupings.
 function groupKey(m: ModelRow, grouping: Grouping): string {
   return grouping === "tier" ? m.tier_cost : String(qualityBand(m.aa_index) ?? "none");
 }
@@ -261,6 +261,8 @@ export function ModelCatalog({
   benchmarksGeneratedAt,
   measuredCount,
   scoreFit,
+  initialGroupBy,
+  initialView,
 }: {
   // Every catalog row: the filter options, the grid's bands, the totals.
   models: ModelRow[];
@@ -280,9 +282,12 @@ export function ModelCatalog({
   benchmarksGeneratedAt: string;
   measuredCount: number;
   scoreFit: ScoreFit | null;
+  // The visitor's saved Group by and view.
+  initialGroupBy: Grouping;
+  initialView: View;
 }) {
-  const [view, setView] = useState<View>("ratings");
-  const [sortKey, setSortKey] = useState<SortKey>("value");
+  const [view, setView] = useState<View>(initialView);
+  const [sortKey, setSortKey] = useState<SortKey>(initialGroupBy === "quality" ? "quality" : "value");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -414,6 +419,7 @@ export function ModelCatalog({
   function groupBy(next: Grouping) {
     setSortKey(next === "tier" ? "value" : "quality");
     setSortDir("desc");
+    savePrefs({ groupBy: next });
   }
 
   function toggleSort(key: SortKey) {
@@ -423,6 +429,7 @@ export function ModelCatalog({
 
   function switchView(v: View) {
     setView(v);
+    savePrefs({ view: v });
     // A sort on a column the other view does not show would be invisible;
     // fall back to the shared default.
     const hiddenInGrid = ["provider", "jurisdiction", "input_price_per_1m"].includes(sortKey);
@@ -660,7 +667,7 @@ export function ModelCatalog({
             "every model in the catalog"
           )}
           ; the Score compares a model with its own cost tier. Hover any AA Index for the top score
-          at that price, and see the frontier chart below the Score charts for the whole line.
+          at that price, and see the frontier chart below the table for the whole line.
         </p>
         <p className="rounded-lg border border-brand-slate-200 bg-brand-slate-50 px-3 py-2 text-brand-slate-700 dark:border-brand-slate-700 dark:bg-brand-slate-800/60 dark:text-brand-slate-200">
           <strong className="text-brand-slate-900 dark:text-brand-slate-50">

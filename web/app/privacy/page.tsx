@@ -55,7 +55,10 @@ export default function PrivacyPage() {
             </li>
             <li>
               No accounts, no email collection, and no cookies beyond what
-              Next.js needs for the request lifecycle.
+              Next.js needs for the request lifecycle, plus one preference
+              cookie on the <code className="px-1">/models</code> page that
+              remembers the filters, grouping and view you chose there. It
+              holds only those choices and is never sent anywhere else.
             </li>
           </ul>
 
