@@ -585,7 +585,8 @@ export function FrontierChart({
           </strong>{" "}
           The dotted green line joins them from cheapest to priciest and steps up at each one, so
           its height at any price is the top AA Index that price buys. The grey lines are the
-          Score&rsquo;s price lines, one per cost tier, drawn for comparison.
+          Score&rsquo;s price lines, one per cost tier, drawn for comparison; the charts below
+          take them apart tier by tier.
         </p>
 
         <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-brand-slate-600 dark:text-brand-slate-300">

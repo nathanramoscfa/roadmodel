@@ -647,7 +647,7 @@ export function ScoreCharts({
             other {scope ? `${scope} model` : "model in the catalog"} at its price or less.
           </strong>{" "}
           When the top score at a tier&rsquo;s prices belongs to a cheaper tier, that tier&rsquo;s
-          chart names the model under its title. The frontier chart below plots every model
+          chart names the model under its title. The frontier chart above plots every model
           together and draws the frontier as a line.
         </p>
       </div>

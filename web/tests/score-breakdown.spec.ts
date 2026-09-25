@@ -137,6 +137,15 @@ test("quality bands are fixed ten-point ranges labelled by what they hold", () =
   expect(qualityBand(null)).toBeNull();
   expect(formatQualityBand(40)).toBe("40–49.9");
   expect(formatQualityBand(0)).toBe("0–9.9");
+  // Bands above today's leaders open on their own as models reach them.
+  expect(qualityBand(63.2)).toBe(60);
+  expect(formatQualityBand(60)).toBe("60–69.9");
+  expect(qualityBand(87.5)).toBe(80);
+  expect(formatQualityBand(80)).toBe("80–89.9");
+  // The index tops out at 100, which joins the 90s rather than a band of one.
+  expect(qualityBand(99.9)).toBe(90);
+  expect(qualityBand(100)).toBe(90);
+  expect(formatQualityBand(90)).toBe("90–100");
 });
 
 test("a group is 'beaten' only when none of its measured models is on the frontier", () => {

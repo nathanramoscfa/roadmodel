@@ -268,17 +268,23 @@ export function groupBeatenBy(
 // Index in fixed ten-point bands (50–59.9, 40–49.9, …), labelled by their
 // literal range, so a band means exactly what it says. Fixed rather than
 // relative to the leader, so a model changes band only when its own index
-// moves (or AA re-versions the index, which moves every model at once). An
-// unmeasured model has no band.
+// moves (or AA re-versions the index, which moves every model at once). The
+// bands come from the models, not a list: the first model past 60 opens a
+// "60–69.9" group on its own. The index tops out at 100, which joins the
+// 90s band ("90–100") rather than opening a band of one value. An unmeasured
+// model has no band.
 export const QUALITY_BAND_WIDTH = 10;
+const QUALITY_TOP_BAND = 100 - QUALITY_BAND_WIDTH;
 
 export function qualityBand(index: number | null): number | null {
   if (index === null || !Number.isFinite(index)) return null;
-  return Math.floor(index / QUALITY_BAND_WIDTH) * QUALITY_BAND_WIDTH;
+  return Math.min(QUALITY_TOP_BAND, Math.floor(index / QUALITY_BAND_WIDTH) * QUALITY_BAND_WIDTH);
 }
 
-// "40–49.9" (the AA Index is published to one decimal).
+// "40–49.9" (the AA Index is published to one decimal); the top band, which
+// also holds 100, reads "90–100".
 export function formatQualityBand(lo: number): string {
+  if (lo >= QUALITY_TOP_BAND) return `${lo}–100`;
   return `${lo}–${(lo + QUALITY_BAND_WIDTH - 0.1).toFixed(1)}`;
 }
 
