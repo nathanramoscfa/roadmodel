@@ -105,7 +105,11 @@ jobs:
 
       - name: File or clear the tracking issue
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          # The workflow's own token (permissions: issues: write above), not the
+          # cron bot's App token: GitHub refused the App token's comments
+          # ("Resource not accessible by integration (addComment)"), so every
+          # failing run since 2026-09-05 died here and the alarm never posted.
+          GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           FRESHNESS_OUTCOME: ${{ steps.freshness.outcome }}
           FAILING_CRONS: ${{ steps.crons.outputs.failing }}

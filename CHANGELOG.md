@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The recommender soak fails loudly when production stops answering.**
+  From 2026-09-21 to 2026-09-24 every production recommendation failed while
+  `recommend-soak.yml` stayed green. Its quality bar is report-only, and its
+  tracking issue already fails daily on known residuals.
+  - `scripts/soak-health.ts` marks the service DOWN when half or more of the
+    soak's requests fail, and the script exits 3.
+  - The workflow then fails the run and opens an `incident` issue. The issue
+    gets a comment on every failing run and closes itself when requests
+    succeed again.
+  - `cron-health.yml` now posts its alarm with the workflow's own token. The
+    cron bot's App token had every comment refused, so the alarm never
+    posted.
+
 ## [0.2.42] — 2026-09-24
 
 ### Added
