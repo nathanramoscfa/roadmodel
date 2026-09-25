@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.43] — 2026-09-25
+
 ### Added
 
 - **GPT-6 Astra, Sol and Luna are in the catalog.** They carry OpenAI's own
