@@ -13,23 +13,31 @@
 // (keyboard) any dot for its card; hover the green line for the top score at
 // that price. Click or tap pins a card; a click elsewhere or Escape clears it.
 // Laid out at the container's real pixel width (chart-kit useWidth).
+//
+// The page's filters (lib/catalog-filter): the dots are the models all three
+// keep; the frontier is drawn from the models Provider and Jurisdiction keep,
+// at every price. With a Cost tier chosen, the line is clipped to the band's
+// prices and can step up where a model outside the band holds the top score:
+// a step with no dot, which the panel names.
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import { blendedPrice, formatUsd, type ScoreFit } from "@/lib/benchmark-grid";
 import { COST_TIER_DEFS, type CostTier, type ModelRow } from "@/lib/catalog-fields";
 import {
+  FilterNote,
   FRONTIER,
   LABEL_PX,
   LegendSwatch,
   pickPriceTicks,
   placeLabels,
   useWidth,
+  type ChartFilter,
   type Label,
 } from "./chart-kit";
 import { FloatingCard, type AnchorRect } from "./FloatingCard";
-import { FrontierPointCard, FrontierStepCard } from "./ScoreCards";
+import { FrontierPointCard, FrontierScope, FrontierStepCard } from "./ScoreCards";
 
 const M = { top: 16, right: 24, bottom: 46, left: 46 };
 const R = 5; // dot radius: this chart carries every model at once
@@ -52,15 +60,34 @@ interface TierLine {
 
 type Active = { kind: "point"; id: string } | { kind: "step"; x: number } | null;
 
+// Every measured row at its blended price, cheapest first.
+function toPts(rows: readonly ModelRow[]): Pt[] {
+  return rows
+    .filter((r) => r.aa_index !== null)
+    .map((r) => {
+      const price = blendedPrice(r.input_price_per_1m, r.output_price_per_1m);
+      return { row: r, x: Math.log10(price), price, index: r.aa_index as number };
+    })
+    .sort((a, b) => a.x - b.x || b.index - a.index);
+}
+
 function FrontierPlot({
   pts,
   frontier,
+  drawn,
+  x0,
+  x1,
   lines,
   byId,
 }: {
   pts: Pt[];
-  // The ringed models, cheapest first.
+  // The pool's ringed models, cheapest first, shown or not.
   frontier: Pt[];
+  // The ones the line passes through inside [x0, x1], cheapest first.
+  drawn: Pt[];
+  // The plotted price range, log10.
+  x0: number;
+  x1: number;
   lines: TierLine[];
   byId: Map<string, ModelRow>;
 }) {
@@ -74,12 +101,15 @@ function FrontierPlot({
   const plotW = Math.max(40, width - M.left - M.right);
   const plotH = height - M.top - M.bottom;
 
-  const xs = pts.map((p) => p.x);
-  const pad = Math.max(0.06, (Math.max(...xs) - Math.min(...xs)) * 0.04);
-  const x0 = Math.min(...xs) - pad;
-  const x1 = Math.max(...xs) + pad;
   const yLo = 0;
-  const yHi = Math.min(100, Math.ceil((Math.max(...pts.map((p) => p.index)) + 4) / 10) * 10);
+  // Tall enough for every dot, every step of the line and both ends of every
+  // tier line (a filtered chart's line can run above its highest dot).
+  const top = Math.max(
+    ...pts.map((p) => p.index),
+    ...drawn.map((f) => f.index),
+    ...lines.flatMap((l) => [l.ya, l.yb]),
+  );
+  const yHi = Math.min(100, Math.ceil((top + 4) / 10) * 10);
   const sx = useCallback((x: number) => M.left + ((x - x0) / (x1 - x0)) * plotW, [x0, x1, plotW]);
   const sy = useCallback(
     (y: number) => M.top + plotH - ((y - yLo) / (yHi - yLo)) * plotH,
@@ -92,15 +122,17 @@ function FrontierPlot({
     [width, x0, x1, sx, plotW],
   );
 
-  // The frontier line: from the cheapest ringed model, flat until the next
-  // ringed model's price, then up to its score, and flat to the right edge
-  // after the last one. Its height at any price is the top score that buys.
+  // The frontier line: from the cheapest ringed model (or the chart's left
+  // edge, when a cheaper model outside the plotted band holds the top score
+  // there), flat until the next ringed model's price, then up to its score,
+  // and flat to the right edge after the last one. Its height at any price is
+  // the top score that buys.
   const stepPath = useMemo(() => {
-    if (frontier.length === 0) return "";
-    let d = `M ${sx(frontier[0].x)} ${sy(frontier[0].index)}`;
-    for (const f of frontier.slice(1)) d += ` H ${sx(f.x)} V ${sy(f.index)}`;
+    if (drawn.length === 0) return "";
+    let d = `M ${sx(Math.max(drawn[0].x, x0))} ${sy(drawn[0].index)}`;
+    for (const f of drawn.slice(1)) d += ` H ${sx(f.x)} V ${sy(f.index)}`;
     return `${d} H ${sx(x1)}`;
-  }, [frontier, sx, sy, x1]);
+  }, [drawn, sx, sy, x0, x1]);
 
   // The ringed model that holds the top score at a price (log10), if any.
   const holderAt = useCallback(
@@ -213,7 +245,8 @@ function FrontierPlot({
           Every model, one chart
         </span>
         <span className="text-xs tabular-nums text-brand-slate-500 dark:text-brand-slate-400">
-          {pts.length} models · {frontier.length} on the frontier
+          {pts.length} {pts.length === 1 ? "model" : "models"} ·{" "}
+          {pts.filter((p) => p.row.value_frontier).length} on the frontier
         </span>
       </figcaption>
 
@@ -224,7 +257,7 @@ function FrontierPlot({
             width={width}
             height={height}
             role="group"
-            aria-label={`Every model with an AA Index, ${pts.length} in all, by blended price and AA Intelligence Index. The cost/quality frontier joins the ${frontier.length} ringed models: ${frontier.map((f) => f.row.name).join(", ")}.`}
+            aria-label={`Every model with an AA Index, ${pts.length} in all, by blended price and AA Intelligence Index. The cost/quality frontier passes through ${drawn.length} ${drawn.length === 1 ? "model" : "models"}: ${drawn.map((f) => f.row.name).join(", ")}.`}
             className="block touch-manipulation select-none text-brand-slate-400 dark:text-brand-slate-500"
             onPointerDown={(e) => {
               if (e.target === e.currentTarget) clear();
@@ -296,7 +329,7 @@ function FrontierPlot({
               strokeLinecap="round"
               strokeLinejoin="round"
               data-testid="frontier-line"
-              data-frontier-ids={frontier.map((f) => f.row.id).join(",")}
+              data-frontier-ids={drawn.map((f) => f.row.id).join(",")}
               pointerEvents="none"
             />
             {/* Wide invisible target along it: hover for the top score at that price. */}
@@ -322,8 +355,8 @@ function FrontierPlot({
                 setActive({ kind: "step", x: xAt(e.clientX) });
               }}
               onFocus={(e) => {
-                if (e.currentTarget.matches(":focus-visible") && frontier.length > 0) {
-                  setActive({ kind: "step", x: frontier[0].x });
+                if (e.currentTarget.matches(":focus-visible") && drawn.length > 0) {
+                  setActive({ kind: "step", x: Math.max(drawn[0].x, x0) });
                 }
               }}
               onBlur={() => {
@@ -473,24 +506,51 @@ function FrontierPlot({
   );
 }
 
-export function FrontierChart({ rows, fit }: { rows: ModelRow[]; fit: ScoreFit | null }) {
-  const pts: Pt[] = rows
-    .filter((r) => r.aa_index !== null)
-    .map((r) => {
-      const price = blendedPrice(r.input_price_per_1m, r.output_price_per_1m);
-      return { row: r, x: Math.log10(price), price, index: r.aa_index as number };
-    })
-    .sort((a, b) => a.x - b.x || b.index - a.index);
-  if (pts.length < 2) return null;
-  const frontier = pts.filter((p) => p.row.value_frontier);
-  const byId = new Map(rows.map((r) => [r.id, r]));
-  // The Score's price lines, each over its own tier's measured prices (a tier
-  // priced at one point gets a short stub so it still shows).
+export function FrontierChart({
+  rows,
+  pool,
+  fit,
+  filter,
+}: {
+  // The rows the page's filters keep: the dots.
+  rows: ModelRow[];
+  // The rows the Provider and Jurisdiction filters keep, frontier marked over
+  // them: the line, and the models the cards name.
+  pool: ModelRow[];
+  fit: ScoreFit | null;
+  // The active filters; null when the page shows every model.
+  filter: ChartFilter | null;
+}) {
+  const scope = useContext(FrontierScope);
+  const pts = toPts(rows);
+  if (!filter && pts.length < 2) return null;
+  const frontier = toPts(pool.filter((r) => r.value_frontier));
+  const byId = new Map(pool.map((r) => [r.id, r]));
+
+  // The plotted price range (log10), padded so no dot sits on the frame.
+  const xs = pts.map((p) => p.x);
+  const pad = Math.max(0.06, (Math.max(...xs) - Math.min(...xs)) * 0.04);
+  const x0 = Math.min(...xs) - pad;
+  const x1 = Math.max(...xs) + pad;
+  // The line inside that range: the model holding the top score at the left
+  // edge, then each one that steps up before the right edge. Unfiltered, that
+  // is every ringed model, all of them dots.
+  const before = frontier.filter((f) => f.x <= x0);
+  const drawn =
+    pts.length === 0 ? [] : [...before.slice(-1), ...frontier.filter((f) => f.x > x0 && f.x <= x1)];
+  const shownIds = new Set(pts.map((p) => p.row.id));
+  const offBand = drawn.filter((f) => !shownIds.has(f.row.id));
+  const ringed = pts.filter((p) => p.row.value_frontier).length;
+
+  // The Score's price lines, one per cost tier on the chart, each over the
+  // prices of that tier's plotted models (a tier priced at one point gets a
+  // short stub so it still shows).
   const lines: TierLine[] = fit
-    ? TIERS.filter((t) => fit.tiers[t]).map((t) => {
+    ? TIERS.filter((t) => fit.tiers[t] && pts.some((p) => p.row.tier_cost === t)).map((t) => {
         const tf = fit.tiers[t];
-        let a = Math.log10(tf.minPrice);
-        let b = Math.log10(tf.maxPrice);
+        const tx = pts.filter((p) => p.row.tier_cost === t).map((p) => p.x);
+        let a = Math.min(...tx);
+        let b = Math.max(...tx);
         if (b - a < 0.04) {
           a -= 0.03;
           b += 0.03;
@@ -521,7 +581,7 @@ export function FrontierChart({ rows, fit }: { rows: ModelRow[]; fit: ScoreFit |
           Intelligence Index up.{" "}
           <strong>
             The green models are the cost/quality frontier: each one scores higher than every other
-            model at its price or less.
+            {scope ? ` ${scope} model` : " model"} at its price or less.
           </strong>{" "}
           The dotted green line joins them from cheapest to priciest and steps up at each one, so
           its height at any price is the top AA Index that price buys. The grey lines are the
@@ -566,12 +626,40 @@ export function FrontierChart({ rows, fit }: { rows: ModelRow[]; fit: ScoreFit |
           </li>
         </ul>
 
-        <FrontierPlot pts={pts} frontier={frontier} lines={lines} byId={byId} />
+        {filter && (
+          <FilterNote filter={filter} testId="frontier-filter">
+            {pts.length === 0
+              ? "No measured model matches, so there is nothing to plot."
+              : `${pts.length} measured ${pts.length === 1 ? "model" : "models"} plotted.`}{" "}
+            {scope
+              ? `The frontier is redrawn over the ${scope} models, at every price.`
+              : "The frontier still compares every model in the catalog."}
+            {offBand.length > 0 && (
+              <span data-testid="frontier-off-band">
+                {" "}
+                Where the green line steps up with no dot, the top score belongs to a model your Cost
+                tier choice hides: {offBand.map((f) => `${f.row.name} (${COST_TIER_DEFS[f.row.tier_cost].label} cost)`).join(", ")}.
+              </span>
+            )}
+          </FilterNote>
+        )}
+
+        {pts.length > 0 && (
+          <FrontierPlot
+            pts={pts}
+            frontier={frontier}
+            drawn={drawn}
+            x0={x0}
+            x1={x1}
+            lines={lines}
+            byId={byId}
+          />
+        )}
 
         <p className="text-xs leading-5 text-brand-slate-500 dark:text-brand-slate-400">
-          The frontier comes straight from the data: sort every model by blended price and keep each
-          one that scores higher than every model at its price or less. That keeps {frontier.length}{" "}
-          of the {pts.length} models plotted.
+          The frontier comes straight from the data: sort every{scope ? ` ${scope}` : ""} model by
+          blended price and keep each one that scores higher than every model at its price or less.
+          That keeps {ringed} of the {pts.length} models plotted.
           {fit && (
             <>
               {" "}

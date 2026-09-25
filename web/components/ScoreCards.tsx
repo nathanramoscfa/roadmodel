@@ -12,10 +12,12 @@
 //                        and where it stands across the whole catalog
 //   FrontierStepCard   — the frontier line: the top score a price buys
 // Every card that shows a Score also shows FrontierStatus: the Score compares
-// a model with its own cost tier, and FrontierStatus with the whole catalog.
+// a model with its own cost tier, and FrontierStatus with the whole catalog,
+// or with the models the page's Provider and Jurisdiction filters keep
+// (FrontierScope).
 // Figures come from the same ScoreFit the table and charts use, so a card can
 // never disagree with the cell or the dot it explains.
-import type { ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 
 import {
   blendedPrice,
@@ -26,6 +28,11 @@ import {
   type ScoreFit,
 } from "@/lib/benchmark-grid";
 import { COST_TIER_DEFS, COST_TIER_DOT, type CostTier, type ModelRow } from "@/lib/catalog-fields";
+
+// Which models the frontier compares (lib/catalog-filter poolScope), as a
+// modifier for "every ___ model": null for the whole catalog, else "US + EU"
+// or "Anthropic". The /models page provides it; the cards read it.
+export const FrontierScope = createContext<string | null>(null);
 
 const MUTED = "text-brand-slate-500 dark:text-brand-slate-400";
 const STRONG = "text-brand-slate-900 dark:text-brand-slate-50";
@@ -86,8 +93,9 @@ function Row({
   );
 }
 
-// The whole-catalog half of the story, in every card. A green ring marks a
-// model on the cost/quality frontier: the top AA Index at its price or less.
+// The whole-catalog half of the story, in every card (the filtered pool's,
+// when the filters narrow it). A green ring marks a model on the cost/quality
+// frontier: the top AA Index at its price or less.
 // Any other model is shown with the model that holds the top score at its
 // price or less. The Score compares a model with its own tier, so a card that
 // shows a Score shows this too.
@@ -99,10 +107,11 @@ export function FrontierStatus({
   // The row m.value_beaten_by names; null on the frontier.
   leader: ModelRow | null;
 }) {
+  const scope = useContext(FrontierScope);
   if (m.aa_index === null) return null;
   const heading = (
     <p className={"mb-1 text-[11px] font-semibold uppercase tracking-wide " + MUTED}>
-      Across the whole catalog
+      {scope ? `Across ${scope} models` : "Across the whole catalog"}
     </p>
   );
   if (m.value_frontier || !leader || leader.aa_index === null) {
@@ -117,7 +126,8 @@ export function FrontierStatus({
           <span className="mt-[4px] inline-block h-2.5 w-2.5 shrink-0 rounded-full border-2 border-emerald-500" />
           <span>
             <span className={"font-semibold " + STRONG}>On the cost/quality frontier.</span> It
-            scores higher on the AA Index than every other model at its price or less.
+            scores higher on the AA Index than every other {scope ? `${scope} model` : "model"} at
+            its price or less.
           </span>
         </p>
       </div>

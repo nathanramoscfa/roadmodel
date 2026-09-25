@@ -1,8 +1,6 @@
 import { BenchmarkReference } from "@/components/BenchmarkReference";
 import { CatalogLegend } from "@/components/CatalogLegend";
-import { FrontierChart } from "@/components/FrontierChart";
-import { ModelCatalog } from "@/components/ModelCatalog";
-import { ScoreCharts } from "@/components/ScoreCharts";
+import { ModelsExplorer } from "@/components/ModelsExplorer";
 import { getBenchmarkMeta, getCatalogGeneratedAt, getModelRows, getScoreFit } from "@/lib/catalog-models";
 
 export const metadata = {
@@ -30,24 +28,23 @@ export default function ModelsPage() {
           them: Artificial Analysis&rsquo;s independently measured benchmarks, the same test on
           the same scale for every model, refreshed daily. A rating is a class several models can
           share; the figures separate them within it. Sort any column, filter by provider,
-          jurisdiction, or cost, switch to the full benchmark grid, and hover any label for its
-          definition and source.
+          jurisdiction, or cost (the charts below follow the same filters), switch to the full
+          benchmark grid, and hover any label for its definition and source.
         </p>
       </header>
 
       {/* Most used first: the catalog itself, then the charts that explain its
-          Score column, then the frontier drawn across every model, then the
-          full key (the table's caption links to it). */}
+          Score column, then the frontier drawn across every model (all three
+          under the table's filters), then the full key (the table's caption
+          links to it). */}
       <div className="mt-10 space-y-8">
-        <ModelCatalog
+        <ModelsExplorer
           models={models}
           generatedAt={generatedAt}
           benchmarksGeneratedAt={bench.generatedAt}
           measuredCount={bench.measuredCount}
           scoreFit={scoreFit}
         />
-        <ScoreCharts rows={models} fit={scoreFit} />
-        <FrontierChart rows={models} fit={scoreFit} />
         <CatalogLegend id="how-to-read" />
         <BenchmarkReference id="benchmarks" />
       </div>

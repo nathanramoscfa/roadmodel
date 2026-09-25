@@ -3,7 +3,8 @@
 // What the /models charts share (the per-tier Score charts and the frontier
 // chart): the chart's real width, label widths in the page's own font, greedy
 // label placement that never covers another label or dot, round price ticks
-// for a log axis, the legend swatch, and the frontier colour.
+// for a log axis, the legend swatch, the frontier colour, and the note a
+// panel shows while the page's filters narrow it.
 "use client";
 
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
@@ -187,5 +188,45 @@ export function LegendSwatch({ children }: { children: ReactNode }) {
     <svg width={22} height={14} viewBox="0 0 22 14" aria-hidden className="shrink-0">
       {children}
     </svg>
+  );
+}
+
+// The page's active filters, as a chart panel shows them (ModelsExplorer).
+export interface ChartFilter {
+  // Every active filter in a line: "Jurisdiction: US + EU · High cost".
+  summary: string;
+  onClear: () => void;
+}
+
+// A filtered panel says so at its top, far below the controls that set it,
+// and offers the way back.
+export function FilterNote({
+  filter,
+  testId,
+  children,
+}: {
+  filter: ChartFilter;
+  testId: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-lg border border-brand-accent/30 bg-brand-accent/5 px-3 py-2 text-xs leading-5 text-brand-slate-700 dark:bg-brand-accent/10 dark:text-brand-slate-200"
+      data-testid={testId}
+    >
+      <p>
+        <strong className="font-semibold text-brand-slate-900 dark:text-brand-slate-50">
+          Filtered: {filter.summary}.
+        </strong>{" "}
+        {children}
+      </p>
+      <button
+        type="button"
+        onClick={filter.onClear}
+        className="shrink-0 font-medium text-brand-accent hover:underline"
+      >
+        Show every model
+      </button>
+    </div>
   );
 }
