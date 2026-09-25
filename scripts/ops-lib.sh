@@ -97,6 +97,24 @@ _gh_merge() {
   _gh_as_merger pr merge "$pr" -R "$REPO" "$@"
 }
 
+# quiet_push <git push args...> — the pre-push hook prints the whole macOS
+# verify suite; show it only when the push fails.
+quiet_push() {
+  local out
+  out="$(git push "$@" 2>&1)" || { printf '%s\n' "$out" | tail -25 >&2; return 1; }
+}
+
+# pypi_index_has <version> — true once PyPI's SIMPLE index (what pip and uv
+# resolve against) lists the version. The JSON API sees a release minutes
+# before the CDN-cached index does; a build that resolves in that window fails
+# with "only roadmodel<=OLD is available" (0.2.43's first service build).
+pypi_index_has() {
+  curl -s --max-time 15 -H "Accept: application/vnd.pypi.simple.v1+json" \
+    https://pypi.org/simple/roadmodel/ |
+    python3 -c 'import json,sys; sys.exit(0 if sys.argv[1] in json.load(sys.stdin).get("versions",[]) else 1)' "$1" \
+    2>/dev/null
+}
+
 healthz_version() {
   curl -s --max-time 15 "$HEALTHZ_URL" |
     python3 -c 'import json,sys; print(json.load(sys.stdin).get("roadmodel_version",""))' 2>/dev/null
