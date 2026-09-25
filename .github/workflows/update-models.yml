@@ -210,6 +210,14 @@ jobs:
           set -euo pipefail
           git show HEAD:docs/model-selector.txt > /tmp/base-selector.txt
           python update/merge_catalog.py --write --base /tmp/base-selector.txt
+          # Codex lists its models on its own page; a catalogued one belongs on both
+          # Codex methods. Deterministic + additive — the prompt's supports-models
+          # guard refuses a whole family launch at once. Fail-open on fetch errors.
+          codex_ids="$(python update/extract_codex_models.py --recommended | paste -sd, - || true)"
+          if [ -n "${codex_ids}" ]; then
+            python update/merge_catalog.py --sync-method codex-cli --ids "${codex_ids}"
+            python update/merge_catalog.py --sync-method codex-api --ids "${codex_ids}"
+          fi
           # Derived ratings overlay: tier-coding/agentic/long-context/knowledge
           # are a function of docs/benchmarks.json (update/derive_ratings.py),
           # so any Opus edit to them is reverted here and the coding S-tier
