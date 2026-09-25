@@ -42,10 +42,12 @@ controls)** material:
   reasoning value onto the existing 7-state EFFORT field
   (`Off`/`Low`/`Medium`/`High`/`XHigh`/`Max`/`N/A`). The established mapping is
   `minimal → Off`, `low → Low`, `medium → Medium`, `high → High`,
-  `xhigh` / `extra-high` → `XHigh`. OpenAI's scale tops out at `xhigh`, so no
-  OpenAI level maps to `Max` (the `Max` slot is for an above-`xhigh` step, which
-  only the Claude `max` models reach). `extra-high` is the UI synonym for the
-  `xhigh` config token; keep both readable but they mean the same tier.
+  `xhigh` / `extra-high` → `XHigh`, `max` → `Max`, `ultra` → `Ultracode` (the
+  top EFFORT rung). The documented set in `<docs_facts>` is authoritative for
+  which of these exist: OpenAI added `max` and `ultra` above `xhigh` in 2026-09,
+  and a step it adds later maps onto the next rung up. `extra-high` is the UI
+  synonym for the `xhigh` config token; keep both readable but they mean the
+  same tier.
 
 The output contract is v2 (see `<output-format>`'s `OUTPUT CONTRACT VERSION: 2`
 header): the reasoning LEVEL lives in the `EFFORT` field, and `THINKING` is a
