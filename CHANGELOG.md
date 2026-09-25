@@ -7,7 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **GPT-6 Astra, Sol and Luna are in the catalog.** They carry OpenAI's own
+  prices: $10/$50, $2/$10 and $0.10/$0.50 per million input/output tokens.
+  All three are listed on the OpenAI API and Codex, and Astra also on
+  ChatGPT. Their coding, agentic, long-context and knowledge ratings are
+  derived from Artificial Analysis benchmarks.
+- **Any scheduled job runs on demand.** `scripts/run-now.sh <target>` runs a
+  curation cron, the benchmark refresh, the availability probe or the soak.
+  So do the **Run now (on demand)** workflow (GitHub app or web) and `/run-now`
+  in Claude Code. Each run waits for the job, prints its API cost and the PR
+  it opened, and with `--merge` merges that PR once its checks pass.
+  `scripts/release.sh` runs a whole release: the PyPI publish, the service
+  version floor, and a check that production reports the new version. See
+  `docs/on-demand-operations.md`.
+
 ### Changed
+
+- **A model family launch reaches its access methods.** The curation prompt
+  halted when three or more new models arrived for one method in one run, so
+  two of the three GPT-6 models landed with no method and the refresh failed.
+  The catalog step now adds, in code, every catalogued model on a provider's
+  own price list to that provider's API method, and Codex's recommended models
+  to both Codex methods. It only ever adds.
+- **The curation crons cost about a seventh as much per run.** They return
+  edits instead of rewriting the 180 KB selector, run on Opus 5.5, send the
+  Claude Code tracker only the new changelog sections, and log each API call's
+  cost. A Codex run went from about $2.30 to $0.32.
 
 - **A step commits the AGENTS.md the updater created.** `roadmodel-update`
   writes `AGENTS.md` once in every project and never commits it, so each
