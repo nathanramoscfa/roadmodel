@@ -1,9 +1,9 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-25T16:25:33Z",
+  "generated_at_utc": "2026-09-25T16:50:05Z",
   "source_doc_sha256": {
-    "model-selector.txt": "8712732c84a5ba403bcdf00ccb4f5e22cc3d6e98f31b5d642ea8841a35763732",
+    "model-selector.txt": "f9a14aef7559487e2f5fb5bf182f7aa8df73539b036775c2d58c5d6af08bbd1d",
     "model-tier-cost-scale.md": "9b9f57f5367b553ab11c1116ff69b89eb4d3a9251a7f1caebd813dbdc0c4716a"
   },
   "models": [
@@ -879,12 +879,12 @@
       "cache_read_per_1m": null,
       "tier_cost": "very-high",
       "tiers": {
-        "coding": "B",
+        "coding": "S",
         "planning": "B",
-        "agentic": "B",
+        "agentic": "S",
         "multimodal": "B",
-        "long-context": "B",
-        "knowledge": "B",
+        "long-context": "A",
+        "knowledge": "A",
         "speed": "B"
       },
       "jurisdiction": "us",
@@ -907,7 +907,7 @@
         "planning": "B",
         "agentic": "B",
         "multimodal": "B",
-        "long-context": "B",
+        "long-context": "A",
         "knowledge": "B",
         "speed": "B"
       },
@@ -931,8 +931,8 @@
         "planning": "B",
         "agentic": "B",
         "multimodal": "B",
-        "long-context": "B",
-        "knowledge": "B",
+        "long-context": "S",
+        "knowledge": "A",
         "speed": "B"
       },
       "jurisdiction": "us",
