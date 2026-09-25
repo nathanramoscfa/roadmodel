@@ -116,11 +116,25 @@ outside the object:
 
 ```
 {
-  "roadmodel_txt": "<full updated content of docs/model-selector.txt>",
+  "edits": [{"find": "<exact unique span of docs/model-selector.txt>", "replace": "<new text>"}],
   "summary": "<3-8 line plain-text summary of what changed; this becomes the commit message body>",
   "warnings": ["<any caveats, missing data, judgments worth flagging>"]
 }
 ```
 
-If nothing changed at all, return `roadmodel_txt` verbatim and set `summary` to
+Return EDITS, not the whole file. Each edit replaces one exact span of the
+current file:
+
+- `find` — text copied VERBATIM from the current file (same whitespace, quotes
+  and line breaks) that occurs EXACTLY ONCE in it. Include enough surrounding
+  text (e.g. the element's `id="…"` attribute) to make it unique, but keep it
+  short — a single attribute value or line is ideal. A `find` that matches zero
+  or several places FAILS the whole run.
+- `replace` — the text that takes its place (`""` deletes the span).
+
+Edits apply in order, each to the result of the previous ones, so two edits
+must not overlap. Everything you do not edit is kept byte-for-byte — never
+restate unchanged text.
+
+If nothing changed at all, return `"edits": []` and set `summary` to
 "No changes detected.".

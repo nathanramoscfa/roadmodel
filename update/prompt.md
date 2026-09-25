@@ -987,31 +987,42 @@ commentary outside the object:
 
 ```
 {
-  "roadmodel_txt": "<full updated content of docs/model-selector.txt>",
-  "model_tier_cost_scale_md": "<full updated content of docs/model-tier-cost-scale.md>",
+  "edits": [{"find": "<exact unique span of the target file>", "replace": "<new text>"}],
   "summary": "<3-8 line plain-text summary of what changed; this becomes the commit message body>",
   "warnings": ["<any caveats, missing data, sources you skipped, or judgments worth flagging>"]
 }
 ```
 
-If nothing changed, return both files verbatim, set `summary` to
+Return EDITS, not the whole file. Each edit replaces one exact span of the
+current file:
+
+- `find` — text copied VERBATIM from the current file (same whitespace, quotes
+  and line breaks) that occurs EXACTLY ONCE in it. Include enough surrounding
+  text (e.g. the element's `id="…"` attribute) to make it unique, but keep it
+  short — a single attribute value or line is ideal. A `find` that matches zero
+  or several places FAILS the whole run.
+- `replace` — the text that takes its place (`""` deletes the span).
+
+Edits apply in order, each to the result of the previous ones, so two edits
+must not overlap. Everything you do not edit is kept byte-for-byte — never
+restate unchanged text.
+
+If nothing changed, return `"edits": []`, set `summary` to
 "No changes detected.", and `warnings` to an empty array.
 
 ## Single-target emit (`<emit_target>`)
 
-To keep each response well under the output-token ceiling, the refresh is split
-into two calls, each emitting ONE file. When the user message contains an
-`<emit_target>` directive, emit ONLY the named file's key (omit the other
-entirely) plus `summary` and `warnings`:
+The refresh is split into two calls, each editing ONE file. The user message's
+`<emit_target>` directive names it, and every `find` must come from THAT file:
 
-- `<emit_target>cost_scale</emit_target>` — return ONLY
-  `model_tier_cost_scale_md` (apply every rule above that concerns
+- `<emit_target>cost_scale</emit_target>` — edit ONLY
+  `docs/model-tier-cost-scale.md` (apply every rule above that concerns
   `docs/model-tier-cost-scale.md`: pricing rows, tiers, the Classification
-  Audit, subscription tiers). Do NOT return `roadmodel_txt`.
+  Audit, subscription tiers).
   ```
-  { "model_tier_cost_scale_md": "<full updated content>", "summary": "...", "warnings": [...] }
+  { "edits": [ ... ], "summary": "...", "warnings": [...] }
   ```
-- `<emit_target>selector</emit_target>` — return ONLY `roadmodel_txt` (apply
+- `<emit_target>selector</emit_target>` — edit ONLY `docs/model-selector.txt` (apply
   every rule that concerns `docs/model-selector.txt`: `<model-options>`
   lifecycle, tier ratings, `headline-benchmarks`, `pricing-notes`,
   `supports-models`). The provided
@@ -1030,10 +1041,9 @@ entirely) plus `summary` and `warnings`:
   any mismatch, so do not paraphrase, reorder, or drop clauses. This is the
   "Final-pass invariant: cost-scale `Notes` ≡ selector `pricing-notes`" rule
   above, now applied against the provided (authoritative) cost scale rather than
-  one you emit in the same response. Do NOT return
-  `model_tier_cost_scale_md`.
+  one you emit in the same response. Do NOT edit the cost scale in this pass.
   ```
-  { "roadmodel_txt": "<full updated content>", "summary": "...", "warnings": [...] }
+  { "edits": [ ... ], "summary": "...", "warnings": [...] }
   ```
 
 The `summary` / `warnings` rules and the "No changes detected." convention are
