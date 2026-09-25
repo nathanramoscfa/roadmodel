@@ -225,3 +225,35 @@ def test_fake_client_matches_the_real_sdk() -> None:
         assert field in Message.model_fields, f"SDK Message lost .{field}"
     assert "output_tokens" in Message.model_fields["usage"].annotation.model_fields
     assert "text" in TextBlock.model_fields
+
+
+def test_crons_run_opus_5_5_at_pinned_effort(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Model + effort are shared and explicit; Opus 5.5's API default is 'medium',
+    pinned here so a server-side default change can't move the crons' spend."""
+    import importlib
+
+    for name in (
+        "update_models",
+        "update_claude_code",
+        "update_codex",
+        "update_gemini",
+        "update_deepseek",
+    ):
+        assert importlib.import_module(name).MODEL_ID == opus_turn.OPUS_MODEL == "claude-opus-5-5"
+
+    client = _install(monkeypatch, [("{}", "end_turn")])
+    _run(client)
+    assert client.messages.calls[0]["output_config"] == {"effort": opus_turn.OPUS_EFFORT}
+
+
+def test_usage_line_prices_a_turn() -> None:
+    class U:
+        input_tokens = 1_000_000
+        output_tokens = 100_000
+        cache_read_input_tokens = 0
+        cache_creation_input_tokens = 0
+        server_tool_use = type("S", (), {"web_search_requests": 3})()
+
+    line = opus_turn._usage_line(U())
+    # $4 input + $2 output + 3 searches x $0.01
+    assert "web_searches=3" in line and "est_usd=6.030" in line

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Refresh ``docs/model-selector.txt`` and ``docs/model-tier-cost-scale.md``
-for roadmodel from upstream pricing and benchmark sources using Opus 4.7."""
+for roadmodel from upstream pricing and benchmark sources using Opus."""
 
 from __future__ import annotations
 
@@ -23,8 +23,10 @@ _UPDATE_DIR = Path(__file__).resolve().parent
 if str(_UPDATE_DIR) not in sys.path:
     sys.path.insert(0, str(_UPDATE_DIR))
 # E402/I001 are expected after the path guard above.
+from edits import EditError, payload_size, resolve_file  # noqa: E402, I001
 from opus_turn import (  # noqa: E402, I001
     MAX_OUTPUT_TOKENS,
+    OPUS_MODEL,
     OpusTurnIncomplete,
     stream_until_complete,
 )
@@ -38,7 +40,7 @@ UPDATE_DIR = REPO_ROOT / "update"
 SELECTOR_PATH = DOCS_DIR / "model-selector.txt"
 COST_SCALE_PATH = DOCS_DIR / "model-tier-cost-scale.md"
 
-MODEL_ID = "claude-opus-4-7"
+MODEL_ID = OPUS_MODEL
 # The selector pass emits docs/model-selector.txt whole (~41k tokens) inside a
 # JSON string, plus a planning preamble — measured at 66,690 output tokens on
 # 2026-09-04, above the 64000 this used to carry. See update/opus_turn.py.
@@ -637,9 +639,7 @@ def parse_result(raw: str, primary_key: str = "roadmodel_txt") -> dict[str, Any]
         except json.JSONDecodeError:
             return
         if isinstance(parsed, dict):
-            payload = parsed.get(primary_key, "")
-            length = len(payload) if isinstance(payload, str) else 0
-            candidates.append((length, parsed))
+            candidates.append((payload_size(parsed, primary_key), parsed))
 
     for block in _FENCED_BLOCK_RE.findall(text):
         _try_add(block)
@@ -915,11 +915,11 @@ def main() -> int:
     result_cs = run_call("cost_scale", cost_scale_text, pricing_sources, "model_tier_cost_scale_md")
     if result_cs is None:
         return 2
-    new_cost_scale_obj = result_cs.get("model_tier_cost_scale_md")
-    if not isinstance(new_cost_scale_obj, str) or not new_cost_scale_obj.strip():
-        sys.stderr.write("cost_scale pass did not return a model_tier_cost_scale_md string\n")
+    try:
+        new_cost_scale = resolve_file(result_cs, "model_tier_cost_scale_md", cost_scale_text)
+    except EditError as exc:
+        sys.stderr.write(f"cost_scale pass: could not apply the model's edits: {exc}\n")
         return 2
-    new_cost_scale: str = new_cost_scale_obj
 
     # Annual prices are EDITORIAL — deterministically restore the committed Annual
     # column so the cron can never originate one (issue #315). Runs before the
@@ -930,11 +930,11 @@ def main() -> int:
     result_sel = run_call("selector", new_cost_scale, benchmark_sources, "roadmodel_txt")
     if result_sel is None:
         return 2
-    new_selector_obj = result_sel.get("roadmodel_txt")
-    if not isinstance(new_selector_obj, str) or not new_selector_obj.strip():
-        sys.stderr.write("selector pass did not return a roadmodel_txt string\n")
+    try:
+        new_selector = resolve_file(result_sel, "roadmodel_txt", selector_text)
+    except EditError as exc:
+        sys.stderr.write(f"selector pass: could not apply the model's edits: {exc}\n")
         return 2
-    new_selector: str = new_selector_obj
 
     # Merge summaries (drop bare "No changes detected.") and warnings.
     summary_parts = [

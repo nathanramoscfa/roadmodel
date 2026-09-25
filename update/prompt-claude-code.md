@@ -257,12 +257,26 @@ commentary outside the object:
 
 ```
 {
-  "roadmodel_txt": "<full updated content of docs/model-selector.txt>",
+  "edits": [{"find": "<exact unique span of docs/model-selector.txt>", "replace": "<new text>"}],
   "summary": "<3-8 line plain-text summary of what changed; this becomes the commit message body>",
   "warnings": ["<any caveats, missing data, judgments worth flagging>"],
   "consumed_versions": ["<every version string from new_versions_since_last_run that you considered, even if it produced no edit>"]
 }
 ```
+
+Return EDITS, not the whole file. Each edit replaces one exact span of the
+current file:
+
+- `find` — text copied VERBATIM from the current file (same whitespace, quotes
+  and line breaks) that occurs EXACTLY ONCE in it. Include enough surrounding
+  text (e.g. the element's `id="…"` attribute) to make it unique, but keep it
+  short — a single attribute value or line is ideal. A `find` that matches zero
+  or several places FAILS the whole run.
+- `replace` — the text that takes its place (`""` deletes the span).
+
+Edits apply in order, each to the result of the previous ones, so two edits
+must not overlap. Everything you do not edit is kept byte-for-byte — never
+restate unchanged text.
 
 Every entry in `<new_versions_since_last_run>` MUST appear in
 `consumed_versions`, even when the bullets under that version
@@ -276,7 +290,7 @@ If a version was considered and produced no edit, ALSO add a warning
 of the form `version <N.N.N> considered no-op: <one-sentence reason>`
 so the PR description surfaces the skip rationale.
 
-If nothing changed at all, return `roadmodel_txt` verbatim, set
+If nothing changed at all, return `"edits": []`, set
 `summary` to "No changes detected.", populate `consumed_versions`
 with every entry from `<new_versions_since_last_run>`, and add a
 `considered no-op` warning per version.
