@@ -95,7 +95,7 @@ export function ModelsExplorer({
           benchmarksGeneratedAt={benchmarksGeneratedAt}
           measuredCount={measuredCount}
           scoreFit={scoreFit}
-          initialGroupBy={prefs.groupBy}
+          initialGroupBy={prefs.grouping}
           initialView={prefs.view}
         />
         {/* The frontier first (the whole market on one chart), then the Score

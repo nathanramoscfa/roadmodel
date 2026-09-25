@@ -162,12 +162,13 @@ test("the page leads with the table, then the frontier chart, the Score charts, 
   await expect(page.getByTestId("table-key")).toContainText("Blended price = (3 × input + 1 × output) ÷ 4.");
 });
 
-test("default sort is Score, grouped by cost tier (priciest first); Output toggles to cheapest-first", async ({ page }) => {
+test("Group by Cost tier: Score within each tier (priciest first); Output toggles to cheapest-first", async ({ page }) => {
   await page.goto("/models");
 
-  // Default = Score: the table opens grouped, one header row per cost tier,
-  // priciest tier first, so a cheap model's high score cannot read as
-  // "better than the frontier model" three rows above it.
+  // Cost tier: one header row per cost tier, priciest tier first, so a cheap
+  // model's high score cannot read as "better than the frontier model" three
+  // rows above it.
+  await page.getByTestId("group-by-tier").click();
   const tiersPresent = new Set(scored.map((m) => m.tier_cost));
   await expect(page.getByTestId("score-group")).toHaveCount(tiersPresent.size);
   const groupOrder = await page
@@ -488,8 +489,9 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
       .filter({ hasText: `${MEASURED_COUNT} of ${MODEL_COUNT} catalog models measured` }),
   ).toHaveCount(1);
 
-  // Score is the default sort: groups by cost tier (priciest first), one header
-  // row per tier present, ordered by score inside each tier, unmeasured last.
+  // Grouped by cost tier (priciest first): one header row per tier present,
+  // ordered by score inside each tier, unmeasured last.
+  await page.getByTestId("group-by-tier").click();
   const tiersPresent = new Set(scored.map((m) => m.tier_cost));
   await expect(page.getByTestId("score-group")).toHaveCount(tiersPresent.size);
   const groupOrder = await page.getByTestId("score-group").evaluateAll((rows) => rows.map((r) => r.getAttribute("data-tier")));
@@ -614,44 +616,55 @@ test("every model off the frontier names the model that beats it, from any cost 
   test.info().annotations.push({ type: "cross-tier leaders", description: String(crossTier) });
 });
 
-test("Group by Quality bands the table by AA Index, cheapest first; Cost tier puts the tiers back", async ({ page }) => {
+test("Group by Quality is the default: AA Index bands, highest Score first in each; Cost tier puts the tiers back", async ({ page }) => {
   await page.goto("/models");
-  // Cost tier is the default grouping, and the caption says what it answers.
-  await expect(page.getByTestId("group-by-tier")).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByTestId("grouping-note")).toContainText("the best buy at your budget");
-
-  await page.getByTestId("group-by-quality").click();
+  // Quality is the default grouping, listed first, and the caption says what it answers.
   await expect(page.getByTestId("group-by-quality")).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByTestId("grouping-note")).toContainText("the cheapest way to each level");
+  await expect(page.getByRole("group", { name: "Group by" }).getByRole("button")).toHaveText(["Quality", "Cost tier"]);
+  await expect(page.getByTestId("grouping-note")).toContainText("the best buy at each level");
   await expect(page.getByTestId("score-group")).toHaveCount(0);
 
   // Ten-point bands, best first, an unmeasured group last; within a band the
-  // cheapest (blended) model first, the higher index breaking a price tie.
+  // highest Score first, unmeasured Scores last, the name breaking a tie.
+  const fit = fitScoreModel(
+    scored.map((m) => ({
+      price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m),
+      index: aaIndexFor(m),
+      tier: m.tier_cost,
+    })),
+  );
   const bandOf = (v: number | null) => (v === null ? null : Math.floor(v / 10) * 10);
   const rowsIn = scored.map((m) => ({
     m,
     band: bandOf(aaIndexFor(m)),
-    price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m),
-    index: aaIndexFor(m),
+    score: scoreFor(fit, m.tier_cost, blendedPrice(m.input_price_per_1m, m.output_price_per_1m), aaIndexFor(m)),
   }));
   const bands = [...new Set(rowsIn.map((r) => r.band).filter((b): b is number => b !== null))].sort((a, b) => b - a);
   const groups = await page.getByTestId("quality-group").evaluateAll((els) => els.map((e) => e.getAttribute("data-band")));
   expect(groups).toEqual([...bands.map(String), ...(rowsIn.some((r) => r.band === null) ? ["none"] : [])]);
-  const expected = [...rowsIn]
-    .sort((a, b) => {
-      if (a.band !== b.band) return a.band === null ? 1 : b.band === null ? -1 : b.band - a.band;
-      if (a.price !== b.price) return a.price - b.price;
-      if (a.index !== b.index) return (b.index ?? -1) - (a.index ?? -1);
-      return a.m.name.localeCompare(b.m.name);
-    })
-    .map((r) => r.m.id);
-  const actual = await page.getByTestId("model-row").evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")));
-  expect(actual).toEqual(expected);
+  const order = (dir: 1 | -1) =>
+    [...rowsIn]
+      .sort((a, b) => {
+        if (a.band !== b.band) return a.band === null ? 1 : b.band === null ? -1 : b.band - a.band;
+        if (a.score !== b.score) return a.score === null ? 1 : b.score === null ? -1 : (a.score - b.score) * dir;
+        return a.m.name.localeCompare(b.m.name);
+      })
+      .map((r) => r.m.id);
+  const actual = () => page.getByTestId("model-row").evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")));
+  expect(await actual()).toEqual(order(-1));
   const top = page.locator(`[data-testid="quality-group"][data-band="${bands[0]}"]`);
   await expect(top).toContainText(`AA Index ${bands[0]}–${(bands[0] + 9.9).toFixed(1)}`);
-  await expect(top.getByTestId("quality-group-prices")).toContainText("cheapest first");
+  await expect(top.getByTestId("quality-group-prices")).toContainText("highest Score first");
+  await expect(page.getByRole("columnheader", { name: /^Score/ })).toHaveAttribute("aria-sort", "descending");
+
+  // The Score header flips the order inside each band; the bands stay put.
+  await page.getByRole("button", { name: "Score", exact: true }).click();
+  await expect(top.getByTestId("quality-group-prices")).toContainText("lowest Score first");
+  expect(await actual()).toEqual(order(1));
 
   await page.getByTestId("group-by-tier").click();
+  await expect(page.getByTestId("group-by-tier")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("grouping-note")).toContainText("the best buy at your budget");
   await expect(page.getByTestId("quality-group")).toHaveCount(0);
   await expect(page.getByTestId("score-group")).toHaveCount(new Set(scored.map((m) => m.tier_cost)).size);
 });
@@ -680,7 +693,8 @@ test("a group with nothing on the frontier says so in its header and its chart, 
     return true;
   };
 
-  // Cost tiers (the default grouping) and their charts.
+  // Cost tiers and their charts.
+  await page.getByTestId("group-by-tier").click();
   let beatenTiers = 0;
   for (const tier of new Set(scored.map((m) => m.tier_cost))) {
     const members = MEASURED.filter((r) => r.m.tier_cost === tier);
