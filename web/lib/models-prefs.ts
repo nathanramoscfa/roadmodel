@@ -27,7 +27,10 @@ export interface ModelsPrefs {
   // jurisdiction the catalog adds later starts checked, like the rest.
   hideJurisdictions: string[];
   cost: "all" | CostTier;
-  groupBy: Grouping;
+  // Stored as `grouping` since Quality became the default. Older cookies say
+  // `groupBy: "tier"` whether or not the visitor chose it (every save wrote
+  // the whole view), so that key is ignored and they open on Quality once.
+  grouping: Grouping;
   view: View;
 }
 
@@ -35,7 +38,7 @@ export const DEFAULT_PREFS: ModelsPrefs = {
   provider: "all",
   hideJurisdictions: [],
   cost: "all",
-  groupBy: "tier",
+  grouping: "quality",
   view: "ratings",
 };
 
@@ -58,7 +61,7 @@ export function parsePrefs(raw: string | null | undefined): ModelsPrefs {
       ? o.hideJurisdictions.filter((c): c is string => typeof c === "string" && c.length <= 16).slice(0, 32)
       : [],
     cost: typeof o.cost === "string" && COSTS.includes(o.cost) ? (o.cost as ModelsPrefs["cost"]) : "all",
-    groupBy: o.groupBy === "quality" ? "quality" : "tier",
+    grouping: o.grouping === "tier" ? "tier" : "quality",
     view: o.view === "benchmarks" ? "benchmarks" : "ratings",
   };
 }
