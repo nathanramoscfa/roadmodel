@@ -19,13 +19,13 @@ import { extractAaIndex } from "@/lib/benchmark-scores";
 import {
   blendedPrice,
   fitScoreModel,
-  frontierLeaders,
   GRID_COLUMNS,
   scoreFor,
   type BenchKey,
   type BenchRow,
   type ScoreFit,
 } from "@/lib/benchmark-grid";
+import { withFrontier } from "@/lib/catalog-filter";
 import { BENCHMARKS } from "@/lib/glossary";
 
 interface RawModel {
@@ -106,21 +106,11 @@ export function getModelRows(): ModelRow[] {
       retires_on: m.retires_on ?? null,
     };
   });
-  // The frontier is priced like the Score and the charts (blended), so every
-  // value figure on the page reads one price per model.
-  const leaders = frontierLeaders(
-    rows.map((r) => ({
-      row: r,
-      price: blendedPrice(r.input_price_per_1m, r.output_price_per_1m),
-      index: r.aa_index,
-    })),
-  );
-  for (const [p, leader] of leaders) {
-    if (leader === p) p.row.value_frontier = true;
-    else p.row.value_beaten_by = leader.row.id;
-  }
-  const fit = getScoreFit(rows);
-  for (const r of rows) {
+  // The frontier across the whole catalog; the page re-marks it over the
+  // models its Provider and Jurisdiction filters keep (lib/catalog-filter).
+  const marked = withFrontier(rows);
+  const fit = getScoreFit(marked);
+  for (const r of marked) {
     r.value_score = scoreFor(
       fit,
       r.tier_cost,
@@ -128,7 +118,7 @@ export function getModelRows(): ModelRow[] {
       r.aa_index,
     );
   }
-  return rows;
+  return marked;
 }
 
 // The market fit behind the Score column, over the rows given (the page passes

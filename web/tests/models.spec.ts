@@ -2,7 +2,8 @@
 //
 // The /models catalog reference page (public): renders the full model table,
 // the "how to read this" legend, sortable columns, the provider + jurisdiction
-// filters, the ratings/benchmark-scores view toggle, the uniform Artificial
+// + cost filters (which drive the charts too), the ratings/benchmark-scores
+// view toggle, the uniform Artificial
 // Analysis figures (under the letters and as the full grid), the expanded row,
 // and benchmark + provider-doc links.
 
@@ -22,6 +23,7 @@ import {
   paretoFrontier,
   scoreFor,
 } from "../lib/benchmark-grid";
+import { modelProvider } from "../lib/catalog-fields";
 
 // Expected row counts are DERIVED from the catalog the page renders, never
 // hardcoded. The catalog grows whenever the daily refresh cron picks up a new
@@ -82,7 +84,8 @@ const AA_VALUE = String(aaIndexFor(WITH_AA));
 // The frontier, computed independently of the page: every measured model at
 // its blended price, and its leader — the highest AA Index at its price or
 // less, the cheapest of those on a tie, catalog order last. A model that is
-// its own leader is on the frontier.
+// its own leader is on the frontier. `pool` is who it competes with: the
+// whole catalog, or the models the Provider + Jurisdiction filters keep.
 interface Measured {
   m: ScoredModel;
   price: number;
@@ -91,10 +94,10 @@ interface Measured {
 const MEASURED: Measured[] = scored
   .map((m) => ({ m, price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m), index: aaIndexFor(m) }))
   .filter((r): r is Measured => r.index !== null);
-function leaderOf(r: Measured): Measured {
-  const pool = MEASURED.filter((o) => o.price <= r.price);
-  const top = Math.max(...pool.map((o) => o.index));
-  const tied = pool.filter((o) => o.index === top);
+function leaderOf(r: Measured, pool: Measured[] = MEASURED): Measured {
+  const cheaper = pool.filter((o) => o.price <= r.price);
+  const top = Math.max(...cheaper.map((o) => o.index));
+  const tied = cheaper.filter((o) => o.index === top);
   const cheapest = Math.min(...tied.map((o) => o.price));
   return tied.find((o) => o.price === cheapest)!;
 }
@@ -202,14 +205,163 @@ test("default sort is Score, grouped by cost tier (priciest first); Output toggl
   await expect(page.getByTestId("model-row").first()).toContainText(CHEAPEST_MODEL);
 });
 
-test("the jurisdiction filter narrows the rows", async ({ page }) => {
+test("jurisdiction is a checkbox per code, all checked; any combination narrows the rows", async ({ page }) => {
   await page.goto("/models");
+  const codes = [...new Set(catalog.models.map((m) => m.jurisdiction ?? ""))];
+  const box = (code: string) => page.getByTestId(`jurisdiction-${code}`);
+  const countIn = (keep: string[]) => catalog.models.filter((m) => keep.includes(m.jurisdiction ?? "")).length;
 
-  await page.getByLabel("Filter by jurisdiction").selectOption("cn");
-  // Exactly the catalog's cn-jurisdiction models (DeepSeek, GLM, Kimi) — the
-  // count follows the catalog rather than pinning today's lineup.
+  const group = page.getByRole("group", { name: "Jurisdiction" });
+  await expect(group.getByRole("checkbox")).toHaveCount(codes.length);
+  for (const code of codes) await expect(box(code)).toBeChecked();
+  await expect(page.getByTestId("clear-filters")).toHaveCount(0);
+
+  // "No China": uncheck CN and every other jurisdiction stays.
+  await group.getByRole("checkbox", { name: "CN" }).uncheck();
+  const noCn = codes.filter((c) => c !== "cn");
+  await expect(page.getByTestId("model-row")).toHaveCount(countIn(noCn));
+  for (const m of catalog.models.filter((x) => x.jurisdiction === "cn")) {
+    await expect(page.locator(`[data-testid="model-row"][data-model-id="${m.id}"]`)).toHaveCount(0);
+  }
+  await expect(page.getByTestId("clear-filters")).toBeVisible();
+
+  // Only CN: exactly the catalog's cn-jurisdiction models (DeepSeek, GLM,
+  // Kimi); the count follows the catalog rather than pinning today's lineup.
+  for (const code of noCn) await box(code).uncheck();
+  await box("cn").check();
   await expect(page.getByTestId("model-row")).toHaveCount(CN_MODEL_COUNT);
-  await expect(page.getByText("No models match")).toHaveCount(0);
+
+  // Nothing checked is allowed, and says so.
+  await box("cn").uncheck();
+  await expect(page.getByTestId("model-row")).toHaveCount(0);
+  await expect(page.getByText("No models match your filters.")).toBeVisible();
+
+  await page.getByTestId("clear-filters").click();
+  await expect(page.getByTestId("model-row")).toHaveCount(MODEL_COUNT);
+  for (const code of codes) await expect(box(code)).toBeChecked();
+});
+
+test("unchecking CN takes it out of every chart and redraws the frontier over the rest", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/models");
+  await page.getByTestId("jurisdiction-cn").uncheck();
+
+  const pool = MEASURED.filter((r) => r.m.jurisdiction !== "cn");
+  const onFrontier = pool.filter((r) => leaderOf(r, pool) === r).sort((a, b) => a.price - b.price);
+  const catalogFrontier = new Set(MEASURED.filter((r) => leaderOf(r) === r).map((r) => r.m.id));
+
+  // The Score charts: every non-CN measured model in a charted tier, no CN
+  // dot, and each dot keeps its whole-catalog Score.
+  const fit = fitScoreModel(MEASURED.map((r) => ({ price: r.price, index: r.index, tier: r.m.tier_cost })))!;
+  const charted = pool.filter((r) => (fit.tiers[r.m.tier_cost]?.n ?? 0) >= 2);
+  const scorePanel = page.getByTestId("score-charts");
+  await expect(scorePanel.getByTestId("score-charts-filter")).toContainText("Jurisdiction: US + EU");
+  await expect(scorePanel.getByTestId("score-chart-point")).toHaveCount(charted.length);
+  const some = charted[0];
+  await expect(
+    scorePanel.locator(`[data-testid="score-chart-point"][data-model-id="${some.m.id}"]`),
+  ).toHaveAttribute(
+    "aria-label",
+    new RegExp(`Score ${formatScore(scoreFor(fit, some.m.tier_cost, some.price, some.index)).replace("+", "\\+")}`),
+  );
+
+  // The frontier chart: every non-CN measured model, the frontier recomputed
+  // over them, and the line through exactly those models.
+  const panel = page.getByTestId("frontier-panel");
+  await expect(panel.getByTestId("frontier-filter")).toContainText("redrawn over the US + EU models");
+  await expect(panel.getByTestId("frontier-chart-point")).toHaveCount(pool.length);
+  await expect(panel.locator('[data-testid="frontier-chart-point"][data-frontier="1"]')).toHaveCount(onFrontier.length);
+  await expect(panel.getByTestId("frontier-line")).toHaveAttribute(
+    "data-frontier-ids",
+    onFrontier.map((r) => r.m.id).join(","),
+  );
+  await expect(panel).toContainText(`That keeps ${onFrontier.length} of the ${pool.length} models plotted.`);
+
+  // The table rings the same models, and says what they are compared with.
+  await expect(page.locator('[data-testid="aa-index"][data-frontier="1"]')).toHaveCount(onFrontier.length);
+  await expect(page.getByTestId("frontier-scope")).toHaveText("US + EU");
+
+  // A model a CN model used to beat: its card now names the non-CN model that
+  // holds the top score at its price, or puts it on the frontier.
+  const promoted = pool.find((r) => leaderOf(r).m.jurisdiction === "cn");
+  test.info().annotations.push({ type: "models a CN model beat", description: String(pool.filter((r) => leaderOf(r).m.jurisdiction === "cn").length) });
+  if (promoted) {
+    const lead = leaderOf(promoted, pool);
+    const cell = page.locator(`[data-testid="model-row"][data-model-id="${promoted.m.id}"] [data-testid="aa-index"]`);
+    await expect(cell).toHaveAttribute("data-beaten-by", lead === promoted ? "" : lead.m.id);
+    await cell.getByTestId("aa-index-trigger").hover();
+    const status = page.getByTestId("aa-index-card").getByTestId("frontier-status");
+    await expect(status).toContainText("Across US + EU models");
+    await expect(status).toHaveAttribute("data-frontier", lead === promoted ? "1" : "0");
+    if (lead === promoted) expect(catalogFrontier.has(promoted.m.id)).toBe(false);
+  }
+
+  // "Show every model" puts the whole catalog back, charts included.
+  await panel.getByRole("button", { name: "Show every model" }).click();
+  await expect(page.getByTestId("jurisdiction-cn")).toBeChecked();
+  await expect(panel.getByTestId("frontier-chart-point")).toHaveCount(MEASURED.length);
+  await expect(panel.getByTestId("frontier-filter")).toHaveCount(0);
+});
+
+test("a Cost tier narrows the charts to its models; the frontier still spans every price", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/models");
+  const fit = fitScoreModel(MEASURED.map((r) => ({ price: r.price, index: r.index, tier: r.m.tier_cost })))!;
+  // The charted tier with the fewest models: the narrowest band on the page.
+  const tier = Object.entries(fit.tiers)
+    .filter(([, t]) => t.n >= 2)
+    .sort((a, b) => a[1].n - b[1].n)[0][0];
+  await page.getByLabel("Filter by cost tier").selectOption(tier);
+  const inTier = MEASURED.filter((r) => r.m.tier_cost === tier);
+  const catalogFrontier = new Set(MEASURED.filter((r) => leaderOf(r) === r).map((r) => r.m.id));
+
+  // One Score chart, the tier's own.
+  await expect(page.getByTestId("score-chart")).toHaveCount(1);
+  await expect(page.getByTestId("score-chart")).toHaveAttribute("data-tier", tier);
+  await expect(page.getByTestId("score-chart-point")).toHaveCount(inTier.length);
+
+  // The frontier chart: the tier's models, ringed only if they hold the top
+  // score across the whole catalog (a band's cheapest model is not ringed for
+  // starting the band), one grey tier line, and a line whose every step is a
+  // whole-catalog frontier model.
+  const panel = page.getByTestId("frontier-panel");
+  await expect(panel.getByTestId("frontier-chart-point")).toHaveCount(inTier.length);
+  for (const r of inTier) {
+    await expect(panel.locator(`[data-testid="frontier-chart-point"][data-model-id="${r.m.id}"]`)).toHaveAttribute(
+      "data-frontier",
+      catalogFrontier.has(r.m.id) ? "1" : "0",
+    );
+  }
+  await expect(panel.getByTestId("frontier-tier-line")).toHaveCount(1);
+  const ids = ((await panel.getByTestId("frontier-line").getAttribute("data-frontier-ids")) ?? "").split(",").filter(Boolean);
+  expect(ids.length).toBeGreaterThan(0);
+  for (const id of ids) expect(catalogFrontier.has(id)).toBe(true);
+  // A step held by a model outside the band is named, since it has no dot.
+  const offBand = ids.filter((id) => !inTier.some((r) => r.m.id === id));
+  await expect(panel.getByTestId("frontier-off-band")).toHaveCount(offBand.length > 0 ? 1 : 0);
+  for (const id of offBand) {
+    await expect(panel.getByTestId("frontier-off-band")).toContainText(catalog.models.find((m) => m.id === id)!.name);
+  }
+  test.info().annotations.push({ type: "off-band frontier steps", description: `${tier}: ${offBand.join(",")}` });
+});
+
+test("a Provider narrows the charts to its models and redraws the frontier over them", async ({ page }) => {
+  await page.goto("/models");
+  await page.getByLabel("Filter by provider").selectOption("Anthropic");
+  const pool = MEASURED.filter((r) => modelProvider(r.m.id)?.label === "Anthropic");
+  const onFrontier = pool.filter((r) => leaderOf(r, pool) === r).sort((a, b) => a.price - b.price);
+
+  const scoreIds = await page.getByTestId("score-chart-point").evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")));
+  expect(scoreIds.length).toBeGreaterThan(0);
+  for (const id of scoreIds) expect(pool.some((r) => r.m.id === id)).toBe(true);
+
+  const panel = page.getByTestId("frontier-panel");
+  await expect(panel.getByTestId("frontier-chart-point")).toHaveCount(pool.length);
+  await expect(panel.getByTestId("frontier-line")).toHaveAttribute(
+    "data-frontier-ids",
+    onFrontier.map((r) => r.m.id).join(","),
+  );
+  await expect(page.getByTestId("frontier-scope")).toHaveText("Anthropic");
 });
 
 test("the benchmark-scores view is a uniform grid: one AA column per evaluation", async ({ page }) => {

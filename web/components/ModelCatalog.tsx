@@ -33,6 +33,13 @@
 // Cache-read price, tier name, pricing notes, "best for", and the benchmarks
 // the cron cited (mixed sources — evidence for the letters, not a scale) live
 // in the expanded row so they add no width. Fits a 1024px viewport.
+//
+// The Provider, Jurisdiction and Cost tier filters belong to ModelsExplorer,
+// which applies them to the table AND both chart panels; the table renders
+// the controls and receives the rows they keep (frontier re-marked over the
+// Provider + Jurisdiction pool, lib/catalog-filter). Jurisdiction is a
+// checkbox per code, all checked to start, so any combination (US + EU, say)
+// is one click away. Search stays the table's own.
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
@@ -67,6 +74,7 @@ import {
   COST_TIER_DOT,
   COST_TIER_RANK,
   FIELD_DEFS,
+  type CostTier,
   formatPrice,
   jurisdictionDef,
   modelProvider,
@@ -75,6 +83,7 @@ import {
   type Category,
   type ModelRow,
 } from "@/lib/catalog-fields";
+import type { CatalogFilters } from "@/lib/catalog-filter";
 import { HoverCard } from "./FloatingCard";
 import { GlossaryTerm } from "./GlossaryTerm";
 import { IndexCard, ScoreBreakdownCard, SupersededCard, topScoreSentence } from "./ScoreCards";
@@ -241,12 +250,32 @@ function scoreTone(score: number | null, fit: ScoreFit | null): string {
 
 export function ModelCatalog({
   models,
+  shown,
+  filters,
+  jurisdictions,
+  onFiltersChange,
+  filterSummary,
+  onClearFilters,
+  scope,
   generatedAt,
   benchmarksGeneratedAt,
   measuredCount,
   scoreFit,
 }: {
+  // Every catalog row: the filter options, the grid's bands, the totals.
   models: ModelRow[];
+  // The rows the Provider, Jurisdiction and Cost tier filters keep.
+  shown: ModelRow[];
+  filters: CatalogFilters;
+  // The catalog's jurisdiction codes, in checkbox order.
+  jurisdictions: string[];
+  onFiltersChange: (next: CatalogFilters) => void;
+  // Every active filter in a line; null when none is.
+  filterSummary: string | null;
+  onClearFilters: () => void;
+  // Which models the frontier compares (lib/catalog-filter poolScope); null
+  // for the whole catalog.
+  scope: string | null;
   generatedAt: string;
   benchmarksGeneratedAt: string;
   measuredCount: number;
@@ -256,9 +285,6 @@ export function ModelCatalog({
   const [sortKey, setSortKey] = useState<SortKey>("value");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [search, setSearch] = useState("");
-  const [provider, setProvider] = useState("all");
-  const [juris, setJuris] = useState("all");
-  const [cost, setCost] = useState("all");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const providers = useMemo(
@@ -268,10 +294,13 @@ export function ModelCatalog({
       ),
     [models],
   );
-  const jurisdictions = useMemo(
-    () => Array.from(new Set(models.map((m) => m.jurisdiction))).sort(),
-    [models],
-  );
+
+  function toggleJurisdiction(code: string) {
+    const next = new Set(filters.jurisdictions);
+    if (next.has(code)) next.delete(code);
+    else next.add(code);
+    onFiltersChange({ ...filters, jurisdictions: next });
+  }
 
   // Sorted measured values per grid column, over the WHOLE catalog (not the
   // filtered rows), so a cell's band does not change when a filter is applied.
@@ -288,19 +317,13 @@ export function ModelCatalog({
 
   const rows = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    const filtered = models.filter((m) => {
-      if (provider !== "all" && m.provider !== provider) return false;
-      if (juris !== "all" && m.jurisdiction !== juris) return false;
-      if (cost !== "all" && m.tier_cost !== cost) return false;
-      if (
-        needle &&
-        !m.name.toLowerCase().includes(needle) &&
-        !(m.provider ?? "").toLowerCase().includes(needle) &&
-        !m.headline_benchmarks.toLowerCase().includes(needle)
-      )
-        return false;
-      return true;
-    });
+    const filtered = shown.filter(
+      (m) =>
+        !needle ||
+        m.name.toLowerCase().includes(needle) ||
+        (m.provider ?? "").toLowerCase().includes(needle) ||
+        m.headline_benchmarks.toLowerCase().includes(needle),
+    );
     const dir = sortDir === "asc" ? 1 : -1;
     return [...filtered].sort((a, b) => {
       if (isBenchKey(sortKey)) {
@@ -347,7 +370,7 @@ export function ModelCatalog({
       }
       return a.name.localeCompare(b.name);
     });
-  }, [models, search, provider, juris, cost, sortKey, sortDir]);
+  }, [shown, search, sortKey, sortDir]);
 
   // The model that beats each off-frontier model, looked up by id for the cards.
   const byId = useMemo(() => new Map(models.map((m) => [m.id, m])), [models]);
@@ -445,8 +468,8 @@ export function ModelCatalog({
           <label className={LABEL_CLASS}>
             Provider
             <select
-              value={provider}
-              onChange={(e) => setProvider(e.target.value)}
+              value={filters.provider}
+              onChange={(e) => onFiltersChange({ ...filters, provider: e.target.value })}
               aria-label="Filter by provider"
               className={INPUT_CLASS}
             >
@@ -458,27 +481,45 @@ export function ModelCatalog({
               ))}
             </select>
           </label>
-          <label className={LABEL_CLASS}>
-            Jurisdiction
-            <select
-              value={juris}
-              onChange={(e) => setJuris(e.target.value)}
-              aria-label="Filter by jurisdiction"
-              className={INPUT_CLASS}
+          <div className={LABEL_CLASS}>
+            <span id="jurisdiction-label">Jurisdiction</span>
+            <div
+              role="group"
+              aria-labelledby="jurisdiction-label"
+              data-testid="jurisdiction-filter"
+              className="inline-flex self-start rounded-md border border-brand-slate-300 bg-white p-0.5 shadow-sm dark:border-brand-slate-700 dark:bg-brand-slate-800"
             >
-              <option value="all">All</option>
-              {jurisdictions.map((j) => (
-                <option key={j} value={j}>
-                  {j.toUpperCase()}
-                </option>
-              ))}
-            </select>
-          </label>
+              {jurisdictions.map((j) => {
+                const on = filters.jurisdictions.has(j);
+                return (
+                  <label
+                    key={j}
+                    title={jurisdictionDef(j)}
+                    className={
+                      "inline-flex cursor-pointer items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-medium transition-colors hover:text-brand-accent " +
+                      (on
+                        ? "text-brand-slate-900 dark:text-brand-slate-50"
+                        : "text-brand-slate-400 dark:text-brand-slate-500")
+                    }
+                  >
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      onChange={() => toggleJurisdiction(j)}
+                      data-testid={`jurisdiction-${j}`}
+                      className="h-3.5 w-3.5 cursor-pointer accent-brand-accent"
+                    />
+                    {j.toUpperCase()}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
           <label className={LABEL_CLASS}>
             Cost tier
             <select
-              value={cost}
-              onChange={(e) => setCost(e.target.value)}
+              value={filters.cost}
+              onChange={(e) => onFiltersChange({ ...filters, cost: e.target.value as "all" | CostTier })}
               aria-label="Filter by cost tier"
               className={INPUT_CLASS}
             >
@@ -556,6 +597,20 @@ export function ModelCatalog({
 
       <p className="mt-3 text-xs text-brand-slate-500 dark:text-brand-slate-400">
         Showing <span className="font-semibold">{rows.length}</span> of {models.length} models
+        {filterSummary && (
+          <>
+            {" "}({filterSummary};{" "}
+            <button
+              type="button"
+              onClick={onClearFilters}
+              data-testid="clear-filters"
+              className="text-brand-accent hover:underline"
+            >
+              clear filters
+            </button>
+            )
+          </>
+        )}
         {view === "benchmarks" && (
           <>
             {" "}&middot; {measuredCount} measured by Artificial Analysis; &ldquo;&mdash;&rdquo; is
@@ -595,9 +650,17 @@ export function ModelCatalog({
             Cost/quality frontier: the top score at every price.
           </strong>{" "}
           A green ring marks a model that scores higher on the AA Index than every other model at
-          its price or less. The ring compares every model in the catalog; the Score compares a
-          model with its own cost tier. Hover any AA Index for the top score at that price, and see
-          the frontier chart below the Score charts for the whole line.
+          its price or less. The ring compares{" "}
+          {scope ? (
+            <>
+              every <span data-testid="frontier-scope">{scope}</span> model, at every price (the
+              Cost tier filter narrows what you see, not what the ring compares)
+            </>
+          ) : (
+            "every model in the catalog"
+          )}
+          ; the Score compares a model with its own cost tier. Hover any AA Index for the top score
+          at that price, and see the frontier chart below the Score charts for the whole line.
         </p>
         <p className="rounded-lg border border-brand-slate-200 bg-brand-slate-50 px-3 py-2 text-brand-slate-700 dark:border-brand-slate-700 dark:bg-brand-slate-800/60 dark:text-brand-slate-200">
           <strong className="text-brand-slate-900 dark:text-brand-slate-50">
@@ -1013,7 +1076,9 @@ export function ModelCatalog({
         Index minus what the model&rsquo;s price predicts among its own cost tier (one market
         fit, a baseline per tier), in index points. <strong>The green ring beside an AA Index
         marks the cost/quality frontier</strong>: each ringed model scores higher than every other
-        model in the catalog at its price or less (blended). A rating is a class, not a rank within it; sorting a category orders by
+        {scope ? ` ${scope} model` : " model in the catalog"} at its price or less (blended). A
+        filter changes which models show, never a Score: the price lines are fitted over the whole
+        catalog. A rating is a class, not a rank within it; sorting a category orders by
         letter, then by the AA Index. Ratings are curated by the project&rsquo;s daily automation;
         see the{" "}
         <a href="/docs" className="text-brand-accent hover:underline">

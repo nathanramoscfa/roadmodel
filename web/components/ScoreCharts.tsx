@@ -17,10 +17,13 @@
 // first, and a label that would collide with another label or dot is left to
 // the hover card instead of being drawn on top of something.
 //
-// Everything comes from the same rows and ScoreFit the table uses.
+// Everything comes from the same rows and ScoreFit the table uses, and the
+// page's Provider, Jurisdiction and Cost tier filters choose the dots: a tier
+// the filters empty has no chart. The lines and Scores stay the whole-catalog
+// fit, so a filter changes what is drawn, never where the line sits.
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   blendedPrice,
@@ -34,13 +37,15 @@ import {
   FRONTIER,
   LABEL_PX,
   LegendSwatch,
+  FilterNote,
   pickPriceTicks,
   placeLabels,
   useWidth,
+  type ChartFilter,
   type Label,
 } from "./chart-kit";
 import { FloatingCard, type AnchorRect } from "./FloatingCard";
-import { ModelPointCard, PriceLineCard, topScoreSentence } from "./ScoreCards";
+import { FrontierScope, ModelPointCard, PriceLineCard, topScoreSentence } from "./ScoreCards";
 
 // Sign is also carried by direction and by the printed Score, so colour is
 // never the only cue. Sky/orange stays distinct under protan and deutan
@@ -76,7 +81,8 @@ function TierChart({
   tier: CostTier;
   rows: ModelRow[];
   fit: ScoreFit;
-  // Every catalog row by id, for the model that beats a dot's model.
+  // Every row in the frontier's pool by id, for the model that beats a dot's
+  // model (it may sit in a tier the Cost tier filter hides).
   byId: Map<string, ModelRow>;
 }) {
   const wrap = useRef<HTMLDivElement>(null);
@@ -111,6 +117,7 @@ function TierChart({
   // The caption's price ranges, over the plotted models: output (which sets
   // the tier) and blended (the x axis).
   const outs = pts.map((p) => p.row.output_price_per_1m);
+  const blends = pts.map((p) => p.price);
   const range = (lo: number, hi: number) =>
     lo === hi ? formatUsd(lo) : `${formatUsd(lo)}–${formatUsd(hi)}`;
   // When the top score at this tier's prices belongs to a cheaper tier's
@@ -236,7 +243,7 @@ function TierChart({
           </span>
           {" · "}
           <span className="whitespace-nowrap">
-            blended {range(t.minPrice, t.maxPrice)} per 1M
+            blended {range(Math.min(...blends), Math.max(...blends))} per 1M
           </span>
         </span>
       </figcaption>
@@ -519,11 +526,30 @@ function TierChart({
   );
 }
 
-export function ScoreCharts({ rows, fit }: { rows: ModelRow[]; fit: ScoreFit | null }) {
+export function ScoreCharts({
+  rows,
+  pool,
+  fit,
+  filter,
+}: {
+  // The rows the page's filters keep: the dots.
+  rows: ModelRow[];
+  // The rows the Provider and Jurisdiction filters keep (the frontier's pool),
+  // for the models the cards and notes name.
+  pool: ModelRow[];
+  fit: ScoreFit | null;
+  // The active filters; null when the page shows every model.
+  filter: ChartFilter | null;
+}) {
+  const scope = useContext(FrontierScope);
   if (!fit) return null;
-  const tiers = TIER_ORDER.filter((t) => (fit.tiers[t]?.n ?? 0) >= 2);
-  const byId = new Map(rows.map((r) => [r.id, r]));
-  if (tiers.length === 0) return null;
+  // A tier needs two measured models for a line; the filters then decide
+  // which of those tiers still have a dot to draw.
+  const fitted = TIER_ORDER.filter((t) => (fit.tiers[t]?.n ?? 0) >= 2);
+  if (fitted.length === 0) return null;
+  const plotted = rows.filter((r) => r.aa_index !== null && r.value_score !== null && fitted.includes(r.tier_cost));
+  const tiers = fitted.filter((t) => plotted.some((r) => r.tier_cost === t));
+  const byId = new Map(pool.map((r) => [r.id, r]));
   const sigma = fit.sigma.toFixed(1);
 
   return (
@@ -555,6 +581,16 @@ export function ScoreCharts({ rows, fit }: { rows: ModelRow[]; fit: ScoreFit | n
           (&minus;) buys less.
         </p>
 
+        {filter && (
+          <FilterNote filter={filter} testId="score-charts-filter">
+            {plotted.length === 0
+              ? "No measured model matches, so there is nothing to plot."
+              : `${plotted.length} measured ${plotted.length === 1 ? "model" : "models"} in ${tiers.length} ${tiers.length === 1 ? "chart" : "charts"}.`}{" "}
+            The price lines and Scores are still fitted over the whole catalog, so a filter changes
+            which dots are drawn, never where a line sits.
+          </FilterNote>
+        )}
+
         <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-brand-slate-600 dark:text-brand-slate-300">
           <li className="inline-flex items-center gap-1.5">
             <LegendSwatch>
@@ -572,7 +608,7 @@ export function ScoreCharts({ rows, fit }: { rows: ModelRow[]; fit: ScoreFit | n
             <LegendSwatch>
               <circle cx={11} cy={7} r={5.5} fill="none" stroke={FRONTIER} strokeWidth={2} />
             </LegendSwatch>
-            Cost/quality frontier (whole catalog)
+            Cost/quality frontier ({scope ? `${scope} models` : "whole catalog"})
           </li>
           <li className="inline-flex items-center gap-1.5">
             <LegendSwatch>
@@ -591,11 +627,13 @@ export function ScoreCharts({ rows, fit }: { rows: ModelRow[]; fit: ScoreFit | n
           </li>
         </ul>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {tiers.map((t) => (
-            <TierChart key={t} tier={t} rows={rows} fit={fit} byId={byId} />
-          ))}
-        </div>
+        {tiers.length > 0 && (
+          <div className={"grid grid-cols-1 gap-4" + (tiers.length > 1 ? " lg:grid-cols-2" : "")}>
+            {tiers.map((t) => (
+              <TierChart key={t} tier={t} rows={rows} fit={fit} byId={byId} />
+            ))}
+          </div>
+        )}
 
         <p className="text-xs leading-5 text-brand-slate-500 dark:text-brand-slate-400">
           One least-squares fit over all {fit.n} AA-measured models: AA Index = α<sub>tier</sub>
@@ -606,7 +644,7 @@ export function ScoreCharts({ rows, fit }: { rows: ModelRow[]; fit: ScoreFit | n
           close together as a tie, not a ranking.{" "}
           <strong className="text-brand-slate-700 dark:text-brand-slate-200">
             The green ring marks the cost/quality frontier: a model that scores higher than every
-            other model in the catalog at its price or less.
+            other {scope ? `${scope} model` : "model in the catalog"} at its price or less.
           </strong>{" "}
           When the top score at a tier&rsquo;s prices belongs to a cheaper tier, that tier&rsquo;s
           chart names the model under its title. The frontier chart below plots every model
