@@ -364,3 +364,19 @@ def test_roadmap_writing_commands_set_their_own_effort() -> None:
         description, text = up._split_frontmatter(body)
         assert description and "effort:" not in text
         assert "effort:" not in up.port_gemini(name, body)
+
+
+def test_roadmap_commands_commit_the_agents_md_the_updater_created() -> None:
+    """roadmodel-update writes AGENTS.md once in every project and never
+    commits it, so each project's next step stopped on a dirty tree and
+    asked the operator what to do (assetmark-dashboard, 2026-09-24). The
+    step or refresh PR now commits it — recognised by the updater's own
+    marker, which must match what the updater writes."""
+    marker = "<!-- Created once by roadmodel-update. Edit freely: it is never overwritten. -->"
+    assert marker in (ROOT / "scripts" / "update_projects.py").read_text()
+    for command in (STEP_COMMAND, REFRESH_COMMAND):
+        flat = re.sub(r"\s+", " ", command.read_text())
+        assert f"`{marker}`" in flat
+        assert "`chore: commit the AGENTS.md roadmodel-update created`" in flat
+        assert "Do not stop on it and do not ask" in flat
+        assert "WITHOUT that marker is the operator's own file" in flat

@@ -27,6 +27,14 @@ wherever this project keeps them (the repo root, `docs/`, or
   (`roadmodel --version`), so no separate kit PR is needed. Kit files
   the repo does not track stay untracked. An uncommitted edit to any
   other tracked file: stop and report it.
+- An untracked `AGENTS.md` at the repo root that carries the marker
+  `<!-- Created once by roadmodel-update. Edit freely: it is never overwritten. -->`
+  is roadmodel's too: the updater writes it once so Codex, Antigravity,
+  Cursor and the other agents follow the same instructions. It belongs in
+  the repo. Do not stop on it and do not ask: commit it first, on its own,
+  as `chore: commit the AGENTS.md roadmodel-update created`, before the kit
+  commit if there is one. An untracked `AGENTS.md` WITHOUT that marker is
+  the operator's own file: leave it untracked and out of the PR.
 - If `planning/model-selector.txt` does not exist, first run
   `roadmodel export-kit . --force` so §3 uses the current selector.
 

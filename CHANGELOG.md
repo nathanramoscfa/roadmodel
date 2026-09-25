@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **A step commits the AGENTS.md the updater created.** `roadmodel-update`
+  writes `AGENTS.md` once in every project and never commits it, so each
+  project's next `/roadmap-step` stopped on a dirty tree and asked what to
+  do. `/roadmap-step` and `/roadmap-refresh` now commit it first, on its
+  own, in their own PR, recognising it by the updater's marker comment. An
+  `AGENTS.md` without the marker is the operator's own and stays untracked.
+
 - **The recommender soak fails loudly when production stops answering.**
   From 2026-09-21 to 2026-09-24 every production recommendation failed while
   `recommend-soak.yml` stayed green. Its quality bar is report-only, and its
