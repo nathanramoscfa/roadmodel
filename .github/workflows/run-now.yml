@@ -1,0 +1,89 @@
+# .github/workflows/run-now.yml
+#
+# Run any scheduled job on demand — from the Actions tab or the GitHub mobile
+# app ("Run workflow"). A thin wrapper around scripts/run-now.sh, which
+# dispatches the job's own workflow, waits for it, prints its API cost and the
+# PR it opened, and (with `merge`) squash-merges that PR once its checks pass.
+# `crons` runs every curation job in the daily schedule's order, merging each
+# PR before the next job starts.
+#
+# Releases are NOT here: they sign the tag with the maintainer's local key —
+# run `scripts/release.sh` on the Mac (or ask Claude Code to).
+name: Run now (on demand)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Job to run"
+        required: true
+        type: choice
+        default: crons
+        options:
+          - crons
+          - catalog
+          - benchmarks
+          - claude-code
+          - codex
+          - gemini
+          - deepseek
+          - availability
+          - soak
+          - health
+      dry_run:
+        description: "Preview only (jobs that support it open no PR)"
+        type: boolean
+        default: false
+      merge:
+        description: "Merge each PR the job opens once its checks pass"
+        type: boolean
+        default: true
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: read
+  checks: read
+  statuses: read
+
+concurrency:
+  group: run-now
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      # The cron App merges (a GITHUB_TOKEN merge would not trigger the push
+      # workflows on main); the workflow's own token dispatches and watches.
+      - uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v5
+
+      - name: Run ${{ inputs.target }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MERGE_GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TARGET: ${{ inputs.target }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          MERGE: ${{ inputs.merge }}
+        run: |
+          set -uo pipefail
+          flags=""
+          [ "$DRY_RUN" = "true" ] && flags="$flags --dry-run"
+          [ "$MERGE" = "true" ] && flags="$flags --merge"
+          # shellcheck disable=SC2086
+          scripts/run-now.sh "$TARGET" $flags 2>&1 | tee /tmp/run-now.log
+          rc=${PIPESTATUS[0]}
+          {
+            echo "## Run now: $TARGET"
+            echo '```'
+            cat /tmp/run-now.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
