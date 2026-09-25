@@ -111,6 +111,23 @@ def parse_versions(changelog: str) -> list[tuple[str, list[str]]]:
     return out
 
 
+def changelog_excerpt(changelog: str, versions: list[str]) -> str:
+    """The raw CHANGELOG sections for ``versions`` only, in file order.
+
+    The full CHANGELOG is ~800 KB (~200k+ input tokens) and was sent whole on
+    every run — the bulk of this cron's API cost. Opus only acts on the new
+    versions; everything older is already reflected in the selector.
+    """
+    wanted = set(versions)
+    matches = list(_VERSION_HEADER_RE.finditer(changelog))
+    sections = []
+    for idx, m in enumerate(matches):
+        if m.group(1) in wanted:
+            end = matches[idx + 1].start() if idx + 1 < len(matches) else len(changelog)
+            sections.append(changelog[m.start() : end].strip())
+    return "\n\n".join(sections)
+
+
 def new_versions(
     parsed: list[tuple[str, list[str]]], last_version: str | None
 ) -> list[tuple[str, list[str]]]:
@@ -373,8 +390,9 @@ def main() -> int:
             "and the claude-code best-for with the docs."
         )
 
+    excerpt = changelog_excerpt(changelog_text, [v for v, _ in new_entries])
     user_message = build_user_message(
-        selector_text, changelog_url, changelog_text, new_entries, docs_facts
+        selector_text, changelog_url, excerpt, new_entries, docs_facts
     )
 
     try:

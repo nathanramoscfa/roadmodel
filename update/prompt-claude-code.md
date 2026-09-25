@@ -18,8 +18,10 @@ A user message containing, in order:
 
 - `<current_file path="docs/model-selector.txt">…</current_file>` —
   the full current contents of model-selector.txt.
-- `<source type="changelog" url="…">…</source>` — the full fetched
-  text of `anthropics/claude-code`'s CHANGELOG.md.
+- `<source type="changelog" url="…">…</source>` — the sections of
+  `anthropics/claude-code`'s CHANGELOG.md for the versions in
+  `<new_versions_since_last_run>` only (empty when none are new). Older
+  releases are already reflected in the current file.
 - `<new_versions_since_last_run>…</new_versions_since_last_run>` —
   a JSON list of version strings (e.g. `["2.1.158", "2.1.157"]`)
   identifying the CHANGELOG `## <version>` headers that are new

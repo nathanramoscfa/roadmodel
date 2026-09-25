@@ -107,3 +107,12 @@ def test_trigger_keywords_extended() -> None:
     mod = _load("validate_claude_code_diff")
     for kw in ("ultrathink", "xhigh", "max effort", "adaptive reasoning"):
         assert kw in mod.TRIGGER_KEYWORDS
+
+
+def test_changelog_excerpt_sends_only_new_versions() -> None:
+    """The full ~800 KB CHANGELOG was the bulk of this cron's API bill."""
+    mod = _load("update_claude_code")
+    log = "# Changelog\n\n## 2.1.3\n- c\n\n## 2.1.2\n- b\n\n## 2.1.1\n- a\n"
+    assert mod.changelog_excerpt(log, ["2.1.3", "2.1.2"]) == "## 2.1.3\n- c\n\n## 2.1.2\n- b"
+    assert mod.changelog_excerpt(log, ["2.1.1"]) == "## 2.1.1\n- a"
+    assert mod.changelog_excerpt(log, []) == ""
