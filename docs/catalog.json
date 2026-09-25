@@ -1,10 +1,10 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-24T22:10:02Z",
+  "generated_at_utc": "2026-09-25T16:25:33Z",
   "source_doc_sha256": {
-    "model-selector.txt": "7bb1ece281583a4a332ea39e5fdfa8c8f1182b722d06df28d7189e26f8bc3d1d",
-    "model-tier-cost-scale.md": "77792a8ac8313b401532c43b65b7db80c60a1cefd4e8c36bf175e89ce36c5c9d"
+    "model-selector.txt": "8712732c84a5ba403bcdf00ccb4f5e22cc3d6e98f31b5d642ea8841a35763732",
+    "model-tier-cost-scale.md": "9b9f57f5367b553ab11c1116ff69b89eb4d3a9251a7f1caebd813dbdc0c4716a"
   },
   "models": [
     {
@@ -24,7 +24,7 @@
         "speed": "S"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 16.9 (reasoning); Output Speed 144.6 tokens/s; AA-Omniscience -4.2; latency leader among Claude family",
+      "headline_benchmarks": "AA Intelligence Index 16.9 (reasoning); Output Speed 115.0 tokens/s; AA-Omniscience -4.2; latency leader among Claude family",
       "pricing_notes": "Hidden by default; Bedrock/Vertex: regional endpoints +10% surcharge; Cache: writes 1.25x, reads 0.1x",
       "best_for": "Speed-optimized lowest-cost Claude model, ideal for simple completions, high-volume repetitive tasks, and latency-sensitive workflows where a lightweight capable response matters more than deep reasoning",
       "superseded_by": null,
@@ -432,7 +432,7 @@
         "speed": "S"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 40.9 (high); HLE 47.8% (high); Terminal-Bench 2.1 87.6; Output Speed 315.7 tokens/s",
+      "headline_benchmarks": "AA Intelligence Index 40.9 (high); HLE 47.8% (high); Terminal-Bench 2.1 87.6; Output Speed 277.5 tokens/s",
       "pricing_notes": "-",
       "best_for": "Google's Gemini 3.8 Flash \u2014 the visible-by-default successor to 3.7 Flash at the same low-tier pricing ($0.75/$3.50), with placeholder tier ratings inherited from the Flash series and AA Intelligence Index 40.9 (high), Terminal-Bench 2.1 87.6, and exceptional output speed (~316 tokens/s). Pick over 3.7 Flash when both are available since 3.8 supersedes 3.7 in the same series at equal output price.",
       "superseded_by": null,
@@ -816,7 +816,7 @@
         "speed": "S"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 37.3 (max) / 34.6 (xhigh); HLE 39.5% (max); Output Speed 151.0 tokens/s (max) / 146.3 (xhigh)",
+      "headline_benchmarks": "AA Intelligence Index 37.3 (max) / 34.6 (xhigh); HLE 39.5% (max); Output Speed 104.7 tokens/s (max) / 106.1 (xhigh)",
       "pricing_notes": "Requires Max Mode on legacy request-based plans; Smallest GPT-5.6 variant, optimized for cost and speed; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate",
       "best_for": "OpenAI's smallest GPT-5.6 variant at low-tier pricing ($0.20/$1.20, 5x cheaper output than at initial listing) \u2014 strong AA Intelligence Index (37.3 max) for the price and very high output throughput (~151 tokens/s), positioning it as a very cost-efficient near-frontier alternative to Gemini 3.5 Flash and other cheap Flash-class models when GPT-family behavior is preferred; pick when latency and cost dominate but broader reasoning quality than smaller mini/nano variants is required.",
       "superseded_by": null,
@@ -864,9 +864,81 @@
         "speed": "A"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 42.1 (max); HLE 42.9%; Terminal-Bench 2.1 88.0; Output Speed 104.8 tokens/s",
+      "headline_benchmarks": "AA Intelligence Index 42.1 (max); HLE 42.9%; Terminal-Bench 2.1 88.0; Output Speed 86.2 tokens/s",
       "pricing_notes": "Requires Max Mode on legacy request-based plans; Mid-tier GPT-5.6 variant between Sol and Luna; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate",
       "best_for": "OpenAI's mid-tier GPT-5.6 variant between Sol (flagship) and Luna (mini) at medium-tier pricing ($2/$12) \u2014 Artificial Analysis Intelligence Index 42.1 (max) matches near-frontier reasoning while output speed (~105 tokens/s) is faster than most peers; pick for balanced near-frontier reasoning, agentic execution, and speed when Sol's high tier isn't justified but stronger throughput than GPT-5.4 is desired.",
+      "superseded_by": null,
+      "superseded_on": null,
+      "retires_on": null
+    },
+    {
+      "id": "gpt-6-astra",
+      "name": "GPT-6 Astra",
+      "input_price_per_1m": 10.0,
+      "output_price_per_1m": 50.0,
+      "cache_read_per_1m": null,
+      "tier_cost": "very-high",
+      "tiers": {
+        "coding": "B",
+        "planning": "B",
+        "agentic": "B",
+        "multimodal": "B",
+        "long-context": "B",
+        "knowledge": "B",
+        "speed": "B"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "LMArena WebDev #2 (Elo 1792.2); LMArena Text coding Elo 1488.6 (#31); LMArena Text Elo 1443.7 (#59)",
+      "pricing_notes": "Provider-direct OpenAI API per-token pricing (not via the Cursor pool)",
+      "best_for": "Auto-added very-high-cost OpenAI model; pending editorial best-for refinement.",
+      "superseded_by": null,
+      "superseded_on": null,
+      "retires_on": null
+    },
+    {
+      "id": "gpt-6-luna",
+      "name": "GPT-6 Luna",
+      "input_price_per_1m": 0.1,
+      "output_price_per_1m": 0.5,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "B",
+        "agentic": "B",
+        "multimodal": "B",
+        "long-context": "B",
+        "knowledge": "B",
+        "speed": "B"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "LMArena WebDev #24 (Elo 1593.2)",
+      "pricing_notes": "Provider-direct OpenAI API per-token pricing (not via the Cursor pool)",
+      "best_for": "Auto-added cheap-tier OpenAI model; pending editorial best-for refinement.",
+      "superseded_by": null,
+      "superseded_on": null,
+      "retires_on": null
+    },
+    {
+      "id": "gpt-6-sol",
+      "name": "GPT-6 Sol",
+      "input_price_per_1m": 2.0,
+      "output_price_per_1m": 10.0,
+      "cache_read_per_1m": null,
+      "tier_cost": "medium",
+      "tiers": {
+        "coding": "B",
+        "planning": "B",
+        "agentic": "B",
+        "multimodal": "B",
+        "long-context": "B",
+        "knowledge": "B",
+        "speed": "B"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "LMArena WebDev #5 (Elo 1685.9)",
+      "pricing_notes": "Provider-direct OpenAI API per-token pricing (not via the Cursor pool)",
+      "best_for": "Auto-added medium-cost OpenAI model; pending editorial best-for refinement.",
       "superseded_by": null,
       "superseded_on": null,
       "retires_on": null
@@ -1032,7 +1104,7 @@
         "speed": "C"
       },
       "jurisdiction": "cn",
-      "headline_benchmarks": "AA Intelligence Index 43.6 (max); HLE 46.9% (max); Terminal-Bench 2.1 85.0; \u03c4\u00b2-bench banking pass_1 45.9%",
+      "headline_benchmarks": "AA Intelligence Index 43.6 (max); HLE 46.9% (max); Terminal-Bench 2.1 85.0; \u03c4\u00b2-bench banking pass_1 46.0%",
       "pricing_notes": "Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); No separate cache-write fee",
       "best_for": "Moonshot's Kimi K3 flagship at high-tier pricing ($3/$15) \u2014 a strong near-frontier reasoning + coding model with 1M extended-context support at flat per-token rates and AA Intelligence Index 43.6 (max), competitive with GPT-5.6 Sol and Opus 5 on knowledge/coding indices; text-only (no multimodal) and notably slow (~38 tokens/s). Routed via Cursor's pool only; cn-jurisdiction excluded by the default allowed-jurisdictions list unless the user opts into cn.",
       "superseded_by": null,
@@ -1152,7 +1224,7 @@
         "speed": "D"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 40.7 (max); LMArena Text #12 (Elo 1483.4); LMArena WebDev #5 (Elo 1556.9); AA-Omniscience 26.2 (#2)",
+      "headline_benchmarks": "AA Intelligence Index 40.7 (max); LMArena Text #12 (Elo 1483.4); LMArena WebDev #29 (Elo 1557.2); AA-Omniscience 26.2 (#2)",
       "pricing_notes": "Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)",
       "best_for": "Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching",
       "superseded_by": "claude-opus-5-5",
@@ -1247,7 +1319,8 @@
         "gpt-5.5",
         "gpt-5.6-luna",
         "gpt-5.6-sol",
-        "gpt-5.6-terra"
+        "gpt-5.6-terra",
+        "gpt-6-astra"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
@@ -1320,7 +1393,10 @@
         "gpt-5.5",
         "gpt-5.6-luna",
         "gpt-5.6-sol",
-        "gpt-5.6-terra"
+        "gpt-5.6-terra",
+        "gpt-6-astra",
+        "gpt-6-luna",
+        "gpt-6-sol"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
@@ -1343,7 +1419,10 @@
         "gpt-5.5",
         "gpt-5.6-luna",
         "gpt-5.6-sol",
-        "gpt-5.6-terra"
+        "gpt-5.6-terra",
+        "gpt-6-astra",
+        "gpt-6-luna",
+        "gpt-6-sol"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
@@ -1566,7 +1645,10 @@
         "gpt-5.5",
         "gpt-5.6-luna",
         "gpt-5.6-sol",
-        "gpt-5.6-terra"
+        "gpt-5.6-terra",
+        "gpt-6-astra",
+        "gpt-6-luna",
+        "gpt-6-sol"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
@@ -1717,7 +1799,7 @@
       "surface_funded": [
         "cursor"
       ],
-      "notes": "$20 monthly model-usage credit pool across every model in Cursor's catalog; on-demand overage billed at API rates."
+      "notes": "Two monthly usage pools \u2014 Cursor Models (generous included usage for Grok 4.7, Grok 4.6, Grok 4.5, Composer 2.5) and Other Models (third-party models at API price); on-demand overage billed at API rates."
     },
     {
       "provider": "Cursor",

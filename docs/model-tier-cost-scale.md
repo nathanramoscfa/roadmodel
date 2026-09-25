@@ -121,6 +121,9 @@ table and surface material cost / availability / capability constraints.
 | GPT-5.6 Luna       | $0.20 | $0.25       | $0.02      | $1.20  | Low       | Requires Max Mode on legacy request-based plans; Smallest GPT-5.6 variant, optimized for cost and speed; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate |
 | GPT-5.6 Sol        | $4.00 | $5.00       | $0.40      | $20.00 | High      | Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate; Promotional pricing through November 21, 2026 |
 | GPT-5.6 Terra      | $2.00 | $2.50       | $0.20      | $12.00 | Medium    | Requires Max Mode on legacy request-based plans; Mid-tier GPT-5.6 variant between Sol and Luna; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate |
+| GPT-6 Astra        | $10.00 | –          | –          | $50.00 | Very High | Provider-direct OpenAI API per-token pricing (not via the Cursor pool) |
+| GPT-6 Luna         | $0.10 | –           | –          | $0.50  | Low       | Provider-direct OpenAI API per-token pricing (not via the Cursor pool) |
+| GPT-6 Sol          | $2.00 | –           | –          | $10.00 | Medium    | Provider-direct OpenAI API per-token pricing (not via the Cursor pool) |
 
 
 ### API Pool — Moonshot
@@ -142,7 +145,7 @@ table and surface material cost / availability / capability constraints.
 
 ---
 
-<!-- subscription-tiers-reviewed: 2026-09-23 -->
+<!-- subscription-tiers-reviewed: 2026-09-25 -->
 
 ## Subscription Tiers and Access Methods
 
@@ -203,7 +206,7 @@ and adjust the rebuild rules in [`update/prompt.md`](../update/prompt.md).
 | Google AI Pro          | $19.99  | $199.99 | Google    | gemini-app, gemini-cli  | Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus Deep Research, Nano Banana Pro, Veo 3.1 access, 1,000 monthly AI credits, and 5 TB of Google One storage; includes YouTube Premium Lite; 50% off the first year for new subscribers. |
 | Google AI Ultra ($100) | $99.99  | —       | Google    | gemini-app, gemini-cli  | Developer-focused Ultra tier (May 2026): 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan. |
 | Google AI Ultra ($200) | $199.99 | —       | Google    | gemini-app, gemini-cli  | Highest access to Gemini 3.1 Pro, Deep Think, Project Genie, Veo 3.1 with 25,000 monthly AI credits, $100/month Google Cloud credits, and 30 TB Google One storage (price reduced from $249.99 to $199.99 at Google I/O 2026). |
-| Cursor Pro             | $20     | $192    | Cursor    | cursor                  | $20 monthly model-usage credit pool across every model in Cursor's catalog; on-demand overage billed at API rates. |
+| Cursor Pro             | $20     | $192    | Cursor    | cursor                  | Two monthly usage pools — Cursor Models (generous included usage for Grok 4.7, Grok 4.6, Grok 4.5, Composer 2.5) and Other Models (third-party models at API price); on-demand overage billed at API rates. |
 | Cursor Pro+            | $60     | $576    | Cursor    | cursor                  | Same model coverage as Pro at roughly 3x the OpenAI / Claude / Gemini usage budget.                       |
 | Cursor Ultra           | $200    | $1920   | Cursor    | cursor                  | Same model coverage as Pro at roughly 20x the OpenAI / Claude / Gemini usage budget; priority access to new features. |
 
@@ -233,11 +236,13 @@ appear here.
 | claude-fable-5   | $50.00  | Very High    | Very High    | ✓      |
 | claude-fable-5.1 | $50.00  | Very High    | Very High    | ✓      |
 | gpt-5.5          | $30.00  | Very High    | Very High    | ✓      |
+| gpt-6-astra      | $50.00  | Very High    | Very High    | ✓      |
 | gpt-5.6-sol      | $20.00  | High         | High         | ✓      |
 | sonnet-4.6       | $15.00  | High         | High         | ✓      |
 | claude-sonnet-5  | $10.00  | Medium       | Medium       | ✓      |
 | gpt-5.4          | $15.00  | High         | High         | ✓      |
 | gpt-5.6-terra    | $12.00  | Medium       | Medium       | ✓      |
+| gpt-6-sol        | $10.00  | Medium       | Medium       | ✓      |
 | gpt-5.3-codex    | $14.00  | Medium       | Medium       | ✓      |
 | gpt-5.2          | $14.00  | Medium       | Medium       | ✓      |
 | gpt-5.2-codex    | $14.00  | Medium       | Medium       | ✓      |
@@ -256,7 +261,9 @@ appear here.
 | grok-4.6         | $6.00   | Low          | Low          | ✓      |
 | grok-4.7         | $6.00   | Low          | Low          | ✓      |
 | gpt-5.6-luna     | $1.20   | Low          | Low          | ✓      |
+| gpt-6-luna       | $0.50   | Low          | Low          | ✓      |
 | claude-4.5-haiku | $5.00   | Low          | Low          | ✓      |
+| muse-spark-1.3   | $4.25   | Low          | Low          | ✓      |
 | gpt-5.4-mini     | $4.50   | Low          | Low          | ✓      |
 | glm-5.2          | $4.40   | Low          | Low          | ✓      |
 | kimi-k2.7-code   | $4.00   | Low          | Low          | ✓      |
@@ -266,6 +273,7 @@ appear here.
 | grok-4.3         | $2.50   | Low          | Low          | ✓      |
 | glm-4.6          | $2.20   | Low          | Low          | ✓      |
 | gpt-5-mini       | $2.00   | Low          | Low          | ✓      |
+| gpt-5.1-codex-mini | $2.00 | Low          | Low          | ✓      |
 | mistral-large-3  | $1.50   | Low          | Low          | ✓      |
 | gpt-5.4-nano     | $1.25   | Low          | Low          | ✓      |
 | glm-4.5-air      | $1.10   | Low          | Low          | ✓      |
@@ -295,6 +303,9 @@ recommendable engines.
 
 | Model id           | Output | Tier | Change                                                                                                                     |
 | ------------------ | ------ | ---- | -------------------------------------------------------------------------------------------------------------------------- |
+| GPT-6 Astra        | $50.00 | Very High | New 2026-09-25 via the provider-discovery lane — OpenAI's own pricing page lists gpt-6-astra at $10/$50; not on Cursor's pricing page. Provider-direct (Federation rule: prices owned by `catalog-openai.json`) |
+| GPT-6 Sol          | $10.00 | Medium | New 2026-09-25 via the provider-discovery lane — OpenAI's own pricing page lists gpt-6-sol at $2/$10; not on Cursor's pricing page. Provider-direct |
+| GPT-6 Luna         | $0.50  | Low  | New 2026-09-25 via the provider-discovery lane — OpenAI's own pricing page lists gpt-6-luna at $0.10/$0.50; not on Cursor's pricing page. Provider-direct |
 | Claude Opus 5.5    | $20.00 | High | New 2026-09-23 on Cursor's pricing page — Anthropic's Opus 5 successor at $4/$20 (20% cheaper than Opus 5 on input and output); prompt-cache reads $0.20/M (0.05x input, down from 0.10x on Opus 5); regional and US-only endpoints priced 10% higher ($4.40/$22); visible by default (not Hidden). Selector-pass will add to `<model-options>` per the Anthropic Federation rule (input/output owned by `catalog-anthropic.json`) |
 | Claude Fable 5.1   | $50.00 | Very High | Notes refreshed 2026-09-23 — Cursor updated the Fable 5.1 hovertext from "About 2x the cost of Claude Opus 5" to "About 2.5x the cost of Claude Opus 5.5 on input and output" following the Opus 5.5 launch (Fable 5.1 pricing itself unchanged at $10/$50) |
 | Grok 4.7           | $6.00  | Low  | New 2026-09-22 in the Cursor Models pool — xAI/SpaceXAI released Grok 4.7 on 2026-09-21 as a same-price, same-speed upgrade over Grok 4.6 at $2/$6 (2.1T parameters, 500K context, xhigh reasoning). Fast variant $4/$12 (Medium tier); 500k long-context variant $4/$12 (Medium tier); 500k Fast variant $6/$18 (High tier). Not yet added to `<model-options>` (selector-pass will handle) |
@@ -400,3 +411,11 @@ does not carry. When the catalog cron declines a model the discovery lane
 flags (`update/discovery.py`), it adds a line here and the flag stops. One
 model per line, in exactly this form:
 `- <provider>/<slug> — <reason> (declined YYYY-MM-DD)`.
+
+- anthropic/Claude Mythos 5 — provider-page name for the Fable 5 model already carried as claude-fable-5 (identical $10/$50 pricing; Fable 5 is the Mythos-class model) (declined 2026-09-25)
+- anthropic/Claude Mythos 5.1 — provider-page name for the Fable 5.1 model already carried as claude-fable-5.1 (identical $10/$50 pricing) (declined 2026-09-25)
+- google/Gemini 2.5 Computer Use — computer-use variant, not a general text model (declined 2026-09-25)
+- xai/grok-4.20-0309-non-reasoning — dated (0309) snapshot of the Grok 4.20 generation; the catalog carries grok-4.3 / grok-4.6 / grok-4.7 as the Grok line (declined 2026-09-25)
+- xai/grok-4.20-0309-reasoning — dated (0309) snapshot of the Grok 4.20 generation; the catalog carries grok-4.3 / grok-4.6 / grok-4.7 as the Grok line (declined 2026-09-25)
+- xai/grok-4.20-multi-agent-0309 — dated (0309) multi-agent variant of the Grok 4.20 generation; not a fixed single-engine model the catalog tracks (declined 2026-09-25)
+- xai/grok-build-0.1 — build-agent preview removed from the catalog on 2026-07-15 when Cursor delisted it; retired (declined 2026-09-25)
