@@ -23,6 +23,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
+import { EXIT_DOWN, healthLine, serviceHealth } from "./soak-health";
+
 // Model display-name → cost tier (very-high/high/medium/low), from the bundled
 // catalog. Used by the B7 tier-stability check. Resolved relative to this
 // script so it works regardless of cwd (local from web/, or the CI cron).
@@ -280,8 +282,11 @@ async function main(): Promise<void> {
     console.log(`  [${tag}] ${c.bar.padEnd(4)} ${c.id.padEnd(22)} ${c.detail}`);
   }
   console.log(`\nRESULT: ${failed.length === 0 ? "PASS" : "FAIL"} (${blocking.length - failed.length}/${blocking.length} blocking checks)`);
+  // The loud signal, apart from the report-only bar: is the recommender up?
+  const health = serviceHealth(rows.map((r) => r.status));
+  console.log(healthLine(health));
   console.log("SOAK_DONE");
-  process.exit(failed.length === 0 ? 0 : 1);
+  process.exit(health.down ? EXIT_DOWN : failed.length === 0 ? 0 : 1);
 }
 
 main().catch((e) => {
