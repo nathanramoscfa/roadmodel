@@ -98,7 +98,7 @@ EOF
     fi
     git add pyproject.toml src/roadmodel/__init__.py tests/test_packaging.py CHANGELOG.md
     git commit -q -m "release: roadmodel $version — $title" || die "commit failed"
-    git push -q -f -u origin "$branch" || die "push failed"
+    quiet_push -q -f -u origin "$branch" || die "push failed"
     pr="$(gh pr create -R "$REPO" --base main --head "$branch" \
       --title "release: roadmodel $version — $title" \
       --body "Release $version. Notes: the [$version] section of CHANGELOG.md. Opened by scripts/release.sh." |
@@ -117,7 +117,7 @@ if ! git ls-remote --exit-code --tags origin "$tag" >/dev/null 2>&1; then
   git tag -s "$tag" -m "roadmodel $version" 2>/dev/null ||
     { log "signed tag failed — using an annotated tag"; git tag -a "$tag" -m "roadmodel $version"; } ||
     die "could not create $tag"
-  git push -q origin "$tag" || die "could not push $tag"
+  quiet_push -q origin "$tag" || die "could not push $tag"
   log "pushed $tag"
 fi
 
@@ -144,6 +144,12 @@ fi
 curl -sf "https://pypi.org/pypi/roadmodel/$version/json" >/dev/null ||
   die "roadmodel $version is not on PyPI yet"
 log "roadmodel $version is on PyPI"
+for i in $(seq 1 60); do
+  pypi_index_has "$version" && break
+  [ "$i" = 1 ] && log "waiting for PyPI's package index to serve $version (CDN lag)"
+  sleep 15
+done
+pypi_index_has "$version" || die "PyPI's package index still does not list $version after 15 minutes"
 
 # ---------------------------------------------------------- 4. floor bump
 if ! grep -q "roadmodel\[recommend\]>=$version," service/pyproject.toml; then
@@ -162,7 +168,7 @@ open(p, "w").write(t2)
 EOF
     git add service/pyproject.toml
     git commit -q -m "chore(service): bump roadmodel floor to >=$version" || die "commit failed"
-    git push -q -f -u origin "$branch" || die "push failed"
+    quiet_push -q -f -u origin "$branch" || die "push failed"
     pr="$(gh pr create -R "$REPO" --base main --head "$branch" \
       --title "chore(service): bump roadmodel floor to >=$version" \
       --body "Ships $version to the production recommender. The floor bump is what makes the cached Vercel build install the new release. Opened by scripts/release.sh." |
