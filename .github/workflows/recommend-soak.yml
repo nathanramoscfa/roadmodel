@@ -3,9 +3,15 @@
 # Phase 4.5 Stream C — scheduled recommender SOAK. Runs scripts/soak-recommend.ts
 # (the deterministic bar-scorecard) against gated prod daily and on demand, then
 # REPORTS: on a bar regression it creates/updates a single tracking issue with
-# the scorecard. Report-only — never auto-fixes, and the job stays GREEN even
-# when the bar isn't met (so it doesn't spam red runs or trip auto-remediate;
-# the open tracking issue is the signal).
+# the scorecard. The quality bar is report-only — never auto-fixes, and the job
+# stays GREEN when only the bar is missed (the open tracking issue is the signal).
+#
+# The recommender being DOWN is not report-only. When half or more of the soak's
+# requests fail (scripts/soak-health.ts; the script exits 3), the run FAILS and
+# an incident issue opens, gets a comment on every failing run, and closes
+# itself on the first run that gets answers again. Every production request
+# failed from 2026-09-21 to 2026-09-24 while this job stayed green: the tracking
+# issue already fails daily on known residuals, so nobody read it as an alarm.
 #
 # GATED: skips cleanly until the 5 prod-soak secrets are seeded as Actions
 # secrets (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -83,6 +89,7 @@ jobs:
           # ../scripts file resolves @supabase/* against web/node_modules.
           NODE_PATH="$(pwd)/node_modules" node_modules/.bin/tsx ../scripts/soak-recommend.ts 2>&1 | tee /tmp/soak.log
           echo "exit=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+          echo "health=$(grep -m1 '^SERVICE_HEALTH:' /tmp/soak.log || true)" >> "$GITHUB_OUTPUT"
 
       - name: Track regression in a single issue
         if: steps.check.outputs.have == 'true' && steps.soak.outputs.exit != '0'
@@ -113,3 +120,76 @@ jobs:
             } else {
               await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body, labels: ["dogfood"] });
             }
+
+      - name: Alarm while the recommender is down
+        # exit 3 = scripts/soak-health.ts found half or more requests failing.
+        if: steps.check.outputs.have == 'true' && steps.soak.outputs.exit == '3'
+        uses: actions/github-script@v7
+        env:
+          HEALTH: ${{ steps.soak.outputs.health }}
+        with:
+          script: |
+            const title = "Recommender is down: production requests are failing";
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const health = process.env.HEALTH || "SERVICE_HEALTH: DOWN";
+            try {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner, repo: context.repo.repo, name: "incident", color: "B60205",
+                description: "Production is failing; opened and closed by automation",
+              });
+            } catch {}
+            // REST list + exact title (never the search index, which lags).
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: "open", per_page: 100,
+            });
+            const found = open.data.find((i) => i.title === title && !i.pull_request);
+            if (found) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo, issue_number: found.number,
+                body: `Still down: \`${health}\` ([run](${run})).`,
+              });
+              return;
+            }
+            const body = [
+              `The recommender soak found production down: \`${health}\` ([run](${run})).`,
+              "",
+              "Every failing request is a recommendation nobody got. To diagnose:",
+              "- `curl -s https://roadmodel-api.vercel.app/healthz`: the service's health and the roadmodel version it runs.",
+              "- `vercel logs <production deployment of roadmodel-api> --scope roadmodel`: the runtime error (on 2026-09-24 it was an ImportError at startup; see #717).",
+              "- The soak log in the run above: each request's status.",
+              "",
+              "This issue gets a comment on every failing soak and closes itself on the first soak that gets answers again.",
+            ].join("\n");
+            await github.rest.issues.create({
+              owner: context.repo.owner, repo: context.repo.repo, title, body, labels: ["incident"],
+            });
+
+      - name: Close the alarm once the recommender answers again
+        if: steps.check.outputs.have == 'true' && steps.soak.outputs.exit != '' && steps.soak.outputs.exit != '3'
+        uses: actions/github-script@v7
+        env:
+          HEALTH: ${{ steps.soak.outputs.health }}
+        with:
+          script: |
+            const title = "Recommender is down: production requests are failing";
+            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const open = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo, state: "open", per_page: 100,
+            });
+            const found = open.data.find((i) => i.title === title && !i.pull_request);
+            if (!found) return;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: found.number,
+              body: `Recovered: \`${process.env.HEALTH || "SERVICE_HEALTH: UP"}\` ([run](${run})). Closing.`,
+            });
+            await github.rest.issues.update({
+              owner: context.repo.owner, repo: context.repo.repo, issue_number: found.number, state: "closed",
+            });
+
+      - name: Fail the run while the recommender is down
+        if: steps.check.outputs.have == 'true' && steps.soak.outputs.exit == '3'
+        env:
+          HEALTH: ${{ steps.soak.outputs.health }}
+        run: |
+          echo "::error title=Recommender is down::${HEALTH}"
+          exit 1
