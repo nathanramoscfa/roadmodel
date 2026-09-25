@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refresh the Claude Code surface-parameter blocks of
 ``docs/model-selector.txt`` from the upstream
-``anthropics/claude-code`` CHANGELOG using Opus 4.7.
+``anthropics/claude-code`` CHANGELOG using Opus.
 
 Scope is narrow: only `<thinking-context>`, `<max-mode-context>`, and
 the `<method id="claude-code">` element in `<access-methods>` may be
@@ -32,7 +32,13 @@ _UPDATE_DIR = Path(__file__).resolve().parent
 if str(_UPDATE_DIR) not in sys.path:
     sys.path.insert(0, str(_UPDATE_DIR))
 # E402/I001 are expected after the path guard above.
-from opus_turn import MAX_OUTPUT_TOKENS, OpusTurnIncomplete, stream_until_complete  # noqa: E402, I001
+from edits import EditError, payload_size, resolve_file  # noqa: E402, I001
+from opus_turn import (  # noqa: E402, I001
+    MAX_OUTPUT_TOKENS,
+    OPUS_MODEL,
+    OpusTurnIncomplete,
+    stream_until_complete,
+)
 from selector_re import repair_attribute_quotes  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -53,7 +59,7 @@ LAST_WARNINGS_PATH = UPDATE_DIR / ".last-claude-code-warnings.txt"
 EFFORT_JSON_PATH = UPDATE_DIR / "claude-code-effort.json"
 DOCS_URL = "https://code.claude.com/docs/en/model-config.md"
 
-MODEL_ID = "claude-opus-4-7"
+MODEL_ID = OPUS_MODEL
 MAX_TOKENS = MAX_OUTPUT_TOKENS
 USER_AGENT = "roadmodel-updater/1.0 (+https://github.com/nathanramoscfa/roadmodel)"
 FETCH_TIMEOUT = 30
@@ -240,9 +246,7 @@ def parse_result(raw: str) -> dict[str, Any]:
         except json.JSONDecodeError:
             return
         if isinstance(parsed, dict):
-            roadmodel_txt = parsed.get("roadmodel_txt", "")
-            length = len(roadmodel_txt) if isinstance(roadmodel_txt, str) else 0
-            candidates.append((length, parsed))
+            candidates.append((payload_size(parsed, "roadmodel_txt"), parsed))
 
     for block in _FENCED_BLOCK_RE.findall(text):
         _try_add(block)
@@ -387,7 +391,11 @@ def main() -> int:
         sys.stderr.write(raw[:2000] + "\n[... elided ...]\n" + raw[-2000:] + "\n")
         return 2
 
-    new_selector = result["roadmodel_txt"]
+    try:
+        new_selector = resolve_file(result, "roadmodel_txt", selector_text)
+    except EditError as exc:
+        sys.stderr.write(f"Could not apply the model's edits: {exc}\n")
+        return 2
     summary = result.get("summary") or "Refresh Claude Code surface parameters"
     warnings = list(result.get("warnings") or [])
     # An LLM-written value with a raw quote would end its attribute early.
