@@ -1,10 +1,14 @@
 // web/components/ModelsExplorer.tsx
 //
-// The /models page's interactive half: the catalog table, the per-tier Score
-// charts and the frontier chart, driven by ONE set of filters. Provider,
+// The /models page's interactive half: the catalog table, the frontier chart
+// and the per-tier Score charts, driven by ONE set of filters. Provider,
 // Jurisdiction (a checkbox per code, all checked to start) and Cost tier are
 // set in the table's controls and applied to all three, so unchecking CN
 // leaves the US + EU models in the table and in every chart.
+//
+// The page remembers them (lib/models-prefs): the server reads the saved
+// choices from a cookie and passes them in, so the first render is already
+// the visitor's view, and every change here is saved for the next visit.
 //
 // What each filter changes is set out in lib/catalog-filter: Provider and
 // Jurisdiction choose the pool the frontier is recomputed over; Cost tier
@@ -24,6 +28,7 @@ import {
   withFrontier,
   type CatalogFilters,
 } from "@/lib/catalog-filter";
+import { filtersFromPrefs, prefsFromFilters, savePrefs, type ModelsPrefs } from "@/lib/models-prefs";
 import type { ChartFilter } from "./chart-kit";
 import { FrontierChart } from "./FrontierChart";
 import { ModelCatalog } from "./ModelCatalog";
@@ -36,15 +41,28 @@ export function ModelsExplorer({
   benchmarksGeneratedAt,
   measuredCount,
   scoreFit,
+  prefs,
 }: {
   models: ModelRow[];
   generatedAt: string;
   benchmarksGeneratedAt: string;
   measuredCount: number;
   scoreFit: ScoreFit | null;
+  // The visitor's saved choices (defaults on a first visit).
+  prefs: ModelsPrefs;
 }) {
   const jurisdictions = useMemo(() => jurisdictionCodes(models), [models]);
-  const [filters, setFilters] = useState<CatalogFilters>(() => allFilters(jurisdictions));
+  const [filters, setFilters] = useState<CatalogFilters>(() =>
+    filtersFromPrefs(
+      prefs,
+      models.flatMap((m) => (m.provider ? [m.provider] : [])),
+      jurisdictions,
+    ),
+  );
+  function changeFilters(next: CatalogFilters) {
+    setFilters(next);
+    savePrefs(prefsFromFilters(next, jurisdictions));
+  }
 
   const scope = poolScope(filters, jurisdictions);
   // The frontier's pool. Unnarrowed, the server's whole-catalog marks stand.
@@ -58,7 +76,7 @@ export function ModelsExplorer({
   );
 
   const summary = filterSummary(filters, jurisdictions);
-  const clear = () => setFilters(allFilters(jurisdictions));
+  const clear = () => changeFilters(allFilters(jurisdictions));
   const chartFilter: ChartFilter | null = summary ? { summary, onClear: clear } : null;
 
   return (
@@ -69,7 +87,7 @@ export function ModelsExplorer({
           shown={shown}
           filters={filters}
           jurisdictions={jurisdictions}
-          onFiltersChange={setFilters}
+          onFiltersChange={changeFilters}
           filterSummary={summary}
           onClearFilters={clear}
           scope={scope}
@@ -77,9 +95,13 @@ export function ModelsExplorer({
           benchmarksGeneratedAt={benchmarksGeneratedAt}
           measuredCount={measuredCount}
           scoreFit={scoreFit}
+          initialGroupBy={prefs.groupBy}
+          initialView={prefs.view}
         />
-        <ScoreCharts rows={shown} pool={pool} fit={scoreFit} filter={chartFilter} />
+        {/* The frontier first (the whole market on one chart), then the Score
+            charts that take it apart tier by tier. */}
         <FrontierChart rows={shown} pool={pool} fit={scoreFit} filter={chartFilter} />
+        <ScoreCharts rows={shown} pool={pool} fit={scoreFit} filter={chartFilter} />
       </div>
     </FrontierScope.Provider>
   );

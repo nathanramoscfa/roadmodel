@@ -1,7 +1,10 @@
+import { cookies } from "next/headers";
+
 import { BenchmarkReference } from "@/components/BenchmarkReference";
 import { CatalogLegend } from "@/components/CatalogLegend";
 import { ModelsExplorer } from "@/components/ModelsExplorer";
 import { getBenchmarkMeta, getCatalogGeneratedAt, getModelRows, getScoreFit } from "@/lib/catalog-models";
+import { parsePrefs, PREFS_COOKIE } from "@/lib/models-prefs";
 
 export const metadata = {
   title: "Models — roadmodel",
@@ -9,7 +12,10 @@ export const metadata = {
     "The full AI-model catalog roadmodel recommends from: pricing, the S→D per-category ratings, and Artificial Analysis's uniform benchmark scores for every model — sortable, filterable, and sourced.",
 };
 
-export default function ModelsPage() {
+export default async function ModelsPage() {
+  // The visitor's saved filters, grouping and view, so the first render is
+  // already the page they left (lib/models-prefs).
+  const prefs = parsePrefs((await cookies()).get(PREFS_COOKIE)?.value);
   const models = getModelRows();
   const generatedAt = getCatalogGeneratedAt();
   const bench = getBenchmarkMeta();
@@ -29,14 +35,15 @@ export default function ModelsPage() {
           the same scale for every model, refreshed daily. A rating is a class several models can
           share; the figures separate them within it. Sort any column, filter by provider,
           jurisdiction, or cost (the charts below follow the same filters), switch to the full
-          benchmark grid, and hover any label for its definition and source.
+          benchmark grid, and hover any label for its definition and source. The page remembers
+          your filters, grouping and view in this browser for your next visit.
         </p>
       </header>
 
-      {/* Most used first: the catalog itself, then the charts that explain its
-          Score column, then the frontier drawn across every model (all three
-          under the table's filters), then the full key (the table's caption
-          links to it). */}
+      {/* Most used first: the catalog itself, then the frontier drawn across
+          every model, then the charts that explain its Score column tier by
+          tier (all three under the table's filters), then the full key (the
+          table's caption links to it). */}
       <div className="mt-10 space-y-8">
         <ModelsExplorer
           models={models}
@@ -44,6 +51,7 @@ export default function ModelsPage() {
           benchmarksGeneratedAt={bench.generatedAt}
           measuredCount={bench.measuredCount}
           scoreFit={scoreFit}
+          prefs={prefs}
         />
         <CatalogLegend id="how-to-read" />
         <BenchmarkReference id="benchmarks" />
