@@ -961,8 +961,8 @@
       <model id="gpt-6-astra" name="GPT-6 Astra"
              input-price-per-1m="$10.00" output-price-per-1m="$50.00"
              jurisdiction="us"
-             tier-coding="B" tier-planning="B" tier-agentic="B"
-             tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
+             tier-coding="S" tier-planning="B" tier-agentic="S"
+             tier-multimodal="B" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
              headline-benchmarks="LMArena WebDev #2 (Elo 1792.2); LMArena Text coding Elo 1488.6 (#31); LMArena Text Elo 1443.7 (#59)"
              pricing-notes="Provider-direct OpenAI API per-token pricing (not via the Cursor pool)"
@@ -1111,7 +1111,7 @@
              input-price-per-1m="$2.00" output-price-per-1m="$10.00"
              jurisdiction="us"
              tier-coding="B" tier-planning="B" tier-agentic="B"
-             tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
+             tier-multimodal="B" tier-long-context="S" tier-knowledge="A"
              tier-speed="B"
              headline-benchmarks="LMArena WebDev #5 (Elo 1685.9)"
              pricing-notes="Provider-direct OpenAI API per-token pricing (not via the Cursor pool)"
@@ -1275,7 +1275,7 @@
              input-price-per-1m="$0.10" output-price-per-1m="$0.50"
              jurisdiction="us"
              tier-coding="B" tier-planning="B" tier-agentic="B"
-             tier-multimodal="B" tier-long-context="B" tier-knowledge="B"
+             tier-multimodal="B" tier-long-context="A" tier-knowledge="B"
              tier-speed="B"
              headline-benchmarks="LMArena WebDev #24 (Elo 1593.2)"
              pricing-notes="Provider-direct OpenAI API per-token pricing (not via the Cursor pool)"
@@ -1705,7 +1705,7 @@
         context (opus-4.7 1M, opus-4.8 1M, claude-opus-5 1M, claude-opus-5-5 1M, gemini-3.1-pro 1M) over forcing
         a smaller-context model into Max Mode truncation.
       - For PRIMARY = `coding` at S-tier requirement, the candidate set is
-        grok-4.6, grok-4.7, gpt-5.1-codex, gpt-5.1-codex-max, gpt-5.6-terra, gpt-5.2-codex, gpt-5.3-codex, claude-opus-5-5, gpt-5.6-sol, claude-opus-5, claude-fable-5.1; cost tie-breaker favors
+        grok-4.6, grok-4.7, gpt-5.1-codex, gpt-5.1-codex-max, gpt-5.6-terra, gpt-5.2-codex, gpt-5.3-codex, claude-opus-5-5, gpt-5.6-sol, claude-opus-5, claude-fable-5.1, gpt-6-astra; cost tie-breaker favors
         grok-4.6 when the ratings are equivalent for the prompt.
       - Default to composer-2.5 for routine multi-file implementation when a
         coding-A rating suffices; escalate only on a concrete capability
