@@ -1219,21 +1219,21 @@ Billing types:
 #### OpenAI API — `openai-api`
 
 - **Billing:** per-token (requires openai-api-key)
-- **Supports models:** gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5.4-nano,gpt-5-mini
+- **Supports models:** gpt-6-astra,gpt-6-sol,gpt-6-luna,gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5.4-nano,gpt-5-mini
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
 - **Best for:** Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates. Exposes the full Codex/OpenAI `reasoning_effort` dial (`low`, `medium`, `high`, `xhigh`, `max`, `ultra` — the top `ultra` step is a session-wide multi-agent orchestration mode analogous to Claude Code's `ultracode`).
 
 #### Codex — `codex-cli`
 
 - **Billing:** subscription-included (requires chatgpt-subscription)
-- **Supports models:** gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.2,gpt-5,gpt-5-mini
+- **Supports models:** gpt-6-astra,gpt-6-sol,gpt-6-luna,gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.2,gpt-5,gpt-5-mini
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
 - **Best for:** Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate, in the CLI and the IDE extension. A ChatGPT-account sign-in CANNOT run the `-codex` model variants: Codex answers 400 &quot;The &apos;gpt-5.3-codex&apos; model is not supported when using Codex with a ChatGPT account.&quot; Those variants are reachable only through `codex-api` (an OpenAI API key), so recommending one here would name a model the operator&apos;s subscription cannot run. Exposes the full Codex `reasoning_effort` dial (`low`, `medium`, `high`, `xhigh`, `max`, `ultra` — the top `ultra` step is session-wide multi-agent orchestration on par with Claude Code&apos;s `ultracode`) and no Max Mode.
 
 #### Codex (API key) — `codex-api`
 
 - **Billing:** per-token (requires openai-api-key)
-- **Supports models:** gpt-5.3-codex,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.2,gpt-5,gpt-5-mini
+- **Supports models:** gpt-6-astra,gpt-6-sol,gpt-6-luna,gpt-5.3-codex,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.2,gpt-5,gpt-5-mini
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
 - **Best for:** The same Codex surface driven by an OpenAI API key instead of a ChatGPT sign-in: the ONLY way to run the coding-specialised `-codex` variants (gpt-5.3-codex and the gpt-5.1-codex family), and the fallback for GPT work once the ChatGPT plan&apos;s limits bind. Billed per token at list price, so prefer `codex-cli` while the subscription still has headroom. Exposes the full Codex `reasoning_effort` dial (`low`, `medium`, `high`, `xhigh`, `max`, `ultra`).
 

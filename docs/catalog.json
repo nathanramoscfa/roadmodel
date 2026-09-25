@@ -1,9 +1,9 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-25T16:14:39Z",
+  "generated_at_utc": "2026-09-25T16:25:33Z",
   "source_doc_sha256": {
-    "model-selector.txt": "6d5e3020fa2d36e2181cabe6594ac99151322cd6150eae8061c649c1ded3eb86",
+    "model-selector.txt": "8712732c84a5ba403bcdf00ccb4f5e22cc3d6e98f31b5d642ea8841a35763732",
     "model-tier-cost-scale.md": "9b9f57f5367b553ab11c1116ff69b89eb4d3a9251a7f1caebd813dbdc0c4716a"
   },
   "models": [
@@ -1393,7 +1393,10 @@
         "gpt-5.5",
         "gpt-5.6-luna",
         "gpt-5.6-sol",
-        "gpt-5.6-terra"
+        "gpt-5.6-terra",
+        "gpt-6-astra",
+        "gpt-6-luna",
+        "gpt-6-sol"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
@@ -1416,7 +1419,10 @@
         "gpt-5.5",
         "gpt-5.6-luna",
         "gpt-5.6-sol",
-        "gpt-5.6-terra"
+        "gpt-5.6-terra",
+        "gpt-6-astra",
+        "gpt-6-luna",
+        "gpt-6-sol"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
@@ -1639,7 +1645,10 @@
         "gpt-5.5",
         "gpt-5.6-luna",
         "gpt-5.6-sol",
-        "gpt-5.6-terra"
+        "gpt-5.6-terra",
+        "gpt-6-astra",
+        "gpt-6-luna",
+        "gpt-6-sol"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
