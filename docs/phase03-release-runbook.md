@@ -325,7 +325,7 @@ Release notes template (`/tmp/release-notes.md`):
   backed by Haiku 4.5 / Gemini Flash, rate-limited at 3/day per IP,
   with audit logs and provider-side cost ceilings as the day-one
   guardrail.
-- Link: [ROADMAP.md Phase 3](../ROADMAP.md#phase-3--marketing-site-and-anonymous-web-recommender)
+- Link: [ROADMAP.md Phase 3](../ROADMAP.md#phase-3--marketing-site-and-anonymous-web-recommender-)
 - Link: [docs/phase03-release-runbook.md](phase03-release-runbook.md)
 - Link: https://roadmodel.ai
 - Note: no PyPI release — OSS CLI `roadmodel` v0.2.0 unchanged from
