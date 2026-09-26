@@ -156,6 +156,20 @@ if ! grep -q "roadmodel\[recommend\]>=$version," service/pyproject.toml; then
   branch="chore/service-floor-$version"
   pr="$(gh pr list -R "$REPO" --head "$branch" --state open --json number -q '.[0].number // empty')"
   if [ -z "$pr" ]; then
+    # PyPI serves the index with max-age=600, and uv keeps it in the Vercel
+    # build cache. The release PR's own main build reads the index just before
+    # the upload, so a floor-bump build restoring that cache within 10 minutes
+    # replays the old version list and fails with "only
+    # roadmodel[recommend]<=OLD is available" (0.2.43, 0.2.44). Open the PR
+    # once every copy read before the upload has expired.
+    uploaded="$(pypi_upload_epoch "$version")"
+    if [ -n "$uploaded" ]; then
+      wait_s=$((uploaded + 660 - $(date +%s)))
+      if [ "$wait_s" -gt 0 ]; then
+        log "waiting ${wait_s}s for cached copies of the old package index to expire"
+        sleep "$wait_s"
+      fi
+    fi
     git checkout -q -B "$branch" origin/main
     python3 - "$version" <<'EOF' || die "floor bump failed"
 import re, sys
