@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Every roadmap lives in `docs/roadmap/`.** `ROADMAP.md` and each
+  `phaseNN-roadmap.md` now sit together in one folder, none at the repo
+  root. Before, `ROADMAP.md` went to the root and phase roadmaps to `docs/`
+  beside QA findings and runbooks, and projects drifted (one kept all six
+  at the root, another used `roadmaps/`). `/roadmap-project` and
+  `/roadmap-phase` write there by default, and stop in a project whose
+  roadmaps sit anywhere else. `/roadmap-refresh` moves a project's roadmaps
+  into the folder with `git mv`, fixes the relative links inside them, and
+  updates every link, verify script, test and workflow that names their
+  old paths, in the same PR. Git-excluded roadmaps (`private/`) stay where
+  they are.
+
 ## [0.2.45] — 2026-09-25
 
 ### Changed

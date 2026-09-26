@@ -15,8 +15,8 @@ paid API.
 | `model-tier-cost-scale.md` | Per-token **prices** and **subscription tiers** — the funding/cost data the selector's access-selection step consumes. |
 | `settings-display.md` | The **display contract**: how the selector's setting fields map to the real controls each surface exposes (which dials to show, which to omit). Read it before writing any Settings table. |
 | `user-context.md` | The operator's **subscriptions + API keys + platform preference order** — decides *which platform pays* for each pick. |
-| `templates/project-roadmap-template.md` | Skeleton for a whole-project `ROADMAP.md`. |
-| `templates/phase-roadmap-template.md` | Skeleton for one `phaseNN-roadmap.md`. |
+| `templates/project-roadmap-template.md` | Skeleton for a whole-project `docs/roadmap/ROADMAP.md`. |
+| `templates/phase-roadmap-template.md` | Skeleton for one `docs/roadmap/phaseNN-roadmap.md`, beside it. |
 | `prompts/project-roadmap.md` | **Fill-in paste-prompt** that writes `ROADMAP.md` from the project template — refreshes the kit first. |
 | `prompts/phase-roadmap.md` | **Fill-in paste-prompt** that writes one `phaseNN-roadmap.md` — refreshes the kit first. |
 
