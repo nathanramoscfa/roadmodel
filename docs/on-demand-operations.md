@@ -42,7 +42,9 @@ fix the cause and run it again:
 1. a release PR (version bump; CHANGELOG `[Unreleased]` → `[X.Y.Z]`), merged
 2. a signed `vX.Y.Z` tag, which builds, uploads to TestPyPI and verifies the install
 3. the PyPI publish (`release.yml` dispatch) and the GitHub Release
-4. a PR bumping `service/pyproject.toml` to `roadmodel[recommend]>=X.Y.Z`, merged
+4. a PR bumping `service/pyproject.toml` to `roadmodel[recommend]>=X.Y.Z`, merged.
+   It opens 11 minutes after the PyPI upload, once every cached copy of the
+   old package index has expired
 5. a wait until `https://roadmodel-api.vercel.app/healthz` reports `X.Y.Z`
 
 ## When a run fails
@@ -57,3 +59,8 @@ fix the cause and run it again:
 - **TestPyPI "No matching distribution"** during a release: the CDN hasn't
   caught up yet. Run `gh run rerun <id> --failed`, then run `scripts/release.sh`
   again.
+- **The floor-bump PR's `roadmodel-api` build says "only
+  roadmodel[recommend]<=OLD is available"**: that build read a cached copy of
+  PyPI's index from before the upload. PyPI serves the index with
+  `max-age=600`, and `uv` keeps it in the Vercel build cache. Push an empty
+  commit to the PR's branch to rebuild, then run `scripts/release.sh` again.
