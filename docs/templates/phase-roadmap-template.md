@@ -117,9 +117,10 @@ STYLE RULES (the AI MUST follow)
   - The document opens with a phase-level Status line
     directly under its `# Phase N Roadmap` title (`Not
     started` → `In progress` from Step 1's PR → `Complete —
-    <YYYY-MM-DD>` from the final step's PR), and its Summary
-    Table carries a Status column mirroring each step's
-    Status line. Same Status rule, same Stage-3 commits.
+    <YYYY-MM-DD>` and a ` ✅` on the title from the final
+    step's PR), and its Summary Table carries a Status column
+    mirroring each step's Status line. Same Status rule, same
+    Stage-3 commits.
   - Findings surfaced while executing a step are classified
     per the Overview "Triage rule" before they are acted on;
     a step's PR contains the step plus blocking fixes only.
@@ -371,7 +372,10 @@ started` to `In progress` (the parent's `### Phase {{N}}` line
 reads `In progress — phase{{N}}-roadmap.md`), and the final
 step's PR flips both to `Complete — …` (the parent's with its row
 in the "Phase Complexity Summary" table and the header
-`> **Status:**` line). There is no separate
+`> **Status:**` line) and appends ` ✅` to this file's `# ` title
+and to the parent's `### Phase {{N}}` heading, so the project
+roadmap shows a finished phase the way this file shows a finished
+step. There is no separate
 "update the roadmaps" chore: a step whose PR merged without its
 Status line is a lifecycle violation, and the next step's Stage 1
 (and `/roadmap-step`) refuses to start until the previous step
@@ -425,7 +429,8 @@ before declaring a step complete.
    commit sets this roadmap's phase-level `**Status:**` (under its
    title) and the parent project roadmap's Phase {{N}}
    `**Status:**` to `In progress`; on the final step, both to
-   `Complete`.
+   `Complete`, with ` ✅` appended to this roadmap's `# ` title
+   and to the parent's `### Phase {{N}}` heading.
 
 4. **Wait for green checks, then squash-merge.** Every required
    status check (lint, type-check, test-matrix, package-smoke,
@@ -946,7 +951,11 @@ hygiene").}}
        parent project roadmap's
        Phase {{N}} `**Status:**` to
        `In progress`; on the final
-       step, both to `Complete`.
+       step, both to `Complete`,
+       with ` ✅` appended to this
+       roadmap's `# ` title and to
+       the parent's `### Phase {{N}}`
+       heading.
 
     4. WAIT FOR GREEN CHECKS, THEN
        SQUASH-MERGE. Every required
@@ -1644,7 +1653,9 @@ that surface has neither dial.
         `**Status:** Complete —
         <YYYY-MM-DD>; PR #<n>;
         {{milestone tag}};
-        phase{{N}}-roadmap.md`.
+        phase{{N}}-roadmap.md`
+        directly under its heading,
+        and the heading ends in ✅.
       - Its row in the "Phase
         Complexity Summary" table
         reads `Complete` (Step 1's
@@ -1662,8 +1673,9 @@ that surface has neither dial.
       commit: its phase-level
       `**Status:**` line (under the
       title) reads `Complete —
-      <YYYY-MM-DD>`, every step
-      heading ends in ✅, and every
+      <YYYY-MM-DD>`, the title and
+      every step heading end in ✅,
+      and every
       step's Summary Table Status
       cell reads `Complete — PR
       #<n>`.
@@ -1729,9 +1741,10 @@ that surface has neither dial.
   remains. Every step of this roadmap, this one included,
   reads `**Status:** Complete — PR #…` on `main` under a ✅
   heading, the Summary Table's Status column and this roadmap's
-  phase-level Status line say `Complete`, and the parent
-  project roadmap's Phase {{N}} entry, its summary-table row,
-  and its header status line say `Complete` — all landed in
+  phase-level Status line say `Complete` under a ✅ title, and the
+  parent project roadmap's Phase {{N}} entry (under a ✅ heading),
+  its summary-table row, and its header status line say
+  `Complete` — all landed in
   this step's PR. This step's final response ends with two lines and
   nothing after them: "Step {{N}} is complete. You can now move
   on to Step {{N+1}}." is replaced by "Step {{N}} is complete.

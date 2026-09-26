@@ -93,17 +93,33 @@ Then each phase roadmap itself: a `**Status:**` line directly under its
 some ⇒ `In progress`; none ⇒ `Not started`), and a Status column in its
 Summary Table (add it if missing): each step's row mirrors that step's
 line (`Complete — PR #<n>` or `Not started`), verification rows read
-`--`.
+`--`. A phase roadmap that reads `Complete` gets ` ✅` at the end of its
+title (`# Phase 5 Roadmap — Downside-risk efficient frontier ✅`); one
+that does not, has none.
 
 Then the project roadmap: every `### Phase` gets a `**Status:**` line
-under its Goal, and its summary table a Status column. All of a phase's
-steps Complete ⇒ `Complete — <last merge date>`; some ⇒
+directly under its heading, before its Goal — the place a step carries
+its own. Move an existing one there (roadmaps written before roadmodel
+0.2.44 carry it after the Goal or the metadata badge), so each phase
+ends up with exactly one; change no Status value while moving it. All of
+a phase's steps Complete ⇒ `Complete — <last merge date>`; some ⇒
 `In progress — <phase roadmap file>`; none, or no phase roadmap yet ⇒
-`Not started`. A phase roadmap with no `### Phase` section of its own (a
-sub-phase such as 4.5 or 31.5, written after the project roadmap) gets
-one, in phase order: its title, a one-paragraph Goal drawn from the
-phase roadmap's own overview, the Status line, and a pointer to the
-file. Without it, the project ledger hides the phase that is underway.
+`Not started`. A phase that reads `Complete` gets ` ✅` at the end of
+its heading (`### Phase 5 — Downside-risk efficient frontier ✅`); a
+phase that does not, has none. The mark is how a reader of the project
+roadmap sees which phases are done, in the preview, the outline and the
+table of contents, as they see steps in a phase roadmap. Its summary
+table gets a Status column. A phase roadmap with no `### Phase` section
+of its own (a sub-phase such as 4.5 or 31.5, written after the project
+roadmap) gets one, in phase order: its title, the Status line, a
+one-paragraph Goal drawn from the phase roadmap's own overview, and a
+pointer to the file. Without it, the project ledger hides the phase that
+is underway.
+
+A heading that gains or loses ` ✅` gets a new anchor (GitHub renders
+`### Phase 6 — Report ✅` as `#phase-6--report-`, with a trailing
+hyphen). Update every link in the repo's Markdown that points at the old
+anchor.
 
 Print the phase · step · status table.
 

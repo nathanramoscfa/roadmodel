@@ -23,10 +23,11 @@ current. Run `pip install -U roadmodel && roadmodel export-kit . --force`
 `planning/templates/project-roadmap-template.md` and confirm its Step
 lifecycle Stage 3 reads "Open the PR, then mark the step" and Stage 6
 reads "Dispose of every finding, declare completion, then new
-conversation". If Stage 3 is a bare "Open the PR", or Stage 6 tells
+conversation". If Stage 3 is a bare "Open the PR", Stage 6 tells
 you to put findings in a "Follow-ups (non-blocking)" note after the
-completion line, STOP and tell me the kit is stale — do not write the
-roadmap from it.
+completion line, or a `### Phase` section's `**Status:**` line sits
+after its **Goal:** rather than directly under its heading, STOP and
+tell me the kit is stale — do not write the roadmap from it.
 
 Step 1 — write `{{OUTPUT}}` from
 `@planning/templates/project-roadmap-template.md`. The project brief
@@ -49,8 +50,9 @@ availability exclusion in the selector.
 Honor the template's style rules: 80-column prose, no `<PLACEHOLDER>`
 tokens left, every `<!-- ... -->` guidance block stripped, numbers
 marked "TBD" rather than invented, every phase carrying
-`**Status:** Not started` under its Goal and the §8 summary table
-carrying a Status column (each phase's final step flips both).
+`**Status:** Not started` directly under its `### Phase` heading,
+before its Goal, and the §8 summary table carrying a Status column
+(each phase's final step flips both and appends ✅ to the heading).
 
 When the file is written, reply with its path and the phase list with
 one line each. Do not start Phase 1 — each phase gets its own phase

@@ -26,13 +26,15 @@ STYLE RULES (the AI MUST follow)
       **Complexity:** … · **Risk:** … · **Cloud cost:** … ·
       **Handles sensitive data:** <Yes/No — PII, secrets, auth>
   - Every phase carries a `**Status:**` line directly under its
-    **Goal:** — `Not started` when this roadmap is written. The
-    phase's FIRST step flips it to `In progress — <phase
-    roadmap file>` and its FINAL step to `Complete —
-    <YYYY-MM-DD>; PR #<n>; <tag>; <phase roadmap file>`, each in
-    that step's own PR, so this file on `main` marks a phase
-    complete exactly when its last PR merges (see §5 "Step
-    lifecycle" Stage 3). The §8 summary table carries the same
+    `### Phase` heading, before its **Goal:** — `Not started`
+    when this roadmap is written. The phase's FIRST step flips it
+    to `In progress — <phase roadmap file>` and its FINAL step to
+    `Complete — <YYYY-MM-DD>; PR #<n>; <tag>; <phase roadmap
+    file>` and appends ` ✅` to the heading (`### Phase 5 —
+    <Title> ✅`), each in that step's own PR, so this file on
+    `main` marks a phase complete exactly when its last PR merges
+    (see §5 "Step lifecycle" Stage 3), and the outline shows it
+    the way a phase roadmap shows its steps. The §8 summary table carries the same
     state in its Status column, and the header `> **Status:**`
     line agrees with both. Nothing else records completion.
   - §5 "Security & privacy strategy" is MANDATORY for any
@@ -172,11 +174,11 @@ single public ingress point.>
 <!--
 The heart of the document. Produce 3–8 phases. Each phase MUST
 have:
-  1. ### Phase N — <Title>
-  2. **Goal:** one sentence.
-  3. **Status:** Not started (flipped to In progress by the
+  1. ### Phase N — <Title> (ends in ` ✅` once Complete)
+  2. **Status:** Not started (flipped to In progress by the
      phase's first step and to Complete by its final step —
      see the STYLE RULES and §5 "Step lifecycle").
+  3. **Goal:** one sentence.
   4. Metadata line: **Complexity:** … · **Risk:** … ·
      **Cloud cost:** … · **Handles sensitive data:** …
   5. Numbered sub-sections (#### N.1, #### N.2, …) describing
@@ -193,9 +195,9 @@ dependency graph in §5 is honoured.
 
 ### Phase 1 — <Phase Title>
 
-**Goal:** <One sentence describing the outcome of this phase.>
-
 **Status:** Not started
+
+**Goal:** <One sentence describing the outcome of this phase.>
 
 **Complexity:** <Low | Medium | High> · **Risk:**
 <Low | Medium | High> · **Cloud cost:** <$0 | …> ·
@@ -230,9 +232,9 @@ dependency graph in §5 is honoured.
 
 ### Phase 2 — <Phase Title>
 
-**Goal:** <one sentence>.
-
 **Status:** Not started
+
+**Goal:** <one sentence>.
 
 **Complexity:** … · **Risk:** … · **Cloud cost:** …
 
@@ -251,9 +253,9 @@ dependency graph in §5 is honoured.
 
 ### Phase N — <Final Phase Title>
 
-**Goal:** <one sentence>.
-
 **Status:** Not started
+
+**Goal:** <one sentence>.
 
 **Complexity:** … · **Risk:** … · **Cloud cost:** …
 
@@ -390,8 +392,9 @@ complete all six stages before declaring the step done.
    reconstructing history from `git log`. The same commit marks
    the phase here: on a phase's first step its `**Status:**`
    line becomes `In progress — <phase roadmap file>`; on its
-   final step, `Complete — …`, together with its §8 summary row
-   and the header `> **Status:**` line. A roadmap that is
+   final step, `Complete — …` with ` ✅` appended to its
+   `### Phase` heading, together with its §8 summary row and the
+   header `> **Status:**` line. A roadmap that is
    git-excluded needs the edit only.
 
 4. **Wait for green checks, then squash-merge.** Every required

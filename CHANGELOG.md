@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **A finished phase gets a ✅ on its heading, like a finished step.** In
+  the project roadmap, each `### Phase` now carries its `**Status:**` line
+  directly under the heading, before the Goal, and a Complete phase's heading
+  ends in ✅. So does a Complete phase roadmap's title. The phase's final step
+  adds both marks in its own PR. `/roadmap-refresh` moves existing Status
+  lines, adds the marks and fixes links to headings whose anchors changed.
+  `/roadmap-step` makes the same migration if it meets the old layout.
+
 ## [0.2.43] — 2026-09-25
 
 ### Added
