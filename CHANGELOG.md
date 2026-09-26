@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A release's service build no longer reads a stale package index.** PyPI
+  serves its index with `max-age=600`, and `uv` keeps it in the Vercel build
+  cache. The release PR's own build read the index just before the upload,
+  so the floor-bump build that followed replayed the old version list and
+  failed (0.2.43, 0.2.44). `scripts/release.sh` now opens the floor-bump PR
+  11 minutes after the upload, and checks the index with the header `uv`
+  sends.
+
 ## [0.2.44] — 2026-09-25
 
 ### Changed

@@ -107,11 +107,23 @@ quiet_push() {
 # pypi_index_has <version> — true once PyPI's SIMPLE index (what pip and uv
 # resolve against) lists the version. The JSON API sees a release minutes
 # before the CDN-cached index does; a build that resolves in that window fails
-# with "only roadmodel<=OLD is available" (0.2.43's first service build).
+# with "only roadmodel<=OLD is available" (0.2.43's first service build). The
+# CDN caches one copy per Accept header, so this asks with uv's own.
 pypi_index_has() {
-  curl -s --max-time 15 -H "Accept: application/vnd.pypi.simple.v1+json" \
+  curl -s --max-time 15 \
+    -H "Accept: application/vnd.pypi.simple.v1+json, application/vnd.pypi.simple.v1+html;q=0.2, text/html;q=0.01" \
     https://pypi.org/simple/roadmodel/ |
     python3 -c 'import json,sys; sys.exit(0 if sys.argv[1] in json.load(sys.stdin).get("versions",[]) else 1)' "$1" \
+    2>/dev/null
+}
+
+# pypi_upload_epoch <version> — Unix time of the version's first upload.
+pypi_upload_epoch() {
+  curl -s --max-time 15 "https://pypi.org/pypi/roadmodel/$1/json" |
+    python3 -c 'import json,sys
+from datetime import datetime
+u = json.load(sys.stdin)["urls"]
+print(int(min(datetime.fromisoformat(f["upload_time_iso_8601"].replace("Z", "+00:00")).timestamp() for f in u)))' \
     2>/dev/null
 }
 
