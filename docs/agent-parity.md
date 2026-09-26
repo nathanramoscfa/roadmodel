@@ -17,7 +17,7 @@ Ecosystems covered:
 | **Gemini** | Antigravity CLI (`agy`) + Antigravity IDE — the Gemini CLI's successor, which shares `~/.gemini` but reads a different layout underneath — and Jules |
 | **Open source** | OpenCode, Cline, Continue, Aider and other clients over Ollama / vLLM / an OpenAI-compatible endpoint |
 
-`roadmodel-update` already keeps the *roadmap commands*, the *roadmodel MCP
+`roadmodel-upgrade` already keeps the *roadmap commands*, the *roadmodel MCP
 server* and the *default model and effort* in parity across every agent it
 detects — see [After the sync](#after-the-sync). A bare `~/.gemini` no longer
 counts as the legacy Gemini CLI, since Antigravity creates that directory too. This document covers
@@ -107,8 +107,8 @@ For every skill and every slash command <SOURCE> has that you lack, create the
 equivalent in your own format, preserving the name so I type the same thing in
 both agents. Where your format has no argument placeholder, replace the
 placeholder with a sentence saying the arguments arrive as the text after the
-command. Do NOT touch anything `roadmodel-update` manages (roadmap-project,
-roadmap-phase, roadmap-step, roadmodel-update) — it regenerates those for every
+command. Do NOT touch anything `roadmodel-upgrade` manages (roadmap-project,
+roadmap-phase, roadmap-step, roadmap-refresh, roadmodel-upgrade) — it regenerates those for every
 agent and would overwrite your edits.
 
 STEP 5 — MCP servers.
@@ -146,7 +146,7 @@ memory store).
 
 ## After the sync
 
-`roadmodel-update` (`/roadmodel-update`, or
+`roadmodel-upgrade` (`/roadmodel-upgrade`, or
 `python scripts/update_projects.py`) keeps three things in parity on every run,
 for every agent it detects — Claude Code, Codex, Gemini, Cursor, OpenCode and
 the VS Code chat panel:

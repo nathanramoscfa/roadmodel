@@ -1,6 +1,6 @@
 # tests/test_update_projects.py
 """Guards on scripts/update_projects.py — the one-run "upgrade roadmodel in
-every project" updater behind /roadmodel-update.
+every project" updater behind /roadmodel-upgrade.
 
 The script is stdlib-only and fetched from the repo at run time, so these
 tests import it from its path. Environment detection must never guess:
@@ -20,7 +20,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "update_projects.py"
-COMMAND = ROOT / "docs" / "claude-commands" / "roadmodel-update.md"
+COMMAND = ROOT / "docs" / "claude-commands" / "roadmodel-upgrade.md"
 
 
 @pytest.fixture(scope="module")
@@ -38,6 +38,14 @@ def _no_real_vscode(up: ModuleType, monkeypatch: pytest.MonkeyPatch) -> None:
     """Agent detection must not depend on whether the DEVELOPER has VS Code
     installed; tests that care about the vscode lane patch this themselves."""
     monkeypatch.setattr(up, "_vscode_user_dirs", lambda: [])
+
+
+@pytest.fixture(autouse=True)
+def _no_real_retirement(up: ModuleType, monkeypatch: pytest.MonkeyPatch) -> None:
+    """refresh_commands removes retired commands from the agents' dirs; a test
+    that leaves one of those dirs pointing at the DEVELOPER's home must not
+    delete their installed copies. The retirement test opts back in."""
+    monkeypatch.setattr(up, "RETIRED_COMMANDS", ())
 
 
 def _fake_venv(project: Path, name: str) -> Path:
@@ -335,7 +343,7 @@ COMMANDS_DIR = ROOT / "docs" / "claude-commands"
 
 
 @pytest.mark.parametrize(
-    "name", ["roadmap-project", "roadmap-phase", "roadmap-step", "roadmodel-update"]
+    "name", ["roadmap-project", "roadmap-phase", "roadmap-step", "roadmodel-upgrade"]
 )
 def test_gemini_port_is_valid_toml_with_args(up: ModuleType, name: str) -> None:
     import tomllib
@@ -353,7 +361,7 @@ def test_gemini_port_is_valid_toml_with_args(up: ModuleType, name: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "name", ["roadmap-project", "roadmap-phase", "roadmap-step", "roadmodel-update"]
+    "name", ["roadmap-project", "roadmap-phase", "roadmap-step", "roadmodel-upgrade"]
 )
 def test_codex_port_is_a_skill(up: ModuleType, name: str) -> None:
     body = (COMMANDS_DIR / f"{name}.md").read_text()
@@ -436,6 +444,46 @@ def test_refresh_installs_per_detected_agent(
     )
 
 
+def test_refresh_retires_the_renamed_update_command(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """/roadmodel-update became /roadmodel-upgrade (0.2.45). Every run removes
+    the updater's own copies of the old name for every agent, and leaves a
+    user's own command of that name alone."""
+    home = tmp_path / "home"
+    monkeypatch.setattr(up, "CLAUDE_DIR", home / ".claude")
+    monkeypatch.setattr(up, "GEMINI_DIR", home / ".gemini")
+    monkeypatch.setattr(up, "CODEX_DIR", home / ".codex")
+    monkeypatch.setattr(up, "AGENTS_SKILLS_DIR", home / ".agents" / "skills")
+    monkeypatch.setattr(up, "CODEX_LEGACY_SKILLS_DIR", home / ".codex" / "skills")
+    monkeypatch.setattr(up, "OPENCODE_DIR", home / ".config" / "opencode")
+    monkeypatch.setattr(up, "ANTIGRAVITY_SKILLS_DIR", home / ".gemini" / "config" / "skills")
+    monkeypatch.setattr(up, "RETIRED_COMMANDS", ("roadmodel-update",))
+    assert "roadmodel-upgrade" in up.COMMANDS and "roadmodel-update" not in up.COMMANDS
+    old = (COMMANDS_DIR / "roadmodel-upgrade.md").read_text()
+    ours = [
+        home / ".claude" / "commands" / "roadmodel-update.md",
+        home / ".gemini" / "commands" / "roadmodel-update.toml",
+        home / ".codex" / "prompts" / "roadmodel-update.md",
+        home / ".agents" / "skills" / "roadmodel-update" / "SKILL.md",
+        home / ".config" / "opencode" / "commands" / "roadmodel-update.md",
+    ]
+    for path in ours:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(old)
+    theirs = home / ".gemini" / "config" / "skills" / "roadmodel-update" / "SKILL.md"
+    theirs.parent.mkdir(parents=True)
+    theirs.write_text("---\nname: roadmodel-update\n---\nmy own\n")
+
+    assert up.retire_commands(dry_run=True) == ["roadmodel-update: retired — removed 5 old copies"]
+    assert all(p.exists() for p in ours)  # dry run removes nothing
+    assert up.retire_commands() == ["roadmodel-update: retired — removed 5 old copies"]
+    assert not any(p.exists() for p in ours)
+    assert not (home / ".agents" / "skills" / "roadmodel-update").exists()
+    assert theirs.read_text().endswith("my own\n")
+    assert up.retire_commands() == []  # nothing left of ours
+
+
 def test_commands_only_cli_needs_no_registry(tmp_path: Path) -> None:
     result = subprocess.run(
         [
@@ -462,7 +510,7 @@ def test_commands_only_cli_needs_no_registry(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "name", ["roadmap-project", "roadmap-phase", "roadmap-step", "roadmodel-update"]
+    "name", ["roadmap-project", "roadmap-phase", "roadmap-step", "roadmodel-upgrade"]
 )
 def test_opencode_port_keeps_arguments_and_refuses_injection(up: ModuleType, name: str) -> None:
     body = (COMMANDS_DIR / f"{name}.md").read_text()
@@ -957,7 +1005,7 @@ def test_gemini_trusts_every_registered_project(
 
 
 @pytest.mark.parametrize(
-    "name", ["roadmap-project", "roadmap-phase", "roadmap-step", "roadmodel-update"]
+    "name", ["roadmap-project", "roadmap-phase", "roadmap-step", "roadmodel-upgrade"]
 )
 def test_antigravity_port_is_a_slash_invocable_skill(up: ModuleType, name: str) -> None:
     body = (COMMANDS_DIR / f"{name}.md").read_text()

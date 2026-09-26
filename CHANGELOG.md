@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`/roadmodel-update` is now `/roadmodel-upgrade`.** It upgrades the tool
+  (every registered project's roadmodel, its `planning/` kit and the slash
+  commands), and read too much like `/roadmap-refresh`, which updates a
+  project's roadmaps. The next run under either name installs
+  `/roadmodel-upgrade` for every agent and removes the updater's own copies
+  of `/roadmodel-update`; a hand-written command of that name is left alone.
+  The daily schedule keeps running unchanged.
+
 ### Fixed
 
 - **A release's service build no longer reads a stale package index.** PyPI
