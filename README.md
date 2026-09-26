@@ -73,7 +73,7 @@ What the loop guarantees, independent of the project:
   and a step that touches a deployed surface is done at post-deploy
   verification, not at merge.
 
-Setup is once per machine (`/roadmodel-update` keeps every project's
+Setup is once per machine (`/roadmodel-upgrade` keeps every project's
 copy current after that); the commands then work in any project.
 Step-by-step: [docs/planning-workflow.md](docs/planning-workflow.md).
 
@@ -110,15 +110,15 @@ pip install -U roadmodel
   **then** `roadmodel export-kit . --force` to refresh it. The `/roadmap-project`
   and `/roadmap-phase` commands do both as their Step 0.
 
-### Every project on a machine — `/roadmodel-update`
+### Every project on a machine — `/roadmodel-upgrade`
 
 Projects that each carry roadmodel in their **own** conda env or venv would
 otherwise be upgraded one at a time. Instead, from any Claude Code chat:
 
 ```
-/roadmodel-update                       # every registered project
-/roadmodel-update ~/code/app-one …      # register these dirs, then run
-/roadmodel-update --install-schedule    # once: also run daily, unattended
+/roadmodel-upgrade                      # every registered project
+/roadmodel-upgrade ~/code/app-one …     # register these dirs, then run
+/roadmodel-upgrade --install-schedule   # once: also run daily, unattended
 ```
 
 The command fetches [`scripts/update_projects.py`](scripts/update_projects.py)
@@ -196,14 +196,14 @@ hand; the `export-kit` command above avoids that entirely.
 `docs/claude-commands/` — `/roadmap-project`, `/roadmap-phase N`,
 `/roadmap-step P M` (executes a step), `/roadmap-refresh` (bookkeeping
 only: marks shipped steps and re-selects upcoming Settings, runs
-nothing), `/roadmodel-update` — see
+nothing), `/roadmodel-upgrade` — see
 [The planning workflow](#the-planning-workflow) above for the loop and
 [docs/planning-workflow.md](docs/planning-workflow.md) for setup and
 per-command detail. The same five are generated for **Gemini CLI**
 (`~/.gemini/commands/*.toml`), **Codex** and **Cursor** (one
 `~/.agents/skills/*/SKILL.md` both read; `$roadmap-step` in Codex,
 `/roadmap-step` in Cursor), and **OpenCode**
-(`~/.config/opencode/commands/*.md`), installed by `/roadmodel-update`
+(`~/.config/opencode/commands/*.md`), installed by `/roadmodel-upgrade`
 wherever those tools are present.
 
 Either way the in-editor AI runs the algorithm itself rather than calling
@@ -332,7 +332,7 @@ provider goes down, or a task suits a different model?
 (instructions, memory, skills, slash commands, MCP servers, model, effort,
 permissions) across Claude, Codex, Gemini and open-source clients in any
 direction, and carries one parameterised prompt that makes the target agent
-sync itself. `roadmodel-update` keeps the roadmap commands, the roadmodel MCP
+sync itself. `roadmodel-upgrade` keeps the roadmap commands, the roadmodel MCP
 server and the reasoning-effort default in parity automatically.
 
 ## Subcommands

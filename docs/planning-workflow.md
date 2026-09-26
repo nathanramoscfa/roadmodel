@@ -23,7 +23,7 @@ Windows PowerShell, no checkout needed (fetches from `main`):
 ```powershell
 $base = "https://raw.githubusercontent.com/nathanramoscfa/roadmodel/main/docs/claude-commands"
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude\commands" | Out-Null
-foreach ($n in "roadmap-project","roadmap-phase","roadmap-step","roadmodel-update") {
+foreach ($n in "roadmap-project","roadmap-phase","roadmap-step","roadmap-refresh","roadmodel-upgrade") {
   curl.exe -fsSL "$base/$n.md" -o "$env:USERPROFILE\.claude\commands\$n.md"
 }
 ```
@@ -36,7 +36,7 @@ you open a new chat. Type `/` in a chat; `roadmap-project`,
 The five files in [`docs/claude-commands/`](claude-commands/) become
 the user-scope Claude Code slash commands `/roadmap-project`,
 `/roadmap-phase`, `/roadmap-step`, `/roadmap-refresh`, and
-`/roadmodel-update`, available
+`/roadmodel-upgrade`, available
 in every project on that machine. They are also the source for the
 Gemini CLI and Codex versions — see "Other agents" below. The first two are thin: each executes
 the paste-prompt the planning kit ships, so they never drift from the
@@ -60,7 +60,7 @@ starts nothing.
 
 Use it after a model generation ships, after your subscriptions change,
 or once to bring an older roadmap up to date. Refresh AFTER the planning
-kit is current (`/roadmodel-update`), since the selector it runs is the
+kit is current (`/roadmodel-upgrade`), since the selector it runs is the
 kit's.
 
 ## 2. Write the project roadmap
@@ -212,7 +212,7 @@ upgrading one project at a time. Instead, from any Claude Code chat on
 the machine:
 
 ```
-/roadmodel-update
+/roadmodel-upgrade
 ```
 
 The command fetches [`scripts/update_projects.py`](../scripts/update_projects.py)
@@ -226,13 +226,13 @@ re-exports `planning/` where a kit exists, and re-downloads the four
 command files. One table at the end; a project whose env cannot be
 detected is reported, never guessed into `base`.
 
-First run: `/roadmodel-update E:\Code\app-one E:\Code\app-two …`
-registers the dirs and runs. Later runs: `/roadmodel-update` alone. The
+First run: `/roadmodel-upgrade E:\Code\app-one E:\Code\app-two …`
+registers the dirs and runs. Later runs: `/roadmodel-upgrade` alone. The
 registry and updater live under `~/.config/roadmodel/`; nothing is
 committed to any project. Without Claude Code:
 `python ~/.config/roadmodel/update_projects.py [--dry-run]`.
 
-**Hands-off:** `/roadmodel-update --install-schedule 09:00` (once per
+**Hands-off:** `/roadmodel-upgrade --install-schedule 09:00` (once per
 machine) registers a daily run — launchd on macOS, Task Scheduler on
 Windows, cron on Linux — so every registered project follows each
 release within a day, logged to `~/.config/roadmodel/update.log`.
@@ -271,7 +271,7 @@ says `*** self-update FAILED` with the reason.
 ## Other agents: Gemini CLI, Codex, Cursor, OpenCode
 
 The same five commands exist for Gemini CLI, Codex, Cursor and
-OpenCode, generated from the Claude Code files so they never drift. `/roadmodel-update` (or
+OpenCode, generated from the Claude Code files so they never drift. `/roadmodel-upgrade` (or
 `python ~/.config/roadmodel/update_projects.py --commands-only`)
 installs them wherever it finds the tool:
 

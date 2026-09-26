@@ -85,7 +85,7 @@ file used.
 ## Keeping it the same on every machine
 
 If you plan from more than one machine, give the file ONE home and let
-`roadmodel-update` carry it. Hand-copying drifts on the first edit — and the
+`roadmodel-upgrade` carry it. Hand-copying drifts on the first edit — and the
 file changes every time a usage pool binds.
 
 One machine is the **source**: it publishes its file to a **private** GitHub
