@@ -19,6 +19,12 @@ WHEN TO USE
   - Numbering convention: `phaseNN-roadmap.md` where NN is
     the phase number (e.g. `phase31-roadmap.md` for
     Phase 31, `phase04-roadmap.md` for Phase 4).
+  - Location: `docs/roadmap/`, beside the project's
+    `ROADMAP.md` — every roadmap in one folder. A project
+    that keeps its roadmaps git-excluded (e.g. `private/`)
+    keeps them there. Relative links resolve from
+    `docs/roadmap/` (`../phase{{N}}-qa-findings.md`,
+    `../../scripts/…`).
 
 PLACEHOLDER SYNTAX
   - Prose placeholders use {{double-curly}} form so that
@@ -1444,9 +1450,9 @@ that surface has neither dial.
         executable.
     {{last-2}}. docs/phase{{N}}-qa-
         findings.md exists.
-    {{last-1}}. docs/phase{{N}}-
-        roadmap.md exists (this
-        doc).
+    {{last-1}}. docs/roadmap/
+        phase{{N}}-roadmap.md
+        exists (this doc).
     {{last}}. .github/workflows/
         phase-verify.yml matrix
         includes `{{N}}`.
@@ -1644,9 +1650,9 @@ that surface has neither dial.
     <requirement>
       Mark the phase complete in
       the parent project roadmap
-      (docs/ROADMAP.md, or
-      wherever this project keeps
-      it) in the SAME Stage-3
+      (docs/roadmap/ROADMAP.md,
+      beside this file) in the
+      SAME Stage-3
       commit that marks this step
       (Status rule):
       - `### Phase {{N}}` gets
@@ -2029,7 +2035,7 @@ Each item is one bullet, two sentences max. Lead with the
 deferred thing, follow with where / when it lives instead.
 -->
 
-Per [`docs/ROADMAP.md`](ROADMAP.md) Phase {{N}} "Not in
+Per [`docs/roadmap/ROADMAP.md`](ROADMAP.md) Phase {{N}} "Not in
 scope":
 
 - Item explicitly deferred by the parent roadmap, with a
@@ -2092,9 +2098,9 @@ Example skeleton:
   QA findings rollup, and any tests that need re-running.}}
 
   Audit cross-reference: see
-  [`docs/phase{{N}}-website-audit.md`](phase{{N}}-website-audit.md)
+  [`docs/phase{{N}}-website-audit.md`](../phase{{N}}-website-audit.md)
   finding `PHASE{{N}}-AUDIT-NNN`. QA cross-reference: see
-  [`docs/phase{{N}}-qa-findings.md`](phase{{N}}-qa-findings.md)
+  [`docs/phase{{N}}-qa-findings.md`](../phase{{N}}-qa-findings.md)
   § "{{Back-patch rollup heading}}".
 =============================================================
 -->

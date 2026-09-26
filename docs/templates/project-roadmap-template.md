@@ -22,6 +22,12 @@ STYLE RULES (the AI MUST follow)
     a per-phase exit gate, never a final-phase afterthought —
     an issue introduced in Phase 2 must be caught in Phase 2,
     before its work is committed, pushed, or merged.
+  - This file lives at `docs/roadmap/ROADMAP.md`, and every
+    phase roadmap (`phaseNN-roadmap.md`) is written beside it:
+    all roadmaps in one folder, none at the repo root. A
+    project that keeps its roadmaps git-excluded (e.g.
+    `private/`) keeps them there. Relative links resolve from
+    `docs/roadmap/` (`../../README.md`, `../ci.md`).
   - Every phase carries a one-line metadata badge:
       **Complexity:** … · **Risk:** … · **Cloud cost:** … ·
       **Handles sensitive data:** <Yes/No — PII, secrets, auth>
