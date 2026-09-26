@@ -159,7 +159,7 @@ grounded in the bundled selector + template docs.
 
 ## 4. Phased Roadmap
 
-### Phase 1 — Open-source the Recommender CLI
+### Phase 1 — Open-source the Recommender CLI ✅
 
 **Goal:** Ship the existing recommender as a public Apache 2.0
 package on PyPI so early adopters can install and use it with their
@@ -195,7 +195,7 @@ own API keys.
 
 ---
 
-### Phase 2 — Platform Recommendation, MCP Server, and Catalog v2
+### Phase 2 — Platform Recommendation, MCP Server, and Catalog v2 ✅
 
 **Goal:** Extend the recommender beyond "which model" to "which
 model on which platform with which settings," driven by subscription
@@ -260,7 +260,7 @@ Continue) with their project's full context already on hand.
 
 ---
 
-### Phase 3 — Marketing Site and Anonymous Web Recommender
+### Phase 3 — Marketing Site and Anonymous Web Recommender ✅
 
 **Goal:** Stand up `roadmodel.ai` with a marketing home and a
 working anonymous recommender so a first-time visitor can paste a
