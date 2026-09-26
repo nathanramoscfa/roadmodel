@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.44] — 2026-09-25
+
 ### Changed
 
 - **A finished phase gets a ✅ on its heading, like a finished step.** In
@@ -16,6 +18,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   adds both marks in its own PR. `/roadmap-refresh` moves existing Status
   lines, adds the marks and fixes links to headings whose anchors changed.
   `/roadmap-step` makes the same migration if it meets the old layout.
+- **/models opens grouped by Quality, highest Score first in every group.**
+  The Group by switch lists Quality first and opens on it; Cost tier is the
+  second option. Inside every group the rows sort by Score, highest first,
+  and the Score header flips that order while keeping the groups. A saved
+  view from before opens on Quality once, with its filters kept.
+- **Bundled Claude Code notes refreshed through 2.1.282.** 2.1.281 extends
+  the AGENTS.md fallback to Bedrock, Vertex, Foundry, LLM gateways and
+  telemetry-off sessions. Neither release changes the `/effort` vocabulary
+  or the thinking controls.
+
+### Fixed
+
+- **The Codex refresh maps OpenAI's full effort scale.** Its instructions
+  said OpenAI tops out at `xhigh`, while the documented set now adds `max`
+  and `ultra` above it. The prompt maps `max` to Max and `ultra` to
+  Ultracode, and takes the documented set as authoritative, so a later run
+  cannot "correct" the selector back.
+- **`scripts/release.sh` waits for PyPI's package index before the service
+  floor bump.** 0.2.43's first service build ran while the index `uv`
+  resolves still ended at 0.2.42. The script now waits until that index
+  lists the new version.
 
 ## [0.2.43] — 2026-09-25
 
