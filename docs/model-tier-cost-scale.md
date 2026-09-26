@@ -145,7 +145,7 @@ table and surface material cost / availability / capability constraints.
 
 ---
 
-<!-- subscription-tiers-reviewed: 2026-09-25 -->
+<!-- subscription-tiers-reviewed: 2026-09-26 -->
 
 ## Subscription Tiers and Access Methods
 
@@ -200,7 +200,7 @@ and adjust the rebuild rules in [`update/prompt.md`](../update/prompt.md).
 | claude.ai Max ($200)   | $200    | —       | Anthropic | claude-code, claude-web | Same model coverage as Pro at roughly 20x the Pro usage budget; highest consumer-tier Claude budget.      |
 | ChatGPT Go             | $8      | —       | OpenAI    | chatgpt-app, codex-cli  | Budget tier with GPT-5.3 Instant unlimited and GPT-5.3 quota, more uploads and image generation than Free; ads still shown; lacks advanced reasoning models, Sora, Codex full access, Agent Mode, and Deep Research. |
 | ChatGPT Plus           | $20     | —       | OpenAI    | chatgpt-app, codex-cli  | GPT-5.6 Sol default model with full feature suite — Deep Research, Sora video, Codex, Agent Mode; GPT-5.6 Terra and GPT-5.6 Luna also available. |
-| ChatGPT Pro ($100)     | $100    | —       | OpenAI    | chatgpt-app, codex-cli  | Same model suite as Pro $200 (GPT-5.6 Sol, GPT-5.5, o1 Pro mode) at 5x Plus usage limits; Codex access included with promotional 10x multiplier through May 31, 2026. |
+| ChatGPT Pro ($100)     | $100    | —       | OpenAI    | chatgpt-app, codex-cli  | Same core capabilities as Pro $200 at 5x Plus usage limits, including GPT-6 Pro (powered by GPT-6 Astra) in chat alongside GPT-5.6 Sol and Codex access; the launch-window 10x Codex promotion has ended. |
 | ChatGPT Pro ($200)     | $200    | —       | OpenAI    | chatgpt-app, codex-cli  | Same coverage as Pro $100 with much higher caps (20x Plus limits), 1M-token context window, unlimited Sora video, Operator agent, and priority access to top-tier models; new sign-ups paused as of 2026-09-10 (existing subscriptions unaffected). |
 | Google AI Plus         | $4.99   | —       | Google    | gemini-app, gemini-cli  | Entry-paid Google AI tier with 2x higher usage limits than Free in the Gemini app, access to Gemini 3.1 Pro / Nano Banana Pro / Daily Brief / Gemini Omni video generation, 200 Google Flow Credits, and 400 GB of cloud storage (price cut from $7.99 to $4.99 on 2026-06-08; storage doubled from 200 GB to 400 GB). |
 | Google AI Pro          | $19.99  | $199.99 | Google    | gemini-app, gemini-cli  | Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus Deep Research, Nano Banana Pro, Veo 3.1 access, 1,000 monthly AI credits, and 5 TB of Google One storage; includes YouTube Premium Lite; 50% off the first year for new subscribers. |
