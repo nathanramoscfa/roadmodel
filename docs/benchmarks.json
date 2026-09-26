@@ -6,7 +6,7 @@
     "endpoint": "https://artificialanalysis.ai/api/v2/data/llms/models",
     "attribution": "Benchmark data © Artificial Analysis, used under its API terms with attribution."
   },
-  "generated_at_utc": "2026-09-25T22:10:15Z",
+  "generated_at_utc": "2026-09-26T22:09:57Z",
   "model_count": 50,
   "unmapped": [],
   "missing_slugs": [],
@@ -36,8 +36,8 @@
         "tau2": 0.546783625730994,
         "tau_banking": 0.0927835051546392
       },
-      "median_output_tokens_per_second": 112.331,
-      "median_time_to_first_token_seconds": 14.822
+      "median_output_tokens_per_second": 114.956,
+      "median_time_to_first_token_seconds": 14.282
     },
     "claude-fable-5": {
       "aa_id": "cd55210d-358e-4df1-ba9c-9acb5f186cc9",
@@ -92,8 +92,8 @@
         "tau2": null,
         "tau_banking": 0.472164948453608
       },
-      "median_output_tokens_per_second": 71.496,
-      "median_time_to_first_token_seconds": 137.695
+      "median_output_tokens_per_second": 71.791,
+      "median_time_to_first_token_seconds": 145.959
     },
     "claude-opus-5": {
       "aa_id": "b8fc61f7-5e9a-49e6-8547-6ac56db24627",
@@ -120,8 +120,8 @@
         "tau2": null,
         "tau_banking": 0.420618556701031
       },
-      "median_output_tokens_per_second": 67.509,
-      "median_time_to_first_token_seconds": 34.244
+      "median_output_tokens_per_second": 0,
+      "median_time_to_first_token_seconds": 0
     },
     "claude-opus-5-5": {
       "aa_id": "2f3c4dc9-a450-4303-8697-0237257cf08f",
@@ -148,8 +148,8 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 101.998,
-      "median_time_to_first_token_seconds": 276.865
+      "median_output_tokens_per_second": 98.588,
+      "median_time_to_first_token_seconds": 232.884
     },
     "claude-sonnet-5": {
       "aa_id": "23c86e4a-c769-43c0-a056-79e3cd15834f",
@@ -176,8 +176,8 @@
         "tau2": null,
         "tau_banking": 0.37319587628866
       },
-      "median_output_tokens_per_second": 86.276,
-      "median_time_to_first_token_seconds": 138.497
+      "median_output_tokens_per_second": 86.599,
+      "median_time_to_first_token_seconds": 134.039
     },
     "deepseek-flash": {
       "aa_id": "dbe7c625-3100-4463-b479-a228c41f75dd",
@@ -204,8 +204,8 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 225.054,
-      "median_time_to_first_token_seconds": 0.77
+      "median_output_tokens_per_second": 227.06,
+      "median_time_to_first_token_seconds": 0.772
     },
     "deepseek-v4-pro": {
       "aa_id": "83173329-c09a-41f1-a028-a282a5f908d7",
@@ -232,8 +232,8 @@
         "tau2": null,
         "tau_banking": 0.395876288659794
       },
-      "median_output_tokens_per_second": 79.847,
-      "median_time_to_first_token_seconds": 1.103
+      "median_output_tokens_per_second": 89.663,
+      "median_time_to_first_token_seconds": 1.132
     },
     "gemini-2.5-flash": {
       "aa_id": "219ed587-60c5-4a48-9517-8480e08d0ca1",
@@ -344,7 +344,7 @@
         "tau2": 0.956140350877193,
         "tau_banking": 0.214432989690722
       },
-      "median_output_tokens_per_second": 130.627,
+      "median_output_tokens_per_second": 136.049,
       "median_time_to_first_token_seconds": 18.476
     },
     "gemini-3.5-flash": {
@@ -456,7 +456,7 @@
         "tau2": null,
         "tau_banking": 0.449484536082474
       },
-      "median_output_tokens_per_second": 277.514,
+      "median_output_tokens_per_second": 311.737,
       "median_time_to_first_token_seconds": 8.773
     },
     "glm-4.5-air": {
@@ -736,8 +736,8 @@
         "tau2": 0.859649122807018,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 117.009,
-      "median_time_to_first_token_seconds": 39.444
+      "median_output_tokens_per_second": 116.827,
+      "median_time_to_first_token_seconds": 44.517
     },
     "gpt-5.4": {
       "aa_id": "a89c4b28-2d8c-456e-88ea-255fb51fd2b6",
@@ -876,8 +876,8 @@
         "tau2": null,
         "tau_banking": 0.311340206185567
       },
-      "median_output_tokens_per_second": 102.358,
-      "median_time_to_first_token_seconds": 22.543
+      "median_output_tokens_per_second": 0,
+      "median_time_to_first_token_seconds": 0
     },
     "gpt-5.6-sol": {
       "aa_id": "d93edfe8-bf35-49ad-b56e-b18116142a1c",
@@ -904,8 +904,8 @@
         "tau2": 0.850877192982456,
         "tau_banking": 0.443298969072165
       },
-      "median_output_tokens_per_second": 86.318,
-      "median_time_to_first_token_seconds": 45.71
+      "median_output_tokens_per_second": 0,
+      "median_time_to_first_token_seconds": 0
     },
     "gpt-5.6-terra": {
       "aa_id": "bcf8db0a-3bb6-4d82-9516-0f57370c85a6",
@@ -932,8 +932,8 @@
         "tau2": 0.862573099415205,
         "tau_banking": 0.402061855670103
       },
-      "median_output_tokens_per_second": 86.687,
-      "median_time_to_first_token_seconds": 143.358
+      "median_output_tokens_per_second": 98.226,
+      "median_time_to_first_token_seconds": 238.175
     },
     "gpt-6-astra": {
       "aa_id": "2f339a97-9a0d-499a-9cb5-e0db665bfa25",
@@ -960,8 +960,8 @@
         "tau2": null,
         "tau_banking": 0.414432989690722
       },
-      "median_output_tokens_per_second": 54.12,
-      "median_time_to_first_token_seconds": 214.045
+      "median_output_tokens_per_second": 58.9,
+      "median_time_to_first_token_seconds": 259.453
     },
     "gpt-6-luna": {
       "aa_id": "6fb13851-40ce-4bda-ad3f-6b38e0c5daa7",
@@ -988,8 +988,8 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 125.845,
-      "median_time_to_first_token_seconds": 127.063
+      "median_output_tokens_per_second": 133.28,
+      "median_time_to_first_token_seconds": 127.622
     },
     "gpt-6-sol": {
       "aa_id": "c50ea08c-88c0-4eb7-85b8-27f2bbf6d527",
@@ -1016,7 +1016,7 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 85.316,
+      "median_output_tokens_per_second": 89.446,
       "median_time_to_first_token_seconds": 98.805
     },
     "gpt-oss-120b": {
@@ -1044,8 +1044,8 @@
         "tau2": 0.657894736842105,
         "tau_banking": 0.127835051546392
       },
-      "median_output_tokens_per_second": 174.466,
-      "median_time_to_first_token_seconds": 0.512
+      "median_output_tokens_per_second": 184.893,
+      "median_time_to_first_token_seconds": 0.509
     },
     "gpt-oss-20b": {
       "aa_id": "36f73aaf-d38a-4b56-a2b3-d04d17186910",
@@ -1072,8 +1072,8 @@
         "tau2": 0.60233918128655,
         "tau_banking": 0.0701030927835052
       },
-      "median_output_tokens_per_second": 194.912,
-      "median_time_to_first_token_seconds": 0.439
+      "median_output_tokens_per_second": 198,
+      "median_time_to_first_token_seconds": 0.441
     },
     "grok-4.3": {
       "aa_id": "948892b5-db03-4118-a4a8-ccd51ed871ea",
@@ -1128,8 +1128,8 @@
         "tau2": null,
         "tau_banking": 0.507216494845361
       },
-      "median_output_tokens_per_second": 68.306,
-      "median_time_to_first_token_seconds": 33.772
+      "median_output_tokens_per_second": 79.11,
+      "median_time_to_first_token_seconds": 33.996
     },
     "grok-4.7": {
       "aa_id": "59627802-1546-422c-9a65-65b61c022d36",
@@ -1156,8 +1156,8 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 58.859,
-      "median_time_to_first_token_seconds": 0.806
+      "median_output_tokens_per_second": 68.123,
+      "median_time_to_first_token_seconds": 12.728
     },
     "kimi-k2.7-code": {
       "aa_id": "8d0cb231-7303-452c-9923-a9620b948475",
@@ -1184,7 +1184,7 @@
         "tau2": 0.900584795321637,
         "tau_banking": 0.202061855670103
       },
-      "median_output_tokens_per_second": 79.482,
+      "median_output_tokens_per_second": 57.974,
       "median_time_to_first_token_seconds": 1.058
     },
     "kimi-k3": {
@@ -1213,7 +1213,7 @@
         "tau_banking": 0.45979381443299
       },
       "median_output_tokens_per_second": 36.835,
-      "median_time_to_first_token_seconds": 3.827
+      "median_time_to_first_token_seconds": 2.59
     },
     "mistral-large-3": {
       "aa_id": "4928e950-7f37-4475-b0dc-c5bad781a321",
@@ -1240,8 +1240,8 @@
         "tau2": 0.245614035087719,
         "tau_banking": 0.0577319587628866
       },
-      "median_output_tokens_per_second": 73.103,
-      "median_time_to_first_token_seconds": 0.698
+      "median_output_tokens_per_second": 73.46,
+      "median_time_to_first_token_seconds": 0.743
     },
     "mistral-medium-3.5": {
       "aa_id": "dd059b25-d82a-4ead-82a4-4adceaaec48b",
@@ -1268,8 +1268,8 @@
         "tau2": 0.941520467836257,
         "tau_banking": 0.150515463917526
       },
-      "median_output_tokens_per_second": 151.825,
-      "median_time_to_first_token_seconds": 0.635
+      "median_output_tokens_per_second": 156.415,
+      "median_time_to_first_token_seconds": 0.669
     },
     "mistral-small-4": {
       "aa_id": "3fd96175-4ef1-434c-8795-f873aec2abc1",
@@ -1296,8 +1296,8 @@
         "tau2": 0.412280701754386,
         "tau_banking": 0.0494845360824742
       },
-      "median_output_tokens_per_second": 159.678,
-      "median_time_to_first_token_seconds": 0.561
+      "median_output_tokens_per_second": 160.617,
+      "median_time_to_first_token_seconds": 0.588
     },
     "muse-spark-1.3": {
       "aa_id": "9999672c-b687-4026-9c15-5cef02ff53bb",
@@ -1324,8 +1324,8 @@
         "tau2": null,
         "tau_banking": 0.505154639175258
       },
-      "median_output_tokens_per_second": 217.276,
-      "median_time_to_first_token_seconds": 20.362
+      "median_output_tokens_per_second": 177.858,
+      "median_time_to_first_token_seconds": 26.816
     },
     "opus-4.7": {
       "aa_id": "e9a09db3-8fd6-41dd-ba2f-20e0a2bff7f2",
