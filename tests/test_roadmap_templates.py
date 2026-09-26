@@ -230,6 +230,71 @@ def test_roadmap_refresh_migrates_status_to_the_heading() -> None:
     assert "a Status column in its Summary Table" in flat
 
 
+# ---------------------------------------------------------------------------
+# A phase is marked the way a step is (0.2.44): its Status line sits directly
+# under its `### Phase` heading and a Complete phase's heading ends in ✅, as
+# does its phase roadmap's title. Before this the project roadmap only had a
+# Status line below the Goal and the metadata badge, so jackson-opt's five
+# shipped phases looked no different from the two ahead of them.
+# ---------------------------------------------------------------------------
+
+
+def test_project_template_puts_phase_status_at_the_heading() -> None:
+    text = PROJECT.read_text()
+    flat = re.sub(r"\s+", " ", text)
+    headings = re.findall(r"^### Phase [^\n]*$", text, re.M)
+    assert len(headings) >= 3  # Phase 1, Phase 2, Phase N
+    for heading in headings:
+        after = text[text.index(heading) :]
+        assert re.match(
+            re.escape(heading) + r"\n\n\*\*Status:\*\* Not started\n\n\*\*Goal:\*\*", after
+        ), f"Status is not directly under: {heading}"
+    # No phase keeps its Status line in the old place, after the Goal.
+    assert not re.search(r"^\*\*Goal:\*\*[^\n]*\n\n\*\*Status:\*\*", text, re.M)
+    # ✅ on completion: the style rule, the §4 checklist, §5 Stage 3.
+    assert "and appends ` ✅` to the heading" in flat
+    assert "### Phase N — <Title> (ends in ` ✅` once Complete)" in text
+    assert "with ` ✅` appended to its `### Phase` heading" in flat
+
+
+def test_phase_template_marks_the_phase_title_and_parent_heading() -> None:
+    flat = re.sub(r"\s+", " ", PHASE.read_text())
+    # Status rule, both Stage-3 copies, the QA step, the closing criteria.
+    assert "appends ` ✅` to this file's `# ` title and to the parent's `### Phase {{N}}`" in flat
+    assert flat.count("appended to this roadmap's `# ` title") == 2
+    assert "directly under its heading, and the heading ends in ✅" in flat
+    assert "the title and every step heading end in ✅" in flat
+    assert "Phase {{N}} entry (under a ✅ heading)" in flat
+
+
+def test_roadmap_step_marks_the_phase_heading_on_the_final_step() -> None:
+    flat = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
+    assert (
+        "appends ` ✅` to this roadmap's `# ` title and to the parent's "
+        "`### Phase {{PHASE}}` heading" in flat
+    )
+    # An old-layout project roadmap is migrated in the step's PR.
+    assert "sits after its Goal, or a Complete phase has no ✅" in flat
+    assert "update every Markdown link to a heading whose anchor that changed" in flat
+
+
+def test_roadmap_refresh_marks_phases_at_the_heading() -> None:
+    flat = re.sub(r"\s+", " ", REFRESH_COMMAND.read_text())
+    assert "every `### Phase` gets a `**Status:**` line directly under its heading" in flat
+    assert "`### Phase 5 — Downside-risk efficient frontier ✅`" in flat
+    assert "`# Phase 5 Roadmap — Downside-risk efficient frontier ✅`" in flat
+    assert "a phase that does not, has none" in flat
+    assert "change no Status value while moving it" in flat
+    # A heading's anchor changes with its ✅; links to it are kept working.
+    assert "Update every link in the repo's Markdown that points at the old anchor" in flat
+
+
+def test_project_prompt_refuses_a_kit_with_the_old_phase_status_layout() -> None:
+    flat = re.sub(r"\s+", " ", PROMPT_PROJECT.read_text())
+    assert "`**Status:**` line sits after its **Goal:**" in flat
+    assert "directly under its `### Phase` heading" in flat
+
+
 def test_roadmap_refresh_gives_every_phase_roadmap_a_project_section() -> None:
     """On 2026-09-23 both refreshed projects had phase roadmaps the project
     roadmap never listed (reversi's 31.5, roadmodel's 4.5-4.10), so the
