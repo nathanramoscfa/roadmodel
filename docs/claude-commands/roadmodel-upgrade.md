@@ -1,10 +1,15 @@
 ---
-description: Upgrade roadmodel in every registered project at once — each project's own env, its planning/ kit, and these commands (usage: /roadmodel-update [project dirs to register…] [--install-schedule HH:MM])
+description: Upgrade roadmodel in every registered project at once — each project's own env, its planning/ kit, and these commands (usage: /roadmodel-upgrade [project dirs to register…] [--install-schedule HH:MM])
 ---
-Update roadmodel everywhere on this machine in one run: every registered
+Upgrade roadmodel everywhere on this machine in one run: every registered
 project's own conda env or venv, each project's `planning/` kit, and the
 user-scope `/roadmap-*` commands. The operator should not have to open a
 terminal — you run everything.
+
+This upgrades the tool, not any project's work: it changes no roadmap and
+pulls no git history. `/roadmap-refresh`, run in a project, applies the
+kit's current rules to that project's roadmaps; `git pull` brings in merged
+work.
 
 ## 1. Fetch the updater fresh
 
