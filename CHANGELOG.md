@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.45] — 2026-09-25
+
 ### Changed
 
 - **`/roadmodel-update` is now `/roadmodel-upgrade`.** It upgrades the tool
