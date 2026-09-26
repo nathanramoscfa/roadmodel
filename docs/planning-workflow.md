@@ -135,9 +135,11 @@ The command:
    exactly when PR #n merges — never before, and never by a later
    chat reconstructing history. The same commit marks the phase:
    Step 1 flips the phase roadmap's own `**Status:**` line (under its
-   title) and `ROADMAP.md`'s to `In progress`, the final step both to
-   `Complete` (with its summary-table row and the header status
-   line).
+   title) and `ROADMAP.md`'s (under the `### Phase` heading) to
+   `In progress`, the final step both to `Complete` (with its
+   summary-table row and the header status line) and appends ✅ to
+   the phase roadmap's title and to the phase's heading in
+   `ROADMAP.md`.
 
 The step ends with "Step 3 is complete. You can now move on to
 Step 4." and nothing after it — every finding has been dispatched
@@ -149,15 +151,27 @@ outstanding; nothing is silently carried. Then close the chat and
 ### Progress at a glance
 
 No "update the roadmaps" chore exists — the marks land with the
-work. A completed step's heading ends in ✅, so the rendered preview,
-the outline, and the table of contents show progress without opening
-anything; the phase roadmap's Summary Table has a Status column, and
-its title carries the phase's own Status line. To read it as text:
+work. A completed step's heading ends in ✅, and so does a completed
+phase's heading in `ROADMAP.md` and its phase roadmap's title, so the
+rendered preview, the outline, and the table of contents show progress
+without opening anything. Each phase's Status line sits directly under
+its heading; the phase roadmap's Summary Table and `ROADMAP.md`'s
+summary table each have a Status column. To read it as text:
 
 ```sh
 grep -n '^\*\*Status:\*\*' docs/phase01-roadmap.md   # one line per step
 grep -n '^\*\*Status:\*\*' ROADMAP.md                # one line per phase
 ```
+
+### Project roadmaps written before roadmodel 0.2.44
+
+Before 0.2.44 a `### Phase` in `ROADMAP.md` carried its Status line
+after its Goal and metadata badge, and no ✅ however it stood. Run
+`/roadmap-refresh` once: it moves each phase's Status line directly
+under its heading, adds ✅ to every Complete phase heading and phase
+roadmap title, and updates links to headings whose anchors changed.
+`/roadmap-step` makes the same migration in its own PR if it meets
+the old layout first.
 
 ### Roadmaps written before roadmodel 0.2.40
 

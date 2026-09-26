@@ -59,10 +59,10 @@ its PR merged. Check it before touching anything:
   its Summary Table (the layout in the next bullet). Print the resulting
   step/status table, then re-apply the two bullets above. Backfill the parent
   ROADMAP.md in the same pass: every `### Phase` gets a `**Status:**`
-  line under its Goal and a Status column in the summary table — a
-  phase whose roadmap's steps are all Complete ⇒ `Complete — <last
-  merge date>`; some ⇒ `In progress — <phase roadmap file>`; none, or
-  no phase roadmap yet ⇒ `Not started`.
+  line directly under its heading and a Status column in the summary
+  table — a phase whose roadmap's steps are all Complete ⇒ `Complete —
+  <last merge date>`, with ` ✅` on its heading; some ⇒ `In progress —
+  <phase roadmap file>`; none, or no phase roadmap yet ⇒ `Not started`.
 - **Status lines sit after `**Deploys:**`** → the roadmap predates
   roadmodel 0.2.40, which moved completion to where it is seen. Migrate
   the layout in this step's Stage-3 commit, the same edit
@@ -74,6 +74,16 @@ its PR merged. Check it before touching anything:
   `In progress`, none ⇒ `Not started`); add a Status column to the
   Summary Table (each step's row mirrors its Status line, verification
   rows read `--`). Change no Status value while moving it.
+- **A `### Phase` Status line in the parent ROADMAP.md sits after its
+  Goal, or a Complete phase has no ✅** → the project roadmap predates
+  roadmodel 0.2.44, which marks phases the way it marks steps. Migrate
+  it in this step's Stage-3 commit, the same edit `/roadmap-refresh`
+  makes: move every phase's `**Status:**` line directly under its
+  `### Phase` heading, before the Goal; append ` ✅` to the heading of
+  every phase that reads `Complete` (and to no other), and to the `# `
+  title of every phase roadmap that reads `Complete`; update every
+  Markdown link to a heading whose anchor that changed. Change no Status
+  value while moving it.
 
 ## 3. Settings gate — before any work
 
@@ -178,7 +188,9 @@ line (under its title) to `In progress`, and the parent ROADMAP.md's
 `**Status:**` line under `### Phase {{PHASE}}` to `In progress — <this
 roadmap>`. If this is the phase's final step, the same commit sets
 both to `Complete — …`, the parent's with its row in the summary table
-and the header `> **Status:**` line. A git-excluded roadmap (e.g.
+and the header `> **Status:**` line, and appends ` ✅` to this roadmap's
+`# ` title and to the parent's `### Phase {{PHASE}}` heading (updating
+any Markdown link to either heading's old anchor). A git-excluded roadmap (e.g.
 `private/`) needs the edit only. Stage 6's
 completion line presupposes this mark: do not emit it unless `main`
 now carries the step's `Complete` line.
