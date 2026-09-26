@@ -13,6 +13,7 @@ Then read `planning/prompts/phase-roadmap.md` and execute everything
 below its horizontal rule exactly as written, with:
 - `{{N}}` = the first token of "$ARGUMENTS"
 - `{{OUTPUT}}` = the second token of "$ARGUMENTS" if given, else the
-  prompt's default (`docs/phaseNN-roadmap.md`, or `private/` if that is
-  where this project keeps its phase roadmaps)
+  prompt's default (`docs/roadmap/phaseNN-roadmap.md`, beside
+  `docs/roadmap/ROADMAP.md`; `private/` only if this project keeps its
+  roadmaps git-excluded there)
 - every other placeholder = the prompt's stated default

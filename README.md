@@ -38,11 +38,12 @@ picks the model. The loop is the same in every repo, in every
 language, on every machine where the commands are installed:
 
 ```
-/roadmap-project        ROADMAP.md — phases, acceptance criteria, and
-                        the security / release / operations strategy
-/roadmap-phase 1        docs/phase01-roadmap.md — Phase 1 broken into
-                        steps; each names its branch, its model and
-                        settings, and carries a <task> prompt
+/roadmap-project        docs/roadmap/ROADMAP.md — phases, acceptance
+                        criteria, and the security / release /
+                        operations strategy
+/roadmap-phase 1        docs/roadmap/phase01-roadmap.md — Phase 1
+                        broken into steps; each names its branch, its
+                        model and settings, and carries a <task> prompt
 /roadmap-step 1 1       a NEW chat runs Step 1: branch → work → PR →
 /roadmap-step 1 2       merge → "Step 1 is complete." One step per
 …                       conversation; no work straddles two steps

@@ -445,3 +445,58 @@ def test_roadmap_commands_commit_the_agents_md_the_updater_created() -> None:
         assert "`chore: commit the AGENTS.md roadmodel-update created`" in flat
         assert "Do not stop on it and do not ask" in flat
         assert "WITHOUT that marker is the operator's own file" in flat
+
+
+# ---------------------------------------------------------------------------
+# Every roadmap lives in docs/roadmap/ (0.2.46): ROADMAP.md and each
+# phaseNN-roadmap.md together, none at the repo root. Before this the kit
+# wrote ROADMAP.md at the root and phase roadmaps in docs/ beside QA findings,
+# and nothing stopped a project drifting: jackson-opt kept all six at the root,
+# bot-farm used roadmaps/. /roadmap-refresh moves a project's roadmaps and
+# every reference to them; the writing prompts refuse to add to a stray set.
+# ---------------------------------------------------------------------------
+
+PHASE_COMMAND = ROOT / "docs" / "claude-commands" / "roadmap-phase.md"
+
+
+def test_writing_prompts_default_to_docs_roadmap() -> None:
+    phase = PROMPT_PHASE.read_text()
+    assert "`@docs/roadmap/ROADMAP.md`" in phase
+    assert "`docs/roadmap/phase{{NN}}-roadmap.md`" in phase
+    assert "`@docs/roadmap/phase{{NN-1}}-roadmap.md`" in phase
+    assert "`docs/roadmap/ROADMAP.md`" in PROMPT_PROJECT.read_text()
+    assert "`docs/roadmap/phaseNN-roadmap.md`" in PHASE_COMMAND.read_text()
+    for prompt in (PROMPT_PHASE, PROMPT_PROJECT):
+        flat = re.sub(r"\s+", " ", prompt.read_text())
+        assert "Step 0b — roadmaps live in `docs/roadmap/`" in flat
+        assert "STOP and tell me to run `/roadmap-refresh` first" in flat
+        assert "Do not write a new roadmap beside them" in flat
+
+
+def test_templates_state_the_location_and_link_from_it() -> None:
+    phase = re.sub(r"\s+", " ", PHASE.read_text())
+    assert "Location: `docs/roadmap/`, beside the project's `ROADMAP.md`" in phase
+    assert "](../phase{{N}}-qa-findings.md)" in phase
+    assert "docs/roadmap/ROADMAP.md, beside this file" in phase
+    project = re.sub(r"\s+", " ", PROJECT.read_text())
+    assert "This file lives at `docs/roadmap/ROADMAP.md`" in project
+    assert "none at the repo root" in project
+
+
+def test_roadmap_refresh_moves_roadmaps_and_their_references() -> None:
+    flat = re.sub(r"\s+", " ", REFRESH_COMMAND.read_text())
+    assert "## 1. Locate, and move into `docs/roadmap/`" in flat
+    assert "`git mv` each one into `docs/roadmap/`, keeping its filename" in flat
+    assert "Git-excluded roadmaps (e.g. `private/`) stay where they are" in flat
+    # Links inside the moved files, and every reference elsewhere.
+    assert "`[optimize](../optimize.md)`" in flat
+    assert "Every Markdown link must resolve after the move" in flat
+    assert "Every path a script, test or CI workflow reads must name the new location" in flat
+    assert "Run the project's own checks that read roadmaps" in flat
+    assert "`docs: move the roadmaps into docs/roadmap/`" in flat
+
+
+def test_roadmap_step_looks_in_docs_roadmap_first() -> None:
+    flat = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
+    assert "otherwise the first of `docs/roadmap/phase{{PP}}-roadmap.md`" in flat
+    assert "The parent project roadmap is the `ROADMAP.md` beside it" in flat

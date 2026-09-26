@@ -9,7 +9,7 @@ apply.
 | Placeholder    | Meaning                                                  | Default                     |
 | -------------- | -------------------------------------------------------- | --------------------------- |
 | `{{BRIEF}}`    | Where the project is described: files, or inline prose   | `@README.md`                |
-| `{{OUTPUT}}`   | Where the roadmap is written                             | `ROADMAP.md`                |
+| `{{OUTPUT}}`   | Where the roadmap is written                             | `docs/roadmap/ROADMAP.md`   |
 | `{{CONSTRAINTS}}` | Hard constraints the roadmap must respect (optional)  | —                           |
 
 ---
@@ -28,6 +28,16 @@ you to put findings in a "Follow-ups (non-blocking)" note after the
 completion line, or a `### Phase` section's `**Status:**` line sits
 after its **Goal:** rather than directly under its heading, STOP and
 tell me the kit is stale — do not write the roadmap from it.
+
+Step 0b — roadmaps live in `docs/roadmap/`: `ROADMAP.md` and every
+`phaseNN-roadmap.md`, together. A project that keeps them git-excluded
+(e.g. `private/`) keeps them there, and the rest of this step does not
+apply: a tracked `ROADMAP.md` beside them is a published copy.
+Otherwise, if this project has a `ROADMAP.md` or `phaseNN-roadmap.md`
+anywhere else that git does not ignore (committed, or written and not
+yet committed), STOP and tell me to run `/roadmap-refresh` first: it
+moves them into `docs/roadmap/` and updates every reference to them. Do
+not write a new roadmap beside them.
 
 Step 1 — write `{{OUTPUT}}` from
 `@planning/templates/project-roadmap-template.md`. The project brief

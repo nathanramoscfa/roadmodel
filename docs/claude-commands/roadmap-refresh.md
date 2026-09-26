@@ -4,18 +4,20 @@ description: Bring every roadmap's Status ledger and upcoming Settings up to dat
 Bring this project's roadmaps current **without executing any step**:
 mark what has already shipped, then re-run the model selector for every
 step that has not. This is bookkeeping only — no step's `<task>` block
-runs, and no code, test, CI or config file is touched. Only roadmap
-files change.
+runs, and no code is changed. Only roadmap files change, plus the
+references that point at them when §1 moves them into `docs/roadmap/`.
 
 Roadmap directory: the first token of "$ARGUMENTS" if given; otherwise
-wherever this project keeps them (the repo root, `docs/`, or
-`private/`).
+`docs/roadmap/`, or, in a project whose roadmaps have not moved there
+yet, wherever it keeps them (the repo root, `docs/`, a `roadmaps/`
+folder, or a git-excluded `private/`).
 
 ## 0. Guard
 
 - Do NOT run any step's `<task>` block, and do not edit anything but
   the project roadmap (`ROADMAP.md`) and the phase roadmaps
-  (`phaseNN-roadmap.md`).
+  (`phaseNN-roadmap.md`), except the path references §1 updates when it
+  moves them.
 - If the roadmaps are tracked by git: your first tool call is
   `git checkout -b chore/roadmap-refresh-<YYYY-MM-DD>` from a clean,
   up-to-date `main`. If they are git-excluded (e.g. `private/`), edit
@@ -38,9 +40,41 @@ wherever this project keeps them (the repo root, `docs/`, or
 - If `planning/model-selector.txt` does not exist, first run
   `roadmodel export-kit . --force` so §3 uses the current selector.
 
-## 1. Locate
+## 1. Locate, and move into `docs/roadmap/`
 
-Find the project roadmap and every phase roadmap. List them.
+Find the project roadmap and every phase roadmap. List them with their
+paths.
+
+Roadmaps live in `docs/roadmap/`: `ROADMAP.md` and every
+`phaseNN-roadmap.md` (sub-phases too, such as `phase04.5-…-roadmap.md`),
+together in one folder. Git-excluded roadmaps (e.g. `private/`) stay
+where they are, and in such a project nothing moves: a tracked
+`ROADMAP.md` beside them is a published copy. In any other project, every
+roadmap outside `docs/roadmap/` moves there now, in a commit of its own
+before the ledger work:
+
+1. `git mv` each one into `docs/roadmap/`, keeping its filename. A
+   roadmap written but not yet committed moves with a plain `mv`.
+2. Fix the relative links inside the moved files so each resolves from
+   `docs/roadmap/`: from the root, `[optimize](docs/optimize.md)` becomes
+   `[optimize](../optimize.md)` and `[cli](src/cli.py)` becomes
+   `[cli](../../src/cli.py)`. Links between roadmaps stay as they are,
+   since they now share a folder.
+3. Update every reference to a moved file in the rest of the repo. Run
+   `git grep -n` for each old path, and for each bare filename (a script
+   run from the root names `phase03-roadmap.md` alone), skipping
+   `planning/`. Every Markdown link must resolve after the move
+   (README, CLAUDE.md, AGENTS.md, other docs). Every path a script, test
+   or CI workflow reads must name the new location
+   (`files_exist phase03-roadmap.md`, `awk … ROADMAP.md`). Change only
+   the path. Historical records, such as CHANGELOG entries, stay as
+   written.
+4. Run the project's own checks that read roadmaps (its
+   `scripts/verify-phase*.sh --fast`, and any test that names a roadmap)
+   and fix whatever path they still miss.
+5. Commit as `docs: move the roadmaps into docs/roadmap/`.
+
+Print the old path → new path table.
 
 ## 2. Status ledger — mark what has already shipped
 
@@ -158,10 +192,11 @@ Print the step · was · now · changed table.
 ## 4. Deliver
 
 Commit once, as `docs: refresh roadmap status and upcoming settings`
-(after the kit commit from §0, if there was one).
+(after the kit commit from §0 and the move commit from §1, if there
+were any).
 Then open the PR and take it through this project's own lifecycle — the
 same CI gates a step's PR passes — to merge. For git-excluded roadmaps,
 the edits are the delivery.
 
-Reply with both tables and the PR link. **Do not start any step** —
+Reply with the tables and the PR link. **Do not start any step** —
 the next one runs in a fresh conversation with `/roadmap-step <phase> <step>`.

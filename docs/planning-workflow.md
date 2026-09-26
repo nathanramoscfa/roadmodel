@@ -73,7 +73,15 @@ Open a **new** Claude Code chat in the project root and type:
 
 Optional argument: where the brief lives, e.g.
 `/roadmap-project @docs/brief.md`. Default is `@README.md`. Output is
-`ROADMAP.md`.
+`docs/roadmap/ROADMAP.md`.
+
+Every roadmap lives in `docs/roadmap/`: `ROADMAP.md` and each
+`phaseNN-roadmap.md`, together, none at the repo root. A project that
+keeps its roadmaps git-excluded (`private/`) keeps them there. The
+roadmap-writing commands stop in a project whose roadmaps sit anywhere
+else and ask for `/roadmap-refresh`, which moves them into
+`docs/roadmap/` and updates every link, verify script, test and
+workflow that names their old paths.
 
 ## 3. Write a phase roadmap
 
@@ -85,8 +93,8 @@ New chat in the project root:
 
 Optional second argument: the output path, e.g.
 `/roadmap-phase 6 private/phase06-roadmap.md`. Defaults: parent roadmap
-`@ROADMAP.md`, output `docs/phaseNN-roadmap.md`, continuity from the
-previous phase's roadmap.
+`@docs/roadmap/ROADMAP.md`, output `docs/roadmap/phaseNN-roadmap.md`,
+continuity from the previous phase's roadmap.
 
 ## 4. Execute a step
 
@@ -100,7 +108,7 @@ New chat in the project root — one step per conversation:
 not at `docs/` or `private/`). No copying the `<task>` block by hand.
 The command:
 
-1. **Finds the step** — `## Step 3 — …` in `docs/phase01-roadmap.md`
+1. **Finds the step** — `## Step 3 — …` in `docs/roadmap/phase01-roadmap.md`
    (or `private/`), and reads its `**Branch:**` line, `**Status:**`
    line, Settings table, `<task>` block, and acceptance criteria.
 2. **Gates on status.** The roadmap on `main` is the ledger: each
@@ -131,7 +139,7 @@ The command:
    `Complete — PR #n (date)`, appends ✅ to that heading, sets the
    step's Summary Table Status cell, commits
    `docs: mark Phase 1 Step 3 complete` on the step branch, and
-   pushes. So `docs/phase01-roadmap.md` on `main` says Step 3 is done
+   pushes. So `docs/roadmap/phase01-roadmap.md` on `main` says Step 3 is done
    exactly when PR #n merges — never before, and never by a later
    chat reconstructing history. The same commit marks the phase:
    Step 1 flips the phase roadmap's own `**Status:**` line (under its
@@ -159,8 +167,8 @@ its heading; the phase roadmap's Summary Table and `ROADMAP.md`'s
 summary table each have a Status column. To read it as text:
 
 ```sh
-grep -n '^\*\*Status:\*\*' docs/phase01-roadmap.md   # one line per step
-grep -n '^\*\*Status:\*\*' ROADMAP.md                # one line per phase
+grep -n '^\*\*Status:\*\*' docs/roadmap/phase01-roadmap.md   # one line per step
+grep -n '^\*\*Status:\*\*' docs/roadmap/ROADMAP.md           # one line per phase
 ```
 
 ### Project roadmaps written before roadmodel 0.2.44
@@ -200,7 +208,7 @@ parent `ROADMAP.md` gains a `**Status:**` line per phase (`Complete`
 in its summary table. Review that diff in the PR like
 any other. To backfill without executing a step, ask for exactly
 that in a new chat: "add `**Status:**` lines to ROADMAP.md and
-docs/phase01-roadmap.md per the Status rule in
+docs/roadmap/phase01-roadmap.md per the Status rule in
 planning/templates/phase-roadmap-template.md" — same lookup, same
 result.
 
