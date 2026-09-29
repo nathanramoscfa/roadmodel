@@ -864,7 +864,7 @@ Tier ratings:
 #### Sonnet 5.5 — `claude-sonnet-5-5`
 
 - **Pricing:** Input $2.00/M · Output $10.00/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **A** · Long-context **A** · Knowledge **B** · Speed **A**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **A**
 - **Headline benchmarks:** AA Intelligence Index 56.0 (max); HLE 55.0% (max); SciCode 61.0 (max); AA-LCR 0.827
 - **Pricing notes:** Requires Max Mode on legacy request-based plans; Same per-token rates as Claude Sonnet 5; US-only endpoints are priced 10% higher ($2.20/M input, $11/M output); Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
 - **Best for:** Anthropic's Sonnet 5 successor at the same medium-tier pricing ($2/$10; US-only endpoints 10% higher) — placeholder tier ratings inherited from claude-sonnet-5 pending editorial review, with Artificial Analysis evidence of AA Intelligence Index 56.0 (max), HLE 55.0% (max), AA-LCR 0.827, and ~145 tokens/s median output (tier-speed set to A on that throughput); up to 1M tokens of extended context at flat per-token rates.
@@ -1146,7 +1146,7 @@ Tier ratings:
 #### GLM-5.3 — `glm-5.3`
 
 - **Pricing:** Input $1.40/M · Output $4.40/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **D** · Long-context **A** · Knowledge **B** · Speed **B**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **D** · Long-context **A** · Knowledge **A** · Speed **B**
 - **Headline benchmarks:** LMArena Text Elo 1472.5 (#25); LMArena Text coding Elo 1498.5 (#23); LMArena WebDev Elo 1619.1 (#18)
 - **Pricing notes:** Hidden by default; Same per-token rates as GLM 5.2
 - **Best for:** z.ai's GLM-5.2 successor at the same low-tier pricing ($1.40/$4.40) — placeholder tier ratings inherited from glm-5.2, with LMArena results (Text Elo 1472.5, WebDev Elo 1619.1) roughly level with or slightly above glm-5.2; cn-jurisdiction, routed via Cursor's pool (Hidden by default).
@@ -1154,7 +1154,7 @@ Tier ratings:
 #### GLM-5.3-Flash — `glm-5.3-flash`
 
 - **Pricing:** Input $0.15/M · Output $0.50/M
-- **Tier ratings:** Coding **B** · Planning **A** · Agentic **B** · Multimodal **B** · Long-context **B** · Knowledge **B** · Speed **S**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **B** · Long-context **A** · Knowledge **B** · Speed **S**
 - **Headline benchmarks:** LMArena Text Elo 1470.9 (#27); LMArena Text coding Elo 1506.0 (#16); LMArena WebDev Elo 1613.2 (#21)
 - **Pricing notes:** Hidden by default
 - **Best for:** Auto-added cheap-tier z.ai model; pending editorial best-for refinement.
