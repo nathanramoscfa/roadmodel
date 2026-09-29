@@ -2428,8 +2428,18 @@ def _parser() -> argparse.ArgumentParser:
     return ap
 
 
+def tolerate_unencodable_output() -> None:
+    """A scheduled run's console or pipe may be cp1252 (Windows), and a
+    refresh's model-written detail can carry ✅ or →. Print those as "?"
+    rather than end the run with a UnicodeEncodeError."""
+    for stream in (sys.stdout, sys.stderr):
+        with contextlib.suppress(AttributeError, ValueError, OSError):
+            stream.reconfigure(errors="replace")  # type: ignore[union-attr]
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     raw = list(sys.argv[1:] if argv is None else argv)
+    tolerate_unencodable_output()
     ap = _parser()
     if "--self-check" in raw:
         return 0
