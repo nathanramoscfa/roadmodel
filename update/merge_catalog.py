@@ -505,7 +505,8 @@ def apply_method_sync(
         if not provider:
             continue
         method_id = f"{provider}-api"
-        slug_to_id = snap.get("slug_to_id") if isinstance(snap.get("slug_to_id"), dict) else {}
+        raw_map = snap.get("slug_to_id")
+        slug_to_id: dict[str, str] = raw_map if isinstance(raw_map, dict) else {}
         listed = resolve_listed_ids(snapshot_model_ids(snap), models, slug_to_id)
         selector_text, added = ensure_supported(selector_text, method_id, listed)
         if added:
