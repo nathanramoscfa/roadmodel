@@ -64,7 +64,8 @@ table and surface material cost / availability / capability constraints.
 | Claude Opus 4.8             | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode on legacy request-based plans; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
 | Claude Opus 5               | $5.00  | $6.25       | $0.50      | $25.00  | Very High | Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-fast`) requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
 | Claude Opus 5.5             | $4.00  | $5.00       | $0.20      | $20.00  | High      | Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-5-fast`) requires Max Mode on legacy request-based plans; 20% cheaper than Claude Opus 5 on input and output; Prompt-cache reads are $0.20/M (0.05x input), down from 0.10x input on Claude Opus 5; Regional and US-only endpoints are priced 10% higher ($4.40/M input, $22/M output); Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
-| Claude Sonnet 5             | $2.00  | $2.50       | $0.20      | $10.00  | Medium    | Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens |
+| Claude Sonnet 5             | $2.00  | $2.50       | $0.20      | $10.00  | Medium    | Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens |
+| Claude Sonnet 5.5           | $2.00  | $2.50       | $0.20      | $10.00  | Medium    | Requires Max Mode on legacy request-based plans; Same per-token rates as Claude Sonnet 5; US-only endpoints are priced 10% higher ($2.20/M input, $11/M output); Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge) |
 
 
 ### API Pool — Cursor Composer
@@ -141,6 +142,8 @@ table and surface material cost / availability / capability constraints.
 | Model   | Input | Cache Write | Cache Read | Output | Tier | Notes |
 | ------- | ----- | ----------- | ---------- | ------ | ---- | ----- |
 | GLM 5.2 | $1.40 | –           | $0.26      | $4.40  | Low  | Hidden by default |
+| GLM 5.3 | $1.40 | –           | $0.26      | $4.40  | Low  | Hidden by default; Same per-token rates as GLM 5.2 |
+| GLM 5.3 Flash | $0.15 | –     | $0.029     | $0.50  | Low  | Hidden by default |
 
 
 ---
@@ -240,6 +243,7 @@ appear here.
 | gpt-5.6-sol      | $20.00  | High         | High         | ✓      |
 | sonnet-4.6       | $15.00  | High         | High         | ✓      |
 | claude-sonnet-5  | $10.00  | Medium       | Medium       | ✓      |
+| claude-sonnet-5-5 | $10.00 | Medium       | Medium       | ✓      |
 | gpt-5.4          | $15.00  | High         | High         | ✓      |
 | gpt-5.6-terra    | $12.00  | Medium       | Medium       | ✓      |
 | gpt-6-sol        | $10.00  | Medium       | Medium       | ✓      |
@@ -266,6 +270,8 @@ appear here.
 | muse-spark-1.3   | $4.25   | Low          | Low          | ✓      |
 | gpt-5.4-mini     | $4.50   | Low          | Low          | ✓      |
 | glm-5.2          | $4.40   | Low          | Low          | ✓      |
+| glm-5.3          | $4.40   | Low          | Low          | ✓      |
+| glm-5.3-flash    | $0.50   | Low          | Low          | ✓      |
 | kimi-k2.7-code   | $4.00   | Low          | Low          | ✓      |
 | gemini-3-flash   | $3.00   | Low          | Low          | ✓      |
 | composer-2.5     | $2.50   | Low          | Low          | ✓      |
@@ -303,6 +309,10 @@ recommendable engines.
 
 | Model id           | Output | Tier | Change                                                                                                                     |
 | ------------------ | ------ | ---- | -------------------------------------------------------------------------------------------------------------------------- |
+| Claude Sonnet 5.5  | $10.00 | Medium | New 2026-09-29 on Cursor's pricing page — Anthropic's Sonnet 5 successor at the same $2/$10 rates (US-only endpoints 10% higher at $2.20/$11); visible by default. Selector pass adds it to `<model-options>`; Anthropic is provider-direct, so `catalog-anthropic.json` must carry it for the G4 gate |
+| Claude Sonnet 5    | $10.00 | Medium | Notes refreshed 2026-09-29 — Cursor flipped Sonnet 5 to "Hidden by default" after the Sonnet 5.5 launch (pricing unchanged) |
+| GLM 5.3            | $4.40  | Low  | New 2026-09-29 on Cursor's pricing page — z.ai's GLM 5.3 at the same $1.40/$4.40 rates as GLM 5.2 (Hidden by default) |
+| GLM 5.3 Flash      | $0.50  | Low  | New 2026-09-29 on Cursor's pricing page — z.ai's GLM 5.3 Flash at $0.15/$0.50 (Hidden by default) |
 | GPT-6 Astra        | $50.00 | Very High | New 2026-09-25 via the provider-discovery lane — OpenAI's own pricing page lists gpt-6-astra at $10/$50; not on Cursor's pricing page. Provider-direct (Federation rule: prices owned by `catalog-openai.json`) |
 | GPT-6 Sol          | $10.00 | Medium | New 2026-09-25 via the provider-discovery lane — OpenAI's own pricing page lists gpt-6-sol at $2/$10; not on Cursor's pricing page. Provider-direct |
 | GPT-6 Luna         | $0.50  | Low  | New 2026-09-25 via the provider-discovery lane — OpenAI's own pricing page lists gpt-6-luna at $0.10/$0.50; not on Cursor's pricing page. Provider-direct |
