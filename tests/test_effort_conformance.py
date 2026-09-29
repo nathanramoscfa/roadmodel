@@ -362,9 +362,10 @@ def test_extractor_parses_the_current_live_docs_wording() -> None:
     # "*" is the blanket default, with per-model carve-outs beside it.
     assert snapshot["default_effort"] == {"*": "high", "Opus 4.7": "xhigh"}
 
-    # Opus 5 is in the catalog already; Fable 5.1 is not, so it — and only it —
-    # is handed to the catalog cron.
-    assert snapshot["unexpected_models"] == ["Fable 5.1"]
+    # Every model in this table is catalogued now (Fable 5.1, Opus 5.5 and
+    # Sonnet 5.5 joined KNOWN_MODELS on 2026-09-29), so none is handed to the
+    # catalog cron; test_extractor_flags_unexpected_model covers a new one.
+    assert snapshot["unexpected_models"] == []
 
 
 def test_extractor_survives_prose_rewording_around_its_facts() -> None:
@@ -563,3 +564,36 @@ def test_missing_provider_bullet_is_still_a_failure() -> None:
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+def test_extractor_reads_the_2_1_284_ultracode_wording() -> None:
+    """Claude Code 2.1.284 made ultracode a toggle that keeps the session's
+    effort; only `claude --effort ultracode` also sets xhigh. The one-phrase
+    anchor ("sends `xhigh`") failed the tracker on the reworded docs
+    (2026-09-29). The xhigh link must still be found, and the new fact kept."""
+    mod = _load_extractor()
+    md = SAMPLE_MD.read_text().replace(
+        "it sends `xhigh` to the model",
+        "at whichever effort level the session is at. Turning ultracode on or off "
+        "with `/effort` or the `ultracode` setting leaves the effort level unchanged. "
+        "The `--effort ultracode` flag and the Agent SDK `effortLevel` value turn it "
+        "on and also set the level to `xhigh`",
+    )
+    assert "sends `xhigh`" not in md
+    ultracode = mod.build_snapshot(md, source_url="x")["ultracode"]
+    assert ultracode["sends_effort"] == "xhigh"
+    assert ultracode["keeps_session_effort"] is True
+    assert ultracode["xhigh_via"] == "claude --effort ultracode"
+    # Before 2.1.284 the /effort command itself set xhigh.
+    old = mod.build_snapshot(SAMPLE_MD.read_text(), source_url="x")["ultracode"]
+    assert (old["keeps_session_effort"], old["xhigh_via"]) == (False, "/effort ultracode")
+
+
+def test_template_says_how_to_reach_ultracode_after_2_1_284() -> None:
+    flat = " ".join(
+        (REPO_ROOT / "docs" / "templates" / "phase-roadmap-template.md").read_text().split()
+    )
+    assert "reached by launching `claude --effort ultracode`" in flat
+    assert "`/effort xhigh` then `/effort ultracode`" in flat
+    prompt = " ".join((REPO_ROOT / "update" / "prompt-claude-code.md").read_text().split())
+    assert "Never write that `/effort ultracode` alone sets `xhigh`" in prompt
