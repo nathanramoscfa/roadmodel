@@ -500,3 +500,22 @@ def test_roadmap_step_looks_in_docs_roadmap_first() -> None:
     flat = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
     assert "otherwise the first of `docs/roadmap/phase{{PP}}-roadmap.md`" in flat
     assert "The parent project roadmap is the `ROADMAP.md` beside it" in flat
+
+
+def test_other_roadmap_named_files_do_not_block_writing() -> None:
+    """judge-metrics keeps a brief's status page at docs/ROADMAP.md (the brief
+    fixes that path) and bot-farm's project roadmap is agentic-bot-farm-v1.md.
+    After the 2026-09-28 move neither may make /roadmap-phase stop forever."""
+    for prompt in (PROMPT_PHASE, PROMPT_PROJECT):
+        flat = re.sub(r"\s+", " ", prompt.read_text())
+        assert "a `phaseNN-roadmap.md` that git does not ignore" in flat
+        assert "`docs/roadmap/` holds no project roadmap while this project's roadmap" in flat
+        assert "any other file named `ROADMAP.md` is a different document" in flat
+        assert "the file in `docs/roadmap/` the phase roadmaps name as their parent" in flat
+    refresh = re.sub(r"\s+", " ", REFRESH_COMMAND.read_text())
+    assert "is a different document: it stays where it is" in refresh
+    step = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
+    assert "the file the phase roadmap names as its parent" in step
+    # A step underway with no PR (reversi 31.5 Step 4, a beta soak) stays
+    # In progress on cited evidence instead of dropping to Not started.
+    assert "cited evidence shows the work underway" in refresh

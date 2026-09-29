@@ -33,11 +33,18 @@ Step 0b — roadmaps live in `docs/roadmap/`: `ROADMAP.md` and every
 `phaseNN-roadmap.md`, together. A project that keeps them git-excluded
 (e.g. `private/`) keeps them there, and the rest of this step does not
 apply: a tracked `ROADMAP.md` beside them is a published copy.
-Otherwise, if this project has a `ROADMAP.md` or `phaseNN-roadmap.md`
-anywhere else that git does not ignore (committed, or written and not
-yet committed), STOP and tell me to run `/roadmap-refresh` first: it
-moves them into `docs/roadmap/` and updates every reference to them. Do
-not write a new roadmap beside them.
+Otherwise, STOP and tell me to run `/roadmap-refresh` first when this
+project's roadmaps have not moved yet: a `phaseNN-roadmap.md` that git
+does not ignore (committed, or written and not yet committed) sits
+outside `docs/roadmap/`, or `docs/roadmap/` holds no project roadmap
+while this project's roadmap sits elsewhere. `/roadmap-refresh` moves
+them into `docs/roadmap/` and updates every reference to them. Do not
+write a new roadmap beside them. Once the project roadmap is in
+`docs/roadmap/`, any other file named `ROADMAP.md` is a different
+document (a brief's status page, a published copy): leave it alone. A
+project roadmap written before this convention may carry another name
+(e.g. `agentic-bot-farm-v1.md`); it is the file in `docs/roadmap/` the
+phase roadmaps name as their parent.
 
 Step 1 — write `{{OUTPUT}}` from
 `@planning/templates/project-roadmap-template.md`. The project brief
