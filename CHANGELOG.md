@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`/roadmodel-upgrade --refresh-roadmaps` refreshes every project's
+  roadmaps at once.** After the upgrade it runs `/roadmap-refresh` in each
+  registered project, three at a time. Each runs as Claude Code headless
+  (`claude -p`) in a fresh clone, so your own checkout is never touched. The
+  session is told it is unattended: it asks nothing and settles unverified
+  steps from cited evidence. It runs static checks only, leaves other PRs
+  alone, and uses Claude Code's `auto` permission mode. It takes its PR
+  through CI to a merge. Git-excluded roadmaps (`private/`) are edited in
+  place.
+- **Refreshes are skipped while work may be in flight.** A project checked
+  out on another branch, with uncommitted edits outside `planning/`, a
+  roadmap written but not committed, or an open PR from a branch its
+  roadmaps name is skipped and named in the report.
+- **The daily run refreshes every project by itself when the roadmap rules
+  change.** That means the refresh or step command, or the kit's roadmap
+  templates and prompts. A catalog-only release triggers nothing, because
+  `/roadmap-step` re-checks a step's Settings when it runs. A project
+  skipped one day is tried again the next. `--auto-refresh off` turns this
+  off on a machine. Logs go to `~/.config/roadmodel/refresh-logs/`.
+
 ## [0.2.47] — 2026-09-28
 
 ### Fixed

@@ -63,6 +63,11 @@ or once to bring an older roadmap up to date. Refresh AFTER the planning
 kit is current (`/roadmodel-upgrade`), since the selector it runs is the
 kit's.
 
+To refresh every project at once, run `/roadmodel-upgrade --refresh-roadmaps`
+from any chat. It upgrades, then runs `/roadmap-refresh` unattended in a fresh
+clone of each registered project, and skips any project with work in flight.
+The daily run does this by itself whenever the roadmap rules change. See §5.
+
 ## 2. Write the project roadmap
 
 Open a **new** Claude Code chat in the project root and type:
@@ -246,6 +251,21 @@ Windows, cron on Linux — so every registered project follows each
 release within a day, logged to `~/.config/roadmodel/update.log`.
 `--uninstall-schedule` removes it. On Windows the task runs after a start
 missed while the PC was off.
+
+**Every project's roadmaps, too.** `/roadmodel-upgrade --refresh-roadmaps`
+runs `/roadmap-refresh` in every registered project after the upgrade, three
+at a time. Each project gets Claude Code headless (`claude -p`) in a fresh clone
+under `~/.cache/roadmodel/refresh/`. The session is unattended, runs static
+checks only, and uses Claude Code's `auto` permission mode. It takes its PR to
+a merge. Git-excluded roadmaps are edited in place. A project with work in
+flight is skipped and named: on another branch, uncommitted edits outside
+`planning/`, a roadmap not yet committed, or an open PR from a branch its
+roadmaps name. The daily run does the same by itself whenever the roadmap
+*rules* change (the refresh or step command, or the kit's roadmap templates
+and prompts), and retries a skipped project the next day. A catalog-only
+release triggers nothing, because `/roadmap-step` re-checks a step's Settings
+when it runs. `--auto-refresh off` turns the automatic run off on this machine.
+Logs go to `~/.config/roadmodel/refresh-logs/`.
 
 **The updater keeps itself current.** It also ships inside the roadmodel
 package, and the copy the schedule runs is a launcher: each run upgrades
