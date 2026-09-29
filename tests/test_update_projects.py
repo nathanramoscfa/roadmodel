@@ -1895,3 +1895,20 @@ def test_upgrade_command_documents_the_fleet_refresh() -> None:
     assert "`auto` permission mode" in flat
     assert "A project where work may be in flight is skipped and named" in flat
     assert "when the roadmap rules change" in flat and "`--auto-refresh off`" in flat
+
+
+def test_output_survives_a_cp1252_console(up: ModuleType, monkeypatch: pytest.MonkeyPatch) -> None:
+    """2026-09-29, the PC over SSH: printing a result line with ✅ to a cp1252
+    pipe raised UnicodeEncodeError. A refresh detail is model-written, so the
+    updater's own output must degrade to "?" instead of ending the run."""
+    import io
+
+    raw = io.BytesIO()
+    console = io.TextIOWrapper(raw, encoding="cp1252")
+    monkeypatch.setattr(sys, "stdout", console)
+    with pytest.raises(UnicodeEncodeError):
+        print("REFRESH-RESULT: no changes ✅ → done")
+    up.tolerate_unencodable_output()
+    print("REFRESH-RESULT: no changes ✅ → done")
+    console.flush()
+    assert raw.getvalue().endswith(b"REFRESH-RESULT: no changes ? ? done\n")
