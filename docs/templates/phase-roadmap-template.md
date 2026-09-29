@@ -769,9 +769,13 @@ that owns it.}}
      Table rows: Model / Backup / Platform / Effort /
      Thinking / Conversation.
      EFFORT values: Low / Medium / High / Extra High /
-     Max — plus Ultracode, which is CLAUDE CODE ONLY (it is
-     set with `/effort ultracode`, so no other surface has
-     that rung). Map from overall complexity per
+     Max — plus Ultracode, which is CLAUDE CODE ONLY:
+     `xhigh` with ultracode's dynamic workflows on, reached
+     by launching `claude --effort ultracode` or by running
+     `/effort xhigh` then `/effort ultracode` (since Claude
+     Code 2.1.284 the `/effort` toggle keeps the current
+     level), so no other surface has that rung. Map from
+     overall complexity per
      `<thinking-context>`: Low → Low, Medium → Medium,
      High → High, High with novel problem-solving or
      cross-file multi-step proof → Extra High,

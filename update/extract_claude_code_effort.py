@@ -77,7 +77,29 @@ EFFORT_ORDER = ("low", "medium", "high", "xhigh", "max")
 # catalog does NOT carry yet (Fable 5.1, as of this commit) stay unlisted on
 # purpose — that flag is the handoff to the catalog cron.
 KNOWN_MODELS = frozenset(
-    {"Fable 5", "Opus 5", "Sonnet 5", "Opus 4.8", "Opus 4.7", "Opus 4.6", "Sonnet 4.6"}
+    {
+        "Fable 5.1",
+        "Fable 5",
+        "Opus 5.5",
+        "Opus 5",
+        "Sonnet 5.5",
+        "Sonnet 5",
+        "Opus 4.8",
+        "Opus 4.7",
+        "Opus 4.6",
+        "Sonnet 4.6",
+    }
+)
+
+# Every wording the docs have used for "ultracode puts the session at xhigh".
+# Anchored on the fact (ultracode <-> xhigh), not one sentence: Claude Code
+# 2.1.284 reworded it when ultracode became a toggle that keeps the current
+# effort, with only the `--effort ultracode` launch flag also setting xhigh,
+# and the one-phrase anchor failed the tracker (2026-09-29).
+_ULTRACODE_XHIGH_RES = (
+    re.compile(r"sends\s+\W{0,3}xhigh"),  # to 2.1.283: "it sends `xhigh` to the model"
+    re.compile(r"set\s+the\s+(?:session(?:'s)?\s+)?level\s+to\s+\W{0,3}xhigh"),  # 2.1.284 flag
+    re.compile(r"starts\s+the\s+session\s+at\s+\W{0,3}xhigh"),  # 2.1.284 flag, bullet form
 )
 
 # Sentinel substrings that MUST survive in the in-scope span. Their absence
@@ -235,7 +257,10 @@ def parse_defaults(in_scope: str) -> dict[str, str]:
 def parse_ultracode(in_scope: str) -> dict[str, object]:
     lower = in_scope.lower()
     is_setting = "ultracode is a claude code setting" in lower
-    sends_xhigh = bool(re.search(r"sends\s+\W{0,3}xhigh", lower))
+    sends_xhigh = any(rx.search(lower) for rx in _ULTRACODE_XHIGH_RES)
+    # 2.1.284: turning ultracode on with /effort or the setting keeps the
+    # session's effort; only the launch flag also sets xhigh.
+    keeps_effort = "leaves the effort level unchanged" in lower
     # ultracode->xhigh is one of the four in-scope facts and feeds the
     # conformance gate. If the docs still document ultracode but reword the
     # "sends xhigh" phrasing, fail loud rather than emit sends_effort=None,
@@ -249,6 +274,8 @@ def parse_ultracode(in_scope: str) -> dict[str, object]:
         "is_effort_level": False,
         "is_setting": is_setting,
         "sends_effort": "xhigh" if sends_xhigh else None,
+        "keeps_session_effort": keeps_effort,
+        "xhigh_via": "claude --effort ultracode" if keeps_effort else "/effort ultracode",
         "orchestrates_workflows": "orchestrate" in lower and "workflow" in lower,
         "session_only": "current session only" in lower,
         "set_via": ["/effort", '"ultracode": true'],
