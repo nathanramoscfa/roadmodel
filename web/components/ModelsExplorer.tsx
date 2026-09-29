@@ -5,8 +5,9 @@
 // (a checkbox per code, all checked to start) and Cost tier are set in the
 // table's controls and applied to all three, so unchecking CN leaves the
 // US + EU models in the table and in every chart. The table's Group by
-// switch groups the Score charts too: one chart per quality band or one per
-// cost tier, the same groups as the table's header rows.
+// switch lives here too, since the charts read it: grouped by quality, the
+// frontier chart marks the table's ten-point AA Index bands, and the Score
+// charts, one per cost tier either way, say why they stay by tier.
 //
 // The page remembers them (lib/models-prefs): the server reads the saved
 // choices from a cookie and passes them in, so the first render is already
@@ -71,7 +72,7 @@ export function ModelsExplorer({
     setFilters(next);
     savePrefs(prefsFromFilters(next, jurisdictions));
   }
-  // The Group by choice: the table's header rows and the Score charts.
+  // The Group by choice: the table's header rows, and what the charts mark.
   const [grouping, setGrouping] = useState<Grouping>(prefs.grouping);
   function changeGrouping(next: Grouping) {
     setGrouping(next);
@@ -114,8 +115,8 @@ export function ModelsExplorer({
           initialView={prefs.view}
         />
         {/* The frontier first (the whole market on one chart), then the Score
-            charts that take it apart group by group, grouped as the table is. */}
-        <FrontierChart rows={shown} pool={pool} fit={scoreFit} filter={chartFilter} />
+            charts that take it apart tier by tier. */}
+        <FrontierChart rows={shown} pool={pool} fit={scoreFit} filter={chartFilter} grouping={grouping} />
         <ScoreCharts rows={shown} pool={pool} fit={scoreFit} filter={chartFilter} grouping={grouping} />
       </div>
     </FrontierScope.Provider>

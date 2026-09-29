@@ -19,12 +19,27 @@
 // at every price. With a Cost tier chosen, the line is clipped to the band's
 // prices and can step up where a model outside the band holds the top score:
 // a step with no dot, which the panel names.
+//
+// Grouped by quality (the table's Group by), the chart marks the table's
+// ten-point AA Index bands as rows between its gridlines, every other one
+// shaded, and names each band that holds a model in the right margin. Within
+// a row the models line up by price, and the cheapest way to reach a level is
+// where the green line first reaches that row: the question the quality
+// grouping asks, answered on the chart that compares every model at once.
 "use client";
 
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import { blendedPrice, formatUsd, type ScoreFit } from "@/lib/benchmark-grid";
+import {
+  blendedPrice,
+  formatQualityBand,
+  formatUsd,
+  QUALITY_BAND_WIDTH,
+  qualityBand,
+  type ScoreFit,
+} from "@/lib/benchmark-grid";
 import { COST_TIER_DEFS, type CostTier, type ModelRow } from "@/lib/catalog-fields";
+import type { Grouping } from "@/lib/models-prefs";
 import {
   FilterNote,
   FRONTIER,
@@ -40,6 +55,11 @@ import { FloatingCard, type AnchorRect } from "./FloatingCard";
 import { FrontierPointCard, FrontierScope, FrontierStepCard } from "./ScoreCards";
 
 const M = { top: 16, right: 24, bottom: 46, left: 46 };
+// The right margin while the quality bands are named in it ("50–59.9"), on a
+// chart wide enough to spare the room; a narrower chart shades the bands and
+// leaves their names to the axis.
+const BAND_MARGIN = 70;
+const BAND_NAMES_MIN_WIDTH = 480;
 const R = 5; // dot radius: this chart carries every model at once
 const TIERS: CostTier[] = ["low", "medium", "high", "very-high"];
 
@@ -79,6 +99,7 @@ function FrontierPlot({
   x1,
   lines,
   byId,
+  bands,
 }: {
   pts: Pt[];
   // The pool's ringed models, cheapest first, shown or not.
@@ -90,6 +111,9 @@ function FrontierPlot({
   x1: number;
   lines: TierLine[];
   byId: Map<string, ModelRow>;
+  // Grouped by quality: the lower bound of each band that holds a plotted
+  // model (the table's quality groups). Null when grouped by cost tier.
+  bands: number[] | null;
 }) {
   const wrap = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -98,7 +122,8 @@ function FrontierPlot({
   const pinned = useRef(false);
 
   const height = width > 0 && width < 640 ? 400 : 460;
-  const plotW = Math.max(40, width - M.left - M.right);
+  const namedBands = bands !== null && width >= BAND_NAMES_MIN_WIDTH;
+  const plotW = Math.max(40, width - M.left - (namedBands ? BAND_MARGIN : M.right));
   const plotH = height - M.top - M.bottom;
 
   const yLo = 0;
@@ -117,6 +142,10 @@ function FrontierPlot({
   );
   const yTicks: number[] = [];
   for (let v = yLo; v <= yHi; v += 10) yTicks.push(v);
+  // Grouped by quality: one row per ten-point band from the axis's foot to its
+  // top, on the gridlines above (the top band, 90–100, holds the 100 too).
+  const bandRows: number[] = [];
+  if (bands) for (let v = yLo; v < yHi; v += QUALITY_BAND_WIDTH) bandRows.push(v);
   const xTicks = useMemo(
     () => (width === 0 ? [] : pickPriceTicks(x0, x1, sx, M.left, plotW)),
     [width, x0, x1, sx, plotW],
@@ -263,6 +292,43 @@ function FrontierPlot({
               if (e.target === e.currentTarget) clear();
             }}
           >
+            {/* Grouped by quality: the table's bands as rows behind everything
+                else, every other one shaded, and each band that holds a model
+                named in the margin. */}
+            {bandRows.map((lo) => {
+              const shaded = (lo / QUALITY_BAND_WIDTH) % 2 === 1;
+              return (
+                <rect
+                  key={`band-${lo}`}
+                  x={M.left}
+                  y={sy(lo + QUALITY_BAND_WIDTH)}
+                  width={plotW}
+                  height={sy(lo) - sy(lo + QUALITY_BAND_WIDTH)}
+                  fill={shaded ? undefined : "transparent"}
+                  className={shaded ? "fill-brand-slate-900/[0.045] dark:fill-white/[0.05]" : undefined}
+                  pointerEvents="none"
+                  data-testid="frontier-band-stripe"
+                  data-band={lo}
+                  data-shaded={shaded ? "1" : "0"}
+                />
+              );
+            })}
+            {namedBands &&
+              bands?.map((lo) => (
+                <text
+                  key={`band-name-${lo}`}
+                  x={M.left + plotW + 8}
+                  y={(sy(lo) + sy(lo + QUALITY_BAND_WIDTH)) / 2 + 4}
+                  fontSize={11}
+                  pointerEvents="none"
+                  data-testid="frontier-band-label"
+                  data-band={lo}
+                  className="fill-brand-slate-500 tabular-nums dark:fill-brand-slate-400"
+                >
+                  {formatQualityBand(lo)}
+                </text>
+              ))}
+
             {/* Grid and y axis */}
             {yTicks.map((v) => (
               <g key={v}>
@@ -511,6 +577,7 @@ export function FrontierChart({
   pool,
   fit,
   filter,
+  grouping,
 }: {
   // The rows the page's filters keep: the dots.
   rows: ModelRow[];
@@ -520,12 +587,20 @@ export function FrontierChart({
   fit: ScoreFit | null;
   // The active filters; null when the page shows every model.
   filter: ChartFilter | null;
+  // The table's Group by choice: grouped by quality, the chart marks its bands.
+  grouping: Grouping;
 }) {
   const scope = useContext(FrontierScope);
   const pts = toPts(rows);
   if (!filter && pts.length < 2) return null;
   const frontier = toPts(pool.filter((r) => r.value_frontier));
   const byId = new Map(pool.map((r) => [r.id, r]));
+  // Grouped by quality: the bands that hold a plotted model, best first, the
+  // table's quality groups.
+  const bands =
+    grouping === "quality"
+      ? [...new Set(pts.map((p) => qualityBand(p.index) as number))].sort((a, b) => b - a)
+      : null;
 
   // The plotted price range (log10), padded so no dot sits on the frame.
   const xs = pts.map((p) => p.x);
@@ -564,6 +639,7 @@ export function FrontierChart({
       open
       className="group rounded-xl border border-brand-slate-200 bg-brand-slate-50/60 dark:border-brand-slate-700 dark:bg-brand-slate-800/40"
       data-testid="frontier-panel"
+      data-grouping={grouping}
     >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-5 py-3 text-sm font-semibold text-brand-slate-800 dark:text-brand-slate-100">
         The cost/quality frontier: every model on one chart
@@ -585,8 +661,17 @@ export function FrontierChart({
           </strong>{" "}
           The dotted green line joins them from cheapest to priciest and steps up at each one, so
           its height at any price is the top AA Index that price buys. The grey lines are the
-          Score&rsquo;s price lines, one per cost tier, drawn for comparison; the Score charts
-          below measure every model against its own tier&rsquo;s line.
+          Score&rsquo;s price lines, one per cost tier, drawn for comparison; the charts below
+          take them apart tier by tier.
+          {bands && (
+            <span data-testid="frontier-bands-note">
+              {" "}
+              Grouped by quality, the rows between the gridlines are the table&rsquo;s ten-point
+              AA Index bands, every other one shaded: within a band the models line up by price,
+              and the cheapest way to reach a level is where the green line first reaches that
+              band.
+            </span>
+          )}
         </p>
 
         <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-brand-slate-600 dark:text-brand-slate-300">
@@ -622,6 +707,14 @@ export function FrontierChart({
             </LegendSwatch>
             A cost tier&rsquo;s Score line
           </li>
+          {bands && (
+            <li className="inline-flex items-center gap-1.5">
+              <LegendSwatch>
+                <rect x={1} y={1} width={20} height={12} rx={1} className="fill-brand-slate-900/[0.08] dark:fill-white/[0.1]" />
+              </LegendSwatch>
+              A quality band: ten AA Index points, every other one shaded
+            </li>
+          )}
           <li className="text-brand-slate-500 dark:text-brand-slate-400">
             Hover or tap any dot or the green line for its numbers.
           </li>
@@ -654,6 +747,7 @@ export function FrontierChart({
             x1={x1}
             lines={lines}
             byId={byId}
+            bands={bands}
           />
         )}
 
