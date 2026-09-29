@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Claude Code tracker reads 2.1.284's ultracode.** Claude Code 2.1.284
+  made ultracode a toggle that keeps the session's current effort; only the
+  `claude --effort ultracode` launch flag also sets `xhigh`. The tracker's
+  one-phrase anchor ("sends `xhigh`") no longer matched, so it failed on
+  2026-09-29. It now anchors on the fact in any of the docs' wordings,
+  records `keeps_session_effort` and `xhigh_via`, and knows Fable 5.1, Opus
+  5.5 and Sonnet 5.5. The roadmap template says how to reach the Ultracode
+  rung today (`claude --effort ultracode`, or `/effort xhigh` then
+  `/effort ultracode`), and the tracker is told never to write that
+  `/effort ultracode` alone sets `xhigh`.
+- **New models on a provider's own price list reach its API.** Anthropic
+  lists a new model as a discovery under its display name ("Claude Sonnet
+  5.5"), which the method sync compared against catalog ids and missed. It
+  now resolves display names to ids, so Sonnet 5.5 reached the Anthropic API
+  (#773).
+
 ## [0.2.49] — 2026-09-29
 
 ### Fixed

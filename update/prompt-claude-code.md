@@ -102,9 +102,17 @@ with it using the SMALLEST edit:
 
 - The Claude Code effort vocabulary must stay within `effort_levels`,
   and the `XHigh = xhigh` mapping (UI label "Extra High") must hold.
-- `ultracode` must read as a SESSION setting that sends `xhigh` and
-  orchestrates Dynamic Workflows; `ultrathink` as a PER-TURN prompt
+- `ultracode` must read as a SESSION setting that orchestrates Dynamic
+  Workflows and is tied to `xhigh`; `ultrathink` as a PER-TURN prompt
   keyword that does NOT change session effort. Never conflate them.
+  When `<docs_facts>` has `ultracode.keeps_session_effort: true` (Claude
+  Code 2.1.284+), turning ultracode on with `/effort` or the setting
+  keeps the session's current effort, and only the launch flag in
+  `ultracode.xhigh_via` (`claude --effort ultracode`) also sets `xhigh`.
+  roadmodel's `EFFORT: Ultracode` still means `xhigh` with ultracode on,
+  so say how to reach it: launch with `claude --effort ultracode`, or run
+  `/effort xhigh` then `/effort ultracode`. Never write that
+  `/effort ultracode` alone sets `xhigh`.
   `ultracode`'s acceptance as the top `EFFORT` value depends on those
   exact `<docs_facts>` (`ultracode.is_setting` + `ultracode.sends_effort`)
   — the gate reads them, so keep the prose faithful to them.
