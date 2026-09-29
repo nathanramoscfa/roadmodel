@@ -1053,6 +1053,36 @@ def check_deepseek_thinking(selector: str, deepseek_snapshot: dict[str, object])
     return failures
 
 
+def check_default_effort(selector: str, snapshot: dict[str, object]) -> list[str]:
+    """Check G — every documented per-model default effort stays stated.
+
+    The docs give a blanket default and per-model exceptions ("Opus 5.5 and
+    Sonnet 5.5 default to `medium`"). A model whose default differs from the
+    blanket must be named with that level in a clause that says "default". On
+    2026-09-29 the tracker struck Opus 5.5's true `medium` default because the
+    extractor had missed the plural wording; this is the check that refuses
+    that edit. A missing or blanket-only map checks nothing.
+    """
+    defaults = snapshot.get("default_effort")
+    if not isinstance(defaults, dict):
+        return []
+    blanket = str(defaults.get("*", "")).lower()
+    blocks = "\n".join((extract_block(selector, THINKING_BLOCK), extract_cc_method(selector)))
+    clauses = split_clauses(_collapse(blocks).lower())
+    failures: list[str] = []
+    for model, level in defaults.items():
+        level = str(level).lower()
+        if model == "*" or level == blanket:
+            continue
+        stated = any(model.lower() in c and "default" in c and f"`{level}`" in c for c in clauses)
+        if not stated:
+            failures.append(
+                f"check G (default effort): the docs say {model!r} defaults to "
+                f"{level!r}, but no clause of the Claude Code blocks states it"
+            )
+    return failures
+
+
 def run_checks(
     selector: str,
     snapshot: dict[str, object],
@@ -1064,6 +1094,7 @@ def run_checks(
     failures += check_thinking_vocab(selector, snapshot)
     failures += check_per_model_effort(selector, snapshot)
     failures += check_ultracode_ultrathink(selector, snapshot)
+    failures += check_default_effort(selector, snapshot)
     if codex_snapshot is not None:
         failures += check_codex_reasoning_vocab(selector, codex_snapshot)
     if gemini_snapshot is not None:
@@ -1107,7 +1138,8 @@ def main() -> int:
     print(
         "validate_effort_conformance: PASS (the EFFORT vocabulary is a documented "
         "Claude Code subset and THINKING stayed a two-position toggle; no model "
-        "tied to an unsupported effort level; ultracode "
+        "tied to an unsupported effort level; every documented per-model default "
+        "effort stated; ultracode "
         "and ultrathink kept distinct; Codex reasoning vocabulary matches the docs; "
         "Gemini thinking levels match the docs; DeepSeek "
         "thinking toggle + reasoning-effort vocabulary and mapping match the docs)"

@@ -7,7 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Claude Sonnet 5.5, GLM-5.3 and GLM-5.3 Flash are in the catalog.**
+  Sonnet 5.5 ($2/$10) is on the Anthropic API, Claude Code and Cursor.
+  GLM-5.3 ($1.40/$4.40) and GLM-5.3 Flash ($0.15/$0.50) are on Cursor until
+  z.ai's own price list shows them.
+- **Claude Code notes run through 2.1.285.** Sonnet 5.5 is in the effort
+  table. Ultracode is now a toggle that keeps the session's effort, and the
+  Ultracode rung is reached with `claude --effort ultracode` or
+  `/effort xhigh` then `/effort ultracode`.
+
 ### Fixed
+
+- **Opus 5.5 and Sonnet 5.5 default to Medium again in the selector.** The
+  docs say "Opus 5.5 and Sonnet 5.5 default to `medium`". The Claude Code
+  tracker only read the singular "defaults to", so it saw Opus 4.7 as the
+  only exception, and its 2026-09-29 run struck Opus 5.5's true default. It
+  now reads both forms. A new gate check refuses a selector that drops a
+  documented per-model default.
 
 - **The Claude Code tracker reads 2.1.284's ultracode.** Claude Code 2.1.284
   made ultracode a toggle that keeps the session's current effort; only the

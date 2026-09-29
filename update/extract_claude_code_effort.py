@@ -91,6 +91,9 @@ KNOWN_MODELS = frozenset(
     }
 )
 
+# A model as the docs name it in prose: a word, then a version ("Opus 5.5").
+_MODEL_NAME_RE = re.compile(r"[A-Z][A-Za-z]*(?: \d[\w.]*)+")
+
 # Every wording the docs have used for "ultracode puts the session at xhigh".
 # Anchored on the fact (ultracode <-> xhigh), not one sentence: Claude Code
 # 2.1.284 reworded it when ultracode became a toggle that keeps the current
@@ -245,12 +248,20 @@ def parse_defaults(in_scope: str) -> dict[str, str]:
         if defaults:
             return defaults
 
-    # List form: a blanket default plus "<Model> defaults to `<level>`" carve-outs.
+    # List form: a blanket default plus carve-outs, singular or plural:
+    # "Opus 4.7 defaults to `xhigh`", "Opus 5.5 and Sonnet 5.5 default to
+    # `medium`". The plural form went unread and the tracker then struck Opus
+    # 5.5's true `medium` default from the selector (2026-09-29).
     blanket = re.search(r"default effort: `(\w+)` on every model that supports effort", in_scope)
     if blanket:
         defaults["*"] = blanket.group(1).lower()
-    for em in re.finditer(r"([A-Z][A-Za-z0-9 .]*?) defaults to `(\w+)`", in_scope):
-        defaults[em.group(1).strip()] = em.group(2).lower()
+    for em in re.finditer(r"\bdefaults?\s+to\s+`(\w+)`", in_scope):
+        head = in_scope[max(0, em.start() - 160) : em.start()]
+        clause = re.split(r"except that |`,\s*|[;:]\s+|\.\s+|\n", head)[-1]
+        for name in re.split(r",|\band\b", clause):
+            name = name.strip()
+            if _MODEL_NAME_RE.fullmatch(name):
+                defaults[name] = em.group(1).lower()
     return defaults
 
 
