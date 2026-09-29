@@ -36,6 +36,13 @@
       "xhigh",
       "max"
     ],
+    "Sonnet 5.5": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
     "Opus 5": [
       "low",
       "medium",
@@ -79,7 +86,6 @@
   },
   "default_effort": {
     "*": "high",
-    "Opus 5.5": "medium",
     "Opus 4.7": "xhigh"
   },
   "fallback_rule": "highest supported level at or below the requested level",
@@ -87,6 +93,8 @@
     "is_effort_level": false,
     "is_setting": true,
     "sends_effort": "xhigh",
+    "keeps_session_effort": true,
+    "xhigh_via": "claude --effort ultracode",
     "orchestrates_workflows": true,
     "session_only": true,
     "set_via": [
@@ -117,9 +125,6 @@
     ],
     "cannot_disable_on": []
   },
-  "unexpected_models": [
-    "Fable 5.1",
-    "Opus 5.5"
-  ],
-  "section_sha256": "26e46eef8f11cf12b4ee8533666fa6d13ef57e0b3ede7b0e47e8a6de8c04d07d"
+  "unexpected_models": [],
+  "section_sha256": "d1085f6391d1c9216fd81133684d5d97a7a749f8bf363e0803a1c90e2e4ba7c2"
 }
