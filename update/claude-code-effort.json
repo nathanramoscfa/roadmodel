@@ -86,6 +86,8 @@
   },
   "default_effort": {
     "*": "high",
+    "Opus 5.5": "medium",
+    "Sonnet 5.5": "medium",
     "Opus 4.7": "xhigh"
   },
   "fallback_rule": "highest supported level at or below the requested level",
@@ -126,5 +128,5 @@
     "cannot_disable_on": []
   },
   "unexpected_models": [],
-  "section_sha256": "d1085f6391d1c9216fd81133684d5d97a7a749f8bf363e0803a1c90e2e4ba7c2"
+  "section_sha256": "c5fb32cdfc66e6ff2415275641415a92417269e61a642bbf774ca44b995b734e"
 }
