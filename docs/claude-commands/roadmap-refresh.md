@@ -54,7 +54,10 @@ roadmap outside `docs/roadmap/` moves there now, in a commit of its own
 before the ledger work:
 
 1. `git mv` each one into `docs/roadmap/`, keeping its filename. A
-   roadmap written but not yet committed moves with a plain `mv`.
+   roadmap written but not yet committed moves with a plain `mv`. A file
+   named `ROADMAP.md` that is not this project's roadmap (a brief's
+   status page whose path the brief fixes, a published copy) is a
+   different document: it stays where it is.
 2. Fix the relative links inside the moved files so each resolves from
    `docs/roadmap/`: from the root, `[optimize](docs/optimize.md)` becomes
    `[optimize](../optimize.md)` and `[cli](src/cli.py)` becomes
@@ -84,8 +87,10 @@ For every step in every phase roadmap, look up its `**Branch:**` line:
 - A merged PR ⇒ `**Status:** Complete — PR #<n> (<mergedAt date>)`.
 - No merged PR, and no verified `Complete` step comes after it in phase
   order ⇒ `**Status:** Not started` — it is simply ahead — unless it
-  already reads `In progress` and its branch has an OPEN PR; then leave
-  it.
+  already reads `In progress` and either its branch has an OPEN PR or
+  cited evidence shows the work underway (an `→ operate` step mid-run,
+  such as a beta soak whose builds and rounds are shipping); then leave
+  it `In progress`, with that evidence beside it.
 - No merged PR, but verified work comes AFTER it, or its phase roadmap
   has no `**Branch:**` lines at all (written before that convention) ⇒
   unverified. Such a step may have shipped under another branch name, or
