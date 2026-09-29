@@ -120,6 +120,7 @@ otherwise be upgraded one at a time. Instead, from any Claude Code chat:
 /roadmodel-upgrade                      # every registered project
 /roadmodel-upgrade ~/code/app-one …     # register these dirs, then run
 /roadmodel-upgrade --install-schedule   # once: also run daily, unattended
+/roadmodel-upgrade --refresh-roadmaps   # also run /roadmap-refresh in every project
 ```
 
 The command fetches [`scripts/update_projects.py`](scripts/update_projects.py)

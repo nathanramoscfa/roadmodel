@@ -1248,6 +1248,488 @@ def retire_commands(dry_run: bool = False) -> list[str]:
 
 
 # --------------------------------------------------------------------------
+# Roadmap refresh across every project: /roadmap-refresh, unattended
+#
+# /roadmodel-upgrade keeps the tool current; /roadmap-refresh applies the
+# kit's current rules to one project's roadmaps. Running the second by hand
+# in every project window was the chore (2026-09-28: eight refreshes). This
+# runs Claude Code headless (`claude -p`) in a fresh clone of each registered
+# project — on demand with --refresh-roadmaps, and in the scheduled run
+# whenever the roadmap RULES changed: the refresh and step commands, or the
+# kit's roadmap templates and prompts. A catalog-only release triggers
+# nothing, because /roadmap-step re-checks a step's Settings when it runs.
+#
+# Unattended means: no questions (unverified steps are settled from cited
+# evidence), static checks only, other PRs left alone, and Claude Code's
+# `auto` permission mode, which refuses actions it judges destructive. A
+# project where work may be in flight is skipped and retried on the next
+# run: checked out on another branch, uncommitted edits outside planning/, a
+# roadmap written but not committed, or an open PR from a branch its
+# roadmaps name. Git-excluded roadmaps (private/) are refreshed in place.
+# --------------------------------------------------------------------------
+
+REFRESH_STATE = CONFIG_DIR / "refresh-state.json"
+REFRESH_CACHE = Path.home() / ".cache" / "roadmodel" / "refresh"
+REFRESH_LOGS = CONFIG_DIR / "refresh-logs"
+REFRESH_TIMEOUT = 2 * 60 * 60  # one project: the refresh plus its PR's CI
+CLONE_TIMEOUT = 30 * 60
+REFRESH_BRANCH_PREFIX = "chore/roadmap-refresh-"
+RULE_COMMANDS = ("roadmap-refresh", "roadmap-step")
+RULE_KIT_FILES = (
+    "phase-roadmap-template.md",
+    "project-roadmap-template.md",
+    "prompt-phase-roadmap.md",
+    "prompt-project-roadmap.md",
+)
+_ROADMAP_FILE_RE = re.compile(r"(?:^|/)(?:ROADMAP|phase\d[^/]*roadmap[^/]*)\.md$", re.IGNORECASE)
+_BRANCH_LINE_RE = re.compile(r"^\*\*Branch:\*\*\s*`([^`]+)`", re.MULTILINE)
+_REFRESH_RESULT_RE = re.compile(r"^REFRESH-RESULT:\s*(.+?)\s*$", re.MULTILINE)
+_REFRESH_OK = ("merged", "no changes", "in place")
+
+
+def _is_roadmap_path(path: str) -> bool:
+    posix = path.replace("\\", "/").strip().strip('"')
+    return bool(_ROADMAP_FILE_RE.search(posix)) or posix.startswith("docs/roadmap/")
+
+
+def _git_lines(path: Path, *args: str) -> list[str]:
+    try:
+        cp = _git(*args, cwd=path)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    return cp.stdout.splitlines() if cp.returncode == 0 else []
+
+
+def _default_branch(path: Path) -> str:
+    head = _git_lines(path, "symbolic-ref", "--short", "refs/remotes/origin/HEAD")
+    if head and "/" in head[0]:
+        return head[0].split("/", 1)[1]
+    for name in ("main", "master"):
+        if _git_lines(path, "rev-parse", "--verify", "--quiet", f"refs/remotes/origin/{name}"):
+            return name
+    return "main"
+
+
+def _open_pr_heads(path: Path) -> Optional[dict[str, int]]:
+    """Open PRs as {head branch: number}, or None when gh cannot tell."""
+    gh = shutil.which("gh")
+    if not gh:
+        return None
+    try:
+        cp = subprocess.run(  # noqa: S603 — gh resolved from PATH, literal argv
+            [gh, "pr", "list", "--state", "open", "--limit", "200"]
+            + ["--json", "number,headRefName"],
+            cwd=path,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=120,
+        )
+        if cp.returncode != 0:
+            return None
+        return {pr["headRefName"]: int(pr["number"]) for pr in json.loads(cp.stdout or "[]")}
+    except (OSError, subprocess.SubprocessError, ValueError, KeyError, TypeError):
+        return None
+
+
+@dataclass
+class RefreshPlan:
+    entry: Entry
+    mode: str  # "clone", "in-place" or "skip"
+    reason: str = ""
+    default: str = ""
+    remote: str = ""
+
+
+def plan_refresh(entry: Entry) -> RefreshPlan:
+    """Decide how to refresh one project's roadmaps, or why not to now."""
+    path = entry.path
+    if not (path / ".git").exists():
+        return RefreshPlan(entry, "skip", "not a git checkout")
+    private = path / "private"
+    if private.is_dir():
+        kept = sorted(f.name for f in private.iterdir() if f.is_file() and _is_roadmap_path(f.name))
+        if kept and _git_lines(path, "check-ignore", f"private/{kept[0]}"):
+            return RefreshPlan(entry, "in-place", "roadmaps are git-excluded (private/)")
+    tracked = [f for f in _git_lines(path, "ls-files") if _is_roadmap_path(f)]
+    if not tracked:
+        return RefreshPlan(entry, "skip", "no tracked roadmaps")
+    default = _default_branch(path)
+    branch = (_git_lines(path, "branch", "--show-current") or [""])[0] or "(detached)"
+    if branch != default:
+        return RefreshPlan(entry, "skip", f"on branch {branch}, not {default}")
+    status = _git_lines(path, "status", "--porcelain")
+    edits = [
+        line[3:]
+        for line in status
+        if not line.startswith("??") and not line[3:].replace("\\", "/").startswith("planning/")
+    ]
+    if edits:
+        return RefreshPlan(entry, "skip", f"uncommitted edits ({', '.join(edits[:3])})")
+    unwritten = [
+        line[3:] for line in status if line.startswith("??") and _is_roadmap_path(line[3:])
+    ]
+    if unwritten:
+        return RefreshPlan(entry, "skip", f"roadmap not yet committed ({unwritten[0]})")
+    heads = _open_pr_heads(path)
+    if heads is None:
+        return RefreshPlan(entry, "skip", "gh could not list PRs (it opens the refresh's PR)")
+    named: set[str] = set()
+    for rel in tracked:
+        with contextlib.suppress(OSError):
+            named.update(_BRANCH_LINE_RE.findall((path / rel).read_text(encoding="utf-8")))
+    for head, number in sorted(heads.items(), key=lambda kv: kv[1]):
+        if head.startswith(REFRESH_BRANCH_PREFIX):
+            return RefreshPlan(entry, "skip", f"an earlier refresh's PR #{number} is still open")
+        if head in named:
+            return RefreshPlan(entry, "skip", f"step PR #{number} ({head}) is open")
+    remote = (_git_lines(path, "remote", "get-url", "origin") or [""])[0]
+    if not remote:
+        return RefreshPlan(entry, "skip", "no origin remote")
+    return RefreshPlan(entry, "clone", default=default, remote=remote)
+
+
+_UNATTENDED = """\
+UNATTENDED RUN. You are running /roadmap-refresh (below) for the project
+"{project}" with no operator present; roadmodel's updater started you. These
+rules override every point in the procedure that would ask the operator.
+
+- Ask nothing; nobody will answer. Where the procedure would ask about
+  unverified steps, the operator has handed the call back: settle each from
+  cited evidence exactly as the procedure describes for that case.
+{where}
+- Never commit planning/user-context.md; it is personal.
+- Run only static checks: verify scripts in their `--fast` mode and tests
+  that only read files. Never run `--post`, `--all`, a deploy, a drill,
+  anything over SSH, or anything that touches live data or a remote host.
+- Leave every pull request you did not open alone.
+- If a step you would take is refused, do not look for a way around it:
+  stop, and give the reason in the result line.
+- End your final response with exactly one line, the last one:
+  `REFRESH-RESULT: merged <PR URL>` when your PR merged;
+  `REFRESH-RESULT: no changes` when nothing needed changing;
+  `REFRESH-RESULT: in place` when you edited git-excluded roadmaps;
+  `REFRESH-RESULT: open <PR URL> — <why>` when your PR could not merge;
+  `REFRESH-RESULT: stopped — <why>` when you stopped before a PR.
+"""
+
+_WHERE_CLONE = """\
+- You are in a fresh clone of the project ({workdir}), made for this run
+  and deleted after it, with an up-to-date `{default}` checked out. Work
+  only inside it, scratch files included, and branch from here."""
+
+_WHERE_IN_PLACE = """\
+- You are in the operator's own checkout ({workdir}). This project keeps
+  its roadmaps git-excluded, so the procedure edits them in place: change
+  only those roadmap files. No branch, no commit, no PR, no other file.{kit}"""
+
+
+def refresh_prompt(body: str, plan: RefreshPlan, workdir: Path, kit: Optional[Path] = None) -> str:
+    """The unattended rules, then the /roadmap-refresh procedure itself."""
+    _, text = _split_frontmatter(body)
+    if plan.mode == "in-place":
+        note = (
+            f"\n  The planning kit is exported to {kit} for this run; read it\n"
+            "  there rather than exporting one into this checkout."
+            if kit
+            else ""
+        )
+        where = _WHERE_IN_PLACE.format(workdir=workdir, kit=note)
+    else:
+        where = _WHERE_CLONE.format(workdir=workdir, default=plan.default)
+    procedure = text.replace("$ARGUMENTS", "").strip()
+    return _UNATTENDED.format(project=plan.entry.name, where=where) + "\n---\n\n" + procedure + "\n"
+
+
+def claude_executable() -> Optional[str]:
+    found = shutil.which("claude")
+    if found:
+        return found
+    candidates = [
+        Path("/opt/homebrew/bin/claude"),
+        Path("/usr/local/bin/claude"),
+        Path.home() / ".local" / "bin" / "claude",
+        Path.home() / ".claude" / "local" / "claude",
+    ]
+    if WINDOWS:
+        appdata = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+        candidates += [
+            appdata / "npm" / "claude.cmd",
+            Path.home() / ".local" / "bin" / "claude.exe",
+        ]
+    return next((str(c) for c in candidates if c.is_file()), None)
+
+
+def claude_refresh_argv(claude: str) -> list[str]:
+    # The prompt goes in on stdin: it is ~10 KB, past what a Windows .cmd
+    # shim passes through intact on its command line.
+    return [claude, "-p", "--permission-mode", "auto", "--output-format", "json"]
+
+
+def parse_refresh_output(stdout: str) -> tuple[str, str, Optional[float]]:
+    """(status, detail, cost) from `claude -p --output-format json`."""
+    try:
+        data = json.loads(stdout)
+    except ValueError:
+        return "FAILED", "no JSON from claude: " + _tail(stdout, 2), None
+    if not isinstance(data, dict):
+        return "FAILED", "unexpected output from claude", None
+    cost = data.get("total_cost_usd")
+    cost = float(cost) if isinstance(cost, (int, float)) else None
+    text = str(data.get("result") or "")
+    if data.get("is_error"):
+        reason = text.strip().splitlines()[-1] if text.strip() else str(data.get("subtype", ""))
+        return "FAILED", reason or "claude reported an error", cost
+    found = _REFRESH_RESULT_RE.findall(text)
+    if not found:
+        return "attention", "no REFRESH-RESULT line; read the log", cost
+    verdict = found[-1]
+    return ("ok" if verdict.startswith(_REFRESH_OK) else "attention"), verdict, cost
+
+
+@dataclass
+class RefreshResult:
+    entry: Entry
+    status: str  # "ok", "attention", "skipped", "FAILED" or "planned"
+    detail: str
+    cost: Optional[float] = None
+    log: Optional[Path] = None
+
+
+def _remove_tree(path: Path) -> None:
+    def _writable(func, target, _exc) -> None:  # git marks pack files read-only on Windows
+        with contextlib.suppress(OSError):
+            os.chmod(target, 0o700)
+            func(target)
+
+    if path.exists():
+        shutil.rmtree(path, onerror=_writable)  # onerror, not onexc: runs on 3.9+
+
+
+def _refresh_command_body() -> Optional[str]:
+    installed = CLAUDE_DIR / "commands" / "roadmap-refresh.md"
+    with contextlib.suppress(OSError):
+        return installed.read_text(encoding="utf-8")
+    try:
+        url = f"{REPO_RAW}/docs/claude-commands/roadmap-refresh.md"
+        with urllib.request.urlopen(url, timeout=30) as resp:  # noqa: S310 — fixed https URL
+            return resp.read().decode("utf-8")
+    except (urllib.error.URLError, OSError):
+        return None
+
+
+def _export_kit(entry: Entry, target: Path) -> str:
+    env, note = resolve_env(entry)
+    if env is None:
+        return f"kit not exported ({note})"
+    try:
+        cp = _run(
+            [str(env.python), "-m", "roadmodel", "export-kit", str(target), "--force"],
+            timeout=KIT_TIMEOUT,
+            cwd=target,
+        )
+    except (subprocess.SubprocessError, OSError) as exc:
+        return f"kit not exported ({exc})"
+    return "kit exported" if cp.returncode == 0 else "kit not exported: " + _tail(cp.stderr, 2)
+
+
+def run_refresh(plan: RefreshPlan, claude: str, body: str, stamp: str) -> RefreshResult:
+    """Refresh one project's roadmaps with a headless Claude Code session."""
+    entry = plan.entry
+    if plan.mode == "skip":
+        return RefreshResult(entry, "skipped", plan.reason)
+    REFRESH_LOGS.mkdir(parents=True, exist_ok=True)
+    REFRESH_CACHE.mkdir(parents=True, exist_ok=True)
+    log = REFRESH_LOGS / f"{stamp}-{entry.name}.log"
+    notes: list[str] = []
+    kit: Optional[Path] = None
+    if plan.mode == "clone":
+        workdir = REFRESH_CACHE / f"{entry.name}-{stamp}"
+        _remove_tree(workdir)
+        try:
+            cp = subprocess.run(  # noqa: S603 — git from PATH, argv built here
+                ["git", "clone", "--quiet", "--reference-if-able", str(entry.path)]  # noqa: S607
+                + ["--branch", plan.default, plan.remote, str(workdir)],
+                capture_output=True,
+                text=True,
+                timeout=CLONE_TIMEOUT,
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
+            return RefreshResult(entry, "FAILED", f"clone: {exc}")
+        if cp.returncode != 0:
+            return RefreshResult(entry, "FAILED", "clone: " + _tail(cp.stderr, 2))
+        notes.append(_export_kit(entry, workdir))
+    else:
+        workdir = entry.path
+        kit_root = REFRESH_CACHE / f"{entry.name}-kit-{stamp}"
+        kit_root.mkdir(parents=True, exist_ok=True)
+        notes.append(_export_kit(entry, kit_root))
+        kit = kit_root / "planning"
+    prompt = refresh_prompt(body, plan, workdir, kit)
+    try:
+        cp = subprocess.run(  # noqa: S603 — the claude CLI, flags built here, prompt on stdin
+            claude_refresh_argv(claude),
+            input=prompt,
+            cwd=workdir,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=REFRESH_TIMEOUT,
+        )
+        stdout, stderr = cp.stdout, cp.stderr
+    except subprocess.TimeoutExpired as exc:
+        stdout = exc.stdout if isinstance(exc.stdout, str) else ""
+        stderr = f"timed out after {REFRESH_TIMEOUT // 60} minutes"
+    except OSError as exc:
+        stdout, stderr = "", f"could not run {claude}: {exc}"
+    log.write_text(
+        f"project: {entry.path}\nmode: {plan.mode}\nworkdir: {workdir}\n"
+        + "".join(f"{n}\n" for n in notes)
+        + f"\n--- stdout ---\n{stdout}\n--- stderr ---\n{stderr}\n",
+        encoding="utf-8",
+    )
+    status, detail, cost = parse_refresh_output(stdout)
+    if status == "FAILED" and stderr.strip() and not stdout.strip():
+        detail = _tail(stderr, 2)
+    if plan.mode == "clone" and status == "ok":
+        _remove_tree(workdir)
+    elif kit is not None:
+        _remove_tree(kit.parent)
+    return RefreshResult(entry, status, detail, cost, log)
+
+
+def _rule_kit_dir() -> Optional[Path]:
+    """Where this updater's own roadmap templates live: roadmodel/data when
+    packaged, docs/templates in a repo checkout."""
+    here = Path(__file__).resolve().parent
+    for candidate in (here / "data", here.parent / "docs" / "templates"):
+        if all((candidate / name).is_file() for name in RULE_KIT_FILES):
+            return candidate
+    return None
+
+
+def rules_fingerprint() -> str:
+    """One hash of everything a refresh applies: the installed refresh and
+    step commands, and the kit's roadmap templates and prompts."""
+    import hashlib
+
+    digest = hashlib.sha256()
+    for name in RULE_COMMANDS:
+        path = CLAUDE_DIR / "commands" / f"{name}.md"
+        digest.update(name.encode() + b"\0")
+        digest.update(path.read_bytes().replace(b"\r\n", b"\n") if path.is_file() else b"-")
+    kit = _rule_kit_dir()
+    for name in RULE_KIT_FILES:
+        digest.update(name.encode() + b"\0")
+        data = (kit / name).read_bytes() if kit else b"-"
+        digest.update(data.replace(b"\r\n", b"\n"))
+    return digest.hexdigest()[:16]
+
+
+def load_refresh_state() -> dict:
+    try:
+        state = json.loads(REFRESH_STATE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        state = {}
+    if not isinstance(state, dict):
+        state = {}
+    state.setdefault("auto", True)
+    if not isinstance(state.get("projects"), dict):
+        state["projects"] = {}
+    return state
+
+
+def save_refresh_state(state: dict) -> None:
+    REFRESH_STATE.parent.mkdir(parents=True, exist_ok=True)
+    REFRESH_STATE.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def due_for_refresh(entries: list[Entry], state: dict, fingerprint: str) -> tuple[list, list]:
+    """(due, new): a project last refreshed under other rules is due; one this
+    machine has never refreshed is new, and only recorded — its roadmaps are
+    taken as current until the rules next change."""
+    due, new = [], []
+    for entry in entries:
+        seen = state["projects"].get(str(entry.path))
+        if seen is None:
+            new.append(entry)
+        elif seen.get("fingerprint") != fingerprint:
+            due.append(entry)
+    return due, new
+
+
+def _refresh_table(results: list[RefreshResult]) -> str:
+    rows = [("project", "result", "detail")]
+    for r in results:
+        detail = r.detail + (f" (${r.cost:.2f} API-equivalent)" if r.cost else "")
+        rows.append((r.entry.name, r.status, detail))
+    width = [max(len(row[i]) for row in rows) for i in range(2)]
+    out = []
+    for n, row in enumerate(rows):
+        out.append(f"{row[0].ljust(width[0])}  {row[1].ljust(width[1])}  {row[2]}".rstrip())
+        if n == 0:
+            out.append(f"{'-' * width[0]}  {'-' * width[1]}  {'-' * 6}")
+    return "\n".join(out)
+
+
+def refresh_roadmaps(
+    entries: list[Entry], *, on_demand: bool, unattended: bool, jobs: int, dry_run: bool
+) -> tuple[list[str], bool]:
+    """Refresh every project due (or, on demand, every project). Returns the
+    report lines and whether anything needs the operator's attention."""
+    state = load_refresh_state()
+    fingerprint = rules_fingerprint()
+    now = _dt.datetime.now().isoformat(timespec="minutes")
+    if on_demand:
+        targets = list(entries)
+    else:
+        targets, new = due_for_refresh(entries, state, fingerprint)
+        if new and not dry_run:
+            for entry in new:
+                state["projects"][str(entry.path)] = {"fingerprint": fingerprint, "at": now}
+            save_refresh_state(state)
+        if not targets:
+            return [f"roadmap rules unchanged ({fingerprint}); nothing to refresh"], False
+        if not unattended or not state["auto"]:
+            names = ", ".join(e.name for e in targets)
+            why = "automatic refresh is off" if not state["auto"] else "this is not the daily run"
+            return [
+                f"roadmap rules changed; due for a refresh: {names}",
+                f"not run ({why}); run with --refresh-roadmaps",
+            ], False
+    plans = [plan_refresh(e) for e in targets]
+    if dry_run:
+        return [
+            f"{p.entry.name}: {p.mode}" + (f" — {p.reason}" if p.reason else "") for p in plans
+        ], False
+    claude = claude_executable()
+    body = _refresh_command_body()
+    if claude is None or body is None:
+        missing = "the claude CLI" if claude is None else "the /roadmap-refresh command text"
+        return [f"roadmap refresh SKIPPED: {missing} not found"], True
+    stamp = _dt.datetime.now().strftime("%Y%m%d-%H%M")
+    results: list[RefreshResult] = []
+    with ThreadPoolExecutor(max_workers=max(1, jobs)) as pool:
+        futures = [pool.submit(run_refresh, p, claude, body, stamp) for p in plans]
+        for fut in as_completed(futures):
+            results.append(fut.result())
+    results.sort(key=lambda r: r.entry.name.lower())
+    for r in results:
+        if r.status == "ok":
+            state["projects"][str(r.entry.path)] = {
+                "fingerprint": fingerprint,
+                "at": now,
+                "result": r.detail,
+            }
+    save_refresh_state(state)
+    lines = _refresh_table(results).splitlines()
+    lines += [f"log: {r.log}" for r in results if r.log and r.status != "ok"]
+    return lines, any(r.status in ("FAILED", "attention") for r in results)
+
+
+# --------------------------------------------------------------------------
 # Unattended runs: a per-machine schedule that runs this script daily
 # --------------------------------------------------------------------------
 
@@ -1919,6 +2401,28 @@ def _parser() -> argparse.ArgumentParser:
             "removing it so the provider's own default applies (MCP and trust still sync)"
         ),
     )
+    ap.add_argument(
+        "--refresh-roadmaps",
+        action="store_true",
+        help=(
+            "after upgrading, run /roadmap-refresh in every project (Claude Code, "
+            "headless, in a fresh clone): moves, ✅ marks, status, upcoming settings"
+        ),
+    )
+    ap.add_argument(
+        "--auto-refresh",
+        choices=("on", "off"),
+        help=(
+            "whether the daily run refreshes every project's roadmaps when the "
+            "roadmap rules change (default on; remembered on this machine)"
+        ),
+    )
+    ap.add_argument(
+        "--refresh-jobs",
+        type=int,
+        default=3,
+        help="projects refreshed at once (default: %(default)s)",
+    )
     # A launcher's proof that a copy loads and builds its CLI; see self_update.
     ap.add_argument("--self-check", action="store_true", help=argparse.SUPPRESS)
     return ap
@@ -2053,13 +2557,35 @@ def main(argv: Optional[list[str]] = None) -> int:
     if args.install_schedule:
         print("\nSchedule:", install_schedule(args.install_schedule, dry_run=args.dry_run))
 
+    if args.auto_refresh and not args.dry_run:
+        state = load_refresh_state()
+        state["auto"] = args.auto_refresh == "on"
+        save_refresh_state(state)
+        print(f"\nAutomatic roadmap refresh: {args.auto_refresh}")
+
+    # Last, so it applies the command files and kit this run just installed.
+    refresh_attention = False
+    if args.no_commands and not args.refresh_roadmaps:
+        pass  # the rules on disk may be stale; the next full run decides
+    else:
+        print("\nRoadmap refresh:")
+        lines, refresh_attention = refresh_roadmaps(
+            [r.entry for r in results if r.ok] if not args.refresh_roadmaps else entries,
+            on_demand=args.refresh_roadmaps,
+            unattended=args.log,
+            jobs=args.refresh_jobs,
+            dry_run=args.dry_run,
+        )
+        for line in lines:
+            print(f"  {line}")
+
     failed = [r for r in results if not r.ok]
     if failed:
         print(f"\n{len(failed)} project(s) need attention:")
         for r in failed:
             print(f"  {r.entry.path}: {r.error}")
         return 1
-    return 0
+    return 1 if refresh_attention else 0
 
 
 if __name__ == "__main__":

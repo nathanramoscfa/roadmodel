@@ -1524,3 +1524,374 @@ def test_the_personal_user_context_can_never_be_committed_to_this_public_repo() 
         ["git", "check-ignore", "-q", "docs/user-context.md"], cwd=ROOT, check=False
     )
     assert ignored.returncode == 0, "docs/user-context.md must stay gitignored"
+
+
+# --------------------------------------------------------------------------
+# Roadmap refresh across every project (--refresh-roadmaps, automatic runs)
+#
+# 2026-09-28 the operator asked for /roadmap-refresh in every project at once,
+# on demand and automatically, after eight refreshes were run by hand. These
+# pin the three things that make an unattended run safe: a project with work
+# in flight is skipped, the session is told it is unattended and runs in
+# Claude Code's auto permission mode, and it only runs automatically when the
+# roadmap rules changed.
+# --------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _refresh_in_tmp(up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """No test may read or write this machine's refresh state, cache or logs."""
+    monkeypatch.setattr(up, "REFRESH_STATE", tmp_path / "cfg" / "refresh-state.json")
+    monkeypatch.setattr(up, "REFRESH_CACHE", tmp_path / "cache" / "refresh")
+    monkeypatch.setattr(up, "REFRESH_LOGS", tmp_path / "cfg" / "refresh-logs")
+
+
+_GIT_ENV = {
+    "GIT_AUTHOR_NAME": "t",
+    "GIT_AUTHOR_EMAIL": "t@example.invalid",
+    "GIT_COMMITTER_NAME": "t",
+    "GIT_COMMITTER_EMAIL": "t@example.invalid",
+}
+
+
+def _g(cwd: Path, *args: str) -> str:
+    return subprocess.run(
+        ["git", "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", *args],
+        cwd=cwd,
+        check=True,
+        capture_output=True,
+        text=True,
+        env={**os.environ, **_GIT_ENV},
+    ).stdout
+
+
+def _project(tmp_path: Path, files: dict[str, str]) -> Path:
+    """A checkout of a bare origin, on main, holding ``files``."""
+    seed = tmp_path / "seed"
+    seed.mkdir()
+    _g(seed, "init", "-q", "-b", "main")
+    for rel, text in files.items():
+        (seed / rel).parent.mkdir(parents=True, exist_ok=True)
+        (seed / rel).write_text(text)
+    _g(seed, "add", "-A")
+    _g(seed, "commit", "-q", "-m", "init")
+    origin = tmp_path / "origin.git"
+    _g(tmp_path, "init", "-q", "--bare", str(origin))
+    _g(seed, "push", "-q", str(origin), "main:main")
+    _g(origin, "symbolic-ref", "HEAD", "refs/heads/main")
+    project = tmp_path / "project"
+    _g(tmp_path, "clone", "-q", str(origin), str(project))
+    return project
+
+
+_ROADMAPS = {
+    "docs/roadmap/ROADMAP.md": "# P\n",
+    "docs/roadmap/phase01-roadmap.md": (
+        "## Step 1 — x\n\n**Status:** Not started\n\n**Branch:** `feature/phase01-step1-x`\n"
+    ),
+    "README.md": "hi\n",
+}
+
+
+def test_roadmap_paths_are_recognised(up: ModuleType) -> None:
+    for path in (
+        "ROADMAP.md",
+        "docs/ROADMAP.md",
+        "phase01-roadmap.md",
+        "docs/phase31.5-roadmap.md",
+        "docs/phase04.6-catalog-federation-roadmap.md",
+        "docs/phase31j-roadmap.md",
+        "docs/roadmap/agentic-bot-farm-v1.md",
+        "docs\\roadmap\\phase02-roadmap.md",
+    ):
+        assert up._is_roadmap_path(path), path
+    for path in ("docs/phase01-qa-findings.md", "README.md", "docs/test-automation.md"):
+        assert not up._is_roadmap_path(path), path
+
+
+def test_plan_refresh_clones_a_clean_project(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = _project(tmp_path, _ROADMAPS)
+    monkeypatch.setattr(up, "_open_pr_heads", lambda _p: {"dependabot/x": 3})
+    plan = up.plan_refresh(up.Entry(project))
+    assert (plan.mode, plan.default) == ("clone", "main"), plan.reason
+    assert plan.remote.endswith("origin.git")
+
+
+def test_plan_refresh_skips_work_in_flight(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = _project(tmp_path, _ROADMAPS)
+    entry = up.Entry(project)
+
+    # A step PR from a branch the roadmaps name.
+    monkeypatch.setattr(up, "_open_pr_heads", lambda _p: {"feature/phase01-step1-x": 7})
+    plan = up.plan_refresh(entry)
+    assert plan.mode == "skip" and "step PR #7" in plan.reason
+    # An earlier refresh's PR still open.
+    monkeypatch.setattr(up, "_open_pr_heads", lambda _p: {"chore/roadmap-refresh-2026-09-28": 9})
+    assert "earlier refresh's PR #9" in up.plan_refresh(entry).reason
+    # gh cannot answer: skip rather than guess.
+    monkeypatch.setattr(up, "_open_pr_heads", lambda _p: None)
+    assert "gh could not list PRs" in up.plan_refresh(entry).reason
+    monkeypatch.setattr(up, "_open_pr_heads", lambda _p: {})
+
+    # Edits under planning/ are the daily kit export, not work in flight.
+    (project / "planning").mkdir()
+    (project / "planning" / "x.md").write_text("kit\n")
+    _g(project, "add", "planning/x.md")
+    _g(project, "commit", "-q", "-m", "kit")
+    (project / "planning" / "x.md").write_text("kit, re-exported\n")
+    assert up.plan_refresh(entry).mode == "clone"
+    # Any other uncommitted edit is.
+    (project / "README.md").write_text("edited\n")
+    assert "uncommitted edits (README.md)" in up.plan_refresh(entry).reason
+    _g(project, "checkout", "-q", "--", "README.md")
+    # A roadmap written but not yet committed.
+    (project / "docs" / "roadmap" / "phase02-roadmap.md").write_text("# 2\n")
+    assert "roadmap not yet committed" in up.plan_refresh(entry).reason
+    (project / "docs" / "roadmap" / "phase02-roadmap.md").unlink()
+    # Checked out on another branch.
+    _g(project, "checkout", "-q", "-b", "feature/phase01-step1-x")
+    assert up.plan_refresh(entry).reason == "on branch feature/phase01-step1-x, not main"
+
+
+def test_plan_refresh_edits_git_excluded_roadmaps_in_place(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = _project(tmp_path, {".gitignore": "private/\n", "README.md": "hi\n"})
+    (project / "private").mkdir()
+    (project / "private" / "ROADMAP.md").write_text("# private\n")
+    monkeypatch.setattr(up, "_open_pr_heads", lambda _p: pytest.fail("no PR lookup in place"))
+    plan = up.plan_refresh(up.Entry(project))
+    assert plan.mode == "in-place"
+    # Without roadmaps anywhere there is nothing to do.
+    other = tmp_path / "other"
+    other.mkdir()
+    bare = _project(other, {"README.md": "hi\n"})
+    assert up.plan_refresh(up.Entry(bare)).reason == "no tracked roadmaps"
+    assert up.plan_refresh(up.Entry(tmp_path)).reason == "not a git checkout"
+
+
+def test_refresh_prompt_is_unattended_and_carries_the_procedure(up: ModuleType) -> None:
+    body = (COMMANDS_DIR / "roadmap-refresh.md").read_text()
+    entry = up.Entry(Path("/p/demo"))
+    clone = up.refresh_prompt(body, up.RefreshPlan(entry, "clone", default="main"), Path("/c"))
+    assert clone.startswith("UNATTENDED RUN.")
+    assert "Ask nothing; nobody will answer" in clone
+    assert "handed the call back" in clone
+    assert "Never commit planning/user-context.md" in clone
+    assert "Never run `--post`" in clone
+    assert "Leave every pull request you did not open alone" in clone
+    assert "do not look for a way around it" in clone
+    assert "REFRESH-RESULT: merged <PR URL>" in clone
+    assert "fresh clone of the project (/c)" in clone and "`main` checked out" in clone
+    # The procedure follows, without its frontmatter or the $ARGUMENTS token.
+    assert "## 1. Locate, and move into `docs/roadmap/`" in clone
+    assert "description:" not in clone and "$ARGUMENTS" not in clone
+    in_place = up.refresh_prompt(
+        body, up.RefreshPlan(entry, "in-place"), Path("/p/demo"), Path("/k/planning")
+    )
+    assert "operator's own checkout (/p/demo)" in in_place
+    assert "No branch, no commit, no PR" in in_place
+    assert "exported to /k/planning" in in_place
+
+
+def test_claude_runs_headless_in_auto_mode_with_the_prompt_on_stdin(up: ModuleType) -> None:
+    argv = up.claude_refresh_argv("claude")
+    assert argv[:2] == ["claude", "-p"]
+    assert argv[argv.index("--permission-mode") + 1] == "auto"
+    assert argv[argv.index("--output-format") + 1] == "json"
+    assert "--dangerously-skip-permissions" not in argv
+    assert not any("UNATTENDED" in a for a in argv)  # the prompt travels on stdin
+
+
+@pytest.mark.parametrize(
+    ("result", "status", "detail"),
+    [
+        ("done\nREFRESH-RESULT: merged https://x/pull/5", "ok", "merged https://x/pull/5"),
+        ("REFRESH-RESULT: no changes", "ok", "no changes"),
+        ("REFRESH-RESULT: in place", "ok", "in place"),
+        (
+            "REFRESH-RESULT: open https://x/pull/6 — CI red",
+            "attention",
+            "open https://x/pull/6 — CI red",
+        ),
+        ("REFRESH-RESULT: stopped — refused", "attention", "stopped — refused"),
+        ("all good, trust me", "attention", "no REFRESH-RESULT line; read the log"),
+    ],
+)
+def test_parse_refresh_output(up: ModuleType, result: str, status: str, detail: str) -> None:
+    import json
+
+    out = json.dumps({"type": "result", "is_error": False, "result": result, "total_cost_usd": 2.5})
+    assert up.parse_refresh_output(out) == (status, detail, 2.5)
+
+
+def test_parse_refresh_output_failures(up: ModuleType) -> None:
+    import json
+
+    err = json.dumps({"is_error": True, "result": "Error: usage limit reached"})
+    assert up.parse_refresh_output(err) == ("FAILED", "Error: usage limit reached", None)
+    status, detail, _ = up.parse_refresh_output("not json")
+    assert status == "FAILED" and detail.startswith("no JSON from claude")
+
+
+def _fake_claude(tmp_path: Path, verdict: str) -> Path:
+    script = tmp_path / "fake-claude"
+    script.write_text(
+        f"#!{sys.executable}\n"
+        "import json, os, sys\n"
+        "prompt = sys.stdin.read()\n"
+        "assert prompt.startswith('UNATTENDED RUN.'), prompt[:80]\n"
+        "assert sys.argv[1:3] == ['-p', '--permission-mode'], sys.argv\n"
+        "open('cwd.txt', 'w').write(os.getcwd())\n"
+        "print(json.dumps({'is_error': False, 'total_cost_usd': 1.25,\n"
+        f"                  'result': 'worked\\nREFRESH-RESULT: {verdict}'}}))\n"
+    )
+    script.chmod(0o755)
+    return script
+
+
+@pytest.mark.skipif(os.name == "nt", reason="the fake claude is a POSIX script")
+def test_run_refresh_clones_runs_claude_and_cleans_up(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = _project(tmp_path, _ROADMAPS)
+    monkeypatch.setattr(up, "_open_pr_heads", lambda _p: {})
+    monkeypatch.setattr(up, "_export_kit", lambda _e, _t: "kit exported")
+    plan = up.plan_refresh(up.Entry(project))
+    body = (COMMANDS_DIR / "roadmap-refresh.md").read_text()
+
+    ok = up.run_refresh(plan, str(_fake_claude(tmp_path, "no changes")), body, "20260929-0900")
+    assert (ok.status, ok.detail, ok.cost) == ("ok", "no changes", 1.25)
+    workdir = up.REFRESH_CACHE / "project-20260929-0900"
+    assert not workdir.exists()  # a finished clone is removed
+    assert ok.log is not None and "REFRESH-RESULT: no changes" in ok.log.read_text()
+    assert (project / "cwd.txt").exists() is False  # the session never ran in the checkout
+
+    stuck = up.run_refresh(
+        plan, str(_fake_claude(tmp_path, "stopped — refused")), body, "20260929-0910"
+    )
+    assert stuck.status == "attention"
+    kept = up.REFRESH_CACHE / "project-20260929-0910"
+    assert (kept / "cwd.txt").read_text() == str(kept)  # it ran in the clone, kept for a look
+    assert (kept / "docs" / "roadmap" / "phase01-roadmap.md").exists()
+
+
+def test_rules_fingerprint_follows_commands_and_kit(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    claude = tmp_path / "claude"
+    (claude / "commands").mkdir(parents=True)
+    kit = tmp_path / "kit"
+    kit.mkdir()
+    for name in up.RULE_KIT_FILES:
+        (kit / name).write_text(f"{name}\n")
+    (claude / "commands" / "roadmap-refresh.md").write_text("refresh v1\n")
+    monkeypatch.setattr(up, "CLAUDE_DIR", claude)
+    monkeypatch.setattr(up, "_rule_kit_dir", lambda: kit)
+    first = up.rules_fingerprint()
+    (claude / "commands" / "roadmap-refresh.md").write_text("refresh v1\r\n")
+    assert up.rules_fingerprint() == first  # line endings are not a rule change
+    (claude / "commands" / "roadmap-refresh.md").write_text("refresh v2\n")
+    second = up.rules_fingerprint()
+    assert second != first
+    (kit / "phase-roadmap-template.md").write_text("new layout\n")
+    assert up.rules_fingerprint() != second
+    # The updater finds its own templates, packaged or in this checkout.
+    monkeypatch.undo()
+    assert up._rule_kit_dir() == ROOT / "docs" / "templates"
+
+
+def test_refresh_runs_automatically_only_when_the_rules_change(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    a, b = up.Entry(tmp_path / "a"), up.Entry(tmp_path / "b")
+    fingerprint = {"value": "rules-1"}
+    ran: list[str] = []
+    monkeypatch.setattr(up, "rules_fingerprint", lambda: fingerprint["value"])
+    monkeypatch.setattr(up, "claude_executable", lambda: "claude")
+    monkeypatch.setattr(up, "_refresh_command_body", lambda: "---\ndescription: d\n---\nbody")
+    monkeypatch.setattr(up, "plan_refresh", lambda e: up.RefreshPlan(e, "clone", default="main"))
+
+    def fake_run(plan, claude, body, stamp):
+        ran.append(plan.entry.name)
+        status = "ok" if plan.entry.name == "a" else "skipped"
+        return up.RefreshResult(plan.entry, status, "merged https://x/pull/1")
+
+    monkeypatch.setattr(up, "run_refresh", fake_run)
+
+    # First sight: recorded as current, nothing runs.
+    lines, attention = up.refresh_roadmaps(
+        [a, b], on_demand=False, unattended=True, jobs=2, dry_run=False
+    )
+    assert ran == [] and not attention and "nothing to refresh" in lines[0]
+    state = up.load_refresh_state()
+    assert state["auto"] is True and set(state["projects"]) == {str(a.path), str(b.path)}
+
+    # Same rules: nothing runs.
+    up.refresh_roadmaps([a, b], on_demand=False, unattended=True, jobs=2, dry_run=False)
+    assert ran == []
+
+    # New rules, but a manual run: reported, not run.
+    fingerprint["value"] = "rules-2"
+    lines, _ = up.refresh_roadmaps([a, b], on_demand=False, unattended=False, jobs=2, dry_run=False)
+    assert ran == [] and "due for a refresh: a, b" in lines[0] and "--refresh-roadmaps" in lines[1]
+
+    # The daily run refreshes both; only the one that finished is recorded.
+    up.refresh_roadmaps([a, b], on_demand=False, unattended=True, jobs=2, dry_run=False)
+    assert sorted(ran) == ["a", "b"]
+    state = up.load_refresh_state()
+    assert state["projects"][str(a.path)]["fingerprint"] == "rules-2"
+    assert state["projects"][str(b.path)]["fingerprint"] == "rules-1"  # retried next run
+
+    # Next day: only the skipped one is still due.
+    ran.clear()
+    up.refresh_roadmaps([a, b], on_demand=False, unattended=True, jobs=2, dry_run=False)
+    assert ran == ["b"]
+
+    # Switched off: reported, never run.
+    ran.clear()
+    state = up.load_refresh_state()
+    state["auto"] = False
+    up.save_refresh_state(state)
+    lines, _ = up.refresh_roadmaps([a, b], on_demand=False, unattended=True, jobs=2, dry_run=False)
+    assert ran == [] and "automatic refresh is off" in lines[1]
+
+    # On demand runs every project regardless.
+    up.refresh_roadmaps([a, b], on_demand=True, unattended=False, jobs=2, dry_run=False)
+    assert sorted(ran) == ["a", "b"]
+
+
+def test_refresh_dry_run_plans_and_writes_nothing(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    a = up.Entry(tmp_path / "a")
+    monkeypatch.setattr(up, "rules_fingerprint", lambda: "rules-1")
+    monkeypatch.setattr(
+        up, "plan_refresh", lambda e: up.RefreshPlan(e, "skip", "on branch x, not main")
+    )
+    monkeypatch.setattr(up, "run_refresh", lambda *a, **k: pytest.fail("a dry run ran a refresh"))
+    lines, _ = up.refresh_roadmaps([a], on_demand=True, unattended=False, jobs=1, dry_run=True)
+    assert lines == ["a: skip — on branch x, not main"]
+    assert not up.REFRESH_STATE.exists()
+
+
+def test_refresh_flags_are_on_the_cli(up: ModuleType) -> None:
+    args = up._parser().parse_args(
+        ["--refresh-roadmaps", "--auto-refresh", "off", "--refresh-jobs", "2"]
+    )
+    assert (args.refresh_roadmaps, args.auto_refresh, args.refresh_jobs) == (True, "off", 2)
+    assert up._parser().parse_args([]).refresh_jobs == 3
+
+
+def test_upgrade_command_documents_the_fleet_refresh() -> None:
+    flat = " ".join(COMMAND.read_text().split())
+    assert "[--refresh-roadmaps]" in flat
+    assert "`--refresh-roadmaps` runs `/roadmap-refresh` in every registered project" in flat
+    assert "in a fresh clone of the project, so the operator's checkout is never touched" in flat
+    assert "`auto` permission mode" in flat
+    assert "A project where work may be in flight is skipped and named" in flat
+    assert "when the roadmap rules change" in flat and "`--auto-refresh off`" in flat

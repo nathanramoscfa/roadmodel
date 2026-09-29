@@ -1,5 +1,5 @@
 ---
-description: Upgrade roadmodel in every registered project at once — each project's own env, its planning/ kit, and these commands (usage: /roadmodel-upgrade [project dirs to register…] [--install-schedule HH:MM])
+description: Upgrade roadmodel in every registered project at once — each project's own env, its planning/ kit, and these commands (usage: /roadmodel-upgrade [project dirs to register…] [--refresh-roadmaps] [--install-schedule HH:MM])
 ---
 Upgrade roadmodel everywhere on this machine in one run: every registered
 project's own conda env or venv, each project's `planning/` kit, and the
@@ -75,7 +75,32 @@ venv and runs the updater from that release, so nothing needs
 re-fetching. On Windows a start missed while the PC was off runs once it
 is back. `--uninstall-schedule` removes it.
 
-## 5. Report
+## 5. Refresh every project's roadmaps
+
+`--refresh-roadmaps` runs `/roadmap-refresh` in every registered project
+after the upgrade, several at once (`--refresh-jobs N`, default 3). Each
+runs as Claude Code headless (`claude -p`) in a fresh clone of the
+project, so the operator's checkout is never touched. The session is told
+it is unattended: it asks nothing and settles unverified steps from cited
+evidence. It runs static checks only, leaves other PRs alone, and runs in
+Claude Code's `auto` permission mode, which refuses actions it judges
+destructive. It takes its PR through CI to a merge. A project whose
+roadmaps are git-excluded (`private/`) is refreshed in place.
+
+A project where work may be in flight is skipped and named: checked out
+on another branch, uncommitted edits outside `planning/`, a roadmap
+written but not committed, or an open PR from a branch its roadmaps name.
+
+The daily run does the same by itself when the roadmap rules change: the
+`/roadmap-refresh` or `/roadmap-step` command, or the kit's roadmap
+templates and prompts. A release that only updates the catalog changes
+nothing here, because `/roadmap-step` re-checks a step's Settings when
+it runs. A project skipped that day is tried again the next day.
+`--auto-refresh off` turns the automatic run off on this machine, and
+`--auto-refresh on` turns it back on. Logs go to
+`~/.config/roadmodel/refresh-logs/`.
+
+## 6. Report
 
 Show the result table verbatim. If the first line reads `*** self-update
 FAILED`, show it with its reason: the run still happened, but on the
@@ -85,6 +110,10 @@ local copy of the updater. For any project marked FAILED:
   it to the registry for them once they name the env.
 - a pip error → show the last lines and the fix (usually network, or a
   Python too old for the current roadmodel — ≥ 3.11).
+
+If a "Roadmap refresh:" section is printed, show its table: a merged PR
+link per project, `skipped` with the reason, or a project that needs a
+look, with the log path.
 
 If any command file reports `updated` or `installed`, say that the editor
 window needs a reload (`Developer: Reload Window`) before the new command
