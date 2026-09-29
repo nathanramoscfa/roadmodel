@@ -597,3 +597,47 @@ def test_template_says_how_to_reach_ultracode_after_2_1_284() -> None:
     assert "`/effort xhigh` then `/effort ultracode`" in flat
     prompt = " ".join((REPO_ROOT / "update" / "prompt-claude-code.md").read_text().split())
     assert "Never write that `/effort ultracode` alone sets `xhigh`" in prompt
+
+
+LIVE_MD_0929 = REPO_ROOT / "tests" / "fixtures" / "model-config-sample-2026-09-29.md"
+
+
+def test_extractor_reads_the_2026_09_29_docs() -> None:
+    """The Claude Code docs as of 2.1.284-2.1.285. Two misses on this page
+    reached the selector on 2026-09-29: ultracode's reworded xhigh link failed
+    the tracker, and the plural carve-out "Opus 5.5 and Sonnet 5.5 default to
+    `medium`" went unread, so the next run struck Opus 5.5's true default."""
+    mod = _load_extractor()
+    snap = mod.build_snapshot(LIVE_MD_0929.read_text(), source_url="file://live")
+    assert snap["default_effort"] == {
+        "*": "high",
+        "Opus 5.5": "medium",
+        "Sonnet 5.5": "medium",
+        "Opus 4.7": "xhigh",
+    }
+    assert snap["per_model_effort"]["Sonnet 5.5"] == ["low", "medium", "high", "xhigh", "max"]
+    assert snap["ultracode"]["sends_effort"] == "xhigh"
+    assert snap["ultracode"]["keeps_session_effort"] is True
+    assert snap["unexpected_models"] == []
+
+
+def test_check_g_refuses_striking_a_documented_default() -> None:
+    """The committed selector states every per-model default; the edit the
+    2026-09-29 tracker run made (dropping Opus 5.5 and Sonnet 5.5 from the
+    default-effort sentence) fails check G."""
+    gate = _load_conformance()
+    snapshot = json.loads(REAL_SNAPSHOT.read_text())
+    assert gate.check_default_effort(REAL_SELECTOR.read_text(), snapshot) == []
+    kept = (
+        "<thinking-context>\nDefault effort is `high` on every model that supports\n"
+        "effort, except Opus 4.7 (`xhigh`) and Opus 5.5 and Sonnet 5.5 (`medium`).\n"
+        "</thinking-context>\n"
+    )
+    assert gate.check_default_effort(kept, snapshot) == []
+    struck = kept.replace(" and Opus 5.5 and Sonnet 5.5 (`medium`)", "")
+    failures = gate.check_default_effort(struck, snapshot)
+    assert len(failures) == 2, failures
+    assert any("'Opus 5.5' defaults to 'medium'" in f for f in failures)
+    assert any("'Sonnet 5.5' defaults to 'medium'" in f for f in failures)
+    # A blanket-only map has nothing to hold the prose to.
+    assert gate.check_default_effort(struck, {"default_effort": {"*": "high"}}) == []

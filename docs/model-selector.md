@@ -381,7 +381,9 @@ differently:
   Sonnet 4.6 top out at `max` without an `xhigh` step. An effort
   level a model does not support falls back to the highest
   supported level at or below it. Default effort is `high` on every
-  model that supports effort, except Opus 4.7 (`xhigh`). Extended thinking can also be toggled with Option+T /
+  model that supports effort, except Opus 4.7 (`xhigh`) and Opus 5.5
+  and Sonnet 5.5 (`medium`). Extended thinking can also be toggled
+  with Option+T /
   Alt+T, `alwaysThinkingEnabled`, or `MAX_THINKING_TOKENS=0`. Claude
   Code 2.1.257 ships Claude Fable 5.1 as the new default Fable model
   (1M context, $10/$50 per Mtok with $0.25/Mtok cache reads);
@@ -436,9 +438,10 @@ differently:
   adds Claude Opus 5.5 (`claude-opus-5-5`) as the new default
   Opus model (1M context, $4/$20 per Mtok with $0.20/Mtok cache
   reads); Opus 5.5 exposes the full low/medium/high/xhigh/max
-  effort range (2.1.280 launched it at a `medium` default; the
-  current model-config docs list only Opus 4.7 as an exception to
-  the `high` default). 2.1.280 also stops carrying a saved pre-per-model
+  effort range with default effort `medium` (below the `high`
+  default of every other effort-capable model, Opus 4.7's `xhigh`
+  and Sonnet 5.5's `medium` aside). 2.1.280 also stops carrying a
+  saved pre-per-model
   `/effort` onto newly released models (they start at the
   documented default until you pick a level) and stops Opus 4.7,
   Opus 4.8 and Fable 5 from holding their launch-default effort
