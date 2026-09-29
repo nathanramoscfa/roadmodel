@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.48] — 2026-09-29
+
 ### Added
 
 - **`/roadmodel-upgrade --refresh-roadmaps` refreshes every project's
