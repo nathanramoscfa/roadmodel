@@ -1,10 +1,10 @@
 // web/components/chart-kit.tsx
 //
-// What the /models charts share (the per-tier Score charts and the frontier
-// chart): the chart's real width, label widths in the page's own font, greedy
-// label placement that never covers another label or dot, round price ticks
-// for a log axis, the legend swatch, the frontier colour, and the note a
-// panel shows while the page's filters narrow it.
+// What the /models charts share (the Score charts, one per quality band or
+// cost tier, and the frontier chart): the chart's real width, label widths in
+// the page's own font, greedy label placement that never covers another label
+// or dot, round price ticks for a log axis, the legend swatch, the frontier
+// colour, and the note a panel shows while the page's filters narrow it.
 "use client";
 
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
