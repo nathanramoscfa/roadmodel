@@ -91,7 +91,8 @@
   },
   "unexpected_slugs": [
     "Claude Mythos 5",
-    "Claude Mythos 5.1"
+    "Claude Mythos 5.1",
+    "Claude Sonnet 5.5"
   ],
   "discovered": [
     {
@@ -103,6 +104,11 @@
       "slug": "Claude Mythos 5",
       "input_price_per_1m": 10.0,
       "output_price_per_1m": 50.0
+    },
+    {
+      "slug": "Claude Sonnet 5.5",
+      "input_price_per_1m": 2.0,
+      "output_price_per_1m": 10.0
     }
   ],
   "missing_mapped_models": [],

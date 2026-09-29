@@ -445,18 +445,70 @@ def snapshot_model_ids(snap: dict[str, Any]) -> list[str]:
     return ids
 
 
+def _letters_digits(text: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", text.lower())
+
+
+# Lenient on purpose: the sync must keep working on a selector the strict
+# catalog parser would refuse (it raises on any element it cannot span).
+_MODEL_ID_NAME_RE = re.compile(r'<model\s+id="([^"]+)"\s+name="([^"]*)"')
+
+
+def resolve_listed_ids(
+    ids: list[str], models: dict[str, dict[str, Any]], slug_to_id: dict[str, str]
+) -> list[str]:
+    """Map what a price list names to catalogued model ids.
+
+    A discovery is keyed by the provider's display name ("Claude Sonnet 5.5"),
+    not a catalog id ("claude-sonnet-5-5"), so it never matched and a new model
+    on the provider's own list reached no method (Sonnet 5.5, 2026-09-29). An
+    id passes through; a display name goes through the snapshot's
+    ``slug_to_id``, then matches a catalogued id or name on letters and digits
+    alone, then — with its brand word dropped — a name whose id starts with
+    that brand. Anything unmatched passes through and ``ensure_supported``
+    ignores it, as before."""
+    by_key: dict[str, str] = {}
+    by_name: dict[str, str] = {}
+    for mid, model in models.items():
+        by_key.setdefault(_letters_digits(mid), mid)
+        name = str(model.get("name") or "")
+        if name:
+            by_key.setdefault(_letters_digits(name), mid)
+            by_name.setdefault(_letters_digits(name), mid)
+    out: list[str] = []
+    for ident in ids:
+        if ident in models:
+            out.append(ident)
+            continue
+        if slug_to_id.get(ident):
+            out.append(slug_to_id[ident])
+            continue
+        hit = by_key.get(_letters_digits(ident))
+        brand, _, rest = ident.partition(" ")
+        if hit is None and rest:
+            named = by_name.get(_letters_digits(rest))
+            if named and _letters_digits(named).startswith(_letters_digits(brand)):
+                hit = named
+        out.append(hit or ident)
+    return out
+
+
 def apply_method_sync(
     selector_text: str, snapshots: list[dict[str, Any]]
 ) -> tuple[str, dict[str, list[str]]]:
     """A catalogued model on provider P's own price list is reachable on P's API:
     make ``<P>-api`` list it."""
     added_by_method: dict[str, list[str]] = {}
+    models = {mid: {"name": name} for mid, name in _MODEL_ID_NAME_RE.findall(selector_text)}
     for snap in snapshots:
         provider = snap.get("provider")
         if not provider:
             continue
         method_id = f"{provider}-api"
-        selector_text, added = ensure_supported(selector_text, method_id, snapshot_model_ids(snap))
+        raw_map = snap.get("slug_to_id")
+        slug_to_id: dict[str, str] = raw_map if isinstance(raw_map, dict) else {}
+        listed = resolve_listed_ids(snapshot_model_ids(snap), models, slug_to_id)
+        selector_text, added = ensure_supported(selector_text, method_id, listed)
         if added:
             added_by_method[method_id] = added
     return selector_text, added_by_method

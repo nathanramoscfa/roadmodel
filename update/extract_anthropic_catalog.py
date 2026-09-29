@@ -57,6 +57,9 @@ NAME_TO_ID = {
     # price provider-verified (G4) instead of trusted from the aggregator, and
     # what stops the extractor flagging a model the catalog now carries.
     "Claude Opus 5.5": "claude-opus-5-5",
+    # Added 2026-09-29 with its catalog entry: the Sonnet 5 successor ($2/$10),
+    # listed on Anthropic's own page and in Claude Code's effort table.
+    "Claude Sonnet 5.5": "claude-sonnet-5-5",
     "Claude Opus 5": "claude-opus-5",
     "Claude Sonnet 5": "claude-sonnet-5",
     "Claude Fable 5": "claude-fable-5",
