@@ -76,3 +76,32 @@ def test_extract_codex_models_can_print_every_recommended_slug(tmp_path: Path) -
         check=True,
     ).stdout.split()
     assert "gpt-6-sol" in out
+
+
+def test_a_discovery_keyed_by_display_name_reaches_the_provider_api() -> None:
+    """2026-09-29: Anthropic's price list carried Sonnet 5.5 as a discovery
+    keyed "Claude Sonnet 5.5". The sync compared that to catalog ids, matched
+    nothing, and the model reached no method, so its maker resolved to None and
+    the catalog refresh PR (#773) went red."""
+    sel = """<model-options>
+  <model id="claude-sonnet-5-5" name="Sonnet 5.5"/>
+  <model id="claude-opus-5-5" name="Opus 5.5"/>
+  <model id="claude-4.5-haiku" name="Haiku 4.5"/>
+  <model id="sol-7" name="Sol 7"/>
+</model-options>
+<method id="anthropic-api" name="Anthropic API" supports-models="claude-opus-5-5"/>
+"""
+    snap = {
+        "provider": "anthropic",
+        "models": [{"id": "claude-opus-5-5"}],
+        "slug_to_id": {"Claude Haiku 4.5": "claude-4.5-haiku"},
+        "discovered": [
+            {"slug": "Claude Sonnet 5.5"},  # display name → id on letters and digits
+            {"slug": "Claude Haiku 4.5"},  # word order differs → the snapshot's own map
+            {"slug": "Claude Mythos 5"},  # not catalogued → never added
+            {"slug": "Claude Sol 7"},  # brand dropped, but sol-7 is not a claude-* id
+        ],
+    }
+    out, added = mc.apply_method_sync(sel, [snap])
+    assert added == {"anthropic-api": ["claude-sonnet-5-5", "claude-4.5-haiku"]}
+    assert 'supports-models="claude-sonnet-5-5,claude-4.5-haiku,claude-opus-5-5"' in out

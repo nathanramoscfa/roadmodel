@@ -754,7 +754,7 @@ Tier ratings:
 
 - **Pricing:** Input $5.00/M · Output $25.00/M
 - **Tier ratings:** Coding **A** · Planning **S** · Agentic **A** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **D**
-- **Headline benchmarks:** AA Intelligence Index 40.7 (max); LMArena Text #12 (Elo 1483.4); LMArena WebDev #29 (Elo 1557.2); AA-Omniscience 26.2 (#2)
+- **Headline benchmarks:** AA Intelligence Index 40.7 (max); LMArena Text #14 (Elo 1483.9); LMArena WebDev #31 (Elo 1556.1); AA-Omniscience 26.2 (#2)
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
 - **Best for:** Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching
 
@@ -794,7 +794,7 @@ Tier ratings:
 
 - **Pricing:** Input $5.00/M · Output $30.00/M
 - **Tier ratings:** Coding **A** · Planning **S** · Agentic **A** · Multimodal **A** · Long-context **S** · Knowledge **A** · Speed **D**
-- **Headline benchmarks:** AA Intelligence Index 38.4 (xhigh); LMArena Text Elo 1465.6 (#31); HLE 45.8%; AA-Omniscience 20.1 (#3)
+- **Headline benchmarks:** AA Intelligence Index 38.4 (xhigh); LMArena Text Elo 1466.7 (#32); HLE 45.8%; AA-Omniscience 20.1 (#3)
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; More token-efficient than GPT-5.4 on comparable tasks; Improved persistence on long-running tasks; Fast mode is available at higher rates; Long context supports up to 1M tokens with 2x input pricing
 - **Best for:** OpenAI's most capable frontier model and highest-cost GPT offering, best suited for the most demanding reasoning, long-horizon planning, and tasks where maximum intelligence is required regardless of cost — strongest single model for hard coding, agentic execution, and reasoning, but verify factual claims due to elevated hallucination
 
@@ -802,7 +802,7 @@ Tier ratings:
 
 - **Pricing:** Input $10.00/M · Output $50.00/M
 - **Tier ratings:** Coding **S** · Planning **B** · Agentic **S** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **B**
-- **Headline benchmarks:** LMArena WebDev #2 (Elo 1792.2); LMArena Text coding Elo 1488.6 (#31); LMArena Text Elo 1443.7 (#59)
+- **Headline benchmarks:** LMArena WebDev #2 (Elo 1791.7); LMArena Text coding Elo 1488.1 (#36); LMArena Text Elo 1443.7 (#59)
 - **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
 - **Best for:** Auto-added very-high-cost OpenAI model; pending editorial best-for refinement.
 
@@ -828,7 +828,7 @@ Tier ratings:
 
 - **Pricing:** Input $3.00/M · Output $15.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **B** · Multimodal **A** · Long-context **A** · Knowledge **B** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 30.1; LMArena Text Elo 1458.3 (#35); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage
+- **Headline benchmarks:** AA Intelligence Index 30.1; LMArena Text Elo 1457.9 (#39); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
 - **Best for:** Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation
 
@@ -836,7 +836,7 @@ Tier ratings:
 
 - **Pricing:** Input $2.50/M · Output $15.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 39.0 (xhigh); LMArena Text Elo 1452.6 (#41); HLE 43.7% (xhigh); τ²-bench banking pass_1 39.6%
+- **Headline benchmarks:** AA Intelligence Index 39.0 (xhigh); LMArena Text Elo 1452.3 (#45); HLE 43.7% (xhigh); τ²-bench banking pass_1 39.6%
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context supports up to 1M tokens with 2x input pricing
 - **Best for:** Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding
 
@@ -855,8 +855,16 @@ Tier ratings:
 - **Pricing:** Input $2.00/M · Output $10.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **A** · Long-context **A** · Knowledge **B** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 38.2 (adaptive max); Terminal-Bench 2.1 80.5; τ²-bench banking pass_1 37.3%; native 1M context
-- **Pricing notes:** Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens
+- **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens
 - **Best for:** Anthropic's Sonnet 4.6 successor at the same high-tier pricing — placeholder tier ratings inherited from sonnet-4.6 pending editorial refresh; native 1M context, updated tokenizer, and a launch promotion pricing ($2/$10) through Aug 31, 2026 that makes it a strong value pick for near-frontier coding and agentic work at the mid-cost tier when the Anthropic lineage is preferred.
+
+#### Sonnet 5.5 — `claude-sonnet-5-5`
+
+- **Pricing:** Input $2.00/M · Output $10.00/M
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **A** · Long-context **A** · Knowledge **B** · Speed **A**
+- **Headline benchmarks:** AA Intelligence Index 56.0 (max); HLE 55.0% (max); SciCode 61.0 (max); AA-LCR 0.827
+- **Pricing notes:** Requires Max Mode on legacy request-based plans; Same per-token rates as Claude Sonnet 5; US-only endpoints are priced 10% higher ($2.20/M input, $11/M output); Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
+- **Best for:** Anthropic's Sonnet 5 successor at the same medium-tier pricing ($2/$10; US-only endpoints 10% higher) — placeholder tier ratings inherited from claude-sonnet-5 pending editorial review, with Artificial Analysis evidence of AA Intelligence Index 56.0 (max), HLE 55.0% (max), AA-LCR 0.827, and ~145 tokens/s median output (tier-speed set to A on that throughput); up to 1M tokens of extended context at flat per-token rates.
 
 #### GPT-5.3 Codex — `gpt-5.3-codex`
 
@@ -886,7 +894,7 @@ Tier ratings:
 
 - **Pricing:** Input $2.00/M · Output $12.00/M
 - **Tier ratings:** Coding **S** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **A**
-- **Headline benchmarks:** AA Intelligence Index 42.1 (max); HLE 42.9%; Terminal-Bench 2.1 88.0; Output Speed 86.2 tokens/s
+- **Headline benchmarks:** AA Intelligence Index 42.1 (max); HLE 42.9%; Terminal-Bench 2.1 88.0; Output Speed 107.0 tokens/s
 - **Pricing notes:** Requires Max Mode on legacy request-based plans; Mid-tier GPT-5.6 variant between Sol and Luna; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate
 - **Best for:** OpenAI's mid-tier GPT-5.6 variant between Sol (flagship) and Luna (mini) at medium-tier pricing ($2/$12) — Artificial Analysis Intelligence Index 42.1 (max) matches near-frontier reasoning while output speed (~105 tokens/s) is faster than most peers; pick for balanced near-frontier reasoning, agentic execution, and speed when Sol's high tier isn't justified but stronger throughput than GPT-5.4 is desired.
 
@@ -894,7 +902,7 @@ Tier ratings:
 
 - **Pricing:** Input $2.00/M · Output $12.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **S** · Long-context **A** · Knowledge **A** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 29.7 (#3); AA-Omniscience 32.9 (#1); HLE 47.0% (#1); LMArena Text Elo 1480.1 (#16); 1M-token context
+- **Headline benchmarks:** AA Intelligence Index 29.7 (#3); AA-Omniscience 32.9 (#1); HLE 47.0% (#1); LMArena Text Elo 1479.9 (#16); 1M-token context
 - **Pricing notes:** -
 - **Best for:** True native multimodal understanding (text, image, video, audio, and code in a single pass), 1M-token context optimized for heterogeneous inputs, strong agentic multi-step tool use, and synthesizing insights across large mixed-media datasets or sprawling document corpora — the obvious choice whenever multimodal or long-context is the primary category
 
@@ -902,7 +910,7 @@ Tier ratings:
 
 - **Pricing:** Input $2.00/M · Output $12.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **S** · Long-context **A** · Knowledge **B** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 28.0 (high); LMArena Text Elo 1479.5; 1M-token context; native multimodal across text/image/video/audio/code
+- **Headline benchmarks:** AA Intelligence Index 28.0 (high); LMArena Text Elo 1479.4; 1M-token context; native multimodal across text/image/video/audio/code
 - **Pricing notes:** Hidden by default
 - **Best for:** Gemini 3 family Pro model at the same medium-tier pricing as gemini-3.1-pro — pick gemini-3.1-pro over gemini-3-pro when both are available since 3.1 carries the updated benchmarks and is the canonical visible Gemini Pro; gemini-3-pro fits when reproducing earlier Gemini-3-generation outputs or when the 3.1 refresh's behavioral changes are undesirable for a specific workload
 
@@ -934,7 +942,7 @@ Tier ratings:
 
 - **Pricing:** Input $2.00/M · Output $10.00/M
 - **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **B** · Long-context **S** · Knowledge **A** · Speed **B**
-- **Headline benchmarks:** LMArena WebDev #5 (Elo 1685.9)
+- **Headline benchmarks:** LMArena WebDev #5 (Elo 1681.0)
 - **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
 - **Best for:** Auto-added medium-cost OpenAI model; pending editorial best-for refinement.
 
@@ -976,7 +984,7 @@ Tier ratings:
 
 - **Pricing:** Input $0.75/M · Output $3.50/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **S**
-- **Headline benchmarks:** AA Intelligence Index 40.9 (high); HLE 47.8% (high); Terminal-Bench 2.1 87.6; Output Speed 277.5 tokens/s
+- **Headline benchmarks:** AA Intelligence Index 40.9 (high); HLE 47.8% (high); Terminal-Bench 2.1 87.6; Output Speed 237.7 tokens/s
 - **Pricing notes:** -
 - **Best for:** Google's Gemini 3.8 Flash — the visible-by-default successor to 3.7 Flash at the same low-tier pricing ($0.75/$3.50), with placeholder tier ratings inherited from the Flash series and AA Intelligence Index 40.9 (high), Terminal-Bench 2.1 87.6, and exceptional output speed (~316 tokens/s). Pick over 3.7 Flash when both are available since 3.8 supersedes 3.7 in the same series at equal output price.
 
@@ -1000,7 +1008,7 @@ Tier ratings:
 
 - **Pricing:** Input $1.00/M · Output $5.00/M
 - **Tier ratings:** Coding **C** · Planning **B** · Agentic **C** · Multimodal **B** · Long-context **A** · Knowledge **D** · Speed **S**
-- **Headline benchmarks:** AA Intelligence Index 16.9 (reasoning); Output Speed 115.0 tokens/s; AA-Omniscience -4.2; latency leader among Claude family
+- **Headline benchmarks:** AA Intelligence Index 16.9 (reasoning); Output Speed 105.3 tokens/s; AA-Omniscience -4.2; latency leader among Claude family
 - **Pricing notes:** Hidden by default; Bedrock/Vertex: regional endpoints +10% surcharge; Cache: writes 1.25x, reads 0.1x
 - **Best for:** Speed-optimized lowest-cost Claude model, ideal for simple completions, high-volume repetitive tasks, and latency-sensitive workflows where a lightweight capable response matters more than deep reasoning
 
@@ -1080,7 +1088,7 @@ Tier ratings:
 
 - **Pricing:** Input $0.10/M · Output $0.50/M
 - **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **B** · Long-context **A** · Knowledge **B** · Speed **B**
-- **Headline benchmarks:** LMArena WebDev #24 (Elo 1593.2)
+- **Headline benchmarks:** LMArena WebDev #24 (Elo 1592.6)
 - **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
 - **Best for:** Auto-added cheap-tier OpenAI model; pending editorial best-for refinement.
 
@@ -1131,6 +1139,22 @@ Tier ratings:
 - **Headline benchmarks:** z.ai (Zhipu AI) GLM-5.2 flagship (~Jun 2026) — strong coding / agentic model in the GLM-5 line; text-only; cn-jurisdiction; specific public benchmark numbers pending independent refresh
 - **Pricing notes:** Provider-direct z.ai (Zhipu) API per-token pricing (not via the Cursor pool); cn-jurisdiction; cache-input $0.26/M
 - **Best for:** z.ai's flagship GLM-5.2 — a low-cost ($4.40/M output), cn-jurisdiction reasoning / coding model and the strongest GLM for multi-step coding and agentic work. Pick it when the cn jurisdiction is acceptable and a zai-api-key is configured and you want a frontier-adjacent coder at a fraction of US-frontier output price; text-only, so not for multimodal work (use the GLM-V vision line, not yet in the catalog). Reached via the `zai-api` method (provider-direct per-token, not the Cursor pool). Rated coding/planning/agentic-A on the GLM-5 line's positioning pending an independent benchmark refresh (the catalog cron's Opus lane owns the numbers).
+
+#### GLM-5.3 — `glm-5.3`
+
+- **Pricing:** Input $1.40/M · Output $4.40/M
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **D** · Long-context **A** · Knowledge **B** · Speed **B**
+- **Headline benchmarks:** LMArena Text Elo 1472.5 (#25); LMArena Text coding Elo 1498.5 (#23); LMArena WebDev Elo 1619.1 (#18)
+- **Pricing notes:** Hidden by default; Same per-token rates as GLM 5.2
+- **Best for:** z.ai's GLM-5.2 successor at the same low-tier pricing ($1.40/$4.40) — placeholder tier ratings inherited from glm-5.2, with LMArena results (Text Elo 1472.5, WebDev Elo 1619.1) roughly level with or slightly above glm-5.2; cn-jurisdiction, routed via Cursor's pool (Hidden by default).
+
+#### GLM-5.3-Flash — `glm-5.3-flash`
+
+- **Pricing:** Input $0.15/M · Output $0.50/M
+- **Tier ratings:** Coding **B** · Planning **A** · Agentic **B** · Multimodal **B** · Long-context **B** · Knowledge **B** · Speed **S**
+- **Headline benchmarks:** LMArena Text Elo 1470.9 (#27); LMArena Text coding Elo 1506.0 (#16); LMArena WebDev Elo 1613.2 (#21)
+- **Pricing notes:** Hidden by default
+- **Best for:** Auto-added cheap-tier z.ai model; pending editorial best-for refinement.
 
 #### GLM-4.6 — `glm-4.6`
 
@@ -1218,14 +1242,14 @@ Billing types:
 #### Anthropic API — `anthropic-api`
 
 - **Billing:** per-token (requires anthropic-api-key)
-- **Supports models:** claude-opus-5-5,claude-opus-5,opus-4.8,claude-fable-5.1,claude-fable-5,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku
+- **Supports models:** claude-sonnet-5-5,claude-opus-5-5,claude-opus-5,opus-4.8,claude-fable-5.1,claude-fable-5,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
 - **Best for:** Programmatic / scripted Claude use outside Claude Code — raw API headers, batch endpoints, or features not surfaced by Claude Code. Falls back here when claude.ai Max budget is exhausted.
 
 #### Claude Code — `claude-code`
 
 - **Billing:** subscription-or-key (requires claude-max-subscription OR anthropic-api-key)
-- **Supports models:** claude-opus-5-5,claude-opus-5,opus-4.8,claude-fable-5.1,claude-fable-5,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku
+- **Supports models:** claude-sonnet-5-5,claude-opus-5-5,claude-opus-5,opus-4.8,claude-fable-5.1,claude-fable-5,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — yes
 - **Best for:** Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context; as of 2.1.219 Claude Opus 5 ships as the new default Opus (1M context, fast mode at $10/$50 per Mtok) and Opus 4.7 is removed from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.280 ships Claude Opus 5.5 as the new default Opus (1M context, $4/$20 per Mtok with $0.20/Mtok cache reads) and changes the Pro and Team Standard default model from Sonnet to Opus (matching Max / Team Premium / Enterprise); 2.1.220–2.1.280 are bug-fix / reliability / self-hosted-runner / UI-polish / plugin-safety / VS Code / Claude apps / AGENTS.md / auto-mode-server-classifier releases with no effort/thinking surface changes beyond the 2.1.267 `maxEffortLevel` cap and the 2.1.269 `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) knob for the Workflow tool's per-run concurrent-agent limit noted below (2.1.224 adds `claude self-hosted-runner` for turning your own machines into places where Claude Code web/mobile/desktop sessions can run, cross-session `SendMessage`, and archive-plugin sources; 2.1.225 adds gateway spend-limit reporting to the usage warning; 2.1.227 polishes the slash-command menu and fixes feature-flag evaluation for expired login tokens; 2.1.257 ships Claude Fable 5.1 as the new default Fable at 1M context and $10/$50 per Mtok; 2.1.259 adds `managedMcpServers` policy and `--permission-prompts none` for unattended headless hosts; 2.1.260 adds an inline `/diff` panel and a headless text form of `/advisor`; 2.1.261 adds `/skill-doctor` and `bashOutputMaxChars` / `taskOutputMaxChars` settings; 2.1.263 is a reliability release; 2.1.265 adds a `--plugin-dir` folder-of-plugins mode and tightens plugin path containment; 2.1.266 restores gateway/proxy behavior when `CLAUDE_CODE_USE_GATEWAY` is set alongside an API key or `apiKeyHelper`; 2.1.267 adds a `maxEffortLevel` setting — top-level or per model under `modelSettings` — that CAPS the effort level on every provider including Bedrock, Vertex, and Foundry while still letting users pick any lower level, plus `--system-prompt-snapshot off` for iterating on prompt text and a fix for `effort:` frontmatter on custom commands, skills, and subagents being ignored on models whose default effort is still pinned; 2.1.269 adds `claude plugin eval` for scored plugin eval suites, `/output-style [name]` to list and switch output styles (including over Remote Control and in headless sessions), a Bash-tool file-edit diff (setting `bashEditDiffEnabled`), `OTEL_METRICS_INCLUDE_REPOSITORY` for tagging OpenTelemetry metrics and events with `vcs.*` attributes, `CLAUDE_CODE_GATEWAY_MODEL_DISCOVERY_TIMEOUT_MS` to extend the LLM gateway `/v1/models` discovery timeout, and `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise the Workflow tool's per-run concurrent-agent limit for inference-bound fan-outs — none of which change the `/effort` vocabulary; 2.1.270 fixes read-only git commands in Bash unexpectedly asking for permission after a session had been running for a while, a 2.1.269 regression, with no surface changes; 2.1.271 adds fast mode in Claude Code Remote (cloud and self-hosted runner) sessions where organization policy allows it, mouse support in the `/config` panel, per-command Bash / PowerShell / Monitor `allowed_domains` in auto mode with sandboxing, agent-frontmatter and `--agents` JSON `omitClaudeMd` to let custom / plugin subagents run without CLAUDE.md files (managed policy still loads), and `--accept-command <sha256>` for `claude plugin install` / `update`; 2.1.272 is a bug-fix / reliability release; 2.1.273 adds `x-claude-code-*` LLM-gateway request-hint headers behind `CLAUDE_CODE_GATEWAY_HINT_HEADERS=1`, forking a `--remote-control` / `/remote-control` session from the Claude app as a local background session, and MCP-server-disconnected notifications, plus fixes for permission handling, credential/auth error messages, prompt-cache retention across `/login` / `/upgrade` / `/extra-usage`, and gateway 401 messaging — no effort/thinking surface changes; 2.1.274 adds a critical-memory-usage warning with recovery steps, `CLAUDE_CODE_MCP_STARTUP_WAIT_MS` to bound how long the first non-interactive turn waits for connecting MCP servers, an `effort` attribute on the `claude_code.llm_request` OpenTelemetry trace span, plus assorted VS Code, Claude Code on the web, Claude Tag, and Code Review fixes and improvements — no changes to the `/effort` vocabulary or extended-thinking controls; 2.1.275 adds signed-in account confirmation for Claude apps gateway sign-in, a send-now key (ctrl+enter, or ctrl+x ctrl+s) that flushes queued messages mid-turn, syncing of claude.ai-account skills and plugins into terminal sessions (opt out with `syncClaudeAiSkills: false` / `syncClaudeAiPlugins: false`), `/plugin install <plugin> --marketplace <source>`, and a startup warning when `otelHeadersHelper` fails, plus a broad set of reliability and rendering fixes — no changes to the `/effort` vocabulary or extended-thinking controls; 2.1.276 is a hotfix for a 2.1.275 regression where every request behind a proxy or gateway failed with `400 … Input tag 'advisor_20260301'`, with no surface changes; 2.1.277 adds AGENTS.md fallback support (in a project with no CLAUDE.md, Claude Code reads AGENTS.md instead — configurable under "Project instructions" in `/config`; extended by 2.1.281 to Bedrock, Vertex, Foundry, LLM gateways and telemetry-disabled sessions), `CLAUDE_GATEWAY_PROXY_IS_EGRESS_BOUNDARY=1` for Claude apps gateways whose only egress is a forward proxy, an optional `headers:` map on Claude apps gateway upstreams, plus assorted reliability, plugin, background-task, and VS Code / Claude Code on the web / Claude Tag fixes — no changes to the `/effort` vocabulary or extended-thinking controls; 2.1.278 changes auto mode for Claude API and Enterprise users, and on Bedrock, Vertex, Foundry and gateways, to default to the server-side classifier that does not charge for classifier overhead (opt out on Bedrock, Vertex, Foundry and gateways with `CLAUDE_CODE_AUTO_MODE_SERVER=0`; warns on billed fallback) and adds an `Auto mode server` row to `/status` showing whether this session's auto mode classifier runs on the server — no changes to the `/effort` vocabulary or extended-thinking controls; 2.1.280 ships Claude Opus 5.5 as the new default Opus model at 1M context and $4/$20 per Mtok, changes the Pro and Team Standard default model from Sonnet to Opus (matching Max / Team Premium / Enterprise), and stops Opus 4.7, Opus 4.8 and Fable 5 from holding their launch-default effort over an explicit `/effort`, `effortLevel`, project or managed setting — the `/effort` vocabulary itself is unchanged; 2.1.281–2.1.285 are reliability / plugin / gateway / VS Code / Claude Tag / Artifact releases, with 2.1.284 adding Claude Sonnet 5.5 as the default Sonnet on the Anthropic API (1M context, $2/$10 per Mtok) and making Ultracode its own `/effort` toggle, and 2.1.285 adding `claude --desktop` to open the Claude desktop app on the current directory and an `allowedProviders` managed setting). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 5, Opus 5.5, Opus 4.7, Opus 4.8, Sonnet 5, Sonnet 5.5, Fable 5, and Fable 5.1 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one; deployments may set `maxEffortLevel` to cap the maximum reachable level on every provider), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls, plus Ultracode (session-wide Dynamic Workflows tied to xhigh; since 2.1.284 its own `/effort` toggle — Tab or `/effort ultracode [on|off]` — that keeps the current effort level, with only `claude --effort ultracode` also setting xhigh; set via `/effort ultracode` or `"ultracode": true`; 2.1.202+ adds a `/config` "Dynamic workflow size" advisory guideline, 2.1.219 defaults it to medium (aim for fewer than 15 agents) with the `workflowSizeGuideline` settings key to set it from any settings file, and 2.1.269 adds `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise the per-run concurrent-agent cap for the Workflow tool) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized).
 
@@ -1339,7 +1363,7 @@ Billing types:
 #### Cursor — `cursor`
 
 - **Billing:** subscription-pool (requires cursor-pro-or-ultra-subscription)
-- **Supports models:** claude-opus-5-5,claude-opus-5,opus-4.8,claude-fable-5.1,claude-fable-5,opus-4.7,gpt-5.5,gpt-5.6-sol,claude-sonnet-5,sonnet-4.6,gpt-5.4,kimi-k3,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.6-terra,gemini-3.1-pro,gemini-3-pro,gpt-5,gpt-5.1-codex-max,gpt-5.1-codex,gemini-3.5-flash,gemini-3.6-flash,claude-4.5-haiku,muse-spark-1.3,gpt-5.4-mini,gpt-5.4-nano,grok-4.7,grok-4.6,kimi-k2.7-code,gemini-3.7-flash,gemini-3.8-flash,gemini-3-flash,composer-2.5,gemini-2.5-flash,gpt-5-mini,gpt-5.1-codex-mini,gpt-5.6-luna,glm-5.2
+- **Supports models:** claude-sonnet-5-5,glm-5.3,glm-5.3-flash,claude-opus-5-5,claude-opus-5,opus-4.8,claude-fable-5.1,claude-fable-5,opus-4.7,gpt-5.5,gpt-5.6-sol,claude-sonnet-5,sonnet-4.6,gpt-5.4,kimi-k3,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.6-terra,gemini-3.1-pro,gemini-3-pro,gpt-5,gpt-5.1-codex-max,gpt-5.1-codex,gemini-3.5-flash,gemini-3.6-flash,claude-4.5-haiku,muse-spark-1.3,gpt-5.4-mini,gpt-5.4-nano,grok-4.7,grok-4.6,kimi-k2.7-code,gemini-3.7-flash,gemini-3.8-flash,gemini-3-flash,composer-2.5,gemini-2.5-flash,gpt-5-mini,gpt-5.1-codex-mini,gpt-5.6-luna,glm-5.2
 - **Toggles:** Max Mode — yes · Thinking — no · Orchestration — no
 - **Best for:** Cursor IDE — single Platform covering both UI modes (Composer for multi-file autonomous editing; Chat for interactive model-picker). The operator picks the mode at task time based on the chosen Model: composer-2 / composer-2.5 imply Composer mode; frontier models (opus-4.7, gpt-5.5, sonnet-4.6, etc.) imply Chat mode. Cursor's own Auto and Premium routing modes are deliberately NOT enumerated as roadmodel-recommendable models because their routing is opaque (see `jurisdiction-context` for the rationale) — operators who want routing behavior pick a specific fixed model and let Cursor's pool handle the call. All routes through the $0-marginal Cursor pool. Defer to claude-code when the chosen model is Claude and claude.ai Max is active (Max budget is cheaper marginal cost than burning Cursor pool tokens on Claude calls that have a dedicated Anthropic subscription path).
 
@@ -1493,7 +1517,7 @@ Guardrails:
   - Never sacrifice quality to save cost — the cost step is a true-tie
     resolver, not a downgrade trigger.
   - For PRIMARY = `multimodal`, only consider models with tier-multimodal
-    of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro at S; gemini-3.6-flash, gemini-3.7-flash, gemini-3.8-flash, gemini-3.5-flash, gpt-5.6-luna, sonnet-4.6, claude-sonnet-5, gpt-5.4, gpt-5.6-terra, opus-4.7, opus-4.8, claude-opus-5, claude-opus-5-5, claude-fable-5, claude-fable-5.1, gpt-5.5, gpt-5.6-sol at A).
+    of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro at S; gemini-3.6-flash, gemini-3.7-flash, gemini-3.8-flash, gemini-3.5-flash, gpt-5.6-luna, sonnet-4.6, claude-sonnet-5, claude-sonnet-5-5, gpt-5.4, gpt-5.6-terra, opus-4.7, opus-4.8, claude-opus-5, claude-opus-5-5, claude-fable-5, claude-fable-5.1, gpt-5.5, gpt-5.6-sol at A).
   - For PRIMARY = `long-context`, prefer models with native large
     context (opus-4.7 1M, opus-4.8 1M, claude-opus-5 1M, claude-opus-5-5 1M, gemini-3.1-pro 1M) over forcing
     a smaller-context model into Max Mode truncation.
