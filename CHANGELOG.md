@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The updater's output never crashes on a character the console cannot
+  show.** A scheduled run on Windows can write to a cp1252 console or pipe,
+  and a refresh's result line is written by the model, so it may carry ✅ or
+  →. Those now print as `?` instead of ending the run with a
+  `UnicodeEncodeError`. A test on the PC found this before any real refresh
+  ran there.
+
 ## [0.2.48] — 2026-09-29
 
 ### Added
