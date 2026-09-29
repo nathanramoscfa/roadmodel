@@ -11,8 +11,9 @@ Execute Step $ARGUMENTS of this project's phase roadmap. Parse
   `private/phase{{PP}}-roadmap.md`, or any `**/phase{{PP}}-roadmap.md`
   (PP = PHASE zero-padded to two digits; a project whose roadmaps have
   not moved to `docs/roadmap/` yet keeps them in `docs/` or the root).
-  The parent project roadmap is the `ROADMAP.md` beside it, or the
-  repo root's in a project not moved yet. If none exists, stop and say
+  The parent project roadmap is the `ROADMAP.md` beside it (or, where
+  it carries another name, the file the phase roadmap names as its
+  parent), or the repo root's in a project not moved yet. If none exists, stop and say
   so — do not improvise a step.
 - The step is the section headed `## Step {{STEP}} — …` (a Complete
   step's heading ends in ✅) up to the next `## ` heading. From it,

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Another file named `ROADMAP.md` no longer blocks roadmap writing.** A
+  project can keep a different document under that name, such as a brief's
+  status page or an OSS port's plan. The writing commands now stop only
+  while phase roadmaps sit outside `docs/roadmap/`, or while the project
+  roadmap itself has not moved there. A project roadmap written before the
+  convention under another name is the one its phase roadmaps name as their
+  parent.
+- **`/roadmap-refresh` keeps a step that is plainly underway `In
+  progress`.** An operate step with no PR, such as a beta soak whose builds
+  are shipping, stays `In progress` with its evidence cited, instead of
+  dropping to `Not started`.
+
 ## [0.2.46] — 2026-09-26
 
 ### Changed
