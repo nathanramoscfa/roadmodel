@@ -2,8 +2,8 @@
 //
 // The /models catalog reference page (public): renders the full model table,
 // the "how to read this" legend, sortable columns, the provider + jurisdiction
-// + cost filters (which drive the charts too), Group by (which groups the
-// Score charts too), the ratings/benchmark-scores view toggle, the uniform Artificial
+// + cost filters (which drive the charts too), the ratings/benchmark-scores
+// view toggle, the uniform Artificial
 // Analysis figures (under the letters and as the full grid), the expanded row,
 // and benchmark + provider-doc links.
 
@@ -23,7 +23,7 @@ import {
   paretoFrontier,
   scoreFor,
 } from "../lib/benchmark-grid";
-import { COST_TIER_DEFS, modelProvider, type CostTier } from "../lib/catalog-fields";
+import { modelProvider } from "../lib/catalog-fields";
 
 // Expected row counts are DERIVED from the catalog the page renders, never
 // hardcoded. The catalog grows whenever the daily refresh cron picks up a new
@@ -101,15 +101,6 @@ function leaderOf(r: Measured, pool: Measured[] = MEASURED): Measured {
   const cheapest = Math.min(...tied.map((o) => o.price));
   return tied.find((o) => o.price === cheapest)!;
 }
-
-// The ten-point AA Index band a measured model falls in (Group by Quality).
-const bandOfIndex = (v: number) => Math.floor(v / 10) * 10;
-
-// The Score fit, recomputed from the same inputs the page uses, and the models
-// the Score charts plot under either grouping: measured, in a tier with a line
-// (two measured models or more).
-const FIT = fitScoreModel(MEASURED.map((r) => ({ price: r.price, index: r.index, tier: r.m.tier_cost })))!;
-const CHARTED = MEASURED.filter((r) => (FIT.tiers[r.m.tier_cost]?.n ?? 0) >= 2);
 
 
 const CN_MODEL_COUNT = catalog.models.filter((m) => m.jurisdiction === "cn").length;
@@ -325,19 +316,7 @@ test("a Cost tier narrows the charts to its models; the frontier still spans eve
   const inTier = MEASURED.filter((r) => r.m.tier_cost === tier);
   const catalogFrontier = new Set(MEASURED.filter((r) => leaderOf(r) === r).map((r) => r.m.id));
 
-  // Grouped by quality (the default): a Score chart per band the tier's models
-  // fall in, each drawing that one tier's line.
-  const bands = [...new Set(inTier.map((r) => bandOfIndex(r.index)))].sort((a, b) => b - a);
-  await expect(page.getByTestId("score-chart")).toHaveCount(bands.length);
-  await expect(page.getByTestId("score-chart-point")).toHaveCount(inTier.length);
-  for (const band of bands) {
-    const lines = page.locator(`[data-testid="score-chart"][data-band="${band}"] [data-testid="score-chart-line"]`);
-    await expect(lines).toHaveCount(1);
-    await expect(lines).toHaveAttribute("data-tier", tier);
-  }
-
-  // Grouped by cost tier: one Score chart, the tier's own.
-  await page.getByTestId("group-by-tier").click();
+  // One Score chart, the tier's own.
   await expect(page.getByTestId("score-chart")).toHaveCount(1);
   await expect(page.getByTestId("score-chart")).toHaveAttribute("data-tier", tier);
   await expect(page.getByTestId("score-chart-point")).toHaveCount(inTier.length);
@@ -729,17 +708,12 @@ test("a group with nothing on the frontier says so in its header and its chart, 
   }
   test.info().annotations.push({ type: "tiers with nothing on the frontier", description: String(beatenTiers) });
 
-  // Quality bands and their charts.
+  // Quality bands.
   await page.getByTestId("group-by-quality").click();
-  for (const band of new Set(MEASURED.map((r) => bandOfIndex(r.index)))) {
+  const bandOf = (v: number) => Math.floor(v / 10) * 10;
+  for (const band of new Set(MEASURED.map((r) => bandOf(r.index)))) {
     const header = page.locator(`[data-testid="quality-group"][data-band="${band}"]`);
-    await check(header, MEASURED.filter((r) => bandOfIndex(r.index) === band));
-    const members = CHARTED.filter((r) => bandOfIndex(r.index) === band);
-    if (members.length > 0) {
-      const chart = page.locator(`[data-testid="score-chart"][data-band="${band}"]`);
-      const beaten = members.every((r) => !frontier.has(r.m.id));
-      await expect(chart.getByTestId("chart-beaten")).toHaveCount(beaten ? 1 : 0);
-    }
+    await check(header, MEASURED.filter((r) => bandOf(r.index) === band));
   }
 });
 
@@ -816,6 +790,72 @@ test("the frontier chart plots every measured model and joins the frontier with 
   await page.mouse.move(spot!.x, spot!.y);
   await expect(card).toBeVisible();
   await expect(card.getByTestId("frontier-step-card")).toContainText(spot!.holder);
+});
+
+test("Group by Quality marks the table's AA Index bands on the frontier chart; Cost tier clears them", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/models");
+  const panel = page.getByTestId("frontier-panel");
+  await expect(panel).toHaveAttribute("data-grouping", "quality");
+  await expect(panel.getByTestId("frontier-chart-point")).toHaveCount(MEASURED.length);
+  await expect(panel.getByTestId("frontier-bands-note")).toContainText("the cheapest way to reach a level");
+
+  // Each band that holds a model is named, best first: the table's quality groups.
+  const bandOf = (v: number) => Math.min(90, Math.floor(v / 10) * 10);
+  const populated = [...new Set(MEASURED.map((r) => bandOf(r.index)))].sort((a, b) => b - a);
+  const tableGroups = await page
+    .getByTestId("quality-group")
+    .evaluateAll((els) => els.map((e) => e.getAttribute("data-band")).filter((b) => b !== "none"));
+  expect(tableGroups).toEqual(populated.map(String));
+  const names = panel.getByTestId("frontier-band-label");
+  await expect(names).toHaveCount(populated.length);
+  expect(await names.evaluateAll((els) => els.map((e) => e.getAttribute("data-band")))).toEqual(populated.map(String));
+  await expect(names.first()).toHaveText(`${populated[0]}–${(populated[0] + 9.9).toFixed(1)}`);
+
+  // A row per ten points from the axis's foot, every other one shaded; every
+  // dot sits in its own band's row, and each name beside its row, right of the plot.
+  const layout = await panel.getByTestId("frontier-chart").evaluate((fig) => {
+    const num = (el: Element, a: string) => Number(el.getAttribute(a));
+    return {
+      rows: [...fig.querySelectorAll('[data-testid="frontier-band-stripe"]')].map((r) => ({
+        band: num(r, "data-band"),
+        shaded: r.getAttribute("data-shaded") === "1",
+        right: num(r, "x") + num(r, "width"),
+        top: num(r, "y"),
+        bottom: num(r, "y") + num(r, "height"),
+      })),
+      dots: [...fig.querySelectorAll('[data-testid="frontier-chart-point"]')].map((d) => ({
+        id: d.getAttribute("data-model-id")!,
+        cy: num(d, "cy"),
+      })),
+      names: [...fig.querySelectorAll('[data-testid="frontier-band-label"]')].map((t) => ({
+        band: num(t, "data-band"),
+        x: num(t, "x"),
+        y: num(t, "y"),
+      })),
+    };
+  });
+  expect(layout.rows.map((r) => r.band)).toEqual(layout.rows.map((_, i) => i * 10));
+  for (let i = 1; i < layout.rows.length; i += 1) expect(layout.rows[i].shaded).not.toBe(layout.rows[i - 1].shaded);
+  for (const d of layout.dots) {
+    const r = MEASURED.find((m) => m.m.id === d.id)!;
+    const row = layout.rows.find((x) => x.band === bandOf(r.index))!;
+    expect(d.cy, `${r.m.name} (AA ${r.index}) in its row`).toBeGreaterThanOrEqual(row.top - 0.5);
+    expect(d.cy, `${r.m.name} (AA ${r.index}) in its row`).toBeLessThanOrEqual(row.bottom + 0.5);
+  }
+  for (const n of layout.names) {
+    const row = layout.rows.find((x) => x.band === n.band)!;
+    expect(n.x).toBeGreaterThan(row.right);
+    expect(Math.abs(n.y - 4 - (row.top + row.bottom) / 2)).toBeLessThan(1);
+  }
+
+  // Grouped by cost tier, the rows and names step aside; the dots stay.
+  await page.getByTestId("group-by-tier").click();
+  await expect(panel).toHaveAttribute("data-grouping", "tier");
+  await expect(panel.getByTestId("frontier-band-stripe")).toHaveCount(0);
+  await expect(names).toHaveCount(0);
+  await expect(panel.getByTestId("frontier-bands-note")).toHaveCount(0);
+  await expect(panel.getByTestId("frontier-chart-point")).toHaveCount(MEASURED.length);
 });
 
 test("a superseded model is tagged with its successor and the day it leaves", async ({ page }) => {
@@ -934,13 +974,10 @@ test("sorting a category orders by letter, then AA Index", async ({ page }) => {
   }
 });
 
-test("Group by Cost tier: one Score chart per cost tier, every measured model plotted with the table's figure", async ({ page }) => {
+test("one Score chart per cost tier in either grouping, every measured model plotted with the table's figure", async ({ page }) => {
   await page.goto("/models");
   const panel = page.getByTestId("score-charts");
   await expect(panel).toBeVisible(); // open by default: the charts are the explanation
-  await page.getByTestId("group-by-tier").click();
-  await expect(panel).toHaveAttribute("data-grouping", "tier");
-  await expect(panel.locator("summary")).toContainText("one chart per cost tier");
 
   const fit = fitScoreModel(
     scored.map((m) => ({
@@ -952,6 +989,17 @@ test("Group by Cost tier: one Score chart per cost tier, every measured model pl
   expect(fit).not.toBeNull();
   const tiers = Object.entries(fit!.tiers).filter(([, t]) => t.n >= 2).map(([tier]) => tier);
   await expect(panel.getByTestId("score-chart")).toHaveCount(tiers.length);
+  const charted = () =>
+    panel.getByTestId("score-chart").evaluateAll((els) => els.map((e) => e.getAttribute("data-tier")));
+
+  // Grouped by quality (the default), the charts stay by tier and say why:
+  // a Score is read against its own tier's line.
+  await expect(page.getByTestId("group-by-quality")).toHaveAttribute("aria-pressed", "true");
+  await expect(panel.getByTestId("score-charts-grouping-note")).toContainText(
+    "these charts stay one per cost tier",
+  );
+  const byQuality = await charted();
+  expect([...byQuality].sort()).toEqual([...tiers].sort());
 
   for (const tier of tiers) {
     const chart = panel.locator(`[data-testid="score-chart"][data-tier="${tier}"]`);
@@ -967,164 +1015,20 @@ test("Group by Cost tier: one Score chart per cost tier, every measured model pl
     }
   }
 
+  // Grouped by cost tier: the same charts, and the note steps aside.
+  await page.getByTestId("group-by-tier").click();
+  await expect(panel.getByTestId("score-charts-grouping-note")).toHaveCount(0);
+  await expect(panel.getByTestId("score-chart")).toHaveCount(tiers.length);
+  expect(await charted()).toEqual(byQuality);
+
   // The footnote carries the live fit, not typed figures.
   await expect(panel).toContainText(`One least-squares fit over all ${fit!.n} AA-measured models`);
   await expect(panel).toContainText(`β = ${fit!.slope.toFixed(1)}`);
 });
 
-test("Group by Quality (the default): one Score chart per AA Index band, each stem on its own tier's line", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/models");
-  const panel = page.getByTestId("score-charts");
-  await expect(page.getByTestId("group-by-quality")).toHaveAttribute("aria-pressed", "true");
-  await expect(panel).toHaveAttribute("data-grouping", "quality");
-  await expect(panel.locator("summary")).toContainText("one chart per quality band");
-
-  // The table's quality groups, best band first: every charted model in its
-  // band's chart, with the table's Score.
-  const bands = [...new Set(CHARTED.map((r) => bandOfIndex(r.index)))].sort((a, b) => b - a);
-  await expect(panel.getByTestId("score-chart")).toHaveCount(bands.length);
-  await expect(panel.getByTestId("score-chart-point")).toHaveCount(CHARTED.length);
-  expect(
-    await panel.getByTestId("score-chart").evaluateAll((els) => els.map((e) => e.getAttribute("data-band"))),
-  ).toEqual(bands.map(String));
-  let namesDrawn = 0;
-  for (const band of bands) {
-    const members = CHARTED.filter((r) => bandOfIndex(r.index) === band);
-    const chart = panel.locator(`[data-testid="score-chart"][data-band="${band}"]`);
-    await expect(chart.locator("figcaption")).toContainText(`AA Index ${band}–${(band + 9.9).toFixed(1)}`);
-    await expect(chart.getByTestId("score-chart-point")).toHaveCount(members.length);
-    for (const r of members) {
-      const sc = formatScore(scoreFor(FIT, r.m.tier_cost, r.price, r.index));
-      await expect(
-        chart.locator(`[data-testid="score-chart-point"][data-model-id="${r.m.id}"]`),
-      ).toHaveAttribute("aria-label", new RegExp(`Score ${sc.replace("+", "\\+")}`));
-    }
-    // One line per cost tier among the band's models, and every stem starts
-    // on its own tier's line, at the model's price: the Score is the distance
-    // the table prints, whichever group the model is drawn in.
-    const tiers = [...new Set(members.map((r) => r.m.tier_cost))].sort();
-    const drawn = await chart
-      .getByTestId("score-chart-line")
-      .evaluateAll((els) => els.map((e) => e.getAttribute("data-tier") ?? "").sort());
-    expect(drawn).toEqual(tiers);
-    await expect(chart.getByTestId("score-chart-stem")).toHaveCount(members.length);
-    const offLine = await chart.evaluate((fig) => {
-      const ends = (el: Element) => ["x1", "y1", "x2", "y2"].map((a) => Number(el.getAttribute(a)));
-      const lines = new Map(
-        [...fig.querySelectorAll('[data-testid="score-chart-line"]')].map((l) => [l.getAttribute("data-tier"), ends(l)]),
-      );
-      return [...fig.querySelectorAll('[data-testid="score-chart-stem"]')].flatMap((s) => {
-        const [x, y] = ends(s);
-        const [lx1, ly1, lx2, ly2] = lines.get(s.getAttribute("data-tier"))!;
-        const onLine = ly1 + ((ly2 - ly1) * (x - lx1)) / (lx2 - lx1);
-        return x >= lx1 - 0.5 && x <= lx2 + 0.5 && Math.abs(onLine - y) < 0.5 ? [] : [s.getAttribute("data-model-id")];
-      });
-    });
-    expect(offLine).toEqual([]);
-    // A line's name, where the chart has room for it, sits along its own line
-    // (over or under part of it), never past its end beside another tier's.
-    const names = await chart.evaluate((fig) =>
-      [...fig.querySelectorAll('[data-testid="score-chart-line-label"]')].map((g) => {
-        const tier = g.getAttribute("data-tier");
-        const plate = g.querySelector("rect")!;
-        const line = fig.querySelector(`[data-testid="score-chart-line"][data-tier="${tier}"]`)!;
-        const from = Number(plate.getAttribute("x"));
-        const to = from + Number(plate.getAttribute("width"));
-        return { tier, along: from < Number(line.getAttribute("x2")) && to > Number(line.getAttribute("x1")) };
-      }),
-    );
-    for (const n of names) expect(n.along, `the ${n.tier} line's name in the ${band} band`).toBe(true);
-    namesDrawn += names.length;
-  }
-  expect(namesDrawn).toBeGreaterThan(0);
-
-  // A band's line is its tier's own: hover one on a chart with several tiers,
-  // at a spot clear of every dot and every other line, for that tier's equation.
-  const multiTier = bands.filter(
-    (b) => new Set(CHARTED.filter((r) => bandOfIndex(r.index) === b).map((r) => r.m.tier_cost)).size >= 2,
-  );
-  expect(multiTier.length).toBeGreaterThan(0);
-  let hovered: string | null = null;
-  for (const band of multiTier) {
-    const chart = panel.locator(`[data-testid="score-chart"][data-band="${band}"]`);
-    await chart.scrollIntoViewIfNeeded();
-    const spot = await chart.evaluate((fig) => {
-      const ends = (el: Element) => ["x1", "y1", "x2", "y2"].map((a) => Number(el.getAttribute(a)));
-      const svg = fig.querySelector("svg")!.getBoundingClientRect();
-      const lines = [...fig.querySelectorAll('[data-testid="score-chart-line"]')];
-      const dots = [...fig.querySelectorAll('[data-testid="score-chart-point"]')].map((d) => {
-        const r = d.getBoundingClientRect();
-        return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
-      });
-      // Distance from a point to a line segment, in the SVG's own pixels.
-      const away = (px: number, py: number, el: Element) => {
-        const [x1, y1, x2, y2] = ends(el);
-        const t = Math.max(0, Math.min(1, ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / ((x2 - x1) ** 2 + (y2 - y1) ** 2)));
-        return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
-      };
-      for (const l of lines) {
-        const [x1, y1, x2, y2] = ends(l);
-        for (let f = 0.1; f <= 0.9; f += 0.05) {
-          const px = x1 + (x2 - x1) * f;
-          const py = y1 + (y2 - y1) * f;
-          const x = svg.x + px;
-          const y = svg.y + py;
-          if (
-            dots.every((d) => Math.hypot(d.x - x, d.y - y) > 20) &&
-            lines.every((o) => o === l || away(px, py, o) > 14)
-          ) {
-            return { tier: l.getAttribute("data-tier")!, x, y };
-          }
-        }
-      }
-      return null;
-    });
-    if (!spot) continue;
-    await page.mouse.move(spot.x, spot.y);
-    hovered = spot.tier;
-    break;
-  }
-  expect(hovered).not.toBeNull();
-  const card = page.getByTestId("chart-card");
-  await expect(card).toBeVisible();
-  const t = FIT.tiers[hovered!];
-  const num = (v: number) => (Math.round(v * 10) / 10 < 0 ? "−" : "") + Math.abs(Math.round(v * 10) / 10).toFixed(1);
-  await expect(card).toContainText(`Price line: ${COST_TIER_DEFS[hovered as CostTier].label} cost`);
-  await expect(card.getByTestId("line-equation")).toContainText(
-    `Expected AA Index = ${num(t.intercept)} + ${num(FIT.slope)} × log`,
-  );
-  await page.mouse.move(2, 2);
-  await expect(card).toHaveCount(0);
-
-  // The switch regroups the charts with the table: the same models, the same
-  // Scores, one chart per cost tier; and back.
-  const plottedIds = async () => {
-    await expect(panel.getByTestId("score-chart-point")).toHaveCount(CHARTED.length);
-    return (
-      await panel.getByTestId("score-chart-point").evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")))
-    ).sort();
-  };
-  const byBand = await plottedIds();
-  expect(byBand).toEqual(CHARTED.map((r) => r.m.id).sort());
-  await page.getByTestId("group-by-tier").click();
-  await expect(panel).toHaveAttribute("data-grouping", "tier");
-  await expect(panel.locator("summary")).toContainText("one chart per cost tier");
-  await expect(page.getByTestId("score-group")).toHaveCount(new Set(scored.map((m) => m.tier_cost)).size);
-  await expect(panel.getByTestId("score-chart")).toHaveCount(new Set(CHARTED.map((r) => r.m.tier_cost)).size);
-  await expect(panel.locator('[data-testid="score-chart"][data-band]')).toHaveCount(0);
-  expect(await plottedIds()).toEqual(byBand);
-  await page.getByTestId("group-by-quality").click();
-  await expect(panel).toHaveAttribute("data-grouping", "quality");
-  await expect(panel.getByTestId("score-chart")).toHaveCount(bands.length);
-  expect(await plottedIds()).toEqual(byBand);
-});
-
 test("hovering a chart dot shows its model, Score, AA Index and prices; the line shows its equation", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/models");
-  // The tier charts: one line each, the tier's own.
-  await page.getByTestId("group-by-tier").click();
   const fit = fitScoreModel(
     scored.map((m) => ({
       price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m),

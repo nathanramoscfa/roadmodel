@@ -1,10 +1,10 @@
 // web/components/chart-kit.tsx
 //
-// What the /models charts share (the Score charts, one per quality band or
-// cost tier, and the frontier chart): the chart's real width, label widths in
-// the page's own font, greedy label placement that never covers another label
-// or dot, round price ticks for a log axis, the legend swatch, the frontier
-// colour, and the note a panel shows while the page's filters narrow it.
+// What the /models charts share (the per-tier Score charts and the frontier
+// chart): the chart's real width, label widths in the page's own font, greedy
+// label placement that never covers another label or dot, round price ticks
+// for a log axis, the legend swatch, the frontier colour, and the note a
+// panel shows while the page's filters narrow it.
 "use client";
 
 import { useEffect, useState, type ReactNode, type RefObject } from "react";
@@ -73,50 +73,19 @@ export interface Label {
 // closer to a neighbour than to its own dot.
 const DOT_CLEARANCE = 3;
 
-// The twelve spots a label can take around its point: beside it, above or
-// below it, on a diagonal, or above or below but flush with one side.
-export type Spot =
-  | "right"
-  | "left"
-  | "above"
-  | "below"
-  | "above-right"
-  | "above-left"
-  | "below-right"
-  | "below-left"
-  | "above-flush-left"
-  | "above-flush-right"
-  | "below-flush-left"
-  | "below-flush-right";
-const SPOTS: Spot[] = [
-  "right",
-  "left",
-  "above",
-  "below",
-  "above-right",
-  "above-left",
-  "below-right",
-  "below-left",
-  "above-flush-left",
-  "above-flush-right",
-  "below-flush-left",
-  "below-flush-right",
-];
-
 // Places labels greedily, highest priority first, at the first of twelve spots
 // around each dot that stays inside the plot and clears every label already
 // placed and every other dot. A label with no clear spot is left to the hover
 // card: a crowd of labels is harder to read than none. An item can offer
-// other anchors to try in turn (a line's two ends and middle), each with the
-// spots to try there, and an item that is not a dot (dot: false) keeps no
-// clearance of its own.
+// other anchors to try in turn (a line's two ends and middle), and an item
+// that is not a dot (dot: false) keeps no clearance of its own.
 export interface LabelItem {
   id: string;
   cx: number;
   cy: number;
   text: string;
   priority: number;
-  anchors?: { cx: number; cy: number; spots?: Spot[] }[];
+  anchors?: { cx: number; cy: number }[];
   dot?: boolean;
 }
 
@@ -141,26 +110,26 @@ export function placeLabels(
     const off = dotR + 5;
     // The diagonal offset: the plate's corner sits just off the dot.
     const d = off - 3;
-    for (const { cx, cy, spots: order } of p.anchors ?? [{ cx: p.cx, cy: p.cy }]) {
+    for (const { cx, cy } of p.anchors ?? [{ cx: p.cx, cy: p.cy }]) {
       // Right, left, above, below the dot, then the diagonals: the plate's
       // top-left corner, the text's anchor point, and its alignment.
-      const spots: Record<Spot, [number, number, number, number, Label["anchor"]]> = {
-        right: [cx + off, cy - LABEL_H / 2, cx + off + 3, cy + 4, "start"],
-        left: [cx - off - w - 6, cy - LABEL_H / 2, cx - off - 3, cy + 4, "end"],
-        above: [cx - w / 2 - 3, cy - off - LABEL_H, cx, cy - off - 4, "middle"],
-        below: [cx - w / 2 - 3, cy + off, cx, cy + off + 10, "middle"],
-        "above-right": [cx + d, cy - d - LABEL_H, cx + d + 3, cy - d - 4, "start"],
-        "above-left": [cx - d - w - 6, cy - d - LABEL_H, cx - d - 3, cy - d - 4, "end"],
-        "below-right": [cx + d, cy + d, cx + d + 3, cy + d + 10, "start"],
-        "below-left": [cx - d - w - 6, cy + d, cx - d - 3, cy + d + 10, "end"],
+      const spots: [number, number, number, number, Label["anchor"]][] = [
+        [cx + off, cy - LABEL_H / 2, cx + off + 3, cy + 4, "start"],
+        [cx - off - w - 6, cy - LABEL_H / 2, cx - off - 3, cy + 4, "end"],
+        [cx - w / 2 - 3, cy - off - LABEL_H, cx, cy - off - 4, "middle"],
+        [cx - w / 2 - 3, cy + off, cx, cy + off + 10, "middle"],
+        [cx + d, cy - d - LABEL_H, cx + d + 3, cy - d - 4, "start"],
+        [cx - d - w - 6, cy - d - LABEL_H, cx - d - 3, cy - d - 4, "end"],
+        [cx + d, cy + d, cx + d + 3, cy + d + 10, "start"],
+        [cx - d - w - 6, cy + d, cx - d - 3, cy + d + 10, "end"],
         // Above/below but flush with the dot's side, for a dot near a plot edge.
-        "above-flush-left": [cx - 8, cy - off - LABEL_H, cx - 5, cy - off - 4, "start"],
-        "above-flush-right": [cx + 8 - w - 6, cy - off - LABEL_H, cx + 5, cy - off - 4, "end"],
-        "below-flush-left": [cx - 8, cy + off, cx - 5, cy + off + 10, "start"],
-        "below-flush-right": [cx + 8 - w - 6, cy + off, cx + 5, cy + off + 10, "end"],
-      };
+        [cx - 8, cy - off - LABEL_H, cx - 5, cy - off - 4, "start"],
+        [cx + 8 - w - 6, cy - off - LABEL_H, cx + 5, cy - off - 4, "end"],
+        [cx - 8, cy + off, cx - 5, cy + off + 10, "start"],
+        [cx + 8 - w - 6, cy + off, cx + 5, cy + off + 10, "end"],
+      ];
       let placed = false;
-      for (const [bx, by, tx, ty, anchor] of (order ?? SPOTS).map((s) => spots[s])) {
+      for (const [bx, by, tx, ty, anchor] of spots) {
         const box = { x: bx, y: by, w: w + 6, h: LABEL_H };
         const inside =
           box.x >= bounds.x &&

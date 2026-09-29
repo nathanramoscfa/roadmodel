@@ -75,8 +75,8 @@ test("every choice survives a reload, and the server renders it before any scrip
     await expect(page.getByLabel("Filter by provider")).toHaveValue("OpenAI");
     await expect(page.getByLabel("Filter by cost tier")).toHaveValue(tier);
     await expect(page.getByTestId("group-by-tier")).toHaveAttribute("aria-pressed", "true");
-    // The Score charts follow Group by.
-    await expect(page.getByTestId("score-charts")).toHaveAttribute("data-grouping", "tier");
+    // The frontier chart reads Group by too (it marks the bands under Quality).
+    await expect(page.getByTestId("frontier-panel")).toHaveAttribute("data-grouping", "tier");
     await expect(page.getByTestId("view-benchmarks")).toHaveAttribute("aria-pressed", "true");
     const rows = page.getByTestId("model-row");
     const n = await rows.count();
@@ -90,7 +90,7 @@ test("every choice survives a reload, and the server renders it before any scrip
   // The raw HTML already carries the saved view: nothing waits for hydration.
   const html = await (await page.request.get("/models")).text();
   expect(html).toMatch(/data-testid="group-by-tier"[^>]*aria-pressed="true"/);
-  expect(html).toMatch(/data-testid="score-charts"[^>]*data-grouping="tier"/);
+  expect(html).toMatch(/data-testid="frontier-panel"[^>]*data-grouping="tier"/);
   expect(html).toMatch(/data-testid="view-benchmarks"[^>]*aria-pressed="true"/);
   const box = (code: string) => html.match(new RegExp(`<input[^>]*data-testid="jurisdiction-${code}"[^>]*>`))?.[0] ?? "";
   expect(box("us")).toContain("checked");
@@ -111,6 +111,6 @@ test("a malformed cookie opens the default page", async ({ page, context, baseUR
   await page.goto("/models");
   await expect(page.getByTestId("model-row")).toHaveCount(MODEL_COUNT);
   await expect(page.getByTestId("group-by-quality")).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByTestId("score-charts")).toHaveAttribute("data-grouping", "quality");
+  await expect(page.getByTestId("frontier-panel")).toHaveAttribute("data-grouping", "quality");
   await expect(page.getByTestId("view-ratings")).toHaveAttribute("aria-pressed", "true");
 });

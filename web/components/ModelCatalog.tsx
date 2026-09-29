@@ -41,7 +41,7 @@
 // Provider + Jurisdiction pool, lib/catalog-filter). Jurisdiction is a
 // checkbox per code, all checked to start, so any combination (US + EU, say)
 // is one click away. Search stays the table's own. Group by belongs to
-// ModelsExplorer too, since it groups the Score charts as well as the rows.
+// ModelsExplorer too, since the charts read it as well as the rows.
 // Group by and the Ratings / Benchmark scores view are saved for the next
 // visit (lib/models-prefs), like the filters.
 "use client";
@@ -280,8 +280,8 @@ export function ModelCatalog({
   benchmarksGeneratedAt: string;
   measuredCount: number;
   scoreFit: ScoreFit | null;
-  // The Group by choice (ModelsExplorer's, shared with the Score charts); it
-  // groups the rows while the table is sorted by Score.
+  // The Group by choice (ModelsExplorer's, shared with the charts); it groups
+  // the rows while the table is sorted by Score.
   groupChoice: Grouping;
   onGroupChoiceChange: (next: Grouping) => void;
   // The visitor's saved view.
