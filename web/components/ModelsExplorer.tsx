@@ -1,10 +1,12 @@
 // web/components/ModelsExplorer.tsx
 //
 // The /models page's interactive half: the catalog table, the frontier chart
-// and the per-tier Score charts, driven by ONE set of filters. Provider,
-// Jurisdiction (a checkbox per code, all checked to start) and Cost tier are
-// set in the table's controls and applied to all three, so unchecking CN
-// leaves the US + EU models in the table and in every chart.
+// and the Score charts, driven by ONE set of filters. Provider, Jurisdiction
+// (a checkbox per code, all checked to start) and Cost tier are set in the
+// table's controls and applied to all three, so unchecking CN leaves the
+// US + EU models in the table and in every chart. The table's Group by
+// switch groups the Score charts too: one chart per quality band or one per
+// cost tier, the same groups as the table's header rows.
 //
 // The page remembers them (lib/models-prefs): the server reads the saved
 // choices from a cookie and passes them in, so the first render is already
@@ -28,7 +30,13 @@ import {
   withFrontier,
   type CatalogFilters,
 } from "@/lib/catalog-filter";
-import { filtersFromPrefs, prefsFromFilters, savePrefs, type ModelsPrefs } from "@/lib/models-prefs";
+import {
+  filtersFromPrefs,
+  prefsFromFilters,
+  savePrefs,
+  type Grouping,
+  type ModelsPrefs,
+} from "@/lib/models-prefs";
 import type { ChartFilter } from "./chart-kit";
 import { FrontierChart } from "./FrontierChart";
 import { ModelCatalog } from "./ModelCatalog";
@@ -63,6 +71,12 @@ export function ModelsExplorer({
     setFilters(next);
     savePrefs(prefsFromFilters(next, jurisdictions));
   }
+  // The Group by choice: the table's header rows and the Score charts.
+  const [grouping, setGrouping] = useState<Grouping>(prefs.grouping);
+  function changeGrouping(next: Grouping) {
+    setGrouping(next);
+    savePrefs({ grouping: next });
+  }
 
   const scope = poolScope(filters, jurisdictions);
   // The frontier's pool. Unnarrowed, the server's whole-catalog marks stand.
@@ -95,13 +109,14 @@ export function ModelsExplorer({
           benchmarksGeneratedAt={benchmarksGeneratedAt}
           measuredCount={measuredCount}
           scoreFit={scoreFit}
-          initialGroupBy={prefs.grouping}
+          groupChoice={grouping}
+          onGroupChoiceChange={changeGrouping}
           initialView={prefs.view}
         />
         {/* The frontier first (the whole market on one chart), then the Score
-            charts that take it apart tier by tier. */}
+            charts that take it apart group by group, grouped as the table is. */}
         <FrontierChart rows={shown} pool={pool} fit={scoreFit} filter={chartFilter} />
-        <ScoreCharts rows={shown} pool={pool} fit={scoreFit} filter={chartFilter} />
+        <ScoreCharts rows={shown} pool={pool} fit={scoreFit} filter={chartFilter} grouping={grouping} />
       </div>
     </FrontierScope.Provider>
   );

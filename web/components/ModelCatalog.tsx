@@ -40,9 +40,10 @@
 // the controls and receives the rows they keep (frontier re-marked over the
 // Provider + Jurisdiction pool, lib/catalog-filter). Jurisdiction is a
 // checkbox per code, all checked to start, so any combination (US + EU, say)
-// is one click away. Search stays the table's own. Group by and the
-// Ratings / Benchmark scores view are saved for the next visit
-// (lib/models-prefs), like the filters.
+// is one click away. Search stays the table's own. Group by belongs to
+// ModelsExplorer too, since it groups the Score charts as well as the rows.
+// Group by and the Ratings / Benchmark scores view are saved for the next
+// visit (lib/models-prefs), like the filters.
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
@@ -257,7 +258,8 @@ export function ModelCatalog({
   benchmarksGeneratedAt,
   measuredCount,
   scoreFit,
-  initialGroupBy,
+  groupChoice,
+  onGroupChoiceChange,
   initialView,
 }: {
   // Every catalog row: the filter options, the grid's bands, the totals.
@@ -278,13 +280,14 @@ export function ModelCatalog({
   benchmarksGeneratedAt: string;
   measuredCount: number;
   scoreFit: ScoreFit | null;
-  // The visitor's saved Group by and view.
-  initialGroupBy: Grouping;
+  // The Group by choice (ModelsExplorer's, shared with the Score charts); it
+  // groups the rows while the table is sorted by Score.
+  groupChoice: Grouping;
+  onGroupChoiceChange: (next: Grouping) => void;
+  // The visitor's saved view.
   initialView: View;
 }) {
   const [view, setView] = useState<View>(initialView);
-  // The Group by choice; it applies while the table is sorted by Score.
-  const [groupChoice, setGroupChoice] = useState<Grouping>(initialGroupBy);
   const [sortKey, setSortKey] = useState<SortKey>("value");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [search, setSearch] = useState("");
@@ -405,10 +408,9 @@ export function ModelCatalog({
   }, [rows, grouping, byId]);
 
   function groupBy(next: Grouping) {
-    setGroupChoice(next);
+    onGroupChoiceChange(next);
     setSortKey("value");
     setSortDir("desc");
-    savePrefs({ grouping: next });
   }
 
   function toggleSort(key: SortKey) {
