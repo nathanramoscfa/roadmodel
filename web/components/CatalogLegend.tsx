@@ -12,6 +12,7 @@ import {
   DERIVATION_BANDS,
   DERIVED_CATEGORIES,
   GRID_COLUMN_BY_KEY,
+  NEW_RELEASE_DAYS,
   QUALITY_BAND_WIDTH,
   type BenchKey,
 } from "@/lib/benchmark-grid";
@@ -22,8 +23,10 @@ import {
   COST_TIER_COLORS,
   COST_TIER_DEFS,
   COST_TIER_DOT,
+  ESTIMATED_BADGE,
   JURISDICTION_DEFS,
   RATING_COLORS,
+  RATING_OUTLINE_COLORS,
   type CostTier,
   type Rating,
 } from "@/lib/catalog-fields";
@@ -119,13 +122,20 @@ export function CatalogLegend({ id }: { id?: string }) {
             ))}
           </dl>
           <p className="mt-3 text-xs text-brand-slate-500 dark:text-brand-slate-400">
-            A rating is a class several models can share. The <strong>{DERIVED_NAMES}</strong>{" "}
-            letters are <em>derived</em> from one Artificial Analysis benchmark each ({DERIVED_EVIDENCE})
-            as the gap to the category leader &mdash; {BAND_RULE} points, else D &mdash; and refresh
-            with the data. The rest are editorial;
-            a <span className="rounded px-1 ring-1 ring-inset ring-brand-slate-400/60">ringed</span>{" "}
-            letter is editorial because AA has not measured that model. The{" "}
-            <strong>AA Index</strong> column is the one published composite.{" "}
+            A rating is a class several models can share. A filled letter{" "}
+            <span className={BADGE + " " + RATING_COLORS.A}>A</span> is <em>measured</em>: the{" "}
+            <strong>{DERIVED_NAMES}</strong> letters are derived from one Artificial Analysis
+            benchmark each ({DERIVED_EVIDENCE}) as the gap to the category leader &mdash;{" "}
+            {BAND_RULE} points, else D &mdash; and refresh with the data. A dashed-outline letter{" "}
+            <span className={BADGE + " " + ESTIMATED_BADGE + " " + RATING_OUTLINE_COLORS.A}>A</span>{" "}
+            is <em>estimated</em>: the daily catalog automation sets it from each provider&rsquo;s
+            published results, and a new model starts from its predecessor&rsquo;s letters. Every
+            planning, multimodal and speed letter is an estimate, as is a derived category&rsquo;s
+            letter for a model outside its benchmark&rsquo;s measured set. A <strong>New</strong>{" "}
+            tag marks a model released in the last {NEW_RELEASE_DAYS} days and clears on its own.
+            The <strong>AA Index</strong> column is the one published composite; hover it for the
+            Artificial Analysis model it was measured as and that model&rsquo;s own benchmarks,
+            ranked in this catalog, with a check that they bear the index out.{" "}
             <strong>Score</strong> is the cost-adjusted figure: the AA Index minus what a
             model&rsquo;s price predicts <em>among its own cost tier</em>, from one market fit
             over every measured model (index against log&nbsp;price, with a baseline per tier),

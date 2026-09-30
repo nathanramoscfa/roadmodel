@@ -20,6 +20,7 @@ import {
   blendedPrice,
   fitScoreModel,
   GRID_COLUMNS,
+  newUntil,
   scoreFor,
   type BenchKey,
   type BenchRow,
@@ -50,6 +51,7 @@ const MODELS = (catalog as { models?: RawModel[] }).models ?? [];
 interface RawBench {
   aa_slug: string;
   aa_name: string;
+  release_date?: string | null;
   evaluations: Record<string, number | null>;
   median_output_tokens_per_second: number | null;
   median_time_to_first_token_seconds: number | null;
@@ -73,10 +75,12 @@ function benchRowFor(id: string): BenchRow | null {
     }
     values[col.key] = typeof v === "number" && Number.isFinite(v) ? v : null;
   }
-  return { aa_slug: raw.aa_slug, aa_name: raw.aa_name, values };
+  return { aa_slug: raw.aa_slug, aa_name: raw.aa_name, release_date: raw.release_date ?? null, values };
 }
 
-export function getModelRows(): ModelRow[] {
+// `now` decides which models carry the "New" tag (lib/benchmark-grid
+// newUntil); the page renders per request, so the tag clears on its own.
+export function getModelRows(now: Date = new Date()): ModelRow[] {
   const rows: ModelRow[] = MODELS.map((m) => {
     const prose = m.headline_benchmarks ?? "";
     const bench = benchRowFor(m.id);
@@ -104,6 +108,7 @@ export function getModelRows(): ModelRow[] {
       superseded_by: m.superseded_by ?? null,
       superseded_on: m.superseded_on ?? null,
       retires_on: m.retires_on ?? null,
+      new_until: newUntil(bench?.release_date, now),
     };
   });
   // The frontier across the whole catalog; the page re-marks it over the
