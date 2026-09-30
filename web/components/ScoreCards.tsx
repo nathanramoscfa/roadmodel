@@ -165,13 +165,13 @@ export function FrontierStatus({
 // A group (a cost tier, a quality band) whose top score at its prices belongs
 // to a model outside it, in plain words: "The top score at these prices or
 // less is Opus 5.5 (High cost): it scores higher than all 6 models here and
-// costs less." The table's group header and the tier's chart both say it, so
-// it shows without hovering anything. Null when a model in the group holds
-// the top score at its own price (it wears the green ring).
+// costs less." The table's group header says it, so it shows without hovering
+// anything. Null when a model in the group holds the top score at its own
+// price (it wears the green ring).
 export function topScoreSentence(
   members: readonly ModelRow[],
   byId: Map<string, ModelRow>,
-  // What to hover for the figures: "an AA Index" (table) or "a dot" (chart).
+  // What to hover for the figures, e.g. "an AA Index" in the table.
   hover: string,
 ): string | null {
   const group = groupBeatenBy(members);
