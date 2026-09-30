@@ -54,6 +54,14 @@
       "cache_read_per_1m": 0.5
     },
     {
+      "id": "claude-sonnet-5-5",
+      "slug": "Claude Sonnet 5.5",
+      "name": "Claude Sonnet 5.5",
+      "input_price_per_1m": 2.0,
+      "output_price_per_1m": 10.0,
+      "cache_read_per_1m": 0.2
+    },
+    {
       "id": "claude-sonnet-5",
       "slug": "Claude Sonnet 5",
       "name": "Claude Sonnet 5",
@@ -85,14 +93,14 @@
     "Claude Opus 5": "claude-opus-5",
     "Claude Opus 4.8": "opus-4.8",
     "Claude Opus 4.7": "opus-4.7",
+    "Claude Sonnet 5.5": "claude-sonnet-5-5",
     "Claude Sonnet 5": "claude-sonnet-5",
     "Claude Sonnet 4.6": "sonnet-4.6",
     "Claude Haiku 4.5": "claude-4.5-haiku"
   },
   "unexpected_slugs": [
     "Claude Mythos 5",
-    "Claude Mythos 5.1",
-    "Claude Sonnet 5.5"
+    "Claude Mythos 5.1"
   ],
   "discovered": [
     {
@@ -104,13 +112,8 @@
       "slug": "Claude Mythos 5",
       "input_price_per_1m": 10.0,
       "output_price_per_1m": 50.0
-    },
-    {
-      "slug": "Claude Sonnet 5.5",
-      "input_price_per_1m": 2.0,
-      "output_price_per_1m": 10.0
     }
   ],
   "missing_mapped_models": [],
-  "section_sha256": "12d23dc435eb96be5010092579ecce06a10f904351e2be7c5f8216e8a2e121fc"
+  "section_sha256": "39c28462145dcd0f11af3ac40964dc8e9e9ac4696f1d99ef776fd22ae0bc26e0"
 }
