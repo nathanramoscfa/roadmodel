@@ -6,7 +6,7 @@
     "endpoint": "https://artificialanalysis.ai/api/v2/data/llms/models",
     "attribution": "Benchmark data © Artificial Analysis, used under its API terms with attribution."
   },
-  "generated_at_utc": "2026-09-30T02:47:10Z",
+  "generated_at_utc": "2026-09-30T22:10:49Z",
   "model_count": 53,
   "unmapped": [],
   "missing_slugs": [],
@@ -38,8 +38,8 @@
         "tau2": 0.546783625730994,
         "tau_banking": 0.0927835051546392
       },
-      "median_output_tokens_per_second": 114.616,
-      "median_time_to_first_token_seconds": 14.298
+      "median_output_tokens_per_second": 120.134,
+      "median_time_to_first_token_seconds": 13.08
     },
     "claude-fable-5": {
       "aa_id": "cd55210d-358e-4df1-ba9c-9acb5f186cc9",
@@ -96,8 +96,8 @@
         "tau2": null,
         "tau_banking": 0.472164948453608
       },
-      "median_output_tokens_per_second": 69.568,
-      "median_time_to_first_token_seconds": 111.663
+      "median_output_tokens_per_second": 68.541,
+      "median_time_to_first_token_seconds": 113.701
     },
     "claude-opus-5": {
       "aa_id": "b8fc61f7-5e9a-49e6-8547-6ac56db24627",
@@ -154,8 +154,8 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 95.923,
-      "median_time_to_first_token_seconds": 474.538
+      "median_output_tokens_per_second": 95.679,
+      "median_time_to_first_token_seconds": 482.463
     },
     "claude-sonnet-5": {
       "aa_id": "23c86e4a-c769-43c0-a056-79e3cd15834f",
@@ -183,7 +183,7 @@
         "tau2": null,
         "tau_banking": 0.37319587628866
       },
-      "median_output_tokens_per_second": 89.987,
+      "median_output_tokens_per_second": 89.992,
       "median_time_to_first_token_seconds": 123.046
     },
     "claude-sonnet-5-5": {
@@ -212,13 +212,13 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 145.398,
-      "median_time_to_first_token_seconds": 304.758
+      "median_output_tokens_per_second": 145.124,
+      "median_time_to_first_token_seconds": 279.471
     },
     "deepseek-flash": {
       "aa_id": "dbe7c625-3100-4463-b479-a228c41f75dd",
       "aa_slug": "deepseek-v4-1-flash",
-      "aa_name": "DeepSeek V4.1 Flash (Reasoning, Max Effort)",
+      "aa_name": "DeepSeek V4.1 Flash (Max)",
       "aa_creator": "DeepSeek",
       "release_date": "2026-09-10",
       "evaluations": {
@@ -247,7 +247,7 @@
     "deepseek-v4-pro": {
       "aa_id": "83173329-c09a-41f1-a028-a282a5f908d7",
       "aa_slug": "deepseek-v4-pro",
-      "aa_name": "DeepSeek V4 Pro 0813 (Reasoning, Max Effort)",
+      "aa_name": "DeepSeek V4 Pro 0813 (Max)",
       "aa_creator": "DeepSeek",
       "release_date": "2026-08-13",
       "evaluations": {
@@ -270,8 +270,8 @@
         "tau2": null,
         "tau_banking": 0.395876288659794
       },
-      "median_output_tokens_per_second": 87.145,
-      "median_time_to_first_token_seconds": 1.124
+      "median_output_tokens_per_second": 79.336,
+      "median_time_to_first_token_seconds": 1.16
     },
     "gemini-2.5-flash": {
       "aa_id": "219ed587-60c5-4a48-9517-8480e08d0ca1",
@@ -334,7 +334,7 @@
     "gemini-3-pro": {
       "aa_id": "d1122eff-ee85-4fdc-8a9f-23bee6590667",
       "aa_slug": "gemini-3-pro",
-      "aa_name": "Gemini 3 Pro Preview (high)",
+      "aa_name": "Gemini 3 Pro Preview (High)",
       "aa_creator": "Google",
       "release_date": "2025-11-18",
       "evaluations": {
@@ -386,13 +386,13 @@
         "tau2": 0.956140350877193,
         "tau_banking": 0.214432989690722
       },
-      "median_output_tokens_per_second": 131.766,
+      "median_output_tokens_per_second": 126.44,
       "median_time_to_first_token_seconds": 22.837
     },
     "gemini-3.5-flash": {
       "aa_id": "0097ebf5-124f-42f6-9463-33b00e711f03",
       "aa_slug": "gemini-3-5-flash",
-      "aa_name": "Gemini 3.5 Flash (high)",
+      "aa_name": "Gemini 3.5 Flash (High)",
       "aa_creator": "Google",
       "release_date": "2026-05-19",
       "evaluations": {
@@ -421,7 +421,7 @@
     "gemini-3.6-flash": {
       "aa_id": "78332c88-fe60-42c8-af9d-3617e44cf1f5",
       "aa_slug": "gemini-3-6-flash",
-      "aa_name": "Gemini 3.6 Flash (high)",
+      "aa_name": "Gemini 3.6 Flash (High)",
       "aa_creator": "Google",
       "release_date": "2026-07-21",
       "evaluations": {
@@ -450,7 +450,7 @@
     "gemini-3.7-flash": {
       "aa_id": "b2331108-72ed-415a-82d1-188633875bbc",
       "aa_slug": "gemini-3-7-flash",
-      "aa_name": "Gemini 3.7 Flash (high)",
+      "aa_name": "Gemini 3.7 Flash (High)",
       "aa_creator": "Google",
       "release_date": "2026-08-13",
       "evaluations": {
@@ -479,7 +479,7 @@
     "gemini-3.8-flash": {
       "aa_id": "8a999846-4c1d-4ce7-a8b7-1310a7166fd7",
       "aa_slug": "gemini-3-8-flash",
-      "aa_name": "Gemini 3.8 Flash (high)",
+      "aa_name": "Gemini 3.8 Flash (High)",
       "aa_creator": "Google",
       "release_date": "2026-09-02",
       "evaluations": {
@@ -502,8 +502,8 @@
         "tau2": null,
         "tau_banking": 0.449484536082474
       },
-      "median_output_tokens_per_second": 237.734,
-      "median_time_to_first_token_seconds": 12.574
+      "median_output_tokens_per_second": 230.001,
+      "median_time_to_first_token_seconds": 13.065
     },
     "glm-4.5-air": {
       "aa_id": "5d303dc9-c027-401f-9803-4e9aa3331007",
@@ -566,7 +566,7 @@
     "glm-5.2": {
       "aa_id": "f7a4ea75-e548-4069-80d4-9be8bc7c009b",
       "aa_slug": "glm-5-2",
-      "aa_name": "GLM-5.2 (max)",
+      "aa_name": "GLM-5.2 (Max)",
       "aa_creator": "Z AI",
       "release_date": "2026-06-16",
       "evaluations": {
@@ -595,7 +595,7 @@
     "glm-5.3": {
       "aa_id": "cd684ea4-b475-4269-b001-d469d06d8a7a",
       "aa_slug": "glm-5-3",
-      "aa_name": "GLM-5.3 (max)",
+      "aa_name": "GLM-5.3 (Max)",
       "aa_creator": "Z AI",
       "release_date": "2026-08-18",
       "evaluations": {
@@ -618,8 +618,8 @@
         "tau2": null,
         "tau_banking": 0.503092783505155
       },
-      "median_output_tokens_per_second": 74.79,
-      "median_time_to_first_token_seconds": 2.703
+      "median_output_tokens_per_second": 69.619,
+      "median_time_to_first_token_seconds": 3.012
     },
     "glm-5.3-flash": {
       "aa_id": "19496b81-9f41-4214-a77a-1df803b3c5ae",
@@ -647,13 +647,13 @@
         "tau2": null,
         "tau_banking": 0.472164948453608
       },
-      "median_output_tokens_per_second": 46.936,
-      "median_time_to_first_token_seconds": 3.156
+      "median_output_tokens_per_second": 47.201,
+      "median_time_to_first_token_seconds": 3.195
     },
     "gpt-5": {
       "aa_id": "48e50f00-1fd1-4acc-b337-61078aa341e6",
       "aa_slug": "gpt-5",
-      "aa_name": "GPT-5 (high)",
+      "aa_name": "GPT-5 (High)",
       "aa_creator": "OpenAI",
       "release_date": "2025-08-07",
       "evaluations": {
@@ -682,7 +682,7 @@
     "gpt-5-mini": {
       "aa_id": "29855680-7469-43eb-8b88-cd3fb1d99da3",
       "aa_slug": "gpt-5-mini",
-      "aa_name": "GPT-5 mini (high)",
+      "aa_name": "GPT-5 mini (High)",
       "aa_creator": "OpenAI",
       "release_date": "2025-08-07",
       "evaluations": {
@@ -711,7 +711,7 @@
     "gpt-5.1-codex": {
       "aa_id": "04d023f3-025c-4d78-9571-53edda3eaf2a",
       "aa_slug": "gpt-5-1-codex",
-      "aa_name": "GPT-5.1 Codex (high)",
+      "aa_name": "GPT-5.1 Codex (High)",
       "aa_creator": "OpenAI",
       "release_date": "2025-11-13",
       "evaluations": {
@@ -740,7 +740,7 @@
     "gpt-5.1-codex-mini": {
       "aa_id": "fd4454ff-e703-46c0-a7f5-fa69af09486d",
       "aa_slug": "gpt-5-1-codex-mini",
-      "aa_name": "GPT-5.1 Codex mini (high)",
+      "aa_name": "GPT-5.1 Codex mini (High)",
       "aa_creator": "OpenAI",
       "release_date": "2025-11-13",
       "evaluations": {
@@ -769,7 +769,7 @@
     "gpt-5.2": {
       "aa_id": "498862c3-f9ac-49d2-852f-16a02bb0c38f",
       "aa_slug": "gpt-5-2",
-      "aa_name": "GPT-5.2 (xhigh)",
+      "aa_name": "GPT-5.2 (Xhigh)",
       "aa_creator": "OpenAI",
       "release_date": "2025-12-11",
       "evaluations": {
@@ -798,7 +798,7 @@
     "gpt-5.2-codex": {
       "aa_id": "019e86f6-e66b-42d8-8a50-235a06b53003",
       "aa_slug": "gpt-5-2-codex",
-      "aa_name": "GPT-5.2 Codex (xhigh)",
+      "aa_name": "GPT-5.2 Codex (Xhigh)",
       "aa_creator": "OpenAI",
       "release_date": "2025-12-11",
       "evaluations": {
@@ -827,7 +827,7 @@
     "gpt-5.3-codex": {
       "aa_id": "59b5b14b-5365-4ee7-824a-18a8e6309644",
       "aa_slug": "gpt-5-3-codex",
-      "aa_name": "GPT-5.3 Codex (xhigh)",
+      "aa_name": "GPT-5.3 Codex (Xhigh)",
       "aa_creator": "OpenAI",
       "release_date": "2026-02-05",
       "evaluations": {
@@ -850,13 +850,13 @@
         "tau2": 0.859649122807018,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 111.569,
-      "median_time_to_first_token_seconds": 38.918
+      "median_output_tokens_per_second": 95.829,
+      "median_time_to_first_token_seconds": 39.134
     },
     "gpt-5.4": {
       "aa_id": "a89c4b28-2d8c-456e-88ea-255fb51fd2b6",
       "aa_slug": "gpt-5-4",
-      "aa_name": "GPT-5.4 (xhigh)",
+      "aa_name": "GPT-5.4 (Xhigh)",
       "aa_creator": "OpenAI",
       "release_date": "2026-03-05",
       "evaluations": {
@@ -885,7 +885,7 @@
     "gpt-5.4-mini": {
       "aa_id": "ba242e40-83b7-4cd3-a0e0-b56237984914",
       "aa_slug": "gpt-5-4-mini",
-      "aa_name": "GPT-5.4 mini (xhigh)",
+      "aa_name": "GPT-5.4 mini (Xhigh)",
       "aa_creator": "OpenAI",
       "release_date": "2026-03-17",
       "evaluations": {
@@ -914,7 +914,7 @@
     "gpt-5.4-nano": {
       "aa_id": "d4fc3f33-f2b0-4da1-88ee-f1f82bd4de31",
       "aa_slug": "gpt-5-4-nano",
-      "aa_name": "GPT-5.4 nano (xhigh)",
+      "aa_name": "GPT-5.4 nano (Xhigh)",
       "aa_creator": "OpenAI",
       "release_date": "2026-03-17",
       "evaluations": {
@@ -943,7 +943,7 @@
     "gpt-5.5": {
       "aa_id": "1f054429-397e-4fdb-9e71-67bc92c1735e",
       "aa_slug": "gpt-5-5",
-      "aa_name": "GPT-5.5 (xhigh)",
+      "aa_name": "GPT-5.5 (Xhigh)",
       "aa_creator": "OpenAI",
       "release_date": "2026-04-23",
       "evaluations": {
@@ -972,7 +972,7 @@
     "gpt-5.6-luna": {
       "aa_id": "426d24c8-49ae-482a-b4a8-20f1c53f21c1",
       "aa_slug": "gpt-5-6-luna",
-      "aa_name": "GPT-5.6 Luna (max)",
+      "aa_name": "GPT-5.6 Luna (Max)",
       "aa_creator": "OpenAI",
       "release_date": "2026-07-09",
       "evaluations": {
@@ -1001,7 +1001,7 @@
     "gpt-5.6-sol": {
       "aa_id": "d93edfe8-bf35-49ad-b56e-b18116142a1c",
       "aa_slug": "gpt-5-6-sol",
-      "aa_name": "GPT-5.6 Sol (max)",
+      "aa_name": "GPT-5.6 Sol (Max)",
       "aa_creator": "OpenAI",
       "release_date": "2026-07-09",
       "evaluations": {
@@ -1030,7 +1030,7 @@
     "gpt-5.6-terra": {
       "aa_id": "bcf8db0a-3bb6-4d82-9516-0f57370c85a6",
       "aa_slug": "gpt-5-6-terra",
-      "aa_name": "GPT-5.6 Terra (max)",
+      "aa_name": "GPT-5.6 Terra (Max)",
       "aa_creator": "OpenAI",
       "release_date": "2026-07-09",
       "evaluations": {
@@ -1059,7 +1059,7 @@
     "gpt-6-astra": {
       "aa_id": "2f339a97-9a0d-499a-9cb5-e0db665bfa25",
       "aa_slug": "gpt-6-astra",
-      "aa_name": "GPT-6 Astra (max)",
+      "aa_name": "GPT-6 Astra (Max)",
       "aa_creator": "OpenAI",
       "release_date": "2026-09-03",
       "evaluations": {
@@ -1082,13 +1082,13 @@
         "tau2": null,
         "tau_banking": 0.414432989690722
       },
-      "median_output_tokens_per_second": 60.647,
-      "median_time_to_first_token_seconds": 177.9
+      "median_output_tokens_per_second": 53.673,
+      "median_time_to_first_token_seconds": 192.987
     },
     "gpt-6-luna": {
       "aa_id": "6fb13851-40ce-4bda-ad3f-6b38e0c5daa7",
       "aa_slug": "gpt-6-luna",
-      "aa_name": "GPT-6 Luna (max)",
+      "aa_name": "GPT-6 Luna (Max)",
       "aa_creator": "OpenAI",
       "release_date": "2026-09-22",
       "evaluations": {
@@ -1111,13 +1111,13 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 142.083,
-      "median_time_to_first_token_seconds": 73.23
+      "median_output_tokens_per_second": 129.064,
+      "median_time_to_first_token_seconds": 76.752
     },
     "gpt-6-sol": {
       "aa_id": "c50ea08c-88c0-4eb7-85b8-27f2bbf6d527",
       "aa_slug": "gpt-6-sol",
-      "aa_name": "GPT-6 Sol (max)",
+      "aa_name": "GPT-6 Sol (Max)",
       "aa_creator": "OpenAI",
       "release_date": "2026-09-22",
       "evaluations": {
@@ -1140,13 +1140,13 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 83.367,
-      "median_time_to_first_token_seconds": 110.379
+      "median_output_tokens_per_second": 79.832,
+      "median_time_to_first_token_seconds": 120.762
     },
     "gpt-oss-120b": {
       "aa_id": "f0083258-8646-45b8-8082-7aaf6c2ea82a",
       "aa_slug": "gpt-oss-120b",
-      "aa_name": "gpt-oss-120b (high)",
+      "aa_name": "gpt-oss-120b (High)",
       "aa_creator": "OpenAI",
       "release_date": "2025-08-05",
       "evaluations": {
@@ -1169,13 +1169,13 @@
         "tau2": 0.657894736842105,
         "tau_banking": 0.127835051546392
       },
-      "median_output_tokens_per_second": 196.538,
-      "median_time_to_first_token_seconds": 0.564
+      "median_output_tokens_per_second": 172.523,
+      "median_time_to_first_token_seconds": 0.561
     },
     "gpt-oss-20b": {
       "aa_id": "36f73aaf-d38a-4b56-a2b3-d04d17186910",
       "aa_slug": "gpt-oss-20b",
-      "aa_name": "gpt-oss-20b (high)",
+      "aa_name": "gpt-oss-20b (High)",
       "aa_creator": "OpenAI",
       "release_date": "2025-08-05",
       "evaluations": {
@@ -1198,13 +1198,13 @@
         "tau2": 0.60233918128655,
         "tau_banking": 0.0701030927835052
       },
-      "median_output_tokens_per_second": 181.79,
+      "median_output_tokens_per_second": 171.862,
       "median_time_to_first_token_seconds": 0.426
     },
     "grok-4.3": {
       "aa_id": "948892b5-db03-4118-a4a8-ccd51ed871ea",
       "aa_slug": "grok-4-3",
-      "aa_name": "Grok 4.3 (high)",
+      "aa_name": "Grok 4.3 (High)",
       "aa_creator": "SpaceXAI",
       "release_date": "2026-04-30",
       "evaluations": {
@@ -1233,7 +1233,7 @@
     "grok-4.6": {
       "aa_id": "c8adc5cf-fd5a-407b-af51-dc3bede3e49c",
       "aa_slug": "grok-4-6",
-      "aa_name": "Grok 4.6 (high)",
+      "aa_name": "Grok 4.6 (High)",
       "aa_creator": "SpaceXAI",
       "release_date": "2026-08-12",
       "evaluations": {
@@ -1256,13 +1256,13 @@
         "tau2": null,
         "tau_banking": 0.507216494845361
       },
-      "median_output_tokens_per_second": 66.127,
-      "median_time_to_first_token_seconds": 23.412
+      "median_output_tokens_per_second": 69.637,
+      "median_time_to_first_token_seconds": 27.853
     },
     "grok-4.7": {
       "aa_id": "59627802-1546-422c-9a65-65b61c022d36",
       "aa_slug": "grok-4-7",
-      "aa_name": "Grok 4.7 (xhigh)",
+      "aa_name": "Grok 4.7 (Xhigh)",
       "aa_creator": "SpaceXAI",
       "release_date": "2026-09-21",
       "evaluations": {
@@ -1285,8 +1285,8 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 84.367,
-      "median_time_to_first_token_seconds": 22.566
+      "median_output_tokens_per_second": 82.607,
+      "median_time_to_first_token_seconds": 19.282
     },
     "kimi-k2.7-code": {
       "aa_id": "8d0cb231-7303-452c-9923-a9620b948475",
@@ -1314,13 +1314,13 @@
         "tau2": 0.900584795321637,
         "tau_banking": 0.202061855670103
       },
-      "median_output_tokens_per_second": 70.12,
-      "median_time_to_first_token_seconds": 0.991
+      "median_output_tokens_per_second": 63.579,
+      "median_time_to_first_token_seconds": 1.034
     },
     "kimi-k3": {
       "aa_id": "f7d2fc3e-1f7b-405f-818c-07952a4af78f",
       "aa_slug": "kimi-k3",
-      "aa_name": "Kimi K3 (max)",
+      "aa_name": "Kimi K3 (Max)",
       "aa_creator": "Kimi",
       "release_date": "2026-07-16",
       "evaluations": {
@@ -1343,8 +1343,8 @@
         "tau2": null,
         "tau_banking": 0.45979381443299
       },
-      "median_output_tokens_per_second": 42.262,
-      "median_time_to_first_token_seconds": 4.75
+      "median_output_tokens_per_second": 38.459,
+      "median_time_to_first_token_seconds": 2.906
     },
     "mistral-large-3": {
       "aa_id": "4928e950-7f37-4475-b0dc-c5bad781a321",
@@ -1372,8 +1372,8 @@
         "tau2": 0.245614035087719,
         "tau_banking": 0.0577319587628866
       },
-      "median_output_tokens_per_second": 77.563,
-      "median_time_to_first_token_seconds": 0.718
+      "median_output_tokens_per_second": 76.03,
+      "median_time_to_first_token_seconds": 0.697
     },
     "mistral-medium-3.5": {
       "aa_id": "dd059b25-d82a-4ead-82a4-4adceaaec48b",
@@ -1401,7 +1401,7 @@
         "tau2": 0.941520467836257,
         "tau_banking": 0.150515463917526
       },
-      "median_output_tokens_per_second": 171.081,
+      "median_output_tokens_per_second": 163.901,
       "median_time_to_first_token_seconds": 0.621
     },
     "mistral-small-4": {
@@ -1430,13 +1430,13 @@
         "tau2": 0.412280701754386,
         "tau_banking": 0.0494845360824742
       },
-      "median_output_tokens_per_second": 173.192,
-      "median_time_to_first_token_seconds": 0.553
+      "median_output_tokens_per_second": 169.832,
+      "median_time_to_first_token_seconds": 0.587
     },
     "muse-spark-1.3": {
       "aa_id": "9999672c-b687-4026-9c15-5cef02ff53bb",
       "aa_slug": "muse-spark-1-3",
-      "aa_name": "Muse Spark 1.3 (max)",
+      "aa_name": "Muse Spark 1.3 (Max)",
       "aa_creator": "Meta",
       "release_date": "2026-09-02",
       "evaluations": {
@@ -1459,8 +1459,8 @@
         "tau2": null,
         "tau_banking": 0.505154639175258
       },
-      "median_output_tokens_per_second": 230.337,
-      "median_time_to_first_token_seconds": 21.88
+      "median_output_tokens_per_second": 195.622,
+      "median_time_to_first_token_seconds": 25.685
     },
     "opus-4.7": {
       "aa_id": "e9a09db3-8fd6-41dd-ba2f-20e0a2bff7f2",
