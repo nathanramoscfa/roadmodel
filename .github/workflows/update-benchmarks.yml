@@ -77,7 +77,7 @@ jobs:
           import json
           d = json.load(open("docs/benchmarks.json"))
           assert d["model_count"] > 0, "benchmarks.json has no measured models"
-          print(f"{d['model_count']} measured; unmapped={d['unmapped']}; missing={d['missing_slugs']}")
+          print(f"{d['model_count']} measured; unmapped={d['unmapped']}; missing={d['missing_slugs']}; mismatched={d.get('mismatched', [])}")
           EOF
 
       - name: Re-derive ratings from the refreshed layer
@@ -127,6 +127,8 @@ jobs:
               lines.append("- **Unmapped catalog ids** (add to `update/aa-model-map.json`, `--suggest` lists candidates): " + ", ".join(f"`{m}`" for m in d["unmapped"]))
           if d["missing_slugs"]:
               lines.append("- **Map points at slugs AA no longer serves**: " + ", ".join(f"`{m}`" for m in d["missing_slugs"]))
+          if d.get("mismatched"):
+              lines.append("- **Map joins an id to a differently named AA model** (scores left out, row shows dashes): " + ", ".join(f"`{m}`" for m in d["mismatched"]))
           print("\n".join(lines))
           EOF
           )"
