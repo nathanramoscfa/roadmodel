@@ -151,7 +151,13 @@ jobs:
         # Keep the rendered mirror in sync with the .txt Opus just edited
         # (the test_doc_schema sync test gates this on the PR).
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
-        run: python update/render_md.py
+        run: |
+          set -euo pipefail
+          # Tier letters are not this tracker's to move: update/rating_guard.py
+          # reverts any letter edit the pass made (it declares none).
+          git show HEAD:docs/model-selector.txt > /tmp/base-selector.txt
+          python update/rating_guard.py --apply --base /tmp/base-selector.txt
+          python update/render_md.py
 
       - name: Rebuild docs/catalog.json (deterministic)
         # catalog.json mirrors selector prose this cron edits (notably the
