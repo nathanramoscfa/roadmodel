@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -81,13 +82,13 @@ def test_derive_scales_fractions_to_points_and_skips_nulls() -> None:
             "artificial_analysis_coding_index": 80.0,
             "hle": 0.60,
             "lcr": None,
-            "terminalbench_v2_1": 0.9,
+            "terminalbench_v4_0": 0.9,
         },
         cheap_one={
             "artificial_analysis_coding_index": 58.0,
             "hle": 0.42,
             "lcr": 0.7,
-            "terminalbench_v2_1": None,
+            "terminalbench_v4_0": None,
         },
     )
     d = dr.derive(bench)
@@ -108,14 +109,14 @@ def test_plan_apply_and_enumeration_round_trip() -> None:
             "artificial_analysis_coding_index": 80.0,
             "hle": 0.60,
             "lcr": 0.9,
-            "terminalbench_v2_1": 0.9,
+            "terminalbench_v4_0": 0.9,
         },
         **{
             "cheap-one": {
                 "artificial_analysis_coding_index": 77.0,
                 "hle": 0.20,
                 "lcr": 0.85,
-                "terminalbench_v2_1": 0.5,
+                "terminalbench_v4_0": 0.5,
             }
         },
     )
@@ -125,7 +126,8 @@ def test_plan_apply_and_enumeration_round_trip() -> None:
     assert by[("cheap-one", "coding")] == ("B", "S")  # gap 3
     assert by[("cheap-one", "knowledge")] == ("B", "C")  # gap 40
     assert by[("cheap-one", "long-context")] == ("B", "S")  # gap 5
-    assert by[("cheap-one", "agentic")] == ("B", "C")  # gap 40
+    # Agentic is by rank: second of two measured models holds its B.
+    assert ("cheap-one", "agentic") not in by
     assert not any(c["id"] == "leader" for c in changes)
     # The unmeasured model is reported, not edited.
     assert all("unmeasured" in ids for ids in unmeasured.values())
@@ -158,16 +160,93 @@ def test_report_names_changes_and_editorial_categories() -> None:
                 "artificial_analysis_coding_index": 50.0,
                 "hle": None,
                 "lcr": None,
-                "terminalbench_v2_1": None,
+                "terminalbench_v4_0": None,
             }
         }
     )
     changes, unmeasured = dr.plan_changes(SELECTOR, bench)
     text = dr.render_report(changes, unmeasured, {"cheap-one": "Cheap One"})
-    assert "| Cheap One | coding | AA Coding Index | 50.0 | 50.0 | 0.0 | B | **S** |" in text
+    assert "| Cheap One | coding | AA Coding Index | 50.0 | 50.0 | 0.0 | — | B | **S** |" in text
     assert "planning, multimodal, speed" in text
     # Names come from the catalog map when present, else the id.
     assert "**knowledge**: Cheap One, leader, unmeasured" in text
+
+
+def test_agentic_letters_by_rank_hold_the_spread() -> None:
+    """Of every 40 measured models: 9 S, 16 A, 7 B, 2 C, the rest D — by rank
+    on the evidence, whatever its scale."""
+    shares = dr.RANK_SHARES["agentic"]
+    n = 40
+    letters = [dr.letter_for_rank(better, 1, n, shares) for better in range(n)]
+    assert [letters.count(x) for x in "SABCD"] == [9, 16, 7, 2, 6]
+    assert letters == sorted(letters, key="SABCD".index)
+    # A tie group shares its mean position, so it never splits: eight models
+    # tied at the bottom of 40 (positions 32–39) are all D.
+    assert dr.letter_for_rank(32, 8, n, shares) == "D"
+    # The top-ranked model is S however few are measured.
+    assert dr.letter_for_rank(0, 1, 2, shares) == "S"
+    assert dr.letter_for_rank(1, 1, 2, shares) == "B"
+
+
+def test_derive_letters_agentic_by_rank_with_rank_and_count() -> None:
+    values = {f"m{i:02d}": (40 - i) / 100 for i in range(40)}  # m00 best
+    bench = _bench(**{cid: {"terminalbench_v4_0": v} for cid, v in values.items()})
+    d = dr.derive(bench)["agentic"]
+    assert d["m00"] == {
+        "value": 40.0,
+        "leader": 40.0,
+        "gap": 0.0,
+        "rank": 1,
+        "of": 40,
+        "letter": "S",
+    }
+    assert d["m08"]["letter"] == "S" and d["m09"]["letter"] == "A"
+    assert d["m24"]["letter"] == "A" and d["m25"]["letter"] == "B"
+    assert d["m33"]["letter"] == "C" and d["m34"]["letter"] == "D"
+    # The gap rule still governs the other categories on the same data shape.
+    assert "rank" not in dr.derive(_bench(a={"hle": 0.5}, b={"hle": 0.4}))["knowledge"]["b"]
+
+
+def test_a_retired_models_row_never_shifts_a_letter() -> None:
+    """A retired model keeps its selector element and, for a day, its
+    benchmark row; ranks and leaders use the catalog's live models only."""
+    retired = SELECTOR.replace(
+        'id="unmeasured" name="Unmeasured"',
+        'id="unmeasured" name="Unmeasured" retired-on="2026-10-01"',
+    )
+    assert dr.live_ids(retired) == {"cheap-one", "leader"}
+    bench = _bench(
+        leader={"hle": 0.60},
+        **{"cheap-one": {"hle": 0.42}},
+        unmeasured={"hle": 0.90},  # would lead HLE if it counted
+    )
+    changes, _ = dr.plan_changes(retired, bench)
+    by = {(c["id"], c["category"]): c for c in changes}
+    assert by[("cheap-one", "knowledge")]["leader"] == 60.0
+    assert ("leader", "knowledge") not in by  # still the leader: S
+
+
+def test_web_and_scoring_mirror_the_derivation() -> None:
+    """The /models tooltips (web/lib/benchmark-grid.ts) must explain the rule
+    the letters follow, and the scoring core must read the same evidence."""
+    from roadmodel import scoring
+
+    grid = (REPO_ROOT / "web" / "lib" / "benchmark-grid.ts").read_text(encoding="utf-8")
+    bands = re.findall(r'\{ max: (\d+), letter: "([SABCD])" \}', grid)
+    assert [(float(m), letter) for m, letter in bands] == dr.BANDS
+    assert re.search(r"export const RANK_OUT_OF = (\d+);", grid).group(1) == str(dr.RANK_OUT_OF)  # type: ignore[union-attr]
+    for cat, shares in dr.RANK_SHARES.items():
+        body = re.search(rf"\n  {re.escape(cat)}: \[(.*?)\],", grid, re.S)
+        assert body, f"RANK_DERIVATION lacks {cat}"
+        pairs = re.findall(r'letter: "([SABCD])", count: (\d+)', body.group(1))
+        assert [(letter, int(c)) for letter, c in pairs] == shares
+    # Each derived category's evidence column carries its `category` tag, and
+    # the scoring core reads the same AA key.
+    for cat, (key, _scale, _label) in dr.CATEGORY_EVIDENCE.items():
+        block = re.search(rf'key: "{key}",(.*?)\n  \}}', grid, re.S)
+        assert block and f'category: "{cat}"' in block.group(1), f"{key} is not tagged {cat}"
+        assert scoring.CATEGORY_EVIDENCE[cat] == key
+    assert set(dr.RANK_SHARES) <= scoring.RANK_SCALED
 
 
 def test_committed_selector_matches_committed_benchmark_layer() -> None:

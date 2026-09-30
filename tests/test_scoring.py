@@ -548,6 +548,29 @@ def test_zero_evidence_is_unmeasured_not_a_score() -> None:
     assert scoring._evidence(bench, "gpt-5.6-sol", "median_output_tokens_per_second") == 80
 
 
+def test_agentic_evidence_is_ranked_and_an_evaluation_zero_is_a_result() -> None:
+    """Agentic reads Terminal-Bench 4.0 by rank (0 lowest … 100 highest, ties
+    share their mean rank), so one runaway leader does not squash the field,
+    and a 0% there is a measured result, unlike 0 tokens/s."""
+    tb = {"a": 0.64, "b": 0.14, "c": 0.0, "d": 0.0}
+    bench = {k: {"evaluations": {"terminalbench_v4_0": v}} for k, v in tb.items()}
+    cat = {"models": [{"id": k} for k in tb]}
+    scale = scoring._evidence_scale(cat, bench, scoring.CATEGORY_EVIDENCE["agentic"])
+    assert scoring.CATEGORY_EVIDENCE["agentic"] == "terminalbench_v4_0"
+    assert scale is not None and scale.ranked
+    assert scale.points(0.64) == pytest.approx(100.0)
+    assert scale.points(0.14) == pytest.approx(100 * 2 / 3)
+    assert scale.points(0.0) == pytest.approx(100 * 0.5 / 3)
+    assert scoring._evidence(bench, "c", "terminalbench_v4_0") == 0.0
+    # Every other category stays min-max.
+    hle = {
+        k: {"evaluations": {"hle": v}} for k, v in {"a": 0.6, "b": 0.4, "c": 0.2, "d": 0.2}.items()
+    }
+    minmax = scoring._evidence_scale(cat, hle, "hle")
+    assert minmax is not None and not minmax.ranked
+    assert minmax.points(0.4) == pytest.approx(50.0)
+
+
 def test_k_is_fitted_in_the_scores_own_quality_units() -> None:
     """K must be the slope of the blended quality the score uses (0–100,
     stretched), not of the raw AA index — otherwise λ = 1 is far below the

@@ -13,7 +13,7 @@
 // server page reads data/benchmarks.json, projects each model to a BenchRow
 // with exactly the GRID_COLUMNS keys, and passes it down as props.
 
-import type { Category } from "@/lib/catalog-fields";
+import type { Category, Rating } from "@/lib/catalog-fields";
 
 // Keys as the AA Insights API names them (evaluations.<key>), plus the two
 // performance fields promoted to columns.
@@ -103,19 +103,19 @@ export const GRID_COLUMNS: BenchColumn[] = [
     short: "TB 2.1",
     label: "Terminal-Bench 2.1",
     definition:
-      "Autonomous multi-step tasks in a real terminal — the agentic benchmark; percent of tasks completed, as run by AA.",
+      "The previous Terminal-Bench release: autonomous multi-step tasks in a real terminal; percent of tasks completed, as run by AA on models released before the current release took over.",
     unit: "fraction",
     url: "https://www.tbench.ai/",
-    category: "agentic",
   },
   {
     key: "terminalbench_v4_0",
     short: "TB 4.0",
     label: "Terminal-Bench 4.0",
     definition:
-      "The current Terminal-Bench release: harder autonomous multi-step tasks in a real terminal; percent of tasks completed, as run by AA. It is the Terminal-Bench release AA runs on newly released models.",
+      "The agentic benchmark: the current Terminal-Bench release, harder autonomous multi-step tasks in a real terminal; percent of tasks completed, as run by AA. It is the Terminal-Bench release AA runs on newly released models.",
     unit: "fraction",
     url: "https://www.tbench.ai/",
+    category: "agentic",
   },
   {
     key: "tau_banking",
@@ -169,8 +169,9 @@ export const CATEGORY_FIGURE: Partial<Record<Category, BenchKey>> = Object.fromE
 );
 
 // The four categories whose letter is DERIVED from its evidence column by
-// update/derive_ratings.py (gap to the category leader, in points:
-// S ≤ 5, A ≤ 20, B ≤ 35, C ≤ 50, else D) for every model AA measures.
+// update/derive_ratings.py for every model AA measures: by gap to the
+// category leader, in points (S ≤ 5, A ≤ 20, B ≤ 35, C ≤ 50, else D), or,
+// for a RANK_DERIVATION category, by rank.
 // Speed has an evidence column for display but stays estimated: AA's tokens/s
 // is measured on the provider's first-party endpoint at max effort.
 export const DERIVED_CATEGORIES: ReadonlySet<Category> = new Set<Category>([
@@ -185,6 +186,53 @@ export const DERIVATION_BANDS: readonly { max: number; letter: string }[] = [
   { max: 35, letter: "B" },
   { max: 50, letter: "C" },
 ];
+
+// Categories lettered by RANK on their evidence instead of by gap: of every
+// RANK_OUT_OF measured models, the first `count` of each letter in order, D
+// for the rest. The top-ranked model is always the first letter, and a tie
+// group shares its mean position, so it never splits. Agentic reads
+// Terminal-Bench 4.0, whose leader sits far above the field, so the gap bands
+// would have dropped most models (#789). Mirrors update/derive_ratings.py
+// RANK_SHARES (tests/test_derived_ratings.py holds the two together).
+export const RANK_OUT_OF = 40;
+export type RankShares = readonly { letter: Rating; count: number }[];
+export const RANK_DERIVATION: Partial<Record<Category, RankShares>> = {
+  agentic: [
+    { letter: "S", count: 9 },
+    { letter: "A", count: 16 },
+    { letter: "B", count: 7 },
+    { letter: "C", count: 2 },
+  ],
+};
+
+// The letter a value earns by rank among a column's measured values (sorted
+// ascending), exactly as update/derive_ratings.py letter_for_rank: the centre
+// of the tie group's mean slot, (position + ½) / n, against the cumulative
+// shares, in integers (2·position + 1 = 2·better + tied).
+export function rankLetter(value: number, sortedAsc: readonly number[], shares: RankShares): Rating {
+  let better = 0;
+  let tied = 0;
+  for (const v of sortedAsc) {
+    if (v > value) better += 1;
+    else if (v === value) tied += 1;
+  }
+  if (better === 0) return shares[0].letter;
+  const slot = 2 * better + tied;
+  let cum = 0;
+  for (const share of shares) {
+    cum += share.count;
+    if (slot * RANK_OUT_OF < 2 * sortedAsc.length * cum) return share.letter;
+  }
+  return "D";
+}
+
+// "of every 40 measured models, the top 9 are S, the next 16 A, 7 B, 2 C,
+// the rest D" — the rank rule in words, from the constants.
+export function rankRuleText(shares: RankShares): string {
+  const [first, ...rest] = shares;
+  const next = rest.map((s) => `${s.count} ${s.letter}`).join(", ");
+  return `of every ${RANK_OUT_OF} measured models, the top ${first.count} are ${first.letter}, the next ${next}, the rest D`;
+}
 
 // Points on the derivation scale: indices as-is, fractions ×100.
 export function benchPoints(value: number, unit: BenchUnit): number {

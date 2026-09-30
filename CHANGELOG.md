@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Agentic letters follow Terminal-Bench 4.0, by rank.** Artificial Analysis
+  runs Terminal-Bench 4.0 on new models in place of 2.1, so no model released
+  since mid-September could earn a measured agentic letter. 4.0 is far harder
+  (leader 63.6%, field 0–64%), and the gap bands would have dropped 30 of the
+  40 measured models, most to D. The letter is now the model's rank on 4.0,
+  with the spread the recommender was tuned on held fixed: of every 40
+  measured models, 9 S, 16 A, 7 B, 2 C, the rest D. Fifteen letters move:
+  Sonnet 5.5, GPT-6 Sol, Fable 5 and GLM-5.3 to S; GPT-5.6 Terra, Grok 4.7,
+  Grok 4.6 and Gemini 3.8 Flash from S to A; DeepSeek-V4.1-Flash and GPT-6
+  Luna from B to A; Gemini 3.5 Flash, Gemini 3.1 Pro and GLM-5.2 from A to B;
+  Haiku 4.5 and Mistral Medium 3.5 from C to D (both score 0%).
+- **`roadmodel score` reads agentic the same way.** The scoring core's agentic
+  evidence is Terminal-Bench 4.0, scaled by rank (0 for the lowest, 100 for
+  the highest), and an evaluation's 0% counts as a measured result; only
+  0 tokens/s still means "not measured". The bundled benchmark layer carries
+  Terminal-Bench 4.0.
+
 ## [0.2.50] — 2026-09-29
 
 ### Added

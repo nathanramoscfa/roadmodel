@@ -1,5 +1,25 @@
 // web/components/RatingScale.tsx
+import {
+  CATEGORY_FIGURE,
+  DERIVATION_BANDS,
+  DERIVED_CATEGORIES,
+  GRID_COLUMN_BY_KEY,
+  RANK_DERIVATION,
+  rankRuleText,
+  type BenchKey,
+} from "@/lib/benchmark-grid";
+import { CATEGORY_ORDER } from "@/lib/catalog-fields";
 import { RATING_SCALE } from "@/lib/glossary";
+
+// The derivation in words, from the constants the letters are derived with,
+// so this page cannot state a rule the data no longer follows.
+const DERIVED = CATEGORY_ORDER.filter((c) => DERIVED_CATEGORIES.has(c));
+const EVIDENCE = DERIVED.map((c) => GRID_COLUMN_BY_KEY[CATEGORY_FIGURE[c] as BenchKey].label).join(", ");
+const GAP = DERIVED.filter((c) => !RANK_DERIVATION[c]).join(", ");
+const BANDS = DERIVATION_BANDS.map((b) => `${b.letter} within ${b.max}`).join(", ");
+const RANKED = DERIVED.filter((c) => RANK_DERIVATION[c])
+  .map((c) => `${c} is the model's rank with the letter spread held fixed: ${rankRuleText(RANK_DERIVATION[c]!)}`)
+  .join("; ");
 
 // The S→D per-category rating scale, rendered from the glossary's RATING_SCALE
 // (the same source as the rationale's tier popovers). `id` lets the rationale's
@@ -33,11 +53,10 @@ export function RatingScale({ id, compact = false }: { id?: string; compact?: bo
         top &ldquo;tier-list&rdquo; rank, a step above A (the gaming convention for
         the genuine best), then A, B, C, D. A rating is a <em>class</em>, not a
         ranking within it: several frontier models share S in most categories. Four
-        of the seven letters &mdash; coding, agentic, long-context, and knowledge
-        &mdash; are <em>derived</em> from a single Artificial Analysis benchmark each
-        (Coding Index, Terminal-Bench 2.1, AA-LCR, HLE) as the model&rsquo;s gap to
-        the category leader: S within 5 points, A within 20, B within 35, C within
-        50, else D. They refresh with the data and cannot be hand-edited. Every
+        of the seven letters &mdash; {DERIVED.join(", ")} &mdash; are <em>derived</em>{" "}
+        from a single Artificial Analysis benchmark each ({EVIDENCE}): {GAP} as the
+        model&rsquo;s gap to the category leader ({BANDS} points, else D); {RANKED}.
+        They refresh with the data and cannot be hand-edited. Every
         other letter is an estimate: planning, multimodal, and speed, and a derived
         category for a model outside its benchmark&rsquo;s measured set. The daily
         catalog automation sets estimates from cited evidence one step at a time, and

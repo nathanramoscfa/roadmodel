@@ -24,6 +24,8 @@ import {
   indexEvidence,
   newUntil,
   paretoFrontier,
+  RANK_DERIVATION,
+  rankLetter,
   scoreFor,
   type BenchKey,
   type BenchRow,
@@ -577,6 +579,40 @@ test("measured letters match the published bands; every other letter is marked e
   expect(derivedSeen).toBe(measuredOnHle);
   expect(derivedSeen).toBeGreaterThan(0);
   expect(estimatedSeen).toBeGreaterThan(0);
+});
+
+test("agentic letters are each model's rank on Terminal-Bench 4.0, with the letter spread held fixed", async ({ page }) => {
+  await page.goto("/models");
+  // Column order: chevron, model, provider, juris, input, output, AA index,
+  // value, then coding, planning, agentic, …
+  const AGENTIC_TD = 10;
+  const shares = RANK_DERIVATION.agentic!;
+  const tb = COLUMN_VALUES.terminalbench_v4_0;
+  const rows = page.getByTestId("model-row");
+  const n = await rows.count();
+  const seen: Record<string, number> = {};
+  for (let i = 0; i < n; i += 1) {
+    const r = rows.nth(i);
+    const id = (await r.getAttribute("data-model-id"))!;
+    const v = benchRowOf(id)?.values.terminalbench_v4_0 ?? null;
+    const cell = r.locator("td").nth(AGENTIC_TD).getByTestId("rating-cell");
+    if (v === null) {
+      await expect(cell).toHaveAttribute("data-basis", "estimated");
+      continue;
+    }
+    const letter = rankLetter(v, tb, shares);
+    seen[letter] = (seen[letter] ?? 0) + 1;
+    await expect(cell).toHaveAttribute("data-basis", "measured");
+    await expect(cell).toHaveText(letter);
+    await expect(cell).toHaveAttribute(
+      "title",
+      /Measured: (?:ranked #\d+|tied for #\d+–\d+) of \d+ on Terminal-Bench 4\.0 \(.*of every 40 measured models, the top 9 are S/,
+    );
+  }
+  // Every measured model is lettered, and the leader is S.
+  expect(Object.values(seen).reduce((a, b) => a + b, 0)).toBe(tb.length);
+  expect(seen.S ?? 0).toBeGreaterThan(0);
+  test.info().annotations.push({ type: "agentic spread", description: JSON.stringify(seen) });
 });
 
 test("every model off the frontier names the model that beats it, from any cost tier", async ({ page }) => {
