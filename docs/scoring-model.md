@@ -27,7 +27,7 @@ score = quality − requirement_penalty − λ · K · decades(effective_cost)
 
 | Term | What it is | Source |
 | --- | --- | --- |
-| `quality` (0–100) | The model's standing in the task's category. The Artificial Analysis evidence figure for that category, min-max scaled across the measured catalog, blended 70/30 with the editorial S→D letter. Unmeasured models use the letter alone, discounted by 5 points (a letter without evidence is a prior, not a measurement) — except in a category with no evidence at all (multimodal), where every model is on its letter. An AA figure of exactly 0 is "not measured" (AA reports 0 tokens/s for endpoints it has not throughput-tested). | `docs/benchmarks.json` (AA) + `docs/catalog.json` letters |
+| `quality` (0–100) | The model's standing in the task's category. The Artificial Analysis evidence figure for that category, min-max scaled across the measured catalog (agentic by rank instead: 0 for the lowest, 100 for the highest, ties sharing their mean rank, because Terminal-Bench 4.0's leader sits far above the field), blended 70/30 with the S→D letter. Unmeasured models use the letter alone, discounted by 5 points (a letter without evidence is an estimate, not a measurement) — except in a category with no evidence at all (multimodal), where every model is on its letter. A throughput of exactly 0 tokens/s is "not measured" (AA reports it for endpoints it has not throughput-tested); an evaluation's 0 is a result. | `docs/benchmarks.json` (AA) + `docs/catalog.json` letters |
 | `requirement_penalty` | 1.5 points per point the model falls short of the quality the task requires: Low → 30 (C band), Medium → 50 (B), High → 70 (A), High + novel / multi-step proof → 85 (S). Soft, not a filter, so a thin candidate set still ranks. | complexity |
 | `effective_cost` | Blended list price (3 input : 1 output tokens per 1M) × *scarcity* of the platform's funding × the effort level's expected token multiplier. | catalog prices, user-context funding |
 | `decades` | log₁₀(effective_cost / $0.02), floored at 0 — a 10× price step costs the same points anywhere on the range, and $0 is "free", not infinitely good. | — |
@@ -44,11 +44,11 @@ the surface a roadmap step actually runs on.
 | --- | --- | --- |
 | coding | Artificial Analysis Coding Index | letter |
 | planning | Artificial Analysis Intelligence Index | letter |
-| agentic | Terminal-Bench 2.1 | letter |
+| agentic | Terminal-Bench 4.0, by rank | letter |
 | long-context | AA-LCR | letter |
 | knowledge | Humanity's Last Exam | letter |
 | speed | median output tokens/s | letter |
-| multimodal | — (editorial letter only) | letter |
+| multimodal | — (letter only) | letter |
 
 ### Funding → scarcity
 

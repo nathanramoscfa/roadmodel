@@ -13,9 +13,9 @@ Score, per candidate (model reached through a specific access method)::
 
 - ``quality`` (0–100) is the model's standing in the task's category: the
   Artificial Analysis evidence figure for that category, min-max scaled across
-  the measured catalog and blended 70/30 with the editorial S→D letter, or the
-  letter alone when AA has not measured the model (``quality_source`` says
-  which).
+  the measured catalog (by rank for agentic, see ``RANK_SCALED``) and blended
+  70/30 with the S→D letter, or the letter alone when AA has not measured the
+  model (``quality_source`` says which).
 - ``requirement_penalty`` is a steep linear penalty for falling short of the
   quality the task's complexity requires (Low → C, Medium → B, High → A, High
   plus a novel / multi-step-proof problem → S). Soft, not a hard filter, so a
@@ -85,12 +85,22 @@ EFFORT_LADDER: Final[tuple[str, ...]] = ("low", "medium", "high", "xhigh", "max"
 CATEGORY_EVIDENCE: Final[dict[str, str | None]] = {
     "coding": "artificial_analysis_coding_index",
     "planning": "artificial_analysis_intelligence_index",
-    "agentic": "terminalbench_v2_1",
+    "agentic": "terminalbench_v4_0",
     "multimodal": None,
     "long-context": "lcr",
     "knowledge": "hle",
     "speed": "median_output_tokens_per_second",
 }
+
+# Categories whose evidence enters quality by RANK among the measured catalog
+# (0 = lowest, 100 = highest, ties share their mean rank) instead of min-max.
+# Terminal-Bench 4.0 spreads the field over 0–64% with the leader far above
+# the pack, so min-max would squash most models toward 0; update/
+# derive_ratings.py letters agentic by rank for the same reason (#789).
+RANK_SCALED: Final[frozenset[str]] = frozenset({"agentic"})
+_RANK_SCALED_KEYS: Final[frozenset[str]] = frozenset(
+    key for cat in RANK_SCALED if (key := CATEGORY_EVIDENCE[cat]) is not None
+)
 
 # --- Priors (calibration targets for the usage ledger) ----------------------
 
@@ -270,10 +280,13 @@ def _evidence(bench: dict[str, Any], model_id: str, key: str | None) -> float | 
         v = evals.get(key) if isinstance(evals, dict) else None
     if not isinstance(v, (int, float)) or not math.isfinite(float(v)):
         return None
-    # AA reports 0 tokens/s for endpoints it has not throughput-tested, and no
-    # evaluation legitimately scores exactly 0: treat 0 as "not measured"
-    # (mirrors web/lib/catalog-models.ts).
-    return float(v) if float(v) > 0 else None
+    if key == "median_output_tokens_per_second":
+        # AA reports 0 tokens/s for endpoints it has not throughput-tested:
+        # "not measured", not a speed (mirrors web/lib/catalog-models.ts).
+        return float(v) if float(v) > 0 else None
+    # An evaluation's 0 is a measurement: Terminal-Bench 4.0 scores models at
+    # 0% of its tasks.
+    return float(v)
 
 
 def blended_price(model: dict[str, Any]) -> float:
@@ -286,7 +299,7 @@ def market_exchange_rate(
     catalog: dict[str, Any],
     bench: dict[str, Any],
     task: Task | None = None,
-    scale: tuple[float, float] | None = None,
+    scale: EvidenceScale | None = None,
 ) -> float:
     """K: the market's exchange rate between price and quality, in the SCORE'S
     OWN quality units — the OLS slope of this category's blended quality (the
@@ -561,7 +574,7 @@ def _quality(
     model: dict[str, Any],
     task: Task,
     bench: dict[str, Any],
-    scale: tuple[float, float] | None,
+    scale: EvidenceScale | None,
 ) -> tuple[float, str, str]:
     raw_tiers = model.get("tiers")
     tiers: dict[str, Any] = raw_tiers if isinstance(raw_tiers, dict) else {}
@@ -569,21 +582,40 @@ def _quality(
     letter_q = LETTER_QUALITY.get(letter, 30.0)
     key = CATEGORY_EVIDENCE[task.category]
     v = _evidence(bench, str(model.get("id", "")), key)
-    if scale is None or scale[1] <= scale[0]:
+    if scale is None:
         # No evidence exists for this category at all (multimodal): every model
         # is on its letter, so there is nothing to discount against.
         return letter_q, "letter", letter
     if v is None:
         return max(0.0, letter_q - UNMEASURED_DISCOUNT), "letter", letter
-    scaled = 100.0 * (v - scale[0]) / (scale[1] - scale[0])
-    scaled = max(0.0, min(100.0, scaled))
-    q = EVIDENCE_WEIGHT * scaled + (1.0 - EVIDENCE_WEIGHT) * letter_q
+    q = EVIDENCE_WEIGHT * scale.points(v) + (1.0 - EVIDENCE_WEIGHT) * letter_q
     return q, f"aa:{key}+letter", letter
+
+
+@dataclass(frozen=True)
+class EvidenceScale:
+    """Maps a raw AA figure onto 0–100 quality points across the measured
+    catalog: min-max between ``lo`` and ``hi``, or, for a ``RANK_SCALED``
+    category, the figure's mean rank among ``ranked`` (sorted ascending; ties
+    share their mean rank), from 0 for the lowest to 100 for the highest."""
+
+    lo: float
+    hi: float
+    ranked: tuple[float, ...] = ()
+
+    def points(self, v: float) -> float:
+        if self.ranked:
+            below = sum(1 for x in self.ranked if x < v)
+            tied = sum(1 for x in self.ranked if x == v)
+            return 100.0 * (below + (tied - 1) / 2) / (len(self.ranked) - 1)
+        return max(0.0, min(100.0, 100.0 * (v - self.lo) / (self.hi - self.lo)))
 
 
 def _evidence_scale(
     catalog: dict[str, Any], bench: dict[str, Any], key: str | None
-) -> tuple[float, float] | None:
+) -> EvidenceScale | None:
+    """None when fewer than three catalog models are measured or they all score
+    the same: every model then stands on its letter."""
     if key is None:
         return None
     vals = [
@@ -593,9 +625,10 @@ def _evidence_scale(
         for v in [_evidence(bench, str(m.get("id", "")), key)]
         if v is not None
     ]
-    if len(vals) < 3:
+    if len(vals) < 3 or max(vals) <= min(vals):
         return None
-    return min(vals), max(vals)
+    ranked = tuple(sorted(vals)) if key in _RANK_SCALED_KEYS else ()
+    return EvidenceScale(min(vals), max(vals), ranked)
 
 
 def _funding_for(
