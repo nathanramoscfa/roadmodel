@@ -56,6 +56,7 @@ pip-wheel-metadata/
 update/.last-summary.txt
 update/.last-warnings.txt
 update/.last-ratings-report.md
+update/.last-rating-guard.md
 update/.cache/
 
 # Test fixtures regenerated from update/build_fixture.py (never committed).
