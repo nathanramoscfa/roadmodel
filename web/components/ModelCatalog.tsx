@@ -57,6 +57,7 @@ import {
   blendedPrice,
   benchSortValue,
   CATEGORY_FIGURE,
+  DERIVATION_BANDS,
   DERIVED_CATEGORIES,
   formatBench,
   formatQualityBand,
@@ -66,6 +67,9 @@ import {
   indexEvidence,
   QUALITY_BAND_WIDTH,
   qualityBand,
+  RANK_DERIVATION,
+  rankRuleText,
+  standing,
   type Band,
   type BenchColumn,
   type ScoreFit,
@@ -1009,7 +1013,16 @@ export function ModelCatalog({
                             const v = key ? benchSortValue(m.bench, key) : null;
                             const derived = DERIVED_CATEGORIES.has(cat) && key && v !== null;
                             let basis = ESTIMATED_BASIS;
-                            if (derived) {
+                            const rankRule = RANK_DERIVATION[cat];
+                            if (derived && rankRule) {
+                              const col = GRID_COLUMN_BY_KEY[key];
+                              const st = standing(v, columnValues[key]);
+                              const tied = columnValues[key].filter((x) => x === v).length;
+                              basis =
+                                tied > 1
+                                  ? `Measured: tied for #${st.rank}–${st.rank + tied - 1} of ${st.of} on ${col.label} (${formatBench(v, col.unit)}; a tie is lettered at its middle place); ${rankRuleText(rankRule)}.`
+                                  : `Measured: ranked #${st.rank} of ${st.of} on ${col.label} (${formatBench(v, col.unit)}); ${rankRuleText(rankRule)}.`;
+                            } else if (derived) {
                               const col = GRID_COLUMN_BY_KEY[key];
                               const leader = columnValues[key][columnValues[key].length - 1];
                               const gap = benchPoints(leader, col.unit) - benchPoints(v, col.unit);
@@ -1327,9 +1340,13 @@ function CategoryHeader({
   const active = sortKey === cat;
   const figureKey = CATEGORY_FIGURE[cat];
   const figure = figureKey ? GRID_COLUMN_BY_KEY[figureKey] : null;
+  const rankRule = RANK_DERIVATION[cat];
+  const measuredRule = rankRule
+    ? `the model's rank on ${figure?.label} (Artificial Analysis), with the letter spread held fixed: ${rankRuleText(rankRule)}`
+    : `derived from ${figure?.label} (Artificial Analysis) as the gap to the category leader: ${DERIVATION_BANDS.map((b) => `${b.letter} ≤ ${b.max}`).join(", ")} points, else D`;
   const definition = figure
     ? DERIVED_CATEGORIES.has(cat)
-      ? `${def.definition} A filled letter is MEASURED: derived from ${figure.label} (Artificial Analysis) as the gap to the category leader: S ≤ 5, A ≤ 20, B ≤ 35, C ≤ 50 points, else D. A dashed-outline letter is estimated by the daily catalog automation, for a model outside ${figure.label}'s measured set.`
+      ? `${def.definition} A filled letter is MEASURED: ${measuredRule}. A dashed-outline letter is estimated by the daily catalog automation, for a model outside ${figure.label}'s measured set.`
       : `${def.definition} Estimated by the daily catalog automation (dashed outline); the ${figure.label} column in the Benchmark scores view is first-party-endpoint throughput, shown for reference.`
     : `${def.definition} Estimated by the daily catalog automation from each provider's published results (dashed outline).`;
   return (

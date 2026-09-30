@@ -1,9 +1,9 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-30T02:46:59Z",
+  "generated_at_utc": "2026-09-30T03:22:11Z",
   "source_doc_sha256": {
-    "model-selector.txt": "ca7c64fd60eacd8baf8e3b83aecc52f1174be425bac3530c4351339335ed8ebb",
+    "model-selector.txt": "17d2a49e7d9ef30c9c25c88815698c4c462044193f246693ef0747735e221b98",
     "model-tier-cost-scale.md": "029d3b2ea2636580e0f2baaea280eca4eb5ad7dba0e3c1c11752149c63b9934a"
   },
   "models": [
@@ -17,7 +17,7 @@
       "tiers": {
         "coding": "C",
         "planning": "B",
-        "agentic": "C",
+        "agentic": "D",
         "multimodal": "B",
         "long-context": "A",
         "knowledge": "D",
@@ -41,7 +41,7 @@
       "tiers": {
         "coding": "A",
         "planning": "S",
-        "agentic": "A",
+        "agentic": "S",
         "multimodal": "S",
         "long-context": "A",
         "knowledge": "A",
@@ -161,7 +161,7 @@
       "tiers": {
         "coding": "A",
         "planning": "A",
-        "agentic": "A",
+        "agentic": "S",
         "multimodal": "A",
         "long-context": "A",
         "knowledge": "A",
@@ -233,7 +233,7 @@
       "tiers": {
         "coding": "A",
         "planning": "B",
-        "agentic": "B",
+        "agentic": "A",
         "multimodal": "C",
         "long-context": "S",
         "knowledge": "B",
@@ -353,7 +353,7 @@
       "tiers": {
         "coding": "A",
         "planning": "A",
-        "agentic": "A",
+        "agentic": "B",
         "multimodal": "S",
         "long-context": "A",
         "knowledge": "A",
@@ -377,7 +377,7 @@
       "tiers": {
         "coding": "A",
         "planning": "A",
-        "agentic": "A",
+        "agentic": "B",
         "multimodal": "B",
         "long-context": "A",
         "knowledge": "A",
@@ -449,7 +449,7 @@
       "tiers": {
         "coding": "A",
         "planning": "A",
-        "agentic": "S",
+        "agentic": "A",
         "multimodal": "B",
         "long-context": "A",
         "knowledge": "A",
@@ -521,7 +521,7 @@
       "tiers": {
         "coding": "A",
         "planning": "A",
-        "agentic": "A",
+        "agentic": "B",
         "multimodal": "D",
         "long-context": "A",
         "knowledge": "B",
@@ -545,7 +545,7 @@
       "tiers": {
         "coding": "A",
         "planning": "A",
-        "agentic": "A",
+        "agentic": "S",
         "multimodal": "D",
         "long-context": "A",
         "knowledge": "A",
@@ -929,7 +929,7 @@
       "tiers": {
         "coding": "S",
         "planning": "A",
-        "agentic": "S",
+        "agentic": "A",
         "multimodal": "A",
         "long-context": "A",
         "knowledge": "A",
@@ -977,7 +977,7 @@
       "tiers": {
         "coding": "B",
         "planning": "B",
-        "agentic": "B",
+        "agentic": "A",
         "multimodal": "B",
         "long-context": "A",
         "knowledge": "B",
@@ -1001,7 +1001,7 @@
       "tiers": {
         "coding": "B",
         "planning": "B",
-        "agentic": "B",
+        "agentic": "S",
         "multimodal": "B",
         "long-context": "S",
         "knowledge": "A",
@@ -1097,7 +1097,7 @@
       "tiers": {
         "coding": "S",
         "planning": "A",
-        "agentic": "S",
+        "agentic": "A",
         "multimodal": "B",
         "long-context": "A",
         "knowledge": "A",
@@ -1121,7 +1121,7 @@
       "tiers": {
         "coding": "S",
         "planning": "A",
-        "agentic": "S",
+        "agentic": "A",
         "multimodal": "B",
         "long-context": "A",
         "knowledge": "A",
@@ -1217,7 +1217,7 @@
       "tiers": {
         "coding": "B",
         "planning": "B",
-        "agentic": "C",
+        "agentic": "D",
         "multimodal": "B",
         "long-context": "A",
         "knowledge": "C",

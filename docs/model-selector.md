@@ -780,7 +780,7 @@ Tier ratings:
 #### Fable 5 — `claude-fable-5`
 
 - **Pricing:** Input $10.00/M · Output $50.00/M
-- **Tier ratings:** Coding **A** · Planning **S** · Agentic **A** · Multimodal **S** · Long-context **A** · Knowledge **A** · Speed **D**
+- **Tier ratings:** Coding **A** · Planning **S** · Agentic **S** · Multimodal **S** · Long-context **A** · Knowledge **A** · Speed **D**
 - **Headline benchmarks:** AA Intelligence Index 49.6 (max); HLE 55.5% (max); Terminal-Bench Hard 62.9 (top-tier); τ²-bench retail pass_1 98.5%
 - **Pricing notes:** Hidden by default; Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; About 2x the cost of Claude Opus 5; Requires Max Mode on legacy request-based plans
 - **Best for:** Anthropic's new top-of-line Fable family flagship (no predecessor) — S-tier across coding, planning, agentic, multimodal, long-context, and knowledge, leading HLE (55.5%) and Terminal-Bench Hard (62.9) with state-of-the-art vision and a 1M default context; about 2x the cost of Opus 5 and latency-slow (output ~69 tokens/s), so reserve for the hardest reasoning, agentic, and vision work where maximum capability outweighs cost and speed; security-guardrail trips auto-route to Opus. Tier profile sourced from the catalog cron's 2026-06-11 dry-run reconciliation against the live benchmark sources (τ²-bench retail not yet published for this model), pending editorial confirmation in the next refresh.
@@ -864,7 +864,7 @@ Tier ratings:
 #### Sonnet 5.5 — `claude-sonnet-5-5`
 
 - **Pricing:** Input $2.00/M · Output $10.00/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **A**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **A**
 - **Headline benchmarks:** AA Intelligence Index 56.0 (max); HLE 55.0% (max); SciCode 61.0 (max); AA-LCR 0.827
 - **Pricing notes:** Requires Max Mode on legacy request-based plans; Same per-token rates as Claude Sonnet 5; US-only endpoints are priced 10% higher ($2.20/M input, $11/M output); Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
 - **Best for:** Anthropic's Sonnet 5 successor at the same medium-tier pricing ($2/$10; US-only endpoints 10% higher) — placeholder tier ratings inherited from claude-sonnet-5 pending editorial review, with Artificial Analysis evidence of AA Intelligence Index 56.0 (max), HLE 55.0% (max), AA-LCR 0.827, and ~145 tokens/s median output (tier-speed set to A on that throughput); up to 1M tokens of extended context at flat per-token rates.
@@ -896,7 +896,7 @@ Tier ratings:
 #### GPT-5.6 Terra — `gpt-5.6-terra`
 
 - **Pricing:** Input $2.00/M · Output $12.00/M
-- **Tier ratings:** Coding **S** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **A**
+- **Tier ratings:** Coding **S** · Planning **A** · Agentic **A** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **A**
 - **Headline benchmarks:** AA Intelligence Index 42.1 (max); HLE 42.9%; Terminal-Bench 2.1 88.0; Output Speed 107.0 tokens/s
 - **Pricing notes:** Requires Max Mode on legacy request-based plans; Mid-tier GPT-5.6 variant between Sol and Luna; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate
 - **Best for:** OpenAI's mid-tier GPT-5.6 variant between Sol (flagship) and Luna (mini) at medium-tier pricing ($2/$12) — Artificial Analysis Intelligence Index 42.1 (max) matches near-frontier reasoning while output speed (~105 tokens/s) is faster than most peers; pick for balanced near-frontier reasoning, agentic execution, and speed when Sol's high tier isn't justified but stronger throughput than GPT-5.4 is desired.
@@ -904,7 +904,7 @@ Tier ratings:
 #### Gemini 3.1 Pro — `gemini-3.1-pro`
 
 - **Pricing:** Input $2.00/M · Output $12.00/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **S** · Long-context **A** · Knowledge **A** · Speed **B**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **B** · Multimodal **S** · Long-context **A** · Knowledge **A** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 29.7 (#3); AA-Omniscience 32.9 (#1); HLE 47.0% (#1); LMArena Text Elo 1479.9 (#16); 1M-token context
 - **Pricing notes:** -
 - **Best for:** True native multimodal understanding (text, image, video, audio, and code in a single pass), 1M-token context optimized for heterogeneous inputs, strong agentic multi-step tool use, and synthesizing insights across large mixed-media datasets or sprawling document corpora — the obvious choice whenever multimodal or long-context is the primary category
@@ -944,7 +944,7 @@ Tier ratings:
 #### GPT-6 Sol — `gpt-6-sol`
 
 - **Pricing:** Input $2.00/M · Output $10.00/M
-- **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **B** · Long-context **S** · Knowledge **A** · Speed **B**
+- **Tier ratings:** Coding **B** · Planning **B** · Agentic **S** · Multimodal **B** · Long-context **S** · Knowledge **A** · Speed **B**
 - **Headline benchmarks:** LMArena WebDev #5 (Elo 1681.0)
 - **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
 - **Best for:** Auto-added medium-cost OpenAI model; pending editorial best-for refinement.
@@ -954,7 +954,7 @@ Tier ratings:
 #### Gemini 3.5 Flash — `gemini-3.5-flash`
 
 - **Pricing:** Input $1.50/M · Output $9.00/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **S**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **B** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **S**
 - **Headline benchmarks:** AA Intelligence Index 32.6 (high reasoning); τ²-bench banking pass_1 32.2%; Output Speed 250.6 tokens/s
 - **Pricing notes:** Hidden by default
 - **Best for:** Auto-added cheap-tier Google model; pending editorial best-for refinement.
@@ -962,7 +962,7 @@ Tier ratings:
 #### Mistral Medium 3.5 — `mistral-medium-3.5`
 
 - **Pricing:** Input $1.50/M · Output $7.50/M
-- **Tier ratings:** Coding **B** · Planning **B** · Agentic **C** · Multimodal **B** · Long-context **A** · Knowledge **C** · Speed **B**
+- **Tier ratings:** Coding **B** · Planning **B** · Agentic **D** · Multimodal **B** · Long-context **A** · Knowledge **C** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 14.2 (independently measured by Artificial Analysis); unified chat / reasoning / code model with an adjustable reasoning dial (reasoning_effort); multimodal (text + image input)
 - **Pricing notes:** Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)
 - **Best for:** Mistral's flagship unified model — the EU-jurisdiction choice for data-sovereignty / EU-regulatory workloads at low cost ($7.50/M output), with adjustable reasoning and multimodal (vision) input. Artificial Analysis Intelligence Index 14.2 places it well below the US/cn frontier (behind models such as Gemini 3.1 Pro or DeepSeek V4-Pro) — pick it when the operator's EU jurisdiction is the deciding constraint, not when raw capability is. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key.
@@ -986,7 +986,7 @@ Tier ratings:
 #### Gemini 3.8 Flash — `gemini-3.8-flash`
 
 - **Pricing:** Input $0.75/M · Output $3.50/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **S**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **S**
 - **Headline benchmarks:** AA Intelligence Index 40.9 (high); HLE 47.8% (high); Terminal-Bench 2.1 87.6; Output Speed 237.7 tokens/s
 - **Pricing notes:** -
 - **Best for:** Google's Gemini 3.8 Flash — the visible-by-default successor to 3.7 Flash at the same low-tier pricing ($0.75/$3.50), with placeholder tier ratings inherited from the Flash series and AA Intelligence Index 40.9 (high), Terminal-Bench 2.1 87.6, and exceptional output speed (~316 tokens/s). Pick over 3.7 Flash when both are available since 3.8 supersedes 3.7 in the same series at equal output price.
@@ -1002,7 +1002,7 @@ Tier ratings:
 #### Grok 4.7 — `grok-4.7`
 
 - **Pricing:** Input $2.00/M · Output $6.00/M
-- **Tier ratings:** Coding **S** · Planning **A** · Agentic **S** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **B**
+- **Tier ratings:** Coding **S** · Planning **A** · Agentic **A** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 46.4 (xhigh) / 46.3 (high); HLE 43.1% (xhigh); SciCode 57.4; AA-LCR 0.767
 - **Pricing notes:** Jointly trained by Cursor and SpaceXAI; Long context (>256k input tokens) is billed at 2x standard rates, up to 500k; Fast mode is available at 2x pricing; Fast mode for long context (>256k) is billed at 3x standard rates
 - **Best for:** Cursor and SpaceXAI's Grok 4.6 successor at the same low-tier pricing ($2/$6) — placeholder tier ratings inherited from grok-4.6 with benchmark-grounded confirmation from AA Intelligence Index (46.4 xhigh) and HLE (43.1% xhigh); 500K native context and jointly trained by Cursor and SpaceXAI. Pick over grok-4.5 / grok-4.6 when available since 4.7 supersedes them in the same series at equal output price.
@@ -1010,7 +1010,7 @@ Tier ratings:
 #### Haiku 4.5 — `claude-4.5-haiku`
 
 - **Pricing:** Input $1.00/M · Output $5.00/M
-- **Tier ratings:** Coding **C** · Planning **B** · Agentic **C** · Multimodal **B** · Long-context **A** · Knowledge **D** · Speed **S**
+- **Tier ratings:** Coding **C** · Planning **B** · Agentic **D** · Multimodal **B** · Long-context **A** · Knowledge **D** · Speed **S**
 - **Headline benchmarks:** AA Intelligence Index 16.9 (reasoning); Output Speed 105.3 tokens/s; AA-Omniscience -4.2; latency leader among Claude family
 - **Pricing notes:** Hidden by default; Bedrock/Vertex: regional endpoints +10% surcharge; Cache: writes 1.25x, reads 0.1x
 - **Best for:** Speed-optimized lowest-cost Claude model, ideal for simple completions, high-volume repetitive tasks, and latency-sensitive workflows where a lightweight capable response matters more than deep reasoning
@@ -1090,7 +1090,7 @@ Tier ratings:
 #### GPT-6 Luna — `gpt-6-luna`
 
 - **Pricing:** Input $0.10/M · Output $0.50/M
-- **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **B** · Long-context **A** · Knowledge **B** · Speed **B**
+- **Tier ratings:** Coding **B** · Planning **B** · Agentic **A** · Multimodal **B** · Long-context **A** · Knowledge **B** · Speed **B**
 - **Headline benchmarks:** LMArena WebDev #24 (Elo 1592.6)
 - **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
 - **Best for:** Auto-added cheap-tier OpenAI model; pending editorial best-for refinement.
@@ -1106,7 +1106,7 @@ Tier ratings:
 #### DeepSeek-V4.1-Flash — `deepseek-flash`
 
 - **Pricing:** Input $0.15/M · Output $0.60/M
-- **Tier ratings:** Coding **A** · Planning **B** · Agentic **B** · Multimodal **C** · Long-context **S** · Knowledge **B** · Speed **A**
+- **Tier ratings:** Coding **A** · Planning **B** · Agentic **A** · Multimodal **C** · Long-context **S** · Knowledge **B** · Speed **A**
 - **Headline benchmarks:** AA Intelligence Index 39.5 (max) — independently measured by Artificial Analysis (v4.3; the retired V4-Flash-0731 scored 34.3 and V4-Pro 36.0 on the same index); ~229 tokens/s median output (AA); Terminal-Bench 2.1 90.6, Terminal-Bench 4.0 31.2, DeepSWE v1.1 74.2, HLE 36.8%, GPQA Diamond 90.9, Codeforces 3471, MMMU-Pro 56.5 (all DeepSeek-reported, max effort); 1M-token context; image input supported (V4-Flash-Vision-Exp folded in)
 - **Pricing notes:** Provider-direct DeepSeek API per-token pricing (not via the Cursor pool). Listed price is DeepSeek's OFF-PEAK rate (all hours except 01:00–04:00 and 06:00–10:00 UTC Mon–Fri, i.e. ~79% of the week incl. all US/EU working hours); peak is 2×: $0.30 input / $1.20 output per 1M — aggregators such as OpenRouter list the peak rate. Cache-hit input $0.003/M off-peak ($0.006/M peak). The legacy model names deepseek-v4-flash and deepseek-v4-flash-vision-exp are still accepted by the API but are served by this model at this price.
 - **Best for:** DeepSeek's V4.1-Flash (API name deepseek-flash) — the 2026-09-17 successor to the retired V4-Flash: the fast (~229 tokens/s), cheapest DeepSeek variant ($0.60/M output off-peak) with a 1M-token context window and now native image input, for high-throughput / latency-sensitive text, code, and light vision work under the cn jurisdiction with a deepseek-api-key. Tier ratings are inherited from V4-Flash pending the cron's benchmark-grounded pass, except multimodal lifted from D to C because image input is now native (MMMU-Pro 56.5 is DeepSeek-reported, so no higher yet). Independently it now out-scores V4-Pro on the AA Intelligence Index (39.5 vs 36.0) and DeepSeek reports frontier-class agentic-coding numbers (Terminal-Bench 2.1 90.6, DeepSWE v1.1 74.2) — self-reported, so it stays coding-A rather than S pending an independent leaderboard entry. Reached via the `deepseek-api` method (provider-direct per-token); MIT open weights on Hugging Face for the `ollama` path. Pick V4-Pro over V4.1-Flash only when its deeper reasoning profile matters; pick V4.1-Flash when speed, cost, or image input dominate.
@@ -1138,7 +1138,7 @@ Tier ratings:
 #### GLM-5.2 — `glm-5.2`
 
 - **Pricing:** Input $1.40/M · Output $4.40/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **D** · Long-context **A** · Knowledge **B** · Speed **B**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **B** · Multimodal **D** · Long-context **A** · Knowledge **B** · Speed **B**
 - **Headline benchmarks:** z.ai (Zhipu AI) GLM-5.2 flagship (~Jun 2026) — strong coding / agentic model in the GLM-5 line; text-only; cn-jurisdiction; specific public benchmark numbers pending independent refresh
 - **Pricing notes:** Provider-direct z.ai (Zhipu) API per-token pricing (not via the Cursor pool); cn-jurisdiction; cache-input $0.26/M
 - **Best for:** z.ai's flagship GLM-5.2 — a low-cost ($4.40/M output), cn-jurisdiction reasoning / coding model and the strongest GLM for multi-step coding and agentic work. Pick it when the cn jurisdiction is acceptable and a zai-api-key is configured and you want a frontier-adjacent coder at a fraction of US-frontier output price; text-only, so not for multimodal work (use the GLM-V vision line, not yet in the catalog). Reached via the `zai-api` method (provider-direct per-token, not the Cursor pool). Rated coding/planning/agentic-A on the GLM-5 line's positioning pending an independent benchmark refresh (the catalog cron's Opus lane owns the numbers).
@@ -1146,7 +1146,7 @@ Tier ratings:
 #### GLM-5.3 — `glm-5.3`
 
 - **Pricing:** Input $1.40/M · Output $4.40/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **D** · Long-context **A** · Knowledge **A** · Speed **B**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **D** · Long-context **A** · Knowledge **A** · Speed **B**
 - **Headline benchmarks:** LMArena Text Elo 1472.5 (#25); LMArena Text coding Elo 1498.5 (#23); LMArena WebDev Elo 1619.1 (#18)
 - **Pricing notes:** Hidden by default; Same per-token rates as GLM 5.2
 - **Best for:** z.ai's GLM-5.2 successor at the same low-tier pricing ($1.40/$4.40) — placeholder tier ratings inherited from glm-5.2, with LMArena results (Text Elo 1472.5, WebDev Elo 1619.1) roughly level with or slightly above glm-5.2; cn-jurisdiction, routed via Cursor's pool (Hidden by default).
@@ -1202,7 +1202,7 @@ Tier ratings:
 #### Grok 4.6 — `grok-4.6`
 
 - **Pricing:** Input $2.00/M · Output $6.00/M
-- **Tier ratings:** Coding **S** · Planning **A** · Agentic **S** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **B**
+- **Tier ratings:** Coding **S** · Planning **A** · Agentic **A** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 44.3 (high); HLE 42.9% (high); Terminal-Bench 2.1 88.4 (high); τ²-bench banking pass_1 50.7%
 - **Pricing notes:** Jointly trained by Cursor and SpaceXAI
 - **Best for:** Cursor and SpaceXAI's Grok 4.5 successor at the same low-tier pricing ($2/$6) — placeholder tier ratings inherited from grok-4.5 with benchmark-grounded confirmation from AA Intelligence Index (44.3 high), Terminal-Bench 2.1 (88.4 high), and τ²-bench banking (50.7% pass_1). Pick over grok-4.5 when both are available since 4.6 supersedes 4.5 in the same series at equal output price.

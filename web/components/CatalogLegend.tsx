@@ -14,6 +14,8 @@ import {
   GRID_COLUMN_BY_KEY,
   NEW_RELEASE_DAYS,
   QUALITY_BAND_WIDTH,
+  RANK_DERIVATION,
+  rankRuleText,
   type BenchKey,
 } from "@/lib/benchmark-grid";
 import { RATING_SCALE } from "@/lib/glossary";
@@ -41,6 +43,13 @@ const DERIVED_EVIDENCE: string = CATEGORY_ORDER.filter(
   .join(", ");
 const DERIVED_NAMES: string = CATEGORY_ORDER.filter((c) => DERIVED_CATEGORIES.has(c)).join(", ");
 const BAND_RULE: string = DERIVATION_BANDS.map((b) => `${b.letter} within ${b.max}`).join(", ");
+// The categories lettered by gap, and those lettered by rank (with the rule).
+const GAP_NAMES: string = CATEGORY_ORDER.filter(
+  (c) => DERIVED_CATEGORIES.has(c) && !RANK_DERIVATION[c],
+).join(", ");
+const RANK_RULES: string = CATEGORY_ORDER.filter((c) => RANK_DERIVATION[c])
+  .map((c) => `${c} is the model's rank, holding the letter spread fixed (${rankRuleText(RANK_DERIVATION[c]!)})`)
+  .join("; ");
 
 const BADGE =
   "inline-flex min-w-[1.75rem] items-center justify-center rounded px-1.5 py-0.5 text-xs font-semibold";
@@ -125,8 +134,9 @@ export function CatalogLegend({ id }: { id?: string }) {
             A rating is a class several models can share. A filled letter{" "}
             <span className={BADGE + " " + RATING_COLORS.A}>A</span> is <em>measured</em>: the{" "}
             <strong>{DERIVED_NAMES}</strong> letters are derived from one Artificial Analysis
-            benchmark each ({DERIVED_EVIDENCE}) as the gap to the category leader &mdash;{" "}
-            {BAND_RULE} points, else D &mdash; and refresh with the data. A dashed-outline letter{" "}
+            benchmark each ({DERIVED_EVIDENCE}) and refresh with the data: {GAP_NAMES} as the
+            gap to the category leader &mdash; {BAND_RULE} points, else D; {RANK_RULES}. A
+            dashed-outline letter{" "}
             <span className={BADGE + " " + ESTIMATED_BADGE + " " + RATING_OUTLINE_COLORS.A}>A</span>{" "}
             is <em>estimated</em>: the daily catalog automation sets it from each provider&rsquo;s
             published results, and a new model starts from its predecessor&rsquo;s letters. Every
