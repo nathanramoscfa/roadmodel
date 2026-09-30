@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.51] — 2026-09-29
+
 ### Changed
 
 - **Agentic letters follow Terminal-Bench 4.0, by rank.** Artificial Analysis
