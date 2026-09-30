@@ -385,6 +385,10 @@ export function ModelCatalog({
   // Sorting by Score groups the rows the Group by switch chose (AA Index band
   // or cost tier). Any other sort is a plain ranking.
   const grouping: Grouping | null = sortKey === "value" ? groupChoice : null;
+  // The benchmark-scores view spends its width on eleven evaluation columns,
+  // so its leading columns (model, output, AA Index, Score) pad tighter.
+  const dense = view !== "ratings";
+  const padX = dense ? "px-2" : "px-3";
   const scoreOrder = sortDir === "desc" ? "highest Score first" : "lowest Score first";
 
   // What each group header says about the rows under it: how many, their
@@ -692,6 +696,7 @@ export function ModelCatalog({
                 dir={sortDir}
                 onSort={toggleSort}
                 className={"min-w-[9rem] " + STICKY_HEAD}
+                dense={dense}
               />
               {view === "ratings" && (
                 <>
@@ -722,6 +727,7 @@ export function ModelCatalog({
                 dir={sortDir}
                 onSort={toggleSort}
                 align="right"
+                dense={dense}
               />
               <SortHeader
                 field="aa_index"
@@ -729,6 +735,7 @@ export function ModelCatalog({
                 dir={sortDir}
                 onSort={toggleSort}
                 align="right"
+                dense={dense}
                 detail={`This page carries the Artificial Analysis snapshot of ${benchmarksGeneratedAt}: ${measuredCount} of ${models.length} catalog models measured, ${GRID_COLUMNS.length - 1} of its evaluations shown as columns in the benchmark-scores view.`}
               />
               <SortHeader
@@ -737,6 +744,7 @@ export function ModelCatalog({
                 dir={sortDir}
                 onSort={toggleSort}
                 align="right"
+                dense={dense}
                 detail={
                   scoreFit
                     ? `Fit over ${scoreFit.n} measured models in ${Object.keys(scoreFit.tiers).length} cost tiers: ${scoreFit.slope.toFixed(1)} index points per 10× price, R² ${scoreFit.r2.toFixed(2)}, residual σ ${scoreFit.sigma.toFixed(1)} — treat gaps under about ${Math.round(scoreFit.sigma)} points as ties.`
@@ -862,7 +870,9 @@ export function ModelCatalog({
                       </td>
                       <td
                         className={
-                          "whitespace-nowrap px-3 py-2 font-medium text-brand-slate-900 dark:text-brand-slate-50 " +
+                          "whitespace-nowrap py-2 font-medium text-brand-slate-900 dark:text-brand-slate-50 " +
+                          padX +
+                          " " +
                           STICKY_CELL
                         }
                       >
@@ -901,7 +911,7 @@ export function ModelCatalog({
                           </td>
                         </>
                       )}
-                      <td className="whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums text-brand-slate-900 dark:text-brand-slate-50">
+                      <td className={"whitespace-nowrap py-2 text-right font-medium tabular-nums text-brand-slate-900 dark:text-brand-slate-50 " + padX}>
                         <span
                           data-testid="cost-tier-dot"
                           data-tier={m.tier_cost}
@@ -917,7 +927,7 @@ export function ModelCatalog({
                         data-testid="aa-index"
                         data-frontier={m.value_frontier ? "1" : "0"}
                         data-beaten-by={m.value_beaten_by ?? ""}
-                        className="whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums text-brand-slate-900 dark:text-brand-slate-50"
+                        className={"whitespace-nowrap py-2 text-right font-medium tabular-nums text-brand-slate-900 dark:text-brand-slate-50 " + padX}
                       >
                         {m.aa_index === null ? (
                           <span
@@ -953,7 +963,7 @@ export function ModelCatalog({
                         )}
                       </td>
                       <td
-                        className={"whitespace-nowrap px-3 py-2 text-right tabular-nums " + scoreTone(m.value_score, scoreFit)}
+                        className={"whitespace-nowrap py-2 text-right tabular-nums " + padX + " " + scoreTone(m.value_score, scoreFit)}
                         data-testid="value-cell"
                         data-value={m.value_score === null ? "" : m.value_score.toFixed(3)}
                       >
@@ -1033,7 +1043,7 @@ export function ModelCatalog({
                                 data-testid="bench-cell"
                                 data-bench={col.key}
                                 data-band={band ?? ""}
-                                className="whitespace-nowrap px-1.5 py-1.5 text-right tabular-nums"
+                                className="whitespace-nowrap px-1 py-1.5 text-right tabular-nums"
                                 title={
                                   v === null
                                     ? `${col.label}: not measured by Artificial Analysis`
@@ -1045,7 +1055,7 @@ export function ModelCatalog({
                                 ) : (
                                   <span
                                     className={
-                                      "inline-block min-w-[3.25rem] rounded px-1.5 py-0.5 text-xs font-semibold " +
+                                      "inline-block min-w-[3rem] rounded px-1.5 py-0.5 text-xs font-semibold " +
                                       BAND_CLASS[band!]
                                     }
                                   >
@@ -1248,6 +1258,7 @@ function SortHeader({
   align = "left",
   className = "",
   detail,
+  dense = false,
 }: {
   field: Exclude<SortKey, Category | BenchKey>;
   sortKey: SortKey;
@@ -1257,13 +1268,17 @@ function SortHeader({
   className?: string;
   // Extra sentence appended to the definition (e.g. live fit statistics).
   detail?: string;
+  // The benchmark-scores view: eleven evaluation columns share the 1280px
+  // budget, so the leading columns give up some padding.
+  dense?: boolean;
 }) {
   const def = FIELD_DEFS[field];
   const active = sortKey === field;
   return (
     <th
       className={
-        "whitespace-nowrap px-3 py-2 font-semibold " +
+        "whitespace-nowrap py-2 font-semibold " +
+        (dense ? "px-2 " : "px-3 ") +
         (align === "right" ? "text-right " : "text-left ") +
         className
       }
@@ -1365,7 +1380,7 @@ function BenchHeader({
   const active = sortKey === col.key;
   return (
     <th
-      className="whitespace-nowrap px-1.5 py-2 text-right font-semibold"
+      className="whitespace-nowrap px-1 py-2 text-right font-semibold"
       aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
     >
       <span className="inline-flex flex-row-reverse items-center gap-1">
