@@ -37,9 +37,11 @@ export function RatingScale({ id, compact = false }: { id?: string; compact?: bo
         &mdash; are <em>derived</em> from a single Artificial Analysis benchmark each
         (Coding Index, Terminal-Bench 2.1, AA-LCR, HLE) as the model&rsquo;s gap to
         the category leader: S within 5 points, A within 20, B within 35, C within
-        50, else D. They refresh with the data and cannot be hand-edited. Planning,
-        multimodal, and speed are editorial, set from cited evidence one step at a
-        time. The selection algorithm sets a minimum required rating from the
+        50, else D. They refresh with the data and cannot be hand-edited. Every
+        other letter is an estimate: planning, multimodal, and speed, and a derived
+        category for a model outside its benchmark&rsquo;s measured set. The daily
+        catalog automation sets estimates from cited evidence one step at a time, and
+        a new model starts from its predecessor&rsquo;s letters. The selection algorithm sets a minimum required rating from the
         prompt&rsquo;s complexity, then picks the highest-rated available model that
         clears it &mdash; ties inside a class resolve on the benchmark evidence, which
         the{" "}

@@ -24,6 +24,7 @@ export type BenchKey =
   | "gpqa"
   | "scicode"
   | "terminalbench_v2_1"
+  | "terminalbench_v4_0"
   | "tau_banking"
   | "ifbench"
   | "lcr"
@@ -108,6 +109,15 @@ export const GRID_COLUMNS: BenchColumn[] = [
     category: "agentic",
   },
   {
+    key: "terminalbench_v4_0",
+    short: "TB 4.0",
+    label: "Terminal-Bench 4.0",
+    definition:
+      "The current Terminal-Bench release: harder autonomous multi-step tasks in a real terminal; percent of tasks completed, as run by AA. It is the Terminal-Bench release AA runs on newly released models.",
+    unit: "fraction",
+    url: "https://www.tbench.ai/",
+  },
+  {
     key: "tau_banking",
     short: "τ² Bank",
     label: "τ²-bench (banking)",
@@ -161,7 +171,7 @@ export const CATEGORY_FIGURE: Partial<Record<Category, BenchKey>> = Object.fromE
 // The four categories whose letter is DERIVED from its evidence column by
 // update/derive_ratings.py (gap to the category leader, in points:
 // S ≤ 5, A ≤ 20, B ≤ 35, C ≤ 50, else D) for every model AA measures.
-// Speed has an evidence column for display but stays editorial: AA's tokens/s
+// Speed has an evidence column for display but stays estimated: AA's tokens/s
 // is measured on the provider's first-party endpoint at max effort.
 export const DERIVED_CATEGORIES: ReadonlySet<Category> = new Set<Category>([
   "coding",
@@ -525,6 +535,8 @@ export function formatUsd(v: number): string {
 export interface BenchRow {
   aa_slug: string;
   aa_name: string;
+  // AA's release date for the model ("2026-09-28"), or null when AA has none.
+  release_date: string | null;
   values: Record<BenchKey, number | null>;
 }
 
@@ -544,4 +556,98 @@ export function formatBench(value: number | null, unit: BenchUnit): string {
 export function benchSortValue(row: BenchRow | null, key: BenchKey): number | null {
   const v = row?.values[key];
   return v === undefined ? null : v;
+}
+
+// Where a value stands among a column's measured values (sorted ascending):
+// its rank from the top (1 = highest; tied values share the better rank), the
+// number of measured models, and its mid-rank percentile, 0–100.
+export interface Standing {
+  rank: number;
+  of: number;
+  pct: number;
+}
+
+export function standing(value: number, sortedAsc: readonly number[]): Standing {
+  let below = 0;
+  let equal = 0;
+  for (const v of sortedAsc) {
+    if (v < value) below += 1;
+    else if (v === value) equal += 1;
+  }
+  const of = sortedAsc.length;
+  return {
+    rank: of - below - equal + 1,
+    of,
+    pct: of === 0 ? 0 : (100 * (below + equal / 2)) / of,
+  };
+}
+
+// The AA Index card's evidence: every evaluation column the model is measured
+// on (the index and speed aside), with its standing in the catalog, and a
+// verdict on whether the index rank agrees with them. The index is AA's
+// composite of its evaluations, so a model's own benchmarks bear it out: its
+// index percentile sits within EVIDENCE_TOLERANCE points of the median
+// percentile of its benchmarks. Past that, the verdict says which way the
+// index leans. Two benchmarks at least make a verdict.
+export const EVIDENCE_TOLERANCE = 20;
+export const EVIDENCE_MIN_BENCHMARKS = 2;
+
+export type EvidenceVerdict = "agrees" | "above" | "below";
+
+export interface EvidenceItem extends Standing {
+  key: BenchKey;
+  value: number;
+}
+
+export interface IndexEvidence {
+  index: EvidenceItem;
+  // Best standing first.
+  items: EvidenceItem[];
+  medianPct: number | null;
+  verdict: EvidenceVerdict | null;
+}
+
+const INDEX_KEY: BenchKey = "artificial_analysis_intelligence_index";
+
+export function indexEvidence(
+  bench: BenchRow | null,
+  columnValues: Readonly<Record<BenchKey, readonly number[]>>,
+): IndexEvidence | null {
+  const value = bench?.values[INDEX_KEY] ?? null;
+  if (bench === null || value === null) return null;
+  const at = (key: BenchKey, v: number): EvidenceItem => ({
+    key,
+    value: v,
+    ...standing(v, columnValues[key] ?? []),
+  });
+  const items = GRID_COLUMNS.filter((c) => c.key !== INDEX_KEY && c.unit !== "tok/s")
+    .flatMap((c) => {
+      const v = bench.values[c.key];
+      return v === null || v === undefined ? [] : [at(c.key, v)];
+    })
+    .sort((a, b) => b.pct - a.pct);
+  const index = at(INDEX_KEY, value);
+  if (items.length < EVIDENCE_MIN_BENCHMARKS) {
+    return { index, items, medianPct: null, verdict: null };
+  }
+  const pcts = items.map((i) => i.pct).sort((a, b) => a - b);
+  const mid = Math.floor(pcts.length / 2);
+  const medianPct = pcts.length % 2 === 1 ? pcts[mid] : (pcts[mid - 1] + pcts[mid]) / 2;
+  const lean = index.pct - medianPct;
+  const verdict: EvidenceVerdict =
+    lean > EVIDENCE_TOLERANCE ? "above" : lean < -EVIDENCE_TOLERANCE ? "below" : "agrees";
+  return { index, items, medianPct, verdict };
+}
+
+// A model is NEW for its first NEW_RELEASE_DAYS days after its release date
+// (AA's `release_date`): its figures are launch-window results. Returns the
+// day the tag clears ("2026-10-12") while `now` is before it, else null.
+export const NEW_RELEASE_DAYS = 14;
+
+export function newUntil(releaseDate: string | null | undefined, now: Date): string | null {
+  if (!releaseDate || !/^\d{4}-\d{2}-\d{2}$/.test(releaseDate)) return null;
+  const released = Date.parse(`${releaseDate}T00:00:00Z`);
+  if (Number.isNaN(released)) return null;
+  const until = released + NEW_RELEASE_DAYS * 86_400_000;
+  return now.getTime() < until ? new Date(until).toISOString().slice(0, 10) : null;
 }
