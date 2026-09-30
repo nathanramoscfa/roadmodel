@@ -28,6 +28,14 @@ The Insights API returns EVERY evaluation AA publishes for a model as
 column set can grow without a re-fetch. Accuracy-style evaluations arrive as
 0–1 fractions and the composite indices as 0–100; the web layer normalises
 display (see web/lib/benchmark-grid.ts), this file stores the API's values.
+
+Every joined row must NAME its catalog model: AA's display name carries each
+token of the catalog name ("Sonnet 5.5" in "Claude Sonnet 5.5 (Adaptive
+Reasoning, Max Effort)"), and AA's base name (before the parenthetical)
+adds nothing but a vendor prefix, "Preview" or a date stamp. A row that fails
+is dropped and listed under `mismatched`, so a wrong map entry shows dashes
+on /models instead of another model's scores — a surprising number on the
+page is then always AA's own figure for that model.
 """
 
 from __future__ import annotations
@@ -76,6 +84,11 @@ def load_catalog_ids() -> list[str]:
     return [m["id"] for m in catalog.get("models", [])]
 
 
+def load_catalog_names() -> dict[str, str]:
+    catalog = json.loads(CATALOG_PATH.read_text())
+    return {m["id"]: m["name"] for m in catalog.get("models", []) if m.get("name")}
+
+
 def load_map() -> dict[str, str | None]:
     raw = json.loads(MAP_PATH.read_text())
     return {k: v for k, v in raw.items() if not k.startswith("_")}
@@ -83,6 +96,24 @@ def load_map() -> dict[str, str | None]:
 
 def _tokens(s: str) -> set[str]:
     return set(re.findall(r"\d+(?:\.\d+)+|[a-z]+|\d+", s.lower()))
+
+
+# Words AA's base name may add to the catalog name without naming a different
+# model: its vendor prefix ("Claude 4.5 Haiku" for "Haiku 4.5") and a release
+# stage. A four-digit date stamp ("DeepSeek V4 Pro 0813") is allowed as well.
+_BENIGN_EXTRA = frozenset({"claude", "preview"})
+
+
+def names_model(catalog_name: str, aa_name: str) -> bool:
+    """True when AA's display name names the catalog model: every token of the
+    catalog name appears in it ("5.5" is one token, so "Sonnet 5" never matches
+    "Sonnet 5.5"), and AA's base name adds no model word of its own ("GPT-5
+    mini" never stands in for "GPT-5")."""
+    want = _tokens(catalog_name)
+    if not want or not want <= _tokens(aa_name):
+        return False
+    extra = _tokens(aa_name.split("(", 1)[0]) - want
+    return all(t in _BENIGN_EXTRA or re.fullmatch(r"\d{4}", t) for t in extra)
 
 
 def suggest(
@@ -143,11 +174,16 @@ def build(
     aa: list[dict[str, Any]],
     *,
     now: dt.datetime,
+    names: dict[str, str] | None = None,
 ) -> dict[str, Any]:
+    """`names` ({catalog id: display name}) turns on the name check: a mapped
+    row whose AA name does not name the catalog model is left out and listed
+    under `mismatched`."""
     by_slug = {m.get("slug"): m for m in aa if m.get("slug")}
     models: dict[str, Any] = {}
     unmapped: list[str] = []
     missing_slugs: list[str] = []
+    mismatched: list[str] = []
     for cid in catalog_ids:
         if cid not in mapping:
             unmapped.append(cid)
@@ -160,6 +196,12 @@ def build(
             # The map names a slug AA no longer serves (renamed / retired). Keep
             # the run alive — the row shows dashes — but say so loudly.
             missing_slugs.append(f"{cid} -> {slug}")
+            continue
+        catalog_name = (names or {}).get(cid)
+        if catalog_name and not names_model(catalog_name, src.get("name") or ""):
+            # The map joins this id to a different model. Its scores would sit
+            # under the wrong name, so the row shows dashes until the map is fixed.
+            mismatched.append(f"{cid} -> {slug} ({src.get('name')})")
             continue
         models[cid] = {
             "aa_id": src.get("id"),
@@ -183,6 +225,7 @@ def build(
         "model_count": len(models),
         "unmapped": unmapped,
         "missing_slugs": missing_slugs,
+        "mismatched": mismatched,
         "models": models,
     }
 
@@ -234,11 +277,22 @@ def main() -> int:
                 # Parsed by update-benchmarks.yml into the PR description.
                 print(f"AUTO_MAPPED {cid} -> {slug}")
 
-    doc = build(catalog_ids, mapping, aa, now=dt.datetime.now(dt.timezone.utc))
+    doc = build(
+        catalog_ids,
+        mapping,
+        aa,
+        now=dt.datetime.now(dt.timezone.utc),
+        names=load_catalog_names(),
+    )
     for cid in doc["unmapped"]:
         print(f"::warning::{cid} has no entry in update/aa-model-map.json (run --suggest)")
     for pair in doc["missing_slugs"]:
         print(f"::warning::AA no longer serves {pair}; update update/aa-model-map.json")
+    for pair in doc["mismatched"]:
+        print(
+            f"::warning::{pair} names a different model; its scores are left out "
+            "until update/aa-model-map.json is fixed"
+        )
 
     if args.check:
         existing = json.loads(OUT_PATH.read_text()) if OUT_PATH.exists() else {}

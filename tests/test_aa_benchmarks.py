@@ -87,6 +87,58 @@ def test_retired_slug_is_reported_not_fatal() -> None:
     assert doc["missing_slugs"] == ["opus-4.7 -> claude-opus-4-7"]
 
 
+def test_a_row_that_names_a_different_model_is_left_out_and_reported() -> None:
+    """A wrong map entry would put another model's scores under this name, so
+    the row degrades to dashes and the PR body names the entry."""
+    mapping = {"claude-opus-5": "claude-opus-5", "sonnet-5": "claude-opus-5"}
+    doc = fab.build(
+        ["claude-opus-5", "sonnet-5"],
+        mapping,
+        AA,
+        now=NOW,
+        names={"claude-opus-5": "Opus 5", "sonnet-5": "Sonnet 5"},
+    )
+    assert set(doc["models"]) == {"claude-opus-5"}
+    assert doc["mismatched"] == [
+        "sonnet-5 -> claude-opus-5 (Claude Opus 5 (Adaptive Reasoning, Max Effort))"
+    ]
+
+
+def test_names_model_matches_whole_version_tokens_and_model_words() -> None:
+    ok = [
+        ("Sonnet 5.5", "Claude Sonnet 5.5 (Adaptive Reasoning, Max Effort, Default Fallback)"),
+        ("Haiku 4.5", "Claude 4.5 Haiku (Reasoning)"),
+        ("Gemini 3 Flash", "Gemini 3 Flash Preview (Reasoning)"),
+        ("DeepSeek-V4-Pro", "DeepSeek V4 Pro 0813 (Reasoning, Max Effort)"),
+        ("GPT-5.1 Codex Mini", "GPT-5.1 Codex mini (high)"),
+        ("gpt-oss-120b", "gpt-oss-120b (high)"),
+    ]
+    for catalog_name, aa_name in ok:
+        assert fab.names_model(catalog_name, aa_name), (catalog_name, aa_name)
+    wrong = [
+        ("Sonnet 5", "Claude Sonnet 5.5 (Adaptive Reasoning, Max Effort)"),
+        ("Opus 5.5", "Claude Sonnet 5.5 (Adaptive Reasoning, Max Effort)"),
+        ("Gemini 3 Pro", "Gemini 3.1 Pro Preview"),
+        ("GPT-5", "GPT-5 mini (high)"),
+        ("GPT-5", "GPT-5.5 (xhigh)"),
+    ]
+    for catalog_name, aa_name in wrong:
+        assert not fab.names_model(catalog_name, aa_name), (catalog_name, aa_name)
+
+
+def test_committed_rows_name_their_catalog_model() -> None:
+    """Every committed row is AA's figure for the model it sits under — the
+    guarantee behind reading a surprising score as AA's, not a join slip."""
+    doc = json.loads((REPO_ROOT / "docs" / "benchmarks.json").read_text())
+    names = {
+        m["id"]: m["name"]
+        for m in json.loads((REPO_ROOT / "docs" / "catalog.json").read_text())["models"]
+    }
+    for cid, row in doc["models"].items():
+        if cid in names:
+            assert fab.names_model(names[cid], row["aa_name"]), (cid, row["aa_name"])
+
+
 def test_stable_fields_ignore_the_timestamp_only() -> None:
     a = fab.build(["claude-opus-5"], {"claude-opus-5": "claude-opus-5"}, AA, now=NOW)
     b = fab.build(
