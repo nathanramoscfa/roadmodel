@@ -26,9 +26,12 @@ genuine best), then A, B, C, D:
 The selection algorithm reads the prompt's complexity to set a **minimum required
 rating** (High → S, Medium → A, Low → B) in the prompt's primary category, then picks
 the highest-rated *available* model that clears the bar, breaking ties by the
-secondary category and finally by cost. Ratings are an editorial synthesis of the
-public benchmarks below (plus model cards and first-party reports), refreshed as new
-results land.
+secondary category and finally by cost. Four ratings (coding, agentic, long-context,
+knowledge) are measured wherever Artificial Analysis publishes their benchmark: each is
+derived as the model's gap to the category leader. Every other letter is an estimate the
+daily catalog automation sets from the public benchmarks below (plus model cards and
+first-party reports), refreshed as new results land; a new model starts from its
+predecessor's letters.
 
 ## Benchmarks
 

@@ -3,7 +3,10 @@
 // What the /models hover cards say. One visual language:
 //   ScoreBreakdownCard — a table Score, taken apart into parts that add up to
 //                        the printed figure (lib/benchmark-grid scoreBreakdown)
-//   IndexCard          — a table AA Index: the figure, its source, and the top
+//   IndexCard          — a table AA Index: the figure, the AA model it was
+//                        measured as, the model's own benchmarks ranked in the
+//                        catalog with a verdict on whether they bear the index
+//                        out (lib/benchmark-grid indexEvidence), and the top
 //                        score at its price or less (the frontier)
 //   ModelPointCard     — a chart dot: the model, its Score, AA Index and prices
 //   PriceLineCard      — a chart's fitted line: the equation, what each term
@@ -21,10 +24,14 @@ import { createContext, useContext, type ReactNode } from "react";
 
 import {
   blendedPrice,
+  formatBench,
   formatScore,
   formatUsd,
+  GRID_COLUMN_BY_KEY,
   groupBeatenBy,
   scoreBreakdown,
+  type EvidenceVerdict,
+  type IndexEvidence,
   type ScoreFit,
 } from "@/lib/benchmark-grid";
 import { COST_TIER_DEFS, COST_TIER_DOT, type CostTier, type ModelRow } from "@/lib/catalog-fields";
@@ -278,10 +285,14 @@ export function IndexCard({
   model: m,
   leader,
   snapshot,
+  evidence = null,
 }: {
   model: ModelRow;
   leader: ModelRow | null;
   snapshot: string;
+  // The model's own benchmarks ranked in the catalog (null when AA has no
+  // index for it in the snapshot).
+  evidence?: IndexEvidence | null;
 }) {
   if (m.aa_index === null) return null;
   return (
@@ -300,9 +311,87 @@ export function IndexCard({
           ? "As cited in the catalog; this model is not in the Artificial Analysis data snapshot yet."
           : `From the snapshot of ${snapshot}.`}
       </p>
+      {m.bench && (
+        <p className={"mt-1 text-xs leading-[1.125rem] " + MUTED} data-testid="index-measured-as">
+          Measured as <span className={STRONG}>{m.bench.aa_name}</span>
+          {m.bench.release_date ? `, released ${m.bench.release_date}` : ""}.
+        </p>
+      )}
+      {evidence && evidence.items.length > 0 && <IndexEvidenceBlock evidence={evidence} />}
       <div className="mt-2.5">
         <FrontierStatus model={m} leader={leader} />
       </div>
+    </div>
+  );
+}
+
+const VERDICT_TEXT: Record<EvidenceVerdict, string> = {
+  agrees: "Its benchmark ranks agree with its index rank: its own results bear the index out.",
+  above: "Its index ranks above most of its own benchmarks; weigh the index alongside them.",
+  below: "Its index ranks below most of its own benchmarks; its individual results run stronger.",
+};
+
+const VERDICT_TONE: Record<EvidenceVerdict, string> = {
+  agrees: "text-emerald-700 dark:text-emerald-300",
+  above: "text-amber-700 dark:text-amber-300",
+  below: "text-amber-700 dark:text-amber-300",
+};
+
+// Where the model's index comes from, in its own results: each benchmark AA
+// measured it on, its rank in this catalog, then the index's rank, and the
+// verdict (lib/benchmark-grid indexEvidence).
+function IndexEvidenceBlock({ evidence: e }: { evidence: IndexEvidence }) {
+  const rank = (r: number, of: number) => (
+    <span className={"ml-2 inline-block min-w-[4.25rem] text-left " + MUTED}>
+      #{r} of {of}
+    </span>
+  );
+  return (
+    <div
+      className="mt-2.5 rounded-md bg-brand-slate-50 px-3 py-2 dark:bg-brand-slate-900/70"
+      data-testid="index-evidence"
+      data-verdict={e.verdict ?? ""}
+    >
+      <p className={"mb-1 text-[11px] font-semibold uppercase tracking-wide " + MUTED}>
+        Its own benchmarks, ranked in this catalog
+      </p>
+      {e.items.map((it) => {
+        const col = GRID_COLUMN_BY_KEY[it.key];
+        return (
+          <Row
+            key={it.key}
+            className="text-xs"
+            label={col.label}
+            value={
+              <>
+                <span className={STRONG}>{formatBench(it.value, col.unit)}</span>
+                {rank(it.rank, it.of)}
+              </>
+            }
+            testId="index-evidence-row"
+          />
+        );
+      })}
+      <div className={"my-1 border-t " + RULE} />
+      <Row
+        className="text-xs"
+        label={<span className="font-semibold">AA Intelligence Index</span>}
+        value={
+          <>
+            <span className={"font-semibold " + STRONG}>{num(e.index.value)}</span>
+            {rank(e.index.rank, e.index.of)}
+          </>
+        }
+        testId="index-evidence-index"
+      />
+      {e.verdict && (
+        <p
+          className={"mt-1.5 text-xs leading-[1.125rem] " + VERDICT_TONE[e.verdict]}
+          data-testid="index-verdict"
+        >
+          {VERDICT_TEXT[e.verdict]}
+        </p>
+      )}
     </div>
   );
 }

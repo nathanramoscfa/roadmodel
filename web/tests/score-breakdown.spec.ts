@@ -20,12 +20,18 @@ import {
   formatScore,
   formatQualityBand,
   frontierLeaders,
+  GRID_COLUMNS,
   groupBeatenBy,
+  indexEvidence,
+  newUntil,
   paretoFrontier,
   priceTicks,
   qualityBand,
   scoreBreakdown,
   scoreFor,
+  standing,
+  type BenchKey,
+  type BenchRow,
 } from "../lib/benchmark-grid";
 
 interface CatalogModel {
@@ -170,4 +176,60 @@ test("a group is 'beaten' only when none of its measured models is on the fronti
   for (const [p, lead] of leaders) {
     if (lead !== p) expect(frontierIds.has(lead.id)).toBe(true);
   }
+});
+
+test("standing ranks from the top, shares the better rank on a tie, and gives a mid-rank percentile", () => {
+  const sorted = [10, 20, 20, 30];
+  expect(standing(30, sorted)).toEqual({ rank: 1, of: 4, pct: 87.5 });
+  expect(standing(20, sorted)).toEqual({ rank: 2, of: 4, pct: 50 });
+  expect(standing(10, sorted)).toEqual({ rank: 4, of: 4, pct: 12.5 });
+});
+
+// A 10-model column set in which model values run 1..10 on every column.
+function columnsOf(): Record<BenchKey, number[]> {
+  const ten = Array.from({ length: 10 }, (_, i) => i + 1);
+  return Object.fromEntries(GRID_COLUMNS.map((c) => [c.key, ten])) as Record<BenchKey, number[]>;
+}
+function benchOf(values: Partial<Record<BenchKey, number>>): BenchRow {
+  const all = Object.fromEntries(GRID_COLUMNS.map((c) => [c.key, values[c.key] ?? null])) as Record<
+    BenchKey,
+    number | null
+  >;
+  return { aa_slug: "m", aa_name: "M (max)", release_date: null, values: all };
+}
+
+test("the index agrees with its own benchmarks when their ranks sit together, and leans when they part", () => {
+  const cols = columnsOf();
+  // Top index, top benchmarks: agrees.
+  const top = indexEvidence(
+    benchOf({ artificial_analysis_intelligence_index: 10, hle: 10, scicode: 9, lcr: 10 }),
+    cols,
+  )!;
+  expect(top.verdict).toBe("agrees");
+  expect(top.index).toMatchObject({ rank: 1, of: 10 });
+  // Best standing first; speed never counts as evidence.
+  expect(top.items.map((i) => i.key)).toEqual(["hle", "lcr", "scicode"]);
+  // Top index over bottom benchmarks: the index leans above them.
+  expect(
+    indexEvidence(benchOf({ artificial_analysis_intelligence_index: 10, hle: 2, scicode: 3, lcr: 1 }), cols)!
+      .verdict,
+  ).toBe("above");
+  // Bottom index over top benchmarks: below.
+  expect(
+    indexEvidence(benchOf({ artificial_analysis_intelligence_index: 1, hle: 9, scicode: 10 }), cols)!.verdict,
+  ).toBe("below");
+  // One benchmark makes no verdict; no index, no evidence.
+  const lone = indexEvidence(benchOf({ artificial_analysis_intelligence_index: 5, hle: 5 }), cols)!;
+  expect(lone.items).toHaveLength(1);
+  expect(lone.verdict).toBeNull();
+  expect(indexEvidence(benchOf({ hle: 5 }), cols)).toBeNull();
+  expect(indexEvidence(null, cols)).toBeNull();
+});
+
+test("a model is new for fourteen days after its release date", () => {
+  expect(newUntil("2026-09-28", new Date("2026-09-29T12:00:00Z"))).toBe("2026-10-12");
+  expect(newUntil("2026-09-28", new Date("2026-10-11T23:59:59Z"))).toBe("2026-10-12");
+  expect(newUntil("2026-09-28", new Date("2026-10-12T00:00:00Z"))).toBeNull();
+  expect(newUntil(null, new Date())).toBeNull();
+  expect(newUntil("September", new Date())).toBeNull();
 });

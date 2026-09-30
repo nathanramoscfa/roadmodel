@@ -63,6 +63,7 @@ import {
   formatScore,
   GRID_COLUMN_BY_KEY,
   GRID_COLUMNS,
+  indexEvidence,
   QUALITY_BAND_WIDTH,
   qualityBand,
   type Band,
@@ -82,7 +83,9 @@ import {
   formatPrice,
   jurisdictionDef,
   modelProvider,
+  ESTIMATED_BADGE,
   RATING_COLORS,
+  RATING_OUTLINE_COLORS,
   RATING_RANK,
   type Category,
   type ModelRow,
@@ -96,6 +99,12 @@ import { IndexCard, ScoreBreakdownCard, SupersededCard, topScoreSentence } from 
 const RATING_MEANING: Record<string, string> = Object.fromEntries(
   RATING_SCALE.map((r) => [r.rating, r.meaning]),
 );
+
+// The basis of a letter no benchmark measures for the model: the class the
+// daily catalog automation assigns. Measured letters (the four derived
+// categories, where AA has the figure) come from update/derive_ratings.py.
+const ESTIMATED_BASIS =
+  "Estimated: set by the daily catalog automation from each provider's published results; a new model starts from its predecessor's letter.";
 
 // Grid cell tint by within-column quintile, on the same palette as the letter
 // badges so green/blue/grey/amber/rose mean the same thing in both views.
@@ -376,6 +385,10 @@ export function ModelCatalog({
   // Sorting by Score groups the rows the Group by switch chose (AA Index band
   // or cost tier). Any other sort is a plain ranking.
   const grouping: Grouping | null = sortKey === "value" ? groupChoice : null;
+  // The benchmark-scores view spends its width on eleven evaluation columns,
+  // so its leading columns (model, output, AA Index, Score) pad tighter.
+  const dense = view !== "ratings";
+  const padX = dense ? "px-2" : "px-3";
   const scoreOrder = sortDir === "desc" ? "highest Score first" : "lowest Score first";
 
   // What each group header says about the rows under it: how many, their
@@ -683,6 +696,7 @@ export function ModelCatalog({
                 dir={sortDir}
                 onSort={toggleSort}
                 className={"min-w-[9rem] " + STICKY_HEAD}
+                dense={dense}
               />
               {view === "ratings" && (
                 <>
@@ -713,6 +727,7 @@ export function ModelCatalog({
                 dir={sortDir}
                 onSort={toggleSort}
                 align="right"
+                dense={dense}
               />
               <SortHeader
                 field="aa_index"
@@ -720,6 +735,7 @@ export function ModelCatalog({
                 dir={sortDir}
                 onSort={toggleSort}
                 align="right"
+                dense={dense}
                 detail={`This page carries the Artificial Analysis snapshot of ${benchmarksGeneratedAt}: ${measuredCount} of ${models.length} catalog models measured, ${GRID_COLUMNS.length - 1} of its evaluations shown as columns in the benchmark-scores view.`}
               />
               <SortHeader
@@ -728,6 +744,7 @@ export function ModelCatalog({
                 dir={sortDir}
                 onSort={toggleSort}
                 align="right"
+                dense={dense}
                 detail={
                   scoreFit
                     ? `Fit over ${scoreFit.n} measured models in ${Object.keys(scoreFit.tiers).length} cost tiers: ${scoreFit.slope.toFixed(1)} index points per 10× price, R² ${scoreFit.r2.toFixed(2)}, residual σ ${scoreFit.sigma.toFixed(1)} — treat gaps under about ${Math.round(scoreFit.sigma)} points as ties.`
@@ -853,7 +870,9 @@ export function ModelCatalog({
                       </td>
                       <td
                         className={
-                          "whitespace-nowrap px-3 py-2 font-medium text-brand-slate-900 dark:text-brand-slate-50 " +
+                          "whitespace-nowrap py-2 font-medium text-brand-slate-900 dark:text-brand-slate-50 " +
+                          padX +
+                          " " +
                           STICKY_CELL
                         }
                       >
@@ -870,6 +889,7 @@ export function ModelCatalog({
                         ) : (
                           m.name
                         )}
+                        {m.new_until && <NewTag model={m} />}
                         {m.superseded_by && (
                           <SupersededTag model={m} successor={byId.get(m.superseded_by) ?? null} />
                         )}
@@ -891,7 +911,7 @@ export function ModelCatalog({
                           </td>
                         </>
                       )}
-                      <td className="whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums text-brand-slate-900 dark:text-brand-slate-50">
+                      <td className={"whitespace-nowrap py-2 text-right font-medium tabular-nums text-brand-slate-900 dark:text-brand-slate-50 " + padX}>
                         <span
                           data-testid="cost-tier-dot"
                           data-tier={m.tier_cost}
@@ -907,7 +927,7 @@ export function ModelCatalog({
                         data-testid="aa-index"
                         data-frontier={m.value_frontier ? "1" : "0"}
                         data-beaten-by={m.value_beaten_by ?? ""}
-                        className="whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums text-brand-slate-900 dark:text-brand-slate-50"
+                        className={"whitespace-nowrap py-2 text-right font-medium tabular-nums text-brand-slate-900 dark:text-brand-slate-50 " + padX}
                       >
                         {m.aa_index === null ? (
                           <span
@@ -920,7 +940,12 @@ export function ModelCatalog({
                           <HoverCard
                             label={`${m.name}: AA Index ${m.aa_index}${m.value_frontier ? ", on the cost/quality frontier" : ""}. Show where it stands across every cost tier`}
                             card={
-                              <IndexCard model={m} leader={leaderOf(m)} snapshot={benchmarksGeneratedAt} />
+                              <IndexCard
+                                model={m}
+                                leader={leaderOf(m)}
+                                snapshot={benchmarksGeneratedAt}
+                                evidence={indexEvidence(m.bench, columnValues)}
+                              />
                             }
                             triggerTestId="aa-index-trigger"
                             cardTestId="aa-index-card"
@@ -938,7 +963,7 @@ export function ModelCatalog({
                         )}
                       </td>
                       <td
-                        className={"whitespace-nowrap px-3 py-2 text-right tabular-nums " + scoreTone(m.value_score, scoreFit)}
+                        className={"whitespace-nowrap py-2 text-right tabular-nums " + padX + " " + scoreTone(m.value_score, scoreFit)}
                         data-testid="value-cell"
                         data-value={m.value_score === null ? "" : m.value_score.toFixed(3)}
                       >
@@ -983,23 +1008,24 @@ export function ModelCatalog({
                             const key = CATEGORY_FIGURE[cat];
                             const v = key ? benchSortValue(m.bench, key) : null;
                             const derived = DERIVED_CATEGORIES.has(cat) && key && v !== null;
-                            let basis = "Editorial rating.";
+                            let basis = ESTIMATED_BASIS;
                             if (derived) {
                               const col = GRID_COLUMN_BY_KEY[key];
                               const leader = columnValues[key][columnValues[key].length - 1];
                               const gap = benchPoints(leader, col.unit) - benchPoints(v, col.unit);
-                              basis = `Derived from ${col.label} ${formatBench(v, col.unit)}: ${gap.toFixed(1)} points behind the category leader (${formatBench(leader, col.unit)}).`;
+                              basis = `Measured: derived from ${col.label} ${formatBench(v, col.unit)}, ${gap.toFixed(1)} points behind the category leader (${formatBench(leader, col.unit)}).`;
+                            } else if (key && DERIVED_CATEGORIES.has(cat)) {
+                              basis = `${ESTIMATED_BASIS} Measured letters in this column come from ${GRID_COLUMN_BY_KEY[key].label}, which Artificial Analysis publishes for ${columnValues[key].length} of these models.`;
                             }
                             return (
                               <td key={cat} className="w-14 px-1 py-2 text-center">
                                 <span
                                   data-testid="rating-cell"
-                                  data-basis={derived ? "derived" : "editorial"}
+                                  data-basis={derived ? "measured" : "estimated"}
                                   className={
                                     BADGE_CLASS +
                                     " " +
-                                    RATING_COLORS[r] +
-                                    (derived ? "" : " ring-1 ring-inset ring-brand-slate-400/60 dark:ring-brand-slate-500/60")
+                                    (derived ? RATING_COLORS[r] : `${ESTIMATED_BADGE} ${RATING_OUTLINE_COLORS[r]}`)
                                   }
                                   title={`${CATEGORY_DEFS[cat].fullName}: ${r} — ${RATING_MEANING[r]} ${basis}`}
                                 >
@@ -1017,7 +1043,7 @@ export function ModelCatalog({
                                 data-testid="bench-cell"
                                 data-bench={col.key}
                                 data-band={band ?? ""}
-                                className="whitespace-nowrap px-1.5 py-1.5 text-right tabular-nums"
+                                className="whitespace-nowrap px-1 py-1.5 text-right tabular-nums"
                                 title={
                                   v === null
                                     ? `${col.label}: not measured by Artificial Analysis`
@@ -1029,7 +1055,7 @@ export function ModelCatalog({
                                 ) : (
                                   <span
                                     className={
-                                      "inline-block min-w-[3.25rem] rounded px-1.5 py-0.5 text-xs font-semibold " +
+                                      "inline-block min-w-[3rem] rounded px-1.5 py-0.5 text-xs font-semibold " +
                                       BAND_CLASS[band!]
                                     }
                                   >
@@ -1088,6 +1114,41 @@ export function ModelCatalog({
   );
 }
 
+// "New · released Sep 28" under the name of a model released in the last two
+// weeks (lib/benchmark-grid newUntil): its AA figures are launch-window results.
+// The server decides the window per request, so the tag clears on its own.
+function NewTag({ model: m }: { model: ModelRow }) {
+  const released = m.bench?.release_date ?? null;
+  return (
+    <span
+      className="mt-0.5 block max-w-[11rem] whitespace-normal text-[11px] font-normal leading-4 text-brand-slate-500 dark:text-brand-slate-400"
+      data-testid="new-tag"
+      data-new-until={m.new_until ?? ""}
+    >
+      <HoverCard
+        label={`${m.name} is new. Show what that means`}
+        card={
+          <p className="w-64 max-w-full text-[13px] leading-5">
+            <span className="font-semibold text-brand-slate-900 dark:text-brand-slate-50">
+              {m.name} is new{released ? `: released ${formatLongDay(released)}` : ""}.
+            </span>{" "}
+            Its Artificial Analysis figures are launch-window results, and its dashed-outline
+            letters are the daily catalog automation&rsquo;s estimates. The tag clears on{" "}
+            {formatDay(m.new_until ?? "")}.
+          </p>
+        }
+        triggerTestId="new-trigger"
+        cardTestId="new-card"
+      >
+        <span className="mr-1 rounded bg-violet-100 px-1 py-px text-[10px] font-semibold uppercase tracking-wide text-violet-800 dark:bg-violet-500/30 dark:text-violet-200">
+          New
+        </span>
+        {released && <>released {formatDay(released)}</>}
+      </HoverCard>
+    </span>
+  );
+}
+
 // "Superseded by Opus 5.5 · leaves Oct 24" under a superseded model's name
 // (update/supersede.py): hover or tap it for what the successor beats it on.
 function SupersededTag({ model: m, successor }: { model: ModelRow; successor: ModelRow | null }) {
@@ -1115,6 +1176,12 @@ function SupersededTag({ model: m, successor }: { model: ModelRow; successor: Mo
 function formatDay(iso: string): string {
   const d = new Date(`${iso}T00:00:00Z`);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+}
+
+// "2026-09-28" → "Sep 28, 2026".
+function formatLongDay(iso: string): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
 // The expanded row: what the model is best for, the full price card (input /
@@ -1191,6 +1258,7 @@ function SortHeader({
   align = "left",
   className = "",
   detail,
+  dense = false,
 }: {
   field: Exclude<SortKey, Category | BenchKey>;
   sortKey: SortKey;
@@ -1200,13 +1268,17 @@ function SortHeader({
   className?: string;
   // Extra sentence appended to the definition (e.g. live fit statistics).
   detail?: string;
+  // The benchmark-scores view: eleven evaluation columns share the 1280px
+  // budget, so the leading columns give up some padding.
+  dense?: boolean;
 }) {
   const def = FIELD_DEFS[field];
   const active = sortKey === field;
   return (
     <th
       className={
-        "whitespace-nowrap px-3 py-2 font-semibold " +
+        "whitespace-nowrap py-2 font-semibold " +
+        (dense ? "px-2 " : "px-3 ") +
         (align === "right" ? "text-right " : "text-left ") +
         className
       }
@@ -1257,9 +1329,9 @@ function CategoryHeader({
   const figure = figureKey ? GRID_COLUMN_BY_KEY[figureKey] : null;
   const definition = figure
     ? DERIVED_CATEGORIES.has(cat)
-      ? `${def.definition} Letters here are DERIVED from ${figure.label} (Artificial Analysis) as the gap to the category leader: S ≤ 5, A ≤ 20, B ≤ 35, C ≤ 50 points, else D. A ringed letter is editorial (AA has not measured that model).`
-      : `${def.definition} Editorial rating; the ${figure.label} column in the Benchmark scores view is first-party-endpoint throughput and is shown for reference only.`
-    : `${def.definition} No single-source public benchmark covers this category; the rating is editorial.`;
+      ? `${def.definition} A filled letter is MEASURED: derived from ${figure.label} (Artificial Analysis) as the gap to the category leader: S ≤ 5, A ≤ 20, B ≤ 35, C ≤ 50 points, else D. A dashed-outline letter is estimated by the daily catalog automation, for a model outside ${figure.label}'s measured set.`
+      : `${def.definition} Estimated by the daily catalog automation (dashed outline); the ${figure.label} column in the Benchmark scores view is first-party-endpoint throughput, shown for reference.`
+    : `${def.definition} Estimated by the daily catalog automation from each provider's published results (dashed outline).`;
   return (
     <th
       className="w-14 px-1 py-2 text-center align-bottom font-semibold"
@@ -1308,7 +1380,7 @@ function BenchHeader({
   const active = sortKey === col.key;
   return (
     <th
-      className="whitespace-nowrap px-2 py-2 text-right font-semibold"
+      className="whitespace-nowrap px-1 py-2 text-right font-semibold"
       aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
     >
       <span className="inline-flex flex-row-reverse items-center gap-1">

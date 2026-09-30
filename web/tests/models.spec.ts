@@ -19,9 +19,14 @@ import {
   fitScoreModel,
   formatBench,
   formatScore,
+  GRID_COLUMN_BY_KEY,
   GRID_COLUMNS,
+  indexEvidence,
+  newUntil,
   paretoFrontier,
   scoreFor,
+  type BenchKey,
+  type BenchRow,
 } from "../lib/benchmark-grid";
 import { modelProvider } from "../lib/catalog-fields";
 
@@ -52,7 +57,9 @@ const MODEL_COUNT = catalog.models.length;
 // The structured benchmark layer the grid reads (data/benchmarks.json is the
 // synced copy of docs/benchmarks.json, like the catalog).
 interface BenchModel {
+  aa_slug: string;
   aa_name: string;
+  release_date?: string | null;
   evaluations: Record<string, number | null>;
   median_output_tokens_per_second: number | null;
 }
@@ -516,7 +523,7 @@ test("rating cells are letters only; the Score column is the cost-adjusted score
   expect(measuredSeen).toBe(fit!.n);
 });
 
-test("derived letters match the published bands; unmeasured letters are marked editorial", async ({ page }) => {
+test("measured letters match the published bands; every other letter is marked estimated", async ({ page }) => {
   await page.goto("/models");
 
   // Column order: chevron, model, provider, juris, input, output, AA index,
@@ -532,7 +539,7 @@ test("derived letters match the published bands; unmeasured letters are marked e
   const rows = page.getByTestId("model-row");
   const n = await rows.count();
   let derivedSeen = 0;
-  let editorialSeen = 0;
+  let estimatedSeen = 0;
   for (let i = 0; i < n; i += 1) {
     const r = rows.nth(i);
     // The row's id, not the name cell's text (which can carry a superseded tag).
@@ -541,17 +548,26 @@ test("derived letters match the published bands; unmeasured letters are marked e
     const hle = benchmarks.models[model.id]?.evaluations.hle;
     const cell = r.locator("td").nth(KNOWLEDGE_TD).getByTestId("rating-cell");
     if (typeof hle === "number") {
-      await expect(cell).toHaveAttribute("data-basis", "derived");
+      await expect(cell).toHaveAttribute("data-basis", "measured");
       await expect(cell).toHaveText(band(leader - hle * 100));
-      await expect(cell).toHaveAttribute("title", /Derived from Humanity's Last Exam .* points behind the category leader/);
+      await expect(cell).toHaveAttribute(
+        "title",
+        /Measured: derived from Humanity's Last Exam .* points behind the category leader/,
+      );
       derivedSeen += 1;
     } else {
-      await expect(cell).toHaveAttribute("data-basis", "editorial");
-      await expect(cell).toHaveAttribute("title", /Editorial rating\./);
-      editorialSeen += 1;
+      // An estimate in a derived category names the benchmark that would measure it.
+      await expect(cell).toHaveAttribute("data-basis", "estimated");
+      await expect(cell).toHaveAttribute(
+        "title",
+        /Estimated: set by the daily catalog automation.*Measured letters in this column come from Humanity's Last Exam/,
+      );
+      estimatedSeen += 1;
     }
-    // Planning is never derived.
-    await expect(r.locator("td").nth(CODING_TD + 1).getByTestId("rating-cell")).toHaveAttribute("data-basis", "editorial");
+    // Planning is always an estimate.
+    const planning = r.locator("td").nth(CODING_TD + 1).getByTestId("rating-cell");
+    await expect(planning).toHaveAttribute("data-basis", "estimated");
+    await expect(planning).toHaveAttribute("title", /Estimated: set by the daily catalog automation/);
   }
   // Every measured model's letter is derived: as many as the catalog measures
   // on HLE (the count moves as models arrive and retire).
@@ -560,7 +576,7 @@ test("derived letters match the published bands; unmeasured letters are marked e
   ).length;
   expect(derivedSeen).toBe(measuredOnHle);
   expect(derivedSeen).toBeGreaterThan(0);
-  expect(editorialSeen).toBeGreaterThan(0);
+  expect(estimatedSeen).toBeGreaterThan(0);
 });
 
 test("every model off the frontier names the model that beats it, from any cost tier", async ({ page }) => {
@@ -875,6 +891,83 @@ test("a superseded model is tagged with its successor and the day it leaves", as
   const card = page.getByTestId("superseded-card");
   await expect(card).toContainText(`Superseded by ${successor.name}.`);
   await expect(card).toContainText(`leaves the catalog on ${m.retires_on}`);
+});
+
+test("a model released in the last two weeks carries a New tag that says when it clears", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/models");
+  const now = new Date();
+  const fresh = catalog.models.filter((m) => newUntil(benchmarks.models[m.id]?.release_date, now) !== null);
+  await expect(page.getByTestId("new-tag")).toHaveCount(fresh.length);
+  test.info().annotations.push({ type: "new models", description: fresh.map((m) => m.id).join(", ") });
+  if (fresh.length === 0) return;
+  const m = fresh[0];
+  const until = newUntil(benchmarks.models[m.id].release_date, now)!;
+  const tag = page.locator(`[data-testid="model-row"][data-model-id="${m.id}"] [data-testid="new-tag"]`);
+  await expect(tag).toHaveAttribute("data-new-until", until);
+  await expect(tag).toContainText("New");
+  await tag.getByTestId("new-trigger").hover();
+  const card = page.getByTestId("new-card");
+  await expect(card).toContainText(`${m.name} is new`);
+  await expect(card).toContainText("launch-window results");
+});
+
+// The page's BenchRow and per-column sorted values, rebuilt from the same JSON,
+// so the card's ranks and verdict are checked against an independent build.
+function benchRowOf(id: string): BenchRow | null {
+  const raw = benchmarks.models[id];
+  if (!raw) return null;
+  const values = {} as Record<BenchKey, number | null>;
+  for (const c of GRID_COLUMNS) {
+    const v = c.key === "median_output_tokens_per_second" ? raw.median_output_tokens_per_second : raw.evaluations[c.key];
+    values[c.key] = typeof v === "number" && Number.isFinite(v) && !(c.unit === "tok/s" && v <= 0) ? v : null;
+  }
+  return { aa_slug: raw.aa_slug, aa_name: raw.aa_name, release_date: raw.release_date ?? null, values };
+}
+const COLUMN_VALUES = Object.fromEntries(
+  GRID_COLUMNS.map((c) => [
+    c.key,
+    catalog.models
+      .map((m) => benchRowOf(m.id)?.values[c.key] ?? null)
+      .filter((v): v is number => v !== null)
+      .sort((a, b) => a - b),
+  ]),
+) as Record<BenchKey, number[]>;
+
+test("the AA Index card names the AA model it was measured as and ranks its own benchmarks", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/models");
+
+  // Every measured model's verdict, computed independently (recorded, not
+  // asserted: which models lean is data).
+  const verdicts = catalog.models
+    .map((m) => ({ m, e: indexEvidence(benchRowOf(m.id), COLUMN_VALUES) }))
+    .filter((x) => x.e !== null);
+  const leaning = verdicts.filter((x) => x.e!.verdict === "above" || x.e!.verdict === "below");
+  test.info().annotations.push({
+    type: "index leans from its benchmarks",
+    description: leaning.map((x) => `${x.m.id}: ${x.e!.verdict}`).join(", ") || "none",
+  });
+
+  // The top AA Index in the catalog: the figure a reader is most likely to doubt.
+  const withVerdict = verdicts.filter((x) => x.e!.verdict !== null);
+  const top = withVerdict.sort((a, b) => b.e!.index.value - a.e!.index.value)[0];
+  const e = top.e!;
+  const row = page.locator(`[data-testid="model-row"][data-model-id="${top.m.id}"]`);
+  await row.getByTestId("aa-index-trigger").hover();
+  const card = page.getByTestId("aa-index-card");
+  await expect(card.getByTestId("index-measured-as")).toContainText(
+    `Measured as ${benchmarks.models[top.m.id].aa_name}`,
+  );
+  const evidence = card.getByTestId("index-evidence");
+  await expect(evidence).toHaveAttribute("data-verdict", e.verdict!);
+  const rows = evidence.getByTestId("index-evidence-row");
+  await expect(rows).toHaveCount(e.items.length);
+  const best = e.items[0];
+  const col = GRID_COLUMN_BY_KEY[best.key];
+  await expect(rows.first()).toHaveText(`${formatBench(best.value, col.unit)}#${best.rank} of ${best.of}`);
+  await expect(evidence.getByTestId("index-evidence-index")).toContainText(`#${e.index.rank} of ${e.index.of}`);
+  await expect(evidence.getByTestId("index-verdict")).toBeVisible();
 });
 
 test("the expanded row carries the cited (mixed-source) benchmarks and pricing detail", async ({ page }) => {

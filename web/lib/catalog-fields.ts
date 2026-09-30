@@ -67,6 +67,9 @@ export interface ModelRow {
   superseded_by: string | null;
   superseded_on: string | null;
   retires_on: string | null;
+  // The day the "New" tag clears (release + 14 days, lib/benchmark-grid
+  // newUntil) while the model is inside that window; null otherwise.
+  new_until: string | null;
 }
 
 export interface FieldDef {
@@ -255,6 +258,19 @@ export const RATING_COLORS: Record<Rating, string> = {
   C: "bg-amber-100 text-amber-800 dark:bg-amber-500/35 dark:text-amber-300",
   D: "bg-rose-100 text-rose-700 dark:bg-rose-500/35 dark:text-rose-300",
 };
+
+// An ESTIMATED letter (set by the daily catalog automation, not derived from a
+// benchmark): the same hue as a measured letter, drawn as a dashed outline
+// instead of a fill so the two read apart at a glance. An outline, not a
+// border, so the badge keeps the measured badge's size.
+export const RATING_OUTLINE_COLORS: Record<Rating, string> = {
+  S: "outline-emerald-500 text-emerald-700 dark:outline-emerald-400 dark:text-emerald-300",
+  A: "outline-sky-500 text-sky-700 dark:outline-sky-400 dark:text-sky-300",
+  B: "outline-brand-slate-400 text-brand-slate-600 dark:outline-brand-slate-500 dark:text-brand-slate-300",
+  C: "outline-amber-500 text-amber-700 dark:outline-amber-400 dark:text-amber-300",
+  D: "outline-rose-500 text-rose-700 dark:outline-rose-400 dark:text-rose-300",
+};
+export const ESTIMATED_BADGE = "outline-dashed outline-1 -outline-offset-1";
 
 export const COST_TIER_RANK: Record<CostTier, number> = {
   low: 1,
