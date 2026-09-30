@@ -669,7 +669,7 @@ test("Group by Quality is the default: AA Index bands, highest Score first in ea
   await expect(page.getByTestId("score-group")).toHaveCount(new Set(scored.map((m) => m.tier_cost)).size);
 });
 
-test("a group with nothing on the frontier says so in its header and its chart, naming what beats it", async ({ page }) => {
+test("a group with nothing on the frontier says so in its table header, naming what beats it; the Score charts keep to the Score", async ({ page }) => {
   await page.goto("/models");
   const frontier = new Set(MEASURED.filter((r) => leaderOf(r) === r).map((r) => r.m.id));
   const check = async (header: ReturnType<typeof page.locator>, members: Measured[]) => {
@@ -693,20 +693,18 @@ test("a group with nothing on the frontier says so in its header and its chart, 
     return true;
   };
 
-  // Cost tiers and their charts.
+  // Cost tiers. The Score charts carry no such sentence: a tier's chart shows
+  // its Scores, and a dot's card names the top score at that dot's price.
   await page.getByTestId("group-by-tier").click();
   let beatenTiers = 0;
   for (const tier of new Set(scored.map((m) => m.tier_cost))) {
     const members = MEASURED.filter((r) => r.m.tier_cost === tier);
     const header = page.locator(`[data-testid="score-group"][data-tier="${tier}"]`);
     if (await check(header, members)) beatenTiers += 1;
-    if (members.length >= 2) {
-      const chart = page.locator(`[data-testid="score-chart"][data-tier="${tier}"]`);
-      const beaten = members.every((r) => !frontier.has(r.m.id));
-      await expect(chart.getByTestId("chart-beaten")).toHaveCount(beaten ? 1 : 0);
-    }
   }
   test.info().annotations.push({ type: "tiers with nothing on the frontier", description: String(beatenTiers) });
+  await expect(page.getByTestId("score-chart")).not.toHaveCount(0);
+  await expect(page.getByTestId("score-charts")).not.toContainText("The top score at");
 
   // Quality bands.
   await page.getByTestId("group-by-quality").click();

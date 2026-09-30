@@ -52,7 +52,7 @@ import {
   type Label,
 } from "./chart-kit";
 import { FloatingCard, type AnchorRect } from "./FloatingCard";
-import { FrontierScope, ModelPointCard, PriceLineCard, topScoreSentence } from "./ScoreCards";
+import { FrontierScope, ModelPointCard, PriceLineCard } from "./ScoreCards";
 
 // Sign is also carried by direction and by the printed Score, so colour is
 // never the only cue. Sky/orange stays distinct under protan and deutan
@@ -127,10 +127,6 @@ function TierChart({
   const blends = pts.map((p) => p.price);
   const range = (lo: number, hi: number) =>
     lo === hi ? formatUsd(lo) : `${formatUsd(lo)}–${formatUsd(hi)}`;
-  // When the top score at this tier's prices belongs to a cheaper tier's
-  // model, the chart names it: each tier's Scores average zero, so the words
-  // carry what the tier's own line leaves out.
-  const note = topScoreSentence(pts.map((p) => p.row), byId, "a dot");
 
   const height = width > 0 && width < 480 ? 340 : 320;
   const plotW = Math.max(40, width - M.left - M.right);
@@ -254,11 +250,6 @@ function TierChart({
           </span>
         </span>
       </figcaption>
-      {note && (
-        <p className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-300" data-testid="chart-beaten">
-          {note}
-        </p>
-      )}
 
       <div ref={wrap} className="mt-2 w-full" style={{ height }}>
         {width > 0 && (
@@ -671,9 +662,7 @@ export function ScoreCharts({
             The green ring marks the cost/quality frontier: a model that scores higher than every
             other {scope ? `${scope} model` : "model in the catalog"} at its price or less.
           </strong>{" "}
-          When the top score at a tier&rsquo;s prices belongs to a cheaper tier, that tier&rsquo;s
-          chart names the model under its title. The frontier chart above plots every model
-          together and draws the frontier as a line.
+          The frontier chart above plots every model together and draws the frontier as a line.
         </p>
       </div>
     </details>
