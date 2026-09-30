@@ -101,7 +101,8 @@
   "unexpected_slugs": [
     "gpt-6-astra",
     "gpt-6-luna",
-    "gpt-6-sol"
+    "gpt-6-sol",
+    "gpt-6.1-sol"
   ],
   "discovered": [
     {
@@ -110,7 +111,7 @@
       "output_price_per_1m": 50.0
     },
     {
-      "slug": "gpt-6-sol",
+      "slug": "gpt-6.1-sol",
       "input_price_per_1m": 2.0,
       "output_price_per_1m": 10.0
     },
@@ -118,6 +119,11 @@
       "slug": "gpt-6-luna",
       "input_price_per_1m": 0.1,
       "output_price_per_1m": 0.5
+    },
+    {
+      "slug": "gpt-6-sol",
+      "input_price_per_1m": 2.0,
+      "output_price_per_1m": 10.0
     }
   ],
   "missing_mapped_models": [],
