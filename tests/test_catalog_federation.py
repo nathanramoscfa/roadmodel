@@ -12,6 +12,7 @@ artifacts stay byte-stable and the recommender's behavior is unchanged.
 from __future__ import annotations
 
 import importlib
+import inspect
 import json
 import subprocess
 import sys
@@ -1380,11 +1381,15 @@ def test_g6_flags_a_benched_model_missing_from_the_catalog(tmp_path: Path) -> No
         availability.write_text(original)
 
 
-def test_prompt_defers_supersession_when_the_successor_is_unavailable() -> None:
-    """The rule that keeps a series recommendable when its newest is benched."""
+def test_supersession_is_deferred_while_the_successor_is_unavailable() -> None:
+    """The rule that keeps a series recommendable when its newest is benched
+    lives in code now (update/supersede.py); the curation pass removes no
+    superseded model at all."""
+    supersede = _load("supersede")
+    assert "unavailable" in inspect.signature(supersede.successors).parameters
+    assert "unavailable_ids()" in (REPO_ROOT / "update" / "supersede.py").read_text()
     prompt = (REPO_ROOT / "update" / "prompt.md").read_text()
-    for phrase in ("supersession deferred:", "UNAVAILABLE successor does NOT displace"):
-        assert phrase in prompt, f"update/prompt.md lost the availability guard: {phrase!r}"
+    assert "Supersession is NOT a removal reason in this pass" in prompt
 
 
 if __name__ == "__main__":

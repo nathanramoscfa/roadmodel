@@ -87,8 +87,8 @@ surface has no dial so the line is OMITTED entirely. Keep that wording intact.
 If `<docs_facts>` introduces a thinking level beyond `low`/`medium`/`high` (it
 appears in both `thinking_levels` and `unexpected_levels`), ADD that level to the
 bullet enumeration AND give it an EFFORT mapping — a new top-of-scale tier maps
-to `XHigh` — and add a warning naming the new tier so the maintainer reviews the
-new reasoning level. Do NOT silently omit it: the conformance gate requires the
+to `XHigh` — and add a warning naming the new tier for the PR body. Do NOT
+silently omit it: the conformance gate requires the
 selector's Gemini vocabulary to EQUAL the documented `thinking_levels`.
 
 Do NOT touch the Claude, OpenAI/Codex, or Cursor bullets/mappings, or any

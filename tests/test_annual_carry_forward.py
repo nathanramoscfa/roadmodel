@@ -4,7 +4,7 @@
 the committed Subscription Tiers `Annual` cells after the Opus cost-scale pass, so
 the cron can never originate an annual price (a plausibly-shaped hallucination is
 indistinguishable from a real capture by the old 8x-12x guard). A tier new to the
-table is nulled to `—` and flagged for maintainer review.
+table is nulled to `—`, and the run's warnings say so.
 """
 
 from __future__ import annotations

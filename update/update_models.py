@@ -721,7 +721,7 @@ def write_dry_run_report(
 # the old `8x-12x monthly` shape guard accepts any plausibly-shaped value, so a
 # hallucinated annual passed it (issue #315). After the Opus cost-scale pass this
 # overlay deterministically restores every Annual cell to the committed value and
-# FLAGS a tier new to the table (nulled to `—`) for explicit maintainer review.
+# nulls a tier new to the table to `—`, saying so in the run's warnings.
 
 
 def _subscription_annual_cols(cells: list[str]) -> tuple[int, int] | None:
@@ -801,13 +801,13 @@ def carry_forward_annual_column(before: str, after: str) -> tuple[str, list[str]
         current = cells[annual_idx].strip()
         want = committed.get(name)
         if want is None:
-            # The cron cannot originate an annual: null a new tier for review.
+            # The cron cannot originate an annual: a new tier's is `—`.
             if current in ("—", ""):
                 continue
             warnings.append(
                 f"Annual carry-forward: NEW tier {name!r} — cron proposed annual "
-                f"{current!r}; reset to '—'. Hand-verify and edit "
-                f"docs/model-tier-cost-scale.md to set it if real."
+                f"{current!r}; reset to '—' (annual prices come only from the "
+                f"committed file)."
             )
             want = "—"
         elif current == want:

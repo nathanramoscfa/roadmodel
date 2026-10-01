@@ -71,7 +71,7 @@ surface has no dial so the line is OMITTED entirely. Keep that wording intact.
 If `<docs_facts>` introduces a reasoning-effort value the selector does not yet
 carry (it appears in both `reasoning_effort` and `unexpected_effort`), ADD that
 value to the bullet enumeration AND give it an EFFORT mapping, then add a warning
-naming the new tier so the maintainer reviews it. Place it by these rules, in
+naming the new tier for the PR body. Place it by these rules, in
 order — they are deterministic, so do not deliberate:
 
 1. The name matches an EFFORT rung (`low`/`medium`/`high`/`xhigh`/`max`) → that
