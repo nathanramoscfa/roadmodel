@@ -10,6 +10,7 @@ owns is what the generator writes from today's letters, prices and benchmarks.
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import sys
 from pathlib import Path
@@ -50,9 +51,12 @@ def test_every_model_has_real_text(field: str) -> None:
 
 
 def test_selector_matches_the_generator() -> None:
+    """As of the day the committed catalog was built: a promotion that ends
+    later must not fail every PR until the next cron run rewrites it."""
     selector = model_prose.SELECTOR_PATH.read_text()
     benchmarks = json.loads(model_prose.BENCHMARKS_PATH.read_text())
-    new_text, changes = model_prose.apply(selector, benchmarks)
+    built = json.loads((REPO_ROOT / "docs" / "catalog.json").read_text())["generated_at_utc"]
+    new_text, changes = model_prose.apply(selector, benchmarks, dt.date.fromisoformat(built[:10]))
     assert new_text == selector, (
         f"{len(changes)} generated field(s) are stale, e.g. "
         f"{[(c.id, c.field) for c in changes[:3]]}. Run `python update/model_prose.py --write`, "
