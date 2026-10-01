@@ -946,18 +946,18 @@ Tier ratings:
 #### GPT-6 Sol — `gpt-6-sol`
 
 - **Pricing:** Input $2.00/M · Output $10.00/M
-- **Tier ratings:** Coding **S** · Planning **B** · Agentic **S** · Multimodal **B** · Long-context **S** · Knowledge **A** · Speed **B**
+- **Tier ratings:** Coding **S** · Planning **S** · Agentic **S** · Multimodal **A** · Long-context **S** · Knowledge **A** · Speed **D**
 - **Headline benchmarks:** AA Intelligence Index 47.6 (max); HLE 47.9%; SciCode 57.6; Terminal-Bench 4.0 43.9; AA-LCR 0.837; LMArena WebDev #7 (Elo 1689.3)
 - **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
-- **Best for:** Frontier-class coding, agentic work and long context, plus strong knowledge, at a medium price. Its AA Intelligence Index of 47.6 ranks 9th of 54 measured models.
+- **Best for:** Frontier-class coding, planning, agentic work and long context, plus strong multimodal input and knowledge, at a medium price. Its AA Intelligence Index of 47.6 ranks 9th of 54 measured models. Weakest at speed (D).
 
 #### GPT-6.1 Sol — `gpt-6.1-sol`
 
 - **Pricing:** Input $2.00/M · Output $10.00/M
-- **Tier ratings:** Coding **A** · Planning **B** · Agentic **S** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **B**
+- **Tier ratings:** Coding **A** · Planning **S** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **D**
 - **Headline benchmarks:** AA Intelligence Index 51.8 (max); HLE 52.9%; SciCode 54.2; Terminal-Bench 4.0 56.1; AA-LCR 0.830; LMArena WebDev #3 (Elo 1758.7)
 - **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
-- **Best for:** Frontier-class agentic work, plus strong coding, long context and knowledge, at a medium price. Its AA Intelligence Index of 51.8 ranks 5th of 54 measured models.
+- **Best for:** Frontier-class planning and agentic work, plus strong coding, multimodal input, long context and knowledge, at a medium price. Its AA Intelligence Index of 51.8 ranks 5th of 54 measured models. Weakest at speed (D).
 
 ### Low Cost Tier
 
@@ -1100,10 +1100,10 @@ Tier ratings:
 #### GPT-6 Luna — `gpt-6-luna`
 
 - **Pricing:** Input $0.10/M · Output $0.50/M
-- **Tier ratings:** Coding **A** · Planning **B** · Agentic **A** · Multimodal **B** · Long-context **A** · Knowledge **B** · Speed **B**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **B** · Long-context **A** · Knowledge **B** · Speed **S**
 - **Headline benchmarks:** AA Intelligence Index 38.1 (max); HLE 38.5%; SciCode 54.6; Terminal-Bench 4.0 12.6; AA-LCR 0.833; LMArena WebDev #30 (Elo 1581.9)
 - **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
-- **Best for:** Strong coding, agentic work and long context at a low price. Its AA Intelligence Index of 38.1 ranks 25th of 54 measured models, the highest of any model at its price or lower.
+- **Best for:** Strong coding, planning, agentic work and long context, with very fast output, at a low price. Its AA Intelligence Index of 38.1 ranks 25th of 54 measured models, the highest of any model at its price or lower.
 
 #### DeepSeek-V4-Pro — `deepseek-v4-pro`
 
@@ -1530,7 +1530,7 @@ Guardrails:
   - Never sacrifice quality to save cost — the cost step is a true-tie
     resolver, not a downgrade trigger.
   - For PRIMARY = `multimodal`, only consider models with tier-multimodal
-    of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro, claude-fable-5, claude-fable-5.1 at S; gemini-2.5-flash, claude-sonnet-5, claude-sonnet-5-5, gpt-5.6-terra, gpt-5.4, sonnet-4.6, claude-opus-5-5, gpt-5.6-sol, claude-opus-5, opus-4.7, opus-4.8, gpt-5.5 at A).
+    of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro, claude-fable-5, claude-fable-5.1 at S; gemini-2.5-flash, claude-sonnet-5, claude-sonnet-5-5, gpt-6-sol, gpt-6.1-sol, gpt-5.6-terra, gpt-5.4, sonnet-4.6, claude-opus-5-5, gpt-5.6-sol, claude-opus-5, opus-4.7, opus-4.8, gpt-5.5 at A).
   - For PRIMARY = `long-context`, prefer models with native large
     context (opus-4.7 1M, opus-4.8 1M, claude-opus-5 1M, claude-opus-5-5 1M, gemini-3.1-pro 1M) over forcing
     a smaller-context model into Max Mode truncation.

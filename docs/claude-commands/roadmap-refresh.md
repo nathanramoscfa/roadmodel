@@ -206,8 +206,13 @@ model the operator's access methods reach, at the deepest reasoning
 rung it exposes on its platform (`Max` in Claude Code), thinking on,
 never `Ultracode`, with a backup on its own platform and dial — unless
 `planning/user-context.md` states a rule for roadmap-writing sessions,
-which wins. The table takes its platform's shape, as a step's does,
-with Conversation **New**, followed by one or two sentences on why.
+which wins. Where `roadmodel` is installed, take the model and the
+backup, not their effort, from the PRIMARY and BACKUP lines of
+`roadmodel score --category planning --complexity high --budget best`:
+it ranks on measured benchmarks, so a stale catalog letter cannot steer
+them, and a model the user-context names for these sessions still wins.
+The table takes its platform's shape, as a step's does, with
+Conversation **New**, followed by one or two sentences on why.
 
 - No table yet ⇒ add one. It is the phase's first pick, so it takes no
   `Settings updated` line.
