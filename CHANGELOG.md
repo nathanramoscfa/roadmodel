@@ -34,6 +34,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`/roadmap-phase` runs at `max` in Claude Code**, up from `xhigh`. A
   command's `effort:` overrides `/effort` for the turn and cannot vary by
   phase, so at `xhigh` no phase roadmap could be written at `Max`.
+- **Phase roadmap settings take their models from the scoring core.** Where
+  roadmodel is installed, the model and backup come from `roadmodel score
+  --category planning --complexity high --budget best`, which ranks on
+  measured benchmarks; the effort stays the deepest rung. The selector's
+  prose ranks on catalog letters, so one stale letter had sent every backup
+  to GPT-5.6 Sol, while the scoring core named GPT-6.1 Sol on the same
+  catalog. A model the user-context names for these sessions still wins.
+
+### Fixed
+
+- **GPT-6 Sol is the backup for planning work again, not GPT-5.6 Sol.** The
+  GPT-6 models joined the catalog on 2026-09-25 with every estimated letter
+  (planning, multimodal, speed) at the B placeholder. That was five days
+  before a new model started inheriting its same-series predecessor's
+  letters, and the editorial review the refresh asked for never happened.
+  GPT-6.1 Sol then inherited GPT-6 Sol's B. With planning at B, every
+  cross-provider backup for a planning task went to GPT-5.6 Sol, the model
+  GPT-6 Sol succeeds at half the price. The letters are now what the rule
+  gives: GPT-6 Sol and GPT-6.1 Sol take GPT-5.6 Sol's (planning S,
+  multimodal A, speed D), and GPT-6 Luna takes GPT-5.6 Luna's (planning A,
+  speed S). GPT-6 Astra has no predecessor and stays at B. A test now fails
+  any model that keeps the bare B default while a same-series predecessor
+  exists.
 
 ## [0.2.53] — 2026-10-01
 

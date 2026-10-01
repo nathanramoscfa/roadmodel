@@ -1,9 +1,9 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-10-01T22:10:29Z",
+  "generated_at_utc": "2026-10-01T23:02:27Z",
   "source_doc_sha256": {
-    "model-selector.txt": "e2b0143e0275594a46465f5e8c5f31d505a4dbf64d056dc65280fb0adb99ba63",
+    "model-selector.txt": "842430054fd069a9819519743c44841ce9844708564b5e9ee3dd2759b78890ca",
     "model-tier-cost-scale.md": "0e07bd4fae45e3472d064067a09f426c4430da87b6031ce7d610baeb23b5b2fb"
   },
   "models": [
@@ -1016,17 +1016,17 @@
       "tier_cost": "low",
       "tiers": {
         "coding": "A",
-        "planning": "B",
+        "planning": "A",
         "agentic": "A",
         "multimodal": "B",
         "long-context": "A",
         "knowledge": "B",
-        "speed": "B"
+        "speed": "S"
       },
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 38.1 (max); HLE 38.5%; SciCode 54.6; Terminal-Bench 4.0 12.6; AA-LCR 0.833; LMArena WebDev #30 (Elo 1581.9)",
       "pricing_notes": "Provider-direct OpenAI API per-token pricing (not via the Cursor pool)",
-      "best_for": "Strong coding, agentic work and long context at a low price. Its AA Intelligence Index of 38.1 ranks 25th of 54 measured models, the highest of any model at its price or lower.",
+      "best_for": "Strong coding, planning, agentic work and long context, with very fast output, at a low price. Its AA Intelligence Index of 38.1 ranks 25th of 54 measured models, the highest of any model at its price or lower.",
       "superseded_by": null,
       "superseded_on": null,
       "added_on": null,
@@ -1041,17 +1041,17 @@
       "tier_cost": "medium",
       "tiers": {
         "coding": "S",
-        "planning": "B",
+        "planning": "S",
         "agentic": "S",
-        "multimodal": "B",
+        "multimodal": "A",
         "long-context": "S",
         "knowledge": "A",
-        "speed": "B"
+        "speed": "D"
       },
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 47.6 (max); HLE 47.9%; SciCode 57.6; Terminal-Bench 4.0 43.9; AA-LCR 0.837; LMArena WebDev #7 (Elo 1689.3)",
       "pricing_notes": "Provider-direct OpenAI API per-token pricing (not via the Cursor pool)",
-      "best_for": "Frontier-class coding, agentic work and long context, plus strong knowledge, at a medium price. Its AA Intelligence Index of 47.6 ranks 9th of 54 measured models.",
+      "best_for": "Frontier-class coding, planning, agentic work and long context, plus strong multimodal input and knowledge, at a medium price. Its AA Intelligence Index of 47.6 ranks 9th of 54 measured models. Weakest at speed (D).",
       "superseded_by": null,
       "superseded_on": null,
       "added_on": null,
@@ -1066,17 +1066,17 @@
       "tier_cost": "medium",
       "tiers": {
         "coding": "A",
-        "planning": "B",
+        "planning": "S",
         "agentic": "S",
-        "multimodal": "B",
+        "multimodal": "A",
         "long-context": "A",
         "knowledge": "A",
-        "speed": "B"
+        "speed": "D"
       },
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 51.8 (max); HLE 52.9%; SciCode 54.2; Terminal-Bench 4.0 56.1; AA-LCR 0.830; LMArena WebDev #3 (Elo 1758.7)",
       "pricing_notes": "Provider-direct OpenAI API per-token pricing (not via the Cursor pool)",
-      "best_for": "Frontier-class agentic work, plus strong coding, long context and knowledge, at a medium price. Its AA Intelligence Index of 51.8 ranks 5th of 54 measured models.",
+      "best_for": "Frontier-class planning and agentic work, plus strong coding, multimodal input, long context and knowledge, at a medium price. Its AA Intelligence Index of 51.8 ranks 5th of 54 measured models. Weakest at speed (D).",
       "superseded_by": null,
       "superseded_on": null,
       "added_on": "2026-10-01",

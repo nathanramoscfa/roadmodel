@@ -87,7 +87,10 @@ for the session that will write that phase's roadmap (§3). The
 selector picks them quality first. A phase roadmap fixes every step's
 scope, task prompt, acceptance criteria and Settings, and it is written
 once, so it gets the strongest planning model your subscriptions reach
-at that model's deepest reasoning rung — `Max` in Claude Code, never
+(and the strongest from another provider as its backup, both from
+`roadmodel score`, which ranks on measured benchmarks rather than
+catalog letters) at that model's deepest reasoning rung — `Max` in
+Claude Code, never
 `Ultracode` (which reasons at Extra high and adds parallel agents a
 single document does not need). A rule for roadmap-writing sessions in
 your user-context overrides that default.

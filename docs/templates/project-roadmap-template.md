@@ -42,9 +42,15 @@ STYLE RULES (the AI MUST follow)
     Take the strongest `planning` model the operator's access
     methods reach, at the deepest reasoning rung that model
     exposes on its platform (`Max` in Claude Code, which
-    `/roadmap-phase` sets by itself), with thinking on. Never
-    `Ultracode`: it reasons at `Extra high` and adds parallel
-    agents, which one planning document does not need. A rule
+    `/roadmap-phase` sets by itself), with thinking on. Where
+    `roadmodel` is installed, take the two models, not their
+    effort, from the PRIMARY and BACKUP lines of `roadmodel
+    score --category planning --complexity high --budget best`:
+    it ranks on measured benchmarks, so a stale catalog letter
+    cannot steer them, and a model the user-context names for
+    these sessions still wins. Never `Ultracode`: it reasons at
+    `Extra high` and adds parallel agents, which one planning
+    document does not need. A rule
     for roadmap-writing sessions in the user-context overrides
     this default. The table takes its platform's shape (the
     phase roadmap template's Settings variants) with a Backup

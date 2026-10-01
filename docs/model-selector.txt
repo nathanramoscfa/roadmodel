@@ -1170,23 +1170,23 @@
       <model id="gpt-6-sol" name="GPT-6 Sol"
              input-price-per-1m="$2.00" output-price-per-1m="$10.00"
              jurisdiction="us"
-             tier-coding="S" tier-planning="B" tier-agentic="S"
-             tier-multimodal="B" tier-long-context="S" tier-knowledge="A"
-             tier-speed="B"
+             tier-coding="S" tier-planning="S" tier-agentic="S"
+             tier-multimodal="A" tier-long-context="S" tier-knowledge="A"
+             tier-speed="D"
              headline-benchmarks="AA Intelligence Index 47.6 (max); HLE 47.9%; SciCode 57.6; Terminal-Bench 4.0 43.9; AA-LCR 0.837; LMArena WebDev #7 (Elo 1689.3)"
              pricing-notes="Provider-direct OpenAI API per-token pricing (not via the Cursor pool)"
              prose-generated="best-for headline-benchmarks"
-             best-for="Frontier-class coding, agentic work and long context, plus strong knowledge, at a medium price. Its AA Intelligence Index of 47.6 ranks 9th of 54 measured models." />
+             best-for="Frontier-class coding, planning, agentic work and long context, plus strong multimodal input and knowledge, at a medium price. Its AA Intelligence Index of 47.6 ranks 9th of 54 measured models. Weakest at speed (D)." />
       <model id="gpt-6.1-sol" name="GPT-6.1 Sol"
              input-price-per-1m="$2.00" output-price-per-1m="$10.00"
              jurisdiction="us"
-             tier-coding="A" tier-planning="B" tier-agentic="S"
-             tier-multimodal="B" tier-long-context="A" tier-knowledge="A"
-             tier-speed="B"
+             tier-coding="A" tier-planning="S" tier-agentic="S"
+             tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
+             tier-speed="D"
              headline-benchmarks="AA Intelligence Index 51.8 (max); HLE 52.9%; SciCode 54.2; Terminal-Bench 4.0 56.1; AA-LCR 0.830; LMArena WebDev #3 (Elo 1758.7)"
              pricing-notes="Provider-direct OpenAI API per-token pricing (not via the Cursor pool)"
              prose-generated="best-for headline-benchmarks"
-             best-for="Frontier-class agentic work, plus strong coding, long context and knowledge, at a medium price. Its AA Intelligence Index of 51.8 ranks 5th of 54 measured models." added-on="2026-10-01"/>
+             best-for="Frontier-class planning and agentic work, plus strong coding, multimodal input, long context and knowledge, at a medium price. Its AA Intelligence Index of 51.8 ranks 5th of 54 measured models. Weakest at speed (D)." added-on="2026-10-01"/>
     </tier>
     <tier cost="low">
       <model id="gemini-3.5-flash" name="Gemini 3.5 Flash"
@@ -1356,13 +1356,13 @@
       <model id="gpt-6-luna" name="GPT-6 Luna"
              input-price-per-1m="$0.10" output-price-per-1m="$0.50"
              jurisdiction="us"
-             tier-coding="A" tier-planning="B" tier-agentic="A"
+             tier-coding="A" tier-planning="A" tier-agentic="A"
              tier-multimodal="B" tier-long-context="A" tier-knowledge="B"
-             tier-speed="B"
+             tier-speed="S"
              headline-benchmarks="AA Intelligence Index 38.1 (max); HLE 38.5%; SciCode 54.6; Terminal-Bench 4.0 12.6; AA-LCR 0.833; LMArena WebDev #30 (Elo 1581.9)"
              pricing-notes="Provider-direct OpenAI API per-token pricing (not via the Cursor pool)"
              prose-generated="best-for headline-benchmarks"
-             best-for="Strong coding, agentic work and long context at a low price. Its AA Intelligence Index of 38.1 ranks 25th of 54 measured models, the highest of any model at its price or lower." />
+             best-for="Strong coding, planning, agentic work and long context, with very fast output, at a low price. Its AA Intelligence Index of 38.1 ranks 25th of 54 measured models, the highest of any model at its price or lower." />
       <model id="deepseek-v4-pro" name="DeepSeek-V4-Pro"
              input-price-per-1m="$0.66" output-price-per-1m="$1.98"
              jurisdiction="cn"
@@ -1813,7 +1813,7 @@
       - Never sacrifice quality to save cost — the cost step is a true-tie
         resolver, not a downgrade trigger.
       - For PRIMARY = `multimodal`, only consider models with tier-multimodal
-        of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro, claude-fable-5, claude-fable-5.1 at S; gemini-2.5-flash, claude-sonnet-5, claude-sonnet-5-5, gpt-5.6-terra, gpt-5.4, sonnet-4.6, claude-opus-5-5, gpt-5.6-sol, claude-opus-5, opus-4.7, opus-4.8, gpt-5.5 at A).
+        of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro, claude-fable-5, claude-fable-5.1 at S; gemini-2.5-flash, claude-sonnet-5, claude-sonnet-5-5, gpt-6-sol, gpt-6.1-sol, gpt-5.6-terra, gpt-5.4, sonnet-4.6, claude-opus-5-5, gpt-5.6-sol, claude-opus-5, opus-4.7, opus-4.8, gpt-5.5 at A).
       - For PRIMARY = `long-context`, prefer models with native large
         context (opus-4.7 1M, opus-4.8 1M, claude-opus-5 1M, claude-opus-5-5 1M, gemini-3.1-pro 1M) over forcing
         a smaller-context model into Max Mode truncation.

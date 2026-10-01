@@ -68,7 +68,12 @@ quality first as the template's style rule says: the strongest
 `planning` model the operator's access methods reach, at the deepest
 reasoning rung it exposes on its platform (`Max` in Claude Code),
 thinking on, never `Ultracode` — unless the user-context states a rule
-for roadmap-writing sessions. Use the selector the same way wherever
+for roadmap-writing sessions. Where `roadmodel` is installed, take the
+model and the backup, not their effort, from the PRIMARY and BACKUP
+lines of `roadmodel score --category planning --complexity high
+--budget best`: it ranks on measured benchmarks, so a stale catalog
+letter cannot steer them, and a model the user-context names for these
+sessions still wins. Use the selector the same way wherever
 else the roadmap names a model or platform. You are the engine — do
 not call any external API. Honor every availability exclusion in the
 selector, and write each phase's backup model into its table's Backup
