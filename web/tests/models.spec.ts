@@ -24,6 +24,8 @@ import {
   indexEvidence,
   newUntil,
   paretoFrontier,
+  COMPOSITE_DERIVATION,
+  compositeScores,
   RANK_DERIVATION,
   rankLetter,
   scoreFor,
@@ -613,6 +615,48 @@ test("agentic letters are each model's rank on Terminal-Bench 4.0, with the lett
   expect(Object.values(seen).reduce((a, b) => a + b, 0)).toBe(tb.length);
   expect(seen.S ?? 0).toBeGreaterThan(0);
   test.info().annotations.push({ type: "agentic spread", description: JSON.stringify(seen) });
+});
+
+test("coding letters are each model's rank on SciCode + Terminal-Bench 4.0, and no estimate in a measured category reaches S", async ({ page }) => {
+  await page.goto("/models");
+  // Column order: chevron, model, provider, juris, input, output, AA index,
+  // value, then coding, planning, agentic, multimodal, long-context, knowledge, …
+  const TD: Record<string, number> = { coding: 8, agentic: 10, "long-context": 12, knowledge: 13 };
+  const composite = COMPOSITE_DERIVATION.coding!;
+  const scores = compositeScores(
+    catalog.models.map((m) => ({ id: m.id, bench: benchRowOf(m.id) })),
+    composite.parts,
+  );
+  const sorted = [...scores.values()].sort((a, b) => a - b);
+  const shares = RANK_DERIVATION.coding!;
+  const rows = page.getByTestId("model-row");
+  const n = await rows.count();
+  let measured = 0;
+  for (let i = 0; i < n; i += 1) {
+    const r = rows.nth(i);
+    const id = (await r.getAttribute("data-model-id"))!;
+    const coding = r.locator("td").nth(TD.coding).getByTestId("rating-cell");
+    const v = scores.get(id);
+    if (v !== undefined) {
+      measured += 1;
+      await expect(coding).toHaveAttribute("data-basis", "measured");
+      await expect(coding).toHaveText(rankLetter(v, sorted, shares));
+      await expect(coding).toHaveAttribute(
+        "title",
+        /Measured: (?:ranked #\d+|tied for #\d+–\d+) of \d+ on SciCode \+ Terminal-Bench 4\.0 \(SciCode .*of every 40 measured models, the top 8 are S/,
+      );
+    }
+    // In a derived category an estimate stops at A: S takes a measurement.
+    for (const td of Object.values(TD)) {
+      const cell = r.locator("td").nth(td).getByTestId("rating-cell");
+      if ((await cell.getAttribute("data-basis")) === "estimated") {
+        await expect(cell).not.toHaveText("S");
+        await expect(cell).toHaveAttribute("title", /an estimate stops at A: S takes a measurement/);
+      }
+    }
+  }
+  expect(measured).toBe(scores.size);
+  expect(measured).toBeGreaterThan(0);
 });
 
 test("every model off the frontier names the model that beats it, from any cost tier", async ({ page }) => {

@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Coding letters follow the evaluations Artificial Analysis runs today.**
+  AA publishes no Coding Index for new models, so Opus 5.5, Sonnet 5.5, GPT-6
+  Sol and the other recent models could only carry estimated coding letters.
+  Coding is now the model's rank on SciCode and Terminal-Bench 4.0 averaged —
+  the pair AA's own Coding Index combined, on today's releases; it orders the
+  models that carry the old index with a Spearman ρ of 0.94 against it — with
+  the spread held fixed: of every 40 measured models, 8 S, 19 A, 6 B, 2 C, the
+  rest D. Fifteen letters move: Sonnet 5.5, Fable 5, GLM-5.3, GPT-6 Sol and
+  Muse Spark 1.3 to S; Opus 5, GPT-5.6 Sol, GPT-5.6 Terra, Grok 4.7 and Grok
+  4.6 from S to A; GPT-6 Luna from B to A; Sonnet 4.6 and GLM-5.2 from A to B;
+  Grok 4.3 from C to B; Mistral Medium 3.5 from B to C.
+- **S takes a measurement in coding, agentic, long-context and knowledge.**
+  An estimated letter there stops at A until Artificial Analysis measures the
+  model: GPT-5.1 Codex, GPT-5.1 Codex Max, GPT-5.2 Codex and GPT-5.3 Codex
+  move from S to A in coding, GPT-5.2 Codex and GPT-5.3 Codex in agentic.
+  The coding S-tier candidates are now exactly the eight measured S models,
+  and the cost tie-breaker among them favors Muse Spark 1.3 (it favored the
+  superseded Grok 4.6).
+- **GPT-5.3 Codex and GPT-5.1 Codex are superseded** by GPT-5.6 Terra and
+  GPT-5.6 Luna: with their estimated S letters held at A, the newer models
+  beat them on every count, so they leave the catalog in 30 days. GPT-5.2
+  Codex's successor moves from GPT-5.3 Codex to GPT-5.6 Terra.
+- **The multimodal guardrail list is regenerated from the letters.** It had
+  drifted: it listed Fable 5 and 5.1 at A (they are S) and five B-rated
+  models at A.
+- **`roadmodel score` reads coding the same way**, scaled by rank.
+
 ## [0.2.51] — 2026-09-29
 
 ### Changed

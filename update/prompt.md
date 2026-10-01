@@ -500,10 +500,12 @@ cite-able and the change is conservative.
 **Four ratings are DERIVED, not edited.** `tier-coding`, `tier-agentic`,
 `tier-long-context`, and `tier-knowledge` are computed after this pass by
 `update/derive_ratings.py` from the Artificial Analysis layer in
-`docs/benchmarks.json` for every model AA measures (coding, long-context
-and knowledge as the gap to the category leader: S ≤ 5, A ≤ 20, B ≤ 35,
-C ≤ 50 points, else D; agentic as the model's rank on Terminal-Bench 4.0,
-with the letter spread held fixed), and the committed selector is
+`docs/benchmarks.json` for every model AA measures (long-context and
+knowledge as the gap to the category leader: S ≤ 5, A ≤ 20, B ≤ 35, C ≤ 50
+points, else D; agentic as the model's rank on Terminal-Bench 4.0, and
+coding as its rank on SciCode and Terminal-Bench 4.0 averaged, each with the
+letter spread held fixed; an unmeasured model's letter in these four stops
+at A, since S takes a measurement), and the committed selector is
 CI-checked against that derivation. NEVER edit those four attributes on an
 existing model: the derivation overwrites a measured model's letter, and
 `update/rating_guard.py` reverts an edit to an unmeasured one (that letter
@@ -554,13 +556,11 @@ update a tier rating based on general reputation, vendor marketing,
 pricing changes, sources outside `<benchmark-sources>`, or
 aggregation across runs.
 
-Tier-inflation guard. After applying this run's updates, count the
-models rated S in each of the seven categories. For every category
-whose count exceeds 8, emit
-`tier inflation: tier-<category> now carries <N> S-tier models — editorial re-rating review recommended`.
-This is a warning for the human reviewer, never an edit: demoting
-models to restore the class is editorial (it changes which models the
-selector's S-tier floors admit) and is out of this automation's scope.
+The S class stays the frontier's by rule: in the four derived categories
+S takes a measurement (`update/derive_ratings.py` holds an unmeasured
+model's letter at A), and in planning, multimodal and speed an S needs a
+cited result within 5 points of the category leader (above). Do not count
+or report S-tier totals.
 
 ### `best-for` updates
 
@@ -789,20 +789,16 @@ warning describing the ambiguity.
 
 ### Selection-algorithm guardrail sync
 
-When `<model-options>` changes (model added, removed, or its
-`tier-multimodal` / `tier-coding` rating changes via the rules
-above), specific parenthetical enumerations inside
-`<selection-algorithm>` MUST be regenerated to stay consistent.
-These are the ONLY mutations authorized to `<selection-algorithm>` —
-the rest of that section is protected by "What NOT to change" below.
-
-Authorized regenerations:
+Two parenthetical enumerations inside `<selection-algorithm>` follow
+the letters in `<model-options>`, and `update/derive_ratings.py --write`
+regenerates both after this pass. Leave them verbatim, like the rest of
+that section (protected by "What NOT to change" below):
 
 - Multimodal guardrail: the parenthetical `(currently: <S-tier
-  multimodal models> at S; <A-tier multimodal models> at A)`. Models
-  within each group are listed in order of ascending output price.
-  Source: scan `<model-options>` for every `<model …/>` whose
-  `tier-multimodal` is `S` or `A`.
+  multimodal models> at S; <A-tier multimodal models> at A)`, each
+  group in ascending output price. Regenerated deterministically by
+  `update/derive_ratings.py --write` after this pass — leave it
+  verbatim.
 - Coding S-tier guardrail: the enumeration `the candidate set is
   <comma-separated models with tier-coding="S">; cost tie-breaker
   favors <model with the lowest output-price-per-1m among them>
