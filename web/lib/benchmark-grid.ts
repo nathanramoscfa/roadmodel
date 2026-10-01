@@ -722,8 +722,9 @@ export function indexEvidence(
 }
 
 // A model is NEW for its first NEW_RELEASE_DAYS days after its release date
-// (AA's `release_date`): its figures are launch-window results. Returns the
-// day the tag clears ("2026-10-12") while `now` is before it, else null.
+// (AA's `release_date`; before AA lists it, the day it joined the catalog):
+// its figures are launch-window results. Returns the day the tag clears
+// ("2026-10-12") while `now` is before it, else null.
 export const NEW_RELEASE_DAYS = 14;
 
 export function newUntil(releaseDate: string | null | undefined, now: Date): string | null {

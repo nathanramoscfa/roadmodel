@@ -67,7 +67,11 @@ export interface ModelRow {
   superseded_by: string | null;
   superseded_on: string | null;
   retires_on: string | null;
-  // The day the "New" tag clears (release + 14 days, lib/benchmark-grid
+  // The day the model joined the catalog (update/stamp_added.py), for a model
+  // added since the stamp began; null otherwise.
+  added_on: string | null;
+  // The day the "New" tag clears (14 days after the release on Artificial
+  // Analysis, or after added_on until AA dates it; lib/benchmark-grid
   // newUntil) while the model is inside that window; null otherwise.
   new_until: string | null;
 }
