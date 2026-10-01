@@ -28,9 +28,6 @@
 //     is read against its own price band (a raw AA Index sort puts cheap
 //     models on top and invites "is this flash model really better than the
 //     frontier one?").
-// Either way, when the top score at a group's prices belongs to a model
-// outside it, the group's header names that model (topScoreSentence): each
-// tier's Scores average zero, and the header shows it without a hover.
 // Cache-read price, tier name, pricing notes, "best for", and the benchmarks
 // the cron cited (mixed sources — evidence for the letters, not a scale) live
 // in the expanded row so they add no width. Fits a 1024px viewport.
@@ -102,7 +99,7 @@ import type { CatalogFilters } from "@/lib/catalog-filter";
 import { savePrefs, type Grouping, type View } from "@/lib/models-prefs";
 import { HoverCard } from "./FloatingCard";
 import { GlossaryTerm } from "./GlossaryTerm";
-import { IndexCard, ScoreBreakdownCard, SupersededCard, topScoreSentence } from "./ScoreCards";
+import { IndexCard, ScoreBreakdownCard, SupersededCard } from "./ScoreCards";
 
 const RATING_MEANING: Record<string, string> = Object.fromEntries(
   RATING_SCALE.map((r) => [r.rating, r.meaning]),
@@ -242,9 +239,6 @@ interface GroupStats {
   outHi: number;
   blendLo: number;
   blendHi: number;
-  // Set when the top score at the group's prices belongs to a model outside
-  // it: the sentence the header shows (topScoreSentence).
-  note: string | null;
 }
 
 // The key a row falls under in each of the two groupings.
@@ -439,8 +433,7 @@ export function ModelCatalog({
 
   // What each group header says about the rows under it: how many, their
   // prices on both scales the page uses (output, which sets the tier, and
-  // blended, which the Score, the charts and the frontier use), and whether
-  // anything in the group is on the frontier.
+  // blended, which the Score, the charts and the frontier use).
   const groupStats = useMemo(() => {
     const out = new Map<string, GroupStats>();
     if (!grouping) return out;
@@ -460,11 +453,10 @@ export function ModelCatalog({
         outHi: Math.max(...outs),
         blendLo: Math.min(...blends),
         blendHi: Math.max(...blends),
-        note: topScoreSentence(list, byId, "an AA Index"),
       });
     }
     return out;
-  }, [rows, grouping, byId]);
+  }, [rows, grouping]);
 
   function groupBy(next: Grouping) {
     onGroupChoiceChange(next);
@@ -849,14 +841,6 @@ export function ModelCatalog({
                     per 1M
                   </>
                 );
-                const beatenNote = group?.note && (
-                  <span
-                    className="mt-0.5 block font-medium normal-case tracking-normal text-emerald-700 dark:text-emerald-300"
-                    data-testid="group-beaten"
-                  >
-                    {group.note}
-                  </span>
-                );
                 return (
                   <Fragment key={m.id}>
                     {groupStart && group && grouping === "tier" && (
@@ -868,7 +852,6 @@ export function ModelCatalog({
                             {prices}
                             {tierFit && <> · Score is vs. this tier&rsquo;s own price line</>}
                           </span>
-                          {beatenNote}
                         </td>
                       </tr>
                     )}
@@ -889,7 +872,6 @@ export function ModelCatalog({
                               </>
                             )}
                           </span>
-                          {beatenNote}
                         </td>
                       </tr>
                     )}

@@ -765,49 +765,13 @@ test("Group by Quality is the default: AA Index bands, highest Score first in ea
   await expect(page.getByTestId("score-group")).toHaveCount(new Set(scored.map((m) => m.tier_cost)).size);
 });
 
-test("a group with nothing on the frontier says so in its table header, naming what beats it; the Score charts keep to the Score", async ({ page }) => {
+test("the table's group headers carry no frontier sentence, in either grouping", async ({ page }) => {
   await page.goto("/models");
-  const frontier = new Set(MEASURED.filter((r) => leaderOf(r) === r).map((r) => r.m.id));
-  const check = async (header: ReturnType<typeof page.locator>, members: Measured[]) => {
-    const beaten = members.length > 0 && members.every((r) => !frontier.has(r.m.id));
-    await expect(header.getByTestId("group-beaten")).toHaveCount(beaten ? 1 : 0);
-    if (!beaten) return false;
-    // The most frequent leader is named (a tie for most frequent may name
-    // either); a single leader for the whole group names the count too.
-    const counts = new Map<string, number>();
-    for (const r of members) counts.set(leaderOf(r).m.name, (counts.get(leaderOf(r).m.name) ?? 0) + 1);
-    const most = Math.max(...counts.values());
-    const tops = [...counts.keys()].filter((name) => counts.get(name) === most);
-    const note = header.getByTestId("group-beaten");
-    await expect(note).toContainText(counts.size === 1 ? "The top score at th" : "The top scores at these prices or less are");
-    const text = await note.innerText();
-    expect(tops.some((name) => text.includes(name))).toBe(true);
-    if (counts.size === 1 && members.length > 1) {
-      await expect(note).toContainText(`The top score at these prices or less is ${tops[0]}`);
-      await expect(note).toContainText(`all ${members.length} models here`);
-    }
-    return true;
-  };
-
-  // Cost tiers. The Score charts carry no such sentence: a tier's chart shows
-  // its Scores, and a dot's card names the top score at that dot's price.
-  await page.getByTestId("group-by-tier").click();
-  let beatenTiers = 0;
-  for (const tier of new Set(scored.map((m) => m.tier_cost))) {
-    const members = MEASURED.filter((r) => r.m.tier_cost === tier);
-    const header = page.locator(`[data-testid="score-group"][data-tier="${tier}"]`);
-    if (await check(header, members)) beatenTiers += 1;
-  }
-  test.info().annotations.push({ type: "tiers with nothing on the frontier", description: String(beatenTiers) });
-  await expect(page.getByTestId("score-chart")).not.toHaveCount(0);
-  await expect(page.getByTestId("score-charts")).not.toContainText("The top score at");
-
-  // Quality bands.
-  await page.getByTestId("group-by-quality").click();
-  const bandOf = (v: number) => Math.floor(v / 10) * 10;
-  for (const band of new Set(MEASURED.map((r) => bandOf(r.index)))) {
-    const header = page.locator(`[data-testid="quality-group"][data-band="${band}"]`);
-    await check(header, MEASURED.filter((r) => bandOf(r.index) === band));
+  for (const grouping of ["group-by-quality", "group-by-tier"]) {
+    await page.getByTestId(grouping).click();
+    await expect(page.getByTestId("model-row").first()).toBeVisible();
+    await expect(page.getByTestId("group-beaten")).toHaveCount(0);
+    await expect(page.locator("table")).not.toContainText("The top score");
   }
 });
 

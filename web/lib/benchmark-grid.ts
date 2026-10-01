@@ -356,28 +356,6 @@ export function frontierLeaders<T extends { price: number; index: number | null 
   return leaders;
 }
 
-// A group of rows (a cost tier, a quality band) in which NO measured model is
-// on the frontier: each is beaten by a model that costs no more and scores
-// higher. Returns how many are measured and the models that beat them, most
-// frequent first; null when any measured model in the group is on the
-// frontier, or none is measured. This is how a whole cost tier can be beaten
-// by one cheaper model while its Scores still average zero.
-export function groupBeatenBy(
-  rows: readonly { aa_index: number | null; value_frontier: boolean; value_beaten_by: string | null }[],
-): { measured: number; leaders: string[] } | null {
-  const measured = rows.filter((r) => r.aa_index !== null);
-  if (measured.length === 0 || measured.some((r) => r.value_frontier)) return null;
-  const counts = new Map<string, number>();
-  for (const r of measured) {
-    if (r.value_beaten_by) counts.set(r.value_beaten_by, (counts.get(r.value_beaten_by) ?? 0) + 1);
-  }
-  if (counts.size === 0) return null;
-  return {
-    measured: measured.length,
-    leaders: [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id),
-  };
-}
-
 // Quality bands for the table's "group by quality" view: the AA Intelligence
 // Index in fixed ten-point bands (50–59.9, 40–49.9, …), labelled by their
 // literal range, so a band means exactly what it says. Fixed rather than
