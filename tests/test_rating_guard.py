@@ -268,3 +268,37 @@ def test_every_ai_pass_is_guarded() -> None:
     assert "--declarations update/.last-warnings.txt" in catalog
     assert catalog.index("rating_guard.py --apply") < catalog.index("derive_ratings.py --write")
     assert "update/.last-rating-guard.md" in catalog
+
+
+def _bare_defaults_over_a_predecessor(selector: str) -> list[str]:
+    models = rg.models(selector)
+    stale = []
+    for mid, model in models.items():
+        pred = rg.predecessor(mid, {k: v for k, v in models.items() if k != mid})
+        if pred is None:
+            continue
+        default, _ = rg.placeholder(model, {})  # the bare B default for this name
+        mine = {c: model.tiers[c] for c in rg.ESTIMATED}
+        if mine == {c: default[c] for c in rg.ESTIMATED} and mine != {
+            c: models[pred].tiers[c] for c in rg.ESTIMATED
+        }:
+            stale.append(f"{mid} (predecessor {pred})")
+    return stale
+
+
+def test_no_model_keeps_the_b_default_its_predecessor_replaces() -> None:
+    """The GPT-6 family entered on 2026-09-25 (#730) with every estimated
+    letter at the bare B default, five days before this guard (#794) gave a
+    new model its predecessor's letters, and nothing revisited them. GPT-6.1
+    Sol then inherited GPT-6 Sol's B. With planning held at B, every backup
+    for a planning task went to GPT-5.6 Sol, the model GPT-6 Sol replaces at
+    half the price. A model with a same-series predecessor never keeps the
+    bare default."""
+    selector = (REPO_ROOT / "docs" / "model-selector.txt").read_text()
+    assert _bare_defaults_over_a_predecessor(selector) == []
+    # The check sees the case it exists for.
+    stale = _selector(
+        _model("gpt-5.6-sol", "GPT-5.6 Sol", planning="S", multimodal="A", speed="D"),
+        _model("gpt-6-sol", "GPT-6 Sol", coding="S", agentic="S"),
+    )
+    assert _bare_defaults_over_a_predecessor(stale) == ["gpt-6-sol (predecessor gpt-5.6-sol)"]

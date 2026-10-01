@@ -623,3 +623,21 @@ def test_roadmap_refresh_repicks_only_phases_not_yet_written() -> None:
     # A written phase's table is history, as a Complete step's is.
     assert "Never add, re-pick or rewrite the table of a phase whose roadmap exists" in flat
     assert "Print the phase · was · now · changed table" in flat
+
+
+def test_roadmap_writing_picks_take_their_models_from_the_scoring_core() -> None:
+    """The first Phase roadmap settings tables (2026-10-01) named GPT-5.6 Sol
+    as every backup: the selector's prose ranks on catalog letters, and the
+    GPT-6 family still carried its unreviewed B placeholder in planning.
+    `roadmodel score` ranks on measured benchmarks and named GPT-6.1 Sol on
+    the same stale catalog. Wherever a table is picked, its two models come
+    from the scoring core; the effort stays the deepest rung, and a model the
+    user-context names still wins."""
+    score = "`roadmodel score --category planning --complexity high --budget best`"
+    for path in (PROJECT, PROMPT_PROJECT, REFRESH_COMMAND):
+        flat = re.sub(r"\s+", " ", path.read_text())
+        assert score in flat, path.name
+        assert "not their effort" in flat, path.name
+        assert "PRIMARY and BACKUP lines" in flat, path.name
+        assert "a stale catalog letter cannot steer them" in flat, path.name
+        assert "a model the user-context names for these sessions still wins" in flat, path.name
