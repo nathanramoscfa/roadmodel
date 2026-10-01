@@ -199,6 +199,13 @@ dial the chosen platform lacks gets NO line at all — never `Off`, never
   subscription, or excludes `cursor` under "Allowed / excluded
   platforms", no recommendation will carry a Max Mode line at all and
   this bullet is moot.
+- **Roadmap-writing sessions** — the session that runs
+  `/roadmap-project` or `/roadmap-phase`, which writes a roadmap rather
+  than a step inside one. By default each phase's **Phase roadmap
+  settings** are picked quality first: the strongest planning model you
+  can reach, at its deepest reasoning rung (`Max` in Claude Code). State
+  a rule here to override that, for example "Phase roadmaps: Opus 5.5 at
+  `XHigh`" to keep more of a weekly pool.
 
 ## Budget priority and speed posture
 
