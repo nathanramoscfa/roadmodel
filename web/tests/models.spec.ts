@@ -965,26 +965,6 @@ test("a model released in the last two weeks carries a New tag that says when it
   }
 });
 
-test("the line above the table names every new model and opens its row", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/models");
-  const fresh = catalog.models.filter((m) => newUntilOf(m, new Date()) !== null);
-  const links = page.getByTestId("new-model-link");
-  await expect(links).toHaveCount(fresh.length);
-  if (fresh.length === 0) {
-    await expect(page.getByTestId("new-models")).toHaveCount(0);
-    return;
-  }
-  // The newest model AA has yet to measure is the case the line exists for.
-  const m = fresh.find((x) => !benchmarks.models[x.id]) ?? fresh[0];
-  const link = page.locator(`[data-testid="new-model-link"][data-model-id="${m.id}"]`);
-  await expect(link).toHaveText(m.name);
-  await link.click();
-  const row = page.locator(`[data-testid="model-row"][data-model-id="${m.id}"]`);
-  await expect(row.getByRole("button", { name: `Hide details for ${m.name}` })).toBeVisible();
-  await expect(row).toBeInViewport();
-});
-
 // The page's BenchRow and per-column sorted values, rebuilt from the same JSON,
 // so the card's ranks and verdict are checked against an independent build.
 function benchRowOf(id: string): BenchRow | null {

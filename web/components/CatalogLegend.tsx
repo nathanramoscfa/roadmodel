@@ -148,8 +148,7 @@ export function CatalogLegend({ id }: { id?: string }) {
             letter for a model outside its benchmark&rsquo;s measured set; there an estimate stops
             at {ESTIMATE_CEILING}, since S takes a measurement. A <strong>New</strong>{" "}
             tag marks a model released in the last {NEW_RELEASE_DAYS} days (or, before Artificial
-            Analysis lists it, added to this catalog in that time); it clears on its own, and the
-            line above the table names each one.
+            Analysis lists it, added to this catalog in that time) and clears on its own.
             The <strong>AA Index</strong> column is the one published composite; hover it for the
             Artificial Analysis model it was measured as and that model&rsquo;s own benchmarks,
             ranked in this catalog, with a check that they bear the index out.{" "}
