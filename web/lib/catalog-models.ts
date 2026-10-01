@@ -49,6 +49,19 @@ interface RawModel {
 
 const MODELS = (catalog as { models?: RawModel[] }).models ?? [];
 
+interface RawMethod {
+  provider_jurisdiction: string;
+  supports_models: string[];
+}
+// The open-weight models: the ones a local method (Ollama, on the operator's
+// own hardware) serves. The selector curates that list by licence, so the
+// recommender's local option and this page's Weights filter read one list.
+const OPEN_WEIGHTS = new Set(
+  ((catalog as { access_methods?: RawMethod[] }).access_methods ?? [])
+    .filter((m) => m.provider_jurisdiction === "local")
+    .flatMap((m) => m.supports_models),
+);
+
 interface RawBench {
   aa_slug: string;
   aa_name: string;
@@ -97,6 +110,7 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
       tier_cost: m.tier_cost as CostTier,
       tiers: m.tiers as Record<Category, Rating>,
       jurisdiction: m.jurisdiction,
+      open_weights: OPEN_WEIGHTS.has(m.id),
       headline_benchmarks: prose,
       pricing_notes: m.pricing_notes ?? "",
       best_for: m.best_for ?? "",

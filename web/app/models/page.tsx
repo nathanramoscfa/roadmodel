@@ -34,9 +34,10 @@ export default async function ModelsPage() {
           them: Artificial Analysis&rsquo;s independently measured benchmarks, the same test on
           the same scale for every model, refreshed daily. A rating is a class several models can
           share; the figures separate them within it. Sort any column, filter by provider,
-          jurisdiction, or cost (the charts below follow the same filters), switch to the full
-          benchmark grid, and hover any label for its definition and source. The page remembers
-          your filters, grouping and view in this browser for your next visit.
+          jurisdiction, open or closed weights, or cost (the charts below follow the same
+          filters), switch to the full benchmark grid, and hover any label for its definition
+          and source. The page remembers your filters, grouping and view in this browser for
+          your next visit.
         </p>
       </header>
 

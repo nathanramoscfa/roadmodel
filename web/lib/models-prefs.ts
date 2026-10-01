@@ -1,7 +1,7 @@
 // web/lib/models-prefs.ts
 //
-// The /models view a visitor last chose (Provider, Jurisdiction, Cost tier,
-// Group by, and Ratings / Benchmark scores), kept in a first-party cookie so
+// The /models view a visitor last chose (Provider, Jurisdiction, Weights,
+// Cost tier, Group by, and Ratings / Benchmark scores), kept in a first-party cookie so
 // the page opens the way they left it. A cookie rather than localStorage
 // because the server reads it: the first render already carries the
 // visitor's view, so there is no flash of the default table and no hydration
@@ -10,7 +10,7 @@
 // parsePrefs treats the cookie as untrusted input and falls back field by
 // field; a choice the catalog no longer offers (a provider that left) falls
 // back to "all" in filtersFromPrefs. savePrefs is the one client-only export.
-import type { CostTier } from "@/lib/catalog-fields";
+import type { CostTier, Weights } from "@/lib/catalog-fields";
 import type { CatalogFilters } from "@/lib/catalog-filter";
 
 export const PREFS_COOKIE = "roadmodel_models_view";
@@ -26,6 +26,7 @@ export interface ModelsPrefs {
   // The jurisdictions the visitor UNchecked. Kept as the excluded set so a
   // jurisdiction the catalog adds later starts checked, like the rest.
   hideJurisdictions: string[];
+  weights: "all" | Weights;
   cost: "all" | CostTier;
   // Stored as `grouping` since Quality became the default. Older cookies say
   // `groupBy: "tier"` whether or not the visitor chose it (every save wrote
@@ -37,11 +38,13 @@ export interface ModelsPrefs {
 export const DEFAULT_PREFS: ModelsPrefs = {
   provider: "all",
   hideJurisdictions: [],
+  weights: "all",
   cost: "all",
   grouping: "quality",
   view: "ratings",
 };
 
+const WEIGHTS: readonly string[] = ["all", "open", "closed"];
 const COSTS: readonly string[] = ["all", "low", "medium", "high", "very-high"];
 
 export function parsePrefs(raw: string | null | undefined): ModelsPrefs {
@@ -60,6 +63,7 @@ export function parsePrefs(raw: string | null | undefined): ModelsPrefs {
     hideJurisdictions: Array.isArray(o.hideJurisdictions)
       ? o.hideJurisdictions.filter((c): c is string => typeof c === "string" && c.length <= 16).slice(0, 32)
       : [],
+    weights: typeof o.weights === "string" && WEIGHTS.includes(o.weights) ? (o.weights as ModelsPrefs["weights"]) : "all",
     cost: typeof o.cost === "string" && COSTS.includes(o.cost) ? (o.cost as ModelsPrefs["cost"]) : "all",
     grouping: o.grouping === "tier" ? "tier" : "quality",
     view: o.view === "benchmarks" ? "benchmarks" : "ratings",
@@ -75,6 +79,7 @@ export function filtersFromPrefs(
   return {
     provider: providers.includes(prefs.provider) ? prefs.provider : "all",
     jurisdictions: new Set(jurisdictions.filter((c) => !prefs.hideJurisdictions.includes(c))),
+    weights: prefs.weights,
     cost: prefs.cost,
   };
 }
@@ -82,10 +87,11 @@ export function filtersFromPrefs(
 export function prefsFromFilters(
   f: CatalogFilters,
   jurisdictions: readonly string[],
-): Pick<ModelsPrefs, "provider" | "hideJurisdictions" | "cost"> {
+): Pick<ModelsPrefs, "provider" | "hideJurisdictions" | "weights" | "cost"> {
   return {
     provider: f.provider,
     hideJurisdictions: jurisdictions.filter((c) => !f.jurisdictions.has(c)),
+    weights: f.weights,
     cost: f.cost,
   };
 }
