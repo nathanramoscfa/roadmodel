@@ -138,6 +138,9 @@ jobs:
           # Tier letters are not this tracker's to move: update/rating_guard.py
           # reverts any letter edit the pass made (it declares none).
           git show HEAD:docs/model-selector.txt > /tmp/base-selector.txt
+          # Added prose that could steer the recommender quarantines the pass
+          # (update/prose_guard.py); then no letter may move.
+          python update/prose_guard.py --apply docs/model-selector.txt
           python update/rating_guard.py --apply --base /tmp/base-selector.txt
           python update/render_md.py
 

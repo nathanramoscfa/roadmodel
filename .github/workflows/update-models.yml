@@ -209,6 +209,11 @@ jobs:
         run: |
           set -euo pipefail
           git show HEAD:docs/model-selector.txt > /tmp/base-selector.txt
+          # Prose guard: every line the curation pass added is checked for what
+          # this prose never needs (URLs, active markup, hidden characters, text
+          # addressed to a model). A hit quarantines the pass — both docs go back
+          # to their committed text before the deterministic layers below run.
+          python update/prose_guard.py --apply docs/model-selector.txt docs/model-tier-cost-scale.md
           python update/merge_catalog.py --write --base /tmp/base-selector.txt
           # Codex lists its models on its own page; a catalogued one belongs on both
           # Codex methods. Deterministic + additive — the prompt's supports-models
@@ -297,6 +302,9 @@ jobs:
           fi
           if [ -s update/.last-rating-guard.md ]; then
             warnings="${warnings}$(printf '\n\n')$(cat update/.last-rating-guard.md)"
+          fi
+          if [ -s update/.last-prose-guard.md ]; then
+            warnings="${warnings}$(printf '\n\n')$(cat update/.last-prose-guard.md)"
           fi
           git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
           git commit -m "Automated catalog refresh: ${DATE}" -m "${summary}${warnings}"
