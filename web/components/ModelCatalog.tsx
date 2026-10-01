@@ -32,12 +32,13 @@
 // the cron cited (mixed sources — evidence for the letters, not a scale) live
 // in the expanded row so they add no width. Fits a 1024px viewport.
 //
-// The Provider, Jurisdiction and Cost tier filters belong to ModelsExplorer,
-// which applies them to the table AND both chart panels; the table renders
-// the controls and receives the rows they keep (frontier re-marked over the
-// Provider + Jurisdiction pool, lib/catalog-filter). Jurisdiction is a
-// checkbox per code, all checked to start, so any combination (US + EU, say)
-// is one click away. Search stays the table's own. Group by belongs to
+// The Provider, Jurisdiction, Weights and Cost tier filters belong to
+// ModelsExplorer, which applies them to the table AND both chart panels; the
+// table renders the controls and receives the rows they keep (frontier
+// re-marked over the Provider + Jurisdiction + Weights pool,
+// lib/catalog-filter). Jurisdiction is a checkbox per code, all checked to
+// start, so any combination (US + EU, say) is one click away; Weights is All,
+// Open or Closed. Search stays the table's own. Group by belongs to
 // ModelsExplorer too, since the charts read it as well as the rows.
 // Group by and the Ratings / Benchmark scores view are saved for the next
 // visit (lib/models-prefs), like the filters.
@@ -92,6 +93,7 @@ import {
   RATING_COLORS,
   RATING_OUTLINE_COLORS,
   RATING_RANK,
+  WEIGHTS_DEFS,
   type Category,
   type ModelRow,
 } from "@/lib/catalog-fields";
@@ -564,6 +566,34 @@ export function ModelCatalog({
               })}
             </div>
           </div>
+          <div className={LABEL_CLASS}>
+            <span id="weights-label">Weights</span>
+            <div
+              role="group"
+              aria-labelledby="weights-label"
+              data-testid="weights-filter"
+              className="inline-flex self-start rounded-md border border-brand-slate-300 bg-white p-0.5 shadow-sm dark:border-brand-slate-700 dark:bg-brand-slate-800"
+            >
+              {(["all", "open", "closed"] as const).map((w) => (
+                <button
+                  key={w}
+                  type="button"
+                  data-testid={`weights-${w}`}
+                  aria-pressed={filters.weights === w}
+                  title={w === "all" ? "Every model, open- and closed-weight." : WEIGHTS_DEFS[w].definition}
+                  onClick={() => onFiltersChange({ ...filters, weights: w })}
+                  className={
+                    "rounded px-3 py-1.5 text-sm font-medium transition-colors " +
+                    (filters.weights === w
+                      ? "bg-brand-accent text-white"
+                      : "text-brand-slate-600 hover:text-brand-accent dark:text-brand-slate-300")
+                  }
+                >
+                  {w === "all" ? "All" : WEIGHTS_DEFS[w].label}
+                </button>
+              ))}
+            </div>
+          </div>
           <label className={LABEL_CLASS}>
             Cost tier
             <select
@@ -879,6 +909,7 @@ export function ModelCatalog({
                       data-testid="model-row"
                       data-model-id={m.id}
                       data-tier-cost={m.tier_cost}
+                      data-weights={m.open_weights ? "open" : "closed"}
                       className="group/row align-middle hover:bg-brand-slate-50 dark:hover:bg-brand-slate-800/40"
                     >
                       <td className="px-1 py-2 text-center">
@@ -1300,6 +1331,13 @@ function ModelDetail({ model: m }: { model: ModelRow }) {
             <span className="font-semibold">Notes:</span> {notes}
           </p>
         )}
+        <p
+          data-testid="model-weights"
+          className="mt-2 whitespace-normal text-xs text-brand-slate-500 dark:text-brand-slate-400"
+        >
+          <span className="font-semibold">{WEIGHTS_DEFS[m.open_weights ? "open" : "closed"].label} weights:</span>{" "}
+          {WEIGHTS_DEFS[m.open_weights ? "open" : "closed"].definition}
+        </p>
       </div>
     </div>
   );

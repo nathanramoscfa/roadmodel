@@ -2,8 +2,8 @@
 //
 // The "How to read this" cheat sheet for /models: the two definitions readers
 // trip on (the cost/quality frontier and the blended price), then the S→D
-// rating scale, the seven rating categories, the cost-tier boundaries, and the
-// jurisdiction codes — using the same badge colors as the table. It sits below
+// rating scale, the seven rating categories, the cost-tier boundaries, the
+// jurisdiction codes, and open vs closed weights — using the same badge colors as the table. It sits below
 // the table and the charts (the page leads with the catalog itself), and the
 // table's caption links here. A native <details> disclosure (open by default),
 // so it needs no client JS. Data comes from the glossary + catalog-fields.
@@ -31,6 +31,7 @@ import {
   JURISDICTION_DEFS,
   RATING_COLORS,
   RATING_OUTLINE_COLORS,
+  WEIGHTS_DEFS,
   type CostTier,
   type Rating,
 } from "@/lib/catalog-fields";
@@ -227,6 +228,19 @@ export function CatalogLegend({ id }: { id?: string }) {
                 </dt>
                 <dd className="text-brand-slate-600 dark:text-brand-slate-300">
                   {JURISDICTION_DEFS[code]}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <h3 className={SECTION_HEADING + " mt-4"}>Weights</h3>
+          <dl className="mt-2 space-y-1 text-sm" data-testid="legend-weights">
+            {(["open", "closed"] as const).map((w) => (
+              <div key={w} className="flex gap-2">
+                <dt className="w-14 shrink-0 font-medium text-brand-slate-700 dark:text-brand-slate-200">
+                  {WEIGHTS_DEFS[w].label}
+                </dt>
+                <dd className="text-brand-slate-600 dark:text-brand-slate-300">
+                  {WEIGHTS_DEFS[w].definition}
                 </dd>
               </div>
             ))}

@@ -2,9 +2,10 @@
 //
 // The /models page's interactive half: the catalog table, the frontier chart
 // and the Score charts, driven by ONE set of filters. Provider, Jurisdiction
-// (a checkbox per code, all checked to start) and Cost tier are set in the
-// table's controls and applied to all three, so unchecking CN leaves the
-// US + EU models in the table and in every chart. The table's Group by
+// (a checkbox per code, all checked to start), Weights (All, Open, Closed) and
+// Cost tier are set in the table's controls and applied to all three, so
+// unchecking CN leaves the US + EU models in the table and in every chart, and
+// Open leaves only the models you could run yourself. The table's Group by
 // switch lives here too, since the charts read it: grouped by quality, the
 // frontier chart marks the table's ten-point AA Index bands, and the Score
 // charts, one per cost tier either way, say why they stay by tier.
@@ -13,8 +14,8 @@
 // choices from a cookie and passes them in, so the first render is already
 // the visitor's view, and every change here is saved for the next visit.
 //
-// What each filter changes is set out in lib/catalog-filter: Provider and
-// Jurisdiction choose the pool the frontier is recomputed over; Cost tier
+// What each filter changes is set out in lib/catalog-filter: Provider,
+// Jurisdiction and Weights choose the pool the frontier is recomputed over; Cost tier
 // narrows what is shown; the Score is the whole-catalog fit throughout.
 "use client";
 
