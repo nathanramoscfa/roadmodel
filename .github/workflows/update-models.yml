@@ -74,31 +74,18 @@ jobs:
         id: gate
         run: python update/check_sources.py
 
-      - name: Refresh roadmodel catalog (Opus)
-        # Skip on scheduled runs when no upstream source changed. Manual
-        # workflow_dispatch always runs — the operator triggered it for
-        # a reason. A check_sources fetch error sets changed=true so the
-        # gate fails open rather than silently skipping a real refresh.
-        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          AA_API_KEY: ${{ secrets.AA_API_KEY }}
-        run: |
-          set -eo pipefail
-          ARGS=""
-          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
-            ARGS="--dry-run"
-          fi
-          python update/update_models.py $ARGS
-
       - name: Refresh provider-direct catalog snapshots
         # Federation (Phase 4.6): refresh each provider's OWN pricing snapshot from
         # its own docs so the price-provenance gate (G4 in
         # update/validate_catalog_conformance.py) checks the selector against
-        # CURRENT provider prices. Fail-open per provider — a fetch/parse failure
-        # keeps the committed snapshot rather than breaking the catalog refresh
-        # (a real source restructure surfaces later as a G4 mismatch / a stale
-        # snapshot, not a hard cron failure here).
+        # CURRENT provider prices. It runs before the curation pass, so the
+        # pass's <provider_discovery> block (update/discovery.py) carries
+        # today's flags and prices: any model update/dispose_discoveries.py
+        # declines later in this run was shown to the pass first, priced.
+        # Fail-open per provider — a fetch/parse failure keeps the committed
+        # snapshot rather than breaking the catalog refresh (a real source
+        # restructure surfaces later as a G4 mismatch / a stale snapshot, not a
+        # hard cron failure here).
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         run: |
           set -uo pipefail
@@ -124,6 +111,23 @@ jobs:
           # script re-writes the manual snapshot from its constant and DRIFT-CHECKS the
           # gpt-oss model names against groq.com/pricing (it does not parse prices).
           python update/extract_groq_catalog.py || echo "groq drift-check flagged or failed; catalog-groq.json prices are manually maintained — review"
+
+      - name: Refresh roadmodel catalog (Opus)
+        # Skip on scheduled runs when no upstream source changed. Manual
+        # workflow_dispatch always runs — the operator triggered it for
+        # a reason. A check_sources fetch error sets changed=true so the
+        # gate fails open rather than silently skipping a real refresh.
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AA_API_KEY: ${{ secrets.AA_API_KEY }}
+        run: |
+          set -eo pipefail
+          ARGS=""
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            ARGS="--dry-run"
+          fi
+          python update/update_models.py $ARGS
 
       - name: Keep the declined-models list (discovery lane)
         # The curation model regenerates docs/model-tier-cost-scale.md whole, so
@@ -290,6 +294,7 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
+          nl=$'\n'  # joins sections: $( ) strips the trailing newlines of what it captures
           if git diff --quiet -- docs/ update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json; then
             echo "No changes to commit."
             exit 0
@@ -304,19 +309,19 @@ jobs:
           summary="$(cat update/.last-summary.txt 2>/dev/null || echo 'Automated catalog refresh.')"
           warnings=""
           if [ -f update/.last-warnings.txt ] && [ -s update/.last-warnings.txt ]; then
-            warnings="$(printf '\n\n## Warnings\n')$(sed 's/^/- /' update/.last-warnings.txt)"
+            warnings="${nl}${nl}## Warnings${nl}$(sed 's/^/- /' update/.last-warnings.txt)"
           fi
           if [ -f update/.last-ratings-report.md ] && grep -q '^| ' update/.last-ratings-report.md; then
-            warnings="${warnings}$(printf '\n\n')$(cat update/.last-ratings-report.md)"
+            warnings="${warnings}${nl}${nl}$(cat update/.last-ratings-report.md)"
           fi
           if [ -s update/.last-rating-guard.md ]; then
-            warnings="${warnings}$(printf '\n\n')$(cat update/.last-rating-guard.md)"
+            warnings="${warnings}${nl}${nl}$(cat update/.last-rating-guard.md)"
           fi
           if [ -s update/.last-prose-guard.md ]; then
-            warnings="${warnings}$(printf '\n\n')$(cat update/.last-prose-guard.md)"
+            warnings="${warnings}${nl}${nl}$(cat update/.last-prose-guard.md)"
           fi
           if [ -s update/.last-dispositions.md ]; then
-            warnings="${warnings}$(printf '\n\n')$(cat update/.last-dispositions.md)"
+            warnings="${warnings}${nl}${nl}$(cat update/.last-dispositions.md)"
           fi
           git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
           git commit -m "Automated catalog refresh: ${DATE}" -m "${summary}${warnings}"

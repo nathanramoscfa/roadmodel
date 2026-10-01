@@ -218,6 +218,7 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
+          nl=$'\n'  # joins sections: $( ) strips the trailing newlines of what it captures
           if git diff --quiet -- docs/model-selector.txt docs/model-selector.md docs/catalog.json update/deepseek-thinking.json; then
             echo "No selector / snapshot changes — nothing to commit."
             exit 0
@@ -231,7 +232,7 @@ jobs:
           summary="$(cat update/.last-deepseek-summary.txt 2>/dev/null || echo 'Automated DeepSeek thinking refresh.')"
           warnings=""
           if [ -f update/.last-deepseek-warnings.txt ] && [ -s update/.last-deepseek-warnings.txt ]; then
-            warnings="$(printf '\n\n## Warnings\n')$(sed 's/^/- /' update/.last-deepseek-warnings.txt)"
+            warnings="${nl}${nl}## Warnings${nl}$(sed 's/^/- /' update/.last-deepseek-warnings.txt)"
           fi
           # FLAG (never act on) a new DeepSeek model the pricing docs introduced.
           unexpected="$(python update/extract_deepseek_models.py 2>/dev/null | paste -sd, - | sed 's/,/, /g' || true)"
