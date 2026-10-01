@@ -236,6 +236,9 @@ jobs:
           # Lifecycle tags: re-apply the supersession rule, restoring any tag
           # (and its date) the curation pass dropped from the committed file.
           python update/supersede.py --write --base /tmp/base-selector.txt
+          # Best-for + headline-benchmarks prose written from the data above
+          # (update/model_prose.py); after the letters and tags, before render.
+          python update/model_prose.py --write
           python update/render_md.py
 
       - name: Rebuild docs/catalog.json (deterministic)

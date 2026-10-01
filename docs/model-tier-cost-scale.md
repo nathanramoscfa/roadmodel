@@ -391,7 +391,7 @@ this table.
 | Google (Mountain View, US)    | `us`              | gemini-3.1-pro, gemini-3-pro, gemini-3.5-flash, gemini-3-flash, gemini-2.5-flash                                        |
 | xAI (Palo Alto, US)           | `us`              | grok-4.3                                                                                                                |
 | Cursor (San Francisco, US)    | `us`              | composer-2, composer-2.5 — note: base weights for these Composer models derive from Moonshot's Kimi K2 series; Cursor's operator status determines the jurisdiction code per `<jurisdiction-context>` (data flow governed by Cursor's privacy policy and US law) |
-| Meta (Menlo Park, US)         | `us`              | (Muse Spark 1.3 auto-added to `<model-options>` 2026-09-10 with placeholder B tiers pending editorial review)                                                       |
+| Meta (Menlo Park, US)         | `us`              | muse-spark-1.3                                                                                                                                                      |
 | Moonshot AI (Beijing, CN)     | `cn`              | kimi-k2.5                                                                                                               |
 | DeepSeek (Hangzhou, CN)       | `cn`              | deepseek-v4-pro, deepseek-flash                                                                                         |
 | z.ai / Zhipu AI (Beijing, CN) | `cn`              | glm-5.2, glm-4.6, glm-4.5-air                                                                                           |

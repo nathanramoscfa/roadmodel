@@ -111,6 +111,15 @@ would then reject.
   every count. Copy those attributes verbatim; never add, change or remove
   them. Leave a model that carries `retired-on` exactly as it is: it stays
   in the file as a record and is no longer in the catalog.
+- **Generated prose is not yours to edit.** A `<model>` element may carry
+  `prose-generated="best-for headline-benchmarks"` (or one of the two).
+  `update/model_prose.py` writes the fields it lists from the catalog's
+  data after your pass and rewrites them on every run. Copy the
+  attribute and a listed `best-for` verbatim. In a listed
+  `headline-benchmarks`, the Artificial Analysis claims (AA Intelligence
+  Index, HLE, SciCode, Terminal-Bench 4.0, AA-LCR) are the pass's: copy
+  them verbatim. The field's other claims follow "Headline benchmarks"
+  below.
 - **`<model-options>` is comprehensive, not hand-curated.** If a model
   appears in `model-tier-cost-scale.md`'s price tables but NOT in
   `<model-options>` of `model-selector.txt`, ADD it to `<model-options>`
@@ -125,9 +134,9 @@ would then reject.
       multimodal, long-context, knowledge, speed): set to `B` for
       unknown categories. EXCEPTION: when the model name contains
       "Mini", "Flash", "Haiku", "Nano", or "Lite", set `tier-speed="S"`.
-      Set a newly-auto-added model's `headline-benchmarks` to `"No
-      benchmark figures cited yet"`; a later refresh replaces it once a
-      fetched source carries the model's numbers.
+    - `headline-benchmarks`: `""` — `update/model_prose.py` fills it
+      from the Artificial Analysis layer after your pass (see "Adding
+      new models" below for the claims you may add yourself).
     - `pricing-notes`: copy verbatim from the cost-scale row's Notes
       column (the same invariant that the final-pass reconciliation
       enforces).
@@ -144,10 +153,8 @@ would then reject.
       Provider Jurisdictions table)` warning; the model carries
       `unknown` until a fetched provider page names its headquarters
       and the table gains the row.
-    - `best-for`: a one-sentence placeholder summarizing the price
-      tier and provider, e.g. "Auto-added cheap-tier <provider>
-      model." The `best-for` update rule below rewrites it once
-      fetched sources describe the model.
+    - `best-for`: `""` — `update/model_prose.py` writes it from the
+      model's letters, price and Artificial Analysis figures.
   Emit a warning of the form
   `model auto-added to <model-options>: <id>`
   for every model added this way, so the PR description lists them.
@@ -452,7 +459,11 @@ Source of truth: the named leaderboards in `<benchmark-sources>` of
 The `headline-benchmarks` attribute is a semicolon-separated list of
 discrete claims. Treat it as a STRING TO PRESERVE BY DEFAULT and modify
 only the individual numeric values you can directly re-verify against
-this run's fetched `<source>` blocks. Hard rules:
+this run's fetched `<source>` blocks. When the element's
+`prose-generated` attribute lists `headline-benchmarks`, its
+Artificial Analysis claims are `update/model_prose.py`'s (see
+"Generated prose is not yours to edit"); the rules below cover the
+rest. Hard rules:
 
 - A claim is a single semicolon-delimited fact. Examples of claims:
   "SWE-bench Verified 87.6%", "AA Intelligence Index 57.3",
@@ -580,6 +591,9 @@ rewritten when ALL of these hold:
 For every `best-for` update, emit a warning of the form:
 `best-for updated: <id> — <new fact or repositioning reason>`.
 
+A `best-for` listed in the element's `prose-generated` attribute is
+`update/model_prose.py`'s: leave it verbatim whatever the sources show.
+
 If the rewrite cannot be justified by a concrete new fact from this
 run's fetched sources, leave the `best-for` verbatim. NEVER rewrite
 `best-for` for stylistic preference, paraphrasing, mere reordering
@@ -675,26 +689,30 @@ auto-add rule in the Pricing section above:
        `Flash`, `Haiku`, `Nano`, or `Lite`. Never use `?`,
        `inherit`, or any value outside the discrete set — the
        selection-algorithm requires a resolvable rating.
-- `headline-benchmarks` — semicolon-separated list of 2–4 numeric
-  facts about this model from the fetched `<source>` blocks, each
-  citing its source by name. NEVER invent numbers. If no fetched
-  source covers this model, set `headline-benchmarks="No benchmark
-  figures cited yet"`; a later refresh replaces it once a fetched
-  source carries the model's numbers.
-- `best-for` — one factual sentence positioning the model, derived
-  from its Cursor `pricing-notes`, the predecessor's `best-for`
-  (when inheriting from a series), and any vendor description
-  present in the fetched sources. Do NOT invent capability
-  claims. Acceptable fallback for a brand-new entry without rich
-  context: `"Auto-added <tier>-cost <provider> model."`, which the
-  `best-for` update rule rewrites once fetched sources describe it.
+- `headline-benchmarks` — semicolon-separated list of the numeric
+  facts about this model in the fetched `<source>` blocks that come
+  from a source OTHER than Artificial Analysis (LMArena, a vendor's
+  published results marked `(<vendor>-reported)`), each citing its
+  source by name, plus plain facts such as the context window. NEVER
+  invent numbers. Write `headline-benchmarks=""` when you have none.
+  `update/model_prose.py` runs after your pass and puts the
+  Artificial Analysis figures (`docs/benchmarks.json`) in front of
+  whatever you write, so leave those out.
+- `best-for` — write `best-for=""`. `update/model_prose.py` writes it
+  from the model's letters, price and Artificial Analysis figures
+  after your pass, and rewrites it on every run as they change.
+
+Never write text about this automation's own process into either
+field ("auto-added", "pending", "placeholder", "inherited from",
+"editorial", "next refresh"). `tests/test_model_prose.py` fails the PR
+on any such phrase, and `update/model_prose.py` replaces the field.
 
 For every `<model …/>` element added, emit a warning of the form
 `new model added to <model-options>: <id> in <tier>-cost tier
-(output $<n>/M) — placeholder tiers <inherited from <predecessor>
-| defaulted to B/S>`. The PR description lists each addition; its
-letters become measured as Artificial Analysis publishes its
-benchmarks, and its best-for is rewritten as sources describe it.
+(output $<n>/M) — tiers <inherited from <predecessor> | defaulted
+to B/S>`. The PR description lists each addition;
+`update/derive_ratings.py` replaces the four measurable letters as
+soon as Artificial Analysis measures the model.
 
 ### Removing models
 
@@ -907,7 +925,9 @@ warning per skipped method.
   `id, name, input-price-per-1m, output-price-per-1m, tier-coding,
   tier-planning, tier-agentic, tier-multimodal, tier-long-context,
   tier-knowledge, tier-speed, headline-benchmarks, pricing-notes,
-  best-for`. The current schema for `<method>` elements in
+  best-for`, plus the attributes deterministic passes write after you
+  (`superseded-by`, `superseded-on`, `retired-on`, `prose-generated`),
+  which you copy verbatim. The current schema for `<method>` elements in
   `<access-methods>` is `id, name, provider, billing,
   provider-jurisdiction, requires, supports-models, exposes-max-mode,
   exposes-thinking, exposes-orchestration, best-for`.
