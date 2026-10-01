@@ -73,11 +73,14 @@ LAST_SUMMARY_PATH = UPDATE_DIR / ".last-claude-code-summary.txt"
 # settings key still names "effort"/"thinking"/a dial and is caught by the
 # specific keywords below. The conformance gate (validate_effort_
 # conformance.py checks A–F) remains the hard enforcement for the vocab.
+# "auto mode" is Claude Code's PERMISSION mode (its classifier approves tool
+# calls); it is no reasoning dial, and 2.1.281–2.1.285 mention it in a dozen
+# bullets the selector rightly ignores, which failed the cron daily from
+# 2026-09-26 (#801). Removed.
 TRIGGER_KEYWORDS = (
     "/effort",
     "effort level",
     "extended thinking",
-    "auto mode",
     "ultracode",
     "ultrathink",
     "xhigh",

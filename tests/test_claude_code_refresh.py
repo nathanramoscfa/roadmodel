@@ -212,6 +212,39 @@ def test_generic_feature_bullets_do_not_trigger(tmp_path: Path) -> None:
     assert "PASS" in result.stdout
 
 
+def test_permission_auto_mode_bullets_do_not_trigger(tmp_path: Path) -> None:
+    """Regression (2026-09, #801): "auto mode" is Claude Code's permission
+    mode, no reasoning dial. 2.1.281–2.1.285 mention it in a dozen bullets,
+    and as a trigger keyword it failed the cron every day from 2026-09-26."""
+    pending = _write_pending(
+        tmp_path,
+        [
+            {
+                "version": "2.1.285",
+                "bullets": [
+                    "Fixed background subagents in auto mode prompting a second, "
+                    "redundant reply after each report",
+                ],
+            },
+            {
+                "version": "2.1.281",
+                "bullets": [
+                    "Added an auto mode recommendation to `/insights` that estimates "
+                    "how many permission prompts auto mode could have handled",
+                ],
+            },
+        ],
+    )
+    consumed = _write_consumed(tmp_path, ["2.1.285", "2.1.281"])
+    before = tmp_path / "before.txt"
+    after = tmp_path / "after.txt"
+    before.write_text("- Effort levels: low / medium / high / xhigh\n")
+    after.write_text("- Effort levels: low / medium / high / xhigh\n")
+    result = _run_validator(pending, consumed, before, after)
+    assert result.returncode == 0, result.stderr
+    assert "PASS" in result.stdout
+
+
 def test_pending_file_missing_errors_cleanly(tmp_path: Path) -> None:
     """Validator exits 2 (config error) when pending-bullets.json is missing."""
     consumed = _write_consumed(tmp_path, [])
