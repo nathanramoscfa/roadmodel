@@ -535,7 +535,8 @@ OMITTED. Every other value is an EFFORT level emitted verbatim, with
 
 - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
   `high` → `High` (the docs' default effort on every model that
-  supports effort, Opus 4.7 aside); `xhigh` → `XHigh`
+  supports effort, Opus 4.7 (`xhigh`) and Opus 5.5 / Sonnet 5.5
+  (`medium`) aside); `xhigh` → `XHigh`
   (the "Extra High" UI label); `max` → `Max` (the top "Max" UI
   level, ABOVE "Extra High") ONLY on models whose documented row
   exposes a `max` step above `xhigh` — Opus 5, Opus 5.5, Opus 4.7,
@@ -640,7 +641,8 @@ the last two bullets state:
   (`Low` → `Medium`, `Medium` → `High`, `High` → `XHigh`).
 - Ceiling — `Max`: the top per-call level, used ONLY on models whose
   `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus 5,
-  Opus 5.5, Opus 4.7, Opus 4.8, Sonnet 5, Fable 5, Fable 5.1). On such
+  Opus 5.5, Opus 4.7, Opus 4.8, Sonnet 5, Sonnet 5.5, Fable 5,
+  Fable 5.1). On such
   a model, prefer `Max` over `XHigh` when the appended user-context
   declares a Quality (`best`) budget posture, or for the most demanding
   tasks (the `XHigh` conditions above taken to their limit). Under a
