@@ -407,10 +407,12 @@ def test_roadmap_commands_handle_the_backup_row() -> None:
 
 
 def test_roadmap_writing_commands_set_their_own_effort() -> None:
-    """Writing a roadmap is the planning work the operator wants done at a
-    fixed rung, without typing /effort first: a phase roadmap at xhigh, the
-    project roadmap at max. Claude Code reads `effort:` from a command's
-    frontmatter; the ports for other agents carry only the description."""
+    """Writing a roadmap is the planning work the operator wants done at the
+    deepest rung, without typing /effort first: both roadmaps at max. A
+    command's `effort:` cannot vary per phase, and it overrides /effort for
+    the turn, so a phase command at xhigh could never run a phase at Max.
+    Claude Code reads `effort:` from a command's frontmatter; the ports for
+    other agents carry only the description."""
     import importlib.util
     import sys as _sys
 
@@ -422,7 +424,7 @@ def test_roadmap_writing_commands_set_their_own_effort() -> None:
     _sys.modules.setdefault(spec.name, up)
     spec.loader.exec_module(up)
     commands = ROOT / "docs" / "claude-commands"
-    for name, effort in (("roadmap-phase", "xhigh"), ("roadmap-project", "max")):
+    for name, effort in (("roadmap-phase", "max"), ("roadmap-project", "max")):
         body = (commands / f"{name}.md").read_text()
         head = body.split("\n---\n", 1)[0]
         assert f"\neffort: {effort}" in head, name
@@ -519,3 +521,105 @@ def test_other_roadmap_named_files_do_not_block_writing() -> None:
     # A step underway with no PR (reversi 31.5 Step 4, a beta soak) stays
     # In progress on cited evidence instead of dropping to Not started.
     assert "cited evidence shows the work underway" in refresh
+
+
+# ---------------------------------------------------------------------------
+# Each phase names the session that writes its roadmap (0.2.54). /roadmap-phase
+# ran every phase at one fixed rung (xhigh, from its frontmatter), and nothing
+# recorded which model should write which phase. The project roadmap now
+# carries a Phase roadmap settings table per phase, picked quality first; the
+# phase prompt checks the session against it; /roadmap-refresh re-picks it for
+# phases not yet written and never for one that is.
+# ---------------------------------------------------------------------------
+
+# The quality-first rule, stated where a table is picked: the template (read
+# by /roadmap-project), the project prompt, and /roadmap-refresh.
+_QUALITY_FIRST = (
+    "the strongest `planning` model the operator's access methods reach",
+    "deepest reasoning rung",
+)
+
+
+def test_project_template_names_the_settings_that_write_each_phase_roadmap() -> None:
+    text = PROJECT.read_text()
+    flat = re.sub(r"\s+", " ", text)
+    phases = re.split(r"^### Phase ", text, flags=re.M)[1:]
+    assert len(phases) >= 3  # Phase 1, Phase 2, Phase N
+    for section in phases:
+        name = section.splitlines()[0]
+        badge = section.index("**Complexity:**")
+        settings = section.index("**Phase roadmap settings**")
+        first_sub = section.index("\n#### ")
+        assert badge < settings < first_sub, f"settings not after the badge: Phase {name}"
+        rows = re.findall(r"^\| (\w+)\s+\|", section[settings:first_sub], re.M)
+        assert rows == [
+            "Setting",
+            "Model",
+            "Backup",
+            "Platform",
+            "Effort",
+            "Thinking",
+            "Conversation",
+        ], name
+        assert "| Conversation | **New**" in section[settings:first_sub], name
+        assert "`/roadmap-phase " in section[settings:first_sub], name
+    # The rule: quality first, the deepest rung, never Ultracode, history kept.
+    for phrase in _QUALITY_FIRST:
+        assert phrase in flat
+    assert "Pick it with the model selector, quality first" in flat
+    assert "Never `Ultracode`: it reasons at `Extra high`" in flat
+    assert "A rule for roadmap-writing sessions in the user-context overrides" in flat
+    assert "Once the phase roadmap exists, the table is history" in flat
+    # The §4 checklist lists it between the badge and the sub-sections.
+    assert "5. **Phase roadmap settings** — the model and dials" in flat
+
+
+def test_project_prompt_picks_each_phase_roadmap_settings_quality_first() -> None:
+    flat = re.sub(r"\s+", " ", PROMPT_PROJECT.read_text())
+    # A kit whose template predates the table is stale.
+    assert "or a `### Phase` section has no **Phase roadmap settings** table, STOP" in flat
+    assert "For **each phase's** Phase roadmap settings table" in flat
+    for phrase in _QUALITY_FIRST:
+        assert phrase in flat
+    assert "never `Ultracode`" in flat
+    assert "unless the user-context states a rule for roadmap-writing sessions" in flat
+    assert "into its table's Backup row" in flat
+    assert "naming the model and effort that will write each phase's roadmap" in flat
+
+
+def test_phase_prompt_checks_the_session_against_the_phase_settings() -> None:
+    text = PROMPT_PHASE.read_text()
+    flat = re.sub(r"\s+", " ", text)
+    # The check runs after the kit refresh and the location check, before
+    # anything is written.
+    assert text.index("Step 0b —") < text.index("Step 0c —") < text.index("Step 1 —")
+    assert "its **Phase roadmap settings** table" in flat
+    assert "Phase {{N}} roadmap settings: Model <M> · Platform <P>" in flat
+    # Same tolerance as /roadmap-step: a newer version in the same line, or
+    # the table's own backup, continues; anything else stops.
+    assert "a newer version in the same line" in flat
+    assert "You are its Backup on the backup's platform: continue" in flat
+    assert "STOP and tell me how to switch" in flat
+    assert "Do not write the roadmap on a model it did not intend" in flat
+    # The effort comes from the command; the agent cannot read its own dial.
+    assert "You cannot see your own reasoning dial" in flat
+    assert "`/roadmap-phase` sets Claude Code's effort to `Max` by itself" in flat
+    # A project roadmap from before the table: pick now, edit nothing.
+    assert "No such table (a project roadmap written before roadmodel 0.2.54)" in flat
+    assert "Leave the project roadmap as it is — `/roadmap-refresh` adds the table" in flat
+
+
+def test_roadmap_refresh_repicks_only_phases_not_yet_written() -> None:
+    flat = re.sub(r"\s+", " ", REFRESH_COMMAND.read_text())
+    assert "a **Phase roadmap settings** table (roadmodel 0.2.54 on)" in flat
+    assert "For every phase whose roadmap does not exist yet" in flat
+    for phrase in _QUALITY_FIRST:
+        assert phrase in flat
+    assert "never `Ultracode`" in flat
+    assert "which wins" in flat  # a user-context rule for these sessions
+    # A first pick is not an update; a changed pick is, and says so.
+    assert "It is the phase's first pick, so it takes no `Settings updated` line" in flat
+    assert "rewrite it and its why, and add `> Settings updated <YYYY-MM-DD> (refresh)" in flat
+    # A written phase's table is history, as a Complete step's is.
+    assert "Never add, re-pick or rewrite the table of a phase whose roadmap exists" in flat
+    assert "Print the phase · was · now · changed table" in flat

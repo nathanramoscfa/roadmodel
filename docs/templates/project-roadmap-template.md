@@ -31,6 +31,26 @@ STYLE RULES (the AI MUST follow)
   - Every phase carries a one-line metadata badge:
       **Complexity:** … · **Risk:** … · **Cloud cost:** … ·
       **Handles sensitive data:** <Yes/No — PII, secrets, auth>
+  - Every phase carries a **Phase roadmap settings** table
+    directly after its metadata badge: the model and dials for
+    the session that writes that phase's roadmap with
+    `/roadmap-phase N`. The steps inside the phase get their
+    own tables in the phase roadmap. Pick it with the model
+    selector, quality first. A phase roadmap fixes every step's
+    scope, task prompt, acceptance criteria and Settings, so it
+    is the phase's highest-leverage session, and it runs once.
+    Take the strongest `planning` model the operator's access
+    methods reach, at the deepest reasoning rung that model
+    exposes on its platform (`Max` in Claude Code, which
+    `/roadmap-phase` sets by itself), with thinking on. Never
+    `Ultracode`: it reasons at `Extra high` and adds parallel
+    agents, which one planning document does not need. A rule
+    for roadmap-writing sessions in the user-context overrides
+    this default. The table takes its platform's shape (the
+    phase roadmap template's Settings variants) with a Backup
+    row, and its Conversation is always **New**. Once the phase
+    roadmap exists, the table is history: only a phase not yet
+    written is ever re-picked.
   - Every phase carries a `**Status:**` line directly under its
     `### Phase` heading, before its **Goal:** — `Not started`
     when this roadmap is written. The phase's FIRST step flips it
@@ -187,10 +207,14 @@ have:
   3. **Goal:** one sentence.
   4. Metadata line: **Complexity:** … · **Risk:** … ·
      **Cloud cost:** … · **Handles sensitive data:** …
-  5. Numbered sub-sections (#### N.1, #### N.2, …) describing
+  5. **Phase roadmap settings** — the model and dials that
+     write this phase's roadmap (`/roadmap-phase N`), picked
+     quality first (see the STYLE RULES), then one or two
+     sentences on why.
+  6. Numbered sub-sections (#### N.1, #### N.2, …) describing
      concrete work.
-  6. Tables, code blocks, or schema dumps where they clarify.
-  7. **Acceptance criteria** — bulleted, testable list that
+  7. Tables, code blocks, or schema dumps where they clarify.
+  8. **Acceptance criteria** — bulleted, testable list that
      INCLUDES at least one security check for the surface the
      phase touches (see §5 "Security & privacy strategy") and,
      when the phase touches a deployed surface, a deployed-and-
@@ -208,6 +232,27 @@ dependency graph in §5 is honoured.
 **Complexity:** <Low | Medium | High> · **Risk:**
 <Low | Medium | High> · **Cloud cost:** <$0 | …> ·
 **Handles sensitive data:** <Yes/No — PII, secrets, auth>
+
+**Phase roadmap settings** — the session that writes
+`phase01-roadmap.md` (`/roadmap-phase 1`):
+
+| Setting      | Value                                                |
+|--------------|------------------------------------------------------|
+| Model        | <Model name>                                         |
+| Backup       | <Backup model — its platform · its dial, or None>    |
+| Platform     | <Claude Code, or the access method that pays>        |
+| Effort       | <Deepest reasoning rung there — Max in Claude Code>  |
+| Thinking     | On                                                   |
+| Conversation | **New**                                              |
+
+<!-- The Claude Code shape. Another platform takes its own
+shape from the phase roadmap template's Settings variants:
+Codex carries Intelligence and no Thinking row; Cursor
+carries Max Mode alone. -->
+
+<One or two sentences: what this phase's roadmap must get
+right, why this model at this rung, and which subscription or
+key pays for the platform.>
 
 #### 1.1 <Sub-section title>
 - <Action item>.
@@ -244,6 +289,20 @@ dependency graph in §5 is honoured.
 
 **Complexity:** … · **Risk:** … · **Cloud cost:** …
 
+**Phase roadmap settings** — the session that writes
+`phase02-roadmap.md` (`/roadmap-phase 2`):
+
+| Setting      | Value   |
+|--------------|---------|
+| Model        | …       |
+| Backup       | …       |
+| Platform     | …       |
+| Effort       | …       |
+| Thinking     | On      |
+| Conversation | **New** |
+
+<Why, in one or two sentences.>
+
 #### 2.1 <Sub-section title>
 - <Action>.
 
@@ -264,6 +323,20 @@ dependency graph in §5 is honoured.
 **Goal:** <one sentence>.
 
 **Complexity:** … · **Risk:** … · **Cloud cost:** …
+
+**Phase roadmap settings** — the session that writes
+`phaseNN-roadmap.md` (`/roadmap-phase N`):
+
+| Setting      | Value   |
+|--------------|---------|
+| Model        | …       |
+| Backup       | …       |
+| Platform     | …       |
+| Effort       | …       |
+| Thinking     | On      |
+| Conversation | **New** |
+
+<Why, in one or two sentences.>
 
 #### N.1 <Sub-section title>
 - <Action>.
