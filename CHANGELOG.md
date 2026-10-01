@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Each phase in a project roadmap names the model that writes its
+  roadmap.** Every `### Phase` carries a **Phase roadmap settings** table
+  after its Complexity/Risk badge: model, backup, platform and dials for the
+  session that runs `/roadmap-phase N`. The selector picks it quality first,
+  because a phase roadmap fixes every step's scope, task prompt, acceptance
+  criteria and Settings, and it is written once. It takes the strongest
+  planning model your subscriptions reach at that model's deepest reasoning
+  rung (`Max` in Claude Code), never `Ultracode`. A rule for roadmap-writing
+  sessions in the user-context overrides that default.
+- **The phase prompt checks the session against those settings** before it
+  writes anything. It prints the phase's settings beside the session's own
+  model. The table's model, a newer version in the same line, or its backup
+  continues; any other model or surface stops and says how to switch. A
+  project roadmap from before this release has no tables: the prompt picks
+  the settings on the spot and leaves `ROADMAP.md` alone.
+- **`/roadmap-refresh` keeps those tables current** for every phase not yet
+  written: it adds a missing table and re-picks a stale one with a
+  `Settings updated` line. It never touches the table of a phase whose
+  roadmap exists.
+
+### Changed
+
+- **`/roadmap-phase` runs at `max` in Claude Code**, up from `xhigh`. A
+  command's `effort:` overrides `/effort` for the turn and cannot vary by
+  phase, so at `xhigh` no phase roadmap could be written at `Max`.
+
 ## [0.2.53] — 2026-10-01
 
 ### Added

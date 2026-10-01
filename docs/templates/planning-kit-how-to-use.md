@@ -58,6 +58,13 @@ Concretely, for each roadmap step:
    own platform and dial in one cell (`GPT-5.6 Terra — Codex · Intelligence
    Medium`).
 
+The project roadmap uses the same engine for one more table per phase: its
+**Phase roadmap settings**, the model and dials for the session that writes
+that phase's roadmap. They are picked quality first — the strongest planning
+model the operator's access methods reach, at its deepest reasoning rung —
+because a phase roadmap fixes every step after it. `prompts/phase-roadmap.md`
+checks the session against them before it writes anything.
+
 ## Paste-prompt
 
 Do not type the ask each time. Open `prompts/phase-roadmap.md` (or

@@ -39,8 +39,9 @@ language, on every machine where the commands are installed:
 
 ```
 /roadmap-project        docs/roadmap/ROADMAP.md — phases, acceptance
-                        criteria, and the security / release /
-                        operations strategy
+                        criteria, the security / release / operations
+                        strategy, and the model that writes each
+                        phase's roadmap
 /roadmap-phase 1        docs/roadmap/phase01-roadmap.md — Phase 1
                         broken into steps; each names its branch, its
                         model and settings, and carries a <task> prompt
@@ -60,6 +61,9 @@ What the loop guarantees, independent of the project:
   Settings table (model, platform, effort, thinking) comes from
   running the bundled selector against your own subscriptions and
   keys — by the AI already open in your editor, at $0 marginal cost.
+  Each phase also names the model and effort that write its roadmap,
+  picked quality first, and `/roadmap-phase` checks the session
+  against them.
 - **"Done" means done.** A step ends with "Step N is complete. You
   can now move on to Step N+1." and nothing after it. Every finding
   the step surfaced has already been dispatched — roadmap edited,
