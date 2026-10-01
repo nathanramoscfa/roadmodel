@@ -16,7 +16,9 @@ name: Update benchmark layer (Artificial Analysis)
 # The four derived ratings (update/derive_ratings.py) are re-applied to the
 # selector in the same run, so a benchmark move that crosses a band ships the
 # letter change with the number that caused it — structured attributes only,
-# with the change table in the PR body.
+# with the change table in the PR body. The best-for / headline-benchmarks
+# prose that update/model_prose.py writes is a deterministic function of those
+# same numbers and letters (no model writes it), so it rides the same auto-merge.
 
 on:
   schedule:
@@ -87,6 +89,9 @@ jobs:
           # The lifecycle rule (update/supersede.py): tag models a newer
           # same-maker model beats on every count, retire them 30 days on.
           python update/supersede.py --write | tee /tmp/supersede.out
+          # Best-for + headline-benchmarks prose written from the data above
+          # (update/model_prose.py); after the letters and tags, before render.
+          python update/model_prose.py --write
           python update/render_md.py
           python update/build_catalog.py
           python update/derive_ratings.py --check
@@ -145,6 +150,6 @@ jobs:
             --base main \
             --head "$BRANCH" \
             --title "Automated benchmark refresh: ${DATE}" \
-            --body "$(printf '## Summary\n\n%s\n\n---\n\nOpened automatically by `.github/workflows/update-benchmarks.yml`: one fetch of the Artificial Analysis Insights API joined to catalog ids via `update/aa-model-map.json`. Numbers and derived rating letters only, no prose, so auto-merge is enabled — GitHub squash-merges once checks pass. To stop it: `gh pr merge --disable-auto`.' "$notes")")"
+            --body "$(printf '## Summary\n\n%s\n\n---\n\nOpened automatically by `.github/workflows/update-benchmarks.yml`: one fetch of the Artificial Analysis Insights API joined to catalog ids via `update/aa-model-map.json`. Numbers, derived rating letters, and the prose update/model_prose.py builds from them (no AI-written text), so auto-merge is enabled — GitHub squash-merges once checks pass. To stop it: `gh pr merge --disable-auto`.' "$notes")")"
           echo "Opened: $PR_URL"
           gh pr merge --auto --squash --delete-branch "$PR_URL"
