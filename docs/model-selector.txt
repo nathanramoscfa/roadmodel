@@ -942,7 +942,7 @@
              tier-coding="A" tier-planning="S" tier-agentic="A"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 40.7 (max); LMArena Text #14 (Elo 1483.9); LMArena WebDev #32 (Elo 1555.8); AA-Omniscience 26.2 (#2)"
+             headline-benchmarks="AA Intelligence Index 40.7 (max); LMArena Text #15 (Elo 1483.6); LMArena WebDev #34 (Elo 1556.0); AA-Omniscience 26.2 (#2)"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)"
              best-for="Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching" superseded-by="claude-opus-5-5" superseded-on="2026-09-24"/>
       <model id="opus-4.8" name="Opus 4.8"
@@ -991,7 +991,7 @@
              tier-coding="A" tier-planning="S" tier-agentic="A"
              tier-multimodal="A" tier-long-context="S" tier-knowledge="A"
              tier-speed="D"
-             headline-benchmarks="AA Intelligence Index 38.4 (xhigh); LMArena Text Elo 1466.7 (#32); HLE 45.8%; AA-Omniscience 20.1 (#3)"
+             headline-benchmarks="AA Intelligence Index 38.4 (xhigh); LMArena Text Elo 1466.8 (#33); HLE 45.8%; AA-Omniscience 20.1 (#3)"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; More token-efficient than GPT-5.4 on comparable tasks; Improved persistence on long-running tasks; Fast mode is available at higher rates; Long context supports up to 1M tokens with 2x input pricing"
              best-for="OpenAI's most capable frontier model and highest-cost GPT offering, best suited for the most demanding reasoning, long-horizon planning, and tasks where maximum intelligence is required regardless of cost — strongest single model for hard coding, agentic execution, and reasoning, but verify factual claims due to elevated hallucination" superseded-by="gpt-5.6-sol" superseded-on="2026-09-24"/>
       <model id="gpt-6-astra" name="GPT-6 Astra"
@@ -1000,7 +1000,7 @@
              tier-coding="S" tier-planning="B" tier-agentic="S"
              tier-multimodal="B" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 52.7 (max); HLE 54.7%; SciCode 56.5; Terminal-Bench 4.0 59.1; AA-LCR 0.807; LMArena WebDev #2 (Elo 1792.0); LMArena Text coding Elo 1488.1 (#36); LMArena Text Elo 1443.7 (#59)"
+             headline-benchmarks="AA Intelligence Index 52.7 (max); HLE 54.7%; SciCode 56.5; Terminal-Bench 4.0 59.1; AA-LCR 0.807; LMArena WebDev #2 (Elo 1789.1); LMArena Text coding Elo 1488.1 (#36); LMArena Text Elo 1443.7 (#59)"
              pricing-notes="Provider-direct OpenAI API per-token pricing (not via the Cursor pool)"
              prose-generated="best-for headline-benchmarks"
              best-for="Frontier-class coding and agentic work, plus strong long context and knowledge, at a very high price. Its AA Intelligence Index of 52.7 ranks 4th of 53 measured models." />
@@ -1031,7 +1031,7 @@
              tier-coding="B" tier-planning="A" tier-agentic="B"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="B"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 30.1; LMArena Text Elo 1457.9 (#39); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage"
+             headline-benchmarks="AA Intelligence Index 30.1; LMArena Text Elo 1457.7 (#41); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)"
              best-for="Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation" superseded-by="claude-sonnet-5" superseded-on="2026-09-24"/>
 
@@ -1041,7 +1041,7 @@
              tier-coding="A" tier-planning="A" tier-agentic="A"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 39.0 (xhigh); LMArena Text Elo 1452.3 (#45); HLE 43.7% (xhigh); τ²-bench banking pass_1 39.6%"
+             headline-benchmarks="AA Intelligence Index 39.0 (xhigh); LMArena Text Elo 1452.3 (#46); HLE 43.7% (xhigh); τ²-bench banking pass_1 39.6%"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context supports up to 1M tokens with 2x input pricing"
              best-for="Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding" superseded-by="gpt-5.6-terra" superseded-on="2026-09-24"/>
       <model id="kimi-k3" name="Kimi K3"
@@ -1109,7 +1109,7 @@
              tier-coding="A" tier-planning="A" tier-agentic="A"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="A"
-             headline-benchmarks="AA Intelligence Index 42.1 (max); HLE 42.9%; Terminal-Bench 2.1 88.0; Output Speed 107.7 tokens/s"
+             headline-benchmarks="AA Intelligence Index 42.1 (max); HLE 42.9%; Terminal-Bench 2.1 88.0; Output Speed 106.4 tokens/s"
              pricing-notes="Requires Max Mode on legacy request-based plans; Mid-tier GPT-5.6 variant between Sol and Luna; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate"
              best-for="OpenAI's mid-tier GPT-5.6 variant between Sol (flagship) and Luna (mini) at medium-tier pricing ($2/$12) — Artificial Analysis Intelligence Index 42.1 (max) matches near-frontier reasoning while output speed (~105 tokens/s) is faster than most peers; pick for balanced near-frontier reasoning, agentic execution, and speed when Sol's high tier isn't justified but stronger throughput than GPT-5.4 is desired." />
       <model id="gemini-3.1-pro" name="Gemini 3.1 Pro"
@@ -1118,7 +1118,7 @@
              tier-coding="A" tier-planning="A" tier-agentic="B"
              tier-multimodal="S" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 29.7 (#3); AA-Omniscience 32.9 (#1); HLE 47.0% (#1); LMArena Text Elo 1479.9 (#16); 1M-token context"
+             headline-benchmarks="AA Intelligence Index 29.7 (#3); AA-Omniscience 32.9 (#1); HLE 47.0% (#1); LMArena Text Elo 1480.2 (#18); 1M-token context"
              pricing-notes="-"
              best-for="True native multimodal understanding (text, image, video, audio, and code in a single pass), 1M-token context optimized for heterogeneous inputs, strong agentic multi-step tool use, and synthesizing insights across large mixed-media datasets or sprawling document corpora — the obvious choice whenever multimodal or long-context is the primary category" />
       <model id="gemini-3-pro" name="Gemini 3 Pro"
@@ -1164,10 +1164,20 @@
              tier-coding="S" tier-planning="B" tier-agentic="S"
              tier-multimodal="B" tier-long-context="S" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 47.5 (max); HLE 47.9%; SciCode 57.6; Terminal-Bench 4.0 43.9; AA-LCR 0.837; LMArena WebDev #6 (Elo 1692.3)"
+             headline-benchmarks="AA Intelligence Index 47.5 (max); HLE 47.9%; SciCode 57.6; Terminal-Bench 4.0 43.9; AA-LCR 0.837; LMArena WebDev #7 (Elo 1689.3)"
              pricing-notes="Provider-direct OpenAI API per-token pricing (not via the Cursor pool)"
              prose-generated="best-for headline-benchmarks"
              best-for="Frontier-class coding, agentic work and long context, plus strong knowledge, at a medium price. Its AA Intelligence Index of 47.5 ranks 8th of 53 measured models." />
+      <model id="gpt-6.1-sol" name="GPT-6.1 Sol"
+             input-price-per-1m="$2.00" output-price-per-1m="$10.00"
+             jurisdiction="us"
+             tier-coding="A" tier-planning="B" tier-agentic="A"
+             tier-multimodal="B" tier-long-context="A" tier-knowledge="A"
+             tier-speed="B"
+             headline-benchmarks="LMArena WebDev #3 (Elo 1758.7)"
+             pricing-notes="Provider-direct OpenAI API per-token pricing (not via the Cursor pool)"
+             prose-generated="best-for"
+             best-for="Strong coding, agentic work, long context and knowledge at a medium price." />
     </tier>
     <tier cost="low">
       <model id="gemini-3.5-flash" name="Gemini 3.5 Flash"
@@ -1215,7 +1225,7 @@
              tier-coding="A" tier-planning="A" tier-agentic="A"
              tier-multimodal="B" tier-long-context="A" tier-knowledge="A"
              tier-speed="S"
-             headline-benchmarks="AA Intelligence Index 40.9 (high); HLE 47.8% (high); Terminal-Bench 2.1 87.6; Output Speed 222.1 tokens/s"
+             headline-benchmarks="AA Intelligence Index 40.9 (high); HLE 47.8% (high); Terminal-Bench 2.1 87.6; Output Speed 237.7 tokens/s"
              pricing-notes="-"
              prose-generated="best-for"
              best-for="Strong coding, planning, agentic work, long context and knowledge, with very fast output, at a low price. Its AA Intelligence Index of 40.9 ranks 17th of 53 measured models." />
@@ -1244,7 +1254,7 @@
              tier-coding="C" tier-planning="B" tier-agentic="D"
              tier-multimodal="B" tier-long-context="A" tier-knowledge="D"
              tier-speed="S"
-             headline-benchmarks="AA Intelligence Index 16.9 (reasoning); Output Speed 117.0 tokens/s; AA-Omniscience -4.2; latency leader among Claude family"
+             headline-benchmarks="AA Intelligence Index 16.9 (reasoning); Output Speed 122.5 tokens/s; AA-Omniscience -4.2; latency leader among Claude family"
              pricing-notes="Hidden by default; Bedrock/Vertex: regional endpoints +10% surcharge; Cache: writes 1.25x, reads 0.1x"
              best-for="Speed-optimized lowest-cost Claude model, ideal for simple completions, high-volume repetitive tasks, and latency-sensitive workflows where a lightweight capable response matters more than deep reasoning" />
       <model id="muse-spark-1.3" name="Muse Spark 1.3"
@@ -1338,7 +1348,7 @@
              tier-coding="A" tier-planning="B" tier-agentic="A"
              tier-multimodal="B" tier-long-context="A" tier-knowledge="B"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 37.3 (max); HLE 38.5%; SciCode 54.6; Terminal-Bench 4.0 12.6; AA-LCR 0.833; LMArena WebDev #26 (Elo 1583.3)"
+             headline-benchmarks="AA Intelligence Index 37.3 (max); HLE 38.5%; SciCode 54.6; Terminal-Bench 4.0 12.6; AA-LCR 0.833; LMArena WebDev #30 (Elo 1581.9)"
              pricing-notes="Provider-direct OpenAI API per-token pricing (not via the Cursor pool)"
              prose-generated="best-for headline-benchmarks"
              best-for="Strong coding, agentic work and long context at a low price. Its AA Intelligence Index of 37.3 ranks 24th of 53 measured models, the highest of any model at its price or lower." />
@@ -1406,7 +1416,7 @@
              tier-coding="S" tier-planning="A" tier-agentic="S"
              tier-multimodal="D" tier-long-context="A" tier-knowledge="A"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 44.8 (max); HLE 42.3%; SciCode 59.0; Terminal-Bench 4.0 41.9; AA-LCR 0.797; LMArena Text Elo 1472.5 (#25); LMArena Text coding Elo 1498.5 (#23); LMArena WebDev Elo 1622.9 (#17)"
+             headline-benchmarks="AA Intelligence Index 44.8 (max); HLE 42.3%; SciCode 59.0; Terminal-Bench 4.0 41.9; AA-LCR 0.797; LMArena Text Elo 1472.2 (#26); LMArena Text coding Elo 1497.1 (#26); LMArena WebDev Elo 1622.0 (#19)"
              pricing-notes="Hidden by default; Same per-token rates as GLM 5.2"
              prose-generated="best-for headline-benchmarks"
              best-for="Frontier-class coding and agentic work, plus strong planning, long context and knowledge, at a low price. Its AA Intelligence Index of 44.8 ranks 11th of 53 measured models. It is the cheapest model in the catalog rated S for agentic work. Weakest at multimodal input (D)." />
@@ -1416,7 +1426,7 @@
              tier-coding="A" tier-planning="A" tier-agentic="A"
              tier-multimodal="B" tier-long-context="A" tier-knowledge="B"
              tier-speed="S"
-             headline-benchmarks="AA Intelligence Index 41.8; HLE 39.9%; SciCode 51.6; Terminal-Bench 4.0 32.8; AA-LCR 0.800; LMArena Text Elo 1470.9 (#27); LMArena Text coding Elo 1506.0 (#16); LMArena WebDev Elo 1613.6 (#22)"
+             headline-benchmarks="AA Intelligence Index 41.8; HLE 39.9%; SciCode 51.6; Terminal-Bench 4.0 32.8; AA-LCR 0.800; LMArena Text Elo 1470.5 (#29); LMArena Text coding Elo 1506.8 (#17); LMArena WebDev Elo 1614.8 (#24)"
              pricing-notes="Hidden by default"
              prose-generated="best-for headline-benchmarks"
              best-for="Strong coding, planning, agentic work and long context, with very fast output, at a low price. Its AA Intelligence Index of 41.8 ranks 15th of 53 measured models, the highest of any model at its price or lower." />
@@ -1542,7 +1552,7 @@
             provider="openai" billing="per-token"
             provider-jurisdiction="us"
             requires="openai-api-key"
-            supports-models="gpt-6-astra,gpt-6-sol,gpt-6-luna,gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5.4-nano,gpt-5-mini"
+            supports-models="gpt-6-astra,gpt-6.1-sol,gpt-6-sol,gpt-6-luna,gpt-5.6-sol,gpt-5.5,gpt-5.6-terra,gpt-5.4,gpt-5.3-codex,gpt-5.2,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5,gpt-5.6-luna,gpt-5.4-mini,gpt-5.4-nano,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
             best-for="Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates. Exposes the full Codex/OpenAI `reasoning_effort` dial (`low`, `medium`, `high`, `xhigh`, `max`, `ultra` — the top `ultra` step is a session-wide multi-agent orchestration mode analogous to Claude Code's `ultracode`)." />
@@ -1550,7 +1560,7 @@
             provider="openai" billing="subscription-included"
             provider-jurisdiction="us"
             requires="chatgpt-subscription"
-            supports-models="gpt-6-astra,gpt-6-sol,gpt-6-luna,gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.2,gpt-5,gpt-5-mini"
+            supports-models="gpt-6-astra,gpt-6.1-sol,gpt-6-sol,gpt-6-luna,gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.2,gpt-5,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
             best-for="Default for GPT-driven autonomous coding sessions when a ChatGPT Plus/Pro subscription is active — pays from the ChatGPT budget instead of the per-token API rate, in the CLI and the IDE extension. A ChatGPT-account sign-in CANNOT run the `-codex` model variants: Codex answers 400 &quot;The &apos;gpt-5.3-codex&apos; model is not supported when using Codex with a ChatGPT account.&quot; Those variants are reachable only through `codex-api` (an OpenAI API key), so recommending one here would name a model the operator&apos;s subscription cannot run. Exposes the full Codex `reasoning_effort` dial (`low`, `medium`, `high`, `xhigh`, `max`, `ultra` — the top `ultra` step is session-wide multi-agent orchestration on par with Claude Code&apos;s `ultracode`) and no Max Mode." />
@@ -1558,7 +1568,7 @@
             provider="openai" billing="per-token"
             provider-jurisdiction="us"
             requires="openai-api-key"
-            supports-models="gpt-6-astra,gpt-6-sol,gpt-6-luna,gpt-5.3-codex,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.2,gpt-5,gpt-5-mini"
+            supports-models="gpt-6-astra,gpt-6.1-sol,gpt-6-sol,gpt-6-luna,gpt-5.3-codex,gpt-5.2-codex,gpt-5.1-codex-max,gpt-5.1-codex,gpt-5.1-codex-mini,gpt-5.6-sol,gpt-5.6-terra,gpt-5.6-luna,gpt-5.5,gpt-5.4,gpt-5.4-mini,gpt-5.2,gpt-5,gpt-5-mini"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="no"
             best-for="The same Codex surface driven by an OpenAI API key instead of a ChatGPT sign-in: the ONLY way to run the coding-specialised `-codex` variants (gpt-5.3-codex and the gpt-5.1-codex family), and the fallback for GPT work once the ChatGPT plan&apos;s limits bind. Billed per token at list price, so prefer `codex-cli` while the subscription still has headroom. Exposes the full Codex `reasoning_effort` dial (`low`, `medium`, `high`, `xhigh`, `max`, `ultra`)." />
