@@ -245,6 +245,38 @@ def test_permission_auto_mode_bullets_do_not_trigger(tmp_path: Path) -> None:
     assert "PASS" in result.stdout
 
 
+def test_bug_fix_bullets_do_not_trigger(tmp_path: Path) -> None:
+    """Regression (2026-10-01): a bug fix restores documented behaviour, so a
+    "Fixed ..." bullet that names a dial needs no selector edit. A bullet that
+    CHANGES the dial still triggers."""
+    pending = _write_pending(
+        tmp_path,
+        [
+            {
+                "version": "2.1.282",
+                "bullets": [
+                    "Fixed continued or resumed conversations losing earlier extended "
+                    "thinking when relaunched with a `--tools` list that leaves out a "
+                    "built-in tool offered earlier in the conversation",
+                    "[VSCode] Fixed `/effort` showing the wrong level after a reload",
+                ],
+            },
+        ],
+    )
+    consumed = _write_consumed(tmp_path, ["2.1.282"])
+    before = tmp_path / "before.txt"
+    after = tmp_path / "after.txt"
+    before.write_text("- Effort levels: low / medium / high / xhigh\n")
+    after.write_text("- Effort levels: low / medium / high / xhigh\n")
+    result = _run_validator(pending, consumed, before, after)
+    assert result.returncode == 0, result.stderr
+    pending.write_text(
+        '[{"version": "2.1.290", "bullets": ["Changed the default extended thinking budget"]}]'
+    )
+    _write_consumed(tmp_path, ["2.1.290"])
+    assert _run_validator(pending, consumed, before, after).returncode != 0
+
+
 def test_pending_file_missing_errors_cleanly(tmp_path: Path) -> None:
     """Validator exits 2 (config error) when pending-bullets.json is missing."""
     consumed = _write_consumed(tmp_path, [])

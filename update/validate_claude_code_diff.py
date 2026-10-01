@@ -178,7 +178,16 @@ def coverage_check(pending: list[dict[str, object]], consumed: set[str]) -> list
     return failures
 
 
+# A bug fix restores documented behaviour; it changes no dial the selector
+# describes, so it needs no selector edit even when it names one. 2.1.282's
+# "Fixed continued or resumed conversations losing earlier extended thinking
+# …" failed the run on the "extended thinking" keyword (2026-10-01).
+_BUG_FIX = re.compile(r"^\s*(?:\[[^\]]+\]\s*)?Fixed\b")
+
+
 def bullet_is_trigger(bullet: str) -> bool:
+    if _BUG_FIX.match(bullet):
+        return False
     low = bullet.lower()
     return any(kw in low for kw in TRIGGER_KEYWORDS)
 
