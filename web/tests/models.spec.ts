@@ -51,6 +51,7 @@ interface CatalogModel {
   input_price_per_1m: number;
   output_price_per_1m: number;
   tier_cost: string;
+  added_on?: string | null;
 }
 const catalog = JSON.parse(
   readFileSync(path.join(process.cwd(), "data", "catalog.json"), "utf8"),
@@ -937,23 +938,51 @@ test("a superseded model is tagged with its successor and the day it leaves", as
   await expect(card).toContainText(`leaves the catalog on ${m.retires_on}`);
 });
 
+// New counts from the release AA dates; before AA lists a model, from the day
+// it joined the catalog (update/stamp_added.py).
+function newUntilOf(m: CatalogModel, now: Date): string | null {
+  return newUntil(benchmarks.models[m.id]?.release_date ?? m.added_on, now);
+}
+
 test("a model released in the last two weeks carries a New tag that says when it clears", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/models");
   const now = new Date();
-  const fresh = catalog.models.filter((m) => newUntil(benchmarks.models[m.id]?.release_date, now) !== null);
+  const fresh = catalog.models.filter((m) => newUntilOf(m, now) !== null);
   await expect(page.getByTestId("new-tag")).toHaveCount(fresh.length);
   test.info().annotations.push({ type: "new models", description: fresh.map((m) => m.id).join(", ") });
-  if (fresh.length === 0) return;
-  const m = fresh[0];
-  const until = newUntil(benchmarks.models[m.id].release_date, now)!;
-  const tag = page.locator(`[data-testid="model-row"][data-model-id="${m.id}"] [data-testid="new-tag"]`);
-  await expect(tag).toHaveAttribute("data-new-until", until);
-  await expect(tag).toContainText("New");
-  await tag.getByTestId("new-trigger").hover();
-  const card = page.getByTestId("new-card");
-  await expect(card).toContainText(`${m.name} is new`);
-  await expect(card).toContainText("launch-window results");
+  for (const m of fresh) {
+    const tag = page.locator(`[data-testid="model-row"][data-model-id="${m.id}"] [data-testid="new-tag"]`);
+    await expect(tag).toHaveAttribute("data-new-until", newUntilOf(m, now)!);
+    await expect(tag).toContainText("New");
+    await tag.getByTestId("new-trigger").hover();
+    const card = page.getByTestId("new-card");
+    await expect(card).toContainText(`${m.name} is new`);
+    await expect(card).toContainText(
+      benchmarks.models[m.id] ? "launch-window results" : "awaits its first Artificial Analysis measurement",
+    );
+    await page.mouse.move(0, 0);
+  }
+});
+
+test("the line above the table names every new model and opens its row", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/models");
+  const fresh = catalog.models.filter((m) => newUntilOf(m, new Date()) !== null);
+  const links = page.getByTestId("new-model-link");
+  await expect(links).toHaveCount(fresh.length);
+  if (fresh.length === 0) {
+    await expect(page.getByTestId("new-models")).toHaveCount(0);
+    return;
+  }
+  // The newest model AA has yet to measure is the case the line exists for.
+  const m = fresh.find((x) => !benchmarks.models[x.id]) ?? fresh[0];
+  const link = page.locator(`[data-testid="new-model-link"][data-model-id="${m.id}"]`);
+  await expect(link).toHaveText(m.name);
+  await link.click();
+  const row = page.locator(`[data-testid="model-row"][data-model-id="${m.id}"]`);
+  await expect(row.getByRole("button", { name: `Hide details for ${m.name}` })).toBeVisible();
+  await expect(row).toBeInViewport();
 });
 
 // The page's BenchRow and per-column sorted values, rebuilt from the same JSON,

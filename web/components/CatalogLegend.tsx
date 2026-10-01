@@ -147,7 +147,9 @@ export function CatalogLegend({ id }: { id?: string }) {
             planning, multimodal and speed letter is an estimate, as is a derived category&rsquo;s
             letter for a model outside its benchmark&rsquo;s measured set; there an estimate stops
             at {ESTIMATE_CEILING}, since S takes a measurement. A <strong>New</strong>{" "}
-            tag marks a model released in the last {NEW_RELEASE_DAYS} days and clears on its own.
+            tag marks a model released in the last {NEW_RELEASE_DAYS} days (or, before Artificial
+            Analysis lists it, added to this catalog in that time); it clears on its own, and the
+            line above the table names each one.
             The <strong>AA Index</strong> column is the one published composite; hover it for the
             Artificial Analysis model it was measured as and that model&rsquo;s own benchmarks,
             ranked in this catalog, with a check that they bear the index out.{" "}

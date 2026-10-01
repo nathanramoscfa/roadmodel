@@ -117,7 +117,9 @@ would then reject.
   the ratings: a newer model from the same maker beats the tagged one on
   every count. Copy those attributes verbatim; never add, change or remove
   them. Leave a model that carries `retired-on` exactly as it is: it stays
-  in the file as a record and is no longer in the catalog.
+  in the file as a record and is no longer in the catalog. `added-on`, the
+  day a model joined the catalog, is written after your pass the same way
+  (`update/stamp_added.py`): copy it verbatim, and never write it yourself.
 - **Generated prose is not yours to edit.** A `<model>` element may carry
   `prose-generated="best-for headline-benchmarks"` (or one of the two).
   `update/model_prose.py` writes the fields it lists from the catalog's
@@ -933,7 +935,8 @@ warning per skipped method.
   tier-planning, tier-agentic, tier-multimodal, tier-long-context,
   tier-knowledge, tier-speed, headline-benchmarks, pricing-notes,
   best-for`, plus the attributes deterministic passes write after you
-  (`superseded-by`, `superseded-on`, `retired-on`, `prose-generated`),
+  (`superseded-by`, `superseded-on`, `retired-on`, `added-on`,
+  `prose-generated`),
   which you copy verbatim. The current schema for `<method>` elements in
   `<access-methods>` is `id, name, provider, billing,
   provider-jurisdiction, requires, supports-models, exposes-max-mode,

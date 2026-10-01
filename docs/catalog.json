@@ -1,9 +1,9 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-10-01T04:22:58Z",
+  "generated_at_utc": "2026-10-01T15:33:21Z",
   "source_doc_sha256": {
-    "model-selector.txt": "1eae495e1c4765c21b3b9876b7656b64cd83619fa5f70043ecb278148762924c",
+    "model-selector.txt": "54c6dbd9b0741ded6356b23b9de59ea8028ab66901d8641a6b9ced59653ca862",
     "model-tier-cost-scale.md": "0e07bd4fae45e3472d064067a09f426c4430da87b6031ce7d610baeb23b5b2fb"
   },
   "models": [
@@ -29,6 +29,7 @@
       "best_for": "Speed-optimized lowest-cost Claude model, ideal for simple completions, high-volume repetitive tasks, and latency-sensitive workflows where a lightweight capable response matters more than deep reasoning",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -53,6 +54,7 @@
       "best_for": "Frontier-class coding, planning, agentic work and multimodal input, plus strong long context and knowledge, at a very high price. Its AA Intelligence Index of 49.6 ranks 6th of 53 measured models. Weakest at speed (D). Superseded by Fable 5.1.",
       "superseded_by": "claude-fable-5.1",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     },
     {
@@ -77,6 +79,7 @@
       "best_for": "Frontier-class coding, planning, agentic work, multimodal input, long context and knowledge at a very high price. Its AA Intelligence Index of 53.4 ranks 3rd of 53 measured models. Weakest at speed (D).",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -101,6 +104,7 @@
       "best_for": "Frontier-class planning and agentic work, plus strong coding, multimodal input, long context and knowledge, at a very high price. Its AA Intelligence Index of 50.8 ranks 5th of 53 measured models. Weakest at speed (D). Superseded by Opus 5.5.",
       "superseded_by": "claude-opus-5-5",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     },
     {
@@ -125,6 +129,7 @@
       "best_for": "Frontier-class coding, planning, agentic work, long context and knowledge, plus strong multimodal input, at a high price. Its AA Intelligence Index of 57.6 is the highest in the catalog. It is the cheapest model in the catalog rated S for knowledge. Weakest at speed (D).",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -149,6 +154,7 @@
       "best_for": "Strong coding, planning, agentic work, multimodal input and long context at a medium price. Its AA Intelligence Index of 38.2 ranks 23rd of 53 measured models.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -173,6 +179,7 @@
       "best_for": "Frontier-class coding and agentic work, plus strong planning, multimodal input, long context and knowledge, with fast output, at a medium price. Its AA Intelligence Index of 56.0 ranks 2nd of 53 measured models, the highest of any model at its price or lower.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -197,6 +204,7 @@
       "best_for": "Mistral's dedicated code model \u2014 fast, cheap ($0.90/M output) code completion and fill-in-the-middle under the EU jurisdiction, for autocomplete-style / high-throughput coding loops where an EU operator and low latency matter more than top-tier agentic reasoning. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key; prefer mistral-medium-3.5 for reasoning-heavy coding, codestral for fast bounded completions.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -221,6 +229,7 @@
       "best_for": "Strong coding and agentic work, with very fast output, at a low price. Weakest at multimodal input (D).",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -245,6 +254,7 @@
       "best_for": "Frontier-class long context, plus strong coding and agentic work, with fast output, at a low price. Its AA Intelligence Index of 39.5 ranks 19th of 53 measured models. It is the cheapest model in the catalog rated S for long context. Weakest at multimodal input (C).",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -269,6 +279,7 @@
       "best_for": "Strong coding, planning, agentic work and long context at a low price. Its AA Intelligence Index of 36.0 ranks 26th of 53 measured models. Weakest at multimodal input (D), then speed (C).",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -293,6 +304,7 @@
       "best_for": "Google's cheap, fast, multimodal Flash model at $0.30/M output \u2014 the cost-efficient pick for high-volume structured-output tasks (model recommendation, classification, light planning with strong system-prompt grounding) where multimodal capability matters and frontier-class reasoning does not; powers free-tier SaaS surfaces where per-call cost discipline is essential and the bundled templates do the structural heavy lifting",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -317,6 +329,7 @@
       "best_for": "Gemini 3 generation's cheap-tier model \u2014 meaningfully stronger planning, agentic, knowledge ratings than 2.5 Flash at slightly higher cost ($3.00/M output vs $2.50/M), with native multimodal-S; pick over 2.5 Flash when the task benefits from Gemini 3 family improvements and per-call cost discipline still matters",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -341,6 +354,7 @@
       "best_for": "Gemini 3 family Pro model at the same medium-tier pricing as gemini-3.1-pro \u2014 pick gemini-3.1-pro over gemini-3-pro when both are available since 3.1 carries the updated benchmarks and is the canonical visible Gemini Pro; gemini-3-pro fits when reproducing earlier Gemini-3-generation outputs or when the 3.1 refresh's behavioral changes are undesirable for a specific workload",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -365,6 +379,7 @@
       "best_for": "True native multimodal understanding (text, image, video, audio, and code in a single pass), 1M-token context optimized for heterogeneous inputs, strong agentic multi-step tool use, and synthesizing insights across large mixed-media datasets or sprawling document corpora \u2014 the obvious choice whenever multimodal or long-context is the primary category",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -389,6 +404,7 @@
       "best_for": "Strong coding, planning, long context and knowledge, with very fast output, at a low price. Its AA Intelligence Index of 32.6 ranks 29th of 53 measured models. Superseded by Gemini 3.8 Flash.",
       "superseded_by": "gemini-3.8-flash",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     },
     {
@@ -413,6 +429,7 @@
       "best_for": "Strong coding, planning, agentic work and long context, with very fast output, at a low price. Its AA Intelligence Index of 34.0 ranks 27th of 53 measured models. Superseded by Gemini 3.8 Flash.",
       "superseded_by": "gemini-3.8-flash",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     },
     {
@@ -437,6 +454,7 @@
       "best_for": "Strong coding, planning, agentic work, long context and knowledge, with very fast output, at a low price. Its AA Intelligence Index of 39.1 ranks 20th of 53 measured models. Superseded by Gemini 3.8 Flash.",
       "superseded_by": "gemini-3.8-flash",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     },
     {
@@ -461,6 +479,7 @@
       "best_for": "Strong coding, planning, agentic work, long context and knowledge, with very fast output, at a low price. Its AA Intelligence Index of 40.9 ranks 17th of 53 measured models.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -485,6 +504,7 @@
       "best_for": "z.ai's GLM-4.5-Air \u2014 the cheapest non-free GLM ($1.10/M output): a small, fast, cn-jurisdiction model for high-throughput / latency-sensitive text and light coding where cost is the binding constraint, not top-tier capability. Reached via the `zai-api` method (provider-direct per-token) with a zai-api-key; step up to glm-4.6 for serious coding or glm-5.2 for reasoning / agentic work.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -509,6 +529,7 @@
       "best_for": "z.ai's GLM-4.6 \u2014 the proven value coding model: very low cost ($2.20/M output), cn-jurisdiction, and a strong code-generation / fill profile that made it a popular coding-plan default. Pick it over glm-5.2 when cost dominates and the task is bounded coding rather than the hardest agentic reasoning; pick glm-5.2 when reasoning depth or agentic autonomy matters. Text-only. Reached via the `zai-api` method (provider-direct per-token) with a zai-api-key.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -533,6 +554,7 @@
       "best_for": "Strong planning and long context at a low price. Its AA Intelligence Index of 33.7 ranks 28th of 53 measured models. Weakest at multimodal input (D).",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -557,6 +579,7 @@
       "best_for": "Frontier-class coding and agentic work, plus strong planning, long context and knowledge, at a low price. Its AA Intelligence Index of 44.8 ranks 11th of 53 measured models. It is the cheapest model in the catalog rated S for agentic work. Weakest at multimodal input (D).",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -581,6 +604,7 @@
       "best_for": "Strong coding, planning, agentic work and long context, with very fast output, at a low price. Its AA Intelligence Index of 41.8 ranks 15th of 53 measured models, the highest of any model at its price or lower.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -605,6 +629,7 @@
       "best_for": "OpenAI's baseline GPT-5 family flagship \u2014 broad reasoning capability at medium-tier pricing ($10/M output), useful when a balanced GPT-5-class model is needed without the premium of GPT-5.4 / 5.5 and without the codex coding specialization; superseded by GPT-5.2 / 5.3 / 5.4 for most production use cases but available on Cursor's pool",
       "superseded_by": "gpt-5.6-luna",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     },
     {
@@ -629,6 +654,7 @@
       "best_for": "The cheapest GPT-5 family variant at $2.00/M output \u2014 well-suited for trivial text tasks, simple lookups, rapid classification, and high-throughput pipelines where the cost-per-call is the binding constraint; not appropriate for multi-step planning or autonomous agentic execution; competitive with Gemini 2.5 Flash on cost but lacks Gemini's native multimodal-A rating",
       "superseded_by": "gpt-5.6-luna",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     },
     {
@@ -653,6 +679,7 @@
       "best_for": "Earlier Codex generation at the same medium-tier pricing as gpt-5.3-codex but $10/M output (gpt-5.3-codex is $14/M) \u2014 the lowest-cost S-tier coding model on the medium tier; prefer gpt-5.3-codex when latest-generation Codex quality matters, prefer gpt-5.1-codex when reproducing earlier-Codex-generation outputs or when the slightly cheaper output price compounds against a high-volume coding workload",
       "superseded_by": "gpt-5.6-luna",
       "superseded_on": "2026-10-01",
+      "added_on": null,
       "retires_on": "2026-10-31"
     },
     {
@@ -677,6 +704,7 @@
       "best_for": "Strong coding and agentic work at a medium price. Weakest at multimodal input (D).",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -701,6 +729,7 @@
       "best_for": "Strong coding, with very fast output, at a low price. Its AA Intelligence Index of 20.4 ranks 43rd of 53 measured models. Weakest at multimodal input (D), then planning, agentic work and knowledge (C). Superseded by GPT-5.6 Luna.",
       "superseded_by": "gpt-5.6-luna",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     },
     {
@@ -725,6 +754,7 @@
       "best_for": "Earlier-flagship GPT reasoning model (December 2025) with 400K context and broad knowledge coverage (GPQA 71.2, MMLU Pro 81.4); same medium-tier pricing as GPT-5.3 Codex but lacks Codex's autonomous-coding specialization \u2014 pick gpt-5.3-codex over gpt-5.2 for coding/agentic tasks; gpt-5.2 fits when broad reasoning at A-tier knowledge and a 400K context window are the primary need at the medium price tier",
       "superseded_by": "gpt-5.6-terra",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     },
     {
@@ -749,6 +779,7 @@
       "best_for": "Strong coding, agentic work and long context at a medium price. Its AA Intelligence Index of 28.5 ranks 34th of 53 measured models. Weakest at multimodal input (D). Superseded by GPT-5.6 Terra.",
       "superseded_by": "gpt-5.6-terra",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     },
     {
@@ -773,6 +804,7 @@
       "best_for": "Highest terminal and tool-use proficiency at the medium tier, most token-efficient autonomous coding, excels at long-running agentic sessions spanning debugging through deployment, and hard algorithmic problems requiring sustained code reasoning across languages \u2014 the cost-efficient pick for pure coding and agentic execution when an S-tier coding rating is needed",
       "superseded_by": "gpt-5.6-terra",
       "superseded_on": "2026-10-01",
+      "added_on": null,
       "retires_on": "2026-10-31"
     },
     {
@@ -797,6 +829,7 @@
       "best_for": "Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding",
       "superseded_by": "gpt-5.6-terra",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     },
     {
@@ -821,6 +854,7 @@
       "best_for": "Lightweight GPT-5.4 variant balancing quality and cost, well-suited for straightforward coding, short-form generation, and high-throughput workloads needing solid GPT reasoning at a fraction of the flagship price",
       "superseded_by": "gpt-5.6-luna",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     },
     {
@@ -845,6 +879,7 @@
       "best_for": "Ultra-low-cost GPT variant for trivial text tasks, simple lookups, rapid classification, and extreme-throughput pipelines where cost efficiency is the sole constraint and task complexity is minimal",
       "superseded_by": "gpt-5.6-luna",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     },
     {
@@ -869,6 +904,7 @@
       "best_for": "OpenAI's most capable frontier model and highest-cost GPT offering, best suited for the most demanding reasoning, long-horizon planning, and tasks where maximum intelligence is required regardless of cost \u2014 strongest single model for hard coding, agentic execution, and reasoning, but verify factual claims due to elevated hallucination",
       "superseded_by": "gpt-5.6-sol",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     },
     {
@@ -893,6 +929,7 @@
       "best_for": "OpenAI's smallest GPT-5.6 variant at low-tier pricing ($0.20/$1.20, 5x cheaper output than at initial listing) \u2014 strong AA Intelligence Index (37.3 max) for the price and very high output throughput (~151 tokens/s), positioning it as a very cost-efficient near-frontier alternative to Gemini 3.5 Flash and other cheap Flash-class models when GPT-family behavior is preferred; pick when latency and cost dominate but broader reasoning quality than smaller mini/nano variants is required.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -917,6 +954,7 @@
       "best_for": "OpenAI's GPT-5.6 Sol flagship \u2014 now at high-tier pricing ($4/$20) under promotional pricing through November 21, 2026 (was $5/$30 at initial listing), leading Artificial Analysis Intelligence Index (47.0 max) and posting Terminal-Bench 2.1 88.0 and HLE 49.5% at max effort; pick for the most demanding reasoning, agentic execution, and knowledge work at the high tier when a GPT-family top model is preferred over Anthropic's Opus/Fable lineage.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -941,6 +979,7 @@
       "best_for": "OpenAI's mid-tier GPT-5.6 variant between Sol (flagship) and Luna (mini) at medium-tier pricing ($2/$12) \u2014 Artificial Analysis Intelligence Index 42.1 (max) matches near-frontier reasoning while output speed (~105 tokens/s) is faster than most peers; pick for balanced near-frontier reasoning, agentic execution, and speed when Sol's high tier isn't justified but stronger throughput than GPT-5.4 is desired.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -965,6 +1004,7 @@
       "best_for": "Frontier-class coding and agentic work, plus strong long context and knowledge, at a very high price. Its AA Intelligence Index of 52.7 ranks 4th of 53 measured models.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -989,6 +1029,7 @@
       "best_for": "Strong coding, agentic work and long context at a low price. Its AA Intelligence Index of 37.3 ranks 24th of 53 measured models, the highest of any model at its price or lower.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -1013,6 +1054,7 @@
       "best_for": "Frontier-class coding, agentic work and long context, plus strong knowledge, at a medium price. Its AA Intelligence Index of 47.5 ranks 8th of 53 measured models.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -1037,6 +1079,7 @@
       "best_for": "Strong coding, agentic work, long context and knowledge at a medium price.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": "2026-10-01",
       "retires_on": null
     },
     {
@@ -1061,6 +1104,7 @@
       "best_for": "OpenAI's open-weight gpt-oss-120b (Apache-2.0) hosted by Groq \u2014 a very low-cost ($0.60/M output), fast (~500 tokens/s), us-jurisdiction reasoning model with an adjustable reasoning dial, for cost / throughput-sensitive reasoning and coding where an open-weight, self-hostable model (data-sovereignty, on-prem portability) is preferred. OpenAI positions it near o4-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key, or via the `ollama` method when docs/user-context.md declares it pulled locally (Apache-2.0 weights; ~65 GB at MXFP4) \u2014 recommendable whenever EITHER host is declared.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -1085,6 +1129,7 @@
       "best_for": "OpenAI's smaller open-weight gpt-oss-20b (Apache-2.0) hosted by Groq \u2014 the cheapest gpt-oss ($0.30/M output) and extremely fast (~1000 tokens/s), for high-throughput / latency-sensitive light reasoning, classification, and simple code under the us jurisdiction, or as an on-device / self-hostable open-weight option. OpenAI positions it near o3-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key, or via the `ollama` method when docs/user-context.md declares it pulled locally (Apache-2.0 weights; ~13 GB at MXFP4, fits 16 GB unified memory) \u2014 recommendable whenever EITHER host is declared. Prefer gpt-oss-120b when reasoning quality matters more than raw speed / cost.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -1109,6 +1154,7 @@
       "best_for": "Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding \u2014 leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -1133,6 +1179,7 @@
       "best_for": "Strong coding, planning, agentic work, long context and knowledge at a low price. Its AA Intelligence Index of 44.3 ranks 12th of 53 measured models. Superseded by Grok 4.7.",
       "superseded_by": "grok-4.7",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     },
     {
@@ -1157,6 +1204,7 @@
       "best_for": "Strong coding, planning, agentic work, long context and knowledge at a low price. Its AA Intelligence Index of 46.4 ranks 10th of 53 measured models.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -1181,6 +1229,7 @@
       "best_for": "Strong long context at a low price. Its AA Intelligence Index of 25.8 ranks 37th of 53 measured models. Weakest at multimodal input (D).",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -1205,6 +1254,7 @@
       "best_for": "Moonshot's Kimi K3 flagship at high-tier pricing ($3/$15) \u2014 a strong near-frontier reasoning + coding model with 1M extended-context support at flat per-token rates and AA Intelligence Index 43.6 (max), competitive with GPT-5.6 Sol and Opus 5 on knowledge/coding indices; text-only (no multimodal) and notably slow (~38 tokens/s). Routed via Cursor's pool only; cn-jurisdiction excluded by the default allowed-jurisdictions list unless the user opts into cn.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -1229,6 +1279,7 @@
       "best_for": "Mistral's open-weight Large 3 (MoE) \u2014 an EU-jurisdiction, self-hostable option at very low cost ($1.50/M output) for data-sovereignty workloads or teams that want to run the weights themselves. Artificial Analysis Intelligence Index 9.3 sits below the frontier and even below Mistral's own Medium 3.5 (Mistral repositioned Large as an open community model) \u2014 pick it for the open-weights / EU-operator profile, not raw capability. Reached via the `mistral-api` method (provider-direct per-token) or self-hosting.",
       "superseded_by": "mistral-small-4",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     },
     {
@@ -1253,6 +1304,7 @@
       "best_for": "Mistral's flagship unified model \u2014 the EU-jurisdiction choice for data-sovereignty / EU-regulatory workloads at low cost ($7.50/M output), with adjustable reasoning and multimodal (vision) input. Artificial Analysis Intelligence Index 14.2 places it well below the US/cn frontier (behind models such as Gemini 3.1 Pro or DeepSeek V4-Pro) \u2014 pick it when the operator's EU jurisdiction is the deciding constraint, not when raw capability is. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -1277,6 +1329,7 @@
       "best_for": "Mistral's cheapest fast model ($0.30/M output) \u2014 a small EU-jurisdiction MoE with multimodal input and an optional reasoning dial, for high-throughput / latency-sensitive text and light multimodal work where the EU operator matters and a mistral-api-key is configured. Artificial Analysis Intelligence Index 11.3 is low, so it is a cost / sovereignty pick rather than a capability pick. Reached via the `mistral-api` method (provider-direct per-token).",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -1301,6 +1354,7 @@
       "best_for": "Frontier-class coding, plus strong agentic work, long context and knowledge, at a low price. Its AA Intelligence Index of 48.1 ranks 7th of 53 measured models, the highest of any model at its price or lower. It is the cheapest model in the catalog rated S for coding.",
       "superseded_by": null,
       "superseded_on": null,
+      "added_on": null,
       "retires_on": null
     },
     {
@@ -1325,6 +1379,7 @@
       "best_for": "Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching",
       "superseded_by": "claude-opus-5-5",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     },
     {
@@ -1349,6 +1404,7 @@
       "best_for": "Frontier-class planning, plus strong coding, agentic work, multimodal input, long context and knowledge, at a very high price. Its AA Intelligence Index of 41.8 ranks 15th of 53 measured models. Weakest at speed (D). Superseded by Opus 5.5.",
       "superseded_by": "claude-opus-5-5",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     },
     {
@@ -1373,6 +1429,7 @@
       "best_for": "Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation",
       "superseded_by": "claude-sonnet-5",
       "superseded_on": "2026-09-24",
+      "added_on": null,
       "retires_on": "2026-10-24"
     }
   ],

@@ -183,6 +183,9 @@ def _parse_models(selector_text: str) -> list[dict[str, Any]]:
                     "superseded_by": attrs.get("superseded-by") or None,
                     "superseded_on": attrs.get("superseded-on") or None,
                     "retired_on": attrs.get("retired-on") or None,
+                    # The day the model joined the catalog (update/stamp_added.py);
+                    # /models counts its New tag from it until AA dates the release.
+                    "added_on": attrs.get("added-on") or None,
                 }
             )
     assert_no_element_lost(options_match.group(1), matched, MODEL_OPEN_RE, "<model-options>")

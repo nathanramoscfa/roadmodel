@@ -44,6 +44,7 @@ interface RawModel {
   superseded_by?: string | null;
   superseded_on?: string | null;
   retires_on?: string | null;
+  added_on?: string | null;
 }
 
 const MODELS = (catalog as { models?: RawModel[] }).models ?? [];
@@ -108,7 +109,10 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
       superseded_by: m.superseded_by ?? null,
       superseded_on: m.superseded_on ?? null,
       retires_on: m.retires_on ?? null,
-      new_until: newUntil(bench?.release_date, now),
+      added_on: m.added_on ?? null,
+      // Counted from the release AA dates; before AA lists the model, from
+      // the day it joined the catalog.
+      new_until: newUntil(bench?.release_date ?? m.added_on, now),
     };
   });
   // The frontier across the whole catalog; the page re-marks it over the
