@@ -291,6 +291,7 @@ def guard(
     """Return (``proposed`` with every rule-breaking letter edit reverted, the reverts)."""
     base_models = models(base)
     decls = parse_declarations(declarations)
+    bench = derive_ratings.with_composites(bench)
     reverts: list[Revert] = []
     for mid, new in models(proposed).items():
         if mid in base_models:

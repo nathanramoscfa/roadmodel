@@ -13,7 +13,7 @@ Score, per candidate (model reached through a specific access method)::
 
 - ``quality`` (0–100) is the model's standing in the task's category: the
   Artificial Analysis evidence figure for that category, min-max scaled across
-  the measured catalog (by rank for agentic, see ``RANK_SCALED``) and blended
+  the measured catalog (by rank for coding and agentic, see ``RANK_SCALED``) and blended
   70/30 with the S→D letter, or the letter alone when AA has not measured the
   model (``quality_source`` says which).
 - ``requirement_penalty`` is a steep linear penalty for falling short of the
@@ -80,10 +80,11 @@ BUDGETS: Final[tuple[str, ...]] = ("cheap", "balanced", "best")
 EFFORT_LADDER: Final[tuple[str, ...]] = ("low", "medium", "high", "xhigh", "max")
 
 # The Artificial Analysis evidence figure per category (the same mapping the
-# web catalog uses for its derived letters). ``None`` = editorial letter only.
-# ``speed`` reads the top-level tokens/s field rather than an evaluation.
+# web catalog uses for its derived letters). ``None`` = the letter only.
+# ``speed`` reads the top-level tokens/s field rather than an evaluation; a
+# ``COMPOSITES`` key is computed by ``with_composites``.
 CATEGORY_EVIDENCE: Final[dict[str, str | None]] = {
-    "coding": "artificial_analysis_coding_index",
+    "coding": "coding_composite",
     "planning": "artificial_analysis_intelligence_index",
     "agentic": "terminalbench_v4_0",
     "multimodal": None,
@@ -97,7 +98,16 @@ CATEGORY_EVIDENCE: Final[dict[str, str | None]] = {
 # Terminal-Bench 4.0 spreads the field over 0–64% with the leader far above
 # the pack, so min-max would squash most models toward 0; update/
 # derive_ratings.py letters agentic by rank for the same reason (#789).
-RANK_SCALED: Final[frozenset[str]] = frozenset({"agentic"})
+RANK_SCALED: Final[frozenset[str]] = frozenset({"coding", "agentic"})
+
+# Composite evidence: the mean of a model's mid-rank percentiles (0–1) on each
+# part, among the models measured on every part. Coding pairs SciCode with
+# Terminal-Bench 4.0, the evaluations AA's own Coding Index averaged, on the
+# releases AA runs today (it publishes no Coding Index for new models).
+# Mirrors update/derive_ratings.py COMPOSITES.
+COMPOSITES: Final[dict[str, tuple[str, ...]]] = {
+    "coding_composite": ("scicode", "terminalbench_v4_0"),
+}
 _RANK_SCALED_KEYS: Final[frozenset[str]] = frozenset(
     key for cat in RANK_SCALED if (key := CATEGORY_EVIDENCE[cat]) is not None
 )
@@ -267,6 +277,41 @@ def _load_benchmarks() -> dict[str, Any]:
     return models if isinstance(models, dict) else {}
 
 
+def with_composites(bench: dict[str, Any]) -> dict[str, Any]:
+    """A copy of ``bench`` with each ``COMPOSITES`` key added to the
+    evaluations of every row measured on all its parts: the mean of the row's
+    mid-rank percentiles on those parts, among those rows (0 = lowest)."""
+    out: dict[str, Any] = {}
+    for mid, row in bench.items():
+        if isinstance(row, dict):
+            evals = row.get("evaluations")
+            out[mid] = {**row, "evaluations": dict(evals) if isinstance(evals, dict) else {}}
+        else:
+            out[mid] = row
+    for key, parts in COMPOSITES.items():
+        rows: dict[str, list[float]] = {}
+        for mid, row in out.items():
+            if not isinstance(row, dict):
+                continue
+            vals = [row["evaluations"].get(p) for p in parts]
+            if all(isinstance(v, (int, float)) and math.isfinite(float(v)) for v in vals):
+                rows[mid] = [float(v) for v in vals]
+        if not rows:
+            continue
+        columns = list(zip(*rows.values(), strict=True))
+        n = len(rows)
+        for mid, values in rows.items():
+            # A lone measured model leads its own composite.
+            pcts = [
+                (sum(1 for x in col if x < v) + (sum(1 for x in col if x == v) - 1) / 2) / (n - 1)
+                if n > 1
+                else 1.0
+                for v, col in zip(values, columns, strict=True)
+            ]
+            out[mid]["evaluations"][key] = sum(pcts) / len(pcts)
+    return out
+
+
 def _evidence(bench: dict[str, Any], model_id: str, key: str | None) -> float | None:
     if key is None:
         return None
@@ -312,6 +357,7 @@ def market_exchange_rate(
     market line to anchor on)."""
     if task is None:
         task = Task("planning", "medium")
+    bench = with_composites(bench)
     if scale is None:
         scale = _evidence_scale(catalog, bench, CATEGORY_EVIDENCE[task.category])
     xs: list[float] = []
@@ -708,7 +754,7 @@ def rank(
 ) -> Ranking:
     """Rank every reachable (model, platform) pair for ``task``."""
     cat = catalog if catalog is not None else _cost._load_catalog()
-    bench = benchmarks if benchmarks is not None else _load_benchmarks()
+    bench = with_composites(benchmarks if benchmarks is not None else _load_benchmarks())
     text = user_context_text or ""
     headroom = consumption_headroom(text)
     pools = pool_states(text)

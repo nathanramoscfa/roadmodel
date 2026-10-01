@@ -55,6 +55,8 @@ SELECTOR = """<selector>
 </model-options>
 <selection-algorithm>
     Guardrails:
+      - For PRIMARY = `multimodal`, only consider models with tier-multimodal
+        of S or A (currently: stale-name at S).
       - For PRIMARY = `coding` at S-tier requirement, the candidate set is
         leader, unmeasured; cost tie-breaker favors
         unmeasured when the ratings are equivalent for the prompt.
@@ -78,22 +80,10 @@ def test_bands_are_gap_to_leader() -> None:
 
 def test_derive_scales_fractions_to_points_and_skips_nulls() -> None:
     bench = _bench(
-        leader={
-            "artificial_analysis_coding_index": 80.0,
-            "hle": 0.60,
-            "lcr": None,
-            "terminalbench_v4_0": 0.9,
-        },
-        cheap_one={
-            "artificial_analysis_coding_index": 58.0,
-            "hle": 0.42,
-            "lcr": 0.7,
-            "terminalbench_v4_0": None,
-        },
+        leader={"hle": 0.60, "lcr": None, "scicode": 0.62, "terminalbench_v4_0": 0.9},
+        cheap_one={"hle": 0.42, "lcr": 0.7, "scicode": 0.50, "terminalbench_v4_0": None},
     )
     d = dr.derive(bench)
-    assert d["coding"]["leader"]["letter"] == "S"
-    assert d["coding"]["cheap_one"] == {"value": 58.0, "leader": 80.0, "gap": 22.0, "letter": "B"}
     # HLE fraction → points: 0.42 → 42.0, gap 18 → A.
     assert d["knowledge"]["cheap_one"]["letter"] == "A"
     # Only cheap_one has LCR, so it IS the leader.
@@ -101,43 +91,51 @@ def test_derive_scales_fractions_to_points_and_skips_nulls() -> None:
         "cheap_one": {"value": 70.0, "leader": 70.0, "gap": 0.0, "letter": "S"}
     }
     assert "cheap_one" not in d["agentic"]
+    # Coding's composite takes both of its parts: only the leader has them,
+    # and a lone measured model leads its own composite.
+    assert "cheap_one" not in d["coding"]
+    assert d["coding"]["leader"]["value"] == 100.0 and d["coding"]["leader"]["letter"] == "S"
+
+
+def test_the_coding_composite_is_the_mean_percentile_of_its_parts() -> None:
+    bench = _bench(
+        a={"scicode": 0.60, "terminalbench_v4_0": 0.10},
+        b={"scicode": 0.50, "terminalbench_v4_0": 0.60},
+        c={"scicode": 0.40, "terminalbench_v4_0": 0.30},
+        d={"scicode": 0.70},  # one part only: no composite
+    )
+    out = dr.with_composites(bench)
+    composite = {cid: row["evaluations"].get("coding_composite") for cid, row in out.items()}
+    # SciCode ranks a > b > c, Terminal-Bench 4.0 ranks b > c > a.
+    assert composite == {"a": 0.5, "b": 0.75, "c": 0.25, "d": None}
+    assert "coding_composite" not in bench["a"]["evaluations"]  # a copy, not a mutation
 
 
 def test_plan_apply_and_enumeration_round_trip() -> None:
     bench = _bench(
-        leader={
-            "artificial_analysis_coding_index": 80.0,
-            "hle": 0.60,
-            "lcr": 0.9,
-            "terminalbench_v4_0": 0.9,
-        },
-        **{
-            "cheap-one": {
-                "artificial_analysis_coding_index": 77.0,
-                "hle": 0.20,
-                "lcr": 0.85,
-                "terminalbench_v4_0": 0.5,
-            }
-        },
+        leader={"hle": 0.60, "lcr": 0.9, "scicode": 0.62, "terminalbench_v4_0": 0.9},
+        **{"cheap-one": {"hle": 0.20, "lcr": 0.85, "scicode": 0.60, "terminalbench_v4_0": 0.5}},
     )
     changes, unmeasured = dr.plan_changes(SELECTOR, bench)
     by = {(c["id"], c["category"]): (c["from"], c["to"]) for c in changes}
     # Placeholder B → derived letters; the leader keeps its S everywhere.
-    assert by[("cheap-one", "coding")] == ("B", "S")  # gap 3
     assert by[("cheap-one", "knowledge")] == ("B", "C")  # gap 40
     assert by[("cheap-one", "long-context")] == ("B", "S")  # gap 5
-    # Agentic is by rank: second of two measured models holds its B.
-    assert ("cheap-one", "agentic") not in by
+    # Coding and agentic are by rank: second of two measured holds its B.
+    assert ("cheap-one", "coding") not in by and ("cheap-one", "agentic") not in by
     assert not any(c["id"] == "leader" for c in changes)
-    # The unmeasured model is reported, not edited.
+    # The unmeasured model is reported and keeps its estimates, except that
+    # an S takes a measurement.
     assert all("unmeasured" in ids for ids in unmeasured.values())
-    assert not any(c["id"] == "unmeasured" for c in changes)
+    assert [(c["category"], c["from"], c["to"]) for c in changes if c["id"] == "unmeasured"] == [
+        ("coding", "S", "A")
+    ]
 
     updated = dr.apply_changes(SELECTOR, changes)
     tiers = dr.current_tiers(updated)
-    assert tiers["cheap-one"]["coding"] == "S"
     assert tiers["cheap-one"]["knowledge"] == "C"
     assert tiers["cheap-one"]["long-context"] == "S"
+    assert tiers["unmeasured"]["coding"] == "A"
     # Untouched attributes survive verbatim.
     assert 'tier-planning="B"' in updated and 'tier-speed="S"' in updated
     assert dr.plan_changes(updated, bench)[0] == []
@@ -146,30 +144,26 @@ def test_plan_apply_and_enumeration_round_trip() -> None:
     # cheapest first, with the cheapest as the tie-breaker.
     regen = dr.regenerate_coding_enumeration(updated)
     assert (
-        "the candidate set is\n        cheap-one, unmeasured, leader; cost tie-breaker favors\n"
-        "        cheap-one when the ratings are equivalent for the prompt."
+        "the candidate set is\n        leader; cost tie-breaker favors\n"
+        "        leader when the ratings are equivalent for the prompt."
     ) in regen
-    # Idempotent.
     assert dr.regenerate_coding_enumeration(regen) == regen
+    # The multimodal list: every S, then every A, each cheapest first.
+    multimodal = dr.regenerate_multimodal_enumeration(regen)
+    assert "of S or A (currently: leader at S).\n" in multimodal
+    assert dr.regenerate_multimodal_enumeration(multimodal) == multimodal
 
 
-def test_report_names_changes_and_editorial_categories() -> None:
-    bench = _bench(
-        **{
-            "cheap-one": {
-                "artificial_analysis_coding_index": 50.0,
-                "hle": None,
-                "lcr": None,
-                "terminalbench_v4_0": None,
-            }
-        }
-    )
+def test_report_names_changes_caps_and_estimates() -> None:
+    bench = _bench(**{"cheap-one": {"hle": 0.5}})
     changes, unmeasured = dr.plan_changes(SELECTOR, bench)
     text = dr.render_report(changes, unmeasured, {"cheap-one": "Cheap One"})
-    assert "| Cheap One | coding | AA Coding Index | 50.0 | 50.0 | 0.0 | — | B | **S** |" in text
+    assert "| Cheap One | knowledge | HLE | 50.0 | 50.0 | 0.0 | — | B | **S** |" in text
+    # Every unmeasured S in a derived category is capped, and said so.
+    assert "- leader: coding S → A" in text and "- unmeasured: coding S → A" in text
     assert "planning, multimodal, speed" in text
     # Names come from the catalog map when present, else the id.
-    assert "**knowledge**: Cheap One, leader, unmeasured" in text
+    assert "**coding**: Cheap One, leader, unmeasured" in text
 
 
 def test_agentic_letters_by_rank_hold_the_spread() -> None:
@@ -226,6 +220,13 @@ def test_a_retired_models_row_never_shifts_a_letter() -> None:
     assert ("leader", "knowledge") not in by  # still the leader: S
 
 
+def _ts_block(source: str, name: str) -> str:
+    """The body of `export const <name> ... = { ... };` in a TypeScript file."""
+    m = re.search(rf"export const {name}\b.*?= \{{(.*?)\n\}};", source, re.S)
+    assert m, f"{name} not found"
+    return m.group(1)
+
+
 def test_web_and_scoring_mirror_the_derivation() -> None:
     """The /models tooltips (web/lib/benchmark-grid.ts) must explain the rule
     the letters follow, and the scoring core must read the same evidence."""
@@ -234,18 +235,33 @@ def test_web_and_scoring_mirror_the_derivation() -> None:
     grid = (REPO_ROOT / "web" / "lib" / "benchmark-grid.ts").read_text(encoding="utf-8")
     bands = re.findall(r'\{ max: (\d+), letter: "([SABCD])" \}', grid)
     assert [(float(m), letter) for m, letter in bands] == dr.BANDS
-    assert re.search(r"export const RANK_OUT_OF = (\d+);", grid).group(1) == str(dr.RANK_OUT_OF)  # type: ignore[union-attr]
+    out_of = re.search(r"export const RANK_OUT_OF = (\d+);", grid)
+    assert out_of and out_of.group(1) == str(dr.RANK_OUT_OF)
+    ranks = _ts_block(grid, "RANK_DERIVATION")
     for cat, shares in dr.RANK_SHARES.items():
-        body = re.search(rf"\n  {re.escape(cat)}: \[(.*?)\],", grid, re.S)
+        body = re.search(rf"\n  {re.escape(cat)}: \[(.*?)\],", ranks, re.S)
         assert body, f"RANK_DERIVATION lacks {cat}"
         pairs = re.findall(r'letter: "([SABCD])", count: (\d+)', body.group(1))
         assert [(letter, int(c)) for letter, c in pairs] == shares
-    # Each derived category's evidence column carries its `category` tag, and
-    # the scoring core reads the same AA key.
+    ceiling = re.search(r'export const ESTIMATE_CEILING: Rating = "([SABCD])";', grid)
+    assert ceiling and ceiling.group(1) == dr.ESTIMATE_CEILING
+    composites = _ts_block(grid, "COMPOSITE_DERIVATION")
     for cat, (key, _scale, _label) in dr.CATEGORY_EVIDENCE.items():
-        block = re.search(rf'key: "{key}",(.*?)\n  \}}', grid, re.S)
-        assert block and f'category: "{cat}"' in block.group(1), f"{key} is not tagged {cat}"
+        # The scoring core reads the same evidence.
         assert scoring.CATEGORY_EVIDENCE[cat] == key
+        if key in dr.COMPOSITES:
+            # A composite: the same parts in the scoring core and on the page.
+            parts = dr.COMPOSITES[key]
+            assert scoring.COMPOSITES[key] == parts
+            body = re.search(
+                rf"\n  {re.escape(cat)}: \{{.*?parts: \[(.*?)\] \}},", composites, re.S
+            )
+            assert body, f"COMPOSITE_DERIVATION lacks {cat}"
+            assert tuple(re.findall(r'"(\w+)"', body.group(1))) == parts
+        else:
+            # A single evidence column carries the category's `category` tag.
+            block = re.search(rf'key: "{key}",(.*?)\n  \}}', grid, re.S)
+            assert block and f'category: "{cat}"' in block.group(1), f"{key} is not tagged {cat}"
     assert set(dr.RANK_SHARES) <= scoring.RANK_SCALED
 
 
@@ -258,5 +274,8 @@ def test_committed_selector_matches_committed_benchmark_layer() -> None:
         + "; ".join(f"{c['id']} {c['category']} {c['from']}→{c['to']}" for c in changes)
         + " — run: python update/derive_ratings.py --write && python update/render_md.py && python update/build_catalog.py"
     )
-    # And the coding S-tier enumeration is exactly the regeneration.
+    # And both letter-driven enumerations are exactly the regeneration.
     assert dr.regenerate_coding_enumeration(selector) == selector
+    assert dr.regenerate_multimodal_enumeration(selector) == selector
+    # No derived category holds an unmeasured S.
+    assert not [c for c in changes if c.get("capped")]
