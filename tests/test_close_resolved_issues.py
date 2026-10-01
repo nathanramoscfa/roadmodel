@@ -37,6 +37,13 @@ def test_a_docs_issue_closes_when_its_model_is_in_the_catalog() -> None:
     )
 
 
+def test_a_docs_issue_closes_when_its_model_is_declined() -> None:
+    title = 'chore(catalog): Gemini docs introduced model "Gemini Robotics Er 2"'
+    assert cri.resolution(title, KEYS, DECLINED) is None
+    declined = DECLINED | {("google", "gemini-robotics-er-2")}
+    assert "declined in the discovery lane" in cri.resolution(title, KEYS, declined)  # type: ignore[operator]
+
+
 def test_a_provider_direct_issue_closes_when_its_model_is_in_the_catalog() -> None:
     title = 'chore(catalog): provider-direct model "Gemini 3.8 Flash" not in <model-options>'
     assert cri.resolution(title, KEYS, DECLINED)

@@ -93,7 +93,12 @@ would then reject.
       provider and slug as the block writes them. Keep every line already in
       that section. A declined model stops being flagged.
   Name every add and every decline in your summary. Never leave an entry
-  unhandled: an ignored flag is what kept the catalog stale.
+  unhandled: an ignored flag is what kept the catalog stale. Whatever you do
+  leave undecided, `update/dispose_discoveries.py` disposes after your pass by
+  rule — a priced model whose same-series predecessor the provider's API
+  already offers is added with that predecessor's letters; anything else is
+  declined (an unpriced one is re-checked each run) — so your decision, made
+  with full context, is the one that counts.
 - If models are removed from the Cursor pricing page, remove them from
   `model-tier-cost-scale.md`.
 - For every model that also appears in the `<model-options>` block of

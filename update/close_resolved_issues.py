@@ -10,7 +10,9 @@ it was resolved:
 
 - ``chore(catalog): <Tool> docs introduced model "<model>"`` and
   ``chore(catalog): provider-direct model "<model>" not in <model-options>``
-  close when <model> is a ``<model>`` in docs/model-selector.txt;
+  close when <model> is a ``<model>`` in docs/model-selector.txt, or declined
+  in the discovery lane (update/dispose_discoveries.py declines docs-only
+  models);
 - ``chore(catalog): provider page prices "<provider>/<slug>"; …`` closes when
   the model is in the catalog or declined in the discovery lane
   (docs/model-tier-cost-scale.md).
@@ -51,6 +53,12 @@ def resolution(title: str, keys: set[str], declined: set[tuple[str, str]]) -> st
     if m := _MODEL_ISSUE.match(title):
         if _variants(m["model"]) & keys:
             return f"`{m['model']}` is in the catalog (docs/model-selector.txt)."
+        # update/dispose_discoveries.py declines a docs-only model under its
+        # provider; any provider's decline of the same name settles it.
+        if normalize(m["model"]) in {slug for _provider, slug in declined}:
+            return (
+                f"`{m['model']}` is declined in the discovery lane (docs/model-tier-cost-scale.md)."
+            )
         return None
     if m := _DISCOVERY_ISSUE.match(title):
         if _variants(m["slug"]) & keys:

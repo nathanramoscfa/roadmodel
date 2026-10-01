@@ -135,13 +135,68 @@ jobs:
           git show HEAD:docs/model-tier-cost-scale.md > /tmp/base-cost-scale.md
           python update/discovery.py --preserve-declined /tmp/base-cost-scale.md
 
+      - name: Re-apply provider-direct models (federation overlay)
+        # Deterministic backstop (Phase 4.6 T4). The Opus refresh above rewrites
+        # the catalog from Cursor's pricing page; this step reconciles every
+        # provider-direct model against the committed snapshots so the conformance
+        # gate stays green BY CONSTRUCTION and a provider price change auto-flows:
+        #   1. whole-element providers the Opus rewrite drops (e.g. DeepSeek) are
+        #      re-added from the committed (pre-run) selector;
+        #   2. every provider-direct input/output price is forced to its snapshot
+        #      in BOTH docs/model-selector.txt AND docs/model-tier-cost-scale.md
+        #      (so G4 never rejects an Opus-authored price, and selector<->cost-scale
+        #      stay consistent). Snapshots were refreshed in the prior step.
+        # Strict no-op when the docs already match the snapshots. See
+        # update/merge_catalog.py.
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
+        run: |
+          set -euo pipefail
+          git show HEAD:docs/model-selector.txt > /tmp/base-selector.txt
+          # Prose guard: every line the curation pass added is checked for what
+          # this prose never needs (URLs, active markup, hidden characters, text
+          # addressed to a model). A hit quarantines the pass — both docs go back
+          # to their committed text before the deterministic layers below run.
+          python update/prose_guard.py --apply docs/model-selector.txt docs/model-tier-cost-scale.md
+          python update/merge_catalog.py --write --base /tmp/base-selector.txt
+          # Discovery lane: add or decline every flagged model the curation pass
+          # left undecided — a priced same-series successor joins the catalog with
+          # its predecessor's letters, anything else is declined with a reason
+          # (update/dispose_discoveries.py). Before the Codex sync, so a new model
+          # reaches the Codex methods this run; before model_prose.py, which writes
+          # a new model's empty best-for and headline-benchmarks.
+          python update/dispose_discoveries.py --write
+          # Codex lists its models on its own page; a catalogued one belongs on both
+          # Codex methods. Deterministic + additive — the prompt's supports-models
+          # guard refuses a whole family launch at once. Fail-open on fetch errors.
+          codex_ids="$(python update/extract_codex_models.py --recommended | paste -sd, - || true)"
+          if [ -n "${codex_ids}" ]; then
+            python update/merge_catalog.py --sync-method codex-cli --ids "${codex_ids}"
+            python update/merge_catalog.py --sync-method codex-api --ids "${codex_ids}"
+          fi
+          # Rating guard: every letter edit the curation pass made must follow
+          # update/prompt.md's rules (declared with its category's evidence, one
+          # step at a time, a new model from its computed placeholder). Edits
+          # that break one are reverted; the report rides in the PR body.
+          python update/rating_guard.py --apply --base /tmp/base-selector.txt --declarations update/.last-warnings.txt
+          # Derived ratings overlay: tier-coding/agentic/long-context/knowledge
+          # are a function of docs/benchmarks.json (update/derive_ratings.py),
+          # so any Opus edit to them is reverted here and the coding S-tier
+          # enumeration is regenerated. The report rides in the PR body.
+          python update/derive_ratings.py --write
+          # Lifecycle tags: re-apply the supersession rule, restoring any tag
+          # (and its date) the curation pass dropped from the committed file.
+          python update/supersede.py --write --base /tmp/base-selector.txt
+          # Best-for + headline-benchmarks prose written from the data above
+          # (update/model_prose.py); after the letters and tags, before render.
+          python update/model_prose.py --write
+          python update/render_md.py
+
       - name: Flag unfederated provider-direct models (model-list federation)
-        # Phase 4.6 model-list federation (FLAG-ONLY): each provider-direct snapshot
-        # is the discovery source for ITS models. Any snapshot model not yet in
-        # <model-options> is flagged via a DEDUPED issue for an editorial add (with
-        # tier ratings — the DeepSeek/Mistral path); it is NEVER auto-added, so no
-        # unrated model can surface in recommendations. No-op when every snapshot
-        # model is already in the registry (today's state). Fail-open.
+        # Runs after the overlay, so it sees what update/dispose_discoveries.py
+        # left: every discovery-lane model is added or declined there, so the
+        # discovery flags below are normally empty. A provider-direct snapshot
+        # model missing from <model-options> (the DeepSeek/Mistral path) is still
+        # flagged via a DEDUPED issue. Fail-open.
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -191,55 +246,6 @@ jobs:
               --body "The provider's own pricing page prices \`${model}\` (listed in \`unexpected_slugs\` of its \`update/catalog-*.json\` snapshot), and this run's curation neither added it to \`<model-options>\` nor declined it in the \`## Declined Models (discovery lane)\` section of \`docs/model-tier-cost-scale.md\`. Add it with tier ratings, or decline it with a reason." \
               || echo "issue create failed for ${model}"
           done
-
-      - name: Re-apply provider-direct models (federation overlay)
-        # Deterministic backstop (Phase 4.6 T4). The Opus refresh above rewrites
-        # the catalog from Cursor's pricing page; this step reconciles every
-        # provider-direct model against the committed snapshots so the conformance
-        # gate stays green BY CONSTRUCTION and a provider price change auto-flows:
-        #   1. whole-element providers the Opus rewrite drops (e.g. DeepSeek) are
-        #      re-added from the committed (pre-run) selector;
-        #   2. every provider-direct input/output price is forced to its snapshot
-        #      in BOTH docs/model-selector.txt AND docs/model-tier-cost-scale.md
-        #      (so G4 never rejects an Opus-authored price, and selector<->cost-scale
-        #      stay consistent). Snapshots were refreshed in the prior step.
-        # Strict no-op when the docs already match the snapshots. See
-        # update/merge_catalog.py.
-        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
-        run: |
-          set -euo pipefail
-          git show HEAD:docs/model-selector.txt > /tmp/base-selector.txt
-          # Prose guard: every line the curation pass added is checked for what
-          # this prose never needs (URLs, active markup, hidden characters, text
-          # addressed to a model). A hit quarantines the pass — both docs go back
-          # to their committed text before the deterministic layers below run.
-          python update/prose_guard.py --apply docs/model-selector.txt docs/model-tier-cost-scale.md
-          python update/merge_catalog.py --write --base /tmp/base-selector.txt
-          # Codex lists its models on its own page; a catalogued one belongs on both
-          # Codex methods. Deterministic + additive — the prompt's supports-models
-          # guard refuses a whole family launch at once. Fail-open on fetch errors.
-          codex_ids="$(python update/extract_codex_models.py --recommended | paste -sd, - || true)"
-          if [ -n "${codex_ids}" ]; then
-            python update/merge_catalog.py --sync-method codex-cli --ids "${codex_ids}"
-            python update/merge_catalog.py --sync-method codex-api --ids "${codex_ids}"
-          fi
-          # Rating guard: every letter edit the curation pass made must follow
-          # update/prompt.md's rules (declared with its category's evidence, one
-          # step at a time, a new model from its computed placeholder). Edits
-          # that break one are reverted; the report rides in the PR body.
-          python update/rating_guard.py --apply --base /tmp/base-selector.txt --declarations update/.last-warnings.txt
-          # Derived ratings overlay: tier-coding/agentic/long-context/knowledge
-          # are a function of docs/benchmarks.json (update/derive_ratings.py),
-          # so any Opus edit to them is reverted here and the coding S-tier
-          # enumeration is regenerated. The report rides in the PR body.
-          python update/derive_ratings.py --write
-          # Lifecycle tags: re-apply the supersession rule, restoring any tag
-          # (and its date) the curation pass dropped from the committed file.
-          python update/supersede.py --write --base /tmp/base-selector.txt
-          # Best-for + headline-benchmarks prose written from the data above
-          # (update/model_prose.py); after the letters and tags, before render.
-          python update/model_prose.py --write
-          python update/render_md.py
 
       - name: Rebuild docs/catalog.json (deterministic)
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
@@ -308,6 +314,9 @@ jobs:
           fi
           if [ -s update/.last-prose-guard.md ]; then
             warnings="${warnings}$(printf '\n\n')$(cat update/.last-prose-guard.md)"
+          fi
+          if [ -s update/.last-dispositions.md ]; then
+            warnings="${warnings}$(printf '\n\n')$(cat update/.last-dispositions.md)"
           fi
           git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
           git commit -m "Automated catalog refresh: ${DATE}" -m "${summary}${warnings}"
