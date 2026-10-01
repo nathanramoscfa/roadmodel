@@ -24,8 +24,8 @@
 // the hover card instead of being drawn on top of something.
 //
 // Everything comes from the same rows and ScoreFit the table uses, and the
-// page's Provider, Jurisdiction and Cost tier filters choose the dots: a tier
-// the filters empty has no chart. The lines and Scores stay the whole-catalog
+// page's Provider, Jurisdiction, Weights and Cost tier filters choose the
+// dots: a tier the filters empty has no chart. The lines and Scores stay the whole-catalog
 // fit, so a filter changes what is drawn, never where the line sits.
 "use client";
 

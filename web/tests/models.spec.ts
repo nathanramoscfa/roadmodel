@@ -2,7 +2,7 @@
 //
 // The /models catalog reference page (public): renders the full model table,
 // the "how to read this" legend, sortable columns, the provider + jurisdiction
-// + cost filters (which drive the charts too), the ratings/benchmark-scores
+// + weights + cost filters (which drive the charts too), the ratings/benchmark-scores
 // view toggle, the uniform Artificial
 // Analysis figures (under the letters and as the full grid), the expanded row,
 // and benchmark + provider-doc links.
@@ -55,9 +55,18 @@ interface CatalogModel {
 }
 const catalog = JSON.parse(
   readFileSync(path.join(process.cwd(), "data", "catalog.json"), "utf8"),
-) as { models: CatalogModel[] };
+) as {
+  models: CatalogModel[];
+  access_methods: { id: string; provider_jurisdiction: string; supports_models: string[] }[];
+};
 
 const MODEL_COUNT = catalog.models.length;
+
+// The open-weight models: the ones the catalog's local (Ollama) method serves,
+// a list the selector curates by licence.
+const OPEN_WEIGHT_IDS = new Set(
+  catalog.access_methods.filter((m) => m.provider_jurisdiction === "local").flatMap((m) => m.supports_models),
+);
 
 // The structured benchmark layer the grid reads (data/benchmarks.json is the
 // synced copy of docs/benchmarks.json, like the catalog).
@@ -356,6 +365,61 @@ test("a Cost tier narrows the charts to its models; the frontier still spans eve
     await expect(panel.getByTestId("frontier-off-band")).toContainText(catalog.models.find((m) => m.id === id)!.name);
   }
   test.info().annotations.push({ type: "off-band frontier steps", description: `${tier}: ${offBand.join(",")}` });
+});
+
+test("Weights: Open keeps only the open-weight models and redraws the frontier over them; Closed keeps the rest", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/models");
+  const open = catalog.models.filter((m) => OPEN_WEIGHT_IDS.has(m.id));
+  // Both sides are populated, and every listed id is a catalogued model.
+  expect(open.length).toBeGreaterThan(0);
+  expect(open.length).toBeLessThan(MODEL_COUNT);
+  expect(open.length).toBe(OPEN_WEIGHT_IDS.size);
+  const rows = page.getByTestId("model-row");
+  const panel = page.getByTestId("frontier-panel");
+  const frontierOf = (pool: Measured[]) =>
+    pool.filter((r) => leaderOf(r, pool) === r).sort((a, b) => a.price - b.price).map((r) => r.m.id).join(",");
+
+  await expect(page.getByTestId("weights-all")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("clear-filters")).toHaveCount(0);
+
+  await page.getByTestId("weights-open").click();
+  await expect(page.getByTestId("weights-open")).toHaveAttribute("aria-pressed", "true");
+  await expect(rows).toHaveCount(open.length);
+  for (const m of open) {
+    await expect(page.locator(`[data-testid="model-row"][data-model-id="${m.id}"]`)).toHaveAttribute("data-weights", "open");
+  }
+  const openPool = MEASURED.filter((r) => OPEN_WEIGHT_IDS.has(r.m.id));
+  await expect(panel.getByTestId("frontier-chart-point")).toHaveCount(openPool.length);
+  await expect(panel.getByTestId("frontier-line")).toHaveAttribute("data-frontier-ids", frontierOf(openPool));
+  await expect(panel.getByTestId("frontier-filter")).toContainText("redrawn over the open-weight models");
+  await expect(page.getByTestId("frontier-scope")).toHaveText("open-weight");
+  await expect(page.getByTestId("score-charts-filter")).toContainText("Open weights");
+
+  // With a jurisdiction narrowed too, the scope names both.
+  await page.getByTestId("jurisdiction-cn").uncheck();
+  await expect(rows).toHaveCount(open.filter((m) => m.jurisdiction !== "cn").length);
+  await expect(page.getByTestId("frontier-scope")).toHaveText("open-weight US + EU");
+  await page.getByTestId("jurisdiction-cn").check();
+
+  await page.getByTestId("weights-closed").click();
+  await expect(rows).toHaveCount(MODEL_COUNT - open.length);
+  const closedPool = MEASURED.filter((r) => !OPEN_WEIGHT_IDS.has(r.m.id));
+  await expect(panel.getByTestId("frontier-chart-point")).toHaveCount(closedPool.length);
+  await expect(panel.getByTestId("frontier-line")).toHaveAttribute("data-frontier-ids", frontierOf(closedPool));
+  await expect(page.getByTestId("frontier-scope")).toHaveText("closed-weight");
+  for (const id of await rows.evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")))) {
+    expect(OPEN_WEIGHT_IDS.has(id ?? "")).toBe(false);
+  }
+
+  // The expanded row says which kind a model is.
+  const firstOpen = open[0];
+  await page.getByTestId("weights-all").click();
+  await expect(rows).toHaveCount(MODEL_COUNT);
+  await expect(page.getByTestId("frontier-scope")).toHaveCount(0);
+  await page.locator(`[data-testid="model-row"][data-model-id="${firstOpen.id}"]`).getByRole("button", { name: `Show details for ${firstOpen.name}` }).click();
+  await expect(page.getByTestId("model-weights")).toContainText("Open weights:");
+  await expect(page.getByTestId("legend-weights")).toContainText("Closed");
 });
 
 test("a Provider narrows the charts to its models and redraws the frontier over them", async ({ page }) => {

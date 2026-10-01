@@ -36,6 +36,9 @@ export interface ModelRow {
   tier_cost: CostTier;
   tiers: Record<Category, Rating>;
   jurisdiction: string;
+  // The maker publishes the weights for download under a licence that permits
+  // running them yourself: the catalog's local (Ollama) method lists the model.
+  open_weights: boolean;
   headline_benchmarks: string;
   pricing_notes: string;
   best_for: string;
@@ -246,6 +249,25 @@ export const JURISDICTION_DEFS: Record<string, string> = {
   kr: "South Korea.",
   ru: "Russia.",
   unknown: "Provider HQ not yet editorially verified.",
+};
+
+export type Weights = "open" | "closed";
+
+// The Weights filter's two choices. `scope` is the modifier the frontier copy
+// reads as "every ___ model".
+export const WEIGHTS_DEFS: Record<Weights, { label: string; scope: string; definition: string }> = {
+  open: {
+    label: "Open",
+    scope: "open-weight",
+    definition:
+      "The maker publishes the model's weights for download under a licence that permits running it yourself (Apache-2.0, MIT and similar), so any host, or your own hardware, can serve it.",
+  },
+  closed: {
+    label: "Closed",
+    scope: "closed-weight",
+    definition:
+      "The maker keeps the weights in-house and serves the model through its own API and apps, and the platforms it licenses.",
+  },
 };
 
 export function jurisdictionDef(code: string): string {

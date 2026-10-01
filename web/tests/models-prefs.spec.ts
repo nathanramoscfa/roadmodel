@@ -1,7 +1,7 @@
 // web/tests/models-prefs.spec.ts
 //
-// /models remembers the visitor's view: Provider, Jurisdiction, Cost tier,
-// Group by and Ratings / Benchmark scores are saved in a cookie
+// /models remembers the visitor's view: Provider, Jurisdiction, Weights, Cost
+// tier, Group by and Ratings / Benchmark scores are saved in a cookie
 // (lib/models-prefs) and applied by the SERVER on the next visit, so the
 // page never opens on the default table and then jumps. A bad or stale
 // cookie falls back to the defaults instead of breaking the page.
@@ -33,31 +33,56 @@ test("the saved cookie is parsed field by field, never trusted", () => {
   expect(parsePrefs(undefined)).toEqual(DEFAULT_PREFS);
   expect(parsePrefs("not json")).toEqual(DEFAULT_PREFS);
   expect(parsePrefs("[1,2]")).toEqual(DEFAULT_PREFS);
-  const good = { provider: "Anthropic", hideJurisdictions: ["cn"], cost: "high", grouping: "tier", view: "benchmarks" };
+  const good = {
+    provider: "Anthropic",
+    hideJurisdictions: ["cn"],
+    weights: "open",
+    cost: "high",
+    grouping: "tier",
+    view: "benchmarks",
+  };
   expect(parsePrefs(JSON.stringify(good))).toEqual(good);
   // The browser's encoded form parses the same.
   expect(parsePrefs(encodeURIComponent(JSON.stringify(good)))).toEqual(good);
   // Each bad field falls back alone.
-  expect(parsePrefs(JSON.stringify({ ...good, cost: "free", grouping: "price", view: 3, hideJurisdictions: "cn" }))).toEqual({
+  expect(
+    parsePrefs(
+      JSON.stringify({ ...good, weights: "source", cost: "free", grouping: "price", view: 3, hideJurisdictions: "cn" }),
+    ),
+  ).toEqual({
     ...good,
+    weights: "all",
     cost: "all",
     grouping: "quality",
     view: "ratings",
     hideJurisdictions: [],
   });
   // A cookie from before Quality became the default carries `groupBy: "tier"`
-  // whether or not the visitor chose it; it opens on Quality, the rest kept.
+  // whether or not the visitor chose it; it opens on Quality, the rest kept
+  // (and all weights: the cookie predates the Weights filter).
   const old = { provider: "Anthropic", hideJurisdictions: ["cn"], cost: "high", groupBy: "tier", view: "benchmarks" };
-  expect(parsePrefs(JSON.stringify(old))).toEqual({ ...good, grouping: "quality" });
+  expect(parsePrefs(JSON.stringify(old))).toEqual({ ...good, weights: "all", grouping: "quality" });
 });
 
 test("saved filters map onto today's catalog: a new jurisdiction starts checked, a gone provider falls back", () => {
-  const prefs = { ...DEFAULT_PREFS, provider: "Gone Labs", hideJurisdictions: ["cn"], cost: "low" as const };
+  const prefs = {
+    ...DEFAULT_PREFS,
+    provider: "Gone Labs",
+    hideJurisdictions: ["cn"],
+    weights: "open" as const,
+    cost: "low" as const,
+  };
   const f = filtersFromPrefs(prefs, ["Anthropic", "OpenAI"], ["us", "eu", "cn", "uk"]);
   expect(f.provider).toBe("all");
   expect([...f.jurisdictions].sort()).toEqual(["eu", "uk", "us"]);
+  expect(f.weights).toBe("open");
   expect(f.cost).toBe("low");
-  expect(prefsFromFilters(f, ["us", "eu", "cn", "uk"])).toEqual({ provider: "all", hideJurisdictions: ["cn"], cost: "low" });
+  expect(prefsFromFilters(f, ["us", "eu", "cn", "uk"])).toEqual({
+    provider: "all",
+    hideJurisdictions: ["cn"],
+    weights: "open",
+    cost: "low",
+  });
 });
 
 test("every choice survives a reload, and the server renders it before any script runs", async ({ page }) => {
@@ -65,6 +90,7 @@ test("every choice survives a reload, and the server renders it before any scrip
   const tier = "high";
   await page.getByTestId("jurisdiction-cn").uncheck();
   await page.getByLabel("Filter by provider").selectOption("OpenAI");
+  await page.getByTestId("weights-closed").click();
   await page.getByLabel("Filter by cost tier").selectOption(tier);
   await page.getByTestId("group-by-tier").click();
   await page.getByTestId("view-benchmarks").click();
@@ -73,6 +99,7 @@ test("every choice survives a reload, and the server renders it before any scrip
     await expect(page.getByTestId("jurisdiction-cn")).not.toBeChecked();
     await expect(page.getByTestId("jurisdiction-us")).toBeChecked();
     await expect(page.getByLabel("Filter by provider")).toHaveValue("OpenAI");
+    await expect(page.getByTestId("weights-closed")).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByLabel("Filter by cost tier")).toHaveValue(tier);
     await expect(page.getByTestId("group-by-tier")).toHaveAttribute("aria-pressed", "true");
     // The frontier chart reads Group by too (it marks the bands under Quality).
@@ -80,7 +107,11 @@ test("every choice survives a reload, and the server renders it before any scrip
     await expect(page.getByTestId("view-benchmarks")).toHaveAttribute("aria-pressed", "true");
     const rows = page.getByTestId("model-row");
     const n = await rows.count();
-    for (let i = 0; i < n; i += 1) await expect(rows.nth(i)).toHaveAttribute("data-tier-cost", tier);
+    expect(n).toBeGreaterThan(0);
+    for (let i = 0; i < n; i += 1) {
+      await expect(rows.nth(i)).toHaveAttribute("data-tier-cost", tier);
+      await expect(rows.nth(i)).toHaveAttribute("data-weights", "closed");
+    }
     await expect(page.getByTestId("score-charts-filter")).toContainText("OpenAI");
   };
   await expectRestored();
@@ -92,6 +123,7 @@ test("every choice survives a reload, and the server renders it before any scrip
   expect(html).toMatch(/data-testid="group-by-tier"[^>]*aria-pressed="true"/);
   expect(html).toMatch(/data-testid="frontier-panel"[^>]*data-grouping="tier"/);
   expect(html).toMatch(/data-testid="view-benchmarks"[^>]*aria-pressed="true"/);
+  expect(html).toMatch(/data-testid="weights-closed"[^>]*aria-pressed="true"/);
   const box = (code: string) => html.match(new RegExp(`<input[^>]*data-testid="jurisdiction-${code}"[^>]*>`))?.[0] ?? "";
   expect(box("us")).toContain("checked");
   expect(box("cn")).not.toBe("");
@@ -102,6 +134,7 @@ test("every choice survives a reload, and the server renders it before any scrip
   await page.reload();
   await expect(page.getByTestId("jurisdiction-cn")).toBeChecked();
   await expect(page.getByLabel("Filter by provider")).toHaveValue("all");
+  await expect(page.getByTestId("weights-all")).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("model-row")).toHaveCount(MODEL_COUNT);
   await expect(page.getByTestId("group-by-tier")).toHaveAttribute("aria-pressed", "true");
 });

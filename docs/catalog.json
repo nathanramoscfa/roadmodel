@@ -1,9 +1,9 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-10-01T19:13:36Z",
+  "generated_at_utc": "2026-10-01T19:19:57Z",
   "source_doc_sha256": {
-    "model-selector.txt": "490125c650312671ece017715baf31910388d5ac65b957583c66a70ebc2c55c3",
+    "model-selector.txt": "a9f838f6e9c53e21efd5d4f359fc168ed6b2334cd08648deb52326bdba061e8e",
     "model-tier-cost-scale.md": "0e07bd4fae45e3472d064067a09f426c4430da87b6031ce7d610baeb23b5b2fb"
   },
   "models": [
@@ -1771,17 +1771,20 @@
         "glm-4.5-air",
         "glm-4.6",
         "glm-5.2",
+        "glm-5.3",
+        "glm-5.3-flash",
         "gpt-oss-120b",
         "gpt-oss-20b",
         "kimi-k2.7-code",
         "kimi-k3",
         "mistral-large-3",
+        "mistral-medium-3.5",
         "mistral-small-4"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
-      "best_for": "Open-weight models pulled and served on the operator's OWN hardware through a local Ollama runtime \u2014 $0 per token, no data leaves the machine, no subscription budget consumed. supports-models lists ONLY catalogued models whose weights are downloadable under a licence that permits local use (Apache-2.0: gpt-oss-120b / gpt-oss-20b / mistral-large-3 / mistral-small-4; MIT: deepseek-v4-pro / deepseek-flash / glm-5.2 / glm-4.6 / glm-4.5-air; Modified MIT: kimi-k2.7-code; Kimi K3 License: kimi-k3) \u2014 the MODEL-level jurisdiction filter (Step 0b) still governs which of them are eligible. HARDWARE CAVEAT: the catalog's tier ratings describe the provider-hosted weights; a quantized local pull (4-bit GGUF, MXFP4, and similar) runs about one tier below them for coding and reasoning, throughput is bounded by the operator's GPU / unified memory, and the largest entries (kimi-k3, deepseek-v4-pro) do not fit consumer hardware at all \u2014 the selector funds this method ONLY for models the operator has actually listed as pulled in docs/user-context.md, so a listed model is one that fits. Thinking is forwarded as `reasoning_effort` for models that support it (gpt-oss, GLM, DeepSeek, Kimi); the per-model dial is the model's, not the runtime's. Reached via the `ollama` access method when docs/user-context.md declares `Ollama installed | Yes` and the model in its pulled-models table."
+      "best_for": "Open-weight models pulled and served on the operator's OWN hardware through a local Ollama runtime \u2014 $0 per token, no data leaves the machine, no subscription budget consumed. supports-models lists ONLY catalogued models whose weights are downloadable under a licence that permits local use (Apache-2.0: gpt-oss-120b / gpt-oss-20b / mistral-large-3 / mistral-small-4; MIT: deepseek-v4-pro / deepseek-flash / glm-5.3-flash / glm-5.2 / glm-4.6 / glm-4.5-air; Modified MIT: kimi-k2.7-code / mistral-medium-3.5; GLM-5.3 License: glm-5.3; Kimi K3 License: kimi-k3) \u2014 the MODEL-level jurisdiction filter (Step 0b) still governs which of them are eligible. HARDWARE CAVEAT: the catalog's tier ratings describe the provider-hosted weights; a quantized local pull (4-bit GGUF, MXFP4, and similar) runs about one tier below them for coding and reasoning, throughput is bounded by the operator's GPU / unified memory, and the largest entries (kimi-k3, glm-5.3, deepseek-v4-pro) do not fit consumer hardware at all \u2014 the selector funds this method ONLY for models the operator has actually listed as pulled in docs/user-context.md, so a listed model is one that fits. Thinking is forwarded as `reasoning_effort` for models that support it (gpt-oss, GLM, DeepSeek, Kimi); the per-model dial is the model's, not the runtime's. Reached via the `ollama` access method when docs/user-context.md declares `Ollama installed | Yes` and the model in its pulled-models table."
     },
     {
       "id": "openai-api",
