@@ -179,6 +179,9 @@ jobs:
           # (update/prose_guard.py); then no letter may move.
           python update/prose_guard.py --apply docs/model-selector.txt
           python update/rating_guard.py --apply --base /tmp/base-selector.txt
+          # Best-for + headline-benchmarks prose written from the data above
+          # (update/model_prose.py); after the letters and tags, before render.
+          python update/model_prose.py --write
           python update/render_md.py
 
       - name: Rebuild docs/catalog.json (deterministic)
