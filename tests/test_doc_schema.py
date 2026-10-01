@@ -328,8 +328,11 @@ def test_prompt_has_lifecycle_rules() -> None:
     """update/prompt.md must contain the Model lifecycle rules. Without
     them, a future refresh could silently remove a model when a costlier
     successor in the same series appears (e.g. drop GPT-5.4 because
-    GPT-5.5 launched at 2x the price). This test guards against
-    accidental deletion of those rules from the prompt.
+    GPT-5.5 launched at 2x the price). Supersession itself is code's
+    (update/supersede.py: same maker, no costlier, better on every count,
+    available), and the prompt keeps the curation pass from removing a
+    superseded model. This test guards against accidental deletion of
+    those rules from the prompt.
 
     Sentinel phrases below are intentionally distinctive — they are
     headers and warning patterns that are unlikely to be reworded
@@ -340,9 +343,8 @@ def test_prompt_has_lifecycle_rules() -> None:
         "Model lifecycle in",
         "Adding new models",
         "Removing models",
-        "Same series",
+        "Supersession is NOT a removal reason in this pass",
         "Selection-algorithm guardrail sync",
-        "superseded:",
         "discontinued by Cursor:",
     ]
     missing = [phrase for phrase in required if phrase not in prompt]
@@ -379,7 +381,7 @@ def test_prompt_has_subscription_refresh_rules() -> None:
         "subscription coverage updated:",
         "subscription tier refresh skipped",
         "subscription tier refresh halted",
-        "subscription tier discovered with unmapped access surface (manual review required):",
+        "subscription tier discovered with unmapped access surface:",
         "subscription-tiers-reviewed:",
     ]
     missing = [phrase for phrase in required if phrase not in prompt]

@@ -8,7 +8,11 @@ A model is SUPERSEDED when another model in ``<model-options>``:
 * scores higher on the Artificial Analysis Intelligence Index;
 * is rated at least as high in each of the seven categories; and
 * is offered by every access method that offers the model, so the newer model
-  is always there to take its place.
+  is always there to take its place; and
+* is available: a model benched in ``infra/model-availability.json`` (its
+  provider withdrew or restricted access) displaces nothing, so a series keeps
+  a recommendable model while its newest is benched (Fable 5 spent months
+  benched on export-control grounds).
 
 The one with the highest AA Index (then the cheaper, then the lower id) is its
 successor. A superseded model carries ``superseded-by`` and ``superseded-on``
@@ -55,6 +59,7 @@ from validate_catalog_conformance import _model_makers  # noqa: E402
 REPO_ROOT = UPDATE_DIR.parent
 SELECTOR_PATH = REPO_ROOT / "docs" / "model-selector.txt"
 BENCHMARKS_PATH = REPO_ROOT / "docs" / "benchmarks.json"
+AVAILABILITY_PATH = REPO_ROOT / "infra" / "model-availability.json"
 
 RATING_RANK = {"S": 5, "A": 4, "B": 3, "C": 2, "D": 1}
 _OPTIONS_RE = re.compile(r"<model-options>(.*?)</model-options>", re.DOTALL)
@@ -118,8 +123,20 @@ def parse_models(selector_text: str, benchmarks: dict[str, Any]) -> list[Model]:
     return out
 
 
-def successors(selector_text: str, models: list[Model]) -> dict[str, str]:
-    """Each superseded model's id -> its successor's id."""
+def unavailable_ids(path: Path = AVAILABILITY_PATH) -> frozenset[str]:
+    """The model ids benched in the committed availability list."""
+    if not path.exists():
+        return frozenset()
+    raw = json.loads(path.read_text())
+    entries = raw.get("unavailable", []) if isinstance(raw, dict) else []
+    return frozenset(str(e.get("id") if isinstance(e, dict) else e) for e in entries if e)
+
+
+def successors(
+    selector_text: str, models: list[Model], unavailable: frozenset[str] = frozenset()
+) -> dict[str, str]:
+    """Each superseded model's id -> its successor's id. A benched model is
+    no successor."""
     makers = _model_makers(selector_text)
     offered: dict[str, set[str]] = {}
     for method in _parse_access_methods(selector_text):
@@ -134,6 +151,8 @@ def successors(selector_text: str, models: list[Model]) -> dict[str, str]:
         best: Model | None = None
         for new in models:
             if new.id == old.id or new.aa_index is None or makers.get(new.id) != maker:
+                continue
+            if new.id in unavailable:
                 continue
             if not (new.blended <= old.blended and new.aa_index > old.aa_index):
                 continue
@@ -176,6 +195,7 @@ def plan(
     benchmarks: dict[str, Any],
     today: dt.date,
     base: dict[str, Tags] | None = None,
+    unavailable: frozenset[str] = frozenset(),
 ) -> Plan:
     """What each model's tags should be after this run. ``base`` holds the tags
     of the committed selector, so a tag a regenerated file dropped comes back
@@ -194,7 +214,7 @@ def plan(
             result.tags[m.id] = Tags(by, since, retired)
         else:
             live.append(m)
-    succ = successors(selector_text, live)
+    succ = successors(selector_text, live, unavailable)
     for m in live:
         recorded = base.get(m.id)
         if m.id not in succ:
@@ -270,7 +290,7 @@ def main(argv: list[str] | None = None) -> int:
     selector_text = SELECTOR_PATH.read_text()
     benchmarks = json.loads(BENCHMARKS_PATH.read_text()) if BENCHMARKS_PATH.exists() else {}
     base = base_tags(args.base.read_text()) if args.base else None
-    p = plan(selector_text, benchmarks, today, base)
+    p = plan(selector_text, benchmarks, today, base, unavailable_ids())
 
     names = {m.id: m.name for m in parse_models(selector_text, benchmarks)}
     for mid in p.newly:

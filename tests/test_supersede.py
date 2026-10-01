@@ -95,6 +95,21 @@ def test_the_successor_must_run_everywhere_the_old_model_does() -> None:
     assert _succ([_model("old", 5, 25, 40), _model("new", 4, 20, 50)], methods) == {}
 
 
+def test_a_benched_model_displaces_nothing() -> None:
+    """A series keeps a recommendable model while its newest is unavailable."""
+    text = _selector([_model("old", 5, 25, 40), _model("new", 4, 20, 50)], BASE_METHODS)
+    models = supersede.parse_models(text, {})
+    assert supersede.successors(text, models) == {"old": "new"}
+    assert supersede.successors(text, models, frozenset({"new"})) == {}
+
+
+def test_the_availability_list_is_read_as_ids(tmp_path: Path) -> None:
+    path = tmp_path / "model-availability.json"
+    path.write_text('{"_note": "x", "unavailable": [{"id": "claude-fable-5"}, "gpt-x"]}')
+    assert supersede.unavailable_ids(path) == frozenset({"claude-fable-5", "gpt-x"})
+    assert supersede.unavailable_ids(tmp_path / "missing.json") == frozenset()
+
+
 def test_only_the_same_maker_supersedes() -> None:
     assert _succ([_model("old", 5, 25, 40), _model("rival", 1, 2, 60)]) == {}
 

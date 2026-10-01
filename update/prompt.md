@@ -125,9 +125,9 @@ would then reject.
       multimodal, long-context, knowledge, speed): set to `B` for
       unknown categories. EXCEPTION: when the model name contains
       "Mini", "Flash", "Haiku", "Nano", or "Lite", set `tier-speed="S"`.
-      Mark newly-auto-added models with `headline-benchmarks="Auto-added
-      pending editorial tier review; specific benchmark numbers pending
-      next refresh"` so the maintainer can find and refine them.
+      Set a newly-auto-added model's `headline-benchmarks` to `"No
+      benchmark figures cited yet"`; a later refresh replaces it once a
+      fetched source carries the model's numbers.
     - `pricing-notes`: copy verbatim from the cost-scale row's Notes
       column (the same invariant that the final-pass reconciliation
       enforces).
@@ -140,16 +140,17 @@ would then reject.
       like "API Pool — xAI / Moonshot" mentions multiple providers,
       or a new provider HQ isn't in the Provider Jurisdictions
       table yet), set `jurisdiction="unknown"` and emit a
-      `jurisdiction unknown: <id> (provider <name>; add to
-      Provider Jurisdictions table)` warning so the maintainer
-      can fill it in.
+      `jurisdiction unknown: <id> (provider <name> is not in the
+      Provider Jurisdictions table)` warning; the model carries
+      `unknown` until a fetched provider page names its headquarters
+      and the table gains the row.
     - `best-for`: a one-sentence placeholder summarizing the price
       tier and provider, e.g. "Auto-added cheap-tier <provider>
-      model; pending editorial best-for refinement." The maintainer
-      will replace this editorially after the auto-add.
+      model." The `best-for` update rule below rewrites it once
+      fetched sources describe the model.
   Emit a warning of the form
-  `model auto-added to <model-options>: <id> (tier-* ratings need editorial review)`
-  for every model added this way, so the PR description surfaces them.
+  `model auto-added to <model-options>: <id>`
+  for every model added this way, so the PR description lists them.
 
 - Routing meta-models (Cursor's "Auto" / "Premium" modes; analogous
   routers from other providers) are NOT recommendable engines in
@@ -190,11 +191,10 @@ column. Copy each tier's existing `Annual` cell through verbatim (including
 `—`), and write `—` for any genuinely new tier you add. Spend NO web_search
 budget on annual prices.
 
-Annual prices are EDITORIAL: a maintainer sets them by hand-editing this
-file, and a deterministic post-pass (`carry_forward_annual_column` in
-`update/update_models.py`) restores the committed `Annual` column after your
-pass — so any annual value you write is DISCARDED, and a new tier's `Annual`
-is reset to `—` and flagged for maintainer review. This exists because a
+Annual prices are never originated by this automation: a deterministic
+post-pass (`carry_forward_annual_column` in `update/update_models.py`)
+restores the committed `Annual` column after your pass — so any annual value
+you write is DISCARDED, and a new tier's `Annual` is `—`. This exists because a
 captured annual that is merely plausibly-shaped (e.g. ~20% off the monthly
 run-rate) cannot be distinguished from a hallucination (issue #315), so the
 cron no longer originates annuals at all. The build parses `—` / blank as a
@@ -282,7 +282,7 @@ skipped per the mapping above):
    web app) that is NOT in P's hardcoded access-methods mapping,
    include the row anyway using the hardcoded mapping verbatim AND
    emit a warning of the form
-   `subscription tier discovered with unmapped access surface (manual review required): <provider>: <tier name> at <price>/mo references surface "<surface>" not enumerated in <access-methods>; consider adding a <method> element before the next run`.
+   `subscription tier discovered with unmapped access surface: <provider>: <tier name> at <price>/mo references surface "<surface>" not enumerated in <access-methods>; mapped to the provider's existing methods`.
 
 ### Sanity guards (per provider, applied before commit)
 
@@ -351,8 +351,8 @@ format IF AND ONLY IF every in-scope provider's rebuild completed
 without tripping any sanity guard this run (no
 `subscription tier refresh skipped for` or `subscription tier refresh halted for`
 warnings). Otherwise leave the marker verbatim — the freshness
-watchdog in `tests/test_subscription_freshness.py` will trip after
-180 days, surfacing persistent rebuild failure for human review.
+watchdog in `tests/test_subscription_freshness.py` fails CI after 180
+days without a completed rebuild, which surfaces in the cron-health alarm.
 
 ### Hard-forbidden mutations
 
@@ -608,7 +608,8 @@ benchmark facts were fetched; that gate was REMOVED because the
 roadmodel SaaS selector consumes `<model-options>` as its candidate
 pool and a Cursor-visible model that's absent from
 `<model-options>` is simply unavailable for recommendation —
-worse than a placeholder-rated entry the maintainer can refine.
+worse than a placeholder-rated entry, whose letters the derivation and
+later refreshes replace as evidence arrives.
 Cursor lists new models days-to-weeks before third-party
 leaderboards index them; the placeholder-tier-first pattern
 matches the realistic timing.
@@ -677,35 +678,29 @@ auto-add rule in the Pricing section above:
 - `headline-benchmarks` — semicolon-separated list of 2–4 numeric
   facts about this model from the fetched `<source>` blocks, each
   citing its source by name. NEVER invent numbers. If no fetched
-  source covers this model, set `headline-benchmarks="Auto-added
-  pending editorial tier review; specific benchmark numbers
-  pending next refresh"` so the maintainer can find and refine
-  the entry.
+  source covers this model, set `headline-benchmarks="No benchmark
+  figures cited yet"`; a later refresh replaces it once a fetched
+  source carries the model's numbers.
 - `best-for` — one factual sentence positioning the model, derived
   from its Cursor `pricing-notes`, the predecessor's `best-for`
   (when inheriting from a series), and any vendor description
   present in the fetched sources. Do NOT invent capability
   claims. Acceptable fallback for a brand-new entry without rich
-  context: `"Auto-added <tier>-cost <provider> model; pending
-  editorial best-for refinement."`
+  context: `"Auto-added <tier>-cost <provider> model."`, which the
+  `best-for` update rule rewrites once fetched sources describe it.
 
 For every `<model …/>` element added, emit a warning of the form
 `new model added to <model-options>: <id> in <tier>-cost tier
 (output $<n>/M) — placeholder tiers <inherited from <predecessor>
-| defaulted to B/S>; editorial review recommended`. The PR
-description surfaces these warnings so the maintainer can refine
-ratings + best-for the same week the model lands rather than
-discovering the gap weeks later.
+| defaulted to B/S>`. The PR description lists each addition; its
+letters become measured as Artificial Analysis publishes its
+benchmarks, and its best-for is rewritten as sources describe it.
 
 ### Removing models
 
-A `<model …/>` element MUST be removed when one of these strict
-conditions holds, and MUST NOT be removed for any other reason. The
-conditions are both necessary and sufficient: when one holds, retire the
-model in the same refresh rather than leaving it to a later judgement
-call. (This was "MAY be removed only when" until 2026-09-05, which read
-as "removal is optional" — refreshes kept every predecessor and the
-catalog accumulated superseded models indefinitely.)
+A `<model …/>` element MUST be removed when the condition below holds,
+and MUST NOT be removed for any other reason; when it holds, remove the
+model in the same refresh.
 
   1. The model is no longer present on the Cursor pricing page
      (Cursor discontinued it) AND it is NOT a provider-direct model.
@@ -723,69 +718,13 @@ catalog accumulated superseded models indefinitely.)
      `left Cursor pool: <id> now provider-direct-only`. (The federation
      overlay re-adds a dropped whole-element element deterministically, so
      never hand-remove one — that only churns the diff.)
-  2. A newer version IN THE SAME SERIES exists in `<model-options>`
-     AND its `output-price-per-1m` is less than or equal to the
-     older version's `output-price-per-1m`. Emit a warning of the
-     form `superseded: <old-id> removed in favor of <new-id> (output
-     $<old>/M → $<new>/M, same series)`.
-
-An UNAVAILABLE successor does NOT displace its predecessor either. If
-the candidate successor is benched — listed in `<availability-context>`
-as unavailable, or flagged as such by the runtime availability override —
-KEEP the predecessor and emit
-`supersession deferred: <old-id> kept because <new-id> is unavailable`.
-Retiring the only usable model in a series is worse than carrying one
-model too many: Claude Fable 5 was benched for months on export-control
-grounds, and had a successor retired it in that window the whole series
-would have been unrecommendable.
-
-A costlier successor does NOT displace its predecessor — both must
-be kept so the predecessor remains available on the cost/quality
-frontier. The model-selector.txt entry list reflects that frontier,
-not just the latest release in each series.
-
-### "Same series" definition
-
-Same series = same vendor family AND same variant tier. Variant
-tiers currently in use: `flagship`, `mini`, `nano`, `codex`, `haiku`,
-`sonnet`, `opus`, `pro`, `fast`, `flash`, `fable`. Worked examples:
-
-- `gpt-5.4` and `gpt-5.5` — same series (both OpenAI flagship); newer
-  supersedes only if its output price ≤ the older's.
-- `gpt-5.4` and `gpt-5.5-mini` — different series (mini variant never
-  supersedes flagship); both kept.
-- `sonnet-4.6` and `opus-4.7` — different series (different Anthropic
-  variant tiers); both kept.
-- `opus-4.6` and `opus-4.7` — same series (both Anthropic opus);
-  newer supersedes only if its output price ≤ the older's.
-- `gpt-5.3-codex` and a future `gpt-5.4-codex` — same series (both
-  OpenAI codex); a non-codex flagship never supersedes a codex.
-- `gemini-3.7-flash` and `gemini-3.8-flash` — same series (both Google
-  flash); newer supersedes at equal output price, so 3.7 retires.
-- `claude-fable-5` and `claude-fable-5.1` — same series (both Anthropic
-  fable); newer supersedes at equal output price, so Fable 5 retires.
-- `gemini-3-flash` ($3.00) and `gemini-3.5-flash` ($9.00) — same series,
-  but the successor is COSTLIER, so both are kept. Retirement follows the
-  price rule, not the version number.
-- `mistral-small-4` and `mistral-large-3` — DIFFERENT series. `small` /
-  `medium` / `large` are size variants, the Mistral equivalent of
-  `mini` / `flagship`; a cheaper small model never supersedes a large
-  one just because its version number is higher. Both kept.
-- `gpt-5.6-sol` / `-terra` / `-luna` — a brand-new variant-tier naming
-  whose mapping onto `flagship` / `mini` is not established. AMBIGUOUS:
-  keep every model and emit the ambiguity warning rather than guessing a
-  lineage. Add these names to the variant-tier list above only once the
-  mapping is deliberate.
-
-Routing meta-models (`premium`, `auto`) are no longer enumerated
-in `<model-options>` — this supersession rule does not apply to
-them. If a stale snapshot contains them, remove per the routing-
-meta-model rule in the Pricing section.
-
-If the series relationship is ambiguous (a brand-new variant tier,
-unclear vendor lineage, or the predecessor exists at a different
-variant tier than the candidate successor), do NOT remove. Emit a
-warning describing the ambiguity.
+Supersession is NOT a removal reason in this pass. `update/supersede.py`
+owns a model's whole lifecycle in code: it tags a model that a newer
+same-maker model outclasses on every count (price, AA Intelligence Index,
+all seven letters, the same access methods) as `superseded-by`, and retires
+it 30 days later, restoring any tag this pass drops. NEVER remove, re-tag or
+un-tag a superseded model yourself, and emit no warning about supersession:
+the lifecycle report rides in the PR body.
 
 ### Selection-algorithm guardrail sync
 
@@ -810,13 +749,15 @@ NOT authorized for regeneration (leave verbatim):
 
 - The long-context guardrail's parenthetical (`opus-4.7 1M,
   gemini-3.1-pro 1M, grok-4.3 2M`) — context-window sizes are not
-  attributes of `<model …/>` elements and cannot be derived from
-  `<model-options>` automatically. If a new model with potential
-  native large context is added, emit a warning of the form
-  `long-context guardrail may be stale: <id> added — manual review
-  needed for context-window enumeration`.
+  attributes of `<model …/>` elements, so this pass maintains it from
+  evidence: when a model's Cursor pricing notes or a fetched provider
+  page state a native context window of 1M tokens or more, append
+  `<id> <N>M` (and drop an entry whose model left `<model-options>`),
+  with a warning of the form
+  `long-context guardrail updated: <id> <N>M — <source> states <the context window>`.
+  Leave the rest of the parenthetical verbatim.
 - The `Default to composer-2 …` guardrail — this names a specific
-  model as an editorial default. Only modify it if `composer-2` is
+  model as a fixed default. Only modify it if `composer-2` is
   itself removed from `<model-options>`, in which case substitute
   the lowest-output-price model with `tier-coding` of `A` or better
   and emit a warning.
@@ -881,7 +822,7 @@ element M in `<access-methods>`:
    ids — only catalog-tracked models can appear in `supports-models`.
    Any candidate that's not in `<model-options>` is dropped from the
    intersection AND emits a warning of the form
-   `supports-models candidate <method-id> exposes <candidate-name> but it is missing from <model-options>; consider adding the model in next editorial pass`.
+   `supports-models candidate <method-id> exposes <candidate-name>, which is not in <model-options>; left out of supports-models until the model is added`.
 
 4. Compute the delta vs M's current supports-models:
    - `new_in_candidate` = intersection − existing
@@ -892,9 +833,9 @@ element M in `<access-methods>`:
      placing the new entry per the Ordering rule below.
    - For each model in `missing_in_candidate`: KEEP in M's
      supports-models verbatim AND emit warning of the form
-     `supports-models existing entry <model-id> on <method-id> not detected in this run's search; retained pending manual review (possible search miss or actual removal)`.
+     `supports-models existing entry <model-id> on <method-id> not detected in this run's search; retained (a search miss keeps it; the next run checks again)`.
    This is the additive-only guarantee — the cron only ever ADDS
-   models to supports-models, never removes. Removals are editorial.
+   models to supports-models, never removes; this pass makes no removal.
 
 ### Sanity guards (per `<method>`, applied before commit)
 
@@ -915,7 +856,7 @@ run:
 - **Catastrophic addition delta:** if `len(new_in_candidate) >= 3`
   (three or more new models in one run), retain M's existing
   supports-models verbatim and emit
-  `supports-models refresh halted for <method-id>: new-model delta exceeds sanity guard (<N> new entries proposed), likely false positives — manual review required`.
+  `supports-models refresh halted for <method-id>: new-model delta exceeds sanity guard (<N> new entries proposed), likely false positives; the committed list stands`.
 
 - **Source recency:** every model in the candidate set MUST be
   backed by a search result on the provider's official domain dated
