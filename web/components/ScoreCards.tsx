@@ -28,7 +28,6 @@ import {
   formatScore,
   formatUsd,
   GRID_COLUMN_BY_KEY,
-  groupBeatenBy,
   scoreBreakdown,
   type EvidenceVerdict,
   type IndexEvidence,
@@ -167,43 +166,6 @@ export function FrontierStatus({
       <Row label="Blended price" value={`${usd(leaderPrice)} vs ${usd(price)}`} valueClass={STRONG} />
     </div>
   );
-}
-
-// A group (a cost tier, a quality band) whose top score at its prices belongs
-// to a model outside it, in plain words: "The top score at these prices or
-// less is Opus 5.5 (High cost): it scores higher than all 6 models here and
-// costs less." The table's group header says it, so it shows without hovering
-// anything. Null when a model in the group holds the top score at its own
-// price (it wears the green ring).
-export function topScoreSentence(
-  members: readonly ModelRow[],
-  byId: Map<string, ModelRow>,
-  // What to hover for the figures, e.g. "an AA Index" in the table.
-  hover: string,
-): string | null {
-  const group = groupBeatenBy(members);
-  if (!group) return null;
-  const leaders = group.leaders
-    .map((id) => byId.get(id))
-    .filter((r): r is ModelRow => r !== undefined && r.aa_index !== null);
-  if (leaders.length === 0) return null;
-  const name = (r: ModelRow) => `${r.name} (${COST_TIER_DEFS[r.tier_cost].label} cost)`;
-  if (leaders.length > 1) {
-    const shown = leaders.slice(0, 3).map(name);
-    const rest = leaders.length - shown.length;
-    const list = rest > 0 ? `${shown.join(", ")} and ${rest} more` : `${shown.slice(0, -1).join(", ")} and ${shown[shown.length - 1]}`;
-    return `The top scores at these prices or less are ${list}. Hover ${hover} to see the top score at each model's price.`;
-  }
-  const lead = leaders[0];
-  const leadPrice = blendedPrice(lead.input_price_per_1m, lead.output_price_per_1m);
-  const measured = members.filter((r) => r.aa_index !== null);
-  const higher = measured.every((r) => (r.aa_index as number) < (lead.aa_index as number));
-  const cheaper = measured.every((r) => blendedPrice(r.input_price_per_1m, r.output_price_per_1m) > leadPrice);
-  const scores = higher ? "scores higher than" : "scores as high as";
-  const costs = cheaper ? "costs less" : "costs the same or less";
-  const whom = group.measured === 1 ? "the model here" : `all ${group.measured} models here`;
-  const where = group.measured === 1 ? "this price or less" : "these prices or less";
-  return `The top score at ${where} is ${name(lead)}: it ${scores} ${whom} and ${costs}. Hover ${hover} for the figures.`;
 }
 
 // A dot on the frontier chart: the model, its AA Index and blended price, and
