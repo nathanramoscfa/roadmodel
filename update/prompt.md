@@ -128,7 +128,12 @@ would then reject.
   `headline-benchmarks`, the Artificial Analysis claims (AA Intelligence
   Index, HLE, SciCode, Terminal-Bench 4.0, AA-LCR) are the pass's: copy
   them verbatim. The field's other claims follow "Headline benchmarks"
-  below.
+  below. The pass also takes over a hand-written field once the catalog's
+  data contradicts a claim in it (`update/stale_claims.py`: a stale AA
+  figure or rank, a price that is not the model's, an ended promotion, a
+  letter claim, or a "latest" / "cheapest" / "best at X" that another
+  model now holds), so write only claims that will stay true or that a
+  fetched source states.
 - **`<model-options>` is comprehensive, not hand-curated.** If a model
   appears in `model-tier-cost-scale.md`'s price tables but NOT in
   `<model-options>` of `model-selector.txt`, ADD it to `<model-options>`

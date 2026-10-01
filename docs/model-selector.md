@@ -761,7 +761,7 @@ Tier ratings:
 - **Tier ratings:** Coding **A** · Planning **S** · Agentic **A** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **D**
 - **Headline benchmarks:** AA Intelligence Index 40.7 (max); LMArena Text #15 (Elo 1483.6); LMArena WebDev #34 (Elo 1556.0); AA-Omniscience 26.2 (#2)
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
-- **Best for:** Deepest abstract and scientific reasoning, highest coherence on long unsupervised multi-step agent chains, best long-context recall at 1M tokens, 128K output ceiling for large single-shot deliverables, and novel problem-solving where high ambiguity demands creative judgment over pattern-matching
+- **Best for:** Frontier-class planning, plus strong coding, agentic work, multimodal input, long context and knowledge, at a very high price. Its AA Intelligence Index of 40.7 ranks 18th of 53 measured models. Weakest at speed (D). Superseded by Opus 5.5.
 
 #### Opus 4.8 — `opus-4.8`
 
@@ -801,7 +801,7 @@ Tier ratings:
 - **Tier ratings:** Coding **A** · Planning **S** · Agentic **A** · Multimodal **A** · Long-context **S** · Knowledge **A** · Speed **D**
 - **Headline benchmarks:** AA Intelligence Index 38.4 (xhigh); LMArena Text Elo 1466.8 (#33); HLE 45.8%; AA-Omniscience 20.1 (#3)
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; More token-efficient than GPT-5.4 on comparable tasks; Improved persistence on long-running tasks; Fast mode is available at higher rates; Long context supports up to 1M tokens with 2x input pricing
-- **Best for:** OpenAI's most capable frontier model and highest-cost GPT offering, best suited for the most demanding reasoning, long-horizon planning, and tasks where maximum intelligence is required regardless of cost — strongest single model for hard coding, agentic execution, and reasoning, but verify factual claims due to elevated hallucination
+- **Best for:** Frontier-class planning and long context, plus strong coding, agentic work, multimodal input and knowledge, at a very high price. Its AA Intelligence Index of 38.4 ranks 22nd of 53 measured models. Weakest at speed (D). Superseded by GPT-5.6 Sol.
 
 #### GPT-6 Astra — `gpt-6-astra`
 
@@ -827,15 +827,15 @@ Tier ratings:
 - **Tier ratings:** Coding **A** · Planning **S** · Agentic **S** · Multimodal **A** · Long-context **S** · Knowledge **A** · Speed **D**
 - **Headline benchmarks:** AA Intelligence Index 47.0 (max) / 44.0 (xhigh); HLE 49.5% (max); Terminal-Bench 2.1 88.0; τ²-bench banking pass_1 44.3%
 - **Pricing notes:** Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate; Promotional pricing through November 21, 2026
-- **Best for:** OpenAI's GPT-5.6 Sol flagship — now at high-tier pricing ($4/$20) under promotional pricing through November 21, 2026 (was $5/$30 at initial listing), leading Artificial Analysis Intelligence Index (47.0 max) and posting Terminal-Bench 2.1 88.0 and HLE 49.5% at max effort; pick for the most demanding reasoning, agentic execution, and knowledge work at the high tier when a GPT-family top model is preferred over Anthropic's Opus/Fable lineage.
+- **Best for:** Frontier-class planning, agentic work and long context, plus strong coding, multimodal input and knowledge, at a high price. Its AA Intelligence Index of 47.0 ranks 9th of 53 measured models. Weakest at speed (D).
 
 #### Sonnet 4.6 — `sonnet-4.6`
 
 - **Pricing:** Input $3.00/M · Output $15.00/M
 - **Tier ratings:** Coding **B** · Planning **A** · Agentic **B** · Multimodal **A** · Long-context **A** · Knowledge **B** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 30.1; LMArena Text Elo 1457.7 (#41); AA-Omniscience 12.4; top-ranked tool-calling on Anthropic lineage
+- **Headline benchmarks:** AA Intelligence Index 30.1 (adaptive reasoning, max effort); HLE 33.6%; SciCode 50.1; Terminal-Bench 4.0 3.0; AA-LCR 0.800; LMArena Text Elo 1457.7 (#41); AA-Omniscience 12.4
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
-- **Best for:** Top-ranked tool-calling and agentic execution globally, near-Opus coding quality at 2-3x the speed, strong mathematical reasoning (89% MATH), and complex but well-structured tasks needing reliable high-throughput multi-step implementation
+- **Best for:** Strong planning, multimodal input and long context at a high price. Its AA Intelligence Index of 30.1 ranks 32nd of 53 measured models. Superseded by Sonnet 5.
 
 #### GPT-5.4 — `gpt-5.4`
 
@@ -843,7 +843,7 @@ Tier ratings:
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 39.0 (xhigh); LMArena Text Elo 1452.3 (#46); HLE 43.7% (xhigh); τ²-bench banking pass_1 39.6%
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context supports up to 1M tokens with 2x input pricing
-- **Best for:** Broadest professional domain expertise (outperforms human specialists in 83% of occupations), native computer-use capability surpassing human baselines, lowest factual error rate among GPT models, and cross-domain knowledge work requiring deep real-world accuracy and grounding
+- **Best for:** Strong coding, planning, agentic work, multimodal input, long context and knowledge at a high price. Its AA Intelligence Index of 39.0 ranks 21st of 53 measured models. Superseded by GPT-5.6 Terra.
 
 #### Kimi K3 — `kimi-k3`
 
@@ -877,7 +877,7 @@ Tier ratings:
 - **Tier ratings:** Coding **A** · Planning **B** · Agentic **A** · Multimodal **D** · Long-context **A** · Knowledge **A** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 32.5 (xhigh); HLE 42.5%; Codex lineage retains strong Terminal-Bench and SWE-bench Verified performance for autonomous coding
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.3-codex-high
-- **Best for:** Highest terminal and tool-use proficiency at the medium tier, most token-efficient autonomous coding, excels at long-running agentic sessions spanning debugging through deployment, and hard algorithmic problems requiring sustained code reasoning across languages — the cost-efficient pick for pure coding and agentic execution when an S-tier coding rating is needed
+- **Best for:** Strong coding, agentic work, long context and knowledge at a medium price. Its AA Intelligence Index of 32.5 ranks 30th of 53 measured models. Weakest at multimodal input (D). Superseded by GPT-5.6 Terra.
 
 #### GPT-5.2 — `gpt-5.2`
 
@@ -885,7 +885,7 @@ Tier ratings:
 - **Tier ratings:** Coding **B** · Planning **A** · Agentic **B** · Multimodal **C** · Long-context **A** · Knowledge **B** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 30.4 (xhigh); GPQA 90.3; LiveCodeBench 88.9; HLE 37.7%; released 2025-12-10
 - **Pricing notes:** Hidden by default; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.2-high
-- **Best for:** Earlier-flagship GPT reasoning model (December 2025) with 400K context and broad knowledge coverage (GPQA 71.2, MMLU Pro 81.4); same medium-tier pricing as GPT-5.3 Codex but lacks Codex's autonomous-coding specialization — pick gpt-5.3-codex over gpt-5.2 for coding/agentic tasks; gpt-5.2 fits when broad reasoning at A-tier knowledge and a 400K context window are the primary need at the medium price tier
+- **Best for:** Strong planning and long context at a medium price. Its AA Intelligence Index of 30.4 ranks 31st of 53 measured models. Weakest at multimodal input (C). Superseded by GPT-5.6 Terra.
 
 #### GPT-5.2 Codex — `gpt-5.2-codex`
 
@@ -907,7 +907,7 @@ Tier ratings:
 
 - **Pricing:** Input $2.00/M · Output $12.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **B** · Multimodal **S** · Long-context **A** · Knowledge **A** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 29.7 (#3); AA-Omniscience 32.9 (#1); HLE 47.0% (#1); LMArena Text Elo 1480.2 (#18); 1M-token context
+- **Headline benchmarks:** AA Intelligence Index 29.7; HLE 47.0%; SciCode 58.7; Terminal-Bench 4.0 4.0; AA-LCR 0.820; AA-Omniscience 32.9 (#1); LMArena Text Elo 1480.2 (#18); 1M-token context
 - **Pricing notes:** -
 - **Best for:** True native multimodal understanding (text, image, video, audio, and code in a single pass), 1M-token context optimized for heterogeneous inputs, strong agentic multi-step tool use, and synthesizing insights across large mixed-media datasets or sprawling document corpora — the obvious choice whenever multimodal or long-context is the primary category
 
@@ -933,7 +933,7 @@ Tier ratings:
 - **Tier ratings:** Coding **A** · Planning **B** · Agentic **A** · Multimodal **D** · Long-context **A** · Knowledge **C** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 23.7 (high); HLE 25.7%; earlier-generation Codex specialization with strong terminal / tool-use profile carried forward from the Codex lineage
 - **Pricing notes:** Hidden by default; Agentic and reasoning capabilities
-- **Best for:** Earlier Codex generation at the same medium-tier pricing as gpt-5.3-codex but $10/M output (gpt-5.3-codex is $14/M) — the lowest-cost S-tier coding model on the medium tier; prefer gpt-5.3-codex when latest-generation Codex quality matters, prefer gpt-5.1-codex when reproducing earlier-Codex-generation outputs or when the slightly cheaper output price compounds against a high-volume coding workload
+- **Best for:** Strong coding, agentic work and long context at a medium price. Its AA Intelligence Index of 23.7 ranks 40th of 53 measured models. Weakest at multimodal input (D), then knowledge (C). Superseded by GPT-5.6 Luna.
 
 #### GPT-5.1 Codex Max — `gpt-5.1-codex-max`
 
@@ -1071,15 +1071,15 @@ Tier ratings:
 - **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **A** · Long-context **B** · Knowledge **C** · Speed **S**
 - **Headline benchmarks:** AA Intelligence Index 9.9 (non-reasoning) / 13.1 (reasoning); native multimodal grounding; 1M-token context; designed for low-cost high-volume inference
 - **Pricing notes:** Hidden by default
-- **Best for:** Google's cheap, fast, multimodal Flash model at $0.30/M output — the cost-efficient pick for high-volume structured-output tasks (model recommendation, classification, light planning with strong system-prompt grounding) where multimodal capability matters and frontier-class reasoning does not; powers free-tier SaaS surfaces where per-call cost discipline is essential and the bundled templates do the structural heavy lifting
+- **Best for:** Strong multimodal input, with very fast output, at a low price. Its AA Intelligence Index of 13.1 ranks 48th of 53 measured models. Weakest at knowledge (C).
 
 #### GPT-5 Mini — `gpt-5-mini`
 
 - **Pricing:** Input $0.25/M · Output $2.00/M
 - **Tier ratings:** Coding **D** · Planning **C** · Agentic **D** · Multimodal **B** · Long-context **A** · Knowledge **C** · Speed **S**
-- **Headline benchmarks:** AA Intelligence Index 16.8 (high); cheapest GPT-5 family variant at $2.00/M output; throughput-optimized inference
+- **Headline benchmarks:** AA Intelligence Index 16.8 (high); HLE 21.5%; SciCode 39.0; Terminal-Bench 4.0 0.0; AA-LCR 0.723; throughput-optimized inference
 - **Pricing notes:** Hidden by default
-- **Best for:** The cheapest GPT-5 family variant at $2.00/M output — well-suited for trivial text tasks, simple lookups, rapid classification, and high-throughput pipelines where the cost-per-call is the binding constraint; not appropriate for multi-step planning or autonomous agentic execution; competitive with Gemini 2.5 Flash on cost but lacks Gemini's native multimodal-A rating
+- **Best for:** Strong long context, with very fast output, at a low price. Its AA Intelligence Index of 16.8 ranks 46th of 53 measured models. Weakest at coding and agentic work (D), then planning and knowledge (C). Superseded by GPT-5.6 Luna.
 
 #### GPT-5.1 Codex Mini — `gpt-5.1-codex-mini`
 
@@ -1183,7 +1183,7 @@ Tier ratings:
 - **Tier ratings:** Coding **B** · Planning **C** · Agentic **C** · Multimodal **D** · Long-context **C** · Knowledge **D** · Speed **A**
 - **Headline benchmarks:** AA Intelligence Index 11.1; HLE 7.0%; AA-LCR 0.467; z.ai GLM-4.5-Air — a lightweight, fast, low-cost GLM variant for high-throughput text / code; text-only; cn-jurisdiction
 - **Pricing notes:** Provider-direct z.ai (Zhipu) API per-token pricing (not via the Cursor pool); cn-jurisdiction; cache-input $0.03/M
-- **Best for:** z.ai's GLM-4.5-Air — the cheapest non-free GLM ($1.10/M output): a small, fast, cn-jurisdiction model for high-throughput / latency-sensitive text and light coding where cost is the binding constraint, not top-tier capability. Reached via the `zai-api` method (provider-direct per-token) with a zai-api-key; step up to glm-4.6 for serious coding or glm-5.2 for reasoning / agentic work.
+- **Best for:** Competent coding, with fast output, at a low price. Its AA Intelligence Index of 11.1 ranks 51st of 53 measured models. Weakest at multimodal input and knowledge (D), then planning, agentic work and long context (C).
 
 #### gpt-oss-120b — `gpt-oss-120b`
 
@@ -1205,9 +1205,9 @@ Tier ratings:
 
 - **Pricing:** Input $1.25/M · Output $2.50/M
 - **Tier ratings:** Coding **B** · Planning **A** · Agentic **D** · Multimodal **B** · Long-context **A** · Knowledge **B** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 24.9 (high); AA-Omniscience 18.3 (#4); HLE 35.0%; LMArena Search Elo 1165.3
+- **Headline benchmarks:** AA Intelligence Index 24.9 (high); HLE 37.2%; SciCode 48.3; Terminal-Bench 4.0 0.0; AA-LCR 0.730; AA-Omniscience 18.3 (#4); LMArena Search Elo 1165.3
 - **Pricing notes:** Hidden by default; Requires Max Mode on request-based plans
-- **Best for:** Latest Grok release with built-in multi-agent self-verification, configurable reasoning depth, and signature 2M-token context with hallucination-resistant grounding — leads the low tier on agentic execution and long-context, ideal when massive context, factual accuracy, and aggressive cost efficiency must coexist
+- **Best for:** Strong planning and long context at a low price. Its AA Intelligence Index of 24.9 ranks 38th of 53 measured models. Weakest at agentic work (D).
 
 #### Grok 4.6 — `grok-4.6`
 

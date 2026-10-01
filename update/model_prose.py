@@ -14,12 +14,14 @@ kept.
 This pass makes the text a FUNCTION of the data, the way
 update/derive_ratings.py does for four of the letters and update/supersede.py
 for the lifecycle tags. It takes over a field when the field is empty, narrates
-the pipeline instead of describing the model (PROCESS_RE), or, for
-``headline-benchmarks``, cites none of the Artificial Analysis figures the
-catalog holds for the model. It records each field it owns in the element's
-``prose-generated`` attribute and rewrites that field on every run, so the text
-follows the letters, prices and benchmarks it is built from. A field it does
-not own is left exactly as written.
+the pipeline instead of describing the model (PROCESS_RE), makes a claim the
+data contradicts (update/stale_claims.py: a figure, price, letter, ended
+promotion, or "latest" / "cheapest" / "best at X" that another model now
+holds), or, for ``headline-benchmarks``, cites none of the Artificial Analysis
+figures the catalog holds for the model. It records each field it owns in the
+element's ``prose-generated`` attribute and rewrites that field on every run,
+so the text follows the letters, prices and benchmarks it is built from. A
+field it does not own is left exactly as written.
 
     best-for             what the model's letters say it does best, at what
                          cost tier; where its AA Intelligence Index ranks in the
@@ -30,8 +32,10 @@ not own is left exactly as written.
                          the Intelligence Index and the benchmarks behind the
                          derived letters, then the field's other sourced claims
                          (LMArena, vendor-reported results, context window), in
-                         their original order. A model AA has not measured says
-                         so, since its letters are then estimates.
+                         their original order, less any the data contradicts
+                         and with any other AA figure in them brought current.
+                         A model AA has not measured says so, since its letters
+                         are then estimates.
 
     python update/model_prose.py            # report what --write would change
     python update/model_prose.py --write    # apply to docs/model-selector.txt
@@ -44,6 +48,7 @@ they write), then render_md.py and build_catalog.py, as for any selector edit.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import re
 import sys
@@ -55,6 +60,7 @@ UPDATE_DIR = Path(__file__).resolve().parent
 if str(UPDATE_DIR) not in sys.path:
     sys.path.insert(0, str(UPDATE_DIR))
 
+import stale_claims  # noqa: E402
 from build_catalog import TASK_CATEGORIES, _parse_attrs, _parse_models  # noqa: E402
 from selector_re import MODEL_RE  # noqa: E402
 
@@ -109,10 +115,14 @@ class Model:
     id: str
     name: str
     tier_cost: str
+    input_price: float | None
+    output_price: float | None
     blended: float | None
     letters: dict[str, str]
     bench: dict[str, Any] | None  # its docs/benchmarks.json row
     index: float | None  # AA Intelligence Index, measured
+    release: str | None  # AA's release date, YYYY-MM-DD
+    maker: str | None
     superseded_by: str | None
 
 
@@ -139,10 +149,14 @@ def load_models(selector_text: str, benchmarks: dict[str, Any]) -> list[Model]:
                 id=m["id"],
                 name=m["name"] or m["id"],
                 tier_cost=m["tier_cost"],
+                input_price=m["input_price_per_1m"],
+                output_price=m["output_price_per_1m"],
                 blended=_blended(m),
                 letters=m["tiers"],
                 bench=bench,
                 index=_num(evals.get("artificial_analysis_intelligence_index")),
+                release=(bench or {}).get("release_date") or None,
+                maker=stale_claims.maker_of(m["id"]),
                 superseded_by=m["superseded_by"],
             )
         )
@@ -299,12 +313,16 @@ def aa_clauses(bench: dict[str, Any] | None) -> list[str]:
     return out
 
 
-def headline(m: Model, current: str) -> str:
+def headline(m: Model, current: str, catalog: list[Model], today: dt.date) -> str:
+    """The AA figures, then the field's other claims in order: a claim the data
+    contradicts is dropped, and a stale AA figure in a kept claim is updated."""
     own = aa_clauses(m.bench)
     kept = [
-        c
+        stale_claims.refresh_figures(c, m)
         for c in split_clauses(current)
-        if not PROCESS_RE.search(c) and not _UNMEASURED_RE.match(c)
+        if not PROCESS_RE.search(c)
+        and not _UNMEASURED_RE.match(c)
+        and not any(f.kind != "figure" for f in stale_claims.claims(c, m, catalog, today))
     ]
     if not own:
         # Commas, not a semicolon: the field's claims are ';'-separated.
@@ -319,20 +337,29 @@ def headline(m: Model, current: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def owned_fields(attrs: dict[str, str], m: Model) -> list[str]:
-    """The fields this pass writes for one element, in FIELDS order."""
+def owned_fields(
+    attrs: dict[str, str], m: Model, catalog: list[Model], today: dt.date
+) -> dict[str, str]:
+    """The fields this pass writes for one element, in FIELDS order, each with
+    the reason it took the field over."""
     marked = set(attrs.get(MARKER, "").split())
-    out: list[str] = []
+    out: dict[str, str] = {}
     for field in FIELDS:
         text = attrs.get(field, "").strip()
-        if field in marked or not text or PROCESS_RE.search(text):
-            out.append(field)
+        if field in marked:
+            out[field] = "generated"
+        elif not text:
+            out[field] = "empty"
+        elif PROCESS_RE.search(text):
+            out[field] = "describes the pipeline"
         elif (
             field == "headline-benchmarks"
             and m.index is not None
             and "Intelligence Index" not in text
         ):
-            out.append(field)
+            out[field] = "cites no Artificial Analysis figure"
+        elif found := stale_claims.claims(text, m, catalog, today):
+            out[field] = "; ".join(f'"{f.claim}": {f.why}' for f in found)
     return out
 
 
@@ -376,10 +403,14 @@ class Change:
     field: str
     old: str
     new: str
+    why: str
 
 
-def apply(selector_text: str, benchmarks: dict[str, Any]) -> tuple[str, list[Change]]:
+def apply(
+    selector_text: str, benchmarks: dict[str, Any], today: dt.date | None = None
+) -> tuple[str, list[Change]]:
     """The selector with every owned field rewritten, and what changed."""
+    today = today or dt.datetime.now(dt.UTC).date()
     catalog = load_models(selector_text, benchmarks)
     by_id = {m.id: m for m in catalog}
     options = _OPTIONS_RE.search(selector_text)
@@ -398,14 +429,17 @@ def apply(selector_text: str, benchmarks: dict[str, Any]) -> tuple[str, list[Cha
         if m is None:
             continue  # retired: the record stays as it was
         element = text[start:end]
-        fields = owned_fields(attrs, m)
-        for field in fields:
+        fields = owned_fields(attrs, m, catalog, today)
+        for field, why in fields.items():
             old = attrs.get(field, "")
-            new = best_for(m, catalog) if field == "best-for" else headline(m, old)
+            if field == "best-for":
+                new = best_for(m, catalog)
+            else:
+                new = headline(m, old, catalog, today)
             if new != old:
                 element = _set_attr(element, field, new)
-                changes.append(Change(m.id, field, old, new))
-        element = _set_marker(element, fields)
+                changes.append(Change(m.id, field, old, new, why))
+        element = _set_marker(element, list(fields))
         if element != text[start:end]:
             text = text[:start] + element + text[end:]
     changes.reverse()
@@ -417,13 +451,16 @@ def main(argv: list[str] | None = None) -> int:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--write", action="store_true", help="apply to docs/model-selector.txt")
     mode.add_argument("--check", action="store_true", help="exit 1 if the selector disagrees")
+    parser.add_argument("--today", type=dt.date.fromisoformat, default=None)
     args = parser.parse_args(argv)
 
     selector_text = SELECTOR_PATH.read_text()
     benchmarks = json.loads(BENCHMARKS_PATH.read_text()) if BENCHMARKS_PATH.exists() else {}
-    new_text, changes = apply(selector_text, benchmarks)
+    new_text, changes = apply(selector_text, benchmarks, args.today)
 
     for c in changes:
+        if c.why != "generated":
+            print(f"TAKEN {c.id} {c.field} ({c.why})")
         print(f"PROSE {c.id} {c.field}: {c.new}")
     if args.check:
         if new_text != selector_text:
