@@ -481,6 +481,16 @@ export function ModelCatalog({
     }
   }
 
+  // Open a row and bring it into view (the New line above the table).
+  function showRow(id: string) {
+    setExpanded((prev) => new Set(prev).add(id));
+    requestAnimationFrame(() =>
+      document
+        .querySelector(`[data-testid="model-row"][data-model-id="${CSS.escape(id)}"]`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" }),
+    );
+  }
+
   function toggleExpand(id: string) {
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -493,6 +503,15 @@ export function ModelCatalog({
   // Ratings: chevron + model + provider + juris + input + output + AA index +
   // seven categories. Grid: provider/juris/input step aside (they are filters,
   // and pricing is the ratings view's job) so the evaluation columns fit.
+  // The rows the filters keep that carry a New tag, newest first, for the line
+  // above the table (new_until is the release or join day plus a fixed span).
+  const fresh = rows
+    .filter((m) => m.new_until !== null)
+    .sort(
+      (a, b) =>
+        (b.new_until ?? "").localeCompare(a.new_until ?? "") || a.name.localeCompare(b.name),
+    );
+
   const colSpan =
     view === "ratings"
       ? 8 + CATEGORY_ORDER.length
@@ -721,6 +740,45 @@ export function ModelCatalog({
           use blended.
         </p>
       </div>
+
+      {/* New models by name: one Artificial Analysis has yet to measure sits in
+          the Not measured group at the table's foot, far from its siblings
+          (GPT-6.1 Sol, 2026-10-01). */}
+      {fresh.length > 0 && (
+        <p
+          className="mt-3 text-xs leading-5 text-brand-slate-600 dark:text-brand-slate-300"
+          data-testid="new-models"
+        >
+          <span className="mr-1.5 rounded bg-violet-100 px-1 py-px text-[10px] font-semibold uppercase tracking-wide text-violet-800 dark:bg-violet-500/30 dark:text-violet-200">
+            New
+          </span>
+          {fresh.map((m, i) => {
+            const released = m.bench?.release_date ?? null;
+            return (
+              <Fragment key={m.id}>
+                {i > 0 && <span aria-hidden> · </span>}
+                <button
+                  type="button"
+                  onClick={() => showRow(m.id)}
+                  data-testid="new-model-link"
+                  data-model-id={m.id}
+                  className="font-medium text-brand-slate-900 underline decoration-dotted underline-offset-2 hover:text-brand-accent dark:text-brand-slate-50"
+                >
+                  {m.name}
+                </button>{" "}
+                <span className="text-brand-slate-500 dark:text-brand-slate-400">
+                  {released
+                    ? `released ${formatDay(released)}`
+                    : m.added_on
+                      ? `added ${formatDay(m.added_on)}`
+                      : ""}
+                  {m.bench ? "" : ", awaiting its first AA measurement"}
+                </span>
+              </Fragment>
+            );
+          })}
+        </p>
+      )}
 
       {/* Table */}
       <div className="mt-4 overflow-x-auto rounded-xl border border-brand-slate-200 dark:border-brand-slate-700">
@@ -1153,9 +1211,12 @@ export function ModelCatalog({
 
 // "New · released Sep 28" under the name of a model released in the last two
 // weeks (lib/benchmark-grid newUntil): its AA figures are launch-window results.
-// The server decides the window per request, so the tag clears on its own.
+// A model Artificial Analysis has yet to list reads "New · added Oct 1", counted
+// from the day it joined the catalog. The server decides the window per
+// request, so the tag clears on its own.
 function NewTag({ model: m }: { model: ModelRow }) {
   const released = m.bench?.release_date ?? null;
+  const added = released ? null : m.added_on;
   return (
     <span
       className="mt-0.5 block max-w-[11rem] whitespace-normal text-[11px] font-normal leading-4 text-brand-slate-500 dark:text-brand-slate-400"
@@ -1167,11 +1228,26 @@ function NewTag({ model: m }: { model: ModelRow }) {
         card={
           <p className="w-64 max-w-full text-[13px] leading-5">
             <span className="font-semibold text-brand-slate-900 dark:text-brand-slate-50">
-              {m.name} is new{released ? `: released ${formatLongDay(released)}` : ""}.
+              {m.name} is new
+              {released
+                ? `: released ${formatLongDay(released)}`
+                : added
+                  ? `: added to this catalog ${formatLongDay(added)}`
+                  : ""}
+              .
             </span>{" "}
-            Its Artificial Analysis figures are launch-window results, and its dashed-outline
-            letters are the daily catalog automation&rsquo;s estimates. The tag clears on{" "}
-            {formatDay(m.new_until ?? "")}.
+            {m.bench ? (
+              <>
+                Its Artificial Analysis figures are launch-window results, and its dashed-outline
+                letters are the daily catalog automation&rsquo;s estimates.
+              </>
+            ) : (
+              <>
+                It awaits its first Artificial Analysis measurement, so its letters are the daily
+                catalog automation&rsquo;s estimates.
+              </>
+            )}{" "}
+            The tag clears on {formatDay(m.new_until ?? "")}.
           </p>
         }
         triggerTestId="new-trigger"
@@ -1180,7 +1256,7 @@ function NewTag({ model: m }: { model: ModelRow }) {
         <span className="mr-1 rounded bg-violet-100 px-1 py-px text-[10px] font-semibold uppercase tracking-wide text-violet-800 dark:bg-violet-500/30 dark:text-violet-200">
           New
         </span>
-        {released && <>released {formatDay(released)}</>}
+        {released ? <>released {formatDay(released)}</> : added && <>added {formatDay(added)}</>}
       </HoverCard>
     </span>
   );

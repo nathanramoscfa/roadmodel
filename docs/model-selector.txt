@@ -1177,7 +1177,7 @@
              headline-benchmarks="LMArena WebDev #3 (Elo 1758.7)"
              pricing-notes="Provider-direct OpenAI API per-token pricing (not via the Cursor pool)"
              prose-generated="best-for"
-             best-for="Strong coding, agentic work, long context and knowledge at a medium price." />
+             best-for="Strong coding, agentic work, long context and knowledge at a medium price." added-on="2026-10-01"/>
     </tier>
     <tier cost="low">
       <model id="gemini-3.5-flash" name="Gemini 3.5 Flash"
