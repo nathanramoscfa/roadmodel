@@ -25,8 +25,9 @@ lifecycle Stage 3 reads "Open the PR, then mark the step" and Stage 6
 reads "Dispose of every finding, declare completion, then new
 conversation". If Stage 3 is a bare "Open the PR", Stage 6 tells
 you to put findings in a "Follow-ups (non-blocking)" note after the
-completion line, or a `### Phase` section's `**Status:**` line sits
-after its **Goal:** rather than directly under its heading, STOP and
+completion line, a `### Phase` section's `**Status:**` line sits
+after its **Goal:** rather than directly under its heading, or a
+`### Phase` section has no **Phase roadmap settings** table, STOP and
 tell me the kit is stale — do not write the roadmap from it.
 
 Step 0b — roadmaps live in `docs/roadmap/`: `ROADMAP.md` and every
@@ -57,21 +58,33 @@ this project's surfaces (security & privacy, release & deployment,
 operations & observability, worktree strategy, defect handling), and
 say explicitly which optional ones you omitted and why.
 
-Where the roadmap names a model or platform for a phase, run the
-model selector in `@planning/model-selector.txt` (prices from
+For **each phase's** Phase roadmap settings table — the model and
+dials for the session that will write that phase's roadmap with
+`/roadmap-phase N` — run the model selector in
+`@planning/model-selector.txt` (prices from
 `@planning/model-tier-cost-scale.md`, display rules from
-`@planning/settings-display.md`) against `@planning/user-context.md`.
-You are the engine — do not call any external API. Honor every
-availability exclusion in the selector.
+`@planning/settings-display.md`) against `@planning/user-context.md`,
+quality first as the template's style rule says: the strongest
+`planning` model the operator's access methods reach, at the deepest
+reasoning rung it exposes on its platform (`Max` in Claude Code),
+thinking on, never `Ultracode` — unless the user-context states a rule
+for roadmap-writing sessions. Use the selector the same way wherever
+else the roadmap names a model or platform. You are the engine — do
+not call any external API. Honor every availability exclusion in the
+selector, and write each phase's backup model into its table's Backup
+row, with the backup's own platform and dial.
 
 Honor the template's style rules: 80-column prose, no `<PLACEHOLDER>`
 tokens left, every `<!-- ... -->` guidance block stripped, numbers
 marked "TBD" rather than invented, every phase carrying
 `**Status:** Not started` directly under its `### Phase` heading,
-before its Goal, and the §8 summary table carrying a Status column
-(each phase's final step flips both and appends ✅ to the heading).
+before its Goal, the §8 summary table carrying a Status column
+(each phase's final step flips both and appends ✅ to the heading),
+and every phase carrying its Phase roadmap settings table directly
+after its metadata badge.
 
 When the file is written, reply with its path and the phase list with
-one line each. Do not start Phase 1 — each phase gets its own phase
+one line each, naming the model and effort that will write each
+phase's roadmap. Do not start Phase 1 — each phase gets its own phase
 roadmap in a separate conversation (see
 `planning/prompts/phase-roadmap.md`).

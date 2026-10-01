@@ -3,7 +3,8 @@ description: Bring every roadmap's Status ledger and upcoming Settings up to dat
 ---
 Bring this project's roadmaps current **without executing any step**:
 mark what has already shipped, then re-run the model selector for every
-step that has not. This is bookkeeping only — no step's `<task>` block
+step that has not, and for the session that writes each phase roadmap
+not written yet. This is bookkeeping only — no step's `<task>` block
 runs, and no code is changed. Only roadmap files change, plus the
 references that point at them when §1 moves them into `docs/roadmap/`.
 
@@ -162,7 +163,7 @@ anchor.
 
 Print the phase · step · status table.
 
-## 3. Settings — re-select every step that has not shipped
+## 3. Settings — re-select every step that has not shipped, and every phase roadmap not yet written
 
 The current step is the first step, in phase order, that does not read
 `Complete`. For the current step and every step after it, in every phase
@@ -193,6 +194,32 @@ exclusion in the selector, and include a backup model.
   not a model choice.
 
 Print the step · was · now · changed table.
+
+Then the project roadmap. Each `### Phase` carries, directly after its
+metadata badge (after its **Goal:** where it has none), a **Phase
+roadmap settings** table (roadmodel 0.2.54 on): the model and dials for
+the session that writes that phase's roadmap with `/roadmap-phase N`.
+For every phase whose roadmap does not exist yet — no
+`phaseNN-roadmap.md` or `phaseNN-<slug>-roadmap.md` for it — re-run the
+selector for that session, quality first: the strongest `planning`
+model the operator's access methods reach, at the deepest reasoning
+rung it exposes on its platform (`Max` in Claude Code), thinking on,
+never `Ultracode`, with a backup on its own platform and dial — unless
+`planning/user-context.md` states a rule for roadmap-writing sessions,
+which wins. The table takes its platform's shape, as a step's does,
+with Conversation **New**, followed by one or two sentences on why.
+
+- No table yet ⇒ add one. It is the phase's first pick, so it takes no
+  `Settings updated` line.
+- A table that differs from the new pick ⇒ rewrite it and its why, and
+  add `> Settings updated <YYYY-MM-DD> (refresh): was <old model> · <old effort>. <why>.`
+  beneath it.
+- A table that matches ⇒ leave the phase exactly as it is.
+- **Never add, re-pick or rewrite the table of a phase whose roadmap
+  exists.** Its table, or the lack of one, is the record of what wrote
+  that roadmap.
+
+Print the phase · was · now · changed table.
 
 ## 4. Deliver
 

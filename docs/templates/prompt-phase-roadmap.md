@@ -48,6 +48,33 @@ project roadmap written before this convention may carry another name
 (e.g. `agentic-bot-farm-v1.md`); it is the file in `docs/roadmap/` the
 phase roadmaps name as their parent.
 
+Step 0c — this roadmap is written with the settings the project
+roadmap names for it. Read the `### Phase {{N}}` section of
+`{{PROJECT_ROADMAP}}` and its **Phase roadmap settings** table, and
+print one line: `Phase {{N}} roadmap settings: Model <M> · Platform
+<P> · <its dials, e.g. Effort Max · Thinking On>. This session: <your
+own model> on <this surface>.`
+
+- You are its Model on its Platform, or a newer version in the same
+  line (Opus 5 → Opus 5.5, Fable 5 → Fable 5.1): continue, and say so
+  on the line.
+- You are its Backup on the backup's platform: continue — I have
+  switched to it — and say so on the line.
+- Anything else — a different line, an older version, another
+  surface: STOP and tell me how to switch (Claude Code: `/model <M>`,
+  then `/roadmap-phase {{N}}` again; elsewhere: the model picker and
+  reasoning setting). Do not write the roadmap on a model it did not
+  intend.
+- You cannot see your own reasoning dial. `/roadmap-phase` sets Claude
+  Code's effort to `Max` by itself, the deepest rung, so never below
+  the table; pasted by hand, or on another surface, the printed line
+  is my cue to set the dial before you go on.
+- No such table (a project roadmap written before roadmodel 0.2.54):
+  pick the settings now by the **Phase roadmap settings** rule in
+  `planning/templates/project-roadmap-template.md`, print them on the
+  same line, and apply the same checks. Leave the project roadmap as it
+  is — `/roadmap-refresh` adds the table.
+
 Step 1 — write `{{OUTPUT}}` from
 `@planning/templates/phase-roadmap-template.md`, expanding the
 Phase {{N}} section of `{{PROJECT_ROADMAP}}` into an executable plan.

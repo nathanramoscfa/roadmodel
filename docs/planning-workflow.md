@@ -54,9 +54,10 @@ line if `commands/` is not picked up.
 It marks every step that has already shipped (a merged PR on the step's
 own Branch ⇒ `Complete — PR #n`), then re-runs the model selector for the
 current step and every step after it, so their Settings reflect today's
-catalog and your user-context. Completed steps are never touched — their
-Settings are the record of what ran. It delivers one docs-only PR and
-starts nothing.
+catalog and your user-context. It does the same for the Phase roadmap
+settings of every phase whose roadmap is not written yet (§3). Completed
+steps and written phases are never touched — their Settings are the
+record of what ran. It delivers one docs-only PR and starts nothing.
 
 Use it after a model generation ships, after your subscriptions change,
 or once to bring an older roadmap up to date. Refresh AFTER the planning
@@ -80,6 +81,17 @@ Optional argument: where the brief lives, e.g.
 `/roadmap-project @docs/brief.md`. Default is `@README.md`. Output is
 `docs/roadmap/ROADMAP.md`.
 
+Each phase in it carries a **Phase roadmap settings** table, right
+after its Complexity/Risk badge: the model, backup, platform and dials
+for the session that will write that phase's roadmap (§3). The
+selector picks them quality first. A phase roadmap fixes every step's
+scope, task prompt, acceptance criteria and Settings, and it is written
+once, so it gets the strongest planning model your subscriptions reach
+at that model's deepest reasoning rung — `Max` in Claude Code, never
+`Ultracode` (which reasons at Extra high and adds parallel agents a
+single document does not need). A rule for roadmap-writing sessions in
+your user-context overrides that default.
+
 Every roadmap lives in `docs/roadmap/`: `ROADMAP.md` and each
 `phaseNN-roadmap.md`, together, none at the repo root. A project that
 keeps its roadmaps git-excluded (`private/`) keeps them there. The
@@ -100,6 +112,24 @@ Optional second argument: the output path, e.g.
 `/roadmap-phase 6 private/phase06-roadmap.md`. Defaults: parent roadmap
 `@docs/roadmap/ROADMAP.md`, output `docs/roadmap/phaseNN-roadmap.md`,
 continuity from the previous phase's roadmap.
+
+In Claude Code the command runs at `Max` effort by itself (`effort: max`
+in its frontmatter), so you never type `/effort` first. A command's
+effort is fixed, so it cannot follow each phase's table; `Max` is the
+deepest rung, so it is never below what a table asks. Before writing
+anything it prints Phase 6's roadmap settings beside the session's own
+model. A newer version in the same line (Opus 5 → Opus 5.5), or the
+table's backup on its own platform, continues. Any other model or
+surface stops and tells you how to switch: in Claude Code, `/model <M>`,
+then `/roadmap-phase 6` again. On Codex, Antigravity and the other
+agents the port carries no effort, so the printed line is your cue to
+set the reasoning dial.
+
+A project roadmap written before roadmodel 0.2.54 has no Phase roadmap
+settings tables. The command then picks the settings on the spot by the
+same rule, prints them and checks the session the same way, without
+editing `ROADMAP.md`. `/roadmap-refresh` adds the tables for every
+phase not written yet.
 
 ## 4. Execute a step
 
@@ -291,7 +321,9 @@ says `*** self-update FAILED` with the reason.
 3. **Executes `planning/prompts/{project,phase}-roadmap.md`** with your
    argument filled in and every other placeholder at its default. The
    AI runs `planning/model-selector.txt` against `planning/user-context.md`
-   as the engine — no external API call.
+   as the engine — no external API call. `/roadmap-project` picks each
+   phase's roadmap settings this way; `/roadmap-phase` first checks the
+   session against its phase's settings (§3).
 4. **Writes the file and stops.** It replies with the path and a short
    summary. It does not start Step 1 — every step is its own
    conversation, per the step lifecycle in the template.
