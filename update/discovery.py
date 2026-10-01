@@ -21,6 +21,9 @@ A flagged model leaves the lane one of two ways:
 
 The curation model regenerates that file whole on every run, so
 ``--preserve-declined`` restores any line it dropped from the committed copy.
+A model declined only for want of a price (``NO_PRICE``, written by
+``update/dispose_discoveries.py``) is shown to the curation model again once
+its provider's page prices it.
 ``--check`` prints the flagged models still neither added nor declined, one
 ``provider/slug`` per line, for the cron's issue step.
 """
@@ -46,6 +49,10 @@ SELECTOR_PATH = REPO_ROOT / "docs" / "model-selector.txt"
 COST_SCALE_PATH = REPO_ROOT / "docs" / "model-tier-cost-scale.md"
 
 DECLINED_HEADING = "## Declined Models (discovery lane)"
+# The reason update/dispose_discoveries.py gives a flagged model its provider's
+# page does not price. Unlike every other reason it is provisional: the model
+# returns to the curation model's block once a price appears.
+NO_PRICE = "no price on the provider page; re-checked each run"
 DECLINED_LINE_RE = re.compile(
     r"^- (?P<provider>[a-z0-9.-]+)/(?P<slug>\S(?:.*?\S)?) — (?P<reason>.+?) "
     r"\(declined (?P<date>\d{4}-\d{2}-\d{2})\)\s*$"
@@ -122,14 +129,18 @@ class Discovery:
     input_price_per_1m: float | None = None
     output_price_per_1m: float | None = None
 
+    @property
+    def priced(self) -> bool:
+        return self.input_price_per_1m is not None and self.output_price_per_1m is not None
+
     def line(self) -> str:
-        if self.input_price_per_1m is not None and self.output_price_per_1m is not None:
+        if self.priced:
             price = (
                 f"${self.input_price_per_1m:g} input / ${self.output_price_per_1m:g} output "
                 "per 1M tokens (provider page)"
             )
         else:
-            price = "price: read it from the provider page"
+            price = "no price on the provider page yet"
         return f"- {self.provider}/{self.slug} — {price} — source: {self.source_url}"
 
 
@@ -143,9 +154,13 @@ def _price(value: Any) -> float | None:
 
 def load(snapshots: list[Path], selector_text: str, cost_scale_text: str) -> list[Discovery]:
     """Every flagged model that the catalog neither carries nor declines, in
-    provider then slug order, with its price where the snapshot recorded one."""
+    provider then slug order, with its price where the snapshot recorded one.
+    A model declined only for want of a price counts as undeclined once the
+    snapshot prices it."""
     carried = catalog_keys(selector_text)
-    declined = {(d.provider, normalize(d.slug)) for d in parse_declined(cost_scale_text)}
+    reasons: dict[tuple[str, str], set[str]] = {}
+    for d in parse_declined(cost_scale_text):
+        reasons.setdefault((d.provider, normalize(d.slug)), set()).add(d.reason)
     found: list[Discovery] = []
     for path in snapshots:
         snap = json.loads(path.read_text())
@@ -162,10 +177,12 @@ def load(snapshots: list[Path], selector_text: str, cost_scale_text: str) -> lis
             slug = str(slug)
             if _variants(slug) & carried:
                 continue
-            if (provider, normalize(slug)) in declined:
-                continue
             in_p, out_p = prices.get(slug, (None, None))
-            found.append(Discovery(provider, slug, source_url, in_p, out_p))
+            found_now = Discovery(provider, slug, source_url, in_p, out_p)
+            held = reasons.get((provider, normalize(slug)), set())
+            if held and not (held == {NO_PRICE} and found_now.priced):
+                continue
+            found.append(found_now)
     return sorted(found, key=lambda d: (d.provider, d.slug))
 
 

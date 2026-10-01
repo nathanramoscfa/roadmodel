@@ -17,14 +17,22 @@ headline-benchmarks start empty: update/model_prose.py writes them.
 DECLINE everything else, with a line in docs/model-tier-cost-scale.md's
 "Declined Models (discovery lane)" section:
 
-- NO_PRICE: the provider's page shows no price the extractor reads. Re-checked
-  every run: once a price and a predecessor exist, the line is lifted and the
-  model added.
+- SPECIALIZED: an image, audio, video, embedding, robotics or computer-use
+  model (by its name). The catalog rates general text models.
+- NO_PRICE: the provider's page shows no price the extractor reads. Provisional:
+  once the page prices it, update/discovery.py shows it to the curation pass
+  again, and this script then adds it (a same-series successor) or declines it
+  as NEW_SERIES.
 - NEW_SERIES: no same-series model the provider's API offers is in the
-  catalog. A new family enters through the curation pass, which sees it first.
+  catalog. New series join through the curation pass, which saw this one with
+  its price in the same run (the snapshots refresh before the pass).
 
 Models a CLI's docs introduce (the Gemini and Claude Code trackers'
 ``unexpected_models``) are disposed the same way: a docs page lists no price.
+
+One decision stands per model. The curation pass's own decline outranks a
+NO_PRICE line, which then goes; so does a NO_PRICE line for a model the
+catalog now carries.
 
     python update/dispose_discoveries.py --write    # apply and report
     python update/dispose_discoveries.py            # report only
@@ -46,6 +54,7 @@ import rating_guard  # noqa: E402
 from discovery import (  # noqa: E402
     DECLINED_HEADING,
     DECLINED_LINE_RE,
+    NO_PRICE,
     Declined,
     _section,
     _variants,
@@ -63,8 +72,18 @@ SELECTOR_PATH = REPO_ROOT / "docs" / "model-selector.txt"
 COST_SCALE_PATH = REPO_ROOT / "docs" / "model-tier-cost-scale.md"
 REPORT_PATH = UPDATE_DIR / ".last-dispositions.md"
 
-NO_PRICE = "no price on the provider page; re-checked each run"
-NEW_SERIES = "a new series with no model from this provider in the catalog; a new family enters through the curation pass"
+NEW_SERIES = "a new series; new series join through the curation pass, which saw it with its price"
+SPECIALIZED = (
+    "an image, audio, video, embedding, robotics or computer-use model; "
+    "the catalog rates general text models"
+)
+# The name words that mark a specialized model (the Google extractor keeps the
+# same kinds off its flags; a docs page or another provider's list does not).
+_SPECIALIZED_RE = re.compile(
+    r"\b(image|imagen|veo|video|audio|tts|speech|transcribe|realtime|embedding|embed|"
+    r"live|nano banana|robotics|computer[ -]use)\b",
+    re.IGNORECASE,
+)
 
 # The trackers whose snapshots name models their CLI's docs introduced.
 TRACKER_FLAGS: dict[str, Path] = {
@@ -283,8 +302,8 @@ def _join_api_method(selector: str, provider: str, model_id: str) -> str:
     return METHOD_RE.sub(edit, selector)
 
 
-def _write_declines(cost_scale: str, add: list[Declined], drop: set[tuple[str, str]]) -> str:
-    """The declined section with lines in ``drop`` removed and ``add`` appended."""
+def _write_declines(cost_scale: str, add: list[Declined], drop: set[Declined]) -> str:
+    """The declined section with the lines in ``drop`` removed and ``add`` appended."""
     span = _section(cost_scale)
     trailing = "\n" if cost_scale.endswith("\n") else ""
     lines = cost_scale.splitlines()
@@ -297,7 +316,7 @@ def _write_declines(cost_scale: str, add: list[Declined], drop: set[tuple[str, s
         m = DECLINED_LINE_RE.match(line.strip())
         if m is None:
             return False
-        return (m["provider"], normalize(m["slug"])) in drop
+        return Declined(m["provider"], m["slug"], m["reason"], m["date"]) in drop
 
     body = [line for line in lines[first + 1 : end] if not dropped(line)]
     while body and not body[-1].strip():
@@ -307,54 +326,96 @@ def _write_declines(cost_scale: str, add: list[Declined], drop: set[tuple[str, s
     return "\n".join(lines[: first + 1] + body + ([""] + rest if rest else [])) + trailing
 
 
+def _listed(d: Declined) -> Flag:
+    """A declined line as the flag the report names."""
+    return Flag(d.provider, d.slug, None, None, "declined list")
+
+
+def _standing(lines: list[Declined]) -> tuple[dict[tuple[str, str], Declined], set[Declined]]:
+    """The decision that stands for each declined model, and the NO_PRICE lines
+    another decision outranks: the curation pass's own line wins over this
+    script's provisional one, and a model keeps one NO_PRICE line at most."""
+    standing: dict[tuple[str, str], Declined] = {}
+    outranked: set[Declined] = set()
+    for d in lines:
+        key = (d.provider, normalize(d.slug))
+        held = standing.get(key)
+        if held is None:
+            standing[key] = d
+        elif held.reason == NO_PRICE:
+            outranked.add(held)
+            standing[key] = d
+        elif d.reason == NO_PRICE:
+            outranked.add(d)
+    return standing, outranked
+
+
 def dispose(
     selector: str, cost_scale: str, flags: list[Flag], today: dt.date
 ) -> tuple[str, str, list[Action]]:
     """Return the selector and cost scale with every undecided flag disposed."""
     actions: list[Action] = []
-    declined = {(d.provider, normalize(d.slug)): d for d in parse_declined(cost_scale)}
+    declined, drop = _standing(parse_declined(cost_scale))
+    for d in sorted(drop, key=lambda d: (d.provider, d.slug)):
+        standing = declined[(d.provider, normalize(d.slug))]
+        by_rule = standing.reason in (NO_PRICE, NEW_SERIES, SPECIALIZED)
+        detail = (
+            "a duplicate line" if by_rule else f"the curation pass declined it: {standing.reason}"
+        )
+        actions.append(Action("lifted", _listed(d), detail))
     new_declines: list[Declined] = []
-    drop: set[tuple[str, str]] = set()
     live = derive_ratings.live_ids(selector)
     for flag in flags:
-        if _variants(flag.slug) & catalog_keys(selector):
-            continue  # carried: added by the pass or an earlier run
         key = (flag.provider, normalize(flag.slug))
         prior = declined.get(key)
-        if prior is not None and prior.reason not in (NO_PRICE,):
-            continue  # declined by the curation pass, or a new series: it stands
-        offered = _api_offered(selector, flag.provider)
-        pool = {
-            mid: m
-            for mid, m in rating_guard.models(selector).items()
-            if mid in live and mid in offered
-        }
-        probe_id = (
-            flag.slug if re.fullmatch(r"[a-z0-9][a-z0-9.\-]*", flag.slug) else normalize(flag.slug)
-        )
-        pred = rating_guard.predecessor(probe_id, pool)
-        if flag.priced and pred is not None:
-            selector, model_id = add_model(selector, flag, pred)
-            if prior is not None:
-                drop.add(key)
-                actions.append(Action("lifted", flag, "its price is on the provider page now"))
-            actions.append(
-                Action(
-                    "added",
-                    flag,
-                    f"as `{model_id}`, the `{pred}` successor at "
-                    f"{_money(flag.input_price or 0)}/{_money(flag.output_price or 0)}, "
-                    f"with `{pred}`'s letters until Artificial Analysis measures it",
-                )
+        if _variants(flag.slug) & catalog_keys(selector):
+            continue  # carried: added by the pass or an earlier run
+        if prior is not None and prior.reason != NO_PRICE:
+            continue  # the curation pass's decline, or a rule decline: it stands
+        if _SPECIALIZED_RE.search(flag.slug):
+            reason = SPECIALIZED
+        else:
+            offered = _api_offered(selector, flag.provider)
+            pool = {
+                mid: m
+                for mid, m in rating_guard.models(selector).items()
+                if mid in live and mid in offered
+            }
+            probe_id = (
+                flag.slug
+                if re.fullmatch(r"[a-z0-9][a-z0-9.\-]*", flag.slug)
+                else normalize(flag.slug)
             )
-            continue
-        reason = NO_PRICE if not flag.priced else NEW_SERIES
+            pred = rating_guard.predecessor(probe_id, pool)
+            if flag.priced and pred is not None:
+                selector, model_id = add_model(selector, flag, pred)
+                if prior is not None:
+                    drop.add(prior)
+                    actions.append(Action("lifted", flag, "its price is on the provider page now"))
+                actions.append(
+                    Action(
+                        "added",
+                        flag,
+                        f"as `{model_id}`, the `{pred}` successor at "
+                        f"{_money(flag.input_price or 0)}/{_money(flag.output_price or 0)}, "
+                        f"with `{pred}`'s letters until Artificial Analysis measures it",
+                    )
+                )
+                continue
+            reason = NO_PRICE if not flag.priced else NEW_SERIES
         if prior is not None and prior.reason == reason:
             continue
         if prior is not None:
-            drop.add(key)
+            drop.add(prior)
         new_declines.append(Declined(flag.provider, flag.slug, reason, today.isoformat()))
         actions.append(Action("declined", flag, reason))
+    # A NO_PRICE line goes once the catalog carries its model, flagged or not:
+    # the extractors stop flagging a carried model.
+    carried = catalog_keys(selector)
+    for d in declined.values():
+        if d.reason == NO_PRICE and d not in drop and _variants(d.slug) & carried:
+            drop.add(d)
+            actions.append(Action("lifted", _listed(d), "the catalog carries it now"))
     if new_declines or drop:
         cost_scale = _write_declines(cost_scale, new_declines, drop)
     return selector, cost_scale, actions

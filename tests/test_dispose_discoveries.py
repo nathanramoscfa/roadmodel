@@ -142,6 +142,54 @@ def test_the_curation_pass_decides_first() -> None:
     )
 
 
+def test_a_specialized_model_is_declined_as_such() -> None:
+    noted = COST_SCALE + f"- google/Gemini Robotics Er 2 — {dd.NO_PRICE} (declined 2026-09-30)\n"
+    flags = [_flag("google", "Gemini Robotics Er 2"), _flag("openai", "gpt-image-2", (5.0, 40.0))]
+    selector, cost_scale, actions = dd.dispose(SELECTOR, noted, flags, TODAY)
+    assert selector == SELECTOR
+    assert [(a.kind, a.flag.slug, a.detail) for a in actions] == [
+        ("declined", "Gemini Robotics Er 2", dd.SPECIALIZED),
+        ("declined", "gpt-image-2", dd.SPECIALIZED),
+    ]
+    assert f"- google/Gemini Robotics Er 2 — {dd.SPECIALIZED} (declined 2026-10-01)" in cost_scale
+    assert dd.NO_PRICE not in cost_scale
+    assert dd.dispose(selector, cost_scale, flags, TODAY)[2] == []
+
+
+def test_a_newly_priced_new_series_is_declined_as_one() -> None:
+    noted = COST_SCALE + f"- google/Gemini 3.9 Flash-Lite — {dd.NO_PRICE} (declined 2026-09-30)\n"
+    flag = _flag("google", "Gemini 3.9 Flash-Lite", (0.1, 0.4))
+    _, cost_scale, actions = dd.dispose(SELECTOR, noted, [flag], TODAY)
+    assert [(a.kind, a.detail) for a in actions] == [("declined", dd.NEW_SERIES)]
+    assert dd.NO_PRICE not in cost_scale
+
+
+def test_the_curation_pass_outranks_a_provisional_decline() -> None:
+    both = (
+        COST_SCALE
+        + f"- google/Gemini 3.9 Flash-Lite — {dd.NO_PRICE} (declined 2026-09-30)\n"
+        + "- google/Gemini 3.9 Flash-Lite — superseded by a newer Flash-Lite (declined 2026-10-01)\n"
+    )
+    flag = _flag("google", "Gemini 3.9 Flash-Lite", (0.1, 0.4))
+    _, cost_scale, actions = dd.dispose(SELECTOR, both, [flag], TODAY)
+    assert dd.NO_PRICE not in cost_scale
+    assert "superseded by a newer Flash-Lite (declined 2026-10-01)" in cost_scale
+    assert [a.line() for a in actions] == [
+        "- lifted: `google/Gemini 3.9 Flash-Lite` — the curation pass declined it: "
+        "superseded by a newer Flash-Lite"
+    ]
+
+
+def test_a_provisional_decline_goes_once_the_catalog_carries_the_model() -> None:
+    # The extractors stop flagging a carried model, so no flag names it.
+    noted = COST_SCALE + f"- openai/GPT-6 Sol — {dd.NO_PRICE} (declined 2026-09-30)\n"
+    _, cost_scale, actions = dd.dispose(SELECTOR, noted, [], TODAY)
+    assert cost_scale == COST_SCALE
+    assert [a.line() for a in actions] == [
+        "- lifted: `openai/GPT-6 Sol` — the catalog carries it now"
+    ]
+
+
 def test_ids_and_names_follow_the_catalog() -> None:
     assert dd.new_id(_flag("openai", "gpt-6.1-sol"), "gpt-6-sol") == "gpt-6.1-sol"
     assert dd.new_id(_flag("anthropic", "Claude Opus 5.6"), "claude-opus-5-5") == "claude-opus-5-6"
@@ -180,16 +228,25 @@ def test_the_report_names_each_disposition() -> None:
     _, _, actions = dd.dispose(
         SELECTOR,
         COST_SCALE,
-        [_flag("openai", "gpt-6.1-sol", (2.0, 10.0)), _flag("google", "Gemini Robotics Er 2")],
+        [
+            _flag("openai", "gpt-6.1-sol", (2.0, 10.0)),
+            _flag("google", "Gemini 3.9 Flash"),
+            _flag("google", "Gemini Robotics Er 2"),
+        ],
         TODAY,
     )
     report = dd.render_report(actions)
     assert "- added: `openai/gpt-6.1-sol` — as `gpt-6.1-sol`, the `gpt-6-sol` successor" in report
-    assert f"- declined: `google/Gemini Robotics Er 2` — {dd.NO_PRICE}" in report
+    assert f"- declined: `google/Gemini 3.9 Flash` — {dd.NO_PRICE}" in report
+    assert f"- declined: `google/Gemini Robotics Er 2` — {dd.SPECIALIZED}" in report
 
 
 def test_the_catalog_workflow_disposes_before_the_codex_sync_and_the_rating_guard() -> None:
     wf = (REPO_ROOT / ".github" / "workflows" / "update-models.yml").read_text()
+    # The curation pass sees today's flags and prices: the snapshots refresh first.
+    assert wf.index("- name: Refresh provider-direct catalog snapshots") < wf.index(
+        "- name: Refresh roadmodel catalog (Opus)"
+    )
     at = wf.index("python update/dispose_discoveries.py --write")
     assert wf.index("prose_guard.py --apply") < wf.index("merge_catalog.py --write --base") < at
     assert at < wf.index("--sync-method codex-cli") < wf.index("rating_guard.py --apply")
