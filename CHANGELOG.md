@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.53] — 2026-10-01
+
+### Added
+
+- **GPT-6.1 Sol is in the catalog.** OpenAI's own price list has it at $2/$10,
+  the same as GPT-6 Sol, on the OpenAI API and in Codex. It carries GPT-6
+  Sol's letters until Artificial Analysis measures it, with coding, agentic
+  and long context held at A until then, so GPT-6 Sol still ranks above it.
+  The catalog's discovery lane added it with no hand edit.
+
+### Changed
+
+- **Every model's best-for and headline benchmarks come from its data.**
+  About 30 of the 56 models described the catalog's own bookkeeping
+  ("pending editorial review") instead of the model. Those fields are now
+  written from the model's letters, price and Artificial Analysis figures and
+  rewritten on every refresh, so the recommender and the MCP catalog read
+  what each model does best and how it measures. Curated text stays as
+  written.
+- **Sonnet 5.5 can run at Max effort in Claude Code,** as its docs row
+  allows; the recommender's ceiling rule now lists it beside Opus 5.5. The
+  selector also names every documented default effort: `medium` on Opus 5.5
+  and Sonnet 5.5, `xhigh` on Opus 4.7, `high` elsewhere.
+
 ## [0.2.52] — 2026-09-30
 
 ### Changed
