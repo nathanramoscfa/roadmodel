@@ -48,6 +48,18 @@
     "Gemini 3.1 Flash-Lite",
     "Gemini 3.5 Flash-Lite"
   ],
+  "discovered": [
+    {
+      "slug": "Gemini 3.5 Flash-Lite",
+      "input_price_per_1m": 0.3,
+      "output_price_per_1m": 2.5
+    },
+    {
+      "slug": "Gemini 3.1 Flash-Lite",
+      "input_price_per_1m": 0.25,
+      "output_price_per_1m": 1.5
+    }
+  ],
   "missing_mapped_models": [],
   "section_sha256": "6bae7254a93b2c49663e3d911c0c4de5f7a9f328ef213d238eda3cb1e4608cb4"
 }

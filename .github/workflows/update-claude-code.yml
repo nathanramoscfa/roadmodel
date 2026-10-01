@@ -212,6 +212,7 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
+          nl=$'\n'  # joins sections: $( ) strips the trailing newlines of what it captures
           if git diff --quiet -- docs/model-selector.txt docs/model-selector.md docs/catalog.json update/claude-code-effort.json; then
             echo "No selector / snapshot changes — nothing to commit."
             exit 0
@@ -225,7 +226,7 @@ jobs:
           summary="$(cat update/.last-claude-code-summary.txt 2>/dev/null || echo 'Automated Claude Code surface refresh.')"
           warnings=""
           if [ -f update/.last-claude-code-warnings.txt ] && [ -s update/.last-claude-code-warnings.txt ]; then
-            warnings="$(printf '\n\n## Warnings\n')$(sed 's/^/- /' update/.last-claude-code-warnings.txt)"
+            warnings="${nl}${nl}## Warnings${nl}$(sed 's/^/- /' update/.last-claude-code-warnings.txt)"
           fi
           # FLAG (never act on) a new model the docs effort table introduced.
           unexpected="$(python -c "import json; print(', '.join(json.load(open('update/claude-code-effort.json')).get('unexpected_models', [])))" 2>/dev/null || true)"

@@ -38,6 +38,7 @@ import hashlib
 import json
 import re
 import sys
+from collections.abc import Collection, Iterator
 from pathlib import Path
 
 import requests
@@ -114,22 +115,58 @@ def _tier_of(table: Tag) -> str:
     return h.get_text(" ", strip=True) if isinstance(h, Tag) else ""
 
 
-def _model_id_for(table: Tag) -> str | None:
-    """The selector id of the model whose section this table is in, or None.
+def _section_of(table: Tag, names: Collection[str]) -> str | None:
+    """The display name, among ``names``, of the model whose section this table
+    is in, or None.
 
     Walks preceding headings nearest-first: a `` Preview``-stripped exact match to
-    a target display name wins; hitting a NON-target ``Gemini …`` h2 first means
-    the table belongs to another model (stop — do not bind it to a target above).
+    a wanted display name wins; hitting any other ``Gemini …`` h2 first means
+    the table belongs to another model (stop — do not bind it to a name above).
     """
     for h in table.find_all_previous(["h1", "h2", "h3", "h4"]):
         if not isinstance(h, Tag):
             continue
         txt = _PREVIEW_RE.sub("", h.get_text(" ", strip=True)).strip()
-        if txt in NAME_TO_ID:
-            return NAME_TO_ID[txt]
+        if txt in names:
+            return txt
         if h.name == "h2" and txt.startswith("Gemini "):
             return None
     return None
+
+
+def _model_id_for(table: Tag) -> str | None:
+    """The selector id of the model whose section this table is in, or None."""
+    name = _section_of(table, NAME_TO_ID)
+    return NAME_TO_ID[name] if name is not None else None
+
+
+def _standard_tables(soup: BeautifulSoup) -> Iterator[tuple[Tag, list[list[str]]]]:
+    """Each Standard-tier price table (one with Input and Output price rows),
+    with its rows' cell texts, in page order."""
+    for table in soup.find_all("table"):
+        if not isinstance(table, Tag):
+            continue
+        rows = [_row_cells(r) for r in table.find_all("tr") if isinstance(r, Tag)]
+        has_in = any(c and "input price" in c[0].lower() for c in rows)
+        has_out = any(c and c[0].lower().startswith("output price") for c in rows)
+        if not (has_in and has_out):
+            continue
+        if _tier_of(table).lower() != "standard":
+            continue
+        yield table, rows
+
+
+def _paid_prices(rows: list[list[str]]) -> tuple[float | None, float | None]:
+    """The Paid Tier (last column) input and output price of one table."""
+    in_price = out_price = None
+    for c in rows:
+        if not c:
+            continue
+        if "input price" in c[0].lower():
+            in_price = _dollars(c[-1])
+        elif c[0].lower().startswith("output price"):
+            out_price = _dollars(c[-1])
+    return in_price, out_price
 
 
 DECLINED: dict[str, str] = {
@@ -189,30 +226,36 @@ def discover_unmapped(soup: BeautifulSoup) -> list[str]:
     return sorted(found)
 
 
+def discovered_prices(soup: BeautifulSoup, names: list[str]) -> list[dict[str, object]]:
+    """Each flagged model with the price its own section quotes (the first
+    Standard table's Paid Tier, as ``parse_pricing`` reads it), so the catalog
+    cron can add it at Google's own price. A section whose table does not parse
+    is listed without a price."""
+    wanted = set(names)
+    out: list[dict[str, object]] = []
+    seen: set[str] = set()
+    for table, rows in _standard_tables(soup):
+        name = _section_of(table, wanted)
+        if name is None or name in seen:
+            continue
+        seen.add(name)
+        entry: dict[str, object] = {"slug": name}
+        in_price, out_price = _paid_prices(rows)
+        if in_price is not None and out_price is not None:
+            entry["input_price_per_1m"] = in_price
+            entry["output_price_per_1m"] = out_price
+        out.append(entry)
+    return out
+
+
 def parse_pricing(soup: BeautifulSoup) -> list[dict[str, object]]:
     models: list[dict[str, object]] = []
     seen: set[str] = set()
-    for table in soup.find_all("table"):
-        if not isinstance(table, Tag):
-            continue
-        rows = [_row_cells(r) for r in table.find_all("tr") if isinstance(r, Tag)]
-        has_in = any(c and "input price" in c[0].lower() for c in rows)
-        has_out = any(c and c[0].lower().startswith("output price") for c in rows)
-        if not (has_in and has_out):
-            continue
-        if _tier_of(table).lower() != "standard":
-            continue
+    for table, rows in _standard_tables(soup):
         mid = _model_id_for(table)
         if mid is None or mid in seen:
             continue
-        in_price = out_price = None
-        for c in rows:
-            if not c:
-                continue
-            if "input price" in c[0].lower():
-                in_price = _dollars(c[-1])  # last column = Paid Tier
-            elif c[0].lower().startswith("output price"):
-                out_price = _dollars(c[-1])
+        in_price, out_price = _paid_prices(rows)
         if in_price is None or out_price is None:
             raise ExtractError(f"could not parse Standard input/output price for {mid!r}")
         seen.add(mid)
@@ -284,6 +327,9 @@ def build_snapshot(html: str, *, source_url: str) -> dict[str, object]:
         "models": models,
         "slug_to_id": {str(m["slug"]): str(m["id"]) for m in models},
         "unexpected_slugs": unexpected,
+        # The flagged models' own prices, for the catalog cron's discovery lane
+        # (update/discovery.py hands them to the curation model).
+        "discovered": discovered_prices(soup, unexpected),
         "missing_mapped_models": missing,
         "section_sha256": hashlib.sha256(facts.encode("utf-8")).hexdigest(),
     }

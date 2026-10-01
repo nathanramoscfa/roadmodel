@@ -81,8 +81,8 @@ would then reject.
     - ADD it to `model-tier-cost-scale.md` (the provider's table) and to
       `<model-options>`, exactly as for a new Cursor model. Use the price the
       block gives, verbatim: the Federation rule makes the provider's own page
-      the authority. When the block says to read the price from the provider
-      page, take it from that page (its URL is in the entry), not from a mirror.
+      the authority. An entry the block shows with no price yet is not yours
+      to price: leave it, and it comes back to you once its page prices it.
     - DECLINE it, when the catalog should not carry it (a retired generation, a
       long-running `pro` batch variant of a model already carried, a
       non-text or computer-use variant, a limited-availability model the
@@ -92,13 +92,15 @@ would then reject.
       `- <provider>/<slug> — <reason> (declined YYYY-MM-DD)`, with the
       provider and slug as the block writes them. Keep every line already in
       that section. A declined model stops being flagged.
-  Name every add and every decline in your summary. Never leave an entry
-  unhandled: an ignored flag is what kept the catalog stale. Whatever you do
+  Name every add and every decline in your summary. Decide every priced
+  entry: an ignored flag is what kept the catalog stale. Whatever you do
   leave undecided, `update/dispose_discoveries.py` disposes after your pass by
   rule — a priced model whose same-series predecessor the provider's API
-  already offers is added with that predecessor's letters; anything else is
-  declined (an unpriced one is re-checked each run) — so your decision, made
-  with full context, is the one that counts.
+  already offers is added with that predecessor's letters; an image, audio,
+  video, embedding, robotics or computer-use model is declined as such; an
+  unpriced one is declined until its page prices it; the first priced model of
+  a new series is declined — so your decision, made with full context, is the
+  one that counts, and a new series joins the catalog only through you.
 - If models are removed from the Cursor pricing page, remove them from
   `model-tier-cost-scale.md`.
 - For every model that also appears in the `<model-options>` block of
@@ -973,6 +975,11 @@ commentary outside the object:
   "warnings": ["<any caveats, missing data, sources you skipped, or judgments worth flagging>"]
 }
 ```
+
+Each warning is a record of what this run did (kept, skipped, left for the
+next run) and why, never a request: none asks for an editorial decision, a
+review or a follow-up. Name the rule or the missing evidence behind it ("kept
+the committed Max row: the provider page shows no price for the 20x tier").
 
 Return EDITS, not the whole file. Each edit replaces one exact span of the
 current file:

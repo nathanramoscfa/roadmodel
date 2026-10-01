@@ -975,7 +975,9 @@ def main() -> int:
 
     (UPDATE_DIR / ".last-summary.txt").write_text(summary)
     if warnings:
-        (UPDATE_DIR / ".last-warnings.txt").write_text("\n".join(warnings))
+        # Newline-terminated: later steps append lines (the G5 price-coverage
+        # notes), which would otherwise join the last warning.
+        (UPDATE_DIR / ".last-warnings.txt").write_text("\n".join(warnings) + "\n")
 
     print(summary)
     if warnings:

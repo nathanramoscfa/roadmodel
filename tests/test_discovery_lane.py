@@ -100,7 +100,7 @@ def test_load_lists_what_the_catalog_neither_carries_nor_declines(tmp_path: Path
     ]
     astra = found[1]
     assert (astra.input_price_per_1m, astra.output_price_per_1m) == (10.0, 50.0)
-    assert found[0].input_price_per_1m is None  # no price recorded: read the page
+    assert found[0].input_price_per_1m is None  # no price recorded on the page
 
 
 def test_the_block_names_every_entry_with_its_price_and_source(tmp_path: Path) -> None:
@@ -117,6 +117,46 @@ def test_the_block_names_every_entry_with_its_price_and_source(tmp_path: Path) -
     assert "- openai/gpt-6-astra — $10 input / $50 output per 1M tokens" in block
     assert "https://openai.example/pricing" in block
     assert discovery.render_block([]) == ""
+
+
+def test_a_model_declined_for_want_of_a_price_returns_once_priced(tmp_path: Path) -> None:
+    """update/dispose_discoveries.py declines an unpriced model provisionally
+    (NO_PRICE). Once its provider's page prices it, the curation pass sees it
+    again, priced, before any rule decides it; every other decline stands."""
+    noted = COST_SCALE + f"- openai/gpt-6-nova — {discovery.NO_PRICE} (declined 2026-10-01)\n"
+    unpriced = [_snapshot(tmp_path, "openai", ["gpt-6-nova"], [])]
+    assert discovery.load(unpriced, SELECTOR, noted) == []
+    priced = [
+        _snapshot(
+            tmp_path,
+            "openai",
+            ["gpt-6-nova", "gpt-5-nano"],
+            [
+                {"slug": "gpt-6-nova", "input_price_per_1m": 1.0, "output_price_per_1m": 4.0},
+                {"slug": "gpt-5-nano", "input_price_per_1m": 0.05, "output_price_per_1m": 0.4},
+            ],
+        )
+    ]
+    found = discovery.load(priced, SELECTOR, noted)
+    assert [(d.slug, d.priced) for d in found] == [("gpt-6-nova", True)]
+    assert "no price on the provider page yet" in discovery.Discovery("openai", "x", "u").line()
+
+
+def test_the_google_extractor_records_a_flagged_models_price() -> None:
+    """Google's page prices each model in its own section. A flagged one's
+    price reaches the snapshot, so the curation pass and the disposal see it
+    (before, every Google flag read as unpriced)."""
+    mod = _load("extract_google_catalog")
+    html = (FIXTURES / "google-pricing-sample.html").read_text()
+    html = html.replace("<h2>Gemini 2.5 Flash-Lite</h2>", "<h2>Gemini 3.9 Flash-Lite Preview</h2>")
+    snap = mod.build_snapshot(html, source_url="file://sample")
+    assert snap["unexpected_slugs"] == ["Gemini 3.9 Flash-Lite"]
+    assert snap["discovered"] == [
+        {"slug": "Gemini 3.9 Flash-Lite", "input_price_per_1m": 0.1, "output_price_per_1m": 0.4}
+    ]
+    # The flagged section binds no mapped model's price.
+    prices = {m["id"]: m["input_price_per_1m"] for m in snap["models"]}
+    assert prices["gemini-2.5-flash"] == 0.3
 
 
 def test_the_curation_input_carries_the_block() -> None:

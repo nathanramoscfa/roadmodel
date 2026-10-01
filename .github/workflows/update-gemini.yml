@@ -217,6 +217,7 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
+          nl=$'\n'  # joins sections: $( ) strips the trailing newlines of what it captures
           if git diff --quiet -- docs/model-selector.txt docs/model-selector.md docs/catalog.json update/gemini-thinking.json; then
             echo "No selector / snapshot changes — nothing to commit."
             exit 0
@@ -230,7 +231,7 @@ jobs:
           summary="$(cat update/.last-gemini-summary.txt 2>/dev/null || echo 'Automated Gemini thinking refresh.')"
           warnings=""
           if [ -f update/.last-gemini-warnings.txt ] && [ -s update/.last-gemini-warnings.txt ]; then
-            warnings="$(printf '\n\n## Warnings\n')$(sed 's/^/- /' update/.last-gemini-warnings.txt)"
+            warnings="${nl}${nl}## Warnings${nl}$(sed 's/^/- /' update/.last-gemini-warnings.txt)"
           fi
           # FLAG (never act on) a new Gemini 3.x level model the docs introduced.
           unexpected="$(python -c "import json; print(', '.join(json.load(open('update/gemini-thinking.json')).get('unexpected_models', [])))" 2>/dev/null || true)"

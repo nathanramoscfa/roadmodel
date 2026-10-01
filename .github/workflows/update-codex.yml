@@ -180,6 +180,7 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
+          nl=$'\n'  # joins sections: $( ) strips the trailing newlines of what it captures
           if git diff --quiet -- docs/model-selector.txt docs/model-selector.md docs/catalog.json update/codex-reasoning.json update/codex-reasoning-source.md; then
             echo "No selector / snapshot changes — nothing to commit."
             exit 0
@@ -193,7 +194,7 @@ jobs:
           summary="$(cat update/.last-codex-summary.txt 2>/dev/null || echo 'Automated Codex reasoning-effort refresh.')"
           warnings=""
           if [ -f update/.last-codex-warnings.txt ] && [ -s update/.last-codex-warnings.txt ]; then
-            warnings="$(printf '\n\n## Warnings\n')$(sed 's/^/- /' update/.last-codex-warnings.txt)"
+            warnings="${nl}${nl}## Warnings${nl}$(sed 's/^/- /' update/.last-codex-warnings.txt)"
           fi
           git add docs/model-selector.txt docs/model-selector.md docs/catalog.json update/codex-reasoning.json update/codex-reasoning-source.md
           git commit -m "Automated Codex refresh: ${DATE}" -m "${summary}${warnings}"
