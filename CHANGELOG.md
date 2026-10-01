@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.52] — 2026-09-30
+
 ### Changed
 
 - **Coding letters follow the evaluations Artificial Analysis runs today.**
