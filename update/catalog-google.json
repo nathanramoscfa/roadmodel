@@ -45,7 +45,6 @@
     "Gemini 2.5 Flash": "gemini-2.5-flash"
   },
   "unexpected_slugs": [
-    "Gemini 2.5 Computer Use",
     "Gemini 3.1 Flash-Lite",
     "Gemini 3.5 Flash-Lite"
   ],

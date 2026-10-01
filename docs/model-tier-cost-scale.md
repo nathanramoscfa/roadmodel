@@ -125,6 +125,7 @@ table and surface material cost / availability / capability constraints.
 | GPT-6 Astra        | $10.00 | –          | –          | $50.00 | Very High | Provider-direct OpenAI API per-token pricing (not via the Cursor pool) |
 | GPT-6 Luna         | $0.10 | –           | –          | $0.50  | Low       | Provider-direct OpenAI API per-token pricing (not via the Cursor pool) |
 | GPT-6 Sol          | $2.00 | –           | –          | $10.00 | Medium    | Provider-direct OpenAI API per-token pricing (not via the Cursor pool) |
+| GPT-6.1 Sol        | $2.00 | –           | –          | $10.00 | Medium    | Provider-direct OpenAI API per-token pricing (not via the Cursor pool) |
 
 
 ### API Pool — Moonshot
@@ -248,6 +249,7 @@ appear here.
 | gpt-5.4          | $15.00  | High         | High         | ✓      |
 | gpt-5.6-terra    | $12.00  | Medium       | Medium       | ✓      |
 | gpt-6-sol        | $10.00  | Medium       | Medium       | ✓      |
+| gpt-6.1-sol      | $10.00  | Medium       | Medium       | ✓      |
 | gpt-5.3-codex    | $14.00  | Medium       | Medium       | ✓      |
 | gpt-5.2          | $14.00  | Medium       | Medium       | ✓      |
 | gpt-5.2-codex    | $14.00  | Medium       | Medium       | ✓      |
@@ -310,6 +312,7 @@ recommendable engines.
 
 | Model id           | Output | Tier | Change                                                                                                                     |
 | ------------------ | ------ | ---- | -------------------------------------------------------------------------------------------------------------------------- |
+| GPT-6.1 Sol        | $10.00 | Medium | New 2026-10-01 via the provider-discovery lane. OpenAI's own pricing page lists gpt-6.1-sol at $2/$10, and it is not on Cursor's pricing page. Provider-direct (Federation rule: prices owned by `catalog-openai.json`). The selector pass adds it to `<model-options>` in the Medium bucket |
 | Claude Sonnet 5.5  | $10.00 | Medium | New 2026-09-29 on Cursor's pricing page — Anthropic's Sonnet 5 successor at the same $2/$10 rates (US-only endpoints 10% higher at $2.20/$11); visible by default. Selector pass adds it to `<model-options>`; Anthropic is provider-direct, so `catalog-anthropic.json` must carry it for the G4 gate |
 | Claude Sonnet 5    | $10.00 | Medium | Notes refreshed 2026-09-29 — Cursor flipped Sonnet 5 to "Hidden by default" after the Sonnet 5.5 launch (pricing unchanged) |
 | GLM 5.3            | $4.40  | Low  | New 2026-09-29 on Cursor's pricing page — z.ai's GLM 5.3 at the same $1.40/$4.40 rates as GLM 5.2 (Hidden by default) |
@@ -430,3 +433,7 @@ model per line, in exactly this form:
 - xai/grok-4.20-0309-reasoning — dated (0309) snapshot of the Grok 4.20 generation; the catalog carries grok-4.3 / grok-4.6 / grok-4.7 as the Grok line (declined 2026-09-25)
 - xai/grok-4.20-multi-agent-0309 — dated (0309) multi-agent variant of the Grok 4.20 generation; not a fixed single-engine model the catalog tracks (declined 2026-09-25)
 - xai/grok-build-0.1 — build-agent preview removed from the catalog on 2026-07-15 when Cursor delisted it; retired (declined 2026-09-25)
+- google/Gemini 3.1 Flash-Lite — no price on the provider page; re-checked each run (declined 2026-10-01)
+- google/Gemini 3.1 Flash-Lite Image — no price on the provider page; re-checked each run (declined 2026-10-01)
+- google/Gemini 3.5 Flash-Lite — no price on the provider page; re-checked each run (declined 2026-10-01)
+- google/Gemini Robotics Er 2 — no price on the provider page; re-checked each run (declined 2026-10-01)
