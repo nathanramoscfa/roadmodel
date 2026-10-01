@@ -9,8 +9,10 @@
 // so it needs no client JS. Data comes from the glossary + catalog-fields.
 import {
   CATEGORY_FIGURE,
+  COMPOSITE_DERIVATION,
   DERIVATION_BANDS,
   DERIVED_CATEGORIES,
+  ESTIMATE_CEILING,
   GRID_COLUMN_BY_KEY,
   NEW_RELEASE_DAYS,
   QUALITY_BAND_WIDTH,
@@ -37,9 +39,11 @@ import {
 // letters are derived with — so this sentence cannot go stale when a band or an
 // evidence benchmark changes (a new AA version renames Terminal-Bench, say).
 const DERIVED_EVIDENCE: string = CATEGORY_ORDER.filter(
-  (c) => DERIVED_CATEGORIES.has(c) && CATEGORY_FIGURE[c],
+  (c) => DERIVED_CATEGORIES.has(c) && (CATEGORY_FIGURE[c] || COMPOSITE_DERIVATION[c]),
 )
-  .map((c) => GRID_COLUMN_BY_KEY[CATEGORY_FIGURE[c] as BenchKey].label)
+  .map(
+    (c) => COMPOSITE_DERIVATION[c]?.label ?? GRID_COLUMN_BY_KEY[CATEGORY_FIGURE[c] as BenchKey].label,
+  )
   .join(", ");
 const DERIVED_NAMES: string = CATEGORY_ORDER.filter((c) => DERIVED_CATEGORIES.has(c)).join(", ");
 const BAND_RULE: string = DERIVATION_BANDS.map((b) => `${b.letter} within ${b.max}`).join(", ");
@@ -141,7 +145,8 @@ export function CatalogLegend({ id }: { id?: string }) {
             is <em>estimated</em>: the daily catalog automation sets it from each provider&rsquo;s
             published results, and a new model starts from its predecessor&rsquo;s letters. Every
             planning, multimodal and speed letter is an estimate, as is a derived category&rsquo;s
-            letter for a model outside its benchmark&rsquo;s measured set. A <strong>New</strong>{" "}
+            letter for a model outside its benchmark&rsquo;s measured set; there an estimate stops
+            at {ESTIMATE_CEILING}, since S takes a measurement. A <strong>New</strong>{" "}
             tag marks a model released in the last {NEW_RELEASE_DAYS} days and clears on its own.
             The <strong>AA Index</strong> column is the one published composite; hover it for the
             Artificial Analysis model it was measured as and that model&rsquo;s own benchmarks,

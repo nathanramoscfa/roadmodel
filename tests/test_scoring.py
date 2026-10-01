@@ -131,36 +131,47 @@ CATALOG = {
     ],
 }
 
-# AA figures: coding index + intelligence index for four models; Luna and the
+# AA figures: coding (the SciCode + Terminal-Bench 4.0 composite, in the old
+# coding index's order) + intelligence index for four models; Luna and the
 # flashes are deliberately unmeasured on planning so the letter path is hit.
 BENCH = {
     "claude-opus-5": {
         "evaluations": {
             "artificial_analysis_coding_index": 60,
+            "scicode": 0.600,
+            "terminalbench_v4_0": 0.600,
             "artificial_analysis_intelligence_index": 50,
         }
     },
     "claude-sonnet-5": {
         "evaluations": {
             "artificial_analysis_coding_index": 45,
+            "scicode": 0.450,
+            "terminalbench_v4_0": 0.450,
             "artificial_analysis_intelligence_index": 38,
         }
     },
     "gpt-5.6-sol": {
         "evaluations": {
             "artificial_analysis_coding_index": 59.5,
+            "scicode": 0.595,
+            "terminalbench_v4_0": 0.595,
             "artificial_analysis_intelligence_index": 47,
         }
     },
     "gpt-5.6-luna": {
         "evaluations": {
             "artificial_analysis_coding_index": 44,
+            "scicode": 0.440,
+            "terminalbench_v4_0": 0.440,
             "artificial_analysis_intelligence_index": 37,
         }
     },
     "gemini-3.8-flash": {
         "evaluations": {
             "artificial_analysis_coding_index": 46,
+            "scicode": 0.460,
+            "terminalbench_v4_0": 0.460,
             "artificial_analysis_intelligence_index": 41,
         }
     },
@@ -576,10 +587,11 @@ def test_k_is_fitted_in_the_scores_own_quality_units() -> None:
     stretched), not of the raw AA index — otherwise λ = 1 is far below the
     market line. Recompute the fit by hand from _quality."""
     task = scoring.Task("coding", "medium")
-    scale = scoring._evidence_scale(CATALOG, BENCH, "artificial_analysis_coding_index")
+    bench = scoring.with_composites(BENCH)
+    scale = scoring._evidence_scale(CATALOG, bench, scoring.CATEGORY_EVIDENCE["coding"])
     pts = []
     for m in CATALOG["models"]:
-        q, source, _ = scoring._quality(m, task, BENCH, scale)
+        q, source, _ = scoring._quality(m, task, bench, scale)
         if source != "letter":
             pts.append((math.log10(scoring.blended_price(m)), q))
     n = len(pts)

@@ -48,7 +48,7 @@ BASE = _selector(
 BENCH = {
     "alpha-2": {
         "evaluations": {
-            "artificial_analysis_coding_index": 70.0,
+            "scicode": 0.6,
             "terminalbench_v4_0": 0.4,
             "lcr": 0.8,
             "hle": 0.5,

@@ -65,10 +65,9 @@ export const GRID_COLUMNS: BenchColumn[] = [
     short: "Coding Idx",
     label: "Artificial Analysis Coding Index",
     definition:
-      "AA's composite of its coding evaluations (Terminal-Bench Hard and SciCode); 0–100. The uniform coding figure — every model here was run by the same lab under the same harness.",
+      "AA's composite of its coding evaluations (Terminal-Bench Hard and SciCode); 0–100, as AA published it before it moved to newer evaluation releases. The coding letter reads SciCode with the current Terminal-Bench release instead.",
     unit: "index",
     url: "https://artificialanalysis.ai/evaluations/artificial-analysis-coding-index",
-    category: "coding",
   },
   {
     key: "hle",
@@ -197,6 +196,12 @@ export const DERIVATION_BANDS: readonly { max: number; letter: string }[] = [
 export const RANK_OUT_OF = 40;
 export type RankShares = readonly { letter: Rating; count: number }[];
 export const RANK_DERIVATION: Partial<Record<Category, RankShares>> = {
+  coding: [
+    { letter: "S", count: 8 },
+    { letter: "A", count: 19 },
+    { letter: "B", count: 6 },
+    { letter: "C", count: 2 },
+  ],
   agentic: [
     { letter: "S", count: 9 },
     { letter: "A", count: 16 },
@@ -204,6 +209,57 @@ export const RANK_DERIVATION: Partial<Record<Category, RankShares>> = {
     { letter: "C", count: 2 },
   ],
 };
+
+// Categories whose evidence is a COMPOSITE: the mean of the model's mid-rank
+// percentiles (0–1) on each part, among the models measured on every part.
+// Coding pairs SciCode with Terminal-Bench 4.0, the evaluations AA's own
+// Coding Index averaged, on the releases AA runs today. Mirrors
+// update/derive_ratings.py COMPOSITES.
+export const COMPOSITE_DERIVATION: Partial<
+  Record<Category, { label: string; parts: readonly BenchKey[] }>
+> = {
+  coding: { label: "SciCode + Terminal-Bench 4.0", parts: ["scicode", "terminalbench_v4_0"] },
+};
+
+// The highest letter an unmeasured model holds in a derived category: S
+// takes a measurement (update/derive_ratings.py ESTIMATE_CEILING).
+export const ESTIMATE_CEILING: Rating = "A";
+
+// The evidence a derived category's letter reads, by name.
+export function evidenceLabel(cat: Category): string | null {
+  const composite = COMPOSITE_DERIVATION[cat];
+  if (composite) return composite.label;
+  const key = CATEGORY_FIGURE[cat];
+  return key ? GRID_COLUMN_BY_KEY[key].label : null;
+}
+
+// {id → composite} for every row measured on all of `parts`, exactly as
+// update/derive_ratings.py with_composites (a lone measured row scores 1).
+export function compositeScores(
+  rows: readonly { id: string; bench: BenchRow | null }[],
+  parts: readonly BenchKey[],
+): Map<string, number> {
+  const measured = rows.flatMap((r) => {
+    const values = parts.map((p) => r.bench?.values[p] ?? null);
+    return values.every((v) => v !== null) ? [{ id: r.id, values: values as number[] }] : [];
+  });
+  const n = measured.length;
+  const out = new Map<string, number>();
+  for (const r of measured) {
+    const pcts = r.values.map((v, i) => {
+      if (n === 1) return 1;
+      let below = 0;
+      let tied = 0;
+      for (const o of measured) {
+        if (o.values[i] < v) below += 1;
+        else if (o.values[i] === v) tied += 1;
+      }
+      return (below + (tied - 1) / 2) / (n - 1);
+    });
+    out.set(r.id, pcts.reduce((a, b) => a + b, 0) / pcts.length);
+  }
+  return out;
+}
 
 // The letter a value earns by rank among a column's measured values (sorted
 // ascending), exactly as update/derive_ratings.py letter_for_rank: the centre

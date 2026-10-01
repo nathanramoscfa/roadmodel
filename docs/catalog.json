@@ -1,9 +1,9 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-09-30T22:10:36Z",
+  "generated_at_utc": "2026-10-01T02:36:55Z",
   "source_doc_sha256": {
-    "model-selector.txt": "14de0452b8f96a0f03883c97ff7a9a77e48c3552a2b50d52b331bd40f7794664",
+    "model-selector.txt": "1d3686f03ab3f39dfb97c06b1adb0c8d5ca9e0f5d3ba3dd652691286a36af9ea",
     "model-tier-cost-scale.md": "2edd052e309b51be04a8f4e378da82e5ee6841e74b18df360c6fad38acca21b0"
   },
   "models": [
@@ -39,7 +39,7 @@
       "cache_read_per_1m": null,
       "tier_cost": "very-high",
       "tiers": {
-        "coding": "A",
+        "coding": "S",
         "planning": "S",
         "agentic": "S",
         "multimodal": "S",
@@ -87,7 +87,7 @@
       "cache_read_per_1m": null,
       "tier_cost": "very-high",
       "tiers": {
-        "coding": "S",
+        "coding": "A",
         "planning": "S",
         "agentic": "S",
         "multimodal": "A",
@@ -159,7 +159,7 @@
       "cache_read_per_1m": null,
       "tier_cost": "medium",
       "tiers": {
-        "coding": "A",
+        "coding": "S",
         "planning": "A",
         "agentic": "S",
         "multimodal": "A",
@@ -519,7 +519,7 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "A",
+        "coding": "B",
         "planning": "A",
         "agentic": "B",
         "multimodal": "D",
@@ -543,7 +543,7 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "A",
+        "coding": "S",
         "planning": "A",
         "agentic": "S",
         "multimodal": "D",
@@ -639,7 +639,7 @@
       "cache_read_per_1m": 0.125,
       "tier_cost": "medium",
       "tiers": {
-        "coding": "S",
+        "coding": "A",
         "planning": "B",
         "agentic": "A",
         "multimodal": "D",
@@ -651,9 +651,9 @@
       "headline_benchmarks": "AA Intelligence Index 23.7 (high); HLE 25.7%; earlier-generation Codex specialization with strong terminal / tool-use profile carried forward from the Codex lineage",
       "pricing_notes": "Hidden by default; Agentic and reasoning capabilities",
       "best_for": "Earlier Codex generation at the same medium-tier pricing as gpt-5.3-codex but $10/M output (gpt-5.3-codex is $14/M) \u2014 the lowest-cost S-tier coding model on the medium tier; prefer gpt-5.3-codex when latest-generation Codex quality matters, prefer gpt-5.1-codex when reproducing earlier-Codex-generation outputs or when the slightly cheaper output price compounds against a high-volume coding workload",
-      "superseded_by": null,
-      "superseded_on": null,
-      "retires_on": null
+      "superseded_by": "gpt-5.6-luna",
+      "superseded_on": "2026-10-01",
+      "retires_on": "2026-10-31"
     },
     {
       "id": "gpt-5.1-codex-max",
@@ -663,7 +663,7 @@
       "cache_read_per_1m": null,
       "tier_cost": "medium",
       "tiers": {
-        "coding": "S",
+        "coding": "A",
         "planning": "B",
         "agentic": "A",
         "multimodal": "D",
@@ -735,9 +735,9 @@
       "cache_read_per_1m": null,
       "tier_cost": "medium",
       "tiers": {
-        "coding": "S",
+        "coding": "A",
         "planning": "B",
-        "agentic": "S",
+        "agentic": "A",
         "multimodal": "D",
         "long-context": "A",
         "knowledge": "B",
@@ -747,7 +747,7 @@
       "headline_benchmarks": "AA Intelligence Index 28.5 (xhigh); \u03c4\u00b2-bench retail pass_1 92.1%; SWE-bench Verified (mini-SWE-agent) 72.8%; SWE-bench Multilingual 66.3%",
       "pricing_notes": "Hidden by default; Agentic and reasoning capabilities",
       "best_for": "OpenAI's Codex variant of GPT-5.2 at the same medium-tier pricing as gpt-5.3-codex ($1.75/$14) \u2014 placeholder Codex-lineage S-tier coding + agentic ratings pending an independent gpt-5.2-codex vs gpt-5.3-codex head-to-head; fits when a specific gpt-5.2 codebase behavior is preferred or when 5.3-codex is unavailable, otherwise prefer gpt-5.3-codex as the newer generation in the same series.",
-      "superseded_by": "gpt-5.3-codex",
+      "superseded_by": "gpt-5.6-terra",
       "superseded_on": "2026-09-24",
       "retires_on": "2026-10-24"
     },
@@ -759,9 +759,9 @@
       "cache_read_per_1m": 0.175,
       "tier_cost": "medium",
       "tiers": {
-        "coding": "S",
+        "coding": "A",
         "planning": "B",
-        "agentic": "S",
+        "agentic": "A",
         "multimodal": "D",
         "long-context": "A",
         "knowledge": "A",
@@ -771,9 +771,9 @@
       "headline_benchmarks": "AA Intelligence Index 32.5 (xhigh); HLE 42.5%; Codex lineage retains strong Terminal-Bench and SWE-bench Verified performance for autonomous coding",
       "pricing_notes": "Hidden by default; Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.3-codex-high",
       "best_for": "Highest terminal and tool-use proficiency at the medium tier, most token-efficient autonomous coding, excels at long-running agentic sessions spanning debugging through deployment, and hard algorithmic problems requiring sustained code reasoning across languages \u2014 the cost-efficient pick for pure coding and agentic execution when an S-tier coding rating is needed",
-      "superseded_by": null,
-      "superseded_on": null,
-      "retires_on": null
+      "superseded_by": "gpt-5.6-terra",
+      "superseded_on": "2026-10-01",
+      "retires_on": "2026-10-31"
     },
     {
       "id": "gpt-5.4",
@@ -903,7 +903,7 @@
       "cache_read_per_1m": null,
       "tier_cost": "high",
       "tiers": {
-        "coding": "S",
+        "coding": "A",
         "planning": "S",
         "agentic": "S",
         "multimodal": "A",
@@ -927,7 +927,7 @@
       "cache_read_per_1m": null,
       "tier_cost": "medium",
       "tiers": {
-        "coding": "S",
+        "coding": "A",
         "planning": "A",
         "agentic": "A",
         "multimodal": "A",
@@ -975,7 +975,7 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "B",
+        "coding": "A",
         "planning": "B",
         "agentic": "A",
         "multimodal": "B",
@@ -999,7 +999,7 @@
       "cache_read_per_1m": null,
       "tier_cost": "medium",
       "tiers": {
-        "coding": "B",
+        "coding": "S",
         "planning": "B",
         "agentic": "S",
         "multimodal": "B",
@@ -1071,7 +1071,7 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "C",
+        "coding": "B",
         "planning": "A",
         "agentic": "D",
         "multimodal": "B",
@@ -1095,7 +1095,7 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "S",
+        "coding": "A",
         "planning": "A",
         "agentic": "A",
         "multimodal": "B",
@@ -1119,7 +1119,7 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "S",
+        "coding": "A",
         "planning": "A",
         "agentic": "A",
         "multimodal": "B",
@@ -1215,7 +1215,7 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "B",
+        "coding": "C",
         "planning": "B",
         "agentic": "D",
         "multimodal": "B",
@@ -1263,7 +1263,7 @@
       "cache_read_per_1m": null,
       "tier_cost": "low",
       "tiers": {
-        "coding": "A",
+        "coding": "S",
         "planning": "B",
         "agentic": "A",
         "multimodal": "B",
@@ -1335,7 +1335,7 @@
       "cache_read_per_1m": 0.3,
       "tier_cost": "high",
       "tiers": {
-        "coding": "A",
+        "coding": "B",
         "planning": "A",
         "agentic": "B",
         "multimodal": "A",

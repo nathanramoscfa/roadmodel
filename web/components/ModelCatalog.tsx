@@ -57,8 +57,12 @@ import {
   blendedPrice,
   benchSortValue,
   CATEGORY_FIGURE,
+  COMPOSITE_DERIVATION,
+  compositeScores,
   DERIVATION_BANDS,
   DERIVED_CATEGORIES,
+  ESTIMATE_CEILING,
+  evidenceLabel,
   formatBench,
   formatQualityBand,
   formatScore,
@@ -333,6 +337,44 @@ export function ModelCatalog({
     }
     return out;
   }, [models]);
+
+  // Each derived category's evidence over the WHOLE catalog: a grid column's
+  // sorted values, or a composite's scores (lib/benchmark-grid), with the
+  // figures a cell's tooltip shows for one model.
+  const categoryEvidence = useMemo(() => {
+    const out: Partial<
+      Record<
+        Category,
+        { label: string; sorted: number[]; valueOf: (m: ModelRow) => number | null; detail: (m: ModelRow) => string }
+      >
+    > = {};
+    for (const cat of CATEGORY_ORDER) {
+      const composite = COMPOSITE_DERIVATION[cat];
+      if (composite) {
+        const scores = compositeScores(models, composite.parts);
+        out[cat] = {
+          label: composite.label,
+          sorted: [...scores.values()].sort((x, y) => x - y),
+          valueOf: (m) => scores.get(m.id) ?? null,
+          detail: (m) =>
+            composite.parts
+              .map((p) => `${GRID_COLUMN_BY_KEY[p].label} ${formatBench(benchSortValue(m.bench, p), GRID_COLUMN_BY_KEY[p].unit)}`)
+              .join(", "),
+        };
+        continue;
+      }
+      const key = CATEGORY_FIGURE[cat];
+      if (!key) continue;
+      const col = GRID_COLUMN_BY_KEY[key];
+      out[cat] = {
+        label: col.label,
+        sorted: columnValues[key],
+        valueOf: (m) => benchSortValue(m.bench, key),
+        detail: (m) => formatBench(benchSortValue(m.bench, key), col.unit),
+      };
+    }
+    return out;
+  }, [models, columnValues]);
 
   const rows = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -1009,26 +1051,26 @@ export function ModelCatalog({
                       {view === "ratings"
                         ? CATEGORY_ORDER.map((cat) => {
                             const r = m.tiers[cat];
-                            const key = CATEGORY_FIGURE[cat];
-                            const v = key ? benchSortValue(m.bench, key) : null;
-                            const derived = DERIVED_CATEGORIES.has(cat) && key && v !== null;
+                            const ev = DERIVED_CATEGORIES.has(cat) ? categoryEvidence[cat] : undefined;
+                            const v = ev ? ev.valueOf(m) : null;
+                            const derived = ev !== undefined && v !== null;
                             let basis = ESTIMATED_BASIS;
                             const rankRule = RANK_DERIVATION[cat];
-                            if (derived && rankRule) {
-                              const col = GRID_COLUMN_BY_KEY[key];
-                              const st = standing(v, columnValues[key]);
-                              const tied = columnValues[key].filter((x) => x === v).length;
+                            const figureKey = CATEGORY_FIGURE[cat];
+                            if (ev && v !== null && rankRule) {
+                              const st = standing(v, ev.sorted);
+                              const tied = ev.sorted.filter((x) => x === v).length;
                               basis =
                                 tied > 1
-                                  ? `Measured: tied for #${st.rank}–${st.rank + tied - 1} of ${st.of} on ${col.label} (${formatBench(v, col.unit)}; a tie is lettered at its middle place); ${rankRuleText(rankRule)}.`
-                                  : `Measured: ranked #${st.rank} of ${st.of} on ${col.label} (${formatBench(v, col.unit)}); ${rankRuleText(rankRule)}.`;
-                            } else if (derived) {
-                              const col = GRID_COLUMN_BY_KEY[key];
-                              const leader = columnValues[key][columnValues[key].length - 1];
+                                  ? `Measured: tied for #${st.rank}–${st.rank + tied - 1} of ${st.of} on ${ev.label} (${ev.detail(m)}; a tie is lettered at its middle place); ${rankRuleText(rankRule)}.`
+                                  : `Measured: ranked #${st.rank} of ${st.of} on ${ev.label} (${ev.detail(m)}); ${rankRuleText(rankRule)}.`;
+                            } else if (ev && v !== null && figureKey) {
+                              const col = GRID_COLUMN_BY_KEY[figureKey];
+                              const leader = ev.sorted[ev.sorted.length - 1];
                               const gap = benchPoints(leader, col.unit) - benchPoints(v, col.unit);
                               basis = `Measured: derived from ${col.label} ${formatBench(v, col.unit)}, ${gap.toFixed(1)} points behind the category leader (${formatBench(leader, col.unit)}).`;
-                            } else if (key && DERIVED_CATEGORIES.has(cat)) {
-                              basis = `${ESTIMATED_BASIS} Measured letters in this column come from ${GRID_COLUMN_BY_KEY[key].label}, which Artificial Analysis publishes for ${columnValues[key].length} of these models.`;
+                            } else if (ev) {
+                              basis = `${ESTIMATED_BASIS} In this category an estimate stops at ${ESTIMATE_CEILING}: S takes a measurement. Measured letters in this column come from ${ev.label}, which Artificial Analysis publishes for ${ev.sorted.length} of these models.`;
                             }
                             return (
                               <td key={cat} className="w-14 px-1 py-2 text-center">
@@ -1340,15 +1382,18 @@ function CategoryHeader({
   const active = sortKey === cat;
   const figureKey = CATEGORY_FIGURE[cat];
   const figure = figureKey ? GRID_COLUMN_BY_KEY[figureKey] : null;
+  const label = evidenceLabel(cat);
   const rankRule = RANK_DERIVATION[cat];
+  const averaged = COMPOSITE_DERIVATION[cat] ? ", averaging the model's rank on each" : "";
   const measuredRule = rankRule
-    ? `the model's rank on ${figure?.label} (Artificial Analysis), with the letter spread held fixed: ${rankRuleText(rankRule)}`
-    : `derived from ${figure?.label} (Artificial Analysis) as the gap to the category leader: ${DERIVATION_BANDS.map((b) => `${b.letter} ≤ ${b.max}`).join(", ")} points, else D`;
-  const definition = figure
-    ? DERIVED_CATEGORIES.has(cat)
-      ? `${def.definition} A filled letter is MEASURED: ${measuredRule}. A dashed-outline letter is estimated by the daily catalog automation, for a model outside ${figure.label}'s measured set.`
-      : `${def.definition} Estimated by the daily catalog automation (dashed outline); the ${figure.label} column in the Benchmark scores view is first-party-endpoint throughput, shown for reference.`
-    : `${def.definition} Estimated by the daily catalog automation from each provider's published results (dashed outline).`;
+    ? `the model's rank on ${label} (Artificial Analysis${averaged}), with the letter spread held fixed: ${rankRuleText(rankRule)}`
+    : `derived from ${label} (Artificial Analysis) as the gap to the category leader: ${DERIVATION_BANDS.map((b) => `${b.letter} ≤ ${b.max}`).join(", ")} points, else D`;
+  const definition =
+    label && DERIVED_CATEGORIES.has(cat)
+      ? `${def.definition} A filled letter is MEASURED: ${measuredRule}. A dashed-outline letter is estimated by the daily catalog automation for a model outside ${label}'s measured set, at most ${ESTIMATE_CEILING}: S takes a measurement.`
+      : figure
+        ? `${def.definition} Estimated by the daily catalog automation (dashed outline); the ${figure.label} column in the Benchmark scores view is first-party-endpoint throughput, shown for reference.`
+        : `${def.definition} Estimated by the daily catalog automation from each provider's published results (dashed outline).`;
   return (
     <th
       className="w-14 px-1 py-2 text-center align-bottom font-semibold"
