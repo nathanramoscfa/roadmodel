@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The frontier anchor names a family, not a version.** Both recommender
+  headers told the engine that "Opus 4.8 is the frontier anchor; use Fable 5
+  only when the task favors it". Both models are superseded, so the selector
+  the engine reads no longer lists either, and the cheaper engines resolved
+  the rule to Fable 5.1, the dearest model in the catalog: GPT-5.6 Luna made
+  it the Quality pick on 7 of 12 probe tasks, "help" included. The rule now
+  names the newest Opus in the catalog, and the same engine anchors Quality
+  on Opus 5.5 for 10 of 12 (Fable 5.1 only for the vision task, Sonnet 5.5
+  for "help"). A test fails if a header names any superseded model.
+
 ## [0.2.56] — 2026-10-02
 
 ### Added
