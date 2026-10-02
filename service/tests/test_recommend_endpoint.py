@@ -9,6 +9,7 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
+from roadmodel import usage  # type: ignore[import-untyped]
 from roadmodel.errors import MalformedResponseError  # type: ignore[import-untyped]
 
 _MODULES_TO_RESET = (
@@ -35,6 +36,12 @@ _TEST_TOKEN = "test-internal-token"
 
 
 def _load_main_module(monkeypatch: pytest.MonkeyPatch) -> ModuleType:
+    # Hermetic provider keys: only Anthropic is configured by default, so the
+    # fallback chain (OpenAI -> Google -> Anthropic, engines.json) skips the
+    # engines without a key and lands on Anthropic. Tests that need another
+    # provider set its key themselves.
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
     monkeypatch.setenv("ROADMODEL_INTERNAL_TOKEN", _TEST_TOKEN)
     for module_name in _MODULES_TO_RESET:
@@ -191,6 +198,10 @@ def test_recommend_returns_200(
         "backup": None,
         "session_cost_estimate": None,
         "comparison_table": [],
+        # The engine that answered: the chain's Anthropic link, the only
+        # provider with a key here. No usage: the fake makes no provider call.
+        "engine": "anthropic-claude-haiku-4-5",
+        "usage": None,
     }
 
 
@@ -475,6 +486,8 @@ def test_response_schema_matches_phase2_contract(
         "backup",  # fallback model (Step 7) — same boundary, carried through
         "session_cost_estimate",
         "comparison_table",
+        "engine",  # the engines.json hint that answered (after any fallback)
+        "usage",  # provider-reported token counts for the call (roadmodel.usage)
     }
 
 
@@ -486,6 +499,7 @@ def test_recommend_falls_back_to_next_provider_on_malformed_response(
     provider must fall through to the next provider in the chain instead of
     leaking a 500. Mirrors the 2026-05-31 incident shape where the primary's
     response failed the regex while a fallback could still succeed."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
     monkeypatch.setenv("GOOGLE_API_KEY", "test-google-key")
     recommend_module = importlib.import_module("app.recommend")
     attempted: list[str] = []
@@ -506,7 +520,7 @@ def test_recommend_falls_back_to_next_provider_on_malformed_response(
         temperature: float | None = None,
     ) -> dict[str, Any]:
         attempted.append(config.provider)
-        if config.provider == "anthropic":
+        if config.provider == "openai":
             raise MalformedResponseError("ORCHESTRATION: Ultracode\n<unparseable for old regex>")
         return dict(_RECOMMEND_DICT)
 
@@ -515,10 +529,11 @@ def test_recommend_falls_back_to_next_provider_on_malformed_response(
     response = client.post("/v1/recommend", json=_request_payload())
 
     assert response.status_code == 200
-    # Primary (anthropic) raised MalformedResponseError; loop fell through to
-    # google, which succeeded.
-    assert attempted == ["anthropic", "google"]
+    # Primary (openai) raised MalformedResponseError; loop fell through to
+    # google, which succeeded, and the response says google answered.
+    assert attempted == ["openai", "google"]
     assert response.json()["model"] == _RECOMMEND_DICT["model"]
+    assert response.json()["engine"] == "google-gemini-3.8-flash"
 
 
 def test_recommend_attempts_all_providers_then_raises_when_all_malformed(
@@ -535,6 +550,7 @@ def test_recommend_attempts_all_providers_then_raises_when_all_malformed(
     behavior."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
     monkeypatch.setenv("GOOGLE_API_KEY", "test-google-key")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
     recommend_module = importlib.import_module("app.recommend")
     attempted: list[str] = []
 
@@ -563,22 +579,23 @@ def test_recommend_attempts_all_providers_then_raises_when_all_malformed(
         recommend_module.recommend(request)
 
     # Every provider in the chain was attempted before the loop re-raised.
-    assert attempted == ["anthropic", "google"]
+    assert attempted == ["openai", "google", "anthropic"]
 
 
-def test_latency_kwargs_passed_only_on_gemini_path(
+def test_engine_params_come_from_the_registry(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Issues #132 + #146: the service applies two Gemini-only latency levers
-    via recommend_structured on the google path -- thinking_budget=0 (caps the
-    default reasoning that dominated P50, #132) and max_output_tokens=768
-    (bounds the runaway-rationale P95 tail, #146). NEITHER is passed on the
-    anthropic path (Anthropic extended-thinking has different semantics and the
-    response shape does not tolerate small caps, per #128). Force each provider
-    in turn and capture the kwargs actually passed."""
+    """Every call's (thinking_budget, max_output_tokens, temperature) is the
+    forced engine's engines.json entry, single-pick caps on /v1/recommend.
+    The documented values are pinned too: Gemini 2.5 Flash runs thinking off
+    (#132) under a 512-token cap (#146) at temperature 0 (#176); the default
+    GPT engine runs at its reasoning floor with a generous cap (reasoning
+    counts against it); the legacy Haiku hint keeps provider defaults."""
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
     monkeypatch.setenv("GOOGLE_API_KEY", "test-google-key")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
     recommend_module = importlib.import_module("app.recommend")
+    engines = importlib.import_module("app.engines").REGISTRY.engines
     captured: dict[str, tuple[int | None, int | None, float | None]] = {}
 
     def _fake_recommend_structured(
@@ -596,87 +613,133 @@ def test_latency_kwargs_passed_only_on_gemini_path(
         thinking_budget: int | None = None,
         temperature: float | None = None,
     ) -> dict[str, Any]:
-        captured[config.provider] = (thinking_budget, max_output_tokens, temperature)
+        captured[config.model] = (thinking_budget, max_output_tokens, temperature)
         return dict(_RECOMMEND_DICT)
 
     monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
 
-    # Force the Gemini path: both latency kwargs must be the configured caps.
-    google_req = recommend_module.RecommendRequest(
-        task_description="pick a model",
-        context={"force_provider": "google-gemini-2.5-flash"},
-    )
-    recommend_module.recommend(google_req)
-    assert captured["google"] == (
-        recommend_module._GEMINI_THINKING_BUDGET,
-        recommend_module._GEMINI_MAX_OUTPUT_TOKENS,
-        recommend_module._GEMINI_TEMPERATURE,
-    )
-    assert recommend_module._GEMINI_THINKING_BUDGET == 0
-    assert recommend_module._GEMINI_MAX_OUTPUT_TOKENS == 512
-    assert recommend_module._GEMINI_TEMPERATURE == 0.0
+    def run(hint: str | None) -> None:
+        context = {"force_provider": hint} if hint else None
+        recommend_module.recommend(
+            recommend_module.RecommendRequest(task_description="pick a model", context=context)
+        )
 
-    # Default chain serves anthropic first: both kwargs must be None there.
+    for hint, spec in engines.items():
+        captured.clear()
+        run(hint)
+        assert captured[spec.model] == spec.params(ladder=False), hint
+
+    assert engines["google-gemini-2.5-flash"].params(ladder=False) == (0, 512, 0.0)
+    assert engines["openai-gpt-5.6-luna"].params(ladder=False) == (0, 2048, None)
+    assert engines["anthropic-haiku-4-5"].params(ladder=False) == (None, None, None)
+
+    # No force_provider: the default engine answers with its own params.
     captured.clear()
-    anthropic_req = recommend_module.RecommendRequest(task_description="pick a model")
-    recommend_module.recommend(anthropic_req)
-    assert captured["anthropic"] == (None, None, None)
+    run(None)
+    default = engines[importlib.import_module("app.engines").REGISTRY.default]
+    assert captured == {default.model: default.params(ladder=False)}
 
 
-def test_frontier_gemini_pro_uses_thinking_on_params(
-    monkeypatch: pytest.MonkeyPatch,
+def test_ladder_uses_the_ladder_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ladder mode emits three blocks, so each engine's ladder cap applies."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    recommend_module = importlib.import_module("app.recommend")
+    engines = importlib.import_module("app.engines").REGISTRY.engines
+    captured: dict[str, Any] = {}
+
+    def _fake_ladder(prompt: str, config: Any, **kwargs: Any) -> dict[str, Any]:
+        captured["params"] = (
+            kwargs.get("thinking_budget"),
+            kwargs.get("max_output_tokens"),
+            kwargs.get("temperature"),
+        )
+        pick = dict(_RECOMMEND_DICT)
+        return {"picks": {"quality": pick, "balanced": pick, "cost": pick}, "guard": {}}
+
+    monkeypatch.setattr(recommend_module, "recommend_structured_ladder", _fake_ladder)
+    recommend_module.recommend_ladder(
+        recommend_module.RecommendRequest(
+            task_description="pick a model",
+            context={"force_provider": "openai-gpt-6-luna"},
+        )
+    )
+    assert captured["params"] == engines["openai-gpt-6-luna"].params(ladder=True)
+    assert captured["params"] == (0, 6144, None)
+
+
+def test_engine_without_a_key_is_skipped(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A forced engine whose provider key is missing must not 500 the request:
+    load_config raises MissingProviderKeyError, and the chain moves on."""
+    recommend_module = importlib.import_module("app.recommend")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
+    monkeypatch.setattr(
+        recommend_module, "recommend_structured", lambda *_a, **_k: dict(_RECOMMEND_DICT)
+    )
+    result = recommend_module.recommend(
+        recommend_module.RecommendRequest(
+            task_description="pick a model",
+            context={"force_provider": "openai-gpt-6.1-sol"},
+        )
+    )
+    assert result.engine == "anthropic-claude-haiku-4-5"
+
+
+def test_response_carries_the_engine_and_its_usage(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Phase 4.5 T3b: the signed-in quality tier forces gemini-2.5-pro, which
-    must run with reasoning ON (thinking_budget=512, max_output_tokens=2048) —
-    distinct from the free tier's gemini-2.5-flash (0/512). The params key off
-    the MODEL, so no separate request flag is needed."""
+    """The ladder response names the engine that answered and passes the
+    provider-reported usage through, for the web's exact cost ledger."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    recommend_module = importlib.import_module("app.recommend")
+
+    def _fake_ladder(prompt: str, config: Any, **_kwargs: Any) -> dict[str, Any]:
+        usage.record(
+            "openai",
+            config.model,
+            input_tokens=60929,
+            output_tokens=716,
+            cached_input_tokens=60926,
+            reasoning_tokens=330,
+        )
+        pick = dict(_RECOMMEND_DICT)
+        return {"picks": {"quality": pick, "balanced": pick, "cost": pick}, "guard": {}}
+
+    monkeypatch.setattr(recommend_module, "recommend_structured_ladder", _fake_ladder)
+    body = client.post(
+        "/v1/recommend/ladder",
+        json={"task_description": "pick", "context": {"force_provider": "openai-gpt-6-luna"}},
+    ).json()
+    assert body["engine"] == "openai-gpt-6-luna"
+    assert body["usage"] == {
+        "provider": "openai",
+        "model": "gpt-6-luna",
+        "input_tokens": 60929,
+        "cached_input_tokens": 60926,
+        "cache_write_tokens": 0,
+        "output_tokens": 716,
+        "reasoning_tokens": 330,
+    }
+
+
+def test_a_failed_engine_does_not_report_its_usage(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Usage is reset before each engine call, so a failed engine's numbers can
+    never be billed to the engine that answered after it."""
+    monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
     monkeypatch.setenv("GOOGLE_API_KEY", "test-google-key")
     recommend_module = importlib.import_module("app.recommend")
-    captured: dict[str, tuple[int | None, int | None]] = {}
 
-    def _fake_recommend_structured(
-        prompt: str,
-        config: Any,
-        *,
-        user_context_text: str | None = None,
-        unavailable_models: list[str] | None = None,
-        availability_authoritative: bool = False,
-        allowed_jurisdictions: list[str] | None = None,
-        input_tokens: int | None = None,
-        output_tokens: int | None = None,
-        max_mode: bool = False,
-        max_output_tokens: int | None = None,
-        thinking_budget: int | None = None,
-        temperature: float | None = None,
-    ) -> dict[str, Any]:
-        captured[config.model] = (thinking_budget, max_output_tokens)
+    def _fake(prompt: str, config: Any, **_kwargs: Any) -> dict[str, Any]:
+        if config.provider == "openai":
+            usage.record("openai", config.model, input_tokens=99, output_tokens=99)
+            raise MalformedResponseError("<unparseable>")
         return dict(_RECOMMEND_DICT)
 
-    monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
-
-    # Frontier: gemini-2.5-pro → reasoning-ON params.
-    recommend_module.recommend(
-        recommend_module.RecommendRequest(
-            task_description="pick a model",
-            context={"force_provider": "google-gemini-2.5-pro"},
-        )
-    )
-    assert captured["gemini-2.5-pro"] == (
-        recommend_module._GEMINI_FRONTIER_THINKING_BUDGET,
-        recommend_module._GEMINI_FRONTIER_MAX_OUTPUT_TOKENS,
-    )
-    assert recommend_module._GEMINI_FRONTIER_THINKING_BUDGET == 512
-    assert recommend_module._GEMINI_FRONTIER_MAX_OUTPUT_TOKENS == 2048
-
-    # Free tier: gemini-2.5-flash keeps reasoning OFF + the tight cap.
-    captured.clear()
-    recommend_module.recommend(
-        recommend_module.RecommendRequest(
-            task_description="pick a model",
-            context={"force_provider": "google-gemini-2.5-flash"},
-        )
-    )
-    assert captured["gemini-2.5-flash"] == (0, 512)
+    monkeypatch.setattr(recommend_module, "recommend_structured", _fake)
+    result = recommend_module.recommend(recommend_module.RecommendRequest(task_description="x"))
+    assert result.engine == "google-gemini-3.8-flash"
+    assert result.usage is None
 
 
 def _fake_returning(model: str, platform: str) -> Any:
