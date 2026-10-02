@@ -37,8 +37,12 @@ import { COST_TIER_DEFS, COST_TIER_DOT, type CostTier, type ModelRow } from "@/l
 
 // Which models the frontier compares (lib/catalog-filter poolScope), as a
 // modifier for "every ___ model": null for the whole catalog, else "US + EU"
-// or "Anthropic". The /models page provides it; the cards read it.
+// or "Anthropic" on /models, or YOUR_MODELS on /recommend. The pages provide
+// it; the cards read it.
 export const FrontierScope = createContext<string | null>(null);
+
+// The /recommend scope: the models the viewer's Settings reach.
+export const YOUR_MODELS = "your";
 
 const MUTED = "text-brand-slate-500 dark:text-brand-slate-400";
 const STRONG = "text-brand-slate-900 dark:text-brand-slate-50";
@@ -132,8 +136,9 @@ export function FrontierStatus({
           <span className="mt-[4px] inline-block h-2.5 w-2.5 shrink-0 rounded-full border-2 border-emerald-500" />
           <span>
             <span className={"font-semibold " + STRONG}>On the cost/quality frontier.</span> It
-            scores higher on the AA Index than every other {scope ? `${scope} model` : "model"} at
-            its price or less.
+            scores higher on the AA Index than every other{" "}
+            {scope === YOUR_MODELS ? "model you can use" : scope ? `${scope} model` : "model"} at its
+            price or less.
           </span>
         </p>
       </div>

@@ -3,9 +3,12 @@ import { cookies } from "next/headers";
 
 import { RecommendWorkspace } from "@/components/RecommendWorkspace";
 import { getServerSession } from "@/lib/auth";
-import { getBenchmarkMeta, getModelRows } from "@/lib/catalog-models";
+import { getModelAvailability } from "@/lib/availability";
+import { getBenchmarkMeta, getModelRows, getScoreFit } from "@/lib/catalog-models";
+import { reachableModelIds } from "@/lib/funding";
+import { getProfile } from "@/lib/profile";
 import { DEFAULT_ENGINE, menuFor, viewerFor } from "@/lib/recommend-engines";
-import { picksData } from "@/lib/recommend-picks";
+import { picksData, viewerPool } from "@/lib/recommend-picks";
 import { parseEnginePref, RECOMMEND_PREFS_COOKIE } from "@/lib/recommend-prefs";
 
 export const metadata = {
@@ -23,6 +26,18 @@ export default async function RecommendPage() {
   const initialEngine = engines.find((e) => e.hint === saved && e.allowed)?.hint ?? DEFAULT_ENGINE.hint;
   const models = getModelRows();
   const bench = getBenchmarkMeta();
+  // The models this visitor's Settings reach, so the picks' frontier is drawn
+  // over what they can run; the availability read only when there is a pool.
+  const profile = session ? await getProfile(session.id) : null;
+  const reachable = profile
+    ? reachableModelIds(profile.subscriptions, profile.api_providers, profile.allowed_jurisdictions)
+    : null;
+  const unavailable = reachable ? (await getModelAvailability()).ids : [];
+  const picks = picksData(models, {
+    pool: viewerPool(models, reachable, unavailable),
+    fit: getScoreFit(models),
+    snapshot: bench.generatedAt,
+  });
 
   return (
     <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
@@ -43,7 +58,7 @@ export default async function RecommendPage() {
         <RecommendWorkspace
           engines={engines}
           initialEngine={initialEngine}
-          picks={picksData(models)}
+          picks={picks}
           signedIn={session !== null}
           modelCount={models.length}
           measuredCount={bench.measuredCount}
