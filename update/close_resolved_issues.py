@@ -15,7 +15,11 @@ it was resolved:
   models);
 - ``chore(catalog): provider page prices "<provider>/<slug>"; …`` closes when
   the model is in the catalog or declined in the discovery lane
-  (docs/model-tier-cost-scale.md).
+  (docs/model-tier-cost-scale.md);
+- ``chore(catalog): near-miss supersession "<old>" -> "<new>"`` (filed by the
+  catalog cron when the pair lasts three days) closes when the pair is no
+  longer a near-miss (update/supersede.py): <new> reached every method <old>
+  is on, or the pair no longer passes the other supersession tests.
 
 Runs daily in .github/workflows/cron-health.yml.
 
@@ -34,6 +38,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from discovery import _variants, catalog_keys, normalize, parse_declined  # noqa: E402
+from supersede import BENCHMARKS_PATH, live_near_misses  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SELECTOR_PATH = REPO_ROOT / "docs" / "model-selector.txt"
@@ -45,11 +50,33 @@ _MODEL_ISSUE = re.compile(
 _DISCOVERY_ISSUE = re.compile(
     r'^chore\(catalog\): provider page prices "(?P<provider>[^/"]+)/(?P<slug>[^"]+)"'
 )
+_NEAR_MISS_ISSUE = re.compile(
+    r'^chore\(catalog\): near-miss supersession "(?P<old>[^"]+)" -> "(?P<new>[^"]+)"$'
+)
 
 
-def resolution(title: str, keys: set[str], declined: set[tuple[str, str]]) -> str | None:
+def near_miss_title(old: str, new: str) -> str:
+    """The title the catalog cron files a lasting near-miss under."""
+    return f'chore(catalog): near-miss supersession "{old}" -> "{new}"'
+
+
+def resolution(
+    title: str,
+    keys: set[str],
+    declined: set[tuple[str, str]],
+    near_misses: set[tuple[str, str]] | None = None,
+) -> str | None:
     """How the committed catalog resolves the issue titled ``title``, or None
-    while it still stands."""
+    while it still stands. ``near_misses`` holds the committed selector's
+    (old, new) near-miss pairs; None leaves near-miss issues open."""
+    if m := _NEAR_MISS_ISSUE.match(title):
+        if near_misses is None or (m["old"], m["new"]) in near_misses:
+            return None
+        return (
+            f"`{m['new']}` no longer waits on an access method to supersede `{m['old']}` "
+            "(update/supersede.py): it reached every method that offers it, or the pair "
+            "no longer passes the other supersession tests."
+        )
     if m := _MODEL_ISSUE.match(title):
         if _variants(m["model"]) & keys:
             return f"`{m['model']}` is in the catalog (docs/model-selector.txt)."
@@ -103,9 +130,17 @@ def main() -> int:
         (d.provider.lower(), normalize(d.slug))
         for d in parse_declined(COST_SCALE_PATH.read_text(encoding="utf-8"))
     }
+    near_misses: set[tuple[str, str]] | None
+    try:
+        bench = json.loads(BENCHMARKS_PATH.read_text()) if BENCHMARKS_PATH.exists() else {}
+        selector = SELECTOR_PATH.read_text(encoding="utf-8")
+        near_misses = {(n.old, n.new) for n in live_near_misses(selector, bench)}
+    except Exception as exc:  # noqa: BLE001 - leave near-miss issues open, close the rest
+        print(f"near-miss rule unavailable ({exc!r}); near-miss issues stay open")
+        near_misses = None
     closed = 0
     for number, title in open_issues():
-        reason = resolution(title, keys, declined)
+        reason = resolution(title, keys, declined, near_misses)
         if reason is None:
             continue
         closed += 1

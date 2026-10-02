@@ -818,19 +818,20 @@ exposes-orchestration, best-for) remain preserved verbatim — `<method>` elemen
 or renamed by this automation. Only the `supports-models` value
 changes.
 
-### Hand-maintained methods (skip entirely)
+### Methods this pass skips
 
-Two `<method>` elements are EDITORIAL and MUST be retained verbatim —
-`supports-models` included — on every run, exactly like the attributes
-this section never touches:
+Two `<method>` elements MUST be retained verbatim — `supports-models`
+included — on every run, exactly like the attributes this section never
+touches:
 
-- `ollama` (`billing="local"`): its `supports-models` lists only
-  catalogued models whose weights are downloadable under a licence that
-  permits local use, verified per model against the maker's licence
-  page. A web-search refresh cannot verify a licence, so an addition
-  here would be a false recommendation.
-- `openrouter`: its `supports-models` is a dated point-in-time snapshot
-  of openrouter.ai/models taken by hand; the cron does not refresh it.
+- `ollama` (`billing="local"`) is hand-maintained: its `supports-models`
+  lists only catalogued models whose weights are downloadable under a
+  licence that permits local use, verified per model against the maker's
+  licence page. A web-search refresh cannot verify a licence, so an
+  addition here would be a false recommendation.
+- `openrouter` is synced by code after this pass, from OpenRouter's public
+  model list (`update/extract_openrouter_models.py`), so this pass leaves it
+  alone.
 
 Emit no warning for skipping them. Then, for each OTHER `<method>`
 element M in `<access-methods>`:
@@ -876,6 +877,19 @@ element M in `<access-methods>`:
      `supports-models existing entry <model-id> on <method-id> not detected in this run's search; retained (a search miss keeps it; the next run checks again)`.
    This is the additive-only guarantee — the cron only ever ADDS
    models to supports-models, never removes; this pass makes no removal.
+
+### Targeted checks (`<near_miss_checks>`)
+
+When the input carries a `<near_miss_checks>` block, each line names a
+`<method>` and a catalogued model it does not list yet: a model that would
+supersede an older model of its maker (`update/supersede.py`) but for this
+method's list. For each line, besides the method's general search, issue a
+`web_search` for that model on that method's official source (for example
+`"Sonnet 5.5" site:support.claude.com` for `claude-web`). When an official
+source dated within the last 90 days shows the method offers the model, add
+it to that method's `supports-models`; otherwise leave the list as it is and
+emit `supports-models near-miss check: <model-id> not found on <method-id> in this run's search`.
+These additions follow every guard below.
 
 ### Sanity guards (per `<method>`, applied before commit)
 

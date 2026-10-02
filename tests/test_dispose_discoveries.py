@@ -255,3 +255,28 @@ def test_the_catalog_workflow_disposes_before_the_codex_sync_and_the_rating_guar
         "Flag unfederated provider-direct models"
     )
     assert "update/.last-dispositions.md" in wf
+
+
+def test_a_snapshot_stops_flagging_a_model_the_catalog_now_carries(tmp_path: Path) -> None:
+    # Seen on the 2026-10-02 refresh: the snapshot was taken before this run
+    # added Gemini 3.8 Flash's successor, so the committed snapshot still
+    # flagged a model the committed catalog carried, and the Google extractor's
+    # own test failed the PR.
+    snap = tmp_path / "catalog-google.json"
+    snap.write_text(
+        json.dumps(
+            {
+                "provider": "google",
+                "unexpected_slugs": ["Gemini 3.8 Flash", "Gemini 4 Ultra — Preview"],
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n"
+    )
+    assert dd.prune_carried([snap], SELECTOR) == ["google/Gemini 3.8 Flash"]
+    data = json.loads(snap.read_text())
+    assert data["unexpected_slugs"] == ["Gemini 4 Ultra — Preview"]
+    # ensure_ascii=False, as the extractors write it.
+    assert "—" in snap.read_text()
+    assert dd.prune_carried([snap], SELECTOR) == []

@@ -1,0 +1,8 @@
+{
+  "_comment": "OpenRouter model ids (without a :variant suffix) that do not normalize to their catalog id or display name, mapped to the <model> id they route to. update/extract_openrouter_models.py reads it; every other OpenRouter model maps by normalized name. Add an entry only for a model OpenRouter routes as a text endpoint under a name the catalog spells differently.",
+  "models": {
+    "google/gemini-3-flash-preview": "gemini-3-flash",
+    "google/gemini-3.1-pro-preview": "gemini-3.1-pro",
+    "mistralai/codestral-2508": "codestral"
+  }
+}

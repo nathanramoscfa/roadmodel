@@ -421,6 +421,29 @@ def dispose(
     return selector, cost_scale, actions
 
 
+def prune_carried(snapshots: list[Path], selector: str) -> list[str]:
+    """Drop from each provider snapshot's ``unexpected_slugs`` every model the
+    catalog now carries: the curation pass or this run added it after the
+    snapshot was taken, and the extractor stops flagging a carried model on its
+    next run anyway. Keeps the committed snapshot and the committed catalog in
+    agreement within one refresh. Returns ``provider/slug`` for each one pruned."""
+    carried = catalog_keys(selector)
+    pruned: list[str] = []
+    for path in snapshots:
+        snap = json.loads(path.read_text())
+        flagged = snap.get("unexpected_slugs")
+        if not isinstance(flagged, list):
+            continue
+        keep = [s for s in flagged if not (_variants(str(s)) & carried)]
+        if len(keep) == len(flagged):
+            continue
+        provider = str(snap.get("provider", path.stem.removeprefix("catalog-")))
+        pruned += [f"{provider}/{s}" for s in flagged if s not in keep]
+        snap["unexpected_slugs"] = keep
+        path.write_text(json.dumps(snap, indent=2, ensure_ascii=False) + "\n")
+    return pruned
+
+
 def render_report(actions: list[Action]) -> str:
     if not actions:
         return ""
@@ -446,6 +469,8 @@ def main() -> int:
         SELECTOR_PATH.write_text(selector)
         COST_SCALE_PATH.write_text(cost_scale)
         REPORT_PATH.write_text(report)
+        for item in prune_carried(snapshot_paths(), selector):
+            print(f"unflagged {item}: the catalog carries it now")
     return 0
 
 
