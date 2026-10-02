@@ -229,18 +229,18 @@ def test_anthropic_floor_is_low_effort(monkeypatch: pytest.MonkeyPatch, model: s
     assert "temperature" not in captured
 
 
-def test_anthropic_haiku_takes_sampling_but_not_effort(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_anthropic_haiku_takes_no_effort(monkeypatch: pytest.MonkeyPatch) -> None:
     _install_anthropic(monkeypatch)
     anthropic_provider.recommend(
         "p", "s", api_key="k", model="claude-haiku-4-5", thinking_budget=0, temperature=0.0
     )
     assert "output_config" not in _AnthropicFake.captured
-    assert _AnthropicFake.captured["temperature"] == 0.0
+    assert "temperature" not in _AnthropicFake.captured
 
 
 def test_anthropic_unknown_model_gets_neither_dial(monkeypatch: pytest.MonkeyPatch) -> None:
-    """An id the adapter cannot read is sent without effort or sampling, the
-    side of a 400 that still answers."""
+    """An id the adapter cannot read is sent without effort, the side of a 400
+    that still answers."""
     _install_anthropic(monkeypatch)
     anthropic_provider.recommend(
         "p", "s", api_key="k", model="some-future-name", thinking_budget=0, temperature=0.0
