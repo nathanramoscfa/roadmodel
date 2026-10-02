@@ -123,8 +123,9 @@ def test_openrouter_method_has_the_specified_attributes() -> None:
     assert m["exposes-thinking"] == "yes"
     assert m["exposes-orchestration"] == "no"
     best_for = m["best-for"]
-    # Point-in-time snapshot, fee-inclusive floor, routing + jurisdiction note.
-    assert "POINT-IN-TIME" in best_for
+    # Synced daily from OpenRouter's model list, fee-inclusive floor, routing +
+    # jurisdiction note.
+    assert "synced daily from openrouter.ai/models" in best_for
     assert "platform fee" in best_for
     assert "FLOOR" in best_for
     assert "Step 0b" in best_for

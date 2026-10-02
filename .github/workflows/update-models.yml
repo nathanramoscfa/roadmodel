@@ -74,6 +74,61 @@ jobs:
         id: gate
         run: python update/check_sources.py
 
+      - name: Flag near-miss supersessions that last three days
+        # update/supersede.py prints `NEAR-MISS <old> -> <new>: missing on
+        # <methods>` when a same-maker model passes every supersession test but
+        # coverage, so the older model stays a candidate (Sonnet 5 stayed four
+        # days that way, #853). The curation pass below checks each pair against
+        # the method's own source (<near_miss_checks>). A pair that is a
+        # near-miss on main today AND on main three days ago files ONE
+        # title-deduped issue; update/close_resolved_issues.py (cron-health.yml)
+        # closes it once the pair resolves. Runs every day, gate or not (no model
+        # call), and never fails the refresh.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -uo pipefail
+          git show HEAD:docs/model-selector.txt > /tmp/selector-now.txt
+          python update/supersede.py --near-misses --selector /tmp/selector-now.txt || true
+          git fetch --quiet --shallow-since="$(date -u -d '10 days ago' +%Y-%m-%d)" origin main || true
+          old_rev="$(git rev-list -1 --before='3 days ago' FETCH_HEAD 2>/dev/null || true)"
+          if [ -z "${old_rev}" ]; then
+            echo "No main commit three or more days old in the fetched history; nothing to compare."
+            exit 0
+          fi
+          git show "${old_rev}:docs/model-selector.txt" > /tmp/selector-3d.txt
+          mapfile -t lasting < <(python update/supersede.py --near-misses \
+            --selector /tmp/selector-now.txt --persisted-since /tmp/selector-3d.txt 2>/dev/null || true)
+          if [ ${#lasting[@]} -eq 0 ]; then
+            echo "No near-miss has lasted three days."
+            exit 0
+          fi
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            printf 'Would flag (dry run): %s\n' "${lasting[@]}"
+            exit 0
+          fi
+          gh label create catalog-near-miss --color FBCA04 \
+            --description "A model would supersede an older one but for an access method that does not list it" 2>/dev/null || true
+          # REST issues API + EXACT title (tests/test_cron_issue_dedup.py).
+          existing="$(gh issue list --state open --limit 200 --json title -q '.[].title' || true)"
+          for line in "${lasting[@]}"; do
+            [ -z "${line}" ] && continue
+            old="$(printf '%s' "${line}" | sed -E 's/^NEAR-MISS ([^ ]+) -> .*/\1/')"
+            new="$(printf '%s' "${line}" | sed -E 's/^NEAR-MISS [^ ]+ -> ([^:]+):.*/\1/')"
+            missing="$(printf '%s' "${line}" | sed -E 's/^.*: missing on //')"
+            title="chore(catalog): near-miss supersession \"${old}\" -> \"${new}\""
+            if printf '%s\n' "${existing}" | grep -Fqx "${title}"; then
+              echo "Issue already open for ${old} -> ${new}; skipping."
+              continue
+            fi
+            gh issue create \
+              --title "${title}" \
+              --label catalog-near-miss \
+              --body "\`${new}\` passes every supersession test against \`${old}\` but coverage: ${missing} offer \`${old}\` and do not list \`${new}\`, so \`${old}\` stays a recommendation candidate. It has been so on main for at least three days. The daily catalog refresh checks each of those methods' own sources for \`${new}\` (\`<near_miss_checks>\` in update/update_models.py), and this issue closes itself once the pair resolves (update/close_resolved_issues.py, daily in cron-health.yml)." \
+              || echo "issue create failed for ${old} -> ${new}"
+          done
+
       - name: Refresh provider-direct catalog snapshots
         # Federation (Phase 4.6): refresh each provider's OWN pricing snapshot from
         # its own docs so the price-provenance gate (G4 in
@@ -176,6 +231,14 @@ jobs:
           if [ -n "${codex_ids}" ]; then
             python update/merge_catalog.py --sync-method codex-cli --ids "${codex_ids}"
             python update/merge_catalog.py --sync-method codex-api --ids "${codex_ids}"
+          fi
+          # OpenRouter lists every model it routes on a public endpoint
+          # (openrouter.ai/api/v1/models); a catalogued one belongs on the
+          # openrouter method. Same pattern as the Codex sync: deterministic,
+          # additive, fail-open on fetch errors (update/extract_openrouter_models.py).
+          openrouter_ids="$(python update/extract_openrouter_models.py | paste -sd, - || true)"
+          if [ -n "${openrouter_ids}" ]; then
+            python update/merge_catalog.py --sync-method openrouter --ids "${openrouter_ids}"
           fi
           # Rating guard: every letter edit the curation pass made must follow
           # update/prompt.md's rules (declared with its category's evidence, one
