@@ -19,6 +19,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from roadmodel import usage
 from roadmodel.errors import ProviderCallError
 from roadmodel.providers.registry import (
     COMPATIBLE_PROVIDERS,
@@ -52,6 +53,21 @@ def _extract_message_text(response: object) -> str | None:
         text = _THINK_BLOCK.sub("", "".join(p for p in pieces if isinstance(p, str))).strip()
         return text or None
     return None
+
+
+def _record_usage(provider: str, model_id: str, response: object) -> None:
+    """Report Chat Completions token counts to roadmodel.usage."""
+    u = getattr(response, "usage", None)
+    if u is None:
+        return
+    details = getattr(u, "prompt_tokens_details", None)
+    usage.record(
+        provider,
+        model_id,
+        input_tokens=getattr(u, "prompt_tokens", None),
+        output_tokens=getattr(u, "completion_tokens", None),
+        cached_input_tokens=getattr(details, "cached_tokens", None) or 0,
+    )
 
 
 def _reasoning_only(response: object) -> bool:
@@ -161,6 +177,7 @@ class OpenAICompatibleAdapter:
                 kwargs["temperature"] = temperature
             kwargs.update(_reasoning_kwargs(spec, thinking_budget))
             response = client.chat.completions.create(**kwargs)
+            _record_usage(spec.name, model_id, response)
             text = _extract_message_text(response)
             if text:
                 return text

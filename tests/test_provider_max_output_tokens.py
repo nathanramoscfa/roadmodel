@@ -190,11 +190,11 @@ def test_anthropic_keeps_4096_default_when_unset(
     assert _FakeAnthropicClient.captured["max_tokens"] == 4096
 
 
-def test_anthropic_ignores_thinking_budget(monkeypatch: pytest.MonkeyPatch) -> None:
-    """thinking_budget is Gemini-specific (issue #132). Anthropic accepts the
-    keyword for ProviderAdapter parity but must NOT forward it to the SDK —
-    Anthropic extended-thinking has different semantics and the recommender
-    response shape does not tolerate small caps on Anthropic (PR #128)."""
+def test_anthropic_never_sends_a_thinking_token_budget(monkeypatch: pytest.MonkeyPatch) -> None:
+    """thinking_budget is the Protocol's reasoning dial, not an Anthropic field:
+    current Claude models reject a token budget (400 on Sonnet 5 / Opus 4.7+),
+    so the adapter maps it to output_config.effort and never sends a budget or
+    a `thinking` block (PR #128: small caps break the response shape)."""
     _install_anthropic_fake(monkeypatch)
     anthropic_provider.recommend("prompt", "system", api_key="key", thinking_budget=0)
     captured = _FakeAnthropicClient.captured
@@ -203,11 +203,18 @@ def test_anthropic_ignores_thinking_budget(monkeypatch: pytest.MonkeyPatch) -> N
     assert "thinking_config" not in captured
 
 
-def test_anthropic_ignores_temperature(monkeypatch: pytest.MonkeyPatch) -> None:
-    """temperature is a Gemini-specific knob (#176). Anthropic accepts it for
-    ProviderAdapter parity but must NOT forward it to the SDK."""
+def test_anthropic_forwards_temperature_only_where_sampling_exists(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Recommender determinism (#176) on the models that take sampling (the
+    default Sonnet 4.6, Haiku 4.5); Sonnet 5 and Opus 4.7+ reject it with a 400,
+    so it is dropped there."""
     _install_anthropic_fake(monkeypatch)
     anthropic_provider.recommend("prompt", "system", api_key="key", temperature=0.0)
+    assert _FakeAnthropicClient.captured["temperature"] == 0.0
+    anthropic_provider.recommend(
+        "prompt", "system", api_key="key", model="claude-sonnet-5", temperature=0.0
+    )
     assert "temperature" not in _FakeAnthropicClient.captured
 
 
@@ -273,8 +280,8 @@ def test_openai_maps_thinking_budget_to_reasoning_effort(
 
 
 def test_openai_no_reasoning_for_non_gpt5_model(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Only gpt-5* models get the reasoning.effort cap; a non-reasoning model is
-    left untouched (no reasoning key)."""
+    """Only the gpt-5+ reasoning models get the reasoning.effort cap; a
+    non-reasoning model is left untouched (no reasoning key)."""
     _install_openai_fake(monkeypatch)
     openai_provider.recommend("p", "s", api_key="k", model="gpt-4o", thinking_budget=0)
     assert "reasoning" not in _FakeOpenAIClient.captured
