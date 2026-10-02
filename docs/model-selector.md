@@ -839,7 +839,7 @@ Tier ratings:
 
 - **Pricing:** Input $3.00/M · Output $15.00/M
 - **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **A** · Long-context **A** · Knowledge **B** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 30.1 (adaptive reasoning, max effort); HLE 33.6%; SciCode 50.1; Terminal-Bench 4.0 3.0; AA-LCR 0.800; LMArena Text Elo 1457.7 (#41); AA-Omniscience 12.4
+- **Headline benchmarks:** AA Intelligence Index 30.1 (max); HLE 33.6%; SciCode 50.1; Terminal-Bench 4.0 3.0; AA-LCR 0.800; LMArena Text Elo 1457.7 (#41); AA-Omniscience 12.4
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
 - **Best for:** Strong multimodal input and long context at a high price. Its AA Intelligence Index of 30.1 ranks 33rd of 54 measured models.
 
