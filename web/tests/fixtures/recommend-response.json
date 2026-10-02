@@ -1,0 +1,247 @@
+{
+  "recommendations": [
+    {
+      "model": "Gemini 3.8 Flash",
+      "platform": "Gemini CLI",
+      "settings": {
+        "effort": "Medium",
+        "thinking": "On",
+        "budget_priority": "cheap",
+        "rationale": "TASK: Coding — multi-file refactor with type safety and test coverage on a large codebase. PICK: Flash is A-tier for coding (AA Intelligence Index 40.9, #18 of 54) at a low price ($0.75/$3.50); adequate for well-structured refactoring when the original code is clear and module boundaries are straightforward. EFFORT: Medium reasoning handles type annotations and test structure without the High-effort multi-agent reasoning larger codebases might need. Budget priority: cheap."
+      },
+      "rationale": "TASK: Coding — multi-file refactor with type safety and test coverage on a large codebase. PICK: Flash is A-tier for coding (AA Intelligence Index 40.9, #18 of 54) at a low price ($0.75/$3.50); adequate for well-structured refactoring when the original code is clear and module boundaries are straightforward. EFFORT: Medium reasoning handles type annotations and test structure without the High-effort multi-agent reasoning larger codebases might need.",
+      "rationale_sections": {
+        "task": "Coding — multi-file refactor with type safety and test coverage on a large codebase.",
+        "pick": "Flash is A-tier for coding (AA Intelligence Index 40.9, #18 of 54) at a low price ($0.75/$3.50); adequate for well-structured refactoring when the original code is clear and module boundaries are straightforward.",
+        "effort": "Medium reasoning handles type annotations and test structure without the High-effort multi-agent reasoning larger codebases might need."
+      },
+      "conversation": "New",
+      "backup": {
+        "model": "GPT-5.6 Terra",
+        "platform": "ChatGPT (web / desktop)",
+        "settings": {
+          "effort": "Medium",
+          "thinking": "On"
+        }
+      },
+      "session_cost_estimate": {
+        "model_id": "gemini-3.8-flash",
+        "model_name": "Gemini 3.8 Flash",
+        "platform_id": "gemini-cli",
+        "platform_name": "Gemini CLI",
+        "input_tokens": 1000,
+        "output_tokens": 2000,
+        "max_mode": false,
+        "input_usd": 0.00075,
+        "output_usd": 0.007,
+        "total_usd": 0.00775,
+        "funding_source": "per-token",
+        "subscription_label": null,
+        "notes": []
+      },
+      "comparison_table": [
+        {
+          "model_id": "gemini-3.8-flash",
+          "model_name": "Gemini 3.8 Flash",
+          "platform_id": "antigravity",
+          "platform_name": "Antigravity",
+          "input_tokens": 1000,
+          "output_tokens": 2000,
+          "max_mode": false,
+          "input_usd": 0.00075,
+          "output_usd": 0.007,
+          "total_usd": 0.00775,
+          "funding_source": "per-token",
+          "subscription_label": null,
+          "notes": [],
+          "your_cost": "$0 · Google AI Pro",
+          "funded": true
+        },
+        {
+          "model_id": "gemini-3.8-flash",
+          "model_name": "Gemini 3.8 Flash",
+          "platform_id": "gemini-app",
+          "platform_name": "Gemini (web / app)",
+          "input_tokens": 1000,
+          "output_tokens": 2000,
+          "max_mode": false,
+          "input_usd": 0.00075,
+          "output_usd": 0.007,
+          "total_usd": 0.00775,
+          "funding_source": "per-token",
+          "subscription_label": null,
+          "notes": [],
+          "your_cost": "$0 · Google AI Pro",
+          "funded": true
+        }
+      ],
+      "priority": "cheap"
+    },
+    {
+      "model": "GPT-5.6 Terra",
+      "platform": "Codex",
+      "settings": {
+        "intelligence": "High",
+        "budget_priority": "balanced",
+        "rationale": "TASK: Coding — multi-file refactor with type safety and test coverage on a large codebase. PICK: Terra is A-tier for coding (AA Intelligence Index 42.1) at a medium price point ($2/$12) with strong multi-file reasoning; competitive with Sonnet 5.5 on this scoped task when cost efficiency matters. EFFORT: High reasoning fits the refactor's cross-file scope and type-design decisions without maxing effort. Budget priority: balanced."
+      },
+      "rationale": "TASK: Coding — multi-file refactor with type safety and test coverage on a large codebase. PICK: Terra is A-tier for coding (AA Intelligence Index 42.1) at a medium price point ($2/$12) with strong multi-file reasoning; competitive with Sonnet 5.5 on this scoped task when cost efficiency matters. EFFORT: High reasoning fits the refactor's cross-file scope and type-design decisions without maxing effort.",
+      "rationale_sections": {
+        "task": "Coding — multi-file refactor with type safety and test coverage on a large codebase.",
+        "pick": "Terra is A-tier for coding (AA Intelligence Index 42.1) at a medium price point ($2/$12) with strong multi-file reasoning; competitive with Sonnet 5.5 on this scoped task when cost efficiency matters.",
+        "effort": "High reasoning fits the refactor's cross-file scope and type-design decisions without maxing effort."
+      },
+      "conversation": "New",
+      "backup": {
+        "model": "Sonnet 5.5",
+        "platform": "Claude Code",
+        "settings": {
+          "effort": "High",
+          "thinking": "On"
+        }
+      },
+      "session_cost_estimate": {
+        "model_id": "gpt-5.6-terra",
+        "model_name": "GPT-5.6 Terra",
+        "platform_id": "codex-cli",
+        "platform_name": "Codex",
+        "input_tokens": 1000,
+        "output_tokens": 2000,
+        "max_mode": false,
+        "input_usd": 0.002,
+        "output_usd": 0.024,
+        "total_usd": 0.026000000000000002,
+        "funding_source": "subscription-included",
+        "subscription_label": "OpenAI ChatGPT Plus $20/mo",
+        "notes": []
+      },
+      "comparison_table": [
+        {
+          "model_id": "gpt-5.6-terra",
+          "model_name": "GPT-5.6 Terra",
+          "platform_id": "chatgpt-app",
+          "platform_name": "ChatGPT (web / desktop)",
+          "input_tokens": 1000,
+          "output_tokens": 2000,
+          "max_mode": false,
+          "input_usd": 0.002,
+          "output_usd": 0.024,
+          "total_usd": 0.026000000000000002,
+          "funding_source": "subscription-included",
+          "subscription_label": "OpenAI ChatGPT Plus $20/mo",
+          "notes": [],
+          "your_cost": "$0 · ChatGPT Plus",
+          "funded": true
+        },
+        {
+          "model_id": "gpt-5.6-terra",
+          "model_name": "GPT-5.6 Terra",
+          "platform_id": "codex-cli",
+          "platform_name": "Codex",
+          "input_tokens": 1000,
+          "output_tokens": 2000,
+          "max_mode": false,
+          "input_usd": 0.002,
+          "output_usd": 0.024,
+          "total_usd": 0.026000000000000002,
+          "funding_source": "subscription-included",
+          "subscription_label": "OpenAI ChatGPT Plus $20/mo",
+          "notes": [],
+          "your_cost": "$0 · ChatGPT Plus",
+          "funded": true
+        }
+      ],
+      "priority": "balanced"
+    },
+    {
+      "model": "Sonnet 5.5",
+      "platform": "Claude Code",
+      "settings": {
+        "effort": "High",
+        "thinking": "On",
+        "budget_priority": "best",
+        "rationale": "TASK: Coding — multi-file refactor with type safety and test coverage on a large codebase. PICK: Sonnet 5.5 is S-tier for coding (AA Intelligence Index 56.0, #2 of 54 models) and matches the task's cross-file scope and type-system reasoning at a balanced price within your funded Claude Max subscription. EFFORT: High reasoning handles the multi-step architectural decisions (module boundaries, type signatures, test structure) required to preserve behaviour while restructuring. Budget priority: best."
+      },
+      "rationale": "TASK: Coding — multi-file refactor with type safety and test coverage on a large codebase. PICK: Sonnet 5.5 is S-tier for coding (AA Intelligence Index 56.0, #2 of 54 models) and matches the task's cross-file scope and type-system reasoning at a balanced price within your funded Claude Max subscription. EFFORT: High reasoning handles the multi-step architectural decisions (module boundaries, type signatures, test structure) required to preserve behaviour while restructuring.",
+      "rationale_sections": {
+        "task": "Coding — multi-file refactor with type safety and test coverage on a large codebase.",
+        "pick": "Sonnet 5.5 is S-tier for coding (AA Intelligence Index 56.0, #2 of 54 models) and matches the task's cross-file scope and type-system reasoning at a balanced price within your funded Claude Max subscription.",
+        "effort": "High reasoning handles the multi-step architectural decisions (module boundaries, type signatures, test structure) required to preserve behaviour while restructuring."
+      },
+      "conversation": "New",
+      "backup": {
+        "model": "GPT-5.6 Sol",
+        "platform": "ChatGPT (web / desktop)",
+        "settings": {
+          "effort": "High",
+          "thinking": "On"
+        }
+      },
+      "session_cost_estimate": {
+        "model_id": "claude-sonnet-5-5",
+        "model_name": "Sonnet 5.5",
+        "platform_id": "claude-code",
+        "platform_name": "Claude Code",
+        "input_tokens": 1000,
+        "output_tokens": 2000,
+        "max_mode": false,
+        "input_usd": 0.002,
+        "output_usd": 0.02,
+        "total_usd": 0.022,
+        "funding_source": "subscription-or-key",
+        "subscription_label": "Anthropic claude.ai Max ($100) $100/mo",
+        "notes": []
+      },
+      "comparison_table": [
+        {
+          "model_id": "claude-sonnet-5-5",
+          "model_name": "Sonnet 5.5",
+          "platform_id": "claude-code",
+          "platform_name": "Claude Code",
+          "input_tokens": 1000,
+          "output_tokens": 2000,
+          "max_mode": false,
+          "input_usd": 0.002,
+          "output_usd": 0.02,
+          "total_usd": 0.022,
+          "funding_source": "subscription-or-key",
+          "subscription_label": "Anthropic claude.ai Max ($100) $100/mo",
+          "notes": [],
+          "your_cost": "$0 · Claude Max",
+          "funded": true
+        },
+        {
+          "model_id": "claude-sonnet-5-5",
+          "model_name": "Sonnet 5.5",
+          "platform_id": "anthropic-api",
+          "platform_name": "Anthropic API",
+          "input_tokens": 1000,
+          "output_tokens": 2000,
+          "max_mode": false,
+          "input_usd": 0.002,
+          "output_usd": 0.02,
+          "total_usd": 0.022,
+          "funding_source": "per-token",
+          "subscription_label": null,
+          "notes": [],
+          "your_cost": "~$10/M out · your Anthropic API",
+          "funded": false
+        }
+      ],
+      "priority": "best"
+    }
+  ],
+  "primary": "best",
+  "engine": {
+    "hint": "openai-gpt-6-luna",
+    "name": "GPT-6 Luna",
+    "maker": "OpenAI",
+    "requested": "openai-gpt-6-luna",
+    "requested_name": "GPT-6 Luna",
+    "fell_back": false,
+    "latency_ms": 11800,
+    "cost_usd": 0.0015,
+    "cost_source": "measured",
+    "cached_share": 0.98
+  }
+}

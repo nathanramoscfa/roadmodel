@@ -31,6 +31,16 @@ const DEST_DIR = path.join(webRoot, "data");
 const DEST = path.join(DEST_DIR, "catalog.json");
 const BENCH_SOURCE = path.join(repoRoot, "docs", "benchmarks.json");
 const BENCH_DEST = path.join(DEST_DIR, "benchmarks.json");
+// The recommender's engine registry: the service runs engines from it and the
+// /recommend menu is built from it (lib/recommend-engines.ts), so both
+// deployments read the one file. Required, like the catalog.
+const ENGINES_SOURCE = path.join(repoRoot, "service", "app", "engines.json");
+const ENGINES_DEST = path.join(DEST_DIR, "engines.json");
+// The measured figures the menu shows per engine (scripts/
+// eval_recommend_engines.py --summary-json). Optional: without it the menu
+// shows the registry's engines with catalog prices only.
+const EVAL_SOURCE = path.join(repoRoot, "docs", "engine-eval.json");
+const EVAL_DEST = path.join(DEST_DIR, "engine-eval.json");
 
 async function main() {
   let raw;
@@ -111,6 +121,35 @@ async function main() {
   console.log(
     `[sync-catalog] copied ${Object.keys(bench.models).length} benchmark rows → ${path.relative(webRoot, BENCH_DEST)}`,
   );
+
+  let enginesRaw;
+  try {
+    enginesRaw = await readFile(ENGINES_SOURCE, "utf8");
+    const engines = JSON.parse(enginesRaw);
+    if (!Array.isArray(engines.engines) || engines.engines.length === 0) {
+      throw new Error("no engines array");
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(
+      `[sync-catalog] failed to read ${ENGINES_SOURCE}: ${msg}\n` +
+        `  It is the recommender's engine registry; restore it from git.`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+  await writeFile(ENGINES_DEST, enginesRaw, "utf8");
+  console.log(`[sync-catalog] copied the engine registry → ${path.relative(webRoot, ENGINES_DEST)}`);
+
+  let evalRaw = '{"engines": {}}\n';
+  try {
+    evalRaw = await readFile(EVAL_SOURCE, "utf8");
+    JSON.parse(evalRaw);
+  } catch {
+    console.warn(`[sync-catalog] no ${path.relative(repoRoot, EVAL_SOURCE)}; the engine menu shows prices only`);
+    evalRaw = '{"engines": {}}\n';
+  }
+  await writeFile(EVAL_DEST, evalRaw, "utf8");
 }
 
 await main();

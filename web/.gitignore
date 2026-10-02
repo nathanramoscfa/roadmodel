@@ -11,3 +11,5 @@ tsconfig.tsbuildinfo
 # truth lives at docs/catalog.json; never commit the copy.
 data/catalog.json
 data/benchmarks.json
+data/engines.json
+data/engine-eval.json

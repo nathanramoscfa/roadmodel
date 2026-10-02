@@ -38,30 +38,12 @@ import type { TaskTier } from "./model-routing";
 // model.
 export const FREE_ROADMAP_MIN_TIER: TaskTier = "B";
 
-// Recommender quality floor. Stays at 'B' across Phase 4; the
-// /recommend surface is a JSON proxy to the FastAPI service which
-// performs its own engine routing — this floor exists so the
-// outer Next.js tier matches the FastAPI service's free-tier
-// posture.
-export const FREE_RECOMMEND_MIN_TIER: TaskTier = "B";
-
 // Surface-keyed override map. Empty by default — the catalog
-// derivation runs untouched. When the maintainer wants to pin a
-// surface to a specific model id, they set the corresponding key
-// here.
+// derivation runs untouched. When the maintainer wants to pin the
+// /roadmap engine to a specific model id, they set it here.
+// /recommend does not read this map: its engines, default and fallback
+// chain live in the engine registry (service/app/engines.json), which
+// both the service and the web read.
 export const ENGINE_OVERRIDES: {
-  recommend?: string;
   roadmap?: string;
-} = {
-  // GPT-5.6 Luna (eval-backed engine move, 2026-09-22 — supersedes gpt-5-mini).
-  // Pins the free/anon /recommend engine to gpt-5.6-luna (force_provider
-  // "openai-gpt-5.6-luna"). The 12-probe differential: both engines parse 12/12
-  // with every structured field and rationale section present and no task leak,
-  // but gpt-5-mini demotes the Quality pick on cost grounds on the cost-bulk
-  // probe (0.92 no-demote) where Luna does not (1.00) — and Luna is ~40%
-  // cheaper per output token ($1.20 vs $2.00 per Mtok). The signed-in frontier
-  // uses the same engine (FRONTIER_RECOMMENDER_ENGINE in model-routing.ts);
-  // this override keeps the anon path pinned independently. Rollback: set this
-  // back to "gpt-5-mini" — its provider hint is still registered service-side.
-  recommend: "gpt-5.6-luna",
-};
+} = {};
