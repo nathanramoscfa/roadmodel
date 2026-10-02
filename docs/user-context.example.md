@@ -363,7 +363,7 @@ platforms.excluded:  (none declared)
 Values are **access-method ids** from the `<access-methods>` block in
 `model-selector.txt` — e.g. `claude-code`, `cursor`, `codex-cli`,
 `chatgpt-app`, `claude-web`, `anthropic-api`, `openai-api`,
-`google-api`, `gemini-cli`, `deepseek-api`, `mistral-api` — not
+`google-api`, `gemini-cli`, `antigravity`, `deepseek-api`, `mistral-api` — not
 display names ("Claude Code") and not provider names ("Anthropic").
 An operator who works only in the terminal might declare:
 

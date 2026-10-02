@@ -204,7 +204,7 @@ contract.
 - Every `<method>` element in `<access-methods>` OTHER THAN
   `<method id="claude-code">`. In particular, `claude-web`,
   `anthropic-api`, `codex-cli`, `chatgpt-app`, `gemini-cli`,
-  `gemini-app`, `cursor-chat`, `cursor-composer`, `openai-api`,
+  `gemini-app`, `antigravity`, `cursor-chat`, `cursor-composer`, `openai-api`,
   `google-api`, and `xai-api` are out of scope.
 - `<orchestration-context>` — the ORCHESTRATION (`None`/`PerPrompt`)
   mapping lives here and is NOT this cron's lane. That section also

@@ -176,7 +176,7 @@ DEFAULT_K: Final[float] = 30.0
 # Coding-agent surfaces get a nudge on coding / agentic / planning work (that
 # is where roadmap steps run) when costs tie; chat apps and raw APIs do not.
 AGENT_SURFACES: Final[frozenset[str]] = frozenset(
-    {"claude-code", "codex-cli", "cursor", "gemini-cli"}
+    {"claude-code", "codex-cli", "cursor", "gemini-cli", "antigravity"}
 )
 AGENT_CATEGORIES: Final[frozenset[str]] = frozenset({"coding", "agentic", "planning"})
 # Platform tie-break when scores are equal: a paid-for subscription surface,

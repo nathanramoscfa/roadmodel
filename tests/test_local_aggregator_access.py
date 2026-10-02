@@ -400,6 +400,19 @@ def test_conformance_gate_aggregator_set_mirrors_cost_module() -> None:
     assert m
     gate_set = {s.strip().strip("\"'") for s in m.group(1).split(",") if s.strip()}
     assert gate_set == set(cost._AGGREGATOR_PROVIDERS)
+    hosts = re.search(r"host_methods = \{([^}]*)\}", src)
+    assert hosts
+    host_set = {s.strip().strip("\"'") for s in hosts.group(1).split(",") if s.strip()}
+    assert host_set == set(cost._HOST_METHODS)
+
+
+def test_a_host_surface_never_decides_a_maker() -> None:
+    """Antigravity is Google's, and it serves Claude Sonnet 4.6 and gpt-oss-120b
+    too. Counting it made both makers ambiguous (None), and would have let the
+    backup guard pair two models from the same real maker."""
+    assert cost.model_provider("sonnet-4.6") == "anthropic"
+    assert cost.model_provider("gemini-3.8-flash") == "google"
+    assert cost.model_provider("gpt-oss-120b") not in {None, "google"}
 
 
 def test_backup_substitution_skips_local_only_candidates(fixture_env: Path) -> None:

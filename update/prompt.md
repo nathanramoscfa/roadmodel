@@ -232,7 +232,13 @@ verbatim:
 
 - `anthropic` → `claude-code, claude-web`
 - `openai` → `codex-cli, chatgpt-app`
-- `google` → `gemini-cli, gemini-app`
+- `google` → `gemini-app, antigravity` for Google AI Pro and every Google
+  AI Ultra tier, and `gemini-app` alone for every other Google tier
+  (Google AI Plus today). Antigravity's plans page
+  (antigravity.google/docs/plans) gives paid quota to Pro and Ultra only;
+  every other account gets its free tier, which needs no subscription.
+  `gemini-cli` is never a subscription surface: since 2026-06-18 it serves
+  Gemini API keys and Code Assist Standard / Enterprise licences only.
 - `cursor` → `cursor`
 - `xai` → (no consumer-facing subscription access methods enumerated
   in `<access-methods>`; xai tiers MUST be skipped this run — see
@@ -840,6 +846,8 @@ element M in `<access-methods>`:
    - `openai-api` → `OpenAI API models reference site:openai.com`
    - `gemini-cli` → `"Gemini CLI" supported models site:gemini.google.com`
    - `gemini-app` → `Gemini Advanced models site:gemini.google.com`
+   - `antigravity` → `Antigravity models site:antigravity.google` (its
+     models page names every model and the plans that reach it)
    - `google-api` → `Google AI Studio API models site:ai.google.dev`
    - `cursor-chat` / `cursor-composer` → `Cursor models catalog site:cursor.com`
    - `xai-api` → `xAI API Grok models site:x.ai`
