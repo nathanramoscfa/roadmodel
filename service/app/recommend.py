@@ -21,6 +21,7 @@ from roadmodel.recommend import (  # type: ignore[import-untyped]
     recommend_structured_ladder,
 )
 
+from .engines import REGISTRY, EngineSpec
 from .funding import (
     AccessGuard,
     FundingGuard,
@@ -32,6 +33,11 @@ from .funding import (
     user_context_from_request,
 )
 from .models import BackupPick, LadderResponse, RecommendRequest, RecommendResponse
+
+try:  # roadmodel >= 0.2.56; an older install meters nothing rather than failing
+    from roadmodel import usage as engine_usage
+except ImportError:  # pragma: no cover - exercised only against roadmodel < 0.2.56
+    engine_usage = None
 
 logger = logging.getLogger(__name__)
 
@@ -96,127 +102,22 @@ def _session_cost(
         return None, []
 
 
+# The engines the service can run, keyed by the force_provider hint the web
+# edge sends: provider, API model id and per-call parameters all come from the
+# registry (engines.json), which the web build reads too. Each entry's `notes`
+# records why its parameters are what they are: Gemini 2.5 Flash runs thinking
+# OFF (#132 latency) under a 512-token visible cap (#146 tail) at temperature 0
+# (#176 determinism); the reasoning models (GPT-5+, Gemini 3, Claude) run at
+# their reasoning floor with a generous cap, because reasoning tokens count
+# against max_output_tokens and a tight cap returns no text at all; ladder mode
+# emits three blocks, so its cap is about three single-block caps.
 _PROVIDER_HINTS: dict[str, tuple[str, str]] = {
-    "anthropic-haiku-4-5": ("anthropic", "claude-haiku-4-5-20251001"),
-    "google-gemini-2.5-flash": ("google", "gemini-2.5-flash"),
-    # Phase 4.5 T3b signed-in quality tier: Gemini 2.5 Pro with thinking ON
-    # (params below). The free/anon tier stays on 2.5 Flash; the web edge only
-    # routes signed-in users here when RECOMMENDER_FRONTIER_ENABLED is on.
-    "google-gemini-2.5-pro": ("google", "gemini-2.5-pro"),
-    # GPT-5 mini — the previous eval-backed engine (superseded 2026-09-22 by
-    # gpt-5.6-luna; kept reachable for rollback and comparison).
-    "openai-gpt-5-mini": ("openai", "gpt-5-mini"),
-    # GPT-5.6 Luna — the eval-backed recommender engine. Cheaper than gpt-5-mini
-    # ($0.20/$1.20 vs $0.25/$2.00 per Mtok) AND cleaner on the 12-probe
-    # differential: 12/12 parsed, every structured field and rationale section
-    # present, no task leak, and no cost-demotion of the Quality pick (gpt-5-mini
-    # demotes it on the cost-bulk probe). Runs at its ladder floor, which is
-    # `low` — the 5.6 generation rejects `minimal` outright.
-    "openai-gpt-5.6-luna": ("openai", "gpt-5.6-luna"),
-    "openai-gpt-5.6-terra": ("openai", "gpt-5.6-terra"),
+    hint: (spec.provider, spec.model) for hint, spec in REGISTRY.engines.items()
 }
 
-# The frontier model id — keyed on directly so its thinking-ON params apply
-# without a separate request flag (the model IS the tier signal).
-_GEMINI_FRONTIER_MODEL = "gemini-2.5-pro"
-
-_FALLBACK_CHAIN: tuple[str, ...] = (
-    "anthropic-haiku-4-5",
-    "google-gemini-2.5-flash",
-)
-
-# Phase 4 Step 7 latency lever (issue #132). The warm-path latency
-# gap is NOT the output token count — it is Gemini 2.5 Flash's
-# default reasoning, which is decoded before (and counted against
-# the budget of) the visible answer. A clean production baseline
-# measured P50 ~13 s with the Gemini call ~99.7% of total. The
-# 2026-05-31 incident proved that capping max_output_tokens alone
-# cannot fix this: at 1024 the thinking tokens consumed the budget
-# and the visible six-field block truncated below the parser
-# threshold (MalformedResponseError on every call).
-#
-# roadmodel 0.2.3 adds an optional thinking_budget keyword to the
-# Google provider (config.thinking_config.thinking_budget). We pass
-# it ONLY on the Gemini path below. 0 disables Gemini's default
-# reasoning entirely — the most aggressive latency cut — and is the
-# starting value; a production A/B may tune it upward if response
-# quality (the model pick) degrades. It is deliberately NOT passed
-# on the Anthropic path: Anthropic extended-thinking has different
-# semantics and the recommender response shape does not tolerate
-# small caps on Anthropic (PR #128).
-#
-# The issue #133 fallback loop still catches MalformedResponseError,
-# so any parser/selector drift on one provider degrades to the next
-# instead of 500ing. See docs/phase04-latency-findings.md.
-_GEMINI_THINKING_BUDGET = 0
-
-# Phase 4 Step 7 latency tail (issue #146). thinking_budget=0 fixed the
-# P50 (13.0s -> 1.6s) but left a bimodal P95 tail (~11s): a minority of
-# requests where Gemini 2.5 Flash emits a runaway RATIONALE (the last,
-# variable-length field of the response block) on complex planning
-# prompts. A 2026-05-31 probe of the real recommender prompt at
-# thinking_budget=0 measured normal visible output at 124-300 tokens with
-# a single 4,125-token runaway on a planning prompt -- the exact tail.
-#
-# Because thinking is OFF, max_output_tokens is now a pure visible-response
-# cap (no reasoning to consume it -- the 2026-05-31 cap=1024 incident only
-# happened with thinking ON, see project_parser_selector_drift_incident).
-# 512 sits ~1.7x above the observed normal max (300), so normal responses
-# are never clipped, while runaway rationales are bounded -- cutting their
-# decode time. Truncation is parser-safe: the 6 required fields (MODEL..
-# CONVERSATION) are emitted first and RATIONALE is captured lazily to
-# end-of-string, so even a forced cap=96 truncation still parses with the
-# pick preserved. Gemini-only, like thinking_budget (never Anthropic, #128).
-#
-# Value history: an initial 768 cap (2026-06-01 prod sweep) cut P95 from
-# 11,084ms to 5,530ms -- the runaway tail collapsed, but P95 still missed
-# the <=5,000ms budget by ~530ms because the cap-bound long generations
-# landed at ~5.5-6.3s. The capped tail scales with the token count (~187
-# tok/s decode + ~1.4s base), so 512 brings it to ~4.1s with margin. 512
-# is still well above the normal-output ceiling, so the tightening only
-# trims over-long (>1.7x normal) rationales, never the pick.
-_GEMINI_MAX_OUTPUT_TOKENS = 512
-
-# Recommender determinism (#176). Without an explicit temperature Gemini
-# samples at its default (~1.0), so the SAME task_description returns
-# different model picks run-to-run (a prod dogfooding sweep saw ~25% of
-# identical requests flip to a different model). 0.0 = greedy/deterministic,
-# the right default for a recommender (consistency builds trust); tunable up
-# if pick diversity is ever wanted. Gemini-only, like the two caps above
-# (never Anthropic, #128).
-_GEMINI_TEMPERATURE = 0.0
-
-# Phase 4.5 T3b — signed-in QUALITY-tier Gemini params (frontier model only).
-# The free tier runs Gemini 2.5 Flash with reasoning OFF for latency (#132); the
-# quality tier runs Gemini 2.5 Pro with reasoning ON, which is what closes the
-# adherence residuals (#185 cost-demotion, #188 thinking-prose) the free engine
-# left open. The bake-off (2026-06-06) showed thinking_budget=512 is the sweet
-# spot: thinking_budget=None starved the visible block (no-output failures) and
-# thinking_budget=1024 doubled latency (~12s) for no quality gain, while 512
-# cleared the residuals at ~6-7s (within the quality-tier P50<=8s budget). The
-# combined max_output_tokens must leave room for both the bounded thinking and
-# the visible six-field block, hence 2048 (vs the free tier's 512).
-_GEMINI_FRONTIER_THINKING_BUDGET = 512
-_GEMINI_FRONTIER_MAX_OUTPUT_TOKENS = 2048
-
-# GPT-5* reasoning-model engine params. The OpenAI provider maps thinking_budget
-# -> reasoning.effort (0 -> minimal); minimal keeps the structured-classification
-# recommender task fast (~7s vs ~33s at low effort) and cheap. The output cap is
-# generous because reasoning tokens ALSO count against max_output_tokens on these
-# models — too tight and the reasoning empties the budget, returning no text.
-_GPT5_THINKING_BUDGET = 0
-_GPT5_MAX_OUTPUT_TOKENS = 2048
-
-# Ladder mode (tasks #1/#3) emits THREE six/seven-field blocks in one response,
-# so the visible-output cap must scale ~3x the single-block cap or the third
-# (COST) block truncates below the parser threshold — the same failure class as
-# the 2026-05-31 incident, but from too-tight a cap on a 3x-longer body.
-_LADDER_OUTPUT_MULTIPLIER = 3
-
-
-def _ladder_output_cap(single_block_cap: int) -> int:
-    """Scale a single-block output cap for the three-block ladder response."""
-    return single_block_cap * _LADDER_OUTPUT_MULTIPLIER
+# The default chain: the default engine, then engines from the other providers,
+# so a provider outage degrades to another provider instead of an error.
+_FALLBACK_CHAIN: tuple[str, ...] = REGISTRY.fallback_chain
 
 
 # Output contract v2 — the structured `settings` a pick carries must match the
@@ -308,6 +209,9 @@ def _config_for_hint(hint: str) -> Any:
 
 
 def _provider_chain(context: dict[str, Any] | None) -> tuple[str, ...]:
+    """The engines to try, in order: the forced engine (the user's menu choice)
+    first, then the fallback chain. An unknown hint is ignored, so a web build
+    that names an engine this service does not know still gets an answer."""
     if not context:
         return _FALLBACK_CHAIN
     force = context.get("force_provider")
@@ -315,6 +219,24 @@ def _provider_chain(context: dict[str, Any] | None) -> tuple[str, ...]:
         rest = tuple(h for h in _FALLBACK_CHAIN if h != force)
         return (force, *rest)
     return _FALLBACK_CHAIN
+
+
+def _spec_for(hint: str) -> EngineSpec:
+    return REGISTRY.engines[hint]
+
+
+def _reset_usage() -> None:
+    if engine_usage is not None:
+        engine_usage.reset()
+
+
+def _call_usage() -> dict[str, Any] | None:
+    """The provider-reported token counts of the engine call just made, or None
+    when the installed roadmodel or the provider reported none."""
+    if engine_usage is None:
+        return None
+    last = engine_usage.last()
+    return dict(last.as_dict()) if last is not None else None
 
 
 def _unavailable_models_from_request(context: dict[str, Any] | None) -> list[str] | None:
@@ -396,31 +318,12 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
     allowed_jurisdictions = resolve_allowed_jurisdictions(req.context)
 
     for hint in _provider_chain(req.context):
-        config = _config_for_hint(hint)
-        # Gemini-only: cap the default reasoning that dominates the
-        # warm-path latency (#132), and bound the runaway-rationale P95
-        # tail with a visible-output cap (#146). Anthropic is left
-        # untouched on both (#128).
-        is_gemini = config.provider == "google"
-        is_frontier = is_gemini and config.model == _GEMINI_FRONTIER_MODEL
-        is_openai_gpt5 = config.provider == "openai" and (config.model or "").startswith("gpt-5")
-        if is_frontier:
-            # Quality tier: reasoning ON, larger combined cap (T3b).
-            thinking_budget: int | None = _GEMINI_FRONTIER_THINKING_BUDGET
-            max_output_tokens: int | None = _GEMINI_FRONTIER_MAX_OUTPUT_TOKENS
-        elif is_gemini:
-            # Free tier: reasoning OFF (#132), tight visible cap (#146).
-            thinking_budget = _GEMINI_THINKING_BUDGET
-            max_output_tokens = _GEMINI_MAX_OUTPUT_TOKENS
-        elif is_openai_gpt5:
-            # GPT-5 engine: minimal reasoning (fast/cheap), generous output cap.
-            thinking_budget = _GPT5_THINKING_BUDGET
-            max_output_tokens = _GPT5_MAX_OUTPUT_TOKENS
-        else:
-            thinking_budget = None
-            max_output_tokens = None
-        temperature = _GEMINI_TEMPERATURE if is_gemini else None
+        thinking_budget, max_output_tokens, temperature = _spec_for(hint).params(ladder=False)
         try:
+            # Inside the try: an engine whose provider key is missing raises
+            # MissingProviderKeyError here, and the chain moves on to the next.
+            config = _config_for_hint(hint)
+            _reset_usage()
             result = recommend_structured(
                 req.task_description,
                 config,
@@ -432,9 +335,10 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
                 thinking_budget=thinking_budget,
                 temperature=temperature,
             )
-            return _pick_response(
+            response = _pick_response(
                 result, req.task_description, funding_guard, access_guard, budget_priority
             )
+            return response.model_copy(update={"engine": hint, "usage": _call_usage()})
         except (MissingProviderKeyError, ProviderCallError, MalformedResponseError) as exc:
             last_error = exc
             if isinstance(exc, MalformedResponseError):
@@ -613,27 +517,10 @@ def recommend_ladder(req: RecommendRequest) -> LadderResponse:
     allowed_jurisdictions = resolve_allowed_jurisdictions(req.context)
 
     for hint in _provider_chain(req.context):
-        config = _config_for_hint(hint)
-        is_gemini = config.provider == "google"
-        is_frontier = is_gemini and config.model == _GEMINI_FRONTIER_MODEL
-        is_openai_gpt5 = config.provider == "openai" and (config.model or "").startswith("gpt-5")
-        if is_frontier:
-            thinking_budget: int | None = _GEMINI_FRONTIER_THINKING_BUDGET
-            # The ladder emits ~3x the visible tokens (three blocks), so lift the
-            # per-call output cap accordingly to avoid truncating the third block.
-            max_output_tokens: int | None = _ladder_output_cap(_GEMINI_FRONTIER_MAX_OUTPUT_TOKENS)
-        elif is_gemini:
-            thinking_budget = _GEMINI_THINKING_BUDGET
-            max_output_tokens = _ladder_output_cap(_GEMINI_MAX_OUTPUT_TOKENS)
-        elif is_openai_gpt5:
-            # GPT-5 engine: minimal reasoning; lift the cap for the 3-block ladder.
-            thinking_budget = _GPT5_THINKING_BUDGET
-            max_output_tokens = _ladder_output_cap(_GPT5_MAX_OUTPUT_TOKENS)
-        else:
-            thinking_budget = None
-            max_output_tokens = None
-        temperature = _GEMINI_TEMPERATURE if is_gemini else None
+        thinking_budget, max_output_tokens, temperature = _spec_for(hint).params(ladder=True)
         try:
+            config = _config_for_hint(hint)
+            _reset_usage()
             ladder = recommend_structured_ladder(
                 req.task_description,
                 config,
@@ -655,7 +542,12 @@ def recommend_ladder(req: RecommendRequest) -> LadderResponse:
                 )
                 for tier, pick in ladder["picks"].items()
             }
-            return LadderResponse(picks=picks, guard=ladder.get("guard", {}))
+            return LadderResponse(
+                picks=picks,
+                guard=ladder.get("guard", {}),
+                engine=hint,
+                usage=_call_usage(),
+            )
         except (MissingProviderKeyError, ProviderCallError, MalformedResponseError) as exc:
             last_error = exc
             if isinstance(exc, MalformedResponseError):
