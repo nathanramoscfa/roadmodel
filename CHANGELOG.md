@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.64] — 2026-10-02
+
 ### Changed
 
 - **A category specialist may take the Quality pick.** In every category
