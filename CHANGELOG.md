@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.57] — 2026-10-02
+
 ### Fixed
 
 - **Claude engines work again on anthropic 1.x.** 0.2.56 sent `temperature`
