@@ -237,3 +237,24 @@ def test_active_tier_matches_an_operator_parenthetical_by_name_and_price() -> No
     assert matched is not None and matched["tier"] == "ChatGPT Pro ($100)"
     # Same stem, wrong price -> no match (the price disambiguates the tiers).
     assert cost_module._match_active_tier(tiers, [("ChatGPT Pro (5x)", "openai", 150.0)]) is None
+
+
+def test_active_tier_matches_a_price_the_operator_rounded() -> None:
+    """The operator's user-context listed Google AI Pro at "$20"; the catalog
+    has $19.99. Exact matching left the subscription funding nothing (the
+    Gemini app and Antigravity both read as unfunded). A rounded price still
+    matches, and the price still tells same-name tiers apart."""
+    from roadmodel import cost as cost_module
+
+    tiers = [
+        {"provider": "Google", "tier": "Google AI Pro", "monthly_usd": 19.99},
+        {"provider": "Google", "tier": "Google AI Ultra ($100)", "monthly_usd": 99.99},
+        {"provider": "Google", "tier": "Google AI Ultra ($200)", "monthly_usd": 199.99},
+    ]
+    pro = cost_module._match_active_tier(tiers, [("Google AI Pro", "google", 20.0)])
+    assert pro is not None and pro["tier"] == "Google AI Pro"
+    ultra = cost_module._match_active_tier(tiers, [("Google AI Ultra", "google", 100.0)])
+    assert ultra is not None and ultra["tier"] == "Google AI Ultra ($100)"
+    ultra = cost_module._match_active_tier(tiers, [("Google AI Ultra", "google", 200.0)])
+    assert ultra is not None and ultra["tier"] == "Google AI Ultra ($200)"
+    assert cost_module._match_active_tier(tiers, [("Google AI Pro", "google", 25.0)]) is None
