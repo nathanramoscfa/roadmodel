@@ -59,6 +59,7 @@ export const GRID_COLUMNS: BenchColumn[] = [
       "AA's composite over its evaluation suite — the one published overall number; 0–100. Scores are not comparable across index versions.",
     unit: "index",
     url: "https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index",
+    category: "planning",
   },
   {
     key: "artificial_analysis_coding_index",
@@ -161,13 +162,14 @@ export const GRID_COLUMN_BY_KEY: Record<BenchKey, BenchColumn> = Object.fromEntr
 ) as Record<BenchKey, BenchColumn>;
 
 // Category → the uniform column that is evidence for that category's letter
-// (named in the category header's tooltip). Planning and multimodal have no
-// single-lab public benchmark in this dataset.
+// (named in the category header's tooltip). Planning reads the AA
+// Intelligence Index: no benchmark tests planning alone, and the index is AA's
+// composite of its whole suite. Multimodal has no evaluation in this dataset.
 export const CATEGORY_FIGURE: Partial<Record<Category, BenchKey>> = Object.fromEntries(
   GRID_COLUMNS.filter((c) => c.category).map((c) => [c.category, c.key]),
 );
 
-// The four categories whose letter is DERIVED from its evidence column by
+// The five categories whose letter is DERIVED from its evidence column by
 // update/derive_ratings.py for every model AA measures: by gap to the
 // category leader, in points (S ≤ 5, A ≤ 20, B ≤ 35, C ≤ 50, else D), or,
 // for a RANK_DERIVATION category, by rank.
@@ -175,6 +177,7 @@ export const CATEGORY_FIGURE: Partial<Record<Category, BenchKey>> = Object.fromE
 // is measured on the provider's first-party endpoint at max effort.
 export const DERIVED_CATEGORIES: ReadonlySet<Category> = new Set<Category>([
   "coding",
+  "planning",
   "agentic",
   "long-context",
   "knowledge",

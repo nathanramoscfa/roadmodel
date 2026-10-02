@@ -108,7 +108,7 @@ const RATING_MEANING: Record<string, string> = Object.fromEntries(
 );
 
 // The basis of a letter no benchmark measures for the model: the class the
-// daily catalog automation assigns. Measured letters (the four derived
+// daily catalog automation assigns. Measured letters (the derived
 // categories, where AA has the figure) come from update/derive_ratings.py.
 const ESTIMATED_BASIS =
   "Estimated: set by the daily catalog automation from each provider's published results; a new model starts from its predecessor's letter.";

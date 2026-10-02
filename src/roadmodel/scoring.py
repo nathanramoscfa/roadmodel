@@ -79,10 +79,14 @@ COMPLEXITIES: Final[tuple[str, ...]] = ("low", "medium", "high")
 BUDGETS: Final[tuple[str, ...]] = ("cheap", "balanced", "best")
 EFFORT_LADDER: Final[tuple[str, ...]] = ("low", "medium", "high", "xhigh", "max")
 
-# The Artificial Analysis evidence figure per category (the same mapping the
-# web catalog uses for its derived letters). ``None`` = the letter only.
-# ``speed`` reads the top-level tokens/s field rather than an evaluation; a
-# ``COMPOSITES`` key is computed by ``with_composites``.
+# The Artificial Analysis evidence figure per category. For the five derived
+# categories it is the evidence update/derive_ratings.py letters from, and the
+# web catalog's too (tests/test_derived_ratings.py holds the three together).
+# ``speed`` reads the top-level tokens/s field: it enters quality here, but
+# its letter stays an estimate, since AA measures throughput on the maker's
+# own endpoint at max effort. ``None`` = the letter only (multimodal: AA runs
+# no multimodal evaluation). A ``COMPOSITES`` key is computed by
+# ``with_composites``.
 CATEGORY_EVIDENCE: Final[dict[str, str | None]] = {
     "coding": "coding_composite",
     "planning": "artificial_analysis_intelligence_index",

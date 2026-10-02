@@ -9,14 +9,14 @@ compares the committed selector with the pass's proposal and reverts every
 S→D letter edit that breaks a rule, reporting each revert:
 
 On a model already in the catalog
-  - coding / agentic / long-context / knowledge never move here. A measured
+  - coding / planning / agentic / long-context / knowledge never move here. A measured
     letter belongs to update/derive_ratings.py (it runs after this guard);
     an unmeasured one stays an estimate until AA publishes the benchmark.
-  - planning / multimodal / speed move at most ONE step per run, and only
+  - multimodal / speed move at most ONE step per run, and only
     with a declaration in the pass's warnings, in the prompt's format:
         tier rating updated: <id> tier-<category> <old>→<new> — <source> shows <figure>
-    citing the evidence mapped to that category (EVIDENCE: LMArena →
-    planning, MMMU → multimodal, tokens/s → speed). A move INTO S also
+    citing the evidence mapped to that category (EVIDENCE: MMMU →
+    multimodal, tokens/s → speed). A move INTO S also
     states the category leader's figure, "(leader <figure>)", within
     S_MARGIN points of the model's.
 
@@ -67,9 +67,9 @@ CATEGORIES = ("coding", "planning", "agentic", "multimodal", "long-context", "kn
 DERIVED = tuple(derive_ratings.CATEGORY_EVIDENCE)
 ESTIMATED = tuple(c for c in CATEGORIES if c not in DERIVED)
 
-# The evidence a declaration may cite, per category. Coding and agentic
-# evidence counts only when a NEW model enters the catalog, before AA measures
-# it; long-context and knowledge have none outside Artificial Analysis.
+# The evidence a declaration may cite, per category. Coding, planning and
+# agentic evidence counts only when a NEW model enters the catalog, before AA
+# measures it; long-context and knowledge have none outside Artificial Analysis.
 EVIDENCE: dict[str, re.Pattern[str]] = {
     "planning": re.compile(r"\bLMArena\b", re.IGNORECASE),
     "multimodal": re.compile(r"\bMMMU\b"),

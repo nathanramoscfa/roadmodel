@@ -604,6 +604,13 @@ test("measured letters match the published bands; every other letter is marked e
     .filter((v): v is number => typeof v === "number");
   const leader = Math.max(...hleAll) * 100;
   const band = (gap: number) => (gap <= 5 ? "S" : gap <= 20 ? "A" : gap <= 35 ? "B" : gap <= 50 ? "C" : "D");
+  // Planning reads the AA Intelligence Index, in index points, led over the
+  // catalog the page renders (update/derive_ratings.py's live models).
+  const indexOf = (id: string) => benchmarks.models[id]?.evaluations.artificial_analysis_intelligence_index;
+  const indexLeader = Math.max(
+    ...catalog.models.map((m) => indexOf(m.id)).filter((v): v is number => typeof v === "number"),
+  );
+  let planningMeasured = 0;
 
   const rows = page.getByTestId("model-row");
   const n = await rows.count();
@@ -633,11 +640,27 @@ test("measured letters match the published bands; every other letter is marked e
       );
       estimatedSeen += 1;
     }
-    // Planning is always an estimate.
+    // Planning is measured on the AA Intelligence Index wherever AA has it.
     const planning = r.locator("td").nth(CODING_TD + 1).getByTestId("rating-cell");
-    await expect(planning).toHaveAttribute("data-basis", "estimated");
-    await expect(planning).toHaveAttribute("title", /Estimated: set by the daily catalog automation/);
+    const index = indexOf(model.id);
+    if (typeof index === "number") {
+      await expect(planning).toHaveAttribute("data-basis", "measured");
+      await expect(planning).toHaveText(band(indexLeader - index));
+      await expect(planning).toHaveAttribute(
+        "title",
+        /Measured: derived from Artificial Analysis Intelligence Index .* points behind the category leader/,
+      );
+      planningMeasured += 1;
+    } else {
+      await expect(planning).toHaveAttribute("data-basis", "estimated");
+    }
+    // Multimodal is always an estimate: AA runs no multimodal evaluation.
+    const multimodal = r.locator("td").nth(CODING_TD + 3).getByTestId("rating-cell");
+    await expect(multimodal).toHaveAttribute("data-basis", "estimated");
+    await expect(multimodal).toHaveAttribute("title", /Estimated: set by the daily catalog automation/);
   }
+  expect(planningMeasured).toBe(catalog.models.filter((m) => typeof indexOf(m.id) === "number").length);
+  expect(planningMeasured).toBeGreaterThan(0);
   // Every measured model's letter is derived: as many as the catalog measures
   // on HLE (the count moves as models arrive and retire).
   const measuredOnHle = catalog.models.filter(
@@ -686,7 +709,7 @@ test("coding letters are each model's rank on SciCode + Terminal-Bench 4.0, and 
   await page.goto("/models");
   // Column order: chevron, model, provider, juris, input, output, AA index,
   // value, then coding, planning, agentic, multimodal, long-context, knowledge, …
-  const TD: Record<string, number> = { coding: 8, agentic: 10, "long-context": 12, knowledge: 13 };
+  const TD: Record<string, number> = { coding: 8, planning: 9, agentic: 10, "long-context": 12, knowledge: 13 };
   const composite = COMPOSITE_DERIVATION.coding!;
   const scores = compositeScores(
     catalog.models.map((m) => ({ id: m.id, bench: benchRowOf(m.id) })),
