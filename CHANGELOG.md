@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Every pick runs at its row's effort on every surface whose dial is
+  documented.** `docs/catalog.json` now records each access method's
+  `effort_levels` (native level names, lowest first, with per-model lists
+  where the docs distinguish models), built only from the snapshots the
+  daily trackers take of Claude Code's, Codex's, the Gemini API's and
+  DeepSeek's docs. The ladder table prints each rung's level in its
+  platform's own words (the scorer's xhigh reads high on Gemini 3.8 Flash),
+  the distinct-picks rule compares those native levels, and code sets each
+  pick's EFFORT to its row's on Codex, the Gemini API and DeepSeek as well as
+  Claude Code. A surface no tracker documents keeps the engine's mapping.
+  The catalog's `schema_version` is now `4`.
+- New `scoring.native_level(platform, model, scorer_level)` and
+  `scoring.native_levels(platform, model)`.
+
 ## [0.2.61] — 2026-10-02
 
 ### Changed

@@ -168,6 +168,21 @@ frontier, in code (`scoring.ladder`):
    Max, ChatGPT Pro and Google AI Pro reads Sonnet 5.5 · High, Sonnet 5.5 ·
    XHigh, Opus 5.5 · XHigh; a row with one adequate model (knowledge, high,
    novel) runs it at three efforts.
+6. **Native levels.** Each rung's level is set on its platform's own dial.
+   `docs/catalog.json` records each access method's `effort_levels` (native
+   names, lowest first) and, where the surface's docs distinguish models,
+   `effort_levels_by_model`; `update/build_catalog.py` reads them only from
+   the snapshots the daily trackers take of each surface's docs (Claude
+   Code's effort table, Codex's `model_reasoning_effort`, the Gemini API's
+   thinking levels for the Google AI Studio API, DeepSeek's
+   `reasoning_effort`). `native_level` maps a scorer level to the native
+   level of the same name, else the highest native level below it, else the
+   dial's lowest: on Gemini 3.8 Flash (low / medium / high) the scorer's
+   xhigh and max both read high. Step 5 compares levels on the native dial,
+   so two scorer levels that land on one native level still give distinct
+   picks. A method no tracker documents (Antigravity, the chat apps, Cursor)
+   carries no levels, and its rows keep the scorer's word for the engine to
+   map.
 
 `ladder_table` computes the ladder for every classification (seven
 categories × three complexities, plus novel high-complexity work: 28 rows,
@@ -179,9 +194,12 @@ problem, a new algorithm, a multi-step proof); planning, architecture,
 security hardening, design and refactors are `routine` at any difficulty. `recommend_structured_ladder` checks every rung
 against the row and rewrites any that names another model or platform, so
 the picks are the table's whatever the engine writes, and text injected
-into a task can at most change its classification. The guard reports
+into a task can at most change its classification. On every platform with
+documented levels it also sets each rung's EFFORT to the row's native level
+(on Claude Code, Ultracode stands where the row says max). The guard reports
 `mode: "frontier"`, the row, how it was found (`declared`, or `matched` from
-the picks) and the tiers rewritten. A response the table cannot place keeps
+the picks), the tiers rewritten and the tiers whose effort was set
+(`effort_set`). A response the table cannot place keeps
 the engine's own picks under the old tier-distinctness guard.
 
 The table needs a user-context the scorer can read (the `user-context.md`

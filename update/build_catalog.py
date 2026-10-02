@@ -48,9 +48,30 @@ CATALOG_PATH = DOCS_DIR / "catalog.json"
 
 # Bumped 2->3 when the catalog SHAPE changed: <method> elements gained an
 # `exposes_orchestration` key and the document gained the top-level
-# `output_contract_version` key (v2 of the emission contract). Consumers that
-# pin the schema version must be updated in the same change.
-SCHEMA_VERSION = "3"
+# `output_contract_version` key (v2 of the emission contract). Bumped 3->4
+# when a method gained `effort_levels` / `effort_levels_by_model`. Consumers
+# that pin the schema version must be updated in the same change.
+SCHEMA_VERSION = "4"
+
+# Each access method's effort dial, read ONLY from the tracker snapshots the
+# daily jobs refresh from each surface's own docs; a level list is never
+# written by hand. Per source: the snapshot file, the access methods its docs
+# document, the key of its level list, and the key of its per-model map when
+# the docs distinguish models. A method no source documents gets no
+# `effort_levels`, and the recommender's engine maps the scorer's level to its
+# dial itself.
+EFFORT_SOURCES: tuple[tuple[str, tuple[str, ...], str, str | None], ...] = (
+    ("claude-code-effort.json", ("claude-code",), "effort_levels", "per_model_effort"),
+    ("codex-reasoning.json", ("codex-api", "codex-cli"), "reasoning_effort", None),
+    ("gemini-thinking.json", ("google-api",), "thinking_levels", "per_model_levels"),
+    ("deepseek-thinking.json", ("deepseek-api",), "reasoning_effort", None),
+)
+# The order level names run in, lowest first, across every documented dial: a
+# snapshot lists levels in its docs' order, which is not always lowest first
+# (DeepSeek's table reads high, max, low). Mirrors roadmodel.scoring
+# LEVEL_ORDER. A dial with a word outside it is left unordered and gets no
+# `effort_levels` until the word is placed here.
+LEVEL_ORDER = ("none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra")
 
 # Days a superseded model stays before it retires (update/supersede.py).
 RETIRE_AFTER_DAYS = 30
@@ -220,6 +241,87 @@ def _parse_access_methods(selector_text: str) -> list[dict[str, Any]]:
         )
     assert_no_element_lost(access_match.group(1), len(methods), METHOD_OPEN_RE, "<access-methods>")
     return methods
+
+
+def _normalize_level(value: str) -> str:
+    """A level name compared case- and spacing-free; "extra high" is xhigh."""
+    level = re.sub(r"[\s_-]+", "", value.strip().lower())
+    return {"extrahigh": "xhigh"}.get(level, level)
+
+
+def _ordered_levels(raw: object) -> list[str] | None:
+    """A snapshot's level list as lowest-first names, or None when it is not
+    a non-empty list of names or names a level LEVEL_ORDER does not place."""
+    if not isinstance(raw, list) or not raw:
+        return None
+    if not all(isinstance(x, str) and x.strip() for x in raw):
+        return None
+    levels = list(dict.fromkeys(_normalize_level(x) for x in raw))
+    if any(level not in LEVEL_ORDER for level in levels):
+        return None
+    return sorted(levels, key=LEVEL_ORDER.index)
+
+
+def _name_key(name: str) -> str:
+    """A model display name as the docs and the selector both write it:
+    "Opus 5.5" and "Claude Opus 5.5" key the same."""
+    words = name.lower().split()
+    return " ".join(words[1:] if words[:1] == ["claude"] else words)
+
+
+def _attach_effort_levels(
+    methods: list[dict[str, Any]], models: list[dict[str, Any]], update_dir: Path
+) -> None:
+    """Give each method an EFFORT_SOURCES snapshot documents its
+    ``effort_levels`` (native names, lowest first) and, where the docs
+    distinguish models, ``effort_levels_by_model`` for the catalog models it
+    supports. With a per-model map, a supported model the docs leave out has
+    no documented dial. Fails open: a missing, malformed or unplaceable
+    snapshot leaves its methods without levels."""
+    by_name = {_name_key(str(m["name"])): str(m["id"]) for m in models}
+    by_id = {str(m["id"]): m for m in methods}
+    for filename, method_ids, levels_key, per_model_key in EFFORT_SOURCES:
+        try:
+            snapshot = json.loads((update_dir / filename).read_text())
+        except (OSError, ValueError):
+            continue
+        if not isinstance(snapshot, dict):
+            continue
+        if snapshot.get("xhigh_model_dependent") is True:
+            # The docs say xhigh depends on the model without saying which.
+            print(
+                f"build_catalog: {filename}: xhigh is model-dependent; no levels", file=sys.stderr
+            )
+            continue
+        levels = _ordered_levels(snapshot.get(levels_key))
+        if levels is None:
+            print(
+                f"build_catalog: {filename}: {levels_key} is unplaceable; no levels",
+                file=sys.stderr,
+            )
+            continue
+        per_model: dict[str, list[str]] | None = None
+        if per_model_key is not None:
+            raw = snapshot.get(per_model_key)
+            if not isinstance(raw, dict) or not raw:
+                print(f"build_catalog: {filename}: no {per_model_key}; no levels", file=sys.stderr)
+                continue
+            per_model = {}
+            for name, model_levels in raw.items():
+                model_id = by_name.get(_name_key(str(name)))
+                ordered = _ordered_levels(model_levels)
+                if model_id is not None and ordered is not None:
+                    per_model[model_id] = ordered
+        for method_id in method_ids:
+            method = by_id.get(method_id)
+            if method is None:
+                continue
+            method["effort_levels"] = levels
+            if per_model is not None:
+                supported = set(method["supports_models"])
+                method["effort_levels_by_model"] = {
+                    mid: per_model[mid] for mid in sorted(per_model) if mid in supported
+                }
 
 
 def _parse_max_mode_rules(selector_text: str, models: list[dict[str, Any]]) -> dict[str, Any]:
@@ -411,6 +513,7 @@ def build_catalog() -> dict[str, Any]:
     for method in access_methods:
         method["supports_models"] = [x for x in method["supports_models"] if x not in retired]
     access_methods.sort(key=lambda m: m["id"])
+    _attach_effort_levels(access_methods, models, _UPDATE_DIR)
 
     max_mode_rules = _parse_max_mode_rules(selector_text, models)
 
