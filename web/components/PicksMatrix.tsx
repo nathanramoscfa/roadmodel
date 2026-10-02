@@ -3,12 +3,13 @@
 // The three picks side by side: Cost, Balanced and Quality are COLUMNS and
 // what they share are ROWS (your cost, the settings each surface exposes, the
 // backup, the seven ratings), so each row is read once and scanned across.
-// Each pick's header carries the catalog's own facts about the model, in the
-// /models vocabulary: its cost tier, its AA Intelligence Index (hover for the
-// card /models shows, with where it stands against the frontier), the green
-// frontier ring, and below, its S→D letters (filled = measured from an
-// Artificial Analysis figure, dashed = estimated), so a pick reads the same
-// here as in the catalog.
+// The catalog's own facts about each model sit in rows too, in the /models
+// vocabulary: its blended price, AA Intelligence Index and Score (hover the
+// index for where it stands against the frontier, the Score for how it adds
+// up), and its S→D letters (filled = measured from an Artificial Analysis
+// figure, dashed = estimated), so a pick reads the same here as in the
+// catalog. The header says whether the pick is on the frontier: the viewer's
+// own, drawn over the models their Settings reach, once they have saved them.
 //
 // Selecting a column shows that pick's rationale and cost below. Below the md
 // breakpoint the columns become a segmented control over one pick at a time.
@@ -18,10 +19,10 @@ import { Fragment, useEffect, useState, type ReactNode } from "react";
 
 import type { PriorityRecommendation } from "@/lib/api";
 import { BUDGET_PRIORITY_OPTIONS } from "@/lib/budget-priority";
+import { formatScore, formatUsd } from "@/lib/benchmark-grid";
 import {
   CATEGORY_DEFS,
   CATEGORY_ORDER,
-  COST_TIER_COLORS,
   COST_TIER_DEFS,
   ESTIMATED_BADGE,
   RATING_COLORS,
@@ -30,6 +31,8 @@ import {
 } from "@/lib/catalog-fields";
 import type { BudgetPriority } from "@/lib/profile";
 import {
+  blendedOf,
+  inPool,
   rowForPick,
   type PicksData,
   type SlimRow,
@@ -37,7 +40,11 @@ import {
 import { formatSettingValue, humanizeSettingKey } from "@/lib/settings-format";
 import { FRONTIER } from "./chart-kit";
 import { HoverCard } from "./FloatingCard";
-import { FrontierPointCard } from "./ScoreCards";
+import {
+  FrontierPointCard,
+  ScoreBreakdownCard,
+  scoreToneClass,
+} from "./ScoreCards";
 
 const LABELS = new Map(BUDGET_PRIORITY_OPTIONS.map((o) => [o.id, o]));
 
@@ -171,8 +178,9 @@ function Ratings({ row, measured }: { row: SlimRow; measured: Category[] }) {
   );
 }
 
-// The catalog facts under a pick's name: cost tier, AA Index (with the
-// /models card on hover) and the frontier ring.
+// Under a pick's name: whether it is on the cost/quality frontier (the
+// viewer's own, when they have saved Settings), or the model that beats it,
+// with the /models card on hover.
 function PickFacts({ row, data }: { row: SlimRow | null; data: PicksData }) {
   if (!row) {
     return (
@@ -181,52 +189,121 @@ function PickFacts({ row, data }: { row: SlimRow | null; data: PicksData }) {
       </span>
     );
   }
+  if (row.aa_index === null || !inPool(data, row)) return null;
+  const yours = data.pool !== null;
+  const leader = row.value_beaten_by
+    ? (data.rows[row.value_beaten_by] ?? null)
+    : null;
+  if (row.value_frontier) {
+    return (
+      <span
+        className="inline-flex items-center gap-1 text-[10.5px] font-medium"
+        style={{ color: FRONTIER }}
+        title={
+          yours
+            ? "On your cost/quality frontier: it scores highest on the AA Index of the models you can use at its price or less"
+            : "On the cost/quality frontier: it scores highest on the AA Index of the catalog's models at its price or less"
+        }
+        data-testid="pick-frontier"
+      >
+        <span
+          className="inline-block h-2 w-2 rounded-full border-2"
+          style={{ borderColor: FRONTIER }}
+        />
+        {yours ? "your frontier" : "frontier"}
+      </span>
+    );
+  }
+  if (!leader) return null;
+  return (
+    <HoverCard
+      label={`${row.name}: ${leader.name} scores higher at its price or less`}
+      card={<FrontierPointCard model={row} leader={leader} />}
+      className="self-start text-[10.5px] font-medium text-orange-700 dark:text-orange-300"
+      triggerTestId="pick-beaten"
+    >
+      Beaten by {leader.name}
+    </HoverCard>
+  );
+}
+
+const MUTED_UNIT = "font-normal text-brand-slate-400 dark:text-brand-slate-500";
+
+// Blended price, as /models prices every model: (3 × input + output) ÷ 4.
+function PriceCell({ row }: { row: SlimRow }) {
+  return (
+    <span
+      title={`(3 × ${formatUsd(row.input_price_per_1m)} input + ${formatUsd(row.output_price_per_1m)} output) ÷ 4 · ${COST_TIER_DEFS[row.tier_cost].label} cost tier`}
+    >
+      <span className="tabular-nums" data-testid="pick-price">
+        ${blendedOf(row).toFixed(2)}
+      </span>{" "}
+      <span className={MUTED_UNIT}>per 1M tokens</span>
+    </span>
+  );
+}
+
+function IndexCell({ row, data }: { row: SlimRow; data: PicksData }) {
+  if (row.aa_index === null) {
+    return <span className={MUTED_UNIT}>not measured</span>;
+  }
+  const value = row.aa_index.toFixed(1);
+  if (!inPool(data, row)) {
+    return (
+      <span className="tabular-nums" data-testid="pick-aa-index">
+        {value}
+      </span>
+    );
+  }
   const leader = row.value_beaten_by
     ? (data.rows[row.value_beaten_by] ?? null)
     : null;
   return (
-    <span
-      className="flex flex-wrap items-center gap-1.5"
-      data-testid="pick-facts"
+    <HoverCard
+      label={`${row.name}: AA Intelligence Index ${value}`}
+      card={<FrontierPointCard model={row} leader={leader} />}
+      className="tabular-nums"
+      triggerTestId="pick-aa-index"
     >
-      <span
-        className={
-          "rounded px-1.5 py-px text-[10.5px] font-semibold " +
-          COST_TIER_COLORS[row.tier_cost]
-        }
-        title={`Cost tier: ${COST_TIER_DEFS[row.tier_cost].definition}`}
-      >
-        {COST_TIER_DEFS[row.tier_cost].label}
+      {value}
+    </HoverCard>
+  );
+}
+
+// The /models Score: AA Index points above or below what the model's price
+// predicts among its cost tier.
+function ScoreCell({ row, data }: { row: SlimRow; data: PicksData }) {
+  if (row.value_score === null) return <span className={MUTED_UNIT}>—</span>;
+  const tone = data.fit
+    ? scoreToneClass(row.value_score, data.fit.sigma)
+    : "";
+  const shown = formatScore(row.value_score);
+  if (!data.fit || !inPool(data, row)) {
+    return (
+      <span className={"font-semibold tabular-nums " + tone} data-testid="pick-score">
+        {shown}
       </span>
-      {row.aa_index !== null ? (
-        <HoverCard
-          label={`${row.name}: AA Intelligence Index ${row.aa_index}`}
-          card={<FrontierPointCard model={row} leader={leader} />}
-          className="text-[11px] font-semibold tabular-nums text-brand-slate-700 dark:text-brand-slate-200"
-          triggerTestId="pick-aa-index"
-        >
-          AA {row.aa_index}
-        </HoverCard>
-      ) : (
-        <span className="text-[11px] text-brand-slate-400 dark:text-brand-slate-500">
-          AA not measured
-        </span>
-      )}
-      {row.value_frontier && (
-        <span
-          className="inline-flex items-center gap-1 text-[10.5px] font-medium"
-          style={{ color: FRONTIER }}
-          title="On the cost/quality frontier: no model in the catalog scores higher on the AA Index for less"
-          data-testid="pick-frontier"
-        >
-          <span
-            className="inline-block h-2 w-2 rounded-full border-2"
-            style={{ borderColor: FRONTIER }}
-          />
-          frontier
-        </span>
-      )}
-    </span>
+    );
+  }
+  const leader = row.value_beaten_by
+    ? (data.rows[row.value_beaten_by] ?? null)
+    : null;
+  return (
+    <HoverCard
+      label={`${row.name}: Score ${shown}. Show how it adds up`}
+      card={
+        <ScoreBreakdownCard
+          model={row}
+          fit={data.fit}
+          snapshot={data.snapshot}
+          leader={leader}
+        />
+      }
+      className={"font-semibold tabular-nums " + tone}
+      triggerTestId="pick-score"
+    >
+      {shown}
+    </HoverCard>
   );
 }
 
@@ -245,7 +322,30 @@ function matrixRows(
 ): MatrixRow[] {
   const keys = settingKeys(recs);
   const showBackup = recs.some((r) => r.backup?.model);
-  const showRatings = recs.some((r) => rowForPick(data, r.model));
+  const inCatalog = recs.some((r) => rowForPick(data, r.model));
+  const facts: MatrixRow[] = inCatalog
+    ? [
+        {
+          key: "__price",
+          label: "Blended price",
+          cell: (_rec, row) => ({ node: row ? <PriceCell row={row} /> : "—" }),
+        },
+        {
+          key: "__aa",
+          label: "AA Index",
+          cell: (_rec, row) => ({
+            node: row ? <IndexCell row={row} data={data} /> : "—",
+          }),
+        },
+        {
+          key: "__score",
+          label: "Score",
+          cell: (_rec, row) => ({
+            node: row ? <ScoreCell row={row} data={data} /> : "—",
+          }),
+        },
+      ]
+    : [];
   return [
     {
       key: "__cost",
@@ -267,6 +367,7 @@ function matrixRows(
         };
       },
     },
+    ...facts,
     ...keys
       // Codex names its reasoning dial "Intelligence"; every other surface
       // calls it Effort. When the picks span both, one Effort row carries
@@ -307,7 +408,7 @@ function matrixRows(
           } satisfies MatrixRow,
         ]
       : []),
-    ...(showRatings
+    ...(inCatalog
       ? [
           {
             key: "__ratings",
@@ -451,6 +552,8 @@ export function PicksMatrix({
                   <div
                     key={rec.priority}
                     className={`${cellBase} ${color}${active}`}
+                    data-pick={rec.priority}
+                    data-row={row.key}
                   >
                     {node}
                   </div>
@@ -516,6 +619,8 @@ export function PicksMatrix({
                 <div
                   key={row.key}
                   className="flex items-center justify-between gap-3 py-2"
+                  data-pick={selectedRec.priority}
+                  data-row={row.key}
                 >
                   <dt className="text-xs font-medium text-brand-slate-500 dark:text-brand-slate-400">
                     {row.label}

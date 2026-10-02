@@ -20,6 +20,7 @@ interface CatalogModel {
   id: string;
   name: string;
   output_price_per_1m: number | null;
+  jurisdiction?: string;
 }
 
 interface CatalogMethod {
@@ -97,6 +98,46 @@ const MONEY = new Intl.NumberFormat("en-US", {
 
 function providerLabel(id: string): string {
   return PROVIDER_LABELS[id] ?? id;
+}
+
+// The jurisdictions the service allows when a request names none
+// (service/app/funding.py _BASELINE_JURISDICTIONS).
+const BASELINE_JURISDICTIONS = ["us", "eu", "uk", "ca", "au", "jp", "kr"];
+
+// The catalog models a signed-in user can run, from the Settings they saved:
+// a model qualifies when an access method that offers it is covered by one of
+// their plans, or sells it per token through a provider whose API they
+// enabled, and its jurisdiction is one they allow. Null when they saved no
+// plan and no API provider, which is also when the recommender applies no
+// access filter. Mirrors service/app/funding.py accessible_model_ids, the
+// filter every pick passes through, so /recommend draws the same set.
+export function reachableModelIds(
+  subscriptions: readonly string[],
+  apiProviders: readonly string[],
+  allowedJurisdictions: readonly string[],
+): Set<string> | null {
+  if (subscriptions.length === 0 && apiProviders.length === 0) return null;
+  const funded = new Set(subscriptions.flatMap((s) => fundedSurfacesForSubscription(s)));
+  const enabled = new Set(apiProviders);
+  const reachable = new Set<string>();
+  for (const m of METHODS) {
+    const byApi = API_BILLING.has(m.billing) && enabled.has(m.provider);
+    if (!byApi && !funded.has(m.id)) continue;
+    for (const id of m.supports_models) reachable.add(id);
+  }
+  const allowed = new Set(
+    (allowedJurisdictions.length > 0 ? allowedJurisdictions : BASELINE_JURISDICTIONS).map((j) =>
+      j.trim().toLowerCase(),
+    ),
+  );
+  const out = new Set<string>();
+  for (const m of MODELS) {
+    if (!reachable.has(m.id)) continue;
+    const j = (m.jurisdiction ?? "").trim().toLowerCase();
+    if (j && !allowed.has(j)) continue;
+    out.add(m.id);
+  }
+  return out;
 }
 
 // Compute the user's cheapest funded path to `modelName` and return a short

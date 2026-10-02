@@ -19,6 +19,7 @@ import { BenchmarkReference } from "./BenchmarkReference";
 import { EnginePicker } from "./EnginePicker";
 import { PicksChart } from "./PicksChart";
 import { PicksMatrix } from "./PicksMatrix";
+import { FrontierScope, YOUR_MODELS } from "./ScoreCards";
 import { RatingScale } from "./RatingScale";
 import { TierDetail } from "./TierDetail";
 
@@ -170,136 +171,140 @@ export function RecommendResult({
   const rows = Object.values(picks.rows);
 
   return (
-    <div className="space-y-4" data-testid="recommend-result">
-      <div className="space-y-3 rounded-xl border border-brand-slate-200 bg-white px-4 py-3 shadow-sm dark:border-brand-slate-700 dark:bg-brand-slate-800">
-        <div className="flex items-start gap-3">
-          <span className="mt-0.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wide text-brand-slate-400 dark:text-brand-slate-500">
-            Your task
-          </span>
-          <p className="line-clamp-2 min-w-0 flex-1 text-sm text-brand-slate-800 dark:text-brand-slate-100" data-testid="result-task">
-            {task || "—"}
-          </p>
-          <div className="flex flex-none gap-1.5">
-            <button
-              type="button"
-              onClick={onEdit}
-              className="rounded-md border border-brand-slate-300 px-2.5 py-1 text-xs font-semibold text-brand-slate-600 hover:border-brand-accent hover:text-brand-accent dark:border-brand-slate-600 dark:text-brand-slate-300"
-            >
-              Edit
-            </button>
-            <button
-              type="button"
-              onClick={onNew}
-              className="rounded-md border border-brand-slate-300 px-2.5 py-1 text-xs font-semibold text-brand-slate-600 hover:border-brand-accent hover:text-brand-accent dark:border-brand-slate-600 dark:text-brand-slate-300"
-            >
-              New task
-            </button>
+    // With saved Settings, every frontier card speaks of the viewer's models.
+    <FrontierScope.Provider value={picks.pool ? YOUR_MODELS : null}>
+      <div className="space-y-4" data-testid="recommend-result">
+        <div className="space-y-3 rounded-xl border border-brand-slate-200 bg-white px-4 py-3 shadow-sm dark:border-brand-slate-700 dark:bg-brand-slate-800">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wide text-brand-slate-400 dark:text-brand-slate-500">
+              Your task
+            </span>
+            <p className="line-clamp-2 min-w-0 flex-1 text-sm text-brand-slate-800 dark:text-brand-slate-100" data-testid="result-task">
+              {task || "—"}
+            </p>
+            <div className="flex flex-none gap-1.5">
+              <button
+                type="button"
+                onClick={onEdit}
+                className="rounded-md border border-brand-slate-300 px-2.5 py-1 text-xs font-semibold text-brand-slate-600 hover:border-brand-accent hover:text-brand-accent dark:border-brand-slate-600 dark:text-brand-slate-300"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={onNew}
+                className="rounded-md border border-brand-slate-300 px-2.5 py-1 text-xs font-semibold text-brand-slate-600 hover:border-brand-accent hover:text-brand-accent dark:border-brand-slate-600 dark:text-brand-slate-300"
+              >
+                New task
+              </button>
+            </div>
+          </div>
+          <div className="border-t border-brand-slate-100 pt-3 dark:border-brand-slate-700/70">
+            <EngineLine
+              data={data}
+              engines={engines}
+              rerunEngine={rerunEngine}
+              onRerunEngineChange={onRerunEngineChange}
+              onRerun={onRerun}
+              signedIn={signedIn}
+              pending={pending}
+            />
           </div>
         </div>
-        <div className="border-t border-brand-slate-100 pt-3 dark:border-brand-slate-700/70">
-          <EngineLine
-            data={data}
-            engines={engines}
-            rerunEngine={rerunEngine}
-            onRerunEngineChange={onRerunEngineChange}
-            onRerun={onRerun}
-            signedIn={signedIn}
-            pending={pending}
-          />
-        </div>
-      </div>
 
-      <section
-        aria-label="The three picks"
-        className="rounded-xl border border-brand-slate-200 bg-white p-3 shadow-sm dark:border-brand-slate-700 dark:bg-brand-slate-800 sm:p-4"
-      >
-        <div className="flex items-baseline justify-between gap-3 px-1 pb-2">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
-            Your {recs.length === 3 ? "three " : ""}picks
-          </h2>
-          <span className="hidden text-xs text-brand-slate-400 md:inline dark:text-brand-slate-500">
-            Select a pick for its reasoning and cost
-          </span>
-        </div>
-        {insight && (
-          <div className="mb-2.5 flex items-center gap-2.5 rounded-md border border-brand-accent/30 bg-brand-accent/10 px-3 py-1.5 text-[13px] text-brand-slate-700 dark:text-brand-slate-200">
-            <Sparkles className="h-4 w-4 flex-none text-brand-accent" aria-hidden />
-            <span>
-              All {recs.length === 3 ? "three " : ""}picks run at{" "}
-              <b className="font-semibold text-brand-slate-900 dark:text-brand-slate-50">$0 to you</b>
-              {insight.source ? ` on ${insight.source}` : ""}: the trade-off is{" "}
-              <b className="font-semibold text-brand-slate-900 dark:text-brand-slate-50">capability and effort</b>,
-              not price.
+        <section
+          aria-label="The three picks"
+          className="rounded-xl border border-brand-slate-200 bg-white p-3 shadow-sm dark:border-brand-slate-700 dark:bg-brand-slate-800 sm:p-4"
+        >
+          <div className="flex items-baseline justify-between gap-3 px-1 pb-2">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
+              Your {recs.length === 3 ? "three " : ""}picks
+            </h2>
+            <span className="hidden text-xs text-brand-slate-400 md:inline dark:text-brand-slate-500">
+              Select a pick for its reasoning and cost
             </span>
           </div>
-        )}
-        <PicksMatrix
-          recommendations={recs}
-          data={picks}
-          selected={selected}
-          primary={primary}
-          onSelect={setSelected}
-        />
-      </section>
-
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
-        {selectedRec && (
-          <TierDetail
-            rec={selectedRec}
-            canPersist={canPersist}
-            persisting={persisting}
-            isDefault={selectedRec.priority === primary}
-            onSetDefault={setDefault}
+          {insight && (
+            <div className="mb-2.5 flex items-center gap-2.5 rounded-md border border-brand-accent/30 bg-brand-accent/10 px-3 py-1.5 text-[13px] text-brand-slate-700 dark:text-brand-slate-200">
+              <Sparkles className="h-4 w-4 flex-none text-brand-accent" aria-hidden />
+              <span>
+                All {recs.length === 3 ? "three " : ""}picks run at{" "}
+                <b className="font-semibold text-brand-slate-900 dark:text-brand-slate-50">$0 to you</b>
+                {insight.source ? ` on ${insight.source}` : ""}: the trade-off is{" "}
+                <b className="font-semibold text-brand-slate-900 dark:text-brand-slate-50">capability and effort</b>,
+                not price.
+              </span>
+            </div>
+          )}
+          <PicksMatrix
+            recommendations={recs}
+            data={picks}
+            selected={selected}
+            primary={primary}
+            onSelect={setSelected}
           />
-        )}
-        <PicksChart
-          rows={rows}
-          picks={recs.map((r) => ({ priority: r.priority, model: r.model, row: rowForPick(picks, r.model) }))}
-          selected={selected}
-          onSelect={setSelected}
-        />
-      </div>
+        </section>
 
-      <details className="group rounded-xl border border-brand-slate-200 bg-brand-slate-50/60 dark:border-brand-slate-700 dark:bg-brand-slate-800/40">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-5 py-3 text-sm font-semibold text-brand-slate-800 dark:text-brand-slate-100">
-          How to read these picks
-          <span className="text-xs font-normal text-brand-slate-500 group-open:hidden dark:text-brand-slate-400">show</span>
-          <span className="hidden text-xs font-normal text-brand-slate-500 group-open:inline dark:text-brand-slate-400">hide</span>
-        </summary>
-        <div className="grid gap-6 border-t border-brand-slate-200 px-5 py-5 text-sm text-brand-slate-600 dark:border-brand-slate-700 dark:text-brand-slate-300 md:grid-cols-2">
-          <div className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
-              The three picks
-            </h3>
-            <p>
-              <b className="text-brand-slate-800 dark:text-brand-slate-100">Quality</b> is the strongest model for the
-              task. <b className="text-brand-slate-800 dark:text-brand-slate-100">Balanced</b> is the best value below
-              it, and <b className="text-brand-slate-800 dark:text-brand-slate-100">Cost</b> is the cheapest model that
-              still does the job. Each comes with the platform to run it on and its settings.
-            </p>
-            <p>
-              The letters are the catalog&rsquo;s S&rarr;D ratings in coding, planning, agentic, multimodal,
-              long-context, knowledge and speed. A filled letter is measured from an Artificial Analysis benchmark; a
-              dashed one is estimated. The <Link href="/models#how-to-read" className="font-medium text-brand-accent hover:underline">catalog key</Link> has the rules.
-            </p>
-          </div>
-          <div>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
-              Rating scale
-            </h3>
-            <RatingScale compact />
-          </div>
-          <div className="md:col-span-2">
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
-              The benchmarks behind the ratings
-            </h3>
-            <BenchmarkReference compact />
-            <Link href="/docs" className="mt-3 inline-block text-xs font-medium text-brand-accent hover:underline">
-              Full reference &rarr;
-            </Link>
-          </div>
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
+          {selectedRec && (
+            <TierDetail
+              rec={selectedRec}
+              canPersist={canPersist}
+              persisting={persisting}
+              isDefault={selectedRec.priority === primary}
+              onSetDefault={setDefault}
+            />
+          )}
+          <PicksChart
+            rows={rows}
+            pool={picks.pool}
+            picks={recs.map((r) => ({ priority: r.priority, model: r.model, row: rowForPick(picks, r.model) }))}
+            selected={selected}
+            onSelect={setSelected}
+          />
         </div>
-      </details>
-    </div>
+
+        <details className="group rounded-xl border border-brand-slate-200 bg-brand-slate-50/60 dark:border-brand-slate-700 dark:bg-brand-slate-800/40">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-5 py-3 text-sm font-semibold text-brand-slate-800 dark:text-brand-slate-100">
+            How to read these picks
+            <span className="text-xs font-normal text-brand-slate-500 group-open:hidden dark:text-brand-slate-400">show</span>
+            <span className="hidden text-xs font-normal text-brand-slate-500 group-open:inline dark:text-brand-slate-400">hide</span>
+          </summary>
+          <div className="grid gap-6 border-t border-brand-slate-200 px-5 py-5 text-sm text-brand-slate-600 dark:border-brand-slate-700 dark:text-brand-slate-300 md:grid-cols-2">
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
+                The three picks
+              </h3>
+              <p>
+                <b className="text-brand-slate-800 dark:text-brand-slate-100">Quality</b> is the strongest model for the
+                task. <b className="text-brand-slate-800 dark:text-brand-slate-100">Balanced</b> is the best value below
+                it, and <b className="text-brand-slate-800 dark:text-brand-slate-100">Cost</b> is the cheapest model that
+                still does the job. Each comes with the platform to run it on and its settings.
+              </p>
+              <p>
+                The letters are the catalog&rsquo;s S&rarr;D ratings in coding, planning, agentic, multimodal,
+                long-context, knowledge and speed. A filled letter is measured from an Artificial Analysis benchmark; a
+                dashed one is estimated. The <Link href="/models#how-to-read" className="font-medium text-brand-accent hover:underline">catalog key</Link> has the rules.
+              </p>
+            </div>
+            <div>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
+                Rating scale
+              </h3>
+              <RatingScale compact />
+            </div>
+            <div className="md:col-span-2">
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-slate-500 dark:text-brand-slate-400">
+                The benchmarks behind the ratings
+              </h3>
+              <BenchmarkReference compact />
+              <Link href="/docs" className="mt-3 inline-block text-xs font-medium text-brand-accent hover:underline">
+                Full reference &rarr;
+              </Link>
+            </div>
+          </div>
+        </details>
+      </div>
+    </FrontierScope.Provider>
   );
 }
