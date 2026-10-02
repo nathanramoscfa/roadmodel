@@ -1387,6 +1387,40 @@ def test_build_backup_ultracode_clamps_to_max_on_cross_provider_surface() -> Non
     assert b is not None and b.settings.get("effort") == "Max"
 
 
+def test_build_backup_follows_the_scorers_backup_plan() -> None:
+    """A frontier-ladder pick names the platform and effort the scorer runs its
+    backup at; the backup is shown there instead of on a guessed surface."""
+    from app.recommend import _build_backup
+
+    g = _agg_guard(["claude-max"], ["openai"])
+    result = {
+        "model": "Nano",
+        "settings": {"intelligence": "Low"},
+        "backup": "Haiku",
+        "backup_plan": {"model": "Haiku", "platform": "Claude Code", "effort": "High"},
+    }
+    b = _build_backup(result, g)
+    assert b is not None
+    assert b.platform == "Claude Code"
+    assert b.settings == {"effort": "High", "thinking": "On"}
+
+
+def test_build_backup_ignores_a_plan_for_a_backup_the_guard_replaced() -> None:
+    from app.recommend import _build_backup
+
+    g = _agg_guard(["claude-max"], ["openai"])
+    result = {
+        "model": "Nano",
+        "settings": {"intelligence": "XHigh"},
+        "backup": "Haiku",
+        "backup_plan": {"model": "Some Other Model", "platform": "Codex", "effort": "Low"},
+    }
+    b = _build_backup(result, g)
+    assert b is not None
+    assert b.platform == "Claude Code"
+    assert b.settings == {"effort": "XHigh", "thinking": "On"}
+
+
 def test_build_backup_none_and_anon() -> None:
     from app.recommend import _build_backup
 

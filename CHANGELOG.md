@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Each pick's backup comes from the frontier of the other makers' models.**
+  The engine used to choose the backup, and named models off the frontier
+  (GPT-6 Astra beside a Sonnet 5.5 pick). Now the scorer draws the frontier
+  over the models the user can run from every other maker and takes the
+  strongest one that meets the task's bar at no higher list price than the
+  pick (else the cheapest above it), run at the pick's posture on its own
+  surface. The ladder table names each pick's backup and code replaces one
+  the engine writes differently (guard `backup_set`). Such a pick carries a
+  `backup_plan` with the backup's platform and effort, so the backup shows
+  on the user's subscription surface where one reaches it. On Claude Max,
+  ChatGPT Pro and Google AI Pro, Sonnet 5.5 and Opus 5.5 back up to
+  GPT-6.1 Sol on Codex.
+
 ## [0.2.62] — 2026-10-02
 
 ### Changed

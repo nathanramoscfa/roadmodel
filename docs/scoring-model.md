@@ -183,6 +183,20 @@ frontier, in code (`scoring.ladder`):
    picks. A method no tracker documents (Antigravity, the chat apps, Cursor)
    carries no levels, and its rows keep the scorer's word for the engine to
    map.
+7. **Backups.** Each rung carries a backup from another maker
+   (`Candidate.provider` differs from the rung model's): over the pool's
+   models from other makers, draw the frontier and keep its adequate points;
+   the backup is the adequate point with the highest list price at or below
+   the rung's, else the cheapest adequate point above it, else (with no
+   adequate point) the strongest for the category. It runs at the rung's
+   posture's effort on its own platform's dial. With no other maker in the
+   pool a rung has no backup and `backup_warning` says why. On Claude Max,
+   ChatGPT Pro and Google AI Pro, Sonnet 5.5 and Opus 5.5 rungs back up to
+   GPT-6.1 Sol on Codex (GPT-6 Astra on novel rows, where only it clears the
+   bar); GPT-6 Luna rungs back up to Gemini 3.8 Flash on Antigravity from
+   medium complexity up, and on low-complexity rows to the cheapest Gemini
+   that clears the bar (Gemini 2.5 Flash or Gemini 3 Flash on the Gemini
+   app), since no other maker's model costs Luna's $0.20 or less.
 
 `ladder_table` computes the ladder for every classification (seven
 categories × three complexities, plus novel high-complexity work: 28 rows,
@@ -196,10 +210,14 @@ against the row and rewrites any that names another model or platform, so
 the picks are the table's whatever the engine writes, and text injected
 into a task can at most change its classification. On every platform with
 documented levels it also sets each rung's EFFORT to the row's native level
-(on Claude Code, Ultracode stands where the row says max). The guard reports
-`mode: "frontier"`, the row, how it was found (`declared`, or `matched` from
-the picks), the tiers rewritten and the tiers whose effort was set
-(`effort_set`). A response the table cannot place keeps
+(on Claude Code, Ultracode stands where the row says max), and it sets each
+rung's BACKUP to the row's; such a pick carries a `backup_plan` (the
+backup's platform and effort), which the service uses to show the backup on
+the scorer's surface. The guard reports `mode: "frontier"`, the row, how it
+was found (`declared`, or `matched` from the picks), the tiers rewritten,
+the tiers whose effort was set (`effort_set`) and the tiers whose backup was
+set (`backup_set`). The Step 7 backup guard, `suggest_cross_provider_backup`
+and the service's AccessGuard stay in place as safety nets. A response the table cannot place keeps
 the engine's own picks under the old tier-distinctness guard.
 
 The table needs a user-context the scorer can read (the `user-context.md`

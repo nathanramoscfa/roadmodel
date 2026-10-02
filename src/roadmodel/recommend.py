@@ -501,8 +501,10 @@ _SAAS_LADDER_TABLE_HEADER: Final = (
     "gives both the same settings because a lower effort saves this user nothing or "
     "the dial has no lower level; say which in that block's RATIONALE, and never "
     "invent another difference.\n"
-    "- BACKUP obeys the Step 7 HARD cross-provider rule and names a model this user "
-    "can reach.\n"
+    "- Each block's BACKUP is the model the row names after `backup` in that tier's "
+    "cell, copied verbatim; code checks it against the row and replaces one that "
+    "differs. Where a cell names no backup, BACKUP obeys the Step 7 HARD "
+    "cross-provider rule and names a model this user can reach.\n"
     "- Each RATIONALE is three labelled segments (TASK: / PICK: / EFFORT:), one crisp "
     "sentence each. PICK says why the row's model fits its tier in the table's terms "
     "(where it sits on the user's frontier, its AA Index); EFFORT says why the setting "
@@ -1331,6 +1333,48 @@ def _enforce_table_row(ladder: dict[str, dict[str, str]], row: scoring.Ladder) -
     return rewritten
 
 
+def _enforce_table_backup(ladder: dict[str, dict[str, str]], row: scoring.Ladder) -> list[str]:
+    """Make every rung's BACKUP the row's: the best model from another maker
+    the user can run at no higher list price (scoring._backup_for). A rung
+    whose row names no backup (no other maker funded) keeps the engine's,
+    under the Step 7 guard. Returns the tiers whose backup it set."""
+    adjusted: list[str] = []
+    for tier in _LADDER_TIERS:
+        backup = row.rungs[tier].backup
+        if backup is None:
+            continue
+        b = backup.candidate
+        written = ladder[tier].get("backup", "")
+        if written and (
+            cost.model_id_of(written) == b.model_id
+            or _model_key(written) in {_model_key(b.model_id), _model_key(b.model_name)}
+        ):
+            continue
+        ladder[tier]["backup"] = b.model_name
+        adjusted.append(tier)
+    return adjusted
+
+
+def _attach_backup_plans(picks: dict[str, dict[str, Any]], row: scoring.Ladder) -> None:
+    """Give each pick whose BACKUP is the row's a ``backup_plan``: the
+    platform and effort the row runs that backup at, so a caller can show the
+    backup on the surface the scorer chose (the user's subscription surface
+    where one reaches it) instead of guessing one. A backup the guard replaced
+    gets none."""
+    for tier in _LADDER_TIERS:
+        backup = row.rungs[tier].backup
+        if backup is None:
+            continue
+        b = backup.candidate
+        if picks[tier].get("backup") != cost.canonical_model_name(b.model_name):
+            continue
+        picks[tier]["backup_plan"] = {
+            "model": picks[tier]["backup"],
+            "platform": b.platform_name,
+            "effort": _effort_word(backup.level),
+        }
+
+
 # Claude Code's Ultracode is a session setting above its Max level: it stands
 # where the row says max.
 _ULTRACODE_PLATFORM: Final = "claude-code"
@@ -1410,10 +1454,13 @@ def recommend_structured_ladder(
     ladder table (scoring.ladder_table) goes into the prompt, the engine
     classifies the task and copies its row, and every rung is then made the
     row's (:func:`_enforce_table_row`), effort included on every surface
-    whose dial the catalog documents (:func:`_enforce_table_effort`). ``guard``
-    then reports ``mode: "frontier"``, the row, how it was found, the tiers
-    rewritten and the tiers whose effort was set, and is healthy: two rungs on
-    one model are the table's answer, not a collapse.
+    whose dial the catalog documents (:func:`_enforce_table_effort`), and
+    BACKUP included where the row names one (:func:`_enforce_table_backup`;
+    such a pick also carries a ``backup_plan`` with the backup's platform and
+    effort). ``guard`` then reports ``mode: "frontier"``, the row, how it was
+    found, the tiers rewritten, the tiers whose effort was set and the tiers
+    whose backup was set, and is healthy: two rungs on one model are the
+    table's answer, not a collapse.
     Without a table, or a response the table cannot place, the engine's own
     picks stand under the tier-distinctness guard as before.
 
@@ -1460,6 +1507,7 @@ def recommend_structured_ladder(
                 "found": found,
                 "rewritten": _enforce_table_row(ladder, row),
                 "effort_set": _enforce_table_effort(ladder, row),
+                "backup_set": _enforce_table_backup(ladder, row),
                 "frontier": [p.candidate.model_name for p in row.frontier],
             }
         else:
@@ -1474,6 +1522,8 @@ def recommend_structured_ladder(
         )
         for tier in _LADDER_TIERS
     }
+    if frontier_guard is not None and frontier_guard["classification"] is not None:
+        _attach_backup_plans(picks, table[frontier_guard["classification"]])
     guard = _ladder_tier_guard(picks)
     if frontier_guard is not None:
         guard.update(frontier_guard)
