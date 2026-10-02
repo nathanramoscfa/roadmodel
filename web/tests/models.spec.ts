@@ -161,18 +161,23 @@ test("renders the catalog table, legend, and model links", async ({ page }) => {
   await expect(claude).toHaveAttribute("target", "_blank");
 });
 
-test("the page leads with the table, then the frontier chart, the Score charts, then the full key", async ({ page }) => {
+test("the page leads with the filters and the frontier chart, then the table, the Score charts, then the full key", async ({ page }) => {
   await page.goto("/models");
   const top = async (loc: ReturnType<typeof page.locator>) => (await loc.boundingBox())!.y;
+  const filters = await top(page.getByTestId("catalog-filters"));
+  const frontierPanel = await top(page.getByTestId("frontier-panel"));
   const table = await top(page.getByTestId("model-catalog"));
   const charts = await top(page.getByTestId("score-charts"));
-  const frontierPanel = await top(page.getByTestId("frontier-panel"));
   const legend = await top(page.getByTestId("catalog-legend"));
   const reference = await top(page.locator("#benchmarks"));
-  expect(table).toBeLessThan(frontierPanel);
-  expect(frontierPanel).toBeLessThan(charts);
+  expect(filters).toBeLessThan(frontierPanel);
+  expect(frontierPanel).toBeLessThan(table);
+  expect(table).toBeLessThan(charts);
   expect(charts).toBeLessThan(legend);
   expect(legend).toBeLessThan(reference);
+  // The page's filters sit outside the table: they drive every chart too.
+  await expect(page.getByTestId("model-catalog").getByLabel("Filter by provider")).toHaveCount(0);
+  await expect(page.getByTestId("catalog-filters").getByLabel("Filter by provider")).toHaveCount(1);
   // The table's caption points down to the key, and the key above the table
   // defines the two things readers trip on.
   await expect(page.getByTestId("model-catalog").locator('a[href="#how-to-read"]')).toHaveCount(1);
@@ -181,6 +186,40 @@ test("the page leads with the table, then the frontier chart, the Score charts, 
     "Cost/quality frontier: the top score at every price.",
   );
   await expect(page.getByTestId("table-key")).toContainText("Blended price = (3 × input + 1 × output) ÷ 4.");
+});
+
+// The frontier chart is the page's overview, so its plot opens on the first
+// screen of a 1280x720 laptop, ahead of its legend and explanation. Under the
+// table it started 4,500px down, six screens of scrolling at that size, where
+// few visitors reach.
+test("the frontier plot starts on the first screen of a laptop", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/models");
+  // At least 160px of the plot (its top gridlines and the frontier's priciest
+  // steps) shows without scrolling.
+  const plot = (await page.getByTestId("frontier-chart").boundingBox())!;
+  expect(plot.y).toBeLessThan(720 - 160);
+});
+
+// The rows scroll in a box about two thirds of the screen tall, under a header
+// pinned to the box's top, so the column names stay in view on every row and
+// the Score charts follow a short scroll after the table.
+test("the table scrolls in its own box under a pinned header", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/models");
+  const box = page.getByTestId("catalog-scroll");
+  const size = await box.evaluate((el) => ({ client: el.clientHeight, scroll: el.scrollHeight }));
+  expect(size.client).toBeLessThanOrEqual(Math.ceil(0.7 * 900) + 2);
+  expect(size.scroll).toBeGreaterThan(size.client);
+
+  // Scrolled to its last row, the header still sits at the box's top.
+  await box.scrollIntoViewIfNeeded();
+  await box.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+  await expect(page.getByTestId("model-row").last()).toBeInViewport();
+  const boxTop = (await box.boundingBox())!.y;
+  const headTop = (await box.locator("thead").boundingBox())!.y;
+  expect(Math.abs(headTop - boxTop)).toBeLessThanOrEqual(2);
+  await expect(box.getByRole("button", { name: /^Sort by Coding/ })).toBeInViewport();
 });
 
 test("Group by Cost tier: Score within each tier (priciest first); Output toggles to cheapest-first", async ({ page }) => {
