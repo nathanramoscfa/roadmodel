@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.56] — 2026-10-02
+
 ### Added
 
 - **Every engine call reports what it cost.** `roadmodel.usage` records the
