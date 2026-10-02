@@ -94,6 +94,15 @@ class RecommendResponse(BaseModel):
     backup: BackupPick | None = None
     session_cost_estimate: dict[str, Any] | None = None
     comparison_table: list[dict[str, Any]] = Field(default_factory=list)
+    # The engine that produced this answer (an engines.json hint). It differs
+    # from the requested engine when that one failed and the fallback chain
+    # answered, so the web can say which model actually wrote the picks.
+    engine: str | None = None
+    # The engine call's provider-reported token counts (roadmodel.usage):
+    # input_tokens, cached_input_tokens, cache_write_tokens, output_tokens,
+    # reasoning_tokens. The web meters the call from these. None when the
+    # provider reported none.
+    usage: dict[str, Any] | None = None
 
     model_config = ConfigDict(extra="forbid")
 
@@ -112,5 +121,9 @@ class LadderResponse(BaseModel):
 
     picks: dict[str, RecommendResponse]
     guard: dict[str, Any] = Field(default_factory=dict)
+    # The engine that answered and its token counts, for the whole ladder (one
+    # call); see RecommendResponse.engine / .usage.
+    engine: str | None = None
+    usage: dict[str, Any] | None = None
 
     model_config = ConfigDict(extra="forbid")

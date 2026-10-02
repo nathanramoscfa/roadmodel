@@ -30,12 +30,15 @@ Usage (from repo root, in the verify venv):
 from __future__ import annotations
 
 import argparse
+import datetime
 import json
 import os
 import pathlib
 import re
 import sys
 import time
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from typing import Any
 
@@ -363,6 +366,45 @@ def _parse_extra(raw: str, max_output_tokens: int | None) -> Engine:
     return engine
 
 
+def _service_hint(eng: Engine) -> str:
+    """The engines.json hint for an engine: provider + API id."""
+    return f"{eng.provider}-{eng.api_model}"
+
+
+def _run_via_service(eng: Engine, prompt: str, url: str, token: str) -> dict[str, Any]:
+    """One probe through the DEPLOYED service's ladder endpoint, forcing this
+    engine. Exercises the production path end to end (the service's keys, its
+    engine params, its parse + guards) and reads the provider-reported usage
+    back from the response."""
+    body = json.dumps(
+        {"task_description": prompt, "context": {"force_provider": _service_hint(eng)}}
+    ).encode()
+    if not url.startswith("https://"):
+        raise SystemExit("--via-service takes an https:// URL")
+    req = urllib.request.Request(  # noqa: S310 - https only, checked above
+        f"{url.rstrip('/')}/v1/recommend/ladder",
+        data=body,
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
+    )
+    t0 = time.time()
+    try:
+        with urllib.request.urlopen(req, timeout=180) as resp:  # noqa: S310 - fixed https URL
+            r = json.load(resp)
+    except urllib.error.HTTPError as e:
+        return {"error": f"HTTP {e.code}", "latency_s": round(time.time() - t0, 1)}
+    except Exception as e:  # noqa: BLE001 - record every failure mode
+        return {
+            "error": f"{type(e).__name__}: {str(e)[:160]}",
+            "latency_s": round(time.time() - t0, 1),
+        }
+    answered = r.get("engine")
+    if answered and answered != _service_hint(eng):
+        # The forced engine failed and the fallback chain answered: a failure
+        # of THIS engine, whatever the fallback produced.
+        return {"error": f"fell back to {answered}", "latency_s": round(time.time() - t0, 1)}
+    return _score(r, round(time.time() - t0, 1), r.get("usage"))
+
+
 def _run_one(eng: Engine, prompt: str) -> dict[str, Any]:
     key = _key_for(eng.provider)
     if not key:
@@ -385,15 +427,20 @@ def _run_one(eng: Engine, prompt: str) -> dict[str, Any]:
             "latency_s": round(time.time() - t0, 1),
         }
     latency = round(time.time() - t0, 1)
+    call_usage = usage.last()
+    return _score(r, latency, call_usage.as_dict() if call_usage else None)
+
+
+def _score(r: dict[str, Any], latency: float, call_usage: dict[str, Any] | None) -> dict[str, Any]:
+    """Score one ladder result (package output or a service response)."""
     picks = r.get("picks", {}) or {}
     guard = r.get("guard", {}) or {}
-    call_usage = usage.last()
-    out = {
+    out: dict[str, Any] = {
         "latency_s": latency,
         "healthy": bool(guard.get("healthy")),
         "picks": {},
         "checks": {},
-        "usage": call_usage.as_dict() if call_usage else None,
+        "usage": call_usage,
     }
     all_fields = True
     task_leak = False
@@ -461,6 +508,16 @@ def main() -> int:
     )
     ap.add_argument("--baseline", default=BASELINE, help="engine key the others are diffed against")
     ap.add_argument(
+        "--via-service",
+        default="",
+        help="run each probe through this deployed service URL (needs ROADMODEL_INTERNAL_TOKEN)",
+    )
+    ap.add_argument(
+        "--summary-json",
+        default="",
+        help="also write the per-engine summary the /recommend menu reads (docs/engine-eval.json)",
+    )
+    ap.add_argument(
         "--extra-max-output-tokens",
         type=int,
         default=None,
@@ -483,9 +540,16 @@ def main() -> int:
         ]
     else:
         jsonl = pathlib.Path(f"{args.out}.jsonl").open("w")
+        token = os.environ.get("ROADMODEL_INTERNAL_TOKEN", "")
+        if args.via_service and not token:
+            raise SystemExit("--via-service needs ROADMODEL_INTERNAL_TOKEN")
         for eng in selected:
             for probe in probes:
-                res = _run_one(eng, probe["task"])
+                res = (
+                    _run_via_service(eng, probe["task"], args.via_service, token)
+                    if args.via_service
+                    else _run_one(eng, probe["task"])
+                )
                 rec = {"engine": eng.key, "ga": eng.ga, "probe": probe["id"], **res}
                 rows.append(rec)
                 jsonl.write(json.dumps(rec) + "\n")
@@ -501,7 +565,9 @@ def main() -> int:
     # Baseline picks per probe for agreement.
     baseline = args.baseline
     base = {r["probe"]: r for r in rows if r["engine"] == baseline and "picks" in r}
-    catalog_by_id = {m["id"]: m for m in json.loads((REPO / "docs" / "catalog.json").read_text())["models"]}
+    catalog_by_id = {
+        m["id"]: m for m in json.loads((REPO / "docs" / "catalog.json").read_text())["models"]
+    }
     known_engines = {e.key: e for e in [*ENGINES, *selected]}
 
     def call_cost(r: dict[str, Any]) -> float | None:
@@ -523,6 +589,17 @@ def main() -> int:
             + u["cache_write_tokens"] * p_in * 1.25
             + u["output_tokens"] * m["output_price_per_1m"]
         ) / 1_000_000
+
+    by_name = {m["name"].lower(): m for m in catalog_by_id.values()}
+
+    def quality_pick_price(name: str | None) -> float | None:
+        """The Quality pick's blended price (3 input : 1 output, the /models
+        convention): an engine that escalates every task to the dearest model
+        in the catalog shows up here."""
+        m = by_name.get((name or "").strip().lower())
+        if m is None:
+            return None
+        return (3 * m["input_price_per_1m"] + m["output_price_per_1m"]) / 4
 
     def resolves(model: str | None) -> bool:
         """Catalog hit for the pick as emitted, or with a leading maker word
@@ -568,6 +645,11 @@ def main() -> int:
             )
             exact.append(m / 3)
         lats = sorted(r["latency_s"] for r in ran)
+        q_prices = [
+            p
+            for p in (quality_pick_price(r["picks"]["quality"]["model"]) for r in ran)
+            if p is not None
+        ]
         costs = [c for c in (call_cost(r) for r in ran) if c is not None]
         with_usage = [r["usage"] for r in ran if r.get("usage")]
         return {
@@ -581,6 +663,9 @@ def main() -> int:
             else None,
             "mean_out_tokens": round(sum(u["output_tokens"] for u in with_usage) / len(with_usage))
             if with_usage
+            else None,
+            "quality_pick_blended_per_1m": round(sum(q_prices) / len(q_prices), 2)
+            if q_prices
             else None,
             "cached_share": round(
                 sum(u["cached_input_tokens"] for u in with_usage)
@@ -604,19 +689,19 @@ def main() -> int:
     ]
     md.append("## Summary\n")
     md.append(
-        "| engine | GA | parsed | lat(s) | p50(s) | $/call | in tok | cached | out tok | healthy | on-catalog | fields | sections | no-leak | no-demote | pick-agree vs base |"
+        "| engine | GA | parsed | lat(s) | p50(s) | $/call | in tok | cached | out tok | Q-pick $/1M | healthy | on-catalog | fields | sections | no-leak | no-demote | pick-agree vs base |"
     )
-    md.append("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|")
+    md.append("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|")
     for eng in selected:
         a = agg(eng.key)
         ga = "GA" if eng.ga else "preview"
         if a["ran"] == 0:
             md.append(
-                f"| `{eng.key}` | {ga} | 0/{a['total']} | — | — | — | — | — | — | — | — | — | — | — | — | _{a['reason']}_ |"
+                f"| `{eng.key}` | {ga} | 0/{a['total']} | — | — | — | — | — | — | — | — | — | — | — | — | — | _{a['reason']}_ |"
             )
         else:
             md.append(
-                f"| `{eng.key}` | {ga} | {a['ran']}/{a['total']} | {a['mean_latency_s']} | {a['p50_latency_s']} | {a['mean_cost_usd']} | {a['mean_in_tokens']} | {a['cached_share']} | {a['mean_out_tokens']} | {a['healthy']} | {a['on_catalog']} | {a['all_fields']} | {a['sections_parse']} | {a['no_task_leak']} | {a['no_cost_demotion']} | {a['pick_agreement_vs_baseline']} |"
+                f"| `{eng.key}` | {ga} | {a['ran']}/{a['total']} | {a['mean_latency_s']} | {a['p50_latency_s']} | {a['mean_cost_usd']} | {a['mean_in_tokens']} | {a['cached_share']} | {a['mean_out_tokens']} | {a['quality_pick_blended_per_1m']} | {a['healthy']} | {a['on_catalog']} | {a['all_fields']} | {a['sections_parse']} | {a['no_task_leak']} | {a['no_cost_demotion']} | {a['pick_agreement_vs_baseline']} |"
             )
     md.append("\n## Per-probe Quality pick (model) by engine\n")
     ran_engines = [e for e in selected if agg(e.key)["ran"] > 0]
@@ -638,6 +723,48 @@ def main() -> int:
 
     report = pathlib.Path(f"{args.out}.md")
     report.write_text("\n".join(md) + "\n")
+    if args.summary_json:
+        # The figures the /recommend engine menu shows, keyed by engines.json
+        # hint. Merged into an existing file so engines evaluated by separate
+        # runs (local keys vs --via-service) accumulate.
+        path = pathlib.Path(args.summary_json)
+        summary = json.loads(path.read_text()) if path.exists() else {"engines": {}}
+        today = datetime.date.today().isoformat()
+        for eng in selected:
+            a = agg(eng.key)
+            if a["ran"] == 0:
+                continue
+            checks = ("all_fields", "sections_parse", "no_task_leak", "on_catalog")
+            summary["engines"][_service_hint(eng)] = {
+                "evaluated_on": today,
+                "probes": a["total"],
+                "parsed": a["ran"],
+                # A probe passes when it parsed with every structured field
+                # and section, stayed on the catalog and leaked no task text.
+                "passed": sum(
+                    1
+                    for r in rows
+                    if r["engine"] == eng.key
+                    and "picks" in r
+                    and all(r["checks"][c] for c in checks if c != "on_catalog")
+                ),
+                "healthy_ladder": a["healthy"],
+                "p50_latency_s": a["p50_latency_s"],
+                "mean_cost_usd": a["mean_cost_usd"],
+                "mean_input_tokens": a["mean_in_tokens"],
+                "cached_share": a["cached_share"],
+                "quality_pick_blended_per_1m": a["quality_pick_blended_per_1m"],
+                "via": "service" if args.via_service else "package",
+            }
+        summary["_comment"] = (
+            "Generated by scripts/eval_recommend_engines.py --summary-json; do not hand-edit. "
+            "The 12-probe battery per recommender engine: parse/field adherence, latency, and "
+            "the measured cost per three-pick recommendation at catalog prices (cache reads "
+            "billed at the cache rate). The /recommend engine menu shows these figures."
+        )
+        summary["generated_at"] = today
+        path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+        print(f"Summary: {path}")
     print(f"\nReport: {report}\nRaw:    {args.out}.jsonl")
     return 0
 
