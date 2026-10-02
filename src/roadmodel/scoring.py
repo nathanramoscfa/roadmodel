@@ -35,8 +35,9 @@ Score, per candidate (model reached through a specific access method)::
   stakes (a hard or novel task weighs cost less, because a failed attempt
   costs more than the price gap).
 
-Hard filters run first: availability, allowed jurisdictions, the operator's
-platform allow / deny lists. Funding is read from the user-context exactly as
+Hard filters run first: availability, supersession (a superseded model
+leaves while its successor is available, as it leaves the recommender's),
+allowed jurisdictions, the operator's platform allow / deny lists. Funding is read from the user-context exactly as
 :mod:`roadmodel.cost` reads it (Active subscriptions / Active API keys / Local
 models) plus the ``Consumption headroom`` line and the ``Usage-pool status``
 table; an unfunded platform is never chosen while a funded one exists.
@@ -781,6 +782,7 @@ def rank(
     methods = [m for m in cat.get("access_methods", []) if isinstance(m, dict)]
     method_ids = {str(m.get("id", "")) for m in methods}
     families = frozenset(_family_words(cat))
+    catalog_ids = {str(m.get("id", "")) for m in cat.get("models", []) if isinstance(m, dict)}
     candidates: list[Candidate] = []
     excluded: list[dict[str, str]] = []
     # A platform list is only as good as its ids: unknown tokens are reported
@@ -802,6 +804,12 @@ def rank(
             continue
         if model_id in unavailable:
             excluded.append({"model": model_id, "reason": "unavailable"})
+            continue
+        # The successor is the same maker's, no dearer, and rated at least as
+        # high everywhere; a benched successor keeps the older model in play.
+        successor = str(model.get("superseded_by") or "")
+        if successor and successor in catalog_ids and successor not in unavailable:
+            excluded.append({"model": model_id, "reason": f"superseded by {successor}"})
             continue
         if str(model.get("jurisdiction", "")).lower() not in juris:
             excluded.append({"model": model_id, "reason": "jurisdiction"})

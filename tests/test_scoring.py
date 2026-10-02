@@ -375,6 +375,28 @@ def test_unavailable_models_are_excluded() -> None:
     assert {"model": "claude-opus-5", "reason": "unavailable"} in r.excluded
 
 
+def test_a_superseded_model_leaves_while_its_successor_is_available() -> None:
+    """The recommender drops a superseded model while its successor is
+    available; the scoring core named Fable 5 as a multimodal backup after
+    Fable 5.1 superseded it (2026-10-01). A benched successor keeps the older
+    model in play."""
+    catalog = {
+        **CATALOG,
+        "models": [
+            {**m, "superseded_by": "claude-opus-5"} if m["id"] == "claude-sonnet-5" else m
+            for m in CATALOG["models"]
+        ],
+    }
+    task = scoring.Task("coding", "low")
+    r = scoring.rank(task, MAX_AND_PRO, catalog=catalog, benchmarks=BENCH)
+    assert all(c.model_id != "claude-sonnet-5" for c in r.candidates)
+    assert {"model": "claude-sonnet-5", "reason": "superseded by claude-opus-5"} in r.excluded
+    benched = scoring.rank(
+        task, MAX_AND_PRO, catalog=catalog, benchmarks=BENCH, unavailable_models=["claude-opus-5"]
+    )
+    assert any(c.model_id == "claude-sonnet-5" for c in benched.candidates)
+
+
 # --------------------------------------------------------------------------- #
 # The score itself
 # --------------------------------------------------------------------------- #

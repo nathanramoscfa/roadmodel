@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The user-context describes access, not models.** The example and the
+  setup guide now say so, and the example pins no model version: a version
+  written there goes stale the day its successor ships (the operator's own
+  copy still sent Gemini work to Gemini 3.1 Pro a day after Gemini 3.8 Flash
+  superseded it). A family name (Opus, Sonnet) states a preference and means
+  that family's newest model the catalog does not mark superseded. A test
+  keeps the example free of pinned versions; the Local models section, which
+  records pulled models by catalog id, is exempt.
+
+### Fixed
+
+- **`roadmodel score` leaves out superseded models,** as the recommender
+  does, while their successor is available; a benched successor keeps the
+  older model in play. It had named Fable 5 as the multimodal backup after
+  Fable 5.1 superseded it.
+
 ## [0.2.54] — 2026-10-01
 
 ### Added

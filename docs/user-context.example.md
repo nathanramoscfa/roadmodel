@@ -15,6 +15,13 @@ per-token prices) so that:
 The weekly catalog refresh in [`update/prompt.md`](../update/prompt.md)
 **must not** modify this file.
 
+**Describe access, not models.** This file says what you pay for and how you
+work. Leave model versions out: the catalog decides which models qualify and
+keeps up with every release, so a version written here goes stale the day its
+successor ships. Name a model family (Opus, Sonnet) only to state a
+preference; the selector reads it as that family's newest model the catalog
+does not mark superseded.
+
 ## How the selector consumes this file
 
 When [`model-selector.txt`](model-selector.txt) is referenced, the AI
@@ -186,8 +193,9 @@ dial the chosen platform lacks gets NO line at all — never `Off`, never
 - **Thinking** — default `On` wherever extended reasoning helps; `Off`
   only for purely mechanical steps where latency matters. It never
   carries an effort word or a number; `THINKING: Max` is not a setting
-  any surface can apply. Claude Fable 5 cannot disable extended
-  thinking, so never declare `Off` for it.
+  any surface can apply. Some models cannot disable extended
+  thinking (the Claude Fable line, for one), so never declare `Off`
+  for those.
 - **Codex / OpenAI** — the surface labels its dial "Intelligence" in its
   own UI, but the emitted field is still `EFFORT` (same value, different
   name). It exposes no separate thinking toggle and no Max Mode.
@@ -204,8 +212,8 @@ dial the chosen platform lacks gets NO line at all — never `Off`, never
   than a step inside one. By default each phase's **Phase roadmap
   settings** are picked quality first: the strongest planning model you
   can reach, at its deepest reasoning rung (`Max` in Claude Code). State
-  a rule here to override that, for example "Phase roadmaps: Opus 5.5 at
-  `XHigh`" to keep more of a weekly pool.
+  a rule here to override that, for example "Phase roadmaps: one rung below
+  the deepest" to keep more of a weekly pool.
 
 ## Budget priority and speed posture
 
@@ -232,14 +240,11 @@ the frontier tier on every posture.
 **Speed posture:** speed is NOT a valued dimension — workflows are
 batch / asynchronous, not latency-sensitive. Apply these rules:
 
-- **Never recommend a "Fast" variant** of a model (e.g., Opus 4.7
-  Fast, GPT-5.4 Fast, GPT-5 Fast, Claude 4.6 Opus Fast mode) when a
-  standard non-fast variant of the same base model is available.
-  Fast variants in Cursor's catalog typically charge 2x output for
-  marginal speed gain (e.g., "Fast mode is 15% faster with 2x
-  pricing", "Claude 4.6 Opus Fast mode" at $30/$150 input/output vs.
-  standard Opus at $5/$25) — the speed-for-cost trade is never worth
-  it here.
+- **Never recommend a "Fast" variant** of a model (e.g., an Opus Fast
+  or a GPT Fast mode) when a standard non-fast variant of the same base
+  model is available. Fast variants typically charge 2x or more on
+  output for a marginal speed gain — the speed-for-cost trade is never
+  worth it here.
 - **In `<selection-algorithm>` Step 5** (cost tie-breaker), when the
   tied set contains both a standard and a Fast variant of the same
   base model, the standard variant always wins regardless of any
