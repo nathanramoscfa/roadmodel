@@ -42,7 +42,7 @@ from typing import Any
 REPO = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
 
-from roadmodel import cost  # noqa: E402
+from roadmodel import cost, usage  # noqa: E402
 from roadmodel.config import PROVIDER_KEY_ENV, Config  # noqa: E402
 from roadmodel.providers.registry import COMPATIBLE_PROVIDERS, OLLAMA_PLACEHOLDER_KEY  # noqa: E402
 from roadmodel.recommend import recommend_structured_ladder  # noqa: E402
@@ -105,6 +105,9 @@ class Engine:
     temperature: float | None = 0.0
     ga: bool = True
     note: str = ""
+    # The docs/catalog.json id whose prices the report bills the run at;
+    # defaults to the key (most engine keys ARE catalog ids).
+    catalog_id: str | None = None
 
 
 # Callable, verified (via the models list + smoke test). thinking params mirror
@@ -196,6 +199,85 @@ ENGINES: list[Engine] = [
         ga=True,
         note="one tier up from Luna; needs OPENAI_API_KEY",
     ),
+    # The gpt-6 generation (2026-09): Luna is cheaper than gpt-5.6-luna on paper
+    # ($0.10/$0.50 vs $0.20/$1.20) and higher on the AA index; Sol is the
+    # mid-tier. Both need the gpt-6 reasoning cap (roadmodel 0.2.56).
+    Engine(
+        "gpt-6-luna",
+        "openai",
+        "gpt-6-luna",
+        thinking_budget=0,
+        max_output_tokens=6144,
+        ga=True,
+        note="cheapest current OpenAI; needs OPENAI_API_KEY",
+    ),
+    Engine(
+        "gpt-6-sol",
+        "openai",
+        "gpt-6-sol",
+        thinking_budget=0,
+        max_output_tokens=6144,
+        ga=True,
+        note="needs OPENAI_API_KEY",
+    ),
+    Engine(
+        "gpt-6.1-sol",
+        "openai",
+        "gpt-6.1-sol",
+        thinking_budget=0,
+        max_output_tokens=6144,
+        ga=True,
+        note="OpenAI mid-tier flagship; needs OPENAI_API_KEY",
+    ),
+    # Gemini 3.x takes a thinking LEVEL; budget 0 maps to `low` (0.2.56).
+    Engine(
+        "gemini-3.8-flash",
+        "google",
+        "gemini-3.8-flash",
+        thinking_budget=0,
+        max_output_tokens=6144,
+        ga=True,
+        note="current Gemini Flash; level low",
+    ),
+    # Claude engines: cached system prompt + effort low (0.2.56). Opus 5.5
+    # cannot disable thinking; low effort keeps it brief.
+    Engine(
+        "claude-haiku-4-5",
+        "anthropic",
+        "claude-haiku-4-5",
+        thinking_budget=0,
+        max_output_tokens=6144,
+        ga=True,
+        catalog_id="claude-4.5-haiku",
+        note="needs ANTHROPIC_API_KEY",
+    ),
+    Engine(
+        "claude-sonnet-5",
+        "anthropic",
+        "claude-sonnet-5",
+        thinking_budget=0,
+        max_output_tokens=8192,
+        ga=True,
+        note="needs ANTHROPIC_API_KEY",
+    ),
+    Engine(
+        "claude-sonnet-5-5",
+        "anthropic",
+        "claude-sonnet-5-5",
+        thinking_budget=0,
+        max_output_tokens=8192,
+        ga=True,
+        note="needs ANTHROPIC_API_KEY",
+    ),
+    Engine(
+        "claude-opus-5-5",
+        "anthropic",
+        "claude-opus-5-5",
+        thinking_budget=0,
+        max_output_tokens=8192,
+        ga=True,
+        note="needs ANTHROPIC_API_KEY",
+    ),
     # OpenAI-compatible engines (providers/openai_compatible.py). Local Ollama
     # models are the ones runnable with no hosted key; the hosted entries run
     # only when their key is present. thinking_budget=0 maps to each provider's
@@ -244,7 +326,8 @@ ENGINES: list[Engine] = [
     Engine("zai:glm-5.2", "zai", "glm-5.2", thinking_budget=0, ga=True, note="needs ZAI_API_KEY"),
 ]
 
-BASELINE = "gemini-2.5-pro"
+# The engine prod runs today; --baseline overrides it.
+BASELINE = "gpt-5.6-luna"
 UC_ANON = REPO / "docs" / "user-context.example.md"
 
 _COST_DEMOTION = re.compile(
@@ -285,6 +368,7 @@ def _run_one(eng: Engine, prompt: str) -> dict[str, Any]:
     if not key:
         return {"skipped": f"no {PROVIDER_KEY_ENV.get(eng.provider, 'key')}"}
     cfg = Config(provider=eng.provider, model=eng.api_model, api_key=key, user_context_path=UC_ANON)
+    usage.reset()
     t0 = time.time()
     try:
         r = recommend_structured_ladder(
@@ -303,7 +387,14 @@ def _run_one(eng: Engine, prompt: str) -> dict[str, Any]:
     latency = round(time.time() - t0, 1)
     picks = r.get("picks", {}) or {}
     guard = r.get("guard", {}) or {}
-    out = {"latency_s": latency, "healthy": bool(guard.get("healthy")), "picks": {}, "checks": {}}
+    call_usage = usage.last()
+    out = {
+        "latency_s": latency,
+        "healthy": bool(guard.get("healthy")),
+        "picks": {},
+        "checks": {},
+        "usage": call_usage.as_dict() if call_usage else None,
+    }
     all_fields = True
     task_leak = False
     cost_demotion = False
@@ -368,6 +459,7 @@ def main() -> int:
         default="",
         help="skip running; rebuild the report from an existing JSONL (e.g. a killed run)",
     )
+    ap.add_argument("--baseline", default=BASELINE, help="engine key the others are diffed against")
     ap.add_argument(
         "--extra-max-output-tokens",
         type=int,
@@ -407,7 +499,30 @@ def main() -> int:
         jsonl.close()
 
     # Baseline picks per probe for agreement.
-    base = {r["probe"]: r for r in rows if r["engine"] == BASELINE and "picks" in r}
+    baseline = args.baseline
+    base = {r["probe"]: r for r in rows if r["engine"] == baseline and "picks" in r}
+    catalog_by_id = {m["id"]: m for m in json.loads((REPO / "docs" / "catalog.json").read_text())["models"]}
+    known_engines = {e.key: e for e in [*ENGINES, *selected]}
+
+    def call_cost(r: dict[str, Any]) -> float | None:
+        """What the call cost at the engine's catalog prices, cache reads billed
+        at the catalog's cache rate (10% of input where the catalog has none:
+        the discount OpenAI, Anthropic and Google all apply to cache reads),
+        Anthropic cache writes at 1.25x input."""
+        u = r.get("usage")
+        eng = known_engines.get(r["engine"])
+        m = catalog_by_id.get((eng.catalog_id or eng.key) if eng else r["engine"])
+        if not u or not m:
+            return None
+        p_in = m["input_price_per_1m"]
+        p_cache = m.get("cache_read_per_1m") or p_in * 0.1
+        uncached = u["input_tokens"] - u["cached_input_tokens"] - u["cache_write_tokens"]
+        return (
+            uncached * p_in
+            + u["cached_input_tokens"] * p_cache
+            + u["cache_write_tokens"] * p_in * 1.25
+            + u["output_tokens"] * m["output_price_per_1m"]
+        ) / 1_000_000
 
     def resolves(model: str | None) -> bool:
         """Catalog hit for the pick as emitted, or with a leading maker word
@@ -452,10 +567,28 @@ def main() -> int:
                 if r["picks"][t]["model"] == b["picks"][t]["model"]
             )
             exact.append(m / 3)
+        lats = sorted(r["latency_s"] for r in ran)
+        costs = [c for c in (call_cost(r) for r in ran) if c is not None]
+        with_usage = [r["usage"] for r in ran if r.get("usage")]
         return {
             "ran": n,
             "total": total,
             "mean_latency_s": round(sum(r["latency_s"] for r in ran) / n, 1),
+            "p50_latency_s": lats[len(lats) // 2],
+            "mean_cost_usd": round(sum(costs) / len(costs), 5) if costs else None,
+            "mean_in_tokens": round(sum(u["input_tokens"] for u in with_usage) / len(with_usage))
+            if with_usage
+            else None,
+            "mean_out_tokens": round(sum(u["output_tokens"] for u in with_usage) / len(with_usage))
+            if with_usage
+            else None,
+            "cached_share": round(
+                sum(u["cached_input_tokens"] for u in with_usage)
+                / max(1, sum(u["input_tokens"] for u in with_usage)),
+                2,
+            )
+            if with_usage
+            else None,
             "healthy": round(rate(lambda r: r["healthy"]), 2),
             "on_catalog": round(rate(on_catalog), 2),
             "all_fields": round(rate(lambda r: r["checks"]["all_fields"]), 2),
@@ -467,23 +600,23 @@ def main() -> int:
 
     md = [
         "# Recommender engine differential eval\n",
-        f"Probes: {len(probes)} · baseline: `{BASELINE}` · anon context (user_context_text=None)\n",
+        f"Probes: {len(probes)} · baseline: `{baseline}` · anon context (user_context_text=None)\n",
     ]
     md.append("## Summary\n")
     md.append(
-        "| engine | GA | parsed | lat(s) | healthy | on-catalog | fields | sections | no-leak | no-demote | pick-agree vs base |"
+        "| engine | GA | parsed | lat(s) | p50(s) | $/call | in tok | cached | out tok | healthy | on-catalog | fields | sections | no-leak | no-demote | pick-agree vs base |"
     )
-    md.append("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|")
+    md.append("|---|---|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|--:|")
     for eng in selected:
         a = agg(eng.key)
         ga = "GA" if eng.ga else "preview"
         if a["ran"] == 0:
             md.append(
-                f"| `{eng.key}` | {ga} | 0/{a['total']} | — | — | — | — | — | — | — | _{a['reason']}_ |"
+                f"| `{eng.key}` | {ga} | 0/{a['total']} | — | — | — | — | — | — | — | — | — | — | — | — | _{a['reason']}_ |"
             )
         else:
             md.append(
-                f"| `{eng.key}` | {ga} | {a['ran']}/{a['total']} | {a['mean_latency_s']} | {a['healthy']} | {a['on_catalog']} | {a['all_fields']} | {a['sections_parse']} | {a['no_task_leak']} | {a['no_cost_demotion']} | {a['pick_agreement_vs_baseline']} |"
+                f"| `{eng.key}` | {ga} | {a['ran']}/{a['total']} | {a['mean_latency_s']} | {a['p50_latency_s']} | {a['mean_cost_usd']} | {a['mean_in_tokens']} | {a['cached_share']} | {a['mean_out_tokens']} | {a['healthy']} | {a['on_catalog']} | {a['all_fields']} | {a['sections_parse']} | {a['no_task_leak']} | {a['no_cost_demotion']} | {a['pick_agreement_vs_baseline']} |"
             )
     md.append("\n## Per-probe Quality pick (model) by engine\n")
     ran_engines = [e for e in selected if agg(e.key)["ran"] > 0]
