@@ -97,3 +97,34 @@ two so future maintainers can trace the recovery path:
   issue with the failure log attached so the next cron run can succeed
   without manual intervention. The cron is the primary refresh path;
   manual runs should remain exceptional.
+
+## How new models reach every access list
+
+A model retires its predecessor only when it is offered on every access
+method that offers the predecessor (`update/supersede.py`), so each method's
+`supports-models` list has to keep up with launches. The daily catalog cron
+keeps them current in three ways:
+
+- **Synced from the surface's own list, in code.** After the curation pass,
+  `update/merge_catalog.py --sync-method` adds every catalogued model a
+  surface publishes: Codex's models page (`update/extract_codex_models.py`)
+  for `codex-cli` and `codex-api`; OpenRouter's public model list
+  (`update/extract_openrouter_models.py`, matched by normalized name, with
+  the exceptions in `update/openrouter-model-map.json`) for `openrouter`;
+  each provider's own price list for its `<provider>-api` method. Additive
+  and fail-open. `ollama` is the one hand-maintained list (a local model
+  needs a licence check).
+- **Searched by the curation pass.** Every other method's list is refreshed
+  from its official source, under the sanity guards in `update/prompt.md`.
+- **Near-misses, checked one by one.** `update/supersede.py` prints
+  `NEAR-MISS <old> -> <new>: missing on <methods>` for a same-maker model
+  that passes every supersession test but coverage. The curation pass gets
+  those (method, model) pairs as `<near_miss_checks>` and searches each
+  method's source for exactly that model. A pair that is a near-miss on main
+  today and three days ago opens one issue,
+  `chore(catalog): near-miss supersession "<old>" -> "<new>"`, which
+  `update/close_resolved_issues.py` (daily, in `cron-health.yml`) closes once
+  the pair resolves.
+
+A dispatch of the cron on a day it already ran refreshes that day's open
+catalog PR in place; the PR still awaits human review.
