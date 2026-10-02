@@ -423,9 +423,10 @@ def dispose(
 
 def prune_carried(snapshots: list[Path], selector: str) -> list[str]:
     """Drop from each provider snapshot's ``unexpected_slugs`` every model the
-    catalog now carries: the curation pass or this run added it after the
-    snapshot was taken, and the extractor stops flagging a carried model on its
-    next run anyway. Keeps the committed snapshot and the committed catalog in
+    catalog now carries, with its ``discovered`` price row (G1: every
+    discovered row names a flagged slug): the curation pass or this run added
+    it after the snapshot was taken. Runs after the provider-API sync has read
+    the rows, and keeps the committed snapshot and the committed catalog in
     agreement within one refresh. Returns ``provider/slug`` for each one pruned."""
     carried = catalog_keys(selector)
     pruned: list[str] = []
@@ -438,8 +439,14 @@ def prune_carried(snapshots: list[Path], selector: str) -> list[str]:
         if len(keep) == len(flagged):
             continue
         provider = str(snap.get("provider", path.stem.removeprefix("catalog-")))
-        pruned += [f"{provider}/{s}" for s in flagged if s not in keep]
+        gone = [s for s in flagged if s not in keep]
+        pruned += [f"{provider}/{s}" for s in gone]
         snap["unexpected_slugs"] = keep
+        rows = snap.get("discovered")
+        if isinstance(rows, list):
+            snap["discovered"] = [
+                r for r in rows if not (isinstance(r, dict) and r.get("slug") in gone)
+            ]
         path.write_text(json.dumps(snap, indent=2, ensure_ascii=False) + "\n")
     return pruned
 
