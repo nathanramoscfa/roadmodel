@@ -461,3 +461,52 @@ def test_the_real_catalog_and_user_context_example_yield_a_full_table() -> None:
         assert prices == sorted(prices), "COST <= BALANCED <= QUALITY in price"
         on_frontier = {p.candidate.model_id for p in lad.frontier}
         assert all(r.candidate.model_id in on_frontier for r in lad.rungs.values())
+
+
+def test_on_claude_code_the_rows_effort_is_set_when_the_engine_copies_only_the_model(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, table_on_fixture: dict[str, scoring.Ladder]
+) -> None:
+    # Seen in production: the engine copied Sonnet onto COST but at BALANCED's
+    # XHigh, so the two rungs read the same.
+    fake, _ = _fake(
+        {
+            "quality": _block("Opus", "Claude Code", "Ultracode", "planning/high"),
+            "balanced": _block("Sonnet", "Claude Code", "Extra high", "planning/high"),
+            "cost": _block("Sonnet", "Claude Code", "XHigh", "planning/high"),
+        }
+    )
+    monkeypatch.setattr(recommend_module, "recommend_ladder", fake)
+    result = recommend_structured_ladder("plan a release", _config(tmp_path))
+
+    guard = result["guard"]
+    assert guard["rewritten"] == []
+    # "Extra high" is XHigh; Ultracode on QUALITY is above the row's XHigh, so
+    # it is set back to the row's level too.
+    assert guard["effort_set"] == ["quality", "cost"]
+    assert result["picks"]["cost"]["settings"]["effort"] == "High"
+    assert result["picks"]["balanced"]["settings"]["effort"] == "Extra high"
+    assert result["picks"]["quality"]["settings"]["effort"] == "XHigh"
+    cost_sections = result["picks"]["cost"]["rationale_sections"]
+    assert cost_sections["pick"] == "Sonnet fits."
+    assert cost_sections["effort"].startswith("High is the effort the cheap posture sets")
+
+
+def test_ultracode_stands_where_the_row_says_max(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    uncapped = _context([MAX, PRO], headroom="uncapped")
+    table = scoring.ladder_table(uncapped, catalog=CATALOG, benchmarks=BENCH)
+    monkeypatch.setattr(recommend_module, "_ladder_table_for", lambda *_a, **_k: table)
+    fake, _ = _fake(
+        {
+            "quality": _block("Opus", "Claude Code", "Ultracode", "planning/medium"),
+            "balanced": _block("Sonnet", "Claude Code", "Max", "planning/medium"),
+            "cost": _block("Luna", "Codex", "High", "planning/medium"),
+        }
+    )
+    monkeypatch.setattr(recommend_module, "recommend_ladder", fake)
+    result = recommend_structured_ladder("plan a release", _config(tmp_path))
+    assert result["guard"]["effort_set"] == []
+    assert result["picks"]["quality"]["settings"]["effort"] == "Ultracode"
+    # Codex is not set by code: its dial has its own words.
+    assert result["picks"]["cost"]["settings"]["intelligence"] == "High"

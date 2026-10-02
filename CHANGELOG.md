@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A Claude Code pick runs at its row's effort.** Two picks on one model
+  differ only by effort, and in production the engine copied Sonnet 5.5 onto
+  the Cost pick at Balanced's XHigh instead of its row's High, so the two
+  picks read the same. On Claude Code, whose dial reads the scorer's levels,
+  code now sets each pick's effort to its row's and rewrites the EFFORT
+  rationale to match (Ultracode stands where the row says Max). Other
+  surfaces name their levels differently and keep the engine's mapping. The
+  guard lists the picks it set as `effort_set`.
+
 ## [0.2.59] — 2026-10-02
 
 ### Changed
