@@ -7,7 +7,8 @@ recommend_structured_ladder puts the table of those ladders in the prompt, and
 makes every rung the row's, whatever the engine writes.
 
 The fixture catalog is tiny and hand-built so every pick can be worked out by
-hand. Planning quality (the scorer's 0-100) is 0.7 x the AA Index min-max
+hand. Lite, Luna and Astra are one maker's (Codex), Sonnet, Sonnet Old and Opus
+another's (Claude Code). Planning quality (the scorer's 0-100) is 0.7 x the AA Index min-max
 scaled over 20..58, plus 0.3 x the letter:
 
     model        blended $/1M   AA   planning   quality   frontier?
@@ -40,10 +41,13 @@ from roadmodel.recommend import (
 )
 
 
-def _model(mid: str, name: str, inp: float, out: float, planning: str) -> dict[str, Any]:
+def _model(
+    mid: str, name: str, inp: float, out: float, planning: str, provider: str
+) -> dict[str, Any]:
     return {
         "id": mid,
         "name": name,
+        "provider": provider,
         "input_price_per_1m": inp,
         "output_price_per_1m": out,
         "tier_cost": "low",
@@ -62,12 +66,12 @@ def _model(mid: str, name: str, inp: float, out: float, planning: str) -> dict[s
 
 CATALOG: dict[str, Any] = {
     "models": [
-        _model("lite", "Lite", 0.1, 0.5, "C"),
-        _model("luna", "Luna", 0.25, 1.25, "A"),
-        _model("sonnet", "Sonnet", 2.0, 10.0, "S"),
-        _model("sonnet-old", "Sonnet Old", 2.0, 10.0, "A"),
-        _model("opus", "Opus", 4.0, 20.0, "S"),
-        _model("astra", "Astra", 10.0, 50.0, "S"),
+        _model("lite", "Lite", 0.1, 0.5, "C", "openai"),
+        _model("luna", "Luna", 0.25, 1.25, "A", "openai"),
+        _model("sonnet", "Sonnet", 2.0, 10.0, "S", "anthropic"),
+        _model("sonnet-old", "Sonnet Old", 2.0, 10.0, "A", "anthropic"),
+        _model("opus", "Opus", 4.0, 20.0, "S", "anthropic"),
+        _model("astra", "Astra", 10.0, 50.0, "S", "openai"),
     ],
     "access_methods": [
         {
@@ -308,8 +312,9 @@ def test_the_table_renders_every_row_and_the_frontier() -> None:
     for category, complexity, novel in scoring.table_keys():
         assert f"\n{scoring.table_key(category, complexity, novel)}: COST = " in text
     assert (
-        "planning/high: COST = Sonnet @ Claude Code · high | BALANCED = Sonnet @ Claude Code · xhigh"
-        " | QUALITY = Opus @ Claude Code · xhigh"
+        "planning/high: COST = Sonnet @ Claude Code · high, backup Astra @ Codex"
+        " | BALANCED = Sonnet @ Claude Code · xhigh, backup Astra @ Codex"
+        " | QUALITY = Opus @ Claude Code · xhigh, backup Astra @ Codex"
     ) in text
 
 
@@ -669,6 +674,8 @@ def test_two_scorer_levels_on_one_native_level_are_told_apart_natively() -> None
         "planning/high/novel: COST = Astra @ Codex · low | BALANCED = Astra @ Codex · medium"
         " | QUALITY = Astra @ Codex · high"
     ) in text
+    # ChatGPT Pro alone: no other maker, so no backup.
+    assert "backup" not in text.split("\n")[-2]
     assert lad.to_dict()["rungs"]["quality"]["native_effort"] == "high"
 
 
@@ -711,3 +718,107 @@ def test_a_surface_without_documented_levels_keeps_the_engines_mapping(
     result = recommend_structured_ladder("plan a release", _config(tmp_path))
     assert result["guard"]["effort_set"] == []
     assert result["picks"]["cost"]["settings"]["intelligence"] == "High"
+
+
+# --------------------------------------------------------------------------- #
+# Backups: the other makers' frontier, at no higher list price
+# --------------------------------------------------------------------------- #
+
+
+def _backups(lad: scoring.Ladder) -> dict[str, tuple[str, str, str] | None]:
+    return {
+        t: (r.backup.candidate.model_name, r.backup.candidate.platform_name, r.backup.level)
+        if r.backup
+        else None
+        for t, r in lad.rungs.items()
+    }
+
+
+def test_each_rung_backs_up_to_the_other_makers_best_at_no_higher_price() -> None:
+    # Medium planning needs 50. Codex's frontier is Lite, Luna, Astra, of which
+    # Luna (57.9) and Astra (85.9) clear it: Sonnet ($4) and Opus ($8) back up
+    # to Luna, the dearest at or below their price. Nothing on Claude Code's
+    # frontier (Sonnet, Opus) costs Luna's $0.50 or less, so Luna backs up to
+    # the cheapest adequate point above it, Sonnet. Each runs at its rung's
+    # posture's effort on its own dial.
+    lad = _ladder("planning", "medium")
+    assert _backups(lad) == {
+        "cost": ("Sonnet", "Claude Code", "medium"),
+        "balanced": ("Luna", "Codex", "high"),
+        "quality": ("Luna", "Codex", "xhigh"),
+    }
+    assert lad.backup_warning is None
+
+
+def test_a_backup_above_the_rungs_price_only_when_nothing_cheaper_clears_the_bar() -> None:
+    # High planning needs 70: only Astra ($20) clears it on Codex's frontier.
+    lad = _ladder("planning", "high")
+    assert {b[0] for b in _backups(lad).values() if b} == {"Astra"}
+
+
+def test_with_no_adequate_backup_the_strongest_other_maker_point_stands() -> None:
+    # Novel planning needs 85; with Astra benched, Codex's frontier is Lite and
+    # Luna, and neither clears it: Luna is the stronger.
+    lad = scoring.ladder(
+        scoring.Task("planning", "high", True),
+        BOTH,
+        unavailable_models=["astra"],
+        catalog=CATALOG,
+        benchmarks=BENCH,
+    )
+    assert lad is not None
+    assert {b[0] for b in _backups(lad).values() if b} == {"Luna"}
+
+
+def test_with_one_maker_funded_there_is_no_backup_and_a_warning_says_why() -> None:
+    lad = _ladder("planning", "medium", _context([MAX]))
+    assert _backups(lad) == {"cost": None, "balanced": None, "quality": None}
+    assert lad.backup_warning is not None and "anthropic only" in lad.backup_warning
+
+
+def test_the_table_and_json_carry_each_rungs_backup() -> None:
+    lad = _ladder("planning", "medium")
+    text = scoring.render_ladder_table({"planning/medium": lad})
+    assert (
+        "planning/medium: COST = Luna @ Codex · medium, backup Sonnet @ Claude Code | "
+        "BALANCED = Sonnet @ Claude Code · high, backup Luna @ Codex | "
+        "QUALITY = Opus @ Claude Code · xhigh, backup Luna @ Codex"
+    ) in text
+    payload = json.loads(json.dumps(lad.to_dict()))
+    assert payload["rungs"]["cost"]["backup"]["model_id"] == "sonnet"
+    assert payload["rungs"]["cost"]["backup"]["native_effort"] == "medium"
+
+
+def test_a_backup_that_differs_from_the_row_is_replaced_and_planned(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, table_on_fixture: dict[str, scoring.Ladder]
+) -> None:
+    blocks = {
+        "quality": _block("Opus", "Claude Code", "XHigh", "planning/medium"),
+        "balanced": _block("Sonnet", "Claude Code", "High", "planning/medium"),
+        "cost": _block("Luna", "Codex", "Medium", "planning/medium"),
+    }
+    blocks["quality"]["backup"] = "Astra"  # off this rung's price: Luna is the row's
+    blocks["balanced"]["backup"] = "Luna"  # the row's already
+    blocks["cost"]["backup"] = "Opus"  # dearer than the row's Sonnet
+    fake, _ = _fake(blocks)
+    monkeypatch.setattr(recommend_module, "recommend_ladder", fake)
+    result = recommend_structured_ladder("plan a release", _config(tmp_path))
+
+    assert result["guard"]["backup_set"] == ["quality", "cost"]
+    picks = result["picks"]
+    assert {t: p["backup"] for t, p in picks.items()} == {
+        "quality": "Luna",
+        "balanced": "Luna",
+        "cost": "Sonnet",
+    }
+    assert picks["cost"]["backup_plan"] == {
+        "model": "Sonnet",
+        "platform": "Claude Code",
+        "effort": "Medium",
+    }
+    assert picks["quality"]["backup_plan"]["effort"] == "XHigh"
+
+
+def test_the_header_says_to_copy_the_rows_backup() -> None:
+    header = " ".join(_SAAS_LADDER_TABLE_HEADER.split())
+    assert "BACKUP is the model the row names after `backup`" in header

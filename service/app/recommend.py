@@ -402,8 +402,9 @@ def _build_backup(result: dict[str, Any], access_guard: AccessGuard | None) -> B
     """Enrich the Step 7 backup name into a BackupPick that adheres to the user's
     settings: the funded surface they run it on, plus its per-surface settings at
     the SAME reasoning posture as the pick (effort is a per-user axis, applied
-    uniformly). Best-effort — platform/settings stay unset when unresolvable
-    (anon / no funding), so the client falls back to showing just the model name.
+    uniformly), or the surface and effort the pick's ``backup_plan`` names.
+    Best-effort — platform/settings stay unset when unresolvable (anon / no
+    funding), so the client falls back to showing just the model name.
 
     Called AFTER ``access_guard.enforce`` so it enriches the FINAL backup name
     (post-substitution), never a name the guard already replaced."""
@@ -411,9 +412,25 @@ def _build_backup(result: dict[str, Any], access_guard: AccessGuard | None) -> B
     if not name:
         return None
     platform = access_guard.platform_for(name) if access_guard is not None else None
+    level = _reasoning_level(result.get("settings") or {})
+    # A frontier-ladder pick carries the platform and effort the scorer runs
+    # its backup at (roadmodel >= 0.2.63): the user's subscription surface
+    # where one reaches the model, at the pick's posture. Used only while the
+    # backup is still the one it planned (the guard may have replaced it) and
+    # the user can reach the model at all.
+    plan = result.get("backup_plan")
+    if (
+        isinstance(plan, dict)
+        and canonical_model_name(plan.get("model")) == name
+        and isinstance(plan.get("platform"), str)
+        and plan["platform"]
+        and (access_guard is None or platform is not None)
+    ):
+        platform = plan["platform"]
+        if isinstance(plan.get("effort"), str) and plan["effort"]:
+            level = plan["effort"]
     settings: dict[str, Any] = {}
     if platform:
-        level = _reasoning_level(result.get("settings") or {})
         if level is not None:
             # Ultracode is a Claude-Code session mode; on a cross-provider backup
             # it reads as that surface's top effort -> Max.
