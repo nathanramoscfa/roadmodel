@@ -923,6 +923,240 @@ def rank(
 
 
 # --------------------------------------------------------------------------- #
+# The Cost / Balanced / Quality ladder, read off the operator's own frontier
+# --------------------------------------------------------------------------- #
+
+LADDER_TIERS: Final[tuple[str, ...]] = ("cost", "balanced", "quality")
+# The posture each rung's effort follows (effort_for).
+TIER_BUDGET: Final[dict[str, str]] = {"cost": "cheap", "balanced": "balanced", "quality": "best"}
+# The frontier's quality axis: the figure /models and /recommend plot.
+FRONTIER_INDEX: Final[str] = "artificial_analysis_intelligence_index"
+
+
+@dataclass(frozen=True)
+class FrontierPoint:
+    candidate: Candidate
+    aa_index: float
+    # Blended list $/1M, the price /models plots. List price, not what the
+    # operator pays: on a subscription every covered model costs them $0, which
+    # would collapse the frontier to its top model; list price is what a pick
+    # draws from a capped pool, and where the steps in capability are.
+    price_usd: float
+
+
+@dataclass(frozen=True)
+class Rung:
+    tier: str
+    point: FrontierPoint
+    effort: str
+
+    @property
+    def candidate(self) -> Candidate:
+        return self.point.candidate
+
+
+@dataclass
+class Ladder:
+    task: Task
+    frontier: list[FrontierPoint]
+    # Frontier points whose quality in the task's category meets the
+    # complexity's requirement, cheapest first.
+    adequate: list[FrontierPoint]
+    rungs: dict[str, Rung]
+
+    def to_dict(self) -> dict[str, Any]:
+        def point(p: FrontierPoint) -> dict[str, Any]:
+            c = p.candidate
+            return {
+                "model_id": c.model_id,
+                "model_name": c.model_name,
+                "platform_id": c.platform_id,
+                "platform_name": c.platform_name,
+                "aa_index": p.aa_index,
+                "price_usd": p.price_usd,
+                "list_price_usd": c.blended_price_usd,
+                "quality": c.quality,
+            }
+
+        return {
+            "task": asdict(self.task),
+            "frontier": [point(p) for p in self.frontier],
+            "adequate": [p.candidate.model_id for p in self.adequate],
+            "rungs": {t: {**point(r.point), "effort": r.effort} for t, r in self.rungs.items()},
+        }
+
+
+def frontier(candidates: list[Candidate], bench: dict[str, Any]) -> list[FrontierPoint]:
+    """The cost/quality frontier over ``candidates``, cheapest first: every
+    model that scores higher on the AA Intelligence Index than every candidate
+    at its price or less. The rule web/lib/benchmark-grid.ts paretoFrontier
+    draws on /models: a tie on price goes to the higher index, a tie on index to
+    the cheaper price. Unmeasured models have no place on it."""
+    points = [
+        FrontierPoint(c, aa, c.blended_price_usd)
+        for c in candidates
+        for aa in [_evidence(bench, c.model_id, FRONTIER_INDEX)]
+        if aa is not None
+    ]
+    points.sort(key=lambda p: (p.price_usd, -p.aa_index, p.candidate.model_id))
+    out: list[FrontierPoint] = []
+    for p in points:
+        if not out or p.aa_index > out[-1].aa_index:
+            out.append(p)
+    return out
+
+
+def ladder(
+    task: Task,
+    user_context_text: str,
+    *,
+    unavailable_models: list[str] | None = None,
+    catalog: dict[str, Any] | None = None,
+    benchmarks: dict[str, Any] | None = None,
+) -> Ladder | None:
+    """The Cost / Balanced / Quality picks for ``task``, read off the
+    operator's own cost/quality frontier.
+
+    - Pool: :func:`rank`'s candidates, every hard filter applied, one per model
+      on its best platform; the funded ones, or all of them when the
+      user-context funds nothing (an anonymous caller sees the whole catalog).
+    - Frontier: :func:`frontier` over the pool, at list price.
+    - Adequate: frontier points whose quality in the task's category meets the
+      complexity's requirement; when none does, the frontier's best for the
+      category stands alone.
+    - QUALITY is the adequate point that scores highest in the category (then
+      the higher AA Index, then the cheaper). COST is the cheapest adequate
+      point. BALANCED is the point strictly between them with the best score
+      at the balanced posture; with none between, the COST or QUALITY model at
+      the balanced posture's effort, whichever differs from both other rungs.
+    - Each rung runs at :func:`effort_for` its posture (cheap / balanced /
+      best) on its platform, so two rungs on one model differ by effort; on an
+      `uncapped` pool every free rung runs at the top effort, and two rungs on
+      one model then converge.
+
+    None when no pool model carries an AA Index (no frontier to read)."""
+    cat = catalog if catalog is not None else _cost._load_catalog()
+    bench = benchmarks if benchmarks is not None else _load_benchmarks()
+    base = Task(task.category, task.complexity, task.novel, "balanced")
+    ranking = rank(
+        base,
+        user_context_text,
+        unavailable_models=unavailable_models,
+        catalog=cat,
+        benchmarks=bench,
+    )
+    funded = [c for c in ranking.candidates if c.funding != "unfunded"]
+    front = frontier(funded or ranking.candidates, bench)
+    if not front:
+        return None
+
+    def strength(p: FrontierPoint) -> tuple[float, float, float]:
+        return (p.candidate.quality, p.aa_index, -p.price_usd)
+
+    adequate = [p for p in front if p.candidate.requirement_penalty == 0]
+    if not adequate:
+        adequate = [max(front, key=strength)]
+    top = max(adequate, key=strength)
+    span = adequate[: adequate.index(top) + 1]
+    headroom = consumption_headroom(user_context_text or "")
+
+    def rung(tier: str, p: FrontierPoint) -> Rung:
+        t = Task(task.category, task.complexity, task.novel, TIER_BUDGET[tier])
+        return Rung(tier, p, effort_for(t, headroom, p.candidate.scarcity))
+
+    def same(a: Rung, b: Rung) -> bool:
+        return a.candidate.model_id == b.candidate.model_id and a.effort == b.effort
+
+    cost_rung = rung("cost", span[0])
+    quality_rung = rung("quality", top)
+    between = span[1:-1]
+    if between:
+        balanced_rung = rung(
+            "balanced", max(between, key=lambda p: (p.candidate.score, -p.price_usd))
+        )
+    else:
+        # Two adequate points or one: BALANCED runs one of them at the balanced
+        # posture, whichever differs from both other rungs; it converges only
+        # when neither does.
+        options = [rung("balanced", span[0]), rung("balanced", top)]
+        balanced_rung = next(
+            (r for r in options if not same(r, cost_rung) and not same(r, quality_rung)),
+            options[0],
+        )
+    rungs = {"cost": cost_rung, "balanced": balanced_rung, "quality": quality_rung}
+    return Ladder(task=base, frontier=front, adequate=adequate, rungs=rungs)
+
+
+def table_keys() -> list[tuple[str, str, bool]]:
+    """Every task classification the ladder table covers: each category at each
+    complexity, plus the novel variant of a high-complexity task."""
+    return [
+        (cat, cx, novel)
+        for cat in CATEGORIES
+        for cx in COMPLEXITIES
+        for novel in ((False, True) if cx == "high" else (False,))
+    ]
+
+
+def table_key(category: str, complexity: str, novel: bool) -> str:
+    return f"{category}/{complexity}" + ("/novel" if novel and complexity == "high" else "")
+
+
+def ladder_table(
+    user_context_text: str,
+    *,
+    unavailable_models: list[str] | None = None,
+    catalog: dict[str, Any] | None = None,
+    benchmarks: dict[str, Any] | None = None,
+) -> dict[str, Ladder]:
+    """The ladder for every classification in :func:`table_keys`, keyed by
+    :func:`table_key`; a classification with no frontier is left out."""
+    cat = catalog if catalog is not None else _cost._load_catalog()
+    bench = benchmarks if benchmarks is not None else _load_benchmarks()
+    out: dict[str, Ladder] = {}
+    for category, complexity, novel in table_keys():
+        lad = ladder(
+            Task(category, complexity, novel),
+            user_context_text,
+            unavailable_models=unavailable_models,
+            catalog=cat,
+            benchmarks=bench,
+        )
+        if lad is not None:
+            out[table_key(category, complexity, novel)] = lad
+    return out
+
+
+def render_ladder_table(table: dict[str, Ladder]) -> str:
+    """The table as the engine reads it: one row per classification, each rung
+    as model, platform and effort, under the frontier it was read from."""
+    if not table:
+        return ""
+    any_ladder = next(iter(table.values()))
+    lines = [
+        "<ladder-table>",
+        "This user's cost/quality frontier (the models they can run that score higher on "
+        "the AA Intelligence Index than any they can run for less), cheapest first:",
+        "  "
+        + " < ".join(
+            f"{p.candidate.model_name} (AA {p.aa_index:g}, ${p.candidate.blended_price_usd:.2f}/1M list)"
+            for p in any_ladder.frontier
+        ),
+        "Rows: <category>/<complexity>[/novel]: COST | BALANCED | QUALITY, each "
+        "<model> @ <platform> · <effort>.",
+    ]
+    for key, lad in table.items():
+        cells = " | ".join(
+            f"{t.upper()} = {r.candidate.model_name} @ {r.candidate.platform_name} · {r.effort}"
+            for t in LADDER_TIERS
+            for r in [lad.rungs[t]]
+        )
+        lines.append(f"{key}: {cells}")
+    lines.append("</ladder-table>")
+    return "\n".join(lines)
+
+
+# --------------------------------------------------------------------------- #
 # Rendering
 # --------------------------------------------------------------------------- #
 

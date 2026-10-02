@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **/recommend's three picks are read off your own cost/quality frontier, in
+  code.** The engine used to choose the Cost, Balanced and Quality models
+  from written rules, and could name a model that a stronger one beats at
+  the same price: it put Sonnet 5 in the Cost column beside Sonnet 5.5, both
+  $2/$10 per 1M tokens. Now the scorer draws the frontier /models draws
+  (blended list price against the AA Intelligence Index) over only the
+  models the user's plans and API keys reach. It keeps the points that meet
+  the task's bar: Quality is the strongest of them for the task's category,
+  Cost the cheapest, and Balanced the best value between. When only two
+  models clear the bar, Balanced runs one of them at the balanced effort.
+  The engine classifies the task and copies its row from a table of every
+  classification's picks (28 rows), and code rewrites any pick that differs
+  from the row. A planning task of high complexity on Claude Max, ChatGPT Pro
+  and Google AI Pro now reads Sonnet 5.5 · High, Sonnet 5.5 · XHigh,
+  Opus 5.5 · XHigh. `docs/scoring-model.md` has the rules.
+- `recommend_structured_ladder` takes `scoring_context_text`: the caller's
+  user-context in the `user-context.md` table format, for a caller whose
+  prompt context is prose (the service's is).
+
 ## [0.2.58] — 2026-10-02
 
 ### Fixed

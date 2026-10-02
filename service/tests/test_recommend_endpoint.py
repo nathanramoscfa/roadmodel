@@ -1192,9 +1192,11 @@ def test_ladder_endpoint_returns_three_anchored_picks(
         max_output_tokens: int | None = None,
         thinking_budget: int | None = None,
         temperature: float | None = None,
+        scoring_context_text: str | None = None,
     ) -> dict[str, Any]:
         captured["prompt"] = prompt
         captured["max_output_tokens"] = max_output_tokens
+        captured["scoring_context_text"] = scoring_context_text
         return {
             "picks": {
                 "quality": _ladder_pick("Opus 4.8", "Claude Code", "Max"),
@@ -1227,6 +1229,9 @@ def test_ladder_endpoint_returns_three_anchored_picks(
     # but the anthropic default hint passes None (no Gemini cap). Assert the call
     # was made; cap behavior is covered by the package-level tests.
     assert captured["prompt"] == "pick a model"
+    # An anonymous request declares no access: the bundled template serves the
+    # engine and the scorer alike.
+    assert captured["scoring_context_text"] is None
 
 
 def test_ladder_endpoint_requires_bearer(monkeypatch: pytest.MonkeyPatch) -> None:

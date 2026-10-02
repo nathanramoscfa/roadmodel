@@ -17,13 +17,17 @@ from pathlib import Path
 
 import pytest
 
-from roadmodel.recommend import _SAAS_HEADER, _SAAS_LADDER_HEADER
+from roadmodel.recommend import _SAAS_HEADER, _SAAS_LADDER_HEADER, _SAAS_LADDER_TABLE_HEADER
 
 _CATALOG = json.loads((Path(__file__).resolve().parents[1] / "docs" / "catalog.json").read_text())
 _SUPERSEDED = sorted(m["name"] for m in _CATALOG["models"] if m.get("superseded_by"))
 
 
-@pytest.mark.parametrize("header", [_SAAS_HEADER, _SAAS_LADDER_HEADER], ids=["single", "ladder"])
+@pytest.mark.parametrize(
+    "header",
+    [_SAAS_HEADER, _SAAS_LADDER_HEADER, _SAAS_LADDER_TABLE_HEADER],
+    ids=["single", "ladder", "ladder-table"],
+)
 def test_headers_name_no_superseded_model(header: str) -> None:
     named = [
         name

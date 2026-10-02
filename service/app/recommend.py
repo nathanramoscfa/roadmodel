@@ -1,6 +1,7 @@
 # service/app/recommend.py
 from __future__ import annotations
 
+import inspect
 import logging
 import os
 from dataclasses import asdict
@@ -30,6 +31,7 @@ from .funding import (
     funding_guard_from_request,
     platform_dials,
     resolve_allowed_jurisdictions,
+    scoring_context_from_request,
     user_context_from_request,
 )
 from .models import BackupPick, LadderResponse, RecommendRequest, RecommendResponse
@@ -40,6 +42,13 @@ except ImportError:  # pragma: no cover - exercised only against roadmodel < 0.2
     engine_usage = None
 
 logger = logging.getLogger(__name__)
+
+# roadmodel >= 0.2.59 reads the picks off the user's own frontier, from a
+# user-context in the table format its scorer parses (scoring_context_from_request).
+# An older install takes no such argument and keeps the engine's own picks.
+_LADDER_TAKES_SCORING_CONTEXT = (
+    "scoring_context_text" in inspect.signature(recommend_structured_ladder).parameters
+)
 
 
 def _bootstrap_user_context() -> Path:
@@ -515,6 +524,13 @@ def recommend_ladder(req: RecommendRequest) -> LadderResponse:
     # package so the cross-provider backup substitution only picks a region-valid
     # fallback (0.2.20).
     allowed_jurisdictions = resolve_allowed_jurisdictions(req.context)
+    # The same declared access, in the format the package's scorer reads, so
+    # the ladder table is drawn over the models this user can run.
+    scoring_kwargs: dict[str, Any] = (
+        {"scoring_context_text": scoring_context_from_request(req.context)}
+        if _LADDER_TAKES_SCORING_CONTEXT
+        else {}
+    )
 
     for hint in _provider_chain(req.context):
         thinking_budget, max_output_tokens, temperature = _spec_for(hint).params(ladder=True)
@@ -531,6 +547,7 @@ def recommend_ladder(req: RecommendRequest) -> LadderResponse:
                 max_output_tokens=max_output_tokens,
                 thinking_budget=thinking_budget,
                 temperature=temperature,
+                **scoring_kwargs,
             )
             picks = {
                 tier: _pick_response(
