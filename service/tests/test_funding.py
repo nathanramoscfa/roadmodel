@@ -1421,6 +1421,43 @@ def test_build_backup_ignores_a_plan_for_a_backup_the_guard_replaced() -> None:
     assert b.settings == {"effort": "XHigh", "thinking": "On"}
 
 
+def test_a_substituted_pick_is_no_specialist() -> None:
+    """The specialist flag describes the model the package planned: when the
+    AccessGuard replaces the pick with another model, the flag goes."""
+    from app.recommend import _pick_response
+
+    g = _agg_guard(["claude-max"], [])
+    kept = _pick_response(
+        {
+            "model": "Haiku",
+            "platform": "Claude Code",
+            "settings": {"effort": "High", "thinking": "On"},
+            "specialist": True,
+            "specialist_category": "multimodal",
+        },
+        "read this chart",
+        None,
+        g,
+        "best",
+    )
+    assert kept.specialist is True and kept.specialist_category == "multimodal"
+    replaced = _pick_response(
+        {
+            "model": "Nano",
+            "platform": "OpenAI API",
+            "settings": {"intelligence": "High"},
+            "specialist": True,
+            "specialist_category": "multimodal",
+        },
+        "read this chart",
+        None,
+        g,
+        "best",
+    )
+    assert replaced.model != "Nano"
+    assert replaced.specialist is False and replaced.specialist_category is None
+
+
 def test_build_backup_none_and_anon() -> None:
     from app.recommend import _build_backup
 
