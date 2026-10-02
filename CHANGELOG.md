@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Sonnet 5 is superseded by Sonnet 5.5.** The two cost the same ($2/$10)
+  and Sonnet 5.5 scores higher everywhere, but the lifecycle rule only
+  retires a model when its successor is offered on every surface that offers
+  it. Sonnet 5.5 was missing from claude.ai (where Anthropic launched it on
+  2026-09-28) and from the hand-kept OpenRouter snapshot, so Sonnet 5 stayed
+  a candidate and /recommend could name it as the Cost pick beside Sonnet 5.5.
+  Both lists now include Sonnet 5.5. The OpenRouter snapshot is refreshed
+  against openrouter.ai/models as of 2026-10-02, which also adds GPT-6 Astra,
+  GPT-6.1 Sol, GPT-6 Sol, GPT-6 Luna, GLM-5.3 and GLM-5.3 Flash.
+
 ## [0.2.57] — 2026-10-02
 
 ### Fixed
