@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.62] — 2026-10-02
+
 ### Changed
 
 - **Every pick runs at its row's effort on every surface whose dial is
