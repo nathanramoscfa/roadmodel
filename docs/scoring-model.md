@@ -132,15 +132,57 @@ requirement bands to outcomes and replace the priors with measured values.
 Until then the formula is transparent about which term drove a pick, which
 is the property the prose rules could not offer.
 
+## The Cost / Balanced / Quality ladder
+
+/recommend's three picks are read off the operator's own cost/quality
+frontier, in code (`scoring.ladder`):
+
+1. **Pool.** `rank`'s candidates, every hard filter applied, one per model on
+   its best platform: the funded ones, or every candidate when the
+   user-context funds nothing (an anonymous caller).
+2. **Frontier.** Among the pool, every model that scores higher on the AA
+   Intelligence Index than every pool model at its blended list price or
+   less: the rule /models draws, over the models this operator can run.
+   List price, not the price they pay: on a subscription every covered model
+   costs them $0, which would collapse the frontier to its top model, while
+   list price is what a pick draws from a capped pool. A model the frontier
+   leaves out (the same price as a stronger one, or dearer and weaker) is
+   never a pick.
+3. **Adequate.** Frontier points whose quality in the task's category meets
+   the complexity's requirement (no requirement penalty). When none does, the
+   frontier's best for the category stands alone.
+4. **Rungs.** QUALITY is the adequate point that scores highest in the
+   category; COST is the cheapest adequate point; BALANCED is the point
+   between them with the best score at the balanced posture, or, with none
+   between, the COST or QUALITY model run at the balanced posture's effort,
+   whichever differs from both other rungs. Each rung's effort is
+   `effort_for` its posture (cheap / balanced / best), so two rungs on one
+   model differ by effort, and converge only when nothing else would serve.
+
+`ladder_table` computes the ladder for every classification (seven
+categories × three complexities, plus novel high-complexity work: 28 rows,
+about 0.4 s). In ladder mode the recommender appends the table to the prompt;
+the engine classifies the task on a `CLASSIFICATION:` line and copies its
+row's model, platform and effort into the three blocks, then writes the
+settings and rationale. `recommend_structured_ladder` checks every rung
+against the row and rewrites any that names another model or platform, so
+the picks are the table's whatever the engine writes, and text injected
+into a task can at most change its classification. The guard reports
+`mode: "frontier"`, the row, how it was found (`declared`, or `matched` from
+the picks) and the tiers rewritten. A response the table cannot place keeps
+the engine's own picks under the old tier-distinctness guard.
+
+The table needs a user-context the scorer can read (the `user-context.md`
+tables). The service writes its per-user context as prose for the engine, so
+it renders a table-format twin from the same request
+(`scoring_context_from_request`) and passes it as `scoring_context_text`.
+
 ## Integration path
 
-1. **Now** — `roadmodel score` and the `score_candidates` MCP tool are
-   advisory: run them after classifying a task to audit or override a
-   prompt-driven pick.
-2. **Next** — two-pass recommend: the engine classifies (category,
-   complexity, novel), the scorer ranks, the engine writes the rationale for
-   the scorer's primary/backup. Agreement between the prompt-driven pick and
-   the scorer's top-1 is logged; disagreement rate becomes the first outcome
-   metric.
+1. **Done** — `roadmodel score` and the `score_candidates` MCP tool rank
+   candidates for a classified task.
+2. **Done** — /recommend's ladder: the engine classifies, the scorer's
+   frontier ladder picks, the engine writes the rationale for the picks it
+   is given, and code holds it to them.
 3. **Then** — the ledger; priors → measured values; the selector prose
    shrinks to classification guidance and rationale style.

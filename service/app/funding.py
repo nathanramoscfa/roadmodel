@@ -1542,6 +1542,72 @@ def resolve_allowed_jurisdictions(context: dict[str, Any] | None) -> list[str]:
     return parsed or list(_BASELINE_JURISDICTIONS)
 
 
+def scoring_context_from_request(
+    context: dict[str, Any] | None, *, catalog: dict[str, Any] | None = None
+) -> str | None:
+    """The request's declared access in the user-context.md TABLE format that
+    the package's scorer reads (roadmodel.scoring, roadmodel.cost): Active
+    subscriptions and Active API keys as tables, the consumption headroom, the
+    allowed jurisdictions and the platform lists. ``build_user_context`` writes
+    the same facts as prose for the engine, which the scorer cannot parse;
+    this is their machine-readable twin, for the frontier ladder table. None
+    when the request declares no subscription and no API provider: the bundled
+    template then serves the engine and the scorer alike. Never raises."""
+    ctx = context or {}
+    subscriptions = set(_str_list(ctx.get("subscriptions")))
+    api_providers = sorted(set(_str_list(ctx.get("api_providers"))))
+    if not subscriptions and not api_providers:
+        return None
+    try:
+        cat = catalog if catalog is not None else load_catalog()
+        tiers: Any = cat.get("subscription_tiers", []) or []
+        sub_rows = [
+            f"| {tier['tier']} | ${tier.get('monthly_usd', 0):g} | {tier['provider']} | "
+            f"{', '.join(s for s in tier.get('surface_funded') or [] if isinstance(s, str))} |"
+            for tier in tiers
+            if isinstance(tier, dict)
+            and isinstance(tier.get("provider"), str)
+            and isinstance(tier.get("tier"), str)
+            and _tier_id(tier["provider"], tier["tier"]) in subscriptions
+        ]
+        key_rows = [f"| {provider} | Yes | |" for provider in api_providers]
+        headroom = _effective_consumption_headroom(
+            ctx.get("consumption_headroom")
+            if isinstance(ctx.get("consumption_headroom"), str)
+            else None,
+            subscriptions,
+            tiers,
+        )
+        allowed_platforms, excluded_platforms = resolve_platform_filters(ctx, catalog=cat)
+        lines = [
+            "# User Context",
+            "",
+            "## Active subscriptions",
+            "",
+            "| Subscription | Monthly | Provider | What it pays for |",
+            "| --- | --- | --- | --- |",
+            *sub_rows,
+            "",
+            "## Active API keys",
+            "",
+            "| Provider | Key present | Notes |",
+            "| --- | --- | --- |",
+            *key_rows,
+            "",
+            f"**Consumption headroom:** `{headroom}`",
+            "",
+            f"**Allowed jurisdictions:** `{', '.join(resolve_allowed_jurisdictions(ctx))}`",
+        ]
+        if allowed_platforms:
+            lines += ["", f"platforms.allowed: {', '.join(allowed_platforms)}"]
+        if excluded_platforms:
+            lines += ["", f"platforms.excluded: {', '.join(excluded_platforms)}"]
+        return "\n".join(lines) + "\n"
+    except Exception:  # noqa: BLE001 - the scorer's context is best-effort, never fatal
+        logger.warning("scoring context build failed (non-fatal)", exc_info=True)
+        return None
+
+
 def user_context_from_request(context: dict[str, Any] | None) -> str | None:
     """Build the per-user user-context from a RecommendRequest.context dict.
 
