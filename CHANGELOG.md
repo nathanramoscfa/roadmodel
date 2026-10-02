@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The three picks stay distinct.** When two adjacent picks land on the same
+  model and platform, the lower one now runs at least one effort level below
+  the one above, so the Cost, Balanced and Quality columns always offer a
+  choice. A novel high-complexity planning task used to read Sonnet 5.5 ·
+  XHigh twice; it now reads Sonnet 5.5 · High, Sonnet 5.5 · XHigh,
+  Opus 5.5 · XHigh, and a row with one adequate model runs it at three
+  efforts. Picks still converge at the dial's lowest level, and on an
+  `uncapped` plan, where a lower effort saves nothing.
+- **`novel` means research-grade work.** The ladder prompt now defines a
+  novel task as an open problem, a new algorithm or a multi-step proof, and
+  classes planning, architecture, security hardening, design and refactors as
+  routine at any difficulty. The engine had flipped an ordinary planning task
+  between the two run to run.
+
 ## [0.2.60] — 2026-10-02
 
 ### Fixed
