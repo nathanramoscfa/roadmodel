@@ -122,6 +122,16 @@ The sections below mirror
 [`user-context.example.md`](user-context.example.md) one-to-one so
 the two docs can be read side-by-side.
 
+**Describe access, not models.** Write down what you pay for, which keys
+you hold, how your usage pools are doing, and how you like to work. Leave
+model versions out: the catalog decides which models qualify and keeps up
+with every release, so "route Gemini work to Gemini 3.1 Pro" goes stale the
+day a successor supersedes it, while "route Gemini work to Antigravity"
+does not. Name a model family (Opus, Sonnet) only to state a preference;
+the selector reads it as that family's newest model the catalog does not
+mark superseded. The one place a model id belongs is the Local models
+section, which records what you have actually pulled.
+
 ### Active subscriptions
 
 A Markdown table of every AI subscription you currently pay for, with
