@@ -156,15 +156,27 @@ frontier, in code (`scoring.ladder`):
    between them with the best score at the balanced posture, or, with none
    between, the COST or QUALITY model run at the balanced posture's effort,
    whichever differs from both other rungs. Each rung's effort is
-   `effort_for` its posture (cheap / balanced / best), so two rungs on one
-   model differ by effort, and converge only when nothing else would serve.
+   `effort_for` its posture (cheap / balanced / best).
+5. **Distinct picks.** When two adjacent rungs name the same model on the
+   same platform, the lower one runs at least one effort level below the one
+   above: BALANCED at most one level under QUALITY, then COST at most one
+   level under BALANCED. Three columns that read the same offer no choice,
+   and on a capped pool a lower effort is a real, cheaper option. Two rungs
+   converge in two cases: at the dial's lowest level, and on an `uncapped`
+   free path, where a lower effort saves the operator nothing (their declared
+   flat-funding posture). A novel high-complexity planning task on Claude
+   Max, ChatGPT Pro and Google AI Pro reads Sonnet 5.5 · High, Sonnet 5.5 ·
+   XHigh, Opus 5.5 · XHigh; a row with one adequate model (knowledge, high,
+   novel) runs it at three efforts.
 
 `ladder_table` computes the ladder for every classification (seven
 categories × three complexities, plus novel high-complexity work: 28 rows,
 about 0.4 s). In ladder mode the recommender appends the table to the prompt;
 the engine classifies the task on a `CLASSIFICATION:` line and copies its
 row's model, platform and effort into the three blocks, then writes the
-settings and rationale. `recommend_structured_ladder` checks every rung
+settings and rationale. `novel` covers research-grade work only (an open
+problem, a new algorithm, a multi-step proof); planning, architecture,
+security hardening, design and refactors are `routine` at any difficulty. `recommend_structured_ladder` checks every rung
 against the row and rewrites any that names another model or platform, so
 the picks are the table's whatever the engine writes, and text injected
 into a task can at most change its classification. The guard reports
