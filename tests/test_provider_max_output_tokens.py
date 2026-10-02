@@ -203,19 +203,16 @@ def test_anthropic_never_sends_a_thinking_token_budget(monkeypatch: pytest.Monke
     assert "thinking_config" not in captured
 
 
-def test_anthropic_forwards_temperature_only_where_sampling_exists(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Recommender determinism (#176) on the models that take sampling (the
-    default Sonnet 4.6, Haiku 4.5); Sonnet 5 and Opus 4.7+ reject it with a 400,
-    so it is dropped there."""
+def test_anthropic_never_sends_temperature(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The anthropic SDK removed `temperature` from messages.create in 1.0 (a
+    TypeError before any request: it took every Claude engine down in
+    production), and current Claude models reject sampling anyway."""
     _install_anthropic_fake(monkeypatch)
-    anthropic_provider.recommend("prompt", "system", api_key="key", temperature=0.0)
-    assert _FakeAnthropicClient.captured["temperature"] == 0.0
-    anthropic_provider.recommend(
-        "prompt", "system", api_key="key", model="claude-sonnet-5", temperature=0.0
-    )
-    assert "temperature" not in _FakeAnthropicClient.captured
+    for model in ("claude-haiku-4-5", "claude-sonnet-4-6", "claude-sonnet-5", "claude-opus-5-5"):
+        anthropic_provider.recommend(
+            "prompt", "system", api_key="key", model=model, temperature=0.0
+        )
+        assert "temperature" not in _FakeAnthropicClient.captured
 
 
 # --------------------------------------------------------------------- openai
