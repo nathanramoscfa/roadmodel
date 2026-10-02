@@ -1,9 +1,9 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-10-02T02:50:29Z",
+  "generated_at_utc": "2026-10-02T15:35:10Z",
   "source_doc_sha256": {
-    "model-selector.txt": "64998c7c21759d3b13f71908e5c51e3db4c95e1bae39efd5a3e391381b01a572",
+    "model-selector.txt": "05f33e72f22a3895f49a198478bff74c65782ca66f65405b9ce3682a2b659fc8",
     "model-tier-cost-scale.md": "2b3b0eb82237eb5cb5bf468a3fe971bcaf0160ad7d0bc700698d2c16640bc41d"
   },
   "models": [
@@ -151,11 +151,11 @@
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 38.2 (adaptive max); Terminal-Bench 2.1 80.5; \u03c4\u00b2-bench banking pass_1 37.3%; native 1M context",
       "pricing_notes": "Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge); Uses an updated tokenizer, so the same input can map to more tokens",
-      "best_for": "Strong coding, planning, agentic work, multimodal input and long context at a medium price. Its AA Intelligence Index of 38.2 ranks 24th of 54 measured models.",
-      "superseded_by": null,
-      "superseded_on": null,
+      "best_for": "Strong coding, planning, agentic work, multimodal input and long context at a medium price. Its AA Intelligence Index of 38.2 ranks 24th of 54 measured models. Superseded by Sonnet 5.5.",
+      "superseded_by": "claude-sonnet-5-5",
+      "superseded_on": "2026-10-02",
       "added_on": null,
-      "retires_on": null
+      "retires_on": "2026-11-01"
     },
     {
       "id": "claude-sonnet-5-5",
@@ -1538,6 +1538,7 @@
         "claude-opus-5",
         "claude-opus-5-5",
         "claude-sonnet-5",
+        "claude-sonnet-5-5",
         "opus-4.7",
         "opus-4.8",
         "sonnet-4.6"
@@ -1853,6 +1854,7 @@
         "claude-opus-5",
         "claude-opus-5-5",
         "claude-sonnet-5",
+        "claude-sonnet-5-5",
         "codestral",
         "deepseek-flash",
         "deepseek-v4-pro",
@@ -1866,6 +1868,8 @@
         "glm-4.5-air",
         "glm-4.6",
         "glm-5.2",
+        "glm-5.3",
+        "glm-5.3-flash",
         "gpt-5",
         "gpt-5-mini",
         "gpt-5.1-codex",
@@ -1881,6 +1885,10 @@
         "gpt-5.6-luna",
         "gpt-5.6-sol",
         "gpt-5.6-terra",
+        "gpt-6-astra",
+        "gpt-6-luna",
+        "gpt-6-sol",
+        "gpt-6.1-sol",
         "gpt-oss-120b",
         "gpt-oss-20b",
         "grok-4.3",
@@ -1898,7 +1906,7 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
-      "best_for": "Per-token AGGREGATOR that resells other makers' models behind one OpenAI-format endpoint and one key (openrouter.ai) \u2014 like Cursor's pool but paid per call, not a subscription. Reaches most of the catalog: supports-models is a POINT-IN-TIME snapshot of openrouter.ai/models at authoring (2026-09-20; absent: composer-2.5 which is Cursor-only, gemini-3-pro which OpenRouter serves only as an image endpoint, mistral-large-3 which it serves only as a batch endpoint) that the operator should trust LESS than a provider-direct method \u2014 prefer the maker's own method when the operator holds that key. BILLING: OpenRouter charges the maker's list price plus its platform fee (~5% on credit purchases at authoring), so the catalog price is a FLOOR for this method, never an exact estimate. ROUTING: a request may be served by any of OpenRouter's upstream hosts for that model; the MODEL-level jurisdiction filter (Step 0b) still governs which models are eligible, and this method's `us` code is OpenRouter's own (the operator's counterparty), NOT the upstream host's. Exposes the maker's reasoning dial where the routed model documents one (`reasoning_effort` on OpenAI / gpt-oss / GLM / DeepSeek families). Never the maker of any model it resells: the cross-provider BACKUP guard resolves makers through provider-direct methods, exactly as it does for Cursor."
+      "best_for": "Per-token AGGREGATOR that resells other makers' models behind one OpenAI-format endpoint and one key (openrouter.ai) \u2014 like Cursor's pool but paid per call, not a subscription. Reaches most of the catalog: supports-models is a POINT-IN-TIME snapshot of openrouter.ai/models at authoring (refreshed 2026-10-02; absent: composer-2.5 which is Cursor-only, gemini-3-pro which OpenRouter serves only as an image endpoint, mistral-large-3 which it serves only as a batch endpoint) that the operator should trust LESS than a provider-direct method \u2014 prefer the maker's own method when the operator holds that key. BILLING: OpenRouter charges the maker's list price plus its platform fee (~5% on credit purchases at authoring), so the catalog price is a FLOOR for this method, never an exact estimate. ROUTING: a request may be served by any of OpenRouter's upstream hosts for that model; the MODEL-level jurisdiction filter (Step 0b) still governs which models are eligible, and this method's `us` code is OpenRouter's own (the operator's counterparty), NOT the upstream host's. Exposes the maker's reasoning dial where the routed model documents one (`reasoning_effort` on OpenAI / gpt-oss / GLM / DeepSeek families). Never the maker of any model it resells: the cross-provider BACKUP guard resolves makers through provider-direct methods, exactly as it does for Cursor."
     },
     {
       "id": "xai-api",
