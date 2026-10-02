@@ -1,14 +1,17 @@
 // web/components/ModelsExplorer.tsx
 //
-// The /models page's interactive half: the catalog table, the frontier chart
-// and the Score charts, driven by ONE set of filters. Provider, Jurisdiction
-// (a checkbox per code, all checked to start), Weights (All, Open, Closed) and
-// Cost tier are set in the table's controls and applied to all three, so
-// unchecking CN leaves the US + EU models in the table and in every chart, and
-// Open leaves only the models you could run yourself. The table's Group by
-// switch lives here too, since the charts read it: grouped by quality, the
-// frontier chart marks the table's ten-point AA Index bands, and the Score
-// charts, one per cost tier either way, say why they stay by tier.
+// The /models page's interactive half, in reading order: the filters, the
+// frontier chart (the whole market on one chart), the catalog table (its rows
+// scroll in their own box), then the Score charts that take the frontier apart
+// tier by tier. ONE set of filters drives all three: Provider, Jurisdiction (a
+// checkbox per code, all checked to start), Weights (All, Open, Closed) and
+// Cost tier sit in the bar at the top (CatalogFilterBar), so unchecking CN
+// leaves the US + EU models in the table and in every chart, and Open leaves
+// only the models you could run yourself, with the chart that changes right
+// under the control. The table's Group by switch keeps its state here too,
+// since the charts read it: grouped by quality, the frontier chart marks the
+// table's ten-point AA Index bands, and the Score charts, one per cost tier
+// either way, say why they stay by tier.
 //
 // The page remembers them (lib/models-prefs): the server reads the saved
 // choices from a cookie and passes them in, so the first render is already
@@ -39,6 +42,7 @@ import {
   type Grouping,
   type ModelsPrefs,
 } from "@/lib/models-prefs";
+import { CatalogFilterBar } from "./CatalogFilterBar";
 import type { ChartFilter } from "./chart-kit";
 import { FrontierChart } from "./FrontierChart";
 import { ModelCatalog } from "./ModelCatalog";
@@ -98,12 +102,19 @@ export function ModelsExplorer({
   return (
     <FrontierScope.Provider value={scope}>
       <div className="space-y-8">
-        <ModelCatalog
+        {/* The filters, then the frontier (the whole market on one chart)
+            right under them, then the table, then the Score charts that take
+            the frontier apart tier by tier. */}
+        <CatalogFilterBar
           models={models}
-          shown={shown}
           filters={filters}
           jurisdictions={jurisdictions}
           onFiltersChange={changeFilters}
+        />
+        <FrontierChart rows={shown} pool={pool} fit={scoreFit} filter={chartFilter} grouping={grouping} />
+        <ModelCatalog
+          models={models}
+          shown={shown}
           filterSummary={summary}
           onClearFilters={clear}
           scope={scope}
@@ -115,9 +126,6 @@ export function ModelsExplorer({
           onGroupChoiceChange={changeGrouping}
           initialView={prefs.view}
         />
-        {/* The frontier first (the whole market on one chart), then the Score
-            charts that take it apart tier by tier. */}
-        <FrontierChart rows={shown} pool={pool} fit={scoreFit} filter={chartFilter} grouping={grouping} />
         <ScoreCharts rows={shown} pool={pool} fit={scoreFit} filter={chartFilter} grouping={grouping} />
       </div>
     </FrontierScope.Provider>

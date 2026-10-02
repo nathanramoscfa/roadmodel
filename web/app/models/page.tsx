@@ -29,22 +29,19 @@ export default async function ModelsPage() {
           Model catalog
         </h1>
         <p className="mt-3 text-brand-slate-600 dark:text-brand-slate-300">
-          Every model roadmodel recommends from — with pricing, the per-category{" "}
-          <strong>S&nbsp;&rarr;&nbsp;D</strong> ratings, and one uniform set of numbers under
-          them: Artificial Analysis&rsquo;s independently measured benchmarks, the same test on
-          the same scale for every model, refreshed daily. A rating is a class several models can
-          share; the figures separate them within it. Sort any column, filter by provider,
-          jurisdiction, open or closed weights, or cost (the charts below follow the same
-          filters), switch to the full benchmark grid, and hover any label for its definition
-          and source. The page remembers your filters, grouping and view in this browser for
-          your next visit.
+          Every model roadmodel recommends from: its price, its{" "}
+          <strong>S&nbsp;&rarr;&nbsp;D</strong> rating in each category, and Artificial
+          Analysis&rsquo;s benchmark scores, measured the same way for every model and refreshed
+          daily. The filters drive the charts and the table and stay set for your next visit;
+          hover any label for its definition and source.
         </p>
       </header>
 
-      {/* Most used first: the catalog itself, then the frontier drawn across
-          every model, then the charts that explain its Score column tier by
-          tier (all three under the table's filters), then the full key (the
-          table's caption links to it). */}
+      {/* Overview first: the filters, the frontier drawn across every model
+          right under them, the catalog table (its rows scroll in their own
+          box), then the charts that explain its Score column tier by tier
+          (all three under the same filters), then the full key (the table's
+          caption links to it). */}
       <div className="mt-10 space-y-8">
         <ModelsExplorer
           models={models}
