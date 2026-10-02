@@ -23,23 +23,6 @@ def _generation(model_id: str) -> tuple[str, tuple[int, int]] | None:
     return match["family"], (int(match["major"]), int(match["minor"] or 0))
 
 
-def _takes_sampling(model_id: str) -> bool:
-    """Whether the model still accepts `temperature`. Sonnet 5, Opus 4.7 and
-    later, and the Fable/Mythos line reject sampling parameters with a 400; an
-    id this cannot read is sent without it, the safe side of that 400."""
-    gen = _generation(model_id)
-    if gen is None:
-        return False
-    family, version = gen
-    if family == "haiku":
-        return True
-    if family == "sonnet":
-        return version < (5, 0)
-    if family == "opus":
-        return version < (4, 7)
-    return False
-
-
 def _takes_effort(model_id: str) -> bool:
     """Whether the model accepts output_config.effort: Opus 4.5 and later,
     Sonnet 4.6 and later, and the Fable/Mythos line. Haiku 4.5 rejects it."""
@@ -113,9 +96,10 @@ def recommend(
     # the documented way to make it brief.
     if thinking_budget is not None and _takes_effort(model_id):
         kwargs["output_config"] = {"effort": "low"}
-    # Recommender determinism (#176), on the models that still take sampling.
-    if temperature is not None and _takes_sampling(model_id):
-        kwargs["temperature"] = temperature
+    # `temperature` (the Gemini determinism knob, #176) is never sent: the
+    # anthropic SDK removed the parameter in 1.0 (a TypeError before any
+    # request), and Sonnet 5, Opus 4.7+ and Fable reject sampling anyway.
+    _ = temperature
 
     try:
         client = Anthropic(api_key=api_key)
