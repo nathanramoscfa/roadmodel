@@ -391,13 +391,28 @@ jobs:
           fi
           git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
           git commit -m "Automated catalog refresh: ${DATE}" -m "${summary}${warnings}"
-          git push -u origin "$BRANCH"
-          PR_URL="$(gh pr create \
-            --base main \
-            --head "$BRANCH" \
-            --title "Automated catalog refresh: ${DATE}" \
-            --body "$(printf '## Summary\n\n%s%s\n\n---\n\nThis PR was opened automatically by the daily catalog-refresh cron in `.github/workflows/update-models.yml`. **Human review required before merge (audit L4):** the catalog carries free-text prose fields (best-for, notes, pricing-notes) sourced from external provider pages that the deterministic gates (G4 price provenance, conformance A-F, schema tests) do NOT fully constrain — so a compromised/MITM-d page could inject prose that ships to the published selector + live recommender. Review the diff (especially prose changes), then squash-merge: `gh pr merge --squash --delete-branch <PR>`.' "$summary" "$warnings")")"
-          echo "Opened (awaiting human review): $PR_URL"
+          body="$(printf '## Summary\n\n%s%s\n\n---\n\nThis PR was opened automatically by the daily catalog-refresh cron in `.github/workflows/update-models.yml`. **Human review required before merge (audit L4):** the catalog carries free-text prose fields (best-for, notes, pricing-notes) sourced from external provider pages that the deterministic gates (G4 price provenance, conformance A-F, schema tests) do NOT fully constrain — so a compromised/MITM-d page could inject prose that ships to the published selector + live recommender. Review the diff (especially prose changes), then squash-merge: `gh pr merge --squash --delete-branch <PR>`.' "$summary" "$warnings")"
+          # A same-day re-run (a dispatch after the scheduled run) finds the day's
+          # branch already on origin: its fresher refresh replaces that one, and
+          # the open PR for the branch takes the new body. A plain push would be
+          # refused as non-fast-forward and the re-run would open nothing.
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            git push --force -u origin "$BRANCH"
+          else
+            git push -u origin "$BRANCH"
+          fi
+          PR_URL="$(gh pr list --head "$BRANCH" --state open --json url -q '.[0].url' || true)"
+          if [ -n "${PR_URL}" ]; then
+            gh pr edit "${PR_URL}" --body "${body}"
+            echo "Refreshed (awaiting human review): $PR_URL"
+          else
+            PR_URL="$(gh pr create \
+              --base main \
+              --head "$BRANCH" \
+              --title "Automated catalog refresh: ${DATE}" \
+              --body "${body}")"
+            echo "Opened (awaiting human review): $PR_URL"
+          fi
           # Auto-merge intentionally NOT enabled (audit L4): the catalog's
           # free-text prose fields are not covered by the deterministic gates,
           # so a human reviews the diff before this reaches main + PyPI + the

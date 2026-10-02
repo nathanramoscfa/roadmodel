@@ -257,3 +257,19 @@ def test_the_catalog_cron_syncs_openrouter_and_flags_lasting_near_misses() -> No
     )
     selector = (REPO_ROOT / "docs" / "model-selector.txt").read_text()
     assert "synced daily from openrouter.ai/models" in selector
+
+
+def test_a_same_day_rerun_refreshes_the_days_open_pr() -> None:
+    # A dispatch after the scheduled run finds the day's branch on origin; a
+    # plain push was refused and the re-run opened nothing.
+    wf = (REPO_ROOT / ".github" / "workflows" / "update-models.yml").read_text()
+    assert 'git ls-remote --exit-code --heads origin "$BRANCH"' in wf
+    assert 'git push --force -u origin "$BRANCH"' in wf
+    assert 'gh pr list --head "$BRANCH" --state open' in wf
+    assert 'gh pr edit "${PR_URL}" --body "${body}"' in wf
+    # The human-review gate stays: nothing in the catalog cron merges its PR.
+    assert "gh pr merge" not in "\n".join(
+        line
+        for line in wf.splitlines()
+        if not line.lstrip().startswith("#") and "squash-merge:" not in line
+    )
