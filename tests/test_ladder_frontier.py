@@ -21,6 +21,7 @@ scaled over 20..58, plus 0.3 x the letter:
 
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 from typing import Any
@@ -76,6 +77,7 @@ CATALOG: dict[str, Any] = {
             "provider_jurisdiction": "us",
             "billing": "subscription-or-key",
             "supports_models": ["sonnet", "sonnet-old", "opus"],
+            "effort_levels": ["low", "medium", "high", "xhigh", "max"],
         },
         {
             "id": "codex-cli",
@@ -84,6 +86,7 @@ CATALOG: dict[str, Any] = {
             "provider_jurisdiction": "us",
             "billing": "subscription-or-key",
             "supports_models": ["lite", "luna", "astra"],
+            "effort_levels": ["low", "medium", "high", "xhigh", "max", "ultra"],
         },
     ],
     "subscription_tiers": [
@@ -576,7 +579,135 @@ def test_ultracode_stands_where_the_row_says_max(
     )
     monkeypatch.setattr(recommend_module, "recommend_ladder", fake)
     result = recommend_structured_ladder("plan a release", _config(tmp_path))
-    assert result["guard"]["effort_set"] == []
+    # Codex documents its dial too, so its row's max is set there; Ultracode
+    # stands on Claude Code alone.
+    assert result["guard"]["effort_set"] == ["cost"]
     assert result["picks"]["quality"]["settings"]["effort"] == "Ultracode"
-    # Codex is not set by code: its dial has its own words.
+    assert result["picks"]["cost"]["settings"]["intelligence"] == "Max"
+
+
+# --------------------------------------------------------------------------- #
+# Native effort levels: each surface's own dial, from the catalog
+# --------------------------------------------------------------------------- #
+
+
+def _with_levels(method_id: str, **fields: Any) -> dict[str, Any]:
+    """CATALOG with one access method's effort fields replaced (a field set
+    to None is removed)."""
+    cat = copy.deepcopy(CATALOG)
+    method = next(m for m in cat["access_methods"] if m["id"] == method_id)
+    for key, value in fields.items():
+        if value is None:
+            method.pop(key, None)
+        else:
+            method[key] = value
+    return cat
+
+
+# Gemini's dial for one model, documented per model: low / medium / high.
+GEMINI_LIKE = _with_levels(
+    "codex-cli",
+    effort_levels=["minimal", "low", "medium", "high"],
+    effort_levels_by_model={"astra": ["low", "medium", "high"], "luna": ["minimal", "high"]},
+)
+
+
+@pytest.mark.parametrize(
+    ("platform", "model", "level", "native"),
+    [
+        ("claude-code", "opus", "xhigh", "xhigh"),
+        ("claude-code", "opus", "Extra high", "xhigh"),
+        ("claude-code", "sonnet", "max", "max"),
+        ("codex-cli", "astra", "medium", "medium"),
+        # No xhigh or max on the dial: the highest level below it.
+        ("codex-cli", "astra", "xhigh", "high"),
+        ("codex-cli", "astra", "max", "high"),
+        # medium is missing too; minimal sits below low.
+        ("codex-cli", "luna", "medium", "minimal"),
+        ("codex-cli", "luna", "low", "minimal"),
+        # The docs distinguish models and leave this one out: no dial.
+        ("codex-cli", "lite", "high", None),
+        ("no-such-surface", "opus", "high", None),
+    ],
+)
+def test_native_level(platform: str, model: str, level: str, native: str | None) -> None:
+    assert scoring.native_level(platform, model, level, catalog=GEMINI_LIKE) == native
+
+
+def test_below_the_lowest_native_level_the_lowest_stands() -> None:
+    cat = _with_levels("codex-cli", effort_levels=["high", "max"])
+    assert scoring.native_level("codex-cli", "luna", "low", catalog=cat) == "high"
+
+
+def test_a_surface_without_documented_levels_has_no_native_level() -> None:
+    cat = _with_levels("codex-cli", effort_levels=None)
+    assert scoring.native_level("codex-cli", "luna", "high", catalog=cat) is None
+    lad = scoring.ladder(scoring.Task("planning", "medium"), BOTH, catalog=cat, benchmarks=BENCH)
+    assert lad is not None
+    assert lad.rungs["cost"].native is None
+    assert lad.rungs["cost"].level == "medium"
+
+
+def test_two_scorer_levels_on_one_native_level_are_told_apart_natively() -> None:
+    # ChatGPT Pro alone, novel planning: Astra takes every rung. The scorer
+    # asks xhigh of all three, which this dial reads as high, so BALANCED steps
+    # to medium and COST to low on the dial itself.
+    lad = scoring.ladder(
+        scoring.Task("planning", "high", True),
+        _context([PRO]),
+        catalog=GEMINI_LIKE,
+        benchmarks=BENCH,
+    )
+    assert lad is not None
+    assert {t: (r.candidate.model_name, r.native) for t, r in lad.rungs.items()} == {
+        "cost": ("Astra", "low"),
+        "balanced": ("Astra", "medium"),
+        "quality": ("Astra", "high"),
+    }
+    text = scoring.render_ladder_table({"planning/high/novel": lad})
+    assert (
+        "planning/high/novel: COST = Astra @ Codex · low | BALANCED = Astra @ Codex · medium"
+        " | QUALITY = Astra @ Codex · high"
+    ) in text
+    assert lad.to_dict()["rungs"]["quality"]["native_effort"] == "high"
+
+
+def test_every_documented_dial_gets_the_rows_level_in_its_own_words(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    table = scoring.ladder_table(_context([PRO]), catalog=GEMINI_LIKE, benchmarks=BENCH)
+    monkeypatch.setattr(recommend_module, "_ladder_table_for", lambda *_a, **_k: table)
+    fake, _ = _fake(
+        {
+            "quality": _block("Astra", "Codex", "XHigh", "planning/high/novel"),
+            "balanced": _block("Astra", "Codex", "XHigh", "planning/high/novel"),
+            "cost": _block("Astra", "Codex", "Low", "planning/high/novel"),
+        }
+    )
+    monkeypatch.setattr(recommend_module, "recommend_ladder", fake)
+    result = recommend_structured_ladder("plan a release", _config(tmp_path))
+    assert result["guard"]["effort_set"] == ["quality", "balanced"]
+    assert {t: p["settings"] for t, p in result["picks"].items()} == {
+        "quality": {"intelligence": "High"},
+        "balanced": {"intelligence": "Medium"},
+        "cost": {"intelligence": "Low"},
+    }
+
+
+def test_a_surface_without_documented_levels_keeps_the_engines_mapping(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    cat = _with_levels("codex-cli", effort_levels=None)
+    table = scoring.ladder_table(BOTH, catalog=cat, benchmarks=BENCH)
+    monkeypatch.setattr(recommend_module, "_ladder_table_for", lambda *_a, **_k: table)
+    fake, _ = _fake(
+        {
+            "quality": _block("Opus", "Claude Code", "XHigh", "planning/medium"),
+            "balanced": _block("Sonnet", "Claude Code", "High", "planning/medium"),
+            "cost": _block("Luna", "Codex", "High", "planning/medium"),
+        }
+    )
+    monkeypatch.setattr(recommend_module, "recommend_ladder", fake)
+    result = recommend_structured_ladder("plan a release", _config(tmp_path))
+    assert result["guard"]["effort_set"] == []
     assert result["picks"]["cost"]["settings"]["intelligence"] == "High"

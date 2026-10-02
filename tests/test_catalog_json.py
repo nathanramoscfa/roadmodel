@@ -143,8 +143,9 @@ def test_schema_top_level_keys() -> None:
     assert not missing, f"catalog.json missing top-level keys: {missing}"
     assert not extra, f"catalog.json has unexpected top-level keys: {extra}"
     # 3 since the method elements gained `exposes_orchestration` and the
-    # document gained `output_contract_version` (output-contract v2).
-    assert catalog["schema_version"] == "3"
+    # document gained `output_contract_version` (output-contract v2); 4 since
+    # a method gained `effort_levels` / `effort_levels_by_model`.
+    assert catalog["schema_version"] == "4"
     assert isinstance(catalog["output_contract_version"], int)
     assert isinstance(catalog["models"], list) and catalog["models"]
     assert isinstance(catalog["access_methods"], list) and catalog["access_methods"]
@@ -483,3 +484,98 @@ def test_every_selector_consumer_survives_prose_angle_brackets() -> None:
     hit = selector_re.model_element_re("gpt-5.6-sol").search(selector)
     assert hit is not None, "the federation overlay cannot find the element"
     assert hit.group(0).count("<model") == 1, "matched across an element boundary"
+
+
+# --- Effort dials: read only from the trackers' snapshots of each surface's docs ---
+
+
+def _snapshot(name: str) -> dict:
+    return json.loads((REPO_ROOT / "update" / name).read_text())
+
+
+def _methods() -> dict[str, dict]:
+    return {m["id"]: m for m in _load_catalog()["access_methods"]}
+
+
+def test_effort_levels_come_from_the_tracker_snapshots() -> None:
+    gen = _load_generator()
+    methods = _methods()
+    names = {m["id"]: m["name"] for m in _load_catalog()["models"]}
+    for filename, method_ids, levels_key, per_model_key in gen.EFFORT_SOURCES:
+        snap = _snapshot(filename)
+        levels = sorted(set(snap[levels_key]), key=gen.LEVEL_ORDER.index)
+        for method_id in method_ids:
+            method = methods[method_id]
+            assert method["effort_levels"] == levels, method_id
+            if per_model_key is None:
+                assert "effort_levels_by_model" not in method
+                continue
+            by_model = method["effort_levels_by_model"]
+            for model_id, model_levels in by_model.items():
+                assert model_id in method["supports_models"]
+                assert model_levels == snap[per_model_key][names[model_id]], model_id
+
+
+def test_known_dials_read_as_their_docs_say() -> None:
+    methods = _methods()
+    assert methods["claude-code"]["effort_levels"] == ["low", "medium", "high", "xhigh", "max"]
+    # DeepSeek's docs table reads high, max, low: the catalog stores lowest first.
+    assert methods["deepseek-api"]["effort_levels"] == ["low", "high", "max"]
+    assert methods["codex-cli"]["effort_levels"] == methods["codex-api"]["effort_levels"]
+    assert methods["google-api"]["effort_levels_by_model"]["gemini-3.8-flash"] == [
+        "low",
+        "medium",
+        "high",
+    ]
+
+
+def test_a_method_no_snapshot_documents_has_no_effort_levels() -> None:
+    gen = _load_generator()
+    documented = {mid for _f, ids, _l, _p in gen.EFFORT_SOURCES for mid in ids}
+    for method_id, method in _methods().items():
+        if method_id not in documented:
+            assert "effort_levels" not in method, method_id
+            assert "effort_levels_by_model" not in method, method_id
+    assert "antigravity" not in documented
+
+
+def test_effort_levels_fail_open(tmp_path: Path) -> None:
+    gen = _load_generator()
+    models = [{"id": "m1", "name": "Model One"}, {"id": "m2", "name": "Claude Model Two"}]
+
+    def methods() -> list[dict]:
+        return [
+            {"id": mid, "supports_models": ["m1", "m2"]}
+            for _f, ids, _l, _p in gen.EFFORT_SOURCES
+            for mid in ids
+        ]
+
+    # No snapshots at all: every method keeps its shape.
+    bare = methods()
+    gen._attach_effort_levels(bare, models, tmp_path)
+    assert all("effort_levels" not in m for m in bare)
+
+    # A level word LEVEL_ORDER cannot place leaves that dial undocumented, a
+    # model-dependent xhigh leaves Codex undocumented, and a per-model map
+    # names models by display name, with or without a "Claude" prefix.
+    (tmp_path / "deepseek-thinking.json").write_text(
+        json.dumps({"reasoning_effort": ["high", "turbo"]})
+    )
+    (tmp_path / "codex-reasoning.json").write_text(
+        json.dumps({"reasoning_effort": ["low", "high"], "xhigh_model_dependent": True})
+    )
+    (tmp_path / "claude-code-effort.json").write_text(
+        json.dumps(
+            {
+                "effort_levels": ["max", "Low", "Extra high"],
+                "per_model_effort": {"Model Two": ["low", "max"], "Unknown": ["low"]},
+            }
+        )
+    )
+    out = methods()
+    gen._attach_effort_levels(out, models, tmp_path)
+    by_id = {m["id"]: m for m in out}
+    assert "effort_levels" not in by_id["deepseek-api"]
+    assert "effort_levels" not in by_id["codex-cli"]
+    assert by_id["claude-code"]["effort_levels"] == ["low", "xhigh", "max"]
+    assert by_id["claude-code"]["effort_levels_by_model"] == {"m2": ["low", "max"]}

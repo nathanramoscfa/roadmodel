@@ -79,6 +79,21 @@ CATEGORIES: Final[tuple[str, ...]] = (
 COMPLEXITIES: Final[tuple[str, ...]] = ("low", "medium", "high")
 BUDGETS: Final[tuple[str, ...]] = ("cheap", "balanced", "best")
 EFFORT_LADDER: Final[tuple[str, ...]] = ("low", "medium", "high", "xhigh", "max")
+# Level names across every documented effort dial, lowest first: the scorer's
+# five plus the words some surfaces add below or above them (Gemini's
+# `minimal`, Codex's `ultra`). Orders and compares native levels; each
+# surface's own list comes from the catalog's `effort_levels`, which
+# update/build_catalog.py reads from the trackers' snapshots of its docs.
+LEVEL_ORDER: Final[tuple[str, ...]] = (
+    "none",
+    "minimal",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+    "max",
+    "ultra",
+)
 
 # The Artificial Analysis evidence figure per category. For the five derived
 # categories it is the evidence update/derive_ratings.py letters from, and the
@@ -621,6 +636,71 @@ def effort_for(task: Task, headroom: str, scarcity: float) -> str:
     return EFFORT_LADDER[rung]
 
 
+def normalize_level(value: str) -> str:
+    """An effort level name compared case- and spacing-free: "XHigh",
+    "x-high" and "Extra high" are all ``xhigh``."""
+    level = re.sub(r"[\s_-]+", "", value.strip().lower())
+    return {"extrahigh": "xhigh"}.get(level, level)
+
+
+def native_levels(
+    platform: str, model: str, *, catalog: dict[str, Any] | None = None
+) -> list[str] | None:
+    """The levels ``platform``'s effort dial offers for ``model``, lowest
+    first, as the catalog records them from that surface's own docs: the
+    method's ``effort_levels_by_model`` entry where its docs distinguish
+    models (a model they leave out has no documented dial), else its
+    ``effort_levels``. None when the catalog documents no dial; the engine
+    then maps the scorer's level to the surface itself."""
+    cat = catalog if catalog is not None else _cost._load_catalog()
+    for method in cat.get("access_methods", []):
+        if not isinstance(method, dict) or method.get("id") != platform:
+            continue
+        by_model = method.get("effort_levels_by_model")
+        levels = by_model.get(model) if isinstance(by_model, dict) else method.get("effort_levels")
+        if isinstance(levels, list) and levels and all(isinstance(x, str) for x in levels):
+            return list(levels)
+        return None
+    return None
+
+
+def native_level(
+    platform: str, model: str, scorer_level: str, *, catalog: dict[str, Any] | None = None
+) -> str | None:
+    """The level to set on ``platform``'s dial for ``model`` when the scorer
+    says ``scorer_level``: the native level of that name, else the highest
+    native level below it, else the dial's lowest. None when the catalog
+    documents no dial for the pair."""
+    levels = native_levels(platform, model, catalog=catalog)
+    if not levels:
+        return None
+    want = normalize_level(scorer_level)
+    for level in levels:
+        if normalize_level(level) == want:
+            return level
+    order = {name: i for i, name in enumerate(LEVEL_ORDER)}
+    if want in order:
+        below = [lv for lv in levels if order.get(normalize_level(lv), len(order)) < order[want]]
+        if below:
+            return max(below, key=lambda lv: order[normalize_level(lv)])
+    return levels[0]
+
+
+def _scorer_level(native: str) -> str:
+    """The scorer level a native level stands for: the highest of
+    EFFORT_LADDER at or below it, floored at ``low`` (Gemini's ``minimal``)
+    and capped at ``max`` (Codex's ``ultra``)."""
+    level = normalize_level(native)
+    if level in EFFORT_LADDER:
+        return level
+    order = {name: i for i, name in enumerate(LEVEL_ORDER)}
+    rank = order.get(level)
+    if rank is None:
+        return EFFORT_LADDER[0]
+    at_or_below = [e for e in EFFORT_LADDER if order[e] <= rank]
+    return at_or_below[-1] if at_or_below else EFFORT_LADDER[0]
+
+
 def _quality(
     model: dict[str, Any],
     task: Task,
@@ -948,11 +1028,20 @@ class FrontierPoint:
 class Rung:
     tier: str
     point: FrontierPoint
+    # The scorer's level (EFFORT_LADDER) this rung runs at.
     effort: str
+    # The same level as the platform's own dial names it (native_level), or
+    # None when the catalog documents no dial for the platform and model.
+    native: str | None = None
 
     @property
     def candidate(self) -> Candidate:
         return self.point.candidate
+
+    @property
+    def level(self) -> str:
+        """The level the operator sets: the native word, else the scorer's."""
+        return self.native or self.effort
 
 
 @dataclass
@@ -982,7 +1071,10 @@ class Ladder:
             "task": asdict(self.task),
             "frontier": [point(p) for p in self.frontier],
             "adequate": [p.candidate.model_id for p in self.adequate],
-            "rungs": {t: {**point(r.point), "effort": r.effort} for t, r in self.rungs.items()},
+            "rungs": {
+                t: {**point(r.point), "effort": r.effort, "native_effort": r.native}
+                for t, r in self.rungs.items()
+            },
         }
 
 
@@ -1030,7 +1122,8 @@ def ladder(
       at the balanced posture; with none between, the COST or QUALITY model at
       the balanced posture's effort, whichever differs from both other rungs.
     - Each rung runs at :func:`effort_for` its posture (cheap / balanced /
-      best) on its platform. A lower rung on the same model and platform as
+      best), set on its platform's own dial (:func:`native_level`) where the
+      catalog documents one. A lower rung on the same model and platform as
       the rung above runs at least one effort level below it
       (:func:`_below`), so the three picks stay distinct; at the dial's lowest
       level they may converge. On an `uncapped` pool every free rung runs at
@@ -1065,10 +1158,12 @@ def ladder(
 
     def rung(tier: str, p: FrontierPoint) -> Rung:
         t = Task(task.category, task.complexity, task.novel, TIER_BUDGET[tier])
-        return Rung(tier, p, effort_for(t, headroom, p.candidate.scarcity))
+        effort = effort_for(t, headroom, p.candidate.scarcity)
+        c = p.candidate
+        return Rung(tier, p, effort, native_level(c.platform_id, c.model_id, effort, catalog=cat))
 
     def same(a: Rung, b: Rung) -> bool:
-        return a.candidate.model_id == b.candidate.model_id and a.effort == b.effort
+        return a.candidate.model_id == b.candidate.model_id and a.level == b.level
 
     cost_rung = rung("cost", span[0])
     quality_rung = rung("quality", top)
@@ -1086,23 +1181,34 @@ def ladder(
             (r for r in options if not same(r, cost_rung) and not same(r, quality_rung)),
             options[0],
         )
-    balanced_rung = _below(balanced_rung, quality_rung)
-    cost_rung = _below(cost_rung, balanced_rung)
+    balanced_rung = _below(balanced_rung, quality_rung, cat)
+    cost_rung = _below(cost_rung, balanced_rung, cat)
     rungs = {"cost": cost_rung, "balanced": balanced_rung, "quality": quality_rung}
     return Ladder(task=base, frontier=front, adequate=adequate, rungs=rungs)
 
 
-def _below(lower: Rung, upper: Rung) -> Rung:
+def _below(lower: Rung, upper: Rung, catalog: dict[str, Any]) -> Rung:
     """``lower`` run at least one effort level below ``upper`` when both name
     the same model on the same platform and that path costs something
     (scarcity > 0); floored at the dial's lowest level, where the two may
     converge. Three columns that read the same offer no choice, and on a
     capped pool a lower effort is a real, cheaper option. On a free path
     (`uncapped`) a lower effort saves nothing, so the rungs keep their
-    posture's effort and converge."""
+    posture's effort and converge.
+
+    Levels are compared on the platform's own dial where the catalog
+    documents one, since two scorer levels can land on one native level
+    (Gemini's dial tops out at high, where the scorer's xhigh and max land
+    too); elsewhere on the scorer's ladder."""
     lc, uc = lower.candidate, upper.candidate
     if (lc.model_id, lc.platform_id) != (uc.model_id, uc.platform_id) or lc.scarcity == 0:
         return lower
+    levels = native_levels(lc.platform_id, lc.model_id, catalog=catalog)
+    if levels and lower.native in levels and upper.native in levels:
+        cap = max(0, levels.index(upper.native) - 1)
+        if levels.index(lower.native) <= cap:
+            return lower
+        return Rung(lower.tier, lower.point, _scorer_level(levels[cap]), levels[cap])
     cap = max(0, EFFORT_LADDER.index(upper.effort) - 1)
     if EFFORT_LADDER.index(lower.effort) <= cap:
         return lower
@@ -1165,11 +1271,11 @@ def render_ladder_table(table: dict[str, Ladder]) -> str:
             for p in any_ladder.frontier
         ),
         "Rows: <category>/<complexity>[/novel]: COST | BALANCED | QUALITY, each "
-        "<model> @ <platform> · <effort>.",
+        "<model> @ <platform> · <effort>, the effort in the platform's own level words.",
     ]
     for key, lad in table.items():
         cells = " | ".join(
-            f"{t.upper()} = {r.candidate.model_name} @ {r.candidate.platform_name} · {r.effort}"
+            f"{t.upper()} = {r.candidate.model_name} @ {r.candidate.platform_name} · {r.level}"
             for t in LADDER_TIERS
             for r in [lad.rungs[t]]
         )
