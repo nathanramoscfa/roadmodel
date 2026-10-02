@@ -41,6 +41,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   prose ranks on catalog letters, so one stale letter had sent every backup
   to GPT-5.6 Sol, while the scoring core named GPT-6.1 Sol on the same
   catalog. A model the user-context names for these sessions still wins.
+- **Planning letters are measured: the gap to the leader on the AA
+  Intelligence Index.** No benchmark tests planning alone, and the index is
+  Artificial Analysis's composite of its whole suite, the reasoning a plan or
+  a design draws on; the scoring core already ranked planning on it. The
+  letter had been an editorial estimate that only an AI pass citing LMArena
+  could move, and it disagreed with the index on 19 of 33 measured models.
+  Planning now bands like knowledge and long context (S within 5 points of
+  the leader, A within 20, B within 35, C within 50), and 31 letters move:
+  Sonnet 5.5 and GPT-6 Astra to S; GPT-6.1 Sol, GPT-6 Sol, GPT-5.6 Sol,
+  Opus 5, Fable 5 and Muse Spark 1.3 to A; Gemini 3.1 Pro, Gemini 3 Pro and
+  GPT-5.6 Luna to B; Haiku 4.5 to C. A model Artificial Analysis has not
+  measured keeps an estimate, at most A. Multimodal and speed stay estimates:
+  AA runs no multimodal evaluation, and its tokens/s comes from the maker's
+  own endpoint at max effort. With planning measured, DeepSeek-V4.1-Flash
+  supersedes DeepSeek-V4-Pro.
 
 ### Fixed
 
@@ -57,6 +72,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   speed S). GPT-6 Astra has no predecessor and stays at B. A test now fails
   any model that keeps the bare B default while a same-series predecessor
   exists.
+- **The Gemini Flash line is multimodal S, as Gemini 3 Flash is.** Gemini 3.5
+  Flash entered on 2026-05-24 at multimodal B, a conservative default
+  "pending editorial review", and 3.6, 3.7 and 3.8 Flash copied it, so the
+  multimodal guardrail never offered the current Flash. They now carry
+  Gemini 3 Flash's S, as the predecessor rule gives. Gemini 3.8 Flash then
+  supersedes Gemini 3 Pro and Gemini 3.1 Pro: it costs under a third as much,
+  scores 40.9 on the AA Index against 29.7 and 28.0, and rates at least as
+  high in every category. The guard test now follows a stale letter down
+  every successor that copied it.
 
 ## [0.2.53] — 2026-10-01
 

@@ -26,14 +26,17 @@ genuine best), then A, B, C, D:
 The selection algorithm reads the prompt's complexity to set a **minimum required
 rating** (High → S, Medium → A, Low → B) in the prompt's primary category, then picks
 the highest-rated *available* model that clears the bar, breaking ties by the
-secondary category and finally by cost. Four ratings (coding, agentic, long-context,
-knowledge) are measured wherever Artificial Analysis publishes their benchmark:
-long-context and knowledge as the model's gap to the category leader, agentic as its rank
-on Terminal-Bench 4.0, and coding as its rank on SciCode and Terminal-Bench 4.0 averaged.
-Every other letter is an estimate the daily catalog automation sets from the public
-benchmarks below (plus model cards and first-party reports), refreshed as new results
-land; a new model starts from its predecessor's letters. In those four measured
-categories an estimate stops at A: S takes a measurement.
+secondary category and finally by cost. Five ratings (coding, planning, agentic,
+long-context, knowledge) are measured wherever Artificial Analysis publishes their
+benchmark: planning, long-context and knowledge as the model's gap to the category
+leader, agentic as its rank on Terminal-Bench 4.0, and coding as its rank on SciCode and
+Terminal-Bench 4.0 averaged. Planning reads the AA Intelligence Index, AA's composite of
+its whole evaluation suite, since no benchmark tests planning alone. Multimodal and speed
+are estimates the daily catalog automation sets from the public benchmarks below (plus
+model cards and first-party reports), refreshed as new results land, as is a measured
+category's letter for a model Artificial Analysis has not measured; a new model starts
+from its predecessor's letters. In the five measured categories an estimate stops at A:
+S takes a measurement.
 
 ## Benchmarks
 

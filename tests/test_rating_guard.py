@@ -10,6 +10,7 @@ letter with a reason.
 from __future__ import annotations
 
 import importlib.util
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -52,6 +53,7 @@ BENCH = {
             "terminalbench_v4_0": 0.4,
             "lcr": 0.8,
             "hle": 0.5,
+            "artificial_analysis_intelligence_index": 45.0,
         }
     }
 }
@@ -61,6 +63,16 @@ def _tiers(selector: str, mid: str) -> dict[str, str]:
     return rg.models(selector)[mid].tiers
 
 
+def _with(selector: str, mid: str, category: str, letter: str) -> str:
+    """``selector`` with one letter of one model changed."""
+    return re.sub(
+        rf'(<model id="{re.escape(mid)}"[^>]*?tier-{category}=")[SABCD]"',
+        rf'\g<1>{letter}"',
+        selector,
+        count=1,
+    )
+
+
 def test_the_committed_selector_passes_its_own_guard() -> None:
     selector = (REPO_ROOT / "docs" / "model-selector.txt").read_text()
     guarded, reverts = rg.guard(selector, selector, "", {})
@@ -68,61 +80,61 @@ def test_the_committed_selector_passes_its_own_guard() -> None:
 
 
 def test_a_declared_one_step_move_with_its_evidence_survives() -> None:
-    proposed = BASE.replace(
-        'id="beta-flash" name="Beta Flash" output-price-per-1m="$10" tier-coding="B" tier-planning="B"',
-        'id="beta-flash" name="Beta Flash" output-price-per-1m="$10" tier-coding="B" tier-planning="A"',
-    )
-    decl = "tier rating updated: beta-flash tier-planning B→A — LMArena shows 1402 Elo"
+    proposed = _with(BASE, "beta-flash", "multimodal", "A")
+    decl = "tier rating updated: beta-flash tier-multimodal B→A — MMMU shows 70.1"
     guarded, reverts = rg.guard(BASE, proposed, decl, BENCH)
-    assert reverts == [] and _tiers(guarded, "beta-flash")["planning"] == "A"
+    assert reverts == [] and _tiers(guarded, "beta-flash")["multimodal"] == "A"
 
 
 def test_an_undeclared_or_wrongly_sourced_move_is_reverted() -> None:
-    proposed = BASE.replace(
-        'tier-planning="B" tier-agentic="B" tier-multimodal="B"',
-        'tier-planning="A" tier-agentic="B" tier-multimodal="B"',
-    )
+    proposed = _with(BASE, "beta-flash", "multimodal", "A")
     guarded, reverts = rg.guard(BASE, proposed, "", BENCH)
-    assert _tiers(guarded, "beta-flash")["planning"] == "B"
+    assert _tiers(guarded, "beta-flash")["multimodal"] == "B"
     assert "no 'tier rating updated' declaration" in reverts[0].reason
-    # Planning moves on LMArena, not on MMMU.
-    decl = "tier rating updated: beta-flash tier-planning B→A — MMMU shows 70.1"
+    # Multimodal moves on MMMU, not on LMArena.
+    decl = "tier rating updated: beta-flash tier-multimodal B→A — LMArena shows 1402"
     guarded, reverts = rg.guard(BASE, proposed, decl, BENCH)
-    assert _tiers(guarded, "beta-flash")["planning"] == "B"
-    assert "cites no planning evidence" in reverts[0].reason
+    assert _tiers(guarded, "beta-flash")["multimodal"] == "B"
+    assert "cites no multimodal evidence" in reverts[0].reason
     # A declaration that disagrees with the edit carries nothing.
-    decl = "tier rating updated: beta-flash tier-planning C→B — LMArena shows 1402"
+    decl = "tier rating updated: beta-flash tier-multimodal C→B — MMMU shows 70.1"
     guarded, reverts = rg.guard(BASE, proposed, decl, BENCH)
     assert "its declaration says C→B" in reverts[0].reason
 
 
 def test_a_letter_moves_one_step_at_most() -> None:
-    proposed = BASE.replace(
-        'tier-planning="B" tier-agentic="B" tier-multimodal="B"',
-        'tier-planning="S" tier-agentic="B" tier-multimodal="B"',
-    )
-    decl = "tier rating updated: beta-flash tier-planning B→S — LMArena shows 1500 (leader 1502)"
+    proposed = _with(BASE, "beta-flash", "multimodal", "S")
+    decl = "tier rating updated: beta-flash tier-multimodal B→S — MMMU shows 81 (leader 82)"
     guarded, reverts = rg.guard(BASE, proposed, decl, BENCH)
-    assert _tiers(guarded, "beta-flash")["planning"] == "B"
+    assert _tiers(guarded, "beta-flash")["multimodal"] == "B"
     assert reverts[0].reason == "a letter moves at most one step per run"
 
 
 def test_a_move_into_s_needs_the_leader_within_five_points() -> None:
-    proposed = BASE.replace(
-        'tier-coding="A" tier-planning="A"', 'tier-coding="A" tier-planning="S"'
-    )
-    ok = "tier rating updated: alpha-2 tier-planning A→S — LMArena shows 1499 (leader 1502)"
-    assert rg.guard(BASE, proposed, ok, BENCH)[1] == []
+    base = _with(BASE, "alpha-2", "multimodal", "A")
+    proposed = _with(base, "alpha-2", "multimodal", "S")
+    ok = "tier rating updated: alpha-2 tier-multimodal A→S — MMMU shows 79.5 (leader 82)"
+    assert rg.guard(base, proposed, ok, BENCH)[1] == []
     for decl, why in [
-        ("tier rating updated: alpha-2 tier-planning A→S — LMArena shows 1499", "leader"),
-        (
-            "tier rating updated: alpha-2 tier-planning A→S — LMArena shows 1480 (leader 1502)",
-            "gap 22",
-        ),
+        ("tier rating updated: alpha-2 tier-multimodal A→S — MMMU shows 79.5", "leader"),
+        ("tier rating updated: alpha-2 tier-multimodal A→S — MMMU shows 70 (leader 82)", "gap 12"),
     ]:
-        guarded, reverts = rg.guard(BASE, proposed, decl, BENCH)
-        assert _tiers(guarded, "alpha-2")["planning"] == "A"
+        guarded, reverts = rg.guard(base, proposed, decl, BENCH)
+        assert _tiers(guarded, "alpha-2")["multimodal"] == "A"
         assert why in reverts[0].reason
+
+
+def test_planning_moves_only_through_the_derivation() -> None:
+    """Planning reads the AA Intelligence Index since 2026-10-01: an LMArena
+    declaration no longer moves an existing model's planning letter."""
+    assert "planning" in rg.DERIVED and "planning" not in rg.ESTIMATED
+    proposed = _with(BASE, "beta-flash", "planning", "A")
+    decl = "tier rating updated: beta-flash tier-planning B→A — LMArena shows 1402 Elo"
+    guarded, reverts = rg.guard(BASE, proposed, decl, BENCH)
+    assert _tiers(guarded, "beta-flash")["planning"] == "B"
+    assert "stays until AA measures it" in reverts[0].reason
+    # A measured model's planning letter is left to update/derive_ratings.py.
+    assert rg.guard(BASE, _with(BASE, "alpha-2", "planning", "C"), "", BENCH)[1] == []
 
 
 def test_derived_letters_move_only_through_the_derivation() -> None:
@@ -271,34 +283,55 @@ def test_every_ai_pass_is_guarded() -> None:
 
 
 def _bare_defaults_over_a_predecessor(selector: str) -> list[str]:
+    """Models whose estimated letters are the bare B default while a
+    same-series predecessor exists — an unreviewed placeholder — and every
+    successor that copied such a letter down the line."""
     models = rg.models(selector)
-    stale = []
-    for mid, model in models.items():
-        pred = rg.predecessor(mid, {k: v for k, v in models.items() if k != mid})
-        if pred is None:
+    pred = {
+        mid: rg.predecessor(mid, {k: v for k, v in models.items() if k != mid}) for mid in models
+    }
+
+    def estimates(mid: str) -> dict[str, str]:
+        return {c: models[mid].tiers[c] for c in rg.ESTIMATED}
+
+    stale: set[str] = set()
+    for mid, before in pred.items():
+        if before is None:
             continue
-        default, _ = rg.placeholder(model, {})  # the bare B default for this name
-        mine = {c: model.tiers[c] for c in rg.ESTIMATED}
-        if mine == {c: default[c] for c in rg.ESTIMATED} and mine != {
-            c: models[pred].tiers[c] for c in rg.ESTIMATED
-        }:
-            stale.append(f"{mid} (predecessor {pred})")
-    return stale
+        default, _ = rg.placeholder(models[mid], {})  # the bare B default for this name
+        bare = {c: default[c] for c in rg.ESTIMATED}
+        if estimates(mid) == bare and estimates(mid) != estimates(before):
+            stale.add(mid)
+    # A successor that inherited a stale letter carries it too.
+    grew = True
+    while grew:
+        grew = False
+        for mid, before in pred.items():
+            if before in stale and mid not in stale and estimates(mid) == estimates(before):
+                stale.add(mid)
+                grew = True
+    return sorted(f"{mid} (predecessor {pred[mid]})" for mid in stale)
 
 
 def test_no_model_keeps_the_b_default_its_predecessor_replaces() -> None:
     """The GPT-6 family entered on 2026-09-25 (#730) with every estimated
     letter at the bare B default, five days before this guard (#794) gave a
-    new model its predecessor's letters, and nothing revisited them. GPT-6.1
-    Sol then inherited GPT-6 Sol's B. With planning held at B, every backup
-    for a planning task went to GPT-5.6 Sol, the model GPT-6 Sol replaces at
-    half the price. A model with a same-series predecessor never keeps the
-    bare default."""
+    new model its predecessor's letters, and nothing revisited them; GPT-6.1
+    Sol then copied GPT-6 Sol's. With planning held at B, every backup for a
+    planning task went to GPT-5.6 Sol. Gemini 3.5 Flash entered on 2026-05-24
+    (#117) at multimodal B "pending editorial review" under Gemini 3 Flash's
+    S, and 3.6, 3.7 and 3.8 Flash copied it, so the multimodal guardrail never
+    offered the current Flash. A model with a same-series predecessor never
+    keeps the bare default, and neither does a successor that copied it."""
     selector = (REPO_ROOT / "docs" / "model-selector.txt").read_text()
     assert _bare_defaults_over_a_predecessor(selector) == []
-    # The check sees the case it exists for.
+    # The check sees the cases it exists for: the stale model and its heirs.
     stale = _selector(
         _model("gpt-5.6-sol", "GPT-5.6 Sol", planning="S", multimodal="A", speed="D"),
         _model("gpt-6-sol", "GPT-6 Sol", coding="S", agentic="S"),
+        _model("gpt-6.1-sol", "GPT-6.1 Sol", agentic="S"),
     )
-    assert _bare_defaults_over_a_predecessor(stale) == ["gpt-6-sol (predecessor gpt-5.6-sol)"]
+    assert _bare_defaults_over_a_predecessor(stale) == [
+        "gpt-6-sol (predecessor gpt-5.6-sol)",
+        "gpt-6.1-sol (predecessor gpt-6-sol)",
+    ]

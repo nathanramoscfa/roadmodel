@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 """Derive the measurable S→D ratings from the uniform benchmark layer.
 
-Four of the seven per-model ratings in docs/model-selector.txt have a
+Five of the seven per-model ratings in docs/model-selector.txt have a
 single-source, same-scale benchmark behind them in docs/benchmarks.json
 (Artificial Analysis, see update/fetch_aa_benchmarks.py):
 
     tier-coding        ← scicode + terminalbench_v4_0       (mean rank, by rank)
+    tier-planning      ← artificial_analysis_intelligence_index  (index points)
     tier-agentic       ← terminalbench_v4_0                  (% of tasks, by rank)
     tier-long-context  ← lcr  (AA Long Context Reasoning)    (% correct)
     tier-knowledge     ← hle  (Humanity's Last Exam)         (% correct)
 
-This script makes those four letters a FUNCTION of the data instead of an
-editorial judgment. Long-context and knowledge letter the model's gap to the
-category leader, in points on that benchmark's scale, banded as
+This script makes those five letters a FUNCTION of the data instead of an
+editorial judgment. Planning, long-context and knowledge letter the model's
+gap to the category leader, in points on that benchmark's scale, banded as
 
     S  ≤ 5      frontier-class — the rule the daily cron already applies to S
     A  ≤ 20     strong, near-frontier
@@ -37,14 +38,21 @@ averaged, on the releases AA runs today. AA publishes no Coding Index for new
 models, and the composite orders the models that carry one with a Spearman ρ
 of 0.94 against it.
 
-S is the class the frontier shares, so in these four categories it takes a
+Planning reads the AA Intelligence Index: no benchmark tests planning
+alone, and the index is AA's composite of its whole evaluation suite, the
+general reasoning a plan, a design or an architecture decision draws on.
+src/roadmodel/scoring.py already ranked planning on it. Until 2026-10-01 the
+letter was an editorial estimate that only an AI pass citing LMArena could
+move, and it disagreed with the index on 19 of 33 measured models (the
+GPT-6 family sat at a B placeholder while it ranked 4th, 5th and 9th of 54).
+
+S is the class the frontier shares, so in these five categories it takes a
 measurement: an unmeasured model's S drops to A (its estimate stands below S
 until AA measures it). Measured letters are bounded by their own rule.
 
 A model AA has not measured on a category's benchmark keeps its estimated
-letter, capped at A (the report says so). Planning, multimodal, and speed are never
-touched: planning and multimodal have no single-source public benchmark,
-and AA's tokens/s is measured on the provider's first-party endpoint at max
+letter, capped at A (the report says so). Multimodal and speed are never
+touched: AA runs no multimodal evaluation in this layer, and AA's tokens/s is measured on the provider's first-party endpoint at max
 effort (gpt-oss-20b reads 181 tok/s there and ~1,000 on Groq, which is what
 the catalog's speed letter reflects), so it is the wrong evidence for a
 speed class.
@@ -86,6 +94,7 @@ REPORT_PATH = REPO_ROOT / "update" / ".last-ratings-report.md"
 # a COMPOSITES key is computed by with_composites() before deriving.
 CATEGORY_EVIDENCE: dict[str, tuple[str, float, str]] = {
     "coding": ("coding_composite", 100.0, "SciCode + Terminal-Bench 4.0"),
+    "planning": ("artificial_analysis_intelligence_index", 1.0, "AA Intelligence Index"),
     "agentic": ("terminalbench_v4_0", 100.0, "Terminal-Bench 4.0"),
     "long-context": ("lcr", 100.0, "AA-LCR"),
     "knowledge": ("hle", 100.0, "HLE"),
@@ -413,7 +422,7 @@ def render_report(
         if ids:
             lines.append(f"- **{cat}**: " + ", ".join(names.get(i, i) for i in ids))
     lines.append(
-        "- **planning, multimodal, speed**: always estimated (no single-source benchmark; "
+        "- **multimodal, speed**: always estimated (AA runs no multimodal evaluation; "
         "AA tokens/s is first-party-endpoint-specific)."
     )
     return "\n".join(lines) + "\n"
