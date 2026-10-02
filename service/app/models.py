@@ -92,6 +92,13 @@ class RecommendResponse(BaseModel):
     # no BACKUP / "None"; platform + settings are best-effort within it (None / {}
     # when unresolvable), so the client degrades to showing just the model name.
     backup: BackupPick | None = None
+    # True when this pick is a category specialist: a model off the user's
+    # cost/quality frontier whose rating for the task's category
+    # (``specialist_category``) is above every frontier model's, which the
+    # frontier ladder puts on QUALITY (roadmodel >= 0.2.64). The web shows "Top
+    # for <category> work" in place of the frontier mark.
+    specialist: bool = False
+    specialist_category: str | None = None
     session_cost_estimate: dict[str, Any] | None = None
     comparison_table: list[dict[str, Any]] = Field(default_factory=list)
     # The engine that produced this answer (an engines.json hint). It differs

@@ -196,6 +196,10 @@ def test_recommend_returns_200(
         # The fallback model (Step 7) survives the boundary too; None here
         # because this fake payload emits no backup.
         "backup": None,
+        # A single pick is never a category specialist (the ladder's Quality
+        # pick alone can be one).
+        "specialist": False,
+        "specialist_category": None,
         "session_cost_estimate": None,
         "comparison_table": [],
         # The engine that answered: the chain's Anthropic link, the only
@@ -484,6 +488,8 @@ def test_response_schema_matches_phase2_contract(
         "rationale_sections",  # structured task/pick/effort — carried through, None when absent
         "conversation",  # #190 — same boundary, now carried through
         "backup",  # fallback model (Step 7) — same boundary, carried through
+        "specialist",  # a ladder Quality pick off the frontier, top for its category
+        "specialist_category",
         "session_cost_estimate",
         "comparison_table",
         "engine",  # the engines.json hint that answered (after any fallback)
@@ -1264,3 +1270,37 @@ def test_ladder_endpoint_carries_backup_and_guard(
     body = client.post("/v1/recommend/ladder", json=_request_payload()).json()
     assert body["picks"]["quality"]["backup"]["model"] == "GPT-5.5"
     assert body["guard"]["distinct_tiers"] is True
+
+
+def test_ladder_endpoint_carries_the_category_specialist_flag(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A QUALITY pick the package marks as a category specialist keeps its
+    flag and category across the service boundary; other picks carry none."""
+    recommend_module = importlib.import_module("app.recommend")
+
+    def _fake_ladder(prompt: str, config: Any, **_kwargs: Any) -> dict[str, Any]:
+        quality = _ladder_pick("Fable 5.1", "Claude Code", "XHigh")
+        quality["specialist"] = True
+        quality["specialist_category"] = "multimodal"
+        return {
+            "picks": {
+                "quality": quality,
+                "balanced": _ladder_pick("Sonnet 5.5", "Claude Code", "High"),
+                "cost": _ladder_pick("GPT-6 Luna", "Codex", "Low"),
+            },
+            "guard": {
+                "healthy": True,
+                "specialist": {"tier": "quality", "category": "multimodal"},
+            },
+        }
+
+    monkeypatch.setattr(recommend_module, "recommend_structured_ladder", _fake_ladder)
+
+    body = client.post("/v1/recommend/ladder", json=_request_payload()).json()
+    assert body["picks"]["quality"]["specialist"] is True
+    assert body["picks"]["quality"]["specialist_category"] == "multimodal"
+    assert body["picks"]["cost"]["specialist"] is False
+    assert body["picks"]["cost"]["specialist_category"] is None
+    assert body["guard"]["specialist"] == {"tier": "quality", "category": "multimodal"}

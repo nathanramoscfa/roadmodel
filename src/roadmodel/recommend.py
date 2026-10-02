@@ -1295,7 +1295,14 @@ def _table_row_key(
 def _rung_pick_sentence(row: scoring.Ladder, tier: str) -> str:
     r = row.rungs[tier]
     c = r.candidate
-    facts = f"AA Index {r.point.aa_index:g}, ${c.blended_price_usd:.2f} per 1M tokens at list price"
+    aa = "not measured" if r.point.aa_index is None else f"{r.point.aa_index:g}"
+    facts = f"AA Index {aa}, ${c.blended_price_usd:.2f} per 1M tokens at list price"
+    if r.specialist:
+        return (
+            f"{c.model_name} is the strongest model you can run for {row.task.category} work: "
+            f"its {row.task.category} rating ({c.letter}) is above every model on your "
+            f"cost/quality frontier ({facts})."
+        )
     if tier == "quality":
         return f"{c.model_name} is the strongest model on your cost/quality frontier for {row.task.category} work ({facts})."
     if tier == "cost":
@@ -1373,6 +1380,18 @@ def _attach_backup_plans(picks: dict[str, dict[str, Any]], row: scoring.Ladder) 
             "platform": b.platform_name,
             "effort": _effort_word(backup.level),
         }
+
+
+def _mark_specialist(picks: dict[str, dict[str, Any]], row: scoring.Ladder) -> None:
+    """Flag the QUALITY pick ``specialist`` with its category when the row
+    puts a category specialist there and the pick still names it."""
+    rung = row.rungs["quality"]
+    if not rung.specialist:
+        return
+    if picks["quality"].get("model") != cost.canonical_model_name(rung.candidate.model_name):
+        return
+    picks["quality"]["specialist"] = True
+    picks["quality"]["specialist_category"] = row.task.category
 
 
 # Claude Code's Ultracode is a session setting above its Max level: it stands
@@ -1457,9 +1476,11 @@ def recommend_structured_ladder(
     whose dial the catalog documents (:func:`_enforce_table_effort`), and
     BACKUP included where the row names one (:func:`_enforce_table_backup`;
     such a pick also carries a ``backup_plan`` with the backup's platform and
-    effort). ``guard`` then reports ``mode: "frontier"``, the row, how it was
-    found, the tiers rewritten, the tiers whose effort was set and the tiers
-    whose backup was set, and is healthy: two rungs on one model are the
+    effort). A QUALITY pick the row gives a category specialist carries
+    ``specialist: True`` and ``specialist_category``. ``guard`` then reports
+    ``mode: "frontier"``, the row, how it was found, the tiers rewritten, the
+    tiers whose effort was set, the tiers whose backup was set and the
+    specialist (or None), and is healthy: two rungs on one model are the
     table's answer, not a collapse.
     Without a table, or a response the table cannot place, the engine's own
     picks stand under the tier-distinctness guard as before.
@@ -1509,6 +1530,11 @@ def recommend_structured_ladder(
                 "effort_set": _enforce_table_effort(ladder, row),
                 "backup_set": _enforce_table_backup(ladder, row),
                 "frontier": [p.candidate.model_name for p in row.frontier],
+                "specialist": (
+                    {"tier": "quality", "category": row.task.category}
+                    if row.rungs["quality"].specialist
+                    else None
+                ),
             }
         else:
             frontier_guard = {"mode": "frontier", "classification": None, "found": found}
@@ -1524,6 +1550,7 @@ def recommend_structured_ladder(
     }
     if frontier_guard is not None and frontier_guard["classification"] is not None:
         _attach_backup_plans(picks, table[frontier_guard["classification"]])
+        _mark_specialist(picks, table[frontier_guard["classification"]])
     guard = _ladder_tier_guard(picks)
     if frontier_guard is not None:
         guard.update(frontier_guard)

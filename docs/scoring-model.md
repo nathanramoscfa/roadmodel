@@ -183,7 +183,21 @@ frontier, in code (`scoring.ladder`):
    picks. A method no tracker documents (Antigravity, the chat apps, Cursor)
    carries no levels, and its rows keep the scorer's word for the engine to
    map.
-7. **Backups.** Each rung carries a backup from another maker
+7. **Category specialist.** In every category whose evidence is something
+   other than the AA Intelligence Index (all but planning), a pool model off
+   the frontier takes QUALITY when its letter in the task's category is
+   strictly above that of the strongest adequate frontier point and its
+   category quality is strictly higher too. It runs at the best posture's
+   effort; COST and BALANCED stay on the frontier, BALANCED then spanning
+   every adequate point above COST. The rung, the guard (`specialist`) and the
+   pick (`specialist: true`, `specialist_category`) say so, and /recommend
+   shows "Top for <category> work" under its name. The AA Index is a broad
+   measure; a clearly stronger specialist earns the top pick for its
+   category, while the frontier still anchors Cost and Balanced. With Claude
+   Max and ChatGPT Pro alone, Fable 5.1 (S for multimodal) takes multimodal
+   QUALITY over Opus 5.5 (A); with Google AI Pro added, Gemini 3.8 Flash (S)
+   tops the multimodal frontier and no specialist arises.
+8. **Backups.** Each rung carries a backup from another maker
    (`Candidate.provider` differs from the rung model's): over the pool's
    models from other makers, draw the frontier and keep its adequate points;
    the backup is the adequate point with the highest list price at or below

@@ -144,4 +144,33 @@ test.describe("signed in with saved Settings", () => {
     await page.locator('[data-pick="best"][data-row="__aa"]').getByTestId("pick-aa-index").hover();
     await expect(page.getByTestId("frontier-status")).toContainText("Across your models");
   });
+
+  test("a category specialist off the frontier reads as the top model for its category", async ({ page }) => {
+    await signInViaCallback(page);
+    await page.getByLabel(/Claude Max.*\$200\/mo/i).check();
+    await page.getByRole("button", { name: /Save and continue/i }).click();
+    await expect(page).toHaveURL("/");
+
+    // Fable 5.1 costs more than Opus 5.5 and scores lower on the AA Index, so
+    // the frontier would mark it beaten; as the multimodal specialist it is the
+    // top model for that work.
+    const body = JSON.parse(FIXTURE);
+    const best = body.recommendations.find((r: { priority: string }) => r.priority === "best");
+    Object.assign(best, {
+      model: "Fable 5.1",
+      platform: "Claude Code",
+      specialist: true,
+      specialist_category: "multimodal",
+    });
+    await page.route("**/api/recommend", (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) }),
+    );
+    await page.goto("/recommend");
+    await page.getByPlaceholder(/Describe the task/i).fill("Read the chart in this screenshot.");
+    await page.getByRole("button", { name: /^Recommend/ }).click();
+
+    const quality = page.locator('[data-priority="best"]');
+    await expect(quality.getByTestId("pick-specialist")).toHaveText("Top for multimodal work");
+    await expect(quality.getByTestId("pick-beaten")).toHaveCount(0);
+  });
 });

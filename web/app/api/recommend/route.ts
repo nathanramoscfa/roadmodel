@@ -121,6 +121,11 @@ interface RecommenderPayload {
     platform: string | null;
     settings: Record<string, string>;
   };
+  // A category specialist on the ladder's Quality pick (see
+  // RecommendResponse.specialist in lib/api). Spread to the client via
+  // `parsed`, like backup.
+  specialist?: boolean;
+  specialist_category?: string | null;
   // The engine that answered this call and its token counts (see LadderPayload).
   engine?: string;
   usage?: unknown;

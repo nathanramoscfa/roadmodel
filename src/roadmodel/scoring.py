@@ -1016,7 +1016,9 @@ FRONTIER_INDEX: Final[str] = "artificial_analysis_intelligence_index"
 @dataclass(frozen=True)
 class FrontierPoint:
     candidate: Candidate
-    aa_index: float
+    # The AA Intelligence Index; every frontier point has one, and only a
+    # category specialist (off the frontier) may be unmeasured.
+    aa_index: float | None
     # Blended list $/1M, the price /models plots. List price, not what the
     # operator pays: on a subscription every covered model costs them $0, which
     # would collapse the frontier to its top model; list price is what a pick
@@ -1054,6 +1056,8 @@ class Rung:
     # The best cross-maker substitute at no higher list price; None when the
     # pool holds no other maker's model.
     backup: Backup | None = None
+    # True for a QUALITY rung held by a category specialist off the frontier.
+    specialist: bool = False
 
     @property
     def candidate(self) -> Candidate:
@@ -1099,6 +1103,7 @@ class Ladder:
                     **point(r.point),
                     "effort": r.effort,
                     "native_effort": r.native,
+                    "specialist": r.specialist,
                     "backup": (
                         {
                             **point(r.backup.point),
@@ -1121,18 +1126,68 @@ def frontier(candidates: list[Candidate], bench: dict[str, Any]) -> list[Frontie
     at its price or less. The rule web/lib/benchmark-grid.ts paretoFrontier
     draws on /models: a tie on price goes to the higher index, a tie on index to
     the cheaper price. Unmeasured models have no place on it."""
-    points = [
-        FrontierPoint(c, aa, c.blended_price_usd)
+    measured = [
+        (c, aa)
         for c in candidates
         for aa in [_evidence(bench, c.model_id, FRONTIER_INDEX)]
         if aa is not None
     ]
-    points.sort(key=lambda p: (p.price_usd, -p.aa_index, p.candidate.model_id))
+    measured.sort(key=lambda m: (m[0].blended_price_usd, -m[1], m[0].model_id))
     out: list[FrontierPoint] = []
-    for p in points:
-        if not out or p.aa_index > out[-1].aa_index:
-            out.append(p)
+    best = -math.inf
+    for c, aa in measured:
+        if aa > best:
+            out.append(FrontierPoint(c, aa, c.blended_price_usd))
+            best = aa
     return out
+
+
+def _strength(p: FrontierPoint) -> tuple[float, float, float]:
+    """A point's standing for the task's category: its category quality, then
+    the AA Index, then the cheaper price."""
+    return (p.candidate.quality, -1.0 if p.aa_index is None else p.aa_index, -p.price_usd)
+
+
+# Letters from weakest to strongest.
+LETTER_ORDER: Final[str] = "DCBAS"
+# Categories whose evidence is something other than the AA Intelligence Index,
+# the frontier's own axis: there a model off the frontier can be clearly
+# stronger for the category (every category but planning).
+SPECIALIST_CATEGORIES: Final[frozenset[str]] = frozenset(
+    cat for cat, key in CATEGORY_EVIDENCE.items() if key != FRONTIER_INDEX
+)
+
+
+def _specialist(
+    task: Task,
+    pool: list[Candidate],
+    front: list[FrontierPoint],
+    top: FrontierPoint,
+    bench: dict[str, Any],
+) -> FrontierPoint | None:
+    """A category specialist for QUALITY: the pool model off the frontier
+    whose letter in the task's category is strictly above that of ``top``
+    (the strongest adequate frontier point) and whose category quality is
+    strictly above it too; the strongest such model, else None. Only for
+    SPECIALIST_CATEGORIES."""
+    if task.category not in SPECIALIST_CATEGORIES:
+        return None
+    on_front = {p.candidate.model_id for p in front}
+    rank = LETTER_ORDER.find
+    t = top.candidate
+    stronger = [
+        c
+        for c in pool
+        if c.model_id not in on_front and rank(c.letter) > rank(t.letter) and c.quality > t.quality
+    ]
+    if not stronger:
+        return None
+    best = max(
+        stronger, key=lambda c: (c.quality, rank(c.letter), -c.blended_price_usd, c.model_id)
+    )
+    return FrontierPoint(
+        best, _evidence(bench, best.model_id, FRONTIER_INDEX), best.blended_price_usd
+    )
 
 
 def ladder(
@@ -1166,6 +1221,12 @@ def ladder(
       level they may converge. On an `uncapped` pool every free rung runs at
       the top effort and two rungs on one model converge: a lower effort saves
       that operator nothing.
+    - A category specialist (:func:`_specialist`) may take QUALITY in a
+      category whose evidence is not the AA Index: a pool model off the
+      frontier whose letter and category quality are both strictly above
+      the strongest adequate frontier point's. It runs at the best posture's
+      effort; COST and BALANCED stay on the frontier, BALANCED then spanning
+      every adequate point above COST.
     - Each rung carries a BACKUP from another maker (:func:`_backup_for`):
       the best adequate point on the other makers' frontier at no higher list
       price. ``backup_warning`` says why a rung has none.
@@ -1186,15 +1247,14 @@ def ladder(
     if not front:
         return None
 
-    def strength(p: FrontierPoint) -> tuple[float, float, float]:
-        return (p.candidate.quality, p.aa_index, -p.price_usd)
-
     adequate = [p for p in front if p.candidate.requirement_penalty == 0]
     if not adequate:
-        adequate = [max(front, key=strength)]
-    top = max(adequate, key=strength)
+        adequate = [max(front, key=_strength)]
+    top = max(adequate, key=_strength)
     span = adequate[: adequate.index(top) + 1]
     headroom = consumption_headroom(user_context_text or "")
+    pool = funded or ranking.candidates
+    specialist = _specialist(task, pool, front, top, bench)
 
     def rung(tier: str, p: FrontierPoint) -> Rung:
         t = Task(task.category, task.complexity, task.novel, TIER_BUDGET[tier])
@@ -1206,8 +1266,14 @@ def ladder(
         return a.candidate.model_id == b.candidate.model_id and a.level == b.level
 
     cost_rung = rung("cost", span[0])
-    quality_rung = rung("quality", top)
-    between = span[1:-1]
+    quality_rung = (
+        replace(rung("quality", specialist), specialist=True)
+        if specialist is not None
+        else rung("quality", top)
+    )
+    # With a specialist on QUALITY, BALANCED spans every adequate frontier point
+    # above COST, the frontier's strongest included.
+    between = span[1:] if specialist is not None else span[1:-1]
     if between:
         balanced_rung = rung(
             "balanced", max(between, key=lambda p: (p.candidate.score, -p.price_usd))
@@ -1215,15 +1281,16 @@ def ladder(
     else:
         # Two adequate points or one: BALANCED runs one of them at the balanced
         # posture, whichever differs from both other rungs; it converges only
-        # when neither does.
-        options = [rung("balanced", span[0]), rung("balanced", top)]
+        # when neither does. Beside a specialist it stays on the frontier.
+        options = [rung("balanced", span[0])]
+        if specialist is None:
+            options.append(rung("balanced", top))
         balanced_rung = next(
             (r for r in options if not same(r, cost_rung) and not same(r, quality_rung)),
             options[0],
         )
     balanced_rung = _below(balanced_rung, quality_rung, cat)
     cost_rung = _below(cost_rung, balanced_rung, cat)
-    pool = funded or ranking.candidates
     rungs = {
         r.tier: replace(r, backup=_backup_for(r, pool, task, headroom, bench, cat))
         for r in (cost_rung, balanced_rung, quality_rung)
@@ -1264,7 +1331,7 @@ def _backup_for(
         within = [p for p in adequate if p.price_usd <= rung.point.price_usd]
         chosen = within[-1] if within else adequate[0]
     else:
-        chosen = max(front, key=lambda p: (p.candidate.quality, p.aa_index, -p.price_usd))
+        chosen = max(front, key=_strength)
     t = Task(task.category, task.complexity, task.novel, TIER_BUDGET[rung.tier])
     c = chosen.candidate
     effort = effort_for(t, headroom, c.scarcity)
@@ -1339,6 +1406,10 @@ def ladder_table(
     return out
 
 
+def _aa_text(p: FrontierPoint) -> str:
+    return "not measured" if p.aa_index is None else f"{p.aa_index:g}"
+
+
 def render_ladder_table(table: dict[str, Ladder]) -> str:
     """The table as the engine reads it: one row per classification, each rung
     as model, platform and effort, under the frontier it was read from."""
@@ -1351,23 +1422,27 @@ def render_ladder_table(table: dict[str, Ladder]) -> str:
         "the AA Intelligence Index than any they can run for less), cheapest first:",
         "  "
         + " < ".join(
-            f"{p.candidate.model_name} (AA {p.aa_index:g}, ${p.candidate.blended_price_usd:.2f}/1M list)"
+            f"{p.candidate.model_name} (AA {_aa_text(p)}, ${p.candidate.blended_price_usd:.2f}/1M list)"
             for p in any_ladder.frontier
         ),
         "Rows: <category>/<complexity>[/novel]: COST | BALANCED | QUALITY, each "
         "<model> @ <platform> · <effort>, the effort in the platform's own level words, "
-        "then `backup <model> @ <platform>`: that pick's BACKUP.",
+        "then `backup <model> @ <platform>`: that pick's BACKUP. A QUALITY cell marked "
+        "`(top for <category> work)` names a model off the frontier whose rating for that "
+        "category is above every frontier model's.",
     ]
 
-    def cell(t: str, r: Rung) -> str:
+    def cell(t: str, r: Rung, category: str) -> str:
         text = f"{t.upper()} = {r.candidate.model_name} @ {r.candidate.platform_name} · {r.level}"
+        if r.specialist:
+            text += f" (top for {category} work)"
         if r.backup is not None:
             b = r.backup.candidate
             text += f", backup {b.model_name} @ {b.platform_name}"
         return text
 
     for key, lad in table.items():
-        cells = " | ".join(cell(t, lad.rungs[t]) for t in LADDER_TIERS)
+        cells = " | ".join(cell(t, lad.rungs[t], lad.task.category) for t in LADDER_TIERS)
         lines.append(f"{key}: {cells}")
     lines.append("</ladder-table>")
     return "\n".join(lines)

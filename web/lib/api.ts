@@ -39,6 +39,12 @@ export interface RecommendResponse {
     platform: string | null;
     settings: Record<string, string>;
   } | null;
+  // A category specialist: a model off the viewer's cost/quality frontier
+  // whose rating for the task's category (`specialist_category`) is above
+  // every frontier model's, which the frontier ladder puts on Quality. Absent
+  // on a payload from before the field, or false.
+  specialist?: boolean;
+  specialist_category?: string | null;
 }
 
 // One recommendation computed at a specific budget priority. The /recommend

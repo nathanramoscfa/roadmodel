@@ -180,12 +180,33 @@ function Ratings({ row, measured }: { row: SlimRow; measured: Category[] }) {
 
 // Under a pick's name: whether it is on the cost/quality frontier (the
 // viewer's own, when they have saved Settings), or the model that beats it,
-// with the /models card on hover.
-function PickFacts({ row, data }: { row: SlimRow | null; data: PicksData }) {
+// with the /models card on hover. A category specialist off the frontier
+// reads as the top model for its category instead.
+function PickFacts({
+  row,
+  data,
+  specialist = null,
+}: {
+  row: SlimRow | null;
+  data: PicksData;
+  specialist?: string | null;
+}) {
   if (!row) {
     return (
       <span className="text-[11px] text-brand-slate-400 dark:text-brand-slate-500">
         Not in the catalog
+      </span>
+    );
+  }
+  if (specialist && !row.value_frontier) {
+    return (
+      <span
+        className="inline-flex items-center gap-1 text-[10.5px] font-medium text-emerald-700 dark:text-emerald-300"
+        title={`Rated above every model on ${data.pool !== null ? "your" : "the"} cost/quality frontier for ${specialist} work`}
+        data-testid="pick-specialist"
+      >
+        <span className="inline-block h-2 w-2 rounded-full bg-current" />
+        Top for {specialist} work
       </span>
     );
   }
@@ -225,6 +246,11 @@ function PickFacts({ row, data }: { row: SlimRow | null; data: PicksData }) {
       Beaten by {leader.name}
     </HoverCard>
   );
+}
+
+// The category a specialist pick is the top model for, or null.
+function specialistOf(rec: PriorityRecommendation): string | null {
+  return rec.specialist && rec.specialist_category ? rec.specialist_category : null;
 }
 
 const MUTED_UNIT = "font-normal text-brand-slate-400 dark:text-brand-slate-500";
@@ -479,7 +505,7 @@ function PickHead({
           {rec.platform}
         </span>
       </button>
-      <PickFacts row={row} data={data} />
+      <PickFacts row={row} data={data} specialist={specialistOf(rec)} />
     </div>
   );
 }
@@ -607,6 +633,7 @@ export function PicksMatrix({
             <PickFacts
               row={pickRows.get(selectedRec.priority) ?? null}
               data={data}
+              specialist={specialistOf(selectedRec)}
             />
           </div>
           <dl className="mt-3 divide-y divide-brand-slate-100 dark:divide-brand-slate-800">

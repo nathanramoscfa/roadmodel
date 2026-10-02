@@ -470,6 +470,7 @@ def _pick_response(
     # user's declared access, substitute the best accessible one BEFORE cost /
     # settings / funding are derived, so every downstream field describes the
     # model actually returned. Mutates `result` in place; no-op when unset.
+    planned_model = canonical_model_name(result.get("model"))
     if access_guard is not None:
         access_guard.enforce(result, priority)
     # Normalize an ACCEPTED pick to its catalog display name ("Claude Fable 5" ->
@@ -477,6 +478,10 @@ def _pick_response(
     # accepts the engine's pick the raw maker-prefixed name would otherwise leak
     # to the UI. No-op for anon (still runs; catalog-only lookup).
     result["model"] = canonical_model_name(result.get("model"))
+    # A category-specialist flag describes the model the package planned; a
+    # model the guard substituted is no specialist.
+    specialist = bool(result.get("specialist")) and result["model"] == planned_model
+    specialist_category = result.get("specialist_category")
     session_cost_estimate, comparison_table = _session_cost(
         result["model"], result["platform"], task_description
     )
@@ -508,6 +513,10 @@ def _pick_response(
         # Carry the fallback model (Step 7), enriched with its own funded platform
         # + per-surface settings so the backup adheres to the user's settings too.
         backup=_build_backup(result, access_guard),
+        specialist=specialist,
+        specialist_category=(
+            specialist_category if specialist and isinstance(specialist_category, str) else None
+        ),
         session_cost_estimate=session_cost_estimate,
         comparison_table=comparison_table,
     )
