@@ -23,12 +23,6 @@ export interface RecommendResponse {
   settings: Record<string, unknown>;
   session_cost_estimate: Record<string, unknown>;
   comparison_table: Record<string, unknown>[];
-  // Which engine tier served this recommendation (T3b): "free" (Gemini 2.5
-  // Flash, anon) or "frontier" (Gemini 2.5 Pro, signed-in quality tier). Drives
-  // the tier label so signed-in users aren't told to "upgrade for frontier
-  // models" when they are already on it. `engine` is the resolved engine id.
-  tier?: "free" | "frontier";
-  engine?: string;
   // Structured rationale sections (task / pick / run), emitted best-effort by
   // the service when the model followed the labelled RATIONALE format. The
   // "Why this model?" panel renders these as sub-headings; absent/null -> it
@@ -66,6 +60,27 @@ export interface PriorityRecommendation extends RecommendResponse {
 export interface MultiRecommendResponse {
   recommendations: PriorityRecommendation[];
   primary: "cheap" | "balanced" | "best";
+  // The engine run that produced the picks (absent on a payload from before
+  // the engine menu).
+  engine?: EngineRun;
+}
+
+// The engine that wrote the picks: the user's menu choice, or the service's
+// fallback when that engine failed (`fell_back`), with what the call cost
+// roadmodel. `cost_source` says whether the cost came from the provider's
+// reported usage or the cold estimate.
+export interface EngineRun {
+  hint: string;
+  name: string;
+  maker: string;
+  requested: string;
+  requested_name: string;
+  fell_back: boolean;
+  latency_ms: number | null;
+  cost_usd: number;
+  cost_source: "measured" | "estimated";
+  // The share of the prompt the provider served from its cache, when measured.
+  cached_share: number | null;
 }
 
 const DEFAULT_SERVICE_URL =

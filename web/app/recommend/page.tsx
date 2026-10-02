@@ -1,34 +1,53 @@
 // web/app/recommend/page.tsx
+import { cookies } from "next/headers";
+
 import { RecommendWorkspace } from "@/components/RecommendWorkspace";
 import { getServerSession } from "@/lib/auth";
+import { getBenchmarkMeta, getModelRows } from "@/lib/catalog-models";
+import { DEFAULT_ENGINE, menuFor, viewerFor } from "@/lib/recommend-engines";
+import { picksData } from "@/lib/recommend-picks";
+import { parseEnginePref, RECOMMEND_PREFS_COOKIE } from "@/lib/recommend-prefs";
+
+export const metadata = {
+  title: "Recommend — roadmodel",
+  description:
+    "Describe a task and get three model picks (Cost, Balanced and Quality), each with the platform to run it on, its settings and what it costs you, weighed across the whole catalog.",
+};
 
 export default async function RecommendPage() {
-  // The page returns all three priorities (Cost / Balanced / Quality) per
-  // submit; the highlighted-by-default one is seeded server-side from the
-  // profile inside /api/recommend. Here we only need to know whether the
-  // visitor is signed in, so the "Set as default" control can persist.
   const session = await getServerSession();
+  const viewer = viewerFor(session?.id);
+  const engines = menuFor(viewer);
+  // The engine the visitor last chose, if they may still use it.
+  const saved = parseEnginePref((await cookies()).get(RECOMMEND_PREFS_COOKIE)?.value);
+  const initialEngine = engines.find((e) => e.hint === saved && e.allowed)?.hint ?? DEFAULT_ENGINE.hint;
+  const models = getModelRows();
+  const bench = getBenchmarkMeta();
 
   return (
-    <section className="mx-auto max-w-6xl px-6 pt-3 pb-8">
-      {/* Compact header (the nav already brands "roadmodel") so the picks sit
-          near the top of the viewport — the mock's no-scroll fit goal, which
-          wants a small title + tight gaps, not a hero header. */}
-      <header className="max-w-2xl">
-        <h1 className="text-xl font-bold tracking-tight text-brand-slate-900 dark:text-brand-slate-50">
-          Get a model recommendation
+    <section className="mx-auto max-w-6xl px-6 py-10 sm:py-14">
+      <header className="max-w-3xl">
+        <p className="text-sm font-semibold uppercase tracking-wide text-brand-accent">roadmodel</p>
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-brand-slate-900 dark:text-brand-slate-50 sm:text-4xl">
+          Recommend a model
         </h1>
-        <p className="mt-1 text-[13px] leading-snug text-brand-slate-600 dark:text-brand-slate-300">
-          One prompt, three picks — Cost, Balanced, and Quality — compared side
-          by side, with platform, settings, and real cost to you.
+        <p className="mt-3 text-brand-slate-600 dark:text-brand-slate-300">
+          Describe a task. An engine reads it and weighs every model in the catalog for it (the S&nbsp;&rarr;&nbsp;D
+          ratings, Artificial Analysis&rsquo;s benchmarks, prices, and the subscriptions you hold), then returns
+          three picks: the cheapest model that does the job, the best value, and the strongest, each with the
+          platform to run it on, its settings, and what it costs you.
         </p>
       </header>
 
-      {/* Single full-width column: the redesign renders the three picks as a
-          side-by-side comparison matrix + detail, which needs the full width
-          (the old two-column layout squeezed them into stacked cards). */}
-      <div className="mt-3">
-        <RecommendWorkspace canPersistBudget={session !== null} />
+      <div className="mt-8">
+        <RecommendWorkspace
+          engines={engines}
+          initialEngine={initialEngine}
+          picks={picksData(models)}
+          signedIn={session !== null}
+          modelCount={models.length}
+          measuredCount={bench.measuredCount}
+        />
       </div>
     </section>
   );

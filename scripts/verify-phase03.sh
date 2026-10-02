@@ -355,17 +355,20 @@ run_static_checks() {
     record_fail 30 "web/tests/recommend.spec.ts exists" "missing"
   fi
 
+  # The /recommend form, its output, and the engine-tier label. The 2026-10
+  # overhaul renamed the first two (PromptForm -> RecommendComposer,
+  # RecommendOutput -> RecommendResult); FreeTierLabel still labels /roadmap.
   local ok31=1
-  for comp in PromptForm RecommendOutput FreeTierLabel; do
+  for comp in RecommendComposer RecommendResult FreeTierLabel; do
     if ! grep -Rql "${comp}" web/components/ 2>/dev/null; then
       ok31=0
       break
     fi
   done
   if [[ "${ok31}" -eq 1 ]]; then
-    record_pass 31 "web/components/ carries PromptForm, RecommendOutput, FreeTierLabel"
+    record_pass 31 "web/components/ carries RecommendComposer, RecommendResult, FreeTierLabel"
   else
-    record_fail 31 "web/components/ carries PromptForm, RecommendOutput, FreeTierLabel" \
+    record_fail 31 "web/components/ carries RecommendComposer, RecommendResult, FreeTierLabel" \
       "one or more component names not found"
   fi
 

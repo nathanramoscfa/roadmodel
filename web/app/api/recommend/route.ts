@@ -13,9 +13,15 @@ import {
   withSpan,
 } from "@/lib/latency";
 import {
-  NoEligibleEngineError,
-  resolveRecommenderEngine,
-} from "@/lib/model-routing";
+  chooseEngine,
+  costFromUsage,
+  engineByHint,
+  estimatedCost,
+  isEngineUsage,
+  viewerFor,
+  type Engine,
+  type EngineUsage,
+} from "@/lib/recommend-engines";
 import {
   DEFAULT_PROFILE,
   getAllowedJurisdictions,
@@ -28,58 +34,17 @@ import { recommenderRequestHeaders } from "@/lib/api";
 import { identifyRequest, withRateLimit } from "@/lib/withRateLimit";
 import { fundingNoteForModel, personalizeComparison } from "@/lib/funding";
 import { env } from "@/lib/env";
+import type { EngineRun } from "@/lib/api";
+import { recordSpend } from "@/lib/spend-guard";
 
 const DEFAULT_RECOMMENDER_URL =
   "https://roadmodel-api.vercel.app/v1/recommend";
 
-// Per-call cost LEDGER (Phase 4.5 T3b). Estimates the recommend ENGINE call's
-// spend so signed-in frontier usage is queryable per audit row (e.g. sum
-// cost_usd over signed-in rows = frontier spend). This is OUR cost, distinct
-// from the recommended model's user-facing session_cost_estimate. Rates are per
-// 1M tokens; the static system prompt (header + selector + tier-cost +
-// user-context) dominates input. outTokens is the visible + (frontier)
-// reasoning estimate. Engines absent here yield no ledger fields.
-const ENGINE_RATES: Record<
-  string,
-  { inPer1m: number; outPer1m: number; outTokens: number }
-> = {
-  "gemini-2.5-flash": { inPer1m: 0.3, outPer1m: 2.5, outTokens: 512 },
-  "gemini-2.5-pro": { inPer1m: 1.25, outPer1m: 10, outTokens: 900 },
-  // GPT-5 mini — the previous anon engine, kept for rollback pricing.
-  "gpt-5-mini": { inPer1m: 0.25, outPer1m: 2.0, outTokens: 700 },
-  // GPT-5.6 Luna (eval-backed anon + frontier engine, 2026-09-22). outTokens
-  // includes floor reasoning (reasoning.effort=low — the 5.6 generation has no
-  // `minimal` rung) plus the visible block; reasoning is billed at the output
-  // rate on these models.
-  "gpt-5.6-luna": { inPer1m: 0.2, outPer1m: 1.2, outTokens: 750 },
-};
-// MEASURED at ~39.5k (google usage_metadata.prompt_token_count on the real
-// header+selector+tier-cost prompt, 2026-07), NOT the earlier 20k guess — so the
-// ledger + the daily spend-guard (web/lib/spend-guard.ts) reflect true engine
-// spend rather than ~half of it. Excludes per-request context caching (Gemini
-// implicit caching is present but unreliable per the 2026-07 probe), so this is
-// a conservative, budget-protective upper bound until real cached-token usage is
-// captured from the provider.
-const STATIC_PROMPT_TOKENS = 39500;
-
-// Cost ledger for the engine call(s). `inputCalls` / `outputCalls` scale the
-// static-prompt input and the visible output independently: the fan-out sends
-// the big system prompt N times (inputCalls = outputCalls = 3), while the ladder
-// sends it ONCE and emits ~3x the output (inputCalls = 1, outputCalls = 3) — so
-// the ladder's lower input cost is reflected faithfully.
-function estimateEngineCost(
-  engine: string,
-  taskLen: number,
-  { inputCalls = 1, outputCalls = 1 }: { inputCalls?: number; outputCalls?: number } = {},
-): { inputTokens: number; outputTokens: number; costUsd: number } | undefined {
-  const r = ENGINE_RATES[engine];
-  if (!r) return undefined;
-  const inputTokens = (STATIC_PROMPT_TOKENS + Math.ceil(taskLen / 4)) * inputCalls;
-  const outputTokens = r.outTokens * outputCalls;
-  const costUsd =
-    (inputTokens * r.inPer1m + outputTokens * r.outPer1m) / 1_000_000;
-  return { inputTokens, outputTokens, costUsd: Number(costUsd.toFixed(6)) };
-}
+// The per-call cost LEDGER: OUR engine spend, written to audit_log.cost_usd and
+// summed by the daily spend guard (lib/spend-guard.ts). Exact when the service
+// returns the provider-reported usage (roadmodel >= 0.2.56: cache reads billed
+// at the cache price); otherwise the cold estimate (lib/recommend-engines.ts),
+// the conservative side for the guard.
 
 function recommenderUrl(): string {
   if (
@@ -108,6 +73,10 @@ function ladderUrl(): string {
 interface LadderPayload {
   picks?: Partial<Record<"quality" | "balanced" | "cost", RecommenderPayload>>;
   guard?: { healthy?: boolean; [k: string]: unknown };
+  // The engines.json hint that answered (after any service-side fallback) and
+  // its provider-reported token counts.
+  engine?: string;
+  usage?: unknown;
 }
 
 // Ladder tier -> the priority id the frontend/matrix expect, in cost→best order.
@@ -152,6 +121,23 @@ interface RecommenderPayload {
     platform: string | null;
     settings: Record<string, string>;
   };
+  // The engine that answered this call and its token counts (see LadderPayload).
+  engine?: string;
+  usage?: unknown;
+}
+
+// Sum the usage of several engine calls (the fan-out makes one per priority).
+function sumUsage(all: EngineUsage[]): EngineUsage {
+  return all.reduce(
+    (t, u) => ({
+      input_tokens: t.input_tokens + u.input_tokens,
+      cached_input_tokens: t.cached_input_tokens + u.cached_input_tokens,
+      cache_write_tokens: t.cache_write_tokens + u.cache_write_tokens,
+      output_tokens: t.output_tokens + u.output_tokens,
+      reasoning_tokens: (t.reasoning_tokens ?? 0) + (u.reasoning_tokens ?? 0),
+    }),
+    { input_tokens: 0, cached_input_tokens: 0, cache_write_tokens: 0, output_tokens: 0, reasoning_tokens: 0 },
+  );
 }
 
 function isCnJurisdictionModel(model: string | undefined): boolean {
@@ -228,7 +214,7 @@ const handler = async (req: Request): Promise<Response> =>
     let apiProviders: string[];
     let taskDescription: string;
     let incomingContext: Record<string, unknown>;
-    let recommenderEngine: ReturnType<typeof resolveRecommenderEngine>;
+    let recommenderEngine: Engine;
 
     try {
       const dispatched = await withSpan("dispatch", async () => {
@@ -307,40 +293,35 @@ const handler = async (req: Request): Promise<Response> =>
           profile?.consumption_headroom ??
           DEFAULT_PROFILE.consumption_headroom;
 
-        try {
-          // T3b: signed-in users get the frontier engine ONLY when the gate is
-          // on; anonymous requests always get the free (Flash) engine.
-          const engine = resolveRecommenderEngine({
-            profile,
-            signedIn: Boolean(localUserId),
-            frontierEnabled: env.RECOMMENDER_FRONTIER_ENABLED,
-          });
+        // The engine the user chose from the /recommend menu, checked against
+        // who may use it BEFORE any paid call (lib/recommend-engines). No
+        // choice means the registry's default, which is open to everyone.
+        const choice = chooseEngine(
+          (parsedBody as { engine?: unknown }).engine,
+          viewerFor(localUserId),
+        );
+        if (!choice.ok) {
           return {
-            kind: "ok",
-            body: parsedBody,
-            session: localSession,
-            userId: localUserId,
-            taskDescription: td,
-            incomingContext: ctx,
-            allowedJurisdictions: localJurisdictions,
-            budgetPriority: localBudget,
-            consumptionHeadroom: localConsumptionHeadroom,
-            subscriptions: localSubscriptions,
-            apiProviders: localApiProviders,
-            engine,
-          } as const;
-        } catch (err) {
-          return {
-            kind: "recommender_error",
-            error_class:
-              err instanceof NoEligibleEngineError
-                ? "no_eligible_engine"
-                : err instanceof Error
-                  ? err.name
-                  : "engine_resolve_failed",
+            kind: "engine_refused",
+            error: choice.error,
+            engine: choice.error === "unknown_engine" ? undefined : choice.engine.hint,
             userId: localUserId,
           } as const;
         }
+        return {
+          kind: "ok",
+          body: parsedBody,
+          session: localSession,
+          userId: localUserId,
+          taskDescription: td,
+          incomingContext: ctx,
+          allowedJurisdictions: localJurisdictions,
+          budgetPriority: localBudget,
+          consumptionHeadroom: localConsumptionHeadroom,
+          subscriptions: localSubscriptions,
+          apiProviders: localApiProviders,
+          engine: choice.engine,
+        } as const;
       });
 
       if (dispatched.kind === "bad_input") {
@@ -351,16 +332,19 @@ const handler = async (req: Request): Promise<Response> =>
         });
         return NextResponse.json({ error: "bad_input" }, { status: 400 });
       }
-      if (dispatched.kind === "recommender_error") {
+      if (dispatched.kind === "engine_refused") {
         recordTotal();
-        auditFor(req, "recommender_error", {
-          error_class: dispatched.error_class,
+        auditFor(req, "bad_input", {
+          error_class: dispatched.error,
           user_id: dispatched.userId,
           latency_ms: getTimings(),
         });
+        // 403: a real engine this viewer may not use, or one that has not
+        // passed the engine eval yet (the menu shows both locked); 400: no
+        // such engine on the menu.
         return NextResponse.json(
-          { error: "recommender_unavailable" },
-          { status: 503 },
+          { error: dispatched.error, engine: dispatched.engine },
+          { status: dispatched.error === "unknown_engine" ? 400 : 403 },
         );
       }
 
@@ -507,7 +491,7 @@ const handler = async (req: Request): Promise<Response> =>
           // SELECTION toward a $0-funded surface on a quality tie. No keys sent.
           subscriptions,
           api_providers: apiProviders,
-          force_provider: recommenderEngine.force_provider,
+          force_provider: recommenderEngine.hint,
         },
       };
       let upstream: Response;
@@ -548,13 +532,24 @@ const handler = async (req: Request): Promise<Response> =>
     const toRecommendation = (
       parsed: RecommenderPayload | null,
       priority: BudgetPriority,
-    ) => ({
-      ...shapePick(parsed, priority),
-      priority,
-      // Same engine for every pick (T3b tier label).
-      tier: recommenderEngine.use_frontier ? "frontier" : "free",
-      engine: recommenderEngine.engine,
-    });
+    ) => {
+      // The engine fields describe the CALL, reported once at the top level.
+      const { engine: _engine, usage: _usage, ...pick } = shapePick(parsed, priority);
+      void _engine;
+      void _usage;
+      return { ...pick, priority };
+    };
+
+    // What the engine call(s) reported: the hint that answered (it differs
+    // from the chosen one when the service fell back) and the token counts.
+    let answeredHint: string | undefined;
+    const usages: EngineUsage[] = [];
+    let usageComplete = true;
+    const noteCall = (payload: { engine?: string; usage?: unknown } | null) => {
+      if (payload?.engine && !answeredHint) answeredHint = payload.engine;
+      if (isEngineUsage(payload?.usage)) usages.push(payload.usage);
+      else usageComplete = false;
+    };
 
     // Tasks #1/#3 — one upstream call returns the whole anchored Cost/Balanced/
     // Quality ladder (Quality first, Balanced/Cost strictly lower). Returns null
@@ -574,7 +569,7 @@ const handler = async (req: Request): Promise<Response> =>
           allowed_jurisdictions: allowedJurisdictions,
           subscriptions,
           api_providers: apiProviders,
-          force_provider: recommenderEngine.force_provider,
+          force_provider: recommenderEngine.hint,
         },
       };
       let upstream: Response;
@@ -596,7 +591,9 @@ const handler = async (req: Request): Promise<Response> =>
       }
       const picks = parsed?.picks;
       if (!picks) return null;
-      // A collapsed (unhealthy) ladder -> fall back to the fan-out.
+      // A collapsed (unhealthy) ladder -> fall back to the fan-out. Its call
+      // was still paid for, so it is metered either way.
+      noteCall(parsed);
       if (parsed?.guard?.healthy === false) return null;
       // One sample decomposes the provider span (Step 7).
       ingestServiceTimings(upstream.headers.get("X-Roadmodel-Timing"));
@@ -650,6 +647,7 @@ const handler = async (req: Request): Promise<Response> =>
         );
       }
 
+      for (const r of ok) noteCall(r.parsed);
       recommendations = await withSpan("render", async () =>
         // results preserve BUDGET_PRIORITY_IDS order (Cost -> Balanced -> Quality).
         ok.map((r) => toRecommendation(r.parsed, r.priority)),
@@ -660,31 +658,65 @@ const handler = async (req: Request): Promise<Response> =>
     // documents (no-op body; the audit write happens after recordTotal()).
     await withSpan("scoring", async () => {});
 
-    // Per-call cost ledger (T3b): OUR engine spend. The fan-out sends the big
-    // system prompt once PER priority (n input + n output "calls"); the ladder
-    // sends it ONCE and emits ~n× the output — so scale input/output separately.
-    // provider/model name the PRIMARY (highlighted) pick.
+    // The cost ledger: OUR engine spend for this request. Exact from the
+    // provider-reported usage when every call returned it; otherwise the cold
+    // estimate (the fan-out sends the big prompt once PER priority; the ladder
+    // once, with ~n x the output). provider/model name the PRIMARY pick.
     const primaryPick =
       recommendations.find((r) => r.priority === budgetPriority) ??
       recommendations[0];
     const n = recommendations.length;
-    const per = estimateEngineCost(recommenderEngine.engine, taskDescription.length, {
-      inputCalls: ladderMode ? 1 : n,
-      outputCalls: n,
-    });
+    const answered = engineByHint(answeredHint) ?? recommenderEngine;
+    const measured = usageComplete && usages.length > 0;
+    const usage = measured
+      ? sumUsage(usages)
+      : estimatedCost(answered, taskDescription.length, {
+          inputCalls: ladderMode ? 1 : n,
+          outputCalls: n,
+        });
+    const costUsd = costFromUsage(answered, usage);
+    // The day's running total the spend guard checks (lib/spend-guard).
+    recordSpend(costUsd);
     recordTotal();
+    const timings = getTimings();
     auditFor(req, "ok", {
       provider: primaryPick.platform,
       model: primaryPick.model,
-      input_tokens: per?.inputTokens,
-      output_tokens: per?.outputTokens,
-      cost_usd: per?.costUsd,
+      input_tokens: usage.input_tokens,
+      output_tokens: usage.output_tokens,
+      cost_usd: costUsd,
       user_id: userId,
-      latency_ms: getTimings(),
+      latency_ms: timings,
+      cache_stats: {
+        provider: "recommend-engine",
+        engine: answered.hint,
+        requested_engine: recommenderEngine.hint,
+        input_tokens: usage.input_tokens,
+        cached_input_tokens: usage.cached_input_tokens,
+        cache_write_tokens: usage.cache_write_tokens,
+        output_tokens: usage.output_tokens,
+        cost_source: measured ? "measured" : "estimated",
+      },
     });
 
+    const engineRun: EngineRun = {
+      hint: answered.hint,
+      name: answered.name,
+      maker: answered.maker,
+      requested: recommenderEngine.hint,
+      requested_name: recommenderEngine.name,
+      fell_back: answered.hint !== recommenderEngine.hint,
+      latency_ms: typeof timings?.total_ms === "number" ? timings.total_ms : null,
+      cost_usd: costUsd,
+      cost_source: measured ? "measured" : "estimated",
+      cached_share:
+        measured && usage.input_tokens > 0
+          ? Number((usage.cached_input_tokens / usage.input_tokens).toFixed(3))
+          : null,
+    };
+
     return new NextResponse(
-      JSON.stringify({ recommendations, primary: budgetPriority }),
+      JSON.stringify({ recommendations, primary: budgetPriority, engine: engineRun }),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
   });

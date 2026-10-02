@@ -97,8 +97,8 @@ test("pinning a priority as default on /recommend persists and Settings reflects
     }),
   );
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Input the prompt/i).fill("build a SQL agent");
-  await page.getByRole("button", { name: /Submit/i }).click();
+  await page.getByPlaceholder(/Describe the task/i).fill("build a SQL agent");
+  await page.getByRole("button", { name: /^Recommend/ }).click();
   const qualityCard = page.locator('[data-priority="best"]');
   await expect(qualityCard).toBeVisible();
 

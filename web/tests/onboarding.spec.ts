@@ -84,9 +84,12 @@ test("save-and-continue persists prefs and surfaces budget priority", async ({
   );
   await page.goto("/recommend");
   await page
-    .getByPlaceholder(/Input the prompt/i)
+    .getByPlaceholder(/Describe the task/i)
     .fill("profile onboarding smoke");
-  await page.getByRole("button", { name: /Submit/i }).click();
+  await page.getByRole("button", { name: /^Recommend/ }).click();
+  // The real route self-fetches the mock recommender once per priority, which
+  // can take well past the default 5s locally: wait for the result itself.
+  await expect(page.getByTestId("recommend-result")).toBeVisible({ timeout: 30_000 });
   // The saved emphasis (best) is the highlighted/default card; scope to it.
   const qualityCard = page.locator('[data-priority="best"]');
   await expect(qualityCard.getByText("Default")).toBeVisible();
@@ -154,8 +157,11 @@ test("forwards held subscriptions + enabled API providers to the recommender (Ph
   await expect(page).toHaveURL("/");
 
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Input the prompt/i).fill("forwarding smoke");
-  await page.getByRole("button", { name: /Submit/i }).click();
+  await page.getByPlaceholder(/Describe the task/i).fill("forwarding smoke");
+  await page.getByRole("button", { name: /^Recommend/ }).click();
+  // The real route self-fetches the mock recommender once per priority, which
+  // can take well past the default 5s locally: wait for the result itself.
+  await expect(page.getByTestId("recommend-result")).toBeVisible({ timeout: 30_000 });
   // The page now renders three priority cards; the forwarded funding is echoed
   // in every card's rationale. The default jurisdictions include cn (#445), so
   // the mock's cn-precedence pick (a cn model from the catalog) fills every
@@ -191,8 +197,11 @@ test("cost table is personalized to the signed-in user's funding (Phase 4.8 T3)"
   await expect(page).toHaveURL("/");
 
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Input the prompt/i).fill("personalized cost table");
-  await page.getByRole("button", { name: /Submit/i }).click();
+  await page.getByPlaceholder(/Describe the task/i).fill("personalized cost table");
+  await page.getByRole("button", { name: /^Recommend/ }).click();
+  // The real route self-fetches the mock recommender once per priority, which
+  // can take well past the default 5s locally: wait for the result itself.
+  await expect(page.getByTestId("recommend-result")).toBeVisible({ timeout: 30_000 });
   // Three cards render, each with a personalized cost table; scope to the Cost
   // card (mock's cheap pick = Claude 4.5 Haiku) so the table assertions are
   // unambiguous.
@@ -263,8 +272,11 @@ test("restrict path excludes cn-jurisdiction models from recommendations", async
   await expect(page).toHaveURL("/");
 
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Input the prompt/i).fill("restrict cn");
-  await page.getByRole("button", { name: /Submit/i }).click();
+  await page.getByPlaceholder(/Describe the task/i).fill("restrict cn");
+  await page.getByRole("button", { name: /^Recommend/ }).click();
+  // The real route self-fetches the mock recommender once per priority, which
+  // can take well past the default 5s locally: wait for the result itself.
+  await expect(page.getByTestId("recommend-result")).toBeVisible({ timeout: 30_000 });
   // Claude 4.5 Haiku is a recommended pick.
   await expect(page.getByText(/Claude 4\.5 Haiku/i).first()).toBeVisible();
   // The cn pick is jurisdiction-excluded EVERYWHERE — not a pick and not a
@@ -281,8 +293,11 @@ test("default path (cn included) surfaces the cn pick", async ({ page }) => {
   await expect(page).toHaveURL("/");
 
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Input the prompt/i).fill("allow cn");
-  await page.getByRole("button", { name: /Submit/i }).click();
+  await page.getByPlaceholder(/Describe the task/i).fill("allow cn");
+  await page.getByRole("button", { name: /^Recommend/ }).click();
+  // The real route self-fetches the mock recommender once per priority, which
+  // can take well past the default 5s locally: wait for the result itself.
+  await expect(page.getByTestId("recommend-result")).toBeVisible({ timeout: 30_000 });
   // With cn allowed the mock returns the cn pick for every priority, so the
   // model appears in all three matrix columns — assert the first is visible.
   await expect(

@@ -8,14 +8,34 @@ import "./fixtures/seed-test-env";
 import { test, expect } from "@playwright/test";
 
 import {
+  _setLedgerPageForTest,
   _setSpendReaderForTest,
   dailyCostCapTripped,
   secondsToUtcMidnight,
   startOfUtcDayIso,
+  sumLedgerSince,
 } from "../lib/spend-guard";
 
 test.afterEach(() => {
   _setSpendReaderForTest(null);
+  _setLedgerPageForTest(null);
+});
+
+test("the ledger sum reads every page, not just the API's first 1,000 rows", async () => {
+  // 2,500 calls at a cent each: a single capped read saw $10 and a $20 cap
+  // could never trip.
+  const rows = Array.from({ length: 2_500 }, () => 0.01);
+  const pages: [number, number][] = [];
+  _setLedgerPageForTest(async (_since, from, to) => {
+    pages.push([from, to]);
+    return rows.slice(from, to + 1);
+  });
+  expect(await sumLedgerSince("2026-10-02T00:00:00.000Z")).toBeCloseTo(25, 6);
+  expect(pages).toEqual([
+    [0, 999],
+    [1000, 1999],
+    [2000, 2999],
+  ]);
 });
 
 test("cap of 0 is disabled — never trips, never reads the ledger", async () => {

@@ -1,18 +1,11 @@
 // web/lib/model-routing.ts
 //
 // 4D model tiering scaffold (per ROADMAP §6 — Phase 4 application
-// of "Engine selection + free-tier override"). Two free-tier
-// surfaces consume this module:
+// of "Engine selection + free-tier override"). The /roadmap surface
+// consumes this module; /recommend picks its engine from the engine
+// registry instead (lib/recommend-engines.ts, service/app/engines.json):
 //
-//   1. /api/recommend  → resolveRecommenderEngine() returns the
-//      catalog-tracked engine the FastAPI recommender service is
-//      forced to use. Phase 3 hard-coded "google-gemini-2.5-flash";
-//      Step 6 makes that string catalog-derived so the Phase 9 §9.2
-//      auto-refresh cron flips it when a cheaper qualifying
-//      knowledge-B Google model shows up in cursor.com's pricing
-//      page.
-//
-//   2. /api/roadmap    → resolveRoadmapEngine() returns the
+//   /api/roadmap → resolveRoadmapEngine() returns the
 //      free-tier engine the @google/genai SDK call is parameterized
 //      on. Step 4 PASS keeps it at `gemini-2.5-flash`; Step 4 FAIL
 //      escalation flips FREE_ROADMAP_MIN_TIER from 'B' to 'A' in
@@ -38,11 +31,7 @@
 // against the upstream Cursor pricing page.
 
 import catalog from "@/data/catalog.json";
-import {
-  ENGINE_OVERRIDES,
-  FREE_RECOMMEND_MIN_TIER,
-  FREE_ROADMAP_MIN_TIER,
-} from "./engine-overrides";
+import { ENGINE_OVERRIDES, FREE_ROADMAP_MIN_TIER } from "./engine-overrides";
 import { DEFAULT_PROFILE, type JurisdictionCode, type Profile } from "./profile";
 
 // Tier ordering matches the docs/model-selector.txt's quality scale where S
@@ -58,7 +47,7 @@ const TIER_RANK: Record<TaskTier, number> = {
   D: 4,
 };
 
-export type EngineSurface = "recommend" | "roadmap";
+export type EngineSurface = "roadmap";
 
 // Map a surface to its PRIMARY task category in the
 // docs/model-selector.txt's <task-categories> taxonomy. Surface-driven
@@ -66,7 +55,6 @@ export type EngineSurface = "recommend" | "roadmap";
 // the model is being asked to do; the profile influences only the
 // jurisdiction filter.
 const SURFACE_PRIMARY: Record<EngineSurface, keyof CatalogTiers> = {
-  recommend: "knowledge",
   roadmap: "planning",
 };
 
@@ -350,56 +338,6 @@ export function resolveRoadmapEngine(
   return pickFreeEngine({
     surface: "roadmap",
     minTier: FREE_ROADMAP_MIN_TIER,
-    allowedJurisdictions:
-      profile?.allowed_jurisdictions ??
-      [...DEFAULT_PROFILE.allowed_jurisdictions],
-  });
-}
-
-interface ResolveRecommenderEngineArgs {
-  profile: Profile | null;
-  // True when the request carries an authenticated session. The frontier
-  // quality tier is signed-in-only; anonymous requests always get the free
-  // engine. (Phase 4.5 T3b)
-  signedIn?: boolean;
-  // RECOMMENDER_FRONTIER_ENABLED gate. Off by default → the free engine for
-  // everyone (the increment-1 dark-ship state). (Phase 4.5 T3b)
-  frontierEnabled?: boolean;
-}
-
-// Signed-in quality-tier engine: GPT-5 mini on the OpenAI key, run with
-// reasoning at minimal effort by the FastAPI service (which keys its GPT-5
-// params — thinking_budget=0 → reasoning.effort=minimal — off the "gpt-5"
-// model-id prefix; see service/app/recommend.py + providers/openai.py). The
-// 2026-07-19 differential eval (scripts/eval_recommend_engines.py) picked it
-// over the prior Gemini 2.5 Pro frontier: perfect cost-demotion adherence
-// (1.0 vs 0.83) and ~3x cheaper with OpenAI automatic prefix caching. This
-// completes the full cutover after the anon canary (ENGINE_OVERRIDES.recommend)
-// was verified in prod. max_tokens mirrors the service GPT-5 output cap;
-// use_frontier marks the audit row for the per-call cost ledger.
-const FRONTIER_RECOMMENDER_ENGINE = "gpt-5.6-luna";
-const FRONTIER_RECOMMENDER_PROVIDER = "openai";
-
-// Recommender-surface entry point. Free engine (catalog-derived Flash) by
-// default; routes signed-in requests to the frontier engine ONLY when
-// RECOMMENDER_FRONTIER_ENABLED is on. The `force_provider` string passes
-// through to the FastAPI recommender as the upstream engine pin.
-export function resolveRecommenderEngine(
-  args: ResolveRecommenderEngineArgs,
-): ResolvedEngine {
-  const { profile, signedIn = false, frontierEnabled = false } = args;
-  if (signedIn && frontierEnabled) {
-    return {
-      engine: FRONTIER_RECOMMENDER_ENGINE,
-      provider: FRONTIER_RECOMMENDER_PROVIDER,
-      force_provider: `${FRONTIER_RECOMMENDER_PROVIDER}-${FRONTIER_RECOMMENDER_ENGINE}`,
-      max_tokens: 2048,
-      use_frontier: true,
-    };
-  }
-  return pickFreeEngine({
-    surface: "recommend",
-    minTier: FREE_RECOMMEND_MIN_TIER,
     allowedJurisdictions:
       profile?.allowed_jurisdictions ??
       [...DEFAULT_PROFILE.allowed_jurisdictions],

@@ -1,463 +1,367 @@
 // web/tests/recommend.spec.ts
-import { test, expect } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
+import { test, expect, type Page } from "@playwright/test";
+
+import registry from "../data/engines.json";
 
 type Pick = Record<string, unknown> & { priority?: string };
 
-// /api/recommend now returns all three priorities at once
-// ({ recommendations: [...], primary }). `mk` wraps the legacy single-pick
-// payloads these tests assert on into that shape with one card.
-function mk(pick: Pick, primary = "balanced") {
-  return JSON.stringify({
-    recommendations: [{ priority: primary, ...pick }],
-    primary,
-  });
+// A real /api/recommend answer (three picks, rationale sections, personalized
+// cost rows), captured from production and stripped of personal detail, with
+// the engine run the route now reports.
+const FIXTURE = readFileSync(path.join(__dirname, "fixtures", "recommend-response.json"), "utf8");
+
+// `mk` wraps a single legacy pick into the multi-pick response shape.
+function mk(pick: Pick, primary = "balanced", engine?: Record<string, unknown>) {
+  return JSON.stringify({ recommendations: [{ priority: primary, ...pick }], primary, engine });
 }
 
-test("/recommend renders form + empty output", async ({ page }) => {
+const task = (page: Page) => page.getByPlaceholder(/Describe the task/i);
+const submit = (page: Page) => page.getByRole("button", { name: /^Recommend/ });
+
+async function ask(page: Page, text = "build a SQL agent") {
+  await task(page).fill(text);
+  await submit(page).click();
+}
+
+async function fulfill(page: Page, body: string, status = 200) {
+  await page.route("**/api/recommend", (route) =>
+    route.fulfill({ status, contentType: "application/json", body }),
+  );
+}
+
+test("/recommend renders the composer, the engine menu and how it works", async ({ page }) => {
   await page.goto("/recommend");
-  await expect(
-    page.getByPlaceholder(/Input the prompt/i),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: /Submit/i }),
-  ).toBeVisible();
-  await expect(
-    page.getByText(/Your recommendation will appear here/i),
-  ).toBeVisible();
-  // The benchmarks & ratings reference panel fills the left column under Submit.
-  await expect(
-    page.getByRole("heading", { name: /Benchmarks & ratings/i }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: /Full reference/i }),
-  ).toHaveAttribute("href", "/docs");
-  await expect(
-    page.getByRole("link", { name: "SWE-bench Verified" }).first(),
-  ).toHaveAttribute("href", "https://www.swebench.com/");
-  // The pre-submit budget toggle is gone — all three priorities are shown after
-  // a submit instead (see the three-card test below).
-  await expect(
-    page.getByRole("radiogroup", { name: /Budget priority/i }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("heading", { level: 1, name: "Recommend a model" })).toBeVisible();
+  await expect(task(page)).toBeVisible();
+  // Nothing to send yet.
+  await expect(submit(page)).toBeDisabled();
+  await expect(page.getByTestId("engine-picker")).toBeVisible();
+  await expect(page.getByTestId("recommend-intro")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "How a recommendation is made" })).toBeVisible();
+  // No pre-submit budget toggle: all three priorities come back together.
+  await expect(page.getByRole("radiogroup", { name: /Budget priority/i })).toHaveCount(0);
 });
 
-test("a single submit renders all three priority cards (Cost / Balanced / Quality)", async ({
-  page,
-}) => {
-  await page.route("**/api/recommend", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        primary: "balanced",
-        recommendations: [
-          {
-            priority: "cheap",
-            model: "Claude 4.5 Haiku",
-            platform: "Claude Code",
-            settings: {},
-            comparison_table: [],
-          },
-          {
-            priority: "balanced",
-            model: "GPT-5.4",
-            platform: "Codex",
-            settings: {},
-            comparison_table: [],
-          },
-          {
-            priority: "best",
-            model: "Claude Opus 4.8",
-            platform: "Claude Code",
-            settings: {},
-            comparison_table: [],
-          },
-        ],
-      }),
+test("an example fills the task", async ({ page }) => {
+  await page.goto("/recommend");
+  await page.getByRole("button", { name: "Bulk-classify tickets" }).click();
+  await expect(task(page)).toHaveValue(/Classify 10,000 support tickets/);
+  await expect(submit(page)).toBeEnabled();
+});
+
+test("a single submit renders all three priority picks (Cost / Balanced / Quality)", async ({ page }) => {
+  await fulfill(
+    page,
+    JSON.stringify({
+      primary: "balanced",
+      recommendations: [
+        { priority: "cheap", model: "Claude 4.5 Haiku", platform: "Claude Code", settings: {}, comparison_table: [] },
+        { priority: "balanced", model: "GPT-5.4", platform: "Codex", settings: {}, comparison_table: [] },
+        { priority: "best", model: "Claude Opus 4.8", platform: "Claude Code", settings: {}, comparison_table: [] },
+      ],
     }),
   );
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Input the prompt/i).fill("build a SQL agent");
-  await page.getByRole("button", { name: /Submit/i }).click();
+  await ask(page);
 
-  // Three cards, one per priority, each with its distinct model.
   await expect(page.locator("[data-priority]")).toHaveCount(3);
-  await expect(
-    page.locator('[data-priority="cheap"]').getByText(/Claude 4.5 Haiku/i),
-  ).toBeVisible();
-  await expect(
-    page.locator('[data-priority="balanced"]').getByText(/GPT-5\.4/),
-  ).toBeVisible();
-  await expect(
-    page.locator('[data-priority="best"]').getByText(/Claude Opus 4\.8/i),
-  ).toBeVisible();
-  // The saved-preference priority (Balanced) leads with the Default badge; the
-  // others offer to become the default (signed-out shows neither control — this
-  // E2E webServer runs unauthenticated, so no "Set as default" appears).
-  await expect(
-    page.locator('[data-priority="balanced"]').getByText("Default"),
-  ).toBeVisible();
+  await expect(page.locator('[data-priority="cheap"]').getByText(/Claude 4.5 Haiku/i)).toBeVisible();
+  await expect(page.locator('[data-priority="balanced"]').getByText(/GPT-5\.4/)).toBeVisible();
+  await expect(page.locator('[data-priority="best"]').getByText(/Claude Opus 4\.8/i)).toBeVisible();
+  // The saved-preference priority (Balanced) leads with the Default badge.
+  await expect(page.locator('[data-priority="balanced"]').getByText("Default")).toBeVisible();
 });
 
-test(
-  "successful submit renders model, platform, cost table, free-tier label",
-  async ({ page }) => {
-    await page.route("**/api/recommend", (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: mk({
-          model: "Claude 4.5 Haiku",
-          platform: "Anthropic API",
-          settings: {
-            max_tokens: 4096,
-          },
-          session_cost_estimate: {
-            total_usd: 0.0042,
-          },
-          comparison_table: [
-            {
-              model: "Claude 4.5 Haiku",
-              platform: "Anthropic API",
-              total_usd: 0.0042,
-            },
-          ],
-        }),
-      }),
-    );
-    await page.goto("/recommend");
-    await page
-      .getByPlaceholder(/Input the prompt/i)
-      .fill("build a SQL agent");
-    await page.getByRole("button", { name: /Submit/i }).click();
-    await expect(page.getByText(/Claude 4.5 Haiku/i)).toBeVisible();
-    // The engine-tier line names the engine that produced the recommendation
-    // (#271), not the recommended model; free tier keeps the upgrade CTA.
-    await expect(page.getByText(/Recommendation generated by/i)).toBeVisible();
-    await expect(page.getByText(/upgrade for frontier models/i)).toBeVisible();
-    // This payload carries no backup, so the backup line must not render.
-    await expect(page.getByText(/Backup if unavailable/i)).toHaveCount(0);
-  },
-);
+test("a pick carries the catalog's facts: cost tier, AA Index, ratings", async ({ page }) => {
+  await fulfill(page, FIXTURE);
+  await page.goto("/recommend");
+  await ask(page, "Refactor a 3,000-line Python data pipeline into typed modules with tests.");
+  const quality = page.locator('[data-priority="best"]');
+  await expect(quality.getByText("Sonnet 5.5")).toBeVisible();
+  await expect(quality.getByTestId("pick-aa-index")).toHaveText(/AA \d+/);
+  // Seven S→D letters per pick, each marked measured or estimated.
+  await expect(page.getByTestId("pick-ratings")).toHaveCount(3);
+  await expect(page.getByTestId("pick-ratings").first().locator("[data-basis]")).toHaveCount(7);
+  // Hovering the AA Index opens the same card /models shows.
+  await quality.getByTestId("pick-aa-index").hover();
+  await expect(page.getByTestId("frontier-point-card")).toBeVisible();
+});
 
-test("renders the backup model line when the recommendation includes one", async ({
-  page,
-}) => {
-  await page.route("**/api/recommend", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: mk({
-        model: "Opus 4.8",
-        platform: "Claude Code",
-        settings: { max_mode: "OFF", thinking: "High" },
-        backup: { model: "GPT-5.5", platform: "Codex", settings: { intelligence: "High" } },
-        comparison_table: [],
-      }),
+test("the result names the engine that wrote it, with time and cost", async ({ page }) => {
+  await fulfill(page, FIXTURE);
+  await page.goto("/recommend");
+  await ask(page);
+  const line = page.getByTestId("engine-line");
+  await expect(line).toContainText("Picked by GPT-6 Luna");
+  await expect(line).toContainText("0.15¢");
+  await expect(page.getByTestId("engine-fell-back")).toHaveCount(0);
+});
+
+test("a fallback answer says which engine answered instead", async ({ page }) => {
+  await fulfill(
+    page,
+    mk({ model: "Opus 4.8", platform: "Claude Code", settings: {}, comparison_table: [] }, "balanced", {
+      hint: "openai-gpt-6-luna",
+      name: "GPT-6 Luna",
+      maker: "OpenAI",
+      requested: "openai-gpt-6.1-sol",
+      requested_name: "GPT-6.1 Sol",
+      fell_back: true,
+      latency_ms: 21000,
+      cost_usd: 0.004,
+      cost_source: "measured",
+      cached_share: 0.9,
     }),
   );
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Input the prompt/i).fill("build a SQL agent");
-  await page.getByRole("button", { name: /Submit/i }).click();
-  // Backup is now a comparison-matrix row (was the per-card "Backup if
-  // unavailable" line); the fallback model still surfaces.
+  await ask(page);
+  await expect(page.getByTestId("engine-fell-back")).toHaveText(/GPT-6\.1 Sol did not answer, so GPT-6 Luna wrote these picks/);
+});
+
+test("the chart plots the picks among the catalog", async ({ page }) => {
+  await fulfill(page, FIXTURE);
+  await page.goto("/recommend");
+  await ask(page);
+  await expect(page.getByTestId("picks-chart")).toBeVisible();
+  await expect(page.getByTestId("picks-chart-pick")).toHaveCount(3);
+});
+
+test("renders the backup model row when the recommendation includes one", async ({ page }) => {
+  await fulfill(
+    page,
+    mk({
+      model: "Opus 4.8",
+      platform: "Claude Code",
+      settings: { max_mode: "OFF", thinking: "High" },
+      backup: { model: "GPT-5.5", platform: "Codex", settings: { intelligence: "High" } },
+      comparison_table: [],
+    }),
+  );
+  await page.goto("/recommend");
+  await ask(page);
   await expect(page.getByText("Backup", { exact: true })).toBeVisible();
   await expect(page.getByText(/GPT-5\.5/)).toBeVisible();
 });
 
-test("humanizes settings labels and renders the rationale prominently", async ({
-  page,
-}) => {
-  await page.route("**/api/recommend", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: mk({
-        model: "Opus 4.8",
-        platform: "Claude Code",
-        settings: {
-          // Max Mode ON so the row renders — an all-OFF dial is now hidden as a
-          // non-differentiating row (see TierMatrix MEANINGLESS_VALUES).
-          max_mode: "ON",
-          thinking: "High",
-          budget_priority: "balanced",
-          rationale: "Chosen for deep reasoning on a hard task.",
-        },
-        conversation: "New",
-        comparison_table: [],
-      }),
+test("humanizes settings labels and renders the rationale prominently", async ({ page }) => {
+  await fulfill(
+    page,
+    mk({
+      model: "Opus 4.8",
+      platform: "Claude Code",
+      settings: {
+        // Max Mode ON so the row renders — an all-OFF dial is hidden.
+        max_mode: "ON",
+        thinking: "High",
+        budget_priority: "balanced",
+        rationale: "Chosen for deep reasoning on a hard task.",
+      },
+      conversation: "New",
+      comparison_table: [],
     }),
   );
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Input the prompt/i).fill("prove a theorem");
-  await page.getByRole("button", { name: /Submit/i }).click();
-  // Settings render as humanized comparison-matrix rows (Max Mode, Thinking).
-  // budget_priority is implied by the column, so it's not shown as a row, and
-  // the raw snake_case key is never surfaced.
+  await ask(page, "prove a theorem");
   await expect(page.getByText("Max Mode")).toBeVisible();
   await expect(page.getByText("Thinking")).toBeVisible();
   await expect(page.getByText("budget_priority")).toHaveCount(0);
-  // Rationale is surfaced prominently (visible without expanding a disclosure)
-  // and is NOT duplicated as a settings row.
-  await expect(
-    page.getByRole("heading", { name: /Why Opus 4\.8\?/i }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Why Opus 4\.8\?/i })).toBeVisible();
   await expect(page.getByText(/Chosen for deep reasoning/i)).toBeVisible();
 });
 
-test("renders the rationale as readable lines with glossary popovers (#270, #269)", async ({
-  page,
-}) => {
-  await page.route("**/api/recommend", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: mk({
-        model: "Opus 4.8",
-        platform: "Claude Code",
-        settings: {
-          rationale:
-            "Opus 4.8 is S-tier for coding. It leads on SWE-bench Verified. THINKING is set to XHigh for the required rigor.",
-        },
-        comparison_table: [],
-      }),
+test("one Effort row carries Codex's Intelligence value", async ({ page }) => {
+  await fulfill(page, FIXTURE);
+  await page.goto("/recommend");
+  await ask(page);
+  const matrix = page.getByTestId("picks-matrix");
+  await expect(matrix.getByText("Effort", { exact: true })).toBeVisible();
+  await expect(matrix.getByText("Intelligence", { exact: true })).toHaveCount(1); // the Codex cell's note, not a row
+});
+
+test("renders the rationale as readable lines with glossary popovers (#270, #269)", async ({ page }) => {
+  await fulfill(
+    page,
+    mk({
+      model: "Opus 4.8",
+      platform: "Claude Code",
+      settings: {
+        rationale:
+          "Opus 4.8 is S-tier for coding. It leads on SWE-bench Verified. THINKING is set to XHigh for the required rigor.",
+      },
+      comparison_table: [],
     }),
   );
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Input the prompt/i).fill("split + glossary");
-  await page.getByRole("button", { name: /Submit/i }).click();
+  await ask(page, "split + glossary");
   const why = page.getByRole("region", { name: /Why this model/i });
   await expect(why).toBeVisible();
-  // #270: three sentences → three paragraphs, not one dense block.
   await expect(why.locator("p")).toHaveCount(3);
-  // #269: the jargon terms ("S-tier", "SWE-bench Verified") carry inline
-  // definition popovers (role="tooltip", revealed on hover/focus).
   const tooltips = why.locator('[role="tooltip"]');
   await expect(tooltips).toHaveCount(2);
-  await expect(
-    tooltips.filter({ hasText: "Frontier-class" }),
-  ).toHaveCount(1);
-  await expect(
-    tooltips.filter({ hasText: "gold standard for software-engineering" }),
-  ).toHaveCount(1);
-  // Benchmark terms link to their canonical, up-to-date source (opens in a new
-  // tab). "S-tier" is a rating, not a benchmark, so it stays a definable span.
+  await expect(tooltips.filter({ hasText: "Frontier-class" })).toHaveCount(1);
+  await expect(tooltips.filter({ hasText: "gold standard for software-engineering" })).toHaveCount(1);
   const swebench = why.getByRole("link", { name: "SWE-bench Verified" });
   await expect(swebench).toHaveAttribute("href", "https://www.swebench.com/");
   await expect(swebench).toHaveAttribute("target", "_blank");
 });
 
-test("renders sub-headed rationale sections when the service supplies them", async ({
-  page,
-}) => {
-  // When the recommender emits structured rationale (task/pick/effort), the panel
-  // renders sub-headings instead of splitting one prose string. The third segment
-  // justifies the EFFORT (why this thinking level) — NOT how to run it.
-  await page.route("**/api/recommend", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: mk({
-        model: "Opus 4.8",
-        platform: "Claude Code",
-        settings: {
-          rationale:
-            "TASK: Ship a report. PICK: Opus 4.8 is S-tier. EFFORT: Max fits the deep reasoning.",
-        },
-        rationale_sections: {
-          task: "Ship an institutional-grade equity research report.",
-          pick: "Opus 4.8 is S-tier for coding.",
-          effort: "Max thinking fits the deep, long-context reasoning this audit demands.",
-        },
-        comparison_table: [],
-      }),
+test("renders sub-headed rationale sections when the service supplies them", async ({ page }) => {
+  await fulfill(
+    page,
+    mk({
+      model: "Opus 4.8",
+      platform: "Claude Code",
+      settings: {
+        rationale: "TASK: Ship a report. PICK: Opus 4.8 is S-tier. EFFORT: Max fits the deep reasoning.",
+      },
+      rationale_sections: {
+        task: "Ship an institutional-grade equity research report.",
+        pick: "Opus 4.8 is S-tier for coding.",
+        effort: "Max thinking fits the deep, long-context reasoning this audit demands.",
+      },
+      comparison_table: [],
     }),
   );
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Input the prompt/i).fill("structured why");
-  await page.getByRole("button", { name: /Submit/i }).click();
+  await ask(page, "structured why");
   const why = page.getByRole("region", { name: /Why this model/i });
-  await expect(why).toBeVisible();
-  // Three sub-heads: task, pick, and the new "Why this effort" — but never the
-  // old "How to run it" (roadmodel answers what to run + settings, not how).
   await expect(why.getByRole("heading", { name: "The task" })).toBeVisible();
   await expect(why.getByRole("heading", { name: "Why this pick" })).toBeVisible();
   await expect(why.getByRole("heading", { name: "Why this effort" })).toBeVisible();
   await expect(why.getByRole("heading", { name: "How to run it" })).toHaveCount(0);
   await expect(why.getByText(/Max thinking fits the deep, long-context reasoning/i)).toBeVisible();
-  await expect(why.getByText(/institutional-grade equity research report/i)).toBeVisible();
 });
 
-test("frontier-tier recommendation shows the quality-tier label (no upgrade CTA)", async ({
+test("the engine menu offers the evaluated engines a visitor may use, and remembers the choice", async ({
   page,
 }) => {
-  await page.route("**/api/recommend", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: mk({
-        model: "Opus 4.8",
-        platform: "Claude Code",
-        settings: { thinking: "High" },
-        tier: "frontier",
-        engine: "gpt-5-mini",
-        comparison_table: [],
-      }),
-    }),
-  );
+  let sentEngine: unknown;
+  await page.route("**/api/recommend", async (route) => {
+    sentEngine = (JSON.parse(route.request().postData() ?? "{}") as { engine?: unknown }).engine;
+    await route.fulfill({ status: 200, contentType: "application/json", body: FIXTURE });
+  });
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Input the prompt/i).fill("hard reasoning task");
-  await page.getByRole("button", { name: /Submit/i }).click();
-  // Signed-in frontier users see the engine that generated the recommendation
-  // (#271) and NO upgrade CTA they're already past.
-  await expect(
-    page.getByText(/Recommendation generated by GPT-5 mini/i),
-  ).toBeVisible();
-  await expect(page.getByRole("link", { name: /upgrade/i })).toHaveCount(0);
+  await page.getByTestId("engine-picker").click();
+  const options = page.getByTestId("engine-options").getByRole("option");
+  await expect(options).toHaveCount(registry.engines.filter((e) => e.menu !== null).length);
+  // Signed out: only public engines can be chosen; the rest are listed locked.
+  const publicHints = registry.engines.filter((e) => e.menu === "public").map((e) => e.hint);
+  for (const hint of publicHints) {
+    await expect(page.locator(`[data-engine="${hint}"]`)).toBeVisible();
+  }
+  const locked = page.locator('[data-engine][data-allowed="0"]');
+  expect(await locked.count()).toBeGreaterThan(0);
+  // Choose a public engine other than the default.
+  const other = publicHints.find((h) => h !== registry.default)!;
+  await page.locator(`[data-engine="${other}"]`).click();
+  await ask(page);
+  await expect(page.getByTestId("recommend-result")).toBeVisible();
+  expect(sentEngine).toBe(other);
+  // The choice survives a reload (cookie, read by the server).
+  await page.reload();
+  await page.getByTestId("engine-picker").click();
+  await expect(page.locator(`[data-engine="${other}"]`)).toHaveAttribute("aria-selected", "true");
 });
 
-test("attached text file content is prepended to the request body (file-input Phase A)", async ({
-  page,
-}) => {
-  // Capture the outbound request body so we can assert the dropped file's text
-  // reaches task_description, prepended to the typed prompt.
+test("the API refuses an engine the visitor may not use, before any upstream call", async ({ request }) => {
+  // The E2E server runs signed out, so a founder-only or unknown engine is
+  // refused at the edge (lib/recommend-engines), never forwarded.
+  const founderOnly = registry.engines.find((e) => e.menu === "founder")!;
+  const refused = await request.post("/api/recommend", {
+    data: { task_description: "pick a model", engine: founderOnly.hint },
+  });
+  expect(refused.status()).toBe(403);
+  expect(["engine_not_allowed", "engine_not_evaluated"]).toContain((await refused.json()).error);
+
+  const unknown = await request.post("/api/recommend", {
+    data: { task_description: "pick a model", engine: "no-such-engine" },
+  });
+  expect(unknown.status()).toBe(400);
+  expect(await unknown.json()).toMatchObject({ error: "unknown_engine" });
+});
+
+test("a recent result reopens from this browser without a new request", async ({ page }) => {
+  let calls = 0;
+  await page.route("**/api/recommend", async (route) => {
+    calls += 1;
+    await route.fulfill({ status: 200, contentType: "application/json", body: FIXTURE });
+  });
+  await page.goto("/recommend");
+  await ask(page, "a task worth remembering");
+  await expect(page.getByTestId("recommend-result")).toBeVisible();
+  await page.reload();
+  const recent = page.getByTestId("recent-recommendations");
+  await expect(recent).toContainText("a task worth remembering");
+  await recent.getByRole("button", { name: /a task worth remembering/ }).click();
+  await expect(page.getByTestId("recommend-result")).toBeVisible();
+  expect(calls).toBe(1);
+});
+
+test("attached text file content is prepended to the request body (file-input Phase A)", async ({ page }) => {
   let sentTask = "";
   await page.route("**/api/recommend", async (route) => {
-    const body = JSON.parse(route.request().postData() ?? "{}") as {
-      task_description?: string;
-    };
+    const body = JSON.parse(route.request().postData() ?? "{}") as { task_description?: string };
     sentTask = body.task_description ?? "";
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: mk({
-        model: "Opus 4.8",
-        platform: "Claude Code",
-        settings: {},
-        comparison_table: [],
-      }),
+      body: mk({ model: "Opus 4.8", platform: "Claude Code", settings: {}, comparison_table: [] }),
     });
   });
   await page.goto("/recommend");
-  // "Drop" a .txt by setting it on the (hidden) file input.
   await page.locator('input[type="file"]').setInputFiles({
     name: "my-prompt.txt",
     mimeType: "text/plain",
     buffer: Buffer.from("Summarize this quarterly earnings report."),
   });
   await expect(page.getByText("my-prompt.txt")).toBeVisible();
-  await page
-    .getByPlaceholder(/Input the prompt/i)
-    .fill("which model should I use?");
-  await page.getByRole("button", { name: /Submit/i }).click();
-  await expect(page.getByText(/Opus 4.8/i)).toBeVisible();
-  // The file's text is delimited as input and precedes the typed prompt.
+  await ask(page, "which model should I use?");
+  await expect(page.getByText(/Opus 4.8/i).first()).toBeVisible();
   expect(sentTask).toContain("Attached file my-prompt.txt:");
   expect(sentTask).toContain("Summarize this quarterly earnings report.");
   expect(sentTask).toContain("which model should I use?");
-  expect(sentTask.indexOf("Summarize this quarterly")).toBeLessThan(
-    sentTask.indexOf("which model should I use?"),
-  );
+  expect(sentTask.indexOf("Summarize this quarterly")).toBeLessThan(sentTask.indexOf("which model should I use?"));
 });
 
-test("non-text files are skipped with a hint (file-input Phase A)", async ({
-  page,
-}) => {
+test("non-text files are skipped with a hint (file-input Phase A)", async ({ page }) => {
   await page.goto("/recommend");
   await page.locator('input[type="file"]').setInputFiles({
     name: "diagram.png",
     mimeType: "image/png",
     buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
   });
-  await expect(
-    page.getByText(/only text files \(\.txt, \.md, \.json\) are supported/i),
-  ).toBeVisible();
-  // The image is not added to the attachment list in Phase A (its name only
-  // appears inside the skip notice, not as a list item).
-  await expect(
-    page.getByRole("listitem").filter({ hasText: "diagram.png" }),
-  ).toHaveCount(0);
+  await expect(page.getByText(/only text files \(\.txt, \.md, \.json\) are supported/i)).toBeVisible();
+  await expect(page.getByRole("listitem").filter({ hasText: "diagram.png" })).toHaveCount(0);
 });
 
 test("502 error renders friendly message", async ({ page }) => {
-  await page.route("**/api/recommend", (route) =>
-    route.fulfill({
-      status: 502,
-      contentType: "application/json",
-      body: JSON.stringify({
-        error: "recommender_unavailable",
-      }),
-    }),
-  );
+  await fulfill(page, JSON.stringify({ error: "recommender_unavailable" }), 502);
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Input the prompt/i).fill("hello");
-  await page.getByRole("button", { name: /Submit/i }).click();
-  await expect(
-    page.getByText(/try again in a moment/i),
-  ).toBeVisible();
+  await ask(page, "hello");
+  await expect(page.getByText(/try again in a moment/i)).toBeVisible();
 });
 
-// Step 6 burst-limit + daily-limit Playwright tests.
-//
-// The Phase 3 Step 6 task spec called for issuing 11 real POSTs and
-// observing the 11th come back with a server-generated 429 sourced
-// from a mocked Upstash backend. Playwright's `page.route` only
-// intercepts browser-initiated requests — it cannot observe or
-// stub the Next.js server's outbound calls to Upstash, so the
-// literal interpretation is not implementable in CI without
-// standing up a separate mock-Upstash HTTP server. The honest
-// equivalent below verifies the user-visible contract: when the
-// API returns 429 with the documented body shape (`burst_dropped`
-// or `rate_limited`), the `/recommend` page renders the right
-// human-readable message. The server-side rate-limit decision is
-// covered by the @upstash/ratelimit library's own tests.
-
+// The rate-limit decision itself is covered by @upstash/ratelimit and
+// ratelimit.spec; these pin the user-visible contract for its 429 bodies.
 test("burst_limit burst-drop 429 renders slow-down message", async ({ page }) => {
-  await page.route("**/api/recommend", (route) =>
-    route.fulfill({
-      status: 429,
-      contentType: "application/json",
-      headers: { "Retry-After": "60" },
-      body: JSON.stringify({
-        error: "burst_dropped",
-        retry_after: 60,
-      }),
-    }),
-  );
+  await fulfill(page, JSON.stringify({ error: "burst_dropped", retry_after: 60 }), 429);
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Input the prompt/i).fill("burst test");
-  await page.getByRole("button", { name: /Submit/i }).click();
+  await ask(page, "burst test");
   await expect(page.getByText(/Slow down/i)).toBeVisible();
 });
 
 test("daily_limit daily-cap 429 renders daily-cap message", async ({ page }) => {
-  await page.route("**/api/recommend", (route) =>
-    route.fulfill({
-      status: 429,
-      contentType: "application/json",
-      headers: { "Retry-After": "3600" },
-      body: JSON.stringify({
-        error: "rate_limited",
-        retry_after: 3600,
-      }),
-    }),
-  );
+  await fulfill(page, JSON.stringify({ error: "rate_limited", retry_after: 3600 }), 429);
   await page.goto("/recommend");
-  await page.getByPlaceholder(/Input the prompt/i).fill("daily test");
-  await page.getByRole("button", { name: /Submit/i }).click();
+  await ask(page, "daily test");
   await expect(page.getByText(/daily recommendation limit/i)).toBeVisible();
 });
 
-test("blank task_description returns 400 bad_input (no upstream call)", async ({
-  request,
-}) => {
-  // #175: the real edge route (not page.route-mocked here) rejects
-  // whitespace-only input with a 400 before any upstream fetch. The E2E
-  // webServer runs with no SITE_PASSWORD, so /api/recommend is reachable
-  // without the gate; the blank guard runs in the dispatch span.
-  const res = await request.post("/api/recommend", {
-    data: { task_description: "   " },
-  });
+test("blank task_description returns 400 bad_input (no upstream call)", async ({ request }) => {
+  const res = await request.post("/api/recommend", { data: { task_description: "   " } });
   expect(res.status()).toBe(400);
   expect(await res.json()).toMatchObject({ error: "bad_input" });
 });
