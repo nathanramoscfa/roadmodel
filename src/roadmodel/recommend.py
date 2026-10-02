@@ -1230,14 +1230,23 @@ def _ladder_tier_guard(picks: dict[str, dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-# The scorer's effort levels as the selector's output format writes them.
+# Effort levels as the selector's output format writes them: the scorer's
+# five and the native words some dials add (scoring.LEVEL_ORDER).
 _EFFORT_WORDS: Final = {
+    "none": "None",
+    "minimal": "Minimal",
     "low": "Low",
     "medium": "Medium",
     "high": "High",
     "xhigh": "XHigh",
     "max": "Max",
+    "ultra": "Ultra",
 }
+
+
+def _effort_word(level: str) -> str:
+    """A rung's level (native or scorer) as the EFFORT line writes it."""
+    return _EFFORT_WORDS.get(scoring.normalize_level(level), level)
 
 
 def _model_key(ref: str) -> str:
@@ -1304,7 +1313,7 @@ def _enforce_table_row(ladder: dict[str, dict[str, str]], row: scoring.Ladder) -
             continue
         rewritten.append(tier)
         c = rung.candidate
-        effort = _EFFORT_WORDS.get(rung.effort, rung.effort)
+        effort = _effort_word(rung.level)
         sections = _split_rationale_sections(base.get("rationale", ""))
         task = (
             sections["task"]
@@ -1322,35 +1331,37 @@ def _enforce_table_row(ladder: dict[str, dict[str, str]], row: scoring.Ladder) -
     return rewritten
 
 
-# Surfaces whose effort dial reads exactly the scorer's levels, so code can set
-# the row's level verbatim. Claude Code's ladder is Low / Medium / High / XHigh /
-# Max, with Ultracode above Max. Elsewhere the dial has its own words (Codex's
-# Intelligence, Gemini's thinking levels) and the engine maps to the nearest.
-_NATIVE_EFFORT_PLATFORMS: Final = frozenset({"claude-code"})
-
-
-def _effort_level(value: str) -> str:
-    level = re.sub(r"[\s_-]+", "", value.strip().lower())
-    return {"extrahigh": "xhigh"}.get(level, level)
+# Claude Code's Ultracode is a session setting above its Max level: it stands
+# where the row says max.
+_ULTRACODE_PLATFORM: Final = "claude-code"
 
 
 def _enforce_table_effort(ladder: dict[str, dict[str, str]], row: scoring.Ladder) -> list[str]:
-    """On a surface whose dial reads the scorer's levels, make every rung's
-    EFFORT the row's (Ultracode stands where the row says Max) and rewrite its
-    EFFORT segment to match. Two rungs on one model are told apart by effort
-    alone, so an engine that copies the model but not the effort makes them
-    identical. Returns the tiers whose effort it set."""
+    """On every surface whose dial the catalog documents (the rung carries a
+    native level), make the rung's EFFORT the row's level in that dial's own
+    words and rewrite its EFFORT segment to match; on Claude Code, Ultracode
+    stands where the row says max. Two rungs on one model are told apart by
+    effort alone, so an engine that copies the model but not the effort makes
+    them identical. A surface with no documented dial keeps the engine's
+    mapping. Returns the tiers whose effort it set."""
     adjusted: list[str] = []
     for tier in _LADDER_TIERS:
         base = ladder[tier]
         rung = row.rungs[tier]
-        if rung.candidate.platform_id not in _NATIVE_EFFORT_PLATFORMS:
+        if rung.native is None:
             continue
-        written = _effort_level(base.get("effort", ""))
-        if written == rung.effort or (rung.effort == "max" and written == "ultracode"):
+        written = scoring.normalize_level(base.get("effort", ""))
+        want = scoring.normalize_level(rung.native)
+        if written == want:
+            continue
+        if (
+            rung.candidate.platform_id == _ULTRACODE_PLATFORM
+            and want == "max"
+            and written == "ultracode"
+        ):
             continue
         adjusted.append(tier)
-        effort = _EFFORT_WORDS.get(rung.effort, rung.effort)
+        effort = _effort_word(rung.native)
         base["effort"] = effort
         sections = _split_rationale_sections(base.get("rationale", ""))
         if sections:
@@ -1398,8 +1409,8 @@ def recommend_structured_ladder(
     The picks come from this user's own cost/quality frontier: the scorer's
     ladder table (scoring.ladder_table) goes into the prompt, the engine
     classifies the task and copies its row, and every rung is then made the
-    row's (:func:`_enforce_table_row`), effort included where the surface's
-    dial reads the scorer's levels (:func:`_enforce_table_effort`). ``guard``
+    row's (:func:`_enforce_table_row`), effort included on every surface
+    whose dial the catalog documents (:func:`_enforce_table_effort`). ``guard``
     then reports ``mode: "frontier"``, the row, how it was found, the tiers
     rewritten and the tiers whose effort was set, and is healthy: two rungs on
     one model are the table's answer, not a collapse.
