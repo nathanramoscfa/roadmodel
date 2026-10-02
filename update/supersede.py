@@ -26,9 +26,18 @@ what it was and what replaced it. A model that stops meeting the test before
 it retires (a price change, a benchmark update) loses its tag, and its clock
 starts again if it returns.
 
+A NEAR-MISS is a same-maker model that passes every test but coverage: some
+access method offers the old model and does not list the new one, so the old
+model stays. The run prints ``NEAR-MISS <old> -> <new>: missing on <methods>``
+for each one whose old model has no successor yet. The catalog cron checks
+each (method, model) pair against the method's own source, and a near-miss
+that lasts three days opens an issue that closes itself once it resolves.
+
 Usage: ``python update/supersede.py --write [--today YYYY-MM-DD] [--base PATH]``
 (``--base``: the committed selector, to restore tags a regenerated file
 dropped). Prints one line per change for the PR body.
+``python update/supersede.py --near-misses [--selector PATH] [--persisted-since
+OLD_SELECTOR]`` prints only the near-misses (those the older selector had too).
 """
 
 from __future__ import annotations
@@ -132,35 +141,47 @@ def unavailable_ids(path: Path = AVAILABILITY_PATH) -> frozenset[str]:
     return frozenset(str(e.get("id") if isinstance(e, dict) else e) for e in entries if e)
 
 
+def _offered(selector_text: str) -> dict[str, set[str]]:
+    """Each model id -> the access methods whose supports-models list it."""
+    offered: dict[str, set[str]] = {}
+    for method in _parse_access_methods(selector_text):
+        for mid in method.get("supports_models", []):
+            offered.setdefault(str(mid), set()).add(str(method.get("id", "")))
+    return offered
+
+
+def _beats(old: Model, new: Model, makers: dict[str, str], unavailable: frozenset[str]) -> bool:
+    """Every supersession test but coverage: same maker, available, no
+    dearer, a higher AA Index, rated at least as high everywhere."""
+    maker = makers.get(old.id)
+    if maker is None or old.aa_index is None:
+        return False
+    if new.id == old.id or new.aa_index is None or makers.get(new.id) != maker:
+        return False
+    if new.id in unavailable:
+        return False
+    if not (new.blended <= old.blended and new.aa_index > old.aa_index):
+        return False
+    return all(new.ratings[c] >= old.ratings[c] for c in TASK_CATEGORIES)
+
+
 def successors(
     selector_text: str, models: list[Model], unavailable: frozenset[str] = frozenset()
 ) -> dict[str, str]:
     """Each superseded model's id -> its successor's id. A benched model is
     no successor."""
     makers = _model_makers(selector_text)
-    offered: dict[str, set[str]] = {}
-    for method in _parse_access_methods(selector_text):
-        for mid in method.get("supports_models", []):
-            offered.setdefault(str(mid), set()).add(str(method.get("id", "")))
+    offered = _offered(selector_text)
     out: dict[str, str] = {}
     for old in models:
-        maker = makers.get(old.id)
-        if maker is None or old.aa_index is None:
-            continue
         where = offered.get(old.id, set())
         best: Model | None = None
         for new in models:
-            if new.id == old.id or new.aa_index is None or makers.get(new.id) != maker:
-                continue
-            if new.id in unavailable:
-                continue
-            if not (new.blended <= old.blended and new.aa_index > old.aa_index):
-                continue
-            if any(new.ratings[c] < old.ratings[c] for c in TASK_CATEGORIES):
+            if not _beats(old, new, makers, unavailable):
                 continue
             if not where <= offered.get(new.id, set()):
                 continue
-            if best is None or (-new.aa_index, new.blended, new.id) < (
+            if best is None or (-new.aa_index, new.blended, new.id) < (  # type: ignore[operator]
                 -best.aa_index,  # type: ignore[operator]
                 best.blended,
                 best.id,
@@ -169,6 +190,59 @@ def successors(
         if best is not None:
             out[old.id] = best.id
     return out
+
+
+@dataclass(frozen=True)
+class NearMiss:
+    """A same-maker model that passes every supersession test against ``old``
+    except coverage: the access methods in ``missing`` offer ``old`` and do
+    not list ``new``, so ``old`` stays in the catalog."""
+
+    old: str
+    new: str
+    missing: tuple[str, ...]
+
+    def line(self) -> str:
+        return f"NEAR-MISS {self.old} -> {self.new}: missing on {', '.join(self.missing)}"
+
+
+_NEAR_MISS_RE = re.compile(r"^NEAR-MISS (?P<old>\S+) -> (?P<new>\S+): missing on (?P<missing>.+)$")
+
+
+def near_misses(
+    selector_text: str, models: list[Model], unavailable: frozenset[str] = frozenset()
+) -> list[NearMiss]:
+    """Every near-miss among ``models`` whose old model has no successor yet
+    (a model already superseded has nothing to wait for)."""
+    makers = _model_makers(selector_text)
+    offered = _offered(selector_text)
+    superseded = successors(selector_text, models, unavailable)
+    out: list[NearMiss] = []
+    for old in models:
+        if old.id in superseded:
+            continue
+        where = offered.get(old.id, set())
+        for new in models:
+            if not _beats(old, new, makers, unavailable):
+                continue
+            missing = where - offered.get(new.id, set())
+            if missing:
+                out.append(NearMiss(old.id, new.id, tuple(sorted(missing))))
+    return out
+
+
+def parse_near_miss(line: str) -> NearMiss | None:
+    """A ``NEAR-MISS`` line back into its parts, or None."""
+    m = _NEAR_MISS_RE.match(line.strip())
+    if m is None:
+        return None
+    return NearMiss(m["old"], m["new"], tuple(x.strip() for x in m["missing"].split(",")))
+
+
+def live_near_misses(selector_text: str, benchmarks: dict[str, Any]) -> list[NearMiss]:
+    """The near-misses among the selector's unretired models."""
+    live = [m for m in parse_models(selector_text, benchmarks) if not m.retired]
+    return near_misses(selector_text, live, unavailable_ids())
 
 
 @dataclass(frozen=True)
@@ -284,11 +358,34 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--write", action="store_true", help="write the tags into the selector")
     parser.add_argument("--today", type=dt.date.fromisoformat, default=None)
     parser.add_argument("--base", type=Path, default=None, help="committed selector")
+    parser.add_argument(
+        "--near-misses",
+        action="store_true",
+        help="print only the NEAR-MISS lines, and write nothing",
+    )
+    parser.add_argument("--selector", type=Path, default=SELECTOR_PATH, help="the selector to read")
+    parser.add_argument(
+        "--persisted-since",
+        type=Path,
+        default=None,
+        help="with --near-misses: an older selector; print only the near-misses it had too",
+    )
     args = parser.parse_args(argv)
 
     today = args.today or dt.datetime.now(dt.UTC).date()
-    selector_text = SELECTOR_PATH.read_text()
+    selector_text = args.selector.read_text()
     benchmarks = json.loads(BENCHMARKS_PATH.read_text()) if BENCHMARKS_PATH.exists() else {}
+    if args.near_misses:
+        found = live_near_misses(selector_text, benchmarks)
+        if args.persisted_since is not None:
+            then = {
+                (n.old, n.new)
+                for n in live_near_misses(args.persisted_since.read_text(), benchmarks)
+            }
+            found = [n for n in found if (n.old, n.new) in then]
+        for n in found:
+            print(n.line())
+        return 0
     base = base_tags(args.base.read_text()) if args.base else None
     p = plan(selector_text, benchmarks, today, base, unavailable_ids())
 
@@ -302,11 +399,13 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"RETIRED {names.get(mid, mid)} (superseded by {names.get(t.by, t.by)} since {t.since})"
         )
+    for n in live_near_misses(selector_text, benchmarks):
+        print(n.line())
 
     if args.write:
         new_text = apply(selector_text, p)
         if new_text != selector_text:
-            SELECTOR_PATH.write_text(new_text)
+            args.selector.write_text(new_text)
     return 0
 
 

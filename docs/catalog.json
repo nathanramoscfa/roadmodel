@@ -3,7 +3,7 @@
   "output_contract_version": 2,
   "generated_at_utc": "2026-10-02T18:08:21Z",
   "source_doc_sha256": {
-    "model-selector.txt": "81c5530a28521df18ebe14810e56cd72e65f1e30ad93d0522d31dbf362516e93",
+    "model-selector.txt": "a8c38de77ea3052f61262d5af2a2c0dbf02a70bcb684c866944127852d0746bf",
     "model-tier-cost-scale.md": "2b3b0eb82237eb5cb5bf468a3fe971bcaf0160ad7d0bc700698d2c16640bc41d"
   },
   "models": [
@@ -2048,7 +2048,7 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
-      "best_for": "Per-token AGGREGATOR that resells other makers' models behind one OpenAI-format endpoint and one key (openrouter.ai) \u2014 like Cursor's pool but paid per call, not a subscription. Reaches most of the catalog: supports-models is a POINT-IN-TIME snapshot of openrouter.ai/models at authoring (refreshed 2026-10-02; absent: composer-2.5 which is Cursor-only, gemini-3-pro which OpenRouter serves only as an image endpoint, mistral-large-3 which it serves only as a batch endpoint) that the operator should trust LESS than a provider-direct method \u2014 prefer the maker's own method when the operator holds that key. BILLING: OpenRouter charges the maker's list price plus its platform fee (~5% on credit purchases at authoring), so the catalog price is a FLOOR for this method, never an exact estimate. ROUTING: a request may be served by any of OpenRouter's upstream hosts for that model; the MODEL-level jurisdiction filter (Step 0b) still governs which models are eligible, and this method's `us` code is OpenRouter's own (the operator's counterparty), NOT the upstream host's. Exposes the maker's reasoning dial where the routed model documents one (`reasoning_effort` on OpenAI / gpt-oss / GLM / DeepSeek families). Never the maker of any model it resells: the cross-provider BACKUP guard resolves makers through provider-direct methods, exactly as it does for Cursor."
+      "best_for": "Per-token AGGREGATOR that resells other makers' models behind one OpenAI-format endpoint and one key (openrouter.ai) \u2014 like Cursor's pool but paid per call, not a subscription. Reaches most of the catalog: supports-models is synced daily from openrouter.ai/models (OpenRouter's public model list): each catalogued model it lists as a text chat route, matched by name (absent today: composer-2.5, which is Cursor-only, and gemini-3-pro, which OpenRouter serves only as an image model). The operator should trust it LESS than a provider-direct method \u2014 prefer the maker's own method when the operator holds that key. BILLING: OpenRouter charges the maker's list price plus its platform fee (~5% on credit purchases at authoring), so the catalog price is a FLOOR for this method, never an exact estimate. ROUTING: a request may be served by any of OpenRouter's upstream hosts for that model; the MODEL-level jurisdiction filter (Step 0b) still governs which models are eligible, and this method's `us` code is OpenRouter's own (the operator's counterparty), NOT the upstream host's. Exposes the maker's reasoning dial where the routed model documents one (`reasoning_effort` on OpenAI / gpt-oss / GLM / DeepSeek families). Never the maker of any model it resells: the cross-provider BACKUP guard resolves makers through provider-direct methods, exactly as it does for Cursor."
     },
     {
       "id": "xai-api",

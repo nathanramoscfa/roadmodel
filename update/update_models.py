@@ -32,6 +32,7 @@ from opus_turn import (  # noqa: E402, I001
 )
 from selector_re import repair_attribute_quotes  # noqa: E402
 import discovery  # noqa: E402
+import supersede  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = REPO_ROOT / "docs"
@@ -509,6 +510,39 @@ def gather_sources() -> tuple[list[dict[str, str]], list[str]]:
     return fetched, errors
 
 
+# Methods the supports-models pass leaves alone: `ollama` is hand-kept, and
+# `openrouter` is synced by code from OpenRouter's public model list after the
+# pass (update/extract_openrouter_models.py).
+PASS_SKIPS = frozenset({"ollama", "openrouter"})
+
+
+def near_miss_block(selector_text: str, benchmarks: dict[str, Any]) -> str:
+    """The ``<near_miss_checks>`` block: each (method, model) pair where a
+    catalogued model would supersede an older one of its maker
+    (update/supersede.py) but for that method not listing it yet. The
+    supports-models pass searches the method's own source for exactly that
+    model. Empty when there is none, or when the rule cannot be evaluated."""
+    try:
+        found = supersede.live_near_misses(selector_text, benchmarks)
+        names = {m.id: m.name for m in supersede.parse_models(selector_text, benchmarks)}
+    except Exception:  # noqa: BLE001 - a courtesy input; the pass runs without it
+        return ""
+    lines: list[str] = []
+    for n in found:
+        for method in n.missing:
+            if method in PASS_SKIPS:
+                continue
+            line = (
+                f"- {method}: {n.new} ({names.get(n.new, n.new)}), which would supersede "
+                f"{n.old} ({names.get(n.old, n.old)})"
+            )
+            if line not in lines:
+                lines.append(line)
+    if not lines:
+        return ""
+    return "<near_miss_checks>\n" + "\n".join(lines) + "\n</near_miss_checks>"
+
+
 def build_user_message(
     selector_text: str,
     cost_scale_text: str,
@@ -516,6 +550,7 @@ def build_user_message(
     fetch_errors: list[str],
     target: str | None = None,
     discovery_block: str = "",
+    near_miss_checks: str = "",
 ) -> str:
     """Assemble the Opus user message.
 
@@ -530,6 +565,10 @@ def build_user_message(
     ``update/discovery.py``: the models the providers' own pricing pages list
     that the catalog neither carries nor declines. The instructions tell the
     model to add or decline each one; without this block it had nothing to act on.
+
+    ``near_miss_checks`` is the ``<near_miss_checks>`` block
+    (:func:`near_miss_block`): the (method, model) pairs the supports-models
+    refresh checks one by one, for the selector pass.
     """
     blocks: list[str] = [
         f'<current_file path="docs/model-selector.txt">\n{selector_text}\n</current_file>',
@@ -545,6 +584,8 @@ def build_user_message(
         blocks.append("<fetch_errors>\n" + "\n".join(fetch_errors) + "\n</fetch_errors>")
     if discovery_block:
         blocks.append(discovery_block)
+    if near_miss_checks and target != "cost_scale":
+        blocks.append(near_miss_checks)
     if target is not None:
         blocks.append(f"<emit_target>{target}</emit_target>")
     return "\n\n".join(blocks)
@@ -880,6 +921,11 @@ def main() -> int:
     # benchmarks → selector), so total input stays ~constant rather than doubling.
     pricing_sources = [s for s in fetched if s["type"] == "pricing"]
     benchmark_sources = [s for s in fetched if s["type"] == "benchmark"]
+    try:
+        bench = json.loads(supersede.BENCHMARKS_PATH.read_text())
+    except (OSError, ValueError):
+        bench = {}
+    checks = near_miss_block(selector_text, bench)
 
     def run_call(
         target: str, cost_scale_in: str, srcs: list[dict[str, str]], key: str
@@ -891,7 +937,13 @@ def main() -> int:
             discovery.load(discovery.snapshot_paths(), selector_text, cost_scale_in)
         )
         msg = build_user_message(
-            selector_text, cost_scale_in, srcs, fetch_errors, target=target, discovery_block=block
+            selector_text,
+            cost_scale_in,
+            srcs,
+            fetch_errors,
+            target=target,
+            discovery_block=block,
+            near_miss_checks=checks,
         )
         try:
             raw = call_opus(system_prompt, msg, api_key)

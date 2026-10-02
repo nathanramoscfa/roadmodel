@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **New models reach every access list on their own.** OpenRouter's list
+  is synced daily from its public model list instead of a hand-kept
+  snapshot, and the catalog refresh names each near-miss supersession (a
+  newer same-maker model missing from a method that offers the older one),
+  checks that method's source for the model, and, when a near-miss lasts
+  three days, files an issue that closes itself once it resolves. The
+  bundled selector's OpenRouter description says the list is synced
+  daily.
+
 ## [0.2.64] — 2026-10-02
 
 ### Changed
