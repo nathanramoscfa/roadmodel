@@ -307,7 +307,7 @@ test(
       throw new Error("Stub generateContentStream was never called");
     }
     const params: CapturedParams = captured;
-    expect(params.model).toBe("gemini-2.5-flash");
+    expect(params.model).toBe("gemini-3-flash");
     expect(params.contents[0]?.role).toBe("user");
     expect(params.contents[0]?.parts[0]?.text).toContain(
       "streaming analytics dashboard",

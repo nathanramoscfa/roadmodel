@@ -55,7 +55,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   measured keeps an estimate, at most A. Multimodal and speed stay estimates:
   AA runs no multimodal evaluation, and its tokens/s comes from the maker's
   own endpoint at max effort. With planning measured, DeepSeek-V4.1-Flash
-  supersedes DeepSeek-V4-Pro.
+  supersedes DeepSeek-V4-Pro. The roadmap builder's free engine follows:
+  Gemini 2.5 Flash (index 13.1) letters C, so planning-B work goes to Gemini
+  3 Flash, and a superseded model no longer wins a price tie, so planning-A
+  goes to Gemini 3.8 Flash rather than the 3.7 Flash it supersedes.
 
 ### Fixed
 

@@ -102,6 +102,7 @@ interface CatalogModel {
   tier_cost?: string;
   tiers?: CatalogTiers;
   jurisdiction?: JurisdictionCode;
+  superseded_by?: string | null;
 }
 
 interface CatalogShape {
@@ -262,6 +263,13 @@ export function _pickFreeEngineFromCatalog(
     // (2) Jurisdiction filter — skips unknowns unless the caller
     // explicitly allow-lists "unknown".
     if (!m.jurisdiction || !allowed.has(m.jurisdiction)) {
+      return false;
+    }
+    // (3) A superseded model leaves the candidates, as it does the
+    // recommender's: its successor is in the catalog, no dearer and at
+    // least as good everywhere. Without this, a price tie fell to catalog
+    // order and handed planning-A to Gemini 3.7 Flash over 3.8 Flash.
+    if (m.superseded_by) {
       return false;
     }
     // (4) Frontier exclusion.
