@@ -268,6 +268,10 @@ def test_a_snapshot_stops_flagging_a_model_the_catalog_now_carries(tmp_path: Pat
             {
                 "provider": "google",
                 "unexpected_slugs": ["Gemini 3.8 Flash", "Gemini 4 Ultra — Preview"],
+                "discovered": [
+                    {"slug": "Gemini 3.8 Flash", "input_price_per_1m": 0.75},
+                    {"slug": "Gemini 4 Ultra — Preview", "input_price_per_1m": 9.0},
+                ],
             },
             indent=2,
             ensure_ascii=False,
@@ -277,6 +281,8 @@ def test_a_snapshot_stops_flagging_a_model_the_catalog_now_carries(tmp_path: Pat
     assert dd.prune_carried([snap], SELECTOR) == ["google/Gemini 3.8 Flash"]
     data = json.loads(snap.read_text())
     assert data["unexpected_slugs"] == ["Gemini 4 Ultra — Preview"]
+    # Its price row goes with it: every discovered row names a flagged slug (G1).
+    assert [r["slug"] for r in data["discovered"]] == ["Gemini 4 Ultra — Preview"]
     # ensure_ascii=False, as the extractors write it.
     assert "—" in snap.read_text()
     assert dd.prune_carried([snap], SELECTOR) == []
