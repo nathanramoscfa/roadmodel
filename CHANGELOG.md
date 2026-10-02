@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.60] — 2026-10-02
+
 ### Fixed
 
 - **A Claude Code pick runs at its row's effort.** Two picks on one model

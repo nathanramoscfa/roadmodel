@@ -1,2 +1,2 @@
 # src/roadmodel/__init__.py
-__version__ = "0.2.59"
+__version__ = "0.2.60"
