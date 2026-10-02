@@ -1040,7 +1040,7 @@
              tier-coding="B" tier-planning="B" tier-agentic="B"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="B"
              tier-speed="B"
-             headline-benchmarks="AA Intelligence Index 30.1 (adaptive reasoning, max effort); HLE 33.6%; SciCode 50.1; Terminal-Bench 4.0 3.0; AA-LCR 0.800; LMArena Text Elo 1457.7 (#41); AA-Omniscience 12.4"
+             headline-benchmarks="AA Intelligence Index 30.1 (max); HLE 33.6%; SciCode 50.1; Terminal-Bench 4.0 3.0; AA-LCR 0.800; LMArena Text Elo 1457.7 (#41); AA-Omniscience 12.4"
              pricing-notes="Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)"
              prose-generated="best-for headline-benchmarks"
              best-for="Strong multimodal input and long context at a high price. Its AA Intelligence Index of 30.1 ranks 33rd of 54 measured models."/>
