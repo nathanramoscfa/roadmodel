@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.59] — 2026-10-02
+
 ### Changed
 
 - **/recommend's three picks are read off your own cost/quality frontier, in
