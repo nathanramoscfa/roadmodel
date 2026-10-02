@@ -450,7 +450,13 @@
       level (see below), and adds `effortSlider:decreaseEffort` /
       `increaseEffort` / `toggleUltracode` keybinding actions. 2.1.283
       and 2.1.285 do not change the `/effort` vocabulary or the
-      extended-thinking controls.
+      extended-thinking controls. 2.1.286 does not change them either.
+      2.1.287 makes automatic model switches after a flagged message keep
+      the session's current effort level instead of the new model's
+      default. It also makes Opus 4.7+ and Fable default to a 1M context
+      window on Bedrock, Vertex, Foundry and the Claude apps gateway. The
+      `/effort` vocabulary and the extended-thinking controls are
+      unchanged.
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
       `reasoning_effort` knob — `low`, `medium`, `high`, `xhigh`, `max`,
       `ultra`. Codex's plan-mode `plan_mode_reasoning_effort` variant
