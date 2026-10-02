@@ -56,7 +56,7 @@ from __future__ import annotations
 import json
 import math
 import re
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timedelta, timezone
 from importlib import resources
 from typing import Any, Final
@@ -1025,6 +1025,24 @@ class FrontierPoint:
 
 
 @dataclass(frozen=True)
+class Backup:
+    """A rung's cross-maker substitute, read off the frontier of the other
+    makers' models (see :func:`ladder`)."""
+
+    point: FrontierPoint
+    effort: str
+    native: str | None = None
+
+    @property
+    def candidate(self) -> Candidate:
+        return self.point.candidate
+
+    @property
+    def level(self) -> str:
+        return self.native or self.effort
+
+
+@dataclass(frozen=True)
 class Rung:
     tier: str
     point: FrontierPoint
@@ -1033,6 +1051,9 @@ class Rung:
     # The same level as the platform's own dial names it (native_level), or
     # None when the catalog documents no dial for the platform and model.
     native: str | None = None
+    # The best cross-maker substitute at no higher list price; None when the
+    # pool holds no other maker's model.
+    backup: Backup | None = None
 
     @property
     def candidate(self) -> Candidate:
@@ -1052,6 +1073,8 @@ class Ladder:
     # complexity's requirement, cheapest first.
     adequate: list[FrontierPoint]
     rungs: dict[str, Rung]
+    # Why a rung has no backup: the pool holds no other maker's model.
+    backup_warning: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         def point(p: FrontierPoint) -> dict[str, Any]:
@@ -1072,9 +1095,23 @@ class Ladder:
             "frontier": [point(p) for p in self.frontier],
             "adequate": [p.candidate.model_id for p in self.adequate],
             "rungs": {
-                t: {**point(r.point), "effort": r.effort, "native_effort": r.native}
+                t: {
+                    **point(r.point),
+                    "effort": r.effort,
+                    "native_effort": r.native,
+                    "backup": (
+                        {
+                            **point(r.backup.point),
+                            "effort": r.backup.effort,
+                            "native_effort": r.backup.native,
+                        }
+                        if r.backup is not None
+                        else None
+                    ),
+                }
                 for t, r in self.rungs.items()
             },
+            "backup_warning": self.backup_warning,
         }
 
 
@@ -1129,6 +1166,9 @@ def ladder(
       level they may converge. On an `uncapped` pool every free rung runs at
       the top effort and two rungs on one model converge: a lower effort saves
       that operator nothing.
+    - Each rung carries a BACKUP from another maker (:func:`_backup_for`):
+      the best adequate point on the other makers' frontier at no higher list
+      price. ``backup_warning`` says why a rung has none.
 
     None when no pool model carries an AA Index (no frontier to read)."""
     cat = catalog if catalog is not None else _cost._load_catalog()
@@ -1183,8 +1223,52 @@ def ladder(
         )
     balanced_rung = _below(balanced_rung, quality_rung, cat)
     cost_rung = _below(cost_rung, balanced_rung, cat)
-    rungs = {"cost": cost_rung, "balanced": balanced_rung, "quality": quality_rung}
-    return Ladder(task=base, frontier=front, adequate=adequate, rungs=rungs)
+    pool = funded or ranking.candidates
+    rungs = {
+        r.tier: replace(r, backup=_backup_for(r, pool, task, headroom, bench, cat))
+        for r in (cost_rung, balanced_rung, quality_rung)
+    }
+    warning: str | None = None
+    if any(r.backup is None for r in rungs.values()):
+        makers = sorted({c.provider for c in pool})
+        warning = (
+            f"No cross-provider backup: the models this user can run come from "
+            f"{', '.join(makers) or 'no maker'} only. Add a second maker's subscription or "
+            "API key so an outage or an exhausted pool has somewhere to go."
+        )
+    return Ladder(task=base, frontier=front, adequate=adequate, rungs=rungs, backup_warning=warning)
+
+
+def _backup_for(
+    rung: Rung,
+    pool: list[Candidate],
+    task: Task,
+    headroom: str,
+    bench: dict[str, Any],
+    catalog: dict[str, Any],
+) -> Backup | None:
+    """The rung's backup: the best substitute from another maker the operator
+    can run, at no higher list price.
+
+    Over the pool's models from a maker other than the rung model's, draw the
+    frontier and keep its adequate points. The backup is the adequate point
+    with the highest list price at or below the rung's; else the cheapest
+    adequate point above it; else, with no adequate point, the frontier's
+    strongest for the category. It runs at the rung's posture's effort on its
+    own platform. None when the pool holds no other maker's model."""
+    front = frontier([c for c in pool if c.provider != rung.candidate.provider], bench)
+    if not front:
+        return None
+    adequate = [p for p in front if p.candidate.requirement_penalty == 0]
+    if adequate:
+        within = [p for p in adequate if p.price_usd <= rung.point.price_usd]
+        chosen = within[-1] if within else adequate[0]
+    else:
+        chosen = max(front, key=lambda p: (p.candidate.quality, p.aa_index, -p.price_usd))
+    t = Task(task.category, task.complexity, task.novel, TIER_BUDGET[rung.tier])
+    c = chosen.candidate
+    effort = effort_for(t, headroom, c.scarcity)
+    return Backup(chosen, effort, native_level(c.platform_id, c.model_id, effort, catalog=catalog))
 
 
 def _below(lower: Rung, upper: Rung, catalog: dict[str, Any]) -> Rung:
@@ -1271,14 +1355,19 @@ def render_ladder_table(table: dict[str, Ladder]) -> str:
             for p in any_ladder.frontier
         ),
         "Rows: <category>/<complexity>[/novel]: COST | BALANCED | QUALITY, each "
-        "<model> @ <platform> · <effort>, the effort in the platform's own level words.",
+        "<model> @ <platform> · <effort>, the effort in the platform's own level words, "
+        "then `backup <model> @ <platform>`: that pick's BACKUP.",
     ]
+
+    def cell(t: str, r: Rung) -> str:
+        text = f"{t.upper()} = {r.candidate.model_name} @ {r.candidate.platform_name} · {r.level}"
+        if r.backup is not None:
+            b = r.backup.candidate
+            text += f", backup {b.model_name} @ {b.platform_name}"
+        return text
+
     for key, lad in table.items():
-        cells = " | ".join(
-            f"{t.upper()} = {r.candidate.model_name} @ {r.candidate.platform_name} · {r.level}"
-            for t in LADDER_TIERS
-            for r in [lad.rungs[t]]
-        )
+        cells = " | ".join(cell(t, lad.rungs[t]) for t in LADDER_TIERS)
         lines.append(f"{key}: {cells}")
     lines.append("</ladder-table>")
     return "\n".join(lines)
