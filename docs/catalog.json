@@ -1,10 +1,10 @@
 {
   "schema_version": "3",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-10-02T00:26:36Z",
+  "generated_at_utc": "2026-10-02T02:50:29Z",
   "source_doc_sha256": {
-    "model-selector.txt": "0c7966b41eedc3c8a5f38873d0b56b85575ee935dcef47d8b094d624ab5e34b6",
-    "model-tier-cost-scale.md": "0e07bd4fae45e3472d064067a09f426c4430da87b6031ce7d610baeb23b5b2fb"
+    "model-selector.txt": "64998c7c21759d3b13f71908e5c51e3db4c95e1bae39efd5a3e391381b01a572",
+    "model-tier-cost-scale.md": "2b3b0eb82237eb5cb5bf468a3fe971bcaf0160ad7d0bc700698d2c16640bc41d"
   },
   "models": [
     {
@@ -1426,11 +1426,11 @@
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 30.1 (adaptive reasoning, max effort); HLE 33.6%; SciCode 50.1; Terminal-Bench 4.0 3.0; AA-LCR 0.800; LMArena Text Elo 1457.7 (#41); AA-Omniscience 12.4",
       "pricing_notes": "Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)",
-      "best_for": "Strong multimodal input and long context at a high price. Its AA Intelligence Index of 30.1 ranks 33rd of 54 measured models. Superseded by Sonnet 5.",
-      "superseded_by": "claude-sonnet-5",
-      "superseded_on": "2026-09-24",
+      "best_for": "Strong multimodal input and long context at a high price. Its AA Intelligence Index of 30.1 ranks 33rd of 54 measured models.",
+      "superseded_by": null,
+      "superseded_on": null,
       "added_on": null,
-      "retires_on": "2026-10-24"
+      "retires_on": null
     }
   ],
   "access_methods": [
@@ -1457,6 +1457,26 @@
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
       "best_for": "Programmatic / scripted Claude use outside Claude Code \u2014 raw API headers, batch endpoints, or features not surfaced by Claude Code. Falls back here when claude.ai Max budget is exhausted."
+    },
+    {
+      "id": "antigravity",
+      "name": "Antigravity",
+      "provider": "google",
+      "provider_jurisdiction": "us",
+      "billing": "subscription-included",
+      "requires": "google-ai-pro-or-ultra-subscription",
+      "supports_models": [
+        "gemini-3.1-pro",
+        "gemini-3.6-flash",
+        "gemini-3.7-flash",
+        "gemini-3.8-flash",
+        "gpt-oss-120b",
+        "sonnet-4.6"
+      ],
+      "exposes_max_mode": "no",
+      "exposes_thinking": "yes",
+      "exposes_orchestration": "no",
+      "best_for": "Google's agent-first coding surface: the Antigravity desktop IDE, its VS Code panel and the `agy` CLI, which replaced the Gemini CLI for personal Google accounts on 2026-06-18. Google AI Pro and Ultra pay for it: quota refreshes every five hours up to a weekly limit (the free tier refreshes weekly), and both can buy AI credits for overage. It serves the Gemini models and, on Google's quota, Claude Sonnet 4.6 and Claude Opus 4.6 with thinking and gpt-oss-120b (antigravity.google/docs/models); Claude Opus 4.6 is not in this catalog. Gemini models take a Low / Medium / High reasoning level, set in the model id (`<model>-low` / `-medium` / `-high`) or with `agy --effort`; the Claude and GPT-OSS models carry their own thinking setting. It bills a Google AI plan or a Google Cloud project, not a Gemini API key."
     },
     {
       "id": "chatgpt-app",
@@ -1685,8 +1705,8 @@
       "name": "Gemini CLI",
       "provider": "google",
       "provider_jurisdiction": "us",
-      "billing": "subscription-or-key",
-      "requires": "gemini-advanced-subscription OR google-api-key",
+      "billing": "per-token",
+      "requires": "google-api-key",
       "supports_models": [
         "gemini-2.5-flash",
         "gemini-3-flash",
@@ -1700,7 +1720,7 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
-      "best_for": "Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) \u2014 per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro / 3.7 Flash / 3.8 Flash / 2.5 Pro / 2.5 Flash / 2.5 Flash-Lite are low/medium/high without `minimal`; `minimal` appears on Flash-line models such as 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, and 3 Flash)."
+      "best_for": "Since 2026-06-18 the Gemini CLI serves only paid Gemini API keys and Gemini Code Assist Standard / Enterprise licences: Google AI Pro, Ultra and free personal accounts moved to Antigravity (`antigravity`). Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) \u2014 per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro / 3.7 Flash / 3.8 Flash / 2.5 Pro / 2.5 Flash / 2.5 Flash-Lite are low/medium/high without `minimal`; `minimal` appears on Flash-line models such as 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, and 3 Flash)."
     },
     {
       "id": "google-api",
@@ -1991,8 +2011,7 @@
       "monthly_usd": 4.99,
       "annual_usd": null,
       "surface_funded": [
-        "gemini-app",
-        "gemini-cli"
+        "gemini-app"
       ],
       "notes": "Entry-paid Google AI tier with 2x higher usage limits than Free in the Gemini app, access to Gemini 3.1 Pro / Nano Banana Pro / Daily Brief / Gemini Omni video generation, 200 Google Flow Credits, and 400 GB of cloud storage (price cut from $7.99 to $4.99 on 2026-06-08; storage doubled from 200 GB to 400 GB)."
     },
@@ -2002,10 +2021,10 @@
       "monthly_usd": 19.99,
       "annual_usd": 199.99,
       "surface_funded": [
-        "gemini-app",
-        "gemini-cli"
+        "antigravity",
+        "gemini-app"
       ],
-      "notes": "Gemini 3.1 Pro and supporting multimodal features in the Gemini app and Gemini CLI, plus Deep Research, Nano Banana Pro, Veo 3.1 access, 1,000 monthly AI credits, and 5 TB of Google One storage; includes YouTube Premium Lite; 50% off the first year for new subscribers."
+      "notes": "Gemini 3.1 Pro and supporting multimodal features in the Gemini app, Antigravity quota refreshed every five hours up to a weekly limit, plus Deep Research, Nano Banana Pro, Veo 3.1 access, 1,000 monthly AI credits, and 5 TB of Google One storage; includes YouTube Premium Lite; 50% off the first year for new subscribers."
     },
     {
       "provider": "Google",
@@ -2013,8 +2032,8 @@
       "monthly_usd": 99.99,
       "annual_usd": null,
       "surface_funded": [
-        "gemini-app",
-        "gemini-cli"
+        "antigravity",
+        "gemini-app"
       ],
       "notes": "Developer-focused Ultra tier (May 2026): 5x Pro usage limits in Gemini app and Google Antigravity, Gemini 3.5 Flash integration, priority access to Antigravity, 20 TB cloud storage, and YouTube Premium individual plan."
     },
@@ -2024,8 +2043,8 @@
       "monthly_usd": 199.99,
       "annual_usd": null,
       "surface_funded": [
-        "gemini-app",
-        "gemini-cli"
+        "antigravity",
+        "gemini-app"
       ],
       "notes": "Highest access to Gemini 3.1 Pro, Deep Think, Project Genie, Veo 3.1 with 25,000 monthly AI credits, $100/month Google Cloud credits, and 30 TB Google One storage (price reduced from $249.99 to $199.99 at Google I/O 2026)."
     },

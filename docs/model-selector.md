@@ -835,7 +835,7 @@ Tier ratings:
 - **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **A** · Long-context **A** · Knowledge **B** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 30.1 (adaptive reasoning, max effort); HLE 33.6%; SciCode 50.1; Terminal-Bench 4.0 3.0; AA-LCR 0.800; LMArena Text Elo 1457.7 (#41); AA-Omniscience 12.4
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
-- **Best for:** Strong multimodal input and long context at a high price. Its AA Intelligence Index of 30.1 ranks 33rd of 54 measured models. Superseded by Sonnet 5.
+- **Best for:** Strong multimodal input and long context at a high price. Its AA Intelligence Index of 30.1 ranks 33rd of 54 measured models.
 
 #### GPT-5.4 — `gpt-5.4`
 
@@ -1314,10 +1314,10 @@ Billing types:
 
 #### Gemini CLI — `gemini-cli`
 
-- **Billing:** subscription-or-key (requires gemini-advanced-subscription OR google-api-key)
+- **Billing:** per-token (requires google-api-key)
 - **Supports models:** gemini-3.1-pro,gemini-3-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
-- **Best for:** Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro / 3.7 Flash / 3.8 Flash / 2.5 Pro / 2.5 Flash / 2.5 Flash-Lite are low/medium/high without `minimal`; `minimal` appears on Flash-line models such as 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, and 3 Flash).
+- **Best for:** Since 2026-06-18 the Gemini CLI serves only paid Gemini API keys and Gemini Code Assist Standard / Enterprise licences: Google AI Pro, Ultra and free personal accounts moved to Antigravity (`antigravity`). Terminal-driven Gemini use; the CLI surface for multimodal and long-context Gemini work outside Cursor's pool. Exposes the discrete Gemini thinking-level dial (`minimal`, `low`, `medium`, `high`) — per-model support varies (Gemini 3 Pro is low/high only; Gemini 3.1 Pro / 3.7 Flash / 3.8 Flash / 2.5 Pro / 2.5 Flash / 2.5 Flash-Lite are low/medium/high without `minimal`; `minimal` appears on Flash-line models such as 3.6 Flash, 3.5 Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, and 3 Flash).
 
 #### Gemini (web / app) — `gemini-app`
 
@@ -1325,6 +1325,13 @@ Billing types:
 - **Supports models:** gemini-3.1-pro,gemini-3-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash,gemini-2.5-flash
 - **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
 - **Best for:** Chat-driven Gemini use under the Gemini Advanced subscription budget.
+
+#### Antigravity — `antigravity`
+
+- **Billing:** subscription-included (requires google-ai-pro-or-ultra-subscription)
+- **Supports models:** gemini-3.1-pro,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,sonnet-4.6,gpt-oss-120b
+- **Toggles:** Max Mode — no · Thinking — yes · Orchestration — no
+- **Best for:** Google's agent-first coding surface: the Antigravity desktop IDE, its VS Code panel and the `agy` CLI, which replaced the Gemini CLI for personal Google accounts on 2026-06-18. Google AI Pro and Ultra pay for it: quota refreshes every five hours up to a weekly limit (the free tier refreshes weekly), and both can buy AI credits for overage. It serves the Gemini models and, on Google's quota, Claude Sonnet 4.6 and Claude Opus 4.6 with thinking and gpt-oss-120b (antigravity.google/docs/models); Claude Opus 4.6 is not in this catalog. Gemini models take a Low / Medium / High reasoning level, set in the model id (`<model>-low` / `-medium` / `-high`) or with `agy --effort`; the Claude and GPT-OSS models carry their own thinking setting. It bills a Google AI plan or a Google Cloud project, not a Gemini API key.
 
 ### xAI
 

@@ -391,6 +391,11 @@ _AGGREGATOR_PROVIDERS: frozenset[str] = frozenset({"cursor", "openrouter", "olla
 # pre-4.10 catalog gave (`cursor`) and the same-family backup guard keeps
 # catching Kimi-vs-Kimi. A per-model `maker` attribute would be the real fix.
 _AGGREGATOR_FALLBACK_ORDER: tuple[str, ...] = ("cursor", "openrouter", "ollama")
+# Access methods that belong to a real maker but also host OTHER makers' models
+# never decide a maker: Antigravity is Google's, and it serves Claude Sonnet 4.6
+# and gpt-oss-120b too. A Gemini model's maker still resolves through Google's
+# other methods.
+_HOST_METHODS: frozenset[str] = frozenset({"antigravity"})
 
 # Providers whose access method is a LOCAL runtime (billing `local`). A model
 # whose only reachable platform is one of these is never a usable backup
@@ -424,6 +429,8 @@ def model_provider(model_ref: str) -> str | None:
     supporting: set[str] = set()
     for method in methods:
         if not isinstance(method, dict):
+            continue
+        if method.get("id") in _HOST_METHODS:
             continue
         if model_id in method.get("supports_models", []):
             provider = method.get("provider")
@@ -620,6 +627,10 @@ def _tiers_funding_surface(subscription_tiers: list[Any], surface_id: str) -> li
     return tiers
 
 
+# A user-context price matches a catalog tier's within this many dollars.
+_PRICE_MATCH_USD = 1.0
+
+
 def _match_active_tier(
     catalog_tiers: list[dict[str, Any]],
     active_subscriptions: list[tuple[str, str, float | None]],
@@ -633,10 +644,12 @@ def _match_active_tier(
                 continue
             if sub_provider and sub_provider != catalog_provider:
                 continue
+            # The price tells same-name tiers apart (Ultra $100 / $200), and
+            # a hand-written row rounds it: "$20" is the $19.99 Google AI Pro.
             if (
                 isinstance(catalog_monthly, (int, float))
                 and sub_monthly is not None
-                and float(catalog_monthly) != sub_monthly
+                and abs(float(catalog_monthly) - sub_monthly) >= _PRICE_MATCH_USD
             ):
                 continue
             return catalog_tier

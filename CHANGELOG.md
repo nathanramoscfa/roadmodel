@@ -7,7 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Antigravity is a catalog surface.** Google's agent-first coding surface
+  (the desktop IDE, its VS Code panel and the `agy` CLI) is the `antigravity`
+  access method. Google AI Pro and Ultra fund it, and it serves Gemini 3.1
+  Pro, Gemini 3.8, 3.7 and 3.6 Flash, Claude Sonnet 4.6 and gpt-oss-120b, per
+  antigravity.google/docs/models. It also serves Claude Opus 4.6, which the
+  catalog does not track. The catalog cron refreshes its model list like
+  every other surface's, from that page, so no user-context has to carry it.
+
 ### Changed
+
+- **The Gemini CLI takes a Gemini API key only.** Since 2026-06-18 it no
+  longer serves Google AI Pro, Ultra or free personal accounts; Google moved
+  them to Antigravity. No subscription funds it now. Google AI Pro and Ultra
+  fund the Gemini app and Antigravity, and Google AI Plus funds the Gemini
+  app alone (it gets Antigravity's free tier, which needs no plan). The
+  cron's provider-to-surface mapping says so per tier.
+- **Sonnet 4.6 is no longer superseded.** Antigravity serves it and not
+  Sonnet 5, so Sonnet 5 cannot take its place everywhere it runs.
 
 - **The user-context describes access, not models.** The example and the
   setup guide now say so, and the example pins no model version: a version
@@ -20,6 +39,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A rounded price in the user-context matches its subscription.** The
+  matcher compared monthly prices exactly, so a user-context listing Google
+  AI Pro at "$20" (the catalog has $19.99) funded nothing: the Gemini app and
+  Antigravity both read as unfunded, and Gemini work fell to the Gemini CLI on
+  a pay-per-token key. Prices now match within a dollar; same-name tiers
+  ($100 and $200) still differ.
+- **A maker's surface that hosts other makers' models decides no maker.**
+  Antigravity is Google's and also serves Claude Sonnet 4.6 and gpt-oss-120b;
+  the cross-provider backup guard resolves their makers through their own
+  makers' methods.
 - **`roadmodel score` leaves out superseded models,** as the recommender
   does, while their successor is available; a benched successor keeps the
   older model in play. It had named Fable 5 as the multimodal backup after

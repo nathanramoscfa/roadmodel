@@ -216,10 +216,13 @@ def _model_makers(selector_text: str) -> dict[str, str]:
     """
     # MUST equal roadmodel.cost._AGGREGATOR_PROVIDERS (tests pin the two).
     aggregators = {"cursor", "openrouter", "ollama"}
+    # MUST equal roadmodel.cost._HOST_METHODS: a maker's surface that also hosts
+    # other makers' models decides no maker.
+    host_methods = {"antigravity"}
     supporters: dict[str, set[str]] = {}
     for method in _parse_access_methods(selector_text):
         provider = str(method.get("provider") or "")
-        if not provider:
+        if not provider or method.get("id") in host_methods:
             continue
         for mid in method.get("supports_models", []):
             supporters.setdefault(str(mid), set()).add(provider)
