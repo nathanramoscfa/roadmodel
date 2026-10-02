@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **A category specialist may take the Quality pick.** In every category
+  whose evidence is not the AA Intelligence Index (all but planning), a model
+  off the frontier now takes Quality when both its letter and its quality for
+  the task's category are strictly above the strongest frontier model's. Cost
+  and Balanced stay on the frontier. The pick carries `specialist: true` and
+  `specialist_category`, the guard names it, and /recommend shows "Top for
+  <category> work" under its name. With Claude Max and ChatGPT Pro, Fable 5.1
+  is the multimodal Quality pick over Opus 5.5.
+
 ## [0.2.63] — 2026-10-02
 
 ### Changed

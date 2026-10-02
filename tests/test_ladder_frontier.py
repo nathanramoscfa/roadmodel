@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import copy
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -538,7 +539,12 @@ def test_the_real_catalog_and_user_context_example_yield_a_full_table() -> None:
         prices = [lad.rungs[t].point.price_usd for t in scoring.LADDER_TIERS]
         assert prices == sorted(prices), "COST <= BALANCED <= QUALITY in price"
         on_frontier = {p.candidate.model_id for p in lad.frontier}
-        assert all(r.candidate.model_id in on_frontier for r in lad.rungs.values())
+        # A category specialist is the one pick that may stand off the frontier.
+        assert all(r.candidate.model_id in on_frontier or r.specialist for r in lad.rungs.values())
+    # Claude Max + ChatGPT Pro, no Google plan: Opus 5.5 tops the multimodal
+    # frontier at an A, and Fable 5.1 (S for multimodal) takes QUALITY.
+    quality = table["multimodal/medium"].rungs["quality"]
+    assert quality.specialist and quality.candidate.model_id == "claude-fable-5.1"
 
 
 def test_on_claude_code_the_rows_effort_is_set_when_the_engine_copies_only_the_model(
@@ -822,3 +828,95 @@ def test_a_backup_that_differs_from_the_row_is_replaced_and_planned(
 def test_the_header_says_to_copy_the_rows_backup() -> None:
     header = " ".join(_SAAS_LADDER_TABLE_HEADER.split())
     assert "BACKUP is the model the row names after `backup`" in header
+
+
+# --------------------------------------------------------------------------- #
+# A category specialist may take QUALITY (every category but planning)
+# --------------------------------------------------------------------------- #
+
+
+def _specialist_catalog() -> dict[str, Any]:
+    # Astra rates S for multimodal (the fixture's others rate B). Multimodal
+    # has no AA evidence, so quality is the letter: S 90, B 50.
+    cat = copy.deepcopy(CATALOG)
+    next(m for m in cat["models"] if m["id"] == "astra")["tiers"]["multimodal"] = "S"
+    return cat
+
+
+def test_a_category_specialist_takes_quality_and_the_frontier_keeps_the_rest() -> None:
+    # Medium multimodal needs 50, which every frontier point meets at B; the
+    # strongest of them is Opus (B, 50). Astra sits off the frontier (Opus
+    # beats it on the AA Index for less) and rates S (90): it takes QUALITY at
+    # the best posture's effort. COST is the cheapest frontier point, Lite, and
+    # BALANCED the best value among the points above it, Luna.
+    lad = scoring.ladder(
+        scoring.Task("multimodal", "medium"), BOTH, catalog=_specialist_catalog(), benchmarks=BENCH
+    )
+    assert lad is not None
+    assert _picks(lad) == {
+        "cost": ("Lite", "low"),
+        "balanced": ("Luna", "medium"),
+        "quality": ("Astra", "high"),
+    }
+    assert lad.rungs["quality"].specialist is True
+    assert not lad.rungs["cost"].specialist and not lad.rungs["balanced"].specialist
+    assert lad.to_dict()["rungs"]["quality"]["specialist"] is True
+    text = scoring.render_ladder_table({"multimodal/medium": lad})
+    assert "QUALITY = Astra @ Codex · high (top for multimodal work)" in text
+
+
+def test_a_specialist_needs_both_a_higher_letter_and_higher_quality() -> None:
+    # Astra at A (70) still beats Opus's B (50); at B it ties the letter.
+    cat = _specialist_catalog()
+    astra = next(m for m in cat["models"] if m["id"] == "astra")
+    astra["tiers"]["multimodal"] = "B"
+    lad = scoring.ladder(scoring.Task("multimodal", "medium"), BOTH, catalog=cat, benchmarks=BENCH)
+    assert lad is not None
+    assert not lad.rungs["quality"].specialist
+    assert lad.rungs["quality"].candidate.model_name == "Opus"
+
+
+def test_planning_has_no_specialist() -> None:
+    # Planning's evidence is the AA Index itself: the frontier already ranks it.
+    assert "planning" not in scoring.SPECIALIST_CATEGORIES
+    assert scoring.SPECIALIST_CATEGORIES == set(scoring.CATEGORIES) - {"planning"}
+    lad = _ladder("planning", "medium")
+    top = lad.rungs["quality"].point
+    stronger = replace(
+        next(p.candidate for p in lad.frontier if p.candidate.model_id == "lite"),
+        model_id="ghost",
+        letter="S",
+        quality=top.candidate.quality + 10,
+    )
+    ranking_pool = [p.candidate for p in lad.frontier] + [stronger]
+    for category, expected in (("planning", None), ("knowledge", "ghost")):
+        task = scoring.Task(category, "medium")
+        top_a = replace(top, candidate=replace(top.candidate, letter="A"))
+        got = scoring._specialist(task, ranking_pool, lad.frontier, top_a, BENCH)
+        assert (got.candidate.model_id if got else None) == expected
+
+
+def test_the_quality_pick_carries_the_specialist_flag(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    table = scoring.ladder_table(BOTH, catalog=_specialist_catalog(), benchmarks=BENCH)
+    monkeypatch.setattr(recommend_module, "_ladder_table_for", lambda *_a, **_k: table)
+    fake, _ = _fake(
+        {
+            # The engine names the frontier's top; code holds the row's specialist.
+            "quality": _block("Opus", "Claude Code", "High", "multimodal/medium"),
+            "balanced": _block("Luna", "Codex", "Medium", "multimodal/medium"),
+            "cost": _block("Lite", "Codex", "Low", "multimodal/medium"),
+        }
+    )
+    monkeypatch.setattr(recommend_module, "recommend_ladder", fake)
+    result = recommend_structured_ladder("read this chart", _config(tmp_path))
+    guard = result["guard"]
+    assert guard["rewritten"] == ["quality"]
+    assert guard["specialist"] == {"tier": "quality", "category": "multimodal"}
+    quality = result["picks"]["quality"]
+    assert quality["model"] == "Astra"
+    assert quality["specialist"] is True
+    assert quality["specialist_category"] == "multimodal"
+    assert "strongest model you can run for multimodal work" in quality["rationale"]
+    assert "specialist" not in result["picks"]["cost"]
