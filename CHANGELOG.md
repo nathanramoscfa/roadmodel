@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.61] — 2026-10-02
+
 ### Changed
 
 - **The three picks stay distinct.** When two adjacent picks land on the same
