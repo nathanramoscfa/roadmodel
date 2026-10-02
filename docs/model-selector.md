@@ -758,34 +758,34 @@ Tier ratings:
 #### Opus 4.7 — `opus-4.7`
 
 - **Pricing:** Input $5.00/M · Output $25.00/M
-- **Tier ratings:** Coding **A** · Planning **S** · Agentic **A** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **D**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **D**
 - **Headline benchmarks:** AA Intelligence Index 40.7 (max); LMArena Text #15 (Elo 1483.6); LMArena WebDev #34 (Elo 1556.0); AA-Omniscience 26.2 (#2)
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
-- **Best for:** Frontier-class planning, plus strong coding, agentic work, multimodal input, long context and knowledge, at a very high price. Its AA Intelligence Index of 40.7 ranks 19th of 54 measured models. Weakest at speed (D). Superseded by Opus 5.5.
+- **Best for:** Strong coding, planning, agentic work, multimodal input, long context and knowledge at a very high price. Its AA Intelligence Index of 40.7 ranks 19th of 54 measured models. Weakest at speed (D). Superseded by Opus 5.5.
 
 #### Opus 4.8 — `opus-4.8`
 
 - **Pricing:** Input $5.00/M · Output $25.00/M
-- **Tier ratings:** Coding **A** · Planning **S** · Agentic **A** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **D**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **D**
 - **Headline benchmarks:** AA Intelligence Index 41.8 (max); HLE 48.7%; Terminal-Bench 2.1 84.6 (top-tier); τ²-bench retail pass_1 94.4%
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-4-8-fast`) requires Max Mode on legacy request-based plans; Fast mode is 3x lower per-token pricing than Opus 4.7 fast mode; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
-- **Best for:** Frontier-class planning, plus strong coding, agentic work, multimodal input, long context and knowledge, at a very high price. Its AA Intelligence Index of 41.8 ranks 16th of 54 measured models. Weakest at speed (D). Superseded by Opus 5.5.
+- **Best for:** Strong coding, planning, agentic work, multimodal input, long context and knowledge at a very high price. Its AA Intelligence Index of 41.8 ranks 16th of 54 measured models. Weakest at speed (D). Superseded by Opus 5.5.
 
 #### Opus 5 — `claude-opus-5`
 
 - **Pricing:** Input $5.00/M · Output $25.00/M
-- **Tier ratings:** Coding **A** · Planning **S** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **D**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **D**
 - **Headline benchmarks:** AA Intelligence Index 50.8 (max); HLE 54.9% (max); Terminal-Bench 2.1 89.1 (max); τ²-bench banking pass_1 42.1%
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-fast`) requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
-- **Best for:** Frontier-class planning and agentic work, plus strong coding, multimodal input, long context and knowledge, at a very high price. Its AA Intelligence Index of 50.8 ranks 6th of 54 measured models. Weakest at speed (D). Superseded by Opus 5.5.
+- **Best for:** Frontier-class agentic work, plus strong coding, planning, multimodal input, long context and knowledge, at a very high price. Its AA Intelligence Index of 50.8 ranks 6th of 54 measured models. Weakest at speed (D). Superseded by Opus 5.5.
 
 #### Fable 5 — `claude-fable-5`
 
 - **Pricing:** Input $10.00/M · Output $50.00/M
-- **Tier ratings:** Coding **S** · Planning **S** · Agentic **S** · Multimodal **S** · Long-context **A** · Knowledge **A** · Speed **D**
+- **Tier ratings:** Coding **S** · Planning **A** · Agentic **S** · Multimodal **S** · Long-context **A** · Knowledge **A** · Speed **D**
 - **Headline benchmarks:** AA Intelligence Index 49.6 (max); HLE 55.5% (max); Terminal-Bench Hard 62.9 (top-tier); τ²-bench retail pass_1 98.5%
 - **Pricing notes:** Hidden by default; Requires data retention approval for Enterprise customers, Teams and individual customers with Privacy Mode enabled; Anthropic stores agent input and output data for harm-prevention processes; this data is not used to train or improve Anthropic models or products; Requests that trip a security guardrail are automatically routed to Claude Opus; About 2x the cost of Claude Opus 5; Requires Max Mode on legacy request-based plans
-- **Best for:** Frontier-class coding, planning, agentic work and multimodal input, plus strong long context and knowledge, at a very high price. Its AA Intelligence Index of 49.6 ranks 7th of 54 measured models. Weakest at speed (D). Superseded by Fable 5.1.
+- **Best for:** Frontier-class coding, agentic work and multimodal input, plus strong planning, long context and knowledge, at a very high price. Its AA Intelligence Index of 49.6 ranks 7th of 54 measured models. Weakest at speed (D). Superseded by Fable 5.1.
 
 #### Fable 5.1 — `claude-fable-5.1`
 
@@ -798,18 +798,18 @@ Tier ratings:
 #### GPT-5.5 — `gpt-5.5`
 
 - **Pricing:** Input $5.00/M · Output $30.00/M
-- **Tier ratings:** Coding **A** · Planning **S** · Agentic **A** · Multimodal **A** · Long-context **S** · Knowledge **A** · Speed **D**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **A** · Long-context **S** · Knowledge **A** · Speed **D**
 - **Headline benchmarks:** AA Intelligence Index 38.4 (xhigh); LMArena Text Elo 1466.8 (#33); HLE 45.8%; AA-Omniscience 20.1 (#3)
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; More token-efficient than GPT-5.4 on comparable tasks; Improved persistence on long-running tasks; Fast mode is available at higher rates; Long context supports up to 1M tokens with 2x input pricing
-- **Best for:** Frontier-class planning and long context, plus strong coding, agentic work, multimodal input and knowledge, at a very high price. Its AA Intelligence Index of 38.4 ranks 23rd of 54 measured models. Weakest at speed (D). Superseded by GPT-5.6 Sol.
+- **Best for:** Frontier-class long context, plus strong coding, planning, agentic work, multimodal input and knowledge, at a very high price. Its AA Intelligence Index of 38.4 ranks 23rd of 54 measured models. Weakest at speed (D). Superseded by GPT-5.6 Sol.
 
 #### GPT-6 Astra — `gpt-6-astra`
 
 - **Pricing:** Input $10.00/M · Output $50.00/M
-- **Tier ratings:** Coding **S** · Planning **B** · Agentic **S** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **B**
+- **Tier ratings:** Coding **S** · Planning **S** · Agentic **S** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 52.7 (max); HLE 54.7%; SciCode 56.5; Terminal-Bench 4.0 59.1; AA-LCR 0.807; LMArena WebDev #2 (Elo 1789.1); LMArena Text coding Elo 1488.1 (#36); LMArena Text Elo 1443.7 (#59)
 - **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
-- **Best for:** Frontier-class coding and agentic work, plus strong long context and knowledge, at a very high price. Its AA Intelligence Index of 52.7 ranks 4th of 54 measured models.
+- **Best for:** Frontier-class coding, planning and agentic work, plus strong long context and knowledge, at a very high price. Its AA Intelligence Index of 52.7 ranks 4th of 54 measured models.
 
 ### High Cost Tier
 
@@ -824,18 +824,18 @@ Tier ratings:
 #### GPT-5.6 Sol — `gpt-5.6-sol`
 
 - **Pricing:** Input $4.00/M · Output $20.00/M
-- **Tier ratings:** Coding **A** · Planning **S** · Agentic **A** · Multimodal **A** · Long-context **S** · Knowledge **A** · Speed **D**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **A** · Long-context **S** · Knowledge **A** · Speed **D**
 - **Headline benchmarks:** AA Intelligence Index 47.0 (max) / 44.0 (xhigh); HLE 49.5% (max); Terminal-Bench 2.1 88.0; τ²-bench banking pass_1 44.3%
 - **Pricing notes:** Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate; Promotional pricing through November 21, 2026
-- **Best for:** Frontier-class planning and long context, plus strong coding, agentic work, multimodal input and knowledge, at a high price. Its AA Intelligence Index of 47.0 ranks 10th of 54 measured models. Weakest at speed (D).
+- **Best for:** Frontier-class long context, plus strong coding, planning, agentic work, multimodal input and knowledge, at a high price. Its AA Intelligence Index of 47.0 ranks 10th of 54 measured models. Weakest at speed (D).
 
 #### Sonnet 4.6 — `sonnet-4.6`
 
 - **Pricing:** Input $3.00/M · Output $15.00/M
-- **Tier ratings:** Coding **B** · Planning **A** · Agentic **B** · Multimodal **A** · Long-context **A** · Knowledge **B** · Speed **B**
+- **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **A** · Long-context **A** · Knowledge **B** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 30.1 (adaptive reasoning, max effort); HLE 33.6%; SciCode 50.1; Terminal-Bench 4.0 3.0; AA-LCR 0.800; LMArena Text Elo 1457.7 (#41); AA-Omniscience 12.4
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
-- **Best for:** Strong planning, multimodal input and long context at a high price. Its AA Intelligence Index of 30.1 ranks 33rd of 54 measured models. Superseded by Sonnet 5.
+- **Best for:** Strong multimodal input and long context at a high price. Its AA Intelligence Index of 30.1 ranks 33rd of 54 measured models. Superseded by Sonnet 5.
 
 #### GPT-5.4 — `gpt-5.4`
 
@@ -866,10 +866,10 @@ Tier ratings:
 #### Sonnet 5.5 — `claude-sonnet-5-5`
 
 - **Pricing:** Input $2.00/M · Output $10.00/M
-- **Tier ratings:** Coding **S** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **A**
+- **Tier ratings:** Coding **S** · Planning **S** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **A**
 - **Headline benchmarks:** AA Intelligence Index 56.0 (max); HLE 55.0% (max); SciCode 61.0 (max); AA-LCR 0.827
 - **Pricing notes:** Requires Max Mode on legacy request-based plans; Same per-token rates as Claude Sonnet 5; US-only endpoints are priced 10% higher ($2.20/M input, $11/M output); Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
-- **Best for:** Frontier-class coding and agentic work, plus strong planning, multimodal input, long context and knowledge, with fast output, at a medium price. Its AA Intelligence Index of 56.0 ranks 2nd of 54 measured models, the highest of any model at its price or lower.
+- **Best for:** Frontier-class coding, planning and agentic work, plus strong multimodal input, long context and knowledge, with fast output, at a medium price. Its AA Intelligence Index of 56.0 ranks 2nd of 54 measured models, the highest of any model at its price or lower. It is the cheapest model in the catalog rated S for planning.
 
 #### GPT-5.3 Codex — `gpt-5.3-codex`
 
@@ -882,10 +882,10 @@ Tier ratings:
 #### GPT-5.2 — `gpt-5.2`
 
 - **Pricing:** Input $1.75/M · Output $14.00/M
-- **Tier ratings:** Coding **B** · Planning **A** · Agentic **B** · Multimodal **C** · Long-context **A** · Knowledge **B** · Speed **B**
+- **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **C** · Long-context **A** · Knowledge **B** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 30.4 (xhigh); GPQA 90.3; LiveCodeBench 88.9; HLE 37.7%; released 2025-12-10
 - **Pricing notes:** Hidden by default; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5.2-high
-- **Best for:** Strong planning and long context at a medium price. Its AA Intelligence Index of 30.4 ranks 32nd of 54 measured models. Weakest at multimodal input (C). Superseded by GPT-5.6 Terra.
+- **Best for:** Strong long context at a medium price. Its AA Intelligence Index of 30.4 ranks 32nd of 54 measured models. Weakest at multimodal input (C). Superseded by GPT-5.6 Terra.
 
 #### GPT-5.2 Codex — `gpt-5.2-codex`
 
@@ -906,7 +906,7 @@ Tier ratings:
 #### Gemini 3.1 Pro — `gemini-3.1-pro`
 
 - **Pricing:** Input $2.00/M · Output $12.00/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **B** · Multimodal **S** · Long-context **A** · Knowledge **A** · Speed **B**
+- **Tier ratings:** Coding **A** · Planning **B** · Agentic **B** · Multimodal **S** · Long-context **A** · Knowledge **A** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 29.7; HLE 47.0%; SciCode 58.7; Terminal-Bench 4.0 4.0; AA-LCR 0.820; AA-Omniscience 32.9 (#1); LMArena Text Elo 1480.2 (#18); 1M-token context
 - **Pricing notes:** -
 - **Best for:** True native multimodal understanding (text, image, video, audio, and code in a single pass), 1M-token context optimized for heterogeneous inputs, strong agentic multi-step tool use, and synthesizing insights across large mixed-media datasets or sprawling document corpora — the obvious choice whenever multimodal or long-context is the primary category
@@ -914,7 +914,7 @@ Tier ratings:
 #### Gemini 3 Pro — `gemini-3-pro`
 
 - **Pricing:** Input $2.00/M · Output $12.00/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **S** · Long-context **A** · Knowledge **B** · Speed **B**
+- **Tier ratings:** Coding **A** · Planning **B** · Agentic **A** · Multimodal **S** · Long-context **A** · Knowledge **B** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 28.0 (high); LMArena Text Elo 1479.4; 1M-token context; native multimodal across text/image/video/audio/code
 - **Pricing notes:** Hidden by default
 - **Best for:** Gemini 3 family Pro model at the same medium-tier pricing as gemini-3.1-pro — pick gemini-3.1-pro over gemini-3-pro when both are available since 3.1 carries the updated benchmarks and is the canonical visible Gemini Pro; gemini-3-pro fits when reproducing earlier Gemini-3-generation outputs or when the 3.1 refresh's behavioral changes are undesirable for a specific workload
@@ -922,7 +922,7 @@ Tier ratings:
 #### GPT-5 — `gpt-5`
 
 - **Pricing:** Input $1.25/M · Output $10.00/M
-- **Tier ratings:** Coding **C** · Planning **A** · Agentic **D** · Multimodal **B** · Long-context **A** · Knowledge **B** · Speed **B**
+- **Tier ratings:** Coding **C** · Planning **B** · Agentic **D** · Multimodal **B** · Long-context **A** · Knowledge **B** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 23.0 (high); GPQA 85.4; HLE 28.5%; agentic and reasoning capabilities at medium-tier output pricing
 - **Pricing notes:** Hidden by default; Agentic and reasoning capabilities; Available reasoning effort variant is gpt-5-high
 - **Best for:** OpenAI's baseline GPT-5 family flagship — broad reasoning capability at medium-tier pricing ($10/M output), useful when a balanced GPT-5-class model is needed without the premium of GPT-5.4 / 5.5 and without the codex coding specialization; superseded by GPT-5.2 / 5.3 / 5.4 for most production use cases but available on Cursor's pool
@@ -946,33 +946,33 @@ Tier ratings:
 #### GPT-6 Sol — `gpt-6-sol`
 
 - **Pricing:** Input $2.00/M · Output $10.00/M
-- **Tier ratings:** Coding **S** · Planning **S** · Agentic **S** · Multimodal **A** · Long-context **S** · Knowledge **A** · Speed **D**
+- **Tier ratings:** Coding **S** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **S** · Knowledge **A** · Speed **D**
 - **Headline benchmarks:** AA Intelligence Index 47.6 (max); HLE 47.9%; SciCode 57.6; Terminal-Bench 4.0 43.9; AA-LCR 0.837; LMArena WebDev #7 (Elo 1689.3)
 - **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
-- **Best for:** Frontier-class coding, planning, agentic work and long context, plus strong multimodal input and knowledge, at a medium price. Its AA Intelligence Index of 47.6 ranks 9th of 54 measured models. Weakest at speed (D).
+- **Best for:** Frontier-class coding, agentic work and long context, plus strong planning, multimodal input and knowledge, at a medium price. Its AA Intelligence Index of 47.6 ranks 9th of 54 measured models. Weakest at speed (D).
 
 #### GPT-6.1 Sol — `gpt-6.1-sol`
 
 - **Pricing:** Input $2.00/M · Output $10.00/M
-- **Tier ratings:** Coding **A** · Planning **S** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **D**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **D**
 - **Headline benchmarks:** AA Intelligence Index 51.8 (max); HLE 52.9%; SciCode 54.2; Terminal-Bench 4.0 56.1; AA-LCR 0.830; LMArena WebDev #3 (Elo 1758.7)
 - **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
-- **Best for:** Frontier-class planning and agentic work, plus strong coding, multimodal input, long context and knowledge, at a medium price. Its AA Intelligence Index of 51.8 ranks 5th of 54 measured models. Weakest at speed (D).
+- **Best for:** Frontier-class agentic work, plus strong coding, planning, multimodal input, long context and knowledge, at a medium price. Its AA Intelligence Index of 51.8 ranks 5th of 54 measured models. Weakest at speed (D).
 
 ### Low Cost Tier
 
 #### Gemini 3.5 Flash — `gemini-3.5-flash`
 
 - **Pricing:** Input $1.50/M · Output $9.00/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **B** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **S**
+- **Tier ratings:** Coding **A** · Planning **B** · Agentic **B** · Multimodal **S** · Long-context **A** · Knowledge **A** · Speed **S**
 - **Headline benchmarks:** AA Intelligence Index 32.6 (high reasoning); τ²-bench banking pass_1 32.2%; Output Speed 250.6 tokens/s
 - **Pricing notes:** Hidden by default
-- **Best for:** Strong coding, planning, long context and knowledge, with very fast output, at a low price. Its AA Intelligence Index of 32.6 ranks 30th of 54 measured models. Superseded by Gemini 3.8 Flash.
+- **Best for:** Frontier-class multimodal input, plus strong coding, long context and knowledge, with very fast output, at a low price. Its AA Intelligence Index of 32.6 ranks 30th of 54 measured models. Superseded by Gemini 3.8 Flash.
 
 #### Mistral Medium 3.5 — `mistral-medium-3.5`
 
 - **Pricing:** Input $1.50/M · Output $7.50/M
-- **Tier ratings:** Coding **C** · Planning **B** · Agentic **D** · Multimodal **B** · Long-context **A** · Knowledge **C** · Speed **B**
+- **Tier ratings:** Coding **C** · Planning **C** · Agentic **D** · Multimodal **B** · Long-context **A** · Knowledge **C** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 14.2 (independently measured by Artificial Analysis); unified chat / reasoning / code model with an adjustable reasoning dial (reasoning_effort); multimodal (text + image input)
 - **Pricing notes:** Provider-direct Mistral API per-token pricing (not via the Cursor pool); eu-jurisdiction; prices manually maintained (Mistral publishes no machine-readable price source)
 - **Best for:** Mistral's flagship unified model — the EU-jurisdiction choice for data-sovereignty / EU-regulatory workloads at low cost ($7.50/M output), with adjustable reasoning and multimodal (vision) input. Artificial Analysis Intelligence Index 14.2 places it well below the US/cn frontier (behind models such as Gemini 3.1 Pro or DeepSeek V4-Pro) — pick it when the operator's EU jurisdiction is the deciding constraint, not when raw capability is. Reached via the `mistral-api` method (provider-direct per-token) with a mistral-api-key.
@@ -980,31 +980,31 @@ Tier ratings:
 #### Gemini 3.6 Flash — `gemini-3.6-flash`
 
 - **Pricing:** Input $1.50/M · Output $7.50/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **B** · Long-context **A** · Knowledge **B** · Speed **S**
+- **Tier ratings:** Coding **A** · Planning **B** · Agentic **A** · Multimodal **S** · Long-context **A** · Knowledge **B** · Speed **S**
 - **Headline benchmarks:** AA Intelligence Index 34.0 (high); HLE 40.8% (high); Terminal-Bench 2.1 77.5; Output Speed 188.5 tokens/s
 - **Pricing notes:** Hidden by default
-- **Best for:** Strong coding, planning, agentic work and long context, with very fast output, at a low price. Its AA Intelligence Index of 34.0 ranks 28th of 54 measured models. Superseded by Gemini 3.8 Flash.
+- **Best for:** Frontier-class multimodal input, plus strong coding, agentic work and long context, with very fast output, at a low price. Its AA Intelligence Index of 34.0 ranks 28th of 54 measured models. Superseded by Gemini 3.8 Flash.
 
 #### Gemini 3.7 Flash — `gemini-3.7-flash`
 
 - **Pricing:** Input $0.75/M · Output $3.50/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **S**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **S** · Long-context **A** · Knowledge **A** · Speed **S**
 - **Headline benchmarks:** AA Intelligence Index 39.1 (high); HLE 47.9% (high); Terminal-Bench 2.1 85.8; Output Speed 325.4 tokens/s
 - **Pricing notes:** Hidden by default
-- **Best for:** Strong coding, planning, agentic work, long context and knowledge, with very fast output, at a low price. Its AA Intelligence Index of 39.1 ranks 21st of 54 measured models. Superseded by Gemini 3.8 Flash.
+- **Best for:** Frontier-class multimodal input, plus strong coding, planning, agentic work, long context and knowledge, with very fast output, at a low price. Its AA Intelligence Index of 39.1 ranks 21st of 54 measured models. Superseded by Gemini 3.8 Flash.
 
 #### Gemini 3.8 Flash — `gemini-3.8-flash`
 
 - **Pricing:** Input $0.75/M · Output $3.50/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **S**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **S** · Long-context **A** · Knowledge **A** · Speed **S**
 - **Headline benchmarks:** AA Intelligence Index 40.9 (high); HLE 47.8% (high); Terminal-Bench 2.1 87.6; Output Speed 237.7 tokens/s
 - **Pricing notes:** -
-- **Best for:** Strong coding, planning, agentic work, long context and knowledge, with very fast output, at a low price. Its AA Intelligence Index of 40.9 ranks 18th of 54 measured models.
+- **Best for:** Frontier-class multimodal input, plus strong coding, planning, agentic work, long context and knowledge, with very fast output, at a low price. Its AA Intelligence Index of 40.9 ranks 18th of 54 measured models.
 
 #### GPT-5.6 Luna — `gpt-5.6-luna`
 
 - **Pricing:** Input $0.20/M · Output $1.20/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **B** · Long-context **S** · Knowledge **B** · Speed **S**
+- **Tier ratings:** Coding **A** · Planning **B** · Agentic **A** · Multimodal **B** · Long-context **S** · Knowledge **B** · Speed **S**
 - **Headline benchmarks:** AA Intelligence Index 37.3 (max) / 34.6 (xhigh); HLE 39.5% (max); Output Speed 104.7 tokens/s (max) / 106.1 (xhigh)
 - **Pricing notes:** Requires Max Mode on legacy request-based plans; Smallest GPT-5.6 variant, optimized for cost and speed; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate
 - **Best for:** OpenAI's smallest GPT-5.6 variant at low-tier pricing ($0.20/$1.20, 5x cheaper output than at initial listing) — strong AA Intelligence Index (37.3 max) for the price and very high output throughput (~151 tokens/s), positioning it as a very cost-efficient near-frontier alternative to Gemini 3.5 Flash and other cheap Flash-class models when GPT-family behavior is preferred; pick when latency and cost dominate but broader reasoning quality than smaller mini/nano variants is required.
@@ -1020,7 +1020,7 @@ Tier ratings:
 #### Haiku 4.5 — `claude-4.5-haiku`
 
 - **Pricing:** Input $1.00/M · Output $5.00/M
-- **Tier ratings:** Coding **C** · Planning **B** · Agentic **D** · Multimodal **B** · Long-context **A** · Knowledge **D** · Speed **S**
+- **Tier ratings:** Coding **C** · Planning **C** · Agentic **D** · Multimodal **B** · Long-context **A** · Knowledge **D** · Speed **S**
 - **Headline benchmarks:** AA Intelligence Index 16.9 (reasoning); Output Speed 122.5 tokens/s; AA-Omniscience -4.2; latency leader among Claude family
 - **Pricing notes:** Hidden by default; Bedrock/Vertex: regional endpoints +10% surcharge; Cache: writes 1.25x, reads 0.1x
 - **Best for:** Speed-optimized lowest-cost Claude model, ideal for simple completions, high-volume repetitive tasks, and latency-sensitive workflows where a lightweight capable response matters more than deep reasoning
@@ -1028,15 +1028,15 @@ Tier ratings:
 #### Muse Spark 1.3 — `muse-spark-1.3`
 
 - **Pricing:** Input $1.25/M · Output $4.25/M
-- **Tier ratings:** Coding **S** · Planning **B** · Agentic **A** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **B**
+- **Tier ratings:** Coding **S** · Planning **A** · Agentic **A** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 48.1 (max); HLE 48.7%; SciCode 58.8; Terminal-Bench 4.0 33.3; AA-LCR 0.830
 - **Pricing notes:** Requires Max Mode on legacy request-based plans; Up to 1M tokens in Max Mode at the same per-token rates (no long-context surcharge); Cached input is billed at $0.15 per million tokens with no separate cache-write charge
-- **Best for:** Frontier-class coding, plus strong agentic work, long context and knowledge, at a low price. Its AA Intelligence Index of 48.1 ranks 8th of 54 measured models, the highest of any model at its price or lower. It is the cheapest model in the catalog rated S for coding.
+- **Best for:** Frontier-class coding, plus strong planning, agentic work, long context and knowledge, at a low price. Its AA Intelligence Index of 48.1 ranks 8th of 54 measured models, the highest of any model at its price or lower. It is the cheapest model in the catalog rated S for coding.
 
 #### GPT-5.4 Mini — `gpt-5.4-mini`
 
 - **Pricing:** Input $0.75/M · Output $4.50/M
-- **Tier ratings:** Coding **B** · Planning **C** · Agentic **B** · Multimodal **B** · Long-context **A** · Knowledge **B** · Speed **A**
+- **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **B** · Long-context **A** · Knowledge **B** · Speed **A**
 - **Headline benchmarks:** AA Intelligence Index 24.1 (xhigh); HLE 28.1% (xhigh); τ²-bench banking pass_1 25.6%
 - **Pricing notes:** Hidden by default; Smaller, faster variant of GPT-5.4; 90% discount on cached input tokens
 - **Best for:** Lightweight GPT-5.4 variant balancing quality and cost, well-suited for straightforward coding, short-form generation, and high-throughput workloads needing solid GPT reasoning at a fraction of the flagship price
@@ -1052,7 +1052,7 @@ Tier ratings:
 #### Gemini 3 Flash — `gemini-3-flash`
 
 - **Pricing:** Input $0.50/M · Output $3.00/M
-- **Tier ratings:** Coding **B** · Planning **A** · Agentic **A** · Multimodal **S** · Long-context **A** · Knowledge **B** · Speed **S**
+- **Tier ratings:** Coding **B** · Planning **B** · Agentic **A** · Multimodal **S** · Long-context **A** · Knowledge **B** · Speed **S**
 - **Headline benchmarks:** AA Intelligence Index 26.3 (reasoning); LiveCodeBench 90.8; native multimodal across text/image/video/audio; 1M-token context
 - **Pricing notes:** Hidden by default
 - **Best for:** Gemini 3 generation's cheap-tier model — meaningfully stronger planning, agentic, knowledge ratings than 2.5 Flash at slightly higher cost ($3.00/M output vs $2.50/M), with native multimodal-S; pick over 2.5 Flash when the task benefits from Gemini 3 family improvements and per-call cost discipline still matters
@@ -1068,10 +1068,10 @@ Tier ratings:
 #### Gemini 2.5 Flash — `gemini-2.5-flash`
 
 - **Pricing:** Input $0.30/M · Output $2.50/M
-- **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **A** · Long-context **B** · Knowledge **C** · Speed **S**
+- **Tier ratings:** Coding **B** · Planning **C** · Agentic **B** · Multimodal **A** · Long-context **B** · Knowledge **C** · Speed **S**
 - **Headline benchmarks:** AA Intelligence Index 9.9 (non-reasoning) / 13.1 (reasoning); native multimodal grounding; 1M-token context; designed for low-cost high-volume inference
 - **Pricing notes:** Hidden by default
-- **Best for:** Strong multimodal input, with very fast output, at a low price. Its AA Intelligence Index of 13.1 ranks 49th of 54 measured models. Weakest at knowledge (C).
+- **Best for:** Strong multimodal input, with very fast output, at a low price. Its AA Intelligence Index of 13.1 ranks 49th of 54 measured models. Weakest at planning and knowledge (C).
 
 #### GPT-5 Mini — `gpt-5-mini`
 
@@ -1092,7 +1092,7 @@ Tier ratings:
 #### GPT-5.4 Nano — `gpt-5.4-nano`
 
 - **Pricing:** Input $0.20/M · Output $1.25/M
-- **Tier ratings:** Coding **B** · Planning **D** · Agentic **B** · Multimodal **C** · Long-context **A** · Knowledge **B** · Speed **S**
+- **Tier ratings:** Coding **B** · Planning **C** · Agentic **B** · Multimodal **C** · Long-context **A** · Knowledge **B** · Speed **S**
 - **Headline benchmarks:** AA Intelligence Index 20.7 (xhigh); HLE 28.3% (xhigh); cheapest GPT-5.4 family variant; throughput-optimized inference
 - **Pricing notes:** Hidden by default; Smallest GPT-5.4 variant, optimized for cost; 90% discount on cached input tokens
 - **Best for:** Ultra-low-cost GPT variant for trivial text tasks, simple lookups, rapid classification, and extreme-throughput pipelines where cost efficiency is the sole constraint and task complexity is minimal
@@ -1108,18 +1108,18 @@ Tier ratings:
 #### DeepSeek-V4-Pro — `deepseek-v4-pro`
 
 - **Pricing:** Input $0.66/M · Output $1.98/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **D** · Long-context **A** · Knowledge **B** · Speed **C**
+- **Tier ratings:** Coding **A** · Planning **B** · Agentic **A** · Multimodal **D** · Long-context **A** · Knowledge **B** · Speed **C**
 - **Headline benchmarks:** AA Intelligence Index 36.0 (reasoning, max effort) — independently measured by Artificial Analysis; SWE-bench Verified 80.6%, LiveCodeBench 93.5, Terminal-Bench 2.0 67.9, Codeforces CodeElo 3206, Putnam-2025 120/120 (DeepSeek-reported); 1M-token context; text-only (no image input); ~46 tokens/s (notably slow)
 - **Pricing notes:** Provider-direct DeepSeek API per-token pricing (not via the Cursor pool). Listed price is DeepSeek's OFF-PEAK rate (all hours except 01:00–04:00 and 06:00–10:00 UTC Mon–Fri, i.e. ~79% of the week incl. all US/EU working hours); peak is 2×: $1.32 input / $3.96 output per 1M — aggregators such as OpenRouter list the peak rate. Cache-hit input $0.022/M off-peak ($0.044/M peak).
-- **Best for:** Strong coding, planning, agentic work and long context at a low price. Its AA Intelligence Index of 36.0 ranks 27th of 54 measured models. Weakest at multimodal input (D), then speed (C).
+- **Best for:** Strong coding, agentic work and long context at a low price. Its AA Intelligence Index of 36.0 ranks 27th of 54 measured models. Weakest at multimodal input (D), then speed (C). Superseded by DeepSeek-V4.1-Flash.
 
 #### DeepSeek-V4.1-Flash — `deepseek-flash`
 
 - **Pricing:** Input $0.15/M · Output $0.60/M
-- **Tier ratings:** Coding **A** · Planning **B** · Agentic **A** · Multimodal **C** · Long-context **S** · Knowledge **B** · Speed **A**
+- **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **C** · Long-context **S** · Knowledge **B** · Speed **A**
 - **Headline benchmarks:** AA Intelligence Index 39.5 (max) — independently measured by Artificial Analysis (v4.3; the retired V4-Flash-0731 scored 34.3 and V4-Pro 36.0 on the same index); ~229 tokens/s median output (AA); Terminal-Bench 2.1 90.6, Terminal-Bench 4.0 31.2, DeepSWE v1.1 74.2, HLE 36.8%, GPQA Diamond 90.9, Codeforces 3471, MMMU-Pro 56.5 (all DeepSeek-reported, max effort); 1M-token context; image input supported (V4-Flash-Vision-Exp folded in)
 - **Pricing notes:** Provider-direct DeepSeek API per-token pricing (not via the Cursor pool). Listed price is DeepSeek's OFF-PEAK rate (all hours except 01:00–04:00 and 06:00–10:00 UTC Mon–Fri, i.e. ~79% of the week incl. all US/EU working hours); peak is 2×: $0.30 input / $1.20 output per 1M — aggregators such as OpenRouter list the peak rate. Cache-hit input $0.003/M off-peak ($0.006/M peak). The legacy model names deepseek-v4-flash and deepseek-v4-flash-vision-exp are still accepted by the API but are served by this model at this price.
-- **Best for:** Frontier-class long context, plus strong coding and agentic work, with fast output, at a low price. Its AA Intelligence Index of 39.5 ranks 20th of 54 measured models. It is the cheapest model in the catalog rated S for long context. Weakest at multimodal input (C).
+- **Best for:** Frontier-class long context, plus strong coding, planning and agentic work, with fast output, at a low price. Its AA Intelligence Index of 39.5 ranks 20th of 54 measured models. It is the cheapest model in the catalog rated S for long context. Weakest at multimodal input (C).
 
 #### Mistral Small 4 — `mistral-small-4`
 
@@ -1148,10 +1148,10 @@ Tier ratings:
 #### GLM-5.2 — `glm-5.2`
 
 - **Pricing:** Input $1.40/M · Output $4.40/M
-- **Tier ratings:** Coding **B** · Planning **A** · Agentic **B** · Multimodal **D** · Long-context **A** · Knowledge **B** · Speed **B**
+- **Tier ratings:** Coding **B** · Planning **B** · Agentic **B** · Multimodal **D** · Long-context **A** · Knowledge **B** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 33.7 (max); HLE 41.1%; SciCode 51.2; Terminal-Bench 4.0 1.0; AA-LCR 0.783; z.ai (Zhipu AI) GLM-5.2 flagship (~Jun 2026) — strong coding / agentic model in the GLM-5 line; text-only; cn-jurisdiction
 - **Pricing notes:** Provider-direct z.ai (Zhipu) API per-token pricing (not via the Cursor pool); cn-jurisdiction; cache-input $0.26/M
-- **Best for:** Strong planning and long context at a low price. Its AA Intelligence Index of 33.7 ranks 29th of 54 measured models. Weakest at multimodal input (D).
+- **Best for:** Strong long context at a low price. Its AA Intelligence Index of 33.7 ranks 29th of 54 measured models. Weakest at multimodal input (D).
 
 #### GLM-5.3 — `glm-5.3`
 
@@ -1172,7 +1172,7 @@ Tier ratings:
 #### GLM-4.6 — `glm-4.6`
 
 - **Pricing:** Input $0.60/M · Output $2.20/M
-- **Tier ratings:** Coding **C** · Planning **B** · Agentic **C** · Multimodal **D** · Long-context **B** · Knowledge **C** · Speed **B**
+- **Tier ratings:** Coding **C** · Planning **C** · Agentic **C** · Multimodal **D** · Long-context **B** · Knowledge **C** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 18.5 (reasoning); HLE 14.5%; AA-LCR 0.540; z.ai GLM-4.6 — the widely-adopted, cost-efficient GLM coding workhorse; regarded as a strong value coding model in the GLM-4.x line; text-only; cn-jurisdiction
 - **Pricing notes:** Provider-direct z.ai (Zhipu) API per-token pricing (not via the Cursor pool); cn-jurisdiction; cache-input $0.11/M
 - **Best for:** z.ai's GLM-4.6 — the proven value coding model: very low cost ($2.20/M output), cn-jurisdiction, and a strong code-generation / fill profile that made it a popular coding-plan default. Pick it over glm-5.2 when cost dominates and the task is bounded coding rather than the hardest agentic reasoning; pick glm-5.2 when reasoning depth or agentic autonomy matters. Text-only. Reached via the `zai-api` method (provider-direct per-token) with a zai-api-key.
@@ -1188,7 +1188,7 @@ Tier ratings:
 #### gpt-oss-120b — `gpt-oss-120b`
 
 - **Pricing:** Input $0.15/M · Output $0.60/M
-- **Tier ratings:** Coding **D** · Planning **B** · Agentic **D** · Multimodal **D** · Long-context **C** · Knowledge **C** · Speed **A**
+- **Tier ratings:** Coding **D** · Planning **C** · Agentic **D** · Multimodal **D** · Long-context **C** · Knowledge **C** · Speed **A**
 - **Headline benchmarks:** AA Intelligence Index 11.6 (high); HLE 19.6%; SciCode 34.0; Terminal-Bench 4.0 0.0; AA-LCR 0.520; OpenAI gpt-oss-120b — open-weight (Apache-2.0) Mixture-of-Experts reasoning model (~117B total / ~5B active) with configurable reasoning effort; OpenAI positions it near o4-mini on reasoning; 128K context; hosted by Groq (~500 tokens/s); us-jurisdiction
 - **Pricing notes:** Provider-direct Groq-hosted pricing for OpenAI's open-weight gpt-oss (Apache-2.0); us-jurisdiction; prices manually maintained from groq.com/pricing
 - **Best for:** OpenAI's open-weight gpt-oss-120b (Apache-2.0) hosted by Groq — a very low-cost ($0.60/M output), fast (~500 tokens/s), us-jurisdiction reasoning model with an adjustable reasoning dial, for cost / throughput-sensitive reasoning and coding where an open-weight, self-hostable model (data-sovereignty, on-prem portability) is preferred. OpenAI positions it near o4-mini; 128K context; text-only. Reached via the `groq-api` method (provider-direct per-token) with a groq-api-key, or via the `ollama` method when docs/user-context.md declares it pulled locally (Apache-2.0 weights; ~65 GB at MXFP4) — recommendable whenever EITHER host is declared.
@@ -1204,10 +1204,10 @@ Tier ratings:
 #### Grok 4.3 — `grok-4.3`
 
 - **Pricing:** Input $1.25/M · Output $2.50/M
-- **Tier ratings:** Coding **B** · Planning **A** · Agentic **D** · Multimodal **B** · Long-context **A** · Knowledge **B** · Speed **B**
+- **Tier ratings:** Coding **B** · Planning **B** · Agentic **D** · Multimodal **B** · Long-context **A** · Knowledge **B** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 24.9 (high); HLE 37.2%; SciCode 48.3; Terminal-Bench 4.0 0.0; AA-LCR 0.730; AA-Omniscience 18.3 (#4); LMArena Search Elo 1165.3
 - **Pricing notes:** Hidden by default; Requires Max Mode on request-based plans
-- **Best for:** Strong planning and long context at a low price. Its AA Intelligence Index of 24.9 ranks 39th of 54 measured models. Weakest at agentic work (D).
+- **Best for:** Strong long context at a low price. Its AA Intelligence Index of 24.9 ranks 39th of 54 measured models. Weakest at agentic work (D).
 
 #### Grok 4.6 — `grok-4.6`
 
@@ -1530,7 +1530,7 @@ Guardrails:
   - Never sacrifice quality to save cost — the cost step is a true-tie
     resolver, not a downgrade trigger.
   - For PRIMARY = `multimodal`, only consider models with tier-multimodal
-    of S or A (currently: gemini-3-flash, gemini-3-pro, gemini-3.1-pro, claude-fable-5, claude-fable-5.1 at S; gemini-2.5-flash, claude-sonnet-5, claude-sonnet-5-5, gpt-6-sol, gpt-6.1-sol, gpt-5.6-terra, gpt-5.4, sonnet-4.6, claude-opus-5-5, gpt-5.6-sol, claude-opus-5, opus-4.7, opus-4.8, gpt-5.5 at A).
+    of S or A (currently: gemini-3-flash, gemini-3.7-flash, gemini-3.8-flash, gemini-3.6-flash, gemini-3.5-flash, gemini-3-pro, gemini-3.1-pro, claude-fable-5, claude-fable-5.1 at S; gemini-2.5-flash, claude-sonnet-5, claude-sonnet-5-5, gpt-6-sol, gpt-6.1-sol, gpt-5.6-terra, gpt-5.4, sonnet-4.6, claude-opus-5-5, gpt-5.6-sol, claude-opus-5, opus-4.7, opus-4.8, gpt-5.5 at A).
   - For PRIMARY = `long-context`, prefer models with native large
     context (opus-4.7 1M, opus-4.8 1M, claude-opus-5 1M, claude-opus-5-5 1M, gemini-3.1-pro 1M) over forcing
     a smaller-context model into Max Mode truncation.

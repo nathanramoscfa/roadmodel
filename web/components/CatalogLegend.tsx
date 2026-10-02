@@ -36,7 +36,7 @@ import {
   type Rating,
 } from "@/lib/catalog-fields";
 
-// The four derived categories and the bands, read from the same constants the
+// The derived categories and the bands, read from the same constants the
 // letters are derived with — so this sentence cannot go stale when a band or an
 // evidence benchmark changes (a new AA version renames Terminal-Bench, say).
 const DERIVED_EVIDENCE: string = CATEGORY_ORDER.filter(
@@ -47,6 +47,7 @@ const DERIVED_EVIDENCE: string = CATEGORY_ORDER.filter(
   )
   .join(", ");
 const DERIVED_NAMES: string = CATEGORY_ORDER.filter((c) => DERIVED_CATEGORIES.has(c)).join(", ");
+const ESTIMATED_NAMES: string = CATEGORY_ORDER.filter((c) => !DERIVED_CATEGORIES.has(c)).join(" and ");
 const BAND_RULE: string = DERIVATION_BANDS.map((b) => `${b.letter} within ${b.max}`).join(", ");
 // The categories lettered by gap, and those lettered by rank (with the rule).
 const GAP_NAMES: string = CATEGORY_ORDER.filter(
@@ -145,7 +146,7 @@ export function CatalogLegend({ id }: { id?: string }) {
             <span className={BADGE + " " + ESTIMATED_BADGE + " " + RATING_OUTLINE_COLORS.A}>A</span>{" "}
             is <em>estimated</em>: the daily catalog automation sets it from each provider&rsquo;s
             published results, and a new model starts from its predecessor&rsquo;s letters. Every
-            planning, multimodal and speed letter is an estimate, as is a derived category&rsquo;s
+            {ESTIMATED_NAMES} letter is an estimate, as is a derived category&rsquo;s
             letter for a model outside its benchmark&rsquo;s measured set; there an estimate stops
             at {ESTIMATE_CEILING}, since S takes a measurement. A <strong>New</strong>{" "}
             tag marks a model released in the last {NEW_RELEASE_DAYS} days (or, before Artificial

@@ -13,6 +13,8 @@ import { RATING_SCALE } from "@/lib/glossary";
 // The derivation in words, from the constants the letters are derived with,
 // so this page cannot state a rule the data no longer follows.
 const DERIVED = CATEGORY_ORDER.filter((c) => DERIVED_CATEGORIES.has(c));
+const ESTIMATED = CATEGORY_ORDER.filter((c) => !DERIVED_CATEGORIES.has(c));
+const COUNT = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven"][DERIVED.length];
 const EVIDENCE = DERIVED.map((c) => evidenceLabel(c)).join(", ");
 const GAP = DERIVED.filter((c) => !RANK_DERIVATION[c]).join(", ");
 const BANDS = DERIVATION_BANDS.map((b) => `${b.letter} within ${b.max}`).join(", ");
@@ -51,12 +53,12 @@ export function RatingScale({ id, compact = false }: { id?: string; compact?: bo
         <strong>S&nbsp;&rarr;&nbsp;D</strong> scale &mdash; <strong>S</strong> is the
         top &ldquo;tier-list&rdquo; rank, a step above A (the gaming convention for
         the genuine best), then A, B, C, D. A rating is a <em>class</em>, not a
-        ranking within it: several frontier models share S in most categories. Four
-        of the seven letters &mdash; {DERIVED.join(", ")} &mdash; are <em>derived</em>{" "}
-        from a single Artificial Analysis benchmark each ({EVIDENCE}): {GAP} as the
+        ranking within it: several frontier models share S in most categories.{" "}
+        {COUNT} of the seven letters &mdash; {DERIVED.join(", ")} &mdash; are{" "}
+        <em>derived</em> from Artificial Analysis measurements ({EVIDENCE}): {GAP} as the
         model&rsquo;s gap to the category leader ({BANDS} points, else D); {RANKED}.
         They refresh with the data and cannot be hand-edited. Every
-        other letter is an estimate: planning, multimodal, and speed, and a derived
+        other letter is an estimate: {ESTIMATED.join(" and ")}, and a derived
         category for a model outside its benchmark&rsquo;s measured set, where an
         estimate stops at {ESTIMATE_CEILING} because S takes a measurement. The daily
         catalog automation sets estimates from cited evidence one step at a time, and

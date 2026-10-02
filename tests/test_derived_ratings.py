@@ -112,9 +112,18 @@ def test_the_coding_composite_is_the_mean_percentile_of_its_parts() -> None:
 
 
 def test_plan_apply_and_enumeration_round_trip() -> None:
+    index = "artificial_analysis_intelligence_index"
     bench = _bench(
-        leader={"hle": 0.60, "lcr": 0.9, "scicode": 0.62, "terminalbench_v4_0": 0.9},
-        **{"cheap-one": {"hle": 0.20, "lcr": 0.85, "scicode": 0.60, "terminalbench_v4_0": 0.5}},
+        leader={"hle": 0.60, "lcr": 0.9, "scicode": 0.62, "terminalbench_v4_0": 0.9, index: 60.0},
+        **{
+            "cheap-one": {
+                "hle": 0.20,
+                "lcr": 0.85,
+                "scicode": 0.60,
+                "terminalbench_v4_0": 0.5,
+                index: 30.0,  # gap 30: its planning B holds
+            }
+        },
     )
     changes, unmeasured = dr.plan_changes(SELECTOR, bench)
     by = {(c["id"], c["category"]): (c["from"], c["to"]) for c in changes}
@@ -161,7 +170,9 @@ def test_report_names_changes_caps_and_estimates() -> None:
     assert "| Cheap One | knowledge | HLE | 50.0 | 50.0 | 0.0 | — | B | **S** |" in text
     # Every unmeasured S in a derived category is capped, and said so.
     assert "- leader: coding S → A" in text and "- unmeasured: coding S → A" in text
-    assert "planning, multimodal, speed" in text
+    assert "- leader: planning S → A" in text
+    assert "**multimodal, speed**: always estimated" in text
+    assert "planning, multimodal" not in text
     # Names come from the catalog map when present, else the id.
     assert "**coding**: Cheap One, leader, unmeasured" in text
 
@@ -263,6 +274,9 @@ def test_web_and_scoring_mirror_the_derivation() -> None:
             block = re.search(rf'key: "{key}",(.*?)\n  \}}', grid, re.S)
             assert block and f'category: "{cat}"' in block.group(1), f"{key} is not tagged {cat}"
     assert set(dr.RANK_SHARES) <= scoring.RANK_SCALED
+    derived = re.search(r"export const DERIVED_CATEGORIES[^\[]*\[(.*?)\]\);", grid, re.S)
+    assert derived, "DERIVED_CATEGORIES not found"
+    assert set(re.findall(r'"([a-z-]+)"', derived.group(1))) == set(dr.CATEGORY_EVIDENCE)
 
 
 def test_committed_selector_matches_committed_benchmark_layer() -> None:
@@ -279,3 +293,32 @@ def test_committed_selector_matches_committed_benchmark_layer() -> None:
     assert dr.regenerate_multimodal_enumeration(selector) == selector
     # No derived category holds an unmeasured S.
     assert not [c for c in changes if c.get("capped")]
+
+
+def test_planning_letters_the_gap_to_the_leader_on_the_aa_intelligence_index() -> None:
+    """Planning reads the AA Intelligence Index, in index points (no scaling),
+    banded like long-context and knowledge. The editorial planning letter had
+    drifted from the index on 19 of 33 measured models; GPT-6 Astra (52.7,
+    4th of 54) sat at a B placeholder while GPT-5.6 Sol (47.0) held S."""
+    key = "artificial_analysis_intelligence_index"
+    assert dr.CATEGORY_EVIDENCE["planning"] == (key, 1.0, "AA Intelligence Index")
+    bench = _bench(
+        opus={key: 57.6},
+        astra={key: 52.7},  # gap 4.9
+        sol={key: 51.8},  # gap 5.8
+        gemini={key: 29.7},  # gap 27.9
+        haiku={key: 16.9},  # gap 40.7
+        nano={key: 6.0},  # gap 51.6
+        unmeasured={key: None},
+    )
+    letters = {cid: row["letter"] for cid, row in dr.derive(bench)["planning"].items()}
+    assert letters == {
+        "opus": "S",
+        "astra": "S",
+        "sol": "A",
+        "gemini": "B",
+        "haiku": "C",
+        "nano": "D",
+    }
+    # Multimodal and speed stay estimates: nothing derives them.
+    assert "multimodal" not in dr.CATEGORY_EVIDENCE and "speed" not in dr.CATEGORY_EVIDENCE

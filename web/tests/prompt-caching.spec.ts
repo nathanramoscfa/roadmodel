@@ -161,27 +161,50 @@ const TWO_TURN_MESSAGES = [
 // 1. Engine resolver — catalog derivation, FAIL escalation, overrides
 // ---------------------------------------------------------------
 
-test("pickFreeEngine returns Gemini 2.5 Flash for planning-B on current catalog", () => {
+test("pickFreeEngine returns Gemini 3 Flash for planning-B on current catalog", () => {
+  // Planning is measured on the AA Intelligence Index: Gemini 2.5 Flash
+  // (13.1) letters C, below the bar, and Gemini 3 Flash (26.3) is the
+  // cheapest Google model at B.
   const resolved = pickFreeEngine({
     surface: "roadmap",
     minTier: "B",
     allowedJurisdictions: ["us"],
   });
-  expect(resolved.engine).toBe("gemini-2.5-flash");
+  expect(resolved.engine).toBe("gemini-3-flash");
   expect(resolved.provider).toBe("google");
-  expect(resolved.force_provider).toBe("google-gemini-2.5-flash");
+  expect(resolved.force_provider).toBe("google-gemini-3-flash");
   expect(resolved.use_frontier).toBe(false);
 });
 
-test("FAIL escalation: minTier='A' picks Gemini 3 Flash on current catalog", () => {
+test("FAIL escalation: minTier='A' picks Gemini 3.8 Flash on current catalog", () => {
+  // Gemini 3.7 Flash ties it on price and comes first in the catalog, but
+  // 3.8 Flash supersedes it: a superseded model never wins.
   const resolved = pickFreeEngine({
     surface: "roadmap",
     minTier: "A",
     allowedJurisdictions: ["us"],
   });
-  expect(resolved.engine).toBe("gemini-3-flash");
+  expect(resolved.engine).toBe("gemini-3.8-flash");
   expect(resolved.provider).toBe("google");
-  expect(resolved.force_provider).toBe("google-gemini-3-flash");
+  expect(resolved.force_provider).toBe("google-gemini-3.8-flash");
+});
+
+test("a superseded model never wins the free engine, even at the lowest price", () => {
+  const model = (id: string, price: number, superseded_by: string | null = null) => ({
+    id,
+    name: id,
+    input_price_per_1m: price / 4,
+    output_price_per_1m: price,
+    tier_cost: "low",
+    tiers: { planning: "A", knowledge: "A", speed: "S" } as const,
+    jurisdiction: "us" as const,
+    superseded_by,
+  });
+  const resolved = _pickFreeEngineFromCatalog(
+    { models: [model("gemini-old", 1.0, "gemini-new"), model("gemini-new", 3.5)] },
+    { surface: "roadmap", minTier: "A", allowedJurisdictions: ["us"] },
+  );
+  expect(resolved.engine).toBe("gemini-new");
 });
 
 test(
@@ -285,7 +308,7 @@ test(
       profile: profileWith({ frontier_roadmap_override: false }),
       envFrontierEnabled: true,
     });
-    expect(resolved.engine).toBe("gemini-2.5-flash");
+    expect(resolved.engine).toBe("gemini-3-flash");
     expect(resolved.provider).toBe("google");
     expect(resolved.use_frontier).toBe(false);
   },
@@ -304,7 +327,7 @@ test(
     });
     expect(resolved.provider).toBe("google");
     expect(resolved.use_frontier).toBe(false);
-    expect(resolved.engine).toBe("gemini-2.5-flash");
+    expect(resolved.engine).toBe("gemini-3-flash");
   },
 );
 
