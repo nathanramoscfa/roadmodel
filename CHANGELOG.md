@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Every engine call reports what it cost.** `roadmodel.usage` records the
+  token counts each provider returned for the last call: input, the part of
+  it served from the prompt cache (and, on Anthropic, written to it), output,
+  and reasoning. The hosted recommender meters a call from these instead of a
+  fixed estimate. The estimate had drifted: the prompt is ~61k tokens now,
+  not the 39.5k it assumed, and a warm prompt cache bills most of it at a
+  tenth of the input price.
+
+### Fixed
+
+- **The gpt-6 line gets the reasoning cap.** The OpenAI adapter capped
+  `reasoning.effort` on `gpt-5*` models only, so GPT-6 Luna, Sol and Astra
+  ran at their default effort: slower, dearer, and free to spend the whole
+  output budget thinking. Every gpt-5+ model now gets the cap, at `low`
+  where the model has no `minimal` rung.
+- **Gemini 3 gets a thinking level.** Gemini 3 and later document discrete
+  thinking levels, not the 2.5 token budget. `thinking_budget` now maps to a
+  level on those models (`0` → `low`, the floor every Gemini 3 model
+  accepts); the 2.5 models keep the numeric budget.
+- **Claude engines cache the prompt and run at low effort.** The Anthropic
+  adapter sent the ~61k-token system prompt uncached on every call and could
+  not lower reasoning. It now caches the system prompt, so a warm call reads
+  it at a tenth of the input price, and maps `thinking_budget` to
+  `output_config.effort: low` on the models that take effort (Sonnet 4.6+,
+  Opus 4.5+, Fable). `temperature` is forwarded only to the models that
+  still accept sampling (Haiku 4.5, Sonnet 4.6, Opus 4.6 and earlier);
+  Sonnet 5 and Opus 4.7+ reject it with a 400.
+
 ## [0.2.55] — 2026-10-01
 
 ### Added

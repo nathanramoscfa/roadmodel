@@ -4,13 +4,38 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from roadmodel import usage
 from roadmodel.errors import ProviderCallError
 
 DEFAULT_MODEL = "gpt-5.4"
 
 
+# The reasoning generations: gpt-5 and everything after it (gpt-6, gpt-6.1,
+# ...). Each one bills reasoning against max_output_tokens, so each gets the
+# reasoning.effort cap below. Matching only "gpt-5" left the gpt-6 line running
+# at its default effort: slower, dearer, and free to spend the whole output
+# budget thinking.
+_REASONING_RE = re.compile(r"^gpt-(?:5|[6-9])")
+
 # gpt-5.6 and later dropped the `minimal` reasoning rung; their floor is `low`.
 _NO_MINIMAL_RE = re.compile(r"^gpt-(?:5\.[6-9]|5\.\d\d|[6-9])")
+
+
+def _record_usage(model_id: str, response: object) -> None:
+    """Report the Responses API's token counts to roadmodel.usage."""
+    u = getattr(response, "usage", None)
+    if u is None:
+        return
+    usage.record(
+        "openai",
+        model_id,
+        input_tokens=getattr(u, "input_tokens", None),
+        output_tokens=getattr(u, "output_tokens", None),
+        cached_input_tokens=getattr(getattr(u, "input_tokens_details", None), "cached_tokens", 0),
+        reasoning_tokens=getattr(
+            getattr(u, "output_tokens_details", None), "reasoning_tokens", None
+        ),
+    )
 
 
 def _extract_output_text(response: object) -> str | None:
@@ -71,16 +96,17 @@ def recommend(
         }
         if max_output_tokens is not None:
             kwargs["max_output_tokens"] = max_output_tokens
-        # Cap reasoning on gpt-5* models so it doesn't eat the whole
-        # max_output_tokens budget (see the note above). Default low; a
+        # Cap reasoning on the gpt-5+ reasoning models so it doesn't eat the
+        # whole max_output_tokens budget (see the note above). Default low; a
         # thinking_budget of 0 selects the FLOOR of that model's ladder for the
-        # anon tier — `minimal` on the gpt-5.0-5.5 generation, `low` on the
-        # gpt-5.6 generation, which rejects `minimal` outright ("Unsupported
+        # anon tier — `minimal` on the gpt-5.0-5.5 generation, `low` from the
+        # gpt-5.6 generation on, which rejects `minimal` outright ("Unsupported
         # value: 'minimal' is not supported with the 'gpt-5.6-luna' model").
-        if model_id.startswith("gpt-5"):
+        if _REASONING_RE.match(model_id):
             floor = "low" if _NO_MINIMAL_RE.match(model_id) else "minimal"
             kwargs["reasoning"] = {"effort": floor if thinking_budget == 0 else "low"}
         response = client.responses.create(**kwargs)
+        _record_usage(model_id, response)
         text = _extract_output_text(response)
         if text:
             return text
