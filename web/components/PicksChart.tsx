@@ -1,17 +1,20 @@
 // web/components/PicksChart.tsx
 //
-// Where the three picks sit in the market: every measured catalog model at
-// its blended price (x, log scale) and AA Intelligence Index (y), the green
+// Where the three picks sit in the market: every measured model at its
+// blended price (x, log scale) and AA Intelligence Index (y), the green
 // cost/quality frontier stepping up through the models nothing beats for
 // less, and the picks drawn large and named. It shows in one glance what the
 // Cost, Balanced and Quality picks trade: how many AA Index points each step
-// up buys, and at what price. The same chart, at full size and with every
-// filter, is on /models.
+// up buys, and at what price. For a viewer with saved Settings the dots and
+// the frontier are the models they can run (PicksData.pool), and the rest of
+// the catalog stays faintly in the background. The same chart, at full size
+// and with every filter, is on /models.
 //
 // Hover (mouse), tap (touch) or tab to (keyboard) any dot for the card /models
 // shows for it; a click elsewhere or Escape closes it.
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { blendedPrice, formatUsd } from "@/lib/benchmark-grid";
@@ -43,11 +46,14 @@ export interface ChartPick {
 
 export function PicksChart({
   rows,
+  pool,
   picks,
   selected,
   onSelect,
 }: {
   rows: SlimRow[];
+  // The ids of the models the viewer can run; null for the whole catalog.
+  pool: string[] | null;
   picks: ChartPick[];
   selected: PriorityRecommendation["priority"];
   onSelect: (p: PriorityRecommendation["priority"]) => void;
@@ -57,7 +63,14 @@ export function PicksChart({
   const width = useWidth(wrap);
   const [active, setActive] = useState<string | null>(null);
 
-  const pts = useMemo(() => rows.flatMap((r) => toPt(r) ?? []).sort((a, b) => a.x - b.x), [rows]);
+  const all = useMemo(() => rows.flatMap((r) => toPt(r) ?? []).sort((a, b) => a.x - b.x), [rows]);
+  const pts = useMemo(() => {
+    if (!pool) return all;
+    const mine = new Set(pool);
+    return all.filter((p) => mine.has(p.row.id));
+  }, [all, pool]);
+  // Catalog models outside the viewer's Settings: context, not candidates.
+  const outside = useMemo(() => (pool ? all.filter((p) => !pts.includes(p)) : []), [all, pts, pool]);
   const frontier = useMemo(() => pts.filter((p) => p.row.value_frontier), [pts]);
   const pickPts = useMemo(
     () =>
@@ -73,10 +86,10 @@ export function PicksChart({
   const height = width > 0 && width < 520 ? 260 : 300;
   const plotW = Math.max(40, width - M.left - M.right);
   const plotH = height - M.top - M.bottom;
-  const xs = pts.map((p) => p.x);
+  const xs = all.map((p) => p.x);
   const x0 = Math.min(...xs) - 0.08;
   const x1 = Math.max(...xs) + 0.08;
-  const yHi = Math.min(100, Math.ceil((Math.max(...pts.map((p) => p.index)) + 4) / 10) * 10);
+  const yHi = Math.min(100, Math.ceil((Math.max(...all.map((p) => p.index)) + 4) / 10) * 10);
   const sx = useCallback((x: number) => M.left + ((x - x0) / (x1 - x0)) * plotW, [x0, x1, plotW]);
   const sy = useCallback((y: number) => M.top + plotH - (y / yHi) * plotH, [yHi, plotH]);
 
@@ -158,8 +171,8 @@ export function PicksChart({
         <span className="text-sm font-semibold text-brand-slate-900 dark:text-brand-slate-50">
           Where the picks sit
         </span>
-        <span className="text-xs text-brand-slate-500 dark:text-brand-slate-400">
-          {pts.length} measured models · price vs AA Index
+        <span className="text-xs text-brand-slate-500 dark:text-brand-slate-400" data-testid="picks-chart-scope">
+          {pool ? `${pts.length} models you can use` : `${pts.length} measured models`} · price vs AA Index
         </span>
       </figcaption>
 
@@ -170,7 +183,7 @@ export function PicksChart({
             width={width}
             height={height}
             role="group"
-            aria-label={`The picks among ${pts.length} measured models by blended price and AA Intelligence Index: ${pickPts
+            aria-label={`The picks among ${pts.length} ${pool ? "models you can use" : "measured models"} by blended price and AA Intelligence Index: ${pickPts
               .map((p) => `${PICK_LABEL[p.priority]} ${p.row.name}, AA ${p.index}, ${formatUsd(10 ** p.x)} per 1M`)
               .join("; ")}.`}
             className="block touch-manipulation select-none text-brand-slate-400 dark:text-brand-slate-500"
@@ -191,6 +204,20 @@ export function PicksChart({
             <text x={M.left + plotW / 2} y={height - 4} textAnchor="middle" fontSize={11} className="fill-brand-slate-500 dark:fill-brand-slate-400">
               Blended price, $ per 1M tokens (log scale)
             </text>
+
+            {outside.map((p) => (
+              <circle
+                key={`outside-${p.row.id}`}
+                cx={sx(p.x)}
+                cy={sy(p.index)}
+                r={3}
+                fill="none"
+                stroke="currentColor"
+                strokeOpacity={0.45}
+                pointerEvents="none"
+                data-testid="picks-chart-outside"
+              />
+            ))}
 
             <path d={stepPath} fill="none" stroke={FRONTIER} strokeWidth={2.2} strokeDasharray="0.5 6" strokeLinecap="round" pointerEvents="none" />
 
@@ -287,8 +314,22 @@ export function PicksChart({
       </div>
 
       <p className="mt-1 text-xs leading-5 text-brand-slate-500 dark:text-brand-slate-400">
-        The dotted green line is the cost/quality frontier: its height at any price is the top AA
-        Index that price buys. Grey dots are the rest of the catalog.
+        {pool ? (
+          <>
+            The dotted green line is your cost/quality frontier, drawn over the models your plans and
+            API providers reach: its height at any price is the top AA Index you can get for that
+            price. Grey dots are your other models; hollow rings are the rest of the catalog.
+          </>
+        ) : (
+          <>
+            The dotted green line is the cost/quality frontier: its height at any price is the top AA
+            Index that price buys. Grey dots are the rest of the catalog.{" "}
+            <Link href="/settings" className="font-medium text-brand-accent hover:underline">
+              Save your plans in Settings
+            </Link>{" "}
+            to draw it over the models you can use.
+          </>
+        )}
         {unmeasured.length > 0 &&
           ` Not plotted: ${unmeasured.map((p) => p.model).join(", ")} (no AA Index yet).`}
       </p>

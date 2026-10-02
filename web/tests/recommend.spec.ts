@@ -75,19 +75,28 @@ test("a single submit renders all three priority picks (Cost / Balanced / Qualit
   await expect(page.locator('[data-priority="balanced"]').getByText("Default")).toBeVisible();
 });
 
-test("a pick carries the catalog's facts: cost tier, AA Index, ratings", async ({ page }) => {
+test("a pick carries the catalog's facts: blended price, AA Index, Score, ratings", async ({ page }) => {
   await fulfill(page, FIXTURE);
   await page.goto("/recommend");
   await ask(page, "Refactor a 3,000-line Python data pipeline into typed modules with tests.");
   const quality = page.locator('[data-priority="best"]');
   await expect(quality.getByText("Sonnet 5.5")).toBeVisible();
-  await expect(quality.getByTestId("pick-aa-index")).toHaveText(/AA \d+/);
+  // One row each, read across the three picks. Sonnet 5.5: ($2 × 3 + $10) ÷ 4.
+  const cell = (row: string) => page.locator(`[data-pick="best"][data-row="${row}"]`);
+  await expect(cell("__price").getByTestId("pick-price")).toHaveText("$4.00");
+  await expect(cell("__aa").getByTestId("pick-aa-index")).toHaveText(/^\d+\.\d$/);
+  await expect(cell("__score").getByTestId("pick-score")).toHaveText(/^([+−]\d+\.\d|0\.0)$/);
+  await expect(page.getByTestId("pick-price")).toHaveCount(3);
+  await expect(page.getByTestId("pick-score")).toHaveCount(3);
   // Seven S→D letters per pick, each marked measured or estimated.
   await expect(page.getByTestId("pick-ratings")).toHaveCount(3);
   await expect(page.getByTestId("pick-ratings").first().locator("[data-basis]")).toHaveCount(7);
-  // Hovering the AA Index opens the same card /models shows.
-  await quality.getByTestId("pick-aa-index").hover();
+  // Hovering the AA Index opens the same card /models shows, and the Score
+  // the card that shows how it adds up.
+  await cell("__aa").getByTestId("pick-aa-index").hover();
   await expect(page.getByTestId("frontier-point-card")).toBeVisible();
+  await cell("__score").getByTestId("pick-score").hover();
+  await expect(page.getByTestId("score-breakdown")).toBeVisible();
 });
 
 test("the result names the engine that wrote it, with time and cost", async ({ page }) => {
@@ -127,6 +136,9 @@ test("the chart plots the picks among the catalog", async ({ page }) => {
   await ask(page);
   await expect(page.getByTestId("picks-chart")).toBeVisible();
   await expect(page.getByTestId("picks-chart-pick")).toHaveCount(3);
+  // Signed out there are no saved Settings: the whole catalog's frontier.
+  await expect(page.getByTestId("picks-chart-scope")).toContainText("measured models");
+  await expect(page.getByTestId("picks-chart-outside")).toHaveCount(0);
 });
 
 test("renders the backup model row when the recommendation includes one", async ({ page }) => {
