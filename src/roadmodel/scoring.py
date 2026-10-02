@@ -1030,9 +1030,12 @@ def ladder(
       at the balanced posture; with none between, the COST or QUALITY model at
       the balanced posture's effort, whichever differs from both other rungs.
     - Each rung runs at :func:`effort_for` its posture (cheap / balanced /
-      best) on its platform, so two rungs on one model differ by effort; on an
-      `uncapped` pool every free rung runs at the top effort, and two rungs on
-      one model then converge.
+      best) on its platform. A lower rung on the same model and platform as
+      the rung above runs at least one effort level below it
+      (:func:`_below`), so the three picks stay distinct; at the dial's lowest
+      level they may converge. On an `uncapped` pool every free rung runs at
+      the top effort and two rungs on one model converge: a lower effort saves
+      that operator nothing.
 
     None when no pool model carries an AA Index (no frontier to read)."""
     cat = catalog if catalog is not None else _cost._load_catalog()
@@ -1083,8 +1086,27 @@ def ladder(
             (r for r in options if not same(r, cost_rung) and not same(r, quality_rung)),
             options[0],
         )
+    balanced_rung = _below(balanced_rung, quality_rung)
+    cost_rung = _below(cost_rung, balanced_rung)
     rungs = {"cost": cost_rung, "balanced": balanced_rung, "quality": quality_rung}
     return Ladder(task=base, frontier=front, adequate=adequate, rungs=rungs)
+
+
+def _below(lower: Rung, upper: Rung) -> Rung:
+    """``lower`` run at least one effort level below ``upper`` when both name
+    the same model on the same platform and that path costs something
+    (scarcity > 0); floored at the dial's lowest level, where the two may
+    converge. Three columns that read the same offer no choice, and on a
+    capped pool a lower effort is a real, cheaper option. On a free path
+    (`uncapped`) a lower effort saves nothing, so the rungs keep their
+    posture's effort and converge."""
+    lc, uc = lower.candidate, upper.candidate
+    if (lc.model_id, lc.platform_id) != (uc.model_id, uc.platform_id) or lc.scarcity == 0:
+        return lower
+    cap = max(0, EFFORT_LADDER.index(upper.effort) - 1)
+    if EFFORT_LADDER.index(lower.effort) <= cap:
+        return lower
+    return Rung(lower.tier, lower.point, EFFORT_LADDER[cap])
 
 
 def table_keys() -> list[tuple[str, str, bool]]:

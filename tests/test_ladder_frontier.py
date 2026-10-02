@@ -180,13 +180,63 @@ def test_two_adequate_points_separate_cost_and_balanced_by_effort() -> None:
     }
 
 
-def test_rungs_converge_when_no_rung_can_differ() -> None:
-    # Novel planning starts at the top effort a capped pool allows, so the
-    # cheaper rung on Sonnet and the stronger on Opus are all that is left.
-    picks = _picks(_ladder("planning", "high", novel=True))
-    assert picks["cost"] == ("Sonnet", "xhigh")
-    assert picks["balanced"] == ("Sonnet", "xhigh")
-    assert picks["quality"] == ("Opus", "xhigh")
+def test_a_lower_rung_on_the_same_model_runs_one_effort_below() -> None:
+    # Novel planning starts every posture at the top effort a capped pool
+    # allows (xhigh). COST and BALANCED both land on Sonnet, so COST steps one
+    # level below BALANCED.
+    assert _picks(_ladder("planning", "high", novel=True)) == {
+        "cost": ("Sonnet", "high"),
+        "balanced": ("Sonnet", "xhigh"),
+        "quality": ("Opus", "xhigh"),
+    }
+
+
+def test_a_one_model_row_gets_three_distinct_efforts() -> None:
+    # Claude Max alone, novel planning: only Opus (97.0) clears 85 once Sonnet
+    # is benched, so every rung is Opus, each a level below the one above.
+    lad = scoring.ladder(
+        scoring.Task("planning", "high", True),
+        _context([MAX]),
+        unavailable_models=["sonnet"],
+        catalog=CATALOG,
+        benchmarks=BENCH,
+    )
+    assert lad is not None
+    assert _picks(lad) == {
+        "cost": ("Opus", "medium"),
+        "balanced": ("Opus", "high"),
+        "quality": ("Opus", "xhigh"),
+    }
+
+
+def test_at_the_dials_lowest_level_two_rungs_converge() -> None:
+    # ChatGPT Pro without Astra, low-complexity planning: Luna alone clears
+    # the bar. QUALITY runs it at medium, BALANCED one below at low, and COST
+    # has no lower level to go to.
+    lad = scoring.ladder(
+        scoring.Task("planning", "low"),
+        _context([PRO]),
+        unavailable_models=["astra"],
+        catalog=CATALOG,
+        benchmarks=BENCH,
+    )
+    assert lad is not None
+    assert _picks(lad) == {
+        "cost": ("Luna", "low"),
+        "balanced": ("Luna", "low"),
+        "quality": ("Luna", "medium"),
+    }
+
+
+def test_on_a_free_path_two_rungs_on_one_model_converge() -> None:
+    # `uncapped` on Claude Max: a lower effort saves this operator nothing, so
+    # COST and BALANCED both run Sonnet at the top effort.
+    picks = _picks(_ladder("planning", "high", _context([MAX], headroom="uncapped"), novel=True))
+    assert picks == {
+        "cost": ("Sonnet", "max"),
+        "balanced": ("Sonnet", "max"),
+        "quality": ("Opus", "max"),
+    }
 
 
 def test_a_dominated_model_is_never_a_rung() -> None:
@@ -213,7 +263,11 @@ def test_one_point_over_the_bar_takes_every_rung() -> None:
     # nothing beats Astra, and only Astra (85.9) clears novel work's 85.
     lad = _ladder("planning", "high", _context([PRO]), novel=True)
     assert [p.candidate.model_name for p in lad.frontier] == ["Lite", "Luna", "Astra"]
-    assert {r.candidate.model_name for r in lad.rungs.values()} == {"Astra"}
+    assert _picks(lad) == {
+        "cost": ("Astra", "medium"),
+        "balanced": ("Astra", "high"),
+        "quality": ("Astra", "xhigh"),
+    }
 
 
 def test_when_nothing_meets_the_bar_the_strongest_point_stands_alone() -> None:
@@ -226,7 +280,11 @@ def test_when_nothing_meets_the_bar_the_strongest_point_stands_alone() -> None:
     )
     assert lad is not None
     assert lad.adequate == [lad.frontier[-1]]
-    assert {r.candidate.model_name for r in lad.rungs.values()} == {"Luna"}
+    assert _picks(lad) == {
+        "cost": ("Luna", "medium"),
+        "balanced": ("Luna", "high"),
+        "quality": ("Luna", "xhigh"),
+    }
 
 
 def test_uncapped_headroom_keeps_the_capability_steps_at_the_top_effort() -> None:
@@ -290,6 +348,18 @@ def test_the_table_header_and_table_go_into_the_prompt() -> None:
     without, _ = build_prompt("t", user_context_text="ctx", ladder=True)
     assert without.startswith(_SAAS_LADDER_HEADER)
     assert "<ladder-table>" not in without
+
+
+def test_novel_means_research_grade_work_only() -> None:
+    # The engine flipped an ordinary planning task between routine and novel
+    # run to run; the header now names what novel covers and what it never does.
+    header = " ".join(_SAAS_LADDER_TABLE_HEADER.split())
+    assert "`novel` marks research-grade work only" in header
+    assert "an open problem, a new algorithm, or a multi-step proof" in header
+    assert (
+        "Planning, architecture, security hardening, design and refactors are `routine` "
+        "at any difficulty"
+    ) in header
 
 
 @pytest.fixture
