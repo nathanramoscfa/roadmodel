@@ -32,14 +32,17 @@
 // the cron cited (mixed sources — evidence for the letters, not a scale) live
 // in the expanded row so they add no width. Fits a 1024px viewport.
 //
+// The rows scroll inside a box about two thirds of the screen tall, under a
+// header that stays pinned to its top, so the column names stay in view on
+// every row and the Score charts sit a short scroll below the table.
+//
 // The Provider, Jurisdiction, Weights and Cost tier filters belong to
-// ModelsExplorer, which applies them to the table AND both chart panels; the
-// table renders the controls and receives the rows they keep (frontier
-// re-marked over the Provider + Jurisdiction + Weights pool,
-// lib/catalog-filter). Jurisdiction is a checkbox per code, all checked to
-// start, so any combination (US + EU, say) is one click away; Weights is All,
-// Open or Closed. Search stays the table's own. Group by belongs to
-// ModelsExplorer too, since the charts read it as well as the rows.
+// ModelsExplorer, which renders them above the frontier chart
+// (CatalogFilterBar) and applies them to the table AND both chart panels; the
+// table receives the rows they keep (frontier re-marked over the Provider +
+// Jurisdiction + Weights pool, lib/catalog-filter). The table's own controls
+// sit above it: Search, Group by and the view switch. Group by's state
+// belongs to ModelsExplorer, since the charts read it as well as the rows.
 // Group by and the Ratings / Benchmark scores view are saved for the next
 // visit (lib/models-prefs), like the filters.
 "use client";
@@ -85,7 +88,6 @@ import {
   COST_TIER_DOT,
   COST_TIER_RANK,
   FIELD_DEFS,
-  type CostTier,
   formatPrice,
   jurisdictionDef,
   modelProvider,
@@ -97,8 +99,8 @@ import {
   type Category,
   type ModelRow,
 } from "@/lib/catalog-fields";
-import type { CatalogFilters } from "@/lib/catalog-filter";
 import { savePrefs, type Grouping, type View } from "@/lib/models-prefs";
+import { INPUT_CLASS, LABEL_CLASS, SEGMENTED_CLASS } from "./CatalogFilterBar";
 import { HoverCard } from "./FloatingCard";
 import { GlossaryTerm } from "./GlossaryTerm";
 import { IndexCard, ScoreBreakdownCard, SupersededCard } from "./ScoreCards";
@@ -146,14 +148,6 @@ const BENCH_KEYS = new Set<string>(GRID_COLUMNS.map((c) => c.key));
 function isBenchKey(key: SortKey): key is BenchKey {
   return BENCH_KEYS.has(key);
 }
-
-const INPUT_CLASS =
-  "rounded-md border border-brand-slate-300 dark:border-brand-slate-700 " +
-  "bg-white dark:bg-brand-slate-800 px-3 py-2 text-sm shadow-sm " +
-  "focus:border-brand-accent focus:outline-none focus:ring-1 focus:ring-brand-accent";
-
-const LABEL_CLASS =
-  "flex flex-col gap-1 text-xs font-medium text-brand-slate-600 dark:text-brand-slate-300";
 
 const BADGE_CLASS =
   "inline-flex min-w-[2rem] items-center justify-center rounded px-1.5 py-0.5 text-xs font-semibold";
@@ -261,9 +255,6 @@ function scoreTone(score: number | null, fit: ScoreFit | null): string {
 export function ModelCatalog({
   models,
   shown,
-  filters,
-  jurisdictions,
-  onFiltersChange,
   filterSummary,
   onClearFilters,
   scope,
@@ -275,14 +266,10 @@ export function ModelCatalog({
   onGroupChoiceChange,
   initialView,
 }: {
-  // Every catalog row: the filter options, the grid's bands, the totals.
+  // Every catalog row: the grid's bands, the totals.
   models: ModelRow[];
-  // The rows the Provider, Jurisdiction and Cost tier filters keep.
+  // The rows the page's filters (CatalogFilterBar) keep.
   shown: ModelRow[];
-  filters: CatalogFilters;
-  // The catalog's jurisdiction codes, in checkbox order.
-  jurisdictions: string[];
-  onFiltersChange: (next: CatalogFilters) => void;
   // Every active filter in a line; null when none is.
   filterSummary: string | null;
   onClearFilters: () => void;
@@ -305,21 +292,6 @@ export function ModelCatalog({
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-
-  const providers = useMemo(
-    () =>
-      Array.from(new Set(models.map((m) => m.provider).filter((p): p is string => p !== null))).sort(
-        (a, b) => a.localeCompare(b),
-      ),
-    [models],
-  );
-
-  function toggleJurisdiction(code: string) {
-    const next = new Set(filters.jurisdictions);
-    if (next.has(code)) next.delete(code);
-    else next.add(code);
-    onFiltersChange({ ...filters, jurisdictions: next });
-  }
 
   // Sorted measured values per grid column, over the WHOLE catalog (not the
   // filtered rows), so a cell's band does not change when a filter is applied.
@@ -516,106 +488,12 @@ export function ModelCatalog({
               className={INPUT_CLASS + " sm:w-60"}
             />
           </label>
-          <label className={LABEL_CLASS}>
-            Provider
-            <select
-              value={filters.provider}
-              onChange={(e) => onFiltersChange({ ...filters, provider: e.target.value })}
-              aria-label="Filter by provider"
-              className={INPUT_CLASS}
-            >
-              <option value="all">All</option>
-              {providers.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className={LABEL_CLASS}>
-            <span id="jurisdiction-label">Jurisdiction</span>
-            <div
-              role="group"
-              aria-labelledby="jurisdiction-label"
-              data-testid="jurisdiction-filter"
-              className="inline-flex self-start rounded-md border border-brand-slate-300 bg-white p-0.5 shadow-sm dark:border-brand-slate-700 dark:bg-brand-slate-800"
-            >
-              {jurisdictions.map((j) => {
-                const on = filters.jurisdictions.has(j);
-                return (
-                  <label
-                    key={j}
-                    title={jurisdictionDef(j)}
-                    className={
-                      "inline-flex cursor-pointer items-center gap-1.5 rounded px-2.5 py-1.5 text-sm font-medium transition-colors hover:text-brand-accent " +
-                      (on
-                        ? "text-brand-slate-900 dark:text-brand-slate-50"
-                        : "text-brand-slate-400 dark:text-brand-slate-500")
-                    }
-                  >
-                    <input
-                      type="checkbox"
-                      checked={on}
-                      onChange={() => toggleJurisdiction(j)}
-                      data-testid={`jurisdiction-${j}`}
-                      className="h-3.5 w-3.5 cursor-pointer accent-brand-accent"
-                    />
-                    {j.toUpperCase()}
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-          <div className={LABEL_CLASS}>
-            <span id="weights-label">Weights</span>
-            <div
-              role="group"
-              aria-labelledby="weights-label"
-              data-testid="weights-filter"
-              className="inline-flex self-start rounded-md border border-brand-slate-300 bg-white p-0.5 shadow-sm dark:border-brand-slate-700 dark:bg-brand-slate-800"
-            >
-              {(["all", "open", "closed"] as const).map((w) => (
-                <button
-                  key={w}
-                  type="button"
-                  data-testid={`weights-${w}`}
-                  aria-pressed={filters.weights === w}
-                  title={w === "all" ? "Every model, open- and closed-weight." : WEIGHTS_DEFS[w].definition}
-                  onClick={() => onFiltersChange({ ...filters, weights: w })}
-                  className={
-                    "rounded px-3 py-1.5 text-sm font-medium transition-colors " +
-                    (filters.weights === w
-                      ? "bg-brand-accent text-white"
-                      : "text-brand-slate-600 hover:text-brand-accent dark:text-brand-slate-300")
-                  }
-                >
-                  {w === "all" ? "All" : WEIGHTS_DEFS[w].label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <label className={LABEL_CLASS}>
-            Cost tier
-            <select
-              value={filters.cost}
-              onChange={(e) => onFiltersChange({ ...filters, cost: e.target.value as "all" | CostTier })}
-              aria-label="Filter by cost tier"
-              className={INPUT_CLASS}
-            >
-              <option value="all">All</option>
-              {(["low", "medium", "high", "very-high"] as const).map((t) => (
-                <option key={t} value={t}>
-                  {COST_TIER_DEFS[t].label}
-                </option>
-              ))}
-            </select>
-          </label>
           <div className={LABEL_CLASS}>
             <span id="group-by-label">Group by</span>
             <div
               role="group"
               aria-labelledby="group-by-label"
-              className="inline-flex self-start rounded-md border border-brand-slate-300 bg-white p-0.5 shadow-sm dark:border-brand-slate-700 dark:bg-brand-slate-800"
+              className={SEGMENTED_CLASS}
             >
               {(
                 [
@@ -739,7 +617,7 @@ export function ModelCatalog({
             "every model in the catalog"
           )}
           ; the Score compares a model with its own cost tier. Hover any AA Index for the top score
-          at that price, and see the frontier chart below the table for the whole line.
+          at that price; the frontier chart above draws the whole line.
         </p>
         <p className="rounded-lg border border-brand-slate-200 bg-brand-slate-50 px-3 py-2 text-brand-slate-700 dark:border-brand-slate-700 dark:bg-brand-slate-800/60 dark:text-brand-slate-200">
           <strong className="text-brand-slate-900 dark:text-brand-slate-50">
@@ -752,11 +630,21 @@ export function ModelCatalog({
         </p>
       </div>
 
-      {/* Table */}
-      <div className="mt-4 overflow-x-auto rounded-xl border border-brand-slate-200 dark:border-brand-slate-700">
+      {/* Table: the rows scroll in their own box under a pinned header. The
+          header's rule is a shadow on each cell, since a collapsed border
+          stays with the table when the header sticks. */}
+      <div
+        className="mt-4 max-h-[70vh] overflow-auto rounded-xl border border-brand-slate-200 dark:border-brand-slate-700"
+        data-testid="catalog-scroll"
+      >
         <table className="w-full border-collapse text-left text-sm">
-          <thead className="bg-brand-slate-50 text-[11px] uppercase tracking-wide text-brand-slate-500 dark:bg-brand-slate-800/60 dark:text-brand-slate-400">
-            <tr className="border-b border-brand-slate-200 dark:border-brand-slate-700">
+          <thead
+            className={
+              "sticky top-0 z-20 bg-brand-slate-50 text-[11px] uppercase tracking-wide text-brand-slate-500 dark:bg-brand-slate-800 dark:text-brand-slate-400 " +
+              "[&_th]:shadow-[inset_0_-1px_0_theme(colors.brand.slate.200)] dark:[&_th]:shadow-[inset_0_-1px_0_theme(colors.brand.slate.700)]"
+            }
+          >
+            <tr>
               <th className="w-8 px-1 py-2" aria-hidden />
               <SortHeader
                 field="name"

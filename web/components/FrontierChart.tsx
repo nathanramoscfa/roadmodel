@@ -652,27 +652,38 @@ export function FrontierChart({
       </summary>
 
       <div className="space-y-4 border-t border-brand-slate-200 px-5 py-5 dark:border-brand-slate-700">
-        <p className="max-w-4xl text-sm leading-6 text-brand-slate-600 dark:text-brand-slate-300">
-          Every model with an AA Index, on one chart: blended price across (log scale) and AA
-          Intelligence Index up.{" "}
-          <strong>
-            The green models are the cost/quality frontier: each one scores higher than every other
-            {scope ? ` ${scope} model` : " model"} at its price or less.
-          </strong>{" "}
-          The dotted green line joins them from cheapest to priciest and steps up at each one, so
-          its height at any price is the top AA Index that price buys. The grey lines are the
-          Score&rsquo;s price lines, one per cost tier, drawn for comparison; the charts below
-          take them apart tier by tier.
-          {bands && (
-            <span data-testid="frontier-bands-note">
-              {" "}
-              Grouped by quality, the rows between the gridlines are the table&rsquo;s ten-point
-              AA Index bands, every other one shaded: within a band the models line up by price,
-              and the cheapest way to reach a level is where the green line first reaches that
-              band.
-            </span>
-          )}
-        </p>
+        {filter && (
+          <FilterNote filter={filter} testId="frontier-filter">
+            {pts.length === 0
+              ? "No measured model matches, so there is nothing to plot."
+              : `${pts.length} measured ${pts.length === 1 ? "model" : "models"} plotted.`}{" "}
+            {scope
+              ? `The frontier is redrawn over the ${scope} models, at every price.`
+              : "The frontier still compares every model in the catalog."}
+            {offBand.length > 0 && (
+              <span data-testid="frontier-off-band">
+                {" "}
+                Where the green line steps up with no dot, the top score belongs to a model your Cost
+                tier choice hides: {offBand.map((f) => `${f.row.name} (${COST_TIER_DEFS[f.row.tier_cost].label} cost)`).join(", ")}.
+              </span>
+            )}
+          </FilterNote>
+        )}
+
+        {/* The plot first, so it is what the page's first screen shows; its
+            legend and the reading of it follow. */}
+        {pts.length > 0 && (
+          <FrontierPlot
+            pts={pts}
+            frontier={frontier}
+            drawn={drawn}
+            x0={x0}
+            x1={x1}
+            lines={lines}
+            byId={byId}
+            bands={bands}
+          />
+        )}
 
         <ul className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-brand-slate-600 dark:text-brand-slate-300">
           <li className="inline-flex items-center gap-1.5">
@@ -720,36 +731,27 @@ export function FrontierChart({
           </li>
         </ul>
 
-        {filter && (
-          <FilterNote filter={filter} testId="frontier-filter">
-            {pts.length === 0
-              ? "No measured model matches, so there is nothing to plot."
-              : `${pts.length} measured ${pts.length === 1 ? "model" : "models"} plotted.`}{" "}
-            {scope
-              ? `The frontier is redrawn over the ${scope} models, at every price.`
-              : "The frontier still compares every model in the catalog."}
-            {offBand.length > 0 && (
-              <span data-testid="frontier-off-band">
-                {" "}
-                Where the green line steps up with no dot, the top score belongs to a model your Cost
-                tier choice hides: {offBand.map((f) => `${f.row.name} (${COST_TIER_DEFS[f.row.tier_cost].label} cost)`).join(", ")}.
-              </span>
-            )}
-          </FilterNote>
-        )}
-
-        {pts.length > 0 && (
-          <FrontierPlot
-            pts={pts}
-            frontier={frontier}
-            drawn={drawn}
-            x0={x0}
-            x1={x1}
-            lines={lines}
-            byId={byId}
-            bands={bands}
-          />
-        )}
+        <p className="max-w-4xl text-sm leading-6 text-brand-slate-600 dark:text-brand-slate-300">
+          Every model with an AA Index, on one chart: blended price across (log scale) and AA
+          Intelligence Index up.{" "}
+          <strong>
+            The green models are the cost/quality frontier: each one scores higher than every other
+            {scope ? ` ${scope} model` : " model"} at its price or less.
+          </strong>{" "}
+          The dotted green line joins them from cheapest to priciest and steps up at each one, so
+          its height at any price is the top AA Index that price buys. The grey lines are the
+          Score&rsquo;s price lines, one per cost tier, drawn for comparison; the charts below
+          take them apart tier by tier.
+          {bands && (
+            <span data-testid="frontier-bands-note">
+              {" "}
+              Grouped by quality, the rows between the gridlines are the table&rsquo;s ten-point
+              AA Index bands, every other one shaded: within a band the models line up by price,
+              and the cheapest way to reach a level is where the green line first reaches that
+              band.
+            </span>
+          )}
+        </p>
 
         <p className="text-xs leading-5 text-brand-slate-500 dark:text-brand-slate-400">
           The frontier comes straight from the data: sort every{scope ? ` ${scope}` : ""} model by
