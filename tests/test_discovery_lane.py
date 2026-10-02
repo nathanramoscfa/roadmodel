@@ -257,7 +257,10 @@ def test_the_gate_checks_the_discovered_field(tmp_path: Path) -> None:
     assert any(
         "discovered entry" in f for f in gate.check_snapshot_schema(tmp_path / "x.json", snap)
     )
-    snap["discovered"] = [{"slug": snap["unexpected_slugs"][0], "output_price_per_1m": -1}]
+    # A flagged slug of the test's own: the committed snapshot may flag none
+    # (update/dispose_discoveries.py unflags a model the catalog carries).
+    snap["unexpected_slugs"] = ["flagged-model"]
+    snap["discovered"] = [{"slug": "flagged-model", "output_price_per_1m": -1}]
     assert any(
         "must be a positive number" in f
         for f in gate.check_snapshot_schema(tmp_path / "x.json", snap)
