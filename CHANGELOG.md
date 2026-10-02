@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.58] — 2026-10-02
+
 ### Fixed
 
 - **Sonnet 5 is superseded by Sonnet 5.5.** The two cost the same ($2/$10)
