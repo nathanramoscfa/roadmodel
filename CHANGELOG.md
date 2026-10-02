@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.63] — 2026-10-02
+
 ### Changed
 
 - **Each pick's backup comes from the frontier of the other makers' models.**
