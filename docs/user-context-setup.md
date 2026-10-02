@@ -304,7 +304,7 @@ suppresses "Fast" model variants in favour of standard variants at
 half the per-token price and keeps reasoning effort at the
 complexity-ladder value. Change budget to `cheap` to bias toward
 `composer-2` / Haiku / Flash on tie-breaks, or to `best` to bias
-toward Opus / Sonnet / GPT-5 frontier picks regardless of marginal
+toward Opus / Sonnet / GPT frontier picks regardless of marginal
 cost.
 
 `Consumption headroom` is the effort axis. `capped` (default) says the
