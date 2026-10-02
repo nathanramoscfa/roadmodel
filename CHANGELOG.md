@@ -7,8 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.2.64] — 2026-10-02
-
 ### Changed
 
 - **New models reach every access list on their own.** OpenRouter's list
@@ -17,8 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   newer same-maker model missing from a method that offers the older one),
   checks that method's source for the model, and, when a near-miss lasts
   three days, files an issue that closes itself once it resolves. The
-  bundled selector's
-  OpenRouter description says the list is synced daily.
+  bundled selector's OpenRouter description says the list is synced
+  daily.
+
+## [0.2.64] — 2026-10-02
+
+### Changed
+
 - **A category specialist may take the Quality pick.** In every category
   whose evidence is not the AA Intelligence Index (all but planning), a model
   off the frontier now takes Quality when both its letter and its quality for
