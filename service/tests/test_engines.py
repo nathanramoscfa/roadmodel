@@ -43,10 +43,16 @@ def test_menu_engines_are_current_catalog_models() -> None:
     assert stale == []
 
 
-def test_the_default_engine_is_public() -> None:
-    """Anonymous visitors get the default engine, so it must be on the menu for
-    everyone."""
-    assert REGISTRY.engines[REGISTRY.default].menu == "public"
+def test_the_default_engine_is_open_to_invited_members() -> None:
+    """An invited member who names no engine gets the default, so it must be on
+    the menu for the invite list, not the founder alone."""
+    assert REGISTRY.engines[REGISTRY.default].menu == "invited"
+
+
+def test_the_retired_menu_tiers_fail_to_load() -> None:
+    """`public` and `signed_in` opened engines to visitors the operator does not
+    fund; Phase 4.11 retired them."""
+    assert MENU_ACCESS == {"invited", "founder"}
 
 
 def test_menu_values_are_known() -> None:
@@ -69,7 +75,7 @@ def _entry(**overrides: Any) -> dict[str, Any]:
         "max_output_tokens": 2048,
         "ladder_max_output_tokens": 6144,
         "temperature": None,
-        "menu": "public",
+        "menu": "invited",
     }
     entry.update(overrides)
     return entry
@@ -82,6 +88,8 @@ def _entry(**overrides: Any) -> dict[str, Any]:
         ({"model": ""}, "model"),
         ({"hint": "google-x"}, "start with its provider"),
         ({"menu": "everyone"}, "menu must be one of"),
+        ({"menu": "public"}, "menu must be one of"),
+        ({"menu": "signed_in"}, "menu must be one of"),
         ({"max_output_tokens": -1}, "non-negative"),
         ({"temperature": "0"}, "temperature"),
     ],

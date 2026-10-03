@@ -2,6 +2,7 @@
 import { after } from "next/server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { env } from "./env";
+import type { FundedBy } from "./funding-lane";
 import type { LatencyTimings } from "./latency";
 import type { CacheStats } from "./llm-cache";
 
@@ -26,6 +27,10 @@ function getSupabase(): SupabaseClient {
   return supabaseClient;
 }
 
+// The audit_log outcome CHECK must list exactly these values, or an insert of
+// the missing one fails (silently: writes are fire-and-forget).
+// tests/test_audit_log_migration.py parses this union and the migrations and
+// asserts they are equal.
 export type AuditOutcome =
   | "ok"
   | "rate_limited"
@@ -39,10 +44,17 @@ export type AuditOutcome =
   // Real-time daily spend circuit breaker tripped (web/lib/spend-guard.ts):
   // the UTC day's metered cost_usd reached ROADMODEL_DAILY_COST_CAP_USD.
   | "daily_cost_cap"
-  // Phase 4 Step 7 — env-gated rate-limit bypass for the
-  // maintainer-run latency sweep. Removed in PR 7c alongside the
-  // ROADMODEL_LATENCY_BYPASS_TOKEN env var.
-  | "bypassed_rate_limit";
+  // The X-Roadmodel-Bypass header put a maintainer script (the latency
+  // sweep, the soak) on the operator lane.
+  | "bypassed_rate_limit"
+  // Phase 4.11: a request no lane would fund (lib/funding-lane.ts), refused
+  // with 402 before any paid call.
+  | "funding_required"
+  // Phase 4.11 Step 2's visitor lane: the visitor's key was rejected, its
+  // quota ran out, or its provider failed.
+  | "visitor_key_rejected"
+  | "visitor_quota"
+  | "provider_error";
 
 export interface AuditEntry {
   ip_hash: string;
@@ -64,6 +76,11 @@ export interface AuditEntry {
   // the Anthropic variant against the same column. Schema lives
   // in 20260606000000_audit_log_cache_stats.sql.
   cache_stats?: CacheStats;
+  // Who paid for the request (lib/funding-lane.ts): set on every row of a
+  // request that ran in a lane, null on a refused one and on history. The
+  // spend guard sums operator rows only. Schema lives in
+  // 20261002000000_audit_log_funded_by.sql.
+  funded_by?: FundedBy;
   // Phase 4 Step 7 — per-request span timings. Schema lives in
   // 20260606000002_audit_log_latency.sql. Optional so non-
   // instrumented routes (Phase 4 /api/roadmap, gate/auth audit

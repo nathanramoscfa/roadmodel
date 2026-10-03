@@ -4,6 +4,8 @@ import path from "node:path";
 
 import { defineConfig, devices } from "@playwright/test";
 
+import { E2E_USER_ID } from "./tests/fixtures/onboarding-auth";
+
 // The placeholder build/test environment, read from the SAME file CI reads
 // (web/.env.ci). These values used to be duplicated here and in
 // .github/workflows/tests.yml, so a plain local `npm run build` got neither
@@ -82,6 +84,11 @@ export default defineConfig({
       // a build, so they stay here rather than in the shared env file.
       ROADMODEL_E2E_AUTH: "1",
       ROADMODEL_E2E_MOCK_RECOMMEND: "1",
+      // The E2E session's user is invited, so a signed-in spec's request runs
+      // on the operator lane (against the mock recommender) the way an invited
+      // member's does; signed-out requests are refused with 402, as in
+      // production (lib/funding-lane.ts).
+      RECOMMEND_INVITED_USER_IDS: E2E_USER_ID,
     },
   },
 });

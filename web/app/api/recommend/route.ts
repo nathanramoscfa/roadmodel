@@ -31,7 +31,9 @@ import {
 } from "@/lib/profile";
 import { BUDGET_PRIORITY_IDS, isBudgetPriority } from "@/lib/budget-priority";
 import { recommenderRequestHeaders } from "@/lib/api";
-import { identifyRequest, withRateLimit } from "@/lib/withRateLimit";
+import { identifyRequest, withFundingLane } from "@/lib/withFundingLane";
+import type { OperatorLane } from "@/lib/funding-lane";
+import { clientContext, type ClientContext } from "@/lib/recommend-context";
 import { fundingNoteForModel, personalizeComparison } from "@/lib/funding";
 import { env } from "@/lib/env";
 import type { EngineRun } from "@/lib/api";
@@ -44,7 +46,9 @@ const DEFAULT_RECOMMENDER_URL =
 // summed by the daily spend guard (lib/spend-guard.ts). Exact when the service
 // returns the provider-reported usage (roadmodel >= 0.2.56: cache reads billed
 // at the cache price); otherwise the cold estimate (lib/recommend-engines.ts),
-// the conservative side for the guard.
+// the conservative side for the guard. Every request this handler runs is on
+// the operator lane (lib/withFundingLane.ts refuses the rest before it), so
+// every row it writes is stamped funded_by 'operator'.
 
 function recommenderUrl(): string {
   if (
@@ -199,11 +203,12 @@ function auditFor(
     ua_hash: id.uaHash,
     route: id.route,
     outcome,
+    funded_by: "operator",
     ...extras,
   });
 }
 
-const handler = async (req: Request): Promise<Response> =>
+const handler = async (req: Request, lane: OperatorLane): Promise<Response> =>
   runWithTimings(async () => {
     // Phase 4 Step 7 — input parse + profile load + engine resolve
     // are bundled into a single dispatch span. Anything that runs
@@ -218,7 +223,7 @@ const handler = async (req: Request): Promise<Response> =>
     let subscriptions: string[];
     let apiProviders: string[];
     let taskDescription: string;
-    let incomingContext: Record<string, unknown>;
+    let incomingContext: ClientContext;
     let recommenderEngine: Engine;
 
     try {
@@ -263,12 +268,9 @@ const handler = async (req: Request): Promise<Response> =>
             error_class: "task_description_too_long",
           } as const;
         }
-        const ctx =
-          typeof (parsedBody as { context?: unknown }).context === "object" &&
-          (parsedBody as { context?: unknown }).context !== null
-            ? ((parsedBody as { context: Record<string, unknown> }).context ??
-                {})
-            : {};
+        // Only the allowlisted keys of the browser's context are forwarded
+        // (lib/recommend-context); the rest is dropped here.
+        const ctx = clientContext((parsedBody as { context?: unknown }).context);
 
         // Budget priority chosen inline on /recommend rides in the request
         // body so it takes effect immediately — even signed-out, and before the
@@ -680,8 +682,8 @@ const handler = async (req: Request): Promise<Response> =>
           outputCalls: n,
         });
     const costUsd = costFromUsage(answered, usage);
-    // The day's running total the spend guard checks (lib/spend-guard).
-    recordSpend(costUsd);
+    // The day's running total of operator spend the guard checks.
+    recordSpend(costUsd, "operator");
     recordTotal();
     const timings = getTimings();
     auditFor(req, "ok", {
@@ -701,6 +703,7 @@ const handler = async (req: Request): Promise<Response> =>
         cache_write_tokens: usage.cache_write_tokens,
         output_tokens: usage.output_tokens,
         cost_source: measured ? "measured" : "estimated",
+        funding_reason: lane.reason,
       },
     });
 
@@ -726,7 +729,7 @@ const handler = async (req: Request): Promise<Response> =>
     );
   });
 
-export const POST = withRateLimit(handler, async () => {
+export const POST = withFundingLane(handler, async () => {
   const session = await getServerSession();
   return session?.id;
 });

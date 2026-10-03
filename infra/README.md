@@ -153,7 +153,7 @@ is wired across three env scopes:
   Google Password Manager as `roadmodel ROADMODEL_IP_SALT`).
   Rotation cadence is **quarterly** per the Phase 7
   secrets-rotation policy. Defaults to a placeholder in
-  `web/lib/withRateLimit.ts` so local + CI builds work without
+  `web/lib/ip-salt.ts` so local + CI builds work without
   override, but production builds without the override silently
   bucket every IP under the same key, so the var **must** be
   set in every Vercel scope serving real traffic.
@@ -442,7 +442,9 @@ deliberate — Step 6 should not relitigate the Upstash decision.
 | `UPSTASH_REDIS_TOKEN`          | `roadmodel-web` Vercel env vars (Marketplace Upstash + alias) | Next.js rate limiter (live since Step 7 close-out)                          | web: production + preview + development + staging Custom Env (Step 7) | web: production + preview + development + staging |
 | `ROADMODEL_IP_SALT`            | `roadmodel-web` Vercel env vars (generated `openssl rand -hex 32`) | Next.js rate limiter daily IP+UA hashing salt (live since Step 7 close-out); rotate quarterly | web: production + preview + development + staging Custom Env (Step 7) | web: production + preview + development + staging |
 | `FRONTIER_ROADMAP_ENABLED`     | `roadmodel-web` Vercel env vars (default `false`)            | Next.js model-routing resolver — gates the Phase 5 Anthropic frontier branch | **not set anywhere in Phase 4 (defaults false)**         | web: production + preview + staging (set true on the scope where Phase 5 rolls out) |
-| `RECOMMEND_RATELIMIT_EXEMPT_USER_IDS` | `roadmodel-web` Vercel env vars (comma-separated founder Supabase uid; default empty) | Next.js rate limiter — user_ids that skip the `/api/recommend` daily limit (founder browser dogfooding); empty = nobody exempt | web: production (founder uid) | web: production (+ preview/staging if founder tests there) |
+| `RECOMMEND_RATELIMIT_EXEMPT_USER_IDS` | `roadmodel-web` Vercel env vars (comma-separated founder Supabase uid; default empty) | The FOUNDER list (`web/lib/funding-lane.ts`): these user_ids run `/api/recommend` and `/api/roadmap` on the operator's keys with no rate limit, and see the founder-only engines; empty = nobody | web: production (founder uid) | web: production (+ preview/staging if founder tests there) |
+| `RECOMMEND_INVITED_USER_IDS` | `roadmodel-web` Vercel env vars (comma-separated Supabase uids; default empty; personal data, never committed) | The INVITE list (`web/lib/funding-lane.ts`, Phase 4.11): these user_ids run on the operator's keys, 20 a day each; every caller on neither list gets `402 funding_required` before any paid call | web: production (Phase 4.11 Step 1) | web: production |
+| `ROADMODEL_DAILY_COST_CAP_USD` | `roadmodel-web` Vercel env vars (readable, not sensitive) | The operator lane's daily spend circuit breaker (`web/lib/spend-guard.ts`): once the UTC day's operator-funded `audit_log.cost_usd` reaches it, the operator lane answers 503 until midnight; 0 = off | web: production = `2` (Phase 4.11 Step 1) | web: production |
 
 Rules:
 

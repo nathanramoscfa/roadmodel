@@ -90,5 +90,9 @@ export async function POST(req: Request): Promise<Response> {
     },
     session_cost_estimate: { total_usd: 0.01 },
     comparison_table: comparison,
+    // The context keys the edge forwarded, so a spec can prove a key the
+    // browser sent outside the allowlist never reaches the service
+    // (lib/recommend-context.ts). The edge passes unknown pick fields through.
+    received_context_keys: Object.keys(body.context ?? {}).sort(),
   });
 }

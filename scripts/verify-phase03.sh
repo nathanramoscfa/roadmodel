@@ -341,11 +341,14 @@ run_static_checks() {
       "missing file or force_provider string"
   fi
 
+  # recommendOnServer (the Step 5 helper) had no callers and was deleted in
+  # Phase 4.11 Step 1; the authenticated service call it carried lives on in
+  # recommenderRequestHeaders.
   if [[ -f web/lib/api.ts ]] &&
-    grep -Eq 'export async function recommendOnServer|export function recommendOnServer' web/lib/api.ts; then
-    record_pass 29 "web/lib/api.ts exports recommendOnServer"
+    grep -Fq 'export function recommenderRequestHeaders' web/lib/api.ts; then
+    record_pass 29 "web/lib/api.ts exports recommenderRequestHeaders"
   else
-    record_fail 29 "web/lib/api.ts exports recommendOnServer" \
+    record_fail 29 "web/lib/api.ts exports recommenderRequestHeaders" \
       "export missing"
   fi
 
@@ -386,10 +389,12 @@ run_static_checks() {
     record_fail 33 "web/lib/audit.ts exists" "missing"
   fi
 
-  if [[ -f web/lib/withRateLimit.ts ]]; then
-    record_pass 34 "web/lib/withRateLimit.ts exists"
+  # withRateLimit.ts was replaced by the funding-lane gate in Phase 4.11
+  # Step 1; it carries the paid routes' rate limits now.
+  if [[ -f web/lib/withFundingLane.ts ]]; then
+    record_pass 34 "web/lib/withFundingLane.ts exists"
   else
-    record_fail 34 "web/lib/withRateLimit.ts exists" "missing"
+    record_fail 34 "web/lib/withFundingLane.ts exists" "missing"
   fi
 
   if [[ -f infra/supabase/migrations/20260601000000_audit_log.sql ]]; then

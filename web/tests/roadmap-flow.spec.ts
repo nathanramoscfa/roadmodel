@@ -161,7 +161,34 @@ test(
         ],
       },
     });
+    // The middleware answers a signed-out caller before the route runs.
     expect(res.status()).toBe(401);
+    await ctx.dispose();
+  },
+);
+
+test(
+  "a signed-in caller on neither list is refused with 402 funding_required",
+  async ({ playwright }) => {
+    const ctx = await playwright.request.newContext();
+    const res = await ctx.post(`http://localhost:${PORT}/api/roadmap`, {
+      // Not the E2E user the server invites (playwright.config).
+      headers: { Cookie: "rm-e2e-uid=00000000-0000-4000-8000-0000000000bb" },
+      data: {
+        messages: [
+          {
+            id: "1",
+            role: "user",
+            content: "hi",
+            created_at: new Date().toISOString(),
+          },
+        ],
+      },
+    });
+    // The funding lane refuses before the handler (lib/withFundingLane.ts),
+    // so no conversation row and no Gemini call.
+    expect(res.status()).toBe(402);
+    expect(await res.json()).toEqual({ error: "funding_required" });
     await ctx.dispose();
   },
 );

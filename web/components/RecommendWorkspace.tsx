@@ -32,6 +32,12 @@ function newId(): string {
   }
 }
 
+// What a visitor the operator lane does not fund reads in place of an error
+// (402 funding_required, lib/funding-lane.ts). Phase 4.11 Steps 2 and 5 add
+// the key entry and the Quick pick form beside it.
+export const FUNDING_NOTICE =
+  "Recommend runs on roadmodel's account for invited members. Your own API key will work here soon.";
+
 // The user-facing message for a failed request, by status and error code.
 function errorMessage(status: number, body: { error?: string; engine?: string }, engines: EngineOption[]): string {
   if (status === 403 && body.error === "engine_not_evaluated") {
@@ -40,7 +46,7 @@ function errorMessage(status: number, body: { error?: string; engine?: string },
   }
   if (status === 403 && body.error === "engine_not_allowed") {
     const e = engines.find((o) => o.hint === body.engine);
-    const who = e?.access === "signed_in" ? "signed-in accounts" : "the operator";
+    const who = e?.access === "invited" ? "invited members" : "the operator";
     return `${e?.name ?? "That engine"} is open to ${who}. Choose another engine.`;
   }
   if (status === 429 && body.error === "burst_dropped") {
@@ -83,6 +89,7 @@ export function RecommendWorkspace({
   const [result, setResult] = useState<RecentRun | null>(null);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [recent, setRecent] = useState<RecentRun[]>([]);
   const top = useRef<HTMLDivElement>(null);
 
@@ -99,6 +106,7 @@ export function RecommendWorkspace({
   async function run(taskText: string, shownTask: string, engineHint: string) {
     const option = engines.find((o) => o.hint === engineHint) ?? engines[0];
     setError(null);
+    setNotice(null);
     setRunning({ startedAt: Date.now(), engine: option });
     try {
       const res = await fetch("/api/recommend", {
@@ -108,6 +116,10 @@ export function RecommendWorkspace({
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string; engine?: string };
+        if (res.status === 402 && body.error === "funding_required") {
+          setNotice(FUNDING_NOTICE);
+          return;
+        }
         setError(errorMessage(res.status, body, engines));
         return;
       }
@@ -154,6 +166,7 @@ export function RecommendWorkspace({
           signedIn={signedIn}
           pending={running !== null}
           error={result ? null : error}
+          notice={result ? null : notice}
           onSubmit={submit}
         />
       )}
@@ -172,6 +185,15 @@ export function RecommendWorkspace({
               role="alert"
             >
               {error}
+            </p>
+          )}
+          {notice && (
+            <p
+              className="rounded-lg border border-brand-slate-200 px-4 py-2.5 text-sm text-brand-slate-600 dark:border-brand-slate-700 dark:text-brand-slate-300"
+              role="status"
+              data-testid="funding-notice"
+            >
+              {notice}
             </p>
           )}
           <RecommendResult
@@ -195,6 +217,7 @@ export function RecommendWorkspace({
               setResult(null);
               setEditing(false);
               setError(null);
+              setNotice(null);
             }}
             canPersist={signedIn}
             signedIn={signedIn}
