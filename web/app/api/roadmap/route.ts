@@ -4,9 +4,11 @@
 // (Phase 3) is a JSON proxy to the FastAPI service; this route
 // streams Server-Sent Events directly from the Next.js tier
 // because the roadmap conversation is multi-turn and the Gemini
-// SDK exposes streaming natively. Auth + rate-limit layering
-// mirrors /recommend, with one extension: a per-user 3-per-30-day
-// monthly cap on top of the existing IP-pool burst+daily limits.
+// SDK exposes streaming natively. It runs on the operator's
+// GOOGLE_API_KEY, so it sits behind the same funding lane as
+// /recommend (lib/withFundingLane.ts: founder, invited or bypass,
+// everyone else 402), plus a per-user monthly cap. While
+// ROADMAP_ENABLED is false (production) it answers 404 to everyone.
 //
 // Phase 4 Step 5 extends the handler to persist conversations,
 // messages, and the latest RoadmapDraft to Supabase. The first
@@ -38,7 +40,9 @@ import {
 } from "@/lib/ratelimit";
 import { createRoadmapStream } from "@/lib/roadmap-engine";
 import type { RoadmapDraft } from "@/lib/roadmap-types";
-import { identifyRequest, withRateLimit } from "@/lib/withRateLimit";
+import { catalogCostUsd } from "@/lib/recommend-engines";
+import { recordSpend } from "@/lib/spend-guard";
+import { identifyRequest, withFundingLane } from "@/lib/withFundingLane";
 
 const messageSchema = z.object({
   id: z.string().min(1),
@@ -58,6 +62,11 @@ function sseLine(payload: unknown): Uint8Array {
   return ENCODER.encode(`data: ${JSON.stringify(payload)}\n\n`);
 }
 
+// Every request this handler runs is on the operator lane
+// (withFundingLane refuses the rest before it), so every row it writes
+// is stamped funded_by 'operator'.
+const funded_by = "operator" as const;
+
 const handler = async (req: Request): Promise<Response> => {
   const id = identifyRequest(req);
 
@@ -71,6 +80,7 @@ const handler = async (req: Request): Promise<Response> => {
       ip_hash: id.ipHash,
       ua_hash: id.uaHash,
       route: id.route,
+      funded_by,
       outcome: "unauthorized",
     });
     return NextResponse.json({ error: "unauthorized" }, { status });
@@ -84,6 +94,7 @@ const handler = async (req: Request): Promise<Response> => {
       ip_hash: id.ipHash,
       ua_hash: id.uaHash,
       route: id.route,
+      funded_by,
       outcome: "bad_input",
       error_class: "invalid_json",
       user_id: userId,
@@ -97,6 +108,7 @@ const handler = async (req: Request): Promise<Response> => {
       ip_hash: id.ipHash,
       ua_hash: id.uaHash,
       route: id.route,
+      funded_by,
       outcome: "bad_input",
       error_class: "zod_invalid",
       user_id: userId,
@@ -107,11 +119,9 @@ const handler = async (req: Request): Promise<Response> => {
     );
   }
 
-  // Per-user monthly cap. Runs AFTER the IP-pool burst+daily limit
-  // (enforced by withRateLimit wrapper) so a single user can't
-  // burn through the monthly allowance via burst traffic from a
-  // shared IP, and a shared IP can't be DoS'd into a 429 by a
-  // single rogue user-id.
+  // Per-user monthly cap. Runs AFTER the funding lane's limits
+  // (withFundingLane), so a single user can't burn through the
+  // monthly allowance via burst traffic.
   let monthly;
   try {
     monthly = await checkRoadmapMonthlyLimit(userId);
@@ -120,6 +130,7 @@ const handler = async (req: Request): Promise<Response> => {
       ip_hash: id.ipHash,
       ua_hash: id.uaHash,
       route: id.route,
+      funded_by,
       outcome: "roadmap_error",
       error_class: err instanceof Error ? err.name : "ratelimit_failed",
       user_id: userId,
@@ -134,6 +145,7 @@ const handler = async (req: Request): Promise<Response> => {
       ip_hash: id.ipHash,
       ua_hash: id.uaHash,
       route: id.route,
+      funded_by,
       outcome: "roadmap_monthly_cap",
       user_id: userId,
     });
@@ -172,6 +184,7 @@ const handler = async (req: Request): Promise<Response> => {
         ip_hash: id.ipHash,
         ua_hash: id.uaHash,
         route: id.route,
+        funded_by,
         outcome: "roadmap_error",
         error_class: err instanceof Error ? err.name : "conversation_create_failed",
         user_id: userId,
@@ -287,31 +300,45 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         controller.close();
+        // The ledger: what this turn cost the operator at the engine's
+        // catalog prices, cached prompt reads at the cache price. The
+        // spend guard's counter takes it too.
+        const costUsd =
+          inputTokens !== undefined || outputTokens !== undefined
+            ? catalogCostUsd(engine.engine, {
+                input_tokens: inputTokens ?? 0,
+                cached_input_tokens:
+                  cacheStats?.provider === "google"
+                    ? cacheStats.cachedContentTokenCount
+                    : 0,
+                output_tokens: outputTokens ?? 0,
+              })
+            : undefined;
+        if (costUsd !== undefined) recordSpend(costUsd, funded_by);
         void writeAudit({
           ip_hash: id.ipHash,
           ua_hash: id.uaHash,
           route: id.route,
+          funded_by,
           outcome: "ok",
           provider: engine.provider,
           model: engine.engine,
           input_tokens: inputTokens,
           output_tokens: outputTokens,
+          cost_usd: costUsd,
           user_id: userId,
           cache_stats: cacheStats,
         });
       } catch (err) {
-        controller.enqueue(
-          sseLine({
-            type: "error",
-            error: "roadmap_error",
-            message: err instanceof Error ? err.message : "unknown",
-          }),
-        );
+        // A generic code only: the provider's error text can carry request
+        // details, and the error_class in the audit row is the diagnosis.
+        controller.enqueue(sseLine({ type: "error", error: "roadmap_failed" }));
         controller.close();
         void writeAudit({
           ip_hash: id.ipHash,
           ua_hash: id.uaHash,
           route: id.route,
+          funded_by,
           outcome: "roadmap_error",
           provider: engine.provider,
           model: engine.engine,
@@ -332,15 +359,18 @@ const handler = async (req: Request): Promise<Response> => {
   });
 };
 
-// IP-pool burst+daily limit wraps the inner handler; per-user
-// monthly cap is enforced inside the handler. Both layers share
-// the same withRateLimit + Upstash backend, so a single Upstash
-// outage policy controls all three knobs.
-export const POST = withRateLimit(handler, async () => {
-  try {
-    const session = await requireSession();
-    return session.id;
-  } catch {
-    return undefined;
-  }
-});
+// The funding lane wraps the inner handler (404 while ROADMAP_ENABLED
+// is false, then founder / invited / bypass or 402); the per-user
+// monthly cap is enforced inside the handler.
+export const POST = withFundingLane(
+  handler,
+  async () => {
+    try {
+      const session = await requireSession();
+      return session.id;
+    } catch {
+      return undefined;
+    }
+  },
+  { enabled: () => env.ROADMAP_ENABLED },
+);

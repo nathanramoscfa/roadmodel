@@ -884,3 +884,72 @@ def test_audit_log_latency_ms_accepts_documented_shape(
     db_conn.rollback()
     assert row is not None
     assert row == (4500, 3, 1, 4490, 12, 4470, 6, 0)
+
+
+# ---------------------------------------------------------------
+# Phase 4.11 Step 1 — audit_log.funded_by and the full outcome set
+# ---------------------------------------------------------------
+
+
+def test_audit_log_funded_by_column(db_conn: "psycopg.Connection") -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "select data_type, is_nullable from information_schema.columns "
+            "where table_schema = 'public' and table_name = 'audit_log' "
+            "and column_name = 'funded_by'"
+        )
+        row = cur.fetchone()
+    assert row == ("text", "YES"), (
+        "funded_by must be nullable text — refused requests and history carry null"
+    )
+
+
+def _insert_audit(db_conn: "psycopg.Connection", outcome: str, funded_by: str | None) -> None:
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "insert into public.audit_log (ts, ip_hash, ua_hash, route, outcome, funded_by) "
+            "values (now(), 'h1', 'h2', '/api/recommend', %s, %s)",
+            (outcome, funded_by),
+        )
+
+
+@pytest.mark.parametrize("funded_by", ["operator", "visitor", "keyless", None])
+def test_audit_log_funded_by_accepts_the_lanes(
+    db_conn: "psycopg.Connection", funded_by: str | None
+) -> None:
+    try:
+        _insert_audit(db_conn, "ok", funded_by)
+    finally:
+        db_conn.rollback()
+
+
+def test_audit_log_funded_by_rejects_anything_else(db_conn: "psycopg.Connection") -> None:
+    import psycopg
+
+    with pytest.raises(psycopg.errors.CheckViolation):
+        _insert_audit(db_conn, "ok", "stranger")
+    db_conn.rollback()
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    [
+        "roadmap_monthly_cap",
+        "roadmap_error",
+        "unauthorized",
+        "daily_cost_cap",
+        "bypassed_rate_limit",
+        "funding_required",
+        "visitor_key_rejected",
+        "visitor_quota",
+        "provider_error",
+    ],
+)
+def test_audit_log_outcome_accepts_every_writer_outcome(
+    db_conn: "psycopg.Connection", outcome: str
+) -> None:
+    """The outcomes the original five-value CHECK rejected, and Phase 4.11's."""
+    try:
+        _insert_audit(db_conn, outcome, None)
+    finally:
+        db_conn.rollback()

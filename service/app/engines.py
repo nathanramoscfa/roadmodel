@@ -24,9 +24,12 @@ from typing import Any, Final
 
 _REGISTRY_PATH: Final = Path(__file__).with_name("engines.json")
 
-# Who may choose an engine from the /recommend menu (enforced at the web edge;
-# the service runs whatever hint the authenticated edge forwards).
-MENU_ACCESS: Final = frozenset({"public", "signed_in", "founder"})
+# Who may choose an engine from the /recommend menu when it runs on the
+# operator's keys: the invite list (founder included) or the founder alone.
+# Enforced at the web edge, which refuses every other visitor before any engine
+# runs (web/lib/funding-lane.ts); the service runs whatever hint the
+# authenticated edge forwards.
+MENU_ACCESS: Final = frozenset({"invited", "founder"})
 
 
 @dataclass(frozen=True)

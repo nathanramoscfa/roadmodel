@@ -28,19 +28,25 @@ import {
 } from "../lib/recommend-engines";
 
 const FOUNDER_UID = "rl-exempt-test-uid"; // seeded in RECOMMEND_RATELIMIT_EXEMPT_USER_IDS
+const INVITED_UID = "invited-test-uid"; // seeded in RECOMMEND_INVITED_USER_IDS
 
-test("viewers: anonymous, any account, and the operator allowlist", () => {
+test("viewers: signed out, signed in on neither list, invited, and the founder", () => {
   expect(viewerFor(undefined)).toBe("anonymous");
-  expect(viewerFor("some-user")).toBe("signed_in");
+  expect(viewerFor("some-user")).toBe("visitor");
+  expect(viewerFor(INVITED_UID)).toBe("invited");
   expect(viewerFor(FOUNDER_UID)).toBe("founder");
 });
 
-test("the default engine is open to everyone and always runnable", () => {
+test("the default engine is open to invited members and always runnable", () => {
   expect(DEFAULT_ENGINE.hint).toBe(registry.default);
-  expect(DEFAULT_ENGINE.access).toBe("public");
+  expect(DEFAULT_ENGINE.access).toBe("invited");
   expect(isEvaluated(DEFAULT_ENGINE)).toBe(true);
-  expect(chooseEngine(undefined, "anonymous")).toEqual({ ok: true, engine: DEFAULT_ENGINE });
-  expect(chooseEngine("", "anonymous")).toEqual({ ok: true, engine: DEFAULT_ENGINE });
+  expect(chooseEngine(undefined, "invited")).toEqual({ ok: true, engine: DEFAULT_ENGINE });
+  expect(chooseEngine("", "invited")).toEqual({ ok: true, engine: DEFAULT_ENGINE });
+});
+
+test("the retired tiers are gone: every menu engine is invited or founder", () => {
+  expect(new Set(registry.engines.map((e) => e.menu))).toEqual(new Set(["invited", "founder", null]));
 });
 
 test("every registry engine bills as a catalog model", () => {
@@ -60,8 +66,10 @@ test("access: a viewer may use engines at or below their tier, once evaluated", 
   for (const e of MENU) {
     const evaluated = isEvaluated(e);
     expect(canUse("founder", e)).toBe(evaluated);
-    expect(canUse("signed_in", e)).toBe(evaluated && e.access !== "founder");
-    expect(canUse("anonymous", e)).toBe(evaluated && e.access === "public");
+    expect(canUse("invited", e)).toBe(evaluated && e.access === "invited");
+    // Only the viewers the operator lane funds may choose an operator engine.
+    expect(canUse("visitor", e)).toBe(false);
+    expect(canUse("anonymous", e)).toBe(false);
   }
 });
 
@@ -75,7 +83,7 @@ test("chooseEngine refuses what a viewer may not use, and names unknown engines"
   const founderOnly = MENU.find((e) => e.access === "founder" && isEvaluated(e));
   if (founderOnly) {
     expect(chooseEngine(founderOnly.hint, "anonymous")).toMatchObject({ ok: false, error: "engine_not_allowed" });
-    expect(chooseEngine(founderOnly.hint, "signed_in")).toMatchObject({ ok: false, error: "engine_not_allowed" });
+    expect(chooseEngine(founderOnly.hint, "invited")).toMatchObject({ ok: false, error: "engine_not_allowed" });
     expect(chooseEngine(founderOnly.hint, "founder")).toMatchObject({ ok: true });
   }
   const unevaluated = MENU.find((e) => !isEvaluated(e));
@@ -88,11 +96,18 @@ test("menuFor marks what each viewer may choose, without internals", () => {
   const anon = menuFor("anonymous");
   expect(anon.map((o) => o.hint)).toEqual(MENU.map((e) => e.hint));
   for (const o of anon) {
-    expect(o.allowed).toBe(o.evaluated && o.access === "public");
+    expect(o.allowed).toBe(false);
     expect(Object.keys(o).sort()).toEqual(
       ["access", "allowed", "coldUsd", "eval", "evaluated", "hint", "isDefault", "maker", "name", "warmUsd"].sort(),
     );
   }
+});
+
+test("menuFor: an invited member may choose the evaluated invited engines", () => {
+  for (const o of menuFor("invited")) {
+    expect(o.allowed).toBe(o.evaluated && o.access === "invited");
+  }
+  expect(menuFor("visitor").some((o) => o.allowed)).toBe(false);
 });
 
 test("costFromUsage bills uncached input, cache reads, cache writes and output", () => {

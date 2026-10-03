@@ -5,6 +5,10 @@ import path from "node:path";
 import { test, expect, type Page } from "@playwright/test";
 
 import registry from "../data/engines.json";
+import { E2E_AUTH_COOKIE, E2E_USER_ID, setE2eSessionCookie } from "./fixtures/onboarding-auth";
+
+// The E2E server's invite list holds the E2E session's user (playwright.config).
+const INVITED_COOKIE = { Cookie: `${E2E_AUTH_COOKIE}=${E2E_USER_ID}` };
 
 type Pick = Record<string, unknown> & { priority?: string };
 
@@ -247,7 +251,7 @@ test("renders sub-headed rationale sections when the service supplies them", asy
   await expect(why.getByText(/Max thinking fits the deep, long-context reasoning/i)).toBeVisible();
 });
 
-test("the engine menu offers the evaluated engines a visitor may use, and remembers the choice", async ({
+test("the engine menu offers the evaluated engines an invited member may use, and remembers the choice", async ({
   page,
 }) => {
   let sentEngine: unknown;
@@ -255,19 +259,21 @@ test("the engine menu offers the evaluated engines a visitor may use, and rememb
     sentEngine = (JSON.parse(route.request().postData() ?? "{}") as { engine?: unknown }).engine;
     await route.fulfill({ status: 200, contentType: "application/json", body: FIXTURE });
   });
+  await setE2eSessionCookie(page);
   await page.goto("/recommend");
   await page.getByTestId("engine-picker").click();
   const options = page.getByTestId("engine-options").getByRole("option");
   await expect(options).toHaveCount(registry.engines.filter((e) => e.menu !== null).length);
-  // Signed out: only public engines can be chosen; the rest are listed locked.
-  const publicHints = registry.engines.filter((e) => e.menu === "public").map((e) => e.hint);
-  for (const hint of publicHints) {
-    await expect(page.locator(`[data-engine="${hint}"]`)).toBeVisible();
+  // Invited: the invited engines can be chosen; the founder's are listed locked.
+  const invitedHints = registry.engines.filter((e) => e.menu === "invited").map((e) => e.hint);
+  for (const hint of invitedHints) {
+    await expect(page.locator(`[data-engine="${hint}"]`)).toHaveAttribute("data-allowed", "1");
   }
-  const locked = page.locator('[data-engine][data-allowed="0"]');
-  expect(await locked.count()).toBeGreaterThan(0);
-  // Choose a public engine other than the default.
-  const other = publicHints.find((h) => h !== registry.default)!;
+  for (const e of registry.engines.filter((e) => e.menu === "founder")) {
+    await expect(page.locator(`[data-engine="${e.hint}"]`)).toHaveAttribute("data-allowed", "0");
+  }
+  // Choose an invited engine other than the default.
+  const other = invitedHints.find((h) => h !== registry.default)!;
   await page.locator(`[data-engine="${other}"]`).click();
   await ask(page);
   await expect(page.getByTestId("recommend-result")).toBeVisible();
@@ -278,17 +284,36 @@ test("the engine menu offers the evaluated engines a visitor may use, and rememb
   await expect(page.locator(`[data-engine="${other}"]`)).toHaveAttribute("aria-selected", "true");
 });
 
+test("signed out, every engine on the menu is locked", async ({ page }) => {
+  await page.goto("/recommend");
+  await page.getByTestId("engine-picker").click();
+  await expect(page.locator('[data-engine][data-allowed="1"]')).toHaveCount(0);
+  await expect(page.locator(`[data-engine="${registry.default}"]`)).toContainText(/Invited members/);
+});
+
+test("a 402 reads as what the visitor can do, in plain words", async ({ page }) => {
+  await fulfill(page, JSON.stringify({ error: "funding_required" }), 402);
+  await page.goto("/recommend");
+  await ask(page, "pick a model");
+  await expect(page.getByTestId("funding-notice")).toHaveText(
+    "Recommend runs on roadmodel's account for invited members. Your own API key will work here soon.",
+  );
+  await expect(page.getByText(/unavailable|try again/i)).toHaveCount(0);
+});
+
 test("the API refuses an engine the visitor may not use, before any upstream call", async ({ request }) => {
-  // The E2E server runs signed out, so a founder-only or unknown engine is
+  // The E2E session's user is invited, so a founder-only or unknown engine is
   // refused at the edge (lib/recommend-engines), never forwarded.
   const founderOnly = registry.engines.find((e) => e.menu === "founder")!;
   const refused = await request.post("/api/recommend", {
+    headers: INVITED_COOKIE,
     data: { task_description: "pick a model", engine: founderOnly.hint },
   });
   expect(refused.status()).toBe(403);
   expect(["engine_not_allowed", "engine_not_evaluated"]).toContain((await refused.json()).error);
 
   const unknown = await request.post("/api/recommend", {
+    headers: INVITED_COOKIE,
     data: { task_description: "pick a model", engine: "no-such-engine" },
   });
   expect(unknown.status()).toBe(400);
@@ -373,7 +398,13 @@ test("daily_limit daily-cap 429 renders daily-cap message", async ({ page }) => 
 });
 
 test("blank task_description returns 400 bad_input (no upstream call)", async ({ request }) => {
-  const res = await request.post("/api/recommend", { data: { task_description: "   " } });
+  const res = await request.post("/api/recommend", { headers: INVITED_COOKIE, data: { task_description: "   " } });
   expect(res.status()).toBe(400);
   expect(await res.json()).toMatchObject({ error: "bad_input" });
+});
+
+test("a signed-out request is refused before its input is read", async ({ request }) => {
+  const res = await request.post("/api/recommend", { data: { task_description: "   " } });
+  expect(res.status()).toBe(402);
+  expect(await res.json()).toEqual({ error: "funding_required" });
 });

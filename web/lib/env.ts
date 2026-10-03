@@ -67,14 +67,12 @@ const envSchema = z.object({
     .string()
     .default("false")
     .transform((v) => v === "true" || v === "1"),
-  // Phase 4 Step 7 — temporary env-gated bypass for the
-  // maintainer-run latency sweep. When SET and the inbound
-  // request carries an X-Roadmodel-Bypass header whose value
-  // matches via constant-time comparison, withRateLimit skips
-  // the Upstash check. When UNSET the header is ignored — there
-  // is no fail-open default. Removed (along with the env var,
-  // the withRateLimit branch, and the bypassed_rate_limit audit
-  // outcome) in PR 7c after the post-fix sweep lands.
+  // Env-gated bypass for the maintainer's scripts (the latency sweep, the
+  // daily soak). When SET and the inbound request carries an
+  // X-Roadmodel-Bypass header whose value matches via constant-time
+  // comparison, the request runs on the operator lane with no rate limit
+  // (lib/funding-lane.ts). When UNSET the header is ignored — there is no
+  // fail-open default.
   ROADMODEL_LATENCY_BYPASS_TOKEN: z.string().optional(),
   // Shared edge<->service bearer secret. Sent as
   // `Authorization: Bearer <this>` on every call to the FastAPI
@@ -86,11 +84,12 @@ const envSchema = z.object({
   // header, so the real service rejects with 401 rather than serving
   // a free (paid-upstream) call.
   ROADMODEL_INTERNAL_TOKEN: z.string().optional(),
-  // Real-time daily spend cap (USD) for the paid routes — the in-app circuit
+  // Real-time daily spend cap (USD) for the operator lane — the in-app circuit
   // breaker (web/lib/spend-guard.ts) that complements the GCP budget
-  // kill-switch (infra/gcp-killswitch/). When the current UTC day's summed
-  // audit_log.cost_usd reaches this, /api/recommend + /api/roadmap return 503
-  // until UTC midnight. Default 0 = DISABLED (opt-in): unset behaves exactly as
+  // kill-switch (infra/gcp-killswitch/). When the current UTC day's operator
+  // spend (audit_log.cost_usd on operator-funded rows) reaches this, the
+  // operator lane of /api/recommend + /api/roadmap returns 503 until UTC
+  // midnight. Production: 2, readable (not sensitive). Default 0 = DISABLED (opt-in): unset behaves exactly as
   // before. Coerced number; fails open on a ledger read error so a metering
   // hiccup never bricks the app.
   ROADMODEL_DAILY_COST_CAP_USD: z.coerce.number().nonnegative().default(0),
@@ -105,13 +104,18 @@ const envSchema = z.object({
   // cap (founder/dev dogfooding). Empty by default → nobody exempt.
   // Seeded per Vercel scope; see infra/README.md. (#157)
   ROADMAP_CAP_EXEMPT_USER_IDS: z.string().default(""),
-  // Comma-separated Supabase user_ids exempt from the /api/recommend IP-pool
-  // rate limit (founder/dev dogfooding via the BROWSER — the X-Roadmodel-Bypass
-  // header bypass only works for scripts that can set a header). Empty by
-  // default → nobody exempt, so the global daily limit still protects real
-  // traffic. Seeded per Vercel scope; mirrors ROADMAP_CAP_EXEMPT_USER_IDS (same
-  // founder uid). See infra/README.md.
+  // Comma-separated Supabase user_ids of the FOUNDER list: their requests run
+  // on the operator's keys with no rate limit (lib/funding-lane.ts), and they
+  // see the founder-only engines. The X-Roadmodel-Bypass header is the
+  // scripts' equivalent. Empty by default → nobody. Seeded per Vercel scope;
+  // mirrors ROADMAP_CAP_EXEMPT_USER_IDS (same founder uid). See infra/README.md.
   RECOMMEND_RATELIMIT_EXEMPT_USER_IDS: z.string().default(""),
+  // Comma-separated Supabase user_ids of the INVITE list: their requests run on
+  // the operator's keys, 20 a day each (lib/funding-lane.ts). Every caller on
+  // neither list is refused with 402 funding_required before any paid call.
+  // Empty by default → nobody invited. Personal data, not a secret: never
+  // commit real ids. See infra/README.md.
+  RECOMMEND_INVITED_USER_IDS: z.string().default(""),
   // Recommender-only off-switch for the roadmap builder. When set to
   // "false" (or "0") the roadmap + history surfaces are hidden from the
   // app nav and their routes redirect to /recommend — a reversible
@@ -166,6 +170,7 @@ export const env = envSchema.parse({
   ROADMAP_CAP_EXEMPT_USER_IDS: process.env.ROADMAP_CAP_EXEMPT_USER_IDS,
   RECOMMEND_RATELIMIT_EXEMPT_USER_IDS:
     process.env.RECOMMEND_RATELIMIT_EXEMPT_USER_IDS,
+  RECOMMEND_INVITED_USER_IDS: process.env.RECOMMEND_INVITED_USER_IDS,
   // Raw value through (string | undefined); the schema's .default("true")
   // handles undefined. Do NOT pre-default to a string here.
   ROADMAP_ENABLED: process.env.ROADMAP_ENABLED,

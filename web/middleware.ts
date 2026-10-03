@@ -28,6 +28,7 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
 import { E2E_AUTH_COOKIE } from "@/lib/auth";
+import { env } from "@/lib/env";
 import { isE2eAuthEnabled } from "@/lib/profile";
 import { GATE_COOKIE, deriveGateToken } from "@/lib/gate";
 
@@ -158,6 +159,13 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     if (!(await gatePasses(req, expectedPassword))) {
       return gateRewrite(req, requestHeaders, csp);
     }
+  }
+
+  // The roadmap builder's API while ROADMAP_ENABLED is false (production):
+  // 404 for every caller, signed in or not, ahead of the session check — the
+  // same answer the route gives (app/api/roadmap/route.ts).
+  if (pathname === "/api/roadmap" && !env.ROADMAP_ENABLED) {
+    return withCsp(NextResponse.json({ error: "not_found" }, { status: 404 }));
   }
 
   // ──── Branch 2: Supabase auth validation ──────────────────────────

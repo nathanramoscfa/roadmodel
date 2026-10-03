@@ -17,16 +17,18 @@ export interface RateLimitResult {
 }
 
 interface Limiters {
-  daily: Ratelimit;
+  // The operator lane's per-user limits (lib/withFundingLane.ts): an invited
+  // member gets INVITED_DAILY_LIMIT calls a day and at most 10 a minute, both
+  // keyed on `user:<uid>`. The founder and the bypass header are unlimited.
+  invitedDaily: Ratelimit;
   burst: Ratelimit;
-  // Per-user monthly cap for /api/roadmap — 3 roadmaps / 30 days,
-  // keyed on the Supabase user_id rather than ip+ua. The IP-pool
-  // burst+daily limiters above are still active and run BEFORE
-  // this check inside withRateLimit; this layer is the per-user
-  // capability-matrix gate ROADMAP.md documents for the free
-  // signed-in tier.
+  // Per-user monthly cap for /api/roadmap (rolling 30 days), keyed on the
+  // Supabase user_id. Runs inside the route, after the funding lane.
   roadmapMonthly: Ratelimit;
 }
+
+// Recommendations an invited member may run on the operator's keys per day.
+export const INVITED_DAILY_LIMIT = 20;
 
 function buildLimiters(): Limiters | null {
   if (!env.UPSTASH_REDIS_URL || !env.UPSTASH_REDIS_TOKEN) {
@@ -43,10 +45,10 @@ function buildLimiters(): Limiters | null {
     token: env.UPSTASH_REDIS_TOKEN,
   });
   return {
-    daily: new Ratelimit({
+    invitedDaily: new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(3, "1 d"),
-      prefix: "rl:day",
+      limiter: Ratelimit.slidingWindow(INVITED_DAILY_LIMIT, "1 d"),
+      prefix: "rl:invited",
     }),
     burst: new Ratelimit({
       redis,
@@ -62,6 +64,18 @@ function buildLimiters(): Limiters | null {
 }
 
 const limiters = buildLimiters();
+
+// Subset of the @upstash/ratelimit API the operator-lane limits use.
+type LaneLimiter = Pick<Ratelimit, "limit">;
+
+// Test seam: inject fake burst + invited-daily limiters so the 20-a-day rule
+// is exercised without a live Upstash backend (mirrors setTestRoadmapLimiter).
+let testLaneLimiters: { burst: LaneLimiter; invitedDaily: LaneLimiter } | null = null;
+export function setTestLaneLimiters(
+  fake: { burst: LaneLimiter; invitedDaily: LaneLimiter } | null,
+): void {
+  testLaneLimiters = fake;
+}
 
 // Subset of the @upstash/ratelimit API the roadmap monthly cap uses.
 // getRemaining is READ-ONLY (no token consumed); limit() consumes one.
@@ -97,19 +111,22 @@ export function isRoadmapCapExempt(userId: string): boolean {
   return ROADMAP_CAP_EXEMPT.has(userId);
 }
 
-// User_ids exempt from the /api/recommend IP-pool rate limit (founder/dev
-// dogfooding via the browser), parsed once at module load. Empty → nobody
-// exempt, so the global limit applies to everyone (default-closed).
+// The founder list: user_ids whose requests run on the operator lane with no
+// rate limit (lib/funding-lane.ts), parsed once at module load. Empty →
+// nobody is a founder (default-closed).
 const RATE_LIMIT_EXEMPT = parseExemptIds(env.RECOMMEND_RATELIMIT_EXEMPT_USER_IDS);
 
 export function isRateLimitExempt(userId: string): boolean {
   return RATE_LIMIT_EXEMPT.has(userId);
 }
 
-export async function checkLimits(key: string): Promise<RateLimitResult> {
-  if (!limiters) {
-    // No Upstash configured. In PRODUCTION the limiter is the spend boundary
-    // for the paid recommender — refuse to serve uncapped rather than silently
+// The invited member's limits on the operator lane, keyed on their user id:
+// the 10-a-minute burst, then INVITED_DAILY_LIMIT a day.
+export async function checkInvitedLimits(userId: string): Promise<RateLimitResult> {
+  const lane = testLaneLimiters ?? limiters;
+  if (!lane) {
+    // No Upstash configured. In PRODUCTION the limiter bounds the operator's
+    // spend on invited members — refuse to serve uncapped rather than silently
     // fail open. Throwing here makes the route return 500 BEFORE any upstream
     // call (fail closed). Elsewhere (local/CI/preview, where Upstash is
     // intentionally unseeded) keep the fail-open behaviour so dev/test run.
@@ -125,8 +142,9 @@ export async function checkLimits(key: string): Promise<RateLimitResult> {
     return { allowed: true };
   }
 
+  const key = `user:${userId}`;
   try {
-    const burst = await limiters.burst.limit(key);
+    const burst = await lane.burst.limit(key);
     if (!burst.success) {
       return {
         allowed: false,
@@ -135,12 +153,12 @@ export async function checkLimits(key: string): Promise<RateLimitResult> {
       };
     }
 
-    const daily = await limiters.daily.limit(key);
+    const daily = await lane.invitedDaily.limit(key);
     if (!daily.success) {
       return {
         allowed: false,
         reason: "rate_limited",
-        retryAfter: Math.ceil((daily.reset - Date.now()) / 1000),
+        retryAfter: Math.max(1, Math.ceil((daily.reset - Date.now()) / 1000)),
       };
     }
 
@@ -163,12 +181,10 @@ export async function checkLimits(key: string): Promise<RateLimitResult> {
   }
 }
 
-// Per-user 3-roadmaps-per-30-days cap for /api/roadmap. Invoked by
-// the route handler AFTER the IP-pool burst+daily limits pass, so
-// the user-visible 429 reason on this layer is always the per-user
-// monthly cap rather than an unrelated IP-pool exhaustion. When
-// Upstash is unseeded or unreachable, this layer fails open via
-// the same E2E-vs-prod policy as checkLimits().
+// Per-user monthly cap for /api/roadmap. Invoked by the route handler
+// AFTER the funding lane's limits pass. When Upstash is unseeded or
+// unreachable, this layer fails open via the same E2E-vs-prod policy as
+// checkInvitedLimits().
 // READ-ONLY pre-flight check: does this user have monthly roadmap
 // allowance left? Uses getRemaining (no token consumed) so a request
 // that later fails mid-generation does NOT burn quota — the token is

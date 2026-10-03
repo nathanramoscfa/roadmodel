@@ -10,28 +10,32 @@
 // which scripts/eval_recommend_engines.py --summary-json writes.
 //
 // Who may choose an engine is enforced HERE, at the edge, before any paid
-// call: `public` engines are open to everyone, `signed_in` ones to any
-// account, `founder` ones to the operator allowlist. The service runs
-// whatever the authenticated edge forwards.
+// call. Every engine on the menu runs on roadmodel's account, so only the
+// viewers the operator lane funds (lib/funding-lane.ts) may choose one:
+// `invited` engines are open to the invite list and the founder, `founder`
+// ones to the founder list alone. Signed-out and uninvited visitors see the
+// menu locked. The service runs whatever the authenticated edge forwards.
 
 import catalog from "@/data/catalog.json";
 import evals from "@/data/engine-eval.json";
 import registry from "@/data/engines.json";
 
 import { modelProvider } from "./catalog-fields";
+import { isInvited } from "./funding-lane";
 import { isRateLimitExempt } from "./ratelimit";
 
-export type EngineAccess = "public" | "signed_in" | "founder";
-export type Viewer = "anonymous" | "signed_in" | "founder";
+export type EngineAccess = "invited" | "founder";
+// anonymous = signed out; visitor = signed in, on neither list.
+export type Viewer = "anonymous" | "visitor" | "invited" | "founder";
 
-const ACCESS_RANK: Record<EngineAccess, number> = { public: 0, signed_in: 1, founder: 2 };
+const ACCESS_RANK: Record<EngineAccess, number> = { invited: 1, founder: 2 };
 
 // An engine is offered once it has answered the engine eval in full on at
 // least this share of the probe tasks (docs/engine-eval.json). Until then it
 // is listed as awaiting evaluation, and cannot be chosen: the menu offers
 // engines that are known to work. The default engine is always runnable.
 const PASS_SHARE = 0.9;
-const VIEWER_RANK: Record<Viewer, number> = { anonymous: 0, signed_in: 1, founder: 2 };
+const VIEWER_RANK: Record<Viewer, number> = { anonymous: 0, visitor: 0, invited: 1, founder: 2 };
 
 // Measured on the live ladder prompt (2026-10-02): every recommendation sends
 // the selector + catalog prefix (~240k characters) plus the task, and gets
@@ -154,11 +158,13 @@ export function engineByHint(hint: string | null | undefined): Engine | undefine
   return hint ? BY_HINT.get(hint) : undefined;
 }
 
-// The operator allowlist doubles as the founder tier: the same signed-in ids
-// that skip the rate limit (RECOMMEND_RATELIMIT_EXEMPT_USER_IDS).
+// The viewer's tier, from the same two lists the funding lane reads: the
+// founder list (RECOMMEND_RATELIMIT_EXEMPT_USER_IDS) and the invite list
+// (RECOMMEND_INVITED_USER_IDS).
 export function viewerFor(userId: string | null | undefined): Viewer {
   if (!userId) return "anonymous";
-  return isRateLimitExempt(userId) ? "founder" : "signed_in";
+  if (isRateLimitExempt(userId)) return "founder";
+  return isInvited(userId) ? "invited" : "visitor";
 }
 
 export function isEvaluated(engine: Engine): boolean {
@@ -220,6 +226,22 @@ export function costFromUsage(engine: Engine, u: EngineUsage): number {
     u.cached_input_tokens * engine.cacheReadPer1m +
     u.cache_write_tokens * engine.inputPer1m * CACHE_WRITE_MULTIPLIER +
     u.output_tokens * engine.outputPer1m;
+  return Number((usd / 1_000_000).toFixed(6));
+}
+
+// What one call to a catalog model cost at its catalog prices, cache reads at
+// the cache price: the ledger for engines outside this registry (the roadmap
+// builder's Gemini). Undefined for a model the catalog does not price.
+export function catalogCostUsd(
+  catalogId: string,
+  u: { input_tokens: number; cached_input_tokens: number; output_tokens: number },
+): number | undefined {
+  const model = CATALOG.get(catalogId);
+  if (!model) return undefined;
+  const input = model.input_price_per_1m;
+  const cacheRead = model.cache_read_per_1m ?? input * CACHE_READ_SHARE;
+  const uncached = Math.max(0, u.input_tokens - u.cached_input_tokens);
+  const usd = uncached * input + u.cached_input_tokens * cacheRead + u.output_tokens * model.output_price_per_1m;
   return Number((usd / 1_000_000).toFixed(6));
 }
 

@@ -80,6 +80,7 @@ export function RecommendComposer({
   signedIn,
   pending,
   error,
+  notice = null,
   onSubmit,
 }: {
   task: string;
@@ -92,6 +93,8 @@ export function RecommendComposer({
   signedIn: boolean;
   pending: boolean;
   error: string | null;
+  // A plain note in place of an error: what the visitor can do here.
+  notice?: string | null;
   onSubmit: () => void;
 }) {
   const area = useRef<HTMLTextAreaElement>(null);
@@ -290,6 +293,15 @@ export function RecommendComposer({
           role="alert"
         >
           {error}
+        </p>
+      )}
+      {notice && (
+        <p
+          className="border-t border-brand-slate-100 px-4 py-2.5 text-sm text-brand-slate-600 dark:border-brand-slate-700/70 dark:text-brand-slate-300"
+          role="status"
+          data-testid="funding-notice"
+        >
+          {notice}
         </p>
       )}
     </form>

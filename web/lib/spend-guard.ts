@@ -4,8 +4,13 @@
 // provider-side GCP budget kill-switch (infra/gcp-killswitch/). It tracks the
 // metered per-call cost (the same figure written to audit_log.cost_usd) for the
 // current UTC day and, once that reaches ROADMODEL_DAILY_COST_CAP_USD, trips so
-// the paid routes (/api/recommend, /api/roadmap via withRateLimit) stop until
-// UTC midnight.
+// the operator lane of the paid routes (/api/recommend, /api/roadmap via
+// withFundingLane) stops until UTC midnight.
+//
+// It counts the OPERATOR's spend only: rows stamped funded_by 'operator', plus
+// unstamped history from before the column existed. A visitor's own key or a
+// keyless pick costs the operator nothing, so it never moves the counter or
+// the seed, and visitor traffic can never trip the operator's cap.
 //
 // Why this AND the GCP function: provider billing data lags hours, so a budget
 // notification is a delayed backstop. This reacts in seconds off our own meter.
@@ -27,6 +32,7 @@ import { Redis } from "@upstash/redis";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { env } from "./env";
+import type { FundedBy } from "./funding-lane";
 
 let supabaseClient: SupabaseClient | null = null;
 function getSupabase(): SupabaseClient {
@@ -67,33 +73,56 @@ export function _setSpendReaderForTest(reader: SpendReader | null): void {
   testReader = reader;
 }
 
+// Test seam: capture recordSpend's counter increments instead of writing them.
+type CounterSink = (costUsd: number) => void;
+let testCounter: CounterSink | null = null;
+export function _setSpendCounterForTest(sink: CounterSink | null): void {
+  testCounter = sink;
+}
+
+// One audit_log row as the ledger reads it.
+export interface LedgerRow {
+  cost_usd: unknown;
+  funded_by?: string | null;
+}
+
+// The operator's spend on one row: its cost when the operator funded it (or it
+// predates the funded_by column), nothing when a visitor or the keyless lane
+// did. The ledger query filters the same way; this is the second check.
+export function operatorCost(row: LedgerRow): number {
+  if (row.funded_by != null && row.funded_by !== "operator") return 0;
+  return Number(row.cost_usd) || 0;
+}
+
 // Test seam for the ledger page reader, so the pagination is testable.
-type LedgerPage = (sinceIso: string, from: number, to: number) => Promise<number[]>;
+type LedgerPage = (sinceIso: string, from: number, to: number) => Promise<LedgerRow[]>;
 let testLedgerPage: LedgerPage | null = null;
 export function _setLedgerPageForTest(page: LedgerPage | null): void {
   testLedgerPage = page;
 }
 
-async function ledgerPage(sinceIso: string, from: number, to: number): Promise<number[]> {
+async function ledgerPage(sinceIso: string, from: number, to: number): Promise<LedgerRow[]> {
   if (testLedgerPage) return testLedgerPage(sinceIso, from, to);
   const { data, error } = await getSupabase()
     .from("audit_log")
-    .select("cost_usd")
+    .select("cost_usd, funded_by")
     .gte("ts", sinceIso)
     .not("cost_usd", "is", null)
+    // Operator rows and pre-ledger history; visitor and keyless rows excluded.
+    .or("funded_by.eq.operator,funded_by.is.null")
     .order("ts")
     .range(from, to);
   if (error) throw error;
-  return (data ?? []).map((row) => Number((row as { cost_usd: unknown }).cost_usd) || 0);
+  return (data ?? []) as LedgerRow[];
 }
 
-// The day's spend from the ledger, every page of it.
+// The day's operator spend from the ledger, every page of it.
 export async function sumLedgerSince(sinceIso: string): Promise<number> {
   let total = 0;
   for (let from = 0; ; from += PAGE) {
-    const costs = await ledgerPage(sinceIso, from, from + PAGE - 1);
-    total += costs.reduce((sum, c) => sum + c, 0);
-    if (costs.length < PAGE) return total;
+    const rows = await ledgerPage(sinceIso, from, from + PAGE - 1);
+    total += rows.reduce((sum, row) => sum + operatorCost(row), 0);
+    if (rows.length < PAGE) return total;
   }
 }
 
@@ -129,10 +158,20 @@ async function spentSince(sinceIso: string): Promise<number> {
   return value;
 }
 
-// Add one paid call's cost to the day's counter. Runs after the response is
-// sent (it never delays the caller) and never throws.
-export function recordSpend(costUsd: number, now: Date = new Date()): void {
-  if (!(costUsd > 0) || testReader) return;
+// Add one operator-funded call's cost to the day's counter. A call any other
+// lane funded is not the operator's spend and is ignored. Runs after the
+// response is sent (it never delays the caller) and never throws.
+export function recordSpend(
+  costUsd: number,
+  fundedBy: FundedBy,
+  now: Date = new Date(),
+): void {
+  if (fundedBy !== "operator" || !(costUsd > 0)) return;
+  if (testCounter) {
+    testCounter(costUsd);
+    return;
+  }
+  if (testReader) return;
   const redis = getRedis();
   if (!redis) return;
   const key = counterKey(startOfUtcDayIso(now));
