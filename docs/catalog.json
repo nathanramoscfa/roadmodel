@@ -1,10 +1,10 @@
 {
   "schema_version": "4",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-10-02T22:10:28Z",
+  "generated_at_utc": "2026-10-03T17:24:28Z",
   "source_doc_sha256": {
-    "model-selector.txt": "3a1897163e23e66afb77cf2f76ae84aa9354f85b07a235c27fb6bc55e7b657f8",
-    "model-tier-cost-scale.md": "2b3b0eb82237eb5cb5bf468a3fe971bcaf0160ad7d0bc700698d2c16640bc41d"
+    "model-selector.txt": "4f3b744150059b1b35e10b00e498db99aa7d35a5c689a380926cb21e75a7591a",
+    "model-tier-cost-scale.md": "c09e158c26dc8df964cf097e2afb1dc166edb3cd6d0890cd2ef601ae00a15ed7"
   },
   "models": [
     {
@@ -24,7 +24,7 @@
         "speed": "S"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 16.9 (reasoning); Output Speed 122.5 tokens/s; AA-Omniscience -4.2; latency leader among Claude family",
+      "headline_benchmarks": "AA Intelligence Index 16.9 (reasoning); Output Speed 109.7 tokens/s; AA-Omniscience -4.2; latency leader among Claude family",
       "pricing_notes": "Hidden by default; Bedrock/Vertex: regional endpoints +10% surcharge; Cache: writes 1.25x, reads 0.1x",
       "best_for": "Speed-optimized lowest-cost Claude model, ideal for simple completions, high-volume repetitive tasks, and latency-sensitive workflows where a lightweight capable response matters more than deep reasoning",
       "superseded_by": null,
@@ -358,6 +358,31 @@
       "retires_on": "2026-11-01"
     },
     {
+      "id": "gemini-3.1-flash-lite",
+      "name": "Gemini 3.1 Flash-Lite",
+      "input_price_per_1m": 0.25,
+      "output_price_per_1m": 1.5,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "B",
+        "agentic": "B",
+        "multimodal": "B",
+        "long-context": "B",
+        "knowledge": "B",
+        "speed": "S"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "Artificial Analysis has not measured Gemini 3.1 Flash-Lite yet, so its letters are estimates",
+      "pricing_notes": "Provider-direct Google API per-token pricing (not via the Cursor pool)",
+      "best_for": "Competent coding, planning, agentic work, multimodal input, long context and knowledge, with very fast output, at a low price.",
+      "superseded_by": null,
+      "superseded_on": null,
+      "added_on": "2026-10-03",
+      "retires_on": null
+    },
+    {
       "id": "gemini-3.1-pro",
       "name": "Gemini 3.1 Pro",
       "input_price_per_1m": 2.0,
@@ -406,6 +431,31 @@
       "superseded_on": "2026-09-24",
       "added_on": null,
       "retires_on": "2026-10-24"
+    },
+    {
+      "id": "gemini-3.5-flash-lite",
+      "name": "Gemini 3.5 Flash-Lite",
+      "input_price_per_1m": 0.3,
+      "output_price_per_1m": 2.5,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "B",
+        "planning": "B",
+        "agentic": "B",
+        "multimodal": "B",
+        "long-context": "B",
+        "knowledge": "B",
+        "speed": "S"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "Artificial Analysis has not measured Gemini 3.5 Flash-Lite yet, so its letters are estimates",
+      "pricing_notes": "Provider-direct Google API per-token pricing (not via the Cursor pool)",
+      "best_for": "Competent coding, planning, agentic work, multimodal input, long context and knowledge, with very fast output, at a low price.",
+      "superseded_by": null,
+      "superseded_on": null,
+      "added_on": "2026-10-03",
+      "retires_on": null
     },
     {
       "id": "gemini-3.6-flash",
@@ -474,7 +524,7 @@
         "speed": "S"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 40.9 (high); HLE 47.8% (high); Terminal-Bench 2.1 87.6; Output Speed 237.7 tokens/s",
+      "headline_benchmarks": "AA Intelligence Index 40.9 (high); HLE 47.8% (high); Terminal-Bench 2.1 87.6; Output Speed 255.6 tokens/s",
       "pricing_notes": "-",
       "best_for": "Frontier-class multimodal input, plus strong coding, planning, agentic work, long context and knowledge, with very fast output, at a low price. Its AA Intelligence Index of 40.9 ranks 18th of 54 measured models.",
       "superseded_by": null,
@@ -574,7 +624,7 @@
         "speed": "B"
       },
       "jurisdiction": "cn",
-      "headline_benchmarks": "AA Intelligence Index 44.8 (max); HLE 42.3%; SciCode 59.0; Terminal-Bench 4.0 41.9; AA-LCR 0.797; LMArena Text Elo 1472.2 (#26); LMArena Text coding Elo 1497.1 (#26); LMArena WebDev Elo 1622.0 (#19)",
+      "headline_benchmarks": "AA Intelligence Index 44.8 (max); HLE 42.3%; SciCode 59.0; Terminal-Bench 4.0 41.9; AA-LCR 0.797; LMArena Text Elo 1471.4 (#26); LMArena Text coding Elo 1496.7 (#27); LMArena WebDev Elo 1623.0 (#20)",
       "pricing_notes": "Hidden by default; Same per-token rates as GLM 5.2",
       "best_for": "Frontier-class coding and agentic work, plus strong planning, long context and knowledge, at a low price. Its AA Intelligence Index of 44.8 ranks 12th of 54 measured models. It is the cheapest model in the catalog rated S for agentic work. Weakest at multimodal input (D).",
       "superseded_by": null,
@@ -599,7 +649,7 @@
         "speed": "S"
       },
       "jurisdiction": "cn",
-      "headline_benchmarks": "AA Intelligence Index 41.8; HLE 39.9%; SciCode 51.6; Terminal-Bench 4.0 32.8; AA-LCR 0.800; LMArena Text Elo 1470.5 (#29); LMArena Text coding Elo 1506.8 (#17); LMArena WebDev Elo 1614.8 (#24)",
+      "headline_benchmarks": "AA Intelligence Index 41.8; HLE 39.9%; SciCode 51.6; Terminal-Bench 4.0 32.8; AA-LCR 0.800; LMArena Text Elo 1469.6 (#30); LMArena Text coding Elo 1506.3 (#18); LMArena WebDev Elo 1615.6 (#25)",
       "pricing_notes": "Hidden by default",
       "best_for": "Strong coding, planning, agentic work and long context, with very fast output, at a low price. Its AA Intelligence Index of 41.8 ranks 16th of 54 measured models, the highest of any model at its price or lower.",
       "superseded_by": null,
@@ -824,7 +874,7 @@
         "speed": "B"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 39.0 (xhigh); LMArena Text Elo 1452.3 (#46); HLE 43.7% (xhigh); \u03c4\u00b2-bench banking pass_1 39.6%",
+      "headline_benchmarks": "AA Intelligence Index 39.0 (xhigh); LMArena Text Elo 1452.2 (#47); HLE 43.7% (xhigh); \u03c4\u00b2-bench banking pass_1 39.6%",
       "pricing_notes": "Hidden by default; Requires Max Mode on legacy request-based plans; Agentic and reasoning capabilities; 90% discount on cached input tokens; Fast mode is 15% faster with 2x pricing; Long context supports up to 1M tokens with 2x input pricing",
       "best_for": "Strong coding, planning, agentic work, multimodal input, long context and knowledge at a high price. Its AA Intelligence Index of 39.0 ranks 22nd of 54 measured models. Superseded by GPT-5.6 Terra.",
       "superseded_by": "gpt-5.6-terra",
@@ -974,7 +1024,7 @@
         "speed": "A"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 42.1 (max); HLE 42.9%; Terminal-Bench 2.1 88.0; Output Speed 106.4 tokens/s",
+      "headline_benchmarks": "AA Intelligence Index 42.1 (max); HLE 42.9%; Terminal-Bench 2.1 88.0; Output Speed 110.1 tokens/s",
       "pricing_notes": "Requires Max Mode on legacy request-based plans; Mid-tier GPT-5.6 variant between Sol and Luna; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate",
       "best_for": "OpenAI's mid-tier GPT-5.6 variant between Sol (flagship) and Luna (mini) at medium-tier pricing ($2/$12) \u2014 Artificial Analysis Intelligence Index 42.1 (max) matches near-frontier reasoning while output speed (~105 tokens/s) is faster than most peers; pick for balanced near-frontier reasoning, agentic execution, and speed when Sol's high tier isn't justified but stronger throughput than GPT-5.4 is desired.",
       "superseded_by": null,
@@ -999,7 +1049,7 @@
         "speed": "B"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 52.7 (max); HLE 54.7%; SciCode 56.5; Terminal-Bench 4.0 59.1; AA-LCR 0.807; LMArena WebDev #2 (Elo 1789.1); LMArena Text coding Elo 1488.1 (#36); LMArena Text Elo 1443.7 (#59)",
+      "headline_benchmarks": "AA Intelligence Index 52.7 (max); HLE 54.7%; SciCode 56.5; Terminal-Bench 4.0 59.1; AA-LCR 0.807; LMArena WebDev #2 (Elo 1787.7); LMArena Text coding Elo 1488.6 (#35); LMArena Text Elo 1443.7 (#59)",
       "pricing_notes": "Provider-direct OpenAI API per-token pricing (not via the Cursor pool)",
       "best_for": "Frontier-class coding, planning and agentic work, plus strong long context and knowledge, at a very high price. Its AA Intelligence Index of 52.7 ranks 4th of 54 measured models.",
       "superseded_by": null,
@@ -1024,7 +1074,7 @@
         "speed": "S"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 38.1 (max); HLE 38.5%; SciCode 54.6; Terminal-Bench 4.0 12.6; AA-LCR 0.833; LMArena WebDev #30 (Elo 1581.9)",
+      "headline_benchmarks": "AA Intelligence Index 38.1 (max); HLE 38.5%; SciCode 54.6; Terminal-Bench 4.0 12.6; AA-LCR 0.833; LMArena WebDev #32 (Elo 1578.7)",
       "pricing_notes": "Provider-direct OpenAI API per-token pricing (not via the Cursor pool)",
       "best_for": "Strong coding, planning, agentic work and long context, with very fast output, at a low price. Its AA Intelligence Index of 38.1 ranks 25th of 54 measured models, the highest of any model at its price or lower.",
       "superseded_by": null,
@@ -1049,7 +1099,7 @@
         "speed": "D"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 47.6 (max); HLE 47.9%; SciCode 57.6; Terminal-Bench 4.0 43.9; AA-LCR 0.837; LMArena WebDev #7 (Elo 1689.3)",
+      "headline_benchmarks": "AA Intelligence Index 47.6 (max); HLE 47.9%; SciCode 57.6; Terminal-Bench 4.0 43.9; AA-LCR 0.837; LMArena WebDev #8 (Elo 1689.0)",
       "pricing_notes": "Provider-direct OpenAI API per-token pricing (not via the Cursor pool)",
       "best_for": "Frontier-class coding, agentic work and long context, plus strong planning, multimodal input and knowledge, at a medium price. Its AA Intelligence Index of 47.6 ranks 9th of 54 measured models. Weakest at speed (D).",
       "superseded_by": null,
@@ -1074,7 +1124,7 @@
         "speed": "D"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 51.8 (max); HLE 52.9%; SciCode 54.2; Terminal-Bench 4.0 56.1; AA-LCR 0.830; LMArena WebDev #3 (Elo 1758.7)",
+      "headline_benchmarks": "AA Intelligence Index 51.8 (max); HLE 52.9%; SciCode 54.2; Terminal-Bench 4.0 56.1; AA-LCR 0.830; LMArena WebDev #4 (Elo 1757.8)",
       "pricing_notes": "Provider-direct OpenAI API per-token pricing (not via the Cursor pool)",
       "best_for": "Frontier-class agentic work, plus strong coding, planning, multimodal input, long context and knowledge, at a medium price. Its AA Intelligence Index of 51.8 ranks 5th of 54 measured models. Weakest at speed (D).",
       "superseded_by": null,
@@ -1374,7 +1424,7 @@
         "speed": "D"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 40.7 (max); LMArena Text #15 (Elo 1483.6); LMArena WebDev #34 (Elo 1556.0); AA-Omniscience 26.2 (#2)",
+      "headline_benchmarks": "AA Intelligence Index 40.7 (max); LMArena Text #14 (Elo 1483.3); LMArena WebDev #36 (Elo 1555.3); AA-Omniscience 26.2 (#2)",
       "pricing_notes": "Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)",
       "best_for": "Strong coding, planning, agentic work, multimodal input, long context and knowledge at a very high price. Its AA Intelligence Index of 40.7 ranks 19th of 54 measured models. Weakest at speed (D). Superseded by Opus 5.5.",
       "superseded_by": "claude-opus-5-5",
@@ -1424,7 +1474,7 @@
         "speed": "B"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 30.1 (max); HLE 33.6%; SciCode 50.1; Terminal-Bench 4.0 3.0; AA-LCR 0.800; LMArena Text Elo 1457.7 (#41); AA-Omniscience 12.4",
+      "headline_benchmarks": "AA Intelligence Index 30.1 (max); HLE 33.6%; SciCode 50.1; Terminal-Bench 4.0 3.0; AA-LCR 0.800; LMArena Text Elo 1457.8 (#41); AA-Omniscience 12.4",
       "pricing_notes": "Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)",
       "best_for": "Strong multimodal input and long context at a high price. Its AA Intelligence Index of 30.1 ranks 33rd of 54 measured models.",
       "superseded_by": null,
@@ -1826,8 +1876,10 @@
         "gemini-2.5-flash",
         "gemini-3-flash",
         "gemini-3-pro",
+        "gemini-3.1-flash-lite",
         "gemini-3.1-pro",
         "gemini-3.5-flash",
+        "gemini-3.5-flash-lite",
         "gemini-3.6-flash",
         "gemini-3.7-flash",
         "gemini-3.8-flash"
@@ -1864,6 +1916,12 @@
           "high"
         ],
         "gemini-3.5-flash": [
+          "minimal",
+          "low",
+          "medium",
+          "high"
+        ],
+        "gemini-3.5-flash-lite": [
           "minimal",
           "low",
           "medium",
@@ -2002,8 +2060,10 @@
         "deepseek-v4-pro",
         "gemini-2.5-flash",
         "gemini-3-flash",
+        "gemini-3.1-flash-lite",
         "gemini-3.1-pro",
         "gemini-3.5-flash",
+        "gemini-3.5-flash-lite",
         "gemini-3.6-flash",
         "gemini-3.7-flash",
         "gemini-3.8-flash",
