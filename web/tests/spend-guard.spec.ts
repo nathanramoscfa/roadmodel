@@ -9,22 +9,27 @@ import { test, expect } from "@playwright/test";
 
 import {
   _setLedgerPageForTest,
+  _setSpendCounterForTest,
   _setSpendReaderForTest,
   dailyCostCapTripped,
+  operatorCost,
+  recordSpend,
   secondsToUtcMidnight,
   startOfUtcDayIso,
   sumLedgerSince,
+  type LedgerRow,
 } from "../lib/spend-guard";
 
 test.afterEach(() => {
   _setSpendReaderForTest(null);
   _setLedgerPageForTest(null);
+  _setSpendCounterForTest(null);
 });
 
 test("the ledger sum reads every page, not just the API's first 1,000 rows", async () => {
   // 2,500 calls at a cent each: a single capped read saw $10 and a $20 cap
   // could never trip.
-  const rows = Array.from({ length: 2_500 }, () => 0.01);
+  const rows: LedgerRow[] = Array.from({ length: 2_500 }, () => ({ cost_usd: 0.01, funded_by: "operator" }));
   const pages: [number, number][] = [];
   _setLedgerPageForTest(async (_since, from, to) => {
     pages.push([from, to]);
@@ -80,4 +85,29 @@ test("startOfUtcDayIso is midnight UTC; secondsToUtcMidnight within a day", () =
   expect(startOfUtcDayIso(noon)).toBe("2026-06-27T00:00:00.000Z");
   const secs = secondsToUtcMidnight(noon);
   expect(secs).toBe(12 * 60 * 60); // 12h to next midnight
+});
+
+test("the seed counts operator rows and unstamped history; visitor and keyless rows count nothing", async () => {
+  const rows: LedgerRow[] = [
+    { cost_usd: 0.5, funded_by: "operator" },
+    { cost_usd: "0.25", funded_by: null }, // history from before funded_by
+    { cost_usd: 0.1 }, // a reader that omits the column
+    { cost_usd: 7, funded_by: "visitor" },
+    { cost_usd: 9, funded_by: "keyless" },
+  ];
+  _setLedgerPageForTest(async (_since, from, to) => rows.slice(from, to + 1));
+  expect(await sumLedgerSince("2026-10-02T00:00:00.000Z")).toBeCloseTo(0.85, 9);
+  expect(operatorCost({ cost_usd: 3, funded_by: "visitor" })).toBe(0);
+  expect(operatorCost({ cost_usd: 3, funded_by: "keyless" })).toBe(0);
+  expect(operatorCost({ cost_usd: 3, funded_by: "operator" })).toBe(3);
+});
+
+test("the counter moves for operator-funded calls only", () => {
+  const added: number[] = [];
+  _setSpendCounterForTest((usd) => added.push(usd));
+  recordSpend(0.004, "operator");
+  recordSpend(0.5, "visitor");
+  recordSpend(0.5, "keyless");
+  recordSpend(0, "operator");
+  expect(added).toEqual([0.004]);
 });

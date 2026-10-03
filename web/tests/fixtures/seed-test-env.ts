@@ -22,6 +22,9 @@ const placeholders: Record<string, string> = {
   // branches of isRateLimitExempt(). Can't match any real Supabase uid; only
   // affects in-process unit tests (E2E uses the webServer env, not this seed).
   RECOMMEND_RATELIMIT_EXEMPT_USER_IDS: "rl-exempt-test-uid",
+  // A dummy invited user_id so funding-lane.spec can exercise the invite list
+  // (RECOMMEND_INVITED_USER_IDS). Same scope as the founder id above.
+  RECOMMEND_INVITED_USER_IDS: "invited-test-uid",
 };
 
 for (const [key, value] of Object.entries(placeholders)) {

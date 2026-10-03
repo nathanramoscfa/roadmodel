@@ -19,14 +19,13 @@ export function seconds(s: number): string {
 }
 
 export const ACCESS_LABEL: Record<EngineAccess, string> = {
-  public: "Everyone",
-  signed_in: "Signed-in accounts",
+  invited: "Invited members",
   founder: "Operator only",
 };
 
 // Why a locked engine is locked, in the menu's words.
 export function lockReason(access: EngineAccess, signedIn: boolean, evaluated: boolean): string {
   if (!evaluated) return "Awaiting evaluation";
-  if (access === "signed_in") return "Sign in to use";
-  return signedIn ? "Operator only" : "Operator only · sign in";
+  if (access === "invited") return signedIn ? "Invited members" : "Invited members · sign in";
+  return "Operator only";
 }

@@ -5,6 +5,13 @@ Parses the SQL with sqlparse and asserts the column list, BRIN
 index, RLS enable, and the two service_role policies are all
 present and in the documented order. Also asserts the migration
 filename matches the `^\\d{14}_[a-z_]+\\.sql$` convention.
+
+Phase 4.11 Step 1 adds the outcome-parity guard: the outcome CHECK the
+migrations leave in force must equal the AuditOutcome union in
+web/lib/audit.ts. The two drifted (5 values against 10) and every row
+with a missing outcome failed to insert, silently. The funded_by column
+is pinned the same way, against the FundedBy union in
+web/lib/funding-lane.ts.
 """
 
 from __future__ import annotations
@@ -160,10 +167,11 @@ def test_service_role_policies_present() -> None:
     )
 
 
-def test_outcome_check_constraint_lists_all_outcomes() -> None:
-    """The audit-log writer in web/lib/audit.ts allows exactly five
-    outcome strings; the DB check constraint must match them or
-    inserts will fail at runtime.
+def test_original_outcome_check_constraint_is_unchanged() -> None:
+    """The Phase 3 migration's five outcomes, as applied in production on
+    2026-06-01. A migration is history: later ones widen the CHECK
+    (see test_outcome_check_in_force_equals_the_writer_union), never this
+    file.
     """
     sql = _read_sql()
     required = {
@@ -182,3 +190,89 @@ def test_outcome_check_constraint_lists_all_outcomes() -> None:
         f"  expected: {sorted(required)}\n"
         f"  got:      {sorted(declared)}"
     )
+
+
+# --- Phase 4.11 Step 1: outcome parity and funded_by ---------------------
+
+AUDIT_TS = REPO_ROOT / "web" / "lib" / "audit.ts"
+FUNDING_LANE_TS = REPO_ROOT / "web" / "lib" / "funding-lane.ts"
+FUNDED_BY_MIGRATION = MIGRATIONS_DIR / "20261002000000_audit_log_funded_by.sql"
+
+# The outcome set in force after every migration, pinned so a change to it is
+# a deliberate edit here as well as in the migration and the union.
+EXPECTED_OUTCOMES = {
+    "ok",
+    "rate_limited",
+    "burst_dropped",
+    "recommender_error",
+    "bad_input",
+    "roadmap_monthly_cap",
+    "roadmap_error",
+    "unauthorized",
+    "daily_cost_cap",
+    "bypassed_rate_limit",
+    "funding_required",
+    "visitor_key_rejected",
+    "visitor_quota",
+    "provider_error",
+}
+
+
+def _ts_string_union(path: Path, type_name: str) -> set[str]:
+    """The string literals of `export type <type_name> = "a" | "b" ...;`,
+    comments stripped."""
+    text = path.read_text(encoding="utf-8")
+    match = re.search(rf"export type {type_name} =(.*?);", text, re.S)
+    assert match, f"no `export type {type_name}` in {path}"
+    body = re.sub(r"//[^\n]*", "", match.group(1))
+    values = set(re.findall(r'"([a-z_]+)"', body))
+    assert values, f"{type_name} in {path} has no string members"
+    return values
+
+
+def _outcome_check_in_force() -> set[str]:
+    """The outcome values of the last migration (in apply order) that sets
+    the audit_log outcome CHECK."""
+    in_force: set[str] | None = None
+    for path in sorted(MIGRATIONS_DIR.glob("*.sql")):
+        sql = sqlparse.format(path.read_text(encoding="utf-8"), strip_comments=True)
+        for match in re.finditer(r"(?is)outcome\s+in\s*\(([^)]+)\)", sql):
+            in_force = set(re.findall(r"'([a-z_]+)'", match.group(1)))
+    assert in_force is not None, "no migration sets the outcome CHECK"
+    return in_force
+
+
+def test_outcome_check_in_force_equals_the_writer_union() -> None:
+    sql_outcomes = _outcome_check_in_force()
+    ts_outcomes = _ts_string_union(AUDIT_TS, "AuditOutcome")
+    assert sql_outcomes == ts_outcomes, (
+        "audit_log outcome CHECK and web/lib/audit.ts AuditOutcome differ.\n"
+        f"  only in SQL: {sorted(sql_outcomes - ts_outcomes)}\n"
+        f"  only in TS:  {sorted(ts_outcomes - sql_outcomes)}"
+    )
+    assert sql_outcomes == EXPECTED_OUTCOMES
+
+
+def test_funded_by_migration_replaces_the_outcome_check_by_name() -> None:
+    """Dropping by name (if exists) and re-adding converges production's
+    original constraint and a fresh database to the same state."""
+    sql = FUNDED_BY_MIGRATION.read_text(encoding="utf-8")
+    assert re.search(r"(?is)drop\s+constraint\s+if\s+exists\s+audit_log_outcome_check", sql)
+    assert re.search(r"(?is)add\s+constraint\s+audit_log_outcome_check\s+check", sql)
+
+
+def test_funded_by_column_values_equal_the_writer_union() -> None:
+    sql = sqlparse.format(FUNDED_BY_MIGRATION.read_text(encoding="utf-8"), strip_comments=True)
+    match = re.search(
+        r"(?is)add\s+column\s+funded_by\s+text\s+null.*?funded_by\s+in\s*\(([^)]+)\)", sql
+    )
+    assert match, "expected `add column funded_by text null ... check (funded_by in (...))`"
+    declared = set(re.findall(r"'([a-z_]+)'", match.group(1)))
+    assert declared == {"operator", "visitor", "keyless"}
+    assert declared == _ts_string_union(FUNDING_LANE_TS, "FundedBy")
+
+
+def test_funded_by_migration_grants_nothing() -> None:
+    """Additive only: no grant, no policy, no RLS change on audit_log."""
+    sql = sqlparse.format(FUNDED_BY_MIGRATION.read_text(encoding="utf-8"), strip_comments=True)
+    assert not re.search(r"(?i)\b(grant|revoke|create\s+policy|alter\s+policy|row\s+level)\b", sql)
