@@ -18,6 +18,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   bundled selector's OpenRouter description says the list is synced
   daily.
 
+### Fixed
+
+- **`/roadmodel-upgrade` keeps the MCP server current.** After the
+  registered projects, each run upgrades `roadmodel[mcp]` in the env behind
+  Claude Code's `roadmodel` MCP registration, reading through a launcher
+  script when the registration points at one, and reports it on an
+  `MCP server env:` line. That env is usually none of the projects', so
+  nothing had upgraded it: one machine served a 0.2.36 catalog to every
+  session while 0.2.64 was current. A registration whose interpreter cannot
+  be found makes the run report it as needing attention.
+
 ## [0.2.64] — 2026-10-02
 
 ### Changed

@@ -1912,3 +1912,98 @@ def test_output_survives_a_cp1252_console(up: ModuleType, monkeypatch: pytest.Mo
     print("REFRESH-RESULT: no changes ✅ → done")
     console.flush()
     assert raw.getvalue().endswith(b"REFRESH-RESULT: no changes ? ? done\n")
+
+
+# --------------------------------------------------------------------------
+# The MCP server's own env — upgraded with the projects (2026-10-02: the
+# Mac's sat on 0.2.36 for 28 releases because nothing touched it)
+# --------------------------------------------------------------------------
+
+_BIN = "Scripts" if os.name == "nt" else "bin"
+_MCP_EXE = "roadmodel-mcp.exe" if os.name == "nt" else "roadmodel-mcp"
+
+
+def _mcp_venv(root: Path) -> tuple[Path, Path]:
+    """A venv with a python and the roadmodel-mcp console script; returns both."""
+    prefix = _fake_venv(root, "mcp-venv")
+    script = prefix / _BIN / _MCP_EXE
+    script.write_text("")
+    python = prefix / _BIN / ("python.exe" if os.name == "nt" else "python")
+    return python, script
+
+
+def test_mcp_python_from_the_console_script(up: ModuleType, tmp_path: Path) -> None:
+    python, script = _mcp_venv(tmp_path)
+    assert up.mcp_server_python([str(script)]) == python
+
+
+def test_mcp_python_through_a_launcher_script(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    python, _ = _mcp_venv(tmp_path)
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    launcher = tmp_path / "mcp-launch.sh"
+    launcher.write_text(
+        "#!/bin/sh\n"
+        "# Launches roadmodel-mcp (stdio) for Claude Code.\n"
+        'export GOOGLE_API_KEY="$(security find-generic-password -w)"\n'
+        f'exec "$HOME/mcp-venv/{_BIN}/{_MCP_EXE}"\n'
+    )
+    assert up.mcp_server_python([str(launcher)]) == python
+
+
+def test_mcp_python_when_an_interpreter_runs_the_module(up: ModuleType, tmp_path: Path) -> None:
+    python, _ = _mcp_venv(tmp_path)
+    assert up.mcp_server_python([str(python), "-m", "roadmodel.mcp_server"]) == python
+
+
+def test_an_unplaceable_mcp_registration_needs_attention(up: ModuleType, tmp_path: Path) -> None:
+    launcher = tmp_path / "launch.sh"
+    launcher.write_text("#!/bin/sh\nexec roadmodel-mcp\n")  # bare name: nothing to place
+    assert up.mcp_server_python([str(launcher)]) is None
+    assert up.mcp_server_python([str(tmp_path / "missing")]) is None
+    line, ok = up.update_mcp_env([str(launcher)], dry_run=False)
+    assert not ok and "could not find the interpreter" in line
+
+
+def test_no_mcp_registration_is_fine(up: ModuleType) -> None:
+    line, ok = up.update_mcp_env(None, dry_run=False)
+    assert ok and "no roadmodel MCP registration" in line
+
+
+def test_mcp_env_upgrades_with_the_mcp_extra(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    python, script = _mcp_venv(tmp_path)
+    calls: list[list[str]] = []
+    versions = iter(["0.2.36", "0.2.64"])
+    monkeypatch.setattr(up, "installed_version", lambda _python: next(versions))
+
+    def fake_run(argv: list[str], timeout: int, cwd: object = None) -> object:
+        calls.append(argv)
+        return subprocess.CompletedProcess(argv, 0, "", "")
+
+    monkeypatch.setattr(up, "_run", fake_run)
+    line, ok = up.update_mcp_env([str(script)], dry_run=False)
+    assert ok
+    assert calls == [up._pip_upgrade(python, "roadmodel[mcp]")]
+    assert calls[0][-1] == "roadmodel[mcp]" and "--no-cache-dir" in calls[0]
+    assert line.startswith("0.2.36 -> 0.2.64") and "restart agent sessions" in line
+
+
+def test_mcp_env_dry_run_and_pip_failure(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    python, script = _mcp_venv(tmp_path)
+    monkeypatch.setattr(up, "_run", lambda *a, **k: pytest.fail("dry run must not run pip"))
+    line, ok = up.update_mcp_env([str(script)], dry_run=True)
+    assert ok and line == f"plan: upgrade roadmodel[mcp] with {python}"
+
+    monkeypatch.setattr(up, "installed_version", lambda _python: "0.2.36")
+    monkeypatch.setattr(
+        up,
+        "_run",
+        lambda argv, timeout, cwd=None: subprocess.CompletedProcess(argv, 1, "", "no network"),
+    )
+    line, ok = up.update_mcp_env([str(script)], dry_run=False)
+    assert not ok and "pip install failed" in line and "no network" in line
