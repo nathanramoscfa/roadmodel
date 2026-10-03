@@ -51,8 +51,11 @@ python ~/.config/roadmodel/update_projects.py [--add <dir> …] [--jobs N]
 
 It detects each project's env (`.venv`/`venv`/`env` dir → `environment.yml`
 name → conda env named like the folder → conda env inside the project),
-upgrades `roadmodel` in all of them concurrently, re-exports `planning/`
-where one exists (`--init-kit` to create one everywhere), and
+upgrades `roadmodel` in all of them concurrently, then upgrades
+`roadmodel[mcp]` in the env behind Claude Code's `roadmodel` MCP
+registration (read through any launcher script; the `MCP server env:` line
+reports it, and sessions restart to load a new version), re-exports
+`planning/` where one exists (`--init-kit` to create one everywhere), and
 re-downloads the five command files for every agent installed on this
 machine: `~/.claude/commands` (mirroring any `~/.claude/skills/<name>/
 SKILL.md` copies), `~/.gemini/commands/<name>.toml` for Gemini CLI, and

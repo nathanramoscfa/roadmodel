@@ -4,9 +4,10 @@
 
 One machine, many projects, each with its own conda env or venv. This
 script reads the project list, works out each project's environment,
-upgrades ``roadmodel`` in all of them concurrently, refreshes each
-project's ``planning/`` kit where one exists, and re-downloads the
-user-scope Claude Code commands — one run, one table.
+upgrades ``roadmodel`` in all of them concurrently, upgrades
+``roadmodel[mcp]`` in the env that serves the user-scope MCP server,
+refreshes each project's ``planning/`` kit where one exists, and
+re-downloads the user-scope Claude Code commands — one run, one table.
 
     python update_projects.py                       # every registered project
     python update_projects.py --add C:\\dev\\app1 ... # register, then run
@@ -378,7 +379,7 @@ def _tail(text: str, n: int = 6) -> str:
     return "\n".join(lines[-n:])
 
 
-def _pip_upgrade(python: Path) -> list[str]:
+def _pip_upgrade(python: Path, spec: str = "roadmodel") -> list[str]:
     # --no-cache-dir: pip's HTTP cache can serve an index page fetched before
     # a release existed, so a run minutes after publishing reported
     # "0.2.37 -> 0.2.37 ok" (2026-09-23) and the new version waited a day.
@@ -390,7 +391,7 @@ def _pip_upgrade(python: Path) -> list[str]:
         "--upgrade",
         "--no-cache-dir",
         "--quiet",
-        "roadmodel",
+        spec,
     ]
 
 
@@ -445,6 +446,95 @@ def update_project(entry: Entry, *, kit: bool, init_kit: bool, dry_run: bool) ->
 
     res.ok = True
     return res
+
+
+# --------------------------------------------------------------------------
+# The MCP server's own environment
+#
+# `roadmodel setup-mcp` registers the server from whichever env it ran in, and
+# one user-scope server serves every project, so that env is usually none of
+# the registered projects'. Nothing upgraded it: the Mac's sat on 0.2.36 for
+# 28 releases (found 2026-10-02) and served a stale catalog to every session.
+# Each run now finds the interpreter behind Claude Code's registration and
+# upgrades roadmodel[mcp] there too.
+# --------------------------------------------------------------------------
+
+MCP_SPEC = "roadmodel[mcp]"
+_MCP_SCRIPT_NAMES = {"roadmodel-mcp", "roadmodel-mcp.exe"}
+_PYTHON_NAME = re.compile(r"python(\d+(\.\d+)?)?(\.exe)?", re.IGNORECASE)
+# A console-script path inside a launcher (`exec "$HOME/.venvs/x/bin/roadmodel-mcp"`).
+_LAUNCHER_TARGET = re.compile(r"""[^\s"'`;|&()]*roadmodel-mcp(?:\.exe)?(?![\w.-])""")
+
+
+def _expand_home(token: str) -> Path:
+    home = str(Path.home())
+    for prefix in ("${HOME}", "$HOME", "%USERPROFILE%", "~"):
+        if token.startswith(prefix):
+            return Path(home + token[len(prefix) :])
+    return Path(token)
+
+
+def mcp_server_python(argv: Optional[list[str]]) -> Optional[Path]:
+    """The interpreter whose roadmodel serves the MCP registration ``argv``.
+
+    Three shapes are recognised: the ``roadmodel-mcp`` console script itself
+    (what ``setup-mcp`` registers), an interpreter running the module, and a
+    launcher script that execs the console script (to inject provider keys
+    first). None when the interpreter cannot be placed — nothing is guessed.
+    """
+    if not argv:
+        return None
+    found = shutil.which(argv[0]) if not Path(argv[0]).expanduser().is_absolute() else None
+    command = Path(found) if found else Path(argv[0]).expanduser()
+    if not command.is_file():
+        return None
+    if _PYTHON_NAME.fullmatch(command.name):
+        return command
+    if command.name.lower() in _MCP_SCRIPT_NAMES:
+        script: Optional[Path] = command
+    else:
+        try:
+            text = command.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return None
+        targets = (_expand_home(m.group(0)) for m in _LAUNCHER_TARGET.finditer(text))
+        script = next((p for p in targets if p.is_absolute() and p.is_file()), None)
+    if script is None:
+        return None
+    return _python_path(script.parent.parent)
+
+
+def update_mcp_env(argv: Optional[list[str]], *, dry_run: bool) -> tuple[str, bool]:
+    """Upgrade roadmodel[mcp] in the env behind the MCP registration ``argv``.
+
+    Returns the line to print and whether the env is current (False means the
+    run needs attention).
+    """
+    if argv is None:
+        return "no roadmodel MCP registration in Claude Code; nothing to upgrade", True
+    python = mcp_server_python(argv)
+    if python is None:
+        return (
+            f"could not find the interpreter behind {argv[0]}; upgrade {MCP_SPEC} "
+            "in the env that serves it by hand",
+            False,
+        )
+    if dry_run:
+        return f"plan: upgrade {MCP_SPEC} with {python}", True
+    before = installed_version(python)
+    try:
+        cp = _run(_pip_upgrade(python, MCP_SPEC), timeout=PIP_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return f"pip install timed out after {PIP_TIMEOUT}s ({python})", False
+    except OSError as exc:
+        return f"could not run {python}: {exc}", False
+    if cp.returncode != 0:
+        return f"pip install failed ({python}):\n" + _tail(cp.stderr or cp.stdout), False
+    after = installed_version(python)
+    if after == "-":
+        return f"pip reported success but `import roadmodel` fails ({python})", False
+    note = " (restart agent sessions to load it)" if after != before else ""
+    return f"{before} -> {after} with {python}{note}", True
 
 
 # --------------------------------------------------------------------------
@@ -2545,6 +2635,11 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     print("\n" + _table(results))
 
+    # After the projects, never alongside them: the MCP env may be one of
+    # theirs, and two pips must not write one env at once.
+    mcp_line, mcp_ok = update_mcp_env(_roadmodel_mcp_command(), dry_run=args.dry_run)
+    print(f"\nMCP server env: {mcp_line}")
+
     if not args.no_parity:
         print("\nProject parity (AGENTS.md + memory for non-Claude agents):")
         for entry in entries:
@@ -2594,6 +2689,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(f"\n{len(failed)} project(s) need attention:")
         for r in failed:
             print(f"  {r.entry.path}: {r.error}")
+        return 1
+    if not mcp_ok:
+        print(f"\nThe MCP server env needs attention: {mcp_line}")
         return 1
     return 1 if refresh_attention else 0
 
