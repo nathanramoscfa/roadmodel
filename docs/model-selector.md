@@ -468,7 +468,12 @@ differently:
   default. It also makes Opus 4.7+ and Fable default to a 1M context
   window on Bedrock, Vertex, Foundry and the Claude apps gateway. The
   `/effort` vocabulary and the extended-thinking controls are
-  unchanged.
+  unchanged. 2.1.288 fixes resumed sessions dropping the model's
+  earlier thinking, retries thinking-only responses after a
+  mid-response API timeout, and makes a plugin-defined agent spawned
+  by name run with its own effort instead of the default. 2.1.289 is a
+  plugin / mod / permission-rule bug-fix release. Neither changes the
+  `/effort` vocabulary or the extended-thinking controls.
 - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
   `reasoning_effort` knob — `low`, `medium`, `high`, `xhigh`, `max`,
   `ultra`. Codex's plan-mode `plan_mode_reasoning_effort` variant
