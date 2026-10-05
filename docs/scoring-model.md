@@ -239,6 +239,33 @@ tables). The service writes its per-user context as prose for the engine, so
 it renders a table-format twin from the same request
 (`scoring_context_from_request`) and passes it as `scoring_context_text`.
 
+## Keyless picks
+
+The service's `POST /v1/score` (bearer-authed, `service/app/score.py`) returns
+the ladder for a task that is already classified: `category`, `complexity`,
+`novel` and `budget_priority`, plus the same structured funding fields the
+ladder endpoint reads (`subscriptions`, `api_providers`,
+`consumption_headroom`, `allowed_jurisdictions`, the platform lists,
+`unavailable_models`). It runs `scoring.ladder` and nothing else, so it reads
+no provider key and answers at `cost_usd: 0` with `engine: "scoring-core"`.
+Each rung carries its three score terms (`quality`, `requirement_shortfall`,
+`cost`) and one plain sentence per term. An empty profile ranks the whole
+catalog: the endpoint hands the scorer a context that declares only the
+visitor's jurisdictions and platform lists, or `""`.
+
+`scripts/eval_keyless_agreement.py` measures how closely those picks follow
+the engine's. Per probe of the 12-probe battery it runs the engine ladder three
+times through the deployed service, takes each rung's modal model, and scores
+the probe once with its hand labels (`scripts/keyless_probe_labels.json`),
+both sides on one funding profile: an API key at every pay-per-token provider,
+which puts the whole catalog in the pool exactly as an empty profile does. The
+record, `docs/keyless-eval.json`, has to show at least 27 of 36 rungs agreeing
+and no Quality rung below the selector's Step 3 minimum for the probe's
+complexity; `tests/test_keyless_eval_shape.py` pins it. Since the engine copies
+the scorer's row for the classification it declares, a disagreement is a
+classification the engine and the labels read differently, and the record
+lists the engine's classification per run beside each label.
+
 ## Integration path
 
 1. **Done** — `roadmodel score` and the `score_candidates` MCP tool rank
@@ -246,5 +273,7 @@ it renders a table-format twin from the same request
 2. **Done** — /recommend's ladder: the engine classifies, the scorer's
    frontier ladder picks, the engine writes the rationale for the picks it
    is given, and code holds it to them.
-3. **Then** — the ledger; priors → measured values; the selector prose
+3. **Done** — keyless picks: `POST /v1/score` runs the ladder for a classified
+   task with no engine at all, measured against the engine's picks.
+4. **Then** — the ledger; priors → measured values; the selector prose
    shrinks to classification guidance and rationale style.

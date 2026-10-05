@@ -1,0 +1,89 @@
+{
+  "_comment": "scripts/keyless_probe_labels.json — hand labels for the 12-probe battery (scripts/eval_recommend_engines.py PROBES), read against <task-categories> and <selection-algorithm> Step 2 in docs/model-selector.txt: the PRIMARY category, overall complexity = the maximum of complexity / ambiguity / scope / novelty, and novel only for research-grade work (an open problem, a new algorithm, a multi-step proof that is not a known one). scripts/eval_keyless_agreement.py scores each probe with these labels and compares the picks with the engine's.",
+  "labels": [
+    {
+      "probe_id": "creative",
+      "category": "knowledge",
+      "complexity": "low",
+      "novel": false,
+      "reason": "Short creative prose: no category names fiction, so general language and world knowledge is the primary; one concern, a familiar form, nothing cross-cutting."
+    },
+    {
+      "probe_id": "coding-cli",
+      "category": "coding",
+      "complexity": "medium",
+      "novel": false,
+      "reason": "Implementation work; three interacting concerns (HTTP fetch, a local cache and its expiry, the CLI) make complexity Medium while scope stays small and the pattern is known."
+    },
+    {
+      "probe_id": "planning",
+      "category": "planning",
+      "complexity": "medium",
+      "novel": false,
+      "reason": "A multi-step plan, the planning category's own example; pacing graduate-level material across a week takes judgement (ambiguity Medium)."
+    },
+    {
+      "probe_id": "data-analysis",
+      "category": "long-context",
+      "complexity": "medium",
+      "novel": false,
+      "reason": "Large file ingestion is the long-context category's definition; separating seasonality from trend and charting it is a Medium judgement on a known method."
+    },
+    {
+      "probe_id": "legacy-refactor",
+      "category": "coding",
+      "complexity": "high",
+      "novel": false,
+      "reason": "A multi-file refactor (the selector's Step 1 coding example); 50 files into services is cross-cutting scope, so High; refactors are routine at any difficulty."
+    },
+    {
+      "probe_id": "math-proof",
+      "category": "knowledge",
+      "complexity": "low",
+      "novel": false,
+      "reason": "Mathematical domain knowledge; the irrationality of the square root of 2 is the textbook proof by contradiction, a known result in a few steps, so Low and routine."
+    },
+    {
+      "probe_id": "vision-ocr",
+      "category": "multimodal",
+      "complexity": "medium",
+      "novel": false,
+      "reason": "Reading a scanned image is the multimodal category; rebuilding table structure from a noisy scan adds ambiguity, Medium."
+    },
+    {
+      "probe_id": "ambiguous",
+      "category": "knowledge",
+      "complexity": "low",
+      "novel": false,
+      "reason": "A bare request for help names no task: general assistance at the lowest complexity."
+    },
+    {
+      "probe_id": "non-english",
+      "category": "knowledge",
+      "complexity": "medium",
+      "novel": false,
+      "reason": "Writing in French is cross-language accuracy (knowledge); rimes riches add a strict prosodic constraint on top of meaning, Medium."
+    },
+    {
+      "probe_id": "cost-bulk",
+      "category": "speed",
+      "complexity": "low",
+      "novel": false,
+      "reason": "High-volume routine classification is the speed category's definition; sentiment labelling is a known, per-item task, Low."
+    },
+    {
+      "probe_id": "fenced-json",
+      "category": "coding",
+      "complexity": "low",
+      "novel": false,
+      "reason": "Reviewing a two-key config for risks is a localized code review with a known answer (zero timeout, retries without backoff), Low."
+    },
+    {
+      "probe_id": "agentic-tooluse",
+      "category": "agentic",
+      "complexity": "high",
+      "novel": false,
+      "reason": "Autonomous tool use over mail and calendar APIs is the agentic category; several integrations acting on the user's behalf make complexity and scope High; a known kind of system, so routine."
+    }
+  ]
+}
