@@ -9,6 +9,7 @@ from fastapi import Depends, FastAPI, Response
 from .auth import require_bearer
 from .models import LadderResponse, RecommendRequest, RecommendResponse
 from .recommend import recommend, recommend_ladder
+from .score import router as score_router
 from .visitor import router as visitor_router
 
 # Disable the interactive docs + OpenAPI schema on deployed runtimes
@@ -31,8 +32,10 @@ app = FastAPI(
 
 # What this deployment can do beyond /v1/recommend, so the web edge and the
 # operator's probes can tell an older service from a newer one: "visitor-key"
-# is the visitor lane (POST /v1/visitor/recommend/ladder, app/visitor.py).
-CAPABILITIES: list[str] = ["visitor-key"]
+# is the visitor lane (POST /v1/visitor/recommend/ladder, app/visitor.py);
+# "score" is the keyless ladder from the scoring core (POST /v1/score,
+# app/score.py).
+CAPABILITIES: list[str] = ["visitor-key", "score"]
 
 
 @app.get("/healthz")
@@ -118,3 +121,7 @@ def recommend_ladder_endpoint(req: RecommendRequest, response: Response) -> Ladd
 # Phase 4.11 Step 2 — the visitor lane: one ladder call on the visitor's own
 # key, no fallback chain (app/visitor.py). Same bearer boundary as above.
 app.include_router(visitor_router)
+
+# Phase 4.11 Step 4 — keyless picks: the scoring core's ladder for a classified
+# task, no engine and no provider key (app/score.py). Same bearer boundary.
+app.include_router(score_router)
