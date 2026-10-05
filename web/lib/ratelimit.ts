@@ -8,7 +8,9 @@ import { env } from "./env";
 export type RateLimitReason =
   | "rate_limited"
   | "burst_dropped"
-  | "roadmap_monthly_cap";
+  | "roadmap_monthly_cap"
+  // The visitor lane: too many of this IP+UA's keys were declined today.
+  | "too_many_rejected_keys";
 
 export interface RateLimitResult {
   allowed: boolean;
@@ -25,10 +27,24 @@ interface Limiters {
   // Per-user monthly cap for /api/roadmap (rolling 30 days), keyed on the
   // Supabase user_id. Runs inside the route, after the funding lane.
   roadmapMonthly: Ratelimit;
+  // The visitor lane's limits (lib/funding-lane.ts), keyed on the salted
+  // IP+UA hashes since a visitor may be signed out: VISITOR_DAILY_LIMIT calls a
+  // day and 10 a minute, and VISITOR_REJECTED_LIMIT declined keys a day.
+  visitorDaily: Ratelimit;
+  visitorBurst: Ratelimit;
+  visitorRejected: Ratelimit;
 }
 
 // Recommendations an invited member may run on the operator's keys per day.
 export const INVITED_DAILY_LIMIT = 20;
+
+// Recommendations one IP+UA may run on its own keys per day. The visitor pays,
+// so this bounds load and abuse, not spend.
+export const VISITOR_DAILY_LIMIT = 50;
+// Declined keys one IP+UA may send per day: the defense against using
+// roadmodel to test stolen keys. The next attempt after these is refused
+// before it reaches a provider.
+export const VISITOR_REJECTED_LIMIT = 5;
 
 function buildLimiters(): Limiters | null {
   if (!env.UPSTASH_REDIS_URL || !env.UPSTASH_REDIS_TOKEN) {
@@ -60,6 +76,21 @@ function buildLimiters(): Limiters | null {
       limiter: Ratelimit.slidingWindow(env.ROADMAP_MONTHLY_LIMIT, "30 d"),
       prefix: "rl:roadmap",
     }),
+    visitorDaily: new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(VISITOR_DAILY_LIMIT, "1 d"),
+      prefix: "rl:visitor",
+    }),
+    visitorBurst: new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(10, "1 m"),
+      prefix: "rl:visitor",
+    }),
+    visitorRejected: new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(VISITOR_REJECTED_LIMIT, "1 d"),
+      prefix: "rl:visitor-rejected",
+    }),
   };
 }
 
@@ -75,6 +106,91 @@ export function setTestLaneLimiters(
   fake: { burst: LaneLimiter; invitedDaily: LaneLimiter } | null,
 ): void {
   testLaneLimiters = fake;
+}
+
+// Test seam for the visitor lane's three limiters (mirrors setTestLaneLimiters).
+type VisitorLimiters = {
+  burst: LaneLimiter;
+  daily: LaneLimiter;
+  rejected: Pick<Ratelimit, "limit" | "getRemaining">;
+};
+let testVisitorLimiters: VisitorLimiters | null = null;
+export function setTestVisitorLimiters(fake: VisitorLimiters | null): void {
+  testVisitorLimiters = fake;
+}
+function visitorLimiters(): VisitorLimiters | null {
+  if (testVisitorLimiters) return testVisitorLimiters;
+  if (!limiters) return null;
+  return {
+    burst: limiters.visitorBurst,
+    daily: limiters.visitorDaily,
+    rejected: limiters.visitorRejected,
+  };
+}
+
+// No Upstash in production: the visitor lane is not served unbounded, the same
+// fail-closed policy as checkInvitedLimits (the route answers 500 before any
+// upstream call). Elsewhere (local, CI, preview) it fails open.
+function requireLimiterInProduction(): void {
+  if (process.env.VERCEL_ENV === "production") {
+    throw new Error(
+      "[ratelimit] UPSTASH_REDIS_URL / UPSTASH_REDIS_TOKEN unset in " +
+        "production — refusing to run the visitor lane without a rate limiter.",
+    );
+  }
+}
+
+// The visitor lane's limits for one IP+UA, checked before the call: the
+// declined-key allowance first (read-only, so checking it consumes nothing),
+// then the 10-a-minute burst, then VISITOR_DAILY_LIMIT a day.
+export async function checkVisitorLimits(ipUa: string): Promise<RateLimitResult> {
+  const lane = visitorLimiters();
+  if (!lane) {
+    requireLimiterInProduction();
+    return { allowed: true };
+  }
+  try {
+    const rejected = await lane.rejected.getRemaining(`rejected:${ipUa}`);
+    if (rejected.remaining <= 0) {
+      return {
+        allowed: false,
+        reason: "too_many_rejected_keys",
+        retryAfter: Math.max(1, Math.ceil((rejected.reset - Date.now()) / 1000)),
+      };
+    }
+    const burst = await lane.burst.limit(`min:${ipUa}`);
+    if (!burst.success) {
+      return { allowed: false, reason: "burst_dropped", retryAfter: 60 };
+    }
+    const daily = await lane.daily.limit(`day:${ipUa}`);
+    if (!daily.success) {
+      return {
+        allowed: false,
+        reason: "rate_limited",
+        retryAfter: Math.max(1, Math.ceil((daily.reset - Date.now()) / 1000)),
+      };
+    }
+    return { allowed: true };
+  } catch (err) {
+    if (isE2eAuthEnabled()) {
+      console.warn("[ratelimit] Upstash unreachable in E2E mode (visitor) — failing open", err);
+      return { allowed: true };
+    }
+    throw err;
+  }
+}
+
+// Count one declined key against this IP+UA's daily allowance. Called after
+// the provider refused a visitor's key. Never throws: the visitor already has
+// their answer.
+export async function recordRejectedVisitorKey(ipUa: string): Promise<void> {
+  const lane = visitorLimiters();
+  if (!lane) return;
+  try {
+    await lane.rejected.limit(`rejected:${ipUa}`);
+  } catch (err) {
+    console.warn("[ratelimit] failed to count a declined visitor key (non-fatal)", err);
+  }
 }
 
 // Subset of the @upstash/ratelimit API the roadmap monthly cap uses.

@@ -1,5 +1,6 @@
 // web/lib/api.ts
 import { env } from "./env";
+import { VISITOR_KEY_HEADER, VISITOR_PROVIDER_HEADER, type VisitorLane } from "./funding-lane";
 
 // Headers for a server->service /v1/recommend call. Always JSON; attaches
 // the shared edge<->service bearer when ROADMODEL_INTERNAL_TOKEN is set.
@@ -15,6 +16,19 @@ export function recommenderRequestHeaders(): Record<string, string> {
     headers["Authorization"] = `Bearer ${token}`;
   }
   return headers;
+}
+
+// Headers for the visitor lane's service call: the ones above, plus the
+// visitor's key and provider, copied from the browser's request into the same
+// two headers. This is the only place the key is read for forwarding, and a
+// header is the only place it travels: never the body, the context, a log or
+// the audit row. The lane has already checked its shape (lib/funding-lane.ts).
+export function visitorRequestHeaders(req: Request, lane: VisitorLane): Record<string, string> {
+  return {
+    ...recommenderRequestHeaders(),
+    [VISITOR_KEY_HEADER]: (req.headers.get(VISITOR_KEY_HEADER) ?? "").trim(),
+    [VISITOR_PROVIDER_HEADER]: lane.provider,
+  };
 }
 
 export interface RecommendResponse {
@@ -72,9 +86,10 @@ export interface MultiRecommendResponse {
 }
 
 // The engine that wrote the picks: the user's menu choice, or the service's
-// fallback when that engine failed (`fell_back`), with what the call cost
-// roadmodel. `cost_source` says whether the cost came from the provider's
-// reported usage or the cold estimate.
+// fallback when that engine failed (`fell_back`), with what the call cost and
+// who paid it (`funded_by`: roadmodel's account, or the visitor's own key).
+// `cost_source` says whether the cost came from the provider's reported usage
+// or the cold estimate.
 export interface EngineRun {
   hint: string;
   name: string;
@@ -87,4 +102,6 @@ export interface EngineRun {
   cost_source: "measured" | "estimated";
   // The share of the prompt the provider served from its cache, when measured.
   cached_share: number | null;
+  // Absent on a payload from before the visitor lane, which was the operator's.
+  funded_by?: "operator" | "visitor";
 }

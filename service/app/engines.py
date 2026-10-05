@@ -31,6 +31,11 @@ _REGISTRY_PATH: Final = Path(__file__).with_name("engines.json")
 # authenticated edge forwards.
 MENU_ACCESS: Final = frozenset({"invited", "founder"})
 
+# The providers a visitor may pay with their own key (service/app/visitor.py):
+# the three with native adapters. Each has a default engine in the registry's
+# `visitor_defaults`, used when the visitor names no engine of that provider.
+VISITOR_PROVIDERS: Final = frozenset({"openai", "google", "anthropic"})
+
 
 @dataclass(frozen=True)
 class EngineSpec:
@@ -92,6 +97,22 @@ class Registry:
     engines: dict[str, EngineSpec]
     default: str
     fallback_chain: tuple[str, ...]
+    # Provider -> the engine a visitor's key runs when they name none of it.
+    visitor_defaults: dict[str, str]
+
+
+def _visitor_defaults(raw: Any, engines: dict[str, EngineSpec]) -> dict[str, str]:
+    if not isinstance(raw, dict) or set(raw) != VISITOR_PROVIDERS:
+        raise ValueError(
+            f"visitor_defaults must name one engine for each of {sorted(VISITOR_PROVIDERS)}"
+        )
+    for provider, hint in raw.items():
+        spec = engines.get(hint) if isinstance(hint, str) else None
+        if spec is None or spec.provider != provider:
+            raise ValueError(
+                f"visitor_defaults[{provider!r}] must be a {provider} engine in the registry"
+            )
+    return dict(raw)
 
 
 def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
@@ -109,7 +130,46 @@ def load_registry(path: Path = _REGISTRY_PATH) -> Registry:
     unknown = [hint for hint in chain if hint not in engines]
     if not chain or unknown:
         raise ValueError(f"fallback_chain must name registry engines (unknown: {unknown})")
-    return Registry(engines=engines, default=default, fallback_chain=chain)
+    return Registry(
+        engines=engines,
+        default=default,
+        fallback_chain=chain,
+        visitor_defaults=_visitor_defaults(raw.get("visitor_defaults"), engines),
+    )
 
 
 REGISTRY: Final = load_registry()
+
+
+# The engine eval's per-engine record (scripts/eval_recommend_engines.py
+# --summary-json writes docs/engine-eval.json and this copy beside the
+# registry, because the service deploys from service/ and cannot read docs/;
+# tests/test_engine_eval_mirror.py holds the two equal). An engine passes once
+# it answered every structured field on at least PASS_SHARE of the probes: the
+# same rule the web menu applies (web/lib/recommend-engines.ts isEvaluated).
+_EVAL_PATH: Final = Path(__file__).with_name("engine-eval.json")
+PASS_SHARE: Final = 0.9
+
+
+def load_evaluated(path: Path = _EVAL_PATH) -> frozenset[str]:
+    """The hints whose eval record passes. A missing or unreadable file passes
+    none, so a visitor then runs their provider's default engine."""
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return frozenset()
+    engines = raw.get("engines") if isinstance(raw, dict) else None
+    if not isinstance(engines, dict):
+        return frozenset()
+    passed: set[str] = set()
+    for hint, record in engines.items():
+        if not isinstance(record, dict):
+            continue
+        probes, ok = record.get("probes"), record.get("passed")
+        if isinstance(probes, int) and isinstance(ok, int) and probes > 0:
+            if ok / probes >= PASS_SHARE:
+                passed.add(hint)
+    return frozenset(passed)
+
+
+EVALUATED: Final = load_evaluated()
