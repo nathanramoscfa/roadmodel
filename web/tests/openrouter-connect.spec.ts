@@ -26,6 +26,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { GET, POST } from "../app/api/openrouter/exchange/route";
 import { OPENROUTER_KEYS_URL, VERIFIER_STORAGE_KEY } from "../lib/openrouter-connect";
 import { OPENROUTER_EXCHANGE_LIMIT, setTestExchangeLimiter } from "../lib/ratelimit";
+import { chooseLane } from "./fixtures/lanes";
 
 const RUN = { timeout: 30_000 };
 
@@ -226,7 +227,7 @@ async function connect(page: Page): Promise<{ auth: URL; origin: string; verifie
     route.fulfill({ status: 200, contentType: "text/html", body: "<p>OpenRouter consent (stub)</p>" }),
   );
   await page.goto("/recommend");
-  await page.getByTestId("visitor-key-toggle").click();
+  await chooseLane(page, "openrouter", "visitor-key-panel");
   await expect(page.getByTestId("visitor-key-panel")).toContainText(
     "OpenRouter is a prepaid account that pays for many AI models; connecting it lets roadmodel bill your recommendations to your OpenRouter credits.",
   );

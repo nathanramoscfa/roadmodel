@@ -4,7 +4,7 @@ import { writeAudit, type AuditOutcome } from "@/lib/audit";
 import { getModelAvailability } from "@/lib/availability";
 import { modelsInJurisdiction } from "@/lib/catalog-models";
 import { getServerSession } from "@/lib/auth";
-import { isE2eAuthEnabled } from "@/lib/e2e-mode";
+import { isE2eMockRecommend, recommenderUrl } from "@/lib/service-url";
 import {
   getTimings,
   ingestServiceTimings,
@@ -41,9 +41,6 @@ import { env } from "@/lib/env";
 import type { EngineRun } from "@/lib/api";
 import { recordSpend } from "@/lib/spend-guard";
 
-const DEFAULT_RECOMMENDER_URL =
-  "https://roadmodel-api.vercel.app/v1/recommend";
-
 // The per-call cost LEDGER: OUR engine spend, written to audit_log.cost_usd and
 // summed by the daily spend guard (lib/spend-guard.ts). Exact when the service
 // returns the provider-reported usage (roadmodel >= 0.2.56: cache reads billed
@@ -55,17 +52,8 @@ const DEFAULT_RECOMMENDER_URL =
 // cost_usd null and the visitor's cost in cache_stats.visitor_cost_usd, so a
 // visitor's spend never reaches the operator's ledger or counter.
 
-function recommenderUrl(): string {
-  if (
-    isE2eAuthEnabled() &&
-    process.env.ROADMODEL_E2E_MOCK_RECOMMEND === "1"
-  ) {
-    const site =
-      process.env.ROADMODEL_E2E_SITE_URL ?? "http://127.0.0.1:3000";
-    return new URL("/api/test/mock-recommend", site).toString();
-  }
-  return process.env.ROADMODEL_RECOMMEND_URL ?? DEFAULT_RECOMMENDER_URL;
-}
+// What the 402 offers a caller no lane funds (lib/withFundingLane.ts).
+const REFUSAL_OPTIONS = ["visitor_key", "openrouter", "keyless", "own_agent"] as const;
 
 // The single-call ladder endpoint (tasks #1/#3): the /v1/recommend base with a
 // /ladder suffix. Derived from recommenderUrl() so the ROADMODEL_RECOMMEND_URL
@@ -81,7 +69,7 @@ function ladderUrl(): string {
 // its ladder. An older service answers 404, which reads as provider_error, so
 // the lane fails closed during a deploy skew.
 function visitorLadderUrl(): string {
-  if (isE2eAuthEnabled() && process.env.ROADMODEL_E2E_MOCK_RECOMMEND === "1") {
+  if (isE2eMockRecommend()) {
     return `${recommenderUrl()}/visitor`;
   }
   return new URL("/v1/visitor/recommend/ladder", recommenderUrl()).toString();
@@ -868,5 +856,8 @@ export const POST = withFundingLane(
     const session = await getServerSession();
     return session?.id;
   },
-  { visitor: handler },
+  // A free-text request no lane funds can still be answered: with the
+  // visitor's own key, through OpenRouter, as keyless picks
+  // (/api/recommend/keyless), or in the visitor's own agent over MCP.
+  { visitor: handler, refusalOptions: REFUSAL_OPTIONS },
 );

@@ -41,6 +41,11 @@ const ENGINES_DEST = path.join(DEST_DIR, "engines.json");
 // shows the registry's engines with catalog prices only.
 const EVAL_SOURCE = path.join(repoRoot, "docs", "engine-eval.json");
 const EVAL_DEST = path.join(DEST_DIR, "engine-eval.json");
+// The keyless lane's measured agreement with the AI recommender (scripts/
+// eval_keyless_agreement.py). Required: /recommend states its figures beside
+// every Quick pick, and lib/keyless-eval.ts reads only this copy.
+const KEYLESS_EVAL_SOURCE = path.join(repoRoot, "docs", "keyless-eval.json");
+const KEYLESS_EVAL_DEST = path.join(DEST_DIR, "keyless-eval.json");
 
 async function main() {
   let raw;
@@ -150,6 +155,32 @@ async function main() {
     evalRaw = '{"engines": {}}\n';
   }
   await writeFile(EVAL_DEST, evalRaw, "utf8");
+
+  let keylessRaw;
+  try {
+    keylessRaw = await readFile(KEYLESS_EVAL_SOURCE, "utf8");
+    const record = JSON.parse(keylessRaw);
+    if (
+      !Number.isInteger(record.agree) ||
+      !Number.isInteger(record.total) ||
+      record.total <= 0 ||
+      typeof record.evaluated_on !== "string" ||
+      !Array.isArray(record.probes) ||
+      record.probes.length === 0
+    ) {
+      throw new Error("missing agree / total / evaluated_on / probes");
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(
+      `[sync-catalog] failed to read ${KEYLESS_EVAL_SOURCE}: ${msg}\n` +
+        `  Regenerate it with \`python scripts/eval_keyless_agreement.py\`.`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+  await writeFile(KEYLESS_EVAL_DEST, keylessRaw, "utf8");
+  console.log(`[sync-catalog] copied the keyless agreement record → ${path.relative(webRoot, KEYLESS_EVAL_DEST)}`);
 }
 
 await main();

@@ -11,14 +11,19 @@
 // passes a `visitor` handler. That lane never checks the operator's cap and
 // never adds to its spend; it has its own limits per IP+UA, the declined-key
 // limit among them.
+//
+// A route that takes the keyless lane (picks computed in code at $0) passes a
+// `keyless` handler, and then every caller runs it: the requests no other lane
+// funds, and the operator's own lanes too, since a $0 call has no spend for
+// the cap to bound. It has its own limits per IP+UA and never reads the cap.
 
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 
 import { writeAudit } from "./audit";
-import { decideLane, type OperatorLane, type VisitorLane } from "./funding-lane";
+import { decideLane, type KeylessLane, type OperatorLane, type VisitorLane } from "./funding-lane";
 import { ipHashSalt } from "./ip-salt";
-import { checkInvitedLimits, checkVisitorLimits } from "./ratelimit";
+import { checkInvitedLimits, checkKeylessLimits, checkVisitorLimits } from "./ratelimit";
 import { dailyCostCapTripped } from "./spend-guard";
 
 function hash(value: string): string {
@@ -58,6 +63,13 @@ export function identifyRequest(req: Request): RequestIdentity {
 
 export type LaneHandler = (req: Request, lane: OperatorLane) => Promise<Response>;
 export type VisitorLaneHandler = (req: Request, lane: VisitorLane) => Promise<Response>;
+// A keyless handler is told which lane the request was decided into, so its
+// audit row can name the operator's reason when there is one.
+export type KeylessLaneHandler = (
+  req: Request,
+  lane: KeylessLane | OperatorLane,
+  userId: string | undefined,
+) => Promise<Response>;
 type UserIdResolver = (req: Request) => Promise<string | undefined>;
 
 export interface FundingLaneOptions {
@@ -67,6 +79,11 @@ export interface FundingLaneOptions {
   // The route's handler for the visitor lane. Without one the visitor headers
   // are ignored and the request is decided as if it carried none.
   visitor?: VisitorLaneHandler;
+  // The route's handler for the keyless lane: with one, every caller runs it
+  // and no request is refused.
+  keyless?: KeylessLaneHandler;
+  // What a refused caller can do instead, sent with the 402 as `options`.
+  refusalOptions?: readonly string[];
 }
 
 // The IP+UA identity the visitor lane's limits key on.
@@ -93,7 +110,30 @@ export function withFundingLane(
       userId = undefined;
     }
 
-    const lane = decideLane(req, userId, { visitor: options.visitor !== undefined });
+    const lane = decideLane(req, userId, {
+      visitor: options.visitor !== undefined,
+      keyless: options.keyless !== undefined,
+    });
+
+    if (options.keyless && (lane.lane === "keyless" || lane.lane === "operator")) {
+      const limit = await checkKeylessLimits(ipUaKey(id));
+      if (!limit.allowed) {
+        void writeAudit({
+          ip_hash: id.ipHash,
+          ua_hash: id.uaHash,
+          route: id.route,
+          outcome: limit.reason === "burst_dropped" ? "burst_dropped" : "rate_limited",
+          user_id: userId,
+          funded_by: "keyless",
+        });
+        return NextResponse.json(
+          { error: limit.reason, retry_after: limit.retryAfter },
+          { status: 429, headers: { "Retry-After": String(limit.retryAfter) } },
+        );
+      }
+      // $0 to everyone: no operator cap, no operator spend.
+      return options.keyless(req, lane, userId);
+    }
 
     if (lane.lane === "invalid") {
       // A key that cannot be one is never forwarded.
@@ -140,7 +180,12 @@ export function withFundingLane(
         outcome: "funding_required",
         user_id: userId,
       });
-      return NextResponse.json({ error: "funding_required" }, { status: 402 });
+      return NextResponse.json(
+        options.refusalOptions
+          ? { error: "funding_required", options: options.refusalOptions }
+          : { error: "funding_required" },
+        { status: 402 },
+      );
     }
 
     // Daily spend circuit breaker (real-time complement to the GCP budget

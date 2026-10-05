@@ -242,7 +242,10 @@ test("client context: only the allowlisted keys survive", () => {
 test("the route: a signed-out POST to /api/recommend is refused with 402", async ({ request }) => {
   const res = await request.post("/api/recommend", { data: { task_description: "pick a model" } });
   expect(res.status()).toBe(402);
-  expect(await res.json()).toEqual({ error: "funding_required" });
+  expect(await res.json()).toEqual({
+    error: "funding_required",
+    options: ["visitor_key", "openrouter", "keyless", "own_agent"],
+  });
 });
 
 test("the route: an unknown context key and a spoofed force_provider never reach the service", async ({
