@@ -20,7 +20,7 @@ export default function PrivacyPage() {
           Privacy
         </h1>
         <p className="mt-2 text-sm text-brand-slate-500 dark:text-brand-slate-400">
-          Last updated: 2026-05-20.
+          Last updated: 2026-10-04.
         </p>
 
         <div className="prose prose-slate mt-8 max-w-none text-brand-slate-700 dark:text-brand-slate-200">
@@ -36,13 +36,25 @@ export default function PrivacyPage() {
           </h2>
           <ul className="mt-3 list-disc space-y-2 pl-6">
             <li>
-              Your task description is sent in real time to AI providers
-              (currently Google Gemini 2.5 Flash, with Anthropic Haiku 4.5 as
-              a fallback) to generate the recommendation.{" "}
+              Your task description is sent in real time to the AI provider
+              of the engine that writes your recommendation (OpenAI, Google or
+              Anthropic) to generate it.{" "}
               <strong>
                 We do not store task descriptions or recommendation outputs
               </strong>{" "}
               in our database.
+            </li>
+            <li id="your-api-key">
+              <strong>Your own API key.</strong> When you use your own API key
+              on <code className="px-1">/recommend</code>, it is used for the
+              one request it travels with, then discarded:{" "}
+              <strong>roadmodel never stores it.</strong> It goes from your
+              browser to our server and on to the provider you chose as a
+              request header, over HTTPS, for that single call, and the
+              provider bills that call to your account. It is kept in your
+              browser tab&rsquo;s memory until you click &ldquo;Forget
+              key&rdquo; or close the tab, and stays out of cookies, browser
+              storage, our database and our logs.
             </li>
             <li>
               We log one audit row per request containing: a salted hash of
@@ -67,8 +79,11 @@ export default function PrivacyPage() {
           </h2>
           <ul className="mt-3 list-disc space-y-2 pl-6">
             <li>
-              Rate limiting — at most 3 recommendations per day, with a
-              10-per-minute burst cap, per salted IP+UA hash.
+              Rate limiting. Recommendations run on your own API key are
+              limited to 50 a day and 10 a minute per salted IP+UA hash, and
+              keys a provider declines to 5 a day, so roadmodel cannot be used
+              to test keys in bulk. Invited members&rsquo; limits are kept per
+              account.
             </li>
             <li>
               Abuse prevention and aggregate usage analytics for capacity
@@ -84,8 +99,10 @@ export default function PrivacyPage() {
             <li>Supabase — audit log storage.</li>
             <li>Upstash Redis — rate-limit counters.</li>
             <li>
-              Anthropic and Google — AI inference. Each provider has its own
-              privacy policy that governs how it processes prompts in transit.
+              OpenAI, Google and Anthropic — AI inference. Each provider has its
+              own privacy policy that governs how it processes prompts in
+              transit, and, when you use your own key, the terms of your account
+              with it.
             </li>
           </ul>
 

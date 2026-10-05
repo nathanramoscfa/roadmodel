@@ -296,8 +296,10 @@ test("a 402 reads as what the visitor can do, in plain words", async ({ page }) 
   await page.goto("/recommend");
   await ask(page, "pick a model");
   await expect(page.getByTestId("funding-notice")).toHaveText(
-    "Recommend runs on roadmodel's account for invited members. Your own API key will work here soon.",
+    "Recommend runs on roadmodel's account for invited members. Add your own API key below to run it on yours.",
   );
+  // The key panel opens beside the notice.
+  await expect(page.getByTestId("visitor-key-panel")).toBeVisible();
   await expect(page.getByText(/unavailable|try again/i)).toHaveCount(0);
 });
 
