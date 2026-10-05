@@ -51,6 +51,8 @@ const VIEWER_RANK: Record<Viewer, number> = { anonymous: 0, visitor: 0, invited:
 // reports no usage.
 const PROMPT_TOKENS_BY_PROVIDER: Record<string, number> = {
   openai: 61_000,
+  // OpenRouter's engine is GPT-6 Luna: OpenAI's tokenizer.
+  openrouter: 61_000,
   google: 66_500,
   anthropic: 94_000,
 };
@@ -325,14 +327,20 @@ export function menuFor(viewer: Viewer): EngineOption[] {
 }
 
 // The menu for a visitor's own key: the menu engines of that provider, every
-// evaluated one open to choose, the provider's visitor default marked.
+// evaluated one open to choose, the provider's visitor default marked. The
+// default is listed even when the operator menu does not offer it (OpenRouter's
+// engine runs on visitors' keys only, menu null in engines.json).
 export function visitorMenuFor(provider: VisitorProvider): EngineOption[] {
   const fallback = REGISTRY.visitor_defaults[provider];
-  return MENU.filter((e) => e.provider === provider).map((e) => ({
+  const own = MENU.filter((e) => e.provider === provider);
+  const engines = own.some((e) => e.hint === fallback) ? own : [BY_HINT.get(fallback) as Engine, ...own];
+  return engines.map((e) => ({
     hint: e.hint,
     name: e.name,
     maker: e.maker,
-    access: e.access as EngineAccess,
+    // Who may run it on roadmodel's account; a visitor-only engine reads as
+    // invited, the widest tier, since the visitor menu never locks by tier.
+    access: e.access ?? "invited",
     isDefault: e.hint === fallback,
     evaluated: isEvaluated(e),
     allowed: isEvaluated(e),

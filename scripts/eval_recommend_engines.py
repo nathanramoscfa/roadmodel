@@ -111,6 +111,11 @@ class Engine:
     # The docs/catalog.json id whose prices the report bills the run at;
     # defaults to the key (most engine keys ARE catalog ids).
     catalog_id: str | None = None
+    # The engines.json hint the summary records it under; defaults to
+    # provider + API id, which fits every native engine. An aggregator's API id
+    # carries a vendor prefix (OpenRouter's "openai/gpt-6-luna") that the hint
+    # does not, so it names its hint.
+    hint: str | None = None
 
 
 # Callable, verified (via the models list + smoke test). thinking params mirror
@@ -231,6 +236,22 @@ ENGINES: list[Engine] = [
         max_output_tokens=6144,
         ga=True,
         note="OpenAI mid-tier flagship; needs OPENAI_API_KEY",
+    ),
+    # GPT-6 Luna through OpenRouter: the visitor default for OpenRouter keys
+    # (Phase 4.11 Step 3), as the service runs it (no temperature; the
+    # openrouter entry forwards no reasoning dial). Billed at Luna's catalog
+    # prices, which OpenRouter passes through.
+    Engine(
+        "openrouter-gpt-6-luna",
+        "openrouter",
+        "openai/gpt-6-luna",
+        thinking_budget=0,
+        max_output_tokens=6144,
+        temperature=None,
+        ga=True,
+        catalog_id="gpt-6-luna",
+        hint="openrouter-gpt-6-luna",
+        note="needs OPENROUTER_API_KEY",
     ),
     # Gemini 3.x takes a thinking LEVEL; budget 0 maps to `low` (0.2.56).
     Engine(
@@ -367,8 +388,8 @@ def _parse_extra(raw: str, max_output_tokens: int | None) -> Engine:
 
 
 def _service_hint(eng: Engine) -> str:
-    """The engines.json hint for an engine: provider + API id."""
-    return f"{eng.provider}-{eng.api_model}"
+    """The engines.json hint for an engine: its own, else provider + API id."""
+    return eng.hint or f"{eng.provider}-{eng.api_model}"
 
 
 def _run_via_service(eng: Engine, prompt: str, url: str, token: str) -> dict[str, Any]:

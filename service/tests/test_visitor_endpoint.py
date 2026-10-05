@@ -34,7 +34,7 @@ from roadmodel.errors import ProviderCallError  # type: ignore[import-untyped]
 
 _TOKEN = "test-internal-token"
 _PATH = "/v1/visitor/recommend/ladder"
-_PROVIDERS = ("openai", "google", "anthropic")
+_PROVIDERS = ("openai", "google", "anthropic", "openrouter")
 
 
 def _fake_key(prefix: str) -> str:
@@ -48,6 +48,7 @@ VISITOR_KEYS = {
     "openai": CANARY,
     "google": "AIza" + secrets.token_hex(16),
     "anthropic": _fake_key("sk-ant"),
+    "openrouter": _fake_key("sk-or-v1"),
 }
 # The operator's environment keys, each a distinct sentinel, so a call that
 # reached one is unmistakable.
@@ -55,6 +56,7 @@ ENV_KEYS = {
     "OPENAI_API_KEY": "env-sentinel-openai",
     "GOOGLE_API_KEY": "env-sentinel-google",
     "ANTHROPIC_API_KEY": "env-sentinel-anthropic",
+    "OPENROUTER_API_KEY": "env-sentinel-openrouter",
 }
 
 _LADDER_TEXT = """\
@@ -250,6 +252,112 @@ def test_any_other_requested_engine_runs_the_provider_default(
     assert [p for p, _, _ in recorder.calls] == ["anthropic"]
 
 
+# --- OpenRouter: the real OpenAI-compatible adapter ---------------------------
+
+
+class _FakeOpenAI:
+    """Stands in for the openai SDK client the compatible adapter builds:
+    records each client (its key and endpoint) and each create() call."""
+
+    clients: list[dict[str, Any]] = []
+    creates: list[dict[str, Any]] = []
+    answer: Callable[[], Any] = staticmethod(lambda: None)
+
+    def __init__(self, **kwargs: Any) -> None:
+        _FakeOpenAI.clients.append(kwargs)
+        self.chat = self
+        self.completions = self
+
+    def create(self, **kwargs: Any) -> Any:
+        _FakeOpenAI.creates.append(kwargs)
+        return _FakeOpenAI.answer()
+
+
+def _completion(text: str) -> Any:
+    from types import SimpleNamespace
+
+    message = SimpleNamespace(content=text)
+    return SimpleNamespace(choices=[SimpleNamespace(message=message)], usage=None)
+
+
+@pytest.fixture
+def openrouter_sdk(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> type[_FakeOpenAI]:
+    """The real openrouter adapter (the recorder's fake undone) over a fake SDK."""
+    import openai
+    from roadmodel.providers import openai_compatible  # type: ignore[import-untyped]
+
+    monkeypatch.setitem(
+        package_recommend.PROVIDER_ADAPTERS, "openrouter", openai_compatible.ADAPTERS["openrouter"]
+    )
+    monkeypatch.setattr(openai, "OpenAI", _FakeOpenAI)
+    _FakeOpenAI.clients, _FakeOpenAI.creates = [], []
+    _FakeOpenAI.answer = staticmethod(lambda: _completion(_LADDER_TEXT))
+    return _FakeOpenAI
+
+
+def test_openrouter_runs_the_compatible_adapter_on_the_visitor_key_once(
+    client: TestClient,
+    recorder: _Recorder,
+    openrouter_sdk: type[_FakeOpenAI],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    caplog.set_level(logging.DEBUG)
+    key = VISITOR_KEYS["openrouter"]
+    response = _post(client, "openrouter", key)
+    assert response.status_code == 200, response.text
+    assert response.json()["engine"] == "openrouter-gpt-6-luna"
+    # One client, on the visitor's key, at OpenRouter's endpoint; one call, on
+    # OpenRouter's id for GPT-6 Luna. No other adapter ran.
+    assert openrouter_sdk.clients == [{"api_key": key, "base_url": "https://openrouter.ai/api/v1"}]
+    assert [c["model"] for c in openrouter_sdk.creates] == ["openai/gpt-6-luna"]
+    assert recorder.calls == []
+    _assert_no_canary(response, caplog, key)
+
+
+@pytest.mark.parametrize(
+    ("status", "http", "code"),
+    [
+        (401, 401, "visitor_key_rejected"),
+        # OpenRouter: out of credits.
+        (402, 429, "visitor_quota"),
+        (429, 429, "visitor_quota"),
+        (500, 502, "provider_error"),
+    ],
+)
+def test_an_openrouter_failure_maps_from_the_sdk_status_with_no_fallback(
+    client: TestClient,
+    recorder: _Recorder,
+    openrouter_sdk: type[_FakeOpenAI],
+    caplog: pytest.LogCaptureFixture,
+    status: int,
+    http: int,
+    code: str,
+) -> None:
+    """The compatible adapter wraps the SDK's APIStatusError, whose
+    status_code visitor.classify reads; the call is never retried elsewhere."""
+    import openai
+
+    caplog.set_level(logging.DEBUG)
+    key = VISITOR_KEYS["openrouter"]
+
+    def fail() -> Any:
+        # The SDK's own status error, built without its HTTP response object,
+        # whose class depends on the SDK version (httpx, then httpx2).
+        err = openai.APIStatusError.__new__(openai.APIStatusError)
+        Exception.__init__(err, f"Error code: {status} - key {key} refused")
+        err.status_code = status
+        raise err
+
+    openrouter_sdk.answer = staticmethod(fail)
+    response = _post(client, "openrouter", key)
+    assert response.status_code == http
+    assert response.json() == {"error": code, "provider": "openrouter"}
+    assert len(openrouter_sdk.creates) == 1
+    assert {c["api_key"] for c in openrouter_sdk.clients} == {key}
+    assert recorder.calls == []
+    _assert_no_canary(response, caplog, key)
+
+
 def test_the_response_carries_the_timing_header(client: TestClient) -> None:
     response = _post(client, "openai", CANARY)
     assert response.headers["X-Roadmodel-Timing"].startswith("service_scoring_ms=")
@@ -369,14 +477,15 @@ def test_the_filter_scrubs_any_key_shaped_token_and_is_on_the_root_logger() -> N
     assert any(isinstance(f, VisitorKeyFilter) for f in logging.getLogger().filters)
     google = "AIza" + secrets.token_hex(16)
     anthropic = _fake_key("sk-ant")
-    text = f"a {CANARY} b {google} c {anthropic}"
-    assert scrub(text) == "a [visitor-key] b [visitor-key] c [visitor-key]"
+    openrouter = _fake_key("sk-or-v1")
+    text = f"a {CANARY} b {google} c {anthropic} d {openrouter}"
+    assert scrub(text) == "a [visitor-key] b [visitor-key] c [visitor-key] d [visitor-key]"
 
 
 # --- Rejected before any call -------------------------------------------------
 
 
-@pytest.mark.parametrize("provider", [None, "", "openrouter", "deepseek", "custom"])
+@pytest.mark.parametrize("provider", [None, "", "together", "deepseek", "custom"])
 def test_an_unsupported_provider_is_400_with_zero_adapter_calls(
     client: TestClient, recorder: _Recorder, provider: str | None
 ) -> None:

@@ -601,6 +601,9 @@ def test_engine_params_come_from_the_registry(
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test-anthropic-key")
     monkeypatch.setenv("GOOGLE_API_KEY", "test-google-key")
     monkeypatch.setenv("OPENAI_API_KEY", "test-openai-key")
+    # OpenRouter's engine runs on visitors' keys in production; a key here
+    # lets this loop check its params like every other engine's.
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-openrouter-key")
     recommend_module = importlib.import_module("app.recommend")
     engines = importlib.import_module("app.engines").REGISTRY.engines
     captured: dict[str, tuple[int | None, int | None, float | None]] = {}
