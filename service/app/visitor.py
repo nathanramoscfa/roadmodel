@@ -13,7 +13,8 @@ with the request. Its contract:
   fallback chain, no retry on another provider and no fan-out. A failing
   visitor key therefore never reaches an operator key.
 - Failures map to a code: the provider refused the key (401/403) ->
-  ``visitor_key_rejected``; its rate limit or quota (429) -> ``visitor_quota``;
+  ``visitor_key_rejected``; its rate limit, quota or exhausted credits (429,
+  402) -> ``visitor_quota``;
   anything else -> ``provider_error``. The body carries the code and provider
   only, never SDK text, which can echo part of the key.
 - While the request runs, a ContextVar holds the key and a redaction filter
@@ -56,7 +57,7 @@ REDACTED: Final = "[visitor-key]"
 _VISITOR_KEY: ContextVar[str | None] = ContextVar("roadmodel_visitor_key", default=None)
 
 # Anything shaped like a provider key, whoever's it is: Anthropic (sk-ant-),
-# OpenAI and other sk- keys, Google (AIza). Scrubbed even with no visitor key
+# OpenAI, OpenRouter (sk-or-) and other sk- keys, Google (AIza). Scrubbed even with no visitor key
 # in play, so an operator key echoed by an SDK is caught the same way.
 _KEY_SHAPES: Final = re.compile(
     r"sk-ant-[A-Za-z0-9_\-]{8,}|sk-[A-Za-z0-9_\-]{8,}|AIza[A-Za-z0-9_\-]{8,}"
@@ -211,6 +212,7 @@ def _upstream_status(exc: BaseException) -> int | None:
 # invalid key with 400 INVALID_ARGUMENT, reason API_KEY_INVALID.
 _REJECTED_TEXT: Final = re.compile(r"API_KEY_INVALID|API key not valid", re.IGNORECASE)
 # Anthropic answers an exhausted prepaid balance with 400 "credit balance is too low".
+# (OpenRouter answers it with 402 Payment Required, a quota whatever its text.)
 _QUOTA_TEXT: Final = re.compile(r"credit balance|insufficient_quota|quota", re.IGNORECASE)
 
 
@@ -221,7 +223,7 @@ def classify(exc: BaseException) -> tuple[int, str]:
         text = str(exc.__cause__ or exc)
         if status in (401, 403) or (status == 400 and _REJECTED_TEXT.search(text)):
             return 401, "visitor_key_rejected"
-        if status == 429 or (status in (400, 402) and _QUOTA_TEXT.search(text)):
+        if status in (402, 429) or (status == 400 and _QUOTA_TEXT.search(text)):
             return 429, "visitor_quota"
     return 502, "provider_error"
 

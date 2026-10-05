@@ -5,9 +5,9 @@
 // imports, no storage. The key itself is never kept here; the page holds it in
 // React state (lib/use-visitor-key.ts) and the edge reads it from its header.
 
-export type VisitorProvider = "openai" | "google" | "anthropic";
+export type VisitorProvider = "openai" | "google" | "anthropic" | "openrouter";
 
-export const VISITOR_PROVIDERS: readonly VisitorProvider[] = ["openai", "google", "anthropic"];
+export const VISITOR_PROVIDERS: readonly VisitorProvider[] = ["openai", "google", "anthropic", "openrouter"];
 
 // The request headers the key and its provider travel in, browser -> edge ->
 // service. Header names are case-insensitive; fetch sends them as written.
@@ -18,6 +18,7 @@ export const PROVIDER_LABEL: Record<VisitorProvider, string> = {
   openai: "OpenAI",
   google: "Google",
   anthropic: "Anthropic",
+  openrouter: "OpenRouter",
 };
 
 // How each provider's keys begin, as the key field explains it.
@@ -25,13 +26,16 @@ export const KEY_PREFIX_HINT: Record<VisitorProvider, string> = {
   openai: "sk-",
   google: "AIza",
   anthropic: "sk-ant-",
+  openrouter: "sk-or-",
 };
 
-// OpenAI keys (sk-proj-, sk-svcacct-, …) share sk- with Anthropic's sk-ant-.
+// OpenAI keys (sk-proj-, sk-svcacct-, …) share sk- with Anthropic's sk-ant-
+// and OpenRouter's sk-or-.
 const PREFIX_MATCHES: Record<VisitorProvider, (key: string) => boolean> = {
-  openai: (k) => k.startsWith("sk-") && !k.startsWith("sk-ant-"),
+  openai: (k) => k.startsWith("sk-") && !k.startsWith("sk-ant-") && !k.startsWith("sk-or-"),
   google: (k) => k.startsWith("AIza"),
   anthropic: (k) => k.startsWith("sk-ant-"),
+  openrouter: (k) => k.startsWith("sk-or-"),
 };
 
 const KEY_CHARS = /^[A-Za-z0-9_\-.]{20,256}$/;

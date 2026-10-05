@@ -7,6 +7,12 @@
 // result's "Run again" (which reuses it), so a reload or a closed tab forgets
 // it, and "Forget key" clears it at once. The key leaves the page only as the
 // X-Roadmodel-Visitor-Key header of a /api/recommend request (headersFor).
+//
+// "Connect OpenRouter" returns a key on another page (/recommend/openrouter).
+// That page hands it over in module memory (handOffVisitorKey) and moves to
+// /recommend by client-side navigation, which keeps this module alive, and
+// RecommendWorkspace takes it on mount (takeVisitorKeyHandoff). The handoff
+// is held for that one navigation and cleared as it is read.
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
@@ -48,4 +54,18 @@ export function useVisitorKey(initialProvider: VisitorProvider = "openai"): Visi
     () => ({ provider, key, setProvider, setKey, forget, active, valid, headersFor }),
     [provider, key, forget, active, valid, headersFor],
   );
+}
+
+// The key a connect flow returned, waiting for /recommend to take it.
+let handoff: { provider: VisitorProvider; key: string } | null = null;
+
+export function handOffVisitorKey(provider: VisitorProvider, key: string): void {
+  handoff = { provider, key };
+}
+
+// The waiting key, once: reading it clears it.
+export function takeVisitorKeyHandoff(): { provider: VisitorProvider; key: string } | null {
+  const taken = handoff;
+  handoff = null;
+  return taken;
 }

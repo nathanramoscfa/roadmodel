@@ -43,6 +43,7 @@ const KEYS = {
   openai: CANARY,
   google: "AIza" + randomBytes(16).toString("hex"),
   anthropic: fakeKey("sk-ant"),
+  openrouter: fakeKey("sk-or-v1"),
 } as const;
 
 const VISITOR_URL = "/v1/visitor/recommend/ladder";
@@ -181,7 +182,7 @@ async function expectNoKey(res: Response, key: string = CANARY): Promise<string>
 // --- The lane decision ------------------------------------------------------
 
 test("decideLane: a well-formed key and provider is the visitor lane, even for an invited member", () => {
-  for (const provider of ["openai", "google", "anthropic"] as const) {
+  for (const provider of ["openai", "google", "anthropic", "openrouter"] as const) {
     expect(decideLane(post(keyed(provider)), undefined, { visitor: true })).toEqual({ lane: "visitor", provider });
   }
   expect(decideLane(post(keyed("openai")), INVITED, { visitor: true })).toEqual({
@@ -205,7 +206,9 @@ test("decideLane: a key that cannot be one is the invalid lane", () => {
     keyed("openai", `${CANARY} spaced`),
     keyed("openai", `${CANARY}"quote`),
     keyed("openai", `sk-${"a".repeat(260)}`),
-    { ...keyed("openai"), "x-roadmodel-visitor-provider": "openrouter" },
+    keyed("openai", KEYS.openrouter), // an OpenRouter key named OpenAI
+    keyed("openrouter", CANARY), // an OpenAI key named OpenRouter
+    { ...keyed("openai"), "x-roadmodel-visitor-provider": "together" },
   ];
   for (const headers of malformed) {
     expect(decideLane(post(headers), undefined, { visitor: true })).toEqual({
@@ -300,13 +303,21 @@ test("engine: any evaluated engine of the key's provider, founder tier included;
   await POST(post(keyed("anthropic"), { task_description: "t", engine: "anthropic-claude-opus-5-5" }));
   await POST(post(keyed("google"), { task_description: "t", engine: "openai-gpt-6-luna" }));
   await POST(post(keyed("openai"), { task_description: "t", engine: "openai-nope" }));
+  // An OpenRouter key runs OpenRouter's engine, whatever it names.
+  await POST(post(keyed("openrouter"), { task_description: "t", engine: "openai-gpt-6-luna" }));
   const engines = calls.map((c) => (JSON.parse(c.body) as { context: { force_provider: string } }).context.force_provider);
   expect(engines).toEqual([
     "anthropic-claude-opus-5-5",
     registry.visitor_defaults.google,
     registry.visitor_defaults.openai,
+    "openrouter-gpt-6-luna",
   ]);
-  expect(calls.map((c) => c.headers["x-roadmodel-visitor-provider"])).toEqual(["anthropic", "google", "openai"]);
+  expect(calls.map((c) => c.headers["x-roadmodel-visitor-provider"])).toEqual([
+    "anthropic",
+    "google",
+    "openai",
+    "openrouter",
+  ]);
 });
 
 test("failures relay the code alone, from exactly one call", async () => {

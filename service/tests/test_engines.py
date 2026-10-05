@@ -141,10 +141,11 @@ _VISITOR_DEFAULTS = {
     "openai": "openai-x",
     "google": "google-x",
     "anthropic": "anthropic-x",
+    "openrouter": "openrouter-x",
 }
 
 
-def _three_providers(**registry: Any) -> dict[str, Any]:
+def _visitor_registry(**registry: Any) -> dict[str, Any]:
     base: dict[str, Any] = {
         "default": "openai-x",
         "fallback_chain": ["openai-x"],
@@ -152,6 +153,7 @@ def _three_providers(**registry: Any) -> dict[str, Any]:
             _entry(),
             _entry(hint="google-x", provider="google"),
             _entry(hint="anthropic-x", provider="anthropic"),
+            _entry(hint="openrouter-x", provider="openrouter"),
         ],
         "visitor_defaults": dict(_VISITOR_DEFAULTS),
     }
@@ -176,15 +178,19 @@ def test_each_visitor_provider_has_an_evaluated_default_of_that_provider() -> No
         {**_VISITOR_DEFAULTS, "deepseek": "openai-x"},
         {**_VISITOR_DEFAULTS, "google": "openai-x"},
         {**_VISITOR_DEFAULTS, "anthropic": "anthropic-nope"},
+        {**_VISITOR_DEFAULTS, "openrouter": "openai-x"},
+        {k: v for k, v in _VISITOR_DEFAULTS.items() if k != "openrouter"},
     ],
 )
 def test_malformed_visitor_defaults_fail_to_load(tmp_path: Path, defaults: Any) -> None:
     with pytest.raises(ValueError, match="visitor_defaults"):
-        load_registry(_write(tmp_path, _three_providers(visitor_defaults=defaults)))
+        load_registry(_write(tmp_path, _visitor_registry(visitor_defaults=defaults)))
 
 
 def test_a_well_formed_registry_with_visitor_defaults_loads(tmp_path: Path) -> None:
-    assert load_registry(_write(tmp_path, _three_providers())).visitor_defaults == _VISITOR_DEFAULTS
+    assert (
+        load_registry(_write(tmp_path, _visitor_registry())).visitor_defaults == _VISITOR_DEFAULTS
+    )
 
 
 def test_an_engine_passes_the_eval_at_nine_tenths_of_its_probes(tmp_path: Path) -> None:

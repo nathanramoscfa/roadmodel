@@ -17,7 +17,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { MultiRecommendResponse } from "@/lib/api";
 import type { EngineOption } from "@/lib/recommend-engines";
-import { useVisitorKey } from "@/lib/use-visitor-key";
+import { takeVisitorKeyHandoff, useVisitorKey } from "@/lib/use-visitor-key";
 import { KEY_PREFIX_HINT, PROVIDER_LABEL, type VisitorProvider } from "@/lib/visitor-key";
 import type { PicksData } from "@/lib/recommend-picks";
 import { saveEnginePref } from "@/lib/recommend-prefs";
@@ -149,6 +149,17 @@ export function RecommendWorkspace({
   useEffect(() => {
     setRecent(loadRecent());
   }, []);
+
+  // A key "Connect OpenRouter" just returned (app/recommend/openrouter): it
+  // pays from here on, and the panel opens to say so.
+  const { setProvider: setKeyProvider, setKey } = visitor;
+  useEffect(() => {
+    const connected = takeVisitorKeyHandoff();
+    if (!connected) return;
+    setKeyProvider(connected.provider);
+    setKey(connected.key);
+    setKeyOpen(true);
+  }, [setKeyProvider, setKey]);
 
   function chooseEngine(hint: string) {
     // A key's engine is chosen for this page only; the preference cookie keeps

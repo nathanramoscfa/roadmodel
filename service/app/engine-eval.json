@@ -117,7 +117,20 @@
       "probes": 12,
       "quality_pick_blended_per_1m": 9.0,
       "via": "package"
+    },
+    "openrouter-gpt-6-luna": {
+      "cached_share": 0.92,
+      "evaluated_on": "2026-10-04",
+      "healthy_ladder": 1.0,
+      "mean_cost_usd": 0.00164,
+      "mean_input_tokens": 62703,
+      "p50_latency_s": 12.8,
+      "parsed": 12,
+      "passed": 12,
+      "probes": 12,
+      "quality_pick_blended_per_1m": 8.67,
+      "via": "package"
     }
   },
-  "generated_at": "2026-10-02"
+  "generated_at": "2026-10-04"
 }

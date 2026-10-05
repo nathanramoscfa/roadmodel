@@ -32,9 +32,11 @@ _REGISTRY_PATH: Final = Path(__file__).with_name("engines.json")
 MENU_ACCESS: Final = frozenset({"invited", "founder"})
 
 # The providers a visitor may pay with their own key (service/app/visitor.py):
-# the three with native adapters. Each has a default engine in the registry's
-# `visitor_defaults`, used when the visitor names no engine of that provider.
-VISITOR_PROVIDERS: Final = frozenset({"openai", "google", "anthropic"})
+# the three with native adapters, and OpenRouter through the package's
+# OpenAI-compatible adapter (its `openrouter` registry entry). Each has a
+# default engine in the registry's `visitor_defaults`, used when the visitor
+# names no engine of that provider.
+VISITOR_PROVIDERS: Final = frozenset({"openai", "google", "anthropic", "openrouter"})
 
 
 @dataclass(frozen=True)
