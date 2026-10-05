@@ -335,19 +335,18 @@ def test_an_openrouter_failure_maps_from_the_sdk_status_with_no_fallback(
 ) -> None:
     """The compatible adapter wraps the SDK's APIStatusError, whose
     status_code visitor.classify reads; the call is never retried elsewhere."""
-    import httpx
     import openai
 
     caplog.set_level(logging.DEBUG)
     key = VISITOR_KEYS["openrouter"]
 
     def fail() -> Any:
-        request = httpx.Request("POST", "https://openrouter.ai/api/v1/chat/completions")
-        raise openai.APIStatusError(
-            f"Error code: {status} - key {key} refused",
-            response=httpx.Response(status, request=request),
-            body=None,
-        )
+        # The SDK's own status error, built without its HTTP response object,
+        # whose class depends on the SDK version (httpx, then httpx2).
+        err = openai.APIStatusError.__new__(openai.APIStatusError)
+        Exception.__init__(err, f"Error code: {status} - key {key} refused")
+        err.status_code = status
+        raise err
 
     openrouter_sdk.answer = staticmethod(fail)
     response = _post(client, "openrouter", key)
