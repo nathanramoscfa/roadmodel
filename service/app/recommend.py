@@ -60,7 +60,9 @@ def _bootstrap_user_context() -> Path:
     ships with the roadmodel package to /tmp (the one writable location on
     Fluid Compute) and return its path. Idempotent across warm invocations.
     """
-    target = Path("/tmp/roadmodel-user-context.md")  # noqa: S108
+    # /tmp is the one writable path on Fluid Compute; the name is fixed and the
+    # content is the public bundled template, never user data.
+    target = Path("/tmp/roadmodel-user-context.md")  # noqa: S108  # nosec B108
     if not target.exists():
         template = resources.files("roadmodel.data") / "user-context.example.md"
         target.write_text(template.read_text(encoding="utf-8"), encoding="utf-8")
