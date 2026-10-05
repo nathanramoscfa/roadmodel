@@ -10,17 +10,26 @@
 // one React state holder here (lib/use-visitor-key.ts), shared by the composer
 // and "Run again", and leaves the page only as a request header. While a key
 // is in use the engine menu is that provider's engines, priced to the key.
+//
+// A visitor outside the invite list who holds no key chooses a lane first
+// (LaneChooser): Quick pick (three picks computed from published benchmarks
+// and prices, /api/recommend/keyless), their own API key or OpenRouter (the
+// free-text flow below), or roadmodel's MCP server in their own agent.
 "use client";
 
 import { KeyRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import type { MultiRecommendResponse } from "@/lib/api";
+import type { KeylessAgreement, KeylessResponse, KeylessTask } from "@/lib/keyless";
 import type { EngineOption } from "@/lib/recommend-engines";
 import { takeVisitorKeyHandoff, useVisitorKey } from "@/lib/use-visitor-key";
 import { KEY_PREFIX_HINT, PROVIDER_LABEL, type VisitorProvider } from "@/lib/visitor-key";
 import type { PicksData } from "@/lib/recommend-picks";
 import { saveEnginePref } from "@/lib/recommend-prefs";
+import { LaneChooser, type Lane, type LaneChoice } from "./LaneChooser";
+import { OwnAgentPanel } from "./OwnAgentPanel";
+import { KeylessResult, QuickPickForm } from "./QuickPick";
 import { attachmentsPrefix, RecommendComposer, type Attachment } from "./RecommendComposer";
 import { RecommendIntro } from "./RecommendIntro";
 import { RecommendResult } from "./RecommendResult";
@@ -98,6 +107,21 @@ function errorMessage(
   return "The recommender is unavailable — try again in a moment.";
 }
 
+// The user-facing message for a failed Quick pick.
+function keylessErrorMessage(status: number, error: string | undefined): string {
+  if (status === 429 && error === "burst_dropped") {
+    return "Slow down — too many Quick picks in a short window. Try again in a minute.";
+  }
+  if (status === 429) return "You've reached today's Quick pick limit. Try again tomorrow.";
+  if (status === 422 && error === "no_frontier") {
+    return "Quick pick draws from the benchmarked models your Settings reach. Widen your Settings to bring more of them in.";
+  }
+  if (status === 400) return "Choose a task type and a difficulty.";
+  return "Quick pick is unavailable — try again in a moment.";
+}
+
+const QUICK_DEFAULT: KeylessTask = { category: "coding", complexity: "medium", novel: false, budget_priority: "balanced" };
+
 // The engine a visitor's key opens on: its provider's default.
 function visitorDefaultHint(options: EngineOption[]): string {
   return (options.find((o) => o.isDefault) ?? options[0])?.hint ?? "";
@@ -111,6 +135,8 @@ export function RecommendWorkspace({
   signedIn,
   modelCount,
   measuredCount,
+  keylessViewer,
+  agreement,
 }: {
   engines: EngineOption[];
   // The menu for a visitor's own key, by its provider (visitorMenuFor).
@@ -120,6 +146,11 @@ export function RecommendWorkspace({
   signedIn: boolean;
   modelCount: number;
   measuredCount: number;
+  // Outside the invite list: the operator's account answers none of this
+  // viewer's free-text requests, so the page offers the lanes first.
+  keylessViewer: boolean;
+  // The keyless lane's measured agreement (lib/keyless-eval.ts).
+  agreement: KeylessAgreement;
 }) {
   const [task, setTask] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -137,6 +168,14 @@ export function RecommendWorkspace({
   const [visitorEngine, setVisitorEngine] = useState(() => visitorDefaultHint(visitorEngines.openai));
   // A key in use: the menu, the chosen engine and "Run again" are its own.
   const keyed = visitor.active && visitor.valid;
+  // The lane chooser, for a keyless viewer holding no key; Quick pick first.
+  const [lane, setLane] = useState<Lane>("quick");
+  const showChooser = keylessViewer && !keyed;
+  const activeLane: Lane = showChooser ? lane : "key";
+  const [quickTask, setQuickTask] = useState<KeylessTask>(QUICK_DEFAULT);
+  const [quickResult, setQuickResult] = useState<KeylessResponse | null>(null);
+  const [quickPending, setQuickPending] = useState(false);
+  const [quickError, setQuickError] = useState<string | null>(null);
   const menu = keyed ? visitorEngines[visitor.provider] : engines;
   const composerEngine = keyed ? visitorEngine : engine;
   const rerunHint = keyed ? visitorEngine : rerunEngine;
@@ -160,6 +199,41 @@ export function RecommendWorkspace({
     setKey(connected.key);
     setKeyOpen(true);
   }, [setKeyProvider, setKey]);
+
+  function chooseLane(choice: LaneChoice) {
+    if (choice === "key" || choice === "openrouter") {
+      if (choice === "openrouter") setKeyProvider("openrouter");
+      else if (visitor.provider === "openrouter") setKeyProvider("openai");
+      setLane("key");
+      setKeyOpen(true);
+      return;
+    }
+    setLane(choice);
+  }
+
+  async function runQuick(t: KeylessTask) {
+    setQuickTask(t);
+    setQuickError(null);
+    setQuickPending(true);
+    try {
+      const res = await fetch("/api/recommend/keyless", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(t),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        setQuickError(keylessErrorMessage(res.status, body.error));
+        return;
+      }
+      setQuickResult((await res.json()) as KeylessResponse);
+      top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+    } catch {
+      setQuickError("Quick pick is unavailable — try again in a moment.");
+    } finally {
+      setQuickPending(false);
+    }
+  }
 
   function chooseEngine(hint: string) {
     // A key's engine is chosen for this page only; the preference cookie keeps
@@ -230,8 +304,44 @@ export function RecommendWorkspace({
 
   const showComposer = !result || editing;
 
+  if (activeLane !== "key") {
+    return (
+      <div ref={top} className="scroll-mt-20 space-y-5">
+        <LaneChooser lane={activeLane} openRouter={false} onChoose={chooseLane} />
+        {activeLane === "agent" ? (
+          <OwnAgentPanel />
+        ) : quickResult ? (
+          <KeylessResult
+            data={quickResult}
+            agreement={agreement}
+            onChange={() => setQuickResult(null)}
+            onDescribe={() => chooseLane("key")}
+          />
+        ) : (
+          <QuickPickForm initial={quickTask} pending={quickPending} error={quickError} onSubmit={(t) => void runQuick(t)} />
+        )}
+        {/* Past free-text results open in the lane that wrote them. */}
+        <RecentRecommendations
+          runs={recent}
+          activeId={null}
+          onOpen={(r) => {
+            setLane("key");
+            setResult(r);
+            setEditing(false);
+            setError(null);
+            top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+          }}
+          onClear={() => setRecent(saveRecent([]))}
+        />
+      </div>
+    );
+  }
+
   return (
     <div ref={top} className="scroll-mt-20 space-y-5">
+      {showChooser && (
+        <LaneChooser lane="key" openRouter={visitor.provider === "openrouter"} onChoose={chooseLane} />
+      )}
       {showComposer && (
         <RecommendComposer
           task={task}

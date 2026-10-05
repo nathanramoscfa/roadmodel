@@ -33,6 +33,11 @@ interface Limiters {
   visitorDaily: Ratelimit;
   visitorBurst: Ratelimit;
   visitorRejected: Ratelimit;
+  // The keyless lane's limits (/api/recommend/keyless), keyed on the salted
+  // IP+UA hashes like the visitor lane's: KEYLESS_BURST_LIMIT a minute and
+  // KEYLESS_DAILY_LIMIT a day.
+  keylessBurst: Ratelimit;
+  keylessDaily: Ratelimit;
   // /api/openrouter/exchange: OPENROUTER_EXCHANGE_LIMIT code exchanges a
   // minute per IP+UA. One connect is one exchange; this bounds code guessing.
   openrouterExchange: Ratelimit;
@@ -48,6 +53,10 @@ export const VISITOR_DAILY_LIMIT = 50;
 // roadmodel to test stolen keys. The next attempt after these is refused
 // before it reaches a provider.
 export const VISITOR_REJECTED_LIMIT = 5;
+// Keyless picks one IP+UA may compute per minute and per day. They cost $0,
+// so these bound load and scraping.
+export const KEYLESS_BURST_LIMIT = 20;
+export const KEYLESS_DAILY_LIMIT = 200;
 // OpenRouter code exchanges one IP+UA may make per minute.
 export const OPENROUTER_EXCHANGE_LIMIT = 10;
 
@@ -96,6 +105,16 @@ function buildLimiters(): Limiters | null {
       limiter: Ratelimit.slidingWindow(VISITOR_REJECTED_LIMIT, "1 d"),
       prefix: "rl:visitor-rejected",
     }),
+    keylessBurst: new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(KEYLESS_BURST_LIMIT, "1 m"),
+      prefix: "rl:keyless",
+    }),
+    keylessDaily: new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(KEYLESS_DAILY_LIMIT, "1 d"),
+      prefix: "rl:keyless",
+    }),
     openrouterExchange: new Ratelimit({
       redis,
       limiter: Ratelimit.slidingWindow(OPENROUTER_EXCHANGE_LIMIT, "1 m"),
@@ -141,11 +160,11 @@ function visitorLimiters(): VisitorLimiters | null {
 // No Upstash in production: the visitor lane is not served unbounded, the same
 // fail-closed policy as checkInvitedLimits (the route answers 500 before any
 // upstream call). Elsewhere (local, CI, preview) it fails open.
-function requireLimiterInProduction(): void {
+function requireLimiterInProduction(lane = "visitor"): void {
   if (process.env.VERCEL_ENV === "production") {
     throw new Error(
       "[ratelimit] UPSTASH_REDIS_URL / UPSTASH_REDIS_TOKEN unset in " +
-        "production — refusing to run the visitor lane without a rate limiter.",
+        `production — refusing to run the ${lane} lane without a rate limiter.`,
     );
   }
 }
@@ -200,6 +219,47 @@ export async function recordRejectedVisitorKey(ipUa: string): Promise<void> {
     await lane.rejected.limit(`rejected:${ipUa}`);
   } catch (err) {
     console.warn("[ratelimit] failed to count a declined visitor key (non-fatal)", err);
+  }
+}
+
+// Test seam for the keyless lane's two limiters (mirrors setTestVisitorLimiters).
+type KeylessLimiters = { burst: LaneLimiter; daily: LaneLimiter };
+let testKeylessLimiters: KeylessLimiters | null = null;
+export function setTestKeylessLimiters(fake: KeylessLimiters | null): void {
+  testKeylessLimiters = fake;
+}
+
+// The keyless lane's limits for one IP+UA: the burst, then the day. Fails
+// closed in production without Upstash and open elsewhere, like the visitor
+// lane.
+export async function checkKeylessLimits(ipUa: string): Promise<RateLimitResult> {
+  const lane =
+    testKeylessLimiters ??
+    (limiters ? { burst: limiters.keylessBurst, daily: limiters.keylessDaily } : null);
+  if (!lane) {
+    requireLimiterInProduction("keyless");
+    return { allowed: true };
+  }
+  try {
+    const burst = await lane.burst.limit(`min:${ipUa}`);
+    if (!burst.success) {
+      return { allowed: false, reason: "burst_dropped", retryAfter: 60 };
+    }
+    const daily = await lane.daily.limit(`day:${ipUa}`);
+    if (!daily.success) {
+      return {
+        allowed: false,
+        reason: "rate_limited",
+        retryAfter: Math.max(1, Math.ceil((daily.reset - Date.now()) / 1000)),
+      };
+    }
+    return { allowed: true };
+  } catch (err) {
+    if (isE2eAuthEnabled()) {
+      console.warn("[ratelimit] Upstash unreachable in E2E mode (keyless) — failing open", err);
+      return { allowed: true };
+    }
+    throw err;
   }
 }
 

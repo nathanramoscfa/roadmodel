@@ -5,6 +5,7 @@ import path from "node:path";
 import { test, expect, type Page } from "@playwright/test";
 
 import registry from "../data/engines.json";
+import { openFreeText } from "./fixtures/lanes";
 import { E2E_AUTH_COOKIE, E2E_USER_ID, setE2eSessionCookie } from "./fixtures/onboarding-auth";
 
 // The E2E server's invite list holds the E2E session's user (playwright.config).
@@ -37,7 +38,7 @@ async function fulfill(page: Page, body: string, status = 200) {
 }
 
 test("/recommend renders the composer, the engine menu and how it works", async ({ page }) => {
-  await page.goto("/recommend");
+  await openFreeText(page);
   await expect(page.getByRole("heading", { level: 1, name: "Recommend a model" })).toBeVisible();
   await expect(task(page)).toBeVisible();
   // Nothing to send yet.
@@ -50,7 +51,7 @@ test("/recommend renders the composer, the engine menu and how it works", async 
 });
 
 test("an example fills the task", async ({ page }) => {
-  await page.goto("/recommend");
+  await openFreeText(page);
   await page.getByRole("button", { name: "Bulk-classify tickets" }).click();
   await expect(task(page)).toHaveValue(/Classify 10,000 support tickets/);
   await expect(submit(page)).toBeEnabled();
@@ -68,7 +69,7 @@ test("a single submit renders all three priority picks (Cost / Balanced / Qualit
       ],
     }),
   );
-  await page.goto("/recommend");
+  await openFreeText(page);
   await ask(page);
 
   await expect(page.locator("[data-priority]")).toHaveCount(3);
@@ -81,7 +82,7 @@ test("a single submit renders all three priority picks (Cost / Balanced / Qualit
 
 test("a pick carries the catalog's facts: blended price, AA Index, Score, ratings", async ({ page }) => {
   await fulfill(page, FIXTURE);
-  await page.goto("/recommend");
+  await openFreeText(page);
   await ask(page, "Refactor a 3,000-line Python data pipeline into typed modules with tests.");
   const quality = page.locator('[data-priority="best"]');
   await expect(quality.getByText("Sonnet 5.5")).toBeVisible();
@@ -105,7 +106,7 @@ test("a pick carries the catalog's facts: blended price, AA Index, Score, rating
 
 test("the result names the engine that wrote it, with time and cost", async ({ page }) => {
   await fulfill(page, FIXTURE);
-  await page.goto("/recommend");
+  await openFreeText(page);
   await ask(page);
   const line = page.getByTestId("engine-line");
   await expect(line).toContainText("Picked by GPT-6 Luna");
@@ -129,14 +130,14 @@ test("a fallback answer says which engine answered instead", async ({ page }) =>
       cached_share: 0.9,
     }),
   );
-  await page.goto("/recommend");
+  await openFreeText(page);
   await ask(page);
   await expect(page.getByTestId("engine-fell-back")).toHaveText(/GPT-6\.1 Sol did not answer, so GPT-6 Luna wrote these picks/);
 });
 
 test("the chart plots the picks among the catalog", async ({ page }) => {
   await fulfill(page, FIXTURE);
-  await page.goto("/recommend");
+  await openFreeText(page);
   await ask(page);
   await expect(page.getByTestId("picks-chart")).toBeVisible();
   await expect(page.getByTestId("picks-chart-pick")).toHaveCount(3);
@@ -156,7 +157,7 @@ test("renders the backup model row when the recommendation includes one", async 
       comparison_table: [],
     }),
   );
-  await page.goto("/recommend");
+  await openFreeText(page);
   await ask(page);
   await expect(page.getByText("Backup", { exact: true })).toBeVisible();
   await expect(page.getByText(/GPT-5\.5/)).toBeVisible();
@@ -179,7 +180,7 @@ test("humanizes settings labels and renders the rationale prominently", async ({
       comparison_table: [],
     }),
   );
-  await page.goto("/recommend");
+  await openFreeText(page);
   await ask(page, "prove a theorem");
   await expect(page.getByText("Max Mode")).toBeVisible();
   await expect(page.getByText("Thinking")).toBeVisible();
@@ -190,7 +191,7 @@ test("humanizes settings labels and renders the rationale prominently", async ({
 
 test("one Effort row carries Codex's Intelligence value", async ({ page }) => {
   await fulfill(page, FIXTURE);
-  await page.goto("/recommend");
+  await openFreeText(page);
   await ask(page);
   const matrix = page.getByTestId("picks-matrix");
   await expect(matrix.getByText("Effort", { exact: true })).toBeVisible();
@@ -210,7 +211,7 @@ test("renders the rationale as readable lines with glossary popovers (#270, #269
       comparison_table: [],
     }),
   );
-  await page.goto("/recommend");
+  await openFreeText(page);
   await ask(page, "split + glossary");
   const why = page.getByRole("region", { name: /Why this model/i });
   await expect(why).toBeVisible();
@@ -241,7 +242,7 @@ test("renders sub-headed rationale sections when the service supplies them", asy
       comparison_table: [],
     }),
   );
-  await page.goto("/recommend");
+  await openFreeText(page);
   await ask(page, "structured why");
   const why = page.getByRole("region", { name: /Why this model/i });
   await expect(why.getByRole("heading", { name: "The task" })).toBeVisible();
@@ -285,7 +286,7 @@ test("the engine menu offers the evaluated engines an invited member may use, an
 });
 
 test("signed out, every engine on the menu is locked", async ({ page }) => {
-  await page.goto("/recommend");
+  await openFreeText(page);
   await page.getByTestId("engine-picker").click();
   await expect(page.locator('[data-engine][data-allowed="1"]')).toHaveCount(0);
   await expect(page.locator(`[data-engine="${registry.default}"]`)).toContainText(/Invited members/);
@@ -293,7 +294,7 @@ test("signed out, every engine on the menu is locked", async ({ page }) => {
 
 test("a 402 reads as what the visitor can do, in plain words", async ({ page }) => {
   await fulfill(page, JSON.stringify({ error: "funding_required" }), 402);
-  await page.goto("/recommend");
+  await openFreeText(page);
   await ask(page, "pick a model");
   await expect(page.getByTestId("funding-notice")).toHaveText(
     "Recommend runs on roadmodel's account for invited members. Add your own API key below to run it on yours.",
@@ -328,7 +329,7 @@ test("a recent result reopens from this browser without a new request", async ({
     calls += 1;
     await route.fulfill({ status: 200, contentType: "application/json", body: FIXTURE });
   });
-  await page.goto("/recommend");
+  await openFreeText(page);
   await ask(page, "a task worth remembering");
   await expect(page.getByTestId("recommend-result")).toBeVisible();
   await page.reload();
@@ -350,7 +351,7 @@ test("attached text file content is prepended to the request body (file-input Ph
       body: mk({ model: "Opus 4.8", platform: "Claude Code", settings: {}, comparison_table: [] }),
     });
   });
-  await page.goto("/recommend");
+  await openFreeText(page);
   await page.locator('input[type="file"]').setInputFiles({
     name: "my-prompt.txt",
     mimeType: "text/plain",
@@ -366,7 +367,7 @@ test("attached text file content is prepended to the request body (file-input Ph
 });
 
 test("non-text files are skipped with a hint (file-input Phase A)", async ({ page }) => {
-  await page.goto("/recommend");
+  await openFreeText(page);
   await page.locator('input[type="file"]').setInputFiles({
     name: "diagram.png",
     mimeType: "image/png",
@@ -378,7 +379,7 @@ test("non-text files are skipped with a hint (file-input Phase A)", async ({ pag
 
 test("502 error renders friendly message", async ({ page }) => {
   await fulfill(page, JSON.stringify({ error: "recommender_unavailable" }), 502);
-  await page.goto("/recommend");
+  await openFreeText(page);
   await ask(page, "hello");
   await expect(page.getByText(/try again in a moment/i)).toBeVisible();
 });
@@ -387,14 +388,14 @@ test("502 error renders friendly message", async ({ page }) => {
 // ratelimit.spec; these pin the user-visible contract for its 429 bodies.
 test("burst_limit burst-drop 429 renders slow-down message", async ({ page }) => {
   await fulfill(page, JSON.stringify({ error: "burst_dropped", retry_after: 60 }), 429);
-  await page.goto("/recommend");
+  await openFreeText(page);
   await ask(page, "burst test");
   await expect(page.getByText(/Slow down/i)).toBeVisible();
 });
 
 test("daily_limit daily-cap 429 renders daily-cap message", async ({ page }) => {
   await fulfill(page, JSON.stringify({ error: "rate_limited", retry_after: 3600 }), 429);
-  await page.goto("/recommend");
+  await openFreeText(page);
   await ask(page, "daily test");
   await expect(page.getByText(/daily recommendation limit/i)).toBeVisible();
 });
@@ -408,5 +409,8 @@ test("blank task_description returns 400 bad_input (no upstream call)", async ({
 test("a signed-out request is refused before its input is read", async ({ request }) => {
   const res = await request.post("/api/recommend", { data: { task_description: "   " } });
   expect(res.status()).toBe(402);
-  expect(await res.json()).toEqual({ error: "funding_required" });
+  expect(await res.json()).toEqual({
+    error: "funding_required",
+    options: ["visitor_key", "openrouter", "keyless", "own_agent"],
+  });
 });

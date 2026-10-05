@@ -6,9 +6,10 @@
 // latency-sweep bypass header, and every other request is refused.
 //
 // Phase 4.11 widens what a refused visitor can do with lanes of their own:
-// `visitor` (their own provider key, per request: below) and, in Step 5,
-// `keyless` (picks computed in code at $0). Neither reopens the operator lane,
-// which stays exactly the three reasons below.
+// `visitor` (their own provider key, per request: below) and `keyless` (picks
+// computed in code at $0, on /api/recommend/keyless only: the outcome there
+// for every request the operator and visitor lanes leave). Neither reopens the
+// operator lane, which stays exactly the three reasons below.
 //
 // The visitor lane. A request that carries X-Roadmodel-Visitor-Key and
 // X-Roadmodel-Visitor-Provider pays with that key, whoever sends it: an
@@ -44,9 +45,14 @@ export type OperatorLane = { lane: "operator"; reason: OperatorReason };
 // The provider is the only thing about the key the lane carries.
 export type VisitorLane = { lane: "visitor"; provider: VisitorProvider };
 
+// Picks computed in code from the bundled catalog: no engine, no provider key,
+// $0 to everyone.
+export type KeylessLane = { lane: "keyless" };
+
 export type FundingLane =
   | OperatorLane
   | VisitorLane
+  | KeylessLane
   | { lane: "refused" }
   // The request tried to pay with a key that cannot be one.
   | { lane: "invalid"; error: "visitor_key_malformed" };
@@ -99,11 +105,13 @@ export function bypassMatches(req: Request): boolean {
 }
 
 // Precedence: a visitor key (on routes that take one), then bypass, founder,
-// invited. Anything else, and any exception on the way, is refused.
+// invited. Anything else, and any exception on the way, is refused, or, on a
+// route that takes the keyless lane, keyless: that lane spends nothing, so it
+// is the safe answer to a failed decision too.
 export function decideLane(
   req: Request,
   userId: string | undefined,
-  { visitor = false }: { visitor?: boolean } = {},
+  { visitor = false, keyless = false }: { visitor?: boolean; keyless?: boolean } = {},
 ): FundingLane {
   try {
     if (visitor) {
@@ -116,5 +124,5 @@ export function decideLane(
   } catch (err) {
     console.warn("[funding-lane] lane decision failed — refusing", err);
   }
-  return { lane: "refused" };
+  return keyless ? { lane: "keyless" } : { lane: "refused" };
 }

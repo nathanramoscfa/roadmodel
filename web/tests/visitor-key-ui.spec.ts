@@ -23,6 +23,7 @@ import { randomBytes } from "node:crypto";
 import { test, expect, type Page, type Request } from "@playwright/test";
 
 import registry from "../data/engines.json";
+import { chooseLane } from "./fixtures/lanes";
 
 // Assembled at runtime: no secret-shaped literal is committed.
 function fakeKey(prefix: string, marker = "canary-0411"): string {
@@ -32,8 +33,9 @@ function fakeKey(prefix: string, marker = "canary-0411"): string {
 const task = (page: Page) => page.getByPlaceholder(/Describe the task/i);
 const submit = (page: Page) => page.getByRole("button", { name: /^Recommend/ });
 
+// Signed out, "Use your own API key" in the lane chooser opens the key panel.
 async function enterKey(page: Page, provider: string, key: string) {
-  await page.getByTestId("visitor-key-toggle").click();
+  await chooseLane(page, "key", "visitor-key-panel");
   await page.getByTestId("visitor-key-provider").selectOption(provider);
   await page.getByTestId("visitor-key-input").fill(key);
 }
@@ -136,7 +138,7 @@ test("a visitor's key runs the recommendation, travels only as a header and is s
 
   // A reload keeps nothing either.
   await page.reload();
-  await page.getByTestId("visitor-key-toggle").click();
+  await chooseLane(page, "key", "visitor-key-panel");
   await expect(page.getByTestId("visitor-key-input")).toHaveValue("");
   expect(await storedText(page)).not.toContain(canary);
 });

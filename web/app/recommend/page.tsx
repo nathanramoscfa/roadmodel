@@ -6,6 +6,7 @@ import { getServerSession } from "@/lib/auth";
 import { getModelAvailability } from "@/lib/availability";
 import { getBenchmarkMeta, getModelRows, getScoreFit } from "@/lib/catalog-models";
 import { reachableModelIds } from "@/lib/funding";
+import { keylessAgreement } from "@/lib/keyless-eval";
 import { getProfile } from "@/lib/profile";
 import { DEFAULT_ENGINE, menuFor, viewerFor, visitorMenuFor } from "@/lib/recommend-engines";
 import { picksData, viewerPool } from "@/lib/recommend-picks";
@@ -15,7 +16,7 @@ import { VISITOR_PROVIDERS, type VisitorProvider } from "@/lib/visitor-key";
 export const metadata = {
   title: "Recommend — roadmodel",
   description:
-    "Describe a task and get three model picks (Cost, Balanced and Quality), each with the platform to run it on, its settings and what it costs you, weighed across the whole catalog.",
+    "Describe a task and get three model picks (Cost, Balanced and Quality), each with the platform to run it on, its settings and what it costs you, weighed across the whole catalog. Quick pick computes them free from published benchmarks and prices.",
 };
 
 export default async function RecommendPage() {
@@ -68,6 +69,8 @@ export default async function RecommendPage() {
           signedIn={session !== null}
           modelCount={models.length}
           measuredCount={bench.measuredCount}
+          keylessViewer={viewer === "anonymous" || viewer === "visitor"}
+          agreement={keylessAgreement()}
         />
       </div>
     </section>
