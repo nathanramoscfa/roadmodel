@@ -6,14 +6,19 @@
 // rate limits are the operator lane's: they bound what the operator's keys
 // spend, so they apply inside that lane and nowhere else, and a tripped cap
 // never stands in for a refusal.
+//
+// A route that takes the visitor lane (a visitor paying with their own key)
+// passes a `visitor` handler. That lane never checks the operator's cap and
+// never adds to its spend; it has its own limits per IP+UA, the declined-key
+// limit among them.
 
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 
 import { writeAudit } from "./audit";
-import { decideLane, type OperatorLane } from "./funding-lane";
+import { decideLane, type OperatorLane, type VisitorLane } from "./funding-lane";
 import { ipHashSalt } from "./ip-salt";
-import { checkInvitedLimits } from "./ratelimit";
+import { checkInvitedLimits, checkVisitorLimits } from "./ratelimit";
 import { dailyCostCapTripped } from "./spend-guard";
 
 function hash(value: string): string {
@@ -52,12 +57,21 @@ export function identifyRequest(req: Request): RequestIdentity {
 }
 
 export type LaneHandler = (req: Request, lane: OperatorLane) => Promise<Response>;
+export type VisitorLaneHandler = (req: Request, lane: VisitorLane) => Promise<Response>;
 type UserIdResolver = (req: Request) => Promise<string | undefined>;
 
 export interface FundingLaneOptions {
   // When this returns false the route answers 404 to every caller, before the
   // session is read or the lane decided (/api/roadmap's ROADMAP_ENABLED).
   enabled?: () => boolean;
+  // The route's handler for the visitor lane. Without one the visitor headers
+  // are ignored and the request is decided as if it carried none.
+  visitor?: VisitorLaneHandler;
+}
+
+// The IP+UA identity the visitor lane's limits key on.
+export function ipUaKey(id: RequestIdentity): string {
+  return `${id.ipHash}:${id.uaHash}`;
 }
 
 export function withFundingLane(
@@ -79,7 +93,45 @@ export function withFundingLane(
       userId = undefined;
     }
 
-    const lane = decideLane(req, userId);
+    const lane = decideLane(req, userId, { visitor: options.visitor !== undefined });
+
+    if (lane.lane === "invalid") {
+      // A key that cannot be one is never forwarded.
+      void writeAudit({
+        ip_hash: id.ipHash,
+        ua_hash: id.uaHash,
+        route: id.route,
+        outcome: "bad_input",
+        error_class: lane.error,
+        user_id: userId,
+        funded_by: "visitor",
+      });
+      return NextResponse.json({ error: lane.error }, { status: 400 });
+    }
+
+    if (lane.lane === "visitor" && options.visitor) {
+      const limit = await checkVisitorLimits(ipUaKey(id));
+      if (!limit.allowed) {
+        void writeAudit({
+          ip_hash: id.ipHash,
+          ua_hash: id.uaHash,
+          route: id.route,
+          // The declined-key limit has no outcome of its own in the CHECK:
+          // it is a rate limit, told apart by its error_class.
+          outcome: limit.reason === "burst_dropped" ? "burst_dropped" : "rate_limited",
+          error_class: limit.reason,
+          user_id: userId,
+          funded_by: "visitor",
+        });
+        return NextResponse.json(
+          { error: limit.reason, retry_after: limit.retryAfter },
+          { status: 429, headers: { "Retry-After": String(limit.retryAfter) } },
+        );
+      }
+      // The visitor pays: no operator cap, no operator spend.
+      return options.visitor(req, lane);
+    }
+
     if (lane.lane !== "operator") {
       void writeAudit({
         ip_hash: id.ipHash,
@@ -135,7 +187,7 @@ export function withFundingLane(
           ip_hash: id.ipHash,
           ua_hash: id.uaHash,
           route: id.route,
-          outcome: limit.reason!,
+          outcome: limit.reason === "burst_dropped" ? "burst_dropped" : "rate_limited",
           user_id: userId,
           funded_by: "operator",
         });

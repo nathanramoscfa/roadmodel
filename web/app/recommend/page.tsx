@@ -7,9 +7,10 @@ import { getModelAvailability } from "@/lib/availability";
 import { getBenchmarkMeta, getModelRows, getScoreFit } from "@/lib/catalog-models";
 import { reachableModelIds } from "@/lib/funding";
 import { getProfile } from "@/lib/profile";
-import { DEFAULT_ENGINE, menuFor, viewerFor } from "@/lib/recommend-engines";
+import { DEFAULT_ENGINE, menuFor, viewerFor, visitorMenuFor } from "@/lib/recommend-engines";
 import { picksData, viewerPool } from "@/lib/recommend-picks";
 import { parseEnginePref, RECOMMEND_PREFS_COOKIE } from "@/lib/recommend-prefs";
+import { VISITOR_PROVIDERS, type VisitorProvider } from "@/lib/visitor-key";
 
 export const metadata = {
   title: "Recommend — roadmodel",
@@ -21,6 +22,10 @@ export default async function RecommendPage() {
   const session = await getServerSession();
   const viewer = viewerFor(session?.id);
   const engines = menuFor(viewer);
+  // The menu for a visitor's own key, by provider: every evaluated engine of it.
+  const visitorEngines = Object.fromEntries(
+    VISITOR_PROVIDERS.map((p) => [p, visitorMenuFor(p)]),
+  ) as Record<VisitorProvider, ReturnType<typeof visitorMenuFor>>;
   // The engine the visitor last chose, if they may still use it.
   const saved = parseEnginePref((await cookies()).get(RECOMMEND_PREFS_COOKIE)?.value);
   const initialEngine = engines.find((e) => e.hint === saved && e.allowed)?.hint ?? DEFAULT_ENGINE.hint;
@@ -57,6 +62,7 @@ export default async function RecommendPage() {
       <div className="mt-8">
         <RecommendWorkspace
           engines={engines}
+          visitorEngines={visitorEngines}
           initialEngine={initialEngine}
           picks={picks}
           signedIn={session !== null}

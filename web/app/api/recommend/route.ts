@@ -14,6 +14,7 @@ import {
 } from "@/lib/latency";
 import {
   chooseEngine,
+  chooseVisitorEngine,
   costFromUsage,
   engineByHint,
   estimatedCost,
@@ -30,9 +31,10 @@ import {
   type JurisdictionCode,
 } from "@/lib/profile";
 import { BUDGET_PRIORITY_IDS, isBudgetPriority } from "@/lib/budget-priority";
-import { recommenderRequestHeaders } from "@/lib/api";
-import { identifyRequest, withFundingLane } from "@/lib/withFundingLane";
-import type { OperatorLane } from "@/lib/funding-lane";
+import { recommenderRequestHeaders, visitorRequestHeaders } from "@/lib/api";
+import { identifyRequest, ipUaKey, withFundingLane } from "@/lib/withFundingLane";
+import type { FundedBy, OperatorLane, VisitorLane } from "@/lib/funding-lane";
+import { recordRejectedVisitorKey } from "@/lib/ratelimit";
 import { clientContext, type ClientContext } from "@/lib/recommend-context";
 import { fundingNoteForModel, personalizeComparison } from "@/lib/funding";
 import { env } from "@/lib/env";
@@ -46,9 +48,12 @@ const DEFAULT_RECOMMENDER_URL =
 // summed by the daily spend guard (lib/spend-guard.ts). Exact when the service
 // returns the provider-reported usage (roadmodel >= 0.2.56: cache reads billed
 // at the cache price); otherwise the cold estimate (lib/recommend-engines.ts),
-// the conservative side for the guard. Every request this handler runs is on
-// the operator lane (lib/withFundingLane.ts refuses the rest before it), so
-// every row it writes is stamped funded_by 'operator'.
+// the conservative side for the guard. This handler runs on two lanes
+// (lib/withFundingLane.ts refuses the rest before it): the operator lane,
+// whose rows are stamped funded_by 'operator' and whose cost is the guard's,
+// and the visitor lane, whose rows are stamped funded_by 'visitor' with
+// cost_usd null and the visitor's cost in cache_stats.visitor_cost_usd, so a
+// visitor's spend never reaches the operator's ledger or counter.
 
 function recommenderUrl(): string {
   if (
@@ -68,6 +73,41 @@ function recommenderUrl(): string {
 // ladder-shaped body at the same path + /ladder).
 function ladderUrl(): string {
   return `${recommenderUrl()}/ladder`;
+}
+
+// The visitor lane's service endpoint: one ladder call on the visitor's own key,
+// with no fallback chain (service/app/visitor.py). On the service's host,
+// whatever path ROADMODEL_RECOMMEND_URL names; the E2E mock serves it beside
+// its ladder. An older service answers 404, which reads as provider_error, so
+// the lane fails closed during a deploy skew.
+function visitorLadderUrl(): string {
+  if (isE2eAuthEnabled() && process.env.ROADMODEL_E2E_MOCK_RECOMMEND === "1") {
+    return `${recommenderUrl()}/visitor`;
+  }
+  return new URL("/v1/visitor/recommend/ladder", recommenderUrl()).toString();
+}
+
+// The visitor lane's failure codes, by the service's status. The client gets
+// the code alone: never the service's text, which names the provider's answer.
+type VisitorFailure = "visitor_key_rejected" | "visitor_quota" | "provider_error";
+const VISITOR_FAILURE_STATUS: Record<VisitorFailure, number> = {
+  visitor_key_rejected: 401,
+  visitor_quota: 429,
+  provider_error: 502,
+};
+
+function visitorFailure(status: number, text: string): VisitorFailure {
+  let code: unknown;
+  try {
+    code = (JSON.parse(text) as { error?: unknown }).error;
+  } catch {
+    code = undefined;
+  }
+  // Trust a code only with its own status: a 401 from the bearer check
+  // (`detail`, no `error`) is the service refusing the edge, not the key.
+  if (code === "visitor_key_rejected" && status === 401) return code;
+  if (code === "visitor_quota" && status === 429) return code;
+  return "provider_error";
 }
 
 // The ladder upstream response (tasks #1/#3): three tier-keyed picks (each the
@@ -192,8 +232,9 @@ function filterByJurisdiction(
   };
 }
 
-function auditFor(
+function auditRow(
   req: Request,
+  fundedBy: FundedBy,
   outcome: AuditOutcome,
   extras: Partial<Parameters<typeof writeAudit>[0]> = {},
 ): void {
@@ -203,13 +244,19 @@ function auditFor(
     ua_hash: id.uaHash,
     route: id.route,
     outcome,
-    funded_by: "operator",
+    funded_by: fundedBy,
     ...extras,
   });
 }
 
-const handler = async (req: Request, lane: OperatorLane): Promise<Response> =>
+const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<Response> =>
   runWithTimings(async () => {
+    const fundedBy: FundedBy = lane.lane === "visitor" ? "visitor" : "operator";
+    const auditFor = (
+      r: Request,
+      outcome: AuditOutcome,
+      extras: Partial<Parameters<typeof writeAudit>[0]> = {},
+    ) => auditRow(r, fundedBy, outcome, extras);
     // Phase 4 Step 7 — input parse + profile load + engine resolve
     // are bundled into a single dispatch span. Anything that runs
     // BEFORE the upstream fetch belongs here so provider_ms is
@@ -277,7 +324,9 @@ const handler = async (req: Request, lane: OperatorLane): Promise<Response> =>
         // profile PATCH lands — overriding the stored profile for THIS call.
         const bodyBudget = (parsedBody as { budget_priority?: unknown })
           .budget_priority;
-        const localSession = await getServerSession();
+        // An unreadable session here is a signed-out caller: the lane is
+        // already decided, so it costs only the profile's personalization.
+        const localSession = await getServerSession().catch(() => null);
         const localUserId = localSession?.id;
         const profile = localUserId ? await getProfile(localUserId) : null;
         const localBudget = isBudgetPriority(bodyBudget)
@@ -302,11 +351,14 @@ const handler = async (req: Request, lane: OperatorLane): Promise<Response> =>
 
         // The engine the user chose from the /recommend menu, checked against
         // who may use it BEFORE any paid call (lib/recommend-engines). No
-        // choice means the registry's default, which is open to everyone.
-        const choice = chooseEngine(
-          (parsedBody as { engine?: unknown }).engine,
-          viewerFor(localUserId),
-        );
+        // choice means the registry's default, which is open to everyone. A
+        // visitor's key runs an evaluated engine of its own provider, any
+        // tier, else that provider's default.
+        const requestedEngine = (parsedBody as { engine?: unknown }).engine;
+        const choice =
+          lane.lane === "visitor"
+            ? ({ ok: true, engine: chooseVisitorEngine(requestedEngine, lane.provider) } as const)
+            : chooseEngine(requestedEngine, viewerFor(localUserId));
         if (!choice.ok) {
           return {
             kind: "engine_refused",
@@ -613,52 +665,128 @@ const handler = async (req: Request, lane: OperatorLane): Promise<Response> =>
       return recs;
     };
 
+    // The visitor lane: ONE ladder call on the visitor's key, forwarded only
+    // as its header (visitorRequestHeaders). No fan-out fallback, so the
+    // visitor never pays for more than the call they asked for; a collapsed
+    // ladder is still their answer. A failure returns its code alone.
+    type VisitorFetch =
+      | { ok: true; recs: ReturnType<typeof toRecommendation>[] }
+      | { ok: false; code: VisitorFailure; status: number };
+    const fetchVisitorLadder = async (visitor: VisitorLane): Promise<VisitorFetch> => {
+      const upstreamPayload = {
+        task_description: taskDescription,
+        context: {
+          ...incomingContext,
+          unavailable_models: unavailableModels,
+          availability_authoritative: availabilityAuthoritative,
+          consumption_headroom: consumptionHeadroom,
+          allowed_jurisdictions: allowedJurisdictions,
+          subscriptions,
+          api_providers: apiProviders,
+          force_provider: recommenderEngine.hint,
+        },
+      };
+      let upstream: Response;
+      try {
+        upstream = await fetch(visitorLadderUrl(), {
+          method: "POST",
+          headers: visitorRequestHeaders(req, visitor),
+          body: JSON.stringify(upstreamPayload),
+        });
+      } catch {
+        return { ok: false, code: "provider_error", status: 502 };
+      }
+      const text = await upstream.text();
+      if (!upstream.ok) {
+        return { ok: false, code: visitorFailure(upstream.status, text), status: upstream.status };
+      }
+      let parsed: LadderPayload | null = null;
+      try {
+        parsed = JSON.parse(text) as LadderPayload;
+      } catch {
+        parsed = null;
+      }
+      const picks = parsed?.picks;
+      if (!picks || LADDER_TIER_TO_PRIORITY.some(([tier]) => !picks[tier])) {
+        return { ok: false, code: "provider_error", status: upstream.status };
+      }
+      noteCall(parsed);
+      ingestServiceTimings(upstream.headers.get("X-Roadmodel-Timing"));
+      return {
+        ok: true,
+        recs: LADDER_TIER_TO_PRIORITY.map(([tier, priority]) => toRecommendation(picks[tier]!, priority)),
+      };
+    };
+
     let recommendations: ReturnType<typeof toRecommendation>[];
     let ladderMode = false;
 
-    const ladderRecs = env.RECOMMEND_LADDER_ENABLED
-      ? await withSpan("provider", fetchLadder)
-      : null;
-
-    if (ladderRecs) {
-      recommendations = await withSpan("render", async () => ladderRecs);
-      ladderMode = true;
-    } else {
-      const results = await withSpan("provider", async () =>
-        Promise.all(BUDGET_PRIORITY_IDS.map(fetchOne)),
-      );
-
-      const ok = results.filter(
-        (r): r is Extract<PickFetch, { ok: true }> => r.ok,
-      );
-      // Decompose the provider span via the first pick's timing header (Step 7);
-      // the three calls share an engine so one sample is representative.
-      if (ok.length > 0) {
-        ingestServiceTimings(ok[0].timing);
-      }
-
-      if (ok.length === 0) {
+    if (lane.lane === "visitor") {
+      const visitorRun = await withSpan("provider", () => fetchVisitorLadder(lane));
+      if (!visitorRun.ok) {
         recordTotal();
-        const first = results.find(
-          (r): r is Extract<PickFetch, { ok: false }> => !r.ok,
-        );
-        const status = first?.status ?? 502;
-        auditFor(req, "recommender_error", {
-          error_class: `upstream_${status}`,
+        auditFor(req, visitorRun.code, {
+          error_class: `upstream_${visitorRun.status}`,
+          provider: lane.provider,
+          model: recommenderEngine.catalogId,
           user_id: userId,
           latency_ms: getTimings(),
         });
-        return new NextResponse(
-          first?.body ?? JSON.stringify({ error: "recommender_unavailable" }),
-          { status, headers: { "Content-Type": "application/json" } },
+        // A declined key counts toward this IP+UA's daily allowance of them.
+        if (visitorRun.code === "visitor_key_rejected") {
+          await recordRejectedVisitorKey(ipUaKey(identifyRequest(req)));
+        }
+        return NextResponse.json(
+          { error: visitorRun.code },
+          { status: VISITOR_FAILURE_STATUS[visitorRun.code] },
         );
       }
+      recommendations = await withSpan("render", async () => visitorRun.recs);
+      ladderMode = true;
+    } else {
+      const ladderRecs = env.RECOMMEND_LADDER_ENABLED
+        ? await withSpan("provider", fetchLadder)
+        : null;
+      if (ladderRecs) {
+        recommendations = await withSpan("render", async () => ladderRecs);
+        ladderMode = true;
+      } else {
+        const results = await withSpan("provider", async () =>
+          Promise.all(BUDGET_PRIORITY_IDS.map(fetchOne)),
+        );
 
-      for (const r of ok) noteCall(r.parsed);
-      recommendations = await withSpan("render", async () =>
-        // results preserve BUDGET_PRIORITY_IDS order (Cost -> Balanced -> Quality).
-        ok.map((r) => toRecommendation(r.parsed, r.priority)),
-      );
+        const ok = results.filter(
+          (r): r is Extract<PickFetch, { ok: true }> => r.ok,
+        );
+        // Decompose the provider span via the first pick's timing header (Step 7);
+        // the three calls share an engine so one sample is representative.
+        if (ok.length > 0) {
+          ingestServiceTimings(ok[0].timing);
+        }
+
+        if (ok.length === 0) {
+          recordTotal();
+          const first = results.find(
+            (r): r is Extract<PickFetch, { ok: false }> => !r.ok,
+          );
+          const status = first?.status ?? 502;
+          auditFor(req, "recommender_error", {
+            error_class: `upstream_${status}`,
+            user_id: userId,
+            latency_ms: getTimings(),
+          });
+          return new NextResponse(
+            first?.body ?? JSON.stringify({ error: "recommender_unavailable" }),
+            { status, headers: { "Content-Type": "application/json" } },
+          );
+        }
+
+        for (const r of ok) noteCall(r.parsed);
+        recommendations = await withSpan("render", async () =>
+          // results preserve BUDGET_PRIORITY_IDS order (Cost -> Balanced -> Quality).
+          ok.map((r) => toRecommendation(r.parsed, r.priority)),
+        );
+      }
     }
 
     // The scoring span preserves the four-span shape the audit contract
@@ -682,8 +810,9 @@ const handler = async (req: Request, lane: OperatorLane): Promise<Response> =>
           outputCalls: n,
         });
     const costUsd = costFromUsage(answered, usage);
-    // The day's running total of operator spend the guard checks.
-    recordSpend(costUsd, "operator");
+    // The day's running total of operator spend the guard checks. A visitor's
+    // call is theirs: it never reaches the counter.
+    if (lane.lane === "operator") recordSpend(costUsd, "operator");
     recordTotal();
     const timings = getTimings();
     auditFor(req, "ok", {
@@ -691,7 +820,8 @@ const handler = async (req: Request, lane: OperatorLane): Promise<Response> =>
       model: primaryPick.model,
       input_tokens: usage.input_tokens,
       output_tokens: usage.output_tokens,
-      cost_usd: costUsd,
+      // The operator's ledger column; null on the visitor lane.
+      cost_usd: lane.lane === "operator" ? costUsd : undefined,
       user_id: userId,
       latency_ms: timings,
       cache_stats: {
@@ -703,7 +833,9 @@ const handler = async (req: Request, lane: OperatorLane): Promise<Response> =>
         cache_write_tokens: usage.cache_write_tokens,
         output_tokens: usage.output_tokens,
         cost_source: measured ? "measured" : "estimated",
-        funding_reason: lane.reason,
+        ...(lane.lane === "operator"
+          ? { funding_reason: lane.reason }
+          : { visitor_cost_usd: costUsd, visitor_provider: lane.provider }),
       },
     });
 
@@ -721,6 +853,7 @@ const handler = async (req: Request, lane: OperatorLane): Promise<Response> =>
         measured && usage.input_tokens > 0
           ? Number((usage.cached_input_tokens / usage.input_tokens).toFixed(3))
           : null,
+      funded_by: fundedBy,
     };
 
     return new NextResponse(
@@ -729,7 +862,11 @@ const handler = async (req: Request, lane: OperatorLane): Promise<Response> =>
     );
   });
 
-export const POST = withFundingLane(handler, async () => {
-  const session = await getServerSession();
-  return session?.id;
-});
+export const POST = withFundingLane(
+  handler,
+  async () => {
+    const session = await getServerSession();
+    return session?.id;
+  },
+  { visitor: handler },
+);

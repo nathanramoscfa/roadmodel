@@ -763,8 +763,18 @@ def main() -> int:
             "billed at the cache rate). The /recommend engine menu shows these figures."
         )
         summary["generated_at"] = today
-        path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+        text = json.dumps(summary, indent=2, sort_keys=True) + "\n"
+        path.write_text(text)
         print(f"Summary: {path}")
+        # The service deploys from service/ and cannot read docs/, so it reads
+        # a copy beside its engine registry (service/app/engines.py EVALUATED,
+        # which gates the engines a visitor's key may run).
+        # tests/test_engine_eval_mirror.py holds the two equal.
+        repo = pathlib.Path(__file__).resolve().parents[1]
+        if path.resolve() == repo / "docs" / "engine-eval.json":
+            mirror = repo / "service" / "app" / "engine-eval.json"
+            mirror.write_text(text)
+            print(f"Mirror:  {mirror}")
     print(f"\nReport: {report}\nRaw:    {args.out}.jsonl")
     return 0
 

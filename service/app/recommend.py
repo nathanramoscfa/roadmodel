@@ -4,7 +4,7 @@ from __future__ import annotations
 import inspect
 import logging
 import os
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from importlib import resources
 from pathlib import Path
 from typing import Any
@@ -522,6 +522,88 @@ def _pick_response(
     )
 
 
+@dataclass(frozen=True)
+class _LadderInputs:
+    """Everything a ladder call derives from the request, independent of the
+    engine that answers it: built once, then shared by every attempt."""
+
+    user_context_text: str | None
+    funding_guard: FundingGuard | None
+    access_guard: AccessGuard | None
+    unavailable_models: list[str] | None
+    availability_authoritative: bool
+    allowed_jurisdictions: list[str]
+    scoring_kwargs: dict[str, Any]
+
+
+def _ladder_inputs(req: RecommendRequest) -> _LadderInputs:
+    # The same declared access, in the format the package's scorer reads, so
+    # the ladder table is drawn over the models this user can run.
+    scoring_kwargs: dict[str, Any] = (
+        {"scoring_context_text": scoring_context_from_request(req.context)}
+        if _LADDER_TAKES_SCORING_CONTEXT
+        else {}
+    )
+    return _LadderInputs(
+        user_context_text=user_context_from_request(req.context),
+        # Funded-platform honesty guard (#444) — same activation condition as
+        # the per-user context above; applied to every rung of the ladder.
+        funding_guard=funding_guard_from_request(req.context),
+        # Access-restriction guard (#445) — applied per rung with that rung's
+        # priority so substitutes are tier-appropriate (quality->best,
+        # cost->cheap). Carries the operator's platform allow/deny list (Step
+        # A00) too, so every rung is filtered and relabelled identically.
+        access_guard=access_guard_from_request(req.context),
+        unavailable_models=_unavailable_models_from_request(req.context),
+        availability_authoritative=_availability_authoritative_from_request(req.context),
+        # The user's permitted jurisdictions (or the baseline) — forwarded to
+        # the package so the cross-provider backup substitution only picks a
+        # region-valid fallback (0.2.20).
+        allowed_jurisdictions=resolve_allowed_jurisdictions(req.context),
+        scoring_kwargs=scoring_kwargs,
+    )
+
+
+def ladder_once(
+    req: RecommendRequest, hint: str, config: Any, inputs: _LadderInputs | None = None
+) -> LadderResponse:
+    """ONE ladder call on ``config``, reported as engine ``hint``. Raises the
+    package's errors unchanged: the operator path below catches them and moves
+    down its fallback chain; the visitor path (visitor.py) maps them to an error
+    code and stops, since a visitor's request runs on their key alone."""
+    ins = inputs if inputs is not None else _ladder_inputs(req)
+    thinking_budget, max_output_tokens, temperature = _spec_for(hint).params(ladder=True)
+    _reset_usage()
+    ladder = recommend_structured_ladder(
+        req.task_description,
+        config,
+        user_context_text=ins.user_context_text,
+        unavailable_models=ins.unavailable_models,
+        availability_authoritative=ins.availability_authoritative,
+        allowed_jurisdictions=ins.allowed_jurisdictions,
+        max_output_tokens=max_output_tokens,
+        thinking_budget=thinking_budget,
+        temperature=temperature,
+        **ins.scoring_kwargs,
+    )
+    picks = {
+        tier: _pick_response(
+            pick,
+            req.task_description,
+            ins.funding_guard,
+            ins.access_guard,
+            _TIER_TO_PRIORITY.get(tier, "balanced"),
+        )
+        for tier, pick in ladder["picks"].items()
+    }
+    return LadderResponse(
+        picks=picks,
+        guard=ladder.get("guard", {}),
+        engine=hint,
+        usage=_call_usage(),
+    )
+
+
 def recommend_ladder(req: RecommendRequest) -> LadderResponse:
     """One-call Cost/Balanced/Quality ladder (tasks #1/#3).
 
@@ -534,63 +616,12 @@ def recommend_ladder(req: RecommendRequest) -> LadderResponse:
     falls back to the fan-out.
     """
     last_error: Exception | None = None
-
-    user_context_text = user_context_from_request(req.context)
-    # Funded-platform honesty guard (#444) — same activation condition as the
-    # per-user context above; applied to every rung of the ladder.
-    funding_guard = funding_guard_from_request(req.context)
-    # Access-restriction guard (#445) — applied per rung with that rung's
-    # priority so substitutes are tier-appropriate (quality->best, cost->cheap).
-    # Carries the operator's platform allow/deny list (Step A00) too, so every
-    # rung is filtered and relabelled identically.
-    access_guard = access_guard_from_request(req.context)
-    unavailable_models = _unavailable_models_from_request(req.context)
-    availability_authoritative = _availability_authoritative_from_request(req.context)
-    # The user's permitted jurisdictions (or the baseline) — forwarded to the
-    # package so the cross-provider backup substitution only picks a region-valid
-    # fallback (0.2.20).
-    allowed_jurisdictions = resolve_allowed_jurisdictions(req.context)
-    # The same declared access, in the format the package's scorer reads, so
-    # the ladder table is drawn over the models this user can run.
-    scoring_kwargs: dict[str, Any] = (
-        {"scoring_context_text": scoring_context_from_request(req.context)}
-        if _LADDER_TAKES_SCORING_CONTEXT
-        else {}
-    )
+    inputs = _ladder_inputs(req)
 
     for hint in _provider_chain(req.context):
-        thinking_budget, max_output_tokens, temperature = _spec_for(hint).params(ladder=True)
         try:
             config = _config_for_hint(hint)
-            _reset_usage()
-            ladder = recommend_structured_ladder(
-                req.task_description,
-                config,
-                user_context_text=user_context_text,
-                unavailable_models=unavailable_models,
-                availability_authoritative=availability_authoritative,
-                allowed_jurisdictions=allowed_jurisdictions,
-                max_output_tokens=max_output_tokens,
-                thinking_budget=thinking_budget,
-                temperature=temperature,
-                **scoring_kwargs,
-            )
-            picks = {
-                tier: _pick_response(
-                    pick,
-                    req.task_description,
-                    funding_guard,
-                    access_guard,
-                    _TIER_TO_PRIORITY.get(tier, "balanced"),
-                )
-                for tier, pick in ladder["picks"].items()
-            }
-            return LadderResponse(
-                picks=picks,
-                guard=ladder.get("guard", {}),
-                engine=hint,
-                usage=_call_usage(),
-            )
+            return ladder_once(req, hint, config, inputs)
         except (MissingProviderKeyError, ProviderCallError, MalformedResponseError) as exc:
             last_error = exc
             if isinstance(exc, MalformedResponseError):

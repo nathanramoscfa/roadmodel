@@ -14,7 +14,7 @@
 import { Check, ChevronDown, Lock } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
-import { cents, lockReason, seconds } from "@/lib/engine-format";
+import { cents, costLine, costNote, lockReason, seconds } from "@/lib/engine-format";
 import type { EngineOption } from "@/lib/recommend-engines";
 
 function costOf(o: EngineOption): number {
@@ -25,9 +25,7 @@ function OptionFigures({ o }: { o: EngineOption }) {
   const e = o.eval;
   return (
     <span className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs tabular-nums text-brand-slate-500 dark:text-brand-slate-400">
-      <span title="What one recommendation costs roadmodel at this engine's API price, with the prompt cached (cold, about 4× more)">
-        {cents(costOf(o))} each
-      </span>
+      <span title={costNote(o.payer)}>{costLine(o.payer, costOf(o))}</span>
       {e?.p50_latency_s != null && <span title="Median time on the engine eval">~{seconds(e.p50_latency_s)}</span>}
       {e ? (
         <span title={`Engine eval, ${e.evaluated_on}: answered every structured field on ${e.passed} of ${e.probes} probe tasks`}>
@@ -133,7 +131,8 @@ export function EnginePicker({
         <div className="absolute bottom-full left-0 z-40 mb-2 w-[min(30rem,calc(100vw-2rem))] rounded-xl border border-brand-slate-200 bg-white p-2 shadow-xl shadow-brand-slate-900/10 dark:border-brand-slate-600 dark:bg-brand-slate-800 dark:shadow-black/40 sm:bottom-auto sm:top-full sm:mb-0 sm:mt-2">
           <p className="px-2 pb-2 pt-1 text-xs leading-5 text-brand-slate-500 dark:text-brand-slate-400">
             The engine reads your task and writes the three picks; it is not the model it
-            recommends. Cost is what one recommendation costs at the engine&rsquo;s API price.
+            recommends. Cost is what one recommendation costs at the engine&rsquo;s API price
+            {current.payer === "visitor" ? ", billed to your key." : ", paid by roadmodel."}
           </p>
           <ul
             ref={list}

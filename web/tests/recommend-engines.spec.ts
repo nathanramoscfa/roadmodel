@@ -98,8 +98,9 @@ test("menuFor marks what each viewer may choose, without internals", () => {
   for (const o of anon) {
     expect(o.allowed).toBe(false);
     expect(Object.keys(o).sort()).toEqual(
-      ["access", "allowed", "coldUsd", "eval", "evaluated", "hint", "isDefault", "maker", "name", "warmUsd"].sort(),
+      ["access", "allowed", "coldUsd", "eval", "evaluated", "hint", "isDefault", "maker", "name", "payer", "warmUsd"].sort(),
     );
+    expect(o.payer).toBe("operator");
   }
 });
 

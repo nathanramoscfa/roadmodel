@@ -15,13 +15,19 @@
 // `invited` engines are open to the invite list and the founder, `founder`
 // ones to the founder list alone. Signed-out and uninvited visitors see the
 // menu locked. The service runs whatever the authenticated edge forwards.
+//
+// A visitor paying with their own key (the visitor lane) gets a menu of their
+// own: every evaluated engine of that key's provider, whatever its tier, since
+// the visitor pays (visitorMenuFor). An engine of another provider, or one
+// that has not passed the eval, runs as that provider's default instead
+// (engines.json `visitor_defaults`, the same file the service reads).
 
 import catalog from "@/data/catalog.json";
 import evals from "@/data/engine-eval.json";
 import registry from "@/data/engines.json";
 
 import { modelProvider } from "./catalog-fields";
-import { isInvited } from "./funding-lane";
+import { isInvited, type VisitorProvider } from "./funding-lane";
 import { isRateLimitExempt } from "./ratelimit";
 
 export type EngineAccess = "invited" | "founder";
@@ -115,7 +121,11 @@ const EVALS = ((evals as { engines?: Record<string, EngineEval> }).engines ?? {}
   string,
   EngineEval
 >;
-const REGISTRY = registry as { default: string; engines: RegistryEntry[] };
+const REGISTRY = registry as {
+  default: string;
+  engines: RegistryEntry[];
+  visitor_defaults: Record<VisitorProvider, string>;
+};
 
 const MAKER: Record<string, string> = { openai: "OpenAI", google: "Google", anthropic: "Anthropic" };
 
@@ -263,6 +273,25 @@ export function estimatedCost(
   return { ...usage, costUsd: costFromUsage(engine, usage) };
 }
 
+// The engine a visitor's key runs: the one asked for when it is an evaluated
+// menu engine of the key's provider (any tier: the visitor pays), else that
+// provider's default from engines.json `visitor_defaults`.
+export function chooseVisitorEngine(requested: unknown, provider: VisitorProvider): Engine {
+  const engine = typeof requested === "string" ? BY_HINT.get(requested) : undefined;
+  if (engine && engine.access !== null && engine.provider === provider && isEvaluated(engine)) {
+    return engine;
+  }
+  return BY_HINT.get(REGISTRY.visitor_defaults[provider]) as Engine;
+}
+
+export function visitorDefaultEngine(provider: VisitorProvider): Engine {
+  return BY_HINT.get(REGISTRY.visitor_defaults[provider]) as Engine;
+}
+
+// Who pays for one recommendation on an engine: roadmodel's account (the
+// operator lane) or the visitor's own key.
+export type EnginePayer = "operator" | "visitor";
+
 // A compact, client-safe view of an engine for the menu (no internals).
 export interface EngineOption {
   hint: string;
@@ -276,6 +305,7 @@ export interface EngineOption {
   coldUsd: number;
   warmUsd: number;
   eval: EngineEval | null;
+  payer: EnginePayer;
 }
 
 export function menuFor(viewer: Viewer): EngineOption[] {
@@ -290,5 +320,25 @@ export function menuFor(viewer: Viewer): EngineOption[] {
     coldUsd: e.coldUsd,
     warmUsd: e.warmUsd,
     eval: e.eval,
+    payer: "operator",
+  }));
+}
+
+// The menu for a visitor's own key: the menu engines of that provider, every
+// evaluated one open to choose, the provider's visitor default marked.
+export function visitorMenuFor(provider: VisitorProvider): EngineOption[] {
+  const fallback = REGISTRY.visitor_defaults[provider];
+  return MENU.filter((e) => e.provider === provider).map((e) => ({
+    hint: e.hint,
+    name: e.name,
+    maker: e.maker,
+    access: e.access as EngineAccess,
+    isDefault: e.hint === fallback,
+    evaluated: isEvaluated(e),
+    allowed: isEvaluated(e),
+    coldUsd: e.coldUsd,
+    warmUsd: e.warmUsd,
+    eval: e.eval,
+    payer: "visitor",
   }));
 }

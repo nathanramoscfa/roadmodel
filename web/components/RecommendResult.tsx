@@ -11,7 +11,7 @@ import { AlertTriangle, Cpu, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import type { MultiRecommendResponse, PriorityRecommendation } from "@/lib/api";
-import { cents, seconds } from "@/lib/engine-format";
+import { cents, runCostNote, seconds } from "@/lib/engine-format";
 import type { BudgetPriority } from "@/lib/profile";
 import type { EngineOption } from "@/lib/recommend-engines";
 import { rowForPick, type PicksData } from "@/lib/recommend-picks";
@@ -73,9 +73,10 @@ function EngineLine({
             </span>
             <span className="text-xs tabular-nums text-brand-slate-500 dark:text-brand-slate-400">
               {run.latency_ms !== null ? `${seconds(run.latency_ms / 1000)} · ` : ""}
-              <span title={run.cost_source === "measured" ? "What this run cost roadmodel, from the provider's reported usage" : "Estimated from the prompt size; the provider reported no usage"}>
+              <span title={runCostNote(run.funded_by ?? "operator", run.cost_source === "measured")}>
                 {cents(run.cost_usd)}
                 {run.cost_source === "estimated" ? " (est.)" : ""}
+                {run.funded_by === "visitor" ? ", billed to your key" : ""}
               </span>
               {run.cached_share !== null && run.cached_share > 0.5 ? " · prompt cached" : ""}
             </span>

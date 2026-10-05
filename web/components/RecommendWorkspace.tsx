@@ -5,12 +5,20 @@
 // work, with its real elapsed time), and a result (the three picks, with a way
 // to ask another engine the same task). The last few results stay in this
 // browser (RecentRecommendations), so a reload or a comparison costs nothing.
+//
+// A visitor may pay with their own API key (VisitorKeyPanel). The key lives in
+// one React state holder here (lib/use-visitor-key.ts), shared by the composer
+// and "Run again", and leaves the page only as a request header. While a key
+// is in use the engine menu is that provider's engines, priced to the key.
 "use client";
 
+import { KeyRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import type { MultiRecommendResponse } from "@/lib/api";
 import type { EngineOption } from "@/lib/recommend-engines";
+import { useVisitorKey } from "@/lib/use-visitor-key";
+import { KEY_PREFIX_HINT, PROVIDER_LABEL, type VisitorProvider } from "@/lib/visitor-key";
 import type { PicksData } from "@/lib/recommend-picks";
 import { saveEnginePref } from "@/lib/recommend-prefs";
 import { attachmentsPrefix, RecommendComposer, type Attachment } from "./RecommendComposer";
@@ -33,13 +41,37 @@ function newId(): string {
 }
 
 // What a visitor the operator lane does not fund reads in place of an error
-// (402 funding_required, lib/funding-lane.ts). Phase 4.11 Steps 2 and 5 add
-// the key entry and the Quick pick form beside it.
+// (402 funding_required, lib/funding-lane.ts), with the key panel opened
+// beside it. Phase 4.11 Step 5 adds the Quick pick form.
 export const FUNDING_NOTICE =
-  "Recommend runs on roadmodel's account for invited members. Your own API key will work here soon.";
+  "Recommend runs on roadmodel's account for invited members. Add your own API key below to run it on yours.";
 
 // The user-facing message for a failed request, by status and error code.
-function errorMessage(status: number, body: { error?: string; engine?: string }, engines: EngineOption[]): string {
+// `keyProvider` is the provider of the visitor's key, when one paid.
+function errorMessage(
+  status: number,
+  body: { error?: string; engine?: string },
+  engines: EngineOption[],
+  keyProvider: VisitorProvider | null,
+): string {
+  const provider = keyProvider ? PROVIDER_LABEL[keyProvider] : "Your provider";
+  if (body.error === "visitor_key_rejected") {
+    return "Your provider declined this key. Check it in your provider's console and paste it again.";
+  }
+  if (body.error === "visitor_quota") {
+    return `${provider} reports this key's rate limit or quota is used up. Raise it in your provider's console, or try again later.`;
+  }
+  if (body.error === "too_many_rejected_keys") {
+    return "Several keys from this browser were declined today, so keys are paused here until tomorrow.";
+  }
+  if (body.error === "visitor_key_malformed") {
+    return keyProvider
+      ? `${provider} API keys begin with ${KEY_PREFIX_HINT[keyProvider]}. Paste the whole key.`
+      : "Paste the whole API key for the provider you chose.";
+  }
+  if (keyProvider && body.error === "provider_error") {
+    return `${provider} returned no recommendation this time. Try again in a moment.`;
+  }
   if (status === 403 && body.error === "engine_not_evaluated") {
     const e = engines.find((o) => o.hint === body.engine);
     return `${e?.name ?? "That engine"} has not passed the engine evaluation yet. Choose another engine.`;
@@ -66,8 +98,14 @@ function errorMessage(status: number, body: { error?: string; engine?: string },
   return "The recommender is unavailable — try again in a moment.";
 }
 
+// The engine a visitor's key opens on: its provider's default.
+function visitorDefaultHint(options: EngineOption[]): string {
+  return (options.find((o) => o.isDefault) ?? options[0])?.hint ?? "";
+}
+
 export function RecommendWorkspace({
   engines,
+  visitorEngines,
   initialEngine,
   picks,
   signedIn,
@@ -75,6 +113,8 @@ export function RecommendWorkspace({
   measuredCount,
 }: {
   engines: EngineOption[];
+  // The menu for a visitor's own key, by its provider (visitorMenuFor).
+  visitorEngines: Record<VisitorProvider, EngineOption[]>;
   initialEngine: string;
   picks: PicksData;
   signedIn: boolean;
@@ -92,35 +132,62 @@ export function RecommendWorkspace({
   const [notice, setNotice] = useState<string | null>(null);
   const [recent, setRecent] = useState<RecentRun[]>([]);
   const top = useRef<HTMLDivElement>(null);
+  const visitor = useVisitorKey();
+  const [keyOpen, setKeyOpen] = useState(false);
+  const [visitorEngine, setVisitorEngine] = useState(() => visitorDefaultHint(visitorEngines.openai));
+  // A key in use: the menu, the chosen engine and "Run again" are its own.
+  const keyed = visitor.active && visitor.valid;
+  const menu = keyed ? visitorEngines[visitor.provider] : engines;
+  const composerEngine = keyed ? visitorEngine : engine;
+  const rerunHint = keyed ? visitorEngine : rerunEngine;
+
+  // A new provider opens on its own default engine.
+  useEffect(() => {
+    setVisitorEngine(visitorDefaultHint(visitorEngines[visitor.provider]));
+  }, [visitor.provider, visitorEngines]);
 
   useEffect(() => {
     setRecent(loadRecent());
   }, []);
 
   function chooseEngine(hint: string) {
+    // A key's engine is chosen for this page only; the preference cookie keeps
+    // the engine for roadmodel's account.
+    if (keyed) {
+      setVisitorEngine(hint);
+      return;
+    }
     setEngine(hint);
     setRerunEngine(hint);
     saveEnginePref(hint);
   }
 
   async function run(taskText: string, shownTask: string, engineHint: string) {
-    const option = engines.find((o) => o.hint === engineHint) ?? engines[0];
+    if (visitor.active && !visitor.valid) {
+      setError(errorMessage(400, { error: "visitor_key_malformed" }, menu, visitor.provider));
+      setKeyOpen(true);
+      return;
+    }
+    const option = menu.find((o) => o.hint === engineHint) ?? menu[0];
+    const keyProvider = keyed ? visitor.provider : null;
     setError(null);
     setNotice(null);
     setRunning({ startedAt: Date.now(), engine: option });
     try {
       const res = await fetch("/api/recommend", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        // The key, when one pays, rides only in its header.
+        headers: { "Content-Type": "application/json", ...visitor.headersFor() },
         body: JSON.stringify({ task_description: taskText, engine: engineHint }),
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string; engine?: string };
         if (res.status === 402 && body.error === "funding_required") {
           setNotice(FUNDING_NOTICE);
+          setKeyOpen(true);
           return;
         }
-        setError(errorMessage(res.status, body, engines));
+        setError(errorMessage(res.status, body, menu, keyProvider));
         return;
       }
       const data = (await res.json()) as MultiRecommendResponse;
@@ -140,14 +207,14 @@ export function RecommendWorkspace({
     const prefix = attachmentsPrefix(attachments).text;
     const typed = task.trim();
     const shown = typed || `Attached: ${attachments.map((a) => a.name).join(", ")}`;
-    void run(`${prefix}${typed}`, shown, engine);
+    void run(`${prefix}${typed}`, shown, composerEngine);
   }
 
   function rerun() {
     if (!result) return;
     const prefix = attachmentsPrefix(attachments).text;
     const typed = task.trim() || result.task;
-    void run(`${prefix}${typed}`, result.task, rerunEngine);
+    void run(`${prefix}${typed}`, result.task, rerunHint);
   }
 
   const showComposer = !result || editing;
@@ -160,13 +227,16 @@ export function RecommendWorkspace({
           onTaskChange={setTask}
           attachments={attachments}
           onAttachmentsChange={setAttachments}
-          engines={engines}
-          engine={engine}
+          engines={menu}
+          engine={composerEngine}
           onEngineChange={chooseEngine}
           signedIn={signedIn}
           pending={running !== null}
           error={result ? null : error}
           notice={result ? null : notice}
+          visitor={visitor}
+          keyOpen={keyOpen}
+          onKeyOpenChange={setKeyOpen}
           onSubmit={submit}
         />
       )}
@@ -196,13 +266,36 @@ export function RecommendWorkspace({
               {notice}
             </p>
           )}
+          {visitor.active && (
+            <p
+              className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-brand-slate-600 dark:text-brand-slate-300"
+              data-testid="visitor-key-status"
+            >
+              <KeyRound className="h-4 w-4 flex-none text-brand-accent" aria-hidden />
+              <span>
+                &ldquo;Run again&rdquo; runs on your {PROVIDER_LABEL[visitor.provider]} key, held in this tab only.
+              </span>
+              <button
+                type="button"
+                onClick={visitor.forget}
+                className="font-semibold text-brand-accent hover:underline"
+                data-testid="visitor-key-status-forget"
+              >
+                Forget key
+              </button>
+            </p>
+          )}
           <RecommendResult
             data={result.data}
             task={result.task}
             picks={picks}
-            engines={engines}
-            rerunEngine={rerunEngine}
+            engines={menu}
+            rerunEngine={rerunHint}
             onRerunEngineChange={(hint) => {
+              if (keyed) {
+                setVisitorEngine(hint);
+                return;
+              }
               setRerunEngine(hint);
               saveEnginePref(hint);
             }}

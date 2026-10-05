@@ -133,7 +133,8 @@ def test_healthz_returns_200(client: TestClient, monkeypatch: pytest.MonkeyPatch
 
     assert response.status_code == 200
     body = response.json()
-    assert set(body.keys()) == {"status", "roadmodel_version"}
+    assert set(body.keys()) == {"status", "roadmodel_version", "capabilities"}
+    assert "visitor-key" in body["capabilities"]
     assert body["status"] == "ok"
     assert body["roadmodel_version"] == "0.2.0"
 

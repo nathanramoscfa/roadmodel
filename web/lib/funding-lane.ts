@@ -6,20 +6,63 @@
 // latency-sweep bypass header, and every other request is refused.
 //
 // Phase 4.11 widens what a refused visitor can do with lanes of their own:
-// Step 2 adds `visitor` (their own provider key, per request) and Step 5 adds
+// `visitor` (their own provider key, per request: below) and, in Step 5,
 // `keyless` (picks computed in code at $0). Neither reopens the operator lane,
 // which stays exactly the three reasons below.
+//
+// The visitor lane. A request that carries X-Roadmodel-Visitor-Key and
+// X-Roadmodel-Visitor-Provider pays with that key, whoever sends it: an
+// invited member who attaches a key chose to pay. The key is checked for shape
+// here, travels on to the service ONLY as the same header (lib/api.ts
+// visitorRequestHeaders), and is never copied into the lane, a log, the audit
+// row or a response. A malformed key is answered 400 without forwarding.
 
 import { timingSafeEqual } from "node:crypto";
 
 import { env } from "./env";
 import { isRateLimitExempt, parseExemptIds } from "./ratelimit";
+import {
+  isVisitorProvider,
+  VISITOR_KEY_HEADER,
+  VISITOR_PROVIDER_HEADER,
+  visitorKeyLooksValid,
+  type VisitorProvider,
+} from "./visitor-key";
+
+export {
+  VISITOR_KEY_HEADER,
+  VISITOR_PROVIDER_HEADER,
+  VISITOR_PROVIDERS,
+  visitorKeyLooksValid,
+  type VisitorProvider,
+} from "./visitor-key";
 
 export type OperatorReason = "founder" | "invited" | "bypass";
 
 export type OperatorLane = { lane: "operator"; reason: OperatorReason };
 
-export type FundingLane = OperatorLane | { lane: "refused" };
+// The provider is the only thing about the key the lane carries.
+export type VisitorLane = { lane: "visitor"; provider: VisitorProvider };
+
+export type FundingLane =
+  | OperatorLane
+  | VisitorLane
+  | { lane: "refused" }
+  // The request tried to pay with a key that cannot be one.
+  | { lane: "invalid"; error: "visitor_key_malformed" };
+
+// The visitor lane, a malformed attempt at it, or null when the request
+// carries neither visitor header. Either header alone is an attempt.
+function visitorLane(req: Request): VisitorLane | { lane: "invalid"; error: "visitor_key_malformed" } | null {
+  const key = req.headers.get(VISITOR_KEY_HEADER);
+  const provider = req.headers.get(VISITOR_PROVIDER_HEADER);
+  if (key === null && provider === null) return null;
+  const p = provider?.trim().toLowerCase();
+  if (isVisitorProvider(p) && key !== null && visitorKeyLooksValid(p, key.trim())) {
+    return { lane: "visitor", provider: p };
+  }
+  return { lane: "invalid", error: "visitor_key_malformed" };
+}
 
 // Who funded a request, as audit_log.funded_by records it. The two lanes
 // Steps 2 and 5 add already have their values here (and in the column's CHECK)
@@ -55,10 +98,18 @@ export function bypassMatches(req: Request): boolean {
   return timingSafeEqual(expectedBuf, suppliedBuf);
 }
 
-// Precedence: bypass, then founder, then invited. Anything else, and any
-// exception on the way, is refused.
-export function decideLane(req: Request, userId: string | undefined): FundingLane {
+// Precedence: a visitor key (on routes that take one), then bypass, founder,
+// invited. Anything else, and any exception on the way, is refused.
+export function decideLane(
+  req: Request,
+  userId: string | undefined,
+  { visitor = false }: { visitor?: boolean } = {},
+): FundingLane {
   try {
+    if (visitor) {
+      const v = visitorLane(req);
+      if (v) return v;
+    }
     if (bypassMatches(req)) return { lane: "operator", reason: "bypass" };
     if (userId && isRateLimitExempt(userId)) return { lane: "operator", reason: "founder" };
     if (userId && isInvited(userId)) return { lane: "operator", reason: "invited" };
