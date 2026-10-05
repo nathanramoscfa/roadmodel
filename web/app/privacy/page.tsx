@@ -37,8 +37,9 @@ export default function PrivacyPage() {
           <ul className="mt-3 list-disc space-y-2 pl-6">
             <li>
               Your task description is sent in real time to the AI provider
-              of the engine that writes your recommendation (OpenAI, Google or
-              Anthropic) to generate it.{" "}
+              of the engine that writes your recommendation (OpenAI, Google,
+              Anthropic, or OpenRouter when your OpenRouter account pays) to
+              generate it.{" "}
               <strong>
                 We do not store task descriptions or recommendation outputs
               </strong>{" "}
@@ -55,6 +56,18 @@ export default function PrivacyPage() {
               browser tab&rsquo;s memory until you click &ldquo;Forget
               key&rdquo; or close the tab, and stays out of cookies, browser
               storage, our database and our logs.
+            </li>
+            <li id="openrouter">
+              <strong>Connect OpenRouter.</strong> When you choose
+              &ldquo;Connect OpenRouter&rdquo;, OpenRouter asks you to approve a
+              key for roadmodel and sends you back with a one-time code. Our
+              server trades that code for the key and hands the key to your
+              browser tab once; from there it is your own API key exactly as
+              above, held in the tab&rsquo;s memory and never stored by
+              roadmodel. The one-time check value that secures the trade is
+              kept in your tab&rsquo;s session storage until the trade, then
+              deleted. You can revoke the key in your OpenRouter account at any
+              time.
             </li>
             <li>
               We log one audit row per request containing: a salted hash of
@@ -99,7 +112,7 @@ export default function PrivacyPage() {
             <li>Supabase — audit log storage.</li>
             <li>Upstash Redis — rate-limit counters.</li>
             <li>
-              OpenAI, Google and Anthropic — AI inference. Each provider has its
+              OpenAI, Google, Anthropic and OpenRouter — AI inference. Each provider has its
               own privacy policy that governs how it processes prompts in
               transit, and, when you use your own key, the terms of your account
               with it.

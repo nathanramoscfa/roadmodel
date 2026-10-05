@@ -24,6 +24,7 @@ import {
   menuFor,
   promptTokens,
   viewerFor,
+  visitorMenuFor,
   type Engine,
 } from "../lib/recommend-engines";
 
@@ -144,4 +145,18 @@ test("each provider's tokenizer counts the same prompt differently", () => {
   expect(promptTokens({ provider: "openai" })).toBeLessThan(promptTokens({ provider: "google" }));
   expect(promptTokens({ provider: "google" })).toBeLessThan(promptTokens({ provider: "anthropic" }));
   expect(promptTokens({ provider: "unknown" })).toBe(promptTokens({ provider: "openai" }));
+});
+
+test("each visitor provider's menu lists its default engine, even one the operator menu does not offer", () => {
+  for (const [provider, hint] of Object.entries(registry.visitor_defaults)) {
+    const menu = visitorMenuFor(provider as keyof typeof registry.visitor_defaults);
+    const own = menu.find((o) => o.hint === hint);
+    expect(own, provider).toMatchObject({ isDefault: true, payer: "visitor" });
+    expect(menu.filter((o) => o.isDefault)).toHaveLength(1);
+    for (const o of menu) expect(o.allowed).toBe(o.evaluated);
+    expect(menu.every((o) => engineByHint(o.hint)?.provider === provider)).toBe(true);
+  }
+  // OpenRouter's engine runs on visitors' keys only.
+  expect(MENU.some((e) => e.provider === "openrouter")).toBe(false);
+  expect(visitorMenuFor("openrouter").map((o) => o.hint)).toEqual(["openrouter-gpt-6-luna"]);
 });

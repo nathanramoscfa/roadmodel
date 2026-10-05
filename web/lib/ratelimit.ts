@@ -33,6 +33,9 @@ interface Limiters {
   visitorDaily: Ratelimit;
   visitorBurst: Ratelimit;
   visitorRejected: Ratelimit;
+  // /api/openrouter/exchange: OPENROUTER_EXCHANGE_LIMIT code exchanges a
+  // minute per IP+UA. One connect is one exchange; this bounds code guessing.
+  openrouterExchange: Ratelimit;
 }
 
 // Recommendations an invited member may run on the operator's keys per day.
@@ -45,6 +48,8 @@ export const VISITOR_DAILY_LIMIT = 50;
 // roadmodel to test stolen keys. The next attempt after these is refused
 // before it reaches a provider.
 export const VISITOR_REJECTED_LIMIT = 5;
+// OpenRouter code exchanges one IP+UA may make per minute.
+export const OPENROUTER_EXCHANGE_LIMIT = 10;
 
 function buildLimiters(): Limiters | null {
   if (!env.UPSTASH_REDIS_URL || !env.UPSTASH_REDIS_TOKEN) {
@@ -90,6 +95,11 @@ function buildLimiters(): Limiters | null {
       redis,
       limiter: Ratelimit.slidingWindow(VISITOR_REJECTED_LIMIT, "1 d"),
       prefix: "rl:visitor-rejected",
+    }),
+    openrouterExchange: new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(OPENROUTER_EXCHANGE_LIMIT, "1 m"),
+      prefix: "rl:openrouter-exchange",
     }),
   };
 }
@@ -190,6 +200,33 @@ export async function recordRejectedVisitorKey(ipUa: string): Promise<void> {
     await lane.rejected.limit(`rejected:${ipUa}`);
   } catch (err) {
     console.warn("[ratelimit] failed to count a declined visitor key (non-fatal)", err);
+  }
+}
+
+// Test seam for the OpenRouter exchange limiter (mirrors setTestVisitorLimiters).
+let testExchangeLimiter: LaneLimiter | null = null;
+export function setTestExchangeLimiter(fake: LaneLimiter | null): void {
+  testExchangeLimiter = fake;
+}
+
+// The OpenRouter code-exchange limit for one IP+UA, checked before the
+// exchange reaches OpenRouter. Fails closed in production without Upstash,
+// open elsewhere, like the visitor lane.
+export async function checkOpenRouterExchangeLimit(ipUa: string): Promise<RateLimitResult> {
+  const limiter = testExchangeLimiter ?? limiters?.openrouterExchange ?? null;
+  if (!limiter) {
+    requireLimiterInProduction();
+    return { allowed: true };
+  }
+  try {
+    const res = await limiter.limit(`min:${ipUa}`);
+    return res.success ? { allowed: true } : { allowed: false, reason: "burst_dropped", retryAfter: 60 };
+  } catch (err) {
+    if (isE2eAuthEnabled()) {
+      console.warn("[ratelimit] Upstash unreachable in E2E mode (openrouter exchange) — failing open", err);
+      return { allowed: true };
+    }
+    throw err;
   }
 }
 

@@ -6,11 +6,17 @@
 // and sent as one request header per recommendation. The field sits outside
 // the composer's <form>, so a browser's password manager has no form
 // submission to offer to save it from.
+//
+// "Connect OpenRouter" is the way in with no key to copy: an OAuth PKCE round
+// trip to openrouter.ai (lib/openrouter-connect.ts) that comes back with an
+// OpenRouter key in the same holder.
 "use client";
 
 import Link from "next/link";
 import { KeyRound } from "lucide-react";
+import { useState } from "react";
 
+import { startOpenRouterConnect } from "@/lib/openrouter-connect";
 import type { VisitorKey } from "@/lib/use-visitor-key";
 import {
   isVisitorProvider,
@@ -21,6 +27,20 @@ import {
 
 export function VisitorKeyPanel({ visitor, disabled = false }: { visitor: VisitorKey; disabled?: boolean }) {
   const label = PROVIDER_LABEL[visitor.provider];
+  const [connecting, setConnecting] = useState(false);
+  const [connectFailed, setConnectFailed] = useState(false);
+
+  async function connect() {
+    setConnecting(true);
+    setConnectFailed(false);
+    try {
+      await startOpenRouterConnect();
+    } catch {
+      setConnecting(false);
+      setConnectFailed(true);
+    }
+  }
+
   return (
     <div
       id="visitor-key-panel"
@@ -88,6 +108,26 @@ export function VisitorKeyPanel({ visitor, disabled = false }: { visitor: Visito
           Forget key
         </button>
       </div>
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <button
+          type="button"
+          onClick={() => void connect()}
+          disabled={disabled || connecting}
+          className="rounded-lg border border-brand-accent px-3 py-2 text-sm font-semibold text-brand-accent transition hover:bg-brand-accent/10 disabled:opacity-50"
+          data-testid="openrouter-connect"
+        >
+          {connecting ? "Opening OpenRouter…" : "Connect OpenRouter"}
+        </button>
+        <p className="min-w-0 flex-1 text-xs leading-5 text-brand-slate-500 dark:text-brand-slate-400">
+          OpenRouter is a prepaid account that pays for many AI models; connecting it lets roadmodel bill your
+          recommendations to your OpenRouter credits.
+        </p>
+      </div>
+      {connectFailed && (
+        <p className="mt-2 text-xs text-amber-700 dark:text-amber-300" role="status" data-testid="openrouter-connect-failed">
+          This browser could not start the OpenRouter connection. Paste an OpenRouter key instead.
+        </p>
+      )}
       {visitor.active && !visitor.valid && (
         <p className="mt-2 text-xs text-amber-700 dark:text-amber-300" role="status" data-testid="visitor-key-shape">
           {label} API keys begin with {KEY_PREFIX_HINT[visitor.provider]}. Paste the whole key.
