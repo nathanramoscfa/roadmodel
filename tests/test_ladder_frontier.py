@@ -364,7 +364,14 @@ def test_novel_means_research_grade_work_only() -> None:
     # run to run; the header now names what novel covers and what it never does.
     header = " ".join(_SAAS_LADDER_TABLE_HEADER.split())
     assert "`novel` marks research-grade work only" in header
-    assert "an open problem, a new algorithm, or a multi-step proof" in header
+    assert "an open problem, a new algorithm, or a proof of a result with no known proof" in header
+    # A textbook proof (the keyless eval's math-proof probe, #917) read as
+    # "a multi-step proof" by the letter and flipped the ladder to all-Opus.
+    assert (
+        "Writing out a known result (a textbook proof, a standard derivation) is `routine`"
+        in header
+    )
+    assert "multi-step proof" not in header
     assert (
         "Planning, architecture, security hardening, design and refactors are `routine` "
         "at any difficulty"
