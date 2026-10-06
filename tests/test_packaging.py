@@ -32,7 +32,7 @@ def test_pyproject_parses() -> None:
         data = tomllib.load(f)
     project = data["project"]
     assert project["name"] == "roadmodel"
-    assert project["version"] == "0.2.65"
+    assert project["version"] == "0.2.66"
     assert project["requires-python"] == ">=3.11"
     assert project["scripts"]["roadmodel"] == "roadmodel.cli:main"
 
