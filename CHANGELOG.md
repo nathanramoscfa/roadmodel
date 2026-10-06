@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.67] — 2026-10-06
+
 ### Added
 
 - **Switch coding agents with shared rules, complete memory, and a handoff.**
