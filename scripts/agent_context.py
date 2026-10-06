@@ -417,7 +417,11 @@ def sync_project(
                 if shipped == "agent_context.py"
                 else Path(__file__).with_name(shipped)
             )
-            if not helper.exists() or helper.read_bytes() != expected.read_bytes():
+            # Installation writes LF text. Windows Git checkouts may supply
+            # CRLF source files, which are the same helper version.
+            if not helper.exists() or helper.read_text(encoding="utf-8") != expected.read_text(
+                encoding="utf-8"
+            ):
                 drift.append(f"session helper version: {installed}")
         exclude = git_dir / "info/exclude"
         old_exclude = exclude.read_text(encoding="utf-8") if exclude.exists() else ""

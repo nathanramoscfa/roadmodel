@@ -95,6 +95,26 @@ def test_session_detects_new_memory_without_upgrader(context, project, tmp_path)
     assert context.sync_project(project, home, check=True)[1]
 
 
+def test_crlf_release_helpers_do_not_report_version_drift(context, project, tmp_path, monkeypatch):
+    shipped = tmp_path / "updater-kit"
+    shipped.mkdir()
+    source = Path(context.__file__).parent
+    for name in ("agent_context.py", "worktree_memory.py"):
+        content = (source / name).read_text(encoding="utf-8")
+        (shipped / name).write_bytes(content.replace("\n", "\r\n").encode("utf-8"))
+    monkeypatch.setattr(context, "__file__", str(shipped / "agent_context.py"))
+    home = tmp_path / "home"
+    lines, ok = context.sync_project(project, home)
+    assert ok, lines
+    installed = project / ".roadmodel/context.py"
+    assert b"\r\n" not in installed.read_bytes()
+    lines, ok = context.sync_project(project, home, check=True)
+    assert ok, lines
+    installed.write_bytes(installed.read_bytes() + b"\n# changed helper\n")
+    lines, ok = context.sync_project(project, home, check=True)
+    assert not ok and "session helper version: context.py" in lines[0]
+
+
 def test_existing_rules_settings_handoff_preserved(context, project, tmp_path):
     home = tmp_path / "home"
     (project / "AGENTS.md").write_text("# My rules\nRun real tests.\n")

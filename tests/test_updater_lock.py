@@ -56,14 +56,20 @@ def _child(config: Path, *, env: dict[str, str] | None = None) -> subprocess.Com
     )
 
 
+def _metadata(config: Path) -> bytes:
+    # Windows prevents another file handle from reading locked byte zero.
+    # The owner record deliberately starts beyond that sentinel.
+    with (config / "update.lock").open("rb") as stream:
+        stream.seek(1)
+        return stream.read()
+
+
 def test_lock_records_only_owner_and_restores_environment(
     locks: ModuleType, tmp_path: Path
 ) -> None:
     config = tmp_path / "config"
     with locks.machine_lock(config):
-        content = (config / "update.lock").read_bytes()
-        assert content[:1] == b"\0"
-        state = json.loads(content[1:])
+        state = json.loads(_metadata(config))
         assert set(state) == {"version", "pid", "token"}
         assert state["pid"] == os.getpid()
         assert len(state["token"]) == 64
@@ -72,6 +78,7 @@ def test_lock_records_only_owner_and_restores_environment(
     assert locks.LOCK_TOKEN_ENV not in os.environ
     assert locks.LOCK_PID_ENV not in os.environ
     assert (config / "update.lock").is_file()
+    assert (config / "update.lock").read_bytes()[:1] == b"\0"
 
 
 def test_independent_process_is_rejected_then_can_acquire(
@@ -90,10 +97,10 @@ def test_direct_handover_child_keeps_parents_lock(locks: ModuleType, tmp_path: P
     config = tmp_path / "config"
     clean_env = dict(os.environ)
     with locks.machine_lock(config):
-        before = (config / "update.lock").read_bytes()
+        before = _metadata(config)
         child = _child(config)
         assert child.returncode == 0 and child.stdout.strip() == "acquired"
-        assert (config / "update.lock").read_bytes() == before
+        assert _metadata(config) == before
         assert _child(config, env=clean_env).returncode == 9
 
 
