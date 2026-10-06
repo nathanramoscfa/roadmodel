@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  launchd agent: once an hour, rewrite expired rows of the Usage-pool status
+  table in docs/user-context.md (tight/exhausted -> headroom, weekly reset date
+  rolled forward). Local-only; the file is gitignored.
+
+  Install (one time):
+    cp scripts/com.roadmodel.roll-pool-status.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.roadmodel.roll-pool-status.plist
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.roadmodel.roll-pool-status.plist
+    rm ~/Library/LaunchAgents/com.roadmodel.roll-pool-status.plist
+
+  Adjust the path below if your checkout is not at ~/roadmodel.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.roadmodel.roll-pool-status</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/nathanramos/roadmodel/scripts/roll_pool_status.py</string>
+  </array>
+
+  <key>StartInterval</key>
+  <integer>3600</integer>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/roadmodel-roll-pool-status.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/roadmodel-roll-pool-status.log</string>
+</dict>
+</plist>
