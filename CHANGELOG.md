@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Switch coding agents with shared rules, complete memory, and a handoff.**
+  `roadmodel-upgrade` installs private agent adapters and a writable live memory
+  store for each project, preserves Claude's old stores with verified backups
+  and redirects, imports memories from registered worktrees, and checks context
+  freshness at session entry. Existing project instructions and work in progress
+  stay intact. Windows memory paths now use Claude's actual directory naming.
+- **Upgrade a configured fleet from one command.** Private SSH peer settings
+  extend the updater to other machines, with conflict-protected global rules,
+  explicit failure reporting, and recursion prevention. `--sync-only` repairs
+  context without package upgrades or model calls; `--check` verifies it without
+  writing; `--local-only` limits a run to the current machine.
+
 ## [0.2.66] — 2026-10-06
 
 ### Fixed

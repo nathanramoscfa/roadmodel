@@ -1,125 +1,212 @@
 ---
-description: Upgrade roadmodel in every registered project at once — each project's own env, its planning/ kit, and these commands (usage: /roadmodel-upgrade [project dirs to register…] [--refresh-roadmaps] [--install-schedule HH:MM])
+description: Upgrade roadmodel and shared agent context across registered projects and configured machines (usage: /roadmodel-upgrade [project dirs to register…] [--sync-only | --check] [--local-only] [--skip-roadmap-refresh] [--refresh-roadmaps] [--install-schedule HH:MM])
 ---
-Upgrade roadmodel everywhere on this machine in one run: every registered
-project's own conda env or venv, each project's `planning/` kit, and the
-user-scope `/roadmap-*` commands. The operator should not have to open a
+Upgrade roadmodel in every registered project's own environment, refresh its
+`planning/` kit and agent commands, and maintain live shared rules, full
+project memory, and handoff records. Include explicitly configured SSH peers
+unless `--local-only` is given. The operator should not have to open a
 terminal — you run everything.
 
-This upgrades the tool, not any project's work: it changes no roadmap and
-pulls no git history. `/roadmap-refresh`, run in a project, applies the
-kit's current rules to that project's roadmaps; `git pull` brings in merged
-work.
+Invocation authorizes updates to registered projects and configured peers;
+do not ask again to apply routine repairs. Preserve independent instruction
+text, existing settings outside the managed changes, and all memory bodies.
+This command does not pull Git history or execute roadmap steps. Roadmap
+bookkeeping runs only under the existing refresh behavior described below.
 
-## 1. Fetch the updater fresh
+## 1. Select the mode before fetching anything
 
-Save it to `~/.config/roadmodel/update_projects.py` (Windows:
-`%USERPROFILE%\.config\roadmodel\update_projects.py`), creating the
-directory if needed. Fetching it every time is harmless: at run start it
-upgrades roadmodel in a venv of its own (`~/.config/roadmodel/venv`),
-replaces itself with the updater inside that release, and hands the run
-over to it. Download it from:
+Parse "$ARGUMENTS" first. In Codex this command is normally the skill
+`$roadmodel-upgrade`; `/prompts:roadmodel-upgrade` is the legacy prompt form.
+
+| Mode | Action |
+| --- | --- |
+| Default | Upgrade packages, kits, commands/runtime, and shared context, then configured peers |
+| `--sync-only` | Repair rules, full memory, and handoff setup using installed code; no package upgrades, command downloads, or AI calls |
+| `--check` | Verify shared context and configured peers without writes, logging, registration, or self-update |
+| `--local-only` | Skip fleet peers in any mode |
+| `--skip-roadmap-refresh` | Skip roadmap agents for this full upgrade without changing the saved automatic-refresh preference |
+| `--dry-run` | Describe the plan without changes or peer connections |
+
+For `--sync-only`, `--check`, or `--dry-run`, invoke the **installed launcher**
+at `~/.config/roadmodel/update_projects.py` directly. Do not download or replace
+the launcher first: repair/check must work offline, and a check must not write.
+Its companion modules must already be installed. If the launcher or companions
+are missing, report that a full upgrade is required; do not silently turn a
+check into an installation. These modes do not fetch packages or invoke a
+model. Configured peers still use SSH unless `--local-only` is supplied.
+
+For a full upgrade, fetch the launcher to that location (Windows:
+`%USERPROFILE%\.config\roadmodel\update_projects.py`), creating the directory
+if needed:
 
 `https://raw.githubusercontent.com/nathanramoscfa/roadmodel/main/scripts/update_projects.py`
 
-Use whatever fetches on this machine — `curl -fsSL … -o …`,
-`curl.exe` in PowerShell, or `python -c "import urllib.request as u;
-u.urlretrieve(URL, PATH)"`. Stdlib only, Python 3.9+; run it with the
-machine's default `python` (or `py -3` on Windows).
+Use an available downloader such as `curl -fsSL … -o …`, `curl.exe`, or
+Python's `urllib.request`. Run it with the machine's default `python`,
+`python3`, or `py -3` on Windows. The launcher is stdlib-only, Python 3.9+.
+On a full run it upgrades roadmodel in its dedicated
+`~/.config/roadmodel/venv`, replaces the launcher and companion modules from
+the published wheel, and hands over to that release. The package requires
+Python 3.11+; the updater can find a suitable registered project's interpreter.
+This uses roadmodel's normal signed-tag/provenance release channel; it is not
+a claim that the launcher independently verifies artifact signatures.
 
-## 2. Make sure the registry has projects
+## 2. Resolve the registry and fleet
 
-The registry is `~/.config/roadmodel/projects.txt` — one project dir per
-line, `#` comments, optional env override: `<dir> | conda:<name>` or
+The local registry is `~/.config/roadmodel/projects.txt`: one project dir per
+line, `#` comments, optional env override `<dir> | conda:<name>` or
 `<dir> | venv:<subdir>`.
 
-- Split "$ARGUMENTS": tokens starting with `--` (and their values, e.g.
-  `--install-schedule 09:00`, `--jobs 8`, `--dry-run`) are passed to the
-  script as-is; everything else is a project dir to register with
-  `--add <dir> …`.
-- If the registry is missing or empty and no dirs were given, ask the
-  operator which projects to register. If they answer with names rather
-  than paths, locate the folders yourself (search their usual code root —
-  e.g. `E:\Code`, `~/code`, `~/dev` — two levels deep) and confirm the
-  paths in one line before registering.
+- Pass options and their values through to the script, including
+  `--install-schedule 09:00`, `--jobs 8`, and `--dry-run`.
+- In a mutating run, project-directory arguments become `--add <dir> …`.
+  In `--check`, pass directories positionally so checking never changes the
+  registry. With no directories, use the existing registry.
+- If the registry is missing or empty and no directories were given, locate
+  previously specified projects in their known code roots. Ask only for
+  information that is still missing; do not ask to reconfirm known paths.
+- Read `~/.config/roadmodel/fleet.json` when present. It is private local
+  configuration; never commit machine addresses or private project lists.
 
-## 3. Run it
+The fleet schema is an object with `"version": 1` and a `"peers"` object keyed
+by machine name. Each peer has `host` (SSH alias/hostname), `platform`
+(`windows` or `posix`), an absolute `python` executable, and a nonempty
+`projects` list of absolute paths. Optional `launcher` defaults to
+`~/.config/roadmodel/update_projects.py`, expanded on the remote machine.
+Optional top-level `global_rules_source` is the absolute local path of the
+coordinator's authoritative global rules file for replication to peers'
+`~/.claude/CLAUDE.md`; changed
+remote copies are protected by a hash conflict check. See
+`docs/agent-parity.md` for an example. Peers require an installed updater
+with its companions, known SSH host keys, and noninteractive authentication.
+This command does not discover or bootstrap unconfigured machines.
 
-```
+## 3. Run and verify shared context
+
+```text
 python ~/.config/roadmodel/update_projects.py [--add <dir> …] [--jobs N]
 ```
 
-It detects each project's env (`.venv`/`venv`/`env` dir → `environment.yml`
-name → conda env named like the folder → conda env inside the project),
-upgrades `roadmodel` in all of them concurrently, then upgrades
-`roadmodel[mcp]` in the env behind Claude Code's `roadmodel` MCP
-registration (read through any launcher script; the `MCP server env:` line
-reports it, and sessions restart to load a new version), re-exports
-`planning/` where one exists (`--init-kit` to create one everywhere), and
-re-downloads the five command files for every agent installed on this
-machine: `~/.claude/commands` (mirroring any `~/.claude/skills/<name>/
-SKILL.md` copies), `~/.gemini/commands/<name>.toml` for Gemini CLI, and
-`~/.agents/skills/<name>/SKILL.md` for Codex and Cursor (both read that
-directory; `$roadmap-step 1 3` in Codex, `/roadmap-step 1 3` in Cursor),
-and `~/.config/opencode/commands/<name>.md` for OpenCode.
-`--agents claude,gemini,codex,cursor,opencode` overrides the
-auto-detection; `--commands-only` refreshes commands and nothing else.
-`--dry-run` shows the plan.
+Context repair runs independently of whether a project's package environment
+is healthy. It leaves tracked `AGENTS.md` and `CLAUDE.md` unchanged and installs
+private, Git-excluded adapters: `AGENTS.override.md` for Codex,
+`CLAUDE.local.md` imports for Claude, and an always-on rule for Antigravity.
+Their shared protocol lives in `.agents/shared-context.md`. Existing
+independent adapter text is preserved; agents read original project rules in
+full and preserve scoped rules. Global Claude rules remain the live source;
+Codex, Antigravity/Gemini, and OpenCode get adapters to it. Exact duplicate
+global copies are backed up before conversion.
 
-## 4. Unattended runs (optional, once per machine)
+All detailed Claude memory files are retained. The default legacy store is
+backed up and redirected to `.roadmodel/memory/`; a custom memory location stays
+authoritative. Claude's local setting and the other agents reference the same
+store. Worktrees share memory with the main checkout. Private context files
+are Git-excluded; tracked personal context, conflicting files, changed
+redirects, and unreadable sources are reported as failures.
 
-`--install-schedule [HH:MM]` also registers a daily run for this user —
-a launchd agent on macOS, a Task Scheduler task on Windows, a crontab
-entry on Linux — that executes the same script with `--log`, appending
-to `~/.config/roadmodel/update.log`. From then on every registered
-project follows each roadmodel release within a day without anyone
-running anything, and so does the updater itself: each run upgrades its
-venv and runs the updater from that release, so nothing needs
-re-fetching. On Windows a start missed while the PC was off runs once it
+The updater installs `.roadmodel/context.py`, `.roadmodel/context.json`,
+`.roadmodel/HANDOFF.md`, and `.roadmodel/WORKTREE.md`. Existing handoff text is
+preserved; the checkout snapshot is refreshed. Project instructions tell each
+agent to run `python .roadmodel/context.py --session` from the repository root,
+then read the live memory index, relevant entries, and handoff. Agents write
+new durable decisions to the shared store and maintain the handoff before
+ending or switching. The helper makes no model calls or package upgrades.
+Writable state lives in `.roadmodel/`, within ordinary workspace permissions,
+while static client adapters remain in their protected configuration paths.
+
+This shares saved rules, memories, and written work state; it does not import
+full conversation transcripts or guarantee identical model behavior. Check
+which sources the agent actually read. Fresh sessions are needed after
+instruction changes; existing conversations may retain earlier instructions.
+
+## 4. Full upgrade behavior
+
+A full run detects each project's env (`.venv`/`venv`/`env` dir →
+`environment.yml` name → conda env named like the folder → conda env inside
+the project), upgrades `roadmodel` concurrently, then upgrades `roadmodel[mcp]`
+in the env behind Claude Code's roadmodel MCP registration. The
+`MCP server env:` line reports it; restart sessions to load a new server.
+
+It re-exports `planning/` where one exists (`--init-kit` creates one everywhere)
+and refreshes the five commands for detected agents: Claude commands and skill
+copies, legacy Gemini TOML commands, Antigravity skills under
+`~/.gemini/config/skills/` (IDE/2.0) and
+`~/.gemini/antigravity-cli/skills/` (CLI), shared Codex/Cursor skills under `~/.agents/skills/`,
+Codex prompt compatibility files, OpenCode commands, and VS Code prompt files.
+`--agents claude,gemini,antigravity,codex,cursor,opencode,vscode` overrides
+detection. Runtime synchronization retains the existing roadmodel MCP and
+provider-default behavior; use `--keep-pins` to retain pinned model/effort
+defaults. Context-only repair does not change these runtime settings.
+
+`--commands-only` refreshes commands and existing runtime/user-context
+integration; it does not synchronize project memory or run the fleet.
+It is insufficient for an agent handoff. `--no-parity` skips local shared
+context during a full upgrade; use only when explicitly requested.
+
+At the end, configured peers run their installed updater. Every remote run
+has `--local-only` to prevent recursive fleet updates. Full coordinated
+upgrades use `--skip-roadmap-refresh` on peers; repair/check propagate their
+own mode. Mutating peer runs register listed paths and append to the remote
+update log. Checks neither register paths nor request logging. Named peer
+failures affect the exit status; inspect that peer's local log or local check
+for details. Fleet operations can replicate the configured global rules file;
+they do not merge project memory between machines.
+
+## 5. Unattended runs (once per machine)
+
+`--install-schedule [HH:MM]` registers a daily run for this user, default
+09:00: launchd on macOS, Task Scheduler on Windows, and cron on Linux.
+It runs the installed launcher with `--log`, appending to
+`~/.config/roadmodel/update.log`. Each full run follows published releases
+and refreshes the launcher and companion modules, so repeated manual fetching
+is unnecessary. On Windows a start missed while the PC was off runs once it
 is back. `--uninstall-schedule` removes it.
 
-## 5. Refresh every project's roadmaps
+Install a schedule on each machine; a coordinator can additionally update its
+configured peers. Keep the machines' run times from overlapping. Schedules
+and registries are local; installing one schedule does not install another
+on a peer. When the operator has requested automatic upkeep, install and
+verify it within that authorization.
 
-`--refresh-roadmaps` runs `/roadmap-refresh` in every registered project
-after the upgrade, several at once (`--refresh-jobs N`, default 3). Each
-runs as Claude Code headless (`claude -p`) in a fresh clone of the
-project, so the operator's checkout is never touched. The session is told
-it is unattended: it asks nothing and settles unverified steps from cited
-evidence. It runs static checks only, leaves other PRs alone, and runs in
-Claude Code's `auto` permission mode, which refuses actions it judges
-destructive. It takes its PR through CI to a merge. A project whose
-roadmaps are git-excluded (`private/`) is refreshed in place.
+## 6. Refresh every project's roadmaps
 
-A project where work may be in flight is skipped and named: checked out
-on another branch, uncommitted edits outside `planning/`, a roadmap
-written but not committed, or an open PR from a branch its roadmaps name.
+`--refresh-roadmaps` runs `/roadmap-refresh` in every registered project on
+this machine after the upgrade, concurrently (`--refresh-jobs N`, default 3). Each runs as
+Claude Code headless (`claude -p`) in a fresh clone of the project, so the
+operator's checkout is never touched. The unattended session asks nothing, settles unverified
+steps from cited evidence, runs static checks only, leaves other PRs alone,
+and uses Claude Code's `auto` permission mode. It takes its PR through CI to
+a merge. Projects with git-excluded roadmaps (`private/`) are refreshed in place.
 
-The daily run does the same by itself when the roadmap rules change: the
-`/roadmap-refresh` or `/roadmap-step` command, or the kit's roadmap
-templates and prompts. A release that only updates the catalog changes
-nothing here, because `/roadmap-step` re-checks a step's Settings when
-it runs. A project skipped that day is tried again the next day.
-`--auto-refresh off` turns the automatic run off on this machine, and
-`--auto-refresh on` turns it back on. Logs go to
-`~/.config/roadmodel/refresh-logs/`.
+A project where work may be in flight is skipped and named: another checked-out
+branch, uncommitted edits outside `planning/`, a roadmap not yet committed,
+or an open PR from a branch its roadmaps name.
 
-## 6. Report
+The daily full run does the same automatically when the roadmap rules change:
+the `/roadmap-refresh` or `/roadmap-step` command, or roadmap templates and
+prompts. Catalog-only releases do not trigger it; step execution rechecks
+Settings. Skipped projects are retried on a later run. `--auto-refresh off`
+disables this automatic behavior on the machine; `--auto-refresh on` restores
+it. Logs live in `~/.config/roadmodel/refresh-logs/`.
 
-Show the result table verbatim. If the first line reads `*** self-update
-FAILED`, show it with its reason: the run still happened, but on the
-local copy of the updater. For any project marked FAILED:
+For a tool/context upgrade while Claude is unavailable, use
+`--skip-roadmap-refresh`; it preserves the saved preference. It conflicts
+with `--refresh-roadmaps`. `--sync-only` and `--check` never run roadmap agents
+and cannot be combined with refresh, command-only, or schedule operations.
 
-- `no env found` → tell the operator the override syntax and offer to add
-  it to the registry for them once they name the env.
-- a pip error → show the last lines and the fix (usually network, or a
-  Python too old for the current roadmodel — ≥ 3.11).
+## 7. Report
 
-If a "Roadmap refresh:" section is printed, show its table: a merged PR
-link per project, `skipped` with the reason, or a project that needs a
-look, with the log path.
+Show the result table and shared-context/fleet status. If the first line reads
+`*** self-update FAILED`, include the reason: the run used its local copy,
+which may be stale. Explain every failed project or peer; do not report the
+whole fleet as ready when any member failed. For `no env found`, inspect its
+environment and add a supported override when identifiable. For pip failures,
+show the relevant last lines and diagnosis. Memory or rule failures need
+their exact source path; never claim successful loading from file existence.
 
-If any command file reports `updated` or `installed`, say that the editor
-window needs a reload (`Developer: Reload Window`) before the new command
-text is used. If a schedule was installed, show the "Schedule:" line and
-where the log lives. The registry, the updater, and the schedule stay on
-this machine; nothing here is committed to any project.
+If a `Roadmap refresh:` section appears, include merged PR links, skipped
+reasons, or the log path for work needing attention. If commands changed,
+reload the editor (`Developer: Reload Window`). If rules changed, start fresh
+agent sessions and verify loaded sources. Report installed schedules and log
+paths. Registries, fleet configuration, updater state, schedules, and private
+context stay local; the updater makes no Git commits.

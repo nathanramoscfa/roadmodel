@@ -1,191 +1,209 @@
-# Agent parity: make any coding agent match any other
+# Shared rules and memory across coding agents
 
-Written for: an operator who runs more than one coding agent — because one
-subscription's usage pool runs out, or a provider goes down, or a task suits a
-different model — and wants the second agent to know what the first one knows.
+`roadmodel-upgrade` maintains shared project context so you can move between
+Claude Code, Codex, Antigravity, and OpenCode without repeatedly copying
+instructions or summarizing Claude's memory. Run it once on each machine to
+install the setup; subsequent sessions read the same live files.
 
-One file, every direction. The **surface map** below is symmetric: read the
-SOURCE column for where a setting lives today and the TARGET column for where
-it has to land. The **prompt** is parameterised: fill in two names and paste.
+| Task | Codex | Claude Code, Antigravity, OpenCode |
+| --- | --- | --- |
+| Upgrade tools and repair shared context | `$roadmodel-upgrade` | `/roadmodel-upgrade` |
+| Repair context without package upgrades or AI calls | `$roadmodel-upgrade --sync-only` | `/roadmodel-upgrade --sync-only` |
+| Check context without changing files | `$roadmodel-upgrade --check` | `/roadmodel-upgrade --check` |
+| Upgrade while skipping roadmap agents for this run | `$roadmodel-upgrade --skip-roadmap-refresh` | `/roadmodel-upgrade --skip-roadmap-refresh` |
 
-Ecosystems covered:
+The agent runs the updater; you do not need to switch to a terminal. Existing
+Codex custom prompts also support `/prompts:roadmodel-upgrade`, but the skill
+form is preferred. `/roadmap-refresh` updates roadmap bookkeeping and upcoming
+model settings; it does not synchronize instructions or memories.
 
-| Ecosystem | Agents it covers |
+## What is shared
+
+| Surface | Authoritative source | How another agent uses it |
+| --- | --- | --- |
+| Global rules | Coordinator's `~/.claude/CLAUDE.md` when fleet replication is configured; otherwise each machine's own file | Managed global adapters read the live local source; scoped `~/.claude/rules/` remain applicable on their machine |
+| Project rules | Existing `AGENTS.md`, Claude instruction files, and scoped rules | Private client adapters read applicable originals and the shared context protocol |
+| Durable project memory | `.roadmodel/memory/`, or an existing explicitly configured Claude memory directory | Every agent reads the full index and relevant detailed entries and writes decisions to this same store |
+| Work in progress | `.roadmodel/HANDOFF.md` | Agents preserve the objective, unfinished work, checks, and next action before a handoff |
+| Actual checkout state | `.roadmodel/WORKTREE.md` | Session check records the branch, HEAD, working changes, recent commits, and roadmap locations |
+| Context inventory | `.roadmodel/context.json` | Lists every memory file and hashes, rule hashes, and source locations |
+
+The default migration preserves every file from Claude's former memory
+directory, verifies its contents, keeps a complete backup beside that store,
+and redirects the former location to the shared directory. It uses a symlink
+on macOS/Linux and a junction on Windows. Claude's local
+`autoMemoryDirectory` setting also points at the shared store. An existing
+custom memory directory stays authoritative and is exposed through the
+project's `.roadmodel/memory/` path. Worktrees share the main checkout's memory;
+their handoff and checkout snapshot remain local to each worktree.
+
+This replaces the capped `.agents/memory.md` export. There is no limit that
+drops older detailed memories: the manifest includes entries that are absent
+from `MEMORY.md` too. The old generated export becomes a pointer; a handwritten
+export is preserved. Agents load relevant details as needed rather than
+putting every memory body into the initial instruction prompt.
+
+Private memory, handoffs, manifests, client adapters, the session helper, and
+Claude local settings are excluded using the repository's local Git
+exclusions. The updater reports already tracked private context as an error
+instead of silently treating it as private. It leaves tracked project
+`AGENTS.md` and `CLAUDE.md` unchanged, so context setup can run while a feature
+branch has work in progress.
+
+## How instructions stay current
+
+The project adapters are private files with marked sections; independent
+user text in them is preserved:
+
+| Client | Project entry point |
 | --- | --- |
-| **Claude** | Claude Code (CLI + IDE extension), Claude Desktop |
-| **Codex** | Codex CLI + Codex IDE extension (VS Code / Cursor / Windsurf) |
-| **Gemini** | Antigravity CLI (`agy`) + Antigravity IDE — the Gemini CLI's successor, which shares `~/.gemini` but reads a different layout underneath — and Jules |
-| **Open source** | OpenCode, Cline, Continue, Aider and other clients over Ollama / vLLM / an OpenAI-compatible endpoint |
+| Codex | `AGENTS.override.md`, which directs the agent to read the full existing `AGENTS.md` and applicable Claude files |
+| Claude Code | `CLAUDE.local.md`, importing existing `AGENTS.md` and `.agents/shared-context.md` |
+| Antigravity | `.agents/rules/roadmodel-context.md`, with `trigger: always_on` |
+| OpenCode | Its global adapter explicitly loads `.agents/shared-context.md` and the project's live context; original rules keep their normal entry point |
 
-`roadmodel-upgrade` already keeps the *roadmap commands*, the *roadmodel MCP
-server* and the *default model and effort* in parity across every agent it
-detects — see [After the sync](#after-the-sync). A bare `~/.gemini` no longer
-counts as the legacy Gemini CLI, since Antigravity creates that directory too. This document covers
-everything it cannot: your own instructions, memory, skills and permissions.
+The shared protocol requires reading applicable ancestor and directory
+instructions and preserving the `paths` scope of modular Claude rules when
+working in subdirectories. A short Codex adapter keeps startup instructions
+within the client's prompt budget; large original instruction files are
+read explicitly in full rather than being silently truncated at discovery.
 
----
+Global Claude instructions remain the live source. Codex's adapter lives in
+`~/.codex/AGENTS.md`, or the effective `AGENTS.override.md` when one exists.
+Antigravity uses `~/.gemini/GEMINI.md` with its native
+`@[Shared global rules](~/.claude/CLAUDE.md)` include. OpenCode uses
+`~/.config/opencode/AGENTS.md`. An exact duplicate global copy can be replaced
+with an adapter after preserving a backup; distinct client instructions stay
+outside the managed block.
 
-## The surface map
+Codex and OpenCode adapters explicitly instruct the agent to read the source;
+a Markdown reference does not itself inline the file. Global modular rules
+are read with their scopes intact. Missing or unreadable sources are reported.
+The instructions require rechecking changed sources at new tasks and after
+compaction. Start a fresh client session after installing or changing the
+adapters, and verify the files the agent actually read. A successful file
+check does not prove that an already open conversation loaded new rules.
 
-Every row is a thing an agent knows. Find your SOURCE column, find your TARGET
-column, apply the mechanism.
-
-| Surface | Claude | Codex | Gemini (Antigravity) | Open source |
-| --- | --- | --- | --- | --- |
-| **Project instructions** | `CLAUDE.md` (falls back to `AGENTS.md`) | `AGENTS.md`, or any name in `project_doc_fallback_filenames` | `AGENTS.md` / `GEMINI.md` | `AGENTS.md` (OpenCode, Cline, Aider all read it) |
-| **User instructions** | `~/.claude/CLAUDE.md` | `~/.codex/AGENTS.md` | `~/.gemini/GEMINI.md`; Antigravity also reads `~/.gemini/config/` | client-specific; usually a global rules file |
-| **Memory** | auto-memory: `~/.claude/projects/<slug>/memory/*.md` + `MEMORY.md` | `features.memories` → `~/.codex/memories` | agent memories / `GEMINI.md` | usually none — fold into the instructions file |
-| **Skills** (model-invocable) | `~/.claude/skills/<name>/SKILL.md` | `~/.agents/skills/<name>/SKILL.md` | `~/.gemini/config/skills/<name>/SKILL.md` globally, `<repo>/.agents/skills/` per project | `~/.agents/skills` where supported |
-| **Slash commands** (you type them) | `~/.claude/commands/<name>.md` → `/name` | `~/.codex/prompts/<name>.md` → `/prompts:name` | Antigravity: a skill IS the command, `/name`; legacy Gemini CLI: `~/.gemini/commands/<name>.toml` → `/name` | OpenCode `~/.config/opencode/commands/<name>.md` → `/name`; VS Code chat `<user>/prompts/<name>.prompt.md` → `/name` |
-| **MCP servers** | `~/.claude.json` → `mcpServers` (or `claude mcp add`) | `[mcp_servers.<id>]` in `~/.codex/config.toml` | `mcpServers` in `~/.gemini/config/mcp_config.json` (Antigravity, or `agy mcp add`); `~/.gemini/settings.json` (legacy CLI) | `mcpServers` in the client's JSON config |
-| **Model** | `settings.json` → `model` | `config.toml` → `model` | client setting | client setting / `ROADMODEL_MODEL`-style env |
-| **Reasoning effort** | `effortLevel` (low…max), `maxEffortLevel` as a ceiling | `model_reasoning_effort` (minimal…xhigh), `plan_mode_reasoning_effort` | `agy --effort low\|medium\|high`, per session | `reasoning_effort` where the endpoint exposes it |
-| **Permissions** | `permissions`, `defaultMode` | `approval_policy`, `sandbox_mode` | approval setting | client setting |
-| **Hooks / subagents / statusline / plugins** | yes | partial (hooks: no; subagents: yes) | partial | varies |
-
-Three rules that save work in every direction:
-
-1. **Prefer reading over copying.** Codex's `project_doc_fallback_filenames =
-   ["CLAUDE.md"]` makes it read `CLAUDE.md` directly; most other agents read
-   `AGENTS.md`. A repo that carries one file plus a one-line pointer in the
-   other never drifts. Copy only what cannot be pointed at.
-2. **Mirror the intent of a setting, not its letter.** Ladders differ (Claude
-   tops out at `max`; Codex now runs `low` through `ultra`; Antigravity's
-   rung lives in the model id). Parity is every agent on its OWN provider's
-   default — not the same rung everywhere — and a ceiling is never mirrored
-   as a default.
-3. **Name what has no equivalent** instead of approximating it. An operator who
-   thinks a hook still runs is worse off than one who knows it does not.
-
----
-
-## The prompt
-
-Fill in the two names and paste the block into the TARGET agent, in the project
-you want synced. It works in either direction and for any pair in the table.
-
-> **SOURCE** = the agent that is already configured the way you like.
-> **TARGET** = the agent you are pasting this into.
+At session start, the project instructions tell the agent to run, from the
+repository root:
 
 ```text
-You are <TARGET>. Bring yourself to parity with <SOURCE> on this machine and in
-this project, so I can switch to you — when <SOURCE>'s usage pool is exhausted,
-when its provider is down, or when a task suits you better — and keep working
-with the same instructions, memory, commands and tools.
-
-Use docs/agent-parity.md in the roadmodel repo as the surface map if you can
-read it; otherwise use your own knowledge of both agents' config layouts.
-
-Work in this order, and SHOW me each diff before you apply it. Do not invent
-settings I do not already have in <SOURCE>; where something has no equivalent
-in you, say so explicitly rather than approximating it.
-
-STEP 1 — Inventory <SOURCE> (read-only).
-Find, for this project and for my user account: its project instructions file,
-its user instructions file, its memory store, its skills, its slash commands,
-its MCP server registrations, and its model / reasoning-effort / permission
-settings. Print a table of what exists, where, and which surfaces I have not
-configured at all. Flag every surface you have no equivalent for.
-
-STEP 2 — Instructions, by reference where possible.
-If you can be pointed at <SOURCE>'s instructions file (a fallback-filenames
-setting, a symlink, or an include), do that instead of copying. Otherwise
-create your own instructions file whose FIRST line names the file it was
-copied from and the date, so the duplication is visible. If a project-level
-and a user-level instructions file both exist, mirror both.
-
-STEP 3 — Memory.
-Enable your own memory store if you have one. Import what <SOURCE> already
-knows about this project: read its memory index and the entries it points to,
-and write their CONTENT (not the file list) into your instructions file under a
-heading "## Imported from <SOURCE> memory (<today's date>)", collapsing
-duplicates and dropping anything that is only about <SOURCE>'s own UI. Keep it
-under ~150 lines — durable facts, not a transcript.
-
-STEP 4 — Skills and slash commands.
-For every skill and every slash command <SOURCE> has that you lack, create the
-equivalent in your own format, preserving the name so I type the same thing in
-both agents. Where your format has no argument placeholder, replace the
-placeholder with a sentence saying the arguments arrive as the text after the
-command. Do NOT touch anything `roadmodel-upgrade` manages (roadmap-project,
-roadmap-phase, roadmap-step, roadmap-refresh, roadmodel-upgrade) — it regenerates those for every
-agent and would overwrite your edits.
-
-STEP 5 — MCP servers.
-For each MCP server registered in <SOURCE> that you lack, add the equivalent
-entry in your own config: stdio servers map command/args/env directly, HTTP
-servers use a url. Keep any env-var indirection exactly as it is — never copy a
-secret into a config file. List anything you skipped and why.
-
-STEP 6 — Model, effort and permissions, calibrated.
-Mirror the INTENT: the same class of model (frontier ↔ frontier, coding-
-specialised ↔ coding-specialised), the same calibrated reasoning effort
-remembering the ladders differ, and the same permission / sandbox posture. If
-<SOURCE> pins a ceiling rather than a default, mirror the DEFAULT. Print the
-before/after of every key you change.
-
-STEP 7 — Verify and report.
-Restart yourself if needed, then confirm out loud: which instructions file you
-are actually reading here; how many skills and slash commands you can see, and
-that the roadmap-* ones are among them; which MCP servers connected and
-which failed; and your active model, reasoning effort and permission posture.
-Finish with the list of <SOURCE> features you have NO equivalent for, so I know
-exactly what I lose by switching to you.
+python .roadmodel/context.py --session
 ```
 
-### Run it with
+The helper performs local checks, refreshes the manifest and checkout
+snapshot, and reports the number of complete memory files and a context
+revision. It makes no model calls or package upgrades. The agent then reads
+the live memory index, relevant entries, and handoff. The helper cannot infer
+an unfinished conversation's intent; the agent maintains that narrative in
+`HANDOFF.md`.
 
-Ask roadmodel: `roadmodel score --category agentic --complexity medium` ranks
-the models you can actually reach for this task. It is a bounded, well-specified
-config task — a mid-tier model at a moderate reasoning effort is the right call,
-and the frontier model is not worth its pool draw here. Raise one rung if the
-SOURCE agent has an unusual setup (many hooks, many MCP servers, a large
-memory store).
+Writable memory and handoff files live under `.roadmodel/` because clients
+such as Codex protect agent configuration directories from routine writes.
+The static adapters stay in their client-specific locations. This lets
+agents update project memory under normal workspace permissions without
+requesting approval for every memory write.
 
----
+## Multiple machines and automatic upkeep
 
-## After the sync
+Each machine has its own `~/.config/roadmodel/projects.txt` registry, installed
+updater and companions, credentials, and local schedule. Registry entries are
+absolute project paths, optionally followed by an environment override:
 
-`roadmodel-upgrade` (`/roadmodel-upgrade`, or
-`python scripts/update_projects.py`) keeps three things in parity on every run,
-for every agent it detects — Claude Code, Codex, Gemini, Cursor, OpenCode and
-the VS Code chat panel:
+```text
+/home/developer/code/example-app | venv:.venv
+```
 
-- **The roadmap commands**, generated from one Claude Code source into each
-  agent's own format, so `/roadmap-phase 1` means the same thing everywhere.
-  Codex spells it `/prompts:roadmap-phase 1`, because that is how Codex
-  addresses a prompt file; everywhere else it is `/roadmap-phase 1`. In
-  Antigravity a skill and a slash command are the same object, so the four
-  land once in `~/.gemini/config/skills/` and are both typed and
-  model-invoked.
-- **The roadmodel MCP server**, mirrored from your Claude registration into
-  Codex's `config.toml`, Gemini's `settings.json` and OpenCode's config — so
-  every agent gets `recommend_model`, `score_candidates`, `read_catalog` and
-  `generate_phase_roadmap`, launched exactly the way Claude launches it
-  (including any wrapper script that injects provider keys). Antigravity ships
-  its `mcp_config.json` as a zero-byte file, which means "no servers", not
-  "corrupt" — the updater treats it that way.
-- **The default model and effort, anchored to each provider.** The updater
-  removes any pinned default — `effortLevel` / `model` and every per-model
-  `modelSettings.<m>.effortLevel` in Claude Code, top-level `model` /
-  `model_reasoning_effort` in Codex, `defaultAgentModelId` in Antigravity —
-  so each client resolves its provider's own current default:
+On Windows the registry lives under `%USERPROFILE%\.config\roadmodel`, and
+project paths can use drive letters. Register each machine's own directories;
+running the updater on one machine does not make another machine's filesystem
+local.
 
-  | Agent | Where the default comes from |
-  | --- | --- |
-  | Claude Code | Anthropic's documented per-model default (Opus 5.5 → `medium`, Opus 4.7 → `xhigh`, the rest → `high`) |
-  | Codex | `default_reasoning_level` per model in the catalog Codex fetches from OpenAI — Codex documents no default as a value |
-  | Antigravity | the client's own default model id, which carries the rung |
+A coordinator can update named SSH peers through its private
+`~/.config/roadmodel/fleet.json`:
 
-  Carrying no pin is the only way to follow a provider the day it changes a
-  default: a pin written from roadmodel's own opinion drifts the moment the
-  provider moves (Opus 5.5 shipped with a `medium` default a pinned `high`
-  would have overridden). **Ceilings are kept exactly as found** —
-  `maxEffortLevel` bounds escalation, it does not pick a starting point. A
-  `*-codex` model pin on a ChatGPT sign-in is removed even under
-  `--keep-pins`, because that account cannot run it at all. Opt out with
-  `--keep-pins` (the old `--no-calibrate` still works).
+```json
+{
+  "version": 1,
+  "global_rules_source": "/home/developer/.claude/CLAUDE.md",
+  "peers": {
+    "workstation": {
+      "host": "workstation-ssh",
+      "platform": "windows",
+      "python": "C:\\Python313\\python.exe",
+      "launcher": "~/.config/roadmodel/update_projects.py",
+      "projects": ["D:\\Code\\example-app", "D:\\Code\\example-library"]
+    }
+  }
+}
+```
 
-What still needs the prompt above: your own `CLAUDE.md` / `AGENTS.md`, your
-memory, your own skills and commands, and your permission posture. Re-run the
-memory step when the project's memory index changes materially.
+`platform` is `windows` or `posix`; `python` and project paths must be absolute.
+`launcher` is optional and defaults to the path shown, expanded on the peer.
+`host` is an existing SSH alias or hostname, optionally `user@host`. Peers need
+the installed updater and companions, a known SSH host key, and working
+noninteractive authentication. The coordinator does not discover machines or
+bootstrap remote software. Keep this configuration private and out of Git.
+
+Optional `global_rules_source` is an absolute local path selecting one
+authoritative global rules file on the coordinator. Mutating runs replicate
+it to `~/.claude/CLAUDE.md` on peers
+before their adapters are synchronized. Replication records hashes and refuses
+to overwrite divergent remote edits. Edit the coordinator's source for shared
+changes; reconcile reported conflicts explicitly. This replicates the named
+file, not arbitrary imported files or the entire modular rules directory.
+Without this option, global sources remain independent on each machine.
+
+Ordinary upgrades register the peer's listed projects and run its updater.
+Every peer invocation includes `--local-only`, so peers never recurse into
+their own fleets. Coordinated full upgrades also skip model-backed roadmap
+refreshes on peers. `--sync-only` and `--check` carry the same mode to peers;
+`--local-only` skips all peers. An unreachable or failed peer produces a named
+failure and a nonzero result; other machines still run.
+
+`--sync-only` and `--check` use the installed launcher and companions without
+fetching or self-updating. They make no package or model requests. Checks do
+not write files or register projects, though configured peers are contacted
+over SSH. Add `--local-only` for a fully local check or repair; `--dry-run`
+validates and describes fleet actions without connecting to peers.
+
+Install a daily schedule on each machine with `--install-schedule 09:00`:
+launchd on macOS, Task Scheduler on Windows, and cron on Linux. Schedules use
+the installed launcher and append to `~/.config/roadmodel/update.log`.
+Windows catches a missed start when the machine returns. A coordinator's
+schedule can also reach its configured peers; each machine's own schedule
+provides upkeep when the coordinator is unavailable. Choose times that avoid
+overlapping runs. A machine lock prevents simultaneous upgrades; a busy run
+reports a failure so it can be retried. The schedule's normal full upgrade follows published
+roadmodel releases and refreshes its own launcher and companion modules.
+
+Fleet orchestration does not merge a repository's memory between separate
+clones on different machines. If you use the same repository on multiple
+machines, synchronize its private memory store separately with conflict
+handling. Different projects retain separate project memories.
+
+## Other agent capabilities
+
+A full upgrade continues to distribute the five roadmap command/skill files
+and mirror the roadmodel MCP registration into supported clients. It also
+retains the existing provider-default behavior: pinned default model and effort
+settings are removed unless `--keep-pins` is used; ceilings are retained.
+`--sync-only` touches neither runtime model pins nor MCP or permission settings.
+Client permissions, hooks, plugins, and unrelated skills keep their native
+behavior; copying prose cannot make those mechanisms interchangeable.
+
+Antigravity skill copies are installed in both documented global locations:
+`~/.gemini/config/skills/` for the IDE/2.0 client and
+`~/.gemini/antigravity-cli/skills/` for the CLI. Both expose a skill as a slash
+command; the copies are generated from the same command source.
+
+OpenRouter is an API provider. OpenCode using OpenRouter gets the OpenCode
+integration above. Other OpenRouter clients need their own supported
+instruction integration; an API endpoint does not discover local files.
+Cursor and VS Code receive their supported commands and project guidance, but
+this updater does not install their global rule adapters.
+
+Shared files preserve saved rules, durable memories, and written work state.
+They do not transfer full chat transcripts, unsaved reasoning, or guarantee
+identical model behavior. Verify loaded sources and use a fresh session when
+switching clients after configuration changes.

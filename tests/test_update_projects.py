@@ -171,7 +171,11 @@ def test_dry_run_cli_plans_without_touching_anything(tmp_path: Path) -> None:
     assert before == after  # dry run wrote nothing
 
 
-def test_empty_registry_explains_how_to_add(tmp_path: Path) -> None:
+def test_empty_registry_explains_how_to_add(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
     result = subprocess.run(
         [
             sys.executable,
@@ -458,6 +462,7 @@ def test_refresh_retires_the_renamed_update_command(
     monkeypatch.setattr(up, "CODEX_LEGACY_SKILLS_DIR", home / ".codex" / "skills")
     monkeypatch.setattr(up, "OPENCODE_DIR", home / ".config" / "opencode")
     monkeypatch.setattr(up, "ANTIGRAVITY_SKILLS_DIR", home / ".gemini" / "config" / "skills")
+    monkeypatch.setattr(up, "ANTIGRAVITY_STATE_DIR", home / ".gemini" / "antigravity-cli")
     monkeypatch.setattr(up, "RETIRED_COMMANDS", ("roadmodel-update",))
     assert "roadmodel-upgrade" in up.COMMANDS and "roadmodel-update" not in up.COMMANDS
     old = (COMMANDS_DIR / "roadmodel-upgrade.md").read_text()
@@ -467,6 +472,7 @@ def test_refresh_retires_the_renamed_update_command(
         home / ".codex" / "prompts" / "roadmodel-update.md",
         home / ".agents" / "skills" / "roadmodel-update" / "SKILL.md",
         home / ".config" / "opencode" / "commands" / "roadmodel-update.md",
+        home / ".gemini" / "antigravity-cli" / "skills" / "roadmodel-update" / "SKILL.md",
     ]
     for path in ours:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -475,9 +481,9 @@ def test_refresh_retires_the_renamed_update_command(
     theirs.parent.mkdir(parents=True)
     theirs.write_text("---\nname: roadmodel-update\n---\nmy own\n")
 
-    assert up.retire_commands(dry_run=True) == ["roadmodel-update: retired — removed 5 old copies"]
+    assert up.retire_commands(dry_run=True) == ["roadmodel-update: retired — removed 6 old copies"]
     assert all(p.exists() for p in ours)  # dry run removes nothing
-    assert up.retire_commands() == ["roadmodel-update: retired — removed 5 old copies"]
+    assert up.retire_commands() == ["roadmodel-update: retired — removed 6 old copies"]
     assert not any(p.exists() for p in ours)
     assert not (home / ".agents" / "skills" / "roadmodel-update").exists()
     assert theirs.read_text().endswith("my own\n")
@@ -1030,6 +1036,34 @@ def test_antigravity_port_tells_the_model_to_use_inline_arguments(up: ModuleType
     )
 
 
+def test_antigravity_refresh_mirrors_cli_and_ide_skills(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import io
+
+    home = tmp_path / "home"
+    monkeypatch.setattr(up, "ANTIGRAVITY_SKILLS_DIR", home / ".gemini/config/skills")
+    monkeypatch.setattr(up, "ANTIGRAVITY_STATE_DIR", home / ".gemini/antigravity-cli")
+    monkeypatch.setattr(up, "COMMANDS", ("roadmodel-upgrade",))
+    body = COMMAND.read_bytes()
+    monkeypatch.setattr(up.urllib.request, "urlopen", lambda *_a, **_kw: io.BytesIO(body))
+    up.refresh_commands(dry_run=True, agents=["antigravity"])
+    assert not home.exists()
+    lines = up.refresh_commands(agents=["antigravity"])
+    ide = home / ".gemini/config/skills/roadmodel-upgrade/SKILL.md"
+    cli = home / ".gemini/antigravity-cli/skills/roadmodel-upgrade/SKILL.md"
+    assert ide.read_bytes() == cli.read_bytes()
+    assert "name: roadmodel-upgrade" in cli.read_text()
+    assert "--sync-only" in cli.read_text()
+    assert "antigravity installed" in lines[1]
+    assert "antigravity-cli installed" in lines[1]
+    mtimes = (ide.stat().st_mtime_ns, cli.stat().st_mtime_ns)
+    lines = up.refresh_commands(agents=["antigravity"])
+    assert "antigravity unchanged" in lines[1]
+    assert "antigravity-cli unchanged" in lines[1]
+    assert (ide.stat().st_mtime_ns, cli.stat().st_mtime_ns) == mtimes
+
+
 def test_antigravity_detected_by_its_own_state_dir_not_a_bare_gemini_dir(
     up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1319,10 +1353,11 @@ def test_only_the_installed_copy_hands_over(
 
 
 def test_main_hands_over_before_parsing_flags_it_does_not_know(
-    up: ModuleType, monkeypatch: pytest.MonkeyPatch
+    up: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """A launcher one release behind must not reject a flag the release added."""
     seen: list[list[str]] = []
+    monkeypatch.setattr(up, "CONFIG_DIR", tmp_path)
     monkeypatch.setattr(up, "should_self_update", lambda self_path=None: True)
     monkeypatch.setattr(up, "self_update", lambda raw, pf: seen.append(raw) or 7)
     assert up.main(["--brand-new-flag"]) == 7
