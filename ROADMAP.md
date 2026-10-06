@@ -4,14 +4,16 @@
 > `roadmodel-mcp` MCP server are on PyPI (`roadmodel` 0.2.x), and the site
 > and web recommender are built and running privately ahead of launch.
 > Phase 4 is complete except for its public launch (Step 8), which waits
-> on a pre-launch quality push. Phases 5–9 below remain the forward
-> execution plan.
+> on a pre-launch quality push. Visitor-funded recommendations have
+> shipped: roadmodel's own AI spend is limited to an invite list, and
+> every other visitor pays with their own provider key or gets a free
+> keyless pick. Phases 5–9 below remain the forward execution plan.
 > **Owner:** Nathan Ramos, founder and sole maintainer
 > **Target environment:** Local through Phase 2; managed cloud from
 > Phase 3 onward (managed Next.js host for the web tier, managed
 > Python runtime for the recommender service, managed Postgres + Auth
 > + Storage)
-> **Last updated:** September 2026
+> **Last updated:** October 2026
 
 This roadmap takes roadmodel from a local Python CLI that ranks AI
 models by prompt fit to a bundled SaaS at `roadmodel.ai`. The SaaS
@@ -443,6 +445,21 @@ launch, not a side effect of any other step.
   `project_site_pre_launch_gate` with the lift date; keep
   `feedback_public_readiness_gate` as durable guidance for
   future DNS-cut milestones.
+
+#### Visitor-funded recommendations (shipped)
+Before the public launch, who pays for a recommendation became an
+explicit, fail-closed decision made before any AI provider is called:
+
+- **Invite list.** roadmodel's own provider keys answer only the
+  founder and invited accounts, under a daily operator spend cap.
+- **Your own key.** Any other visitor can run a recommendation on their
+  own provider account. The key is used for that one request, is never
+  stored or logged, and never falls back to roadmodel's keys.
+- **Keyless picks.** A short form returns three picks computed in code
+  from published benchmarks and prices, at no AI cost to anyone, plus a
+  path to run the recommender inside the visitor's own coding agent.
+- **Daily alarm.** An automated check flags any operator-funded request
+  that fell outside those rules.
 
 **Acceptance criteria**
 - A signed-in user can complete a full roadmap conversation, see
