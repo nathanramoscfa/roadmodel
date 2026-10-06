@@ -2369,11 +2369,12 @@ def _replace_bytes(path: Path, data: bytes) -> None:
 
 def _install_launcher(dry_run: bool) -> Path:
     """A schedule always runs LAUNCHER. Put this file there when this run is
-    not already it (say, `--install-schedule` from a repo checkout). A run a
-    launcher handed over to leaves it alone: the launcher just refreshed
-    itself."""
+    not already it (say, `--install-schedule` from a repo checkout). A released
+    handover child also repairs companions: older launchers only copied this
+    file, before SUPPORT_MODULES existed. Development runs with a handover
+    variable keep the installed release untouched."""
     here = Path(__file__).resolve()
-    if os.environ.get(DELEGATED_ENV) or _same_file(here, LAUNCHER) or dry_run:
+    if (os.environ.get(DELEGATED_ENV) and not _packaged()) or _same_file(here, LAUNCHER) or dry_run:
         return LAUNCHER
     LAUNCHER.parent.mkdir(parents=True, exist_ok=True)
     _replace_bytes(LAUNCHER, here.read_bytes())
@@ -2686,6 +2687,16 @@ def _main(argv: Optional[list[str]] = None) -> int:
 
     if args.context_source and not args.context_sync:
         raise SystemExit("--context-source needs --context-sync OWNER/REPO")
+    # A pre-companion launcher (for example 0.2.65) refreshed only this module
+    # before handing over. Repair the complete installed release on this first
+    # full run, so the next offline --sync-only does not need another upgrade.
+    # main() already holds or inherited the machine lock at this point.
+    if (
+        _packaged()
+        and os.environ.get(DELEGATED_ENV)
+        and not (args.dry_run or args.check or args.sync_only)
+    ):
+        _install_launcher(False)
     if args.context_sync:
         print(configure_context_sync(args.context_sync, args.context_source, args.dry_run))
 
@@ -2837,12 +2848,17 @@ def main(argv: Optional[list[str]] = None) -> int:
         return _main(raw)
     try:
         locking = _support("updater_lock")
-    except FileNotFoundError:
+    except RuntimeError as exc:
         # A freshly downloaded bootstrap has no companions yet. Its released
         # handover child acquires the lock, and installs it for future runs.
-        if should_self_update():
+        if (
+            not Path(__file__).with_name("updater_lock.py").is_file()
+            and should_self_update()
+            and "--sync-only" not in raw
+        ):
             return _main(raw)
-        raise
+        print(f"Updater: {exc}", file=sys.stderr)
+        return 1
     try:
         with locking.machine_lock(CONFIG_DIR):
             return _main(raw)

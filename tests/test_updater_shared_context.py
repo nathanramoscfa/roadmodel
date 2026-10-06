@@ -289,3 +289,93 @@ def test_install_launcher_copies_all_companions(
         assert (launcher.parent / f"{name}.py").read_bytes() == (
             ROOT / "scripts" / f"{name}.py"
         ).read_bytes()
+
+
+def released_child(updater, monkeypatch):
+    """An old parent copied only its newly installed release's updater."""
+    up = updater.up
+    package = updater.home / "site-packages/roadmodel"
+    package.mkdir(parents=True)
+    for name in ("update_projects", *up.SUPPORT_MODULES):
+        shutil.copyfile(ROOT / "scripts" / f"{name}.py", package / f"{name}.py")
+    up.LAUNCHER.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(package / "update_projects.py", up.LAUNCHER)
+    monkeypatch.setattr(up, "__file__", str(package / "update_projects.py"))
+    monkeypatch.setattr(up, "__package__", "roadmodel")
+    monkeypatch.setattr(up, "should_self_update", lambda: False)
+    monkeypatch.setenv(up.DELEGATED_ENV, sys.executable)
+    monkeypatch.setattr(up, "sync_user_context", lambda **_kwargs: [])
+    monkeypatch.setattr(up, "_roadmodel_mcp_command", lambda: None)
+    monkeypatch.setattr(up, "update_mcp_env", lambda *_args, **_kwargs: ("unchanged", True))
+    monkeypatch.setattr(
+        up,
+        "update_project",
+        lambda entry, **_kwargs: up.Result(
+            entry, up.Env("venv", ".venv", entry.path / ".venv"), "fixture", ok=True
+        ),
+    )
+    return package
+
+
+def test_first_delegated_release_run_repairs_legacy_launchers_missing_companions(
+    updater, monkeypatch
+):
+    up = updater.up
+    package = released_child(updater, monkeypatch)
+    assert all(not up.LAUNCHER.with_name(f"{name}.py").exists() for name in up.SUPPORT_MODULES)
+    assert up.main(["--no-commands", "--no-parity", str(updater.project)]) == 0
+    for name in ("update_projects", *up.SUPPORT_MODULES):
+        assert (
+            up.LAUNCHER.with_name(f"{name}.py").read_bytes()
+            == (package / f"{name}.py").read_bytes()
+        )
+    # The repaired offline launcher resolves companions itself, without pip or
+    # a second self-update. This is the behavior the legacy parent omitted.
+    monkeypatch.setattr(up, "__file__", str(up.LAUNCHER))
+    monkeypatch.setattr(up, "__package__", "")
+    assert up.main(["--sync-only", str(updater.project)]) == 0
+    assert [name for name, _ in updater.calls].count("shared") == 1
+
+
+@pytest.mark.parametrize("flag", ["--check", "--dry-run", "--help", "--self-check", "--sync-only"])
+def test_delegated_nonupgrade_modes_do_not_install_release_files(updater, monkeypatch, flag):
+    up = updater.up
+    released_child(updater, monkeypatch)
+    before = up.LAUNCHER.read_bytes()
+    args = [flag, "--no-commands", "--no-parity", str(updater.project)]
+    if flag == "--help":
+        with pytest.raises(SystemExit) as exc:
+            up.main(args)
+        assert exc.value.code == 0
+    else:
+        assert up.main(args) == 0
+    assert up.LAUNCHER.read_bytes() == before
+    assert all(not up.LAUNCHER.with_name(f"{name}.py").exists() for name in up.SUPPORT_MODULES)
+
+
+def test_source_checkout_full_run_does_not_install_itself(updater, monkeypatch):
+    up = updater.up
+    released_child(updater, monkeypatch)
+    monkeypatch.setattr(up, "__package__", "")
+    monkeypatch.setattr(up, "__file__", str(ROOT / "scripts/update_projects.py"))
+    assert up.main(["--no-commands", "--no-parity", str(updater.project)]) == 0
+    assert all(not up.LAUNCHER.with_name(f"{name}.py").exists() for name in up.SUPPORT_MODULES)
+
+
+def test_downloaded_launcher_without_lock_helper_can_reach_release_handover(updater, monkeypatch):
+    up = updater.up
+    up.LAUNCHER.parent.mkdir(parents=True)
+    up.LAUNCHER.write_text("legacy bootstrap")
+    monkeypatch.setattr(up, "__file__", str(up.LAUNCHER))
+    handed = []
+    monkeypatch.setattr(up, "self_update", lambda raw, _registry: handed.append(raw) or 7)
+    assert up.main(["--new-release-flag"]) == 7
+    assert handed == [["--new-release-flag"]]
+
+
+def test_missing_lock_helper_never_turns_sync_only_into_full_upgrade(updater, monkeypatch, capsys):
+    up = updater.up
+    monkeypatch.setattr(up, "__file__", str(up.LAUNCHER))
+    assert up.main(["--sync-only", str(updater.project)]) == 1
+    assert "Missing updater companion" in capsys.readouterr().err
+    assert not updater.calls
