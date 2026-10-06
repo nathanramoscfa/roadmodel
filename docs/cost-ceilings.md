@@ -1,25 +1,84 @@
 <!-- docs/cost-ceilings.md -->
-# AI provider cost ceilings
+# AI cost ceilings
 
-This is the public-facing summary of the day-one provider-side
-spend ceilings roadmodel runs under during Phase 3. It is a
-derivative of the internal "Provider cost ceilings" table in the
-maintainer's infrastructure runbook — that table is the single
-source of truth; if numbers on this page disagree with the
+This is the public-facing summary of what roadmodel.ai can spend on AI
+inference, who pays for each kind of request, and the layers that hold the
+bill down. It is a derivative of the internal "Provider cost ceilings" table in
+the maintainer's infrastructure runbook — that table is the single source of
+truth for the provider-side numbers; if the numbers here disagree with the
 runbook, the runbook wins.
 
-The caps documented here are the **disaster-recovery floor** for
-AI-inference spend. Phase 7 will add an application-side ledger
-that strengthens but does not replace these caps (see
-["Forward reference — Phase 7 application ledger"](#forward-reference--phase-7-application-ledger)
-below).
+Three layers, innermost first:
 
-## Day-one provider caps
+1. **The funding lanes** decide who pays before any provider is called, and a
+   request nobody funds is refused with `402`.
+2. **The daily operator cap** ($2 a day) stops the operator's own spend in
+   real time.
+3. **The provider caps** are the disaster-recovery floor: independent monthly
+   limits in each provider's console that hold even if the application layers
+   fail.
 
-Three providers carry the free-tier recommender's traffic during
-Phase 3. Each carries an independent monthly spend cap plus a
-50% / 75% / 90% email alert ladder so the maintainer sees a
-breach trajectory days before the cap actually fires.
+## The three lanes
+
+Every request to a paid route (`POST /api/recommend`, `POST /api/roadmap`) is
+assigned to exactly one lane by `web/lib/funding-lane.ts`. The decision fails
+closed: any error in it refuses the request.
+
+| Lane | Who pays | Who gets it | Limits (per IP + user agent unless noted) |
+| ---- | -------- | ----------- | ----------------------------------------- |
+| **Operator** | roadmodel's own provider keys | The founder, the invite list, and the latency-sweep bypass header | Founder and bypass: none. Invited: 20 a day per account, plus a 10-a-minute burst. The $2/day cap applies to all three. |
+| **Visitor** | The visitor's own key (OpenAI, Google, Anthropic or an OpenRouter connection), for that one request | Anyone who sends a key | 10 a minute and 50 a day, plus 5 declined keys a day. Never checks or moves the operator cap. |
+| **Keyless** | Nobody: the picks are computed in code from the bundled catalog (`POST /v1/score`), with no model call | Anyone, signed in or not | 20 a minute and 200 a day. Never checks or moves the operator cap. |
+
+A request that fits none of them is answered `402 funding_required` with the
+ways forward, before any upstream call is made. The key a visitor sends travels
+as one request header, is used for that request, and is not stored, logged or
+copied into the audit row.
+
+Each `audit_log` row records the lane in `funded_by` (`operator`, `visitor` or
+`keyless`; empty on a refused request). Only `operator` rows count toward the
+cap.
+
+## The daily operator cap
+
+`ROADMODEL_DAILY_COST_CAP_USD` is **$2**. The running total for the UTC day
+lives in a counter (`spend:<UTC day>`) that every operator-funded call adds its
+metered cost to, so the check is one read at any volume. When a day's counter
+is missing it is seeded from the operator rows in `audit_log`, page by page.
+Once the total reaches the cap, the operator lane answers `503 daily_cost_cap`
+with a `Retry-After` until UTC midnight — the founder and the bypass header
+included. The visitor and keyless lanes keep working, because they cost the
+operator nothing.
+
+The guard fails open on purpose: with no cap set, or when every read errors, it
+never trips. A metering hiccup must not take the app down; the provider caps
+below are the backstop for that case.
+
+### The arithmetic
+
+The default engine is GPT-6 Luna at $0.10 per million input tokens and $0.50
+per million output tokens. A ladder call reads about 61,000 input tokens and
+may write up to 6,144.
+
+| Quantity | Figure |
+| -------- | ------ |
+| Measured cost of one call (92% of the input served from cache) | about $0.0015 |
+| Worst case for one call (every input token uncached, output at its cap): 60,925 × $0.10/M + 6,144 × $0.50/M | **$0.0092** |
+| One worst-case recommendation (a failed ladder plus a three-call fan-out, four calls) | about $0.037 |
+| Worst-case recommendations the cap allows in a day ($2 ÷ $0.037) | about 54 |
+| Expected operator volume (the invite list plus the daily soak run) at the measured cost | about $0.25 a day |
+| **Worst month**: $2 × 30 days | **$60** |
+
+The cap, not the expected volume, sets the ceiling: even if every operator call
+were a worst-case call, a month cannot pass $60 of operator spend through this
+layer.
+
+## The provider caps
+
+The operator's provider keys also carry independent monthly spend caps plus a
+50% / 75% / 90% email alert ladder, so the maintainer sees a breach trajectory
+days before a cap fires. They are the backstop for everything the application
+layers cannot see: a leaked key, a bug in the guard, a fail-open read.
 
 | Provider  | Monthly cap (USD) | Alert thresholds (50% / 75% / 90%) | Console URL                                                                  |
 | --------- | ----------------- | ---------------------------------- | ---------------------------------------------------------------------------- |
@@ -27,93 +86,81 @@ breach trajectory days before the cap actually fires.
 | OpenAI    | $200              | $100 / $150 / $180                 | <https://platform.openai.com/settings/organization/limits>                   |
 | Google    | $50               | $25 / $37.50 / $45                 | <https://console.cloud.google.com/billing> (project `roadmodel-saas`)        |
 
-The Google budget is scoped to the Generative Language API
-service so non-AI GCP usage on the same billing account does not
-count toward the cap.
+The Google budget is scoped to the Generative Language API service so non-AI
+GCP usage on the same billing account does not count toward the cap.
 
-The aggregate ceiling under Phase 3 settings is $450/mo across
-the three providers. A coordinated bot attack cannot drive spend
-past that floor without the maintainer first taking deliberate
-action to raise a cap. Phase 7's application ledger pushes the
-realistic ceiling well below this number for non-incident
-operation.
+The aggregate provider-side ceiling is $450 a month across the three. A
+coordinated attack cannot drive operator spend past it without the maintainer
+first taking deliberate action to raise a cap.
+
+## The funding-invariant alarm
+
+A daily check (`scripts/check_funding_invariant.py`, run by the
+`cron-health.yml` workflow) reads the last 25 hours of `audit_log` and fails
+when an operator-funded row that spent money breaks either rule:
+
+- its `cache_stats.funding_reason` is anything but `founder`, `invited` or
+  `bypass`;
+- it has no `user_id` and a reason other than `bypass` (the founder and invite
+  lanes are signed-in lanes).
+
+A failure opens, or adds to, the single `cron-health` tracking issue, and the
+issue closes itself when the next daily run is clean. The check prints counts
+and row ids only.
 
 ## Cap-breach response runbook
 
-When a provider sends a threshold alert (50% / 75% / 90%) or the
-cap fires outright, the maintainer follows these steps in order.
-The 50% and 75% alerts are early-warning signals — investigate
-but do not necessarily rotate. The 90% alert and a hard cap-fire
-are the action-required signals.
+When a provider sends a threshold alert (50% / 75% / 90%), the cap fires
+outright, or the daily operator cap trips unexpectedly, the maintainer follows
+these steps in order. The 50% and 75% alerts are early-warning signals —
+investigate but do not necessarily rotate. The 90% alert, a hard cap-fire and
+an unexplained `daily_cost_cap` are the action-required signals.
 
-1. **Confirm the breach via the provider console.** Open the
-   console URL for the affected provider from the table above
-   and confirm the live spend matches the alert. False
-   positives are rare but possible; rotating keys against a
-   stale alert burns time and adds churn.
-2. **Rotate the compromised API key.** In the provider's console,
-   revoke the existing key and create a fresh one. Save the new
-   value to Google Password Manager under the entry
-   `roadmodel <PROVIDER>_API_KEY` (e.g., `roadmodel ANTHROPIC_API_KEY`).
-3. **Update the Vercel env var.** From a clone of the repo with
-   the new key on the clipboard:
+1. **Confirm the breach.** For a provider alert, open the console URL from the
+   table above and confirm the live spend matches. For the daily cap, read the
+   day's operator rows in `audit_log` (`funded_by = 'operator'`) and check
+   their `funding_reason`. False positives are rare but possible; rotating keys
+   against a stale alert burns time and adds churn.
+2. **Rotate the compromised API key.** In the provider's console, revoke the
+   existing key and create a fresh one. Save the new value to Google Password
+   Manager under the entry `roadmodel <PROVIDER>_API_KEY` (e.g.,
+   `roadmodel OPENAI_API_KEY`).
+3. **Update the Vercel env var.** From a clone of the repo with the new key on
+   the clipboard:
+
    ```bash
    cd service && pbpaste | tr -d '\r\n' \
-     | vercel env add ANTHROPIC_API_KEY production --force --yes
+     | vercel env add OPENAI_API_KEY production --force --yes
    ```
-   Repeat for the `preview` scope. The FastAPI service redeploys
-   automatically on env var change; allow ~30 seconds for the
-   new deployment to become live. (Until Step 5.5b the Railway
-   tier needed a parallel update; Railway has since been retired
-   so only Vercel env vars matter.)
-4. **Verify the new key works via the health-check endpoint.**
-   Issue a curl against the recommender:
-   ```bash
-   curl -sS https://staging.roadmodel.ai/api/recommend \
-     -H 'Content-Type: application/json' \
-     -d '{"task_description":"smoke test post-rotation","context":{"budget_priority":"cheap"}}'
-   ```
-   Expected: HTTP 200 with a JSON `model` + `platform` payload.
-   A 5xx response indicates the new key did not propagate — wait
-   30 seconds and retry; if still failing, re-check the env var
-   value in the Vercel dashboard.
-5. **Post-mortem.** Capture the incident in
-   `private/incidents/<UTC-date>-<provider>.md` (template lives
-   in `docs/phase03-qa-findings.md` once the Step 8 close-out
-   doc lands). Cover: alert trigger time, traffic shape that
-   caused the breach, rotated key fingerprint, total spend at
-   rotation, and whether the cap value itself should change.
 
-If the spend is **organic** — legitimate traffic growth rather
-than abuse — the rotation step is unnecessary. Instead, raise the
-cap deliberately in the provider console, update the
-"Provider cost ceilings" table in the internal infrastructure
+   Repeat for the `preview` scope. The service redeploys automatically on an
+   env var change; allow about 30 seconds for the new deployment to go live.
+4. **Verify the new key works.** From the maintainer's Mac, run the live lane
+   probe, which makes one founder call on the operator lane and checks that it
+   is the only call that moved the spend counter:
+
+   ```bash
+   NODE_PATH="$(pwd)/web/node_modules" scripts/with-prod-secrets.sh \
+     node web/node_modules/.bin/tsx scripts/probe-funding-lanes.ts
+   ```
+
+   Expected: every line `PASS`. A founder call that fails means the new key
+   did not propagate — wait 30 seconds and retry, then re-check the env var in
+   the Vercel dashboard.
+5. **Post-mortem.** Capture the incident in
+   `private/incidents/<UTC-date>-<provider>.md`. Cover: alert trigger time,
+   traffic shape that caused the breach, rotated key fingerprint, total spend
+   at rotation, and whether a cap value itself should change.
+
+If the spend is **organic** — legitimate traffic growth rather than abuse — the
+rotation step is unnecessary. Instead, raise the cap deliberately (the daily
+cap through `ROADMODEL_DAILY_COST_CAP_USD`, a provider cap in its console),
+update the "Provider cost ceilings" table in the internal infrastructure
 runbook, and re-sync this public derivative.
 
-## Forward reference — Phase 7 application ledger
+## What this page does not cover
 
-The caps documented above are intentionally crude: they
-deterministically prevent the bill from running unbounded, but
-they cannot prevent a single bad actor from spending the cap
-amount on garbage requests in a few hours. Phase 7 of the
-roadmap adds an **application-side hard ledger** that tracks
-token spend per-request and per-account in real time and can
-refuse a call before it ever reaches the provider. That ledger
-strengthens this floor in three ways:
-
-- **Per-account caps.** Heavy users hit a dollar/token ceiling
-  long before they could move the per-provider cap.
-- **Anomaly cutoff.** A burst of expensive requests trips a
-  60-second kill-switch at the application tier; the
-  provider-side cap is the slow-burn backstop, not the first
-  line of defense.
-- **Real-time visibility.** The ledger surfaces live spend at a
-  per-route + per-provider grain; the provider consoles report
-  hours behind real time.
-
-Until that ledger ships, the provider caps documented here are
-roadmodel's only hard limit on AI-inference cost. Phase 7's
-landing **strengthens but does not replace** them — if the
-ledger ever fails open (a bug, a stale cache, a misconfigured
-deploy), the provider caps still hold and the bill still cannot
-exceed the documented monthly floor.
+Stored, encrypted bring-your-own keys, paid tiers, and per-account dollar caps
+arrive in later phases. A paid subscription will become one more way into the
+operator lane above, under the same $2/day layer and provider caps. Until then,
+a visitor's spend is capped by their own provider account, not by roadmodel.

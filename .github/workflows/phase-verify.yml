@@ -29,12 +29,12 @@ jobs:
         # Linux only — free on public repos. macOS verification runs locally
         # on the Mac Studio via scripts/verify-macos.sh (see .githooks/pre-push).
         os: [ubuntu-latest]
-        phase: ["01", "02", "03", "04", "046"]
+        phase: ["01", "02", "03", "04", "046", "0411"]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
-          python-version: ${{ (matrix.phase == '03' || matrix.phase == '04' || matrix.phase == '046') && '3.12' || '3.11' }}
+          python-version: ${{ (matrix.phase == '03' || matrix.phase == '04' || matrix.phase == '046' || matrix.phase == '0411') && '3.12' || '3.11' }}
       - name: Run phase verify script (--fast)
         env:
           ROADMODEL_VERIFY_PYTHON: python
@@ -49,7 +49,7 @@ jobs:
         # Linux only — free on public repos. macOS verification runs locally
         # on the Mac Studio via scripts/verify-macos.sh (see .githooks/pre-push).
         os: [ubuntu-latest]
-        phase: ["01", "02", "03", "04", "046"]
+        phase: ["01", "02", "03", "04", "046", "0411"]
     steps:
       # fetch-depth: 0 so gitleaks detect can scan the full git history,
       # not just the latest commit.
@@ -58,7 +58,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
-          python-version: ${{ (matrix.phase == '03' || matrix.phase == '04' || matrix.phase == '046') && '3.12' || '3.11' }}
+          python-version: ${{ (matrix.phase == '03' || matrix.phase == '04' || matrix.phase == '046' || matrix.phase == '0411') && '3.12' || '3.11' }}
           # setup-python's built-in pip cache handles macOS
           # (~/Library/Caches/pip) and Linux (~/.cache/pip) paths
           # automatically — cleaner than a hand-rolled actions/cache.
@@ -137,4 +137,8 @@ jobs:
         # configured here (we deliberately don't export GH_TOKEN), so the
         # script skips it. Live recommend smoke is also skipped because
         # ANTHROPIC_API_KEY is unset.
-        run: bash "scripts/verify-phase${{ matrix.phase }}.sh" --post
+        #
+        # Phase 4.11's --post is the live production lane probe, which needs
+        # the maintainer's keychain secrets and runs on the Mac. Its CI mode
+        # is --security (secret scan, SAST, dependency audit, literal grep).
+        run: bash "scripts/verify-phase${{ matrix.phase }}.sh" ${{ matrix.phase == '0411' && '--security' || '--post' }}

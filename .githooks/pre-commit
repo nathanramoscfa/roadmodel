@@ -11,7 +11,13 @@
 # Install (one-time per clone):
 #   git config core.hooksPath .githooks
 #
-# Bypass (NOT recommended; reserved for emergency):
+# It also runs the secret scan (Phase 4.11 Step 6): `gitleaks git --staged`
+# over what is about to be committed, the same detector phase-verify.yml's
+# post job runs over history. A machine without gitleaks gets a notice, not a
+# block; CI is the backstop.
+#
+# Bypass (NOT recommended; reserved for emergency; skips the branch guard
+# only, never the secret scan):
 #   ROADMODEL_ALLOW_MAIN_COMMIT=1 git commit ...
 
 set -euo pipefail
@@ -20,12 +26,8 @@ protected_branches=(main master)
 
 current_branch="$(git symbolic-ref --short HEAD 2>/dev/null || echo "DETACHED")"
 
-if [[ "${ROADMODEL_ALLOW_MAIN_COMMIT:-0}" == "1" ]]; then
-  exit 0
-fi
-
 for protected in "${protected_branches[@]}"; do
-  if [[ "$current_branch" == "$protected" ]]; then
+  if [[ "${ROADMODEL_ALLOW_MAIN_COMMIT:-0}" != "1" && "$current_branch" == "$protected" ]]; then
     cat >&2 <<EOF
 ================================================================
   REFUSED: cannot commit directly to '$current_branch'.
@@ -53,5 +55,16 @@ EOF
     exit 1
   fi
 done
+
+# Secret scan over the staged diff. --redact keeps a finding's value out of
+# the terminal and the scrollback.
+if command -v gitleaks >/dev/null 2>&1; then
+  if ! gitleaks git --staged --no-banner --redact >&2; then
+    echo "pre-commit: gitleaks found a secret in the staged changes; commit refused." >&2
+    exit 1
+  fi
+else
+  echo "pre-commit: gitleaks not installed; skipping the secret scan (CI still runs it)." >&2
+fi
 
 exit 0

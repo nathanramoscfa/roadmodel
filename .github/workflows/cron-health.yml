@@ -14,6 +14,13 @@ name: Cron health
 # redundant with (1). Failure files a single deduplicated tracking issue and
 # fails the run; recovery closes the issue automatically.
 #
+# A third, independent question joined with Phase 4.11:
+#
+#   3. Did the operator's money pay for anything but the operator lane?
+#      (scripts/check_funding_invariant.py reads the last 25 hours of
+#      audit_log and fails on an operator row outside founder / invited /
+#      bypass. It prints counts and row ids only.)
+#
 # This is where tests/test_freshness.py's staleness assertion lives now. It
 # used to run in the per-PR matrix, where a broken cron turned every pull
 # request red — including the PR fixing the cron. See that module's docstring.
@@ -112,6 +119,16 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Funding invariant (scripts/check_funding_invariant.py)
+        id: funding
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -o pipefail
+          python scripts/check_funding_invariant.py 2>&1 | tee /tmp/funding.txt
+
       - name: File or clear the tracking issue
         env:
           # The workflow's own token (permissions: issues: write above), not the
@@ -121,6 +138,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           FRESHNESS_OUTCOME: ${{ steps.freshness.outcome }}
+          FUNDING_OUTCOME: ${{ steps.funding.outcome }}
           FAILING_CRONS: ${{ steps.crons.outputs.failing }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
@@ -129,6 +147,7 @@ jobs:
 
           healthy=1
           if [ "$FRESHNESS_OUTCOME" = "failure" ]; then healthy=0; fi
+          if [ "$FUNDING_OUTCOME" = "failure" ]; then healthy=0; fi
           if [ -n "$FAILING_CRONS" ]; then healthy=0; fi
 
           # Dedup by EXACT title over OPEN issues via the REST list (never
@@ -140,7 +159,7 @@ jobs:
           if [ "$healthy" = "1" ]; then
             echo "Refresh pipeline healthy."
             if [ -n "$number" ]; then
-              gh issue comment "$number" --body "Recovered: every scheduled cron's last run succeeded and an automated refresh has landed within the freshness threshold. Closing. ($RUN_URL)"
+              gh issue comment "$number" --body "Recovered: every scheduled cron's last run succeeded, an automated refresh has landed within the freshness threshold, and every operator-funded request in the last 25 hours was on the founder, invited or bypass lane. Closing. ($RUN_URL)"
               gh issue close "$number"
               echo "Closed #$number."
             fi
@@ -158,6 +177,9 @@ jobs:
           fi
           if [ "$FRESHNESS_OUTCOME" = "failure" ]; then
             printf '\n## Refresh staleness\n\n```\n%s\n```\n' "$(tail -20 /tmp/freshness.txt)" >> "$BODY"
+          fi
+          if [ "$FUNDING_OUTCOME" = "failure" ]; then
+            printf '\n## Funding invariant\n\nAn operator-funded request fell outside the founder / invited / bypass lanes. Row ids only (see docs/cost-ceilings.md):\n\n```\n%s\n```\n' "$(tail -20 /tmp/funding.txt)" >> "$BODY"
           fi
           printf '\nCheck run: %s\n\nOpened automatically by `.github/workflows/cron-health.yml`. It closes itself once the pipeline recovers.\n' \
             "$RUN_URL" >> "$BODY"

@@ -26,6 +26,46 @@ one, because the recommender needs strict labeled-block output and
 smaller models often do not deliver it. You can configure more than
 one key and switch with `--provider <name>` per invocation.
 
+## Using your key on roadmodel.ai
+
+The website at roadmodel.ai can run a recommendation on **your** provider
+account instead of roadmodel's. You do not need to be invited. On `/recommend`,
+choose **Use your own API key**, pick OpenAI, Google or Anthropic, and paste a
+key from the sections above. Then write your task and run it. The same lane
+also covers **Connect OpenRouter**, which asks for your consent on
+openrouter.ai and hands the page a key for your OpenRouter balance, so you
+never paste one.
+
+What happens to the key:
+
+- **Header only.** The key travels in one request header
+  (`X-Roadmodel-Visitor-Key`, with the provider in
+  `X-Roadmodel-Visitor-Provider`). It is never put in a URL or a request body.
+- **Single use.** The service builds a client with your key, makes the call,
+  and discards it. The recommender runs one ladder call on your key.
+- **Never stored.** The key lives in the page's memory while the tab is open.
+  It is not written to a cookie, `localStorage`, `sessionStorage`, the recent
+  recommendations list, the audit log or any server log; the service scrubs
+  key-shaped strings from its logs. Closing the tab, or pressing **Forget key**,
+  removes it.
+- **No fallback.** If your provider rejects the key, is out of credit or fails,
+  the answer is that error. roadmodel does not retry on another provider and
+  does not substitute its own key. The one call you see is the one call your
+  account is billed for.
+- **Limits.** The lane allows 10 requests a minute and 50 a day. After five
+  declined keys in a day, further attempts are refused until the next day, so
+  the page cannot be used to test lists of stolen keys.
+
+Prefer to pay nothing? **Quick pick** answers a short form (task type,
+difficulty, whether the problem is new, budget priority) with three picks
+computed from the published benchmarks and prices — no key and no model call.
+And **Run it in your own agent** shows the two commands that install
+roadmodel's MCP server for the coding agent you already pay for, so the
+recommendation runs on your own subscription.
+
+For what roadmodel itself spends on the other lanes, see
+[cost-ceilings.md](cost-ceilings.md).
+
 ## Anthropic
 
 1. Open the [Anthropic Console](https://console.anthropic.com/) and
