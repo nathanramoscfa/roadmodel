@@ -53,6 +53,17 @@ def test_data_dir_in_wheel(tmp_path: Path) -> None:
         # Each machine's scheduled updater hands over to this copy, so it must
         # ship, and be the repo's file byte for byte (one source of truth).
         updater = zf.read("roadmodel/update_projects.py")
+        for helper in (
+            "agent_context",
+            "agent_rules",
+            "upgrade_fleet",
+            "worktree_memory",
+            "updater_lock",
+        ):
+            assert (
+                zf.read(f"roadmodel/{helper}.py")
+                == (REPO_ROOT / "scripts" / f"{helper}.py").read_bytes()
+            )
     for name in BUNDLED_DOCS:
         expected = f"roadmodel/data/{name}"
         assert expected in members, (

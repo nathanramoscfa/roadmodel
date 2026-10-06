@@ -112,6 +112,19 @@ jobs:
         # .github/workflows/cron-health.yml, which files a tracking issue.
         run: pytest -x --cov=roadmodel tests/ --ignore=tests/test_sources_live.py -m "not freshness"
 
+  agent-context-windows:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install test runner
+        run: python -m pip install pytest
+      - name: Verify shared memory and Windows junctions
+        run: python -m pytest -q tests/test_agent_context.py tests/test_updater_lock.py
+
   package-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -313,6 +326,7 @@ jobs:
     needs:
       - lint
       - type-check
+      - agent-context-windows
       - test-matrix
       - package-smoke
       - security-scan
@@ -327,6 +341,7 @@ jobs:
         run: |
           echo "lint=${{ needs.lint.result }}"
           echo "type-check=${{ needs.type-check.result }}"
+          echo "agent-context-windows=${{ needs.agent-context-windows.result }}"
           echo "test-matrix=${{ needs.test-matrix.result }}"
           echo "package-smoke=${{ needs.package-smoke.result }}"
           echo "security-scan=${{ needs.security-scan.result }}"
@@ -337,6 +352,7 @@ jobs:
           echo "migration-tests=${{ needs.migration-tests.result }}"
           if [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.type-check.result }}" != "success" ] || \
+             [ "${{ needs.agent-context-windows.result }}" != "success" ] || \
              [ "${{ needs.test-matrix.result }}" != "success" ] || \
              [ "${{ needs.package-smoke.result }}" != "success" ] || \
              [ "${{ needs.security-scan.result }}" != "success" ] || \
