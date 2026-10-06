@@ -39,6 +39,26 @@ def _common(project: Path) -> Path:
     return (common if common.is_absolute() else project / common).resolve()
 
 
+def _registered_common(worktree: Path) -> Path:
+    """Validate worktree ownership without running Git under another root.
+
+    The Windows sandbox uses a separate user and grants Git trust to the active
+    project. Its registered sibling worktrees need no new safe.directory entries:
+    their .git pointer and commondir files establish the same relationship.
+    """
+    git_entry = worktree / ".git"
+    if git_entry.is_dir():
+        return git_entry.resolve()
+    pointer = git_entry.read_text(encoding="utf-8").strip()
+    if not pointer.startswith("gitdir: "):
+        raise ValueError(f"invalid registered worktree git pointer: {git_entry}")
+    git_dir = Path(pointer[8:])
+    if not git_dir.is_absolute():
+        git_dir = worktree / git_dir
+    shared = Path((git_dir / "commondir").read_text(encoding="utf-8").strip())
+    return (shared if shared.is_absolute() else git_dir / shared).resolve()
+
+
 def _slug(project: Path) -> str:
     return re.sub(r"[^a-zA-Z0-9]", "-", str(project))
 
@@ -153,7 +173,7 @@ def _import(
     for worktree in worktrees:
         if worktree == project or not worktree.exists():
             continue
-        if _common(worktree) != common:
+        if _registered_common(worktree) != common:
             raise ValueError(f"registered worktree now belongs to another repo: {worktree}")
         source = config / "projects" / _slug(worktree) / "memory"
         if not source.is_dir():

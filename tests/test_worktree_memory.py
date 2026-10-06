@@ -150,6 +150,33 @@ def test_windows_project_slug_replaces_drive_and_separators(memory):
     assert memory._slug(Path(r"E:\Code\Python\some_project")) == "E--Code-Python-some-project"
 
 
+def test_only_root_requires_git_trust(memory, setup, monkeypatch):
+    root, _, home, _ = setup
+    real_git = memory._git
+
+    def restricted_git(project, *args):
+        if project != root:
+            raise ValueError("dubious ownership: sandbox only trusts active root")
+        return real_git(project, *args)
+
+    monkeypatch.setattr(memory, "_git", restricted_git)
+    lines, ok = memory.import_worktree_memory(root, home)
+    assert ok, lines
+    assert (archived(memory, setup) / "MEMORY.md").exists()
+
+
+def test_worktree_replaced_by_unrelated_repo_is_refused(memory, setup):
+    root, worktree, home, _ = setup
+    unrelated = root.parent / "unrelated"
+    unrelated.mkdir()
+    git(unrelated, "init")
+    (worktree / ".git").write_text(f"gitdir: {unrelated / '.git'}\n")
+    (unrelated / ".git/commondir").write_text(".\n")
+    lines, ok = memory.import_worktree_memory(root, home)
+    assert not ok and "another repo" in lines[-1]
+    assert not (root / memory.STATE).exists()
+
+
 def test_configured_custom_store_accepts_archives_and_preserves_private_state(
     memory, setup, tmp_path
 ):
