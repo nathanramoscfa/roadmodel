@@ -38,6 +38,9 @@ const MODEL_TIER: Record<string, string> = (() => {
     for (const m of cat.models) if (m.name && m.tier_cost) map[m.name] = m.tier_cost;
     return map;
   } catch {
+    // Without the catalog every model is its own "tier" (below), and B7 turns
+    // into exact-model determinism. Say so in the log rather than silently.
+    console.warn("soak: web/data/catalog.json unreadable; B7 compares exact models, not tiers");
     return {};
   }
 })();
@@ -125,6 +128,21 @@ interface Row {
   rationale: string;
 }
 
+// The pick the soak scores. Since #320 (2026-06-28) /api/recommend answers
+// with the whole ladder, `{ recommendations: [pick per priority], primary,
+// engine }`, and each pick carries its own model / platform / settings /
+// rationale / conversation. The soak read those from the top level until
+// 2026-10-06, so every field was null: B5 failed on every call while B1, B4
+// and B7 passed on nulls. Score the primary pick (the viewer's priority); an
+// older flat response is still read as itself. The `shape` check below fails
+// the run if a 200 ever yields no pick again.
+function primaryPick(payload: Record<string, unknown>): Record<string, unknown> {
+  const recs = payload.recommendations;
+  if (!Array.isArray(recs)) return payload;
+  const picks = recs.filter((r): r is Record<string, unknown> => typeof r === "object" && r !== null);
+  return picks.find((r) => r.priority === payload.primary) ?? picks[0] ?? {};
+}
+
 async function runProbe(p: Probe, authCookie: string | null, gate: string, bypass: string, iter: number): Promise<Row> {
   const cookie = authCookie ? `${gate}; ${authCookie}` : gate;
   const mode = authCookie ? "authed" : "anon";
@@ -147,7 +165,8 @@ async function runProbe(p: Probe, authCookie: string | null, gate: string, bypas
     /* network error → status 0 */
   }
   const ms = Math.round(performance.now() - t0);
-  const settings = (payload.settings ?? {}) as Record<string, unknown>;
+  const pick = primaryPick(payload);
+  const settings = (pick.settings ?? {}) as Record<string, unknown>;
   const thinking = (settings.thinking ?? settings.effort ?? settings.intelligence ?? null) as string | null;
   return {
     id: p.id,
@@ -155,11 +174,11 @@ async function runProbe(p: Probe, authCookie: string | null, gate: string, bypas
     iter,
     status,
     ms,
-    model: (payload.model ?? null) as string | null,
-    platform: (payload.platform ?? null) as string | null,
+    model: (pick.model ?? null) as string | null,
+    platform: (pick.platform ?? null) as string | null,
     thinking,
-    conversation: (payload.conversation ?? null) as string | null,
-    rationale: typeof payload.rationale === "string" ? payload.rationale : "",
+    conversation: (pick.conversation ?? null) as string | null,
+    rationale: typeof pick.rationale === "string" ? pick.rationale : "",
   };
 }
 
@@ -185,6 +204,12 @@ function score(rows: Row[]): Check[] {
   // B0 — every call succeeded.
   const non200 = rows.filter((r) => r.status !== 200);
   checks.push({ id: "all-200", bar: "B0", pass: non200.length === 0, detail: `${non200.length} non-200` });
+
+  // Shape — every 200 yielded a pick the checks below can read. Without it a
+  // response-shape change makes B1/B4/B7 pass on nulls (as from #320 until
+  // 2026-10-06).
+  const shapeless = ok.filter((r) => r.model === null);
+  checks.push({ id: "pick-readable", bar: "B0", pass: shapeless.length === 0, detail: `${shapeless.length} 200s without a readable pick` });
 
   // B1 — no task-execution leak.
   const leaks = ok.filter((r) => LEAK.test(r.rationale));
