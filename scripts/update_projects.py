@@ -37,6 +37,7 @@ from __future__ import annotations
 import argparse
 import contextlib
 import datetime as _dt
+import importlib.util
 import json
 import os
 import re
@@ -110,6 +111,74 @@ VENV_DIRS = (".venv", "venv", "env")
 WINDOWS = os.name == "nt"
 PIP_TIMEOUT = 900
 KIT_TIMEOUT = 180
+SUPPORT_MODULES = (
+    "agent_context",
+    "agent_rules",
+    "upgrade_fleet",
+    "worktree_memory",
+    "updater_lock",
+)
+
+
+def _support(name: str):
+    """Load stdlib companions from the same release, never from the network."""
+    path = Path(__file__).with_name(name + ".py")
+    if not path.is_file():
+        raise RuntimeError(f"Missing updater companion {path}; run a full roadmodel-upgrade first")
+    spec = importlib.util.spec_from_file_location("roadmodel_updater_" + name, path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Cannot load {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    # Read-only checks must not create __pycache__ in the installed launcher.
+    exec(compile(path.read_bytes(), str(path), "exec"), module.__dict__)  # noqa: S102
+    return module
+
+
+def sync_shared_context(entries, agents=None, *, dry_run=False, check=False):
+    """Live memory and instruction adapters; independent of project env health."""
+    healthy = True
+    try:
+        context = _support("agent_context")
+        rules = _support("agent_rules")
+        lines, ok = rules.sync_global_rules(
+            Path.home(), agents or detect_agents(), dry_run=dry_run, check=check
+        )
+        for line in lines:
+            print(f"  {line}")
+        healthy = healthy and ok
+    except (OSError, RuntimeError, ValueError) as exc:
+        print(f"  Shared context FAILED: {exc}")
+        healthy = False
+    for entry in entries:
+        try:
+            context = _support("agent_context")
+            lines, ok = context.sync_project(entry.path, dry_run=dry_run, check=check)
+            for line in lines:
+                print(f"  [{entry.name}] {line}")
+            healthy = healthy and ok
+        except (OSError, RuntimeError, ValueError) as exc:
+            print(f"  [{entry.name}] context: FAILED: {exc}")
+            healthy = False
+    return healthy
+
+
+def upgrade_peers(args):
+    if args.local_only:
+        return True
+    try:
+        lines, ok = _support("upgrade_fleet").run_fleet(
+            CONFIG_DIR / "fleet.json",
+            dry_run=args.dry_run,
+            sync_only=args.sync_only,
+            check=args.check,
+        )
+        for line in lines:
+            print(f"  {line}")
+        return ok
+    except (OSError, RuntimeError, ValueError) as exc:
+        print(f"  Fleet FAILED: {exc}")
+        return False
 
 
 # --------------------------------------------------------------------------
@@ -1224,8 +1293,9 @@ def sync_project_parity(project: Path, dry_run: bool = False) -> list[str]:
 def refresh_commands(dry_run: bool = False, agents: Optional[list[str]] = None) -> list[str]:
     """Re-download docs/claude-commands/*.md and install them for every agent
     on this machine: Claude Code as-is (mirroring any ~/.claude/skills copy),
-    Gemini CLI as TOML custom commands, Antigravity as ~/.gemini/config
-    skills, Codex + Cursor as ~/.agents skills, OpenCode as Markdown commands.
+    Gemini CLI as TOML custom commands, Antigravity in both its IDE and CLI
+    global skill directories, Codex + Cursor as ~/.agents skills, OpenCode
+    as Markdown commands.
     Returns report lines."""
     agents = agents or detect_agents()
     report: list[str] = [f"agents: {', '.join(agents)}"]
@@ -1255,8 +1325,9 @@ def refresh_commands(dry_run: bool = False, agents: Optional[list[str]] = None) 
                 target = GEMINI_DIR / "commands" / f"{name}.toml"
                 states.append(f"gemini {_install(target, toml, dry_run)}")
         if "antigravity" in agents:
-            target = ANTIGRAVITY_SKILLS_DIR / name / "SKILL.md"
-            states.append(f"antigravity {_install(target, port_antigravity(name, body), dry_run)}")
+            skill = port_antigravity(name, body)
+            for label, target in _antigravity_skill_targets(name):
+                states.append(f"{label} {_install(target, skill, dry_run)}")
         if "codex" in agents:
             # Skills are model-invocable; a prompt is what makes the SAME slash
             # command the operator types in Claude Code work here too.
@@ -1296,13 +1367,21 @@ def refresh_commands(dry_run: bool = False, agents: Optional[list[str]] = None) 
     return report + retire_commands(dry_run)
 
 
+def _antigravity_skill_targets(name: str) -> list[tuple[str, Path]]:
+    """IDE/2.0 and CLI document separate global skill discovery locations."""
+    return [
+        ("antigravity", ANTIGRAVITY_SKILLS_DIR / name / "SKILL.md"),
+        ("antigravity-cli", ANTIGRAVITY_STATE_DIR / "skills" / name / "SKILL.md"),
+    ]
+
+
 def _command_files(name: str) -> list[Path]:
     """Every file refresh_commands can install for ``name``, for every agent."""
     files = [
         CLAUDE_DIR / "commands" / f"{name}.md",
         CLAUDE_DIR / "skills" / name / "SKILL.md",
         GEMINI_DIR / "commands" / f"{name}.toml",
-        ANTIGRAVITY_SKILLS_DIR / name / "SKILL.md",
+        *(path for _, path in _antigravity_skill_targets(name)),
         CODEX_DIR / "prompts" / f"{name}.md",
         AGENTS_SKILLS_DIR / name / "SKILL.md",
         CODEX_LEGACY_SKILLS_DIR / name / "SKILL.md",
@@ -2290,14 +2369,19 @@ def _replace_bytes(path: Path, data: bytes) -> None:
 
 def _install_launcher(dry_run: bool) -> Path:
     """A schedule always runs LAUNCHER. Put this file there when this run is
-    not already it (say, `--install-schedule` from a repo checkout). A run a
-    launcher handed over to leaves it alone: the launcher just refreshed
-    itself."""
+    not already it (say, `--install-schedule` from a repo checkout). A released
+    handover child also repairs companions: older launchers only copied this
+    file, before SUPPORT_MODULES existed. Development runs with a handover
+    variable keep the installed release untouched."""
     here = Path(__file__).resolve()
-    if os.environ.get(DELEGATED_ENV) or _same_file(here, LAUNCHER) or dry_run:
+    if (os.environ.get(DELEGATED_ENV) and not _packaged()) or _same_file(here, LAUNCHER) or dry_run:
         return LAUNCHER
     LAUNCHER.parent.mkdir(parents=True, exist_ok=True)
     _replace_bytes(LAUNCHER, here.read_bytes())
+    for name in SUPPORT_MODULES:
+        companion = here.with_name(name + ".py")
+        if companion.is_file():
+            _replace_bytes(LAUNCHER.with_name(name + ".py"), companion.read_bytes())
     return LAUNCHER
 
 
@@ -2414,6 +2498,10 @@ def self_update(argv: list[str], projects_file: Path) -> Optional[int]:
     if fresh != mine and _self_check([sys.executable, str(packaged)]):
         _replace_bytes(LAUNCHER, fresh)
         done.append("launcher refreshed")
+    for name in SUPPORT_MODULES:
+        companion = packaged.with_name(name + ".py")
+        if companion.is_file():
+            _replace_bytes(LAUNCHER.with_name(name + ".py"), companion.read_bytes())
     print(f"self-update: {'; '.join(done)}. Running the updater from that release.")
     sys.stdout.flush()
     sys.stderr.flush()
@@ -2454,6 +2542,19 @@ def _parser() -> argparse.ArgumentParser:
         help="comma-separated subset of claude,gemini,codex,cursor,opencode to install for (default: detect)",
     )
     ap.add_argument("--dry-run", action="store_true", help="show the plan; change nothing")
+    ap.add_argument(
+        "--sync-only",
+        action="store_true",
+        help="repair shared rules/memory locally and on configured peers, without package upgrades or AI calls",
+    )
+    ap.add_argument(
+        "--check",
+        action="store_true",
+        help="verify shared context on this machine and configured peers without writing or self-updating",
+    )
+    ap.add_argument(
+        "--local-only", action="store_true", help="operate on this machine only; skip fleet peers"
+    )
     ap.add_argument(
         "--install-schedule",
         nargs="?",
@@ -2500,6 +2601,11 @@ def _parser() -> argparse.ArgumentParser:
         ),
     )
     ap.add_argument(
+        "--skip-roadmap-refresh",
+        action="store_true",
+        help="skip roadmap agents for this run, preserving the scheduled-refresh preference",
+    )
+    ap.add_argument(
         "--auto-refresh",
         choices=("on", "off"),
         help=(
@@ -2527,7 +2633,7 @@ def tolerate_unencodable_output() -> None:
             stream.reconfigure(errors="replace")  # type: ignore[union-attr]
 
 
-def main(argv: Optional[list[str]] = None) -> int:
+def _main(argv: Optional[list[str]] = None) -> int:
     raw = list(sys.argv[1:] if argv is None else argv)
     tolerate_unencodable_output()
     ap = _parser()
@@ -2542,11 +2648,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     early.add_argument("--dry-run", action="store_true")
     early.add_argument("--projects-file", type=Path, default=DEFAULT_PROJECTS_FILE)
     pre, _ = early.parse_known_args(raw)
-    if pre.log:
+    if pre.log and "--check" not in raw and not pre.dry_run:
         log_fh = _open_log()
         sys.stdout = _Tee(sys.__stdout__, log_fh)
         sys.stderr = _Tee(sys.__stderr__, log_fh)
-    if should_self_update() and not {"-h", "--help"} & set(raw):
+    if should_self_update() and not {"-h", "--help", "--check", "--sync-only"} & set(raw):
         if pre.dry_run:
             print("self-update: skipped (dry run); this is the local copy's plan")
         else:
@@ -2555,9 +2661,42 @@ def main(argv: Optional[list[str]] = None) -> int:
                 return code
 
     args = ap.parse_args(raw)
+    if (args.check or args.sync_only) and (
+        args.commands_only
+        or args.refresh_roadmaps
+        or args.context_sync
+        or args.install_schedule
+        or args.uninstall_schedule
+        or args.auto_refresh
+    ):
+        ap.error(
+            "--check/--sync-only cannot be combined with package, roadmap, command, or schedule operations"
+        )
+    if args.skip_roadmap_refresh and args.refresh_roadmaps:
+        ap.error("--skip-roadmap-refresh conflicts with --refresh-roadmaps")
+    if args.check and (
+        args.add
+        or args.install_schedule
+        or args.uninstall_schedule
+        or args.context_sync
+        or args.auto_refresh
+    ):
+        ap.error(
+            "--check cannot be combined with configuration changes; pass project paths positionally"
+        )
 
     if args.context_source and not args.context_sync:
         raise SystemExit("--context-source needs --context-sync OWNER/REPO")
+    # A pre-companion launcher (for example 0.2.65) refreshed only this module
+    # before handing over. Repair the complete installed release on this first
+    # full run, so the next offline --sync-only does not need another upgrade.
+    # main() already holds or inherited the machine lock at this point.
+    if (
+        _packaged()
+        and os.environ.get(DELEGATED_ENV)
+        and not (args.dry_run or args.check or args.sync_only)
+    ):
+        _install_launcher(False)
     if args.context_sync:
         print(configure_context_sync(args.context_sync, args.context_source, args.dry_run))
 
@@ -2590,13 +2729,14 @@ def main(argv: Optional[list[str]] = None) -> int:
             return 0
 
     if args.add:
-        added = add_to_registry(args.projects_file, args.add)
+        added = [] if args.dry_run else add_to_registry(args.projects_file, args.add)
         for p in added:
             print(f"registered {p}")
 
-    entries = [Entry(Path(p).expanduser()) for p in args.projects] or read_registry(
-        args.projects_file
-    )
+    entries = [
+        Entry(Path(p).expanduser())
+        for p in (args.projects or ((args.add or []) if args.dry_run else []))
+    ] or read_registry(args.projects_file)
     if not entries:
         print(
             f"No projects registered. Add some:\n  python {Path(sys.argv[0]).name} --add <project dir> ...\n"
@@ -2604,6 +2744,12 @@ def main(argv: Optional[list[str]] = None) -> int:
             file=sys.stderr,
         )
         return 2
+
+    if args.sync_only or args.check:
+        print("Shared agent context:")
+        context_ok = sync_shared_context(entries, agents, dry_run=args.dry_run, check=args.check)
+        peers_ok = upgrade_peers(args)
+        return 0 if context_ok and peers_ok else 1
 
     # Before the kits refresh: each project's planning/ kit copies the
     # user-context in, so it must already be this morning's.
@@ -2640,11 +2786,10 @@ def main(argv: Optional[list[str]] = None) -> int:
     mcp_line, mcp_ok = update_mcp_env(_roadmodel_mcp_command(), dry_run=args.dry_run)
     print(f"\nMCP server env: {mcp_line}")
 
+    context_ok = True
     if not args.no_parity:
-        print("\nProject parity (AGENTS.md + memory for non-Claude agents):")
-        for entry in entries:
-            for line in sync_project_parity(entry.path, dry_run=args.dry_run):
-                print(f"  [{entry.name}] {line}")
+        print("\nShared agent context (live rules, full memory, and handoff):")
+        context_ok = sync_shared_context(entries, agents, dry_run=args.dry_run)
 
     if not args.no_commands:
         print("\nAgent command files:")
@@ -2670,7 +2815,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     # Last, so it applies the command files and kit this run just installed.
     refresh_attention = False
-    if args.no_commands and not args.refresh_roadmaps:
+    if args.skip_roadmap_refresh or (args.no_commands and not args.refresh_roadmaps):
         pass  # the rules on disk may be stale; the next full run decides
     else:
         print("\nRoadmap refresh:")
@@ -2684,6 +2829,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         for line in lines:
             print(f"  {line}")
 
+    peers_ok = upgrade_peers(args)
     failed = [r for r in results if not r.ok]
     if failed:
         print(f"\n{len(failed)} project(s) need attention:")
@@ -2693,7 +2839,32 @@ def main(argv: Optional[list[str]] = None) -> int:
     if not mcp_ok:
         print(f"\nThe MCP server env needs attention: {mcp_line}")
         return 1
-    return 1 if refresh_attention else 0
+    return 1 if refresh_attention or not context_ok or not peers_ok else 0
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    raw = list(sys.argv[1:] if argv is None else argv)
+    if {"--check", "--dry-run", "--help", "-h", "--self-check"} & set(raw):
+        return _main(raw)
+    try:
+        locking = _support("updater_lock")
+    except RuntimeError as exc:
+        # A freshly downloaded bootstrap has no companions yet. Its released
+        # handover child acquires the lock, and installs it for future runs.
+        if (
+            not Path(__file__).with_name("updater_lock.py").is_file()
+            and should_self_update()
+            and "--sync-only" not in raw
+        ):
+            return _main(raw)
+        print(f"Updater: {exc}", file=sys.stderr)
+        return 1
+    try:
+        with locking.machine_lock(CONFIG_DIR):
+            return _main(raw)
+    except RuntimeError as exc:
+        print(f"Updater: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

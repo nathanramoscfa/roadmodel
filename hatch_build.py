@@ -80,7 +80,15 @@ class BundleDocsHook(BuildHookInterface):  # type: ignore[misc]
         # source file: scripts/update_projects.py, which is also the bootstrap
         # URL, so it is mapped in rather than copied under src/.
         if self.target_name == "wheel":
-            updater = root / "scripts" / "update_projects.py"
-            if not updater.is_file():
-                raise FileNotFoundError(f"hatch_build.py: {updater} is missing")
-            force_include[str(updater)] = "roadmodel/update_projects.py"
+            for name in (
+                "update_projects",
+                "agent_context",
+                "agent_rules",
+                "upgrade_fleet",
+                "worktree_memory",
+                "updater_lock",
+            ):
+                updater = root / "scripts" / (name + ".py")
+                if not updater.is_file():
+                    raise FileNotFoundError(f"hatch_build.py: {updater} is missing")
+                force_include[str(updater)] = f"roadmodel/{name}.py"
