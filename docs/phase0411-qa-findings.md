@@ -119,8 +119,13 @@ it writes to the production ledger:
 
 | Run | State of the ledger | Expected | Result |
 | --- | --- | --- | --- |
-| 1 | One synthetic violating row (`/__invariant-drill`) | `failure`, tracking issue opened or updated | _recorded below when the drill runs_ |
-| 2 | Row deleted | `success`, tracking issue closed | _recorded below when the drill runs_ |
+| [1](https://github.com/nathanramoscfa/roadmodel/actions/runs/37400751521) | One synthetic violating row (`/__invariant-drill`) | `failure`, tracking issue opened | `failure`: `1 violations`, `VIOLATION row id=10605 rule=reason_outside_lane`; issue #924 opened |
+| [2](https://github.com/nathanramoscfa/roadmodel/actions/runs/37400796852) | Row deleted | funding check clean | The funding step succeeded (`0 violations`); the run still failed because another cron (`update-deepseek.yml`) had a cancelled last run, which the same workflow reports |
+| [3](https://github.com/nathanramoscfa/roadmodel/actions/runs/37401387551) | Row deleted, deepseek re-run (dry run) | `success`, tracking issue closed | `success`; #924 closed itself |
+
+The drill also showed that the alarm shares the cron-health issue with the
+other pipeline checks: a clean funding ledger does not turn the run green while
+any other cron's last run is failing.
 
 ## Pre-ship items
 
