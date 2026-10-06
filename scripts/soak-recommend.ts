@@ -256,20 +256,24 @@ function score(rows: Row[]): Check[] {
   );
   checks.push({ id: "watch:exact-model-flip", bar: "B7", pass: true, detail: modelFlaky.map(([id]) => id).join(",") || "stable" });
 
-  // B8 — free-tier latency P50<=3s / P95<=5s.
+  // B8 / B9 — latency, anonymous and signed-in: P50 <= 8 s, P95 <= 15 s.
+  // Until 2026-10-06 B8 held anonymous traffic to 3 s / 5 s and a "tier-active"
+  // check (T3b) required signed-in calls to be slower, because the bar was
+  // written for a cheap engine serving anonymous visitors and a frontier engine
+  // serving signed-in users. One engine now serves both lanes (the engine
+  // registry; Phase 4.11 refuses or keyless-routes anonymous free text), so
+  // both lanes share one latency target and T3b is retired.
+  const LAT_P50_MS = 8000;
+  const LAT_P95_MS = 15000;
   const aMs = anon.map((r) => r.ms);
   const aP50 = pctile(aMs, 50);
   const aP95 = pctile(aMs, 95);
-  checks.push({ id: "latency-free", bar: "B8", pass: aP50 <= 3000 && aP95 <= 5000, detail: `P50=${aP50}ms P95=${aP95}ms` });
+  checks.push({ id: "latency-anon", bar: "B8", pass: aP50 <= LAT_P50_MS && aP95 <= LAT_P95_MS, detail: `P50=${aP50}ms P95=${aP95}ms` });
 
-  // B9 — frontier latency P50<=8s / P95<=15s (provisional).
   const uMs = authed.map((r) => r.ms);
   const uP50 = pctile(uMs, 50);
   const uP95 = pctile(uMs, 95);
-  checks.push({ id: "latency-frontier", bar: "B9", pass: uP50 <= 8000 && uP95 <= 15000, detail: `P50=${uP50}ms P95=${uP95}ms` });
-
-  // Tier-active — frontier is engaged (signed-in meaningfully slower than free).
-  checks.push({ id: "tier-active", bar: "T3b", pass: uP50 > aP50 + 1500, detail: `frontier P50 ${uP50} vs free ${aP50}` });
+  checks.push({ id: "latency-signed-in", bar: "B9", pass: uP50 <= LAT_P50_MS && uP95 <= LAT_P95_MS, detail: `P50=${uP50}ms P95=${uP95}ms` });
 
   // Residual watch (NON-blocking, reported): thinking-prose on Cursor (#188), Ultracode on refactor (#189).
   const prose = ok.filter((r) => NO_THINK_PLATFORMS.has(r.platform ?? "") && THINK_PROSE.test(r.rationale));
