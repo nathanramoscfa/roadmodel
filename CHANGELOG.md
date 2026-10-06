@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.66] — 2026-10-06
+
+### Fixed
+
+- **A textbook proof no longer reads as novel work.** The recommender's
+  ladder defined "novel" as research-grade work including "a multi-step
+  proof", so a known proof written out step by step matched by the letter
+  and put the top model on every rung. Novel now means a proof of a result
+  with no known proof; writing out a known result is routine however many
+  steps it takes (#917).
+
 ## [0.2.65] — 2026-10-02
 
 ### Changed
