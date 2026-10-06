@@ -473,7 +473,14 @@ differently:
   mid-response API timeout, and makes a plugin-defined agent spawned
   by name run with its own effort instead of the default. 2.1.289 is a
   plugin / mod / permission-rule bug-fix release. Neither changes the
-  `/effort` vocabulary or the extended-thinking controls.
+  `/effort` vocabulary or the extended-thinking controls. 2.1.290
+  makes three effort/thinking fixes. A flagged message retried on a
+  fallback model with a different saved level no longer changes the
+  effort level. A reply that the output content filter stopped while
+  Claude was still thinking is now retried once. `/effort` sent from
+  `claude agents` to a busy background session now applies right
+  away. 2.1.291 is a hotfix for two regressions. Neither release
+  changes the `/effort` vocabulary or the extended-thinking controls.
 - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
   `reasoning_effort` knob — `low`, `medium`, `high`, `xhigh`, `max`,
   `ultra`. Codex's plan-mode `plan_mode_reasoning_effort` variant
