@@ -38,6 +38,9 @@ const MODEL_TIER: Record<string, string> = (() => {
     for (const m of cat.models) if (m.name && m.tier_cost) map[m.name] = m.tier_cost;
     return map;
   } catch {
+    // Without the catalog every model is its own "tier" (below), and B7 turns
+    // into exact-model determinism. Say so in the log rather than silently.
+    console.warn("soak: web/data/catalog.json unreadable; B7 compares exact models, not tiers");
     return {};
   }
 })();

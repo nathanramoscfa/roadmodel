@@ -70,6 +70,14 @@ jobs:
         if: steps.check.outputs.have == 'true'
         run: npm ci --prefix web
 
+      - name: Generate the catalog the soak reads
+        # B7 (determinism) compares cost TIERS, read from web/data/catalog.json.
+        # That file is generated (gitignored), and nothing built it here until
+        # 2026-10-06, so the tier table was empty and B7 compared exact model
+        # names instead: two same-tier models read as a determinism failure.
+        if: steps.check.outputs.have == 'true'
+        run: node web/scripts/sync-catalog.mjs
+
       - name: Run soak (report-only)
         id: soak
         if: steps.check.outputs.have == 'true'
