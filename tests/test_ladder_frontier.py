@@ -1040,3 +1040,27 @@ def test_speed_never_ranks_local_weights() -> None:
 
     assert lite_platform("coding") == "ollama"
     assert lite_platform("speed") == "codex-cli"
+
+
+def test_balanced_prefers_a_prepaid_point_over_a_per_token_one() -> None:
+    # Medium planning: COST is Luna. A cheap, strong Muse (per token, AA 54)
+    # and Sonnet (prepaid) both sit between Luna and Opus and both beat Luna;
+    # Muse has the better balanced score, but BALANCED takes Sonnet, the one
+    # already paid for.
+    cat = _with_per_token_muse()
+    muse = next(m for m in cat["models"] if m["id"] == "muse")
+    muse["input_price_per_1m"], muse["output_price_per_1m"] = 0.3, 1.5
+    bench = {**BENCH, "muse": {"evaluations": {"artificial_analysis_intelligence_index": 54}}}
+    lad = scoring.ladder(
+        scoring.Task("planning", "medium"),
+        BOTH + OPENROUTER_KEY,
+        catalog=cat,
+        benchmarks=bench,
+    )
+    assert lad is not None
+    between = [p.candidate.model_name for p in lad.adequate][1:-1]
+    assert "Muse" in between and "Sonnet" in between
+    scores = {p.candidate.model_name: p.candidate.score for p in lad.adequate}
+    assert scores["Muse"] > scores["Sonnet"]
+    assert lad.rungs["cost"].candidate.model_name == "Luna"
+    assert lad.rungs["balanced"].candidate.model_name == "Sonnet"
