@@ -212,3 +212,52 @@ def test_save_map_keeps_the_files_layout(tmp_path, monkeypatch) -> None:  # type
     fab.save_map({"b": "b", "a": None, "c": "c-1"})
     assert list(json.loads(path.read_text())) == ["_comment", "a", "b", "c"]
     assert json.loads(path.read_text())["_comment"] == "keep me"
+
+
+def test_aa_effort_reads_the_level_from_the_name() -> None:
+    assert fab.aa_effort("GPT-6 Luna (Xhigh)") == "xhigh"
+    assert fab.aa_effort("Claude Sonnet 5.5 (Max, Default Fallback)") == "max"
+    assert fab.aa_effort("Claude Opus 5 (Adaptive Reasoning, Max Effort)") == "max"
+    assert fab.aa_effort("Gemini 3.8 Flash (High)") == "high"
+    assert fab.aa_effort("Gemini 3 Flash Preview (Reasoning)") is None
+    assert fab.aa_effort("GPT-6 Luna (Non-reasoning)") is None
+    assert fab.aa_effort("Mistral Small 4") is None
+
+
+def _level_row(slug: str, name: str, aa: float) -> dict[str, object]:
+    return {
+        "id": slug,
+        "name": name,
+        "slug": slug,
+        "model_creator": {"name": "Anthropic"},
+        "evaluations": {"artificial_analysis_intelligence_index": aa, "lcr": None},
+        "median_output_tokens_per_second": 0,
+    }
+
+
+def test_build_carries_the_models_rows_at_its_other_efforts() -> None:
+    aa = [
+        *AA,
+        _level_row("claude-opus-5-xhigh", "Claude Opus 5 (Xhigh)", 49.0),
+        _level_row("claude-opus-5-low", "Claude Opus 5 (Low)", 40.0),
+        # Another model whose slug starts with this one's, and a level row whose
+        # name names another model: neither is Opus 5's.
+        _level_row("claude-opus-5-5-xhigh", "Claude Opus 5.5 (Xhigh)", 56.0),
+        _level_row("claude-opus-5-medium", "Claude Haiku 5 (Medium)", 30.0),
+        # The non-reasoning row is not an effort on the model's dial.
+        _level_row("claude-opus-5-non-reasoning", "Claude Opus 5 (Non-reasoning)", 20.0),
+    ]
+    doc = fab.build(
+        ["claude-opus-5"],
+        {"claude-opus-5": "claude-opus-5"},
+        aa,
+        now=NOW,
+        names={"claude-opus-5": "Opus 5"},
+    )
+    row = doc["models"]["claude-opus-5"]
+    assert row["aa_effort"] == "max"
+    assert sorted(row["effort_variants"]) == ["low", "xhigh"]
+    xhigh = row["effort_variants"]["xhigh"]
+    assert xhigh["aa_slug"] == "claude-opus-5-xhigh"
+    # Only measured figures ride along on a level row.
+    assert xhigh["evaluations"] == {"artificial_analysis_intelligence_index": 49.0}

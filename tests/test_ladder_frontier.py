@@ -545,8 +545,9 @@ def test_the_real_catalog_and_user_context_example_yield_a_full_table() -> None:
     for lad in table.values():
         prices = [lad.rungs[t].point.price_usd for t in scoring.LADDER_TIERS]
         assert prices == sorted(prices), "COST <= BALANCED <= QUALITY in price"
-        on_frontier = {p.candidate.model_id for p in lad.frontier}
-        # A category specialist is the one pick that may stand off the frontier.
+        # The picks are read off the frontier over each model at its measured
+        # efforts; a category specialist is the one pick that may stand off it.
+        on_frontier = {p.candidate.model_id for p in lad.points}
         assert all(r.candidate.model_id in on_frontier or r.specialist for r in lad.rungs.values())
     # Claude Max + ChatGPT Pro, no Google plan: Opus 5.5 tops the multimodal
     # frontier at an A, and Fable 5.1 (S for multimodal) takes QUALITY.
@@ -851,19 +852,21 @@ def _specialist_catalog() -> dict[str, Any]:
 
 
 def test_a_category_specialist_takes_quality_and_the_frontier_keeps_the_rest() -> None:
-    # Medium multimodal needs 50, which every frontier point meets at B; the
-    # strongest of them is Opus (B, 50). Astra sits off the frontier (Opus
-    # beats it on the AA Index for less) and rates S (90): it takes QUALITY at
-    # the best posture's effort. COST is the cheapest frontier point, Lite.
-    # Every frontier point rates the same B for multimodal, so none above Lite
-    # adds anything in the category: BALANCED runs Lite at the balanced effort.
+    # Medium multimodal needs 50 in the category, which every frontier point
+    # meets at B, and 50 in general capability (planning quality), which Lite
+    # (9.0) misses; the strongest adequate point is Opus (B, 50). Astra sits
+    # off the frontier (Opus beats it on the AA Index for less) and rates S
+    # (90): it takes QUALITY at the best posture's effort. COST is the cheapest
+    # adequate point, Luna. Every frontier point rates the same B for
+    # multimodal, so none above Luna adds anything in the category: BALANCED
+    # runs Luna at the balanced effort.
     lad = scoring.ladder(
         scoring.Task("multimodal", "medium"), BOTH, catalog=_specialist_catalog(), benchmarks=BENCH
     )
     assert lad is not None
     assert _picks(lad) == {
-        "cost": ("Lite", "low"),
-        "balanced": ("Lite", "medium"),
+        "cost": ("Luna", "low"),
+        "balanced": ("Luna", "medium"),
         "quality": ("Astra", "high"),
     }
     assert lad.rungs["quality"].specialist is True
@@ -895,6 +898,7 @@ def test_planning_has_no_specialist() -> None:
         model_id="ghost",
         letter="S",
         quality=top.candidate.quality + 10,
+        requirement_penalty=0.0,
     )
     ranking_pool = [p.candidate for p in lad.frontier] + [stronger]
     for category, expected in (("planning", None), ("knowledge", "ghost")):
@@ -913,8 +917,8 @@ def test_the_quality_pick_carries_the_specialist_flag(
         {
             # The engine names the frontier's top; code holds the row's specialist.
             "quality": _block("Opus", "Claude Code", "High", "multimodal/medium"),
-            "balanced": _block("Lite", "Codex", "Medium", "multimodal/medium"),
-            "cost": _block("Lite", "Codex", "Low", "multimodal/medium"),
+            "balanced": _block("Luna", "Codex", "Medium", "multimodal/medium"),
+            "cost": _block("Luna", "Codex", "Low", "multimodal/medium"),
         }
     )
     monkeypatch.setattr(recommend_module, "recommend_ladder", fake)
@@ -1064,3 +1068,148 @@ def test_balanced_prefers_a_prepaid_point_over_a_per_token_one() -> None:
     assert scores["Muse"] > scores["Sonnet"]
     assert lad.rungs["cost"].candidate.model_name == "Luna"
     assert lad.rungs["balanced"].candidate.model_name == "Sonnet"
+
+
+# --------------------------------------------------------------------------- #
+# Effort-aware evidence: a pick is credited with what AA measured it at the
+# effort it runs
+# --------------------------------------------------------------------------- #
+
+# Luna as AA measures it at each effort (its headline row is the max one).
+# Planning quality, with the scale still drawn over the headline rows (20..58)
+# and Luna's A letter (21 points): low 21.0, medium 35.7, high 44.9, xhigh
+# 50.5, max 57.9. A capped pool runs planning/medium at most at xhigh.
+_LUNA_LEVELS = {"low": 20, "medium": 28, "high": 33, "xhigh": 36}
+
+
+def _bench_with_levels(**extra: dict[str, Any]) -> dict[str, Any]:
+    bench = copy.deepcopy(BENCH)
+    bench["luna"]["aa_effort"] = "max"
+    bench["luna"]["effort_variants"] = {
+        level: {"evaluations": {"artificial_analysis_intelligence_index": aa}}
+        for level, aa in _LUNA_LEVELS.items()
+    }
+    for mid, fields in extra.items():
+        bench[mid].update(fields)
+    return bench
+
+
+def test_a_pick_runs_at_the_effort_whose_measured_score_clears_the_bar() -> None:
+    # Medium planning needs 50. Luna's headline (max, 57.9) clears it, but a
+    # capped pool never runs max; of the efforts it may run, only xhigh (50.5)
+    # clears the bar, so COST is Luna at xhigh, where it used to be credited
+    # its max score and run at medium.
+    lad = scoring.ladder(
+        scoring.Task("planning", "medium"), BOTH, catalog=CATALOG, benchmarks=_bench_with_levels()
+    )
+    assert lad is not None
+    assert _picks(lad) == {
+        "cost": ("Luna", "xhigh"),
+        "balanced": ("Sonnet", "high"),
+        "quality": ("Opus", "xhigh"),
+    }
+    cost = lad.rungs["cost"]
+    assert cost.candidate.evidence_level == "xhigh"
+    assert cost.point.aa_index == 36
+    # Each effort is its own point, priced by its token multiplier; Luna at
+    # low (20 for 0.30) adds nothing over Lite (20 for 0.20).
+    assert [
+        (p.candidate.model_name, p.candidate.evidence_level, p.price_usd) for p in lad.points
+    ] == [
+        ("Lite", None, 0.2),
+        ("Luna", "medium", 0.4),
+        ("Luna", "high", 0.5),
+        ("Luna", "xhigh", 0.8),
+        ("Sonnet", None, 4.0),
+        ("Opus", None, 8.0),
+    ]
+    # The models' frontier, as /models draws it, is unchanged.
+    assert [p.candidate.model_name for p in lad.frontier] == ["Lite", "Luna", "Sonnet", "Opus"]
+    assert lad.to_dict()["rungs"]["cost"]["evidence_level"] == "xhigh"
+
+
+def test_a_model_measured_only_at_efforts_the_task_does_not_run_is_left_out() -> None:
+    # AA measured Sonnet at max alone; a capped pool runs medium planning at
+    # most at xhigh, so nothing says how Sonnet does there. Without it, Sonnet
+    # Old (38, planning 54.2) is the best model at its price and stands
+    # between COST and QUALITY.
+    lad = scoring.ladder(
+        scoring.Task("planning", "medium"),
+        BOTH,
+        catalog=CATALOG,
+        benchmarks=_bench_with_levels(sonnet={"aa_effort": "max"}),
+    )
+    assert lad is not None
+    assert "sonnet" not in {p.candidate.model_id for p in lad.points}
+    assert _picks(lad) == {
+        "cost": ("Luna", "xhigh"),
+        "balanced": ("Sonnet Old", "high"),
+        "quality": ("Opus", "xhigh"),
+    }
+
+
+def test_a_hard_task_needs_general_capability_as_well_as_the_category() -> None:
+    # Lite rates S for long-context (90 points: the fixture has no LCR
+    # figures) but scores 9 in general capability, the AA Index measure that
+    # planning reads. Medium work needs 50 in both, so Luna takes COST.
+    cat = copy.deepcopy(CATALOG)
+    next(m for m in cat["models"] if m["id"] == "lite")["tiers"]["long-context"] = "S"
+    lad = scoring.ladder(
+        scoring.Task("long-context", "medium"), BOTH, catalog=cat, benchmarks=BENCH
+    )
+    assert lad is not None
+    lite = next(p.candidate for p in lad.points if p.candidate.model_id == "lite")
+    assert lite.quality == 90.0 and lite.requirement_penalty > 0
+    assert lad.rungs["cost"].candidate.model_name == "Luna"
+
+
+def test_with_composites_scores_each_effort_among_the_headline_rows() -> None:
+    bench = {
+        "a": {"evaluations": {"scicode": 10, "terminalbench_v4_0": 10}},
+        "b": {"evaluations": {"scicode": 20, "terminalbench_v4_0": 20}},
+        "c": {
+            "evaluations": {"scicode": 30, "terminalbench_v4_0": 30},
+            "effort_variants": {"low": {"evaluations": {"scicode": 15, "terminalbench_v4_0": 25}}},
+        },
+    }
+    before = copy.deepcopy(bench)
+    out = scoring.with_composites(bench)
+    assert out["c"]["evaluations"]["coding_composite"] == 1.0
+    # 15 sits above one of three headline rows, 25 above two: (1/3 + 2/3) / 2.
+    assert out["c"]["effort_variants"]["low"]["evaluations"]["coding_composite"] == pytest.approx(
+        0.5
+    )
+    assert bench == before, "the caller's rows are not modified"
+    assert scoring.measured_levels(out, "c") == {"low": out["c"]["effort_variants"]["low"]}
+    assert scoring._evidence(out, "c", "scicode", "low") == 15
+    assert scoring._evidence(out, "c", "scicode", "high") is None
+    assert scoring._evidence(out, "c", "scicode") == 30
+
+
+def test_a_tie_in_the_category_moves_balanced_one_measured_effort_up() -> None:
+    # Multimodal has no AA evidence, so Sonnet and Opus (both A there) tie in
+    # the category and nothing between COST and QUALITY beats COST in it.
+    # Sonnet, measured at high (50) and xhigh (53), clears the high bar at
+    # both; BALANCED takes its next measured effort up rather than pushing
+    # COST below the bar to stay distinct.
+    cat = copy.deepcopy(CATALOG)
+    for m in cat["models"]:
+        if m["id"] in {"sonnet", "opus"}:
+            m["tiers"]["multimodal"] = "A"
+    bench = _bench_with_levels(
+        sonnet={
+            "aa_effort": "max",
+            "effort_variants": {
+                "high": {"evaluations": {"artificial_analysis_intelligence_index": 50}},
+                "xhigh": {"evaluations": {"artificial_analysis_intelligence_index": 53}},
+            },
+        }
+    )
+    lad = scoring.ladder(scoring.Task("multimodal", "high"), BOTH, catalog=cat, benchmarks=bench)
+    assert lad is not None
+    assert _picks(lad) == {
+        "cost": ("Sonnet", "high"),
+        "balanced": ("Sonnet", "xhigh"),
+        "quality": ("Opus", "xhigh"),
+    }
+    assert all(r.candidate.requirement_penalty == 0 for r in lad.rungs.values())
