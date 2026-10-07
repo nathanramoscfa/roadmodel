@@ -69,8 +69,29 @@ interface RawBench {
   evaluations: Record<string, number | null>;
   median_output_tokens_per_second: number | null;
   median_time_to_first_token_seconds: number | null;
+  // The effort AA ran this row at, and its rows at the model's other efforts
+  // (update/fetch_aa_benchmarks.py, schema 2).
+  aa_effort?: string | null;
+  effort_variants?: Record<string, { evaluations?: Record<string, number | null> }>;
 }
 const BENCH = (benchmarks as { models?: Record<string, RawBench> }).models ?? {};
+
+const INDEX_KEY = "artificial_analysis_intelligence_index";
+
+// The AA Index at each effort AA measured the model at, or undefined when it
+// names none.
+function indexByEffort(id: string): Record<string, number> | undefined {
+  const raw = BENCH[id];
+  if (!raw) return undefined;
+  const out: Record<string, number> = {};
+  for (const [level, row] of Object.entries(raw.effort_variants ?? {})) {
+    const v = row.evaluations?.[INDEX_KEY];
+    if (typeof v === "number" && Number.isFinite(v)) out[level] = v;
+  }
+  const head = raw.evaluations[INDEX_KEY];
+  if (raw.aa_effort && typeof head === "number" && Number.isFinite(head)) out[raw.aa_effort] = head;
+  return Object.keys(out).length > 0 ? out : undefined;
+}
 
 // Project a benchmarks.json entry to exactly the grid's columns. AA reports
 // 0 tokens/s for endpoints it has not throughput-tested; that is "not
@@ -116,6 +137,7 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
       best_for: m.best_for ?? "",
       aa_index: measured ?? cited,
       aa_index_source: measured !== null ? "snapshot" : cited !== null ? "cited" : null,
+      aa_index_by_effort: indexByEffort(m.id),
       bench,
       value_score: null,
       value_frontier: false,
