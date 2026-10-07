@@ -37,6 +37,7 @@ import {
   type PicksData,
   type SlimRow,
 } from "@/lib/recommend-picks";
+import { effortLabel, pickAtEffort, pickEffort, type PickAtEffort } from "@/lib/pick-effort";
 import { formatSettingValue, humanizeSettingKey } from "@/lib/settings-format";
 import { FRONTIER } from "./chart-kit";
 import { HoverCard } from "./FloatingCard";
@@ -182,15 +183,26 @@ function Ratings({ row, measured }: { row: SlimRow; measured: Category[] }) {
 // viewer's own, when they have saved Settings), or the model that beats it,
 // with the /models card on hover. A category specialist off the frontier
 // reads as the top model for its category instead.
+// A pick's facts read at the effort it runs (lib/pick-effort.ts), or null
+// for a model the catalog does not list.
+function viewOf(
+  data: PicksData,
+  rec: PriorityRecommendation,
+  row: SlimRow | null,
+): PickAtEffort | null {
+  return row ? pickAtEffort(data, row, pickEffort(rec.settings)) : null;
+}
+
 function PickFacts({
-  row,
+  view,
   data,
   specialist = null,
 }: {
-  row: SlimRow | null;
+  view: PickAtEffort | null;
   data: PicksData;
   specialist?: string | null;
 }) {
+  const row = view?.row ?? null;
   if (!row) {
     return (
       <span className="text-[11px] text-brand-slate-400 dark:text-brand-slate-500">
@@ -212,9 +224,7 @@ function PickFacts({
   }
   if (row.aa_index === null || !inPool(data, row)) return null;
   const yours = data.pool !== null;
-  const leader = row.value_beaten_by
-    ? (data.rows[row.value_beaten_by] ?? null)
-    : null;
+  const leader = view?.leader ?? null;
   if (row.value_frontier) {
     return (
       <span
@@ -269,36 +279,48 @@ function PriceCell({ row }: { row: SlimRow }) {
   );
 }
 
-function IndexCell({ row, data }: { row: SlimRow; data: PicksData }) {
+// The AA Index at the effort the pick runs, when AA measured it there: a
+// reasoning model's figures move with its effort.
+function IndexCell({ view, data }: { view: PickAtEffort; data: PicksData }) {
+  const { row, leader, level } = view;
   if (row.aa_index === null) {
     return <span className={MUTED_UNIT}>not measured</span>;
   }
   const value = row.aa_index.toFixed(1);
+  const at = level ? (
+    <span className={MUTED_UNIT} data-testid="pick-aa-effort">
+      at {effortLabel(level)}
+    </span>
+  ) : null;
   if (!inPool(data, row)) {
     return (
-      <span className="tabular-nums" data-testid="pick-aa-index">
-        {value}
-      </span>
+      <>
+        <span className="tabular-nums" data-testid="pick-aa-index">
+          {value}
+        </span>
+        {at}
+      </>
     );
   }
-  const leader = row.value_beaten_by
-    ? (data.rows[row.value_beaten_by] ?? null)
-    : null;
   return (
-    <HoverCard
-      label={`${row.name}: AA Intelligence Index ${value}`}
-      card={<FrontierPointCard model={row} leader={leader} />}
-      className="tabular-nums"
-      triggerTestId="pick-aa-index"
-    >
-      {value}
-    </HoverCard>
+    <>
+      <HoverCard
+        label={`${row.name}: AA Intelligence Index ${value}`}
+        card={<FrontierPointCard model={row} leader={leader} />}
+        className="tabular-nums"
+        triggerTestId="pick-aa-index"
+      >
+        {value}
+      </HoverCard>
+      {at}
+    </>
   );
 }
 
 // The /models Score: AA Index points above or below what the model's price
 // predicts among its cost tier.
-function ScoreCell({ row, data }: { row: SlimRow; data: PicksData }) {
+function ScoreCell({ view, data }: { view: PickAtEffort; data: PicksData }) {
+  const { row, leader } = view;
   if (row.value_score === null) return <span className={MUTED_UNIT}>—</span>;
   const tone = data.fit
     ? scoreToneClass(row.value_score, data.fit.sigma)
@@ -311,9 +333,6 @@ function ScoreCell({ row, data }: { row: SlimRow; data: PicksData }) {
       </span>
     );
   }
-  const leader = row.value_beaten_by
-    ? (data.rows[row.value_beaten_by] ?? null)
-    : null;
   return (
     <HoverCard
       label={`${row.name}: Score ${shown}. Show how it adds up`}
@@ -394,16 +413,18 @@ function matrixRows(
         {
           key: "__aa",
           label: "AA Index",
-          cell: (_rec, row) => ({
-            node: row ? <IndexCell row={row} data={data} /> : "—",
-          }),
+          cell: (rec, row) => {
+            const view = viewOf(data, rec, row);
+            return { node: view ? <IndexCell view={view} data={data} /> : "—" };
+          },
         },
         {
           key: "__score",
           label: "Score",
-          cell: (_rec, row) => ({
-            node: row ? <ScoreCell row={row} data={data} /> : "—",
-          }),
+          cell: (rec, row) => {
+            const view = viewOf(data, rec, row);
+            return { node: view ? <ScoreCell view={view} data={data} /> : "—" };
+          },
         },
       ]
     : [];
@@ -540,7 +561,7 @@ function PickHead({
           {rec.platform}
         </span>
       </button>
-      <PickFacts row={row} data={data} specialist={specialistOf(rec)} />
+      <PickFacts view={viewOf(data, rec, row)} data={data} specialist={specialistOf(rec)} />
     </div>
   );
 }
@@ -666,7 +687,7 @@ export function PicksMatrix({
           </p>
           <div className="mt-1.5">
             <PickFacts
-              row={pickRows.get(selectedRec.priority) ?? null}
+              view={viewOf(data, selectedRec, pickRows.get(selectedRec.priority) ?? null)}
               data={data}
               specialist={specialistOf(selectedRec)}
             />

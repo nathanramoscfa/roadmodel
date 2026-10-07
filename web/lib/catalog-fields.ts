@@ -49,6 +49,11 @@ export interface ModelRow {
   // Where aa_index came from: the structured Artificial Analysis snapshot, or
   // the figure the catalog cites for a model not yet mapped into it.
   aa_index_source: "snapshot" | "cited" | null;
+  // The AA Intelligence Index at each effort AA measured the model at (its
+  // headline row's level included), keyed by level ("low" … "max"). A pick
+  // that runs at one of them reads its figure (lib/pick-effort.ts). Absent
+  // when AA names no effort for the model.
+  aa_index_by_effort?: Record<string, number>;
   // The uniform Artificial Analysis figures (lib/benchmark-grid.ts), or null
   // when AA has not measured the model at all.
   bench: BenchRow | null;

@@ -165,6 +165,24 @@ test("renders the backup row with its platform and effort", async ({ page }) => 
   await expect(page.getByTestId("backup-detail").first()).toHaveText("Codex · Intelligence: High");
 });
 
+test("each pick's AA Index is read at the effort it runs", async ({ page }) => {
+  // AA measures a reasoning model at each effort; a pick run below its
+  // headline effort reads that effort's figure, not the headline's.
+  const bench = JSON.parse(readFileSync(path.join(__dirname, "..", "data", "benchmarks.json"), "utf8"));
+  const at = (id: string, level: string): string =>
+    bench.models[id].effort_variants[level].evaluations.artificial_analysis_intelligence_index.toFixed(1);
+  await fulfill(page, FIXTURE);
+  await openFreeText(page);
+  await ask(page);
+  const cell = (pick: string) => page.locator(`[data-pick="${pick}"][data-row="__aa"]`).first();
+  // Gemini 3.8 Flash at Medium (its headline row is High); GPT-5.6 Terra at
+  // High on Codex's Intelligence dial (headline Max).
+  await expect(cell("cheap")).toContainText(at("gemini-3.8-flash", "medium"));
+  await expect(cell("cheap").getByTestId("pick-aa-effort")).toHaveText("at Medium");
+  await expect(cell("balanced")).toContainText(at("gpt-5.6-terra", "high"));
+  await expect(cell("balanced").getByTestId("pick-aa-effort")).toHaveText("at High");
+});
+
 test("humanizes settings labels and renders the rationale prominently", async ({ page }) => {
   await fulfill(
     page,
