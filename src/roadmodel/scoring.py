@@ -330,6 +330,14 @@ def context_windows() -> dict[str, int]:
     return {str(k): v for k, v in models.items() if isinstance(v, int) and v > 0}
 
 
+def nothing_fits(input_tokens: int, windows: dict[str, int] | None = None) -> bool:
+    """True when no model with a known context window can hold
+    ``input_tokens`` of material: the material is larger than any model
+    takes, and a model whose window is unknown is no answer."""
+    known = windows if windows is not None else context_windows()
+    return bool(known) and len(too_small_for(input_tokens, known)) == len(known)
+
+
 def too_small_for(input_tokens: int, windows: dict[str, int] | None = None) -> list[str]:
     """The catalog ids whose context window cannot hold ``input_tokens`` of
     material with CONTEXT_HEADROOM to spare. A model with no known window is

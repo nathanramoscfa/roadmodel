@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Material larger than every context window fits nothing.** A model
+  whose window is unknown stays in when the task's material is sized, so an
+  input beyond every known window (2M tokens) left only such a model and it
+  took every pick (Gemini 3 Pro, which OpenRouter lists only as an image
+  endpoint). Now no model is picked for it: the recommender keeps the row
+  and reports `fits: false`, and the keyless `/v1/score` answers 422
+  `input_exceeds_every_context_window`.
+
 ## [0.2.72] — 2026-10-07
 
 ### Added
