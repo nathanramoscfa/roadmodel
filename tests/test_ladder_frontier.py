@@ -1349,3 +1349,30 @@ def test_a_model_too_small_for_the_material_leaves_the_row(
     assert "balanced" in guard["rewritten"]
     assert all(p["model"] != "Sonnet" for p in result["picks"].values())
     assert all("input_tokens" not in p for p in result["picks"].values())
+
+
+def test_material_larger_than_every_known_window_fits_nothing() -> None:
+    windows = {"a": 128000, "b": 1000000}
+    assert not scoring.nothing_fits(300000, windows)
+    # 2M tokens is beyond every known window; a model whose window is unknown
+    # would otherwise stand by default.
+    assert scoring.nothing_fits(2000000, windows)
+    assert not scoring.nothing_fits(2000000, {})
+
+
+def test_material_larger_than_every_window_keeps_the_row_and_says_so(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, table_on_fixture: dict[str, scoring.Ladder]
+) -> None:
+    monkeypatch.setattr(scoring, "nothing_fits", lambda n, windows=None: True)
+    blocks = {
+        "quality": _block("Opus", "Claude Code", "XHigh", "planning/medium"),
+        "balanced": _block("Sonnet", "Claude Code", "High", "planning/medium"),
+        "cost": _block("Luna", "Codex", "Medium", "planning/medium"),
+    }
+    for b in blocks.values():
+        b["input_tokens"] = "5000000"
+    fake, _ = _fake(blocks)
+    monkeypatch.setattr(recommend_module, "recommend_ladder", fake)
+    result = recommend_structured_ladder("read this archive", _config(tmp_path))
+    assert result["guard"]["context"]["fits"] is False
+    assert result["guard"]["rewritten"] == []

@@ -230,6 +230,9 @@ def score_endpoint(req: ScoreRequest) -> ScoreResponse:
     task = scoring.Task(req.category, req.complexity, req.novel, req.budget_priority)
     unavailable = list(req.unavailable_models)
     if req.input_tokens is not None:
+        if scoring.nothing_fits(req.input_tokens):
+            # Larger than every known context window: no model holds it.
+            raise HTTPException(status_code=422, detail="input_exceeds_every_context_window")
         unavailable += scoring.too_small_for(req.input_tokens)
     lad = scoring.ladder(task, scoring_text(req), unavailable_models=unavailable or None)
     if lad is None:

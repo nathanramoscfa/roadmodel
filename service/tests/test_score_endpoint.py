@@ -205,6 +205,12 @@ def test_a_model_too_small_for_the_input_is_left_out(
     assert client.post(_PATH, json={**_TASK, "input_tokens": 0}).status_code == 422
 
 
+def test_an_input_beyond_every_context_window_is_a_422(client: TestClient) -> None:
+    response = client.post(_PATH, json={**_TASK, "input_tokens": 50_000_000})
+    assert response.status_code == 422
+    assert response.json()["detail"] == "input_exceeds_every_context_window"
+
+
 def test_no_frontier_is_a_422(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(scoring, "ladder", lambda *_a, **_k: None)
     response = client.post(_PATH, json=_TASK)
