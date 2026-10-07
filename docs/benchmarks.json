@@ -6,8 +6,8 @@
     "endpoint": "https://artificialanalysis.ai/api/v2/data/llms/models",
     "attribution": "Benchmark data © Artificial Analysis, used under its API terms with attribution."
   },
-  "generated_at_utc": "2026-10-07T22:11:02Z",
-  "model_count": 54,
+  "generated_at_utc": "2026-10-07T22:56:43Z",
+  "model_count": 56,
   "unmapped": [],
   "missing_slugs": [],
   "mismatched": [],
@@ -680,6 +680,37 @@
         }
       }
     },
+    "gemini-3.1-flash-lite": {
+      "aa_id": "598190f8-dc9c-4fea-a7ea-4b81c402ab18",
+      "aa_slug": "gemini-3-1-flash-lite-preview",
+      "aa_name": "Gemini 3.1 Flash-Lite",
+      "aa_creator": "Google",
+      "release_date": "2026-03-03",
+      "evaluations": {
+        "artificial_analysis_intelligence_index": 15.6,
+        "artificial_analysis_coding_index": 34.7,
+        "artificial_analysis_math_index": null,
+        "mmlu_pro": null,
+        "gpqa": 0.822,
+        "hle": 0.172,
+        "livecodebench": null,
+        "scicode": 0.434,
+        "math_500": null,
+        "aime": null,
+        "aime_25": null,
+        "ifbench": 0.772108843537415,
+        "lcr": 0.743333333333333,
+        "terminalbench_hard": 0.242424242424242,
+        "terminalbench_v2_1": 0.310861423220974,
+        "terminalbench_v4_0": 0.00505050505050505,
+        "tau2": 0.312865497076023,
+        "tau_banking": 0.0969072164948454
+      },
+      "median_output_tokens_per_second": 0,
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": null,
+      "effort_variants": {}
+    },
     "gemini-3.1-pro": {
       "aa_id": "bbd93ebe-80da-4594-bb19-61e69d0331df",
       "aa_slug": "gemini-3-1-pro-preview",
@@ -770,6 +801,37 @@
           "median_output_tokens_per_second": 0
         }
       }
+    },
+    "gemini-3.5-flash-lite": {
+      "aa_id": "093b9df2-ebee-4309-943f-5a7e88360adf",
+      "aa_slug": "gemini-3-5-flash-lite",
+      "aa_name": "Gemini 3.5 Flash-Lite",
+      "aa_creator": "Google",
+      "release_date": "2026-07-21",
+      "evaluations": {
+        "artificial_analysis_intelligence_index": 22.2,
+        "artificial_analysis_coding_index": 49.3,
+        "artificial_analysis_math_index": null,
+        "mmlu_pro": null,
+        "gpqa": 0.838,
+        "hle": 0.188,
+        "livecodebench": null,
+        "scicode": 0.413,
+        "math_500": null,
+        "aime": null,
+        "aime_25": null,
+        "ifbench": null,
+        "lcr": 0.76,
+        "terminalbench_hard": null,
+        "terminalbench_v2_1": 0.535580524344569,
+        "terminalbench_v4_0": 0.0101010101010101,
+        "tau2": null,
+        "tau_banking": 0.175257731958763
+      },
+      "median_output_tokens_per_second": 329.536,
+      "median_time_to_first_token_seconds": 7.289,
+      "aa_effort": null,
+      "effort_variants": {}
     },
     "gemini-3.6-flash": {
       "aa_id": "78332c88-fe60-42c8-af9d-3617e44cf1f5",
