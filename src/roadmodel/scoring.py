@@ -806,11 +806,11 @@ def _evidence_points(
     if scale is None:
         return None
     key = CATEGORY_EVIDENCE[task.category]
-    v = _evidence(bench, model_id, key, level)
-    if v is None and level is not None and key == "median_output_tokens_per_second":
-        # Throughput is the endpoint's at any effort; AA leaves it unmeasured
-        # on most of a model's other-effort rows.
-        v = _evidence(bench, model_id, key)
+    # Throughput is the endpoint's at any effort (AA leaves it unmeasured on
+    # most of a model's other-effort rows, and its figures there are noise):
+    # speed reads the headline row's.
+    at = None if key == "median_output_tokens_per_second" else level
+    v = _evidence(bench, model_id, key, at)
     return None if v is None else scale.points(v)
 
 
@@ -1281,10 +1281,15 @@ def _level_with(a: Candidate, b: Candidate, category: str) -> bool:
     return a.evidence_points >= b.evidence_points - TIE_BAND.get(category, DEFAULT_TIE_BAND)
 
 
-def _tie_break(p: FrontierPoint) -> tuple[float, float]:
+def _tie_break(p: FrontierPoint, category: str) -> tuple[float, float, float]:
     """Between points level in the category: the higher AA Index, then the
-    cheaper."""
-    return (-1.0 if p.aa_index is None else p.aa_index, -p.price_usd)
+    cheaper. On speed work the lower effort comes first: throughput is the
+    same at every effort, and more reasoning only delays the answer."""
+    slower = 0.0
+    if category == "speed":
+        level = p.candidate.evidence_level or p.candidate.effort
+        slower = -float(EFFORT_LADDER.index(level)) if level in EFFORT_LADDER else 0.0
+    return (slower, -1.0 if p.aa_index is None else p.aa_index, -p.price_usd)
 
 
 def _top(points: list[FrontierPoint], category: str) -> FrontierPoint:
@@ -1293,7 +1298,7 @@ def _top(points: list[FrontierPoint], category: str) -> FrontierPoint:
     difference within run-to-run noise does not decide it."""
     leader = max(points, key=_strength)
     level = [p for p in points if _level_with(p.candidate, leader.candidate, category)]
-    return max(level, key=_tie_break)
+    return max(level, key=lambda p: _tie_break(p, category))
 
 
 # Letters from weakest to strongest.

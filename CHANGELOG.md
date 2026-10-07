@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Speed work runs the least effort that clears the bar.** Throughput is
+  the endpoint's at every effort, so a model's efforts now read its headline
+  tokens per second and tie on speed, and between tied points the lower
+  effort comes first: more reasoning only delays the answer. Low- and
+  medium-complexity speed work now reads Gemini 3.8 Flash · Low for Quality,
+  where it climbed to Medium and High.
+
 - **A backup does the job its pick does.** A rung's backup was the other
   maker's adequate model with the highest list price at or below the
   pick's, so it often stood well below the pick: multimodal Gemini 3.8 Flash

@@ -1271,3 +1271,24 @@ def test_level_with_reads_the_band_on_measured_evidence_and_quality_otherwise() 
     # Unmeasured in the category: its quality (the letter) decides.
     assert scoring._level_with(replace(a, evidence_points=None), a, "multimodal")
     assert not scoring._level_with(replace(a, evidence_points=None, quality=70.0), a, "multimodal")
+
+
+def test_speed_ties_go_to_the_lower_effort_and_others_to_the_higher_aa_index() -> None:
+    base = _ladder("planning", "medium").rungs["cost"].candidate
+    fast = scoring.FrontierPoint(replace(base, evidence_level="low"), 20.0, 0.3)
+    slow = scoring.FrontierPoint(replace(base, evidence_level="high"), 30.0, 0.5)
+    # Throughput is the same at every effort; more reasoning delays the answer.
+    assert max((fast, slow), key=lambda p: scoring._tie_break(p, "speed")) is fast
+    assert max((fast, slow), key=lambda p: scoring._tie_break(p, "coding")) is slow
+
+
+def test_speed_reads_throughput_from_the_headline_row_at_every_effort() -> None:
+    bench = _bench_with_levels()
+    bench["luna"]["median_output_tokens_per_second"] = 120.0
+    bench["luna"]["effort_variants"]["low"]["median_output_tokens_per_second"] = 90.0
+    for mid, tps in {"lite": 200.0, "sonnet": 80.0, "opus": 60.0}.items():
+        bench[mid]["median_output_tokens_per_second"] = tps
+    scale = scoring._evidence_scale(CATALOG, bench, "median_output_tokens_per_second")
+    task = scoring.Task("speed", "low")
+    at_low = scoring._evidence_points("luna", task, bench, scale, "low")
+    assert at_low == scoring._evidence_points("luna", task, bench, scale)
