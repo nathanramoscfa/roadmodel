@@ -1487,12 +1487,18 @@ def _fit_row_to_input(
     """The row with every model whose context window cannot hold the task's
     material left out (scoring.too_small_for), and what the check found. The
     table is computed before the engine reads the task, so the row is
-    recomputed here when a model its frontier draws on is too small; with
-    none left that fits, the row stands and ``fits`` says so."""
+    recomputed here when a model its frontier draws on is too small. When the
+    material is larger than every known window, or none left fits, the row
+    stands and ``fits`` says so."""
     small = set(scoring.too_small_for(input_tokens))
     drawn = {p.candidate.model_id for p in [*row.frontier, *row.points]}
     excluded = sorted(small & drawn)
     report: dict[str, Any] = {"input_tokens": input_tokens, "excluded": excluded, "fits": True}
+    if scoring.nothing_fits(input_tokens):
+        # Larger than every known window: no pick holds it, and one whose
+        # window is unknown would stand only by default.
+        report["fits"] = False
+        return row, report
     if not excluded:
         return row, report
     refit = scoring.ladder(
