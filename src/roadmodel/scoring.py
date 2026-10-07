@@ -147,6 +147,15 @@ REQUIREMENT: Final[dict[str, float]] = {"low": 30.0, "medium": 50.0, "high": 70.
 REQUIREMENT_NOVEL: Final[float] = 85.0
 # Points lost per point of shortfall below the requirement (steep, but soft).
 SHORTFALL_SLOPE: Final[float] = 1.5
+# Benchmark differences within run-to-run noise, in the scaled evidence's
+# points (0–100 across the measured catalog): two candidates this close in a
+# category stand level there, and the general measure (the AA Index) decides
+# between them. Measured from the cases where AA scores a model lower at a
+# higher effort: on its long-context test (LCR) 90% of the 32 such drops fall
+# within 5.6 points (about 3 points of LCR); on the other benchmarks they stay
+# within about 4.
+TIE_BAND: Final[dict[str, float]] = {"long-context": 6.0}
+DEFAULT_TIE_BAND: Final[float] = 4.0
 # λ: the share of the market's exchange rate K this operator applies to a
 # decade of spend. λ = 1 ranks purely by value (the market-line residual, the
 # same quantity the /models Score shows); λ → 0 ranks purely by quality. It is
@@ -257,6 +266,10 @@ class Candidate:
     # The effort AA measured the quality evidence at; this candidate runs at
     # it. None: the model's headline figure, at the posture's effort.
     evidence_level: str | None = None
+    # The category's evidence on its 0–100 scale (EvidenceScale.points), the
+    # figure ties are judged on; None when AA has not measured it there or the
+    # category has no evidence (multimodal).
+    evidence_points: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -770,20 +783,35 @@ def _quality(
     tiers: dict[str, Any] = raw_tiers if isinstance(raw_tiers, dict) else {}
     letter = str(tiers.get(task.category, "C")).upper()
     letter_q = LETTER_QUALITY.get(letter, 30.0)
-    key = CATEGORY_EVIDENCE[task.category]
-    v = _evidence(bench, str(model.get("id", "")), key, level)
-    if v is None and level is not None and key == "median_output_tokens_per_second":
-        # Throughput is the endpoint's at any effort; AA leaves it unmeasured
-        # on most of a model's other-effort rows.
-        v = _evidence(bench, str(model.get("id", "")), key)
     if scale is None:
         # No evidence exists for this category at all (multimodal): every model
         # is on its letter, so there is nothing to discount against.
         return letter_q, "letter", letter
-    if v is None:
+    points = _evidence_points(str(model.get("id", "")), task, bench, scale, level)
+    if points is None:
         return max(0.0, letter_q - UNMEASURED_DISCOUNT), "letter", letter
-    q = EVIDENCE_WEIGHT * scale.points(v) + (1.0 - EVIDENCE_WEIGHT) * letter_q
-    return q, f"aa:{key}+letter", letter
+    q = EVIDENCE_WEIGHT * points + (1.0 - EVIDENCE_WEIGHT) * letter_q
+    return q, f"aa:{CATEGORY_EVIDENCE[task.category]}+letter", letter
+
+
+def _evidence_points(
+    model_id: str,
+    task: Task,
+    bench: dict[str, Any],
+    scale: EvidenceScale | None,
+    level: str | None = None,
+) -> float | None:
+    """The category's evidence for ``model_id`` (at ``level`` when given) on
+    its 0–100 scale, or None when unmeasured or the category has none."""
+    if scale is None:
+        return None
+    key = CATEGORY_EVIDENCE[task.category]
+    v = _evidence(bench, model_id, key, level)
+    if v is None and level is not None and key == "median_output_tokens_per_second":
+        # Throughput is the endpoint's at any effort; AA leaves it unmeasured
+        # on most of a model's other-effort rows.
+        v = _evidence(bench, model_id, key)
+    return None if v is None else scale.points(v)
 
 
 @dataclass(frozen=True)
@@ -959,6 +987,7 @@ def rank(
             continue
         provider = _cost.model_provider(model_id) or str(model.get("provider", "unknown"))
         quality, source, letter = _quality(model, task, bench, scale)
+        points = _evidence_points(model_id, task, bench, scale)
         shortfall = max(0.0, requirement - quality)
         penalty = SHORTFALL_SLOPE * shortfall
         price = blended_price(model)
@@ -1023,6 +1052,7 @@ def rank(
                 cost_penalty=round(cost_pen, 2),
                 score=round(score, 2),
                 notes=notes,
+                evidence_points=None if points is None else round(points, 2),
             )
             # One row per model: its best reachable platform. A funded platform
             # always beats an unfunded one regardless of score; equal scores go
@@ -1242,6 +1272,30 @@ def _nearest(p: FrontierPoint) -> tuple[float, float, float, float]:
     return (-p.candidate.requirement_penalty, *_strength(p))
 
 
+def _level_with(a: Candidate, b: Candidate, category: str) -> bool:
+    """Whether ``a`` stands at least level with ``b`` in the category: its
+    evidence no more than the noise band (``TIE_BAND``) below ``b``'s, or,
+    where either is unmeasured there, its quality no lower."""
+    if a.evidence_points is None or b.evidence_points is None:
+        return a.quality >= b.quality
+    return a.evidence_points >= b.evidence_points - TIE_BAND.get(category, DEFAULT_TIE_BAND)
+
+
+def _tie_break(p: FrontierPoint) -> tuple[float, float]:
+    """Between points level in the category: the higher AA Index, then the
+    cheaper."""
+    return (-1.0 if p.aa_index is None else p.aa_index, -p.price_usd)
+
+
+def _top(points: list[FrontierPoint], category: str) -> FrontierPoint:
+    """The strongest point for the category: of those level with its leader
+    there (:func:`_level_with`), the one ahead on :func:`_tie_break`. A
+    difference within run-to-run noise does not decide it."""
+    leader = max(points, key=_strength)
+    level = [p for p in points if _level_with(p.candidate, leader.candidate, category)]
+    return max(level, key=_tie_break)
+
+
 # Letters from weakest to strongest.
 LETTER_ORDER: Final[str] = "DCBAS"
 # Categories whose evidence is something other than the AA Intelligence Index,
@@ -1276,6 +1330,7 @@ def _specialist(
         and c.requirement_penalty == 0
         and rank(c.letter) > rank(t.letter)
         and c.quality > t.quality
+        and not _level_with(t, c, task.category)
     ]
     if not stronger:
         return None
@@ -1325,6 +1380,7 @@ def _at_level(
     model is not up to it.
     ``scales`` are the category's evidence scale and the planning one."""
     quality, source, letter = _quality(model, task, bench, scales[0], level)
+    points = _evidence_points(c.model_id, task, bench, scales[0], level)
     general, _, _ = _quality(model, replace(task, category="planning"), bench, scales[1], level)
     penalty = SHORTFALL_SLOPE * max(0.0, c.requirement - min(quality, general))
     if level is None:
@@ -1354,6 +1410,7 @@ def _at_level(
         cost_penalty=round(cost_pen, 2),
         score=round(quality - penalty - cost_pen + nudge, 2),
         evidence_level=level,
+        evidence_points=None if points is None else round(points, 2),
     )
 
 
@@ -1478,7 +1535,7 @@ def ladder(
     adequate = [p for p in points if p.candidate.requirement_penalty == 0]
     if not adequate:
         adequate = [max(points, key=_nearest)]
-    top = max(adequate, key=_strength)
+    top = _top(adequate, task.category)
     span = adequate[: adequate.index(top) + 1]
     specialist = _specialist(task, settings, points, top, bench)
     by_level = {(c.model_id, c.evidence_level): c for c in settings if c.evidence_level}
@@ -1541,11 +1598,12 @@ def ladder(
     )
     # With a specialist on QUALITY, BALANCED spans every adequate frontier point
     # above COST, the frontier's strongest included. A BALANCED point earns its
-    # higher price only by beating COST in the task's own category: the
-    # frontier is drawn on the AA Index, and a point above COST on that axis
-    # can still trail it in the category the task needs.
+    # higher price only by standing at least level with COST in the task's own
+    # category: the frontier is drawn on the AA Index, and a point above COST
+    # on that axis can still trail it in the category the task needs. A gap
+    # within run-to-run noise is level, and the AA Index then decides.
     between = span[lo + 1 :] if specialist is not None else span[lo + 1 : -1]
-    between = [p for p in between if p.candidate.quality > cost_point.candidate.quality]
+    between = [p for p in between if _level_with(p.candidate, cost_point.candidate, task.category)]
     # Like COST, BALANCED draws on what is already paid for first: a per-token
     # point stands between only when no prepaid one out-scores COST there.
     between = [p for p in between if p.candidate.scarcity < 1.0] or between

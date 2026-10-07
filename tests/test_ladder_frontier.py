@@ -858,15 +858,15 @@ def test_a_category_specialist_takes_quality_and_the_frontier_keeps_the_rest() -
     # off the frontier (Opus beats it on the AA Index for less) and rates S
     # (90): it takes QUALITY at the best posture's effort. COST is the cheapest
     # adequate point, Luna. Every frontier point rates the same B for
-    # multimodal, so none above Luna adds anything in the category: BALANCED
-    # runs Luna at the balanced effort.
+    # multimodal, so the points above Luna stand level with it there and
+    # BALANCED is the best value of them, Sonnet.
     lad = scoring.ladder(
         scoring.Task("multimodal", "medium"), BOTH, catalog=_specialist_catalog(), benchmarks=BENCH
     )
     assert lad is not None
     assert _picks(lad) == {
         "cost": ("Luna", "low"),
-        "balanced": ("Luna", "medium"),
+        "balanced": ("Sonnet", "medium"),
         "quality": ("Astra", "high"),
     }
     assert lad.rungs["quality"].specialist is True
@@ -899,6 +899,7 @@ def test_planning_has_no_specialist() -> None:
         letter="S",
         quality=top.candidate.quality + 10,
         requirement_penalty=0.0,
+        evidence_points=None,
     )
     ranking_pool = [p.candidate for p in lad.frontier] + [stronger]
     for category, expected in (("planning", None), ("knowledge", "ghost")):
@@ -917,7 +918,7 @@ def test_the_quality_pick_carries_the_specialist_flag(
         {
             # The engine names the frontier's top; code holds the row's specialist.
             "quality": _block("Opus", "Claude Code", "High", "multimodal/medium"),
-            "balanced": _block("Luna", "Codex", "Medium", "multimodal/medium"),
+            "balanced": _block("Sonnet", "Claude Code", "Medium", "multimodal/medium"),
             "cost": _block("Luna", "Codex", "Low", "multimodal/medium"),
         }
     )
@@ -1213,3 +1214,59 @@ def test_a_tie_in_the_category_moves_balanced_one_measured_effort_up() -> None:
         "quality": ("Opus", "xhigh"),
     }
     assert all(r.candidate.requirement_penalty == 0 for r in lad.rungs.values())
+
+
+# --------------------------------------------------------------------------- #
+# Near ties: a gap within run-to-run noise does not decide a pick
+# --------------------------------------------------------------------------- #
+
+
+def _lcr_bench() -> dict[str, Any]:
+    # Long-context figures (scale 0.40..0.85). Opus at medium reads 0.84 on
+    # AA's long-context test and at high 0.83: a gap of 2.2 scaled points,
+    # inside the 6-point noise band, where the AA Index (56.5 vs 57.5) decides.
+    lcr = {
+        "lite": 0.40,
+        "luna": 0.80,
+        "sonnet": 0.82,
+        "sonnet-old": 0.70,
+        "opus": 0.85,
+        "astra": 0.80,
+    }
+    bench = copy.deepcopy(BENCH)
+    for mid, v in lcr.items():
+        bench[mid]["evaluations"]["lcr"] = v
+    bench["opus"]["aa_effort"] = "max"
+    bench["opus"]["effort_variants"] = {
+        "medium": {"evaluations": {"artificial_analysis_intelligence_index": 56.5, "lcr": 0.84}},
+        "high": {"evaluations": {"artificial_analysis_intelligence_index": 57.5, "lcr": 0.83}},
+    }
+    return bench
+
+
+def test_a_gap_within_the_noise_band_goes_to_the_higher_aa_index(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def quality_pick() -> tuple[str, str]:
+        lad = scoring.ladder(
+            scoring.Task("long-context", "medium"), BOTH, catalog=CATALOG, benchmarks=_lcr_bench()
+        )
+        assert lad is not None
+        return _picks(lad)["quality"]
+
+    assert quality_pick() == ("Opus", "high")
+    # Read without the band, the 0.01 edge at medium would decide it.
+    monkeypatch.setattr(scoring, "TIE_BAND", {})
+    monkeypatch.setattr(scoring, "DEFAULT_TIE_BAND", 0.0)
+    assert quality_pick() == ("Opus", "medium")
+
+
+def test_level_with_reads_the_band_on_measured_evidence_and_quality_otherwise() -> None:
+    base = _ladder("planning", "medium").rungs["cost"].candidate
+    a = replace(base, evidence_points=90.0, quality=80.0)
+    assert scoring._level_with(replace(a, evidence_points=84.5), a, "long-context")
+    assert not scoring._level_with(replace(a, evidence_points=83.5), a, "long-context")
+    assert not scoring._level_with(replace(a, evidence_points=85.5), a, "knowledge")
+    # Unmeasured in the category: its quality (the letter) decides.
+    assert scoring._level_with(replace(a, evidence_points=None), a, "multimodal")
+    assert not scoring._level_with(replace(a, evidence_points=None, quality=70.0), a, "multimodal")

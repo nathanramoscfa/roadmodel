@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A gap within a benchmark's noise does not decide a pick.** Two
+  candidates whose category evidence differs by less than its run-to-run
+  noise now stand level there, and the AA Intelligence Index decides between
+  them, for the Quality pick, for Balanced's test against Cost, and for a
+  category specialist. The bands are measured from the cases where AA scores
+  a model lower at a higher effort: 6 points of the scorer's 0–100 scale on
+  the long-context test (about 3 points of LCR), 4 elsewhere. Medium
+  long-context work now reads Opus 5.5 · High for Quality, where a 0.016 LCR
+  edge at Medium used to win.
+
 ## [0.2.71] — 2026-10-07
 
 ### Fixed
