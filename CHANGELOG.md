@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A backup does the job its pick does.** A rung's backup was the other
+  maker's adequate model with the highest list price at or below the
+  pick's, so it often stood well below the pick: multimodal Gemini 3.8 Flash
+  picks backed up to GPT-6 Luna, Opus 5.5 picks to GPT-6.1 Sol, and several
+  GPT-6.1 Sol and Gemini picks to Grok 4.7 billed per token through
+  OpenRouter. The backup is now the cheapest substitute that stands level
+  with the pick in the task's category and in general capability (within
+  the same noise bands), at its measured effort, a prepaid one ahead of a
+  per-token one; with none, the substitute the Quality rule would pick.
+  Opus 5.5 picks now mostly back up to GPT-6 Astra and Gemini picks to Opus
+  5.5 or GPT-6.1 Sol, on the subscriptions already held.
 - **A gap within a benchmark's noise does not decide a pick.** Two
   candidates whose category evidence differs by less than its run-to-run
   noise now stand level there, and the AA Intelligence Index decides between
