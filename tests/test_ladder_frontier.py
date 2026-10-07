@@ -1376,3 +1376,15 @@ def test_material_larger_than_every_window_keeps_the_row_and_says_so(
     result = recommend_structured_ladder("read this archive", _config(tmp_path))
     assert result["guard"]["context"]["fits"] is False
     assert result["guard"]["rewritten"] == []
+
+
+def test_the_header_classifies_high_volume_routine_work_as_speed() -> None:
+    # The selector defines speed as "high-volume routine work"; the engine read
+    # "Classify 10,000 support tickets ... accuracy still matters" as knowledge
+    # and the Quality pick became Opus for 10,000 calls.
+    header = " ".join(_SAAS_LADDER_TABLE_HEADER.split())
+    assert "High-volume routine work" in header
+    assert "is `speed` whatever accuracy it needs" in header
+    assert "its complexity is how hard ONE item is" in header
+    # Building an agent is coding; the model that runs as one is agentic.
+    assert "Building an agent or an app (writing its code) is `coding`" in header

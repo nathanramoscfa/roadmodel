@@ -25,26 +25,29 @@ const MAX_ATTACHMENTS = 5;
 // Mirrors the service input cap (#142, 50k chars) for files and for the task.
 const MAX_CHARS = 50_000;
 
+// Hardest first: each lands in a different row of the picks table, from
+// long-context/high down to speed/low, so running them in order walks the
+// scale from the strongest picks to the lightest.
 export const EXAMPLES: { label: string; task: string }[] = [
-  {
-    label: "Refactor a pipeline",
-    task: "Refactor a 3,000-line Python data pipeline into typed modules with tests, keeping its behaviour identical.",
-  },
   {
     label: "Audit a long contract",
     task: "Read our 400-page vendor contract and list every clause that limits our liability, with page references.",
   },
   {
-    label: "Bulk-classify tickets",
-    task: "Classify 10,000 support tickets by sentiment as cheaply as possible; accuracy still matters.",
+    label: "Refactor a pipeline",
+    task: "Refactor a 3,000-line Python data pipeline into typed modules with tests, keeping its behaviour identical.",
   },
   {
     label: "Inbox agent",
-    task: "Build an agent that triages my inbox, drafts replies for me to approve, and books meetings through my calendar API.",
+    task: "Run an agent that triages my inbox, drafts replies for me to approve, and books meetings through my calendar API.",
   },
   {
     label: "Plan a launch",
     task: "Plan a two-week launch for a mobile app: milestones, owners, dependencies and the risks to watch.",
+  },
+  {
+    label: "Bulk-classify tickets",
+    task: "Classify 10,000 support tickets by sentiment as cheaply as possible; accuracy still matters.",
   },
 ];
 
