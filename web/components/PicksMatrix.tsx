@@ -333,6 +333,41 @@ function ScoreCell({ row, data }: { row: SlimRow; data: PicksData }) {
   );
 }
 
+// The backup is what to run when the pick is unavailable, so it reads like a
+// pick: the model, the surface the service resolved for it and the level to
+// set there (Codex calls its dial Intelligence). A payload without them (an
+// anonymous request) shows the name alone.
+function BackupCell({
+  backup,
+}: {
+  backup: PriorityRecommendation["backup"];
+}) {
+  if (!backup?.model) return <>—</>;
+  const settings = backup.settings ?? {};
+  const dial = (["effort", "intelligence"] as const).find((key) =>
+    isMeaningful(formatSettingValue(settings[key])),
+  );
+  const detail = [
+    backup.platform,
+    dial
+      ? `${humanizeSettingKey(dial)}: ${formatSettingValue(settings[dial])}`
+      : null,
+  ].filter(Boolean);
+  return (
+    <>
+      <span>{backup.model}</span>
+      {detail.length ? (
+        <span
+          className="basis-full text-[11px] font-medium leading-snug text-brand-slate-500 dark:text-brand-slate-400"
+          data-testid="backup-detail"
+        >
+          {detail.join(" · ")}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
 interface MatrixRow {
   key: string;
   label: string;
@@ -429,7 +464,7 @@ function matrixRows(
             key: "__backup",
             label: "Backup",
             cell: (rec: PriorityRecommendation) => ({
-              node: rec.backup?.model ?? "—",
+              node: <BackupCell backup={rec.backup} />,
             }),
           } satisfies MatrixRow,
         ]
