@@ -173,17 +173,21 @@ frontier, in code (`scoring.ladder`):
    it. When
    no point is adequate, the one that falls shortest of the bar stands alone.
 5. **Rungs.** QUALITY is the adequate point that scores highest in the
-   category. COST is the cheapest adequate point the operator has already
+   category; points within run-to-run noise of the leader there stand level
+   with it, and the highest AA Index of them takes the rung (see *Near
+   ties* below). COST is the cheapest adequate point the operator has already
    paid for: a subscription pool with headroom, or local weights (scarcity
    below list price). A per-token point takes COST only when no prepaid point
    is adequate, because a per-token call is fresh spend while the prepaid
    pool's marginal cost is the pool itself. BALANCED is the point between
-   them that beats COST in the task's category, with the best score at the
+   them that stands at least level with COST in the task's category, with
+   the best score at the
    balanced posture, a prepaid point ahead of any per-token one (a per-token
    point stands between only when no prepaid one out-scores COST there).
    The frontier is drawn on the AA Index, so a point above COST on that axis
    can still trail it in the category the task needs; a BALANCED pick earns
-   its higher price only with more of the task's own quality. With no such
+   its higher price only when it gives up none of the task's own quality
+   beyond noise. With no such
    point, BALANCED is the COST or QUALITY model run at the balanced
    posture's effort, whichever differs from both other rungs; a model run at
    its measured efforts moves instead to its next one that still meets the
@@ -248,6 +252,18 @@ frontier, in code (`scoring.ladder`):
    Claude Max, ChatGPT Pro and Google AI Pro, Sonnet 5.5 and Opus 5.5 rungs
    back up to GPT-6.1 Sol on Codex (GPT-6 Astra on most novel rows), and
    GPT-6 Luna rungs to Gemini 3.8 Flash on Antigravity.
+
+**Near ties.** A benchmark separates models only as finely as its own
+run-to-run noise. Each candidate carries its category evidence on the
+scorer's 0–100 scale (`evidence_points`), and two within the band
+(`TIE_BAND`: 6 points for long-context, 4 elsewhere) stand level in the
+category (`_level_with`); between level points the AA Index decides
+(`_tie_break`). The bands are measured: where AA scores a model lower at a
+higher effort, the drop on its long-context test is within 5.6 points in 90%
+of the 32 cases (about 3 points of LCR), and within about 4 on the other
+benchmarks. On Claude Max, ChatGPT Pro and Google AI Pro, medium long-context
+work reads Opus 5.5 · High for QUALITY, where the 0.016 LCR edge Opus has at
+medium effort used to put it at Medium.
 
 `ladder_table` computes the ladder for every classification (seven
 categories × three complexities, plus novel high-complexity work: 28 rows,
