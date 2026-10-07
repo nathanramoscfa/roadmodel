@@ -1495,6 +1495,29 @@ def ladder(
     def same(a: Rung, b: Rung) -> bool:
         return a.candidate.model_id == b.candidate.model_id and a.level == b.level
 
+    def step(p: FrontierPoint, by: int) -> FrontierPoint | None:
+        """``p``'s model on its platform at its next measured effort up
+        (``by`` 1) or down (-1) that meets the task's bar, else None."""
+        c = p.candidate
+        if c.evidence_level is None:
+            return None
+        here = EFFORT_LADDER.index(c.evidence_level)
+        near = [
+            s
+            for s in settings
+            if s.model_id == c.model_id
+            and s.platform_id == c.platform_id
+            and s.evidence_level is not None
+            and s.requirement_penalty == 0
+            and (EFFORT_LADDER.index(s.evidence_level) - here) * by > 0
+        ]
+        if not near:
+            return None
+        s = min(near, key=lambda s: abs(EFFORT_LADDER.index(s.evidence_level or "low") - here))
+        return FrontierPoint(
+            s, _evidence(bench, s.model_id, FRONTIER_INDEX, s.evidence_level), frontier_price(s)
+        )
+
     def settle(r: Rung) -> Rung:
         """A rung :func:`_below` moved to another effort reads AA's row at that
         effort, where AA measured one."""
@@ -1534,10 +1557,17 @@ def ladder(
         # No point between COST and QUALITY beats COST in the category:
         # BALANCED runs one of those two at the balanced posture, whichever
         # differs from both other rungs; it converges only when neither does.
-        # Beside a specialist it stays on the frontier.
+        # A model run at its measured efforts moves to its next one that
+        # still meets the bar instead (COST's up, QUALITY's down), so COST is
+        # never pushed below the bar to stay distinct. Beside a specialist it
+        # stays on the frontier.
         options = [rung("balanced", cost_point)]
+        if (up := step(cost_point, 1)) is not None:
+            options.append(rung("balanced", up))
         if specialist is None:
             options.append(rung("balanced", top))
+            if (down := step(top, -1)) is not None:
+                options.append(rung("balanced", down))
         balanced_rung = next(
             (r for r in options if not same(r, cost_rung) and not same(r, quality_rung)),
             options[0],

@@ -185,7 +185,10 @@ frontier, in code (`scoring.ladder`):
    can still trail it in the category the task needs; a BALANCED pick earns
    its higher price only with more of the task's own quality. With no such
    point, BALANCED is the COST or QUALITY model run at the balanced
-   posture's effort, whichever differs from both other rungs. A rung runs at
+   posture's effort, whichever differs from both other rungs; a model run at
+   its measured efforts moves instead to its next one that still meets the
+   bar (COST's up, QUALITY's down), so COST is never pushed below the bar to
+   stay distinct. A rung runs at
    its point's measured effort, so the cheapest pick that clears the bar runs
    a weaker model higher; a model with no measured efforts runs at
    `effort_for` its posture (cheap / balanced / best). On Claude Max, ChatGPT

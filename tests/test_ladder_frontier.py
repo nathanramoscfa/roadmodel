@@ -1184,3 +1184,32 @@ def test_with_composites_scores_each_effort_among_the_headline_rows() -> None:
     assert scoring._evidence(out, "c", "scicode", "low") == 15
     assert scoring._evidence(out, "c", "scicode", "high") is None
     assert scoring._evidence(out, "c", "scicode") == 30
+
+
+def test_a_tie_in_the_category_moves_balanced_one_measured_effort_up() -> None:
+    # Multimodal has no AA evidence, so Sonnet and Opus (both A there) tie in
+    # the category and nothing between COST and QUALITY beats COST in it.
+    # Sonnet, measured at high (50) and xhigh (53), clears the high bar at
+    # both; BALANCED takes its next measured effort up rather than pushing
+    # COST below the bar to stay distinct.
+    cat = copy.deepcopy(CATALOG)
+    for m in cat["models"]:
+        if m["id"] in {"sonnet", "opus"}:
+            m["tiers"]["multimodal"] = "A"
+    bench = _bench_with_levels(
+        sonnet={
+            "aa_effort": "max",
+            "effort_variants": {
+                "high": {"evaluations": {"artificial_analysis_intelligence_index": 50}},
+                "xhigh": {"evaluations": {"artificial_analysis_intelligence_index": 53}},
+            },
+        }
+    )
+    lad = scoring.ladder(scoring.Task("multimodal", "high"), BOTH, catalog=cat, benchmarks=bench)
+    assert lad is not None
+    assert _picks(lad) == {
+        "cost": ("Sonnet", "high"),
+        "balanced": ("Sonnet", "xhigh"),
+        "quality": ("Opus", "xhigh"),
+    }
+    assert all(r.candidate.requirement_penalty == 0 for r in lad.rungs.values())
