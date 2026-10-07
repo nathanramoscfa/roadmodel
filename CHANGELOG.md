@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.71] — 2026-10-07
+
 ### Fixed
 
 - **A pick is credited with what it scores at the effort it runs.**
