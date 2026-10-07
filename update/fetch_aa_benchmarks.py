@@ -29,6 +29,11 @@ column set can grow without a re-fetch. Accuracy-style evaluations arrive as
 0–1 fractions and the composite indices as 0–100; the web layer normalises
 display (see web/lib/benchmark-grid.ts), this file stores the API's values.
 
+AA measures a reasoning model at several efforts, one row each. The mapped
+row stays the model's headline figure; `aa_effort` names its level, and
+`effort_variants` carries the model's other levels so the scorer can read a
+pick's evidence at the effort it actually runs.
+
 Every joined row must NAME its catalog model: AA's display name carries each
 token of the catalog name ("Sonnet 5.5" in "Claude Sonnet 5.5 (Adaptive
 Reasoning, Max Effort)"), and AA's base name (before the parenthetical)
@@ -62,7 +67,15 @@ AA_HOME = "https://artificialanalysis.ai/"
 USER_AGENT = "roadmodel-updater/1.0 (+https://github.com/nathanramoscfa/roadmodel)"
 FETCH_TIMEOUT = 60
 
-SCHEMA_VERSION = 1
+# 2: each row names the effort AA ran it at (`aa_effort`) and carries AA's
+# rows for the same model at its other efforts (`effort_variants`).
+SCHEMA_VERSION = 2
+
+# Effort levels as AA names them in a row's parenthetical ("GPT-6 Luna
+# (Xhigh)", "Claude Sonnet 5.5 (Adaptive Reasoning, Max Effort)"), lowest
+# first. A level row's slug is the model's slug plus the level
+# (`gpt-6-luna-xhigh`).
+EFFORT_LEVELS = ("minimal", "low", "medium", "high", "xhigh", "max")
 
 
 def fetch_aa_models(api_key: str) -> list[dict[str, Any]]:
@@ -114,6 +127,47 @@ def names_model(catalog_name: str, aa_name: str) -> bool:
         return False
     extra = _tokens(aa_name.split("(", 1)[0]) - want
     return all(t in _BENIGN_EXTRA or re.fullmatch(r"\d{4}", t) for t in extra)
+
+
+def aa_effort(aa_name: str) -> str | None:
+    """The effort level AA ran a row at, read from its name's parenthetical;
+    None when it names none ("Reasoning", "Non-reasoning")."""
+    paren = re.search(r"\(([^)]*)\)", aa_name)
+    if paren is None:
+        return None
+    text = re.sub(r"\b(?:x-high|extra high)\b", "xhigh", paren.group(1).lower())
+    return next((w for w in re.findall(r"[a-z]+", text) if w in EFFORT_LEVELS), None)
+
+
+def effort_variants(
+    slug: str,
+    base_level: str | None,
+    by_slug: dict[Any, dict[str, Any]],
+    catalog_name: str | None,
+) -> dict[str, Any]:
+    """AA's rows for the same model at its other effort levels, keyed by level:
+    the row at `<slug>-<level>` whose name says that level (and, with the name
+    check on, names the catalog model). A model's benchmark scores move with
+    its effort (GPT-6 Luna reads 21.5 on the AA Index at low and 38.1 at max),
+    so the scorer reads a pick's evidence at the effort it runs."""
+    out: dict[str, Any] = {}
+    for level in EFFORT_LEVELS:
+        if level == base_level:
+            continue
+        src = by_slug.get(f"{slug}-{level}")
+        if src is None or aa_effort(src.get("name") or "") != level:
+            continue
+        if catalog_name and not names_model(catalog_name, src.get("name") or ""):
+            continue
+        evals = src.get("evaluations") or {}
+        out[level] = {
+            "aa_slug": src.get("slug"),
+            "aa_name": src.get("name"),
+            # Only measured figures: a level row is read, never shown as a column.
+            "evaluations": {k: v for k, v in evals.items() if v is not None},
+            "median_output_tokens_per_second": src.get("median_output_tokens_per_second"),
+        }
+    return out
 
 
 def suggest(
@@ -203,6 +257,7 @@ def build(
             # under the wrong name, so the row shows dashes until the map is fixed.
             mismatched.append(f"{cid} -> {slug} ({src.get('name')})")
             continue
+        level = aa_effort(src.get("name") or "")
         models[cid] = {
             "aa_id": src.get("id"),
             "aa_slug": slug,
@@ -212,6 +267,8 @@ def build(
             "evaluations": src.get("evaluations") or {},
             "median_output_tokens_per_second": src.get("median_output_tokens_per_second"),
             "median_time_to_first_token_seconds": src.get("median_time_to_first_token_seconds"),
+            "aa_effort": level,
+            "effort_variants": effort_variants(slug, level, by_slug, catalog_name),
         }
     return {
         "schema_version": SCHEMA_VERSION,

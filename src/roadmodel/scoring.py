@@ -254,6 +254,9 @@ class Candidate:
     cost_penalty: float
     score: float
     notes: list[str] = field(default_factory=list)
+    # The effort AA measured the quality evidence at; this candidate runs at
+    # it. None: the model's headline figure, at the posture's effort.
+    evidence_level: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -300,12 +303,17 @@ def _load_benchmarks() -> dict[str, Any]:
 def with_composites(bench: dict[str, Any]) -> dict[str, Any]:
     """A copy of ``bench`` with each ``COMPOSITES`` key added to the
     evaluations of every row measured on all its parts: the mean of the row's
-    mid-rank percentiles on those parts, among those rows (0 = lowest)."""
+    mid-rank percentiles on those parts, among those rows (0 = lowest). A
+    model's rows at other efforts (``effort_variants``) get the composite too,
+    their percentiles taken among the headline rows."""
     out: dict[str, Any] = {}
     for mid, row in bench.items():
         if isinstance(row, dict):
             evals = row.get("evaluations")
             out[mid] = {**row, "evaluations": dict(evals) if isinstance(evals, dict) else {}}
+            variants = row.get("effort_variants")
+            if isinstance(variants, dict):
+                out[mid]["effort_variants"] = dict(variants)
         else:
             out[mid] = row
     for key, parts in COMPOSITES.items():
@@ -329,15 +337,63 @@ def with_composites(bench: dict[str, Any]) -> dict[str, Any]:
                 for v, col in zip(values, columns, strict=True)
             ]
             out[mid]["evaluations"][key] = sum(pcts) / len(pcts)
+        # A model's row at another effort is placed among the headline rows,
+        # so its composite reads on the same scale.
+        for row in out.values():
+            variants = row.get("effort_variants") if isinstance(row, dict) else None
+            if not isinstance(variants, dict):
+                continue
+            for level, vrow in list(variants.items()):
+                if not isinstance(vrow, dict):
+                    continue
+                evals = dict(vrow.get("evaluations") or {})
+                vals = [evals.get(p) for p in parts]
+                if not all(isinstance(v, (int, float)) and math.isfinite(float(v)) for v in vals):
+                    continue
+                pcts = [
+                    (sum(1 for x in col if x < float(v)) + sum(1 for x in col if x == float(v)) / 2)
+                    / len(col)
+                    for v, col in zip(vals, columns, strict=True)
+                ]
+                evals[key] = sum(pcts) / len(pcts)
+                variants[level] = {**vrow, "evaluations": evals}
     return out
 
 
-def _evidence(bench: dict[str, Any], model_id: str, key: str | None) -> float | None:
+def measured_levels(bench: dict[str, Any], model_id: str) -> dict[str, dict[str, Any]]:
+    """The effort levels AA has measured ``model_id`` at, each with its row:
+    the headline row at its own level (``aa_effort``) and every
+    ``effort_variants`` row. Empty when AA names no level for the model (the
+    row then stands for the model at whatever effort it runs)."""
+    row = bench.get(model_id)
+    if not isinstance(row, dict):
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    variants = row.get("effort_variants")
+    if isinstance(variants, dict):
+        out.update(
+            {str(k): v for k, v in variants.items() if k in EFFORT_LADDER and isinstance(v, dict)}
+        )
+    level = row.get("aa_effort")
+    if isinstance(level, str) and level in EFFORT_LADDER:
+        out[level] = row
+    return out
+
+
+def _evidence(
+    bench: dict[str, Any], model_id: str, key: str | None, level: str | None = None
+) -> float | None:
+    """AA's figure ``key`` for ``model_id``: its headline row's, or with
+    ``level`` its row at that effort (None when AA has not measured it there)."""
     if key is None:
         return None
     row = bench.get(model_id)
     if not isinstance(row, dict):
         return None
+    if level is not None:
+        row = measured_levels(bench, model_id).get(level)
+        if row is None:
+            return None
     if key == "median_output_tokens_per_second":
         v = row.get(key)
     else:
@@ -706,13 +762,20 @@ def _quality(
     task: Task,
     bench: dict[str, Any],
     scale: EvidenceScale | None,
+    level: str | None = None,
 ) -> tuple[float, str, str]:
+    """The model's quality for the task's category: its headline evidence, or
+    with ``level`` its evidence at that effort, blended with its letter."""
     raw_tiers = model.get("tiers")
     tiers: dict[str, Any] = raw_tiers if isinstance(raw_tiers, dict) else {}
     letter = str(tiers.get(task.category, "C")).upper()
     letter_q = LETTER_QUALITY.get(letter, 30.0)
     key = CATEGORY_EVIDENCE[task.category]
-    v = _evidence(bench, str(model.get("id", "")), key)
+    v = _evidence(bench, str(model.get("id", "")), key, level)
+    if v is None and level is not None and key == "median_output_tokens_per_second":
+        # Throughput is the endpoint's at any effort; AA leaves it unmeasured
+        # on most of a model's other-effort rows.
+        v = _evidence(bench, str(model.get("id", "")), key)
     if scale is None:
         # No evidence exists for this category at all (multimodal): every model
         # is on its letter, so there is nothing to discount against.
@@ -1076,13 +1139,19 @@ class Rung:
 @dataclass
 class Ladder:
     task: Task
+    # The operator's frontier over their models, as /models draws it: each at
+    # its headline AA Index and list price.
     frontier: list[FrontierPoint]
-    # Frontier points whose quality in the task's category meets the
-    # complexity's requirement, cheapest first.
+    # Points whose quality in the task's category meets the complexity's
+    # requirement, cheapest first, from ``points``.
     adequate: list[FrontierPoint]
     rungs: dict[str, Rung]
     # Why a rung has no backup: the pool holds no other maker's model.
     backup_warning: str | None = None
+    # The frontier the rungs are read from: each model at every effort AA
+    # measured it at (:func:`effort_settings`). Equals ``frontier`` when no
+    # model carries per-effort figures.
+    points: list[FrontierPoint] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         def point(p: FrontierPoint) -> dict[str, Any]:
@@ -1096,12 +1165,14 @@ class Ladder:
                 "price_usd": p.price_usd,
                 "list_price_usd": c.blended_price_usd,
                 "quality": c.quality,
+                "evidence_level": c.evidence_level,
             }
 
         return {
             "task": asdict(self.task),
             "frontier": [point(p) for p in self.frontier],
-            "adequate": [p.candidate.model_id for p in self.adequate],
+            "points": [point(p) for p in self.points],
+            "adequate": list(dict.fromkeys(p.candidate.model_id for p in self.adequate)),
             "rungs": {
                 t: {
                     **point(r.point),
@@ -1124,24 +1195,37 @@ class Ladder:
         }
 
 
+def frontier_price(c: Candidate) -> float:
+    """Where ``c`` sits on the frontier's price axis: the blended list price,
+    times its effort's token multiplier when it runs at a measured effort (a
+    higher effort draws more tokens of the same model)."""
+    if c.evidence_level is None:
+        return c.blended_price_usd
+    return round(c.blended_price_usd * EFFORT_TOKEN_MULTIPLIER[c.evidence_level], 4)
+
+
 def frontier(candidates: list[Candidate], bench: dict[str, Any]) -> list[FrontierPoint]:
     """The cost/quality frontier over ``candidates``, cheapest first: every
-    model that scores higher on the AA Intelligence Index than every candidate
+    candidate that scores higher on the AA Intelligence Index than every one
     at its price or less. The rule web/lib/benchmark-grid.ts paretoFrontier
     draws on /models: a tie on price goes to the higher index, a tie on index to
-    the cheaper price. Unmeasured models have no place on it."""
+    the cheaper price. Unmeasured models have no place on it.
+
+    A candidate at a measured effort (``evidence_level``) is placed by its
+    index at that effort and its :func:`frontier_price`, so one model can
+    hold several points, one per effort worth its price."""
     measured = [
         (c, aa)
         for c in candidates
-        for aa in [_evidence(bench, c.model_id, FRONTIER_INDEX)]
+        for aa in [_evidence(bench, c.model_id, FRONTIER_INDEX, c.evidence_level)]
         if aa is not None
     ]
-    measured.sort(key=lambda m: (m[0].blended_price_usd, -m[1], m[0].model_id))
+    measured.sort(key=lambda m: (frontier_price(m[0]), -m[1], m[0].model_id))
     out: list[FrontierPoint] = []
     best = -math.inf
     for c, aa in measured:
         if aa > best:
-            out.append(FrontierPoint(c, aa, c.blended_price_usd))
+            out.append(FrontierPoint(c, aa, frontier_price(c)))
             best = aa
     return out
 
@@ -1150,6 +1234,12 @@ def _strength(p: FrontierPoint) -> tuple[float, float, float]:
     """A point's standing for the task's category: its category quality, then
     the AA Index, then the cheaper price."""
     return (p.candidate.quality, -1.0 if p.aa_index is None else p.aa_index, -p.price_usd)
+
+
+def _nearest(p: FrontierPoint) -> tuple[float, float, float, float]:
+    """With no point meeting the task's bar: the one that falls shortest of
+    it (in its category or in general capability), then the strongest."""
+    return (-p.candidate.requirement_penalty, *_strength(p))
 
 
 # Letters from weakest to strongest.
@@ -1172,8 +1262,8 @@ def _specialist(
     """A category specialist for QUALITY: the pool model off the frontier
     whose letter in the task's category is strictly above that of ``top``
     (the strongest adequate frontier point) and whose category quality is
-    strictly above it too; the strongest such model, else None. Only for
-    SPECIALIST_CATEGORIES."""
+    strictly above it too, and that meets the task's bar itself; the
+    strongest such model, else None. Only for SPECIALIST_CATEGORIES."""
     if task.category not in SPECIALIST_CATEGORIES:
         return None
     on_front = {p.candidate.model_id for p in front}
@@ -1182,16 +1272,134 @@ def _specialist(
     stronger = [
         c
         for c in pool
-        if c.model_id not in on_front and rank(c.letter) > rank(t.letter) and c.quality > t.quality
+        if c.model_id not in on_front
+        and c.requirement_penalty == 0
+        and rank(c.letter) > rank(t.letter)
+        and c.quality > t.quality
     ]
     if not stronger:
         return None
+
+    def aa(c: Candidate) -> float:
+        v = _evidence(bench, c.model_id, FRONTIER_INDEX, c.evidence_level)
+        return -1.0 if v is None else v
+
+    # A category with no AA evidence (multimodal) rates a model's every effort
+    # alike there; the stronger effort overall then takes QUALITY.
     best = max(
-        stronger, key=lambda c: (c.quality, rank(c.letter), -c.blended_price_usd, c.model_id)
+        stronger, key=lambda c: (c.quality, rank(c.letter), aa(c), -frontier_price(c), c.model_id)
     )
-    return FrontierPoint(
-        best, _evidence(bench, best.model_id, FRONTIER_INDEX), best.blended_price_usd
+    return FrontierPoint(best, aa(best) if aa(best) >= 0 else None, frontier_price(best))
+
+
+def _allowed_levels(c: Candidate, task: Task, headroom: str, catalog: dict[str, Any]) -> list[str]:
+    """The scorer levels a pick on ``c``'s path may run at, lowest first: its
+    platform's dial (every scorer level where the catalog documents none), up
+    to the effort the best posture would run (:func:`effort_for`), which keeps
+    a capped pool below max. A free path runs at the top only."""
+    ceiling = EFFORT_LADDER.index(effort_for(replace(task, budget="best"), headroom, c.scarcity))
+    dial = native_levels(c.platform_id, c.model_id, catalog=catalog)
+    levels = dict.fromkeys(_scorer_level(n) for n in dial) if dial else dict.fromkeys(EFFORT_LADDER)
+    return [lv for lv in levels if EFFORT_LADDER.index(lv) <= ceiling]
+
+
+def _at_level(
+    c: Candidate,
+    level: str | None,
+    model: dict[str, Any],
+    task: Task,
+    bench: dict[str, Any],
+    scales: tuple[EvidenceScale | None, EvidenceScale | None],
+    ranking: Ranking,
+) -> Candidate:
+    """``c`` run at ``level`` (None: its headline row, at the posture's
+    effort): quality from AA's row at that effort, and the requirement
+    penalty, effective cost and balanced-posture score that follow from it.
+
+    The complexity's bar applies twice, in the task's category and in general
+    capability (the AA Intelligence Index, the planning measure): a hard task
+    needs a capable model as well as one that does its kind of work. A
+    category benchmark can saturate (on AA's long-context test most current
+    models score 74–85%, and an A-rated model clears the bar for hard work
+    from about 72%), and only the general figure then says a low-effort small
+    model is not up to it.
+    ``scales`` are the category's evidence scale and the planning one."""
+    quality, source, letter = _quality(model, task, bench, scales[0], level)
+    general, _, _ = _quality(model, replace(task, category="planning"), bench, scales[1], level)
+    penalty = SHORTFALL_SLOPE * max(0.0, c.requirement - min(quality, general))
+    if level is None:
+        # The headline row: only the general bar can change the candidate.
+        if round(penalty, 2) == c.requirement_penalty:
+            return c
+        return replace(
+            c,
+            requirement_penalty=round(penalty, 2),
+            score=round(c.score + c.requirement_penalty - penalty, 2),
+        )
+    mult = EFFORT_TOKEN_MULTIPLIER[level]
+    eff_cost = c.blended_price_usd * c.scarcity * mult
+    decades = math.log10(max(eff_cost, COST_FLOOR_USD) / COST_FLOOR_USD)
+    cost_pen = ranking.lam * ranking.k_points_per_decade * decades
+    nudge = 0.5 if task.category in AGENT_CATEGORIES and c.platform_id in AGENT_SURFACES else 0.0
+    return replace(
+        c,
+        quality=round(quality, 2),
+        quality_source=f"{source}@{level}",
+        letter=letter,
+        requirement_penalty=round(penalty, 2),
+        effort=level,
+        effort_multiplier=mult,
+        effective_cost_usd=round(eff_cost, 4),
+        cost_decades=round(decades, 3),
+        cost_penalty=round(cost_pen, 2),
+        score=round(quality - penalty - cost_pen + nudge, 2),
+        evidence_level=level,
     )
+
+
+def effort_settings(
+    pool: list[Candidate],
+    task: Task,
+    headroom: str,
+    ranking: Ranking,
+    *,
+    catalog: dict[str, Any],
+    benchmarks: dict[str, Any],
+) -> list[Candidate]:
+    """Every pool model at each effort it may run at (:func:`_allowed_levels`)
+    that AA has measured it at, its quality and score read at that effort
+    (:func:`_at_level`). A model's benchmark figures move with its effort
+    (GPT-6 Luna reads 21.5 on the AA Index at low and 38.1 at max), so a pick
+    is credited with what it scores at the effort it runs. A model AA names
+    no effort for keeps its headline row and the posture's effort; one AA
+    measured only at other efforts is left out."""
+    models = {str(m.get("id", "")): m for m in catalog.get("models", []) if isinstance(m, dict)}
+    bench = with_composites(benchmarks)
+    scales = (
+        _evidence_scale(catalog, bench, CATEGORY_EVIDENCE[task.category]),
+        _evidence_scale(catalog, bench, CATEGORY_EVIDENCE["planning"]),
+    )
+    out: list[Candidate] = []
+    for c in pool:
+        model = models.get(c.model_id)
+        if model is None:
+            out.append(c)
+            continue
+        measured = measured_levels(benchmarks, c.model_id)
+        levels: list[str | None] = [
+            lv for lv in _allowed_levels(c, task, headroom, catalog) if lv in measured
+        ]
+        if measured and not levels:
+            # Measured only at efforts this task does not run (Muse Spark 1.3
+            # at xhigh and max, on a row capped at medium): nothing says how it
+            # does at the ones it would.
+            continue
+        if headroom == "uncapped" and c.scarcity == 0:
+            levels = levels[-1:]  # a free path runs at its top effort
+        out.extend(
+            _at_level(c, lv, model, task, bench, scales, ranking) for lv in (levels or [None])
+        )
+    return out
 
 
 def ladder(
@@ -1208,10 +1416,13 @@ def ladder(
     - Pool: :func:`rank`'s candidates, every hard filter applied, one per model
       on its best platform; the funded ones, or all of them when the
       user-context funds nothing (an anonymous caller sees the whole catalog).
-    - Frontier: :func:`frontier` over the pool, at list price.
-    - Adequate: frontier points whose quality in the task's category meets the
-      complexity's requirement; when none does, the frontier's best for the
-      category stands alone.
+    - Frontier: :func:`frontier` over the pool, at list price (``frontier``,
+      as /models draws it), and over each pool model at every effort it may
+      run that AA measured (:func:`effort_settings`, ``points``): the picks
+      are read off the latter.
+    - Adequate: points that meet the complexity's requirement in the task's
+      category and in general capability (:func:`_at_level`); when none does,
+      the one that falls shortest of it stands alone.
     - QUALITY is the adequate point that scores highest in the category (then
       the higher AA Index, then the cheaper). COST is the cheapest adequate
       point the operator has already paid for (a subscription with headroom,
@@ -1221,9 +1432,10 @@ def ladder(
       posture, a prepaid point ahead of any per-token one; with none, the COST
       or QUALITY model at the balanced posture's effort, whichever differs
       from both other rungs.
-    - Each rung runs at :func:`effort_for` its posture (cheap / balanced /
-      best), set on its platform's own dial (:func:`native_level`) where the
-      catalog documents one. A lower rung on the same model and platform as
+    - Each rung runs at its point's measured effort, else at
+      :func:`effort_for` its posture (cheap / balanced / best), set on its
+      platform's own dial (:func:`native_level`) where the catalog documents
+      one. A lower rung on the same model and platform as
       the rung above runs at least one effort level below it
       (:func:`_below`), so the three picks stay distinct; at the dial's lowest
       level they may converge. On an `uncapped` pool every free rung runs at
@@ -1232,9 +1444,9 @@ def ladder(
     - A category specialist (:func:`_specialist`) may take QUALITY in a
       category whose evidence is not the AA Index: a pool model off the
       frontier whose letter and category quality are both strictly above
-      the strongest adequate frontier point's. It runs at the best posture's
-      effort; COST and BALANCED stay on the frontier, BALANCED then spanning
-      every adequate point above COST.
+      the strongest adequate frontier point's and that meets the bar itself.
+      COST and BALANCED stay on the frontier, BALANCED then spanning every
+      adequate point above COST.
     - Each rung carries a BACKUP from another maker (:func:`_backup_for`):
       the best adequate point on the other makers' frontier at no higher list
       price. ``backup_warning`` says why a rung has none.
@@ -1251,27 +1463,47 @@ def ladder(
         benchmarks=bench,
     )
     funded = [c for c in ranking.candidates if c.funding != "unfunded"]
-    front = frontier(funded or ranking.candidates, bench)
+    pool = funded or ranking.candidates
+    front = frontier(pool, bench)
     if not front:
         return None
+    headroom = consumption_headroom(user_context_text or "")
+    # The picks are read off the same frontier drawn over each model at every
+    # effort AA measured it at, so an effort is part of the pick it prices.
+    settings = effort_settings(pool, base, headroom, ranking, catalog=cat, benchmarks=bench)
+    # Every model AA measured only at efforts this task does not run leaves
+    # none: the picks then fall back to the models' frontier.
+    points = frontier(settings, bench) or front
 
-    adequate = [p for p in front if p.candidate.requirement_penalty == 0]
+    adequate = [p for p in points if p.candidate.requirement_penalty == 0]
     if not adequate:
-        adequate = [max(front, key=_strength)]
+        adequate = [max(points, key=_nearest)]
     top = max(adequate, key=_strength)
     span = adequate[: adequate.index(top) + 1]
-    headroom = consumption_headroom(user_context_text or "")
-    pool = funded or ranking.candidates
-    specialist = _specialist(task, pool, front, top, bench)
+    specialist = _specialist(task, settings, points, top, bench)
+    by_level = {(c.model_id, c.evidence_level): c for c in settings if c.evidence_level}
 
     def rung(tier: str, p: FrontierPoint) -> Rung:
-        t = Task(task.category, task.complexity, task.novel, TIER_BUDGET[tier])
-        effort = effort_for(t, headroom, p.candidate.scarcity)
         c = p.candidate
+        if c.evidence_level is not None:
+            effort = c.evidence_level
+        else:
+            t = Task(task.category, task.complexity, task.novel, TIER_BUDGET[tier])
+            effort = effort_for(t, headroom, c.scarcity)
         return Rung(tier, p, effort, native_level(c.platform_id, c.model_id, effort, catalog=cat))
 
     def same(a: Rung, b: Rung) -> bool:
         return a.candidate.model_id == b.candidate.model_id and a.level == b.level
+
+    def settle(r: Rung) -> Rung:
+        """A rung :func:`_below` moved to another effort reads AA's row at that
+        effort, where AA measured one."""
+        c = r.candidate
+        moved = by_level.get((c.model_id, r.effort))
+        if c.evidence_level is None or r.effort == c.evidence_level or moved is None:
+            return r
+        aa = _evidence(bench, moved.model_id, FRONTIER_INDEX, moved.evidence_level)
+        return replace(r, point=FrontierPoint(moved, aa, frontier_price(moved)))
 
     # COST is the cheapest adequate point already paid for: a subscription pool
     # with headroom or local weights (scarcity below list price) costs the
@@ -1310,10 +1542,10 @@ def ladder(
             (r for r in options if not same(r, cost_rung) and not same(r, quality_rung)),
             options[0],
         )
-    balanced_rung = _below(balanced_rung, quality_rung, cat)
-    cost_rung = _below(cost_rung, balanced_rung, cat)
+    balanced_rung = settle(_below(balanced_rung, quality_rung, cat))
+    cost_rung = settle(_below(cost_rung, balanced_rung, cat))
     rungs = {
-        r.tier: replace(r, backup=_backup_for(r, pool, task, headroom, bench, cat))
+        r.tier: replace(r, backup=_backup_for(r, settings, task, headroom, bench, cat))
         for r in (cost_rung, balanced_rung, quality_rung)
     }
     warning: str | None = None
@@ -1324,7 +1556,14 @@ def ladder(
             f"{', '.join(makers) or 'no maker'} only. Add a second maker's subscription or "
             "API key so an outage or an exhausted pool has somewhere to go."
         )
-    return Ladder(task=base, frontier=front, adequate=adequate, rungs=rungs, backup_warning=warning)
+    return Ladder(
+        task=base,
+        frontier=front,
+        adequate=adequate,
+        rungs=rungs,
+        backup_warning=warning,
+        points=points,
+    )
 
 
 def _backup_for(
@@ -1352,10 +1591,13 @@ def _backup_for(
         within = [p for p in adequate if p.price_usd <= rung.point.price_usd]
         chosen = within[-1] if within else adequate[0]
     else:
-        chosen = max(front, key=_strength)
-    t = Task(task.category, task.complexity, task.novel, TIER_BUDGET[rung.tier])
+        chosen = max(front, key=_nearest)
     c = chosen.candidate
-    effort = effort_for(t, headroom, c.scarcity)
+    if c.evidence_level is not None:
+        effort = c.evidence_level
+    else:
+        t = Task(task.category, task.complexity, task.novel, TIER_BUDGET[rung.tier])
+        effort = effort_for(t, headroom, c.scarcity)
     return Backup(chosen, effort, native_level(c.platform_id, c.model_id, effort, catalog=catalog))
 
 

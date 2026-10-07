@@ -150,10 +150,29 @@ frontier, in code (`scoring.ladder`):
    list price is what a pick draws from a capped pool. A model the frontier
    leaves out (the same price as a stronger one, or dearer and weaker) is
    never a pick.
-3. **Adequate.** Frontier points whose quality in the task's category meets
-   the complexity's requirement (no requirement penalty). When none does, the
-   frontier's best for the category stands alone.
-4. **Rungs.** QUALITY is the adequate point that scores highest in the
+3. **Efforts as points.** AA measures a reasoning model at several efforts,
+   one row each, and its figures move with the effort: GPT-6 Luna reads
+   21.5 on the AA Index at low and 38.1 at max. `docs/benchmarks.json` keeps
+   the headline row with its level (`aa_effort`) and the model's other rows
+   (`effort_variants`), and the picks are read off the same frontier drawn
+   over each pool model at every effort it may run that AA measured
+   (`effort_settings`): up to the effort the best posture would run
+   (`effort_for`, so a capped pool stays below max), only the top one on an
+   `uncapped` free path. Each such point carries its AA Index, quality and
+   score at that effort, and sits at its list price times the effort's token
+   multiplier. A model AA names no effort for keeps its headline row and runs
+   at its posture's effort; one AA measured only at efforts the task does
+   not run is left out, since nothing says how it does at the ones it would.
+4. **Adequate.** Points that meet the complexity's requirement both in the
+   task's category and in general capability (the AA Index, the measure
+   planning reads), each at the point's effort. A hard task needs a capable
+   model as well as one that does its kind of work: a category benchmark can
+   saturate (on AA's long-context test most current models score 74–85%,
+   and an A-rated model clears the high-complexity bar from about 72%), and
+   only the general figure then says a low-effort small model is not up to
+   it. When
+   no point is adequate, the one that falls shortest of the bar stands alone.
+5. **Rungs.** QUALITY is the adequate point that scores highest in the
    category. COST is the cheapest adequate point the operator has already
    paid for: a subscription pool with headroom, or local weights (scarcity
    below list price). A per-token point takes COST only when no prepaid point
@@ -162,26 +181,27 @@ frontier, in code (`scoring.ladder`):
    them that beats COST in the task's category, with the best score at the
    balanced posture, a prepaid point ahead of any per-token one (a per-token
    point stands between only when no prepaid one out-scores COST there).
-   The frontier is drawn on the AA Index, so a point above
-   COST on that axis can still trail it in the category the task needs
-   (on long-context work, GPT-6 Luna out-scores Gemini 3.8 Flash, Muse Spark
-   1.3 and Sonnet 5.5 on LCR at a fraction of their price); a BALANCED pick
-   earns its higher price only with more of the task's own quality. With no
-   such point, BALANCED is the COST or QUALITY model run at the balanced
-   posture's effort, whichever differs from both other rungs. Each rung's
-   effort is `effort_for` its posture (cheap / balanced / best).
-5. **Distinct picks.** When two adjacent rungs name the same model on the
+   The frontier is drawn on the AA Index, so a point above COST on that axis
+   can still trail it in the category the task needs; a BALANCED pick earns
+   its higher price only with more of the task's own quality. With no such
+   point, BALANCED is the COST or QUALITY model run at the balanced
+   posture's effort, whichever differs from both other rungs. A rung runs at
+   its point's measured effort, so the cheapest pick that clears the bar runs
+   a weaker model higher; a model with no measured efforts runs at
+   `effort_for` its posture (cheap / balanced / best). On Claude Max, ChatGPT
+   Pro and Google AI Pro, high-complexity long-context work reads GPT-6.1
+   Sol · Medium, Opus 5.5 · High, Opus 5.5 · XHigh.
+6. **Distinct picks.** When two adjacent rungs name the same model on the
    same platform, the lower one runs at least one effort level below the one
    above: BALANCED at most one level under QUALITY, then COST at most one
    level under BALANCED. Three columns that read the same offer no choice,
    and on a capped pool a lower effort is a real, cheaper option. Two rungs
    converge in two cases: at the dial's lowest level, and on an `uncapped`
    free path, where a lower effort saves the operator nothing (their declared
-   flat-funding posture). A novel high-complexity planning task on Claude
-   Max, ChatGPT Pro and Google AI Pro reads Sonnet 5.5 · High, Sonnet 5.5 ·
-   XHigh, Opus 5.5 · XHigh; a row with one adequate model (knowledge, high,
-   novel) runs it at three efforts.
-6. **Native levels.** Each rung's level is set on its platform's own dial.
+   flat-funding posture). A rung moved to another effort reads AA's row at
+   that effort. A row with one adequate model (knowledge, high, novel) runs
+   it at three efforts.
+7. **Native levels.** Each rung's level is set on its platform's own dial.
    `docs/catalog.json` records each access method's `effort_levels` (native
    names, lowest first) and, where the surface's docs distinguish models,
    `effort_levels_by_model`; `update/build_catalog.py` reads them only from
@@ -193,15 +213,18 @@ frontier, in code (`scoring.ladder`):
    dial's lowest: on Gemini 3.8 Flash (low / medium / high) the scorer's
    xhigh and max both read high. Step 5 compares levels on the native dial,
    so two scorer levels that land on one native level still give distinct
-   picks. A method no tracker documents (Antigravity, the chat apps, Cursor)
+   picks. The efforts a model may run (step 3) are its dial's levels, each
+   read as the scorer level at or below it. A method no tracker documents (Antigravity, the chat apps, Cursor)
    carries no levels, and its rows keep the scorer's word for the engine to
    map.
-7. **Category specialist.** In every category whose evidence is something
+8. **Category specialist.** In every category whose evidence is something
    other than the AA Intelligence Index (all but planning), a pool model off
    the frontier takes QUALITY when its letter in the task's category is
-   strictly above that of the strongest adequate frontier point and its
-   category quality is strictly higher too. It runs at the best posture's
-   effort; COST and BALANCED stay on the frontier, BALANCED then spanning
+   strictly above that of the strongest adequate frontier point, its
+   category quality is strictly higher too, and it meets the task's bar
+   itself. Of its efforts the strongest overall takes the rung (multimodal,
+   with no AA evidence, rates them alike); COST and BALANCED stay on the
+   frontier, BALANCED then spanning
    every adequate point above COST. The rung, the guard (`specialist`) and the
    pick (`specialist: true`, `specialist_category`) say so, and /recommend
    shows "Top for <category> work" under its name. The AA Index is a broad
@@ -210,20 +233,18 @@ frontier, in code (`scoring.ladder`):
    Max and ChatGPT Pro alone, Fable 5.1 (S for multimodal) takes multimodal
    QUALITY over Opus 5.5 (A); with Google AI Pro added, Gemini 3.8 Flash (S)
    tops the multimodal frontier and no specialist arises.
-8. **Backups.** Each rung carries a backup from another maker
+9. **Backups.** Each rung carries a backup from another maker
    (`Candidate.provider` differs from the rung model's): over the pool's
    models from other makers, draw the frontier and keep its adequate points;
    the backup is the adequate point with the highest list price at or below
    the rung's, else the cheapest adequate point above it, else (with no
-   adequate point) the strongest for the category. It runs at the rung's
-   posture's effort on its own platform's dial. With no other maker in the
-   pool a rung has no backup and `backup_warning` says why. On Claude Max,
-   ChatGPT Pro and Google AI Pro, Sonnet 5.5 and Opus 5.5 rungs back up to
-   GPT-6.1 Sol on Codex (GPT-6 Astra on novel rows, where only it clears the
-   bar); GPT-6 Luna rungs back up to Gemini 3.8 Flash on Antigravity from
-   medium complexity up, and on low-complexity rows to the cheapest Gemini
-   that clears the bar (Gemini 2.5 Flash or Gemini 3 Flash on the Gemini
-   app), since no other maker's model costs Luna's $0.20 or less.
+   adequate point) the one that falls shortest of the bar. Its points are
+   efforts too (step 3), so it runs at its point's measured effort, else at
+   the rung's posture's effort, on its own platform's dial. With no other
+   maker in the pool a rung has no backup and `backup_warning` says why. On
+   Claude Max, ChatGPT Pro and Google AI Pro, Sonnet 5.5 and Opus 5.5 rungs
+   back up to GPT-6.1 Sol on Codex (GPT-6 Astra on most novel rows), and
+   GPT-6 Luna rungs to Gemini 3.8 Flash on Antigravity.
 
 `ladder_table` computes the ladder for every classification (seven
 categories × three complexities, plus novel high-complexity work: 28 rows,
