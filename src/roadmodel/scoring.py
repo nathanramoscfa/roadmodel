@@ -943,12 +943,17 @@ def _funding_for(
     return "subscription", "headroom", SCARCITY["subscription-headroom"], ""
 
 
-def _platform_key(c: Candidate) -> tuple[bool, float, int, int, str]:
+def _platform_key(c: Candidate, dial: bool = False) -> tuple[bool, float, int, int, int, str]:
+    """A platform's standing for one model: funded first, then the score, the
+    subscription over a key, the agent surface, then the surface whose effort
+    dial the catalog documents for the model (``dial``), where a pick's effort
+    can be set exactly."""
     return (
         c.funding == "unfunded",
         -c.score,
         FUNDING_PREFERENCE.get(c.funding, 3),
         0 if c.platform_id in AGENT_SURFACES else 1,
+        0 if dial else 1,
         c.platform_id,
     )
 
@@ -1037,6 +1042,7 @@ def rank(
         price = blended_price(model)
 
         best_for_model: Candidate | None = None
+        best_dial = False
         for method in methods:
             supports = method.get("supports_models") or method.get("supports-models") or []
             if model_id not in supports:
@@ -1100,8 +1106,13 @@ def rank(
             )
             # One row per model: its best reachable platform. A funded platform
             # always beats an unfunded one regardless of score; equal scores go
-            # to the subscription surface over a key, then to the agent surface.
-            if best_for_model is None or _platform_key(c) < _platform_key(best_for_model):
+            # to the subscription surface over a key, then to the agent surface,
+            # then to the surface whose effort dial the catalog documents.
+            dial = native_levels(pid, model_id, catalog=cat) is not None
+            if best_for_model is None or _platform_key(c, dial) < _platform_key(
+                best_for_model, best_dial
+            ):
+                best_dial = dial
                 best_for_model = c
         if best_for_model is None:
             excluded.append(
@@ -1347,15 +1358,11 @@ def _level_with(a: Candidate, b: Candidate, category: str) -> bool:
     return a.evidence_points >= b.evidence_points - TIE_BAND.get(category, DEFAULT_TIE_BAND)
 
 
-def _tie_break(p: FrontierPoint, category: str) -> tuple[float, float, float]:
+def _tie_break(p: FrontierPoint, category: str) -> tuple[float, float]:
     """Between points level in the category: the higher AA Index, then the
-    cheaper. On speed work the lower effort comes first: throughput is the
-    same at every effort, and more reasoning only delays the answer."""
-    slower = 0.0
-    if category == "speed":
-        level = p.candidate.evidence_level or p.candidate.effort
-        slower = -float(EFFORT_LADDER.index(level)) if level in EFFORT_LADDER else 0.0
-    return (slower, -1.0 if p.aa_index is None else p.aa_index, -p.price_usd)
+    cheaper. Speed work too: QUALITY is the ladder's top, and COST and
+    BALANCED already take the lower efforts on price."""
+    return (-1.0 if p.aa_index is None else p.aa_index, -p.price_usd)
 
 
 def _top(points: list[FrontierPoint], category: str) -> FrontierPoint:

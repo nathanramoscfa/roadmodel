@@ -1273,13 +1273,36 @@ def test_level_with_reads_the_band_on_measured_evidence_and_quality_otherwise() 
     assert not scoring._level_with(replace(a, evidence_points=None, quality=70.0), a, "multimodal")
 
 
-def test_speed_ties_go_to_the_lower_effort_and_others_to_the_higher_aa_index() -> None:
+def test_speed_keeps_the_ladder_order_when_one_model_fills_the_row() -> None:
+    # Speed ties every effort of a model (its throughput is the endpoint's).
+    # QUALITY breaks the tie on the AA Index like every category, so a row
+    # one model fills reads low / medium / high instead of collapsing onto its
+    # lowest effort (which a lower-effort-first tie-break did).
     base = _ladder("planning", "medium").rungs["cost"].candidate
     fast = scoring.FrontierPoint(replace(base, evidence_level="low"), 20.0, 0.3)
     slow = scoring.FrontierPoint(replace(base, evidence_level="high"), 30.0, 0.5)
-    # Throughput is the same at every effort; more reasoning delays the answer.
-    assert max((fast, slow), key=lambda p: scoring._tie_break(p, "speed")) is fast
-    assert max((fast, slow), key=lambda p: scoring._tie_break(p, "coding")) is slow
+    assert max((fast, slow), key=lambda p: scoring._tie_break(p, "speed")) is slow
+
+
+def test_a_tie_between_platforms_goes_to_the_one_whose_dial_is_documented() -> None:
+    # Two subscription surfaces reach Sonnet at the same score; the catalog
+    # documents Claude Code's effort dial and not the other's, where a pick's
+    # effort could not be set exactly. Alphabetical order used to decide.
+    cat = copy.deepcopy(CATALOG)
+    cat["access_methods"].append(
+        {
+            "id": "aaa-surface",
+            "name": "AAA Surface",
+            "provider": "anthropic",
+            "provider_jurisdiction": "us",
+            "billing": "subscription-or-key",
+            "supports_models": ["sonnet"],
+        }
+    )
+    cat["subscription_tiers"][0]["surface_funded"].append("aaa-surface")
+    ranking = scoring.rank(scoring.Task("planning", "medium"), BOTH, catalog=cat, benchmarks=BENCH)
+    sonnet = next(c for c in ranking.candidates if c.model_id == "sonnet")
+    assert sonnet.platform_id == "claude-code"
 
 
 def test_speed_reads_throughput_from_the_headline_row_at_every_effort() -> None:

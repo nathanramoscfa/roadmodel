@@ -277,12 +277,17 @@ work reads Opus 5.5 · High for QUALITY, where the 0.016 LCR edge Opus has at
 medium effort used to put it at Medium.
 
 **Speed work.** Speed's evidence is the endpoint's throughput, the same at
-every effort, so a model's efforts read its headline figure and tie there;
-between level points the lower effort comes first, since more reasoning only
-delays the answer. Each rung then runs the least effort that clears the bar:
-on Claude Max, ChatGPT Pro and Google AI Pro low- and medium-complexity speed
-work reads Gemini 3.8 Flash · Low for QUALITY, where it used to climb to
-Medium and High.
+every effort, so a model's efforts read its headline figure and tie there.
+QUALITY breaks the tie on the AA Index as in every category, so the ladder
+keeps its order; COST and BALANCED take the lower efforts on price. On Claude
+Max, ChatGPT Pro and Google AI Pro, medium and high speed work reads Gemini
+3.8 Flash · Low, Medium, High.
+
+**Platforms.** Of the surfaces that reach a model, the best-scoring funded one
+runs it; on a tie, a subscription beats a key, an agent surface beats a chat
+app, and then a surface whose effort dial the catalog documents beats one
+whose dial it does not, since only there can a pick's effort be set exactly
+(Sonnet 5.5 runs on Claude Code, not Antigravity).
 
 **Context windows.** `docs/context-windows.json` holds each catalogued
 model's context window in tokens, OpenRouter's `context_length` (the largest
