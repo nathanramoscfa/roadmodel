@@ -273,3 +273,45 @@ def test_a_same_day_rerun_refreshes_the_days_open_pr() -> None:
         for line in wf.splitlines()
         if not line.lstrip().startswith("#") and "squash-merge:" not in line
     )
+
+
+def test_each_catalogued_model_carries_its_largest_listed_context_window(tmp_path: Path) -> None:
+    entries = [
+        {
+            **_entry("anthropic/claude-sonnet-5.5", "Anthropic: Claude Sonnet 5.5"),
+            "context_length": 200000,
+        },
+        {
+            **_entry("anthropic/claude-sonnet-5.5:extended", "Anthropic: Claude Sonnet 5.5"),
+            "context_length": 1000000,
+        },
+        {
+            **_entry("anthropic/claude-haiku-4.5", "Anthropic: Claude Haiku 4.5"),
+            "top_provider": {"context_length": 200000},
+        },
+        {**_entry("qwen/qwen3.8-max", "Qwen: Qwen3.8 Max"), "context_length": 128000},
+    ]
+    windows = orx.context_windows(entries, CATALOG_SELECTOR, {})
+    # The largest of a model's routes; an uncatalogued model is left out.
+    assert windows == {"claude-4.5-haiku": 200000, "claude-sonnet-5-5": 1000000}
+    path = tmp_path / "context-windows.json"
+    path.write_text(json.dumps({"models": {"opus-4.8": 1000000, "claude-4.5-haiku": 100000}}))
+    assert orx.write_context_windows(path, windows) is True
+    # A model no longer listed keeps its last known window; a listed one is refreshed.
+    assert json.loads(path.read_text())["models"] == {
+        "claude-4.5-haiku": 200000,
+        "claude-sonnet-5-5": 1000000,
+        "opus-4.8": 1000000,
+    }
+    assert orx.write_context_windows(path, windows) is False
+
+
+def test_the_catalog_cron_refreshes_the_context_windows() -> None:
+    wf = (REPO_ROOT / ".github" / "workflows" / "update-models.yml").read_text()
+    assert "extract_openrouter_models.py --context-windows docs/context-windows.json" in wf
+    assert "docs/context-windows.json" in wf.split("git add", 1)[1].split("\n", 1)[0]
+    committed = json.loads((REPO_ROOT / "docs" / "context-windows.json").read_text())["models"]
+    catalogued = {
+        m["id"] for m in json.loads((REPO_ROOT / "docs" / "catalog.json").read_text())["models"]
+    }
+    assert committed and set(committed) <= catalogued

@@ -185,6 +185,26 @@ def test_a_declared_profile_reaches_the_scorer_as_tables(
         assert rung["platform_id"] in {"claude-code", "claude-web"}
 
 
+def test_a_model_too_small_for_the_input_is_left_out(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen: list[list[str] | None] = []
+    real = scoring.ladder
+
+    def ladder(task: Any, text: Any, **kwargs: Any) -> Any:
+        seen.append(kwargs.get("unavailable_models"))
+        return real(task, text, **kwargs)
+
+    monkeypatch.setattr(scoring, "ladder", ladder)
+    body = {**_TASK, "unavailable_models": ["benched-model"], "input_tokens": 300000}
+    assert client.post(_PATH, json=body).status_code == 200
+    (unavailable,) = seen
+    assert unavailable is not None
+    assert unavailable[0] == "benched-model"
+    assert set(unavailable[1:]) == set(scoring.too_small_for(300000)) != set()
+    assert client.post(_PATH, json={**_TASK, "input_tokens": 0}).status_code == 422
+
+
 def test_no_frontier_is_a_422(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(scoring, "ladder", lambda *_a, **_k: None)
     response = client.post(_PATH, json=_TASK)

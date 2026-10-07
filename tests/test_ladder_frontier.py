@@ -1292,3 +1292,60 @@ def test_speed_reads_throughput_from_the_headline_row_at_every_effort() -> None:
     task = scoring.Task("speed", "low")
     at_low = scoring._evidence_points("luna", task, bench, scale, "low")
     assert at_low == scoring._evidence_points("luna", task, bench, scale)
+
+
+# Context windows: a model that cannot hold the task's material is left out
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.parametrize(
+    ("line", "tokens"),
+    [
+        ("INPUT: 240000 tokens", 240000),
+        ("INPUT: ~240k tokens", 240000),
+        ("input: 240,000 tokens", 240000),
+        ("INPUT: 1.2M tokens", 1200000),
+        ("INPUT: none", None),
+    ],
+)
+def test_the_input_line_reads_as_tokens(line: str, tokens: int | None) -> None:
+    text = f"CLASSIFICATION: long-context / high / routine\n{line}\nTIER: QUALITY\n"
+    assert recommend_module.parse_input_tokens(text) == tokens
+
+
+def test_too_small_for_keeps_a_model_with_no_known_window() -> None:
+    windows = {"a": 128000, "b": 400000, "c": 1000000}
+    # 300k of material needs 330k with the 10% headroom.
+    assert scoring.too_small_for(300000, windows) == ["a"]
+    assert scoring.too_small_for(1000000, windows) == ["a", "b", "c"]
+    assert "unlisted" not in scoring.too_small_for(10**9, windows)
+
+
+def test_a_model_too_small_for_the_material_leaves_the_row(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, table_on_fixture: dict[str, scoring.Ladder]
+) -> None:
+    # The table is computed before the engine reads the task; once it says the
+    # material is 300k tokens and Sonnet cannot hold that, the row is
+    # recomputed without it and the picks follow the new row.
+    real_ladder = scoring.ladder
+    monkeypatch.setattr(
+        scoring,
+        "ladder",
+        lambda *a, **k: real_ladder(*a, **{**k, "catalog": CATALOG, "benchmarks": BENCH}),
+    )
+    monkeypatch.setattr(scoring, "too_small_for", lambda n, windows=None: ["sonnet"])
+    blocks = {
+        "quality": _block("Opus", "Claude Code", "XHigh", "planning/medium"),
+        "balanced": _block("Sonnet", "Claude Code", "High", "planning/medium"),
+        "cost": _block("Luna", "Codex", "Medium", "planning/medium"),
+    }
+    for b in blocks.values():
+        b["input_tokens"] = "300000"
+    fake, _ = _fake(blocks)
+    monkeypatch.setattr(recommend_module, "recommend_ladder", fake)
+    result = recommend_structured_ladder("review this 500-page plan", _config(tmp_path))
+    guard = result["guard"]
+    assert guard["context"] == {"input_tokens": 300000, "excluded": ["sonnet"], "fits": True}
+    assert "balanced" in guard["rewritten"]
+    assert all(p["model"] != "Sonnet" for p in result["picks"].values())
+    assert all("input_tokens" not in p for p in result["picks"].values())
