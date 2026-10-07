@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **High-volume routine work is classified as speed.** The ladder header
+  now says that classifying, tagging, extracting or summarizing many similar
+  items is `speed` whatever accuracy it needs, with its complexity read per
+  item, and that building an agent or app is `coding` while running one is
+  `agentic`. The engine had read "Classify 10,000 support tickets ...
+  accuracy still matters" as knowledge, putting Opus 5.5 on the Quality pick
+  for 10,000 calls; it now reads speed/low (Quality: Gemini 3.8 Flash · Low).
+
 ## [0.2.73] — 2026-10-07
 
 ### Fixed
