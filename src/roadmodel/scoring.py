@@ -1505,8 +1505,9 @@ def ladder(
       COST and BALANCED stay on the frontier, BALANCED then spanning every
       adequate point above COST.
     - Each rung carries a BACKUP from another maker (:func:`_backup_for`):
-      the best adequate point on the other makers' frontier at no higher list
-      price. ``backup_warning`` says why a rung has none.
+      the cheapest point on the other makers' frontier that does the job as
+      well as the rung, else the nearest below it. ``backup_warning`` says why
+      a rung has none.
 
     None when no pool model carries an AA Index (no frontier to read)."""
     cat = catalog if catalog is not None else _cost._load_catalog()
@@ -1632,8 +1633,12 @@ def ladder(
         )
     balanced_rung = settle(_below(balanced_rung, quality_rung, cat))
     cost_rung = settle(_below(cost_rung, balanced_rung, cat))
+    # General capability is level within the same noise band, read on the
+    # AA Index's own 0–100 scale (the planning evidence).
+    gscale = _evidence_scale(cat, bench, FRONTIER_INDEX)
+    aa_band = 0.0 if gscale is None else DEFAULT_TIE_BAND * (gscale.hi - gscale.lo) / 100.0
     rungs = {
-        r.tier: replace(r, backup=_backup_for(r, settings, task, headroom, bench, cat))
+        r.tier: replace(r, backup=_backup_for(r, settings, task, headroom, bench, cat, aa_band))
         for r in (cost_rung, balanced_rung, quality_rung)
     }
     warning: str | None = None
@@ -1661,23 +1666,51 @@ def _backup_for(
     headroom: str,
     bench: dict[str, Any],
     catalog: dict[str, Any],
+    aa_band: float = 0.0,
 ) -> Backup | None:
-    """The rung's backup: the best substitute from another maker the operator
-    can run, at no higher list price.
+    """The rung's backup: the substitute from another maker that does the job
+    as well as the rung, for the least.
 
-    Over the pool's models from a maker other than the rung model's, draw the
-    frontier and keep its adequate points. The backup is the adequate point
-    with the highest list price at or below the rung's; else the cheapest
-    adequate point above it; else, with no adequate point, the frontier's
-    strongest for the category. It runs at the rung's posture's effort on its
-    own platform. None when the pool holds no other maker's model."""
+    Over the pool's models from a maker other than the rung model's, each at
+    its measured efforts, draw the frontier and keep its adequate points,
+    those already paid for ahead of per-token ones. A point matches the rung
+    when it stands level with it in the task's category
+    (:func:`_level_with`) and in general capability (an AA Index no more than
+    ``aa_band`` below). The backup is the cheapest match; with none, the
+    substitute the QUALITY rule would pick (:func:`_top`: strongest in the
+    category, a near tie going to the higher AA Index); with no adequate
+    point, the one that falls shortest of the bar. It runs at its
+    point's measured effort, else at the rung's posture's effort, on its own
+    platform. None when the pool holds no other
+    maker's model."""
     front = frontier([c for c in pool if c.provider != rung.candidate.provider], bench)
     if not front:
         return None
     adequate = [p for p in front if p.candidate.requirement_penalty == 0]
+    r = rung.point
+
+    def paid_first(points: list[FrontierPoint]) -> list[FrontierPoint]:
+        return [p for p in points if p.candidate.scarcity < 1.0] or points
+
+    def aa(p: FrontierPoint) -> float:
+        return -1.0 if p.aa_index is None else p.aa_index
+
     if adequate:
-        within = [p for p in adequate if p.price_usd <= rung.point.price_usd]
-        chosen = within[-1] if within else adequate[0]
+        # The cheapest substitute level with the rung in the category and in
+        # general capability; with none, the one the QUALITY rule would pick
+        # among the substitutes (:func:`_top`).
+        near = paid_first(adequate)
+        matches = [
+            p
+            for p in near
+            if _level_with(p.candidate, r.candidate, task.category)
+            and (r.aa_index is None or aa(p) >= r.aa_index - aa_band)
+        ]
+        chosen = (
+            min(matches, key=lambda p: (p.price_usd, -aa(p)))
+            if matches
+            else _top(near, task.category)
+        )
     else:
         chosen = max(front, key=_nearest)
     c = chosen.candidate
