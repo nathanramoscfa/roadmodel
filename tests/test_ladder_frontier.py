@@ -854,15 +854,16 @@ def test_a_category_specialist_takes_quality_and_the_frontier_keeps_the_rest() -
     # Medium multimodal needs 50, which every frontier point meets at B; the
     # strongest of them is Opus (B, 50). Astra sits off the frontier (Opus
     # beats it on the AA Index for less) and rates S (90): it takes QUALITY at
-    # the best posture's effort. COST is the cheapest frontier point, Lite, and
-    # BALANCED the best value among the points above it, Luna.
+    # the best posture's effort. COST is the cheapest frontier point, Lite.
+    # Every frontier point rates the same B for multimodal, so none above Lite
+    # adds anything in the category: BALANCED runs Lite at the balanced effort.
     lad = scoring.ladder(
         scoring.Task("multimodal", "medium"), BOTH, catalog=_specialist_catalog(), benchmarks=BENCH
     )
     assert lad is not None
     assert _picks(lad) == {
         "cost": ("Lite", "low"),
-        "balanced": ("Luna", "medium"),
+        "balanced": ("Lite", "medium"),
         "quality": ("Astra", "high"),
     }
     assert lad.rungs["quality"].specialist is True
@@ -912,7 +913,7 @@ def test_the_quality_pick_carries_the_specialist_flag(
         {
             # The engine names the frontier's top; code holds the row's specialist.
             "quality": _block("Opus", "Claude Code", "High", "multimodal/medium"),
-            "balanced": _block("Luna", "Codex", "Medium", "multimodal/medium"),
+            "balanced": _block("Lite", "Codex", "Medium", "multimodal/medium"),
             "cost": _block("Lite", "Codex", "Low", "multimodal/medium"),
         }
     )
@@ -927,3 +928,115 @@ def test_the_quality_pick_carries_the_specialist_flag(
     assert quality["specialist_category"] == "multimodal"
     assert "strongest model you can run for multimodal work" in quality["rationale"]
     assert "specialist" not in result["picks"]["cost"]
+
+
+# --------------------------------------------------------------------------- #
+# Calibration: BALANCED beats COST in the category; COST is already paid for
+# --------------------------------------------------------------------------- #
+
+
+def test_balanced_must_beat_cost_in_the_tasks_category() -> None:
+    # Long-context letters make Luna (S) stronger than Sonnet (A), which costs
+    # eight times more: on the AA-Index frontier Sonnet sits between COST
+    # (Luna) and QUALITY (Opus), but it buys less long-context quality than
+    # COST already gives. BALANCED runs Luna at the balanced effort instead.
+    cat = copy.deepcopy(CATALOG)
+    letters = {"lite": "C", "luna": "S", "sonnet": "A", "opus": "S"}
+    for m in cat["models"]:
+        if m["id"] in letters:
+            m["tiers"]["long-context"] = letters[m["id"]]
+    lad = scoring.ladder(
+        scoring.Task("long-context", "medium"), BOTH, catalog=cat, benchmarks=BENCH
+    )
+    assert lad is not None
+    picks = _picks(lad)
+    assert picks["cost"][0] == "Luna"
+    assert picks["balanced"][0] == "Luna"
+    assert picks["quality"][0] == "Opus"
+    assert picks["balanced"] != picks["cost"]
+
+
+def _with_per_token_muse() -> dict[str, Any]:
+    # Muse: cheaper than Sonnet, on the AA-Index frontier, reachable only per
+    # token through an aggregator key.
+    cat = copy.deepcopy(CATALOG)
+    cat["models"].append(_model("muse", "Muse", 0.5, 2.5, "S", "meta"))
+    cat["access_methods"].append(
+        {
+            "id": "openrouter",
+            "name": "OpenRouter",
+            "provider": "openrouter",
+            "provider_jurisdiction": "us",
+            "billing": "per-token",
+            "supports_models": ["muse"],
+        }
+    )
+    return cat
+
+
+MUSE_BENCH: dict[str, Any] = {
+    **BENCH,
+    "muse": {"evaluations": {"artificial_analysis_intelligence_index": 45}},
+}
+OPENROUTER_KEY = (
+    "\n## Active API keys\n\n| Provider | Key present | Notes |\n| --- | --- | --- |\n"
+    "| OpenRouter | Yes | aggregator |\n"
+)
+
+
+def test_cost_prefers_a_prepaid_pool_over_a_per_token_call() -> None:
+    # High planning needs 70: Muse, Sonnet and Opus clear it, and Muse is the
+    # cheapest by list price. Sonnet runs on a subscription already paid for,
+    # so it takes COST; a Muse call would be fresh spend.
+    cat = _with_per_token_muse()
+    lad = scoring.ladder(
+        scoring.Task("planning", "high"),
+        BOTH + OPENROUTER_KEY,
+        catalog=cat,
+        benchmarks=MUSE_BENCH,
+    )
+    assert lad is not None
+    assert "Muse" in [p.candidate.model_name for p in lad.adequate]
+    assert lad.rungs["cost"].candidate.model_name == "Sonnet"
+    assert lad.rungs["cost"].candidate.funding == "subscription"
+
+
+def test_a_per_token_point_takes_cost_when_nothing_prepaid_is_adequate() -> None:
+    cat = _with_per_token_muse()
+    lad = scoring.ladder(
+        scoring.Task("planning", "high"),
+        _context([]) + OPENROUTER_KEY,
+        catalog=cat,
+        benchmarks=MUSE_BENCH,
+    )
+    assert lad is not None
+    assert lad.rungs["cost"].candidate.model_name == "Muse"
+
+
+def test_speed_never_ranks_local_weights() -> None:
+    # Speed evidence is hosted throughput; a model on the operator's own
+    # machine runs at its own pace, so the local method drops out for speed
+    # and stays in for every other category.
+    cat = copy.deepcopy(CATALOG)
+    cat["access_methods"].append(
+        {
+            "id": "ollama",
+            "name": "Ollama (local)",
+            "provider": "ollama",
+            "provider_jurisdiction": "local",
+            "billing": "local",
+            "supports_models": ["lite"],
+        }
+    )
+    text = BOTH + (
+        "\n## Local models (Ollama)\n\n| Runtime | Present |\n| --- | --- |\n"
+        "| Ollama installed | Yes |\n\n"
+        "| Catalog model id | Ollama tag |\n| --- | --- |\n| lite | lite:latest |\n"
+    )
+
+    def lite_platform(category: str) -> str:
+        r = scoring.rank(scoring.Task(category, "low"), text, catalog=cat, benchmarks=BENCH)
+        return next(c.platform_id for c in r.candidates if c.model_id == "lite")
+
+    assert lite_platform("coding") == "ollama"
+    assert lite_platform("speed") == "codex-cli"

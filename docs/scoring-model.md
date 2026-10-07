@@ -93,7 +93,9 @@ every list), the operator's `platforms.allowed` / `platforms.excluded` lists
 access-method ids, such as `(none declared)`, are dropped, and an unknown id
 is reported and ignored rather than read as "allow nothing"), and the access
 method's own provider jurisdiction. Excluded models are reported with the
-reason.
+reason. For the `speed` category a local access method (`billing: local`)
+drops out: speed evidence is the hosted providers' measured throughput, and a
+model on the operator's own hardware runs at that hardware's pace.
 
 ### Backup
 
@@ -152,11 +154,20 @@ frontier, in code (`scoring.ladder`):
    the complexity's requirement (no requirement penalty). When none does, the
    frontier's best for the category stands alone.
 4. **Rungs.** QUALITY is the adequate point that scores highest in the
-   category; COST is the cheapest adequate point; BALANCED is the point
-   between them with the best score at the balanced posture, or, with none
-   between, the COST or QUALITY model run at the balanced posture's effort,
-   whichever differs from both other rungs. Each rung's effort is
-   `effort_for` its posture (cheap / balanced / best).
+   category. COST is the cheapest adequate point the operator has already
+   paid for: a subscription pool with headroom, or local weights (scarcity
+   below list price). A per-token point takes COST only when no prepaid point
+   is adequate, because a per-token call is fresh spend while the prepaid
+   pool's marginal cost is the pool itself. BALANCED is the point between
+   them that beats COST in the task's category, with the best score at the
+   balanced posture. The frontier is drawn on the AA Index, so a point above
+   COST on that axis can still trail it in the category the task needs
+   (on long-context work, GPT-6 Luna out-scores Gemini 3.8 Flash, Muse Spark
+   1.3 and Sonnet 5.5 on LCR at a fraction of their price); a BALANCED pick
+   earns its higher price only with more of the task's own quality. With no
+   such point, BALANCED is the COST or QUALITY model run at the balanced
+   posture's effort, whichever differs from both other rungs. Each rung's
+   effort is `effort_for` its posture (cheap / balanced / best).
 5. **Distinct picks.** When two adjacent rungs name the same model on the
    same platform, the lower one runs at least one effort level below the one
    above: BALANCED at most one level under QUALITY, then COST at most one

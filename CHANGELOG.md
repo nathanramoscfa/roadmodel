@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Balanced pick beats the Cost pick at the task's own work.** The
+  Cost / Balanced / Quality ladder draws its frontier on the AA Intelligence
+  Index but ranks each task by its category, so a model priced between Cost
+  and Quality could still score below Cost for that category. On
+  long-context work Balanced read Gemini 3.8 Flash, which scores below GPT-6
+  Luna on LCR at seven times the list price. Balanced now takes only a point
+  that out-scores Cost in the category; with none, it runs the Cost or
+  Quality model at the balanced effort (long-context, high: GPT-6 Luna ·
+  High).
+- **The Cost pick is already paid for.** Cost is now the cheapest adequate
+  model on a subscription with headroom or local weights; a per-token model
+  (an OpenRouter key, say) takes Cost only when no prepaid model is adequate.
+  High-complexity coding and planning had read Muse Spark 1.3 on OpenRouter
+  for Cost over Sonnet 5.5 on Claude Code.
+- **Speed tasks rank hosted models only.** Speed evidence is hosted
+  throughput, which says nothing about the operator's own machine, so the
+  local Ollama method no longer competes in the `speed` category.
+
 ## [0.2.68] — 2026-10-06
 
 ### Fixed

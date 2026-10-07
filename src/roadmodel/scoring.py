@@ -913,6 +913,10 @@ def rank(
             pj = str(method.get("provider_jurisdiction", "us")).lower()
             if pj != "local" and pj not in juris:
                 continue  # `local` runs on the operator's hardware: passes every list
+            if task.category == "speed" and str(method.get("billing", "")) == "local":
+                # Speed evidence is the hosted providers' measured throughput;
+                # the operator's own hardware runs at its own, unmeasured pace.
+                continue
             funding, state, scarcity, note = _funding_for(
                 _cost._with_model(method, model_id),
                 cat,
@@ -1210,9 +1214,12 @@ def ladder(
       category stands alone.
     - QUALITY is the adequate point that scores highest in the category (then
       the higher AA Index, then the cheaper). COST is the cheapest adequate
-      point. BALANCED is the point strictly between them with the best score
-      at the balanced posture; with none between, the COST or QUALITY model at
-      the balanced posture's effort, whichever differs from both other rungs.
+      point the operator has already paid for (a subscription with headroom,
+      or local weights); a per-token point takes COST only when no prepaid
+      point is adequate. BALANCED is the point strictly between them, stronger
+      than COST in the task's category, with the best score at the balanced
+      posture; with none, the COST or QUALITY model at the balanced posture's
+      effort, whichever differs from both other rungs.
     - Each rung runs at :func:`effort_for` its posture (cheap / balanced /
       best), set on its platform's own dial (:func:`native_level`) where the
       catalog documents one. A lower rung on the same model and platform as
@@ -1265,24 +1272,34 @@ def ladder(
     def same(a: Rung, b: Rung) -> bool:
         return a.candidate.model_id == b.candidate.model_id and a.level == b.level
 
-    cost_rung = rung("cost", span[0])
+    # COST is the cheapest adequate point already paid for: a subscription pool
+    # with headroom or local weights (scarcity below list price) costs the
+    # operator nothing new, while a per-token call is fresh spend.
+    cost_point = next((p for p in span if p.candidate.scarcity < 1.0), span[0])
+    lo = span.index(cost_point)
+    cost_rung = rung("cost", cost_point)
     quality_rung = (
         replace(rung("quality", specialist), specialist=True)
         if specialist is not None
         else rung("quality", top)
     )
     # With a specialist on QUALITY, BALANCED spans every adequate frontier point
-    # above COST, the frontier's strongest included.
-    between = span[1:] if specialist is not None else span[1:-1]
+    # above COST, the frontier's strongest included. A BALANCED point earns its
+    # higher price only by beating COST in the task's own category: the
+    # frontier is drawn on the AA Index, and a point above COST on that axis
+    # can still trail it in the category the task needs.
+    between = span[lo + 1 :] if specialist is not None else span[lo + 1 : -1]
+    between = [p for p in between if p.candidate.quality > cost_point.candidate.quality]
     if between:
         balanced_rung = rung(
             "balanced", max(between, key=lambda p: (p.candidate.score, -p.price_usd))
         )
     else:
-        # Two adequate points or one: BALANCED runs one of them at the balanced
-        # posture, whichever differs from both other rungs; it converges only
-        # when neither does. Beside a specialist it stays on the frontier.
-        options = [rung("balanced", span[0])]
+        # No point between COST and QUALITY beats COST in the category:
+        # BALANCED runs one of those two at the balanced posture, whichever
+        # differs from both other rungs; it converges only when neither does.
+        # Beside a specialist it stays on the frontier.
+        options = [rung("balanced", cost_point)]
         if specialist is None:
             options.append(rung("balanced", top))
         balanced_rung = next(
