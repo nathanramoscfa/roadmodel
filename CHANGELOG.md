@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.68] — 2026-10-06
+
+### Fixed
+
+- **Windows unattended upgrades survive the virtual-environment handover.**
+  Python's Windows venv launcher inserts an intermediate process. The updater
+  now recognizes that process chain when transferring its existing lock to
+  the released updater, while still rejecting unrelated concurrent runs.
+
 ## [0.2.67] — 2026-10-06
 
 ### Added
