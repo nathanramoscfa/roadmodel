@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The speed ladder keeps its order.** Breaking speed ties toward the lower
+  effort (0.2.72) put Quality at a model's lowest effort; when one model
+  filled the row, the ladder then held Balanced and Cost below it and all
+  three read Gemini 3.8 Flash · Low. Quality now breaks the tie on the AA
+  Index as in every category: medium speed work reads Gemini 3.8 Flash · Low,
+  Medium, High. Speed still reads the endpoint's throughput at every effort.
+- **A model runs where its effort dial is documented.** With Antigravity now
+  serving Sonnet 5.5, Claude Code and Antigravity tied for it and the tie
+  fell to alphabetical order, moving Sonnet picks to Antigravity. On a tie
+  the surface whose effort dial the catalog documents now wins.
+
 ## [0.2.74] — 2026-10-07
 
 ### Fixed
