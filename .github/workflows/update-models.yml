@@ -394,7 +394,7 @@ jobs:
           fi
           git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json docs/context-windows.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
           git commit -m "Automated catalog refresh: ${DATE}" -m "${summary}${warnings}"
-          body="$(printf '## Summary\n\n%s%s\n\n---\n\nThis PR was opened automatically by the daily catalog-refresh cron in `.github/workflows/update-models.yml`. **Human review required before merge (audit L4):** the catalog carries free-text prose fields (best-for, notes, pricing-notes) sourced from external provider pages that the deterministic gates (G4 price provenance, conformance A-F, schema tests) do NOT fully constrain — so a compromised/MITM-d page could inject prose that ships to the published selector + live recommender. Review the diff (especially prose changes), then squash-merge: `gh pr merge --squash --delete-branch <PR>`.' "$summary" "$warnings")"
+          body="$(printf '## Summary\n\n%s%s\n\n---\n\nThis PR was opened automatically by the daily catalog-refresh cron in `.github/workflows/update-models.yml` and merges itself when CI is green. The review runs in code before it opens: the prose guard quarantines added text carrying URLs, markup, invisible characters or model-addressed instructions; the rating guard reverts letter edits that break the rating rules; G1-G4 lock schema, prices and their provenance; the generated prose fields are rewritten from data daily.' "$summary" "$warnings")"
           # A same-day re-run (a dispatch after the scheduled run) finds the day's
           # branch already on origin: its fresher refresh replaces that one, and
           # the open PR for the branch takes the new body. A plain push would be
@@ -407,20 +407,23 @@ jobs:
           PR_URL="$(gh pr list --head "$BRANCH" --state open --json url -q '.[0].url' || true)"
           if [ -n "${PR_URL}" ]; then
             gh pr edit "${PR_URL}" --body "${body}"
-            echo "Refreshed (awaiting human review): $PR_URL"
+            echo "Refreshed: $PR_URL"
           else
             PR_URL="$(gh pr create \
               --base main \
               --head "$BRANCH" \
               --title "Automated catalog refresh: ${DATE}" \
               --body "${body}")"
-            echo "Opened (awaiting human review): $PR_URL"
+            echo "Opened: $PR_URL"
           fi
-          # Auto-merge intentionally NOT enabled (audit L4): the catalog's
-          # free-text prose fields are not covered by the deterministic gates,
-          # so a human reviews the diff before this reaches main + PyPI + the
-          # live recommender. The structured price/schema fields ARE gate-locked
-          # (G4 + conformance + tests), so review can focus on the prose.
+          # Merges itself when green, like the four tracker crons. The review
+          # runs above, in code: prose_guard quarantines injected text,
+          # rating_guard enforces the letter rules, and G1-G4 lock schema and
+          # prices. Arming auto-merge also opts the PR into unstick-cron-prs.yml,
+          # which rebases it when main moves; a red PR stays open for cron-health
+          # to flag. A merge changes /models at once and reaches the recommender
+          # with the next release.
+          gh pr merge --auto --squash --delete-branch "$PR_URL"
 
       - name: Promote source-hash for next run
         # Only promote staged hash → canonical if every prior step
