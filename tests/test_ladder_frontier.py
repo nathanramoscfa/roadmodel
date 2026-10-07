@@ -1388,3 +1388,27 @@ def test_the_header_classifies_high_volume_routine_work_as_speed() -> None:
     assert "its complexity is how hard ONE item is" in header
     # Building an agent is coding; the model that runs as one is agentic.
     assert "Building an agent or an app (writing its code) is `coding`" in header
+
+
+# --------------------------------------------------------------------------- #
+# `roadmodel score` (scoring.rank) reads each model at its best measured effort
+# --------------------------------------------------------------------------- #
+
+
+def test_rank_stands_each_model_at_its_best_measured_effort() -> None:
+    task = scoring.Task("planning", "medium")
+    bench = _bench_with_levels(sonnet={"aa_effort": "max"})
+    ranking = scoring.rank(task, BOTH, catalog=CATALOG, benchmarks=bench)
+    luna = next(c for c in ranking.candidates if c.model_id == "luna")
+    # Of the efforts Luna may run here (up to xhigh), only xhigh clears the
+    # bar (50.5 against 50), and it scores best.
+    assert (luna.evidence_level, luna.effort, luna.requirement_penalty) == ("xhigh", "xhigh", 0.0)
+    # Sonnet is measured only at max, which a capped pool does not run here.
+    assert "sonnet" not in {c.model_id for c in ranking.candidates}
+    assert {"model": "sonnet", "reason": "measured only at efforts this task does not run"} in (
+        ranking.excluded
+    )
+    # The ladder's own pool stands on the headline rows; it expands them itself.
+    flat = scoring.rank(task, BOTH, catalog=CATALOG, benchmarks=bench, effort_aware=False)
+    luna_flat = next(c for c in flat.candidates if c.model_id == "luna")
+    assert (luna_flat.evidence_level, luna_flat.effort) == (None, "high")
