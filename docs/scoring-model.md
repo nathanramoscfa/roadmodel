@@ -17,6 +17,13 @@ roadmodel score --category planning --complexity medium --budget cheap --output 
 or from an agent via the MCP tool `score_candidates(category, complexity,
 novel, budget, top)` — neither needs a provider key.
 
+Both read each model at the effort that scores best for the task's posture,
+among those it may run that Artificial Analysis measured (the same settings
+the Cost / Balanced / Quality ladder reads, below): its quality, requirement
+penalty and cost at that effort, and a model measured only at efforts the
+task does not run is left out and listed under `excluded`. A model AA names no
+effort for stands on its headline row at its posture's effort.
+
 ## The formula
 
 For every catalog model, reached through its best funded access method:
