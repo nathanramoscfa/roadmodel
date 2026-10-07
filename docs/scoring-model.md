@@ -269,6 +269,14 @@ benchmarks. On Claude Max, ChatGPT Pro and Google AI Pro, medium long-context
 work reads Opus 5.5 · High for QUALITY, where the 0.016 LCR edge Opus has at
 medium effort used to put it at Medium.
 
+**Speed work.** Speed's evidence is the endpoint's throughput, the same at
+every effort, so a model's efforts read its headline figure and tie there;
+between level points the lower effort comes first, since more reasoning only
+delays the answer. Each rung then runs the least effort that clears the bar:
+on Claude Max, ChatGPT Pro and Google AI Pro low- and medium-complexity speed
+work reads Gemini 3.8 Flash · Low for QUALITY, where it used to climb to
+Medium and High.
+
 `ladder_table` computes the ladder for every classification (seven
 categories × three complexities, plus novel high-complexity work: 28 rows,
 about 0.4 s). In ladder mode the recommender appends the table to the prompt;
