@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.72] — 2026-10-07
+
 ### Added
 
 - **A model must be able to hold the task's material.** The catalog cron
