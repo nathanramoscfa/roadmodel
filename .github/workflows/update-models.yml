@@ -236,7 +236,10 @@ jobs:
           # (openrouter.ai/api/v1/models); a catalogued one belongs on the
           # openrouter method. Same pattern as the Codex sync: deterministic,
           # additive, fail-open on fetch errors (update/extract_openrouter_models.py).
-          openrouter_ids="$(python update/extract_openrouter_models.py | paste -sd, - || true)"
+          # The same fetch refreshes docs/context-windows.json, each model's
+          # context window, which the scorer reads to keep a model out of a task
+          # whose material it cannot hold.
+          openrouter_ids="$(python update/extract_openrouter_models.py --context-windows docs/context-windows.json | paste -sd, - || true)"
           if [ -n "${openrouter_ids}" ]; then
             python update/merge_catalog.py --sync-method openrouter --ids "${openrouter_ids}"
           fi
@@ -389,7 +392,7 @@ jobs:
           if [ -s update/.last-dispositions.md ]; then
             warnings="${warnings}${nl}${nl}$(cat update/.last-dispositions.md)"
           fi
-          git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
+          git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json docs/context-windows.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
           git commit -m "Automated catalog refresh: ${DATE}" -m "${summary}${warnings}"
           body="$(printf '## Summary\n\n%s%s\n\n---\n\nThis PR was opened automatically by the daily catalog-refresh cron in `.github/workflows/update-models.yml`. **Human review required before merge (audit L4):** the catalog carries free-text prose fields (best-for, notes, pricing-notes) sourced from external provider pages that the deterministic gates (G4 price provenance, conformance A-F, schema tests) do NOT fully constrain — so a compromised/MITM-d page could inject prose that ships to the published selector + live recommender. Review the diff (especially prose changes), then squash-merge: `gh pr merge --squash --delete-branch <PR>`.' "$summary" "$warnings")"
           # A same-day re-run (a dispatch after the scheduled run) finds the day's

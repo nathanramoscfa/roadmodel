@@ -215,6 +215,10 @@ FUNDING_PREFERENCE: Final[dict[str, int]] = {
 BASELINE_JURISDICTIONS: Final[tuple[str, ...]] = ("us", "eu", "uk", "ca", "au", "jp", "kr")
 
 BUNDLED_BENCHMARKS_PATH = resources.files("roadmodel.data") / "benchmarks.json"
+BUNDLED_CONTEXT_PATH = resources.files("roadmodel.data") / "context-windows.json"
+# A context window must hold the task's material plus the instructions and the
+# answer: 10% above the material's own size.
+CONTEXT_HEADROOM: Final[float] = 1.1
 
 
 # --------------------------------------------------------------------------- #
@@ -311,6 +315,28 @@ def _load_benchmarks() -> dict[str, Any]:
         return {}
     models = raw.get("models") if isinstance(raw, dict) else None
     return models if isinstance(models, dict) else {}
+
+
+def context_windows() -> dict[str, int]:
+    """Each catalog model's context window in tokens (docs/context-windows.json,
+    from OpenRouter's listing); empty when the file is missing or unreadable."""
+    try:
+        raw = json.loads(BUNDLED_CONTEXT_PATH.read_text(encoding="utf-8"))
+    except (FileNotFoundError, OSError, ValueError):
+        return {}
+    models = raw.get("models") if isinstance(raw, dict) else None
+    if not isinstance(models, dict):
+        return {}
+    return {str(k): v for k, v in models.items() if isinstance(v, int) and v > 0}
+
+
+def too_small_for(input_tokens: int, windows: dict[str, int] | None = None) -> list[str]:
+    """The catalog ids whose context window cannot hold ``input_tokens`` of
+    material with CONTEXT_HEADROOM to spare. A model with no known window is
+    kept: nothing says it cannot."""
+    known = windows if windows is not None else context_windows()
+    need = input_tokens * CONTEXT_HEADROOM
+    return sorted(mid for mid, n in known.items() if n < need)
 
 
 def with_composites(bench: dict[str, Any]) -> dict[str, Any]:

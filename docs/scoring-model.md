@@ -277,6 +277,19 @@ on Claude Max, ChatGPT Pro and Google AI Pro low- and medium-complexity speed
 work reads Gemini 3.8 Flash · Low for QUALITY, where it used to climb to
 Medium and High.
 
+**Context windows.** `docs/context-windows.json` holds each catalogued
+model's context window in tokens, OpenRouter's `context_length` (the largest
+of its routes), refreshed by the catalog cron
+(`update/extract_openrouter_models.py --context-windows`). When the task says
+how much material the model must read, the engine adds an `INPUT: <n> tokens`
+line after its classification (about 600 tokens a page, 1.3 a word, 10 a line
+of code); `scoring.too_small_for` names the models whose window cannot hold it
+with 10% to spare (`CONTEXT_HEADROOM`), and the row is recomputed without them
+(`_fit_row_to_input`; the guard's `context` reports the size and the models
+left out). A model with no known window stays in. The keyless `/v1/score`
+takes the same size as `input_tokens`. A surface may cap a model below its
+API window; the file records the model's own.
+
 `ladder_table` computes the ladder for every classification (seven
 categories × three complexities, plus novel high-complexity work: 28 rows,
 about 0.4 s). In ladder mode the recommender appends the table to the prompt;
