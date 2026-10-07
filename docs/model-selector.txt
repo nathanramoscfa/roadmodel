@@ -469,6 +469,11 @@
       `claude agents` to a busy background session now applies right
       away. 2.1.291 is a hotfix for two regressions. Neither release
       changes the `/effort` vocabulary or the extended-thinking controls.
+      2.1.292 adds an `effort` parameter to the Agent tool, so a sub-agent
+      runs at the effort level you ask for. It also fixes cloud sessions
+      forgetting the client's thinking setting after a container restart.
+      The `/effort` vocabulary and the extended-thinking controls are
+      unchanged.
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
       `reasoning_effort` knob — `low`, `medium`, `high`, `xhigh`, `max`,
       `ultra`. Codex's plan-mode `plan_mode_reasoning_effort` variant
