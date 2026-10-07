@@ -241,17 +241,21 @@ frontier, in code (`scoring.ladder`):
    QUALITY over Opus 5.5 (A); with Google AI Pro added, Gemini 3.8 Flash (S)
    tops the multimodal frontier and no specialist arises.
 9. **Backups.** Each rung carries a backup from another maker
-   (`Candidate.provider` differs from the rung model's): over the pool's
-   models from other makers, draw the frontier and keep its adequate points;
-   the backup is the adequate point with the highest list price at or below
-   the rung's, else the cheapest adequate point above it, else (with no
-   adequate point) the one that falls shortest of the bar. Its points are
-   efforts too (step 3), so it runs at its point's measured effort, else at
+   (`Candidate.provider` differs from the rung model's), chosen to do the
+   rung's job: over the pool's models from other makers, each at its
+   measured efforts (step 3), draw the frontier and keep its adequate
+   points, those already paid for ahead of per-token ones. A point matches
+   the rung when it stands level with it in the task's category and in
+   general capability (an AA Index within the same noise band, see *Near
+   ties*). The backup is the cheapest match; with none, the substitute the
+   QUALITY rule would pick among them (strongest in the category, a near
+   tie going to the higher AA Index); with no adequate point, the one that
+   falls shortest of the bar. It runs at its point's measured effort, else at
    the rung's posture's effort, on its own platform's dial. With no other
    maker in the pool a rung has no backup and `backup_warning` says why. On
-   Claude Max, ChatGPT Pro and Google AI Pro, Sonnet 5.5 and Opus 5.5 rungs
-   back up to GPT-6.1 Sol on Codex (GPT-6 Astra on most novel rows), and
-   GPT-6 Luna rungs to Gemini 3.8 Flash on Antigravity.
+   Claude Max, ChatGPT Pro and Google AI Pro, Opus 5.5 rungs mostly back up
+   to GPT-6 Astra (GPT-6.1 Sol on long-context work), GPT-6.1 Sol rungs to
+   Sonnet 5.5 or Opus 5.5, and GPT-6 Luna rungs to Gemini 3.8 Flash.
 
 **Near ties.** A benchmark separates models only as finely as its own
 run-to-run noise. Each candidate carries its category evidence on the

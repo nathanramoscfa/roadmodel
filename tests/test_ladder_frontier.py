@@ -748,24 +748,25 @@ def _backups(lad: scoring.Ladder) -> dict[str, tuple[str, str, str] | None]:
     }
 
 
-def test_each_rung_backs_up_to_the_other_makers_best_at_no_higher_price() -> None:
+def test_each_rung_backs_up_to_the_cheapest_match_else_the_strongest_substitute() -> None:
     # Medium planning needs 50. Codex's frontier is Lite, Luna, Astra, of which
-    # Luna (57.9) and Astra (85.9) clear it: Sonnet ($4) and Opus ($8) back up
-    # to Luna, the dearest at or below their price. Nothing on Claude Code's
-    # frontier (Sonnet, Opus) costs Luna's $0.50 or less, so Luna backs up to
-    # the cheapest adequate point above it, Sonnet. Each runs at its rung's
-    # posture's effort on its own dial.
+    # Luna (AA 40) and Astra (52) clear it. Nothing there stands level with
+    # Sonnet (55) or Opus (58), so both back up to the strongest substitute,
+    # Astra. Both of Claude Code's points (Sonnet, Opus) match Luna, so Luna
+    # backs up to the cheaper, Sonnet. Each runs at its rung's posture's effort
+    # on its own dial.
     lad = _ladder("planning", "medium")
     assert _backups(lad) == {
         "cost": ("Sonnet", "Claude Code", "medium"),
-        "balanced": ("Luna", "Codex", "high"),
-        "quality": ("Luna", "Codex", "xhigh"),
+        "balanced": ("Astra", "Codex", "high"),
+        "quality": ("Astra", "Codex", "xhigh"),
     }
     assert lad.backup_warning is None
 
 
-def test_a_backup_above_the_rungs_price_only_when_nothing_cheaper_clears_the_bar() -> None:
-    # High planning needs 70: only Astra ($20) clears it on Codex's frontier.
+def test_only_a_substitute_that_clears_the_bar_backs_up_a_hard_rung() -> None:
+    # High planning needs 70: only Astra clears it on Codex's frontier, so
+    # every rung backs up to it, whatever its price.
     lad = _ladder("planning", "high")
     assert {b[0] for b in _backups(lad).values() if b} == {"Astra"}
 
@@ -795,8 +796,8 @@ def test_the_table_and_json_carry_each_rungs_backup() -> None:
     text = scoring.render_ladder_table({"planning/medium": lad})
     assert (
         "planning/medium: COST = Luna @ Codex · medium, backup Sonnet @ Claude Code | "
-        "BALANCED = Sonnet @ Claude Code · high, backup Luna @ Codex | "
-        "QUALITY = Opus @ Claude Code · xhigh, backup Luna @ Codex"
+        "BALANCED = Sonnet @ Claude Code · high, backup Astra @ Codex | "
+        "QUALITY = Opus @ Claude Code · xhigh, backup Astra @ Codex"
     ) in text
     payload = json.loads(json.dumps(lad.to_dict()))
     assert payload["rungs"]["cost"]["backup"]["model_id"] == "sonnet"
@@ -811,8 +812,8 @@ def test_a_backup_that_differs_from_the_row_is_replaced_and_planned(
         "balanced": _block("Sonnet", "Claude Code", "High", "planning/medium"),
         "cost": _block("Luna", "Codex", "Medium", "planning/medium"),
     }
-    blocks["quality"]["backup"] = "Astra"  # off this rung's price: Luna is the row's
-    blocks["balanced"]["backup"] = "Luna"  # the row's already
+    blocks["quality"]["backup"] = "Luna"  # weaker than the row's Astra
+    blocks["balanced"]["backup"] = "Astra"  # the row's already
     blocks["cost"]["backup"] = "Opus"  # dearer than the row's Sonnet
     fake, _ = _fake(blocks)
     monkeypatch.setattr(recommend_module, "recommend_ladder", fake)
@@ -821,8 +822,8 @@ def test_a_backup_that_differs_from_the_row_is_replaced_and_planned(
     assert result["guard"]["backup_set"] == ["quality", "cost"]
     picks = result["picks"]
     assert {t: p["backup"] for t, p in picks.items()} == {
-        "quality": "Luna",
-        "balanced": "Luna",
+        "quality": "Astra",
+        "balanced": "Astra",
         "cost": "Sonnet",
     }
     assert picks["cost"]["backup_plan"] == {
