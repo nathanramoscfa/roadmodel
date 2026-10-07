@@ -14,6 +14,7 @@ import type { MultiRecommendResponse, PriorityRecommendation } from "@/lib/api";
 import { cents, runCostNote, seconds } from "@/lib/engine-format";
 import type { BudgetPriority } from "@/lib/profile";
 import type { EngineOption } from "@/lib/recommend-engines";
+import { pickEffort } from "@/lib/pick-effort";
 import { rowForPick, type PicksData } from "@/lib/recommend-picks";
 import { BenchmarkReference } from "./BenchmarkReference";
 import { EnginePicker } from "./EnginePicker";
@@ -259,7 +260,12 @@ export function RecommendResult({
           <PicksChart
             rows={rows}
             pool={picks.pool}
-            picks={recs.map((r) => ({ priority: r.priority, model: r.model, row: rowForPick(picks, r.model) }))}
+            picks={recs.map((r) => ({
+              priority: r.priority,
+              model: r.model,
+              row: rowForPick(picks, r.model),
+              level: pickEffort(r.settings),
+            }))}
             selected={selected}
             onSelect={setSelected}
           />
