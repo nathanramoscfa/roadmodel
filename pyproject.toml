@@ -91,6 +91,7 @@ include = [
     "docs/user-context.example.md",
     "docs/catalog.json",
     "docs/benchmarks.json",
+    "docs/context-windows.json",
     "scripts/update_projects.py",
     "scripts/agent_context.py",
     "scripts/agent_rules.py",

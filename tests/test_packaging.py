@@ -24,6 +24,7 @@ BUNDLED_DOCS = (
     "user-context.example.md",
     "catalog.json",
     "benchmarks.json",
+    "context-windows.json",
 )
 
 
