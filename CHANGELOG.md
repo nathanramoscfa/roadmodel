@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A model must be able to hold the task's material.** The catalog cron
+  now records each model's context window (`docs/context-windows.json`, from
+  OpenRouter's listing; 54 of 57 models). When a task says how much it gives
+  the model to read ("a 400-page contract"), the engine states the size on an
+  `INPUT:` line and the picks leave out every model whose window cannot hold
+  it with 10% to spare (a 300k-token contract rules out Haiku 4.5, the
+  gpt-oss models, Kimi K2.7, Codestral and the smaller Mistral and GLM
+  models). The keyless `/v1/score` takes the size as `input_tokens`.
+
 ### Fixed
 
 - **Speed work runs the least effort that clears the bar.** Throughput is

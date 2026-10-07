@@ -79,6 +79,10 @@ class ScoreRequest(BaseModel):
     # scorer's availability is the forwarded list alone (as the engine's
     # frontier table's is), so the flag is accepted and has no further effect.
     availability_authoritative: bool = False
+    # The size in tokens of the material the task gives the model to read,
+    # when known: a model whose context window cannot hold it is left out
+    # (scoring.too_small_for).
+    input_tokens: int | None = Field(default=None, gt=0)
 
     model_config = ConfigDict(extra="forbid")
 
@@ -224,9 +228,10 @@ router = APIRouter()
 @router.post("/v1/score", response_model=ScoreResponse, dependencies=[Depends(require_bearer)])
 def score_endpoint(req: ScoreRequest) -> ScoreResponse:
     task = scoring.Task(req.category, req.complexity, req.novel, req.budget_priority)
-    lad = scoring.ladder(
-        task, scoring_text(req), unavailable_models=list(req.unavailable_models) or None
-    )
+    unavailable = list(req.unavailable_models)
+    if req.input_tokens is not None:
+        unavailable += scoring.too_small_for(req.input_tokens)
+    lad = scoring.ladder(task, scoring_text(req), unavailable_models=unavailable or None)
     if lad is None:
         # The declared filters leave no model with an AA Index: no frontier.
         raise HTTPException(status_code=422, detail="no_frontier")

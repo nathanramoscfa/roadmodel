@@ -485,7 +485,10 @@ _SAAS_LADDER_TABLE_HEADER: Final = (
     "standard derivation) is `routine` however many steps it takes, and its "
     "complexity is how hard that known result is to reproduce. Planning, "
     "architecture, security hardening, design and refactors are `routine` at any "
-    "difficulty, as is every other task.\n"
+    "difficulty, as is every other task. When the task says how much material the "
+    "model must read (pages, words, lines of code, files), the next line is "
+    "`INPUT: <n> tokens`, your estimate of that material at about 600 tokens per "
+    "page, 1.3 per word and 10 per line of code; leave the line out otherwise.\n"
     "2. Three blocks per the <output-format> 'Ladder mode' spec: TIER: QUALITY, "
     "TIER: BALANCED and TIER: COST, in that order.\n\n"
     "Obey strictly:\n"
@@ -671,6 +674,26 @@ _CLASSIFICATION_RE: Final = re.compile(
 )
 
 
+# The table-mode ladder's optional size line, after CLASSIFICATION:
+# `INPUT: 240000 tokens` (also `~240k tokens`, `240,000 tokens`).
+_INPUT_RE: Final = re.compile(
+    r"^[ \t]*INPUT:[ \t]*~?[ \t]*(?P<n>\d[\d,_]*(?:\.\d+)?)[ \t]*(?P<unit>[km])?[ \t]*tokens?\b",
+    flags=re.IGNORECASE | re.MULTILINE,
+)
+
+
+def parse_input_tokens(text: str) -> int | None:
+    """The size in tokens of the material a table-mode response says the task
+    gives the model to read (its INPUT line), or None when it declares none."""
+    match = _INPUT_RE.search(text)
+    if not match:
+        return None
+    value = float(match.group("n").replace(",", "").replace("_", ""))
+    scale = {"k": 1_000, "m": 1_000_000}.get((match.group("unit") or "").lower(), 1)
+    tokens = int(value * scale)
+    return tokens if tokens > 0 else None
+
+
 def parse_classification(text: str) -> str | None:
     """The ladder-table key (``scoring.table_key``) a table-mode response
     declares on its CLASSIFICATION line, or None when it declares none or names
@@ -781,7 +804,9 @@ def recommend_ladder(
 
     With ``ladder_table`` (scoring.render_ladder_table) the engine copies the
     picks from the table instead of choosing them, and each base dict carries
-    the ``classification`` key the response declared, when it declared one."""
+    the ``classification`` key the response declared, when it declared one,
+    and ``input_tokens``, the size of the task's material its INPUT line
+    declared."""
     resolved_user_context = (
         user_context_text
         if user_context_text is not None
@@ -807,9 +832,12 @@ def recommend_ladder(
     )
     parsed = parse_ladder_response(raw_response)
     classification = parse_classification(raw_response) if ladder_table else None
-    if classification:
-        for base in parsed.values():
+    input_tokens = parse_input_tokens(raw_response) if ladder_table else None
+    for base in parsed.values():
+        if classification:
             base["classification"] = classification
+        if input_tokens:
+            base["input_tokens"] = str(input_tokens)
     return parsed
 
 
@@ -1450,6 +1478,32 @@ def _ladder_table_for(
         return {}
 
 
+def _fit_row_to_input(
+    row: scoring.Ladder,
+    input_tokens: int,
+    scoring_text: str,
+    unavailable_models: list[str] | None,
+) -> tuple[scoring.Ladder, dict[str, Any]]:
+    """The row with every model whose context window cannot hold the task's
+    material left out (scoring.too_small_for), and what the check found. The
+    table is computed before the engine reads the task, so the row is
+    recomputed here when a model its frontier draws on is too small; with
+    none left that fits, the row stands and ``fits`` says so."""
+    small = set(scoring.too_small_for(input_tokens))
+    drawn = {p.candidate.model_id for p in [*row.frontier, *row.points]}
+    excluded = sorted(small & drawn)
+    report: dict[str, Any] = {"input_tokens": input_tokens, "excluded": excluded, "fits": True}
+    if not excluded:
+        return row, report
+    refit = scoring.ladder(
+        row.task, scoring_text, unavailable_models=[*(unavailable_models or []), *sorted(small)]
+    )
+    if refit is None:
+        report["fits"] = False
+        return row, report
+    return refit, report
+
+
 def recommend_structured_ladder(
     prompt: str,
     config: Config,
@@ -1521,10 +1575,17 @@ def recommend_structured_ladder(
         ladder_table=scoring.render_ladder_table(table) or None,
     )
     frontier_guard: dict[str, Any] | None = None
+    fitted: scoring.Ladder | None = None
     if table:
         key, found = _table_row_key(ladder, table)
         if key is not None:
             row = table[key]
+            context: dict[str, Any] | None = None
+            tokens = next(
+                (int(b["input_tokens"]) for b in ladder.values() if b.get("input_tokens")), None
+            )
+            if tokens is not None and scoring_text is not None:
+                row, context = _fit_row_to_input(row, tokens, scoring_text, unavailable_models)
             frontier_guard = {
                 "mode": "frontier",
                 "classification": key,
@@ -1538,11 +1599,14 @@ def recommend_structured_ladder(
                     if row.rungs["quality"].specialist
                     else None
                 ),
+                "context": context,
             }
+            fitted = row
         else:
             frontier_guard = {"mode": "frontier", "classification": None, "found": found}
     for base in ladder.values():
         base.pop("classification", None)
+        base.pop("input_tokens", None)
     picks = {
         tier: _base_to_payload(
             ladder[tier],
@@ -1551,9 +1615,9 @@ def recommend_structured_ladder(
         )
         for tier in _LADDER_TIERS
     }
-    if frontier_guard is not None and frontier_guard["classification"] is not None:
-        _attach_backup_plans(picks, table[frontier_guard["classification"]])
-        _mark_specialist(picks, table[frontier_guard["classification"]])
+    if fitted is not None:
+        _attach_backup_plans(picks, fitted)
+        _mark_specialist(picks, fitted)
     guard = _ladder_tier_guard(picks)
     if frontier_guard is not None:
         guard.update(frontier_guard)
