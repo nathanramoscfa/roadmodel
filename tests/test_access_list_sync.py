@@ -267,12 +267,10 @@ def test_a_same_day_rerun_refreshes_the_days_open_pr() -> None:
     assert 'git push --force -u origin "$BRANCH"' in wf
     assert 'gh pr list --head "$BRANCH" --state open' in wf
     assert 'gh pr edit "${PR_URL}" --body "${body}"' in wf
-    # The human-review gate stays: nothing in the catalog cron merges its PR.
-    assert "gh pr merge" not in "\n".join(
-        line
-        for line in wf.splitlines()
-        if not line.lstrip().startswith("#") and "squash-merge:" not in line
-    )
+    # The PR merges itself when green, like the four tracker crons: auto-merge
+    # is armed once the PR exists (opened or refreshed).
+    assert 'gh pr merge --auto --squash --delete-branch "$PR_URL"' in wf
+    assert "Human review required" not in wf
 
 
 def test_each_catalogued_model_carries_its_largest_listed_context_window(tmp_path: Path) -> None:
