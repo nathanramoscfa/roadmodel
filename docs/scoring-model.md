@@ -160,7 +160,9 @@ frontier, in code (`scoring.ladder`):
    is adequate, because a per-token call is fresh spend while the prepaid
    pool's marginal cost is the pool itself. BALANCED is the point between
    them that beats COST in the task's category, with the best score at the
-   balanced posture. The frontier is drawn on the AA Index, so a point above
+   balanced posture, a prepaid point ahead of any per-token one (a per-token
+   point stands between only when no prepaid one out-scores COST there).
+   The frontier is drawn on the AA Index, so a point above
    COST on that axis can still trail it in the category the task needs
    (on long-context work, GPT-6 Luna out-scores Gemini 3.8 Flash, Muse Spark
    1.3 and Sonnet 5.5 on LCR at a fraction of their price); a BALANCED pick
