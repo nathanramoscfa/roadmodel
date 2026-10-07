@@ -146,7 +146,7 @@ test("the chart plots the picks among the catalog", async ({ page }) => {
   await expect(page.getByTestId("picks-chart-outside")).toHaveCount(0);
 });
 
-test("renders the backup model row when the recommendation includes one", async ({ page }) => {
+test("renders the backup row with its platform and effort", async ({ page }) => {
   await fulfill(
     page,
     mk({
@@ -161,6 +161,8 @@ test("renders the backup model row when the recommendation includes one", async 
   await ask(page);
   await expect(page.getByText("Backup", { exact: true })).toBeVisible();
   await expect(page.getByText(/GPT-5\.5/)).toBeVisible();
+  // Running the backup needs where and at what level, not just its name.
+  await expect(page.getByTestId("backup-detail").first()).toHaveText("Codex · Intelligence: High");
 });
 
 test("humanizes settings labels and renders the rationale prominently", async ({ page }) => {
