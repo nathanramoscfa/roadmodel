@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A pick is credited with what it scores at the effort it runs.**
+  Artificial Analysis measures a reasoning model at several efforts, and its
+  figures move with the effort: GPT-6 Luna reads 21.5 on the AA Index at low
+  and 38.1 at max. The picks used each model's headline (usually max-effort)
+  figures, then ran it at a lower effort. `docs/benchmarks.json` now keeps
+  each model's rows at its other efforts (schema 2: `aa_effort`,
+  `effort_variants`), and the Cost / Balanced / Quality picks are read off a
+  frontier of each model at every effort it may run that AA measured. The
+  cheapest pick that clears the bar now runs a weaker model higher, and a
+  model AA measured only at efforts the task does not run is left out.
+- **A hard task needs a capable model, not just one that does its kind of
+  work.** A pick now meets the complexity's bar both in the task's category
+  and in general capability (the AA Intelligence Index), each at its effort.
+  AA's long-context test barely separates current models (most score
+  74–85%), so a 400-page contract review read GPT-6 Luna at Medium and High
+  for Cost and Balanced; it now reads GPT-6.1 Sol · Medium, Opus 5.5 · High,
+  Opus 5.5 · XHigh. A category specialist must meet the bar too, and with
+  nothing adequate the pick nearest the bar stands, not the category's
+  strongest.
+
 ## [0.2.70] — 2026-10-07
 
 ### Fixed

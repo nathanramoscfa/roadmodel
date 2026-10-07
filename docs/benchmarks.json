@@ -1,12 +1,12 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "source": {
     "name": "Artificial Analysis",
     "url": "https://artificialanalysis.ai/",
     "endpoint": "https://artificialanalysis.ai/api/v2/data/llms/models",
     "attribution": "Benchmark data © Artificial Analysis, used under its API terms with attribution."
   },
-  "generated_at_utc": "2026-10-06T22:11:12Z",
+  "generated_at_utc": "2026-10-07T15:44:20Z",
   "model_count": 54,
   "unmapped": [],
   "missing_slugs": [],
@@ -38,8 +38,10 @@
         "tau2": 0.546783625730994,
         "tau_banking": 0.0927835051546392
       },
-      "median_output_tokens_per_second": 98.659,
-      "median_time_to_first_token_seconds": 7.086
+      "median_output_tokens_per_second": 97.15,
+      "median_time_to_first_token_seconds": 6.128,
+      "aa_effort": null,
+      "effort_variants": {}
     },
     "claude-fable-5": {
       "aa_id": "cd55210d-358e-4df1-ba9c-9acb5f186cc9",
@@ -68,7 +70,9 @@
         "tau_banking": 0.381443298969072
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "max",
+      "effort_variants": {}
     },
     "claude-fable-5.1": {
       "aa_id": "3e87c73e-a257-495e-9730-367a66229811",
@@ -96,8 +100,75 @@
         "tau2": null,
         "tau_banking": 0.472164948453608
       },
-      "median_output_tokens_per_second": 69.251,
-      "median_time_to_first_token_seconds": 140.452
+      "median_output_tokens_per_second": 68.33,
+      "median_time_to_first_token_seconds": 142.849,
+      "aa_effort": "max",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "claude-fable-5-1-low",
+          "aa_name": "Claude Fable 5.1 (Low, Default Fallback)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 46.8,
+            "artificial_analysis_coding_index": 75.2,
+            "gpqa": 0.881,
+            "hle": 0.489,
+            "scicode": 0.567,
+            "lcr": 0.823333333333333,
+            "terminalbench_v2_1": 0.850187265917603,
+            "terminalbench_v4_0": 0.404040404040404,
+            "tau_banking": 0.389690721649485
+          },
+          "median_output_tokens_per_second": 48.367
+        },
+        "medium": {
+          "aa_slug": "claude-fable-5-1-medium",
+          "aa_name": "Claude Fable 5.1 (Medium, Default Fallback)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 48.9,
+            "artificial_analysis_coding_index": 77.1,
+            "gpqa": 0.886,
+            "hle": 0.538,
+            "scicode": 0.564,
+            "lcr": 0.846666666666667,
+            "terminalbench_v2_1": 0.880149812734082,
+            "terminalbench_v4_0": 0.44949494949495,
+            "tau_banking": 0.410309278350515
+          },
+          "median_output_tokens_per_second": 47.711
+        },
+        "high": {
+          "aa_slug": "claude-fable-5-1-high",
+          "aa_name": "Claude Fable 5.1 (High, Default Fallback)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 51.2,
+            "artificial_analysis_coding_index": 79.1,
+            "gpqa": 0.906,
+            "hle": 0.559,
+            "scicode": 0.587,
+            "lcr": 0.836666666666667,
+            "terminalbench_v2_1": 0.898876404494382,
+            "terminalbench_v4_0": 0.52020202020202,
+            "tau_banking": 0.430927835051546
+          },
+          "median_output_tokens_per_second": 49.45
+        },
+        "xhigh": {
+          "aa_slug": "claude-fable-5-1-xhigh",
+          "aa_name": "Claude Fable 5.1 (Xhigh, Default Fallback)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 53.2,
+            "artificial_analysis_coding_index": 80.7,
+            "gpqa": 0.934,
+            "hle": 0.587,
+            "scicode": 0.609,
+            "lcr": 0.83,
+            "terminalbench_v2_1": 0.910112359550562,
+            "terminalbench_v4_0": 0.55050505050505,
+            "tau_banking": 0.457731958762887
+          },
+          "median_output_tokens_per_second": 50.977
+        }
+      }
     },
     "claude-opus-5": {
       "aa_id": "b8fc61f7-5e9a-49e6-8547-6ac56db24627",
@@ -126,7 +197,74 @@
         "tau_banking": 0.420618556701031
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "max",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "claude-opus-5-low",
+          "aa_name": "Claude Opus 5 (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 39.4,
+            "artificial_analysis_coding_index": 66.9,
+            "gpqa": 0.889,
+            "hle": 0.434,
+            "scicode": 0.492,
+            "lcr": 0.813333333333333,
+            "terminalbench_v2_1": 0.764044943820225,
+            "terminalbench_v4_0": 0.262626262626263,
+            "tau_banking": 0.303092783505155
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "medium": {
+          "aa_slug": "claude-opus-5-medium",
+          "aa_name": "Claude Opus 5 (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 44.8,
+            "artificial_analysis_coding_index": 74.3,
+            "gpqa": 0.919,
+            "hle": 0.513,
+            "scicode": 0.515,
+            "lcr": 0.82,
+            "terminalbench_v2_1": 0.861423220973783,
+            "terminalbench_v4_0": 0.343434343434343,
+            "tau_banking": 0.385567010309278
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "high": {
+          "aa_slug": "claude-opus-5-high",
+          "aa_name": "Claude Opus 5 (High)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 48.1,
+            "artificial_analysis_coding_index": 76.5,
+            "gpqa": 0.937,
+            "hle": 0.528,
+            "scicode": 0.554,
+            "lcr": 0.79,
+            "terminalbench_v2_1": 0.876404494382023,
+            "terminalbench_v4_0": 0.45959595959596,
+            "tau_banking": 0.447422680412371
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "xhigh": {
+          "aa_slug": "claude-opus-5-xhigh",
+          "aa_name": "Claude Opus 5 (Xhigh)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 49.7,
+            "artificial_analysis_coding_index": 77,
+            "gpqa": 0.937,
+            "hle": 0.544,
+            "scicode": 0.557,
+            "lcr": 0.803333333333333,
+            "terminalbench_v2_1": 0.880149812734082,
+            "terminalbench_v4_0": 0.464646464646465,
+            "tau_banking": 0.43298969072165
+          },
+          "median_output_tokens_per_second": 0
+        }
+      }
     },
     "claude-opus-5-5": {
       "aa_id": "2f3c4dc9-a450-4303-8697-0237257cf08f",
@@ -154,8 +292,59 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 96.823,
-      "median_time_to_first_token_seconds": 470.118
+      "median_output_tokens_per_second": 97.277,
+      "median_time_to_first_token_seconds": 511.146,
+      "aa_effort": "max",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "claude-opus-5-5-low",
+          "aa_name": "Claude Opus 5.5 (Low, Default Fallback)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 42.3,
+            "hle": 0.483,
+            "scicode": 0.586,
+            "lcr": 0.806666666666667,
+            "terminalbench_v4_0": 0.313131313131313
+          },
+          "median_output_tokens_per_second": 69.224
+        },
+        "medium": {
+          "aa_slug": "claude-opus-5-5-medium",
+          "aa_name": "Claude Opus 5.5 (Medium, Default Fallback)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 51.2,
+            "hle": 0.547,
+            "scicode": 0.593,
+            "lcr": 0.843333333333333,
+            "terminalbench_v4_0": 0.525252525252525
+          },
+          "median_output_tokens_per_second": 69.565
+        },
+        "high": {
+          "aa_slug": "claude-opus-5-5-high",
+          "aa_name": "Claude Opus 5.5 (High, Default Fallback)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 53.6,
+            "hle": 0.556,
+            "scicode": 0.604,
+            "lcr": 0.826666666666667,
+            "terminalbench_v4_0": 0.565656565656566
+          },
+          "median_output_tokens_per_second": 72.405
+        },
+        "xhigh": {
+          "aa_slug": "claude-opus-5-5-xhigh",
+          "aa_name": "Claude Opus 5.5 (Xhigh, Default Fallback)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 56,
+            "hle": 0.575,
+            "scicode": 0.65,
+            "lcr": 0.846666666666667,
+            "terminalbench_v4_0": 0.595959595959596
+          },
+          "median_output_tokens_per_second": 76.076
+        }
+      }
     },
     "claude-sonnet-5": {
       "aa_id": "23c86e4a-c769-43c0-a056-79e3cd15834f",
@@ -184,7 +373,58 @@
         "tau_banking": 0.37319587628866
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "max",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "claude-sonnet-5-low",
+          "aa_name": "Claude Sonnet 5 (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 24.3,
+            "hle": 0.219,
+            "scicode": 0.501,
+            "lcr": 0.673333333333333,
+            "terminalbench_v4_0": 0.0252525252525253
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "medium": {
+          "aa_slug": "claude-sonnet-5-medium",
+          "aa_name": "Claude Sonnet 5 (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 28.1,
+            "hle": 0.3,
+            "scicode": 0.516,
+            "lcr": 0.736666666666667,
+            "terminalbench_v4_0": 0.0202020202020202
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "high": {
+          "aa_slug": "claude-sonnet-5-high",
+          "aa_name": "Claude Sonnet 5 (High)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 31.7,
+            "hle": 0.357,
+            "scicode": 0.543,
+            "lcr": 0.766666666666667,
+            "terminalbench_v4_0": 0.0505050505050505
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "xhigh": {
+          "aa_slug": "claude-sonnet-5-xhigh",
+          "aa_name": "Claude Sonnet 5 (Xhigh)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 34.4,
+            "hle": 0.39,
+            "scicode": 0.541,
+            "lcr": 0.766666666666667,
+            "terminalbench_v4_0": 0.0707070707070707
+          },
+          "median_output_tokens_per_second": 0
+        }
+      }
     },
     "claude-sonnet-5-5": {
       "aa_id": "b171d979-5ec1-45de-b8b9-db1ee65e77ec",
@@ -212,8 +452,59 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 137.452,
-      "median_time_to_first_token_seconds": 269.765
+      "median_output_tokens_per_second": 135.8,
+      "median_time_to_first_token_seconds": 269.556,
+      "aa_effort": "max",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "claude-sonnet-5-5-low",
+          "aa_name": "Claude Sonnet 5.5 (Low, Default Fallback)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 35.9,
+            "hle": 0.362,
+            "scicode": 0.491,
+            "lcr": 0.76,
+            "terminalbench_v4_0": 0.207070707070707
+          },
+          "median_output_tokens_per_second": 90.603
+        },
+        "medium": {
+          "aa_slug": "claude-sonnet-5-5-medium",
+          "aa_name": "Claude Sonnet 5.5 (Medium, Default Fallback)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 40.8,
+            "hle": 0.398,
+            "scicode": 0.529,
+            "lcr": 0.763333333333333,
+            "terminalbench_v4_0": 0.297979797979798
+          },
+          "median_output_tokens_per_second": 93.921
+        },
+        "high": {
+          "aa_slug": "claude-sonnet-5-5-high",
+          "aa_name": "Claude Sonnet 5.5 (High, Default Fallback)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 46.8,
+            "hle": 0.458,
+            "scicode": 0.537,
+            "lcr": 0.78,
+            "terminalbench_v4_0": 0.439393939393939
+          },
+          "median_output_tokens_per_second": 92.314
+        },
+        "xhigh": {
+          "aa_slug": "claude-sonnet-5-5-xhigh",
+          "aa_name": "Claude Sonnet 5.5 (Xhigh, Default Fallback)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 51.9,
+            "hle": 0.5,
+            "scicode": 0.573,
+            "lcr": 0.796666666666667,
+            "terminalbench_v4_0": 0.570707070707071
+          },
+          "median_output_tokens_per_second": 92.071
+        }
+      }
     },
     "deepseek-flash": {
       "aa_id": "dbe7c625-3100-4463-b479-a228c41f75dd",
@@ -241,8 +532,10 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 211.532,
-      "median_time_to_first_token_seconds": 0.838
+      "median_output_tokens_per_second": 218.491,
+      "median_time_to_first_token_seconds": 0.865,
+      "aa_effort": "max",
+      "effort_variants": {}
     },
     "deepseek-v4-pro": {
       "aa_id": "83173329-c09a-41f1-a028-a282a5f908d7",
@@ -270,8 +563,10 @@
         "tau2": null,
         "tau_banking": 0.395876288659794
       },
-      "median_output_tokens_per_second": 94.405,
-      "median_time_to_first_token_seconds": 1.116
+      "median_output_tokens_per_second": 93.516,
+      "median_time_to_first_token_seconds": 1.11,
+      "aa_effort": "max",
+      "effort_variants": {}
     },
     "gemini-2.5-flash": {
       "aa_id": "219ed587-60c5-4a48-9517-8480e08d0ca1",
@@ -300,7 +595,9 @@
         "tau_banking": null
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": null,
+      "effort_variants": {}
     },
     "gemini-3-flash": {
       "aa_id": "7c73c3be-7f51-4d14-bec8-d5789488df25",
@@ -329,7 +626,9 @@
         "tau_banking": 0.208247422680412
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": null,
+      "effort_variants": {}
     },
     "gemini-3-pro": {
       "aa_id": "d1122eff-ee85-4fdc-8a9f-23bee6590667",
@@ -358,7 +657,28 @@
         "tau_banking": null
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "high",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "gemini-3-pro-low",
+          "aa_name": "Gemini 3 Pro Preview (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 22.3,
+            "artificial_analysis_math_index": 86.7,
+            "mmlu_pro": 0.895,
+            "gpqa": 0.887,
+            "hle": 0.295,
+            "livecodebench": 0.857,
+            "aime_25": 0.866666666666667,
+            "ifbench": 0.496598639455782,
+            "lcr": 0.74,
+            "terminalbench_hard": 0.340909090909091,
+            "tau2": 0.681286549707602
+          },
+          "median_output_tokens_per_second": 0
+        }
+      }
     },
     "gemini-3.1-pro": {
       "aa_id": "bbd93ebe-80da-4594-bb19-61e69d0331df",
@@ -386,8 +706,10 @@
         "tau2": 0.956140350877193,
         "tau_banking": 0.214432989690722
       },
-      "median_output_tokens_per_second": 120.916,
-      "median_time_to_first_token_seconds": 16.499
+      "median_output_tokens_per_second": 120.521,
+      "median_time_to_first_token_seconds": 16.499,
+      "aa_effort": null,
+      "effort_variants": {}
     },
     "gemini-3.5-flash": {
       "aa_id": "0097ebf5-124f-42f6-9463-33b00e711f03",
@@ -416,7 +738,38 @@
         "tau_banking": 0.321649484536082
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "high",
+      "effort_variants": {
+        "minimal": {
+          "aa_slug": "gemini-3-5-flash-minimal",
+          "aa_name": "Gemini 3.5 Flash (Minimal)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 23.8,
+            "gpqa": 0.828,
+            "hle": 0.241,
+            "ifbench": 0.472789115646259,
+            "lcr": 0.613333333333333,
+            "terminalbench_hard": 0.462121212121212,
+            "tau2": 0.587719298245614
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "medium": {
+          "aa_slug": "gemini-3-5-flash-medium",
+          "aa_name": "Gemini 3.5 Flash (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 33.6,
+            "gpqa": 0.921,
+            "hle": 0.413,
+            "ifbench": 0.745578231292517,
+            "lcr": 0.743333333333333,
+            "terminalbench_hard": 0.393939393939394,
+            "tau2": 0.956140350877193
+          },
+          "median_output_tokens_per_second": 0
+        }
+      }
     },
     "gemini-3.6-flash": {
       "aa_id": "78332c88-fe60-42c8-af9d-3617e44cf1f5",
@@ -445,7 +798,9 @@
         "tau_banking": 0.298969072164948
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "high",
+      "effort_variants": {}
     },
     "gemini-3.7-flash": {
       "aa_id": "b2331108-72ed-415a-82d1-188633875bbc",
@@ -474,7 +829,40 @@
         "tau_banking": 0.327835051546392
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "high",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "gemini-3-7-flash-low",
+          "aa_name": "Gemini 3.7 Flash (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 36.9,
+            "artificial_analysis_coding_index": 71,
+            "gpqa": 0.901,
+            "hle": 0.351,
+            "scicode": 0.557,
+            "lcr": 0.786666666666667,
+            "terminalbench_v2_1": 0.797752808988764,
+            "tau_banking": 0.294845360824742
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "medium": {
+          "aa_slug": "gemini-3-7-flash-medium",
+          "aa_name": "Gemini 3.7 Flash (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 39.6,
+            "artificial_analysis_coding_index": 71.5,
+            "gpqa": 0.921,
+            "hle": 0.39,
+            "scicode": 0.598,
+            "lcr": 0.83,
+            "terminalbench_v2_1": 0.782771535580524,
+            "tau_banking": 0.354639175257732
+          },
+          "median_output_tokens_per_second": 0
+        }
+      }
     },
     "gemini-3.8-flash": {
       "aa_id": "8a999846-4c1d-4ce7-a8b7-1310a7166fd7",
@@ -502,8 +890,43 @@
         "tau2": null,
         "tau_banking": 0.449484536082474
       },
-      "median_output_tokens_per_second": 193.352,
-      "median_time_to_first_token_seconds": 11.478
+      "median_output_tokens_per_second": 156.785,
+      "median_time_to_first_token_seconds": 11.791,
+      "aa_effort": "high",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "gemini-3-8-flash-low",
+          "aa_name": "Gemini 3.8 Flash (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 33.5,
+            "artificial_analysis_coding_index": 73.5,
+            "gpqa": 0.92,
+            "hle": 0.371,
+            "scicode": 0.55,
+            "lcr": 0.806666666666667,
+            "terminalbench_v2_1": 0.831460674157303,
+            "terminalbench_v4_0": 0.101010101010101,
+            "tau_banking": 0.331958762886598
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "medium": {
+          "aa_slug": "gemini-3-8-flash-medium",
+          "aa_name": "Gemini 3.8 Flash (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 39.8,
+            "artificial_analysis_coding_index": 74.1,
+            "gpqa": 0.935,
+            "hle": 0.421,
+            "scicode": 0.551,
+            "lcr": 0.84,
+            "terminalbench_v2_1": 0.838951310861423,
+            "terminalbench_v4_0": 0.196969696969697,
+            "tau_banking": 0.457731958762887
+          },
+          "median_output_tokens_per_second": 0
+        }
+      }
     },
     "glm-4.5-air": {
       "aa_id": "5d303dc9-c027-401f-9803-4e9aa3331007",
@@ -532,7 +955,9 @@
         "tau_banking": null
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": null,
+      "effort_variants": {}
     },
     "glm-4.6": {
       "aa_id": "6a5d56e1-bb68-4205-8d9b-26b97888bc84",
@@ -561,7 +986,9 @@
         "tau_banking": 0.134020618556701
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": null,
+      "effort_variants": {}
     },
     "glm-5.2": {
       "aa_id": "f7a4ea75-e548-4069-80d4-9be8bc7c009b",
@@ -590,7 +1017,9 @@
         "tau_banking": 0.34639175257732
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "max",
+      "effort_variants": {}
     },
     "glm-5.3": {
       "aa_id": "cd684ea4-b475-4269-b001-d469d06d8a7a",
@@ -618,8 +1047,23 @@
         "tau2": null,
         "tau_banking": 0.503092783505155
       },
-      "median_output_tokens_per_second": 74.56,
-      "median_time_to_first_token_seconds": 2.696
+      "median_output_tokens_per_second": 75.904,
+      "median_time_to_first_token_seconds": 3.068,
+      "aa_effort": "max",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "glm-5-3-low",
+          "aa_name": "GLM-5.3 (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 34.3,
+            "hle": 0.366,
+            "scicode": 0.42,
+            "lcr": 0.726666666666667,
+            "terminalbench_v4_0": 0.348484848484849
+          },
+          "median_output_tokens_per_second": 75.009
+        }
+      }
     },
     "glm-5.3-flash": {
       "aa_id": "19496b81-9f41-4214-a77a-1df803b3c5ae",
@@ -647,8 +1091,10 @@
         "tau2": null,
         "tau_banking": 0.472164948453608
       },
-      "median_output_tokens_per_second": 48.776,
-      "median_time_to_first_token_seconds": 2.773
+      "median_output_tokens_per_second": 49.499,
+      "median_time_to_first_token_seconds": 2.648,
+      "aa_effort": null,
+      "effort_variants": {}
     },
     "gpt-5": {
       "aa_id": "48e50f00-1fd1-4acc-b337-61078aa341e6",
@@ -677,7 +1123,68 @@
         "tau_banking": 0.220618556701031
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "high",
+      "effort_variants": {
+        "minimal": {
+          "aa_slug": "gpt-5-minimal",
+          "aa_name": "GPT-5 (Minimal)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 11.4,
+            "artificial_analysis_math_index": 31.7,
+            "mmlu_pro": 0.806,
+            "gpqa": 0.673,
+            "hle": 0.06,
+            "livecodebench": 0.558,
+            "math_500": 0.861333333333333,
+            "aime": 0.366666666666667,
+            "aime_25": 0.316666666666667,
+            "ifbench": 0.45578231292517,
+            "terminalbench_hard": 0.181818181818182,
+            "tau2": 0.669590643274854
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "low": {
+          "aa_slug": "gpt-5-low",
+          "aa_name": "GPT-5 (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 20.8,
+            "artificial_analysis_math_index": 83,
+            "mmlu_pro": 0.86,
+            "gpqa": 0.808,
+            "hle": 0.196,
+            "livecodebench": 0.763,
+            "math_500": 0.987333333333333,
+            "aime": 0.83,
+            "aime_25": 0.83,
+            "ifbench": 0.665986394557823,
+            "terminalbench_hard": 0.265151515151515,
+            "tau2": 0.842105263157895
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "medium": {
+          "aa_slug": "gpt-5-medium",
+          "aa_name": "GPT-5 (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 22.9,
+            "artificial_analysis_math_index": 91.7,
+            "mmlu_pro": 0.867,
+            "gpqa": 0.842,
+            "hle": 0.254,
+            "livecodebench": 0.703,
+            "math_500": 0.991333333333333,
+            "aime": 0.916666666666667,
+            "aime_25": 0.916666666666667,
+            "ifbench": 0.706122448979592,
+            "lcr": 0.76,
+            "terminalbench_hard": 0.378787878787879,
+            "tau2": 0.865497076023392
+          },
+          "median_output_tokens_per_second": 0
+        }
+      }
     },
     "gpt-5-mini": {
       "aa_id": "29855680-7469-43eb-8b88-cd3fb1d99da3",
@@ -706,7 +1213,46 @@
         "tau_banking": 0.154639175257732
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "high",
+      "effort_variants": {
+        "minimal": {
+          "aa_slug": "gpt-5-mini-minimal",
+          "aa_name": "GPT-5 mini (Minimal)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 9.9,
+            "artificial_analysis_math_index": 46.7,
+            "mmlu_pro": 0.775,
+            "gpqa": 0.687,
+            "hle": 0.051,
+            "livecodebench": 0.545,
+            "aime_25": 0.466666666666667,
+            "ifbench": 0.45578231292517,
+            "lcr": 0.393333333333333,
+            "terminalbench_hard": 0.143939393939394,
+            "tau2": 0.318713450292398
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "medium": {
+          "aa_slug": "gpt-5-mini-medium",
+          "aa_name": "GPT-5 mini (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 20.6,
+            "artificial_analysis_math_index": 85,
+            "mmlu_pro": 0.828,
+            "gpqa": 0.803,
+            "hle": 0.159,
+            "livecodebench": 0.692,
+            "aime_25": 0.85,
+            "ifbench": 0.71156462585034,
+            "lcr": 0.723333333333333,
+            "terminalbench_hard": 0.287878787878788,
+            "tau2": 0.710526315789474
+          },
+          "median_output_tokens_per_second": 0
+        }
+      }
     },
     "gpt-5.1-codex": {
       "aa_id": "04d023f3-025c-4d78-9571-53edda3eaf2a",
@@ -735,7 +1281,9 @@
         "tau_banking": null
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "high",
+      "effort_variants": {}
     },
     "gpt-5.1-codex-mini": {
       "aa_id": "fd4454ff-e703-46c0-a7f5-fa69af09486d",
@@ -764,7 +1312,9 @@
         "tau_banking": null
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "high",
+      "effort_variants": {}
     },
     "gpt-5.2": {
       "aa_id": "498862c3-f9ac-49d2-852f-16a02bb0c38f",
@@ -793,7 +1343,28 @@
         "tau_banking": null
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "xhigh",
+      "effort_variants": {
+        "medium": {
+          "aa_slug": "gpt-5-2-medium",
+          "aa_name": "GPT-5.2 (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 26.5,
+            "artificial_analysis_math_index": 96.7,
+            "mmlu_pro": 0.859,
+            "gpqa": 0.864,
+            "hle": 0.267,
+            "livecodebench": 0.894,
+            "aime_25": 0.966666666666667,
+            "ifbench": 0.652380952380953,
+            "lcr": 0.703333333333333,
+            "terminalbench_hard": 0.431818181818182,
+            "tau2": 0.742690058479532
+          },
+          "median_output_tokens_per_second": 0
+        }
+      }
     },
     "gpt-5.2-codex": {
       "aa_id": "019e86f6-e66b-42d8-8a50-235a06b53003",
@@ -822,7 +1393,9 @@
         "tau_banking": null
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "xhigh",
+      "effort_variants": {}
     },
     "gpt-5.3-codex": {
       "aa_id": "59b5b14b-5365-4ee7-824a-18a8e6309644",
@@ -850,8 +1423,10 @@
         "tau2": 0.859649122807018,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 94.067,
-      "median_time_to_first_token_seconds": 34.541
+      "median_output_tokens_per_second": 92.011,
+      "median_time_to_first_token_seconds": 34.452,
+      "aa_effort": "xhigh",
+      "effort_variants": {}
     },
     "gpt-5.4": {
       "aa_id": "a89c4b28-2d8c-456e-88ea-255fb51fd2b6",
@@ -880,7 +1455,24 @@
         "tau_banking": 0.395876288659794
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "xhigh",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "gpt-5-4-low",
+          "aa_name": "GPT-5.4 (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 27.6,
+            "gpqa": 0.871,
+            "hle": 0.308,
+            "ifbench": 0.659183673469388,
+            "lcr": 0.766666666666667,
+            "terminalbench_hard": 0.431818181818182,
+            "tau2": 0.745614035087719
+          },
+          "median_output_tokens_per_second": 0
+        }
+      }
     },
     "gpt-5.4-mini": {
       "aa_id": "ba242e40-83b7-4cd3-a0e0-b56237984914",
@@ -909,7 +1501,24 @@
         "tau_banking": 0.255670103092783
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "xhigh",
+      "effort_variants": {
+        "medium": {
+          "aa_slug": "gpt-5-4-mini-medium",
+          "aa_name": "GPT-5.4 mini (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 19.7,
+            "gpqa": 0.823,
+            "hle": 0.186,
+            "ifbench": 0.647619047619048,
+            "lcr": 0.67,
+            "terminalbench_hard": 0.340909090909091,
+            "tau2": 0.365497076023392
+          },
+          "median_output_tokens_per_second": 0
+        }
+      }
     },
     "gpt-5.4-nano": {
       "aa_id": "d4fc3f33-f2b0-4da1-88ee-f1f82bd4de31",
@@ -938,7 +1547,24 @@
         "tau_banking": 0.274226804123711
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "xhigh",
+      "effort_variants": {
+        "medium": {
+          "aa_slug": "gpt-5-4-nano-medium",
+          "aa_name": "GPT-5.4 nano (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 20,
+            "gpqa": 0.761,
+            "hle": 0.159,
+            "ifbench": 0.64421768707483,
+            "lcr": 0.673333333333333,
+            "terminalbench_hard": 0.333333333333333,
+            "tau2": 0.526315789473684
+          },
+          "median_output_tokens_per_second": 0
+        }
+      }
     },
     "gpt-5.5": {
       "aa_id": "1f054429-397e-4fdb-9e71-67bc92c1735e",
@@ -967,7 +1593,65 @@
         "tau_banking": 0.389690721649485
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "xhigh",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "gpt-5-5-low",
+          "aa_name": "GPT-5.5 (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 30.7,
+            "artificial_analysis_coding_index": 60.9,
+            "gpqa": 0.91,
+            "hle": 0.327,
+            "ifbench": 0.643537414965986,
+            "lcr": 0.81,
+            "terminalbench_hard": 0.522727272727273,
+            "terminalbench_v2_1": 0.655430711610487,
+            "tau2": 0.839181286549708,
+            "tau_banking": 0.249484536082474
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "medium": {
+          "aa_slug": "gpt-5-5-medium",
+          "aa_name": "GPT-5.5 (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 33.8,
+            "artificial_analysis_coding_index": 71.5,
+            "gpqa": 0.926,
+            "hle": 0.424,
+            "scicode": 0.545,
+            "ifbench": 0.70952380952381,
+            "lcr": 0.83,
+            "terminalbench_hard": 0.575757575757576,
+            "terminalbench_v2_1": 0.805243445692884,
+            "terminalbench_v4_0": 0.0505050505050505,
+            "tau2": 0.91812865497076,
+            "tau_banking": 0.298969072164948
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "high": {
+          "aa_slug": "gpt-5-5-high",
+          "aa_name": "GPT-5.5 (High)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 37,
+            "artificial_analysis_coding_index": 71.6,
+            "gpqa": 0.932,
+            "hle": 0.45,
+            "scicode": 0.561,
+            "ifbench": 0.716326530612245,
+            "lcr": 0.843333333333333,
+            "terminalbench_hard": 0.598484848484849,
+            "terminalbench_v2_1": 0.794007490636704,
+            "terminalbench_v4_0": 0.0909090909090909,
+            "tau2": 0.929824561403509,
+            "tau_banking": 0.36701030927835
+          },
+          "median_output_tokens_per_second": 0
+        }
+      }
     },
     "gpt-5.6-luna": {
       "aa_id": "426d24c8-49ae-482a-b4a8-20f1c53f21c1",
@@ -996,7 +1680,74 @@
         "tau_banking": 0.311340206185567
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "max",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "gpt-5-6-luna-low",
+          "aa_name": "GPT-5.6 Luna (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 21,
+            "artificial_analysis_coding_index": 44.2,
+            "gpqa": 0.835,
+            "hle": 0.198,
+            "scicode": 0.461,
+            "lcr": 0.7,
+            "terminalbench_v2_1": 0.434456928838951,
+            "terminalbench_v4_0": 0,
+            "tau_banking": 0.127835051546392
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "medium": {
+          "aa_slug": "gpt-5-6-luna-medium",
+          "aa_name": "GPT-5.6 Luna (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 25,
+            "artificial_analysis_coding_index": 50.7,
+            "gpqa": 0.859,
+            "hle": 0.258,
+            "scicode": 0.468,
+            "lcr": 0.75,
+            "terminalbench_v2_1": 0.531835205992509,
+            "terminalbench_v4_0": 0.00505050505050505,
+            "tau_banking": 0.177319587628866
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "high": {
+          "aa_slug": "gpt-5-6-luna-high",
+          "aa_name": "GPT-5.6 Luna (High)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 32.1,
+            "artificial_analysis_coding_index": 63.3,
+            "gpqa": 0.892,
+            "hle": 0.334,
+            "scicode": 0.516,
+            "lcr": 0.803333333333333,
+            "terminalbench_v2_1": 0.696629213483146,
+            "terminalbench_v4_0": 0.0252525252525253,
+            "tau_banking": 0.251546391752577
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "xhigh": {
+          "aa_slug": "gpt-5-6-luna-xhigh",
+          "aa_name": "GPT-5.6 Luna (Xhigh)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 34.6,
+            "artificial_analysis_coding_index": 68.6,
+            "gpqa": 0.895,
+            "hle": 0.37,
+            "scicode": 0.505,
+            "lcr": 0.816666666666667,
+            "terminalbench_v2_1": 0.779026217228464,
+            "terminalbench_v4_0": 0.0353535353535354,
+            "tau_banking": 0.28659793814433
+          },
+          "median_output_tokens_per_second": 0
+        }
+      }
     },
     "gpt-5.6-sol": {
       "aa_id": "d93edfe8-bf35-49ad-b56e-b18116142a1c",
@@ -1025,7 +1776,86 @@
         "tau_banking": 0.443298969072165
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "max",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "gpt-5-6-sol-low",
+          "aa_name": "GPT-5.6 Sol (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 33.5,
+            "artificial_analysis_coding_index": 69.7,
+            "gpqa": 0.898,
+            "hle": 0.394,
+            "scicode": 0.564,
+            "ifbench": 0.66530612244898,
+            "lcr": 0.78,
+            "terminalbench_hard": 0.606060606060606,
+            "terminalbench_v2_1": 0.767790262172285,
+            "terminalbench_v4_0": 0.0101010101010101,
+            "tau2": 0.760233918128655,
+            "tau_banking": 0.290721649484536
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "medium": {
+          "aa_slug": "gpt-5-6-sol-medium",
+          "aa_name": "GPT-5.6 Sol (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 39.2,
+            "artificial_analysis_coding_index": 76.3,
+            "gpqa": 0.926,
+            "hle": 0.422,
+            "scicode": 0.574,
+            "ifbench": 0.695918367346939,
+            "lcr": 0.803333333333333,
+            "terminalbench_hard": 0.628787878787879,
+            "terminalbench_v2_1": 0.861423220973783,
+            "terminalbench_v4_0": 0.146464646464646,
+            "tau2": 0.809941520467836,
+            "tau_banking": 0.364948453608247
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "high": {
+          "aa_slug": "gpt-5-6-sol-high",
+          "aa_name": "GPT-5.6 Sol (High)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 42.3,
+            "artificial_analysis_coding_index": 77.2,
+            "gpqa": 0.928,
+            "hle": 0.46,
+            "scicode": 0.578,
+            "ifbench": 0.691836734693878,
+            "lcr": 0.816666666666667,
+            "terminalbench_hard": 0.621212121212121,
+            "terminalbench_v2_1": 0.872659176029963,
+            "terminalbench_v4_0": 0.207070707070707,
+            "tau2": 0.833333333333333,
+            "tau_banking": 0.36701030927835
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "xhigh": {
+          "aa_slug": "gpt-5-6-sol-xhigh",
+          "aa_name": "GPT-5.6 Sol (Xhigh)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 44,
+            "artificial_analysis_coding_index": 78.3,
+            "gpqa": 0.931,
+            "hle": 0.473,
+            "scicode": 0.571,
+            "ifbench": 0.710204081632653,
+            "lcr": 0.823333333333333,
+            "terminalbench_hard": 0.613636363636364,
+            "terminalbench_v2_1": 0.895131086142322,
+            "terminalbench_v4_0": 0.247474747474747,
+            "tau2": 0.847953216374269,
+            "tau_banking": 0.381443298969072
+          },
+          "median_output_tokens_per_second": 0
+        }
+      }
     },
     "gpt-5.6-terra": {
       "aa_id": "bcf8db0a-3bb6-4d82-9516-0f57370c85a6",
@@ -1053,8 +1883,86 @@
         "tau2": 0.862573099415205,
         "tau_banking": 0.402061855670103
       },
-      "median_output_tokens_per_second": 103.757,
-      "median_time_to_first_token_seconds": 83.831
+      "median_output_tokens_per_second": 99.05,
+      "median_time_to_first_token_seconds": 80.214,
+      "aa_effort": "max",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "gpt-5-6-terra-low",
+          "aa_name": "GPT-5.6 Terra (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 27.5,
+            "artificial_analysis_coding_index": 58.1,
+            "gpqa": 0.843,
+            "hle": 0.292,
+            "scicode": 0.499,
+            "ifbench": 0.596598639455782,
+            "lcr": 0.713333333333333,
+            "terminalbench_hard": 0.439393939393939,
+            "terminalbench_v2_1": 0.625468164794007,
+            "terminalbench_v4_0": 0.0151515151515152,
+            "tau2": 0.605263157894737,
+            "tau_banking": 0.187628865979381
+          },
+          "median_output_tokens_per_second": 84.062
+        },
+        "medium": {
+          "aa_slug": "gpt-5-6-terra-medium",
+          "aa_name": "GPT-5.6 Terra (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 30.1,
+            "artificial_analysis_coding_index": 64.7,
+            "gpqa": 0.872,
+            "hle": 0.333,
+            "scicode": 0.505,
+            "ifbench": 0.621768707482993,
+            "lcr": 0.74,
+            "terminalbench_v2_1": 0.722846441947566,
+            "terminalbench_v4_0": 0.0101010101010101,
+            "tau2": 0.728070175438596,
+            "tau_banking": 0.255670103092783
+          },
+          "median_output_tokens_per_second": 87.051
+        },
+        "high": {
+          "aa_slug": "gpt-5-6-terra-high",
+          "aa_name": "GPT-5.6 Terra (High)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 34.2,
+            "artificial_analysis_coding_index": 67.1,
+            "gpqa": 0.896,
+            "hle": 0.385,
+            "scicode": 0.524,
+            "ifbench": 0.64421768707483,
+            "lcr": 0.776666666666667,
+            "terminalbench_hard": 0.575757575757576,
+            "terminalbench_v2_1": 0.756554307116105,
+            "terminalbench_v4_0": 0.0151515151515152,
+            "tau2": 0.783625730994152,
+            "tau_banking": 0.28659793814433
+          },
+          "median_output_tokens_per_second": 88.259
+        },
+        "xhigh": {
+          "aa_slug": "gpt-5-6-terra-xhigh",
+          "aa_name": "GPT-5.6 Terra (Xhigh)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 38,
+            "artificial_analysis_coding_index": 70.6,
+            "gpqa": 0.908,
+            "hle": 0.419,
+            "scicode": 0.523,
+            "ifbench": 0.662585034013605,
+            "lcr": 0.79,
+            "terminalbench_hard": 0.628787878787879,
+            "terminalbench_v2_1": 0.801498127340824,
+            "terminalbench_v4_0": 0.101010101010101,
+            "tau2": 0.804093567251462,
+            "tau_banking": 0.296907216494845
+          },
+          "median_output_tokens_per_second": 84.911
+        }
+      }
     },
     "gpt-6-astra": {
       "aa_id": "2f339a97-9a0d-499a-9cb5-e0db665bfa25",
@@ -1082,8 +1990,75 @@
         "tau2": null,
         "tau_banking": 0.414432989690722
       },
-      "median_output_tokens_per_second": 50.735,
-      "median_time_to_first_token_seconds": 205.366
+      "median_output_tokens_per_second": 49.069,
+      "median_time_to_first_token_seconds": 213.938,
+      "aa_effort": "max",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "gpt-6-astra-low",
+          "aa_name": "GPT-6 Astra (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 45.8,
+            "artificial_analysis_coding_index": 75.7,
+            "gpqa": 0.931,
+            "hle": 0.492,
+            "scicode": 0.541,
+            "lcr": 0.8,
+            "terminalbench_v2_1": 0.880149812734082,
+            "terminalbench_v4_0": 0.419191919191919,
+            "tau_banking": 0.319587628865979
+          },
+          "median_output_tokens_per_second": 46.008
+        },
+        "medium": {
+          "aa_slug": "gpt-6-astra-medium",
+          "aa_name": "GPT-6 Astra (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 49.6,
+            "artificial_analysis_coding_index": 76.7,
+            "gpqa": 0.939,
+            "hle": 0.527,
+            "scicode": 0.542,
+            "lcr": 0.796666666666667,
+            "terminalbench_v2_1": 0.895131086142322,
+            "terminalbench_v4_0": 0.494949494949495,
+            "tau_banking": 0.354639175257732
+          },
+          "median_output_tokens_per_second": 47.416
+        },
+        "high": {
+          "aa_slug": "gpt-6-astra-high",
+          "aa_name": "GPT-6 Astra (High)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 50.9,
+            "artificial_analysis_coding_index": 77.1,
+            "gpqa": 0.949,
+            "hle": 0.531,
+            "scicode": 0.554,
+            "lcr": 0.8,
+            "terminalbench_v2_1": 0.898876404494382,
+            "terminalbench_v4_0": 0.54040404040404,
+            "tau_banking": 0.4
+          },
+          "median_output_tokens_per_second": 46.791
+        },
+        "xhigh": {
+          "aa_slug": "gpt-6-astra-xhigh",
+          "aa_name": "GPT-6 Astra (Xhigh)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 52.4,
+            "artificial_analysis_coding_index": 75.9,
+            "gpqa": 0.963,
+            "hle": 0.546,
+            "scicode": 0.557,
+            "lcr": 0.8,
+            "terminalbench_v2_1": 0.891385767790262,
+            "terminalbench_v4_0": 0.595959595959596,
+            "tau_banking": 0.430927835051546
+          },
+          "median_output_tokens_per_second": 48.861
+        }
+      }
     },
     "gpt-6-luna": {
       "aa_id": "6fb13851-40ce-4bda-ad3f-6b38e0c5daa7",
@@ -1111,8 +2086,59 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 133.905,
-      "median_time_to_first_token_seconds": 68.659
+      "median_output_tokens_per_second": 128.653,
+      "median_time_to_first_token_seconds": 67.703,
+      "aa_effort": "max",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "gpt-6-luna-low",
+          "aa_name": "GPT-6 Luna (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 21.5,
+            "hle": 0.203,
+            "scicode": 0.469,
+            "lcr": 0.74,
+            "terminalbench_v4_0": 0
+          },
+          "median_output_tokens_per_second": 119.116
+        },
+        "medium": {
+          "aa_slug": "gpt-6-luna-medium",
+          "aa_name": "GPT-6 Luna (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 29.9,
+            "hle": 0.283,
+            "scicode": 0.509,
+            "lcr": 0.783333333333333,
+            "terminalbench_v4_0": 0.0252525252525253
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "high": {
+          "aa_slug": "gpt-6-luna-high",
+          "aa_name": "GPT-6 Luna (High)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 32.9,
+            "hle": 0.329,
+            "scicode": 0.503,
+            "lcr": 0.793333333333333,
+            "terminalbench_v4_0": 0.0454545454545455
+          },
+          "median_output_tokens_per_second": 120.575
+        },
+        "xhigh": {
+          "aa_slug": "gpt-6-luna-xhigh",
+          "aa_name": "GPT-6 Luna (Xhigh)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 34.6,
+            "hle": 0.343,
+            "scicode": 0.517,
+            "lcr": 0.8,
+            "terminalbench_v4_0": 0.0808080808080808
+          },
+          "median_output_tokens_per_second": 122.312
+        }
+      }
     },
     "gpt-6-sol": {
       "aa_id": "c50ea08c-88c0-4eb7-85b8-27f2bbf6d527",
@@ -1141,7 +2167,58 @@
         "tau_banking": null
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "max",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "gpt-6-sol-low",
+          "aa_name": "GPT-6 Sol (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 34.2,
+            "hle": 0.349,
+            "scicode": 0.502,
+            "lcr": 0.793333333333333,
+            "terminalbench_v4_0": 0.0909090909090909
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "medium": {
+          "aa_slug": "gpt-6-sol-medium",
+          "aa_name": "GPT-6 Sol (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 39.8,
+            "hle": 0.41,
+            "scicode": 0.538,
+            "lcr": 0.823333333333333,
+            "terminalbench_v4_0": 0.186868686868687
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "high": {
+          "aa_slug": "gpt-6-sol-high",
+          "aa_name": "GPT-6 Sol (High)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 42.4,
+            "hle": 0.441,
+            "scicode": 0.549,
+            "lcr": 0.836666666666667,
+            "terminalbench_v4_0": 0.262626262626263
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "xhigh": {
+          "aa_slug": "gpt-6-sol-xhigh",
+          "aa_name": "GPT-6 Sol (Xhigh)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 44.2,
+            "hle": 0.463,
+            "scicode": 0.551,
+            "lcr": 0.813333333333333,
+            "terminalbench_v4_0": 0.303030303030303
+          },
+          "median_output_tokens_per_second": 0
+        }
+      }
     },
     "gpt-6.1-sol": {
       "aa_id": "b25ac058-1e33-4c31-bbc9-a20c3ad0717a",
@@ -1169,8 +2246,59 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 57.423,
-      "median_time_to_first_token_seconds": 179.839
+      "median_output_tokens_per_second": 55.192,
+      "median_time_to_first_token_seconds": 183.156,
+      "aa_effort": "max",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "gpt-6-1-sol-low",
+          "aa_name": "GPT-6.1 Sol (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 42.1,
+            "hle": 0.474,
+            "scicode": 0.532,
+            "lcr": 0.84,
+            "terminalbench_v4_0": 0.308080808080808
+          },
+          "median_output_tokens_per_second": 51.802
+        },
+        "medium": {
+          "aa_slug": "gpt-6-1-sol-medium",
+          "aa_name": "GPT-6.1 Sol (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 47.8,
+            "hle": 0.499,
+            "scicode": 0.532,
+            "lcr": 0.833333333333333,
+            "terminalbench_v4_0": 0.47979797979798
+          },
+          "median_output_tokens_per_second": 49.144
+        },
+        "high": {
+          "aa_slug": "gpt-6-1-sol-high",
+          "aa_name": "GPT-6.1 Sol (High)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 50.2,
+            "hle": 0.514,
+            "scicode": 0.558,
+            "lcr": 0.823333333333333,
+            "terminalbench_v4_0": 0.515151515151515
+          },
+          "median_output_tokens_per_second": 50.079
+        },
+        "xhigh": {
+          "aa_slug": "gpt-6-1-sol-xhigh",
+          "aa_name": "GPT-6.1 Sol (Xhigh)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 51,
+            "hle": 0.526,
+            "scicode": 0.557,
+            "lcr": 0.796666666666667,
+            "terminalbench_v4_0": 0.54040404040404
+          },
+          "median_output_tokens_per_second": 53.52
+        }
+      }
     },
     "gpt-oss-120b": {
       "aa_id": "f0083258-8646-45b8-8082-7aaf6c2ea82a",
@@ -1198,8 +2326,32 @@
         "tau2": 0.657894736842105,
         "tau_banking": 0.127835051546392
       },
-      "median_output_tokens_per_second": 186.012,
-      "median_time_to_first_token_seconds": 0.502
+      "median_output_tokens_per_second": 187.681,
+      "median_time_to_first_token_seconds": 0.506,
+      "aa_effort": "high",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "gpt-oss-120b-low",
+          "aa_name": "gpt-oss-120b (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 10.2,
+            "artificial_analysis_coding_index": 21.2,
+            "artificial_analysis_math_index": 66.7,
+            "mmlu_pro": 0.775,
+            "gpqa": 0.672,
+            "hle": 0.059,
+            "livecodebench": 0.707,
+            "aime_25": 0.666666666666667,
+            "ifbench": 0.582993197278912,
+            "lcr": 0.46,
+            "terminalbench_hard": 0.053030303030303,
+            "terminalbench_v2_1": 0.138576779026217,
+            "tau2": 0.450292397660819,
+            "tau_banking": 0.0288659793814433
+          },
+          "median_output_tokens_per_second": 200.382
+        }
+      }
     },
     "gpt-oss-20b": {
       "aa_id": "36f73aaf-d38a-4b56-a2b3-d04d17186910",
@@ -1227,8 +2379,29 @@
         "tau2": 0.60233918128655,
         "tau_banking": 0.0701030927835052
       },
-      "median_output_tokens_per_second": 231.256,
-      "median_time_to_first_token_seconds": 0.412
+      "median_output_tokens_per_second": 212.107,
+      "median_time_to_first_token_seconds": 0.42,
+      "aa_effort": "high",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "gpt-oss-20b-low",
+          "aa_name": "gpt-oss-20b (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 10,
+            "artificial_analysis_math_index": 62.3,
+            "mmlu_pro": 0.718,
+            "gpqa": 0.611,
+            "hle": 0.053,
+            "livecodebench": 0.652,
+            "aime_25": 0.623333333333333,
+            "ifbench": 0.578231292517007,
+            "lcr": 0.31,
+            "terminalbench_hard": 0.0454545454545455,
+            "tau2": 0.502923976608187
+          },
+          "median_output_tokens_per_second": 255.282
+        }
+      }
     },
     "grok-4.3": {
       "aa_id": "948892b5-db03-4118-a4a8-ccd51ed871ea",
@@ -1257,7 +2430,38 @@
         "tau_banking": 0.123711340206186
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "high",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "grok-4-3-low",
+          "aa_name": "Grok 4.3 (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 24.3,
+            "gpqa": 0.843,
+            "hle": 0.184,
+            "ifbench": 0.80952380952381,
+            "lcr": 0.74,
+            "terminalbench_hard": 0.265151515151515,
+            "tau2": 0.888888888888889
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "medium": {
+          "aa_slug": "grok-4-3-medium",
+          "aa_name": "Grok 4.3 (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 24.8,
+            "gpqa": 0.89,
+            "hle": 0.3,
+            "ifbench": 0.833333333333333,
+            "lcr": 0.75,
+            "terminalbench_hard": 0.303030303030303,
+            "tau2": 0.912280701754386
+          },
+          "median_output_tokens_per_second": 0
+        }
+      }
     },
     "grok-4.6": {
       "aa_id": "c8adc5cf-fd5a-407b-af51-dc3bede3e49c",
@@ -1286,7 +2490,58 @@
         "tau_banking": 0.507216494845361
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "high",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "grok-4-6-low",
+          "aa_name": "Grok 4.6 (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 35.1,
+            "artificial_analysis_coding_index": 66.3,
+            "gpqa": 0.879,
+            "hle": 0.276,
+            "scicode": 0.494,
+            "lcr": 0.806666666666667,
+            "terminalbench_v2_1": 0.752808988764045,
+            "terminalbench_v4_0": 0.0303030303030303,
+            "tau_banking": 0.381443298969072
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "medium": {
+          "aa_slug": "grok-4-6-medium",
+          "aa_name": "Grok 4.6 (Medium)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 42.8,
+            "artificial_analysis_coding_index": 74.4,
+            "gpqa": 0.935,
+            "hle": 0.421,
+            "scicode": 0.559,
+            "lcr": 0.81,
+            "terminalbench_v2_1": 0.842696629213483,
+            "terminalbench_v4_0": 0.131313131313131,
+            "tau_banking": 0.443298969072165
+          },
+          "median_output_tokens_per_second": 0
+        },
+        "xhigh": {
+          "aa_slug": "grok-4-6-xhigh",
+          "aa_name": "Grok 4.6 (Xhigh)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 44.2,
+            "artificial_analysis_coding_index": 75.9,
+            "gpqa": 0.935,
+            "hle": 0.441,
+            "scicode": 0.53,
+            "lcr": 0.81,
+            "terminalbench_v2_1": 0.880149812734082,
+            "terminalbench_v4_0": 0.171717171717172,
+            "tau_banking": 0.43298969072165
+          },
+          "median_output_tokens_per_second": 0
+        }
+      }
     },
     "grok-4.7": {
       "aa_id": "59627802-1546-422c-9a65-65b61c022d36",
@@ -1314,8 +2569,35 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 69.431,
-      "median_time_to_first_token_seconds": 8.037
+      "median_output_tokens_per_second": 64.533,
+      "median_time_to_first_token_seconds": 7.717,
+      "aa_effort": "xhigh",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "grok-4-7-low",
+          "aa_name": "Grok 4.7 (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 42.2,
+            "hle": 0.392,
+            "scicode": 0.549,
+            "lcr": 0.8,
+            "terminalbench_v4_0": 0.161616161616162
+          },
+          "median_output_tokens_per_second": 62.39
+        },
+        "high": {
+          "aa_slug": "grok-4-7-high",
+          "aa_name": "Grok 4.7 (High)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 46.3,
+            "hle": 0.423,
+            "scicode": 0.578,
+            "lcr": 0.77,
+            "terminalbench_v4_0": 0.247474747474747
+          },
+          "median_output_tokens_per_second": 65.973
+        }
+      }
     },
     "kimi-k2.7-code": {
       "aa_id": "8d0cb231-7303-452c-9923-a9620b948475",
@@ -1343,8 +2625,10 @@
         "tau2": 0.900584795321637,
         "tau_banking": 0.202061855670103
       },
-      "median_output_tokens_per_second": 83.243,
-      "median_time_to_first_token_seconds": 1.298
+      "median_output_tokens_per_second": 80.716,
+      "median_time_to_first_token_seconds": 1.098,
+      "aa_effort": null,
+      "effort_variants": {}
     },
     "kimi-k3": {
       "aa_id": "f7d2fc3e-1f7b-405f-818c-07952a4af78f",
@@ -1372,8 +2656,27 @@
         "tau2": null,
         "tau_banking": 0.45979381443299
       },
-      "median_output_tokens_per_second": 45.073,
-      "median_time_to_first_token_seconds": 2.953
+      "median_output_tokens_per_second": 45.014,
+      "median_time_to_first_token_seconds": 2.953,
+      "aa_effort": "max",
+      "effort_variants": {
+        "low": {
+          "aa_slug": "kimi-k3-low",
+          "aa_name": "Kimi K3 (Low)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 30.1,
+            "artificial_analysis_coding_index": 72,
+            "gpqa": 0.842,
+            "hle": 0.25,
+            "scicode": 0.527,
+            "lcr": 0.793333333333333,
+            "terminalbench_v2_1": 0.823970037453184,
+            "terminalbench_v4_0": 0.126262626262626,
+            "tau_banking": 0.416494845360825
+          },
+          "median_output_tokens_per_second": 41.182
+        }
+      }
     },
     "mistral-large-3": {
       "aa_id": "4928e950-7f37-4475-b0dc-c5bad781a321",
@@ -1401,8 +2704,10 @@
         "tau2": 0.245614035087719,
         "tau_banking": 0.0577319587628866
       },
-      "median_output_tokens_per_second": 79.072,
-      "median_time_to_first_token_seconds": 0.688
+      "median_output_tokens_per_second": 77.671,
+      "median_time_to_first_token_seconds": 0.689,
+      "aa_effort": null,
+      "effort_variants": {}
     },
     "mistral-medium-3.5": {
       "aa_id": "dd059b25-d82a-4ead-82a4-4adceaaec48b",
@@ -1430,8 +2735,10 @@
         "tau2": 0.941520467836257,
         "tau_banking": 0.150515463917526
       },
-      "median_output_tokens_per_second": 162.625,
-      "median_time_to_first_token_seconds": 0.595
+      "median_output_tokens_per_second": 161.375,
+      "median_time_to_first_token_seconds": 0.602,
+      "aa_effort": null,
+      "effort_variants": {}
     },
     "mistral-small-4": {
       "aa_id": "3fd96175-4ef1-434c-8795-f873aec2abc1",
@@ -1459,8 +2766,10 @@
         "tau2": 0.412280701754386,
         "tau_banking": 0.0494845360824742
       },
-      "median_output_tokens_per_second": 163.865,
-      "median_time_to_first_token_seconds": 0.542
+      "median_output_tokens_per_second": 163.966,
+      "median_time_to_first_token_seconds": 0.549,
+      "aa_effort": null,
+      "effort_variants": {}
     },
     "muse-spark-1.3": {
       "aa_id": "9999672c-b687-4026-9c15-5cef02ff53bb",
@@ -1488,8 +2797,27 @@
         "tau2": null,
         "tau_banking": 0.505154639175258
       },
-      "median_output_tokens_per_second": 115.306,
-      "median_time_to_first_token_seconds": 26.027
+      "median_output_tokens_per_second": 107.96,
+      "median_time_to_first_token_seconds": 28.442,
+      "aa_effort": "max",
+      "effort_variants": {
+        "xhigh": {
+          "aa_slug": "muse-spark-1-3-xhigh",
+          "aa_name": "Muse Spark 1.3 (Xhigh)",
+          "evaluations": {
+            "artificial_analysis_intelligence_index": 45.1,
+            "artificial_analysis_coding_index": 76.5,
+            "gpqa": 0.941,
+            "hle": 0.475,
+            "scicode": 0.597,
+            "lcr": 0.83,
+            "terminalbench_v2_1": 0.853932584269663,
+            "terminalbench_v4_0": 0.166666666666667,
+            "tau_banking": 0.472164948453608
+          },
+          "median_output_tokens_per_second": 130.237
+        }
+      }
     },
     "opus-4.7": {
       "aa_id": "e9a09db3-8fd6-41dd-ba2f-20e0a2bff7f2",
@@ -1518,7 +2846,9 @@
         "tau_banking": 0.34639175257732
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "max",
+      "effort_variants": {}
     },
     "opus-4.8": {
       "aa_id": "992b7b84-5069-4c6a-9295-834252553d50",
@@ -1547,7 +2877,9 @@
         "tau_banking": 0.342268041237113
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "max",
+      "effort_variants": {}
     },
     "sonnet-4.6": {
       "aa_id": "df8d14e0-3997-4e4d-b4ad-9c047acc9c69",
@@ -1576,7 +2908,9 @@
         "tau_banking": 0.344329896907216
       },
       "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0
+      "median_time_to_first_token_seconds": 0,
+      "aa_effort": "max",
+      "effort_variants": {}
     }
   }
 }
