@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+import venv
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
@@ -102,6 +103,59 @@ def test_direct_handover_child_keeps_parents_lock(locks: ModuleType, tmp_path: P
         assert child.returncode == 0 and child.stdout.strip() == "acquired"
         assert _metadata(config) == before
         assert _child(config, env=clean_env).returncode == 9
+
+
+def test_handover_through_real_virtualenv_python(locks: ModuleType, tmp_path: Path) -> None:
+    environment = tmp_path / "venv"
+    venv.EnvBuilder(with_pip=False).create(environment)
+    python = environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+    config = tmp_path / "config"
+    clean_env = dict(os.environ)
+    with locks.machine_lock(config):
+        before = _metadata(config)
+        command = [str(python), *_command(config)[1:]]
+        child = subprocess.run(command, capture_output=True, text=True, timeout=15, check=False)
+        assert child.returncode == 0, child.stdout + child.stderr
+        assert child.stdout.strip() == "acquired"
+        assert _metadata(config) == before
+        assert _child(config, env=clean_env).returncode == 9
+
+
+@pytest.mark.parametrize(
+    "parents,owner,expected",
+    [
+        ({30: 20, 20: 10, 10: 1}, 10, True),
+        ({30: 20, 20: 10}, 10, False),  # recorded owner has exited
+        ({30: 20, 20: 1, 10: 1}, 10, False),  # live, but unrelated
+        ({30: 20, 20: 30, 10: 1}, 10, False),  # malformed/reused-PID cycle
+        ({}, 10, False),
+    ],
+)
+def test_windows_owner_must_be_present_in_ancestry(
+    locks: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    parents: dict[int, int],
+    owner: int,
+    expected: bool,
+) -> None:
+    monkeypatch.setattr(locks, "_WINDOWS", True)
+    monkeypatch.setattr(locks.os, "getpid", lambda: 30)
+    monkeypatch.setattr(locks, "_windows_process_parents", lambda: parents)
+    assert locks._owner_is_ancestor(owner) is expected
+
+
+def test_ancestry_failure_does_not_allow_inherited_bypass(
+    locks: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with locks.machine_lock(tmp_path):
+
+        def unavailable(_pid: int) -> bool:
+            raise OSError("process snapshot unavailable")
+
+        monkeypatch.setattr(locks, "_owner_is_ancestor", unavailable)
+        with pytest.raises(RuntimeError, match="already running"):
+            with locks.machine_lock(tmp_path):
+                pytest.fail("unverified owner must not bypass contention")
 
 
 @pytest.mark.parametrize(
