@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`roadmodel score` reads each model at the effort it would run.** The
+  command and the `score_candidates` MCP tool ranked every model on its
+  headline (usually max-effort) figures at its posture's effort, as /recommend
+  did before 0.2.71. Each model now stands at the effort that scores best for
+  the task's posture among those AA measured and the task may run, with the
+  general-capability bar applied, and a model measured only at other efforts
+  is listed under `excluded`. Planning/high at the best budget reads Opus 5.5
+  · XHigh, backed up by GPT-6 Astra · XHigh.
 - **High-volume routine work is classified as speed.** The ladder header
   now says that classifying, tagging, extracting or summarizing many similar
   items is `speed` whatever accuracy it needs, with its complexity read per

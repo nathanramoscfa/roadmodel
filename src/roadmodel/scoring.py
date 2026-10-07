@@ -961,10 +961,20 @@ def rank(
     catalog: dict[str, Any] | None = None,
     benchmarks: dict[str, Any] | None = None,
     top: int | None = None,
+    effort_aware: bool = True,
 ) -> Ranking:
-    """Rank every reachable (model, platform) pair for ``task``."""
+    """Rank every reachable (model, platform) pair for ``task``.
+
+    With ``effort_aware`` (the default), a model AA has measured at several
+    efforts stands at the one that scores best for the task's posture, among
+    those it may run (:func:`effort_settings`), its quality, requirement
+    penalty (in the category and in general capability) and cost read there;
+    a model measured only at efforts the task does not run is left out. Off,
+    every model stands on its headline row at its posture's effort: the pool
+    :func:`ladder` expands itself."""
     cat = catalog if catalog is not None else _cost._load_catalog()
-    bench = with_composites(benchmarks if benchmarks is not None else _load_benchmarks())
+    raw_bench = benchmarks if benchmarks is not None else _load_benchmarks()
+    bench = with_composites(raw_bench)
     text = user_context_text or ""
     headroom = consumption_headroom(text)
     pools = pool_states(text)
@@ -1099,6 +1109,28 @@ def rank(
             )
             continue
         candidates.append(best_for_model)
+
+    if effort_aware and candidates:
+        settings = effort_settings(
+            candidates, task, headroom, lam=lam, k=k, catalog=cat, benchmarks=raw_bench
+        )
+        best: dict[str, Candidate] = {}
+        for c in settings:
+            held = best.get(c.model_id)
+            if held is None or (c.score, -c.effective_cost_usd) > (
+                held.score,
+                -held.effective_cost_usd,
+            ):
+                best[c.model_id] = c
+        for c in candidates:
+            if c.model_id not in best:
+                excluded.append(
+                    {
+                        "model": c.model_id,
+                        "reason": "measured only at efforts this task does not run",
+                    }
+                )
+        candidates = [best[c.model_id] for c in candidates if c.model_id in best]
 
     # Funded first, then score, then cheaper, then id — deterministic.
     candidates.sort(
@@ -1404,7 +1436,8 @@ def _at_level(
     task: Task,
     bench: dict[str, Any],
     scales: tuple[EvidenceScale | None, EvidenceScale | None],
-    ranking: Ranking,
+    lam: float,
+    k: float,
 ) -> Candidate:
     """``c`` run at ``level`` (None: its headline row, at the posture's
     effort): quality from AA's row at that effort, and the requirement
@@ -1434,7 +1467,7 @@ def _at_level(
     mult = EFFORT_TOKEN_MULTIPLIER[level]
     eff_cost = c.blended_price_usd * c.scarcity * mult
     decades = math.log10(max(eff_cost, COST_FLOOR_USD) / COST_FLOOR_USD)
-    cost_pen = ranking.lam * ranking.k_points_per_decade * decades
+    cost_pen = lam * k * decades
     nudge = 0.5 if task.category in AGENT_CATEGORIES and c.platform_id in AGENT_SURFACES else 0.0
     return replace(
         c,
@@ -1457,8 +1490,9 @@ def effort_settings(
     pool: list[Candidate],
     task: Task,
     headroom: str,
-    ranking: Ranking,
     *,
+    lam: float,
+    k: float,
     catalog: dict[str, Any],
     benchmarks: dict[str, Any],
 ) -> list[Candidate]:
@@ -1493,7 +1527,7 @@ def effort_settings(
         if headroom == "uncapped" and c.scarcity == 0:
             levels = levels[-1:]  # a free path runs at its top effort
         out.extend(
-            _at_level(c, lv, model, task, bench, scales, ranking) for lv in (levels or [None])
+            _at_level(c, lv, model, task, bench, scales, lam, k) for lv in (levels or [None])
         )
     return out
 
@@ -1558,6 +1592,7 @@ def ladder(
         unavailable_models=unavailable_models,
         catalog=cat,
         benchmarks=bench,
+        effort_aware=False,
     )
     funded = [c for c in ranking.candidates if c.funding != "unfunded"]
     pool = funded or ranking.candidates
@@ -1567,7 +1602,15 @@ def ladder(
     headroom = consumption_headroom(user_context_text or "")
     # The picks are read off the same frontier drawn over each model at every
     # effort AA measured it at, so an effort is part of the pick it prices.
-    settings = effort_settings(pool, base, headroom, ranking, catalog=cat, benchmarks=bench)
+    settings = effort_settings(
+        pool,
+        base,
+        headroom,
+        lam=ranking.lam,
+        k=ranking.k_points_per_decade,
+        catalog=cat,
+        benchmarks=bench,
+    )
     # Every model AA measured only at efforts this task does not run leaves
     # none: the picks then fall back to the models' frontier.
     points = frontier(settings, bench) or front
