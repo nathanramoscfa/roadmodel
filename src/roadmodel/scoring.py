@@ -1218,8 +1218,9 @@ def ladder(
       or local weights); a per-token point takes COST only when no prepaid
       point is adequate. BALANCED is the point strictly between them, stronger
       than COST in the task's category, with the best score at the balanced
-      posture; with none, the COST or QUALITY model at the balanced posture's
-      effort, whichever differs from both other rungs.
+      posture, a prepaid point ahead of any per-token one; with none, the COST
+      or QUALITY model at the balanced posture's effort, whichever differs
+      from both other rungs.
     - Each rung runs at :func:`effort_for` its posture (cheap / balanced /
       best), set on its platform's own dial (:func:`native_level`) where the
       catalog documents one. A lower rung on the same model and platform as
@@ -1290,6 +1291,9 @@ def ladder(
     # can still trail it in the category the task needs.
     between = span[lo + 1 :] if specialist is not None else span[lo + 1 : -1]
     between = [p for p in between if p.candidate.quality > cost_point.candidate.quality]
+    # Like COST, BALANCED draws on what is already paid for first: a per-token
+    # point stands between only when no prepaid one out-scores COST there.
+    between = [p for p in between if p.candidate.scarcity < 1.0] or between
     if between:
         balanced_rung = rung(
             "balanced", max(between, key=lambda p: (p.candidate.score, -p.price_usd))

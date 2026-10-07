@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Balanced pick is already paid for, too.** Like Cost, Balanced now
+  takes a model on a subscription with headroom or local weights ahead of a
+  per-token one; a per-token model is Balanced only when no prepaid model
+  between Cost and Quality out-scores Cost in the category. Medium agentic
+  work had read Muse Spark 1.3 on OpenRouter for Balanced; it now reads
+  Gemini 3.8 Flash on Antigravity.
+
 ## [0.2.69] — 2026-10-07
 
 ### Fixed
