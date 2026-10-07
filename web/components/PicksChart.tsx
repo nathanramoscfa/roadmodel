@@ -1,14 +1,16 @@
 // web/components/PicksChart.tsx
 //
-// Where the three picks sit in the market: every measured model at its
-// blended price (x, log scale) and AA Intelligence Index (y), the green
-// cost/quality frontier stepping up through the models nothing beats for
-// less, and the picks drawn large and named. It shows in one glance what the
-// Cost, Balanced and Quality picks trade: how many AA Index points each step
-// up buys, and at what price. For a viewer with saved Settings the dots and
-// the frontier are the models they can run (PicksData.pool), and the rest of
-// the catalog stays faintly in the background. The same chart, at full size
-// and with every filter, is on /models.
+// Where the three picks sit in the market. A pick runs a model at an effort,
+// and Artificial Analysis measures a reasoning model at each effort
+// separately, so every model appears at each effort AA measured it at (x:
+// blended price times the effort's token use, log scale; y: its AA
+// Intelligence Index there), joined by a faint line, and the green
+// cost/quality frontier steps up through the points nothing beats for less:
+// the frontier the picks are read from (roadmodel scoring.effort_settings,
+// lib/pick-effort.ts). The picks are drawn large, each at the effort it runs.
+// For a viewer with saved Settings the points and the frontier are the models
+// they can run (PicksData.pool), and the rest of the catalog stays faintly in
+// the background. /models plots each model once, at its headline figures.
 //
 // Hover (mouse), tap (touch) or tab to (keyboard) any dot for the card /models
 // shows for it; a click elsewhere or Escape closes it.
@@ -17,8 +19,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { blendedPrice, formatUsd } from "@/lib/benchmark-grid";
+import { blendedPrice, formatUsd, paretoFrontier } from "@/lib/benchmark-grid";
 import type { PriorityRecommendation } from "@/lib/api";
+import { effortLabel, effortPoints, named, type EffortLevel } from "@/lib/pick-effort";
 import type { SlimRow } from "@/lib/recommend-picks";
 import { FRONTIER, LABEL_PX, pickPriceTicks, placeLabels, useWidth } from "./chart-kit";
 import { FloatingCard, type AnchorRect } from "./FloatingCard";
@@ -28,20 +31,47 @@ const M = { top: 14, right: 16, bottom: 40, left: 40 };
 const PICK_LABEL: Record<string, string> = { cheap: "Cost", balanced: "Balanced", best: "Quality" };
 
 interface Pt {
+  // The model and effort, unique per point.
+  key: string;
   row: SlimRow;
+  level: EffortLevel | null;
   x: number;
   index: number;
+  price: number;
 }
 
-function toPt(row: SlimRow): Pt | null {
+// A model's points: one per effort AA measured, else its headline figure.
+function ptsOf(row: SlimRow): Pt[] {
+  return effortPoints(row).map((p) => ({
+    key: `${row.id}@${p.level ?? "-"}`,
+    row,
+    level: p.level,
+    x: Math.log10(p.price),
+    index: p.index,
+    price: p.price,
+  }));
+}
+
+function nameOf(p: Pt): string {
+  return p.level ? `${p.row.name} · ${effortLabel(p.level)}` : p.row.name;
+}
+
+// The point a pick runs at: its effort's, where AA measured it, else the
+// model's headline figure at list price.
+function pickPt(row: SlimRow, level: EffortLevel | null): Pt | null {
+  const at = ptsOf(row).find((p) => p.level === level && level !== null);
+  if (at) return at;
   if (row.aa_index === null) return null;
-  return { row, x: Math.log10(blendedPrice(row.input_price_per_1m, row.output_price_per_1m)), index: row.aa_index };
+  const price = blendedPrice(row.input_price_per_1m, row.output_price_per_1m);
+  return { key: `${row.id}@-`, row, level: null, x: Math.log10(price), index: row.aa_index, price };
 }
 
 export interface ChartPick {
   priority: PriorityRecommendation["priority"];
   row: SlimRow | null;
   model: string;
+  // The effort the pick runs at (lib/pick-effort.ts pickEffort).
+  level: EffortLevel | null;
 }
 
 export function PicksChart({
@@ -63,25 +93,50 @@ export function PicksChart({
   const width = useWidth(wrap);
   const [active, setActive] = useState<string | null>(null);
 
-  const all = useMemo(() => rows.flatMap((r) => toPt(r) ?? []).sort((a, b) => a.x - b.x), [rows]);
+  const all = useMemo(() => rows.flatMap(ptsOf).sort((a, b) => a.x - b.x), [rows]);
   const pts = useMemo(() => {
     if (!pool) return all;
     const mine = new Set(pool);
     return all.filter((p) => mine.has(p.row.id));
   }, [all, pool]);
+  const models = useMemo(() => new Set(pts.map((p) => p.row.id)).size, [pts]);
   // Catalog models outside the viewer's Settings: context, not candidates.
   const outside = useMemo(() => (pool ? all.filter((p) => !pts.includes(p)) : []), [all, pts, pool]);
-  const frontier = useMemo(() => pts.filter((p) => p.row.value_frontier), [pts]);
+  const onFrontier = useMemo(() => paretoFrontier(pts), [pts]);
+  const frontier = useMemo(() => pts.filter((p) => onFrontier.has(p)), [pts, onFrontier]);
+  // Each model's efforts, joined lowest to highest.
+  const paths = useMemo(() => {
+    const byModel = new Map<string, Pt[]>();
+    for (const p of pts) byModel.set(p.row.id, [...(byModel.get(p.row.id) ?? []), p]);
+    return [...byModel.values()].filter((ps) => ps.length > 1);
+  }, [pts]);
   const pickPts = useMemo(
     () =>
       picks.flatMap((p) => {
-        const pt = p.row ? toPt(p.row) : null;
+        const pt = p.row ? pickPt(p.row, p.level) : null;
         return pt ? [{ ...pt, priority: p.priority }] : [];
       }),
     [picks],
   );
   const unmeasured = picks.filter((p) => !p.row || p.row.aa_index === null);
-  const byId = useMemo(() => new Map(rows.map((r) => [r.id, r])), [rows]);
+  // The point that beats p: the strongest at its price or less that scores higher.
+  const leaderOf = useCallback(
+    (p: Pt): Pt | null =>
+      pts
+        .filter((q) => q.price <= p.price + 1e-9 && q.index > p.index)
+        .sort((a, b) => b.index - a.index || a.price - b.price)[0] ?? null,
+    [pts],
+  );
+  // A point as /models' card reads a model: named for its effort, its AA
+  // Index and frontier mark there.
+  const asRow = useCallback(
+    (p: Pt): SlimRow => {
+      const base = p.level ? named(p.row, p.level, p.index) : p.row;
+      const leader = leaderOf(p);
+      return { ...base, value_frontier: leader === null, value_beaten_by: leader ? leader.key : null };
+    },
+    [leaderOf],
+  );
 
   const height = width > 0 && width < 520 ? 260 : 300;
   const plotW = Math.max(40, width - M.left - M.right);
@@ -108,19 +163,22 @@ export function PicksChart({
           id: `pick-${p.priority}`,
           cx: sx(p.x),
           cy: sy(p.index),
-          text: `${PICK_LABEL[p.priority]}: ${p.row.name}`,
+          text: `${PICK_LABEL[p.priority]}: ${nameOf(p)}`,
           priority: 2000 + (p.priority === selected ? 100 : 0),
         })),
         // The other frontier models' names, while there is room; a pick on
         // the frontier is already named by its pick label.
         ...frontier
-          .filter((f) => !pickPts.some((p) => p.row.id === f.row.id))
+          .filter((f) => !pickPts.some((p) => p.key === f.key))
           .map((f) => ({
-          id: f.row.id,
-          cx: sx(f.x),
-          cy: sy(f.index),
-          text: f.row.name,
-          priority: 100 + f.index,
+            id: f.key,
+            cx: sx(f.x),
+            cy: sy(f.index),
+            text: nameOf(f),
+            priority: 100 + f.index,
+            // With a point per effort the frontier is dense; its dots must
+            // not crowd the picks' names out.
+            dot: false,
           })),
       ],
       { x: M.left + 2, y: M.top + 2, w: plotW - 4, h: plotH - 4 },
@@ -152,13 +210,15 @@ export function PicksChart({
   const yTicks: number[] = [];
   for (let v = 0; v <= yHi; v += 10) yTicks.push(v);
 
-  const activePt = active ? pts.find((p) => p.row.id === active) : undefined;
+  const activePt = active
+    ? (pts.find((p) => p.key === active) ?? pickPts.find((p) => p.key === active))
+    : undefined;
   const getAnchor = (): AnchorRect | null => {
     const r = svgRef.current?.getBoundingClientRect();
     if (!r || !activePt) return null;
     return { left: r.left + sx(activePt.x) - 8, top: r.top + sy(activePt.index) - 8, width: 16, height: 16 };
   };
-  const pickIds = new Map(pickPts.map((p) => [p.row.id, p.priority]));
+  const pickKeys = new Map(pickPts.map((p) => [p.key, p.priority]));
 
   if (pts.length < 2) return null;
 
@@ -172,7 +232,7 @@ export function PicksChart({
           Where the picks sit
         </span>
         <span className="text-xs text-brand-slate-500 dark:text-brand-slate-400" data-testid="picks-chart-scope">
-          {pool ? `${pts.length} models you can use` : `${pts.length} measured models`} · price vs AA Index
+          {pool ? `${models} models you can use` : `${models} measured models`} · each at its measured efforts
         </span>
       </figcaption>
 
@@ -183,8 +243,8 @@ export function PicksChart({
             width={width}
             height={height}
             role="group"
-            aria-label={`The picks among ${pts.length} ${pool ? "models you can use" : "measured models"} by blended price and AA Intelligence Index: ${pickPts
-              .map((p) => `${PICK_LABEL[p.priority]} ${p.row.name}, AA ${p.index}, ${formatUsd(10 ** p.x)} per 1M`)
+            aria-label={`The picks among ${models} ${pool ? "models you can use" : "measured models"}, each at its measured efforts, by price and AA Intelligence Index: ${pickPts
+              .map((p) => `${PICK_LABEL[p.priority]} ${nameOf(p)}, AA ${p.index}, ${formatUsd(p.price)} per 1M`)
               .join("; ")}.`}
             className="block touch-manipulation select-none text-brand-slate-400 dark:text-brand-slate-500"
           >
@@ -202,12 +262,12 @@ export function PicksChart({
               </text>
             ))}
             <text x={M.left + plotW / 2} y={height - 4} textAnchor="middle" fontSize={11} className="fill-brand-slate-500 dark:fill-brand-slate-400">
-              Blended price, $ per 1M tokens (log scale)
+              {"Blended price × the effort's token use, $ per 1M (log scale)"}
             </text>
 
             {outside.map((p) => (
               <circle
-                key={`outside-${p.row.id}`}
+                key={`outside-${p.key}`}
                 cx={sx(p.x)}
                 cy={sy(p.index)}
                 r={3}
@@ -219,20 +279,33 @@ export function PicksChart({
               />
             ))}
 
+            {paths.map((ps) => (
+              <polyline
+                key={`path-${ps[0].row.id}`}
+                points={ps.map((p) => `${sx(p.x)},${sy(p.index)}`).join(" ")}
+                fill="none"
+                stroke="currentColor"
+                strokeOpacity={0.3}
+                strokeWidth={1}
+                pointerEvents="none"
+                data-testid="picks-chart-effort-path"
+              />
+            ))}
+
             <path d={stepPath} fill="none" stroke={FRONTIER} strokeWidth={2.2} strokeDasharray="0.5 6" strokeLinecap="round" pointerEvents="none" />
 
             {pts.map((p) => {
-              if (pickIds.has(p.row.id)) return null;
-              const onFrontier = p.row.value_frontier;
+              if (pickKeys.has(p.key)) return null;
+              const front = onFrontier.has(p);
               return (
-                <g key={p.row.id} pointerEvents="none" opacity={activePt && activePt !== p ? 0.45 : 1}>
-                  {onFrontier && <circle cx={sx(p.x)} cy={sy(p.index)} r={6} fill="none" stroke={FRONTIER} strokeWidth={1.5} />}
+                <g key={p.key} pointerEvents="none" opacity={activePt && activePt !== p ? 0.45 : 1}>
+                  {front && <circle cx={sx(p.x)} cy={sy(p.index)} r={6} fill="none" stroke={FRONTIER} strokeWidth={1.5} />}
                   <circle
                     cx={sx(p.x)}
                     cy={sy(p.index)}
                     r={3.5}
-                    fill={onFrontier ? FRONTIER : undefined}
-                    className={onFrontier ? "" : "fill-brand-slate-300 dark:fill-brand-slate-600"}
+                    fill={front ? FRONTIER : undefined}
+                    className={front ? "" : "fill-brand-slate-300 dark:fill-brand-slate-600"}
                   />
                 </g>
               );
@@ -242,7 +315,7 @@ export function PicksChart({
               const isSel = p.priority === selected;
               return (
                 <g key={`pick-${p.priority}`} pointerEvents="none">
-                  {p.row.value_frontier && (
+                  {leaderOf(p) === null && (
                     <circle cx={sx(p.x)} cy={sy(p.index)} r={isSel ? 11.5 : 10} fill="none" stroke={FRONTIER} strokeWidth={2} />
                   )}
                   <circle
@@ -277,33 +350,33 @@ export function PicksChart({
               );
             })}
 
-            {pts.map((p) => {
-              const pick = pickIds.get(p.row.id);
+            {[...pts.filter((p) => !pickKeys.has(p.key)), ...pickPts].map((p) => {
+              const pick = pickKeys.get(p.key);
               return (
                 <circle
-                  key={`hit-${p.row.id}`}
+                  key={`hit-${p.key}`}
                   cx={sx(p.x)}
                   cy={sy(p.index)}
                   r={pick ? 12 : 8}
                   fill="transparent"
                   tabIndex={0}
                   role="button"
-                  aria-label={`${pick ? `${PICK_LABEL[pick]} pick: ` : ""}${p.row.name}, AA Index ${p.index}, blended ${formatUsd(10 ** p.x)} per 1M tokens`}
+                  aria-label={`${pick ? `${PICK_LABEL[pick]} pick: ` : ""}${nameOf(p)}, AA Index ${p.index}, ${formatUsd(p.price)} per 1M tokens at its effort's token use`}
                   data-testid={pick ? "picks-chart-pick" : "picks-chart-point"}
                   data-model-id={p.row.id}
                   className="cursor-pointer outline-none"
                   onPointerEnter={(e) => {
-                    if (e.pointerType === "mouse") setActive(p.row.id);
+                    if (e.pointerType === "mouse") setActive(p.key);
                   }}
                   onPointerLeave={(e) => {
                     if (e.pointerType === "mouse") setActive(null);
                   }}
                   onClick={() => {
-                    setActive(p.row.id);
+                    setActive(p.key);
                     if (pick) onSelect(pick);
                   }}
                   onFocus={(e) => {
-                    if (e.currentTarget.matches(":focus-visible")) setActive(p.row.id);
+                    if (e.currentTarget.matches(":focus-visible")) setActive(p.key);
                   }}
                   onBlur={() => setActive(null)}
                 />
@@ -316,14 +389,19 @@ export function PicksChart({
       <p className="mt-1 text-xs leading-5 text-brand-slate-500 dark:text-brand-slate-400">
         {pool ? (
           <>
-            The dotted green line is your cost/quality frontier, drawn over the models your plans and
-            API providers reach: its height at any price is the top AA Index you can get for that
-            price. Grey dots are your other models; hollow rings are the rest of the catalog.
+            Each model appears at every effort Artificial Analysis measured it at, joined by a faint
+            line: a higher effort scores higher and draws more tokens, so it sits further right. The
+            dotted green line is your cost/quality frontier over those points, drawn over the models
+            your plans and API providers reach: its height at any price is the top AA Index you can
+            get for that price, and the picks are read from it. Grey dots are your other points;
+            hollow rings are the rest of the catalog.
           </>
         ) : (
           <>
-            The dotted green line is the cost/quality frontier: its height at any price is the top AA
-            Index that price buys. Grey dots are the rest of the catalog.{" "}
+            Each model appears at every effort Artificial Analysis measured it at, joined by a faint
+            line: a higher effort scores higher and draws more tokens, so it sits further right. The
+            dotted green line is the cost/quality frontier over those points: its height at any price
+            is the top AA Index that price buys. Grey dots are the rest of the catalog.{" "}
             <Link href="/settings" className="font-medium text-brand-accent hover:underline">
               Save your plans in Settings
             </Link>{" "}
@@ -337,8 +415,11 @@ export function PicksChart({
       {activePt && (
         <FloatingCard getAnchor={getAnchor} placement="side" testId="picks-chart-card">
           <FrontierPointCard
-            model={activePt.row}
-            leader={activePt.row.value_beaten_by ? (byId.get(activePt.row.value_beaten_by) ?? null) : null}
+            model={asRow(activePt)}
+            leader={(() => {
+              const l = leaderOf(activePt);
+              return l ? asRow(l) : null;
+            })()}
           />
         </FloatingCard>
       )}

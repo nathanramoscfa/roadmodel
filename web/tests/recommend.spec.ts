@@ -144,6 +144,11 @@ test("the chart plots the picks among the catalog", async ({ page }) => {
   // Signed out there are no saved Settings: the whole catalog's frontier.
   await expect(page.getByTestId("picks-chart-scope")).toContainText("measured models");
   await expect(page.getByTestId("picks-chart-outside")).toHaveCount(0);
+  // Each model at its measured efforts, and each pick at the effort it runs.
+  expect(await page.getByTestId("picks-chart-effort-path").count()).toBeGreaterThan(0);
+  await expect(
+    page.getByRole("button", { name: /^Cost pick: Gemini 3\.8 Flash · Medium,/ }),
+  ).toHaveCount(1);
 });
 
 test("renders the backup row with its platform and effort", async ({ page }) => {

@@ -57,7 +57,7 @@ export function pickEffort(settings: Record<string, unknown> | null | undefined)
   return LEVEL_WORDS[raw.toLowerCase().replace(/[\s_-]+/g, "")] ?? null;
 }
 
-interface Point {
+export interface EffortPoint {
   row: SlimRow;
   level: EffortLevel | null;
   index: number;
@@ -66,7 +66,7 @@ interface Point {
 
 // A model's points on the frontier: one per effort AA measured, priced by
 // its token multiplier, or its headline figure at list price.
-function pointsOf(row: SlimRow): Point[] {
+export function effortPoints(row: SlimRow): EffortPoint[] {
   const blended = blendedPrice(row.input_price_per_1m, row.output_price_per_1m);
   const by = row.aa_index_by_effort ?? {};
   const levels = Object.keys(by).filter((l): l is EffortLevel => l in EFFORT_TOKEN_MULTIPLIER);
@@ -81,7 +81,8 @@ function pointsOf(row: SlimRow): Point[] {
   }));
 }
 
-function named(row: SlimRow, level: EffortLevel, index: number): SlimRow {
+// The model's row read at one effort: named for it, its AA Index there.
+export function named(row: SlimRow, level: EffortLevel, index: number): SlimRow {
   return { ...row, name: `${row.name} · ${effortLabel(level)}`, aa_index: index };
 }
 
@@ -110,7 +111,7 @@ export function pickAtEffort(data: PicksData, row: SlimRow, level: EffortLevel |
   const leader =
     Object.values(data.rows)
       .filter((r) => inPool(data, r))
-      .flatMap(pointsOf)
+      .flatMap(effortPoints)
       .filter((p) => p.price <= price + 1e-9 && p.index > index)
       .sort((a, b) => b.index - a.index || a.price - b.price)[0] ?? null;
   const at: SlimRow = {
