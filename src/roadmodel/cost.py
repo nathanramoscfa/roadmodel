@@ -404,7 +404,7 @@ _HOST_METHODS: frozenset[str] = frozenset({"antigravity"})
 _LOCAL_PROVIDERS: frozenset[str] = frozenset({"ollama"})
 
 
-def model_provider(model_ref: str) -> str | None:
+def model_provider(model_ref: str, catalog: dict[str, Any] | None = None) -> str | None:
     """Resolve a model id-or-name to its MAKER (the company that produces it):
     ``anthropic`` / ``openai`` / ``google`` / ``xai`` / ``deepseek`` / ``mistral``
     / ``zai`` / ``groq`` / ``cursor`` …
@@ -419,7 +419,10 @@ def model_provider(model_ref: str) -> str | None:
     rather than dropping a valid backup.
     """
     try:
-        catalog = _load_catalog()
+        # A caller that already holds the catalog passes it: the scorer asks
+        # once per candidate, and re-parsing the JSON each time was most of a
+        # ladder table's cost (Phase 4.5, 2026-10-08).
+        catalog = catalog if catalog is not None else _load_catalog()
         model_id = str(_resolve_model(model_ref, catalog)["id"])
     except (ValueError, BundledDocNotFoundError, KeyError, TypeError):
         return None
