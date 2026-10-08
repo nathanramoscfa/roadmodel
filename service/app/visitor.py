@@ -257,7 +257,7 @@ def visitor_ladder_endpoint(
         )
         provider_start = time.perf_counter()
         try:
-            result = ladder_once(req, spec.hint, config)
+            result = ladder_once(req, spec.hint, config, votes=False)
         except (ProviderCallError, MalformedResponseError) as exc:
             status, code = classify(exc)
             logger.warning(
