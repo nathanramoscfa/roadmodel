@@ -376,13 +376,13 @@ differently:
   `/effort` level with documented values `low`, `medium`, `high`,
   `xhigh`, `max` (shown in the UI as Low / Medium / High / Extra
   High / Max). Not every model supports every level — Opus 5,
-  Opus 5.5, Opus 4.7, Opus 4.8, Sonnet 5, Sonnet 5.5, Fable 5, and Fable 5.1
+  Opus 5.5, Opus 4.7, Opus 4.8, Sonnet 5, Sonnet 5.5, Fable 5, Fable 5.1, and Haiku 5.5
   expose the full low/medium/high/xhigh/max range; Opus 4.6 and
   Sonnet 4.6 top out at `max` without an `xhigh` step. An effort
   level a model does not support falls back to the highest
   supported level at or below it. Default effort is `high` on every
-  model that supports effort, except Opus 4.7 (`xhigh`) and Opus 5.5
-  and Sonnet 5.5 (`medium`). Extended thinking can also be toggled
+  model that supports effort, except Opus 4.7 (`xhigh`) and Opus 5.5,
+  Sonnet 5.5 and Haiku 5.5 (`medium`). Extended thinking can also be toggled
   with Option+T /
   Alt+T, `alwaysThinkingEnabled`, or `MAX_THINKING_TOKENS=0`. Claude
   Code 2.1.257 ships Claude Fable 5.1 as the new default Fable model
@@ -485,7 +485,13 @@ differently:
   runs at the effort level you ask for. It also fixes cloud sessions
   forgetting the client's thinking setting after a container restart.
   The `/effort` vocabulary and the extended-thinking controls are
-  unchanged.
+  unchanged. 2.1.293 adds Claude Haiku 5.5 (`claude-haiku-5-5`, the
+  new default Haiku on the Anthropic API; 1M context). It exposes the
+  full low/medium/high/xhigh/max range with default effort `medium`.
+  2.1.293 also stops `/model` effort ←/→ from wrapping past the
+  highest or lowest level. 2.1.294 is a hook-judging fix release.
+  Neither release changes the `/effort` vocabulary or the
+  extended-thinking controls.
 - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
   `reasoning_effort` knob — `low`, `medium`, `high`, `xhigh`, `max`,
   `ultra`. Codex's plan-mode `plan_mode_reasoning_effort` variant
@@ -558,12 +564,12 @@ OMITTED. Every other value is an EFFORT level emitted verbatim, with
 
 - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
   `high` → `High` (the docs' default effort on every model that
-  supports effort, Opus 4.7 (`xhigh`) and Opus 5.5 / Sonnet 5.5
-  (`medium`) aside); `xhigh` → `XHigh`
+  supports effort, Opus 4.7 (`xhigh`) and Opus 5.5 / Sonnet 5.5 /
+  Haiku 5.5 (`medium`) aside); `xhigh` → `XHigh`
   (the "Extra High" UI label); `max` → `Max` (the top "Max" UI
   level, ABOVE "Extra High") ONLY on models whose documented row
   exposes a `max` step above `xhigh` — Opus 5, Opus 5.5, Opus 4.7,
-  Opus 4.8, Sonnet 5, Sonnet 5.5, Fable 5, and Fable 5.1. On models that reach
+  Opus 4.8, Sonnet 5, Sonnet 5.5, Fable 5, Fable 5.1, and Haiku 5.5. On models that reach
   `max` with NO `xhigh` step (Opus 4.6, Sonnet 4.6), `max` is their
   Extra-High top and maps to `XHigh`, not `Max`. Extended thinking
   disabled (Option+T / Alt+T, `MAX_THINKING_TOKENS=0`, or
