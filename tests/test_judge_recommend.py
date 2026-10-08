@@ -126,10 +126,12 @@ def test_a_defensible_alternative_reading_passes_b2(world: dict[str, Any]) -> No
     assert jr.b2_probe(picks, strict, world["table"], world["context"], [])
 
 
-def test_b2_needs_every_probe_answered() -> None:
-    assert jr.b2_check({"a": [], "b": []}, 2).passed
-    assert not jr.b2_check({"a": [], "b": ["quality: x"]}, 2).passed
-    assert not jr.b2_check({"a": []}, 2).passed
+def test_b2_holds_at_90_percent_with_every_probe_answered() -> None:
+    ten = {f"p{i}": [] for i in range(10)}
+    assert jr.b2_check(ten, 10).passed
+    assert jr.b2_check({**ten, "p0": ["quality: x"]}, 10).passed  # 9/10
+    assert not jr.b2_check({**ten, "p0": ["x"], "p1": ["x"]}, 10).passed  # 8/10
+    assert not jr.b2_check({k: v for k, v in ten.items() if k != "p9"}, 10).passed
 
 
 def test_only_full_anonymous_first_pass_rows_are_scored() -> None:
