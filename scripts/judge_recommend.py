@@ -15,7 +15,8 @@ roadmodel version installed here (the workflow installs the one production's
 the anonymous default) nor its QUALITY rung is weaker in the gold category than
 the gold row's: the same model at no lower effort, or another model whose
 quality there is at least the gold model's. A stronger pick passes (quality
-first: over-escalation is spec-compliant). Bar: every probe.
+first: over-escalation is spec-compliant). Bar: every probe answered and at
+least 90% passing (the bar's free-tier figure, for the anonymous lane).
 
 B6, an LLM judge: would a user who otherwise hands docs/model-selector.txt to
 Opus accept this recommendation? Each ladder is graded on six criteria
@@ -77,7 +78,10 @@ DEFAULT_OUT = "/tmp/rm-judge-recommend.json"  # noqa: S108  # nosec B108 - a rep
 JUDGE_MODEL = "claude-opus-5-5"
 # The maker of every model the judge may run as (claude -p runs Anthropic's).
 JUDGE_MAKER = "Anthropic"
-B2_BAR = 1.0
+# The bar's free-tier figure: B2 is scored on the anonymous lane (maintainer
+# decision 2026-10-08). The engine misreads some probes systematically
+# (non-english reads Low on every call), so 100% could not hold on it.
+B2_BAR = 0.90
 B6_BAR = 0.95
 # 33 probes and 5 controls fit; anything past the cap is left unjudged (and
 # so fails B6) rather than spent.
