@@ -265,6 +265,17 @@ def test_the_fact_sheet_and_prompt_carry_no_engine_name(world: dict[str, Any]) -
     assert message.count("backup") == 3
 
 
+def test_the_fact_sheet_marks_letter_only_scores(world: dict[str, Any]) -> None:
+    # 2026-10-08: GPT-5.6 Luna's speed "85" is its letter (AA has no throughput
+    # figure for it), and the judge read it as a measured lead over a measured 48.
+    sheet = jr.fact_sheet(world["context"], [])
+    multimodal = [ln for ln in sheet.splitlines() if ln.strip().startswith("multimodal (")]
+    assert multimodal and all(
+        v.endswith("*") for ln in multimodal for v in ln.split(": ")[1].split("/")
+    )
+    assert "marked * is the letter alone" in jr.RUBRIC.replace("\n", " ")
+
+
 def test_judge_all_caps_calls_and_never_raises() -> None:
     real = jr.claude_judge("/dev/null", "m")
     calls: list[str] = []
