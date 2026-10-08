@@ -1,19 +1,20 @@
 // scripts/soak-recommend.ts
 //
 // Phase 4.5 Stream C — the committed recommender SOAK harness. Mints one founder
-// session, fires a probe battery against gated prod /api/recommend ANON (free
-// tier, twice each for determinism) and SIGNED-IN (frontier tier), then scores
-// the result against the DETERMINISTIC subset of the Phase 4.5 quality BAR. The
-// subtler quality calls (model-pick vs gold, the LLM-judge "would an Opus@selector
-// user accept this") are the AI layer (the gold-differential Workflow), run
-// separately; everything here is rule-based and needs no AI API.
+// session, fires the probe battery (scripts/soak_probes.json) against gated
+// prod /api/recommend ANON (twice each, for determinism) and SIGNED-IN (once),
+// then scores the result against the rule-based subset of the Phase 4.5
+// quality BAR. B2 (the picks against the probes' gold labels) and B6 (the
+// LLM judge) are scripts/judge_recommend.py, which reads this script's JSONL:
+// every row carries the whole ladder the user saw and the engine that wrote it.
 //
 //   cd web
 //   NODE_PATH="$(pwd)/node_modules" ../scripts/with-prod-secrets.sh \
 //       node node_modules/.bin/tsx ../scripts/soak-recommend.ts [BASE_URL]
 //
 // Exit code 0 = all deterministic bar checks pass; 1 = a regression (so the
-// scheduled cron can fail/report). Output JSONL: /tmp/rm-soak-recommend.jsonl.
+// scheduled cron can fail/report). Output JSONL: $SOAK_OUT, else
+// /tmp/rm-soak-recommend.jsonl.
 
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
@@ -51,7 +52,7 @@ const modelTier = (name: string | null): string =>
 
 const BASE = process.argv[2] ?? "https://roadmodel.ai";
 const EMAIL = process.env.ROADMODEL_DOGFOOD_EMAIL ?? "nathan.ramos.github@gmail.com";
-const OUT = "/tmp/rm-soak-recommend.jsonl";
+const OUT = process.env.SOAK_OUT ?? "/tmp/rm-soak-recommend.jsonl";
 
 function need(n: string): string {
   const v = process.env[n];
@@ -92,20 +93,13 @@ interface Probe {
   id: string;
   task: string;
 }
-const PROBES: Probe[] = [
-  { id: "creative", task: "Write a short story about a robot learning to garden." },
-  { id: "coding-cli", task: "Help me build a small Python CLI that fetches weather data and caches it locally." },
-  { id: "planning", task: "Draft a one-week study plan for a graduate-level linear algebra exam." },
-  { id: "data-analysis", task: "Analyze a 2 GB CSV of retail sales and surface seasonal demand trends with charts." },
-  { id: "legacy-refactor", task: "Refactor a 50-file legacy Django monolith into modular services with tests." },
-  { id: "math-proof", task: "Prove that the square root of 2 is irrational, step by step, rigorously." },
-  { id: "vision-ocr", task: "Extract line-item tables from a scanned PDF invoice image and output CSV." },
-  { id: "ambiguous", task: "help" },
-  { id: "non-english", task: "Écris un poème sur la mer, en français, avec des rimes riches." },
-  { id: "cost-bulk", task: "Cheapest capable model to classify 10,000 support tickets by sentiment; accuracy matters." },
-  { id: "fenced-json", task: 'Review this config and flag risks: a JSON config {"retries":5,"timeout_ms":0}' },
-  { id: "agentic-tooluse", task: "Build an autonomous agent that monitors my inbox, drafts replies, and books meetings via API." },
-];
+// The battery and its gold labels live in one file, shared with the judge
+// (scripts/judge_recommend.py) and pinned by tests/test_soak_probes.py.
+const PROBES: Probe[] = (() => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const doc = JSON.parse(readFileSync(join(here, "soak_probes.json"), "utf8")) as { probes: Probe[] };
+  return doc.probes.map(({ id, task }) => ({ id, task }));
+})();
 
 // Deterministic defect signatures (mirror the Task-1 + T-measure analysis).
 const LEAK = /##\s|\bDay\s*1\b|Morning\s*\(|Step\s*1:|```|\n\s*[-*]\s+\w|Majestueuse|ravisse|\n\d+\.\s/m;
@@ -126,6 +120,20 @@ interface Row {
   thinking: string | null;
   conversation: string | null;
   rationale: string;
+  // What the judge reads: every pick of the ladder as the user saw it, and the
+  // engine that wrote them (the judge refuses to grade its own maker's work).
+  ladder: Record<string, unknown>[];
+  engine: { hint?: string; name?: string; maker?: string; fell_back?: boolean } | null;
+}
+
+// The fields of a pick the judge needs; the cost tables stay out of the JSONL.
+const LADDER_FIELDS = ["priority", "model", "platform", "settings", "backup", "rationale", "rationale_sections", "conversation", "specialist", "specialist_category"];
+function ladderOf(payload: Record<string, unknown>): Record<string, unknown>[] {
+  const recs = payload.recommendations;
+  if (!Array.isArray(recs)) return [];
+  return recs
+    .filter((r): r is Record<string, unknown> => typeof r === "object" && r !== null)
+    .map((r) => Object.fromEntries(LADDER_FIELDS.filter((k) => k in r).map((k) => [k, r[k]])));
 }
 
 // The pick the soak scores. Since #320 (2026-06-28) /api/recommend answers
@@ -179,6 +187,8 @@ async function runProbe(p: Probe, authCookie: string | null, gate: string, bypas
     thinking,
     conversation: (pick.conversation ?? null) as string | null,
     rationale: typeof pick.rationale === "string" ? pick.rationale : "",
+    ladder: ladderOf(payload),
+    engine: (payload.engine ?? null) as Row["engine"],
   };
 }
 

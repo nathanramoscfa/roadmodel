@@ -13,6 +13,13 @@
 # failed from 2026-09-21 to 2026-09-24 while this job stayed green: the tracking
 # issue already fails daily on known residuals, so nobody read it as an alarm.
 #
+# B2 (the picks against the probes' gold labels) and B6 (an LLM judge: would a
+# selector user accept this ladder?) are scored after the soak by
+# scripts/judge_recommend.py, against the roadmodel version production runs.
+# The judge is Claude Code headless on the CLAUDE_CODE_OAUTH_TOKEN subscription
+# token: no API key is read, so it spends no API cash. A dispatch can skip it
+# (judge: false) and score B2 alone.
+#
 # GATED: skips cleanly until the 5 prod-soak secrets are seeded as Actions
 # secrets (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_ANON_KEY,
 # SITE_PASSWORD, and optional ROADMODEL_LATENCY_BYPASS_TOKEN). Until then it logs
@@ -25,6 +32,11 @@ on:
   schedule:
     - cron: "0 13 * * *" # daily 13:00 UTC (clear of the catalog crons at 16:00/17:00)
   workflow_dispatch:
+    inputs:
+      judge:
+        description: "Run the B6 judge (Opus via the subscription token); false scores B2 only"
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -99,8 +111,37 @@ jobs:
           echo "exit=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
           echo "health=$(grep -m1 '^SERVICE_HEALTH:' /tmp/soak.log || true)" >> "$GITHUB_OUTPUT"
 
+      - uses: actions/setup-python@v5
+        if: steps.check.outputs.have == 'true' && steps.soak.outputs.exit != '3'
+        with:
+          python-version: "3.13"
+
+      - name: Install the roadmodel production runs
+        # B2 recomputes the gold ladder rows, and the judge's fact sheet reads
+        # the catalog: both must be the release production serves, not main.
+        if: steps.check.outputs.have == 'true' && steps.soak.outputs.exit != '3'
+        run: |
+          V=$(curl -fsS https://roadmodel-api.vercel.app/healthz | python -c 'import json,sys; print(json.load(sys.stdin)["roadmodel_version"])')
+          echo "Production runs roadmodel $V"
+          python -m pip install --quiet "roadmodel==$V"
+          # Claude Code, pinned, for the judge (claude -p).
+          npm install -g --no-fund --no-audit @anthropic-ai/claude-code@2.1.293
+
+      - name: Score B2 and B6 (judge)
+        id: judge
+        if: steps.check.outputs.have == 'true' && steps.soak.outputs.exit != '3'
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          JUDGE: ${{ inputs.judge }}
+        run: |
+          set +e
+          FLAG=""
+          if [ "$JUDGE" = "false" ]; then FLAG="--no-judge"; fi
+          python scripts/judge_recommend.py --rows /tmp/rm-soak-recommend.jsonl $FLAG 2>&1 | tee /tmp/judge.log
+          echo "exit=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
       - name: Track regression in a single issue
-        if: steps.check.outputs.have == 'true' && steps.soak.outputs.exit != '0'
+        if: steps.check.outputs.have == 'true' && (steps.soak.outputs.exit != '0' || (steps.judge.outputs.exit != '' && steps.judge.outputs.exit != '0'))
         uses: actions/github-script@v7
         with:
           script: |
@@ -108,7 +149,11 @@ jobs:
             let log = "";
             try { log = fs.readFileSync("/tmp/soak.log", "utf8"); } catch {}
             const idx = log.indexOf("=== SOAK SCORECARD");
-            const scorecard = idx >= 0 ? log.slice(idx) : log.slice(-3000);
+            let scorecard = idx >= 0 ? log.slice(idx) : log.slice(-3000);
+            let judge = "";
+            try { judge = fs.readFileSync("/tmp/judge.log", "utf8"); } catch {}
+            const j = judge.indexOf("=== JUDGE SCORECARD");
+            if (j >= 0) scorecard = `${scorecard.trim()}\n\n${judge.slice(j).trim()}`;
             const title = "Recommender soak: quality bar not met";
             const body = [
               `The daily recommender soak did not meet the Phase 4.5 quality BAR (run ${context.runId}).`,
