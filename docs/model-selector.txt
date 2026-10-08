@@ -1257,7 +1257,7 @@
              tier-coding="A" tier-planning="A" tier-agentic="A"
              tier-multimodal="S" tier-long-context="A" tier-knowledge="A"
              tier-speed="S"
-             headline-benchmarks="AA Intelligence Index 40.9 (high); HLE 47.8%; SciCode 56.6; Terminal-Bench 4.0 19.7; AA-LCR 0.813; Terminal-Bench 2.1 87.6; Output Speed 156.8 tokens/s"
+             headline-benchmarks="AA Intelligence Index 40.9 (high); HLE 47.8%; SciCode 56.6; Terminal-Bench 4.0 19.7; AA-LCR 0.813; Terminal-Bench 2.1 87.6; Output Speed 122.1 tokens/s"
              pricing-notes="-"
              prose-generated="best-for headline-benchmarks"
              best-for="Frontier-class multimodal input, plus strong coding, planning, agentic work, long context and knowledge, with very fast output, at a low price. Its AA Intelligence Index of 40.9 ranks 18th of 56 measured models." />
