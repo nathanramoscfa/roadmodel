@@ -1203,8 +1203,11 @@ def test_ladder_endpoint_returns_three_anchored_picks(
         thinking_budget: int | None = None,
         temperature: float | None = None,
         scoring_context_text: str | None = None,
+        classification: str | None = None,
+        classification_votes: int = 0,
     ) -> dict[str, Any]:
         captured["prompt"] = prompt
+        captured["classification_votes"] = classification_votes
         captured["max_output_tokens"] = max_output_tokens
         captured["scoring_context_text"] = scoring_context_text
         return {

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The same task lands on the same ladder row.** The picks come from the
+  ladder table; the engine's one judgement is the task's classification (the
+  row), and at its reasoning floor it varied between identical calls: 6 of
+  the soak's 33 probes landed on a different row across three calls.
+  `recommend_structured_ladder` now takes `classification`, a row an earlier
+  answer to the same task landed on, which it holds, and
+  `classification_votes`: for a new task, that many short calls on the same
+  cached prompt return the CLASSIFICATION line alone, in parallel with the
+  ladder call, and the majority row wins. The votes' tokens are folded into
+  the call's usage (`usage.add`), and the guard reports
+  `classification_source` (pinned / vote / declared) and
+  `classification_votes`. Measured on the 33 probes, three calls each: rows
+  stable 27 → 30 with two votes; the hosted service pins each task's row for
+  seven days, so a repeated task is stable by construction.
+
 ## [0.2.75] — 2026-10-07
 
 ### Fixed

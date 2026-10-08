@@ -85,6 +85,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--runs", type=int, default=3)
     ap.add_argument("--probes", default="", help="comma-separated probe ids (default: all)")
     ap.add_argument("--concurrency", type=int, default=6)
+    ap.add_argument(
+        "--votes", type=int, default=0, help="classification votes per request (production: 2)"
+    )
     ap.add_argument("--out", type=pathlib.Path)
     args = ap.parse_args(argv)
 
@@ -122,6 +125,7 @@ def main(argv: list[str] | None = None) -> int:
                 max_output_tokens=engine["ladder_max_output_tokens"],
                 thinking_budget=engine["thinking_budget"],
                 temperature=engine["temperature"],
+                classification_votes=args.votes,
             )
         except Exception as exc:  # noqa: BLE001 - a failed run reads as no classification
             print(f"{probe['id']}: {type(exc).__name__}: {str(exc)[:120]}", file=sys.stderr)
@@ -154,6 +158,7 @@ def main(argv: list[str] | None = None) -> int:
         "engine": engine["hint"],
         "probes": len(rows),
         "runs": args.runs,
+        "votes": args.votes,
         "agree": sum(r["agrees"] for r in rows),
         "under": sum(r["under"] for r in rows),
         "stable": sum(r["stable"] for r in rows),

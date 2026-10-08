@@ -4,6 +4,7 @@ from __future__ import annotations
 import inspect
 import logging
 import os
+import re
 from dataclasses import asdict, dataclass
 from importlib import resources
 from pathlib import Path
@@ -49,6 +50,25 @@ logger = logging.getLogger(__name__)
 _LADDER_TAKES_SCORING_CONTEXT = (
     "scoring_context_text" in inspect.signature(recommend_structured_ladder).parameters
 )
+
+# roadmodel >= 0.2.76 holds a pinned classification (the row an earlier answer
+# to the same task landed on, which the web edge caches) and, for a new task,
+# takes the majority of the ladder call and CLASSIFICATION_VOTES short
+# classification calls on the same cached prompt (Phase 4.5, maintainer
+# decision 2026-10-08). An older install takes neither argument.
+_LADDER_TAKES_CLASSIFICATION = (
+    "classification" in inspect.signature(recommend_structured_ladder).parameters
+)
+CLASSIFICATION_VOTES = 2
+# A ladder-table key (scoring.table_key): `<category>/<complexity>[/novel]`.
+_TABLE_KEY_RE = re.compile(r"^[a-z][a-z-]{1,31}/(?:low|medium|high)(?:/novel)?$")
+
+
+def _pinned_classification(context: dict[str, Any] | None) -> str | None:
+    """The classification the web edge pinned for this task, when it is shaped
+    like a ladder-table key; the package ignores one its table does not hold."""
+    raw = (context or {}).get("classification")
+    return raw if isinstance(raw, str) and _TABLE_KEY_RE.match(raw) else None
 
 
 def _bootstrap_user_context() -> Path:
@@ -546,6 +566,9 @@ def _ladder_inputs(req: RecommendRequest) -> _LadderInputs:
         if _LADDER_TAKES_SCORING_CONTEXT
         else {}
     )
+    if _LADDER_TAKES_CLASSIFICATION:
+        scoring_kwargs["classification"] = _pinned_classification(req.context)
+        scoring_kwargs["classification_votes"] = CLASSIFICATION_VOTES
     return _LadderInputs(
         user_context_text=user_context_from_request(req.context),
         # Funded-platform honesty guard (#444) — same activation condition as
@@ -567,13 +590,24 @@ def _ladder_inputs(req: RecommendRequest) -> _LadderInputs:
 
 
 def ladder_once(
-    req: RecommendRequest, hint: str, config: Any, inputs: _LadderInputs | None = None
+    req: RecommendRequest,
+    hint: str,
+    config: Any,
+    inputs: _LadderInputs | None = None,
+    *,
+    votes: bool = True,
 ) -> LadderResponse:
     """ONE ladder call on ``config``, reported as engine ``hint``. Raises the
     package's errors unchanged: the operator path below catches them and moves
     down its fallback chain; the visitor path (visitor.py) maps them to an error
-    code and stops, since a visitor's request runs on their key alone."""
+    code and stops, since a visitor's request runs on their key alone.
+    ``votes=False`` drops the classification votes, so the call is the engine's
+    only one (the visitor pays for exactly the call they asked for); a pinned
+    classification still holds."""
     ins = inputs if inputs is not None else _ladder_inputs(req)
+    kwargs = dict(ins.scoring_kwargs)
+    if not votes and "classification_votes" in kwargs:
+        kwargs["classification_votes"] = 0
     thinking_budget, max_output_tokens, temperature = _spec_for(hint).params(ladder=True)
     _reset_usage()
     ladder = recommend_structured_ladder(
@@ -586,7 +620,7 @@ def ladder_once(
         max_output_tokens=max_output_tokens,
         thinking_budget=thinking_budget,
         temperature=temperature,
-        **ins.scoring_kwargs,
+        **kwargs,
     )
     picks = {
         tier: _pick_response(

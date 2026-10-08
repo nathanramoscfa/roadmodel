@@ -88,3 +88,28 @@ def record(
             reasoning_tokens=_int(reasoning_tokens),
         )
     )
+
+
+def add(extra: list[CallUsage | None]) -> None:
+    """Fold other calls made for the same request (the classification votes,
+    run in their own contexts) into this context's record, summing every
+    count, so the caller meters the request whole. ``None`` entries (a call
+    that reported nothing) are skipped."""
+    calls = [u for u in extra if u is not None]
+    if not calls:
+        return
+    base = _LAST.get()
+    if base is not None:
+        calls = [base, *calls]
+    reasoning = [u.reasoning_tokens for u in calls if u.reasoning_tokens is not None]
+    _LAST.set(
+        CallUsage(
+            provider=calls[0].provider,
+            model=calls[0].model,
+            input_tokens=sum(u.input_tokens for u in calls),
+            cached_input_tokens=sum(u.cached_input_tokens for u in calls),
+            cache_write_tokens=sum(u.cache_write_tokens for u in calls),
+            output_tokens=sum(u.output_tokens for u in calls),
+            reasoning_tokens=sum(reasoning) if reasoning else None,
+        )
+    )

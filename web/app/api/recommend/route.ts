@@ -40,6 +40,7 @@ import { fundingNoteForModel, personalizeComparison } from "@/lib/funding";
 import { env } from "@/lib/env";
 import type { EngineRun } from "@/lib/api";
 import { recordSpend } from "@/lib/spend-guard";
+import { readPin, schedulePin } from "@/lib/classification-pin";
 
 // The per-call cost LEDGER: OUR engine spend, written to audit_log.cost_usd and
 // summed by the daily spend guard (lib/spend-guard.ts). Exact when the service
@@ -602,13 +603,24 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
     // Quality ladder (Quality first, Balanced/Cost strictly lower). Returns null
     // on any error OR an UNHEALTHY (collapsed) ladder so the caller falls back to
     // the fan-out — the ladder can never make the result worse than today.
+    // Same task, same row (lib/classification-pin): the row an earlier answer
+    // to this text landed on goes to the service, which holds it; a fresh
+    // answer pins its row once the response is out.
+    const pinFrom = (parsed: LadderPayload | null): void => {
+      const g = parsed?.guard;
+      if (!g) return;
+      schedulePin(recommenderEngine.hint, taskDescription, g.classification, g.classification_source);
+    };
+
     const fetchLadder = async (): Promise<
       ReturnType<typeof toRecommendation>[] | null
     > => {
+      const pinned = await readPin(recommenderEngine.hint, taskDescription);
       const upstreamPayload = {
         task_description: taskDescription,
         context: {
           ...incomingContext,
+          ...(pinned ? { classification: pinned } : {}),
           unavailable_models: unavailableModels,
           availability_authoritative: availabilityAuthoritative,
           // No budget_priority — the ladder emits all three tiers itself.
@@ -642,6 +654,7 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
       // was still paid for, so it is metered either way.
       noteCall(parsed);
       if (parsed?.guard?.healthy === false) return null;
+      pinFrom(parsed);
       // One sample decomposes the provider span (Step 7).
       ingestServiceTimings(upstream.headers.get("X-Roadmodel-Timing"));
       const recs: ReturnType<typeof toRecommendation>[] = [];
@@ -661,10 +674,12 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
       | { ok: true; recs: ReturnType<typeof toRecommendation>[] }
       | { ok: false; code: VisitorFailure; status: number };
     const fetchVisitorLadder = async (visitor: VisitorLane): Promise<VisitorFetch> => {
+      const pinned = await readPin(recommenderEngine.hint, taskDescription);
       const upstreamPayload = {
         task_description: taskDescription,
         context: {
           ...incomingContext,
+          ...(pinned ? { classification: pinned } : {}),
           unavailable_models: unavailableModels,
           availability_authoritative: availabilityAuthoritative,
           consumption_headroom: consumptionHeadroom,
@@ -699,6 +714,7 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
         return { ok: false, code: "provider_error", status: upstream.status };
       }
       noteCall(parsed);
+      pinFrom(parsed);
       ingestServiceTimings(upstream.headers.get("X-Roadmodel-Timing"));
       return {
         ok: true,

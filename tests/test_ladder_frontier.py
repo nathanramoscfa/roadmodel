@@ -1435,3 +1435,34 @@ def test_rank_stands_each_model_at_its_best_measured_effort() -> None:
     flat = scoring.rank(task, BOTH, catalog=CATALOG, benchmarks=bench, effort_aware=False)
     luna_flat = next(c for c in flat.candidates if c.model_id == "luna")
     assert (luna_flat.evidence_level, luna_flat.effort) == (None, "high")
+
+
+@pytest.mark.parametrize(
+    ("pin", "forwarded"), [("planning/high", "planning/high"), ("cooking/high", None), (None, None)]
+)
+def test_only_a_table_row_is_pinned_and_the_guard_says_how_the_row_was_chosen(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    table_on_fixture: dict[str, scoring.Ladder],
+    pin: str | None,
+    forwarded: str | None,
+) -> None:
+    blocks = {
+        "quality": _block("Opus", "Claude Code", "XHigh", "planning/high"),
+        "balanced": _block("Sonnet", "Claude Code", "XHigh", "planning/high"),
+        "cost": _block("Sonnet", "Claude Code", "High", "planning/high"),
+    }
+    for block in blocks.values():
+        block["classification_source"] = "vote"
+        block["classification_votes"] = "planning/high,-"
+    fake, seen = _fake(blocks)
+    monkeypatch.setattr(recommend_module, "recommend_ladder", fake)
+    result = recommend_structured_ladder(
+        "plan a release", _config(tmp_path), classification=pin, classification_votes=2
+    )
+    assert seen["pinned_classification"] == forwarded
+    assert seen["classification_votes"] == 2
+    guard = result["guard"]
+    assert guard["classification_source"] == "vote"
+    assert guard["classification_votes"] == ["planning/high", None]
+    assert all("classification_source" not in p for p in result["picks"].values())
