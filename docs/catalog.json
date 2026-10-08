@@ -1,10 +1,10 @@
 {
   "schema_version": "4",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-10-07T22:56:43Z",
+  "generated_at_utc": "2026-10-08T16:15:27Z",
   "source_doc_sha256": {
-    "model-selector.txt": "a82aa64391c70c94696f1f34f7d500856960698391576cfd9f0e9f671895ca0a",
-    "model-tier-cost-scale.md": "80baddfd88e6a105658eb5dbe64a22d444ff42e55c7b9e42dd3a14c5ec419b89"
+    "model-selector.txt": "0e3f1e25506dfcc24f13aecf3a644ac36ecd3522b5020add9df979e52bbe03e6",
+    "model-tier-cost-scale.md": "5e1d464381416d153ca792a941ccef98c9ec826cd3955c5600c4f827eb340c19"
   },
   "models": [
     {
@@ -24,9 +24,9 @@
         "speed": "S"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 16.9 (reasoning); HLE 10.4%; SciCode 42.2; Terminal-Bench 4.0 0.0; AA-LCR 0.743; Output Speed 97.2 tokens/s; AA-Omniscience -4.2; latency leader among Claude family",
+      "headline_benchmarks": "AA Intelligence Index 16.9 (reasoning); HLE 10.4%; SciCode 42.2; Terminal-Bench 4.0 0.0; AA-LCR 0.743; Output Speed 96.3 tokens/s; AA-Omniscience -4.2; latency leader among Claude family",
       "pricing_notes": "Hidden by default; Bedrock/Vertex: regional endpoints +10% surcharge; Cache: writes 1.25x, reads 0.1x",
-      "best_for": "Speed-optimized lowest-cost Claude model, ideal for simple completions, high-volume repetitive tasks, and latency-sensitive workflows where a lightweight capable response matters more than deep reasoning",
+      "best_for": "Strong long context, with very fast output, at a low price. Its AA Intelligence Index of 16.9 ranks 47th of 56 measured models. Weakest at agentic work and knowledge (D), then coding and planning (C).",
       "superseded_by": null,
       "superseded_on": null,
       "added_on": null,
@@ -80,6 +80,31 @@
       "superseded_by": null,
       "superseded_on": null,
       "added_on": null,
+      "retires_on": null
+    },
+    {
+      "id": "claude-haiku-5-5",
+      "name": "Haiku 5.5",
+      "input_price_per_1m": 0.1,
+      "output_price_per_1m": 0.5,
+      "cache_read_per_1m": null,
+      "tier_cost": "low",
+      "tiers": {
+        "coding": "C",
+        "planning": "C",
+        "agentic": "D",
+        "multimodal": "B",
+        "long-context": "A",
+        "knowledge": "D",
+        "speed": "S"
+      },
+      "jurisdiction": "us",
+      "headline_benchmarks": "Artificial Analysis has not measured Haiku 5.5 yet, so its letters are estimates",
+      "pricing_notes": "Requires Max Mode on legacy request-based plans; Requests above 100k input tokens bill at 5x the standard rates ($0.50/M input, $0.625/M cache write, $0.05/M cache read, $2.50/M output); 90% cheaper than Claude 4.5 Haiku on input and output for requests up to 100k input tokens",
+      "best_for": "Strong long context, with very fast output, at a low price. Weakest at agentic work and knowledge (D), then coding and planning (C).",
+      "superseded_by": null,
+      "superseded_on": null,
+      "added_on": "2026-10-08",
       "retires_on": null
     },
     {
@@ -175,7 +200,7 @@
       },
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 56.0 (max); HLE 55.0% (max); SciCode 61.0 (max); AA-LCR 0.827",
-      "pricing_notes": "Requires Max Mode on legacy request-based plans; Same per-token rates as Claude Sonnet 5; US-only endpoints are priced 10% higher ($2.20/M input, $11/M output); Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)",
+      "pricing_notes": "Requires Max Mode on legacy request-based plans; Same input and output rates as Claude Sonnet 5, with cache reads at $0.10/M instead of $0.20/M; US-only endpoints are priced 10% higher ($2.20/M input, $11/M output); Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)",
       "best_for": "Frontier-class coding, planning and agentic work, plus strong multimodal input, long context and knowledge, with fast output, at a medium price. Its AA Intelligence Index of 56.0 ranks 2nd of 56 measured models, the highest of any model at its price or lower. It is the cheapest model in the catalog rated S for planning.",
       "superseded_by": null,
       "superseded_on": null,
@@ -524,7 +549,7 @@
         "speed": "S"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 40.9 (high); HLE 47.8%; SciCode 56.6; Terminal-Bench 4.0 19.7; AA-LCR 0.813; Terminal-Bench 2.1 87.6; Output Speed 156.8 tokens/s",
+      "headline_benchmarks": "AA Intelligence Index 40.9 (high); HLE 47.8%; SciCode 56.6; Terminal-Bench 4.0 19.7; AA-LCR 0.813; Terminal-Bench 2.1 87.6; Output Speed 131.0 tokens/s",
       "pricing_notes": "-",
       "best_for": "Frontier-class multimodal input, plus strong coding, planning, agentic work, long context and knowledge, with very fast output, at a low price. Its AA Intelligence Index of 40.9 ranks 18th of 56 measured models.",
       "superseded_by": null,
@@ -624,7 +649,7 @@
         "speed": "B"
       },
       "jurisdiction": "cn",
-      "headline_benchmarks": "AA Intelligence Index 44.8 (max); HLE 42.3%; SciCode 59.0; Terminal-Bench 4.0 41.9; AA-LCR 0.797; LMArena Text Elo 1471.4 (#26); LMArena Text coding Elo 1496.7 (#27); LMArena WebDev Elo 1623.0 (#20)",
+      "headline_benchmarks": "AA Intelligence Index 44.8 (max); HLE 42.3%; SciCode 59.0; Terminal-Bench 4.0 41.9; AA-LCR 0.797; LMArena Text Elo 1471.4 (#26); LMArena Text coding Elo 1496.7 (#27); LMArena WebDev Elo 1622.3 (#22)",
       "pricing_notes": "Hidden by default; Same per-token rates as GLM 5.2",
       "best_for": "Frontier-class coding and agentic work, plus strong planning, long context and knowledge, at a low price. Its AA Intelligence Index of 44.8 ranks 12th of 56 measured models. It is the cheapest model in the catalog rated S for agentic work. Weakest at multimodal input (D).",
       "superseded_by": null,
@@ -649,7 +674,7 @@
         "speed": "S"
       },
       "jurisdiction": "cn",
-      "headline_benchmarks": "AA Intelligence Index 41.8; HLE 39.9%; SciCode 51.6; Terminal-Bench 4.0 32.8; AA-LCR 0.800; LMArena Text Elo 1469.6 (#30); LMArena Text coding Elo 1506.3 (#18); LMArena WebDev Elo 1615.6 (#25)",
+      "headline_benchmarks": "AA Intelligence Index 41.8; HLE 39.9%; SciCode 51.6; Terminal-Bench 4.0 32.8; AA-LCR 0.800; LMArena Text Elo 1469.6 (#30); LMArena Text coding Elo 1506.3 (#18); LMArena WebDev Elo 1610.0 (#26)",
       "pricing_notes": "Hidden by default",
       "best_for": "Strong coding, planning, agentic work and long context, with very fast output, at a low price. Its AA Intelligence Index of 41.8 ranks 16th of 56 measured models, the highest of any model at its price or lower.",
       "superseded_by": null,
@@ -1024,7 +1049,7 @@
         "speed": "A"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 42.1 (max); HLE 42.9%; Terminal-Bench 2.1 88.0; Output Speed 99.1 tokens/s",
+      "headline_benchmarks": "AA Intelligence Index 42.1 (max); HLE 42.9%; Terminal-Bench 2.1 88.0; Output Speed 102.2 tokens/s",
       "pricing_notes": "Requires Max Mode on legacy request-based plans; Mid-tier GPT-5.6 variant between Sol and Luna; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate",
       "best_for": "OpenAI's mid-tier GPT-5.6 variant between Sol (flagship) and Luna (mini) at medium-tier pricing ($2/$12) \u2014 Artificial Analysis Intelligence Index 42.1 (max) matches near-frontier reasoning while output speed (~105 tokens/s) is faster than most peers; pick for balanced near-frontier reasoning, agentic execution, and speed when Sol's high tier isn't justified but stronger throughput than GPT-5.4 is desired.",
       "superseded_by": null,
@@ -1049,7 +1074,7 @@
         "speed": "B"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 52.7 (max); HLE 54.7%; SciCode 56.5; Terminal-Bench 4.0 59.1; AA-LCR 0.807; LMArena WebDev #2 (Elo 1787.7); LMArena Text coding Elo 1488.6 (#35); LMArena Text Elo 1443.7 (#59)",
+      "headline_benchmarks": "AA Intelligence Index 52.7 (max); HLE 54.7%; SciCode 56.5; Terminal-Bench 4.0 59.1; AA-LCR 0.807; LMArena WebDev #2 (Elo 1787.6); LMArena Text coding Elo 1488.6 (#35); LMArena Text Elo 1443.7 (#59)",
       "pricing_notes": "Provider-direct OpenAI API per-token pricing (not via the Cursor pool)",
       "best_for": "Frontier-class coding, planning and agentic work, plus strong long context and knowledge, at a very high price. Its AA Intelligence Index of 52.7 ranks 4th of 56 measured models.",
       "superseded_by": null,
@@ -1074,7 +1099,7 @@
         "speed": "S"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 38.1 (max); HLE 38.5%; SciCode 54.6; Terminal-Bench 4.0 12.6; AA-LCR 0.833; LMArena WebDev #32 (Elo 1578.7)",
+      "headline_benchmarks": "AA Intelligence Index 38.1 (max); HLE 38.5%; SciCode 54.6; Terminal-Bench 4.0 12.6; AA-LCR 0.833; LMArena WebDev #31 (Elo 1582.3)",
       "pricing_notes": "Provider-direct OpenAI API per-token pricing (not via the Cursor pool)",
       "best_for": "Strong coding, planning, agentic work and long context, with very fast output, at a low price. Its AA Intelligence Index of 38.1 ranks 25th of 56 measured models, the highest of any model at its price or lower.",
       "superseded_by": null,
@@ -1099,7 +1124,7 @@
         "speed": "D"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 47.6 (max); HLE 47.9%; SciCode 57.6; Terminal-Bench 4.0 43.9; AA-LCR 0.837; LMArena WebDev #8 (Elo 1689.0)",
+      "headline_benchmarks": "AA Intelligence Index 47.6 (max); HLE 47.9%; SciCode 57.6; Terminal-Bench 4.0 43.9; AA-LCR 0.837; LMArena WebDev #8 (Elo 1687.5)",
       "pricing_notes": "Provider-direct OpenAI API per-token pricing (not via the Cursor pool)",
       "best_for": "Frontier-class coding, agentic work and long context, plus strong planning, multimodal input and knowledge, at a medium price. Its AA Intelligence Index of 47.6 ranks 9th of 56 measured models. Weakest at speed (D).",
       "superseded_by": null,
@@ -1124,7 +1149,7 @@
         "speed": "D"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 51.8 (max); HLE 52.9%; SciCode 54.2; Terminal-Bench 4.0 56.1; AA-LCR 0.830; LMArena WebDev #4 (Elo 1757.8)",
+      "headline_benchmarks": "AA Intelligence Index 51.8 (max); HLE 52.9%; SciCode 54.2; Terminal-Bench 4.0 56.1; AA-LCR 0.830; LMArena WebDev #4 (Elo 1757.3)",
       "pricing_notes": "Provider-direct OpenAI API per-token pricing (not via the Cursor pool)",
       "best_for": "Frontier-class agentic work, plus strong coding, planning, multimodal input, long context and knowledge, at a medium price. Its AA Intelligence Index of 51.8 ranks 5th of 56 measured models. Weakest at speed (D).",
       "superseded_by": null,
@@ -1424,7 +1449,7 @@
         "speed": "D"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 40.7 (max); LMArena Text #14 (Elo 1483.3); LMArena WebDev #36 (Elo 1555.3); AA-Omniscience 26.2 (#2)",
+      "headline_benchmarks": "AA Intelligence Index 40.7 (max); LMArena Text #14 (Elo 1483.3); LMArena WebDev #37 (Elo 1555.2); AA-Omniscience 26.2 (#2)",
       "pricing_notes": "Hidden by default; Requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)",
       "best_for": "Strong coding, planning, agentic work, multimodal input, long context and knowledge at a very high price. Its AA Intelligence Index of 40.7 ranks 19th of 56 measured models. Weakest at speed (D). Superseded by Opus 5.5.",
       "superseded_by": "claude-opus-5-5",
@@ -1495,6 +1520,7 @@
         "claude-4.5-haiku",
         "claude-fable-5",
         "claude-fable-5.1",
+        "claude-haiku-5-5",
         "claude-opus-5",
         "claude-opus-5-5",
         "claude-sonnet-5",
@@ -1545,7 +1571,8 @@
         "gpt-5.6-luna",
         "gpt-5.6-sol",
         "gpt-5.6-terra",
-        "gpt-6-astra"
+        "gpt-6-astra",
+        "gpt-6-sol"
       ],
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
@@ -1563,6 +1590,7 @@
         "claude-4.5-haiku",
         "claude-fable-5",
         "claude-fable-5.1",
+        "claude-haiku-5-5",
         "claude-opus-5",
         "claude-opus-5-5",
         "claude-sonnet-5",
@@ -1657,6 +1685,7 @@
       "supports_models": [
         "claude-4.5-haiku",
         "claude-fable-5.1",
+        "claude-haiku-5-5",
         "claude-opus-5",
         "claude-opus-5-5",
         "claude-sonnet-5",
@@ -1756,6 +1785,7 @@
         "claude-4.5-haiku",
         "claude-fable-5",
         "claude-fable-5.1",
+        "claude-haiku-5-5",
         "claude-opus-5",
         "claude-opus-5-5",
         "claude-sonnet-5",
@@ -2052,6 +2082,7 @@
         "claude-4.5-haiku",
         "claude-fable-5",
         "claude-fable-5.1",
+        "claude-haiku-5-5",
         "claude-opus-5",
         "claude-opus-5-5",
         "claude-sonnet-5",
