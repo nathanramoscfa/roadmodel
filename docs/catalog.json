@@ -1,9 +1,9 @@
 {
   "schema_version": "4",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-10-08T20:14:02Z",
+  "generated_at_utc": "2026-10-08T22:10:51Z",
   "source_doc_sha256": {
-    "model-selector.txt": "a82aa64391c70c94696f1f34f7d500856960698391576cfd9f0e9f671895ca0a",
+    "model-selector.txt": "58061ed5e6812e7778a4ef31d2337a8c56322202849d68a43d069187133fae2b",
     "model-tier-cost-scale.md": "80baddfd88e6a105658eb5dbe64a22d444ff42e55c7b9e42dd3a14c5ec419b89"
   },
   "models": [
@@ -524,7 +524,7 @@
         "speed": "S"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 40.9 (high); HLE 47.8%; SciCode 56.6; Terminal-Bench 4.0 19.7; AA-LCR 0.813; Terminal-Bench 2.1 87.6; Output Speed 156.8 tokens/s",
+      "headline_benchmarks": "AA Intelligence Index 40.9 (high); HLE 47.8%; SciCode 56.6; Terminal-Bench 4.0 19.7; AA-LCR 0.813; Terminal-Bench 2.1 87.6; Output Speed 122.1 tokens/s",
       "pricing_notes": "-",
       "best_for": "Frontier-class multimodal input, plus strong coding, planning, agentic work, long context and knowledge, with very fast output, at a low price. Its AA Intelligence Index of 40.9 ranks 18th of 56 measured models.",
       "superseded_by": null,
