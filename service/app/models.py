@@ -30,6 +30,9 @@ class RecommendRequest(BaseModel):
     #                                           resolve_platform_filters.
     #   unavailable_models[], availability_authoritative — runtime Step-0a override
     #   force_provider                        — engine pin (canary / probes)
+    #   classification                        — the ladder-table row an earlier
+    #                                           answer to the same task landed
+    #                                           on (web pin cache, Phase 4.5)
     context: dict[str, Any] | None = None
 
     @field_validator("task_description")

@@ -1,14 +1,17 @@
 # src/roadmodel/recommend.py
 from __future__ import annotations
 
+import contextvars
 import json
 import re
+from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict
 from importlib import resources
 from importlib.resources.abc import Traversable
 from typing import Any, Final
 
-from roadmodel import cost, scoring, user_context
+from roadmodel import cost, scoring, usage, user_context
 from roadmodel.config import Config
 from roadmodel.errors import (
     BundledDocNotFoundError,
@@ -788,6 +791,36 @@ def recommend(
     return parse_response(raw_response)
 
 
+# A classification vote: the same prompt (so the provider serves its cached
+# prefix) asking for the CLASSIFICATION line alone. Its output cap leaves room
+# for a reasoning model's thinking, which counts against it.
+_VOTE_INSTRUCTION: Final = (
+    "\n\nFor this reply return ONLY the `CLASSIFICATION:` line (and the `INPUT:` "
+    "line if it applies): no tiers, no rationale."
+)
+_VOTE_MAX_OUTPUT_TOKENS: Final = 1024
+
+
+def _pinned_instruction(key: str) -> str:
+    category, complexity, *rest = key.split("/")
+    novel = "novel" if rest else "routine"
+    return (
+        f"\n\nThis task's classification is already fixed: write the line "
+        f"`CLASSIFICATION: {category} / {complexity} / {novel}` and copy that row."
+    )
+
+
+def _vote(key: str | None, votes: list[str | None]) -> tuple[str | None, str]:
+    """The row the request answers to: the majority of the main call's key and
+    the votes, else the main call's own. Returns (key, source)."""
+    found = [k for k in (key, *votes) if k]
+    if found:
+        top, count = Counter(found).most_common(1)[0]
+        if count >= 2 and top != key:
+            return top, "vote"
+    return key, "declared"
+
+
 def recommend_ladder(
     prompt: str,
     config: Config,
@@ -799,6 +832,8 @@ def recommend_ladder(
     thinking_budget: int | None = None,
     temperature: float | None = None,
     ladder_table: str | None = None,
+    pinned_classification: str | None = None,
+    classification_votes: int = 0,
 ) -> dict[str, dict[str, str]]:
     """One LLM call that returns the whole Cost/Balanced/Quality ladder (tasks
     #1/#3): ``{"quality", "balanced", "cost"}`` base dicts, Quality anchored
@@ -810,7 +845,19 @@ def recommend_ladder(
     picks from the table instead of choosing them, and each base dict carries
     the ``classification`` key the response declared, when it declared one,
     and ``input_tokens``, the size of the task's material its INPUT line
-    declared."""
+    declared.
+
+    The classification is the one judgement left to the engine, and at its
+    reasoning floor it varies between identical calls (Phase 4.5 soak,
+    2026-10-08: 6 of 33 probes land on a different row across three calls).
+    ``pinned_classification`` (a table key, from an earlier answer to the
+    same task) fixes it: the engine is told the row and code holds it.
+    Otherwise ``classification_votes`` extra calls, run in parallel with the
+    ladder call on the same cached prompt, each return the CLASSIFICATION
+    line alone, and the majority row wins (else the ladder call's own). Their
+    token usage is folded into the request's (:func:`usage.add`). Each base
+    dict then carries ``classification_source`` (pinned / vote / declared)
+    and ``classification_votes`` (the votes' keys, comma-separated)."""
     resolved_user_context = (
         user_context_text
         if user_context_text is not None
@@ -825,23 +872,58 @@ def recommend_ladder(
         ladder_table=ladder_table,
     )
     adapter = PROVIDER_ADAPTERS[config.provider]
-    raw_response = adapter.recommend(
-        user_prompt,
-        system_prompt,
-        model=config.model,
-        api_key=config.api_key,
-        max_output_tokens=max_output_tokens,
-        thinking_budget=thinking_budget,
-        temperature=temperature,
-    )
+    pinned = pinned_classification if ladder_table else None
+    n_votes = classification_votes if ladder_table and not pinned else 0
+
+    def call(user: str, cap: int | None) -> str:
+        return adapter.recommend(
+            user,
+            system_prompt,
+            model=config.model,
+            api_key=config.api_key,
+            max_output_tokens=cap,
+            thinking_budget=thinking_budget,
+            temperature=temperature,
+        )
+
+    def vote() -> tuple[str | None, usage.CallUsage | None]:
+        usage.reset()
+        try:
+            text = call(user_prompt + _VOTE_INSTRUCTION, _VOTE_MAX_OUTPUT_TOKENS)
+        except Exception:  # noqa: BLE001 - a failed vote is no vote
+            return None, usage.last()
+        return parse_classification(text), usage.last()
+
+    pool = ThreadPoolExecutor(max_workers=n_votes) if n_votes else None
+    try:
+        pending = (
+            [pool.submit(contextvars.copy_context().run, vote) for _ in range(n_votes)]
+            if pool
+            else []
+        )
+        raw_response = call(
+            user_prompt + (_pinned_instruction(pinned) if pinned else ""), max_output_tokens
+        )
+        votes = [f.result() for f in pending]
+    finally:
+        if pool is not None:
+            pool.shutdown(wait=False)
+    usage.add([u for _, u in votes])
     parsed = parse_ladder_response(raw_response)
     classification = parse_classification(raw_response) if ladder_table else None
+    if pinned:
+        classification, source = pinned, "pinned"
+    else:
+        classification, source = _vote(classification, [k for k, _ in votes])
     input_tokens = parse_input_tokens(raw_response) if ladder_table else None
     for base in parsed.values():
         if classification:
             base["classification"] = classification
         if input_tokens:
             base["input_tokens"] = str(input_tokens)
+        if ladder_table:
+            base["classification_source"] = source
+            base["classification_votes"] = ",".join(k or "-" for k, _ in votes)
     return parsed
 
 
@@ -1526,6 +1608,8 @@ def recommend_structured_ladder(
     thinking_budget: int | None = None,
     temperature: float | None = None,
     scoring_context_text: str | None = None,
+    classification: str | None = None,
+    classification_votes: int = 0,
 ) -> dict[str, Any]:
     """One-call Cost/Balanced/Quality ladder (tasks #1/#3).
 
@@ -1559,6 +1643,12 @@ def recommend_structured_ladder(
     ``user_context_text`` with no scoring twin gets no table, since the scorer
     could not read its funding.
 
+    ``classification`` pins the row (a ``scoring.table_key`` this table holds;
+    any other value is ignored), and ``classification_votes`` asks for that
+    many classification votes when nothing is pinned (:func:`recommend_ladder`).
+    ``guard`` then reports ``classification_source`` (pinned / vote /
+    declared) and ``classification_votes``.
+
     Raises :class:`MalformedResponseError` (via :func:`recommend_ladder`) on a
     malformed ladder, so the caller falls back to the per-priority fan-out.
     """
@@ -1583,7 +1673,12 @@ def recommend_structured_ladder(
         thinking_budget=thinking_budget,
         temperature=temperature,
         ladder_table=scoring.render_ladder_table(table) or None,
+        pinned_classification=classification if classification in table else None,
+        classification_votes=max(0, classification_votes),
     )
+    first = next(iter(ladder.values()), {})
+    source = first.get("classification_source")
+    votes = [v for v in (first.get("classification_votes") or "").split(",") if v]
     frontier_guard: dict[str, Any] | None = None
     fitted: scoring.Ladder | None = None
     if table:
@@ -1617,6 +1712,8 @@ def recommend_structured_ladder(
     for base in ladder.values():
         base.pop("classification", None)
         base.pop("input_tokens", None)
+        base.pop("classification_source", None)
+        base.pop("classification_votes", None)
     picks = {
         tier: _base_to_payload(
             ladder[tier],
@@ -1631,6 +1728,8 @@ def recommend_structured_ladder(
     guard = _ladder_tier_guard(picks)
     if frontier_guard is not None:
         guard.update(frontier_guard)
+        guard["classification_source"] = source
+        guard["classification_votes"] = [None if v == "-" else v for v in votes]
         if frontier_guard["classification"] is not None:
             guard["healthy"] = True
     return {"picks": picks, "guard": guard}
