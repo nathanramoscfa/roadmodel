@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import contextvars
 import json
+import os
 import re
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
@@ -1553,15 +1554,37 @@ def _enforce_table_effort(ladder: dict[str, dict[str, str]], row: scoring.Ladder
     return adjusted
 
 
+# Ladder tables already computed in this process, by user-context text, the
+# unavailable models and any catalog override. The catalog and benchmarks are
+# bundled, so one context always yields the same table; rebuilding it (28 rows,
+# each ranking the whole pool) cost the hosted service about a second a request
+# for a well-funded user (Phase 4.5 soak, 2026-10-08: B9 latency). Rows are
+# read, never mutated. Oldest entry out first past _TABLE_CACHE_MAX.
+_TABLE_CACHE: dict[tuple[str, tuple[str, ...], str], dict[str, scoring.Ladder]] = {}
+_TABLE_CACHE_MAX: Final = 64
+
+
 def _ladder_table_for(
     user_context_text: str, unavailable_models: list[str] | None
 ) -> dict[str, scoring.Ladder]:
     """The scorer's ladder table for this user-context, or an empty one if it
     cannot be computed: a scoring failure costs the table, never the call."""
+    key = (
+        user_context_text,
+        tuple(sorted(unavailable_models or [])),
+        os.environ.get("ROADMODEL_CATALOG_PATH", ""),
+    )
+    cached = _TABLE_CACHE.get(key)
+    if cached is not None:
+        return cached
     try:
-        return scoring.ladder_table(user_context_text, unavailable_models=unavailable_models)
+        table = scoring.ladder_table(user_context_text, unavailable_models=unavailable_models)
     except Exception:  # noqa: BLE001 - fail open to the free-choice ladder
         return {}
+    if len(_TABLE_CACHE) >= _TABLE_CACHE_MAX:
+        _TABLE_CACHE.pop(next(iter(_TABLE_CACHE)), None)
+    _TABLE_CACHE[key] = table
+    return table
 
 
 def _fit_row_to_input(

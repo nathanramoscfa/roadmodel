@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A ladder table is built once per user-context.** The hosted service
+  rebuilt the 28-row table on every request, and the scorer re-parsed the
+  catalog JSON about a thousand times while doing it (`cost.model_provider`
+  loaded it per candidate). For a well-funded signed-in user that cost about
+  a second a request, enough to push signed-in latency over the Phase 4.5
+  bar. `model_provider` now takes the caller's catalog, and
+  `recommend_structured_ladder` keeps each context's table for the life of
+  the process (a cold build 0.34 s -> 0.14 s locally; a warm one free).
+
 ## [0.2.76] — 2026-10-07
 
 ### Changed

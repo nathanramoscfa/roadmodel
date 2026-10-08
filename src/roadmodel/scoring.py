@@ -1034,7 +1034,7 @@ def rank(
         if str(model.get("jurisdiction", "")).lower() not in juris:
             excluded.append({"model": model_id, "reason": "jurisdiction"})
             continue
-        provider = _cost.model_provider(model_id) or str(model.get("provider", "unknown"))
+        provider = _cost.model_provider(model_id, cat) or str(model.get("provider", "unknown"))
         quality, source, letter = _quality(model, task, bench, scale)
         points = _evidence_points(model_id, task, bench, scale)
         shortfall = max(0.0, requirement - quality)
