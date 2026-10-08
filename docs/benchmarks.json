@@ -6,7 +6,7 @@
     "endpoint": "https://artificialanalysis.ai/api/v2/data/llms/models",
     "attribution": "Benchmark data © Artificial Analysis, used under its API terms with attribution."
   },
-  "generated_at_utc": "2026-10-07T22:56:43Z",
+  "generated_at_utc": "2026-10-08T22:10:51Z",
   "model_count": 56,
   "unmapped": [],
   "missing_slugs": [],
@@ -38,8 +38,8 @@
         "tau2": 0.546783625730994,
         "tau_banking": 0.0927835051546392
       },
-      "median_output_tokens_per_second": 97.15,
-      "median_time_to_first_token_seconds": 6.128,
+      "median_output_tokens_per_second": 99.079,
+      "median_time_to_first_token_seconds": 8.429,
       "aa_effort": null,
       "effort_variants": {}
     },
@@ -100,8 +100,8 @@
         "tau2": null,
         "tau_banking": 0.472164948453608
       },
-      "median_output_tokens_per_second": 67.41,
-      "median_time_to_first_token_seconds": 145.247,
+      "median_output_tokens_per_second": 69.222,
+      "median_time_to_first_token_seconds": 154.38,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
@@ -118,7 +118,7 @@
             "terminalbench_v4_0": 0.404040404040404,
             "tau_banking": 0.389690721649485
           },
-          "median_output_tokens_per_second": 48.367
+          "median_output_tokens_per_second": 50.548
         },
         "medium": {
           "aa_slug": "claude-fable-5-1-medium",
@@ -134,7 +134,7 @@
             "terminalbench_v4_0": 0.44949494949495,
             "tau_banking": 0.410309278350515
           },
-          "median_output_tokens_per_second": 47.711
+          "median_output_tokens_per_second": 51.079
         },
         "high": {
           "aa_slug": "claude-fable-5-1-high",
@@ -150,7 +150,7 @@
             "terminalbench_v4_0": 0.52020202020202,
             "tau_banking": 0.430927835051546
           },
-          "median_output_tokens_per_second": 49.45
+          "median_output_tokens_per_second": 51.667
         },
         "xhigh": {
           "aa_slug": "claude-fable-5-1-xhigh",
@@ -166,7 +166,7 @@
             "terminalbench_v4_0": 0.55050505050505,
             "tau_banking": 0.457731958762887
           },
-          "median_output_tokens_per_second": 50.977
+          "median_output_tokens_per_second": 56.351
         }
       }
     },
@@ -292,8 +292,8 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 97.16,
-      "median_time_to_first_token_seconds": 512.808,
+      "median_output_tokens_per_second": 96.795,
+      "median_time_to_first_token_seconds": 534.532,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
@@ -306,7 +306,7 @@
             "lcr": 0.806666666666667,
             "terminalbench_v4_0": 0.313131313131313
           },
-          "median_output_tokens_per_second": 69.224
+          "median_output_tokens_per_second": 74.578
         },
         "medium": {
           "aa_slug": "claude-opus-5-5-medium",
@@ -318,7 +318,7 @@
             "lcr": 0.843333333333333,
             "terminalbench_v4_0": 0.525252525252525
           },
-          "median_output_tokens_per_second": 69.565
+          "median_output_tokens_per_second": 73.504
         },
         "high": {
           "aa_slug": "claude-opus-5-5-high",
@@ -330,7 +330,7 @@
             "lcr": 0.826666666666667,
             "terminalbench_v4_0": 0.565656565656566
           },
-          "median_output_tokens_per_second": 72.405
+          "median_output_tokens_per_second": 74.51
         },
         "xhigh": {
           "aa_slug": "claude-opus-5-5-xhigh",
@@ -342,7 +342,7 @@
             "lcr": 0.846666666666667,
             "terminalbench_v4_0": 0.595959595959596
           },
-          "median_output_tokens_per_second": 75.986
+          "median_output_tokens_per_second": 76.274
         }
       }
     },
@@ -452,8 +452,8 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 133.893,
-      "median_time_to_first_token_seconds": 246.693,
+      "median_output_tokens_per_second": 136.822,
+      "median_time_to_first_token_seconds": 270.896,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
@@ -478,7 +478,7 @@
             "lcr": 0.763333333333333,
             "terminalbench_v4_0": 0.297979797979798
           },
-          "median_output_tokens_per_second": 93.921
+          "median_output_tokens_per_second": 92.973
         },
         "high": {
           "aa_slug": "claude-sonnet-5-5-high",
@@ -490,7 +490,7 @@
             "lcr": 0.78,
             "terminalbench_v4_0": 0.439393939393939
           },
-          "median_output_tokens_per_second": 92.314
+          "median_output_tokens_per_second": 98.725
         },
         "xhigh": {
           "aa_slug": "claude-sonnet-5-5-xhigh",
@@ -502,7 +502,7 @@
             "lcr": 0.796666666666667,
             "terminalbench_v4_0": 0.570707070707071
           },
-          "median_output_tokens_per_second": 92.071
+          "median_output_tokens_per_second": 96.659
         }
       }
     },
@@ -532,8 +532,8 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 215.593,
-      "median_time_to_first_token_seconds": 0.865,
+      "median_output_tokens_per_second": 216.372,
+      "median_time_to_first_token_seconds": 0.826,
       "aa_effort": "max",
       "effort_variants": {}
     },
@@ -563,8 +563,8 @@
         "tau2": null,
         "tau_banking": 0.395876288659794
       },
-      "median_output_tokens_per_second": 94.966,
-      "median_time_to_first_token_seconds": 1.113,
+      "median_output_tokens_per_second": 97.794,
+      "median_time_to_first_token_seconds": 1.099,
       "aa_effort": "max",
       "effort_variants": {}
     },
@@ -737,8 +737,8 @@
         "tau2": 0.956140350877193,
         "tau_banking": 0.214432989690722
       },
-      "median_output_tokens_per_second": 120.521,
-      "median_time_to_first_token_seconds": 16.499,
+      "median_output_tokens_per_second": 122.667,
+      "median_time_to_first_token_seconds": 16.704,
       "aa_effort": null,
       "effort_variants": {}
     },
@@ -828,8 +828,8 @@
         "tau2": null,
         "tau_banking": 0.175257731958763
       },
-      "median_output_tokens_per_second": 329.536,
-      "median_time_to_first_token_seconds": 7.289,
+      "median_output_tokens_per_second": 382.92,
+      "median_time_to_first_token_seconds": 7.508,
       "aa_effort": null,
       "effort_variants": {}
     },
@@ -952,8 +952,8 @@
         "tau2": null,
         "tau_banking": 0.449484536082474
       },
-      "median_output_tokens_per_second": 149.651,
-      "median_time_to_first_token_seconds": 14.293,
+      "median_output_tokens_per_second": 122.092,
+      "median_time_to_first_token_seconds": 18.717,
       "aa_effort": "high",
       "effort_variants": {
         "low": {
@@ -1109,8 +1109,8 @@
         "tau2": null,
         "tau_banking": 0.503092783505155
       },
-      "median_output_tokens_per_second": 75.43,
-      "median_time_to_first_token_seconds": 2.91,
+      "median_output_tokens_per_second": 62.058,
+      "median_time_to_first_token_seconds": 2.975,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
@@ -1123,14 +1123,14 @@
             "lcr": 0.726666666666667,
             "terminalbench_v4_0": 0.348484848484849
           },
-          "median_output_tokens_per_second": 76.317
+          "median_output_tokens_per_second": 76.737
         }
       }
     },
     "glm-5.3-flash": {
       "aa_id": "19496b81-9f41-4214-a77a-1df803b3c5ae",
       "aa_slug": "glm-5-3-flash",
-      "aa_name": "GLM 5.3 Flash",
+      "aa_name": "GLM-5.3-Flash",
       "aa_creator": "Z AI",
       "release_date": "2026-08-26",
       "evaluations": {
@@ -1153,7 +1153,7 @@
         "tau2": null,
         "tau_banking": 0.472164948453608
       },
-      "median_output_tokens_per_second": 49.499,
+      "median_output_tokens_per_second": 51.291,
       "median_time_to_first_token_seconds": 2.806,
       "aa_effort": null,
       "effort_variants": {}
@@ -1485,8 +1485,8 @@
         "tau2": 0.859649122807018,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 89.201,
-      "median_time_to_first_token_seconds": 34.635,
+      "median_output_tokens_per_second": 90.242,
+      "median_time_to_first_token_seconds": 47.576,
       "aa_effort": "xhigh",
       "effort_variants": {}
     },
@@ -1945,8 +1945,8 @@
         "tau2": 0.862573099415205,
         "tau_banking": 0.402061855670103
       },
-      "median_output_tokens_per_second": 99.05,
-      "median_time_to_first_token_seconds": 80.214,
+      "median_output_tokens_per_second": 105.105,
+      "median_time_to_first_token_seconds": 112.729,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
@@ -1966,7 +1966,7 @@
             "tau2": 0.605263157894737,
             "tau_banking": 0.187628865979381
           },
-          "median_output_tokens_per_second": 84.062
+          "median_output_tokens_per_second": 85.398
         },
         "medium": {
           "aa_slug": "gpt-5-6-terra-medium",
@@ -1984,7 +1984,7 @@
             "tau2": 0.728070175438596,
             "tau_banking": 0.255670103092783
           },
-          "median_output_tokens_per_second": 85.176
+          "median_output_tokens_per_second": 89.076
         },
         "high": {
           "aa_slug": "gpt-5-6-terra-high",
@@ -2003,7 +2003,7 @@
             "tau2": 0.783625730994152,
             "tau_banking": 0.28659793814433
           },
-          "median_output_tokens_per_second": 84.537
+          "median_output_tokens_per_second": 91.376
         },
         "xhigh": {
           "aa_slug": "gpt-5-6-terra-xhigh",
@@ -2022,7 +2022,7 @@
             "tau2": 0.804093567251462,
             "tau_banking": 0.296907216494845
           },
-          "median_output_tokens_per_second": 83.869
+          "median_output_tokens_per_second": 97.186
         }
       }
     },
@@ -2053,7 +2053,7 @@
         "tau_banking": 0.414432989690722
       },
       "median_output_tokens_per_second": 48.042,
-      "median_time_to_first_token_seconds": 229.496,
+      "median_time_to_first_token_seconds": 246.845,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
@@ -2070,7 +2070,7 @@
             "terminalbench_v4_0": 0.419191919191919,
             "tau_banking": 0.319587628865979
           },
-          "median_output_tokens_per_second": 46.008
+          "median_output_tokens_per_second": 44.386
         },
         "medium": {
           "aa_slug": "gpt-6-astra-medium",
@@ -2086,7 +2086,7 @@
             "terminalbench_v4_0": 0.494949494949495,
             "tau_banking": 0.354639175257732
           },
-          "median_output_tokens_per_second": 47.416
+          "median_output_tokens_per_second": 44.888
         },
         "high": {
           "aa_slug": "gpt-6-astra-high",
@@ -2102,7 +2102,7 @@
             "terminalbench_v4_0": 0.54040404040404,
             "tau_banking": 0.4
           },
-          "median_output_tokens_per_second": 46.791
+          "median_output_tokens_per_second": 46.248
         },
         "xhigh": {
           "aa_slug": "gpt-6-astra-xhigh",
@@ -2118,7 +2118,7 @@
             "terminalbench_v4_0": 0.595959595959596,
             "tau_banking": 0.430927835051546
           },
-          "median_output_tokens_per_second": 51.703
+          "median_output_tokens_per_second": 51.293
         }
       }
     },
@@ -2148,8 +2148,8 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 127.196,
-      "median_time_to_first_token_seconds": 61.062,
+      "median_output_tokens_per_second": 135.261,
+      "median_time_to_first_token_seconds": 99.813,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
@@ -2162,7 +2162,7 @@
             "lcr": 0.74,
             "terminalbench_v4_0": 0
           },
-          "median_output_tokens_per_second": 119.116
+          "median_output_tokens_per_second": 115.408
         },
         "medium": {
           "aa_slug": "gpt-6-luna-medium",
@@ -2186,7 +2186,7 @@
             "lcr": 0.793333333333333,
             "terminalbench_v4_0": 0.0454545454545455
           },
-          "median_output_tokens_per_second": 118.37
+          "median_output_tokens_per_second": 120.693
         },
         "xhigh": {
           "aa_slug": "gpt-6-luna-xhigh",
@@ -2198,7 +2198,7 @@
             "lcr": 0.8,
             "terminalbench_v4_0": 0.0808080808080808
           },
-          "median_output_tokens_per_second": 123.455
+          "median_output_tokens_per_second": 130
         }
       }
     },
@@ -2308,8 +2308,8 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 55.192,
-      "median_time_to_first_token_seconds": 183.156,
+      "median_output_tokens_per_second": 58.093,
+      "median_time_to_first_token_seconds": 178.471,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
@@ -2322,7 +2322,7 @@
             "lcr": 0.84,
             "terminalbench_v4_0": 0.308080808080808
           },
-          "median_output_tokens_per_second": 51.802
+          "median_output_tokens_per_second": 50.886
         },
         "medium": {
           "aa_slug": "gpt-6-1-sol-medium",
@@ -2334,7 +2334,7 @@
             "lcr": 0.833333333333333,
             "terminalbench_v4_0": 0.47979797979798
           },
-          "median_output_tokens_per_second": 49.144
+          "median_output_tokens_per_second": 51.223
         },
         "high": {
           "aa_slug": "gpt-6-1-sol-high",
@@ -2346,7 +2346,7 @@
             "lcr": 0.823333333333333,
             "terminalbench_v4_0": 0.515151515151515
           },
-          "median_output_tokens_per_second": 50.079
+          "median_output_tokens_per_second": 52.649
         },
         "xhigh": {
           "aa_slug": "gpt-6-1-sol-xhigh",
@@ -2358,7 +2358,7 @@
             "lcr": 0.796666666666667,
             "terminalbench_v4_0": 0.54040404040404
           },
-          "median_output_tokens_per_second": 54.387
+          "median_output_tokens_per_second": 53.52
         }
       }
     },
@@ -2388,8 +2388,8 @@
         "tau2": 0.657894736842105,
         "tau_banking": 0.127835051546392
       },
-      "median_output_tokens_per_second": 183.019,
-      "median_time_to_first_token_seconds": 0.502,
+      "median_output_tokens_per_second": 184.511,
+      "median_time_to_first_token_seconds": 0.51,
       "aa_effort": "high",
       "effort_variants": {
         "low": {
@@ -2411,7 +2411,7 @@
             "tau2": 0.450292397660819,
             "tau_banking": 0.0288659793814433
           },
-          "median_output_tokens_per_second": 191.359
+          "median_output_tokens_per_second": 180.667
         }
       }
     },
@@ -2441,8 +2441,8 @@
         "tau2": 0.60233918128655,
         "tau_banking": 0.0701030927835052
       },
-      "median_output_tokens_per_second": 206.106,
-      "median_time_to_first_token_seconds": 0.427,
+      "median_output_tokens_per_second": 193.16,
+      "median_time_to_first_token_seconds": 0.456,
       "aa_effort": "high",
       "effort_variants": {
         "low": {
@@ -2631,8 +2631,8 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 61.072,
-      "median_time_to_first_token_seconds": 7.717,
+      "median_output_tokens_per_second": 68.538,
+      "median_time_to_first_token_seconds": 16.38,
       "aa_effort": "xhigh",
       "effort_variants": {
         "low": {
@@ -2645,7 +2645,7 @@
             "lcr": 0.8,
             "terminalbench_v4_0": 0.161616161616162
           },
-          "median_output_tokens_per_second": 61.798
+          "median_output_tokens_per_second": 62.39
         },
         "high": {
           "aa_slug": "grok-4-7-high",
@@ -2657,7 +2657,7 @@
             "lcr": 0.77,
             "terminalbench_v4_0": 0.247474747474747
           },
-          "median_output_tokens_per_second": 65.045
+          "median_output_tokens_per_second": 63.707
         }
       }
     },
@@ -2687,8 +2687,8 @@
         "tau2": 0.900584795321637,
         "tau_banking": 0.202061855670103
       },
-      "median_output_tokens_per_second": 83.137,
-      "median_time_to_first_token_seconds": 1.154,
+      "median_output_tokens_per_second": 74.187,
+      "median_time_to_first_token_seconds": 1.099,
       "aa_effort": null,
       "effort_variants": {}
     },
@@ -2718,8 +2718,8 @@
         "tau2": null,
         "tau_banking": 0.45979381443299
       },
-      "median_output_tokens_per_second": 42.869,
-      "median_time_to_first_token_seconds": 2.916,
+      "median_output_tokens_per_second": 38.915,
+      "median_time_to_first_token_seconds": 2.879,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
@@ -2736,7 +2736,7 @@
             "terminalbench_v4_0": 0.126262626262626,
             "tau_banking": 0.416494845360825
           },
-          "median_output_tokens_per_second": 41.182
+          "median_output_tokens_per_second": 39.82
         }
       }
     },
@@ -2766,8 +2766,8 @@
         "tau2": 0.245614035087719,
         "tau_banking": 0.0577319587628866
       },
-      "median_output_tokens_per_second": 77.616,
-      "median_time_to_first_token_seconds": 0.692,
+      "median_output_tokens_per_second": 81.6,
+      "median_time_to_first_token_seconds": 0.703,
       "aa_effort": null,
       "effort_variants": {}
     },
@@ -2797,8 +2797,8 @@
         "tau2": 0.941520467836257,
         "tau_banking": 0.150515463917526
       },
-      "median_output_tokens_per_second": 161.375,
-      "median_time_to_first_token_seconds": 0.602,
+      "median_output_tokens_per_second": 159.639,
+      "median_time_to_first_token_seconds": 0.594,
       "aa_effort": null,
       "effort_variants": {}
     },
@@ -2828,8 +2828,8 @@
         "tau2": 0.412280701754386,
         "tau_banking": 0.0494845360824742
       },
-      "median_output_tokens_per_second": 163.75,
-      "median_time_to_first_token_seconds": 0.555,
+      "median_output_tokens_per_second": 163.561,
+      "median_time_to_first_token_seconds": 0.532,
       "aa_effort": null,
       "effort_variants": {}
     },
@@ -2859,8 +2859,8 @@
         "tau2": null,
         "tau_banking": 0.505154639175258
       },
-      "median_output_tokens_per_second": 107.96,
-      "median_time_to_first_token_seconds": 28.442,
+      "median_output_tokens_per_second": 97.223,
+      "median_time_to_first_token_seconds": 48.757,
       "aa_effort": "max",
       "effort_variants": {
         "xhigh": {
@@ -2877,7 +2877,7 @@
             "terminalbench_v4_0": 0.166666666666667,
             "tau_banking": 0.472164948453608
           },
-          "median_output_tokens_per_second": 115.767
+          "median_output_tokens_per_second": 122.932
         }
       }
     },
