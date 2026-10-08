@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.76] — 2026-10-07
+
 ### Changed
 
 - **The same task lands on the same ladder row.** The picks come from the
