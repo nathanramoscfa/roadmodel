@@ -139,11 +139,15 @@ task's primary category AND its general score both meet the bar for the
 task's complexity: Low 30, Medium 50, High 70, novel 85. A hard task needs a
 capable model as well as one that does its kind of work. Scores fall as the
 effort drops; a pick within 5 points of the bar is minor at worst. A pick
-cannot run above its task's effort ceiling (in the fact sheet).
+cannot run above its task's effort ceiling (in the fact sheet). A score marked
+* is the letter alone (AA has not measured that model there; multimodal has
+no measurements at all): a measured score is the stronger evidence, so an
+unmeasured model's letter-based score never makes it clearly stronger than a
+measured pick.
 
 Judge only against the facts below and the task. Do not reward a maker or a
 model family for its own sake; judge each pick by its letters, index, price
-and platform. Do not reward length or style. For each criterion give pass,
+and platform. Do not reward length or style. For each criterion give its
 evidence first (one short sentence naming the fact you relied on), then pass
 and severity (use "minor" when it passes). Write the summary before the
 criteria, and set accept to false exactly when some criterion fails as a
@@ -373,18 +377,22 @@ def _bench() -> dict[str, Any]:
 
 def model_scores(
     model: dict[str, Any], catalog: dict[str, Any], bench: dict[str, Any]
-) -> dict[str, dict[str | None, float]]:
+) -> dict[str, dict[str | None, tuple[float, bool]]]:
     """The scorer's quality for ``model`` in every category plus ``general``
     (the planning measure the general bar reads), at each effort AA measured
-    (None: the headline row when it measured none)."""
+    (None: the headline row when it measured none), each with whether AA
+    measured it there (False: the score is the letter alone)."""
     levels: list[str | None] = [
         lv for lv in scoring.EFFORT_LADDER if lv in scoring.measured_levels(bench, model["id"])
     ] or [None]
-    out: dict[str, dict[str | None, float]] = {}
+    out: dict[str, dict[str | None, tuple[float, bool]]] = {}
     for category in scoring.CATEGORIES:
         scale = scoring._evidence_scale(catalog, bench, scoring.CATEGORY_EVIDENCE[category])
         task = scoring.Task(category, "medium")
-        out[category] = {lv: scoring._quality(model, task, bench, scale, lv)[0] for lv in levels}
+        out[category] = {}
+        for lv in levels:
+            quality, source, _ = scoring._quality(model, task, bench, scale, lv)
+            out[category][lv] = (quality, source != "letter")
     out["general"] = dict(out["planning"])
     return out
 
@@ -418,7 +426,8 @@ def fact_sheet(context: str, unavailable: list[str]) -> str:
         "Models this person can run. Price is the list price blended per 1M tokens. Scores "
         "are the scorer's 0-100 quality per category (catalog letter S > A > B > C > D in "
         "brackets) at each effort AA measured, lowest effort first; `general` is the "
-        "planning measure, read from the AA Intelligence Index.",
+        "planning measure, read from the AA Intelligence Index. A score marked * is the "
+        "letter alone: AA has not measured that model there.",
     ]
     for name, e in sorted(pool.items(), key=lambda kv: (kv[1]["price"], kv[0])):
         model = by_id.get(e["id"], {"id": e["id"]})
@@ -435,7 +444,9 @@ def fact_sheet(context: str, unavailable: list[str]) -> str:
         )
         for category in ("general", *scoring.CATEGORIES):
             letter = "" if category == "general" else f" ({tiers.get(category, '-')})"
-            values = "/".join(f"{v:.0f}" for v in scores[category].values())
+            values = "/".join(
+                f"{q:.0f}" + ("" if measured else "*") for q, measured in scores[category].values()
+            )
             lines.append(f"    {category}{letter}: {values}")
     # The frontier the rungs are read from: each model at every effort AA
     # measured, priced by its effort. A task may use only the efforts its
