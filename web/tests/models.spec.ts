@@ -1446,3 +1446,22 @@ test("the page never scrolls sideways, from a phone to a desktop", async ({ page
     expect(overflow, `page overflow at ${width}px`).toBe(0);
   }
 });
+
+test("each AA Index names the effort Artificial Analysis measured it at", async ({ page }) => {
+  await page.goto("/models");
+  const withEffort = catalog.models.find(
+    (m) => (benchmarks.models[m.id] as { aa_effort?: string | null } | undefined)?.aa_effort === "xhigh",
+  );
+  const without = catalog.models.find(
+    (m) =>
+      benchmarks.models[m.id] &&
+      !(benchmarks.models[m.id] as { aa_effort?: string | null }).aa_effort,
+  );
+  expect(withEffort, "a model AA headlines at xhigh").toBeTruthy();
+  const row = page.locator(`[data-testid="model-row"][data-model-id="${withEffort!.id}"]`);
+  await expect(row.getByTestId("aa-index-effort")).toHaveText("Extra high");
+  if (without) {
+    const plain = page.locator(`[data-testid="model-row"][data-model-id="${without.id}"]`);
+    await expect(plain.getByTestId("aa-index-effort")).toHaveCount(0);
+  }
+});

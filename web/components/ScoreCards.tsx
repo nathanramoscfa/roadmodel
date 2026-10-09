@@ -34,6 +34,7 @@ import {
   type ScoreFit,
 } from "@/lib/benchmark-grid";
 import { COST_TIER_DEFS, COST_TIER_DOT, type CostTier, type ModelRow } from "@/lib/catalog-fields";
+import { effortWord } from "@/lib/pick-effort";
 
 // Which models the frontier compares (lib/catalog-filter poolScope), as a
 // modifier for "every ___ model": null for the whole catalog, else "US + EU"
@@ -268,7 +269,7 @@ export function IndexCard({
       <div className="mt-2">
         <Row
           label={<span className={"font-semibold " + STRONG}>AA Intelligence Index</span>}
-          value={num(m.aa_index)}
+          value={`${num(m.aa_index)}${m.aa_index_effort ? ` at ${effortWord(m.aa_index_effort)}` : ""}`}
           valueClass={"text-sm font-bold " + STRONG}
         />
       </div>
