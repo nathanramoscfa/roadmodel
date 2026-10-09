@@ -110,12 +110,14 @@ test("renders a consistent monthly price for every subscription tier", async ({
   await signInViaCallback(page);
   // A unique-name tier shows its price...
   await expect(page.getByLabel(/Cursor Ultra.*\$200\/mo/i)).toBeVisible();
-  // ...and the two duplicate-name "Claude Max" tiers are disambiguated by
-  // the price column, not a parenthetical in the name.
-  await expect(page.getByLabel(/Claude Max.*\$100\/mo/i)).toBeVisible();
-  await expect(page.getByLabel(/Claude Max.*\$200\/mo/i)).toBeVisible();
-  // No parenthetical "($NNN)" price leaks into any label anymore.
-  await expect(page.getByText(/\(\$\d/)).toHaveCount(0);
+  // ...and tiers a vendor sells at several prices under one name keep their
+  // price in the name, so no two rows of a provider read alike (#446): the
+  // price column alone left three rows reading "ChatGPT Pro".
+  await expect(page.getByLabel(/Claude Max \(\$100\).*\$100\/mo/i)).toBeVisible();
+  await expect(page.getByLabel(/Claude Max \(\$200\).*\$200\/mo/i)).toBeVisible();
+  await expect(page.getByLabel(/ChatGPT Pro \(\$500\).*\$500\/mo/i)).toBeVisible();
+  // A name unique within its provider carries no parenthetical price.
+  await expect(page.getByText(/(Cursor Ultra|Claude Pro|ChatGPT Plus) \(\$/)).toHaveCount(0);
   // The price column is monthly-only for every tier — even the seeded annual
   // plan (Claude Pro) shows just "$20/mo"; no "/yr" or "save Z%" leaks into any
   // label anymore (annual display was removed as inconsistent across tiers).

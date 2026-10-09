@@ -14,6 +14,10 @@ import catalog from "@/data/catalog.json";
 export interface SubscriptionOption {
   id: string;
   label: string;
+  // The picker's name for the tier: the label without its "($NNN)" price
+  // disambiguator, unless another tier of the same provider shares that name
+  // (see pickerNames, #446).
+  name: string;
   provider: string;
   // Structured monthly price (USD) from the cost-scale Subscription Tiers
   // table. The UI renders this consistently instead of the parenthetical
@@ -74,13 +78,36 @@ const TIERS: SubscriptionTier[] =
 
 // Catalog order is preserved (groups appear in first-seen provider order).
 export function getSubscriptionOptions(): SubscriptionOption[] {
-  return TIERS.map((t) => ({
+  const options = TIERS.map((t) => ({
     id: tierId(t.provider, t.tier),
     label: cleanLabel(t.tier),
+    name: cleanLabel(t.tier),
     provider: t.provider,
     monthly_usd: t.monthly_usd,
     annual_usd: t.annual_usd ?? null,
   }));
+  const names = pickerNames(options);
+  return options.map((o) => ({ ...o, name: names.get(o.id) ?? o.label }));
+}
+
+// The catalog bakes a "($NNN)" price disambiguator into tiers a vendor sells at
+// several prices under one name (ChatGPT Pro $100 / $200 / $500, Claude Max
+// $100 / $200, Google AI Ultra $100 / $200). The picker shows a name without
+// it where the name is unique within its provider, and keeps it where it is
+// not: stripped everywhere, three rows read "ChatGPT Pro" and only the price
+// column told them apart (#446).
+const PRICE_SUFFIX = /\s*\(\$[\d.,]+\)\s*$/;
+
+export function pickerNames(options: readonly SubscriptionOption[]): Map<string, string> {
+  const base = (o: SubscriptionOption) => o.label.replace(PRICE_SUFFIX, "");
+  const counts = new Map<string, number>();
+  for (const o of options) {
+    const key = `${o.provider}|${base(o)}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return new Map(
+    options.map((o) => [o.id, (counts.get(`${o.provider}|${base(o)}`) ?? 0) > 1 ? o.label : base(o)]),
+  );
 }
 
 // Valid id set for server-side validation (e.g. /api/profile).
