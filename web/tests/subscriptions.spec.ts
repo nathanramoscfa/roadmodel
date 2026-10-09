@@ -11,6 +11,7 @@ import {
   SUBSCRIPTION_IDS,
   fundedSurfacesForSubscription,
   getSubscriptionOptions,
+  pickerNames,
 } from "../lib/subscriptions";
 
 test("derives every catalog subscription tier", () => {
@@ -69,4 +70,42 @@ test("SUBSCRIPTION_IDS matches the derived options and funds map to surfaces", (
   // Legacy Anthropic Max funds the Claude surfaces (basis for #163).
   expect(fundedSurfacesForSubscription("claude-max")).toContain("claude-code");
   expect(fundedSurfacesForSubscription("nonexistent-id")).toEqual([]);
+});
+
+// #446: three rows read "ChatGPT Pro" (and two "Claude Max", two "Google AI
+// Ultra") once the "($NNN)" disambiguator was stripped; only the price column
+// told them apart. A name keeps its price where a sibling shares it.
+test("picker names stay unique within each provider", () => {
+  const opts = getSubscriptionOptions();
+  const byProvider = new Map<string, string[]>();
+  for (const o of opts) byProvider.set(o.provider, [...(byProvider.get(o.provider) ?? []), o.name]);
+  for (const [provider, names] of byProvider) {
+    expect(new Set(names).size, `${provider}: ${names.join(", ")}`).toBe(names.length);
+  }
+  const byId = new Map(opts.map((o) => [o.id, o.name]));
+  expect(byId.get("chatgpt-pro")).toBe("ChatGPT Pro ($200)");
+  expect(byId.get("claude-max")).toBe("Claude Max ($200)");
+  // A unique name loses the disambiguator it does not need.
+  expect(opts.find((o) => o.label === "ChatGPT Plus")?.name).toBe("ChatGPT Plus");
+});
+
+test("pickerNames strips the price only where the name is unique in its provider", () => {
+  const opt = (id: string, provider: string, label: string) => ({
+    id,
+    label,
+    name: label,
+    provider,
+    monthly_usd: 1,
+    annual_usd: null,
+  });
+  const names = pickerNames([
+    opt("a", "P", "Solo ($10)"),
+    opt("b", "P", "Twin ($10)"),
+    opt("c", "P", "Twin ($20)"),
+    opt("d", "Q", "Twin ($30)"),
+  ]);
+  expect(names.get("a")).toBe("Solo");
+  expect(names.get("b")).toBe("Twin ($10)");
+  expect(names.get("c")).toBe("Twin ($20)");
+  expect(names.get("d")).toBe("Twin"); // another provider's twin does not collide
 });
