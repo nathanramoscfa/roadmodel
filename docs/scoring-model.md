@@ -36,7 +36,7 @@ score = quality − requirement_penalty − λ · K · decades(effective_cost)
 | --- | --- | --- |
 | `quality` (0–100) | The model's standing in the task's category. The Artificial Analysis evidence figure for that category, min-max scaled across the measured catalog (coding and agentic by rank instead: 0 for the lowest, 100 for the highest, ties sharing their mean rank; coding's figure is the mean of the model's percentile ranks on SciCode and Terminal-Bench 4.0, the evaluations AA's own Coding Index averaged), blended 70/30 with the S→D letter. Unmeasured models use the letter alone, discounted by 5 points (a letter without evidence is an estimate, not a measurement) — except in a category with no evidence at all (multimodal), where every model is on its letter. A throughput of exactly 0 tokens/s is "not measured" (AA reports it for endpoints it has not throughput-tested); an evaluation's 0 is a result. | `docs/benchmarks.json` (AA) + `docs/catalog.json` letters |
 | `requirement_penalty` | 1.5 points per point the model falls short of the quality the task requires: Low → 30 (C band), Medium → 50 (B), High → 70 (A), High + novel / multi-step proof → 85 (S). Soft, not a filter, so a thin candidate set still ranks. | complexity |
-| `effective_cost` | Blended list price (3 input : 1 output tokens per 1M) × *scarcity* of the platform's funding × the effort level's expected token multiplier. | catalog prices, user-context funding |
+| `effective_cost` | Blended list price (3 input : 1 output tokens per 1M) × *scarcity* of the platform's funding × the tokens the model draws at the effort, relative to a typical model at high (measured, `docs/effort-tokens.json`; else the uniform table). | catalog prices, user-context funding, effort-tokens |
 | `decades` | log₁₀(effective_cost / $0.02), floored at 0 — a 10× price step costs the same points anywhere on the range, and $0 is "free", not infinitely good. | — |
 | `K` | The market exchange rate between price and quality, **in the score's own quality units**: the OLS slope of this category's blended quality on log₁₀(blended price) over every measured model (≈ 33–37 points per decade for coding / planning at the time of writing). Fitting on raw AA-index units and applying it to the stretched quality would understate the market line 2× and more. A category with no positive slope (speed — faster models are cheaper) anchors on the general-intelligence (planning) fit. Recomputed from the bundled data on every call. | fitted |
 | `λ` | The share of `K` this operator applies to a decade of spend. λ = 1 ranks purely by value (the market-line residual — the same quantity the `/models` Score shows); λ → 0 ranks purely by quality. It is a budget factor (`cheap` 0.9 / `balanced` 0.5 / `best` 0.1) times a stakes factor (Low 1.6 / Medium 1.0 / High 0.55 / High + novel 0.27 — a failed attempt at a hard task costs far more than the price gap between two models). Under `balanced` that is roughly **30 / 18 / 10 / 5 quality points per decade of spend** for Low / Medium / High / novel: a routine task is a value decision, a novel hard one is a quality decision. | budget + complexity |
@@ -87,9 +87,29 @@ The selector's `<thinking-context>` ladder, in code: Low → `low`,
 Medium → `medium`, High → `high`, High + novel → `xhigh`; cross-cutting
 planning / knowledge +1 rung; `best` +1; `cheap` on a path that costs
 something −1; `uncapped` headroom on a free path → `max`. Under `capped`
-the ladder tops out at `xhigh`. The effort's token multiplier (low 0.6,
-medium 0.8, high 1.0, xhigh 1.6, max 2.5) feeds the cost term, so a higher
-effort on a metered pool is priced, not free.
+the ladder tops out at `xhigh`. The tokens the model draws at the effort feed
+the cost term, so a higher effort on a metered pool is priced, not free.
+
+A per-token price is the same at every effort (Artificial Analysis lists one
+price for every effort row); a higher effort costs more only through the
+tokens it draws, and models differ in that more than efforts do. So the
+multiplier is measured: `update/measure_effort_tokens.py` runs each model AA
+measured at several efforts through a fixed set of eight short tasks, twice,
+at each of those efforts (Claude models on Claude Code, the GPT models a
+ChatGPT sign-in runs on Codex, the rest on OpenRouter), and
+`docs/effort-tokens.json` keeps the mean output tokens per task (reasoning
+included) over the median model's mean at `high`. A typical model at high
+reads 1.0. Two corrections make the figures comparable. The same model draws
+about 1.3x the tokens through OpenRouter's bare API that it draws inside a
+coding agent, so four subscription-lane models also run on OpenRouter, and
+the OpenRouter-only models are scaled by the median ratio (the file's
+`lanes.openrouter.factor`, 0.78 on the first run). And a higher effort never
+draws fewer tokens, so a model's figures are fitted to rise with its effort
+(neighbouring efforts that measure inverted read their average; the raw
+means stay in `mean_output_tokens`). A model or effort not measured there reads the uniform table
+(low 0.6, medium 0.8, high 1.0, xhigh 1.6, max 2.5; `token_multiplier`).
+AA's own token counts are not in its API, and its terms forbid scraping the
+site that shows them.
 
 ### Hard filters (before scoring)
 
@@ -182,7 +202,14 @@ frontier, in code (`scoring.ladder`):
 5. **Rungs.** QUALITY is the adequate point that scores highest in the
    category; points within run-to-run noise of the leader there stand level
    with it, and the highest AA Index of them takes the rung (see *Near
-   ties* below). COST is the cheapest adequate point the operator has already
+   ties* below). QUALITY also reads that point's own model at each higher
+   effort that meets the bar, on or off the frontier: where the category
+   rates a model's efforts alike (multimodal), a higher effort is only
+   dearer, so another model's cheaper point can push it off the frontier
+   while it is still the strongest run of the strongest model. Speed work
+   does not climb: there the lower effort is the faster one. With QUALITY
+   off the frontier, BALANCED may take the frontier's strongest point, as
+   beside a specialist. COST is the cheapest adequate point the operator has already
    paid for: a subscription pool with headroom, or local weights (scarcity
    below list price). A per-token point takes COST only when no prepaid point
    is adequate, because a per-token call is fresh spend while the prepaid

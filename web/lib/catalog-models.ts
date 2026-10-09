@@ -6,6 +6,7 @@
 // bundle — the same pattern as lib/api-providers.ts and lib/subscriptions.ts.
 import catalog from "@/data/catalog.json";
 import benchmarks from "@/data/benchmarks.json";
+import effortTokens from "@/data/effort-tokens.json";
 
 import {
   CATEGORY_ORDER,
@@ -78,6 +79,21 @@ const BENCH = (benchmarks as { models?: Record<string, RawBench> }).models ?? {}
 
 const INDEX_KEY = "artificial_analysis_intelligence_index";
 
+// Each effort's measured output-token multiplier (docs/effort-tokens.json,
+// update/measure_effort_tokens.py), or undefined when it was not measured.
+const TOKENS =
+  (effortTokens as { models?: Record<string, { levels?: Record<string, { multiplier?: number }> }> })
+    .models ?? {};
+
+function multiplierByEffort(id: string): Record<string, number> | undefined {
+  const out: Record<string, number> = {};
+  for (const [level, row] of Object.entries(TOKENS[id]?.levels ?? {})) {
+    const v = row.multiplier;
+    if (typeof v === "number" && Number.isFinite(v) && v > 0) out[level] = v;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 // The AA Index at each effort AA measured the model at, or undefined when it
 // names none.
 function indexByEffort(id: string): Record<string, number> | undefined {
@@ -138,6 +154,7 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
       aa_index: measured ?? cited,
       aa_index_source: measured !== null ? "snapshot" : cited !== null ? "cited" : null,
       aa_index_by_effort: indexByEffort(m.id),
+      token_multiplier_by_effort: multiplierByEffort(m.id),
       bench,
       value_score: null,
       value_frontier: false,
