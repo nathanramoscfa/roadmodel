@@ -25,6 +25,7 @@ BUNDLED_DOCS = (
     "catalog.json",
     "benchmarks.json",
     "context-windows.json",
+    "effort-tokens.json",
 )
 
 

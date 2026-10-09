@@ -38,6 +38,7 @@ BUNDLED_DOCS: dict[str, str] = {
     "catalog.json": "catalog.json",
     "benchmarks.json": "benchmarks.json",
     "context-windows.json": "context-windows.json",
+    "effort-tokens.json": "effort-tokens.json",
     "templates/phase-roadmap-template.md": "phase-roadmap-template.md",
     "templates/project-roadmap-template.md": "project-roadmap-template.md",
     "templates/planning-kit-how-to-use.md": "planning-kit-how-to-use.md",

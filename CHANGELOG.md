@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Each model's efforts are priced by the tokens it was measured drawing
+  there.** The frontier placed a model at an effort at its blended price
+  times one table for every model (low 0.6 … max 2.5). A per-token price is
+  the same at every effort, so what an effort costs is the tokens it draws,
+  and measured, models differ in that more than efforts do:
+  - Sonnet 5.5 draws about the same tokens from low to xhigh, then 3x at max.
+  - At medium it draws 1.7x what GPT-6.1 Sol does.
+  - GPT-6 Luna draws the same at low and medium.
+
+  `update/measure_effort_tokens.py` runs every model AA measured at several
+  efforts through eight short tasks, twice, at each of those efforts: Claude
+  models on Claude Code, the GPT models a ChatGPT sign-in runs on Codex, the
+  rest on OpenRouter. OpenRouter's figures are scaled by a measured lane
+  factor (0.78: the same model draws about 1.3x the tokens through the bare
+  API). Each model's figures are fitted to rise with its effort.
+  `docs/effort-tokens.json` (bundled) holds the result for 29 models;
+  `scoring.token_multiplier` reads it, and the uniform table remains the
+  fallback. AA's own token counts are not in its API, and its terms forbid
+  scraping them. The first run cost $9.24 on OpenRouter.
+
+  For the operator's context, 7 of 28 ladder rows change:
+  - COST on the low rows runs GPT-6 Luna at medium.
+  - BALANCED on low coding, planning and knowledge work is GPT-6.1 Sol at
+    medium.
+
+  For an anonymous visitor, 11 rows change. Among them, Grok 4.7 (3.6x a
+  typical model's tokens) leaves COST on high coding, planning and
+  long-context work. The agentic/high row stands: GPT-6.1 Sol · Medium,
+  Sonnet 5.5 · Extra high, Opus 5.5 · Extra high.
+- **QUALITY may run its model at a higher effort that left the frontier.**
+  Where a category rates a model's efforts alike (multimodal), measured
+  token use pushed Gemini 3.8 Flash's medium and high off the AA-Index
+  frontier, which would have left QUALITY at Flash · Low. QUALITY now also
+  reads the top point's own model at each higher effort that meets the bar
+  (`_higher_efforts`); speed work keeps the lower, faster effort. Under the
+  uniform table this changes no row.
+- The daily benchmark refresh keeps one issue open, "chore(effort-tokens):
+  model efforts not yet token-measured", while AA measures a model or effort
+  that the file lacks. It closes the issue when there are none.
+
 ## [0.2.77] — 2026-10-07
 
 ### Fixed

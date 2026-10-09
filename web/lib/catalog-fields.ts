@@ -54,6 +54,10 @@ export interface ModelRow {
   // that runs at one of them reads its figure (lib/pick-effort.ts). Absent
   // when AA names no effort for the model.
   aa_index_by_effort?: Record<string, number>;
+  // The output tokens the model draws at each effort we measured, relative to
+  // a typical model at high (docs/effort-tokens.json). An effort missing here
+  // reads the uniform table (lib/pick-effort.ts EFFORT_TOKEN_MULTIPLIER).
+  token_multiplier_by_effort?: Record<string, number>;
   // The uniform Artificial Analysis figures (lib/benchmark-grid.ts), or null
   // when AA has not measured the model at all.
   bench: BenchRow | null;

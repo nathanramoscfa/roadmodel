@@ -53,6 +53,7 @@ code. Nothing here calls a model.
 
 from __future__ import annotations
 
+import functools
 import json
 import math
 import re
@@ -182,8 +183,10 @@ SCARCITY: Final[dict[str, float]] = {
     "api-key": 1.0,
     "unfunded": 1.0,
 }
-# Expected output-token multiplier by effort level (Anthropic: higher effort
-# "uses more tokens"; the exact ratios are unpublished — measure them).
+# Expected output tokens by effort level, relative to a typical model at high:
+# the fallback for a model and effort docs/effort-tokens.json has not measured
+# (token_multiplier). Measured, models differ more from each other than this
+# table's steps: at medium, Sonnet 5.5 drew 1.7x GPT-6.1 Sol's tokens.
 EFFORT_TOKEN_MULTIPLIER: Final[dict[str, float]] = {
     "low": 0.6,
     "medium": 0.8,
@@ -216,6 +219,7 @@ BASELINE_JURISDICTIONS: Final[tuple[str, ...]] = ("us", "eu", "uk", "ca", "au", 
 
 BUNDLED_BENCHMARKS_PATH = resources.files("roadmodel.data") / "benchmarks.json"
 BUNDLED_CONTEXT_PATH = resources.files("roadmodel.data") / "context-windows.json"
+BUNDLED_EFFORT_TOKENS_PATH = resources.files("roadmodel.data") / "effort-tokens.json"
 # A context window must hold the task's material plus the instructions and the
 # answer: 10% above the material's own size.
 CONTEXT_HEADROOM: Final[float] = 1.1
@@ -328,6 +332,47 @@ def context_windows() -> dict[str, int]:
     if not isinstance(models, dict):
         return {}
     return {str(k): v for k, v in models.items() if isinstance(v, int) and v > 0}
+
+
+@functools.cache
+def effort_token_multipliers() -> dict[str, dict[str, float]]:
+    """Each measured model's output-token multiplier at each effort, relative
+    to a typical model at high (docs/effort-tokens.json, from
+    update/measure_effort_tokens.py); empty when the file is missing or
+    unreadable."""
+    try:
+        raw = json.loads(BUNDLED_EFFORT_TOKENS_PATH.read_text(encoding="utf-8"))
+    except (FileNotFoundError, OSError, ValueError):
+        return {}
+    models = raw.get("models") if isinstance(raw, dict) else None
+    if not isinstance(models, dict):
+        return {}
+    out: dict[str, dict[str, float]] = {}
+    for mid, row in models.items():
+        levels = row.get("levels") if isinstance(row, dict) else None
+        if not isinstance(levels, dict):
+            continue
+        by = {
+            str(lv): float(v["multiplier"])
+            for lv, v in levels.items()
+            if isinstance(v, dict)
+            and isinstance(v.get("multiplier"), int | float)
+            and v["multiplier"] > 0
+        }
+        if by:
+            out[str(mid)] = by
+    return out
+
+
+def token_multiplier(
+    model_id: str, level: str, measured: dict[str, dict[str, float]] | None = None
+) -> float:
+    """The output tokens ``model_id`` draws at ``level``, relative to a typical
+    model at high: measured where docs/effort-tokens.json has it, else the
+    uniform EFFORT_TOKEN_MULTIPLIER. A per-token price is the same at every
+    effort; what a higher effort costs is these extra tokens."""
+    table = measured if measured is not None else effort_token_multipliers()
+    return table.get(model_id, {}).get(level, EFFORT_TOKEN_MULTIPLIER[level])
 
 
 def nothing_fits(input_tokens: int, windows: dict[str, int] | None = None) -> bool:
@@ -1069,7 +1114,7 @@ def rank(
                 family_words=families,
             )
             effort = effort_for(task, headroom, scarcity)
-            mult = EFFORT_TOKEN_MULTIPLIER[effort]
+            mult = token_multiplier(model_id, effort)
             eff_cost = price * scarcity * mult
             decades = math.log10(max(eff_cost, COST_FLOOR_USD) / COST_FLOOR_USD)
             cost_pen = lam * k * decades
@@ -1304,11 +1349,12 @@ class Ladder:
 
 def frontier_price(c: Candidate) -> float:
     """Where ``c`` sits on the frontier's price axis: the blended list price,
-    times its effort's token multiplier when it runs at a measured effort (a
-    higher effort draws more tokens of the same model)."""
+    times the tokens it draws at its effort (:func:`token_multiplier`) when it
+    runs at a measured effort (a higher effort draws more tokens of the same
+    model, and models differ in how many they draw)."""
     if c.evidence_level is None:
         return c.blended_price_usd
-    return round(c.blended_price_usd * EFFORT_TOKEN_MULTIPLIER[c.evidence_level], 4)
+    return round(c.blended_price_usd * token_multiplier(c.model_id, c.evidence_level), 4)
 
 
 def frontier(candidates: list[Candidate], bench: dict[str, Any]) -> list[FrontierPoint]:
@@ -1471,7 +1517,7 @@ def _at_level(
             requirement_penalty=round(penalty, 2),
             score=round(c.score + c.requirement_penalty - penalty, 2),
         )
-    mult = EFFORT_TOKEN_MULTIPLIER[level]
+    mult = token_multiplier(c.model_id, level)
     eff_cost = c.blended_price_usd * c.scarcity * mult
     decades = math.log10(max(eff_cost, COST_FLOOR_USD) / COST_FLOOR_USD)
     cost_pen = lam * k * decades
@@ -1629,6 +1675,11 @@ def ladder(
     span = adequate[: adequate.index(top) + 1]
     specialist = _specialist(task, settings, points, top, bench)
     by_level = {(c.model_id, c.evidence_level): c for c in settings if c.evidence_level}
+    peak = (
+        top
+        if task.category == "speed"
+        else _top([top, *_higher_efforts(top, settings, bench)], task.category)
+    )
 
     def rung(tier: str, p: FrontierPoint) -> Rung:
         c = p.candidate
@@ -1684,7 +1735,7 @@ def ladder(
     quality_rung = (
         replace(rung("quality", specialist), specialist=True)
         if specialist is not None
-        else rung("quality", top)
+        else rung("quality", peak)
     )
     # With a specialist on QUALITY, BALANCED spans every adequate frontier point
     # above COST, the frontier's strongest included. A BALANCED point earns its
@@ -1692,7 +1743,10 @@ def ladder(
     # category: the frontier is drawn on the AA Index, and a point above COST
     # on that axis can still trail it in the category the task needs. A gap
     # within run-to-run noise is level, and the AA Index then decides.
-    between = span[lo + 1 :] if specialist is not None else span[lo + 1 : -1]
+    # QUALITY off the frontier (a specialist, or the top's model at a higher
+    # effort) leaves the frontier's strongest point to BALANCED too.
+    off_front = specialist is not None or peak is not top
+    between = span[lo + 1 :] if off_front else span[lo + 1 : -1]
     between = [p for p in between if _level_with(p.candidate, cost_point.candidate, task.category)]
     # Like COST, BALANCED draws on what is already paid for first: a per-token
     # point stands between only when no prepaid one out-scores COST there.
@@ -1746,6 +1800,33 @@ def ladder(
         backup_warning=warning,
         points=points,
     )
+
+
+def _higher_efforts(
+    top: FrontierPoint, settings: list[Candidate], bench: dict[str, Any]
+) -> list[FrontierPoint]:
+    """``top``'s model on its platform at each higher effort it may run that
+    meets the task's bar, as points. QUALITY is the strongest point for the
+    category, and the frontier, drawn on the AA Index, can drop the top's own
+    higher efforts: where the category rates a model's efforts alike
+    (multimodal), a higher effort is only dearer, and another model's cheaper
+    point out-scores it on the AA Index. QUALITY then reads these too
+    (:func:`_top`). Speed work does not: there the lower effort is faster."""
+    c = top.candidate
+    if c.evidence_level is None:
+        return []
+    here = EFFORT_LADDER.index(c.evidence_level)
+    return [
+        FrontierPoint(
+            s, _evidence(bench, s.model_id, FRONTIER_INDEX, s.evidence_level), frontier_price(s)
+        )
+        for s in settings
+        if s.model_id == c.model_id
+        and s.platform_id == c.platform_id
+        and s.evidence_level is not None
+        and s.requirement_penalty == 0
+        and EFFORT_LADDER.index(s.evidence_level) > here
+    ]
 
 
 def _backup_for(
