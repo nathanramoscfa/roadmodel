@@ -7,7 +7,11 @@
 > on a pre-launch quality push. Visitor-funded recommendations have
 > shipped: roadmodel's own AI spend is limited to an invite list, and
 > every other visitor pays with their own provider key or gets a free
-> keyless pick. Phases 5–9 below remain the forward execution plan.
+> keyless pick. The project is now in Phase 4.12, private iteration:
+> the maintainer uses the site, the MCP server and the package daily
+> and improves whatever that use turns up. The public launch (Phase 4
+> Step 8) and Phases 5–9 wait until the maintainer judges the product
+> ready for the public.
 > **Owner:** Nathan Ramos, founder and sole maintainer
 > **Target environment:** Local through Phase 2; managed cloud from
 > Phase 3 onward (managed Next.js host for the web tier, managed
@@ -489,6 +493,27 @@ explicit, fail-closed decision made before any AI provider is called:
 
 ---
 
+### Phase 4.12 — Private Iteration
+
+**Goal:** Bring the product to a standard the maintainer is satisfied
+to release, through daily use. The site stays behind its pre-launch
+gate; the open-source CLI, the MCP server and the package stay public.
+
+- **Loop.** The maintainer uses the web recommender, the MCP tools
+  and the CLI on real work. Each finding becomes one tracked issue,
+  one fix and one pull request; package changes ship as releases.
+- **No pre-planned steps.** The work is whatever daily use surfaces,
+  logged in order with its issue and fix.
+- **Guardrail.** The daily automated soak scores every
+  recommendation-quality criterion, so a change that regresses
+  quality, latency or determinism shows up the next day.
+
+**Exit:** the maintainer declares the product ready for the public.
+No date or metric ends the phase. The public launch (Phase 4 Step 8)
+and Phase 5 follow that declaration.
+
+---
+
 ### Phase 5 — Monetization Layer
 
 **Goal:** Turn on paid tier with a managed payments provider,
@@ -846,8 +871,12 @@ Native mobile is out of scope (see §6).
 ### Sequencing and dependencies
 
 ```
-Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 ──▶ Phase 5 ──▶ Phase 6 ──▶ Phase 7 ──▶ Phase 8 ──▶ Phase 9
+Phase 1 ──▶ Phase 2 ──▶ Phase 3 ──▶ Phase 4 ──▶ Phase 4.12 ──▶ Phase 5 ──▶ Phase 6 ──▶ Phase 7 ──▶ Phase 8 ──▶ Phase 9
 ```
+
+- Phase 4.12 (private iteration) holds the line before monetization:
+  Phase 4's public launch (Step 8) and every later phase start only
+  when the maintainer declares the product ready.
 
 - Phases 1 and 2 run entirely on the maintainer's laptop with zero
   cloud spend; ship them before any infrastructure is provisioned.
