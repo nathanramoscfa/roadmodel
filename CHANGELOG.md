@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Every AA figure names the effort it was measured at.**
+  - /models shows the headline AA Index with its effort ("57.6 Max"), in the
+    cell, the hover card and the screen-reader label. The headline is each
+    model's top measured effort.
+  - The /recommend matrix rates each pick at the effort it runs.
+    `update/derive_ratings.py --write` now also writes
+    `docs/effort-ratings.json`: the letters a model's run at each of its other
+    measured efforts earns. That run takes its headline row's place among the
+    live models, and `derive()` is unchanged. Both crons commit the file, and
+    `--check` fails when it is stale.
+  - For example, Sonnet 5.5 at Medium reads A in coding, planning, agentic and
+    long-context and B in knowledge, where its headline (Max) reads S, S, S,
+    A and A. A category AA did not measure at that effort keeps its headline
+    letter.
+  - Display only: the scorer already reads evidence at the pick's effort.
+
 ### Fixed
 
 - **A model's headline benchmark row is its top measured effort.** That was

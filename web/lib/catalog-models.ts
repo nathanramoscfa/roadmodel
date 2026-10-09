@@ -7,6 +7,7 @@
 import catalog from "@/data/catalog.json";
 import benchmarks from "@/data/benchmarks.json";
 import effortTokens from "@/data/effort-tokens.json";
+import effortRatings from "@/data/effort-ratings.json";
 
 import {
   CATEGORY_ORDER,
@@ -85,6 +86,10 @@ const TOKENS =
   (effortTokens as { models?: Record<string, { levels?: Record<string, { multiplier?: number }> }> })
     .models ?? {};
 
+const EFFORT_RATINGS =
+  (effortRatings as { models?: Record<string, Record<string, Partial<Record<Category, Rating>>>> })
+    .models ?? {};
+
 function multiplierByEffort(id: string): Record<string, number> | undefined {
   const out: Record<string, number> = {};
   for (const [level, row] of Object.entries(TOKENS[id]?.levels ?? {})) {
@@ -154,7 +159,9 @@ export function getModelRows(now: Date = new Date()): ModelRow[] {
       aa_index: measured ?? cited,
       aa_index_source: measured !== null ? "snapshot" : cited !== null ? "cited" : null,
       aa_index_by_effort: indexByEffort(m.id),
+      aa_index_effort: measured !== null ? (BENCH[m.id]?.aa_effort ?? null) : null,
       token_multiplier_by_effort: multiplierByEffort(m.id),
+      tiers_by_effort: EFFORT_RATINGS[m.id],
       bench,
       value_score: null,
       value_frontier: false,

@@ -392,7 +392,7 @@ jobs:
           if [ -s update/.last-dispositions.md ]; then
             warnings="${warnings}${nl}${nl}$(cat update/.last-dispositions.md)"
           fi
-          git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json docs/context-windows.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
+          git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json docs/context-windows.json docs/effort-ratings.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
           git commit -m "Automated catalog refresh: ${DATE}" -m "${summary}${warnings}"
           body="$(printf '## Summary\n\n%s%s\n\n---\n\nThis PR was opened automatically by the daily catalog-refresh cron in `.github/workflows/update-models.yml` and merges itself when CI is green. The review runs in code before it opens: the prose guard quarantines added text carrying URLs, markup, invisible characters or model-addressed instructions; the rating guard reverts letter edits that break the rating rules; G1-G4 lock schema, prices and their provenance; the generated prose fields are rewritten from data daily.' "$summary" "$warnings")"
           # A same-day re-run (a dispatch after the scheduled run) finds the day's

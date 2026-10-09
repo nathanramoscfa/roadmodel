@@ -15,3 +15,4 @@ data/engines.json
 data/engine-eval.json
 data/keyless-eval.json
 data/effort-tokens.json
+data/effort-ratings.json

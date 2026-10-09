@@ -104,6 +104,7 @@ import { INPUT_CLASS, LABEL_CLASS, SEGMENTED_CLASS } from "./CatalogFilterBar";
 import { HoverCard } from "./FloatingCard";
 import { GlossaryTerm } from "./GlossaryTerm";
 import { IndexCard, ScoreBreakdownCard, SupersededCard } from "./ScoreCards";
+import { effortWord } from "@/lib/pick-effort";
 
 const RATING_MEANING: Record<string, string> = Object.fromEntries(
   RATING_SCALE.map((r) => [r.rating, r.meaning]),
@@ -145,6 +146,7 @@ type SortKey =
 type SortDir = "asc" | "desc";
 
 const BENCH_KEYS = new Set<string>(GRID_COLUMNS.map((c) => c.key));
+
 function isBenchKey(key: SortKey): key is BenchKey {
   return BENCH_KEYS.has(key);
 }
@@ -885,7 +887,7 @@ export function ModelCatalog({
                           </span>
                         ) : (
                           <HoverCard
-                            label={`${m.name}: AA Index ${m.aa_index}${m.value_frontier ? ", on the cost/quality frontier" : ""}. Show where it stands across every cost tier`}
+                            label={`${m.name}: AA Index ${m.aa_index}${m.aa_index_effort ? ` at ${effortWord(m.aa_index_effort)}` : ""}${m.value_frontier ? ", on the cost/quality frontier" : ""}. Show where it stands across every cost tier`}
                             card={
                               <IndexCard
                                 model={m}
@@ -906,6 +908,15 @@ export function ModelCatalog({
                               />
                             )}
                             {m.aa_index}
+                            {m.aa_index_effort && (
+                              <span
+                                data-testid="aa-index-effort"
+                                title={`Measured at ${effortWord(m.aa_index_effort)} effort, the top one Artificial Analysis ran it at`}
+                                className="ml-1 text-[11px] font-normal text-brand-slate-400 dark:text-brand-slate-500"
+                              >
+                                {effortWord(m.aa_index_effort)}
+                              </span>
+                            )}
                           </HoverCard>
                         )}
                       </td>

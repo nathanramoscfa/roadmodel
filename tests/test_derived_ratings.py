@@ -322,3 +322,29 @@ def test_planning_letters_the_gap_to_the_leader_on_the_aa_intelligence_index() -
     }
     # Multimodal and speed stay estimates: nothing derives them.
     assert "multimodal" not in dr.CATEGORY_EVIDENCE and "speed" not in dr.CATEGORY_EVIDENCE
+
+
+def test_a_lower_effort_is_lettered_against_the_live_headline_field() -> None:
+    """A model's run at another effort takes its headline row's place among
+    the live models and earns the letter derive() gives it there."""
+    bench = {
+        "leader": {
+            "aa_name": "leader",
+            "evaluations": {"hle": 0.60},
+            "aa_effort": "max",
+            "effort_variants": {"low": {"evaluations": {"hle": 0.30}}},
+        },
+        "cheap-one": {"aa_name": "cheap-one", "evaluations": {"hle": 0.50}},
+    }
+    letters = dr.effort_letters(SELECTOR, bench)
+    # At low the leader reads 30 against cheap-one's 50: 20 points behind (A).
+    assert letters == {"leader": {"low": {"knowledge": "A"}}}
+
+
+def test_committed_effort_ratings_match_the_derivation() -> None:
+    selector = (REPO_ROOT / "docs" / "model-selector.txt").read_text()
+    bench = json.loads((REPO_ROOT / "docs" / "benchmarks.json").read_text())["models"]
+    committed = (REPO_ROOT / "docs" / "effort-ratings.json").read_text()
+    assert committed == dr.render_effort_ratings(dr.effort_letters(selector, bench)), (
+        "docs/effort-ratings.json is stale — run: python update/derive_ratings.py --write"
+    )

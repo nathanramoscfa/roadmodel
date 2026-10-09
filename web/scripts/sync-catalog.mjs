@@ -50,6 +50,10 @@ const KEYLESS_EVAL_DEST = path.join(DEST_DIR, "keyless-eval.json");
 // Required: the /recommend chart prices each effort by it, as the scorer does.
 const EFFORT_TOKENS_SOURCE = path.join(repoRoot, "docs", "effort-tokens.json");
 const EFFORT_TOKENS_DEST = path.join(DEST_DIR, "effort-tokens.json");
+// The letters each model's run at its other efforts earns (update/
+// derive_ratings.py). Required: the /recommend matrix rates a pick at its effort.
+const EFFORT_RATINGS_SOURCE = path.join(repoRoot, "docs", "effort-ratings.json");
+const EFFORT_RATINGS_DEST = path.join(DEST_DIR, "effort-ratings.json");
 
 async function main() {
   let raw;
@@ -204,6 +208,25 @@ async function main() {
   }
   await writeFile(EFFORT_TOKENS_DEST, tokensRaw, "utf8");
   console.log(`[sync-catalog] copied the effort token measurements → ${path.relative(webRoot, EFFORT_TOKENS_DEST)}`);
+
+  let ratingsRaw;
+  try {
+    ratingsRaw = await readFile(EFFORT_RATINGS_SOURCE, "utf8");
+    const record = JSON.parse(ratingsRaw);
+    if (!record || typeof record.models !== "object" || record.models === null) {
+      throw new Error("no models object");
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(
+      `[sync-catalog] failed to read ${EFFORT_RATINGS_SOURCE}: ${msg}\n` +
+        `  Regenerate it with \`python update/derive_ratings.py --write\`.`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+  await writeFile(EFFORT_RATINGS_DEST, ratingsRaw, "utf8");
+  console.log(`[sync-catalog] copied the per-effort ratings → ${path.relative(webRoot, EFFORT_RATINGS_DEST)}`);
 }
 
 await main();

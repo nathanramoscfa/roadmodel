@@ -59,6 +59,13 @@ export function effortLabel(level: EffortLevel): string {
   return LEVEL_LABEL[level];
 }
 
+// Any AA effort name as the dials word it ("xhigh" → "Extra high"), Gemini's
+// "minimal" included; an unknown name is shown as given.
+export function effortWord(level: string): string {
+  if (level === "minimal") return "Minimal";
+  return level in LEVEL_LABEL ? LEVEL_LABEL[level as EffortLevel] : level;
+}
+
 // The level a pick's settings run it at: Effort, or Intelligence on Codex.
 export function pickEffort(settings: Record<string, unknown> | null | undefined): EffortLevel | null {
   const raw = settings?.effort ?? settings?.intelligence;
