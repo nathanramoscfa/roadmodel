@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`/roadmap-step` and `/roadmap-phase` no longer stop a Codex session on a
+  correctly picked model.** Codex's instructions tell the agent only that it is
+  "based on GPT-6", so the settings gate could not tell GPT-6 Sol from any
+  other GPT-6 and stopped with "cannot verify the required Sol model" even
+  with Sol selected (pyeconomics Step 2, 2026-10-09). The gate now has the
+  agent read its exact model and effort from the session's rollout file
+  (`turn_context.model` / `.effort`), asks the operator when no source names
+  the model instead of stopping, and lists GPT-6 Sol → GPT-6.1 Sol as a newer
+  version in the same line, as it already did for Opus and Fable.
+
 - **A pick's Score charges it for the tokens it draws at its effort.** The
   /recommend matrix read a pick's AA Index at its effort but compared it with
   the bare list price, so a higher effort was credited its higher index for

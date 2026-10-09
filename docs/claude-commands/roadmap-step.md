@@ -110,13 +110,26 @@ Intelligence <I>>. This session: <your own model> on <this surface>.`
   Codex, Antigravity, Cursor, …), and you are not the backup on its
   platform, stop: this step is meant to run on another surface; tell
   the operator which.
+- **Read your own model.** Name the exact model, never only its family.
+  On Codex your instructions say just "based on GPT-6", but the model
+  the operator picked and its reasoning effort are recorded in the
+  session's rollout. Read them with a shell command: the newest
+  `rollout-*.jsonl` under `${CODEX_HOME:-~/.codex}/sessions/` whose
+  first line (`session_meta`) has this repo as its `cwd`; the last
+  `turn_context` line in it holds `"model"` (e.g. `gpt-6.1-sol`) and
+  `"effort"`. Use those for `<your own model>` and the effort on the
+  printed line. Where no source names the model, print `unverified` and
+  ask the operator which model they picked; take their answer and
+  carry on. A family name alone is never a reason to stop.
 - **Model.** Continue if you are the table's model. Also continue if you
   are a **newer version in the same line** — Claude Opus 5 → Opus 5.5,
-  Fable 5 → Fable 5.1, Sonnet 5 → Sonnet 5.1: a provider supersedes
-  within a line, and the newer version is what the operator's client now
-  opens on. Say so on the printed line (`… · superseded by <yours>`).
-  Anything else — a different line (Opus → Sonnet, Fable → Opus), an
-  older version, or a name you cannot place — stop and tell the operator
+  Fable 5 → Fable 5.1, Sonnet 5 → Sonnet 5.1, GPT-6 Sol → GPT-6.1 Sol:
+  a provider supersedes within a line, and the newer version is what the
+  operator's client now opens on. Say so on the printed line
+  (`… · superseded by <yours>`).
+  Anything else — a different line (Opus → Sonnet, Fable → Opus, Sol →
+  Luna), an older version, or a model you have read and cannot place —
+  stop and tell the operator
   how to switch on this surface (Claude Code: `/model <M>` then
   `/effort <E>`; Codex and Antigravity: their model picker and reasoning
   setting), then re-run this command with the same arguments. Do not
@@ -130,8 +143,10 @@ Intelligence <I>>. This session: <your own model> on <this surface>.`
   proof, or chain-of-thought across many files) and tell the operator the
   value to set. Keep a top rung only when the step's own rationale names
   reasoning depth as the demonstrated bottleneck.
-- You cannot verify the reasoning dials yourself; the printed line is
-  the operator's cue to set them. Continue.
+- You cannot verify most reasoning dials yourself; the printed line is
+  the operator's cue to set them. Codex's effort is the exception: the
+  rollout's `"effort"` is the dial the session runs on, so print it. If
+  it differs from the table's, name the value to set. Continue.
 
 **Record what ran.** If the model or effort you proceed with differs from
 the table, the step's own PR rewrites its Settings table to match (§5),

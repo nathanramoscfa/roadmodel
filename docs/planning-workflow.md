@@ -121,8 +121,10 @@ in its frontmatter), so you never type `/effort` first. A command's
 effort is fixed, so it cannot follow each phase's table; `Max` is the
 deepest rung, so it is never below what a table asks. Before writing
 anything it prints Phase 6's roadmap settings beside the session's own
-model. A newer version in the same line (Opus 5 → Opus 5.5), or the
-table's backup on its own platform, continues. Any other model or
+model. A newer version in the same line (Opus 5 → Opus 5.5, GPT-6 Sol →
+GPT-6.1 Sol), or the table's backup on its own platform, continues. Codex
+names itself only as "based on GPT-6", so there the agent reads the exact
+model and effort from the session's rollout file. Any other model or
 surface stops and tells you how to switch: in Claude Code, `/model <M>`,
 then `/roadmap-phase 6` again. On Codex, Antigravity and the other
 agents the port carries no effort, so the printed line is your cue to
