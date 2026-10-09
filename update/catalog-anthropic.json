@@ -59,7 +59,7 @@
       "name": "Claude Sonnet 5.5",
       "input_price_per_1m": 2.0,
       "output_price_per_1m": 10.0,
-      "cache_read_per_1m": 0.2
+      "cache_read_per_1m": 0.1
     },
     {
       "id": "claude-sonnet-5",
@@ -115,5 +115,5 @@
     }
   ],
   "missing_mapped_models": [],
-  "section_sha256": "39c28462145dcd0f11af3ac40964dc8e9e9ac4696f1d99ef776fd22ae0bc26e0"
+  "section_sha256": "d58c1e047eaede3fdbaac8baca4bc62f10f5b0e989b91f76cb96eb39410fb9d5"
 }
