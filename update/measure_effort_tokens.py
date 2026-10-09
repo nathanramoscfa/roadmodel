@@ -795,7 +795,8 @@ def main(argv: list[str] | None = None) -> int:
     doc = summarize(
         load_runs(args.runs),
         sha=sha,
-        skipped=skipped,
+        # Every model's reason, not only the ones this run was narrowed to.
+        skipped=plan(bench, samples=1, models=None, levels=None, routes=routes)[1],
         generated_at=dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         samples=args.samples,
     )

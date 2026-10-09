@@ -324,3 +324,8 @@ def test_the_benchmark_cron_keeps_one_issue_for_unmeasured_efforts() -> None:
     wf = (REPO_ROOT / ".github" / "workflows" / "update-benchmarks.yml").read_text()
     assert "python update/measure_effort_tokens.py --unmeasured" in wf
     assert "chore(effort-tokens): model efforts not yet token-measured" in wf
+
+
+def test_a_narrowed_run_keeps_every_models_skip_reason() -> None:
+    src = (UPDATE_DIR / "measure_effort_tokens.py").read_text()
+    assert "skipped=plan(bench, samples=1, models=None, levels=None, routes=routes)[1]" in src
