@@ -2526,34 +2526,34 @@
       }
     },
     "grok-4.6": {
-      "aa_id": "c8adc5cf-fd5a-407b-af51-dc3bede3e49c",
-      "aa_slug": "grok-4-6",
-      "aa_name": "Grok 4.6 (High)",
+      "aa_id": "d6f43d0a-e8c4-447c-9ff7-5cf0a9d59aa3",
+      "aa_slug": "grok-4-6-xhigh",
+      "aa_name": "Grok 4.6 (Xhigh)",
       "aa_creator": "SpaceXAI",
       "release_date": "2026-08-12",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 44.3,
-        "artificial_analysis_coding_index": 76.8,
+        "artificial_analysis_intelligence_index": 44.2,
+        "artificial_analysis_coding_index": 75.9,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
-        "gpqa": 0.949,
-        "hle": 0.429,
+        "gpqa": 0.935,
+        "hle": 0.441,
         "livecodebench": null,
-        "scicode": 0.565,
+        "scicode": 0.53,
         "math_500": null,
         "aime": null,
         "aime_25": null,
         "ifbench": null,
-        "lcr": 0.803333333333333,
+        "lcr": 0.81,
         "terminalbench_hard": null,
-        "terminalbench_v2_1": 0.883895131086142,
-        "terminalbench_v4_0": 0.212121212121212,
+        "terminalbench_v2_1": 0.880149812734082,
+        "terminalbench_v4_0": 0.171717171717172,
         "tau2": null,
-        "tau_banking": 0.507216494845361
+        "tau_banking": 0.43298969072165
       },
       "median_output_tokens_per_second": 0,
       "median_time_to_first_token_seconds": 0,
-      "aa_effort": "high",
+      "aa_effort": "xhigh",
       "effort_variants": {
         "low": {
           "aa_slug": "grok-4-6-low",
@@ -2587,19 +2587,19 @@
           },
           "median_output_tokens_per_second": 0
         },
-        "xhigh": {
-          "aa_slug": "grok-4-6-xhigh",
-          "aa_name": "Grok 4.6 (Xhigh)",
+        "high": {
+          "aa_slug": "grok-4-6",
+          "aa_name": "Grok 4.6 (High)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 44.2,
-            "artificial_analysis_coding_index": 75.9,
-            "gpqa": 0.935,
-            "hle": 0.441,
-            "scicode": 0.53,
-            "lcr": 0.81,
-            "terminalbench_v2_1": 0.880149812734082,
-            "terminalbench_v4_0": 0.171717171717172,
-            "tau_banking": 0.43298969072165
+            "artificial_analysis_intelligence_index": 44.3,
+            "artificial_analysis_coding_index": 76.8,
+            "gpqa": 0.949,
+            "hle": 0.429,
+            "scicode": 0.565,
+            "lcr": 0.803333333333333,
+            "terminalbench_v2_1": 0.883895131086142,
+            "terminalbench_v4_0": 0.212121212121212,
+            "tau_banking": 0.507216494845361
           },
           "median_output_tokens_per_second": 0
         }
