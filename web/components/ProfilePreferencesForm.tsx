@@ -89,12 +89,6 @@ function formatMoney(usd: number): string {
   return MONEY.format(usd);
 }
 
-// The catalog bakes a "($NNN)" price disambiguator into a few tier names
-// (the two "Claude Max" rows, etc.). The price column now disambiguates
-// them, so strip the parenthetical for display (Phase 4.7 T1).
-function displayName(label: string): string {
-  return label.replace(/\s*\(\$[\d.,]+\)\s*$/, "");
-}
 
 // Build the price-column text for a tier: monthly only ("$N/mo"). The catalog
 // seeds a verified annual price for only a few tiers, so rendering "· $Y/yr
@@ -299,7 +293,7 @@ export function ProfilePreferencesForm({
                       onChange={() => toggleSubscription(option.id)}
                       className="rounded border-brand-slate-300 dark:border-brand-slate-700 accent-brand-accent"
                     />
-                    {displayName(option.label)}
+                    {option.name}
                   </span>
                   <span className="tabular-nums text-brand-slate-500 dark:text-brand-slate-400">
                     {priceLabel(option.monthly_usd)}
