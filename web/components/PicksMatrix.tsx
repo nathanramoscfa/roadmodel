@@ -37,7 +37,13 @@ import {
   type PicksData,
   type SlimRow,
 } from "@/lib/recommend-picks";
-import { effortLabel, pickAtEffort, pickEffort, type PickAtEffort } from "@/lib/pick-effort";
+import {
+  effortLabel,
+  pickAtEffort,
+  pickEffort,
+  type EffortLevel,
+  type PickAtEffort,
+} from "@/lib/pick-effort";
 import { formatSettingValue, humanizeSettingKey } from "@/lib/settings-format";
 import { FRONTIER } from "./chart-kit";
 import { HoverCard } from "./FloatingCard";
@@ -149,12 +155,26 @@ export function headlineCost(rec: PriorityRecommendation): {
   return { amount: "—", source: "", funded: false };
 }
 
-function Ratings({ row, measured }: { row: SlimRow; measured: Category[] }) {
+// The pick's letters at the effort it runs: a derived category AA measured
+// there reads the letter that run earns (docs/effort-ratings.json); the rest,
+// and a pick at its top effort, read the model's headline letters.
+function Ratings({
+  row,
+  measured,
+  level,
+}: {
+  row: SlimRow;
+  measured: Category[];
+  level: EffortLevel | null;
+}) {
+  const atEffort = level ? row.tiers_by_effort?.[level] : undefined;
   return (
     <span className="inline-grid grid-cols-7 gap-1" data-testid="pick-ratings">
       {CATEGORY_ORDER.map((cat) => {
-        const r = row.tiers[cat];
-        const isMeasured = measured.includes(cat);
+        const own = atEffort?.[cat];
+        const r = own ?? row.tiers[cat];
+        const isMeasured = own !== undefined || measured.includes(cat);
+        const at = own !== undefined && level ? ` at ${effortLabel(level)}` : "";
         return (
           <span key={cat} className="flex flex-col items-center gap-0.5">
             <span className="text-[9px] font-semibold uppercase leading-none text-brand-slate-400 dark:text-brand-slate-500">
@@ -167,7 +187,7 @@ function Ratings({ row, measured }: { row: SlimRow; measured: Category[] }) {
                   ? RATING_COLORS[r]
                   : `${ESTIMATED_BADGE} ${RATING_OUTLINE_COLORS[r]}`)
               }
-              title={`${CATEGORY_DEFS[cat].fullName}: ${r}${isMeasured ? " (measured)" : " (estimated)"}`}
+              title={`${CATEGORY_DEFS[cat].fullName}: ${r}${at}${isMeasured ? " (measured)" : " (estimated)"}`}
               data-basis={isMeasured ? "measured" : "estimated"}
             >
               {r}
@@ -495,9 +515,13 @@ function matrixRows(
           {
             key: "__ratings",
             label: "Ratings",
-            cell: (_rec: PriorityRecommendation, row: SlimRow | null) => ({
+            cell: (rec: PriorityRecommendation, row: SlimRow | null) => ({
               node: row ? (
-                <Ratings row={row} measured={data.measured[row.id] ?? []} />
+                <Ratings
+                  row={row}
+                  measured={data.measured[row.id] ?? []}
+                  level={pickEffort(rec.settings)}
+                />
               ) : (
                 "—"
               ),

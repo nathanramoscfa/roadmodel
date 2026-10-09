@@ -135,7 +135,7 @@ jobs:
         run: |
           set -euo pipefail
           nl=$'\n'  # joins sections: $( ) strips the trailing newlines of what it captures
-          if git diff --quiet -- docs/benchmarks.json docs/model-selector.txt docs/model-selector.md docs/catalog.json update/aa-model-map.json; then
+          if git diff --quiet -- docs/benchmarks.json docs/model-selector.txt docs/model-selector.md docs/catalog.json docs/effort-ratings.json update/aa-model-map.json; then
             echo "No benchmark or rating changes — nothing to commit."
             exit 0
           fi
@@ -176,7 +176,7 @@ jobs:
           if [ -s /tmp/supersede.out ]; then
             notes="${notes}${nl}${nl}### Catalog lifecycle (update/supersede.py)${nl}${nl}$(sed 's/^/- /' /tmp/supersede.out)"
           fi
-          git add docs/benchmarks.json docs/model-selector.txt docs/model-selector.md docs/catalog.json update/aa-model-map.json
+          git add docs/benchmarks.json docs/model-selector.txt docs/model-selector.md docs/catalog.json docs/effort-ratings.json update/aa-model-map.json
           git commit -m "Automated benchmark refresh: ${DATE}" -m "${notes}"
           git push -u origin "$BRANCH"
           PR_URL="$(gh pr create \

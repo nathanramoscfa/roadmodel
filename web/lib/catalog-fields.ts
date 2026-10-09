@@ -35,6 +35,10 @@ export interface ModelRow {
   cache_read_per_1m: number | null;
   tier_cost: CostTier;
   tiers: Record<Category, Rating>;
+  // The derived letters the model's run at each of its other measured efforts
+  // earns (docs/effort-ratings.json, update/derive_ratings.py), keyed by level;
+  // a category AA did not measure there keeps its headline letter in `tiers`.
+  tiers_by_effort?: Record<string, Partial<Record<Category, Rating>>>;
   jurisdiction: string;
   // The maker publishes the weights for download under a licence that permits
   // running them yourself: the catalog's local (Ollama) method lists the model.
@@ -49,6 +53,9 @@ export interface ModelRow {
   // Where aa_index came from: the structured Artificial Analysis snapshot, or
   // the figure the catalog cites for a model not yet mapped into it.
   aa_index_source: "snapshot" | "cited" | null;
+  // The effort AA ran the headline figure at: the model's top measured effort
+  // ("max", "xhigh", …), or null when AA names none or the figure is cited.
+  aa_index_effort?: string | null;
   // The AA Intelligence Index at each effort AA measured the model at (its
   // headline row's level included), keyed by level ("low" … "max"). A pick
   // that runs at one of them reads its figure (lib/pick-effort.ts). Absent
