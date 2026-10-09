@@ -3,7 +3,7 @@
 // Where the three picks sit in the market. A pick runs a model at an effort,
 // and Artificial Analysis measures a reasoning model at each effort
 // separately, so every model appears at each effort AA measured it at (x:
-// blended price times the effort's token use, log scale; y: its AA
+// blended price times its measured token use there, log scale; y: its AA
 // Intelligence Index there), joined by a faint line, and the green
 // cost/quality frontier steps up through the points nothing beats for less:
 // the frontier the picks are read from (roadmodel scoring.effort_settings,
@@ -262,7 +262,7 @@ export function PicksChart({
               </text>
             ))}
             <text x={M.left + plotW / 2} y={height - 4} textAnchor="middle" fontSize={11} className="fill-brand-slate-500 dark:fill-brand-slate-400">
-              {"Blended price × the effort's token use, $ per 1M (log scale)"}
+              {"Blended price × measured token use, $ per 1M (log scale)"}
             </text>
 
             {outside.map((p) => (
@@ -390,7 +390,9 @@ export function PicksChart({
         {pool ? (
           <>
             Each model appears at every effort Artificial Analysis measured it at, joined by a faint
-            line: a higher effort scores higher and draws more tokens, so it sits further right. The
+            line: a higher effort scores higher and draws more tokens, so it sits further right. Its
+            price is its blended price times the tokens the model drew at that effort on our test
+            tasks, relative to a typical model at high. The
             dotted green line is your cost/quality frontier over those points, drawn over the models
             your plans and API providers reach: its height at any price is the top AA Index you can
             get for that price, and the picks are read from it. Grey dots are your other points;
@@ -399,7 +401,9 @@ export function PicksChart({
         ) : (
           <>
             Each model appears at every effort Artificial Analysis measured it at, joined by a faint
-            line: a higher effort scores higher and draws more tokens, so it sits further right. The
+            line: a higher effort scores higher and draws more tokens, so it sits further right. Its
+            price is its blended price times the tokens the model drew at that effort on our test
+            tasks, relative to a typical model at high. The
             dotted green line is the cost/quality frontier over those points: its height at any price
             is the top AA Index that price buys. Grey dots are the rest of the catalog.{" "}
             <Link href="/settings" className="font-medium text-brand-accent hover:underline">

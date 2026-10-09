@@ -46,6 +46,10 @@ const EVAL_DEST = path.join(DEST_DIR, "engine-eval.json");
 // every Quick pick, and lib/keyless-eval.ts reads only this copy.
 const KEYLESS_EVAL_SOURCE = path.join(repoRoot, "docs", "keyless-eval.json");
 const KEYLESS_EVAL_DEST = path.join(DEST_DIR, "keyless-eval.json");
+// Measured output tokens per model and effort (update/measure_effort_tokens.py).
+// Required: the /recommend chart prices each effort by it, as the scorer does.
+const EFFORT_TOKENS_SOURCE = path.join(repoRoot, "docs", "effort-tokens.json");
+const EFFORT_TOKENS_DEST = path.join(DEST_DIR, "effort-tokens.json");
 
 async function main() {
   let raw;
@@ -181,6 +185,25 @@ async function main() {
   }
   await writeFile(KEYLESS_EVAL_DEST, keylessRaw, "utf8");
   console.log(`[sync-catalog] copied the keyless agreement record → ${path.relative(webRoot, KEYLESS_EVAL_DEST)}`);
+
+  let tokensRaw;
+  try {
+    tokensRaw = await readFile(EFFORT_TOKENS_SOURCE, "utf8");
+    const record = JSON.parse(tokensRaw);
+    if (!record || typeof record.models !== "object" || record.models === null) {
+      throw new Error("no models object");
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(
+      `[sync-catalog] failed to read ${EFFORT_TOKENS_SOURCE}: ${msg}\n` +
+        `  Regenerate it with \`python update/measure_effort_tokens.py\`.`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+  await writeFile(EFFORT_TOKENS_DEST, tokensRaw, "utf8");
+  console.log(`[sync-catalog] copied the effort token measurements → ${path.relative(webRoot, EFFORT_TOKENS_DEST)}`);
 }
 
 await main();

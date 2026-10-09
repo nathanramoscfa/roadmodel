@@ -5,13 +5,15 @@
 // Index at low and 38.1 at max. The recommender reads its picks off the
 // viewer's frontier drawn over each model at every effort AA measured
 // (roadmodel scoring.effort_settings), each placed at its blended list price
-// times the effort's token multiplier. A pick's facts read the same way here:
+// times the tokens it draws at that effort (tokenMultiplier). A pick's facts
+// read the same way here:
 // its AA Index and Score at the effort it runs, and whether anything the
 // viewer can run beats it there.
 import { blendedPrice, scoreFor } from "@/lib/benchmark-grid";
 import { inPool, type PicksData, type SlimRow } from "@/lib/recommend-picks";
 
-// Expected output tokens at each effort, relative to high. Mirrors
+// Expected output tokens at each effort, relative to a typical model at high,
+// for a model or effort not measured (docs/effort-tokens.json). Mirrors
 // EFFORT_TOKEN_MULTIPLIER in src/roadmodel/scoring.py
 // (tests/test_web_effort_sync.py holds the two together).
 export const EFFORT_TOKEN_MULTIPLIER = {
@@ -23,6 +25,13 @@ export const EFFORT_TOKEN_MULTIPLIER = {
 } as const;
 
 export type EffortLevel = keyof typeof EFFORT_TOKEN_MULTIPLIER;
+
+// The tokens a model draws at an effort, relative to a typical model at high:
+// measured where update/measure_effort_tokens.py ran it there, else the
+// uniform table. Mirrors scoring.token_multiplier.
+export function tokenMultiplier(row: SlimRow, level: EffortLevel): number {
+  return row.token_multiplier_by_effort?.[level] ?? EFFORT_TOKEN_MULTIPLIER[level];
+}
 
 // A surface's word for a level, compared case- and spacing-free: Claude
 // Code's "Extra high" is xhigh, its Ultracode stands for max, and so does
@@ -65,7 +74,8 @@ export interface EffortPoint {
 }
 
 // A model's points on the frontier: one per effort AA measured, priced by
-// its token multiplier, or its headline figure at list price.
+// the tokens it draws there (tokenMultiplier), or its headline figure at list
+// price.
 export function effortPoints(row: SlimRow): EffortPoint[] {
   const blended = blendedPrice(row.input_price_per_1m, row.output_price_per_1m);
   const by = row.aa_index_by_effort ?? {};
@@ -77,7 +87,7 @@ export function effortPoints(row: SlimRow): EffortPoint[] {
     row,
     level,
     index: by[level],
-    price: blended * EFFORT_TOKEN_MULTIPLIER[level],
+    price: blended * tokenMultiplier(row, level),
   }));
 }
 
@@ -105,7 +115,7 @@ export function pickAtEffort(data: PicksData, row: SlimRow, level: EffortLevel |
     return { row, leader, level: null };
   }
   const blended = blendedPrice(row.input_price_per_1m, row.output_price_per_1m);
-  const price = blended * EFFORT_TOKEN_MULTIPLIER[level];
+  const price = blended * tokenMultiplier(row, level);
   // The strongest point the viewer can run at this price or less that scores
   // higher; ties on index go to the cheaper.
   const leader =
