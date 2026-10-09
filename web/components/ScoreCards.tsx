@@ -369,6 +369,7 @@ export function ScoreBreakdownCard({
   fit,
   snapshot,
   leader,
+  effort = null,
 }: {
   model: ModelRow;
   fit: ScoreFit;
@@ -376,8 +377,14 @@ export function ScoreBreakdownCard({
   snapshot: string;
   // The model that beats this one across the whole catalog (null on the frontier).
   leader: ModelRow | null;
+  // A /recommend pick read at the effort it runs: its AA Index is the one
+  // measured there, and its price is the blended price times the tokens it
+  // draws there relative to a typical model at high (lib/pick-effort.ts),
+  // the figure the frontier chart plots.
+  effort?: { label: string; tokenShare: number } | null;
 }) {
-  const price = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
+  const listPrice = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
+  const price = listPrice * (effort?.tokenShare ?? 1);
   const b = scoreBreakdown(fit, m.tier_cost, price, m.aa_index);
   if (!b) return null;
   const tier = COST_TIER_DEFS[m.tier_cost].label;
@@ -439,10 +446,28 @@ export function ScoreBreakdownCard({
         <p className={"mb-1 text-[11px] font-semibold uppercase tracking-wide " + MUTED}>
           The price adjustment
         </p>
-        <Row label="Blended price" value={`${usd(b.price)} per 1M tokens`} valueClass={STRONG} />
+        <Row
+          label={effort ? `Price at ${effort.label}` : "Blended price"}
+          value={`${usd(b.price)} per 1M tokens`}
+          valueClass={STRONG}
+        />
         <p className={"-mt-0.5 mb-1 text-right text-xs tabular-nums " + MUTED}>
           (3 × {formatUsd(m.input_price_per_1m)} input + {formatUsd(m.output_price_per_1m)} output) ÷ 4
+          {effort && (
+            <>
+              {" "}
+              × {effort.tokenShare.toFixed(2)}
+            </>
+          )}
         </p>
+        {effort && (
+          <p className={"mb-1 text-xs leading-[1.125rem] " + MUTED} data-testid="score-breakdown-effort">
+            The per-token price is the same at every effort, but the tokens drawn are not: at{" "}
+            {effort.label} the model draws {effort.tokenShare.toFixed(2)}× what a typical model
+            draws at High, so it is priced here at {usd(b.price)} rather than its {usd(listPrice)}{" "}
+            list price, as on the chart below.
+          </p>
+        )}
         <Row
           label={`Typical ${tier}-cost price`}
           value={`${usd(b.typicalPrice)} per 1M tokens`}

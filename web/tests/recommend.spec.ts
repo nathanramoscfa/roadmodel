@@ -102,6 +102,11 @@ test("a pick carries the catalog's facts: blended price, AA Index, Score, rating
   await expect(page.getByTestId("frontier-point-card")).toBeVisible();
   await cell("__score").getByTestId("pick-score").hover();
   await expect(page.getByTestId("score-breakdown")).toBeVisible();
+  // The pick runs at High: its Score prices the tokens it draws there, as the
+  // chart places it, not the bare list price.
+  await expect(page.getByTestId("score-breakdown-effort")).toContainText(
+    /at High the model draws \d+\.\d\d× what a typical model draws at High/,
+  );
 });
 
 test("the result names the engine that wrote it, with time and cost", async ({ page }) => {

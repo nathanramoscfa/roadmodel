@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A pick's Score charges it for the tokens it draws at its effort.** The
+  /recommend matrix read a pick's AA Index at its effort but compared it with
+  the bare list price, so a higher effort was credited its higher index for
+  free. The Score now prices the pick as the frontier chart places it: the
+  blended price times its measured token use there. The breakdown card shows
+  that price and why. For the agentic/high picks: GPT-6.1 Sol · Medium
+  +12.1 → +16.9, Sonnet 5.5 · Extra high +16.2 → +16.8, Opus 5.5 · Extra
+  high +11.6 → +11.3. /models still scores each model at list price and its
+  labelled top effort. Web only.
+
 ## [0.2.79] — 2026-10-09
 
 ### Changed

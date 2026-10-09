@@ -113,13 +113,17 @@ export interface PickAtEffort {
   leader: SlimRow | null;
   // The effort the facts were read at, or null.
   level: EffortLevel | null;
+  // The tokens the pick draws at its effort relative to a typical model at
+  // high (tokenMultiplier): the Score's price, like the chart's, is the
+  // blended price times this. Null with no level.
+  tokenShare: number | null;
 }
 
 export function pickAtEffort(data: PicksData, row: SlimRow, level: EffortLevel | null): PickAtEffort {
   const index = level ? row.aa_index_by_effort?.[level] : undefined;
   if (!level || index === undefined) {
     const leader = row.value_beaten_by ? (data.rows[row.value_beaten_by] ?? null) : null;
-    return { row, leader, level: null };
+    return { row, leader, level: null, tokenShare: null };
   }
   const blended = blendedPrice(row.input_price_per_1m, row.output_price_per_1m);
   const price = blended * tokenMultiplier(row, level);
@@ -131,9 +135,13 @@ export function pickAtEffort(data: PicksData, row: SlimRow, level: EffortLevel |
       .flatMap(effortPoints)
       .filter((p) => p.price <= price + 1e-9 && p.index > index)
       .sort((a, b) => b.index - a.index || a.price - b.price)[0] ?? null;
+  // The Score weighs the AA Index at this effort against the price the
+  // frontier places it at (the same figure the chart plots), so a higher
+  // effort is credited its higher index and charged for its extra tokens.
+  const tokenShare = tokenMultiplier(row, level);
   const at: SlimRow = {
     ...named(row, level, index),
-    value_score: scoreFor(data.fit, row.tier_cost, blended, index),
+    value_score: scoreFor(data.fit, row.tier_cost, price, index),
     value_frontier: inPool(data, row) && leader === null,
     value_beaten_by: leader ? leader.row.id : null,
   };
@@ -141,5 +149,6 @@ export function pickAtEffort(data: PicksData, row: SlimRow, level: EffortLevel |
     row: at,
     leader: leader ? (leader.level ? named(leader.row, leader.level, leader.index) : leader.row) : null,
     level,
+    tokenShare,
   };
 }

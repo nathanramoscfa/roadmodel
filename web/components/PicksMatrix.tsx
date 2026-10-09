@@ -362,6 +362,11 @@ function ScoreCell({ view, data }: { view: PickAtEffort; data: PicksData }) {
           fit={data.fit}
           snapshot={data.snapshot}
           leader={leader}
+          effort={
+            view.level && view.tokenShare !== null
+              ? { label: effortLabel(view.level), tokenShare: view.tokenShare }
+              : null
+          }
         />
       }
       className={"font-semibold tabular-nums " + tone}
