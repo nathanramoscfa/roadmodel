@@ -161,6 +161,15 @@ def test_roadmap_step_reads_a_settings_table_as_intent() -> None:
     # … but a different line still stops: never start on an unintended model.
     assert "a different line" in flat
     assert "Do not start the step on a model it did not intend" in flat
+    # Codex's instructions say only "based on GPT-6"; the exact model and
+    # effort are in the session rollout. A family name alone must not stop the
+    # step (2026-10-09: pyeconomics Step 2 stopped on a correctly picked
+    # GPT-6 Sol because the session could not see "Sol").
+    assert "Read your own model" in flat
+    assert "rollout-*.jsonl" in flat
+    assert '`"model"` (e.g. `gpt-6.1-sol`) and `"effort"`' in flat
+    assert "A family name alone is never a reason to stop" in flat
+    assert "GPT-6 Sol → GPT-6.1 Sol" in flat
     # A pre-capped top rung is stale, not binding.
     assert "Consumption headroom: capped" in flat
     assert "Keep a top rung only when" in flat
@@ -598,6 +607,9 @@ def test_phase_prompt_checks_the_session_against_the_phase_settings() -> None:
     # Same tolerance as /roadmap-step: a newer version in the same line, or
     # the table's own backup, continues; anything else stops.
     assert "a newer version in the same line" in flat
+    assert "GPT-6 Sol → GPT-6.1 Sol" in flat
+    assert "Name your exact model, never only its family" in flat
+    assert "rollout-*.jsonl" in flat
     assert "You are its Backup on the backup's platform: continue" in flat
     assert "STOP and tell me how to switch" in flat
     assert "Do not write the roadmap on a model it did not intend" in flat
