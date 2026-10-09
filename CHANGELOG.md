@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.79] — 2026-10-09
+
 ### Changed
 
 - **Every AA figure names the effort it was measured at.**
