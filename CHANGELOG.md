@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.78] — 2026-10-09
+
 ### Changed
 
 - **Each model's efforts are priced by the tokens it was measured drawing
