@@ -797,10 +797,10 @@ Tier ratings:
 #### Opus 5 — `claude-opus-5`
 
 - **Pricing:** Input $5.00/M · Output $25.00/M
-- **Tier ratings:** Coding **A** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **D**
+- **Tier ratings:** Coding **S** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **D**
 - **Headline benchmarks:** AA Intelligence Index 50.8 (max); HLE 54.9% (max); Terminal-Bench 2.1 89.1 (max); τ²-bench banking pass_1 42.1%
 - **Pricing notes:** Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-fast`) requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)
-- **Best for:** Frontier-class agentic work, plus strong coding, planning, multimodal input, long context and knowledge, at a very high price. Its AA Intelligence Index of 50.8 ranks 6th of 56 measured models. Weakest at speed (D). Superseded by Opus 5.5.
+- **Best for:** Frontier-class coding and agentic work, plus strong planning, multimodal input, long context and knowledge, at a very high price. Its AA Intelligence Index of 50.8 ranks 6th of 56 measured models. Weakest at speed (D). Superseded by Opus 5.5.
 
 #### Fable 5 — `claude-fable-5`
 
@@ -1252,9 +1252,9 @@ Tier ratings:
 
 - **Pricing:** Input $2.00/M · Output $6.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **B** · Long-context **A** · Knowledge **A** · Speed **B**
-- **Headline benchmarks:** AA Intelligence Index 44.3 (high); HLE 42.9% (high); Terminal-Bench 2.1 88.4 (high); τ²-bench banking pass_1 50.7%
+- **Headline benchmarks:** AA Intelligence Index 44.2 (xhigh); HLE 44.1%; SciCode 53.0; Terminal-Bench 4.0 17.2; AA-LCR 0.810; Terminal-Bench 2.1 88.4 (high); τ²-bench banking pass_1 43.3%
 - **Pricing notes:** Jointly trained by Cursor and SpaceXAI
-- **Best for:** Strong coding, planning, agentic work, long context and knowledge at a low price. Its AA Intelligence Index of 44.3 ranks 13th of 56 measured models. Superseded by Grok 4.7.
+- **Best for:** Strong coding, planning, agentic work, long context and knowledge at a low price. Its AA Intelligence Index of 44.2 ranks 13th of 56 measured models. Superseded by Grok 4.7.
 
 ## Access Methods
 
@@ -1581,7 +1581,7 @@ Guardrails:
     context (opus-4.7 1M, opus-4.8 1M, claude-opus-5 1M, claude-opus-5-5 1M, gemini-3.1-pro 1M, gemini-3.5-flash-lite 1M) over forcing
     a smaller-context model into Max Mode truncation.
   - For PRIMARY = `coding` at S-tier requirement, the candidate set is
-    muse-spark-1.3, glm-5.3, claude-sonnet-5-5, gpt-6-sol, claude-opus-5-5, claude-fable-5, claude-fable-5.1, gpt-6-astra; cost tie-breaker favors
+    muse-spark-1.3, glm-5.3, claude-sonnet-5-5, gpt-6-sol, claude-opus-5-5, claude-opus-5, claude-fable-5, claude-fable-5.1, gpt-6-astra; cost tie-breaker favors
     muse-spark-1.3 when the ratings are equivalent for the prompt.
   - Default to composer-2.5 for routine multi-file implementation when a
     coding-A rating suffices; escalate only on a concrete capability

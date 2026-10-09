@@ -174,7 +174,8 @@ export const CATEGORY_FIGURE: Partial<Record<Category, BenchKey>> = Object.fromE
 // category leader, in points (S ≤ 5, A ≤ 20, B ≤ 35, C ≤ 50, else D), or,
 // for a RANK_DERIVATION category, by rank.
 // Speed has an evidence column for display but stays estimated: AA's tokens/s
-// is measured on the provider's first-party endpoint at max effort.
+// is measured on the provider's first-party endpoint, at the model's headline
+// effort (its top measured one, update/fetch_aa_benchmarks.py).
 export const DERIVED_CATEGORIES: ReadonlySet<Category> = new Set<Category>([
   "coding",
   "planning",

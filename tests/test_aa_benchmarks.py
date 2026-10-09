@@ -170,7 +170,9 @@ def test_committed_layer_matches_the_committed_map_and_catalog() -> None:
     )
     assert set(doc["models"]) <= catalog_ids | retired_ids
     for cid, row in doc["models"].items():
-        assert mapping.get(cid) == row["aa_slug"]
+        # The headline is the top measured effort: the mapped row, or that
+        # row's `<slug>-<level>` sibling when AA's default is a lower level.
+        assert row["aa_slug"] in (mapping.get(cid), f"{mapping.get(cid)}-{row['aa_effort']}")
     assert doc["model_count"] == len(doc["models"]) > 0
     assert doc["source"]["url"] == "https://artificialanalysis.ai/"
 
@@ -261,3 +263,21 @@ def test_build_carries_the_models_rows_at_its_other_efforts() -> None:
     assert xhigh["aa_slug"] == "claude-opus-5-xhigh"
     # Only measured figures ride along on a level row.
     assert xhigh["evaluations"] == {"artificial_analysis_intelligence_index": 49.0}
+
+
+def test_the_headline_is_the_top_effort_aa_measured() -> None:
+    """AA's default row for Grok 4.6 is High though it measured XHigh: the
+    headline re-bases on XHigh, and the default row becomes a level."""
+    aa = [
+        {**_level_row("grok-4-6", "Grok 4.6 (High)", 44.3), "model_creator": {"name": "xAI"}},
+        _level_row("grok-4-6-xhigh", "Grok 4.6 (Xhigh)", 44.2),
+        _level_row("grok-4-6-low", "Grok 4.6 (Low)", 35.1),
+    ]
+    doc = fab.build(
+        ["grok-4.6"], {"grok-4.6": "grok-4-6"}, aa, now=NOW, names={"grok-4.6": "Grok 4.6"}
+    )
+    row = doc["models"]["grok-4.6"]
+    assert (row["aa_effort"], row["aa_slug"]) == ("xhigh", "grok-4-6-xhigh")
+    assert row["evaluations"]["artificial_analysis_intelligence_index"] == 44.2
+    assert list(row["effort_variants"]) == ["low", "high"]
+    assert row["effort_variants"]["high"]["aa_slug"] == "grok-4-6"

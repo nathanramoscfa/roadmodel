@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A model's headline benchmark row is its top measured effort.** That was
+  true of 55 of 56 models; AA's default row for Grok 4.6 is High although it
+  measured XHigh. `update/fetch_aa_benchmarks.py` now re-bases any such model
+  on its top effort, and the default row becomes one of its levels. Grok 4.6
+  reads 44.2 at XHigh (was 44.3 at High). By rank, Opus 5 moves up to an S
+  in coding, and the generated prose follows. No ladder row changes.
+- **Muse Spark 1.3 is token-measured** (#1028): 2.449 at XHigh and at Max,
+  replacing the uniform 1.6 and 2.5. No ladder row changes.
+
 ## [0.2.78] — 2026-10-09
 
 ### Changed
