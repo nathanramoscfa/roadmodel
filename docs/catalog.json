@@ -1,9 +1,9 @@
 {
   "schema_version": "4",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-10-08T22:10:51Z",
+  "generated_at_utc": "2026-10-09T14:53:46Z",
   "source_doc_sha256": {
-    "model-selector.txt": "58061ed5e6812e7778a4ef31d2337a8c56322202849d68a43d069187133fae2b",
+    "model-selector.txt": "a41aef972265c5acdd4e3826d74f4919ba06c93857f2d0058cb82f7b192c46a4",
     "model-tier-cost-scale.md": "80baddfd88e6a105658eb5dbe64a22d444ff42e55c7b9e42dd3a14c5ec419b89"
   },
   "models": [
@@ -90,7 +90,7 @@
       "cache_read_per_1m": null,
       "tier_cost": "very-high",
       "tiers": {
-        "coding": "A",
+        "coding": "S",
         "planning": "A",
         "agentic": "S",
         "multimodal": "A",
@@ -101,7 +101,7 @@
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 50.8 (max); HLE 54.9% (max); Terminal-Bench 2.1 89.1 (max); \u03c4\u00b2-bench banking pass_1 42.1%",
       "pricing_notes": "Hidden by default; Requires Max Mode on legacy request-based plans; Fast mode (`claude-opus-5-fast`) requires Max Mode on legacy request-based plans; Up to 1M tokens with extended context at the same per-token rates (no long-context surcharge)",
-      "best_for": "Frontier-class agentic work, plus strong coding, planning, multimodal input, long context and knowledge, at a very high price. Its AA Intelligence Index of 50.8 ranks 6th of 56 measured models. Weakest at speed (D). Superseded by Opus 5.5.",
+      "best_for": "Frontier-class coding and agentic work, plus strong planning, multimodal input, long context and knowledge, at a very high price. Its AA Intelligence Index of 50.8 ranks 6th of 56 measured models. Weakest at speed (D). Superseded by Opus 5.5.",
       "superseded_by": "claude-opus-5-5",
       "superseded_on": "2026-09-24",
       "added_on": null,
@@ -1224,9 +1224,9 @@
         "speed": "B"
       },
       "jurisdiction": "us",
-      "headline_benchmarks": "AA Intelligence Index 44.3 (high); HLE 42.9% (high); Terminal-Bench 2.1 88.4 (high); \u03c4\u00b2-bench banking pass_1 50.7%",
+      "headline_benchmarks": "AA Intelligence Index 44.2 (xhigh); HLE 44.1%; SciCode 53.0; Terminal-Bench 4.0 17.2; AA-LCR 0.810; Terminal-Bench 2.1 88.4 (high); \u03c4\u00b2-bench banking pass_1 43.3%",
       "pricing_notes": "Jointly trained by Cursor and SpaceXAI",
-      "best_for": "Strong coding, planning, agentic work, long context and knowledge at a low price. Its AA Intelligence Index of 44.3 ranks 13th of 56 measured models. Superseded by Grok 4.7.",
+      "best_for": "Strong coding, planning, agentic work, long context and knowledge at a low price. Its AA Intelligence Index of 44.2 ranks 13th of 56 measured models. Superseded by Grok 4.7.",
       "superseded_by": "grok-4.7",
       "superseded_on": "2026-09-24",
       "added_on": null,

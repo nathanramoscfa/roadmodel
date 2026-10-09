@@ -101,7 +101,7 @@ LEVEL_ORDER: Final[tuple[str, ...]] = (
 # web catalog's too (tests/test_derived_ratings.py holds the three together).
 # ``speed`` reads the top-level tokens/s field: it enters quality here, but
 # its letter stays an estimate, since AA measures throughput on the maker's
-# own endpoint at max effort. ``None`` = the letter only (multimodal: AA runs
+# own endpoint at the headline (top measured) effort. ``None`` = the letter only (multimodal: AA runs
 # no multimodal evaluation). A ``COMPOSITES`` key is computed by
 # ``with_composites``.
 CATEGORY_EVIDENCE: Final[dict[str, str | None]] = {

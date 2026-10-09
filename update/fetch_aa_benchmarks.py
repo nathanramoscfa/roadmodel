@@ -258,6 +258,26 @@ def build(
             mismatched.append(f"{cid} -> {slug} ({src.get('name')})")
             continue
         level = aa_effort(src.get("name") or "")
+        variants = effort_variants(slug, level, by_slug, catalog_name)
+        # The headline is the model's top measured effort, as the page and
+        # the ratings read it ("its best run"). AA's default row is usually
+        # that one, but not always (Grok 4.6's is High though AA measured
+        # XHigh): re-base on the top level, the default row becoming a level.
+        above = [
+            lv for lv in variants if level and EFFORT_LEVELS.index(lv) > EFFORT_LEVELS.index(level)
+        ]
+        if level and above:
+            top = max(above, key=EFFORT_LEVELS.index)
+            evals = src.get("evaluations") or {}
+            variants[level] = {
+                "aa_slug": src.get("slug"),
+                "aa_name": src.get("name"),
+                "evaluations": {k: v for k, v in evals.items() if v is not None},
+                "median_output_tokens_per_second": src.get("median_output_tokens_per_second"),
+            }
+            src = by_slug[variants.pop(top)["aa_slug"]]
+            slug, level = str(src.get("slug")), top
+            variants = dict(sorted(variants.items(), key=lambda kv: EFFORT_LEVELS.index(kv[0])))
         models[cid] = {
             "aa_id": src.get("id"),
             "aa_slug": slug,
@@ -268,7 +288,7 @@ def build(
             "median_output_tokens_per_second": src.get("median_output_tokens_per_second"),
             "median_time_to_first_token_seconds": src.get("median_time_to_first_token_seconds"),
             "aa_effort": level,
-            "effort_variants": effort_variants(slug, level, by_slug, catalog_name),
+            "effort_variants": variants,
         }
     return {
         "schema_version": SCHEMA_VERSION,
