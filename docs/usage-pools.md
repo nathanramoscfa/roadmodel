@@ -93,3 +93,36 @@ Antigravity. An exhausted OpenRouter reserve disables its key’s funding;
 prepaid credit states never expire on a timer. Maker pay-as-you-go keys remain
 independent. CLI and MCP scoring use the same rules; package changes reach the
 hosted recommender only through a release and service floor update.
+
+The web profile needs a database migration before it can carry pool states.
+`web/lib/profile.ts` and `/api/profile` currently expose funding preferences,
+and `service/app/funding.py` builds their user context without usage-pool rows.
+The schema-only migration
+[`20261010173834_profiles_pool_states.sql`](../infra/supabase/migrations/20261010173834_profiles_pool_states.sql)
+adds `profiles.pool_states`, a non-null JSON array defaulting to `[]` (unknown).
+It inherits the existing owner-only profile policies and update timestamp.
+This migration does not activate web synchronization or change recommendations.
+
+Apply the migration manually from the linked repository before continuing:
+
+```sh
+supabase db push --linked
+```
+
+After that operator step, the smallest proposed sync is an hourly HTTPS PATCH
+to Supabase's profile REST endpoint with a per-user bearer session and the
+publishable key. Keep the rotating refresh token in macOS Keychain. Existing
+`auth.uid() = user_id` policies restrict the update to the signed-in user's
+profile; the uploader needs no service-role key. Patch only `pool_states`,
+preserving the saved funding preferences. Use one normalized entry per funded
+pool row, with a stable pool/platform identifier, source, state, used percentage,
+window duration and UTC observation/reset timestamps. Never upload the personal
+context document, account identifiers, logs, API keys or raw provider responses.
+
+The subsequent implementation must validate each entry, enforce freshness and
+passed-reset rules, and preserve prior states when an observation is missing
+or stale. The profile mapper, recommendation route and service funding builder
+must forward and render those entries as Usage-pool rows for the existing scorer.
+Verify an authenticated write/read round trip, owner isolation, and the resulting
+scorer funding before enabling the hourly upload. Implementation stops at this
+migration handoff until the operator applies the schema.
