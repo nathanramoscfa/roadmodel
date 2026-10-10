@@ -40,11 +40,7 @@ def _disable_service() -> None:
     su = discovery.build("serviceusage", "v1", cache_discovery=False)
     name = f"projects/{TARGET_PROJECT}/services/{TARGET_SERVICE}"
     print(f"[killswitch] DISABLING {name}")
-    op = (
-        su.services()
-        .disable(name=name, body={"disableDependentServices": False})
-        .execute()
-    )
+    op = su.services().disable(name=name, body={"disableDependentServices": False}).execute()
     print(f"[killswitch] disable submitted: {op.get('name', 'ok')}")
 
 
