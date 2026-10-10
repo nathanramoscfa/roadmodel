@@ -13,11 +13,6 @@
       "medium",
       "high"
     ],
-    "Gemini 3.7 Flash": [
-      "low",
-      "medium",
-      "high"
-    ],
     "Gemini 3.6 Flash": [
       "minimal",
       "low",
@@ -49,12 +44,6 @@
       "low",
       "high"
     ],
-    "Gemini 3.5 Flash": [
-      "minimal",
-      "low",
-      "medium",
-      "high"
-    ],
     "Gemini 2.5 Pro": [
       "low",
       "medium",
@@ -79,14 +68,12 @@
   },
   "level_defaults": {
     "Gemini 3.8 Flash": "medium",
-    "Gemini 3.7 Flash": "medium",
     "Gemini 3.6 Flash": "medium",
     "Gemini 3.5 Flash-Lite": "minimal",
     "Gemini 3.1 Pro": "high",
     "Gemini 3.1 Flash-Lite Image": "minimal",
     "Gemini 3 Flash": "high",
     "Gemini 3 Pro": "high",
-    "Gemini 3.5 Flash": "medium",
     "Gemini 2.5 Pro": "on",
     "Gemini 2.5 Flash": "on",
     "Gemini 2.5 Flash-Lite": "off",
@@ -96,10 +83,9 @@
     "Gemini 3.1 Flash-Lite Image",
     "Gemini 3.5 Flash-Lite",
     "Gemini 3.6 Flash",
-    "Gemini 3.7 Flash",
     "Gemini 3.8 Flash",
     "Gemini Robotics Er 2"
   ],
   "unexpected_levels": [],
-  "section_sha256": "9936839df1aff2446ba46a30386947edeff758d3cac1c1e891cad9062a916e89"
+  "section_sha256": "4ea7a28f1c72738bac485d1a764a0a508c147cd05afaa2bc2681a94b5b2f1dd2"
 }
