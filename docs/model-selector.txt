@@ -1994,6 +1994,11 @@
           UNFUNDED for the window. A model reachable through another funded
           pool then wins on cost when it is adequate for the task; the
           RATIONALE must name the reset time and the pool that was skipped.
+      FIXED PREPAID RESERVE: an `exhausted` OpenRouter credits row makes
+      the `openrouter` method UNFUNDED even when its key is present. It has
+      no automatic time reset: funding returns only after credits are added
+      and the reserve observation changes. `headroom` / `tight` reserves
+      remain per-token paths; maker pay-as-you-go keys have no pool state.
       A `tight` or `exhausted` entry also CLOSES the `<objective>`
       FLAT-FUNDING GATE for every candidate that subscription funds
       (condition (c)) — the per-pool table overrides the single headroom

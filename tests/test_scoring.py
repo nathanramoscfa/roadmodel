@@ -862,3 +862,177 @@ def test_tight_expires_like_exhausted_and_headroom_is_untouched() -> None:
     assert tight[0][1] == "headroom"
     fresh = scoring.pool_states(_pools("2026-09-22 20:00 EDT", "headroom"), now=past)
     assert fresh[0] == ("claude.ai Max — weekly", "headroom", "overflow on")
+
+
+def _pool_catalog():
+    import copy
+
+    catalog = copy.deepcopy(CATALOG)
+    catalog["access_methods"].extend(
+        [
+            {
+                "id": "antigravity",
+                "name": "Antigravity",
+                "provider": "google",
+                "provider_jurisdiction": "us",
+                "billing": "subscription-included",
+                "supports_models": ["gemini-3.8-flash", "claude-sonnet-5"],
+            },
+            {
+                "id": "openrouter",
+                "name": "OpenRouter",
+                "provider": "openrouter",
+                "provider_jurisdiction": "us",
+                "billing": "per-token",
+                "supports_models": ["gemini-3.8-flash"],
+            },
+        ]
+    )
+    catalog["subscription_tiers"].append(
+        {
+            "provider": "Google",
+            "tier": "Google AI Pro ($19.99)",
+            "monthly_usd": 19.99,
+            "surface_funded": ["antigravity"],
+        }
+    )
+    return catalog
+
+
+@pytest.mark.parametrize(
+    "platform,name,model,subscription",
+    [
+        (
+            "claude-code",
+            "Claude subscription — weekly",
+            "claude-opus-5",
+            "| claude.ai Max ($200) | $200 | Anthropic | yes |",
+        ),
+        ("codex-cli", "Codex — 5h", "gpt-5.6-sol", "| ChatGPT Pro ($100) | $100 | OpenAI | yes |"),
+        (
+            "antigravity",
+            "Antigravity",
+            "gemini-3.8-flash",
+            "| Google AI Pro | $20 | Google | yes |",
+        ),
+    ],
+)
+@pytest.mark.parametrize("state,scarcity", [("headroom", 0.35), ("tight", 0.7), ("exhausted", 1.0)])
+def test_collector_pool_names_map_to_their_funded_platform(
+    platform, name, model, subscription, state, scarcity
+):
+    text = _context(
+        subs=subscription,
+        pools=f"| {name} | metered | `{state}` | rolling | [auto: example 42% at time] |",
+    )
+    ranking = scoring.rank(
+        scoring.Task("coding", "medium"), text, catalog=_pool_catalog(), benchmarks=BENCH
+    )
+    candidate = next(c for c in ranking.candidates if c.model_id == model)
+    assert candidate.platform_id == platform
+    assert candidate.pool_state == state and candidate.scarcity == scarcity
+
+
+def test_split_codex_windows_use_the_worst_live_state():
+    text = _context(
+        subs="| ChatGPT Pro ($100) | $100 | OpenAI | yes |",
+        pools=(
+            "| ChatGPT Pro — Codex weekly | 7 days | `headroom` | rolling | |\n"
+            "| Codex — 5h | 5 hours | `exhausted` | rolling | |"
+        ),
+    )
+    ranking = scoring.rank(
+        scoring.Task("coding", "low"), text, catalog=_pool_catalog(), benchmarks=BENCH
+    )
+    candidate = next(c for c in ranking.candidates if c.model_id == "gpt-5.6-sol")
+    assert candidate.platform_id == "codex-cli" and candidate.pool_state == "exhausted"
+
+
+def test_claude_weekly_exhaustion_does_not_attach_to_google_pool():
+    text = _context(
+        subs="| Google AI Pro | $20 | Google | yes |",
+        pools=("| claude.ai Max — weekly | 7 days | `exhausted` | rolling | |"),
+    )
+    ranking = scoring.rank(
+        scoring.Task("coding", "medium"), text, catalog=_pool_catalog(), benchmarks=BENCH
+    )
+    candidate = next(c for c in ranking.candidates if c.model_id == "claude-sonnet-5")
+    assert candidate.platform_id == "antigravity" and candidate.pool_state == "headroom"
+
+
+@pytest.mark.parametrize(
+    "state,expected", [("headroom", "api-key"), ("tight", "api-key"), ("exhausted", "unfunded")]
+)
+def test_openrouter_reserve_controls_funding_even_with_a_declared_key(state, expected):
+    text = _context(
+        subs="",
+        keys="| OpenRouter | Yes | capped key |",
+        pools=(f"| OpenRouter credits | fixed reserve | `{state}` | 2020-01-01 00:00 UTC | |"),
+    )
+    catalog = _pool_catalog()
+    # Only OpenRouter reaches this model; an empty reserve must stay visible as unfunded.
+    catalog["access_methods"] = [m for m in catalog["access_methods"] if m["id"] == "openrouter"]
+    ranking = scoring.rank(scoring.Task("coding", "low"), text, catalog=catalog, benchmarks=BENCH)
+    candidate = next(c for c in ranking.candidates if c.model_id == "gemini-3.8-flash")
+    assert candidate.funding == expected and candidate.pool_state == state
+    assert scoring.pool_states(text)[0][1] == state  # A dated cell cannot refill prepaid credits.
+    if state == "exhausted":
+        assert "reserve exhausted" in candidate.notes[0]
+
+
+def test_api_pool_lookalike_does_not_change_subscription_or_maker_key_funding():
+    from roadmodel import cost
+
+    text = _context(
+        subs="",
+        keys="| Anthropic | Yes | PAYG |\n| OpenAI | Yes | PAYG |\n| Google | Yes | PAYG |\n| OpenRouter | Yes | reserve |",
+        pools=(
+            "| OpenRouter credits | fixed reserve | `exhausted` | — | |\n"
+            "| Anthropic API budget | monthly | `exhausted` | rolling | |"
+        ),
+    )
+    assert cost._parse_active_api_keys(text) == {
+        "anthropic": True,
+        "openai": True,
+        "google": True,
+        "openrouter": False,
+    }
+
+
+def test_cli_score_reads_an_exhausted_openrouter_reserve(monkeypatch, tmp_path):
+    from click.testing import CliRunner
+
+    from roadmodel.cli import cli
+
+    catalog = _pool_catalog()
+    path = tmp_path / "catalog.json"
+    path.write_text(json.dumps(catalog))
+    monkeypatch.setenv("ROADMODEL_CATALOG_PATH", str(path))
+    ctx = tmp_path / "user-context.md"
+    ctx.write_text(
+        _context(
+            subs="",
+            keys="| OpenRouter | Yes | prepaid |",
+            pools=("| OpenRouter credits | fixed reserve | `exhausted` | — | |"),
+            extra="platforms.allowed: openrouter",
+        )
+    )
+    result = CliRunner().invoke(
+        cli,
+        [
+            "score",
+            "--category",
+            "coding",
+            "--complexity",
+            "low",
+            "--user-context",
+            str(ctx),
+            "--output",
+            "json",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["candidates"] and all(
+        c["funding"] == "unfunded" and c["pool_state"] == "exhausted" for c in payload["candidates"]
+    )

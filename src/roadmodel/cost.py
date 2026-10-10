@@ -681,7 +681,26 @@ def _parse_active_api_keys(text: str) -> dict[str, bool]:
         provider = row[0].strip().lower()
         present = row[1].strip().lower() in {"yes", "y", "true", "✓", "x"}
         keys[provider] = present
+    if _openrouter_reserve_state(text) == "exhausted":
+        keys["openrouter"] = False
     return keys
+
+
+def _openrouter_reserve_state(text: str) -> str | None:
+    """Worst declared reserve state; fixed prepaid credits never reset by time.
+
+    A key's presence cannot fund calls when its declared reserve is empty.
+    Maker pay-as-you-go keys have no pool and are unaffected.
+    """
+    states = []
+    for row in _parse_markdown_table(_extract_section(text, "Usage-pool status")):
+        if len(row) < 3 or not re.search(r"\bopenrouter\b", row[0], re.I):
+            continue
+        match = re.search(r"\b(headroom|tight|exhausted)\b", row[2], re.I)
+        if match:
+            states.append(match[1].lower())
+    order = {"headroom": 0, "tight": 1, "exhausted": 2}
+    return max(states, key=order.__getitem__) if states else None
 
 
 def _local_funding(method: dict[str, Any], user_context_text: str) -> str:

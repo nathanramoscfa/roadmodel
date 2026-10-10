@@ -682,7 +682,8 @@ def pool_states(text: str, *, now: datetime | None = None) -> list[tuple[str, st
     A `tight` / `exhausted` row whose Resets time has passed reads as
     `headroom`: the operator writes the row when a cap binds and cannot be
     relied on to flip it back when the window rolls, so the table must not
-    outlive its own reset. The note records why, for the audit line."""
+    outlive its own reset. The note records why, for the audit line. A fixed
+    OpenRouter prepaid reserve never refills because a dated cell passed."""
     now = now or datetime.now(timezone.utc)
     section = _cost._extract_section(text, "Usage-pool status")
     rows: list[tuple[str, str, str]] = []
@@ -696,7 +697,11 @@ def pool_states(text: str, *, now: datetime | None = None) -> list[tuple[str, st
             continue
         state = m.group(1).lower()
         reset = row[3].strip() if len(row) > 3 else ""
-        if state in ("tight", "exhausted") and _reset_passed(reset, now):
+        if (
+            state in ("tight", "exhausted")
+            and "openrouter" not in name.lower()
+            and _reset_passed(reset, now)
+        ):
             notes = f"declared {state}, but its reset ({reset}) has passed"
             state = "headroom"
         rows.append((name, state, notes))
@@ -727,12 +732,15 @@ def _pool_state_for(
     *,
     model_name: str = "",
     family_words: frozenset[str] | set[str] = frozenset(),
+    platform_id: str = "",
 ) -> tuple[str, str]:
     """Worst declared state among pool rows that belong to this subscription
     tier, and that row's notes. A row belongs to the tier when its name
     contains the tier's name minus its price tag (a "claude.ai Max — weekly"
     row matches "claude.ai Max ($200)"), or names the provider together with a
-    plan word ("Anthropic Max weekly"). A row that names a model family ("…
+    plan word ("Anthropic Max weekly"). Collector labels can also name the
+    funded surface (Codex, Antigravity, Claude subscription).
+    A row that names a model family ("…
     Fable 50% sub-cap") applies only to models of that family. Unknown →
     headroom."""
     if tier is None or not pools:
@@ -748,7 +756,15 @@ def _pool_state_for(
         tokens = set(re.split(r"[^a-z0-9.]+", low))
         by_stem = bool(stem) and stem in low
         by_provider = bool(provider) and provider in tokens and bool(tokens & _PLAN_WORDS)
-        if not (by_stem or by_provider):
+        by_surface = (
+            (platform_id == "codex-cli" and "codex" in tokens)
+            or (platform_id == "antigravity" and "antigravity" in tokens)
+            or (
+                platform_id == "claude-code"
+                and ("claude-code" in low or {"claude", "subscription"} <= tokens)
+            )
+        )
+        if not (by_stem or by_provider or by_surface):
             continue
         scoped = tokens & set(family_words)
         if scoped and not any(w in model_low for w in scoped):
@@ -943,6 +959,14 @@ def _funding_for(
     family_words: frozenset[str] | set[str] = frozenset(),
 ) -> tuple[str, str, float, str]:
     """(funding class, pool state, scarcity, note) for one access method."""
+    reserve = _cost._openrouter_reserve_state(text) if method.get("id") == "openrouter" else None
+    if reserve == "exhausted":
+        return (
+            "unfunded",
+            "exhausted",
+            SCARCITY["unfunded"],
+            "OpenRouter prepaid reserve exhausted; add credits",
+        )
     kind, tier = _cost._resolve_funding(method, catalog, text)
     if kind == _cost.FUNDING_LOCAL:
         return "local", "n/a", SCARCITY["local"], ""
@@ -955,13 +979,24 @@ def _funding_for(
         if str(method.get("billing", "")) == "per-token":
             api_keys = _cost._parse_active_api_keys(text)
             if api_keys.get(str(method.get("provider", "")).lower(), False):
-                return "api-key", "n/a", SCARCITY["api-key"], ""
+                return (
+                    "api-key",
+                    reserve or "n/a",
+                    SCARCITY["api-key"],
+                    "reserve tight" if reserve == "tight" else "",
+                )
             return "unfunded", "n/a", SCARCITY["unfunded"], "no API key declared"
         return "unfunded", "n/a", SCARCITY["unfunded"], "no subscription or key declared"
     if tier is None:
         # subscription-or-key satisfied by an API key.
         return "api-key", "n/a", SCARCITY["api-key"], ""
-    state, notes = _pool_state_for(tier, pools, model_name=model_name, family_words=family_words)
+    state, notes = _pool_state_for(
+        tier,
+        pools,
+        model_name=model_name,
+        family_words=family_words,
+        platform_id=str(method.get("id", "")),
+    )
     if state == "exhausted" and "overflow off" in notes.lower():
         api_keys = _cost._parse_active_api_keys(text)
         if str(method.get("billing", "")) == "subscription-or-key" and api_keys.get(

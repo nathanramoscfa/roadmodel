@@ -86,3 +86,10 @@ ignored. Snapshots store only a digest for identity matching. Bound quota-error
 records must identify the matching account; unbound logs cannot change it.
 If the funded account is not signed in, existing state is retained until its
 supported meter or a matching error record becomes available.
+
+Scoring matches generic collector labels to their funded surface, including
+independent Codex weekly and five-hour rows. Claude’s pool does not attach to
+Antigravity. An exhausted OpenRouter reserve disables its key’s funding;
+prepaid credit states never expire on a timer. Maker pay-as-you-go keys remain
+independent. CLI and MCP scoring use the same rules; package changes reach the
+hosted recommender only through a release and service floor update.
