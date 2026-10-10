@@ -364,13 +364,13 @@
       `/effort` level with documented values `low`, `medium`, `high`,
       `xhigh`, `max` (shown in the UI as Low / Medium / High / Extra
       High / Max). Not every model supports every level — Opus 5,
-      Opus 5.5, Opus 4.7, Opus 4.8, Sonnet 5, Sonnet 5.5, Fable 5, and Fable 5.1
+      Opus 5.5, Opus 4.7, Opus 4.8, Sonnet 5, Sonnet 5.5, Haiku 5.5, Fable 5, and Fable 5.1
       expose the full low/medium/high/xhigh/max range; Opus 4.6 and
       Sonnet 4.6 top out at `max` without an `xhigh` step. An effort
       level a model does not support falls back to the highest
       supported level at or below it. Default effort is `high` on every
-      model that supports effort, except Opus 4.7 (`xhigh`) and Opus 5.5
-      and Sonnet 5.5 (`medium`). Extended thinking can also be toggled
+      model that supports effort, except Opus 4.7 (`xhigh`) and Opus 5.5,
+      Sonnet 5.5 and Haiku 5.5 (`medium`). Extended thinking can also be toggled
       with Option+T /
       Alt+T, `alwaysThinkingEnabled`, or `MAX_THINKING_TOKENS=0`. Claude
       Code 2.1.257 ships Claude Fable 5.1 as the new default Fable model
@@ -473,6 +473,10 @@
       runs at the effort level you ask for. It also fixes cloud sessions
       forgetting the client's thinking setting after a container restart.
       The `/effort` vocabulary and the extended-thinking controls are
+      unchanged. 2.1.296 fixes token counts for Haiku 5.5 and other models
+      that take only adaptive thinking. It also adds
+      `CLAUDE_CODE_WORKFLOW_SUBAGENT_MODEL` to run every workflow agent on one
+      model. The `/effort` vocabulary and the extended-thinking controls are
       unchanged.
     - OpenAI (Codex, OpenAI API, ChatGPT advanced controls):
       `reasoning_effort` knob — `low`, `medium`, `high`, `xhigh`, `max`,
