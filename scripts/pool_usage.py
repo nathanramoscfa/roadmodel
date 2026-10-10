@@ -6,6 +6,7 @@ Timestamps are UTC epoch seconds; a missing decision means retain the current st
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import os
@@ -51,10 +52,18 @@ def save(snapshot: dict[str, Any], cache: Path = CACHE) -> None:
 
 def load(cache: Path = CACHE) -> dict[str, dict[str, Any]]:
     result = {}
+    try:
+        expected = json.loads((cache / "accounts.json").read_text()).get("antigravity")
+    except (OSError, ValueError, AttributeError):
+        expected = None
     for source in ("claude", "codex", "openrouter", "antigravity"):
         try:
             data = json.loads((cache / f"{source}.json").read_text())
             if isinstance(data, dict) and data.get("source") == source:
+                if source == "antigravity" and expected:
+                    digest = hashlib.sha256(expected.lower().encode()).hexdigest()
+                    if data.get("extra", {}).get("account_digest") != digest:
+                        continue
                 result[source] = data
         except (OSError, ValueError):
             pass

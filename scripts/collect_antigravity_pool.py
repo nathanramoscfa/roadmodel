@@ -9,6 +9,7 @@ https://www.antigravity.google/docs/cli/commands/usage
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -30,8 +31,11 @@ ERROR = re.compile(
 STAMP = re.compile(r"\d{4}-\d\d-\d\d[T ]\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)")
 
 
-def parse_panel(raw: str, now: float) -> dict[str, Any] | None:
+def parse_panel(raw: str, now: float, expected_account: str | None = None) -> dict[str, Any] | None:
     text = ANSI.sub("", raw).replace("\r", "\n")
+    account = re.search(r"Account:\s*(\S+@\S+)", text)
+    if expected_account and (not account or account[1].lower() != expected_account.lower()):
+        return None
     windows = []
     for name, body in re.findall(
         r"(GEMINI MODELS|CLAUDE AND GPT MODELS)(.*?)(?=GEMINI MODELS|CLAUDE AND GPT MODELS|$)",
@@ -68,7 +72,15 @@ def parse_panel(raw: str, now: float) -> dict[str, Any] | None:
     if len({w["name"].split("-")[0] for w in windows}) != 2:
         return None
     return dict(
-        source="antigravity", observed_at=now, windows=windows, extra={"readout": "agy /usage"}
+        source="antigravity",
+        observed_at=now,
+        windows=windows,
+        extra={
+            "readout": "agy /usage",
+            "account_digest": hashlib.sha256(account[1].lower().encode()).hexdigest()
+            if account
+            else None,
+        },
     )
 
 
@@ -124,7 +136,7 @@ def usage_panel(binary: str, timeout: float = 25) -> str:
         os.close(master)
 
 
-def log_error(root: Path) -> dict[str, Any] | None:
+def log_error(root: Path, expected_account: str | None = None) -> dict[str, Any] | None:
     """Only actual timestamped failure records, never quoted conversation text.
 
     A file's modification time is NOT an error time. No errors means unknown,
@@ -142,13 +154,21 @@ def log_error(root: Path) -> dict[str, Any] | None:
                         if path.suffix in (".json", ".jsonl"):
                             try:
                                 record = json.loads(line)
+                                if (
+                                    expected_account
+                                    and str(record.get("account", "")).lower()
+                                    != expected_account.lower()
+                                ):
+                                    continue
                                 error = record.get("error")
                                 if not error or not ERROR.search(json.dumps(error)):
                                     continue
                                 candidate = record.get("timestamp")
                             except (ValueError, AttributeError):
                                 continue
-                        elif re.search(r"\b(?:ERROR|error|WARN|warn)\b", line):
+                        elif not expected_account and re.search(
+                            r"\b(?:ERROR|error|WARN|warn)\b", line
+                        ):
                             stamp = STAMP.search(line)
                             candidate = stamp[0] if stamp else None
                         if candidate:
@@ -177,7 +197,12 @@ def log_error(root: Path) -> dict[str, Any] | None:
                 quota_error=True,
             )
         ],
-        extra={"readout": "quota-error log"},
+        extra={
+            "readout": "quota-error log",
+            "account_digest": hashlib.sha256(expected_account.lower().encode()).hexdigest()
+            if expected_account
+            else None,
+        },
     )
 
 
@@ -189,15 +214,32 @@ def main() -> int:
     )
     ap.add_argument("--agy", default="/opt/homebrew/bin/agy")
     ap.add_argument("--logs-only", action="store_true")
+    ap.add_argument(
+        "--account", help="Expected funded account; otherwise use private cache/accounts.json"
+    )
     args = ap.parse_args()
     snapshot = None
+    expected = args.account
+    if not expected:
+        try:
+            expected = json.loads((args.cache / "accounts.json").read_text()).get("antigravity")
+        except (OSError, ValueError, AttributeError):
+            pass
+    mismatch = False
     if not args.logs_only:
         try:
             args.cache.mkdir(parents=True, exist_ok=True, mode=0o700)
-            snapshot = parse_panel(usage_panel(args.agy), time.time())
+            panel = usage_panel(args.agy)
+            account = re.search(r"Account:\s*(\S+@\S+)", ANSI.sub("", panel))
+            mismatch = bool(expected and account and account[1].lower() != expected.lower())
+            snapshot = parse_panel(panel, time.time(), expected)
         except (OSError, ValueError, subprocess.SubprocessError):
             pass
-    snapshot = snapshot or log_error(args.logs)
+    if not mismatch:
+        snapshot = snapshot or log_error(args.logs, expected)
+    if mismatch:
+        print("antigravity: signed-in account differs from funded account; no observation applied")
+        return 0
     if snapshot:
         save(snapshot, args.cache)
     print(

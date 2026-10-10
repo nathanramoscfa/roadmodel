@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import re
 from datetime import datetime
 from typing import Any
@@ -93,7 +94,9 @@ def render(
                 if isinstance(m, dict) and s == state and number(m.get("resets_at")) is not None
             ]
             reset_text = (
-                datetime.fromtimestamp(max(resets), tz).strftime("%a %Y-%m-%d %H:%M %Z")
+                datetime.fromtimestamp(math.ceil(max(resets) / 60) * 60, tz).strftime(
+                    "%a %Y-%m-%d %H:%M %Z"
+                )
                 if resets
                 else cells[3]
             )

@@ -266,17 +266,47 @@ batch / asynchronous, not latency-sensitive. Apply these rules:
 
 ## Usage-pool status
 
-Optional, hand-maintained. One row per subscription usage pool, so the
-selector knows which funded paths are actually $0 THIS window. It is
-consumed by `<access-selection>` Step C ("USAGE-POOL STATUS") and by the
-`<objective>` FLAT-FUNDING GATE (a `tight` / `exhausted` pool closes the
-gate). Delete the table to declare every pool `headroom`.
+Optional. One row per metered pool tells the selector which funded paths
+have capacity. The CLI, MCP and local planning kit consume these rows through
+`<access-selection>` Step C and the FLAT-FUNDING GATE. Web Settings is a
+separate saved profile; a local edit alone does not update the web app.
+
+**Automatic meter rules.** The hourly `scripts/roll_pool_status.py` job
+refreshes Codex, OpenRouter and supported Antigravity meters; Claude Code's
+status-line wrapper supplies account-wide weekly and five-hour observations.
+The Fable sub-cap is still set manually. Maker pay-as-you-go keys and local
+inference have no pool.
+
+- `exhausted`: usage ≥97%, an explicit rate-limit-reached flag, or a quota
+  error. Claude overflow then bills usage credits at list price.
+- `tight`: usage percentage divided by the elapsed fraction of its window
+  projects ≥100% at reset; weekly windows need at least 12 hours elapsed.
+  Also tight: usage ≥85% with more than 24 hours remaining.
+- `headroom`: other fresh observations. OpenRouter's fixed reserve is
+  `exhausted` below $1 remaining and `tight` below 20% of the key's limit;
+  it has no automatic reset.
+- Observations older than six hours for a weekly window or one hour for a
+  five-hour window never change state; OpenRouter expires after six hours.
+  Missing or malformed data retains the row. Clearing a live exhausted pool
+  requires fresh data or a known passed reset. Grouped pools need fresh data
+  for every group before lowering state.
+- Resets come from the meter, displayed in `America/New_York` with EDT/EST
+  as appropriate, rounding up to the next minute. Antigravity uses its supported `/usage` model-group
+  windows; if unavailable, an actual quota error marks it exhausted for
+  five hours after the original error. No error means unknown.
+
+Changed rows carry `[auto: source used% at time]` in Notes. Expired dated
+states still return to `headroom`, and weekly reset dates roll forward.
+Use `--dry-run` for a diff that leaves the context file untouched.
 
 | Pool                                  | Window  | State      | Resets (local time)        | Notes                                                                 |
 | ------------------------------------- | ------- | ---------- | -------------------------- | --------------------------------------------------------------------- |
 | claude.ai Max — weekly (all models)   | 7 days  | `headroom` | —                          | Shared by Claude Code + claude.ai; Fable draws from it under a 50% sub-cap. |
 | claude.ai Max — 5-hour session        | 5 hours | `headroom` | —                          | Rolling; rarely the binding constraint.                               |
-| ChatGPT Plus — Codex 5-hour / weekly  | 5h / 7d | `headroom` | —                          | Low ceiling; see Platform preference order.                           |
+| ChatGPT subscription — Codex weekly | 7 days | `headroom` | — | Updated from the weekly window when exposed. |
+| ChatGPT subscription — Codex 5h | 5 hours | `headroom` | — | Independent window when exposed; slot order is not assumed. |
+| Google AI Pro — Antigravity | metered | `headroom` | — | Supported quota groups determine window length. |
+| OpenRouter credits | fixed reserve | `headroom` | — | Fixed prepaid reserve; no automatic top-up/reset. |
 
 States:
 
@@ -291,8 +321,8 @@ States:
   overflow turned OFF, add `overflow off` to Notes and the selector
   treats those platforms as unfunded until the reset.
 
-Update the State and Resets cells when a cap binds, and clear them when
-the window resets. The `Consumption headroom` line above is one global
+Fresh meters update the State and Resets cells automatically. Unsupported
+sub-caps remain manual; a known dated reset can clear an expired state. The `Consumption headroom` line above is one global
 declaration; this table is the per-pool override for the current window,
 and any `tight` or `exhausted` row closes the FLAT-FUNDING GATE for every
 candidate that pool funds, whatever the line above says.

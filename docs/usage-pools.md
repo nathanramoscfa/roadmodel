@@ -59,3 +59,30 @@ no usage-pool state.
 
 References: [Claude status-line data](https://code.claude.com/docs/en/statusline),
 [OpenRouter current-key meter](https://openrouter.ai/docs/api/api-reference/api-keys/get-current-api-key).
+
+The hourly updater (`roll_pool_status.py`) refreshes the three polling collectors
+and applies fresh cached observations plus known reset expiry. It preserves
+file permissions, follows the configured context symlink, and replaces the
+personal file atomically. Run `--dry-run` to inspect cached changes;
+`--dry-run --refresh` refreshes cache too. `--no-collect` skips polling.
+The launchd cadence remains hourly and uses Python 3.11 or later.
+
+Preview the Claude settings change with
+`python3 scripts/configure_claude_pool.py`; show the diff before invoking
+`--install`. The complete original statusLine object stays privately in the
+cache, all other settings survive, and repeating installation is a no-op.
+`--restore` reinstates the original object (or removes the wrapper when none
+existed). The status-line command inherits its existing padding and refresh
+options. Claude updates its snapshot during normal usage; the hourly job never
+calls a Claude model just to refresh a meter.
+
+Displayed reset times round up to the next minute so minute-resolution table cells never clear a live exhausted window early.
+
+For an account-specific funded pool, bind Antigravity to the expected account
+using `--account` or a private `~/.cache/roadmodel/pools/accounts.json` file:
+`{"antigravity": "funded-account@example.invalid"}`. A different signed-in
+account cannot update the pool, and older snapshots from another account are
+ignored. Snapshots store only a digest for identity matching. Bound quota-error
+records must identify the matching account; unbound logs cannot change it.
+If the funded account is not signed in, existing state is retained until its
+supported meter or a matching error record becomes available.
