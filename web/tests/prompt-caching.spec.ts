@@ -132,6 +132,7 @@ function profileWith(
   const now = new Date().toISOString();
   return {
     user_id: "test-user",
+    pool_states: [],
     subscriptions: [],
     api_providers: [],
     budget_priority: "balanced",

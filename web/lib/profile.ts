@@ -6,6 +6,8 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { normalizePools, type PoolObservation } from "./pools";
+
 import { createSupabaseServerClient } from "./auth";
 import { isE2eAuthEnabled } from "./e2e-mode";
 
@@ -47,6 +49,7 @@ export type JurisdictionCode =
 
 export interface Profile {
   user_id: string;
+  pool_states: PoolObservation[];
   subscriptions: SubscriptionId[];
   // Phase 4.8 (#260) — providers the user reaches via their own API key.
   // Additive; defaults to [] for pre-4.8 rows.
@@ -65,6 +68,7 @@ export interface Profile {
 }
 
 export const DEFAULT_PROFILE = {
+  pool_states: [] as PoolObservation[],
   subscriptions: [] as SubscriptionId[],
   api_providers: [] as ApiProviderId[],
   budget_priority: "balanced" as BudgetPriority,
@@ -109,15 +113,18 @@ export function e2eUpsertProfile(
     | "updated_at"
     | "frontier_roadmap_override"
     | "consumption_headroom"
+    | "pool_states"
   > & {
     frontier_roadmap_override?: boolean | null;
     consumption_headroom?: ConsumptionHeadroom;
+    pool_states?: PoolObservation[];
   },
 ): Profile {
   const existing = e2eProfiles.get(userId);
   const now = new Date().toISOString();
   const profile: Profile = {
     user_id: userId,
+    pool_states: row.pool_states ?? existing?.pool_states ?? [],
     subscriptions: row.subscriptions,
     api_providers: row.api_providers,
     budget_priority: row.budget_priority,
@@ -150,6 +157,7 @@ function mapRow(row: Record<string, unknown>): Profile {
   const override = row.frontier_roadmap_override;
   return {
     user_id: String(row.user_id),
+    pool_states: normalizePools(row.pool_states),
     subscriptions: (row.subscriptions ?? []) as SubscriptionId[],
     api_providers: (row.api_providers ?? []) as ApiProviderId[],
     budget_priority: row.budget_priority as BudgetPriority,

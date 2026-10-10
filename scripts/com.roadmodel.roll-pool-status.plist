@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   launchd agent: once an hour, refresh usage meters and apply fresh pool states
-  to docs/user-context.md; dated expired rows still clear and roll forward. Local-only; the file is gitignored.
+  to docs/user-context.md; dated expired rows still clear and roll forward.
+  The local file is gitignored; normalized observations sync using a
+  per-user Keychain session.
 
   Install (one time):
     cp scripts/com.roadmodel.roll-pool-status.plist ~/Library/LaunchAgents/
@@ -21,6 +23,7 @@
   <array>
     <string>/opt/homebrew/bin/python3.12</string>
     <string>/Users/nathanramos/roadmodel/scripts/roll_pool_status.py</string>
+    <string>--sync-web</string>
   </array>
 
   <key>StartInterval</key>

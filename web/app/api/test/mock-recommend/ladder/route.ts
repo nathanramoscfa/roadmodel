@@ -20,6 +20,7 @@ export async function POST(req: Request): Promise<Response> {
       allowed_jurisdictions?: string[];
       subscriptions?: string[];
       api_providers?: string[];
+      pool_states?: unknown[];
     };
   } = {};
   try {
@@ -34,7 +35,7 @@ export async function POST(req: Request): Promise<Response> {
     subscriptions.length || apiProviders.length
       ? ` Forwarded funding — subscriptions: [${subscriptions.join(
           ", ",
-        )}]; api: [${apiProviders.join(", ")}].`
+        )}]; api: [${apiProviders.join(", ")}]. Pools: ${JSON.stringify(body.context?.pool_states ?? [])}.`
       : "";
 
   const comparisonFor = (model_id: string, model_name: string, total_usd: number) => [

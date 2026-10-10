@@ -42,6 +42,7 @@ const SCORE_FIELDS = new Set([
   "budget_priority",
   "subscriptions",
   "api_providers",
+  "pool_states",
   "consumption_headroom",
   "allowed_jurisdictions",
   "platforms_allowed",

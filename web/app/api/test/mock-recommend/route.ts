@@ -19,6 +19,7 @@ export async function POST(req: Request): Promise<Response> {
       allowed_jurisdictions?: string[];
       subscriptions?: string[];
       api_providers?: string[];
+      pool_states?: unknown[];
       budget_priority?: string;
     };
   } = {};
@@ -56,7 +57,7 @@ export async function POST(req: Request): Promise<Response> {
     subscriptions.length || apiProviders.length
       ? ` Forwarded funding — subscriptions: [${subscriptions.join(
           ", ",
-        )}]; api: [${apiProviders.join(", ")}].`
+        )}]; api: [${apiProviders.join(", ")}]. Pools: ${JSON.stringify(body.context?.pool_states ?? [])}.`
       : "";
 
   // Realistic SessionCostEstimate shape (model_id/platform_id) so the T3 edge

@@ -9,7 +9,10 @@ The Fable sub-cap remains manual. No PAYG maker keys or local inference pools.
 
 Stdlib only, Python 3.11+. --dry-run prints a unified diff without writing the
 context file or collecting new data; --refresh also refreshes cache in a dry run.
---no-collect applies only existing snapshots. See docs/usage-pools.md.
+--no-collect applies only existing snapshots. --sync-web also uploads fresh,
+normalized observations with a per-user Keychain session, even when the local
+table is unchanged. A dry run never authenticates or uploads.
+See docs/usage-pools.md.
 """
 
 from __future__ import annotations
@@ -160,6 +163,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--cache", type=Path, default=CACHE)
     ap.add_argument("--zone", default="America/New_York")
     ap.add_argument("--no-collect", action="store_true")
+    ap.add_argument(
+        "--sync-web", action="store_true", help="Push fresh meters with a per-user Keychain session"
+    )
     ap.add_argument("--refresh", action="store_true", help="Refresh cache even in a dry run")
     args = ap.parse_args(argv)
     path = args.file.resolve()
@@ -174,7 +180,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     if not summary:
         print("roll_pool_status: no changes")
-        return 0
+        if args.dry_run:
+            return 0
     for s in summary:
         print(f"roll_pool_status: {s}")
     if args.dry_run:
@@ -189,8 +196,19 @@ def main(argv: list[str] | None = None) -> int:
             ),
             end="",
         )
-    else:
+    elif new != text:
         write_context(path, text, new)
+    if args.sync_web and not args.dry_run:
+        return subprocess.run(  # noqa: S603 — fixed sibling script
+            [
+                sys.executable,
+                str(Path(__file__).with_name("push_pool_status.py")),
+                "--cache",
+                str(args.cache),
+            ],
+            check=False,
+            timeout=120,
+        ).returncode
     return 0
 
 

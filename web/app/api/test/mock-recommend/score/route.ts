@@ -44,5 +44,6 @@ export async function POST(req: Request): Promise<Response> {
     engine: "scoring-core",
     cost_usd: 0,
     received_keys: Object.keys(body).sort(),
+    received_pool_states: body.pool_states,
   });
 }

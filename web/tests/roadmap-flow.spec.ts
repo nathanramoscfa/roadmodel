@@ -231,6 +231,7 @@ test(
     const text = await loadSystemInstruction({
       profile: {
         user_id: "test-user",
+        pool_states: [],
         subscriptions: ["claude-max"],
         api_providers: [],
         budget_priority: "cheap",

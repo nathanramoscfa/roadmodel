@@ -14,6 +14,7 @@ import {
   type JurisdictionCode,
   type SubscriptionId,
 } from "@/lib/profile";
+import { mergePools, poolSchema } from "@/lib/pools";
 import { API_PROVIDER_IDS } from "@/lib/api-providers";
 import { SUBSCRIPTION_IDS } from "@/lib/subscriptions";
 
@@ -35,6 +36,7 @@ const jurisdictionEnum = z.enum([
 // PATCH). The inline /recommend budget control sends only `budget_priority`;
 // onboarding / settings still send the full body (merge == replace for them).
 const patchSchema = z.object({
+  pool_states: z.array(poolSchema).max(6).optional(),
   // Catalog-derived id set (issue #152), validated server-side rather than
   // a fixed enum so it tracks catalog.json's subscription_tiers.
   subscriptions: z
@@ -96,16 +98,28 @@ export async function PATCH(req: Request): Promise<Response> {
   };
 
   if (isE2eAuthEnabled()) {
-    const profile = e2eUpsertProfile(user.id, row);
+    const profile = e2eUpsertProfile(user.id, {
+      ...row,
+      pool_states: mergePools(existing?.pool_states, payload.pool_states),
+    });
     return NextResponse.json(profile);
   }
 
   const supabase = await createSupabaseServerClient();
+  if (payload.pool_states !== undefined && existing) {
+    const { data, error } = await supabase.from("profiles")
+      .update({ ...row, pool_states: mergePools(existing.pool_states, payload.pool_states) })
+      .eq("user_id", user.id).eq("updated_at", existing.updated_at).select("*").maybeSingle();
+    if (error) return NextResponse.json({ error: "profile_save_failed" }, { status: 500 });
+    if (!data) return NextResponse.json({ error: "profile_changed_retry" }, { status: 409 });
+    return NextResponse.json(data);
+  }
   const { data, error } = await supabase
     .from("profiles")
     .upsert({
       user_id: user.id,
       ...row,
+      ...(payload.pool_states !== undefined ? { pool_states: mergePools([], payload.pool_states) } : {}),
     })
     .select("*")
     .single();
