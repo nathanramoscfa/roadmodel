@@ -51,6 +51,7 @@ ItemList = Annotated[list[Item], Field(max_length=MAX_ITEMS)]
 
 # The request fields the funding helpers read, under the names they read them by.
 FUNDING_FIELDS: Final = (
+    "pool_states",
     "subscriptions",
     "api_providers",
     "consumption_headroom",
@@ -68,6 +69,7 @@ class ScoreRequest(BaseModel):
     complexity: Complexity
     novel: bool = False
     budget_priority: Budget = "balanced"
+    pool_states: list[dict[str, Any]] = Field(default_factory=list, max_length=6)
     subscriptions: ItemList = Field(default_factory=list)
     api_providers: ItemList = Field(default_factory=list)
     consumption_headroom: Literal["auto", "capped", "uncapped"] | None = None

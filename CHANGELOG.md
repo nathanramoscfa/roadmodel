@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Authenticated usage-pool sync from the Mac into the saved web profile.
+  Only normalized observations are uploaded using a rotating per-user session
+  in Keychain. Settings saves preserve pool states, and both recommendation
+  lanes apply them to scoring and funding annotations. Stale or missing
+  observations preserve saved states; known subscription resets clear them.
+
 ## [0.2.80] — 2026-10-10
 
 ### Fixed

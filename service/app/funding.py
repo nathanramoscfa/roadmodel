@@ -40,6 +40,9 @@ from roadmodel.cost import (  # type: ignore[import-untyped]
     _AGGREGATOR_PROVIDERS,
 )
 
+from .pools import states as pool_states
+from .pools import table as pool_table
+
 logger = logging.getLogger(__name__)
 
 _BUNDLED_CATALOG_PATH: Traversable = resources.files("roadmodel.data") / "catalog.json"
@@ -1000,7 +1003,9 @@ class FundingGuard:
         api_providers: list[str],
         *,
         catalog: dict[str, Any] | None = None,
+        pools: Any = None,
     ) -> None:
+        self._pool_states = pool_states(pools)
         cat = catalog if catalog is not None else load_catalog()
         tiers: Any = cat.get("subscription_tiers", []) or []
         methods: Any = cat.get("access_methods", []) or []
@@ -1032,6 +1037,13 @@ class FundingGuard:
                 self._methods[name.strip().lower()] = method
 
     def _replacement(self, platform: str, method: dict[str, Any] | None) -> str:
+        mid = method.get("id") if method else None
+        if isinstance(mid, str) and self._pool_states.get(mid) == "exhausted":
+            return f"The {platform} usage pool is exhausted. " + (
+                "Claude Code overflow uses usage credits at list price."
+                if mid == "claude-code"
+                else "Additional access or credits are required."
+            )
         provider = method.get("provider") if method else None
         key_reachable = (
             method is not None
@@ -1063,7 +1075,11 @@ class FundingGuard:
         try:
             method = self._methods.get(platform.strip().lower())
             method_id = method.get("id") if method else None
-            if isinstance(method_id, str) and method_id in self._sub_funded_ids:
+            if (
+                isinstance(method_id, str)
+                and method_id in self._sub_funded_ids
+                and self._pool_states.get(method_id) != "exhausted"
+            ):
                 # A held subscription funds this surface: "your subscription"
                 # claims are true — leave the engine's narration alone.
                 return rationale, rationale_sections
@@ -1119,7 +1135,7 @@ def funding_guard_from_request(context: dict[str, Any] | None) -> FundingGuard |
     if not subscriptions and not api_providers and budget_is_default:
         return None
     try:
-        return FundingGuard(subscriptions, api_providers)
+        return FundingGuard(subscriptions, api_providers, pools=context.get("pool_states"))
     except Exception:  # noqa: BLE001 - guard is best-effort, never fatal
         logger.warning("funding guard build failed (non-fatal)", exc_info=True)
         return None
@@ -1602,7 +1618,7 @@ def scoring_context_from_request(
             lines += ["", f"platforms.allowed: {', '.join(allowed_platforms)}"]
         if excluded_platforms:
             lines += ["", f"platforms.excluded: {', '.join(excluded_platforms)}"]
-        return "\n".join(lines) + "\n"
+        return "\n".join(lines) + "\n" + pool_table(ctx.get("pool_states"))
     except Exception:  # noqa: BLE001 - the scorer's context is best-effort, never fatal
         logger.warning("scoring context build failed (non-fatal)", exc_info=True)
         return None
@@ -1641,7 +1657,7 @@ def user_context_from_request(context: dict[str, Any] | None) -> str | None:
         return None
 
     try:
-        return build_user_context(
+        text = build_user_context(
             subscriptions,
             api_providers,
             budget_priority=budget_priority,
@@ -1650,6 +1666,7 @@ def user_context_from_request(context: dict[str, Any] | None) -> str | None:
             platforms_allowed=platforms_allowed or None,
             platforms_excluded=platforms_excluded or None,
         )
+        return text + pool_table(context.get("pool_states")) if text is not None else None
     except Exception:  # noqa: BLE001 - funding context is best-effort, never fatal
         # A catalog read/parse failure must not turn a good request into a 500;
         # degrade to the bundled template (the pre-T2b behavior).
