@@ -262,6 +262,105 @@ def test_profiles_columns_and_defaults(db_conn: "psycopg.Connection") -> None:
     assert "'us'" in (rows["allowed_jurisdictions"][1] or "")
 
 
+def test_profiles_pool_states_defaults_to_unknown(db_conn: "psycopg.Connection") -> None:
+    from uuid import uuid4
+
+    user_id = uuid4()
+    try:
+        with db_conn.cursor() as cur:
+            cur.execute("insert into auth.users (id) values (%s)", (user_id,))
+            cur.execute(
+                "insert into public.profiles (user_id) values (%s) returning pool_states",
+                (user_id,),
+            )
+            assert cur.fetchone() == ([],)
+            cur.execute(
+                "select data_type, is_nullable from information_schema.columns "
+                "where table_schema = 'public' and table_name = 'profiles' "
+                "and column_name = 'pool_states'"
+            )
+            assert cur.fetchone() == ("jsonb", "NO")
+    finally:
+        db_conn.rollback()
+
+
+@pytest.mark.parametrize("invalid", [{}, None, "unvalidated text", 42])
+def test_profiles_pool_states_rejects_non_array(
+    db_conn: "psycopg.Connection", invalid: object
+) -> None:
+    from uuid import uuid4
+
+    import psycopg
+    from psycopg.types.json import Jsonb
+
+    user_id = uuid4()
+    try:
+        with db_conn.cursor() as cur:
+            cur.execute("insert into auth.users (id) values (%s)", (user_id,))
+            with pytest.raises(psycopg.errors.CheckViolation):
+                cur.execute(
+                    "insert into public.profiles (user_id, pool_states) values (%s, %s)",
+                    (user_id, Jsonb(invalid)),
+                )
+    finally:
+        db_conn.rollback()
+
+
+def test_profiles_pool_states_owner_roundtrip_and_isolation(
+    db_conn: "psycopg.Connection",
+) -> None:
+    from uuid import uuid4
+
+    from psycopg.types.json import Jsonb
+
+    own, other = uuid4(), uuid4()
+    observations = [
+        {
+            "pool": "codex-weekly",
+            "platform_id": "codex-cli",
+            "source": "codex",
+            "state": "tight",
+            "used_percent": 88,
+            "observed_at": 1_800_000_000,
+            "resets_at": 1_800_100_000,
+            "window_minutes": 10080,
+        }
+    ]
+    try:
+        with db_conn.cursor() as cur:
+            for user_id in (own, other):
+                cur.execute("insert into auth.users (id) values (%s)", (user_id,))
+                cur.execute("insert into public.profiles (user_id) values (%s)", (user_id,))
+            # Vanilla Postgres needs the grants Supabase normally provisions.
+            # These grants, test rows and JWT claim all roll back after the test.
+            cur.execute("grant usage on schema public, auth to authenticated, anon")
+            cur.execute("grant select, update on public.profiles to authenticated, anon")
+            cur.execute("select set_config('request.jwt.claim.sub', %s, true)", (str(own),))
+            cur.execute("set local role authenticated")
+            cur.execute(
+                "update public.profiles set pool_states = %s where user_id = %s "
+                "returning pool_states, budget_priority",
+                (Jsonb(observations), own),
+            )
+            assert cur.fetchone() == (observations, "balanced")
+            cur.execute("select pool_states from public.profiles where user_id = %s", (own,))
+            assert cur.fetchone() == (observations,)
+            cur.execute("select pool_states from public.profiles where user_id = %s", (other,))
+            assert cur.fetchone() is None
+            cur.execute(
+                "update public.profiles set pool_states = %s where user_id = %s",
+                (Jsonb(observations), other),
+            )
+            assert cur.rowcount == 0
+            cur.execute("set local role anon")
+            cur.execute("select pool_states from public.profiles")
+            assert cur.fetchall() == []
+            cur.execute("update public.profiles set pool_states = '[]'::jsonb")
+            assert cur.rowcount == 0
+    finally:
+        db_conn.rollback()
+
+
 def test_profiles_check_constraints(db_conn: "psycopg.Connection") -> None:
     with db_conn.cursor() as cur:
         cur.execute(
