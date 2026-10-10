@@ -331,3 +331,35 @@ def test_displayed_reset_rounds_up_to_avoid_clearing_a_live_pool():
         meter["resets_at"] + 59, ZoneInfo("America/New_York")
     ).strftime("%a %Y-%m-%d %H:%M %Z")
     assert expected in result
+
+
+def test_antigravity_account_binding_rejects_another_accounts_meter(tmp_path):
+    wrong = "Account: other@example.invalid\n" + PANEL
+    assert parse_panel(wrong, NOW, "funded@example.invalid") is None
+    right = "Account: funded@example.invalid\n" + PANEL
+    data = parse_panel(right, NOW, "funded@example.invalid")
+    assert data and "funded@example.invalid" not in json.dumps(data)
+    save(data, tmp_path)
+    (tmp_path / "accounts.json").write_text(json.dumps({"antigravity": "funded@example.invalid"}))
+    assert load(tmp_path)["antigravity"] == data
+    data = parse_panel(wrong, NOW)
+    save(data, tmp_path)
+    assert "antigravity" not in load(tmp_path)
+
+
+def test_bound_quota_errors_require_account_provenance(tmp_path):
+    (tmp_path / "unbound.log").write_text("2026-10-10T10:00:00Z ERROR RESOURCE_EXHAUSTED\n")
+    assert log_error(tmp_path, "funded@example.invalid") is None
+    (tmp_path / "bound.jsonl").write_text(
+        json.dumps(
+            {
+                "timestamp": "2026-10-10T10:00:00Z",
+                "account": "funded@example.invalid",
+                "error": "RESOURCE_EXHAUSTED",
+            }
+        )
+        + "\n"
+    )
+    data = log_error(tmp_path, "funded@example.invalid")
+    assert data and data["windows"][0]["used_percent"] == 100
+    assert "funded@example.invalid" not in json.dumps(data)

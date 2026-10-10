@@ -77,3 +77,12 @@ options. Claude updates its snapshot during normal usage; the hourly job never
 calls a Claude model just to refresh a meter.
 
 Displayed reset times round up to the next minute so minute-resolution table cells never clear a live exhausted window early.
+
+For an account-specific funded pool, bind Antigravity to the expected account
+using `--account` or a private `~/.cache/roadmodel/pools/accounts.json` file:
+`{"antigravity": "funded-account@example.invalid"}`. A different signed-in
+account cannot update the pool, and older snapshots from another account are
+ignored. Snapshots store only a digest for identity matching. Bound quota-error
+records must identify the matching account; unbound logs cannot change it.
+If the funded account is not signed in, existing state is retained until its
+supported meter or a matching error record becomes available.
