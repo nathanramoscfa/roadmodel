@@ -168,6 +168,16 @@ def test_roadmap_step_reads_a_settings_table_as_intent() -> None:
     assert "Read your own model" in flat
     assert "rollout-*.jsonl" in flat
     assert '`"model"` (e.g. `gpt-6.1-sol`) and `"effort"`' in flat
+    # The lookup must work from PowerShell on Windows: the rollout records
+    # `e:\Code\…` where the shell prints `E:\Code\…` or `E:/Code/…`, and the
+    # live session holds its rollout open, so .NET's ReadAllText fails on it
+    # (both seen on the PC's pyeconomics sessions, 2026-10-09). A rollout from
+    # another directory is another repo's session, never a fallback.
+    assert "`%USERPROFILE%\\.codex` on Windows" in flat
+    assert "Compare the paths case- and slash-insensitively" in flat
+    assert "PowerShell's `Get-Content`), not .NET's `ReadAllText`" in flat
+    assert "Never take a rollout from another directory" in flat
+    assert "${CODEX_HOME:-" not in text
     assert "A family name alone is never a reason to stop" in flat
     assert "GPT-6 Sol → GPT-6.1 Sol" in flat
     # A pre-capped top rung is stale, not binding.
@@ -610,6 +620,11 @@ def test_phase_prompt_checks_the_session_against_the_phase_settings() -> None:
     assert "GPT-6 Sol → GPT-6.1 Sol" in flat
     assert "Name your exact model, never only its family" in flat
     assert "rollout-*.jsonl" in flat
+    assert "`%USERPROFILE%\\.codex` on Windows" in flat
+    assert "compared case- and slash-insensitively" in flat
+    assert "PowerShell's `Get-Content`" in flat
+    assert "never take a rollout from another directory" in flat
+    assert "${CODEX_HOME:-" not in text
     assert "You are its Backup on the backup's platform: continue" in flat
     assert "STOP and tell me how to switch" in flat
     assert "Do not write the roadmap on a model it did not intend" in flat
