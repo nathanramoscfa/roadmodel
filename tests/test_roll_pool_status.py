@@ -68,3 +68,79 @@ def test_stale_headroom_row_gets_date_rolled_without_state_change() -> None:
     row = next(line for line in new.split("\n") if line.startswith("| Max weekly"))
     assert "`headroom`" in row and "Tue 2026-10-13 20:00 EDT" in row
     assert "[auto:" not in row
+
+
+def test_fresh_exhaustion_overrides_an_old_passed_reset() -> None:
+    now = AFTER.timestamp()
+    snapshot = dict(
+        source="claude",
+        observed_at=now,
+        windows=[dict(name="weekly", used_percent=99, resets_at=now + 86400, window_minutes=10080)],
+        extra={},
+    )
+    text = TABLE.replace("Max weekly", "claude.ai Max weekly")
+    new, _ = rps.roll(text, AFTER, {"claude": snapshot})
+    row = next(line for line in new.splitlines() if "claude.ai Max weekly" in line)
+    assert "`exhausted`" in row and "[auto: claude 99%" in row
+
+
+def test_atomic_write_preserves_permissions_and_detects_concurrent_edit(tmp_path) -> None:
+    path = tmp_path / "context.md"
+    path.write_text("before")
+    path.chmod(0o600)
+    rps.write_context(path, "before", "after")
+    assert path.read_text() == "after"
+    assert path.stat().st_mode & 0o777 == 0o600
+    import pytest
+
+    with pytest.raises(RuntimeError, match="context changed"):
+        rps.write_context(path, "before", "lost edit")
+    assert path.read_text() == "after"
+    assert list(tmp_path.iterdir()) == [path]
+
+
+def test_cli_dry_run_keeps_file_and_default_symlink_target(tmp_path) -> None:
+    import json
+    import subprocess
+    import sys
+
+    path = tmp_path / "context.md"
+    text = TABLE.replace("Max weekly", "claude.ai Max weekly")
+    path.write_text(text)
+    path.chmod(0o600)
+    link = tmp_path / "symlink.md"
+    link.symlink_to(path)
+    cache = tmp_path / "cache"
+    cache.mkdir()
+    from time import time
+
+    now = time()
+    (cache / "claude.json").write_text(
+        json.dumps(
+            dict(
+                source="claude",
+                observed_at=now,
+                windows=[
+                    dict(
+                        name="weekly", used_percent=99, resets_at=now + 86400, window_minutes=10080
+                    )
+                ],
+                extra={},
+            )
+        )
+    )
+    command = [
+        sys.executable,
+        str(REPO_ROOT / "scripts/roll_pool_status.py"),
+        "--file",
+        str(link),
+        "--cache",
+        str(cache),
+        "--no-collect",
+    ]
+    result = subprocess.run(command + ["--dry-run"], check=True, capture_output=True, text=True)
+    assert "[auto: claude 99%" in result.stdout
+    assert path.read_text() == text and link.is_symlink()
+    subprocess.run(command, check=True, capture_output=True)
+    assert "[auto: claude 99%" in path.read_text() and link.is_symlink()
+    assert path.stat().st_mode & 0o777 == 0o600
