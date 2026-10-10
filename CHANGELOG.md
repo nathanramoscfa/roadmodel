@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Metered pools affect their funded platforms and empty reserves stop funding.**
+  Generic Claude subscription, Codex weekly/five-hour and Antigravity rows map
+  to their funded surfaces. Split windows use the worst live state, while
+  Claude's cap never consumes the independent Antigravity allowance. An
+  exhausted OpenRouter prepaid reserve makes its key unfunded until credits
+  are restored; a reset date cannot refill a fixed reserve. The CLI, MCP and
+  recommender scoring share these checks. Hourly stdlib collectors and a
+  preserved Claude status line supply private usage observations; stale or
+  mismatched-account data retains the declared state.
+
 - **`/roadmap-step` and `/roadmap-phase` no longer stop a Codex session on a
   correctly picked model.** Codex's instructions tell the agent only that it is
   "based on GPT-6", so the settings gate could not tell GPT-6 Sol from any

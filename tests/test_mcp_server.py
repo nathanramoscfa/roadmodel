@@ -379,3 +379,29 @@ def test_score_candidates_is_case_insensitive_and_warns_without_a_second_provide
     assert payload["task"]["budget"] == "best"
     assert payload["backup"] is None
     assert "funds only anthropic" in payload["backup_warning"]
+
+
+def test_mcp_score_marks_empty_openrouter_reserve_unfunded(monkeypatch, tmp_path):
+    ctx = tmp_path / "user-context.md"
+    ctx.write_text("""## Active API keys
+| Provider | Key present | Notes |
+| --- | --- | --- |
+| OpenRouter | Yes | prepaid reserve |
+
+## Usage-pool status
+| Pool | Window | State | Resets | Notes |
+| --- | --- | --- | --- | --- |
+| OpenRouter credits | fixed reserve | `exhausted` | — | |
+
+platforms.allowed: openrouter
+""")
+    monkeypatch.setenv("ROADMODEL_USER_CONTEXT", str(ctx))
+    is_error, payload = _call_score({"category": "coding", "complexity": "low", "top": 5})
+    assert not is_error, payload
+    assert payload["candidates"]
+    assert all(
+        c["platform_id"] == "openrouter"
+        and c["funding"] == "unfunded"
+        and c["pool_state"] == "exhausted"
+        for c in payload["candidates"]
+    )
