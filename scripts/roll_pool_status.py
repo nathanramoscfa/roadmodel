@@ -1,33 +1,34 @@
 #!/usr/bin/env python3
-"""Tidy the ``Usage-pool status`` table in docs/user-context.md after a reset.
+"""Refresh real meters and maintain the private Usage-pool status table hourly.
 
-The selector already READS a `tight` / `exhausted` row whose dated Resets time
-has passed as `headroom` (src/roadmodel/scoring.py ``pool_states``). This
-script makes the FILE say the same thing, so it never shows a stale cap:
+Claude's status-line wrapper supplies account-wide weekly/5h snapshots.
+Codex, OpenRouter and supported Antigravity /usage are refreshed each run.
+Fresh observations set states and dated resets; stale/missing data retains
+states. Known passed resets still clear caps, with weekly dates rolled forward.
+The Fable sub-cap remains manual. No PAYG maker keys or local inference pools.
 
-- a `tight` / `exhausted` row whose reset has passed becomes `headroom`;
-- a dated row with a 7-day window (passed reset, any state) gets its Resets
-  cell rolled forward in whole weeks, keeping the weekday and time of day.
-
-Rows with a rolling / undated Resets cell, or a time in a zone this script does
-not know, are left alone — the same asymmetry as the scorer: wrongly clearing
-a LIVE exhausted pool bills overflow at list price. It never SETS `tight` or
-`exhausted`: nothing here can read the Claude Code usage meter, so that flip
-stays the operator's.
-
-Stdlib only; idempotent. Run daily via launchd (see
-scripts/com.roadmodel.roll-pool-status.plist).
-
-  roll_pool_status.py [--file docs/user-context.md] [--dry-run]
+Stdlib only, Python 3.11+. --dry-run prints a unified diff without writing the
+context file or collecting new data; --refresh also refreshes cache in a dry run.
+--no-collect applies only existing snapshots. See docs/usage-pools.md.
 """
 
 from __future__ import annotations
 
 import argparse
+import difflib
+import os
 import re
+import subprocess
 import sys
+import tempfile
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from pool_table import render
+from pool_usage import CACHE, load
 
 DEFAULT_FILE = Path(__file__).resolve().parent.parent / "docs" / "user-context.md"
 SECTION = "Usage-pool status"
@@ -86,7 +87,12 @@ def roll_row(cells: list[str], now: datetime) -> tuple[list[str], str] | None:
     return out, f"{cells[0].strip()}: " + ", ".join(changes)
 
 
-def roll(text: str, now: datetime) -> tuple[str, list[str]]:
+def roll(
+    text: str,
+    now: datetime,
+    snapshots: dict[str, dict[str, Any]] | None = None,
+    zone: str = "America/New_York",
+) -> tuple[str, list[str]]:
     lines = text.split("\n")
     summary: list[str] = []
     in_section = False
@@ -103,27 +109,88 @@ def roll(text: str, now: datetime) -> tuple[str, list[str]]:
         if rolled:
             lines[i] = "|" + "|".join(rolled[0]) + "|"
             summary.append(rolled[1])
-    return "\n".join(lines), summary
+    rolled_text = "\n".join(lines)
+    if snapshots is not None:
+        updated = render(rolled_text, snapshots, now.timestamp(), zone)
+        if updated != rolled_text:
+            summary.append("fresh usage snapshots applied")
+        rolled_text = updated
+    return rolled_text, summary
+
+
+def refresh_collectors(cache: Path) -> None:
+    for source in ("codex", "openrouter", "antigravity"):
+        try:
+            subprocess.run(  # noqa: S603 — fixed sibling scripts
+                [
+                    sys.executable,
+                    str(Path(__file__).with_name(f"collect_{source}_pool.py")),
+                    "--cache",
+                    str(cache),
+                ],
+                check=True,
+                timeout=90,
+            )
+        except (OSError, subprocess.SubprocessError):
+            print(
+                f"roll_pool_status: {source} unavailable; retain previous observation",
+                file=sys.stderr,
+            )
+
+
+def write_context(path: Path, before: str, after: str) -> None:
+    """Atomic replacement preserving permissions and refusing concurrent edits."""
+    fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        os.fchmod(fd, path.stat().st_mode & 0o777)
+        with os.fdopen(fd, "w", encoding="utf-8") as out:
+            out.write(after)
+        if path.read_text(encoding="utf-8") != before:
+            raise RuntimeError("context changed during update; retry")
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--file", type=Path, default=DEFAULT_FILE)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--cache", type=Path, default=CACHE)
+    ap.add_argument("--zone", default="America/New_York")
+    ap.add_argument("--no-collect", action="store_true")
+    ap.add_argument("--refresh", action="store_true", help="Refresh cache even in a dry run")
     args = ap.parse_args(argv)
     path = args.file.resolve()
     if not path.is_file():
         print(f"roll_pool_status: {path} not found; nothing to do")
         return 0
+    if not args.no_collect and (not args.dry_run or args.refresh):
+        refresh_collectors(args.cache)
     text = path.read_text(encoding="utf-8")
-    new, summary = roll(text, datetime.now(timezone.utc))
+    new, summary = roll(
+        text, datetime.fromtimestamp(time.time(), timezone.utc), load(args.cache), args.zone
+    )
     if not summary:
-        print("roll_pool_status: no expired rows")
+        print("roll_pool_status: no changes")
         return 0
     for s in summary:
         print(f"roll_pool_status: {s}")
-    if not args.dry_run:
-        path.write_text(new, encoding="utf-8")
+    if args.dry_run:
+        print(
+            "".join(
+                difflib.unified_diff(
+                    text.splitlines(True),
+                    new.splitlines(True),
+                    fromfile=str(path),
+                    tofile=str(path),
+                )
+            ),
+            end="",
+        )
+    else:
+        write_context(path, text, new)
     return 0
 
 

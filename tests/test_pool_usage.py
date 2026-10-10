@@ -259,3 +259,107 @@ def test_grouped_pool_cannot_lower_with_one_stale_or_missing_window():
     data["windows"].append({"name": "missing"})
     result = render(TABLE, {"antigravity": data}, NOW)
     assert "| Google AI Pro — Antigravity | 5h / 7d | `exhausted` | rolling | separate |" in result
+
+
+def test_statusline_configuration_preserves_complete_original_and_other_settings(tmp_path):
+    from configure_claude_pool import configuration
+
+    original = {
+        "type": "command",
+        "command": 'printf "original"',
+        "padding": 3,
+        "refreshInterval": 60,
+        "hideVimModeIndicator": True,
+    }
+    settings = {"statusLine": original, "permissions": {"defaultMode": "plan"}}
+    new, saved = configuration(settings, tmp_path / "original.json")
+    assert saved == original and settings["statusLine"] == original
+    assert new["permissions"] == settings["permissions"]
+    for field in ("padding", "refreshInterval", "hideVimModeIndicator"):
+        assert new["statusLine"][field] == original[field]
+    again, _ = configuration(new, tmp_path / "original.json")
+    assert again == new
+
+
+def test_statusline_installer_preview_install_and_restore(tmp_path):
+    settings_path = tmp_path / "settings.json"
+    settings = {"statusLine": {"type": "command", "command": "cat", "padding": 2}, "other": True}
+    settings_path.write_text(json.dumps(settings))
+    script = Path(__file__).resolve().parents[1] / "scripts/configure_claude_pool.py"
+    command = [
+        sys.executable,
+        str(script),
+        "--settings",
+        str(settings_path),
+        "--cache",
+        str(tmp_path / "cache"),
+    ]
+    preview = subprocess.run(command, check=True, capture_output=True)
+    assert b"collect_claude_pool" in preview.stdout
+    assert json.loads(settings_path.read_text()) == settings
+    assert not (tmp_path / "cache").exists()
+    subprocess.run(command + ["--install"], check=True, capture_output=True)
+    assert (
+        json.loads((tmp_path / "cache/claude-statusline-original.json").read_text())
+        == settings["statusLine"]
+    )
+    installed = settings_path.read_bytes()
+    subprocess.run(command + ["--install"], check=True, capture_output=True)
+    assert settings_path.read_bytes() == installed
+    subprocess.run(command + ["--restore"], check=True, capture_output=True)
+    assert json.loads(settings_path.read_text()) == settings
+
+
+def test_operator_zone_uses_est_after_daylight_saving():
+    snapshot, meter = snap(99)
+    # Nov 9 2026 00:00 UTC is Nov 8 19:00 EST.
+    meter["resets_at"] = 1794182400
+    meter["window_minutes"] = WEEK
+    snapshot["observed_at"] = meter["resets_at"] - 3600
+    result = render(TABLE, {"claude": snapshot}, snapshot["observed_at"])
+    assert "2026-11-08 19:00 EST" in result
+
+
+def test_displayed_reset_rounds_up_to_avoid_clearing_a_live_pool():
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    snapshot, meter = snap(99)
+    meter["resets_at"] += 1
+    result = render(TABLE, {"claude": snapshot}, NOW)
+    expected = datetime.fromtimestamp(
+        meter["resets_at"] + 59, ZoneInfo("America/New_York")
+    ).strftime("%a %Y-%m-%d %H:%M %Z")
+    assert expected in result
+
+
+def test_antigravity_account_binding_rejects_another_accounts_meter(tmp_path):
+    wrong = "Account: other@example.invalid\n" + PANEL
+    assert parse_panel(wrong, NOW, "funded@example.invalid") is None
+    right = "Account: funded@example.invalid\n" + PANEL
+    data = parse_panel(right, NOW, "funded@example.invalid")
+    assert data and "funded@example.invalid" not in json.dumps(data)
+    save(data, tmp_path)
+    (tmp_path / "accounts.json").write_text(json.dumps({"antigravity": "funded@example.invalid"}))
+    assert load(tmp_path)["antigravity"] == data
+    data = parse_panel(wrong, NOW)
+    save(data, tmp_path)
+    assert "antigravity" not in load(tmp_path)
+
+
+def test_bound_quota_errors_require_account_provenance(tmp_path):
+    (tmp_path / "unbound.log").write_text("2026-10-10T10:00:00Z ERROR RESOURCE_EXHAUSTED\n")
+    assert log_error(tmp_path, "funded@example.invalid") is None
+    (tmp_path / "bound.jsonl").write_text(
+        json.dumps(
+            {
+                "timestamp": "2026-10-10T10:00:00Z",
+                "account": "funded@example.invalid",
+                "error": "RESOURCE_EXHAUSTED",
+            }
+        )
+        + "\n"
+    )
+    data = log_error(tmp_path, "funded@example.invalid")
+    assert data and data["windows"][0]["used_percent"] == 100
+    assert "funded@example.invalid" not in json.dumps(data)
