@@ -1,3 +1,4 @@
+import type { PoolObservation } from "@/lib/pools";
 // web/app/api/recommend/route.ts
 import { NextResponse } from "next/server";
 import { writeAudit, type AuditOutcome } from "@/lib/audit";
@@ -258,6 +259,7 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
     let consumptionHeadroom: string;
     let subscriptions: string[];
     let apiProviders: string[];
+    let poolStates: PoolObservation[];
     let taskDescription: string;
     let incomingContext: ClientContext;
     let recommenderEngine: Engine;
@@ -368,6 +370,7 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
           consumptionHeadroom: localConsumptionHeadroom,
           subscriptions: localSubscriptions,
           apiProviders: localApiProviders,
+          poolStates: profile?.pool_states ?? [],
           engine: choice.engine,
         } as const;
       });
@@ -406,6 +409,7 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
       consumptionHeadroom = dispatched.consumptionHeadroom;
       subscriptions = dispatched.subscriptions;
       apiProviders = dispatched.apiProviders;
+      poolStates = dispatched.poolStates;
       recommenderEngine = dispatched.engine;
     } catch (err) {
       // Unexpected error inside the dispatch span — treat as a 500-
@@ -462,6 +466,7 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
             payload.comparison_table,
             subscriptions,
             apiProviders,
+            poolStates,
           ),
         };
       }
@@ -493,7 +498,7 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
         payload.comparison_table.length > 0;
       const fundingNote = tableShowsFunding
         ? null
-        : fundingNoteForModel(payload.model ?? "", subscriptions, apiProviders);
+        : fundingNoteForModel(payload.model ?? "", subscriptions, apiProviders, poolStates);
       const rationale = fundingNote
         ? withBudget
           ? `${withBudget} ${fundingNote}`
@@ -539,6 +544,7 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
           // SELECTION toward a $0-funded surface on a quality tie. No keys sent.
           subscriptions,
           api_providers: apiProviders,
+          pool_states: poolStates,
           force_provider: recommenderEngine.hint,
         },
       };
@@ -628,6 +634,7 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
           allowed_jurisdictions: allowedJurisdictions,
           subscriptions,
           api_providers: apiProviders,
+          pool_states: poolStates,
           force_provider: recommenderEngine.hint,
         },
       };
@@ -686,6 +693,7 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
           allowed_jurisdictions: allowedJurisdictions,
           subscriptions,
           api_providers: apiProviders,
+          pool_states: poolStates,
           force_provider: recommenderEngine.hint,
         },
       };

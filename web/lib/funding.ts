@@ -9,6 +9,7 @@
 // (the maintainer decision is consider-all, surface-the-cheaper, never gate);
 // it only annotates the recommendation the LLM already returned. Runs purely
 // at the web edge — no service / prompt / package change.
+import { poolState, type PoolObservation } from "./pools";
 import catalog from "@/data/catalog.json";
 
 import {
@@ -148,6 +149,7 @@ export function fundingNoteForModel(
   modelName: string,
   subscriptions: readonly string[],
   apiProviders: readonly string[],
+  pools: readonly PoolObservation[] = [],
 ): string | null {
   const id = modelIdFor(modelName);
   if (!id) return null;
@@ -159,7 +161,7 @@ export function fundingNoteForModel(
   // 1. Cheapest possible: a held subscription that funds a reaching surface.
   for (const sub of subscriptions) {
     const funded = fundedSurfacesForSubscription(sub);
-    if (funded.some((surface) => reachingIds.has(surface))) {
+    if (funded.some((surface) => reachingIds.has(surface) && poolState(pools, surface) !== "exhausted")) {
       const label = SUB_LABEL.get(sub) ?? sub;
       return `You have a $0 path to ${modelName} via your ${label} subscription.`;
     }
@@ -168,7 +170,7 @@ export function fundingNoteForModel(
   // 2. Otherwise: an API provider the user enabled that reaches the model.
   const enabled = new Set(apiProviders);
   const apiMethod = reaching.find(
-    (m) => API_BILLING.has(m.billing) && enabled.has(m.provider),
+    (m) => API_BILLING.has(m.billing) && enabled.has(m.provider) && poolState(pools, m.id) !== "exhausted",
   );
   if (apiMethod) {
     const out = ID_TO_MODEL.get(id)?.output_price_per_1m;
@@ -196,6 +198,7 @@ export function personalizeComparison(
   rows: readonly Record<string, unknown>[],
   subscriptions: readonly string[],
   apiProviders: readonly string[],
+  pools: readonly PoolObservation[] = [],
 ): Record<string, unknown>[] {
   if ((subscriptions.length === 0 && apiProviders.length === 0) || rows.length === 0) {
     return [...rows];
@@ -231,16 +234,19 @@ export function personalizeComparison(
     let funded = false;
 
     const sub = subForSurface.get(platformId);
-    if (sub) {
+    const state = poolState(pools, platformId);
+    if (sub && state === "exhausted") {
+      yourCost = platformId === "claude-code" ? "pool exhausted · usage credits at list price" : "pool exhausted";
+    } else if (sub) {
       rank = RANK_FUNDED;
       funded = true;
-      yourCost = `$0 · ${sub}`;
+      yourCost = `$0 · ${sub}${state === "tight" ? " · pool tight" : ""}`;
     } else {
       const method = METHOD_BY_ID.get(platformId);
       if (
         method &&
         API_BILLING.has(method.billing) &&
-        enabledApi.has(method.provider)
+        enabledApi.has(method.provider) && state !== "exhausted"
       ) {
         rank = RANK_API;
         const out = modelId
@@ -251,6 +257,7 @@ export function personalizeComparison(
         yourCost = `${rate} · your ${providerLabel(method.provider)} API`;
       }
     }
+    if (platformId === "openrouter" && state === "exhausted") yourCost = "prepaid reserve exhausted · add credits";
     const personalizedRow: Record<string, unknown> = {
       ...row,
       your_cost: yourCost,

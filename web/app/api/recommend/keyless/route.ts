@@ -59,6 +59,7 @@ const keylessHandler: KeylessLaneHandler = async (req, _lane, userId) => {
     budget_priority: task.budget_priority ?? profile?.budget_priority ?? DEFAULT_PROFILE.budget_priority,
     subscriptions: scoreList(profile?.subscriptions),
     api_providers: scoreList(profile?.api_providers),
+    pool_states: profile?.pool_states ?? [],
     ...(profile?.consumption_headroom ? { consumption_headroom: profile.consumption_headroom } : {}),
     allowed_jurisdictions: scoreList(profile?.allowed_jurisdictions),
     unavailable_models: scoreList(unavailable),

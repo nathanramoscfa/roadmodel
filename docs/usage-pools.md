@@ -94,35 +94,62 @@ prepaid credit states never expire on a timer. Maker pay-as-you-go keys remain
 independent. CLI and MCP scoring use the same rules; package changes reach the
 hosted recommender only through a release and service floor update.
 
-The web profile needs a database migration before it can carry pool states.
-`web/lib/profile.ts` and `/api/profile` currently expose funding preferences,
-and `service/app/funding.py` builds their user context without usage-pool rows.
-The schema-only migration
+The saved web profile carries normalized observations in `profiles.pool_states`.
+Apply the additive
 [`20261010173834_profiles_pool_states.sql`](../infra/supabase/migrations/20261010173834_profiles_pool_states.sql)
-adds `profiles.pool_states`, a non-null JSON array defaulting to `[]` (unknown).
-It inherits the existing owner-only profile policies and update timestamp.
-This migration does not activate web synchronization or change recommendations.
-
-Apply the migration manually from the linked repository before continuing:
+migration before deploying the web consumer:
 
 ```sh
 supabase db push --linked
 ```
 
-After that operator step, the smallest proposed sync is an hourly HTTPS PATCH
-to Supabase's profile REST endpoint with a per-user bearer session and the
-publishable key. Keep the rotating refresh token in macOS Keychain. Existing
-`auth.uid() = user_id` policies restrict the update to the signed-in user's
-profile; the uploader needs no service-role key. Patch only `pool_states`,
-preserving the saved funding preferences. Use one normalized entry per funded
-pool row, with a stable pool/platform identifier, source, state, used percentage,
-window duration and UTC observation/reset timestamps. Never upload the personal
-context document, account identifiers, logs, API keys or raw provider responses.
+`scripts/push_pool_status.py` uses the Supabase publishable key and a rotating
+**per-user session**, with owner-only profile policies. It never reads a
+service-role credential. It reads these macOS Keychain entries:
 
-The subsequent implementation must validate each entry, enforce freshness and
-passed-reset rules, and preserve prior states when an observation is missing
-or stale. The profile mapper, recommendation route and service funding builder
-must forward and render those entries as Usage-pool rows for the existing scorer.
-Verify an authenticated write/read round trip, owner isolation, and the resulting
-scorer funding before enabling the hourly upload. Implementation stops at this
-migration handoff until the operator applies the schema.
+- `roadmodel/SUPABASE_URL`
+- `roadmodel/NEXT_PUBLIC_SUPABASE_ANON_KEY` (publishable or legacy anon key)
+- `roadmodel/POOL_SYNC_REFRESH_TOKEN` (the signed-in user's refresh token)
+
+Provision the first two through the existing Keychain setup. To import a
+per-user session, run the following locally and enter its refresh token at the
+hidden prompt; never paste credentials into a chat or commit them:
+
+```sh
+python3 scripts/push_pool_status.py --import-refresh-token
+python3 scripts/push_pool_status.py
+```
+
+Import verifies the session before activation and stores the rotated token in
+Keychain. Subsequent runs rotate it automatically. A revoked session requires
+another import. The account must already have a saved Settings profile; the
+uploader derives the owner from the verified session and never creates users.
+
+The uploader merges fresh cached observations with saved states, then PATCHes
+only `pool_states`. A timestamp condition retries concurrent profile updates;
+ordinary Settings saves omit the field and preserve the latest upload. Missing,
+stale, future, malformed, or older observations cannot lower a saved state.
+A known passed subscription reset clears its effective state; prepaid credits
+never clear on a timer. An unavailable session or network leaves the saved
+profile intact and makes the job report failure.
+
+Inspect the allowlisted upload without authentication or network access:
+
+```sh
+python3 scripts/push_pool_status.py --dry-run
+```
+
+Entries contain only stable pool/source/platform identifiers, state, used
+percentage, window duration, and UTC observation/reset timestamps. The personal
+context document, account identifiers, logs, API keys and raw provider responses
+are never uploaded. The profile mapper forwards saved states through the
+keyless scorer and the engine-backed recommendation route; the service renders
+them as Usage-pool rows for the shared scorer. Cost annotations disclose an
+exhausted subscription or OpenRouter reserve.
+
+After an authenticated write/read round trip succeeds, install the committed
+hourly launchd plist (which adds `--sync-web`) using its instructions. The sync
+runs even if the local table has no changes. `--dry-run` on the hourly updater
+never authenticates or uploads. Owner isolation is covered by the profile's
+migration tests; profile retention and recommendation forwarding are covered
+by browser tests.
