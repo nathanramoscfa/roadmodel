@@ -113,11 +113,18 @@ Intelligence <I>>. This session: <your own model> on <this surface>.`
 - **Read your own model.** Name the exact model, never only its family.
   On Codex your instructions say just "based on GPT-6", but the model
   the operator picked and its reasoning effort are recorded in the
-  session's rollout. Read them with a shell command: the newest
-  `rollout-*.jsonl` under `${CODEX_HOME:-~/.codex}/sessions/` whose
-  first line (`session_meta`) has this repo as its `cwd`; the last
-  `turn_context` line in it holds `"model"` (e.g. `gpt-6.1-sol`) and
-  `"effort"`. Use those for `<your own model>` and the effort on the
+  session's rollout. Read them with a shell command: the most recently
+  modified `rollout-*.jsonl` under `sessions/` in `CODEX_HOME` (default
+  `~/.codex`; `%USERPROFILE%\.codex` on Windows) whose first line
+  (`session_meta`) has this repo as its `cwd`; the last `turn_context`
+  line in it holds `"model"` (e.g. `gpt-6.1-sol`) and `"effort"`.
+  Compare the paths case- and slash-insensitively: on Windows the
+  rollout records `e:\Code\…` where the shell prints `E:\Code\…` or
+  `E:/Code/…`. Your own rollout is still open for writing, so read it
+  with a reader that shares the file (Python's `open`, PowerShell's
+  `Get-Content`), not .NET's `ReadAllText`. Never take a rollout from
+  another directory: sessions in other repos write there too. Use those
+  for `<your own model>` and the effort on the
   printed line. Where no source names the model, print `unverified` and
   ask the operator which model they picked; take their answer and
   carry on. A family name alone is never a reason to stop.

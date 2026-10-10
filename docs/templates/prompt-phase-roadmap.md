@@ -57,10 +57,15 @@ own model> on <this surface>.`
 
 - Name your exact model, never only its family. On Codex your
   instructions say just "based on GPT-6", but the model picked and its
-  effort are in the session's rollout: the newest `rollout-*.jsonl` under
-  `${CODEX_HOME:-~/.codex}/sessions/` whose first line (`session_meta`)
-  has this repo as its `cwd`; its last `turn_context` line holds
-  `"model"` (e.g. `gpt-6.1-sol`) and `"effort"`. Where no source names
+  effort are in the session's rollout: the most recently modified
+  `rollout-*.jsonl` under `sessions/` in `CODEX_HOME` (default
+  `~/.codex`; `%USERPROFILE%\.codex` on Windows) whose first line
+  (`session_meta`) has this repo as its `cwd`, compared case- and
+  slash-insensitively (Windows records `e:\Code\…` where the shell
+  prints `E:\Code\…`); its last `turn_context` line holds `"model"`
+  (e.g. `gpt-6.1-sol`) and `"effort"`. Read it with a reader that shares
+  the open file (Python's `open`, PowerShell's `Get-Content`), and never
+  take a rollout from another directory. Where no source names
   the model, print `unverified`, ask me which I picked, and go on with my
   answer.
 - You are its Model on its Platform, or a newer version in the same

@@ -19,6 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the model instead of stopping, and lists GPT-6 Sol → GPT-6.1 Sol as a newer
   version in the same line, as it already did for Opus and Fable.
 
+- **The Codex rollout lookup works from PowerShell on Windows.** There the
+  rollout records the repo as `e:\Code\…` while the shell prints `E:\Code\…`
+  or `E:/Code/…`, so a literal path match found no rollout and the gate fell
+  back to asking. The live session also holds its rollout open, so .NET's
+  `ReadAllText` fails on it. The gate now names the Windows Codex home,
+  compares the paths case- and slash-insensitively, says which readers can
+  share the open file, and never falls back to a rollout from another
+  directory, because sessions in other repos write there too.
+
 - **A pick's Score charges it for the tokens it draws at its effort.** The
   /recommend matrix read a pick's AA Index at its effort but compared it with
   the bare list price, so a higher effort was credited its higher index for
