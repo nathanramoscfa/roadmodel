@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.80] — 2026-10-10
+
 ### Fixed
 
 - **Metered pools affect their funded platforms and empty reserves stop funding.**
