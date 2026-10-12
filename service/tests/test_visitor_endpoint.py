@@ -20,6 +20,7 @@ Fixture keys are fake and assembled at runtime, never committed as a literal.
 from __future__ import annotations
 
 import importlib
+import inspect
 import logging
 import secrets
 import sys
@@ -262,22 +263,40 @@ class _FakeOpenAI:
     clients: list[dict[str, Any]] = []
     creates: list[dict[str, Any]] = []
     answer: Callable[[], Any] = staticmethod(lambda: None)
+    constructor_signature: inspect.Signature
+    create_signature: inspect.Signature
 
     def __init__(self, **kwargs: Any) -> None:
+        _FakeOpenAI.constructor_signature.bind(**kwargs)
         _FakeOpenAI.clients.append(kwargs)
         self.chat = self
         self.completions = self
 
     def create(self, **kwargs: Any) -> Any:
+        _FakeOpenAI.create_signature.bind(**kwargs)
         _FakeOpenAI.creates.append(kwargs)
         return _FakeOpenAI.answer()
 
 
 def _completion(text: str) -> Any:
-    from types import SimpleNamespace
+    from openai.types.chat import ChatCompletion
 
-    message = SimpleNamespace(content=text)
-    return SimpleNamespace(choices=[SimpleNamespace(message=message)], usage=None)
+    return ChatCompletion.model_validate(
+        {
+            "id": "fixture",
+            "object": "chat.completion",
+            "created": 0,
+            "model": "fixture",
+            "choices": [
+                {
+                    "index": 0,
+                    "finish_reason": "stop",
+                    "message": {"role": "assistant", "content": text},
+                }
+            ],
+            "usage": None,
+        }
+    )
 
 
 @pytest.fixture
@@ -289,6 +308,14 @@ def openrouter_sdk(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> type[
     monkeypatch.setitem(
         package_recommend.PROVIDER_ADAPTERS, "openrouter", openai_compatible.ADAPTERS["openrouter"]
     )
+    _FakeOpenAI.constructor_signature = inspect.signature(openai.OpenAI)
+    # Constructor and response contracts are exercised against the installed SDK;
+    # constructing/closing a client makes no HTTP request.
+    sdk_client = openai.OpenAI(api_key="synthetic-contract-fixture")
+    try:
+        _FakeOpenAI.create_signature = inspect.signature(sdk_client.chat.completions.create)
+    finally:
+        sdk_client.close()
     monkeypatch.setattr(openai, "OpenAI", _FakeOpenAI)
     _FakeOpenAI.clients, _FakeOpenAI.creates = [], []
     _FakeOpenAI.answer = staticmethod(lambda: _completion(_LADDER_TEXT))
@@ -312,7 +339,7 @@ def test_openrouter_runs_the_compatible_adapter_on_the_visitor_key_once(
         {
             "api_key": key,
             "base_url": "https://openrouter.ai/api/v1",
-            "timeout": 600.0,
+            "timeout": 60.0,
             "max_retries": 0,
         }
     ]

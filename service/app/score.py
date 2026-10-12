@@ -24,10 +24,11 @@ from __future__ import annotations
 from typing import Annotated, Any, Final, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StringConstraints, field_validator
 from roadmodel import scoring  # type: ignore[import-untyped]
 
 from .auth import require_bearer
+from .context import validate_pools
 from .funding import resolve_allowed_jurisdictions, scoring_context_from_request
 
 Category = Literal[
@@ -67,7 +68,7 @@ RUNG_ORDER: Final = ("quality", "balanced", "cost")
 class ScoreRequest(BaseModel):
     category: Category
     complexity: Complexity
-    novel: bool = False
+    novel: StrictBool = False
     budget_priority: Budget = "balanced"
     pool_states: list[dict[str, Any]] = Field(default_factory=list, max_length=6)
     subscriptions: ItemList = Field(default_factory=list)
@@ -80,11 +81,16 @@ class ScoreRequest(BaseModel):
     # The web edge forwards this beside unavailable_models on every lane. The
     # scorer's availability is the forwarded list alone (as the engine's
     # frontier table's is), so the flag is accepted and has no further effect.
-    availability_authoritative: bool = False
+    availability_authoritative: StrictBool = False
     # The size in tokens of the material the task gives the model to read,
     # when known: a model whose context window cannot hold it is left out
     # (scoring.too_small_for).
-    input_tokens: int | None = Field(default=None, gt=0)
+    input_tokens: int | None = Field(default=None, gt=0, le=10_000_000, strict=True)
+
+    @field_validator("pool_states")
+    @classmethod
+    def _pools(cls, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        return validate_pools(rows)
 
     model_config = ConfigDict(extra="forbid")
 

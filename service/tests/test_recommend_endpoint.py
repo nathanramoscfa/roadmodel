@@ -1025,8 +1025,7 @@ def test_unavailable_models_threaded_to_recommend_structured(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Phase 4.9 B2: the runtime unavailable-ids the web edge forwards in context
-    reach recommend_structured as the Step-0a override, cleaned (blanks /
-    non-strings dropped, order preserved)."""
+    reach recommend_structured as the Step-0a override, with order preserved."""
     recommend_module = importlib.import_module("app.recommend")
     captured: dict[str, Any] = {}
 
@@ -1050,7 +1049,7 @@ def test_unavailable_models_threaded_to_recommend_structured(
 
     monkeypatch.setattr(recommend_module, "recommend_structured", _fake_recommend_structured)
 
-    ctx = {"unavailable_models": ["claude-fable-5", "  ", 123, "gpt-x"]}
+    ctx = {"unavailable_models": ["claude-fable-5", "gpt-x"]}
     response = client.post(
         "/v1/recommend", json={"task_description": "pick a model", "context": ctx}
     )

@@ -4,9 +4,12 @@ from __future__ import annotations
 import os
 import time
 
-from fastapi import Depends, FastAPI, Response
+from fastapi import Depends, FastAPI, Request, Response
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from .auth import require_bearer
+from .boundaries import RequestBoundaries
 from .models import LadderResponse, RecommendRequest, RecommendResponse
 from .recommend import recommend, recommend_ladder
 from .score import router as score_router
@@ -28,6 +31,14 @@ app = FastAPI(
     redoc_url="/redoc" if _DOCS_ENABLED else None,
     openapi_url="/openapi.json" if _DOCS_ENABLED else None,
 )
+
+
+app.add_middleware(RequestBoundaries)
+
+
+@app.exception_handler(RequestValidationError)
+async def invalid_request(_request: Request, _error: RequestValidationError) -> JSONResponse:
+    return JSONResponse({"error": "invalid_request"}, status_code=422)
 
 
 # What this deployment can do beyond /v1/recommend, so the web edge and the
