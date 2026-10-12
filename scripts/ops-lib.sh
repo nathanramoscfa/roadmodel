@@ -52,16 +52,20 @@ run_summary() {
 
 # prs_from_run <run_id> — PR numbers a run opened, one per line.
 prs_from_run() {
-  gh run view "$1" -R "$REPO" --log 2>/dev/null |
-    grep -oE "https://github.com/$REPO/pull/[0-9]+" | sort -u | grep -oE '[0-9]+$'
+  python3 "$HERE/cron_pr.py" --repo "$REPO" --run "$1"
 }
 
 # merge_when_green <pr> — wait for checks, rebase when BEHIND, squash-merge.
 # MERGE_GH_TOKEN (optional) is used for the merge itself: in Actions it is the
 # cron App's token, so the merge commit still triggers push workflows.
 merge_when_green() {
-  local pr="$1" state merge_state failing i
+  local pr="$1" run_id="${2:-}" state merge_state failing i head_sha
   for i in $(seq 1 120); do
+    head_sha=""
+    if [ -n "$run_id" ]; then
+      head_sha="$(python3 "$HERE/cron_pr.py" --repo "$REPO" --run "$run_id" --pr "$pr")" ||
+        die "PR provenance validation failed"
+    fi
     state="$(gh pr view "$pr" -R "$REPO" --json state -q .state)"
     [ "$state" = "MERGED" ] && { log "PR #$pr merged"; return 0; }
     [ "$state" = "CLOSED" ] && { log "PR #$pr was closed (superseded?) — skipping"; return 0; }
@@ -74,7 +78,11 @@ merge_when_green() {
         log "PR #$pr is behind main — rebasing"
         _gh_as_merger pr update-branch "$pr" -R "$REPO" --rebase || true ;;
       CLEAN | HAS_HOOKS | UNSTABLE)
-        _gh_merge "$pr" --squash --delete-branch || _gh_merge "$pr" --squash || true ;;
+        if [ -n "$head_sha" ]; then
+          _gh_merge "$pr" --squash --delete-branch --match-head-commit "$head_sha" || true
+        else
+          _gh_merge "$pr" --squash --delete-branch || _gh_merge "$pr" --squash || true
+        fi ;;
     esac
     sleep 20
   done
