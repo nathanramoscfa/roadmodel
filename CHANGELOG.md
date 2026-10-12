@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.82] — 2026-10-12
+
+### Security
+
+- **Private Windows files and bounded context parsing.** Private writes use
+  protected Windows ACLs and validated directory handles. Atomic replacement,
+  appending and lock access preserve the private-file boundary. Existing
+  broader log and lock permissions require explicit repair while their old
+  processes are stopped; existing memory migration repairs selected files
+  with exclusive access. Global rule adapters and backups use the same helper.
+- Context tier and jurisdiction parsing use linear scans. Concurrent updater
+  startup acquires the file lock before writing its initial marker.
+
 ## [0.2.81] — 2026-10-12
 
 ### Security
