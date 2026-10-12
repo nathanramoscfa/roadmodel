@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -263,7 +264,10 @@ def test_support_helpers_load_from_installed_siblings(
     package.mkdir(parents=True)
     monkeypatch.setattr(updater.up, "__file__", str(package / "update_projects.py"))
     for name in updater.up.SUPPORT_MODULES:
-        shutil.copyfile(ROOT / "scripts" / f"{name}.py", package / f"{name}.py")
+        shutil.copyfile(
+            updater.up._support_path(ROOT / "scripts/update_projects.py", name),
+            package / f"{name}.py",
+        )
         helper = updater.up._support(name)
         assert isinstance(helper, ModuleType)
         assert Path(helper.__file__).parent == package
@@ -286,8 +290,8 @@ def test_install_launcher_copies_all_companions(
     assert updater.up._install_launcher(False) == launcher
     assert launcher.is_file()
     for name in updater.up.SUPPORT_MODULES:
-        assert (launcher.parent / f"{name}.py").read_bytes() == (
-            ROOT / "scripts" / f"{name}.py"
+        assert (launcher.parent / f"{name}.py").read_bytes() == updater.up._support_path(
+            ROOT / "scripts/update_projects.py", name
         ).read_bytes()
 
 
@@ -297,7 +301,14 @@ def released_child(updater, monkeypatch):
     package = updater.home / "site-packages/roadmodel"
     package.mkdir(parents=True)
     for name in ("update_projects", *up.SUPPORT_MODULES):
-        shutil.copyfile(ROOT / "scripts" / f"{name}.py", package / f"{name}.py")
+        shutil.copyfile(
+            up._support_path(ROOT / "scripts/update_projects.py", name), package / f"{name}.py"
+        )
+    (package / "data").mkdir()
+    for name in (*(n + ".md" for n in up.COMMANDS), *up.RULE_KIT_FILES):
+        shutil.copyfile(
+            up._data_source(ROOT / "scripts/update_projects.py", name), package / "data" / name
+        )
     up.LAUNCHER.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(package / "update_projects.py", up.LAUNCHER)
     monkeypatch.setattr(up, "__file__", str(package / "update_projects.py"))
@@ -379,3 +390,32 @@ def test_missing_lock_helper_never_turns_sync_only_into_full_upgrade(updater, mo
     assert up.main(["--sync-only", str(updater.project)]) == 1
     assert "Missing updater companion" in capsys.readouterr().err
     assert not updater.calls
+
+
+def test_direct_packaged_bootstrap_installs_complete_offline_release(updater, monkeypatch):
+    up = updater.up
+    package = released_child(updater, monkeypatch)
+    monkeypatch.delenv(up.DELEGATED_ENV, raising=False)
+    assert up.main(["--no-commands", "--no-parity", str(updater.project)]) == 0
+    for name in (*(n + ".md" for n in up.COMMANDS), *up.RULE_KIT_FILES):
+        assert (up.LAUNCHER.parent / "data" / name).read_bytes() == (
+            package / "data" / name
+        ).read_bytes()
+    done = subprocess.run(
+        [sys.executable, "-I", str(up.LAUNCHER), "--self-check"],
+        text=True,
+        capture_output=True,
+        timeout=30,
+    )
+    assert done.returncode == 0, done.stderr
+
+
+def test_incomplete_release_leaves_existing_launcher_intact(updater, monkeypatch):
+    up = updater.up
+    package = released_child(updater, monkeypatch)
+    (package / "data/roadmap-phase.md").unlink()
+    before = up.LAUNCHER.read_bytes()
+    with pytest.raises(RuntimeError, match="Incomplete"):
+        up._install_release(package / "update_projects.py")
+    assert up.LAUNCHER.read_bytes() == before
+    assert not (up.LAUNCHER.parent / "data").exists()

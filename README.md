@@ -134,7 +134,7 @@ The command fetches [`scripts/update_projects.py`](scripts/update_projects.py)
 (a `.venv`/`venv`/`env` dir, the `name:` in `environment.yml`, a conda env named
 like the folder, or a conda env inside the project; never `base` by guesswork),
 then **concurrently** upgrades `roadmodel` in every one, re-exports `planning/`
-where a kit exists, re-downloads the `/roadmap-*` command files, and prints one
+where a kit exists, installs the released `/roadmap-*` command files, and prints one
 table. Same script on Windows, macOS, and Linux; `--install-schedule [HH:MM]`
 registers a daily run (Task Scheduler / launchd / cron, logged to
 `~/.config/roadmodel/update.log`) so every project follows each release within a
@@ -186,17 +186,21 @@ It uses the catalog **bundled in the installed wheel**, so refresh with
 of each phase. Flags: `--dest <subdir>`, `--force` (overwrite an existing
 kit `user-context.md`), `--user-context <path>`.
 
-**Shell alternative (no install).** A bash script fetches the kit fresh
-from this repo's `main` branch instead of from an installed wheel:
+**Shell alternative.** From a reviewed checkout, the bash wrapper uses a
+security-fixed released CLI (0.2.81+), bootstrapping it in a temporary venv
+if necessary. It does not install into the target project's environment:
 
 ```sh
 scripts/export-planning-kit.sh /path/to/other-project
 ```
 
-Flags: `--dest <subdir>`, `--ref <git-ref>`, `--local` (copy from a local
-checkout instead of GitHub), `--user-context <path>`. On Windows
-PowerShell, call `curl.exe` (not the `curl` alias) if you fetch files by
-hand; the `export-kit` command above avoids that entirely.
+Flags: `--dest <subdir>`, `--force`, `--user-context <path>`, and `--local`
+(explicit developer mode using this checkout's code and docs, including edits).
+`--ref` is retired; review a checkout before using `--local`. Existing private
+context is kept unless `--force` has a real source to copy. Both exporters
+refuse redirected destinations and tracked private context, and install Git
+exclusions before writing it. POSIX copies use mode 0600; on Windows, account
+isolation also depends on the destination's inherited ACLs.
 
 **Day-to-day:** the kit is driven by the five user-scope commands in
 `docs/claude-commands/` — `/roadmap-project`, `/roadmap-phase N`,

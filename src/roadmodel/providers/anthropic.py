@@ -6,6 +6,7 @@ from typing import Any
 
 from roadmodel import usage
 from roadmodel.errors import ProviderCallError
+from roadmodel.providers._safety import hosted_timeout, private_transport, safe_error
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
 
@@ -58,6 +59,7 @@ def _record_usage(model_id: str, response: object) -> None:
     )
 
 
+@private_transport
 def recommend(
     prompt: str,
     system: str,
@@ -68,13 +70,16 @@ def recommend(
     thinking_budget: int | None = None,
     temperature: float | None = None,
 ) -> str:
+    missing_sdk: ProviderCallError | None = None
     try:
-        from anthropic import Anthropic, APIError
-    except Exception as exc:  # pragma: no cover - dependency/runtime guard
-        raise ProviderCallError(
+        from anthropic import Anthropic
+    except Exception:  # pragma: no cover - dependency/runtime guard
+        missing_sdk = ProviderCallError(
             "The Anthropic SDK is required for `roadmodel recommend` but is not "
             "installed. Install the engine extra: pip install 'roadmodel[recommend]'."
-        ) from exc
+        )
+    if missing_sdk is not None:
+        raise missing_sdk
 
     model_id = model or DEFAULT_MODEL
     # `kwargs` is typed `Any` for the same reason as providers/openai.py: the
@@ -102,7 +107,7 @@ def recommend(
     _ = temperature
 
     try:
-        client = Anthropic(api_key=api_key)
+        client = Anthropic(api_key=api_key, timeout=hosted_timeout(), max_retries=0)
         response = client.messages.create(**kwargs)
         _record_usage(model_id, response)
         text_parts: list[str] = []
@@ -116,7 +121,7 @@ def recommend(
         raise ProviderCallError("Anthropic response did not contain text output.")
     except ProviderCallError:
         raise
-    except APIError as exc:
-        raise ProviderCallError(f"Anthropic API call failed: {exc}") from exc
-    except Exception as exc:  # pragma: no cover - defensive adapter guard
-        raise ProviderCallError(f"Anthropic API call failed ({type(exc).__name__}).") from exc
+    except Exception as exc:
+        failure = safe_error("Anthropic", exc)
+    # Raising outside the except block drops the raw SDK cause/context.
+    raise failure

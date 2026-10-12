@@ -199,7 +199,9 @@ def test_empty_registry_explains_how_to_add(
 
 def test_roadmodel_update_command_points_at_the_script(up: ModuleType) -> None:
     text = COMMAND.read_text()
-    assert f"{up.REPO_RAW}/scripts/update_projects.py" in text
+    assert "raw.githubusercontent.com" not in text
+    assert "-m roadmodel.update_projects" in text
+    assert "published wheel" in text
     assert "projects.txt" in text
     assert "--add" in text and "--dry-run" in text
     assert "no env found" in text
@@ -261,10 +263,12 @@ def test_schedule_artifacts(up: ModuleType, tmp_path: Path) -> None:
     assert argv[:2] == ["schtasks", "/Create"] and "/F" in argv
     assert argv[argv.index("/TN") + 1] == up.TASK_NAME
     assert argv[argv.index("/ST") + 1] == "09:05"
-    assert argv[argv.index("/TR") + 1] == f'"{wpy}" "{wscript}" --log'  # quoted for spaces
+    assert argv[argv.index("/TR") + 1] == subprocess.list2cmdline(
+        [str(wpy), "-I", "-X", "utf8", str(wscript), "--log"]
+    )
 
     line = up.cron_line(py, script, 9, 0)
-    assert line.startswith("0 9 * * * /usr/bin/python3 /x/update_projects.py --log")
+    assert line.startswith("0 9 * * * /usr/bin/python3 -I -X utf8 /x/update_projects.py --log")
     assert line.endswith(f"# {up.SCHEDULE_LABEL}")
 
 
@@ -285,7 +289,9 @@ def test_the_windows_task_catches_up_after_a_missed_start(up: ModuleType) -> Non
     )
     assert root.findtext(".//t:ScheduleByDay/t:DaysInterval", namespaces=ns) == "1"
     assert root.findtext(".//t:Exec/t:Command", namespaces=ns) == str(py)  # & survives escaping
-    assert root.findtext(".//t:Exec/t:Arguments", namespaces=ns) == f'"{script}" --log'
+    assert root.findtext(".//t:Exec/t:Arguments", namespaces=ns) == subprocess.list2cmdline(
+        ["-I", "-X", "utf8", str(script), "--log"]
+    )
 
     # A boundary already behind us today would read as a run to make up at once.
     assert up._next_start(9, 0, dt.datetime(2026, 9, 23, 8, 59)) == dt.date(2026, 9, 23)
@@ -398,17 +404,7 @@ def test_refresh_installs_per_detected_agent(
     monkeypatch.setattr(up.shutil, "which", lambda _cmd: None)
     body = (COMMANDS_DIR / "roadmap-step.md").read_text()
 
-    class _Resp:
-        def __enter__(self) -> "_Resp":
-            return self
-
-        def __exit__(self, *a: object) -> None:
-            pass
-
-        def read(self) -> bytes:
-            return body.encode()
-
-    monkeypatch.setattr(up.urllib.request, "urlopen", lambda url, timeout=30: _Resp())
+    monkeypatch.setattr(up, "_command_body", lambda _name: body)
 
     # Only Claude Code assumed when no other agent dir exists.
     assert up.detect_agents() == ["claude"]
@@ -546,17 +542,7 @@ def test_cursor_and_opencode_detection_and_install(
     monkeypatch.setattr(up.shutil, "which", lambda _cmd: None)
     body = (COMMANDS_DIR / "roadmap-step.md").read_text()
 
-    class _Resp:
-        def __enter__(self) -> "_Resp":
-            return self
-
-        def __exit__(self, *a: object) -> None:
-            pass
-
-        def read(self) -> bytes:
-            return body.encode()
-
-    monkeypatch.setattr(up.urllib.request, "urlopen", lambda url, timeout=30: _Resp())
+    monkeypatch.setattr(up, "_command_body", lambda _name: body)
 
     # Cursor alone (no Codex): the shared skill lands once, labelled for Cursor.
     (home / ".cursor").mkdir(parents=True)
@@ -1039,14 +1025,12 @@ def test_antigravity_port_tells_the_model_to_use_inline_arguments(up: ModuleType
 def test_antigravity_refresh_mirrors_cli_and_ide_skills(
     up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import io
-
     home = tmp_path / "home"
     monkeypatch.setattr(up, "ANTIGRAVITY_SKILLS_DIR", home / ".gemini/config/skills")
     monkeypatch.setattr(up, "ANTIGRAVITY_STATE_DIR", home / ".gemini/antigravity-cli")
     monkeypatch.setattr(up, "COMMANDS", ("roadmodel-upgrade",))
     body = COMMAND.read_bytes()
-    monkeypatch.setattr(up.urllib.request, "urlopen", lambda *_a, **_kw: io.BytesIO(body))
+    monkeypatch.setattr(up, "_command_body", lambda _name: body.decode())
     up.refresh_commands(dry_run=True, agents=["antigravity"])
     assert not home.exists()
     lines = up.refresh_commands(agents=["antigravity"])
@@ -1179,6 +1163,15 @@ class _Machine:
         self.packaged = tmp / "site-packages" / "roadmodel" / "update_projects.py"
         self.packaged.parent.mkdir(parents=True)
         self.packaged.write_bytes(b"# the updater in the release\n")
+        for name in up.SUPPORT_MODULES:
+            (self.packaged.parent / f"{name}.py").write_bytes(
+                up._support_path(SCRIPT, name).read_bytes()
+            )
+        (self.packaged.parent / "data").mkdir()
+        for name in (*(n + ".md" for n in up.COMMANDS), *up.RULE_KIT_FILES):
+            (self.packaged.parent / "data" / name).write_bytes(
+                up._data_source(SCRIPT, name).read_bytes()
+            )
         self.versions = ["0.2.38", "0.2.39"]  # before / after the pip upgrade
         self.ships_module = True
         self.pip_rc = 0
@@ -1208,7 +1201,7 @@ class _Machine:
         def done(rc: int = 0, out: str = "") -> subprocess.CompletedProcess[str]:
             return subprocess.CompletedProcess(argv, rc, out, "boom" if rc else "")
 
-        if argv[1:3] == ["-m", "venv"]:
+        if argv[1:6] == ["-I", "-X", "utf8", "-m", "venv"]:
             if self.venv_rc == 0:
                 (self.venv / "pyvenv.cfg").parent.mkdir(parents=True, exist_ok=True)
                 (self.venv / "pyvenv.cfg").write_text("home = x\n")
@@ -1244,13 +1237,24 @@ def test_the_launcher_upgrades_refreshes_itself_and_hands_over(
     code = up.self_update(["--log", "--brand-new-flag"], tmp_path / "projects.txt")
 
     assert code == 0
-    assert [c for c in m.calls if c[1:3] == ["-m", "venv"]], "a missing venv is built"
+    assert [c for c in m.calls if c[1:6] == ["-I", "-X", "utf8", "-m", "venv"]], (
+        "a missing venv is built"
+    )
     pip = next(c for c in m.calls if "pip" in c)
     assert pip[0] == str(m.python()) and "--no-cache-dir" in pip and pip[-1] == "roadmodel"
     # The launcher becomes the release's copy of itself: no more re-fetching.
     assert m.launcher.read_bytes() == m.packaged.read_bytes()
     ((argv, env),) = m.handed
-    assert argv == [str(m.python()), "-m", "roadmodel.update_projects", "--log", "--brand-new-flag"]
+    assert argv == [
+        str(m.python()),
+        "-I",
+        "-X",
+        "utf8",
+        "-m",
+        "roadmodel.update_projects",
+        "--log",
+        "--brand-new-flag",
+    ]
     assert env[up.DELEGATED_ENV] == sys.executable  # the handed-over run never hands over again
     out = capsys.readouterr().out
     assert "roadmodel 0.2.39 (was 0.2.38)" in out and "launcher refreshed" in out
@@ -1333,7 +1337,7 @@ def test_a_foreign_directory_at_the_venv_path_is_never_cleared(
     m.venv.mkdir()
     (m.venv / "precious.txt").write_text("not a venv")
     assert up.self_update([], tmp_path / "projects.txt") is None
-    assert not [c for c in m.calls if c[1:3] == ["-m", "venv"]]
+    assert not [c for c in m.calls if c[1:6] == ["-I", "-X", "utf8", "-m", "venv"]]
     assert (m.venv / "precious.txt").read_text() == "not a venv"
 
 
@@ -1827,10 +1831,21 @@ def test_rules_fingerprint_follows_commands_and_kit(
     (claude / "commands" / "roadmap-refresh.md").write_text("refresh v1\n")
     monkeypatch.setattr(up, "CLAUDE_DIR", claude)
     monkeypatch.setattr(up, "_rule_kit_dir", lambda: kit)
+    monkeypatch.setattr(
+        up,
+        "_command_body",
+        lambda name: (
+            (kit / (name + ".md")).read_text() if (kit / (name + ".md")).exists() else "step v1"
+        ),
+    )
+    released = kit / "roadmap-refresh.md"
+    released.write_text("refresh v1\n")
     first = up.rules_fingerprint()
     (claude / "commands" / "roadmap-refresh.md").write_text("refresh v1\r\n")
     assert up.rules_fingerprint() == first  # line endings are not a rule change
     (claude / "commands" / "roadmap-refresh.md").write_text("refresh v2\n")
+    assert up.rules_fingerprint() == first  # installed user edits are not release inputs
+    released.write_text("refresh v2\n")
     second = up.rules_fingerprint()
     assert second != first
     (kit / "phase-roadmap-template.md").write_text("new layout\n")
@@ -2042,3 +2057,52 @@ def test_mcp_env_dry_run_and_pip_failure(
     )
     line, ok = up.update_mcp_env([str(script)], dry_run=False)
     assert not ok and "pip install failed" in line and "no network" in line
+
+
+def test_release_commands_are_offline_and_missing_resource_preserves_install(
+    up, tmp_path, monkeypatch
+):
+    import urllib.request
+
+    def no_network(*args, **kwargs):
+        pytest.fail("release command installation made a network request")
+
+    monkeypatch.setattr(urllib.request, "urlopen", no_network)
+    monkeypatch.setattr(up, "CLAUDE_DIR", tmp_path / "claude")
+    installed = up.CLAUDE_DIR / "commands/roadmap-step.md"
+    up.refresh_commands(agents=["claude"])
+    assert installed.read_text() == up._command_body("roadmap-step")
+    installed.write_text("user edit must not execute")
+    assert "user edit must not execute" not in up._refresh_command_body()
+    original_reader = up._command_body
+
+    def missing(name):
+        if name == "roadmodel-upgrade":
+            raise FileNotFoundError("fixture")
+        return original_reader(name)
+
+    monkeypatch.setattr(up, "_command_body", missing)
+    report = up.refresh_commands(agents=["claude"])
+    assert any("SOURCE FAILED" in item for item in report)
+    assert installed.read_text() == "user edit must not execute"
+
+
+def test_registry_invalid_addition_is_atomic_and_private(up, tmp_path):
+    reg = tmp_path / "cfg/projects.txt"
+    valid = tmp_path / "project"
+    valid.mkdir()
+    with pytest.raises(SystemExit):
+        up.add_to_registry(reg, [str(valid), str(tmp_path / "missing")])
+    assert not reg.exists()
+    up.add_to_registry(reg, [str(valid)])
+    if os.name == "posix":
+        assert reg.stat().st_mode & 0o777 == 0o600
+        assert reg.parent.stat().st_mode & 0o777 == 0o700
+
+
+def test_schedule_preview_does_not_create_private_state(up, tmp_path, monkeypatch):
+    config = tmp_path / "not-created"
+    monkeypatch.setattr(up, "CONFIG_DIR", config)
+    monkeypatch.setattr(up, "LAUNCHER", config / "update_projects.py")
+    up.install_schedule("09:00", dry_run=True)
+    assert not config.exists()

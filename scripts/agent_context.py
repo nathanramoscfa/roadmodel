@@ -15,10 +15,8 @@ import importlib.util
 import json
 import os
 import re
-import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -34,6 +32,7 @@ PRIVATE = (
     "/.roadmodel/HANDOFF.md",
     "/.roadmodel/WORKTREE.md",
     "/.roadmodel/worktree_memory.py",
+    "/.roadmodel/private_files.py",
     "/.roadmodel/worktree-imports.json",
     "/.agents/shared-context.md",
     "/.agents/rules/roadmodel-context.md",
@@ -57,16 +56,40 @@ def _git(project: Path, *args: str) -> str:
     return result.stdout.strip()
 
 
+def _private_source() -> Path:
+    here = Path(__file__).resolve()
+    if here.parent.name == "scripts" and (here.parent.parent / "pyproject.toml").is_file():
+        return here.parent.parent / "src/roadmodel/private_files.py"
+    return here.with_name("private_files.py")
+
+
+def _private():
+    path = _private_source()
+    if not path.is_file() or path.is_symlink():
+        raise ValueError("private file helper is missing; run a full roadmodel-upgrade")
+    spec = importlib.util.spec_from_file_location("roadmodel_context_private", path)
+    module = importlib.util.module_from_spec(spec)
+    exec(compile(path.read_bytes(), str(path), "exec"), module.__dict__)  # noqa: S102
+    return module
+
+
 def _atomic(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, name = tempfile.mkstemp(prefix=".roadmodel-", dir=path.parent)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as stream:
-            stream.write(text)
-        os.replace(name, path)
-    finally:
-        if os.path.exists(name):
-            os.unlink(name)
+    _private().atomic_private_write(path, text.encode("utf-8"))
+
+
+def _private_tree(directory: Path) -> None:
+    """Repair the validated private store; never follow descendant redirects."""
+    safe = _private()
+    safe.private_directory(directory)
+    _files(directory)
+    for path in sorted(directory.rglob("*")):
+        if path.is_dir():
+            safe.private_directory(path)
+        elif path.is_file():
+            # Open, validate, and chmod the same inode without rewriting a
+            # concurrently edited memory. Hardlinks are refused by the helper.
+            with safe.open_private_append(path):
+                pass
 
 
 def _json(path: Path) -> dict:
@@ -186,7 +209,7 @@ def _source(project: Path, home: Path, target: Path) -> Path:
 
 def _adopt(source: Path, target: Path) -> None:
     if _same(source, target):
-        target.mkdir(parents=True, exist_ok=True)
+        _private_tree(target.resolve())
         return
     if _redirect(source):
         raise ValueError(f"existing memory redirect has a different target: {source}")
@@ -203,17 +226,17 @@ def _adopt(source: Path, target: Path) -> None:
         raise ValueError(
             "memory migration conflict (both copies preserved): " + ", ".join(conflicts)
         )
-    target.mkdir(parents=True, exist_ok=True)
+    _private().private_directory(target)
     for name in before:
         dest = target / name
         if not dest.exists():
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source / name, dest)
+            _private().atomic_private_write(dest, (source / name).read_bytes())
     if _files(source) != before:
         raise ValueError("Claude memory changed during migration; retry, originals preserved")
     copied = _files(target)
     if any(copied.get(name) != digest for name, digest in before.items()):
         raise ValueError("copied memory failed verification; originals preserved")
+    _private_tree(target)
     if not source.exists():
         source.parent.mkdir(parents=True, exist_ok=True)
         _link(source, target)
@@ -225,6 +248,7 @@ def _adopt(source: Path, target: Path) -> None:
     try:
         if _files(backup) != before:
             raise ValueError("Claude memory changed during migration; retry, originals preserved")
+        _private_tree(backup)
         _link(source, target)
     except Exception:
         backup.rename(source)
@@ -410,11 +434,14 @@ def sync_project(
         for installed, shipped in (
             ("context.py", "agent_context.py"),
             ("worktree_memory.py", "worktree_memory.py"),
+            ("private_files.py", "private_files.py"),
         ):
             helper = project / ".roadmodel" / installed
             expected = (
                 Path(__file__)
                 if shipped == "agent_context.py"
+                else _private_source()
+                if shipped == "private_files.py"
                 else Path(__file__).with_name(shipped)
             )
             # Installation writes LF text. Windows Git checkouts may supply
@@ -461,6 +488,8 @@ def sync_project(
                 + "\n".join(missing)
                 + "\n",
             )
+        _private().private_directory(owner / ".roadmodel")
+        _private().private_directory(project / ".roadmodel")
         _adopt(source, target)
         if not (target / "MEMORY.md").exists():
             _atomic(
@@ -495,6 +524,12 @@ def sync_project(
                 "# Agent handoff\n\nNo narrative handoff has been recorded yet. Read WORKTREE.md, the live\nmemory index, and the project's current roadmap before continuing.\n\n## Current objective\n\n## Changes and validation\n\n## Unresolved decisions and next action\n",
             )
         _atomic(project / ".roadmodel/WORKTREE.md", _snapshot(project))
+        if handoff.exists():
+            with _private().open_private_append(handoff):
+                pass
+        _atomic(
+            project / ".roadmodel/private_files.py", _private_source().read_text(encoding="utf-8")
+        )
         _atomic(project / ".roadmodel/context.py", Path(__file__).read_text(encoding="utf-8"))
         _atomic(
             project / ".roadmodel/worktree_memory.py",

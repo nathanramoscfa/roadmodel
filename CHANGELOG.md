@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **Private exports and released updater resources.** Planning-kit exports
+  validate destinations and Git protection before writing private context.
+  Private files use atomic writes and owner-only POSIX modes. Upgrades install
+  commands and companions from the published wheel, with isolated Python
+  execution. The shell wrapper uses a released CLI by default; reviewed
+  checkout mode remains available through `--local`, and `--ref` is retired.
+- Provider errors and SDK diagnostics keep credentials and request content out
+  of CLI/MCP error output. Hosted requests make one attempt with finite
+  timeouts. MCP tools bound input, context and output sizes, including errors
+  from malformed protocol messages. Builds use an explicit file inventory
+  and reject symlinked inputs.
+
 ### Added
 
 - Authenticated usage-pool sync from the Mac into the saved web profile.

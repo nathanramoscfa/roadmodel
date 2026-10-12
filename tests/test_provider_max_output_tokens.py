@@ -43,7 +43,7 @@ _RECOMMENDER_RESPONSE = (
 class _FakeGoogleClient:
     captured: dict[str, Any] = {}
 
-    def __init__(self, api_key: str) -> None:
+    def __init__(self, api_key: str, *, http_options: dict[str, Any]) -> None:
         self.api_key = api_key
         self.models = _FakeGoogleModels()
 
@@ -150,7 +150,7 @@ def test_google_omits_temperature_when_unset(monkeypatch: pytest.MonkeyPatch) ->
 class _FakeAnthropicClient:
     captured: dict[str, Any] = {}
 
-    def __init__(self, api_key: str) -> None:
+    def __init__(self, api_key: str, *, timeout: float, max_retries: int) -> None:
         self.api_key = api_key
         self.messages = _FakeAnthropicMessages()
 
@@ -221,7 +221,7 @@ def test_anthropic_never_sends_temperature(monkeypatch: pytest.MonkeyPatch) -> N
 class _FakeOpenAIClient:
     captured: dict[str, Any] = {}
 
-    def __init__(self, api_key: str) -> None:
+    def __init__(self, api_key: str, *, timeout: float, max_retries: int) -> None:
         self.api_key = api_key
         self.responses = _FakeOpenAIResponses()
 

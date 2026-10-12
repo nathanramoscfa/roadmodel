@@ -717,7 +717,7 @@ def test_config_repr_masks_api_key() -> None:
     )
     rendered = repr(config)
     assert "sk-ant-very-secret-token-abcdef123456" not in rendered
-    assert "sk-a***" in rendered
+    assert "<redacted>" in rendered
 
     empty_config = Config(
         provider="anthropic",

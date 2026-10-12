@@ -6,6 +6,7 @@ from typing import Any
 
 from roadmodel import usage
 from roadmodel.errors import ProviderCallError
+from roadmodel.providers._safety import hosted_timeout, private_transport, safe_error
 
 # Default engine model for direct Google API calls when no model is passed.
 # Must be a model that is actually callable on the public Google Generative
@@ -56,6 +57,7 @@ def _record_usage(model_id: str, response: object) -> None:
     )
 
 
+@private_transport
 def recommend(
     prompt: str,
     system: str,
@@ -66,17 +68,25 @@ def recommend(
     thinking_budget: int | None = None,
     temperature: float | None = None,
 ) -> str:
+    missing_sdk: ProviderCallError | None = None
     try:
         from google import genai
-        from google.genai.errors import APIError
-    except Exception as exc:  # pragma: no cover - dependency/runtime guard
-        raise ProviderCallError(
+    except Exception:  # pragma: no cover - dependency/runtime guard
+        missing_sdk = ProviderCallError(
             "The Google GenAI SDK is required for `roadmodel recommend` but is "
             "not installed. Install the engine extra: pip install 'roadmodel[recommend]'."
-        ) from exc
+        )
+    if missing_sdk is not None:
+        raise missing_sdk
 
     try:
-        client = genai.Client(api_key=api_key)
+        client = genai.Client(
+            api_key=api_key,
+            http_options={
+                "timeout": int(hosted_timeout() * 1000),
+                "retry_options": {"attempts": 1},
+            },
+        )
         # `config` is typed `Any` so mypy strict doesn't reject a mixed
         # str|int dict literal against the SDK's `GenerateContentConfigDict`
         # TypedDict; the runtime SDK accepts plain dicts identically.
@@ -110,7 +120,7 @@ def recommend(
         raise ProviderCallError("Google response did not contain text output.")
     except ProviderCallError:
         raise
-    except APIError as exc:
-        raise ProviderCallError(f"Google API call failed: {exc}") from exc
-    except Exception as exc:  # pragma: no cover - defensive adapter guard
-        raise ProviderCallError(f"Google API call failed ({type(exc).__name__}).") from exc
+    except Exception as exc:
+        failure = safe_error("Google", exc)
+    # Raising outside the except block drops the raw SDK cause/context.
+    raise failure
