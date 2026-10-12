@@ -99,6 +99,13 @@ def _entry(**overrides: Any) -> dict[str, Any]:
         ({"menu": "signed_in"}, "menu must be one of"),
         ({"max_output_tokens": -1}, "non-negative"),
         ({"temperature": "0"}, "temperature"),
+        ({"temperature": True}, "temperature"),
+        ({"temperature": float("nan")}, "temperature"),
+        ({"temperature": float("inf")}, "temperature"),
+        ({"max_output_tokens": 0}, "output cap"),
+        ({"max_output_tokens": 8193}, "output cap"),
+        ({"max_output_tokens": None}, "output cap"),
+        ({"ladder_max_output_tokens": 8193}, "output cap"),
     ],
 )
 def test_malformed_entries_fail_to_load(

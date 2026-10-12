@@ -35,7 +35,7 @@ def require_bearer(request: Request) -> Request:
         )
 
     expected: Final[str] = _internal_token()
-    if not hmac.compare_digest(token, expected):
+    if not hmac.compare_digest(token.encode("utf-8"), expected.encode("utf-8")):
         raise HTTPException(
             status_code=401,
             detail="invalid_or_missing_bearer",
