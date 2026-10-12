@@ -1,3 +1,4 @@
+import { ORIGIN_HEADERS } from "./fixtures/origin";
 // web/tests/funding-lane.spec.ts
 //
 // Who pays for a request (lib/funding-lane.ts) and the gate in front of the
@@ -32,7 +33,7 @@ const mutableEnv = env as { ROADMODEL_LATENCY_BYPASS_TOKEN?: string; ROADMODEL_D
 function post(headers: Record<string, string> = {}): Request {
   return new Request("http://localhost/api/recommend", {
     method: "POST",
-    headers: { "content-type": "application/json", ...headers },
+    headers: { origin: "http://localhost", "content-type": "application/json", ...headers },
     body: JSON.stringify({ task_description: "pick a model" }),
   });
 }
@@ -240,7 +241,7 @@ test("client context: only the allowlisted keys survive", () => {
 // --- Against the running server (ROADMODEL_E2E_MOCK_RECOMMEND) ------------
 
 test("the route: a signed-out POST to /api/recommend is refused with 402", async ({ request }) => {
-  const res = await request.post("/api/recommend", { data: { task_description: "pick a model" } });
+  const res = await request.post("/api/recommend", { headers: ORIGIN_HEADERS,  data: { task_description: "pick a model" } });
   expect(res.status()).toBe(402);
   expect(await res.json()).toEqual({
     error: "funding_required",
@@ -252,7 +253,7 @@ test("the route: an unknown context key and a spoofed force_provider never reach
   request,
 }) => {
   const res = await request.post("/api/recommend", {
-    headers: { Cookie: `${E2E_AUTH_COOKIE}=${E2E_USER_ID}` },
+    headers: { ...ORIGIN_HEADERS,  Cookie: `${E2E_AUTH_COOKIE}=${E2E_USER_ID}` },
     data: {
       task_description: "pick a model",
       context: {
@@ -263,16 +264,6 @@ test("the route: an unknown context key and a spoofed force_provider never reach
       },
     },
   });
-  expect(res.status()).toBe(200);
-  const body = (await res.json()) as {
-    recommendations: { received_context_keys?: string[] }[];
-    engine: { requested: string; hint: string };
-  };
-  for (const rec of body.recommendations) {
-    const keys = rec.received_context_keys ?? [];
-    expect(keys).not.toContain("unknown_key");
-    expect(keys).toContain("platforms_allowed");
-  }
-  // The engine is the menu's choice (the default), never the smuggled pin.
-  expect(body.engine.requested).not.toBe("anthropic-claude-opus-5-5");
+  expect(res.status()).toBe(400);
+  expect(await res.json()).toEqual({ error: "bad_input" });
 });

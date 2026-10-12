@@ -1,3 +1,4 @@
+import { ORIGIN_HEADERS } from "./origin";
 // web/tests/fixtures/onboarding-auth.ts
 import type { Page } from "@playwright/test";
 
@@ -9,7 +10,7 @@ export async function clearE2eSession(page: Page): Promise<void> {
 }
 
 export async function resetE2eState(page: Page): Promise<void> {
-  await page.request.post("/api/test/e2e-reset");
+  await page.request.post("/api/test/e2e-reset", { headers: ORIGIN_HEADERS });
   await clearE2eSession(page);
 }
 

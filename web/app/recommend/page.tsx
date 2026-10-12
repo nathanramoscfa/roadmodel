@@ -62,11 +62,13 @@ export default async function RecommendPage() {
 
       <div className="mt-8">
         <RecommendWorkspace
+          key={session?.id ?? "anonymous"}
           engines={engines}
           visitorEngines={visitorEngines}
           initialEngine={initialEngine}
           picks={picks}
           signedIn={session !== null}
+          owner={session?.id ?? "anonymous"}
           modelCount={models.length}
           measuredCount={bench.measuredCount}
           keylessViewer={viewer === "anonymous" || viewer === "visitor"}

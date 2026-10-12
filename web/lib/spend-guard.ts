@@ -27,6 +27,7 @@
 // trips — a metering hiccup must not take the app down. It only ever BLOCKS
 // when a cap is configured AND the day's spend has actually crossed it.
 
+import { boundedWait } from "./http-boundaries";
 import { after } from "next/server";
 import { Redis } from "@upstash/redis";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -119,11 +120,13 @@ async function ledgerPage(sinceIso: string, from: number, to: number): Promise<L
 // The day's operator spend from the ledger, every page of it.
 export async function sumLedgerSince(sinceIso: string): Promise<number> {
   let total = 0;
-  for (let from = 0; ; from += PAGE) {
-    const rows = await ledgerPage(sinceIso, from, from + PAGE - 1);
+  const deadline = Date.now() + 5000;
+  for (let from = 0; from < 100 * PAGE && Date.now() < deadline; from += PAGE) {
+    const rows = await boundedWait(ledgerPage(sinceIso, from, from + PAGE - 1), Math.max(1, deadline - Date.now()));
     total += rows.reduce((sum, row) => sum + operatorCost(row), 0);
     if (rows.length < PAGE) return total;
   }
+  throw new Error("ledger_read_limit");
 }
 
 // A short in-process memo so a configured cap doesn't add a read to EVERY
@@ -132,7 +135,7 @@ const MEMO_TTL_MS = 5_000;
 let memo: { sinceIso: string; value: number; at: number } | null = null;
 
 async function spentSince(sinceIso: string): Promise<number> {
-  if (testReader) return testReader(sinceIso);
+  if (testReader) return boundedWait(testReader(sinceIso), 5000);
   const now = Date.now();
   if (memo && memo.sinceIso === sinceIso && now - memo.at < MEMO_TTL_MS) {
     return memo.value;
@@ -142,16 +145,16 @@ async function spentSince(sinceIso: string): Promise<number> {
   try {
     if (!redis) throw new Error("upstash not configured");
     const key = counterKey(sinceIso);
-    const raw = await redis.get<string | number>(key);
+    const raw = await boundedWait(redis.get<string | number>(key));
     if (raw === null || raw === undefined) {
       // No counter yet today: start it from what the ledger already holds.
       value = await sumLedgerSince(sinceIso);
-      await redis.set(key, value, { nx: true, ex: COUNTER_TTL_SECONDS });
+      await boundedWait(redis.set(key, value, { nx: true, ex: COUNTER_TTL_SECONDS }));
     } else {
       value = Number(raw) || 0;
     }
-  } catch (err) {
-    console.warn("[spend-guard] counter read failed — summing the ledger", err);
+  } catch {
+    console.warn("[spend-guard] counter read failed — summing the ledger");
     value = await sumLedgerSince(sinceIso);
   }
   memo = { sinceIso, value, at: now };
@@ -177,11 +180,11 @@ export function recordSpend(
   const key = counterKey(startOfUtcDayIso(now));
   const write = (async () => {
     try {
-      await redis.incrbyfloat(key, costUsd);
-      await redis.expire(key, COUNTER_TTL_SECONDS);
+      await boundedWait(redis.incrbyfloat(key, costUsd));
+      await boundedWait(redis.expire(key, COUNTER_TTL_SECONDS));
       if (memo && memo.sinceIso === startOfUtcDayIso(now)) memo.value += costUsd;
-    } catch (err) {
-      console.warn("[spend-guard] counter write failed (non-fatal)", err);
+    } catch {
+      console.warn("[spend-guard] counter write failed (non-fatal)");
     }
   })();
   try {
@@ -230,8 +233,8 @@ export async function dailyCostCapTripped(
       };
     }
     return { tripped: false, spentUsd: spent, capUsd };
-  } catch (err) {
-    console.warn("[spend-guard] spend read failed — failing open", err);
+  } catch {
+    console.warn("[spend-guard] spend read failed — failing open");
     return { tripped: false };
   }
 }

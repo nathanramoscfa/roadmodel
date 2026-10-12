@@ -13,6 +13,7 @@
 // the cookie payload as-is; getUser revalidates with the Supabase
 // auth server so a forged or stale cookie can't pass.
 
+import { noStore, safeLocalPath } from "./http-boundaries";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
@@ -40,6 +41,7 @@ export async function createSupabaseServerClient(): Promise<SupabaseClient> {
     env.SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
+      cookieOptions: { secure: env.NEXT_PUBLIC_SITE_URL.startsWith("https:"), sameSite: "lax" },
       cookies: {
         getAll() {
           return cookieStore.getAll();
@@ -96,9 +98,14 @@ export async function requireSession(): Promise<User> {
   return user;
 }
 
-export async function signOut(redirectTo: string = "/"): Promise<NextResponse> {
-  const supabase = await createSupabaseServerClient();
-  await supabase.auth.signOut();
-  const target = new URL(redirectTo, env.NEXT_PUBLIC_SITE_URL);
-  return NextResponse.redirect(target);
+export async function signOut(redirectTo: string = "/", origin: string = env.NEXT_PUBLIC_SITE_URL): Promise<NextResponse> {
+  if (isE2eAuthEnabled()) {
+    const store = await cookies();
+    store.delete(E2E_AUTH_COOKIE);
+  } else {
+    const supabase = await createSupabaseServerClient();
+    await supabase.auth.signOut();
+  }
+  const target = new URL(safeLocalPath(redirectTo), origin);
+  return noStore(NextResponse.redirect(target, 303));
 }

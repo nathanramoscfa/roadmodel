@@ -1,4 +1,5 @@
 // web/lib/ratelimit.ts
+import { boundedWait } from "./http-boundaries";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
@@ -6,10 +7,11 @@ import { isE2eAuthEnabled } from "./e2e-mode";
 import { env } from "./env";
 
 export type RateLimitReason =
+  | "rate_limit_unavailable"
   | "rate_limited"
   | "burst_dropped"
   | "roadmap_monthly_cap"
-  // The visitor lane: too many of this IP+UA's keys were declined today.
+  // The visitor lane: too many of this IP's keys were declined today.
   | "too_many_rejected_keys";
 
 export interface RateLimitResult {
@@ -28,36 +30,36 @@ interface Limiters {
   // Supabase user_id. Runs inside the route, after the funding lane.
   roadmapMonthly: Ratelimit;
   // The visitor lane's limits (lib/funding-lane.ts), keyed on the salted
-  // IP+UA hashes since a visitor may be signed out: VISITOR_DAILY_LIMIT calls a
+  // IP hashes since a visitor may be signed out: VISITOR_DAILY_LIMIT calls a
   // day and 10 a minute, and VISITOR_REJECTED_LIMIT declined keys a day.
   visitorDaily: Ratelimit;
   visitorBurst: Ratelimit;
   visitorRejected: Ratelimit;
   // The keyless lane's limits (/api/recommend/keyless), keyed on the salted
-  // IP+UA hashes like the visitor lane's: KEYLESS_BURST_LIMIT a minute and
+  // IP hashes like the visitor lane's: KEYLESS_BURST_LIMIT a minute and
   // KEYLESS_DAILY_LIMIT a day.
   keylessBurst: Ratelimit;
   keylessDaily: Ratelimit;
   // /api/openrouter/exchange: OPENROUTER_EXCHANGE_LIMIT code exchanges a
-  // minute per IP+UA. One connect is one exchange; this bounds code guessing.
+  // minute per IP. One connect is one exchange; this bounds code guessing.
   openrouterExchange: Ratelimit;
 }
 
 // Recommendations an invited member may run on the operator's keys per day.
 export const INVITED_DAILY_LIMIT = 20;
 
-// Recommendations one IP+UA may run on its own keys per day. The visitor pays,
+// Recommendations one IP may run on its own keys per day. The visitor pays,
 // so this bounds load and abuse, not spend.
 export const VISITOR_DAILY_LIMIT = 50;
-// Declined keys one IP+UA may send per day: the defense against using
+// Declined keys one IP may send per day: the defense against using
 // roadmodel to test stolen keys. The next attempt after these is refused
 // before it reaches a provider.
 export const VISITOR_REJECTED_LIMIT = 5;
-// Keyless picks one IP+UA may compute per minute and per day. They cost $0,
+// Keyless picks one IP may compute per minute and per day. They cost $0,
 // so these bound load and scraping.
 export const KEYLESS_BURST_LIMIT = 20;
 export const KEYLESS_DAILY_LIMIT = 200;
-// OpenRouter code exchanges one IP+UA may make per minute.
+// OpenRouter code exchanges one IP may make per minute.
 export const OPENROUTER_EXCHANGE_LIMIT = 10;
 
 function buildLimiters(): Limiters | null {
@@ -125,6 +127,19 @@ function buildLimiters(): Limiters | null {
 
 const limiters = buildLimiters();
 
+const unavailable = (): RateLimitResult => ({ allowed: false, reason: "rate_limit_unavailable", retryAfter: 30 });
+async function checkedLimit(result: ReturnType<Ratelimit["limit"]>) {
+  const value = await boundedWait(result);
+  if (value.reason === "timeout") throw new Error("rate_limit_unavailable");
+  return value;
+}
+async function checkedRemaining(result: ReturnType<Ratelimit["getRemaining"]>) {
+  const value = await boundedWait(result);
+  if (!Number.isFinite(value.remaining) || !Number.isFinite(value.reset)) throw new Error("rate_limit_unavailable");
+  return value;
+}
+
+
 // Subset of the @upstash/ratelimit API the operator-lane limits use.
 type LaneLimiter = Pick<Ratelimit, "limit">;
 
@@ -158,28 +173,22 @@ function visitorLimiters(): VisitorLimiters | null {
 }
 
 // No Upstash in production: the visitor lane is not served unbounded, the same
-// fail-closed policy as checkInvitedLimits (the route answers 500 before any
+// fail-closed policy as checkInvitedLimits (the route answers 503 before any
 // upstream call). Elsewhere (local, CI, preview) it fails open.
-function requireLimiterInProduction(lane = "visitor"): void {
-  if (process.env.VERCEL_ENV === "production") {
-    throw new Error(
-      "[ratelimit] UPSTASH_REDIS_URL / UPSTASH_REDIS_TOKEN unset in " +
-        `production — refusing to run the ${lane} lane without a rate limiter.`,
-    );
-  }
+function missingLimiter(): RateLimitResult {
+  return process.env.VERCEL_ENV === "production" ? unavailable() : { allowed: true };
 }
 
-// The visitor lane's limits for one IP+UA, checked before the call: the
+// The visitor lane's limits for one IP, checked before the call: the
 // declined-key allowance first (read-only, so checking it consumes nothing),
 // then the 10-a-minute burst, then VISITOR_DAILY_LIMIT a day.
 export async function checkVisitorLimits(ipUa: string): Promise<RateLimitResult> {
   const lane = visitorLimiters();
   if (!lane) {
-    requireLimiterInProduction();
-    return { allowed: true };
+    return missingLimiter();
   }
   try {
-    const rejected = await lane.rejected.getRemaining(`rejected:${ipUa}`);
+    const rejected = await checkedRemaining(lane.rejected.getRemaining(`rejected:${ipUa}`));
     if (rejected.remaining <= 0) {
       return {
         allowed: false,
@@ -187,11 +196,11 @@ export async function checkVisitorLimits(ipUa: string): Promise<RateLimitResult>
         retryAfter: Math.max(1, Math.ceil((rejected.reset - Date.now()) / 1000)),
       };
     }
-    const burst = await lane.burst.limit(`min:${ipUa}`);
+    const burst = await checkedLimit(lane.burst.limit(`min:${ipUa}`));
     if (!burst.success) {
       return { allowed: false, reason: "burst_dropped", retryAfter: 60 };
     }
-    const daily = await lane.daily.limit(`day:${ipUa}`);
+    const daily = await checkedLimit(lane.daily.limit(`day:${ipUa}`));
     if (!daily.success) {
       return {
         allowed: false,
@@ -200,25 +209,25 @@ export async function checkVisitorLimits(ipUa: string): Promise<RateLimitResult>
       };
     }
     return { allowed: true };
-  } catch (err) {
+  } catch {
     if (isE2eAuthEnabled()) {
-      console.warn("[ratelimit] Upstash unreachable in E2E mode (visitor) — failing open", err);
+      console.warn("[ratelimit] Upstash unreachable in E2E mode (visitor) — failing open");
       return { allowed: true };
     }
-    throw err;
+    return unavailable();
   }
 }
 
-// Count one declined key against this IP+UA's daily allowance. Called after
+// Count one declined key against this IP's daily allowance. Called after
 // the provider refused a visitor's key. Never throws: the visitor already has
 // their answer.
 export async function recordRejectedVisitorKey(ipUa: string): Promise<void> {
   const lane = visitorLimiters();
   if (!lane) return;
   try {
-    await lane.rejected.limit(`rejected:${ipUa}`);
-  } catch (err) {
-    console.warn("[ratelimit] failed to count a declined visitor key (non-fatal)", err);
+    await checkedLimit(lane.rejected.limit(`rejected:${ipUa}`));
+  } catch {
+    console.warn("[ratelimit] failed to count a declined visitor key (non-fatal)");
   }
 }
 
@@ -229,7 +238,7 @@ export function setTestKeylessLimiters(fake: KeylessLimiters | null): void {
   testKeylessLimiters = fake;
 }
 
-// The keyless lane's limits for one IP+UA: the burst, then the day. Fails
+// The keyless lane's limits for one IP: the burst, then the day. Fails
 // closed in production without Upstash and open elsewhere, like the visitor
 // lane.
 export async function checkKeylessLimits(ipUa: string): Promise<RateLimitResult> {
@@ -237,15 +246,14 @@ export async function checkKeylessLimits(ipUa: string): Promise<RateLimitResult>
     testKeylessLimiters ??
     (limiters ? { burst: limiters.keylessBurst, daily: limiters.keylessDaily } : null);
   if (!lane) {
-    requireLimiterInProduction("keyless");
-    return { allowed: true };
+    return missingLimiter();
   }
   try {
-    const burst = await lane.burst.limit(`min:${ipUa}`);
+    const burst = await checkedLimit(lane.burst.limit(`min:${ipUa}`));
     if (!burst.success) {
       return { allowed: false, reason: "burst_dropped", retryAfter: 60 };
     }
-    const daily = await lane.daily.limit(`day:${ipUa}`);
+    const daily = await checkedLimit(lane.daily.limit(`day:${ipUa}`));
     if (!daily.success) {
       return {
         allowed: false,
@@ -254,12 +262,12 @@ export async function checkKeylessLimits(ipUa: string): Promise<RateLimitResult>
       };
     }
     return { allowed: true };
-  } catch (err) {
+  } catch {
     if (isE2eAuthEnabled()) {
-      console.warn("[ratelimit] Upstash unreachable in E2E mode (keyless) — failing open", err);
+      console.warn("[ratelimit] Upstash unreachable in E2E mode (keyless) — failing open");
       return { allowed: true };
     }
-    throw err;
+    return unavailable();
   }
 }
 
@@ -269,24 +277,23 @@ export function setTestExchangeLimiter(fake: LaneLimiter | null): void {
   testExchangeLimiter = fake;
 }
 
-// The OpenRouter code-exchange limit for one IP+UA, checked before the
+// The OpenRouter code-exchange limit for one IP, checked before the
 // exchange reaches OpenRouter. Fails closed in production without Upstash,
 // open elsewhere, like the visitor lane.
 export async function checkOpenRouterExchangeLimit(ipUa: string): Promise<RateLimitResult> {
   const limiter = testExchangeLimiter ?? limiters?.openrouterExchange ?? null;
   if (!limiter) {
-    requireLimiterInProduction();
-    return { allowed: true };
+    return missingLimiter();
   }
   try {
-    const res = await limiter.limit(`min:${ipUa}`);
+    const res = await checkedLimit(limiter.limit(`min:${ipUa}`));
     return res.success ? { allowed: true } : { allowed: false, reason: "burst_dropped", retryAfter: 60 };
-  } catch (err) {
+  } catch {
     if (isE2eAuthEnabled()) {
-      console.warn("[ratelimit] Upstash unreachable in E2E mode (openrouter exchange) — failing open", err);
+      console.warn("[ratelimit] Upstash unreachable in E2E mode (openrouter exchange) — failing open");
       return { allowed: true };
     }
-    throw err;
+    return unavailable();
   }
 }
 
@@ -338,26 +345,12 @@ export function isRateLimitExempt(userId: string): boolean {
 export async function checkInvitedLimits(userId: string): Promise<RateLimitResult> {
   const lane = testLaneLimiters ?? limiters;
   if (!lane) {
-    // No Upstash configured. In PRODUCTION the limiter bounds the operator's
-    // spend on invited members — refuse to serve uncapped rather than silently
-    // fail open. Throwing here makes the route return 500 BEFORE any upstream
-    // call (fail closed). Elsewhere (local/CI/preview, where Upstash is
-    // intentionally unseeded) keep the fail-open behaviour so dev/test run.
-    // Gated on VERCEL_ENV === "production" (not VERCEL=1, which is every
-    // Vercel runtime). See also lib/ip-salt.ts for the same prod policy.
-    if (process.env.VERCEL_ENV === "production") {
-      throw new Error(
-        "[ratelimit] UPSTASH_REDIS_URL / UPSTASH_REDIS_TOKEN unset in " +
-          "production — refusing to run the recommender without a rate " +
-          'limiter. See infra/README.md "Environment variables".',
-      );
-    }
-    return { allowed: true };
+    return missingLimiter();
   }
 
   const key = `user:${userId}`;
   try {
-    const burst = await lane.burst.limit(key);
+    const burst = await checkedLimit(lane.burst.limit(key));
     if (!burst.success) {
       return {
         allowed: false,
@@ -366,7 +359,7 @@ export async function checkInvitedLimits(userId: string): Promise<RateLimitResul
       };
     }
 
-    const daily = await lane.invitedDaily.limit(key);
+    const daily = await checkedLimit(lane.invitedDaily.limit(key));
     if (!daily.success) {
       return {
         allowed: false,
@@ -376,27 +369,26 @@ export async function checkInvitedLimits(userId: string): Promise<RateLimitResul
     }
 
     return { allowed: true };
-  } catch (err) {
+  } catch {
     // In E2E mode the CI env injects placeholder Upstash creds that
     // can't actually reach the network — fail open so tests don't
     // wedge on the rate limiter. In every other runtime (Vercel
     // Production / Preview / Development, local `vercel dev`), an
-    // Upstash outage must NOT silently disable the limiter, so let
-    // the exception propagate to the route handler.
+    // Upstash outage must NOT silently disable the limiter, so return
+    // an explicit unavailable result before dispatch.
     if (isE2eAuthEnabled()) {
       console.warn(
         "[ratelimit] Upstash unreachable in E2E mode — failing open",
-        err,
       );
       return { allowed: true };
     }
-    throw err;
+    return unavailable();
   }
 }
 
 // Per-user monthly cap for /api/roadmap. Invoked by the route handler
 // AFTER the funding lane's limits pass. When Upstash is unseeded or
-// unreachable, this layer fails open via the same E2E-vs-prod policy as
+// unreachable, this layer follows the same E2E-vs-prod policy as
 // checkInvitedLimits().
 // READ-ONLY pre-flight check: does this user have monthly roadmap
 // allowance left? Uses getRemaining (no token consumed) so a request
@@ -413,10 +405,10 @@ export async function checkRoadmapMonthlyLimit(
   }
   const limiter = roadmapLimiter();
   if (!limiter) {
-    return { allowed: true };
+    return missingLimiter();
   }
   try {
-    const { remaining, reset } = await limiter.getRemaining(`user:${userId}`);
+    const { remaining, reset } = await checkedRemaining(limiter.getRemaining(`user:${userId}`));
     if (remaining <= 0) {
       return {
         allowed: false,
@@ -425,15 +417,14 @@ export async function checkRoadmapMonthlyLimit(
       };
     }
     return { allowed: true };
-  } catch (err) {
+  } catch {
     if (isE2eAuthEnabled()) {
       console.warn(
         "[ratelimit] Upstash unreachable in E2E mode (roadmap) — failing open",
-        err,
       );
       return { allowed: true };
     }
-    throw err;
+    return unavailable();
   }
 }
 
@@ -451,11 +442,10 @@ export async function consumeRoadmapMonthlyToken(userId: string): Promise<void> 
     return;
   }
   try {
-    await limiter.limit(`user:${userId}`);
-  } catch (err) {
+    await checkedLimit(limiter.limit(`user:${userId}`));
+  } catch {
     console.warn(
       "[ratelimit] failed to consume roadmap monthly token (non-fatal)",
-      err,
     );
   }
 }

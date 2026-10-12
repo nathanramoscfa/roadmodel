@@ -5,6 +5,7 @@
 // session cookie via the createServerClient adapter, then we redirect
 // first-time users to /onboarding or to `next` when already onboarded.
 
+import { privateRoute, safeLocalPath } from "@/lib/http-boundaries";
 import { type NextRequest, NextResponse } from "next/server";
 
 import {
@@ -27,11 +28,11 @@ function redirectToOnboarding(req: NextRequest, next: string): NextResponse {
   return NextResponse.redirect(onboardingUrl);
 }
 
-export async function GET(req: NextRequest): Promise<NextResponse> {
+export const GET = privateRoute(async (req: NextRequest): Promise<Response> => {
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
   const rawNext = url.searchParams.get("next");
-  const next = rawNext && rawNext.startsWith("/") ? rawNext : "/";
+  const next = safeLocalPath(rawNext);
 
   if (!code) {
     const loginUrl = new URL("/login", siteOrigin(req));
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
     const errUrl = new URL("/login", siteOrigin(req));
-    errUrl.searchParams.set("error", error.message);
+    errUrl.searchParams.set("error", "sign_in_failed");
     errUrl.searchParams.set("next", next);
     return NextResponse.redirect(errUrl);
   }
@@ -74,4 +75,4 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   return NextResponse.redirect(new URL(next, siteOrigin(req)));
-}
+});

@@ -1,3 +1,4 @@
+import { ORIGIN_HEADERS } from "./fixtures/origin";
 // web/tests/onboarding.spec.ts
 //
 // Phase 4 Step 2 — profile onboarding flow. Uses the ROADMODEL_E2E_AUTH
@@ -325,7 +326,7 @@ test("checking restrict hides cn-based API providers from the picker", async ({
 
 test.describe("profile API", () => {
   test("signed-out PATCH /api/profile returns 401", async ({ request }) => {
-    const response = await request.patch("/api/profile", {
+    const response = await request.patch("/api/profile", { headers: ORIGIN_HEADERS,
       data: { skip: true },
       failOnStatusCode: false,
     });

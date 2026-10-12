@@ -84,8 +84,8 @@ export async function readPin(engineHint: string, task: string): Promise<string 
       new Promise<null>((resolve) => setTimeout(() => resolve(null), PIN_READ_TIMEOUT_MS)),
     ]);
     return isTableKey(value) ? value : null;
-  } catch (err) {
-    console.warn("[classification-pin] read failed (classifying afresh)", err);
+  } catch {
+    console.warn("[classification-pin] read failed (classifying afresh)");
     return null;
   }
 }
@@ -105,8 +105,8 @@ export async function writePin(
   if (!s) return;
   try {
     await s.set(pinKey(engineHint, task), classification, PIN_TTL_SECONDS);
-  } catch (err) {
-    console.warn("[classification-pin] write failed (non-fatal)", err);
+  } catch {
+    console.warn("[classification-pin] write failed (non-fatal)");
   }
 }
 

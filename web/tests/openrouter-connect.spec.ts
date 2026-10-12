@@ -98,7 +98,7 @@ test.describe("the exchange route", () => {
   test("a good code: the key once, no-store, one exchange at OpenRouter's key endpoint", async () => {
     const res = await POST(post());
     expect(res.status).toBe(200);
-    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("cache-control")).toContain("no-store");
     expect(await res.json()).toEqual({ key: KEY });
     expect(calls).toHaveLength(1);
     expect(calls[0].url).toBe(OPENROUTER_KEYS_URL);
@@ -116,7 +116,7 @@ test.describe("the exchange route", () => {
       upstream = () => Response.json({ error: { message: `Invalid code ${CODE}` } }, { status });
       const res = await POST(post());
       expect(res.status).toBe(400);
-      expect(res.headers.get("cache-control")).toBe("no-store");
+      expect(res.headers.get("cache-control")).toContain("no-store");
       const text = await res.text();
       expect(JSON.parse(text)).toEqual({ error: "openrouter_exchange_failed" });
       for (const s of [CODE, VERIFIER]) expect(text).not.toContain(s);
@@ -137,7 +137,7 @@ test.describe("the exchange route", () => {
       upstream = answer;
       const res = await POST(post());
       expect(res.status).toBe(502);
-      expect(res.headers.get("cache-control")).toBe("no-store");
+      expect(res.headers.get("cache-control")).toContain("no-store");
       expect(await res.json()).toEqual({ error: "openrouter_exchange_failed" });
     }
     expectNothingLogged(CODE, VERIFIER, KEY);
@@ -153,7 +153,7 @@ test.describe("the exchange route", () => {
     for (const headers of refused) {
       const res = await POST(post(undefined, headers));
       expect(res.status).toBe(403);
-      expect(res.headers.get("cache-control")).toBe("no-store");
+      expect(res.headers.get("cache-control")).toContain("no-store");
       expect(await res.json()).toEqual({ error: "cross_origin" });
     }
     expect(calls).toEqual([]);
@@ -163,7 +163,7 @@ test.describe("the exchange route", () => {
     const res = await GET();
     expect(res.status).toBe(405);
     expect(res.headers.get("allow")).toBe("POST");
-    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(res.headers.get("cache-control")).toContain("no-store");
     expect(calls).toEqual([]);
   });
 
@@ -190,7 +190,7 @@ test.describe("the exchange route", () => {
     expect(calls).toEqual([]);
   });
 
-  test("rate limit: 10 exchanges a minute per IP+UA, then 429 before OpenRouter", async () => {
+  test("rate limit: 10 exchanges a minute per IP, then 429 before OpenRouter", async () => {
     for (let i = 0; i < OPENROUTER_EXCHANGE_LIMIT; i++) {
       expect((await POST(post())).status).toBe(200);
     }
@@ -199,8 +199,9 @@ test.describe("the exchange route", () => {
     expect(over.headers.get("retry-after")).toBe("60");
     expect(await over.json()).toEqual({ error: "burst_dropped" });
     expect(calls).toHaveLength(OPENROUTER_EXCHANGE_LIMIT);
-    // Another browser (UA) has its own allowance.
-    expect((await POST(post(undefined, { origin: ORIGIN, "user-agent": "other" }))).status).toBe(200);
+    // Changing user-agent does not reset the IP allowance.
+    expect((await POST(post(undefined, { origin: ORIGIN, "user-agent": "other" }))).status).toBe(429);
+    expect((await POST(post(undefined, { origin: ORIGIN, "x-forwarded-for": "192.0.2.18" }))).status).toBe(200);
   });
 });
 

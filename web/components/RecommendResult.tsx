@@ -163,6 +163,7 @@ export function RecommendResult({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ budget_priority: priority }),
     })
+      .then((response) => response.arrayBuffer())
       .catch(() => {})
       .finally(() => setPersisting(false));
   }

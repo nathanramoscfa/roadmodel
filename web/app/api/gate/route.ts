@@ -1,4 +1,5 @@
 // web/app/api/gate/route.ts
+import { privateRoute, sameOrigin, safeLocalPath, readForm } from "@/lib/http-boundaries";
 import { NextRequest, NextResponse } from "next/server";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { GATE_COOKIE, deriveGateToken } from "@/lib/gate";
@@ -20,12 +21,6 @@ function passwordMatches(submitted: string, expected: string): boolean {
   const a = createHash("sha256").update(submitted).digest();
   const b = createHash("sha256").update(expected).digest();
   return timingSafeEqual(a, b);
-}
-
-function safeNext(raw: string | null): string {
-  if (typeof raw !== "string" || raw.length === 0) return "/";
-  if (!raw.startsWith("/") || raw.startsWith("//")) return "/";
-  return raw;
 }
 
 function clientIp(req: NextRequest): string {
@@ -52,15 +47,16 @@ function failureRedirect(
   return res;
 }
 
-export async function POST(req: NextRequest): Promise<NextResponse> {
+export const POST = privateRoute(async (req: NextRequest): Promise<Response> => {
+  if (!sameOrigin(req)) return NextResponse.json({ error: "cross_origin" }, { status: 403 });
   const expected = process.env.SITE_PASSWORD;
   if (!expected) {
     return NextResponse.redirect(new URL("/", req.url), 303);
   }
 
-  const form = await req.formData();
+  const form = await readForm(req);
   const submitted = form.get("password");
-  const next = safeNext(
+  const next = safeLocalPath(
     typeof form.get("next") === "string"
       ? (form.get("next") as string)
       : null,
@@ -81,7 +77,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     });
   }
 
-  if (typeof submitted !== "string" || !passwordMatches(submitted, expected)) {
+  if (typeof submitted !== "string" || submitted.length > 1024 || !passwordMatches(submitted, expected)) {
     // Wrong password — count the failure. If it trips the lockout, alert.
     const after = await recordGateFailure(ip);
     if (after.locked) {
@@ -109,4 +105,4 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     maxAge: COOKIE_MAX_AGE_SECONDS,
   });
   return response;
-}
+});

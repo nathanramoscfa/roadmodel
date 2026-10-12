@@ -1,3 +1,4 @@
+import { ORIGIN_HEADERS } from "./fixtures/origin";
 // web/tests/auth.spec.ts
 //
 // Phase 4 Step 1 — Supabase auth integration. Mirror the describe /
@@ -59,7 +60,7 @@ test.describe("login page", () => {
 
 test.describe("middleware auth gate", () => {
   test("signed-out POST /api/profile returns 401", async ({ request }) => {
-    const response = await request.post("/api/profile", {
+    const response = await request.post("/api/profile", { headers: ORIGIN_HEADERS,
       data: { display_name: "anon" },
       failOnStatusCode: false,
     });

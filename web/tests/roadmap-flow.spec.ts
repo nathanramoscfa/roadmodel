@@ -15,6 +15,7 @@
 // Side-effect import seeds Node-side env vars BEFORE any
 // transitive load of web/lib/env.ts. Must be the first import.
 import "./fixtures/seed-test-env";
+import { ORIGIN_HEADERS } from "./fixtures/origin";
 
 import { test, expect } from "@playwright/test";
 import type { GoogleGenAI } from "@google/genai";
@@ -173,7 +174,7 @@ test(
     const ctx = await playwright.request.newContext();
     const res = await ctx.post(`http://localhost:${PORT}/api/roadmap`, {
       // Not the E2E user the server invites (playwright.config).
-      headers: { Cookie: "rm-e2e-uid=00000000-0000-4000-8000-0000000000bb" },
+      headers: { ...ORIGIN_HEADERS, Cookie: "rm-e2e-uid=00000000-0000-4000-8000-0000000000bb" },
       data: {
         messages: [
           {
@@ -200,6 +201,7 @@ test(
     await ctx.post(`http://localhost:${PORT}/api/test/e2e-reset`);
     const res = await ctx.post(`http://localhost:${PORT}/api/roadmap`, {
       headers: {
+        ...ORIGIN_HEADERS,
         Cookie:
           "rm-e2e-uid=00000000-0000-4000-8000-000000000001",
       },

@@ -1,0 +1,5 @@
+Contact: mailto:nathan.ramos.github@gmail.com
+Expires: 2027-10-12T00:00:00Z
+Preferred-Languages: en
+Canonical: https://roadmodel.ai/.well-known/security.txt
+Policy: https://github.com/nathanramoscfa/roadmodel/blob/main/SECURITY.md

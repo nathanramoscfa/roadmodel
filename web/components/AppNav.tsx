@@ -1,6 +1,7 @@
 // web/components/AppNav.tsx
 "use client";
 
+import { clearRecent } from "@/lib/recent-recommendations";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -84,7 +85,7 @@ export function AppNav({ roadmapEnabled }: { roadmapEnabled: boolean }) {
         </div>
         <div className="order-2 flex items-center gap-1 lg:order-3 lg:gap-2">
           <ThemeToggle />
-          <form action="/signout" method="post" className="ml-1">
+          <form action="/signout" method="post" onSubmit={clearRecent} className="ml-1">
             <button
               type="submit"
               className="rounded-md px-3 py-1.5 text-sm font-medium text-brand-slate-600 dark:text-brand-slate-300 hover:bg-brand-slate-50 dark:hover:bg-brand-slate-800 hover:text-brand-slate-900 dark:hover:text-brand-slate-50"
