@@ -157,7 +157,7 @@ test("renders the catalog table, legend, and model links", async ({ page }) => {
   const claude = page
     .locator(`[data-testid="model-row"][data-model-id="${ANTHROPIC_MODEL.id}"]`)
     .getByRole("link", { name: ANTHROPIC_MODEL.name, exact: true });
-  await expect(claude).toHaveAttribute("href", /docs\.claude\.com/);
+  await expect(claude).toHaveAttribute("href", /^https:\/\/docs\.claude\.com\//);
   await expect(claude).toHaveAttribute("target", "_blank");
 });
 
