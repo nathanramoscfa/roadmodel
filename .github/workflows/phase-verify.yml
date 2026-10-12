@@ -12,8 +12,7 @@ on:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: {}
 
 concurrency:
   group: phase-verify-${{ github.ref }}
@@ -21,6 +20,8 @@ concurrency:
 
 jobs:
   verify:
+    permissions:
+      contents: read
     runs-on: ${{ matrix.os }}
     timeout-minutes: 5
     strategy:
@@ -31,8 +32,10 @@ jobs:
         os: [ubuntu-latest]
         phase: ["01", "02", "03", "04", "046", "0411"]
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ (matrix.phase == '03' || matrix.phase == '04' || matrix.phase == '046' || matrix.phase == '0411') && '3.12' || '3.11' }}
       - name: Run phase verify script (--fast)
@@ -41,6 +44,8 @@ jobs:
         run: bash "scripts/verify-phase${{ matrix.phase }}.sh" --fast
 
   post:
+    permissions:
+      contents: read
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
@@ -53,10 +58,11 @@ jobs:
     steps:
       # fetch-depth: 0 so gitleaks detect can scan the full git history,
       # not just the latest commit.
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
+          persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ (matrix.phase == '03' || matrix.phase == '04' || matrix.phase == '046' || matrix.phase == '0411') && '3.12' || '3.11' }}
           # setup-python's built-in pip cache handles macOS
@@ -117,7 +123,7 @@ jobs:
         if: matrix.phase == '03'
         id: node-version
         run: echo "version=$(cat web/.nvmrc)" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         if: matrix.phase == '03'
         with:
           node-version: ${{ steps.node-version.outputs.version }}

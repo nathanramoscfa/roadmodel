@@ -21,7 +21,7 @@
 # CHANGELOG.md's [Unreleased] section, which must not be empty; an uncommitted
 # edit to CHANGELOG.md is carried onto the release branch.
 # Runs on the Mac (signed tags use the local SSH signing key).
-set -uo pipefail
+set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 # shellcheck source=scripts/ops-lib.sh
@@ -51,7 +51,15 @@ if [ -z "$version" ]; then
   version="$(python3 -c "v='$main_version'.split('.');v[-1]=str(int(v[-1])+1);print('.'.join(v))")"
   git ls-remote --exit-code --tags origin "v$main_version" >/dev/null 2>&1 || version="$main_version"
 fi
+[[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || die "invalid release version"
 tag="v$version"
+# Execute the verifier from fetched main, never from a resumed tag or branch.
+release_policy_dir="$(mktemp -d)" || die "cannot create release policy directory"
+trap 'rm -rf "$release_policy_dir"' EXIT
+verify_release() {
+  git show origin/main:scripts/verify_release_tag.py > "$release_policy_dir/verify.py" || die "trusted release verifier missing"
+  python3 "$release_policy_dir/verify.py" "$tag" "$@" >/dev/null || die "release signature, version, or ancestry verification failed"
+}
 log "release $tag (main is at $main_version, working tree at $current)"
 
 # ----------------------------------------------------------- 1. release PR
@@ -114,12 +122,14 @@ git checkout -q main && git pull -q --ff-only origin main || die "could not upda
 if ! git ls-remote --exit-code --tags origin "$tag" >/dev/null 2>&1; then
   on_main="$(pyproject_version <pyproject.toml)"
   [ "$on_main" = "$version" ] || die "main is at $on_main, not $version — will not tag"
-  git tag -s "$tag" -m "roadmodel $version" 2>/dev/null ||
-    { log "signed tag failed — using an annotated tag"; git tag -a "$tag" -m "roadmodel $version"; } ||
-    die "could not create $tag"
+  git tag -s "$tag" -m "roadmodel $version" 2>/dev/null || die "signed tag creation failed"
+  verify_release --local
   quiet_push -q origin "$tag" || die "could not push $tag"
   log "pushed $tag"
 fi
+
+# Verify existing tags on resumed releases too.
+verify_release
 
 # ------------------------------------------- 2b. TestPyPI (tag-push run)
 if ! curl -sf "https://pypi.org/pypi/roadmodel/$version/json" >/dev/null; then
@@ -162,7 +172,7 @@ if ! grep -q "roadmodel\[recommend\]>=$version," service/pyproject.toml; then
     # replays the old version list and fails with "only
     # roadmodel[recommend]<=OLD is available" (0.2.43, 0.2.44). Open the PR
     # once every copy read before the upload has expired.
-    uploaded="$(pypi_upload_epoch "$version")"
+    uploaded="$(pypi_upload_epoch "$version")" || uploaded=""
     if [ -n "$uploaded" ]; then
       wait_s=$((uploaded + 660 - $(date +%s)))
       if [ "$wait_s" -gt 0 ]; then
@@ -196,7 +206,7 @@ fi
 
 # ---------------------------------------------------------- 5. production
 for i in $(seq 1 80); do
-  live="$(healthz_version)"
+  live="$(healthz_version)" || live=""
   [ "$live" = "$version" ] && { log "production /healthz reports $version — release complete"; exit 0; }
   sleep 15
 done

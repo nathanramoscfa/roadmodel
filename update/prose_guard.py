@@ -40,7 +40,10 @@ CHECKS: tuple[tuple[str, re.Pattern[str]], ...] = (
             r"|\bon[a-z]+\s*=\s*[\"']"
         ),
     ),
-    ("an invisible or bidirectional-control character", re.compile("[​-‏‪-‮⁠-⁤⁦-⁩﻿]")),
+    (
+        "an invisible or bidirectional-control character",
+        re.compile("[\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]"),
+    ),
     (
         "an instruction to override earlier instructions",
         re.compile(
