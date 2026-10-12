@@ -65,7 +65,7 @@ def _request(method: str, url: str, token: str, body: Any | None = None) -> byte
     }
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, headers=headers, method=method)  # noqa: S310
-    with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
+    with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310  # nosec B310
         return bytes(resp.read())
 
 

@@ -1,7 +1,7 @@
 name: Merge validated refreshes
 
 on:
-  workflow_run:
+  workflow_run: # zizmor: ignore[dangerous-triggers] main only; candidate blobs are data
     workflows:
       - Update roadmodel catalog docs
       - Update Claude Code surface parameters

@@ -64,7 +64,7 @@ def test_recovery_closes_the_alarm() -> None:
 
 def test_cron_health_posts_with_the_workflow_token() -> None:
     wf = yaml.safe_load((REPO_ROOT / ".github" / "workflows" / "cron-health.yml").read_text())
-    assert wf["permissions"]["issues"] == "write"
+    assert wf["jobs"]["health"]["permissions"]["issues"] == "write"
     step = next(
         s
         for s in wf["jobs"]["health"]["steps"]

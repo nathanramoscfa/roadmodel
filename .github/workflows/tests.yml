@@ -7,8 +7,7 @@ on:
   pull_request:
     branches: [main]
 
-permissions:
-  contents: read
+permissions: {}
 
 concurrency:
   group: tests-${{ github.ref }}
@@ -16,6 +15,8 @@ concurrency:
 
 jobs:
   lint:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -23,11 +24,13 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions/cache@v5
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('pyproject.toml', 'tests/requirements.txt') }}
@@ -43,6 +46,8 @@ jobs:
         run: ruff format --check src tests update
 
   type-check:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -50,11 +55,13 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions/cache@v5
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('pyproject.toml', 'update/requirements.txt') }}
@@ -71,6 +78,8 @@ jobs:
         run: mypy --strict src update
 
   test-matrix:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
@@ -78,13 +87,14 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
+          persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions/cache@v5
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('pyproject.toml', 'tests/requirements.txt', 'update/requirements.txt') }}
@@ -113,11 +123,15 @@ jobs:
         run: pytest -x --cov=roadmodel tests/ --ignore=tests/test_sources_live.py -m "not freshness"
 
   agent-context-windows:
+    permissions:
+      contents: read
     runs-on: windows-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.11"
       - name: Install test runner
@@ -126,6 +140,8 @@ jobs:
         run: python -m pytest -q tests/test_agent_context.py tests/test_updater_lock.py
 
   package-smoke:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -133,11 +149,13 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions/cache@v5
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-py${{ matrix.python-version }}-pip-${{ hashFiles('pyproject.toml') }}
@@ -145,9 +163,8 @@ jobs:
             ${{ runner.os }}-py${{ matrix.python-version }}-pip-
       - name: Build distribution
         run: |
-          python -m pip install --upgrade pip
-          pip install build
-          python -m build
+          python -m pip install --require-hashes -r .github/requirements-build.txt
+          python -m build --no-isolation
       - name: Install BARE wheel in a fresh venv (no recommend extra)
         run: |
           python -m venv .pkg-smoke-venv
@@ -167,58 +184,65 @@ jobs:
           python -m roadmodel.update_projects --self-check
 
   security-scan:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
-      - uses: actions/cache@v5
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-py3.12-security-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-py3.12-security-
-      - name: Install dependencies
+      - name: Install locked security tools and resolve audited dependencies separately
         run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          python -m venv "$RUNNER_TEMP/security-tools"
+          "$RUNNER_TEMP/security-tools/bin/pip" install --require-hashes -r .github/requirements-security.txt
+          python -m venv "$RUNNER_TEMP/audit-target"
+          "$RUNNER_TEMP/audit-target/bin/pip" install -e ".[dev,recommend]" -e "service[dev]" -r update/requirements.txt
+          "$RUNNER_TEMP/audit-target/bin/pip" freeze --exclude-editable > "$RUNNER_TEMP/audit-requirements.txt"
       - name: Bandit static analysis
-        run: bandit -r src/
-      - name: pip-audit (runtime + dev dependencies)
-        # --skip-editable so roadmodel itself (installed editable for
-        # CI) is not audited against PyPI; only third-party deps are.
-        # --strict cannot combine with --skip-editable because the skip
-        # is itself treated as a strict-mode error.
-        run: pip-audit --skip-editable
+        run: '"$RUNNER_TEMP/security-tools/bin/bandit" -r src/ update/ service/app/ -ll'
+      - name: Audit resolved package, provider, service and CI dependencies
+        run: '"$RUNNER_TEMP/security-tools/bin/pip-audit" --strict --no-deps --disable-pip -r "$RUNNER_TEMP/audit-requirements.txt"'
 
   roadmap-sync:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
       - name: Lint public ROADMAP.md against deny-list
         run: python update/sync_public_roadmap.py --check
 
   web-build:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
       - name: Read Node version
         id: node-version
         run: echo "version=$(cat web/.nvmrc)" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ steps.node-version.outputs.version }}
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: Install web dependencies
         run: npm ci --prefix web
+      - name: Audit production web dependencies
+        run: npm audit --omit=dev --audit-level=high --prefix web
       - name: Lint web
         run: npm --prefix web run lint
       - name: Typecheck web
@@ -227,15 +251,19 @@ jobs:
         run: npm --prefix web run build:ci
 
   web-test:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: [web-build]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
       - name: Read Node version
         id: node-version
         run: echo "version=$(cat web/.nvmrc)" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ steps.node-version.outputs.version }}
           cache: npm
@@ -251,11 +279,15 @@ jobs:
         run: npm --prefix web run test:ci
 
   service-tests:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
       - name: Install service dependencies
@@ -279,14 +311,18 @@ jobs:
         run: pytest service/tests/ -x
 
   migration-tests:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
-      - uses: actions/cache@v5
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-py3.12-migration-${{ hashFiles('tests/requirements.txt', 'pyproject.toml') }}
@@ -297,7 +333,7 @@ jobs:
           docker compose -f infra/test-postgres/docker-compose.yml up -d
       - name: Wait for Postgres health
         run: |
-          for i in $(seq 1 30); do
+          for _attempt in $(seq 1 30); do
             if docker compose -f infra/test-postgres/docker-compose.yml \
                  exec -T postgres pg_isready -U postgres -d postgres; then
               exit 0
@@ -321,7 +357,75 @@ jobs:
         run: |
           docker compose -f infra/test-postgres/docker-compose.yml down -v
 
+  workflow-security:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Install integrity-pinned scanners
+        run: |
+          set -euo pipefail
+          python -m pip install --require-hashes -r .github/requirements-security.txt
+          mkdir "$RUNNER_TEMP/scanners"
+          cd "$RUNNER_TEMP/scanners"
+          curl -fsSLo actionlint.tar.gz https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  actionlint.tar.gz' | sha256sum -c -
+          tar -xzf actionlint.tar.gz actionlint
+          curl -fsSLo gitleaks.tar.gz https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gitleaks.tar.gz' | sha256sum -c -
+          tar -xzf gitleaks.tar.gz gitleaks
+          echo "$RUNNER_TEMP/scanners" >> "$GITHUB_PATH"
+      - name: Validate the locked refresh environment
+        run: |
+          python -m venv "$RUNNER_TEMP/updater-tools"
+          "$RUNNER_TEMP/updater-tools/bin/pip" install --require-hashes --only-binary=:all: -r .github/requirements-updater.txt
+          "$RUNNER_TEMP/updater-tools/bin/python" -c "import anthropic, bs4, pyarrow, requests"
+      - name: Lint and audit workflows
+        run: |
+          actionlint
+          zizmor --no-online-audits --min-severity=medium .github/workflows
+      - name: Scan all fetched history for secrets
+        run: gitleaks git --redact=100 --no-banner --log-opts=--all .
+
+  codeql:
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, javascript-typescript]
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          queries: security-extended
+      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
+        with:
+          output: ${{ runner.temp }}/codeql-results
+          category: /language:${{ matrix.language }}
+      - name: Enforce high and critical findings gate
+        env:
+          SARIF_DIRECTORY: ${{ runner.temp }}/codeql-results
+        run: python3 scripts/check_codeql_sarif.py "$SARIF_DIRECTORY"
+
   test:
+    permissions: {}
     if: ${{ always() }}
     needs:
       - lint
@@ -330,6 +434,8 @@ jobs:
       - test-matrix
       - package-smoke
       - security-scan
+      - workflow-security
+      - codeql
       - roadmap-sync
       - service-tests
       - web-build
@@ -350,7 +456,9 @@ jobs:
           echo "web-build=${{ needs.web-build.result }}"
           echo "web-test=${{ needs.web-test.result }}"
           echo "migration-tests=${{ needs.migration-tests.result }}"
-          if [ "${{ needs.lint.result }}" != "success" ] || \
+          if [ "${{ needs.workflow-security.result }}" != "success" ] || \
+             [ "${{ needs.codeql.result }}" != "success" ] || \
+             [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.type-check.result }}" != "success" ] || \
              [ "${{ needs.agent-context-windows.result }}" != "success" ] || \
              [ "${{ needs.test-matrix.result }}" != "success" ] || \

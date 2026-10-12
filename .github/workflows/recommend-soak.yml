@@ -38,9 +38,7 @@ on:
         type: boolean
         default: true
 
-permissions:
-  contents: read
-  issues: write
+permissions: {}
 
 concurrency:
   group: recommend-soak
@@ -48,9 +46,15 @@ concurrency:
 
 jobs:
   soak:
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      issues: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
 
       - name: Check prod-soak secrets present
         id: check
@@ -68,7 +72,7 @@ jobs:
             echo "::notice::Prod-soak secrets not seeded — skipping. Seed SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_ANON_KEY, SITE_PASSWORD (and optionally ROADMODEL_LATENCY_BYPASS_TOKEN) as Actions secrets to enable."
           fi
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         if: steps.check.outputs.have == 'true'
         with:
           # Node 22 (not web/.nvmrc's 20): @supabase/supabase-js's realtime
@@ -111,7 +115,7 @@ jobs:
           echo "exit=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
           echo "health=$(grep -m1 '^SERVICE_HEALTH:' /tmp/soak.log || true)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         if: steps.check.outputs.have == 'true' && steps.soak.outputs.exit != '3'
         with:
           python-version: "3.13"
@@ -123,6 +127,7 @@ jobs:
         run: |
           V=$(curl -fsS https://roadmodel-api.vercel.app/healthz | python -c 'import json,sys; print(json.load(sys.stdin)["roadmodel_version"])')
           echo "Production runs roadmodel $V"
+          [[ "$V" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || exit 1
           python -m pip install --quiet "roadmodel==$V"
           # Claude Code, pinned, for the judge (claude -p).
           npm install -g --no-fund --no-audit @anthropic-ai/claude-code@2.1.293
@@ -142,7 +147,7 @@ jobs:
 
       - name: Track regression in a single issue
         if: steps.check.outputs.have == 'true' && (steps.soak.outputs.exit != '0' || (steps.judge.outputs.exit != '' && steps.judge.outputs.exit != '0'))
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const fs = require("fs");
@@ -177,7 +182,7 @@ jobs:
       - name: Alarm while the recommender is down
         # exit 3 = scripts/soak-health.ts found half or more requests failing.
         if: steps.check.outputs.have == 'true' && steps.soak.outputs.exit == '3'
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
           HEALTH: ${{ steps.soak.outputs.health }}
         with:
@@ -219,7 +224,7 @@ jobs:
 
       - name: Close the alarm once the recommender answers again
         if: steps.check.outputs.have == 'true' && steps.soak.outputs.exit != '' && steps.soak.outputs.exit != '3'
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
           HEALTH: ${{ steps.soak.outputs.health }}
         with:

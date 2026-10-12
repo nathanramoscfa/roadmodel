@@ -18,9 +18,7 @@ on:
         type: boolean
         default: false
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 concurrency:
   group: update-codex
@@ -28,17 +26,26 @@ concurrency:
 
 jobs:
   update:
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/create-github-app-token@v2
+      - uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
         id: app-token
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5; zizmor: ignore[artipacked] credentials needed for scoped PR push
         with:
+          persist-credentials: true
           # Authenticate as the roadmodel cron GitHub App (installation token
           # minted above) so the push + gh pr create are attributed to the App
           # and its PRs TRIGGER required-status workflows (the default
@@ -46,20 +53,20 @@ jobs:
           # (secrets.BOT_PAT), which expired and broke the cron at checkout.
           token: ${{ steps.app-token.outputs.token }}
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: update/requirements.txt
+          cache-dependency-path: .github/requirements-updater.txt
 
       - name: Install dependencies
-        run: pip install -r update/requirements.txt
+        run: pip install --require-hashes -r .github/requirements-updater.txt
 
       - name: Restore Codex source-hash cache
         # In-scope reasoning-span signature from the previous successful run.
         # Restore-keys lookup falls back to the most recent saved entry if the
         # exact run_id key misses (always, by design).
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             update/.cache/codex-docs-hash
@@ -107,6 +114,8 @@ jobs:
               echo "Tracking issue already open for: ${model}"
               continue
             fi
+            # Literal Markdown/jq syntax; shell expansion is not intended.
+            # shellcheck disable=SC2016
             gh issue create \
               --title "$title" \
               --label codex-new-model \
@@ -121,13 +130,14 @@ jobs:
         id: opus
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
         run: |
           set -eo pipefail
-          ARGS="--docs-changed"
-          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
-            ARGS="$ARGS --dry-run"
+          ARGS=(--docs-changed)
+          if [ "$DRY_RUN" = "true" ]; then
+            ARGS+=(--dry-run)
           fi
-          python update/update_codex.py $ARGS
+          python update/update_codex.py "${ARGS[@]}"
 
       - name: Render model-selector.md
         # Keep the rendered mirror in sync with the .txt Opus just edited (the
@@ -201,6 +211,8 @@ jobs:
           git add docs/model-selector.txt docs/model-selector.md docs/catalog.json update/codex-reasoning.json update/codex-reasoning-source.md
           git commit -m "Automated Codex refresh: ${DATE}" -m "${summary}${warnings}"
           git push -u origin "$BRANCH"
+          # Literal Markdown/jq syntax; shell expansion is not intended.
+          # shellcheck disable=SC2016
           PR_URL="$(gh pr create \
             --base main \
             --head "$BRANCH" \
