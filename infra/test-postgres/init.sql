@@ -29,6 +29,12 @@ begin
 end
 $$;
 
+-- Supabase supplies broad table privileges before application migrations.
+-- Model those defaults here so security migrations must revoke them correctly.
+grant usage on schema public, auth to anon, authenticated, service_role;
+alter default privileges in schema public
+  grant select, insert, update, delete on tables to anon, authenticated, service_role;
+
 -- auth.uid() helper used by RLS USING expressions. Supabase
 -- populates request.jwt.claim.sub from the access token; the test
 -- harness sets it explicitly when exercising authenticated reads.
