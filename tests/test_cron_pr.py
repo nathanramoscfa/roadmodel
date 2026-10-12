@@ -35,13 +35,13 @@ def fixture() -> tuple[dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
     pr = {
         "number": 42,
         "user": {"login": "roadmodel-cron-bot[bot]", "type": "Bot"},
-        "base": {"ref": "main", "repo": {"full_name": REPO}},
+        "base": {"ref": "main", "repo": {"full_name": REPO}, "sha": "b" * 40},
         "head": {"ref": "chore/codex-refresh-2026-10-12", "repo": {"full_name": REPO}, "sha": SHA},
         "draft": False,
         "created_at": "2026-10-12T12:05:00Z",
         "changed_files": 1,
     }
-    return run, pr, [{"filename": "docs/catalog.json"}]
+    return run, pr, [{"filename": "docs/catalog.json", "status": "modified"}]
 
 
 def test_own_data_pr_returns_exact_commit() -> None:
@@ -108,6 +108,8 @@ def test_partial_file_inventory_is_rejected() -> None:
 def test_shell_resolver_never_reads_log_links(tmp_path: Path) -> None:
     run, pr, files = fixture()
     payload = {"run": run, "pr": pr, "files": files}
+    payload["commit"] = {"sha": SHA, "committer": {"date": pr["created_at"]}}
+    payload["tree"] = {"tree": [{"path": "docs/catalog.json", "type": "blob", "mode": "100644"}]}
     data = tmp_path / "fixture.json"
     data.write_text(json.dumps(payload))
     gh = tmp_path / "gh"
@@ -119,7 +121,9 @@ def test_shell_resolver_never_reads_log_links(tmp_path: Path) -> None:
         " print('https://github.com/example/project/pull/999'); sys.exit(0)\n"
         "p=sys.argv[-1]\n"
         "if '/actions/runs/' in p: result=j['run']\n"
-        "elif '/files?' in p: result=j['files']\n"
+        "elif '/compare/' in p: result={'files':j['files']}\n"
+        "elif '/git/commits/' in p: result=j['commit']\n"
+        "elif '/git/trees/' in p: result=j['tree']\n"
         "elif '/pulls?' in p: result=[j['pr']]\n"
         "else: result=j['pr']\n"
         "print(json.dumps([result]))\n"
@@ -160,3 +164,41 @@ def test_shell_resolver_never_reads_log_links(tmp_path: Path) -> None:
     )
     assert result.returncode != 0
     assert result.stdout == ""
+
+
+def test_same_day_refresh_uses_commit_time() -> None:
+    run, pr, files = fixture()
+    pr["created_at"] = "2026-10-12T01:00:00Z"
+    assert guard.validate(run, pr, files, REPO, committed_at="2026-10-12T12:04:00Z") == SHA
+
+
+def test_rebase_rechecks_paths_without_requiring_original_timestamp() -> None:
+    run, pr, files = fixture()
+    later = "2026-10-12T12:30:00Z"
+    with pytest.raises(ValueError):
+        guard.validate(run, pr, files, REPO, committed_at=later)
+    assert guard.validate(run, pr, files, REPO, committed_at=later, check_time=False) == SHA
+    files[0]["filename"] = "scripts/update_projects.py"
+    with pytest.raises(ValueError):
+        guard.validate(run, pr, files, REPO, committed_at=later, check_time=False)
+
+
+@pytest.mark.parametrize("mode", ["120000", "100755", "160000"])
+def test_immutable_tree_rejects_non_data_modes(monkeypatch: pytest.MonkeyPatch, mode: str) -> None:
+    run, pr, files = fixture()
+    paths: list[str] = []
+
+    def api(repo: str, path: str) -> Any:
+        assert repo == REPO
+        paths.append(path)
+        if path.startswith("compare/"):
+            assert path == f"compare/{'b' * 40}...{SHA}"
+            return {"files": files}
+        if path.startswith("git/commits/"):
+            return {"sha": SHA, "committer": {"date": pr["created_at"]}}
+        return {"tree": [{"path": "docs/catalog.json", "type": "blob", "mode": mode}]}
+
+    monkeypatch.setattr(guard, "api", api)
+    with pytest.raises(ValueError, match="regular non-executable"):
+        guard.validated_commit(run, pr, REPO)
+    assert all("pulls/" not in path for path in paths)

@@ -92,7 +92,13 @@ def policy(run: dict[str, Any], repo: str) -> tuple[str, set[str]] | None:
 
 
 def validate(
-    run: dict[str, Any], pr: dict[str, Any], files: list[dict[str, Any]], repo: str
+    run: dict[str, Any],
+    pr: dict[str, Any],
+    files: list[dict[str, Any]],
+    repo: str,
+    *,
+    committed_at: str | None = None,
+    check_time: bool = True,
 ) -> str:
     selected = policy(run, repo)
     if selected is None:
@@ -108,11 +114,11 @@ def validate(
         or pr["draft"]
     ):
         raise ValueError("PR provenance does not match the refresh")
-    created = datetime.fromisoformat(pr["created_at"].replace("Z", "+00:00"))
+    created = datetime.fromisoformat((committed_at or pr["created_at"]).replace("Z", "+00:00"))
     start = datetime.fromisoformat(run["created_at"].replace("Z", "+00:00"))
     end = datetime.fromisoformat(run["updated_at"].replace("Z", "+00:00"))
-    if not start <= created <= end:
-        raise ValueError("PR was not created during this run")
+    if check_time and not start <= created <= end:
+        raise ValueError("PR commit was not produced during this run")
     if not files or len(files) != pr["changed_files"]:
         raise ValueError("incomplete changed-file inventory")
     if any(
@@ -127,6 +133,39 @@ def validate(
     return sha
 
 
+def validated_commit(
+    run: dict[str, Any], pr: dict[str, Any], repo: str, *, check_time: bool = True
+) -> str:
+    """Check immutable commit/tree objects, including same-day refreshed PRs."""
+    head = pr["head"]["sha"]
+    base = pr["base"]["sha"]
+    if any(re.fullmatch(r"[0-9a-f]{40}", sha) is None for sha in (head, base)):
+        raise ValueError("invalid comparison commits")
+    comparison = api(repo, f"compare/{base}...{head}")
+    files = comparison["files"]
+    # GitHub limits comparison files to 300. Refuse a truncated result rather
+    # than falling back to the mutable pull-request files endpoint.
+    if len(files) >= 300:
+        raise ValueError("comparison exceeds the data refresh limit")
+    commit = api(repo, f"git/commits/{head}")
+    if commit["sha"] != head:
+        raise ValueError("unexpected commit response")
+    sha = validate(
+        run, pr, files, repo, committed_at=commit["committer"]["date"], check_time=check_time
+    )
+    tree = api(repo, f"git/trees/{head}?recursive=1")
+    if tree.get("truncated"):
+        raise ValueError("incomplete commit tree")
+    entries = {entry["path"]: entry for entry in tree["tree"]}
+    for file in files:
+        if file["status"] == "removed":
+            continue
+        entry = entries[file["filename"]]
+        if entry["type"] != "blob" or entry["mode"] != "100644":
+            raise ValueError("refresh data must be regular non-executable files")
+    return sha
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", required=True)
@@ -138,8 +177,10 @@ def main() -> int:
         selected = policy(run, args.repo)
         if args.pr is not None:
             pr = api(args.repo, f"pulls/{args.pr}")
-            files = api(args.repo, f"pulls/{args.pr}/files?per_page=100")
-            print(validate(run, pr, files, args.repo))
+            # Discovery already bound this PR to the run. A subsequent trusted
+            # rebase changes its commit timestamp; all origin, path, tree and
+            # SHA checks still run immediately before every merge attempt.
+            print(validated_commit(run, pr, args.repo, check_time=False))
         elif selected is not None:
             # Enumerate API records, never interpret workflow logs as commands
             # or as evidence that a privileged operation should target a PR.
@@ -148,8 +189,7 @@ def main() -> int:
                 if re.fullmatch(branches, pr["head"]["ref"]) is None:
                     continue
                 detail = api(args.repo, f"pulls/{pr['number']}")
-                files = api(args.repo, f"pulls/{pr['number']}/files?per_page=100")
-                validate(run, detail, files, args.repo)
+                validated_commit(run, detail, args.repo)
                 print(pr["number"])
     except (KeyError, TypeError, ValueError, subprocess.SubprocessError):
         print("Cannot validate refresh PR provenance; refusing automated merge.", file=sys.stderr)
