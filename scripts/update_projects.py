@@ -2192,16 +2192,21 @@ class _Tee:
 
 
 def _open_log() -> object:
-    _private_dir(CONFIG_DIR)
-    # A handed-over run continues the section its launcher opened.
-    handed_over = bool(os.environ.get(DELEGATED_ENV))
-    if not handed_over and LOG_FILE.exists() and LOG_FILE.stat().st_size > LOG_MAX_BYTES:
-        tail = LOG_FILE.read_bytes()[-LOG_MAX_BYTES // 5 :]
-        _replace_bytes(LOG_FILE, tail)
-    fh = _support("private_files").open_private_append(LOG_FILE)
-    if not handed_over:
-        fh.write(f"\n===== {_dt.datetime.now().isoformat(timespec='seconds')} =====\n")
-    return fh
+    try:
+        _private_dir(CONFIG_DIR)
+        # A handed-over run continues the section its launcher opened.
+        handed_over = bool(os.environ.get(DELEGATED_ENV))
+        if not handed_over and LOG_FILE.exists() and LOG_FILE.stat().st_size > LOG_MAX_BYTES:
+            tail = LOG_FILE.read_bytes()[-LOG_MAX_BYTES // 5 :]
+            _replace_bytes(LOG_FILE, tail)
+        fh = _support("private_files").open_private_append(LOG_FILE)
+        if not handed_over:
+            fh.write(f"\n===== {_dt.datetime.now().isoformat(timespec='seconds')} =====\n")
+        return fh
+    except (OSError, ValueError):
+        raise RuntimeError(
+            "Private log cannot be opened safely; repair its permissions before retrying."
+        ) from None
 
 
 # --------------------------------------------------------------------------

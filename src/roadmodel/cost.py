@@ -53,10 +53,6 @@ FUNDING_UNFUNDED_LOCAL: Final = "unfunded-local"
 LOCAL_COST_LABEL: Final = "$0 — local hardware"
 
 _FAST_SUFFIX_RE: Final = re.compile(r"\s+Fast\s*$", re.IGNORECASE)
-# A trailing parenthetical on a tier name — the catalog's "($100)" price tag
-# or an operator's own "(5x)" — is not part of the tier's identity; the
-# monthly price is compared separately.
-_TIER_PAREN_RE: Final = re.compile(r"\s*\([^()]*\)\s*$")
 _TABLE_ROW_RE: Final = re.compile(r"^\s*\|(.+)\|\s*$")
 
 
@@ -660,7 +656,15 @@ def _match_active_tier(
 
 
 def _canonical_tier_name(name: str) -> str:
-    return _TIER_PAREN_RE.sub("", name).strip().lower()
+    # A final price/multiplier parenthetical is not part of the tier identity;
+    # its monthly price is compared separately.
+    value = name.strip()
+    if value.endswith(")"):
+        opening = value.rfind("(")
+        # Only the last opening can begin a non-nested final suffix.
+        if opening >= 0 and ")" not in value[opening + 1 : -1]:
+            value = value[:opening].rstrip()
+    return value.lower()
 
 
 def _parse_active_subscriptions(text: str) -> list[tuple[str, str, float | None]]:

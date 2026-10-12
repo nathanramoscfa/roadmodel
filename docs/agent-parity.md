@@ -177,6 +177,20 @@ overlapping runs. A machine lock prevents simultaneous upgrades; a busy run
 reports a failure so it can be retried. The schedule's normal full upgrade follows published
 roadmodel releases and refreshes its own launcher and companion modules.
 
+Private writes use atomic replacement and owner-only permissions. On Windows,
+local drives must support persistent ACLs; newly created private files grant
+access only to the current user, SYSTEM and Administrators. Output paths reject
+junctions, device names and alternate data streams. UNC and cloud reparse paths
+are unsupported. Ordinary ancestor directories retain their existing ACLs.
+Only explicitly selected private directories have their permissions tightened.
+
+An existing Windows log with broader or inherited permissions is refused before
+appending. Stop its old updater process and repair that specific log before the
+first upgrade; changing a DACL does not revoke an already-open reader. A current
+launcher and its handover child can append to the same protected log. This
+protects future writes; it does not automatically repair older files throughout
+registered projects.
+
 Fleet orchestration does not merge a repository's memory between separate
 clones on different machines. If you use the same repository on multiple
 machines, synchronize its private memory store separately with conflict

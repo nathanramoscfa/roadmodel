@@ -30,7 +30,8 @@ GLOBAL_RULES_ERROR = 75
 
 # Sent over SSH stdin, so neither private rules nor large payloads appear in
 # command arguments (Windows cmd.exe also has a relatively short command limit).
-# The only dynamic input is the JSON payload, never executable source text.
+# Private rules are JSON data. The fixed private-writer helper is shipped with
+# this released bootstrap, never fetched from a peer or a moving remote ref.
 _REMOTE_SCRIPT = r"""
 import hashlib
 import json
@@ -38,24 +39,13 @@ import os
 from pathlib import Path
 import runpy
 import sys
-import tempfile
 
 def atomic(path, content, expected=None, guard=False):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, temporary = tempfile.mkstemp(prefix='.fleet-', dir=str(path.parent))
-    try:
-        with os.fdopen(fd, 'wb') as stream:
-            stream.write(content)
-            stream.flush()
-            os.fsync(stream.fileno())
-        if guard:
-            observed = hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else None
-            if observed != expected:
-                raise SystemExit(73)
-        os.replace(temporary, path)
-    finally:
-        if os.path.exists(temporary):
-            os.unlink(temporary)
+    def verify_current():
+        observed = hashlib.sha256(private['read_private_output'](path)).hexdigest() if path.exists() else None
+        if observed != expected:
+            raise SystemExit(73)
+    private['atomic_private_write'](path, content, before_replace=verify_current if guard else None)
 
 rules = payload.get('global_rules')
 if rules is not None:
@@ -279,6 +269,19 @@ def build_input(
     }
     encoded = base64.b64encode(json.dumps(payload).encode("utf-8")).decode("ascii")
     prefix = f"import base64,json\npayload=json.loads(base64.b64decode('{encoded}'))\n"
+    here = Path(__file__).resolve()
+    helper = (
+        here.parent.parent / "src/roadmodel/private_files.py"
+        if here.parent.name == "scripts" and (here.parent.parent / "pyproject.toml").is_file()
+        else here.with_name("private_files.py")
+    )
+    if not helper.is_file() or helper.is_symlink():
+        raise ValueError("released private file helper is missing")
+    encoded_helper = base64.b64encode(helper.read_bytes()).decode("ascii")
+    prefix += (
+        "private={}\n"
+        f"exec(compile(base64.b64decode('{encoded_helper}'), '<released-private-helper>', 'exec'), private)\n"
+    )
     return (prefix + _REMOTE_SCRIPT).encode("utf-8")
 
 

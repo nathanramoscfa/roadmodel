@@ -2106,3 +2106,20 @@ def test_schedule_preview_does_not_create_private_state(up, tmp_path, monkeypatc
     monkeypatch.setattr(up, "LAUNCHER", config / "update_projects.py")
     up.install_schedule("09:00", dry_run=True)
     assert not config.exists()
+
+
+def test_private_log_refusal_has_a_fixed_diagnostic(up, tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(up, "CONFIG_DIR", tmp_path)
+    monkeypatch.setattr(up, "LOG_FILE", tmp_path / "new.log")
+    monkeypatch.setattr(up, "_private_dir", lambda path: None)
+
+    def denied(path):
+        raise ValueError("synthetic-private-marker")
+
+    monkeypatch.setattr(up, "_support", lambda name: SimpleNamespace(open_private_append=denied))
+    with pytest.raises(RuntimeError, match="Private log cannot be opened safely") as error:
+        up._open_log()
+    assert "synthetic-private-marker" not in str(error.value)
+    assert error.value.__suppress_context__
