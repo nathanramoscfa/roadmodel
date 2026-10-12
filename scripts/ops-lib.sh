@@ -59,34 +59,43 @@ prs_from_run() {
 # MERGE_GH_TOKEN (optional) is used for the merge itself: in Actions it is the
 # cron App's token, so the merge commit still triggers push workflows.
 merge_when_green() {
-  local pr="$1" run_id="${2:-}" state merge_state failing i head_sha
-  for i in $(seq 1 120); do
-    head_sha=""
-    if [ -n "$run_id" ]; then
-      head_sha="$(python3 "$HERE/cron_pr.py" --repo "$REPO" --run "$run_id" --pr "$pr")" ||
-        die "PR provenance validation failed"
-    fi
+  local pr="$1" run_id="${2:-}" state merge_state failing i head_sha checks_ready
+  for i in $(seq 1 "${MERGE_MAX_POLLS:-120}"); do
     state="$(gh pr view "$pr" -R "$REPO" --json state -q .state)"
     [ "$state" = "MERGED" ] && { log "PR #$pr merged"; return 0; }
-    [ "$state" = "CLOSED" ] && { log "PR #$pr was closed (superseded?) — skipping"; return 0; }
+    [ "$state" = "CLOSED" ] && { log "PR #$pr was closed — skipping"; return 0; }
+    head_sha=""
     failing="$(gh pr view "$pr" -R "$REPO" --json statusCheckRollup \
       -q '[.statusCheckRollup[] | select((.conclusion // .state) as $c | $c == "FAILURE" or $c == "ERROR" or $c == "CANCELLED" or $c == "TIMED_OUT")] | map(.name // .context) | join(", ")')"
-    [ -n "$failing" ] && die "PR #$pr has failing checks: $failing — https://github.com/$REPO/pull/$pr"
     merge_state="$(gh pr view "$pr" -R "$REPO" --json mergeStateStatus -q .mergeStateStatus)"
+    if [ -n "$failing" ] && [ "$merge_state" != "BEHIND" ]; then
+      die "PR #$pr has failing checks: $failing — https://github.com/$REPO/pull/$pr"
+    fi
     case "$merge_state" in
       BEHIND)
+        if [ -n "$run_id" ]; then
+          python3 "$HERE/cron_pr.py" --repo "$REPO" --run "$run_id" --pr "$pr" --paths-only >/dev/null ||
+            die "PR provenance validation failed"
+        fi
         log "PR #$pr is behind main — rebasing"
         _gh_as_merger pr update-branch "$pr" -R "$REPO" --rebase || true ;;
       CLEAN | HAS_HOOKS | UNSTABLE)
-        if [ -n "$head_sha" ]; then
-          _gh_merge "$pr" --squash --delete-branch --match-head-commit "$head_sha" || true
-        else
-          _gh_merge "$pr" --squash --delete-branch || _gh_merge "$pr" --squash || true
+        checks_ready="$(gh pr view "$pr" -R "$REPO" --json headRefOid,statusCheckRollup \
+          -q '[.statusCheckRollup[] | (.conclusion // .state)] as $states | if ($states | length > 0) and ($states | all(. == "SUCCESS" or . == "SKIPPED" or . == "NEUTRAL")) and any(.statusCheckRollup[]; .name == "test" and .conclusion == "SUCCESS") then .headRefOid else empty end')"
+        if [ -n "$run_id" ]; then
+          if [ -n "$checks_ready" ]; then
+            head_sha="$(python3 "$HERE/cron_pr.py" --repo "$REPO" --run "$run_id" --pr "$pr")" ||
+              die "PR provenance validation failed"
+            [ "$head_sha" = "$checks_ready" ] || continue
+            _gh_merge "$pr" --squash --delete-branch --match-head-commit "$head_sha" || true
+          fi
+        elif [ -n "$checks_ready" ]; then
+          _gh_merge "$pr" --squash --delete-branch --match-head-commit "$checks_ready" || true
         fi ;;
     esac
     sleep 20
   done
-  die "PR #$pr did not merge within 40 minutes — https://github.com/$REPO/pull/$pr"
+  die "PR #$pr did not merge within the polling window — https://github.com/$REPO/pull/$pr"
 }
 
 # gh as the merger: MERGE_GH_TOKEN when set (the cron App in Actions, so the

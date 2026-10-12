@@ -219,6 +219,8 @@ jobs:
         run: |
           set -euo pipefail
           nl=$'\n'  # joins sections: $( ) strips the trailing newlines of what it captures
+          # Validate final generated data before publishing or promoting source hashes.
+          python update/automation_integrity.py
           if git diff --quiet -- docs/model-selector.txt docs/model-selector.md docs/catalog.json update/deepseek-thinking.json; then
             echo "No selector / snapshot changes — nothing to commit."
             exit 0
@@ -254,9 +256,9 @@ jobs:
             --base main \
             --head "$BRANCH" \
             --title "Automated DeepSeek refresh: ${DATE}" \
-            --body "$(printf '## Summary\n\n%s%s%s\n\n---\n\nThis PR was opened automatically by the daily DeepSeek refresh cron in `.github/workflows/update-deepseek.yml`. It tracks the DeepSeek API thinking-mode docs (HTML, parsed with bs4); the change trigger hashes the EXTRACTED FACTS, and the docs snapshot (`update/deepseek-thinking.json`) plus the offline conformance gate (check F) keep the selector consistent with the docs. Auto-merge is enabled: GitHub will squash-merge once the `test` status check passes. To stop it: `gh pr merge --disable-auto`.' "$summary" "$warnings$newmodel" "$newtier")")"
+            --body "$(printf '## Summary\n\n%s%s%s\n\n---\n\nThis PR was opened automatically by the daily DeepSeek refresh cron in `.github/workflows/update-deepseek.yml`. It tracks the DeepSeek API thinking-mode docs (HTML, parsed with bs4); the change trigger hashes the EXTRACTED FACTS, and the docs snapshot (`update/deepseek-thinking.json`) plus the offline conformance gate (check F) keep the selector consistent with the docs. The validated refresh merger checks instruction integrity and all CI results before squash-merging. To stop it: mark the PR as draft.' "$summary" "$warnings$newmodel" "$newtier")")"
           echo "Opened: $PR_URL"
-          gh pr merge --auto --squash --delete-branch "$PR_URL"
+          echo "The validated refresh merger will evaluate $PR_URL."
 
       - name: Promote source-hash for next run
         # Only promote staged → canonical if every prior step succeeded and this
