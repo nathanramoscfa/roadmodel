@@ -7,7 +7,7 @@
 // with budget_priority overridden in the BODY (no profile mutation) for each of
 // cheap / balanced / best, and prints model + settings per priority.
 //
-// The prompt is read from a path arg (default: the scratchpad equity prompt) so
+// The prompt is read from a required path argument so
 // no personal-detail prompt is committed to this public repo.
 //
 //   cd web

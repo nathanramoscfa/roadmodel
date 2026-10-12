@@ -18,7 +18,8 @@ to the macOS keychain entries `roadmodel/UPSTASH_REDIS_URL` and
 uses). If creds are absent the watcher exits quietly (no-op).
 
 Env overrides:
-  GATE_ALERT_EMAIL   recipient for the Mail.app email (default below; empty = skip)
+  GATE_ALERT_EMAIL   recipient; defaults to roadmodel/GATE_ALERT_EMAIL in Keychain
+                    (explicitly empty = skip)
   GATE_ALERT_NO_MAIL if set, skip the email and only show the desktop popup
 """
 
@@ -29,7 +30,6 @@ import subprocess
 import sys
 from urllib import error, parse, request
 
-DEFAULT_EMAIL = ""
 ALERTS_KEY = "gate:alerts"
 MAX_DRAIN = 50  # safety cap per pass
 
@@ -147,7 +147,10 @@ def main() -> int:
         # No creds — nothing to do (quiet no-op so launchd logs stay clean).
         return 0
 
-    to_addr = os.environ.get("GATE_ALERT_EMAIL", DEFAULT_EMAIL).strip()
+    to_addr = os.environ.get("GATE_ALERT_EMAIL")
+    if to_addr is None:
+        to_addr = _keychain("GATE_ALERT_EMAIL")
+    to_addr = to_addr.strip()
     do_mail = to_addr and not os.environ.get("GATE_ALERT_NO_MAIL")
 
     seen = 0
