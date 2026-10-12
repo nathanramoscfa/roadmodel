@@ -17,6 +17,7 @@ SDK_LOGGERS = (
     "openai._base_client",
     "openai._response",
     "openai._legacy_response",
+    "openai.resources.responses.responses",
     "anthropic._base_client",
     "anthropic._response",
     "anthropic._legacy_response",
@@ -31,6 +32,12 @@ SDK_LOGGERS = (
     "httpcore.http2",
     "httpcore.proxy",
     "httpcore.socks",
+    "httpx2",
+    "httpcore2.connection",
+    "httpcore2.http11",
+    "httpcore2.http2",
+    "httpcore2.proxy",
+    "httpcore2.socks",
 )
 
 

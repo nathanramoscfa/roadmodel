@@ -65,6 +65,9 @@ def test_dirty_tree_artifacts_and_sdist_rebuild(source_tree: Path, tmp_path: Pat
         "src/roadmodel/credentials.py",
         "src/roadmodel/.env",
         "src/roadmodel/data/stale-secret.txt",
+        "AUTHORS-private.txt",
+        "NOTICE-private.txt",
+        "LICENSE-private.txt",
     ):
         path = source_tree / name
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -87,6 +90,19 @@ def test_dirty_tree_artifacts_and_sdist_rebuild(source_tree: Path, tmp_path: Pat
             m.name.endswith("docs/claude-commands/roadmodel-upgrade.md")
             for m in archive.getmembers()
         )
+    # Also build directly from the dirty tree: rebuilding only from the sdist
+    # could conceal a wheel backend's independent metadata-file discovery.
+    subprocess.run(
+        [sys.executable, "-m", "build", "--wheel", "--outdir", str(outdir / "direct")],
+        cwd=source_tree,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    with zipfile.ZipFile(next((outdir / "direct").glob("*.whl"))) as direct:
+        assert all(marker not in direct.read(name) for name in direct.namelist())
+        licenses = {name.rsplit("/", 1)[-1] for name in direct.namelist() if "/licenses/" in name}
+        assert licenses == {"LICENSE", "NOTICE"}
     with zipfile.ZipFile(next(outdir.glob("*.whl"))) as archive:
         assert all(marker not in archive.read(name) for name in archive.namelist())
         for name in BUNDLED_DOCS:

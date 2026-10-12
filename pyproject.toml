@@ -9,6 +9,7 @@ description = "BYO-key CLI that recommends the right AI model, platform, and set
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
+license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "Nathan Ramos", email = "nathan.ramos.github@gmail.com" }]
 keywords = ["ai", "llm", "model-selection", "anthropic", "openai", "gemini", "cli"]
 classifiers = [
@@ -42,7 +43,7 @@ recommend = [
     "google-genai>=1.74.0",
 ]
 dev = [
-    "roadmodel[recommend]",
+    "roadmodel[recommend,mcp]",
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "ruff>=0.6",

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import inspect
 import logging
 import threading
@@ -27,9 +28,24 @@ def test_real_sdk_one_attempt_safe_error_and_logs(
     monkeypatch: pytest.MonkeyPatch,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    httpx = pytest.importorskip("httpx")
     attempts: list[Any] = []
     clients: list[Any] = []
+
+    if provider == "google":
+        module = pytest.importorskip("google.genai")
+        attribute, adapter = "Client", google_adapter
+        httpx = pytest.importorskip("httpx")
+    else:
+        module = pytest.importorskip(provider)
+        attribute, adapter = (
+            ("Anthropic", anthropic_adapter)
+            if provider == "anthropic"
+            else ("OpenAI", openai_adapter)
+        )
+        # The SDK constructor contract selects its transport implementation;
+        # current and minimum supported SDK releases use different modules.
+        base_client = importlib.import_module(provider + "._base_client")
+        httpx = getattr(base_client, "httpx2", None) or base_client.httpx
 
     def send(request: Any) -> Any:
         attempts.append(request.extensions["timeout"])
@@ -43,15 +59,6 @@ def test_real_sdk_one_attempt_safe_error_and_logs(
         )
 
     transport = httpx.Client(transport=httpx.MockTransport(send))
-    if provider == "google":
-        module = pytest.importorskip("google.genai")
-        attribute, adapter = "Client", google_adapter
-    elif provider == "anthropic":
-        module = pytest.importorskip("anthropic")
-        attribute, adapter = "Anthropic", anthropic_adapter
-    else:
-        module = pytest.importorskip("openai")
-        attribute, adapter = "OpenAI", openai_adapter
     real = getattr(module, attribute)
 
     def construct(**kwargs: Any) -> Any:
