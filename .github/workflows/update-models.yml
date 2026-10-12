@@ -364,6 +364,8 @@ jobs:
         run: |
           set -euo pipefail
           nl=$'\n'  # joins sections: $( ) strips the trailing newlines of what it captures
+          # Validate final generated data before publishing or promoting source hashes.
+          python update/automation_integrity.py
           if git diff --quiet -- docs/ update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json; then
             echo "No changes to commit."
             exit 0
@@ -416,14 +418,9 @@ jobs:
               --body "${body}")"
             echo "Opened: $PR_URL"
           fi
-          # Merges itself when green, like the four tracker crons. The review
-          # runs above, in code: prose_guard quarantines injected text,
-          # rating_guard enforces the letter rules, and G1-G4 lock schema and
-          # prices. Arming auto-merge also opts the PR into unstick-cron-prs.yml,
-          # which rebases it when main moves; a red PR stays open for cron-health
-          # to flag. A merge changes /models at once and reaches the recommender
-          # with the next release.
-          gh pr merge --auto --squash --delete-branch "$PR_URL"
+          # A trusted default-branch workflow validates the final immutable
+          # candidate and all checks before merging the exact head commit.
+          echo "The validated refresh merger will evaluate $PR_URL."
 
       - name: Promote source-hash for next run
         # Only promote staged hash → canonical if every prior step

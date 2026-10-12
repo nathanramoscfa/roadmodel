@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import copy
 import importlib.util
 import json
@@ -34,7 +35,7 @@ def fixture() -> tuple[dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
     }
     pr = {
         "number": 42,
-        "user": {"login": "roadmodel-cron-bot[bot]", "type": "Bot"},
+        "user": {"login": "roadmodel-cron-bot[bot]", "type": "Bot", "id": 293410582},
         "base": {"ref": "main", "repo": {"full_name": REPO}, "sha": "b" * 40},
         "head": {"ref": "chore/codex-refresh-2026-10-12", "repo": {"full_name": REPO}, "sha": SHA},
         "draft": False,
@@ -109,7 +110,18 @@ def test_shell_resolver_never_reads_log_links(tmp_path: Path) -> None:
     run, pr, files = fixture()
     payload = {"run": run, "pr": pr, "files": files}
     payload["commit"] = {"sha": SHA, "committer": {"date": pr["created_at"]}}
-    payload["tree"] = {"tree": [{"path": "docs/catalog.json", "type": "blob", "mode": "100644"}]}
+    payload["tree"] = {
+        "tree": [{"path": path, "type": "blob", "mode": "100644"} for path in guard.INPUTS]
+    }
+    payload["contents"] = {
+        path: {
+            "type": "file",
+            "size": (ROOT / path).stat().st_size,
+            "encoding": "base64",
+            "content": base64.b64encode((ROOT / path).read_bytes()).decode(),
+        }
+        for path in guard.INPUTS
+    }
     data = tmp_path / "fixture.json"
     data.write_text(json.dumps(payload))
     gh = tmp_path / "gh"
@@ -124,6 +136,7 @@ def test_shell_resolver_never_reads_log_links(tmp_path: Path) -> None:
         "elif '/compare/' in p: result={'files':j['files']}\n"
         "elif '/git/commits/' in p: result=j['commit']\n"
         "elif '/git/trees/' in p: result=j['tree']\n"
+        "elif '/contents/' in p: result=j['contents'][p.split('/contents/',1)[1].split('?',1)[0]]\n"
         "elif '/pulls?' in p: result=[j['pr']]\n"
         "else: result=j['pr']\n"
         "print(json.dumps([result]))\n"
@@ -181,6 +194,65 @@ def test_rebase_rechecks_paths_without_requiring_original_timestamp() -> None:
     files[0]["filename"] = "scripts/update_projects.py"
     with pytest.raises(ValueError):
         guard.validate(run, pr, files, REPO, committed_at=later, check_time=False)
+
+
+def test_bot_identity_is_immutable() -> None:
+    run, pr, files = fixture()
+    pr["user"]["id"] = 1
+    with pytest.raises(ValueError):
+        guard.validate(run, pr, files, REPO)
+
+
+@pytest.mark.parametrize("accepted", [False, True])
+def test_independent_status_targets_the_reviewed_commit(
+    monkeypatch: pytest.MonkeyPatch, accepted: bool
+) -> None:
+    _, pr, _ = fixture()
+    monkeypatch.setattr(guard, "api", lambda repo, path: copy.deepcopy(pr))
+    posted: list[tuple[list[str], dict[str, Any]]] = []
+
+    def review(repo: str, candidate: dict[str, Any]) -> None:
+        assert candidate["head"]["sha"] == SHA
+        pr["head"]["sha"] = "c" * 40  # a later API head must not receive this verdict
+        if not accepted:
+            raise ValueError("rejected")
+
+    def run(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        posted.append((command, json.loads(kwargs["input"])))
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(guard, "review_candidate", review)
+    monkeypatch.setattr(guard.subprocess, "run", run)
+    if accepted:
+        guard.review(REPO, 42, post_status=True)
+    else:
+        with pytest.raises(ValueError):
+            guard.review(REPO, 42, post_status=True)
+    assert posted[0][0][-3] == f"repos/{REPO}/statuses/{SHA}"
+    assert posted[0][1]["state"] == ("success" if accepted else "failure")
+    assert posted[0][1]["context"] == "refresh-integrity"
+
+
+def test_independent_review_rejects_unknown_producer_and_code_paths(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _, pr, _ = fixture()
+    monkeypatch.setattr(
+        guard, "api", lambda repo, path: {"files": [{"filename": "scripts/run-now.sh"}]}
+    )
+    pr["head"]["ref"] = "feature/unapproved"
+    with pytest.raises(ValueError, match="unknown refresh"):
+        guard.review_candidate(REPO, pr)
+    _, pr, _ = fixture()
+
+    def api(repo: str, path: str) -> Any:
+        if path.startswith("compare/"):
+            return {"files": [{"filename": "scripts/run-now.sh", "status": "modified"}]}
+        return {"tree": []}
+
+    monkeypatch.setattr(guard, "api", api)
+    with pytest.raises(ValueError, match="path policy"):
+        guard.review_candidate(REPO, pr)
 
 
 @pytest.mark.parametrize("mode", ["120000", "100755", "160000"])
