@@ -39,12 +39,7 @@ on:
         type: boolean
         default: true
 
-permissions:
-  actions: write
-  contents: read
-  pull-requests: read
-  checks: read
-  statuses: read
+permissions: {}
 
 concurrency:
   group: run-now
@@ -52,18 +47,31 @@ concurrency:
 
 jobs:
   run:
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: read
+      checks: read
+      statuses: read
     runs-on: ubuntu-latest
     timeout-minutes: 300
     steps:
       # The cron App merges (a GITHUB_TOKEN merge would not trigger the push
       # workflows on main); the workflow's own token dispatches and watches.
-      - uses: actions/create-github-app-token@v2
+      - uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
         id: app-token
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
 
       - name: Run ${{ inputs.target }}
         env:

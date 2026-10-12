@@ -137,7 +137,7 @@ def probe_invoke(api_id: str, key: str) -> str:
         "https://api.anthropic.com/v1/messages", data=payload, headers=headers, method="POST"
     )
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310  # nosec B310
             return classify_probe(resp.status, "")
     except urllib.error.HTTPError as exc:
         return classify_probe(exc.code, exc.read().decode(errors="replace"))
@@ -151,7 +151,7 @@ def probe_invoke(api_id: str, key: str) -> str:
 def _http_get_json(url: str, headers: dict[str, str]) -> Any | None:
     req = urllib.request.Request(url, headers=headers, method="GET")  # noqa: S310
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310  # nosec B310
             return json.loads(resp.read())
     except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError):
         return None

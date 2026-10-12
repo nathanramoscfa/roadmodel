@@ -33,5 +33,5 @@ test("footer carries the GitHub link", async ({ page }) => {
   // the <footer> element so the assertion stays unambiguous.
   await expect(
     page.locator("footer").getByRole("link", { name: /GitHub/i }),
-  ).toHaveAttribute("href", /github\.com\/nathanramoscfa\/roadmodel/);
+  ).toHaveAttribute("href", "https://github.com/nathanramoscfa/roadmodel");
 });
