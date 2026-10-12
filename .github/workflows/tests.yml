@@ -127,17 +127,21 @@ jobs:
       contents: read
     runs-on: windows-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.13"]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
       - name: Install test runner
         run: python -m pip install pytest
       - name: Verify shared memory and Windows junctions
-        run: python -m pytest -q tests/test_agent_context.py tests/test_updater_lock.py
+        run: python -m pytest -q tests/test_agent_context.py tests/test_updater_lock.py tests/test_private_files_windows.py
 
   package-smoke:
     permissions:

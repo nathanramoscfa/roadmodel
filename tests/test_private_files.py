@@ -210,8 +210,9 @@ def test_private_append_preserves_handover_and_refuses_links(tmp_path: Path) -> 
     root.mkdir(mode=0o755)
     private_directory(root)
     log = root / "update.log"
-    log.write_text("before\n")
-    log.chmod(0o644)
+    atomic_private_write(log, b"before\n")
+    if os.name == "posix":
+        log.chmod(0o644)
     with open_private_append(log) as parent, open_private_append(log) as child:
         parent.write("parent\n")
         parent.flush()
@@ -291,3 +292,25 @@ def test_nested_repository_cannot_hide_private_output_from_owning_index(tmp_path
     with pytest.raises(ValueError, match="nested repository"):
         protect_export(root, Path("planning/user-context.md"))
     assert target.read_text() == "original"
+
+
+def test_exclusive_private_publication_preserves_prior_bytes(tmp_path):
+    target = tmp_path / "backup"
+    atomic_private_write(target, b"before", replace=False)
+    with pytest.raises((OSError, ValueError)):
+        atomic_private_write(target, b"after", replace=False)
+    assert target.read_bytes() == b"before"
+    assert list(tmp_path.iterdir()) == [target]
+
+
+def test_publication_guard_keeps_existing_content_and_cleans_staging(tmp_path):
+    target = tmp_path / "context"
+    atomic_private_write(target, b"before")
+
+    def conflict():
+        raise ValueError("concurrent update")
+
+    with pytest.raises(ValueError, match="concurrent"):
+        atomic_private_write(target, b"after", before_replace=conflict)
+    assert target.read_bytes() == b"before"
+    assert list(tmp_path.iterdir()) == [target]
