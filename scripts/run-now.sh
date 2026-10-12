@@ -68,7 +68,7 @@ workflow_for() {
 
 failures=""
 run_one() {
-  local name="$1" wf run_id rc pr
+  local name="$1" wf run_id rc pr prs
   wf="$(workflow_for "$name")" || die "unknown target: $name (see --help)"
   set --
   if [ "$dry_run" = 1 ]; then
@@ -89,9 +89,10 @@ run_one() {
     return 0
   fi
   if [ "$merge" = 1 ] && [ "$dry_run" = 0 ]; then
-    for pr in $(prs_from_run "$run_id"); do
+    prs="$(prs_from_run "$run_id")" || { failures="$failures $name(provenance)"; return 0; }
+    for pr in $prs; do
       log "merging PR #$pr when green"
-      ( merge_when_green "$pr" ) || failures="$failures $name(PR#$pr)"
+      ( merge_when_green "$pr" "$run_id" ) || failures="$failures $name(PR#$pr)"
     done
   fi
 }
