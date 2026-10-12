@@ -1,4 +1,5 @@
 // web/app/gate/page.tsx
+import { safeLocalPath } from "@/lib/http-boundaries";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -19,7 +20,7 @@ interface GatePageProps {
 
 export default async function GatePage({ searchParams }: GatePageProps) {
   const params = await searchParams;
-  const next = typeof params.next === "string" ? params.next : "/";
+  const next = safeLocalPath(params.next);
   const error = params.error === "1";
   const locked = params.locked === "1";
   const retryMinutes = Math.max(1, Math.ceil(Number(params.retry ?? "300") / 60));

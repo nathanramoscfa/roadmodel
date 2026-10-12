@@ -121,8 +121,8 @@ export function decideLane(
     if (bypassMatches(req)) return { lane: "operator", reason: "bypass" };
     if (userId && isRateLimitExempt(userId)) return { lane: "operator", reason: "founder" };
     if (userId && isInvited(userId)) return { lane: "operator", reason: "invited" };
-  } catch (err) {
-    console.warn("[funding-lane] lane decision failed — refusing", err);
+  } catch {
+    console.warn("[funding-lane] lane decision failed — refusing");
   }
   return keyless ? { lane: "keyless" } : { lane: "refused" };
 }

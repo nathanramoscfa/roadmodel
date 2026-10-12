@@ -8,6 +8,17 @@
 // never forwarded, so a browser cannot pin an engine (`force_provider`),
 // override funding, or reach a key the service adds later.
 
+import { z } from "zod";
+
+const platformList = z.array(z.string().min(1).max(100).regex(/^[A-Za-z0-9][A-Za-z0-9 ._+:/()-]*$/)).max(64);
+export const recommendRequestSchema = z.object({
+  task_description: z.string().max(50000),
+  context: z.object({ platforms_allowed: platformList.optional(), platforms_excluded: platformList.optional() }).strict().optional(),
+  // The menu and budget resolver retain their existing fallback semantics.
+  engine: z.unknown().optional(),
+  budget_priority: z.unknown().optional(),
+}).strict();
+
 export const CLIENT_CONTEXT_KEYS = ["platforms_allowed", "platforms_excluded"] as const;
 
 type ClientContextKey = (typeof CLIENT_CONTEXT_KEYS)[number];

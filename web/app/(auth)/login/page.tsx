@@ -7,6 +7,7 @@
 // needed in one place on the browser; this keeps the env surface
 // small and avoids a second env-seed-first round-trip.
 
+import { safeLocalPath } from "@/lib/http-boundaries";
 import type { Metadata } from "next";
 
 import { env } from "@/lib/env";
@@ -24,7 +25,7 @@ interface LoginPageProps {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
-  const next = typeof params.next === "string" ? params.next : "/";
+  const next = safeLocalPath(params.next);
   const error = typeof params.error === "string" ? params.error : null;
   return (
     <LoginForm

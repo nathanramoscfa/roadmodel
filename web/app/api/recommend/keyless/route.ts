@@ -13,6 +13,7 @@
 // and merged with the viewer's saved funding (none when signed out); only
 // those fields, filtered to the shape /v1/score accepts, are forwarded.
 
+import { readJson, bodyFailure } from "@/lib/http-boundaries";
 import { NextResponse } from "next/server";
 
 import { recommenderRequestHeaders } from "@/lib/api";
@@ -37,10 +38,9 @@ const keylessHandler: KeylessLaneHandler = async (req, _lane, userId) => {
     });
 
   let body: unknown;
-  try {
-    body = await req.json();
-  } catch {
-    body = null;
+  try { body = await readJson(req, 4096); } catch (error) {
+    audit({ outcome: "bad_input", error_class: "invalid_keyless_task" });
+    return bodyFailure(error);
   }
   const task = parseKeylessTask(body);
   if (!task) {
@@ -70,11 +70,14 @@ const keylessHandler: KeylessLaneHandler = async (req, _lane, userId) => {
   try {
     upstream = await fetch(scoreUrl(), {
       method: "POST",
+      cache: "no-store",
+      signal: AbortSignal.timeout(30_000),
+      redirect: "error",
       headers: recommenderRequestHeaders(),
       body: JSON.stringify(payload),
     });
-  } catch (err) {
-    audit({ outcome: "recommender_error", error_class: err instanceof Error ? err.name : "fetch_failed" });
+  } catch {
+    audit({ outcome: "recommender_error", error_class: "fetch_failed" });
     return NextResponse.json({ error: "recommender_unavailable" }, { status: 502 });
   }
   const text = await upstream.text();

@@ -1,3 +1,4 @@
+import { ORIGIN_HEADERS } from "./fixtures/origin";
 import "./fixtures/seed-test-env";
 import { test, expect } from "@playwright/test";
 import { personalizeComparison } from "../lib/funding";
@@ -37,24 +38,28 @@ test("profile roundtrip retains pools across settings saves and forwards only sa
   await resetE2eState(page);
   await setE2eSessionCookie(page);
   const observation = weekly("exhausted");
-  const save = await page.request.patch("/api/profile", { data: {
+  const save = await page.request.patch("/api/profile", { headers: ORIGIN_HEADERS,  data: {
     subscriptions: ["claude-max"], allowed_jurisdictions: ["us"], pool_states: [observation],
   }});
   expect(save.status()).toBe(200);
   expect((await save.json()).pool_states[0].state).toBe("exhausted");
-  const settings = await page.request.patch("/api/profile", {data: {budget_priority: "cheap"}});
+  const settings = await page.request.patch("/api/profile", { headers: ORIGIN_HEADERS, data: {budget_priority: "cheap"}});
   expect((await settings.json()).pool_states[0].state).toBe("exhausted");
-  const stale = await page.request.patch("/api/profile", {data: {pool_states: [weekly("headroom", 21601)]}});
+  const stale = await page.request.patch("/api/profile", { headers: ORIGIN_HEADERS, data: {pool_states: [weekly("headroom", 21601)]}});
   expect((await stale.json()).pool_states[0].state).toBe("exhausted");
-  const bad = await page.request.patch("/api/profile", {data: {pool_states: [{...observation, used_percent: 101}]}});
+  const bad = await page.request.patch("/api/profile", { headers: ORIGIN_HEADERS, data: {pool_states: [{...observation, used_percent: 101}]}});
   expect(bad.status()).toBe(400);
-  const quick = await page.request.post("/api/recommend/keyless", {data: {
+  const spoofed = await page.request.post("/api/recommend/keyless", { headers: ORIGIN_HEADERS, data: {
     category: "coding", complexity: "low", pool_states: [weekly("headroom")],
+  }});
+  expect(spoofed.status()).toBe(400);
+  const quick = await page.request.post("/api/recommend/keyless", { headers: ORIGIN_HEADERS, data: {
+    category: "coding", complexity: "low",
   }});
   expect(quick.status()).toBe(200);
   expect((await quick.json()).received_pool_states[0].state).toBe("exhausted");
-  const engine = await page.request.post("/api/recommend", {data: {
-    task_description: "pool forwarding smoke", context: {pool_states: [weekly("headroom")]},
+  const engine = await page.request.post("/api/recommend", { headers: ORIGIN_HEADERS, data: {
+    task_description: "pool forwarding smoke",
   }});
   expect(engine.status()).toBe(200);
   expect(await engine.text()).toContain("claude:weekly");

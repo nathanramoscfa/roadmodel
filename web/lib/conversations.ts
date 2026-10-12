@@ -5,8 +5,8 @@
 //
 //   - Supabase server client (default). Uses the user's session
 //     cookie, so RLS enforces auth.uid() = user_id on every read
-//     and write. Authoring code does NOT pass user_id filters
-//     defensively; RLS is the single source of truth.
+//     and write. Authoring code also passes user_id filters
+//     defensively in addition to RLS.
 //   - In-memory store (E2E mode only). Mirrors the e2eProfiles
 //     pattern in web/lib/profile.ts so Playwright fixtures can
 //     seed conversations without standing up a Postgres.
@@ -208,6 +208,7 @@ export async function listConversationsForUser(
   const { data, error } = await supabase
     .from("conversations")
     .select("id, title, updated_at, messages(content, created_at)")
+    .eq("user_id", userId)
     .order("updated_at", { ascending: false })
     .limit(200);
   if (error || !data) {
@@ -352,7 +353,7 @@ export async function insertMessage(args: {
     content: args.content,
   });
   if (error) {
-    console.error("message_insert_failed", error);
+    console.error("message_insert_failed");
   }
 }
 
@@ -398,7 +399,7 @@ export async function upsertRoadmap(args: {
     .select("id")
     .single();
   if (error || !data) {
-    console.error("roadmap_upsert_failed", error);
+    console.error("roadmap_upsert_failed");
     return null;
   }
   return { id: String(data.id) };
@@ -429,7 +430,7 @@ export async function updateConversationTitle(args: {
     .eq("id", args.conversationId)
     .eq("user_id", args.userId); // defense-in-depth (M5): only the owner's row
   if (error) {
-    console.error("conversation_title_update_failed", error);
+    console.error("conversation_title_update_failed");
   }
 }
 

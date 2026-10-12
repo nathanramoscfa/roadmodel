@@ -132,7 +132,7 @@ export async function writeAudit(entry: AuditEntry): Promise<void> {
       ...entry,
     });
     if (error) {
-      console.error("audit write failed", error);
+      console.error("audit write failed");
     }
   })();
   flushAfterResponse(write);

@@ -8,44 +8,7 @@
 
 import { History } from "lucide-react";
 
-import type { MultiRecommendResponse } from "@/lib/api";
-
-const KEY = "roadmodel:recommend-recent";
-const MAX = 8;
-
-export interface RecentRun {
-  id: string;
-  at: number;
-  task: string;
-  data: MultiRecommendResponse;
-}
-
-export function loadRecent(): RecentRun[] {
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    const parsed: unknown = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (r): r is RecentRun =>
-        !!r &&
-        typeof r === "object" &&
-        typeof (r as RecentRun).task === "string" &&
-        Array.isArray((r as RecentRun).data?.recommendations),
-    );
-  } catch {
-    return [];
-  }
-}
-
-export function saveRecent(runs: RecentRun[]): RecentRun[] {
-  const kept = runs.slice(0, MAX);
-  try {
-    window.localStorage.setItem(KEY, JSON.stringify(kept));
-  } catch {
-    // Storage full or blocked: the list just doesn't persist.
-  }
-  return kept;
-}
+import type { RecentRun } from "@/lib/recent-recommendations";
 
 function ago(at: number): string {
   const s = Math.max(0, (Date.now() - at) / 1000);

@@ -22,7 +22,7 @@
 
 import type { GenerateContentResponse } from "@google/genai";
 
-import { resolveGeminiClient, withGeminiRetry, GEMINI_MAX_OUTPUT_TOKENS } from "./gemini-client";
+import { resolveGeminiClient, withGeminiRetry, GEMINI_MAX_OUTPUT_TOKENS, GEMINI_REQUEST_TIMEOUT_MS } from "./gemini-client";
 import {
   extractCacheStats,
   getOrCreateCachedPrefix,
@@ -79,6 +79,7 @@ export type RoadmapStreamEvent =
   | MessageCompleteEvent;
 
 interface CreateRoadmapStreamArgs {
+  signal?: AbortSignal;
   messages: Message[];
   profile: Profile | null;
   // Step 6 onward callers pass envFrontierEnabled from the route
@@ -238,12 +239,16 @@ function chunkText(chunk: GenerateContentResponse): string {
 // behind a similar adapter.
 function buildGoogleCacheClient(
   client: ReturnType<typeof resolveGeminiClient>,
+  signal: AbortSignal,
 ): GoogleCacheClient {
   return {
     async create({ model, contents, systemInstruction, ttl_seconds }) {
+      signal.throwIfAborted();
       const created = await client.caches.create({
         model,
         config: {
+          abortSignal: signal,
+          httpOptions: { retryOptions: { attempts: 1 } },
           contents: contents.map((text) => ({
             role: "user",
             parts: [{ text }],
@@ -270,6 +275,9 @@ function buildGoogleCacheClient(
 export async function* createRoadmapStream(
   args: CreateRoadmapStreamArgs,
 ): AsyncIterable<RoadmapStreamEvent> {
+  const deadline = AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS);
+  const signal = args.signal ? AbortSignal.any([args.signal, deadline]) : deadline;
+  signal.throwIfAborted();
   const engine: ResolvedEngine =
     args.engine ??
     (args.model
@@ -323,14 +331,15 @@ export async function* createRoadmapStream(
         systemInstruction: promptParts.orientation,
         contents: cachedContents,
       },
-      client: buildGoogleCacheClient(client),
+      client: buildGoogleCacheClient(client, signal),
     });
-  } catch (err) {
+  } catch {
+    signal.throwIfAborted();
     // A cache-create failure is non-fatal: log and continue with a
     // non-cached call. The cache_stats row written below will
     // carry zeros for the cached-content fields, which is the
     // honest representation.
-    console.warn("[roadmap-engine] cachedContent setup failed", err);
+    console.warn("[roadmap-engine] cachedContent setup failed");
     cachedContentName = null;
   }
 
@@ -354,6 +363,8 @@ export async function* createRoadmapStream(
   ].join("\n\n");
 
   const generateConfig: Record<string, unknown> = {
+    abortSignal: signal,
+    httpOptions: { retryOptions: { attempts: 1 } },
     maxOutputTokens: engine.max_tokens ?? GEMINI_MAX_OUTPUT_TOKENS,
   };
   let contents: GeminiTurn[];
@@ -368,13 +379,14 @@ export async function* createRoadmapStream(
     contents = baseContents;
   }
 
-  const stream = await withGeminiRetry(() =>
-    client.models.generateContentStream({
+  const stream = await withGeminiRetry(() => {
+    signal.throwIfAborted();
+    return client.models.generateContentStream({
       model: engine.engine,
       contents,
       config: generateConfig as Record<string, unknown>,
-    }),
-  );
+    });
+  }, undefined, signal);
 
   let buffered = "";
   let lastDraftJson: string | null = null;
@@ -383,6 +395,7 @@ export async function* createRoadmapStream(
   let lastChunk: GenerateContentResponse | null = null;
 
   for await (const chunk of stream) {
+    signal.throwIfAborted();
     lastChunk = chunk;
     const delta = chunkText(chunk);
     if (delta) {
@@ -417,6 +430,7 @@ export async function* createRoadmapStream(
     }
   }
 
+  signal.throwIfAborted();
   // Pull the final usageMetadata off the last chunk so cache_stats
   // captures the cachedContentTokenCount(Used) counters Gemini
   // emits at stream end. extractCacheStats() coalesces missing

@@ -20,14 +20,15 @@ Do not file a public GitHub issue for undisclosed security problems.
 
 ## Supported versions
 
-Security fixes are applied to the **latest released minor** version line of
-this repository. Older tags may not receive backports unless noted in a
-release announcement.
+Security fixes are applied to the latest published package release and the
+current deployments. Use roadmodel 0.2.82 or later for the private-file and
+request-boundary fixes. Older releases do not receive routine backports.
 
 ## Scope
 
-Reports should concern this repository and its documented workflows (for
-example, automation scripts and GitHub Actions) as shipped on `main`.
+Reports may cover the CLI, MCP server, web app at roadmodel.ai, its API service,
+database authorization, automation scripts and GitHub Actions as shipped on
+`main`.
 Third-party services (model providers, data hosts) are outside this
 project's control; route those issues to the respective vendor.
 
@@ -59,3 +60,43 @@ objects while a visitor key is in scope. They are installed before lazy SDK impo
 previously captured warning aliases, direct C-level warnings and custom logging
 pipelines that bypass standard record/filter handling are outside this guarantee.
 Service-owned failure logs contain fixed events and bounded counts.
+
+## Web request controls
+
+Browser mutations require an exact same-origin Origin and compatible Fetch
+Metadata. Enabled funding routes also support the existing authenticated machine
+bypass with neither Origin nor Fetch Metadata. Explicit foreign origins never
+use that exception. Request JSON is streamed into bounded buffers: 512 KiB for
+recommendations, 1 MiB aggregate for roadmap history, 32 KiB for profile edits,
+and 4 KiB for keyless scoring and key exchange. Gate forms are capped at 16 KiB.
+Body reads have a 15-second budget. Roadmap history permits up to 50 messages of
+20,000 characters each; the aggregate limit can reject histories below those limits.
+Authenticated and mutation responses use private/no-store caching.
+
+The roadmap provider path shares a 120-second abort signal across cache creation,
+stream opening and body reads, including its single application retry. SDK retries
+are disabled, and browser cancellation aborts the local provider request. Redis
+memo waits are capped at two seconds each. Aborting local HTTP work does not
+guarantee cancellation or prevent billing for work already accepted remotely.
+Web-owned dependency failure logs contain fixed events, without exception objects.
+
+Visitor, keyless, rejected-key and exchange quotas use salted IPs. Migrating
+from the previous IP/user-agent key starts a fresh quota window once. Configured
+limiter failures and SDK timeouts stop dispatch outside explicit local E2E mode.
+Optional Upstash environment variables retain production runtime enforcement.
+
+The daily spend guard remains a post-call meter, not a reservation system.
+Concurrent admitted calls, retries and fallback work can exceed its threshold.
+Redis waits and the paginated ledger fallback are bounded; when both stores fail,
+this guard retains its availability-oriented fail-open policy. Provider account
+limits remain the backstop. Aborting an edge request cannot cancel provider work
+already admitted by the service.
+
+Recent browser results use one account-scoped store capped at eight runs and
+512 KiB. Sign-out, account
+changes and explicit clearing remove it and invalidate pending responses. Browser
+Supabase cookies intentionally remain readable by the browser auth client, with
+SameSite=Lax and Secure on HTTPS; the gate cookie is HttpOnly. CSP retains inline
+styles required by the framework and permits the configured Supabase origin;
+script execution requires the per-response nonce. OAuth popup compatibility uses
+Cross-Origin-Opener-Policy: same-origin-allow-popups.

@@ -24,7 +24,9 @@ export function LoginForm({
   initialError,
 }: LoginFormProps) {
   const supabase = useMemo(
-    () => createBrowserClient(supabaseUrl, supabaseAnonKey),
+    () => createBrowserClient(supabaseUrl, supabaseAnonKey, {
+      cookieOptions: { sameSite: "lax", secure: typeof window !== "undefined" && window.location.protocol === "https:" },
+    }),
     [supabaseUrl, supabaseAnonKey],
   );
   const [email, setEmail] = useState("");

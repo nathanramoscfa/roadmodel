@@ -1,3 +1,4 @@
+import { ORIGIN_HEADERS } from "./fixtures/origin";
 // web/tests/history.spec.ts
 //
 // Phase 4 Step 5 — /history list + re-hydration + Markdown
@@ -63,7 +64,7 @@ async function resetHistoryState(
 ): Promise<void> {
   await clearE2eSession(page);
   await setHistorySessionCookie(page);
-  await page.request.post("/api/test/clear-conversations", {
+  await page.request.post("/api/test/clear-conversations", { headers: ORIGIN_HEADERS,
     data: { user_id: HISTORY_USER_ID },
   });
 }
@@ -76,7 +77,7 @@ async function seedConversation(
   request: import("@playwright/test").APIRequestContext,
   body: Record<string, unknown>,
 ): Promise<string> {
-  const res = await request.post("/api/test/seed-conversation", {
+  const res = await request.post("/api/test/seed-conversation", { headers: ORIGIN_HEADERS,
     data: body,
   });
   expect(res.ok()).toBe(true);

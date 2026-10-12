@@ -1,4 +1,5 @@
 // web/app/api/profile/route.ts
+import { privateRoute, sameOrigin, readJson, bodyFailure } from "@/lib/http-boundaries";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -40,20 +41,21 @@ const patchSchema = z.object({
   // Catalog-derived id set (issue #152), validated server-side rather than
   // a fixed enum so it tracks catalog.json's subscription_tiers.
   subscriptions: z
-    .array(z.string().refine((id) => SUBSCRIPTION_IDS.has(id)))
+    .array(z.string().refine((id) => SUBSCRIPTION_IDS.has(id))).max(64)
     .optional(),
   // Catalog-derived API-provider id set (Phase 4.8, #260); same server-side
   // validation pattern as subscriptions. Boolean signal only — no keys.
   api_providers: z
-    .array(z.string().refine((id) => API_PROVIDER_IDS.has(id)))
+    .array(z.string().refine((id) => API_PROVIDER_IDS.has(id))).max(64)
     .optional(),
   budget_priority: z.enum(["cheap", "balanced", "best"]).optional(),
   consumption_headroom: z.enum(["auto", "uncapped", "capped"]).optional(),
-  allowed_jurisdictions: z.array(jurisdictionEnum).min(1).optional(),
+  allowed_jurisdictions: z.array(jurisdictionEnum).min(1).max(10).optional(),
   skip: z.boolean().default(false),
-});
+}).strict();
 
-export async function PATCH(req: Request): Promise<Response> {
+export const PATCH = privateRoute(async (req: Request): Promise<Response> => {
+  if (!sameOrigin(req)) return NextResponse.json({ error: "cross_origin" }, { status: 403 });
   let user;
   try {
     user = await requireSession();
@@ -66,9 +68,9 @@ export async function PATCH(req: Request): Promise<Response> {
 
   let body: unknown;
   try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "bad_input" }, { status: 400 });
+    body = await readJson(req, 32 * 1024);
+  } catch (error) {
+    return bodyFailure(error);
   }
 
   const parsed = patchSchema.safeParse(body);
@@ -125,7 +127,7 @@ export async function PATCH(req: Request): Promise<Response> {
     .single();
 
   if (error || !data) {
-    console.error("profile upsert failed", error);
+    console.error("profile upsert failed");
     return NextResponse.json(
       { error: "profile_save_failed" },
       { status: 500 },
@@ -133,4 +135,4 @@ export async function PATCH(req: Request): Promise<Response> {
   }
 
   return NextResponse.json(data);
-}
+});

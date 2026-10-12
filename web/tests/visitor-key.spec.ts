@@ -157,7 +157,7 @@ function post(
 ): Request {
   return new Request("http://localhost/api/recommend", {
     method: "POST",
-    headers: { "content-type": "application/json", ...headers },
+    headers: { origin: "http://localhost", "content-type": "application/json", ...headers },
     body: JSON.stringify(body),
   });
 }
@@ -239,7 +239,7 @@ test("malformed key: 400 visitor_key_malformed, zero fetches, a bad_input row", 
 });
 
 test("one call to the visitor endpoint, the key in its header only, the context clean", async () => {
-  const res = await POST(post(keyed("openai"), { task_description: "refactor a data pipeline", context: { force_provider: "x", platforms_allowed: ["Claude Code"] } }));
+  const res = await POST(post(keyed("openai"), { task_description: "refactor a data pipeline", context: { platforms_allowed: ["Claude Code"] } }));
   expect(res.status).toBe(200);
   const text = await expectNoKey(res);
 
@@ -353,7 +353,7 @@ test("failures relay the code alone, from exactly one call", async () => {
   expect(spend).toEqual([]);
 });
 
-test("limits: 50 a day per IP+UA, then 429 rate_limited with no fetch", async () => {
+test("limits: 50 a day per IP, then 429 rate_limited with no fetch", async () => {
   for (let i = 0; i < VISITOR_DAILY_LIMIT; i++) {
     expect((await POST(post(keyed("openai")))).status).toBe(200);
   }
@@ -362,6 +362,8 @@ test("limits: 50 a day per IP+UA, then 429 rate_limited with no fetch", async ()
   expect((await over.json()).error).toBe("rate_limited");
   expect(calls).toHaveLength(VISITOR_DAILY_LIMIT);
   expect(audits.at(-1)).toMatchObject({ outcome: "rate_limited", funded_by: "visitor" });
+  expect((await POST(post({ ...keyed("openai"), "user-agent": "changed" }))).status).toBe(429);
+  expect((await POST(post({ ...keyed("openai"), "x-forwarded-for": "192.0.2.32" }))).status).toBe(200);
 });
 
 test("limits: the burst still applies", async () => {
@@ -380,7 +382,7 @@ test("the declined-key limiter: five declined keys a day, the sixth attempt is 4
     expect(res.status).toBe(401);
   }
   expect(calls).toHaveLength(VISITOR_REJECTED_LIMIT);
-  const sixth = await POST(post(keyed("openai", fakeKey("sk", "declined"))));
+  const sixth = await POST(post({ ...keyed("openai", fakeKey("sk", "declined")), "user-agent": "changed" }));
   expect(sixth.status).toBe(429);
   expect((await sixth.json()).error).toBe("too_many_rejected_keys");
   // Refused at the edge: no sixth call reaches a provider, even with a good key.

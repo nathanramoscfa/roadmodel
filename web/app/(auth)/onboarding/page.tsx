@@ -1,4 +1,5 @@
 // web/app/(auth)/onboarding/page.tsx
+import { safeLocalPath } from "@/lib/http-boundaries";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
@@ -33,10 +34,7 @@ export default async function OnboardingPage({
   }
 
   const params = await searchParams;
-  const next =
-    typeof params.next === "string" && params.next.startsWith("/")
-      ? params.next
-      : "/";
+  const next = safeLocalPath(params.next);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-brand-slate-50 dark:bg-brand-slate-900 px-6 py-16">

@@ -9,14 +9,16 @@
 //
 // A route that takes the visitor lane (a visitor paying with their own key)
 // passes a `visitor` handler. That lane never checks the operator's cap and
-// never adds to its spend; it has its own limits per IP+UA, the declined-key
+// never adds to its spend; it has its own limits per IP, the declined-key
 // limit among them.
 //
 // A route that takes the keyless lane (picks computed in code at $0) passes a
 // `keyless` handler, and then every caller runs it: the requests no other lane
 // funds, and the operator's own lanes too, since a $0 call has no spend for
-// the cap to bound. It has its own limits per IP+UA and never reads the cap.
+// the cap to bound. It has its own limits per IP and never reads the cap.
 
+import { noStore, privateRoute, sameOrigin } from "./http-boundaries";
+import { bypassMatches } from "./funding-lane";
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 
@@ -86,9 +88,9 @@ export interface FundingLaneOptions {
   refusalOptions?: readonly string[];
 }
 
-// The IP+UA identity the visitor lane's limits key on.
-export function ipUaKey(id: RequestIdentity): string {
-  return `${id.ipHash}:${id.uaHash}`;
+// The quota identity is the salted IP; a user-agent change never resets it.
+export function ipQuotaKey(id: RequestIdentity): string {
+  return id.ipHash;
 }
 
 export function withFundingLane(
@@ -96,9 +98,13 @@ export function withFundingLane(
   resolveUserId: UserIdResolver,
   options: FundingLaneOptions = {},
 ): (req: Request) => Promise<Response> {
-  return async (req: Request): Promise<Response> => {
+  return privateRoute(async (req: Request): Promise<Response> => {
     if (options.enabled && !options.enabled()) {
       return NextResponse.json({ error: "not_found" }, { status: 404 });
+    }
+
+    if (!sameOrigin(req, bypassMatches(req))) {
+      return noStore(NextResponse.json({ error: "cross_origin" }, { status: 403 }));
     }
 
     const id = identifyRequest(req);
@@ -116,7 +122,7 @@ export function withFundingLane(
     });
 
     if (options.keyless && (lane.lane === "keyless" || lane.lane === "operator")) {
-      const limit = await checkKeylessLimits(ipUaKey(id));
+      const limit = await checkKeylessLimits(ipQuotaKey(id));
       if (!limit.allowed) {
         void writeAudit({
           ip_hash: id.ipHash,
@@ -128,7 +134,7 @@ export function withFundingLane(
         });
         return NextResponse.json(
           { error: limit.reason, retry_after: limit.retryAfter },
-          { status: 429, headers: { "Retry-After": String(limit.retryAfter) } },
+          { status: limit.reason === "rate_limit_unavailable" ? 503 : 429, headers: { "Retry-After": String(limit.retryAfter) } },
         );
       }
       // $0 to everyone: no operator cap, no operator spend.
@@ -150,7 +156,7 @@ export function withFundingLane(
     }
 
     if (lane.lane === "visitor" && options.visitor) {
-      const limit = await checkVisitorLimits(ipUaKey(id));
+      const limit = await checkVisitorLimits(ipQuotaKey(id));
       if (!limit.allowed) {
         void writeAudit({
           ip_hash: id.ipHash,
@@ -165,7 +171,7 @@ export function withFundingLane(
         });
         return NextResponse.json(
           { error: limit.reason, retry_after: limit.retryAfter },
-          { status: 429, headers: { "Retry-After": String(limit.retryAfter) } },
+          { status: limit.reason === "rate_limit_unavailable" ? 503 : 429, headers: { "Retry-After": String(limit.retryAfter) } },
         );
       }
       // The visitor pays: no operator cap, no operator spend.
@@ -239,7 +245,7 @@ export function withFundingLane(
         return NextResponse.json(
           { error: limit.reason, retry_after: limit.retryAfter },
           {
-            status: 429,
+            status: limit.reason === "rate_limit_unavailable" ? 503 : 429,
             headers: { "Retry-After": String(limit.retryAfter) },
           },
         );
@@ -248,5 +254,5 @@ export function withFundingLane(
 
     // The founder runs unlimited; the handler writes the request's audit row.
     return handler(req, lane);
-  };
+  });
 }
