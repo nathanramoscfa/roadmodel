@@ -20,12 +20,12 @@ export default function PrivacyPage() {
           Privacy
         </h1>
         <p className="mt-2 text-sm text-brand-slate-500 dark:text-brand-slate-400">
-          Last updated: 2026-10-04.
+          Last updated: 2026-10-12.
         </p>
 
         <div className="prose prose-slate mt-8 max-w-none text-brand-slate-700 dark:text-brand-slate-200">
           <p>
-            <strong>roadmodel.ai</strong> is an anonymous AI model-recommendation
+            <strong>roadmodel.ai</strong> is an AI model-recommendation
             service operated by Arcforge Digital Labs LLC (&ldquo;we&rdquo;,
             &ldquo;us&rdquo;). This page describes what we collect and what we
             do not.
@@ -43,7 +43,11 @@ export default function PrivacyPage() {
               <strong>
                 We do not store task descriptions or recommendation outputs
               </strong>{" "}
-              in our database.
+              in our recommendation database. This browser can retain up to eight
+              recent task descriptions and results in local storage. Clear removes
+              them; signing out or switching accounts also clears that history.
+              When the roadmap builder is enabled, its conversations and drafts
+              are saved to your account.
             </li>
             <li id="your-api-key">
               <strong>Your own API key.</strong> When you use your own API key
@@ -74,16 +78,19 @@ export default function PrivacyPage() {
               your IP, a salted hash of your user agent, the route name (e.g.
               <code className="px-1">/api/recommend</code>), the provider and
               model that served the request, token counts, the cost in USD,
-              and the outcome (<code className="px-1">ok</code>,{" "}
+              your account ID when signed in, and the outcome (<code className="px-1">ok</code>,{" "}
               <code className="px-1">rate_limited</code>, etc.). The raw IP
-              and user agent are never stored.
+              and user agent are absent from audit rows. Password-gate lockout
+              alerts temporarily include the raw IP and user agent in an operator
+              alert queue, retained for up to seven days. Hosting and authentication
+              providers also process request metadata.
             </li>
             <li>
-              No accounts, no email collection, and no cookies beyond what
-              Next.js needs for the request lifecycle, plus one preference
-              cookie on the <code className="px-1">/models</code> page that
-              remembers the filters, grouping and view you chose there. It
-              holds only those choices and is never sent anywhere else.
+              Optional accounts use Supabase authentication and store your email,
+              profile preferences, declared subscriptions and usage-pool status.
+              Session cookies support sign-in; a seven-day password-gate cookie
+              supports pre-launch access. Theme, model filters and recommendation
+              engine preferences are stored in this browser.
             </li>
           </ul>
 
@@ -93,7 +100,7 @@ export default function PrivacyPage() {
           <ul className="mt-3 list-disc space-y-2 pl-6">
             <li>
               Rate limiting. Recommendations run on your own API key are
-              limited to 50 a day and 10 a minute per salted IP+UA hash, and
+              limited to 50 a day and 10 a minute per salted IP hash, and
               keys a provider declines to 5 a day, so roadmodel cannot be used
               to test keys in bulk. Invited members&rsquo; limits are kept per
               account.
@@ -109,7 +116,7 @@ export default function PrivacyPage() {
           </h2>
           <ul className="mt-3 list-disc space-y-2 pl-6">
             <li>Vercel — application hosting.</li>
-            <li>Supabase — audit log storage.</li>
+            <li>Supabase — authentication, profiles, conversations and audit storage.</li>
             <li>Upstash Redis — rate-limit counters.</li>
             <li>
               OpenAI, Google, Anthropic and OpenRouter — AI inference. Each provider has its
@@ -123,19 +130,21 @@ export default function PrivacyPage() {
             Retention
           </h2>
           <p className="mt-3">
-            Audit log rows are retained for operational and abuse-prevention
-            purposes. The IP and user-agent hashing salt is rotated quarterly,
-            severing correlation across rotation periods. We will publish a
-            specific retention window here once it is enforced by automation.
+            Audit rows and account data currently have no automatic deletion
+            schedule. They remain until removed by the operator. Salted hashes
+            remain correlatable while the salt is unchanged; no automatic rotation
+            schedule is currently enforced. Gate alert queue entries expire after
+            seven days, while delivered operator notifications follow the receiving
+            device or mailbox retention policy. Browser history remains until
+            cleared, sign-out or an account switch.
           </p>
 
           <h2 className="mt-8 text-xl font-semibold text-brand-slate-900 dark:text-brand-slate-50">
             Your rights
           </h2>
           <p className="mt-3">
-            Because we do not store identifiers (only salted hashes), we
-            cannot link an audit row back to you. If you have a privacy
-            concern, contact us via{" "}
+            Signed-in audit rows can be linked to your account. For access,
+            correction or deletion requests, contact us via{" "}
             <Link
               href={ARCFORGE_URL}
               className="text-brand-accent hover:underline"

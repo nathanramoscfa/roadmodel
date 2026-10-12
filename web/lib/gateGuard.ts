@@ -93,8 +93,8 @@ export async function gateLockState(ip: string): Promise<GateLockState> {
       retryAfter: retryAfterFrom(reset),
       remaining: Math.max(0, remaining),
     };
-  } catch (err) {
-    console.warn("[gate] lock-state check failed — failing open", err);
+  } catch {
+    console.warn("[gate] lock-state check failed — failing open");
     return OPEN;
   }
 }
@@ -111,8 +111,8 @@ export async function recordGateFailure(ip: string): Promise<GateLockState> {
       retryAfter: retryAfterFrom(r.reset),
       remaining: Math.max(0, r.remaining),
     };
-  } catch (err) {
-    console.warn("[gate] failure record failed — failing open", err);
+  } catch {
+    console.warn("[gate] failure record failed — failing open");
     return OPEN;
   }
 }
@@ -141,7 +141,7 @@ export async function fireGateAlert(ip: string, ua: string): Promise<void> {
     await b.redis.lpush(ALERTS_KEY, event);
     await b.redis.ltrim(ALERTS_KEY, 0, ALERTS_MAX - 1);
     await b.redis.expire(ALERTS_KEY, ALERTS_TTL_SECONDS);
-  } catch (err) {
-    console.warn("[gate] alert push failed — non-fatal", err);
+  } catch {
+    console.warn("[gate] alert push failed — non-fatal");
   }
 }

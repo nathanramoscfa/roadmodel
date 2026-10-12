@@ -34,7 +34,9 @@ import { attachmentsPrefix, RecommendComposer, type Attachment } from "./Recomme
 import { RecommendIntro } from "./RecommendIntro";
 import { RecommendResult } from "./RecommendResult";
 import { RecommendRunning } from "./RecommendRunning";
-import { loadRecent, RecentRecommendations, saveRecent, type RecentRun } from "./RecentRecommendations";
+import { RecentRecommendations } from "./RecentRecommendations";
+import { clearRecent, loadRecent, saveRecent, RECENT_KEY, RECENT_CLEARED, RECENT_CLEAR_SIGNAL, recentOwner, type RecentRun } from "@/lib/recent-recommendations";
+import { useRouter } from "next/navigation";
 
 interface Running {
   startedAt: number;
@@ -133,6 +135,7 @@ export function RecommendWorkspace({
   initialEngine,
   picks,
   signedIn,
+  owner,
   modelCount,
   measuredCount,
   keylessViewer,
@@ -144,6 +147,7 @@ export function RecommendWorkspace({
   initialEngine: string;
   picks: PicksData;
   signedIn: boolean;
+  owner: string;
   modelCount: number;
   measuredCount: number;
   // Outside the invite list: the operator's account answers none of this
@@ -185,9 +189,43 @@ export function RecommendWorkspace({
     setVisitorEngine(visitorDefaultHint(visitorEngines[visitor.provider]));
   }, [visitor.provider, visitorEngines]);
 
+  const generation = useRef(0);
+  const previousOwner = useRef(owner);
+  const activeRequests = useRef(new Set<AbortController>());
+  const router = useRouter();
+  const { forget } = visitor;
   useEffect(() => {
-    setRecent(loadRecent());
-  }, []);
+    const pending = activeRequests.current;
+    const invalidate = () => { generation.current++; };
+    const reset = () => {
+      invalidate();
+      pending.forEach((controller) => controller.abort());
+      pending.clear();
+      setRecent([]); setResult(null); setTask(""); setAttachments([]);
+      setQuickResult(null); setRunning(null); setQuickPending(false);
+      setError(null); setQuickError(null); setNotice(null); forget();
+    };
+    if (previousOwner.current !== owner) reset();
+    previousOwner.current = owner;
+    setRecent(loadRecent(owner));
+    const changed = (event: StorageEvent) => {
+      if (event.key === RECENT_KEY && recentOwner(event.newValue) === owner) {
+        setRecent(loadRecent(owner));
+      } else if (event.key === RECENT_KEY || event.key === RECENT_CLEAR_SIGNAL || event.key === null) {
+        reset();
+        router.refresh();
+      }
+    };
+    window.addEventListener("storage", changed);
+    window.addEventListener(RECENT_CLEARED, reset);
+    return () => {
+      invalidate();
+      pending.forEach((controller) => controller.abort());
+      pending.clear();
+      window.removeEventListener("storage", changed);
+      window.removeEventListener(RECENT_CLEARED, reset);
+    };
+  }, [owner, router, forget]);
 
   // A key "Connect OpenRouter" just returned (app/recommend/openrouter): it
   // pays from here on, and the panel opens to say so.
@@ -212,26 +250,36 @@ export function RecommendWorkspace({
   }
 
   async function runQuick(t: KeylessTask) {
+    const current = generation.current;
+    const controller = new AbortController();
+    activeRequests.current.add(controller);
     setQuickTask(t);
     setQuickError(null);
     setQuickPending(true);
     try {
       const res = await fetch("/api/recommend/keyless", {
         method: "POST",
+        signal: controller.signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(t),
       });
+      if (current !== generation.current) return;
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
+        if (current !== generation.current) return;
         setQuickError(keylessErrorMessage(res.status, body.error));
         return;
       }
-      setQuickResult((await res.json()) as KeylessResponse);
+      const answer = (await res.json()) as KeylessResponse;
+      if (current !== generation.current) return;
+      setQuickResult(answer);
       top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
     } catch {
+      if (current !== generation.current) return;
       setQuickError("Quick pick is unavailable — try again in a moment.");
     } finally {
-      setQuickPending(false);
+      activeRequests.current.delete(controller);
+      if (current === generation.current) setQuickPending(false);
     }
   }
 
@@ -253,6 +301,9 @@ export function RecommendWorkspace({
       setKeyOpen(true);
       return;
     }
+    const current = generation.current;
+    const controller = new AbortController();
+    activeRequests.current.add(controller);
     const option = menu.find((o) => o.hint === engineHint) ?? menu[0];
     const keyProvider = keyed ? visitor.provider : null;
     setError(null);
@@ -261,12 +312,15 @@ export function RecommendWorkspace({
     try {
       const res = await fetch("/api/recommend", {
         method: "POST",
+        signal: controller.signal,
         // The key, when one pays, rides only in its header.
         headers: { "Content-Type": "application/json", ...visitor.headersFor() },
         body: JSON.stringify({ task_description: taskText, engine: engineHint }),
       });
+      if (current !== generation.current) return;
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string; engine?: string };
+        if (current !== generation.current) return;
         if (res.status === 402 && body.error === "funding_required") {
           setNotice(FUNDING_NOTICE);
           setKeyOpen(true);
@@ -276,15 +330,18 @@ export function RecommendWorkspace({
         return;
       }
       const data = (await res.json()) as MultiRecommendResponse;
+      if (current !== generation.current) return;
       const entry: RecentRun = { id: newId(), at: Date.now(), task: shownTask, data };
       setResult(entry);
       setEditing(false);
-      setRecent((prev) => saveRecent([entry, ...prev]));
+      setRecent((prev) => current === generation.current ? saveRecent(owner, [entry, ...prev]) : prev);
       top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
     } catch {
+      if (current !== generation.current) return;
       setError("The recommender is unavailable — try again in a moment.");
     } finally {
-      setRunning(null);
+      activeRequests.current.delete(controller);
+      if (current === generation.current) setRunning(null);
     }
   }
 
@@ -331,7 +388,7 @@ export function RecommendWorkspace({
             setError(null);
             top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
           }}
-          onClear={() => setRecent(saveRecent([]))}
+          onClear={clearRecent}
         />
       </div>
     );
@@ -451,7 +508,7 @@ export function RecommendWorkspace({
           setError(null);
           top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
         }}
-        onClear={() => setRecent(saveRecent([]))}
+        onClear={clearRecent}
       />
     </div>
   );

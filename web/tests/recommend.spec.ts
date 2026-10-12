@@ -1,3 +1,4 @@
+import { ORIGIN_HEADERS } from "./fixtures/origin";
 // web/tests/recommend.spec.ts
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -339,14 +340,14 @@ test("the API refuses an engine the visitor may not use, before any upstream cal
   // refused at the edge (lib/recommend-engines), never forwarded.
   const founderOnly = registry.engines.find((e) => e.menu === "founder")!;
   const refused = await request.post("/api/recommend", {
-    headers: INVITED_COOKIE,
+    headers: { ...ORIGIN_HEADERS, ...INVITED_COOKIE },
     data: { task_description: "pick a model", engine: founderOnly.hint },
   });
   expect(refused.status()).toBe(403);
   expect(["engine_not_allowed", "engine_not_evaluated"]).toContain((await refused.json()).error);
 
   const unknown = await request.post("/api/recommend", {
-    headers: INVITED_COOKIE,
+    headers: { ...ORIGIN_HEADERS, ...INVITED_COOKIE },
     data: { task_description: "pick a model", engine: "no-such-engine" },
   });
   expect(unknown.status()).toBe(400);
@@ -431,13 +432,13 @@ test("daily_limit daily-cap 429 renders daily-cap message", async ({ page }) => 
 });
 
 test("blank task_description returns 400 bad_input (no upstream call)", async ({ request }) => {
-  const res = await request.post("/api/recommend", { headers: INVITED_COOKIE, data: { task_description: "   " } });
+  const res = await request.post("/api/recommend", { headers: { ...ORIGIN_HEADERS, ...INVITED_COOKIE }, data: { task_description: "   " } });
   expect(res.status()).toBe(400);
   expect(await res.json()).toMatchObject({ error: "bad_input" });
 });
 
 test("a signed-out request is refused before its input is read", async ({ request }) => {
-  const res = await request.post("/api/recommend", { data: { task_description: "   " } });
+  const res = await request.post("/api/recommend", { headers: ORIGIN_HEADERS,  data: { task_description: "   " } });
   expect(res.status()).toBe(402);
   expect(await res.json()).toEqual({
     error: "funding_required",

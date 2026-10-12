@@ -1,6 +1,7 @@
 // web/components/ProfilePreferencesForm.tsx
 "use client";
 
+import { safeLocalPath } from "@/lib/http-boundaries";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -217,22 +218,27 @@ export function ProfilePreferencesForm({
   async function saveProfile(body: Record<string, unknown>): Promise<void> {
     setPending(true);
     setError(null);
-    const res = await fetch("/api/profile", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    setPending(false);
-    if (!res.ok) {
+    try {
+      const res = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      // Complete the private response before navigation/refresh replaces its
+      // consumer. Fetch resolves at headers, before the body has arrived.
+      await res.arrayBuffer();
+      if (!res.ok) throw new Error("profile_save_failed");
+      if (redirectOnSave) {
+        router.push(safeLocalPath(redirectOnSave));
+        return;
+      }
+      setSaved(true);
+      router.refresh();
+    } catch {
       setError("Could not save your preferences. Please try again.");
-      return;
+    } finally {
+      setPending(false);
     }
-    if (redirectOnSave) {
-      router.push(redirectOnSave);
-      return;
-    }
-    setSaved(true);
-    router.refresh();
   }
 
   async function handleSave(event: React.FormEvent<HTMLFormElement>) {

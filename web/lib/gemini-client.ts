@@ -13,12 +13,12 @@
 // retry policy.
 
 import { GoogleGenAI } from "@google/genai";
+import { setTimeout as delay } from "node:timers/promises";
 
 import { env } from "./env";
 
-// Per-request hard timeout. Vercel Functions default execution
-// budget is 300s; pinning the upstream Gemini stream to 120s keeps
-// a buffer for SSE flushing and the audit-write tail.
+// Shared cache + generation deadline. Abort stops our HTTP wait/stream;
+// a provider may still finish or bill work already accepted remotely.
 export const GEMINI_REQUEST_TIMEOUT_MS = 120_000;
 
 // Generous ceiling for a single roadmap turn. The combined
@@ -39,7 +39,10 @@ let cachedClient: GoogleGenAI | null = null;
 
 export function getGeminiClient(): GoogleGenAI {
   if (cachedClient === null) {
-    cachedClient = new GoogleGenAI({ apiKey: env.GOOGLE_API_KEY });
+    cachedClient = new GoogleGenAI({
+      apiKey: env.GOOGLE_API_KEY,
+      httpOptions: { timeout: GEMINI_REQUEST_TIMEOUT_MS, retryOptions: { attempts: 1 } },
+    });
   }
   return cachedClient;
 }
@@ -50,6 +53,9 @@ export function isRetryableGeminiError(err: unknown): boolean {
   }
   const message = err.message.toLowerCase();
   return (
+    // With explicit retryOptions the SDK classifies HTTP status itself and
+    // exposes this fixed prefix, even when the response statusText is empty.
+    message.startsWith("retryable http error:") ||
     message.includes("503") ||
     message.includes("unavailable") ||
     message.includes("deadline_exceeded") ||
@@ -61,12 +67,15 @@ export function isRetryableGeminiError(err: unknown): boolean {
 export async function withGeminiRetry<T>(
   fn: () => Promise<T>,
   maxAttempts: number = GEMINI_RETRY_MAX_ATTEMPTS,
+  signal?: AbortSignal,
 ): Promise<T> {
   let lastError: unknown;
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    signal?.throwIfAborted();
     try {
       return await fn();
     } catch (err) {
+      signal?.throwIfAborted();
       lastError = err;
       if (
         attempt === maxAttempts - 1 ||
@@ -74,9 +83,7 @@ export async function withGeminiRetry<T>(
       ) {
         throw err;
       }
-      await new Promise((resolve) =>
-        setTimeout(resolve, GEMINI_RETRY_INITIAL_DELAY_MS * (attempt + 1)),
-      );
+      await delay(GEMINI_RETRY_INITIAL_DELAY_MS * (attempt + 1), undefined, { signal });
     }
   }
   throw lastError;

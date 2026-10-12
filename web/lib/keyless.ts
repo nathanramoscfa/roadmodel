@@ -39,6 +39,7 @@ export interface KeylessTask {
 export function parseKeylessTask(body: unknown): KeylessTask | null {
   if (typeof body !== "object" || body === null || Array.isArray(body)) return null;
   const b = body as Record<string, unknown>;
+  if (Object.keys(b).some((key) => !["category", "complexity", "novel", "budget_priority"].includes(key))) return null;
   if (!(KEYLESS_CATEGORIES as readonly unknown[]).includes(b.category)) return null;
   if (!(KEYLESS_COMPLEXITIES as readonly unknown[]).includes(b.complexity)) return null;
   if (b.novel !== undefined && typeof b.novel !== "boolean") return null;

@@ -1,3 +1,5 @@
+import { readJson, BodyError } from "@/lib/http-boundaries";
+import { recommendRequestSchema } from "@/lib/recommend-context";
 import type { PoolObservation } from "@/lib/pools";
 // web/app/api/recommend/route.ts
 import { NextResponse } from "next/server";
@@ -33,7 +35,7 @@ import {
 } from "@/lib/profile";
 import { BUDGET_PRIORITY_IDS, isBudgetPriority } from "@/lib/budget-priority";
 import { recommenderRequestHeaders, visitorRequestHeaders } from "@/lib/api";
-import { identifyRequest, ipUaKey, withFundingLane } from "@/lib/withFundingLane";
+import { identifyRequest, ipQuotaKey, withFundingLane } from "@/lib/withFundingLane";
 import type { FundedBy, OperatorLane, VisitorLane } from "@/lib/funding-lane";
 import { recordRejectedVisitorKey } from "@/lib/ratelimit";
 import { clientContext, type ClientContext } from "@/lib/recommend-context";
@@ -268,8 +270,9 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
       const dispatched = await withSpan("dispatch", async () => {
         let parsedBody: unknown;
         try {
-          parsedBody = await req.json();
-        } catch {
+          parsedBody = await readJson(req);
+        } catch (error) {
+          if (error instanceof BodyError) throw error;
           return { kind: "bad_input", error_class: "invalid_json" } as const;
         }
         if (
@@ -283,6 +286,8 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
             error_class: "missing_task_description",
           } as const;
         }
+
+        if (!recommendRequestSchema.safeParse(parsedBody).success) return { kind: "bad_input", error_class: "invalid_request" } as const;
 
         const td = (parsedBody as { task_description: string })
           .task_description;
@@ -412,6 +417,7 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
       poolStates = dispatched.poolStates;
       recommenderEngine = dispatched.engine;
     } catch (err) {
+      if (err instanceof BodyError) throw err;
       // Unexpected error inside the dispatch span — treat as a 500-
       // class fetch failure so the caller sees a friendly error
       // instead of an opaque 500. The audit row still carries the
@@ -419,7 +425,7 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
       // blind.
       recordTotal();
       auditFor(req, "recommender_error", {
-        error_class: err instanceof Error ? err.name : "dispatch_failed",
+        error_class: "dispatch_failed",
         latency_ms: getTimings(),
       });
       return NextResponse.json(
@@ -552,15 +558,18 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
       try {
         upstream = await fetch(recommenderUrl(), {
           method: "POST",
+          cache: "no-store",
+          signal: AbortSignal.timeout(130_000),
+          redirect: "error",
           headers: recommenderRequestHeaders(),
           body: JSON.stringify(upstreamPayload),
         });
-      } catch (err) {
+      } catch {
         return {
           priority,
           ok: false,
           status: 502,
-          body: err instanceof Error ? err.name : "fetch_failed",
+          body: "fetch_failed",
         };
       }
       const text = await upstream.text();
@@ -642,6 +651,9 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
       try {
         upstream = await fetch(ladderUrl(), {
           method: "POST",
+          cache: "no-store",
+          signal: AbortSignal.timeout(130_000),
+          redirect: "error",
           headers: recommenderRequestHeaders(),
           body: JSON.stringify(upstreamPayload),
         });
@@ -701,6 +713,9 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
       try {
         upstream = await fetch(visitorLadderUrl(), {
           method: "POST",
+          cache: "no-store",
+          signal: AbortSignal.timeout(130_000),
+          redirect: "error",
           headers: visitorRequestHeaders(req, visitor),
           body: JSON.stringify(upstreamPayload),
         });
@@ -744,9 +759,9 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
           user_id: userId,
           latency_ms: getTimings(),
         });
-        // A declined key counts toward this IP+UA's daily allowance of them.
+        // A declined key counts toward this IP's daily allowance of them.
         if (visitorRun.code === "visitor_key_rejected") {
-          await recordRejectedVisitorKey(ipUaKey(identifyRequest(req)));
+          await recordRejectedVisitorKey(ipQuotaKey(identifyRequest(req)));
         }
         return NextResponse.json(
           { error: visitorRun.code },
@@ -788,8 +803,8 @@ const handler = async (req: Request, lane: OperatorLane | VisitorLane): Promise<
             latency_ms: getTimings(),
           });
           return new NextResponse(
-            first?.body ?? JSON.stringify({ error: "recommender_unavailable" }),
-            { status, headers: { "Content-Type": "application/json" } },
+            JSON.stringify({ error: "recommender_unavailable" }),
+            { status: 502, headers: { "Content-Type": "application/json" } },
           );
         }
 

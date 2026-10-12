@@ -24,6 +24,7 @@
 // /login, /gate, /api/gate, the auth callback) bypass branches 1-2
 // after the gate check, but still get the CSP.
 
+import { noStore } from "@/lib/http-boundaries";
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
@@ -148,16 +149,22 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
   const nonce = newNonce();
   const csp = buildCsp(nonce);
   const requestHeaders = withNonceRequest(req, nonce, csp);
+  const pendingCookies = new Map<string, Parameters<NextResponse["cookies"]["set"]>[0]>();
+  const authHeaders = new Headers();
   const withCsp = (res: NextResponse): NextResponse => {
+    for (const cookie of pendingCookies.values()) {
+      if (typeof cookie !== "string") res.cookies.set(cookie);
+    }
+    authHeaders.forEach((value, key) => res.headers.set(key, value));
     res.headers.set("content-security-policy", csp);
-    return res;
+    return noStore(res);
   };
 
   // ──── Branch 1: pre-launch password gate ──────────────────────────
   const expectedPassword = process.env.SITE_PASSWORD;
   if (expectedPassword && !GATE_ALLOWED_PATHS.has(pathname)) {
     if (!(await gatePasses(req, expectedPassword))) {
-      return gateRewrite(req, requestHeaders, csp);
+      return withCsp(gateRewrite(req, requestHeaders, csp));
     }
   }
 
@@ -189,19 +196,22 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     process.env.SUPABASE_URL ?? "",
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
     {
+      cookieOptions: { secure: req.nextUrl.protocol === "https:", sameSite: "lax" },
       cookies: {
         getAll() {
           return req.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet, headers) {
           for (const { name, value } of cookiesToSet) {
             req.cookies.set(name, value);
           }
+          requestHeaders.set("cookie", req.headers.get("cookie") ?? "");
+          for (const [name, value] of Object.entries(headers)) authHeaders.set(name, value);
           supabaseResponse = NextResponse.next({
             request: { headers: requestHeaders },
           });
           for (const { name, value, options } of cookiesToSet) {
-            supabaseResponse.cookies.set(name, value, options);
+            pendingCookies.set(name, { name, value, ...options });
           }
         },
       },
@@ -215,7 +225,7 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
         NextResponse.json({ error: "unauthorized" }, { status: 401 }),
       );
     }
-    return loginRewrite(req, requestHeaders, csp);
+    return withCsp(loginRewrite(req, requestHeaders, csp));
   }
 
   return withCsp(supabaseResponse);

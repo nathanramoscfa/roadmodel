@@ -1,3 +1,4 @@
+import { ORIGIN_HEADERS } from "./fixtures/origin";
 // web/tests/keyless-lane.spec.ts
 //
 // The keyless lane: Quick pick's /api/recommend/keyless (app/api/recommend/
@@ -8,7 +9,7 @@
 //   (no /v1/recommend, no ladder, no visitor endpoint), whatever the body says;
 // - the body is checked against /v1/score's enums (400 without a fetch) and
 //   only the allowlisted fields are forwarded;
-// - its own limits, 20 a minute and 200 a day per IP+UA;
+// - its own limits, 20 a minute and 200 a day per IP;
 // - the ledger: rows read funded_by 'keyless' with cost_usd 0, the operator's
 //   spend counter never moves and the operator's cap never blocks the lane;
 // - /api/recommend still answers a free-text request no lane funds with 402,
@@ -150,7 +151,7 @@ test.afterEach(() => {
 function post(body: unknown = TASK, headers: Record<string, string> = {}): Request {
   return new Request("http://localhost/api/recommend/keyless", {
     method: "POST",
-    headers: { "content-type": "application/json", ...headers },
+    headers: { origin: "http://localhost", "content-type": "application/json", ...headers },
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
 }
@@ -219,19 +220,8 @@ test("never a paid endpoint, and only the allowlisted fields, whatever the body 
       "x-roadmodel-visitor-provider": "openai",
     }),
   );
-  expect(res.status).toBe(200);
-  expect(calls).toHaveLength(1);
-  for (const c of calls) {
-    const path = new URL(c.url).pathname;
-    expect(path).toBe("/v1/score");
-    expect(path).not.toMatch(/recommend/);
-    // A visitor key on this route is ignored: it never travels on.
-    expect(c.headers["x-roadmodel-visitor-key"]).toBeUndefined();
-    for (const key of Object.keys(c.body)) expect(SCORE_FIELDS.has(key)).toBe(true);
-    // The browser's own funding claims are never forwarded: only the profile's.
-    expect(c.body.subscriptions).toEqual([]);
-    expect(JSON.stringify(c.body)).not.toContain("anthropic-claude-opus-5-5");
-  }
+  expect(res.status).toBe(400);
+  expect(calls).toHaveLength(0);
 });
 
 test("an invalid body is 400 bad_input with zero fetches", async () => {
@@ -279,7 +269,7 @@ test("the operator's tripped cap never blocks the keyless lane", async () => {
   expect(spend).toEqual([]);
 });
 
-test("limits: 200 a day per IP+UA, then 429 rate_limited with no fetch", async () => {
+test("limits: 200 a day per IP, then 429 rate_limited with no fetch", async () => {
   const { burst, daily, used } = counters(10_000, KEYLESS_DAILY_LIMIT);
   setTestKeylessLimiters({ burst, daily });
   for (let i = 0; i < KEYLESS_DAILY_LIMIT; i++) {
@@ -289,12 +279,14 @@ test("limits: 200 a day per IP+UA, then 429 rate_limited with no fetch", async (
   expect(over.status).toBe(429);
   expect((await over.json()).error).toBe("rate_limited");
   expect(calls).toHaveLength(KEYLESS_DAILY_LIMIT);
+  expect((await keylessPOST(post(TASK, { "user-agent": "changed" }))).status).toBe(429);
   expect(audits.at(-1)).toMatchObject({ outcome: "rate_limited", funded_by: "keyless" });
-  // Keyed on IP+UA, never a user id.
-  expect(Object.keys(used).every((k) => /^(min|day):[0-9a-f]+:[0-9a-f]+$/.test(k))).toBe(true);
+  // Keyed on IP, never a user id.
+  expect(Object.keys(used).every((k) => /^(min|day):[0-9a-f]+$/.test(k))).toBe(true);
+  expect((await keylessPOST(post(TASK, { "x-forwarded-for": "192.0.2.31" }))).status).toBe(200);
 });
 
-test("limits: 20 a minute per IP+UA, then 429 burst_dropped with no fetch", async () => {
+test("limits: 20 a minute per IP, then 429 burst_dropped with no fetch", async () => {
   const { burst, daily } = counters(KEYLESS_BURST_LIMIT, 10_000);
   setTestKeylessLimiters({ burst, daily });
   for (let i = 0; i < KEYLESS_BURST_LIMIT; i++) {
@@ -325,7 +317,7 @@ test("/api/recommend: free text with no funding is 402 naming the four ways forw
   const res = await recommendPOST(
     new Request("http://localhost/api/recommend", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { origin: "http://localhost", "content-type": "application/json" },
       body: JSON.stringify({ task_description: "pick a model" }),
     }),
   );
@@ -343,8 +335,8 @@ test("/api/recommend: free text with no funding is 402 naming the four ways forw
 // few seconds before the lane fails open (lib/ratelimit.ts).
 test("the route: a signed-out Quick pick returns three rungs, forwarding only the allowlist", async ({ request }) => {
   test.setTimeout(60_000);
-  const res = await request.post("/api/recommend/keyless", {
-    data: { ...TASK, engine: "anthropic-claude-opus-5-5", unknown_key: "x" },
+  const res = await request.post("/api/recommend/keyless", { headers: ORIGIN_HEADERS,
+    data: TASK,
   });
   expect(res.status()).toBe(200);
   const body = (await res.json()) as { rungs: unknown[]; received_keys: string[] };
@@ -353,7 +345,7 @@ test("the route: a signed-out Quick pick returns three rungs, forwarding only th
 });
 
 test("the route: a signed-out free-text request is 402 with the options", async ({ request }) => {
-  const res = await request.post("/api/recommend", { data: { task_description: "pick a model" } });
+  const res = await request.post("/api/recommend", { headers: ORIGIN_HEADERS,  data: { task_description: "pick a model" } });
   expect(res.status()).toBe(402);
   expect((await res.json()).options).toEqual(["visitor_key", "openrouter", "keyless", "own_agent"]);
 });
