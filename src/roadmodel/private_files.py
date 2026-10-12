@@ -16,7 +16,7 @@ import unicodedata
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, TextIO
+from typing import Any, BinaryIO, TextIO
 
 
 class UnsafePrivatePath(ValueError):
@@ -319,6 +319,28 @@ class _WindowsFiles:
         finally:
             self.free(descriptor)
 
+    def repair_file(self, path: Path) -> None:
+        """Repair one explicitly owned file while excluding existing readers."""
+        with self.parent(path) as parent, self.descriptor() as (descriptor, principals):
+            handle = self.open(parent, path.name, 0xC0040000, 1, share=0)
+            try:
+                self.check(self.info(handle).links == 1)
+                self.verify(handle, principals, owner_only=True)
+                present, defaulted, dacl = self.w.BOOL(), self.w.BOOL(), self.c.c_void_p()
+                self.check(
+                    self.get_dacl(
+                        descriptor,
+                        self.c.byref(present),
+                        self.c.byref(dacl),
+                        self.c.byref(defaulted),
+                    )
+                )
+                self.check(present.value and dacl.value)
+                self.check(self.set_security(handle, 1, 0x80000004, None, None, dacl, None) == 0)
+                self.verify(handle, principals)
+            finally:
+                self.close(handle)
+
     def info(self, handle: int, directory: bool = False) -> Any:
         info = self.Info()
         self.check(self.get_info(handle, self.c.byref(info)))
@@ -534,24 +556,17 @@ class _WindowsFiles:
             with stream:
                 return stream.read()
 
-    def append(self, path: Path) -> TextIO:
+    def stream_fd(self, path: Path, *, append: bool) -> int:
         with self.parent(path) as parent, self.descriptor() as (descriptor, principals):
-            handle = self.open(parent, path.name, 4, 3, descriptor=descriptor)
+            access = 4 if append else 0xC0000000  # APPEND_DATA or GENERIC_READ|WRITE
+            handle = self.open(parent, path.name, access, 3, descriptor=descriptor)
             try:
                 self.verify(handle, principals)
                 self.check(self.info(handle).links == 1)
+                flags = (os.O_WRONLY | os.O_APPEND) if append else os.O_RDWR
+                return self.fd(handle, flags | 0x8000)
             except BaseException:
                 self.close(handle)
-                raise
-            try:
-                fd = self.fd(handle, os.O_WRONLY | os.O_APPEND | 0x8000)
-            except BaseException:
-                self.close(handle)
-                raise
-            try:
-                return os.fdopen(fd, "a", encoding="utf-8")
-            except BaseException:
-                os.close(fd)
                 raise
 
 
@@ -612,6 +627,31 @@ def private_directory(path: Path) -> None:
     else:
         with _windows().parent(path / ".directory-check", repair=True):
             pass
+
+
+def private_file_permissions(path: Path) -> None:
+    """Repair an explicitly owned existing private file without replacing bytes.
+
+    Windows requires an exclusive handle; an existing reader/writer must close
+    first. This is an explicit migration operation, never an append fallback.
+    """
+    path = path.expanduser().absolute()
+    if os.name == "nt":
+        _windows().repair_file(path)
+        return
+    directory = _parent_fd(path)
+    try:
+        fd = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=directory)
+        try:
+            info = os.fstat(fd)
+            _regular(info)
+            if info.st_nlink != 1 or info.st_uid != os.geteuid():
+                raise UnsafePrivatePath("Private file must be independently owned.")
+            os.fchmod(fd, 0o600)
+        finally:
+            os.close(fd)
+    finally:
+        os.close(directory)
 
 
 def atomic_private_write(
@@ -677,35 +717,46 @@ def read_private_output(path: Path) -> bytes:
         os.close(directory)
 
 
-def open_private_append(path: Path) -> TextIO:
-    """Append a private log without replacing an inode held by a handover child."""
+def _private_stream_fd(path: Path, *, append: bool) -> int:
     path = path.expanduser().absolute()
     if os.name == "nt":
-        return _windows().append(path)
+        return _windows().stream_fd(path, append=append)
     directory = _parent_fd(path)
-    target = path.name if directory is not None else path
-    fd = None
     try:
-        fd = os.open(
-            target,
-            os.O_APPEND | os.O_WRONLY | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0),
-            0o600,
-            dir_fd=directory,
-        )
-        info = os.fstat(fd)
-        _regular(info)
-        if info.st_nlink != 1:
-            raise UnsafePrivatePath("Private log must not share a hardlink.")
-        if os.name == "posix":
+        flags = (os.O_APPEND | os.O_WRONLY) if append else os.O_RDWR
+        fd = os.open(path.name, flags | os.O_CREAT | os.O_NOFOLLOW, 0o600, dir_fd=directory)
+        try:
+            info = os.fstat(fd)
+            _regular(info)
+            if info.st_nlink != 1:
+                raise UnsafePrivatePath("Private stream must not share a hardlink.")
             os.fchmod(fd, 0o600)
-        stream = os.fdopen(fd, "a", encoding="utf-8")
-        fd = None
-        return stream
-    finally:
-        if fd is not None:
+            return fd
+        except BaseException:
             os.close(fd)
-        if directory is not None:
-            os.close(directory)
+            raise
+    finally:
+        os.close(directory)
+
+
+def open_private_append(path: Path) -> TextIO:
+    """Append a private log without replacing an inode held by a handover child."""
+    fd = _private_stream_fd(path, append=True)
+    try:
+        return os.fdopen(fd, "a", encoding="utf-8")
+    except BaseException:
+        os.close(fd)
+        raise
+
+
+def open_private_update(path: Path) -> BinaryIO:
+    """Open a private lock/state stream without replacing its shared inode."""
+    fd = _private_stream_fd(path, append=False)
+    try:
+        return os.fdopen(fd, "r+b")
+    except BaseException:
+        os.close(fd)
+        raise
 
 
 def _git(project: Path, *args: str) -> subprocess.CompletedProcess[str]:

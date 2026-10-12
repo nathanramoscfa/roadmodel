@@ -184,8 +184,8 @@ junctions, device names and alternate data streams. UNC and cloud reparse paths
 are unsupported. Ordinary ancestor directories retain their existing ACLs.
 Only explicitly selected private directories have their permissions tightened.
 
-An existing Windows log with broader or inherited permissions is refused before
-appending. Stop its old updater process and repair that specific log before the
+Existing Windows logs and lock files with broader or inherited permissions are
+refused before use. Stop the old updater and repair those specific files before the
 first upgrade; changing a DACL does not revoke an already-open reader. A current
 launcher and its handover child can append to the same protected log. This
 protects future writes; it does not automatically repair older files throughout

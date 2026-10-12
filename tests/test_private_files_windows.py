@@ -288,3 +288,42 @@ def test_exclusive_publication_never_overwrites_existing_backup(files, tmp_path)
         files.atomic_private_write(path, b"new", replace=False)
     assert path.read_bytes() == b"old"
     assert list(tmp_path.iterdir()) == [path]
+
+
+def test_private_update_handles_share_inode_and_preserve_seeks(files, tmp_path):
+    path = tmp_path / "update.lock"
+    with files.open_private_update(path) as a, files.open_private_update(path) as b:
+        a.write(b"\0owner")
+        a.flush()
+        b.seek(1)
+        assert b.read() == b"owner"
+        b.seek(1)
+        b.write(b"child")
+        b.flush()
+        a.seek(1)
+        assert a.read() == b"child"
+    verify_path(files, path)
+
+
+def test_private_update_refuses_broad_legacy_lock(files, tmp_path):
+    path = tmp_path / "update.lock"
+    path.write_bytes(b"old")
+    broad_acl(files, path)
+    with pytest.raises(files.UnsafePrivatePath):
+        files.open_private_update(path)
+    assert path.read_bytes() == b"old"
+
+
+def test_explicit_acl_repair_preserves_bytes_and_requires_closed_readers(files, tmp_path):
+    path = tmp_path / "old-memory.md"
+    path.write_bytes(b"preserve memory")
+    broad_acl(files, path)
+    before = path.stat()
+    with path.open("rb"):
+        with pytest.raises(files.UnsafePrivatePath):
+            files.private_file_permissions(path)
+    files.private_file_permissions(path)
+    assert path.read_bytes() == b"preserve memory"
+    assert path.stat().st_ino == before.st_ino
+    assert path.stat().st_mtime_ns == before.st_mtime_ns
+    verify_path(files, path)
