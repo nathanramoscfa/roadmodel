@@ -20,7 +20,7 @@ Write the Phase {{N}} roadmap for this project.
 Step 0 — refresh the planning kit so the templates and catalog are
 current. Run `pip install -U roadmodel && roadmodel export-kit . --force`
 (where roadmodel is not installed, run
-`scripts/export-planning-kit.sh .` instead). Then open
+`scripts/export-planning-kit.sh .` from a reviewed checkout instead; it bootstraps a released wheel). Then open
 `planning/templates/phase-roadmap-template.md` and confirm its Stage 3
 reads "OPEN THE PR, THEN MARK THE STEP", its Stage 6 reads "DISPOSE
 OF EVERY FINDING, DECLARE COMPLETION, THEN NEW CONVERSATION", and its

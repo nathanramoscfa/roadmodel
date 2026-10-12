@@ -1,160 +1,94 @@
 #!/usr/bin/env bash
-# scripts/export-planning-kit.sh
-#
-# Export the roadmodel "planning kit" into another project so an in-editor AI
-# (Claude Code, Cursor, etc.) can author project/phase roadmaps WITH per-step
-# model recommendations at $0 marginal cost — the AI runs the selector
-# algorithm in its own context instead of calling a paid API or MCP server.
-#
-# Files are fetched fresh from the public roadmodel GitHub repo by default, so
-# the kit stays current with the catalog crons (new models, prices, and
-# availability exclusions such as a withdrawn flagship). Use --local to copy
-# from this clone's working tree instead (offline; reflects uncommitted edits).
-#
-# Usage:
-#   scripts/export-planning-kit.sh <target-project-dir> [options]
-#
-# Options:
-#   --dest <subdir>        Destination subdir inside the target project
-#                          (default: planning)
-#   --ref <git-ref>        Fetch from this branch/tag/sha (default: main)
-#   --local                Copy from this repo's working tree, not GitHub
-#   --user-context <path>  Path to user-context.md (default:
-#                          $XDG_CONFIG_HOME/roadmodel/user-context.md, else
-#                          ~/.config/roadmodel/user-context.md)
-#   -h, --help             Show this help and exit
-
+# Export the roadmodel planning kit using the published wheel.
+# Usage: export-planning-kit.sh TARGET [--dest DIR] [--user-context FILE] [--force] [--local]
+# Default: use roadmodel >=0.2.81, bootstrapping an isolated temporary venv if needed.
+# --local explicitly reads this reviewed checkout's code and docs, including edits.
+# --ref is retired: use a released wheel, or review a checkout and use --local.
 set -euo pipefail
 
-REPO_SLUG="nathanramoscfa/roadmodel"
-
-usage() {
-  sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'
-}
-
-# --- defaults -------------------------------------------------------------
+usage() { sed -n '2,6p' "$0" | sed 's/^# //'; }
 TARGET=""
 DEST_SUBDIR="planning"
-REF="main"
-MODE="remote"
-XDG="${XDG_CONFIG_HOME:-$HOME/.config}"
-USER_CONTEXT="$XDG/roadmodel/user-context.md"
-
-# --- arg parsing ----------------------------------------------------------
+MODE="release"
+FORCE="0"
+USER_CONTEXT="${XDG_CONFIG_HOME:-$HOME/.config}/roadmodel/user-context.md"
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --dest)         DEST_SUBDIR="${2:?--dest needs a value}"; shift 2 ;;
-    --ref)          REF="${2:?--ref needs a value}"; shift 2 ;;
-    --local)        MODE="local"; shift ;;
+    --dest) DEST_SUBDIR="${2:?--dest needs a value}"; shift 2 ;;
     --user-context) USER_CONTEXT="${2:?--user-context needs a value}"; shift 2 ;;
-    -h|--help)      usage; exit 0 ;;
-    -*)             echo "ERROR: unknown option: $1" >&2; usage >&2; exit 2 ;;
-    *)
-      if [[ -z "$TARGET" ]]; then TARGET="$1"; shift
-      else echo "ERROR: unexpected argument: $1" >&2; exit 2; fi
-      ;;
+    --force) FORCE="1"; shift ;;
+    --local) MODE="local"; shift ;;
+    --ref) echo "ERROR: --ref is retired; use a released wheel or a reviewed checkout with --local." >&2; exit 2 ;;
+    -h|--help) usage; exit 0 ;;
+    -*) echo "ERROR: unknown option." >&2; exit 2 ;;
+    *) if [[ -z "$TARGET" ]]; then TARGET="$1"; shift
+       else echo "ERROR: unexpected argument." >&2; exit 2; fi ;;
   esac
 done
-
-if [[ -z "$TARGET" ]]; then
-  echo "ERROR: target project directory is required." >&2
-  usage >&2
-  exit 2
+if [[ -z "$TARGET" || ! -d "$TARGET" ]]; then
+  echo "ERROR: target directory does not exist." >&2; exit 2
 fi
-if [[ ! -d "$TARGET" ]]; then
-  echo "ERROR: target directory does not exist: $TARGET" >&2
-  exit 2
-fi
-
+PYTHON="${ROADMODEL_PYTHON:-python3}"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-DEST="$(cd "$TARGET" && pwd)/$DEST_SUBDIR"
-
-# --- source -> destination map -------------------------------------------
-# Each entry: "<repo-relative source>::<destination path under $DEST>"
-# settings-display.md is the DISPLAY CONTRACT — how the selector's setting
-# fields map to the real controls each surface exposes (which dials to show,
-# which to omit). `roadmodel export-kit` has always shipped it; omitting it here
-# meant shell-exported kits carried the selector without its display rules.
-FILES=(
-  "docs/model-selector.txt::model-selector.txt"
-  "docs/model-tier-cost-scale.md::model-tier-cost-scale.md"
-  "docs/settings-display.md::settings-display.md"
-  "docs/templates/project-roadmap-template.md::templates/project-roadmap-template.md"
-  "docs/templates/phase-roadmap-template.md::templates/phase-roadmap-template.md"
-  "docs/templates/planning-kit-how-to-use.md::HOW-TO-USE.md"
-  "docs/templates/prompt-project-roadmap.md::prompts/project-roadmap.md"
-  "docs/templates/prompt-phase-roadmap.md::prompts/phase-roadmap.md"
-)
-
-fetch_one() {  # <src_rel> <dest_abs>
-  local src="$1" dest="$2"
-  mkdir -p "$(dirname "$dest")"
-  if [[ "$MODE" == "local" ]]; then
-    if [[ ! -f "$REPO_ROOT/$src" ]]; then
-      echo "ERROR: source not found in local tree: $REPO_ROOT/$src" >&2
-      exit 1
-    fi
-    cp "$REPO_ROOT/$src" "$dest"
-  else
-    local url="https://raw.githubusercontent.com/${REPO_SLUG}/${REF}/${src}"
-    if ! curl -fsSL "$url" -o "$dest"; then
-      echo "ERROR: failed to fetch $url" >&2
-      echo "       (check the --ref value and your network connection)" >&2
-      exit 1
-    fi
+if [[ "$MODE" == "release" ]]; then
+  EXPORT_PYTHON="$PYTHON"
+  if ! "$PYTHON" -I -X utf8 -c 'from importlib.metadata import version; from roadmodel import private_files; assert tuple(map(int, version("roadmodel").split("."))) >= (0, 2, 81)' 2>/dev/null; then
+    umask 077
+    BOOTSTRAP="$(mktemp -d)"
+    trap 'rm -rf -- "$BOOTSTRAP"' EXIT
+    "$PYTHON" -I -X utf8 -m venv "$BOOTSTRAP/venv"
+    EXPORT_PYTHON="$BOOTSTRAP/venv/bin/python"
+    if [[ ! -f "$EXPORT_PYTHON" ]]; then EXPORT_PYTHON="$BOOTSTRAP/venv/Scripts/python.exe"; fi
+    "$EXPORT_PYTHON" -I -X utf8 -m pip install --disable-pip-version-check --only-binary=:all: 'roadmodel>=0.2.81,<0.3'
   fi
-  if [[ ! -s "$dest" ]]; then
-    echo "ERROR: fetched an empty file: $dest" >&2
-    exit 1
-  fi
+  ARGS=(export-kit "$TARGET" --dest "$DEST_SUBDIR" --user-context "$USER_CONTEXT")
+  if [[ "$FORCE" == "1" ]]; then ARGS+=(--force); fi
+  "$EXPORT_PYTHON" -I -X utf8 -m roadmodel "${ARGS[@]}"
+  exit 0
+fi
+
+# Local developer mode uses the same stdlib path policy as the released CLI.
+# No code or instructions are fetched from a moving Git ref.
+"$PYTHON" -I -X utf8 - "$REPO_ROOT" "$TARGET" "$DEST_SUBDIR" "$USER_CONTEXT" "$FORCE" <<'PYLOCAL'
+import importlib.util
+import sys
+from pathlib import Path
+
+repo, project, destination, source, force = sys.argv[1:]
+root = Path(repo)
+spec = importlib.util.spec_from_file_location("private_files", root / "src/roadmodel/private_files.py")
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+files = {
+    "model-selector.txt": "model-selector.txt",
+    "model-tier-cost-scale.md": "model-tier-cost-scale.md",
+    "settings-display.md": "settings-display.md",
+    "templates/project-roadmap-template.md": "templates/project-roadmap-template.md",
+    "templates/phase-roadmap-template.md": "templates/phase-roadmap-template.md",
+    "templates/planning-kit-how-to-use.md": "HOW-TO-USE.md",
+    "templates/prompt-project-roadmap.md": "prompts/project-roadmap.md",
+    "templates/prompt-phase-roadmap.md": "prompts/phase-roadmap.md",
 }
-
-echo "Exporting roadmodel planning kit -> $DEST"
-echo "  source: $([[ "$MODE" == local ]] && echo "local tree ($REPO_ROOT)" || echo "github ${REPO_SLUG}@${REF}")"
-mkdir -p "$DEST"
-
-for entry in "${FILES[@]}"; do
-  src="${entry%%::*}"
-  rel="${entry##*::}"
-  fetch_one "$src" "$DEST/$rel"
-  echo "  + $rel"
-done
-
-# --- sanity: confirm we got the real selector, not an error page ----------
-if ! grep -q "<model-selector>" "$DEST/model-selector.txt"; then
-  echo "ERROR: model-selector.txt is missing its '<model-selector>' marker —" >&2
-  echo "       the fetch may have returned an error page. Aborting." >&2
-  exit 1
-fi
-
-# --- user-context (machine-local; never fetched from GitHub) --------------
-if [[ -f "$USER_CONTEXT" ]]; then
-  cp "$USER_CONTEXT" "$DEST/user-context.md"
-  echo "  + user-context.md (from $USER_CONTEXT)"
-else
-  cat > "$DEST/user-context.md" <<'PLACEHOLDER'
-# User Context (PLACEHOLDER — fill this in)
-
-No user-context.md was found at the default path
-($XDG_CONFIG_HOME/roadmodel/user-context.md). Without it, model picks still
-work but PLATFORM selection falls back to the selector's generic default order
-instead of your real subscriptions.
-
-Create the real file at ~/.config/roadmodel/user-context.md (subscriptions,
-API keys, platform preference order) and re-run the exporter, or replace this
-placeholder directly. See the roadmodel repo's docs/user-context.example.md
-for the schema.
-PLACEHOLDER
-  echo "  ! user-context.md NOT found at $USER_CONTEXT — wrote a placeholder" >&2
-fi
-
-cat <<EOF
-
-Done. Next, in that project open ${DEST_SUBDIR}/prompts/phase-roadmap.md (or
-project-roadmap.md), fill the placeholders, and paste it into a new AI chat.
-The AI runs @${DEST_SUBDIR}/model-selector.txt against
-@${DEST_SUBDIR}/user-context.md as the engine — no external API.
-
-See @${DEST_SUBDIR}/HOW-TO-USE.md for the full workflow. Re-run this exporter at
-the start of each phase to stay current with the catalog.
-EOF
+try:
+    project = Path(project).resolve(strict=True)
+    outputs = [(root / "docs" / name, module.safe_destination(project, Path(destination) / rel))
+               for name, rel in files.items()]
+    context = module.protect_export(project, Path(destination) / "user-context.md")
+    contents = [(path.read_bytes(), output) for path, output in outputs]
+    if any(not data for data, _ in contents) or b"<model-selector>" not in contents[0][0]:
+        raise ValueError("Incomplete planning kit")
+    source = Path(source).expanduser().resolve()
+    if context.exists() and (force != "1" or not source.is_file()):
+        private = module.read_private_output(context)
+    elif source.is_file():
+        private = source.read_bytes()
+    else:
+        private = b"# User Context (PLACEHOLDER)\n\nFill in your subscriptions and access preferences.\n"
+    for data, output in contents:
+        module.atomic_private_write(output, data)
+    module.atomic_private_write(context, private)
+except (OSError, ValueError):
+    print("ERROR: export refused; check source files, destination links and Git exclusions.", file=sys.stderr)
+    sys.exit(1)
+print("Exported planning kit. Open its HOW-TO-USE.md to continue.")
+PYLOCAL

@@ -107,8 +107,9 @@ def test_posix_command_keeps_metacharacters_as_data(fleet: ModuleType, tmp_path:
     )[0]
     command = fleet.build_command(peer)
     assert command[-2] == "posix" and command[-3] == "--"
-    python, flag, code = shlex.split(command[-1])
+    python, isolated, xoption, encoding, flag, code = shlex.split(command[-1])
     assert python == "/bin/python3" and flag == "-c"
+    assert (isolated, xoption, encoding) == ("-I", "-X", "utf8")
     payload = code.split("b64decode('", 1)[1].split("'", 1)[0]
     data = json.loads(base64.b64decode(payload))
     assert data == {
@@ -126,7 +127,7 @@ def test_windows_command_is_encoded_and_quotes_executable(
     peer = fleet.load_peers(_config(tmp_path, python=python, projects=[project]))[0]
     command = fleet.build_command(peer)
     script = base64.b64decode(command[-1].split()[-1]).decode("utf-16-le")
-    assert "& 'C:\\O''Brien;$(not-a-command)\\python.exe' '-c'" in script
+    assert "& 'C:\\O''Brien;$(not-a-command)\\python.exe' '-I' '-X' 'utf8' '-c'" in script
     assert "$ErrorActionPreference='Stop'" in script
     assert "exit $LASTEXITCODE" in script
     assert project not in script

@@ -79,7 +79,7 @@ class Config:
     user_context_path: Path
 
     def __repr__(self) -> str:
-        masked = f"{self.api_key[:4]}***" if self.api_key else "<empty>"
+        masked = "<redacted>" if self.api_key else "<empty>"
         return (
             f"Config(provider={self.provider!r}, model={self.model!r}, "
             f"api_key={masked!r}, user_context_path={self.user_context_path!r})"
@@ -103,9 +103,7 @@ def _normalize_provider(value: str | None) -> ProviderName | None:
     normalized = value.strip().lower()
     if normalized in PROVIDER_KEY_ENV:
         return normalized
-    raise MissingProviderKeyError(
-        f"Invalid provider {value!r}. Use one of: {', '.join(PROVIDER_CHOICES)}."
-    )
+    raise MissingProviderKeyError(f"Invalid provider. Use one of: {', '.join(PROVIDER_CHOICES)}.")
 
 
 def _first_present_env_provider() -> ProviderName | None:

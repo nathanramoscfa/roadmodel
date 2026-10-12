@@ -21,7 +21,7 @@ Parse "$ARGUMENTS" first. In Codex this command is normally the skill
 | Mode | Action |
 | --- | --- |
 | Default | Upgrade packages, kits, commands/runtime, and shared context, then configured peers |
-| `--sync-only` | Repair rules, full memory, and handoff setup using installed code; no package upgrades, command downloads, or AI calls |
+| `--sync-only` | Repair rules, full memory, and handoff setup using installed code; no package upgrades, command installation, or AI calls |
 | `--check` | Verify shared context and configured peers without writes, logging, registration, or self-update |
 | `--local-only` | Skip fleet peers in any mode |
 | `--skip-roadmap-refresh` | Skip roadmap agents for this full upgrade without changing the saved automatic-refresh preference |
@@ -35,21 +35,25 @@ are missing, report that a full upgrade is required; do not silently turn a
 check into an installation. These modes do not fetch packages or invoke a
 model. Configured peers still use SSH unless `--local-only` is supplied.
 
-For a full upgrade, fetch the launcher to that location (Windows:
-`%USERPROFILE%\.config\roadmodel\update_projects.py`), creating the directory
-if needed:
+For a full upgrade, run the existing installed launcher directly (Windows:
+`%USERPROFILE%\.config\roadmodel\update_projects.py`). It upgrades roadmodel in
+its dedicated `~/.config/roadmodel/venv`, installs the complete launcher,
+companions and command resources from that published wheel, and hands over
+to the release. Do not fetch executable code or command instructions from
+GitHub's moving `main` branch.
 
-`https://raw.githubusercontent.com/nathanramoscfa/roadmodel/main/scripts/update_projects.py`
+If no launcher is installed, use Python 3.11+ to create that dedicated venv:
+`python3 -I -X utf8 -m venv ~/.config/roadmodel/venv` (Windows: `py -3 -I -X utf8 -m venv
+"$env:USERPROFILE\.config\roadmodel\venv"`). Use its `bin/python` (Windows:
+`Scripts/python.exe`) to run `-I -X utf8 -m pip install --upgrade --only-binary=:all:
+"roadmodel>=0.2.81,<0.3"`, then `-I -X utf8 -m roadmodel.update_projects` with the requested
+full-upgrade arguments. The first full invocation installs its launcher.
+Never bootstrap for check, sync-only or dry-run modes.
 
-Use an available downloader such as `curl -fsSL … -o …`, `curl.exe`, or
-Python's `urllib.request`. Run it with the machine's default `python`,
-`python3`, or `py -3` on Windows. The launcher is stdlib-only, Python 3.9+.
-On a full run it upgrades roadmodel in its dedicated
-`~/.config/roadmodel/venv`, replaces the launcher and companion modules from
-the published wheel, and hands over to that release. The package requires
-Python 3.11+; the updater can find a suitable registered project's interpreter.
-This uses roadmodel's normal signed-tag/provenance release channel; it is not
-a claim that the launcher independently verifies artifact signatures.
+This follows the published PyPI release and its signed-tag/provenance process.
+Installation trusts PyPI, TLS and the publisher; the launcher does not
+independently verify artifact signatures. An existing legacy launcher can
+hand over to the released updater without a mutable-main download.
 
 ## 2. Resolve the registry and fleet
 

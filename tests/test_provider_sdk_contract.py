@@ -54,7 +54,7 @@ def test_anthropic_arguments_exist_in_the_sdk(monkeypatch: pytest.MonkeyPatch, m
     captured: dict[str, Any] = {}
 
     class _Client:
-        def __init__(self, api_key: str) -> None:
+        def __init__(self, api_key: str, *, timeout: float, max_retries: int) -> None:
             self.messages = self
 
         def create(self, **kwargs: Any) -> Any:
@@ -82,7 +82,7 @@ def test_openai_arguments_exist_in_the_sdk(monkeypatch: pytest.MonkeyPatch, mode
     captured: dict[str, Any] = {}
 
     class _Client:
-        def __init__(self, api_key: str) -> None:
+        def __init__(self, api_key: str, *, timeout: float, max_retries: int) -> None:
             self.responses = self
 
         def create(self, **kwargs: Any) -> Any:
@@ -112,7 +112,7 @@ def test_google_arguments_and_config_exist_in_the_sdk(
     captured: dict[str, Any] = {}
 
     class _Client:
-        def __init__(self, api_key: str) -> None:
+        def __init__(self, api_key: str, *, http_options: dict[str, Any]) -> None:
             self.models = self
 
         def generate_content(self, **kwargs: Any) -> Any:

@@ -7,7 +7,7 @@ paste-prompt.
 
 If `planning/prompts/project-roadmap.md` does not exist yet, first run
 `pip install -U roadmodel && roadmodel export-kit . --force` (or
-`scripts/export-planning-kit.sh .` where roadmodel is not installed).
+`scripts/export-planning-kit.sh .` from a reviewed checkout to bootstrap a released wheel).
 
 Then read `planning/prompts/project-roadmap.md` and execute everything
 below its horizontal rule exactly as written, with:

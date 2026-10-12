@@ -130,7 +130,12 @@ def test_uses_chat_completions_against_registry_base_url(
     _install_fake(monkeypatch)
     text = ADAPTERS["deepseek"].recommend("P", "S", api_key="k", max_output_tokens=512)
     assert text == _RESPONSE.strip()
-    assert _FakeClient.init_kwargs == {"api_key": "k", "base_url": "https://api.deepseek.com"}
+    assert _FakeClient.init_kwargs == {
+        "api_key": "k",
+        "base_url": "https://api.deepseek.com",
+        "timeout": 600.0,
+        "max_retries": 0,
+    }
     sent = _FakeClient.captured
     assert sent["model"] == "deepseek-v4-pro"  # registry default
     assert sent["messages"] == [
@@ -157,8 +162,8 @@ def test_local_endpoints_get_long_timeout_and_no_retries(
     ADAPTERS["custom"].recommend("P", "S", api_key="k", model="m")
     assert _FakeClient.init_kwargs["timeout"] == 1800.0
     ADAPTERS["deepseek"].recommend("P", "S", api_key="k")
-    assert "timeout" not in _FakeClient.init_kwargs
-    assert "max_retries" not in _FakeClient.init_kwargs
+    assert _FakeClient.init_kwargs["timeout"] == 600.0
+    assert _FakeClient.init_kwargs["max_retries"] == 0
 
 
 def test_explicit_model_and_temperature_forwarded(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -251,7 +256,7 @@ def test_api_error_is_wrapped_with_provider_label(monkeypatch: pytest.MonkeyPatc
         raise sys.modules["openai"].APIError("401 bad key")  # type: ignore[attr-defined]
 
     monkeypatch.setattr(_FakeCompletions, "create", boom)
-    with pytest.raises(ProviderCallError, match="Groq API call failed: 401 bad key"):
+    with pytest.raises(ProviderCallError, match="Groq request failed"):
         ADAPTERS["groq"].recommend("P", "S", api_key="k")
 
 
