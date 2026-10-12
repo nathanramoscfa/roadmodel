@@ -6,6 +6,7 @@ from typing import Any
 
 from roadmodel import usage
 from roadmodel.errors import ProviderCallError
+from roadmodel.providers._safety import hosted_timeout, private_transport, safe_error
 
 DEFAULT_MODEL = "gpt-5.4"
 
@@ -54,6 +55,7 @@ def _extract_output_text(response: object) -> str | None:
     return None
 
 
+@private_transport
 def recommend(
     prompt: str,
     system: str,
@@ -73,16 +75,19 @@ def recommend(
     # where the pick is easy (T1), so a low effort is fast + cheap + sufficient;
     # 0 -> minimal for the highest-volume anon path.
     _ = temperature
+    missing_sdk: ProviderCallError | None = None
     try:
-        from openai import APIError, OpenAI
-    except Exception as exc:  # pragma: no cover - dependency/runtime guard
-        raise ProviderCallError(
+        from openai import OpenAI
+    except Exception:  # pragma: no cover - dependency/runtime guard
+        missing_sdk = ProviderCallError(
             "The OpenAI SDK is required for `roadmodel recommend` but is not "
             "installed. Install the engine extra: pip install 'roadmodel[recommend]'."
-        ) from exc
+        )
+    if missing_sdk is not None:
+        raise missing_sdk
 
     try:
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=hosted_timeout(), max_retries=0)
         # `kwargs` is typed `Any` so mypy strict doesn't reject the
         # mixed-value-type dict against the SDK's overloaded `create`
         # signature; the runtime call accepts plain dicts identically.
@@ -113,7 +118,7 @@ def recommend(
         raise ProviderCallError("OpenAI response did not contain text output.")
     except ProviderCallError:
         raise
-    except APIError as exc:
-        raise ProviderCallError(f"OpenAI API call failed: {exc}") from exc
-    except Exception as exc:  # pragma: no cover - defensive adapter guard
-        raise ProviderCallError(f"OpenAI API call failed ({type(exc).__name__}).") from exc
+    except Exception as exc:
+        failure = safe_error("OpenAI", exc)
+    # Raising outside the except block drops the raw SDK cause/context.
+    raise failure

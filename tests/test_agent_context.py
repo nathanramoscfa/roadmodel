@@ -102,6 +102,7 @@ def test_crlf_release_helpers_do_not_report_version_drift(context, project, tmp_
     for name in ("agent_context.py", "worktree_memory.py"):
         content = (source / name).read_text(encoding="utf-8")
         (shipped / name).write_bytes(content.replace("\n", "\r\n").encode("utf-8"))
+    (shipped / "private_files.py").write_bytes(context._private_source().read_bytes())
     monkeypatch.setattr(context, "__file__", str(shipped / "agent_context.py"))
     home = tmp_path / "home"
     lines, ok = context.sync_project(project, home)
@@ -290,3 +291,32 @@ def test_check_catches_missing_worktree_helper(context, project, tmp_path):
     assert context.sync_project(project, home)[1]
     (project / ".roadmodel/worktree_memory.py").unlink()
     assert not context.sync_project(project, home, check=True)[1]
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX mode enforcement")
+def test_private_modes_repaired_without_changing_memory_or_public_parents(
+    context, project, tmp_path
+):
+    home = tmp_path / "home"
+    source = seed(context, project, home)
+    source.chmod(0o755)
+    (source / "old.md").chmod(0o644)
+    project.chmod(0o755)
+    report, ok = context.sync_project(project, home)
+    assert ok, report
+    private = project / ".roadmodel"
+    memory = private / "memory"
+    assert private.stat().st_mode & 0o777 == 0o700
+    assert memory.stat().st_mode & 0o777 == 0o700
+    backup = next(source.parent.glob("memory.before-roadmodel-*"))
+    assert backup.stat().st_mode & 0o777 == 0o700
+    assert (backup / "old.md").stat().st_mode & 0o777 == 0o600
+    assert project.stat().st_mode & 0o777 == 0o755
+    saved = (memory / "old.md").read_bytes()
+    (memory / "old.md").chmod(0o644)
+    handoff = private / "HANDOFF.md"
+    handoff.chmod(0o644)
+    assert context.sync_project(project, home)[1]
+    assert (memory / "old.md").read_bytes() == saved
+    assert (memory / "old.md").stat().st_mode & 0o777 == 0o600
+    assert handoff.stat().st_mode & 0o777 == 0o600

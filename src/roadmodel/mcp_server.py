@@ -3,17 +3,70 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 from importlib import resources
 from importlib.resources.abc import Traversable
-from typing import Any
+from pathlib import Path
+from typing import Any, Literal
 
 from roadmodel import recommend as recommender
 from roadmodel import user_context
 from roadmodel.config import Config, load_config
 from roadmodel.errors import BundledDocNotFoundError
 from roadmodel.providers import ProviderAdapter
+from roadmodel.providers._safety import transport_timeout
+
+_CONTEXT_BYTES = 262_144
+_PROMPT_BYTES = 1_048_576
+_STDIO_ACTIVE: ContextVar[bool] = ContextVar("roadmodel_private_stdio", default=False)
+
+
+class _PrivateMCPLogs(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        sdk = record.name.startswith("mcp.") or record.pathname.replace("\\", "/").endswith(
+            "/mcp/shared/session.py"
+        )
+        return not (_STDIO_ACTIVE.get() and sdk)
+
+
+_MCP_LOG_FILTER = _PrivateMCPLogs()
+
+
+@contextmanager
+def _private_mcp_logs() -> Iterator[None]:
+    # SDK diagnostics can include protocol bodies. Other host tasks retain
+    # their own logging context; no levels, handlers or factories are replaced.
+    for name in (
+        "",
+        "mcp.server.lowlevel.server",
+        "mcp.server.fastmcp.server",
+        "mcp.server.fastmcp.resources.resource_manager",
+    ):
+        logging.getLogger(name).addFilter(_MCP_LOG_FILTER)
+    token = _STDIO_ACTIVE.set(True)
+    try:
+        yield
+    finally:
+        _STDIO_ACTIVE.reset(token)
+
+
+def _bounded_context(path: Path) -> str:
+    with path.open("rb") as handle:
+        raw = handle.read(_CONTEXT_BYTES + 1)
+    if len(raw) > _CONTEXT_BYTES:
+        raise ValueError("Private context exceeds the tool byte limit.")
+    return raw.decode("utf-8")
+
+
+def _check_prompts(system: str, user: str) -> None:
+    if len(system.encode("utf-8")) + len(user.encode("utf-8")) > _PROMPT_BYTES:
+        raise ValueError("Combined prompts exceed the tool byte limit.")
+
 
 BUNDLED_SELECTOR_PATH: Traversable = resources.files("roadmodel.data") / "model-selector.txt"
 BUNDLED_TIER_COST_PATH: Traversable = resources.files("roadmodel.data") / "model-tier-cost-scale.md"
@@ -41,8 +94,7 @@ def _recommend_system_prompt(user_context_text: str, context: str | None) -> str
     selector_text = _read_bundled_doc(BUNDLED_SELECTOR_PATH, "model-selector.txt")
     tier_cost_text = _read_bundled_doc(BUNDLED_TIER_COST_PATH, "model-tier-cost-scale.md")
     parts = [selector_text, tier_cost_text, user_context_text]
-    if context is not None and context.strip():
-        parts.append(f"Project context:\n{context.strip()}")
+    # Caller-supplied project context belongs in the user message below.
     return "\n\n".join(parts)
 
 
@@ -138,6 +190,7 @@ def _provider_recommend(config: Config, user_prompt: str, system_prompt: str) ->
         system_prompt,
         model=config.model,
         api_key=config.api_key,
+        max_output_tokens=4096,
     )
 
 
@@ -173,7 +226,9 @@ def _recommend_structured_with_prompts(
 
     recommender.build_prompt = _build_prompt_override
     try:
-        return recommender.recommend_structured(forced_user_prompt, config)
+        return recommender.recommend_structured(
+            forced_user_prompt, config, user_context_text="", max_output_tokens=4096
+        )
     finally:
         recommender.build_prompt = original_build_prompt
 
@@ -188,18 +243,136 @@ def _user_context_text_without_provider() -> str:
     if not os.environ.get("ROADMODEL_USER_CONTEXT"):
         override = _config_user_context_override(_read_config_toml())
     resolved = user_context.resolve(cli_path=override)
-    return user_context.read(resolved) if resolved.exists() else ""
+    return _bounded_context(resolved) if resolved.exists() else ""
 
 
 def create_app() -> Any:
+    from mcp import types as mcp_types
     from mcp.server.fastmcp import FastMCP
+    from pydantic import Field
 
-    app = FastMCP("roadmodel", log_level="ERROR")
+    class SafeFastMCP(FastMCP):
+        async def run_stdio_async(self) -> None:
+            with _private_mcp_logs():
+                await self._run_private_stdio()
+
+        async def _run_private_stdio(self) -> None:
+            import anyio
+            from mcp.server.stdio import stdio_server
+            from mcp.shared.message import SessionMessage
+
+            # Transport validation happens before the tool handlers. Pydantic
+            # exceptions include raw input, and the lowlevel server logs them.
+            async with stdio_server() as (incoming, outgoing):
+                sender, receiver = anyio.create_memory_object_stream[SessionMessage | Exception](0)
+
+                async def forward() -> None:
+                    async with sender:
+                        async for message in incoming:
+                            if not isinstance(message, Exception):
+                                root = message.message.root
+                                try:
+                                    # The session performs a second validation
+                                    # pass and logs its raw exceptions at WARNING.
+                                    # Validate those envelopes before handing over.
+                                    if isinstance(root, mcp_types.JSONRPCRequest):
+                                        mcp_types.ClientRequest.model_validate(
+                                            root.model_dump(
+                                                by_alias=True, mode="json", exclude_none=True
+                                            )
+                                        )
+                                    elif isinstance(root, mcp_types.JSONRPCNotification):
+                                        mcp_types.ClientNotification.model_validate(
+                                            root.model_dump(
+                                                by_alias=True, mode="json", exclude_none=True
+                                            )
+                                        )
+                                except Exception:
+                                    if isinstance(root, mcp_types.JSONRPCRequest):
+                                        await outgoing.send(
+                                            SessionMessage(
+                                                mcp_types.JSONRPCMessage(
+                                                    mcp_types.JSONRPCError(
+                                                        jsonrpc="2.0",
+                                                        id=root.id,
+                                                        error=mcp_types.ErrorData(
+                                                            code=-32602,
+                                                            message="Invalid request parameters",
+                                                        ),
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    continue
+                            await sender.send(
+                                ValueError("Invalid MCP transport message")
+                                if isinstance(message, Exception)
+                                else message
+                            )
+
+                async with anyio.create_task_group() as group:
+                    group.start_soon(forward)
+                    await self._mcp_server.run(
+                        receiver, outgoing, self._mcp_server.create_initialization_options()
+                    )
+
+        def _setup_handlers(self) -> None:
+            super()._setup_handlers()
+            # This server exposes tools only. These unused SDK handlers echo
+            # unknown prompt names/resource URIs in logs and error messages.
+            self._mcp_server.request_handlers.pop(mcp_types.GetPromptRequest, None)
+            self._mcp_server.request_handlers.pop(mcp_types.ReadResourceRequest, None)
+            original = self._mcp_server.request_handlers[mcp_types.CallToolRequest]
+
+            async def guarded(request: mcp_types.CallToolRequest) -> Any:
+                # Lowlevel MCP logs an unknown name before FastMCP dispatch.
+                # Refuse it before that diagnostic can echo client input.
+                if request.params.name not in {
+                    "recommend_model",
+                    "generate_phase_roadmap",
+                    "score_candidates",
+                    "read_catalog",
+                }:
+                    return mcp_types.ServerResult(self._safe_error())
+                result = await original(request)
+                if isinstance(result.root, mcp_types.CallToolResult) and result.root.isError:
+                    return mcp_types.ServerResult(self._safe_error())
+                return result
+
+            self._mcp_server.request_handlers[mcp_types.CallToolRequest] = guarded
+
+        @staticmethod
+        def _safe_error() -> Any:
+            return mcp_types.CallToolResult(
+                isError=True,
+                content=[
+                    mcp_types.TextContent(
+                        type="text",
+                        text="Tool call failed; check input limits and provider configuration.",
+                    )
+                ],
+            )
+
+        async def call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
+            try:
+                if name == "score_candidates":
+                    arguments = dict(arguments)
+                    for field in ("category", "complexity", "budget"):
+                        value = arguments.get(field)
+                        if isinstance(value, str):
+                            arguments[field] = value.strip().lower()
+                return await super().call_tool(name, arguments)
+            except Exception:
+                # Covers pre-function validation, unknown names, and provider
+                # failures. FastMCP's default includes arbitrary exception text.
+                return self._safe_error()
+
+    app = SafeFastMCP("roadmodel", log_level="ERROR")
 
     @app.tool()
     def recommend_model(
-        task_description: str,
-        context: str | None = None,
+        task_description: str = Field(..., min_length=1, max_length=16_384),
+        context: str | None = Field(None, max_length=65_536),
     ) -> dict[str, Any]:
         """Recommend a model + access method for ``task_description``.
 
@@ -210,35 +383,48 @@ def create_app() -> Any:
         thinking; Codex / OpenAI API: intelligence; Cursor: max_mode +
         thinking), never a placeholder for a control that surface lacks.
         """
+        if not task_description.strip():
+            raise ValueError("Task must contain text.")
         config = _load_runtime_config()
-        user_context_text = user_context.read(config.user_context_path)
+        user_context_text = _bounded_context(config.user_context_path)
         system_prompt = _recommend_system_prompt(user_context_text, context)
         user_prompt = _recommend_user_prompt(task_description, context)
-        return _recommend_structured_with_prompts(
-            config,
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-        )
+        _check_prompts(system_prompt, user_prompt)
+        with transport_timeout(120):
+            return _recommend_structured_with_prompts(
+                config,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+            )
 
     @app.tool()
     def generate_phase_roadmap(
-        project_brief: str,
-        phase_number: int,
-        prior_phases: list[str] | None = None,
+        project_brief: str = Field(..., min_length=1, max_length=65_536),
+        phase_number: int = Field(..., ge=1, le=1_000, strict=True),
+        prior_phases: list[str] | None = Field(None, max_length=24),  # noqa: B008 - MCP schema
     ) -> str:
+        if not project_brief.strip():
+            raise ValueError("Brief must contain text.")
+        prior = prior_phases or []
+        if any(len(item) > 8_192 for item in prior) or sum(map(len, prior)) > 131_072:
+            raise ValueError("Prior phase summaries exceed tool limits.")
         config = _load_runtime_config()
-        user_context_text = user_context.read(config.user_context_path)
+        user_context_text = _bounded_context(config.user_context_path)
         system_prompt = _phase_roadmap_system_prompt(user_context_text)
         user_prompt = _phase_roadmap_user_prompt(project_brief, phase_number, prior_phases)
-        return _provider_recommend(config, user_prompt, system_prompt)
+        _check_prompts(system_prompt, user_prompt)
+        with transport_timeout(120):
+            return _provider_recommend(config, user_prompt, system_prompt)
 
     @app.tool()
     def score_candidates(
-        category: str,
-        complexity: str,
+        category: Literal[
+            "coding", "planning", "agentic", "multimodal", "long-context", "knowledge", "speed"
+        ],
+        complexity: Literal["low", "medium", "high"],
         novel: bool = False,
-        budget: str | None = None,
-        top: int = 10,
+        budget: Literal["cheap", "balanced", "best"] | None = None,
+        top: int = Field(10, ge=0, le=100, strict=True),
     ) -> dict[str, Any]:
         """Rank (model, platform, effort) candidates in CODE — no engine call.
 

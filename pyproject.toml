@@ -9,6 +9,7 @@ description = "BYO-key CLI that recommends the right AI model, platform, and set
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
+license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "Nathan Ramos", email = "nathan.ramos.github@gmail.com" }]
 keywords = ["ai", "llm", "model-selection", "anthropic", "openai", "gemini", "cli"]
 classifiers = [
@@ -42,7 +43,7 @@ recommend = [
     "google-genai>=1.74.0",
 ]
 dev = [
-    "roadmodel[recommend]",
+    "roadmodel[recommend,mcp]",
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "ruff>=0.6",
@@ -71,15 +72,49 @@ Issues = "https://github.com/nathanramoscfa/roadmodel/issues"
 
 [tool.hatch.build.targets.wheel]
 sources = ["src"]
-packages = ["src/roadmodel"]
 include = [
-    "src/roadmodel/data/*",
-    "src/roadmodel/data/catalog.json",
+    "src/roadmodel/__init__.py",
+    "src/roadmodel/__main__.py",
+    "src/roadmodel/cli.py",
+    "src/roadmodel/config.py",
+    "src/roadmodel/cost.py",
+    "src/roadmodel/errors.py",
+    "src/roadmodel/mcp_server.py",
+    "src/roadmodel/private_files.py",
+    "src/roadmodel/providers/__init__.py",
+    "src/roadmodel/providers/_safety.py",
+    "src/roadmodel/providers/anthropic.py",
+    "src/roadmodel/providers/google.py",
+    "src/roadmodel/providers/openai.py",
+    "src/roadmodel/providers/openai_compatible.py",
+    "src/roadmodel/providers/registry.py",
+    "src/roadmodel/recommend.py",
+    "src/roadmodel/scoring.py",
+    "src/roadmodel/usage.py",
+    "src/roadmodel/user_context.py",
 ]
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "src/roadmodel/**",
+    "src/roadmodel/__init__.py",
+    "src/roadmodel/__main__.py",
+    "src/roadmodel/cli.py",
+    "src/roadmodel/config.py",
+    "src/roadmodel/cost.py",
+    "src/roadmodel/errors.py",
+    "src/roadmodel/mcp_server.py",
+    "src/roadmodel/private_files.py",
+    "src/roadmodel/providers/__init__.py",
+    "src/roadmodel/providers/_safety.py",
+    "src/roadmodel/providers/anthropic.py",
+    "src/roadmodel/providers/google.py",
+    "src/roadmodel/providers/openai.py",
+    "src/roadmodel/providers/openai_compatible.py",
+    "src/roadmodel/providers/registry.py",
+    "src/roadmodel/recommend.py",
+    "src/roadmodel/scoring.py",
+    "src/roadmodel/usage.py",
+    "src/roadmodel/user_context.py",
     "docs/model-selector.txt",
     "docs/model-tier-cost-scale.md",
     "docs/settings-display.md",
@@ -99,6 +134,11 @@ include = [
     "scripts/upgrade_fleet.py",
     "scripts/worktree_memory.py",
     "scripts/updater_lock.py",
+    "docs/claude-commands/roadmap-project.md",
+    "docs/claude-commands/roadmap-phase.md",
+    "docs/claude-commands/roadmap-step.md",
+    "docs/claude-commands/roadmap-refresh.md",
+    "docs/claude-commands/roadmodel-upgrade.md",
     "hatch_build.py",
     "README.md",
     "LICENSE",

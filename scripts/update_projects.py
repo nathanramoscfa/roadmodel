@@ -7,7 +7,7 @@ script reads the project list, works out each project's environment,
 upgrades ``roadmodel`` in all of them concurrently, upgrades
 ``roadmodel[mcp]`` in the env that serves the user-scope MCP server,
 refreshes each project's ``planning/`` kit where one exists, and
-re-downloads the user-scope Claude Code commands — one run, one table.
+installs the released user-scope Claude Code commands — one run, one table.
 
     python update_projects.py                       # every registered project
     python update_projects.py --add C:\\dev\\app1 ... # register, then run
@@ -41,18 +41,16 @@ import importlib.util
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
-import urllib.error
-import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 from xml.sax.saxutils import escape
 
-REPO_RAW = "https://raw.githubusercontent.com/nathanramoscfa/roadmodel/main"
 COMMANDS = (
     "roadmap-project",
     "roadmap-phase",
@@ -117,12 +115,49 @@ SUPPORT_MODULES = (
     "upgrade_fleet",
     "worktree_memory",
     "updater_lock",
+    "private_files",
 )
+
+
+def _development_root(here: Path) -> Optional[Path]:
+    root = here.parent.parent
+    return root if here.parent.name == "scripts" and (root / "pyproject.toml").is_file() else None
+
+
+def _support_path(here: Path, name: str) -> Path:
+    root = _development_root(here)
+    if name == "private_files" and root is not None:
+        return root / "src" / "roadmodel" / "private_files.py"
+    return here.with_name(name + ".py")
+
+
+def _data_source(here: Path, name: str) -> Path:
+    root = _development_root(here)
+    if root is not None:
+        directory = "claude-commands" if name.removesuffix(".md") in COMMANDS else "templates"
+        return root / "docs" / directory / name
+    return here.parent / "data" / name
+
+
+def _command_body(name: str) -> str:
+    if name not in COMMANDS:
+        raise ValueError("Unknown released command")
+    body = _data_source(Path(__file__).resolve(), name + ".md").read_text(encoding="utf-8")
+    if not body.strip():
+        raise ValueError("Required released command is empty")
+    return body
+
+
+def _private_dir(path: Path) -> None:
+    # Only caller-designated owned directories, never the entire user home.
+    _support("private_files").private_directory(path)
 
 
 def _support(name: str):
     """Load stdlib companions from the same release, never from the network."""
-    path = Path(__file__).with_name(name + ".py")
+    if name not in SUPPORT_MODULES:
+        raise ValueError("Unknown updater companion")
+    path = _support_path(Path(__file__).resolve(), name)
     if not path.is_file():
         raise RuntimeError(f"Missing updater companion {path}; run a full roadmodel-upgrade first")
     spec = importlib.util.spec_from_file_location("roadmodel_updater_" + name, path)
@@ -225,19 +260,22 @@ def read_registry(file: Path) -> list[Entry]:
 
 def add_to_registry(file: Path, paths: list[str]) -> list[Path]:
     """Append absolute paths not already registered. Returns what was added."""
-    file.parent.mkdir(parents=True, exist_ok=True)
     known = {e.path.resolve() for e in read_registry(file)}
     added: list[Path] = []
-    with file.open("a", encoding="utf-8") as fh:
-        for raw in paths:
-            p = Path(raw).expanduser().resolve()
-            if not p.is_dir():
-                raise SystemExit(f"--add: not a directory: {raw}")
-            if p in known:
-                continue
-            fh.write(f"{p}\n")
-            known.add(p)
-            added.append(p)
+    for raw in paths:
+        path = Path(raw).expanduser().resolve()
+        if not path.is_dir():
+            raise SystemExit("--add: not a directory")
+        if path not in known:
+            known.add(path)
+            added.append(path)
+    existing = file.read_bytes() if file.exists() else b""
+    suffix = ("\n".join(map(str, added)) + "\n").encode() if added else b""
+    if suffix and existing and not existing.endswith(b"\n"):
+        existing += b"\n"
+    if file.parent == CONFIG_DIR:
+        _private_dir(CONFIG_DIR)
+    _replace_bytes(file, existing + suffix)
     return added
 
 
@@ -426,6 +464,8 @@ def _run(
         argv,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         timeout=timeout,
         cwd=str(cwd) if cwd else None,
         env={**os.environ, "PIP_DISABLE_PIP_VERSION_CHECK": "1", "PYTHONIOENCODING": "utf-8"},
@@ -435,7 +475,14 @@ def _run(
 def installed_version(python: Path) -> str:
     try:
         cp = _run(
-            [str(python), "-c", "import roadmodel, sys; sys.stdout.write(roadmodel.__version__)"],
+            [
+                str(python),
+                "-I",
+                "-X",
+                "utf8",
+                "-c",
+                "import roadmodel, sys; sys.stdout.write(roadmodel.__version__)",
+            ],
             timeout=60,
         )
     except (subprocess.SubprocessError, OSError):
@@ -454,6 +501,9 @@ def _pip_upgrade(python: Path, spec: str = "roadmodel") -> list[str]:
     # "0.2.37 -> 0.2.37 ok" (2026-09-23) and the new version waited a day.
     return [
         str(python),
+        "-I",
+        "-X",
+        "utf8",
         "-m",
         "pip",
         "install",
@@ -495,7 +545,17 @@ def update_project(entry: Entry, *, kit: bool, init_kit: bool, dry_run: bool) ->
     if kit and (planning.is_dir() or init_kit):
         try:
             cp = _run(
-                [str(env.python), "-m", "roadmodel", "export-kit", str(entry.path), "--force"],
+                [
+                    str(env.python),
+                    "-I",
+                    "-X",
+                    "utf8",
+                    "-m",
+                    "roadmodel",
+                    "export-kit",
+                    str(entry.path),
+                    "--force",
+                ],
                 timeout=KIT_TIMEOUT,
                 cwd=entry.path,
             )
@@ -689,8 +749,7 @@ def _install(target: Path, content: str, dry_run: bool) -> str:
         return "unchanged"
     state = "updated" if target.exists() else "installed"
     if not dry_run:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(content, encoding="utf-8")
+        _replace_bytes(target, content.encode("utf-8"))
     return state
 
 
@@ -887,8 +946,7 @@ def _sync_codex(argv: Optional[list[str]], anchor: bool, dry_run: bool) -> list[
                 out.append(f"codex {label}: provider default")
 
     if text != original and not dry_run:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(text, encoding="utf-8")
+        _replace_bytes(path, text.encode("utf-8"))
     return out
 
 
@@ -923,7 +981,7 @@ def _sync_gemini_trust(projects: list[Path], dry_run: bool) -> list[str]:
         data[path] = "TRUST_FOLDER"
     if not dry_run:
         GEMINI_TRUSTED_FOLDERS.parent.mkdir(parents=True, exist_ok=True)
-        GEMINI_TRUSTED_FOLDERS.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        _replace_bytes(GEMINI_TRUSTED_FOLDERS, (json.dumps(data, indent=2) + "\n").encode("utf-8"))
     return [f"gemini trust: trusted {len(added)} project(s)"]
 
 
@@ -940,8 +998,7 @@ def _sync_gemini_settings(path: Path, dry_run: bool) -> list[str]:
         return ["gemini instructions: present"]
     data["contextFileName"] = list(GEMINI_CONTEXT_FILES)
     if not dry_run:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        _replace_bytes(path, (json.dumps(data, indent=2) + "\n").encode("utf-8"))
     return [f"gemini instructions: reads {', '.join(GEMINI_CONTEXT_FILES)}"]
 
 
@@ -976,7 +1033,7 @@ def _sync_antigravity_trust(projects: list[Path], dry_run: bool) -> list[str]:
     data["trustedWorkspaces"] = list(trusted) + added
     if not dry_run:
         ANTIGRAVITY_SETTINGS.parent.mkdir(parents=True, exist_ok=True)
-        ANTIGRAVITY_SETTINGS.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        _replace_bytes(ANTIGRAVITY_SETTINGS, (json.dumps(data, indent=2) + "\n").encode("utf-8"))
     return [f"antigravity trust: trusted {len(added)} project(s)"]
 
 
@@ -1001,8 +1058,7 @@ def _sync_json_mcp(path: Path, argv: Optional[list[str]], label: str, dry_run: b
         return [f"{label} mcp: present"]
     servers[MCP_SERVER_NAME] = {"command": argv[0], "args": argv[1:]}
     if not dry_run:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        _replace_bytes(path, (json.dumps(data, indent=2) + "\n").encode("utf-8"))
     return [f"{label} mcp: added roadmodel"]
 
 
@@ -1050,7 +1106,7 @@ def _sync_claude_defaults(anchor: bool, dry_run: bool) -> list[str]:
         f"claude ceiling: maxEffortLevel={ceiling} (kept)" if ceiling else "claude ceiling: none"
     )
     if removed and not dry_run:
-        path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        _replace_bytes(path, (json.dumps(data, indent=2) + "\n").encode("utf-8"))
     return out
 
 
@@ -1069,7 +1125,7 @@ def _sync_antigravity_defaults(anchor: bool, dry_run: bool) -> list[str]:
     if not removed:
         return ["antigravity defaults: provider default"]
     if not dry_run:
-        ANTIGRAVITY_SETTINGS.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        _replace_bytes(ANTIGRAVITY_SETTINGS, (json.dumps(data, indent=2) + "\n").encode("utf-8"))
     pinned = ", ".join(str(v) for v in removed.values())
     return [f"antigravity defaults: {pinned} (pinned) -> provider default"]
 
@@ -1291,7 +1347,7 @@ def sync_project_parity(project: Path, dry_run: bool = False) -> list[str]:
 
 
 def refresh_commands(dry_run: bool = False, agents: Optional[list[str]] = None) -> list[str]:
-    """Re-download docs/claude-commands/*.md and install them for every agent
+    """Install this release's command resources for every agent
     on this machine: Claude Code as-is (mirroring any ~/.claude/skills copy),
     Gemini CLI as TOML custom commands, Antigravity in both its IDE and CLI
     global skill directories, Codex + Cursor as ~/.agents skills, OpenCode
@@ -1299,14 +1355,11 @@ def refresh_commands(dry_run: bool = False, agents: Optional[list[str]] = None) 
     Returns report lines."""
     agents = agents or detect_agents()
     report: list[str] = [f"agents: {', '.join(agents)}"]
-    for name in COMMANDS:
-        url = f"{REPO_RAW}/docs/claude-commands/{name}.md"
-        try:
-            with urllib.request.urlopen(url, timeout=30) as resp:  # noqa: S310 — fixed https URL
-                body = resp.read().decode("utf-8")
-        except (urllib.error.URLError, OSError) as exc:
-            report.append(f"{name}: FETCH FAILED ({exc})")
-            continue
+    try:
+        bodies = {name: _command_body(name) for name in COMMANDS}
+    except (OSError, ValueError):
+        return [*report, "commands: SOURCE FAILED; reinstall the released updater"]
+    for name, body in bodies.items():
         states: list[str] = []
         if "claude" in agents:
             state = _install(CLAUDE_DIR / "commands" / f"{name}.md", body, dry_run)
@@ -1677,14 +1730,9 @@ def _remove_tree(path: Path) -> None:
 
 
 def _refresh_command_body() -> Optional[str]:
-    installed = CLAUDE_DIR / "commands" / "roadmap-refresh.md"
-    with contextlib.suppress(OSError):
-        return installed.read_text(encoding="utf-8")
     try:
-        url = f"{REPO_RAW}/docs/claude-commands/roadmap-refresh.md"
-        with urllib.request.urlopen(url, timeout=30) as resp:  # noqa: S310 — fixed https URL
-            return resp.read().decode("utf-8")
-    except (urllib.error.URLError, OSError):
+        return _command_body("roadmap-refresh")
+    except (OSError, ValueError):
         return None
 
 
@@ -1694,7 +1742,17 @@ def _export_kit(entry: Entry, target: Path) -> str:
         return f"kit not exported ({note})"
     try:
         cp = _run(
-            [str(env.python), "-m", "roadmodel", "export-kit", str(target), "--force"],
+            [
+                str(env.python),
+                "-I",
+                "-X",
+                "utf8",
+                "-m",
+                "roadmodel",
+                "export-kit",
+                str(target),
+                "--force",
+            ],
             timeout=KIT_TIMEOUT,
             cwd=target,
         )
@@ -1708,8 +1766,8 @@ def run_refresh(plan: RefreshPlan, claude: str, body: str, stamp: str) -> Refres
     entry = plan.entry
     if plan.mode == "skip":
         return RefreshResult(entry, "skipped", plan.reason)
-    REFRESH_LOGS.mkdir(parents=True, exist_ok=True)
-    REFRESH_CACHE.mkdir(parents=True, exist_ok=True)
+    _private_dir(REFRESH_LOGS)
+    _private_dir(REFRESH_CACHE)
     log = REFRESH_LOGS / f"{stamp}-{entry.name}.log"
     notes: list[str] = []
     kit: Optional[Path] = None
@@ -1728,11 +1786,12 @@ def run_refresh(plan: RefreshPlan, claude: str, body: str, stamp: str) -> Refres
             return RefreshResult(entry, "FAILED", f"clone: {exc}")
         if cp.returncode != 0:
             return RefreshResult(entry, "FAILED", "clone: " + _tail(cp.stderr, 2))
+        _private_dir(workdir)
         notes.append(_export_kit(entry, workdir))
     else:
         workdir = entry.path
         kit_root = REFRESH_CACHE / f"{entry.name}-kit-{stamp}"
-        kit_root.mkdir(parents=True, exist_ok=True)
+        _private_dir(kit_root)
         notes.append(_export_kit(entry, kit_root))
         kit = kit_root / "planning"
     prompt = refresh_prompt(body, plan, workdir, kit)
@@ -1753,11 +1812,13 @@ def run_refresh(plan: RefreshPlan, claude: str, body: str, stamp: str) -> Refres
         stderr = f"timed out after {REFRESH_TIMEOUT // 60} minutes"
     except OSError as exc:
         stdout, stderr = "", f"could not run {claude}: {exc}"
-    log.write_text(
-        f"project: {entry.path}\nmode: {plan.mode}\nworkdir: {workdir}\n"
-        + "".join(f"{n}\n" for n in notes)
-        + f"\n--- stdout ---\n{stdout}\n--- stderr ---\n{stderr}\n",
-        encoding="utf-8",
+    _replace_bytes(
+        log,
+        (
+            f"project: {entry.path}\nmode: {plan.mode}\nworkdir: {workdir}\n"
+            + "".join(f"{n}\n" for n in notes)
+            + f"\n--- stdout ---\n{stdout}\n--- stderr ---\n{stderr}\n"
+        ).encode("utf-8"),
     )
     status, detail, cost = parse_refresh_output(stdout)
     if status == "FAILED" and stderr.strip() and not stdout.strip():
@@ -1772,11 +1833,8 @@ def run_refresh(plan: RefreshPlan, claude: str, body: str, stamp: str) -> Refres
 def _rule_kit_dir() -> Optional[Path]:
     """Where this updater's own roadmap templates live: roadmodel/data when
     packaged, docs/templates in a repo checkout."""
-    here = Path(__file__).resolve().parent
-    for candidate in (here / "data", here.parent / "docs" / "templates"):
-        if all((candidate / name).is_file() for name in RULE_KIT_FILES):
-            return candidate
-    return None
+    candidate = _data_source(Path(__file__).resolve(), RULE_KIT_FILES[0]).parent
+    return candidate if all((candidate / name).is_file() for name in RULE_KIT_FILES) else None
 
 
 def rules_fingerprint() -> str:
@@ -1786,9 +1844,8 @@ def rules_fingerprint() -> str:
 
     digest = hashlib.sha256()
     for name in RULE_COMMANDS:
-        path = CLAUDE_DIR / "commands" / f"{name}.md"
         digest.update(name.encode() + b"\0")
-        digest.update(path.read_bytes().replace(b"\r\n", b"\n") if path.is_file() else b"-")
+        digest.update(_command_body(name).encode().replace(b"\r\n", b"\n"))
     kit = _rule_kit_dir()
     for name in RULE_KIT_FILES:
         digest.update(name.encode() + b"\0")
@@ -1812,7 +1869,7 @@ def load_refresh_state() -> dict:
 
 def save_refresh_state(state: dict) -> None:
     REFRESH_STATE.parent.mkdir(parents=True, exist_ok=True)
-    REFRESH_STATE.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _replace_bytes(REFRESH_STATE, (json.dumps(state, indent=2, sort_keys=True) + "\n").encode())
 
 
 def due_for_refresh(entries: list[Entry], state: dict, fingerprint: str) -> tuple[list, list]:
@@ -1926,15 +1983,18 @@ def launchd_plist(python: Path, script: Path, hour: int, minute: int, log: Path)
   <key>Label</key><string>{SCHEDULE_LABEL}</string>
   <key>ProgramArguments</key>
   <array>
-    <string>{python}</string>
-    <string>{script}</string>
+    <string>{escape(str(python))}</string>
+    <string>-I</string>
+    <string>-X</string>
+    <string>utf8</string>
+    <string>{escape(str(script))}</string>
     <string>--log</string>
   </array>
   <key>StartCalendarInterval</key>
   <dict><key>Hour</key><integer>{hour}</integer><key>Minute</key><integer>{minute}</integer></dict>
   <key>RunAtLoad</key><false/>
   <key>StandardOutPath</key><string>/dev/null</string>
-  <key>StandardErrorPath</key><string>{log}</string>
+  <key>StandardErrorPath</key><string>{escape(str(log))}</string>
   <key>EnvironmentVariables</key>
   <dict><key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string></dict>
 </dict>
@@ -1947,7 +2007,7 @@ def schtasks_xml(python: Path, script: Path, hour: int, minute: int, start: _dt.
     DAILY`, it can set StartWhenAvailable: a PC that is off or asleep at HH:MM
     runs the job once it is back, instead of skipping that day."""
     command = escape(str(python))
-    arguments = escape(f'"{script}" --log')
+    arguments = escape(subprocess.list2cmdline(["-I", "-X", "utf8", str(script), "--log"]))
     return f"""<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
   <RegistrationInfo>
@@ -2002,12 +2062,15 @@ def schtasks_create_argv(python: Path, script: Path, hour: int, minute: int) -> 
         "/TN", TASK_NAME,
         "/SC", "DAILY",
         "/ST", f"{hour:02d}:{minute:02d}",
-        "/TR", f'"{python}" "{script}" --log',
+        "/TR", subprocess.list2cmdline([str(python), "-I", "-X", "utf8", str(script), "--log"]),
     ]  # fmt: skip
 
 
 def cron_line(python: Path, script: Path, hour: int, minute: int) -> str:
-    return f"{minute} {hour} * * * {python} {script} --log  # {SCHEDULE_LABEL}"
+    command = shlex.join([str(python), "-I", "-X", "utf8", str(script), "--log"]).replace(
+        "%", r"\%"
+    )
+    return f"{minute} {hour} * * * {command}  # {SCHEDULE_LABEL}"
 
 
 def _sys(argv: list[str], stdin: Optional[str] = None) -> subprocess.CompletedProcess[str]:
@@ -2037,8 +2100,9 @@ def _install_windows_task(
         return caught_up
     definition = CONFIG_DIR / "schedule-task.xml"
     # schtasks reads a task definition as UTF-16, which is what it declares.
-    definition.write_text(
-        schtasks_xml(python, script, hour, minute, _next_start(hour, minute)), encoding="utf-16"
+    _replace_bytes(
+        definition,
+        schtasks_xml(python, script, hour, minute, _next_start(hour, minute)).encode("utf-16"),
     )
     try:
         cp = _sys(["schtasks", "/Create", "/F", "/TN", TASK_NAME, "/XML", str(definition)])
@@ -2064,7 +2128,8 @@ def install_schedule(when: str, dry_run: bool = False) -> str:
     hour, minute = _parse_time(when)
     python = _launcher_python()
     script = _install_launcher(dry_run)
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    if not dry_run:
+        _private_dir(CONFIG_DIR)
     stamp = f"daily at {hour:02d}:{minute:02d} via {python} {script} (log: {LOG_FILE})"
 
     if sys.platform == "darwin":
@@ -2074,7 +2139,7 @@ def install_schedule(when: str, dry_run: bool = False) -> str:
         plist.parent.mkdir(parents=True, exist_ok=True)
         domain = f"gui/{os.getuid()}"
         _sys(["launchctl", "bootout", f"{domain}/{SCHEDULE_LABEL}"])  # ok if not loaded
-        plist.write_text(launchd_plist(python, script, hour, minute, LOG_FILE), encoding="utf-8")
+        _replace_bytes(plist, launchd_plist(python, script, hour, minute, LOG_FILE).encode("utf-8"))
         cp = _sys(["launchctl", "bootstrap", domain, str(plist)])
         if cp.returncode != 0:
             raise SystemExit(
@@ -2127,13 +2192,13 @@ class _Tee:
 
 
 def _open_log() -> object:
-    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    _private_dir(CONFIG_DIR)
     # A handed-over run continues the section its launcher opened.
     handed_over = bool(os.environ.get(DELEGATED_ENV))
     if not handed_over and LOG_FILE.exists() and LOG_FILE.stat().st_size > LOG_MAX_BYTES:
         tail = LOG_FILE.read_bytes()[-LOG_MAX_BYTES // 5 :]
-        LOG_FILE.write_bytes(tail)
-    fh = LOG_FILE.open("a", encoding="utf-8")
+        _replace_bytes(LOG_FILE, tail)
+    fh = _support("private_files").open_private_append(LOG_FILE)
     if not handed_over:
         fh.write(f"\n===== {_dt.datetime.now().isoformat(timespec='seconds')} =====\n")
     return fh
@@ -2210,8 +2275,8 @@ def configure_context_sync(repo: str, source: Optional[str], dry_run: bool = Fal
             raise SystemExit(f"--context-source: no such file {src}")
         cfg.update(role="source", source=str(src))
     if not dry_run:
-        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-        CONTEXT_SYNC_CONFIG.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+        _private_dir(CONFIG_DIR)
+        _replace_bytes(CONTEXT_SYNC_CONFIG, (json.dumps(cfg, indent=2) + "\n").encode())
     where = f"publishing {cfg['source']}" if source else f"pulling into {USER_CONTEXT}"
     return f"this machine is the user-context {cfg['role'].upper()}, {where}, via {repo}"
 
@@ -2221,8 +2286,9 @@ def _ensure_clone(repo: str) -> Optional[str]:
     carries the operator's GitHub auth for a PRIVATE repo); a URL or path
     clones with plain git."""
     if (CONTEXT_CLONE / ".git").is_dir():
+        _private_dir(CONTEXT_CLONE)
         return None
-    CONTEXT_CLONE.parent.mkdir(parents=True, exist_ok=True)
+    _private_dir(CONTEXT_CLONE.parent)
     if _REPO_SLUG_RE.match(repo) and shutil.which("gh"):
         cmd = ["gh", "repo", "clone", repo, str(CONTEXT_CLONE)]
     else:
@@ -2231,7 +2297,10 @@ def _ensure_clone(repo: str) -> Optional[str]:
     done = subprocess.run(  # noqa: S603 — literal argv built above from a validated repo, no shell
         cmd, capture_output=True, text=True, timeout=180
     )
-    return None if done.returncode == 0 else _tail(done.stderr or done.stdout, 2)
+    if done.returncode == 0:
+        _private_dir(CONTEXT_CLONE)
+        return None
+    return _tail(done.stderr or done.stdout, 2)
 
 
 def _digest(data: bytes) -> str:
@@ -2274,8 +2343,9 @@ def sync_user_context(dry_run: bool = False) -> list[str]:
                 )
         data = src.read_bytes()
         if carried.exists() and carried.read_bytes() == data:
+            _replace_bytes(carried, data)
             return [*out, f"user-context sync: source unchanged ({_digest(data)})"]
-        carried.write_bytes(data)
+        _replace_bytes(carried, data)
         steps = (
             ("add", CONTEXT_FILE),
             ("commit", "--quiet", "-m", f"sync user-context {_digest(data)}"),
@@ -2293,14 +2363,16 @@ def sync_user_context(dry_run: bool = False) -> list[str]:
     if not carried.is_file():
         return ["user-context sync: nothing published yet (run the source machine first)"]
     data = carried.read_bytes()
+    _replace_bytes(carried, data)
     if USER_CONTEXT.exists() and USER_CONTEXT.read_bytes() == data:
+        _replace_bytes(USER_CONTEXT, data)
         return [f"user-context sync: current ({_digest(data)})"]
     if USER_CONTEXT.exists():
         # Keep what is being replaced: a replica should not be edited, but if it
         # was, the edit is recoverable rather than silently gone.
-        shutil.copy2(USER_CONTEXT, USER_CONTEXT.with_name("user-context.md.prev"))
-    USER_CONTEXT.parent.mkdir(parents=True, exist_ok=True)
-    USER_CONTEXT.write_bytes(data)
+        _replace_bytes(USER_CONTEXT.with_name("user-context.md.prev"), USER_CONTEXT.read_bytes())
+    _private_dir(USER_CONTEXT.parent)
+    _replace_bytes(USER_CONTEXT, data)
     return [f"user-context sync: pulled ({_digest(data)})"]
 
 
@@ -2362,26 +2434,42 @@ def _launcher_python() -> Path:
 
 
 def _replace_bytes(path: Path, data: bytes) -> None:
-    staged = path.with_name(path.name + ".new")
-    staged.write_bytes(data)
-    os.replace(staged, path)
+    _support("private_files").atomic_private_write(path, data)
+
+
+def _install_release(here: Path) -> None:
+    """Validate one complete release, install resources/companions, then its launcher."""
+    files = [
+        (_support_path(here, name), LAUNCHER.with_name(name + ".py")) for name in SUPPORT_MODULES
+    ]
+    files.extend(
+        (_data_source(here, name), LAUNCHER.parent / "data" / name)
+        for name in (*(name + ".md" for name in COMMANDS), *RULE_KIT_FILES)
+    )
+    files.append((here, LAUNCHER))
+    payloads = []
+    for source, target in files:
+        if source.is_symlink() or not source.is_file():
+            raise RuntimeError("Incomplete released updater; reinstall its wheel")
+        data = source.read_bytes()
+        if not data:
+            raise RuntimeError("Empty released updater resource")
+        payloads.append((target, data))
+    _private_dir(LAUNCHER.parent)
+    safe = _support("private_files")
+    for target, _ in payloads:
+        safe.safe_destination(LAUNCHER.parent, target.relative_to(LAUNCHER.parent))
+    for target, data in payloads:
+        safe.atomic_private_write(target, data)
 
 
 def _install_launcher(dry_run: bool) -> Path:
-    """A schedule always runs LAUNCHER. Put this file there when this run is
-    not already it (say, `--install-schedule` from a repo checkout). A released
-    handover child also repairs companions: older launchers only copied this
-    file, before SUPPORT_MODULES existed. Development runs with a handover
-    variable keep the installed release untouched."""
     here = Path(__file__).resolve()
     if (os.environ.get(DELEGATED_ENV) and not _packaged()) or _same_file(here, LAUNCHER) or dry_run:
         return LAUNCHER
-    LAUNCHER.parent.mkdir(parents=True, exist_ok=True)
-    _replace_bytes(LAUNCHER, here.read_bytes())
-    for name in SUPPORT_MODULES:
-        companion = here.with_name(name + ".py")
-        if companion.is_file():
-            _replace_bytes(LAUNCHER.with_name(name + ".py"), companion.read_bytes())
+    if _packaged() and not _self_check([str(_launcher_python()), "-I", "-X", "utf8", str(here)]):
+        raise RuntimeError("Released launcher does not support the schedule interpreter")
+    _install_release(here)
     return LAUNCHER
 
 
@@ -2389,7 +2477,7 @@ def _python_ok(python: Path) -> bool:
     """`python` runs and is new enough to install roadmodel."""
     probe = f"import sys; sys.exit(sys.version_info[:2] < {MIN_PYTHON!r})"
     try:
-        return _run([str(python), "-c", probe], timeout=60).returncode == 0
+        return _run([str(python), "-I", "-X", "utf8", "-c", probe], timeout=60).returncode == 0
     except (subprocess.SubprocessError, OSError):
         return False
 
@@ -2418,7 +2506,10 @@ def ensure_updater_venv(projects_file: Path) -> tuple[Optional[Path], str]:
         return None, f"no Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]}+ to build {UPDATER_VENV} from"
     # --clear also rebuilds a venv whose base interpreter was removed or upgraded.
     try:
-        cp = _run([str(base), "-m", "venv", "--clear", str(UPDATER_VENV)], timeout=PIP_TIMEOUT)
+        cp = _run(
+            [str(base), "-I", "-X", "utf8", "-m", "venv", "--clear", str(UPDATER_VENV)],
+            timeout=PIP_TIMEOUT,
+        )
     except (subprocess.SubprocessError, OSError) as exc:
         return None, f"could not create {UPDATER_VENV}: {exc}"
     python = _python_path(UPDATER_VENV)
@@ -2435,7 +2526,7 @@ def _packaged_updater(python: Path) -> Optional[Path]:
         "sys.stdout.write(s.origin if s and s.origin else '')"
     )
     try:
-        cp = _run([str(python), "-c", probe], timeout=60)
+        cp = _run([str(python), "-I", "-X", "utf8", "-c", probe], timeout=60)
     except (subprocess.SubprocessError, OSError):
         return None
     found = cp.stdout.strip()
@@ -2479,7 +2570,7 @@ def self_update(argv: list[str], projects_file: Path) -> Optional[int]:
                 f"self-update: roadmodel {after} has no packaged updater yet; running the local copy"
             )
         return None
-    if not _self_check([str(python), "-m", PACKAGED_MODULE]):
+    if not _self_check([str(python), "-I", "-X", "utf8", "-m", PACKAGED_MODULE]):
         print(
             f"*** self-update FAILED: the updater in roadmodel {after} does not start. "
             "Running the local copy."
@@ -2495,18 +2586,15 @@ def self_update(argv: list[str], projects_file: Path) -> Optional[int]:
         fresh = mine = b""
     # The launcher runs on the schedule's interpreter, which may be older than
     # the venv's; replace it only with a copy proven to start there.
-    if fresh != mine and _self_check([sys.executable, str(packaged)]):
-        _replace_bytes(LAUNCHER, fresh)
-        done.append("launcher refreshed")
-    for name in SUPPORT_MODULES:
-        companion = packaged.with_name(name + ".py")
-        if companion.is_file():
-            _replace_bytes(LAUNCHER.with_name(name + ".py"), companion.read_bytes())
+    if _self_check([sys.executable, "-I", "-X", "utf8", str(packaged)]):
+        _install_release(packaged)
+        if fresh != mine:
+            done.append("launcher refreshed")
     print(f"self-update: {'; '.join(done)}. Running the updater from that release.")
     sys.stdout.flush()
     sys.stderr.flush()
     env = {**os.environ, DELEGATED_ENV: sys.executable}
-    return _handover([str(python), "-m", PACKAGED_MODULE, *argv], env)
+    return _handover([str(python), "-I", "-X", "utf8", "-m", PACKAGED_MODULE, *argv], env)
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -2638,6 +2726,12 @@ def _main(argv: Optional[list[str]] = None) -> int:
     tolerate_unencodable_output()
     ap = _parser()
     if "--self-check" in raw:
+        for name in SUPPORT_MODULES:
+            _support(name)
+        for name in COMMANDS:
+            _command_body(name)
+        if _rule_kit_dir() is None:
+            raise RuntimeError("Required released roadmap templates are missing")
         return 0
 
     # Read only what must act before the hand-over, and leave every other
@@ -2691,11 +2785,7 @@ def _main(argv: Optional[list[str]] = None) -> int:
     # before handing over. Repair the complete installed release on this first
     # full run, so the next offline --sync-only does not need another upgrade.
     # main() already holds or inherited the machine lock at this point.
-    if (
-        _packaged()
-        and os.environ.get(DELEGATED_ENV)
-        and not (args.dry_run or args.check or args.sync_only)
-    ):
+    if _packaged() and not (args.dry_run or args.check or args.sync_only):
         _install_launcher(False)
     if args.context_sync:
         print(configure_context_sync(args.context_sync, args.context_source, args.dry_run))

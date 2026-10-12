@@ -8,11 +8,11 @@ This module uses only the standard library and supports Python 3.9+.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import os
 import re
 import subprocess
-import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -70,19 +70,24 @@ def _namespace(project: Path) -> str:
     return f"{name}-{suffix}"
 
 
+def _private():
+    here = Path(__file__).resolve()
+    path = here.with_name("private_files.py")
+    if here.parent.name == "scripts" and (here.parent.parent / "pyproject.toml").is_file():
+        path = here.parent.parent / "src/roadmodel/private_files.py"
+    if not path.is_file() or path.is_symlink():
+        raise ValueError("private file helper is missing; run a full roadmodel-upgrade")
+    spec = importlib.util.spec_from_file_location("roadmodel_worktree_private", path)
+    module = importlib.util.module_from_spec(spec)
+    exec(compile(path.read_bytes(), str(path), "exec"), module.__dict__)  # noqa: S102
+    return module
+
+
 def _atomic(path: Path, content: bytes) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, temporary = tempfile.mkstemp(prefix=".roadmodel-", dir=path.parent)
-    try:
-        with os.fdopen(fd, "wb") as stream:
-            stream.write(content)
-        os.replace(temporary, path)
-    finally:
-        if os.path.exists(temporary):
-            os.unlink(temporary)
+    _private().atomic_private_write(path, content)
 
 
-def _safe_path(root: Path, destination: Path) -> None:
+def _safe_path(root: Path, destination: Path) -> Path:
     # Context setup deliberately links this one directory to an explicitly
     # configured custom store. Validate that choice, then guard descendants
     # relative to its canonical root so the permitted link is not mistaken
@@ -117,6 +122,7 @@ def _safe_path(root: Path, destination: Path) -> None:
         ):
             raise ValueError(f"archive path redirects outside its location: {path}")
         path = path.parent
+    return destination
 
 
 def _hash(content: bytes) -> str:
@@ -277,6 +283,21 @@ def _import(
             updated = updated.rstrip("\n") + "\n" + pattern + "\n"
     if exclusion != updated:
         _atomic(exclude, updated.encode("utf-8"))
+    safe = _private()
+    safe.private_directory(project / ".roadmodel")
+    archive = _safe_path(project, project / ARCHIVE)
+    safe.private_directory(archive)
+    # Repair unchanged imported files too; originals in other worktrees stay read-only.
+    for path in sorted(archive.rglob("*")):
+        _safe_path(project, path)
+        if path.is_dir():
+            safe.private_directory(path)
+        elif path.is_file():
+            with safe.open_private_append(path):
+                pass
+    if state_path.exists():
+        with safe.open_private_append(state_path):
+            pass
     written = 0
     for target, content, expected_hash, baseline, key, previous_hash in pending:
         _safe_path(project, target)
@@ -291,7 +312,7 @@ def _import(
             conflict = True
             lines.append(f"worktree memory: concurrent edit preserved: {target}")
             continue
-        _atomic(target, content)
+        _atomic(_safe_path(project, target), content)
         written += 1
     if before != json.dumps(state, sort_keys=True):
         _atomic(state_path, (json.dumps(state, indent=2) + "\n").encode("utf-8"))

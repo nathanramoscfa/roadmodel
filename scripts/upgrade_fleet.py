@@ -235,7 +235,7 @@ def build_command(
         "sys.argv=[p]+d['args'];"
         "runpy.run_path(p,run_name='__main__')"
     )
-    python_args = ["-"] if stdin_script else ["-c", code]
+    python_args = ["-I", "-X", "utf8", *(["-"] if stdin_script else ["-c", code])]
     if peer.platform == "windows":
         quote = lambda s: "'" + s.replace("'", "''") + "'"  # noqa: E731
         script = (

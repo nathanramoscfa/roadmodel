@@ -21,6 +21,7 @@ from typing import Any
 
 from roadmodel import usage
 from roadmodel.errors import ProviderCallError
+from roadmodel.providers._safety import hosted_timeout, private_transport, safe_error
 from roadmodel.providers.registry import (
     COMPATIBLE_PROVIDERS,
     CUSTOM_BASE_URL_ENV,
@@ -116,6 +117,7 @@ class OpenAICompatibleAdapter:
     def __init__(self, spec: CompatibleProvider) -> None:
         self.spec = spec
 
+    @private_transport
     def recommend(
         self,
         prompt: str,
@@ -128,14 +130,17 @@ class OpenAICompatibleAdapter:
         temperature: float | None = None,
     ) -> str:
         spec = self.spec
+        missing_sdk: ProviderCallError | None = None
         try:
-            from openai import APIError, OpenAI
-        except Exception as exc:  # pragma: no cover - dependency/runtime guard
-            raise ProviderCallError(
+            from openai import OpenAI
+        except Exception:  # pragma: no cover - dependency/runtime guard
+            missing_sdk = ProviderCallError(
                 f"The OpenAI SDK is required for `roadmodel recommend` via {spec.label} "
                 "but is not installed. Install the engine extra: "
                 "pip install 'roadmodel[recommend]'."
-            ) from exc
+            )
+        if missing_sdk is not None:
+            raise missing_sdk
 
         model_id = model or spec.default_model
         if not model_id:
@@ -150,12 +155,12 @@ class OpenAICompatibleAdapter:
             )
 
         try:
-            client_kwargs: Any = {"api_key": api_key, "base_url": base_url}
-            if spec.timeout_s is not None:
-                # Slow local generation: one long attempt, no retries that
-                # would silently redo minutes of work after a timeout.
-                client_kwargs["timeout"] = spec.timeout_s
-                client_kwargs["max_retries"] = 0
+            client_kwargs: Any = {
+                "api_key": api_key,
+                "base_url": base_url,
+                "timeout": spec.timeout_s or hosted_timeout(),
+                "max_retries": 0,
+            }
             client = OpenAI(**client_kwargs)
             # `kwargs` is typed `Any` for the same reason as providers/openai.py:
             # the SDK's overloaded `create` signature rejects a mixed-value dict.
@@ -194,12 +199,9 @@ class OpenAICompatibleAdapter:
             raise ProviderCallError(f"{spec.label} response did not contain text output.")
         except ProviderCallError:
             raise
-        except APIError as exc:
-            raise ProviderCallError(f"{spec.label} API call failed: {exc}") from exc
-        except Exception as exc:  # pragma: no cover - defensive adapter guard
-            raise ProviderCallError(
-                f"{spec.label} API call failed ({type(exc).__name__})."
-            ) from exc
+        except Exception as exc:
+            failure = safe_error(spec.label, exc)
+        raise failure
 
 
 ADAPTERS: dict[str, OpenAICompatibleAdapter] = {

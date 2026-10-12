@@ -166,7 +166,7 @@ def test_recommend_model_with_context(monkeypatch: pytest.MonkeyPatch, tmp_path:
 
     anyio.run(_run)
     assert adapter.calls, "provider adapter was not called"
-    assert context_text in str(adapter.calls[0]["system"])
+    assert context_text not in str(adapter.calls[0]["system"])
 
 
 def test_generate_phase_roadmap_uses_template(

@@ -219,6 +219,12 @@ _QUOTA_TEXT: Final = re.compile(r"credit balance|insufficient_quota|quota", re.I
 def classify(exc: BaseException) -> tuple[int, str]:
     """(status, code) for a failed visitor call."""
     if isinstance(exc, ProviderCallError):
+        # New packages retain only safe categories, including provider-specific
+        # 400 responses. Keep the legacy status/cause path during rollout.
+        if getattr(exc, "category", None) == "authentication":
+            return 401, "visitor_key_rejected"
+        if getattr(exc, "category", None) == "quota":
+            return 429, "visitor_quota"
         status = _upstream_status(exc)
         text = str(exc.__cause__ or exc)
         if status in (401, 403) or (status == 400 and _REJECTED_TEXT.search(text)):

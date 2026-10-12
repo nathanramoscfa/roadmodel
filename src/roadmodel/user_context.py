@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 import os
-import stat
 from importlib import resources
 from pathlib import Path
 from typing import Final
 
 from roadmodel.errors import BundledDocNotFoundError, UserContextNotFoundError
+from roadmodel.private_files import atomic_private_write
 
 DEFAULT_USER_CONTEXT_HOME = (
     Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
@@ -50,19 +50,7 @@ def bootstrap(target: Path) -> None:
         template_text = template_path.read_text(encoding="utf-8")
     except FileNotFoundError as exc:
         raise BundledDocNotFoundError(_USER_CONTEXT_TEMPLATE) from exc
-    parent = target.parent
-    parent_existed = parent.exists()
-    parent.mkdir(parents=True, exist_ok=True)
-    if not parent_existed:
-        parent.chmod(stat.S_IRWXU)
-    fd = os.open(
-        str(target),
-        os.O_CREAT | os.O_WRONLY | os.O_TRUNC,
-        stat.S_IRUSR | stat.S_IWUSR,
-    )
-    os.fchmod(fd, stat.S_IRUSR | stat.S_IWUSR)
-    with os.fdopen(fd, "w", encoding="utf-8") as handle:
-        handle.write(template_text)
+    atomic_private_write(target, template_text.encode("utf-8"))
 
 
 def read(path: Path) -> str:

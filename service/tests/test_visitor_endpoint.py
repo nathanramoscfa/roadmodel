@@ -308,7 +308,14 @@ def test_openrouter_runs_the_compatible_adapter_on_the_visitor_key_once(
     assert response.json()["engine"] == "openrouter-gpt-6-luna"
     # One client, on the visitor's key, at OpenRouter's endpoint; one call, on
     # OpenRouter's id for GPT-6 Luna. No other adapter ran.
-    assert openrouter_sdk.clients == [{"api_key": key, "base_url": "https://openrouter.ai/api/v1"}]
+    assert openrouter_sdk.clients == [
+        {
+            "api_key": key,
+            "base_url": "https://openrouter.ai/api/v1",
+            "timeout": 600.0,
+            "max_retries": 0,
+        }
+    ]
     assert [c["model"] for c in openrouter_sdk.creates] == ["openai/gpt-6-luna"]
     assert recorder.calls == []
     _assert_no_canary(response, caplog, key)

@@ -10,23 +10,18 @@ Slash commands are **per machine** (Claude Code reads them from your
 home directory), so do this once on every machine you plan on — the
 Mac and the PC each need their own copy.
 
-macOS / Linux, from a roadmodel checkout:
+Install the published wheel into the environment used for roadmodel, then
+install its bundled commands (Python 3.11+; use `py -3` on Windows):
 
 ```sh
-pip install -U roadmodel          # in the env your `roadmodel` runs from
-mkdir -p ~/.claude/commands
-cp docs/claude-commands/roadm*.md ~/.claude/commands/   # project, phase, step, update
+python3 -I -X utf8 -m pip install --upgrade 'roadmodel>=0.2.81,<0.3'
+python3 -I -X utf8 -m roadmodel.update_projects --commands-only --local-only
 ```
 
-Windows PowerShell, no checkout needed (fetches from `main`):
-
-```powershell
-$base = "https://raw.githubusercontent.com/nathanramoscfa/roadmodel/main/docs/claude-commands"
-New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude\commands" | Out-Null
-foreach ($n in "roadmap-project","roadmap-phase","roadmap-step","roadmap-refresh","roadmodel-upgrade") {
-  curl.exe -fsSL "$base/$n.md" -o "$env:USERPROFILE\.claude\commands\$n.md"
-}
-```
+This installs commands from the same published release, without fetching
+instructions from a moving Git branch. For an isolated updater environment,
+follow the bootstrap instructions in
+[`roadmodel-upgrade`](claude-commands/roadmodel-upgrade.md).
 
 Then **reload the editor window** (VS Code: `Developer: Reload Window`)
 — the Claude Code extension scans commands when it starts, not when
@@ -42,8 +37,8 @@ Gemini CLI and Codex versions — see "Other agents" below. The first two are th
 the paste-prompt the planning kit ships, so they never drift from the
 kit. The third reads the step straight out of the phase roadmap and
 EXECUTES it — code, tests, PR, merge. The fourth is bookkeeping only
-(below). The fifth re-fetches the others (and itself) every time it runs, so
-this copy step is a one-time bootstrap. Newer Claude Code
+(below). The fifth installs released copies of the others and itself, so
+this setup step is a one-time bootstrap. Newer Claude Code
 builds also accept them as skills — copy each file to
 `~/.claude/skills/<name>/SKILL.md` with a `name: <name>` frontmatter
 line if `commands/` is not picked up.
@@ -270,7 +265,7 @@ each project's env — a `.venv`/`venv`/`env` dir, the `name:` in
 `environment.yml`, a conda env named like the folder, or a conda env
 inside the project; `<dir> | conda:<name>` / `<dir> | venv:<subdir>`
 overrides — then, **concurrently**, upgrades `roadmodel` in every env,
-re-exports `planning/` where a kit exists, and re-downloads the four
+re-exports `planning/` where a kit exists, and installs the released five
 command files. One table at the end; a project whose env cannot be
 detected is reported, never guessed into `base`.
 

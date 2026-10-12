@@ -15,6 +15,13 @@ class MissingProviderKeyError(RoadmodelError):
 class ProviderCallError(RoadmodelError):
     """A provider SDK call failed."""
 
+    def __init__(
+        self, message: str, *, status_code: int | None = None, category: str = "upstream"
+    ) -> None:
+        self.status_code = status_code
+        self.category = category
+        super().__init__(message)
+
 
 class BundledDocNotFoundError(RoadmodelError):
     """A required bundled document is missing from package data."""
@@ -36,7 +43,8 @@ class MalformedResponseError(RoadmodelError):
     """Provider response could not be parsed into the six-field block."""
 
     def __init__(self, raw_text: str) -> None:
-        self.raw_text = raw_text[:2048]
+        # Retain the constructor for callers, without retaining private output.
+        del raw_text
         super().__init__("Provider response did not match the expected six-field format.")
 
 

@@ -9,7 +9,6 @@ import shutil
 import subprocess  # nosec B404 - only used to invoke the `claude` CLI with fixed argv
 import sysconfig
 import textwrap
-import traceback
 from dataclasses import asdict
 from functools import wraps
 from importlib import resources
@@ -30,6 +29,13 @@ from roadmodel.errors import (
     ProviderCallError,
     UserContextNotFoundError,
 )
+from roadmodel.private_files import (
+    UnsafePrivatePath,
+    atomic_private_write,
+    protect_export,
+    read_private_output,
+    safe_destination,
+)
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -45,14 +51,20 @@ def _error_mapped(command: F) -> F:
             raise
         except click.Abort:
             raise
+        except UnsafePrivatePath as exc:
+            raise click.ClickException(str(exc)) from None
         except MissingProviderKeyError as exc:
             click.echo(str(exc), err=True)
             raise click.exceptions.Exit(2) from exc
         except ProviderCallError as exc:
-            click.echo(str(exc), err=True)
+            click.echo(
+                "Provider request failed. Check credentials, quota and configuration. "
+                "Provider SDKs require: pip install 'roadmodel[recommend]'.",
+                err=True,
+            )
             raise click.exceptions.Exit(3) from exc
         except MalformedResponseError as exc:
-            click.echo(f"Malformed provider response (truncated to 2KB):\n{exc.raw_text}", err=True)
+            click.echo("Provider response did not match the expected format.", err=True)
             raise click.exceptions.Exit(4) from exc
         except BundledDocNotFoundError as exc:
             click.echo(str(exc), err=True)
@@ -65,10 +77,7 @@ def _error_mapped(command: F) -> F:
             )
             raise click.exceptions.Exit(7) from exc
         except Exception as exc:
-            if os.environ.get("ROADMODEL_DEBUG") == "1":
-                traceback.print_exc()
-            else:
-                click.echo(f"Unexpected error: {exc}", err=True)
+            click.echo("Unexpected error; check configuration and input files.", err=True)
             raise click.exceptions.Exit(1) from exc
 
     return cast(F, wrapper)
@@ -105,8 +114,7 @@ def _write_bundled_text(resource: Traversable, dest: Path) -> None:
     byte-identical on Windows, macOS, and Linux — no UTF-16 / BOM surprises
     from PowerShell redirection.
     """
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_text(resource.read_text(encoding="utf-8"), encoding="utf-8", newline="\n")
+    atomic_private_write(dest, resource.read_text(encoding="utf-8").encode("utf-8"))
 
 
 def _settings_text_lines(settings: dict[str, str]) -> list[str]:
@@ -659,6 +667,7 @@ def export_kit(target: Path, dest: str, force: bool, user_context_path: Path | N
     context — no per-call API spend, no shell or network required, identical
     on every OS. Re-run after `pip install -U roadmodel` to refresh the catalog.
     """
+    target = target.resolve(strict=True)
     planning = target / dest
     templates = planning / "templates"
     prompts = planning / "prompts"
@@ -676,18 +685,28 @@ def export_kit(target: Path, dest: str, force: bool, user_context_path: Path | N
         (recommender.BUNDLED_PROMPT_PROJECT_ROADMAP_PATH, prompts / "project-roadmap.md"),
         (recommender.BUNDLED_PROMPT_PHASE_ROADMAP_PATH, prompts / "phase-roadmap.md"),
     ]
+    # Validate EVERY destination before writing even public documents. Ignore
+    # protection must exist before any private context or staging bytes do.
+    for _, out in bundled:
+        safe_destination(target, out.relative_to(target))
+    uc_out = protect_export(target, Path(dest) / "user-context.md")
+    # Resolve all public resources before starting to replace the kit.
+    contents = [
+        (resource.read_text(encoding="utf-8").encode("utf-8"), out) for resource, out in bundled
+    ]
     written: list[Path] = []
-    for resource, out in bundled:
-        _write_bundled_text(resource, out)
+    for data, out in contents:
+        atomic_private_write(out, data)
         written.append(out)
 
     # user-context: copy the operator's real file when present; otherwise seed
     # the bundled template so platform selection still has a schema to fill in.
-    uc_out = planning / "user-context.md"
     resolved = user_context.resolve(cli_path=user_context_path)
     if uc_out.exists() and not force:
+        atomic_private_write(uc_out, read_private_output(uc_out))
         uc_note = f"  = {uc_out.relative_to(target)} (kept; --force to overwrite)"
     elif uc_out.exists() and not resolved.exists():
+        atomic_private_write(uc_out, read_private_output(uc_out))
         # --force means "refresh from my curated user-context", never "replace
         # a real file with the blank template". A machine without the curated
         # file (a second PC, CI) keeps the kit's existing one.
@@ -696,8 +715,7 @@ def export_kit(target: Path, dest: str, force: bool, user_context_path: Path | N
             f"from — no user-context at {resolved})"
         )
     elif resolved.exists():
-        uc_out.parent.mkdir(parents=True, exist_ok=True)
-        uc_out.write_text(user_context.read(resolved), encoding="utf-8", newline="\n")
+        atomic_private_write(uc_out, user_context.read(resolved).encode("utf-8"))
         uc_note = f"  + {uc_out.relative_to(target)} (from {resolved})"
     else:
         _write_bundled_text(recommender.BUNDLED_USER_CONTEXT_TEMPLATE_PATH, uc_out)

@@ -45,7 +45,7 @@ class _OpenAIFake:
     captured: dict[str, Any] = {}
     response_usage: Any = None
 
-    def __init__(self, api_key: str) -> None:
+    def __init__(self, api_key: str, *, timeout: float, max_retries: int) -> None:
         self.responses = self
 
     def create(self, **kwargs: Any) -> Any:
@@ -109,7 +109,7 @@ class _GoogleFake:
     captured: dict[str, Any] = {}
     usage_metadata: Any = None
 
-    def __init__(self, api_key: str) -> None:
+    def __init__(self, api_key: str, *, http_options: dict[str, Any]) -> None:
         self.models = self
 
     def generate_content(self, **kwargs: Any) -> Any:
@@ -182,7 +182,7 @@ class _AnthropicFake:
     captured: dict[str, Any] = {}
     response_usage: Any = None
 
-    def __init__(self, api_key: str) -> None:
+    def __init__(self, api_key: str, *, timeout: float, max_retries: int) -> None:
         self.messages = self
 
     def create(self, **kwargs: Any) -> Any:
