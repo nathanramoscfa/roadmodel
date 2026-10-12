@@ -9,7 +9,9 @@ from __future__ import annotations
 import os
 import secrets
 import stat
-import subprocess
+
+# Fixed read-only Git invocations, without a shell.
+import subprocess  # nosec B404
 import unicodedata
 from pathlib import Path
 from typing import TextIO
@@ -182,7 +184,8 @@ def _git(project: Path, *args: str) -> subprocess.CompletedProcess[str]:
     # inherited alternate index must not hide an already tracked private file.
     environment = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
     environment["GIT_LITERAL_PATHSPECS"] = "1" if args[0] == "ls-files" else "0"
-    return subprocess.run(  # noqa: S603 - fixed Git commands, literal pathspecs
+    # The callers choose fixed subcommands; file names are literal pathspecs.
+    return subprocess.run(  # noqa: S603  # nosec B603, B607
         ["git", "-C", str(project), "-c", "core.fsmonitor=false", *args],  # noqa: S607
         capture_output=True,
         text=True,

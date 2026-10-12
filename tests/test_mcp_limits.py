@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import queue
 import subprocess
 import sys
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -33,9 +35,7 @@ def test_malformed_stdio_never_echoes_input(logging_level: str) -> None:
         },
     }
     payload = (
-        json.dumps(initialize)
-        + "\n"
-        + json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"})
+        json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"})
         + '\n{"PRIVATECANARY":\n'
     )
     payload += json.dumps({"jsonrpc": "2.0", "id": 2, "method": "PRIVATECANARY"}) + "\n"
@@ -84,21 +84,62 @@ def test_malformed_stdio_never_echoes_input(logging_level: str) -> None:
         )
         + "\n"
     )
-    result = subprocess.run(
+    lines: queue.Queue[str] = queue.Queue()
+    stdout: list[str] = []
+    stderr: list[str] = []
+
+    def receive(stream: Any, output: list[str], responses: queue.Queue[str] | None) -> None:
+        for line in stream:
+            output.append(line)
+            if responses is not None:
+                responses.put(line)
+
+    def await_responses(pending: set[int]) -> None:
+        while pending:
+            response = json.loads(lines.get(timeout=15))
+            pending.discard(response.get("id"))
+
+    with subprocess.Popen(
         [
             sys.executable,
             "-c",
             f"import logging; logging.basicConfig(level=logging.{logging_level}); from roadmodel.mcp_server import main; main()",
         ],
-        input=payload,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
-        capture_output=True,
-        timeout=30,
-    )
-    assert '"protocolVersion"' in result.stdout
-    assert "PRIVATECANARY" not in result.stdout + result.stderr
-    assert '"code":-32602' in result.stdout
-    assert '"code":-32601' in result.stdout
+    ) as process:
+        readers = [
+            threading.Thread(target=receive, args=(process.stdout, stdout, lines), daemon=True),
+            threading.Thread(target=receive, args=(process.stderr, stderr, None), daemon=True),
+        ]
+        for reader in readers:
+            reader.start()
+        try:
+            assert process.stdin is not None
+            process.stdin.write(json.dumps(initialize) + "\n")
+            process.stdin.flush()
+            await_responses({1})
+            process.stdin.write(payload)
+            process.stdin.flush()
+            # EOF shuts down the SDK task group. Wait for each request's
+            # actual reply before closing the pipe, just as an MCP client does.
+            await_responses({2, 3, 4, 5})
+            process.stdin.close()
+            assert process.wait(timeout=15) == 0
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=5)
+            for reader in readers:
+                reader.join(timeout=5)
+                assert not reader.is_alive()
+    output = "".join(stdout)
+    assert '"protocolVersion"' in output
+    assert "PRIVATECANARY" not in output + "".join(stderr)
+    assert '"code":-32602' in output
+    assert '"code":-32601' in output
 
 
 @pytest.mark.parametrize(
