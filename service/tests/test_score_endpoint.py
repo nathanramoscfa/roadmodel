@@ -206,7 +206,7 @@ def test_a_model_too_small_for_the_input_is_left_out(
 
 
 def test_an_input_beyond_every_context_window_is_a_422(client: TestClient) -> None:
-    response = client.post(_PATH, json={**_TASK, "input_tokens": 50_000_000})
+    response = client.post(_PATH, json={**_TASK, "input_tokens": 10_000_000})
     assert response.status_code == 422
     assert response.json()["detail"] == "input_exceeds_every_context_window"
 

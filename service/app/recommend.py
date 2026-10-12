@@ -23,6 +23,7 @@ from roadmodel.recommend import (  # type: ignore[import-untyped]
     recommend_structured_ladder,
 )
 
+from .budget import attempt, deadline
 from .engines import REGISTRY, EngineSpec
 from .funding import (
     AccessGuard,
@@ -129,7 +130,7 @@ def _session_cost(
         )
         return asdict(primary), [asdict(est) for est in ranked]
     except Exception:  # noqa: BLE001 - cost is best-effort, never fatal
-        logger.warning("session cost estimate failed (non-fatal)", exc_info=True)
+        logger.warning("session cost estimate failed (non-fatal)")
         return None, []
 
 
@@ -313,6 +314,7 @@ def _availability_authoritative_from_request(context: dict[str, Any] | None) -> 
 
 
 def recommend(req: RecommendRequest) -> RecommendResponse:
+    expires = deadline()
     last_error: Exception | None = None
 
     # Build the per-user funding context once (provider-independent): the user's
@@ -355,17 +357,18 @@ def recommend(req: RecommendRequest) -> RecommendResponse:
             # MissingProviderKeyError here, and the chain moves on to the next.
             config = _config_for_hint(hint)
             _reset_usage()
-            result = recommend_structured(
-                req.task_description,
-                config,
-                user_context_text=user_context_text,
-                unavailable_models=unavailable_models,
-                availability_authoritative=availability_authoritative,
-                allowed_jurisdictions=allowed_jurisdictions,
-                max_output_tokens=max_output_tokens,
-                thinking_budget=thinking_budget,
-                temperature=temperature,
-            )
+            with attempt(expires):
+                result = recommend_structured(
+                    req.task_description,
+                    config,
+                    user_context_text=user_context_text,
+                    unavailable_models=unavailable_models,
+                    availability_authoritative=availability_authoritative,
+                    allowed_jurisdictions=allowed_jurisdictions,
+                    max_output_tokens=max_output_tokens,
+                    thinking_budget=thinking_budget,
+                    temperature=temperature,
+                )
             response = _pick_response(
                 result, req.task_description, funding_guard, access_guard, budget_priority
             )
@@ -651,13 +654,15 @@ def recommend_ladder(req: RecommendRequest) -> LadderResponse:
     on any provider/parse failure it raises (like ``recommend``) so the edge
     falls back to the fan-out.
     """
+    expires = deadline()
     last_error: Exception | None = None
     inputs = _ladder_inputs(req)
 
     for hint in _provider_chain(req.context):
         try:
             config = _config_for_hint(hint)
-            return ladder_once(req, hint, config, inputs)
+            with attempt(expires):
+                return ladder_once(req, hint, config, inputs)
         except (MissingProviderKeyError, ProviderCallError, MalformedResponseError) as exc:
             last_error = exc
             if isinstance(exc, MalformedResponseError):

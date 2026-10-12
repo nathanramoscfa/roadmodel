@@ -449,7 +449,7 @@ def platform_dials(platform: str, *, catalog: dict[str, Any] | None = None) -> d
         try:
             cached = _build_dial_map(load_catalog()) or dict(_DIAL_FALLBACK)
         except Exception:  # noqa: BLE001 - dial lookup is best-effort, never fatal
-            logger.warning("platform dial map build failed (non-fatal)", exc_info=True)
+            logger.warning("platform dial map build failed (non-fatal)")
             cached = dict(_DIAL_FALLBACK)
         _DIAL_CACHE[key] = cached
     return cached.get(platform.strip().lower(), {})
@@ -564,7 +564,9 @@ def _known_platforms_only(values: list[str], known: set[str], field: str) -> lis
     dropped = [v for v in values if v.strip().lower() not in known]
     if dropped:
         logger.warning(
-            "ignoring unknown %s entries not present in the catalog: %s", field, sorted(dropped)
+            "ignoring unknown platform entries: field=%s count=%d",
+            field if field in {"platforms_allowed", "platforms_excluded"} else "platforms",
+            len(dropped),
         )
     return kept
 
@@ -692,10 +694,10 @@ def accessible_model_ids(
         unfiltered = _resolve(set(), set())
         if unfiltered:
             logger.warning(
-                "platform filter emptied the accessible set (allowed=%s excluded=%s); "
+                "platform filter emptied the accessible set (allowed_count=%d excluded_count=%d); "
                 "falling back to the unfiltered set",
-                sorted(allow_platforms),
-                sorted(deny_platforms),
+                len(allow_platforms),
+                len(deny_platforms),
             )
             return unfiltered
     return accessible
@@ -1112,7 +1114,7 @@ class FundingGuard:
                 return f"{rationale} Correction: {honest}", rationale_sections
             return rationale, rationale_sections
         except Exception:  # noqa: BLE001 - guard is best-effort, never fatal
-            logger.warning("funding honesty guard failed (non-fatal)", exc_info=True)
+            logger.warning("funding honesty guard failed (non-fatal)")
             return rationale, rationale_sections
 
 
@@ -1137,7 +1139,7 @@ def funding_guard_from_request(context: dict[str, Any] | None) -> FundingGuard |
     try:
         return FundingGuard(subscriptions, api_providers, pools=context.get("pool_states"))
     except Exception:  # noqa: BLE001 - guard is best-effort, never fatal
-        logger.warning("funding guard build failed (non-fatal)", exc_info=True)
+        logger.warning("funding guard build failed (non-fatal)")
         return None
 
 
@@ -1416,7 +1418,7 @@ class AccessGuard:
             self._enforce_platform(result)
             return changed
         except Exception:  # noqa: BLE001 - guard is best-effort, never fatal
-            logger.warning("access guard failed (non-fatal)", exc_info=True)
+            logger.warning("access guard failed (non-fatal)")
             return False
 
     def platform_permitted(self, platform: str | None) -> bool:
@@ -1545,7 +1547,7 @@ def access_guard_from_request(context: dict[str, Any] | None) -> AccessGuard | N
             catalog=cat,
         )
     except Exception:  # noqa: BLE001 - guard is best-effort, never fatal
-        logger.warning("access guard build failed (non-fatal)", exc_info=True)
+        logger.warning("access guard build failed (non-fatal)")
         return None
 
 
@@ -1620,7 +1622,7 @@ def scoring_context_from_request(
             lines += ["", f"platforms.excluded: {', '.join(excluded_platforms)}"]
         return "\n".join(lines) + "\n" + pool_table(ctx.get("pool_states"))
     except Exception:  # noqa: BLE001 - the scorer's context is best-effort, never fatal
-        logger.warning("scoring context build failed (non-fatal)", exc_info=True)
+        logger.warning("scoring context build failed (non-fatal)")
         return None
 
 
@@ -1670,5 +1672,5 @@ def user_context_from_request(context: dict[str, Any] | None) -> str | None:
     except Exception:  # noqa: BLE001 - funding context is best-effort, never fatal
         # A catalog read/parse failure must not turn a good request into a 500;
         # degrade to the bundled template (the pre-T2b behavior).
-        logger.warning("per-user funding context build failed (non-fatal)", exc_info=True)
+        logger.warning("per-user funding context build failed (non-fatal)")
         return None

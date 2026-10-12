@@ -18,6 +18,7 @@ first request loudly instead of misrouting traffic.
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final
@@ -66,6 +67,16 @@ def _optional_int(entry: dict[str, Any], key: str) -> int | None:
     return value
 
 
+def _output_cap(entry: dict[str, Any], key: str) -> int | None:
+    value = _optional_int(entry, key)
+    # Only the legacy Anthropic entry delegates to a known SDK adapter cap (4096).
+    if value is None and entry.get("provider") == "anthropic":
+        return None
+    if value is None or not 1 <= value <= 8192:
+        raise ValueError(f"{key} must be a positive output cap no greater than 8192")
+    return value
+
+
 def _spec(entry: dict[str, Any]) -> EngineSpec:
     hint = entry.get("hint")
     if not isinstance(hint, str) or not hint:
@@ -76,7 +87,12 @@ def _spec(entry: dict[str, Any]) -> EngineSpec:
     if not hint.startswith(f"{entry['provider']}-"):
         raise ValueError(f"engine {hint!r}: the hint must start with its provider")
     temperature = entry.get("temperature")
-    if temperature is not None and not isinstance(temperature, int | float):
+    if temperature is not None and (
+        not isinstance(temperature, int | float)
+        or isinstance(temperature, bool)
+        or not math.isfinite(temperature)
+        or not 0 <= temperature <= 2
+    ):
         raise ValueError(f"engine {hint!r}: temperature must be a number or null")
     menu = entry.get("menu")
     if menu is not None and menu not in MENU_ACCESS:
@@ -87,8 +103,8 @@ def _spec(entry: dict[str, Any]) -> EngineSpec:
         provider=entry["provider"],
         model=entry["model"],
         thinking_budget=_optional_int(entry, "thinking_budget"),
-        max_output_tokens=_optional_int(entry, "max_output_tokens"),
-        ladder_max_output_tokens=_optional_int(entry, "ladder_max_output_tokens"),
+        max_output_tokens=_output_cap(entry, "max_output_tokens"),
+        ladder_max_output_tokens=_output_cap(entry, "ladder_max_output_tokens"),
         temperature=float(temperature) if temperature is not None else None,
         menu=menu,
     )

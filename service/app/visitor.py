@@ -27,9 +27,7 @@ from __future__ import annotations
 import logging
 import re
 import time
-import traceback
 from collections.abc import Callable, Coroutine
-from contextvars import ContextVar
 from typing import Any, Final
 
 from fastapi import APIRouter, Depends, Request, Response
@@ -43,104 +41,20 @@ from roadmodel.errors import (  # type: ignore[import-untyped]
 )
 
 from .auth import require_bearer
+from .budget import attempt, deadline
 from .engines import EVALUATED, REGISTRY, VISITOR_PROVIDERS, EngineSpec
 from .models import LadderResponse, RecommendRequest
 from .recommend import _BUNDLED_USER_CONTEXT, ladder_once
+from .redaction import _VISITOR_KEY as _VISITOR_KEY
+from .redaction import REDACTED as REDACTED
+from .redaction import VisitorKeyFilter as VisitorKeyFilter
+from .redaction import install_redaction as install_redaction
+from .redaction import scrub as scrub
 
 logger = logging.getLogger(__name__)
 
 KEY_HEADER: Final = "X-Roadmodel-Visitor-Key"
 PROVIDER_HEADER: Final = "X-Roadmodel-Visitor-Provider"
-REDACTED: Final = "[visitor-key]"
-
-# The visitor key of the request being served, for the redaction filter.
-_VISITOR_KEY: ContextVar[str | None] = ContextVar("roadmodel_visitor_key", default=None)
-
-# Anything shaped like a provider key, whoever's it is: Anthropic (sk-ant-),
-# OpenAI, OpenRouter (sk-or-) and other sk- keys, Google (AIza). Scrubbed even with no visitor key
-# in play, so an operator key echoed by an SDK is caught the same way.
-_KEY_SHAPES: Final = re.compile(
-    r"sk-ant-[A-Za-z0-9_\-]{8,}|sk-[A-Za-z0-9_\-]{8,}|AIza[A-Za-z0-9_\-]{8,}"
-)
-
-
-def scrub(text: str) -> str:
-    """``text`` with the current visitor key and every key-shaped token
-    replaced by ``[visitor-key]``."""
-    key = _VISITOR_KEY.get()
-    if key:
-        text = text.replace(key, REDACTED)
-    return _KEY_SHAPES.sub(REDACTED, text)
-
-
-def _scrub_arg(value: object) -> object:
-    # Numbers keep their type so %d / %f still format; anything else is
-    # rendered and scrubbed, since an exception or object can print the key.
-    if value is None or isinstance(value, bool | int | float):
-        return value
-    return scrub(str(value))
-
-
-def _scrub_record(record: logging.LogRecord) -> None:
-    if getattr(record, "_visitor_scrubbed", False):
-        return
-    record.msg = scrub(str(record.msg))
-    if isinstance(record.args, dict):
-        record.args = {k: _scrub_arg(v) for k, v in record.args.items()}
-    elif record.args:
-        record.args = tuple(_scrub_arg(a) for a in record.args)
-    if record.exc_info:
-        # Render the traceback now, scrubbed, and drop the live exception: a
-        # handler would otherwise format it later from the unscrubbed object.
-        text = "".join(traceback.format_exception(*record.exc_info)).rstrip("\n")
-        record.exc_text = scrub(text)
-        record.exc_info = None
-    elif record.exc_text:
-        record.exc_text = scrub(record.exc_text)
-    record._visitor_scrubbed = True
-
-
-class VisitorKeyFilter(logging.Filter):
-    """Replaces the visitor key, and any key-shaped token, in a log record's
-    message, arguments and traceback."""
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        _scrub_record(record)
-        return True
-
-
-_FILTER: Final = VisitorKeyFilter()
-
-
-def install_redaction() -> None:
-    """Install the filter on the root logger and its handlers, and scrub every
-    record as it is created.
-
-    A logger's filters see only records logged on that logger, not those that
-    propagate up from child loggers (uvicorn's, an SDK's, this module's), so
-    the filter on the root logger alone would miss most of them. The record
-    factory scrubs each record at creation, whatever logger and handler it
-    goes through. Idempotent."""
-    root = logging.getLogger()
-    if _FILTER not in root.filters:
-        root.addFilter(_FILTER)
-    for handler in root.handlers:
-        if _FILTER not in handler.filters:
-            handler.addFilter(_FILTER)
-    previous = logging.getLogRecordFactory()
-    if getattr(previous, "_visitor_redaction", False):
-        return
-
-    def factory(*args: Any, **kwargs: Any) -> logging.LogRecord:
-        record = previous(*args, **kwargs)
-        _scrub_record(record)
-        return record
-
-    factory._visitor_redaction = True  # type: ignore[attr-defined]
-    logging.setLogRecordFactory(factory)
-
-
-install_redaction()
 
 
 def _error(status: int, code: str, provider: str | None) -> JSONResponse:
@@ -250,7 +164,7 @@ def visitor_ladder_endpoint(
     if not key:
         return _error(400, "visitor_key_missing", provider)
 
-    token = _VISITOR_KEY.set(key)
+    expires = deadline()
     overall_start = time.perf_counter()
     provider_ms = 0
     try:
@@ -263,7 +177,8 @@ def visitor_ladder_endpoint(
         )
         provider_start = time.perf_counter()
         try:
-            result = ladder_once(req, spec.hint, config, votes=False)
+            with attempt(expires):
+                result = ladder_once(req, spec.hint, config, votes=False)
         except (ProviderCallError, MalformedResponseError) as exc:
             status, code = classify(exc)
             logger.warning(
@@ -281,4 +196,3 @@ def visitor_ladder_endpoint(
         response.headers["X-Roadmodel-Timing"] = (
             f"service_scoring_ms={max(0, total_ms - provider_ms)};service_provider_ms={provider_ms}"
         )
-        _VISITOR_KEY.reset(token)
