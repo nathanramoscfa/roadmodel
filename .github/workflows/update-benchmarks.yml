@@ -188,6 +188,8 @@ jobs:
           git add docs/benchmarks.json docs/model-selector.txt docs/model-selector.md docs/catalog.json docs/effort-ratings.json update/aa-model-map.json
           git commit -m "Automated benchmark refresh: ${DATE}" -m "${notes}"
           git push -u origin "$BRANCH"
+          # Literal Markdown/jq syntax; shell expansion is not intended.
+          # shellcheck disable=SC2016
           PR_URL="$(gh pr create \
             --base main \
             --head "$BRANCH" \

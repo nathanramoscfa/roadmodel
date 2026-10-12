@@ -91,6 +91,24 @@ def test_install_inputs_cannot_execute_shell(field: str, value: str, tmp_path: P
     assert not marker.exists()
 
 
+@pytest.mark.parametrize("producer", ["models", "claude-code", "codex", "deepseek", "gemini"])
+@pytest.mark.parametrize("dry_run", ["true", "false", ""])
+def test_producer_flags_remain_separate_arguments(producer: str, dry_run: str) -> None:
+    steps = workflow(f"update-{producer}.yml")["jobs"]["update"]["steps"]
+    step = next(s for s in steps if "ARGS=" in s.get("run", ""))
+    result = subprocess.run(
+        ["bash", "-c", "python() { printf '%s\\0' \"$@\"; };\n" + step["run"]],
+        env={**os.environ, "DRY_RUN": dry_run, "DOCS_CHANGED": "true", "EVENT_NAME": "schedule"},
+        capture_output=True,
+        check=True,
+    )
+    arguments = result.stdout.decode().split("\0")[:-1]
+    expected = [] if producer == "models" else ["--docs-changed"]
+    if dry_run == "true":
+        expected.append("--dry-run")
+    assert arguments[1:] == expected
+
+
 def sarif(results: list[dict[str, Any]], severity: str = "7.0") -> dict[str, Any]:
     return {
         "version": "2.1.0",
@@ -145,3 +163,19 @@ def test_missing_or_invalid_codeql_output_fails(tmp_path: Path, data: Any) -> No
         ["python3", str(ROOT / "scripts/check_codeql_sarif.py"), str(tmp_path)], capture_output=True
     )
     assert result.returncode == 1
+
+
+def test_codeql_empty_analysis_can_omit_rules(tmp_path: Path) -> None:
+    data = sarif([])
+    del data["runs"][0]["tool"]["driver"]["rules"]
+    test_codeql_gate_reads_rule_severity(tmp_path, data, 0)
+
+
+@pytest.mark.parametrize(
+    "reference", [{"ruleId": "rule"}, {"rule": {"index": 0, "toolComponent": {"index": 0}}}]
+)
+def test_codeql_extension_rules_are_enforced(tmp_path: Path, reference: dict[str, Any]) -> None:
+    data = sarif([reference])
+    tool = data["runs"][0]["tool"]
+    tool["extensions"] = [{"name": "security-pack", "rules": tool["driver"].pop("rules")}]
+    test_codeql_gate_reads_rule_severity(tmp_path, data, 1)

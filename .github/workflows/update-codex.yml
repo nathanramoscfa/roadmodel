@@ -114,6 +114,8 @@ jobs:
               echo "Tracking issue already open for: ${model}"
               continue
             fi
+            # Literal Markdown/jq syntax; shell expansion is not intended.
+            # shellcheck disable=SC2016
             gh issue create \
               --title "$title" \
               --label codex-new-model \
@@ -131,11 +133,11 @@ jobs:
           DRY_RUN: ${{ github.event.inputs.dry_run }}
         run: |
           set -eo pipefail
-          ARGS="--docs-changed"
+          ARGS=(--docs-changed)
           if [ "$DRY_RUN" = "true" ]; then
-            ARGS="$ARGS --dry-run"
+            ARGS+=(--dry-run)
           fi
-          python update/update_codex.py $ARGS
+          python update/update_codex.py "${ARGS[@]}"
 
       - name: Render model-selector.md
         # Keep the rendered mirror in sync with the .txt Opus just edited (the
@@ -209,6 +211,8 @@ jobs:
           git add docs/model-selector.txt docs/model-selector.md docs/catalog.json update/codex-reasoning.json update/codex-reasoning-source.md
           git commit -m "Automated Codex refresh: ${DATE}" -m "${summary}${warnings}"
           git push -u origin "$BRANCH"
+          # Literal Markdown/jq syntax; shell expansion is not intended.
+          # shellcheck disable=SC2016
           PR_URL="$(gh pr create \
             --base main \
             --head "$BRANCH" \

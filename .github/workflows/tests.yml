@@ -333,7 +333,7 @@ jobs:
           docker compose -f infra/test-postgres/docker-compose.yml up -d
       - name: Wait for Postgres health
         run: |
-          for i in $(seq 1 30); do
+          for _attempt in $(seq 1 30); do
             if docker compose -f infra/test-postgres/docker-compose.yml \
                  exec -T postgres pg_isready -U postgres -d postgres; then
               exit 0

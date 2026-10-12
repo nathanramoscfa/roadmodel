@@ -116,6 +116,8 @@ jobs:
               echo "Tracking issue already open for: ${model}"
               continue
             fi
+            # Literal Markdown/jq syntax; shell expansion is not intended.
+            # shellcheck disable=SC2016
             gh issue create \
               --title "$title" \
               --label gemini-new-model \
@@ -151,6 +153,8 @@ jobs:
               echo "Tracking issue already open for level: ${level}"
               continue
             fi
+            # Literal Markdown/jq syntax; shell expansion is not intended.
+            # shellcheck disable=SC2016
             gh issue create \
               --title "$title" \
               --label gemini-new-level \
@@ -168,11 +172,11 @@ jobs:
           DRY_RUN: ${{ github.event.inputs.dry_run }}
         run: |
           set -eo pipefail
-          ARGS="--docs-changed"
+          ARGS=(--docs-changed)
           if [ "$DRY_RUN" = "true" ]; then
-            ARGS="$ARGS --dry-run"
+            ARGS+=(--dry-run)
           fi
-          python update/update_gemini.py $ARGS
+          python update/update_gemini.py "${ARGS[@]}"
 
       - name: Render model-selector.md
         # Keep the rendered mirror in sync with the .txt Opus just edited (the
@@ -259,6 +263,8 @@ jobs:
           git add docs/model-selector.txt docs/model-selector.md docs/catalog.json update/gemini-thinking.json
           git commit -m "Automated Gemini refresh: ${DATE}" -m "${summary}${warnings}${newmodel}${newlevel}"
           git push -u origin "$BRANCH"
+          # Literal Markdown/jq syntax; shell expansion is not intended.
+          # shellcheck disable=SC2016
           PR_URL="$(gh pr create \
             --base main \
             --head "$BRANCH" \

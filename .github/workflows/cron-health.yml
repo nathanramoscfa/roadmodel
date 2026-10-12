@@ -174,11 +174,17 @@ jobs:
             printf '## Crons whose last run failed\n\n%s\n' "$FAILING_CRONS" >> "$BODY"
           fi
           if [ "$FRESHNESS_OUTCOME" = "failure" ]; then
+            # Literal Markdown/jq syntax; shell expansion is not intended.
+            # shellcheck disable=SC2016
             printf '\n## Refresh staleness\n\n```\n%s\n```\n' "$(tail -20 /tmp/freshness.txt)" >> "$BODY"
           fi
           if [ "$FUNDING_OUTCOME" = "failure" ]; then
+            # Literal Markdown/jq syntax; shell expansion is not intended.
+            # shellcheck disable=SC2016
             printf '\n## Funding invariant\n\nAn operator-funded request fell outside the founder / invited / bypass lanes. Row ids only (see docs/cost-ceilings.md):\n\n```\n%s\n```\n' "$(tail -20 /tmp/funding.txt)" >> "$BODY"
           fi
+          # Literal Markdown/jq syntax; shell expansion is not intended.
+          # shellcheck disable=SC2016
           printf '\nCheck run: %s\n\nOpened automatically by `.github/workflows/cron-health.yml`. It closes itself once the pipeline recovers.\n' \
             "$RUN_URL" >> "$BODY"
 
