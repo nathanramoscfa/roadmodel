@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import sys
 from pathlib import Path
 
@@ -53,6 +54,12 @@ def check(directory: Path) -> int:
                     "level", rule.get("defaultConfiguration", {}).get("level", "warning")
                 )
                 if score >= 7 or level == "error":
+                    # Rule IDs are public scanner metadata; never print source,
+                    # result messages, or data-flow snippets in CI diagnostics.
+                    identifier = rule["id"]
+                    if not re.fullmatch(r"[A-Za-z0-9_./-]{1,200}", identifier):
+                        raise ValueError("Invalid rule identifier")
+                    print(f"Blocking rule: {identifier}; severity={score}; level={level}")
                     count += 1
     return count
 
