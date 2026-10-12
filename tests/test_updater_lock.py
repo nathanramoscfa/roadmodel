@@ -234,11 +234,100 @@ def test_windows_locks_and_unlocks_exact_byte_zero(
     def locking(fd: int, mode: int, length: int) -> None:
         calls.append((mode, length, os.lseek(fd, 0, os.SEEK_CUR), os.fstat(fd).st_size))
 
-    monkeypatch.setitem(
-        sys.modules, "msvcrt", SimpleNamespace(LK_NBLCK=1, LK_UNLCK=2, locking=locking)
-    )
+    if os.name == "nt":
+        import msvcrt
+
+        monkeypatch.setattr(msvcrt, "locking", locking)
+    else:
+        monkeypatch.setitem(
+            sys.modules, "msvcrt", SimpleNamespace(LK_NBLCK=1, LK_UNLCK=2, locking=locking)
+        )
     monkeypatch.setattr(locks, "_WINDOWS", True)
     with locks.machine_lock(tmp_path):
         assert os.environ[locks.LOCK_PID_ENV] == str(os.getpid())
-    assert [(mode, length, offset) for mode, length, offset, _ in calls] == [(1, 1, 0), (2, 1, 0)]
-    assert all(size >= 1 for _, _, _, size in calls)
+    crt = sys.modules["msvcrt"]
+    assert [(mode, length, offset) for mode, length, offset, _ in calls] == [
+        (crt.LK_NBLCK, 1, 0),
+        (crt.LK_UNLCK, 1, 0),
+    ]
+    assert calls[0][3] == 0
+    assert calls[1][3] >= 1
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX symlink fixture")
+def test_lock_leaf_symlink_cannot_truncate_other_content(locks, tmp_path):
+    config = tmp_path / "config"
+    config.mkdir()
+    outside = tmp_path / "outside"
+    outside.write_bytes(b"unchanged")
+    (config / "update.lock").symlink_to(outside)
+    with pytest.raises(RuntimeError, match="Private lock cannot be opened safely"):
+        with locks.machine_lock(config):
+            pytest.fail("unsafe lock must not acquire")
+    assert outside.read_bytes() == b"unchanged"
+
+
+def test_lock_refuses_hardlink_without_modifying_peer(locks, tmp_path):
+    config = tmp_path / "config"
+    config.mkdir()
+    outside = tmp_path / "outside"
+    outside.write_bytes(b"unchanged")
+    os.link(outside, config / "update.lock")
+    with pytest.raises(RuntimeError, match="Private lock cannot be opened safely"):
+        with locks.machine_lock(config):
+            pytest.fail("unsafe lock must not acquire")
+    assert outside.read_bytes() == b"unchanged"
+
+
+def test_two_first_openers_use_real_lock_before_writing_metadata(locks, tmp_path):
+    # Both children hold the actual protected, empty file before either locks it.
+    source = (
+        "import sys,os\nfrom pathlib import Path\n"
+        f"sys.path.insert(0, {str(ROOT / 'scripts')!r})\n"
+        "import updater_lock as locking\n"
+        "original = locking._private_stream\n"
+        "def open_then_wait(path):\n"
+        "    stream = original(path)\n"
+        "    print('opened:' + str(os.fstat(stream.fileno()).st_size), flush=True)\n"
+        "    sys.stdin.readline()\n"
+        "    return stream\n"
+        "locking._private_stream = open_then_wait\n"
+        "try:\n"
+        f"    with locking.machine_lock(Path({str(tmp_path)!r})):\n"
+        "        print('acquired', flush=True)\n"
+        "        sys.stdin.readline()\n"
+        "except RuntimeError as error:\n"
+        "    assert str(error) == 'Another roadmodel updater is already running on this machine'\n"
+        "    print('busy', flush=True)\n"
+    )
+    children = []
+    try:
+        for _ in range(2):
+            process = subprocess.Popen(
+                [sys.executable, "-c", source],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            children.append(process)
+            assert process.stdout.readline().strip() == "opened:0"
+        owner, contender = children
+        owner.stdin.write("start\n")
+        owner.stdin.flush()
+        assert owner.stdout.readline().strip() == "acquired"
+        state = _metadata(tmp_path)
+        contender.stdin.write("start\n")
+        contender.stdin.flush()
+        output, error = contender.communicate(timeout=10)
+        assert contender.returncode == 0 and output.strip() == "busy" and not error
+        assert _metadata(tmp_path) == state
+        owner.stdin.write("finish\n")
+        owner.stdin.flush()
+        output, error = owner.communicate(timeout=10)
+        assert owner.returncode == 0 and not output and not error
+    finally:
+        for process in children:
+            if process.poll() is None:
+                process.kill()
+            process.communicate(timeout=10)

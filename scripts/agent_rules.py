@@ -12,9 +12,8 @@ already running client has loaded their contents.
 from __future__ import annotations
 
 import hashlib
-import os
+import importlib.util
 import stat
-import tempfile
 from pathlib import Path
 
 START = "<!-- roadmodel:global-context:start -->"
@@ -86,38 +85,48 @@ def _replace_block(text: str, block: str) -> str:
     return text[:begin] + block + text[end:]
 
 
+def _private():
+    here = Path(__file__).resolve()
+    path = (
+        here.parent.parent / "src/roadmodel/private_files.py"
+        if here.parent.name == "scripts" and (here.parent.parent / "pyproject.toml").is_file()
+        else here.with_name("private_files.py")
+    )
+    if not path.is_file() or path.is_symlink():
+        raise ValueError("released private file helper is missing")
+    spec = importlib.util.spec_from_file_location("roadmodel_rules_private", path)
+    module = importlib.util.module_from_spec(spec)
+    # Fixed companion from the released package; no CWD import or bytecode cache.
+    exec(compile(path.read_bytes(), str(path), "exec"), module.__dict__)  # noqa: S102  # nosec B102
+    return module
+
+
 def _atomic_write(path: Path, text: str) -> None:
-    """Replace the adapter atomically, preserving mode and non-adapter text."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    mode = stat.S_IMODE(path.stat().st_mode) if path.exists() else 0o600
-    fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8", newline="") as stream:
-            stream.write(text)
-        os.chmod(temporary, mode)
-        os.replace(temporary, path)
-    finally:
-        if os.path.exists(temporary):
-            os.unlink(temporary)
+    """Keep private global rules and preserved non-adapter text owner-only."""
+    _private().atomic_private_write(path, text.encode("utf-8"))
 
 
 def _backup_duplicate(path: Path, original: str) -> Path:
     digest = hashlib.sha256(original.encode("utf-8")).hexdigest()[:16]
     backup = path.with_name(f"{path.name}.roadmodel-backup-{digest}")
-    if backup.exists() or backup.is_symlink():
+    private = _private()
+    existed = backup.exists() or backup.is_symlink()
+
+    def verify_existing() -> None:
         info = backup.lstat()
         if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
             raise ValueError("rule backup must be an independent regular file")
-        if _read(backup) != original:
-            raise ValueError(f"existing backup differs: {backup}")
-    else:
-        # Exclusive creation never overwrites an older backup.
-        fd = os.open(backup, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        with os.fdopen(fd, "wb") as stream:
-            stream.write(original.encode("utf-8"))
-    if backup.is_symlink() or backup.stat().st_nlink != 1:
-        raise ValueError("rule backup must be an independent regular file")
-    backup.chmod(0o600)
+        if private.read_private_output(backup) != original.encode("utf-8"):
+            raise ValueError("existing rule backup differs")
+
+    if existed:
+        verify_existing()
+    private.atomic_private_write(
+        backup,
+        original.encode("utf-8"),
+        replace=existed,
+        before_replace=verify_existing if existed else None,
+    )
     return backup
 
 

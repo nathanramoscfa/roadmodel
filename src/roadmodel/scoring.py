@@ -570,16 +570,12 @@ _HEADROOM_RE: Final = re.compile(
 # and the bold ``**platforms.allowed:** `a`, `b```. Values must look like
 # access-method ids; prose such as ``(none declared)`` is dropped.
 _PLATFORMS_RE: Final = re.compile(
-    r"^[ \t]*(?:\*\*)?platforms\.(allowed|excluded)(?:\*\*)?[ \t]*:(?:\*\*)?[ \t]*(.+?)[ \t]*$",
-    re.IGNORECASE | re.MULTILINE,
-)
-_PLATFORM_ID_RE: Final = re.compile(r"^[a-z0-9][a-z0-9-]*$")
-# The list may sit on the heading's own line or on the next non-blank line,
-# backticked or bare.
-_JURIS_RE: Final = re.compile(
-    r"\*\*Allowed jurisdictions[^*\n]*\*\*[ \t]*:?[ \t]*\n*[ \t]*`?([a-z]{2,7}(?:[ \t]*,[ \t]*[a-z]{2,7})*)`?",
+    r"(?:\*\*)?platforms\.(allowed|excluded)(?:\*\*)?[ \t]*:(?:\*\*)?(.*)",
     re.IGNORECASE,
 )
+_PLATFORM_ID_RE: Final = re.compile(r"[a-z0-9][a-z0-9-]*")
+_JURIS_HEADING_RE: Final = re.compile(r"\*\*Allowed jurisdictions[^*\n]*\*\*", re.IGNORECASE)
+_JURIS_LIST_RE: Final = re.compile(r"`?([a-z]{2,7}(?:[ \t]*,[ \t]*[a-z]{2,7})*)`?", re.IGNORECASE)
 _POOL_STATE_RE: Final = re.compile(r"\b(headroom|tight|exhausted)\b", re.IGNORECASE)
 _BUDGET_RE: Final = re.compile(
     r"\*\*Budget priority:\*\*\s*`?(cheap|cost|balanced|best|quality)`?", re.IGNORECASE
@@ -606,22 +602,39 @@ def declared_budget(text: str) -> str:
 def platform_filters(text: str) -> tuple[set[str], set[str]]:
     allowed: set[str] = set()
     excluded: set[str] = set()
-    for kind, rest in _PLATFORMS_RE.findall(text):
+    for line in text.split("\n"):
+        match = _PLATFORMS_RE.fullmatch(line.strip(" \t"))
+        if match is None:
+            continue
+        kind, rest = match.groups()
         ids = {
-            t.strip().strip("`").lower()
-            for t in re.split(r"[,\s]+", rest)
-            if _PLATFORM_ID_RE.match(t.strip().strip("`").lower())
+            token.strip("`").lower()
+            for token in re.split(r"[,\s]+", rest.strip(" \t"))
+            if _PLATFORM_ID_RE.fullmatch(token.strip("`").lower())
         }
         (allowed if kind.lower() == "allowed" else excluded).update(ids)
     return allowed, excluded
 
 
 def allowed_jurisdictions(text: str) -> set[str]:
-    m = _JURIS_RE.search(text)
-    if not m:
-        return set(BASELINE_JURISDICTIONS)
-    codes = {c.strip().lower() for c in re.split(r"[,\s]+", m.group(1)) if c.strip()}
-    return codes or set(BASELINE_JURISDICTIONS)
+    for heading in _JURIS_HEADING_RE.finditer(text):
+        pos = heading.end()
+        # Consume each whitespace run once; adjacent regex stars can revisit
+        # the same run polynomially when no jurisdiction follows it.
+        while pos < len(text) and text[pos] in " \t":
+            pos += 1
+        if pos < len(text) and text[pos] == ":":
+            pos += 1
+        while pos < len(text) and text[pos] in " \t":
+            pos += 1
+        while pos < len(text) and text[pos] == "\n":
+            pos += 1
+        while pos < len(text) and text[pos] in " \t":
+            pos += 1
+        values = _JURIS_LIST_RE.match(text, pos)
+        if values:
+            return {part.strip().lower() for part in values.group(1).split(",")}
+    return set(BASELINE_JURISDICTIONS)
 
 
 # The Resets cell of a Usage-pool row: "Tue 2026-09-22 20:00 EDT", "2026-09-22",

@@ -86,10 +86,9 @@ def _private_tree(directory: Path) -> None:
         if path.is_dir():
             safe.private_directory(path)
         elif path.is_file():
-            # Open, validate, and chmod the same inode without rewriting a
-            # concurrently edited memory. Hardlinks are refused by the helper.
-            with safe.open_private_append(path):
-                pass
+            # Explicit migration preserves bytes/inode, refuses hardlinks,
+            # and requires exclusive Windows access before changing the ACL.
+            safe.private_file_permissions(path)
 
 
 def _json(path: Path) -> dict:
@@ -525,8 +524,7 @@ def sync_project(
             )
         _atomic(project / ".roadmodel/WORKTREE.md", _snapshot(project))
         if handoff.exists():
-            with _private().open_private_append(handoff):
-                pass
+            _private().private_file_permissions(handoff)
         _atomic(
             project / ".roadmodel/private_files.py", _private_source().read_text(encoding="utf-8")
         )
