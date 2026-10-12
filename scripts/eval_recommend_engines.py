@@ -22,7 +22,8 @@ silently truncated away.
 
 Usage (from repo root, in the verify venv):
   GOOGLE_API_KEY=... [OPENAI_API_KEY=...] python scripts/eval_recommend_engines.py
-  # optional: --engines gemini-2.5-pro,gpt-5-mini  --out /tmp/eval  --probes 6
+  # optional: --engines gemini-2.5-pro,gpt-5-mini --probes 6
+  # --out requires a new prefix under a private directory.
   # add an ad-hoc engine without editing ENGINES: --extra provider:model[:budget]
   #   e.g. --extra ollama:gemma3:12b:0  --extra deepseek:deepseek-flash:0
 """
@@ -44,6 +45,9 @@ from typing import Any
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
+
+sys.path.insert(0, str(REPO / "scripts"))
+from private_diagnostics import PrivateArtifact, fresh_directory  # noqa: E402
 
 from roadmodel import cost, usage  # noqa: E402
 from roadmodel.config import PROVIDER_KEY_ENV, Config  # noqa: E402
@@ -359,6 +363,13 @@ _COST_DEMOTION = re.compile(
 )
 
 
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Credentials may only reach the explicitly requested origin."""
+
+    def redirect_request(self, *args: Any, **kwargs: Any) -> None:
+        return None
+
+
 def _key_for(provider: str) -> str | None:
     env_name = PROVIDER_KEY_ENV.get(provider)
     if env_name is None:
@@ -409,20 +420,20 @@ def _run_via_service(eng: Engine, prompt: str, url: str, token: str) -> dict[str
     )
     t0 = time.time()
     try:
-        with urllib.request.urlopen(req, timeout=180) as resp:  # noqa: S310 - fixed https URL
+        with urllib.request.build_opener(NoRedirect()).open(req, timeout=180) as resp:  # noqa: S310 - fixed https URL
             r = json.load(resp)
     except urllib.error.HTTPError as e:
         return {"error": f"HTTP {e.code}", "latency_s": round(time.time() - t0, 1)}
-    except Exception as e:  # noqa: BLE001 - record every failure mode
+    except Exception:  # noqa: BLE001 - record every failure mode
         return {
-            "error": f"{type(e).__name__}: {str(e)[:160]}",
+            "error": "request_failed",
             "latency_s": round(time.time() - t0, 1),
         }
     answered = r.get("engine")
     if answered and answered != _service_hint(eng):
         # The forced engine failed and the fallback chain answered: a failure
         # of THIS engine, whatever the fallback produced.
-        return {"error": f"fell back to {answered}", "latency_s": round(time.time() - t0, 1)}
+        return {"error": "unexpected_engine", "latency_s": round(time.time() - t0, 1)}
     return _score(r, round(time.time() - t0, 1), r.get("usage"))
 
 
@@ -442,9 +453,9 @@ def _run_one(eng: Engine, prompt: str) -> dict[str, Any]:
             thinking_budget=eng.thinking_budget,
             temperature=eng.temperature,
         )
-    except Exception as e:  # noqa: BLE001 - record every failure mode
+    except Exception:  # noqa: BLE001 - record every failure mode
         return {
-            "error": f"{type(e).__name__}: {str(e)[:160]}",
+            "error": "request_failed",
             "latency_s": round(time.time() - t0, 1),
         }
     latency = round(time.time() - t0, 1)
@@ -513,8 +524,8 @@ def main() -> int:
     ap.add_argument("--probes", type=int, default=0, help="limit to first N probes (0 = all)")
     ap.add_argument(
         "--out",
-        default="/tmp/rm-engine-eval",  # noqa: S108 - dev eval artifact, path is overridable
-        help="output path prefix",
+        default=None,
+        help="new output prefix under a private directory (default: fresh private directory)",
     )
     ap.add_argument(
         "--extra",
@@ -550,6 +561,14 @@ def main() -> int:
     selected.extend(_parse_extra(raw, args.extra_max_output_tokens) for raw in args.extra)
     probes = PROBES[: args.probes] if args.probes else PROBES
 
+    token = os.environ.get("ROADMODEL_INTERNAL_TOKEN", "")
+    if args.via_service and not args.from_jsonl and not token:
+        raise SystemExit("--via-service needs ROADMODEL_INTERNAL_TOKEN")
+    if args.out is None:
+        args.out = str(fresh_directory("roadmodel-eval-") / "results")
+    report_output = PrivateArtifact(pathlib.Path(f"{args.out}.md"))
+    raw_output = None if args.from_jsonl else PrivateArtifact(pathlib.Path(f"{args.out}.jsonl"))
+
     rows: list[dict[str, Any]] = []
     if args.from_jsonl:
         rows = [json.loads(line) for line in pathlib.Path(args.from_jsonl).read_text().splitlines()]
@@ -560,28 +579,28 @@ def main() -> int:
             for key in dict.fromkeys(r["engine"] for r in rows)
         ]
     else:
-        jsonl = pathlib.Path(f"{args.out}.jsonl").open("w")
-        token = os.environ.get("ROADMODEL_INTERNAL_TOKEN", "")
-        if args.via_service and not token:
-            raise SystemExit("--via-service needs ROADMODEL_INTERNAL_TOKEN")
-        for eng in selected:
-            for probe in probes:
-                res = (
-                    _run_via_service(eng, probe["task"], args.via_service, token)
-                    if args.via_service
-                    else _run_one(eng, probe["task"])
-                )
-                rec = {"engine": eng.key, "ga": eng.ga, "probe": probe["id"], **res}
-                rows.append(rec)
-                jsonl.write(json.dumps(rec) + "\n")
-                jsonl.flush()
-                status = (
-                    res.get("skipped")
-                    or res.get("error")
-                    or f"{res['latency_s']}s Q={res['picks']['quality']['model']}"
-                )
-                print(f"  {eng.key:24s} {probe['id']:16s} {status}", flush=True)
-        jsonl.close()
+        if raw_output is None:
+            raise RuntimeError("Private output was not initialized.")
+        with raw_output.append() as jsonl:
+            for eng in selected:
+                for probe in probes:
+                    res = (
+                        _run_via_service(eng, probe["task"], args.via_service, token)
+                        if args.via_service
+                        else _run_one(eng, probe["task"])
+                    )
+                    rec = {"engine": eng.key, "ga": eng.ga, "probe": probe["id"], **res}
+                    rows.append(rec)
+                    jsonl.write(json.dumps(rec) + "\n")
+                    jsonl.flush()
+                    status = (
+                        "skipped"
+                        if res.get("skipped")
+                        else "request_failed"
+                        if res.get("error")
+                        else f"{float(res['latency_s']):.2f}s"
+                    )
+                    print(f"  {eng.key:24s} {probe['id']:16s} {status}", flush=True)
 
     # Baseline picks per probe for agreement.
     baseline = args.baseline
@@ -743,7 +762,7 @@ def main() -> int:
         md.append(f"| {probe['id']} | " + " | ".join(str(c) for c in cells) + " |")
 
     report = pathlib.Path(f"{args.out}.md")
-    report.write_text("\n".join(md) + "\n")
+    report_output.write("\n".join(md) + "\n")
     if args.summary_json:
         # The figures the /recommend engine menu shows, keyed by engines.json
         # hint. Merged into an existing file so engines evaluated by separate
@@ -796,9 +815,15 @@ def main() -> int:
             mirror = repo / "service" / "app" / "engine-eval.json"
             mirror.write_text(text)
             print(f"Mirror:  {mirror}")
-    print(f"\nReport: {report}\nRaw:    {args.out}.jsonl")
+    print(f"\nReport: {report}")
+    if raw_output is not None:
+        print(f"Raw: {raw_output.path}")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except (OSError, ValueError):
+        print("Diagnostic input or private output is unavailable.", file=sys.stderr)
+        raise SystemExit(2) from None

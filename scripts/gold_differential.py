@@ -21,7 +21,7 @@ Opus runs through Claude Code headless (`claude -p`, no tools) on the
 subscription, never an API key.
 
 Usage (repo root, a venv with roadmodel installed):
-  python scripts/gold_differential.py --rows /tmp/rm-soak-recommend.jsonl \
+  python scripts/gold_differential.py --rows "$SOAK_OUT" \
       --gold private/gold-differential/gold.json --out private/gold-differential/diff.json
   # --probes creative,planning   limit the gold run to some probes
 """
@@ -44,6 +44,7 @@ from roadmodel import recommend
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import judge_recommend as jr  # noqa: E402
+from private_diagnostics import PrivateArtifact
 
 LETTERS = "DCBAS"
 T1_PROBES = 12  # the original battery, the like-for-like comparison with T1
@@ -135,7 +136,7 @@ def run_gold(
                     gold: dict[str, Any] = out["structured_output"]
                     gold["_list_cost_usd"] = out.get("total_cost_usd")
                     return probe["id"], gold
-        return probe["id"], {"error": (proc.stderr or proc.stdout)[-300:]}
+        return probe["id"], {"error": "gold_process_failed"}
 
     try:
         with ThreadPoolExecutor(max_workers=max(1, concurrency)) as pool:
@@ -221,40 +222,34 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--concurrency", type=int, default=4)
     args = ap.parse_args(argv)
 
+    cache = PrivateArtifact(args.gold, cache=True)
+    output = PrivateArtifact(args.out) if args.out is not None else None
     probes = jr.load_probes()
     if args.probes:
         wanted = set(args.probes.split(","))
         probes = [p for p in probes if p["id"] in wanted]
-    gold: dict[str, dict[str, Any]] = (
-        json.loads(args.gold.read_text(encoding="utf-8")) if args.gold.exists() else {}
-    )
+    gold: dict[str, dict[str, Any]] = json.loads(cache.data) if cache.data else {}
     missing = [p for p in probes if p["id"] not in gold or "error" in gold[p["id"]]]
     if missing:
         print(f"gold: running Opus@selector on {len(missing)} probes", file=sys.stderr)
         gold.update(run_gold(missing, args.model, args.concurrency))
-        args.gold.parent.mkdir(parents=True, exist_ok=True)
-        args.gold.write_text(
-            json.dumps(gold, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-        )
+        cache.write(json.dumps(gold, indent=2, ensure_ascii=False) + "\n")
 
     rows = jr.judged_rows(jr.load_rows(args.rows))
     table = diff(probes, rows, gold)
     t1 = [r for r in table if r["probe"] in {p["id"] for p in probes[:T1_PROBES]}]
     report = {"all": summary(table), "t1_battery": summary(t1), "rows": table}
-    if args.out:
-        args.out.write_text(
-            json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-        )
+    if output is not None:
+        output.write(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
     for r in table:
-        p, q = r["primary"] or {}, r["quality"] or {}
-        print(
-            f"{r['probe']:22} gold {r['gold']['model']} @ {r['gold']['platform']} · {r['gold']['effort']}"
-            f" [{r['gold']['category']}/{r['gold']['complexity']}{'/novel' if r['gold']['novel'] else ''}]"
-            f" | app BAL {p.get('model')} ({r['primary_vs_gold']}) QUAL {q.get('model')} ({r['quality_vs_gold']})"
-        )
+        print(f"{r['probe']:22} BAL {r['primary_vs_gold']} QUAL {r['quality_vs_gold']}")
     print(json.dumps({"all": report["all"], "t1_battery": report["t1_battery"]}, indent=2))
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        raise SystemExit(main())
+    except (OSError, ValueError, subprocess.SubprocessError):
+        print("Diagnostic input or private output is unavailable.", file=sys.stderr)
+        raise SystemExit(2) from None

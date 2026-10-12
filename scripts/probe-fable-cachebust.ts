@@ -5,7 +5,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 const BASE = "https://roadmodel.ai";
 const EMAIL = process.env.ROADMODEL_DOGFOOD_EMAIL ?? "nathan.ramos.github@gmail.com";
@@ -14,8 +14,7 @@ const MARKERS = ["outside your access", "not recommendable", "was unavailable", 
 function need(n: string): string {
   const v = process.env[n];
   if (!v) {
-    console.error(`missing env ${n}`);
-    process.exit(2);
+    throw new Error("Required diagnostic configuration is unavailable.");
   }
   return v;
 }
@@ -28,8 +27,7 @@ async function mint(): Promise<string> {
   const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email: EMAIL });
   const th = data?.properties?.hashed_token;
   if (error || !th) {
-    console.error("generateLink failed", error);
-    process.exit(1);
+    throw new Error("Diagnostic session could not be created.");
   }
   let cap: { name: string; value: string }[] = [];
   const ssr = createServerClient(url, need("NEXT_PUBLIC_SUPABASE_ANON_KEY"), {
@@ -37,8 +35,7 @@ async function mint(): Promise<string> {
   });
   const { error: v } = await ssr.auth.verifyOtp({ type: "magiclink", token_hash: th });
   if (v || !cap.length) {
-    console.error("verifyOtp failed", v);
-    process.exit(1);
+    throw new Error("Diagnostic session could not be verified.");
   }
   return cap.map((c) => `${c.name}=${c.value}`).join("; ");
 }
@@ -48,7 +45,7 @@ async function main() {
   const bypass = need("ROADMODEL_LATENCY_BYPASS_TOKEN");
   const cookie = `${gate}; ${await mint()}`;
   for (let i = 0; i < 4; i++) {
-    const nonce = createHash("sha256").update(`${i}-${need("SITE_PASSWORD")}`).digest("hex").slice(0, 8);
+    const nonce = randomUUID();
     const task =
       `[ref ${nonce}] Answer the hardest Humanity's-Last-Exam (HLE) questions across graduate mathematics, ` +
       `theoretical physics, and molecular biology. ONLY the current HLE leaderboard leader is acceptable — a ` +
@@ -68,15 +65,16 @@ async function main() {
     } catch {
       best = undefined;
     }
-    const pick = best?.rationale_sections?.pick ?? "";
+    const candidate = best?.rationale_sections?.pick;
+    const pick = typeof candidate === "string" ? candidate : "";
     const bad = MARKERS.filter((m) => pick.toLowerCase().includes(m));
-    console.log(`\n[run ${i + 1}] QUALITY = ${best?.model ?? "?"}`);
-    console.log(`   PICK: ${pick}`);
+    console.log(`\n[run ${i + 1}] status=${res.status} quality_present=${best !== undefined}`);
+    console.log(`   pick_length=${pick.length}`);
     console.log(`   contradiction: ${bad.length ? bad.join(", ") : "NONE ✅"}`);
   }
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
+main().catch(() => {
+  console.error("Diagnostic run failed.");
+  process.exitCode = 1;
 });

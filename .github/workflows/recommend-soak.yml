@@ -75,7 +75,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         if: steps.check.outputs.have == 'true'
         with:
-          # Node 22 (not web/.nvmrc's 20): @supabase/supabase-js's realtime
+          # Node 22 (web uses 24): @supabase/supabase-js's realtime
           # client needs native global WebSocket, which lands in Node 22.
           # The soak is a standalone script, so it need not match the web build.
           node-version: "22"
@@ -94,6 +94,18 @@ jobs:
         if: steps.check.outputs.have == 'true'
         run: node web/scripts/sync-catalog.mjs
 
+      - name: Allocate private diagnostic paths
+        if: steps.check.outputs.have == 'true'
+        run: |
+          umask 077
+          SOAK_DIRECTORY=$(mktemp -d "$RUNNER_TEMP/roadmodel-soak.XXXXXX")
+          {
+            echo "SOAK_OUT=$SOAK_DIRECTORY/rows.jsonl"
+            echo "SOAK_JUDGE_OUT=$SOAK_DIRECTORY/judge.json"
+            echo "SOAK_LOG=$SOAK_DIRECTORY/soak.log"
+            echo "JUDGE_LOG=$SOAK_DIRECTORY/judge.log"
+          } >> "$GITHUB_ENV"
+
       - name: Run soak (report-only)
         id: soak
         if: steps.check.outputs.have == 'true'
@@ -106,14 +118,15 @@ jobs:
           ROADMODEL_LATENCY_BYPASS_TOKEN: ${{ secrets.ROADMODEL_LATENCY_BYPASS_TOKEN }}
         run: |
           set +e
+          umask 077
           # tsx is a pinned devDependency (web/package.json + lockfile), so
           # `npm ci` links .bin/tsx — run it directly instead of `npx --yes`,
           # which would fetch tsx from npm at runtime alongside a full-access
           # DB key in env (supply-chain risk, audit L1). NODE_PATH so the
           # ../scripts file resolves @supabase/* against web/node_modules.
-          NODE_PATH="$(pwd)/node_modules" node_modules/.bin/tsx ../scripts/soak-recommend.ts 2>&1 | tee /tmp/soak.log
+          NODE_PATH="$(pwd)/node_modules" node_modules/.bin/tsx ../scripts/soak-recommend.ts 2>&1 | tee "$SOAK_LOG"
           echo "exit=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
-          echo "health=$(grep -m1 '^SERVICE_HEALTH:' /tmp/soak.log || true)" >> "$GITHUB_OUTPUT"
+          echo "health=$(grep -m1 '^SERVICE_HEALTH:' "$SOAK_LOG" || true)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         if: steps.check.outputs.have == 'true' && steps.soak.outputs.exit != '3'
@@ -140,9 +153,10 @@ jobs:
           JUDGE: ${{ inputs.judge }}
         run: |
           set +e
+          umask 077
           FLAG=""
           if [ "$JUDGE" = "false" ]; then FLAG="--no-judge"; fi
-          python scripts/judge_recommend.py --rows /tmp/rm-soak-recommend.jsonl $FLAG 2>&1 | tee /tmp/judge.log
+          python scripts/judge_recommend.py --rows "$SOAK_OUT" --out "$SOAK_JUDGE_OUT" $FLAG 2>&1 | tee "$JUDGE_LOG"
           echo "exit=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
 
       - name: Track regression in a single issue
@@ -152,11 +166,11 @@ jobs:
           script: |
             const fs = require("fs");
             let log = "";
-            try { log = fs.readFileSync("/tmp/soak.log", "utf8"); } catch {}
+            try { log = fs.readFileSync(process.env.SOAK_LOG, "utf8"); } catch {}
             const idx = log.indexOf("=== SOAK SCORECARD");
             let scorecard = idx >= 0 ? log.slice(idx) : log.slice(-3000);
             let judge = "";
-            try { judge = fs.readFileSync("/tmp/judge.log", "utf8"); } catch {}
+            try { judge = fs.readFileSync(process.env.JUDGE_LOG, "utf8"); } catch {}
             const j = judge.indexOf("=== JUDGE SCORECARD");
             if (j >= 0) scorecard = `${scorecard.trim()}\n\n${judge.slice(j).trim()}`;
             const title = "Recommender soak: quality bar not met";

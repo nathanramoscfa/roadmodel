@@ -13,7 +13,15 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pool_usage import CACHE, number, save
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Credentials may only reach the explicitly requested origin."""
+
+    def redirect_request(self, *args: Any, **kwargs: Any) -> None:
+        return None
 
 
 def collect(data: dict[str, Any], now: float) -> dict[str, Any] | None:
@@ -65,7 +73,7 @@ def main() -> int:
         request = urllib.request.Request(
             "https://openrouter.ai/api/v1/key", headers={"Authorization": f"Bearer {key}"}
         )
-        with urllib.request.urlopen(request, timeout=20) as response:  # noqa: S310
+        with urllib.request.build_opener(NoRedirect()).open(request, timeout=20) as response:  # noqa: S310
             snapshot = collect(json.load(response), time.time())
         if snapshot is None:
             raise ValueError("unsupported meter")
