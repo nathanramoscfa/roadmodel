@@ -1,32 +1,14 @@
 #!/usr/bin/env python3
-"""Quarantine an AI curation pass whose added text could steer the recommender.
+"""Quarantine curation outside the reviewed instruction boundary.
 
-docs/model-selector.txt is the recommender's prompt, and the AI passes write
-prose into it (and into docs/model-tier-cost-scale.md) from pages outside this
-repository: Cursor's pricing page, provider pages, CLI changelogs, web search.
-A tampered page could plant text written for the recommender rather than the
-reader. This compares each file's committed text with the pass's proposal and
-checks every ADDED line for what the prose in these files never needs:
-
-- a URL: sources are cited by name;
-- markup that runs or links: script, iframe, img, svg, style, object, embed
-  and anchor tags, ``javascript:`` / ``data:`` URIs, ``on…=`` handlers;
-- invisible or bidirectional-control characters;
-- text addressed to a model: overriding earlier instructions, a
-  system / assistant / user role marker, "you must / should", or "always /
-  never / only recommend · select · choose · pick · prefer".
-
-On any hit it QUARANTINES the pass: every file goes back to its committed
-text, so only the deterministic layers that run after it (provider prices,
-derived letters, the rating guard, lifecycle tags) change the files this run,
-and the report names each hit. A clean pass is left untouched. It runs in all
-five AI workflows (the catalog refresh and the four trackers).
+Only existing typed price/rating values and numeric cost-scale cells may change.
+The legacy phrase checks provide additional diagnostics; byte preservation and
+trusted deterministic reconstruction enforce the boundary. Rejected text never
+appears in the public report. Final publication refuses to promote a quarantined
+source hash. See docs/automation-integrity.md.
 
     python update/prose_guard.py --apply docs/model-selector.txt docs/model-tier-cost-scale.md
-    python update/prose_guard.py --check docs/model-selector.txt   # exit 1 on a hit, no edit
-
-The committed text is read with ``git show <ref>:<path>`` (``--ref``, default
-HEAD). The report goes to stdout and update/.last-prose-guard.md.
+    python update/prose_guard.py --check docs/model-selector.txt
 """
 
 from __future__ import annotations
@@ -38,6 +20,12 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+UPDATE_DIR = Path(__file__).resolve().parent
+if str(UPDATE_DIR) not in sys.path:
+    sys.path.insert(0, str(UPDATE_DIR))
+
+from automation_integrity import costscale, raw_selector  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 REPORT_PATH = REPO_ROOT / "update" / ".last-prose-guard.md"
@@ -85,10 +73,8 @@ class Hit:
     text: str
 
     def render(self) -> str:
-        snippet = self.text.strip()
-        if len(snippet) > 160:
-            snippet = snippet[:157] + "..."
-        return f"- `{self.path}` line {self.line}: {self.reason} — `{snippet}`"
+        # Rejected source text is untrusted and may contain private information.
+        return f"- `{self.path}` line {self.line}: {self.reason}"
 
 
 def added_lines(base: str, proposed: str) -> list[tuple[int, str]]:
@@ -107,6 +93,15 @@ def scan(path: str, base: str, proposed: str) -> list[Hit]:
         for reason, pattern in CHECKS:
             if pattern.search(text):
                 hits.append(Hit(path, number, reason, text))
+    boundary = {
+        "docs/model-selector.txt": raw_selector,
+        "docs/model-tier-cost-scale.md": costscale,
+    }.get(path)
+    if boundary is not None and base != proposed:
+        try:
+            boundary(base, proposed)
+        except (ValueError, KeyError, TypeError):
+            hits.append(Hit(path, 1, "instructions or nonnumeric fields require review", ""))
     return hits
 
 

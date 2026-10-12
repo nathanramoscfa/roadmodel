@@ -1,0 +1,85 @@
+name: Merge validated refreshes
+
+on:
+  workflow_run:
+    workflows:
+      - Update roadmodel catalog docs
+      - Update Claude Code surface parameters
+      - Update Codex reasoning-effort parameters
+      - Update Gemini thinking parameters
+      - Update DeepSeek thinking parameters
+      - Update benchmark layer (Artificial Analysis)
+      - probe-availability
+    types: [completed]
+  schedule:
+    - cron: "50 */3 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: merge-validated-refreshes
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.repository.full_name == github.repository &&
+       (github.event.workflow_run.event == 'schedule' ||
+        github.event.workflow_run.event == 'workflow_dispatch')))
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: read
+      checks: read
+      statuses: read
+    steps:
+      # Only trusted default-branch code. Candidate commits are API data blobs;
+      # their code, dependencies, hooks, caches and artifacts never execute here.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        id: merger
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Validate immutable refresh content and merge after all checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MERGE_GH_TOKEN: ${{ steps.merger.outputs.token }}
+          PRODUCER_RUN: ${{ github.event.workflow_run.id }}
+          ROADMODEL_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          HERE="$PWD/scripts"
+          source "$HERE/ops-lib.sh"
+          candidates="$(mktemp)"
+          trap 'rm -f "$candidates"' EXIT
+          if [ -n "$PRODUCER_RUN" ]; then
+            prs="$(prs_from_run "$PRODUCER_RUN")"
+            for pr in $prs; do
+              printf '%s %s\n' "$PRODUCER_RUN" "$pr" >> "$candidates"
+            done
+          else
+            python3 scripts/cron_pr.py --repo "$REPO" --pending > "$candidates"
+            # Catch-up never lets one pending or rejected PR strand the rest.
+            export MERGE_MAX_POLLS=1
+          fi
+          failed=0
+          while read -r run_id pr; do
+            [ -n "$pr" ] || continue
+            (merge_when_green "$pr" "$run_id") || failed=1
+          done < "$candidates"
+          exit "$failed"

@@ -267,9 +267,12 @@ def test_a_same_day_rerun_refreshes_the_days_open_pr() -> None:
     assert 'git push --force -u origin "$BRANCH"' in wf
     assert 'gh pr list --head "$BRANCH" --state open' in wf
     assert 'gh pr edit "${PR_URL}" --body "${body}"' in wf
-    # The PR merges itself when green, like the four tracker crons: auto-merge
-    # is armed once the PR exists (opened or refreshed).
-    assert 'gh pr merge --auto --squash --delete-branch "$PR_URL"' in wf
+    # The default-branch merger validates the exact candidate after CI. Native
+    # auto-merge must not remain armed across subsequent same-day pushes.
+    assert "gh pr merge --auto" not in wf
+    assert "python update/automation_integrity.py" in wf
+    merger = (REPO_ROOT / ".github/workflows/merge-refresh.yml").read_text()
+    assert 'merge_when_green "$pr" "$run_id"' in merger
     assert "Human review required" not in wf
 
 

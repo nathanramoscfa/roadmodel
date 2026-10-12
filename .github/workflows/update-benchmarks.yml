@@ -135,6 +135,8 @@ jobs:
         run: |
           set -euo pipefail
           nl=$'\n'  # joins sections: $( ) strips the trailing newlines of what it captures
+          # Validate final generated data before publishing or promoting source hashes.
+          python update/automation_integrity.py
           if git diff --quiet -- docs/benchmarks.json docs/model-selector.txt docs/model-selector.md docs/catalog.json docs/effort-ratings.json update/aa-model-map.json; then
             echo "No benchmark or rating changes — nothing to commit."
             exit 0
@@ -183,6 +185,6 @@ jobs:
             --base main \
             --head "$BRANCH" \
             --title "Automated benchmark refresh: ${DATE}" \
-            --body "$(printf '## Summary\n\n%s\n\n---\n\nOpened automatically by `.github/workflows/update-benchmarks.yml`: one fetch of the Artificial Analysis Insights API joined to catalog ids via `update/aa-model-map.json`. Numbers, derived rating letters, and the prose update/model_prose.py builds from them (no AI-written text), so auto-merge is enabled — GitHub squash-merges once checks pass. To stop it: `gh pr merge --disable-auto`.' "$notes")")"
+            --body "$(printf '## Summary\n\n%s\n\n---\n\nOpened automatically by `.github/workflows/update-benchmarks.yml`: one fetch of the Artificial Analysis Insights API joined to catalog ids via `update/aa-model-map.json`. Numbers, derived rating letters, and the prose update/model_prose.py builds from them (no AI-written text), so the validated refresh merger checks content and all CI results before squash-merging. To stop it: mark the PR as draft.' "$notes")")"
           echo "Opened: $PR_URL"
-          gh pr merge --auto --squash --delete-branch "$PR_URL"
+          echo "The validated refresh merger will evaluate $PR_URL."

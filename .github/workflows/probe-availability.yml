@@ -75,15 +75,18 @@ jobs:
           # fallback so the offline CLI + planning kit (which never read the
           # runtime table) carry the correct state into the next release.
           python update/sync_static_availability.py
+          python update/build_catalog.py
           DATE="$(date -u +%Y-%m-%d)"
           BRANCH="auto/availability-${DATE}-${{ github.run_id }}"
+          # Validate final generated data before publishing or promoting source hashes.
+          python update/automation_integrity.py
           git config user.name "roadmodel-bot"
           git config user.email "roadmodel-bot@users.noreply.github.com"
           git checkout -b "$BRANCH"
-          git add infra/model-availability.json docs/model-selector.txt docs/model-selector.md
+          git add infra/model-availability.json docs/model-selector.txt docs/model-selector.md docs/catalog.json
           git commit -m "chore(availability): probe-detected availability change (${DATE})"
           git push -u origin "$BRANCH"
           PR_URL="$(gh pr create \
             --title "chore(availability): probe-detected model availability change (${DATE})" \
-            --body "$(printf '## Summary\n\nThe daily Anthropic availability probe detected a change and updated `infra/model-availability.json`. On merge, `sync-availability.yml` writes it to the `model_availability` table the recommender reads.\n\n**Glance, then it auto-merges.** In the diff, an ADD benches a model (the probe got model-not-found); a REMOVE re-enables one (the probe succeeded). A change only happens on an explicit not-found / success — transient, auth, and rate-limit errors classify as ambiguous and never edit the file.\n\nProbe: `update/probe_availability.py` (1-token invocation per Anthropic catalog model). Opened automatically by `.github/workflows/probe-availability.yml`. To stop: `gh pr merge --disable-auto`.')")"
-          gh pr merge --auto --squash --delete-branch "$PR_URL"
+            --body "$(printf '## Summary\n\nThe daily Anthropic availability probe detected a change and updated `infra/model-availability.json`. On merge, `sync-availability.yml` writes it to the `model_availability` table the recommender reads.\n\n**The validated refresh merger checks the final content and all CI results.** In the diff, an ADD benches a model (the probe got model-not-found); a REMOVE re-enables one (the probe succeeded). A change only happens on an explicit not-found / success — transient, auth, and rate-limit errors classify as ambiguous and never edit the file.\n\nProbe: `update/probe_availability.py` (1-token invocation per Anthropic catalog model). Opened automatically by `.github/workflows/probe-availability.yml`. To stop: mark the PR as draft.')")"
+          echo "The validated refresh merger will evaluate $PR_URL."
