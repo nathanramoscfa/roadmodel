@@ -219,7 +219,10 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   const conversationIdFinal = conversationId;
+  const cancelled = new AbortController();
+  const signal = AbortSignal.any([req.signal, cancelled.signal]);
   const stream = new ReadableStream<Uint8Array>({
+    cancel() { cancelled.abort(); },
     async start(controller) {
       // Echo the conversation_id first so the client can pin it
       // to its in-memory state before any tokens stream in.
@@ -236,6 +239,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       try {
         const events = createRoadmapStream({
+          signal,
           messages: parsed.data.messages,
           profile,
           envFrontierEnabled,
@@ -245,7 +249,7 @@ const handler = async (req: Request): Promise<Response> => {
         let outputTokens: number | undefined;
         let cacheStats: CacheStats | undefined;
         for await (const event of events) {
-          controller.enqueue(sseLine(event));
+          if (!cancelled.signal.aborted) controller.enqueue(sseLine(event));
           if (event.type === "message_delta") {
             assistantContent += event.delta;
           } else if (event.type === "roadmap_draft") {
@@ -278,7 +282,7 @@ const handler = async (req: Request): Promise<Response> => {
             userId,
             draft: latestDraft,
           });
-          if (upserted) {
+          if (upserted && !cancelled.signal.aborted) {
             controller.enqueue(
               sseLine({
                 type: "roadmap_persisted",
@@ -305,7 +309,9 @@ const handler = async (req: Request): Promise<Response> => {
           await consumeRoadmapMonthlyToken(userId);
         }
 
-        controller.close();
+        // Delivery may end during persistence. Keep completed generation's
+        // metering/audit even when there is no longer a browser to receive it.
+        if (!cancelled.signal.aborted) controller.close();
         // The ledger: what this turn cost the operator at the engine's
         // catalog prices, cached prompt reads at the cache price. The
         // spend guard's counter takes it too.
@@ -338,8 +344,10 @@ const handler = async (req: Request): Promise<Response> => {
       } catch {
         // A generic code only: the provider's error text can carry request
         // details, and the error_class in the audit row is the diagnosis.
-        controller.enqueue(sseLine({ type: "error", error: "roadmap_failed" }));
-        controller.close();
+        if (!cancelled.signal.aborted) {
+          controller.enqueue(sseLine({ type: "error", error: "roadmap_failed" }));
+          controller.close();
+        }
         void writeAudit({
           ip_hash: id.ipHash,
           ua_hash: id.uaHash,

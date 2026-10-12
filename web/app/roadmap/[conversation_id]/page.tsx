@@ -52,8 +52,8 @@ export default async function HydratedRoadmapPage({ params }: PageProps) {
       envFrontierEnabled: env.FRONTIER_ROADMAP_ENABLED,
     });
     engine = resolved.engine;
-  } catch (err) {
-    console.warn("[/roadmap/:id] engine resolve failed", err);
+  } catch {
+    console.warn("[/roadmap/:id] engine resolve failed");
   }
 
   return (

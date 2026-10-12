@@ -37,8 +37,8 @@ export default async function RoadmapPage() {
         envFrontierEnabled: env.FRONTIER_ROADMAP_ENABLED,
       });
       engine = resolved.engine;
-    } catch (err) {
-      console.warn("[/roadmap] engine resolve failed", err);
+    } catch {
+      console.warn("[/roadmap] engine resolve failed");
     }
   }
 

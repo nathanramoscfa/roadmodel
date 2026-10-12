@@ -73,6 +73,13 @@ Body reads have a 15-second budget. Roadmap history permits up to 50 messages of
 20,000 characters each; the aggregate limit can reject histories below those limits.
 Authenticated and mutation responses use private/no-store caching.
 
+The roadmap provider path shares a 120-second abort signal across cache creation,
+stream opening and body reads, including its single application retry. SDK retries
+are disabled, and browser cancellation aborts the local provider request. Redis
+memo waits are capped at two seconds each. Aborting local HTTP work does not
+guarantee cancellation or prevent billing for work already accepted remotely.
+Web-owned dependency failure logs contain fixed events, without exception objects.
+
 Visitor, keyless, rejected-key and exchange quotas use salted IPs. Migrating
 from the previous IP/user-agent key starts a fresh quota window once. Configured
 limiter failures and SDK timeouts stop dispatch outside explicit local E2E mode.
