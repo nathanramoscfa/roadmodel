@@ -21,9 +21,9 @@
 
   <key>ProgramArguments</key>
   <array>
-    <string>/opt/homebrew/bin/python3.12</string>
-    <string>/Users/nathanramos/roadmodel/scripts/roll_pool_status.py</string>
-    <string>--sync-web</string>
+    <string>/bin/sh</string>
+    <string>-c</string>
+    <string>exec /opt/homebrew/bin/python3.12 "$HOME/roadmodel/scripts/roll_pool_status.py" --sync-web</string>
   </array>
 
   <key>StartInterval</key>

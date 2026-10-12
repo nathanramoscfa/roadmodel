@@ -15,9 +15,11 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 const BASE = process.argv[2] ?? "https://roadmodel.ai";
-const PROMPT_FILE =
-  process.argv[3] ??
-  "/private/tmp/claude-501/-Users-nathanramos-roadmodel/209aa634-18c4-4993-b193-9b9c9bf7861c/scratchpad/equity-prompt.txt";
+const PROMPT_FILE = process.argv[3];
+if (!PROMPT_FILE) {
+  console.error("A prompt file argument is required");
+  process.exit(2);
+}
 const EMAIL = process.env.ROADMODEL_DOGFOOD_EMAIL ?? "nathan.ramos.github@gmail.com";
 
 function need(n: string): string {

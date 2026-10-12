@@ -7,7 +7,7 @@
 // with budget_priority overridden in the BODY (no profile mutation) for each of
 // cheap / balanced / best, and prints model + settings per priority.
 //
-// The prompt is read from a path arg (default: the scratchpad equity prompt) so
+// The prompt is read from a required path argument so
 // no personal-detail prompt is committed to this public repo.
 //
 //   cd web
@@ -21,9 +21,11 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 const BASE = process.argv[2] ?? "https://roadmodel.ai";
-const PROMPT_FILE =
-  process.argv[3] ??
-  "/private/tmp/claude-501/-Users-nathanramos-roadmodel/209aa634-18c4-4993-b193-9b9c9bf7861c/scratchpad/equity-prompt.txt";
+const PROMPT_FILE = process.argv[3];
+if (!PROMPT_FILE) {
+  console.error("A prompt file argument is required");
+  process.exit(2);
+}
 // The frontier selector is non-deterministic, so a single shot per priority is
 // noise. Sample N times per priority (default 5) and compare DISTRIBUTIONS.
 const SAMPLES = Number(process.env.SAMPLES ?? "5");
