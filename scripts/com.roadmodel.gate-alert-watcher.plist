@@ -21,8 +21,9 @@
 
   <key>ProgramArguments</key>
   <array>
-    <string>/usr/bin/python3</string>
-    <string>/Users/nathanramos/roadmodel/scripts/gate-alert-watcher.py</string>
+    <string>/bin/sh</string>
+    <string>-c</string>
+    <string>exec /usr/bin/python3 "$HOME/roadmodel/scripts/gate-alert-watcher.py"</string>
   </array>
 
   <key>StartInterval</key>

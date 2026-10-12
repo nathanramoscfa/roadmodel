@@ -22,7 +22,7 @@ methodology and instrumentation kit; PR 7b paste-fills baseline
   can resolve `@supabase/supabase-js` from `web/node_modules`):
 
   ```bash
-  NODE_PATH=/Users/nathanramos/roadmodel/web/node_modules \
+  NODE_PATH="$(pwd)/web/node_modules" \
   scripts/with-prod-secrets.sh node web/node_modules/.bin/tsx \
       scripts/measure-recommend-latency.ts \
       --target https://roadmodel.ai \
