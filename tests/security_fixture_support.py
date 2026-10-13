@@ -86,7 +86,8 @@ def document():
                 ],
                 "properties": {
                     "codeqlConfigSummary": {
-                        "queries": [{"uses": "security-extended", "type": "builtinSuite"}]
+                        "disableDefaultQueries": False,
+                        "queries": [{"uses": "security-extended", "type": "builtinSuite"}],
                     }
                 },
                 "results": [result],
@@ -111,3 +112,27 @@ def approval(tree, doc):
             }
         ],
     }
+
+
+def metric_document(value=123):
+    doc = document()
+    run = doc["runs"][0]
+    component = run["tool"]["extensions"][0]
+    component.setdefault("rules", []).append(
+        {
+            "id": "py/summary/lines-of-code",
+            "name": "Synthetic metric",
+            "properties": {"kind": "metric", "tags": ["summary", "lines-of-code"]},
+        }
+    )
+    index = len(component["rules"]) - 1
+    run["properties"].update(
+        {
+            "jobRunUuid": "00000000-0000-4000-8000-000000000001",
+            "semmle.formatSpecifier": "sarif-latest",
+            "metricResults": [
+                {"rule": {"index": index, "toolComponent": {"index": 0}}, "value": value}
+            ],
+        }
+    )
+    return doc

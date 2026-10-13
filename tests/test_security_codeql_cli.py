@@ -16,7 +16,7 @@ from pathlib import Path
 S = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(S))
 import security_sarif as gate
-from security_fixture_support import MemoryTree, approval, document
+from security_fixture_support import MemoryTree, approval, document, metric_document
 from security_manifest import EMPTY, MANIFEST_PATH
 from security_manifest import SharedGitTree as GitTree
 from security_source import bounded_command
@@ -578,6 +578,35 @@ class CLITests(unittest.TestCase):
         self.invoke("review")
         self.invoke("check")
         self.assertEqual(list(self.repo.rglob("*.pyc")), [])
+
+    def test_metric_zero_results_actual_cli_success(self):
+        self.doc = metric_document()
+        self.doc["runs"][0]["results"] = []
+        self.write_doc()
+        self.invoke("snapshot")
+        self.invoke("review")
+        self.invoke("check")
+        data = json.loads(self.review_output.read_bytes())
+        self.assertEqual(data["candidates"], [])
+
+    def test_metric_blocker_actual_cli_review_preserves_fail(self):
+        self.doc = metric_document()
+        self.write_doc()
+        self.invoke("snapshot")
+        self.invoke("review")
+        self.invoke("check", 1)
+        data = json.loads(self.review_output.read_bytes())
+        self.assertEqual(data["raw_blocking"], 1)
+        self.assertEqual(len(data["candidates"]), 1)
+        self.assertNotIn(b"Synthetic metric", self.review_output.read_bytes())
+
+    def test_metric_malformed_zero_results_actual_cli_refuses(self):
+        self.doc = metric_document(True)
+        self.doc["runs"][0]["results"] = []
+        self.write_doc()
+        self.invoke("snapshot")
+        self.invoke("review", 1)
+        self.assertFalse(self.review_output.exists())
 
 
 class BoundsTests(unittest.TestCase):

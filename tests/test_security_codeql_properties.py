@@ -32,7 +32,7 @@ class Properties(unittest.TestCase):
         with self.assertRaises(Invalid):
             raw_run_properties({}, "python")
 
-    def test_summary_exact_api_shape(self):
+    def test_summary_exact_raw_shape(self):
         self.valid({"codeqlConfigSummary": copy.deepcopy(EXPECTED_SUMMARY)})
 
     def test_summary_exact_plus_raw_metadata(self):
@@ -101,6 +101,15 @@ class Properties(unittest.TestCase):
 
     def test_summary_disabled_defaults_rejected(self):
         self.bad({"codeqlConfigSummary": EXPECTED_SUMMARY | {"disable-default-queries": True}})
+
+    def test_raw_summary_disabled_defaults_rejected(self):
+        self.bad({"codeqlConfigSummary": EXPECTED_SUMMARY | {"disableDefaultQueries": True}})
+
+    def test_raw_summary_default_flag_missing_rejected(self):
+        self.bad({"codeqlConfigSummary": {"queries": EXPECTED_SUMMARY["queries"]}})
+
+    def test_raw_summary_default_flag_integer_rejected(self):
+        self.bad({"codeqlConfigSummary": EXPECTED_SUMMARY | {"disableDefaultQueries": 0}})
 
     def test_uuid_malformed_rejected(self):
         self.bad({"jobRunUuid": "PRIVATE_UUID_CANARY"})

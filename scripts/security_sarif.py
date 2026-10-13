@@ -63,6 +63,28 @@ def digest(value: Any) -> str:
     ).hexdigest()
 
 
+def canonical_run_configuration(properties: Any, run: dict | None = None) -> dict:
+    """Exclude only the validated per-job UUID from persistent review identity."""
+    properties = obj(properties)
+    if "jobRunUuid" in properties:
+        value = properties["jobRunUuid"]
+        require(
+            isinstance(value, str)
+            and re.fullmatch(
+                r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",
+                value,
+            )
+            is not None
+        )
+    # The language binding separately enforces the supported configuration.
+    # Every other property, including nested UUID fields, remains bound here.
+    canonical = {key: value for key, value in properties.items() if key != "jobRunUuid"}
+    if "metricResults" in canonical:
+        require(run is not None)
+        canonical["metricResults"] = canonical_metrics(obj(run), canonical["metricResults"])
+    return canonical
+
+
 def load_json(raw: bytes) -> dict:
     require(isinstance(raw, bytes) and 0 < len(raw) <= MAX_JSON)
 
@@ -154,6 +176,26 @@ def resolve_rule(run: dict, result: dict) -> tuple[dict, dict]:
         require(rule.get("id") == identifier)
     require(rule is not None and bool(IDENTIFIER.fullmatch(string(rule.get("id")))))
     return component, rule
+
+
+def canonical_metrics(run: dict, metrics: Any) -> list[dict]:
+    """Bind raw metric values to their fully resolved reporting descriptors."""
+    output = []
+    for metric in arr(metrics):
+        metric = obj(metric)
+        require(set(metric) == {"rule", "value"})
+        value = metric["value"]
+        require(type(value) is int or type(value) is float and math.isfinite(value))
+        component, rule = resolve_rule(run, {"rule": obj(metric["rule"])})
+        output.append(
+            {
+                "reference": metric["rule"],
+                "component": identity(component),
+                "descriptor": rule,
+                "value": value,
+            }
+        )
+    return output
 
 
 def invocation(value: Any) -> None:
@@ -438,7 +480,9 @@ def proof(finding: Finding, tree, language: str, context: str) -> dict:
             "rule_id": finding.rule["id"],
             "context_sha256": context,
             "tool_sha256": digest(tool_identity),
-            "run_configuration_sha256": digest(finding.run.get("properties", {})),
+            "run_configuration_sha256": digest(
+                canonical_run_configuration(finding.run.get("properties", {}), finding.run)
+            ),
             "rule_sha256": digest(
                 {
                     "component": identity(finding.component),

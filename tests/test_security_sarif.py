@@ -104,7 +104,8 @@ def document():
                 ],
                 "properties": {
                     "codeqlConfigSummary": {
-                        "queries": [{"uses": "security-extended", "type": "builtinSuite"}]
+                        "disableDefaultQueries": False,
+                        "queries": [{"uses": "security-extended", "type": "builtinSuite"}],
                     }
                 },
                 "results": [result],

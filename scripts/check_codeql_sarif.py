@@ -30,6 +30,7 @@ from security_sarif import (
     MAX_JSON,
     Canonicalizer,
     arr,
+    canonical_run_configuration,
     classify_document,
     digest,
     evaluate,
@@ -112,12 +113,16 @@ def write_receipt(path: Path, value: dict) -> None:
         os.close(descriptor)
 
 
-EXPECTED_SUMMARY = {"queries": [{"type": "builtinSuite", "uses": "security-extended"}]}
+EXPECTED_SUMMARY = {
+    "disableDefaultQueries": False,
+    "queries": [{"type": "builtinSuite", "uses": "security-extended"}],
+}
 SUPPORTED_KEYS = {
     "codeqlConfigSummary",
     "jobRunUuid",
     "semmle.formatSpecifier",
     "semmle.sourceLanguage",
+    "metricResults",
 }
 DIAGNOSTIC_KEYS = SUPPORTED_KEYS | {"incrementalMode"}
 UUID4 = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
@@ -139,6 +144,39 @@ def raw_run_properties(run, language):
     if "semmle.sourceLanguage" in properties:
         expected = "python" if language == "python" else "javascript"
         require(properties["semmle.sourceLanguage"] == expected)
+    # Validate metric references and values even when the run has no findings.
+    canonical_run_configuration(properties, run)
+
+
+def metric_shapes(metrics):
+    types = {
+        dict: "object",
+        list: "array",
+        str: "string",
+        int: "integer",
+        float: "number",
+        bool: "boolean",
+        type(None): "null",
+    }
+    output = {"type": types.get(type(metrics), "other")}
+    if not isinstance(metrics, list):
+        return output
+    output["count"] = len(metrics)
+    output["items"] = []
+    for metric in metrics[:8]:
+        row = {"type": types.get(type(metric), "other")}
+        if isinstance(metric, dict):
+            row["known"] = [
+                {"key": key, "type": types.get(type(metric[key]), "other")}
+                for key in sorted(set(metric) & {"rule", "value"})
+            ]
+            row["unknown_key_sha256"] = sorted(
+                hashlib.sha256(key.encode("utf-8", "surrogatepass")).hexdigest()
+                for key in metric
+                if key not in {"rule", "value"}
+            )[:16]
+        output["items"].append(row)
+    return output
 
 
 def property_shape(document):
@@ -170,6 +208,8 @@ def property_shape(document):
                 for key in props
                 if key not in DIAGNOSTIC_KEYS
             )[:16]
+            if "metricResults" in props:
+                row["metric_shapes"] = metric_shapes(props["metricResults"])
             summary = props.get("codeqlConfigSummary")
             if isinstance(summary, dict):
                 row["summary_exact_expected"] = digest(summary) == digest(EXPECTED_SUMMARY)
@@ -182,6 +222,7 @@ def property_shape(document):
                         "paths-ignore",
                         "query-filters",
                         "disable-default-queries",
+                        "disableDefaultQueries",
                     }
                 )
                 row["summary_other_key_count"] = len(
@@ -193,6 +234,7 @@ def property_shape(document):
                         "paths-ignore",
                         "query-filters",
                         "disable-default-queries",
+                        "disableDefaultQueries",
                     }
                 )
             if "jobRunUuid" in props:
