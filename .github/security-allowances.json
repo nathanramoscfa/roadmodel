@@ -1,0 +1,6 @@
+{
+  "schema": 1,
+  "context_policy": "whole-tree-v1",
+  "codeql": [],
+  "bandit": []
+}
