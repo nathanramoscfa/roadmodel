@@ -2,8 +2,8 @@
   "bandit": [],
   "codeql": [],
   "context_policy": {
-    "baseline_revision": "289214b26f115cb766d1c05341bde9b84d53bb38",
-    "code_context_sha256": "64c2203bd5584c18e7b0c21ab512b032ab80c7bbf01978547e0bbc5e8d19b4ef",
+    "baseline_revision": "40043af30e5c141b614f8827942cf94b63537dcc",
+    "code_context_sha256": "0a66dd3908468cb428e93981d2fa837de64f2e548fed8681f2fb74f206fd5f81",
     "date_policy": "catalog-utc-date-v1",
     "mode": "typed-catalog-v1",
     "validator_sha256": "d0994ba80c5591de71bf6edb969f475b6ab7aa6b2a0b6bf57cd75cb5f8030eb2"
