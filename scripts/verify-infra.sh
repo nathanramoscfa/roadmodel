@@ -4,9 +4,8 @@
 # Phase 3 Step 2 infrastructure verification. Confirms:
 #   1. DNS:   `dig CNAME staging.roadmodel.ai +short` returns a
 #             Vercel-domain target.
-#   2. TLS:   `curl -sSI https://staging.roadmodel.ai` returns
-#             HTTP/2 200 or HTTP/2 404 (TLS handshake succeeded
-#             either way).
+#   2. TLS:   staging responds over verified TLS, either with 200/404
+#             or the expected Vercel authentication challenge.
 #   3. Docs:  the required infra/README.md section headings are
 #             present.
 #   4. Schema: every env var documented in infra/README.md
@@ -72,7 +71,7 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# Check 2: TLS — curl -sSI returns HTTP/2 200 or 404 (handshake OK).
+# Check 2: TLS — public response or the protected Preview's exact login redirect.
 # -----------------------------------------------------------------------------
 echo "==> Check 2: TLS handshake"
 if ! command -v curl >/dev/null 2>&1; then
@@ -80,11 +79,16 @@ if ! command -v curl >/dev/null 2>&1; then
 else
   # --max-time bounds the probe; --http2 prefers HTTP/2 but falls back to 1.1
   # so the check still succeeds against any cert-issuing TLS responder.
-  CURL_STATUS="$(curl -sSI --max-time 10 --http2 "${STAGING_URL}" 2>/dev/null | head -1 | tr -d '\r' || true)"
+  CURL_HEADERS="$(curl -sSI --max-time 10 --http2 "${STAGING_URL}" 2>/dev/null | tr -d '\r' || true)"
+  CURL_STATUS="$(head -1 <<< "${CURL_HEADERS}")"
   if [[ -z "${CURL_STATUS}" ]]; then
     fail "2 TLS: no response from ${STAGING_URL} (DNS/TLS not yet provisioned)"
   elif echo "${CURL_STATUS}" | grep -Eq '^HTTP/[12](\.[01])?[[:space:]]+(200|404)'; then
     pass "2 TLS: ${STAGING_URL} -> ${CURL_STATUS}"
+  elif echo "${CURL_STATUS}" | grep -Eq '^HTTP/[12](\.[01])?[[:space:]]+302([[:space:]]|$)' &&
+    echo "${CURL_HEADERS}" | grep -qiE '^location:[[:space:]]+https://vercel[.]com/sso-api([?][^[:space:]]*)?[[:space:]]*$'; then
+    # Do not log the authentication URL's query or any returned cookies.
+    pass "2 TLS: verified TLS and expected Vercel Preview authentication challenge"
   else
     fail "2 TLS: unexpected status from ${STAGING_URL}: ${CURL_STATUS}"
   fi
