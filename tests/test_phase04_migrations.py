@@ -71,11 +71,20 @@ def db_conn() -> "psycopg.Connection":
             cur.execute("drop table if exists public.audit_log cascade")
             cur.execute("drop table if exists public.model_availability cascade")
         conn.commit()
+        # Supabase explicitly grants anon EXECUTE on newly created public
+        # functions. Revoking PUBLIC does not remove that direct role grant.
+        # Reproduce the hosted defaults while applying the real migrations.
+        conn.execute("alter default privileges in schema public grant execute on functions to anon")
+        conn.commit()
         for path in _migration_files():
             sql = path.read_text(encoding="utf-8")
             with conn.cursor() as cur:
                 cur.execute(sql)
             conn.commit()
+        conn.execute(
+            "alter default privileges in schema public revoke execute on functions from anon"
+        )
+        conn.commit()
         yield conn
     finally:
         conn.close()
