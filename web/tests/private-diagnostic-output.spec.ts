@@ -18,7 +18,8 @@ type Snapshot = { dev: number; ino: number; content: string };
 // Pin the exact file inspected and read; a path replacement cannot redirect the
 // read after its checks. Expected identity also detects replacement between reads.
 function privateSnapshot(filename: string, links = 1, expected?: Snapshot): Snapshot {
-  const fd = openSync(filename, constants.O_RDONLY | constants.O_NOFOLLOW);
+  // Keep an explicit private mode alongside the read-only, no-follow flags.
+  const fd = openSync(filename, constants.O_RDONLY | constants.O_NOFOLLOW, 0o600);
   try {
     const info = fstatSync(fd);
     expect(info.isFile()).toBe(true);
