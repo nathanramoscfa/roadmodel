@@ -29,7 +29,6 @@ if (!PROMPT_FILE) {
 // The frontier selector is non-deterministic, so a single shot per priority is
 // noise. Sample N times per priority (default 5) and compare DISTRIBUTIONS.
 const SAMPLES = Number(process.env.SAMPLES ?? "5");
-const EMAIL = process.env.ROADMODEL_DOGFOOD_EMAIL ?? "";
 
 function need(n: string): string {
   const v = process.env[n];
@@ -50,7 +49,7 @@ async function mintAuthCookie(): Promise<string> {
   });
   const { data, error } = await admin.auth.admin.generateLink({
     type: "magiclink",
-    email: EMAIL,
+    email: need("ROADMODEL_DOGFOOD_EMAIL"),
   });
   const tokenHash = data?.properties?.hashed_token;
   if (error || !tokenHash) {
@@ -144,6 +143,7 @@ async function fire(
 }
 
 async function main(): Promise<void> {
+  need("ROADMODEL_DOGFOOD_EMAIL");
   const task = readFileSync(PROMPT_FILE, "utf8").trim();
   const gate = `roadmodel_gate=${gateToken(need("SITE_PASSWORD"))}`;
   const cookie = `${gate}; ${await mintAuthCookie()}`;

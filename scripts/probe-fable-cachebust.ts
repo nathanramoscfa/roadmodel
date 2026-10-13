@@ -9,7 +9,6 @@ import { randomUUID } from "node:crypto";
 import { deriveGateToken } from "../web/lib/gate";
 
 const BASE = "https://roadmodel.ai";
-const EMAIL = process.env.ROADMODEL_DOGFOOD_EMAIL ?? "";
 const MARKERS = ["outside your access", "not recommendable", "was unavailable", "is unavailable"];
 
 function need(n: string): string {
@@ -23,7 +22,7 @@ function need(n: string): string {
 async function mint(): Promise<string> {
   const url = need("SUPABASE_URL");
   const admin = createClient(url, need("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false } });
-  const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email: EMAIL });
+  const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email: need("ROADMODEL_DOGFOOD_EMAIL") });
   const th = data?.properties?.hashed_token;
   if (error || !th) {
     throw new Error("Diagnostic session could not be created.");
@@ -40,6 +39,7 @@ async function mint(): Promise<string> {
 }
 
 async function main() {
+  need("ROADMODEL_DOGFOOD_EMAIL");
   const gate = `roadmodel_gate=${await deriveGateToken(need("SITE_PASSWORD"))}`;
   const bypass = need("ROADMODEL_LATENCY_BYPASS_TOKEN");
   const cookie = `${gate}; ${await mint()}`;

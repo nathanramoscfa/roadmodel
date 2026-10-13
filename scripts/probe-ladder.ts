@@ -17,7 +17,6 @@ import { createHash } from "node:crypto";
 
 const N = Number(process.argv[2] ?? "3");
 const BASE = process.argv[3] ?? "https://roadmodel.ai";
-const EMAIL = process.env.ROADMODEL_DOGFOOD_EMAIL ?? "";
 
 // Faithful reconstruction of the pyfinlab task class: a long-context, planning-
 // heavy financial pipeline audit inside a real repo.
@@ -50,7 +49,7 @@ async function mintAuthCookie(): Promise<string> {
   });
   const { data, error } = await admin.auth.admin.generateLink({
     type: "magiclink",
-    email: EMAIL,
+    email: need("ROADMODEL_DOGFOOD_EMAIL"),
   });
   const tokenHash = data?.properties?.hashed_token;
   if (error || !tokenHash) {
@@ -127,6 +126,7 @@ async function run(i: number, cookie: string, bypass: string) {
 }
 
 async function main() {
+  need("ROADMODEL_DOGFOOD_EMAIL");
   const gate = `roadmodel_gate=${gateToken(need("SITE_PASSWORD"))}`;
   const bypass = need("ROADMODEL_LATENCY_BYPASS_TOKEN");
   const authCookie = await mintAuthCookie();
