@@ -310,3 +310,66 @@ class RuleId(unittest.TestCase):
         doc = named()
         doc["runs"][0]["properties"]["metricResults"][0]["ruleId"] = "PRIVATE_RULE_CANARY"
         self.assertNotIn("PRIVATE_", json.dumps(cli.property_shape(doc)))
+
+
+class BaselineShapes(unittest.TestCase):
+    def test_all_four_fields_emit_only_fixed_keys_and_types(self):
+        metric = {
+            "baseline": 731942,
+            "rule": {"id": "PRIVATE_RULE_CANARY"},
+            "ruleId": "PRIVATE_ID_CANARY",
+            "value": "PRIVATE_VALUE_CANARY",
+        }
+        before = copy.deepcopy(metric)
+        output = metric_shapes([metric])
+        self.assertEqual(
+            output["items"][0],
+            {
+                "type": "object",
+                "known": [
+                    {"key": "baseline", "type": "integer"},
+                    {"key": "rule", "type": "object"},
+                    {"key": "ruleId", "type": "string"},
+                    {"key": "value", "type": "string"},
+                ],
+                "unknown_key_sha256": [],
+            },
+        )
+        self.assertNotIn("PRIVATE_", json.dumps(output))
+        self.assertNotIn("731942", json.dumps(output))
+        self.assertEqual(metric, before)
+
+    def test_baseline_diagnostic_reports_types_even_for_refused_values(self):
+        for value, label in [
+            (None, "null"),
+            (False, "boolean"),
+            (731942, "integer"),
+            (731942.5, "number"),
+            ("PRIVATE_BASELINE_CANARY", "string"),
+            ({"PRIVATE_NESTED_CANARY": 1}, "object"),
+            (["PRIVATE_ARRAY_CANARY"], "array"),
+        ]:
+            with self.subTest(value_type=label):
+                output = metric_shapes([{"baseline": value}])
+                self.assertEqual(
+                    output["items"][0]["known"],
+                    [{"key": "baseline", "type": label}],
+                )
+                self.assertNotIn("PRIVATE_", json.dumps(output))
+                self.assertNotIn("731942", json.dumps(output))
+
+    def test_property_diagnostic_keeps_four_key_and_existing_sample_bounds(self):
+        doc = named()
+        metric = doc["runs"][0]["properties"]["metricResults"][0]
+        metric["baseline"] = "PRIVATE_BASELINE_CANARY"
+        metric.update({f"PRIVATE_UNKNOWN_{i}": "PRIVATE_VALUE_CANARY" for i in range(32)})
+        doc["runs"][0]["properties"]["metricResults"] *= 20
+        output = cli.property_shape(doc)
+        encoded = json.dumps(output)
+        self.assertNotIn("PRIVATE_", encoded)
+        rows = output["runs"][0]["metric_shapes"]
+        self.assertEqual(rows["count"], 20)
+        self.assertEqual(len(rows["items"]), 8)
+        for item in rows["items"]:
+            self.assertEqual(len(item["known"]), 4)
+            self.assertEqual(len(item["unknown_key_sha256"]), 16)

@@ -183,7 +183,7 @@ def canonical_metrics(run: dict, metrics: Any) -> list[dict]:
     output = []
     for metric in arr(metrics):
         metric = obj(metric)
-        require({"rule", "value"} <= set(metric) <= {"rule", "ruleId", "value"})
+        require({"rule", "value"} <= set(metric) <= {"rule", "ruleId", "value", "baseline"})
         value = metric["value"]
         require(type(value) is int or type(value) is float and math.isfinite(value))
         reference = {"rule": obj(metric["rule"])}
@@ -198,6 +198,10 @@ def canonical_metrics(run: dict, metrics: Any) -> list[dict]:
         }
         if "ruleId" in metric:
             bound["ruleId"] = metric["ruleId"]
+        if "baseline" in metric:
+            baseline = metric["baseline"]
+            require(type(baseline) is int or type(baseline) is float and math.isfinite(baseline))
+            bound["baseline"] = baseline
         output.append(bound)
     return output
 
@@ -302,13 +306,15 @@ class Canonicalizer:
         value = obj(value)
         require(not (set(value) - {"uri", "uriBaseId", "index", "description"}))
         path = None
-        if "uri" in value:
-            uri = string(value["uri"])
-            if "uriBaseId" in value:
-                require(value["uriBaseId"] == "%SRCROOT%")
-                base = obj(obj(self.run.get("originalUriBaseIds", {})).get("%SRCROOT%"))
+        if "uriBaseId" in value:
+            require(value["uriBaseId"] == "%SRCROOT%")
+            # Pinned CodeQL output may omit this map; relative paths still bind
+            # to the independently verified tracked source root below.
+            if "originalUriBaseIds" in self.run:
+                base = obj(obj(self.run["originalUriBaseIds"]).get("%SRCROOT%"))
                 require(base == {"uri": self.tree.root_uri})
-            path = repo_path(uri)
+        if "uri" in value:
+            path = repo_path(string(value["uri"]))
         if "index" in value:
             require(not resolving)
             artifacts = arr(self.run.get("artifacts", []))
@@ -376,9 +382,25 @@ class Canonicalizer:
                     "importance",
                     "nestingLevel",
                     "kinds",
+                    "taxa",
                 }
             )
         )
+        if "taxa" in value:
+            # Pinned CodeQL emits inline dataflow-role markers, not indexed
+            # taxonomy references. Preserve every validated byte in the hash.
+            taxa = arr(value["taxa"])
+            require(len(taxa) <= 1000)
+            require("taxonomies" not in self.run)
+            seen = set()
+            for taxon in taxa:
+                taxon = obj(taxon)
+                require(set(taxon) == {"id", "properties"})
+                require(IDENTIFIER.fullmatch(string(taxon["id"])) is not None)
+                require(obj(taxon["properties"]) == {"CodeQL/DataflowRole": "step"})
+                key = digest(taxon)
+                require(key not in seen)
+                seen.add(key)
         output = dict(value)
         if "index" in value:
             records = arr(self.run.get("threadFlowLocations", []))

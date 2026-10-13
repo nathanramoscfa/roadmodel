@@ -415,3 +415,141 @@ def test_synthetic_sarif_contract(row):
     assert observed == row["expected"] or (
         row["expected"] == "reject-or-unallowable" and observed in {"reject", "block:1"}
     )
+
+
+class ImplicitSrcrootTests(unittest.TestCase):
+    def setUp(self):
+        self.tree = MemoryTree()
+        self.run = document()["runs"][0]
+        self.location = copy.deepcopy(self.run["results"][0]["locations"][0])
+        artifact = self.location["physicalLocation"]["artifactLocation"]
+        artifact.pop("index")
+        artifact["uriBaseId"] = "%SRCROOT%"
+
+    def test_absent_map_matches_explicit_verified_root(self):
+        implicit = gate.Canonicalizer(self.run, self.tree).location(self.location)
+        self.run["originalUriBaseIds"] = {"%SRCROOT%": {"uri": self.tree.root_uri}}
+        self.assertEqual(gate.Canonicalizer(self.run, self.tree).location(self.location), implicit)
+
+    def test_explicit_invalid_or_conflicting_maps_refuse(self):
+        invalid = [
+            None,
+            [],
+            {},
+            {"OTHER": {"uri": self.tree.root_uri}},
+            {"%SRCROOT%": None},
+            {"%SRCROOT%": {"uri": "file:///outside/"}},
+            {"%SRCROOT%": {"uri": self.tree.root_uri, "uriBaseId": "OTHER"}},
+        ]
+        for value in invalid:
+            self.run["originalUriBaseIds"] = value
+            with self.subTest(value_type=type(value).__name__), self.assertRaises(gate.Invalid):
+                gate.Canonicalizer(self.run, self.tree).location(self.location)
+
+    def test_unknown_bases_unsafe_paths_and_index_disagreement_refuse(self):
+        canon = gate.Canonicalizer(self.run, self.tree)
+        for base in [None, 1, "OTHER", "SRCROOT", "%srcroot%"]:
+            with self.assertRaises(gate.Invalid):
+                canon.uri({"uri": "src/sink.py", "uriBaseId": base})
+        for uri in ["../src/sink.py", "/src/sink.py", "file:///src/sink.py", "%2e%2e/src/sink.py"]:
+            with self.assertRaises(gate.Invalid):
+                canon.uri({"uri": uri, "uriBaseId": "%SRCROOT%"})
+        with self.assertRaises(gate.Invalid):
+            canon.uri({"index": 0, "uriBaseId": "OTHER"})
+        with self.assertRaises(gate.Invalid):
+            canon.uri({"index": 0, "uri": "src/helper.py", "uriBaseId": "%SRCROOT%"})
+
+    def test_implicit_map_preserves_file_and_region_binding(self):
+        for path, line in [("untracked.py", 1), ("src/sink.py", 999999)]:
+            value = copy.deepcopy(self.location)
+            value["physicalLocation"]["artifactLocation"]["uri"] = path
+            value["physicalLocation"]["region"] = {"startLine": line}
+            with self.assertRaises(gate.Invalid):
+                gate.Canonicalizer(self.run, self.tree).location(value)
+
+
+class MetricBaselineTests(unittest.TestCase):
+    def setUp(self):
+        self.run = document()["runs"][0]
+        self.metric = {"rule": {"index": 0}, "ruleId": "py/fixture", "value": 1}
+
+    def canonical(self):
+        return gate.canonical_metrics(self.run, [self.metric])
+
+    def test_optional_baseline_presence_and_value_are_hashed(self):
+        absent = gate.digest(self.canonical())
+        self.metric["baseline"] = 0
+        present = gate.digest(self.canonical())
+        self.assertNotEqual(absent, present)
+        self.metric["baseline"] = 1
+        self.assertNotEqual(present, gate.digest(self.canonical()))
+        self.metric["baseline"] = 1.5
+        self.assertEqual(self.canonical()[0]["baseline"], 1.5)
+
+    def test_invalid_baselines_refuse(self):
+        for value in [None, True, False, "1", [], {}, float("inf"), float("-inf"), float("nan")]:
+            self.metric["baseline"] = value
+            with self.subTest(value_type=type(value).__name__), self.assertRaises(gate.Invalid):
+                self.canonical()
+
+    def test_other_metric_keys_remain_closed(self):
+        self.metric["unknown"] = 1
+        with self.assertRaises(gate.Invalid):
+            self.canonical()
+
+
+class InlineDataflowTaxaTests(unittest.TestCase):
+    def setUp(self):
+        self.tree = MemoryTree()
+        self.doc = document()
+        self.run = self.doc["runs"][0]
+        self.result = self.run["results"][0]
+        self.location = self.result["codeFlows"][0]["threadFlows"][0]["locations"][0]
+        self.taxon = {"id": "synthetic-kind", "properties": {"CodeQL/DataflowRole": "step"}}
+        self.location["taxa"] = [self.taxon]
+
+    def canonical(self):
+        return gate.Canonicalizer(self.run, self.tree).result(self.result)
+
+    def test_inline_shape_preserved_and_changed_identity_stales_proof(self):
+        actual = self.canonical()["codeFlows"][0]["threadFlows"][0]["locations"][0]["taxa"]
+        self.assertEqual(actual, [self.taxon])
+        manifest = approval(self.tree, self.doc)
+        self.assertEqual(gate.evaluate([self.doc], self.tree, manifest, "python")["blocking"], 0)
+        before = gate.digest(self.canonical())
+        self.taxon["id"] = "changed-synthetic-kind"
+        self.assertNotEqual(before, gate.digest(self.canonical()))
+        with self.assertRaises(gate.Invalid):
+            gate.evaluate([self.doc], self.tree, manifest, "python")
+
+    def test_unknown_role_property_and_reference_variants_refuse(self):
+        variants = [
+            {"id": "fixture", "properties": {"CodeQL/DataflowRole": "source"}},
+            {"id": "fixture", "properties": {"CodeQL/DataflowRole": "step", "extra": True}},
+            {"id": "fixture"},
+            {"id": "../private space", "properties": self.taxon["properties"]},
+        ]
+        for field, value in [
+            ("index", 0),
+            ("guid", "00000000-0000-4000-8000-000000000000"),
+            ("toolComponent", {"index": 0}),
+        ]:
+            variant = copy.deepcopy(self.taxon)
+            variant[field] = value
+            variants.append(variant)
+        for variant in variants:
+            self.location["taxa"] = [variant]
+            with self.assertRaises(gate.Invalid):
+                self.canonical()
+
+    def test_ambiguous_taxonomy_duplicates_and_oversized_arrays_refuse(self):
+        self.run["taxonomies"] = []
+        with self.assertRaises(gate.Invalid):
+            self.canonical()
+        self.run.pop("taxonomies")
+        self.location["taxa"] = [self.taxon, self.taxon]
+        with self.assertRaises(gate.Invalid):
+            self.canonical()
+        self.location["taxa"] = [self.taxon] * 1001
+        with self.assertRaises(gate.Invalid):
+            self.canonical()
