@@ -6,14 +6,16 @@ from __future__ import annotations
 import argparse
 import base64
 import contextlib
+import csv
 import hashlib
 import importlib.metadata as metadata
 import io
 import json
 import logging
 import os
+import re
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from check_codeql_sarif import execution_binding, read, write_receipt
@@ -55,6 +57,75 @@ def implementation_digest(tree):
     return digest(items)
 
 
+MAX_RECORD = 4 * 1024 * 1024
+
+
+def unfiltered_record_files(dist, root: Path):
+    # Python's public metadata inventory filters missing files. Use it ONLY to
+    # locate the metadata RECORD itself, then require every declared row below.
+    visible = dist.files
+    require(visible is not None and 0 < len(visible) <= 10000)
+    records = [
+        item
+        for item in visible
+        if len(PurePosixPath(str(item)).parts) == 2
+        and PurePosixPath(str(item)).parts[0].endswith(".dist-info")
+        and PurePosixPath(str(item)).name == "RECORD"
+    ]
+    require(len(records) == 1)
+    record_name = str(records[0])
+    record_location = Path(dist.locate_file(records[0]))
+    # Anchor beneath the environment prefix; do not resolve intermediate links.
+    relative = record_location.relative_to(root).as_posix()
+    raw = bounded_regular(root, relative, MAX_RECORD)[0]
+    rows = list(csv.reader(io.StringIO(raw.decode("utf-8")), strict=True))
+    require(0 < len(rows) <= 10000)
+    unhashed = {
+        record_name,
+        str(PurePosixPath(record_name).parent / "INSTALLER"),
+        str(PurePosixPath(record_name).parent / "REQUESTED"),
+    }
+    seen = set()
+    output = []
+    for row in rows:
+        require(len(row) == 3)
+        name, encoded_hash, size = row
+        require(name and len(name) <= 4096 and name not in seen)
+        seen.add(name)
+        path = PurePosixPath(name)
+        require(not path.is_absolute() and path.as_posix() == name)
+        require(
+            not any(c in name for c in "\\\x00\r\n")
+            and all(ord(c) >= 32 and ord(c) != 127 for c in name)
+        )
+        external = (
+            name.startswith("../../../bin/")
+            and "/" not in name[len("../../../bin/") :]
+            and name[len("../../../bin/") :] not in {"", ".", ".."}
+        )
+        external |= name == "../../../share/man/man1/bandit.1"
+        require(external or not any(part in {".", "..", ""} for part in name.split("/")))
+        if encoded_hash:
+            require(re.fullmatch(r"sha256=[A-Za-z0-9_-]{43}", encoded_hash) is not None)
+            encoded = encoded_hash.removeprefix("sha256=")
+            decoded = base64.b64decode(encoded + "=", altchars=b"-_", validate=True)
+            require(
+                len(decoded) == 32
+                and base64.urlsafe_b64encode(decoded).rstrip(b"=").decode() == encoded
+            )
+            require(re.fullmatch(r"0|[1-9][0-9]{0,9}", size) is not None)
+        else:
+            require(name in unhashed and size == "")
+        require(name != record_name or not encoded_hash and not size)
+        item = metadata.PackagePath(name)
+        item.hash = metadata.FileHash(encoded_hash) if encoded_hash else None
+        item.size = int(size) if size else None
+        item.dist = dist
+        output.append(item)
+    require(record_name in seen)
+    return output
+
+
 def tool_identity(tree):
     require(sys.flags.isolated and sys.dont_write_bytecode and sys.version_info >= (3, 12))
     pins = lock_versions(tree)
@@ -77,18 +148,32 @@ def tool_identity(tree):
         require(name in pins)
         dist = metadata.distribution(name)
         require(dist.version == pins[name])
-        files = dist.files
+        files = unfiltered_record_files(dist, Path(sys.prefix))
         require(files is not None and 0 < len(files) <= 10000)
         items = []
         total = 0
         for item in files:
             relative = str(item)
             if relative.startswith("../"):
+                if name == "bandit" and relative == "../../../share/man/man1/bandit.1":
+                    # The wheel installs this non-executable document outside
+                    # site-packages. Bind its exact anchored bytes and RECORD.
+                    data = bounded_regular(root, "share/man/man1/bandit.1")[0]
+                    actual = (
+                        base64.urlsafe_b64encode(hashlib.sha256(data).digest())
+                        .rstrip(b"=")
+                        .decode("ascii")
+                    )
+                    require(item.hash is not None and item.hash.mode == "sha256")
+                    require(actual == item.hash.value and item.size == len(data))
+                    items.append([relative, sha(data)])
+                    continue
                 # Console script shebangs are installation-specific and are never
                 # executed here. Reject all other external RECORD paths.
                 require(
                     relative.startswith("../../../bin/")
                     and "/" not in relative[len("../../../bin/") :]
+                    and relative[len("../../../bin/") :] not in {"", ".", ".."}
                 )
                 continue
             path = Path(dist.locate_file(item))

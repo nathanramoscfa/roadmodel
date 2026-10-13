@@ -112,9 +112,10 @@ immutable checkout and emit typed review evidence without raw messages or snippe
 Reviewed false positives and accepted risks require an exact occurrence in
 `.github/security-allowances.json`, including source, tool, query and context
 digests plus a rationale. New, changed, duplicate or stale findings fail. The
-shared context policy permits only validated updates to the existing catalog data
-under its frozen baseline; code, identities, prose and unrelated files require
-review again. Native GitHub CodeQL results remain visible independently.
+shared context policy binds current code separately from an immutable catalog
+data baseline on main. It permits only validated updates to existing catalog
+data; code, identities, prose and unrelated files require review again. Native
+GitHub CodeQL results remain visible independently.
 
 Pull requests also run secret scanning, workflow security checks and audits of
 resolved Python and production npm dependencies. These gates supplement review;

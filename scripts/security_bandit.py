@@ -173,6 +173,20 @@ def loc(data):
     )
 
 
+def validate_offsets(source_lines, context_lines, issue_line, first, last):
+    require(type(first) is int and type(last) is int and first >= -1 and last >= 0)
+    # Str/Bytes findings retain child columns while Bandit expands line_range to
+    # the parent. JSON omits the child's end_lineno, so its end column can only
+    # be bounded against possible context lines at or after the issue start.
+    # Keep exact columns plus full context/file hashes in each finding proof.
+    require(first <= len(source_lines[issue_line - 1].rstrip(b"\r\n")))
+    possible_end_lengths = [
+        len(source_lines[n - 1].rstrip(b"\r\n")) for n in context_lines if n >= issue_line
+    ]
+    require(bool(possible_end_lengths) and last <= max(possible_end_lengths))
+    require(len(context_lines) > 1 or last == 0 or last >= first)
+
+
 def parse_report(document, tree, returncode):
     document = obj(document)
     require(set(document) == {"errors", "generated_at", "metrics", "results"})
@@ -230,12 +244,7 @@ def parse_report(document, tree, returncode):
         # Bandit offsets are zero-based byte offsets; keep their exact values,
         # including -1 when an issue has no AST start column.
         first, last = row["col_offset"], row["end_col_offset"]
-        require(type(first) is int and type(last) is int and first >= -1 and last >= 0)
-        require(
-            first <= len(source_lines[lines[0] - 1].rstrip(b"\r\n"))
-            and last <= len(source_lines[lines[-1] - 1].rstrip(b"\r\n"))
-        )
-        require(len(lines) > 1 or last == 0 or last >= first)
+        validate_offsets(source_lines, lines, row["line_number"], first, last)
         binding = tree.bind_region(
             path, {"startLine": lines[0], "endLine": lines[-1]}, "unicodeCodePoints"
         )

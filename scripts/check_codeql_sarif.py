@@ -49,6 +49,28 @@ ANALYSIS_PROFILE = {
 }
 
 
+def contract_failure_locations(error: Exception) -> list[dict]:
+    """Report only public validator line numbers; never exception text or locals."""
+    components = {
+        "check_codeql_sarif.py",
+        "check_bandit.py",
+        "security_sarif.py",
+        "security_source.py",
+        "security_catalog.py",
+        "security_manifest.py",
+        "security_bandit.py",
+    }
+    directory = Path(__file__).resolve().parent
+    locations = []
+    trace = error.__traceback__
+    while trace is not None:
+        path = Path(trace.tb_frame.f_code.co_filename)
+        if path.parent == directory and path.name in components:
+            locations.append({"component": path.name, "line": trace.tb_lineno})
+        trace = trace.tb_next
+    return locations[-12:]
+
+
 def require_full_profile() -> None:
     require(sys.flags.isolated == 1 and sys.dont_write_bytecode)
     require(os.environ.get("CODEQL_ACTION_DIFF_INFORMED_QUERIES") == "false")
@@ -302,6 +324,7 @@ def main() -> int:
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
-    except Exception:
+    except Exception as error:
         print("CodeQL analysis or reviewed allowance is missing, stale or invalid; gate refused.")
+        print(json.dumps({"contract_locations": contract_failure_locations(error)}))
         raise SystemExit(1) from None

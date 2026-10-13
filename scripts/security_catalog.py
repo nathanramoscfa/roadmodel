@@ -118,7 +118,13 @@ def context_digest(tree, policy: dict) -> str:
     require(code_digest == policy["code_context_sha256"])
     require(tree.entries["update/automation_integrity.py"]["sha256"] == policy["validator_sha256"])
     baseline = GitTree(tree.root, policy["baseline_revision"])
-    require(projected(baseline, manifest_path) == code_digest)
+    # The data baseline must remain reachable after squash merge. Its unrelated
+    # historical code is never executed; current code stays bound above. Bind
+    # every validator to both revisions before importing the current copies.
+    for path in VALIDATOR_FILES:
+        require(path in baseline.entries and path in tree.entries)
+        require(baseline.entries[path]["mode"] == tree.entries[path]["mode"] == "100644")
+        require(baseline.blobs[path] == tree.blobs[path])
     for path in DATA_PATHS:
         require(path in baseline.entries and path in tree.entries)
         require(baseline.entries[path]["mode"] == tree.entries[path]["mode"] == "100644")

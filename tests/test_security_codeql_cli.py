@@ -603,3 +603,20 @@ class BoundsTests(unittest.TestCase):
             bounded_command(
                 [sys.executable, "-I", "-c", "raise SystemExit(3)"], dict(os.environ), 32
             )
+
+
+def test_contract_diagnostics_contain_only_public_components_and_lines():
+    from check_codeql_sarif import contract_failure_locations
+
+    canary = "synthetic-private-diagnostic-canary"
+    try:
+        gate.require(False)
+    except gate.Invalid as error:
+        error.args = (canary,)
+        locations = contract_failure_locations(error)
+    assert locations
+    assert all(set(item) == {"component", "line"} for item in locations)
+    assert all(
+        item["component"] == "security_sarif.py" and type(item["line"]) is int for item in locations
+    )
+    assert canary not in json.dumps(locations)

@@ -62,6 +62,10 @@ def main():
         checked("isolated_fixture_environment", made.returncode == 0)
         source_site = next(SOURCE.glob("lib/python*/site-packages"))
         target_site = next(venv.glob("lib/python*/site-packages"))
+        manual = SOURCE / "share/man/man1/bandit.1"
+        target_manual = venv / "share/man/man1/bandit.1"
+        target_manual.parent.mkdir(parents=True)
+        shutil.copyfile(manual, target_manual)
         # Copy only the locked Bandit dependency closure; no installed source edit.
         for component in [
             "bandit",
@@ -227,6 +231,9 @@ def main():
         checked("second_fixture_environment", made.returncode == 0)
         second_site = next(second.glob("lib/python*/site-packages"))
         shutil.copytree(target_site, second_site, dirs_exist_ok=True)
+        second_manual = second / "share/man/man1/bandit.1"
+        second_manual.parent.mkdir(parents=True)
+        shutil.copyfile(target_manual, second_manual)
         identity_code = "import sys,json;from pathlib import Path;sys.path.insert(0,sys.argv[1]);import check_bandit as c;print(json.dumps(c.tool_identity(c.SharedGitTree(Path(sys.argv[2])))))"
         compared = command(
             [str(second / "bin/python"), "-I", "-B", "-c", identity_code, str(scripts), str(repo)],
@@ -272,6 +279,37 @@ def main():
         checked(
             "installed_scanner_hash_tamper_refused",
             result.returncode == 1 and not (root / "tamper.json").exists(),
+        )
+        package.write_bytes(original)
+        manual_before = target_manual.read_bytes()
+        target_manual.write_bytes(manual_before + b"\nsynthetic tamper\n")
+        result = run("manual-tamper.json")
+        checked(
+            "installed_manual_hash_tamper_refused",
+            result.returncode == 1 and not (root / "manual-tamper.json").exists(),
+        )
+        target_manual.write_bytes(manual_before)
+        target_manual.unlink()
+        target_manual.symlink_to(manual)
+        result = run("manual-link.json")
+        checked(
+            "installed_manual_link_refused",
+            result.returncode == 1 and not (root / "manual-link.json").exists(),
+        )
+        target_manual.unlink()
+        target_manual.write_bytes(manual_before)
+        target_manual.unlink()
+        result = run("manual-missing.json")
+        checked(
+            "missing_declared_manual_refused",
+            result.returncode == 1 and not (root / "manual-missing.json").exists(),
+        )
+        target_manual.write_bytes(manual_before)
+        package.unlink()
+        result = run("module-missing.json")
+        checked(
+            "missing_declared_module_refused",
+            result.returncode == 1 and not (root / "module-missing.json").exists(),
         )
         package.write_bytes(original)
         extra = target_site / "bandit/unbound.py"

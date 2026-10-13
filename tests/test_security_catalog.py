@@ -28,6 +28,62 @@ from security_sarif import Invalid
 from test_security_bandit import MemoryTree, identity, report
 
 
+def exercise_ancestral_data_baseline(repo, reset, commit, contract, policy, rows):
+    def refused(current, selected):
+        try:
+            policy.context_digest(current, selected)
+        except (ValueError, KeyError, TypeError):
+            return True
+        return False
+
+    reset()
+    (repo / "reviewed-runtime-change.py").write_text("value = 2\n")
+    current = commit()
+    updated = dict(contract, code_context_sha256=policy.projected(current))
+    # This must pass only after the final current code digest is explicitly bound.
+    policy.context_digest(current, updated)
+    rows.append({"case": "ancestral_data_baseline_allows_unrelated_final_code", "pass": True})
+    rows.append(
+        {
+            "case": "ancestral_data_baseline_still_requires_final_code_digest",
+            "pass": refused(current, contract),
+        }
+    )
+
+    for path, mode_only in [
+        ("update/model_prose.py", False),
+        ("update/automation_integrity.py", False),
+        ("update/model_prose.py", True),
+    ]:
+        reset()
+        target = repo / path
+        if mode_only:
+            target.chmod(0o755)
+        else:
+            target.write_bytes(target.read_bytes() + b"\n# synthetic validator change\n")
+        changed = commit()
+        selected = dict(
+            contract,
+            code_context_sha256=policy.projected(changed),
+            validator_sha256=changed.entries["update/automation_integrity.py"]["sha256"],
+        )
+        # Even knowingly updated current digests cannot reinterpret old baseline
+        # data using different validator bytes or modes.
+        label = (
+            "validator_mode"
+            if mode_only
+            else "root_validator"
+            if path.endswith("automation_integrity.py")
+            else "dependency_validator"
+        )
+        rows.append(
+            {
+                "case": "ancestral_baseline_rejects_changed_" + label,
+                "pass": refused(changed, selected),
+            }
+        )
+
+
 def _exercise_shared_catalog_context():
     rows = []
     source = Path(__file__).resolve().parents[1]
@@ -272,6 +328,7 @@ def _exercise_shared_catalog_context():
 
         denied("duplicate_json_key_refused", duplicate_json)
         denied("data_mode_change_refused", lambda: (repo / "docs/model-selector.txt").chmod(0o755))
+        exercise_ancestral_data_baseline(repo, reset, commit, contract, policy, rows)
     assert all(row["pass"] for row in rows), [row["case"] for row in rows if not row["pass"]]
 
 
