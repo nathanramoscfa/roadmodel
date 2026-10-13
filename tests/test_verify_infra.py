@@ -1,9 +1,9 @@
 """Preview protection remains enabled while infrastructure checks verify TLS."""
 
 import os
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
