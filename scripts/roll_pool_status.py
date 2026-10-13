@@ -19,11 +19,9 @@ from __future__ import annotations
 
 import argparse
 import difflib
-import os
 import re
 import subprocess
 import sys
-import tempfile
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -127,6 +125,9 @@ def refresh_collectors(cache: Path) -> None:
             subprocess.run(  # noqa: S603 — fixed sibling scripts
                 [
                     sys.executable,
+                    "-I",
+                    "-X",
+                    "utf8",
                     str(Path(__file__).with_name(f"collect_{source}_pool.py")),
                     "--cache",
                     str(cache),
@@ -142,18 +143,16 @@ def refresh_collectors(cache: Path) -> None:
 
 
 def write_context(path: Path, before: str, after: str) -> None:
-    """Atomic replacement preserving permissions and refusing concurrent edits."""
-    fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
-    try:
-        os.fchmod(fd, path.stat().st_mode & 0o777)
-        with os.fdopen(fd, "w", encoding="utf-8") as out:
-            out.write(after)
-        if path.read_text(encoding="utf-8") != before:
+    """Private atomic replacement with optimistic conflict detection."""
+    from local_private import private_files
+
+    private = private_files()
+
+    def unchanged() -> None:
+        if private.read_private_output(path).decode("utf-8") != before:
             raise RuntimeError("context changed during update; retry")
-        os.replace(tmp, path)
-    finally:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
+
+    private.atomic_private_write(path, after.encode("utf-8"), before_replace=unchanged)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -174,7 +173,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if not args.no_collect and (not args.dry_run or args.refresh):
         refresh_collectors(args.cache)
-    text = path.read_text(encoding="utf-8")
+    # Preserve raw newlines so optimistic replacement compares the exact bytes
+    # read, including a context created by a Windows editor.
+    text = path.read_bytes().decode("utf-8")
     new, summary = roll(
         text, datetime.fromtimestamp(time.time(), timezone.utc), load(args.cache), args.zone
     )
@@ -202,6 +203,9 @@ def main(argv: list[str] | None = None) -> int:
         return subprocess.run(  # noqa: S603 — fixed sibling script
             [
                 sys.executable,
+                "-I",
+                "-X",
+                "utf8",
                 str(Path(__file__).with_name("push_pool_status.py")),
                 "--cache",
                 str(args.cache),

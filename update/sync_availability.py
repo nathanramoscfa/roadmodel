@@ -27,6 +27,13 @@ AVAILABILITY_JSON = REPO_ROOT / "infra" / "model-availability.json"
 TABLE = "model_availability"
 
 
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Credentials may only reach the explicitly requested origin."""
+
+    def redirect_request(self, *args: Any, **kwargs: Any) -> None:
+        return None
+
+
 def load_unavailable(path: Path) -> dict[str, dict[str, str]]:
     """Return ``{model_id: {"reason", "source"}}`` from the source-of-truth JSON.
 
@@ -65,7 +72,7 @@ def _request(method: str, url: str, token: str, body: Any | None = None) -> byte
     }
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, headers=headers, method=method)  # noqa: S310
-    with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310  # nosec B310
+    with urllib.request.build_opener(NoRedirect()).open(req, timeout=30) as resp:  # noqa: S310  # nosec B310
         return bytes(resp.read())
 
 

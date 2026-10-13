@@ -9,10 +9,10 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-import os
-import tempfile
 from pathlib import Path
 from typing import Any
+
+from local_private import private_files
 
 CACHE = Path.home() / ".cache" / "roadmodel" / "pools"
 WEEK = 7 * 24 * 60
@@ -38,16 +38,10 @@ def save(snapshot: dict[str, Any], cache: Path = CACHE) -> None:
     source = snapshot["source"]
     if source not in {"claude", "codex", "openrouter", "antigravity"}:
         raise ValueError("unknown pool source")
-    cache.mkdir(parents=True, exist_ok=True, mode=0o700)
-    fd, tmp = tempfile.mkstemp(prefix=f".{source}-", dir=cache)
-    try:
-        with os.fdopen(fd, "w") as out:
-            json.dump(snapshot, out, allow_nan=False)
-            out.write("\n")
-        os.replace(tmp, cache / f"{source}.json")
-    finally:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
+    data = (json.dumps(snapshot, allow_nan=False) + "\n").encode()
+    private = private_files()
+    private.private_directory(cache)
+    private.atomic_private_write(cache / f"{source}.json", data)
 
 
 def load(cache: Path = CACHE) -> dict[str, dict[str, Any]]:

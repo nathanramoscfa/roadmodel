@@ -10,13 +10,14 @@ from __future__ import annotations
 import argparse
 import difflib
 import json
-import os
 import shlex
 import sys
-import tempfile
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from local_private import private_files
 from pool_usage import CACHE
 
 
@@ -29,24 +30,18 @@ def configuration(settings: dict[str, Any], original_path: Path) -> tuple[dict[s
     status = dict(old) if isinstance(old, dict) else {}
     status.update(
         type="command",
-        command=shlex.join([sys.executable, str(script), "--original", str(original_path)]),
+        command=shlex.join(
+            [sys.executable, "-I", "-X", "utf8", str(script), "--original", str(original_path)]
+        ),
     )
     new["statusLine"] = status
     return new, old
 
 
-def atomic_json(path: Path, value: Any, mode: int = 0o600) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-    fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
-    try:
-        os.fchmod(fd, mode)
-        with os.fdopen(fd, "w") as out:
-            json.dump(value, out, indent=2)
-            out.write("\n")
-        os.replace(tmp, path)
-    finally:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
+def atomic_json(path: Path, value: Any, before_replace: Callable[[], None] | None = None) -> None:
+    private_files().atomic_private_write(
+        path, (json.dumps(value, indent=2) + "\n").encode(), before_replace=before_replace
+    )
 
 
 def main() -> int:
@@ -58,11 +53,13 @@ def main() -> int:
     mode.add_argument("--restore", action="store_true")
     args = ap.parse_args()
     path = args.settings
-    before = path.read_text() if path.exists() else "{}"
-    settings = json.loads(before)
+    before = (
+        private_files().read_private_output(path) if path.exists() or path.is_symlink() else None
+    )
+    settings = json.loads(before if before is not None else b"{}")
     original_path = args.cache / "claude-statusline-original.json"
     if args.restore:
-        original = json.loads(original_path.read_text())
+        original = json.loads(private_files().read_private_output(original_path))
         new = dict(settings)
         if original is None:
             new.pop("statusLine", None)
@@ -84,11 +81,20 @@ def main() -> int:
         end="",
     )
     if new != settings and (args.install or args.restore):
-        if path.exists() and path.read_text() != before:
-            raise RuntimeError("settings changed; preview the new diff first")
+
+        def unchanged() -> None:
+            try:
+                current = private_files().read_private_output(path)
+            except FileNotFoundError:
+                current = None
+            if current != before:
+                raise RuntimeError("settings changed; preview the new diff first")
+
+        unchanged()
         if args.install:
+            private_files().private_directory(args.cache)
             atomic_json(original_path, original)
-        atomic_json(path, new, path.stat().st_mode & 0o777 if path.exists() else 0o600)
+        atomic_json(path, new, before_replace=unchanged)
     return 0
 
 

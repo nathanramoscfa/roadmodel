@@ -49,6 +49,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlsplit
 from xml.sax.saxutils import escape
 
 COMMANDS = (
@@ -1975,7 +1976,8 @@ def _parse_time(value: str) -> tuple[int, int]:
 def launchd_plist(python: Path, script: Path, hour: int, minute: int, log: Path) -> str:
     # stdout goes nowhere: `--log` already writes the run to the log, and
     # launchd capturing stdout into the same file recorded every run twice.
-    # stderr stays captured, so a crash before the log opens still lands there.
+    # --log also captures stderr after its safe open. launchd must not pre-open
+    # a path outside that validation; failures before log setup are discarded.
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -1994,7 +1996,7 @@ def launchd_plist(python: Path, script: Path, hour: int, minute: int, log: Path)
   <dict><key>Hour</key><integer>{hour}</integer><key>Minute</key><integer>{minute}</integer></dict>
   <key>RunAtLoad</key><false/>
   <key>StandardOutPath</key><string>/dev/null</string>
-  <key>StandardErrorPath</key><string>{escape(str(log))}</string>
+  <key>StandardErrorPath</key><string>/dev/null</string>
   <key>EnvironmentVariables</key>
   <dict><key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string></dict>
 </dict>
@@ -2248,7 +2250,90 @@ CONTEXT_SYNC_CONFIG = CONFIG_DIR / "context-sync.json"
 CONTEXT_CLONE = CONFIG_DIR / "context-repo"
 USER_CONTEXT = CONFIG_DIR / "user-context.md"
 CONTEXT_FILE = "user-context.md"
-_REPO_SLUG_RE = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+_REPO_SLUG_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9_][A-Za-z0-9_.-]{0,99}")
+
+
+def _context_repo(value: str) -> str:
+    """One GitHub repository identity, with no local paths or URL credentials."""
+    if not isinstance(value, str) or any(ord(c) < 33 or ord(c) == 127 for c in value):
+        raise ValueError("Unsupported context repository.")
+    candidate = value
+    if value.startswith("git@github.com:"):
+        candidate = value[len("git@github.com:") :]
+    elif "://" in value:
+        parsed = urlsplit(value)
+        if (
+            parsed.hostname != "github.com"
+            or parsed.port is not None
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError("Unsupported context repository.")
+        if parsed.scheme == "https":
+            if parsed.username is not None or parsed.password is not None:
+                raise ValueError("Unsupported context repository.")
+        elif parsed.scheme == "ssh":
+            if parsed.username != "git" or parsed.password is not None:
+                raise ValueError("Unsupported context repository.")
+        else:
+            raise ValueError("Unsupported context repository.")
+        candidate = parsed.path.removeprefix("/")
+    if candidate.endswith(".git"):
+        candidate = candidate[:-4]
+    if not _REPO_SLUG_RE.fullmatch(candidate):
+        raise ValueError("Unsupported context repository.")
+    return candidate.lower()
+
+
+def _context_visibility(repo: str) -> bool:
+    """Require authenticated, exact-identity PRIVATE metadata before carrying bytes."""
+    try:
+        gh = shutil.which("gh")
+        if not gh:
+            return False
+        result = subprocess.run(  # noqa: S603 — fixed gh API, canonical repository
+            [gh, "api", "--hostname", "github.com", f"repos/{repo}"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode != 0:
+            return False
+        data = json.loads(result.stdout)
+        return (
+            isinstance(data, dict)
+            and data.get("private") is True
+            and data.get("visibility") == "private"
+            and isinstance(data.get("full_name"), str)
+            and data["full_name"].lower() == repo
+        )
+    except (OSError, ValueError, subprocess.SubprocessError):
+        return False
+
+
+def _context_destination(repo: str) -> Optional[str]:
+    """Validate effective Git URL rewrites, configured transports and current branch."""
+    for args in (
+        ("remote", "get-url", "--all", "origin"),
+        ("remote", "get-url", "--push", "--all", "origin"),
+    ):
+        result = _git(*args, cwd=CONTEXT_CLONE)
+        values = result.stdout.splitlines()
+        if result.returncode or len(values) != 1 or _context_repo(values[0]) != repo:
+            return None
+    result = _git("symbolic-ref", "--quiet", "--short", "HEAD", cwd=CONTEXT_CLONE)
+    branch = result.stdout.strip()
+    if result.returncode or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._/-]*", branch):
+        return None
+    if _git("check-ref-format", "--branch", branch, cwd=CONTEXT_CLONE).returncode:
+        return None
+    for name in (f"branch.{branch}.remote", f"branch.{branch}.pushRemote", "remote.pushDefault"):
+        result = _git("config", "--get-all", name, cwd=CONTEXT_CLONE)
+        if result.returncode not in (0, 1) or any(
+            v != "origin" for v in result.stdout.splitlines()
+        ):
+            return None
+    return branch
 
 
 def _git(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -2270,42 +2355,37 @@ def _read_context_config() -> Optional[dict[str, str]]:
 
 def configure_context_sync(repo: str, source: Optional[str], dry_run: bool = False) -> str:
     """Record this machine's role. `source` given → it publishes that file;
-    omitted → it pulls. `repo` is `owner/name` (or a git URL / path)."""
-    if not (_REPO_SLUG_RE.match(repo) or "://" in repo or repo.startswith(("git@", "/"))):
-        raise SystemExit(f"--context-sync: expected OWNER/REPO, got {repo!r}")
+    omitted → it pulls. `repo` identifies a GitHub repository."""
+    try:
+        repo = _context_repo(repo)
+    except ValueError:
+        raise SystemExit("--context-sync: expected a canonical GitHub repository.") from None
     cfg: dict[str, str] = {"repo": repo, "role": "replica"}
     if source:
         src = Path(source).expanduser().resolve()
         if not src.is_file():
-            raise SystemExit(f"--context-source: no such file {src}")
+            raise SystemExit("--context-source: source file is unavailable.")
         cfg.update(role="source", source=str(src))
     if not dry_run:
         _private_dir(CONFIG_DIR)
         _replace_bytes(CONTEXT_SYNC_CONFIG, (json.dumps(cfg, indent=2) + "\n").encode())
-    where = f"publishing {cfg['source']}" if source else f"pulling into {USER_CONTEXT}"
-    return f"this machine is the user-context {cfg['role'].upper()}, {where}, via {repo}"
+    return f"this machine is the user-context {cfg['role'].upper()}; privacy verification required at each sync"
 
 
 def _ensure_clone(repo: str) -> Optional[str]:
-    """None on success, else why it failed. A slug clones through `gh` (which
-    carries the operator's GitHub auth for a PRIVATE repo); a URL or path
-    clones with plain git."""
+    """Clone only the independently verified GitHub repository through gh."""
     if (CONTEXT_CLONE / ".git").is_dir():
         _private_dir(CONTEXT_CLONE)
         return None
     _private_dir(CONTEXT_CLONE.parent)
-    if _REPO_SLUG_RE.match(repo) and shutil.which("gh"):
-        cmd = ["gh", "repo", "clone", repo, str(CONTEXT_CLONE)]
-    else:
-        url = f"https://github.com/{repo}.git" if _REPO_SLUG_RE.match(repo) else repo
-        cmd = ["git", "clone", url, str(CONTEXT_CLONE)]
+    cmd = ["gh", "repo", "clone", repo, str(CONTEXT_CLONE)]
     done = subprocess.run(  # noqa: S603 — literal argv built above from a validated repo, no shell
         cmd, capture_output=True, text=True, timeout=180
     )
     if done.returncode == 0:
         _private_dir(CONTEXT_CLONE)
         return None
-    return _tail(done.stderr or done.stdout, 2)
+    return "clone failed"
 
 
 def _digest(data: bytes) -> str:
@@ -2318,33 +2398,49 @@ def sync_user_context(dry_run: bool = False) -> list[str]:
     """Publish (source) or pull (replica) the user-context. Silent when this
     machine was never configured, so an operator with one machine sees
     nothing new."""
+    try:
+        return _sync_user_context(dry_run)
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError):
+        return ["user-context sync: SKIPPED (private destination could not be verified)"]
+
+
+def _sync_user_context(dry_run: bool) -> list[str]:
     cfg = _read_context_config()
     if cfg is None:
         return []
     if dry_run:
-        return [f"user-context sync: {cfg['role']} via {cfg['repo']} (dry run: nothing sent)"]
-    failed = _ensure_clone(cfg["repo"])
+        return ["user-context sync: dry run; privacy unverified, nothing sent"]
+    repo = _context_repo(cfg["repo"])
+    if not _context_visibility(repo):
+        return ["user-context sync: SKIPPED (private destination could not be verified)"]
+    if CONTEXT_CLONE.exists() and (
+        not (CONTEXT_CLONE / ".git").is_dir() or not _context_destination(repo)
+    ):
+        return ["user-context sync: SKIPPED (clone destination could not be verified)"]
+    failed = _ensure_clone(repo)
     if failed:
-        return [f"user-context sync: SKIPPED (clone of {cfg['repo']} failed: {failed})"]
+        return ["user-context sync: SKIPPED (clone failed)"]
+    branch = _context_destination(repo)
+    if branch is None:
+        return ["user-context sync: SKIPPED (clone destination could not be verified)"]
     has_history = _git("rev-parse", "--verify", "HEAD", cwd=CONTEXT_CLONE).returncode == 0
     if has_history:
-        pulled = _git("pull", "--ff-only", "--quiet", cwd=CONTEXT_CLONE)
+        pulled = _git("pull", "--ff-only", "--quiet", "origin", branch, cwd=CONTEXT_CLONE)
         if pulled.returncode != 0:
-            return [f"user-context sync: SKIPPED (pull failed: {_tail(pulled.stderr, 2)})"]
+            return ["user-context sync: SKIPPED (pull failed)"]
     carried = CONTEXT_CLONE / CONTEXT_FILE
 
     if cfg["role"] == "source":
         src = Path(cfg["source"])
         if not src.is_file():
-            return [f"user-context sync: SKIPPED (source {src} is missing)"]
+            return ["user-context sync: SKIPPED (source file is unavailable)"]
         out: list[str] = []
         # An edit to a separate copy at the default path would never publish.
         if USER_CONTEXT.exists() and not USER_CONTEXT.is_symlink():
             if USER_CONTEXT.read_bytes() != src.read_bytes():
                 out.append(
-                    f"user-context sync: WARNING {USER_CONTEXT} is a separate copy that "
-                    f"differs from the source; edits there are NOT published. Point it at "
-                    f"{src}."
+                    "user-context sync: WARNING default context differs from the source; "
+                    "edits to that separate copy are NOT published."
                 )
         data = src.read_bytes()
         if carried.exists() and carried.read_bytes() == data:
@@ -2354,14 +2450,21 @@ def sync_user_context(dry_run: bool = False) -> list[str]:
         steps = (
             ("add", CONTEXT_FILE),
             ("commit", "--quiet", "-m", f"sync user-context {_digest(data)}"),
-            ("push", "--quiet", "-u", "origin", "HEAD"),
+            ("push", "--quiet", "-u", "origin", f"HEAD:refs/heads/{branch}"),
         )
         for step in steps:
+            if step[0] == "push" and (
+                not _context_visibility(repo) or _context_destination(repo) != branch
+            ):
+                return [
+                    *out,
+                    "user-context sync: SKIPPED (private destination changed before push)",
+                ]
             done = _git(*step, cwd=CONTEXT_CLONE)
             if done.returncode != 0:
                 return [
                     *out,
-                    f"user-context sync: FAILED at git {step[0]}: {_tail(done.stderr, 2)}",
+                    f"user-context sync: FAILED at git {step[0]}",
                 ]
         return [*out, f"user-context sync: published ({_digest(data)})"]
 

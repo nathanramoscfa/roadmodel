@@ -49,6 +49,13 @@ Row = dict[str, Any]
 PageReader = Callable[[str, int, int], list[Row]]
 
 
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Credentials may only reach the explicitly requested origin."""
+
+    def redirect_request(self, *args: Any, **kwargs: Any) -> None:
+        return None
+
+
 def spent_money(row: Row) -> bool:
     """True when the operator's provider key was used for this row."""
     cost = row.get("cost_usd")
@@ -127,7 +134,7 @@ def postgrest_page(base_url: str, key: str) -> PageReader:
                 "Range": f"{start}-{end}",
             },
         )
-        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310  # nosec B310
+        with urllib.request.build_opener(NoRedirect()).open(req, timeout=30) as resp:  # noqa: S310  # nosec B310
             body = json.loads(resp.read())
         if not isinstance(body, list):
             raise ValueError("audit_log read did not return a list")
