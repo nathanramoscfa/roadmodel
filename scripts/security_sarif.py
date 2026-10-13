@@ -190,8 +190,17 @@ def canonical_metrics(run: dict, metrics: Any) -> list[dict]:
         if "ruleId" in metric:
             reference["ruleId"] = metric["ruleId"]
         component, rule = resolve_rule(run, reference)
+        # Indices locate descriptors; their fully validated targets carry identity.
+        # Preserve all non-index raw reference fields and their presence.
+        stable_reference = {key: item for key, item in metric["rule"].items() if key != "index"}
+        if "toolComponent" in stable_reference:
+            stable_reference["toolComponent"] = {
+                key: item
+                for key, item in stable_reference["toolComponent"].items()
+                if key != "index"
+            }
         bound = {
-            "reference": metric["rule"],
+            "reference": stable_reference,
             "component": identity(component),
             "descriptor": rule,
             "value": value,
@@ -203,7 +212,8 @@ def canonical_metrics(run: dict, metrics: Any) -> list[dict]:
             require(type(baseline) is int or type(baseline) is float and math.isfinite(baseline))
             bound["baseline"] = baseline
         output.append(bound)
-    return output
+    # Metrics are independent observations. Sorting retains duplicate occurrences.
+    return sorted(output, key=digest)
 
 
 def invocation(value: Any) -> None:

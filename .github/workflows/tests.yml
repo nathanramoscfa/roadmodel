@@ -446,9 +446,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      # Both values must exist BEFORE init; later settings cannot undo extraction.
+      # Analysis settings must exist BEFORE init; later changes cannot undo extraction.
       CODEQL_ACTION_DIFF_INFORMED_QUERIES: 'false'
       CODEQL_OVERLAY_DATABASE_MODE: none
+      # Calculate the same file-coverage baseline on PRs and the default branch.
+      CODEQL_ACTION_FILE_COVERAGE_ON_PRS: "true"
       CODEQL_LANGUAGE: ${{ matrix.language }}
       CODEQL_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || '' }}
       CODEQL_PR_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
