@@ -40,7 +40,7 @@ async function mintAuthCookie(): Promise<string> {
   });
   const tokenHash = data?.properties?.hashed_token;
   if (error || !tokenHash) {
-    console.error("generateLink failed", error);
+    console.error("Diagnostic authentication failed.");
     process.exit(1);
   }
   let captured: { name: string; value: string }[] = [];
@@ -57,7 +57,7 @@ async function mintAuthCookie(): Promise<string> {
     token_hash: tokenHash,
   });
   if (vErr || captured.length === 0) {
-    console.error("verifyOtp failed", vErr);
+    console.error("Diagnostic session verification failed.");
     process.exit(1);
   }
   return captured.map((c) => `${c.name}=${c.value}`).join("; ");
@@ -100,7 +100,7 @@ async function probe(mode: "anon" | "authed", cookie: string, gate: string, bypa
   }
   console.log(`\n===== ${mode.toUpperCase()} (${res.status}, ${ms}ms) =====`);
   if (!payload) {
-    console.log("non-JSON body:", raw.slice(0, 400));
+    console.log("Diagnostic response was not valid JSON.");
     return;
   }
   // Top-level engine/tier (if the route surfaces them) + per-pick.
@@ -131,7 +131,7 @@ async function main() {
   await probe("authed", `${gate}; ${authCookie}`, gate, bypass);
 }
 
-main().catch((e) => {
-  console.error(e);
+main().catch(() => {
+  console.error("Diagnostic run failed.");
   process.exit(1);
 });
