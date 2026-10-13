@@ -127,8 +127,8 @@ def main(argv: list[str] | None = None) -> int:
                 temperature=engine["temperature"],
                 classification_votes=args.votes,
             )
-        except Exception as exc:  # noqa: BLE001 - a failed run reads as no classification
-            print(f"{probe['id']}: {type(exc).__name__}: {str(exc)[:120]}", file=sys.stderr)
+        except Exception:  # noqa: BLE001 - a failed run reads as no classification
+            print("Classification request failed.", file=sys.stderr)
             return None
         cls = (result.get("guard") or {}).get("classification")
         return str(cls) if cls else None

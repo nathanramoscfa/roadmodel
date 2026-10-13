@@ -44,7 +44,7 @@ async function mintAuthCookie(): Promise<string> {
   });
   const tokenHash = data?.properties?.hashed_token;
   if (error || !tokenHash) {
-    console.error("generateLink failed", error);
+    console.error("Diagnostic authentication failed.");
     process.exit(1);
   }
   let captured: { name: string; value: string }[] = [];
@@ -61,7 +61,7 @@ async function mintAuthCookie(): Promise<string> {
     token_hash: tokenHash,
   });
   if (vErr || captured.length === 0) {
-    console.error("verifyOtp failed", vErr);
+    console.error("Diagnostic session verification failed.");
     process.exit(1);
   }
   return captured.map((c) => `${c.name}=${c.value}`).join("; ");
@@ -110,7 +110,7 @@ async function main(): Promise<void> {
   const raw = await res.text();
   console.log(`POST /api/recommend -> ${res.status} in ${ms}ms\n`);
   if (res.status !== 200) {
-    console.error(`non-200: ${raw.slice(0, 400)}`);
+    console.error("Diagnostic request failed.");
     process.exit(1);
   }
   const data = JSON.parse(raw) as Multi;
@@ -145,7 +145,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((e) => {
-  console.error("ERROR", e);
+main().catch(() => {
+  console.error("Diagnostic run failed.");
   process.exit(1);
 });
