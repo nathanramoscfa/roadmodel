@@ -296,6 +296,24 @@ class CLITests(unittest.TestCase):
         self.env.pop("CODEQL_ACTION_DIFF_INFORMED_QUERIES")
         self.invoke("snapshot", 1)
 
+    def test_raw_action_job_metadata_keeps_exact_suite(self):
+        self.invoke("snapshot")
+        self.doc["runs"][0]["properties"].update(jobRunUuid="00000000-0000-4000-8000-000000000001")
+        self.doc["runs"][0]["properties"]["semmle.formatSpecifier"] = "sarif-latest"
+        self.doc["runs"][0]["properties"]["semmle.sourceLanguage"] = "python"
+        self.write_doc()
+        self.assertEqual(json.loads(self.invoke("check"))["raw_blocking"], 0)
+
+    def test_raw_property_refusal_diagnostic_omits_values(self):
+        self.invoke("snapshot")
+        self.doc["runs"][0]["properties"]["PRIVATE_PROPERTY_CANARY"] = "PRIVATE_VALUE_CANARY"
+        self.write_doc()
+        output = self.invoke("check", 1)
+        self.assertNotIn(b"PRIVATE_", output)
+        shape = json.loads(output.splitlines()[-1])["property_shape"]
+        self.assertEqual(shape["runs"][0]["property_count"], 2)
+        self.assertEqual(len(shape["runs"][0]["unknown_key_sha256"]), 1)
+
     def test_missing_config_summary_refuses(self):
         self.invoke("snapshot")
         self.doc["runs"][0].pop("properties")

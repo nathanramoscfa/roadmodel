@@ -112,17 +112,114 @@ def write_receipt(path: Path, value: dict) -> None:
         os.close(descriptor)
 
 
+EXPECTED_SUMMARY = {"queries": [{"type": "builtinSuite", "uses": "security-extended"}]}
+SUPPORTED_KEYS = {
+    "codeqlConfigSummary",
+    "jobRunUuid",
+    "semmle.formatSpecifier",
+    "semmle.sourceLanguage",
+}
+DIAGNOSTIC_KEYS = SUPPORTED_KEYS | {"incrementalMode"}
+UUID4 = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
+
+
+def raw_run_properties(run, language):
+    require(language in {"python", "javascript-typescript"})
+    # Match raw metadata from the pinned Action without ignoring query policy.
+    # Keep the exact suite summary and all independent workflow/pack checks.
+    properties = obj(obj(run).get("properties", {}))
+    require(not set(properties) - SUPPORTED_KEYS)
+    require("codeqlConfigSummary" in properties)
+    require(digest(obj(properties["codeqlConfigSummary"])) == digest(EXPECTED_SUMMARY))
+    if "jobRunUuid" in properties:
+        value = properties["jobRunUuid"]
+        require(isinstance(value, str) and UUID4.fullmatch(value) is not None)
+    if "semmle.formatSpecifier" in properties:
+        require(properties["semmle.formatSpecifier"] in ("sarif-latest", "2.1.0"))
+    if "semmle.sourceLanguage" in properties:
+        expected = "python" if language == "python" else "javascript"
+        require(properties["semmle.sourceLanguage"] == expected)
+
+
+def property_shape(document):
+    """Only approved key/type/enums or digests; never dump a property value."""
+    runs = document.get("runs") if isinstance(document, dict) else None
+    if not isinstance(runs, list):
+        return {"runs_shape": "invalid"}
+    output = []
+    types = {
+        dict: "object",
+        list: "array",
+        str: "string",
+        int: "integer",
+        float: "number",
+        bool: "boolean",
+        type(None): "null",
+    }
+    for run in runs[:8]:
+        props = run.get("properties", {}) if isinstance(run, dict) else None
+        row = {"properties_type": types.get(type(props), "other")}
+        if isinstance(props, dict):
+            row["property_count"] = len(props)
+            row["known"] = [
+                {"key": key, "type": types.get(type(props[key]), "other")}
+                for key in sorted(set(props) & DIAGNOSTIC_KEYS)
+            ]
+            row["unknown_key_sha256"] = sorted(
+                hashlib.sha256(key.encode("utf-8", "surrogatepass")).hexdigest()
+                for key in props
+                if key not in DIAGNOSTIC_KEYS
+            )[:16]
+            summary = props.get("codeqlConfigSummary")
+            if isinstance(summary, dict):
+                row["summary_exact_expected"] = digest(summary) == digest(EXPECTED_SUMMARY)
+                row["summary_known_keys"] = sorted(
+                    set(summary)
+                    & {
+                        "queries",
+                        "packs",
+                        "paths",
+                        "paths-ignore",
+                        "query-filters",
+                        "disable-default-queries",
+                    }
+                )
+                row["summary_other_key_count"] = len(
+                    set(summary)
+                    - {
+                        "queries",
+                        "packs",
+                        "paths",
+                        "paths-ignore",
+                        "query-filters",
+                        "disable-default-queries",
+                    }
+                )
+            if "jobRunUuid" in props:
+                v = props["jobRunUuid"]
+                row["job_uuid_canonical_v4"] = isinstance(v, str) and UUID4.fullmatch(v) is not None
+            for key, allowed in [
+                ("semmle.formatSpecifier", {"sarif-latest", "2.1.0"}),
+                ("semmle.sourceLanguage", {"python", "javascript"}),
+                ("incrementalMode", {"diff-informed", "overlay", "diff-informed,overlay"}),
+            ]:
+                if key in props:
+                    v = props[key]
+                    row[key + "_known_value"] = (
+                        v if isinstance(v, str) and v in allowed else "unrecognized"
+                    )
+        output.append(row)
+    return {"runs_count": len(runs), "runs": output}
+
+
 def language_binding(document: dict, language: str) -> None:
     expected = "codeql/python-queries" if language == "python" else "codeql/javascript-queries"
     for run in arr(document.get("runs")):
-        require(
-            obj(run).get("properties")
-            == {
-                "codeqlConfigSummary": {
-                    "queries": [{"type": "builtinSuite", "uses": "security-extended"}]
-                }
-            }
-        )
+        try:
+            raw_run_properties(run, language)
+        except Exception as error:
+            error.property_shape = property_shape({"runs": [run]})
+            raise
         tool = obj(obj(run).get("tool"))
         identity(obj(tool.get("driver")))
         extensions = arr(tool.get("extensions", []))
@@ -327,4 +424,6 @@ if __name__ == "__main__":
     except Exception as error:
         print("CodeQL analysis or reviewed allowance is missing, stale or invalid; gate refused.")
         print(json.dumps({"contract_locations": contract_failure_locations(error)}))
+        if getattr(error, "property_shape", None) is not None:
+            print(json.dumps({"property_shape": error.property_shape}))
         raise SystemExit(1) from None
