@@ -152,11 +152,11 @@ async function runSweep(args: Args): Promise<RequestRecord[]> {
     const responseTimingHeader = response.headers.get("X-Roadmodel-Timing");
     const ok = response.ok;
     if (!ok) {
-      const body = await response.text();
+      await response.text();
       console.error(
         `request ${i + 1}/${args.requests} failed (status=${response.status})`,
       );
-      console.error(body.slice(0, 1000));
+      console.error("Diagnostic request failed.");
       process.exit(1);
     }
     // Drain the body so the connection can be reused / closed
@@ -206,7 +206,7 @@ async function fetchAuditRows(
     .gte("ts", new Date(sweepStart).toISOString())
     .order("ts", { ascending: true });
   if (error) {
-    console.error("supabase audit_log query failed", error);
+    console.error("Diagnostic audit query failed.");
     process.exit(1);
   }
   return (data ?? [])
@@ -294,7 +294,7 @@ async function main(): Promise<void> {
   printMarkdown(rows, records);
 }
 
-main().catch((err) => {
-  console.error(err);
+main().catch(() => {
+  console.error("Diagnostic run failed.");
   process.exit(1);
 });

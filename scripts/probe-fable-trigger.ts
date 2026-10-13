@@ -68,7 +68,7 @@ async function mintAuthCookie(): Promise<string> {
   const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email: need("ROADMODEL_DOGFOOD_EMAIL") });
   const tokenHash = data?.properties?.hashed_token;
   if (error || !tokenHash) {
-    console.error("generateLink failed", error);
+    console.error("Diagnostic authentication failed.");
     process.exit(1);
   }
   let captured: { name: string; value: string }[] = [];
@@ -77,7 +77,7 @@ async function mintAuthCookie(): Promise<string> {
   });
   const { error: vErr } = await ssr.auth.verifyOtp({ type: "magiclink", token_hash: tokenHash });
   if (vErr || captured.length === 0) {
-    console.error("verifyOtp failed", vErr);
+    console.error("Diagnostic session verification failed.");
     process.exit(1);
   }
   return captured.map((c) => `${c.name}=${c.value}`).join("; ");
@@ -118,7 +118,7 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  console.error(e);
+main().catch(() => {
+  console.error("Diagnostic run failed.");
   process.exit(1);
 });
