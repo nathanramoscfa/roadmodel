@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "context_policy": {
+    "baseline_revision": "289214b26f115cb766d1c05341bde9b84d53bb38",
+    "code_context_sha256": "f1367fd74ab3ce767c39bd319df7345909c30842bc4c2222fd24cc078e219a4c",
+    "date_policy": "catalog-utc-date-v1",
     "mode": "typed-catalog-v1",
-    "baseline_revision": "65ba4982d94b0c9e4a4e8c24776acbbdcd3a7a5c",
-    "code_context_sha256": "1d0bb98ecc58c27ceab7c7f714ca7302c36a7d23ddda608863e45fcdb68d2d26",
-    "validator_sha256": "d0994ba80c5591de71bf6edb969f475b6ab7aa6b2a0b6bf57cd75cb5f8030eb2",
-    "date_policy": "catalog-utc-date-v1"
+    "validator_sha256": "d0994ba80c5591de71bf6edb969f475b6ab7aa6b2a0b6bf57cd75cb5f8030eb2"
   },
   "codeql": [],
   "bandit": []
