@@ -1926,8 +1926,8 @@
     }
   ],
   "context_policy": {
-    "baseline_revision": "40043af30e5c141b614f8827942cf94b63537dcc",
-    "code_context_sha256": "0a66dd3908468cb428e93981d2fa837de64f2e548fed8681f2fb74f206fd5f81",
+    "baseline_revision": "447451cde1f572183e0fe7e804d0c13e804b42e8",
+    "code_context_sha256": "9cb88fbed06055a4d4f89d83b6451b0e4a5424b0737e4310b5b319f300b9fb91",
     "date_policy": "catalog-utc-date-v1",
     "mode": "typed-catalog-v1",
     "validator_sha256": "d0994ba80c5591de71bf6edb969f475b6ab7aa6b2a0b6bf57cd75cb5f8030eb2"
