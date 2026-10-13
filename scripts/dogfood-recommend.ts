@@ -18,28 +18,23 @@
 // with-prod-secrets.sh exports the keychain secrets (SUPABASE_URL,
 // SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_ANON_KEY, SITE_PASSWORD,
 // ROADMODEL_LATENCY_BYPASS_TOKEN). Override the dogfood account with
-// ROADMODEL_DOGFOOD_EMAIL. Output: /tmp/rm-dogfood-recommend.jsonl.
+// ROADMODEL_DOGFOOD_EMAIL. Output: a fresh private JSONL file.
 
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
-import { createHash } from "node:crypto";
+import { deriveGateToken } from "../web/lib/gate";
+import { createPrivateOutput } from "./private-diagnostic-output";
 import { setTimeout as sleep } from "node:timers/promises";
-import { writeFileSync } from "node:fs";
 
 const BASE = process.argv[2] ?? "https://roadmodel.ai";
 const EMAIL = process.env.ROADMODEL_DOGFOOD_EMAIL ?? "nathan.ramos.github@gmail.com";
-const OUT = "/tmp/rm-dogfood-recommend.jsonl";
 
 function need(n: string): string {
   const v = process.env[n];
   if (!v) {
-    console.error(`missing env ${n}`);
-    process.exit(2);
+    throw new Error("Required diagnostic configuration is missing.");
   }
   return v;
-}
-function gateToken(p: string): string {
-  return createHash("sha256").update(`roadmodel-gate-v1:${p}`).digest("hex");
 }
 
 async function mintAuthCookie(): Promise<string> {
@@ -53,8 +48,7 @@ async function mintAuthCookie(): Promise<string> {
   });
   const tokenHash = data?.properties?.hashed_token;
   if (error || !tokenHash) {
-    console.error("generateLink failed", error);
-    process.exit(1);
+    throw new Error("Session generation failed.");
   }
   let captured: { name: string; value: string }[] = [];
   const ssr = createServerClient(url, need("NEXT_PUBLIC_SUPABASE_ANON_KEY"), {
@@ -70,8 +64,7 @@ async function mintAuthCookie(): Promise<string> {
     token_hash: tokenHash,
   });
   if (vErr || captured.length === 0) {
-    console.error("verifyOtp failed", vErr);
-    process.exit(1);
+    throw new Error("Session verification failed.");
   }
   return captured.map((c) => `${c.name}=${c.value}`).join("; ");
 }
@@ -148,8 +141,8 @@ async function runProbe(p: Probe, authCookie: string | null, gate: string, bypas
     } catch {
       payload = null;
     }
-  } catch (e) {
-    errText = String(e);
+  } catch {
+    errText = "request_failed";
   }
   const ms = Math.round(performance.now() - t0);
   const rationale =
@@ -173,33 +166,38 @@ async function runProbe(p: Probe, authCookie: string | null, gate: string, bypas
 }
 
 async function main(): Promise<void> {
-  const gate = `roadmodel_gate=${gateToken(need("SITE_PASSWORD"))}`;
-  const bypass = process.env.ROADMODEL_LATENCY_BYPASS_TOKEN ?? "";
-  const authCookie = await mintAuthCookie();
+  const output = createPrivateOutput({ prefix: "roadmodel-dogfood" });
+  const OUT = output.path;
+  try {
+    const gate = `roadmodel_gate=${await deriveGateToken(need("SITE_PASSWORD"))}`;
+    const bypass = process.env.ROADMODEL_LATENCY_BYPASS_TOKEN ?? "";
+    const authCookie = await mintAuthCookie();
 
-  const rows: Row[] = [];
-  for (const mode of ["anon", "authed"] as const) {
-    for (const p of PROBES) {
-      const row = await runProbe(p, mode === "authed" ? authCookie : null, gate, bypass);
-      rows.push(row);
-      console.log(
-        `[${mode}] ${p.id.padEnd(15)} ${row.status} ${String(row.ms).padStart(5)}ms ` +
-          `model=${row.model ?? "-"} cost=${row.cost_total_usd ?? "-"} ` +
-          `cmp=${row.comparison_rows ?? "-"} rat=${row.rationale_len ?? "-"}`,
-      );
-      await sleep(250);
+    const rows: Row[] = [];
+    for (const mode of ["anon", "authed"] as const) {
+      for (const p of PROBES) {
+        const row = await runProbe(p, mode === "authed" ? authCookie : null, gate, bypass);
+        rows.push(row);
+        console.log(
+          `[${mode}] ${p.id.padEnd(15)} ${row.status} ${String(row.ms).padStart(5)}ms ` +
+            `cmp=${row.comparison_rows ?? "-"} rat=${row.rationale_len ?? "-"}`,
+        );
+        await sleep(250);
+      }
     }
-  }
 
-  writeFileSync(OUT, rows.map((r) => JSON.stringify(r)).join("\n") + "\n");
-  const fails = rows.filter((r) => !r.ok);
-  const slow = rows.filter((r) => r.ms > 8000);
-  console.log(`\nWROTE ${rows.length} rows -> ${OUT}`);
-  console.log(`NON_200=${fails.length} SLOW_over_8s=${slow.length}`);
-  console.log(`DOGFOOD_DONE`);
+    output.write(rows.map((r) => JSON.stringify(r)).join("\n") + "\n");
+    const fails = rows.filter((r) => !r.ok);
+    const slow = rows.filter((r) => r.ms > 8000);
+    console.log(`\nWROTE ${rows.length} rows -> ${OUT}`);
+    console.log(`NON_200=${fails.length} SLOW_over_8s=${slow.length}`);
+    console.log(`DOGFOOD_DONE`);
+  } finally {
+    output.close();
+  }
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
+main().catch(() => {
+  console.error("Diagnostic run failed.");
+  process.exitCode = 1;
 });

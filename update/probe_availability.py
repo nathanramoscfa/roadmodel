@@ -91,6 +91,13 @@ PROVIDERS: dict[str, dict[str, Any]] = {
 }
 
 
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Credentials may only reach the explicitly requested origin."""
+
+    def redirect_request(self, *args: Any, **kwargs: Any) -> None:
+        return None
+
+
 def watch_ids() -> list[str]:
     """Every catalog id the probe watches, across providers."""
     out: list[str] = []
@@ -109,6 +116,8 @@ def classify_probe(status: int, body: str) -> str:
     Only an explicit not-found is 'unavailable'; everything else non-200 (auth,
     rate-limit, 5xx, malformed) is 'ambiguous' — never bench on uncertainty.
     """
+    if 300 <= status < 400:
+        return "ambiguous"
     if status == 200:
         return "available"
     low = body.lower()
@@ -137,9 +146,11 @@ def probe_invoke(api_id: str, key: str) -> str:
         "https://api.anthropic.com/v1/messages", data=payload, headers=headers, method="POST"
     )
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310  # nosec B310
+        with urllib.request.build_opener(NoRedirect()).open(req, timeout=30) as resp:  # noqa: S310  # nosec B310
             return classify_probe(resp.status, "")
     except urllib.error.HTTPError as exc:
+        if 300 <= exc.code < 400:
+            return "ambiguous"
         return classify_probe(exc.code, exc.read().decode(errors="replace"))
     except (urllib.error.URLError, TimeoutError, OSError):
         return "ambiguous"
@@ -151,7 +162,7 @@ def probe_invoke(api_id: str, key: str) -> str:
 def _http_get_json(url: str, headers: dict[str, str]) -> Any | None:
     req = urllib.request.Request(url, headers=headers, method="GET")  # noqa: S310
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310  # nosec B310
+        with urllib.request.build_opener(NoRedirect()).open(req, timeout=30) as resp:  # noqa: S310  # nosec B310
             return json.loads(resp.read())
     except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError):
         return None

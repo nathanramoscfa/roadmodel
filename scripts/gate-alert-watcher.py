@@ -26,12 +26,21 @@ Env overrides:
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
+from typing import Any
 from urllib import error, parse, request
 
 ALERTS_KEY = "gate:alerts"
 MAX_DRAIN = 50  # safety cap per pass
+
+
+class NoRedirect(request.HTTPRedirectHandler):
+    """Never forward the queue credential through a redirect."""
+
+    def redirect_request(self, *args: Any, **kwargs: Any) -> None:
+        return None
 
 
 def _keychain(name: str) -> str:
@@ -41,9 +50,10 @@ def _keychain(name: str) -> str:
             capture_output=True,
             text=True,
             check=True,
+            timeout=15,
         )
         return out.stdout.strip()
-    except (subprocess.CalledProcessError, FileNotFoundError):
+    except (subprocess.SubprocessError, OSError):
         return ""
 
 
@@ -55,11 +65,35 @@ def _env_or_keychain(name: str) -> str:
 
 def _rest_base(url: str) -> str:
     """Derive the Upstash HTTPS REST base from either an https:// or rediss:// URL."""
-    if url.startswith("https://"):
-        return url.rstrip("/")
-    # rediss://default:<pw>@<host>:<port>  ->  https://<host>
-    host = parse.urlsplit(url).hostname or ""
-    return f"https://{host}" if host else ""
+    try:
+        if url != url.strip() or any(ord(c) < 33 or ord(c) == 127 for c in url):
+            return ""
+        parsed = parse.urlsplit(url)
+        host = parsed.hostname or ""
+        if not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?", host):
+            return ""
+        if any(
+            not label or len(label) > 63 or label.startswith("-") or label.endswith("-")
+            for label in host.split(".")
+        ):
+            return ""
+        if parsed.query or parsed.fragment or parsed.path not in ("", "/"):
+            return ""
+        if parsed.scheme == "https":
+            if (
+                parsed.username is not None
+                or parsed.password is not None
+                or parsed.port not in (None, 443)
+            ):
+                return ""
+        elif parsed.scheme == "rediss":
+            if parsed.port not in (None, 6379):
+                return ""
+        else:
+            return ""
+        return f"https://{host.lower()}"
+    except ValueError:
+        return ""
 
 
 def _rpop(base: str, token: str) -> str | None:
@@ -70,22 +104,28 @@ def _rpop(base: str, token: str) -> str | None:
         method="POST",
     )
     try:
-        with request.urlopen(req, timeout=10) as resp:  # noqa: S310 — fixed https host
+        with request.build_opener(NoRedirect()).open(req, timeout=10) as resp:
             payload = json.loads(resp.read().decode("utf-8"))
-    except (error.URLError, json.JSONDecodeError, TimeoutError) as exc:
-        print(f"[gate-watcher] Upstash RPOP failed: {exc}", file=sys.stderr)
+    except (error.URLError, ValueError, OSError):
+        print("[gate-watcher] Upstash RPOP failed", file=sys.stderr)
         return None
     # Upstash REST returns {"result": <value-or-null>}
-    return payload.get("result")
+    value = payload.get("result") if isinstance(payload, dict) else None
+    return value if isinstance(value, str) else None
 
 
 def _osa(script: str) -> None:
     try:
         subprocess.run(  # noqa: S603 — fixed binary, controlled script
-            ["/usr/bin/osascript", "-e", script], capture_output=True, timeout=15
+            ["/usr/bin/osascript", "-"],
+            input=script,
+            text=True,
+            capture_output=True,
+            timeout=15,
+            check=True,
         )
-    except (subprocess.SubprocessError, FileNotFoundError) as exc:
-        print(f"[gate-watcher] osascript failed: {exc}", file=sys.stderr)
+    except (subprocess.SubprocessError, OSError):
+        print("[gate-watcher] osascript failed", file=sys.stderr)
 
 
 def _esc(text: str) -> str:
@@ -116,10 +156,23 @@ def send_mail(to_addr: str, subject: str, body: str) -> None:
 
 def format_event(raw: str) -> tuple[str, str]:
     """Return (short popup body, long email body) for one alert event."""
+    fallback = ("Invalid gate alert event", "A gate alert could not be decoded.")
+    if len(raw) > 8192:
+        return fallback
     try:
         e = json.loads(raw)
-    except json.JSONDecodeError:
-        return (raw[:180], raw)
+    except (ValueError, TypeError):
+        return fallback
+    if not isinstance(e, dict):
+        return fallback
+    for name, limit in (("ip", 128), ("ua", 512), ("ts", 64)):
+        value = e.get(name, "")
+        if not isinstance(value, str) or len(value) > limit or any(ord(c) < 32 for c in value):
+            return fallback
+    for name, default in (("attempts", 3), ("lock_seconds", 300)):
+        value = e.get(name, default)
+        if type(value) is not int or not 0 <= value <= 86400:
+            return fallback
     ip = e.get("ip", "unknown")
     ua = e.get("ua", "unknown")
     ts = e.get("ts", "")

@@ -14,13 +14,14 @@
 //
 // Exit code 0 = all deterministic bar checks pass; 1 = a regression (so the
 // scheduled cron can fail/report). Output JSONL: $SOAK_OUT, else
-// /tmp/rm-soak-recommend.jsonl.
+// a fresh private JSONL file (the path is printed at completion).
 
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
-import { createHash } from "node:crypto";
+import { deriveGateToken } from "../web/lib/gate";
+import { createPrivateOutput } from "./private-diagnostic-output";
 import { setTimeout as sleep } from "node:timers/promises";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -52,18 +53,14 @@ const modelTier = (name: string | null): string =>
 
 const BASE = process.argv[2] ?? "https://roadmodel.ai";
 const EMAIL = process.env.ROADMODEL_DOGFOOD_EMAIL ?? "nathan.ramos.github@gmail.com";
-const OUT = process.env.SOAK_OUT ?? "/tmp/rm-soak-recommend.jsonl";
+
 
 function need(n: string): string {
   const v = process.env[n];
   if (!v) {
-    console.error(`missing env ${n}`);
-    process.exit(2);
+    throw new Error("Required diagnostic configuration is missing.");
   }
   return v;
-}
-function gateToken(p: string): string {
-  return createHash("sha256").update(`roadmodel-gate-v1:${p}`).digest("hex");
 }
 
 async function mintAuthCookie(): Promise<string> {
@@ -74,8 +71,7 @@ async function mintAuthCookie(): Promise<string> {
   const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email: EMAIL });
   const tokenHash = data?.properties?.hashed_token;
   if (error || !tokenHash) {
-    console.error("generateLink failed", error);
-    process.exit(1);
+    throw new Error("Session generation failed.");
   }
   let captured: { name: string; value: string }[] = [];
   const ssr = createServerClient(url, need("NEXT_PUBLIC_SUPABASE_ANON_KEY"), {
@@ -83,8 +79,7 @@ async function mintAuthCookie(): Promise<string> {
   });
   const { error: vErr } = await ssr.auth.verifyOtp({ type: "magiclink", token_hash: tokenHash });
   if (vErr || captured.length === 0) {
-    console.error("verifyOtp failed", vErr);
-    process.exit(1);
+    throw new Error("Session verification failed.");
   }
   return captured.map((c) => `${c.name}=${c.value}`).join("; ");
 }
@@ -240,11 +235,11 @@ function score(rows: Row[]): Check[] {
       (CLAUDE_RE.test(r.model ?? "") && r.platform === "Cursor") ||
       (GPT_RE.test(r.model ?? "") && r.platform === "OpenAI API"),
   );
-  checks.push({ id: "watch:platform-funded", bar: "B3", pass: true, detail: platErr.map((r) => `${r.id}:${r.model}/${r.platform}`).join(",") || "clean" });
+  checks.push({ id: "watch:platform-funded", bar: "B3", pass: true, detail: platErr.map((r) => r.id).join(",") || "clean" });
 
   // B4 — THINKING N/A on no-thinking surfaces (structured field).
   const thinkErr = ok.filter((r) => NO_THINK_PLATFORMS.has(r.platform ?? "") && r.thinking !== null && r.thinking !== "N/A");
-  checks.push({ id: "thinking-na-cursor", bar: "B4", pass: thinkErr.length === 0, detail: thinkErr.map((r) => `${r.id}:${r.thinking}`).join(",") || "clean" });
+  checks.push({ id: "thinking-na-cursor", bar: "B4", pass: thinkErr.length === 0, detail: thinkErr.map((r) => r.id).join(",") || "clean" });
 
   // B5 — no dropped output field (conversation present on every 200).
   const noConv = ok.filter((r) => r.conversation === null);
@@ -293,42 +288,48 @@ function score(rows: Row[]): Check[] {
 }
 
 async function main(): Promise<void> {
-  const gate = `roadmodel_gate=${gateToken(need("SITE_PASSWORD"))}`;
-  const bypass = process.env.ROADMODEL_LATENCY_BYPASS_TOKEN ?? "";
-  const authCookie = await mintAuthCookie();
+  const output = createPrivateOutput({ prefix: "roadmodel-soak", path: process.env.SOAK_OUT });
+  const OUT = output.path;
+  try {
+    const gate = `roadmodel_gate=${await deriveGateToken(need("SITE_PASSWORD"))}`;
+    const bypass = process.env.ROADMODEL_LATENCY_BYPASS_TOKEN ?? "";
+    const authCookie = await mintAuthCookie();
 
-  const rows: Row[] = [];
-  // anon twice (determinism) + authed once (frontier).
-  for (const iter of [1, 2]) {
+    const rows: Row[] = [];
+    // anon twice (determinism) + authed once (frontier).
+    for (const iter of [1, 2]) {
+      for (const p of PROBES) {
+        rows.push(await runProbe(p, null, gate, bypass, iter));
+        await sleep(200);
+      }
+    }
     for (const p of PROBES) {
-      rows.push(await runProbe(p, null, gate, bypass, iter));
+      rows.push(await runProbe(p, authCookie, gate, bypass, 1));
       await sleep(200);
     }
-  }
-  for (const p of PROBES) {
-    rows.push(await runProbe(p, authCookie, gate, bypass, 1));
-    await sleep(200);
-  }
 
-  writeFileSync(OUT, rows.map((r) => JSON.stringify(r)).join("\n") + "\n");
+    output.write(rows.map((r) => JSON.stringify(r)).join("\n") + "\n");
 
-  const checks = score(rows);
-  const blocking = checks.filter((c) => !c.id.startsWith("watch:"));
-  const failed = blocking.filter((c) => !c.pass);
-  console.log(`\n=== SOAK SCORECARD (${rows.length} calls -> ${OUT}) ===`);
-  for (const c of checks) {
-    const tag = c.id.startsWith("watch:") ? "WATCH" : c.pass ? "PASS " : "FAIL ";
-    console.log(`  [${tag}] ${c.bar.padEnd(4)} ${c.id.padEnd(22)} ${c.detail}`);
+    const checks = score(rows);
+    const blocking = checks.filter((c) => !c.id.startsWith("watch:"));
+    const failed = blocking.filter((c) => !c.pass);
+    console.log(`\n=== SOAK SCORECARD (${rows.length} calls -> ${OUT}) ===`);
+    for (const c of checks) {
+      const tag = c.id.startsWith("watch:") ? "WATCH" : c.pass ? "PASS " : "FAIL ";
+      console.log(`  [${tag}] ${c.bar.padEnd(4)} ${c.id.padEnd(22)} ${c.detail}`);
+    }
+    console.log(`\nRESULT: ${failed.length === 0 ? "PASS" : "FAIL"} (${blocking.length - failed.length}/${blocking.length} blocking checks)`);
+    // The loud signal, apart from the report-only bar: is the recommender up?
+    const health = serviceHealth(rows.map((r) => r.status));
+    console.log(healthLine(health));
+    console.log("SOAK_DONE");
+    process.exitCode = health.down ? EXIT_DOWN : failed.length === 0 ? 0 : 1;
+  } finally {
+    output.close();
   }
-  console.log(`\nRESULT: ${failed.length === 0 ? "PASS" : "FAIL"} (${blocking.length - failed.length}/${blocking.length} blocking checks)`);
-  // The loud signal, apart from the report-only bar: is the recommender up?
-  const health = serviceHealth(rows.map((r) => r.status));
-  console.log(healthLine(health));
-  console.log("SOAK_DONE");
-  process.exit(health.down ? EXIT_DOWN : failed.length === 0 ? 0 : 1);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
+main().catch(() => {
+  console.error("Diagnostic run failed.");
+  process.exitCode = 1;
 });

@@ -256,7 +256,7 @@ def test_schedule_artifacts(up: ModuleType, tmp_path: Path) -> None:
     assert "<key>RunAtLoad</key><false/>" in plist
     # --log writes the run; launchd capturing stdout too recorded it twice.
     assert "<key>StandardOutPath</key><string>/dev/null</string>" in plist
-    assert f"<key>StandardErrorPath</key><string>{log}</string>" in plist
+    assert "<key>StandardErrorPath</key><string>/dev/null</string>" in plist
 
     wpy, wscript = Path("C:/py/python.exe"), Path("C:/u/update_projects.py")
     argv = up.schtasks_create_argv(wpy, wscript, 9, 5)
@@ -1455,6 +1455,31 @@ def ctx(up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict
     monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
     remote = tmp_path / "remote.git"
     subprocess.run(["git", "init", "--bare", "--quiet", str(remote)], check=True)
+    # Keep real local Git roundtrips while substituting only the verified
+    # GitHub transport boundary. Dedicated guard tests exercise that boundary.
+    canonical = up._context_repo
+    monkeypatch.setattr(
+        up,
+        "_context_repo",
+        lambda value: "fixture-owner/private-context" if value == str(remote) else canonical(value),
+    )
+    monkeypatch.setattr(
+        up, "_context_visibility", lambda repo: repo == "fixture-owner/private-context"
+    )
+    monkeypatch.setattr(up, "_context_destination", lambda repo: "main")
+
+    def clone(repo: str) -> str | None:
+        assert repo == "fixture-owner/private-context"
+        if (up.CONTEXT_CLONE / ".git").is_dir():
+            return None
+        result = subprocess.run(
+            ["git", "clone", "--quiet", str(remote), str(up.CONTEXT_CLONE)],
+            capture_output=True,
+            text=True,
+        )
+        return None if result.returncode == 0 else "clone failed"
+
+    monkeypatch.setattr(up, "_ensure_clone", clone)
     return {"remote": remote, "mac": tmp_path / "mac", "pc": tmp_path / "pc"}
 
 

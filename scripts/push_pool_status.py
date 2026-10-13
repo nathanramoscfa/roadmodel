@@ -14,7 +14,6 @@ import base64
 import fcntl
 import getpass
 import json
-import os
 import shlex
 import subprocess
 import sys
@@ -25,7 +24,9 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "service"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from app.pools import ORDER, merge, normalize
+from local_private import private_files
 from pool_usage import CACHE, decide, load
 
 KEYCHAIN_SERVICE = "roadmodel/POOL_SYNC_REFRESH_TOKEN"
@@ -192,9 +193,9 @@ def main() -> int:
     mode.add_argument("--import-refresh-token", action="store_true")
     args = ap.parse_args()
     try:
-        args.cache.mkdir(parents=True, exist_ok=True, mode=0o700)
-        with (args.cache / ".sync.lock").open("a") as lock:
-            os.chmod(lock.name, 0o600)
+        private = private_files()
+        private.private_directory(args.cache)
+        with private.open_private_update(args.cache / ".sync.lock") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             now = time.time()
             rows = observations(load(args.cache), now)

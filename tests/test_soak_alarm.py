@@ -30,7 +30,7 @@ def _steps() -> dict[str, dict[str, Any]]:
 def test_the_script_reports_health_and_exits_3_when_down() -> None:
     script = (REPO_ROOT / "scripts" / "soak-recommend.ts").read_text()
     assert "healthLine(health)" in script
-    assert "process.exit(health.down ? EXIT_DOWN" in script
+    assert "process.exitCode = health.down ? EXIT_DOWN" in script
     helper = (REPO_ROOT / "scripts" / "soak-health.ts").read_text()
     assert "export const EXIT_DOWN = 3;" in helper
     assert "SERVICE_HEALTH:" in helper
@@ -39,7 +39,7 @@ def test_the_script_reports_health_and_exits_3_when_down() -> None:
 def test_a_down_service_opens_the_alarm_and_fails_the_run() -> None:
     steps = _steps()
     run = steps["Run soak (report-only)"]["run"]
-    assert "health=$(grep -m1 '^SERVICE_HEALTH:' /tmp/soak.log" in run
+    assert "health=$(grep -m1 '^SERVICE_HEALTH:' \"$SOAK_LOG\"" in run
     alarm = steps["Alarm while the recommender is down"]
     assert "steps.soak.outputs.exit == '3'" in alarm["if"]
     script = alarm["with"]["script"]

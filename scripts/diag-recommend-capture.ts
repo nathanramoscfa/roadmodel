@@ -3,7 +3,7 @@
 // Full-payload variant of dogfood-recommend.ts. Mints one founder session,
 // fires the SAME 12-probe battery ANON + SIGNED-IN against gated prod
 // /api/recommend, and writes the COMPLETE client-facing JSON payload per
-// probe (not just lengths) to /tmp/rm-diag-app.jsonl — so the gold-standard
+// probe (not just lengths) to a fresh private JSONL file — so the gold-standard
 // differential can compare full rationale text, settings, and comparison
 // tables against an Opus@selector reference for the same prompts.
 //
@@ -13,24 +13,19 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
-import { createHash } from "node:crypto";
+import { deriveGateToken } from "../web/lib/gate";
+import { createPrivateOutput } from "./private-diagnostic-output";
 import { setTimeout as sleep } from "node:timers/promises";
-import { writeFileSync } from "node:fs";
 
 const BASE = process.argv[2] ?? "https://roadmodel.ai";
 const EMAIL = process.env.ROADMODEL_DOGFOOD_EMAIL ?? "nathan.ramos.github@gmail.com";
-const OUT = "/tmp/rm-diag-app.jsonl";
 
 function need(n: string): string {
   const v = process.env[n];
   if (!v) {
-    console.error(`missing env ${n}`);
-    process.exit(2);
+    throw new Error("Required diagnostic configuration is missing.");
   }
   return v;
-}
-function gateToken(p: string): string {
-  return createHash("sha256").update(`roadmodel-gate-v1:${p}`).digest("hex");
 }
 
 async function mintAuthCookie(): Promise<string> {
@@ -44,8 +39,7 @@ async function mintAuthCookie(): Promise<string> {
   });
   const tokenHash = data?.properties?.hashed_token;
   if (error || !tokenHash) {
-    console.error("generateLink failed", error);
-    process.exit(1);
+    throw new Error("Session generation failed.");
   }
   let captured: { name: string; value: string }[] = [];
   const ssr = createServerClient(url, need("NEXT_PUBLIC_SUPABASE_ANON_KEY"), {
@@ -61,8 +55,7 @@ async function mintAuthCookie(): Promise<string> {
     token_hash: tokenHash,
   });
   if (vErr || captured.length === 0) {
-    console.error("verifyOtp failed", vErr);
-    process.exit(1);
+    throw new Error("Session verification failed.");
   }
   return captured.map((c) => `${c.name}=${c.value}`).join("; ");
 }
@@ -113,40 +106,44 @@ async function runProbe(p: Probe, authCookie: string | null, gate: string, bypas
     } catch {
       payload = null;
     }
-  } catch (e) {
-    errText = String(e);
+  } catch {
+    errText = "request_failed";
   }
   const ms = Math.round(performance.now() - t0);
   return { id: p.id, note: p.note, task: p.task, mode, status, ms, payload, raw_len: raw.length, error: errText || null };
 }
 
 async function main(): Promise<void> {
-  const gate = `roadmodel_gate=${gateToken(need("SITE_PASSWORD"))}`;
-  const bypass = process.env.ROADMODEL_LATENCY_BYPASS_TOKEN ?? "";
-  const authCookie = await mintAuthCookie();
+  const output = createPrivateOutput({ prefix: "roadmodel-diag" });
+  const OUT = output.path;
+  try {
+    const gate = `roadmodel_gate=${await deriveGateToken(need("SITE_PASSWORD"))}`;
+    const bypass = process.env.ROADMODEL_LATENCY_BYPASS_TOKEN ?? "";
+    const authCookie = await mintAuthCookie();
 
-  const rows: unknown[] = [];
-  for (const mode of ["anon", "authed"] as const) {
-    for (const p of PROBES) {
-      const row = await runProbe(p, mode === "authed" ? authCookie : null, gate, bypass);
-      rows.push(row);
-      const pl = (row.payload ?? {}) as Record<string, unknown>;
-      const st = (pl.settings ?? {}) as Record<string, unknown>;
-      console.log(
-        `[${mode}] ${p.id.padEnd(16)} ${row.status} ${String(row.ms).padStart(5)}ms ` +
-          `model=${pl.model ?? "-"} plat=${pl.platform ?? "-"} max=${st.max_mode ?? "-"} ` +
-          `think=${st.thinking ?? "-"} ratLen=${typeof pl.rationale === "string" ? pl.rationale.length : "-"}`,
-      );
-      await sleep(250);
+    const rows: unknown[] = [];
+    for (const mode of ["anon", "authed"] as const) {
+      for (const p of PROBES) {
+        const row = await runProbe(p, mode === "authed" ? authCookie : null, gate, bypass);
+        rows.push(row);
+        const pl = (row.payload ?? {}) as Record<string, unknown>;
+        console.log(
+          `[${mode}] ${p.id.padEnd(16)} ${row.status} ${String(row.ms).padStart(5)}ms ` +
+            `ratLen=${typeof pl.rationale === "string" ? pl.rationale.length : 0}`,
+        );
+        await sleep(250);
+      }
     }
-  }
 
-  writeFileSync(OUT, rows.map((r) => JSON.stringify(r)).join("\n") + "\n");
-  console.log(`\nWROTE ${rows.length} rows -> ${OUT}`);
-  console.log(`DIAG_DONE`);
+    output.write(rows.map((r) => JSON.stringify(r)).join("\n") + "\n");
+    console.log(`\nWROTE ${rows.length} rows -> ${OUT}`);
+    console.log(`DIAG_DONE`);
+  } finally {
+    output.close();
+  }
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
+main().catch(() => {
+  console.error("Diagnostic run failed.");
+  process.exitCode = 1;
 });

@@ -87,6 +87,13 @@ EVAL_CONTEXT: dict[str, Any] = {
 }
 
 
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Credentials may only reach the explicitly requested origin."""
+
+    def redirect_request(self, *args: Any, **kwargs: Any) -> None:
+        return None
+
+
 def _post(url: str, path: str, body: dict[str, Any], token: str, timeout: int) -> dict[str, Any]:
     if not url.startswith("https://"):
         raise SystemExit("the service URL must be https://")
@@ -96,7 +103,7 @@ def _post(url: str, path: str, body: dict[str, Any], token: str, timeout: int) -
         headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
     )
     # https only, checked above.
-    with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310  # nosec B310
+    with urllib.request.build_opener(NoRedirect()).open(req, timeout=timeout) as resp:  # noqa: S310  # nosec B310
         data: dict[str, Any] = json.load(resp)
     return data
 
@@ -105,7 +112,9 @@ def _get(url: str, path: str) -> dict[str, Any]:
     if not url.startswith("https://"):
         raise SystemExit("the service URL must be https://")
     # https only, checked above.
-    with urllib.request.urlopen(f"{url.rstrip('/')}{path}", timeout=30) as resp:  # noqa: S310  # nosec B310
+    with urllib.request.build_opener(NoRedirect()).open(
+        f"{url.rstrip('/')}{path}", timeout=30
+    ) as resp:  # noqa: S310  # nosec B310
         data: dict[str, Any] = json.load(resp)
     return data
 

@@ -43,7 +43,7 @@ no API key is read, so it never spends API cash. Calls are capped per run
 (--max-calls).
 
 Usage (repo root, a venv with roadmodel installed):
-  python scripts/judge_recommend.py --rows /tmp/rm-soak-recommend.jsonl
+  python scripts/judge_recommend.py --rows "$SOAK_OUT"
   python scripts/judge_recommend.py --rows ... --no-judge    # B2 only, free
   python scripts/judge_recommend.py --rows ... --dry-run     # print the prompts
 Exit 0 when B2 and B6 pass, 1 when either fails, 2 on bad input.
@@ -67,13 +67,16 @@ from dataclasses import dataclass, field
 from importlib import resources
 from typing import Any
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from private_diagnostics import PrivateArtifact, fresh_directory
+
 from roadmodel import cost as _cost
 from roadmodel import scoring
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 PROBES_FILE = REPO / "scripts" / "soak_probes.json"
 AVAILABILITY_FILE = REPO / "infra" / "model-availability.json"
-DEFAULT_OUT = "/tmp/rm-judge-recommend.json"  # noqa: S108  # nosec B108 - a report path, like the soak's
+DEFAULT_OUT = None
 
 JUDGE_MODEL = "claude-opus-5-5"
 # The maker of every model the judge may run as (claude -p runs Anthropic's).
@@ -738,9 +741,9 @@ def claude_judge(system_file: str, model: str, timeout: int = 300) -> JudgeFn:
                 out: dict[str, Any] = json.loads(proc.stdout)
                 if out.get("structured_output"):
                     return out
-                last = str(out.get("result"))[:200]
+                last = "judge_response_invalid"
             else:
-                last = (proc.stderr or proc.stdout)[-300:]
+                last = "judge_process_failed"
         raise RuntimeError(f"judge call failed: {last}")
 
     return run
@@ -815,8 +818,8 @@ def judge_all(
                 verdict = verdict_from(
                     item.key, judge(system, render_ladder(item.task, item.ladder))
                 )
-            except Exception as exc:  # noqa: BLE001 - an unjudged row fails B6, it never raises
-                verdict = Verdict(item.key, None, error=str(exc)[:300])
+            except Exception:  # noqa: BLE001 - an unjudged row fails B6, it never raises
+                verdict = Verdict(item.key, None, error="judge_request_failed")
             if verdict.accepted is not None:
                 return verdict
         return verdict
@@ -893,8 +896,15 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     if not args.rows.exists():
-        print(f"no soak rows at {args.rows}", file=sys.stderr)
+        print("Soak rows are unavailable.", file=sys.stderr)
         return 2
+    output = (
+        None
+        if args.dry_run
+        else PrivateArtifact(
+            args.out if args.out is not None else fresh_directory("roadmodel-judge-") / "judge.json"
+        )
+    )
     probes = load_probes()
     rows = judged_rows(load_rows(args.rows))
     context = bundled_context()
@@ -940,7 +950,9 @@ def main(argv: list[str] | None = None) -> int:
         checks.append(b6_check(verdicts, items, makers))
 
     spent = sum(v.cost_usd for v in verdicts.values())
-    args.out.write_text(
+    if output is None:
+        raise RuntimeError("Private output was not initialized.")
+    output.write(
         json.dumps(
             {
                 "roadmodel_version": _installed_version(),
@@ -952,18 +964,15 @@ def main(argv: list[str] | None = None) -> int:
             },
             indent=2,
         )
-        + "\n",
-        encoding="utf-8",
+        + "\n"
     )
-    print(f"\n=== JUDGE SCORECARD (roadmodel {_installed_version()}, judge {args.model}) ===")
+    print("\n=== JUDGE SCORECARD ===")
     for c in checks:
-        print(
-            f"  [{'PASS ' if c.passed else 'FAIL '}] {c.bar.ljust(4)} {c.id.ljust(22)} {c.detail}"
-        )
-    for key, v in sorted(verdicts.items()):
-        if v.accepted is False or v.error:
-            reason = v.error or " | ".join(v.blockers)
-            print(f"    {key}: {_clip(reason)}")
+        print(f"  [{'PASS ' if c.passed else 'FAIL '}] {c.bar.ljust(4)} {c.id.ljust(22)}")
+    print(
+        f"  rejected={sum(v.accepted is False for v in verdicts.values())} "
+        f"unjudged={sum(v.accepted is None for v in verdicts.values())}"
+    )
     if verdicts:
         print(f"  judge list-equivalent ${spent:.2f} on the subscription token (no API cash)")
     failed = [c for c in checks if not c.passed]
@@ -988,4 +997,8 @@ def _installed_version() -> str:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        raise SystemExit(main())
+    except (OSError, ValueError):
+        print("Diagnostic input or private output is unavailable.", file=sys.stderr)
+        raise SystemExit(2) from None
