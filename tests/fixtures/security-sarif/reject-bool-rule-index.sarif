@@ -1,0 +1,92 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "CodeQL",
+          "semanticVersion": "2.25.6"
+        },
+        "extensions": [
+          {
+            "name": "codeql/python-queries",
+            "semanticVersion": "synthetic-fixture-1",
+            "guid": "00000000-0000-4000-8000-000000000001",
+            "rules": [
+              {
+                "id": "py/synthetic-high",
+                "guid": "00000000-0000-4000-8000-000000000011",
+                "properties": {
+                  "security-severity": "7.5",
+                  "tags": [
+                    "security"
+                  ]
+                },
+                "defaultConfiguration": {
+                  "level": "warning"
+                }
+              },
+              {
+                "id": "py/synthetic-medium",
+                "guid": "00000000-0000-4000-8000-000000000012",
+                "properties": {
+                  "security-severity": "6.1",
+                  "tags": [
+                    "security"
+                  ]
+                },
+                "defaultConfiguration": {
+                  "level": "warning"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "scripts/check_codeql_sarif.py",
+            "uriBaseId": "%SRCROOT%"
+          }
+        }
+      ],
+      "results": [
+        {
+          "ruleId": "py/synthetic-high",
+          "rule": {
+            "id": "py/synthetic-high",
+            "index": false,
+            "toolComponent": {
+              "index": 0
+            }
+          },
+          "level": "warning",
+          "message": {
+            "text": "Synthetic parser contract result"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "index": 0
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1,
+                  "endLine": 1,
+                  "endColumn": 2
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

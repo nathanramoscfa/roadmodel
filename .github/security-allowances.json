@@ -1,0 +1,1936 @@
+{
+  "schema": 1,
+  "context_policy": {
+    "baseline_revision": "289214b26f115cb766d1c05341bde9b84d53bb38",
+    "code_context_sha256": "64c2203bd5584c18e7b0c21ab512b032ab80c7bbf01978547e0bbc5e8d19b4ef",
+    "date_policy": "catalog-utc-date-v1",
+    "mode": "typed-catalog-v1",
+    "validator_sha256": "d0994ba80c5591de71bf6edb969f475b6ab7aa6b2a0b6bf57cd75cb5f8030eb2"
+  },
+  "codeql": [
+    {
+      "disposition": "false-positive",
+      "id": "codeql-public-billing-render",
+      "max_occurrences": 1,
+      "proof": {
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "f581010fac389415e0ea37581932f4c3156a3e2ef9a5d20921f41dbab1767c7c",
+        "language": "python",
+        "rule_id": "py/clear-text-storage-sensitive-data",
+        "rule_sha256": "d2d3c242f1fbc70803df33600f7be500d72dcc836f4bc53ce45560520dca05bf",
+        "run_configuration_sha256": "de0c7cf61795857bb383f620a298b58d6167dcd235c24d3659a8e8a7f65f2f68",
+        "sources": [
+          {
+            "mode": "100644",
+            "path": "update/render_md.py",
+            "sha256": "dfd6b9d26b9c806e602b40a85ade1a951e0bdad4c24e678795144ff8eda3becf",
+            "spans": [
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "00237a063b15fa5b53bc81bbfea4a17d49e38e9c9429bb6617413a6452a91271",
+                "region": {
+                  "endColumn": 36,
+                  "startColumn": 28,
+                  "startLine": 337
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "0841b02de96ae6d32359387b48d4586baabab774df9c12a52e9e60d6adf4d7bf",
+                "region": {
+                  "endColumn": 6,
+                  "endLine": 311,
+                  "startColumn": 13,
+                  "startLine": 295
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "0e9ed1ccbbf37d18bcf7a44eeb50a83655ebd15de4779d4b8f2faea4a4e124f1",
+                "region": {
+                  "endColumn": 12,
+                  "startColumn": 5,
+                  "startLine": 222
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "0e9ed1ccbbf37d18bcf7a44eeb50a83655ebd15de4779d4b8f2faea4a4e124f1",
+                "region": {
+                  "endColumn": 40,
+                  "startColumn": 15,
+                  "startLine": 222
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "15130a1986711995488f9b8ae06a5944a50753f51151bfaea53ba7d2d62b6260",
+                "region": {
+                  "endColumn": 6,
+                  "endLine": 244,
+                  "startColumn": 12,
+                  "startLine": 232
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "1a065b984ae3f33db31df7aead3528d422929773b0d0c1f7e140d79c0fb6eb59",
+                "region": {
+                  "endColumn": 13,
+                  "startColumn": 5,
+                  "startLine": 324
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "1a065b984ae3f33db31df7aead3528d422929773b0d0c1f7e140d79c0fb6eb59",
+                "region": {
+                  "endColumn": 48,
+                  "startColumn": 16,
+                  "startLine": 324
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "2d0b8edc69c6224d8bbc17f7e8cec0196223dd6f78600077d884557047fb1447",
+                "region": {
+                  "endColumn": 62,
+                  "startColumn": 13,
+                  "startLine": 236
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "53c5bafbd1966c5cd0de02ffa731ab170203c1a90ee84702b050463b7ad86c4d",
+                "region": {
+                  "endColumn": 10,
+                  "endLine": 243,
+                  "startColumn": 9,
+                  "startLine": 233
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "8d7f8210f46b0854b25cf42cbc74b3b3692f8a86ccd8eeb29be34139cd74c1c3",
+                "region": {
+                  "endColumn": 43,
+                  "startColumn": 9,
+                  "startLine": 306
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "a1a95576bbe4f0047a968f34b9cb1008586a4fde69763a197a7bcc243ddb5c66",
+                "region": {
+                  "endColumn": 14,
+                  "startColumn": 9,
+                  "startLine": 266
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "a1a95576bbe4f0047a968f34b9cb1008586a4fde69763a197a7bcc243ddb5c66",
+                "region": {
+                  "endColumn": 48,
+                  "startColumn": 22,
+                  "startLine": 266
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "b36fd7eb32f5da30d4b49362c2f2f56a2d4252a4c54d34b1dce7a9eaf498d3b7",
+                "region": {
+                  "endColumn": 27,
+                  "startColumn": 22,
+                  "startLine": 312
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "b36fd7eb32f5da30d4b49362c2f2f56a2d4252a4c54d34b1dce7a9eaf498d3b7",
+                "region": {
+                  "endColumn": 28,
+                  "startColumn": 12,
+                  "startLine": 312
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "dd45845f4f30157bf5bde887e724f5dd783934a6bd1a5918300056840639ff44",
+                "region": {
+                  "endColumn": 27,
+                  "startColumn": 22,
+                  "startLine": 269
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "dd45845f4f30157bf5bde887e724f5dd783934a6bd1a5918300056840639ff44",
+                "region": {
+                  "endColumn": 28,
+                  "startColumn": 12,
+                  "startLine": 269
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "dd45845f4f30157bf5bde887e724f5dd783934a6bd1a5918300056840639ff44",
+                "region": {
+                  "endColumn": 44,
+                  "startColumn": 12,
+                  "startLine": 269
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "e7694176cb0113cd96f331b70ad28b6e9b5f57aa11272c2bf78228df60b71ca6",
+                "region": {
+                  "endColumn": 10,
+                  "startColumn": 5,
+                  "startLine": 295
+                }
+              }
+            ]
+          }
+        ],
+        "tool_sha256": "569f90f6267451de751a334faa27a6c5174317a1fa5cc50417e7651151bc739b"
+      },
+      "rationale": "Committed public access-method billing labels are rendered into the public catalog mirror; no private account billing data or credential is read.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "false-positive",
+      "id": "codeql-public-billing-sync",
+      "max_occurrences": 1,
+      "proof": {
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "130d070c17e79d8e6481de3ee824ff3849145a11d28d6b4335f774f178ff767e",
+        "language": "python",
+        "rule_id": "py/clear-text-storage-sensitive-data",
+        "rule_sha256": "d2d3c242f1fbc70803df33600f7be500d72dcc836f4bc53ce45560520dca05bf",
+        "run_configuration_sha256": "de0c7cf61795857bb383f620a298b58d6167dcd235c24d3659a8e8a7f65f2f68",
+        "sources": [
+          {
+            "mode": "100644",
+            "path": "update/render_md.py",
+            "sha256": "dfd6b9d26b9c806e602b40a85ade1a951e0bdad4c24e678795144ff8eda3becf",
+            "spans": [
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "0841b02de96ae6d32359387b48d4586baabab774df9c12a52e9e60d6adf4d7bf",
+                "region": {
+                  "endColumn": 6,
+                  "endLine": 311,
+                  "startColumn": 13,
+                  "startLine": 295
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "0e9ed1ccbbf37d18bcf7a44eeb50a83655ebd15de4779d4b8f2faea4a4e124f1",
+                "region": {
+                  "endColumn": 12,
+                  "startColumn": 5,
+                  "startLine": 222
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "0e9ed1ccbbf37d18bcf7a44eeb50a83655ebd15de4779d4b8f2faea4a4e124f1",
+                "region": {
+                  "endColumn": 40,
+                  "startColumn": 15,
+                  "startLine": 222
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "15130a1986711995488f9b8ae06a5944a50753f51151bfaea53ba7d2d62b6260",
+                "region": {
+                  "endColumn": 6,
+                  "endLine": 244,
+                  "startColumn": 12,
+                  "startLine": 232
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "2d0b8edc69c6224d8bbc17f7e8cec0196223dd6f78600077d884557047fb1447",
+                "region": {
+                  "endColumn": 62,
+                  "startColumn": 13,
+                  "startLine": 236
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "53c5bafbd1966c5cd0de02ffa731ab170203c1a90ee84702b050463b7ad86c4d",
+                "region": {
+                  "endColumn": 10,
+                  "endLine": 243,
+                  "startColumn": 9,
+                  "startLine": 233
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "8d7f8210f46b0854b25cf42cbc74b3b3692f8a86ccd8eeb29be34139cd74c1c3",
+                "region": {
+                  "endColumn": 43,
+                  "startColumn": 9,
+                  "startLine": 306
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "a1a95576bbe4f0047a968f34b9cb1008586a4fde69763a197a7bcc243ddb5c66",
+                "region": {
+                  "endColumn": 14,
+                  "startColumn": 9,
+                  "startLine": 266
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "a1a95576bbe4f0047a968f34b9cb1008586a4fde69763a197a7bcc243ddb5c66",
+                "region": {
+                  "endColumn": 48,
+                  "startColumn": 22,
+                  "startLine": 266
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "b36fd7eb32f5da30d4b49362c2f2f56a2d4252a4c54d34b1dce7a9eaf498d3b7",
+                "region": {
+                  "endColumn": 27,
+                  "startColumn": 22,
+                  "startLine": 312
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "b36fd7eb32f5da30d4b49362c2f2f56a2d4252a4c54d34b1dce7a9eaf498d3b7",
+                "region": {
+                  "endColumn": 28,
+                  "startColumn": 12,
+                  "startLine": 312
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "dd45845f4f30157bf5bde887e724f5dd783934a6bd1a5918300056840639ff44",
+                "region": {
+                  "endColumn": 27,
+                  "startColumn": 22,
+                  "startLine": 269
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "dd45845f4f30157bf5bde887e724f5dd783934a6bd1a5918300056840639ff44",
+                "region": {
+                  "endColumn": 28,
+                  "startColumn": 12,
+                  "startLine": 269
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "dd45845f4f30157bf5bde887e724f5dd783934a6bd1a5918300056840639ff44",
+                "region": {
+                  "endColumn": 44,
+                  "startColumn": 12,
+                  "startLine": 269
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "e7694176cb0113cd96f331b70ad28b6e9b5f57aa11272c2bf78228df60b71ca6",
+                "region": {
+                  "endColumn": 10,
+                  "startColumn": 5,
+                  "startLine": 295
+                }
+              }
+            ]
+          },
+          {
+            "mode": "100644",
+            "path": "update/sync_static_availability.py",
+            "sha256": "24f2fe2a989566a6402711ee7e42a1ae16be252b1851a37c4806b6245edad2f3",
+            "spans": [
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "574cca35afe02ae591d91d1b3aebd006fbad88ff172d0329a2d79894a0167e78",
+                "region": {
+                  "endColumn": 65,
+                  "startColumn": 32,
+                  "startLine": 182
+                }
+              }
+            ]
+          }
+        ],
+        "tool_sha256": "569f90f6267451de751a334faa27a6c5174317a1fa5cc50417e7651151bc739b"
+      },
+      "rationale": "Committed public access-method billing labels are rendered into the public catalog mirror; no private account billing data or credential is read.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "false-positive",
+      "id": "codeql-public-billing-update",
+      "max_occurrences": 1,
+      "proof": {
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "bc367a67cb1c6268fc43003d07ab207a43f5493213b6434448ab4c8e3b09ce24",
+        "language": "python",
+        "rule_id": "py/clear-text-storage-sensitive-data",
+        "rule_sha256": "d2d3c242f1fbc70803df33600f7be500d72dcc836f4bc53ce45560520dca05bf",
+        "run_configuration_sha256": "de0c7cf61795857bb383f620a298b58d6167dcd235c24d3659a8e8a7f65f2f68",
+        "sources": [
+          {
+            "mode": "100644",
+            "path": "update/render_md.py",
+            "sha256": "dfd6b9d26b9c806e602b40a85ade1a951e0bdad4c24e678795144ff8eda3becf",
+            "spans": [
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "0841b02de96ae6d32359387b48d4586baabab774df9c12a52e9e60d6adf4d7bf",
+                "region": {
+                  "endColumn": 6,
+                  "endLine": 311,
+                  "startColumn": 13,
+                  "startLine": 295
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "0e9ed1ccbbf37d18bcf7a44eeb50a83655ebd15de4779d4b8f2faea4a4e124f1",
+                "region": {
+                  "endColumn": 12,
+                  "startColumn": 5,
+                  "startLine": 222
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "0e9ed1ccbbf37d18bcf7a44eeb50a83655ebd15de4779d4b8f2faea4a4e124f1",
+                "region": {
+                  "endColumn": 40,
+                  "startColumn": 15,
+                  "startLine": 222
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "15130a1986711995488f9b8ae06a5944a50753f51151bfaea53ba7d2d62b6260",
+                "region": {
+                  "endColumn": 6,
+                  "endLine": 244,
+                  "startColumn": 12,
+                  "startLine": 232
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "2d0b8edc69c6224d8bbc17f7e8cec0196223dd6f78600077d884557047fb1447",
+                "region": {
+                  "endColumn": 62,
+                  "startColumn": 13,
+                  "startLine": 236
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "53c5bafbd1966c5cd0de02ffa731ab170203c1a90ee84702b050463b7ad86c4d",
+                "region": {
+                  "endColumn": 10,
+                  "endLine": 243,
+                  "startColumn": 9,
+                  "startLine": 233
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "8d7f8210f46b0854b25cf42cbc74b3b3692f8a86ccd8eeb29be34139cd74c1c3",
+                "region": {
+                  "endColumn": 43,
+                  "startColumn": 9,
+                  "startLine": 306
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "a1a95576bbe4f0047a968f34b9cb1008586a4fde69763a197a7bcc243ddb5c66",
+                "region": {
+                  "endColumn": 14,
+                  "startColumn": 9,
+                  "startLine": 266
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "a1a95576bbe4f0047a968f34b9cb1008586a4fde69763a197a7bcc243ddb5c66",
+                "region": {
+                  "endColumn": 48,
+                  "startColumn": 22,
+                  "startLine": 266
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "b36fd7eb32f5da30d4b49362c2f2f56a2d4252a4c54d34b1dce7a9eaf498d3b7",
+                "region": {
+                  "endColumn": 27,
+                  "startColumn": 22,
+                  "startLine": 312
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "b36fd7eb32f5da30d4b49362c2f2f56a2d4252a4c54d34b1dce7a9eaf498d3b7",
+                "region": {
+                  "endColumn": 28,
+                  "startColumn": 12,
+                  "startLine": 312
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "dd45845f4f30157bf5bde887e724f5dd783934a6bd1a5918300056840639ff44",
+                "region": {
+                  "endColumn": 27,
+                  "startColumn": 22,
+                  "startLine": 269
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "dd45845f4f30157bf5bde887e724f5dd783934a6bd1a5918300056840639ff44",
+                "region": {
+                  "endColumn": 28,
+                  "startColumn": 12,
+                  "startLine": 269
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "dd45845f4f30157bf5bde887e724f5dd783934a6bd1a5918300056840639ff44",
+                "region": {
+                  "endColumn": 44,
+                  "startColumn": 12,
+                  "startLine": 269
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "e7694176cb0113cd96f331b70ad28b6e9b5f57aa11272c2bf78228df60b71ca6",
+                "region": {
+                  "endColumn": 10,
+                  "startColumn": 5,
+                  "startLine": 295
+                }
+              }
+            ]
+          },
+          {
+            "mode": "100644",
+            "path": "update/update_models.py",
+            "sha256": "e2240c0fedfec939ee001307b669a8f7a20ed61a3fbafb803264e6b6576f18fd",
+            "spans": [
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "773b7a1b3b286694f2431a289ffa3cc1b1396bdd5a67c20afe8ebe39afc05507",
+                "region": {
+                  "endColumn": 61,
+                  "startColumn": 28,
+                  "startLine": 1026
+                }
+              }
+            ]
+          }
+        ],
+        "tool_sha256": "569f90f6267451de751a334faa27a6c5174317a1fa5cc50417e7651151bc739b"
+      },
+      "rationale": "Committed public access-method billing labels are rendered into the public catalog mirror; no private account billing data or credential is read.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "false-positive",
+      "id": "codeql-closed-provider-log",
+      "max_occurrences": 1,
+      "proof": {
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "514e09d623f5d351be36a51460e246f4a21967a2cf641bfa06b1ccf56f6202d9",
+        "language": "python",
+        "rule_id": "py/log-injection",
+        "rule_sha256": "18d52e3185af5fc4b138cbcb714ed5ec459e9e80787eea6a45a0847fec61036a",
+        "run_configuration_sha256": "de0c7cf61795857bb383f620a298b58d6167dcd235c24d3659a8e8a7f65f2f68",
+        "sources": [
+          {
+            "mode": "100644",
+            "path": "service/app/main.py",
+            "sha256": "3257866df515754c01ffcaabc73b5acf20852a15c3d024b422adae0d70002e71",
+            "spans": [
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "710e7429a68b41f27bb6615aa7c839567bc60c6f01208634f406bc2240e6dd37",
+                "region": {
+                  "endColumn": 31,
+                  "startColumn": 28,
+                  "startLine": 93
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "f7050e49fe1572f4bcf279a7cf5e41deaa7894f6731a50875568d766ec1819e0",
+                "region": {
+                  "endColumn": 27,
+                  "startColumn": 24,
+                  "startLine": 88
+                }
+              }
+            ]
+          },
+          {
+            "mode": "100644",
+            "path": "service/app/recommend.py",
+            "sha256": "94e9f34c587677fee51cb72b2710a26ab2485128bab44e4913b387c372f83c4c",
+            "spans": [
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "166a98adac0a76d1765ea5c779e2b7689179079ebecdd9be04dd28b41bde6f7c",
+                "region": {
+                  "endColumn": 25,
+                  "startColumn": 21,
+                  "startLine": 388
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "4b05ac8308d12d83bab20f11ecf5bbcc1dd87b31f5b83d3c3b5607a357393866",
+                "region": {
+                  "endColumn": 13,
+                  "startColumn": 9,
+                  "startLine": 353
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "4b05ac8308d12d83bab20f11ecf5bbcc1dd87b31f5b83d3c3b5607a357393866",
+                "region": {
+                  "endColumn": 44,
+                  "startColumn": 33,
+                  "startLine": 353
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "4b05ac8308d12d83bab20f11ecf5bbcc1dd87b31f5b83d3c3b5607a357393866",
+                "region": {
+                  "endColumn": 45,
+                  "startColumn": 17,
+                  "startLine": 353
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "5399a933f83f03961d1b7718409f86348326660bcf2dcc0dcd1e8d3093b8741b",
+                "region": {
+                  "endColumn": 10,
+                  "startColumn": 5,
+                  "startLine": 249
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "5399a933f83f03961d1b7718409f86348326660bcf2dcc0dcd1e8d3093b8741b",
+                "region": {
+                  "endColumn": 20,
+                  "startColumn": 13,
+                  "startLine": 249
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "5399a933f83f03961d1b7718409f86348326660bcf2dcc0dcd1e8d3093b8741b",
+                "region": {
+                  "endColumn": 42,
+                  "startColumn": 13,
+                  "startLine": 249
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "8f954eaa3cd485676e89bb697b493fe7a16863c71e852e7b8289e9c42b0c7284",
+                "region": {
+                  "endColumn": 28,
+                  "startColumn": 21,
+                  "startLine": 243
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "901cf9d42d10c339483be340bd63dd3ab8995819e7d82c2110639e164eeed6f0",
+                "region": {
+                  "endColumn": 18,
+                  "startColumn": 15,
+                  "startLine": 316
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "cb21ab474c92681e3f6a00eb51e33ca5e7d3fcf9b2c7d13616056bf33acb177c",
+                "region": {
+                  "endColumn": 22,
+                  "startColumn": 17,
+                  "startLine": 252
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "cb21ab474c92681e3f6a00eb51e33ca5e7d3fcf9b2c7d13616056bf33acb177c",
+                "region": {
+                  "endColumn": 29,
+                  "startColumn": 17,
+                  "startLine": 252
+                }
+              }
+            ]
+          }
+        ],
+        "tool_sha256": "569f90f6267451de751a334faa27a6c5174317a1fa5cc50417e7651151bc739b"
+      },
+      "rationale": "Both complete flows pass through membership validation against committed engine registry keys before fixed warning formatting; arbitrary request text cannot become this log argument.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "false-positive",
+      "id": "codeql-closed-ladder-provider-log",
+      "max_occurrences": 1,
+      "proof": {
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "c27c46ccd9b1206f0aaa4c70d3a383f4e643f87c1ea5c7aa0cd93c8c582f30d6",
+        "language": "python",
+        "rule_id": "py/log-injection",
+        "rule_sha256": "18d52e3185af5fc4b138cbcb714ed5ec459e9e80787eea6a45a0847fec61036a",
+        "run_configuration_sha256": "de0c7cf61795857bb383f620a298b58d6167dcd235c24d3659a8e8a7f65f2f68",
+        "sources": [
+          {
+            "mode": "100644",
+            "path": "service/app/main.py",
+            "sha256": "3257866df515754c01ffcaabc73b5acf20852a15c3d024b422adae0d70002e71",
+            "spans": [
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "8ac83844535d98061ad4cf8328c4a894685b44374e7ace60a10d784c984e8ac1",
+                "region": {
+                  "endColumn": 38,
+                  "startColumn": 35,
+                  "startLine": 121
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "bf0e022a8d9b2a8e346103ed3cd958ae6448ab11de4a1b18ab1d302fc91dc43c",
+                "region": {
+                  "endColumn": 34,
+                  "startColumn": 31,
+                  "startLine": 116
+                }
+              }
+            ]
+          },
+          {
+            "mode": "100644",
+            "path": "service/app/recommend.py",
+            "sha256": "94e9f34c587677fee51cb72b2710a26ab2485128bab44e4913b387c372f83c4c",
+            "spans": [
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "166a98adac0a76d1765ea5c779e2b7689179079ebecdd9be04dd28b41bde6f7c",
+                "region": {
+                  "endColumn": 25,
+                  "startColumn": 21,
+                  "startLine": 672
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "4b05ac8308d12d83bab20f11ecf5bbcc1dd87b31f5b83d3c3b5607a357393866",
+                "region": {
+                  "endColumn": 13,
+                  "startColumn": 9,
+                  "startLine": 661
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "4b05ac8308d12d83bab20f11ecf5bbcc1dd87b31f5b83d3c3b5607a357393866",
+                "region": {
+                  "endColumn": 44,
+                  "startColumn": 33,
+                  "startLine": 661
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "4b05ac8308d12d83bab20f11ecf5bbcc1dd87b31f5b83d3c3b5607a357393866",
+                "region": {
+                  "endColumn": 45,
+                  "startColumn": 17,
+                  "startLine": 661
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "5399a933f83f03961d1b7718409f86348326660bcf2dcc0dcd1e8d3093b8741b",
+                "region": {
+                  "endColumn": 10,
+                  "startColumn": 5,
+                  "startLine": 249
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "5399a933f83f03961d1b7718409f86348326660bcf2dcc0dcd1e8d3093b8741b",
+                "region": {
+                  "endColumn": 20,
+                  "startColumn": 13,
+                  "startLine": 249
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "5399a933f83f03961d1b7718409f86348326660bcf2dcc0dcd1e8d3093b8741b",
+                "region": {
+                  "endColumn": 42,
+                  "startColumn": 13,
+                  "startLine": 249
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "88002637e81300dfc92830ca42399dda5f26d8d417b43494a94adb7f5d3553b3",
+                "region": {
+                  "endColumn": 25,
+                  "startColumn": 22,
+                  "startLine": 646
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "8f954eaa3cd485676e89bb697b493fe7a16863c71e852e7b8289e9c42b0c7284",
+                "region": {
+                  "endColumn": 28,
+                  "startColumn": 21,
+                  "startLine": 243
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "cb21ab474c92681e3f6a00eb51e33ca5e7d3fcf9b2c7d13616056bf33acb177c",
+                "region": {
+                  "endColumn": 22,
+                  "startColumn": 17,
+                  "startLine": 252
+                }
+              },
+              {
+                "column_kind": "unicodeCodePoints",
+                "line_sha256": "cb21ab474c92681e3f6a00eb51e33ca5e7d3fcf9b2c7d13616056bf33acb177c",
+                "region": {
+                  "endColumn": 29,
+                  "startColumn": 17,
+                  "startLine": 252
+                }
+              }
+            ]
+          }
+        ],
+        "tool_sha256": "569f90f6267451de751a334faa27a6c5174317a1fa5cc50417e7651151bc739b"
+      },
+      "rationale": "Both complete flows pass through membership validation against committed engine registry keys before fixed warning formatting; arbitrary request text cannot become this log argument.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "accepted-risk",
+      "id": "codeql-diagnostic-budget-gate",
+      "max_occurrences": 1,
+      "proof": {
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "bfae96e9ca218d14b67376a1fc83a51c2e3d104a292b0131d1e69cf29d97a5a6",
+        "language": "javascript-typescript",
+        "rule_id": "js/insufficient-password-hash",
+        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
+        "run_configuration_sha256": "63f6c25166dbae265c4ff0f5947dffc799e5279a73178bb5e3c170f647897143",
+        "sources": [
+          {
+            "mode": "100644",
+            "path": "scripts/diag-budget-priority-divergence.ts",
+            "sha256": "f117061acba62fdd8b5c175e273971354c771f5a9e0307181b9acb242f0196ca",
+            "spans": [
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "5c7aa3b8a781abef8b8205fe4c1704ecaaa790e0fa122b2a69128ba46d1fcea2",
+                "region": {
+                  "endColumn": 60,
+                  "startColumn": 59,
+                  "startLine": 42
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "5c7aa3b8a781abef8b8205fe4c1704ecaaa790e0fa122b2a69128ba46d1fcea2",
+                "region": {
+                  "endColumn": 62,
+                  "startColumn": 38,
+                  "startLine": 42
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "9488b4122762b46b8c94b9c9bea8d5d0e65ee6adcf895fc164e146a1abf23540",
+                "region": {
+                  "endColumn": 65,
+                  "startColumn": 44,
+                  "startLine": 148
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "dcb1171e5c8864e9baf4c7353f9670ea69fa06b3bea598d6a94da6c4ef054344",
+                "region": {
+                  "endColumn": 21,
+                  "startColumn": 20,
+                  "startLine": 41
+                }
+              }
+            ]
+          }
+        ],
+        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+      },
+      "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "accepted-risk",
+      "id": "codeql-diagnostic-three-card-gate",
+      "max_occurrences": 1,
+      "proof": {
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "99be1217fb6e8d5d0ec0af9f714702886799e8e5ad71eb603ab6483b21a0e9e4",
+        "language": "javascript-typescript",
+        "rule_id": "js/insufficient-password-hash",
+        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
+        "run_configuration_sha256": "63f6c25166dbae265c4ff0f5947dffc799e5279a73178bb5e3c170f647897143",
+        "sources": [
+          {
+            "mode": "100644",
+            "path": "scripts/diag-three-card.ts",
+            "sha256": "d8d1d74d686cb37db175788ff9674623353bf4e23c4ed6a72fa6ff880b6f2d8d",
+            "spans": [
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "5c7aa3b8a781abef8b8205fe4c1704ecaaa790e0fa122b2a69128ba46d1fcea2",
+                "region": {
+                  "endColumn": 60,
+                  "startColumn": 59,
+                  "startLine": 33
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "5c7aa3b8a781abef8b8205fe4c1704ecaaa790e0fa122b2a69128ba46d1fcea2",
+                "region": {
+                  "endColumn": 62,
+                  "startColumn": 38,
+                  "startLine": 33
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "9488b4122762b46b8c94b9c9bea8d5d0e65ee6adcf895fc164e146a1abf23540",
+                "region": {
+                  "endColumn": 65,
+                  "startColumn": 44,
+                  "startLine": 91
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "dcb1171e5c8864e9baf4c7353f9670ea69fa06b3bea598d6a94da6c4ef054344",
+                "region": {
+                  "endColumn": 21,
+                  "startColumn": 20,
+                  "startLine": 32
+                }
+              }
+            ]
+          }
+        ],
+        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+      },
+      "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "accepted-risk",
+      "id": "codeql-diagnostic-latency-gate",
+      "max_occurrences": 1,
+      "proof": {
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "4d02f2a7c84613cd7459745fdfcd926a57a77124a2a53098864916394fbf0e0d",
+        "language": "javascript-typescript",
+        "rule_id": "js/insufficient-password-hash",
+        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
+        "run_configuration_sha256": "63f6c25166dbae265c4ff0f5947dffc799e5279a73178bb5e3c170f647897143",
+        "sources": [
+          {
+            "mode": "100644",
+            "path": "scripts/measure-recommend-latency.ts",
+            "sha256": "1fa8e58c37b5866e9f8e636f67965af991bdab207170f3b0cc0ed7bdd271699f",
+            "spans": [
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "3c29e46175e691ead174b5b43a55795d553f56953d3e1f1dc9842e3c8a919d27",
+                "region": {
+                  "endColumn": 21,
+                  "startColumn": 9,
+                  "startLine": 116
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "3c29e46175e691ead174b5b43a55795d553f56953d3e1f1dc9842e3c8a919d27",
+                "region": {
+                  "endColumn": 49,
+                  "startColumn": 24,
+                  "startLine": 116
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "3fb5480ed60596255c235f4b74761dae53929fb7243a0502c0f98b0b3bd490a4",
+                "region": {
+                  "endColumn": 34,
+                  "startColumn": 26,
+                  "startLine": 99
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "4585a2af00484165882b41493b56ae336ec187cf480b56f87d9431cc11be495d",
+                "region": {
+                  "endColumn": 42,
+                  "startColumn": 34,
+                  "startLine": 101
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "4585a2af00484165882b41493b56ae336ec187cf480b56f87d9431cc11be495d",
+                "region": {
+                  "endColumn": 44,
+                  "startColumn": 13,
+                  "startLine": 101
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "c861acf098f009febf9927e3ee1dd865f9f1a5c027c534e69fe9fe5e247657bd",
+                "region": {
+                  "endColumn": 53,
+                  "startColumn": 41,
+                  "startLine": 118
+                }
+              }
+            ]
+          }
+        ],
+        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+      },
+      "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "accepted-risk",
+      "id": "codeql-diagnostic-frontier-gate",
+      "max_occurrences": 1,
+      "proof": {
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "1f76de590bdc68722f105531c7568e2e1a10f48e5dc3a997ae4ac26a0c9bd7da",
+        "language": "javascript-typescript",
+        "rule_id": "js/insufficient-password-hash",
+        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
+        "run_configuration_sha256": "63f6c25166dbae265c4ff0f5947dffc799e5279a73178bb5e3c170f647897143",
+        "sources": [
+          {
+            "mode": "100644",
+            "path": "scripts/probe-frontier-flip.ts",
+            "sha256": "a41b75dfffa2cb3c8926c3c034851aa591746463c4dbb84a2d817a32fe4c59b3",
+            "spans": [
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "5c7aa3b8a781abef8b8205fe4c1704ecaaa790e0fa122b2a69128ba46d1fcea2",
+                "region": {
+                  "endColumn": 60,
+                  "startColumn": 59,
+                  "startLine": 29
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "5c7aa3b8a781abef8b8205fe4c1704ecaaa790e0fa122b2a69128ba46d1fcea2",
+                "region": {
+                  "endColumn": 62,
+                  "startColumn": 38,
+                  "startLine": 29
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "9488b4122762b46b8c94b9c9bea8d5d0e65ee6adcf895fc164e146a1abf23540",
+                "region": {
+                  "endColumn": 65,
+                  "startColumn": 44,
+                  "startLine": 127
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "dcb1171e5c8864e9baf4c7353f9670ea69fa06b3bea598d6a94da6c4ef054344",
+                "region": {
+                  "endColumn": 21,
+                  "startColumn": 20,
+                  "startLine": 28
+                }
+              }
+            ]
+          }
+        ],
+        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+      },
+      "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "accepted-risk",
+      "id": "codeql-diagnostic-trigger-gate",
+      "max_occurrences": 1,
+      "proof": {
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "683b990832403248b2c24a2d1fba571c944db6b76a0fb79d7bd6e75c763d1e3a",
+        "language": "javascript-typescript",
+        "rule_id": "js/insufficient-password-hash",
+        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
+        "run_configuration_sha256": "63f6c25166dbae265c4ff0f5947dffc799e5279a73178bb5e3c170f647897143",
+        "sources": [
+          {
+            "mode": "100644",
+            "path": "scripts/probe-fable-trigger.ts",
+            "sha256": "89cdd14abe1caa832ee663e6aa278cba1acd72779cbdd6bac005db7032605610",
+            "spans": [
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "5c7aa3b8a781abef8b8205fe4c1704ecaaa790e0fa122b2a69128ba46d1fcea2",
+                "region": {
+                  "endColumn": 60,
+                  "startColumn": 59,
+                  "startLine": 60
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "5c7aa3b8a781abef8b8205fe4c1704ecaaa790e0fa122b2a69128ba46d1fcea2",
+                "region": {
+                  "endColumn": 62,
+                  "startColumn": 38,
+                  "startLine": 60
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "9488b4122762b46b8c94b9c9bea8d5d0e65ee6adcf895fc164e146a1abf23540",
+                "region": {
+                  "endColumn": 65,
+                  "startColumn": 44,
+                  "startLine": 98
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "dcb1171e5c8864e9baf4c7353f9670ea69fa06b3bea598d6a94da6c4ef054344",
+                "region": {
+                  "endColumn": 21,
+                  "startColumn": 20,
+                  "startLine": 59
+                }
+              }
+            ]
+          }
+        ],
+        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+      },
+      "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "accepted-risk",
+      "id": "codeql-diagnostic-funding-gate",
+      "max_occurrences": 1,
+      "proof": {
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "d06b38979c0b66d7b5b426f2a9329313544fb6f52f8f536f603c996d0d3398ad",
+        "language": "javascript-typescript",
+        "rule_id": "js/insufficient-password-hash",
+        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
+        "run_configuration_sha256": "63f6c25166dbae265c4ff0f5947dffc799e5279a73178bb5e3c170f647897143",
+        "sources": [
+          {
+            "mode": "100644",
+            "path": "scripts/probe-funding-lanes.ts",
+            "sha256": "15ec2dc2b21f8692347f5e6b41a20bfa8d5cdaee0340c9b123cd510fc93ce209",
+            "spans": [
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "c198297b9b586686ec081d02a8740cafd8cf8f765670088b6de44e065ccbd706",
+                "region": {
+                  "endColumn": 102,
+                  "startColumn": 81,
+                  "startLine": 48
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "c198297b9b586686ec081d02a8740cafd8cf8f765670088b6de44e065ccbd706",
+                "region": {
+                  "endColumn": 104,
+                  "startColumn": 60,
+                  "startLine": 48
+                }
+              }
+            ]
+          }
+        ],
+        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+      },
+      "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "accepted-risk",
+      "id": "codeql-diagnostic-ladder-gate",
+      "max_occurrences": 1,
+      "proof": {
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "755235d92bf588b07c5930ed206d65231f7fcf6237471b06970542f1ca7a0122",
+        "language": "javascript-typescript",
+        "rule_id": "js/insufficient-password-hash",
+        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
+        "run_configuration_sha256": "63f6c25166dbae265c4ff0f5947dffc799e5279a73178bb5e3c170f647897143",
+        "sources": [
+          {
+            "mode": "100644",
+            "path": "scripts/probe-ladder.ts",
+            "sha256": "3f92ebd7829708655ba01a2f2eb8ef788f4283caa8ef31d5ca459da7ca84e81a",
+            "spans": [
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "5c7aa3b8a781abef8b8205fe4c1704ecaaa790e0fa122b2a69128ba46d1fcea2",
+                "region": {
+                  "endColumn": 60,
+                  "startColumn": 59,
+                  "startLine": 42
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "5c7aa3b8a781abef8b8205fe4c1704ecaaa790e0fa122b2a69128ba46d1fcea2",
+                "region": {
+                  "endColumn": 62,
+                  "startColumn": 38,
+                  "startLine": 42
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "9488b4122762b46b8c94b9c9bea8d5d0e65ee6adcf895fc164e146a1abf23540",
+                "region": {
+                  "endColumn": 65,
+                  "startColumn": 44,
+                  "startLine": 130
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "dcb1171e5c8864e9baf4c7353f9670ea69fa06b3bea598d6a94da6c4ef054344",
+                "region": {
+                  "endColumn": 21,
+                  "startColumn": 20,
+                  "startLine": 41
+                }
+              }
+            ]
+          }
+        ],
+        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+      },
+      "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "accepted-risk",
+      "id": "codeql-diagnostic-budget-control-gate",
+      "max_occurrences": 1,
+      "proof": {
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "461f7c2fb00e8a533653c0fda2e35a776fec7ee13e3760bef43e004a629d29e6",
+        "language": "javascript-typescript",
+        "rule_id": "js/insufficient-password-hash",
+        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
+        "run_configuration_sha256": "63f6c25166dbae265c4ff0f5947dffc799e5279a73178bb5e3c170f647897143",
+        "sources": [
+          {
+            "mode": "100644",
+            "path": "scripts/verify-budget-control.ts",
+            "sha256": "3f74dbc9dafc1432cc4630702291f38955a2b64502b4d32d5a5338c4850533dd",
+            "spans": [
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "5c7aa3b8a781abef8b8205fe4c1704ecaaa790e0fa122b2a69128ba46d1fcea2",
+                "region": {
+                  "endColumn": 60,
+                  "startColumn": 59,
+                  "startLine": 34
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "5c7aa3b8a781abef8b8205fe4c1704ecaaa790e0fa122b2a69128ba46d1fcea2",
+                "region": {
+                  "endColumn": 62,
+                  "startColumn": 38,
+                  "startLine": 34
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "9488b4122762b46b8c94b9c9bea8d5d0e65ee6adcf895fc164e146a1abf23540",
+                "region": {
+                  "endColumn": 65,
+                  "startColumn": 44,
+                  "startLine": 85
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "dcb1171e5c8864e9baf4c7353f9670ea69fa06b3bea598d6a94da6c4ef054344",
+                "region": {
+                  "endColumn": 21,
+                  "startColumn": 20,
+                  "startLine": 33
+                }
+              }
+            ]
+          }
+        ],
+        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+      },
+      "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "false-positive",
+      "id": "codeql-transient-submitted-compare",
+      "max_occurrences": 1,
+      "proof": {
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "a6006e1549c431e8c9a5a9dfe5d101743b53bd27315feefa24ac881722d367f5",
+        "language": "javascript-typescript",
+        "rule_id": "js/insufficient-password-hash",
+        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
+        "run_configuration_sha256": "63f6c25166dbae265c4ff0f5947dffc799e5279a73178bb5e3c170f647897143",
+        "sources": [
+          {
+            "mode": "100644",
+            "path": "web/app/api/gate/route.ts",
+            "sha256": "1ffe7a1e0dc09ef7e351fd6d28203e464a75302a1008ae5e7fd073d787b53ba9",
+            "spans": [
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "01cfcd9d8bd2e1f95c122ed8c9d2b6d6620901e25d08facdf2644b1584573882",
+                "region": {
+                  "endColumn": 18,
+                  "startColumn": 9,
+                  "startLine": 58
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "01cfcd9d8bd2e1f95c122ed8c9d2b6d6620901e25d08facdf2644b1584573882",
+                "region": {
+                  "endColumn": 41,
+                  "startColumn": 21,
+                  "startLine": 58
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "6747f50a9972cd80c61f1d2fcdc9e3ddde4125583705eadc05217ff802af08e8",
+                "region": {
+                  "endColumn": 50,
+                  "startColumn": 41,
+                  "startLine": 21
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "7127aa46699af152095b3777abe36b8d907e643b699cdcd8be7a93fbde1108d7",
+                "region": {
+                  "endColumn": 35,
+                  "startColumn": 26,
+                  "startLine": 20
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "c7dc55fa0cf1201bdcae13efcac2002c5e7f5bc540f58ecbebd7cb365c11f6d2",
+                "region": {
+                  "endColumn": 93,
+                  "startColumn": 84,
+                  "startLine": 80
+                }
+              }
+            ]
+          }
+        ],
+        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+      },
+      "rationale": "Digest is a transient fixed-width input to constant-time comparison; it is neither a stored password verifier nor the gate cookie. Separate bearer derivation retains its accepted protocol boundary.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "false-positive",
+      "id": "codeql-transient-expected-compare",
+      "max_occurrences": 1,
+      "proof": {
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "832f868c152537d414a4f895e5948cd3008d85235d9534c42e8b4f97851bf9e9",
+        "language": "javascript-typescript",
+        "rule_id": "js/insufficient-password-hash",
+        "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
+        "run_configuration_sha256": "63f6c25166dbae265c4ff0f5947dffc799e5279a73178bb5e3c170f647897143",
+        "sources": [
+          {
+            "mode": "100644",
+            "path": "web/app/api/gate/route.ts",
+            "sha256": "1ffe7a1e0dc09ef7e351fd6d28203e464a75302a1008ae5e7fd073d787b53ba9",
+            "spans": [
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "7127aa46699af152095b3777abe36b8d907e643b699cdcd8be7a93fbde1108d7",
+                "region": {
+                  "endColumn": 53,
+                  "startColumn": 45,
+                  "startLine": 20
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "c5376c460e84baa0f90a39d347a6cd416011e6da2669f67702625171e3693952",
+                "region": {
+                  "endColumn": 17,
+                  "startColumn": 9,
+                  "startLine": 52
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "c5376c460e84baa0f90a39d347a6cd416011e6da2669f67702625171e3693952",
+                "region": {
+                  "endColumn": 45,
+                  "startColumn": 20,
+                  "startLine": 52
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "c7dc55fa0cf1201bdcae13efcac2002c5e7f5bc540f58ecbebd7cb365c11f6d2",
+                "region": {
+                  "endColumn": 103,
+                  "startColumn": 95,
+                  "startLine": 80
+                }
+              },
+              {
+                "column_kind": "utf16CodeUnits",
+                "line_sha256": "f6179d12621fd7890f8a46dcd571b082d1f4c25b01b782d9c40e8ac515b050fc",
+                "region": {
+                  "endColumn": 49,
+                  "startColumn": 41,
+                  "startLine": 22
+                }
+              }
+            ]
+          }
+        ],
+        "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
+      },
+      "rationale": "Digest is a transient fixed-width input to constant-time comparison; it is neither a stored password verifier nor the gate cookie. Separate bearer derivation retains its accepted protocol boundary.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    }
+  ],
+  "bandit": [
+    {
+      "disposition": "accepted-risk",
+      "id": "bandit-context-private-companion",
+      "max_occurrences": 1,
+      "proof": {
+        "confidence": "HIGH",
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "cf703eec52f0d7e17ef9d3cd40cca80780e56cbedd4398dd3010d5dcb8b35ffb",
+        "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
+        "rule_id": "B102",
+        "severity": "MEDIUM",
+        "source": {
+          "col_offset": 4,
+          "end_col_offset": 72,
+          "line_number": 72,
+          "line_range": [
+            72
+          ],
+          "line_sha256": "4626dc3a8b7a3359db0bf6bd92983801d5000e6ab54710fd2746aaa1a8a60068",
+          "mode": "100644",
+          "path": "scripts/agent_context.py",
+          "sha256": "1b408a6854af5b3aecd45b2d6008be54e47e9899ec4f3578fdce4a62e8316698"
+        },
+        "tool_sha256": "fea4e166a7c8489d0dee633ac5dd1fbf9dff0fb63685ad99c319c954638db75e"
+      },
+      "rationale": "Executes a finite literal companion from the trusted installed release or explicitly reviewed checkout, with the same authority as importing package code. Project content and model output never supply executable source.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "accepted-risk",
+      "id": "bandit-context-worktree-companion",
+      "max_occurrences": 1,
+      "proof": {
+        "confidence": "HIGH",
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "406a6bc1370ddab4347ce238ca57225a25b8a0d6e4172f2508dbc720d042eb22",
+        "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
+        "rule_id": "B102",
+        "severity": "MEDIUM",
+        "source": {
+          "col_offset": 4,
+          "end_col_offset": 72,
+          "line_number": 306,
+          "line_range": [
+            306
+          ],
+          "line_sha256": "4626dc3a8b7a3359db0bf6bd92983801d5000e6ab54710fd2746aaa1a8a60068",
+          "mode": "100644",
+          "path": "scripts/agent_context.py",
+          "sha256": "1b408a6854af5b3aecd45b2d6008be54e47e9899ec4f3578fdce4a62e8316698"
+        },
+        "tool_sha256": "fea4e166a7c8489d0dee633ac5dd1fbf9dff0fb63685ad99c319c954638db75e"
+      },
+      "rationale": "Executes a finite literal companion from the trusted installed release or explicitly reviewed checkout, with the same authority as importing package code. Project content and model output never supply executable source.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "accepted-risk",
+      "id": "bandit-rules-private-companion",
+      "max_occurrences": 1,
+      "proof": {
+        "confidence": "HIGH",
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "c4c12b8cb635ad56577e1a21ad8da8b5bf71c86711d36e19cc2b89639b6bdf47",
+        "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
+        "rule_id": "B102",
+        "severity": "MEDIUM",
+        "source": {
+          "col_offset": 4,
+          "end_col_offset": 72,
+          "line_number": 100,
+          "line_range": [
+            100
+          ],
+          "line_sha256": "55976b182bc7bab5a75e6f88a252867c050d7f406c800a7c89cc28b51af02e74",
+          "mode": "100644",
+          "path": "scripts/agent_rules.py",
+          "sha256": "049cbe37bc1e002b97efc1ff80ad7a73c0aa045e794ab3f01688c19a293c5584"
+        },
+        "tool_sha256": "fea4e166a7c8489d0dee633ac5dd1fbf9dff0fb63685ad99c319c954638db75e"
+      },
+      "rationale": "Executes a finite literal companion from the trusted installed release or explicitly reviewed checkout, with the same authority as importing package code. Project content and model output never supply executable source.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "accepted-risk",
+      "id": "bandit-operator-statusline-shell",
+      "max_occurrences": 1,
+      "proof": {
+        "confidence": "HIGH",
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "0af7498d9c035d25f6cb87b1e5482a041177c323aa0832c726b0ff2f959c93ef",
+        "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
+        "rule_id": "B602",
+        "severity": "HIGH",
+        "source": {
+          "col_offset": 19,
+          "end_col_offset": 77,
+          "line_number": 56,
+          "line_range": [
+            56
+          ],
+          "line_sha256": "e81ae59ecd04f39a6e2e8e4da1b6ba5c4f0017a0cc613f062291a75e858e9abb",
+          "mode": "100644",
+          "path": "scripts/collect_claude_pool.py",
+          "sha256": "8c901e47c483a0701994af90bcf7ce97eea1c2cb3e73ab87d001fc83ecdfd754"
+        },
+        "tool_sha256": "fea4e166a7c8489d0dee633ac5dd1fbf9dff0fb63685ad99c319c954638db75e"
+      },
+      "rationale": "Preserves the explicitly configured trusted operator shell program. Incoming status JSON is passed only through standard input and is not substituted into command text. Arbitrary command-file callers are outside this boundary.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "accepted-risk",
+      "id": "bandit-local-private-companion",
+      "max_occurrences": 1,
+      "proof": {
+        "confidence": "HIGH",
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "a359d09ac1eb06ed7abc4790f7c6693bcfe85fd649e7b3b8a3c29f911b53e21c",
+        "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
+        "rule_id": "B102",
+        "severity": "MEDIUM",
+        "source": {
+          "col_offset": 4,
+          "end_col_offset": 72,
+          "line_number": 18,
+          "line_range": [
+            18
+          ],
+          "line_sha256": "55976b182bc7bab5a75e6f88a252867c050d7f406c800a7c89cc28b51af02e74",
+          "mode": "100644",
+          "path": "scripts/local_private.py",
+          "sha256": "404e1392d5157d2cc7e45e2459502aced1b117ec4b93483047745af982a39b29"
+        },
+        "tool_sha256": "fea4e166a7c8489d0dee633ac5dd1fbf9dff0fb63685ad99c319c954638db75e"
+      },
+      "rationale": "Executes a finite literal companion from the trusted installed release or explicitly reviewed checkout, with the same authority as importing package code. Project content and model output never supply executable source.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "accepted-risk",
+      "id": "bandit-updater-finite-companion",
+      "max_occurrences": 1,
+      "proof": {
+        "confidence": "HIGH",
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "75378f5aa9e2d4b9b2acdf4d11080e126a0abd005deca16d5224e67e3ebaf547",
+        "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
+        "rule_id": "B102",
+        "severity": "MEDIUM",
+        "source": {
+          "col_offset": 4,
+          "end_col_offset": 72,
+          "line_number": 170,
+          "line_range": [
+            170
+          ],
+          "line_sha256": "4626dc3a8b7a3359db0bf6bd92983801d5000e6ab54710fd2746aaa1a8a60068",
+          "mode": "100755",
+          "path": "scripts/update_projects.py",
+          "sha256": "a30cc0eedce97bc1830d83bfe55c1b3a8944f308eebb2cbf1c615fdb9dfd8f0a"
+        },
+        "tool_sha256": "fea4e166a7c8489d0dee633ac5dd1fbf9dff0fb63685ad99c319c954638db75e"
+      },
+      "rationale": "Executes a finite literal companion from the trusted installed release or explicitly reviewed checkout, with the same authority as importing package code. Project content and model output never supply executable source.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "accepted-risk",
+      "id": "bandit-lock-private-companion",
+      "max_occurrences": 1,
+      "proof": {
+        "confidence": "HIGH",
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "6985c8f61382df9100dc95b27ff25ed10bad54473f6b38b05af8d5647451fc19",
+        "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
+        "rule_id": "B102",
+        "severity": "MEDIUM",
+        "source": {
+          "col_offset": 8,
+          "end_col_offset": 76,
+          "line_number": 159,
+          "line_range": [
+            159
+          ],
+          "line_sha256": "24d8844a3509edd78ead31e6b1c3711d3930211afb0a4290740b4633fe12dbf2",
+          "mode": "100644",
+          "path": "scripts/updater_lock.py",
+          "sha256": "d6a6ac18c1b3076e80c05e0f57ee9b6c7fe0ad0b279f85a63d3ea4cac2c19807"
+        },
+        "tool_sha256": "fea4e166a7c8489d0dee633ac5dd1fbf9dff0fb63685ad99c319c954638db75e"
+      },
+      "rationale": "Executes a finite literal companion from the trusted installed release or explicitly reviewed checkout, with the same authority as importing package code. Project content and model output never supply executable source.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "accepted-risk",
+      "id": "bandit-worktree-private-companion",
+      "max_occurrences": 1,
+      "proof": {
+        "confidence": "HIGH",
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "0d6cd834145f0eb23f5a9ec2574a0e8c5da8bd70defa643ac4ff1da9b97019f8",
+        "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
+        "rule_id": "B102",
+        "severity": "MEDIUM",
+        "source": {
+          "col_offset": 4,
+          "end_col_offset": 72,
+          "line_number": 82,
+          "line_range": [
+            82
+          ],
+          "line_sha256": "4626dc3a8b7a3359db0bf6bd92983801d5000e6ab54710fd2746aaa1a8a60068",
+          "mode": "100644",
+          "path": "scripts/worktree_memory.py",
+          "sha256": "8deec580a50206567f5864d54bafe0a038357548ba9b1f57dbbd63497c45b0af"
+        },
+        "tool_sha256": "fea4e166a7c8489d0dee633ac5dd1fbf9dff0fb63685ad99c319c954638db75e"
+      },
+      "rationale": "Executes a finite literal companion from the trusted installed release or explicitly reviewed checkout, with the same authority as importing package code. Project content and model output never supply executable source.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "false-positive",
+      "id": "bandit-isolated-public-template",
+      "max_occurrences": 1,
+      "proof": {
+        "confidence": "MEDIUM",
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "f375e2cb10627c1474cf31e14ba0e3e25cb74433f08fb8a5670996d41b145d06",
+        "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
+        "rule_id": "B108",
+        "severity": "MEDIUM",
+        "source": {
+          "col_offset": 18,
+          "end_col_offset": 50,
+          "line_number": 86,
+          "line_range": [
+            86
+          ],
+          "line_sha256": "1c94fc750ba02d330764c77f28dcb3ae18150e4bcf35a2355a58c8a7999e466d",
+          "mode": "100644",
+          "path": "service/app/recommend.py",
+          "sha256": "94e9f34c587677fee51cb72b2710a26ab2485128bab44e4913b387c372f83c4c"
+        },
+        "tool_sha256": "fea4e166a7c8489d0dee633ac5dd1fbf9dff0fb63685ad99c319c954638db75e"
+      },
+      "rationale": "Fixed path contains the public packaged template in the isolated deployed function filesystem; no request-controlled filesystem writer reaches it. This assessment does not apply to a shared multi-user host.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "false-positive",
+      "id": "bandit-inert-config-path-with-key",
+      "max_occurrences": 1,
+      "proof": {
+        "confidence": "MEDIUM",
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "1e7c43b324da9b111a97076713c8c14365880b69d12414b9617ec592bfae0b48",
+        "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
+        "rule_id": "B108",
+        "severity": "MEDIUM",
+        "source": {
+          "col_offset": 31,
+          "end_col_offset": 43,
+          "line_number": 716,
+          "line_range": [
+            716
+          ],
+          "line_sha256": "23a9b597dddcdc3087f5b6ebcaa39764d3f2b1ccb0f5e974ba2efa641f913fb4",
+          "mode": "100644",
+          "path": "tests/test_cli.py",
+          "sha256": "1ef0092d058950e7f2d68bc4f1fb1cee8e59bbeb01fa86395923ba6c5c3aab50"
+        },
+        "tool_sha256": "fea4e166a7c8489d0dee633ac5dd1fbf9dff0fb63685ad99c319c954638db75e"
+      },
+      "rationale": "Inert path value used only to check redacted configuration representation; no file operation occurs at this fixture.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "false-positive",
+      "id": "bandit-inert-config-path-empty-key",
+      "max_occurrences": 1,
+      "proof": {
+        "confidence": "MEDIUM",
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "b0ced249fc9cc8df2e3eaf954f9ea16d6fd60dd40766b558915d2b73c391c74f",
+        "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
+        "rule_id": "B108",
+        "severity": "MEDIUM",
+        "source": {
+          "col_offset": 31,
+          "end_col_offset": 43,
+          "line_number": 726,
+          "line_range": [
+            726
+          ],
+          "line_sha256": "23a9b597dddcdc3087f5b6ebcaa39764d3f2b1ccb0f5e974ba2efa641f913fb4",
+          "mode": "100644",
+          "path": "tests/test_cli.py",
+          "sha256": "1ef0092d058950e7f2d68bc4f1fb1cee8e59bbeb01fa86395923ba6c5c3aab50"
+        },
+        "tool_sha256": "fea4e166a7c8489d0dee633ac5dd1fbf9dff0fb63685ad99c319c954638db75e"
+      },
+      "rationale": "Inert path value used only to check redacted configuration representation; no file operation occurs at this fixture.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "false-positive",
+      "id": "bandit-trusted-updater-test-source",
+      "max_occurrences": 1,
+      "proof": {
+        "confidence": "HIGH",
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "45daa8557860702ea21b2d44f0af9a0670b2287ca524a67587c43eafbc917155",
+        "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
+        "rule_id": "B102",
+        "severity": "MEDIUM",
+        "source": {
+          "col_offset": 8,
+          "end_col_offset": 87,
+          "line_number": 57,
+          "line_range": [
+            57
+          ],
+          "line_sha256": "fdaadd7d178d6d52287a73e3405659e0f65498419fae3adf97d74b930ecc9e7e",
+          "mode": "100644",
+          "path": "tests/test_context_sync_privacy.py",
+          "sha256": "f6bd02047bd715a0ff811bfdc3e56244ea9c3ee3e844febb2832ffd10d583b06"
+        },
+        "tool_sha256": "fea4e166a7c8489d0dee633ac5dd1fbf9dff0fb63685ad99c319c954638db75e"
+      },
+      "rationale": "Test deliberately executes the fixed repository updater in a disposable synthetic fixture with mocked transports. Private context data is never executed.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "false-positive",
+      "id": "bandit-mocked-judge-path",
+      "max_occurrences": 1,
+      "proof": {
+        "confidence": "MEDIUM",
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "df44939626299ecf0e4f729ecd2d1a5b1593bb47d1eaf9b3687f0e326505d412",
+        "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
+        "rule_id": "B108",
+        "severity": "MEDIUM",
+        "source": {
+          "col_offset": 26,
+          "end_col_offset": 39,
+          "line_number": 315,
+          "line_range": [
+            315
+          ],
+          "line_sha256": "3cbd6a172697fb03a783976466f250e19856a530f6c47837e1791b1b52e7f8e4",
+          "mode": "100644",
+          "path": "tests/test_judge_recommend.py",
+          "sha256": "ed8d1f26c37fe41e4bbc2c672be00db41b21e3d310a45d88f1b601fd35e2f084"
+        },
+        "tool_sha256": "fea4e166a7c8489d0dee633ac5dd1fbf9dff0fb63685ad99c319c954638db75e"
+      },
+      "rationale": "Path is only captured inside an argument vector after the subprocess callable is replaced by the test fake; no real file read or provider process runs.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "false-positive",
+      "id": "bandit-self-built-allowlisted-wheel",
+      "max_occurrences": 1,
+      "proof": {
+        "confidence": "HIGH",
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "ac326d24e3f7663c290b8d78cbd2ba4d22b1ea4fc7932a02bb6d9be3df22efb5",
+        "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
+        "rule_id": "B202",
+        "severity": "HIGH",
+        "source": {
+          "col_offset": 8,
+          "end_col_offset": 37,
+          "line_number": 140,
+          "line_range": [
+            140
+          ],
+          "line_sha256": "fe92193f628b0e24f2c5abeac63540750959b929998c715c215d5e63ea0e374b",
+          "mode": "100644",
+          "path": "tests/test_packaging.py",
+          "sha256": "85694ddf092262ab3acc3c98b60e1efcd98803310b7a90a75e4d526469fdab66"
+        },
+        "tool_sha256": "fea4e166a7c8489d0dee633ac5dd1fbf9dff0fb63685ad99c319c954638db75e"
+      },
+      "rationale": "Archive is built by this test from the explicit repository source allowlist and verified before extraction into a disposable tree. No externally supplied archive is accepted.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "false-positive",
+      "id": "bandit-intentional-bidi-rejection",
+      "max_occurrences": 1,
+      "proof": {
+        "confidence": "MEDIUM",
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "ec2d06a9c31e34944da1542f7adeafa1150dc4bf606eb1da76f0e552742836c2",
+        "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
+        "rule_id": "B613",
+        "severity": "HIGH",
+        "source": {
+          "col_offset": 22,
+          "end_col_offset": 0,
+          "line_number": 57,
+          "line_range": [
+            57
+          ],
+          "line_sha256": "81af309d7dcf9f764996ddb11a029c38ced322cb491f952663f438063659a6d1",
+          "mode": "100644",
+          "path": "tests/test_prose_guard.py",
+          "sha256": "869c4adf30683389cf628c0ca414f0e997722aafe32a9b4acb9e98a34a0e5773"
+        },
+        "tool_sha256": "fea4e166a7c8489d0dee633ac5dd1fbf9dff0fb63685ad99c319c954638db75e"
+      },
+      "rationale": "Quoted malicious-input fixture intentionally includes Unicode bidi control code point 202E and asserts its rejection by the prose guard; executable token boundaries and identifiers are unchanged.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    },
+    {
+      "disposition": "false-positive",
+      "id": "bandit-generated-task-xml-fixture",
+      "max_occurrences": 1,
+      "proof": {
+        "confidence": "HIGH",
+        "context_sha256": "29662f55269ab9f616a24600a43e95e2fee0b668774c9d478c1c2d3ff7bb3f98",
+        "finding_sha256": "0db3d6e7e0390ffb4075abb35de8a1ad5268473b815f023491df961ceff4dded",
+        "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
+        "rule_id": "B314",
+        "severity": "MEDIUM",
+        "source": {
+          "col_offset": 11,
+          "end_col_offset": 46,
+          "line_number": 284,
+          "line_range": [
+            284
+          ],
+          "line_sha256": "dc9fdec698bcddd7cf1f335f9bae3f74ce70320aaecd7a885c21bbc2f2410e16",
+          "mode": "100644",
+          "path": "tests/test_update_projects.py",
+          "sha256": "0fcaaada95a6bb3cd43ee06ebc2887daab0d9d096618eccd6cd363435fc9dc5c"
+        },
+        "tool_sha256": "fea4e166a7c8489d0dee633ac5dd1fbf9dff0fb63685ad99c319c954638db75e"
+      },
+      "rationale": "Parses only task XML generated by the trusted function from fixed synthetic paths and a literal date to verify escaping. No external XML or entity input is accepted.",
+      "reviewed_revision": "d4f7e6039ef7abd177eb6e202aaa0b2ddaa2da34"
+    }
+  ]
+}

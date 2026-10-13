@@ -1,0 +1,215 @@
+{
+  "scope": "Synthetic parser/profile contract; no active reviewed allowance; not CodeQL output",
+  "fixtures": [
+    {
+      "file": "valid-extension-index.sarif",
+      "expected": "block:1",
+      "sha256": "35cb81ac56ae177bda3ecc565600ff86aa73b7ba05dedf95dafbbbff94d7f2ff",
+      "note": ""
+    },
+    {
+      "file": "valid-simultaneous-indices.sarif",
+      "expected": "block:1",
+      "sha256": "f35eef3b367276f5a737a4754bf7c9500ccff52829847fa1ddbb43ed57bd572e",
+      "note": ""
+    },
+    {
+      "file": "valid-extension-guid.sarif",
+      "expected": "block:1",
+      "sha256": "b659c13b685442fd6a50264e79d55bd0b962f9c3d56f80ac5ed9c1b158b11283",
+      "note": ""
+    },
+    {
+      "file": "valid-driver.sarif",
+      "expected": "block:1",
+      "sha256": "fe2f6464bb4bd94d4e2cdf646764819123827a9b2fc80a1849febfec32d3ac30",
+      "note": ""
+    },
+    {
+      "file": "valid-empty-no-catalog.sarif",
+      "expected": "pass:0",
+      "sha256": "5198c71e1ae0dd325051b1cb124d5b035c7e5b14775b66d37e0b6bd7bfa6068b",
+      "note": ""
+    },
+    {
+      "file": "valid-no-invocations.sarif",
+      "expected": "block:1",
+      "sha256": "2fa56a75cb35126b8812e3ff44c4f40109b794a469b40d2a725e2d15d6d6d3a2",
+      "note": ""
+    },
+    {
+      "file": "valid-duplicate-id-qualified-index.sarif",
+      "expected": "block:1",
+      "sha256": "69cfe932bc48934cf622af6b9d4fcfb77c0c29578c70a9fe282bddf4b522d268",
+      "note": "SARIF IDs need not be globally unique; index resolves identity."
+    },
+    {
+      "file": "valid-duplicate-id-other-component.sarif",
+      "expected": "block:1",
+      "sha256": "2081298309ac7eaf5bc2fd91f55df87ecec041c30fac67d4bfa15ea4d74e0215",
+      "note": ""
+    },
+    {
+      "file": "reject-contradictory-rule-ids.sarif",
+      "expected": "reject",
+      "sha256": "4032982812431875904385ece413db9d12a5b4e04d6eb2984212c63e99adffc6",
+      "note": ""
+    },
+    {
+      "file": "reject-contradictory-rule-indices.sarif",
+      "expected": "reject",
+      "sha256": "a995fe1818696fd3193bc2d628441b450e3fb8b0637d86ac3a4c8eadbb516a51",
+      "note": ""
+    },
+    {
+      "file": "reject-index-points-other-id.sarif",
+      "expected": "reject",
+      "sha256": "9c8653c0dac6ddc19518d60caab72e2c23c6f2380216dd925a3271c1fa048f60",
+      "note": ""
+    },
+    {
+      "file": "reject-component-name-mismatch.sarif",
+      "expected": "reject",
+      "sha256": "6c0eae5df0d7726cd05c071c7bb4424a17fe69306dab0e6f46de9c0fbccd4459",
+      "note": ""
+    },
+    {
+      "file": "reject-component-guid-mismatch.sarif",
+      "expected": "reject",
+      "sha256": "8fa26e055e49b59694520664d3382b29ee73c51854b2720404c147097c8d959a",
+      "note": ""
+    },
+    {
+      "file": "reject-rule-guid-mismatch.sarif",
+      "expected": "reject",
+      "sha256": "aa71a7fe0a3938df37c9b9dc14de019d5750eed66e2d480ca4e68dccb3d960b0",
+      "note": ""
+    },
+    {
+      "file": "reject-bool-rule-index.sarif",
+      "expected": "reject",
+      "sha256": "ab1765384270450880019c58e44a5530da3e31e8af1146ac052519fd006a3714",
+      "note": ""
+    },
+    {
+      "file": "reject-bool-component-index.sarif",
+      "expected": "reject",
+      "sha256": "628116a8e1f2669ef559328f0120e9ae46d7a067f19e4a3697b611afa2e91b84",
+      "note": ""
+    },
+    {
+      "file": "reject-negative-rule-index.sarif",
+      "expected": "reject",
+      "sha256": "78258c9d9034a848324aebff1eb43cfb800ef8e1f1beb72fcb30d0ab49a6bcf7",
+      "note": "Intentionally narrower CodeQL gate profile; not universal SARIF validity."
+    },
+    {
+      "file": "reject-out-of-range-rule-index.sarif",
+      "expected": "reject",
+      "sha256": "7b351d80c460624c409e0bb6e85eb40d8adfafb3a6b17ccf1630fc64dbdd2fa8",
+      "note": ""
+    },
+    {
+      "file": "reject-unknown-rule.sarif",
+      "expected": "reject",
+      "sha256": "44f3e2ae5dd0e83ec217ff8eb496aee5921e856110bd4e45a53a89f61a16104f",
+      "note": ""
+    },
+    {
+      "file": "reject-invalid-level.sarif",
+      "expected": "reject",
+      "sha256": "118587464e0a394ab1638d5a40d9722ba6186b227c1486fba1fd824fa64123ba",
+      "note": ""
+    },
+    {
+      "file": "reject-nonfinite-score.sarif",
+      "expected": "reject",
+      "sha256": "c8478c6a4a34de51d0e86eb61abb570670bf0f1e9016e4debbfb7b67ec48a860",
+      "note": ""
+    },
+    {
+      "file": "reject-bool-score.sarif",
+      "expected": "reject",
+      "sha256": "dcee305a0765a3f513b5b212270d264c80445c70b460432f4cb99b2e5323261a",
+      "note": ""
+    },
+    {
+      "file": "reject-missing-security-score.sarif",
+      "expected": "reject",
+      "sha256": "fb1b84f5224f743452de98c1eec10f2ba38412db9e7cfa6b0c023ad72784dce3",
+      "note": ""
+    },
+    {
+      "file": "valid-error-below-seven.sarif",
+      "expected": "block:1",
+      "sha256": "c512f9ea182f77590fdde0dd03b8bcd687a26cdba4e6a4ea91af185d50a20908",
+      "note": ""
+    },
+    {
+      "file": "valid-high-with-none-level.sarif",
+      "expected": "block:1",
+      "sha256": "5e1076e74cf6c78661e0685c67fb500470660f0a0d59880988e4feebb00107f0",
+      "note": ""
+    },
+    {
+      "file": "reject-unsuccessful-empty.sarif",
+      "expected": "reject",
+      "sha256": "dba8718d17212c96f298ad0562194bf77c08b0f4eb159f22c007ba8464343feb",
+      "note": ""
+    },
+    {
+      "file": "reject-unsuccessful-nonempty.sarif",
+      "expected": "reject",
+      "sha256": "ba00af06dd293ccd430a9d32c1cbefc05f351b431c617761acee15fb357ec33c",
+      "note": ""
+    },
+    {
+      "file": "reject-nonboolean-execution.sarif",
+      "expected": "reject",
+      "sha256": "e00cbcc883091e984470cf864189f188b2213ef8e6277eda0ff262270953523b",
+      "note": ""
+    },
+    {
+      "file": "reject-missing-execution-flag.sarif",
+      "expected": "reject",
+      "sha256": "e9909db5b71feca743d9d7772411406c2a1546167e87d2d7e1295e598aa7618f",
+      "note": ""
+    },
+    {
+      "file": "reject-invalid-results-container.sarif",
+      "expected": "reject",
+      "sha256": "da8588a7bc0623cc8af8db60353fce95c209bcf13914a1cccc9a06e995ea6187",
+      "note": ""
+    },
+    {
+      "file": "reject-artifact-uri-index-conflict.sarif",
+      "expected": "reject-or-unallowable",
+      "sha256": "6e2978c51c7c2a96382cb26822e04a129916daa5e27e7554064ceeb4b1c692be",
+      "note": ""
+    },
+    {
+      "file": "reject-encoded-traversal.sarif",
+      "expected": "reject-or-unallowable",
+      "sha256": "845703b4b24df05326d316644ec56ed2b818a628228e66440a159c2b767b7109",
+      "note": ""
+    },
+    {
+      "file": "reject-external-location.sarif",
+      "expected": "reject-or-unallowable",
+      "sha256": "68bfc3a9ece5eafba01aebea9cc590b4ad33e2c6a912720b402f30c7f2b9dfe5",
+      "note": ""
+    },
+    {
+      "file": "reject-unknown-base-id.sarif",
+      "expected": "reject-or-unallowable",
+      "sha256": "f87848ac307d7782e57ab727a534a6af34a7d6d5375f93ce9a0a86ac5670e71d",
+      "note": ""
+    },
+    {
+      "file": "reject-duplicate-json-keys.sarif",
+      "expected": "reject",
+      "sha256": "52fc374b5af99c338c1863447a30b9bb37aecec7881e0fbc4cd5848c42dec256",
+      "note": "Use object_pairs_hook before constructing mappings."
+    }
+  ]
+}
