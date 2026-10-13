@@ -247,3 +247,66 @@ class Shapes(unittest.TestCase):
         raw = json.dumps(x)
         metric_shapes(x)
         self.assertEqual(json.dumps(x), raw)
+
+
+RULE = "py/summary/lines-of-code"
+
+
+def named():
+    doc = metric_document()
+    doc["runs"][0]["properties"]["metricResults"][0]["ruleId"] = RULE
+    return doc
+
+
+class RuleId(unittest.TestCase):
+    def test_optional_omission_supported(self):
+        self.assertNotIn("ruleId", config(metric_document())["metricResults"][0])
+
+    def test_agreeing_id_bound(self):
+        self.assertEqual(config(named())["metricResults"][0]["ruleId"], RULE)
+
+    def test_presence_changes_proof(self):
+        self.assertNotEqual(proof(named()), proof(metric_document()))
+
+    def test_nonstring_and_empty_refused(self):
+        for value in [None, True, False, 0, 1, [], {}, "", 1.5]:
+            with self.subTest(kind=type(value).__name__):
+                doc = named()
+                doc["runs"][0]["properties"]["metricResults"][0]["ruleId"] = value
+                with self.assertRaises(gate.Invalid):
+                    config(doc)
+
+    def test_index_descriptor_disagreement_refused(self):
+        doc = named()
+        doc["runs"][0]["properties"]["metricResults"][0]["ruleId"] = "py/other"
+        with self.assertRaises(gate.Invalid):
+            config(doc)
+
+    def test_explicit_reference_id_disagreement_refused(self):
+        doc = named()
+        doc["runs"][0]["properties"]["metricResults"][0]["rule"]["id"] = "py/other"
+        with self.assertRaises(gate.Invalid):
+            config(doc)
+
+    def test_explicit_reference_id_agreement_passes(self):
+        doc = named()
+        doc["runs"][0]["properties"]["metricResults"][0]["rule"]["id"] = RULE
+        config(doc)
+
+    def test_unrecognized_field_still_refused(self):
+        doc = named()
+        doc["runs"][0]["properties"]["metricResults"][0]["ruleIndex"] = 0
+        with self.assertRaises(gate.Invalid):
+            config(doc)
+
+    def test_named_zero_result_malformed_still_refused(self):
+        doc = named()
+        doc["runs"][0]["results"] = []
+        doc["runs"][0]["properties"]["metricResults"][0]["ruleId"] = "py/wrong"
+        with self.assertRaises(gate.Invalid):
+            cli.language_binding(doc, "python")
+
+    def test_rule_id_diagnostic_never_emits_value(self):
+        doc = named()
+        doc["runs"][0]["properties"]["metricResults"][0]["ruleId"] = "PRIVATE_RULE_CANARY"
+        self.assertNotIn("PRIVATE_", json.dumps(cli.property_shape(doc)))

@@ -183,18 +183,22 @@ def canonical_metrics(run: dict, metrics: Any) -> list[dict]:
     output = []
     for metric in arr(metrics):
         metric = obj(metric)
-        require(set(metric) == {"rule", "value"})
+        require({"rule", "value"} <= set(metric) <= {"rule", "ruleId", "value"})
         value = metric["value"]
         require(type(value) is int or type(value) is float and math.isfinite(value))
-        component, rule = resolve_rule(run, {"rule": obj(metric["rule"])})
-        output.append(
-            {
-                "reference": metric["rule"],
-                "component": identity(component),
-                "descriptor": rule,
-                "value": value,
-            }
-        )
+        reference = {"rule": obj(metric["rule"])}
+        if "ruleId" in metric:
+            reference["ruleId"] = metric["ruleId"]
+        component, rule = resolve_rule(run, reference)
+        bound = {
+            "reference": metric["rule"],
+            "component": identity(component),
+            "descriptor": rule,
+            "value": value,
+        }
+        if "ruleId" in metric:
+            bound["ruleId"] = metric["ruleId"]
+        output.append(bound)
     return output
 
 

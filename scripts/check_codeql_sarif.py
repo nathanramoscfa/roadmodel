@@ -168,12 +168,12 @@ def metric_shapes(metrics):
         if isinstance(metric, dict):
             row["known"] = [
                 {"key": key, "type": types.get(type(metric[key]), "other")}
-                for key in sorted(set(metric) & {"rule", "value"})
+                for key in sorted(set(metric) & {"rule", "ruleId", "value"})
             ]
             row["unknown_key_sha256"] = sorted(
                 hashlib.sha256(key.encode("utf-8", "surrogatepass")).hexdigest()
                 for key in metric
-                if key not in {"rule", "value"}
+                if key not in {"rule", "ruleId", "value"}
             )[:16]
         output["items"].append(row)
     return output

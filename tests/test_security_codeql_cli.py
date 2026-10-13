@@ -581,6 +581,7 @@ class CLITests(unittest.TestCase):
 
     def test_metric_zero_results_actual_cli_success(self):
         self.doc = metric_document()
+        self.doc["runs"][0]["properties"]["metricResults"][0]["ruleId"] = "py/summary/lines-of-code"
         self.doc["runs"][0]["results"] = []
         self.write_doc()
         self.invoke("snapshot")
@@ -591,6 +592,7 @@ class CLITests(unittest.TestCase):
 
     def test_metric_blocker_actual_cli_review_preserves_fail(self):
         self.doc = metric_document()
+        self.doc["runs"][0]["properties"]["metricResults"][0]["ruleId"] = "py/summary/lines-of-code"
         self.write_doc()
         self.invoke("snapshot")
         self.invoke("review")
@@ -603,6 +605,16 @@ class CLITests(unittest.TestCase):
     def test_metric_malformed_zero_results_actual_cli_refuses(self):
         self.doc = metric_document(True)
         self.doc["runs"][0]["results"] = []
+        self.write_doc()
+        self.invoke("snapshot")
+        self.invoke("review", 1)
+        self.assertFalse(self.review_output.exists())
+
+    def test_named_metric_real_cli_contradiction_refused(self):
+        self.doc = metric_document()
+        self.doc["runs"][0]["properties"]["metricResults"][0]["ruleId"] = "py/summary/lines-of-code"
+        self.doc["runs"][0]["results"] = []
+        self.doc["runs"][0]["properties"]["metricResults"][0]["ruleId"] = "py/wrong"
         self.write_doc()
         self.invoke("snapshot")
         self.invoke("review", 1)
