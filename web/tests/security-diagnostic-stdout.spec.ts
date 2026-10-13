@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { createClient as sdkCreateClient } from "@supabase/supabase-js";
 import type { createServerClient as sdkCreateServerClient } from "@supabase/ssr";
-import { createHash } from "node:crypto";
+import { webcrypto } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import * as path from "node:path";
@@ -12,6 +12,14 @@ import ts from "typescript";
 
 const ROOT = resolve(__dirname, "../..");
 const MARKER = "SYNTHETIC_PRIVATE_RESPONSE";
+// Independently calculated with Python hashlib over UTF-8 domain-separated input.
+const GATE_VECTORS = {
+  "synthetic-password": "208637b44eeab5c62f8d667b9bb646a59ccefd2c363e83b51e5a003a95581d1e", // gitleaks:allow -- public synthetic protocol test vector
+  "synthetic-A": "1c8a5caa9ad0b776ad3a23a3863f444ab6ab2c68dc59e5527521618840dee326",
+  "synthetic-B": "395c34e05f09c2e7008c8d64851560d0b1f49c8e0fa189030be971573dc05795"
+} as const;
+type GatePassword = keyof typeof GATE_VECTORS;
+
 const SCRIPTS = ["diag-recommend-capture.ts", "dogfood-recommend.ts", "soak-recommend.ts"] as const;
 type Script = typeof SCRIPTS[number] | "probe-fable-cachebust.ts";
 // Bind the constructor arguments, auth methods, and consumed response projection
@@ -37,7 +45,7 @@ function compile(source: string): string {
 
 // Run actual entrypoint code, substituting only imports/transport. No real SDK,
 // credentials, provider, file writes, or sleeps are reachable from the VM.
-async function diagnostic(script: Script, password = "synthetic-password") {
+async function diagnostic(script: Script, password: GatePassword = "synthetic-password") {
   const logs: string[] = [], tasks: string[] = [], artifacts: string[] = [];
   let authCalls = 0, otpCalls = 0, uuidCalls = 0;
   const uuids = Array.from({ length: 4 }, (_, i) => `00000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`);
@@ -52,6 +60,11 @@ async function diagnostic(script: Script, password = "synthetic-password") {
   };
   const health: Record<string, unknown> = {};
   runInNewContext(compile(readFileSync(join(ROOT, "scripts/soak-health.ts"), "utf8")), { exports: health });
+  // This is the real shared implementation, using Node WebCrypto, not a hash stub.
+  const gate: Record<string, unknown> = {};
+  runInNewContext(compile(readFileSync(join(ROOT, "web/lib/gate.ts"), "utf8")), {
+    exports: gate, crypto: webcrypto, TextEncoder,
+  });
   const outputPath = "/synthetic/private/rows.jsonl";
   const sandbox: Record<string, unknown> = {
     exports: {}, process: processStub, URL, performance,
@@ -62,7 +75,9 @@ async function diagnostic(script: Script, password = "synthetic-password") {
       expect(new URL(String(input)).origin).toBe(expected);
       expect(new URL(String(input)).pathname).toBe("/api/recommend");
       expect(init.method).toBe("POST");
-      expect(init.headers.cookie).toContain(createHash("sha256").update(`roadmodel-gate-v1:${password}`).digest("hex"));
+      const gateCookie = init.headers.cookie.split(";").map((value) => value.trim())
+        .find((value) => value.startsWith("roadmodel_gate="));
+      expect(gateCookie).toBe(`roadmodel_gate=${GATE_VECTORS[password]}`);
       const body = JSON.parse(init.body) as { task_description: unknown };
       expect(typeof body.task_description).toBe("string"); tasks.push(body.task_description as string);
       // These fields reached diagnostic stdout before the privacy correction.
@@ -77,11 +92,12 @@ async function diagnostic(script: Script, password = "synthetic-password") {
     },
     require: (name: string): unknown => {
       switch (name) {
-        case "node:crypto": return { createHash, randomUUID: () => { expect(uuidCalls).toBeLessThan(4); return uuids[uuidCalls++]; } };
+        case "node:crypto": return { randomUUID: () => { expect(uuidCalls).toBeLessThan(4); return uuids[uuidCalls++]; } };
         case "node:path": return path;
         case "node:url": return { fileURLToPath };
         case "node:timers/promises": return { setTimeout: async () => {} };
         case "./soak-health": return health;
+        case "../web/lib/gate": return gate;
         case "./private-diagnostic-output": return {
           createPrivateOutput(options: { prefix: string; path?: string }) {
             expect(["roadmodel-diag", "roadmodel-dogfood", "roadmodel-soak"]).toContain(options.prefix);

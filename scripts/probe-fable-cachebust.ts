@@ -5,7 +5,8 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
+import { deriveGateToken } from "../web/lib/gate";
 
 const BASE = "https://roadmodel.ai";
 const EMAIL = process.env.ROADMODEL_DOGFOOD_EMAIL ?? "nathan.ramos.github@gmail.com";
@@ -18,8 +19,6 @@ function need(n: string): string {
   }
   return v;
 }
-const gateToken = (p: string) =>
-  createHash("sha256").update(`roadmodel-gate-v1:${p}`).digest("hex");
 
 async function mint(): Promise<string> {
   const url = need("SUPABASE_URL");
@@ -41,7 +40,7 @@ async function mint(): Promise<string> {
 }
 
 async function main() {
-  const gate = `roadmodel_gate=${gateToken(need("SITE_PASSWORD"))}`;
+  const gate = `roadmodel_gate=${await deriveGateToken(need("SITE_PASSWORD"))}`;
   const bypass = need("ROADMODEL_LATENCY_BYPASS_TOKEN");
   const cookie = `${gate}; ${await mint()}`;
   for (let i = 0; i < 4; i++) {

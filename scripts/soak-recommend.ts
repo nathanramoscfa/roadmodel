@@ -18,7 +18,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
-import { createHash } from "node:crypto";
+import { deriveGateToken } from "../web/lib/gate";
 import { createPrivateOutput } from "./private-diagnostic-output";
 import { setTimeout as sleep } from "node:timers/promises";
 import { readFileSync } from "node:fs";
@@ -61,9 +61,6 @@ function need(n: string): string {
     throw new Error("Required diagnostic configuration is missing.");
   }
   return v;
-}
-function gateToken(p: string): string {
-  return createHash("sha256").update(`roadmodel-gate-v1:${p}`).digest("hex");
 }
 
 async function mintAuthCookie(): Promise<string> {
@@ -294,7 +291,7 @@ async function main(): Promise<void> {
   const output = createPrivateOutput({ prefix: "roadmodel-soak", path: process.env.SOAK_OUT });
   const OUT = output.path;
   try {
-    const gate = `roadmodel_gate=${gateToken(need("SITE_PASSWORD"))}`;
+    const gate = `roadmodel_gate=${await deriveGateToken(need("SITE_PASSWORD"))}`;
     const bypass = process.env.ROADMODEL_LATENCY_BYPASS_TOKEN ?? "";
     const authCookie = await mintAuthCookie();
 
