@@ -2,7 +2,7 @@
   "schema": 1,
   "context_policy": {
     "baseline_revision": "289214b26f115cb766d1c05341bde9b84d53bb38",
-    "code_context_sha256": "8beb8a1814a67da367968974f870b6c96311915a0e42247de1a8e3dfd7d0cc24",
+    "code_context_sha256": "64a3060e774b6ea6221a89c8fb12050d0d256ad0ba914776dc6e414a01d3ec0c",
     "date_policy": "catalog-utc-date-v1",
     "mode": "typed-catalog-v1",
     "validator_sha256": "d0994ba80c5591de71bf6edb969f475b6ab7aa6b2a0b6bf57cd75cb5f8030eb2"
