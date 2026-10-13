@@ -14,7 +14,6 @@ import { createServerClient } from "@supabase/ssr";
 import { createHash } from "node:crypto";
 
 const BASE = process.argv[2] ?? "https://roadmodel.ai";
-const EMAIL = process.env.ROADMODEL_DOGFOOD_EMAIL ?? "nathan.ramos.github@gmail.com";
 const TASK =
   "Help me build a small Python CLI that fetches weather data and caches it locally.";
 
@@ -37,7 +36,7 @@ async function mintAuthCookie(): Promise<string> {
   });
   const { data, error } = await admin.auth.admin.generateLink({
     type: "magiclink",
-    email: EMAIL,
+    email: need("ROADMODEL_DOGFOOD_EMAIL"),
   });
   const tokenHash = data?.properties?.hashed_token;
   if (error || !tokenHash) {
@@ -124,6 +123,7 @@ async function probe(mode: "anon" | "authed", cookie: string, gate: string, bypa
 }
 
 async function main() {
+  need("ROADMODEL_DOGFOOD_EMAIL");
   const gate = `roadmodel_gate=${gateToken(need("SITE_PASSWORD"))}`;
   const bypass = need("ROADMODEL_LATENCY_BYPASS_TOKEN");
   const authCookie = await mintAuthCookie();
