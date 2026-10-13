@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
+import math
 import os
 import subprocess
 import sys
@@ -619,6 +621,50 @@ class CLITests(unittest.TestCase):
         self.invoke("snapshot")
         self.invoke("review", 1)
         self.assertFalse(self.review_output.exists())
+
+    def test_metric_baseline_changes_raw_digest_and_unapproved_proof(self):
+        self.doc = metric_document()
+        self.write_doc()
+        self.invoke("snapshot")
+        self.invoke("review")
+        absent = json.loads(self.review_output.read_bytes())
+        self.assertEqual(absent["active_allowances"], 0)
+        self.assertEqual(absent["raw_blocking"], 1)
+        raw = (self.output / "python.sarif").read_bytes()
+        self.assertEqual(absent["raw_sarif_sha256"], [hashlib.sha256(raw).hexdigest()])
+        self.invoke("check", 1)
+        previous_hashes = absent["raw_sarif_sha256"]
+        for baseline in [0, 17, 1.5, 10**100]:
+            self.review_output.unlink()
+            self.doc["runs"][0]["properties"]["metricResults"][0]["baseline"] = baseline
+            self.write_doc()
+            self.invoke("review")
+            present = json.loads(self.review_output.read_bytes())
+            raw = (self.output / "python.sarif").read_bytes()
+            self.assertEqual(present["raw_sarif_sha256"], [hashlib.sha256(raw).hexdigest()])
+            self.assertNotEqual(previous_hashes, present["raw_sarif_sha256"])
+            before = absent["candidates"][0]
+            after = present["candidates"][0]
+            changed = {
+                key for key in before["proof"] if before["proof"][key] != after["proof"][key]
+            }
+            self.assertEqual(changed, {"run_configuration_sha256"})
+            self.assertEqual(before["typed_graph"], after["typed_graph"])
+            self.assertEqual(present["active_allowances"], 0)
+            self.assertEqual(present["raw_blocking"], 1)
+            self.invoke("check", 1)
+            previous_hashes = present["raw_sarif_sha256"]
+
+    def test_malformed_metric_baseline_zero_results_refuses_without_proof(self):
+        self.doc = metric_document()
+        self.doc["runs"][0]["results"] = []
+        self.write_doc()
+        self.invoke("snapshot")
+        for baseline in [True, False, None, "1", {}, [], math.nan, math.inf, -math.inf]:
+            self.doc["runs"][0]["properties"]["metricResults"][0]["baseline"] = baseline
+            self.write_doc()
+            self.invoke("review", 1)
+            self.assertFalse(self.review_output.exists())
 
 
 class BoundsTests(unittest.TestCase):

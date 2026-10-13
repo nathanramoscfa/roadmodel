@@ -150,3 +150,26 @@ def test_producer_flags_remain_separate_arguments(producer: str, dry_run: str) -
     if dry_run == "true":
         expected.append("--dry-run")
     assert arguments[1:] == expected
+
+
+@pytest.mark.parametrize("language", ["python", "javascript-typescript"])
+def test_codeql_pr_file_coverage_is_literal_and_inherited_before_init(language: str) -> None:
+    data = workflow("tests.yml")
+    job = data["jobs"]["codeql"]
+    assert language in job["strategy"]["matrix"]["language"]
+    key = "CODEQL_ACTION_FILE_COVERAGE_ON_PRS"
+    assert type(job["env"][key]) is str
+    assert job["env"][key] == "true"
+    initializers = [
+        s for s in job["steps"] if s.get("uses", "").startswith("github/codeql-action/init@")
+    ]
+    analyzers = [
+        s for s in job["steps"] if s.get("uses", "").startswith("github/codeql-action/analyze@")
+    ]
+    assert len(initializers) == len(analyzers) == 1
+    assert initializers[0]["with"]["languages"] == "${{ matrix.language }}"
+    for step in job["steps"]:
+        effective = {**data.get("env", {}), **job["env"], **step.get("env", {})}
+        assert type(effective[key]) is str
+        assert effective[key] == "true"
+        assert key not in step.get("run", "")

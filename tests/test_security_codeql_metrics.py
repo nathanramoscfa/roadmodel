@@ -36,7 +36,7 @@ class Metrics(unittest.TestCase):
         self.assertEqual(row["value"], 123)
         self.assertEqual(row["descriptor"]["id"], "py/summary/lines-of-code")
         self.assertEqual(row["component"]["name"], "codeql/python-queries")
-        self.assertEqual(row["reference"], {"index": 0, "toolComponent": {"index": 0}})
+        self.assertEqual(row["reference"], {"toolComponent": {}})
 
     def test_raw_input_not_mutated(self):
         doc = metric_document()
@@ -373,3 +373,120 @@ class BaselineShapes(unittest.TestCase):
         for item in rows["items"]:
             self.assertEqual(len(item["known"]), 4)
             self.assertEqual(len(item["unknown_key_sha256"]), 16)
+
+
+def two_metrics():
+    doc = metric_document()
+    run = doc["runs"][0]
+    descriptor = copy.deepcopy(run["tool"]["extensions"][0]["rules"][0])
+    descriptor["id"] = "py/summary/lines-of-user-code"
+    run["tool"]["extensions"][0]["rules"].append(descriptor)
+    metric = copy.deepcopy(run["properties"]["metricResults"][0])
+    metric["rule"]["index"] = 1
+    metric["value"] = 7
+    metric["baseline"] = 9
+    run["properties"]["metricResults"].append(metric)
+    return doc
+
+
+class MetricIdentityTests(unittest.TestCase):
+    def test_metric_row_permutation_preserves_complete_proof(self):
+        first = two_metrics()
+        second = copy.deepcopy(first)
+        second["runs"][0]["properties"]["metricResults"].reverse()
+        self.assertEqual(proof(first), proof(second))
+
+    def test_descriptor_permutation_with_resolved_indices_preserves_proof(self):
+        first = two_metrics()
+        second = copy.deepcopy(first)
+        run = second["runs"][0]
+        run["tool"]["extensions"][0]["rules"].reverse()
+        for metric in run["properties"]["metricResults"]:
+            metric["rule"]["index"] = 1 - metric["rule"]["index"]
+        self.assertEqual(proof(first), proof(second))
+
+    def test_index_retarget_to_different_descriptor_changes_proof(self):
+        first = two_metrics()
+        second = copy.deepcopy(first)
+        second["runs"][0]["properties"]["metricResults"][0]["rule"]["index"] = 1
+        self.assertNotEqual(proof(first), proof(second))
+
+    def test_metric_duplicates_are_retained_after_sorting(self):
+        first = two_metrics()
+        second = copy.deepcopy(first)
+        metrics = second["runs"][0]["properties"]["metricResults"]
+        metrics.append(copy.deepcopy(metrics[0]))
+        metrics.reverse()
+        self.assertEqual(len(config(second)["metricResults"]), 3)
+        self.assertNotEqual(proof(first), proof(second))
+
+    def test_nonindex_reference_presence_remains_bound(self):
+        first = two_metrics()
+        second = copy.deepcopy(first)
+        second["runs"][0]["properties"]["metricResults"][0]["rule"]["id"] = (
+            "py/summary/lines-of-code"
+        )
+        self.assertNotEqual(proof(first), proof(second))
+
+    def test_empty_component_reference_presence_remains_bound(self):
+        first = metric_document()
+        first["runs"][0]["properties"]["metricResults"] = [{"rule": {"index": 0}, "value": 1}]
+        second = copy.deepcopy(first)
+        second["runs"][0]["properties"]["metricResults"][0]["rule"]["toolComponent"] = {}
+        self.assertNotEqual(config(first), config(second))
+
+    def test_optional_coverage_baseline_changes_complete_proof(self):
+        first = two_metrics()
+        for metric in first["runs"][0]["properties"]["metricResults"]:
+            metric.pop("baseline", None)
+        for value in [0, -1, 1.5, 10**100]:
+            second = copy.deepcopy(first)
+            second["runs"][0]["properties"]["metricResults"][1]["baseline"] = value
+            with self.subTest(value_type=type(value).__name__):
+                self.assertNotEqual(proof(first), proof(second))
+
+    def test_query_configuration_remains_bound(self):
+        first = two_metrics()
+        second = copy.deepcopy(first)
+        second["runs"][0]["properties"]["codeqlConfigSummary"]["queries"] = [
+            {"uses": "default", "type": "builtinSuite"}
+        ]
+        self.assertNotEqual(proof(first), proof(second))
+
+    def test_source_bytes_remain_bound_even_with_same_context_argument(self):
+        doc = two_metrics()
+        first = MemoryTree()
+        second = MemoryTree()
+        second.change("src/helper.py", b"value = 2\n")
+        finding = gate.classify_document(doc)[0]
+        self.assertNotEqual(
+            gate.proof(finding, first, "python", "a" * 64),
+            gate.proof(finding, second, "python", "a" * 64),
+        )
+
+    def test_ordered_finding_flow_remains_bound(self):
+        first = two_metrics()
+        second = copy.deepcopy(first)
+        second["runs"][0]["results"][0]["codeFlows"][0]["threadFlows"][0]["locations"].reverse()
+        self.assertNotEqual(proof(first), proof(second))
+
+    def test_component_reindex_preserves_metrics_but_tool_inventory_order_is_bound(self):
+        first = metric_document()
+        first["runs"][0]["tool"]["extensions"].append(
+            {"name": "codeql/other-queries", "semanticVersion": "1.0.0+fixture", "rules": []}
+        )
+        second = copy.deepcopy(first)
+        run = second["runs"][0]
+        run["tool"]["extensions"].reverse()
+        run["properties"]["metricResults"][0]["rule"]["toolComponent"]["index"] = 1
+        self.assertEqual(config(first), config(second))
+        before, after = proof(first), proof(second)
+        self.assertEqual(
+            {key for key in before if before[key] != after[key]},
+            {"tool_sha256"},
+        )
+        # The broader tool inventory retains its conservative ordering contract.
+        # A different resolved component version must also change metric identity.
+        run["tool"]["extensions"][1]["semanticVersion"] = "2.0.0+fixture"
+        self.assertNotEqual(config(first), config(second))
+        self.assertNotEqual(proof(first), proof(second))

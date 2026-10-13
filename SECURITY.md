@@ -117,6 +117,14 @@ data baseline on main. It permits only validated updates to existing catalog
 data; code, identities, prose and unrelated files require review again. Native
 GitHub CodeQL results remain visible independently.
 
+CodeQL calculates file coverage on both pull requests and the default branch.
+Metric references are validated and resolved before hashing; independent metric
+rows are sorted without removing duplicates. Metric values, optional coverage
+baseline presence and values, complete descriptors, source content, query
+configuration and ordered finding flows remain bound. Per-run job identifiers
+are validated but excluded from persistent allowance identity; raw SARIF digests
+bind each execution's original bytes.
+
 Pull requests also run secret scanning, workflow security checks and audits of
 resolved Python and production npm dependencies. These gates supplement review;
 they do not establish that every vulnerability or disclosure has been detected.
