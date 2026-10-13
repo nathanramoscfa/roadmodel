@@ -755,8 +755,8 @@ run_post_matrix() {
   d1="$(mktemp -d)/build1"
   d2="$(mktemp -d)/build2"
   mkdir -p "${d1}/docs" "${d1}/update" "${d2}/docs" "${d2}/update"
-  cp docs/model-selector.txt docs/model-tier-cost-scale.md "${d1}/docs/"
-  cp docs/model-selector.txt docs/model-tier-cost-scale.md "${d2}/docs/"
+  cp -p docs/model-selector.txt docs/model-tier-cost-scale.md "${d1}/docs/"
+  cp -p docs/model-selector.txt docs/model-tier-cost-scale.md "${d2}/docs/"
   # selector_re.py too: build_catalog imports its element matcher from that
   # sibling (#561), so an isolated copy without it fails to import — which this
   # check reports as "output differs", pointing at determinism instead of a

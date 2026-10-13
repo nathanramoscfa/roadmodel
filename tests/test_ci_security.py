@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 import re
 import subprocess
@@ -44,13 +43,57 @@ def test_actions_and_app_tokens_are_scoped() -> None:
 
 def test_required_gate_includes_security_results() -> None:
     jobs = workflow("tests.yml")["jobs"]
-    for name in ("workflow-security", "codeql", "security-scan"):
+    for name in ("workflow-security", "codeql", "security-scan", "bandit-whole-tree"):
         assert name in jobs["test"]["needs"]
         assert f"needs.{name}.result" in jobs["test"]["steps"][0]["run"]
     security = "\n".join(s.get("run", "") for s in jobs["workflow-security"]["steps"])
     assert "--require-hashes" in security and "sha256sum -c" in security
     assert "gitleaks git --redact=100" in security
     assert "check_codeql_sarif.py" in jobs["codeql"]["steps"][-1]["run"]
+
+
+def test_codeql_runs_full_queries_and_binds_success_before_enforcement() -> None:
+    job = workflow("tests.yml")["jobs"]["codeql"]
+    assert job["env"]["CODEQL_ACTION_DIFF_INFORMED_QUERIES"] == "false"
+    assert job["env"]["CODEQL_OVERLAY_DATABASE_MODE"] == "none"
+    assert set(job["strategy"]["matrix"]["language"]) == {"python", "javascript-typescript"}
+    steps = job["steps"]
+    checkout, snapshot, init, analyze, review, upload, enforce = steps
+    assert checkout["with"]["fetch-depth"] == 0
+    assert checkout["with"]["persist-credentials"] is False
+    assert "-B -I scripts/check_codeql_sarif.py snapshot" in snapshot["run"]
+    assert init["with"]["queries"] == "security-extended"
+    assert init["with"]["tools"] == "linked"
+    assert init["with"]["build-mode"] == "none"
+    assert analyze["with"]["upload"] == "always"
+    assert analyze["with"]["wait-for-processing"] is True
+    for step in (review, enforce):
+        assert "always()" in step["if"] and "!cancelled()" in step["if"]
+        assert step["env"]["CODEQL_ANALYZE_OUTCOME"] == "${{ steps.codeql_analyze.outcome }}"
+        assert "--snapshot" in step["run"]
+        assert "-B -I scripts/check_codeql_sarif.py" in step["run"]
+    assert " review " in review["run"] and " check " in enforce["run"]
+    assert "always()" in upload["if"] and "steps.codeql_review.outcome == 'success'" in upload["if"]
+    assert upload["with"]["path"] == "${{ runner.temp }}/codeql-review.json"
+    assert upload["with"]["if-no-files-found"] == "error"
+    assert all("continue-on-error" not in step for step in steps)
+
+
+def test_bandit_uses_pristine_checkout_and_isolated_locked_runner() -> None:
+    job = workflow("tests.yml")["jobs"]["bandit-whole-tree"]
+    checkout, _, install, fixtures, snapshot, analyze, upload = job["steps"]
+    assert checkout["with"]["fetch-depth"] == 0
+    assert checkout["with"]["persist-credentials"] is False
+    assert "--require-hashes --no-compile" in install["run"]
+    assert "security_bandit_runner_acceptance.py" in fixtures["run"]
+    for step, command in ((snapshot, "snapshot"), (analyze, "run")):
+        assert f"-I -B scripts/check_bandit.py {command}" in step["run"]
+    assert "--review-output" in analyze["run"] and "--snapshot" in analyze["run"]
+    assert "always()" in upload["if"] and "!cancelled()" in upload["if"]
+    assert upload["with"]["path"] == "${{ runner.temp }}/bandit-review.json"
+    assert upload["with"]["if-no-files-found"] == "error"
+    assert not any("pip install -e" in s.get("run", "") for s in job["steps"])
+    assert all("continue-on-error" not in s for s in job["steps"])
 
 
 def test_release_builds_verified_commit_and_preserves_manual_gate() -> None:
@@ -107,75 +150,3 @@ def test_producer_flags_remain_separate_arguments(producer: str, dry_run: str) -
     if dry_run == "true":
         expected.append("--dry-run")
     assert arguments[1:] == expected
-
-
-def sarif(results: list[dict[str, Any]], severity: str = "7.0") -> dict[str, Any]:
-    return {
-        "version": "2.1.0",
-        "runs": [
-            {
-                "tool": {
-                    "driver": {
-                        "rules": [{"id": "rule", "properties": {"security-severity": severity}}]
-                    }
-                },
-                "results": results,
-            }
-        ],
-    }
-
-
-@pytest.mark.parametrize(
-    ("data", "expected"),
-    [
-        (sarif([]), 0),
-        (sarif([{"ruleId": "rule"}]), 1),
-        (sarif([{"ruleIndex": 0}]), 1),
-        (sarif([{"ruleId": "rule"}], "6.9"), 0),
-        (sarif([{"ruleId": "rule", "level": "error"}], "1"), 1),
-    ],
-)
-def test_codeql_gate_reads_rule_severity(
-    tmp_path: Path, data: dict[str, Any], expected: int
-) -> None:
-    (tmp_path / "results.sarif").write_text(json.dumps(data))
-    result = subprocess.run(
-        ["python3", str(ROOT / "scripts/check_codeql_sarif.py"), str(tmp_path)], capture_output=True
-    )
-    assert result.returncode == expected
-
-
-@pytest.mark.parametrize(
-    "data",
-    [
-        None,
-        {},
-        {"version": "2.1.0", "runs": []},
-        sarif([{"ruleId": "missing"}]),
-        sarif([{"ruleId": "rule"}], "NaN"),
-        sarif([{"ruleIndex": -1}]),
-    ],
-)
-def test_missing_or_invalid_codeql_output_fails(tmp_path: Path, data: Any) -> None:
-    if data is not None:
-        (tmp_path / "results.sarif").write_text(json.dumps(data))
-    result = subprocess.run(
-        ["python3", str(ROOT / "scripts/check_codeql_sarif.py"), str(tmp_path)], capture_output=True
-    )
-    assert result.returncode == 1
-
-
-def test_codeql_empty_analysis_can_omit_rules(tmp_path: Path) -> None:
-    data = sarif([])
-    del data["runs"][0]["tool"]["driver"]["rules"]
-    test_codeql_gate_reads_rule_severity(tmp_path, data, 0)
-
-
-@pytest.mark.parametrize(
-    "reference", [{"ruleId": "rule"}, {"rule": {"index": 0, "toolComponent": {"index": 0}}}]
-)
-def test_codeql_extension_rules_are_enforced(tmp_path: Path, reference: dict[str, Any]) -> None:
-    data = sarif([reference])
-    tool = data["runs"][0]["tool"]
-    tool["extensions"] = [{"name": "security-pack", "rules": tool["driver"].pop("rules")}]
-    test_codeql_gate_reads_rule_severity(tmp_path, data, 1)

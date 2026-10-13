@@ -21,7 +21,7 @@ Do not file a public GitHub issue for undisclosed security problems.
 ## Supported versions
 
 Security fixes are applied to the latest published package release and the
-current deployments. Use roadmodel 0.2.82 or later for the private-file and
+current deployments. Use roadmodel 0.2.83 or later for the private-file, local automation and
 request-boundary fixes. Older releases do not receive routine backports.
 
 ## Scope
@@ -100,3 +100,23 @@ SameSite=Lax and Secure on HTTPS; the gate cookie is HttpOnly. CSP retains inlin
 styles required by the framework and permits the configured Supabase origin;
 script execution requires the per-response nonce. OAuth popup compatibility uses
 Cross-Origin-Opener-Policy: same-origin-allow-popups.
+
+## Automated security checks
+
+Required CI runs full security-extended CodeQL analysis for Python and JavaScript/
+TypeScript, with diff filtering and overlay analysis disabled. Bandit scans every
+tracked Python file with locked tools and verified per-file coverage. Missing,
+failed or malformed analysis fails the gate. Both scanners bind results to the
+immutable checkout and emit typed review evidence without raw messages or snippets.
+
+Reviewed false positives and accepted risks require an exact occurrence in
+`.github/security-allowances.json`, including source, tool, query and context
+digests plus a rationale. New, changed, duplicate or stale findings fail. The
+shared context policy binds current code separately from an immutable catalog
+data baseline on main. It permits only validated updates to existing catalog
+data; code, identities, prose and unrelated files require review again. Native
+GitHub CodeQL results remain visible independently.
+
+Pull requests also run secret scanning, workflow security checks and audits of
+resolved Python and production npm dependencies. These gates supplement review;
+they do not establish that every vulnerability or disclosure has been detected.
