@@ -52,7 +52,6 @@ const modelTier = (name: string | null): string =>
   (name && MODEL_TIER[name]) || `?${name}`;
 
 const BASE = process.argv[2] ?? "https://roadmodel.ai";
-const EMAIL = process.env.ROADMODEL_DOGFOOD_EMAIL ?? "nathan.ramos.github@gmail.com";
 
 
 function need(n: string): string {
@@ -68,7 +67,7 @@ async function mintAuthCookie(): Promise<string> {
   const admin = createClient(url, need("SUPABASE_SERVICE_ROLE_KEY"), {
     auth: { persistSession: false },
   });
-  const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email: EMAIL });
+  const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email: need("ROADMODEL_DOGFOOD_EMAIL") });
   const tokenHash = data?.properties?.hashed_token;
   if (error || !tokenHash) {
     throw new Error("Session generation failed.");
@@ -288,6 +287,7 @@ function score(rows: Row[]): Check[] {
 }
 
 async function main(): Promise<void> {
+  need("ROADMODEL_DOGFOOD_EMAIL");
   const output = createPrivateOutput({ prefix: "roadmodel-soak", path: process.env.SOAK_OUT });
   const OUT = output.path;
   try {

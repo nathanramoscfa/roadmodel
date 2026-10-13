@@ -1,4 +1,4 @@
-// scripts/diag-three-card.ts  (LOCAL behavioral check — not committed)
+// scripts/diag-three-card.ts — local behavioral check
 //
 // Confirms PR #320 end-to-end: a SINGLE /api/recommend submit now returns all
 // three budget priorities (Cost / Balanced / Quality) as one payload
@@ -20,7 +20,6 @@ if (!PROMPT_FILE) {
   console.error("A prompt file argument is required");
   process.exit(2);
 }
-const EMAIL = process.env.ROADMODEL_DOGFOOD_EMAIL ?? "nathan.ramos.github@gmail.com";
 
 function need(n: string): string {
   const v = process.env[n];
@@ -41,7 +40,7 @@ async function mintAuthCookie(): Promise<string> {
   });
   const { data, error } = await admin.auth.admin.generateLink({
     type: "magiclink",
-    email: EMAIL,
+    email: need("ROADMODEL_DOGFOOD_EMAIL"),
   });
   const tokenHash = data?.properties?.hashed_token;
   if (error || !tokenHash) {
@@ -87,6 +86,7 @@ interface Multi {
 }
 
 async function main(): Promise<void> {
+  need("ROADMODEL_DOGFOOD_EMAIL");
   const task = readFileSync(PROMPT_FILE, "utf8").trim();
   const gate = `roadmodel_gate=${gateToken(need("SITE_PASSWORD"))}`;
   const cookie = `${gate}; ${await mintAuthCookie()}`;

@@ -14,7 +14,6 @@ import { createServerClient } from "@supabase/ssr";
 import { createHash } from "node:crypto";
 
 const BASE = "https://roadmodel.ai";
-const EMAIL = process.env.ROADMODEL_DOGFOOD_EMAIL ?? "nathan.ramos.github@gmail.com";
 
 const CANDIDATES: { id: string; task: string }[] = [
   {
@@ -66,7 +65,7 @@ async function mintAuthCookie(): Promise<string> {
   const admin = createClient(url, need("SUPABASE_SERVICE_ROLE_KEY"), {
     auth: { persistSession: false },
   });
-  const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email: EMAIL });
+  const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email: need("ROADMODEL_DOGFOOD_EMAIL") });
   const tokenHash = data?.properties?.hashed_token;
   if (error || !tokenHash) {
     console.error("generateLink failed", error);
@@ -95,6 +94,7 @@ interface Payload {
 }
 
 async function main() {
+  need("ROADMODEL_DOGFOOD_EMAIL");
   const gate = `roadmodel_gate=${gateToken(need("SITE_PASSWORD"))}`;
   const bypass = need("ROADMODEL_LATENCY_BYPASS_TOKEN");
   const cookie = `${gate}; ${await mintAuthCookie()}`;

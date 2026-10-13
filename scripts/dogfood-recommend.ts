@@ -17,7 +17,7 @@
 //
 // with-prod-secrets.sh exports the keychain secrets (SUPABASE_URL,
 // SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_ANON_KEY, SITE_PASSWORD,
-// ROADMODEL_LATENCY_BYPASS_TOKEN). Override the dogfood account with
+// ROADMODEL_LATENCY_BYPASS_TOKEN). Set the required dogfood account with
 // ROADMODEL_DOGFOOD_EMAIL. Output: a fresh private JSONL file.
 
 import { createClient } from "@supabase/supabase-js";
@@ -27,7 +27,6 @@ import { createPrivateOutput } from "./private-diagnostic-output";
 import { setTimeout as sleep } from "node:timers/promises";
 
 const BASE = process.argv[2] ?? "https://roadmodel.ai";
-const EMAIL = process.env.ROADMODEL_DOGFOOD_EMAIL ?? "nathan.ramos.github@gmail.com";
 
 function need(n: string): string {
   const v = process.env[n];
@@ -44,7 +43,7 @@ async function mintAuthCookie(): Promise<string> {
   });
   const { data, error } = await admin.auth.admin.generateLink({
     type: "magiclink",
-    email: EMAIL,
+    email: need("ROADMODEL_DOGFOOD_EMAIL"),
   });
   const tokenHash = data?.properties?.hashed_token;
   if (error || !tokenHash) {
@@ -166,6 +165,7 @@ async function runProbe(p: Probe, authCookie: string | null, gate: string, bypas
 }
 
 async function main(): Promise<void> {
+  need("ROADMODEL_DOGFOOD_EMAIL");
   const output = createPrivateOutput({ prefix: "roadmodel-dogfood" });
   const OUT = output.path;
   try {

@@ -29,7 +29,6 @@ import { createServerClient } from "@supabase/ssr";
 import { createHash, randomBytes } from "node:crypto";
 
 const BASE = process.argv[2] ?? "https://roadmodel.ai";
-const FOUNDER_EMAIL = process.env.ROADMODEL_DOGFOOD_EMAIL ?? "nathan.ramos.github@gmail.com";
 // numeric(10,6) rounds a cost to six places; the counter adds the raw float.
 const COST_TOLERANCE = 1e-6;
 const SETTLE_MS = 30_000;
@@ -165,6 +164,7 @@ async function post(path: string, headers: Record<string, string>, body: unknown
 const FREE_TEXT = { task_description: "Probe: which model should rename a variable across a small repo?" };
 
 async function main(): Promise<void> {
+  const founderEmail = need("ROADMODEL_DOGFOOD_EMAIL");
   const probeStart = new Date().toISOString();
   const probeEmail = `roadmodel-lane-probe-${randomBytes(6).toString("hex")}@example.com`;
   let probeUserId: string | null = null;
@@ -174,7 +174,7 @@ async function main(): Promise<void> {
     probeUserId = created.data.user?.id ?? null;
     if (created.error || !probeUserId) throw new ProbeError("probe user not created");
     const probeCookie = await sessionCookieFor(probeEmail);
-    const founderCookie = await sessionCookieFor(FOUNDER_EMAIL);
+    const founderCookie = await sessionCookieFor(founderEmail);
 
     const counterBefore = await readCounter();
     const ledgerBefore = await ledgerOperatorSpend();
