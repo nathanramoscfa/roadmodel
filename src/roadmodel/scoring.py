@@ -1894,10 +1894,13 @@ def _backup_for(
     those already paid for ahead of per-token ones. A point matches the rung
     when it stands level with it in the task's category
     (:func:`_level_with`) and in general capability (an AA Index no more than
-    ``aa_band`` below). The backup is the cheapest match; with none, the
+    ``aa_band`` below). The reference is the cheapest match; with none, the
     substitute the QUALITY rule would pick (:func:`_top`: strongest in the
-    category, a near tie going to the higher AA Index); with no adequate
-    point, the one that falls shortest of the bar. It runs at its
+    category, a near tie going to the higher AA Index). The backup is the
+    point with the higher score among those within the noise bands of the
+    reference both ways, in the category and in the AA Index: the evidence
+    cannot tell them apart, so the price-aware score decides. With no
+    adequate point, the one that falls shortest of the bar. It runs at its
     point's measured effort, else at the rung's posture's effort, on its own
     platform. None when the pool holds no other
     maker's model."""
@@ -1924,11 +1927,23 @@ def _backup_for(
             if _level_with(p.candidate, r.candidate, task.category)
             and (r.aa_index is None or aa(p) >= r.aa_index - aa_band)
         ]
-        chosen = (
+        ref = (
             min(matches, key=lambda p: (p.price_usd, -aa(p)))
             if matches
             else _top(near, task.category)
         )
+        # Points the evidence cannot tell from the reference, in the category
+        # and in the AA Index, either way: of these the higher score (which
+        # prices the point) wins, so a near-identical model at a quarter of
+        # the price is not passed over for a fraction of an AA point.
+        peers = [
+            p
+            for p in near
+            if _level_with(p.candidate, ref.candidate, task.category)
+            and _level_with(ref.candidate, p.candidate, task.category)
+            and (ref.aa_index is None or abs(aa(p) - aa(ref)) <= aa_band)
+        ]
+        chosen = max(peers, key=lambda p: (p.candidate.score, -p.price_usd))
     else:
         chosen = max(front, key=_nearest)
     c = chosen.candidate

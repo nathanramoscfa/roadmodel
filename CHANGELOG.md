@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **Near-tied backups go to the higher score.** A rung's cross-maker backup no longer passes over a substitute the evidence cannot tell apart from the strongest one: among substitutes within both noise bands (category and AA Index) of the reference point, the higher score, which prices them, wins. Opus 5.5 rungs now back up to GPT-6.1 Sol instead of GPT-6 Astra wherever Astra led by a fraction of an AA point at two to four times the price (13 of 84 rungs on the maintainer's context; no pick changes, and no backup gets dearer).
+
 ## [0.2.83] — 2026-10-12
 
 - **Private automation boundaries.** Bundled context synchronization verifies its private destination before transferring saved context. Local credentials, job logs and diagnostic outputs use protected transport and file handling; authenticated maintenance clients reject redirects.

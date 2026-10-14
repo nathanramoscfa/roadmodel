@@ -785,6 +785,27 @@ def test_with_no_adequate_backup_the_strongest_other_maker_point_stands() -> Non
     assert {b[0] for b in _backups(lad).values() if b} == {"Luna"}
 
 
+def test_a_near_tied_cheaper_substitute_out_scores_the_strongest_one() -> None:
+    # Sol stands one AA point below Astra (within the 1.52-point AA band and
+    # the category band) at a sixth of the price. Nothing on Codex matches
+    # Sonnet or Opus, so Astra is the reference, but the evidence cannot tell
+    # Sol from it and Sol scores higher: Sol backs up both Claude rungs.
+    # Luna's backup is still the cheapest Claude match, Sonnet: Opus is
+    # stronger than Sonnet beyond the band, so a higher score does not lift it.
+    catalog = copy.deepcopy(CATALOG)
+    catalog["models"].append(_model("sol", "Sol", 1.25, 10.0, "S", "openai"))
+    catalog["access_methods"][1]["supports_models"].append("sol")
+    bench = {**BENCH, "sol": {"evaluations": {"artificial_analysis_intelligence_index": 51}}}
+    lad = scoring.ladder(
+        scoring.Task("planning", "medium"), BOTH, catalog=catalog, benchmarks=bench
+    )
+    assert lad is not None
+    backups = _backups(lad)
+    assert backups["balanced"] is not None and backups["balanced"][0] == "Sol"
+    assert backups["quality"] is not None and backups["quality"][0] == "Sol"
+    assert backups["cost"] == ("Sonnet", "Claude Code", "medium")
+
+
 def test_with_one_maker_funded_there_is_no_backup_and_a_warning_says_why() -> None:
     lad = _ladder("planning", "medium", _context([MAX]))
     assert _backups(lad) == {"cost": None, "balanced": None, "quality": None}
