@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.84] — 2026-10-14
+
 - **Measured models are scored on the measurement.** In coding, planning, agentic, long-context and knowledge, a model's S→D letter is derived from the very benchmark the scorer reads, so blending it in (30%) only added a cliff at each band edge: GPT-6 Astra's 52.7 on the AA Index read S and GPT-6.1 Sol's 51.8 read A, six quality points for 0.9 of index. A measured model's quality there is now its evidence alone; letters stand in only where AA has not measured. Speed keeps its blend (its letter is an estimate, not a reading of tokens/s). On the maintainer's context 12 of 84 picks move, each to the model the benchmarks favour at the effort it runs.
 - **Near-tied backups go to the cheaper model.** Where the benchmarks cannot tell two cross-maker substitutes apart (level both ways in the category and within the AA Index's noise band), the backup is the cheaper, at any budget posture, on /recommend and in `roadmodel score`. GPT-6 Astra backs up 5 of 84 rungs instead of 30, all where it leads beyond the noise; GPT-6.1 Sol takes the rest at a quarter of the price.
 - **`roadmodel backup`.** Names the backup for a pick made outside the ladder (a roadmap step's model and effort) by the same rule, and prints the Settings Backup cell. `/roadmap-phase` and `/roadmap-refresh` copy it into each step's Backup row where roadmodel is installed, instead of the selector prose's letter-first choice.
