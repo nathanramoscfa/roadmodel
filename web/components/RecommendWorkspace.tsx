@@ -3,8 +3,9 @@
 // /recommend's interactive half. One request at a time moves through three
 // states: composing (the task, its files, the engine), running (the engine at
 // work, with its real elapsed time), and a result (the three picks, with a way
-// to ask another engine the same task). The last few results stay in this
-// browser (RecentRecommendations), so a reload or a comparison costs nothing.
+// to ask another engine the same task). Every result is saved in this browser
+// and nowhere else (SavedRecommendations), so a reload, a comparison or a
+// return visit costs nothing.
 //
 // A visitor may pay with their own API key (VisitorKeyPanel). The key lives in
 // one React state holder here (lib/use-visitor-key.ts), shared by the composer
@@ -29,19 +30,24 @@ import type { PicksData } from "@/lib/recommend-picks";
 import { saveEnginePref } from "@/lib/recommend-prefs";
 import { LaneChooser, type Lane, type LaneChoice } from "./LaneChooser";
 import { OwnAgentPanel } from "./OwnAgentPanel";
-import { KeylessResult, QuickPickForm } from "./QuickPick";
+import { KeylessResult, QuickPickForm, quickPickSummary } from "./QuickPick";
 import { attachmentsPrefix, RecommendComposer, type Attachment } from "./RecommendComposer";
 import { RecommendIntro } from "./RecommendIntro";
 import { RecommendResult } from "./RecommendResult";
 import { RecommendRunning } from "./RecommendRunning";
-import { RecentRecommendations } from "./RecentRecommendations";
-import { clearRecent, loadRecent, saveRecent, RECENT_KEY, RECENT_CLEARED, RECENT_CLEAR_SIGNAL, recentOwner, type RecentRun } from "@/lib/recent-recommendations";
+import { SavedRecommendations } from "./SavedRecommendations";
+import type { SavedRun } from "@/lib/saved-recommendations";
+import { onSavedMessage } from "@/lib/saved-store";
+import { useSavedRecommendations } from "@/lib/use-saved-recommendations";
 import { useRouter } from "next/navigation";
 
 interface Running {
   startedAt: number;
   engine: EngineOption;
 }
+
+type EngineRun = Extract<SavedRun, { kind: "engine" }>;
+type QuickRun = Extract<SavedRun, { kind: "quick" }>;
 
 function newId(): string {
   try {
@@ -161,11 +167,11 @@ export function RecommendWorkspace({
   const [engine, setEngine] = useState(initialEngine);
   const [rerunEngine, setRerunEngine] = useState(initialEngine);
   const [running, setRunning] = useState<Running | null>(null);
-  const [result, setResult] = useState<RecentRun | null>(null);
+  const [result, setResult] = useState<EngineRun | null>(null);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [recent, setRecent] = useState<RecentRun[]>([]);
+  const saved = useSavedRecommendations(owner);
   const top = useRef<HTMLDivElement>(null);
   const visitor = useVisitorKey();
   const [keyOpen, setKeyOpen] = useState(false);
@@ -177,7 +183,7 @@ export function RecommendWorkspace({
   const showChooser = keylessViewer && !keyed;
   const activeLane: Lane = showChooser ? lane : "key";
   const [quickTask, setQuickTask] = useState<KeylessTask>(QUICK_DEFAULT);
-  const [quickResult, setQuickResult] = useState<KeylessResponse | null>(null);
+  const [quickResult, setQuickResult] = useState<QuickRun | null>(null);
   const [quickPending, setQuickPending] = useState(false);
   const [quickError, setQuickError] = useState<string | null>(null);
   const menu = keyed ? visitorEngines[visitor.provider] : engines;
@@ -201,29 +207,24 @@ export function RecommendWorkspace({
       invalidate();
       pending.forEach((controller) => controller.abort());
       pending.clear();
-      setRecent([]); setResult(null); setTask(""); setAttachments([]);
+      setResult(null); setTask(""); setAttachments([]);
       setQuickResult(null); setRunning(null); setQuickPending(false);
       setError(null); setQuickError(null); setNotice(null); forget();
     };
     if (previousOwner.current !== owner) reset();
     previousOwner.current = owner;
-    setRecent(loadRecent(owner));
-    const changed = (event: StorageEvent) => {
-      if (event.key === RECENT_KEY && recentOwner(event.newValue) === owner) {
-        setRecent(loadRecent(owner));
-      } else if (event.key === RECENT_KEY || event.key === RECENT_CLEAR_SIGNAL || event.key === null) {
-        reset();
-        router.refresh();
-      }
-    };
-    window.addEventListener("storage", changed);
-    window.addEventListener(RECENT_CLEARED, reset);
+    // Another tab signed out: drop what this one shows, pending answers
+    // included, and reload as signed out.
+    const off = onSavedMessage((message) => {
+      if (message.type !== "signout") return;
+      reset();
+      router.refresh();
+    });
     return () => {
       invalidate();
       pending.forEach((controller) => controller.abort());
       pending.clear();
-      window.removeEventListener("storage", changed);
-      window.removeEventListener(RECENT_CLEARED, reset);
+      off();
     };
   }, [owner, router, forget]);
 
@@ -272,7 +273,9 @@ export function RecommendWorkspace({
       }
       const answer = (await res.json()) as KeylessResponse;
       if (current !== generation.current) return;
-      setQuickResult(answer);
+      const entry: QuickRun = { kind: "quick", id: newId(), at: Date.now(), task: quickPickSummary(answer.task), data: answer };
+      setQuickResult(entry);
+      saved.save(entry);
       top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
     } catch {
       if (current !== generation.current) return;
@@ -331,10 +334,11 @@ export function RecommendWorkspace({
       }
       const data = (await res.json()) as MultiRecommendResponse;
       if (current !== generation.current) return;
-      const entry: RecentRun = { id: newId(), at: Date.now(), task: shownTask, data };
+      const entry: EngineRun = { kind: "engine", id: newId(), at: Date.now(), task: shownTask, data };
       setResult(entry);
+      setQuickResult(null);
       setEditing(false);
-      setRecent((prev) => current === generation.current ? saveRecent(owner, [entry, ...prev]) : prev);
+      saved.save(entry);
       top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
     } catch {
       if (current !== generation.current) return;
@@ -361,6 +365,35 @@ export function RecommendWorkspace({
 
   const showComposer = !result || editing;
 
+  // A saved entry opens in the lane that made it, without a new request.
+  function openSaved(run: SavedRun) {
+    setEditing(false);
+    setError(null);
+    if (run.kind === "quick") {
+      setResult(null);
+      setQuickResult(run);
+      setLane("quick");
+    } else {
+      setQuickResult(null);
+      setResult(run);
+      setLane("key");
+    }
+    top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+
+  const savedList = (activeId: string | null) => (
+    <SavedRecommendations
+      runs={saved.runs}
+      activeId={activeId}
+      status={saved.status}
+      onOpen={openSaved}
+      onDelete={saved.remove}
+      onClear={saved.clear}
+      onExport={saved.exportAll}
+      onImport={(file) => void saved.importFile(file)}
+    />
+  );
+
   if (activeLane !== "key") {
     return (
       <div ref={top} className="scroll-mt-20 space-y-5">
@@ -369,7 +402,7 @@ export function RecommendWorkspace({
           <OwnAgentPanel />
         ) : quickResult ? (
           <KeylessResult
-            data={quickResult}
+            data={quickResult.data}
             agreement={agreement}
             onChange={() => setQuickResult(null)}
             onDescribe={() => chooseLane("key")}
@@ -377,19 +410,7 @@ export function RecommendWorkspace({
         ) : (
           <QuickPickForm initial={quickTask} pending={quickPending} error={quickError} onSubmit={(t) => void runQuick(t)} />
         )}
-        {/* Past free-text results open in the lane that wrote them. */}
-        <RecentRecommendations
-          runs={recent}
-          activeId={null}
-          onOpen={(r) => {
-            setLane("key");
-            setResult(r);
-            setEditing(false);
-            setError(null);
-            top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
-          }}
-          onClear={clearRecent}
-        />
+        {savedList(activeLane === "quick" ? (quickResult?.id ?? null) : null)}
       </div>
     );
   }
@@ -495,21 +516,19 @@ export function RecommendWorkspace({
             pending={running !== null}
           />
         </>
+      ) : quickResult && !result ? (
+        // A saved Quick pick, opened where there is no Quick pick lane.
+        <KeylessResult
+          data={quickResult.data}
+          agreement={agreement}
+          onChange={() => setQuickResult(null)}
+          onDescribe={() => setQuickResult(null)}
+        />
       ) : !result ? (
         <RecommendIntro modelCount={modelCount} measuredCount={measuredCount} />
       ) : null}
 
-      <RecentRecommendations
-        runs={recent}
-        activeId={result?.id ?? null}
-        onOpen={(r) => {
-          setResult(r);
-          setEditing(false);
-          setError(null);
-          top.current?.scrollIntoView({ block: "start", behavior: "smooth" });
-        }}
-        onClear={clearRecent}
-      />
+      {savedList(result?.id ?? quickResult?.id ?? null)}
     </div>
   );
 }

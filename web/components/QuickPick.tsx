@@ -216,6 +216,13 @@ export function QuickPickForm({
   );
 }
 
+// A Quick pick's task in one line, as its result and the saved list show it.
+export function quickPickSummary(task: KeylessResponse["task"]): string {
+  const category = CATEGORY_DEFS[task.category as keyof typeof CATEGORY_DEFS]?.label ?? task.category;
+  const difficulty = DIFFICULTY[task.complexity as KeylessComplexity]?.label ?? task.complexity;
+  return `${category} · ${difficulty} difficulty${task.novel ? " · a new kind of problem" : ""}`;
+}
+
 export function KeylessResult({
   data,
   agreement,
@@ -229,8 +236,6 @@ export function KeylessResult({
   onDescribe: () => void;
 }) {
   const primary = PRIORITY_RUNG[(data.task.budget_priority as BudgetPriority) ?? "balanced"] ?? "balanced";
-  const category = CATEGORY_DEFS[data.task.category as keyof typeof CATEGORY_DEFS]?.label ?? data.task.category;
-  const difficulty = DIFFICULTY[data.task.complexity as KeylessComplexity]?.label ?? data.task.complexity;
 
   return (
     <div className="space-y-4" data-testid="keyless-result">
@@ -239,7 +244,7 @@ export function KeylessResult({
           Quick pick
         </span>
         <p className="min-w-0 flex-1 text-sm text-brand-slate-800 dark:text-brand-slate-100" data-testid="keyless-task">
-          {category} · {difficulty} difficulty{data.task.novel ? " · a new kind of problem" : ""}
+          {quickPickSummary(data.task)}
         </p>
         <div className="flex flex-none gap-1.5">
           <button

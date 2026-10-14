@@ -20,7 +20,7 @@ export default function PrivacyPage() {
           Privacy
         </h1>
         <p className="mt-2 text-sm text-brand-slate-500 dark:text-brand-slate-400">
-          Last updated: 2026-10-12.
+          Last updated: 2026-10-14.
         </p>
 
         <div className="prose prose-slate mt-8 max-w-none text-brand-slate-700 dark:text-brand-slate-200">
@@ -43,11 +43,16 @@ export default function PrivacyPage() {
               <strong>
                 We do not store task descriptions or recommendation outputs
               </strong>{" "}
-              in our recommendation database. This browser can retain up to eight
-              recent task descriptions and results in local storage. Clear removes
-              them; signing out or switching accounts also clears that history.
-              When the roadmap builder is enabled, its conversations and drafts
-              are saved to your account.
+              in our recommendation database. Each recommendation you get, with
+              its task description, is saved in your browser&rsquo;s own storage
+              and never sent to us: up to 500 for each account, kept separate
+              per account, and kept when you sign out unless you choose to remove
+              them. You can delete them one at a time, clear them, or export them
+              to a file and import that file in another browser. Your browser may
+              erase them on its own: Safari does after seven days without a
+              visit, and clearing your browsing data does too. When the roadmap
+              builder is enabled, its conversations and drafts are saved to your
+              account.
             </li>
             <li id="your-api-key">
               <strong>Your own API key.</strong> When you use your own API key

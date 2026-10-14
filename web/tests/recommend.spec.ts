@@ -354,7 +354,7 @@ test("the API refuses an engine the visitor may not use, before any upstream cal
   expect(await unknown.json()).toMatchObject({ error: "unknown_engine" });
 });
 
-test("a recent result reopens from this browser without a new request", async ({ page }) => {
+test("a saved result reopens from this browser without a new request", async ({ page }) => {
   let calls = 0;
   await page.route("**/api/recommend", async (route) => {
     calls += 1;
@@ -364,9 +364,9 @@ test("a recent result reopens from this browser without a new request", async ({
   await ask(page, "a task worth remembering");
   await expect(page.getByTestId("recommend-result")).toBeVisible();
   await page.reload();
-  const recent = page.getByTestId("recent-recommendations");
-  await expect(recent).toContainText("a task worth remembering");
-  await recent.getByRole("button", { name: /a task worth remembering/ }).click();
+  const saved = page.getByTestId("saved-recommendations");
+  await expect(saved).toContainText("a task worth remembering");
+  await saved.getByRole("button", { name: /^a task worth remembering/ }).click();
   await expect(page.getByTestId("recommend-result")).toBeVisible();
   expect(calls).toBe(1);
 });
@@ -383,7 +383,7 @@ test("attached text file content is prepended to the request body (file-input Ph
     });
   });
   await openFreeText(page);
-  await page.locator('input[type="file"]').setInputFiles({
+  await page.getByTestId("recommend-composer").locator('input[type="file"]').setInputFiles({
     name: "my-prompt.txt",
     mimeType: "text/plain",
     buffer: Buffer.from("Summarize this quarterly earnings report."),
@@ -399,7 +399,7 @@ test("attached text file content is prepended to the request body (file-input Ph
 
 test("non-text files are skipped with a hint (file-input Phase A)", async ({ page }) => {
   await openFreeText(page);
-  await page.locator('input[type="file"]').setInputFiles({
+  await page.getByTestId("recommend-composer").locator('input[type="file"]').setInputFiles({
     name: "diagram.png",
     mimeType: "image/png",
     buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
