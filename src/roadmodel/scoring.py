@@ -137,8 +137,19 @@ _RANK_SCALED_KEYS: Final[frozenset[str]] = frozenset(
 
 # Editorial letter → quality points. Midpoints of five equal bands.
 LETTER_QUALITY: Final[dict[str, float]] = {"S": 90.0, "A": 70.0, "B": 50.0, "C": 30.0, "D": 10.0}
-# When AA has measured the model: weight on the scaled evidence vs the letter.
+# When AA has measured the model in speed: weight on the scaled evidence vs
+# the letter (speed's letter is an estimate, not derived from tokens/s).
 EVIDENCE_WEIGHT: Final[float] = 0.7
+# The five derived categories: update/derive_ratings.py letters them from the
+# very benchmark CATEGORY_EVIDENCE names, so a measured model's letter there
+# is a staircase of evidence already counted. Blending it in adds no
+# information, only a cliff at each band edge: GPT-6 Astra's 52.7 on the AA
+# Index reads S and GPT-6.1 Sol's 51.8 reads A, six quality points for 0.9
+# of index. A model measured there is scored on its evidence alone; its
+# letter stands in only where AA has not measured it.
+DERIVED_LETTER_CATEGORIES: Final[frozenset[str]] = frozenset(
+    {"coding", "planning", "agentic", "long-context", "knowledge"}
+)
 # A letter with no AA measurement behind it is an editorial prior, not
 # evidence: discount it so a measured model wins an otherwise-tied letter.
 UNMEASURED_DISCOUNT: Final[float] = 5.0
@@ -886,7 +897,8 @@ def _quality(
     level: str | None = None,
 ) -> tuple[float, str, str]:
     """The model's quality for the task's category: its headline evidence, or
-    with ``level`` its evidence at that effort, blended with its letter."""
+    with ``level`` its evidence at that effort; in speed blended with its
+    letter, in a derived category (:data:`DERIVED_LETTER_CATEGORIES`) alone."""
     raw_tiers = model.get("tiers")
     tiers: dict[str, Any] = raw_tiers if isinstance(raw_tiers, dict) else {}
     letter = str(tiers.get(task.category, "C")).upper()
@@ -898,6 +910,8 @@ def _quality(
     points = _evidence_points(str(model.get("id", "")), task, bench, scale, level)
     if points is None:
         return max(0.0, letter_q - UNMEASURED_DISCOUNT), "letter", letter
+    if task.category in DERIVED_LETTER_CATEGORIES:
+        return points, f"aa:{CATEGORY_EVIDENCE[task.category]}", letter
     q = EVIDENCE_WEIGHT * points + (1.0 - EVIDENCE_WEIGHT) * letter_q
     return q, f"aa:{CATEGORY_EVIDENCE[task.category]}+letter", letter
 
@@ -1244,10 +1258,24 @@ def rank(
     backup: Candidate | None = None
     warning: str | None = None
     if primary is not None:
-        for c in candidates[1:]:
-            if c.provider != primary.provider and c.funding != "unfunded":
-                backup = c
-                break
+        others = [
+            c for c in candidates[1:] if c.provider != primary.provider and c.funding != "unfunded"
+        ]
+        if others:
+            # The best-scoring other maker's model, else the cheapest one the
+            # evidence cannot tell from it (:func:`_near_tied`), whatever the
+            # posture: at budget best the score barely prices a model, and a
+            # fraction of an AA point within noise would buy a dearer backup.
+            ref = others[0]
+            band = _aa_band(bench, cat)
+
+            def aa(c: Candidate) -> float | None:
+                return _evidence(bench, c.model_id, FRONTIER_INDEX, c.evidence_level)
+
+            backup = min(
+                (c for c in others if _near_tied(c, aa(c), ref, aa(ref), task.category, band)),
+                key=lambda c: (c.effective_cost_usd, -c.score, c.model_id),
+            )
         if backup is None:
             funded_providers = sorted({c.provider for c in candidates if c.funding != "unfunded"})
             warning = (
@@ -1450,6 +1478,33 @@ def _level_with(a: Candidate, b: Candidate, category: str) -> bool:
     if a.evidence_points is None or b.evidence_points is None:
         return a.quality >= b.quality
     return a.evidence_points >= b.evidence_points - TIE_BAND.get(category, DEFAULT_TIE_BAND)
+
+
+def _near_tied(
+    a: Candidate,
+    a_aa: float | None,
+    b: Candidate,
+    b_aa: float | None,
+    category: str,
+    aa_band: float,
+) -> bool:
+    """Whether the evidence cannot tell ``a`` from ``b``: each level with the
+    other in the category (:func:`_level_with`, both ways), and their AA
+    Indexes (``a_aa``, ``b_aa``) no more than ``aa_band`` apart where both are
+    measured. One-way levelness is not enough: every stronger model is level
+    with a weaker one."""
+    return (
+        _level_with(a, b, category)
+        and _level_with(b, a, category)
+        and (a_aa is None or b_aa is None or abs(a_aa - b_aa) <= aa_band)
+    )
+
+
+def _aa_band(bench: dict[str, Any], catalog: dict[str, Any]) -> float:
+    """The AA Index's noise band in its own points: DEFAULT_TIE_BAND on the
+    0–100 scale it is read on, mapped back onto the index's measured range."""
+    gscale = _evidence_scale(catalog, bench, FRONTIER_INDEX)
+    return 0.0 if gscale is None else DEFAULT_TIE_BAND * (gscale.hi - gscale.lo) / 100.0
 
 
 def _tie_break(p: FrontierPoint, category: str) -> tuple[float, float]:
@@ -1680,8 +1735,9 @@ def ladder(
       adequate point above COST.
     - Each rung carries a BACKUP from another maker (:func:`_backup_for`):
       the cheapest point on the other makers' frontier that does the job as
-      well as the rung, else the nearest below it. ``backup_warning`` says why
-      a rung has none.
+      well as the rung, else the strongest substitute, giving way to a
+      cheaper one the evidence cannot tell from it. ``backup_warning`` says
+      why a rung has none.
 
     None when no pool model carries an AA Index (no frontier to read)."""
     cat = catalog if catalog is not None else _cost._load_catalog()
@@ -1826,8 +1882,7 @@ def ladder(
     cost_rung = settle(_below(cost_rung, balanced_rung, cat))
     # General capability is level within the same noise band, read on the
     # AA Index's own 0–100 scale (the planning evidence).
-    gscale = _evidence_scale(cat, bench, FRONTIER_INDEX)
-    aa_band = 0.0 if gscale is None else DEFAULT_TIE_BAND * (gscale.hi - gscale.lo) / 100.0
+    aa_band = _aa_band(bench, cat)
     rungs = {
         r.tier: replace(r, backup=_backup_for(r, settings, task, headroom, bench, cat, aa_band))
         for r in (cost_rung, balanced_rung, quality_rung)
@@ -1896,11 +1951,11 @@ def _backup_for(
     (:func:`_level_with`) and in general capability (an AA Index no more than
     ``aa_band`` below). The reference is the cheapest match; with none, the
     substitute the QUALITY rule would pick (:func:`_top`: strongest in the
-    category, a near tie going to the higher AA Index). The backup is the
-    point with the higher score among those within the noise bands of the
-    reference both ways, in the category and in the AA Index: the evidence
-    cannot tell them apart, so the price-aware score decides. With no
-    adequate point, the one that falls shortest of the bar. It runs at its
+    category, a near tie going to the higher AA Index); with no adequate
+    point, the one that falls shortest of the bar. The backup is the cheapest
+    of the points within the noise bands of the reference both ways
+    (:func:`_near_tied`): the evidence cannot tell them apart, so paying more
+    buys nothing it can show. It runs at its
     point's measured effort, else at the rung's posture's effort, on its own
     platform. None when the pool holds no other
     maker's model."""
@@ -1932,20 +1987,21 @@ def _backup_for(
             if matches
             else _top(near, task.category)
         )
-        # Points the evidence cannot tell from the reference, in the category
-        # and in the AA Index, either way: of these the higher score (which
-        # prices the point) wins, so a near-identical model at a quarter of
-        # the price is not passed over for a fraction of an AA point.
-        peers = [
-            p
-            for p in near
-            if _level_with(p.candidate, ref.candidate, task.category)
-            and _level_with(ref.candidate, p.candidate, task.category)
-            and (ref.aa_index is None or abs(aa(p) - aa(ref)) <= aa_band)
-        ]
-        chosen = max(peers, key=lambda p: (p.candidate.score, -p.price_usd))
     else:
-        chosen = max(front, key=_nearest)
+        ref = max(front, key=_nearest)
+    # Of the points the evidence cannot tell from the reference, the cheapest:
+    # a near-identical model at a quarter of the price is not passed over for
+    # a fraction of an AA point. A peer may fall short of the bar where the
+    # reference clears it, by less than the noise: a shortfall the evidence
+    # cannot show. A prepaid reference keeps a prepaid backup.
+    prepaid = ref.candidate.scarcity < 1.0
+    peers = [
+        p
+        for p in front
+        if (p.candidate.scarcity < 1.0 or not prepaid)
+        and _near_tied(p.candidate, p.aa_index, ref.candidate, ref.aa_index, task.category, aa_band)
+    ]
+    chosen = min(peers, key=lambda p: (p.price_usd, -p.candidate.score))
     c = chosen.candidate
     if c.evidence_level is not None:
         effort = c.evidence_level
@@ -1953,6 +2009,108 @@ def _backup_for(
         t = Task(task.category, task.complexity, task.novel, TIER_BUDGET[rung.tier])
         effort = effort_for(t, headroom, c.scarcity)
     return Backup(chosen, effort, native_level(c.platform_id, c.model_id, effort, catalog=catalog))
+
+
+def _model_ref_id(ref: str, catalog: dict[str, Any]) -> str:
+    """The catalog id ``ref`` names, matched spelling-free as
+    recommend._model_key does ("Claude Opus 5.5", "Opus 5.5" and
+    "claude-opus-5-5" are one model); ``ref`` itself on a miss."""
+
+    def key(text: str) -> str:
+        words = re.split(r"[\s_.-]+", text.lower())
+        return " ".join(sorted(w for w in words if w and w != "claude"))
+
+    want = key(ref)
+    for m in catalog.get("models", []):
+        if isinstance(m, dict) and want in {key(str(m.get("id", ""))), key(str(m.get("name", "")))}:
+            return str(m.get("id", ""))
+    return ref
+
+
+def backup_for_pick(
+    task: Task,
+    user_context_text: str,
+    model: str,
+    effort: str,
+    *,
+    unavailable_models: list[str] | None = None,
+    catalog: dict[str, Any] | None = None,
+    benchmarks: dict[str, Any] | None = None,
+) -> Backup | None:
+    """The backup for a pick made outside the ladder (a roadmap step's
+    Settings): ``model`` (catalog id or name) run at ``effort`` (a scorer or
+    native level), backed up by the rule a /recommend rung follows
+    (:func:`_backup_for`), over the same pool, so the two never disagree.
+    ``task.budget`` sets the posture an unmeasured backup's effort follows.
+    None when the pool holds no other maker's model. ValueError when the
+    model is not one this user-context can reach."""
+    cat = catalog if catalog is not None else _cost._load_catalog()
+    bench = benchmarks if benchmarks is not None else _load_benchmarks()
+    model_id = _model_ref_id(model, cat)
+    base = Task(task.category, task.complexity, task.novel, "balanced")
+    ranking = rank(
+        base,
+        user_context_text,
+        unavailable_models=unavailable_models,
+        catalog=cat,
+        benchmarks=bench,
+        effort_aware=False,
+    )
+    picked = next((c for c in ranking.candidates if c.model_id == model_id), None)
+    models = {str(m.get("id", "")): m for m in cat.get("models", []) if isinstance(m, dict)}
+    if picked is None or model_id not in models:
+        raise ValueError(f"{model!r} is not a model this user-context can reach")
+    funded = [c for c in ranking.candidates if c.funding != "unfunded"]
+    pool = funded or ranking.candidates
+    headroom = consumption_headroom(user_context_text or "")
+    lam, k = ranking.lam, ranking.k_points_per_decade
+    settings = effort_settings(pool, base, headroom, lam=lam, k=k, catalog=cat, benchmarks=bench)
+    composite = with_composites(bench)
+    scales = (
+        _evidence_scale(cat, composite, CATEGORY_EVIDENCE[base.category]),
+        _evidence_scale(cat, composite, CATEGORY_EVIDENCE["planning"]),
+    )
+    level = _scorer_level(effort)
+    measured = level in measured_levels(bench, model_id)
+    at = _at_level(
+        picked, level if measured else None, models[model_id], base, composite, scales, lam, k
+    )
+    point = FrontierPoint(
+        at, _evidence(bench, model_id, FRONTIER_INDEX, at.evidence_level), frontier_price(at)
+    )
+    tier = next(t for t, b in TIER_BUDGET.items() if b == task.budget)
+    return _backup_for(
+        Rung(tier, point, level), settings, task, headroom, bench, cat, _aa_band(bench, cat)
+    )
+
+
+# A platform's effort dial as a Settings table names it (docs/settings-display.md):
+# Intelligence on OpenAI's reasoning surfaces, Effort elsewhere; Cursor has none.
+_DIAL_NAMES: Final[dict[str, str | None]] = {
+    "codex-cli": "Intelligence",
+    "codex-api": "Intelligence",
+    "openai-api": "Intelligence",
+    "cursor": None,
+}
+_LEVEL_WORDS: Final[dict[str, str]] = {
+    "minimal": "Minimal",
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "xhigh": "XHigh",
+    "max": "Max",
+    "ultra": "Ultra",
+}
+
+
+def backup_cell(backup: Backup) -> str:
+    """``backup`` as a roadmap Settings table's Backup cell:
+    ``GPT-6.1 Sol — Codex · Intelligence XHigh``."""
+    c = backup.candidate
+    dial = _DIAL_NAMES.get(c.platform_id, "Effort")
+    level = _LEVEL_WORDS.get(normalize_level(backup.level), backup.level)
+    head = f"{c.model_name} — {c.platform_name}"
+    return head if dial is None else f"{head} · {dial} {level}"
 
 
 def _below(lower: Rung, upper: Rung, catalog: dict[str, Any]) -> Rung:

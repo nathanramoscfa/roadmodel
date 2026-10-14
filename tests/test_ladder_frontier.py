@@ -785,17 +785,23 @@ def test_with_no_adequate_backup_the_strongest_other_maker_point_stands() -> Non
     assert {b[0] for b in _backups(lad).values() if b} == {"Luna"}
 
 
-def test_a_near_tied_cheaper_substitute_out_scores_the_strongest_one() -> None:
-    # Sol stands one AA point below Astra (within the 1.52-point AA band and
-    # the category band) at a sixth of the price. Nothing on Codex matches
-    # Sonnet or Opus, so Astra is the reference, but the evidence cannot tell
-    # Sol from it and Sol scores higher: Sol backs up both Claude rungs.
-    # Luna's backup is still the cheapest Claude match, Sonnet: Opus is
-    # stronger than Sonnet beyond the band, so a higher score does not lift it.
+def _with_sol(letter: str = "S") -> tuple[dict[str, Any], dict[str, Any]]:
+    # Sol: one AA point below Astra (within the 1.52-point AA band and the
+    # category band) at a sixth of its price, on the same Codex pool.
     catalog = copy.deepcopy(CATALOG)
-    catalog["models"].append(_model("sol", "Sol", 1.25, 10.0, "S", "openai"))
+    catalog["models"].append(_model("sol", "Sol", 1.25, 10.0, letter, "openai"))
     catalog["access_methods"][1]["supports_models"].append("sol")
     bench = {**BENCH, "sol": {"evaluations": {"artificial_analysis_intelligence_index": 51}}}
+    return catalog, bench
+
+
+def test_a_near_tied_cheaper_substitute_backs_up_instead_of_the_strongest() -> None:
+    # Nothing on Codex matches Sonnet or Opus, so Astra is the reference, but
+    # the evidence cannot tell Sol from it and Sol is cheaper: Sol backs up
+    # both Claude rungs. Luna's backup is still the cheapest Claude match,
+    # Sonnet: Opus is stronger than Sonnet beyond the band, so a near tie
+    # read one way only would not lift it.
+    catalog, bench = _with_sol()
     lad = scoring.ladder(
         scoring.Task("planning", "medium"), BOTH, catalog=catalog, benchmarks=bench
     )
@@ -804,6 +810,91 @@ def test_a_near_tied_cheaper_substitute_out_scores_the_strongest_one() -> None:
     assert backups["balanced"] is not None and backups["balanced"][0] == "Sol"
     assert backups["quality"] is not None and backups["quality"][0] == "Sol"
     assert backups["cost"] == ("Sonnet", "Claude Code", "medium")
+
+
+def test_a_shortfall_within_noise_does_not_buy_a_dearer_backup() -> None:
+    # Novel planning needs 85. On Codex, Astra (84.2) and Sol (81.6) both fall
+    # short, Astra the least, but the evidence cannot tell them apart: the
+    # cheaper, Sol, backs up every Claude rung.
+    catalog, bench = _with_sol()
+    lad = scoring.ladder(
+        scoring.Task("planning", "high", True), BOTH, catalog=catalog, benchmarks=bench
+    )
+    assert lad is not None
+    assert {b[0] for b in _backups(lad).values() if b} == {"Sol"}
+
+
+def test_rank_backs_up_to_the_cheaper_of_near_tied_models_at_any_posture() -> None:
+    # At budget best the score barely prices a model, so Astra out-scores Sol
+    # on its one AA point; the two are within noise, so the backup is Sol.
+    catalog, bench = _with_sol()
+    ranking = scoring.rank(
+        scoring.Task("planning", "high", budget="best"), BOTH, catalog=catalog, benchmarks=bench
+    )
+    scores = {c.model_id: c.score for c in ranking.candidates}
+    assert scores["astra"] > scores["sol"]
+    assert ranking.primary is not None and ranking.primary.provider == "anthropic"
+    assert ranking.backup is not None and ranking.backup.model_id == "sol"
+
+
+def test_a_pick_made_elsewhere_gets_the_backup_its_rung_would() -> None:
+    # A roadmap step that runs a rung's model at the rung's effort is backed
+    # up exactly as the rung is, whatever spelling names the model.
+    catalog, bench = _with_sol()
+    task = scoring.Task("planning", "medium")
+    lad = scoring.ladder(task, BOTH, catalog=catalog, benchmarks=bench)
+    assert lad is not None
+    for rung in lad.rungs.values():
+        assert rung.backup is not None
+        for ref in (rung.candidate.model_id, rung.candidate.model_name):
+            got = scoring.backup_for_pick(
+                scoring.Task("planning", "medium", budget=scoring.TIER_BUDGET[rung.tier]),
+                BOTH,
+                ref,
+                rung.effort.upper(),
+                catalog=catalog,
+                benchmarks=bench,
+            )
+            assert got is not None
+            assert (got.candidate.model_id, got.effort) == (
+                rung.backup.candidate.model_id,
+                rung.backup.effort,
+            )
+
+
+def test_a_backup_cell_names_the_platforms_own_dial() -> None:
+    catalog, bench = _with_sol()
+    lad = scoring.ladder(
+        scoring.Task("planning", "medium"), BOTH, catalog=catalog, benchmarks=bench
+    )
+    assert lad is not None
+    cells = {t: scoring.backup_cell(r.backup) for t, r in lad.rungs.items() if r.backup}
+    assert cells["quality"] == "Sol — Codex · Intelligence XHigh"
+    assert cells["cost"] == "Sonnet — Claude Code · Effort Medium"
+
+
+def test_a_pick_this_context_cannot_reach_is_refused() -> None:
+    with pytest.raises(ValueError, match="can reach"):
+        scoring.backup_for_pick(
+            scoring.Task("planning", "medium"),
+            BOTH,
+            "nope",
+            "high",
+            catalog=CATALOG,
+            benchmarks=BENCH,
+        )
+
+
+def test_a_measured_model_is_scored_on_its_evidence_not_its_letter() -> None:
+    # Planning letters are a staircase of the AA Index itself, so a measured
+    # model's planning quality is the evidence alone: Sol (51, lettered A)
+    # stands 2.6 points below Astra (52, lettered S), not 8.6.
+    catalog, bench = _with_sol(letter="A")
+    ranking = scoring.rank(
+        scoring.Task("planning", "medium"), BOTH, catalog=catalog, benchmarks=bench
+    )
+    quality = {c.model_id: c.quality for c in ranking.candidates}
+    assert quality["astra"] - quality["sol"] == pytest.approx(100 / 38, abs=0.02)
 
 
 def test_with_one_maker_funded_there_is_no_backup_and_a_warning_says_why() -> None:
@@ -1003,7 +1094,7 @@ def _with_per_token_muse() -> dict[str, Any]:
 
 MUSE_BENCH: dict[str, Any] = {
     **BENCH,
-    "muse": {"evaluations": {"artificial_analysis_intelligence_index": 45}},
+    "muse": {"evaluations": {"artificial_analysis_intelligence_index": 48}},
 }
 OPENROUTER_KEY = (
     "\n## Active API keys\n\n| Provider | Key present | Notes |\n| --- | --- | --- |\n"
@@ -1099,10 +1190,10 @@ def test_balanced_prefers_a_prepaid_point_over_a_per_token_one() -> None:
 # --------------------------------------------------------------------------- #
 
 # Luna as AA measures it at each effort (its headline row is the max one).
-# Planning quality, with the scale still drawn over the headline rows (20..58)
-# and Luna's A letter (21 points): low 21.0, medium 35.7, high 44.9, xhigh
-# 50.5, max 57.9. A capped pool runs planning/medium at most at xhigh.
-_LUNA_LEVELS = {"low": 20, "medium": 28, "high": 33, "xhigh": 36}
+# Planning quality is the evidence alone, on the scale drawn over the headline
+# rows (20..58): low 0.0, medium 21.1, high 34.2, xhigh 51.3, max 52.6. A
+# capped pool runs planning/medium at most at xhigh.
+_LUNA_LEVELS = {"low": 20, "medium": 28, "high": 33, "xhigh": 39.5}
 
 
 def _bench_with_levels(**extra: dict[str, Any]) -> dict[str, Any]:
@@ -1118,8 +1209,8 @@ def _bench_with_levels(**extra: dict[str, Any]) -> dict[str, Any]:
 
 
 def test_a_pick_runs_at_the_effort_whose_measured_score_clears_the_bar() -> None:
-    # Medium planning needs 50. Luna's headline (max, 57.9) clears it, but a
-    # capped pool never runs max; of the efforts it may run, only xhigh (50.5)
+    # Medium planning needs 50. Luna's headline (max, 52.6) clears it, but a
+    # capped pool never runs max; of the efforts it may run, only xhigh (51.3)
     # clears the bar, so COST is Luna at xhigh, where it used to be credited
     # its max score and run at medium.
     lad = scoring.ladder(
@@ -1133,7 +1224,7 @@ def test_a_pick_runs_at_the_effort_whose_measured_score_clears_the_bar() -> None
     }
     cost = lad.rungs["cost"]
     assert cost.candidate.evidence_level == "xhigh"
-    assert cost.point.aa_index == 36
+    assert cost.point.aa_index == 39.5
     # Each effort is its own point, priced by its token multiplier; Luna at
     # low (20 for 0.30) adds nothing over Lite (20 for 0.20).
     assert [
@@ -1154,13 +1245,14 @@ def test_a_pick_runs_at_the_effort_whose_measured_score_clears_the_bar() -> None
 def test_a_model_measured_only_at_efforts_the_task_does_not_run_is_left_out() -> None:
     # AA measured Sonnet at max alone; a capped pool runs medium planning at
     # most at xhigh, so nothing says how Sonnet does there. Without it, Sonnet
-    # Old (38, planning 54.2) is the best model at its price and stands
+    # Old (46, planning 68.4) is the best model at its price and stands
     # between COST and QUALITY.
+    sonnet_old = {"evaluations": {"artificial_analysis_intelligence_index": 46}}
     lad = scoring.ladder(
         scoring.Task("planning", "medium"),
         BOTH,
         catalog=CATALOG,
-        benchmarks=_bench_with_levels(sonnet={"aa_effort": "max"}),
+        benchmarks=_bench_with_levels(sonnet={"aa_effort": "max"}, **{"sonnet-old": sonnet_old}),
     )
     assert lad is not None
     assert "sonnet" not in {p.candidate.model_id for p in lad.points}
@@ -1445,7 +1537,7 @@ def test_rank_stands_each_model_at_its_best_measured_effort() -> None:
     ranking = scoring.rank(task, BOTH, catalog=CATALOG, benchmarks=bench)
     luna = next(c for c in ranking.candidates if c.model_id == "luna")
     # Of the efforts Luna may run here (up to xhigh), only xhigh clears the
-    # bar (50.5 against 50), and it scores best.
+    # bar (51.3 against 50), and it scores best.
     assert (luna.evidence_level, luna.effort, luna.requirement_penalty) == ("xhigh", "xhigh", 0.0)
     # Sonnet is measured only at max, which a capped pool does not run here.
     assert "sonnet" not in {c.model_id for c in ranking.candidates}

@@ -34,7 +34,7 @@ score = quality − requirement_penalty − λ · K · decades(effective_cost)
 
 | Term | What it is | Source |
 | --- | --- | --- |
-| `quality` (0–100) | The model's standing in the task's category. The Artificial Analysis evidence figure for that category, min-max scaled across the measured catalog (coding and agentic by rank instead: 0 for the lowest, 100 for the highest, ties sharing their mean rank; coding's figure is the mean of the model's percentile ranks on SciCode and Terminal-Bench 4.0, the evaluations AA's own Coding Index averaged), blended 70/30 with the S→D letter. Unmeasured models use the letter alone, discounted by 5 points (a letter without evidence is an estimate, not a measurement) — except in a category with no evidence at all (multimodal), where every model is on its letter. A throughput of exactly 0 tokens/s is "not measured" (AA reports it for endpoints it has not throughput-tested); an evaluation's 0 is a result. | `docs/benchmarks.json` (AA) + `docs/catalog.json` letters |
+| `quality` (0–100) | The model's standing in the task's category. The Artificial Analysis evidence figure for that category, min-max scaled across the measured catalog (coding and agentic by rank instead: 0 for the lowest, 100 for the highest, ties sharing their mean rank; coding's figure is the mean of the model's percentile ranks on SciCode and Terminal-Bench 4.0, the evaluations AA's own Coding Index averaged). In the five categories whose S→D letter update/derive_ratings.py derives from that same figure (coding, planning, agentic, long-context, knowledge), a measured model's quality is the figure alone: the letter is a staircase of it, and blending it back in only adds a cliff at each band edge (GPT-6 Astra's 52.7 on the AA Index read S and GPT-6.1 Sol's 51.8 read A, six quality points for 0.9 of index). Speed, whose letter is an estimate rather than a reading of tokens/s, blends the figure 70/30 with it. Unmeasured models use the letter alone, discounted by 5 points (a letter without evidence is an estimate, not a measurement) — except in a category with no evidence at all (multimodal), where every model is on its letter. A throughput of exactly 0 tokens/s is "not measured" (AA reports it for endpoints it has not throughput-tested); an evaluation's 0 is a result. | `docs/benchmarks.json` (AA) + `docs/catalog.json` letters |
 | `requirement_penalty` | 1.5 points per point the model falls short of the quality the task requires: Low → 30 (C band), Medium → 50 (B), High → 70 (A), High + novel / multi-step proof → 85 (S). Soft, not a filter, so a thin candidate set still ranks. | complexity |
 | `effective_cost` | Blended list price (3 input : 1 output tokens per 1M) × *scarcity* of the platform's funding × the tokens the model draws at the effort, relative to a typical model at high (measured, `docs/effort-tokens.json`; else the uniform table). | catalog prices, user-context funding, effort-tokens |
 | `decades` | log₁₀(effective_cost / $0.02), floored at 0 — a 10× price step costs the same points anywhere on the range, and $0 is "free", not infinitely good. | — |
@@ -127,7 +127,12 @@ model on the operator's own hardware runs at that hardware's pace.
 ### Backup
 
 The best-scoring candidate from a **different provider that the operator can
-reach** (funded). When the user-context funds only one provider the result
+reach** (funded), giving way to the cheapest one the evidence cannot tell
+from it: level with it both ways in the category and within the AA Index's
+noise band (see *Near ties*). At budget `best` the score barely prices a
+model, so without this a fraction of an AA point would buy a backup at four
+times the price. `roadmodel backup` names the backup for a pick made outside
+the ladder (a roadmap step's Settings) by the ladder's own rule (item 9). When the user-context funds only one provider the result
 carries `backup_warning` instead of an unreachable model name — an outage
 or an exhausted pool needs somewhere to go, and naming a model the operator
 cannot run is worse than saying so.
@@ -283,19 +288,22 @@ frontier, in code (`scoring.ladder`):
    general capability (an AA Index within the same noise band, see *Near
    ties*). The reference is the cheapest match; with none, the substitute
    the QUALITY rule would pick among them (strongest in the category, a near
-   tie going to the higher AA Index). The backup is then the point with the
-   higher score among those within both noise bands of the reference, either
-   way: where the evidence cannot tell two substitutes apart, the score,
-   which prices them, decides, so GPT-6.1 Sol (AA 50.2 at high) backs up
-   Opus 5.5 ahead of GPT-6 Astra (50.9) at a quarter of the price. With no
-   adequate point, the backup is the one that falls shortest of the bar. It
-   runs at its point's measured effort, else at the rung's posture's effort,
-   on its own platform's dial. With no other maker in the pool a rung has no
-   backup and `backup_warning` says why. On Claude Max, ChatGPT Pro and
-   Google AI Pro, Opus 5.5 rungs back up to GPT-6.1 Sol unless GPT-6 Astra
-   is clearly stronger for the work (hard coding, hard agentic work, and
-   novel work where only Astra clears the bar), GPT-6.1 Sol rungs to
-   Sonnet 5.5 or Opus 5.5, and GPT-6 Luna rungs to Gemini 3.8 Flash.
+   tie going to the higher AA Index); with no adequate point, the one that
+   falls shortest of the bar. The backup is the cheapest of the points within
+   both noise bands of the reference, either way: where the evidence cannot
+   tell two substitutes apart, paying more buys nothing it can show, so
+   GPT-6.1 Sol (AA 50.2 at high) backs up Opus 5.5 ahead of GPT-6 Astra
+   (50.9) at a quarter of the price. A peer may fall short of the bar where
+   the reference clears it, by less than the noise. It runs at its point's
+   measured effort, else at the rung's posture's effort, on its own
+   platform's dial. With no other maker in the pool a rung has no backup and
+   `backup_warning` says why. On Claude Max, ChatGPT Pro and Google AI Pro,
+   Opus 5.5 rungs back up to GPT-6.1 Sol except where GPT-6 Astra leads
+   beyond the noise (hard agentic work, on Terminal-Bench 4.0), GPT-6.1 Sol
+   rungs to Sonnet 5.5 or Opus 5.5, and GPT-6 Luna rungs to Gemini 3.8
+   Flash. `roadmodel backup --model <m> --effort <e>` applies this rule to a
+   pick made elsewhere, and the roadmap prompts copy its cell into each
+   step's Backup row.
 
 **Near ties.** A benchmark separates models only as finely as its own
 run-to-run noise. Each candidate carries its category evidence on the

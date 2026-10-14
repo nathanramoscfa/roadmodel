@@ -418,6 +418,23 @@ def recommend(
     click.echo(_format_structured_text(structured), nl=False)
 
 
+def _scoring_user_context(user_context_path: Path | None) -> str:
+    """The user-context text the scorer reads: ``--user-context``, else
+    ROADMODEL_USER_CONTEXT, else the default path; empty when none exists. A
+    path named explicitly that does not exist is an error."""
+    if user_context_path is not None and not user_context_path.expanduser().exists():
+        raise UserContextNotFoundError(user_context_path.expanduser())
+    env_user_context = os.environ.get("ROADMODEL_USER_CONTEXT")
+    if (
+        user_context_path is None
+        and env_user_context
+        and not Path(env_user_context).expanduser().exists()
+    ):
+        raise UserContextNotFoundError(Path(env_user_context).expanduser())
+    resolved = user_context.resolve(cli_path=user_context_path)
+    return user_context.read(resolved) if resolved.exists() else ""
+
+
 @cli.command("score")
 @click.option(
     "--category",
@@ -474,17 +491,7 @@ def score_command(
     funding, consumption headroom and Usage-pool status from user-context.md.
     Every term is printed so a pick can be audited line by line.
     """
-    if user_context_path is not None and not user_context_path.expanduser().exists():
-        raise UserContextNotFoundError(user_context_path.expanduser())
-    env_user_context = os.environ.get("ROADMODEL_USER_CONTEXT")
-    if (
-        user_context_path is None
-        and env_user_context
-        and not Path(env_user_context).expanduser().exists()
-    ):
-        raise UserContextNotFoundError(Path(env_user_context).expanduser())
-    resolved = user_context.resolve(cli_path=user_context_path)
-    text = user_context.read(resolved) if resolved.exists() else ""
+    text = _scoring_user_context(user_context_path)
     posture = (budget or scoring.declared_budget(text)).lower()
     try:
         task = scoring.Task(
@@ -502,6 +509,82 @@ def score_command(
         click.echo(json.dumps(payload, indent=2))
         return
     click.echo(scoring.render_text(ranking, limit=top))
+
+
+@cli.command("backup")
+@click.option(
+    "--category",
+    required=True,
+    type=click.Choice(list(scoring.CATEGORIES), case_sensitive=False),
+    help="PRIMARY task category of the pick.",
+)
+@click.option(
+    "--complexity",
+    required=True,
+    type=click.Choice(list(scoring.COMPLEXITIES), case_sensitive=False),
+    help="Overall complexity of the pick's task.",
+)
+@click.option("--novel", is_flag=True, default=False, help="High complexity AND novel.")
+@click.option("--model", required=True, help="The pick's model: catalog id or name.")
+@click.option("--effort", required=True, help="The pick's effort, as its dial names it.")
+@click.option(
+    "--budget",
+    type=click.Choice(list(scoring.BUDGETS), case_sensitive=False),
+    default=None,
+    help="Budget posture; defaults to the user-context's declared Budget priority.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["text", "json"], case_sensitive=False),
+    default="text",
+    show_default=True,
+)
+@click.option(
+    "--user-context",
+    "user_context_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Path to user-context.md override.",
+)
+def backup_command(
+    category: str,
+    complexity: str,
+    novel: bool,
+    model: str,
+    effort: str,
+    budget: str | None,
+    output: str,
+    user_context_path: Path | None,
+) -> None:
+    """Name the cross-maker backup for a pick, in code — no engine call.
+
+    The rule /recommend backs each pick up by: another maker's model that does
+    the job as well, for the least; where the benchmarks cannot tell two
+    substitutes apart, the cheaper. Prints the roadmap Settings Backup cell.
+    """
+    text = _scoring_user_context(user_context_path)
+    posture = (budget or scoring.declared_budget(text)).lower()
+    try:
+        task = scoring.Task(category.lower(), complexity.lower(), novel, posture)
+        backup = scoring.backup_for_pick(task, text, model, effort)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+    cell = scoring.backup_cell(backup) if backup is not None else "None"
+    if output.lower() == "json":
+        payload: dict[str, Any] = {"backup": None, "cell": cell}
+        if backup is not None:
+            c = backup.candidate
+            payload["backup"] = {
+                "model_id": c.model_id,
+                "model": c.model_name,
+                "platform_id": c.platform_id,
+                "platform": c.platform_name,
+                "effort": backup.effort,
+                "native_effort": backup.native,
+            }
+        click.echo(json.dumps(payload, indent=2, ensure_ascii=False))
+        return
+    click.echo(f"BACKUP   {cell}")
 
 
 @cli.command("cost")

@@ -180,7 +180,13 @@ exclusion in the selector, and include a backup model.
   A changed backup alone counts as a difference; name it in that line.
 - Every table carries a `Backup` row directly under `Model`: the
   selector's BACKUP with its own platform and dial in one cell
-  (`GPT-5.6 Terra — Codex · Intelligence Medium`), or `None`. A table
+  (`GPT-5.6 Terra — Codex · Intelligence Medium`), or `None`. Where
+  `roadmodel` is installed, the cell is the one `roadmodel backup
+  --category <c> --complexity <x> [--novel] --model <the step's model>
+  --effort <the step's effort>` prints for the step's classification —
+  the rule /recommend backs a pick up by, which takes the cheaper of two
+  substitutes the benchmarks cannot tell apart — and it outranks the
+  selector's BACKUP. A table
   written before roadmodel 0.2.41 has no such row: add it from the
   backup the step already names (its Model rationale's closing
   sentence, or its entry in the Model selection blocks) — a layout

@@ -522,6 +522,34 @@ def test_bundled_benchmarks_load_and_real_catalog_ranks() -> None:
     assert r.k_points_per_decade > 5
 
 
+def test_cli_backup_names_another_makers_model_for_a_pick(tmp_path: Path) -> None:
+    ctx = tmp_path / "user-context.md"
+    ctx.write_text(MAX_AND_PRO, encoding="utf-8")
+    argv = [sys.executable, "-m", "roadmodel", "backup", "--category", "coding"]
+    argv += ["--complexity", "high", "--model", "Claude Opus 5.5", "--effort", "XHigh"]
+    argv += ["--user-context", str(ctx)]
+    text = subprocess.run(argv, cwd=REPO_ROOT, capture_output=True, text=True, check=True)
+    assert text.stdout.startswith("BACKUP   ") and " — " in text.stdout
+    out = subprocess.run(
+        [*argv, "--output", "json"], cwd=REPO_ROOT, capture_output=True, text=True, check=True
+    )
+    payload = json.loads(out.stdout)
+    assert payload["backup"] is not None
+    assert not payload["backup"]["model_id"].startswith("claude")
+    assert payload["cell"] == text.stdout.removeprefix("BACKUP   ").strip()
+
+
+def test_cli_backup_rejects_a_model_the_context_cannot_reach(tmp_path: Path) -> None:
+    ctx = tmp_path / "user-context.md"
+    ctx.write_text(MAX_AND_PRO, encoding="utf-8")
+    argv = [sys.executable, "-m", "roadmodel", "backup", "--category", "coding"]
+    argv += ["--complexity", "high", "--model", "no-such-model", "--effort", "high"]
+    out = subprocess.run(
+        [*argv, "--user-context", str(ctx)], cwd=REPO_ROOT, capture_output=True, text=True
+    )
+    assert out.returncode != 0 and "no-such-model" in out.stderr
+
+
 def test_cli_score_json(tmp_path: Path) -> None:
     ctx = tmp_path / "user-context.md"
     ctx.write_text(MAX_AND_PRO, encoding="utf-8")
