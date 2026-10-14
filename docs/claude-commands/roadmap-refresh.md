@@ -186,8 +186,15 @@ exclusion in the selector, and include a backup model.
   --effort <the step's effort>` prints for the step's classification —
   the rule /recommend backs a pick up by, which takes the cheaper of two
   substitutes the benchmarks cannot tell apart — and it outranks the
-  selector's BACKUP. A table
-  written before roadmodel 0.2.41 has no such row: add it from the
+  selector's BACKUP. When the command also prints a `MODEL` line, that
+  cell replaces the step's model — a newer version of the same model
+  (GPT-6 Sol → GPT-6.1 Sol), on the same platform, no dearer, that
+  scores level or better at the step's effort; the selector's letters
+  are measured at each model's top effort, and a step that runs lower
+  can reverse them. That is a difference: rewrite the table, its Model
+  rationale and its selection block with the `MODEL` cell, keep the
+  Backup cell printed with it, and add the `Settings updated` line.
+  A table written before roadmodel 0.2.41 has no such row: add it from the
   backup the step already names (its Model rationale's closing
   sentence, or its entry in the Model selection blocks) — a layout
   fix, not a new pick, so it takes no `Settings updated` line.

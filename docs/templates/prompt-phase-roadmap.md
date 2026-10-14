@@ -109,7 +109,14 @@ the cell `roadmodel backup --category <c> --complexity <x> [--novel]
 step's own classification: the rule /recommend backs a pick up by, in
 code, which takes the cheaper of two substitutes the benchmarks cannot
 tell apart. The selector's BACKUP stands only where it is not
-installed.
+installed. When the command also prints a `MODEL` line, that cell
+replaces the step's model: a newer version of the same model (GPT-6 Sol
+→ GPT-6.1 Sol), on the same platform, no dearer, that scores level or
+better at the step's effort. The selector's letters are measured at each
+model's top effort, and a step that runs lower can reverse them. Write
+the `MODEL` cell into the Model row, the Model rationale and the step's
+selection block, citing the newer model's figures at the step's effort,
+and keep the Backup cell printed with it.
 
 Honor the template's style rules: 80-column prose, zero `{{...}}`
 tokens left, `**Status:** Not started` directly under the title and

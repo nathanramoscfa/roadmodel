@@ -561,17 +561,41 @@ def backup_command(
     The rule /recommend backs each pick up by: another maker's model that does
     the job as well, for the least; where the benchmarks cannot tell two
     substitutes apart, the cheaper. Prints the roadmap Settings Backup cell.
+
+    When a newer version of the pick's model (same maker and series, on the
+    same platform, no dearer) scores level or better at the pick's effort, it
+    first prints that model on a MODEL line: the step runs it instead, and the
+    backup printed is its backup.
     """
     text = _scoring_user_context(user_context_path)
     posture = (budget or scoring.declared_budget(text)).lower()
     try:
         task = scoring.Task(category.lower(), complexity.lower(), novel, posture)
-        backup = scoring.backup_for_pick(task, text, model, effort)
+        successor = scoring.successor_for_pick(task, text, model, effort)
+        runs = successor.candidate.model_id if successor is not None else model
+        backup = scoring.backup_for_pick(task, text, runs, effort)
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
     cell = scoring.backup_cell(backup) if backup is not None else "None"
+    model_cell = scoring.backup_cell(successor) if successor is not None else None
     if output.lower() == "json":
-        payload: dict[str, Any] = {"backup": None, "cell": cell}
+        payload: dict[str, Any] = {
+            "model": None,
+            "model_cell": model_cell,
+            "backup": None,
+            "cell": cell,
+        }
+        if successor is not None:
+            s = successor.candidate
+            payload["model"] = {
+                "model_id": s.model_id,
+                "model": s.model_name,
+                "platform_id": s.platform_id,
+                "platform": s.platform_name,
+                "effort": successor.effort,
+                "native_effort": successor.native,
+                "replaces": successor.replaces,
+            }
         if backup is not None:
             c = backup.candidate
             payload["backup"] = {
@@ -584,6 +608,12 @@ def backup_command(
             }
         click.echo(json.dumps(payload, indent=2, ensure_ascii=False))
         return
+    if successor is not None:
+        click.echo(f"MODEL    {model_cell}")
+        click.echo(
+            f"         replaces {successor.replaces}: a newer version, no dearer, "
+            "level or better at this effort"
+        )
     click.echo(f"BACKUP   {cell}")
 
 
