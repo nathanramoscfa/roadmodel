@@ -103,7 +103,13 @@ selector in `@planning/model-selector.txt` (prices from
 You are the engine — do not call any external API. Honor every
 availability exclusion in the selector, and write each step's backup
 model into its Settings table's Backup row, with the backup's own
-platform and dial.
+platform and dial. Where `roadmodel` is installed, the Backup row is
+the cell `roadmodel backup --category <c> --complexity <x> [--novel]
+--model <the step's model> --effort <the step's effort>` prints for the
+step's own classification: the rule /recommend backs a pick up by, in
+code, which takes the cheaper of two substitutes the benchmarks cannot
+tell apart. The selector's BACKUP stands only where it is not
+installed.
 
 Honor the template's style rules: 80-column prose, zero `{{...}}`
 tokens left, `**Status:** Not started` directly under the title and
