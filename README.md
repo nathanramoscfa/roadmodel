@@ -356,7 +356,7 @@ server and the reasoning-effort default in parity automatically.
 | `roadmodel recommend --model`    | Override the specific model ID on the chosen provider.                             |
 | `roadmodel recommend --user-context PATH` | Override the user-context.md location for this invocation.                |
 | `roadmodel score --category C --complexity X` | Rank (model, platform, effort) candidates in code for a classified task — no engine call. See [docs/scoring-model.md](docs/scoring-model.md). |
-| `roadmodel backup --category C --complexity X --model M --effort E` | Name the cross-maker backup for a pick, by the rule /recommend uses — no engine call. Prints the roadmap Settings Backup cell. |
+| `roadmodel backup --category C --complexity X --model M --effort E` | Name the cross-maker backup for a pick, by the rule /recommend uses — no engine call. Prints the roadmap Settings Backup cell, and first a `MODEL` cell when a newer version of the pick's model (same platform, no dearer) scores level or better at its effort. |
 | `roadmodel catalog show`         | Print the bundled `model-selector.txt` (use `--doc tier-cost-scale` for the price doc). |
 | `roadmodel catalog path`         | Print the on-disk path of the bundled catalog document (same `--doc` flag).        |
 | `roadmodel context show`         | Print the resolved `user-context.md` file.                                         |

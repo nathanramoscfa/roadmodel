@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.85] — 2026-10-14
+
+- **A roadmap step runs the newer version of its model.** `roadmodel backup` now checks the step's own model first. A newer release in the same series (GPT-6 Sol → GPT-6.1 Sol) replaces it when that release is from the same maker, on the same platform and no dearer, and, at the step's effort, is level in the step's category and no lower on the AA Intelligence Index. The command prints the replacement on a `MODEL` line, then that model's backup. `/roadmap-phase` and `/roadmap-refresh` write the `MODEL` cell into the step's Settings.
+  - Why: the selector's letters are measured at each model's top effort. At max, a 3-point SciCode gap letters GPT-6 Sol S in coding and GPT-6.1 Sol A. So a phase roadmap put GPT-6 Sol on its Medium Codex steps, though at Medium GPT-6.1 Sol leads it on Terminal-Bench 4.0 (48.0% vs 18.7%), HLE and the AA Index at the same price.
+
 ## [0.2.84] — 2026-10-14
 
 - **Measured models are scored on the measurement.** In coding, planning, agentic, long-context and knowledge, a model's S→D letter is derived from the very benchmark the scorer reads, so blending it in (30%) only added a cliff at each band edge: GPT-6 Astra's 52.7 on the AA Index read S and GPT-6.1 Sol's 51.8 read A, six quality points for 0.9 of index. A measured model's quality there is now its evidence alone; letters stand in only where AA has not measured. Speed keeps its blend (its letter is an estimate, not a reading of tokens/s). On the maintainer's context 12 of 84 picks move, each to the model the benchmarks favour at the effort it runs.

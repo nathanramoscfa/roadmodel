@@ -303,7 +303,17 @@ frontier, in code (`scoring.ladder`):
    rungs to Sonnet 5.5 or Opus 5.5, and GPT-6 Luna rungs to Gemini 3.8
    Flash. `roadmodel backup --model <m> --effort <e>` applies this rule to a
    pick made elsewhere, and the roadmap prompts copy its cell into each
-   step's Backup row.
+   step's Backup row. First it checks the pick itself
+   (`successor_for_pick`). A newer version of the same model replaces it
+   when that version is in the same series, from the same maker, on the
+   same platform and no dearer, and, at the pick's effort, is level with it
+   in the category and no lower on the AA Index. The command then prints
+   that version on a `MODEL` line and backs it up instead. The two are read
+   at that effort where AA has measured both there, else on their headline
+   rows. This catches what the selector's letters miss, because those are
+   measured at each model's top effort: at max, GPT-6 Sol's 3-point SciCode
+   lead letters it S in coding and GPT-6.1 Sol A, yet at medium GPT-6.1 Sol
+   leads it on Terminal-Bench 4.0 by 48.0% to 18.7% at the same price.
 
 **Near ties.** A benchmark separates models only as finely as its own
 run-to-run noise. Each candidate carries its category evidence on the

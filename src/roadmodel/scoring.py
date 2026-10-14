@@ -2027,22 +2027,49 @@ def _model_ref_id(ref: str, catalog: dict[str, Any]) -> str:
     return ref
 
 
-def backup_for_pick(
+@dataclass(frozen=True)
+class _Pick:
+    """A pick made outside the ladder (a roadmap step's Settings), with the
+    pool and scales it is read against (:func:`_pick`)."""
+
+    candidate: Candidate  # the model, on the platform the pool reaches it best
+    level: str  # the scorer's level it runs at
+    ranking: Ranking
+    base: Task
+    models: dict[str, dict[str, Any]]
+    bench: dict[str, Any]
+    composite: dict[str, Any]
+    scales: tuple[EvidenceScale | None, EvidenceScale | None]
+    catalog: dict[str, Any]
+
+    def at(self, c: Candidate, level: str | None) -> Candidate:
+        """``c`` read at ``level`` (None: its headline row; see :func:`_at_level`)."""
+        return _at_level(
+            c,
+            level,
+            self.models[c.model_id],
+            self.base,
+            self.composite,
+            self.scales,
+            self.ranking.lam,
+            self.ranking.k_points_per_decade,
+        )
+
+    def measured(self, model_id: str) -> bool:
+        return self.level in measured_levels(self.bench, model_id)
+
+
+def _pick(
     task: Task,
     user_context_text: str,
     model: str,
     effort: str,
-    *,
-    unavailable_models: list[str] | None = None,
-    catalog: dict[str, Any] | None = None,
-    benchmarks: dict[str, Any] | None = None,
-) -> Backup | None:
-    """The backup for a pick made outside the ladder (a roadmap step's
-    Settings): ``model`` (catalog id or name) run at ``effort`` (a scorer or
-    native level), backed up by the rule a /recommend rung follows
-    (:func:`_backup_for`), over the same pool, so the two never disagree.
-    ``task.budget`` sets the posture an unmeasured backup's effort follows.
-    None when the pool holds no other maker's model. ValueError when the
+    unavailable_models: list[str] | None,
+    catalog: dict[str, Any] | None,
+    benchmarks: dict[str, Any] | None,
+) -> _Pick:
+    """``model`` (catalog id or name) run at ``effort`` (a scorer or native
+    level) for ``task``, over the pool /recommend ranks. ValueError when the
     model is not one this user-context can reach."""
     cat = catalog if catalog is not None else _cost._load_catalog()
     bench = benchmarks if benchmarks is not None else _load_benchmarks()
@@ -2060,28 +2087,143 @@ def backup_for_pick(
     models = {str(m.get("id", "")): m for m in cat.get("models", []) if isinstance(m, dict)}
     if picked is None or model_id not in models:
         raise ValueError(f"{model!r} is not a model this user-context can reach")
-    funded = [c for c in ranking.candidates if c.funding != "unfunded"]
-    pool = funded or ranking.candidates
-    headroom = consumption_headroom(user_context_text or "")
-    lam, k = ranking.lam, ranking.k_points_per_decade
-    settings = effort_settings(pool, base, headroom, lam=lam, k=k, catalog=cat, benchmarks=bench)
     composite = with_composites(bench)
     scales = (
         _evidence_scale(cat, composite, CATEGORY_EVIDENCE[base.category]),
         _evidence_scale(cat, composite, CATEGORY_EVIDENCE["planning"]),
     )
-    level = _scorer_level(effort)
-    measured = level in measured_levels(bench, model_id)
-    at = _at_level(
-        picked, level if measured else None, models[model_id], base, composite, scales, lam, k
+    return _Pick(
+        picked, _scorer_level(effort), ranking, base, models, bench, composite, scales, cat
     )
+
+
+def backup_for_pick(
+    task: Task,
+    user_context_text: str,
+    model: str,
+    effort: str,
+    *,
+    unavailable_models: list[str] | None = None,
+    catalog: dict[str, Any] | None = None,
+    benchmarks: dict[str, Any] | None = None,
+) -> Backup | None:
+    """The backup for a pick made outside the ladder (a roadmap step's
+    Settings): ``model`` (catalog id or name) run at ``effort`` (a scorer or
+    native level), backed up by the rule a /recommend rung follows
+    (:func:`_backup_for`), over the same pool, so the two never disagree.
+    ``task.budget`` sets the posture an unmeasured backup's effort follows.
+    None when the pool holds no other maker's model. ValueError when the
+    model is not one this user-context can reach."""
+    p = _pick(task, user_context_text, model, effort, unavailable_models, catalog, benchmarks)
+    funded = [c for c in p.ranking.candidates if c.funding != "unfunded"]
+    pool = funded or p.ranking.candidates
+    headroom = consumption_headroom(user_context_text or "")
+    settings = effort_settings(
+        pool,
+        p.base,
+        headroom,
+        lam=p.ranking.lam,
+        k=p.ranking.k_points_per_decade,
+        catalog=p.catalog,
+        benchmarks=p.bench,
+    )
+    model_id = p.candidate.model_id
+    at = p.at(p.candidate, p.level if p.measured(model_id) else None)
     point = FrontierPoint(
-        at, _evidence(bench, model_id, FRONTIER_INDEX, at.evidence_level), frontier_price(at)
+        at, _evidence(p.bench, model_id, FRONTIER_INDEX, at.evidence_level), frontier_price(at)
     )
     tier = next(t for t, b in TIER_BUDGET.items() if b == task.budget)
     return _backup_for(
-        Rung(tier, point, level), settings, task, headroom, bench, cat, _aa_band(bench, cat)
+        Rung(tier, point, p.level),
+        settings,
+        task,
+        headroom,
+        p.bench,
+        p.catalog,
+        _aa_band(p.bench, p.catalog),
     )
+
+
+def _series(model_id: str) -> frozenset[str]:
+    """A model id's name words, its version numbers and the vendor prefix
+    aside: `gpt-6-sol` and `gpt-6.1-sol` are one series, `gpt-6-sol` and
+    `gpt-6-luna` two. Mirrors update/rating_guard.py same_series."""
+    return frozenset(re.findall(r"[a-z]+", model_id.lower())) - {"claude"}
+
+
+def _version(model_id: str) -> tuple[int, ...]:
+    return tuple(int(n) for n in re.findall(r"\d+", model_id))
+
+
+@dataclass(frozen=True)
+class Successor:
+    """A newer version of a pick's model that runs in its place
+    (:func:`successor_for_pick`)."""
+
+    candidate: Candidate  # the newer model, read at the pick's effort
+    effort: str  # the scorer's level
+    native: str | None
+    replaces: str  # the pick's model name
+
+    @property
+    def level(self) -> str:
+        return self.native or self.effort
+
+
+def successor_for_pick(
+    task: Task,
+    user_context_text: str,
+    model: str,
+    effort: str,
+    *,
+    unavailable_models: list[str] | None = None,
+    catalog: dict[str, Any] | None = None,
+    benchmarks: dict[str, Any] | None = None,
+) -> Successor | None:
+    """The newer version of ``model`` a pick made outside the ladder should run
+    instead: the same maker's next release in the same series (GPT-6 Sol →
+    GPT-6.1 Sol), funded on the pick's platform, no dearer per token, and, run
+    at ``effort``, level with it in the task's category (:func:`_level_with`)
+    and at least as high on the AA Intelligence Index. The newest such version;
+    None when there is none. ValueError when ``model`` is not one this
+    user-context can reach.
+
+    The selector reads each model's letters at its top effort, and a step that
+    runs lower can reverse them: GPT-6 Sol letters S in coding and GPT-6.1 Sol
+    A on a 3-point SciCode gap at max, yet at medium 6.1 Sol leads it on
+    Terminal-Bench 4.0 by 29 points at the same price. The two are compared
+    at ``effort`` where AA has measured both there, else on their headline
+    rows, so neither is credited with a run the other is not."""
+    p = _pick(task, user_context_text, model, effort, unavailable_models, catalog, benchmarks)
+    old = p.candidate
+    series, version = _series(old.model_id), _version(old.model_id)
+    best: Successor | None = None
+    for c in p.ranking.candidates:
+        if (
+            c.platform_id != old.platform_id
+            or c.provider != old.provider
+            or _series(c.model_id) != series
+            or _version(c.model_id) <= version
+            or c.blended_price_usd > old.blended_price_usd
+        ):
+            continue
+        both = p.measured(old.model_id) and p.measured(c.model_id)
+        level = p.level if both else None
+        was, now = p.at(old, level), p.at(c, level)
+        aa_was = _evidence(p.bench, old.model_id, FRONTIER_INDEX, level)
+        aa_now = _evidence(p.bench, c.model_id, FRONTIER_INDEX, level)
+        if not _level_with(now, was, task.category):
+            continue
+        if aa_now is None or (aa_was is not None and aa_now < aa_was):
+            continue
+        if best is not None and (
+            _version(c.model_id),
+            -c.blended_price_usd,
+        ) <= (_version(best.candidate.model_id), -best.candidate.blended_price_usd):
+            continue
+        native = native_level(c.platform_id, c.model_id, p.level, catalog=p.catalog)
+        best = Successor(now, p.level, native, old.model_name)
+    return best
 
 
 # A platform's effort dial as a Settings table names it (docs/settings-display.md):
@@ -2103,9 +2245,10 @@ _LEVEL_WORDS: Final[dict[str, str]] = {
 }
 
 
-def backup_cell(backup: Backup) -> str:
+def backup_cell(backup: Backup | Successor) -> str:
     """``backup`` as a roadmap Settings table's Backup cell:
-    ``GPT-6.1 Sol — Codex · Intelligence XHigh``."""
+    ``GPT-6.1 Sol — Codex · Intelligence XHigh``. A :class:`Successor` reads
+    the same way, as the model the step runs."""
     c = backup.candidate
     dial = _DIAL_NAMES.get(c.platform_id, "Effort")
     level = _LEVEL_WORDS.get(normalize_level(backup.level), backup.level)
