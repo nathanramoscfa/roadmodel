@@ -24,6 +24,7 @@ import { test, expect, type Page, type Request } from "@playwright/test";
 
 import registry from "../data/engines.json";
 import { chooseLane } from "./fixtures/lanes";
+import { storedRows } from "./fixtures/saved";
 
 // Assembled at runtime: no secret-shaped literal is committed.
 function fakeKey(prefix: string, marker = "canary-0411"): string {
@@ -115,8 +116,9 @@ test("a visitor's key runs the recommendation, travels only as a header and is s
   for (const cookie of await context.cookies()) {
     expect(cookie.value).not.toContain(canary);
   }
-  // The recent-recommendations store kept the result, without the key.
-  expect(await page.evaluate(() => window.localStorage.getItem("roadmodel:recommend-recent"))).toBeTruthy();
+  // The saved-recommendations store kept the result, without the key.
+  await expect.poll(async () => (await storedRows(page)).length).toBeGreaterThan(0);
+  expect(JSON.stringify(await storedRows(page))).not.toContain(canary);
 
   // Forget key, from the result: the next request has no key, and the
   // composer's field is empty.

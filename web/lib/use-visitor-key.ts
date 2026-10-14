@@ -1,7 +1,7 @@
 // web/lib/use-visitor-key.ts
 //
 // The visitor's own API key on /recommend, held in React state and nowhere
-// else: never a cookie, localStorage, sessionStorage, the recent-
+// else: never a cookie, localStorage, sessionStorage, the saved-
 // recommendations store or the engine-prefs cookie. RecommendWorkspace owns
 // one holder and shares it with the composer (where the key is typed) and the
 // result's "Run again" (which reuses it), so a reload or a closed tab forgets

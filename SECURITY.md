@@ -92,9 +92,14 @@ this guard retains its availability-oriented fail-open policy. Provider account
 limits remain the backstop. Aborting an edge request cannot cancel provider work
 already admitted by the service.
 
-Recent browser results use one account-scoped store capped at eight runs and
-512 KiB. Sign-out, account
-changes and explicit clearing remove it and invalidate pending responses. Browser
+Saved recommendations stay in the browser's IndexedDB and are never sent to the
+server. Each account (or the signed-out visitor) has its own list, capped at 500
+entries of at most 512 KiB, and entries are schema-checked on every write, read
+and import. An account change hides the other account's list without deleting
+it. Sign-out keeps the list unless the visitor ticks removal, which deletes every
+saved entry in that browser. Sign-out in one tab resets the other tabs and
+invalidates their pending responses. Export files carry only the checked fields.
+Browser
 Supabase cookies intentionally remain readable by the browser auth client, with
 SameSite=Lax and Secure on HTTPS; the gate cookie is HttpOnly. CSP retains inline
 styles required by the framework and permits the configured Supabase origin;
