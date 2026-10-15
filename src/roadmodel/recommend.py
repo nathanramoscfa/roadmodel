@@ -12,7 +12,7 @@ from importlib import resources
 from importlib.resources.abc import Traversable
 from typing import Any, Final
 
-from roadmodel import cost, scoring, usage, user_context
+from roadmodel import cost, scoring, series, usage, user_context
 from roadmodel.config import Config
 from roadmodel.errors import (
     BundledDocNotFoundError,
@@ -250,6 +250,47 @@ def _drop_superseded(selector_text: str, unavailable_models: list[str] | None) -
         return m.group(1) + ",".join(kept) + m.group(3)
 
     return _SUPPORTS_MODELS_RE.sub(_supports, _MODEL_ELEMENT_RE.sub(_element, selector_text))
+
+
+def _drop_older_versions(selector_text: str, unavailable_models: list[str] | None) -> str:
+    """The selector with every older version of a series taken off each access
+    method that also offers a newer one (:mod:`roadmodel.series`), and a model
+    no method offers any more left out. The operator's rule: a recommendation
+    names the latest version (GPT-6.1 Sol, never GPT-6 Sol where both run). A
+    benched newer version keeps the older one in play."""
+    benched = {m.strip() for m in (unavailable_models or []) if m.strip()}
+    known = {
+        dict(_ELEMENT_ATTR_RE.findall(m.group(1))).get("id", "")
+        for m in _MODEL_ELEMENT_RE.finditer(selector_text)
+    }
+    taken: set[str] = set()
+
+    def _supports(m: re.Match[str]) -> str:
+        ids = [x.strip() for x in m.group(2).split(",") if x.strip()]
+        live = [x for x in ids if x in known and x not in benched]
+        kept = [x for x in ids if not any(series.is_newer(x, y) for y in live)]
+        taken.update(set(ids) - set(kept))
+        return m.group(1) + ",".join(kept) + m.group(3)
+
+    text = _SUPPORTS_MODELS_RE.sub(_supports, selector_text)
+    offered = {x.strip() for m in _SUPPORTS_MODELS_RE.finditer(text) for x in m.group(2).split(",")}
+    drop = taken - offered
+    if not drop:
+        return text
+
+    def _element(m: re.Match[str]) -> str:
+        return "" if dict(_ELEMENT_ATTR_RE.findall(m.group(1))).get("id") in drop else m.group(0)
+
+    return _MODEL_ELEMENT_RE.sub(_element, text)
+
+
+def selector_for_engine(selector_text: str, unavailable_models: list[str] | None = None) -> str:
+    """The selector an engine (the /recommend prompt, the roadmap planning
+    kit, the MCP catalog) reads: no superseded or retired model, and only the
+    latest version of each series on each access method."""
+    return _drop_older_versions(
+        _drop_superseded(selector_text, unavailable_models), unavailable_models
+    )
 
 
 # Phase 4.10: the `local` funding class. Shared by both headers so a Cost-priority
@@ -590,7 +631,7 @@ def build_prompt(
     ladder: bool = False,
     ladder_table: str | None = None,
 ) -> tuple[str, str]:
-    selector_text = _drop_superseded(
+    selector_text = selector_for_engine(
         _strip_ide_framing(_read_bundled_doc(BUNDLED_SELECTOR_PATH, "model-selector.txt")),
         unavailable_models,
     )

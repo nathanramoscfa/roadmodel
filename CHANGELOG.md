@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.86] — 2026-10-14
+
+- **A recommendation names the latest version of a series.** The operator's rule is GPT-6.1 Sol, never GPT-6 Sol where both run, and Opus 5.5, never Opus 5. It is not a benchmark judgment, so it holds even where the older version scores higher or costs less. It is enforced in code at every surface that recommends:
+  - The scorer drops an older version from every platform that offers a newer one, so /recommend, `roadmodel score` and the ladder never pick it.
+  - The selector the engines read lists only the latest version per access method: the /recommend prompt, the planning kit's `model-selector.txt` and the MCP catalog.
+  - A parameter count (`20b`, `120b`) names a different model, not a version. `roadmodel backup`'s `MODEL` line now names the newest version unconditionally.
+- **Roadmap Settings carry the full ladder.** `roadmodel ladder --category C --complexity X [--novel] [--phase]` (MCP: `roadmap_settings`) prints a step's or phase's Settings table as /recommend shows it. The three columns are Cost, Balanced and Quality, each with its effort and a backup from another maker, read with every usage pool at headroom. A **Runs:** line names the column the step runs: the Budget priority's, or Quality for a phase-roadmap session.
+  - `/roadmap-step` picks the column from the pools on the day. A `tight` pool moves the run to the column's Backup (or the Cost column), and an `exhausted` one to its Backup. A change in pool state no longer means refreshing roadmaps.
+  - `/roadmap-phase`, `/roadmap-project` and `/roadmap-refresh` write the ladder wherever roadmodel is installed. The refresh converts single-column tables.
+- **The `roadmodel` on PATH is upgraded too.** A pipx or `uv tool` install is the one agent sessions call, and neither a project env nor the MCP env reaches it. One sat at 0.2.83 while the fleet ran 0.2.85, so roadmap writers there fell back to the selector's letters. `roadmodel-upgrade` now upgrades it and reports a `PATH roadmodel:` line.
+
 ## [0.2.85] — 2026-10-14
 
 - **A roadmap step runs the newer version of its model.** `roadmodel backup` now checks the step's own model first. A newer release in the same series (GPT-6 Sol → GPT-6.1 Sol) replaces it when that release is from the same maker, on the same platform and no dearer, and, at the step's effort, is level in the step's category and no lower on the AA Intelligence Index. The command prints the replacement on a `MODEL` line, then that model's backup. `/roadmap-phase` and `/roadmap-refresh` write the `MODEL` cell into the step's Settings.

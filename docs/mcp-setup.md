@@ -81,8 +81,9 @@ the bare command name.
 **Verify in Cursor.** Open Settings (`Cmd+Shift+J` on macOS,
 `Ctrl+Shift+J` on Linux/Windows) → **Features → Model Context
 Protocol**. The `roadmodel` server should appear with a green
-indicator and four tools listed: `recommend_model`,
-`generate_phase_roadmap`, `read_catalog`, `score_candidates`. If it does not connect,
+indicator and five tools listed: `recommend_model`,
+`generate_phase_roadmap`, `read_catalog`, `score_candidates`,
+`roadmap_settings`. If it does not connect,
 open the Output panel (`Cmd+Shift+U`) and pick **MCP Logs** from the
 dropdown to read the stderr stream from `roadmodel-mcp`.
 

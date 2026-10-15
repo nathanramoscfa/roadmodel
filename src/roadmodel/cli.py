@@ -562,10 +562,10 @@ def backup_command(
     the job as well, for the least; where the benchmarks cannot tell two
     substitutes apart, the cheaper. Prints the roadmap Settings Backup cell.
 
-    When a newer version of the pick's model (same maker and series, on the
-    same platform, no dearer) scores level or better at the pick's effort, it
-    first prints that model on a MODEL line: the step runs it instead, and the
-    backup printed is its backup.
+    When the pick's platform offers a newer version of the pick's model (same
+    series: GPT-6 Sol -> GPT-6.1 Sol), it first prints that model on a MODEL
+    line: a recommendation always names the latest version, so the step runs
+    it instead, and the backup printed is its backup.
     """
     text = _scoring_user_context(user_context_path)
     posture = (budget or scoring.declared_budget(text)).lower()
@@ -611,10 +611,83 @@ def backup_command(
     if successor is not None:
         click.echo(f"MODEL    {model_cell}")
         click.echo(
-            f"         replaces {successor.replaces}: a newer version, no dearer, "
-            "level or better at this effort"
+            f"         replaces {successor.replaces}: the latest version of its series "
+            "on this platform"
         )
     click.echo(f"BACKUP   {cell}")
+
+
+@cli.command("ladder")
+@click.option(
+    "--category",
+    required=True,
+    type=click.Choice(list(scoring.CATEGORIES), case_sensitive=False),
+    help="PRIMARY task category of the step (or `planning` for a phase roadmap).",
+)
+@click.option(
+    "--complexity",
+    required=True,
+    type=click.Choice(list(scoring.COMPLEXITIES), case_sensitive=False),
+    help="Overall complexity of the step.",
+)
+@click.option("--novel", is_flag=True, default=False, help="High complexity AND novel.")
+@click.option(
+    "--phase",
+    is_flag=True,
+    default=False,
+    help="The session that writes a phase roadmap: runs Quality, at its deepest rung.",
+)
+@click.option(
+    "--budget",
+    type=click.Choice(list(scoring.BUDGETS), case_sensitive=False),
+    default=None,
+    help="Budget priority; defaults to the user-context's declared one.",
+)
+@click.option(
+    "--output",
+    type=click.Choice(["markdown", "json"], case_sensitive=False),
+    default="markdown",
+    show_default=True,
+)
+@click.option(
+    "--user-context",
+    "user_context_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Path to user-context.md override.",
+)
+def ladder_command(
+    category: str,
+    complexity: str,
+    novel: bool,
+    phase: bool,
+    budget: str | None,
+    output: str,
+    user_context_path: Path | None,
+) -> None:
+    """Print a roadmap Settings table as the full ladder — no engine call.
+
+    The Cost / Balanced / Quality picks /recommend shows, each with its effort
+    and a backup from another maker, read with every usage pool at headroom,
+    then the column the step runs and the rule for a tight or exhausted pool.
+    The table outlives a pool's state: the step's runner picks the column on
+    the day, so the roadmap needs no refresh when a pool tightens.
+    """
+    text = _scoring_user_context(user_context_path)
+    posture = (budget or scoring.declared_budget(text)).lower()
+    try:
+        task = scoring.Task(category.lower(), complexity.lower(), novel, posture)
+        settings = scoring.settings_ladder(task, text, phase=phase)
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+    if settings is None:
+        raise click.ClickException("no model in this user-context's pool carries an AA Index")
+    if output.lower() == "json":
+        click.echo(json.dumps(settings, indent=2, ensure_ascii=False))
+        return
+    click.echo(settings["markdown"])
+    if settings["backup_warning"]:
+        click.echo(f"\n> {settings['backup_warning']}")
 
 
 @cli.command("cost")
@@ -803,10 +876,17 @@ def export_kit(target: Path, dest: str, force: bool, user_context_path: Path | N
     for _, out in bundled:
         safe_destination(target, out.relative_to(target))
     uc_out = protect_export(target, Path(dest) / "user-context.md")
+
     # Resolve all public resources before starting to replace the kit.
-    contents = [
-        (resource.read_text(encoding="utf-8").encode("utf-8"), out) for resource, out in bundled
-    ]
+    def kit_text(resource: Traversable) -> str:
+        text = resource.read_text(encoding="utf-8")
+        # The roadmap engine reads the selector as /recommend's engine does:
+        # no superseded model, and only the latest version of each series.
+        if resource == recommender.BUNDLED_SELECTOR_PATH:
+            text = recommender.selector_for_engine(text)
+        return text
+
+    contents = [(kit_text(resource).encode("utf-8"), out) for resource, out in bundled]
     written: list[Path] = []
     for data, out in contents:
         atomic_private_write(out, data)

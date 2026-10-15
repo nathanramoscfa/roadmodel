@@ -2148,3 +2148,56 @@ def test_private_log_refusal_has_a_fixed_diagnostic(up, tmp_path, monkeypatch):
         up._open_log()
     assert "synthetic-private-marker" not in str(error.value)
     assert error.value.__suppress_context__
+
+
+# The roadmodel on PATH (2026-10-14): agent sessions call it, and a pipx
+# install sat at 0.2.83 while the fleet ran 0.2.85.
+def _fake_tools(
+    up: ModuleType, monkeypatch: pytest.MonkeyPatch, managers: dict[str, list[str]]
+) -> list[list[str]]:
+    """Each manager's successive `list` outputs; returns the argv log."""
+    calls: list[list[str]] = []
+
+    def which(name: str) -> str | None:
+        return f"/bin/{name}" if name in managers else None
+
+    def run(
+        argv: list[str], timeout: int, cwd: Path | None = None
+    ) -> subprocess.CompletedProcess[str]:
+        calls.append(argv)
+        name = Path(argv[0]).name
+        out = managers[name].pop(0) if "list" in argv else ""
+        return subprocess.CompletedProcess(argv, 0, out, "")
+
+    monkeypatch.setattr(up.shutil, "which", which)
+    monkeypatch.setattr(up, "_run", run)
+    return calls
+
+
+def test_a_pipx_roadmodel_on_path_is_upgraded(
+    up: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = _fake_tools(
+        up, monkeypatch, {"pipx": ["roadmodel 0.2.83\nuv 0.12.15\n", "roadmodel 0.2.86\n"]}
+    )
+    line, ok = up.update_path_tool(dry_run=False)
+    assert (line, ok) == ("pipx 0.2.83 -> 0.2.86", True)
+    assert ["/bin/pipx", "upgrade", "roadmodel"] in calls
+
+
+def test_a_uv_tool_roadmodel_is_upgraded(up: ModuleType, monkeypatch: pytest.MonkeyPatch) -> None:
+    _fake_tools(
+        up, monkeypatch, {"uv": ["roadmodel v0.2.84\n- roadmodel\n", "roadmodel v0.2.86\n"]}
+    )
+    assert up.update_path_tool(dry_run=False) == ("uv 0.2.84 -> 0.2.86", True)
+
+
+def test_no_tool_install_means_nothing_to_upgrade(
+    up: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = _fake_tools(up, monkeypatch, {"pipx": ["black 24.1\n"]})
+    assert up.update_path_tool(dry_run=False) == (
+        "not a pipx or uv tool install; nothing to upgrade",
+        True,
+    )
+    assert all("upgrade" not in argv for argv in calls)

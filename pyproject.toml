@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "roadmodel"
-version = "0.2.85"
+version = "0.2.86"
 description = "BYO-key CLI that recommends the right AI model, platform, and settings for a prompt."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -90,6 +90,7 @@ include = [
     "src/roadmodel/providers/registry.py",
     "src/roadmodel/recommend.py",
     "src/roadmodel/scoring.py",
+    "src/roadmodel/series.py",
     "src/roadmodel/usage.py",
     "src/roadmodel/user_context.py",
 ]
@@ -113,6 +114,7 @@ include = [
     "src/roadmodel/providers/registry.py",
     "src/roadmodel/recommend.py",
     "src/roadmodel/scoring.py",
+    "src/roadmodel/series.py",
     "src/roadmodel/usage.py",
     "src/roadmodel/user_context.py",
     "docs/model-selector.txt",
