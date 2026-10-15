@@ -376,10 +376,10 @@ run_static_checks() {
       "missing file or named test"
   fi
 
-  # 20 — exactly four tool functions, each appearing exactly once
+  # 20 — every documented tool function, each appearing exactly once
   local ok20=1
   local bad20=""
-  for fn in recommend_model generate_phase_roadmap read_catalog score_candidates; do
+  for fn in recommend_model generate_phase_roadmap read_catalog score_candidates roadmap_settings; do
     local count
     count="$(grep -Ec "^[[:space:]]*def ${fn}\(" src/roadmodel/mcp_server.py 2>/dev/null || true)"
     if [[ "${count}" != "1" ]]; then
@@ -389,9 +389,9 @@ run_static_checks() {
     fi
   done
   if [[ "${ok20}" -eq 1 ]]; then
-    record_pass 20 "mcp_server.py registers exactly four tools (recommend_model, generate_phase_roadmap, read_catalog, score_candidates)"
+    record_pass 20 "mcp_server.py registers each documented tool once (recommend_model, generate_phase_roadmap, read_catalog, score_candidates, roadmap_settings)"
   else
-    record_fail 20 "mcp_server.py registers exactly four tools" "${bad20}"
+    record_fail 20 "mcp_server.py registers each documented tool once" "${bad20}"
   fi
 
   # 21 — filesystem-walking guard
@@ -672,7 +672,7 @@ _mcp_tools_list_smoke_py() {
 import asyncio
 import sys
 
-EXPECTED = sorted(["recommend_model", "generate_phase_roadmap", "read_catalog", "score_candidates"])
+EXPECTED = sorted(["recommend_model", "generate_phase_roadmap", "read_catalog", "score_candidates", "roadmap_settings"])
 
 
 async def main() -> int:
@@ -736,7 +736,7 @@ run_mcp_checks() {
   smoke_rc=0
   smoke_out="$(_mcp_tools_list_smoke_py | python - 2>&1)" || smoke_rc=$?
   if [[ "${smoke_rc}" -eq 0 ]] && grep -Fq "OK" <<<"${smoke_out}"; then
-    printf '[PASS] MCP gate: stdio tools/list returned exactly the three documented tools\n'
+    printf '[PASS] MCP gate: stdio tools/list returned exactly the documented tools\n'
     STEP_MCP_PASS+=1
   else
     printf '[FAIL] MCP gate: stdio tools/list smoke failed\n%s\n' "${smoke_out}" >&2
@@ -860,7 +860,7 @@ run_post_matrix() {
   v4_rc=0
   v4_out="$(_mcp_tools_list_smoke_py | python - 2>&1)" || v4_rc=$?
   if [[ "${v4_rc}" -eq 0 ]] && grep -Fq "OK" <<<"${v4_out}"; then
-    printf '[PASS] V4.3: wheel[mcp] tools/list returned exactly the three documented tools\n'
+    printf '[PASS] V4.3: wheel[mcp] tools/list returned exactly the documented tools\n'
     STEP_POST_PASS+=1
   else
     printf '[FAIL] V4.3: wheel[mcp] tools/list smoke failed\n%s\n' "${v4_out}" >&2
