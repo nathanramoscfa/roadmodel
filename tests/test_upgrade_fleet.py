@@ -460,3 +460,12 @@ def test_remote_rule_failures_have_specific_private_status(
     lines, ok = fleet.run_fleet(config)
     assert not ok and word in lines[0]
     assert "private source" not in lines[0]
+
+
+def test_keep_pins_reaches_the_peers(fleet: ModuleType, tmp_path: Path) -> None:
+    """A coordinated run with --keep-pins cleared the PC's pins anyway (2026-10-14):
+    the flag stopped at the coordinator."""
+    peer = fleet.load_peers(_config(tmp_path))[0]
+    args = fleet._updater_args(peer, sync_only=False, check=False, keep_pins=True)
+    assert args[:3] == ["--local-only", "--skip-roadmap-refresh", "--keep-pins"]
+    assert "--keep-pins" not in fleet._updater_args(peer, sync_only=False, check=False)

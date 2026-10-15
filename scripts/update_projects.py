@@ -208,6 +208,7 @@ def upgrade_peers(args):
             dry_run=args.dry_run,
             sync_only=args.sync_only,
             check=args.check,
+            keep_pins=getattr(args, "keep_pins", False),
         )
         for line in lines:
             print(f"  {line}")

@@ -224,12 +224,14 @@ def test_fleet_receives_modes_and_private_config(
         return ["fleet peer: OK"], True
 
     monkeypatch.setattr(updater.up, "_support", lambda name: SimpleNamespace(run_fleet=run_fleet))
-    args = SimpleNamespace(local_only=False, dry_run=True, sync_only=True, check=False)
+    args = SimpleNamespace(
+        local_only=False, dry_run=True, sync_only=True, check=False, keep_pins=True
+    )
     assert updater.original_peers(args)
     assert calls == [
         (
             updater.home / ".config" / "roadmodel" / "fleet.json",
-            {"dry_run": True, "sync_only": True, "check": False},
+            {"dry_run": True, "sync_only": True, "check": False, "keep_pins": True},
         )
     ]
 
