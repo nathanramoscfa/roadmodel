@@ -1144,9 +1144,8 @@ def rank(
         if model_id in unavailable:
             excluded.append({"model": model_id, "reason": "unavailable"})
             continue
-        # The successor is the same maker's: no dearer and rated at least as
-        # high everywhere, or a later version of the series (update/
-        # supersede.py); a benched successor keeps the older model in play.
+        # The successor is the same maker's, no dearer, and rated at least as
+        # high everywhere; a benched successor keeps the older model in play.
         successor = str(model.get("superseded_by") or "")
         if latest_only and successor and successor in catalog_ids and successor not in unavailable:
             excluded.append({"model": model_id, "reason": f"superseded by {successor}"})

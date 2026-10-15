@@ -9,10 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.86] — 2026-10-14
 
-- **A recommendation names the latest version of a series.** The operator's rule is GPT-6.1 Sol, never GPT-6 Sol where both run, and Opus 5.5, never Opus 5. It is not a benchmark judgment, so it holds even where the older version scores higher or costs less. It is enforced at three places:
+- **A recommendation names the latest version of a series.** The operator's rule is GPT-6.1 Sol, never GPT-6 Sol where both run, and Opus 5.5, never Opus 5. It is not a benchmark judgment, so it holds even where the older version scores higher or costs less. It is enforced in code at every surface that recommends:
   - The scorer drops an older version from every platform that offers a newer one, so /recommend, `roadmodel score` and the ladder never pick it.
   - The selector the engines read lists only the latest version per access method: the /recommend prompt, the planning kit's `model-selector.txt` and the MCP catalog.
-  - The catalog's lifecycle tags an older version superseded where no model beats it on every count and the newer one is offered everywhere. Tagged today: GPT-6 Sol, Gemini 3 Flash, Gemini 2.5 Flash, Gemini 3.1 Flash-Lite, GLM-4.6 and Grok 4.3.
   - A parameter count (`20b`, `120b`) names a different model, not a version. `roadmodel backup`'s `MODEL` line now names the newest version unconditionally.
 - **Roadmap Settings carry the full ladder.** `roadmodel ladder --category C --complexity X [--novel] [--phase]` (MCP: `roadmap_settings`) prints a step's or phase's Settings table as /recommend shows it. The three columns are Cost, Balanced and Quality, each with its effort and a backup from another maker, read with every usage pool at headroom. A **Runs:** line names the column the step runs: the Budget priority's, or Quality for a phase-roadmap session.
   - `/roadmap-step` picks the column from the pools on the day. A `tight` pool moves the run to the column's Backup (or the Cost column), and an `exhausted` one to its Backup. A change in pool state no longer means refreshing roadmaps.

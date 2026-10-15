@@ -215,11 +215,10 @@ def _strip_ide_framing(selector_text: str) -> str:
 
 
 # The catalog's lifecycle tags (update/supersede.py). A model tagged
-# superseded-by is one a newer model from the same maker beats on every count
-# (it costs the same or less, scores higher on the AA Intelligence Index, rates
-# at least as high in every category), or a later version of its own series;
-# either way the successor is offered on every platform that offers this one.
-# It is never the pick (the operator's rule: the latest version), so the engine never sees
+# superseded-by is one a newer model from the same maker beats on every count:
+# it costs the same or less, scores higher on the AA Intelligence Index, rates
+# at least as high in every category, and is offered on every platform that
+# offers this one. It can only ever be the worse pick, so the engine never sees
 # it while its successor is available; when the successor is benched at
 # runtime, the superseded model stays in as the fallback. A retired model
 # (retired-on) is always left out. Each dropped element also saves its tokens

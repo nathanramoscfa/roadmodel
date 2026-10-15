@@ -26,8 +26,6 @@ from click.testing import CliRunner
 from roadmodel import scoring, series
 from roadmodel.cli import cli
 
-CATALOG_JSON = Path(__file__).resolve().parent.parent / "docs" / "catalog.json"
-
 
 def _model(mid: str, name: str, inp: float, out: float, provider: str) -> dict[str, Any]:
     return {
@@ -254,18 +252,6 @@ def test_a_benched_newer_version_keeps_the_older_one_ranked() -> None:
 )
 def test_series_and_version(old: str, new: str, newer: bool) -> None:
     assert series.is_newer(old, new) is newer
-
-
-def test_supersede_mirrors_the_series_rule() -> None:
-    import sys
-
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "update"))
-    import supersede
-
-    ids = [m["id"] for m in json.loads(CATALOG_JSON.read_text())["models"]]
-    for a in ids:
-        assert supersede._series(a) == series.series(a), a
-        assert supersede._series_version(a) == series.version(a), a
 
 
 def _cli(tmp_path: Path, monkeypatch: Any, *args: str) -> str:

@@ -11,8 +11,9 @@ aside: `claude-opus-5-5`, `claude-opus-5` and `opus-4.8` are one series;
 `gpt-5.5-mini`. A parameter count (`20b`, `120b`, `a3b`) names a size, not a
 version, so `gpt-oss-20b` and `gpt-oss-120b` are two series.
 
-Mirrored by update/supersede.py (which cannot import the package); the tests
-hold the two together.
+Enforced in code wherever a model is recommended: the scorer's pool
+(`scoring.rank`) and the selector every engine reads
+(`recommend.selector_for_engine`).
 """
 
 from __future__ import annotations

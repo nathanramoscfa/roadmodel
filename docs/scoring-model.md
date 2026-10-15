@@ -315,15 +315,12 @@ so it holds where the older version scores higher (GPT-6 Sol's 3-point SciCode
 lead at max) or costs less. A series is a model id's name words, its version
 numbers and the vendor prefix aside (`claude-opus-5-5`, `claude-opus-5` and
 `opus-4.8` are one; a size such as `20b` / `120b` names a different model). It
-is applied at three places:
+is applied in code, at two places:
 - `rank` drops a model from any platform that also offers a newer version,
   unless that version is benched.
 - The selector every engine reads (the /recommend prompt, the planning kit,
   the MCP catalog; `recommend.selector_for_engine`) lists only the latest
   version on each access method.
-- update/supersede.py tags the older version superseded where no model beats
-  it on every count, so it retires from the catalog. It does this only where
-  the newer version is offered everywhere the older one is.
 
 **A roadmap's Settings carry the ladder.** `roadmodel ladder --category
 <c> --complexity <x> [--novel] [--phase]` (`scoring.settings_ladder`, MCP
