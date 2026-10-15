@@ -182,7 +182,9 @@ def load_peers(config_path: Path) -> list[Peer]:
     return load_config(config_path)[0]
 
 
-def _updater_args(peer: Peer, *, sync_only: bool, check: bool) -> list[str]:
+def _updater_args(
+    peer: Peer, *, sync_only: bool, check: bool, keep_pins: bool = False
+) -> list[str]:
     args = ["--local-only"]  # A peer can have its own fleet: never recurse.
     if check:
         args.append("--check")
@@ -192,6 +194,10 @@ def _updater_args(peer: Peer, *, sync_only: bool, check: bool) -> list[str]:
         # A coordinated upgrade repairs context without starting model-backed
         # roadmap sessions on peers, even though it writes a local log.
         args.append("--skip-roadmap-refresh")
+        if keep_pins:
+            # The operator keeps their pinned model/effort on every machine:
+            # a coordinated run must not clear what a local run keeps.
+            args.append("--keep-pins")
     if not check:
         args.extend(["--log", "--add"])
     args.extend(peer.projects)
@@ -199,7 +205,12 @@ def _updater_args(peer: Peer, *, sync_only: bool, check: bool) -> list[str]:
 
 
 def build_command(
-    peer: Peer, *, sync_only: bool = False, check: bool = False, stdin_script: bool = False
+    peer: Peer,
+    *,
+    sync_only: bool = False,
+    check: bool = False,
+    stdin_script: bool = False,
+    keep_pins: bool = False,
 ) -> list[str]:
     """Build one SSH invocation without interpolating paths into executable code.
 
@@ -213,7 +224,7 @@ def build_command(
         json.dumps(
             {
                 "launcher": peer.launcher,
-                "args": _updater_args(peer, sync_only=sync_only, check=check),
+                "args": _updater_args(peer, sync_only=sync_only, check=check, keep_pins=keep_pins),
             }
         ).encode("utf-8")
     ).decode("ascii")
@@ -258,12 +269,17 @@ def build_command(
 
 
 def build_input(
-    peer: Peer, global_rules: dict[str, str], *, sync_only: bool = False, check: bool = False
+    peer: Peer,
+    global_rules: dict[str, str],
+    *,
+    sync_only: bool = False,
+    check: bool = False,
+    keep_pins: bool = False,
 ) -> bytes:
     """Encode data into a constant bootstrap delivered only through SSH stdin."""
     payload = {
         "launcher": peer.launcher,
-        "args": _updater_args(peer, sync_only=sync_only, check=check),
+        "args": _updater_args(peer, sync_only=sync_only, check=check, keep_pins=keep_pins),
         "check": check,
         "global_rules": global_rules,
     }
@@ -286,7 +302,12 @@ def build_input(
 
 
 def run_fleet(
-    config_path: Path, *, dry_run: bool = False, sync_only: bool = False, check: bool = False
+    config_path: Path,
+    *,
+    dry_run: bool = False,
+    sync_only: bool = False,
+    check: bool = False,
+    keep_pins: bool = False,
 ) -> tuple[list[str], bool]:
     """Return concise status lines and whether every configured peer succeeded.
 
@@ -319,13 +340,21 @@ def run_fleet(
             continue
         try:
             input_kwargs = (
-                {"input": build_input(peer, rules, sync_only=sync_only, check=check)}
+                {
+                    "input": build_input(
+                        peer, rules, sync_only=sync_only, check=check, keep_pins=keep_pins
+                    )
+                }
                 if rules is not None
                 else {"stdin": subprocess.DEVNULL}
             )
             completed = subprocess.run(  # noqa: S603 — validated host and shell-encoded payload
                 build_command(
-                    peer, sync_only=sync_only, check=check, stdin_script=rules is not None
+                    peer,
+                    sync_only=sync_only,
+                    check=check,
+                    stdin_script=rules is not None,
+                    keep_pins=keep_pins,
                 ),
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
