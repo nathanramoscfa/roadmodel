@@ -655,16 +655,40 @@ def test_roadmap_refresh_repicks_only_phases_not_yet_written() -> None:
 def test_roadmap_writing_picks_take_their_models_from_the_scoring_core() -> None:
     """The first Phase roadmap settings tables (2026-10-01) named GPT-5.6 Sol
     as every backup: the selector's prose ranks on catalog letters, and the
-    GPT-6 family still carried its unreviewed B placeholder in planning.
-    `roadmodel score` ranks on measured benchmarks and named GPT-6.1 Sol on
-    the same stale catalog. Wherever a table is picked, its two models come
-    from the scoring core; the effort stays the deepest rung, and a model the
-    user-context names still wins."""
-    score = "`roadmodel score --category planning --complexity high --budget best`"
+    GPT-6 family still carried its unreviewed B placeholder in planning. The
+    scoring core ranks on measured benchmarks. Since 0.2.86 the whole table
+    comes from it: the ladder `roadmodel ladder` prints, which the session
+    runs at its Quality column; a model the user-context names still wins."""
+    ladder = "`roadmodel ladder --category planning --complexity high --phase`"
     for path in (PROJECT, PROMPT_PROJECT, REFRESH_COMMAND):
         flat = re.sub(r"\s+", " ", path.read_text())
-        assert score in flat, path.name
-        assert "not their effort" in flat, path.name
-        assert "PRIMARY and BACKUP lines" in flat, path.name
-        assert "a stale catalog letter cannot steer them" in flat, path.name
+        assert ladder in flat, path.name
+        assert "pasted as printed with its **Runs:** line" in flat, path.name
+        assert "a stale catalog letter cannot steer it" in flat, path.name
         assert "a model the user-context names for these sessions still wins" in flat, path.name
+
+
+def test_step_settings_are_the_full_ladder() -> None:
+    """2026-10-14: the operator wanted /recommend's Cost / Balanced / Quality,
+    each with an effort and a cross-maker backup, in every roadmap, so a pool
+    that turns tight or exhausted needs no refresh: the step's runner picks
+    the column on the day."""
+    step_ladder = "`roadmodel ladder --category <c> --complexity <x> [--novel]`"
+    template = re.sub(r"\s+", " ", PHASE.read_text())
+    assert "THE LADDER — the default wherever roadmodel is installed" in template
+    assert step_ladder in template
+    assert "| Setting | Cost | Balanced | Quality |" in re.sub(r" +", " ", PHASE.read_text())
+    assert "never an older one (GPT-6 Sol where GPT-6.1 Sol runs" in template
+    prompt = re.sub(r"\s+", " ", PROMPT_PHASE.read_text())
+    assert step_ladder in prompt
+    assert "A ladder table (Cost / Balanced / Quality columns)" in prompt
+    assert "never name an older version of a series" in prompt
+    refresh = re.sub(r"\s+", " ", REFRESH_COMMAND.read_text())
+    assert step_ladder in refresh
+    assert "A single-column table becomes the ladder: that is a difference" in refresh
+    step = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
+    assert "**Ladder tables** (Cost / Balanced / Quality columns" in step
+    assert "`> Ran <YYYY-MM-DD>: <column> — <model · effort>. <why>.`" in step
+    assert "reads `tight` moves the run" in prompt
+    assert "`tight`: run that column's Backup when the Backup's pool" in step
+    assert "`exhausted`: run that column's Backup" in step

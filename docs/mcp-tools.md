@@ -16,6 +16,8 @@ registration walk-throughs, see [docs/mcp-setup.md](mcp-setup.md).
   selector, tier-cost-scale doc, and catalog JSON verbatim.
 - [`score_candidates`](#score_candidates) — rank (model, platform,
   effort) candidates in code for a classified task; no engine call.
+- [`roadmap_settings`](#roadmap_settings) — a roadmap Settings table as
+  the full Cost / Balanced / Quality ladder with backups; no engine call.
 
 Every tool reads the user-context file through the same resolution
 chain the CLI uses ([docs/user-context-setup.md](user-context-setup.md));
@@ -196,6 +198,35 @@ the reason).
   "backup_warning": null
 }
 ```
+
+## `roadmap_settings`
+
+A roadmap step's (or phase's) Settings table as the full ladder: the Cost /
+Balanced / Quality picks /recommend shows for the classification, each with
+its effort and a backup from another maker, read with every usage pool at
+headroom. It also names the column the step runs (`runs`: the user-context's
+Budget priority, or Quality for a phase-roadmap session) and the rule for a
+pool that reads `tight` or `exhausted` on the day. Same output as
+`roadmodel ladder`. No provider key, no engine call.
+
+### Signature
+
+```python
+def roadmap_settings(
+    category: str,            # coding | planning | agentic | multimodal | long-context | knowledge | speed
+    complexity: str,          # low | medium | high
+    novel: bool = False,      # High task that is novel problem-solving / multi-step proof
+    phase: bool = False,      # the session that writes a phase roadmap: Quality at its deepest rung
+    budget: str | None = None,  # cheap | balanced | best; default = user-context's Budget priority
+) -> dict
+```
+
+### Returns
+
+`task`, `phase`, `runs` (`cost`, `balanced` or `quality`), `rule`, `columns`
+(per tier: `model`, `platform`, `effort`, `effort_cell`, `thinking_cell`,
+`backup`), `backup_warning`, and `markdown` (the table and its **Runs:**
+line, ready to paste).
 
 ## `read_catalog`
 

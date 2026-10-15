@@ -167,39 +167,42 @@ Print the phase · step · status table.
 
 The current step is the first step, in phase order, that does not read
 `Complete`. For the current step and every step after it, in every phase
-roadmap that exists, re-run the model selector exactly as the phase
-roadmap was written: `planning/model-selector.txt`, with prices from
-`planning/model-tier-cost-scale.md` and display rules from
-`planning/settings-display.md`, against `planning/user-context.md`. You
-are the engine — do not call any external API. Honor every availability
-exclusion in the selector, and include a backup model.
+roadmap that exists, re-select its Settings the way a phase roadmap is
+written now. Classify the step (its PRIMARY and SECONDARY category, its
+complexity, novel or not; its Model rationale names them), then:
 
+- Where `roadmodel` is installed, the Settings table is the ladder
+  `roadmodel ladder --category <c> --complexity <x> [--novel]` prints
+  for that classification (MCP tool: `roadmap_settings`), pasted as
+  printed with its **Runs:** line: Cost, Balanced and Quality, each with
+  its own effort and a backup from another maker, read with every usage
+  pool at headroom, so the step's runner picks the column from the pools
+  on the day. A single-column table becomes the ladder: that is a
+  difference. Its models are always the latest version of their series.
+- Where `roadmodel` cannot be reached, re-run the model selector as the
+  roadmap was written: `planning/model-selector.txt`, with prices from
+  `planning/model-tier-cost-scale.md` and display rules from
+  `planning/settings-display.md`, against `planning/user-context.md`.
+  You are the engine — do not call any external API. Honor every
+  availability exclusion in the selector, include a backup model, and
+  never name an older version of a series (GPT-6 Sol where GPT-6.1 Sol
+  runs, Opus 5 where Opus 5.5 does).
 - If the result differs from the step's Settings table, rewrite the
   table and its Model rationale, and add one line beneath the table:
   `> Settings updated <YYYY-MM-DD> (refresh): was <old model> · <old effort>. <why>.`
-  A changed backup alone counts as a difference; name it in that line.
-- Every table carries a `Backup` row directly under `Model`: the
-  selector's BACKUP with its own platform and dial in one cell
-  (`GPT-5.6 Terra — Codex · Intelligence Medium`), or `None`. Where
-  `roadmodel` is installed, the cell is the one `roadmodel backup
-  --category <c> --complexity <x> [--novel] --model <the step's model>
-  --effort <the step's effort>` prints for the step's classification —
-  the rule /recommend backs a pick up by, which takes the cheaper of two
-  substitutes the benchmarks cannot tell apart — and it outranks the
-  selector's BACKUP. When the command also prints a `MODEL` line, that
-  cell replaces the step's model — a newer version of the same model
-  (GPT-6 Sol → GPT-6.1 Sol), on the same platform, no dearer, that
-  scores level or better at the step's effort; the selector's letters
-  are measured at each model's top effort, and a step that runs lower
-  can reverse them. That is a difference: rewrite the table, its Model
-  rationale and its selection block with the `MODEL` cell, keep the
-  Backup cell printed with it, and add the `Settings updated` line.
-  A table written before roadmodel 0.2.41 has no such row: add it from the
+  For a ladder, the old model and effort are the column the step ran
+  (its **Runs:** line), or the single column it replaced. A changed
+  backup alone counts as a difference; name it in that line.
+- Every table carries a `Backup` row directly under `Model`, each cell
+  a backup with its own platform and dial
+  (`GPT-6.1 Sol — Codex · Intelligence Medium`), or `None`. A table
+  written before roadmodel 0.2.41 has no such row: add it from the
   backup the step already names (its Model rationale's closing
   sentence, or its entry in the Model selection blocks) — a layout
   fix, not a new pick, so it takes no `Settings updated` line.
-- Keep the step's `BACKUP:` line in the Model selection blocks equal to
-  its table's Backup row.
+- Keep the step's selection block in the Model selection blocks equal
+  to the column its **Runs:** line names (its `BACKUP:` line to that
+  column's Backup), and its Summary Table row to the same column.
 - If it matches, leave the step exactly as it is.
 - **Never touch a step that reads `Complete`.** Its settings are the
   record of what ran.
@@ -214,18 +217,20 @@ roadmap settings** table (roadmodel 0.2.54 on): the model and dials for
 the session that writes that phase's roadmap with `/roadmap-phase N`.
 For every phase whose roadmap does not exist yet — no
 `phaseNN-roadmap.md` or `phaseNN-<slug>-roadmap.md` for it — re-run the
-selector for that session, quality first: the strongest `planning`
-model the operator's access methods reach, at the deepest reasoning
-rung it exposes on its platform (`Max` in Claude Code), thinking on,
-never `Ultracode`, with a backup on its own platform and dial — unless
-`planning/user-context.md` states a rule for roadmap-writing sessions,
-which wins. Where `roadmodel` is installed, take the model and the
-backup, not their effort, from the PRIMARY and BACKUP lines of
-`roadmodel score --category planning --complexity high --budget best`:
-it ranks on measured benchmarks, so a stale catalog letter cannot steer
-them, and a model the user-context names for these sessions still wins.
-The table takes its platform's shape, as a step's does, with
-Conversation **New**, followed by one or two sentences on why.
+selector for that session, quality first: it runs the Quality column,
+the strongest `planning` model the operator's access methods reach, at
+the deepest reasoning rung it exposes on its platform (`Max` in Claude
+Code), thinking on, never `Ultracode`, with a backup on its own platform
+and dial — unless `planning/user-context.md` states a rule for
+roadmap-writing sessions, which wins. Where `roadmodel` is installed,
+the table is the ladder `roadmodel ladder --category planning
+--complexity high --phase` prints, pasted as printed with its **Runs:**
+line: it ranks on measured benchmarks, so a stale catalog letter cannot
+steer it, and a model the user-context names for these sessions still
+wins. A single-column table becomes the ladder: that is a difference.
+Without roadmodel, the table takes its platform's single-column shape,
+as a step's does. Conversation is **New**, followed by one or two
+sentences on why.
 
 - No table yet ⇒ add one. It is the phase's first pick, so it takes no
   `Settings updated` line.

@@ -972,7 +972,7 @@ Tier ratings:
 - **Tier ratings:** Coding **S** · Planning **A** · Agentic **S** · Multimodal **A** · Long-context **S** · Knowledge **A** · Speed **D**
 - **Headline benchmarks:** AA Intelligence Index 47.6 (max); HLE 47.9%; SciCode 57.6; Terminal-Bench 4.0 43.9; AA-LCR 0.837; LMArena WebDev #8 (Elo 1689.0)
 - **Pricing notes:** Provider-direct OpenAI API per-token pricing (not via the Cursor pool)
-- **Best for:** Frontier-class coding, agentic work and long context, plus strong planning, multimodal input and knowledge, at a medium price. Its AA Intelligence Index of 47.6 ranks 9th of 56 measured models. Weakest at speed (D).
+- **Best for:** Frontier-class coding, agentic work and long context, plus strong planning, multimodal input and knowledge, at a medium price. Its AA Intelligence Index of 47.6 ranks 9th of 56 measured models. Weakest at speed (D). Superseded by GPT-6.1 Sol.
 
 #### GPT-6.1 Sol — `gpt-6.1-sol`
 
@@ -1094,7 +1094,7 @@ Tier ratings:
 - **Tier ratings:** Coding **B** · Planning **C** · Agentic **B** · Multimodal **A** · Long-context **B** · Knowledge **C** · Speed **S**
 - **Headline benchmarks:** AA Intelligence Index 9.9 (non-reasoning) / 13.1 (reasoning); native multimodal grounding; 1M-token context; designed for low-cost high-volume inference
 - **Pricing notes:** Hidden by default
-- **Best for:** Strong multimodal input, with very fast output, at a low price. Its AA Intelligence Index of 13.1 ranks 51st of 56 measured models. Weakest at planning and knowledge (C).
+- **Best for:** Strong multimodal input, with very fast output, at a low price. Its AA Intelligence Index of 13.1 ranks 51st of 56 measured models. Weakest at planning and knowledge (C). Superseded by Gemini 3.8 Flash.
 
 #### Gemini 3.5 Flash-Lite — `gemini-3.5-flash-lite`
 
@@ -1110,7 +1110,7 @@ Tier ratings:
 - **Tier ratings:** Coding **B** · Planning **C** · Agentic **B** · Multimodal **B** · Long-context **A** · Knowledge **C** · Speed **S**
 - **Headline benchmarks:** AA Intelligence Index 15.6; HLE 17.2%; SciCode 43.4; Terminal-Bench 4.0 0.5; AA-LCR 0.743
 - **Pricing notes:** Provider-direct Google API per-token pricing (not via the Cursor pool)
-- **Best for:** Strong long context, with very fast output, at a low price. Its AA Intelligence Index of 15.6 ranks 49th of 56 measured models. Weakest at planning and knowledge (C).
+- **Best for:** Strong long context, with very fast output, at a low price. Its AA Intelligence Index of 15.6 ranks 49th of 56 measured models. Weakest at planning and knowledge (C). Superseded by Gemini 3.5 Flash-Lite.
 
 #### GPT-5 Mini — `gpt-5-mini`
 
@@ -1246,7 +1246,7 @@ Tier ratings:
 - **Tier ratings:** Coding **C** · Planning **B** · Agentic **D** · Multimodal **B** · Long-context **A** · Knowledge **B** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 24.9 (high); HLE 37.2%; SciCode 48.3; Terminal-Bench 4.0 0.0; AA-LCR 0.730; AA-Omniscience 18.3 (#4); LMArena Search Elo 1165.3
 - **Pricing notes:** Hidden by default; Requires Max Mode on request-based plans
-- **Best for:** Strong long context at a low price. Its AA Intelligence Index of 24.9 ranks 39th of 56 measured models. Weakest at agentic work (D), then coding (C).
+- **Best for:** Strong long context at a low price. Its AA Intelligence Index of 24.9 ranks 39th of 56 measured models. Weakest at agentic work (D), then coding (C). Superseded by Grok 4.7.
 
 #### Grok 4.6 — `grok-4.6`
 

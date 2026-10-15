@@ -304,16 +304,40 @@ frontier, in code (`scoring.ladder`):
    Flash. `roadmodel backup --model <m> --effort <e>` applies this rule to a
    pick made elsewhere, and the roadmap prompts copy its cell into each
    step's Backup row. First it checks the pick itself
-   (`successor_for_pick`). A newer version of the same model replaces it
-   when that version is in the same series, from the same maker, on the
-   same platform and no dearer, and, at the pick's effort, is level with it
-   in the category and no lower on the AA Index. The command then prints
-   that version on a `MODEL` line and backs it up instead. The two are read
-   at that effort where AA has measured both there, else on their headline
-   rows. This catches what the selector's letters miss, because those are
-   measured at each model's top effort: at max, GPT-6 Sol's 3-point SciCode
-   lead letters it S in coding and GPT-6.1 Sol A, yet at medium GPT-6.1 Sol
-   leads it on Terminal-Bench 4.0 by 48.0% to 18.7% at the same price.
+   (`successor_for_pick`): when the pick's platform offers a newer version
+   of its series (`roadmodel.series`), the command prints that version on a
+   `MODEL` line and backs it up instead.
+
+**The latest version of a series.** A recommendation never names an older
+version of a series where a newer one runs: GPT-6.1 Sol, never GPT-6 Sol;
+Opus 5.5, never Opus 5. It is the operator's rule, not a benchmark judgment,
+so it holds where the older version scores higher (GPT-6 Sol's 3-point SciCode
+lead at max) or costs less. A series is a model id's name words, its version
+numbers and the vendor prefix aside (`claude-opus-5-5`, `claude-opus-5` and
+`opus-4.8` are one; a size such as `20b` / `120b` names a different model). It
+is applied at three places:
+- `rank` drops a model from any platform that also offers a newer version,
+  unless that version is benched.
+- The selector every engine reads (the /recommend prompt, the planning kit,
+  the MCP catalog; `recommend.selector_for_engine`) lists only the latest
+  version on each access method.
+- update/supersede.py tags the older version superseded where no model beats
+  it on every count, so it retires from the catalog. It does this only where
+  the newer version is offered everywhere the older one is.
+
+**A roadmap's Settings carry the ladder.** `roadmodel ladder --category
+<c> --complexity <x> [--novel] [--phase]` (`scoring.settings_ladder`, MCP
+`roadmap_settings`) prints a step's Settings as /recommend's three columns,
+each with its effort and backup. It reads every usage pool as `headroom`
+(`rank(neutral_pools=True)`), so the table does not depend on the day it was
+written. The **Runs:** line names the column the step runs: the Budget
+priority's column (cheap → Cost, balanced → Balanced, best → Quality); for a
+phase-roadmap session (`--phase`), Quality at the deepest rung its dial lets
+a roadmap pin (`max`, never `ultra`). Then `/roadmap-step` applies the rule to
+the pools on the day:
+- the column's pool reads `tight`: run its Backup when the Backup's pool has
+  headroom, else the Cost column;
+- the column's pool reads `exhausted`: run its Backup.
 
 **Near ties.** A benchmark separates models only as finely as its own
 run-to-run noise. Each candidate carries its category evidence on the

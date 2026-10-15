@@ -15,6 +15,11 @@ A model is SUPERSEDED when another model in ``<model-options>``:
   benched on export-control grounds).
 
 The one with the highest AA Index (then the cheaper, then the lower id) is its
+successor. With none, a LATER VERSION OF ITS SERIES supersedes it
+(``gpt-6-sol`` by ``gpt-6.1-sol``; src/roadmodel/series.py, mirrored here):
+same maker, available, offered by every access method that offers it,
+whatever the two cost or score. The operator's rule is that a recommendation
+names the latest version of a series; the newest such version is the
 successor. A superseded model carries ``superseded-by`` and ``superseded-on``
 (the day it was first superseded) in its ``<model>`` element: the recommender
 leaves it out of its candidates while the successor is available, and /models
@@ -150,6 +155,44 @@ def _offered(selector_text: str) -> dict[str, set[str]]:
     return offered
 
 
+_SIZE_RE = re.compile(r"(?<![a-z0-9.])a?\d+(?:\.\d+)?[bmk](?![a-z0-9])")
+
+
+def _series_split(model_id: str) -> tuple[str, tuple[str, ...]]:
+    text = model_id.lower()
+    return _SIZE_RE.sub(" ", text), tuple(sorted(_SIZE_RE.findall(text)))
+
+
+def _series(model_id: str) -> frozenset[str]:
+    """Mirrors roadmodel.series.series: name words and sizes, versions and the
+    vendor prefix aside."""
+    rest, sizes = _series_split(model_id)
+    words = frozenset(re.findall(r"[a-z]+", rest)) - {"claude"}
+    return words | frozenset(f"size:{x}" for x in sizes) if words else frozenset()
+
+
+def _series_version(model_id: str) -> tuple[int, ...]:
+    rest, _ = _series_split(model_id)
+    return tuple(int(n) for n in re.findall(r"\d+", rest))
+
+
+def _later_version(
+    old: Model, new: Model, makers: dict[str, str], unavailable: frozenset[str]
+) -> bool:
+    """Every series-rule test but coverage: a later version of ``old``'s
+    series from the same maker, available."""
+    maker = makers.get(old.id)
+    s = _series(old.id)
+    return (
+        maker is not None
+        and makers.get(new.id) == maker
+        and new.id not in unavailable
+        and bool(s)
+        and _series(new.id) == s
+        and _series_version(new.id) > _series_version(old.id)
+    )
+
+
 def _beats(old: Model, new: Model, makers: dict[str, str], unavailable: frozenset[str]) -> bool:
     """Every supersession test but coverage: same maker, available, no
     dearer, a higher AA Index, rated at least as high everywhere."""
@@ -189,6 +232,16 @@ def successors(
                 best = new
         if best is not None:
             out[old.id] = best.id
+            continue
+        # No model beats it on every count: a later version of its own series
+        # still takes its place (the newest, wherever it is offered).
+        later = [
+            new
+            for new in models
+            if _later_version(old, new, makers, unavailable) and where <= offered.get(new.id, set())
+        ]
+        if later:
+            out[old.id] = max(later, key=lambda m: (_series_version(m.id), m.id)).id
     return out
 
 
@@ -223,7 +276,10 @@ def near_misses(
             continue
         where = offered.get(old.id, set())
         for new in models:
-            if not _beats(old, new, makers, unavailable):
+            if not (
+                _beats(old, new, makers, unavailable)
+                or _later_version(old, new, makers, unavailable)
+            ):
                 continue
             missing = where - offered.get(new.id, set())
             if missing:

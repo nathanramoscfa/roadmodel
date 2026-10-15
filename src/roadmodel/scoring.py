@@ -63,6 +63,7 @@ from importlib import resources
 from typing import Any, Final
 
 from roadmodel import cost as _cost
+from roadmodel import series as _series
 
 # --------------------------------------------------------------------------- #
 # Vocabulary
@@ -1074,8 +1075,17 @@ def rank(
     benchmarks: dict[str, Any] | None = None,
     top: int | None = None,
     effort_aware: bool = True,
+    latest_only: bool = True,
+    neutral_pools: bool = False,
 ) -> Ranking:
     """Rank every reachable (model, platform) pair for ``task``.
+
+    With ``latest_only`` (the default) a model never stands on a platform that
+    also offers a newer version of its series (:mod:`roadmodel.series`): the
+    operator's rule is that a recommendation names the latest version, so
+    GPT-6 Sol is never recommended where GPT-6.1 Sol runs. ``neutral_pools``
+    reads every usage pool as `headroom`, for a recommendation meant to
+    outlive today's pool states (a roadmap's Settings ladder).
 
     With ``effort_aware`` (the default), a model AA has measured at several
     efforts stands at the one that scores best for the task's posture, among
@@ -1090,6 +1100,8 @@ def rank(
     text = user_context_text or ""
     headroom = consumption_headroom(text)
     pools = pool_states(text)
+    if neutral_pools:
+        pools = [(name, "headroom", "") for name, _, _ in pools]
     allowed_p, excluded_p = platform_filters(text)
     juris = allowed_jurisdictions(text)
     unavailable = {m.strip() for m in (unavailable_models or [])}
@@ -1132,10 +1144,11 @@ def rank(
         if model_id in unavailable:
             excluded.append({"model": model_id, "reason": "unavailable"})
             continue
-        # The successor is the same maker's, no dearer, and rated at least as
-        # high everywhere; a benched successor keeps the older model in play.
+        # The successor is the same maker's: no dearer and rated at least as
+        # high everywhere, or a later version of the series (update/
+        # supersede.py); a benched successor keeps the older model in play.
         successor = str(model.get("superseded_by") or "")
-        if successor and successor in catalog_ids and successor not in unavailable:
+        if latest_only and successor and successor in catalog_ids and successor not in unavailable:
             excluded.append({"model": model_id, "reason": f"superseded by {successor}"})
             continue
         if str(model.get("jurisdiction", "")).lower() not in juris:
@@ -1150,10 +1163,20 @@ def rank(
 
         best_for_model: Candidate | None = None
         best_dial = False
+        newer_here: list[str] = []
         for method in methods:
             supports = method.get("supports_models") or method.get("supports-models") or []
             if model_id not in supports:
                 continue
+            if latest_only:
+                newer = [
+                    m
+                    for m in supports
+                    if m in catalog_ids and m not in unavailable and _series.is_newer(model_id, m)
+                ]
+                if newer:
+                    newer_here.extend(newer)
+                    continue
             pid = str(method.get("id", ""))
             if allowed_p and pid not in allowed_p:
                 continue
@@ -1222,9 +1245,13 @@ def rank(
                 best_dial = dial
                 best_for_model = c
         if best_for_model is None:
-            excluded.append(
-                {"model": model_id, "reason": "no platform reaches it under the filters"}
+            reason = (
+                f"a newer version ({max(set(newer_here), key=_series.version)}) runs "
+                "on every platform that offers it"
+                if newer_here
+                else "no platform reaches it under the filters"
             )
+            excluded.append({"model": model_id, "reason": reason})
             continue
         candidates.append(best_for_model)
 
@@ -1695,9 +1722,12 @@ def ladder(
     unavailable_models: list[str] | None = None,
     catalog: dict[str, Any] | None = None,
     benchmarks: dict[str, Any] | None = None,
+    neutral_pools: bool = False,
 ) -> Ladder | None:
     """The Cost / Balanced / Quality picks for ``task``, read off the
-    operator's own cost/quality frontier.
+    operator's own cost/quality frontier. ``neutral_pools`` reads every usage
+    pool as `headroom` (:func:`rank`): the ladder a roadmap's Settings carry,
+    which the step's runner reads against the pools' states on the day.
 
     - Pool: :func:`rank`'s candidates, every hard filter applied, one per model
       on its best platform; the funded ones, or all of them when the
@@ -1750,6 +1780,7 @@ def ladder(
         catalog=cat,
         benchmarks=bench,
         effort_aware=False,
+        neutral_pools=neutral_pools,
     )
     funded = [c for c in ranking.candidates if c.funding != "unfunded"]
     pool = funded or ranking.candidates
@@ -2069,21 +2100,31 @@ def _pick(
     benchmarks: dict[str, Any] | None,
 ) -> _Pick:
     """``model`` (catalog id or name) run at ``effort`` (a scorer or native
-    level) for ``task``, over the pool /recommend ranks. ValueError when the
-    model is not one this user-context can reach."""
+    level) for ``task``, over the pool /recommend ranks, which holds only the
+    latest version of each series. An older version (a roadmap written
+    before its successor shipped) is still found, on the platform it would
+    run on, so it can be backed up and replaced. ValueError when the model
+    is not one this user-context can reach."""
     cat = catalog if catalog is not None else _cost._load_catalog()
     bench = benchmarks if benchmarks is not None else _load_benchmarks()
     model_id = _model_ref_id(model, cat)
     base = Task(task.category, task.complexity, task.novel, "balanced")
-    ranking = rank(
-        base,
-        user_context_text,
-        unavailable_models=unavailable_models,
-        catalog=cat,
-        benchmarks=bench,
-        effort_aware=False,
-    )
+
+    def ranked(latest_only: bool) -> Ranking:
+        return rank(
+            base,
+            user_context_text,
+            unavailable_models=unavailable_models,
+            catalog=cat,
+            benchmarks=bench,
+            effort_aware=False,
+            latest_only=latest_only,
+        )
+
+    ranking = ranked(True)
     picked = next((c for c in ranking.candidates if c.model_id == model_id), None)
+    if picked is None:
+        picked = next((c for c in ranked(False).candidates if c.model_id == model_id), None)
     models = {str(m.get("id", "")): m for m in cat.get("models", []) if isinstance(m, dict)}
     if picked is None or model_id not in models:
         raise ValueError(f"{model!r} is not a model this user-context can reach")
@@ -2144,17 +2185,6 @@ def backup_for_pick(
     )
 
 
-def _series(model_id: str) -> frozenset[str]:
-    """A model id's name words, its version numbers and the vendor prefix
-    aside: `gpt-6-sol` and `gpt-6.1-sol` are one series, `gpt-6-sol` and
-    `gpt-6-luna` two. Mirrors update/rating_guard.py same_series."""
-    return frozenset(re.findall(r"[a-z]+", model_id.lower())) - {"claude"}
-
-
-def _version(model_id: str) -> tuple[int, ...]:
-    return tuple(int(n) for n in re.findall(r"\d+", model_id))
-
-
 @dataclass(frozen=True)
 class Successor:
     """A newer version of a pick's model that runs in its place
@@ -2180,50 +2210,46 @@ def successor_for_pick(
     catalog: dict[str, Any] | None = None,
     benchmarks: dict[str, Any] | None = None,
 ) -> Successor | None:
-    """The newer version of ``model`` a pick made outside the ladder should run
-    instead: the same maker's next release in the same series (GPT-6 Sol →
-    GPT-6.1 Sol), funded on the pick's platform, no dearer per token, and, run
-    at ``effort``, level with it in the task's category (:func:`_level_with`)
-    and at least as high on the AA Intelligence Index. The newest such version;
-    None when there is none. ValueError when ``model`` is not one this
-    user-context can reach.
+    """The latest version of ``model``'s series (:mod:`roadmodel.series`) that
+    the pick's platform offers, when that is newer than ``model``: GPT-6.1 Sol
+    for a pick of GPT-6 Sol on Codex, Opus 5.5 for Opus 5 on Claude Code. It
+    runs at the pick's effort, on its own dial. None when ``model`` is the
+    latest there. ValueError when ``model`` is not one this user-context can
+    reach.
 
-    The selector reads each model's letters at its top effort, and a step that
-    runs lower can reverse them: GPT-6 Sol letters S in coding and GPT-6.1 Sol
-    A on a 3-point SciCode gap at max, yet at medium 6.1 Sol leads it on
-    Terminal-Bench 4.0 by 29 points at the same price. The two are compared
-    at ``effort`` where AA has measured both there, else on their headline
-    rows, so neither is credited with a run the other is not."""
+    The operator's rule, not a benchmark judgment: a recommendation names the
+    latest version of a series, so a roadmap written before a release (or by
+    the selector's letters, read at each model's top effort) never keeps an
+    older one."""
     p = _pick(task, user_context_text, model, effort, unavailable_models, catalog, benchmarks)
     old = p.candidate
-    series, version = _series(old.model_id), _version(old.model_id)
-    best: Successor | None = None
-    for c in p.ranking.candidates:
-        if (
-            c.platform_id != old.platform_id
-            or c.provider != old.provider
-            or _series(c.model_id) != series
-            or _version(c.model_id) <= version
-            or c.blended_price_usd > old.blended_price_usd
-        ):
+    unavailable = {m.strip() for m in (unavailable_models or [])}
+    method = next(
+        (
+            m
+            for m in p.catalog.get("access_methods", [])
+            if isinstance(m, dict) and str(m.get("id", "")) == old.platform_id
+        ),
+        {},
+    )
+    supports = method.get("supports_models") or method.get("supports-models") or []
+    newer = sorted(
+        (
+            m
+            for m in supports
+            if m in p.models and m not in unavailable and _series.is_newer(old.model_id, m)
+        ),
+        key=_series.version,
+        reverse=True,
+    )
+    for model_id in newer:
+        c = next((c for c in p.ranking.candidates if c.model_id == model_id), None)
+        if c is None:
             continue
-        both = p.measured(old.model_id) and p.measured(c.model_id)
-        level = p.level if both else None
-        was, now = p.at(old, level), p.at(c, level)
-        aa_was = _evidence(p.bench, old.model_id, FRONTIER_INDEX, level)
-        aa_now = _evidence(p.bench, c.model_id, FRONTIER_INDEX, level)
-        if not _level_with(now, was, task.category):
-            continue
-        if aa_now is None or (aa_was is not None and aa_now < aa_was):
-            continue
-        if best is not None and (
-            _version(c.model_id),
-            -c.blended_price_usd,
-        ) <= (_version(best.candidate.model_id), -best.candidate.blended_price_usd):
-            continue
-        native = native_level(c.platform_id, c.model_id, p.level, catalog=p.catalog)
-        best = Successor(now, p.level, native, old.model_name)
-    return best
+        now = p.at(c, p.level if p.measured(model_id) else None)
+        native = native_level(c.platform_id, model_id, p.level, catalog=p.catalog)
+        return Successor(now, p.level, native, old.model_name)
+    return None
 
 
 # A platform's effort dial as a Settings table names it (docs/settings-display.md):
@@ -2254,6 +2280,127 @@ def backup_cell(backup: Backup | Successor) -> str:
     level = _LEVEL_WORDS.get(normalize_level(backup.level), backup.level)
     head = f"{c.model_name} — {c.platform_name}"
     return head if dial is None else f"{head} · {dial} {level}"
+
+
+# Which ladder column a roadmap step runs, by the user-context's Budget
+# priority; a phase-roadmap session runs Quality whatever the priority
+# (quality first: it fixes every step's scope and Settings, and runs once).
+RUN_COLUMN: Final[dict[str, str]] = {"cheap": "cost", "balanced": "balanced", "best": "quality"}
+# The rule a step's runner applies to the pools on the day (roadmap-step §3).
+RUN_RULE: Final[str] = (
+    "If that column's usage pool reads `tight`, run its Backup when the Backup's pool "
+    "has headroom, else the Cost column; if it reads `exhausted`, run its Backup."
+)
+# Dial levels a roadmap never pins: Codex's `ultra` and Claude Code's
+# Ultracode add parallel agents one planning document does not need.
+_NEVER_PINNED: Final[frozenset[str]] = frozenset({"ultra", "ultracode"})
+
+
+def _effort_cell(c: Candidate, level: str) -> str:
+    """The Effort row's cell for a ladder column: the platform's own dial and
+    level (``Intelligence Medium``, ``Effort High``), or ``—`` where the
+    surface has no reasoning dial (Cursor)."""
+    dial = _DIAL_NAMES.get(c.platform_id, "Effort")
+    if dial is None:
+        return "—"
+    return f"{dial} {_LEVEL_WORDS.get(normalize_level(level), level)}"
+
+
+def _thinking_cell(c: Candidate) -> str:
+    """On where the surface has a Thinking toggle, ``—`` where it has none
+    (Codex and the OpenAI API carry reasoning in Intelligence; Cursor has no
+    reasoning control)."""
+    return "—" if c.platform_id in _DIAL_NAMES else "On"
+
+
+def _deepest_level(c: Candidate, catalog: dict[str, Any]) -> str:
+    """The top rung of ``c``'s dial a roadmap may pin (``max``)."""
+    levels = native_levels(c.platform_id, c.model_id, catalog=catalog) or list(EFFORT_LADDER)
+    pinnable = [lv for lv in levels if normalize_level(lv) not in _NEVER_PINNED]
+    return pinnable[-1] if pinnable else levels[-1]
+
+
+def settings_ladder(
+    task: Task,
+    user_context_text: str,
+    *,
+    phase: bool = False,
+    unavailable_models: list[str] | None = None,
+    catalog: dict[str, Any] | None = None,
+    benchmarks: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    """A roadmap's Settings as the full ladder: the Cost / Balanced / Quality
+    picks /recommend shows, each with its effort and a backup from another
+    maker, plus the column the step runs and the rule for a tight or
+    exhausted pool. Read with every pool at `headroom` (``neutral_pools``),
+    so the table outlives today's pool states: the step's runner applies
+    :data:`RUN_RULE` to the pools on the day instead of the roadmap being
+    refreshed. ``phase`` is a phase-roadmap session: it runs Quality, at
+    the deepest rung its dial allows. Returns the columns and the Markdown
+    table; None when no pool model carries an AA Index."""
+    cat = catalog if catalog is not None else _cost._load_catalog()
+    lad = ladder(
+        task,
+        user_context_text,
+        unavailable_models=unavailable_models,
+        catalog=cat,
+        benchmarks=benchmarks,
+        neutral_pools=True,
+    )
+    if lad is None:
+        return None
+    columns: dict[str, dict[str, Any]] = {}
+    for tier in LADDER_TIERS:
+        rung = lad.rungs[tier]
+        c = rung.candidate
+        level = rung.native or rung.effort
+        if phase and tier == "quality":
+            level = _deepest_level(c, cat)
+        columns[tier] = {
+            "model_id": c.model_id,
+            "model": c.model_name,
+            "platform_id": c.platform_id,
+            "platform": c.platform_name,
+            "effort": normalize_level(level),
+            "effort_cell": _effort_cell(c, level),
+            "thinking_cell": _thinking_cell(c),
+            "backup": None if rung.backup is None else backup_cell(rung.backup),
+        }
+    runs = "quality" if phase else RUN_COLUMN.get(task.budget, "balanced")
+    rows = [
+        ("Model", [columns[t]["model"] for t in LADDER_TIERS]),
+        ("Backup", [columns[t]["backup"] or "None" for t in LADDER_TIERS]),
+        ("Platform", [columns[t]["platform"] for t in LADDER_TIERS]),
+        ("Effort", [columns[t]["effort_cell"] for t in LADDER_TIERS]),
+        ("Thinking", [columns[t]["thinking_cell"] for t in LADDER_TIERS]),
+        ("Conversation", ["**New**"] * len(LADDER_TIERS)),
+    ]
+    head = ["Setting", *(t.capitalize() for t in LADDER_TIERS)]
+    widths = [
+        max(len(head[i]), *(len(r[0]) if i == 0 else len(r[1][i - 1]) for r in rows))
+        for i in range(len(head))
+    ]
+
+    def line(cells: list[str]) -> str:
+        return "| " + " | ".join(x.ljust(w) for x, w in zip(cells, widths, strict=True)) + " |"
+
+    table = [line(head), "| " + " | ".join("-" * w for w in widths) + " |"]
+    table += [line([name, *cells]) for name, cells in rows]
+    why = (
+        "a phase-roadmap session runs Quality (quality first)"
+        if phase
+        else f"the user-context's Budget priority is `{task.budget}`"
+    )
+    run_line = f"**Runs:** {runs.capitalize()} — {why}. {RUN_RULE}"
+    return {
+        "task": asdict(task),
+        "phase": phase,
+        "runs": runs,
+        "rule": RUN_RULE,
+        "columns": columns,
+        "backup_warning": lad.backup_warning,
+        "markdown": "\n".join(table) + "\n\n" + run_line,
+    }
 
 
 def _below(lower: Rung, upper: Rung, catalog: dict[str, Any]) -> Rung:

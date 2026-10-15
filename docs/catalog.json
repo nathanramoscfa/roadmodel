@@ -1,9 +1,9 @@
 {
   "schema_version": "4",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-10-11T22:10:48Z",
+  "generated_at_utc": "2026-10-15T01:54:30Z",
   "source_doc_sha256": {
-    "model-selector.txt": "29056de919994396ddffef03e9ae46391418ed1381ace3f98665444495ab94dd",
+    "model-selector.txt": "7f15d14b46613ffadea866144d6ddff2c0e39605a4a42d775232507c2de2735d",
     "model-tier-cost-scale.md": "80baddfd88e6a105658eb5dbe64a22d444ff42e55c7b9e42dd3a14c5ec419b89"
   },
   "models": [
@@ -301,11 +301,11 @@
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 9.9 (non-reasoning) / 13.1 (reasoning); native multimodal grounding; 1M-token context; designed for low-cost high-volume inference",
       "pricing_notes": "Hidden by default",
-      "best_for": "Strong multimodal input, with very fast output, at a low price. Its AA Intelligence Index of 13.1 ranks 51st of 56 measured models. Weakest at planning and knowledge (C).",
-      "superseded_by": null,
-      "superseded_on": null,
+      "best_for": "Strong multimodal input, with very fast output, at a low price. Its AA Intelligence Index of 13.1 ranks 51st of 56 measured models. Weakest at planning and knowledge (C). Superseded by Gemini 3.8 Flash.",
+      "superseded_by": "gemini-3.8-flash",
+      "superseded_on": "2026-10-14",
       "added_on": null,
-      "retires_on": null
+      "retires_on": "2026-11-13"
     },
     {
       "id": "gemini-3-flash",
@@ -327,10 +327,10 @@
       "headline_benchmarks": "AA Intelligence Index 26.3 (reasoning); LiveCodeBench 90.8; native multimodal across text/image/video/audio; 1M-token context",
       "pricing_notes": "Hidden by default",
       "best_for": "Gemini 3 generation's cheap-tier model \u2014 meaningfully stronger planning, agentic, knowledge ratings than 2.5 Flash at slightly higher cost ($3.00/M output vs $2.50/M), with native multimodal-S; pick over 2.5 Flash when the task benefits from Gemini 3 family improvements and per-call cost discipline still matters",
-      "superseded_by": null,
-      "superseded_on": null,
+      "superseded_by": "gemini-3.8-flash",
+      "superseded_on": "2026-10-14",
       "added_on": null,
-      "retires_on": null
+      "retires_on": "2026-11-13"
     },
     {
       "id": "gemini-3-pro",
@@ -376,11 +376,11 @@
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 15.6; HLE 17.2%; SciCode 43.4; Terminal-Bench 4.0 0.5; AA-LCR 0.743",
       "pricing_notes": "Provider-direct Google API per-token pricing (not via the Cursor pool)",
-      "best_for": "Strong long context, with very fast output, at a low price. Its AA Intelligence Index of 15.6 ranks 49th of 56 measured models. Weakest at planning and knowledge (C).",
-      "superseded_by": null,
-      "superseded_on": null,
+      "best_for": "Strong long context, with very fast output, at a low price. Its AA Intelligence Index of 15.6 ranks 49th of 56 measured models. Weakest at planning and knowledge (C). Superseded by Gemini 3.5 Flash-Lite.",
+      "superseded_by": "gemini-3.5-flash-lite",
+      "superseded_on": "2026-10-14",
       "added_on": "2026-10-07",
-      "retires_on": null
+      "retires_on": "2026-11-13"
     },
     {
       "id": "gemini-3.1-pro",
@@ -577,10 +577,10 @@
       "headline_benchmarks": "AA Intelligence Index 18.5 (reasoning); HLE 14.5%; AA-LCR 0.540; z.ai GLM-4.6 \u2014 the widely-adopted, cost-efficient GLM coding workhorse; regarded as a strong value coding model in the GLM-4.x line; text-only; cn-jurisdiction",
       "pricing_notes": "Provider-direct z.ai (Zhipu) API per-token pricing (not via the Cursor pool); cn-jurisdiction; cache-input $0.11/M",
       "best_for": "z.ai's GLM-4.6 \u2014 the proven value coding model: very low cost ($2.20/M output), cn-jurisdiction, and a strong code-generation / fill profile that made it a popular coding-plan default. Pick it over glm-5.2 when cost dominates and the task is bounded coding rather than the hardest agentic reasoning; pick glm-5.2 when reasoning depth or agentic autonomy matters. Text-only. Reached via the `zai-api` method (provider-direct per-token) with a zai-api-key.",
-      "superseded_by": null,
-      "superseded_on": null,
+      "superseded_by": "glm-5.2",
+      "superseded_on": "2026-10-14",
       "added_on": null,
-      "retires_on": null
+      "retires_on": "2026-11-13"
     },
     {
       "id": "glm-5.2",
@@ -1101,11 +1101,11 @@
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 47.6 (max); HLE 47.9%; SciCode 57.6; Terminal-Bench 4.0 43.9; AA-LCR 0.837; LMArena WebDev #8 (Elo 1689.0)",
       "pricing_notes": "Provider-direct OpenAI API per-token pricing (not via the Cursor pool)",
-      "best_for": "Frontier-class coding, agentic work and long context, plus strong planning, multimodal input and knowledge, at a medium price. Its AA Intelligence Index of 47.6 ranks 9th of 56 measured models. Weakest at speed (D).",
-      "superseded_by": null,
-      "superseded_on": null,
+      "best_for": "Frontier-class coding, agentic work and long context, plus strong planning, multimodal input and knowledge, at a medium price. Its AA Intelligence Index of 47.6 ranks 9th of 56 measured models. Weakest at speed (D). Superseded by GPT-6.1 Sol.",
+      "superseded_by": "gpt-6.1-sol",
+      "superseded_on": "2026-10-14",
       "added_on": null,
-      "retires_on": null
+      "retires_on": "2026-11-13"
     },
     {
       "id": "gpt-6.1-sol",
@@ -1201,11 +1201,11 @@
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 24.9 (high); HLE 37.2%; SciCode 48.3; Terminal-Bench 4.0 0.0; AA-LCR 0.730; AA-Omniscience 18.3 (#4); LMArena Search Elo 1165.3",
       "pricing_notes": "Hidden by default; Requires Max Mode on request-based plans",
-      "best_for": "Strong long context at a low price. Its AA Intelligence Index of 24.9 ranks 39th of 56 measured models. Weakest at agentic work (D), then coding (C).",
-      "superseded_by": null,
-      "superseded_on": null,
+      "best_for": "Strong long context at a low price. Its AA Intelligence Index of 24.9 ranks 39th of 56 measured models. Weakest at agentic work (D), then coding (C). Superseded by Grok 4.7.",
+      "superseded_by": "grok-4.7",
+      "superseded_on": "2026-10-14",
       "added_on": null,
-      "retires_on": null
+      "retires_on": "2026-11-13"
     },
     {
       "id": "grok-4.6",

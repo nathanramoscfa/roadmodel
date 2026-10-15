@@ -101,6 +101,23 @@ Print one line: `Step {{STEP}} requires: Model <M> · Platform <P> ·
 <the dials the table carries, e.g. Effort <E> · Thinking <T>, or
 Intelligence <I>>. This session: <your own model> on <this surface>.`
 
+- **Ladder tables** (Cost / Balanced / Quality columns, roadmodel 0.2.86
+  on) carry every column the step may run, so pick one before the checks
+  below. The table's **Runs:** line names the column. Apply its rule to
+  the Usage-pool status table in `planning/user-context.md` (a row whose
+  reset time has passed reads `headroom`). Read the pool of the
+  subscription that pays for that column's platform:
+  - `headroom`: run that column.
+  - `tight`: run that column's Backup when the Backup's pool reads
+    `headroom`, else the Cost column.
+  - `exhausted`: run that column's Backup.
+
+  The chosen column (or Backup) is what the printed line names as
+  required, with the column named (`… · Balanced column`, or `… ·
+  Balanced column's Backup — Claude pool tight`). Any column's model on
+  that column's platform, or any column's Backup on its own platform,
+  continues too. Say which column you are, and which column the rule
+  selected.
 - **Backup.** The table's `Backup` row (roadmaps from roadmodel 0.2.41
   on) names the model to run when the primary is unavailable, with its
   own platform and dial. If you are that backup model on that platform,
@@ -155,9 +172,13 @@ Intelligence <I>>. This session: <your own model> on <this surface>.`
   rollout's `"effort"` is the dial the session runs on, so print it. If
   it differs from the table's, name the value to set. Continue.
 
-**Record what ran.** If the model or effort you proceed with differs from
-the table, the step's own PR rewrites its Settings table to match (§5),
-with one line beneath it:
+**Record what ran.** With a ladder table, running one of its columns or
+Backups changes nothing in it: the step's own PR adds one line beneath
+it, `> Ran <YYYY-MM-DD>: <column> — <model · effort>. <why>.` (why: the
+**Runs:** column, or the pool that moved it). When what ran is in none of
+its cells, or the table has a single column, and the model or effort you
+proceed with differs from the table, the step's own PR rewrites its
+Settings table to match (§5), with one line beneath it:
 `> Settings updated <YYYY-MM-DD>: was <old model> · <old effort>. <why>.`
 The roadmap on `main` is the ledger, so it must say what actually ran.
 Never rewrite the table of a step that reads `Complete`: that is history.

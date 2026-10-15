@@ -171,6 +171,7 @@ def test_malformed_stdio_never_echoes_input(logging_level: str) -> None:
         ),
         ("score_candidates", {"category": MARKER, "complexity": "low"}),
         ("score_candidates", {"category": "coding", "complexity": "low", "top": 101}),
+        ("roadmap_settings", {"category": MARKER, "complexity": "low"}),
         (MARKER, {}),
     ],
 )

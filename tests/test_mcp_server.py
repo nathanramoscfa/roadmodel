@@ -73,6 +73,7 @@ def test_tools_list_exactly_four() -> None:
         "generate_phase_roadmap",
         "read_catalog",
         "recommend_model",
+        "roadmap_settings",
         "score_candidates",
     ]
 

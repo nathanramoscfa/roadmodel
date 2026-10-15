@@ -667,6 +667,61 @@ def update_mcp_env(argv: Optional[list[str]], *, dry_run: bool) -> tuple[str, bo
     return f"{before} -> {after} with {python}{note}", True
 
 
+_PIPX_ROW = re.compile(r"^roadmodel\s+v?(\S+)", re.M)
+
+
+def _tool_version(argv: list[str]) -> str | None:
+    """roadmodel's version in a tool manager's listing, or None when that
+    manager does not hold it."""
+    try:
+        cp = _run(argv, timeout=PIP_TIMEOUT)
+    except (subprocess.SubprocessError, OSError):
+        return None
+    m = _PIPX_ROW.search(cp.stdout or "") if cp.returncode == 0 else None
+    return m.group(1) if m else None
+
+
+def update_path_tool(*, dry_run: bool) -> tuple[str, bool]:
+    """Upgrade the `roadmodel` on PATH when pipx or uv installed it as a
+    tool. Agent sessions call that one (`roadmodel ladder`, `roadmodel
+    backup`), and neither a project env nor the MCP env reaches it: a pipx
+    install sat at 0.2.83 while the fleet ran 0.2.85, so roadmap writers on
+    that machine fell back to the selector's letters (2026-10-14).
+
+    Returns the line to print and whether it is current."""
+    lines: list[str] = []
+    ok = True
+    managers = (
+        ("pipx", ["pipx", "list", "--short"], ["pipx", "upgrade", "roadmodel"]),
+        ("uv", ["uv", "tool", "list"], ["uv", "tool", "upgrade", "roadmodel"]),
+    )
+    for name, listing, upgrade in managers:
+        exe = shutil.which(name)
+        if exe is None:
+            continue
+        before = _tool_version([exe, *listing[1:]])
+        if before is None:
+            continue
+        if dry_run:
+            lines.append(f"plan: {' '.join(upgrade)} (now {before})")
+            continue
+        try:
+            cp = _run([exe, *upgrade[1:]], timeout=PIP_TIMEOUT)
+        except (subprocess.SubprocessError, OSError) as exc:
+            lines.append(f"{name}: could not upgrade roadmodel: {exc}")
+            ok = False
+            continue
+        if cp.returncode != 0:
+            lines.append(f"{name} upgrade failed:\n" + _tail(cp.stderr or cp.stdout))
+            ok = False
+            continue
+        after = _tool_version([exe, *listing[1:]]) or "-"
+        lines.append(f"{name} {before} -> {after}")
+    if not lines:
+        return "not a pipx or uv tool install; nothing to upgrade", True
+    return "; ".join(lines), ok
+
+
 # --------------------------------------------------------------------------
 # Claude Code commands (user scope, per machine)
 # --------------------------------------------------------------------------
@@ -2983,6 +3038,8 @@ def _main(argv: Optional[list[str]] = None) -> int:
     # theirs, and two pips must not write one env at once.
     mcp_line, mcp_ok = update_mcp_env(_roadmodel_mcp_command(), dry_run=args.dry_run)
     print(f"\nMCP server env: {mcp_line}")
+    tool_line, tool_ok = update_path_tool(dry_run=args.dry_run)
+    print(f"PATH roadmodel: {tool_line}")
 
     context_ok = True
     if not args.no_parity:
@@ -3036,6 +3093,9 @@ def _main(argv: Optional[list[str]] = None) -> int:
         return 1
     if not mcp_ok:
         print(f"\nThe MCP server env needs attention: {mcp_line}")
+        return 1
+    if not tool_ok:
+        print(f"\nThe roadmodel on PATH needs attention: {tool_line}")
         return 1
     return 1 if refresh_attention or not context_ok or not peers_ok else 0
 

@@ -91,7 +91,9 @@ def _load_runtime_config() -> Config:
 
 
 def _recommend_system_prompt(user_context_text: str, context: str | None) -> str:
-    selector_text = _read_bundled_doc(BUNDLED_SELECTOR_PATH, "model-selector.txt")
+    selector_text = recommender.selector_for_engine(
+        _read_bundled_doc(BUNDLED_SELECTOR_PATH, "model-selector.txt")
+    )
     tier_cost_text = _read_bundled_doc(BUNDLED_TIER_COST_PATH, "model-tier-cost-scale.md")
     parts = [selector_text, tier_cost_text, user_context_text]
     # Caller-supplied project context belongs in the user message below.
@@ -158,7 +160,9 @@ _ROADMAP_CONTRACT_HEADER = (
 
 def _phase_roadmap_system_prompt(user_context_text: str) -> str:
     template_text = _read_bundled_doc(BUNDLED_PHASE_TEMPLATE_PATH, "phase-roadmap-template.md")
-    selector_text = _read_bundled_doc(BUNDLED_SELECTOR_PATH, "model-selector.txt")
+    selector_text = recommender.selector_for_engine(
+        _read_bundled_doc(BUNDLED_SELECTOR_PATH, "model-selector.txt")
+    )
     tier_cost_text = _read_bundled_doc(BUNDLED_TIER_COST_PATH, "model-tier-cost-scale.md")
     return "\n\n".join(
         [
@@ -456,6 +460,41 @@ def create_app() -> Any:
         return payload
 
     @app.tool()
+    def roadmap_settings(
+        category: Literal[
+            "coding", "planning", "agentic", "multimodal", "long-context", "knowledge", "speed"
+        ],
+        complexity: Literal["low", "medium", "high"],
+        novel: bool = False,
+        phase: bool = False,
+        budget: Literal["cheap", "balanced", "best"] | None = None,
+    ) -> dict[str, Any]:
+        """A roadmap Settings table as the full ladder, in CODE — no engine call.
+
+        The Cost / Balanced / Quality picks /recommend shows for the step's
+        classification, each with its effort and a backup from another maker,
+        read with every usage pool at headroom, plus the column the step runs
+        (``runs``) and the rule for a tight or exhausted pool. ``phase`` is the
+        session that writes a phase roadmap: it runs Quality at its deepest
+        rung. ``markdown`` is the table to paste under the step (or phase);
+        same as `roadmodel ladder`.
+        """
+        from roadmodel import scoring
+
+        text = _user_context_text_without_provider()
+        posture = (budget or scoring.declared_budget(text)).strip().lower()
+        task = scoring.Task(
+            category=category.strip().lower(),
+            complexity=complexity.strip().lower(),
+            novel=novel,
+            budget=posture,
+        )
+        settings = scoring.settings_ladder(task, text, phase=phase)
+        if settings is None:
+            raise ValueError("No model in this user-context's pool carries an AA Index.")
+        return settings
+
+    @app.tool()
     def read_catalog() -> dict[str, Any]:
         """Return the bundled offline reasoning payload: the model selector, the
         tier-cost scale, the parsed catalog, its source-doc hash, the
@@ -464,7 +503,9 @@ def create_app() -> Any:
         field is platform-conditional and EFFORT/THINKING are separate fields;
         1 = MAX MODE always emitted and THINKING carried the effort level).
         """
-        selector_text = _read_bundled_doc(BUNDLED_SELECTOR_PATH, "model-selector.txt")
+        selector_text = recommender.selector_for_engine(
+            _read_bundled_doc(BUNDLED_SELECTOR_PATH, "model-selector.txt")
+        )
         model_tier_cost_scale_text = _read_bundled_doc(
             BUNDLED_TIER_COST_PATH, "model-tier-cost-scale.md"
         )
