@@ -251,7 +251,7 @@ dependency graph in §5 is honoured.
 | Model        | <Model>                | <Model>                | <The strongest planning model>           |
 | Backup       | <Backup — its platform · its dial> | <Backup — its platform · its dial> | <Backup — its platform · its dial> |
 | Platform     | <Access method>        | <Access method>        | <Claude Code, or the access method that pays> |
-| Effort       | <Its dial and level>   | <Its dial and level>   | <Deepest rung there — Effort Max in Claude Code> |
+| Effort/Intelligence | <Its level only> | <Its level only> | <Deepest rung there — Max in Claude Code> |
 | Thinking     | <On, or — with no toggle> | <On, or — with no toggle> | On                                 |
 | Conversation | **New**                | **New**                | **New**                                  |
 
@@ -311,7 +311,7 @@ key pays for the platform.>
 | Model        | …       | …        | …       |
 | Backup       | …       | …        | …       |
 | Platform     | …       | …        | …       |
-| Effort       | …       | …        | …       |
+| Effort/Intelligence | … | … | … |
 | Thinking     | …       | …        | On      |
 | Conversation | **New** | **New**  | **New** |
 
@@ -348,7 +348,7 @@ key pays for the platform.>
 | Model        | …       | …        | …       |
 | Backup       | …       | …        | …       |
 | Platform     | …       | …        | …       |
-| Effort       | …       | …        | …       |
+| Effort/Intelligence | … | … | … |
 | Thinking     | …       | …        | On      |
 | Conversation | **New** | **New**  | **New** |
 
