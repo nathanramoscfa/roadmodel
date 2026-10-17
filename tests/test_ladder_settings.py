@@ -153,7 +153,7 @@ def test_the_table_carries_every_rung_with_its_effort_and_backup() -> None:
         "Model",
         "Backup",
         "Platform",
-        "Effort",
+        "Effort/Intelligence",
         "Thinking",
         "Conversation",
     ]
@@ -163,10 +163,10 @@ def test_each_column_names_its_own_surfaces_dial() -> None:
     cols = _settings()["columns"]
     for col in cols.values():
         if col["platform_id"] == "codex-cli":
-            assert col["effort_cell"].startswith("Intelligence ")
+            assert not col["effort_cell"].startswith("Intelligence")
             assert col["thinking_cell"] == "—"
         else:
-            assert col["effort_cell"].startswith("Effort ")
+            assert not col["effort_cell"].startswith("Effort")
             assert col["thinking_cell"] == "On"
 
 

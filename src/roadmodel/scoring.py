@@ -2296,13 +2296,12 @@ _NEVER_PINNED: Final[frozenset[str]] = frozenset({"ultra", "ultracode"})
 
 
 def _effort_cell(c: Candidate, level: str) -> str:
-    """The Effort row's cell for a ladder column: the platform's own dial and
-    level (``Intelligence Medium``, ``Effort High``), or ``—`` where the
+    """The Effort/Intelligence row's cell for a ladder column: the level alone
+    (``Medium``, ``XHigh``), the row label carrying the dial; ``—`` where the
     surface has no reasoning dial (Cursor)."""
-    dial = _DIAL_NAMES.get(c.platform_id, "Effort")
-    if dial is None:
+    if _DIAL_NAMES.get(c.platform_id, "Effort") is None:
         return "—"
-    return f"{dial} {_LEVEL_WORDS.get(normalize_level(level), level)}"
+    return _LEVEL_WORDS.get(normalize_level(level), level)
 
 
 def _thinking_cell(c: Candidate) -> str:
@@ -2370,7 +2369,7 @@ def settings_ladder(
         ("Model", [columns[t]["model"] for t in LADDER_TIERS]),
         ("Backup", [columns[t]["backup"] or "None" for t in LADDER_TIERS]),
         ("Platform", [columns[t]["platform"] for t in LADDER_TIERS]),
-        ("Effort", [columns[t]["effort_cell"] for t in LADDER_TIERS]),
+        ("Effort/Intelligence", [columns[t]["effort_cell"] for t in LADDER_TIERS]),
         ("Thinking", [columns[t]["thinking_cell"] for t in LADDER_TIERS]),
         ("Conversation", ["**New**"] * len(LADDER_TIERS)),
     ]
