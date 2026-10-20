@@ -23,7 +23,8 @@ the gate and touches no file outside the data set, it does nothing. Otherwise:
    - the cost scale keeps only the admissible price and tier cells of rows
      base already has, provider-direct prices forced back the same way;
    - benchmarks and availability keep only rows for models base already has;
-   - prose, the selector markdown and catalog.json are regenerated from those;
+   - prose and catalog.json are regenerated from those; the workflow then
+     runs update/render_md.py, the one writer of the selector markdown;
 3. it writes ``update/.last-held.md``, naming what waits for review and the
    gate's reason for refusing the full candidate.
 
@@ -285,7 +286,6 @@ def split(base_dir: Path, hold: Path, paths: list[str], day: dt.date) -> str | N
     )
     _write(ai.SELECTOR, selector)
     _write(ai.COST, cost)
-    _write(ai.MARKDOWN, render_md.render(selector))
     catalog = build_catalog.build_catalog()
     kept = json.loads(base[ai.CATALOG])
     # Unchanged content keeps base's build timestamp, so no-op files stay no-op.
@@ -294,7 +294,9 @@ def split(base_dir: Path, hold: Path, paths: list[str], day: dt.date) -> str | N
     else:
         _write(ai.CATALOG, build_catalog.render_json(catalog))
 
-    ai.validate_documents(base_text, head_text, day)  # the typed part: admitted
+    # The typed part is admitted, its markdown as update/render_md.py writes it next.
+    rendered = render_md.render(selector)
+    ai.validate_documents(base_text, lambda p: rendered if p == ai.MARKDOWN else head_text(p), day)
     REPORT.write_text(held_report(base, full, others, reason), encoding="utf-8")
     return reason
 

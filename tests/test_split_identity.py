@@ -76,6 +76,11 @@ def _regenerate(root: Path) -> None:
     (root / ai.CATALOG).write_text(build_catalog.render_json(build_catalog.build_catalog()))
 
 
+def _render(root: Path) -> None:
+    """The workflow's update/render_md.py step after the split."""
+    (root / ai.MARKDOWN).write_text(render_md.render((root / ai.SELECTOR).read_text()))
+
+
 def _reader(root: Path) -> Any:
     return lambda path: (root / path).read_text(encoding="utf-8")
 
@@ -122,6 +127,11 @@ def test_a_new_model_is_held_and_the_typed_part_ships(work: dict[str, Path]) -> 
     reason = si.split(work["base"], work["hold"], PATHS, DAY)
 
     assert reason == "costscale_structure_requires_review"
+    # update/render_md.py stays the one writer of the markdown: the access-method
+    # billing labels it renders are allowed at that sink only (CodeQL
+    # codeql-public-billing-render), so the split leaves the file to it.
+    assert (root / ai.MARKDOWN).read_text() == (work["hold"] / ai.MARKDOWN).read_text()
+    _render(root)
     # The typed part: the gate admits it, and it keeps the price edit only.
     ai.validate_documents(_reader(work["base"]), _reader(root), DAY)
     shipped = (root / ai.SELECTOR).read_text()
@@ -162,6 +172,7 @@ def test_a_provider_price_waits_with_its_snapshot(work: dict[str, Path]) -> None
     assert si.split(work["base"], work["hold"], PATHS, DAY) == (
         "files outside the typed data set changed"
     )
+    _render(root)
     for path in PATHS:
         assert (root / path).read_text() == (work["base"] / path).read_text(), path
     assert 'output-price-per-1m="$13.00"' in (work["hold"] / ai.SELECTOR).read_text()

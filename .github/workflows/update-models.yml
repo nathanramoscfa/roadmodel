@@ -384,6 +384,7 @@ jobs:
           git archive HEAD docs update infra | tar -x -C "$base"
           # shellcheck disable=SC2086  # one path per word
           python update/split_identity.py --base-dir "$base" --hold "$RUNNER_TEMP/refresh-hold" --paths $REFRESH_PATHS
+          python update/render_md.py
           # Validate final generated data before publishing or promoting source hashes.
           python update/automation_integrity.py
           if git diff --quiet -- docs/ update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json; then
