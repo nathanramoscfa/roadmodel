@@ -570,13 +570,13 @@ def test_project_template_names_the_settings_that_write_each_phase_roadmap() -> 
         settings = section.index("**Phase roadmap settings**")
         first_sub = section.index("\n#### ")
         assert badge < settings < first_sub, f"settings not after the badge: Phase {name}"
-        rows = re.findall(r"^\| (\w+)\s+\|", section[settings:first_sub], re.M)
+        rows = re.findall(r"^\| ([\w/]+)\s+\|", section[settings:first_sub], re.M)
         assert rows == [
             "Setting",
             "Model",
             "Backup",
             "Platform",
-            "Effort",
+            "Effort/Intelligence",
             "Thinking",
             "Conversation",
         ], name

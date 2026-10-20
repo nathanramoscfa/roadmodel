@@ -749,10 +749,10 @@ that owns it.}}
      **Runs:** line exactly as `roadmodel ladder --category
      <c> --complexity <x> [--novel]` prints them for the
      step's classification (MCP tool: `roadmap_settings`).
-     Rows: Model / Backup / Platform / Effort / Thinking /
-     Conversation. The Effort cell names each column's own
-     dial (`Intelligence Medium` on Codex, `Effort High` on
-     Claude Code); a column whose surface has no such
+     Rows: Model / Backup / Platform / Effort/Intelligence /
+     Thinking / Conversation. The Effort/Intelligence cell
+     holds the level alone (`Medium`, `High`, `XHigh`, `Max`),
+     never the dial's name; a column whose surface has no such
      control reads `—` there. Every model is the latest
      version of its series, never an older one (GPT-6 Sol
      where GPT-6.1 Sol runs, Opus 5 where Opus 5.5 does).
@@ -860,7 +860,7 @@ reached}}):
 | Model        | {{Model}}                   | {{Model}}                   | {{Model}}                   |
 | Backup       | {{Backup — platform · dial}} | {{Backup — platform · dial}} | {{Backup — platform · dial}} |
 | Platform     | {{Access method}}           | {{Access method}}           | {{Access method}}           |
-| Effort       | {{Its dial and level}}      | {{Its dial and level}}      | {{Its dial and level}}      |
+| Effort/Intelligence | {{Its level only}} | {{Its level only}} | {{Its level only}} |
 | Thinking     | {{On, or — with no toggle}} | {{On, or — with no toggle}} | {{On, or — with no toggle}} |
 | Conversation | **{{New or Continue}}**     | **{{New or Continue}}**     | **{{New or Continue}}**     |
 
@@ -1281,7 +1281,7 @@ carrying ONLY the rows that platform's panel exposes.}}
 | Model        | {{Model}}                   | {{Model}}                   | {{Model}}                   |
 | Backup       | {{Backup — platform · dial}} | {{Backup — platform · dial}} | {{Backup — platform · dial}} |
 | Platform     | {{Access method}}           | {{Access method}}           | {{Access method}}           |
-| Effort       | {{Its dial and level}}      | {{Its dial and level}}      | {{Its dial and level}}      |
+| Effort/Intelligence | {{Its level only}} | {{Its level only}} | {{Its level only}} |
 | Thinking     | {{On, or — with no toggle}} | {{On, or — with no toggle}} | {{On, or — with no toggle}} |
 | Conversation | **{{New or Continue}}**     | **{{New or Continue}}**     | **{{New or Continue}}**     |
 
@@ -1417,7 +1417,7 @@ single-column variant that matches PLATFORM.}}
 | Model        | {{Model}}                   | {{Model}}                   | {{Model}}                   |
 | Backup       | {{Backup — platform · dial}} | {{Backup — platform · dial}} | {{Backup — platform · dial}} |
 | Platform     | {{Access method}}           | {{Access method}}           | {{Access method}}           |
-| Effort       | {{Its dial and level}}      | {{Its dial and level}}      | {{Its dial and level}}      |
+| Effort/Intelligence | {{Its level only}} | {{Its level only}} | {{Its level only}} |
 | Thinking     | {{On, or — with no toggle}} | {{On, or — with no toggle}} | {{On, or — with no toggle}} |
 | Conversation | **New**                     | **New**                     | **New**                     |
 
