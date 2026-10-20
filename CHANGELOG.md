@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.87] — 2026-10-20
+
+- **Three new models.** Gemini 4 Argon ($2/$10; Google raises it to $4/$20 on 2026-12-01), Claude Haiku 5.5 ($0.10/$0.50 for prompts up to 100k tokens, 5x above) and Meta's Muse Wonder ($4/$20) join the catalog with Artificial Analysis measurements. Argon ranks 5th of 59 measured models on the AA Intelligence Index, Muse Wonder 6th, and Haiku 5.5 17th, the highest of any model at its price or lower. Adding two frontier models moves some rank-based letters down a step (Opus 5 and Muse Spark 1.3 coding S→A, GLM-5.3 and GPT-5.6 Sol agentic S→A).
+- **A new model no longer stalls the catalog refresh.** The automated lane may merge only typed edits to the catalog data: prices, rating letters and regenerated prose. Anything else used to fail the whole run. From 2026-10-14 one decline line for Gemini 4 Argon did exactly that, so for six days no price or letter shipped and Argon never reached the site (#1120).
+  - `update/split_identity.py` now keeps the typed part, which the integrity gate admits by construction, and holds the rest for review: new models, access-list entries, decline lines, provider snapshots and AA rows for new ids. The catalog and benchmark refreshes run it before the gate.
+  - What it holds goes to one rolling draft PR per lane (`chore/catalog-review`, `chore/catalog-review-benchmarks`), rebuilt from each run, for a maintainer to admit. The PR body lists what waits and why the gate refused it.
+  - The discovery lane adds a priced model of a new series with the rating guard's B placeholder instead of declining it. The curation pass may not add rows, and this lane used to decline every new series back to it, so neither ever added one.
+  - The Anthropic extractor reads a model priced by prompt length. The comma in "100,000" made it skip both of Haiku 5.5's rows as a footnote, so Haiku 5.5 was never flagged.
+
 ## [0.2.86] — 2026-10-14
 
 - **A recommendation names the latest version of a series.** The operator's rule is GPT-6.1 Sol, never GPT-6 Sol where both run, and Opus 5.5, never Opus 5. It is not a benchmark judgment, so it holds even where the older version scores higher or costs less. It is enforced in code at every surface that recommends:

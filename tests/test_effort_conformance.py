@@ -630,13 +630,13 @@ def test_check_g_refuses_striking_a_documented_default() -> None:
     assert gate.check_default_effort(REAL_SELECTOR.read_text(), snapshot) == []
     kept = (
         "<thinking-context>\nDefault effort is `high` on every model that supports\n"
-        "effort, except Opus 4.7 (`xhigh`) and Opus 5.5 and Sonnet 5.5 (`medium`).\n"
+        "effort, except Opus 4.7 (`xhigh`) and Opus 5.5, Sonnet 5.5 and Haiku 5.5 (`medium`).\n"
         "</thinking-context>\n"
     )
     assert gate.check_default_effort(kept, snapshot) == []
-    struck = kept.replace(" and Opus 5.5 and Sonnet 5.5 (`medium`)", "")
+    struck = kept.replace(" and Opus 5.5, Sonnet 5.5 and Haiku 5.5 (`medium`)", "")
     failures = gate.check_default_effort(struck, snapshot)
-    assert len(failures) == 2, failures
+    assert len(failures) == 3, failures
     assert any("'Opus 5.5' defaults to 'medium'" in f for f in failures)
     assert any("'Sonnet 5.5' defaults to 'medium'" in f for f in failures)
     # A blanket-only map has nothing to hold the prose to.

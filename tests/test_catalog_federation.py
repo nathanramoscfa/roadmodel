@@ -828,6 +828,29 @@ def test_anthropic_extractor_flags_a_model_the_catalog_does_not_carry() -> None:
         assert name not in mod.DECLINED
 
 
+def test_anthropic_extractor_reads_a_model_priced_by_prompt_length() -> None:
+    # Haiku 5.5's two rows carry "100,000"; the footnote filter's comma check
+    # dropped both, so the extractor never flagged it (2026-10).
+    mod = _load("extract_anthropic_catalog")
+    md = (
+        "| Model | Base Input Tokens | 5m Cache Writes | Cache Hits & Refreshes | Output Tokens |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| Claude Lyric 9 (for prompts up to 100,000 tokens) | $0.10 / MTok | $0.125 / MTok"
+        " | $0.01 / MTok | $0.50 / MTok |\n"
+        "| Claude Lyric 9 (for prompts over 100,000 tokens) | $0.50 / MTok | $0.625 / MTok"
+        " | $0.05 / MTok | $2.50 / MTok |\n"
+        "| Claude Haiku 4.5 | $1 / MTok | $1.25 / MTok | $0.10 / MTok | $5 / MTok |\n"
+    )
+    assert mod.discover_unmapped(md) == ["Claude Lyric 9"]
+    assert mod.discovered_prices(md, ["Claude Lyric 9"]) == [
+        {"slug": "Claude Lyric 9", "input_price_per_1m": 0.1, "output_price_per_1m": 0.5}
+    ]
+    mapped = md.replace("Claude Lyric 9", "Claude Haiku 5.5")
+    models = {m["id"]: m for m in mod.parse_pricing_table(mapped)}
+    assert models["claude-haiku-5-5"]["output_price_per_1m"] == 0.5
+    assert models["claude-haiku-5-5"]["slug"] == "Claude Haiku 5.5"
+
+
 def test_openai_extractor_raises_on_restructure() -> None:
     mod = _load("extract_openai_catalog")
     with pytest.raises(mod.ExtractError):
@@ -900,12 +923,13 @@ def test_google_extractor_section_walk_and_disambiguation() -> None:
     # text SKU for gemini-3.1-pro; only "Gemini 3 Pro Image" remains), so the four
     # mapped models are the full expected set.
     assert set(models) == {
-        "gemini-3.5-flash",
+        "gemini-4-argon",
         "gemini-3.1-pro",
         "gemini-3-flash",
         "gemini-2.5-flash",
     }
-    assert models["gemini-3.5-flash"]["output_price_per_1m"] == 9.0
+    # The STANDARD table, not the 50%-off Batch table below it.
+    assert models["gemini-4-argon"]["output_price_per_1m"] == 10.0
     # Pro is context-tiered: the FIRST Standard table (<=200K) is the headline price.
     assert models["gemini-3.1-pro"]["input_price_per_1m"] == 2.0
     assert models["gemini-3.1-pro"]["output_price_per_1m"] == 12.0

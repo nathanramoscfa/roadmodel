@@ -60,6 +60,9 @@ NAME_TO_ID = {
     # Added 2026-09-29 with its catalog entry: the Sonnet 5 successor ($2/$10),
     # listed on Anthropic's own page and in Claude Code's effort table.
     "Claude Sonnet 5.5": "claude-sonnet-5-5",
+    # Added 2026-10-19 with its catalog entry: Anthropic's Haiku 4.5 successor,
+    # priced by prompt length ($0.10/$0.50 up to 100k tokens, 5x above it).
+    "Claude Haiku 5.5": "claude-haiku-5-5",
     "Claude Opus 5": "claude-opus-5",
     "Claude Sonnet 5": "claude-sonnet-5",
     "Claude Fable 5": "claude-fable-5",
@@ -139,6 +142,22 @@ DECLINED = {
 
 # "Claude Haiku 3.5 ([retired, …](…))" → "Claude Haiku 3.5".
 _ROW_NOTE_RE = re.compile(r"\s*\(\[.*$")
+# A model priced by prompt length takes two rows: "Claude Haiku 5.5 (for
+# prompts up to 100,000 tokens)" carries its base price, and the "(for prompts
+# over …)" row prices long prompts only. The comma in "100,000" once made the
+# footnote filter drop both rows, so Haiku 5.5 was never flagged (2026-10).
+_PROMPT_TIER_RE = re.compile(r"\s*\(for prompts (up to|over) [0-9,]+ tokens\)$", re.IGNORECASE)
+
+
+def _row_name(cell: str) -> str | None:
+    """The model a row prices at its base rate; None for a long-prompt row."""
+    name = _ROW_NOTE_RE.sub("", cell.strip()).strip()
+    tier = _PROMPT_TIER_RE.search(name)
+    if tier is None:
+        return name
+    if tier.group(1).lower() == "over":
+        return None
+    return name[: tier.start()].strip()
 
 
 def discover_unmapped(md: str) -> list[str]:
@@ -150,7 +169,7 @@ def discover_unmapped(md: str) -> list[str]:
     for row in data:
         if not row:
             continue
-        name = _ROW_NOTE_RE.sub("", row[0].strip()).strip()
+        name = _row_name(row[0])
         # Footnote rows list several models in one cell ("Opus 5, Opus 4.8, and
         # Claude Opus 4.7"); they price nothing new.
         if not name or "," in name or "/" in name or " and " in name:
@@ -174,8 +193,8 @@ def discovered_prices(md: str, names: list[str]) -> list[dict[str, object]]:
     for row in data:
         if not row:
             continue
-        name = _ROW_NOTE_RE.sub("", row[0].strip()).strip()
-        if name not in wanted or name in seen:
+        name = _row_name(row[0])
+        if name is None or name not in wanted or name in seen:
             continue
         seen.add(name)
         entry: dict[str, object] = {"slug": name}
@@ -242,9 +261,9 @@ def parse_pricing_table(md: str) -> list[dict[str, object]]:
     for row in data:
         if not row:
             continue
-        name = row[0].strip()
-        mid = NAME_TO_ID.get(name)
-        if mid is None or mid in seen:
+        name = _row_name(row[0])
+        mid = NAME_TO_ID.get(name) if name is not None else None
+        if name is None or mid is None or mid in seen:
             continue
         in_price = _dollars(row[in_col]) if in_col < len(row) else None
         out_price = _dollars(row[out_col]) if out_col < len(row) else None

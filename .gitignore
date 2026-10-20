@@ -59,6 +59,7 @@ update/.last-ratings-report.md
 update/.last-rating-guard.md
 update/.last-prose-guard.md
 update/.last-dispositions.md
+update/.last-held.md
 update/.cache/
 
 # Test fixtures regenerated from update/build_fixture.py (never committed).

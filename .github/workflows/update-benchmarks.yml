@@ -139,9 +139,19 @@ jobs:
         if: github.event.inputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REFRESH_PATHS: docs/benchmarks.json docs/model-selector.txt docs/model-selector.md docs/catalog.json docs/effort-ratings.json update/aa-model-map.json
         run: |
           set -euo pipefail
           nl=$'\n'  # joins sections: $( ) strips the trailing newlines of what it captures
+          # A row for a newly catalogued model (and its update/aa-model-map.json
+          # entry) maps an id to an AA model: that waits for review, and the
+          # numbers for known rows ship (update/split_identity.py).
+          base="$RUNNER_TEMP/refresh-base"
+          rm -rf "$base" "$RUNNER_TEMP/refresh-hold"
+          mkdir -p "$base" "$RUNNER_TEMP/refresh-hold"
+          git archive HEAD docs update infra | tar -x -C "$base"
+          # shellcheck disable=SC2086  # one path per word
+          python update/split_identity.py --base-dir "$base" --hold "$RUNNER_TEMP/refresh-hold" --paths $REFRESH_PATHS
           # Validate final generated data before publishing or promoting source hashes.
           python update/automation_integrity.py
           if git diff --quiet -- docs/benchmarks.json docs/model-selector.txt docs/model-selector.md docs/catalog.json docs/effort-ratings.json update/aa-model-map.json; then
@@ -197,3 +207,13 @@ jobs:
             --body "$(printf '## Summary\n\n%s\n\n---\n\nOpened automatically by `.github/workflows/update-benchmarks.yml`: one fetch of the Artificial Analysis Insights API joined to catalog ids via `update/aa-model-map.json`. Numbers, derived rating letters, and the prose update/model_prose.py builds from them (no AI-written text), so the validated refresh merger checks content and all CI results before squash-merging. To stop it: mark the PR as draft.' "$notes")")"
           echo "Opened: $PR_URL"
           echo "The validated refresh merger will evaluate $PR_URL."
+
+      - name: Hold new AA rows for review (draft PR)
+        if: github.event.inputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REFRESH_PATHS: docs/benchmarks.json docs/model-selector.txt docs/model-selector.md docs/catalog.json docs/effort-ratings.json update/aa-model-map.json
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2086  # one path per word
+          scripts/open-review-pr.sh chore/catalog-review-benchmarks "Benchmark rows waiting for review" "$RUNNER_TEMP/refresh-hold" $REFRESH_PATHS
