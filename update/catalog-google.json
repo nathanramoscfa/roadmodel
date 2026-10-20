@@ -6,11 +6,11 @@
   "overlay_mode": "price-only",
   "models": [
     {
-      "id": "gemini-3.5-flash",
-      "slug": "Gemini 3.5 Flash",
-      "name": "Gemini 3.5 Flash",
-      "input_price_per_1m": 1.5,
-      "output_price_per_1m": 9.0,
+      "id": "gemini-4-argon",
+      "slug": "Gemini 4 Argon",
+      "name": "Gemini 4 Argon",
+      "input_price_per_1m": 2.0,
+      "output_price_per_1m": 10.0,
       "cache_read_per_1m": null
     },
     {
@@ -39,7 +39,7 @@
     }
   ],
   "slug_to_id": {
-    "Gemini 3.5 Flash": "gemini-3.5-flash",
+    "Gemini 4 Argon": "gemini-4-argon",
     "Gemini 3.1 Pro": "gemini-3.1-pro",
     "Gemini 3 Flash": "gemini-3-flash",
     "Gemini 2.5 Flash": "gemini-2.5-flash"
@@ -47,5 +47,5 @@
   "unexpected_slugs": [],
   "discovered": [],
   "missing_mapped_models": [],
-  "section_sha256": "6bae7254a93b2c49663e3d911c0c4de5f7a9f328ef213d238eda3cb1e4608cb4"
+  "section_sha256": "d1d7b44d80ecbc754f2608038d2568efc5367e35741c15ccb7633e00d20ec7ae"
 }

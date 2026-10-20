@@ -5,12 +5,12 @@
       "low": {
         "coding": "A",
         "planning": "A",
-        "agentic": "S",
+        "agentic": "A",
         "long-context": "A",
         "knowledge": "A"
       },
       "medium": {
-        "coding": "S",
+        "coding": "A",
         "planning": "A",
         "agentic": "S",
         "long-context": "S",
@@ -29,6 +29,36 @@
         "agentic": "S",
         "long-context": "A",
         "knowledge": "S"
+      }
+    },
+    "claude-haiku-5-5": {
+      "low": {
+        "coding": "A",
+        "planning": "B",
+        "agentic": "A",
+        "long-context": "A",
+        "knowledge": "B"
+      },
+      "medium": {
+        "coding": "A",
+        "planning": "B",
+        "agentic": "A",
+        "long-context": "A",
+        "knowledge": "B"
+      },
+      "high": {
+        "coding": "A",
+        "planning": "A",
+        "agentic": "A",
+        "long-context": "A",
+        "knowledge": "B"
+      },
+      "xhigh": {
+        "coding": "A",
+        "planning": "A",
+        "agentic": "A",
+        "long-context": "A",
+        "knowledge": "A"
       }
     },
     "claude-opus-5": {
@@ -100,7 +130,7 @@
         "knowledge": "C"
       },
       "medium": {
-        "coding": "A",
+        "coding": "B",
         "planning": "B",
         "agentic": "B",
         "long-context": "A",
@@ -109,7 +139,7 @@
       "high": {
         "coding": "A",
         "planning": "B",
-        "agentic": "A",
+        "agentic": "B",
         "long-context": "A",
         "knowledge": "B"
       },
@@ -271,7 +301,7 @@
       "medium": {
         "coding": "A",
         "planning": "B",
-        "agentic": "A",
+        "agentic": "B",
         "long-context": "A",
         "knowledge": "A"
       },
@@ -299,14 +329,14 @@
         "knowledge": "C"
       },
       "high": {
-        "coding": "A",
+        "coding": "B",
         "planning": "B",
         "agentic": "B",
         "long-context": "A",
         "knowledge": "B"
       },
       "xhigh": {
-        "coding": "A",
+        "coding": "B",
         "planning": "B",
         "agentic": "B",
         "long-context": "A",
@@ -412,16 +442,16 @@
         "knowledge": "C"
       },
       "medium": {
-        "coding": "A",
+        "coding": "B",
         "planning": "B",
         "agentic": "B",
         "long-context": "A",
         "knowledge": "B"
       },
       "high": {
-        "coding": "A",
+        "coding": "B",
         "planning": "B",
-        "agentic": "A",
+        "agentic": "B",
         "long-context": "A",
         "knowledge": "B"
       },
