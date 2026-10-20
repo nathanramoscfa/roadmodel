@@ -14,6 +14,16 @@ Artificial Analysis does) and jurisdiction, joins the provider's
 ``<provider>-api`` method, and takes its prices from the snapshot. best-for and
 headline-benchmarks start empty: update/model_prose.py writes them.
 
+ADD a priced model of a new series too: no same-series model the provider's
+API offers is in the catalog. It starts from the rating guard's B placeholder
+(S speed for a Mini/Flash/Haiku/Nano/Lite name), takes the provider's
+jurisdiction from its snapshot and joins ``<provider>-api``. Neither kind of
+addition auto-merges: a new identity fails the typed refresh boundary
+(update/automation_integrity.py), so update/split_identity.py moves it to the
+catalog's review PR, where a person admits it. Until 2026-10 a new series was
+declined here as NEW_SERIES while the curation pass, barred from adding rows,
+left it to this script, so Gemini 4 Argon reached neither (#1120).
+
 DECLINE everything else, with a line in docs/model-tier-cost-scale.md's
 "Declined Models (discovery lane)" section:
 
@@ -21,11 +31,10 @@ DECLINE everything else, with a line in docs/model-tier-cost-scale.md's
   model (by its name). The catalog rates general text models.
 - NO_PRICE: the provider's page shows no price the extractor reads. Provisional:
   once the page prices it, update/discovery.py shows it to the curation pass
-  again, and this script then adds it (a same-series successor) or declines it
-  as NEW_SERIES.
-- NEW_SERIES: no same-series model the provider's API offers is in the
-  catalog. New series join through the curation pass, which saw this one with
-  its price in the same run (the snapshots refresh before the pass).
+  again, and this script then adds it.
+
+A standing NEW_SERIES line from before 2026-10 is re-decided: the model is
+added and the line lifted.
 
 Models a CLI's docs introduce (the Gemini and Claude Code trackers'
 ``unexpected_models``) are disposed the same way: a docs page lists no price.
@@ -112,6 +121,7 @@ class Flag:
     input_price: float | None
     output_price: float | None
     source: str  # "provider page" or "<tracker> docs"
+    jurisdiction: str = "unknown"  # the provider snapshot's; a new series takes it
 
     @property
     def priced(self) -> bool:
@@ -139,6 +149,7 @@ def load_flags(snapshots: list[Path], tracker_flags: dict[str, Path]) -> list[Fl
     for path in snapshots:
         snap = json.loads(path.read_text())
         provider = str(snap.get("provider", path.stem.removeprefix("catalog-")))
+        jurisdiction = str(snap.get("jurisdiction") or "unknown")
         prices = {
             str(r["slug"]): (
                 _price(r.get("input_price_per_1m")),
@@ -150,7 +161,7 @@ def load_flags(snapshots: list[Path], tracker_flags: dict[str, Path]) -> list[Fl
         for slug in snap.get("unexpected_slugs") or []:
             in_p, out_p = prices.get(str(slug), (None, None))
             flags[(provider, normalize(str(slug)))] = Flag(
-                provider, str(slug), in_p, out_p, "provider page"
+                provider, str(slug), in_p, out_p, "provider page", jurisdiction
             )
     for provider, path in tracker_flags.items():
         if not path.exists():
@@ -182,6 +193,17 @@ def new_id(flag: Flag, predecessor_id: str) -> str:
     if len(old_digits) > 1 and "-" in old.group(0):
         sep = "-"
     return predecessor_id[: old.start()] + sep.join(new_digits) + tail
+
+
+def series_id(flag: Flag) -> str:
+    """A new series' id: an API-id slug as it is, a display name lower-cased
+    with dashes ("Gemini 4 Argon" -> "gemini-4-argon"), versions keeping the
+    provider's separator ("Gemini 3.9 Flash" -> "gemini-3.9-flash")."""
+    if re.fullmatch(r"[a-z0-9][a-z0-9.\-]*", flag.slug):
+        return flag.slug
+    if flag.provider in DASH_VERSIONS:
+        return normalize(flag.slug)
+    return re.sub(r"[^a-z0-9.]+", "-", flag.slug.lower()).strip("-.")
 
 
 def new_name(flag: Flag, predecessor_name: str) -> str:
@@ -225,19 +247,25 @@ def _api_offered(selector: str, provider: str) -> set[str]:
     return set()
 
 
-def add_model(selector: str, flag: Flag, predecessor_id: str) -> tuple[str, str]:
+def add_model(selector: str, flag: Flag, predecessor_id: str | None) -> tuple[str, str]:
     """``selector`` with the flagged model added beside its predecessor (or at
-    the end of its cost tier) and on the provider's API method. Returns the new
-    text and the new id."""
-    pred = rating_guard.models(selector)[predecessor_id]
-    model_id = new_id(flag, predecessor_id)
-    element = model_element(
-        model_id,
-        new_name(flag, pred.name),
-        flag,
-        _pred_jurisdiction(selector, predecessor_id),
-        pred.tiers,
-    )
+    the end of its cost tier) and on the provider's API method. Without a
+    predecessor it is a new series, with the rating guard's B placeholder.
+    Returns the new text and the new id."""
+    if predecessor_id is not None:
+        pred = rating_guard.models(selector)[predecessor_id]
+        model_id = new_id(flag, predecessor_id)
+        name = new_name(flag, pred.name)
+        jurisdiction = _pred_jurisdiction(selector, predecessor_id)
+        tiers = pred.tiers
+    else:
+        model_id = series_id(flag)
+        name = flag.slug
+        jurisdiction = flag.jurisdiction
+        tiers, _ = rating_guard.placeholder(
+            rating_guard.Model(model_id, name, {}), rating_guard.models(selector)
+        )
+    element = model_element(model_id, name, flag, jurisdiction, tiers)
     if flag.output_price is None:
         raise ValueError(f"{flag.provider}/{flag.slug} has no price to add it at")
     tier = cost_tier_for_output_price(flag.output_price)
@@ -370,7 +398,7 @@ def dispose(
         prior = declined.get(key)
         if _variants(flag.slug) & catalog_keys(selector):
             continue  # carried: added by the pass or an earlier run
-        if prior is not None and prior.reason != NO_PRICE:
+        if prior is not None and prior.reason not in (NO_PRICE, NEW_SERIES):
             continue  # the curation pass's decline, or a rule decline: it stands
         if _SPECIALIZED_RE.search(flag.slug):
             reason = SPECIALIZED
@@ -402,7 +430,22 @@ def dispose(
                     )
                 )
                 continue
-            reason = NO_PRICE if not flag.priced else NEW_SERIES
+            if flag.priced:
+                selector, model_id = add_model(selector, flag, None)
+                if prior is not None:
+                    drop.add(prior)
+                    actions.append(Action("lifted", flag, "a new series is added now"))
+                actions.append(
+                    Action(
+                        "added",
+                        flag,
+                        f"as `{model_id}`, a new series at "
+                        f"{_money(flag.input_price or 0)}/{_money(flag.output_price or 0)}, "
+                        "with the B placeholder letters until Artificial Analysis measures it",
+                    )
+                )
+                continue
+            reason = NO_PRICE
         if prior is not None and prior.reason == reason:
             continue
         if prior is not None:

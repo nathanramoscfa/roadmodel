@@ -1,9 +1,10 @@
 """update/dispose_discoveries.py — every flagged model is added or declined.
 
 A priced same-series successor joins the catalog with its predecessor's
-letters (which the rating guard accepts as its placeholder); everything else is
-declined with a reason, an unpriced model re-checked each run; the curation
-pass's own declines stand; and a second run changes nothing.
+letters, and a priced new series with the B placeholder (both the rating
+guard's own placeholder); everything else is declined with a reason, an
+unpriced model re-checked each run; the curation pass's own declines stand; and
+a second run changes nothing.
 """
 
 from __future__ import annotations
@@ -123,11 +124,33 @@ def test_an_unpriced_model_is_declined_then_added_once_priced() -> None:
     assert rg.models(selector)["gemini-3.9-flash"].name == "Gemini 3.9 Flash"
 
 
-def test_a_priced_new_series_is_declined_and_stays_declined() -> None:
-    flag = _flag("google", "Gemini 3.9 Flash-Lite", (0.1, 0.4))
-    selector, cost_scale, actions = dd.dispose(SELECTOR, COST_SCALE, [flag], TODAY)
-    assert selector == SELECTOR and [a.detail for a in actions] == [dd.NEW_SERIES]
-    assert dd.dispose(selector, cost_scale, [flag], TODAY)[2] == []
+ARGON = dd.Flag("google", "Gemini 4 Argon", 2.0, 10.0, "provider page", "us")
+
+
+def test_a_priced_new_series_is_added_with_the_placeholder_letters() -> None:
+    # Gemini 4 Argon sat flagged for a week (#1120): the curation pass may not
+    # add rows, and this script declined every new series back to it.
+    selector, cost_scale, actions = dd.dispose(SELECTOR, COST_SCALE, [ARGON], TODAY)
+    assert [(a.kind, a.flag.slug) for a in actions] == [("added", "Gemini 4 Argon")]
+    argon = rg.models(selector)["gemini-4-argon"]
+    assert argon.name == "Gemini 4 Argon"
+    assert set(argon.tiers.values()) == {"B"}  # no Mini/Flash/Haiku/Nano/Lite word
+    assert rg.check_new(argon, rg.models(SELECTOR), {}, {}) == []
+    # The medium tier its $10 output sets, the snapshot's jurisdiction, the provider's API.
+    at = selector.index('id="gemini-4-argon"')
+    assert at < selector.index('<tier cost="low">')
+    assert 'jurisdiction="us"' in selector[at : selector.index("/>", at)]
+    assert 'supports-models="gemini-3.8-flash,gemini-4-argon"' in selector
+    assert cost_scale == COST_SCALE
+    assert dd.dispose(selector, cost_scale, [ARGON], TODAY)[2] == []
+
+
+def test_a_standing_new_series_decline_is_re_decided() -> None:
+    noted = COST_SCALE + f"- google/Gemini 4 Argon — {dd.NEW_SERIES} (declined 2026-10-19)\n"
+    selector, cost_scale, actions = dd.dispose(SELECTOR, noted, [ARGON], TODAY)
+    assert [a.kind for a in actions] == ["lifted", "added"]
+    assert cost_scale == COST_SCALE
+    assert "gemini-4-argon" in rg.models(selector)
 
 
 def test_the_curation_pass_decides_first() -> None:
@@ -156,12 +179,13 @@ def test_a_specialized_model_is_declined_as_such() -> None:
     assert dd.dispose(selector, cost_scale, flags, TODAY)[2] == []
 
 
-def test_a_newly_priced_new_series_is_declined_as_one() -> None:
+def test_a_newly_priced_new_series_is_added_and_its_provisional_decline_lifted() -> None:
     noted = COST_SCALE + f"- google/Gemini 3.9 Flash-Lite — {dd.NO_PRICE} (declined 2026-09-30)\n"
     flag = _flag("google", "Gemini 3.9 Flash-Lite", (0.1, 0.4))
-    _, cost_scale, actions = dd.dispose(SELECTOR, noted, [flag], TODAY)
-    assert [(a.kind, a.detail) for a in actions] == [("declined", dd.NEW_SERIES)]
+    selector, cost_scale, actions = dd.dispose(SELECTOR, noted, [flag], TODAY)
+    assert [a.kind for a in actions] == ["lifted", "added"]
     assert dd.NO_PRICE not in cost_scale
+    assert rg.models(selector)["gemini-3.9-flash-lite"].tiers["speed"] == "S"
 
 
 def test_the_curation_pass_outranks_a_provisional_decline() -> None:
@@ -199,6 +223,10 @@ def test_ids_and_names_follow_the_catalog() -> None:
     assert dd.new_id(_flag("google", "Gemini 3.9 Flash"), "gemini-3.8-flash") == "gemini-3.9-flash"
     assert dd.new_name(_flag("openai", "gpt-6.1-sol"), "GPT-6 Sol") == "GPT-6.1 Sol"
     assert dd.new_name(_flag("anthropic", "Claude Opus 5.6"), "Opus 5.5") == "Opus 5.6"
+    assert dd.series_id(_flag("google", "Gemini 4 Argon")) == "gemini-4-argon"
+    assert dd.series_id(_flag("google", "Gemini 3.9 Flash-Lite")) == "gemini-3.9-flash-lite"
+    assert dd.series_id(_flag("anthropic", "Claude Lyric 1.5")) == "claude-lyric-1-5"
+    assert dd.series_id(_flag("openai", "gpt-7-nova")) == "gpt-7-nova"
 
 
 def test_flags_come_from_snapshots_and_tracker_docs(tmp_path: Path) -> None:
@@ -207,6 +235,7 @@ def test_flags_come_from_snapshots_and_tracker_docs(tmp_path: Path) -> None:
         json.dumps(
             {
                 "provider": "openai",
+                "jurisdiction": "us",
                 "unexpected_slugs": ["gpt-6.1-sol", "gpt-6.2-sol"],
                 "discovered": [
                     {"slug": "gpt-6.1-sol", "input_price_per_1m": 2.0, "output_price_per_1m": 10.0}
@@ -222,6 +251,7 @@ def test_flags_come_from_snapshots_and_tracker_docs(tmp_path: Path) -> None:
         ("openai", "gpt-6.1-sol", True),
         ("openai", "gpt-6.2-sol", False),
     ]
+    assert [f.jurisdiction for f in flags] == ["unknown", "us", "us"]
 
 
 def test_the_report_names_each_disposition() -> None:

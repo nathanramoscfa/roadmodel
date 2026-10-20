@@ -370,9 +370,21 @@ jobs:
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REFRESH_PATHS: docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json docs/context-windows.json docs/effort-ratings.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
         run: |
           set -euo pipefail
           nl=$'\n'  # joins sections: $( ) strips the trailing newlines of what it captures
+          # Keep what the typed boundary admits and hold the rest (new models,
+          # access-list entries, decline lines, provider snapshots) for the
+          # review PR below. Until 2026-10 one decline line refused the whole
+          # run, prices and letters included (update/split_identity.py, #1120).
+          base="$RUNNER_TEMP/refresh-base"
+          rm -rf "$base" "$RUNNER_TEMP/refresh-hold"
+          mkdir -p "$base" "$RUNNER_TEMP/refresh-hold"
+          git archive HEAD docs update infra | tar -x -C "$base"
+          # shellcheck disable=SC2086  # one path per word
+          python update/split_identity.py --base-dir "$base" --hold "$RUNNER_TEMP/refresh-hold" --paths $REFRESH_PATHS
+          python update/render_md.py
           # Validate final generated data before publishing or promoting source hashes.
           python update/automation_integrity.py
           if git diff --quiet -- docs/ update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json; then
@@ -403,6 +415,9 @@ jobs:
           if [ -s update/.last-dispositions.md ]; then
             warnings="${warnings}${nl}${nl}$(cat update/.last-dispositions.md)"
           fi
+          if [ -s update/.last-held.md ]; then
+            warnings="${warnings}${nl}${nl}$(cat update/.last-held.md)${nl}${nl}They wait in the draft PR from \`chore/catalog-review\`."
+          fi
           git add docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json docs/context-windows.json docs/effort-ratings.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
           git commit -m "Automated catalog refresh: ${DATE}" -m "${summary}${warnings}"
           # Literal Markdown/jq syntax; shell expansion is not intended.
@@ -432,6 +447,19 @@ jobs:
           # A trusted default-branch workflow validates the final immutable
           # candidate and all checks before merging the exact head commit.
           echo "The validated refresh merger will evaluate $PR_URL."
+
+      - name: Hold the rest for review (draft PR)
+        # A new model, an access-list entry, a decline line or a provider
+        # snapshot cannot merge itself: it waits in one rolling draft PR,
+        # rebuilt from each run, for a maintainer to admit.
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REFRESH_PATHS: docs/model-selector.txt docs/model-selector.md docs/model-tier-cost-scale.md docs/catalog.json docs/context-windows.json docs/effort-ratings.json update/catalog-anthropic.json update/catalog-openai.json update/catalog-google.json update/catalog-xai.json update/catalog-deepseek.json update/catalog-zai.json update/catalog-mistral.json update/catalog-groq.json
+        run: |
+          set -euo pipefail
+          # shellcheck disable=SC2086  # one path per word
+          scripts/open-review-pr.sh chore/catalog-review "Catalog changes waiting for review" "$RUNNER_TEMP/refresh-hold" $REFRESH_PATHS
 
       - name: Promote source-hash for next run
         # Only promote staged hash → canonical if every prior step

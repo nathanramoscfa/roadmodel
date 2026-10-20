@@ -43,6 +43,13 @@
       "xhigh",
       "max"
     ],
+    "Haiku 5.5": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
     "Opus 5": [
       "low",
       "medium",
@@ -88,6 +95,7 @@
     "*": "high",
     "Opus 5.5": "medium",
     "Sonnet 5.5": "medium",
+    "Haiku 5.5": "medium",
     "Opus 4.7": "xhigh"
   },
   "fallback_rule": "highest supported level at or below the requested level",
@@ -127,6 +135,8 @@
     ],
     "cannot_disable_on": []
   },
-  "unexpected_models": [],
-  "section_sha256": "294115ebcf53891df47a00b9d294644a9cd4b49d448fb6bc345f7ffea9c4c8e7"
+  "unexpected_models": [
+    "Haiku 5.5"
+  ],
+  "section_sha256": "82e324262d687a26ca412fe5007f255496a5eea4e5ea7455e697f5a26b993f6a"
 }

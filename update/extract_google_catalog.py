@@ -60,10 +60,13 @@ FETCH_TIMEOUT = 30
 # id. EXACT match only, so near-misses (Gemini 3 Pro Image, 2.5 Flash-Lite, 2.5
 # Flash Image, …) do NOT bind. gemini-3-pro is intentionally absent — Google
 # delisted the standalone text SKU for gemini-3.1-pro, so its price stays
-# Cursor-sourced (see the module docstring).
+# Cursor-sourced (see the module docstring). gemini-3.5-flash left the same way
+# on 2026-10-19, when the page dropped its standalone section.
 NAME_TO_ID = {
     "Gemini 3.1 Pro": "gemini-3.1-pro",
-    "Gemini 3.5 Flash": "gemini-3.5-flash",
+    # Added 2026-10-19 with its catalog entry: Google's flagship reasoning
+    # model, $2/$10 until 2026-11-30 and $4/$20 from 2026-12-01.
+    "Gemini 4 Argon": "gemini-4-argon",
     "Gemini 3 Flash": "gemini-3-flash",
     "Gemini 2.5 Flash": "gemini-2.5-flash",
 }
