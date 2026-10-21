@@ -26,6 +26,15 @@ two checks:
    said it considered the release but the visible surface didn't
    change to match.
 
+   Under the typed refresh boundary (``update/automation_integrity.py``:
+   the cron may move prices and rating letters, never selector prose) such
+   an edit is forbidden, so the cron passes ``--review-queue``: an uncited
+   trigger bullet is then queued for a review issue
+   (``update/review_queue.py``) and the run stays green. Failing it instead
+   failed every daily run from 2026-10-14 on, since tomorrow's run met the
+   same bullet and the same boundary (#1149). Without the flag (a reviewed,
+   hand-run refresh) the miss is still a hard FAIL.
+
 The PRE check (parsing the CHANGELOG into per-version bullets) lives
 in ``update_claude_code.py::parse_versions`` /
 ``write_pending_bullets``. This file consumes the persisted snapshot
@@ -51,6 +60,8 @@ from typing import cast
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 UPDATE_DIR = REPO_ROOT / "update"
+if str(UPDATE_DIR) not in sys.path:
+    sys.path.insert(0, str(UPDATE_DIR))
 CACHE_DIR = UPDATE_DIR / ".cache"
 SELECTOR_PATH = REPO_ROOT / "docs" / "model-selector.txt"
 PENDING_BULLETS_PATH = CACHE_DIR / "pending-bullets.json"
@@ -77,6 +88,13 @@ LAST_SUMMARY_PATH = UPDATE_DIR / ".last-claude-code-summary.txt"
 # calls); it is no reasoning dial, and 2.1.281–2.1.285 mention it in a dozen
 # bullets the selector rightly ignores, which failed the cron daily from
 # 2026-09-26 (#801). Removed.
+#
+# The thinking-toggle words joined 2026-10-20. Claude Code 2.1.281 ("Fixed
+# Alt+T and `/config` offering to turn thinking off on models that can't ...")
+# and 2.1.300 ("[VSCode] Fixed the Thinking toggle switching to Off on models
+# that always think; the toggle is no longer shown ...") took the THINKING
+# switch away on five models, matched no keyword, and the run called 2.1.300 a
+# "considered no-op". Comparison casefolds and reads a curly apostrophe as "'".
 TRIGGER_KEYWORDS = (
     "/effort",
     "effort level",
@@ -86,6 +104,14 @@ TRIGGER_KEYWORDS = (
     "xhigh",
     "max effort",
     "adaptive reasoning",
+    "adaptive thinking",
+    "thinking toggle",
+    "alt+t",
+    "option+t",
+    "alwaysthinkingenabled",
+    "max_thinking_tokens",
+    "turn thinking off",
+    "thinking can't be turned off",
 )
 
 # Tokens to ignore when computing "non-trivial" overlap between a
@@ -183,12 +209,29 @@ def coverage_check(pending: list[dict[str, object]], consumed: set[str]) -> list
 # "Fixed continued or resumed conversations losing earlier extended thinking
 # …" failed the run on the "extended thinking" keyword (2026-10-01).
 _BUG_FIX = re.compile(r"^\s*(?:\[[^\]]+\]\s*)?Fixed\b")
+# ...unless the "fix" takes a control away. "Fixed the Thinking toggle switching
+# to Off on models that always think; the toggle is no longer shown for those
+# models" (2.1.300) removed the THINKING dial on five models: a contract change
+# the selector must reflect, phrased as a bug fix.
+_REMOVES_CONTROL = re.compile(
+    r"no longer (?:shown|shows?|offer(?:s|ed)?|available)"
+    r"|\bremov(?:e|ed|es|ing)\b"
+    r"|instead of offering"
+    r"|in place of the switch"
+    r"|\breplac(?:e|ed|es|ing)\b"
+    r"|\bhid(?:e|es|den|ing)\b",
+    re.IGNORECASE,
+)
+
+
+def _fold(text: str) -> str:
+    return text.lower().replace("\u2019", "'")
 
 
 def bullet_is_trigger(bullet: str) -> bool:
-    if _BUG_FIX.match(bullet):
+    if _BUG_FIX.match(bullet) and not _REMOVES_CONTROL.search(bullet):
         return False
-    low = bullet.lower()
+    low = _fold(bullet)
     return any(kw in low for kw in TRIGGER_KEYWORDS)
 
 
@@ -235,9 +278,9 @@ def load_diff(before: Path | None, after: Path | None) -> str:
     )
 
 
-def citation_check(pending: list[dict[str, object]], diff_text: str) -> list[str]:
-    """For every trigger bullet, require ≥1 non-trivial token in the diff."""
-    failures: list[str] = []
+def uncited_bullets(pending: list[dict[str, object]], diff_text: str) -> list[tuple[str, str]]:
+    """``(version, bullet)`` for every trigger bullet the diff does not cite."""
+    misses: list[tuple[str, str]] = []
     diff_tokens = non_trivial_tokens(diff_text)
     for entry in pending:
         version = str(entry.get("version", "")).strip()
@@ -249,22 +292,45 @@ def citation_check(pending: list[dict[str, object]], diff_text: str) -> list[str
             if not bullet_is_trigger(bullet_text):
                 continue
             bullet_tokens = non_trivial_tokens(bullet_text)
-            if not bullet_tokens:
-                continue
-            if not (bullet_tokens & diff_tokens):
-                failures.append(
-                    f"citation check: version {version} bullet "
-                    f"{bullet_text!r} matched a trigger keyword "
-                    f"({_first_match(bullet_text)!r}) but no non-"
-                    "trivial token from the bullet appears in the "
-                    "docs/model-selector.txt diff. Opus likely "
-                    "missed the surface-parameter update."
-                )
-    return failures
+            if bullet_tokens and not (bullet_tokens & diff_tokens):
+                misses.append((version, bullet_text))
+    return misses
+
+
+def review_items(misses: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """One review item per uncited trigger bullet (see update/review_queue.py)."""
+    import review_queue
+
+    items = []
+    for version, bullet in misses:
+        body = (
+            f"Claude Code {version} changed a dial `docs/model-selector.txt` describes:\n\n"
+            f"> {bullet}\n\n"
+            f"It matched the trigger keyword `{_first_match(bullet)}`, and the "
+            "refresh left no trace of it in the selector, because its typed boundary "
+            "forbids prose edits. Decide whether `<thinking-context>`, the "
+            "`claude-code` method's best-for or a model attribute (e.g. "
+            "`always-thinks`) has to change, and make that edit in a reviewed PR. "
+            "A control removed or hidden for some models is a contract change even "
+            'when the bullet reads "Fixed".'
+        )
+        items.append((review_queue.bullet_title(version, bullet), body))
+    return items
+
+
+def citation_check(pending: list[dict[str, object]], diff_text: str) -> list[str]:
+    """For every trigger bullet, require ≥1 non-trivial token in the diff."""
+    return [
+        f"citation check: version {version} bullet {bullet!r} matched a trigger "
+        f"keyword ({_first_match(bullet)!r}) but no non-trivial token from the "
+        "bullet appears in the docs/model-selector.txt diff. Opus likely missed "
+        "the surface-parameter update."
+        for version, bullet in uncited_bullets(pending, diff_text)
+    ]
 
 
 def _first_match(bullet: str) -> str:
-    low = bullet.lower()
+    low = _fold(bullet)
     for kw in TRIGGER_KEYWORDS:
         if kw in low:
             return kw
@@ -309,6 +375,17 @@ def main() -> int:
             "Override path to pending-bullets.json (default: update/.cache/pending-bullets.json)."
         ),
     )
+    parser.add_argument(
+        "--review-queue",
+        type=Path,
+        default=None,
+        help=(
+            "Route trigger bullets the selector diff does not cite to this review "
+            "queue (update/review_queue.py) instead of failing. The cron passes it: "
+            "its typed refresh boundary forbids the prose edit such a bullet would "
+            "need (#1149). The coverage check stays a hard FAIL either way."
+        ),
+    )
     args = parser.parse_args()
 
     global PENDING_BULLETS_PATH
@@ -344,7 +421,20 @@ def main() -> int:
     except RuntimeError as exc:
         sys.stderr.write(f"validate_claude_code_diff: {exc}\n")
         return 2
-    failures.extend(citation_check(pending, diff_text))
+    if args.review_queue is None:
+        failures.extend(citation_check(pending, diff_text))
+    else:
+        misses = uncited_bullets(pending, diff_text)
+        for version, bullet in misses:
+            print(
+                f"validate_claude_code_diff: ROUTED for review — version {version} "
+                f"bullet {bullet!r} matched {_first_match(bullet)!r}; the typed "
+                "boundary forbids the selector edit it would need."
+            )
+        if misses:
+            import review_queue
+
+            review_queue.add(review_items(misses), args.review_queue)
 
     if failures:
         sys.stderr.write(f"validate_claude_code_diff: {len(failures)} failure(s):\n")

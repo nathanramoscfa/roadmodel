@@ -8,7 +8,9 @@ all names, prose, instructions, capability descriptions and access mappings.
 In the cost-scale document, only existing numeric pricing/subscription cells
 and their derived Tier may change; preserve row identities and all other text.
 New identities, capabilities or prose require a reviewed change outside this
-refresh. Return unchanged content when the required change exceeds this scope.
+refresh. Return unchanged content when the required change exceeds this scope,
+and report that change in `needs_review` (see "Output format") so a human makes
+it: a change you may not make is never a no-op.
 Deterministic generators update their own fields after this pass.
 
 You maintain a single section family of `docs/model-selector.txt` —
@@ -131,6 +133,13 @@ with it using the SMALLEST edit:
   — the gate reads them, so keep the prose faithful to them.
 - `THINKING` must stay a two-position toggle. Never widen its enum, and
   never map a provider-native reasoning level onto it.
+- `THINKING` is NOT a setting on the models in
+  `extended_thinking.cannot_disable_on`. Claude Code shows "Thinking can't be
+  turned off" there instead of the switch, and a saved Off or
+  `MAX_THINKING_TOKENS=0` has no effect. The selector must never offer
+  `THINKING: Off` for those models — say they always think. Where that needs
+  prose or a model attribute (`always-thinks="yes"`) the boundary forbids you,
+  leave the file unchanged and report it in `needs_review`.
 - Do NOT add a per-model effort claim that names a model alongside an
   effort level its `per_model_effort` row lacks (e.g. never imply
   Sonnet 4.6 supports `xhigh`).
@@ -283,9 +292,16 @@ commentary outside the object:
   "edits": [{"find": "<exact unique span of docs/model-selector.txt>", "replace": "<new text>"}],
   "summary": "<3-8 line plain-text summary of what changed; this becomes the commit message body>",
   "warnings": ["<any caveats, missing data, judgments worth flagging>"],
-  "consumed_versions": ["<every version string from new_versions_since_last_run that you considered, even if it produced no edit>"]
+  "consumed_versions": ["<every version string from new_versions_since_last_run that you considered, even if it produced no edit>"],
+  "needs_review": [{"version": "<N.N.N>", "bullet": "<the CHANGELOG bullet, verbatim>", "reason": "<one sentence: what the selector would have to change>"}]
 }
 ```
+
+`needs_review` is the run's drift report: every change the selector should
+reflect that this run did not make — a control removed or hidden for some
+models, a `<docs_facts>` fact the selector contradicts, anything the automated
+boundary keeps you from editing. Each entry becomes a review issue for a human.
+Use `[]` when there is none; never drop drift to keep the list empty.
 
 Return EDITS, not the whole file. Each edit replaces one exact span of the
 current file:
@@ -313,7 +329,21 @@ If a version was considered and produced no edit, ALSO add a warning
 of the form `version <N.N.N> considered no-op: <one-sentence reason>`
 so the PR description surfaces the skip rationale.
 
+**A control removed or hidden for some models is a contract change, never a
+`considered no-op`** — even when the bullet starts "Fixed …" or "[VSCode]
+Fixed …". "Fixed the Thinking toggle switching to Off on models that always
+think; the toggle is no longer shown for those models" (2.1.300) and "Fixed
+Alt+T and `/config` offering to turn thinking off on models that can't"
+(2.1.281) took the THINKING dial away on five models; a run that called them
+no-ops left the selector offering a setting that does nothing. Treat any
+bullet that removes, hides or replaces an effort / thinking / ultracode
+control, or stops offering it on some models, as drift: copy it verbatim into
+`needs_review` with its version and a one-sentence reason, and give its
+version a `version <N.N.N> needs review: <reason>` warning instead of a
+`considered no-op` one. Report it whether or not you could also edit for it.
+
 If nothing changed at all, return `"edits": []`, set
 `summary` to "No changes detected.", populate `consumed_versions`
 with every entry from `<new_versions_since_last_run>`, and add a
-`considered no-op` warning per version.
+`considered no-op` warning per version (a `needs review` warning, with its
+`needs_review` entry, for a version that carried drift).

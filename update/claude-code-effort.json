@@ -133,10 +133,14 @@
       "alwaysThinkingEnabled",
       "MAX_THINKING_TOKENS=0"
     ],
-    "cannot_disable_on": []
+    "cannot_disable_on": [
+      "Opus 5.5",
+      "Sonnet 5.5",
+      "Haiku 5.5",
+      "Fable 5.1",
+      "Fable 5"
+    ]
   },
-  "unexpected_models": [
-    "Haiku 5.5"
-  ],
-  "section_sha256": "82e324262d687a26ca412fe5007f255496a5eea4e5ea7455e697f5a26b993f6a"
+  "unexpected_models": [],
+  "section_sha256": "3cca2497050f42524231fed750a9f829eadeda8adfe0bd2a383d90773c45ed2a"
 }

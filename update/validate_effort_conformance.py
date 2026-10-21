@@ -69,6 +69,20 @@ Six hard checks:
      ``high`` -> High is not mistaken for it). DeepSeek publishes no per-model
      reasoning matrix, so there is no per-model sub-check.
 
+One advisory check, which warns and never fails:
+
+  H. Always-thinking models (Claude Code). The docs list the models thinking
+     can't be turned off on (``extended_thinking.cannot_disable_on``); Claude
+     Code shows "Thinking can't be turned off" there instead of the switch, so
+     ``THINKING: Off`` is no setting for them. The selector records the same fact
+     as ``always-thinks="yes"`` on the ``<model>``. A docs-listed model the
+     selector carries without the attribute, or a Claude model the selector marks
+     that the docs do not list, is a WARNING: printed, and queued for a review
+     issue with ``--review-queue``. Not a failure, because the cron that
+     refreshes the snapshot may not add or remove selector attributes (the typed
+     refresh boundary, ``update/automation_integrity.py``) — a hard fail would
+     deadlock every daily run until a person edits the selector.
+
 Locating the provider enumerations (D/E/F): each provider's levels are found by
 first isolating its ``- <Provider> ...`` BULLET in ``<thinking-context>``, then
 reading the enumeration inside it. Checks D/E/F previously grepped prose phrases
@@ -1083,6 +1097,84 @@ def check_default_effort(selector: str, snapshot: dict[str, object]) -> list[str
     return failures
 
 
+# A <model .../> element inside <model-options>; attributes span lines.
+_MODEL_ELEMENT_RE = re.compile(r"<model\s+((?:[^\"/>]|\"[^\"]*\")*)/>", re.DOTALL)
+_ATTR_RE = re.compile(r'([a-z][a-z0-9-]*)="([^"]*)"')
+ALWAYS_THINKS_ATTR = "always-thinks"
+
+
+def selector_models(selector: str) -> list[dict[str, str]]:
+    """Attributes of every ``<model>`` in the selector's ``<model-options>``."""
+    section = extract_block(selector, "model-options")
+    return [dict(_ATTR_RE.findall(m.group(1))) for m in _MODEL_ELEMENT_RE.finditer(section)]
+
+
+def check_always_thinks(selector: str, snapshot: dict[str, object]) -> list[str]:
+    """Check H (advisory) — ``always-thinks="yes"`` agrees with the docs.
+
+    Returns WARNINGS, never failures (see the module docstring). Snapshot names
+    map to selector models by the ``name`` attribute ("Opus 5.5", "Fable 5.1").
+    The reverse direction looks only at models of a family the Claude Code
+    effort table covers (Opus, Sonnet, Haiku, Fable), since these docs say
+    nothing about any other provider's models.
+    """
+    thinking = snapshot.get("extended_thinking")
+    listed_raw = thinking.get("cannot_disable_on") if isinstance(thinking, dict) else None
+    listed = [str(n) for n in listed_raw] if isinstance(listed_raw, list) else []
+    per_model = snapshot.get("per_model_effort")
+    covered = {str(n).split()[0] for n in (per_model if isinstance(per_model, dict) else {})}
+    covered |= {n.split()[0] for n in listed if n.split()}
+
+    by_name: dict[str, list[dict[str, str]]] = {}
+    for attrs in selector_models(selector):
+        by_name.setdefault(attrs.get("name", ""), []).append(attrs)
+
+    warnings: list[str] = []
+    for name in listed:
+        for attrs in by_name.get(name, []):
+            if attrs.get(ALWAYS_THINKS_ATTR) != "yes":
+                warnings.append(
+                    f"check H (always-thinks): the Claude Code docs say thinking can't "
+                    f"be turned off on {name!r}, but selector model "
+                    f'{attrs.get("id", name)!r} lacks {ALWAYS_THINKS_ATTR}="yes" — '
+                    f"the selector may offer THINKING: Off, which Claude Code ignores there"
+                )
+    for name, models in sorted(by_name.items()):
+        if name in listed or not name.split() or name.split()[0] not in covered:
+            continue
+        for attrs in models:
+            if attrs.get(ALWAYS_THINKS_ATTR) == "yes":
+                warnings.append(
+                    f"check H (always-thinks): selector model {attrs.get('id', name)!r} "
+                    f'({name!r}) is marked {ALWAYS_THINKS_ATTR}="yes", but the Claude '
+                    f"Code docs do not list it among the models thinking can't be "
+                    f"turned off on ({listed})"
+                )
+    return warnings
+
+
+def always_thinks_review_items(warnings: list[str]) -> list[tuple[str, str]]:
+    """One review item per check-H warning, titled by the model it names."""
+    items = []
+    for warning in warnings:
+        model = re.search(r"model '([^']+)'", warning)
+        mid = model.group(1) if model else "?"
+        if "lacks" in warning:
+            title = f'chore(selector): "{mid}" always thinks in Claude Code but lacks always-thinks="yes"'
+        else:
+            title = f'chore(selector): "{mid}" is marked always-thinks="yes" but the docs let thinking turn off'
+        body = (
+            f"{warning}.\n\nSource of truth: `extended_thinking.cannot_disable_on` in "
+            "`update/claude-code-effort.json`, extracted from "
+            "https://code.claude.com/docs/en/model-config.md#extended-thinking. "
+            "Fix it in a reviewed PR that sets or removes the attribute on the "
+            "`<model>` in `docs/model-selector.txt` — or, if the docs do say it and "
+            "the snapshot missed it, in `update/extract_claude_code_effort.py`."
+        )
+        items.append((title, body))
+    return items
+
+
 def run_checks(
     selector: str,
     snapshot: dict[str, object],
@@ -1113,6 +1205,12 @@ def main() -> int:
     parser.add_argument("--codex-snapshot", type=Path, default=DEFAULT_CODEX_SNAPSHOT)
     parser.add_argument("--gemini-snapshot", type=Path, default=DEFAULT_GEMINI_SNAPSHOT)
     parser.add_argument("--deepseek-snapshot", type=Path, default=DEFAULT_DEEPSEEK_SNAPSHOT)
+    parser.add_argument(
+        "--review-queue",
+        type=Path,
+        default=None,
+        help="queue each advisory warning here for a review issue (update/review_queue.py)",
+    )
     args = parser.parse_args()
 
     try:
@@ -1124,6 +1222,15 @@ def main() -> int:
     except ConfigError as exc:
         print(f"validate_effort_conformance: config error: {exc}", file=sys.stderr)
         return 2
+
+    warnings = check_always_thinks(selector, snapshot)
+    for msg in warnings:
+        print(f"validate_effort_conformance: WARNING {msg}")
+    if warnings and args.review_queue is not None:
+        sys.path.insert(0, str(UPDATE_DIR))
+        import review_queue
+
+        review_queue.add(always_thinks_review_items(warnings), args.review_queue)
 
     failures = run_checks(selector, snapshot, codex_snapshot, gemini_snapshot, deepseek_snapshot)
     if failures:
@@ -1143,6 +1250,7 @@ def main() -> int:
         "and ultrathink kept distinct; Codex reasoning vocabulary matches the docs; "
         "Gemini thinking levels match the docs; DeepSeek "
         "thinking toggle + reasoning-effort vocabulary and mapping match the docs)"
+        + (f"; {len(warnings)} advisory warning(s) above" if warnings else "")
     )
     return 0
 

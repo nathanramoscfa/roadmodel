@@ -339,5 +339,205 @@ def test_parse_versions_via_update_module(tmp_path: Path) -> None:
     assert [v for v, _ in new_miss] == ["2.1.158", "2.1.157", "2.1.156"]
 
 
+# --------------------------------------------------------------------------- #
+# Thinking-toggle keywords, control-removing "Fixed" bullets, and the review
+# route that replaced the citation hard-fail under the typed boundary (#1149).
+# --------------------------------------------------------------------------- #
+
+# The two real CHANGELOG bullets that took the THINKING switch away on the
+# always-thinking models. Both start "Fixed", both went unflagged.
+THINKING_2_1_300 = (
+    "[VSCode] Fixed the Thinking toggle switching to Off on models that always "
+    "think; the toggle is no longer shown for those models"
+)
+THINKING_2_1_281 = (
+    "Fixed Alt+T and `/config` offering to turn thinking off on models that "
+    "can\u2019t; thinking now stays on there, with a one-line reason in place of the switch"
+)
+
+
+def _diff_module():
+    sys.path.insert(0, str(REPO_ROOT / "update"))
+    try:
+        import importlib
+
+        mod = importlib.import_module("validate_claude_code_diff")
+        return importlib.reload(mod)
+    finally:
+        sys.path.pop(0)
+
+
+def test_thinking_toggle_keywords_are_triggers() -> None:
+    mod = _diff_module()
+    for kw in (
+        "thinking toggle",
+        "alt+t",
+        "option+t",
+        "alwaysthinkingenabled",
+        "max_thinking_tokens",
+        "turn thinking off",
+        "thinking can't be turned off",
+        "adaptive thinking",
+        "ultracode",
+    ):
+        assert kw in mod.TRIGGER_KEYWORDS, kw
+    assert mod.bullet_is_trigger("Added `alwaysThinkingEnabled` per model")
+    assert mod.bullet_is_trigger("Option+T now shows Thinking can\u2019t be turned off")
+
+
+def test_fixed_bullets_that_remove_a_control_still_trigger() -> None:
+    """2.1.300 and 2.1.281 read as bug fixes but removed the THINKING dial on
+    five models: the "Fixed" exemption must not swallow them."""
+    mod = _diff_module()
+    assert mod.bullet_is_trigger(THINKING_2_1_300)
+    assert mod.bullet_is_trigger(THINKING_2_1_281)
+    for phrase in ("removed", "instead of offering", "replacing", "hidden", "no longer offer"):
+        assert mod.bullet_is_trigger(f"Fixed the effort level control, {phrase} on Haiku"), phrase
+    # A fix that only restores behaviour stays exempt, new keyword or not.
+    assert not mod.bullet_is_trigger(
+        "Fixed token counts for Haiku 5.5 and other models that take only adaptive "
+        "thinking, which failed behind some gateways"
+    )
+    assert not mod.bullet_is_trigger("[VSCode] Fixed `/effort` showing the wrong level")
+
+
+def _run_routed(tmp_path: Path, pending: Path, consumed: Path, queue: Path):
+    before = tmp_path / "before.txt"
+    after = tmp_path / "after.txt"
+    before.write_text('<model id="x" input-price-per-1m="$1.00"/>\n')
+    after.write_text('<model id="x" input-price-per-1m="$1.10"/>\n')
+    return subprocess.run(
+        [
+            sys.executable,
+            str(VALIDATOR),
+            "--pending",
+            str(pending),
+            "--consumed-versions",
+            str(consumed),
+            "--before",
+            str(before),
+            "--after",
+            str(after),
+            "--review-queue",
+            str(queue),
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_uncited_trigger_bullets_route_to_review_under_the_boundary(tmp_path: Path) -> None:
+    """#1149: the cron may not edit selector prose, so a trigger bullet it
+    cannot cite is queued for a review issue and the run passes — the exact
+    2.1.299 bullets that failed every run from 2026-10-14."""
+    bullets = [
+        "Added /effort and /fast in agent view",
+        "Added /usage warnings for max effort sessions",
+        THINKING_2_1_300,
+    ]
+    pending = _write_pending(tmp_path, [{"version": "2.1.299", "bullets": bullets}])
+    consumed = _write_consumed(tmp_path, ["2.1.299"])
+    queue = tmp_path / "review.json"
+
+    result = _run_routed(tmp_path, pending, consumed, queue)
+    assert result.returncode == 0, result.stderr
+    assert "ROUTED" in result.stdout
+    items = json.loads(queue.read_text())
+    assert len(items) == 3
+    assert all(
+        item["title"].startswith("chore(claude-code): review Claude Code 2.1.299") for item in items
+    )
+    assert any("no longer shown" in item["body"] for item in items)
+
+    # A rerun of the same run queues nothing new (titles dedup).
+    assert _run_routed(tmp_path, pending, consumed, queue).returncode == 0
+    assert len(json.loads(queue.read_text())) == 3
+
+    # Without the flag (a reviewed, hand-run refresh) the miss still fails.
+    before, after = tmp_path / "before.txt", tmp_path / "after.txt"
+    assert _run_validator(pending, consumed, before, after).returncode == 1
+
+
+def test_review_route_keeps_the_coverage_check_fatal(tmp_path: Path) -> None:
+    pending = _write_pending(
+        tmp_path,
+        [
+            {"version": "2.1.300", "bullets": [THINKING_2_1_300]},
+            {"version": "2.1.299", "bullets": []},
+        ],
+    )
+    consumed = _write_consumed(tmp_path, ["2.1.300"])
+    result = _run_routed(tmp_path, pending, consumed, tmp_path / "review.json")
+    assert result.returncode == 1
+    assert "coverage check" in result.stderr
+
+
+def test_opus_needs_review_and_validator_share_one_issue(tmp_path: Path) -> None:
+    """The prompt makes the pass report a removed control in needs_review; the
+    validator routes the same bullet. Same title, so one issue."""
+    sys.path.insert(0, str(REPO_ROOT / "update"))
+    try:
+        import importlib
+
+        updater = importlib.reload(importlib.import_module("update_claude_code"))
+        queue_mod = importlib.reload(importlib.import_module("review_queue"))
+    finally:
+        sys.path.pop(0)
+    diff = _diff_module()
+
+    result = {
+        "needs_review": [
+            {
+                "version": "2.1.300",
+                "bullet": THINKING_2_1_300,
+                "reason": "THINKING is no setting on always-thinking models",
+            },
+            {"version": "2.1.300", "bullet": ""},
+        ]
+    }
+    from_opus = updater.needs_review_items(result)
+    assert len(from_opus) == 1
+    from_validator = diff.review_items([("2.1.300", THINKING_2_1_300)])
+    assert from_opus[0][0] == from_validator[0][0]
+
+    queue = tmp_path / "review.json"
+    queue_mod.add(from_opus, queue)
+    queue_mod.add(from_validator, queue)
+    items = queue_mod.load(queue)
+    assert len(items) == 1
+    assert "always-thinking" in items[0]["body"] and "contract change" in items[0]["body"]
+    assert updater.needs_review_items({"needs_review": "nope"}) == []
+
+
+def test_review_queue_emits_title_and_body_files(tmp_path: Path) -> None:
+    sys.path.insert(0, str(REPO_ROOT / "update"))
+    try:
+        import importlib
+
+        queue_mod = importlib.reload(importlib.import_module("review_queue"))
+    finally:
+        sys.path.pop(0)
+    queue = tmp_path / "review.json"
+    assert queue_mod.emit(tmp_path / "none", queue) == 0
+    title = "chore(x): " + "word " * 80
+    assert queue_mod.add([(title, "body $(rm -rf /) `x`")], queue) == 1
+    assert queue_mod.emit(tmp_path / "out", queue) == 1
+    written = (tmp_path / "out" / "001.title").read_text().strip()
+    assert "\n" not in written and len(written) <= queue_mod.TITLE_LIMIT
+    body = (tmp_path / "out" / "001.body").read_text()
+    assert "body $(rm -rf /) `x`" in body and "update-claude-code.yml" in body
+
+
+def test_workflow_routes_review_items_instead_of_failing() -> None:
+    """The cron wiring for #1149 and the shrink / always-thinks warnings."""
+    text = (REPO_ROOT / ".github" / "workflows" / "update-claude-code.yml").read_text()
+    queue = "update/.cache/claude-code-review.json"
+    assert "--baseline update/claude-code-effort.json" in text
+    assert text.count(f"--review-queue {queue}") == 3  # extractor, diff, conformance
+    assert f"python update/review_queue.py --queue {queue}" in text
+    route = text.split("- name: Route review items to issues", 1)[1].split("- name:", 1)[0]
+    assert "--body-file" in route and "grep -Fqx" in route and "!cancelled()" in route
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))

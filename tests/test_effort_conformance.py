@@ -641,3 +641,256 @@ def test_check_g_refuses_striking_a_documented_default() -> None:
     assert any("'Sonnet 5.5' defaults to 'medium'" in f for f in failures)
     # A blanket-only map has nothing to hold the prose to.
     assert gate.check_default_effort(struck, {"default_effort": {"*": "high"}}) == []
+
+
+# --------------------------------------------------------------------------- #
+# Always-thinking models (2026-10-20)
+#
+# The docs reworded "Thinking cannot be turned off on X" to "You can't turn
+# thinking off on X, ..., or the Fable models". The extractor read only the old
+# wording, so from #585 (2026-09-10) the snapshot's cannot_disable_on was [] and
+# nothing noticed — while Claude Code 2.1.281 / 2.1.300 stopped offering the
+# Thinking switch on those models at all.
+# --------------------------------------------------------------------------- #
+
+LIVE_MD_1020 = REPO_ROOT / "tests" / "fixtures" / "model-config-sample-2026-10-20.md"
+ALWAYS_THINKING = ["Opus 5.5", "Sonnet 5.5", "Haiku 5.5", "Fable 5.1", "Fable 5"]
+ALWAYS_THINKING_IDS = (
+    "claude-opus-5-5",
+    "claude-sonnet-5-5",
+    "claude-haiku-5-5",
+    "claude-fable-5.1",
+    "claude-fable-5",
+)
+
+
+def test_extractor_reads_the_2026_10_20_no_disable_wording() -> None:
+    mod = _load_extractor()
+    snap = mod.build_snapshot(LIVE_MD_1020.read_text(), source_url="file://live")
+    assert snap["extended_thinking"]["cannot_disable_on"] == ALWAYS_THINKING
+    assert snap["extended_thinking"]["on_off_controls"] == [
+        "Option+T",
+        "Alt+T",
+        "alwaysThinkingEnabled",
+        "MAX_THINKING_TOKENS=0",
+    ]
+    assert snap["unexpected_models"] == []  # Haiku 5.5 is catalogued (#1151)
+
+
+def test_extractor_expands_the_family_in_the_2026_09_29_wording() -> None:
+    """ "You can't turn thinking off on Opus 5.5, Sonnet 5.5, or the Fable
+    models" — the sentence the old regex missed from 2026-09-29 on."""
+    mod = _load_extractor()
+    snap = mod.build_snapshot(LIVE_MD_0929.read_text(), source_url="file://live")
+    assert snap["extended_thinking"]["cannot_disable_on"] == [
+        "Opus 5.5",
+        "Sonnet 5.5",
+        "Fable 5.1",
+        "Fable 5",
+    ]
+
+
+@pytest.mark.parametrize(
+    "sentence, expected",
+    [
+        ("Thinking cannot be turned off on Fable 5.1 or Fable 5.", ["Fable 5.1", "Fable 5"]),
+        # A family expands in effort-table order (here Fable 5 before Fable 5.1).
+        (
+            "You can’t turn thinking off on Haiku 5.5 and Fable models.",
+            ["Haiku 5.5", "Fable 5", "Fable 5.1"],
+        ),
+        ("THINKING CAN'T BE TURNED OFF ON Opus 5.5.", ["Opus 5.5"]),
+        ("You cannot turn off thinking on the Fable 5 models.", ["Fable 5", "Fable 5.1"]),
+    ],
+)
+def test_extractor_reads_the_fact_in_any_wording(sentence: str, expected: list[str]) -> None:
+    mod = _load_extractor()
+    table = ["Fable 5", "Fable 5.1", "Opus 5.5", "Haiku 5.5"]
+    got = mod.parse_extended_thinking(sentence + "\n", table)["cannot_disable_on"]
+    assert got == expected
+
+
+def test_extractor_refuses_an_empty_list_when_the_docs_state_the_fact() -> None:
+    """The fail-loud sanity check: the span still says thinking can't be
+    turned off, but no list parsed — a reword, not a fact change."""
+    mod = _load_extractor()
+    md = LIVE_MD_1020.read_text().replace(
+        "You can't turn thinking off on Opus 5.5, Sonnet 5.5, Haiku 5.5, or the Fable models.",
+        "Some models keep thinking on whatever you set.",
+    )
+    assert "Thinking can't be turned off" in md  # the quoted UI string remains
+    with pytest.raises(mod.ExtractError, match="cannot_disable_on"):
+        mod.build_snapshot(md, source_url="x")
+    # An unknown family is just as unreadable.
+    with pytest.raises(mod.ExtractError, match="Mythos"):
+        mod.parse_extended_thinking(
+            "You can't turn thinking off on the Mythos models.\n", ["Opus 5.5"]
+        )
+    # Docs that never say it (no mention at all) are an honest empty list.
+    plain = mod.parse_extended_thinking("Press `Option+T` to toggle thinking.\n", ["Opus 5.5"])
+    assert plain["cannot_disable_on"] == []
+
+
+def test_committed_snapshot_lists_the_always_thinking_models() -> None:
+    snapshot = json.loads(REAL_SNAPSHOT.read_text())
+    assert set(ALWAYS_THINKING) <= set(snapshot["extended_thinking"]["cannot_disable_on"])
+
+
+# --- shrink guard ---------------------------------------------------------- #
+
+
+def test_snapshot_shrink_reports_dropped_entries() -> None:
+    mod = _load_extractor()
+    old = json.loads(REAL_SNAPSHOT.read_text())
+    assert mod.snapshot_shrink(old, old) == []
+    new = json.loads(json.dumps(old))
+    new["extended_thinking"]["cannot_disable_on"].remove("Haiku 5.5")
+    new["extended_thinking"]["cannot_disable_on"].append("Opus 6")  # growth is fine
+    new["extended_thinking"]["on_off_controls"].remove("Alt+T")
+    new["per_model_effort"]["Opus 4.8"].remove("max")
+    del new["per_model_effort"]["Sonnet 4.6"]
+    assert mod.snapshot_shrink(old, new) == [
+        "extended_thinking.cannot_disable_on: Haiku 5.5",
+        "extended_thinking.on_off_controls: Alt+T",
+        "per_model_effort.Opus 4.8: max",
+        "per_model_effort: Sonnet 4.6 (whole row)",
+    ]
+    # The empty list the old extractor wrote, against a full one, is the
+    # removal this guard exists for.
+    emptied = json.loads(json.dumps(old))
+    emptied["extended_thinking"]["cannot_disable_on"] = []
+    assert len(mod.snapshot_shrink(old, emptied)) == len(
+        old["extended_thinking"]["cannot_disable_on"]
+    )
+
+
+def test_extractor_cli_queues_a_shrink_for_review(tmp_path: Path) -> None:
+    baseline = tmp_path / "committed.json"
+    baseline.write_text(REAL_SNAPSHOT.read_text())
+    queue = tmp_path / "review.json"
+
+    def run(md: Path) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [
+                sys.executable,
+                str(EXTRACTOR),
+                "--input",
+                str(md),
+                "--output",
+                str(tmp_path / "out.json"),
+                "--baseline",
+                str(baseline),
+                "--review-queue",
+                str(queue),
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+    result = run(LIVE_MD_1020)
+    assert result.returncode == 0, result.stderr
+    assert not queue.exists(), "an unchanged fact list must queue nothing"
+
+    # The 2026-09-04 docs list only the Fable models: three entries "dropped".
+    result = run(LIVE_MD)
+    assert result.returncode == 0, result.stderr
+    assert "DROPS" in result.stderr
+    titles = [item["title"] for item in json.loads(queue.read_text())]
+    assert (
+        'chore(claude-code): docs snapshot dropped extended_thinking.cannot_disable_on "Opus 5.5"'
+        in titles
+    )
+    assert len([t for t in titles if "cannot_disable_on" in t]) == 3
+
+
+# --- check H: always-thinks vs the docs ----------------------------------- #
+
+
+def _mark_always_thinks(selector: str, ids: tuple[str, ...]) -> str:
+    import re
+
+    pattern = r'(<model id="(?:' + "|".join(map(re.escape, ids)) + r')" name="[^"]*")'
+    marked, count = re.subn(pattern, r'\1 always-thinks="yes"', selector)
+    assert count == len(ids)
+    return marked
+
+
+def test_check_h_warns_but_passes_without_the_attribute(tmp_path: Path) -> None:
+    """The committed selector may not carry always-thinks yet: warnings only."""
+    selector = REAL_SELECTOR.read_text()
+    if 'always-thinks="yes"' in selector:
+        selector = selector.replace(' always-thinks="yes"', "")
+    path = tmp_path / "selector.txt"
+    path.write_text(selector)
+    queue = tmp_path / "review.json"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(CONFORMANCE),
+            "--selector",
+            str(path),
+            "--snapshot",
+            str(REAL_SNAPSHOT),
+            "--review-queue",
+            str(queue),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "PASS" in result.stdout
+    assert result.stdout.count("WARNING check H") == 5
+    titles = [item["title"] for item in json.loads(queue.read_text())]
+    assert (
+        'chore(selector): "claude-opus-5-5" always thinks in Claude Code but lacks always-thinks="yes"'
+        in titles
+    )
+    assert len(titles) == 5
+
+
+def test_check_h_is_silent_when_selector_and_docs_agree(tmp_path: Path) -> None:
+    gate = _load_conformance()
+    snapshot = json.loads(REAL_SNAPSHOT.read_text())
+    selector = REAL_SELECTOR.read_text().replace(' always-thinks="yes"', "")
+    marked = _mark_always_thinks(selector, ALWAYS_THINKING_IDS)
+    assert gate.check_always_thinks(marked, snapshot) == []
+    path = tmp_path / "selector.txt"
+    path.write_text(marked)
+    result = _run_conformance(path, REAL_SNAPSHOT)
+    assert result.returncode == 0, result.stderr
+    assert "WARNING" not in result.stdout
+
+
+def test_check_h_warns_on_a_marked_model_the_docs_do_not_list() -> None:
+    gate = _load_conformance()
+    snapshot = json.loads(REAL_SNAPSHOT.read_text())
+    selector = REAL_SELECTOR.read_text().replace(' always-thinks="yes"', "")
+    marked = _mark_always_thinks(selector, (*ALWAYS_THINKING_IDS, "opus-4.8"))
+    warnings = gate.check_always_thinks(marked, snapshot)
+    assert len(warnings) == 1 and "'opus-4.8'" in warnings[0] and "do not list" in warnings[0]
+    # A non-Claude model is outside these docs: never a warning.
+    other = _mark_always_thinks(selector, (*ALWAYS_THINKING_IDS, "gemini-3-pro"))
+    assert gate.check_always_thinks(other, snapshot) == []
+    # And the stale empty list warns on every marked model, the other direction.
+    stale = json.loads(json.dumps(snapshot))
+    stale["extended_thinking"]["cannot_disable_on"] = []
+    assert (
+        len(gate.check_always_thinks(_mark_always_thinks(selector, ALWAYS_THINKING_IDS), stale))
+        == 5
+    )
+    items = gate.always_thinks_review_items(warnings)
+    assert (
+        items[0][0]
+        == 'chore(selector): "opus-4.8" is marked always-thinks="yes" but the docs let thinking turn off'
+    )
+
+
+def test_prompt_makes_removed_controls_drift_not_no_ops() -> None:
+    prompt = " ".join((UPDATE_DIR / "prompt-claude-code.md").read_text().split())
+    assert "is a contract change, never a `considered no-op`" in prompt
+    assert '"needs_review"' in prompt
+    assert (
+        "`THINKING` is NOT a setting on the models in `extended_thinking.cannot_disable_on`"
+        in prompt
+    )
+    assert "must never offer `THINKING: Off` for those models" in prompt
