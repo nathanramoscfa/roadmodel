@@ -79,3 +79,19 @@ def _sync_bundled_data() -> None:
                 continue
             source = matches[0]
         shutil.copy2(source, dest_dir / dest_name)
+
+
+@pytest.fixture(autouse=True)
+def _no_ambient_key_aliases(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Drop GEMINI_API_KEY and any other key alias from every test's env.
+
+    roadmodel reads it as the Google key, and a developer's shell often
+    exports it for the Gemini CLI. The suite's clean-env helpers list the
+    canonical key names only, so without this a no-key test on such a machine
+    finds a key and makes a real provider call.
+    """
+    from roadmodel.config import PROVIDER_KEY_ENV_ALIASES
+
+    for names in PROVIDER_KEY_ENV_ALIASES.values():
+        for name in names:
+            monkeypatch.delenv(name, raising=False)

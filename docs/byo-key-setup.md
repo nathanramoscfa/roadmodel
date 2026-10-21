@@ -115,6 +115,8 @@ For what roadmodel itself spends on the other lanes, see
    ```sh
    export GOOGLE_API_KEY=AIza...
    ```
+   `GEMINI_API_KEY`, the name Google's own docs and the Gemini CLI use,
+   works too; `GOOGLE_API_KEY` wins when both are set.
 
 > Free-tier quotas on AI Studio are generous for the recommendation
 > workload but rate-limited. If you hit `429` errors, enable billing

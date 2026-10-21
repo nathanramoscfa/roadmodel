@@ -31,6 +31,7 @@ import pytest
 from roadmodel.config import (
     PROVIDER_CHOICES,
     PROVIDER_KEY_ENV,
+    PROVIDER_KEY_ENV_ALIASES,
     PROVIDER_ORDER,
     load_config,
 )
@@ -55,6 +56,7 @@ _RESPONSE = (
 
 _ALL_ENV = [
     *PROVIDER_KEY_ENV.values(),
+    *(alias for aliases in PROVIDER_KEY_ENV_ALIASES.values() for alias in aliases),
     "ROADMODEL_PROVIDER",
     "ROADMODEL_MODEL",
     "ROADMODEL_BASE_URL",
@@ -445,3 +447,42 @@ def test_native_three_still_win_auto_detection(
     monkeypatch.setenv("OPENAI_API_KEY", "o")
     cfg = load_config(cli_provider=None, cli_model=None, cli_user_context=None)
     assert (cfg.provider, cfg.api_key, cfg.model) == ("openai", "o", None)
+
+
+def test_gemini_api_key_is_googles_key(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Google's docs name GEMINI_API_KEY; a machine that keeps its Gemini key
+    under that name (the Gemini CLI's) must reach the Google engine, not fall
+    through to a later provider."""
+    _isolate(monkeypatch, tmp_path)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "r")
+    monkeypatch.setenv("GEMINI_API_KEY", "g")
+    cfg = load_config(cli_provider=None, cli_model=None, cli_user_context=None)
+    assert (cfg.provider, cfg.api_key) == ("google", "g")
+    monkeypatch.setenv("GOOGLE_API_KEY", "canonical")
+    assert load_config(cli_provider=None, cli_model=None, cli_user_context=None).api_key == (
+        "canonical"
+    )
+
+
+def test_explicit_google_without_a_key_names_both_variables(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _isolate(monkeypatch, tmp_path)
+    with pytest.raises(
+        MissingProviderKeyError, match="GOOGLE_API_KEY or GEMINI_API_KEY is not set"
+    ):
+        load_config(cli_provider="google", cli_model=None, cli_user_context=None)
+
+
+def test_detected_provider_without_default_model_names_its_key(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """2026-10-21: the PC's only key the recommender could read was
+    OPENROUTER_API_KEY, so every call stopped at a bare "no default model"."""
+    _isolate(monkeypatch, tmp_path)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "r")
+    with pytest.raises(MissingProviderKeyError) as excinfo:
+        load_config(cli_provider=None, cli_model=None, cli_user_context=None)
+    message = str(excinfo.value)
+    assert "detected from OPENROUTER_API_KEY" in message
+    assert "ROADMODEL_MODEL" in message

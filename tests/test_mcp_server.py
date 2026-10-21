@@ -411,3 +411,60 @@ platforms.allowed: openrouter
         and c["pool_state"] == "exhausted"
         for c in payload["candidates"]
     )
+
+
+def test_roadmap_settings_answers_over_mcp(monkeypatch, tmp_path):
+    """The tool-name guard once listed four tools, so roadmap_settings (added
+    later) was refused on every call. Call it through a real session."""
+    ctx = tmp_path / "user-context.md"
+    ctx.write_text(TWO_PROVIDERS_CONTEXT, encoding="utf-8")
+    monkeypatch.setenv("ROADMODEL_USER_CONTEXT", str(ctx))
+    app = mcp_server.create_app()
+
+    async def _run() -> tuple[bool, Any]:
+        async with create_connected_server_and_client_session(app) as session:
+            result = await session.call_tool(
+                "roadmap_settings", {"category": "Agentic", "complexity": "high"}
+            )
+            return bool(result.isError), _tool_payload(result)
+
+    is_error, payload = anyio.run(_run)
+    assert not is_error, payload
+    assert "markdown" in payload
+
+
+def _call_recommend_error(monkeypatch, tmp_path, env: dict[str, str]) -> tuple[bool, str]:
+    from roadmodel.config import PROVIDER_KEY_ENV
+
+    for key in [*PROVIDER_KEY_ENV.values(), "ROADMODEL_PROVIDER"]:
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.delenv("ROADMODEL_MODEL", raising=False)
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg"))
+    for key, value in env.items():
+        monkeypatch.setenv(key, value)
+    ctx = tmp_path / "user-context.md"
+    ctx.write_text("# user context for tests\n", encoding="utf-8")
+    monkeypatch.setenv("ROADMODEL_USER_CONTEXT", str(ctx))
+    app = mcp_server.create_app()
+
+    async def _run() -> tuple[bool, str]:
+        async with create_connected_server_and_client_session(app) as session:
+            result = await session.call_tool("recommend_model", {"task_description": "fix a bug"})
+            return bool(result.isError), result.model_dump_json()
+
+    return anyio.run(_run)
+
+
+def test_recommend_model_names_the_setup_fix_without_the_key(monkeypatch, tmp_path):
+    """A setup error reaches the agent in roadmodel's own words; the generic
+    error left an agent on 2026-10-21 reporting only that the tool failed."""
+    is_error, dumped = _call_recommend_error(
+        monkeypatch, tmp_path, {"OPENROUTER_API_KEY": "PRIVATECANARY-key"}
+    )
+    assert is_error
+    assert "detected from OPENROUTER_API_KEY" in dumped
+    assert "PRIVATECANARY" not in dumped
+
+    is_error, dumped = _call_recommend_error(monkeypatch, tmp_path, {})
+    assert is_error
+    assert "No provider key found" in dumped

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.89] — 2026-10-21
+
+- **`roadmap_settings` works over MCP.** The server refuses unknown tool names before dispatch, and its list still named the four tools it shipped with. `roadmap_settings`, added in 0.2.86, was refused on every call with the generic error. The list now comes from the tools the server registers.
+- **`GEMINI_API_KEY` is read as the Google key.** It is the name Google's docs and the Gemini CLI use, and `GOOGLE_API_KEY` still wins when both are set. A Windows machine kept its Gemini key under that name, so the recommender could not see it. It fell through to `OPENROUTER_API_KEY` and stopped, because OpenRouter has no default model.
+- **MCP tools name a setup fix.** A missing key or model now reaches the agent in roadmodel's own words, such as `Provider 'openrouter' (detected from OPENROUTER_API_KEY) has no default model: …`. Before, it got the generic "Tool call failed" and reported only that the recommender had failed. Those messages carry provider and variable names only. Every other failure still returns the generic text.
+
 ## [0.2.88] — 2026-10-21
 
 - **No Thinking setting for a model that always thinks.** Claude Code dropped its Thinking switch for Opus 5.5, Sonnet 5.5, Haiku 5.5, Fable 5 and Fable 5.1. In 2.1.281 the terminal shows "Thinking can't be turned off" in its place, and since 2.1.300 the VS Code panel hides it. A saved `alwaysThinkingEnabled: false` or `MAX_THINKING_TOKENS=0` has no effect on them, and effort alone sets how much they think. roadmodel still told users to set `Thinking: On`, and could suggest `Off`.

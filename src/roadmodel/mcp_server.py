@@ -17,12 +17,14 @@ from typing import Any, Literal
 from roadmodel import recommend as recommender
 from roadmodel import user_context
 from roadmodel.config import Config, load_config
-from roadmodel.errors import BundledDocNotFoundError
+from roadmodel.errors import BundledDocNotFoundError, MissingProviderKeyError
 from roadmodel.providers import ProviderAdapter
 from roadmodel.providers._safety import transport_timeout
 
 _CONTEXT_BYTES = 262_144
 _PROMPT_BYTES = 1_048_576
+# Marks a tool error whose text names a setup fix and may reach the client.
+_CONFIG_ERROR_META = "roadmodel/configuration-error"
 _STDIO_ACTIVE: ContextVar[bool] = ContextVar("roadmodel_private_stdio", default=False)
 
 
@@ -334,16 +336,17 @@ def create_app() -> Any:
 
             async def guarded(request: mcp_types.CallToolRequest) -> Any:
                 # Lowlevel MCP logs an unknown name before FastMCP dispatch.
-                # Refuse it before that diagnostic can echo client input.
-                if request.params.name not in {
-                    "recommend_model",
-                    "generate_phase_roadmap",
-                    "score_candidates",
-                    "read_catalog",
-                }:
+                # Refuse it before that diagnostic can echo client input. The
+                # registered tools are the allowlist, so a new tool can't be
+                # left off it.
+                if self._tool_manager.get_tool(request.params.name) is None:
                     return mcp_types.ServerResult(self._safe_error())
                 result = await original(request)
-                if isinstance(result.root, mcp_types.CallToolResult) and result.root.isError:
+                if (
+                    isinstance(result.root, mcp_types.CallToolResult)
+                    and result.root.isError
+                    and (result.root.meta or {}).get(_CONFIG_ERROR_META) is not True
+                ):
                     return mcp_types.ServerResult(self._safe_error())
                 return result
 
@@ -361,16 +364,31 @@ def create_app() -> Any:
                 ],
             )
 
+        @staticmethod
+        def _config_error(error: MissingProviderKeyError) -> Any:
+            # load_config builds these messages from provider and variable
+            # names only (never a key, a path or tool input), and they name
+            # the fix, which the generic error hides.
+            return mcp_types.CallToolResult(
+                isError=True,
+                content=[mcp_types.TextContent(type="text", text=str(error))],
+                _meta={_CONFIG_ERROR_META: True},
+            )
+
         async def call_tool(self, name: str, arguments: dict[str, Any]) -> Any:
             try:
-                if name == "score_candidates":
+                if name in {"score_candidates", "roadmap_settings"}:
                     arguments = dict(arguments)
                     for field in ("category", "complexity", "budget"):
                         value = arguments.get(field)
                         if isinstance(value, str):
                             arguments[field] = value.strip().lower()
                 return await super().call_tool(name, arguments)
-            except Exception:
+            except Exception as exc:
+                # FastMCP wraps the tool's exception in a ToolError.
+                cause = exc.__cause__ if exc.__cause__ is not None else exc
+                if isinstance(cause, MissingProviderKeyError):
+                    return self._config_error(cause)
                 # Covers pre-function validation, unknown names, and provider
                 # failures. FastMCP's default includes arbitrary exception text.
                 return self._safe_error()
