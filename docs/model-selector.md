@@ -1070,7 +1070,7 @@ Tier ratings:
 
 - **Pricing:** Input $0.75/M · Output $3.50/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **S** · Long-context **A** · Knowledge **A** · Speed **S**
-- **Headline benchmarks:** AA Intelligence Index 40.9 (high); HLE 47.8%; SciCode 56.6; Terminal-Bench 4.0 19.7; AA-LCR 0.813; Terminal-Bench 2.1 87.6; Output Speed 122.1 tokens/s
+- **Headline benchmarks:** AA Intelligence Index 40.9 (high); HLE 47.8%; SciCode 56.6; Terminal-Bench 4.0 19.7; AA-LCR 0.813; Terminal-Bench 2.1 87.6; Output Speed 146.5 tokens/s
 - **Pricing notes:** -
 - **Best for:** Frontier-class multimodal input, plus strong coding, planning, agentic work, long context and knowledge, with very fast output, at a low price. Its AA Intelligence Index of 40.9 ranks 21st of 59 measured models.
 
