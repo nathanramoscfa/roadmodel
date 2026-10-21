@@ -170,11 +170,16 @@ client subprocesses, so set the key inside the client's `env` block
 the shell environment. Confirm with `claude mcp get roadmodel` or by
 reading the Cursor MCP Logs.
 
-**Tool call times out or returns a `ProviderCallError`.** The
-provider call itself failed — most commonly because the underlying
-API key is rate-limited, revoked, or out of credit. The MCP error
-text wraps the provider's own message (`Anthropic API call failed:
-…`, `OpenAI API call failed: …`, `Google API call failed: …`).
-Re-run the same prompt through `roadmodel recommend` from the
-command line to reproduce outside the MCP transport; if the CLI
-also fails, the issue is your provider account, not the MCP wiring.
+**`Provider 'openrouter' (detected from OPENROUTER_API_KEY) has no default model`**
+— the only key the server can see belongs to a provider that serves
+many models (OpenRouter, Together), so roadmodel can't choose one. Set
+`ROADMODEL_MODEL` to that provider's model id, or give the server a key
+for a provider with a default (Anthropic, OpenAI, Google, …).
+
+**`Tool call failed; check input limits and provider configuration.`**
+— any failure other than a setup error above. The text is the same for
+every cause, so tool input and provider responses never reach the
+client. The usual cause is the provider call itself: the key is
+rate-limited, revoked or out of credit. Re-run the same prompt with
+`roadmodel recommend` from the command line, in the same environment as
+the server, to see the provider's own error.

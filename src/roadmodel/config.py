@@ -47,6 +47,11 @@ PROVIDER_KEY_ENV: dict[ProviderName, str] = {
     "ollama": "OLLAMA_API_KEY",
     "custom": "ROADMODEL_API_KEY",
 }
+# Other names a provider documents for the same key, read after the canonical
+# one: Google's Gemini API docs and its google-genai SDK name GEMINI_API_KEY.
+PROVIDER_KEY_ENV_ALIASES: dict[ProviderName, tuple[str, ...]] = {
+    "google": ("GEMINI_API_KEY",),
+}
 # Auto-detection order when ROADMODEL_PROVIDER / --provider is absent: the
 # first of these whose key is present wins. `ollama` (no key) and `custom`
 # (needs ROADMODEL_BASE_URL too) are explicit-only and deliberately absent.
@@ -66,7 +71,7 @@ PROVIDER_CHOICES: tuple[str, ...] = (*PROVIDER_ORDER, "ollama", "custom")
 
 _MISSING_KEY_REMEDIATION = (
     "No provider key found. Set one of ANTHROPIC_API_KEY, OPENAI_API_KEY, GOOGLE_API_KEY "
-    "(or another supported provider's key, or ROADMODEL_PROVIDER=ollama|custom — see "
+    "(or GEMINI_API_KEY, another supported provider's key, or ROADMODEL_PROVIDER=ollama|custom — see "
     "`roadmodel recommend --help`). Try: export ANTHROPIC_API_KEY=..."
 )
 
@@ -106,10 +111,21 @@ def _normalize_provider(value: str | None) -> ProviderName | None:
     raise MissingProviderKeyError(f"Invalid provider. Use one of: {', '.join(PROVIDER_CHOICES)}.")
 
 
+def _key_env_names(provider: ProviderName) -> tuple[str, ...]:
+    return (PROVIDER_KEY_ENV[provider], *PROVIDER_KEY_ENV_ALIASES.get(provider, ()))
+
+
+def _env_api_key(provider: ProviderName) -> str:
+    for env_name in _key_env_names(provider):
+        value = os.environ.get(env_name, "").strip()
+        if value:
+            return value
+    return ""
+
+
 def _first_present_env_provider() -> ProviderName | None:
     for provider in PROVIDER_ORDER:
-        env_name = PROVIDER_KEY_ENV[provider]
-        if os.environ.get(env_name):
+        if _env_api_key(provider):
             return provider
     return None
 
@@ -159,7 +175,7 @@ def load_config(
         raise MissingProviderKeyError(_MISSING_KEY_REMEDIATION)
 
     key_env_name = PROVIDER_KEY_ENV[provider]
-    env_api_key = os.environ.get(key_env_name, "").strip()
+    env_api_key = _env_api_key(provider)
     config_data: dict[str, Any] = {}
     if env_api_key:
         api_key = env_api_key
@@ -173,20 +189,26 @@ def load_config(
     if not api_key:
         if explicit_provider is not None:
             raise MissingProviderKeyError(
-                f"Provider {provider!r} selected but {key_env_name} is not set. "
+                f"Provider {provider!r} selected but "
+                f"{' or '.join(_key_env_names(provider))} is not set. "
                 f"Try: export {key_env_name}=..."
             )
         raise MissingProviderKeyError(_MISSING_KEY_REMEDIATION)
 
-    # --model wins; ROADMODEL_MODEL is its env form (any provider). The two
-    # providers without a default model (ollama, custom) must name one here.
+    # --model wins; ROADMODEL_MODEL is its env form (any provider). The
+    # providers without a default model (openrouter, together, ollama, custom)
+    # must name one here.
     model = cli_model.strip() if isinstance(cli_model, str) and cli_model.strip() else None
     if model is None:
         model = os.environ.get(MODEL_ENV, "").strip() or None
     if compatible is not None:
         if model is None and compatible.default_model is None:
+            # Auto-detection reaches a provider without a default model only
+            # when no key for a provider that has one is set.
+            detected = "" if explicit_provider else f" (detected from {key_env_name})"
             raise MissingProviderKeyError(
-                f"Provider {provider!r} has no default model: pass --model or set {MODEL_ENV}."
+                f"Provider {provider!r}{detected} has no default model: pass --model, "
+                f"set {MODEL_ENV}, or set a key for a provider that has one."
             )
         if provider == "custom" and not os.environ.get(CUSTOM_BASE_URL_ENV, "").strip():
             raise MissingProviderKeyError(
