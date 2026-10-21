@@ -274,10 +274,13 @@ multi-file blast radius without over-buying the ceiling.
 
 The **setting fields are platform-conditional**: a block carries only
 the dials the chosen platform actually has. Claude Code exposes an
-effort dial and a thinking toggle, so the example emits `EFFORT` and
-`THINKING` and no `MAX MODE` line at all — Claude Code has no Max Mode
-control, and a dial a surface lacks is omitted rather than reported as
-`Off`. Cursor is the inverse: it emits `MAX MODE` and no `EFFORT` /
+effort dial and, on a model that can turn thinking off such as Opus
+4.7, a thinking toggle, so the example emits `EFFORT` and `THINKING`
+and no `MAX MODE` line at all — Claude Code has no Max Mode control,
+and a dial a surface lacks is omitted rather than reported as `Off`.
+A model that always thinks (Opus 5.5, Sonnet 5.5, Haiku 5.5, the Fable
+models) has no thinking toggle on any surface, so its block carries
+`EFFORT` and no `THINKING`. Cursor is the inverse: it emits `MAX MODE` and no `EFFORT` /
 `THINKING`. `MODEL`, `BACKUP`, `PLATFORM`, `CONVERSATION`, and
 `RATIONALE` are always present.
 
@@ -385,7 +388,8 @@ complexity; `PLATFORM` and the settings that come with it are filled
 by the `<access-selection>` step, which depends on the subscriptions
 and API-key state declared in your `user-context.md`. Because the
 platform decides which dials exist, the field set varies per block:
-an effort/thinking surface emits `EFFORT` + `THINKING`, Cursor emits
+an effort/thinking surface emits `EFFORT` + `THINKING` (`EFFORT` alone
+for a model that always thinks), Cursor emits
 `MAX MODE`, and a dial the surface does not have is left out entirely
 instead of being reported as `Off` or `N/A`.
 

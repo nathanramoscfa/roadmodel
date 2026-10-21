@@ -290,7 +290,10 @@ contract v2 keeps these as SEPARATE fields, so state them separately:
   gnarliest novel-problem / multi-step-proof prompts.
 - **`THINKING`** is a two-position toggle — `On` or `Off`, nothing else.
   It never carries an effort word: `THINKING: Max` is not a setting any
-  surface can apply, which is why the level lives in `EFFORT`.
+  surface can apply, which is why the level lives in `EFFORT`. A model
+  that always thinks (Opus 5.5, Sonnet 5.5, Haiku 5.5, the Fable models)
+  has no toggle at all — Claude Code shows "Thinking can't be turned
+  off" — so its block carries no `THINKING` line whatever you declare.
 - **`MAX MODE`** applies to Cursor alone. On every other platform no Max
   Mode line is emitted at all.
 

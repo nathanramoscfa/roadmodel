@@ -40,6 +40,7 @@ from opus_turn import (  # noqa: E402, I001
     stream_until_complete,
 )
 from selector_re import repair_attribute_quotes  # noqa: E402
+import review_queue  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = REPO_ROOT / "docs"
@@ -287,6 +288,34 @@ def parse_result(raw: str) -> dict[str, Any]:
     return cast("dict[str, Any]", json.loads(text[start : end + 1]))
 
 
+def needs_review_items(result: dict[str, Any]) -> list[tuple[str, str]]:
+    """The review items for the bullets the pass reported in ``needs_review``.
+
+    The prompt makes a control removed or hidden for some models a contract
+    change the pass must report here, never a "considered no-op" (2.1.300 hid
+    the Thinking toggle on five models and the run waved it through). Titles
+    come from ``review_queue.bullet_title`` so the diff validator, which routes
+    the same bullet when it matches a trigger keyword, files one issue, not two.
+    """
+    raw = result.get("needs_review") or []
+    if not isinstance(raw, list):
+        return []
+    items: list[tuple[str, str]] = []
+    for entry in raw:
+        if isinstance(entry, dict):
+            version = str(entry.get("version", "")).strip() or "?"
+            bullet = str(entry.get("bullet", "")).strip()
+            reason = str(entry.get("reason", "")).strip()
+        else:
+            version, bullet, reason = "?", str(entry).strip(), ""
+        if not bullet:
+            continue
+        body = f"Claude Code {version}:\n\n> {bullet}\n\nThe refresh pass reported it for review"
+        body += f": {reason}" if reason else "."
+        items.append((review_queue.bullet_title(version, bullet), body))
+    return items
+
+
 def write_dry_run_report(
     selector_before: str,
     selector_after: str,
@@ -420,6 +449,8 @@ def main() -> int:
     new_selector, quote_notes = repair_attribute_quotes(new_selector)
     warnings += quote_notes
     consumed_versions = list(result.get("consumed_versions") or [])
+    review = needs_review_items(result)
+    warnings += [f"needs review: {title}" for title, _ in review]
 
     if args.dry_run:
         write_dry_run_report(selector_text, new_selector, summary, warnings, new_entries)
@@ -429,6 +460,8 @@ def main() -> int:
         return 0
 
     SELECTOR_PATH.write_text(new_selector)
+    if review:
+        review_queue.add(review)
     LAST_SUMMARY_PATH.write_text(summary + "\n")
     if warnings:
         LAST_WARNINGS_PATH.write_text("\n".join(warnings) + "\n")

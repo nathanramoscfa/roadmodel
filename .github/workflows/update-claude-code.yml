@@ -94,8 +94,21 @@ jobs:
         # snapshot BEFORE Opus, so Opus reconciles against fresh facts and
         # the conformance gate checks against them. Fatal on a docs
         # restructure (the extractor fails loud) — the maintainer investigates.
+        # --baseline compares against the committed snapshot before it is
+        # overwritten: an entry the docs DROPPED (a model that can now turn
+        # thinking off, a control or effort level withdrawn — or a reworded
+        # sentence the parser stopped reading) is queued for a review issue,
+        # never silently accepted. The queue (update/review_queue.py) starts
+        # empty each run; later steps add to it and "Route review items to
+        # issues" files it.
         if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
-        run: python update/extract_claude_code_effort.py --output update/claude-code-effort.json
+        run: |
+          set -euo pipefail
+          rm -f update/.cache/claude-code-review.json
+          python update/extract_claude_code_effort.py \
+            --output update/claude-code-effort.json \
+            --baseline update/claude-code-effort.json \
+            --review-queue update/.cache/claude-code-review.json
 
       - name: Flag new models for the catalog cron
         # A model in the docs effort table this tracker hasn't seen is the
@@ -204,19 +217,59 @@ jobs:
             echo "No pending bullets — Opus step was a no-op; skipping validator."
             exit 0
           fi
+          # --review-queue: the typed boundary (update/automation_integrity.py)
+          # forbids the prose edit a trigger bullet would need, so an uncited
+          # one is queued for review instead of failing every run (#1149).
+          # A version missing from consumed_versions still fails.
           python update/validate_claude_code_diff.py \
             --consumed-versions update/.cache/consumed-versions.json \
             --before update/.cache/selector.before.txt \
-            --after docs/model-selector.txt
+            --after docs/model-selector.txt \
+            --review-queue update/.cache/claude-code-review.json
 
       - name: Conformance gate (effort/thinking vs docs)
         # Deterministic backstop: the (Opus-edited) selector must conform to
         # the (freshly-extracted) docs snapshot — vocabulary subset, per-model
         # effort support, ultracode/ultrathink distinct. Fatal on violation,
         # so a bad Opus prose edit blocks the PR. Runs in dry-run too (the
-        # snapshot is refreshed even there).
+        # snapshot is refreshed even there). Check H (always-thinks vs the
+        # docs) only warns — this cron may not edit selector attributes — and
+        # --review-queue files each warning for review.
         if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true'
-        run: python update/validate_effort_conformance.py
+        run: python update/validate_effort_conformance.py --review-queue update/.cache/claude-code-review.json
+
+      - name: Route review items to issues
+        # What this run found but may not change itself (see
+        # update/review_queue.py): a docs fact the snapshot dropped, a selector
+        # always-thinks attribute the docs contradict, a CHANGELOG bullet that
+        # changes a dial the selector describes. One issue per item, deduped
+        # on the EXACT title against open issues (REST list, never --search;
+        # see the new-model step above). Bodies quote upstream text, so they go
+        # to gh as files, never as shell words. Runs even when a later gate
+        # failed, so the findings still reach a human.
+        if: ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/claude-code-review"
+          python update/review_queue.py --queue update/.cache/claude-code-review.json --emit "$dir"
+          shopt -s nullglob
+          items=("$dir"/*.title)
+          if [ "${#items[@]}" -eq 0 ]; then
+            echo "Nothing to route for review."
+            exit 0
+          fi
+          existing="$(gh issue list --state open --limit 200 --json title -q '.[].title' || true)"
+          for item in "${items[@]}"; do
+            title="$(cat "$item")"
+            if printf '%s\n' "$existing" | grep -Fqx "$title"; then
+              echo "Review issue already open: ${title}"
+              continue
+            fi
+            gh issue create --title "$title" --body-file "${item%.title}.body"
+            echo "Opened review issue: ${title}"
+          done
 
       - name: Open PR if selector or snapshot changed
         if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.changed == 'true') && github.event.inputs.dry_run != 'true'

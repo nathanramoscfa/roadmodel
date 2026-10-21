@@ -43,6 +43,7 @@ import hashlib
 import json
 import re
 import sys
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 
 import requests
@@ -76,8 +77,11 @@ EFFORT_ORDER = ("low", "medium", "high", "xhigh", "max")
 # since the 2026-08 catalog refresh, so flagging it daily was noise. Models the
 # catalog does NOT carry yet (Fable 5.1, as of this commit) stay unlisted on
 # purpose — that flag is the handoff to the catalog cron.
+# "Haiku 5.5" added 2026-10-20: the catalog carries it as claude-haiku-5-5 since
+# 0.2.87 (#1151), so flagging it daily had become noise.
 KNOWN_MODELS = frozenset(
     {
+        "Haiku 5.5",
         "Fable 5.1",
         "Fable 5",
         "Opus 5.5",
@@ -305,24 +309,82 @@ def parse_ultrathink(in_scope: str) -> dict[str, object]:
     }
 
 
-def parse_extended_thinking(in_scope: str) -> dict[str, object]:
+# The FACT "thinking can't be disabled on these models", in every wording the
+# docs have used for it: "Thinking cannot be turned off on Fable 5.1 or Fable 5"
+# (to 2026-09) and "You can't turn thinking off on Opus 5.5, Sonnet 5.5, Haiku
+# 5.5, or the Fable models" (2026-09-29 on). The first regex alone read only the
+# old wording, so from #585 (2026-09-10) the snapshot carried an empty list and
+# nothing noticed. The list runs to the end of the sentence: a period followed by
+# whitespace, which a version dot ("5.1") never is.
+_NO_DISABLE_RE = re.compile(
+    r"\b(?:cannot|can(?:'|\u2019)t|can\s+not)\s+"
+    r"(?:be\s+turned\s+off|turn\s+(?:thinking|it)\s+off|turn\s+off\s+thinking)"
+    r"\s+(?:on|for)\s+(?P<models>[^\n]+?)(?=\.(?:\s|$)|\n|$)",
+    re.IGNORECASE,
+)
+# A sentence saying thinking can't be turned off, in any form — including the UI
+# string the docs quote ("show `Thinking can't be turned off` for these models").
+# If one is in scope but the list above came back empty, the docs reworded the
+# fact: fail loud rather than write `cannot_disable_on: []` again.
+_NO_DISABLE_MENTION_RE = re.compile(
+    r"(?:cannot|can(?:'|\u2019)t|can\s+not)\s+(?:be\s+)?turn(?:ed)?\s+(?:thinking\s+)?off"
+    r"|thinking\s+(?:cannot|can(?:'|\u2019)t|can\s+not)\s+be\s+(?:turned\s+off|disabled)",
+    re.IGNORECASE,
+)
+# "the Fable models", "Fable models", "the Fable 5 models": a family the docs name
+# instead of listing its members.
+_FAMILY_RE = re.compile(r"(?:the\s+)?(?P<family>[A-Z][A-Za-z]*(?: \d[\w.]*)*)\s+models?")
+
+
+def _expand_family(family: str, models: list[str]) -> list[str]:
+    """The effort-table models a family name covers, in table order."""
+    return [
+        m for m in models if m == family or m.startswith(family + " ") or m.startswith(family + ".")
+    ]
+
+
+def parse_extended_thinking(in_scope: str, models: Iterable[str] = ()) -> dict[str, object]:
+    """The extended-thinking controls and the models thinking can't be turned off on.
+
+    ``models`` are the effort table's model names, used to expand a family the
+    docs name ("the Fable models") into its members, so the snapshot always
+    lists models by the names the rest of it uses.
+    """
     known_controls = ["Option+T", "Alt+T", "alwaysThinkingEnabled", "MAX_THINKING_TOKENS=0"]
     present = [c for c in known_controls if c in in_scope]
-    # Derive the no-disable models generically (regex) rather than hardcoding
-    # "Fable 5", so a second such model is captured instead of silently missed.
-    #
-    # Take the whole clause to the end of the sentence, then split the model
-    # list. Stopping at the first "." dropped every model but the last: the
-    # 2026-09 docs read "cannot be turned off on Fable 5.1 or Fable 5", and the
-    # old pattern cut at the dot inside "5.1" and returned just ["Fable 5"] —
-    # silently missing the model the sentence was added for. A sentence ends at
-    # a period followed by whitespace, which a version dot never is.
+    table = list(models)
     cannot: list[str] = []
-    for clause in re.findall(r"cannot be turned off on ([^\n]+?)(?=\.(?:\s|$)|\n)", in_scope):
-        for model in re.split(r",|\bor\b|\band\b", clause):
-            model = model.strip()
-            if model:
-                cannot.append(model)
+    for match in _NO_DISABLE_RE.finditer(in_scope):
+        for item in re.split(r",|\bor\b|\band\b", match.group("models")):
+            item = item.strip().strip("`*").strip()
+            if item.lower().startswith("the "):
+                item = item[4:].strip()
+            if not item:
+                continue
+            family = _FAMILY_RE.fullmatch(item)
+            if _MODEL_NAME_RE.fullmatch(item):
+                names = [item]
+            elif family:
+                names = _expand_family(family.group("family"), table)
+                if not names:
+                    raise ExtractError(
+                        f"the docs say thinking can't be turned off on {item!r}, but no "
+                        f"model in the effort table belongs to it: {table}"
+                    )
+            else:
+                names = _MODEL_NAME_RE.findall(item)
+                if not names:
+                    raise ExtractError(
+                        f"could not read a model out of {item!r} in the "
+                        "'thinking can't be turned off' sentence"
+                    )
+            cannot.extend(n for n in names if n not in cannot)
+    if not cannot and _NO_DISABLE_MENTION_RE.search(in_scope):
+        raise ExtractError(
+            "the docs say thinking can't be turned off on some models, but no model "
+            "list was parsed (the sentence was reworded?) — refusing to write an "
+            "empty extended_thinking.cannot_disable_on"
+        )
     return {
         "primary_control_is_effort": "effort level is the primary control" in in_scope,
         "on_off_controls": present,
@@ -370,10 +432,80 @@ def build_snapshot(markdown: str, *, source_url: str) -> dict[str, object]:
         "fallback_rule": "highest supported level at or below the requested level",
         "ultracode": parse_ultracode(in_scope),
         "ultrathink": parse_ultrathink(in_scope),
-        "extended_thinking": parse_extended_thinking(in_scope),
+        "extended_thinking": parse_extended_thinking(in_scope, per_model),
         "unexpected_models": unexpected,
         "section_sha256": section_sha256(in_scope),
     }
+
+
+def _str_list(value: object) -> list[str]:
+    return [str(v) for v in value] if isinstance(value, list) else []
+
+
+def _lookup(snapshot: Mapping[str, object], dotted: str) -> object:
+    node: object = snapshot
+    for key in dotted.split("."):
+        node = node.get(key) if isinstance(node, Mapping) else None
+    return node
+
+
+# The lists whose entries the gate and the selector lean on. An entry that
+# disappears from one is a contract change (a control removed, a model that can
+# now turn thinking off, an effort level withdrawn) — or a parse that quietly
+# stopped matching, which is how `cannot_disable_on` went empty for six weeks.
+SHRINK_GUARDED = (
+    "extended_thinking.cannot_disable_on",
+    "extended_thinking.on_off_controls",
+    "effort_levels",
+)
+
+
+def snapshot_shrink(old: Mapping[str, object], new: Mapping[str, object]) -> list[str]:
+    """Entries the committed snapshot ``old`` lists and the fresh ``new`` drops.
+
+    Covers the guarded lists above and every per-model effort row: a model row
+    that vanished, or a level a surviving row no longer lists. Additions are not
+    reported — the refresh exists to take those.
+    """
+    removed: list[str] = []
+    for key in SHRINK_GUARDED:
+        after = set(_str_list(_lookup(new, key)))
+        removed += [
+            f"{key}: {entry}" for entry in _str_list(_lookup(old, key)) if entry not in after
+        ]
+    old_rows = old.get("per_model_effort")
+    new_rows = new.get("per_model_effort")
+    if isinstance(old_rows, Mapping):
+        fresh = new_rows if isinstance(new_rows, Mapping) else {}
+        for model, levels in old_rows.items():
+            if model not in fresh:
+                removed.append(f"per_model_effort: {model} (whole row)")
+                continue
+            after = set(_str_list(fresh[model]))
+            removed += [
+                f"per_model_effort.{model}: {lv}" for lv in _str_list(levels) if lv not in after
+            ]
+    return removed
+
+
+def shrink_review_items(removed: list[str], source_url: str) -> list[tuple[str, str]]:
+    """One review item per dropped entry, titled so a rerun finds it open."""
+    items = []
+    for entry in removed:
+        key, _, value = entry.partition(": ")
+        body = (
+            f"The Claude Code docs refresh dropped `{value}` from `{key}` in "
+            "`update/claude-code-effort.json` (extracted from "
+            f"{source_url}).\n\n"
+            "Either the docs withdrew the fact — a contract change the selector "
+            "may still describe, so check `<thinking-context>`, the claude-code "
+            "method and any `always-thinks` attributes — or the extractor stopped "
+            "reading a reworded sentence, which is a bug in "
+            "`update/extract_claude_code_effort.py`. The refresh wrote the new "
+            "snapshot; this issue keeps the removal from passing unseen."
+        )
+        items.append((f'chore(claude-code): docs snapshot dropped {key} "{value}"', body))
+    return items
 
 
 def main() -> int:
@@ -392,6 +524,21 @@ def main() -> int:
         type=Path,
         default=DEFAULT_OUTPUT,
         help="where to write the JSON snapshot (default: committed canonical copy)",
+    )
+    parser.add_argument(
+        "--baseline",
+        type=Path,
+        default=None,
+        help=(
+            "the committed snapshot to compare against (read before --output is "
+            "written); entries it lists that the fresh snapshot drops are reported"
+        ),
+    )
+    parser.add_argument(
+        "--review-queue",
+        type=Path,
+        default=None,
+        help="queue each dropped entry here for a review issue (update/review_queue.py)",
     )
     args = parser.parse_args()
 
@@ -413,6 +560,16 @@ def main() -> int:
         )
         return 4
 
+    removed: list[str] = []
+    if args.baseline is not None and args.baseline.exists():
+        try:
+            baseline = json.loads(args.baseline.read_text())
+        except (OSError, ValueError) as exc:
+            print(f"extract_claude_code_effort: baseline unreadable: {exc!r}", file=sys.stderr)
+            return 3
+        if isinstance(baseline, dict):
+            removed = snapshot_shrink(baseline, snapshot)
+
     payload = json.dumps(snapshot, indent=2, ensure_ascii=False) + "\n"
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(payload)
@@ -429,6 +586,17 @@ def main() -> int:
         f"extract_claude_code_effort: wrote {args.output} "
         f"({count} models, effort levels: {summary})"
     )
+    if removed:
+        print(
+            "extract_claude_code_effort: NOTE the fresh snapshot DROPS entries the "
+            f"committed one lists: {removed}. Routed for review; never silently accepted.",
+            file=sys.stderr,
+        )
+        if args.review_queue is not None:
+            sys.path.insert(0, str(UPDATE_DIR))
+            import review_queue
+
+            review_queue.add(shrink_review_items(removed, args.url), args.review_queue)
     return 0
 
 

@@ -248,9 +248,14 @@ def test_read_catalog_returns_three_keys() -> None:
         "output_contract_version",
     }
     assert isinstance(payload["catalog_json"], dict)
-    # The rule the raw selector cannot express: Claude Code folds a legacy
-    # ORCHESTRATION:Ultracode into the effort VALUE and Thinking is a toggle.
-    assert "effort=Ultracode; thinking=On" in payload["settings_display_md"]
+    # The rules the raw selector cannot express: Claude Code shows EFFORT:
+    # Ultracode as its effort level plus the Ultracode switch, Thinking is a
+    # toggle, and a model that always thinks has no Thinking row.
+    assert "effort=XHigh; ultracode=On; thinking=On" in payload["settings_display_md"]
+    assert (
+        "| Claude Code | Opus 5.5 | — | High | On | None | effort=High |"
+        in (payload["settings_display_md"])
+    )
     # ...and the v2 emission rule the offline consumer must honour: a dial the
     # platform lacks is an ABSENT line, never "Off"/"N/A".
     assert "the LINE IS ABSENT" in payload["settings_display_md"]

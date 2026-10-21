@@ -117,22 +117,17 @@ def _write_bundled_text(resource: Traversable, dest: Path) -> None:
     atomic_private_write(dest, resource.read_text(encoding="utf-8").encode("utf-8"))
 
 
+# The order a surface's controls read in: Claude Code's effort slider, its
+# Ultracode switch, then the Thinking toggle a model may have.
+_SETTINGS_ORDER = ("max_mode", "effort", "intelligence", "ultracode", "thinking")
+
+
 def _settings_text_lines(settings: dict[str, str]) -> list[str]:
-    if "effort" in settings and "thinking" in settings:
-        return [
-            f"  effort: {settings['effort']}",
-            f"  thinking: {settings['thinking']}",
-        ]
-    if "intelligence" in settings:
-        return [f"  intelligence: {settings['intelligence']}"]
-    lines = []
-    if "max_mode" in settings:
-        lines.append(f"  max_mode: {settings['max_mode']}")
-    if "thinking" in settings:
-        lines.append(f"  thinking: {settings['thinking']}")
-    if lines:
-        return lines
-    return [f"  {key}: {value}" for key, value in settings.items()]
+    """One line per control the surface has — never one it lacks: a model that
+    always thinks carries no ``thinking`` key, so it prints no thinking line."""
+    keys = [k for k in _SETTINGS_ORDER if k in settings]
+    keys += [k for k in settings if k not in _SETTINGS_ORDER]
+    return [f"  {key}: {settings[key]}" for key in keys]
 
 
 def _cost_cell(row: dict[str, Any]) -> str:

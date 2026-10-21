@@ -236,15 +236,32 @@ def test_effort_present_and_thinking_is_a_toggle(
 
 
 def test_ultracode_is_the_top_effort_rung(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """D3: Ultracode round-trips as an EFFORT value, with no orchestration row."""
+    """D3: Ultracode round-trips as the controls Claude Code shows for it (xhigh
+    effort plus the Ultracode switch), with no orchestration row."""
     _install(monkeypatch, V2_CLAUDE_CODE_ULTRACODE)
     result = recommend_module.recommend_structured(TASKS["hard"], _config(tmp_path))
 
     settings = result["settings"]
-    assert settings["effort"] == "Ultracode"
+    assert settings["effort"] == "XHigh"
+    assert settings["ultracode"] == "On"
     assert settings["thinking"] == "On"
     assert "orchestration" not in settings, "Ultracode is an effort rung, not a second axis"
     assert "max_mode" not in settings
+
+
+def test_a_model_that_always_thinks_shows_no_thinking_toggle(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Claude Code has no Thinking switch on Opus 5.5 (2.1.281 CLI, 2.1.300 VS
+    Code), so a THINKING line the engine still emits must not reach the operator
+    as a setting to apply — whether it says On or Off."""
+    for thinking in ("On", "Off"):
+        block = V2_CLAUDE_CODE.replace("Opus 4.8", "Opus 5.5").replace(
+            "THINKING: On", f"THINKING: {thinking}"
+        )
+        _install(monkeypatch, block)
+        result = recommend_module.recommend_structured(TASKS["hard"], _config(tmp_path))
+        assert result["settings"] == {"effort": "Max"}, (thinking, result["settings"])
 
 
 def test_every_emitted_setting_is_one_the_operator_can_set(
@@ -285,7 +302,7 @@ RATIONALE: TASK: Planning. PICK: Opus 4.8 is S-tier. EFFORT: Ultracode fits the 
     settings = result["settings"]
     assert "max_mode" not in settings, "a v1 MAX MODE: Off must not surface as a dial"
     assert settings["thinking"] == "On", "THINKING: Max must never reach the operator"
-    assert settings["effort"] == "Ultracode"
+    assert settings == {"effort": "XHigh", "ultracode": "On", "thinking": "On"}
 
 
 # --------------------------------------------------------------------------- #

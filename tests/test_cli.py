@@ -1144,3 +1144,19 @@ def test_export_kit_missing_target_errors(monkeypatch: pytest.MonkeyPatch, tmp_p
     _export_kit_env(monkeypatch, tmp_path)
     result = _runner().invoke(cli, ["export-kit", str(tmp_path / "does-not-exist")])
     assert result.exit_code != 0
+
+
+def test_settings_text_lines_print_every_claude_code_control_in_order() -> None:
+    from roadmodel.cli import _settings_text_lines
+
+    assert _settings_text_lines({"thinking": "On", "ultracode": "On", "effort": "XHigh"}) == [
+        "  effort: XHigh",
+        "  ultracode: On",
+        "  thinking: On",
+    ]
+    # A model that always thinks carries no thinking key, so no thinking line.
+    assert _settings_text_lines({"effort": "High"}) == ["  effort: High"]
+    assert _settings_text_lines({"max_mode": "ON", "thinking": "On"}) == [
+        "  max_mode: ON",
+        "  thinking: On",
+    ]

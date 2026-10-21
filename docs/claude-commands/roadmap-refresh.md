@@ -220,7 +220,8 @@ For every phase whose roadmap does not exist yet — no
 selector for that session, quality first: it runs the Quality column,
 the strongest `planning` model the operator's access methods reach, at
 the deepest reasoning rung it exposes on its platform (`Max` in Claude
-Code), thinking on, never `Ultracode`, with a backup on its own platform
+Code), thinking on where the model has a Thinking toggle, never
+`Ultracode`, with a backup on its own platform
 and dial — unless `planning/user-context.md` states a rule for
 roadmap-writing sessions, which wins. Where `roadmodel` is installed,
 the table is the ladder `roadmodel ladder --category planning

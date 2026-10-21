@@ -470,6 +470,25 @@ def model_id_of(model_ref: str) -> str | None:
         return None
 
 
+def always_thinks(model_ref: str) -> bool:
+    """Whether ``model_ref`` (an id or display name, with or without a leading
+    "Claude ") is a model whose extended thinking cannot be turned off on any
+    surface — the selector's ``always-thinks="yes"`` (Opus 5.5, Sonnet 5.5,
+    Haiku 5.5, Fable). Such a model has no Thinking toggle to set. False on a
+    catalog miss (never raises), which keeps the toggle the surface documents."""
+    ref = (model_ref or "").strip()
+    try:
+        catalog = _load_catalog()
+    except BundledDocNotFoundError:
+        return False
+    for candidate in dict.fromkeys((ref, ref.removeprefix("Claude ").strip())):
+        try:
+            return bool(_resolve_model(candidate, catalog).get("always_thinks"))
+        except ValueError:
+            continue
+    return False
+
+
 def model_jurisdiction(model_ref: str) -> str | None:
     """Resolve a model id-or-name to its catalog ``jurisdiction`` (lowercased),
     or ``None`` on a catalog miss / missing field (never raises).

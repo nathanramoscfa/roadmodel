@@ -98,7 +98,7 @@ posture changes, so read the table as **intent**, not as a string to
 match exactly — and record what actually ran.
 
 Print one line: `Step {{STEP}} requires: Model <M> · Platform <P> ·
-<the dials the table carries, e.g. Effort <E> · Thinking <T>, or
+<the dials the table carries, e.g. Effort <E>[ · Thinking <T>], or
 Intelligence <I>>. This session: <your own model> on <this surface>.`
 
 - **Ladder tables** (Cost / Balanced / Quality columns, roadmodel 0.2.86

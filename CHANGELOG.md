@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.88] — 2026-10-21
+
+- **No Thinking setting for a model that always thinks.** Claude Code dropped its Thinking switch for Opus 5.5, Sonnet 5.5, Haiku 5.5, Fable 5 and Fable 5.1. In 2.1.281 the terminal shows "Thinking can't be turned off" in its place, and since 2.1.300 the VS Code panel hides it. A saved `alwaysThinkingEnabled: false` or `MAX_THINKING_TOKENS=0` has no effect on them, and effort alone sets how much they think. roadmodel still told users to set `Thinking: On`, and could suggest `Off`.
+  - The selector marks these models `always-thinks="yes"`, and the catalog carries `always_thinks`. The engines are told to emit no `THINKING` line for them, on any surface.
+  - /recommend, the CLI and the MCP tools show their effort with no Thinking setting, even when an engine still emits one. That holds wherever the model is served: Claude Code, the Anthropic API, OpenRouter, Antigravity.
+  - A roadmap's Settings table keeps its Thinking row and puts `—` in these models' columns, as it already does for Codex.
+  - The Thinking toggle stays on Opus 5, Sonnet 5 and the 4.x models, which can still turn thinking off.
+- **Ultracode is its own setting.** Since Claude Code 2.1.284 Ultracode is an on/off switch beside the effort slider and works at any effort level. It is no longer a stop above Max. `EFFORT: Ultracode` (ultracode on at xhigh, what `claude --effort ultracode` sets) now shows as Effort `XHigh` plus `Ultracode: On`. A frontier-ladder pick the scorer puts at max runs at Effort `Max` with Ultracode on. The selector's vocabulary is unchanged, so the effort-conformance tracker keeps its meaning.
+- **The Claude Code tracker sees a control that disappears.** It missed this change three ways:
+  - The docs began writing "You can't turn thinking off on…". The extractor only matched "cannot be turned off on", so from 2026-09-10 it silently recorded no such models.
+  - The changelog check exempted every "Fixed…" bullet.
+  - The model called 2.1.300 a no-op.
+
+  The tracker now:
+  - **Reads both wordings.** The extractor expands "the Fable models" from the effort table. It fails loudly when the docs say thinking can't be turned off but no models parse. The snapshot lists the five models again.
+  - **Warns when a snapshot shrinks.** A regenerated snapshot that drops a model from the cannot-disable list, an on/off control or an effort level opens a review issue.
+  - **Checks the selector.** Advisory check H warns when the docs' always-thinking models and the selector's `always-thinks="yes"` disagree.
+  - **Catches removed controls.** The changelog check watches the thinking-toggle and Ultracode words. A "Fixed…" bullet that removes or hides a control no longer gets the exemption, and the prompt rules that such a change is never a no-op.
+  - **Stops failing on #1149.** The automated pass may not edit prose, so a bullet it cannot cite is now routed to a review issue instead of failing the run. The daily refresh can go green again.
+
 ## [0.2.87] — 2026-10-20
 
 - **Three new models.** Gemini 4 Argon ($2/$10; Google raises it to $4/$20 on 2026-12-01), Claude Haiku 5.5 ($0.10/$0.50 for prompts up to 100k tokens, 5x above) and Meta's Muse Wonder ($4/$20) join the catalog with Artificial Analysis measurements. Argon ranks 5th of 59 measured models on the AA Intelligence Index, Muse Wonder 6th, and Haiku 5.5 17th, the highest of any model at its price or lower. Adding two frontier models moves some rank-based letters down a step (Opus 5 and Muse Spark 1.3 coding S→A, GLM-5.3 and GPT-5.6 Sol agentic S→A).

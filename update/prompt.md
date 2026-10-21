@@ -133,6 +133,9 @@ would then reject.
   in the file as a record and is no longer in the catalog. `added-on`, the
   day a model joined the catalog, is written after your pass the same way
   (`update/stamp_added.py`): copy it verbatim, and never write it yourself.
+  `always-thinks="yes"` marks a model whose thinking cannot be turned off;
+  it is set in a reviewed change, so copy it verbatim and never add or
+  remove it yourself.
 - **Generated prose is not yours to edit.** A `<model>` element may carry
   `prose-generated="best-for headline-benchmarks"` (or one of the two).
   `update/model_prose.py` writes the fields it lists from the catalog's
@@ -976,7 +979,7 @@ warning per skipped method.
   tier-knowledge, tier-speed, headline-benchmarks, pricing-notes,
   best-for`, plus the attributes deterministic passes write after you
   (`superseded-by`, `superseded-on`, `retired-on`, `added-on`,
-  `prose-generated`),
+  `prose-generated`) and the reviewed `always-thinks`,
   which you copy verbatim. The current schema for `<method>` elements in
   `<access-methods>` is `id, name, provider, billing,
   provider-jurisdiction, requires, supports-models, exposes-max-mode,

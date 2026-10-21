@@ -207,6 +207,10 @@ def _parse_models(selector_text: str) -> list[dict[str, Any]]:
                     # The day the model joined the catalog (update/stamp_added.py);
                     # /models counts its New tag from it until AA dates the release.
                     "added_on": attrs.get("added-on") or None,
+                    # A model whose extended thinking cannot be turned off on
+                    # any surface: it carries no Thinking toggle in a Settings
+                    # table (docs/settings-display.md).
+                    "always_thinks": attrs.get("always-thinks") == "yes",
                 }
             )
     assert_no_element_lost(options_match.group(1), matched, MODEL_OPEN_RE, "<model-options>")

@@ -2305,11 +2305,18 @@ def _effort_cell(c: Candidate, level: str) -> str:
     return f"{dial} {_LEVEL_WORDS.get(normalize_level(level), level)}"
 
 
-def _thinking_cell(c: Candidate) -> str:
-    """On where the surface has a Thinking toggle, ``—`` where it has none
-    (Codex and the OpenAI API carry reasoning in Intelligence; Cursor has no
-    reasoning control)."""
-    return "—" if c.platform_id in _DIAL_NAMES else "On"
+def _thinking_cell(c: Candidate, catalog: dict[str, Any]) -> str:
+    """On where the surface has a Thinking toggle for the model, ``—`` where
+    it has none: Codex and the OpenAI API carry reasoning in Intelligence,
+    Cursor has no reasoning control, and a model that always thinks (the
+    catalog's ``always_thinks``: Opus 5.5, Sonnet 5.5, Haiku 5.5, Fable) has
+    no toggle on any surface — Claude Code shows no Thinking switch for it."""
+    if c.platform_id in _DIAL_NAMES:
+        return "—"
+    model: dict[str, Any] = next(
+        (m for m in catalog.get("models", []) if m.get("id") == c.model_id), {}
+    )
+    return "—" if model.get("always_thinks") else "On"
 
 
 def _deepest_level(c: Candidate, catalog: dict[str, Any]) -> str:
@@ -2362,7 +2369,7 @@ def settings_ladder(
             "platform": c.platform_name,
             "effort": normalize_level(level),
             "effort_cell": _effort_cell(c, level),
-            "thinking_cell": _thinking_cell(c),
+            "thinking_cell": _thinking_cell(c, cat),
             "backup": None if rung.backup is None else backup_cell(rung.backup),
         }
     runs = "quality" if phase else RUN_COLUMN.get(task.budget, "balanced")
