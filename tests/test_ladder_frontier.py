@@ -583,7 +583,7 @@ def test_on_claude_code_the_rows_effort_is_set_when_the_engine_copies_only_the_m
     assert cost_sections["effort"].startswith("High is the effort the cheap posture sets")
 
 
-def test_ultracode_stands_where_the_row_says_max(
+def test_ultracode_runs_at_max_where_the_row_says_max(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     uncapped = _context([MAX, PRO], headroom="uncapped")
@@ -598,10 +598,13 @@ def test_ultracode_stands_where_the_row_says_max(
     )
     monkeypatch.setattr(recommend_module, "recommend_ladder", fake)
     result = recommend_structured_ladder("plan a release", _config(tmp_path))
-    # Codex documents its dial too, so its row's max is set there; Ultracode
-    # stands on Claude Code alone.
+    # Codex documents its dial too, so its row's max is set there. On Claude
+    # Code, Ultracode is its own switch (2.1.284+), so the pick keeps it on at
+    # the row's Max rather than dropping to the xhigh `--effort ultracode` sets.
     assert result["guard"]["effort_set"] == ["cost"]
-    assert result["picks"]["quality"]["settings"]["effort"] == "Ultracode"
+    quality = result["picks"]["quality"]["settings"]
+    assert quality["effort"] == "Max"
+    assert quality["ultracode"] == "On"
     assert result["picks"]["cost"]["settings"]["intelligence"] == "Max"
 
 

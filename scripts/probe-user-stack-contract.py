@@ -31,6 +31,7 @@ sys.path.insert(0, str(REPO_ROOT / "tests"))
 
 from test_user_stack_contract import EFFORT_WORDS, TASKS, USER_CONTEXT  # noqa: E402
 
+from roadmodel import cost  # noqa: E402
 from roadmodel import recommend as recommend_module  # noqa: E402
 from roadmodel.config import Config  # noqa: E402
 
@@ -90,14 +91,23 @@ def main() -> int:
             ok &= check("no max_mode", "max_mode" not in settings, str(settings.keys()))
             # D2: EFFORT present and at the top of the dial under flat funding.
             effort = str(settings.get("effort", ""))
-            ok &= check("effort is Max/Ultracode", effort in {"Max", "Ultracode"}, effort)
-            # D2: THINKING is a toggle, never an effort word or a number.
-            thinking = str(settings.get("thinking", ""))
+            ultracode = settings.get("ultracode") == "On"
             ok &= check(
-                "thinking is On/Off",
-                thinking in {"On", "Off"} and thinking.lower() not in EFFORT_WORDS,
-                thinking,
+                "effort is Max/Ultracode",
+                effort == "Max" or (ultracode and effort == "XHigh"),
+                f"{effort} ultracode={ultracode}",
             )
+            # D2: THINKING is a toggle, never an effort word or a number — and
+            # absent on a model that always thinks (no switch exists there).
+            thinking = str(settings.get("thinking", ""))
+            if cost.always_thinks(model):
+                ok &= check("no thinking toggle", "thinking" not in settings, thinking)
+            else:
+                ok &= check(
+                    "thinking is On/Off",
+                    thinking in {"On", "Off"} and thinking.lower() not in EFFORT_WORDS,
+                    thinking,
+                )
             # D4: no cost-motivated down-tier on a flat $0 plan.
             lowered = model.lower()
             ok &= check(

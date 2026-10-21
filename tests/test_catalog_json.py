@@ -579,3 +579,20 @@ def test_effort_levels_fail_open(tmp_path: Path) -> None:
     assert "effort_levels" not in by_id["codex-cli"]
     assert by_id["claude-code"]["effort_levels"] == ["low", "xhigh", "max"]
     assert by_id["claude-code"]["effort_levels_by_model"] == {"m2": ["low", "max"]}
+
+
+def test_always_thinks_marks_exactly_the_models_that_cannot_turn_thinking_off() -> None:
+    """Claude Code shows no Thinking switch on Opus 5.5, Sonnet 5.5, Haiku 5.5
+    and the Fable models (2.1.281 / 2.1.300). The selector marks them
+    `always-thinks="yes"`; the catalog carries it as a boolean on every model so
+    the display layer drops their Thinking row."""
+    catalog = json.loads(CATALOG_PATH.read_text())
+    assert all(isinstance(m.get("always_thinks"), bool) for m in catalog["models"])
+    marked = {m["id"] for m in catalog["models"] if m["always_thinks"]}
+    assert marked == {
+        "claude-opus-5-5",
+        "claude-sonnet-5-5",
+        "claude-haiku-5-5",
+        "claude-fable-5",
+        "claude-fable-5.1",
+    }

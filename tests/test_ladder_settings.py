@@ -170,6 +170,26 @@ def test_each_column_names_its_own_surfaces_dial() -> None:
             assert col["thinking_cell"] == "On"
 
 
+def test_a_model_that_always_thinks_has_no_thinking_toggle() -> None:
+    """Claude Code shows no Thinking switch on a model that always thinks
+    (2.1.281 / 2.1.300), so its column reads ``—`` like a surface without the
+    toggle, while the row itself stays (the table keeps its fixed rows)."""
+    always = {
+        **CATALOG,
+        "models": [
+            {**m, "always_thinks": True} if m["id"] in {"sonnet", "opus"} else m
+            for m in CATALOG["models"]
+        ],
+    }
+    got = scoring.settings_ladder(PLANNING_MEDIUM, _context(), catalog=always, benchmarks=BENCH)
+    assert got is not None
+    claude = [c for c in got["columns"].values() if c["platform_id"] == "claude-code"]
+    assert claude, "the fixture ladder puts a Claude Code model in some column"
+    assert all(c["thinking_cell"] == "—" for c in claude)
+    assert all(c["effort_cell"].startswith("Effort ") for c in claude)
+    assert any(ln.startswith("| Thinking") for ln in got["markdown"].splitlines())
+
+
 @pytest.mark.parametrize(
     ("budget", "runs"), [("cheap", "cost"), ("balanced", "balanced"), ("best", "quality")]
 )

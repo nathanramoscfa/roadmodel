@@ -48,12 +48,16 @@
     Worked examples, one per surface shape (the pick is the same class of
     decision; only the settings vocabulary differs):
     - Frontier Claude model on Claude Code — the surface exposes a discrete
-      effort dial and an extended-thinking toggle, so recommend the model at
-      the EFFORT the `<thinking-context>` complexity ladder yields (e.g.
-      `EFFORT: High` for a High-complexity task; `Max` only for ceiling-class
-      work or under an `uncapped` consumption-headroom posture; `Ultracode`
-      only when the task warrants it) with `THINKING: On`. Emit NO Max Mode
-      line: Claude Code has no such control.
+      effort dial, plus an extended-thinking toggle on models that can turn
+      thinking off, so recommend the model at the EFFORT the
+      `<thinking-context>` complexity ladder yields (e.g. `EFFORT: High` for
+      a High-complexity task; `Max` only for ceiling-class work or under an
+      `uncapped` consumption-headroom posture; `Ultracode` only when the task
+      warrants it), with `THINKING: On` only where the model has the toggle.
+      An `always-thinks="yes"` model (Opus 5.5, Sonnet 5.5, Haiku 5.5,
+      Fable 5, Fable 5.1) gets NO THINKING line: Claude Code shows no
+      Thinking switch for it. Emit NO Max Mode line: Claude Code has no such
+      control.
     - Frontier GPT model on Codex — the surface exposes reasoning effort only,
       so recommend the model at the ladder's level (e.g. `EFFORT: High`, or
       `XHigh` for the novel-problem / multi-step-proof conditions). Emit no
@@ -365,14 +369,23 @@
       `xhigh`, `max` (shown in the UI as Low / Medium / High / Extra
       High / Max). Not every model supports every level — Opus 5,
       Opus 5.5, Opus 4.7, Opus 4.8, Sonnet 5, Sonnet 5.5, Fable 5, and Fable 5.1
-      expose the full low/medium/high/xhigh/max range; Opus 4.6 and
+      expose the full low/medium/high/xhigh/max range, as does Haiku 5.5;
+      Opus 4.6 and
       Sonnet 4.6 top out at `max` without an `xhigh` step. An effort
       level a model does not support falls back to the highest
       supported level at or below it. Default effort is `high` on every
-      model that supports effort, except Opus 4.7 (`xhigh`) and Opus 5.5
-      and Sonnet 5.5 (`medium`). Extended thinking can also be toggled
-      with Option+T /
-      Alt+T, `alwaysThinkingEnabled`, or `MAX_THINKING_TOKENS=0`. Claude
+      model that supports effort, except Opus 4.7 (`xhigh`) and Opus 5.5,
+      Sonnet 5.5 and Haiku 5.5 (`medium`). On models that can turn
+      thinking off (Opus 5, Sonnet 5, the Opus 4.x and Sonnet 4.x models,
+      Haiku 4.5), extended thinking can also be toggled with Option+T /
+      Alt+T, `alwaysThinkingEnabled`, or `MAX_THINKING_TOKENS=0`.
+      Thinking can NOT be turned off on the models marked
+      `always-thinks="yes"` in `<model-options>` (Opus 5.5, Sonnet 5.5,
+      Haiku 5.5, Fable 5, Fable 5.1): Claude Code shows "Thinking can't be
+      turned off" in place of the switch, its VS Code panel hides the
+      Thinking toggle for them, a saved `alwaysThinkingEnabled: false` or
+      `MAX_THINKING_TOKENS=0` has no effect, and the model decides per step
+      how much to think from the effort level alone. Claude
       Code 2.1.257 ships Claude Fable 5.1 as the new default Fable model
       (1M context, $10/$50 per Mtok with $0.25/Mtok cache reads);
       2.1.258 is a hotfix for a launch crash on macOS 12. 2.1.259 adds
@@ -441,9 +454,12 @@
       effort range with default effort `medium`.
       2.1.281 stops Alt+T and `/config` from offering a thinking-off
       switch where the model cannot turn thinking off (thinking stays
-      on, with a one-line reason). 2.1.282 switches the `ultracode`
-      visuals in `/effort` to plain styling. Neither release changes
-      the `/effort` vocabulary or the extended-thinking controls.
+      on, with a one-line reason), and 2.1.300 stops the VS Code panel
+      showing its Thinking toggle for those models: on an
+      `always-thinks="yes"` model the extended-thinking toggle no longer
+      exists, so no THINKING line is emitted for it. 2.1.282 switches the
+      `ultracode` visuals in `/effort` to plain styling and leaves the
+      `/effort` vocabulary unchanged.
       Claude Code 2.1.284 adds Claude Sonnet 5.5 (`claude-sonnet-5-5`,
       the new default Sonnet on the Anthropic API; 1M context, $2/$10
       per Mtok with $0.20/Mtok cache reads), which exposes the full
@@ -526,10 +542,12 @@
       line at all.
     - THINKING — the extended-thinking TOGGLE, and nothing else:
       `On` / `Off`. Emitted when the surface exposes an on/off control
-      (Claude Code's Option+T / Alt+T, `alwaysThinkingEnabled`,
-      `MAX_THINKING_TOKENS=0`; DeepSeek's `enabled` / `disabled`;
+      for the chosen model (Claude Code's Option+T / Alt+T,
+      `alwaysThinkingEnabled`, `MAX_THINKING_TOKENS=0` on Claude models
+      that can turn thinking off; DeepSeek's `enabled` / `disabled`;
       Gemini's thinking-off on models that allow it). OMITTED entirely
-      where no toggle exists.
+      where no toggle exists — including for every model marked
+      `always-thinks="yes"`, on every surface: its thinking is always on.
 
     THINKING has exactly two positions. It NEVER carries an effort word
     and never carries a number: `THINKING: Max` is not a setting any
@@ -555,11 +573,13 @@
       (the "Extra High" UI label); `max` → `Max` (the top "Max" UI
       level, ABOVE "Extra High") ONLY on models whose documented row
       exposes a `max` step above `xhigh` — Opus 5, Opus 5.5, Opus 4.7,
-      Opus 4.8, Sonnet 5, Sonnet 5.5, Fable 5, and Fable 5.1. On models that reach
+      Opus 4.8, Sonnet 5, Sonnet 5.5, Haiku 5.5, Fable 5, and Fable 5.1.
+      On models that reach
       `max` with NO `xhigh` step (Opus 4.6, Sonnet 4.6), `max` is their
       Extra-High top and maps to `XHigh`, not `Max`. Extended thinking
       disabled (Option+T / Alt+T, `MAX_THINKING_TOKENS=0`, or
-      `alwaysThinkingEnabled` false) → `Off`.
+      `alwaysThinkingEnabled` false) → `Off`, on a model that can turn
+      thinking off; an `always-thinks="yes"` model has no `Off`.
     - OpenAI `reasoning_effort`: `low` → `Low`; `medium` → `Medium`;
       `high` → `High`; `xhigh` / `extra-high` (the "Extra High" tier —
       the UI synonym `extra-high` and the config token `xhigh` are the
@@ -656,8 +676,8 @@
       (`Low` → `Medium`, `Medium` → `High`, `High` → `XHigh`).
     - Ceiling — `Max`: the top per-call level, used ONLY on models whose
       `<model-options>` row exposes a `max` step ABOVE `xhigh` (Opus 5,
-      Opus 5.5, Opus 4.7, Opus 4.8, Sonnet 5, Sonnet 5.5, Fable 5,
-      Fable 5.1). On such
+      Opus 5.5, Opus 4.7, Opus 4.8, Sonnet 5, Sonnet 5.5, Haiku 5.5,
+      Fable 5, Fable 5.1). On such
       a model, prefer `Max` over `XHigh` when the appended user-context
       declares a Quality (`best`) budget posture, or for the most demanding
       tasks (the `XHigh` conditions above taken to their limit). Under a
@@ -687,11 +707,16 @@
       warrant (see `<orchestration-context>`) rather than on funding, so this
       override raises to `Max`, not automatically to `Ultracode`.
     - THINKING follows: emit `THINKING: On` whenever the surface has a
-      toggle and reasoning is wanted (every case above). Emit
-      `THINKING: Off` only when the task genuinely wants extended
-      thinking suppressed — a `speed` PRIMARY, or a trivial bounded edit
-      where the latency of thinking is not worth it — and pair it with
-      the surface's floor EFFORT.
+      toggle for the chosen model and reasoning is wanted (every case
+      above). Emit `THINKING: Off` only when the task genuinely wants
+      extended thinking suppressed — a `speed` PRIMARY, or a trivial
+      bounded edit where the latency of thinking is not worth it — and
+      pair it with the surface's floor EFFORT (Claude Code sends `high`
+      in place of a higher level when thinking is off on models such as
+      Opus 5, so Off never goes with `XHigh` or `Max`).
+    - Chosen model marked `always-thinks="yes"` → OMIT the THINKING line
+      on every surface, and never emit `THINKING: Off` for it: the toggle
+      does not exist there. For a speed task, lower EFFORT instead.
     - Chosen access method's `exposes-thinking` attribute is `no` →
       OMIT both the EFFORT and THINKING lines entirely, overriding the
       above. Do not emit `N/A`; a dial the surface lacks has no line.
@@ -699,9 +724,10 @@
     EFFORT, THINKING, and Max Mode are orthogonal, and each is emitted
     only where its surface has it: a Cursor call carries `MAX MODE: On`
     and NO effort or thinking line (Cursor exposes no dial); a Claude
-    Code call carries `EFFORT: High` + `THINKING: On` and NO Max Mode
-    line (Anthropic's surface exposes effort and thinking, not Max
-    Mode).
+    Code call carries `EFFORT: High` + `THINKING: On` on a model with a
+    thinking toggle (only `EFFORT: High` on an `always-thinks="yes"`
+    model) and NO Max Mode line (Anthropic's surface exposes effort and
+    thinking, not Max Mode).
   </thinking-context>
 
   <orchestration-context>
@@ -789,8 +815,9 @@
     Orchestration, effort, thinking, and Max Mode are orthogonal axes,
     and each appears only on a surface that has it. Valid blocks:
     Cursor + `MAX MODE: On` and no other setting line. Claude Code +
-    `EFFORT: Ultracode` + `THINKING: On` + `ORCHESTRATION: None` (the
-    session already auto-authors workflows). Claude Code +
+    `EFFORT: Ultracode` + `ORCHESTRATION: None` (the session already
+    auto-authors workflows), with `THINKING: On` only on a model that has
+    a thinking toggle — here and below. Claude Code +
     `EFFORT: XHigh` + `THINKING: On` + `ORCHESTRATION: None` (Extra high
     effort, no auto-workflow). Claude Code + `EFFORT: XHigh` +
     `THINKING: On` + `ORCHESTRATION: PerPrompt` (one workflow-keyword
@@ -951,7 +978,11 @@
   <model-options>
     Each model entry carries: pricing, S/A/B/C/D tier ratings across the
     seven task categories, headline benchmark numbers grounded in the
-    sources above, and a free-text best-for description.
+    sources above, and a free-text best-for description. A model marked
+    `always-thinks="yes"` cannot have extended thinking turned off on any
+    surface: thinking is always on and adaptive, effort alone sets how
+    much it thinks, and no THINKING line is ever emitted for it (see
+    `<thinking-context>`).
 
     Tier ratings:
     - S — frontier-class: at or within reach of the best in this category
@@ -996,6 +1027,7 @@
       <model id="claude-fable-5" name="Fable 5"
              input-price-per-1m="$10.00" output-price-per-1m="$50.00"
              jurisdiction="us"
+             always-thinks="yes"
              tier-coding="S" tier-planning="A" tier-agentic="S"
              tier-multimodal="S" tier-long-context="A" tier-knowledge="A"
              tier-speed="D"
@@ -1006,6 +1038,7 @@
       <model id="claude-fable-5.1" name="Fable 5.1"
              input-price-per-1m="$10.00" output-price-per-1m="$50.00"
              jurisdiction="us"
+             always-thinks="yes"
              tier-coding="S" tier-planning="S" tier-agentic="S"
              tier-multimodal="S" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
@@ -1038,6 +1071,7 @@
       <model id="claude-opus-5-5" name="Opus 5.5"
              input-price-per-1m="$4.00" output-price-per-1m="$20.00"
              jurisdiction="us"
+             always-thinks="yes"
              tier-coding="S" tier-planning="S" tier-agentic="S"
              tier-multimodal="A" tier-long-context="S" tier-knowledge="S"
              tier-speed="D"
@@ -1110,6 +1144,7 @@
       <model id="claude-sonnet-5-5" name="Sonnet 5.5"
              input-price-per-1m="$2.00" output-price-per-1m="$10.00"
              jurisdiction="us"
+             always-thinks="yes"
              tier-coding="S" tier-planning="S" tier-agentic="S"
              tier-multimodal="A" tier-long-context="A" tier-knowledge="A"
              tier-speed="A"
@@ -1318,6 +1353,7 @@
       <model id="claude-haiku-5-5" name="Haiku 5.5"
              input-price-per-1m="$0.10" output-price-per-1m="$0.50"
              jurisdiction="us"
+             always-thinks="yes"
              tier-coding="A" tier-planning="A" tier-agentic="A"
              tier-multimodal="B" tier-long-context="A" tier-knowledge="A"
              tier-speed="S"
@@ -1630,7 +1666,7 @@
             supports-models="claude-sonnet-5-5,claude-opus-5-5,claude-opus-5,opus-4.8,claude-fable-5.1,claude-fable-5,opus-4.7,claude-sonnet-5,sonnet-4.6,claude-4.5-haiku,claude-haiku-5-5"
             exposes-max-mode="no" exposes-thinking="yes"
             exposes-orchestration="yes"
-            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context; as of 2.1.219 Claude Opus 5 ships as the new default Opus (1M context, fast mode at $10/$50 per Mtok) and Opus 4.7 is removed from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.280 ships Claude Opus 5.5 as the new default Opus (1M context, $4/$20 per Mtok with $0.20/Mtok cache reads) and changes the Pro and Team Standard default model from Sonnet to Opus (matching Max / Team Premium / Enterprise); 2.1.220–2.1.280 are bug-fix / reliability / self-hosted-runner / UI-polish / plugin-safety / VS Code / Claude apps / AGENTS.md / auto-mode-server-classifier releases with no effort/thinking surface changes beyond the 2.1.267 `maxEffortLevel` cap and the 2.1.269 `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) knob for the Workflow tool's per-run concurrent-agent limit noted below (2.1.224 adds `claude self-hosted-runner` for turning your own machines into places where Claude Code web/mobile/desktop sessions can run, cross-session `SendMessage`, and archive-plugin sources; 2.1.225 adds gateway spend-limit reporting to the usage warning; 2.1.227 polishes the slash-command menu and fixes feature-flag evaluation for expired login tokens; 2.1.257 ships Claude Fable 5.1 as the new default Fable at 1M context and $10/$50 per Mtok; 2.1.259 adds `managedMcpServers` policy and `--permission-prompts none` for unattended headless hosts; 2.1.260 adds an inline `/diff` panel and a headless text form of `/advisor`; 2.1.261 adds `/skill-doctor` and `bashOutputMaxChars` / `taskOutputMaxChars` settings; 2.1.263 is a reliability release; 2.1.265 adds a `--plugin-dir` folder-of-plugins mode and tightens plugin path containment; 2.1.266 restores gateway/proxy behavior when `CLAUDE_CODE_USE_GATEWAY` is set alongside an API key or `apiKeyHelper`; 2.1.267 adds a `maxEffortLevel` setting — top-level or per model under `modelSettings` — that CAPS the effort level on every provider including Bedrock, Vertex, and Foundry while still letting users pick any lower level, plus `--system-prompt-snapshot off` for iterating on prompt text and a fix for `effort:` frontmatter on custom commands, skills, and subagents being ignored on models whose default effort is still pinned; 2.1.269 adds `claude plugin eval` for scored plugin eval suites, `/output-style [name]` to list and switch output styles (including over Remote Control and in headless sessions), a Bash-tool file-edit diff (setting `bashEditDiffEnabled`), `OTEL_METRICS_INCLUDE_REPOSITORY` for tagging OpenTelemetry metrics and events with `vcs.*` attributes, `CLAUDE_CODE_GATEWAY_MODEL_DISCOVERY_TIMEOUT_MS` to extend the LLM gateway `/v1/models` discovery timeout, and `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise the Workflow tool's per-run concurrent-agent limit for inference-bound fan-outs — none of which change the `/effort` vocabulary; 2.1.270 fixes read-only git commands in Bash unexpectedly asking for permission after a session had been running for a while, a 2.1.269 regression, with no surface changes; 2.1.271 adds fast mode in Claude Code Remote (cloud and self-hosted runner) sessions where organization policy allows it, mouse support in the `/config` panel, per-command Bash / PowerShell / Monitor `allowed_domains` in auto mode with sandboxing, agent-frontmatter and `--agents` JSON `omitClaudeMd` to let custom / plugin subagents run without CLAUDE.md files (managed policy still loads), and `--accept-command <sha256>` for `claude plugin install` / `update`; 2.1.272 is a bug-fix / reliability release; 2.1.273 adds `x-claude-code-*` LLM-gateway request-hint headers behind `CLAUDE_CODE_GATEWAY_HINT_HEADERS=1`, forking a `--remote-control` / `/remote-control` session from the Claude app as a local background session, and MCP-server-disconnected notifications, plus fixes for permission handling, credential/auth error messages, prompt-cache retention across `/login` / `/upgrade` / `/extra-usage`, and gateway 401 messaging — no effort/thinking surface changes; 2.1.274 adds a critical-memory-usage warning with recovery steps, `CLAUDE_CODE_MCP_STARTUP_WAIT_MS` to bound how long the first non-interactive turn waits for connecting MCP servers, an `effort` attribute on the `claude_code.llm_request` OpenTelemetry trace span, plus assorted VS Code, Claude Code on the web, Claude Tag, and Code Review fixes and improvements — no changes to the `/effort` vocabulary or extended-thinking controls; 2.1.275 adds signed-in account confirmation for Claude apps gateway sign-in, a send-now key (ctrl+enter, or ctrl+x ctrl+s) that flushes queued messages mid-turn, syncing of claude.ai-account skills and plugins into terminal sessions (opt out with `syncClaudeAiSkills: false` / `syncClaudeAiPlugins: false`), `/plugin install <plugin> --marketplace <source>`, and a startup warning when `otelHeadersHelper` fails, plus a broad set of reliability and rendering fixes — no changes to the `/effort` vocabulary or extended-thinking controls; 2.1.276 is a hotfix for a 2.1.275 regression where every request behind a proxy or gateway failed with `400 … Input tag 'advisor_20260301'`, with no surface changes; 2.1.277 adds AGENTS.md fallback support (in a project with no CLAUDE.md, Claude Code reads AGENTS.md instead — configurable under \"Project instructions\" in `/config`; extended by 2.1.281 to Bedrock, Vertex, Foundry, LLM gateways and telemetry-disabled sessions), `CLAUDE_GATEWAY_PROXY_IS_EGRESS_BOUNDARY=1` for Claude apps gateways whose only egress is a forward proxy, an optional `headers:` map on Claude apps gateway upstreams, plus assorted reliability, plugin, background-task, and VS Code / Claude Code on the web / Claude Tag fixes — no changes to the `/effort` vocabulary or extended-thinking controls; 2.1.278 changes auto mode for Claude API and Enterprise users, and on Bedrock, Vertex, Foundry and gateways, to default to the server-side classifier that does not charge for classifier overhead (opt out on Bedrock, Vertex, Foundry and gateways with `CLAUDE_CODE_AUTO_MODE_SERVER=0`; warns on billed fallback) and adds an `Auto mode server` row to `/status` showing whether this session's auto mode classifier runs on the server — no changes to the `/effort` vocabulary or extended-thinking controls; 2.1.280 ships Claude Opus 5.5 as the new default Opus model at 1M context and $4/$20 per Mtok, changes the Pro and Team Standard default model from Sonnet to Opus (matching Max / Team Premium / Enterprise), and stops Opus 4.7, Opus 4.8 and Fable 5 from holding their launch-default effort over an explicit `/effort`, `effortLevel`, project or managed setting — the `/effort` vocabulary itself is unchanged; 2.1.281–2.1.285 are reliability / plugin / gateway / VS Code / Claude Tag / Artifact releases, with 2.1.284 adding Claude Sonnet 5.5 as the default Sonnet on the Anthropic API (1M context, $2/$10 per Mtok) and making Ultracode its own `/effort` toggle, and 2.1.285 adding `claude --desktop` to open the Claude desktop app on the current directory and an `allowedProviders` managed setting). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 5, Opus 5.5, Opus 4.7, Opus 4.8, Sonnet 5, Sonnet 5.5, Fable 5, and Fable 5.1 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one; deployments may set `maxEffortLevel` to cap the maximum reachable level on every provider), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls, plus Ultracode (session-wide Dynamic Workflows tied to xhigh; since 2.1.284 its own `/effort` toggle — Tab or `/effort ultracode [on|off]` — that keeps the current effort level, with only `claude --effort ultracode` also setting xhigh; set via `/effort ultracode` or `\"ultracode\": true`; 2.1.202+ adds a `/config` \"Dynamic workflow size\" advisory guideline, 2.1.219 defaults it to medium (aim for fewer than 15 agents) with the `workflowSizeGuideline` settings key to set it from any settings file, and 2.1.269 adds `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise the per-run concurrent-agent cap for the Workflow tool) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized)." />
+            best-for="Default for Claude coding or terminal tasks when a claude.ai Max subscription is active — $0 marginal cost until the Max budget is exhausted, full tool-use surface, runs as a CLI, IDE extension inside Cursor, native VS Code extension, and as of 2.1.170+ also ships Claude Fable 5 (Mythos-class) plus a first-class Claude in Chrome browser-control integration (GA in 2.1.198), with Claude Sonnet 5 now the default model (2.1.197+) at native 1M-token context; as of 2.1.219 Claude Opus 5 ships as the new default Opus (1M context, fast mode at $10/$50 per Mtok) and Opus 4.7 is removed from fast mode so `/fast` now applies to Opus 5 and Opus 4.8; 2.1.280 ships Claude Opus 5.5 as the new default Opus (1M context, $4/$20 per Mtok with $0.20/Mtok cache reads) and changes the Pro and Team Standard default model from Sonnet to Opus (matching Max / Team Premium / Enterprise); 2.1.220–2.1.280 are bug-fix / reliability / self-hosted-runner / UI-polish / plugin-safety / VS Code / Claude apps / AGENTS.md / auto-mode-server-classifier releases with no effort/thinking surface changes beyond the 2.1.267 `maxEffortLevel` cap and the 2.1.269 `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) knob for the Workflow tool's per-run concurrent-agent limit noted below (2.1.224 adds `claude self-hosted-runner` for turning your own machines into places where Claude Code web/mobile/desktop sessions can run, cross-session `SendMessage`, and archive-plugin sources; 2.1.225 adds gateway spend-limit reporting to the usage warning; 2.1.227 polishes the slash-command menu and fixes feature-flag evaluation for expired login tokens; 2.1.257 ships Claude Fable 5.1 as the new default Fable at 1M context and $10/$50 per Mtok; 2.1.259 adds `managedMcpServers` policy and `--permission-prompts none` for unattended headless hosts; 2.1.260 adds an inline `/diff` panel and a headless text form of `/advisor`; 2.1.261 adds `/skill-doctor` and `bashOutputMaxChars` / `taskOutputMaxChars` settings; 2.1.263 is a reliability release; 2.1.265 adds a `--plugin-dir` folder-of-plugins mode and tightens plugin path containment; 2.1.266 restores gateway/proxy behavior when `CLAUDE_CODE_USE_GATEWAY` is set alongside an API key or `apiKeyHelper`; 2.1.267 adds a `maxEffortLevel` setting — top-level or per model under `modelSettings` — that CAPS the effort level on every provider including Bedrock, Vertex, and Foundry while still letting users pick any lower level, plus `--system-prompt-snapshot off` for iterating on prompt text and a fix for `effort:` frontmatter on custom commands, skills, and subagents being ignored on models whose default effort is still pinned; 2.1.269 adds `claude plugin eval` for scored plugin eval suites, `/output-style [name]` to list and switch output styles (including over Remote Control and in headless sessions), a Bash-tool file-edit diff (setting `bashEditDiffEnabled`), `OTEL_METRICS_INCLUDE_REPOSITORY` for tagging OpenTelemetry metrics and events with `vcs.*` attributes, `CLAUDE_CODE_GATEWAY_MODEL_DISCOVERY_TIMEOUT_MS` to extend the LLM gateway `/v1/models` discovery timeout, and `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise the Workflow tool's per-run concurrent-agent limit for inference-bound fan-outs — none of which change the `/effort` vocabulary; 2.1.270 fixes read-only git commands in Bash unexpectedly asking for permission after a session had been running for a while, a 2.1.269 regression, with no surface changes; 2.1.271 adds fast mode in Claude Code Remote (cloud and self-hosted runner) sessions where organization policy allows it, mouse support in the `/config` panel, per-command Bash / PowerShell / Monitor `allowed_domains` in auto mode with sandboxing, agent-frontmatter and `--agents` JSON `omitClaudeMd` to let custom / plugin subagents run without CLAUDE.md files (managed policy still loads), and `--accept-command <sha256>` for `claude plugin install` / `update`; 2.1.272 is a bug-fix / reliability release; 2.1.273 adds `x-claude-code-*` LLM-gateway request-hint headers behind `CLAUDE_CODE_GATEWAY_HINT_HEADERS=1`, forking a `--remote-control` / `/remote-control` session from the Claude app as a local background session, and MCP-server-disconnected notifications, plus fixes for permission handling, credential/auth error messages, prompt-cache retention across `/login` / `/upgrade` / `/extra-usage`, and gateway 401 messaging — no effort/thinking surface changes; 2.1.274 adds a critical-memory-usage warning with recovery steps, `CLAUDE_CODE_MCP_STARTUP_WAIT_MS` to bound how long the first non-interactive turn waits for connecting MCP servers, an `effort` attribute on the `claude_code.llm_request` OpenTelemetry trace span, plus assorted VS Code, Claude Code on the web, Claude Tag, and Code Review fixes and improvements — no changes to the `/effort` vocabulary or extended-thinking controls; 2.1.275 adds signed-in account confirmation for Claude apps gateway sign-in, a send-now key (ctrl+enter, or ctrl+x ctrl+s) that flushes queued messages mid-turn, syncing of claude.ai-account skills and plugins into terminal sessions (opt out with `syncClaudeAiSkills: false` / `syncClaudeAiPlugins: false`), `/plugin install <plugin> --marketplace <source>`, and a startup warning when `otelHeadersHelper` fails, plus a broad set of reliability and rendering fixes — no changes to the `/effort` vocabulary or extended-thinking controls; 2.1.276 is a hotfix for a 2.1.275 regression where every request behind a proxy or gateway failed with `400 … Input tag 'advisor_20260301'`, with no surface changes; 2.1.277 adds AGENTS.md fallback support (in a project with no CLAUDE.md, Claude Code reads AGENTS.md instead — configurable under \"Project instructions\" in `/config`; extended by 2.1.281 to Bedrock, Vertex, Foundry, LLM gateways and telemetry-disabled sessions), `CLAUDE_GATEWAY_PROXY_IS_EGRESS_BOUNDARY=1` for Claude apps gateways whose only egress is a forward proxy, an optional `headers:` map on Claude apps gateway upstreams, plus assorted reliability, plugin, background-task, and VS Code / Claude Code on the web / Claude Tag fixes — no changes to the `/effort` vocabulary or extended-thinking controls; 2.1.278 changes auto mode for Claude API and Enterprise users, and on Bedrock, Vertex, Foundry and gateways, to default to the server-side classifier that does not charge for classifier overhead (opt out on Bedrock, Vertex, Foundry and gateways with `CLAUDE_CODE_AUTO_MODE_SERVER=0`; warns on billed fallback) and adds an `Auto mode server` row to `/status` showing whether this session's auto mode classifier runs on the server — no changes to the `/effort` vocabulary or extended-thinking controls; 2.1.280 ships Claude Opus 5.5 as the new default Opus model at 1M context and $4/$20 per Mtok, changes the Pro and Team Standard default model from Sonnet to Opus (matching Max / Team Premium / Enterprise), and stops Opus 4.7, Opus 4.8 and Fable 5 from holding their launch-default effort over an explicit `/effort`, `effortLevel`, project or managed setting — the `/effort` vocabulary itself is unchanged; 2.1.281–2.1.285 are reliability / plugin / gateway / VS Code / Claude Tag / Artifact releases, with 2.1.284 adding Claude Sonnet 5.5 as the default Sonnet on the Anthropic API (1M context, $2/$10 per Mtok) and making Ultracode its own `/effort` toggle, and 2.1.285 adding `claude --desktop` to open the Claude desktop app on the current directory and an `allowedProviders` managed setting). Exposes the full `/effort` dial (low/medium/high/xhigh/max — Opus 4.6 and Sonnet 4.6 top out at max with no xhigh step; Opus 5, Opus 5.5, Opus 4.7, Opus 4.8, Sonnet 5, Sonnet 5.5, Haiku 5.5, Fable 5, and Fable 5.1 expose the full range; effort levels a model does not support fall back to the highest supported level at or below the requested one; deployments may set `maxEffortLevel` to cap the maximum reachable level on every provider), the Option+T/Alt+T, `alwaysThinkingEnabled`, and `MAX_THINKING_TOKENS=0` on/off controls on models that can turn thinking off (2.1.281 and 2.1.300 drop the Thinking switch for the always-thinking Opus 5.5, Sonnet 5.5, Haiku 5.5, Fable 5 and Fable 5.1), plus Ultracode (session-wide Dynamic Workflows tied to xhigh; since 2.1.284 its own `/effort` toggle — Tab or `/effort ultracode [on|off]` — that keeps the current effort level, with only `claude --effort ultracode` also setting xhigh; set via `/effort ultracode` or `\"ultracode\": true`; 2.1.202+ adds a `/config` \"Dynamic workflow size\" advisory guideline, 2.1.219 defaults it to medium (aim for fewer than 15 agents) with the `workflowSizeGuideline` settings key to set it from any settings file, and 2.1.269 adds `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` (1–256) to raise the per-run concurrent-agent cap for the Workflow tool) and the per-turn `ultrathink` keyword (`think`/`think hard`/`think more` are not recognized)." />
     <method id="claude-web" name="claude.ai web / desktop"
             provider="anthropic" billing="subscription-included"
             provider-jurisdiction="us"
@@ -2077,7 +2113,9 @@
       bullets. If the chosen access method's `exposes-thinking`
       attribute is `no`, OMIT BOTH LINES from the block regardless of
       complexity — do not emit `N/A`, and do not assert any effort or
-      thinking level for that pick anywhere in the RATIONALE.
+      thinking level for that pick anywhere in the RATIONALE. If the
+      chosen MODEL is marked `always-thinks="yes"`, emit EFFORT and OMIT
+      the THINKING line: that model has no thinking toggle on any surface.
 
     Step E2 — ORCHESTRATION: apply the decision rule from
       <orchestration-context>. If the chosen method has
@@ -2102,7 +2140,8 @@
       platform exposes. The PLATFORM field is the `name` attribute of the
       chosen access method. Determine each setting line from that
       method's attributes:
-        - `exposes-thinking="yes"` → emit EFFORT and THINKING.
+        - `exposes-thinking="yes"` → emit EFFORT and THINKING (EFFORT
+          only when the chosen model is marked `always-thinks="yes"`).
         - `exposes-max-mode="yes"` → emit MAX MODE.
         - `exposes-orchestration="yes"` → emit ORCHESTRATION.
         - every attribute that is `no` → emit NO line for that field.
@@ -2219,7 +2258,8 @@
     Step G, driven by the access method's attributes):
 
       EFFORT         emit iff `exposes-thinking="yes"`
-      THINKING       emit iff `exposes-thinking="yes"`
+      THINKING       emit iff `exposes-thinking="yes"` AND the chosen
+                     model is not marked `always-thinks="yes"`
       MAX MODE       emit iff `exposes-max-mode="yes"`  (today: Cursor only)
       ORCHESTRATION  emit iff `exposes-orchestration="yes"` (today: Claude
                      Code only)
@@ -2234,6 +2274,9 @@
     Concretely, on today's catalog:
       - Claude Code  → MODEL, BACKUP, PLATFORM, EFFORT, THINKING,
                        ORCHESTRATION, CONVERSATION, RATIONALE. No MAX MODE.
+                       No THINKING either for an `always-thinks="yes"`
+                       model (Opus 5.5, Sonnet 5.5, Haiku 5.5, Fable 5,
+                       Fable 5.1) — on this or any other surface.
       - Codex / OpenAI API / Gemini / DeepSeek / Anthropic API / most others
                      → MODEL, BACKUP, PLATFORM, EFFORT, THINKING,
                        CONVERSATION, RATIONALE. No MAX MODE, no

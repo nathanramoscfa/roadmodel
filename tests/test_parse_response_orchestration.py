@@ -132,13 +132,14 @@ def test_v2_thinking_is_never_an_effort_word_on_claude_code() -> None:
 
 def test_v2_effort_ultracode_round_trips() -> None:
     """D3: Ultracode is the TOP value of EFFORT (above Max), not an
-    ORCHESTRATION value — it must survive parse -> display verbatim."""
+    ORCHESTRATION value — it parses verbatim and displays as the two controls
+    it sets in Claude Code 2.1.284+: xhigh effort and the Ultracode switch."""
     parsed = parse_response(_V2_CLAUDE_CODE_ULTRACODE)
     assert parsed["effort"] == "Ultracode"
     # ORCHESTRATION: None still means "no orchestration" -> dropped as absent.
     assert "orchestration" not in parsed
     settings = _structured_settings(parsed)
-    assert settings == {"effort": "Ultracode", "thinking": "On"}
+    assert settings == {"effort": "XHigh", "ultracode": "On", "thinking": "On"}
 
 
 def test_v2_cursor_block_without_effort_or_thinking_parses() -> None:
@@ -198,10 +199,11 @@ def test_orchestration_row_does_not_break_parsing() -> None:
 
 def test_v1_orchestration_ultracode_still_folds_into_effort() -> None:
     """LEGACY ACCEPTANCE: a v1 block has no EFFORT line, so ORCHESTRATION:
-    Ultracode must still fold into the effort VALUE (Claude Code's top rung) and
-    THINKING must still display as the On/Off toggle."""
+    Ultracode must still reach the display as Claude Code's controls — xhigh
+    effort plus the Ultracode switch — and THINKING must still display as the
+    On/Off toggle."""
     settings = _structured_settings(parse_response(_ORCHESTRATION_BLOCK))
-    assert settings == {"effort": "Ultracode", "thinking": "On"}
+    assert settings == {"effort": "XHigh", "ultracode": "On", "thinking": "On"}
     assert "orchestration" not in settings
     assert "max_mode" not in settings  # Claude Code never shows a Max Mode row
 

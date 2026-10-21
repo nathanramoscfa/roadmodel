@@ -128,6 +128,10 @@ _ROADMAP_CONTRACT_HEADER = (
     "(Low/Medium/High/XHigh/Max/Ultracode, Ultracode being the top rung). "
     "THINKING is a two-position toggle taking ONLY 'On' or 'Off'. "
     "'THINKING: Max' is invalid.\n"
+    "- A model that always thinks (Opus 5.5, Sonnet 5.5, Haiku 5.5, the Fable "
+    'models — always-thinks="yes" in <model-options>) has no thinking '
+    "toggle on any surface: emit EFFORT and NO THINKING line for it, never "
+    "'THINKING: Off'.\n"
     "- FLAT-FUNDING GATE: when the chosen platform is subscription-funded, the "
     "model family is covered by that subscription, AND the user-context "
     "declares 'Consumption headroom: uncapped' for it (the operator does not "
@@ -383,9 +387,10 @@ def create_app() -> Any:
         Returns the structured payload: ``model``, ``platform``, optional
         ``backup``, ``rationale`` (+ ``rationale_sections``), ``conversation``,
         and ``settings`` — the per-surface controls. ``settings`` carries ONLY
-        the dials the chosen platform actually exposes (Claude Code: effort +
-        thinking; Codex / OpenAI API: intelligence; Cursor: max_mode +
-        thinking), never a placeholder for a control that surface lacks.
+        the dials the chosen platform actually exposes (Claude Code: effort,
+        ultracode when on, and thinking on models that can turn it off;
+        Codex / OpenAI API: intelligence; Cursor: max_mode + thinking), never a
+        placeholder for a control that surface lacks.
         """
         if not task_description.strip():
             raise ValueError("Task must contain text.")
@@ -519,7 +524,7 @@ def create_app() -> Any:
         # exposes). Ship the per-surface DISPLAY rules alongside it, or an
         # offline consumer has no way to render a surface's real controls and
         # emits raw selector vocabulary (e.g. "Thinking: XHigh" for Claude Code,
-        # whose THINKING is a toggle and whose top effort rung is Ultracode).
+        # whose THINKING is a toggle and whose Ultracode is its own switch).
         settings_display_text = _read_bundled_doc(
             BUNDLED_SETTINGS_DISPLAY_PATH, "settings-display.md"
         )

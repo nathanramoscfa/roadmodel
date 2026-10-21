@@ -30,4 +30,4 @@
 
 - Max Mode follows complexity rules from the selector.
 - GPT reasoning defaults to medium and escalates with complexity.
-- Claude extended thinking defaults to off and escalates with complexity.
+- Claude extended thinking defaults to on where the model has the toggle; Opus 5.5, Sonnet 5.5, Haiku 5.5 and the Fable models always think.

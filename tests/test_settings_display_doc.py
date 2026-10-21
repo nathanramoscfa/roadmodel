@@ -40,7 +40,8 @@ _TABLE_RE = re.compile(
 _ABSENT = "—"
 
 # Input columns, in table order, mapped to the parsed-block keys they drive.
-_INPUT_COLUMNS = ("max_mode", "effort", "thinking", "orchestration")
+# MODEL matters because a model that always thinks has no Thinking toggle.
+_INPUT_COLUMNS = ("model", "max_mode", "effort", "thinking", "orchestration")
 
 Row = tuple[str, dict[str, str], dict[str, str]]
 
@@ -59,7 +60,7 @@ def _rows() -> list[Row]:
         if not line.startswith("|") or set(line) <= set("|-: "):
             continue
         cells = [c.strip() for c in line.strip("|").split("|")]
-        if len(cells) != 6 or cells[0] == "PLATFORM":
+        if len(cells) != 7 or cells[0] == "PLATFORM":
             continue
         platform, *inputs, expected_raw = cells
         block = {
@@ -99,6 +100,16 @@ def test_the_table_covers_both_contract_versions() -> None:
     )
 
 
+def test_the_table_covers_models_with_and_without_a_thinking_toggle() -> None:
+    """A model that always thinks shows no Thinking row; a model that can turn
+    thinking off keeps it. Both must stay pinned, on Claude Code and off it."""
+    rows = _rows()
+    no_toggle = [(p, b) for p, b, e in rows if "model" in b and "thinking" not in e]
+    toggle = [(p, b) for p, b, e in rows if "model" in b and "thinking" in e]
+    assert {p for p, _ in no_toggle} >= {"Claude Code", "Anthropic API", "OpenRouter"}
+    assert any(p == "Claude Code" for p, _ in toggle)
+
+
 @pytest.mark.parametrize("row", _rows(), ids=_row_id)
 def test_documented_mapping_matches_structured_settings(row: Row) -> None:
     platform, block, expected = row
@@ -119,9 +130,24 @@ def test_claude_code_never_surfaces_a_max_mode_or_orchestration_row() -> None:
             "orchestration": "Ultracode",
         }
     )
-    assert set(got) == {"effort", "thinking"}
-    assert got["effort"] == "Ultracode"  # folded, not a separate row
+    assert got == {"effort": "XHigh", "ultracode": "On", "thinking": "On"}
     assert got["thinking"] == "On"  # a toggle — never "XHigh"
+
+
+def test_a_model_that_always_thinks_gets_no_thinking_key() -> None:
+    """Claude Code 2.1.281 / 2.1.300: no Thinking switch on Opus 5.5, Sonnet 5.5,
+    Haiku 5.5 or Fable, and a saved "off" has no effect — so neither an engine's
+    On nor its Off may reach the display as a setting to apply."""
+    for model in ("Opus 5.5", "claude-opus-5-5", "Claude Fable 5.1", "Haiku 5.5"):
+        for thinking in ("On", "Off"):
+            got = _structured_settings(
+                {"platform": "Claude Code", "model": model, "effort": "High", "thinking": thinking}
+            )
+            assert got == {"effort": "High"}, (model, thinking, got)
+    kept = _structured_settings(
+        {"platform": "Claude Code", "model": "Opus 5", "effort": "High", "thinking": "Off"}
+    )
+    assert kept == {"effort": "High", "thinking": "Off"}
 
 
 def test_claude_code_v2_block_has_no_max_mode_key() -> None:

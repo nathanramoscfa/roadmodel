@@ -77,10 +77,10 @@ _REQUIRED_KEYS: Final = ("model", "platform", "conversation", "rationale")
 #
 # ORCHESTRATION is the selector's Dynamic-Workflows axis — kept captured here so
 # _structured_settings can read it — but it is NEVER surfaced as its own settings
-# row: on the Claude Code path a LEGACY (v1) ORCHESTRATION of Ultracode is FOLDED
-# into the effort value ("Ultracode" = the top of Claude Code's effort ladder),
-# matching Claude Code's single /effort dial. v2 emits Ultracode as an EFFORT
-# value directly and restricts ORCHESTRATION to None/PerPrompt.
+# row. The selector says a session-wide ultracode as `EFFORT: Ultracode` (v2) or
+# `ORCHESTRATION: Ultracode` (v1); since Claude Code 2.1.284 Ultracode is its own
+# on/off switch next to the effort slider, so _structured_settings shows either
+# form as an `ultracode: On` setting beside the effort level it runs at.
 _OPTIONAL_KEYS: Final = ("backup", "max_mode", "effort", "thinking", "orchestration")
 
 # Optional fields whose literal "None"/"N/A" value means "there is none" rather
@@ -344,6 +344,10 @@ _SAAS_HEADER: Final = (
     "LEVEL (Low/Medium/High/XHigh/Max/Ultracode — Ultracode is the TOP rung, "
     "above Max). THINKING is a two-position toggle and takes ONLY 'On' or "
     "'Off' — never an effort word, never a number. 'THINKING: Max' is invalid.\n"
+    "- A model that always thinks (Opus 5.5, Sonnet 5.5, Haiku 5.5, the Fable "
+    'models — always-thinks="yes" in <model-options>) has NO thinking '
+    "toggle on any surface: emit EFFORT and NO THINKING line for it, and never "
+    "'THINKING: Off' (for a speed task, lower EFFORT instead).\n"
     "- On a surface with no thinking dial (Cursor, xAI API) emit NEITHER EFFORT "
     "NOR THINKING, and the RATIONALE must not assert any thinking or effort "
     "level for it.\n"
@@ -452,6 +456,10 @@ _SAAS_LADDER_HEADER: Final = (
     "- EFFORT carries the reasoning LEVEL (Low/Medium/High/XHigh/Max/Ultracode, "
     "Ultracode topmost); THINKING is an On/Off toggle ONLY and never carries an "
     "effort word.\n"
+    "- A model that always thinks (Opus 5.5, Sonnet 5.5, Haiku 5.5, the Fable "
+    'models — always-thinks="yes" in <model-options>) has NO thinking '
+    "toggle on any surface: emit EFFORT and NO THINKING line for it, and never "
+    "'THINKING: Off' (for a speed task, lower EFFORT instead).\n"
     "- Determine the QUALITY pick FIRST with NO budget cap: the highest-quality "
     "model, tier, and effort the task genuinely warrants. It anchors the ladder.\n"
     "- BALANCED is the best-VALUE rung, a STRICTLY-LOWER pricing tier AND/OR lower "
@@ -547,6 +555,10 @@ _SAAS_LADDER_TABLE_HEADER: Final = (
     "- Each block's EFFORT is the row's level for that tier, in the platform's own "
     "words (xhigh is XHigh). THINKING is an On/Off toggle only and never carries an "
     "effort word.\n"
+    "- A model that always thinks (Opus 5.5, Sonnet 5.5, Haiku 5.5, the Fable "
+    'models — always-thinks="yes" in <model-options>) has NO thinking '
+    "toggle on any surface: emit EFFORT and NO THINKING line for it, and never "
+    "'THINKING: Off' (for a speed task, lower EFFORT instead).\n"
     "- Between PLATFORM and CONVERSATION each block emits ONLY the setting lines ITS "
     "OWN PLATFORM exposes, in this order: MAX MODE (Max-Mode platforms only — today "
     "Cursor), EFFORT then THINKING (reasoning-dial platforms only), ORCHESTRATION "
@@ -985,9 +997,15 @@ def _structured_settings(base: dict[str, str]) -> dict[str, str]:
       Claude Code effort value.
 
     The one thing this function must NEVER do is invent a dial: an absent MAX
-    MODE line yields no ``max_mode`` key rather than a fabricated "OFF".
+    MODE line yields no ``max_mode`` key rather than a fabricated "OFF", and a
+    model that always thinks (``cost.always_thinks``: Opus 5.5, Sonnet 5.5,
+    Haiku 5.5, Fable) gets no ``thinking`` key, because no surface offers a
+    Thinking toggle for it — even when the block carried a THINKING line.
     """
     plat = base["platform"].strip().lower()
+    # Claude Code 2.1.281 / 2.1.300: no Thinking switch on these models, and a
+    # saved "off" has no effect, so the dial does not exist for them.
+    no_toggle = cost.always_thinks(base.get("model") or "")
     # Absent key vs. present-but-empty are both "no line emitted" (D1).
     max_mode_raw = (base.get("max_mode") or "").strip()
     thinking_raw = (base.get("thinking") or "").strip()
@@ -1007,32 +1025,46 @@ def _structured_settings(base: dict[str, str]) -> dict[str, str]:
             return default
         return "Off" if thinking_raw.lower() in offish else "On"
 
+    def claude_code(effort: str, *, ultracode: bool, thinking: str) -> dict[str, str]:
+        """Claude Code's controls in its own order: the effort level, the
+        Ultracode switch when on, and the Thinking toggle where the model has
+        one. ``EFFORT: Ultracode`` is ultracode on at xhigh (what
+        ``claude --effort ultracode`` sets), so it splits into both."""
+        if effort.strip().lower() == "ultracode":
+            effort, ultracode = "XHigh", True
+        out = {"effort": effort}
+        if ultracode:
+            out["ultracode"] = "On"
+        if not no_toggle:
+            out["thinking"] = thinking
+        return out
+
     if "claude code" in plat.replace("_", " "):
-        # Claude Code exposes a SINGLE effort dial — Low / Medium / High / XHigh /
-        # Max / Ultracode (top) — plus a separate Thinking on/off toggle. It has
-        # NO standalone "orchestration" control in its UI. The selector still
-        # reasons about THINKING and ORCHESTRATION as separate axes (that internal
-        # model drives the daily effort-conformance tracker, which requires
-        # Ultracode to read as a session setting = xhigh + Dynamic Workflows), but
-        # Ultracode IS the top of Claude Code's effort ladder — so we FOLD an
-        # ORCHESTRATION of Ultracode into the effort VALUE here and never surface a
-        # separate "orchestration" row (the 0.2.15 row didn't match Claude Code's
-        # UI and produced incoherent "Effort: High + Orchestration: Ultracode").
+        # Claude Code shows an effort slider (Low / Medium / High / XHigh / Max),
+        # an Ultracode on/off switch beside it (its own toggle since 2.1.284, at
+        # any effort level), and a Thinking toggle only on models that can turn
+        # thinking off. It has NO standalone "orchestration" control. The
+        # selector says a session-wide ultracode as `EFFORT: Ultracode` (= xhigh
+        # with Dynamic Workflows, the meaning the daily effort-conformance
+        # tracker pins), so it is shown here as the two controls it sets.
         # NOTE the emission rule: Claude Code has NO Max Mode, so this branch
         # never returns a max_mode key even if a (v1) block wrongly carried one.
         orch = (base.get("orchestration") or "").strip().lower()
+        ultracode = (base.get("ultracode") or "").strip().lower() == "on"
         if effort_raw:
-            # v2: EFFORT carries the level (including "Ultracode", its top rung)
-            # and THINKING is only ever the toggle. "THINKING: Max" — the bug this
-            # split exists to kill — can no longer reach the display.
-            return {"effort": effort_raw, "thinking": thinking_toggle()}
+            # v2: EFFORT carries the level and THINKING is only ever the toggle.
+            # "THINKING: Max" — the bug this split exists to kill — can no
+            # longer reach the display.
+            return claude_code(effort_raw, ultracode=ultracode, thinking=thinking_toggle())
         # --- v1 legacy derivation (no EFFORT line) ---
         if orch == "ultracode":
-            return {"effort": "Ultracode", "thinking": "On"}
+            return claude_code("Ultracode", ultracode=True, thinking="On")
         if thinking_raw.lower() in offish:
-            return {"effort": "Low", "thinking": "Off"}
+            # Thinking off on a model that cannot turn it off is no setting at
+            # all; the floor effort is what the block still asks for.
+            return claude_code("Low", ultracode=False, thinking="Off")
         if thinking_raw:
-            return {"effort": thinking_raw, "thinking": "On"}
+            return claude_code(thinking_raw, ultracode=False, thinking="On")
         # Neither dial reported: emit no reasoning rows rather than a blank one.
         return {}
 
@@ -1078,9 +1110,11 @@ def _structured_settings(base: dict[str, str]) -> dict[str, str]:
     if max_mode_raw:
         settings["max_mode"] = max_label
     if effort_raw:
-        # v2: explicit level + toggle.
+        # v2: explicit level + toggle (no toggle on a model that always thinks,
+        # wherever it is served: the Anthropic API, OpenRouter, Antigravity).
         settings["effort"] = effort_raw
-        settings["thinking"] = thinking_toggle()
+        if not no_toggle:
+            settings["thinking"] = thinking_toggle()
     elif thinking_raw:
         # v1: THINKING carried the level, and the display showed it verbatim.
         settings["thinking"] = thinking_raw
@@ -1553,8 +1587,8 @@ def _mark_specialist(picks: dict[str, dict[str, Any]], row: scoring.Ladder) -> N
     picks["quality"]["specialist_category"] = row.task.category
 
 
-# Claude Code's Ultracode is a session setting above its Max level: it stands
-# where the row says max.
+# Claude Code's Ultracode is a session switch that runs at any effort level: an
+# engine that writes it where the row says max keeps it, at Max.
 _ULTRACODE_PLATFORM: Final = "claude-code"
 
 
@@ -1565,7 +1599,9 @@ def _enforce_table_effort(ladder: dict[str, dict[str, str]], row: scoring.Ladder
     stands where the row says max. Two rungs on one model are told apart by
     effort alone, so an engine that copies the model but not the effort makes
     them identical. A surface with no documented dial keeps the engine's
-    mapping. Returns the tiers whose effort it set."""
+    mapping. An engine's ``Ultracode`` where the row says max becomes Max with
+    the Ultracode switch on (``/effort max``, then ``/effort ultracode``).
+    Returns the tiers whose effort it set."""
     adjusted: list[str] = []
     for tier in _LADDER_TIERS:
         base = ladder[tier]
@@ -1581,6 +1617,8 @@ def _enforce_table_effort(ladder: dict[str, dict[str, str]], row: scoring.Ladder
             and want == "max"
             and written == "ultracode"
         ):
+            base["effort"] = _effort_word(rung.native)
+            base["ultracode"] = "On"
             continue
         adjusted.append(tier)
         effort = _effort_word(rung.native)

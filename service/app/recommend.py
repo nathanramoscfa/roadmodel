@@ -465,6 +465,10 @@ def _build_backup(result: dict[str, Any], access_guard: AccessGuard | None) -> B
                 _structured_settings(
                     {
                         "platform": platform,
+                        # The model decides whether a Thinking toggle exists:
+                        # roadmodel >= 0.2.88 shows none for a model that always
+                        # thinks (an older package ignores the extra key).
+                        "model": name,
                         "max_mode": "Off",
                         # `thinking` is the v1 input key _structured_settings
                         # reads the LEVEL from; `effort` is its v2 name. Pass

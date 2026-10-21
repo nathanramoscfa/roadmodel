@@ -258,3 +258,16 @@ def test_active_tier_matches_a_price_the_operator_rounded() -> None:
     ultra = cost_module._match_active_tier(tiers, [("Google AI Ultra", "google", 200.0)])
     assert ultra is not None and ultra["tier"] == "Google AI Ultra ($200)"
     assert cost_module._match_active_tier(tiers, [("Google AI Pro", "google", 25.0)]) is None
+
+
+def test_always_thinks_resolves_ids_names_and_the_claude_prefix(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from roadmodel.cost import always_thinks
+
+    monkeypatch.setenv("ROADMODEL_CATALOG_PATH", str(REPO_ROOT / "docs" / "catalog.json"))
+
+    for ref in ("claude-opus-5-5", "Opus 5.5", "Claude Opus 5.5", "Fable 5.1", "Haiku 5.5"):
+        assert always_thinks(ref) is True, ref
+    for ref in ("Opus 5", "claude-opus-5", "Opus 4.8", "GPT-6.1 Sol", "", "not a model"):
+        assert always_thinks(ref) is False, ref

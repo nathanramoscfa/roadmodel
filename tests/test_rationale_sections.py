@@ -226,24 +226,26 @@ def test_recommend_structured_v2_effort_ultracode_round_trips(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     """D3: Ultracode is the TOP value of EFFORT (above Max) and reaches the
-    display verbatim — no orchestration row, no re-derivation."""
+    display as the controls it sets — xhigh effort plus the Ultracode switch —
+    with no orchestration row."""
     monkeypatch.setattr(recommend_module, "recommend", _fake_base_v2(effort="Ultracode"))
     payload = recommend_module.recommend_structured("plan a system", _config(tmp_path))
-    assert payload["settings"] == {"effort": "Ultracode", "thinking": "On"}
+    assert payload["settings"] == {"effort": "XHigh", "ultracode": "On", "thinking": "On"}
     assert "orchestration" not in payload["settings"]
 
 
 def test_recommend_structured_folds_ultracode_into_effort(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    """LEGACY ACCEPTANCE (v1 block). Claude Code has NO separate orchestration
-    dial — Ultracode is the TOP of its single /effort ladder (xhigh + Dynamic
-    Workflows). So an ORCHESTRATION of Ultracode FOLDS into the effort value and
-    there is NO separate orchestration settings row (0.2.16 reconciliation of
-    the 0.2.15 orchestration row)."""
+    """LEGACY ACCEPTANCE (v1 block). Claude Code has NO orchestration dial —
+    Ultracode is a switch in /effort (xhigh + Dynamic Workflows when launched
+    with `--effort ultracode`). So an ORCHESTRATION of Ultracode becomes the
+    effort level plus the Ultracode switch, and there is NO separate
+    orchestration settings row."""
     monkeypatch.setattr(recommend_module, "recommend", _fake_base_with(orchestration="Ultracode"))
     payload = recommend_module.recommend_structured("plan a system", _config(tmp_path))
-    assert payload["settings"]["effort"] == "Ultracode"
+    assert payload["settings"]["effort"] == "XHigh"
+    assert payload["settings"]["ultracode"] == "On"
     assert payload["settings"]["thinking"] == "On"
     assert "orchestration" not in payload["settings"]
 

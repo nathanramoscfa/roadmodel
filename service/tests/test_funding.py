@@ -1405,6 +1405,23 @@ def test_build_backup_follows_the_scorers_backup_plan() -> None:
     assert b.settings == {"effort": "High", "thinking": "On"}
 
 
+def test_build_backup_shows_no_thinking_toggle_for_a_model_that_always_thinks() -> None:
+    """Claude Code has no Thinking switch on Opus 5.5 (2.1.281 / 2.1.300), so a
+    backup run there carries its effort and no Thinking setting."""
+    from app.recommend import _build_backup
+
+    result = {
+        "model": "GPT-6.1 Sol",
+        "settings": {"intelligence": "High"},
+        "backup": "Opus 5.5",
+        "backup_plan": {"model": "Opus 5.5", "platform": "Claude Code", "effort": "High"},
+    }
+    b = _build_backup(result, None)
+    assert b is not None
+    assert b.platform == "Claude Code"
+    assert b.settings == {"effort": "High"}
+
+
 def test_build_backup_ignores_a_plan_for_a_backup_the_guard_replaced() -> None:
     from app.recommend import _build_backup
 

@@ -310,7 +310,8 @@ def test_recommend_structured_ladder_v2_settings_are_platform_conditional(
     result = recommend_structured_ladder("build a SQL agent", _config(tmp_path))
 
     quality = result["picks"]["quality"]["settings"]
-    assert quality == {"effort": "Ultracode", "thinking": "On"}
+    # EFFORT: Ultracode is shown as the two controls it sets (2.1.284+).
+    assert quality == {"effort": "XHigh", "ultracode": "On", "thinking": "On"}
     assert "max_mode" not in quality
 
     balanced = result["picks"]["balanced"]["settings"]

@@ -32,7 +32,8 @@ runs agreed; the flaky ones are called out.
 ## How the output axes show up (so you can target them)
 
 - **Thinking:** `Off` on trivial/speed prompts; `On` / an effort level on Claude
-  Code picks (Opus); **`N/A` on any Cursor or OpenAI-API pick** (those surfaces
+  Code picks (Opus) — and no Thinking at all on a model that always thinks
+  (Opus 5.5, Sonnet 5.5, Haiku 5.5, the Fable models); **`N/A` on any Cursor or OpenAI-API pick** (those surfaces
   don't expose the thinking dial). The finer `XHigh` vs `High` distinction lives
   in the rationale *text*, not the settings chip.
 - **Max Mode:** only appears on **Cursor** picks (it is a Cursor-surface

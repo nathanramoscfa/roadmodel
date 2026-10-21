@@ -61,9 +61,10 @@ const SHORT_HINT: Record<string, string> = {
   best: "Highest quality",
 };
 
-// budget_priority is the column itself; the rationale renders below; Claude
-// Code's Ultracode is the top of its one effort ladder, folded into the effort
-// value (roadmodel >= 0.2.16), so a stale `orchestration` key is hidden too.
+// budget_priority is the column itself; the rationale renders below. Claude
+// Code's Ultracode arrives as its own `ultracode` setting beside the effort
+// level (roadmodel >= 0.2.88), never as `orchestration`, so a stale
+// `orchestration` key is hidden too.
 const HIDDEN_SETTING_KEYS = new Set([
   "rationale",
   "budget_priority",
