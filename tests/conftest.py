@@ -90,8 +90,10 @@ def _no_ambient_key_aliases(monkeypatch: pytest.MonkeyPatch) -> None:
     canonical key names only, so without this a no-key test on such a machine
     finds a key and makes a real provider call.
     """
-    from roadmodel.config import PROVIDER_KEY_ENV_ALIASES
-
+    try:
+        from roadmodel.config import PROVIDER_KEY_ENV_ALIASES
+    except ImportError:  # agent-context-windows runs its tests without the package
+        return
     for names in PROVIDER_KEY_ENV_ALIASES.values():
         for name in names:
             monkeypatch.delenv(name, raising=False)
