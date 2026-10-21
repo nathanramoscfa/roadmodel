@@ -194,9 +194,8 @@ dial the chosen platform lacks gets NO line at all — never `Off`, never
   only for purely mechanical steps where latency matters. It never
   carries an effort word or a number; `THINKING: Max` is not a setting
   any surface can apply. Some models cannot disable extended
-  thinking — Opus 5.5, Sonnet 5.5, Haiku 5.5 and the Fable models —
-  so they carry no Thinking setting at all; never declare `Off` for
-  those.
+  thinking (the catalog marks them `always_thinks`), so they carry
+  no Thinking setting at all; never declare `Off` for those.
 - **Codex / OpenAI** — the surface labels its dial "Intelligence" in its
   own UI, but the emitted field is still `EFFORT` (same value, different
   name). It exposes no separate thinking toggle and no Max Mode.

@@ -15,7 +15,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - A roadmap's Settings table keeps its Thinking row and puts `—` in these models' columns, as it already does for Codex.
   - The Thinking toggle stays on Opus 5, Sonnet 5 and the 4.x models, which can still turn thinking off.
 - **Ultracode is its own setting.** Since Claude Code 2.1.284 Ultracode is an on/off switch beside the effort slider and works at any effort level. It is no longer a stop above Max. `EFFORT: Ultracode` (ultracode on at xhigh, what `claude --effort ultracode` sets) now shows as Effort `XHigh` plus `Ultracode: On`. A frontier-ladder pick the scorer puts at max runs at Effort `Max` with Ultracode on. The selector's vocabulary is unchanged, so the effort-conformance tracker keeps its meaning.
-- **The Claude Code tracker sees a control that disappears.** The tracker missed this because the docs changed their wording to "You can't turn thinking off on…". The extractor only matched "cannot be turned off on", so it has silently recorded no such models since 2026-09-10. It now matches both wordings.
+- **The Claude Code tracker sees a control that disappears.** It missed this change three ways:
+  - The docs began writing "You can't turn thinking off on…". The extractor only matched "cannot be turned off on", so from 2026-09-10 it silently recorded no such models.
+  - The changelog check exempted every "Fixed…" bullet.
+  - The model called 2.1.300 a no-op.
+
+  The tracker now:
+  - **Reads both wordings.** The extractor expands "the Fable models" from the effort table. It fails loudly when the docs say thinking can't be turned off but no models parse. The snapshot lists the five models again.
+  - **Warns when a snapshot shrinks.** A regenerated snapshot that drops a model from the cannot-disable list, an on/off control or an effort level opens a review issue.
+  - **Checks the selector.** Advisory check H warns when the docs' always-thinking models and the selector's `always-thinks="yes"` disagree.
+  - **Catches removed controls.** The changelog check watches the thinking-toggle and Ultracode words. A "Fixed…" bullet that removes or hides a control no longer gets the exemption, and the prompt rules that such a change is never a no-op.
+  - **Stops failing on #1149.** The automated pass may not edit prose, so a bullet it cannot cite is now routed to a review issue instead of failing the run. The daily refresh can go green again.
 
 ## [0.2.87] — 2026-10-20
 
