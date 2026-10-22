@@ -753,11 +753,15 @@ that owns it.}}
      **Runs:** line exactly as `roadmodel ladder --category
      <c> --complexity <x> [--novel]` prints them for the
      step's classification (MCP tool: `roadmap_settings`).
-     Rows: Model / Backup / Platform / Effort / Thinking /
-     Conversation. The Effort cell names each column's own
-     dial (`Intelligence Medium` on Codex, `Effort High` on
-     Claude Code); a column whose surface has no such
-     control reads `—` there. Every model is the latest
+     Rows: Model / Backup / Platform / Effort / AA Index /
+     Thinking / Conversation. The Effort cell names each
+     column's own dial (`Intelligence Medium` on Codex,
+     `Effort High` on Claude Code); a column whose surface
+     has no such control reads `—` there. The AA Index cell
+     is that column's model's Artificial Analysis
+     Intelligence Index at that column's effort, the figure
+     the pick was read from; it reads `not measured` where
+     AA has no row for the model at that effort. Every model is the latest
      version of its series, never an older one (GPT-6 Sol
      where GPT-6.1 Sol runs, Opus 5 where Opus 5.5 does).
      Set Conversation to **Continue** in every column only
@@ -869,6 +873,7 @@ reached}}):
 | Backup       | {{Backup — platform · dial}} | {{Backup — platform · dial}} | {{Backup — platform · dial}} |
 | Platform     | {{Access method}}           | {{Access method}}           | {{Access method}}           |
 | Effort       | {{Its dial and level}}      | {{Its dial and level}}      | {{Its dial and level}}      |
+| AA Index     | {{AA Index at that effort}} | {{AA Index at that effort}} | {{AA Index at that effort}} |
 | Thinking     | {{On, or — with no toggle}} | {{On, or — with no toggle}} | {{On, or — with no toggle}} |
 | Conversation | **{{New or Continue}}**     | **{{New or Continue}}**     | **{{New or Continue}}**     |
 
@@ -1290,6 +1295,7 @@ carrying ONLY the rows that platform's panel exposes.}}
 | Backup       | {{Backup — platform · dial}} | {{Backup — platform · dial}} | {{Backup — platform · dial}} |
 | Platform     | {{Access method}}           | {{Access method}}           | {{Access method}}           |
 | Effort       | {{Its dial and level}}      | {{Its dial and level}}      | {{Its dial and level}}      |
+| AA Index     | {{AA Index at that effort}} | {{AA Index at that effort}} | {{AA Index at that effort}} |
 | Thinking     | {{On, or — with no toggle}} | {{On, or — with no toggle}} | {{On, or — with no toggle}} |
 | Conversation | **{{New or Continue}}**     | **{{New or Continue}}**     | **{{New or Continue}}**     |
 
@@ -1426,6 +1432,7 @@ single-column variant that matches PLATFORM.}}
 | Backup       | {{Backup — platform · dial}} | {{Backup — platform · dial}} | {{Backup — platform · dial}} |
 | Platform     | {{Access method}}           | {{Access method}}           | {{Access method}}           |
 | Effort       | {{Its dial and level}}      | {{Its dial and level}}      | {{Its dial and level}}      |
+| AA Index     | {{AA Index at that effort}} | {{AA Index at that effort}} | {{AA Index at that effort}} |
 | Thinking     | {{On, or — with no toggle}} | {{On, or — with no toggle}} | {{On, or — with no toggle}} |
 | Conversation | **New**                     | **New**                     | **New**                     |
 

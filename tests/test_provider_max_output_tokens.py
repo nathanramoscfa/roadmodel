@@ -124,8 +124,15 @@ def test_google_forwards_thinking_budget_zero(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_google_omits_thinking_config_when_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A named model runs at its own defaults; only the package's default
+    engine carries the evaluated settings."""
     _install_google_fake(monkeypatch)
-    google_provider.recommend("prompt", "system", api_key="key")
+    google_provider.recommend(
+        "prompt",
+        "system",
+        model="gemini-3.8-flash",
+        api_key="key",
+    )
     config = _FakeGoogleClient.captured["config"]
     assert "thinking_config" not in config
 
@@ -151,8 +158,15 @@ def test_google_forwards_temperature_zero(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def test_google_omits_temperature_when_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A named model runs at its own defaults; only the package's default
+    engine carries the evaluated settings."""
     _install_google_fake(monkeypatch)
-    google_provider.recommend("prompt", "system", api_key="key")
+    google_provider.recommend(
+        "prompt",
+        "system",
+        model="gemini-3.8-flash",
+        api_key="key",
+    )
     config = _FakeGoogleClient.captured["config"]
     assert "temperature" not in config
 
@@ -366,3 +380,41 @@ def test_provider_signature_accepts_temperature(
     param = sig.parameters["temperature"]
     assert param.kind == inspect.Parameter.KEYWORD_ONLY
     assert param.default is None
+
+
+# ------------------------------------------------------ the default engines
+
+
+def test_googles_default_engine_runs_at_its_evaluated_settings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Unset, Gemini 3.8 Flash thought at its default level and a
+    recommendation took about 30 s; the eval ran it at low (p50 2.5 s)."""
+    _install_google_fake(monkeypatch)
+    google_provider.recommend("prompt", "system", api_key="key")
+    captured = _FakeGoogleClient.captured
+    assert captured["model"] == google_provider.DEFAULT_MODEL
+    assert captured["config"]["thinking_config"] == {"thinking_level": "low"}
+    assert captured["config"]["temperature"] == 0.0
+    # A caller's own value still wins.
+    google_provider.recommend("prompt", "system", api_key="key", temperature=0.7)
+    assert _FakeGoogleClient.captured["config"]["temperature"] == 0.7
+
+
+def test_anthropics_default_engine_runs_at_low_effort(monkeypatch: pytest.MonkeyPatch) -> None:
+    _install_anthropic_fake(monkeypatch)
+    anthropic_provider.recommend("prompt", "system", api_key="key")
+    captured = _FakeAnthropicClient.captured
+    assert captured["model"] == anthropic_provider.DEFAULT_MODEL == "claude-sonnet-5-5"
+    assert captured["output_config"] == {"effort": "low"}
+    assert "temperature" not in captured
+
+
+def test_openais_default_engine_runs_at_its_reasoning_floor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_openai_fake(monkeypatch)
+    openai_provider.recommend("prompt", "system", api_key="key")
+    captured = _FakeOpenAIClient.captured
+    assert captured["model"] == openai_provider.DEFAULT_MODEL == "gpt-6-luna"
+    assert captured["reasoning"] == {"effort": "low"}

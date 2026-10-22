@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.91] — 2026-10-22
+
+- **A roadmap's Settings table shows each pick's AA Index.** A new **AA Index** row under Effort gives each column's model's Artificial Analysis Intelligence Index at that column's effort, the figure the pick was read from. For example, GPT-6.1 Sol reads 47.8 at Medium and Opus 5.5 reads 56 at XHigh. It reads `not measured` where AA has no row for the model at that effort. `roadmodel ladder` and the MCP `roadmap_settings` print it, the MCP columns carry it as `aa_index`, and both roadmap templates show the row. Existing roadmaps pick it up on their next `/roadmap-refresh`.
+- **The default engines are current, and fast.** With only a provider key and no model named, `roadmodel recommend` and the MCP `recommend_model` now run an engine that passed all 12 engine-eval probes, at the settings it was measured with:
+  - Anthropic: Claude Sonnet 5.5 at low effort. It was Claude Sonnet 4.6 at the model's default effort.
+  - OpenAI: GPT-6 Luna at its reasoning floor. It was gpt-5.4.
+  - Google: Gemini 3.8 Flash at thinking level low and temperature 0. Unset, it thought at its default level and a recommendation took about 30 s; the eval measured a 2.5 s median at low.
+
+  A model named with `--model` or `ROADMODEL_MODEL` still runs with only the settings the caller passes. A test holds every default to a registry engine and its evaluated settings.
+- **The release script no longer dies on a check it already passed** (#1193). It probed PyPI's index once more after the wait loop had seen the new version. A stale CDN copy could then fail that probe and stop the release with a false "after 15 minutes".
+
 ## [0.2.90] — 2026-10-22
 
 - **A new Google key works with the recommender.** With only a Google key, `roadmodel recommend` and the MCP `recommend_model` ran `gemini-2.5-pro` unless a model was named. Google answers 404 to a project that never used that model, so a key created recently failed every call, while an older key kept working. The default is now `gemini-3.8-flash`, the engine the service already runs on a visitor's own Google key. It passed all 12 engine-eval probes through this package at about $0.016 and 2.5 s a call. A test holds the package default to that engine from now on.

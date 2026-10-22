@@ -325,7 +325,8 @@ is applied in code, at two places:
 **A roadmap's Settings carry the ladder.** `roadmodel ladder --category
 <c> --complexity <x> [--novel] [--phase]` (`scoring.settings_ladder`, MCP
 `roadmap_settings`) prints a step's Settings as /recommend's three columns,
-each with its effort and backup. It reads every usage pool as `headroom`
+each with its effort, the model's AA Intelligence Index at that effort
+(`not measured` where AA has no row there), and its backup. It reads every usage pool as `headroom`
 (`rank(neutral_pools=True)`), so the table does not depend on the day it was
 written. The **Runs:** line names the column the step runs: the Budget
 priority's column (cheap → Cost, balanced → Balanced, best → Quality); for a

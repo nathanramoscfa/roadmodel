@@ -8,7 +8,11 @@ writes both; a hand edit to one of them fails here."""
 
 from __future__ import annotations
 
+import importlib
+import json
 from pathlib import Path
+
+import pytest
 
 _REPO = Path(__file__).resolve().parents[1]
 
@@ -22,19 +26,26 @@ def test_the_service_copy_of_the_engine_eval_matches_docs() -> None:
     )
 
 
-def test_the_package_google_default_is_the_evaluated_visitor_engine() -> None:
-    """A bare `roadmodel recommend` or the MCP server with only a Google key
-    runs google.DEFAULT_MODEL. It stayed on gemini-2.5-pro after the service
-    moved on, and on 2026-10-21 a newer key got 404 NOT_FOUND for it. Hold it
-    to the engine the service runs on a visitor's own Google key, which the
-    eval measured through this package."""
-    import json
-
-    from roadmodel.providers import google
-
+@pytest.mark.parametrize("provider", ["anthropic", "openai", "google"])
+def test_the_package_default_engine_is_an_evaluated_one(provider: str) -> None:
+    """A bare `roadmodel recommend` or the MCP server with only this provider's
+    key runs the adapter's DEFAULT_MODEL with its default settings. They rotted
+    once: gemini-2.5-pro got 404 for a newer key (2026-10-21), and the Claude and
+    OpenAI defaults were a generation behind. Each must be a registry engine, at
+    the settings it was evaluated with, that passed every eval probe."""
+    adapter = importlib.import_module(f"roadmodel.providers.{provider}")
     registry = json.loads((_REPO / "service" / "app" / "engines.json").read_text("utf-8"))
-    hint = registry["visitor_defaults"]["google"]
-    engine = next(e for e in registry["engines"] if e["hint"] == hint)
     evaluated = json.loads((_REPO / "docs" / "engine-eval.json").read_text("utf-8"))["engines"]
-    assert google.DEFAULT_MODEL == engine["model"]
-    assert evaluated[hint]["passed"] == evaluated[hint]["probes"]
+    engine = next(
+        (
+            e
+            for e in registry["engines"]
+            if e["provider"] == provider and e["model"] == adapter.DEFAULT_MODEL
+        ),
+        None,
+    )
+    assert engine is not None, f"{adapter.DEFAULT_MODEL} is not a registry engine"
+    assert adapter.DEFAULT_THINKING_BUDGET == engine.get("thinking_budget")
+    assert adapter.DEFAULT_TEMPERATURE == engine.get("temperature")
+    result = evaluated[engine["hint"]]
+    assert result["passed"] == result["probes"]

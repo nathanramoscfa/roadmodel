@@ -2319,6 +2319,20 @@ def _thinking_cell(c: Candidate, catalog: dict[str, Any]) -> str:
     return "—" if model.get("always_thinks") else "On"
 
 
+def ladder_aa_index(bench: dict[str, Any], model_id: str, level: str) -> float | None:
+    """The AA Intelligence Index of ``model_id`` run at ``level``: AA's row at
+    that effort, or the headline row when AA names no level for the model (it
+    then stands for the model at whatever effort it runs). None when AA has
+    measured the model at other efforts only, or not at all."""
+    if measured_levels(bench, model_id):
+        return _evidence(bench, model_id, FRONTIER_INDEX, normalize_level(level))
+    return _evidence(bench, model_id, FRONTIER_INDEX)
+
+
+def _aa_cell(value: float | None) -> str:
+    return "not measured" if value is None else f"{value:g}"
+
+
 def _deepest_level(c: Candidate, catalog: dict[str, Any]) -> str:
     """The top rung of ``c``'s dial a roadmap may pin (``max``)."""
     levels = native_levels(c.platform_id, c.model_id, catalog=catalog) or list(EFFORT_LADDER)
@@ -2342,15 +2356,18 @@ def settings_ladder(
     so the table outlives today's pool states: the step's runner applies
     :data:`RUN_RULE` to the pools on the day instead of the roadmap being
     refreshed. ``phase`` is a phase-roadmap session: it runs Quality, at
-    the deepest rung its dial allows. Returns the columns and the Markdown
-    table; None when no pool model carries an AA Index."""
+    the deepest rung its dial allows. Each column carries its model's AA
+    Intelligence Index at the column's effort (:func:`ladder_aa_index`).
+    Returns the columns and the Markdown table; None when no pool model
+    carries an AA Index."""
     cat = catalog if catalog is not None else _cost._load_catalog()
+    bench = benchmarks if benchmarks is not None else _load_benchmarks()
     lad = ladder(
         task,
         user_context_text,
         unavailable_models=unavailable_models,
         catalog=cat,
-        benchmarks=benchmarks,
+        benchmarks=bench,
         neutral_pools=True,
     )
     if lad is None:
@@ -2369,6 +2386,7 @@ def settings_ladder(
             "platform": c.platform_name,
             "effort": normalize_level(level),
             "effort_cell": _effort_cell(c, level),
+            "aa_index": ladder_aa_index(bench, c.model_id, level),
             "thinking_cell": _thinking_cell(c, cat),
             "backup": None if rung.backup is None else backup_cell(rung.backup),
         }
@@ -2378,6 +2396,7 @@ def settings_ladder(
         ("Backup", [columns[t]["backup"] or "None" for t in LADDER_TIERS]),
         ("Platform", [columns[t]["platform"] for t in LADDER_TIERS]),
         ("Effort", [columns[t]["effort_cell"] for t in LADDER_TIERS]),
+        ("AA Index", [_aa_cell(columns[t]["aa_index"]) for t in LADDER_TIERS]),
         ("Thinking", [columns[t]["thinking_cell"] for t in LADDER_TIERS]),
         ("Conversation", ["**New**"] * len(LADDER_TIERS)),
     ]
