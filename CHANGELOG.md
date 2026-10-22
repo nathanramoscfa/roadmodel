@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.90] — 2026-10-22
+
+- **A new Google key works with the recommender.** With only a Google key, `roadmodel recommend` and the MCP `recommend_model` ran `gemini-2.5-pro` unless a model was named. Google answers 404 to a project that never used that model, so a key created recently failed every call, while an older key kept working. The default is now `gemini-3.8-flash`, the engine the service already runs on a visitor's own Google key. It passed all 12 engine-eval probes through this package at about $0.016 and 2.5 s a call. A test holds the package default to that engine from now on.
+
 ## [0.2.89] — 2026-10-21
 
 - **`roadmap_settings` works over MCP.** The server refuses unknown tool names before dispatch, and its list still named the four tools it shipped with. `roadmap_settings`, added in 0.2.86, was refused on every call with the generic error. The list now comes from the tools the server registers.

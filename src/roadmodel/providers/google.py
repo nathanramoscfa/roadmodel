@@ -8,14 +8,15 @@ from roadmodel import usage
 from roadmodel.errors import ProviderCallError
 from roadmodel.providers._safety import hosted_timeout, private_transport, safe_error
 
-# Default engine model for direct Google API calls when no model is passed.
-# Must be a model that is actually callable on the public Google Generative
-# Language API (v1beta generateContent). `gemini-3.1-pro` is catalog-only
-# (Cursor) and returns 404 NOT_FOUND on the direct API, so a bare
-# `roadmodel recommend` / the MCP server / any SDK caller with only a Google
-# key would fail; `gemini-2.5-pro` is the highest-quality callable Gemini.
-# Prod (the hosted service) forces an explicit model and never relies on this.
-DEFAULT_MODEL = "gemini-2.5-pro"
+# Default engine model for direct Google API calls when no model is passed:
+# a bare `roadmodel recommend`, the MCP server, any SDK caller with only a
+# Google key. It is the engine the service runs on a visitor's own Google key
+# (service/app/engines.json visitor_defaults), which docs/engine-eval.json
+# measured through this package. It must be callable by a NEW key: Google
+# answers 404 NOT_FOUND to a project that never used an older model, so
+# `gemini-2.5-pro` (the default until 0.2.90) and `gemini-3.1-pro` fail there
+# while still working for keys that used them before.
+DEFAULT_MODEL = "gemini-3.8-flash"
 
 # The 2.x generation takes a numeric thinking_budget; from Gemini 3 on, the API
 # documents discrete thinking LEVELS instead (update/gemini-thinking.json), so a

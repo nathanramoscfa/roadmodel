@@ -92,9 +92,16 @@ def test_google_omits_max_output_tokens_when_unset(
 def test_google_forwards_thinking_budget(monkeypatch: pytest.MonkeyPatch) -> None:
     """Issue #132: Gemini Flash reasons by default and that reasoning is decoded
     before (and against the budget of) the visible answer. thinking_budget must
-    reach the SDK as config.thinking_config.thinking_budget."""
+    reach the SDK as config.thinking_config.thinking_budget (the 2.x dial; Gemini 3
+    and later take a level, see test_provider_usage)."""
     _install_google_fake(monkeypatch)
-    google_provider.recommend("prompt", "system", api_key="key", thinking_budget=512)
+    google_provider.recommend(
+        "prompt",
+        "system",
+        model="gemini-2.5-flash",
+        api_key="key",
+        thinking_budget=512,
+    )
     config = _FakeGoogleClient.captured["config"]
     assert config["thinking_config"] == {"thinking_budget": 512}
 
@@ -105,7 +112,13 @@ def test_google_forwards_thinking_budget_zero(monkeypatch: pytest.MonkeyPatch) -
     exactly the bug that would make the latency fix a no-op. Pin that 0 is
     forwarded, not swallowed."""
     _install_google_fake(monkeypatch)
-    google_provider.recommend("prompt", "system", api_key="key", thinking_budget=0)
+    google_provider.recommend(
+        "prompt",
+        "system",
+        model="gemini-2.5-flash",
+        api_key="key",
+        thinking_budget=0,
+    )
     config = _FakeGoogleClient.captured["config"]
     assert config["thinking_config"] == {"thinking_budget": 0}
 
