@@ -419,6 +419,10 @@ def test_roadmap_commands_handle_the_backup_row() -> None:
     refresh = re.sub(r"\s+", " ", REFRESH_COMMAND.read_text())
     assert "Every table carries a `Backup` row directly under `Model`" in refresh
     assert "a layout fix, not a new pick" in refresh
+    # A table whose picks still match gains the 0.2.91 AA Index row too: the
+    # first fleet refresh after 0.2.91 left every such table without it.
+    assert "carries an `AA Index` row directly under `Effort`" in refresh
+    assert "even where every pick still matches" in refresh
     step = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
     assert "If you are that backup model on that platform, continue" in step
     prompt = re.sub(r"\s+", " ", PROMPT_PHASE.read_text())

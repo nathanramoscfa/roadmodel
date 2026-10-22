@@ -200,6 +200,14 @@ complexity, novel or not; its Model rationale names them), then:
   backup the step already names (its Model rationale's closing
   sentence, or its entry in the Model selection blocks) — a layout
   fix, not a new pick, so it takes no `Settings updated` line.
+- Every ladder table, a step's Settings and a phase's Phase roadmap
+  settings alike, carries an `AA Index` row directly under `Effort`:
+  each column's model's AA Intelligence Index at that column's effort,
+  as `roadmodel ladder` prints it (`not measured` where AA has no row
+  there). A table written before roadmodel 0.2.91 has no such row: add
+  it from the ladder printed for that classification, even where every
+  pick still matches — a layout fix, not a new pick, so it takes no
+  `Settings updated` line. Without roadmodel, leave the row out.
 - Keep the step's selection block in the Model selection blocks equal
   to the column its **Runs:** line names (its `BACKUP:` line to that
   column's Backup), and its Summary Table row to the same column.
