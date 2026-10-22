@@ -254,6 +254,7 @@ dependency graph in §5 is honoured.
 | Backup       | <Backup — its platform · its dial> | <Backup — its platform · its dial> | <Backup — its platform · its dial> |
 | Platform     | <Access method>        | <Access method>        | <Claude Code, or the access method that pays> |
 | Effort       | <Its dial and level>   | <Its dial and level>   | <Deepest rung there — Effort Max in Claude Code> |
+| AA Index     | <AA Index at that effort> | <AA Index at that effort> | <AA Index at that effort>        |
 | Thinking     | <On, or — with no toggle> | <On, or — with no toggle> | <On, or — with no toggle>          |
 | Conversation | **New**                | **New**                | **New**                                  |
 
@@ -314,6 +315,7 @@ key pays for the platform.>
 | Backup       | …       | …        | …       |
 | Platform     | …       | …        | …       |
 | Effort       | …       | …        | …       |
+| AA Index     | …       | …        | …       |
 | Thinking     | …       | …        | …       |
 | Conversation | **New** | **New**  | **New** |
 
@@ -351,6 +353,7 @@ key pays for the platform.>
 | Backup       | …       | …        | …       |
 | Platform     | …       | …        | …       |
 | Effort       | …       | …        | …       |
+| AA Index     | …       | …        | …       |
 | Thinking     | …       | …        | …       |
 | Conversation | **New** | **New**  | **New** |
 

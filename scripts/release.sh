@@ -154,12 +154,19 @@ fi
 curl -sf "https://pypi.org/pypi/roadmodel/$version/json" >/dev/null ||
   die "roadmodel $version is not on PyPI yet"
 log "roadmodel $version is on PyPI"
+# The CDN can serve a stale copy right after a fresh one, so the loop's own
+# success is the verdict; probing again after it could die on a check that
+# already passed (#1193).
+indexed=0
 for i in $(seq 1 60); do
-  pypi_index_has "$version" && break
+  if pypi_index_has "$version"; then
+    indexed=1
+    break
+  fi
   [ "$i" = 1 ] && log "waiting for PyPI's package index to serve $version (CDN lag)"
   sleep 15
 done
-pypi_index_has "$version" || die "PyPI's package index still does not list $version after 15 minutes"
+[ "$indexed" = 1 ] || die "PyPI's package index still does not list $version after 15 minutes"
 
 # ---------------------------------------------------------- 4. floor bump
 if ! grep -q "roadmodel\[recommend\]>=$version," service/pyproject.toml; then

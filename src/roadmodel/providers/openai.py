@@ -8,7 +8,15 @@ from roadmodel import usage
 from roadmodel.errors import ProviderCallError
 from roadmodel.providers._safety import hosted_timeout, private_transport, safe_error
 
-DEFAULT_MODEL = "gpt-5.4"
+# The package's own engine when no model is named (`roadmodel recommend`, the MCP
+# server, an SDK caller): one of service/app/engines.json's evaluated engines,
+# with the settings docs/engine-eval.json measured it at. The settings apply only
+# to that default; a named model runs with whatever the caller passes.
+# tests/test_engine_eval_mirror.py holds all three to the registry.
+# gpt-5.4 until 0.2.91.
+DEFAULT_MODEL = "gpt-6-luna"
+DEFAULT_THINKING_BUDGET: int | None = 0
+DEFAULT_TEMPERATURE: float | None = None
 
 
 # The reasoning generations: gpt-5 and everything after it (gpt-6, gpt-6.1,
@@ -74,6 +82,9 @@ def recommend(
     # 32s, empty output). The recommender is a structured-classification task
     # where the pick is easy (T1), so a low effort is fast + cheap + sufficient;
     # 0 -> minimal for the highest-volume anon path.
+    if model is None:
+        thinking_budget = DEFAULT_THINKING_BUDGET if thinking_budget is None else thinking_budget
+        temperature = DEFAULT_TEMPERATURE if temperature is None else temperature
     _ = temperature
     missing_sdk: ProviderCallError | None = None
     try:

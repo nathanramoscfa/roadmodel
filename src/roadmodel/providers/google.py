@@ -8,15 +8,20 @@ from roadmodel import usage
 from roadmodel.errors import ProviderCallError
 from roadmodel.providers._safety import hosted_timeout, private_transport, safe_error
 
-# Default engine model for direct Google API calls when no model is passed:
-# a bare `roadmodel recommend`, the MCP server, any SDK caller with only a
-# Google key. It is the engine the service runs on a visitor's own Google key
-# (service/app/engines.json visitor_defaults), which docs/engine-eval.json
-# measured through this package. It must be callable by a NEW key: Google
-# answers 404 NOT_FOUND to a project that never used an older model, so
-# `gemini-2.5-pro` (the default until 0.2.90) and `gemini-3.1-pro` fail there
-# while still working for keys that used them before.
+# The package's own engine when no model is named (`roadmodel recommend`, the MCP
+# server, an SDK caller): one of service/app/engines.json's evaluated engines,
+# with the settings docs/engine-eval.json measured it at. The settings apply only
+# to that default; a named model runs with whatever the caller passes.
+# tests/test_engine_eval_mirror.py holds all three to the registry.
+# It must be callable by a NEW key: Google answers 404 NOT_FOUND to a project
+# that never used an older model, so `gemini-2.5-pro` (the default until
+# 0.2.90) and `gemini-3.1-pro` fail there while still working for keys that
+# used them before. Thinking level low and temperature 0 (#176) are how the
+# eval ran it (p50 2.5 s); left unset, the model thought at its default level
+# and a recommendation took about 30 s.
 DEFAULT_MODEL = "gemini-3.8-flash"
+DEFAULT_THINKING_BUDGET: int | None = 0
+DEFAULT_TEMPERATURE: float | None = 0.0
 
 # The 2.x generation takes a numeric thinking_budget; from Gemini 3 on, the API
 # documents discrete thinking LEVELS instead (update/gemini-thinking.json), so a
@@ -80,6 +85,9 @@ def recommend(
     if missing_sdk is not None:
         raise missing_sdk
 
+    if model is None:
+        thinking_budget = DEFAULT_THINKING_BUDGET if thinking_budget is None else thinking_budget
+        temperature = DEFAULT_TEMPERATURE if temperature is None else temperature
     try:
         client = genai.Client(
             api_key=api_key,

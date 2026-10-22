@@ -149,14 +149,55 @@ def test_the_table_carries_every_rung_with_its_effort_and_backup() -> None:
         "Balanced",
         "Quality",
     ]
-    assert [ln.split("|")[1].strip() for ln in lines[2:8]] == [
+    assert [ln.split("|")[1].strip() for ln in lines[2:9]] == [
         "Model",
         "Backup",
         "Platform",
         "Effort",
+        "AA Index",
         "Thinking",
         "Conversation",
     ]
+
+
+def _aa(value: float) -> dict[str, Any]:
+    return {"evaluations": {"artificial_analysis_intelligence_index": value}}
+
+
+def test_the_aa_row_reads_each_models_index_at_its_columns_effort() -> None:
+    """The AA Index row is the column's model at the column's effort, not the
+    model's headline: GPT-6 Luna reads 21.5 at low and 38.1 at max."""
+    levels = ("low", "medium", "high", "xhigh")
+    bench = {
+        mid: {
+            **_aa(aa),
+            "aa_effort": "max",
+            "effort_variants": {lv: _aa(aa - 4 * (len(levels) - i)) for i, lv in enumerate(levels)},
+        }
+        for mid, aa in {"lite": 20, "luna": 40, "sonnet": 55, "opus": 58, "astra": 52}.items()
+    }
+    got = scoring.settings_ladder(PLANNING_MEDIUM, _context(), catalog=CATALOG, benchmarks=bench)
+    assert got is not None
+    row = next(ln for ln in got["markdown"].splitlines() if ln.startswith("| AA Index"))
+    cells = [c.strip() for c in row.strip("|").split("|")][1:]
+    for tier, cell in zip(scoring.LADDER_TIERS, cells, strict=True):
+        col = got["columns"][tier]
+        measured = scoring.measured_levels(bench, col["model_id"])[col["effort"]]
+        want = measured["evaluations"]["artificial_analysis_intelligence_index"]
+        assert col["aa_index"] == want
+        assert cell == f"{want:g}"
+
+
+def test_ladder_aa_index_reads_the_effort_or_says_not_measured() -> None:
+    per_level = {"m": {**_aa(50), "aa_effort": "max", "effort_variants": {"low": _aa(30)}}}
+    assert scoring.ladder_aa_index(per_level, "m", "max") == 50
+    assert scoring.ladder_aa_index(per_level, "m", "low") == 30
+    # Measured at other efforts only: no figure stands for this one.
+    assert scoring.ladder_aa_index(per_level, "m", "high") is None
+    # AA names no level: the row stands for the model at whatever effort it runs.
+    assert scoring.ladder_aa_index({"m": _aa(44)}, "m", "high") == 44
+    assert scoring.ladder_aa_index({}, "m", "high") is None
+    assert scoring._aa_cell(None) == "not measured"
 
 
 def test_each_column_names_its_own_surfaces_dial() -> None:

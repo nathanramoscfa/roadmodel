@@ -8,7 +8,15 @@ from roadmodel import usage
 from roadmodel.errors import ProviderCallError
 from roadmodel.providers._safety import hosted_timeout, private_transport, safe_error
 
-DEFAULT_MODEL = "claude-sonnet-4-6"
+# The package's own engine when no model is named (`roadmodel recommend`, the MCP
+# server, an SDK caller): one of service/app/engines.json's evaluated engines,
+# with the settings docs/engine-eval.json measured it at. The settings apply only
+# to that default; a named model runs with whatever the caller passes.
+# tests/test_engine_eval_mirror.py holds all three to the registry.
+# Sonnet 4.6 until 0.2.91; Sonnet 5.5 is that series' latest version.
+DEFAULT_MODEL = "claude-sonnet-5-5"
+DEFAULT_THINKING_BUDGET: int | None = 0
+DEFAULT_TEMPERATURE: float | None = None
 
 # claude-<family>-<major>[-<minor>][-<yyyymmdd>]: claude-haiku-4-5-20251001,
 # claude-sonnet-5, claude-opus-5-5, claude-fable-5-1.
@@ -81,6 +89,9 @@ def recommend(
     if missing_sdk is not None:
         raise missing_sdk
 
+    if model is None:
+        thinking_budget = DEFAULT_THINKING_BUDGET if thinking_budget is None else thinking_budget
+        temperature = DEFAULT_TEMPERATURE if temperature is None else temperature
     model_id = model or DEFAULT_MODEL
     # `kwargs` is typed `Any` for the same reason as providers/openai.py: the
     # SDK's overloaded `create` signature rejects a mixed-value dict literal.
