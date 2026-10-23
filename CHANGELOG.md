@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.92] — 2026-10-22
+
+- **`/roadmap-refresh` adds the AA Index row to tables whose picks still match.** The procedure rewrote a Settings table only when its picks changed, so the first fleet refresh after 0.2.91 left every unchanged table without the new row (reversi's refresh changed one line). Every ladder table, a step's Settings and a phase's Phase roadmap settings alike, now gains the row as a layout fix, the way a missing Backup row already did. It takes no `Settings updated` line.
+
 ## [0.2.91] — 2026-10-22
 
 - **A roadmap's Settings table shows each pick's AA Index.** A new **AA Index** row under Effort gives each column's model's Artificial Analysis Intelligence Index at that column's effort, the figure the pick was read from. For example, GPT-6.1 Sol reads 47.8 at Medium and Opus 5.5 reads 56 at XHigh. It reads `not measured` where AA has no row for the model at that effort. `roadmodel ladder` and the MCP `roadmap_settings` print it, the MCP columns carry it as `aa_index`, and both roadmap templates show the row. Existing roadmaps pick it up on their next `/roadmap-refresh`.
