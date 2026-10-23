@@ -162,3 +162,28 @@ runs even if the local table has no changes. `--dry-run` on the hourly updater
 never authenticates or uploads. Owner isolation is covered by the profile's
 migration tests; profile retention and recommendation forwarding are covered
 by browser tests.
+
+## Staying live
+
+Three layers keep the meters current without relying on one scheduler:
+
+1. **Hourly launchd agent** (`scripts/com.roadmodel.roll-pool-status.plist`) runs
+   the private pool job. launchd can leave an agent *disabled* (a persisted
+   override that makes `bootstrap` fail and the job silently never run).
+   Re-enable with `launchctl enable gui/$(id -u)/com.roadmodel.roll-pool-status`
+   before `launchctl bootstrap`.
+2. **Session-start guard** `scripts/ensure_pool_fresh.py`, installed as a Claude
+   Code SessionStart hook with
+   `python3.12 scripts/configure_claude_pool.py --hook --install` (diff first
+   without `--install`). When the Claude meter is missing or older than 50
+   minutes it starts the same job detached, throttled to one start per ten
+   minutes across concurrent windows, and prints one line. It also reports when
+   the hourly agent is not loaded. It never edits launchd or settings itself.
+3. **Stale flags.** Every run marks a row whose last real measurement is too old
+   (one hour for a five-hour window, six for a weekly or fixed pool) with
+   `[stale: no fresh meter since … ; state unverified]` in its Notes, which the
+   recommender reads. States are never changed by a flag; it clears itself when
+   a fresh meter lands. A pool that has never been measured carries no flag.
+
+Codex's meter comes from Codex's own logs, so it only advances when Codex runs;
+an idle Codex pool is flagged stale rather than guessed.

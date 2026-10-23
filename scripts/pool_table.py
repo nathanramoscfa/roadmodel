@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 
 from pool_usage import decide, number
 
-MARKER = re.compile(r"\s*\[auto: [^\]]*\]")
+MARKER = re.compile(r"\s*\[(?:auto|stale): [^\]]*\]")
 ORDER = {"headroom": 0, "tight": 1, "exhausted": 2}
 
 
