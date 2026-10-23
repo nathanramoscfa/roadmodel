@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Refresh real meters and maintain the private Usage-pool status table hourly.
 
-Claude's status-line wrapper supplies account-wide weekly/5h snapshots.
+Claude's account-wide weekly, 5h and Fable sub-cap come from the headless
+`claude -p /usage` each run (the status-line wrapper is a secondary source).
 Codex, OpenRouter and supported Antigravity /usage are refreshed each run.
 Fresh observations set states and dated resets; stale/missing data retains
 states. Known passed resets still clear caps, with weekly dates rolled forward.
-The Fable sub-cap remains manual. No PAYG maker keys or local inference pools.
+No PAYG maker keys or local inference pools.
 
 Stdlib only, Python 3.11+. --dry-run prints a unified diff without writing the
 context file or collecting new data; --refresh also refreshes cache in a dry run.
@@ -34,6 +35,8 @@ from pool_usage import CACHE, load
 DEFAULT_FILE = Path(__file__).resolve().parent.parent / "docs" / "user-context.md"
 SECTION = "Usage-pool status"
 MARKER = re.compile(r"\s*\[auto: [^\]]*\]")
+STALE = re.compile(r"\s*\[stale: [^\]]*\]")
+STAMP = re.compile(r"\[auto: [^\]]*? at (\d{4}-\d{2}-\d{2}) (\d{1,2}):(\d{2}) ([A-Z]{2,4})\]")
 RESET_RE = re.compile(
     r"(?:(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+)?(\d{4}-\d{2}-\d{2})[ T]+(\d{1,2}):(\d{2})\s*([A-Z]{2,4})"
 )
@@ -88,6 +91,36 @@ def roll_row(cells: list[str], now: datetime) -> tuple[list[str], str] | None:
     return out, f"{cells[0].strip()}: " + ", ".join(changes)
 
 
+def mark_stale(text: str, now: datetime) -> str:
+    """Flag rows whose last real measurement is too old to trust, clear the flag
+    when fresh. States are never changed here: only the Notes say the row is
+    unverified, so a reader cannot mistake an old `headroom` for a live one."""
+    lines = text.split("\n")
+    in_section = False
+    for i, line in enumerate(lines):
+        if line.startswith("#"):
+            in_section = line.lstrip("# ").strip() == SECTION
+            continue
+        cells = _split(line) if in_section else None
+        if cells is None or len(cells) < 5:
+            continue
+        note = STALE.sub("", cells[4])
+        m = STAMP.search(note)
+        if m and m.group(4) in TZ_OFFSETS:
+            tz = timezone(timedelta(hours=TZ_OFFSETS[m.group(4)]))
+            seen = datetime.strptime(f"{m.group(1)} {m.group(2)}:{m.group(3)}", "%Y-%m-%d %H:%M")
+            limit = 3600 if cells[1].strip().lower().startswith("5 h") else 6 * 3600
+            if (now - seen.replace(tzinfo=tz)).total_seconds() > limit:
+                note = (
+                    f"{note.rstrip()} [stale: no fresh meter since "
+                    f"{m.group(1)} {m.group(2).zfill(2)}:{m.group(3)} {m.group(4)}; "
+                    "state unverified]"
+                )
+        if note != cells[4]:
+            lines[i] = "|" + "|".join([*cells[:4], f" {note.strip()} ", *cells[5:]]) + "|"
+    return "\n".join(lines)
+
+
 def roll(
     text: str,
     now: datetime,
@@ -116,11 +149,15 @@ def roll(
         if updated != rolled_text:
             summary.append("fresh usage snapshots applied")
         rolled_text = updated
-    return rolled_text, summary
+    marked = mark_stale(rolled_text, now)
+    if marked != rolled_text:
+        summary.append("stale-meter flags updated")
+    return marked, summary
 
 
 def refresh_collectors(cache: Path) -> None:
-    for source in ("codex", "openrouter", "antigravity"):
+    for script in ("claude_usage", "codex", "openrouter", "antigravity"):
+        source = script.split("_")[0]
         try:
             subprocess.run(  # noqa: S603 — fixed sibling scripts
                 [
@@ -128,7 +165,13 @@ def refresh_collectors(cache: Path) -> None:
                     "-I",
                     "-X",
                     "utf8",
-                    str(Path(__file__).with_name(f"collect_{source}_pool.py")),
+                    str(
+                        Path(__file__).with_name(
+                            f"collect_{script}.py"
+                            if script == "claude_usage"
+                            else f"collect_{source}_pool.py"
+                        )
+                    ),
                     "--cache",
                     str(cache),
                 ],

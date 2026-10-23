@@ -2201,3 +2201,20 @@ def test_no_tool_install_means_nothing_to_upgrade(
         True,
     )
     assert all("upgrade" not in argv for argv in calls)
+
+
+def test_schedule_records_keep_pins_on_every_platform(up: ModuleType) -> None:
+    """A schedule installed with --keep-pins must run with it, or the daily run
+    clears the operator's pinned model/effort (2026-10-23)."""
+    import datetime as dt
+    import plistlib
+
+    py, script, log = Path("/usr/bin/python3"), Path("/x/update_projects.py"), Path("/x/u.log")
+    args = plistlib.loads(up.launchd_plist(py, script, 9, 0, log, True).encode())
+    assert args["ProgramArguments"][-2:] == ["--log", "--keep-pins"]
+    assert up.cron_line(py, script, 9, 0, True).split("  #")[0].endswith("--log --keep-pins")
+    assert up.schtasks_create_argv(py, script, 9, 0, True)[-1].endswith("--log --keep-pins")
+    assert "--log --keep-pins" in up.schtasks_xml(py, script, 9, 0, dt.date(2026, 10, 23), True)
+    # Without the flag every artifact is exactly what it was.
+    assert "--keep-pins" not in up.launchd_plist(py, script, 9, 0, log)
+    assert "--keep-pins" not in up.cron_line(py, script, 9, 0)

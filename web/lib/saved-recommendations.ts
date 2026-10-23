@@ -30,8 +30,8 @@ const pick = z.object({
   priority, model: z.string().min(1).max(256), platform: z.string().max(256),
   settings: fields, session_cost_estimate: fields.default({}),
   comparison_table: z.array(fields).max(128),
-  rationale_sections: z.record(text).nullable().optional(),
-  backup: z.object({ model: text, platform: text.nullable(), settings: z.record(text) }).nullable().optional(),
+  rationale_sections: z.record(z.string(), text).nullable().optional(),
+  backup: z.object({ model: text, platform: text.nullable(), settings: z.record(z.string(), text) }).nullable().optional(),
   specialist: z.boolean().optional(), specialist_category: text.nullable().optional(),
 });
 const engine = z.object({
