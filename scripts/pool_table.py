@@ -37,9 +37,9 @@ def render(
         if len(cells) < 5 or not lines[i].lstrip().startswith("|"):
             continue
         name = cells[0].strip().lower()
-        if "fable" in name or "sub-cap" in name:
-            continue
-        if "claude" in name and ("weekly" in name or "5-hour" in name or "5h" in name):
+        if "claude" in name and ("fable" in name or "sub-cap" in name):
+            rows["claude:fable"] = i
+        elif "claude" in name and ("weekly" in name or "5-hour" in name or "5h" in name):
             rows["claude:weekly" if "weekly" in name else "claude:5h"] = i
         elif "codex" in name:
             rows["codex:weekly" if "week" in name else "codex:5h"] = i
@@ -58,7 +58,9 @@ def render(
         elif source == "openrouter":
             groups = [("credits", [None])]
         for name, group in groups:
-            if source in ("claude", "codex") and name not in ("weekly", "5h"):
+            if source == "codex" and name not in ("weekly", "5h"):
+                continue
+            if source == "claude" and name not in ("weekly", "5h", "fable"):
                 continue
             states = [decide(snapshot, meter, now) for meter in group]
             valid = [state for state in states if state is not None]
@@ -80,7 +82,7 @@ def render(
                     "openrouter": "OpenRouter credits",
                 }
                 cells = [
-                    labels[source] + (f" — {name}" if name in ("weekly", "5h") else ""),
+                    labels[source] + (f" — {name}" if name in ("weekly", "5h", "fable") else ""),
                     "",
                     "",
                     "—",

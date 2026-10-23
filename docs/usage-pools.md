@@ -9,13 +9,22 @@ and raw responses never go into snapshots or public commits.
 Run collectors and preview the personal table without editing it:
 
 ```sh
+python3 scripts/collect_claude_usage.py
 python3 scripts/collect_codex_pool.py
 python3 scripts/collect_openrouter_pool.py
 python3 scripts/collect_antigravity_pool.py
 python3 scripts/preview_pool_status.py --dry-run
 ```
 
-Claude's collector is a status-line wrapper:
+Claude's primary collector is `python3 scripts/collect_claude_usage.py`. It runs
+the supported headless `claude -p /usage`, which the CLI answers locally with no
+model usage, from any surface (the VS Code extension never runs the status
+line). It records the 5-hour session, the all-models weekly pool and the Fable
+weekly sub-cap, so the Fable row updates automatically. It passes the CLI only
+`HOME`, `USER` and `PATH`, retries a cold start that prints a cost summary, and
+saves nothing when the output is not the expected subscription meters.
+
+Claude's secondary collector is a status-line wrapper (terminal only):
 `python3 scripts/collect_claude_pool.py`. It receives the documented status-line
 JSON on stdin. With `--original FILE`, it passes the exact original stdin to the
 shell command saved in that private JSON statusLine object and preserves its

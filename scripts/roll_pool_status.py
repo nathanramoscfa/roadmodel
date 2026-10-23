@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Refresh real meters and maintain the private Usage-pool status table hourly.
 
-Claude's status-line wrapper supplies account-wide weekly/5h snapshots.
+Claude's account-wide weekly, 5h and Fable sub-cap come from the headless
+`claude -p /usage` each run (the status-line wrapper is a secondary source).
 Codex, OpenRouter and supported Antigravity /usage are refreshed each run.
 Fresh observations set states and dated resets; stale/missing data retains
 states. Known passed resets still clear caps, with weekly dates rolled forward.
-The Fable sub-cap remains manual. No PAYG maker keys or local inference pools.
+No PAYG maker keys or local inference pools.
 
 Stdlib only, Python 3.11+. --dry-run prints a unified diff without writing the
 context file or collecting new data; --refresh also refreshes cache in a dry run.
@@ -120,7 +121,8 @@ def roll(
 
 
 def refresh_collectors(cache: Path) -> None:
-    for source in ("codex", "openrouter", "antigravity"):
+    for script in ("claude_usage", "codex", "openrouter", "antigravity"):
+        source = script.split("_")[0]
         try:
             subprocess.run(  # noqa: S603 — fixed sibling scripts
                 [
@@ -128,7 +130,13 @@ def refresh_collectors(cache: Path) -> None:
                     "-I",
                     "-X",
                     "utf8",
-                    str(Path(__file__).with_name(f"collect_{source}_pool.py")),
+                    str(
+                        Path(__file__).with_name(
+                            f"collect_{script}.py"
+                            if script == "claude_usage"
+                            else f"collect_{source}_pool.py"
+                        )
+                    ),
                     "--cache",
                     str(cache),
                 ],
