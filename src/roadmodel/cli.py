@@ -662,9 +662,10 @@ def ladder_command(
 ) -> None:
     """Print a roadmap Settings table as the full ladder — no engine call.
 
-    The Cost / Balanced / Quality picks /recommend shows, each with its effort
-    and a backup from another maker, read with every usage pool at headroom,
-    then the column the step runs and the rule for a tight or exhausted pool.
+    The Cost / Balanced / Quality picks /recommend shows, each ranked three
+    deep (pick, runner-up, and a backup from another maker) with each option's
+    effort and AA Index, read with every usage pool at headroom, then the
+    column the step runs and the rule for a tight or exhausted pool.
     The table outlives a pool's state: the step's runner picks the column on
     the day, so the roadmap needs no refresh when a pool tightens.
     """

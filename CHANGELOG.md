@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.93] — 2026-10-23
+
+- **Each column of a roadmap's Settings table ranks three options, each with its AA Index.** The table had one pick and one backup per column, and only the pick showed an AA Index. Each column of Cost, Balanced and Quality now has three ranked rows, and every option shows its model, platform, effort and AA Index:
+  - **1 · Pick:** the column's pick, as before.
+  - **2 · Runner-up:** what the column would pick with the Pick's whole series removed, from any maker. Removing only the model let an older version take the place, such as GPT-6 Sol under GPT-6.1 Sol.
+  - **3 · Backup:** another maker's model that is not the Runner-up's series. It comes from a third maker when one meets the bar, so with Claude, ChatGPT and Google AI funded a column usually spans all three subscriptions. A Runner-up from the Pick's own maker leaves the Backup as it was. The Backup reads `None` when the Runner-up already holds the only other maker's models.
+
+  Each cell puts one field per line: the model in bold, then the platform, the dial and level, `Thinking On` where the surface has that toggle, and `AA <n>`. The separate Model, Backup, Platform, Effort, AA Index and Thinking rows are gone. The ranks follow each column's own rule, so the AA Index can rise down the Cost column, which ranks the cheapest first.
+- **A tight or exhausted pool moves the run down the ranks.** The rule is now: if the column's pool reads `tight` or `exhausted`, run the first of its Runner-up and Backup whose pool has headroom; with neither, a `tight` column runs the Cost column and an `exhausted` one its Backup. `/roadmap-step` and `/roadmap-phase` apply it, and accept any option in the table on its own platform.
+- **The MCP `roadmap_settings` columns carry `runner_up` and `backup` in the pick's shape.** Each column has the same fields for all three options (`model_id`, `model`, `platform`, `effort`, `effort_cell`, `aa_index`, `thinking_cell`, `cell`), with `null` where a column has none. `backup` was a single string.
+- **`/roadmap-refresh` converts existing ladders to the ranked layout.** It converts them even where every pick still matches, as a layout fix that takes no `Settings updated` line. The roadmap templates and writing prompts show the new layout. A phase-roadmap prompt from an older kit now stops when its ladder tables lack the `2 · Runner-up` row.
+
 ## [0.2.92] — 2026-10-22
 
 - **`/roadmap-refresh` adds the AA Index row to tables whose picks still match.** The procedure rewrote a Settings table only when its picks changed, so the first fleet refresh after 0.2.91 left every unchanged table without the new row (reversi's refresh changed one line). Every ladder table, a step's Settings and a phase's Phase roadmap settings alike, now gains the row as a layout fix, the way a missing Backup row already did. It takes no `Settings updated` line.

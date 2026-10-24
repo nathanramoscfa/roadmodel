@@ -744,8 +744,10 @@ that owns it.}}
      THE LADDER — the default wherever roadmodel is
      installed. A step's Settings table carries the full
      recommendation /recommend shows: Cost, Balanced and
-     Quality, each with its own model, platform and effort
-     and a backup from another maker. The roadmap then
+     Quality, each ranked three deep — the Pick, the
+     Runner-up (the column's next choice, never the Pick's
+     series) and a Backup from another maker — each option
+     with its own model, platform and effort. The roadmap then
      outlives a usage pool's state: when a pool reads
      `tight` or `exhausted`, the step's runner picks
      another column (the **Runs:** line's rule) instead of
@@ -753,15 +755,20 @@ that owns it.}}
      **Runs:** line exactly as `roadmodel ladder --category
      <c> --complexity <x> [--novel]` prints them for the
      step's classification (MCP tool: `roadmap_settings`).
-     Rows: Model / Backup / Platform / Effort / AA Index /
-     Thinking / Conversation. The Effort cell names each
-     column's own dial (`Intelligence Medium` on Codex,
-     `Effort High` on Claude Code); a column whose surface
-     has no such control reads `—` there. The AA Index cell
-     is that column's model's Artificial Analysis
-     Intelligence Index at that column's effort, the figure
-     the pick was read from; it reads `not measured` where
-     AA has no row for the model at that effort. Every model is the latest
+     Rows: 1 · Pick / 2 · Runner-up / 3 · Backup /
+     Conversation. Each cell is one option, one field per
+     line (`<br>` breaks the line and `&emsp;` indents it):
+     the model in bold, its platform, its own dial and level
+     (`Intelligence Medium` on Codex, `Effort High` on
+     Claude Code, `No effort dial` where the surface has
+     none), `Thinking On` where the surface has that toggle,
+     and `AA <n>`: the model's Artificial Analysis
+     Intelligence Index at that effort, `not measured` where
+     AA has no row for it there. The ranks follow the
+     column's own rule, not the AA Index: Cost ranks the
+     cheapest first, so its AA Index may rise down the
+     column. A Backup cell reads `None` when the Runner-up
+     already holds the only other maker's models. Every model is the latest
      version of its series, never an older one (GPT-6 Sol
      where GPT-6.1 Sol runs, Opus 5 where Opus 5.5 does).
      Set Conversation to **Continue** in every column only
@@ -867,17 +874,14 @@ step's classification, pasted as printed. The three shapes
 after it are the fallback where roadmodel cannot be
 reached}}):
 
-| Setting      | Cost                        | Balanced                    | Quality                     |
-| ------------ | --------------------------- | --------------------------- | --------------------------- |
-| Model        | {{Model}}                   | {{Model}}                   | {{Model}}                   |
-| Backup       | {{Backup — platform · dial}} | {{Backup — platform · dial}} | {{Backup — platform · dial}} |
-| Platform     | {{Access method}}           | {{Access method}}           | {{Access method}}           |
-| Effort       | {{Its dial and level}}      | {{Its dial and level}}      | {{Its dial and level}}      |
-| AA Index     | {{AA Index at that effort}} | {{AA Index at that effort}} | {{AA Index at that effort}} |
-| Thinking     | {{On, or — with no toggle}} | {{On, or — with no toggle}} | {{On, or — with no toggle}} |
-| Conversation | **{{New or Continue}}**     | **{{New or Continue}}**     | **{{New or Continue}}**     |
+| Rank          | Cost                                                                                           | Balanced                                                                                       | Quality                                                                                        |
+| ------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 1 · Pick      | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} |
+| 2 · Runner-up | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} |
+| 3 · Backup    | {{The same shape, or None}}                                                                    | {{The same shape, or None}}                                                                    | {{The same shape, or None}}                                                                    |
+| Conversation  | **{{New or Continue}}**                                                                        | **{{New or Continue}}**                                                                        | **{{New or Continue}}**                                                                        |
 
-**Runs:** {{Cost / Balanced / Quality}} — the user-context's Budget priority is `{{cheap / balanced / best}}`. If that column's usage pool reads `tight`, run its Backup when the Backup's pool has headroom, else the Cost column; if it reads `exhausted`, run its Backup.
+**Runs:** {{Cost / Balanced / Quality}} — the user-context's Budget priority is `{{cheap / balanced / best}}`. If that column's usage pool reads `tight` or `exhausted`, run the first of its Runner-up and Backup whose pool has headroom; with neither, a `tight` column runs the Cost column and an `exhausted` one its Backup.
 
 Settings table — Effort + Thinking variant ({{use this
 shape when PLATFORM is "Claude Code" or any other
@@ -1289,15 +1293,12 @@ printed with its **Runs:** line. Where roadmodel cannot be
 reached, the single-column variant that matches PLATFORM,
 carrying ONLY the rows that platform's panel exposes.}}
 
-| Setting      | Cost                        | Balanced                    | Quality                     |
-| ------------ | --------------------------- | --------------------------- | --------------------------- |
-| Model        | {{Model}}                   | {{Model}}                   | {{Model}}                   |
-| Backup       | {{Backup — platform · dial}} | {{Backup — platform · dial}} | {{Backup — platform · dial}} |
-| Platform     | {{Access method}}           | {{Access method}}           | {{Access method}}           |
-| Effort       | {{Its dial and level}}      | {{Its dial and level}}      | {{Its dial and level}}      |
-| AA Index     | {{AA Index at that effort}} | {{AA Index at that effort}} | {{AA Index at that effort}} |
-| Thinking     | {{On, or — with no toggle}} | {{On, or — with no toggle}} | {{On, or — with no toggle}} |
-| Conversation | **{{New or Continue}}**     | **{{New or Continue}}**     | **{{New or Continue}}**     |
+| Rank          | Cost                                                                                           | Balanced                                                                                       | Quality                                                                                        |
+| ------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 1 · Pick      | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} |
+| 2 · Runner-up | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} |
+| 3 · Backup    | {{The same shape, or None}}                                                                    | {{The same shape, or None}}                                                                    | {{The same shape, or None}}                                                                    |
+| Conversation  | **{{New or Continue}}**                                                                        | **{{New or Continue}}**                                                                        | **{{New or Continue}}**                                                                        |
 
 **Runs:** {{the line `roadmodel ladder` prints}}
 
@@ -1426,15 +1427,12 @@ this step's classification, pasted as printed with its
 **Runs:** line; where roadmodel cannot be reached, the
 single-column variant that matches PLATFORM.}}
 
-| Setting      | Cost                        | Balanced                    | Quality                     |
-| ------------ | --------------------------- | --------------------------- | --------------------------- |
-| Model        | {{Model}}                   | {{Model}}                   | {{Model}}                   |
-| Backup       | {{Backup — platform · dial}} | {{Backup — platform · dial}} | {{Backup — platform · dial}} |
-| Platform     | {{Access method}}           | {{Access method}}           | {{Access method}}           |
-| Effort       | {{Its dial and level}}      | {{Its dial and level}}      | {{Its dial and level}}      |
-| AA Index     | {{AA Index at that effort}} | {{AA Index at that effort}} | {{AA Index at that effort}} |
-| Thinking     | {{On, or — with no toggle}} | {{On, or — with no toggle}} | {{On, or — with no toggle}} |
-| Conversation | **New**                     | **New**                     | **New**                     |
+| Rank          | Cost                                                                                           | Balanced                                                                                       | Quality                                                                                        |
+| ------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 1 · Pick      | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} |
+| 2 · Runner-up | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} |
+| 3 · Backup    | {{The same shape, or None}}                                                                    | {{The same shape, or None}}                                                                    | {{The same shape, or None}}                                                                    |
+| Conversation  | **New**                                                                                        | **New**                                                                                        | **New**                                                                                        |
 
 **Runs:** {{the line `roadmodel ladder` prints}}
 

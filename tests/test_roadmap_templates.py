@@ -404,25 +404,34 @@ def test_every_settings_table_carries_a_backup_row() -> None:
     """The backup lived only in the rationale's last sentence and the
     selection blocks at the foot of the file, so an operator looking at a
     step's Settings table could not see what to switch to. Every table in
-    the template — the three platform variants and the step skeletons —
-    carries a Backup row directly under Model."""
+    the template carries one: the three single-column platform variants
+    directly under Model, and the ladders (the default and the step
+    skeletons) as their third rank, under Pick and Runner-up."""
     lines = PHASE.read_text().splitlines()
     model_rows = [i for i, line in enumerate(lines) if line.startswith("| Model ")]
-    assert len(model_rows) >= 5
+    assert len(model_rows) >= 3
     for i in model_rows:
         assert lines[i + 1].startswith("| Backup "), lines[i]
+    ladders = [i for i, line in enumerate(lines) if line.startswith("| Rank ")]
+    assert len(ladders) >= 3
+    for i in ladders:
+        ranks = [ln.split("|")[1].strip() for ln in lines[i + 2 : i + 6]]
+        assert ranks == ["1 · Pick", "2 · Runner-up", "3 · Backup", "Conversation"], ranks
     flat = re.sub(r"\s+", " ", PHASE.read_text())
     assert "Every table carries Model / Backup / Platform / Conversation" in flat
+    assert "Rows: 1 · Pick / 2 · Runner-up / 3 · Backup / Conversation" in flat
 
 
 def test_roadmap_commands_handle_the_backup_row() -> None:
     refresh = re.sub(r"\s+", " ", REFRESH_COMMAND.read_text())
-    assert "Every table carries a `Backup` row directly under `Model`" in refresh
+    assert "Every single-column table carries a `Backup` row directly under `Model`" in refresh
     assert "a layout fix, not a new pick" in refresh
-    # A table whose picks still match gains the 0.2.91 AA Index row too: the
-    # first fleet refresh after 0.2.91 left every such table without it.
-    assert "carries an `AA Index` row directly under `Effort`" in refresh
+    # A ladder whose picks still match takes the 0.2.93 ranked layout too:
+    # the first fleet refresh after 0.2.91 left every unchanged table
+    # without that release's AA Index row.
+    assert "is the ranked ladder (roadmodel 0.2.93 on)" in refresh
     assert "even where every pick still matches" in refresh
+    assert "except that a ladder written before roadmodel 0.2.93 becomes the ranked" in refresh
     step = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
     assert "If you are that backup model on that platform, continue" in step
     prompt = re.sub(r"\s+", " ", PROMPT_PHASE.read_text())
@@ -574,18 +583,17 @@ def test_project_template_names_the_settings_that_write_each_phase_roadmap() -> 
         settings = section.index("**Phase roadmap settings**")
         first_sub = section.index("\n#### ")
         assert badge < settings < first_sub, f"settings not after the badge: Phase {name}"
-        rows = re.findall(r"^\| (\w+(?: \w+)?)\s+\|", section[settings:first_sub], re.M)
+        rows = re.findall(r"^\| ([^|-][^|]*?)\s+\|", section[settings:first_sub], re.M)
         assert rows == [
-            "Setting",
-            "Model",
-            "Backup",
-            "Platform",
-            "Effort",
-            "AA Index",
-            "Thinking",
+            "Rank",
+            "1 · Pick",
+            "2 · Runner-up",
+            "3 · Backup",
             "Conversation",
         ], name
-        assert "| Conversation | **New**" in section[settings:first_sub], name
+        assert re.search(r"^\| Conversation +\| \*\*New\*\*", section[settings:first_sub], re.M), (
+            name
+        )
         assert "`/roadmap-phase " in section[settings:first_sub], name
     # The rule: quality first, the deepest rung, never Ultracode, history kept.
     for phrase in _QUALITY_FIRST:
@@ -682,7 +690,7 @@ def test_step_settings_are_the_full_ladder() -> None:
     template = re.sub(r"\s+", " ", PHASE.read_text())
     assert "THE LADDER — the default wherever roadmodel is installed" in template
     assert step_ladder in template
-    assert "| Setting | Cost | Balanced | Quality |" in re.sub(r" +", " ", PHASE.read_text())
+    assert "| Rank | Cost | Balanced | Quality |" in re.sub(r" +", " ", PHASE.read_text())
     assert "never an older one (GPT-6 Sol where GPT-6.1 Sol runs" in template
     prompt = re.sub(r"\s+", " ", PROMPT_PHASE.read_text())
     assert step_ladder in prompt
@@ -694,6 +702,9 @@ def test_step_settings_are_the_full_ladder() -> None:
     step = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
     assert "**Ladder tables** (Cost / Balanced / Quality columns" in step
     assert "`> Ran <YYYY-MM-DD>: <column> — <model · effort>. <why>.`" in step
-    assert "reads `tight` moves the run" in prompt
-    assert "`tight`: run that column's Backup when the Backup's pool" in step
-    assert "`exhausted`: run that column's Backup" in step
+    assert "reads `tight` or `exhausted` moves the run to the first of the column's" in prompt
+    # 2026-10-23: each column ranks a Pick, a Runner-up and a Backup, and a
+    # tight or exhausted pool moves the run down the ranks.
+    assert "`tight`: run the first of that column's Runner-up and Backup whose" in step
+    assert "`exhausted`: run the first of that column's Runner-up and Backup" in step
+    assert "or its ladder tables have no `2 · Runner-up` row, STOP" in prompt

@@ -19,8 +19,8 @@ Execute Step $ARGUMENTS of this project's phase roadmap. Parse
   step's heading ends in ✅) up to the next `## ` heading. From it,
   read: the `**Branch:**` line, the `**Status:**` line (directly under
   the heading; a roadmap written before roadmodel 0.2.40 has it after
-  `**Deploys:**`), the Settings table (Model / Backup / Platform /
-  Effort / Thinking), the single ```` ```xml ```` fenced `<task>…</task>` block,
+  `**Deploys:**`), the Settings table (a ladder's Pick / Runner-up /
+  Backup rows, or Model / Backup / Platform / Effort / Thinking), the single ```` ```xml ```` fenced `<task>…</task>` block,
   and the `### Step {{STEP}} acceptance criteria` list. If the Branch
   line, Settings table, task block, or criteria are missing, stop and
   report which. A missing Status line is handled in §2.
@@ -103,30 +103,36 @@ Intelligence <I>>. This session: <your own model> on <this surface>.`
 
 - **Ladder tables** (Cost / Balanced / Quality columns, roadmodel 0.2.86
   on) carry every column the step may run, so pick one before the checks
-  below. The table's **Runs:** line names the column. Apply its rule to
-  the Usage-pool status table in `planning/user-context.md` (a row whose
-  reset time has passed reads `headroom`). Read the pool of the
-  subscription that pays for that column's platform:
-  - `headroom`: run that column.
-  - `tight`: run that column's Backup when the Backup's pool reads
-    `headroom`, else the Cost column.
-  - `exhausted`: run that column's Backup.
+  below. From roadmodel 0.2.93 each column ranks three options in rows
+  `1 · Pick`, `2 · Runner-up` and `3 · Backup`. Each cell is one option,
+  one field per line: the model in bold, its platform, its dial and
+  level, `Thinking On` where the surface has that toggle, and its AA
+  Index. An older ladder has Model / Backup / Platform / Effort rows
+  instead: its Model, Platform and Effort cells are the Pick, and it has
+  no Runner-up. The table's **Runs:** line names the column. Apply its
+  rule to the Usage-pool status table in `planning/user-context.md` (a
+  row whose reset time has passed reads `headroom`). Read the pool of the
+  subscription that pays for that column's Pick's platform:
+  - `headroom`: run that column's Pick.
+  - `tight`: run the first of that column's Runner-up and Backup whose
+    pool reads `headroom`, else the Cost column's Pick.
+  - `exhausted`: run the first of that column's Runner-up and Backup
+    whose pool reads `headroom`, else its Backup.
 
-  The chosen column (or Backup) is what the printed line names as
-  required, with the column named (`… · Balanced column`, or `… ·
-  Balanced column's Backup — Claude pool tight`). Any column's model on
-  that column's platform, or any column's Backup on its own platform,
-  continues too. Say which column you are, and which column the rule
-  selected.
+  The chosen option is what the printed line names as required, with
+  its column and rank named (`… · Balanced Pick`, or `… · Balanced
+  Runner-up — Claude pool tight`). Any option in any column, on its own
+  platform, continues too. Say which option you are, and which one the
+  rule selected.
 - **Backup.** The table's `Backup` row (roadmaps from roadmodel 0.2.41
   on) names the model to run when the primary is unavailable, with its
   own platform and dial. If you are that backup model on that platform,
   continue: the operator has switched to it. Say so on the printed line
   (`… · running the backup`) and record it as a model change below.
-- If Platform is not the surface you are running on (Claude Code,
-  Codex, Antigravity, Cursor, …), and you are not the backup on its
-  platform, stop: this step is meant to run on another surface; tell
-  the operator which.
+- If Platform (a ladder option's platform line) is not the surface you
+  are running on (Claude Code, Codex, Antigravity, Cursor, …), and you
+  are no option of the table on its own platform, stop: this step is
+  meant to run on another surface; tell the operator which.
 - **Read your own model.** Name the exact model, never only its family.
   On Codex your instructions say just "based on GPT-6", but the model
   the operator picked and its reasoning effort are recorded in the
@@ -172,10 +178,11 @@ Intelligence <I>>. This session: <your own model> on <this surface>.`
   rollout's `"effort"` is the dial the session runs on, so print it. If
   it differs from the table's, name the value to set. Continue.
 
-**Record what ran.** With a ladder table, running one of its columns or
-Backups changes nothing in it: the step's own PR adds one line beneath
-it, `> Ran <YYYY-MM-DD>: <column> — <model · effort>. <why>.` (why: the
-**Runs:** column, or the pool that moved it). When what ran is in none of
+**Record what ran.** With a ladder table, running one of its options
+changes nothing in it: the step's own PR adds one line beneath it,
+`> Ran <YYYY-MM-DD>: <column> — <model · effort>. <why>.` (column: the
+column and rank, `Balanced Runner-up`; why: the **Runs:** column, or the
+pool that moved it). When what ran is in none of
 its cells, or the table has a single column, and the model or effort you
 proceed with differs from the table, the step's own PR rewrites its
 Settings table to match (§5), with one line beneath it:
