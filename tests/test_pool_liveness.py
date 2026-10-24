@@ -126,3 +126,26 @@ def test_hook_install_adds_one_entry_keeps_others_and_is_idempotent() -> None:
     assert "hooks" not in settings or settings["hooks"]["SessionStart"] == [
         other
     ]  # input untouched
+
+
+def test_overlapping_refresh_is_skipped_cleanly(tmp_path: Path) -> None:
+    first = rps.single_run(tmp_path)
+    assert first is not None
+    assert rps.single_run(tmp_path) is None  # a second run sees the first
+    first.close()
+    again = rps.single_run(tmp_path)
+    assert again is not None
+    again.close()
+
+
+def test_main_exits_zero_when_another_run_holds_the_lock(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    context = tmp_path / "user-context.md"
+    context.write_text("# Ctx\n")
+    held = rps.single_run(tmp_path)
+    try:
+        code = rps.main(["--file", str(context), "--cache", str(tmp_path), "--no-collect"])
+    finally:
+        held.close()
+    assert code == 0 and "another refresh is running" in capsys.readouterr().out

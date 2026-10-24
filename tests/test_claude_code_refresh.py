@@ -367,6 +367,25 @@ def _diff_module():
         sys.path.pop(0)
 
 
+def test_docs_only_run_stages_no_last_version(tmp_path: Path) -> None:
+    """A docs-only refresh (no new release) must not crash or move last_version;
+    a release run stages its newest version for the workflow to promote."""
+    sys.path.insert(0, str(REPO_ROOT / "update"))
+    try:
+        import importlib
+
+        mod = importlib.import_module("update_claude_code")
+        importlib.reload(mod)
+    finally:
+        sys.path.pop(0)
+
+    staged = tmp_path / "claude-code-last-version.new"
+    mod.stage_last_version([], tmp_path)
+    assert not staged.exists()
+    mod.stage_last_version([("2.1.310", ["- x"]), ("2.1.309", ["- y"])], tmp_path)
+    assert staged.read_text() == "2.1.310\n"
+
+
 def test_thinking_toggle_keywords_are_triggers() -> None:
     mod = _diff_module()
     for kw in (
