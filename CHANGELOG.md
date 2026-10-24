@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **A roadmap's tables fit in 80 columns.** Phase roadmaps wrap their prose at 80 characters, but a ladder's Backup cells (`Gemini 4 Argon — Antigravity · Effort High`) pushed every Settings table to about 145 columns, and the eight-column Summary Table past 130. In an editor without word wrap they ran far to the right of everything else.
+  - The ladder `roadmodel ladder` and the MCP `roadmap_settings` print gives the backup three rows under Model: `Backup` (the model), `Backup on` (its platform) and `Backup effort` (its dial and level). The **Runs:** line comes wrapped at 80. The MCP columns add `backup_model`, `backup_platform` and `backup_effort_cell`, and `backup` keeps the one-cell form the single-column tables and the selection block's `BACKUP:` line use. A typical ladder is now 72 to 80 columns wide.
+  - The phase template's Summary Table has four columns: Step / Scope / Model / Status. A Scope is at most 30 characters, and a verification row's Model reads `CI`. The step's own Settings table still carries the platform, the dials and the other two columns.
+  - `/roadmap-refresh` converts existing roadmaps as a layout fix with no `Settings updated` line. It splits each one-cell backup into the three rows and wraps the **Runs:** line, and it narrows the Summary Table. Both changes reach Complete steps and written phases too, because they change no value. `/roadmap-phase` treats a kit whose ladder still joins the backup in one cell as stale.
+
 ## [0.2.92] — 2026-10-22
 
 - **`/roadmap-refresh` adds the AA Index row to tables whose picks still match.** The procedure rewrote a Settings table only when its picks changed, so the first fleet refresh after 0.2.91 left every unchanged table without the new row (reversi's refresh changed one line). Every ladder table, a step's Settings and a phase's Phase roadmap settings alike, now gains the row as a layout fix, the way a missing Backup row already did. It takes no `Settings updated` line.

@@ -200,6 +200,17 @@ complexity, novel or not; its Model rationale names them), then:
   backup the step already names (its Model rationale's closing
   sentence, or its entry in the Model selection blocks) — a layout
   fix, not a new pick, so it takes no `Settings updated` line.
+- In a ladder table (roadmodel 0.2.93 on) the backup takes three rows
+  directly under `Model`: `Backup` (the model), `Backup on` (its
+  platform) and `Backup effort` (its dial and level, `—` where the
+  surface has none; under a `None` backup both read `—`), and the
+  **Runs:** line is wrapped at 80 columns, so the table fits in 80
+  columns. A ladder written before 0.2.93 joins the three in one Backup
+  cell (`GPT-6.1 Sol — Codex · Intelligence Medium`): split it into
+  the three rows, realign the table, and wrap its **Runs:** line — in
+  every ladder, a Complete step's and a written phase's included,
+  because the split changes no value. It is a layout fix, not a new
+  pick, so it takes no `Settings updated` line.
 - Every ladder table, a step's Settings and a phase's Phase roadmap
   settings alike, carries an `AA Index` row directly under `Effort`:
   each column's model's AA Intelligence Index at that column's effort,
@@ -210,10 +221,21 @@ complexity, novel or not; its Model rationale names them), then:
   `Settings updated` line. Without roadmodel, leave the row out.
 - Keep the step's selection block in the Model selection blocks equal
   to the column its **Runs:** line names (its `BACKUP:` line to that
-  column's Backup), and its Summary Table row to the same column.
+  column's Backup), and its Summary Table row's Model to that column's
+  model.
+- The Summary Table (roadmodel 0.2.93 on) has four columns: Step /
+  Scope / Model / Status, a Scope of at most 30 characters, and `CI`
+  as a verification row's Model, so it fits in 80 columns. One with
+  Platform, Reasoning dial, Thinking or Conv columns predates it:
+  drop those columns, shorten each Scope over 30 characters without
+  changing what it names, write `CI` in each verification row's Model,
+  and change no Status — a layout fix in every row, a Complete step's
+  included, with no `Settings updated` line.
 - If it matches, leave the step exactly as it is.
 - **Never touch a step that reads `Complete`.** Its settings are the
-  record of what ran.
+  record of what ran. Only the two 0.2.93 layout fixes above (the
+  ladder's backup rows and the Summary Table's columns) reach it,
+  because they change no value.
 - Keep each step's Conversation row as written — it is session hygiene,
   not a model choice.
 
@@ -249,7 +271,8 @@ sentences on why.
 - A table that matches ⇒ leave the phase exactly as it is.
 - **Never add, re-pick or rewrite the table of a phase whose roadmap
   exists.** Its table, or the lack of one, is the record of what wrote
-  that roadmap.
+  that roadmap. Only the 0.2.93 backup-row split above reaches it,
+  because it changes no value.
 
 Print the phase · was · now · changed table.
 

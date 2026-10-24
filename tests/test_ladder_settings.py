@@ -149,15 +149,38 @@ def test_the_table_carries_every_rung_with_its_effort_and_backup() -> None:
         "Balanced",
         "Quality",
     ]
-    assert [ln.split("|")[1].strip() for ln in lines[2:9]] == [
+    assert [ln.split("|")[1].strip() for ln in lines[2:11]] == [
         "Model",
         "Backup",
+        "Backup on",
+        "Backup effort",
         "Platform",
         "Effort",
         "AA Index",
         "Thinking",
         "Conversation",
     ]
+
+
+def test_the_backup_takes_three_rows_and_the_table_fits_80_columns() -> None:
+    """The Backup row names the model; Backup on and Backup effort carry its
+    platform and dial, so no cell joins all three and every line of the
+    table and its Runs paragraph fits the 80 columns a roadmap wraps at."""
+    got = _settings()
+    rows = {
+        ln.split("|")[1].strip(): [c.strip() for c in ln.strip("|").split("|")[1:]]
+        for ln in got["markdown"].splitlines()
+        if ln.startswith("| ") and not ln.startswith("| -")
+    }
+    for i, tier in enumerate(scoring.LADDER_TIERS):
+        col = got["columns"][tier]
+        assert rows["Backup"][i] == col["backup_model"]
+        assert rows["Backup on"][i] == col["backup_platform"]
+        assert rows["Backup effort"][i] == col["backup_effort_cell"]
+        assert col["backup"] == (
+            f"{col['backup_model']} — {col['backup_platform']} · {col['backup_effort_cell']}"
+        )
+    assert all(len(ln) <= 80 for ln in got["markdown"].splitlines())
 
 
 def _aa(value: float) -> dict[str, Any]:
@@ -237,8 +260,9 @@ def test_a_model_that_always_thinks_has_no_thinking_toggle() -> None:
 def test_the_step_runs_the_column_its_budget_priority_names(budget: str, runs: str) -> None:
     got = _settings(scoring.Task("planning", "medium", budget=budget))
     assert got["runs"] == runs
-    assert got["markdown"].splitlines()[-1].startswith(f"**Runs:** {runs.capitalize()} — ")
-    assert scoring.RUN_RULE in got["markdown"]
+    _, runs_line = got["markdown"].split("\n\n")
+    assert runs_line.startswith(f"**Runs:** {runs.capitalize()} — ")
+    assert scoring.RUN_RULE in " ".join(runs_line.split())
 
 
 def test_a_phase_session_runs_quality_at_its_deepest_pinnable_rung() -> None:

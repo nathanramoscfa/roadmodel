@@ -57,6 +57,7 @@ import functools
 import json
 import math
 import re
+import textwrap
 from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timedelta, timezone
 from importlib import resources
@@ -2389,11 +2390,23 @@ def settings_ladder(
             "aa_index": ladder_aa_index(bench, c.model_id, level),
             "thinking_cell": _thinking_cell(c, cat),
             "backup": None if rung.backup is None else backup_cell(rung.backup),
+            "backup_model": None,
+            "backup_platform": None,
+            "backup_effort_cell": None,
         }
+        if rung.backup is not None:
+            b = rung.backup.candidate
+            columns[tier]["backup_model"] = b.model_name
+            columns[tier]["backup_platform"] = b.platform_name
+            columns[tier]["backup_effort_cell"] = _effort_cell(b, rung.backup.level)
     runs = "quality" if phase else RUN_COLUMN.get(task.budget, "balanced")
+    # The backup takes three rows rather than one `Model — Platform · Effort`
+    # cell, so the table fits the 80 columns a roadmap's prose wraps at.
     rows = [
         ("Model", [columns[t]["model"] for t in LADDER_TIERS]),
-        ("Backup", [columns[t]["backup"] or "None" for t in LADDER_TIERS]),
+        ("Backup", [columns[t]["backup_model"] or "None" for t in LADDER_TIERS]),
+        ("Backup on", [columns[t]["backup_platform"] or "—" for t in LADDER_TIERS]),
+        ("Backup effort", [columns[t]["backup_effort_cell"] or "—" for t in LADDER_TIERS]),
         ("Platform", [columns[t]["platform"] for t in LADDER_TIERS]),
         ("Effort", [columns[t]["effort_cell"] for t in LADDER_TIERS]),
         ("AA Index", [_aa_cell(columns[t]["aa_index"]) for t in LADDER_TIERS]),
@@ -2416,7 +2429,12 @@ def settings_ladder(
         if phase
         else f"the user-context's Budget priority is `{task.budget}`"
     )
-    run_line = f"**Runs:** {runs.capitalize()} — {why}. {RUN_RULE}"
+    run_line = textwrap.fill(
+        f"**Runs:** {runs.capitalize()} — {why}. {RUN_RULE}",
+        width=80,
+        break_long_words=False,
+        break_on_hyphens=False,
+    )
     return {
         "task": asdict(task),
         "phase": phase,

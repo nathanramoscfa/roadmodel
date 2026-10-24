@@ -120,7 +120,8 @@ Intelligence <I>>. This session: <your own model> on <this surface>.`
   selected.
 - **Backup.** The table's `Backup` row (roadmaps from roadmodel 0.2.41
   on) names the model to run when the primary is unavailable, with its
-  own platform and dial. If you are that backup model on that platform,
+  own platform and dial (in a ladder table, the `Backup on` and `Backup
+  effort` rows under it). If you are that backup model on that platform,
   continue: the operator has switched to it. Say so on the printed line
   (`… · running the backup`) and record it as a model change below.
 - If Platform is not the surface you are running on (Claude Code,

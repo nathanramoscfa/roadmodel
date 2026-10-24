@@ -56,7 +56,9 @@ Concretely, for each roadmap step:
    given the operator's active subscriptions (a Claude pick → "Claude Code"
    funded by Max; a GPT pick → "Codex" funded by ChatGPT Pro; etc.).
 4. **Emit** the step's Settings table using the **platform-specific variant**
-   the template defines. Every table carries Model / Backup / Platform /
+   the template defines (a single-column table; the ladder `roadmodel ladder`
+   prints gives the backup three rows: Backup, Backup on, Backup effort).
+   Every table carries Model / Backup / Platform /
    Conversation plus **only the dials the chosen surface actually exposes** — Claude Code →
    Effort + Thinking(On/Off), with Thinking `—` on a model that always thinks
    (Opus 5.5, Sonnet 5.5, Haiku 5.5, the Fable models), which has no toggle; Codex and the other reasoning-dial surfaces

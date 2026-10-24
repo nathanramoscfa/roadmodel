@@ -28,7 +28,9 @@ Step 1 has `**Status:** Not started` directly under the `## Step 1`
 heading. If Stage 3 is a bare "OPEN THE PR", Stage 6 tells you to put
 findings in a "Follow-ups (non-blocking)" note after the completion
 line, a step's Status line sits after its `**Deploys:**` line, or its
-Settings tables have no `Backup` row, STOP
+Settings tables have no `Backup` row, or its ladder joins the backup's
+model, platform and dial in one cell instead of the `Backup`, `Backup
+on` and `Backup effort` rows, STOP
 and tell me the kit is stale — do not write the roadmap from it.
 
 Step 0b — roadmaps live in `docs/roadmap/`: `ROADMAP.md` and every
@@ -119,8 +121,8 @@ backup from another maker. The step's runner picks the column from the
 usage pools on the day, so the roadmap needs no refresh when a pool
 tightens. Its models are always the latest version of their series.
 The Model rationale explains the classification and what sets the
-columns apart for the step; the Summary Table row and the step's
-selection block restate the column the **Runs:** line names.
+columns apart for the step; the Summary Table row's Model and the
+step's selection block restate the column the **Runs:** line names.
 
 Where `roadmodel` cannot be reached, run the model selector as the
 engine instead (prices from `@planning/model-tier-cost-scale.md`,

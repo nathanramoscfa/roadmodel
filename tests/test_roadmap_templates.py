@@ -224,7 +224,7 @@ def test_phase_template_puts_status_at_the_step_heading() -> None:
     assert "append ` ✅` to the step's `## Step` heading" in flat
     assert flat.count("✅") >= 6
     # The Summary Table's Status column, set by the same Stage-3 commit.
-    assert "| Conv | Status      |" in text
+    assert "| Model          | Status             |" in text
     assert "Summary Table Status cell" in flat
 
 
@@ -415,6 +415,38 @@ def test_every_settings_table_carries_a_backup_row() -> None:
     assert "Every table carries Model / Backup / Platform / Conversation" in flat
 
 
+def test_ladders_and_the_summary_table_fit_80_columns() -> None:
+    """A ladder's Backup cell (`Gemini 4 Argon — Antigravity · Effort High`)
+    pushed every Settings table to about 145 columns and the eight-column
+    Summary Table past 130, in roadmaps whose prose wraps at 80. Since 0.2.93
+    the backup takes three rows and the Summary Table four columns."""
+    for path in (PHASE, PROJECT):
+        lines = path.read_text().splitlines()
+        for i, line in enumerate(lines):
+            if line.startswith("| Model "):
+                assert lines[i + 1].startswith("| Backup "), path.name
+                if lines[i - 2].startswith("| Setting ") and "Cost" in lines[i - 2]:
+                    assert lines[i + 2].startswith("| Backup on "), path.name
+                    assert lines[i + 3].startswith("| Backup effort "), path.name
+                    block = lines[i - 2 : i + 11]
+                    assert all(len(row) <= 80 for row in block), path.name
+    text = PHASE.read_text()
+    summary = text[text.index("## Summary Table") : text.index("## Model selection blocks")]
+    head = next(ln for ln in summary.splitlines() if ln.startswith("| Step "))
+    assert [c.strip() for c in head.strip("|").split("|")] == ["Step", "Scope", "Model", "Status"]
+    assert all(len(ln) <= 80 for ln in summary.splitlines())
+    flat = re.sub(r"\s+", " ", summary)
+    assert "Scope is at most 30 characters" in flat
+    assert "A verification row's Model reads `CI`" in flat
+    refresh = re.sub(r"\s+", " ", REFRESH_COMMAND.read_text())
+    assert "A ladder written before 0.2.93 joins the three in one Backup cell" in refresh
+    assert "The Summary Table (roadmodel 0.2.93 on) has four columns" in refresh
+    assert "Only the two 0.2.93 layout fixes above" in refresh
+    assert "Only the 0.2.93 backup-row split above reaches it" in refresh
+    step = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
+    assert "the `Backup on` and `Backup effort` rows under it" in step
+
+
 def test_roadmap_commands_handle_the_backup_row() -> None:
     refresh = re.sub(r"\s+", " ", REFRESH_COMMAND.read_text())
     assert "Every table carries a `Backup` row directly under `Model`" in refresh
@@ -579,13 +611,15 @@ def test_project_template_names_the_settings_that_write_each_phase_roadmap() -> 
             "Setting",
             "Model",
             "Backup",
+            "Backup on",
+            "Backup effort",
             "Platform",
             "Effort",
             "AA Index",
             "Thinking",
             "Conversation",
         ], name
-        assert "| Conversation | **New**" in section[settings:first_sub], name
+        assert "| Conversation | **New**" in re.sub(r" +", " ", section[settings:first_sub]), name
         assert "`/roadmap-phase " in section[settings:first_sub], name
     # The rule: quality first, the deepest rung, never Ultracode, history kept.
     for phrase in _QUALITY_FIRST:

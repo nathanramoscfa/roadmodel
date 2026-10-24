@@ -302,8 +302,9 @@ frontier, in code (`scoring.ladder`):
    beyond the noise (hard agentic work, on Terminal-Bench 4.0), GPT-6.1 Sol
    rungs to Sonnet 5.5 or Opus 5.5, and GPT-6 Luna rungs to Gemini 3.8
    Flash. `roadmodel backup --model <m> --effort <e>` applies this rule to a
-   pick made elsewhere, and the roadmap prompts copy its cell into each
-   step's Backup row. First it checks the pick itself
+   pick made elsewhere, and the roadmap prompts copy its cell into a
+   single-column table's Backup row (a ladder gives the backup three
+   rows). First it checks the pick itself
    (`successor_for_pick`): when the pick's platform offers a newer version
    of its series (`roadmodel.series`), the command prints that version on a
    `MODEL` line and backs it up instead.

@@ -59,7 +59,9 @@ STYLE RULES (the AI MUST follow)
     need. A rule for roadmap-writing sessions in the
     user-context overrides this default. Without roadmodel, the
     table takes its platform's single-column shape (the phase
-    roadmap template's Settings variants) with a Backup row.
+    roadmap template's Settings variants) with a Backup row;
+    the ladder gives the backup three rows (Backup, Backup on,
+    Backup effort) so the table fits in 80 columns.
     Its Conversation is always **New**. Once the phase roadmap
     exists, the table is history: only a phase not yet written
     is ever re-picked.
@@ -248,17 +250,21 @@ dependency graph in §5 is honoured.
 **Phase roadmap settings** — the session that writes
 `phase01-roadmap.md` (`/roadmap-phase 1`):
 
-| Setting      | Cost                   | Balanced               | Quality                                  |
-|--------------|------------------------|------------------------|------------------------------------------|
-| Model        | <Model>                | <Model>                | <The strongest planning model>           |
-| Backup       | <Backup — its platform · its dial> | <Backup — its platform · its dial> | <Backup — its platform · its dial> |
-| Platform     | <Access method>        | <Access method>        | <Claude Code, or the access method that pays> |
-| Effort       | <Its dial and level>   | <Its dial and level>   | <Deepest rung there — Effort Max in Claude Code> |
-| AA Index     | <AA Index at that effort> | <AA Index at that effort> | <AA Index at that effort>        |
-| Thinking     | <On, or — with no toggle> | <On, or — with no toggle> | <On, or — with no toggle>          |
-| Conversation | **New**                | **New**                | **New**                                  |
+| Setting       | Cost             | Balanced         | Quality          |
+|---------------|------------------|------------------|------------------|
+| Model         | <Model>          | <Model>          | <Model>          |
+| Backup        | <Model>          | <Model>          | <Model>          |
+| Backup on     | <Platform>       | <Platform>       | <Platform>       |
+| Backup effort | <Dial and level> | <Dial and level> | <Dial and level> |
+| Platform      | <Platform>       | <Platform>       | <Platform>       |
+| Effort        | <Dial and level> | <Dial and level> | <Deepest rung>   |
+| AA Index      | <AA Index>       | <AA Index>       | <AA Index>       |
+| Thinking      | <On or —>        | <On or —>        | <On or —>        |
+| Conversation  | **New**          | **New**          | **New**          |
 
-**Runs:** Quality — a phase-roadmap session runs Quality (quality first). If that column's usage pool reads `tight`, run its Backup when the Backup's pool has headroom, else the Cost column; if it reads `exhausted`, run its Backup.
+**Runs:** Quality — a phase-roadmap session runs Quality (quality first). If
+that column's usage pool reads `tight`, run its Backup when the Backup's pool
+has headroom, else the Cost column; if it reads `exhausted`, run its Backup.
 
 <!-- The ladder `roadmodel ladder --category planning
 --complexity high --phase` prints, pasted as printed. Without
@@ -309,15 +315,17 @@ key pays for the platform.>
 **Phase roadmap settings** — the session that writes
 `phase02-roadmap.md` (`/roadmap-phase 2`):
 
-| Setting      | Cost    | Balanced | Quality |
-|--------------|---------|----------|---------|
-| Model        | …       | …        | …       |
-| Backup       | …       | …        | …       |
-| Platform     | …       | …        | …       |
-| Effort       | …       | …        | …       |
-| AA Index     | …       | …        | …       |
-| Thinking     | …       | …        | …       |
-| Conversation | **New** | **New**  | **New** |
+| Setting       | Cost    | Balanced | Quality |
+|---------------|---------|----------|---------|
+| Model         | …       | …        | …       |
+| Backup        | …       | …        | …       |
+| Backup on     | …       | …        | …       |
+| Backup effort | …       | …        | …       |
+| Platform      | …       | …        | …       |
+| Effort        | …       | …        | …       |
+| AA Index      | …       | …        | …       |
+| Thinking      | …       | …        | …       |
+| Conversation  | **New** | **New**  | **New** |
 
 **Runs:** Quality — <the line `roadmodel ladder` prints>
 
@@ -347,15 +355,17 @@ key pays for the platform.>
 **Phase roadmap settings** — the session that writes
 `phaseNN-roadmap.md` (`/roadmap-phase N`):
 
-| Setting      | Cost    | Balanced | Quality |
-|--------------|---------|----------|---------|
-| Model        | …       | …        | …       |
-| Backup       | …       | …        | …       |
-| Platform     | …       | …        | …       |
-| Effort       | …       | …        | …       |
-| AA Index     | …       | …        | …       |
-| Thinking     | …       | …        | …       |
-| Conversation | **New** | **New**  | **New** |
+| Setting       | Cost    | Balanced | Quality |
+|---------------|---------|----------|---------|
+| Model         | …       | …        | …       |
+| Backup        | …       | …        | …       |
+| Backup on     | …       | …        | …       |
+| Backup effort | …       | …        | …       |
+| Platform      | …       | …        | …       |
+| Effort        | …       | …        | …       |
+| AA Index      | …       | …        | …       |
+| Thinking      | …       | …        | …       |
+| Conversation  | **New** | **New**  | **New** |
 
 **Runs:** Quality — <the line `roadmodel ladder` prints>
 
