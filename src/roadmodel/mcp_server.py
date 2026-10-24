@@ -495,8 +495,9 @@ def create_app() -> Any:
         """A roadmap Settings table as the full ladder, in CODE — no engine call.
 
         The Cost / Balanced / Quality picks /recommend shows for the step's
-        classification, each with its effort and a backup from another maker,
-        read with every usage pool at headroom, plus the column the step runs
+        classification, each ranked three deep (pick, runner-up, and a backup
+        from another maker) with each option's effort and AA Index, read with
+        every usage pool at headroom, plus the column the step runs
         (``runs``) and the rule for a tight or exhausted pool. ``phase`` is the
         session that writes a phase roadmap: it runs Quality at its deepest
         rung. ``markdown`` is the table to paste under the step (or phase);

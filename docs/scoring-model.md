@@ -325,17 +325,30 @@ is applied in code, at two places:
 **A roadmap's Settings carry the ladder.** `roadmodel ladder --category
 <c> --complexity <x> [--novel] [--phase]` (`scoring.settings_ladder`, MCP
 `roadmap_settings`) prints a step's Settings as /recommend's three columns,
-each with its effort, the model's AA Intelligence Index at that effort
-(`not measured` where AA has no row there), and its backup. It reads every usage pool as `headroom`
-(`rank(neutral_pools=True)`), so the table does not depend on the day it was
-written. The **Runs:** line names the column the step runs: the Budget
-priority's column (cheap → Cost, balanced → Balanced, best → Quality); for a
-phase-roadmap session (`--phase`), Quality at the deepest rung its dial lets
-a roadmap pin (`max`, never `ultra`). Then `/roadmap-step` applies the rule to
-the pools on the day:
-- the column's pool reads `tight`: run its Backup when the Backup's pool has
-  headroom, else the Cost column;
-- the column's pool reads `exhausted`: run its Backup.
+each ranked three deep. Each option carries its effort and the model's AA
+Intelligence Index at that effort (`not measured` where AA has no row there),
+one field per line in its cell:
+- **Pick:** the column's rung.
+- **Runner-up:** the column's rung with the pick's whole series off the
+  table (`unavailable_models`), so it is never an older version of the pick
+  (GPT-6 Sol under GPT-6.1 Sol). It may come from any maker.
+- **Backup:** the pick's backup from another maker (`_backup_for`), never the
+  runner-up's series, and from a maker neither row above uses where one meets
+  the bar (`_ranked_backup`), so the three rows span as many makers as the
+  pool holds. `None` when the runner-up holds the only other maker's series.
+
+The ranks follow the column's own rule, not the AA Index: Cost ranks the
+cheapest first, so its AA Index may rise down the column. The table reads
+every usage pool as `headroom` (`rank(neutral_pools=True)`), so it does not
+depend on the day it was written. The **Runs:** line names the column the
+step runs: the Budget priority's column (cheap → Cost, balanced → Balanced,
+best → Quality); for a phase-roadmap session (`--phase`), Quality, its pick
+and runner-up at the deepest rung their dials let a roadmap pin (`max`, never
+`ultra`). Then `/roadmap-step` applies the rule to the pools on the day:
+- the column's pool reads `headroom`: run its Pick;
+- it reads `tight` or `exhausted`: run the first of its Runner-up and Backup
+  whose pool has headroom; with neither, a `tight` column runs the Cost
+  column and an `exhausted` one its Backup.
 
 **Near ties.** A benchmark separates models only as finely as its own
 run-to-run noise. Each candidate carries its category evidence on the

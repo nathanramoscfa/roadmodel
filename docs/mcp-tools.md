@@ -202,9 +202,9 @@ the reason).
 ## `roadmap_settings`
 
 A roadmap step's (or phase's) Settings table as the full ladder: the Cost /
-Balanced / Quality picks /recommend shows for the classification, each with
-its effort and a backup from another maker, read with every usage pool at
-headroom. It also names the column the step runs (`runs`: the user-context's
+Balanced / Quality picks /recommend shows for the classification, each ranked
+three deep (pick, runner-up, and a backup from another maker) with each
+option's effort and AA Index, read with every usage pool at headroom. It also names the column the step runs (`runs`: the user-context's
 Budget priority, or Quality for a phase-roadmap session) and the rule for a
 pool that reads `tight` or `exhausted` on the day. Same output as
 `roadmodel ladder`. No provider key, no engine call.
@@ -223,11 +223,14 @@ def roadmap_settings(
 
 ### Returns
 
-`task`, `phase`, `runs` (`cost`, `balanced` or `quality`), `rule`, `columns`
-(per tier: `model`, `platform`, `effort`, `effort_cell`, `aa_index` (the
+`task`, `phase`, `runs` (`cost`, `balanced` or `quality`), `rule`, `columns`,
+`backup_warning`, and `markdown` (the table and its **Runs:** line, ready to
+paste). Each of `columns`' tiers is its pick, with `runner_up` and `backup`
+beside it in the same shape (`null` where the column has none): `model_id`,
+`model`, `platform_id`, `platform`, `effort`, `effort_cell`, `aa_index` (the
 model's AA Intelligence Index at that effort, or null where AA has not
-measured it there), `thinking_cell`, `backup`), `backup_warning`, and
-`markdown` (the table and its **Runs:** line, ready to paste).
+measured it there), `thinking_cell`, and `cell` (the option's table cell, one
+field per line).
 
 ## `read_catalog`
 

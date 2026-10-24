@@ -174,8 +174,9 @@ complexity, novel or not; its Model rationale names them), then:
 - Where `roadmodel` is installed, the Settings table is the ladder
   `roadmodel ladder --category <c> --complexity <x> [--novel]` prints
   for that classification (MCP tool: `roadmap_settings`), pasted as
-  printed with its **Runs:** line: Cost, Balanced and Quality, each with
-  its own effort and a backup from another maker, read with every usage
+  printed with its **Runs:** line: Cost, Balanced and Quality, each
+  ranked three deep (Pick, Runner-up, and a Backup from another maker),
+  each option with its own effort and AA Index, read with every usage
   pool at headroom, so the step's runner picks the column from the pools
   on the day. A single-column table becomes the ladder: that is a
   difference. Its models are always the latest version of their series.
@@ -190,10 +191,11 @@ complexity, novel or not; its Model rationale names them), then:
 - If the result differs from the step's Settings table, rewrite the
   table and its Model rationale, and add one line beneath the table:
   `> Settings updated <YYYY-MM-DD> (refresh): was <old model> · <old effort>. <why>.`
-  For a ladder, the old model and effort are the column the step ran
-  (its **Runs:** line), or the single column it replaced. A changed
-  backup alone counts as a difference; name it in that line.
-- Every table carries a `Backup` row directly under `Model`, each cell
+  For a ladder, the old model and effort are the Pick of the column the
+  step ran (its **Runs:** line), or the single column it replaced. A
+  changed runner-up or backup alone counts as a difference; name it in
+  that line.
+- Every single-column table carries a `Backup` row directly under `Model`, each cell
   a backup with its own platform and dial
   (`GPT-6.1 Sol — Codex · Intelligence Medium`), or `None`. A table
   written before roadmodel 0.2.41 has no such row: add it from the
@@ -201,13 +203,18 @@ complexity, novel or not; its Model rationale names them), then:
   sentence, or its entry in the Model selection blocks) — a layout
   fix, not a new pick, so it takes no `Settings updated` line.
 - Every ladder table, a step's Settings and a phase's Phase roadmap
-  settings alike, carries an `AA Index` row directly under `Effort`:
-  each column's model's AA Intelligence Index at that column's effort,
-  as `roadmodel ladder` prints it (`not measured` where AA has no row
-  there). A table written before roadmodel 0.2.91 has no such row: add
-  it from the ladder printed for that classification, even where every
-  pick still matches — a layout fix, not a new pick, so it takes no
-  `Settings updated` line. Without roadmodel, leave the row out.
+  settings alike, is the ranked ladder (roadmodel 0.2.93 on): rows
+  `1 · Pick`, `2 · Runner-up`, `3 · Backup` and `Conversation`, each
+  cell one option with one field per line (the model in bold, its
+  platform, its dial and level, `Thinking On` where the surface has that
+  toggle, and its AA Intelligence Index there, `not measured` where AA
+  has no row), as `roadmodel ladder` prints it. A ladder written before
+  roadmodel 0.2.93 has Model / Backup / Platform / Effort (/ AA Index) /
+  Thinking rows instead: replace it with the ladder printed for that
+  classification, even where every pick still matches — a layout fix,
+  not a new pick, so it takes no `Settings updated` line unless the Pick
+  of the column its **Runs:** line names changed. Without roadmodel,
+  leave it as it is.
 - Keep the step's selection block in the Model selection blocks equal
   to the column its **Runs:** line names (its `BACKUP:` line to that
   column's Backup), and its Summary Table row to the same column.
@@ -246,7 +253,9 @@ sentences on why.
 - A table that differs from the new pick ⇒ rewrite it and its why, and
   add `> Settings updated <YYYY-MM-DD> (refresh): was <old model> · <old effort>. <why>.`
   beneath it.
-- A table that matches ⇒ leave the phase exactly as it is.
+- A table that matches ⇒ leave the phase exactly as it is, except
+  that a ladder written before roadmodel 0.2.93 becomes the ranked
+  ladder, as a step's does.
 - **Never add, re-pick or rewrite the table of a phase whose roadmap
   exists.** Its table, or the lack of one, is the record of what wrote
   that roadmap.

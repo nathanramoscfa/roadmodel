@@ -4,7 +4,9 @@ latest version of each series.
 The operator asked (2026-10-14) for roadmap Settings like /recommend's: Cost,
 Balanced and Quality, each with its effort and a backup from another maker, so
 a usage pool that turns `tight` or `exhausted` moves a step to another column
-instead of the roadmap being refreshed. scoring.settings_ladder reads the
+instead of the roadmap being refreshed. On 2026-10-23 they asked for each
+column ranked three deep (pick, runner-up, backup), each option with its AA
+Index, one field per line in its cell. scoring.settings_ladder reads the
 ladder with every pool at headroom and prints the table and its **Runs:**
 line; `roadmodel ladder` and the MCP tool `roadmap_settings` serve it.
 
@@ -129,10 +131,16 @@ def _settings(
     return got
 
 
-def test_the_table_carries_every_rung_with_its_effort_and_backup() -> None:
-    lad = scoring.ladder(
-        scoring.Task("planning", "medium"), _context(), catalog=CATALOG, benchmarks=BENCH
-    )
+def _rows(markdown: str) -> list[list[str]]:
+    return [
+        [c.strip() for c in ln.strip("|").split("|")]
+        for ln in markdown.splitlines()
+        if ln.startswith("| ") and not ln.startswith("| --")
+    ]
+
+
+def test_each_column_ranks_its_pick_runner_up_and_backup() -> None:
+    lad = scoring.ladder(PLANNING_MEDIUM, _context(), catalog=CATALOG, benchmarks=BENCH)
     assert lad is not None
     got = _settings()
     for tier, rung in lad.rungs.items():
@@ -141,31 +149,158 @@ def test_the_table_carries_every_rung_with_its_effort_and_backup() -> None:
             rung.candidate.model_name,
             rung.candidate.platform_name,
         )
-        assert rung.backup is not None and col["backup"] == scoring.backup_cell(rung.backup)
-    lines = got["markdown"].splitlines()
-    assert [c.strip() for c in lines[0].strip("|").split("|")] == [
-        "Setting",
-        "Cost",
-        "Balanced",
-        "Quality",
+        # The runner-up is the column's pick with the pick's model off the table.
+        rest = scoring.ladder(
+            PLANNING_MEDIUM,
+            _context(),
+            unavailable_models=[rung.candidate.model_id],
+            catalog=CATALOG,
+            benchmarks=BENCH,
+            neutral_pools=True,
+        )
+        assert rest is not None
+        assert col["runner_up"]["model_id"] == rest.rungs[tier].candidate.model_id
+        # The backup is another maker's than the pick's, and never the runner-up.
+        backup = col["backup"]
+        if backup is not None:
+            assert backup["model_id"] not in {col["model_id"], col["runner_up"]["model_id"]}
+            makers = {m["id"]: m["provider"] for m in CATALOG["models"]}
+            assert makers[backup["model_id"]] != makers[col["model_id"]]
+    rows = _rows(got["markdown"])
+    assert rows[0] == ["Rank", "Cost", "Balanced", "Quality"]
+    assert [r[0] for r in rows[1:]] == ["1 · Pick", "2 · Runner-up", "3 · Backup", "Conversation"]
+    for i, tier in enumerate(scoring.LADDER_TIERS, start=1):
+        col = got["columns"][tier]
+        assert rows[1][i] == col["cell"]
+        assert rows[2][i] == col["runner_up"]["cell"]
+        assert rows[3][i] == ("None" if col["backup"] is None else col["backup"]["cell"])
+
+
+def test_a_cell_puts_each_field_on_its_own_indented_line() -> None:
+    col = _settings()["columns"]["quality"]
+    head, *fields = col["cell"].split("<br>")
+    assert head == f"**{col['model']}**"
+    assert all(f.startswith("&emsp;") for f in fields)
+    assert [f.removeprefix("&emsp;") for f in fields] == [
+        col["platform"],
+        col["effort_cell"],
+        *(["Thinking On"] if col["thinking_cell"] == "On" else []),
+        f"AA {col['aa_index']:g}",
     ]
-    assert [ln.split("|")[1].strip() for ln in lines[2:9]] == [
-        "Model",
-        "Backup",
-        "Platform",
-        "Effort",
-        "AA Index",
-        "Thinking",
-        "Conversation",
+
+
+def test_the_runner_up_is_never_an_older_version_of_the_pick() -> None:
+    """Off the table, GPT-6.1 Sol would hand its place to GPT-6 Sol, which the
+    operator's rule never recommends where GPT-6.1 Sol runs: the runner-up
+    leaves out the pick's whole series."""
+    catalog = {
+        **CATALOG,
+        "models": [
+            *(
+                {**m, "id": "gpt-6.1-luna", "name": "GPT-6.1 Luna"} if m["id"] == "luna" else m
+                for m in CATALOG["models"]
+            ),
+            _model("gpt-6-luna", "GPT-6 Luna", 0.25, 1.25, "A", "openai"),
+        ],
+        "access_methods": [
+            {**a, "supports_models": ["lite", "gpt-6.1-luna", "gpt-6-luna", "astra"]}
+            if a["id"] == "codex-cli"
+            else a
+            for a in CATALOG["access_methods"]
+        ],
+    }
+    bench = {
+        **{k: v for k, v in BENCH.items() if k != "luna"},
+        "gpt-6.1-luna": BENCH["luna"],
+        "gpt-6-luna": _aa(39),
+    }
+    got = scoring.settings_ladder(PLANNING_MEDIUM, _context(), catalog=catalog, benchmarks=bench)
+    assert got is not None
+    cols = got["columns"].values()
+    assert any(c["model_id"] == "gpt-6.1-luna" for c in cols), "the fixture picks GPT-6.1 Luna"
+    for col in cols:
+        others = [col["runner_up"], col["backup"]]
+        assert all(o is None or o["model_id"] != "gpt-6-luna" for o in others)
+
+
+GOOGLE: dict[str, Any] = {
+    **CATALOG,
+    # Dearer than Opus: without the third-maker rule, Cost's backup would be
+    # Opus, the runner-up Sonnet's maker.
+    "models": [*CATALOG["models"], _model("argon", "Argon", 5.0, 25.0, "S", "google")],
+    "access_methods": [
+        *CATALOG["access_methods"],
+        {
+            "id": "antigravity",
+            "name": "Antigravity",
+            "provider": "google",
+            "provider_jurisdiction": "us",
+            "billing": "subscription-or-key",
+            "supports_models": ["argon"],
+            "effort_levels": ["low", "medium", "high"],
+        },
+    ],
+    "subscription_tiers": [
+        *CATALOG["subscription_tiers"],
+        {
+            "provider": "Google",
+            "tier": "Google AI Pro ($20)",
+            "monthly_usd": 20.0,
+            "surface_funded": ["antigravity"],
+        },
+    ],
+}
+
+
+def test_the_backup_comes_from_a_maker_neither_row_above_uses() -> None:
+    """With three makers funded, a column whose runner-up is another maker's
+    takes its backup from the third, so the three rows span three pools."""
+    text = _context().replace(
+        "| ChatGPT Pro ($100) | $100 | OpenAI | Codex |",
+        "| ChatGPT Pro ($100) | $100 | OpenAI | Codex |\n"
+        "| Google AI Pro ($20) | $20 | Google | Antigravity |",
+    )
+    bench = {**BENCH, "argon": _aa(54)}
+    got = scoring.settings_ladder(PLANNING_MEDIUM, text, catalog=GOOGLE, benchmarks=bench)
+    assert got is not None
+    makers = {m["id"]: m["provider"] for m in GOOGLE["models"]}
+    spread = [
+        col
+        for col in got["columns"].values()
+        if makers[col["runner_up"]["model_id"]] != makers[col["model_id"]]
     ]
+    assert spread, "the fixture puts another maker's runner-up in some column"
+    for col in spread:
+        assert col["backup"] is not None
+        ranked = [col["model_id"], col["runner_up"]["model_id"], col["backup"]["model_id"]]
+        assert len({makers[m] for m in ranked}) == 3, ranked
+
+
+def test_a_runner_up_holding_the_only_other_maker_leaves_no_backup() -> None:
+    """Two makers, one series each: the runner-up already is the other maker,
+    so no backup can be both another maker's and distinct from it."""
+    catalog = {
+        **CATALOG,
+        "models": [m for m in CATALOG["models"] if m["id"] in {"opus", "astra"}],
+        "access_methods": [
+            {**a, "supports_models": [m for m in a["supports_models"] if m in {"opus", "astra"}]}
+            for a in CATALOG["access_methods"]
+        ],
+    }
+    got = scoring.settings_ladder(PLANNING_MEDIUM, _context(), catalog=catalog, benchmarks=BENCH)
+    assert got is not None
+    for col in got["columns"].values():
+        assert col["runner_up"]["model_id"] != col["model_id"]
+        assert col["backup"] is None
+    assert _rows(got["markdown"])[3][1:] == ["None"] * 3
 
 
 def _aa(value: float) -> dict[str, Any]:
     return {"evaluations": {"artificial_analysis_intelligence_index": value}}
 
 
-def test_the_aa_row_reads_each_models_index_at_its_columns_effort() -> None:
-    """The AA Index row is the column's model at the column's effort, not the
+def test_every_option_reads_its_models_index_at_its_own_effort() -> None:
+    """Each ranked option's AA Index is its model at its own effort, not the
     model's headline: GPT-6 Luna reads 21.5 at low and 38.1 at max."""
     levels = ("low", "medium", "high", "xhigh")
     bench = {
@@ -178,14 +313,14 @@ def test_the_aa_row_reads_each_models_index_at_its_columns_effort() -> None:
     }
     got = scoring.settings_ladder(PLANNING_MEDIUM, _context(), catalog=CATALOG, benchmarks=bench)
     assert got is not None
-    row = next(ln for ln in got["markdown"].splitlines() if ln.startswith("| AA Index"))
-    cells = [c.strip() for c in row.strip("|").split("|")][1:]
-    for tier, cell in zip(scoring.LADDER_TIERS, cells, strict=True):
-        col = got["columns"][tier]
-        measured = scoring.measured_levels(bench, col["model_id"])[col["effort"]]
-        want = measured["evaluations"]["artificial_analysis_intelligence_index"]
-        assert col["aa_index"] == want
-        assert cell == f"{want:g}"
+    for col in got["columns"].values():
+        for option in (col, col["runner_up"], col["backup"]):
+            assert option is not None
+            measured = scoring.measured_levels(bench, option["model_id"])[option["effort"]]
+            want = measured["evaluations"]["artificial_analysis_intelligence_index"]
+            assert option["aa_index"] == want
+            assert option["cell"].endswith(f"<br>&emsp;AA {want:g}")
+            assert option["cell"] in got["markdown"]
 
 
 def test_ladder_aa_index_reads_the_effort_or_says_not_measured() -> None:
@@ -213,8 +348,8 @@ def test_each_column_names_its_own_surfaces_dial() -> None:
 
 def test_a_model_that_always_thinks_has_no_thinking_toggle() -> None:
     """Claude Code shows no Thinking switch on a model that always thinks
-    (2.1.281 / 2.1.300), so its column reads ``—`` like a surface without the
-    toggle, while the row itself stays (the table keeps its fixed rows)."""
+    (2.1.281 / 2.1.300), so its cell carries no Thinking line, like a surface
+    without the toggle."""
     always = {
         **CATALOG,
         "models": [
@@ -228,7 +363,7 @@ def test_a_model_that_always_thinks_has_no_thinking_toggle() -> None:
     assert claude, "the fixture ladder puts a Claude Code model in some column"
     assert all(c["thinking_cell"] == "—" for c in claude)
     assert all(c["effort_cell"].startswith("Effort ") for c in claude)
-    assert any(ln.startswith("| Thinking") for ln in got["markdown"].splitlines())
+    assert all("Thinking On" not in c["cell"] for c in claude)
 
 
 @pytest.mark.parametrize(
@@ -279,7 +414,7 @@ def test_ladder_prints_the_table_and_its_runs_line(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     out = _cli(tmp_path, monkeypatch, "--category", "planning", "--complexity", "medium")
-    assert out.startswith("| Setting ")
+    assert out.startswith("| Rank ")
     assert "**Runs:** Balanced — " in out
     payload = json.loads(
         _cli(

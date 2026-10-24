@@ -57,6 +57,7 @@ import functools
 import json
 import math
 import re
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timedelta, timezone
 from importlib import resources
@@ -1406,6 +1407,9 @@ class Ladder:
     # measured it at (:func:`effort_settings`). Equals ``frontier`` when no
     # model carries per-effort figures.
     points: list[FrontierPoint] = field(default_factory=list)
+    # Every pool model at every effort it may run (:func:`effort_settings`):
+    # the pool a rung's backup is read from.
+    settings: list[Candidate] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         def point(p: FrontierPoint) -> dict[str, Any]:
@@ -1932,6 +1936,7 @@ def ladder(
         rungs=rungs,
         backup_warning=warning,
         points=points,
+        settings=settings,
     )
 
 
@@ -1970,9 +1975,11 @@ def _backup_for(
     bench: dict[str, Any],
     catalog: dict[str, Any],
     aa_band: float = 0.0,
+    avoid: Callable[[Candidate], bool] | None = None,
 ) -> Backup | None:
     """The rung's backup: the substitute from another maker that does the job
-    as well as the rung, for the least.
+    as well as the rung, for the least. ``avoid`` leaves out further
+    candidates (a Settings ladder's runner-up, :func:`_ranked_backup`).
 
     Over the pool's models from a maker other than the rung model's, each at
     its measured efforts, draw the frontier and keep its adequate points,
@@ -1989,7 +1996,14 @@ def _backup_for(
     point's measured effort, else at the rung's posture's effort, on its own
     platform. None when the pool holds no other
     maker's model."""
-    front = frontier([c for c in pool if c.provider != rung.candidate.provider], bench)
+    front = frontier(
+        [
+            c
+            for c in pool
+            if c.provider != rung.candidate.provider and (avoid is None or not avoid(c))
+        ],
+        bench,
+    )
     if not front:
         return None
     adequate = [p for p in front if p.candidate.requirement_penalty == 0]
@@ -2287,8 +2301,9 @@ def backup_cell(backup: Backup | Successor) -> str:
 RUN_COLUMN: Final[dict[str, str]] = {"cheap": "cost", "balanced": "balanced", "best": "quality"}
 # The rule a step's runner applies to the pools on the day (roadmap-step §3).
 RUN_RULE: Final[str] = (
-    "If that column's usage pool reads `tight`, run its Backup when the Backup's pool "
-    "has headroom, else the Cost column; if it reads `exhausted`, run its Backup."
+    "If that column's usage pool reads `tight` or `exhausted`, run the first of its "
+    "Runner-up and Backup whose pool has headroom; with neither, a `tight` column runs "
+    "the Cost column and an `exhausted` one its Backup."
 )
 # Dial levels a roadmap never pins: Codex's `ultra` and Claude Code's
 # Ultracode add parallel agents one planning document does not need.
@@ -2333,6 +2348,86 @@ def _aa_cell(value: float | None) -> str:
     return "not measured" if value is None else f"{value:g}"
 
 
+def _option(
+    c: Candidate, level: str, bench: dict[str, Any], catalog: dict[str, Any]
+) -> dict[str, Any]:
+    """One ranked option of a ladder column: ``c`` run at ``level``, with its
+    AA Index there and its table cell, one field per line (a Markdown table
+    cell holds no line break, so ``<br>`` breaks it and ``&emsp;`` indents):
+    the model in bold, then its platform, its dial and level, Thinking where
+    the surface has the toggle, and the AA Index."""
+    aa = ladder_aa_index(bench, c.model_id, level)
+    effort_cell = _effort_cell(c, level)
+    thinking_cell = _thinking_cell(c, catalog)
+    lines = [
+        c.platform_name,
+        "No effort dial" if effort_cell == "—" else effort_cell,
+        *(["Thinking On"] if thinking_cell == "On" else []),
+        f"AA {_aa_cell(aa)}",
+    ]
+    return {
+        "model_id": c.model_id,
+        "model": c.model_name,
+        "platform_id": c.platform_id,
+        "platform": c.platform_name,
+        "effort": normalize_level(level),
+        "effort_cell": effort_cell,
+        "aa_index": aa,
+        "thinking_cell": thinking_cell,
+        "cell": "<br>&emsp;".join([f"**{c.model_name}**", *lines]),
+    }
+
+
+def _series_ids(model_id: str, catalog: dict[str, Any]) -> list[str]:
+    """``model_id`` and every catalog model in its series
+    (:mod:`roadmodel.series`): GPT-6 Sol beside GPT-6.1 Sol."""
+    own = _series.series(model_id)
+    ids = (str(m.get("id", "")) for m in catalog.get("models", []) if isinstance(m, dict))
+    return [model_id, *(i for i in ids if own and i != model_id and _series.series(i) == own)]
+
+
+def _ranked_backup(
+    rung: Rung,
+    second: Rung | None,
+    pool: list[Candidate],
+    task: Task,
+    headroom: str,
+    bench: dict[str, Any],
+    catalog: dict[str, Any],
+    aa_band: float,
+) -> Backup | None:
+    """A Settings column's Backup, ranked under its pick and runner-up
+    (``second``): the pick's backup (:func:`_backup_for`, another maker's)
+    that is not the runner-up's series, from a maker neither row above uses
+    where one meets the task's bar, so the three rows span as many makers as
+    the pool holds. A runner-up from the pick's own maker leaves the pick's
+    backup as it is. None when the runner-up holds the only other maker's
+    series: it already stands in for an outage or an exhausted pool."""
+    if second is None or second.candidate.provider == rung.candidate.provider:
+        return rung.backup
+    taken = second.candidate
+    own = frozenset(_series_ids(taken.model_id, catalog))
+
+    def same_series(c: Candidate) -> bool:
+        return c.model_id in own
+
+    third = _backup_for(
+        rung,
+        pool,
+        task,
+        headroom,
+        bench,
+        catalog,
+        aa_band,
+        avoid=lambda c: c.provider == taken.provider or same_series(c),
+    )
+    if third is not None and third.candidate.requirement_penalty == 0:
+        return third
+    return (
+        _backup_for(rung, pool, task, headroom, bench, catalog, aa_band, avoid=same_series) or third
+    )
+
+
 def _deepest_level(c: Candidate, catalog: dict[str, Any]) -> str:
     """The top rung of ``c``'s dial a roadmap may pin (``max``)."""
     levels = native_levels(c.platform_id, c.model_id, catalog=catalog) or list(EFFORT_LADDER)
@@ -2350,57 +2445,84 @@ def settings_ladder(
     benchmarks: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """A roadmap's Settings as the full ladder: the Cost / Balanced / Quality
-    picks /recommend shows, each with its effort and a backup from another
-    maker, plus the column the step runs and the rule for a tight or
-    exhausted pool. Read with every pool at `headroom` (``neutral_pools``),
-    so the table outlives today's pool states: the step's runner applies
-    :data:`RUN_RULE` to the pools on the day instead of the roadmap being
-    refreshed. ``phase`` is a phase-roadmap session: it runs Quality, at
-    the deepest rung its dial allows. Each column carries its model's AA
-    Intelligence Index at the column's effort (:func:`ladder_aa_index`).
-    Returns the columns and the Markdown table; None when no pool model
-    carries an AA Index."""
+    picks /recommend shows, each ranked three deep, plus the column the step
+    runs and the rule for a tight or exhausted pool. Read with every pool at
+    `headroom` (``neutral_pools``), so the table outlives today's pool
+    states: the step's runner applies :data:`RUN_RULE` to the pools on the
+    day instead of the roadmap being refreshed. ``phase`` is a phase-roadmap
+    session: it runs Quality, at the deepest rung its dial allows.
+
+    Each column ranks three options, each with its effort and its AA
+    Intelligence Index there (:func:`ladder_aa_index`):
+
+    - Pick: the column's rung (:func:`ladder`).
+    - Runner-up: the column's rung with the pick's whole series off the
+      table, so it is never an older version of the pick (GPT-6 Sol under
+      GPT-6.1 Sol), from any maker.
+    - Backup: another maker's substitute for the pick, never the runner-up's
+      series (:func:`_ranked_backup`).
+
+    The ranks follow the column's own rule, not the AA Index: Cost ranks the
+    cheapest first, so its AA Index may rise down the column. Returns the
+    columns and the Markdown table; None when no pool model carries an AA
+    Index."""
     cat = catalog if catalog is not None else _cost._load_catalog()
     bench = benchmarks if benchmarks is not None else _load_benchmarks()
-    lad = ladder(
-        task,
-        user_context_text,
-        unavailable_models=unavailable_models,
-        catalog=cat,
-        benchmarks=bench,
-        neutral_pools=True,
-    )
+    off = list(unavailable_models or [])
+    seen: dict[frozenset[str], Ladder | None] = {}
+
+    def read(without: list[str]) -> Ladder | None:
+        key = frozenset([*off, *without])
+        if key not in seen:
+            seen[key] = ladder(
+                task,
+                user_context_text,
+                unavailable_models=sorted(key),
+                catalog=cat,
+                benchmarks=bench,
+                neutral_pools=True,
+            )
+        return seen[key]
+
+    lad = read([])
     if lad is None:
         return None
+    headroom = consumption_headroom(user_context_text or "")
+    aa_band = _aa_band(bench, cat)
+
+    def level_of(tier: str, r: Rung) -> str:
+        return _deepest_level(r.candidate, cat) if phase and tier == "quality" else r.level
+
     columns: dict[str, dict[str, Any]] = {}
     for tier in LADDER_TIERS:
         rung = lad.rungs[tier]
-        c = rung.candidate
-        level = rung.native or rung.effort
-        if phase and tier == "quality":
-            level = _deepest_level(c, cat)
+        rest = read(_series_ids(rung.candidate.model_id, cat))
+        second = None if rest is None else rest.rungs[tier]
+        backup = _ranked_backup(rung, second, lad.settings, task, headroom, bench, cat, aa_band)
         columns[tier] = {
-            "model_id": c.model_id,
-            "model": c.model_name,
-            "platform_id": c.platform_id,
-            "platform": c.platform_name,
-            "effort": normalize_level(level),
-            "effort_cell": _effort_cell(c, level),
-            "aa_index": ladder_aa_index(bench, c.model_id, level),
-            "thinking_cell": _thinking_cell(c, cat),
-            "backup": None if rung.backup is None else backup_cell(rung.backup),
+            **_option(rung.candidate, level_of(tier, rung), bench, cat),
+            "runner_up": (
+                None
+                if second is None
+                else _option(second.candidate, level_of(tier, second), bench, cat)
+            ),
+            "backup": (
+                None if backup is None else _option(backup.candidate, backup.level, bench, cat)
+            ),
         }
     runs = "quality" if phase else RUN_COLUMN.get(task.budget, "balanced")
+
+    def ranked(rank: str) -> list[str]:
+        opts = [columns[t] if rank == "pick" else columns[t][rank] for t in LADDER_TIERS]
+        return ["None" if o is None else o["cell"] for o in opts]
+
     rows = [
-        ("Model", [columns[t]["model"] for t in LADDER_TIERS]),
-        ("Backup", [columns[t]["backup"] or "None" for t in LADDER_TIERS]),
-        ("Platform", [columns[t]["platform"] for t in LADDER_TIERS]),
-        ("Effort", [columns[t]["effort_cell"] for t in LADDER_TIERS]),
-        ("AA Index", [_aa_cell(columns[t]["aa_index"]) for t in LADDER_TIERS]),
-        ("Thinking", [columns[t]["thinking_cell"] for t in LADDER_TIERS]),
+        ("1 · Pick", ranked("pick")),
+        ("2 · Runner-up", ranked("runner_up")),
+        ("3 · Backup", ranked("backup")),
         ("Conversation", ["**New**"] * len(LADDER_TIERS)),
     ]
-    head = ["Setting", *(t.capitalize() for t in LADDER_TIERS)]
+    head = ["Rank", *(t.capitalize() for t in LADDER_TIERS)]
     widths = [
         max(len(head[i]), *(len(r[0]) if i == 0 else len(r[1][i - 1]) for r in rows))
         for i in range(len(head))
