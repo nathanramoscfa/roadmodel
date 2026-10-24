@@ -65,6 +65,7 @@ from importlib import resources
 from typing import Any, Final
 
 from roadmodel import cost as _cost
+from roadmodel import ladder_layout as _layout
 from roadmodel import series as _series
 
 # --------------------------------------------------------------------------- #
@@ -2335,14 +2336,18 @@ def _thinking_cell(c: Candidate, catalog: dict[str, Any]) -> str:
     return "—" if model.get("always_thinks") else "On"
 
 
-def ladder_aa_index(bench: dict[str, Any], model_id: str, level: str) -> float | None:
+def ladder_aa_index(
+    bench: dict[str, Any], model_id: str, level: str, *, dial: bool = False
+) -> float | None:
     """The AA Intelligence Index of ``model_id`` run at ``level``: AA's row at
-    that effort, or the headline row when AA names no level for the model (it
-    then stands for the model at whatever effort it runs). None when AA has
-    measured the model at other efforts only, or not at all."""
+    that effort. When AA names no level for the model, its one row stands for
+    the model only on a surface with no dial for it (``dial`` false): where
+    the operator sets a level, that row's effort is unknown, so it is no
+    figure for ``level`` (Gemini 3 Flash's row on the Google API's dial).
+    None when AA has not measured the model at that effort, or not at all."""
     if measured_levels(bench, model_id):
         return _evidence(bench, model_id, FRONTIER_INDEX, normalize_level(level))
-    return _evidence(bench, model_id, FRONTIER_INDEX)
+    return None if dial else _evidence(bench, model_id, FRONTIER_INDEX)
 
 
 def _aa_cell(value: float | None) -> str:
@@ -2361,20 +2366,27 @@ def _option(
         "platform": c.platform_name,
         "effort": normalize_level(level),
         "effort_cell": _effort_cell(c, level),
-        "aa_index": ladder_aa_index(bench, c.model_id, level),
+        "aa_index": ladder_aa_index(
+            bench,
+            c.model_id,
+            level,
+            dial=bool(native_levels(c.platform_id, c.model_id, catalog=catalog)),
+        ),
         "thinking_cell": _thinking_cell(c, catalog),
     }
 
 
-# A ranked option's rows in a Settings ladder, under the rank's own row
-# (which names the model): one field a row, so no cell joins several and the
-# table fits in the 80 columns a roadmap's prose wraps at.
-_OPTION_ROWS: Final[tuple[tuple[str, Callable[[dict[str, Any]], str]], ...]] = (
-    ("Platform", lambda o: str(o["platform"])),
-    ("Effort", lambda o: str(o["effort_cell"])),
-    ("Thinking", lambda o: str(o["thinking_cell"])),
-    ("AA Index", lambda o: _aa_cell(o["aa_index"])),
-)
+def _layout_option(o: dict[str, Any] | None) -> _layout.Option | None:
+    """A ranked option (:func:`_option`) as the ladder's list prints it."""
+    if o is None:
+        return None
+    return _layout.Option(
+        model=str(o["model"]),
+        platform=str(o["platform"]),
+        effort=str(o["effort_cell"]),
+        thinking=str(o["thinking_cell"]),
+        aa=_aa_cell(o["aa_index"]),
+    )
 
 
 def _series_ids(model_id: str, catalog: dict[str, Any]) -> list[str]:
@@ -2463,8 +2475,9 @@ def settings_ladder(
 
     The ranks follow the column's own rule, not the AA Index: Cost ranks the
     cheapest first, so its AA Index may rise down the column. Returns the
-    columns and the Markdown table; None when no pool model carries an AA
-    Index."""
+    columns and the ladder's Markdown (:mod:`roadmodel.ladder_layout`: a
+    list per column, one option a line); None when no pool model carries an
+    AA Index."""
     cat = catalog if catalog is not None else _cost._load_catalog()
     bench = benchmarks if benchmarks is not None else _load_benchmarks()
     off = list(unavailable_models or [])
@@ -2510,30 +2523,18 @@ def settings_ladder(
             ),
         }
     runs = "quality" if phase else RUN_COLUMN.get(task.budget, "balanced")
-
-    rows: list[tuple[str, list[str]]] = []
-    for label, rank in (
-        ("1 · Pick", "pick"),
-        ("2 · Runner-up", "runner_up"),
-        ("3 · Backup", "backup"),
-    ):
-        opts = [columns[t] if rank == "pick" else columns[t][rank] for t in LADDER_TIERS]
-        rows.append((label, ["None" if o is None else str(o["model"]) for o in opts]))
-        rows += [
-            (name, ["—" if o is None else cell(o) for o in opts]) for name, cell in _OPTION_ROWS
-        ]
-    rows.append(("Conversation", ["**New**"] * len(LADDER_TIERS)))
-    head = ["Rank", *(t.capitalize() for t in LADDER_TIERS)]
-    widths = [
-        max(len(head[i]), *(len(r[0]) if i == 0 else len(r[1][i - 1]) for r in rows))
-        for i in range(len(head))
-    ]
-
-    def line(cells: list[str]) -> str:
-        return "| " + " | ".join(x.ljust(w) for x, w in zip(cells, widths, strict=True)) + " |"
-
-    table = [line(head), "| " + " | ".join("-" * w for w in widths) + " |"]
-    table += [line([name, *cells]) for name, cells in rows]
+    lists = _layout.ladder_markdown(
+        {
+            t: {
+                "pick": _layout_option(columns[t]),
+                "runner_up": _layout_option(columns[t]["runner_up"]),
+                "backup": _layout_option(columns[t]["backup"]),
+            }
+            for t in LADDER_TIERS
+        },
+        runs=runs,
+        conversation="New",
+    )
     why = (
         "a phase-roadmap session runs Quality (quality first)"
         if phase
@@ -2552,7 +2553,7 @@ def settings_ladder(
         "rule": RUN_RULE,
         "columns": columns,
         "backup_warning": lad.backup_warning,
-        "markdown": "\n".join(table) + "\n\n" + run_line,
+        "markdown": lists + "\n\n" + run_line,
     }
 
 

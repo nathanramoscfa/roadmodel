@@ -249,24 +249,25 @@ dependency graph in §5 is honoured.
 **Phase roadmap settings** — the session that writes
 `phase01-roadmap.md` (`/roadmap-phase 1`):
 
-| Rank          | Cost             | Balanced         | Quality          |
-|---------------|------------------|------------------|------------------|
-| 1 · Pick      | <Model>          | <Model>          | <Model>          |
-| Platform      | <Platform>       | <Platform>       | <Platform>       |
-| Effort        | <Dial and level> | <Dial and level> | <Dial and level> |
-| Thinking      | <On or —>        | <On or —>        | <On or —>        |
-| AA Index      | <AA Index>       | <AA Index>       | <AA Index>       |
-| 2 · Runner-up | <Model>          | <Model>          | <Model>          |
-| Platform      | <Platform>       | <Platform>       | <Platform>       |
-| Effort        | <Dial and level> | <Dial and level> | <Dial and level> |
-| Thinking      | <On or —>        | <On or —>        | <On or —>        |
-| AA Index      | <AA Index>       | <AA Index>       | <AA Index>       |
-| 3 · Backup    | <Model or None>  | <Model or None>  | <Model or None>  |
-| Platform      | <Platform>       | <Platform>       | <Platform>       |
-| Effort        | <Dial and level> | <Dial and level> | <Dial and level> |
-| Thinking      | <On or —>        | <On or —>        | <On or —>        |
-| AA Index      | <AA Index>       | <AA Index>       | <AA Index>       |
-| Conversation  | **New**          | **New**          | **New**          |
+**Cost**
+
+- Pick: **<Model>** · <Platform> · <Dial and level> · AA <AA Index>
+- Runner-up: **<Model>** · <Platform> · <Dial and level> · AA <AA Index>
+- Backup: **<Model>** · <Platform> · <Dial and level> · AA <AA Index>
+
+**Balanced**
+
+- Pick: **<Model>** · <Platform> · <Dial and level> · AA <AA Index>
+- Runner-up: **<Model>** · <Platform> · <Dial and level> · AA <AA Index>
+- Backup: **<Model>** · <Platform> · <Dial and level> · AA <AA Index>
+
+**Quality** — runs by default
+
+- Pick: **<Model>** · <Platform> · <Dial and level> · AA <AA Index>
+- Runner-up: **<Model>** · <Platform> · <Dial and level> · AA <AA Index>
+- Backup: **<Model>** · <Platform> · <Dial and level> · AA <AA Index>
+
+**Conversation:** New
 
 **Runs:** Quality — a phase-roadmap session runs Quality (quality first). If
 that column's usage pool reads `tight` or `exhausted`, run the first of its
@@ -322,24 +323,25 @@ key pays for the platform.>
 **Phase roadmap settings** — the session that writes
 `phase02-roadmap.md` (`/roadmap-phase 2`):
 
-| Rank          | Cost     | Balanced | Quality  |
-|---------------|----------|----------|----------|
-| 1 · Pick      | …        | …        | …        |
-| Platform      | …        | …        | …        |
-| Effort        | …        | …        | …        |
-| Thinking      | …        | …        | …        |
-| AA Index      | …        | …        | …        |
-| 2 · Runner-up | …        | …        | …        |
-| Platform      | …        | …        | …        |
-| Effort        | …        | …        | …        |
-| Thinking      | …        | …        | …        |
-| AA Index      | …        | …        | …        |
-| 3 · Backup    | …        | …        | …        |
-| Platform      | …        | …        | …        |
-| Effort        | …        | …        | …        |
-| Thinking      | …        | …        | …        |
-| AA Index      | …        | …        | …        |
-| Conversation  | **New**  | **New**  | **New**  |
+**Cost**
+
+- Pick: **…** · … · … · AA …
+- Runner-up: **…** · … · … · AA …
+- Backup: **…** · … · … · AA …
+
+**Balanced**
+
+- Pick: **…** · … · … · AA …
+- Runner-up: **…** · … · … · AA …
+- Backup: **…** · … · … · AA …
+
+**Quality** — runs by default
+
+- Pick: **…** · … · … · AA …
+- Runner-up: **…** · … · … · AA …
+- Backup: **…** · … · … · AA …
+
+**Conversation:** New
 
 **Runs:** Quality — <the line `roadmodel ladder` prints>
 
@@ -369,24 +371,25 @@ key pays for the platform.>
 **Phase roadmap settings** — the session that writes
 `phaseNN-roadmap.md` (`/roadmap-phase N`):
 
-| Rank          | Cost     | Balanced | Quality  |
-|---------------|----------|----------|----------|
-| 1 · Pick      | …        | …        | …        |
-| Platform      | …        | …        | …        |
-| Effort        | …        | …        | …        |
-| Thinking      | …        | …        | …        |
-| AA Index      | …        | …        | …        |
-| 2 · Runner-up | …        | …        | …        |
-| Platform      | …        | …        | …        |
-| Effort        | …        | …        | …        |
-| Thinking      | …        | …        | …        |
-| AA Index      | …        | …        | …        |
-| 3 · Backup    | …        | …        | …        |
-| Platform      | …        | …        | …        |
-| Effort        | …        | …        | …        |
-| Thinking      | …        | …        | …        |
-| AA Index      | …        | …        | …        |
-| Conversation  | **New**  | **New**  | **New**  |
+**Cost**
+
+- Pick: **…** · … · … · AA …
+- Runner-up: **…** · … · … · AA …
+- Backup: **…** · … · … · AA …
+
+**Balanced**
+
+- Pick: **…** · … · … · AA …
+- Runner-up: **…** · … · … · AA …
+- Backup: **…** · … · … · AA …
+
+**Quality** — runs by default
+
+- Pick: **…** · … · … · AA …
+- Runner-up: **…** · … · … · AA …
+- Backup: **…** · … · … · AA …
+
+**Conversation:** New
 
 **Runs:** Quality — <the line `roadmodel ladder` prints>
 
