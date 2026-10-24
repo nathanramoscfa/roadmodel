@@ -500,8 +500,8 @@ def create_app() -> Any:
         every usage pool at headroom, plus the column the step runs
         (``runs``) and the rule for a tight or exhausted pool. ``phase`` is the
         session that writes a phase roadmap: it runs Quality at its deepest
-        rung. ``markdown`` is the table to paste under the step (or phase);
-        same as `roadmodel ladder`.
+        rung. ``markdown`` is the ladder to paste under the step (or phase):
+        a list per column, one option a line; same as `roadmodel ladder`.
         """
         from roadmodel import scoring
 

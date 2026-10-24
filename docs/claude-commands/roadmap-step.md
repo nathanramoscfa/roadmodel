@@ -19,8 +19,8 @@ Execute Step $ARGUMENTS of this project's phase roadmap. Parse
   step's heading ends in ✅) up to the next `## ` heading. From it,
   read: the `**Branch:**` line, the `**Status:**` line (directly under
   the heading; a roadmap written before roadmodel 0.2.40 has it after
-  `**Deploys:**`), the Settings table (a ladder's Pick / Runner-up /
-  Backup rows, or Model / Backup / Platform / Effort / Thinking), the single ```` ```xml ```` fenced `<task>…</task>` block,
+  `**Deploys:**`), the Settings (a ladder's Pick / Runner-up / Backup
+  lines or rows, or a table's Model / Backup / Platform / Effort / Thinking), the single ```` ```xml ```` fenced `<task>…</task>` block,
   and the `### Step {{STEP}} acceptance criteria` list. If the Branch
   line, Settings table, task block, or criteria are missing, stop and
   report which. A missing Status line is handled in §2.
@@ -101,15 +101,20 @@ Print one line: `Step {{STEP}} requires: Model <M> · Platform <P> ·
 <the dials the table carries, e.g. Effort <E>[ · Thinking <T>], or
 Intelligence <I>>. This session: <your own model> on <this surface>.`
 
-- **Ladder tables** (Cost / Balanced / Quality columns, roadmodel 0.2.86
+- **Ladders** (Cost / Balanced / Quality columns, roadmodel 0.2.86
   on) carry every column the step may run, so pick one before the checks
-  below. From roadmodel 0.2.93 each column ranks three options in rows
-  `1 · Pick`, `2 · Runner-up` and `3 · Backup`. Each rank's row names its model, and the Platform, Effort, Thinking and
-  AA Index rows under it are that option's. An older ladder has Model /
+  below. From roadmodel 0.2.94 each column is a bold heading (**Cost**,
+  **Balanced**, **Quality**) over one list line per option: `- Pick:`,
+  `- Runner-up:`, `- Backup:`, each naming its **model**, then its
+  platform, its dial and level, `Thinking On` where the surface has that
+  toggle, and its AA Index (a line past 80 columns continues on the next,
+  indented). A 0.2.93 ladder is a table with rows `1 · Pick`,
+  `2 · Runner-up` and `3 · Backup`, each followed by that option's
+  Platform, Effort, Thinking and AA Index rows. An older ladder has Model /
   Backup / Platform / Effort rows instead: its Model, Platform and Effort
   cells are the Pick, its Backup the Backup (split into `Backup`, `Backup
   on` and `Backup effort` rows on a Complete step since 0.2.93), and it
-  has no Runner-up. The table's **Runs:** line names the column. Apply its
+  has no Runner-up. The ladder's **Runs:** line names the column. Apply its
   rule to the Usage-pool status table in `planning/user-context.md` (a
   row whose reset time has passed reads `headroom`). Read the pool of the
   subscription that pays for that column's Pick's platform:
@@ -178,7 +183,7 @@ Intelligence <I>>. This session: <your own model> on <this surface>.`
   rollout's `"effort"` is the dial the session runs on, so print it. If
   it differs from the table's, name the value to set. Continue.
 
-**Record what ran.** With a ladder table, running one of its options
+**Record what ran.** With a ladder, running one of its options
 changes nothing in it: the step's own PR adds one line beneath it,
 `> Ran <YYYY-MM-DD>: <column> — <model · effort>. <why>.` (column: the
 column and rank, `Balanced Runner-up`; why: the **Runs:** column, or the

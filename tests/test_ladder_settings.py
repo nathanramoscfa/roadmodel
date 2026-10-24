@@ -6,9 +6,12 @@ Balanced and Quality, each with its effort and a backup from another maker, so
 a usage pool that turns `tight` or `exhausted` moves a step to another column
 instead of the roadmap being refreshed. On 2026-10-23 they asked for each
 column ranked three deep (pick, runner-up, backup), each option with its AA
-Index, one field per line in its cell. scoring.settings_ladder reads the
-ladder with every pool at headroom and prints the table and its **Runs:**
-line; `roadmodel ladder` and the MCP tool `roadmap_settings` serve it.
+Index. On 2026-10-24 they found the table of one field a row unreadable in a
+Markdown preview 400–520px wide, so each column is a list, one option a line.
+scoring.settings_ladder reads the ladder with every pool at headroom and
+prints the lists and their **Runs:** line; `roadmodel ladder` and the MCP tool
+`roadmap_settings` serve it, and `roadmodel relayout` converts the tables
+older releases wrote.
 
 The fixture: Lite, Luna and Astra are one maker's (Codex), Sonnet and Opus
 another's (Claude Code), as in tests/test_ladder_frontier.py.
@@ -17,13 +20,14 @@ another's (Claude Code), as in tests/test_ladder_frontier.py.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 import pytest
 from click.testing import CliRunner
 
-from roadmodel import recommend, scoring
+from roadmodel import ladder_layout, recommend, scoring
 from roadmodel.cli import cli
 
 
@@ -131,42 +135,55 @@ def _settings(
     return got
 
 
-def _rows(markdown: str) -> list[list[str]]:
-    return [
-        [c.strip() for c in ln.strip("|").split("|")]
-        for ln in markdown.splitlines()
-        if ln.startswith("| ") and not ln.startswith("| --")
-    ]
+_TIER_HEAD = re.compile(r"^\*\*(Cost|Balanced|Quality)\*\*( — runs by default)?$")
+_ITEM = re.compile(r"^- (Pick|Runner-up|Backup): (.*)$")
+RANKS = ("Pick", "Runner-up", "Backup")
 
 
-RANKS = ("1 · Pick", "2 · Runner-up", "3 · Backup")
-FIELDS = ("Platform", "Effort", "Thinking", "AA Index")
-
-
-def _ranked(markdown: str) -> dict[str, dict[str, list[str]]]:
-    """The table's rows by rank: each rank's own row (``model``) and the
-    field rows under it, one list of cells per row in tier order."""
-    out: dict[str, dict[str, list[str]]] = {}
-    rank = ""
-    for row in _rows(markdown)[1:]:
-        if row[0] in RANKS:
-            rank = row[0]
-            out[rank] = {"model": row[1:]}
-        elif row[0] in FIELDS:
-            out[rank][row[0]] = row[1:]
+def _listed(markdown: str) -> dict[str, dict[str, dict[str, str] | None]]:
+    """The ladder's options by tier and rank, each option's fields (model,
+    platform, and the dial, Thinking and AA fields it carries), its wrapped
+    lines joined; None for a rank that reads ``none``."""
+    out: dict[str, dict[str, dict[str, str] | None]] = {}
+    tier = ""
+    for line in markdown.replace("\n  · ", " · ").splitlines():
+        if head := _TIER_HEAD.match(line):
+            tier = head.group(1).lower()
+            out[tier] = {}
+        elif (item := _ITEM.match(line)) and tier:
+            rank, rest = item.groups()
+            if rest == "none":
+                out[tier][rank] = None
+                continue
+            model, platform, *more = rest.split(" · ")
+            fields = {"model": model.strip("*"), "platform": platform}
+            for f in more:
+                if f.startswith("Thinking "):
+                    fields["thinking"] = f.removeprefix("Thinking ")
+                elif f.startswith("AA "):
+                    fields["aa"] = f.removeprefix("AA ")
+                else:
+                    fields["effort"] = f
+            out[tier][rank] = fields
     return out
 
 
-def _option_cells(option: dict[str, Any] | None) -> dict[str, str]:
+def _option_fields(option: dict[str, Any] | None) -> dict[str, str] | None:
+    """A column's option as its list line should carry it: no field for a
+    dial or toggle the surface lacks."""
     if option is None:
-        return {"model": "None", **dict.fromkeys(FIELDS, "—")}
-    return {
-        "model": option["model"],
-        "Platform": option["platform"],
-        "Effort": option["effort_cell"],
-        "Thinking": option["thinking_cell"],
-        "AA Index": scoring._aa_cell(option["aa_index"]),
-    }
+        return None
+    fields = {"model": option["model"], "platform": option["platform"]}
+    if option["effort_cell"] != "—":
+        fields["effort"] = option["effort_cell"]
+    if option["thinking_cell"] != "—":
+        fields["thinking"] = option["thinking_cell"]
+    fields["aa"] = scoring._aa_cell(option["aa_index"])
+    return fields
+
+
+def _options(col: dict[str, Any]) -> tuple[Any, Any, Any]:
+    return col, col["runner_up"], col["backup"]
 
 
 def test_each_column_ranks_its_pick_runner_up_and_backup() -> None:
@@ -196,28 +213,50 @@ def test_each_column_ranks_its_pick_runner_up_and_backup() -> None:
             assert backup["model_id"] not in {col["model_id"], col["runner_up"]["model_id"]}
             makers = {m["id"]: m["provider"] for m in CATALOG["models"]}
             assert makers[backup["model_id"]] != makers[col["model_id"]]
-    rows = _rows(got["markdown"])
-    assert rows[0] == ["Rank", "Cost", "Balanced", "Quality"]
-    assert [r[0] for r in rows[1:]] == [
-        *(label for rank in RANKS for label in (rank, *FIELDS)),
-        "Conversation",
-    ]
-    ranked = _ranked(got["markdown"])
-    for i, tier in enumerate(scoring.LADDER_TIERS):
+    paragraphs = got["markdown"].split("\n\n")
+    heads = [p for p in paragraphs if _TIER_HEAD.match(p)]
+    assert heads == ["**Cost**", "**Balanced** — runs by default", "**Quality**"]
+    assert paragraphs[-2] == "**Conversation:** New"
+    listed = _listed(got["markdown"])
+    assert list(listed) == list(scoring.LADDER_TIERS)
+    for tier in scoring.LADDER_TIERS:
         col = got["columns"][tier]
-        for rank, option in zip(RANKS, (col, col["runner_up"], col["backup"]), strict=True):
-            for row, cell in _option_cells(option).items():
-                assert ranked[rank][row][i] == cell, (tier, rank, row)
+        assert list(listed[tier]) == list(RANKS)
+        for rank, option in zip(RANKS, _options(col), strict=True):
+            assert listed[tier][rank] == _option_fields(option), (tier, rank)
 
 
-def test_each_option_takes_one_row_per_field_and_the_table_fits_80_columns() -> None:
-    """A cell holds one field: the rank's row names the model and the rows
-    under it its platform, dial and level, Thinking toggle and AA Index, so no
-    `<br>` joins several and every line, the wrapped Runs paragraph
-    included, fits the 80 columns a roadmap's prose wraps at."""
+def test_each_option_takes_one_line_and_the_source_fits_80_columns() -> None:
+    """One option a line, model first, so it reads in a narrow preview, and
+    no table or `<br>` cell; every line, the wrapped Runs paragraph included,
+    fits the 80 columns a roadmap's prose wraps at."""
     got = _settings()
-    assert "<br>" not in got["markdown"] and "&emsp;" not in got["markdown"]
-    assert all(len(ln) <= 80 for ln in got["markdown"].splitlines())
+    md = got["markdown"]
+    assert "<br>" not in md and "&emsp;" not in md
+    assert not any(ln.startswith("|") for ln in md.splitlines())
+    assert all(len(ln) <= 80 for ln in md.splitlines())
+
+
+def test_a_long_option_wraps_between_fields() -> None:
+    """A line past 80 columns breaks before a field, never inside one, and
+    its continuation stays in the list item."""
+    option = ladder_layout.Option(
+        model="Gemini 3.8 Flash",
+        platform="Antigravity",
+        effort="Effort Medium",
+        thinking="On",
+        aa="39.8",
+    )
+    line = ladder_layout.option_line("Runner-up", option)
+    first, rest = line.split("\n")
+    assert first == "- Runner-up: **Gemini 3.8 Flash** · Antigravity · Effort Medium · Thinking On"
+    assert rest == "  · AA 39.8"
+    assert ladder_layout.option_line("Backup", None) == "- Backup: none"
+    # A surface without a dial or toggle gets no field for it.
+    bare = ladder_layout.Option(model="Composer 2", platform="Cursor", aa="not measured")
+    assert ladder_layout.option_line("Pick", bare) == (
+        "- Pick: **Composer 2** · Cursor · AA not measured"
+    )
 
 
 def test_the_runner_up_is_never_an_older_version_of_the_pick() -> None:
@@ -323,9 +362,9 @@ def test_a_runner_up_holding_the_only_other_maker_leaves_no_backup() -> None:
     for col in got["columns"].values():
         assert col["runner_up"]["model_id"] != col["model_id"]
         assert col["backup"] is None
-    backup = _ranked(got["markdown"])["3 · Backup"]
-    assert backup["model"] == ["None"] * 3
-    assert all(backup[f] == ["—"] * 3 for f in FIELDS)
+    listed = _listed(got["markdown"])
+    assert all(listed[t]["Backup"] is None for t in scoring.LADDER_TIERS)
+    assert got["markdown"].count("- Backup: none") == 3
 
 
 def _aa(value: float) -> dict[str, Any]:
@@ -352,11 +391,12 @@ def test_every_option_reads_its_models_index_at_its_own_effort() -> None:
             measured = scoring.measured_levels(bench, option["model_id"])[option["effort"]]
             want = measured["evaluations"]["artificial_analysis_intelligence_index"]
             assert option["aa_index"] == want
-    ranked = _ranked(got["markdown"])
-    for i, tier in enumerate(scoring.LADDER_TIERS):
-        col = got["columns"][tier]
-        for rank, option in zip(RANKS, (col, col["runner_up"], col["backup"]), strict=True):
-            assert ranked[rank]["AA Index"][i] == f"{option['aa_index']:g}"
+    listed = _listed(got["markdown"])
+    for tier in scoring.LADDER_TIERS:
+        for rank, option in zip(RANKS, _options(got["columns"][tier]), strict=True):
+            fields = listed[tier][rank]
+            assert fields is not None
+            assert fields["aa"] == f"{option['aa_index']:g}"
 
 
 def test_ladder_aa_index_reads_the_effort_or_says_not_measured() -> None:
@@ -365,10 +405,26 @@ def test_ladder_aa_index_reads_the_effort_or_says_not_measured() -> None:
     assert scoring.ladder_aa_index(per_level, "m", "low") == 30
     # Measured at other efforts only: no figure stands for this one.
     assert scoring.ladder_aa_index(per_level, "m", "high") is None
-    # AA names no level: the row stands for the model at whatever effort it runs.
+    assert scoring.ladder_aa_index(per_level, "m", "high", dial=True) is None
+    # AA names no level: on a surface with no dial the row stands for the
+    # model as it runs there …
     assert scoring.ladder_aa_index({"m": _aa(44)}, "m", "high") == 44
+    # … but where the operator sets a level, the row's effort is unknown, so
+    # it is no figure for the level set (Gemini 3 Flash on the Google API).
+    assert scoring.ladder_aa_index({"m": _aa(44)}, "m", "low", dial=True) is None
     assert scoring.ladder_aa_index({}, "m", "high") is None
     assert scoring._aa_cell(None) == "not measured"
+
+
+def test_an_unlabeled_aa_row_is_not_shown_at_a_level_the_operator_sets() -> None:
+    """The fixture's AA rows name no effort and both surfaces have a dial, so
+    no option claims a figure for the level it runs at."""
+    got = _settings()
+    for col in got["columns"].values():
+        for option in _options(col):
+            if option is not None:
+                assert option["aa_index"] is None
+    assert "AA not measured" in got["markdown"]
 
 
 def test_each_column_names_its_own_surfaces_dial() -> None:
@@ -399,10 +455,11 @@ def test_a_model_that_always_thinks_has_no_thinking_toggle() -> None:
     assert claude, "the fixture ladder puts a Claude Code model in some column"
     assert all(c["thinking_cell"] == "—" for c in claude)
     assert all(c["effort_cell"].startswith("Effort ") for c in claude)
-    picks = _ranked(got["markdown"])["1 · Pick"]
-    for i, tier in enumerate(scoring.LADDER_TIERS):
+    listed = _listed(got["markdown"])
+    for tier in scoring.LADDER_TIERS:
         if got["columns"][tier]["platform_id"] == "claude-code":
-            assert picks["Thinking"][i] == "—"
+            pick = listed[tier]["Pick"]
+            assert pick is not None and "thinking" not in pick
 
 
 @pytest.mark.parametrize(
@@ -411,7 +468,10 @@ def test_a_model_that_always_thinks_has_no_thinking_toggle() -> None:
 def test_the_step_runs_the_column_its_budget_priority_names(budget: str, runs: str) -> None:
     got = _settings(scoring.Task("planning", "medium", budget=budget))
     assert got["runs"] == runs
-    _, runs_line = got["markdown"].split("\n\n")
+    paragraphs = got["markdown"].split("\n\n")
+    assert f"**{runs.capitalize()}** — runs by default" in paragraphs
+    assert sum("runs by default" in p for p in paragraphs) == 1
+    runs_line = paragraphs[-1]
     assert runs_line.startswith(f"**Runs:** {runs.capitalize()} — ")
     assert scoring.RUN_RULE in " ".join(runs_line.split())
 
@@ -454,7 +514,7 @@ def test_ladder_prints_the_table_and_its_runs_line(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     out = _cli(tmp_path, monkeypatch, "--category", "planning", "--complexity", "medium")
-    assert out.startswith("| Rank ")
+    assert out.startswith("**Cost**\n\n- Pick: **")
     assert "**Runs:** Balanced — " in out
     payload = json.loads(
         _cli(
@@ -474,6 +534,153 @@ def test_ladder_prints_the_table_and_its_runs_line(
         "balanced",
         "quality",
     }
+
+
+# reversi's Phase 31.6 Step 3 as roadmodel 0.2.93 wrote it.
+RANKED_TABLE = """\
+**Deploys:** CI → live on merge.
+
+| Rank          | Cost              | Balanced           | Quality        |
+| ------------- | ----------------- | ------------------ | -------------- |
+| 1 · Pick      | GPT-6.1 Sol       | Gemini 4 Argon     | Opus 5.5       |
+| Platform      | Codex             | Antigravity        | Claude Code    |
+| Effort        | Intelligence High | Effort High        | Effort XHigh   |
+| Thinking      | —                 | On                 | —              |
+| AA Index      | 50.2              | 52.6               | 56             |
+| 2 · Runner-up | Sonnet 5.5        | Opus 5.5           | Fable 5.1      |
+| Platform      | Claude Code       | Claude Code        | Claude Code    |
+| Effort        | Effort XHigh      | Effort High        | Effort XHigh   |
+| Thinking      | —                 | —                  | —              |
+| AA Index      | 51.9              | 53.6               | 53.2           |
+| 3 · Backup    | Gemini 4 Argon    | GPT-6.1 Sol        | None           |
+| Platform      | Antigravity       | Codex              | —              |
+| Effort        | Effort High       | Intelligence XHigh | —              |
+| Thinking      | On                | —                  | —              |
+| AA Index      | 52.6              | 51                 | —              |
+| Conversation  | **New**           | **New**            | **New**        |
+
+**Runs:** Balanced — the user-context's Budget priority is `balanced`. If that
+column's usage pool reads `tight` or `exhausted`, run the first of its Runner-up
+and Backup whose pool has headroom; with neither, a `tight` column runs the Cost
+column and an `exhausted` one its Backup.
+
+**Model rationale:** unchanged.
+"""
+
+RANKED_LISTS = """\
+**Deploys:** CI → live on merge.
+
+**Cost**
+
+- Pick: **GPT-6.1 Sol** · Codex · Intelligence High · AA 50.2
+- Runner-up: **Sonnet 5.5** · Claude Code · Effort XHigh · AA 51.9
+- Backup: **Gemini 4 Argon** · Antigravity · Effort High · Thinking On · AA 52.6
+
+**Balanced** — runs by default
+
+- Pick: **Gemini 4 Argon** · Antigravity · Effort High · Thinking On · AA 52.6
+- Runner-up: **Opus 5.5** · Claude Code · Effort High · AA 53.6
+- Backup: **GPT-6.1 Sol** · Codex · Intelligence XHigh · AA 51
+
+**Quality**
+
+- Pick: **Opus 5.5** · Claude Code · Effort XHigh · AA 56
+- Runner-up: **Fable 5.1** · Claude Code · Effort XHigh · AA 53.2
+- Backup: none
+
+**Conversation:** New
+
+**Runs:** Balanced — the user-context's Budget priority is `balanced`. If that
+column's usage pool reads `tight` or `exhausted`, run the first of its Runner-up
+and Backup whose pool has headroom; with neither, a `tight` column runs the Cost
+column and an `exhausted` one its Backup.
+
+**Model rationale:** unchanged.
+"""
+
+
+def test_relayout_turns_a_ranked_table_into_the_lists_keeping_every_value() -> None:
+    new, count = ladder_layout.relayout(RANKED_TABLE)
+    assert count == 1
+    assert new == RANKED_LISTS
+    # A second pass finds nothing left to convert.
+    assert ladder_layout.relayout(new) == (new, 0)
+
+
+def test_relayout_reads_the_single_pick_ladders_older_releases_wrote() -> None:
+    """0.2.86–0.2.92 ladders: a pick, and a backup in one cell or split into
+    rows on a Complete step (0.2.93). The backup never carried an AA Index,
+    so its line has none; a surface with no dial gets no dial field."""
+    split = """\
+| Setting       | Cost             | Balanced       | Quality        |
+| ------------- | ---------------- | -------------- | -------------- |
+| Model         | GPT-6.1 Sol      | Gemini 4 Argon | Opus 5.5       |
+| Backup        | Sonnet 5.5       | Opus 5.5       | Gemini 4 Argon |
+| Backup on     | Claude Code      | Claude Code    | Antigravity    |
+| Backup effort | Effort Medium    | Effort High    | Effort High    |
+| Platform      | Codex            | Antigravity    | Claude Code    |
+| Effort        | Intelligence Low | Effort High    | Effort High    |
+| AA Index      | 42.1             | 52.6           | 53.6           |
+| Thinking      | —                | On             | —              |
+| Conversation  | **New**          | **New**        | **New**        |
+
+**Runs:** Quality — a phase-roadmap session runs Quality (quality first)."""
+    new, count = ladder_layout.relayout(split)
+    assert count == 1
+    assert new.startswith(
+        "**Cost**\n\n"
+        "- Pick: **GPT-6.1 Sol** · Codex · Intelligence Low · AA 42.1\n"
+        "- Backup: **Sonnet 5.5** · Claude Code · Effort Medium\n\n"
+        "**Balanced**\n\n"
+        "- Pick: **Gemini 4 Argon** · Antigravity · Effort High · Thinking On · AA 52.6\n"
+        "- Backup: **Opus 5.5** · Claude Code · Effort High\n\n"
+        "**Quality** — runs by default\n\n"
+        "- Pick: **Opus 5.5** · Claude Code · Effort High · AA 53.6\n"
+        "- Backup: **Gemini 4 Argon** · Antigravity · Effort High\n\n"
+        "**Conversation:** New\n\n**Runs:** Quality"
+    )
+    one_cell = """\
+| Setting      | Cost                                   | Balanced              | Quality  |
+| ------------ | -------------------------------------- | --------------------- | -------- |
+| Model        | GPT-6.1 Sol                            | Composer 2            | Opus 5.5 |
+| Backup       | Sonnet 5.5 — Claude Code · Effort High | GPT-6.1 Sol — Cursor  | None     |
+| Platform     | Codex                                  | Cursor                | Claude Code |
+| Effort       | Intelligence Medium                    | —                     | Effort Max |
+| Thinking     | —                                      | —                     | —        |
+| Conversation | **New**                                | **New**               | **New**  |
+"""
+    listed = _listed(ladder_layout.relayout(one_cell)[0])
+    assert listed["cost"]["Backup"] == {
+        "model": "Sonnet 5.5",
+        "platform": "Claude Code",
+        "effort": "Effort High",
+    }
+    assert listed["balanced"]["Pick"] == {"model": "Composer 2", "platform": "Cursor"}
+    assert listed["balanced"]["Backup"] == {"model": "GPT-6.1 Sol", "platform": "Cursor"}
+    assert listed["quality"]["Backup"] is None
+    assert "Runner-up" not in ladder_layout.relayout(one_cell)[0]
+
+
+def test_relayout_leaves_a_table_it_does_not_know() -> None:
+    odd = RANKED_TABLE.replace(
+        "| Thinking      | —                 | On ", "| Speed         | —                 | On ", 1
+    )
+    assert ladder_layout.relayout(odd) == (odd, 0)
+    other = "| Item | Cost |\n| --- | --- |\n| EIN | $0 |\n"
+    assert ladder_layout.relayout(other) == (other, 0)
+
+
+def test_relayout_command_rewrites_the_files_and_check_reports_them(tmp_path: Path) -> None:
+    roadmap = tmp_path / "phase31.6-roadmap.md"
+    roadmap.write_text(RANKED_TABLE, encoding="utf-8")
+    check = CliRunner().invoke(cli, ["relayout", "--check", str(roadmap)])
+    assert check.exit_code == 1 and "1 ladder table" in check.output
+    assert roadmap.read_text(encoding="utf-8") == RANKED_TABLE
+    done = CliRunner().invoke(cli, ["relayout", str(roadmap)])
+    assert done.exit_code == 0, done.output
+    assert roadmap.read_text(encoding="utf-8") == RANKED_LISTS
+    again = CliRunner().invoke(cli, ["relayout", "--check", str(roadmap)])
+    assert again.exit_code == 0 and again.output == ""
 
 
 def _selector(models: list[str], methods: dict[str, list[str]]) -> str:

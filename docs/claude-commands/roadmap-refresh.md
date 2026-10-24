@@ -171,12 +171,12 @@ roadmap that exists, re-select its Settings the way a phase roadmap is
 written now. Classify the step (its PRIMARY and SECONDARY category, its
 complexity, novel or not; its Model rationale names them), then:
 
-- Where `roadmodel` is installed, the Settings table is the ladder
+- Where `roadmodel` is installed, the Settings are the ladder
   `roadmodel ladder --category <c> --complexity <x> [--novel]` prints
   for that classification (MCP tool: `roadmap_settings`), pasted as
   printed with its **Runs:** line: Cost, Balanced and Quality, each
   ranked three deep (Pick, Runner-up, and a Backup from another maker),
-  each option with its own effort and AA Index, read with every usage
+  each option on one list line with its own effort and AA Index, read with every usage
   pool at headroom, so the step's runner picks the column from the pools
   on the day. A single-column table becomes the ladder: that is a
   difference. Its models are always the latest version of their series.
@@ -202,28 +202,32 @@ complexity, novel or not; its Model rationale names them), then:
   backup the step already names (its Model rationale's closing
   sentence, or its entry in the Model selection blocks) — a layout
   fix, not a new pick, so it takes no `Settings updated` line.
-- Every ladder table, a step's Settings and a phase's Phase roadmap
-  settings alike, is the ranked ladder (roadmodel 0.2.93 on): rows
-  `1 · Pick`, `2 · Runner-up`, `3 · Backup` and `Conversation`, each
-  rank's row naming its model and the four rows under it carrying one
-  field each — Platform, Effort (its dial and level), Thinking, and AA
-  Index (its AA Intelligence Index there, `not measured` where AA has no
-  row) — with the **Runs:** line wrapped at 80, so the table fits in 80
-  columns, as `roadmodel ladder` prints it. A ladder written before
-  roadmodel 0.2.93 has Model / Backup / Platform / Effort (/ AA Index) /
-  Thinking rows instead: replace it with the ladder printed for that
-  classification, even where every pick still matches — a layout fix,
-  not a new pick, so it takes no `Settings updated` line unless the Pick
-  of the column its **Runs:** line names changed. Without roadmodel,
-  leave it as it is.
-- A Complete step's ladder keeps its values (see below), but a Backup
-  cell that joins model, platform and dial (`GPT-6.1 Sol — Codex ·
-  Intelligence Medium`) is split into a `Backup` row (the model) with
-  `Backup on` (its platform) and `Backup effort` (its dial and level,
-  `—` where the surface has none; both `—` under `None`) directly under
-  it, the table realigned and its **Runs:** line wrapped at 80, so it
-  fits in 80 columns. The split changes no value: a layout fix with no
-  `Settings updated` line.
+- Every ladder, a step's Settings and a phase's Phase roadmap settings
+  alike, takes the list layout (roadmodel 0.2.94 on), as `roadmodel
+  ladder` prints it: a bold heading per column (**Cost**, **Balanced**,
+  **Quality**, the column its **Runs:** line names reading `— runs by
+  default`), each over one list line per rank — `- Pick:`,
+  `- Runner-up:`, `- Backup:` — giving the option's **model**, platform,
+  dial and level, `Thinking On` where the surface has that toggle, and
+  `AA` with its AA Intelligence Index there (`AA not measured` where AA
+  has no row); then a `**Conversation:**` line and the **Runs:** line,
+  every line within 80 columns. Before re-selecting anything, run
+  `roadmodel relayout <every roadmap file>`: it rewrites each ladder
+  table roadmodel 0.2.86–0.2.93 wrote (a `| Rank |` or `| Setting |`
+  table with Cost / Balanced / Quality columns) as those lists, every
+  model, platform, dial and AA Index kept as written. That is a layout
+  fix, not a new pick: it reaches every step and every phase, Complete
+  steps and written phases included, and takes no `Settings updated`
+  line. A ladder written before roadmodel 0.2.93 has Model / Backup /
+  Platform / Effort (/ AA Index) / Thinking rows and no Runner-up: on a
+  step that has not shipped, or a phase not yet written, replace it with
+  the ladder printed for that classification, even where every pick
+  still matches — a layout fix, not a new pick, so it takes no `Settings
+  updated` line unless the Pick of the column its **Runs:** line names
+  changed. Without roadmodel, leave every ladder as it is.
+- A Complete step's ladder keeps its values (see below): `roadmodel
+  relayout` changes its layout alone, and its `> Ran` and `> Settings
+  updated` lines stay beneath it.
 - Keep the step's selection block in the Model selection blocks equal
   to the column its **Runs:** line names (its `BACKUP:` line to that
   column's Backup), and its Summary Table row's Model to that column's
@@ -238,9 +242,9 @@ complexity, novel or not; its Model rationale names them), then:
   included, with no `Settings updated` line.
 - If it matches, leave the step exactly as it is.
 - **Never touch a step that reads `Complete`.** Its settings are the
-  record of what ran. Only the two 0.2.93 layout fixes above (the
-  Backup split and the Summary Table's columns) reach it, because they
-  change no value.
+  record of what ran. Only the layout fixes above (`roadmodel relayout`
+  and the Summary Table's columns) reach it, because they change no
+  value.
 - Keep each step's Conversation row as written — it is session hygiene,
   not a model choice.
 
@@ -275,10 +279,10 @@ sentences on why.
   beneath it.
 - A table that matches ⇒ leave the phase exactly as it is, except
   that a ladder written before roadmodel 0.2.93 becomes the ranked
-  ladder, as a step's does.
+  ladder, as a step's does, and every ladder takes the list layout.
 - **Never add, re-pick or rewrite the table of a phase whose roadmap
   exists.** Its table, or the lack of one, is the record of what wrote
-  that roadmap.
+  that roadmap; `roadmodel relayout` alone reaches it, as a layout fix.
 
 Print the phase · was · now · changed table.
 

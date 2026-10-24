@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.94] — 2026-10-24
+
+- **A roadmap's Settings ladder is a list per column, one option a line.** In an editor's Markdown preview 400–520px wide, 0.2.93's table spread each option over five rows: a rank row with the model, then Platform, Effort, Thinking and AA Index rows. With three columns side by side, nothing marked where one option ended and the next began. Each column is now a bold heading over three lines:
+
+  ```markdown
+  **Balanced** — runs by default
+
+  - Pick: **Gemini 4 Argon** · Antigravity · Effort High · Thinking On · AA 52.6
+  - Runner-up: **Opus 5.5** · Claude Code · Effort High · AA 53.6
+  - Backup: **GPT-6.1 Sol** · Codex · Intelligence XHigh · AA 51
+  ```
+
+  A dial or toggle the surface lacks gets no field rather than a `—`, as in a selection block. The column the **Runs:** line names reads `runs by default`, and a `**Conversation:**` line closes the ladder. A line past 80 columns wraps before a field, so the source still fits a roadmap's prose. `roadmodel ladder` and the MCP `roadmap_settings` print it; the JSON columns are unchanged.
+- **`roadmodel relayout <files>` converts the ladder tables older releases wrote.** It handles 0.2.93's ranked tables and the single-pick tables from 0.2.86–0.2.92, whose backup is in one cell or split into rows. Every model, platform, dial and AA Index is kept as written, so `/roadmap-refresh` runs it on every roadmap as a layout fix: it reaches Complete steps and written phases and takes no `Settings updated` line. It leaves alone any table with a row it does not know. `--check` reports without writing. `/roadmap-step` and `/roadmap-phase` read all three layouts, and the templates and writing prompts show the lists.
+- **An AA Index is shown only for the effort AA measured.** Where AA publishes one figure for a model without naming its effort, the ladder used that figure at any level. Gemini 3 Flash, 2.5 Flash, 3.1 Pro and 3.5 Flash-Lite have such a figure, and the Google API offers each of them a dial. On a surface where the operator sets the level, the figure may come from another effort, so the option now reads `AA not measured`. The figure still stands on a surface with no dial for the model. No existing ladder carried such a figure: every AA Index in the maintainer's ladders (21 model, platform and effort combinations) matches AA's row at that effort.
+
 ## [0.2.93] — 2026-10-23
 
 - **Each column of a roadmap's Settings table ranks three options, each with its AA Index.** The table had one pick and one backup per column, and only the pick showed an AA Index. Each column of Cost, Balanced and Quality now has three ranked rows, and every option shows its model, platform, effort and AA Index:

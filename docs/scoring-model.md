@@ -326,9 +326,14 @@ is applied in code, at two places:
 <c> --complexity <x> [--novel] [--phase]` (`scoring.settings_ladder`, MCP
 `roadmap_settings`) prints a step's Settings as /recommend's three columns,
 each ranked three deep. Each option carries its effort and the model's AA
-Intelligence Index at that effort (`not measured` where AA has no row there),
-one field a row (the rank's row names the model; its Platform, Effort,
-Thinking and AA Index rows follow), so the table fits in 80 columns:
+Intelligence Index at that effort (`not measured` where AA has no row there;
+where AA publishes one row naming no effort, it stands only on a surface with
+no dial for the model, since the level the operator sets elsewhere may not be
+the one AA ran). The ladder prints a list per column, one option a line
+(`- Pick: **Opus 5.5** · Claude Code · Effort XHigh · AA 56`;
+`roadmodel.ladder_layout`), so it reads in a Markdown preview 400px wide and
+its source fits in 80 columns; `roadmodel relayout` rewrites the tables
+0.2.86–0.2.93 wrote, every value kept:
 - **Pick:** the column's rung.
 - **Runner-up:** the column's rung with the pick's whole series off the
   table (`unavailable_models`), so it is never an older version of the pick
@@ -339,7 +344,7 @@ Thinking and AA Index rows follow), so the table fits in 80 columns:
   pool holds. `None` when the runner-up holds the only other maker's series.
 
 The ranks follow the column's own rule, not the AA Index: Cost ranks the
-cheapest first, so its AA Index may rise down the column. The table reads
+cheapest first, so its AA Index may rise down the column. The ladder reads
 every usage pool as `headroom` (`rank(neutral_pools=True)`), so it does not
 depend on the day it was written. The **Runs:** line names the column the
 step runs: the Budget priority's column (cheap → Cost, balanced → Balanced,

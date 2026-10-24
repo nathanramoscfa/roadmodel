@@ -400,14 +400,45 @@ def test_every_command_ships_to_every_agent() -> None:
     assert on_disk == set(up.COMMANDS)
 
 
-LADDER_ROWS = [
+# A ladder's lines reduced to their labels (roadmodel 0.2.94 on): each
+# column's bold heading over its Pick, Runner-up and Backup lines, then the
+# Conversation line.
+LADDER_SHAPE = [
     *(
         label
-        for rank in ("1 · Pick", "2 · Runner-up", "3 · Backup")
-        for label in (rank, "Platform", "Effort", "Thinking", "AA Index")
+        for column in ("Cost", "Balanced", "Quality")
+        for label in (column, "Pick", "Runner-up", "Backup")
     ),
     "Conversation",
 ]
+
+
+def _ladders(text: str) -> list[list[str]]:
+    """Each ladder's non-blank lines, its `**Cost**` heading through its
+    `**Conversation:**` line."""
+    lines = text.splitlines()
+    out = []
+    for i, line in enumerate(lines):
+        if line == "**Cost**":
+            j = i
+            while not lines[j].startswith("**Conversation:**"):
+                j += 1
+            out.append([ln for ln in lines[i : j + 1] if ln.strip()])
+    return out
+
+
+def _ladder_shape(ladder: list[str]) -> list[str]:
+    shape = []
+    for line in ladder:
+        if head := re.match(r"^\*\*(Cost|Balanced|Quality)\*\*", line):
+            shape.append(head.group(1))
+        elif item := re.match(r"^- (Pick|Runner-up|Backup): \*\*", line):
+            shape.append(item.group(1))
+        elif line.startswith("**Conversation:** "):
+            shape.append("Conversation")
+        else:
+            shape.append(line)
+    return shape
 
 
 def test_every_settings_table_carries_a_backup_row() -> None:
@@ -422,33 +453,32 @@ def test_every_settings_table_carries_a_backup_row() -> None:
     assert len(model_rows) >= 3
     for i in model_rows:
         assert lines[i + 1].startswith("| Backup "), lines[i]
-    ladders = [i for i, line in enumerate(lines) if line.startswith("| Rank ")]
+    ladders = _ladders(PHASE.read_text())
     assert len(ladders) >= 3
-    for i in ladders:
-        j = i + 2
-        while lines[j].startswith("|"):
-            j += 1
-        ranks = [ln.split("|")[1].strip() for ln in lines[i + 2 : j]]
-        assert ranks == LADDER_ROWS, ranks
+    for ladder in ladders:
+        assert _ladder_shape(ladder) == LADDER_SHAPE, ladder
     flat = re.sub(r"\s+", " ", PHASE.read_text())
     assert "Every table carries Model / Backup / Platform / Conversation" in flat
-    assert "Rows: each rank (`1 · Pick`, `2 · Runner-up`, `3 · Backup`) names its model" in flat
+    assert (
+        "one list line per rank — `- Pick:`, `- Runner-up:`, `- Backup:` — giving the "
+        "option's **model**"
+    ) in flat
 
 
 def test_ladders_and_the_summary_table_fit_80_columns() -> None:
     """The 0.2.93 ladder first stacked each option's fields in one cell with
     `<br>`, and the eight-column Summary Table passed 130 columns, in
-    roadmaps whose prose wraps at 80. A ladder now takes one field a row and
-    the Summary Table four columns."""
+    roadmaps whose prose wraps at 80. Its next layout, one field a row,
+    read badly in a Markdown preview 400–520px wide (2026-10-24), so a
+    ladder is now a list per column, one option a line, and the Summary
+    Table has four columns."""
     for path in (PHASE, PROJECT):
-        lines = path.read_text().splitlines()
+        text = path.read_text()
+        lines = text.splitlines()
         assert not any("<br>" in ln for ln in lines if ln.startswith("| ")), path.name
-        for i, line in enumerate(lines):
-            if line.startswith("| Rank "):
-                j = i
-                while lines[j].startswith("|"):
-                    j += 1
-                assert all(len(row) <= 80 for row in lines[i:j]), path.name
+        assert not any(ln.startswith("| Rank ") for ln in lines), path.name
+        for ladder in _ladders(text):
+            assert all(len(ln) <= 80 for ln in ladder), path.name
     text = PHASE.read_text()
     summary = text[text.index("## Summary Table") : text.index("## Model selection blocks")]
     head = next(ln for ln in summary.splitlines() if ln.startswith("| Step "))
@@ -458,12 +488,17 @@ def test_ladders_and_the_summary_table_fit_80_columns() -> None:
     assert "Scope is at most 30 characters" in flat
     assert "A verification row's Model reads `CI`" in flat
     refresh = re.sub(r"\s+", " ", REFRESH_COMMAND.read_text())
-    assert "so the table fits in 80 columns, as `roadmodel ladder` prints it" in refresh
+    assert "takes the list layout (roadmodel 0.2.94 on), as `roadmodel ladder` prints it" in refresh
+    assert "every line within 80 columns" in refresh
     assert "A Complete step's ladder keeps its values" in refresh
     assert "The Summary Table (roadmodel 0.2.93 on) has four columns" in refresh
-    assert "Only the two 0.2.93 layout fixes above" in refresh
+    assert "Only the layout fixes above (`roadmodel relayout` and the Summary Table's" in refresh
     step = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
-    assert "Each rank's row names its model, and the Platform, Effort, Thinking" in step
+    assert (
+        "each column is a bold heading (**Cost**, **Balanced**, **Quality**) over one list "
+        "line per option"
+    ) in step
+    assert "A 0.2.93 ladder is a table with rows `1 · Pick`" in step
 
 
 def test_roadmap_commands_handle_the_backup_row() -> None:
@@ -473,7 +508,11 @@ def test_roadmap_commands_handle_the_backup_row() -> None:
     # A ladder whose picks still match takes the 0.2.93 ranked layout too:
     # the first fleet refresh after 0.2.91 left every unchanged table
     # without that release's AA Index row.
-    assert "is the ranked ladder (roadmodel 0.2.93 on)" in refresh
+    assert "takes the list layout (roadmodel 0.2.94 on)" in refresh
+    # 2026-10-24: `roadmodel relayout` converts every older ladder table,
+    # Complete steps and written phases included, keeping every value.
+    assert "run `roadmodel relayout <every roadmap file>`" in refresh
+    assert "Complete steps and written phases included, and takes no `Settings updated`" in refresh
     assert "even where every pick still matches" in refresh
     assert "except that a ladder written before roadmodel 0.2.93 becomes the ranked" in refresh
     step = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
@@ -627,11 +666,11 @@ def test_project_template_names_the_settings_that_write_each_phase_roadmap() -> 
         settings = section.index("**Phase roadmap settings**")
         first_sub = section.index("\n#### ")
         assert badge < settings < first_sub, f"settings not after the badge: Phase {name}"
-        rows = re.findall(r"^\| ([^|-][^|]*?)\s+\|", section[settings:first_sub], re.M)
-        assert rows == ["Rank", *LADDER_ROWS], name
-        assert re.search(r"^\| Conversation +\| \*\*New\*\*", section[settings:first_sub], re.M), (
-            name
-        )
+        block = section[settings:first_sub]
+        ladders = _ladders(block)
+        assert len(ladders) == 1 and _ladder_shape(ladders[0]) == LADDER_SHAPE, name
+        assert "**Quality** — runs by default" in block, name
+        assert "**Conversation:** New" in block, name
         assert "`/roadmap-phase " in section[settings:first_sub], name
     # The rule: quality first, the deepest rung, never Ultracode, history kept.
     for phrase in _QUALITY_FIRST:
@@ -728,21 +767,21 @@ def test_step_settings_are_the_full_ladder() -> None:
     template = re.sub(r"\s+", " ", PHASE.read_text())
     assert "THE LADDER — the default wherever roadmodel is installed" in template
     assert step_ladder in template
-    assert "| Rank | Cost | Balanced | Quality |" in re.sub(r" +", " ", PHASE.read_text())
+    assert _ladders(PHASE.read_text())
     assert "never an older one (GPT-6 Sol where GPT-6.1 Sol runs" in template
     prompt = re.sub(r"\s+", " ", PROMPT_PHASE.read_text())
     assert step_ladder in prompt
-    assert "A ladder table (Cost / Balanced / Quality columns)" in prompt
+    assert "A ladder (Cost / Balanced / Quality columns)" in prompt
     assert "never name an older version of a series" in prompt
     refresh = re.sub(r"\s+", " ", REFRESH_COMMAND.read_text())
     assert step_ladder in refresh
     assert "A single-column table becomes the ladder: that is a difference" in refresh
     step = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
-    assert "**Ladder tables** (Cost / Balanced / Quality columns" in step
+    assert "**Ladders** (Cost / Balanced / Quality columns" in step
     assert "`> Ran <YYYY-MM-DD>: <column> — <model · effort>. <why>.`" in step
     assert "reads `tight` or `exhausted` moves the run to the first of the column's" in prompt
     # 2026-10-23: each column ranks a Pick, a Runner-up and a Backup, and a
     # tight or exhausted pool moves the run down the ranks.
     assert "`tight`: run the first of that column's Runner-up and Backup whose" in step
     assert "`exhausted`: run the first of that column's Runner-up and Backup" in step
-    assert "or its ladder tables have no `2 · Runner-up` row, STOP" in prompt
+    assert "or its ladders have no `- Runner-up:` line, STOP" in prompt

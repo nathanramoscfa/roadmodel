@@ -660,13 +660,13 @@ def ladder_command(
     output: str,
     user_context_path: Path | None,
 ) -> None:
-    """Print a roadmap Settings table as the full ladder — no engine call.
+    """Print a roadmap's Settings as the full ladder — no engine call.
 
     The Cost / Balanced / Quality picks /recommend shows, each ranked three
     deep (pick, runner-up, and a backup from another maker) with each option's
     effort and AA Index, read with every usage pool at headroom, then the
     column the step runs and the rule for a tight or exhausted pool.
-    The table outlives a pool's state: the step's runner picks the column on
+    The ladder outlives a pool's state: the step's runner picks the column on
     the day, so the roadmap needs no refresh when a pool tightens.
     """
     text = _scoring_user_context(user_context_path)
@@ -684,6 +684,44 @@ def ladder_command(
     click.echo(settings["markdown"])
     if settings["backup_warning"]:
         click.echo(f"\n> {settings['backup_warning']}")
+
+
+@cli.command("relayout")
+@click.argument(
+    "paths",
+    nargs=-1,
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--check",
+    is_flag=True,
+    default=False,
+    help="Report the ladder tables without rewriting them; exit 1 if any remain.",
+)
+def relayout_command(paths: tuple[Path, ...], check: bool) -> None:
+    """Rewrite each roadmap's Settings ladder tables as the ladder's lists.
+
+    Every table with Cost / Balanced / Quality columns that roadmodel
+    0.2.86–0.2.93 wrote becomes three lists (Pick, Runner-up, Backup), every
+    model, platform, dial and AA Index kept as written, so it is a layout fix
+    for any step, Complete ones included. A table with a row this release does
+    not know is left as it is.
+    """
+    from roadmodel import ladder_layout
+
+    found = 0
+    for path in paths:
+        text = path.read_text(encoding="utf-8")
+        new, count = ladder_layout.relayout(text)
+        if not count:
+            continue
+        found += count
+        if not check:
+            path.write_text(new, encoding="utf-8")
+        click.echo(f"{path}: {count} ladder table{'s' if count != 1 else ''}")
+    if check and found:
+        raise SystemExit(1)
 
 
 @cli.command("cost")
