@@ -224,13 +224,12 @@ def roadmap_settings(
 ### Returns
 
 `task`, `phase`, `runs` (`cost`, `balanced` or `quality`), `rule`, `columns`,
-`backup_warning`, and `markdown` (the table and its **Runs:** line, ready to
-paste). Each of `columns`' tiers is its pick, with `runner_up` and `backup`
+`backup_warning`, and `markdown` (the table and its **Runs:** line, wrapped at
+80 columns and ready to paste). Each of `columns`' tiers is its pick, with `runner_up` and `backup`
 beside it in the same shape (`null` where the column has none): `model_id`,
 `model`, `platform_id`, `platform`, `effort`, `effort_cell`, `aa_index` (the
 model's AA Intelligence Index at that effort, or null where AA has not
-measured it there), `thinking_cell`, and `cell` (the option's table cell, one
-field per line).
+measured it there), and `thinking_cell`.
 
 ## `read_catalog`
 

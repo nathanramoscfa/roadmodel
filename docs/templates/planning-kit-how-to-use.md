@@ -33,7 +33,7 @@ the step (step 1 below), then paste the table and **Runs:** line
 `roadmodel ladder --category <c> --complexity <x> [--novel]` prints: the
 Cost / Balanced / Quality picks /recommend shows, each ranked three deep (the
 Pick, the Runner-up, and a Backup from another maker), each option with its
-effort and AA Index, one field per line in its cell. It is local code — no API
+effort and AA Index, one field a row. It is local code — no API
 call, no engine — and it
 reads every usage pool at headroom, so the table outlives a pool's state: when
 a pool reads `tight` or `exhausted`, `/roadmap-step` runs another column

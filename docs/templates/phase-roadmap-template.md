@@ -38,7 +38,9 @@ PLACEHOLDER SYNTAX
     {{...}} tokens.
 
 STYLE RULES (the AI MUST follow)
-  - All prose wraps at 80 characters per line.
+  - All prose wraps at 80 characters per line, and every table fits in
+    80 columns: a ladder takes one field a row, and a Summary Table
+    Scope is at most 30 characters.
   - Use Markdown tables for any list of >3 structured items.
   - Use ASCII boxes / arrows (┌ ┐ └ ┘ │ ─ ▶ ↓) for the
     execution-order diagram.
@@ -755,20 +757,20 @@ that owns it.}}
      **Runs:** line exactly as `roadmodel ladder --category
      <c> --complexity <x> [--novel]` prints them for the
      step's classification (MCP tool: `roadmap_settings`).
-     Rows: 1 · Pick / 2 · Runner-up / 3 · Backup /
-     Conversation. Each cell is one option, one field per
-     line (`<br>` breaks the line and `&emsp;` indents it):
-     the model in bold, its platform, its own dial and level
-     (`Intelligence Medium` on Codex, `Effort High` on
-     Claude Code, `No effort dial` where the surface has
-     none), `Thinking On` where the surface has that toggle,
-     and `AA <n>`: the model's Artificial Analysis
-     Intelligence Index at that effort, `not measured` where
-     AA has no row for it there. The ranks follow the
+     Rows: each rank (`1 · Pick`, `2 · Runner-up`, `3 ·
+     Backup`) names its model, and the four rows under it
+     carry one field each: Platform; Effort, its own dial and
+     level (`Intelligence Medium` on Codex, `Effort High` on
+     Claude Code, `—` where the surface has none); Thinking,
+     `On` where the surface has that toggle, else `—`; and AA
+     Index, the model's Artificial Analysis Intelligence
+     Index at that effort (`not measured` where AA has no row
+     for it there). Conversation closes the table. One field
+     a cell keeps the table within 80 columns. The ranks follow the
      column's own rule, not the AA Index: Cost ranks the
      cheapest first, so its AA Index may rise down the
-     column. A Backup cell reads `None` when the Runner-up
-     already holds the only other maker's models. Every model is the latest
+     column. The Backup row reads `None`, with `—` under it, when the
+     Runner-up already holds the only other maker's models. Every model is the latest
      version of its series, never an older one (GPT-6 Sol
      where GPT-6.1 Sol runs, Opus 5 where Opus 5.5 does).
      Set Conversation to **Continue** in every column only
@@ -874,14 +876,30 @@ step's classification, pasted as printed. The three shapes
 after it are the fallback where roadmodel cannot be
 reached}}):
 
-| Rank          | Cost                                                                                           | Balanced                                                                                       | Quality                                                                                        |
-| ------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| 1 · Pick      | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} |
-| 2 · Runner-up | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} |
-| 3 · Backup    | {{The same shape, or None}}                                                                    | {{The same shape, or None}}                                                                    | {{The same shape, or None}}                                                                    |
-| Conversation  | **{{New or Continue}}**                                                                        | **{{New or Continue}}**                                                                        | **{{New or Continue}}**                                                                        |
+| Rank          | Cost               | Balanced           | Quality            |
+| ------------- | ------------------ | ------------------ | ------------------ |
+| 1 · Pick      | {{Model}}          | {{Model}}          | {{Model}}          |
+| Platform      | {{Platform}}       | {{Platform}}       | {{Platform}}       |
+| Effort        | {{Dial and level}} | {{Dial and level}} | {{Dial and level}} |
+| Thinking      | {{On or —}}        | {{On or —}}        | {{On or —}}        |
+| AA Index      | {{AA Index}}       | {{AA Index}}       | {{AA Index}}       |
+| 2 · Runner-up | {{Model}}          | {{Model}}          | {{Model}}          |
+| Platform      | {{Platform}}       | {{Platform}}       | {{Platform}}       |
+| Effort        | {{Dial and level}} | {{Dial and level}} | {{Dial and level}} |
+| Thinking      | {{On or —}}        | {{On or —}}        | {{On or —}}        |
+| AA Index      | {{AA Index}}       | {{AA Index}}       | {{AA Index}}       |
+| 3 · Backup    | {{Model or None}}  | {{Model or None}}  | {{Model or None}}  |
+| Platform      | {{Platform}}       | {{Platform}}       | {{Platform}}       |
+| Effort        | {{Dial and level}} | {{Dial and level}} | {{Dial and level}} |
+| Thinking      | {{On or —}}        | {{On or —}}        | {{On or —}}        |
+| AA Index      | {{AA Index}}       | {{AA Index}}       | {{AA Index}}       |
+| Conversation  | **New**            | **New**            | **New**            |
 
-**Runs:** {{Cost / Balanced / Quality}} — the user-context's Budget priority is `{{cheap / balanced / best}}`. If that column's usage pool reads `tight` or `exhausted`, run the first of its Runner-up and Backup whose pool has headroom; with neither, a `tight` column runs the Cost column and an `exhausted` one its Backup.
+**Runs:** {{Cost / Balanced / Quality}} — the user-context's Budget priority is
+`{{cheap / balanced / best}}`. If that column's usage pool reads `tight` or
+`exhausted`, run the first of its Runner-up and Backup whose pool has headroom;
+with neither, a `tight` column runs the Cost column and an `exhausted` one its
+Backup.
 
 Settings table — Effort + Thinking variant ({{use this
 shape when PLATFORM is "Claude Code" or any other
@@ -1293,12 +1311,24 @@ printed with its **Runs:** line. Where roadmodel cannot be
 reached, the single-column variant that matches PLATFORM,
 carrying ONLY the rows that platform's panel exposes.}}
 
-| Rank          | Cost                                                                                           | Balanced                                                                                       | Quality                                                                                        |
-| ------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| 1 · Pick      | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} |
-| 2 · Runner-up | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} |
-| 3 · Backup    | {{The same shape, or None}}                                                                    | {{The same shape, or None}}                                                                    | {{The same shape, or None}}                                                                    |
-| Conversation  | **{{New or Continue}}**                                                                        | **{{New or Continue}}**                                                                        | **{{New or Continue}}**                                                                        |
+| Rank          | Cost               | Balanced           | Quality            |
+| ------------- | ------------------ | ------------------ | ------------------ |
+| 1 · Pick      | {{Model}}          | {{Model}}          | {{Model}}          |
+| Platform      | {{Platform}}       | {{Platform}}       | {{Platform}}       |
+| Effort        | {{Dial and level}} | {{Dial and level}} | {{Dial and level}} |
+| Thinking      | {{On or —}}        | {{On or —}}        | {{On or —}}        |
+| AA Index      | {{AA Index}}       | {{AA Index}}       | {{AA Index}}       |
+| 2 · Runner-up | {{Model}}          | {{Model}}          | {{Model}}          |
+| Platform      | {{Platform}}       | {{Platform}}       | {{Platform}}       |
+| Effort        | {{Dial and level}} | {{Dial and level}} | {{Dial and level}} |
+| Thinking      | {{On or —}}        | {{On or —}}        | {{On or —}}        |
+| AA Index      | {{AA Index}}       | {{AA Index}}       | {{AA Index}}       |
+| 3 · Backup    | {{Model or None}}  | {{Model or None}}  | {{Model or None}}  |
+| Platform      | {{Platform}}       | {{Platform}}       | {{Platform}}       |
+| Effort        | {{Dial and level}} | {{Dial and level}} | {{Dial and level}} |
+| Thinking      | {{On or —}}        | {{On or —}}        | {{On or —}}        |
+| AA Index      | {{AA Index}}       | {{AA Index}}       | {{AA Index}}       |
+| Conversation  | **New**            | **New**            | **New**            |
 
 **Runs:** {{the line `roadmodel ladder` prints}}
 
@@ -1427,12 +1457,24 @@ this step's classification, pasted as printed with its
 **Runs:** line; where roadmodel cannot be reached, the
 single-column variant that matches PLATFORM.}}
 
-| Rank          | Cost                                                                                           | Balanced                                                                                       | Quality                                                                                        |
-| ------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| 1 · Pick      | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} |
-| 2 · Runner-up | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} | **{{Model}}**<br>&emsp;{{Platform}}<br>&emsp;{{Dial and level}}<br>&emsp;AA {{AA Index there}} |
-| 3 · Backup    | {{The same shape, or None}}                                                                    | {{The same shape, or None}}                                                                    | {{The same shape, or None}}                                                                    |
-| Conversation  | **New**                                                                                        | **New**                                                                                        | **New**                                                                                        |
+| Rank          | Cost               | Balanced           | Quality            |
+| ------------- | ------------------ | ------------------ | ------------------ |
+| 1 · Pick      | {{Model}}          | {{Model}}          | {{Model}}          |
+| Platform      | {{Platform}}       | {{Platform}}       | {{Platform}}       |
+| Effort        | {{Dial and level}} | {{Dial and level}} | {{Dial and level}} |
+| Thinking      | {{On or —}}        | {{On or —}}        | {{On or —}}        |
+| AA Index      | {{AA Index}}       | {{AA Index}}       | {{AA Index}}       |
+| 2 · Runner-up | {{Model}}          | {{Model}}          | {{Model}}          |
+| Platform      | {{Platform}}       | {{Platform}}       | {{Platform}}       |
+| Effort        | {{Dial and level}} | {{Dial and level}} | {{Dial and level}} |
+| Thinking      | {{On or —}}        | {{On or —}}        | {{On or —}}        |
+| AA Index      | {{AA Index}}       | {{AA Index}}       | {{AA Index}}       |
+| 3 · Backup    | {{Model or None}}  | {{Model or None}}  | {{Model or None}}  |
+| Platform      | {{Platform}}       | {{Platform}}       | {{Platform}}       |
+| Effort        | {{Dial and level}} | {{Dial and level}} | {{Dial and level}} |
+| Thinking      | {{On or —}}        | {{On or —}}        | {{On or —}}        |
+| AA Index      | {{AA Index}}       | {{AA Index}}       | {{AA Index}}       |
+| Conversation  | **New**            | **New**            | **New**            |
 
 **Runs:** {{the line `roadmodel ladder` prints}}
 
@@ -1920,56 +1962,30 @@ corresponding row below.
 
 ## Summary Table
 
-<!-- With ladder Settings tables, each step's row shows the
-     column its **Runs:** line names (the Model, Platform
-     and dial of that column); the other two columns live
-     in the step's own table.
+<!-- One row per step and per verification check. Model is the
+     Pick of the column the step's **Runs:** line names (with
+     a single-column Settings table, its Model); the step's own
+     Settings table carries the platform, the dials, the other
+     ranks and the other two columns, so this table need not.
+     Scope is at most 30 characters, so every row fits in 80
+     columns. A verification row's Model reads `CI`; its
+     section names the workflows.
 
-     Summary Table column "Reasoning dial" carries
-     whichever dial the step's PLATFORM exposes, written
-     in the surface's native vocabulary so reviewers can
-     audit each row 1:1 against the panel. The per-step
-     Settings tables are the source of truth; this table
-     just flattens them, so a step whose surface lacks a
-     dial gets "--" HERE (a column cannot be dropped for
-     one row) even though the Settings table above omits
-     the row entirely. "--" means "this surface has no
-     such control" — it is never a setting to apply:
-       • Claude Code → "Effort {{Low/Med/High/XHigh/Max}}"
-         (plus " + Ultracode" when the switch is on), and
-         the Thinking column carries "On" or "Off" — or
-         "--" for a model that always thinks (Opus 5.5, Sonnet 5.5, Haiku 5.5 and the Fable models).
-       • Codex → "Intelligence {{Low/Med/High/XHigh}}"
-         (the Thinking column is "--" because the surface
-         exposes no Thinking field; Codex covers both the
-         CLI binary and the Cursor IDE extension as a
-         single Platform).
-       • Other reasoning-dial surfaces (ChatGPT app,
-         claude.ai web, Anthropic / OpenAI / Google APIs,
-         Gemini CLI, DeepSeek API) → "Effort {{level}}"
-         (and the Thinking column carries "On" or "Off",
-         or "--" for a model that always thinks).
-         Never "Max ON/OFF" — none of these has Max Mode.
-       • Cursor → "Max ON" or "Max OFF" (and the Thinking
-         column is "--"; Cursor exposes no reasoning
-         dial). Max is a CURSOR-ONLY value in this
-         column.
+     Column "Status" mirrors each step's `**Status:**` line:
+     `Not started` when this roadmap is written, set to
+     `Complete — PR #<n>` by the step's own Stage-3 commit
+     (Status rule). Verification rows read "--". -->
 
-     Column "Status" mirrors each step's `**Status:**`
-     line: `Not started` when this roadmap is written, set
-     to `Complete — PR #<n>` by the step's own Stage-3
-     commit (Status rule). Verification rows read "--". -->
-
-| Step    | Scope                     | Model       | Platform     | Reasoning dial  | Thinking         | Conv | Status      |
-| ------- | ------------------------- | ----------- | ------------ | --------------- | ---------------- | ---- | ----------- |
-| 1       | {{Step 1 short scope}}    | {{Model}}   | {{Platform}} | {{Effort Low/Med/High/XHigh/Max/Ultracode or Intelligence Low/Med/High/XHigh or Max ON/OFF (Cursor only)}} | {{On / Off / --}} | New  | Not started |
-| 2       | {{Step 2 short scope}}    | {{Model}}   | {{Platform}} | {{Effort Low/Med/High/XHigh/Max/Ultracode or Intelligence Low/Med/High/XHigh or Max ON/OFF (Cursor only)}} | {{On / Off / --}} | New  | Not started |
-| ...     | ...                       | ...         | ...          | ...             | ...              | ...  | ...         |
-| {{N}}   | QA + verify-phase{{N}}.sh | {{Model}}   | {{Platform}} | {{Effort Low/Med/High/XHigh/Max/Ultracode or Intelligence Low/Med/High/XHigh or Max ON/OFF (Cursor only)}} | {{On / Off / --}} | New  | Not started |
-| V1      | {{Step 1 scope}}          | CI: {{wf}}  | --           | --              | --               | --   | --          |
-| V2      | {{Step 2 scope}}          | CI: {{wf}}  | --           | --              | --               | --   | --          |
-| ...     | ...                       | ...         | --           | --              | --               | --   | ...         |
-| V{{N}}  | CI integration            | CI: phase-verify.yml | --  | --              | --               | --   | --          |
+| Step | Scope                          | Model          | Status             |
+| ---- | ------------------------------ | -------------- | ------------------ |
+| 1    | {{Step 1 short scope}}         | {{Model}}      | Not started        |
+| 2    | {{Step 2 short scope}}         | {{Model}}      | Not started        |
+| ...  | ...                            | ...            | ...                |
+| {{N}} | QA + verify-phase{{N}}.sh     | {{Model}}      | Not started        |
+| V1   | {{Step 1 scope}}               | CI             | --                 |
+| V2   | {{Step 2 scope}}               | CI             | --                 |
+| ...  | ...                            | CI             | --                 |
+| V{{N}} | CI integration               | CI             | --                 |
 
 ---
 

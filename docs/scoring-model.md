@@ -327,7 +327,8 @@ is applied in code, at two places:
 `roadmap_settings`) prints a step's Settings as /recommend's three columns,
 each ranked three deep. Each option carries its effort and the model's AA
 Intelligence Index at that effort (`not measured` where AA has no row there),
-one field per line in its cell:
+one field a row (the rank's row names the model; its Platform, Effort,
+Thinking and AA Index rows follow), so the table fits in 80 columns:
 - **Pick:** the column's rung.
 - **Runner-up:** the column's rung with the pick's whole series off the
   table (`unavailable_models`), so it is never an older version of the pick
