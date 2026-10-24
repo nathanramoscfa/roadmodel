@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.94] — 2026-10-24
+
 - **A roadmap's Settings ladder is a list per column, one option a line.** In an editor's Markdown preview 400–520px wide, 0.2.93's table spread each option over five rows: a rank row with the model, then Platform, Effort, Thinking and AA Index rows. With three columns side by side, nothing marked where one option ended and the next began. Each column is now a bold heading over three lines:
 
   ```markdown
