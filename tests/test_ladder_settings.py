@@ -139,6 +139,36 @@ def _rows(markdown: str) -> list[list[str]]:
     ]
 
 
+RANKS = ("1 · Pick", "2 · Runner-up", "3 · Backup")
+FIELDS = ("Platform", "Effort", "Thinking", "AA Index")
+
+
+def _ranked(markdown: str) -> dict[str, dict[str, list[str]]]:
+    """The table's rows by rank: each rank's own row (``model``) and the
+    field rows under it, one list of cells per row in tier order."""
+    out: dict[str, dict[str, list[str]]] = {}
+    rank = ""
+    for row in _rows(markdown)[1:]:
+        if row[0] in RANKS:
+            rank = row[0]
+            out[rank] = {"model": row[1:]}
+        elif row[0] in FIELDS:
+            out[rank][row[0]] = row[1:]
+    return out
+
+
+def _option_cells(option: dict[str, Any] | None) -> dict[str, str]:
+    if option is None:
+        return {"model": "None", **dict.fromkeys(FIELDS, "—")}
+    return {
+        "model": option["model"],
+        "Platform": option["platform"],
+        "Effort": option["effort_cell"],
+        "Thinking": option["thinking_cell"],
+        "AA Index": scoring._aa_cell(option["aa_index"]),
+    }
+
+
 def test_each_column_ranks_its_pick_runner_up_and_backup() -> None:
     lad = scoring.ladder(PLANNING_MEDIUM, _context(), catalog=CATALOG, benchmarks=BENCH)
     assert lad is not None
@@ -168,25 +198,26 @@ def test_each_column_ranks_its_pick_runner_up_and_backup() -> None:
             assert makers[backup["model_id"]] != makers[col["model_id"]]
     rows = _rows(got["markdown"])
     assert rows[0] == ["Rank", "Cost", "Balanced", "Quality"]
-    assert [r[0] for r in rows[1:]] == ["1 · Pick", "2 · Runner-up", "3 · Backup", "Conversation"]
-    for i, tier in enumerate(scoring.LADDER_TIERS, start=1):
-        col = got["columns"][tier]
-        assert rows[1][i] == col["cell"]
-        assert rows[2][i] == col["runner_up"]["cell"]
-        assert rows[3][i] == ("None" if col["backup"] is None else col["backup"]["cell"])
-
-
-def test_a_cell_puts_each_field_on_its_own_indented_line() -> None:
-    col = _settings()["columns"]["quality"]
-    head, *fields = col["cell"].split("<br>")
-    assert head == f"**{col['model']}**"
-    assert all(f.startswith("&emsp;") for f in fields)
-    assert [f.removeprefix("&emsp;") for f in fields] == [
-        col["platform"],
-        col["effort_cell"],
-        *(["Thinking On"] if col["thinking_cell"] == "On" else []),
-        f"AA {col['aa_index']:g}",
+    assert [r[0] for r in rows[1:]] == [
+        *(label for rank in RANKS for label in (rank, *FIELDS)),
+        "Conversation",
     ]
+    ranked = _ranked(got["markdown"])
+    for i, tier in enumerate(scoring.LADDER_TIERS):
+        col = got["columns"][tier]
+        for rank, option in zip(RANKS, (col, col["runner_up"], col["backup"]), strict=True):
+            for row, cell in _option_cells(option).items():
+                assert ranked[rank][row][i] == cell, (tier, rank, row)
+
+
+def test_each_option_takes_one_row_per_field_and_the_table_fits_80_columns() -> None:
+    """A cell holds one field: the rank's row names the model and the rows
+    under it its platform, dial and level, Thinking toggle and AA Index, so no
+    `<br>` joins several and every line, the wrapped Runs paragraph
+    included, fits the 80 columns a roadmap's prose wraps at."""
+    got = _settings()
+    assert "<br>" not in got["markdown"] and "&emsp;" not in got["markdown"]
+    assert all(len(ln) <= 80 for ln in got["markdown"].splitlines())
 
 
 def test_the_runner_up_is_never_an_older_version_of_the_pick() -> None:
@@ -292,7 +323,9 @@ def test_a_runner_up_holding_the_only_other_maker_leaves_no_backup() -> None:
     for col in got["columns"].values():
         assert col["runner_up"]["model_id"] != col["model_id"]
         assert col["backup"] is None
-    assert _rows(got["markdown"])[3][1:] == ["None"] * 3
+    backup = _ranked(got["markdown"])["3 · Backup"]
+    assert backup["model"] == ["None"] * 3
+    assert all(backup[f] == ["—"] * 3 for f in FIELDS)
 
 
 def _aa(value: float) -> dict[str, Any]:
@@ -319,8 +352,11 @@ def test_every_option_reads_its_models_index_at_its_own_effort() -> None:
             measured = scoring.measured_levels(bench, option["model_id"])[option["effort"]]
             want = measured["evaluations"]["artificial_analysis_intelligence_index"]
             assert option["aa_index"] == want
-            assert option["cell"].endswith(f"<br>&emsp;AA {want:g}")
-            assert option["cell"] in got["markdown"]
+    ranked = _ranked(got["markdown"])
+    for i, tier in enumerate(scoring.LADDER_TIERS):
+        col = got["columns"][tier]
+        for rank, option in zip(RANKS, (col, col["runner_up"], col["backup"]), strict=True):
+            assert ranked[rank]["AA Index"][i] == f"{option['aa_index']:g}"
 
 
 def test_ladder_aa_index_reads_the_effort_or_says_not_measured() -> None:
@@ -363,7 +399,10 @@ def test_a_model_that_always_thinks_has_no_thinking_toggle() -> None:
     assert claude, "the fixture ladder puts a Claude Code model in some column"
     assert all(c["thinking_cell"] == "—" for c in claude)
     assert all(c["effort_cell"].startswith("Effort ") for c in claude)
-    assert all("Thinking On" not in c["cell"] for c in claude)
+    picks = _ranked(got["markdown"])["1 · Pick"]
+    for i, tier in enumerate(scoring.LADDER_TIERS):
+        if got["columns"][tier]["platform_id"] == "claude-code":
+            assert picks["Thinking"][i] == "—"
 
 
 @pytest.mark.parametrize(
@@ -372,8 +411,9 @@ def test_a_model_that_always_thinks_has_no_thinking_toggle() -> None:
 def test_the_step_runs_the_column_its_budget_priority_names(budget: str, runs: str) -> None:
     got = _settings(scoring.Task("planning", "medium", budget=budget))
     assert got["runs"] == runs
-    assert got["markdown"].splitlines()[-1].startswith(f"**Runs:** {runs.capitalize()} — ")
-    assert scoring.RUN_RULE in got["markdown"]
+    _, runs_line = got["markdown"].split("\n\n")
+    assert runs_line.startswith(f"**Runs:** {runs.capitalize()} — ")
+    assert scoring.RUN_RULE in " ".join(runs_line.split())
 
 
 def test_a_phase_session_runs_quality_at_its_deepest_pinnable_rung() -> None:

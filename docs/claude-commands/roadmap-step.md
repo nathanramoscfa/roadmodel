@@ -104,12 +104,12 @@ Intelligence <I>>. This session: <your own model> on <this surface>.`
 - **Ladder tables** (Cost / Balanced / Quality columns, roadmodel 0.2.86
   on) carry every column the step may run, so pick one before the checks
   below. From roadmodel 0.2.93 each column ranks three options in rows
-  `1 · Pick`, `2 · Runner-up` and `3 · Backup`. Each cell is one option,
-  one field per line: the model in bold, its platform, its dial and
-  level, `Thinking On` where the surface has that toggle, and its AA
-  Index. An older ladder has Model / Backup / Platform / Effort rows
-  instead: its Model, Platform and Effort cells are the Pick, and it has
-  no Runner-up. The table's **Runs:** line names the column. Apply its
+  `1 · Pick`, `2 · Runner-up` and `3 · Backup`. Each rank's row names its model, and the Platform, Effort, Thinking and
+  AA Index rows under it are that option's. An older ladder has Model /
+  Backup / Platform / Effort rows instead: its Model, Platform and Effort
+  cells are the Pick, its Backup the Backup (split into `Backup`, `Backup
+  on` and `Backup effort` rows on a Complete step since 0.2.93), and it
+  has no Runner-up. The table's **Runs:** line names the column. Apply its
   rule to the Usage-pool status table in `planning/user-context.md` (a
   row whose reset time has passed reads `headroom`). Read the pool of the
   subscription that pays for that column's Pick's platform:

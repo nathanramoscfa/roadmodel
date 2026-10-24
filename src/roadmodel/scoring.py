@@ -57,6 +57,7 @@ import functools
 import json
 import math
 import re
+import textwrap
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timedelta, timezone
@@ -2352,30 +2353,28 @@ def _option(
     c: Candidate, level: str, bench: dict[str, Any], catalog: dict[str, Any]
 ) -> dict[str, Any]:
     """One ranked option of a ladder column: ``c`` run at ``level``, with its
-    AA Index there and its table cell, one field per line (a Markdown table
-    cell holds no line break, so ``<br>`` breaks it and ``&emsp;`` indents):
-    the model in bold, then its platform, its dial and level, Thinking where
-    the surface has the toggle, and the AA Index."""
-    aa = ladder_aa_index(bench, c.model_id, level)
-    effort_cell = _effort_cell(c, level)
-    thinking_cell = _thinking_cell(c, catalog)
-    lines = [
-        c.platform_name,
-        "No effort dial" if effort_cell == "—" else effort_cell,
-        *(["Thinking On"] if thinking_cell == "On" else []),
-        f"AA {_aa_cell(aa)}",
-    ]
+    dial and level, its Thinking toggle, and its AA Index there."""
     return {
         "model_id": c.model_id,
         "model": c.model_name,
         "platform_id": c.platform_id,
         "platform": c.platform_name,
         "effort": normalize_level(level),
-        "effort_cell": effort_cell,
-        "aa_index": aa,
-        "thinking_cell": thinking_cell,
-        "cell": "<br>&emsp;".join([f"**{c.model_name}**", *lines]),
+        "effort_cell": _effort_cell(c, level),
+        "aa_index": ladder_aa_index(bench, c.model_id, level),
+        "thinking_cell": _thinking_cell(c, catalog),
     }
+
+
+# A ranked option's rows in a Settings ladder, under the rank's own row
+# (which names the model): one field a row, so no cell joins several and the
+# table fits in the 80 columns a roadmap's prose wraps at.
+_OPTION_ROWS: Final[tuple[tuple[str, Callable[[dict[str, Any]], str]], ...]] = (
+    ("Platform", lambda o: str(o["platform"])),
+    ("Effort", lambda o: str(o["effort_cell"])),
+    ("Thinking", lambda o: str(o["thinking_cell"])),
+    ("AA Index", lambda o: _aa_cell(o["aa_index"])),
+)
 
 
 def _series_ids(model_id: str, catalog: dict[str, Any]) -> list[str]:
@@ -2512,16 +2511,18 @@ def settings_ladder(
         }
     runs = "quality" if phase else RUN_COLUMN.get(task.budget, "balanced")
 
-    def ranked(rank: str) -> list[str]:
+    rows: list[tuple[str, list[str]]] = []
+    for label, rank in (
+        ("1 · Pick", "pick"),
+        ("2 · Runner-up", "runner_up"),
+        ("3 · Backup", "backup"),
+    ):
         opts = [columns[t] if rank == "pick" else columns[t][rank] for t in LADDER_TIERS]
-        return ["None" if o is None else o["cell"] for o in opts]
-
-    rows = [
-        ("1 · Pick", ranked("pick")),
-        ("2 · Runner-up", ranked("runner_up")),
-        ("3 · Backup", ranked("backup")),
-        ("Conversation", ["**New**"] * len(LADDER_TIERS)),
-    ]
+        rows.append((label, ["None" if o is None else str(o["model"]) for o in opts]))
+        rows += [
+            (name, ["—" if o is None else cell(o) for o in opts]) for name, cell in _OPTION_ROWS
+        ]
+    rows.append(("Conversation", ["**New**"] * len(LADDER_TIERS)))
     head = ["Rank", *(t.capitalize() for t in LADDER_TIERS)]
     widths = [
         max(len(head[i]), *(len(r[0]) if i == 0 else len(r[1][i - 1]) for r in rows))
@@ -2538,7 +2539,12 @@ def settings_ladder(
         if phase
         else f"the user-context's Budget priority is `{task.budget}`"
     )
-    run_line = f"**Runs:** {runs.capitalize()} — {why}. {RUN_RULE}"
+    run_line = textwrap.fill(
+        f"**Runs:** {runs.capitalize()} — {why}. {RUN_RULE}",
+        width=80,
+        break_long_words=False,
+        break_on_hyphens=False,
+    )
     return {
         "task": asdict(task),
         "phase": phase,

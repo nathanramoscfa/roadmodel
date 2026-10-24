@@ -224,7 +224,7 @@ def test_phase_template_puts_status_at_the_step_heading() -> None:
     assert "append ` ✅` to the step's `## Step` heading" in flat
     assert flat.count("✅") >= 6
     # The Summary Table's Status column, set by the same Stage-3 commit.
-    assert "| Conv | Status      |" in text
+    assert "| Model          | Status             |" in text
     assert "Summary Table Status cell" in flat
 
 
@@ -400,6 +400,16 @@ def test_every_command_ships_to_every_agent() -> None:
     assert on_disk == set(up.COMMANDS)
 
 
+LADDER_ROWS = [
+    *(
+        label
+        for rank in ("1 · Pick", "2 · Runner-up", "3 · Backup")
+        for label in (rank, "Platform", "Effort", "Thinking", "AA Index")
+    ),
+    "Conversation",
+]
+
+
 def test_every_settings_table_carries_a_backup_row() -> None:
     """The backup lived only in the rationale's last sentence and the
     selection blocks at the foot of the file, so an operator looking at a
@@ -415,11 +425,45 @@ def test_every_settings_table_carries_a_backup_row() -> None:
     ladders = [i for i, line in enumerate(lines) if line.startswith("| Rank ")]
     assert len(ladders) >= 3
     for i in ladders:
-        ranks = [ln.split("|")[1].strip() for ln in lines[i + 2 : i + 6]]
-        assert ranks == ["1 · Pick", "2 · Runner-up", "3 · Backup", "Conversation"], ranks
+        j = i + 2
+        while lines[j].startswith("|"):
+            j += 1
+        ranks = [ln.split("|")[1].strip() for ln in lines[i + 2 : j]]
+        assert ranks == LADDER_ROWS, ranks
     flat = re.sub(r"\s+", " ", PHASE.read_text())
     assert "Every table carries Model / Backup / Platform / Conversation" in flat
-    assert "Rows: 1 · Pick / 2 · Runner-up / 3 · Backup / Conversation" in flat
+    assert "Rows: each rank (`1 · Pick`, `2 · Runner-up`, `3 · Backup`) names its model" in flat
+
+
+def test_ladders_and_the_summary_table_fit_80_columns() -> None:
+    """The 0.2.93 ladder first stacked each option's fields in one cell with
+    `<br>`, and the eight-column Summary Table passed 130 columns, in
+    roadmaps whose prose wraps at 80. A ladder now takes one field a row and
+    the Summary Table four columns."""
+    for path in (PHASE, PROJECT):
+        lines = path.read_text().splitlines()
+        assert not any("<br>" in ln for ln in lines if ln.startswith("| ")), path.name
+        for i, line in enumerate(lines):
+            if line.startswith("| Rank "):
+                j = i
+                while lines[j].startswith("|"):
+                    j += 1
+                assert all(len(row) <= 80 for row in lines[i:j]), path.name
+    text = PHASE.read_text()
+    summary = text[text.index("## Summary Table") : text.index("## Model selection blocks")]
+    head = next(ln for ln in summary.splitlines() if ln.startswith("| Step "))
+    assert [c.strip() for c in head.strip("|").split("|")] == ["Step", "Scope", "Model", "Status"]
+    assert all(len(ln) <= 80 for ln in summary.splitlines())
+    flat = re.sub(r"\s+", " ", summary)
+    assert "Scope is at most 30 characters" in flat
+    assert "A verification row's Model reads `CI`" in flat
+    refresh = re.sub(r"\s+", " ", REFRESH_COMMAND.read_text())
+    assert "so the table fits in 80 columns, as `roadmodel ladder` prints it" in refresh
+    assert "A Complete step's ladder keeps its values" in refresh
+    assert "The Summary Table (roadmodel 0.2.93 on) has four columns" in refresh
+    assert "Only the two 0.2.93 layout fixes above" in refresh
+    step = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
+    assert "Each rank's row names its model, and the Platform, Effort, Thinking" in step
 
 
 def test_roadmap_commands_handle_the_backup_row() -> None:
@@ -584,13 +628,7 @@ def test_project_template_names_the_settings_that_write_each_phase_roadmap() -> 
         first_sub = section.index("\n#### ")
         assert badge < settings < first_sub, f"settings not after the badge: Phase {name}"
         rows = re.findall(r"^\| ([^|-][^|]*?)\s+\|", section[settings:first_sub], re.M)
-        assert rows == [
-            "Rank",
-            "1 · Pick",
-            "2 · Runner-up",
-            "3 · Backup",
-            "Conversation",
-        ], name
+        assert rows == ["Rank", *LADDER_ROWS], name
         assert re.search(r"^\| Conversation +\| \*\*New\*\*", section[settings:first_sub], re.M), (
             name
         )
