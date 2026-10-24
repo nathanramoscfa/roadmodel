@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import os
 import re
 import subprocess
 import sys
@@ -198,6 +199,24 @@ def write_context(path: Path, before: str, after: str) -> None:
     private.atomic_private_write(path, after.encode("utf-8"), before_replace=unchanged)
 
 
+def single_run(cache: Path) -> Any:
+    """An exclusive, non-blocking lock for one whole refresh, or None when another
+    run holds it. The hourly agent and the session-start guard can start at the
+    same moment; the second used to fail its web sync on the push lock and exit 1."""
+    try:
+        import fcntl
+    except ImportError:  # no flock (Windows): runs are not scheduled together there
+        return open(os.devnull)  # noqa: SIM115 — held for the run's lifetime
+    cache.mkdir(mode=0o700, parents=True, exist_ok=True)
+    handle = open(cache / ".roll.lock", "a")  # noqa: SIM115 — held for the run's lifetime
+    try:
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        handle.close()
+        return None
+    return handle
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--file", type=Path, default=DEFAULT_FILE)
@@ -213,6 +232,10 @@ def main(argv: list[str] | None = None) -> int:
     path = args.file.resolve()
     if not path.is_file():
         print(f"roll_pool_status: {path} not found; nothing to do")
+        return 0
+    lock = None if args.dry_run else single_run(args.cache)
+    if not args.dry_run and lock is None:
+        print("roll_pool_status: another refresh is running; this one skipped")
         return 0
     if not args.no_collect and (not args.dry_run or args.refresh):
         refresh_collectors(args.cache)

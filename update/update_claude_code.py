@@ -344,6 +344,19 @@ def write_dry_run_report(
     )
 
 
+def stage_last_version(new_entries: list[tuple[str, list[str]]], cache: Path = CACHE_DIR) -> None:
+    """Stage the newest version processed as the next "last_version".
+
+    The workflow promotes the stage file to canonical after the validator and
+    PR-open steps succeed, and skips a missing one. A docs-only run (the
+    in-scope docs changed, no new release) processed no version, so it stages
+    nothing and the current last_version stands (2026-10-23: it crashed here
+    with IndexError after the Opus turn had already been paid for).
+    """
+    if new_entries:
+        (cache / "claude-code-last-version.new").write_text(new_entries[0][0] + "\n")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -475,11 +488,7 @@ def main() -> int:
     # step (e.g. echoing the pending list) would defeat the check.
     CONSUMED_VERSIONS_PATH.write_text(json.dumps({"consumed_versions": consumed_versions}) + "\n")
 
-    # Stage the newest version processed as the next "last_version".
-    # The workflow promotes the stage file → canonical after the
-    # validator and PR-open steps both succeed.
-    newest_processed = new_entries[0][0]
-    (CACHE_DIR / "claude-code-last-version.new").write_text(newest_processed + "\n")
+    stage_last_version(new_entries)
 
     print(summary)
     if warnings:
