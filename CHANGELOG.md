@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.95] — 2026-10-25
+
+- **A roadmap's Settings ladder is one table again, the layout the maintainer chose.** Cost, Balanced and Quality are the columns, and the column that runs by default is marked ✓. Each rank is a bold group row (**Pick**, **Runner‑up**, **Backup**) over indented Model, Platform, Level, AA and Price rows. The candidates were compared in a Markdown preview 400–520px wide: the 0.2.94 lists dropped the table, and 0.2.93's table had nothing marking where one option ended. Two fields changed:
+  - **Level** is the bare level (`High`, `XHigh`). The platform names its own dial: Intelligence on Codex, Effort on Claude Code and Antigravity.
+  - **Thinking has no row.** A ladder only ever recommended it On, and every AA Index and price already assumes it. `/roadmap-step` now states the rule once: Thinking is always On wherever the platform has the toggle.
+- **Each option shows its price at its level.** `$2.18/1M` is the model's blended list price per 1M tokens (3 in : 1 out) times the output tokens it draws at that level. This is the price axis the frontier already ranks on, so GPT-6.1 Sol reads $2.18 at High and $4.00 at XHigh. A `*` marks a level whose token use is not yet measured, where a typical model's use is assumed. The MCP `roadmap_settings` columns carry `level_cell`, `price_usd_per_1m` and `price_measured`.
+- **`roadmodel relayout` converts only what has not run.** It rewrites the ladders 0.2.86–0.2.94 wrote, in tables or lists, as the new table. Every model, platform, level and AA Index is kept as written, and Price is filled in from the bundled catalog. It reaches only steps that read `Not started` and phases whose roadmap does not exist yet. A Complete step's ladder is the record of what ran, an In progress step's is what an agent is running, and a written phase's records what wrote its roadmap, so those keep their layout. `/roadmap-refresh` runs it as a layout fix.
+
 ## [0.2.94] — 2026-10-24
 
 - **A roadmap's Settings ladder is a list per column, one option a line.** In an editor's Markdown preview 400–520px wide, 0.2.93's table spread each option over five rows: a rank row with the model, then Platform, Effort, Thinking and AA Index rows. With three columns side by side, nothing marked where one option ended and the next began. Each column is now a bold heading over three lines:

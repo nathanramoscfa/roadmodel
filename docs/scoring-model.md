@@ -329,11 +329,14 @@ each ranked three deep. Each option carries its effort and the model's AA
 Intelligence Index at that effort (`not measured` where AA has no row there;
 where AA publishes one row naming no effort, it stands only on a surface with
 no dial for the model, since the level the operator sets elsewhere may not be
-the one AA ran). The ladder prints a list per column, one option a line
-(`- Pick: **Opus 5.5** · Claude Code · Effort XHigh · AA 56`;
-`roadmodel.ladder_layout`), so it reads in a Markdown preview 400px wide and
-its source fits in 80 columns; `roadmodel relayout` rewrites the tables
-0.2.86–0.2.93 wrote, every value kept:
+the one AA ran) and its price there (`ladder_price`: the blended list price
+times the tokens the model draws at that level, the frontier's price axis).
+The ladder prints one table (`roadmodel.ladder_layout`): Cost / Balanced /
+Quality columns, each rank a bold group row over indented Model / Platform /
+Level / AA / Price rows, chosen by the operator for a Markdown preview
+400–520px wide. `roadmodel relayout` rewrites the ladders 0.2.86–0.2.94 wrote
+under steps not started and phases not written, every value kept and Price
+filled in:
 - **Pick:** the column's rung.
 - **Runner-up:** the column's rung with the pick's whole series off the
   table (`unavailable_models`), so it is never an older version of the pick

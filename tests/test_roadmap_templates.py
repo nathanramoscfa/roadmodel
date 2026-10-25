@@ -400,45 +400,34 @@ def test_every_command_ships_to_every_agent() -> None:
     assert on_disk == set(up.COMMANDS)
 
 
-# A ladder's lines reduced to their labels (roadmodel 0.2.94 on): each
-# column's bold heading over its Pick, Runner-up and Backup lines, then the
-# Conversation line.
+# A ladder table's row labels (roadmodel 0.2.95 on): each rank a bold group
+# row over its indented Model / Platform / Level / AA / Price rows.
 LADDER_SHAPE = [
-    *(
-        label
-        for column in ("Cost", "Balanced", "Quality")
-        for label in (column, "Pick", "Runner-up", "Backup")
-    ),
-    "Conversation",
+    label
+    for rank in ("Pick", "Runner\u2011up", "Backup")
+    for label in (
+        f"**{rank}**",
+        *("&nbsp;" * 4 + f for f in ("Model", "Platform", "Level", "AA", "Price")),
+    )
 ]
 
 
 def _ladders(text: str) -> list[list[str]]:
-    """Each ladder's non-blank lines, its `**Cost**` heading through its
-    `**Conversation:**` line."""
+    """Each ladder table's lines, its `|  | Cost | Balanced | Quality |`
+    header (the column that runs marked ✓) through its last row."""
     lines = text.splitlines()
     out = []
     for i, line in enumerate(lines):
-        if line == "**Cost**":
+        if re.match(r"^\|\s*\|\s*Cost\b", line):
             j = i
-            while not lines[j].startswith("**Conversation:**"):
+            while j < len(lines) and lines[j].startswith("|"):
                 j += 1
-            out.append([ln for ln in lines[i : j + 1] if ln.strip()])
+            out.append(lines[i:j])
     return out
 
 
 def _ladder_shape(ladder: list[str]) -> list[str]:
-    shape = []
-    for line in ladder:
-        if head := re.match(r"^\*\*(Cost|Balanced|Quality)\*\*", line):
-            shape.append(head.group(1))
-        elif item := re.match(r"^- (Pick|Runner-up|Backup): \*\*", line):
-            shape.append(item.group(1))
-        elif line.startswith("**Conversation:** "):
-            shape.append("Conversation")
-        else:
-            shape.append(line)
-    return shape
+    return [ln.strip("|").split("|")[0].strip() for ln in ladder[2:]]
 
 
 def test_every_settings_table_carries_a_backup_row() -> None:
@@ -459,10 +448,8 @@ def test_every_settings_table_carries_a_backup_row() -> None:
         assert _ladder_shape(ladder) == LADDER_SHAPE, ladder
     flat = re.sub(r"\s+", " ", PHASE.read_text())
     assert "Every table carries Model / Backup / Platform / Conversation" in flat
-    assert (
-        "one list line per rank — `- Pick:`, `- Runner-up:`, `- Backup:` — giving the "
-        "option's **model**"
-    ) in flat
+    assert "Each rank is a bold group row — **Pick**, **Runner‑up**, **Backup** — over" in flat
+    assert "There is no Thinking row: Thinking is always On" in flat
 
 
 def test_ladders_and_the_summary_table_fit_80_columns() -> None:
@@ -470,15 +457,18 @@ def test_ladders_and_the_summary_table_fit_80_columns() -> None:
     `<br>`, and the eight-column Summary Table passed 130 columns, in
     roadmaps whose prose wraps at 80. Its next layout, one field a row,
     read badly in a Markdown preview 400–520px wide (2026-10-24), so a
-    ladder is now a list per column, one option a line, and the Summary
-    Table has four columns."""
+    ladder became a list per column (0.2.94), and the operator then chose a
+    table again: Cost / Balanced / Quality columns, each rank a bold group
+    row over indented field rows (0.2.95). The Summary Table has four
+    columns."""
     for path in (PHASE, PROJECT):
         text = path.read_text()
         lines = text.splitlines()
         assert not any("<br>" in ln for ln in lines if ln.startswith("| ")), path.name
         assert not any(ln.startswith("| Rank ") for ln in lines), path.name
+        assert _ladders(text), path.name
         for ladder in _ladders(text):
-            assert all(len(ln) <= 80 for ln in ladder), path.name
+            assert _ladder_shape(ladder) == LADDER_SHAPE, path.name
     text = PHASE.read_text()
     summary = text[text.index("## Summary Table") : text.index("## Model selection blocks")]
     head = next(ln for ln in summary.splitlines() if ln.startswith("| Step "))
@@ -488,17 +478,17 @@ def test_ladders_and_the_summary_table_fit_80_columns() -> None:
     assert "Scope is at most 30 characters" in flat
     assert "A verification row's Model reads `CI`" in flat
     refresh = re.sub(r"\s+", " ", REFRESH_COMMAND.read_text())
-    assert "takes the list layout (roadmodel 0.2.94 on), as `roadmodel ladder` prints it" in refresh
-    assert "every line within 80 columns" in refresh
-    assert "A Complete step's ladder keeps its values" in refresh
-    assert "The Summary Table (roadmodel 0.2.93 on) has four columns" in refresh
-    assert "Only the layout fixes above (`roadmodel relayout` and the Summary Table's" in refresh
-    step = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
     assert (
-        "each column is a bold heading (**Cost**, **Balanced**, **Quality**) over one list "
-        "line per option"
-    ) in step
-    assert "A 0.2.93 ladder is a table with rows `1 · Pick`" in step
+        "takes the table layout (roadmodel 0.2.95 on), as `roadmodel ladder` prints it" in refresh
+    )
+    assert "A Complete step's ladder keeps its values and its layout" in refresh
+    assert "The Summary Table (roadmodel 0.2.93 on) has four columns" in refresh
+    assert "Only the Summary Table's column fix reaches it" in refresh
+    step = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
+    assert "From roadmodel 0.2.95 a ladder is one table: Cost, Balanced and Quality" in step
+    assert "A 0.2.94 ladder is three lists instead" in step
+    # 2026-10-24: the ladder has no Thinking row; the rule is stated once.
+    assert "**Thinking is always On** wherever the platform has a Thinking toggle" in step
 
 
 def test_roadmap_commands_handle_the_backup_row() -> None:
@@ -508,11 +498,14 @@ def test_roadmap_commands_handle_the_backup_row() -> None:
     # A ladder whose picks still match takes the 0.2.93 ranked layout too:
     # the first fleet refresh after 0.2.91 left every unchanged table
     # without that release's AA Index row.
-    assert "takes the list layout (roadmodel 0.2.94 on)" in refresh
-    # 2026-10-24: `roadmodel relayout` converts every older ladder table,
-    # Complete steps and written phases included, keeping every value.
+    assert "takes the table layout (roadmodel 0.2.95 on)" in refresh
+    # 2026-10-24: `roadmodel relayout` converts older ladders, keeping every
+    # value, only where a step has not started or a phase is not written.
     assert "run `roadmodel relayout <every roadmap file>`" in refresh
-    assert "Complete steps and written phases included, and takes no `Settings updated`" in refresh
+    assert (
+        "reaches only steps that read `Not started` and phases whose roadmap does not exist"
+        in refresh
+    )
     assert "even where every pick still matches" in refresh
     assert "except that a ladder written before roadmodel 0.2.93 becomes the ranked" in refresh
     step = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
@@ -669,7 +662,7 @@ def test_project_template_names_the_settings_that_write_each_phase_roadmap() -> 
         block = section[settings:first_sub]
         ladders = _ladders(block)
         assert len(ladders) == 1 and _ladder_shape(ladders[0]) == LADDER_SHAPE, name
-        assert "**Quality** — runs by default" in block, name
+        assert re.search(r"\| Quality ✓ +\|", block), name
         assert "**Conversation:** New" in block, name
         assert "`/roadmap-phase " in section[settings:first_sub], name
     # The rule: quality first, the deepest rung, never Ultracode, history kept.
@@ -784,4 +777,4 @@ def test_step_settings_are_the_full_ladder() -> None:
     # tight or exhausted pool moves the run down the ranks.
     assert "`tight`: run the first of that column's Runner-up and Backup whose" in step
     assert "`exhausted`: run the first of that column's Runner-up and Backup" in step
-    assert "or its ladders have no `- Runner-up:` line, STOP" in prompt
+    assert "or its ladder tables have no `Price` row, STOP" in prompt

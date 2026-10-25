@@ -2354,11 +2354,45 @@ def _aa_cell(value: float | None) -> str:
     return "not measured" if value is None else f"{value:g}"
 
 
+def ladder_price(model_id: str, level: str, catalog: dict[str, Any]) -> tuple[float, bool] | None:
+    """What ``model_id`` costs run at ``level``: its blended list price (USD
+    per 1M tokens, 3 in : 1 out) times the output tokens it draws there
+    (:func:`token_multiplier`), the frontier's price axis; and whether that
+    token use was measured (else a typical model's at the level). None when
+    the catalog has no such model."""
+    model = next((m for m in catalog.get("models", []) if m.get("id") == model_id), None)
+    if model is None:
+        return None
+    key = _scorer_level(level)
+    measured = key in effort_token_multipliers().get(model_id, {})
+    return round(blended_price(model) * token_multiplier(model_id, key), 4), measured
+
+
+def ladder_price_by_name(
+    catalog: dict[str, Any],
+) -> Callable[[str, str], tuple[float, bool] | None]:
+    """:func:`ladder_price` keyed by a ladder's own cells, the model's display
+    name and a level word (`XHigh`; `—` where the surface has no dial reads as
+    high), for `roadmodel relayout`. None for a name the catalog no longer
+    carries or a word that names no level."""
+    ids = {str(m.get("name")): str(m.get("id")) for m in catalog.get("models", [])}
+
+    def price(name: str, word: str) -> tuple[float, bool] | None:
+        key = "high" if word == _layout.NONE else _layout.level_key(word)
+        if name not in ids or key is None:
+            return None
+        return ladder_price(ids[name], key, catalog)
+
+    return price
+
+
 def _option(
     c: Candidate, level: str, bench: dict[str, Any], catalog: dict[str, Any]
 ) -> dict[str, Any]:
     """One ranked option of a ladder column: ``c`` run at ``level``, with its
-    dial and level, its Thinking toggle, and its AA Index there."""
+    dial and level, its Thinking toggle, its AA Index and its price there."""
+    dial = _DIAL_NAMES.get(c.platform_id, "Effort")
+    price = ladder_price(c.model_id, level, catalog)
     return {
         "model_id": c.model_id,
         "model": c.model_name,
@@ -2366,26 +2400,32 @@ def _option(
         "platform": c.platform_name,
         "effort": normalize_level(level),
         "effort_cell": _effort_cell(c, level),
+        "level_cell": (
+            _layout.NONE if dial is None else _LEVEL_WORDS.get(normalize_level(level), level)
+        ),
         "aa_index": ladder_aa_index(
             bench,
             c.model_id,
             level,
             dial=bool(native_levels(c.platform_id, c.model_id, catalog=catalog)),
         ),
+        "price_usd_per_1m": None if price is None else price[0],
+        "price_measured": None if price is None else price[1],
         "thinking_cell": _thinking_cell(c, catalog),
     }
 
 
 def _layout_option(o: dict[str, Any] | None) -> _layout.Option | None:
-    """A ranked option (:func:`_option`) as the ladder's list prints it."""
+    """A ranked option (:func:`_option`) as the ladder table prints it."""
     if o is None:
         return None
     return _layout.Option(
         model=str(o["model"]),
         platform=str(o["platform"]),
-        effort=str(o["effort_cell"]),
-        thinking=str(o["thinking_cell"]),
+        level=str(o["level_cell"]),
         aa=_aa_cell(o["aa_index"]),
+        price=o["price_usd_per_1m"],
+        price_measured=bool(o["price_measured"]),
     )
 
 

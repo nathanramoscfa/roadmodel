@@ -20,7 +20,6 @@ another's (Claude Code), as in tests/test_ladder_frontier.py.
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 from typing import Any
 
@@ -135,51 +134,49 @@ def _settings(
     return got
 
 
-_TIER_HEAD = re.compile(r"^\*\*(Cost|Balanced|Quality)\*\*( — runs by default)?$")
-_ITEM = re.compile(r"^- (Pick|Runner-up|Backup): (.*)$")
-RANKS = ("Pick", "Runner-up", "Backup")
+RANKS = ("Pick", "Runner‑up", "Backup")
+FIELDS = ("Model", "Platform", "Level", "AA", "Price")
 
 
-def _listed(markdown: str) -> dict[str, dict[str, dict[str, str] | None]]:
-    """The ladder's options by tier and rank, each option's fields (model,
-    platform, and the dial, Thinking and AA fields it carries), its wrapped
-    lines joined; None for a rank that reads ``none``."""
-    out: dict[str, dict[str, dict[str, str] | None]] = {}
-    tier = ""
-    for line in markdown.replace("\n  · ", " · ").splitlines():
-        if head := _TIER_HEAD.match(line):
-            tier = head.group(1).lower()
-            out[tier] = {}
-        elif (item := _ITEM.match(line)) and tier:
-            rank, rest = item.groups()
-            if rest == "none":
-                out[tier][rank] = None
-                continue
-            model, platform, *more = rest.split(" · ")
-            fields = {"model": model.strip("*"), "platform": platform}
-            for f in more:
-                if f.startswith("Thinking "):
-                    fields["thinking"] = f.removeprefix("Thinking ")
-                elif f.startswith("AA "):
-                    fields["aa"] = f.removeprefix("AA ")
-                else:
-                    fields["effort"] = f
-            out[tier][rank] = fields
-    return out
+def _cells(line: str) -> list[str]:
+    return [c.strip() for c in line.strip().strip("|").split("|")]
 
 
-def _option_fields(option: dict[str, Any] | None) -> dict[str, str] | None:
-    """A column's option as its list line should carry it: no field for a
-    dial or toggle the surface lacks."""
+def _tabled(markdown: str) -> tuple[list[str], dict[str, dict[str, dict[str, str]]]]:
+    """The ladder table's header and its cells by tier, rank and field (the
+    field label with its `&nbsp;` indent removed)."""
+    lines = [ln for ln in markdown.splitlines() if ln.startswith("|")]
+    head = _cells(lines[0])
+    out: dict[str, dict[str, dict[str, str]]] = {t: {} for t in scoring.LADDER_TIERS}
+    rank = ""
+    for line in lines[2:]:
+        label, *cells = _cells(line)
+        if label.startswith("**"):
+            rank = label.strip("*")
+            assert cells == ["", "", ""], line
+            for t in scoring.LADDER_TIERS:
+                out[t][rank] = {}
+            continue
+        assert label.startswith(ladder_layout.INDENT), line
+        for t, cell in zip(scoring.LADDER_TIERS, cells, strict=True):
+            out[t][rank][label.removeprefix(ladder_layout.INDENT)] = cell
+    return head, out
+
+
+def _option_cells(option: dict[str, Any] | None) -> dict[str, str]:
+    """A column's option as its table cells should read it."""
     if option is None:
-        return None
-    fields = {"model": option["model"], "platform": option["platform"]}
-    if option["effort_cell"] != "—":
-        fields["effort"] = option["effort_cell"]
-    if option["thinking_cell"] != "—":
-        fields["thinking"] = option["thinking_cell"]
-    fields["aa"] = scoring._aa_cell(option["aa_index"])
-    return fields
+        return dict(zip(FIELDS, ["none", "—", "—", "—", "—"], strict=True))
+    price = option["price_usd_per_1m"]
+    return {
+        "Model": f"**{option['model']}**",
+        "Platform": option["platform"],
+        "Level": option["level_cell"],
+        "AA": scoring._aa_cell(option["aa_index"]),
+        "Price": "—"
+        if price is None
+        else f"${price:.2f}/1M" + ("" if option["price_measured"] else "*"),
+    }
 
 
 def _options(col: dict[str, Any]) -> tuple[Any, Any, Any]:
@@ -213,50 +210,59 @@ def test_each_column_ranks_its_pick_runner_up_and_backup() -> None:
             assert backup["model_id"] not in {col["model_id"], col["runner_up"]["model_id"]}
             makers = {m["id"]: m["provider"] for m in CATALOG["models"]}
             assert makers[backup["model_id"]] != makers[col["model_id"]]
+    head, cells = _tabled(got["markdown"])
+    assert head == ["", "Cost", "Balanced ✓", "Quality"]
     paragraphs = got["markdown"].split("\n\n")
-    heads = [p for p in paragraphs if _TIER_HEAD.match(p)]
-    assert heads == ["**Cost**", "**Balanced** — runs by default", "**Quality**"]
     assert paragraphs[-2] == "**Conversation:** New"
-    listed = _listed(got["markdown"])
-    assert list(listed) == list(scoring.LADDER_TIERS)
     for tier in scoring.LADDER_TIERS:
         col = got["columns"][tier]
-        assert list(listed[tier]) == list(RANKS)
+        assert list(cells[tier]) == list(RANKS)
         for rank, option in zip(RANKS, _options(col), strict=True):
-            assert listed[tier][rank] == _option_fields(option), (tier, rank)
+            assert cells[tier][rank] == _option_cells(option), (tier, rank)
 
 
-def test_each_option_takes_one_line_and_the_source_fits_80_columns() -> None:
-    """One option a line, model first, so it reads in a narrow preview, and
-    no table or `<br>` cell; every line, the wrapped Runs paragraph included,
-    fits the 80 columns a roadmap's prose wraps at."""
-    got = _settings()
-    md = got["markdown"]
-    assert "<br>" not in md and "&emsp;" not in md
-    assert not any(ln.startswith("|") for ln in md.splitlines())
-    assert all(len(ln) <= 80 for ln in md.splitlines())
+def test_the_table_groups_each_rank_over_indented_field_rows() -> None:
+    """2026-10-24: the operator chose this table after reading candidates in
+    a Markdown preview 400–520px wide. Cost / Balanced / Quality are the
+    columns; each rank is a bold group row over indented Model / Platform /
+    Level / AA / Price rows. Level is the bare level and no row carries
+    Thinking (a ladder only recommends it On); no `<br>` cell; the prose
+    under the table wraps at 80."""
+    md = _settings()["markdown"]
+    rows = [_cells(ln) for ln in md.splitlines() if ln.startswith("|")][2:]
+    labels = [r[0] for r in rows]
+    assert labels == [
+        label
+        for rank in RANKS
+        for label in (f"**{rank}**", *(ladder_layout.INDENT + f for f in FIELDS))
+    ]
+    assert "Thinking" not in md and "<br>" not in md
+    assert not any(c.startswith(("Effort ", "Intelligence ")) for r in rows for c in r[1:])
+    prose = [ln for ln in md.splitlines() if not ln.startswith("|")]
+    assert all(len(ln) <= 80 for ln in prose)
+    assert "✓ runs by default. Price: list $ per 1M tokens (3 in : 1 out)" in " ".join(prose)
 
 
-def test_a_long_option_wraps_between_fields() -> None:
-    """A line past 80 columns breaks before a field, never inside one, and
-    its continuation stays in the list item."""
-    option = ladder_layout.Option(
-        model="Gemini 3.8 Flash",
-        platform="Antigravity",
-        effort="Effort Medium",
-        thinking="On",
-        aa="39.8",
-    )
-    line = ladder_layout.option_line("Runner-up", option)
-    first, rest = line.split("\n")
-    assert first == "- Runner-up: **Gemini 3.8 Flash** · Antigravity · Effort Medium · Thinking On"
-    assert rest == "  · AA 39.8"
-    assert ladder_layout.option_line("Backup", None) == "- Backup: none"
-    # A surface without a dial or toggle gets no field for it.
-    bare = ladder_layout.Option(model="Composer 2", platform="Cursor", aa="not measured")
-    assert ladder_layout.option_line("Pick", bare) == (
-        "- Pick: **Composer 2** · Cursor · AA not measured"
-    )
+def test_price_is_the_list_price_at_the_levels_token_use() -> None:
+    """Price is the frontier's price axis: the blended list price (3 in : 1
+    out) times the output tokens the model draws at the level, measured where
+    docs/effort-tokens.json has it; an unmeasured level is marked."""
+    sol = {"models": [{"id": "s", "input_price_per_1m": 2.0, "output_price_per_1m": 10.0}]}
+    price, measured = scoring.ladder_price("s", "xhigh", sol)  # type: ignore[misc]
+    assert price == round(4.0 * scoring.EFFORT_TOKEN_MULTIPLIER["xhigh"], 4)
+    assert measured is False
+    assert scoring.ladder_price("missing", "high", sol) is None
+    # Codex's `ultra` and Gemini's `minimal` price at the scorer level they stand for.
+    assert scoring.ladder_price("s", "ultra", sol) == scoring.ladder_price("s", "max", sol)
+    assert scoring.ladder_price("s", "minimal", sol) == scoring.ladder_price("s", "low", sol)
+    cell = ladder_layout.price_cell
+    assert cell(ladder_layout.Option("m", "p", price=2.1834)) == "$2.18/1M"
+    assert cell(ladder_layout.Option("m", "p", price=4.0, price_measured=False)) == "$4.00/1M*"
+    assert cell(ladder_layout.Option("m", "p")) == "—"
+    by_name = scoring.ladder_price_by_name({"models": [{"name": "Sol", **sol["models"][0]}]})
+    assert by_name("Sol", "XHigh") == scoring.ladder_price("s", "xhigh", sol)
+    assert by_name("Sol", "—") == scoring.ladder_price("s", "high", sol)
+    assert by_name("Gone 1", "High") is None and by_name("Sol", "Turbo") is None
 
 
 def test_the_runner_up_is_never_an_older_version_of_the_pick() -> None:
@@ -362,9 +368,9 @@ def test_a_runner_up_holding_the_only_other_maker_leaves_no_backup() -> None:
     for col in got["columns"].values():
         assert col["runner_up"]["model_id"] != col["model_id"]
         assert col["backup"] is None
-    listed = _listed(got["markdown"])
-    assert all(listed[t]["Backup"] is None for t in scoring.LADDER_TIERS)
-    assert got["markdown"].count("- Backup: none") == 3
+    _, cells = _tabled(got["markdown"])
+    # With no backup in any column the group reads `none` alone.
+    assert all(cells[t]["Backup"] == {"Model": "none"} for t in scoring.LADDER_TIERS)
 
 
 def _aa(value: float) -> dict[str, Any]:
@@ -391,12 +397,10 @@ def test_every_option_reads_its_models_index_at_its_own_effort() -> None:
             measured = scoring.measured_levels(bench, option["model_id"])[option["effort"]]
             want = measured["evaluations"]["artificial_analysis_intelligence_index"]
             assert option["aa_index"] == want
-    listed = _listed(got["markdown"])
+    _, cells = _tabled(got["markdown"])
     for tier in scoring.LADDER_TIERS:
         for rank, option in zip(RANKS, _options(got["columns"][tier]), strict=True):
-            fields = listed[tier][rank]
-            assert fields is not None
-            assert fields["aa"] == f"{option['aa_index']:g}"
+            assert cells[tier][rank]["AA"] == f"{option['aa_index']:g}"
 
 
 def test_ladder_aa_index_reads_the_effort_or_says_not_measured() -> None:
@@ -424,7 +428,8 @@ def test_an_unlabeled_aa_row_is_not_shown_at_a_level_the_operator_sets() -> None
         for option in _options(col):
             if option is not None:
                 assert option["aa_index"] is None
-    assert "AA not measured" in got["markdown"]
+    _, cells = _tabled(got["markdown"])
+    assert {cells[t]["Pick"]["AA"] for t in scoring.LADDER_TIERS} == {"not measured"}
 
 
 def test_each_column_names_its_own_surfaces_dial() -> None:
@@ -455,11 +460,7 @@ def test_a_model_that_always_thinks_has_no_thinking_toggle() -> None:
     assert claude, "the fixture ladder puts a Claude Code model in some column"
     assert all(c["thinking_cell"] == "—" for c in claude)
     assert all(c["effort_cell"].startswith("Effort ") for c in claude)
-    listed = _listed(got["markdown"])
-    for tier in scoring.LADDER_TIERS:
-        if got["columns"][tier]["platform_id"] == "claude-code":
-            pick = listed[tier]["Pick"]
-            assert pick is not None and "thinking" not in pick
+    assert "Thinking" not in got["markdown"]
 
 
 @pytest.mark.parametrize(
@@ -468,10 +469,9 @@ def test_a_model_that_always_thinks_has_no_thinking_toggle() -> None:
 def test_the_step_runs_the_column_its_budget_priority_names(budget: str, runs: str) -> None:
     got = _settings(scoring.Task("planning", "medium", budget=budget))
     assert got["runs"] == runs
-    paragraphs = got["markdown"].split("\n\n")
-    assert f"**{runs.capitalize()}** — runs by default" in paragraphs
-    assert sum("runs by default" in p for p in paragraphs) == 1
-    runs_line = paragraphs[-1]
+    head, _ = _tabled(got["markdown"])
+    assert head[1:] == [t.capitalize() + (" ✓" if t == runs else "") for t in scoring.LADDER_TIERS]
+    runs_line = got["markdown"].split("\n\n")[-1]
     assert runs_line.startswith(f"**Runs:** {runs.capitalize()} — ")
     assert scoring.RUN_RULE in " ".join(runs_line.split())
 
@@ -514,7 +514,7 @@ def test_ladder_prints_the_table_and_its_runs_line(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     out = _cli(tmp_path, monkeypatch, "--category", "planning", "--complexity", "medium")
-    assert out.startswith("**Cost**\n\n- Pick: **")
+    assert _cells(out.splitlines()[0]) == ["", "Cost", "Balanced ✓", "Quality"]
     assert "**Runs:** Balanced — " in out
     payload = json.loads(
         _cli(
@@ -536,7 +536,8 @@ def test_ladder_prints_the_table_and_its_runs_line(
     }
 
 
-# reversi's Phase 31.6 Step 3 as roadmodel 0.2.93 wrote it.
+# reversi's Phase 31.6 Step 3 as roadmodel 0.2.93 wrote it (its Quality
+# backup made None here).
 RANKED_TABLE = """\
 **Deploys:** CI → live on merge.
 
@@ -567,6 +568,7 @@ column and an `exhausted` one its Backup.
 **Model rationale:** unchanged.
 """
 
+# The same ladder as 0.2.94 printed it.
 RANKED_LISTS = """\
 **Deploys:** CI → live on merge.
 
@@ -585,7 +587,8 @@ RANKED_LISTS = """\
 **Quality**
 
 - Pick: **Opus 5.5** · Claude Code · Effort XHigh · AA 56
-- Runner-up: **Fable 5.1** · Claude Code · Effort XHigh · AA 53.2
+- Runner-up: **Fable 5.1** · Claude Code
+  · Effort XHigh · AA 53.2
 - Backup: none
 
 **Conversation:** New
@@ -599,22 +602,58 @@ column and an `exhausted` one its Backup.
 """
 
 
-def test_relayout_turns_a_ranked_table_into_the_lists_keeping_every_value() -> None:
-    new, count = ladder_layout.relayout(RANKED_TABLE)
-    assert count == 1
-    assert new == RANKED_LISTS
+def _fake_price(name: str, word: str) -> tuple[float, bool] | None:
+    """A price per name and level that tests can predict: unknown for a
+    model named `Gone`, unmeasured at any level but High."""
+    return None if name.startswith("Gone") else (len(name) + 0.5, word == "High")
+
+
+def _priced(name: str, word: str) -> str:
+    found = _fake_price(name, word)
+    assert found is not None
+    return f"${found[0]:.2f}/1M" + ("" if found[1] else "*")
+
+
+def test_relayout_turns_a_ranked_table_into_the_ladder_table() -> None:
+    new, count, kept = ladder_layout.relayout(RANKED_TABLE, price=_fake_price)
+    assert (count, kept) == (1, 0)
+    head, cells = _tabled(new)
+    assert head == ["", "Cost", "Balanced ✓", "Quality"]
+    assert cells["cost"]["Pick"] == {
+        "Model": "**GPT-6.1 Sol**",
+        "Platform": "Codex",
+        "Level": "High",
+        "AA": "50.2",
+        "Price": _priced("GPT-6.1 Sol", "High"),
+    }
+    assert cells["balanced"]["Backup"]["Level"] == "XHigh"
+    assert cells["quality"]["Runner‑up"]["Price"] == _priced("Fable 5.1", "XHigh")
+    assert cells["quality"]["Backup"]["Model"] == "none"
+    # Everything around the ladder is kept, and Thinking has no row.
+    assert new.startswith("**Deploys:** CI → live on merge.\n\n|")
+    assert new.endswith(RANKED_TABLE[RANKED_TABLE.index("**Runs:**") :])
+    assert "\n\n**Conversation:** New\n\n**Runs:**" in new
+    assert "Thinking" not in new.split("**Runs:**")[0]
+    assert "* token use not yet measured" in new
     # A second pass finds nothing left to convert.
-    assert ladder_layout.relayout(new) == (new, 0)
+    assert ladder_layout.relayout(new, price=_fake_price) == (new, 0, 0)
+
+
+def test_relayout_reads_the_lists_0_2_94_printed() -> None:
+    """The lists carry the same values, wrapped lines included, and mark the
+    column that runs on its heading."""
+    from_lists = ladder_layout.relayout(RANKED_LISTS, price=_fake_price)
+    assert from_lists == ladder_layout.relayout(RANKED_TABLE, price=_fake_price)
 
 
 def test_relayout_reads_the_single_pick_ladders_older_releases_wrote() -> None:
     """0.2.86–0.2.92 ladders: a pick, and a backup in one cell or split into
-    rows on a Complete step (0.2.93). The backup never carried an AA Index,
-    so its line has none; a surface with no dial gets no dial field."""
+    rows (0.2.93). The backup never carried an AA Index, so that group has no
+    AA row; a model the catalog no longer carries has no price."""
     split = """\
 | Setting       | Cost             | Balanced       | Quality        |
 | ------------- | ---------------- | -------------- | -------------- |
-| Model         | GPT-6.1 Sol      | Gemini 4 Argon | Opus 5.5       |
+| Model         | GPT-6.1 Sol      | Gemini 4 Argon | Gone 1         |
 | Backup        | Sonnet 5.5       | Opus 5.5       | Gemini 4 Argon |
 | Backup on     | Claude Code      | Claude Code    | Antigravity    |
 | Backup effort | Effort Medium    | Effort High    | Effort High    |
@@ -625,62 +664,96 @@ def test_relayout_reads_the_single_pick_ladders_older_releases_wrote() -> None:
 | Conversation  | **New**          | **New**        | **New**        |
 
 **Runs:** Quality — a phase-roadmap session runs Quality (quality first)."""
-    new, count = ladder_layout.relayout(split)
+    new, count, _ = ladder_layout.relayout(split, price=_fake_price)
     assert count == 1
-    assert new.startswith(
-        "**Cost**\n\n"
-        "- Pick: **GPT-6.1 Sol** · Codex · Intelligence Low · AA 42.1\n"
-        "- Backup: **Sonnet 5.5** · Claude Code · Effort Medium\n\n"
-        "**Balanced**\n\n"
-        "- Pick: **Gemini 4 Argon** · Antigravity · Effort High · Thinking On · AA 52.6\n"
-        "- Backup: **Opus 5.5** · Claude Code · Effort High\n\n"
-        "**Quality** — runs by default\n\n"
-        "- Pick: **Opus 5.5** · Claude Code · Effort High · AA 53.6\n"
-        "- Backup: **Gemini 4 Argon** · Antigravity · Effort High\n\n"
-        "**Conversation:** New\n\n**Runs:** Quality"
-    )
-    one_cell = """\
-| Setting      | Cost                                   | Balanced              | Quality  |
-| ------------ | -------------------------------------- | --------------------- | -------- |
-| Model        | GPT-6.1 Sol                            | Composer 2            | Opus 5.5 |
-| Backup       | Sonnet 5.5 — Claude Code · Effort High | GPT-6.1 Sol — Cursor  | None     |
-| Platform     | Codex                                  | Cursor                | Claude Code |
-| Effort       | Intelligence Medium                    | —                     | Effort Max |
-| Thinking     | —                                      | —                     | —        |
-| Conversation | **New**                                | **New**               | **New**  |
-"""
-    listed = _listed(ladder_layout.relayout(one_cell)[0])
-    assert listed["cost"]["Backup"] == {
-        "model": "Sonnet 5.5",
-        "platform": "Claude Code",
-        "effort": "Effort High",
+    head, cells = _tabled(new)
+    assert head == ["", "Cost", "Balanced", "Quality ✓"]
+    assert list(cells["cost"]) == ["Pick", "Backup"]
+    assert cells["cost"]["Backup"] == {
+        "Model": "**Sonnet 5.5**",
+        "Platform": "Claude Code",
+        "Level": "Medium",
+        "Price": _priced("Sonnet 5.5", "Medium"),
     }
-    assert listed["balanced"]["Pick"] == {"model": "Composer 2", "platform": "Cursor"}
-    assert listed["balanced"]["Backup"] == {"model": "GPT-6.1 Sol", "platform": "Cursor"}
-    assert listed["quality"]["Backup"] is None
-    assert "Runner-up" not in ladder_layout.relayout(one_cell)[0]
+    assert cells["quality"]["Pick"]["Price"] == "—"
+    one_cell = """\
+| Setting      | Cost                                   | Balanced             | Quality     |
+| ------------ | -------------------------------------- | -------------------- | ----------- |
+| Model        | GPT-6.1 Sol                            | Composer 2           | Opus 5.5    |
+| Backup       | Sonnet 5.5 — Claude Code · Effort High | GPT-6.1 Sol — Cursor | None        |
+| Platform     | Codex                                  | Cursor               | Claude Code |
+| Effort       | Intelligence Medium                    | —                    | Effort Max  |
+| Thinking     | —                                      | —                    | —           |
+| Conversation | **New**                                | **New**              | **New**     |
+"""
+    _, cells = _tabled(ladder_layout.relayout(one_cell, price=_fake_price)[0])
+    assert cells["cost"]["Backup"]["Level"] == "High"
+    assert cells["balanced"]["Pick"]["Level"] == "—"
+    assert cells["balanced"]["Backup"]["Platform"] == "Cursor"
+    assert cells["quality"]["Backup"]["Model"] == "none"
+    assert cells["quality"]["Pick"]["Level"] == "Max"
+
+
+def test_relayout_keeps_the_ladder_of_a_step_that_ran_or_runs() -> None:
+    """A Complete step's ladder is the record of what ran, an In progress
+    one's is what an agent is running, and a written phase's records what
+    wrote its roadmap: all stay as written."""
+    table = RANKED_TABLE[RANKED_TABLE.index("| Rank") : RANKED_TABLE.index("**Runs:**")]
+    doc = "\n\n".join(
+        [
+            "## Step 1 — Done ✅",
+            "**Status:** Complete — PR #1",
+            table,
+            "## Step 2 — Running",
+            "**Status:** In progress — PR #2",
+            table,
+            "## Step 3 — Next",
+            "**Status:** Not started",
+            table,
+        ]
+    )
+    new, count, kept = ladder_layout.relayout(doc, price=_fake_price)
+    assert (count, kept) == (1, 2)
+    assert new.count("| Rank ") == 2 and new.split("## Step 3")[1].count("| Rank ") == 0
+    phases = "\n\n".join(
+        ["### Phase 4: Written", "**Status:** Not started", table]
+        + ["### Phase 5: Later", "**Status:** Not started", table]
+    )
+    new, count, kept = ladder_layout.relayout(
+        phases, price=_fake_price, phase_written=lambda p: p == "4"
+    )
+    assert (count, kept) == (1, 1)
+    assert new.split("### Phase 5")[0].count("| Rank ") == 1
 
 
 def test_relayout_leaves_a_table_it_does_not_know() -> None:
     odd = RANKED_TABLE.replace(
         "| Thinking      | —                 | On ", "| Speed         | —                 | On ", 1
     )
-    assert ladder_layout.relayout(odd) == (odd, 0)
+    assert ladder_layout.relayout(odd) == (odd, 0, 0)
     other = "| Item | Cost |\n| --- | --- |\n| EIN | $0 |\n"
-    assert ladder_layout.relayout(other) == (other, 0)
+    assert ladder_layout.relayout(other) == (other, 0, 0)
 
 
-def test_relayout_command_rewrites_the_files_and_check_reports_them(tmp_path: Path) -> None:
-    roadmap = tmp_path / "phase31.6-roadmap.md"
-    roadmap.write_text(RANKED_TABLE, encoding="utf-8")
+def test_relayout_command_prices_from_the_catalog_and_checks(tmp_path: Path) -> None:
+    table = RANKED_TABLE[RANKED_TABLE.index("| Rank") :]
+    roadmap = tmp_path / "ROADMAP.md"
+    roadmap.write_text(
+        f"### Phase 4: Written\n\n{table}\n### Phase 5: Later\n\n{table}", encoding="utf-8"
+    )
+    (tmp_path / "phase04-roadmap.md").write_text("# Phase 4\n", encoding="utf-8")
+    before = roadmap.read_text(encoding="utf-8")
     check = CliRunner().invoke(cli, ["relayout", "--check", str(roadmap)])
-    assert check.exit_code == 1 and "1 ladder table" in check.output
-    assert roadmap.read_text(encoding="utf-8") == RANKED_TABLE
+    assert check.exit_code == 1 and "1 converted, 1 kept" in check.output
+    assert roadmap.read_text(encoding="utf-8") == before
     done = CliRunner().invoke(cli, ["relayout", str(roadmap)])
     assert done.exit_code == 0, done.output
-    assert roadmap.read_text(encoding="utf-8") == RANKED_LISTS
+    after = roadmap.read_text(encoding="utf-8")
+    later = after.split("### Phase 5")[1]
+    assert "| Rank " in after.split("### Phase 5")[0] and "| Rank " not in later
+    assert "/1M" in later
     again = CliRunner().invoke(cli, ["relayout", "--check", str(roadmap)])
-    assert again.exit_code == 0 and again.output == ""
+    assert again.exit_code == 0 and "0 converted, 1 kept" in again.output
 
 
 def _selector(models: list[str], methods: dict[str, list[str]]) -> str:

@@ -4,6 +4,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess  # nosec B404 - only used to invoke the `claude` CLI with fixed argv
@@ -697,31 +698,55 @@ def ladder_command(
     "--check",
     is_flag=True,
     default=False,
-    help="Report the ladder tables without rewriting them; exit 1 if any remain.",
+    help="Report the ladders without rewriting them; exit 1 if any would change.",
 )
 def relayout_command(paths: tuple[Path, ...], check: bool) -> None:
-    """Rewrite each roadmap's Settings ladder tables as the ladder's lists.
+    """Rewrite each roadmap's Settings ladders as the ladder table.
 
-    Every table with Cost / Balanced / Quality columns that roadmodel
-    0.2.86–0.2.93 wrote becomes three lists (Pick, Runner-up, Backup), every
-    model, platform, dial and AA Index kept as written, so it is a layout fix
-    for any step, Complete ones included. A table with a row this release does
-    not know is left as it is.
+    Every ladder roadmodel 0.2.86–0.2.94 wrote (a table with Cost / Balanced /
+    Quality columns, or 0.2.94's lists) becomes the table: Cost, Balanced and
+    Quality columns, with Pick, Runner-up and Backup groups of Model /
+    Platform / Level / AA / Price rows. Every model, platform, level and AA
+    Index is kept as written, and Price is filled in from the bundled catalog.
+    A step that is Complete or In progress, and a phase whose roadmap exists,
+    keep their ladder as the record of what ran or is running.
     """
     from roadmodel import ladder_layout
 
+    price = scoring.ladder_price_by_name(cost._load_catalog())
     found = 0
     for path in paths:
         text = path.read_text(encoding="utf-8")
-        new, count = ladder_layout.relayout(text)
-        if not count:
+        new, count, kept = ladder_layout.relayout(
+            text, price=price, phase_written=_phase_written(path.parent)
+        )
+        if not count and not kept:
             continue
         found += count
-        if not check:
+        if count and not check:
             path.write_text(new, encoding="utf-8")
-        click.echo(f"{path}: {count} ladder table{'s' if count != 1 else ''}")
+        click.echo(f"{path}: {count} converted, {kept} kept (Complete, In progress or written)")
     if check and found:
         raise SystemExit(1)
+
+
+def _phase_written(directory: Path) -> Callable[[str], bool]:
+    """Whether a phase's roadmap exists beside the project roadmap:
+    ``phase<id>-roadmap.md`` or ``phase<id>-<slug>-roadmap.md``, the id as the
+    heading writes it or with its number zero-padded (`4.10` → `04.10`)."""
+    names = [p.name.lower() for p in directory.glob("phase*-roadmap.md")]
+
+    def written(phase: str) -> bool:
+        pid = phase.lower()
+        number = re.match(r"(\d+)(.*)", pid)
+        ids = {pid} | ({number.group(1).zfill(2) + number.group(2)} if number else set())
+        return any(
+            re.fullmatch(rf"phase{re.escape(i)}(-[a-z0-9.-]+)?-roadmap\.md", n)
+            for i in ids
+            for n in names
+        )
+
+    return written
 
 
 @cli.command("cost")
