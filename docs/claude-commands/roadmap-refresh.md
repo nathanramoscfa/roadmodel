@@ -176,7 +176,7 @@ complexity, novel or not; its Model rationale names them), then:
   for that classification (MCP tool: `roadmap_settings`), pasted as
   printed with its **Runs:** line: Cost, Balanced and Quality, each
   ranked three deep (Pick, Runner-up, and a Backup from another maker),
-  each option on one list line with its own effort and AA Index, read with every usage
+  each option with its own level, AA Index and price, read with every usage
   pool at headroom, so the step's runner picks the column from the pools
   on the day. A single-column table becomes the ladder: that is a
   difference. Its models are always the latest version of their series.
@@ -203,31 +203,34 @@ complexity, novel or not; its Model rationale names them), then:
   sentence, or its entry in the Model selection blocks) — a layout
   fix, not a new pick, so it takes no `Settings updated` line.
 - Every ladder, a step's Settings and a phase's Phase roadmap settings
-  alike, takes the list layout (roadmodel 0.2.94 on), as `roadmodel
-  ladder` prints it: a bold heading per column (**Cost**, **Balanced**,
-  **Quality**, the column its **Runs:** line names reading `— runs by
-  default`), each over one list line per rank — `- Pick:`,
-  `- Runner-up:`, `- Backup:` — giving the option's **model**, platform,
-  dial and level, `Thinking On` where the surface has that toggle, and
-  `AA` with its AA Intelligence Index there (`AA not measured` where AA
-  has no row); then a `**Conversation:**` line and the **Runs:** line,
-  every line within 80 columns. Before re-selecting anything, run
-  `roadmodel relayout <every roadmap file>`: it rewrites each ladder
-  table roadmodel 0.2.86–0.2.93 wrote (a `| Rank |` or `| Setting |`
-  table with Cost / Balanced / Quality columns) as those lists, every
-  model, platform, dial and AA Index kept as written. That is a layout
-  fix, not a new pick: it reaches every step and every phase, Complete
-  steps and written phases included, and takes no `Settings updated`
-  line. A ladder written before roadmodel 0.2.93 has Model / Backup /
-  Platform / Effort (/ AA Index) / Thinking rows and no Runner-up: on a
-  step that has not shipped, or a phase not yet written, replace it with
-  the ladder printed for that classification, even where every pick
-  still matches — a layout fix, not a new pick, so it takes no `Settings
-  updated` line unless the Pick of the column its **Runs:** line names
-  changed. Without roadmodel, leave every ladder as it is.
-- A Complete step's ladder keeps its values (see below): `roadmodel
-  relayout` changes its layout alone, and its `> Ran` and `> Settings
-  updated` lines stay beneath it.
+  alike, takes the table layout (roadmodel 0.2.95 on), as `roadmodel
+  ladder` prints it: Cost, Balanced and Quality columns (the one its
+  **Runs:** line names marked ✓), each rank a bold group row (**Pick**,
+  **Runner‑up**, **Backup**) over indented Model / Platform / Level / AA /
+  Price rows — Level the bare level of the platform's own dial, AA its AA
+  Intelligence Index there (`not measured` where AA has no row), Price its
+  blended list price per 1M tokens times the tokens it uses at that level —
+  then a note line, a `**Conversation:**` line and the **Runs:** line. It
+  has no Thinking row: Thinking is always On where the platform has the
+  toggle. Before re-selecting anything, run `roadmodel relayout <every
+  roadmap file>`: it rewrites each ladder roadmodel 0.2.86–0.2.94 wrote (a
+  `| Rank |` or `| Setting |` table with Cost / Balanced / Quality columns,
+  or 0.2.94's `- Pick:` lists) as that table, every model, platform, level
+  and AA Index kept as written and Price filled in from the catalog. It
+  reaches only steps that read `Not started` and phases whose roadmap does
+  not exist: a Complete step's ladder is the record of what ran, an `In
+  progress` step's is what an agent is running, and a written phase's
+  records what wrote its roadmap, so those keep their layout. That is a
+  layout fix, not a new pick, and takes no `Settings updated` line. A
+  ladder written before roadmodel 0.2.93 has Model / Backup / Platform /
+  Effort (/ AA Index) / Thinking rows and no Runner-up: on a step that has
+  not shipped, or a phase not yet written, replace it with the ladder
+  printed for that classification, even where every pick still matches —
+  a layout fix, not a new pick, so it takes no `Settings updated` line
+  unless the Pick of the column its **Runs:** line names changed. Without
+  roadmodel, leave every ladder as it is.
+- A Complete step's ladder keeps its values and its layout (see below),
+  with its `> Ran` and `> Settings updated` lines beneath it.
 - Keep the step's selection block in the Model selection blocks equal
   to the column its **Runs:** line names (its `BACKUP:` line to that
   column's Backup), and its Summary Table row's Model to that column's
@@ -242,9 +245,8 @@ complexity, novel or not; its Model rationale names them), then:
   included, with no `Settings updated` line.
 - If it matches, leave the step exactly as it is.
 - **Never touch a step that reads `Complete`.** Its settings are the
-  record of what ran. Only the layout fixes above (`roadmodel relayout`
-  and the Summary Table's columns) reach it, because they change no
-  value.
+  record of what ran. Only the Summary Table's column fix reaches it,
+  because it changes no value.
 - Keep each step's Conversation row as written — it is session hygiene,
   not a model choice.
 
@@ -279,10 +281,10 @@ sentences on why.
   beneath it.
 - A table that matches ⇒ leave the phase exactly as it is, except
   that a ladder written before roadmodel 0.2.93 becomes the ranked
-  ladder, as a step's does, and every ladder takes the list layout.
+  ladder, as a step's does, and its ladder takes the table layout.
 - **Never add, re-pick or rewrite the table of a phase whose roadmap
   exists.** Its table, or the lack of one, is the record of what wrote
-  that roadmap; `roadmodel relayout` alone reaches it, as a layout fix.
+  that roadmap, layout included.
 
 Print the phase · was · now · changed table.
 

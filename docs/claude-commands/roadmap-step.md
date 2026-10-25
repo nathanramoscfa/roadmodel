@@ -101,16 +101,25 @@ Print one line: `Step {{STEP}} requires: Model <M> · Platform <P> ·
 <the dials the table carries, e.g. Effort <E>[ · Thinking <T>], or
 Intelligence <I>>. This session: <your own model> on <this surface>.`
 
+**Thinking is always On** wherever the platform has a Thinking toggle
+(Antigravity, the Gemini app, the APIs that expose one). A ladder carries
+no Thinking row because it never recommends Off: every AA Index and Price
+in it assumes thinking on. On such a platform, print `Thinking On` among
+the dials and make sure it is set.
+
 - **Ladders** (Cost / Balanced / Quality columns, roadmodel 0.2.86
   on) carry every column the step may run, so pick one before the checks
-  below. From roadmodel 0.2.94 each column is a bold heading (**Cost**,
-  **Balanced**, **Quality**) over one list line per option: `- Pick:`,
-  `- Runner-up:`, `- Backup:`, each naming its **model**, then its
-  platform, its dial and level, `Thinking On` where the surface has that
-  toggle, and its AA Index (a line past 80 columns continues on the next,
-  indented). A 0.2.93 ladder is a table with rows `1 · Pick`,
-  `2 · Runner-up` and `3 · Backup`, each followed by that option's
-  Platform, Effort, Thinking and AA Index rows. An older ladder has Model /
+  below. From roadmodel 0.2.95 a ladder is one table: Cost, Balanced and
+  Quality are its columns, and each rank is a bold group row (**Pick**,
+  **Runner‑up**, **Backup**) over indented Model, Platform, Level, AA and
+  Price rows. Level is the bare level of that platform's own dial (`High`
+  is Intelligence High on Codex, Effort High on Claude Code and
+  Antigravity). The ✓ in a column's header marks the one its **Runs:**
+  line names. A 0.2.94 ladder is three lists instead (`- Pick:`,
+  `- Runner-up:`, `- Backup:` under each column's bold heading), and a
+  0.2.93 one a table with rows `1 · Pick`, `2 · Runner-up` and
+  `3 · Backup`, each followed by Platform, Effort, Thinking and AA Index
+  rows. An older ladder has Model /
   Backup / Platform / Effort rows instead: its Model, Platform and Effort
   cells are the Pick, its Backup the Backup (split into `Backup`, `Backup
   on` and `Backup effort` rows on a Complete step since 0.2.93), and it

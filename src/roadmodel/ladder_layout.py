@@ -1,41 +1,69 @@
 """A roadmap's Settings ladder as Markdown, and the converter that brings
-the tables older releases wrote to it.
+the ladders older releases wrote to it.
 
-The ladder is three short lists, Cost, Balanced and Quality, each ranking a
-Pick, a Runner-up and a Backup, one option a line:
+The ladder is one table: Cost, Balanced and Quality are its columns, and each
+rank (Pick, Runner-up, Backup) is a bold group row over indented field rows:
 
-    **Balanced** — runs by default
+    |              | Cost            | Balanced ✓         | Quality         |
+    | ------------ | --------------- | ------------------ | --------------- |
+    | **Pick**     |                 |                    |                 |
+    |     Model    | **GPT-6.1 Sol** | **Gemini 4 Argon** | **Opus 5.5**    |
+    |     Platform | Codex           | Antigravity        | Claude Code     |
+    |     Level    | High            | High               | XHigh           |
+    |     AA       | 50.2            | 52.6               | 56              |
+    |     Price    | $2.18/1M        | $4.00/1M*          | $8.46/1M        |
 
-    - Pick: **Gemini 4 Argon** · Antigravity · Effort High · Thinking On · AA 52.6
-    - Runner-up: **Opus 5.5** · Claude Code · Effort High · AA 53.6
-    - Backup: **GPT-6.1 Sol** · Codex · Intelligence XHigh · AA 51
-
-The operator reads roadmaps in an editor's Markdown preview about 400–520px
-wide. A table of three columns and one field a row (0.2.93) spread each option
-over five rows, and a table with one option a row needs six columns, so it
-wrapped every cell at that width. One option a line reads as a sentence and
-wraps cleanly. A dial or toggle the surface lacks gets no field, as in a
-selection block, and each line wraps at 80 columns on a field boundary, so
-the source fits the roadmap's prose.
+(the indent is four `&nbsp;`, so it never breaks from its label). The operator
+chose it on 2026-10-24 after reading candidates in an editor's Markdown preview
+400–520px wide: 0.2.93's table gave each field a row with nothing marking where
+an option ended, and 0.2.94's lists dropped the table. The group rows mark the
+ranks, Level is the bare level (the platform names its dial: Codex's
+Intelligence, Claude Code's and Antigravity's Effort), and Thinking has no row:
+a ladder only ever recommends it On, and every AA Index and price already
+assumes it, so /roadmap-step states the rule once instead.
 """
 
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+import textwrap
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Final
 
 TIERS: Final[tuple[str, ...]] = ("cost", "balanced", "quality")
-# Each rank's label in the list and its key in a column.
+# Each rank's group label and its key in a column. The label's hyphen is
+# U+2011, which does not break, so "Runner-up" stays on one line at 400px.
 RANKS: Final[tuple[tuple[str, str], ...]] = (
     ("Pick", "pick"),
-    ("Runner-up", "runner_up"),
+    ("Runner‑up", "runner_up"),
     ("Backup", "backup"),
 )
+FIELDS: Final[tuple[str, ...]] = ("Model", "Platform", "Level", "AA", "Price")
+INDENT: Final[str] = "&nbsp;" * 4
+RUNS_MARK: Final[str] = "✓"
 WIDTH: Final[int] = 80
 NONE: Final[str] = "—"
 _SEP: Final[str] = " · "
+# Level words as a dial names them, by the scorer's level.
+LEVEL_WORDS: Final[dict[str, str]] = {
+    "minimal": "Minimal",
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "xhigh": "XHigh",
+    "max": "Max",
+    "ultra": "Ultra",
+}
+_LEVEL_KEYS: Final[dict[str, str]] = {
+    **{word.lower(): key for key, word in LEVEL_WORDS.items()},
+    "extra high": "xhigh",
+}
+_DIALS: Final[tuple[str, ...]] = ("Intelligence ", "Effort ")
+
+# Prices a model at a level: (USD per 1M blended tokens at that level's token
+# use, whether that use was measured); None when the model is unknown.
+PriceFn = Callable[[str, str], tuple[float, bool] | None]
 
 
 @dataclass(frozen=True)
@@ -44,36 +72,47 @@ class Option:
 
     model: str
     platform: str
-    # The dial and level (`Effort High`, `Intelligence XHigh`), or — where the
-    # surface has no reasoning dial.
-    effort: str = NONE
-    # `On` where the surface has a Thinking toggle for the model, else —.
-    thinking: str = NONE
+    # The bare level (`High`, `XHigh`), or — where the surface has no dial.
+    level: str = NONE
     # The AA Index there (`52.6`, `not measured`); None in a ladder written
     # before it carried one.
     aa: str | None = None
+    # USD per 1M blended tokens at the level's token use; None when unknown.
+    price: float | None = None
+    # False when the level's token use is a typical model's, not measured.
+    price_measured: bool = True
 
 
-def option_line(rank: str, option: Option | None, width: int = WIDTH) -> str:
-    """``option`` as a list item, wrapped at ``width`` between fields:
-    ``- Pick: **Opus 5.5** · Claude Code · Effort XHigh · AA 56``. A rank with
-    no option reads ``- Backup: none``."""
+def level_key(word: str) -> str | None:
+    """The scorer's level a level word names (`XHigh` → `xhigh`)."""
+    return _LEVEL_KEYS.get(word.strip().lower())
+
+
+def price_cell(option: Option) -> str:
+    if option.price is None:
+        return NONE
+    return f"${option.price:.2f}/1M" + ("" if option.price_measured else "*")
+
+
+def _cells(option: Option | None) -> list[str]:
     if option is None:
-        return f"- {rank}: none"
-    fields = [f"{rank}: **{option.model}**", option.platform]
-    if option.effort != NONE:
-        fields.append(option.effort)
-    if option.thinking != NONE:
-        fields.append(f"Thinking {option.thinking}")
-    if option.aa is not None:
-        fields.append(f"AA {option.aa}")
-    lines = [f"- {fields[0]}"]
-    for field in fields[1:]:
-        if len(lines[-1]) + len(_SEP) + len(field) <= width:
-            lines[-1] += _SEP + field
-        else:
-            lines.append(f"  · {field}")
-    return "\n".join(lines)
+        return ["none", NONE, NONE, NONE, NONE]
+    return [
+        f"**{option.model}**",
+        option.platform,
+        option.level,
+        NONE if option.aa is None else option.aa,
+        price_cell(option),
+    ]
+
+
+def _grid(rows: list[list[str]]) -> list[str]:
+    widths = [max(len(r[i]) for r in rows) for i in range(len(rows[0]))]
+
+    def line(cells: list[str]) -> str:
+        return "| " + " | ".join(c.ljust(w) for c, w in zip(cells, widths, strict=True)) + " |"
+
+    return [line(rows[0]), "| " + " | ".join("-" * w for w in widths) + " |", *map(line, rows[1:])]
 
 
 def ladder_markdown(
@@ -82,23 +121,50 @@ def ladder_markdown(
     runs: str | None,
     conversation: str | None,
 ) -> str:
-    """The ladder's lists, then its Conversation line: each tier's bold name
-    (the column ``runs`` names marked `runs by default`) over a line per rank
-    it carries. A rank missing from a column is left out (a ladder older than
-    the Runner-up has none); one present as None reads ``none``."""
-    blocks = []
-    for tier in TIERS:
-        col = columns[tier]
-        head = f"**{tier.capitalize()}**" + (" — runs by default" if tier == runs else "")
-        items = [option_line(label, col[key]) for label, key in RANKS if key in col]
-        blocks.append(head + "\n\n" + "\n".join(items))
+    """The ladder's table, its note, then its Conversation line. A rank is
+    printed when any column carries it (a ladder older than the Runner-up has
+    none), and a field row only when some option of that rank has a value
+    there (an older backup has no AA Index; a rank with no option in any
+    column reads `none` alone)."""
+    head = ["", *(t.capitalize() + (f" {RUNS_MARK}" if t == runs else "") for t in TIERS)]
+    rows = [head]
+    priced = unmeasured = False
+    for label, key in RANKS:
+        if not any(key in columns[t] for t in TIERS):
+            continue
+        opts = [columns[t].get(key) for t in TIERS]
+        rows.append([f"**{label}**", "", "", ""])
+        cells = [_cells(o) for o in opts]
+        for i, field in enumerate(FIELDS):
+            values = [c[i] for c in cells]
+            if field != "Model" and all(v == NONE for v in values):
+                continue
+            rows.append([INDENT + field, *values])
+        priced |= any(o is not None and o.price is not None for o in opts)
+        unmeasured |= any(
+            o is not None and o.price is not None and not o.price_measured for o in opts
+        )
+    notes = [f"{RUNS_MARK} runs by default."] if runs else []
+    if priced:
+        notes.append(
+            "Price: list $ per 1M tokens (3 in : 1 out) × the tokens the model "
+            "uses at that level"
+            + (
+                "; * token use not yet measured, a typical model's at that level assumed."
+                if unmeasured
+                else "."
+            )
+        )
+    parts = ["\n".join(_grid(rows))]
+    if notes:
+        parts.append(textwrap.fill(" ".join(notes), width=WIDTH, break_long_words=False))
     if conversation:
-        blocks.append(f"**Conversation:** {conversation}")
-    return "\n\n".join(blocks)
+        parts.append(f"**Conversation:** {conversation}")
+    return "\n\n".join(parts)
 
 
 # --------------------------------------------------------------------------- #
-# Converting the tables older releases wrote
+# Converting the ladders older releases wrote
 # --------------------------------------------------------------------------- #
 
 _HEAD_RE: Final = re.compile(
@@ -106,12 +172,19 @@ _HEAD_RE: Final = re.compile(
 )
 _RULE_RE: Final = re.compile(r"^\|[\s:|-]+\|\s*$")
 _RUNS_RE: Final = re.compile(r"^\*\*Runs:\*\* (Cost|Balanced|Quality)\b")
+_TIER_HEAD_RE: Final = re.compile(r"^\*\*(Cost|Balanced|Quality)\*\*( — runs by default)?\s*$")
+_ITEM_RE: Final = re.compile(r"^- (Pick|Runner-up|Backup): (.*)$")
+_CONVERSATION_RE: Final = re.compile(r"^\*\*Conversation:\*\* (.+?)\s*$")
+_STEP_RE: Final = re.compile(r"^## Step\b")
+_PHASE_RE: Final = re.compile(r"^### Phase\s+([0-9A-Za-z.]+)")
+_STATUS_RE: Final = re.compile(r"^\*\*Status:\*\*\s*(.*)$")
 # The ranked table's (0.2.93) rank rows and the field rows under each.
 _RANK_ROWS: Final[dict[str, str]] = {
     "1 · Pick": "pick",
     "2 · Runner-up": "runner_up",
     "3 · Backup": "backup",
 }
+_LIST_RANKS: Final[dict[str, str]] = {"Pick": "pick", "Runner-up": "runner_up", "Backup": "backup"}
 _FIELD_ROWS: Final[frozenset[str]] = frozenset({"Platform", "Effort", "Thinking", "AA Index"})
 # The single-pick ladder's (0.2.86–0.2.92) rows.
 _PICK_ROWS: Final[frozenset[str]] = frozenset(
@@ -119,18 +192,30 @@ _PICK_ROWS: Final[frozenset[str]] = frozenset(
 )
 
 
-def _cells(line: str) -> list[str]:
-    return [c.strip() for c in line.strip().strip("|").split("|")]
+def _level_word(effort: str) -> str:
+    """The bare level of an Effort cell (`Intelligence High` → `High`)."""
+    effort = effort.strip()
+    for dial in _DIALS:
+        if effort.startswith(dial):
+            return effort[len(dial) :].strip()
+    return effort or NONE
+
+
+def _priced(option: Option, price: PriceFn | None) -> Option:
+    found = None if price is None else price(option.model, option.level)
+    if found is None:
+        return option
+    value, measured = found
+    return Option(option.model, option.platform, option.level, option.aa, value, measured)
 
 
 def _option(fields: Mapping[str, str], model: str) -> Option | None:
-    if model == "None":
+    if model in {"None", "none"}:
         return None
     return Option(
-        model=model,
+        model=model.strip("*"),
         platform=fields.get("Platform", NONE),
-        effort=fields.get("Effort", NONE),
-        thinking=fields.get("Thinking", NONE),
+        level=_level_word(fields.get("Effort", NONE)),
         aa=fields.get("AA Index"),
     )
 
@@ -142,7 +227,11 @@ def _one_cell_backup(cell: str) -> Option | None:
         return None
     model, _, rest = cell.partition(" — ")
     platform, _, effort = rest.partition(_SEP)
-    return Option(model=model, platform=platform or NONE, effort=effort or NONE)
+    return Option(model=model, platform=platform or NONE, level=_level_word(effort or NONE))
+
+
+def _table_cells(line: str) -> list[str]:
+    return [c.strip() for c in line.strip().strip("|").split("|")]
 
 
 def _ranked_columns(rows: list[list[str]]) -> dict[str, dict[str, Option | None]] | None:
@@ -176,10 +265,7 @@ def _pick_columns(rows: list[list[str]]) -> dict[str, dict[str, Option | None]] 
         col: dict[str, Option | None] = {"pick": _option(fields, fields["Model"])}
         if "Backup on" in by:
             col["backup"] = _option(
-                {
-                    "Platform": fields["Backup on"],
-                    "Effort": fields.get("Backup effort", NONE),
-                },
+                {"Platform": fields["Backup on"], "Effort": fields.get("Backup effort", NONE)},
                 fields["Backup"],
             )
         elif "Backup" in by:
@@ -188,7 +274,7 @@ def _pick_columns(rows: list[list[str]]) -> dict[str, dict[str, Option | None]] 
     return out
 
 
-def _conversation(rows: list[list[str]]) -> str | None:
+def _table_conversation(rows: list[list[str]]) -> str | None:
     cells = next((cells for label, *cells in rows if label == "Conversation"), None)
     if cells is None:
         return None
@@ -198,40 +284,134 @@ def _conversation(rows: list[list[str]]) -> str | None:
     return ", ".join(f"{t.capitalize()} {c}" for t, c in zip(TIERS, plain, strict=True))
 
 
-def relayout(text: str) -> tuple[str, int]:
-    """``text`` with every Settings ladder table (Cost / Balanced / Quality
-    columns, as roadmodel 0.2.86–0.2.93 wrote them) rewritten as the ladder's
-    lists, every value kept as written; and how many it rewrote. A table
-    with a row it does not know is left as it is."""
+def _list_option(rest: str) -> Option | None:
+    """A 0.2.94 list item's option: ``**Model** · Platform · Effort High ·
+    Thinking On · AA 52.6``, or ``none``."""
+    if rest.strip() == "none":
+        return None
+    model, platform, *more = [f.strip() for f in rest.split(_SEP)]
+    level, aa = NONE, None
+    for field in more:
+        if field.startswith("AA "):
+            aa = field[3:]
+        elif not field.startswith("Thinking "):
+            level = _level_word(field)
+    return Option(model=model.strip("*"), platform=platform, level=level, aa=aa)
+
+
+def _list_ladder(
+    lines: list[str], start: int
+) -> tuple[int, dict[str, dict[str, Option | None]], str | None, str | None] | None:
+    """The 0.2.94 lists starting at ``lines[start]`` (a `**Cost**` heading):
+    the index past their last line, the columns, the column that runs and the
+    Conversation value; None when the lines are not such a ladder."""
+    columns: dict[str, dict[str, Option | None]] = {}
+    runs = conversation = None
+    tier = ""
+    i = start
+    while i < len(lines):
+        line = lines[i]
+        if head := _TIER_HEAD_RE.match(line):
+            tier = head.group(1).lower()
+            columns[tier] = {}
+            if head.group(2):
+                runs = tier
+        elif (item := _ITEM_RE.match(line)) and tier:
+            rest = item.group(2)
+            while i + 1 < len(lines) and lines[i + 1].startswith("  · "):
+                i += 1
+                rest += _SEP + lines[i][4:]
+            columns[tier][_LIST_RANKS[item.group(1)]] = _list_option(rest)
+        elif conv := _CONVERSATION_RE.match(line):
+            conversation = conv.group(1)
+            i += 1
+            break
+        elif line.strip() and not _RUNS_RE.match(line):
+            return None
+        elif _RUNS_RE.match(line):
+            break
+        i += 1
+    if set(columns) != set(TIERS):
+        return None
+    return i, columns, runs, conversation
+
+
+def relayout(
+    text: str,
+    *,
+    price: PriceFn | None = None,
+    phase_written: Callable[[str], bool] | None = None,
+) -> tuple[str, int, int]:
+    """``text`` with each Settings ladder roadmodel 0.2.86–0.2.94 wrote (a
+    table with Cost / Balanced / Quality columns, or 0.2.94's lists) rewritten
+    as the ladder table, every model, platform, level and AA Index kept as
+    written and each option's price filled in by ``price``. A ladder under a
+    step that is Complete or In progress, or under a phase whose roadmap
+    ``phase_written`` says exists, is the record of what ran or is running
+    and stays as it is. Returns the text, the ladders rewritten and the
+    ladders kept. A table with a row this release does not know is left
+    alone and not counted."""
     lines = text.split("\n")
     out: list[str] = []
-    converted = 0
+    converted = kept = 0
+    done = False
     i = 0
     while i < len(lines):
-        head = _HEAD_RE.match(lines[i])
-        if not head or i + 1 >= len(lines) or not _RULE_RE.match(lines[i + 1]):
-            out.append(lines[i])
+        line = lines[i]
+        if _STEP_RE.match(line):
+            done = "✅" in line
+        elif phase := _PHASE_RE.match(line):
+            written = phase_written(phase.group(1)) if phase_written else False
+            done = "✅" in line or written
+        elif re.match(r"^#{1,2} ", line):
+            done = False
+        elif status := _STATUS_RE.match(line):
+            done = done or status.group(1).startswith(("Complete", "In progress"))
+
+        found = None
+        head = _HEAD_RE.match(line)
+        if head and i + 1 < len(lines) and _RULE_RE.match(lines[i + 1]):
+            end = i + 2
+            while end < len(lines) and lines[end].startswith("|"):
+                end += 1
+            rows = [_table_cells(ln) for ln in lines[i + 2 : end]]
+            columns = None
+            if rows and all(len(r) == 1 + len(TIERS) for r in rows):
+                parse = _ranked_columns if head.group(1) == "Rank" else _pick_columns
+                columns = parse(rows)
+            if columns is None:
+                out.extend(lines[i:end])
+                i = end
+                continue
+            after = next((ln for ln in lines[end:] if ln.strip()), "")
+            runs_match = _RUNS_RE.match(after)
+            runs = runs_match.group(1).lower() if runs_match else None
+            found = (end, columns, runs, _table_conversation(rows))
+        elif _TIER_HEAD_RE.match(line) and line.startswith("**Cost**"):
+            listed = _list_ladder(lines, i)
+            if listed is not None:
+                end, columns, runs, conversation = listed
+                if runs is None:
+                    after = next((ln for ln in lines[end:] if ln.strip()), "")
+                    runs_match = _RUNS_RE.match(after)
+                    runs = runs_match.group(1).lower() if runs_match else None
+                found = (end, columns, runs, conversation)
+
+        if found is None:
+            out.append(line)
             i += 1
             continue
-        end = i + 2
-        while end < len(lines) and lines[end].startswith("|"):
-            end += 1
-        rows = [_cells(ln) for ln in lines[i + 2 : end]]
-        columns = None
-        if rows and all(len(r) == 1 + len(TIERS) for r in rows):
-            parse = _ranked_columns if head.group(1) == "Rank" else _pick_columns
-            columns = parse(rows)
-        if columns is None:
+        end, columns, runs, conversation = found
+        if done:
+            kept += 1
             out.extend(lines[i:end])
             i = end
             continue
-        after = next((ln for ln in lines[end:] if ln.strip()), "")
-        runs = _RUNS_RE.match(after)
-        md = ladder_markdown(
-            columns,
-            runs=runs.group(1).lower() if runs else None,
-            conversation=_conversation(rows),
-        )
+        priced = {
+            tier: {k: None if o is None else _priced(o, price) for k, o in col.items()}
+            for tier, col in columns.items()
+        }
+        md = ladder_markdown(priced, runs=runs, conversation=conversation)
         if out and out[-1].strip():
             out.append("")
         out.extend(md.split("\n"))
@@ -239,4 +419,4 @@ def relayout(text: str) -> tuple[str, int]:
             out.append("")
         converted += 1
         i = end
-    return "\n".join(out), converted
+    return "\n".join(out), converted, kept
