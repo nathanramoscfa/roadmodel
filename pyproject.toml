@@ -138,7 +138,6 @@ include = [
     "scripts/upgrade_fleet.py",
     "scripts/worktree_memory.py",
     "scripts/updater_lock.py",
-    "scripts/checkout_sync.py",
     "docs/claude-commands/roadmap-project.md",
     "docs/claude-commands/roadmap-phase.md",
     "docs/claude-commands/roadmap-step.md",

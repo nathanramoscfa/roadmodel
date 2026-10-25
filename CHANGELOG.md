@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - after every full run's roadmap refresh;
   - on demand with `--sync-checkouts`.
 
-  It only fast-forwards (`git merge --ff-only`). It never merges, rebases, stashes, resets or cleans, and it never touches untracked files. It leaves alone, and reports in the log, any checkout that is on a feature branch (an agent's step, which gets main when it rebases), has commits of its own, has a merge or rebase in progress, or has uncommitted changes to a file the update changes. The logic lives in a new stdlib companion, `checkout_sync.py`, which ships beside the updater.
+  It only fast-forwards (`git merge --ff-only`). It never merges, rebases, stashes, resets or cleans, and it never touches untracked files. It leaves alone, and reports in the log, any checkout that is on a feature branch (an agent's step, which gets main when it rebases), has commits of its own, has a merge or rebase in progress, or has uncommitted changes to a file the update changes. It is part of the standalone updater, so every machine's scheduled updater carries it.
 
 ## [0.2.95] — 2026-10-25
 

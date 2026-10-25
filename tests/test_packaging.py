@@ -127,7 +127,6 @@ def test_dirty_tree_artifacts_and_sdist_rebuild(source_tree: Path, tmp_path: Pat
             "upgrade_fleet",
             "worktree_memory",
             "updater_lock",
-            "checkout_sync",
         ):
             assert (
                 archive.read(f"roadmodel/{name}.py")

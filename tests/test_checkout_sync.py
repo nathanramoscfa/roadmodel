@@ -3,7 +3,7 @@
 On 2026-10-25 the operator opened a roadmap whose new layout was merged on
 GitHub and still saw the old one: the checkout had not pulled. The updater now
 fast-forwards every registered checkout that sits on its default branch, every
-15 minutes and at the end of each run (scripts/checkout_sync.py), and never
+15 minutes and at the end of each run (update_projects.sync_checkout), and never
 anything that could lose work: a feature branch, local commits, an operation
 in progress, or uncommitted changes to a file the update changes.
 
@@ -33,7 +33,7 @@ def _load(name: str) -> ModuleType:
     return mod
 
 
-cs = _load("checkout_sync")
+up_module = _load("update_projects")
 
 
 def _git(repo: Path, *args: str) -> str:
@@ -70,10 +70,10 @@ def _advance(seed: Path, name: str = "docs.md", text: str = "v2\n") -> None:
 def test_a_checkout_behind_on_main_is_fast_forwarded(repos: tuple[Path, Path]) -> None:
     checkout, seed = repos
     _advance(seed)
-    got = cs.sync_checkout(checkout)
+    got = up_module.sync_checkout(checkout)
     assert got.state == "updated" and "fast-forwarded 1 commit(s)" in got.detail
     assert (checkout / "docs.md").read_text(encoding="utf-8") == "v2\n"
-    assert cs.sync_checkout(checkout).state == "current"
+    assert up_module.sync_checkout(checkout).state == "current"
 
 
 def test_untracked_files_and_unrelated_edits_survive(repos: tuple[Path, Path]) -> None:
@@ -84,7 +84,7 @@ def test_untracked_files_and_unrelated_edits_survive(repos: tuple[Path, Path]) -
     _advance(seed)
     (checkout / "scratch.txt").write_text("mine\n", encoding="utf-8")
     (checkout / "other.md").write_text("edited\n", encoding="utf-8")
-    assert cs.sync_checkout(checkout).state == "updated"
+    assert up_module.sync_checkout(checkout).state == "updated"
     assert (checkout / "scratch.txt").read_text(encoding="utf-8") == "mine\n"
     assert (checkout / "other.md").read_text(encoding="utf-8") == "edited\n"
     assert (checkout / "docs.md").read_text(encoding="utf-8") == "v2\n"
@@ -96,7 +96,7 @@ def test_an_uncommitted_edit_to_a_changed_file_blocks_and_is_kept(
     checkout, seed = repos
     _advance(seed)
     (checkout / "docs.md").write_text("my edit\n", encoding="utf-8")
-    got = cs.sync_checkout(checkout)
+    got = up_module.sync_checkout(checkout)
     assert got.state == "skipped" and "local changes block a fast-forward" in got.detail
     assert (checkout / "docs.md").read_text(encoding="utf-8") == "my edit\n"
 
@@ -106,7 +106,7 @@ def test_a_feature_branch_is_left_alone(repos: tuple[Path, Path]) -> None:
     _git(checkout, "checkout", "-q", "-b", "feature/phase7-step2")
     _advance(seed)
     head = _git(checkout, "rev-parse", "HEAD")
-    got = cs.sync_checkout(checkout)
+    got = up_module.sync_checkout(checkout)
     assert got.state == "skipped" and "on feature/phase7-step2" in got.detail
     assert _git(checkout, "rev-parse", "HEAD") == head
 
@@ -116,7 +116,7 @@ def test_local_commits_on_main_are_not_touched(repos: tuple[Path, Path]) -> None
     _commit(checkout, "local.md", "unpushed\n")
     _advance(seed)
     head = _git(checkout, "rev-parse", "HEAD")
-    got = cs.sync_checkout(checkout)
+    got = up_module.sync_checkout(checkout)
     assert got.state == "skipped" and "1 local commit(s)" in got.detail
     assert _git(checkout, "rev-parse", "HEAD") == head
 
@@ -125,7 +125,7 @@ def test_an_operation_in_progress_is_left_alone(repos: tuple[Path, Path]) -> Non
     checkout, seed = repos
     _advance(seed)
     (checkout / ".git" / "MERGE_HEAD").write_text("0" * 40 + "\n", encoding="utf-8")
-    got = cs.sync_checkout(checkout)
+    got = up_module.sync_checkout(checkout)
     assert got.state == "skipped" and "in progress" in got.detail
 
 
@@ -133,26 +133,27 @@ def test_dry_run_changes_nothing(repos: tuple[Path, Path]) -> None:
     checkout, seed = repos
     _advance(seed)
     head = _git(checkout, "rev-parse", "HEAD")
-    got = cs.sync_checkout(checkout, dry_run=True)
+    got = up_module.sync_checkout(checkout, dry_run=True)
     assert got.state == "updated" and got.detail.startswith("would fast-forward")
     assert _git(checkout, "rev-parse", "HEAD") == head
 
 
 def test_a_folder_that_is_not_a_checkout_or_cannot_fetch(tmp_path: Path) -> None:
-    assert cs.sync_checkout(tmp_path).state == "skipped"
+    assert up_module.sync_checkout(tmp_path).state == "skipped"
     lone = tmp_path / "lone"
     subprocess.run(["git", "init", "-q", "-b", "main", str(lone)], check=True)
     _commit(lone, "a.md", "a\n")
     _git(lone, "remote", "add", "origin", str(tmp_path / "missing.git"))
     _git(lone, "update-ref", "refs/remotes/origin/main", "HEAD")
-    got = cs.sync_checkout(lone)
+    got = up_module.sync_checkout(lone)
     assert got.state == "failed" and got.detail.startswith("fetch failed")
-    assert [o.state for o in cs.sync_all([tmp_path, lone])] == ["skipped", "failed"]
+    lines = up_module.sync_checkouts([tmp_path, lone])
+    assert [line.split(" — ")[0].split(": ")[1] for line in lines] == ["skipped", "failed"]
 
 
 @pytest.fixture(scope="module")
 def up() -> ModuleType:
-    return _load("update_projects")
+    return up_module
 
 
 def test_the_updater_schedules_the_sync_every_15_minutes(up: ModuleType) -> None:
@@ -164,7 +165,6 @@ def test_the_updater_schedules_the_sync_every_15_minutes(up: ModuleType) -> None
     assert argv[argv.index("/SC") + 1] == "MINUTE" and argv[argv.index("/MO") + 1] == "15"
     assert "--sync-checkouts" in argv[argv.index("/TR") + 1]
     assert up.sync_cron_line(python, script, 15).startswith("*/15 * * * * ")
-    assert "checkout_sync" in up.SUPPORT_MODULES
 
 
 def test_the_updater_syncs_the_checkouts_it_is_given(

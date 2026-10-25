@@ -117,7 +117,6 @@ SUPPORT_MODULES = (
     "worktree_memory",
     "updater_lock",
     "private_files",
-    "checkout_sync",
 )
 
 
@@ -2021,7 +2020,7 @@ SCHEDULE_LABEL = "com.roadmodel.update-projects"  # launchd label / cron marker
 TASK_NAME = "roadmodel-update-projects"  # Windows Task Scheduler name
 LOG_FILE = CONFIG_DIR / "update.log"
 # The checkout sync's own schedule: fast-forward every registered checkout on
-# its default branch every SYNC_MINUTES (checkout_sync.py).
+# its default branch every SYNC_MINUTES (sync_checkout, below).
 SYNC_LABEL = "com.roadmodel.sync-checkouts"
 SYNC_TASK = "roadmodel-sync-checkouts"
 SYNC_MINUTES = 15
@@ -2372,9 +2371,133 @@ def uninstall_sync_schedule(dry_run: bool = False) -> str:
     return "removed crontab entry"
 
 
+# --------------------------------------------------------------------------
+# Checkout sync
+# --------------------------------------------------------------------------
+# The operator reads roadmaps in each project's own checkout. A roadmap change
+# merged on GitHub (a fleet `roadmodel relayout`, a refresh, a step run on the
+# other machine) reached that checkout only after a manual `git pull`, so the
+# editor kept showing the old version (2026-10-25). --sync-checkouts runs on
+# its own schedule (every SYNC_MINUTES) and at the end of every full run, and
+# only ever fast-forwards where nothing can be lost:
+# - the checkout must sit on its default branch; a feature branch, an agent's
+#   step, is left alone and gets main when it rebases;
+# - `git merge --ff-only` only: never a merge commit, rebase, stash, reset or
+#   clean, and untracked files are never touched;
+# - local commits, a merge/rebase/cherry-pick in progress, or uncommitted
+#   changes to a file the update changes leave the checkout as it is.
+
+SYNC_GIT_TIMEOUT = 120
+_SYNC_BUSY = ("MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "rebase-merge", "rebase-apply")
+
+
+@dataclass(frozen=True)
+class SyncOutcome:
+    """What one checkout's sync did: `updated`, `current`, `skipped` (left
+    alone on purpose) or `failed` (git could not do what was asked)."""
+
+    path: Path
+    state: str
+    detail: str
+
+    def line(self) -> str:
+        return f"{self.path.name}: {self.state} — {self.detail}"
+
+
+def _checkout_git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(  # noqa: S603 — fixed git argv, paths from the registry
+        ["git", "-C", str(repo), *args],  # noqa: S607 — git resolved on PATH, as elsewhere
+        capture_output=True,
+        text=True,
+        timeout=SYNC_GIT_TIMEOUT,
+    )
+
+
+def _first_line(cp: subprocess.CompletedProcess[str]) -> str:
+    text = (cp.stderr or cp.stdout or "").strip()
+    return text.splitlines()[0] if text else f"exit {cp.returncode}"
+
+
+def default_branch(repo: Path) -> Optional[str]:
+    """The remote's default branch as this clone knows it (`origin/HEAD`),
+    else whichever of main and master origin has; None when neither."""
+    cp = _checkout_git(repo, "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD")
+    name = cp.stdout.strip()
+    if cp.returncode == 0 and name.startswith("origin/"):
+        return name[len("origin/") :]
+    for branch in ("main", "master"):
+        ref = f"refs/remotes/origin/{branch}"
+        if _checkout_git(repo, "rev-parse", "--verify", "--quiet", ref).returncode == 0:
+            return branch
+    return None
+
+
+def _checkout_busy(repo: Path) -> bool:
+    cp = _checkout_git(repo, "rev-parse", "--git-dir")
+    if cp.returncode != 0:
+        return False
+    git_dir = Path(cp.stdout.strip())
+    if not git_dir.is_absolute():
+        git_dir = repo / git_dir
+    markers = (*_SYNC_BUSY, "index.lock")
+    return any((git_dir / marker).exists() for marker in markers)
+
+
+def sync_checkout(repo: Path, *, dry_run: bool = False) -> SyncOutcome:
+    """Fast-forward ``repo`` to ``origin/<default branch>`` when it is on that
+    branch and nothing of its own would be lost; otherwise leave it and say
+    why."""
+    repo = Path(repo)
+    if not (repo / ".git").exists():
+        return SyncOutcome(repo, "skipped", "not a git checkout")
+    head = _checkout_git(repo, "symbolic-ref", "--quiet", "--short", "HEAD")
+    if head.returncode != 0:
+        return SyncOutcome(repo, "skipped", "detached HEAD")
+    branch = head.stdout.strip()
+    if _checkout_busy(repo):
+        return SyncOutcome(repo, "skipped", "a merge, rebase or cherry-pick is in progress")
+    default = default_branch(repo)
+    if default is None:
+        return SyncOutcome(repo, "skipped", "origin has no main or master")
+    if branch != default:
+        return SyncOutcome(repo, "skipped", f"on {branch}; it gets {default} when it rebases")
+    fetched = _checkout_git(repo, "fetch", "--quiet", "origin", default)
+    if fetched.returncode != 0:
+        return SyncOutcome(repo, "failed", f"fetch failed: {_first_line(fetched)}")
+    counts = _checkout_git(repo, "rev-list", "--left-right", "--count", f"HEAD...origin/{default}")
+    if counts.returncode != 0:
+        return SyncOutcome(repo, "failed", f"cannot compare with origin: {_first_line(counts)}")
+    ahead, behind = (int(n) for n in counts.stdout.split())
+    if behind == 0:
+        return SyncOutcome(repo, "current", f"{default} is up to date")
+    if ahead:
+        return SyncOutcome(
+            repo, "skipped", f"{ahead} local commit(s) on {default} not on origin; not touched"
+        )
+    if dry_run:
+        return SyncOutcome(repo, "updated", f"would fast-forward {behind} commit(s)")
+    merged = _checkout_git(repo, "merge", "--ff-only", "--quiet", f"origin/{default}")
+    if merged.returncode != 0:
+        return SyncOutcome(
+            repo,
+            "skipped",
+            f"{behind} commit(s) behind, but local changes block a fast-forward: "
+            f"{_first_line(merged)}",
+        )
+    sha = _checkout_git(repo, "rev-parse", "--short", "HEAD").stdout.strip()
+    return SyncOutcome(repo, "updated", f"fast-forwarded {behind} commit(s) to {sha}")
+
+
 def sync_checkouts(paths: list[Path], dry_run: bool = False) -> list[str]:
-    """Fast-forward each checkout on its default branch (checkout_sync)."""
-    return [o.line() for o in _support("checkout_sync").sync_all(paths, dry_run=dry_run)]
+    """:func:`sync_checkout` for each checkout, one line each; a git that
+    hangs or is missing fails that checkout only."""
+    lines = []
+    for repo in paths:
+        try:
+            lines.append(sync_checkout(repo, dry_run=dry_run).line())
+        except (OSError, subprocess.SubprocessError) as exc:
+            lines.append(SyncOutcome(Path(repo), "failed", f"git did not run: {exc}").line())
+    return lines
 
 
 class _Tee:
