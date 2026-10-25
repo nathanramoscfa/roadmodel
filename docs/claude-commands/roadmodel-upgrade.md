@@ -1,5 +1,5 @@
 ---
-description: Upgrade roadmodel and shared agent context across registered projects and configured machines (usage: /roadmodel-upgrade [project dirs to register…] [--sync-only | --check] [--local-only] [--skip-roadmap-refresh] [--refresh-roadmaps] [--install-schedule HH:MM])
+description: Upgrade roadmodel and shared agent context across registered projects and configured machines (usage: /roadmodel-upgrade [project dirs to register…] [--sync-only | --check] [--local-only] [--skip-roadmap-refresh] [--refresh-roadmaps] [--install-schedule HH:MM] [--install-sync-schedule [MINUTES]])
 ---
 Upgrade roadmodel in every registered project's own environment, refresh its
 `planning/` kit and agent commands, and maintain live shared rules, full
@@ -171,6 +171,24 @@ configured peers. Keep the machines' run times from overlapping. Schedules
 and registries are local; installing one schedule does not install another
 on a peer. When the operator has requested automatic upkeep, install and
 verify it within that authorization.
+
+**Checkout sync (roadmodel 0.2.96 on).** A roadmap change merged on GitHub
+reaches a project's checkout only when it pulls, so the editor kept showing
+the old version. `--install-sync-schedule [MINUTES]` (default 15) registers
+`--sync-checkouts` on its own schedule: launchd, Task Scheduler while the user
+is logged on, or cron. Every full run also syncs, after its roadmap refresh.
+For each registered checkout that sits on its default branch, it fetches
+origin and fast-forwards (`git merge --ff-only`). It never merges, rebases,
+stashes, resets or cleans. It leaves alone, and reports in the log, any
+checkout that:
+- is on a feature branch (an agent's step, which gets main when it rebases);
+- has local commits;
+- has a merge or rebase in progress;
+- has uncommitted changes to a file the update changes.
+
+Untracked files are never touched. `--uninstall-sync-schedule` removes it.
+The operator asked for this on 2026-10-25: install it on every machine, peers
+included (over SSH: `<python> <launcher> --install-sync-schedule`).
 
 ## 6. Refresh every project's roadmaps
 

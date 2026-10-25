@@ -113,6 +113,7 @@ class BundleDocsHook(BuildHookInterface):  # type: ignore[misc]
                 "upgrade_fleet",
                 "worktree_memory",
                 "updater_lock",
+                "checkout_sync",
             ):
                 updater = _source(root, "scripts/" + name + ".py")
                 if not updater.is_file():

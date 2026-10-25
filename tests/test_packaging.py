@@ -38,7 +38,7 @@ def test_pyproject_parses() -> None:
         data = tomllib.load(f)
     project = data["project"]
     assert project["name"] == "roadmodel"
-    assert project["version"] == "0.2.95"
+    assert project["version"] == "0.2.96"
     assert project["requires-python"] == ">=3.11"
     assert project["scripts"]["roadmodel"] == "roadmodel.cli:main"
 
@@ -127,6 +127,7 @@ def test_dirty_tree_artifacts_and_sdist_rebuild(source_tree: Path, tmp_path: Pat
             "upgrade_fleet",
             "worktree_memory",
             "updater_lock",
+            "checkout_sync",
         ):
             assert (
                 archive.read(f"roadmodel/{name}.py")

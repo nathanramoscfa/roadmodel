@@ -117,6 +117,7 @@ SUPPORT_MODULES = (
     "worktree_memory",
     "updater_lock",
     "private_files",
+    "checkout_sync",
 )
 
 
@@ -2019,6 +2020,11 @@ def refresh_roadmaps(
 SCHEDULE_LABEL = "com.roadmodel.update-projects"  # launchd label / cron marker
 TASK_NAME = "roadmodel-update-projects"  # Windows Task Scheduler name
 LOG_FILE = CONFIG_DIR / "update.log"
+# The checkout sync's own schedule: fast-forward every registered checkout on
+# its default branch every SYNC_MINUTES (checkout_sync.py).
+SYNC_LABEL = "com.roadmodel.sync-checkouts"
+SYNC_TASK = "roadmodel-sync-checkouts"
+SYNC_MINUTES = 15
 LOG_MAX_BYTES = 1_000_000
 
 
@@ -2256,6 +2262,119 @@ def uninstall_schedule(dry_run: bool = False) -> str:
     if not dry_run:
         _sys(["crontab", "-"], stdin="\n".join(_crontab_without_ours()) + "\n")
     return "removed crontab entry"
+
+
+def _sync_argv(python: Path, script: Path) -> list[str]:
+    return [str(python), "-I", "-X", "utf8", str(script), "--sync-checkouts", "--log"]
+
+
+def sync_launchd_plist(python: Path, script: Path, minutes: int) -> str:
+    """The checkout sync as a launchd agent that starts every ``minutes``."""
+    args = "".join(
+        f"    <string>{escape(a)}</string>\n" for a in _sync_argv(python, script)
+    )
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>{SYNC_LABEL}</string>
+  <key>ProgramArguments</key>
+  <array>
+{args}  </array>
+  <key>StartInterval</key><integer>{minutes * 60}</integer>
+  <key>RunAtLoad</key><true/>
+  <key>StandardOutPath</key><string>/dev/null</string>
+  <key>StandardErrorPath</key><string>/dev/null</string>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string></dict>
+</dict>
+</plist>
+"""
+
+
+def sync_schtasks_argv(python: Path, script: Path, minutes: int) -> list[str]:
+    """The checkout sync as a Task Scheduler task that repeats every
+    ``minutes`` while the user is logged on (git reads their credentials)."""
+    return [
+        "schtasks", "/Create", "/F",
+        "/TN", SYNC_TASK,
+        "/SC", "MINUTE",
+        "/MO", str(minutes),
+        "/TR", subprocess.list2cmdline(_sync_argv(python, script)),
+    ]  # fmt: skip
+
+
+def sync_cron_line(python: Path, script: Path, minutes: int) -> str:
+    command = shlex.join(_sync_argv(python, script)).replace("%", r"\%")
+    return f"*/{minutes} * * * * {command}  # {SYNC_LABEL}"
+
+
+def install_sync_schedule(minutes: int, dry_run: bool = False) -> str:
+    """Register the checkout sync to run every ``minutes`` for this user."""
+    if not 1 <= minutes <= 1440:
+        raise SystemExit("--install-sync-schedule: minutes must be 1–1440")
+    python = _launcher_python()
+    script = _install_launcher(dry_run)
+    stamp = f"every {minutes} min via {python} {script} --sync-checkouts (log: {LOG_FILE})"
+    if sys.platform == "darwin":
+        plist = Path.home() / "Library" / "LaunchAgents" / f"{SYNC_LABEL}.plist"
+        if dry_run:
+            return f"launchd agent {plist} — {stamp}"
+        plist.parent.mkdir(parents=True, exist_ok=True)
+        domain = f"gui/{os.getuid()}"
+        _sys(["launchctl", "bootout", f"{domain}/{SYNC_LABEL}"])  # ok if not loaded
+        _replace_bytes(plist, sync_launchd_plist(python, script, minutes).encode("utf-8"))
+        cp = _sys(["launchctl", "bootstrap", domain, str(plist)])
+        if cp.returncode != 0:
+            raise SystemExit(f"launchctl bootstrap failed: {cp.stderr.strip() or cp.stdout.strip()}")
+        return f"launchd agent {plist} — {stamp}"
+    if WINDOWS:
+        if dry_run:
+            return f"Task Scheduler task {SYNC_TASK} — {stamp}"
+        cp = _sys(sync_schtasks_argv(python, script, minutes))
+        if cp.returncode != 0:
+            raise SystemExit(f"schtasks failed: {cp.stderr.strip() or cp.stdout.strip()}")
+        return f"Task Scheduler task {SYNC_TASK} — {stamp}"
+    line = sync_cron_line(python, script, minutes)
+    if dry_run:
+        return f"crontab entry — {stamp}\n  {line}"
+    current = _sys(["crontab", "-l"])
+    kept = [
+        ln
+        for ln in (current.stdout if current.returncode == 0 else "").splitlines()
+        if SYNC_LABEL not in ln
+    ]
+    cp = _sys(["crontab", "-"], stdin="\n".join(kept + [line]) + "\n")
+    if cp.returncode != 0:
+        raise SystemExit(f"crontab failed: {cp.stderr.strip()}")
+    return f"crontab entry — {stamp}"
+
+
+def uninstall_sync_schedule(dry_run: bool = False) -> str:
+    if sys.platform == "darwin":
+        plist = Path.home() / "Library" / "LaunchAgents" / f"{SYNC_LABEL}.plist"
+        if not dry_run:
+            _sys(["launchctl", "bootout", f"gui/{os.getuid()}/{SYNC_LABEL}"])
+            plist.unlink(missing_ok=True)
+        return f"removed launchd agent {plist}"
+    if WINDOWS:
+        if not dry_run:
+            _sys(["schtasks", "/Delete", "/F", "/TN", SYNC_TASK])
+        return f"removed Task Scheduler task {SYNC_TASK}"
+    if not dry_run:
+        current = _sys(["crontab", "-l"])
+        kept = [
+            ln
+            for ln in (current.stdout if current.returncode == 0 else "").splitlines()
+            if SYNC_LABEL not in ln
+        ]
+        _sys(["crontab", "-"], stdin="\n".join(kept) + "\n")
+    return "removed crontab entry"
+
+
+def sync_checkouts(paths: list[Path], dry_run: bool = False) -> list[str]:
+    """Fast-forward each checkout on its default branch (checkout_sync)."""
+    return [o.line() for o in _support("checkout_sync").sync_all(paths, dry_run=dry_run)]
 
 
 class _Tee:
@@ -2840,6 +2959,25 @@ def _parser() -> argparse.ArgumentParser:
         help="also register a daily unattended run at HH:MM (default 09:00) for this user",
     )
     ap.add_argument("--uninstall-schedule", action="store_true", help="remove the daily run")
+    ap.add_argument(
+        "--sync-checkouts",
+        action="store_true",
+        help=(
+            "fast-forward each registered checkout that sits on its default branch to "
+            "origin, when nothing local would be lost; no package upgrades"
+        ),
+    )
+    ap.add_argument(
+        "--install-sync-schedule",
+        nargs="?",
+        type=int,
+        const=SYNC_MINUTES,
+        metavar="MINUTES",
+        help=f"also register --sync-checkouts every MINUTES (default {SYNC_MINUTES})",
+    )
+    ap.add_argument(
+        "--uninstall-sync-schedule", action="store_true", help="remove the checkout sync"
+    )
     ap.add_argument("--log", action="store_true", help=f"also append output to {LOG_FILE}")
     ap.add_argument(
         "--no-parity",
@@ -2935,7 +3073,13 @@ def _main(argv: Optional[list[str]] = None) -> int:
         log_fh = _open_log()
         sys.stdout = _Tee(sys.__stdout__, log_fh)
         sys.stderr = _Tee(sys.__stderr__, log_fh)
-    if should_self_update() and not {"-h", "--help", "--check", "--sync-only"} & set(raw):
+    if should_self_update() and not {
+        "-h",
+        "--help",
+        "--check",
+        "--sync-only",
+        "--sync-checkouts",
+    } & set(raw):
         if pre.dry_run:
             print("self-update: skipped (dry run); this is the local copy's plan")
         else:
@@ -2970,6 +3114,23 @@ def _main(argv: Optional[list[str]] = None) -> int:
 
     if args.context_source and not args.context_sync:
         raise SystemExit("--context-source needs --context-sync OWNER/REPO")
+    if args.sync_checkouts:
+        # Its own frequent schedule: only git fast-forwards, no upgrades.
+        paths = [Path(p) for p in args.projects] or [
+            e.path for e in read_registry(args.projects_file)
+        ]
+        print("Checkouts:")
+        for line in sync_checkouts(paths, dry_run=args.dry_run):
+            print(f"  {line}")
+        return 0
+    if args.uninstall_sync_schedule:
+        print("Checkout sync:", uninstall_sync_schedule(dry_run=args.dry_run))
+        if not args.projects and not args.add and args.install_sync_schedule is None:
+            return 0
+    if args.install_sync_schedule is not None:
+        print("Checkout sync:", install_sync_schedule(args.install_sync_schedule, args.dry_run))
+        if not args.projects and not args.add:
+            return 0
     # A pre-companion launcher (for example 0.2.65) refreshed only this module
     # before handing over. Repair the complete installed release on this first
     # full run, so the next offline --sync-only does not need another upgrade.
@@ -3112,6 +3273,12 @@ def _main(argv: Optional[list[str]] = None) -> int:
         )
         for line in lines:
             print(f"  {line}")
+
+    # After the refresh, which may have merged roadmap PRs: bring each checkout
+    # on its default branch up to origin so the editor shows them.
+    print("\nCheckouts:")
+    for line in sync_checkouts([e.path for e in entries], dry_run=args.dry_run):
+        print(f"  {line}")
 
     peers_ok = upgrade_peers(args)
     failed = [r for r in results if not r.ok]

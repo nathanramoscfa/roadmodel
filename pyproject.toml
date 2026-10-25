@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "roadmodel"
-version = "0.2.95"
+version = "0.2.96"
 description = "BYO-key CLI that recommends the right AI model, platform, and settings for a prompt."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -138,6 +138,7 @@ include = [
     "scripts/upgrade_fleet.py",
     "scripts/worktree_memory.py",
     "scripts/updater_lock.py",
+    "scripts/checkout_sync.py",
     "docs/claude-commands/roadmap-project.md",
     "docs/claude-commands/roadmap-phase.md",
     "docs/claude-commands/roadmap-step.md",
