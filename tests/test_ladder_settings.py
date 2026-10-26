@@ -356,6 +356,48 @@ def test_three_funded_makers_give_each_rank_its_own_maker() -> None:
     )
 
 
+def test_a_left_out_maker_stays_out_with_its_older_versions() -> None:
+    """With a maker's latest model off the table the pool takes its older
+    version back (GPT-6 Sol under GPT-6.1 Sol), so leaving out a maker by
+    the pool's models let it return: Balanced ranked Opus 5.5, GPT-6.1 Sol,
+    then Opus 5.5 one level lower, with Google funded. A maker is left out
+    with every catalog model it makes."""
+    catalog = {
+        **GOOGLE,
+        "models": [
+            *(
+                {**m, "id": "luna-2", "name": "Luna 2"} if m["id"] == "luna" else m
+                for m in GOOGLE["models"]
+            ),
+            _model("luna-1", "Luna 1", 0.25, 1.25, "A", "openai"),
+        ],
+        "access_methods": [
+            {**a, "supports_models": ["lite", "luna-2", "luna-1", "astra"]}
+            if a["id"] == "codex-cli"
+            else a
+            for a in GOOGLE["access_methods"]
+        ],
+    }
+    text = _context().replace(
+        "| ChatGPT Pro ($100) | $100 | OpenAI | Codex |",
+        "| ChatGPT Pro ($100) | $100 | OpenAI | Codex |\n"
+        "| Google AI Pro ($20) | $20 | Google | Antigravity |",
+    )
+    bench = {
+        **{k: v for k, v in BENCH.items() if k != "luna"},
+        "luna-2": BENCH["luna"],
+        "luna-1": _aa(39),
+        "argon": _aa(54),
+    }
+    got = scoring.settings_ladder(PLANNING_MEDIUM, text, catalog=catalog, benchmarks=bench)
+    assert got is not None
+    makers = {m["id"]: m["provider"] for m in catalog["models"]}
+    for col in got["columns"].values():
+        options = _options(col)
+        assert all(o is not None and not o["stepped_down"] for o in options), col
+        assert len({makers[o["model_id"]] for o in options}) == 3, col
+
+
 def test_too_few_makers_step_the_pick_down_a_level() -> None:
     """With two makers the backup, and with one the runner-up and backup, are
     the Pick's own model one and two levels lower (↓): on a tight pool a

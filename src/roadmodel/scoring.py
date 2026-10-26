@@ -2519,10 +2519,14 @@ def settings_ladder(
     lad = read([])
     if lad is None:
         return None
-    # Every pool model, by its maker: a rank leaves out the makers above it.
+    # Every catalog model, by its maker: a rank leaves out the makers above
+    # it. The whole catalog, not the pool: with GPT-6.1 Sol off the table the
+    # pool takes GPT-6 Sol back, the same maker.
     by_maker: dict[str, set[str]] = {}
-    for c in lad.settings:
-        by_maker.setdefault(c.provider, set()).add(c.model_id)
+    for m in cat.get("models", []):
+        mid = str(m.get("id", ""))
+        maker = _cost.model_provider(mid, cat) or str(m.get("provider", "unknown"))
+        by_maker.setdefault(maker, set()).add(mid)
 
     def level_of(tier: str, r: Rung) -> str:
         return _deepest_level(r.candidate, cat) if phase and tier == "quality" else r.level
