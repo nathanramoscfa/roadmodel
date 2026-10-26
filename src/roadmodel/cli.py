@@ -844,12 +844,19 @@ def rerank_command(
                     )
                     continue
                 key = matches[0]
+                guessed = len(matches) > 1
+            else:
+                guessed = False
             got = ladder_for(key, block.phase)
             if got is None:
                 counts["unresolved"] += 1
                 unresolved.append(f"{path}: {block.section or 'ladder'} — no ladder for {key}")
                 continue
             md = str(got["markdown"])
+            if guessed:
+                # Several classifications rank this ladder alike: the table is
+                # right, but naming one of them in the note would be a guess.
+                md = _drop_ranked_for(md)
             if block.conversation and block.conversation != "New":
                 md = md.replace(
                     "**Conversation:** New", f"**Conversation:** {block.conversation}", 1
@@ -883,6 +890,18 @@ def rerank_command(
         click.echo(f"  unresolved {line}; pass --hint or run /roadmap-refresh")
     if check and pending:
         raise SystemExit(1)
+
+
+def _drop_ranked_for(markdown: str) -> str:
+    """``markdown`` with its note's "Ranked for …" sentence removed and the
+    note re-wrapped at 80 columns."""
+    parts = markdown.split("\n\n")
+    for i, part in enumerate(parts):
+        flat = " ".join(part.split())
+        if flat.startswith("Ranked for "):
+            rest = re.sub(r"^Ranked for [^.]*\.\s*", "", flat)
+            parts[i] = textwrap.fill(rest, width=80, break_long_words=False)
+    return "\n\n".join(p for p in parts if p)
 
 
 def _phase_written(directory: Path) -> Callable[[str], bool]:

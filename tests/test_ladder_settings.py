@@ -788,6 +788,83 @@ def test_relayout_command_prices_from_the_catalog_and_checks(tmp_path: Path) -> 
     assert again.exit_code == 0 and "0 converted, 1 kept" in again.output
 
 
+def _rerank(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, text: str, *args: str
+) -> tuple[Any, str]:
+    monkeypatch.setattr(scoring._cost, "_load_catalog", lambda: CATALOG)
+    monkeypatch.setattr(scoring, "_load_benchmarks", lambda: BENCH)
+    ctx = tmp_path / "user-context.md"
+    ctx.write_text(_context(), encoding="utf-8")
+    roadmap = tmp_path / "phase09-roadmap.md"
+    roadmap.write_text(text, encoding="utf-8")
+    result = CliRunner().invoke(cli, ["rerank", *args, "--user-context", str(ctx), str(roadmap)])
+    return result, roadmap.read_text(encoding="utf-8")
+
+
+def _stale(markdown: str) -> str:
+    """``markdown`` as an older release ranked it: its Runner-up and Backup
+    groups' Model rows swapped."""
+    lines = markdown.split("\n")
+    rows = [i for i, ln in enumerate(lines) if ln.startswith("| " + ladder_layout.INDENT + "Model")]
+    lines[rows[1]], lines[rows[2]] = lines[rows[2]], lines[rows[1]]
+    return "\n".join(lines)
+
+
+def _step(n: int, status: str, ladder: str) -> str:
+    return f"## Step {n} — Work\n\n**Status:** {status}\n\n{ladder}\n\n**Model rationale:** kept.\n"
+
+
+def test_rerank_gives_a_not_started_steps_ladder_this_releases_ranks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """2026-10-25: Runner-up and Backup changed meaning (three makers). The
+    note names the classification, so the ladder is re-ranked without anyone
+    re-reading the step; a Complete step keeps the ladder that ran."""
+    fresh = _settings()["markdown"]
+    doc = (
+        _step(1, "Complete — PR #1", _stale(fresh)) + "\n" + _step(2, "Not started", _stale(fresh))
+    )
+    result, after = _rerank(tmp_path, monkeypatch, doc)
+    assert result.exit_code == 0, result.output
+    assert "1 re-ranked, 0 unchanged, 1 kept, 0 unresolved" in result.output
+    done, todo = after.split("## Step 2")
+    assert _stale(fresh) in done
+    assert fresh in todo
+    assert "(rerank): each column's Runner-up and Backup now come from makers other" in todo
+    assert todo.endswith("**Model rationale:** kept.\n")
+    again, same = _rerank(tmp_path, monkeypatch, after, "--check")
+    assert again.exit_code == 0 and "0 re-ranked, 1 unchanged" in again.output
+    assert same == after
+
+
+def test_rerank_infers_a_classification_from_the_picks_or_takes_a_hint(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A 0.2.95 table names no classification. Where only one ranking fits
+    its Picks it is re-ranked; where several classifications rank it alike,
+    the note names none of them; a --hint names one; Picks no classification
+    reproduces are reported and left."""
+    fresh = _settings()["markdown"]
+    unnamed = _stale(fresh).replace("Ranked for planning, medium complexity. ", "")
+    result, after = _rerank(tmp_path, monkeypatch, _step(3, "Not started", unnamed))
+    assert result.exit_code == 0 and "1 re-ranked" in result.output, result.output
+    # The fixture's letters are alike in every category: the ranks match,
+    # but no single classification can be named.
+    assert "Ranked for" not in after
+    result, after = _rerank(
+        tmp_path,
+        monkeypatch,
+        _step(3, "Not started", unnamed),
+        "--hint",
+        "phase09-roadmap.md:Step 3=planning/medium",
+    )
+    assert "Ranked for planning, medium complexity." in " ".join(after.split())
+    gone = unnamed.replace("**Opus**", "**Gone**", 1).replace("**Astra**", "**Gone**", 1)
+    result, after = _rerank(tmp_path, monkeypatch, _step(4, "Not started", gone), "--check")
+    assert "0 re-ranked, 0 unchanged, 0 kept, 1 unresolved" in result.output
+    assert "Step 4 — no classification reproduces its Picks" in result.output
+
+
 def _selector(models: list[str], methods: dict[str, list[str]]) -> str:
     els = "\n".join(f'<model id="{m}" name="{m}" input-price-per-1m="$1.00"/>' for m in models)
     meths = "\n".join(
