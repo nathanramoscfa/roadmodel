@@ -71,7 +71,7 @@ own model> on <this surface>.`
   answer.
 - A ladder (Cost / Balanced / Quality columns): each column ranks a
   Pick, a Runner-up and a Backup — from roadmodel 0.2.95 a bold group
-  row each, over indented Model / Platform / Level / AA / Price rows
+  label each, beside its Model / Platform / Level / AA / Price rows
   (0.2.94 wrote them as `- Pick:` lists, 0.2.93 as `1 · Pick` rows,
   and older ladders Model / Backup rows with no Runner-up) — and its
   **Runs:** line names the

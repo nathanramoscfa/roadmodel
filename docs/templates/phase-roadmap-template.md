@@ -759,8 +759,9 @@ that owns it.}}
      step's classification (MCP tool: `roadmap_settings`).
      Layout (roadmodel 0.2.95 on): one table whose columns
      are Cost, Balanced and Quality (the column the **Runs:**
-     line names marked ✓). Each rank is a bold group row —
-     **Pick**, **Runner‑up**, **Backup** — over indented
+     line names marked ✓). Each rank — **Pick**, **Runner‑up**,
+     **Backup** — names the first of its rows from a column of
+     its own (blank below it, no `&nbsp;`), beside
      field rows: Model (bold); Platform; Level, the bare
      level the platform's own dial sets (`High` is
      Intelligence High on Codex and Effort High on Claude
@@ -891,26 +892,23 @@ step's classification, pasted as printed. The three table
 shapes after it are the fallback where roadmodel cannot be
 reached}}):
 
-|                                  | Cost                  | Balanced ✓            | Quality               |
-| -------------------------------- | --------------------- | --------------------- | --------------------- |
-| **Pick**                         |                       |                       |                       |
-| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **{{Model}}**         | **{{Model}}**         | **{{Model}}**         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Level    | {{Level}}             | {{Level}}             | {{Level}}             |
-| &nbsp;&nbsp;&nbsp;&nbsp;AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
-| **Runner‑up**                    |                       |                       |                       |
-| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **{{Model}}**         | **{{Model}}**         | **{{Model}}**         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Level    | {{Level}}             | {{Level}}             | {{Level}}             |
-| &nbsp;&nbsp;&nbsp;&nbsp;AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
-| **Backup**                       |                       |                       |                       |
-| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **{{Model or none}}** | **{{Model or none}}** | **{{Model or none}}** |
-| &nbsp;&nbsp;&nbsp;&nbsp;Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Level    | {{Level}}             | {{Level}}             | {{Level}}             |
-| &nbsp;&nbsp;&nbsp;&nbsp;AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
+|               |          | Cost                  | Balanced ✓            | Quality               |
+| ------------- | -------- | --------------------- | --------------------- | --------------------- |
+| **Pick**      | Model    | **{{Model}}**         | **{{Model}}**         | **{{Model}}**         |
+|               | Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
+|               | Level    | {{Level}}             | {{Level}}             | {{Level}}             |
+|               | AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
+|               | Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
+| **Runner‑up** | Model    | **{{Model}}**         | **{{Model}}**         | **{{Model}}**         |
+|               | Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
+|               | Level    | {{Level}}             | {{Level}}             | {{Level}}             |
+|               | AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
+|               | Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
+| **Backup**    | Model    | **{{Model or none}}** | **{{Model or none}}** | **{{Model or none}}** |
+|               | Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
+|               | Level    | {{Level}}             | {{Level}}             | {{Level}}             |
+|               | AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
+|               | Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
 
 ✓ runs by default. Price: list $ per 1M tokens (3 in : 1 out) × the tokens the
 model uses at that level.
@@ -1333,26 +1331,23 @@ printed with its **Runs:** line. Where roadmodel cannot be
 reached, the single-column variant that matches PLATFORM,
 carrying ONLY the rows that platform's panel exposes.}}
 
-|                                  | Cost                  | Balanced ✓            | Quality               |
-| -------------------------------- | --------------------- | --------------------- | --------------------- |
-| **Pick**                         |                       |                       |                       |
-| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **{{Model}}**         | **{{Model}}**         | **{{Model}}**         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Level    | {{Level}}             | {{Level}}             | {{Level}}             |
-| &nbsp;&nbsp;&nbsp;&nbsp;AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
-| **Runner‑up**                    |                       |                       |                       |
-| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **{{Model}}**         | **{{Model}}**         | **{{Model}}**         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Level    | {{Level}}             | {{Level}}             | {{Level}}             |
-| &nbsp;&nbsp;&nbsp;&nbsp;AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
-| **Backup**                       |                       |                       |                       |
-| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **{{Model or none}}** | **{{Model or none}}** | **{{Model or none}}** |
-| &nbsp;&nbsp;&nbsp;&nbsp;Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Level    | {{Level}}             | {{Level}}             | {{Level}}             |
-| &nbsp;&nbsp;&nbsp;&nbsp;AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
+|               |          | Cost                  | Balanced ✓            | Quality               |
+| ------------- | -------- | --------------------- | --------------------- | --------------------- |
+| **Pick**      | Model    | **{{Model}}**         | **{{Model}}**         | **{{Model}}**         |
+|               | Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
+|               | Level    | {{Level}}             | {{Level}}             | {{Level}}             |
+|               | AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
+|               | Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
+| **Runner‑up** | Model    | **{{Model}}**         | **{{Model}}**         | **{{Model}}**         |
+|               | Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
+|               | Level    | {{Level}}             | {{Level}}             | {{Level}}             |
+|               | AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
+|               | Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
+| **Backup**    | Model    | **{{Model or none}}** | **{{Model or none}}** | **{{Model or none}}** |
+|               | Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
+|               | Level    | {{Level}}             | {{Level}}             | {{Level}}             |
+|               | AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
+|               | Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
 
 ✓ runs by default. Price: list $ per 1M tokens (3 in : 1 out) × the tokens the
 model uses at that level.
@@ -1486,26 +1481,23 @@ this step's classification, pasted as printed with its
 **Runs:** line; where roadmodel cannot be reached, the
 single-column variant that matches PLATFORM.}}
 
-|                                  | Cost                  | Balanced ✓            | Quality               |
-| -------------------------------- | --------------------- | --------------------- | --------------------- |
-| **Pick**                         |                       |                       |                       |
-| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **{{Model}}**         | **{{Model}}**         | **{{Model}}**         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Level    | {{Level}}             | {{Level}}             | {{Level}}             |
-| &nbsp;&nbsp;&nbsp;&nbsp;AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
-| **Runner‑up**                    |                       |                       |                       |
-| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **{{Model}}**         | **{{Model}}**         | **{{Model}}**         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Level    | {{Level}}             | {{Level}}             | {{Level}}             |
-| &nbsp;&nbsp;&nbsp;&nbsp;AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
-| **Backup**                       |                       |                       |                       |
-| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **{{Model or none}}** | **{{Model or none}}** | **{{Model or none}}** |
-| &nbsp;&nbsp;&nbsp;&nbsp;Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Level    | {{Level}}             | {{Level}}             | {{Level}}             |
-| &nbsp;&nbsp;&nbsp;&nbsp;AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
+|               |          | Cost                  | Balanced ✓            | Quality               |
+| ------------- | -------- | --------------------- | --------------------- | --------------------- |
+| **Pick**      | Model    | **{{Model}}**         | **{{Model}}**         | **{{Model}}**         |
+|               | Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
+|               | Level    | {{Level}}             | {{Level}}             | {{Level}}             |
+|               | AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
+|               | Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
+| **Runner‑up** | Model    | **{{Model}}**         | **{{Model}}**         | **{{Model}}**         |
+|               | Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
+|               | Level    | {{Level}}             | {{Level}}             | {{Level}}             |
+|               | AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
+|               | Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
+| **Backup**    | Model    | **{{Model or none}}** | **{{Model or none}}** | **{{Model or none}}** |
+|               | Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
+|               | Level    | {{Level}}             | {{Level}}             | {{Level}}             |
+|               | AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
+|               | Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
 
 ✓ runs by default. Price: list $ per 1M tokens (3 in : 1 out) × the tokens the
 model uses at that level.

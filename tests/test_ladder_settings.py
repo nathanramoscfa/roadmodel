@@ -143,23 +143,21 @@ def _cells(line: str) -> list[str]:
 
 
 def _tabled(markdown: str) -> tuple[list[str], dict[str, dict[str, dict[str, str]]]]:
-    """The ladder table's header and its cells by tier, rank and field (the
-    field label with its `&nbsp;` indent removed)."""
+    """The ladder table's header and its cells by tier, rank and field: the
+    rank in its own column on its first row, the field names beside it."""
     lines = [ln for ln in markdown.splitlines() if ln.startswith("|")]
     head = _cells(lines[0])
     out: dict[str, dict[str, dict[str, str]]] = {t: {} for t in scoring.LADDER_TIERS}
     rank = ""
     for line in lines[2:]:
-        label, *cells = _cells(line)
-        if label.startswith("**"):
-            rank = label.strip("*")
-            assert cells == ["", "", ""], line
+        rank_cell, field, *cells = _cells(line)
+        if rank_cell:
+            rank = rank_cell.strip("*")
+            assert rank_cell == f"**{rank}**" and field == "Model", line
             for t in scoring.LADDER_TIERS:
                 out[t][rank] = {}
-            continue
-        assert label.startswith(ladder_layout.INDENT), line
         for t, cell in zip(scoring.LADDER_TIERS, cells, strict=True):
-            out[t][rank][label.removeprefix(ladder_layout.INDENT)] = cell
+            out[t][rank][field] = cell
     return head, out
 
 
@@ -213,7 +211,7 @@ def test_each_column_ranks_its_pick_runner_up_and_backup() -> None:
         if backup is not None:
             assert backup["stepped_down"] and backup["model_id"] == col["model_id"]
     head, cells = _tabled(got["markdown"])
-    assert head == ["", "Cost", "Balanced ✓", "Quality"]
+    assert head == ["", "", "Cost", "Balanced ✓", "Quality"]
     paragraphs = got["markdown"].split("\n\n")
     assert paragraphs[-2] == "**Conversation:** New"
     for tier in scoring.LADDER_TIERS:
@@ -232,12 +230,12 @@ def test_the_table_groups_each_rank_over_indented_field_rows() -> None:
     under the table wraps at 80."""
     md = _settings()["markdown"]
     rows = [_cells(ln) for ln in md.splitlines() if ln.startswith("|")][2:]
-    labels = [r[0] for r in rows]
-    assert labels == [
-        label
-        for rank in RANKS
-        for label in (f"**{rank}**", *(ladder_layout.INDENT + f for f in FIELDS))
+    assert [(r[0], r[1]) for r in rows] == [
+        (f"**{rank}**" if field == "Model" else "", field) for rank in RANKS for field in FIELDS
     ]
+    # 2026-10-25: an `&nbsp;` indent drew a blob in some viewers; the rank's
+    # own column indents the fields with ordinary cells.
+    assert "&nbsp;" not in md and "\u00a0" not in md
     assert "Thinking" not in md and "<br>" not in md
     assert not any(c.startswith(("Effort ", "Intelligence ")) for r in rows for c in r[1:])
     prose = [ln for ln in md.splitlines() if not ln.startswith("|")]
@@ -544,7 +542,7 @@ def test_the_step_runs_the_column_its_budget_priority_names(budget: str, runs: s
     got = _settings(scoring.Task("planning", "medium", budget=budget))
     assert got["runs"] == runs
     head, _ = _tabled(got["markdown"])
-    assert head[1:] == [t.capitalize() + (" ✓" if t == runs else "") for t in scoring.LADDER_TIERS]
+    assert head[2:] == [t.capitalize() + (" ✓" if t == runs else "") for t in scoring.LADDER_TIERS]
     runs_line = got["markdown"].split("\n\n")[-1]
     assert runs_line.startswith(f"**Runs:** {runs.capitalize()} — ")
     assert scoring.RUN_RULE in " ".join(runs_line.split())
@@ -588,7 +586,7 @@ def test_ladder_prints_the_table_and_its_runs_line(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     out = _cli(tmp_path, monkeypatch, "--category", "planning", "--complexity", "medium")
-    assert _cells(out.splitlines()[0]) == ["", "Cost", "Balanced ✓", "Quality"]
+    assert _cells(out.splitlines()[0]) == ["", "", "Cost", "Balanced ✓", "Quality"]
     assert "**Runs:** Balanced — " in out
     payload = json.loads(
         _cli(
@@ -692,7 +690,7 @@ def test_relayout_turns_a_ranked_table_into_the_ladder_table() -> None:
     new, count, kept = ladder_layout.relayout(RANKED_TABLE, price=_fake_price)
     assert (count, kept) == (1, 0)
     head, cells = _tabled(new)
-    assert head == ["", "Cost", "Balanced ✓", "Quality"]
+    assert head == ["", "", "Cost", "Balanced ✓", "Quality"]
     assert cells["cost"]["Pick"] == {
         "Model": "**GPT-6.1 Sol**",
         "Platform": "Codex",
@@ -741,7 +739,7 @@ def test_relayout_reads_the_single_pick_ladders_older_releases_wrote() -> None:
     new, count, _ = ladder_layout.relayout(split, price=_fake_price)
     assert count == 1
     head, cells = _tabled(new)
-    assert head == ["", "Cost", "Balanced", "Quality ✓"]
+    assert head == ["", "", "Cost", "Balanced", "Quality ✓"]
     assert list(cells["cost"]) == ["Pick", "Backup"]
     assert cells["cost"]["Backup"] == {
         "Model": "**Sonnet 5.5**",
@@ -847,7 +845,7 @@ def _stale(markdown: str) -> str:
     """``markdown`` as an older release ranked it: its Runner-up and Backup
     groups' Model rows swapped."""
     lines = markdown.split("\n")
-    rows = [i for i, ln in enumerate(lines) if ln.startswith("| " + ladder_layout.INDENT + "Model")]
+    rows = [i for i, ln in enumerate(lines) if ln.startswith("|") and _cells(ln)[1:2] == ["Model"]]
     lines[rows[1]], lines[rows[2]] = lines[rows[2]], lines[rows[1]]
     return "\n".join(lines)
 
@@ -938,3 +936,66 @@ def test_a_benched_newer_version_keeps_the_older_one_for_engines() -> None:
     text = _selector(["gpt-6-sol", "gpt-6.1-sol"], {"codex-cli": ["gpt-6-sol", "gpt-6.1-sol"]})
     out = recommend.selector_for_engine(text, ["gpt-6.1-sol"])
     assert 'supports-models="gpt-6-sol,gpt-6.1-sol"' in out
+
+
+# A ladder as 0.2.95–0.2.97 printed it: each rank on a row of its own over
+# fields indented with `&nbsp;`, which some viewers draw as a blob.
+INDENTED = """\
+## Step 1 — Done ✅
+
+**Status:** Complete — PR #1
+
+|                                  | Cost         | Balanced ✓   | Quality      |
+| -------------------------------- | ------------ | ------------ | ------------ |
+| **Pick**                         |              |              |              |
+| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **Sonnet**   | **Opus**     | **Opus**     |
+| &nbsp;&nbsp;&nbsp;&nbsp;Platform | Claude Code  | Claude Code  | Claude Code  |
+| &nbsp;&nbsp;&nbsp;&nbsp;Level    | High         | High         | XHigh        |
+| &nbsp;&nbsp;&nbsp;&nbsp;AA       | 55           | 58           | not measured |
+| &nbsp;&nbsp;&nbsp;&nbsp;Price    | $4.00/1M     | $8.00/1M*    | $12.80/1M    |
+| **Backup**                       |              |              |              |
+| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **Luna**     | none         | **Opus**     |
+| &nbsp;&nbsp;&nbsp;&nbsp;Platform | Codex        | —            | Claude Code  |
+| &nbsp;&nbsp;&nbsp;&nbsp;Level    | Medium       | —            | High ↓       |
+| &nbsp;&nbsp;&nbsp;&nbsp;Price    | $0.30/1M     | —            | $8.00/1M     |
+
+Ranked for planning, medium complexity. ✓ runs by default. ↓ the Pick one
+level lower: no other maker is funded, and a lower level uses less of a tight
+pool. Price: list $ per 1M tokens (3 in : 1 out) × the tokens the model uses at
+that level; * token use not yet measured, a typical model's at that level
+assumed.
+
+**Conversation:** Continue
+
+**Runs:** Balanced — the user-context's Budget priority is `balanced`.
+
+> Ran 2026-10-20: Balanced Pick — Opus · High.
+"""
+
+
+def test_relayout_moves_an_indented_ladder_to_the_rank_column_even_when_complete() -> None:
+    """The `&nbsp;` indent drew a blob in some viewers (2026-10-25). Its fix
+    changes no value, so it reaches a Complete step too: every cell, the ↓
+    and `*` marks, the note's classification and the Conversation value are
+    kept, and the Runs and `> Ran` lines stay below it."""
+    new, count, kept = ladder_layout.relayout(INDENTED)
+    assert (count, kept) == (1, 0)
+    assert "&nbsp;" not in new
+    head, cells = _tabled(new)
+    assert head == ["", "", "Cost", "Balanced ✓", "Quality"]
+    assert cells["quality"]["Pick"] == {
+        "Model": "**Opus**",
+        "Platform": "Claude Code",
+        "Level": "XHigh",
+        "AA": "not measured",
+        "Price": "$12.80/1M",
+    }
+    assert cells["balanced"]["Pick"]["Price"] == "$8.00/1M*"
+    assert cells["quality"]["Backup"]["Level"] == "High ↓"
+    assert cells["balanced"]["Backup"]["Model"] == "none"
+    assert "AA" not in cells["cost"]["Backup"]
+    flat = " ".join(new.split())
+    assert "Ranked for planning, medium complexity. ✓ runs by default. ↓ the Pick" in flat
+    assert "\n**Conversation:** Continue\n\n**Runs:** Balanced" in new
+    assert new.endswith("> Ran 2026-10-20: Balanced Pick — Opus · High.\n")
+    assert ladder_layout.relayout(new) == (new, 0, 0)

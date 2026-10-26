@@ -205,8 +205,8 @@ complexity, novel or not; its Model rationale names them), then:
 - Every ladder, a step's Settings and a phase's Phase roadmap settings
   alike, takes the table layout (roadmodel 0.2.95 on), as `roadmodel
   ladder` prints it: Cost, Balanced and Quality columns (the one its
-  **Runs:** line names marked ✓), each rank a bold group row (**Pick**,
-  **Runner‑up**, **Backup**) over indented Model / Platform / Level / AA /
+  **Runs:** line names marked ✓), each rank (**Pick**, **Runner‑up**,
+  **Backup**) in a column of its own beside its Model / Platform / Level / AA /
   Price rows — Level the bare level of the platform's own dial, AA its AA
   Intelligence Index there (`not measured` where AA has no row), Price its
   blended list price per 1M tokens times the tokens it uses at that level —
@@ -220,8 +220,12 @@ complexity, novel or not; its Model rationale names them), then:
   reaches only steps that read `Not started` and phases whose roadmap does
   not exist: a Complete step's ladder is the record of what ran, an `In
   progress` step's is what an agent is running, and a written phase's
-  records what wrote its roadmap, so those keep their layout. That is a
-  layout fix, not a new pick, and takes no `Settings updated` line. Then
+  records what wrote its roadmap, so those keep their layout. One
+  exception reaches every section: a 0.2.95–0.2.97 table, whose fields are
+  indented with `&nbsp;` (some viewers draw each as a highlighted blob),
+  takes the rank column wherever it stands, Complete steps included, every
+  cell kept. That is a layout fix, not a new pick, and takes no `Settings
+  updated` line. Then
   run `roadmodel rerank <every roadmap file>` (roadmodel 0.2.97 on): it
   gives each of those ladder tables the ranks this release computes, so a
   change to how roadmodel ranks reaches every step not yet run. It reads
@@ -238,7 +242,8 @@ complexity, novel or not; its Model rationale names them), then:
   unless the Pick of the column its **Runs:** line names changed. Without
   roadmodel, leave every ladder as it is.
 - A Complete step's ladder keeps its values and its layout (see below),
-  with its `> Ran` and `> Settings updated` lines beneath it.
+  with its `> Ran` and `> Settings updated` lines beneath it, except the
+  `&nbsp;`-indent display fix above.
 - Keep the step's selection block in the Model selection blocks equal
   to the column its **Runs:** line names (its `BACKUP:` line to that
   column's Backup), and its Summary Table row's Model to that column's

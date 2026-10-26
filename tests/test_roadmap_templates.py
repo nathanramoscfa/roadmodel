@@ -403,12 +403,9 @@ def test_every_command_ships_to_every_agent() -> None:
 # A ladder table's row labels (roadmodel 0.2.95 on): each rank a bold group
 # row over its indented Model / Platform / Level / AA / Price rows.
 LADDER_SHAPE = [
-    label
+    (f"**{rank}**" if field == "Model" else "", field)
     for rank in ("Pick", "Runner\u2011up", "Backup")
-    for label in (
-        f"**{rank}**",
-        *("&nbsp;" * 4 + f for f in ("Model", "Platform", "Level", "AA", "Price")),
-    )
+    for field in ("Model", "Platform", "Level", "AA", "Price")
 ]
 
 
@@ -418,7 +415,7 @@ def _ladders(text: str) -> list[list[str]]:
     lines = text.splitlines()
     out = []
     for i, line in enumerate(lines):
-        if re.match(r"^\|\s*\|\s*Cost\b", line):
+        if re.match(r"^\|\s*\|\s*\|\s*Cost\b", line):
             j = i
             while j < len(lines) and lines[j].startswith("|"):
                 j += 1
@@ -426,8 +423,12 @@ def _ladders(text: str) -> list[list[str]]:
     return out
 
 
-def _ladder_shape(ladder: list[str]) -> list[str]:
-    return [ln.strip("|").split("|")[0].strip() for ln in ladder[2:]]
+def _ladder_shape(ladder: list[str]) -> list[tuple[str, str]]:
+    """Each body row's rank cell and field name: the rank on its first row,
+    blank under it (2026-10-25: no `&nbsp;` indent, which some viewers drew
+    as a blob)."""
+    rows = [[c.strip() for c in ln.strip().strip("|").split("|")] for ln in ladder[2:]]
+    return [(r[0], r[1]) for r in rows]
 
 
 def test_every_settings_table_carries_a_backup_row() -> None:
@@ -448,7 +449,10 @@ def test_every_settings_table_carries_a_backup_row() -> None:
         assert _ladder_shape(ladder) == LADDER_SHAPE, ladder
     flat = re.sub(r"\s+", " ", PHASE.read_text())
     assert "Every table carries Model / Backup / Platform / Conversation" in flat
-    assert "Each rank is a bold group row — **Pick**, **Runner‑up**, **Backup** — over" in flat
+    assert (
+        "Each rank — **Pick**, **Runner‑up**, **Backup** — names the first of its rows from a "
+        "column of its own (blank below it, no `&nbsp;`)"
+    ) in flat
     assert "There is no Thinking row: Thinking is always On" in flat
 
 

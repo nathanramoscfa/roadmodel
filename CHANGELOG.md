@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.98] — 2026-10-25
+
+- **A ladder's ranks sit in a column of their own.** 0.2.95–0.2.97 indented each field under its rank with four `&nbsp;`. Some Markdown viewers draw a non-breaking space as a highlighted blob, so the first column showed grey boxes and broke the field names onto a second line. Each rank (**Pick**, **Runner‑up**, **Backup**) now names the first of its rows from its own column, the cells below it are left blank, and the field names stand beside it. Only ordinary table cells are used, so the table reads the same in VS Code, Cursor, GitHub and any other viewer, and it is three rows shorter.
+- **`roadmodel relayout` converts the indented tables wherever they stand.** Every cell is kept, including the ↓ and `*` marks, along with the note's classification and the Conversation value. Because no value changes, it reaches Complete steps too, unlike the older-layout conversions. `roadmodel rerank` reads both table layouts.
+
 ## [0.2.97] — 2026-10-25
 
 - **Each column of a Settings ladder ranks three makers.** The Runner-up was the column's next model with only the Pick's series removed, so Quality could rank Opus 5.5 then Fable 5.1. Both draw the same Claude Max pool, so on a tight pool the Runner-up was no fallback. Now:

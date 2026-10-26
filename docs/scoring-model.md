@@ -332,7 +332,7 @@ no dial for the model, since the level the operator sets elsewhere may not be
 the one AA ran) and its price there (`ladder_price`: the blended list price
 times the tokens the model draws at that level, the frontier's price axis).
 The ladder prints one table (`roadmodel.ladder_layout`): Cost / Balanced /
-Quality columns, each rank a bold group row over indented Model / Platform /
+Quality columns, each rank in a column of its own beside its Model / Platform /
 Level / AA / Price rows, chosen by the operator for a Markdown preview
 400–520px wide. `roadmodel relayout` rewrites the ladders 0.2.86–0.2.94 wrote
 under steps not started and phases not written, every value kept and Price

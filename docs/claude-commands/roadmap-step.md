@@ -110,8 +110,8 @@ the dials and make sure it is set.
 - **Ladders** (Cost / Balanced / Quality columns, roadmodel 0.2.86
   on) carry every column the step may run, so pick one before the checks
   below. From roadmodel 0.2.95 a ladder is one table: Cost, Balanced and
-  Quality are its columns, and each rank is a bold group row (**Pick**,
-  **Runner‑up**, **Backup**) over indented Model, Platform, Level, AA and
+  Quality are its columns, and each rank (**Pick**, **Runner‑up**,
+  **Backup**) sits in a column of its own beside its Model, Platform, Level, AA and
   Price rows. Level is the bare level of that platform's own dial (`High`
   is Intelligence High on Codex, Effort High on Claude Code and
   Antigravity). The ✓ in a column's header marks the one its **Runs:**
