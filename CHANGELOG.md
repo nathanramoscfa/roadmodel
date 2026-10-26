@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.96] — 2026-10-25
+
+- **Project checkouts keep themselves current.** A roadmap change merged on GitHub, such as a fleet `roadmodel relayout` or a refresh, used to reach a project's checkout only after someone ran `git pull` there, so the editor kept showing the old version. The updater now fast-forwards every registered checkout that sits on its default branch:
+  - every 15 minutes, on its own schedule (`--install-sync-schedule [MINUTES]`, using launchd, Task Scheduler or cron);
+  - after every full run's roadmap refresh;
+  - on demand with `--sync-checkouts`.
+
+  It only fast-forwards (`git merge --ff-only`). It never merges, rebases, stashes, resets or cleans, and it never touches untracked files. It leaves alone, and reports in the log, any checkout that is on a feature branch (an agent's step, which gets main when it rebases), has commits of its own, has a merge or rebase in progress, or has uncommitted changes to a file the update changes. It is part of the standalone updater, so every machine's scheduled updater carries it.
+
 ## [0.2.95] — 2026-10-25
 
 - **A roadmap's Settings ladder is one table again, the layout the maintainer chose.** Cost, Balanced and Quality are the columns, and the column that runs by default is marked ✓. Each rank is a bold group row (**Pick**, **Runner‑up**, **Backup**) over indented Model, Platform, Level, AA and Price rows. The candidates were compared in a Markdown preview 400–520px wide: the 0.2.94 lists dropped the table, and 0.2.93's table had nothing marking where one option ended. Two fields changed:
