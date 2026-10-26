@@ -115,7 +115,11 @@ the dials and make sure it is set.
   Price rows. Level is the bare level of that platform's own dial (`High`
   is Intelligence High on Codex, Effort High on Claude Code and
   Antigravity). The ✓ in a column's header marks the one its **Runs:**
-  line names. A 0.2.94 ladder is three lists instead (`- Pick:`,
+  line names. From roadmodel 0.2.97 the three ranks of a column come from
+  three makers (a tight pool is a maker's); where too few are funded, a
+  missing rank is the Pick one level lower, its Level marked ↓, and the
+  note line says which classification the ladder was ranked for. A 0.2.94
+  ladder is three lists instead (`- Pick:`,
   `- Runner-up:`, `- Backup:` under each column's bold heading), and a
   0.2.93 one a table with rows `1 · Pick`, `2 · Runner-up` and
   `3 · Backup`, each followed by Platform, Effort, Thinking and AA Index
@@ -129,7 +133,8 @@ the dials and make sure it is set.
   subscription that pays for that column's Pick's platform:
   - `headroom`: run that column's Pick.
   - `tight`: run the first of that column's Runner-up and Backup whose
-    pool reads `headroom`, else the Cost column's Pick.
+    pool reads `headroom` or that is marked ↓ (the Pick one level lower,
+    which uses less of the tight pool), else the Cost column's Pick.
   - `exhausted`: run the first of that column's Runner-up and Backup
     whose pool reads `headroom`, else its Backup.
 

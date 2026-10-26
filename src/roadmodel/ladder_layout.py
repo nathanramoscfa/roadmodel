@@ -42,6 +42,7 @@ RANKS: Final[tuple[tuple[str, str], ...]] = (
 FIELDS: Final[tuple[str, ...]] = ("Model", "Platform", "Level", "AA", "Price")
 INDENT: Final[str] = "&nbsp;" * 4
 RUNS_MARK: Final[str] = "✓"
+STEP_MARK: Final[str] = "↓"
 WIDTH: Final[int] = 80
 NONE: Final[str] = "—"
 _SEP: Final[str] = " · "
@@ -81,6 +82,9 @@ class Option:
     price: float | None = None
     # False when the level's token use is a typical model's, not measured.
     price_measured: bool = True
+    # The Pick's own model a level or two lower, filling a rank no other
+    # maker could (marked ↓).
+    stepped_down: bool = False
 
 
 def level_key(word: str) -> str | None:
@@ -100,7 +104,7 @@ def _cells(option: Option | None) -> list[str]:
     return [
         f"**{option.model}**",
         option.platform,
-        option.level,
+        option.level + (f" {STEP_MARK}" if option.stepped_down else ""),
         NONE if option.aa is None else option.aa,
         price_cell(option),
     ]
@@ -120,6 +124,7 @@ def ladder_markdown(
     *,
     runs: str | None,
     conversation: str | None,
+    ranked_for: str | None = None,
 ) -> str:
     """The ladder's table, its note, then its Conversation line. A rank is
     printed when any column carries it (a ladder older than the Runner-up has
@@ -128,7 +133,7 @@ def ladder_markdown(
     column reads `none` alone)."""
     head = ["", *(t.capitalize() + (f" {RUNS_MARK}" if t == runs else "") for t in TIERS)]
     rows = [head]
-    priced = unmeasured = False
+    priced = unmeasured = stepped = False
     for label, key in RANKS:
         if not any(key in columns[t] for t in TIERS):
             continue
@@ -144,7 +149,15 @@ def ladder_markdown(
         unmeasured |= any(
             o is not None and o.price is not None and not o.price_measured for o in opts
         )
-    notes = [f"{RUNS_MARK} runs by default."] if runs else []
+        stepped |= any(o is not None and o.stepped_down for o in opts)
+    notes = [f"Ranked for {ranked_for}."] if ranked_for else []
+    if runs:
+        notes.append(f"{RUNS_MARK} runs by default.")
+    if stepped:
+        notes.append(
+            f"{STEP_MARK} the Pick one level lower: no other maker is funded, and a "
+            "lower level uses less of a tight pool."
+        )
     if priced:
         notes.append(
             "Price: list $ per 1M tokens (3 in : 1 out) × the tokens the model "
@@ -420,3 +433,143 @@ def relayout(
         converted += 1
         i = end
     return "\n".join(out), converted, kept
+
+
+# --------------------------------------------------------------------------- #
+# Re-ranking the tables this release writes
+# --------------------------------------------------------------------------- #
+
+_TABLE_RE: Final = re.compile(r"^\|\s*\|\s*Cost\b")
+_RANKED_FOR_RE: Final = re.compile(
+    r"Ranked for ([a-z-]+), (low|medium|high) complexity(, novel)?\."
+)
+_SECTION_RE: Final = re.compile(r"^(?:## (Step \S+)|### (Phase [0-9A-Za-z.]+)|### (\S+))")
+
+
+@dataclass(frozen=True)
+class TableLadder:
+    """A ladder table (0.2.95 on) in a roadmap, with the lines it spans: the
+    table, its note, its Conversation line and its Runs paragraph."""
+
+    start: int
+    end: int
+    section: str
+    phase: bool
+    done: bool
+    picks: tuple[tuple[str, str], ...]
+    ranks: tuple[tuple[str, ...], ...]
+    ranked_for: tuple[str, str, bool] | None
+    conversation: str | None
+
+
+def _skip_blank(lines: list[str], i: int) -> int:
+    while i < len(lines) and not lines[i].strip():
+        i += 1
+    return i
+
+
+def _block_end(lines: list[str], i: int) -> int:
+    """The index past a ladder's note paragraph, Conversation line and Runs
+    paragraph (each optional, in that order), from just past its table."""
+    k = _skip_blank(lines, i)
+    if k < len(lines) and lines[k].startswith(
+        ("Ranked for ", f"{RUNS_MARK} ", "Price: ", f"{STEP_MARK} ")
+    ):
+        while k < len(lines) and lines[k].strip():
+            k += 1
+        i = k
+    k = _skip_blank(lines, i)
+    if k < len(lines) and lines[k].startswith("**Conversation:**"):
+        i = k + 1
+    k = _skip_blank(lines, i)
+    if k < len(lines) and lines[k].startswith("**Runs:**"):
+        while k < len(lines) and lines[k].strip():
+            k += 1
+        i = k
+    return i
+
+
+def table_ladders(
+    text: str, *, phase_written: Callable[[str], bool] | None = None
+) -> list[TableLadder]:
+    """Every ladder table in ``text``, each with its section (`Step 5`,
+    `Phase 32`), whether it sits under a phase heading, whether its step or
+    phase is done (Complete, In progress, or a written phase), its Picks and
+    every rank's models, the classification its note names, and its
+    Conversation value."""
+    lines = text.split("\n")
+    out: list[TableLadder] = []
+    section, phase, done = "", False, False
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        if m := _SECTION_RE.match(line):
+            section = m.group(1) or m.group(2) or m.group(3)
+            phase = m.group(2) is not None
+            done = "✅" in line or bool(
+                phase and phase_written and phase_written(section.split(" ", 1)[1])
+            )
+        elif re.match(r"^#{1,2} ", line):
+            section, phase, done = "", False, False
+        elif status := _STATUS_RE.match(line):
+            done = done or status.group(1).startswith(("Complete", "In progress"))
+        elif line.startswith("**Phase roadmap settings**"):
+            # The session that writes a phase roadmap, under any heading
+            # (pyfinlab's `### F1 —` workstreams): a phase ladder.
+            phase = True
+        if not (_TABLE_RE.match(line) and i + 1 < len(lines) and _RULE_RE.match(lines[i + 1])):
+            i += 1
+            continue
+        j = i + 2
+        cells: dict[str, dict[str, list[str]]] = {}
+        rank = ""
+        while j < len(lines) and lines[j].startswith("|"):
+            label, *values = _table_cells(lines[j])
+            name = label.replace("&nbsp;", "").strip()
+            if name.startswith("**"):
+                rank = name.strip("*")
+                cells[rank] = {}
+            elif rank:
+                cells[rank][name] = [v.strip("*").replace(f" {STEP_MARK}", "") for v in values]
+            j += 1
+        end = _block_end(lines, j)
+        block = "\n".join(lines[j:end])
+        found = _RANKED_FOR_RE.search(" ".join(block.split()))
+        conv = next((m.group(1) for ln in lines[j:end] if (m := _CONVERSATION_RE.match(ln))), None)
+        pick = cells.get("Pick", {})
+        picks = tuple(zip(pick.get("Model", []), pick.get("Level", []), strict=False))
+        ranks = tuple(tuple(cells[r].get("Model", [])) for r in cells)
+        out.append(
+            TableLadder(
+                start=i,
+                end=end,
+                section=section,
+                phase=phase,
+                done=done,
+                picks=picks,
+                ranks=ranks,
+                ranked_for=(
+                    (found.group(1), found.group(2), bool(found.group(3))) if found else None
+                ),
+                conversation=conv,
+            )
+        )
+        i = end
+    return out
+
+
+def replace_ladders(text: str, replacements: Mapping[int, tuple[int, str]]) -> str:
+    """``text`` with each ladder starting at line ``start`` (a key) replaced,
+    through its ``end`` line, by the given Markdown."""
+    lines = text.split("\n")
+    out: list[str] = []
+    i = 0
+    while i < len(lines):
+        if i in replacements:
+            end, md = replacements[i]
+            out.extend(md.split("\n"))
+            i = end
+            continue
+        out.append(lines[i])
+        i += 1
+    return "\n".join(out)

@@ -774,11 +774,18 @@ that owns it.}}
      platform has the toggle, and every AA Index and Price
      already assumes it. A note line under the table explains
      ✓ and Price, and a `**Conversation:**` line closes the
-     ladder. The ranks follow the column's own rule, not the
-     AA Index: Cost ranks the cheapest first, so its AA Index
-     may rise down the column. The Backup reads `none` when
-     the Runner-up already holds the
-     only other maker's models. Every model is the latest
+     ladder. Each rank comes from its own maker (roadmodel
+     0.2.97 on), because a tight usage pool is a maker's: the
+     Runner-up is the column's recommendation with the Pick's
+     maker left out, and the Backup leaves out both makers
+     above it. Where the user-context funds too few makers, a
+     missing rank is the Pick's own model one level lower,
+     its Level marked ↓ (it uses less of a tight pool), and
+     `none` below the dial's lowest level. The note line
+     names the classification the ladder was ranked for. The
+     ranks follow the column's own rule, not the AA Index:
+     Cost ranks each maker's cheapest adequate option, so its
+     AA Index may rise down the column. Every model is the latest
      version of its series, never an older one (GPT-6 Sol
      where GPT-6.1 Sol runs, Opus 5 where Opus 5.5 does).
      Set the Conversation line to **Continue** only when the
