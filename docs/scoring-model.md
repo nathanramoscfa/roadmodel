@@ -337,17 +337,22 @@ Level / AA / Price rows, chosen by the operator for a Markdown preview
 400–520px wide. `roadmodel relayout` rewrites the ladders 0.2.86–0.2.94 wrote
 under steps not started and phases not written, every value kept and Price
 filled in:
+Each rank comes from its own maker (0.2.97), because a tight usage pool is a
+maker's: a fallback from the Pick's maker would draw on the pool that ran
+short (Quality had ranked Opus 5.5, then Fable 5.1).
 - **Pick:** the column's rung.
-- **Runner-up:** the column's rung with the pick's whole series off the
-  table (`unavailable_models`), so it is never an older version of the pick
-  (GPT-6 Sol under GPT-6.1 Sol). It may come from any maker.
-- **Backup:** the pick's backup from another maker (`_backup_for`), never the
-  runner-up's series, and from a maker neither row above uses where one meets
-  the bar (`_ranked_backup`), so the three rows span as many makers as the
-  pool holds. `None` when the runner-up holds the only other maker's series.
+- **Runner-up:** the column's rung with every model of the pick's maker off
+  the table (`unavailable_models`), so it never shares the pick's pool (and
+  never names an older version of the pick).
+- **Backup:** the column's rung with both makers above off the table.
+- **Too few makers:** a missing rank is the pick's own model one level lower
+  on its dial (`_step_down`; ↓ in the table), which uses less of a tight
+  pool; with one maker the runner-up and backup step down one and two levels,
+  and a rank below the dial's lowest level is `None`.
 
-The ranks follow the column's own rule, not the AA Index: Cost ranks the
-cheapest first, so its AA Index may rise down the column. The ladder reads
+The ranks follow the column's own rule, not the AA Index: Cost ranks each
+maker's cheapest adequate option, so its AA Index may rise down the column.
+The note line names the classification the ladder was ranked for. The ladder reads
 every usage pool as `headroom` (`rank(neutral_pools=True)`), so it does not
 depend on the day it was written. The **Runs:** line names the column the
 step runs: the Budget priority's column (cheap → Cost, balanced → Balanced,

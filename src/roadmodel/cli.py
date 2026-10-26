@@ -730,6 +730,180 @@ def relayout_command(paths: tuple[Path, ...], check: bool) -> None:
         raise SystemExit(1)
 
 
+@cli.command("rerank")
+@click.argument(
+    "paths",
+    nargs=-1,
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+@click.option(
+    "--check",
+    is_flag=True,
+    default=False,
+    help="Report the ladders without rewriting them; exit 1 if any would change.",
+)
+@click.option(
+    "--hint",
+    "hints",
+    multiple=True,
+    metavar="FILE:SECTION=CATEGORY/COMPLEXITY[/novel]",
+    help="Classification for a ladder whose note names none and whose Picks match "
+    "several (e.g. 'phase31.6-roadmap.md:Step 5=coding/high').",
+)
+@click.option(
+    "--user-context",
+    "user_context_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Path to user-context.md override.",
+)
+def rerank_command(
+    paths: tuple[Path, ...], check: bool, hints: tuple[str, ...], user_context_path: Path | None
+) -> None:
+    """Re-rank each roadmap's ladder tables by this release's rules.
+
+    For every ladder table under a step that has not started, or a phase whose
+    roadmap does not exist, prints the ladder this release ranks for the same
+    classification: the one its note names, else the one a --hint gives, else
+    the only one whose Picks match the table's. A ladder whose Runner-up or
+    Backup changes gains a `> Settings updated` line beneath it. Complete and
+    In progress steps, and written phases, keep their ladder; a ladder whose
+    classification stays unclear is reported and left as it is.
+    """
+    import datetime as _dt
+    from collections import Counter
+
+    from roadmodel import ladder_layout
+
+    text_ctx = _scoring_user_context(user_context_path)
+    budget = scoring.declared_budget(text_ctx).lower()
+    cache: dict[tuple[tuple[str, str, bool], bool], dict[str, Any] | None] = {}
+
+    def ladder_for(key: tuple[str, str, bool], phase: bool) -> dict[str, Any] | None:
+        if (key, phase) not in cache:
+            task = scoring.Task(key[0], key[1], key[2], budget)
+            cache[(key, phase)] = scoring.settings_ladder(task, text_ctx, phase=phase)
+        return cache[(key, phase)]
+
+    def picks(got: dict[str, Any]) -> tuple[tuple[str, str], ...]:
+        return tuple(
+            (str(got["columns"][t]["model"]), str(got["columns"][t]["level_cell"]))
+            for t in scoring.LADDER_TIERS
+        )
+
+    def ranks(got: dict[str, Any]) -> tuple[tuple[str, ...], ...]:
+        cols = [got["columns"][t] for t in scoring.LADDER_TIERS]
+        return tuple(
+            tuple("none" if o is None else str(o["model"]) for o in opts)
+            for opts in (cols, [c["runner_up"] for c in cols], [c["backup"] for c in cols])
+        )
+
+    hinted: dict[tuple[str, str], tuple[str, str, bool]] = {}
+    for hint in hints:
+        where, _, what = hint.partition("=")
+        name, _, section = where.partition(":")
+        parts = what.strip().lower().split("/")
+        if len(parts) not in (2, 3) or not name or not section:
+            raise click.ClickException(f"--hint {hint!r}: use FILE:SECTION=CATEGORY/COMPLEXITY")
+        hinted[(name.strip(), section.strip())] = (parts[0], parts[1], parts[2:] == ["novel"])
+    keys = scoring.table_keys()
+    today = _dt.date.today().isoformat()
+    pending = 0
+    unresolved: list[str] = []
+    for path in paths:
+        text = path.read_text(encoding="utf-8")
+        lines = text.split("\n")
+        counts: Counter[str] = Counter()
+        replacements: dict[int, tuple[int, str]] = {}
+        for block in ladder_layout.table_ladders(text, phase_written=_phase_written(path.parent)):
+            if block.done:
+                counts["kept"] += 1
+                continue
+            key = block.ranked_for or hinted.get((path.name, block.section))
+            if key is None:
+                matches = [
+                    k for k in keys if (g := ladder_for(k, block.phase)) and picks(g) == block.picks
+                ]
+                tables = {
+                    str((ladder_for(k, block.phase) or {})["markdown"]).split("\n\n")[0]
+                    for k in matches
+                }
+                if len(tables) != 1:
+                    counts["unresolved"] += 1
+                    found = ", ".join(
+                        "/".join(map(str, k[:2])) + ("/novel" if k[2] else "") for k in matches
+                    )
+                    unresolved.append(
+                        f"{path}: {block.section or 'ladder'} — "
+                        + (
+                            f"Picks match {found}"
+                            if matches
+                            else "no classification reproduces its Picks"
+                        )
+                    )
+                    continue
+                key = matches[0]
+                guessed = len(matches) > 1
+            else:
+                guessed = False
+            got = ladder_for(key, block.phase)
+            if got is None:
+                counts["unresolved"] += 1
+                unresolved.append(f"{path}: {block.section or 'ladder'} — no ladder for {key}")
+                continue
+            md = str(got["markdown"])
+            if guessed:
+                # Several classifications rank this ladder alike: the table is
+                # right, but naming one of them in the note would be a guess.
+                md = _drop_ranked_for(md)
+            if block.conversation and block.conversation != "New":
+                md = md.replace(
+                    "**Conversation:** New", f"**Conversation:** {block.conversation}", 1
+                )
+            if md == "\n".join(lines[block.start : block.end]):
+                counts["unchanged"] += 1
+                continue
+            if picks(got) != block.picks:
+                runs = scoring.LADDER_TIERS.index(str(got["runs"]))
+                was = " · ".join(block.picks[runs]) if len(block.picks) > runs else "—"
+                md += (
+                    f"\n\n> Settings updated {today} (rerank): was {was}. Re-ranked for "
+                    f"{key[0]}, {key[1]} complexity, each column's ranks from three makers."
+                )
+            elif ranks(got) != block.ranks:
+                md += (
+                    f"\n\n> Settings updated {today} (rerank): each column's Runner-up and "
+                    "Backup now come from makers other than its Pick; every Pick is unchanged."
+                )
+            replacements[block.start] = (block.end, md)
+            counts["reranked"] += 1
+        if replacements and not check:
+            path.write_text(ladder_layout.replace_ladders(text, replacements), encoding="utf-8")
+        pending += len(replacements)
+        if counts:
+            click.echo(
+                f"{path}: {counts['reranked']} re-ranked, {counts['unchanged']} unchanged, "
+                f"{counts['kept']} kept, {counts['unresolved']} unresolved"
+            )
+    for line in unresolved:
+        click.echo(f"  unresolved {line}; pass --hint or run /roadmap-refresh")
+    if check and pending:
+        raise SystemExit(1)
+
+
+def _drop_ranked_for(markdown: str) -> str:
+    """``markdown`` with its note's "Ranked for …" sentence removed and the
+    note re-wrapped at 80 columns."""
+    parts = markdown.split("\n\n")
+    for i, part in enumerate(parts):
+        flat = " ".join(part.split())
+        if flat.startswith("Ranked for "):
+            rest = re.sub(r"^Ranked for [^.]*\.\s*", "", flat)
+            parts[i] = textwrap.fill(rest, width=80, break_long_words=False)
+    return "\n\n".join(p for p in parts if p)
+
+
 def _phase_written(directory: Path) -> Callable[[str], bool]:
     """Whether a phase's roadmap exists beside the project roadmap:
     ``phase<id>-roadmap.md`` or ``phase<id>-<slug>-roadmap.md``, the id as the

@@ -221,7 +221,15 @@ complexity, novel or not; its Model rationale names them), then:
   not exist: a Complete step's ladder is the record of what ran, an `In
   progress` step's is what an agent is running, and a written phase's
   records what wrote its roadmap, so those keep their layout. That is a
-  layout fix, not a new pick, and takes no `Settings updated` line. A
+  layout fix, not a new pick, and takes no `Settings updated` line. Then
+  run `roadmodel rerank <every roadmap file>` (roadmodel 0.2.97 on): it
+  gives each of those ladder tables the ranks this release computes, so a
+  change to how roadmodel ranks reaches every step not yet run. It reads
+  the classification from the ladder's note (`Ranked for …`), else from the
+  only classification whose ladder has the same Picks. It adds a `Settings
+  updated` line where a rank changed. It reports any ladder it cannot
+  place: classify that step from its Model rationale and re-run with
+  `--hint FILE:SECTION=category/complexity[/novel]`. A
   ladder written before roadmodel 0.2.93 has Model / Backup / Platform /
   Effort (/ AA Index) / Thinking rows and no Runner-up: on a step that has
   not shipped, or a phase not yet written, replace it with the ladder

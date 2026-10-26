@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.97] — 2026-10-25
+
+- **Each column of a Settings ladder ranks three makers.** The Runner-up was the column's next model with only the Pick's series removed, so Quality could rank Opus 5.5 then Fable 5.1. Both draw the same Claude Max pool, so on a tight pool the Runner-up was no fallback. Now:
+  - the Runner-up is the column's recommendation with the Pick's whole maker left out;
+  - the Backup leaves out both makers above it.
+
+  With Claude, ChatGPT and Google AI funded, Quality reads Opus 5.5 XHigh → Gemini 4 Argon High → GPT-6 Astra XHigh.
+- **Too few makers: the Pick one level lower.** Where the user-context funds fewer than three makers, a missing rank is the Pick's own model one level lower on its dial, marked ↓, because a lower level uses less of a tight pool. With one maker, the Runner-up and Backup step down one and two levels. Below the dial's lowest level a rank reads `none`. The run rule lets a ↓ option run on a `tight` pool, but not an `exhausted` one, which it shares.
+- **The note names the classification the ladder was ranked for** (`Ranked for coding, high complexity, novel.`). A later change to the ranking can then reach the ladder without anyone re-reading the step.
+- **`roadmodel rerank <files>` re-ranks existing ladder tables.** It covers steps not started and phases not written, using the classification the note names, else the only one whose ladder has the same Picks, or `--hint FILE:SECTION=category/complexity[/novel]`. A changed rank gains a `> Settings updated` line. A ladder whose classification stays unclear is reported and left. `/roadmap-refresh` runs it after `relayout`.
+
 ## [0.2.96] — 2026-10-25
 
 - **Project checkouts keep themselves current.** A roadmap change merged on GitHub, such as a fleet `roadmodel relayout` or a refresh, used to reach a project's checkout only after someone ran `git pull` there, so the editor kept showing the old version. The updater now fast-forwards every registered checkout that sits on its default branch:
