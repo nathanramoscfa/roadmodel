@@ -250,26 +250,23 @@ dependency graph in §5 is honoured.
 **Phase roadmap settings** — the session that writes
 `phase01-roadmap.md` (`/roadmap-phase 1`):
 
-|                                  | Cost                | Balanced            | Quality ✓           |
-| -------------------------------- | ------------------- | ------------------- | ------------------- |
-| **Pick**                         |                     |                     |                     |
-| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **<Model>**         | **<Model>**         | **<Model>**         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Platform | <Platform>          | <Platform>          | <Platform>          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Level    | <Level>             | <Level>             | <Level>             |
-| &nbsp;&nbsp;&nbsp;&nbsp;AA       | <AA Index>          | <AA Index>          | <AA Index>          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Price    | <$ per 1M>          | <$ per 1M>          | <$ per 1M>          |
-| **Runner‑up**                    |                     |                     |                     |
-| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **<Model>**         | **<Model>**         | **<Model>**         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Platform | <Platform>          | <Platform>          | <Platform>          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Level    | <Level>             | <Level>             | <Level>             |
-| &nbsp;&nbsp;&nbsp;&nbsp;AA       | <AA Index>          | <AA Index>          | <AA Index>          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Price    | <$ per 1M>          | <$ per 1M>          | <$ per 1M>          |
-| **Backup**                       |                     |                     |                     |
-| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **<Model or none>** | **<Model or none>** | **<Model or none>** |
-| &nbsp;&nbsp;&nbsp;&nbsp;Platform | <Platform>          | <Platform>          | <Platform>          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Level    | <Level>             | <Level>             | <Level>             |
-| &nbsp;&nbsp;&nbsp;&nbsp;AA       | <AA Index>          | <AA Index>          | <AA Index>          |
-| &nbsp;&nbsp;&nbsp;&nbsp;Price    | <$ per 1M>          | <$ per 1M>          | <$ per 1M>          |
+|               |          | Cost                | Balanced            | Quality ✓           |
+| ------------- | -------- | ------------------- | ------------------- | ------------------- |
+| **Pick**      | Model    | **<Model>**         | **<Model>**         | **<Model>**         |
+|               | Platform | <Platform>          | <Platform>          | <Platform>          |
+|               | Level    | <Level>             | <Level>             | <Level>             |
+|               | AA       | <AA Index>          | <AA Index>          | <AA Index>          |
+|               | Price    | <$ per 1M>          | <$ per 1M>          | <$ per 1M>          |
+| **Runner‑up** | Model    | **<Model>**         | **<Model>**         | **<Model>**         |
+|               | Platform | <Platform>          | <Platform>          | <Platform>          |
+|               | Level    | <Level>             | <Level>             | <Level>             |
+|               | AA       | <AA Index>          | <AA Index>          | <AA Index>          |
+|               | Price    | <$ per 1M>          | <$ per 1M>          | <$ per 1M>          |
+| **Backup**    | Model    | **<Model or none>** | **<Model or none>** | **<Model or none>** |
+|               | Platform | <Platform>          | <Platform>          | <Platform>          |
+|               | Level    | <Level>             | <Level>             | <Level>             |
+|               | AA       | <AA Index>          | <AA Index>          | <AA Index>          |
+|               | Price    | <$ per 1M>          | <$ per 1M>          | <$ per 1M>          |
 
 ✓ runs by default. Price: list $ per 1M tokens (3 in : 1 out) × the tokens the
 model uses at that level.
@@ -330,26 +327,23 @@ key pays for the platform.>
 **Phase roadmap settings** — the session that writes
 `phase02-roadmap.md` (`/roadmap-phase 2`):
 
-|                                  | Cost  | Balanced | Quality ✓ |
-| -------------------------------- | ----- | -------- | --------- |
-| **Pick**                         |       |          |           |
-| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **…** | **…**    | **…**     |
-| &nbsp;&nbsp;&nbsp;&nbsp;Platform | …     | …        | …         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Level    | …     | …        | …         |
-| &nbsp;&nbsp;&nbsp;&nbsp;AA       | …     | …        | …         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Price    | …     | …        | …         |
-| **Runner‑up**                    |       |          |           |
-| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **…** | **…**    | **…**     |
-| &nbsp;&nbsp;&nbsp;&nbsp;Platform | …     | …        | …         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Level    | …     | …        | …         |
-| &nbsp;&nbsp;&nbsp;&nbsp;AA       | …     | …        | …         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Price    | …     | …        | …         |
-| **Backup**                       |       |          |           |
-| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **…** | **…**    | **…**     |
-| &nbsp;&nbsp;&nbsp;&nbsp;Platform | …     | …        | …         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Level    | …     | …        | …         |
-| &nbsp;&nbsp;&nbsp;&nbsp;AA       | …     | …        | …         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Price    | …     | …        | …         |
+|               |          | Cost  | Balanced | Quality ✓ |
+| ------------- | -------- | ----- | -------- | --------- |
+| **Pick**      | Model    | **…** | **…**    | **…**     |
+|               | Platform | …     | …        | …         |
+|               | Level    | …     | …        | …         |
+|               | AA       | …     | …        | …         |
+|               | Price    | …     | …        | …         |
+| **Runner‑up** | Model    | **…** | **…**    | **…**     |
+|               | Platform | …     | …        | …         |
+|               | Level    | …     | …        | …         |
+|               | AA       | …     | …        | …         |
+|               | Price    | …     | …        | …         |
+| **Backup**    | Model    | **…** | **…**    | **…**     |
+|               | Platform | …     | …        | …         |
+|               | Level    | …     | …        | …         |
+|               | AA       | …     | …        | …         |
+|               | Price    | …     | …        | …         |
 
 ✓ runs by default. Price: list $ per 1M tokens (3 in : 1 out) × the tokens the
 model uses at that level.
@@ -384,26 +378,23 @@ model uses at that level.
 **Phase roadmap settings** — the session that writes
 `phaseNN-roadmap.md` (`/roadmap-phase N`):
 
-|                                  | Cost  | Balanced | Quality ✓ |
-| -------------------------------- | ----- | -------- | --------- |
-| **Pick**                         |       |          |           |
-| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **…** | **…**    | **…**     |
-| &nbsp;&nbsp;&nbsp;&nbsp;Platform | …     | …        | …         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Level    | …     | …        | …         |
-| &nbsp;&nbsp;&nbsp;&nbsp;AA       | …     | …        | …         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Price    | …     | …        | …         |
-| **Runner‑up**                    |       |          |           |
-| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **…** | **…**    | **…**     |
-| &nbsp;&nbsp;&nbsp;&nbsp;Platform | …     | …        | …         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Level    | …     | …        | …         |
-| &nbsp;&nbsp;&nbsp;&nbsp;AA       | …     | …        | …         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Price    | …     | …        | …         |
-| **Backup**                       |       |          |           |
-| &nbsp;&nbsp;&nbsp;&nbsp;Model    | **…** | **…**    | **…**     |
-| &nbsp;&nbsp;&nbsp;&nbsp;Platform | …     | …        | …         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Level    | …     | …        | …         |
-| &nbsp;&nbsp;&nbsp;&nbsp;AA       | …     | …        | …         |
-| &nbsp;&nbsp;&nbsp;&nbsp;Price    | …     | …        | …         |
+|               |          | Cost  | Balanced | Quality ✓ |
+| ------------- | -------- | ----- | -------- | --------- |
+| **Pick**      | Model    | **…** | **…**    | **…**     |
+|               | Platform | …     | …        | …         |
+|               | Level    | …     | …        | …         |
+|               | AA       | …     | …        | …         |
+|               | Price    | …     | …        | …         |
+| **Runner‑up** | Model    | **…** | **…**    | **…**     |
+|               | Platform | …     | …        | …         |
+|               | Level    | …     | …        | …         |
+|               | AA       | …     | …        | …         |
+|               | Price    | …     | …        | …         |
+| **Backup**    | Model    | **…** | **…**    | **…**     |
+|               | Platform | …     | …        | …         |
+|               | Level    | …     | …        | …         |
+|               | AA       | …     | …        | …         |
+|               | Price    | …     | …        | …         |
 
 ✓ runs by default. Price: list $ per 1M tokens (3 in : 1 out) × the tokens the
 model uses at that level.

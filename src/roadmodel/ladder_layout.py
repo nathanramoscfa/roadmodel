@@ -2,22 +2,24 @@
 the ladders older releases wrote to it.
 
 The ladder is one table: Cost, Balanced and Quality are its columns, and each
-rank (Pick, Runner-up, Backup) is a bold group row over indented field rows:
+rank (Pick, Runner-up, Backup) names the first of its field rows from a column
+of its own, so the field names stand indented beside it:
 
-    |              | Cost            | Balanced ✓         | Quality         |
-    | ------------ | --------------- | ------------------ | --------------- |
-    | **Pick**     |                 |                    |                 |
-    |     Model    | **GPT-6.1 Sol** | **Gemini 4 Argon** | **Opus 5.5**    |
-    |     Platform | Codex           | Antigravity        | Claude Code     |
-    |     Level    | High            | High               | XHigh           |
-    |     AA       | 50.2            | 52.6               | 56              |
-    |     Price    | $2.18/1M        | $4.00/1M*          | $8.46/1M        |
+    |          |          | Cost            | Balanced ✓         | Quality      |
+    | -------- | -------- | --------------- | ------------------ | ------------ |
+    | **Pick** | Model    | **GPT-6.1 Sol** | **Gemini 4 Argon** | **Opus 5.5** |
+    |          | Platform | Codex           | Antigravity        | Claude Code  |
+    |          | Level    | High            | High               | XHigh        |
+    |          | AA       | 50.2            | 52.6               | 56           |
+    |          | Price    | $2.18/1M        | $4.00/1M*          | $8.46/1M     |
 
-(the indent is four `&nbsp;`, so it never breaks from its label). The operator
-chose it on 2026-10-24 after reading candidates in an editor's Markdown preview
-400–520px wide: 0.2.93's table gave each field a row with nothing marking where
-an option ended, and 0.2.94's lists dropped the table. The group rows mark the
-ranks, Level is the bare level (the platform names its dial: Codex's
+The operator chose the table on 2026-10-24 after reading candidates in an
+editor's Markdown preview 400–520px wide: 0.2.93's table gave each field a row
+with nothing marking where an option ended, and 0.2.94's lists dropped the
+table. 0.2.95–0.2.97 put each rank on a row of its own over fields indented
+with `&nbsp;`, which some viewers draw as a highlighted blob; ordinary cells
+indent the same in every viewer (2026-10-25). Level is the bare level (the
+platform names its dial: Codex's
 Intelligence, Claude Code's and Antigravity's Effort), and Thinking has no row:
 a ladder only ever recommends it On, and every AA Index and price already
 assumes it, so /roadmap-step states the rule once instead.
@@ -40,7 +42,6 @@ RANKS: Final[tuple[tuple[str, str], ...]] = (
     ("Backup", "backup"),
 )
 FIELDS: Final[tuple[str, ...]] = ("Model", "Platform", "Level", "AA", "Price")
-INDENT: Final[str] = "&nbsp;" * 4
 RUNS_MARK: Final[str] = "✓"
 STEP_MARK: Final[str] = "↓"
 WIDTH: Final[int] = 80
@@ -131,20 +132,23 @@ def ladder_markdown(
     none), and a field row only when some option of that rank has a value
     there (an older backup has no AA Index; a rank with no option in any
     column reads `none` alone)."""
-    head = ["", *(t.capitalize() + (f" {RUNS_MARK}" if t == runs else "") for t in TIERS)]
+    head = ["", "", *(t.capitalize() + (f" {RUNS_MARK}" if t == runs else "") for t in TIERS)]
     rows = [head]
     priced = unmeasured = stepped = False
     for label, key in RANKS:
         if not any(key in columns[t] for t in TIERS):
             continue
         opts = [columns[t].get(key) for t in TIERS]
-        rows.append([f"**{label}**", "", "", ""])
         cells = [_cells(o) for o in opts]
+        rank_cell = f"**{label}**"
         for i, field in enumerate(FIELDS):
             values = [c[i] for c in cells]
             if field != "Model" and all(v == NONE for v in values):
                 continue
-            rows.append([INDENT + field, *values])
+            # The rank names its first row only; the empty cells under it read
+            # as one merged cell, and its field names stand indented beside it.
+            rows.append([rank_cell, field, *values])
+            rank_cell = ""
         priced |= any(o is not None and o.price is not None for o in opts)
         unmeasured |= any(
             o is not None and o.price is not None and not o.price_measured for o in opts
@@ -349,6 +353,76 @@ def _list_ladder(
     return i, columns, runs, conversation
 
 
+# A ladder found by relayout: the index past it, its columns, the column
+# that runs, its Conversation value, the classification its note names, and
+# whether converting it is a display fix that reaches every section.
+_Found = tuple[int, dict[str, dict[str, "Option | None"]], str | None, str | None, str | None, bool]
+# The 0.2.95–0.2.97 table: one empty header cell before Cost.
+_INDENT_HEAD_RE: Final = re.compile(r"^\|\s*\|\s*Cost\b")
+_PRICE_RE: Final = re.compile(r"^\$([0-9]+(?:\.[0-9]+)?)/1M(\*?)$")
+
+
+def _indented_ladder(
+    lines: list[str], start: int
+) -> tuple[int, dict[str, dict[str, Option | None]], str | None, str | None, str | None] | None:
+    """A 0.2.95–0.2.97 ladder table starting at ``lines[start]`` (rank rows
+    over `&nbsp;`-indented fields): the index past its note and Conversation
+    line (its Runs paragraph stays), its columns with every cell read back,
+    the column marked ✓, its Conversation value and the classification its
+    note names; None when a row is not one this release wrote."""
+    head = _table_cells(lines[start])
+    runs = next(
+        (t for t, cell in zip(TIERS, head[1:], strict=False) if cell.endswith(RUNS_MARK)), None
+    )
+    cells, j = _table_rows(lines, start + 2)
+    keys = {label.replace("\u2011", "-"): key for label, key in RANKS}
+    columns: dict[str, dict[str, Option | None]] = {t: {} for t in TIERS}
+    for rank, fields in cells.items():
+        key = keys.get(rank.replace("\u2011", "-"))
+        if key is None or not set(fields) <= set(FIELDS) or "Model" not in fields:
+            return None
+        for i, tier in enumerate(TIERS):
+            model = fields["Model"][i].strip("*")
+            if model == "none":
+                columns[tier][key] = None
+                continue
+            level = fields.get("Level", [NONE] * len(TIERS))[i]
+            price = _PRICE_RE.match(fields.get("Price", [NONE] * len(TIERS))[i])
+            aa = fields.get("AA", [NONE] * len(TIERS))[i]
+            columns[tier][key] = Option(
+                model=model,
+                platform=fields.get("Platform", [NONE] * len(TIERS))[i],
+                level=level.replace(f" {STEP_MARK}", ""),
+                aa=None if aa == NONE else aa,
+                price=float(price.group(1)) if price else None,
+                price_measured=not (price and price.group(2)),
+                stepped_down=level.endswith(f" {STEP_MARK}"),
+            )
+    end = j
+    k = _skip_blank(lines, j)
+    note = ""
+    if k < len(lines) and lines[k].startswith(
+        ("Ranked for ", f"{RUNS_MARK} ", "Price: ", f"{STEP_MARK} ")
+    ):
+        n = k
+        while n < len(lines) and lines[n].strip():
+            n += 1
+        note = " ".join(" ".join(lines[k:n]).split())
+        end = n
+    k = _skip_blank(lines, end)
+    conversation = None
+    if k < len(lines) and (conv := _CONVERSATION_RE.match(lines[k])):
+        conversation = conv.group(1)
+        end = k + 1
+    found = _RANKED_FOR_RE.search(note)
+    ranked_for = None
+    if found:
+        ranked_for = f"{found.group(1)}, {found.group(2)} complexity" + (
+            ", novel" if found.group(3) else ""
+        )
+    return end, columns, runs, conversation, ranked_for
+
+
 def relayout(
     text: str,
     *,
@@ -381,7 +455,7 @@ def relayout(
         elif status := _STATUS_RE.match(line):
             done = done or status.group(1).startswith(("Complete", "In progress"))
 
-        found = None
+        found: _Found | None = None
         head = _HEAD_RE.match(line)
         if head and i + 1 < len(lines) and _RULE_RE.match(lines[i + 1]):
             end = i + 2
@@ -399,7 +473,11 @@ def relayout(
             after = next((ln for ln in lines[end:] if ln.strip()), "")
             runs_match = _RUNS_RE.match(after)
             runs = runs_match.group(1).lower() if runs_match else None
-            found = (end, columns, runs, _table_conversation(rows))
+            found = (end, columns, runs, _table_conversation(rows), None, False)
+        elif _INDENT_HEAD_RE.match(line) and i + 1 < len(lines) and _RULE_RE.match(lines[i + 1]):
+            indented = _indented_ladder(lines, i)
+            if indented is not None:
+                found = (*indented, True)
         elif _TIER_HEAD_RE.match(line) and line.startswith("**Cost**"):
             listed = _list_ladder(lines, i)
             if listed is not None:
@@ -408,23 +486,29 @@ def relayout(
                     after = next((ln for ln in lines[end:] if ln.strip()), "")
                     runs_match = _RUNS_RE.match(after)
                     runs = runs_match.group(1).lower() if runs_match else None
-                found = (end, columns, runs, conversation)
+                found = (end, columns, runs, conversation, None, False)
 
         if found is None:
             out.append(line)
             i += 1
             continue
-        end, columns, runs, conversation = found
-        if done:
+        end, columns, runs, conversation, ranked_for, display_fix = found
+        # The `&nbsp;` indent is a display defect (some viewers draw each
+        # non-breaking space as a highlighted blob), and its fix changes no
+        # value, so it reaches every ladder, Complete steps included.
+        if done and not display_fix:
             kept += 1
             out.extend(lines[i:end])
             i = end
             continue
         priced = {
-            tier: {k: None if o is None else _priced(o, price) for k, o in col.items()}
+            tier: {
+                k: None if o is None else (o if display_fix else _priced(o, price))
+                for k, o in col.items()
+            }
             for tier, col in columns.items()
         }
-        md = ladder_markdown(priced, runs=runs, conversation=conversation)
+        md = ladder_markdown(priced, runs=runs, conversation=conversation, ranked_for=ranked_for)
         if out and out[-1].strip():
             out.append("")
         out.extend(md.split("\n"))
@@ -439,7 +523,9 @@ def relayout(
 # Re-ranking the tables this release writes
 # --------------------------------------------------------------------------- #
 
-_TABLE_RE: Final = re.compile(r"^\|\s*\|\s*Cost\b")
+# A ladder table's header: 0.2.95–0.2.97 (`|  | Cost |`, fields indented
+# with `&nbsp;`) or 0.2.98 on (`|  |  | Cost |`, the rank in its own column).
+_TABLE_RE: Final = re.compile(r"^\|\s*\|(?:\s*\|)?\s*Cost\b")
 _RANKED_FOR_RE: Final = re.compile(
     r"Ranked for ([a-z-]+), (low|medium|high) complexity(, novel)?\."
 )
@@ -489,6 +575,35 @@ def _block_end(lines: list[str], i: int) -> int:
     return i
 
 
+def _table_rows(lines: list[str], j: int) -> tuple[dict[str, dict[str, list[str]]], int]:
+    """A ladder table's cells by rank and field, read from its first body row
+    ``lines[j]``, and the index past the table. Reads both layouts: the rank
+    in its own column (0.2.98 on: `| **Pick** | Model | …`, then `|  |
+    Platform | …`) and a rank row over `&nbsp;`-indented fields (0.2.95–0.2.97:
+    `| **Pick** |  |  |  |`, then `| &nbsp;…Model | …`)."""
+    cells: dict[str, dict[str, list[str]]] = {}
+    rank = ""
+    while j < len(lines) and lines[j].startswith("|"):
+        row = _table_cells(lines[j])
+        if len(row) == 2 + len(TIERS):
+            head, name, *values = row
+            if head.startswith("**"):
+                rank = head.strip("*")
+                cells[rank] = {}
+            if rank and name:
+                cells[rank][name] = values
+        else:
+            label, *values = row
+            name = label.replace("&nbsp;", "").strip()
+            if name.startswith("**"):
+                rank = name.strip("*")
+                cells[rank] = {}
+            elif rank:
+                cells[rank][name] = values
+        j += 1
+    return cells, j
+
+
 def table_ladders(
     text: str, *, phase_written: Callable[[str], bool] | None = None
 ) -> list[TableLadder]:
@@ -521,17 +636,14 @@ def table_ladders(
             i += 1
             continue
         j = i + 2
-        cells: dict[str, dict[str, list[str]]] = {}
-        rank = ""
-        while j < len(lines) and lines[j].startswith("|"):
-            label, *values = _table_cells(lines[j])
-            name = label.replace("&nbsp;", "").strip()
-            if name.startswith("**"):
-                rank = name.strip("*")
-                cells[rank] = {}
-            elif rank:
-                cells[rank][name] = [v.strip("*").replace(f" {STEP_MARK}", "") for v in values]
-            j += 1
+        raw, j = _table_rows(lines, j)
+        cells = {
+            rank: {
+                name: [v.strip("*").replace(f" {STEP_MARK}", "") for v in values]
+                for name, values in fields.items()
+            }
+            for rank, fields in raw.items()
+        }
         end = _block_end(lines, j)
         block = "\n".join(lines[j:end])
         found = _RANKED_FOR_RE.search(" ".join(block.split()))
