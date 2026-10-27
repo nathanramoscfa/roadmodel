@@ -758,8 +758,7 @@ that owns it.}}
      <c> --complexity <x> [--novel]` prints them for the
      step's classification (MCP tool: `roadmap_settings`).
      Layout (roadmodel 0.2.95 on): one table whose columns
-     are Cost, Balanced and Quality (the column the **Runs:**
-     line names marked ✓). Each rank — **Pick**, **Runner‑up**,
+     are Cost, Balanced and Quality. Each rank — **Pick**, **Runner‑up**,
      **Backup** — names the first of its rows from a column of
      its own (blank below it, no `&nbsp;`), beside
      field rows: Model (bold); Platform; Level, the bare
@@ -774,7 +773,7 @@ that owns it.}}
      no Thinking row: Thinking is always On wherever the
      platform has the toggle, and every AA Index and Price
      already assumes it. A note line under the table explains
-     ✓ and Price, and a `**Conversation:**` line closes the
+     Price, and a `**Conversation:**` line closes the
      ladder. Each rank comes from its own maker (roadmodel
      0.2.97 on), because a tight usage pool is a maker's: the
      Runner-up is the column's recommendation with the Pick's
@@ -892,7 +891,7 @@ step's classification, pasted as printed. The three table
 shapes after it are the fallback where roadmodel cannot be
 reached}}):
 
-|               |          | Cost                  | Balanced ✓            | Quality               |
+|               |          | Cost                  | Balanced              | Quality               |
 | ------------- | -------- | --------------------- | --------------------- | --------------------- |
 | **Pick**      | Model    | **{{Model}}**         | **{{Model}}**         | **{{Model}}**         |
 |               | Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
@@ -910,8 +909,8 @@ reached}}):
 |               | AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
 |               | Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
 
-✓ runs by default. Price: list $ per 1M tokens (3 in : 1 out) × the tokens the
-model uses at that level.
+Price: list $ per 1M tokens (3 in : 1 out) × the tokens the model uses at that
+level.
 
 **Conversation:** New
 
@@ -1331,7 +1330,7 @@ printed with its **Runs:** line. Where roadmodel cannot be
 reached, the single-column variant that matches PLATFORM,
 carrying ONLY the rows that platform's panel exposes.}}
 
-|               |          | Cost                  | Balanced ✓            | Quality               |
+|               |          | Cost                  | Balanced              | Quality               |
 | ------------- | -------- | --------------------- | --------------------- | --------------------- |
 | **Pick**      | Model    | **{{Model}}**         | **{{Model}}**         | **{{Model}}**         |
 |               | Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
@@ -1349,8 +1348,8 @@ carrying ONLY the rows that platform's panel exposes.}}
 |               | AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
 |               | Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
 
-✓ runs by default. Price: list $ per 1M tokens (3 in : 1 out) × the tokens the
-model uses at that level.
+Price: list $ per 1M tokens (3 in : 1 out) × the tokens the model uses at that
+level.
 
 **Conversation:** New
 
@@ -1481,7 +1480,7 @@ this step's classification, pasted as printed with its
 **Runs:** line; where roadmodel cannot be reached, the
 single-column variant that matches PLATFORM.}}
 
-|               |          | Cost                  | Balanced ✓            | Quality               |
+|               |          | Cost                  | Balanced              | Quality               |
 | ------------- | -------- | --------------------- | --------------------- | --------------------- |
 | **Pick**      | Model    | **{{Model}}**         | **{{Model}}**         | **{{Model}}**         |
 |               | Platform | {{Platform}}          | {{Platform}}          | {{Platform}}          |
@@ -1499,8 +1498,8 @@ single-column variant that matches PLATFORM.}}
 |               | AA       | {{AA Index}}          | {{AA Index}}          | {{AA Index}}          |
 |               | Price    | {{$ per 1M}}          | {{$ per 1M}}          | {{$ per 1M}}          |
 
-✓ runs by default. Price: list $ per 1M tokens (3 in : 1 out) × the tokens the
-model uses at that level.
+Price: list $ per 1M tokens (3 in : 1 out) × the tokens the model uses at that
+level.
 
 **Conversation:** New
 

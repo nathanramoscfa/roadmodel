@@ -44,7 +44,7 @@ export function RecommendIntro({ modelCount, measuredCount }: { modelCount: numb
       </ol>
       <p className="mt-5 text-sm text-brand-slate-600 dark:text-brand-slate-300">
         Every model, with its ratings, benchmarks and prices, is on{" "}
-        <Link href="/models" className="font-medium text-brand-accent hover:underline">
+        <Link href="/" className="font-medium text-brand-accent hover:underline">
           the catalog
         </Link>
         .

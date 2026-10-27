@@ -37,10 +37,17 @@ test("app nav appears on /recommend and links between surfaces", async ({
   await expect(
     page.getByRole("heading", { name: /^Settings$/i }),
   ).toBeVisible();
+
+  await nav.getByRole("link", { name: /^Models$/ }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(nav.getByRole("link", { name: /^Models$/ })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
 });
 
-test("app nav is absent on the marketing home page", async ({ page }) => {
-  await page.goto("/");
+test("app nav is absent on auth chrome", async ({ page }) => {
+  await page.goto("/login");
   await expect(
     page.getByRole("navigation", { name: /Primary/i }),
   ).toHaveCount(0);

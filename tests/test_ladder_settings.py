@@ -211,7 +211,7 @@ def test_each_column_ranks_its_pick_runner_up_and_backup() -> None:
         if backup is not None:
             assert backup["stepped_down"] and backup["model_id"] == col["model_id"]
     head, cells = _tabled(got["markdown"])
-    assert head == ["", "", "Cost", "Balanced ✓", "Quality"]
+    assert head == ["", "", "Cost", "Balanced", "Quality"]
     paragraphs = got["markdown"].split("\n\n")
     assert paragraphs[-2] == "**Conversation:** New"
     for tier in scoring.LADDER_TIERS:
@@ -236,12 +236,12 @@ def test_the_table_groups_each_rank_over_indented_field_rows() -> None:
     # 2026-10-25: an `&nbsp;` indent drew a blob in some viewers; the rank's
     # own column indents the fields with ordinary cells.
     assert "&nbsp;" not in md and "\u00a0" not in md
-    assert "Thinking" not in md and "<br>" not in md
+    assert "Thinking" not in md and "<br>" not in md and "✓" not in md
     assert not any(c.startswith(("Effort ", "Intelligence ")) for r in rows for c in r[1:])
     prose = [ln for ln in md.splitlines() if not ln.startswith("|")]
     assert all(len(ln) <= 80 for ln in prose)
     flat = " ".join(" ".join(prose).split())
-    assert "✓ runs by default." in flat
+    assert "runs by default." not in flat
     assert "Price: list $ per 1M tokens (3 in : 1 out)" in flat
 
 
@@ -542,7 +542,8 @@ def test_the_step_runs_the_column_its_budget_priority_names(budget: str, runs: s
     got = _settings(scoring.Task("planning", "medium", budget=budget))
     assert got["runs"] == runs
     head, _ = _tabled(got["markdown"])
-    assert head[2:] == [t.capitalize() + (" ✓" if t == runs else "") for t in scoring.LADDER_TIERS]
+    assert head[2:] == [t.capitalize() for t in scoring.LADDER_TIERS]
+    assert "✓" not in got["markdown"]
     runs_line = got["markdown"].split("\n\n")[-1]
     assert runs_line.startswith(f"**Runs:** {runs.capitalize()} — ")
     assert scoring.RUN_RULE in " ".join(runs_line.split())
@@ -586,7 +587,7 @@ def test_ladder_prints_the_table_and_its_runs_line(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     out = _cli(tmp_path, monkeypatch, "--category", "planning", "--complexity", "medium")
-    assert _cells(out.splitlines()[0]) == ["", "", "Cost", "Balanced ✓", "Quality"]
+    assert _cells(out.splitlines()[0]) == ["", "", "Cost", "Balanced", "Quality"]
     assert "**Runs:** Balanced — " in out
     payload = json.loads(
         _cli(
@@ -690,7 +691,7 @@ def test_relayout_turns_a_ranked_table_into_the_ladder_table() -> None:
     new, count, kept = ladder_layout.relayout(RANKED_TABLE, price=_fake_price)
     assert (count, kept) == (1, 0)
     head, cells = _tabled(new)
-    assert head == ["", "", "Cost", "Balanced ✓", "Quality"]
+    assert head == ["", "", "Cost", "Balanced", "Quality"]
     assert cells["cost"]["Pick"] == {
         "Model": "**GPT-6.1 Sol**",
         "Platform": "Codex",
@@ -739,7 +740,7 @@ def test_relayout_reads_the_single_pick_ladders_older_releases_wrote() -> None:
     new, count, _ = ladder_layout.relayout(split, price=_fake_price)
     assert count == 1
     head, cells = _tabled(new)
-    assert head == ["", "", "Cost", "Balanced", "Quality ✓"]
+    assert head == ["", "", "Cost", "Balanced", "Quality"]
     assert list(cells["cost"]) == ["Pick", "Backup"]
     assert cells["cost"]["Backup"] == {
         "Model": "**Sonnet 5.5**",
@@ -974,15 +975,16 @@ assumed.
 
 
 def test_relayout_moves_an_indented_ladder_to_the_rank_column_even_when_complete() -> None:
-    """The `&nbsp;` indent drew a blob in some viewers (2026-10-25). Its fix
-    changes no value, so it reaches a Complete step too: every cell, the ↓
-    and `*` marks, the note's classification and the Conversation value are
-    kept, and the Runs and `> Ran` lines stay below it."""
+    """The `&nbsp;` indent drew a blob in some viewers (2026-10-25), and 0.2.98
+    carried ✓ in the column header and note. Both fixes change no value, so
+    they reach a Complete step too: every cell, the ↓ and `*` marks, the note's
+    classification and the Conversation value are kept, and the Runs and `> Ran`
+    lines stay below it."""
     new, count, kept = ladder_layout.relayout(INDENTED)
     assert (count, kept) == (1, 0)
-    assert "&nbsp;" not in new
+    assert "&nbsp;" not in new and "✓" not in new
     head, cells = _tabled(new)
-    assert head == ["", "", "Cost", "Balanced ✓", "Quality"]
+    assert head == ["", "", "Cost", "Balanced", "Quality"]
     assert cells["quality"]["Pick"] == {
         "Model": "**Opus**",
         "Platform": "Claude Code",
@@ -995,7 +997,44 @@ def test_relayout_moves_an_indented_ladder_to_the_rank_column_even_when_complete
     assert cells["balanced"]["Backup"]["Model"] == "none"
     assert "AA" not in cells["cost"]["Backup"]
     flat = " ".join(new.split())
-    assert "Ranked for planning, medium complexity. ✓ runs by default. ↓ the Pick" in flat
+    assert "Ranked for planning, medium complexity. ↓ the Pick" in flat
     assert "\n**Conversation:** Continue\n\n**Runs:** Balanced" in new
     assert new.endswith("> Ran 2026-10-20: Balanced Pick — Opus · High.\n")
     assert ladder_layout.relayout(new) == (new, 0, 0)
+    # A 0.2.98 table with the rank column but still carrying ✓ is stripped too.
+    with_checkmark = new.replace("| Balanced     |", "| Balanced ✓   |").replace(
+        "Ranked for planning, medium complexity.",
+        "Ranked for planning, medium complexity. ✓ runs by default.",
+    )
+    assert ladder_layout.relayout(with_checkmark) == (new, 1, 0)
+
+
+def test_a_maker_ranks_its_cheaper_model_when_a_dearer_one_is_within_noise() -> None:
+    """2026-10-26: when settings_ladder excluded the upper makers to rank the
+    third maker (OpenAI), ladder() picked GPT-6 Astra ($16.36/1M, AA 52.4) over
+    GPT-6.1 Sol ($4.00/1M, AA 51.0) on Quality, even though the 1.4-point AA
+    gap is within the noise band. Within a maker, a cheaper model the evidence
+    cannot tell from the strongest wins."""
+    catalog = {
+        **GOOGLE,
+        "models": [*GOOGLE["models"], _model("sol", "Sol", 1.25, 10.0, "S", "openai")],
+        "access_methods": [
+            {**a, "supports_models": [*a["supports_models"], "sol"]}
+            if a["id"] == "codex-cli"
+            else a
+            for a in GOOGLE["access_methods"]
+        ],
+    }
+    text = _context().replace(
+        "| ChatGPT Pro ($100) | $100 | OpenAI | Codex |",
+        "| ChatGPT Pro ($100) | $100 | OpenAI | Codex |\n"
+        "| Google AI Pro ($20) | $20 | Google | Antigravity |",
+    )
+    bench = {**BENCH, "argon": _aa(54), "sol": _aa(51)}
+    for task in (
+        scoring.Task("planning", "medium"),
+        scoring.Task("planning", "high", True),
+    ):
+        got = scoring.settings_ladder(task, text, catalog=catalog, benchmarks=bench)
+        assert got is not None
+        assert got["columns"]["quality"]["backup"]["model_id"] == "sol"

@@ -15,16 +15,17 @@ import { ThemeToggle } from "./ThemeToggle";
 // onboarding, gate, privacy, terms) via usePathname, so those routes stay
 // static and keep their own headers.
 const NAV_LINKS: { href: string; label: string }[] = [
+  { href: "/", label: "Models" },
   { href: "/recommend", label: "Recommend" },
-  { href: "/models", label: "Models" },
   { href: "/roadmap", label: "Roadmap" },
   { href: "/history", label: "History" },
   { href: "/settings", label: "Settings" },
   { href: "/docs", label: "Docs" },
 ];
 
-// Route prefixes the app nav appears on. Everything else (/, /login,
-// /onboarding, /callback, /gate, /signout, /privacy, /terms) renders without it.
+// Route prefixes the app nav appears on (plus `/` for the benchmark home page).
+// Auth and legal chrome (/login, /onboarding, /callback, /gate, /signout,
+// /privacy, /terms) renders without it.
 const APP_PREFIXES = ["/recommend", "/models", "/roadmap", "/history", "/settings", "/docs"];
 
 // Sign out, from a small panel: saved recommendations stay in this browser for
@@ -111,9 +112,9 @@ function SignOut() {
 
 export function AppNav({ roadmapEnabled }: { roadmapEnabled: boolean }) {
   const pathname = usePathname();
-  const onAppSurface = APP_PREFIXES.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`),
-  );
+  const onAppSurface =
+    pathname === "/" ||
+    APP_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   if (!onAppSurface) {
     return null;
   }
@@ -148,7 +149,9 @@ export function AppNav({ roadmapEnabled }: { roadmapEnabled: boolean }) {
         <div className="order-3 -mx-1 flex w-full flex-wrap items-center gap-1 lg:order-2 lg:mx-0 lg:ml-auto lg:w-auto lg:flex-nowrap lg:gap-2">
           {links.map((link) => {
             const active =
-              pathname === link.href || pathname.startsWith(`${link.href}/`);
+              link.href === "/"
+                ? pathname === "/" || pathname === "/models" || pathname.startsWith("/models/")
+                : pathname === link.href || pathname.startsWith(`${link.href}/`);
             return (
               <Link
                 key={link.href}

@@ -114,8 +114,7 @@ the dials and make sure it is set.
   **Backup**) sits in a column of its own beside its Model, Platform, Level, AA and
   Price rows. Level is the bare level of that platform's own dial (`High`
   is Intelligence High on Codex, Effort High on Claude Code and
-  Antigravity). The ✓ in a column's header marks the one its **Runs:**
-  line names. From roadmodel 0.2.97 the three ranks of a column come from
+  Antigravity). From roadmodel 0.2.97 the three ranks of a column come from
   three makers (a tight pool is a maker's); where too few are funded, a
   missing rank is the Pick one level lower, its Level marked ↓, and the
   note line says which classification the ladder was ranked for. A 0.2.94

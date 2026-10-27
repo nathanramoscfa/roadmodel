@@ -410,8 +410,8 @@ LADDER_SHAPE = [
 
 
 def _ladders(text: str) -> list[list[str]]:
-    """Each ladder table's lines, its `|  | Cost | Balanced | Quality |`
-    header (the column that runs marked ✓) through its last row."""
+    """Each ladder table's lines, its `|  |  | Cost | Balanced | Quality |`
+    header through its last row."""
     lines = text.splitlines()
     out = []
     for i, line in enumerate(lines):
@@ -666,8 +666,10 @@ def test_project_template_names_the_settings_that_write_each_phase_roadmap() -> 
         block = section[settings:first_sub]
         ladders = _ladders(block)
         assert len(ladders) == 1 and _ladder_shape(ladders[0]) == LADDER_SHAPE, name
-        assert re.search(r"\| Quality ✓ +\|", block), name
+        assert re.search(r"\| Quality +\|", block), name
+        assert "✓" not in block, name
         assert "**Conversation:** New" in block, name
+        assert "**Runs:** Quality" in block, name
         assert "`/roadmap-phase " in section[settings:first_sub], name
     # The rule: quality first, the deepest rung, never Ultracode, history kept.
     for phrase in _QUALITY_FIRST:
