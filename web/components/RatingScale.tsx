@@ -1,4 +1,6 @@
 // web/components/RatingScale.tsx
+import Link from "next/link";
+
 import {
   DERIVATION_BANDS,
   DERIVED_CATEGORIES,
@@ -66,9 +68,9 @@ export function RatingScale({ id, compact = false }: { id?: string; compact?: bo
         prompt&rsquo;s complexity, then picks the highest-rated available model that
         clears it &mdash; ties inside a class resolve on the benchmark evidence, which
         the{" "}
-        <a href="/models" className="text-brand-accent hover:underline">
+        <Link href="/" className="text-brand-accent hover:underline">
           model catalog
-        </a>{" "}
+        </Link>{" "}
         shows as the Artificial Analysis Intelligence Index and the full benchmark
         grid.
       </p>

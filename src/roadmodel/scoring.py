@@ -1808,10 +1808,36 @@ def ladder(
     # none: the picks then fall back to the models' frontier.
     points = frontier(settings, bench) or front
 
+    aa_band = _aa_band(bench, cat)
     adequate = [p for p in points if p.candidate.requirement_penalty == 0]
     if not adequate:
         adequate = [max(points, key=_nearest)]
-    top = _top(adequate, task.category)
+    raw_top = _top(adequate, task.category)
+    # Within a maker, a model the evidence cannot tell from the strongest
+    # (within the category and AA noise bands both ways, as in _backup_for)
+    # wins when it is cheaper: GPT-6.1 Sol at $4.00/1M is not passed over for
+    # GPT-6 Astra at $16.36/1M over 1.4 AA points. Each model is read at its
+    # own strongest effort in the band so a model's lower effort does not
+    # displace its higher one on QUALITY.
+    prepaid = raw_top.candidate.scarcity < 1.0
+    peers = [
+        p
+        for p in points
+        if p.candidate.provider == raw_top.candidate.provider
+        and (p.candidate.scarcity < 1.0 or not prepaid)
+        and _near_tied(
+            p.candidate, p.aa_index, raw_top.candidate, raw_top.aa_index, task.category, aa_band
+        )
+    ]
+    by_model: dict[str, list[FrontierPoint]] = {}
+    for p in peers:
+        by_model.setdefault(p.candidate.model_id, []).append(p)
+    top = min(
+        (_top(ps, task.category) for ps in by_model.values()),
+        key=lambda p: (p.price_usd, -p.candidate.score),
+    )
+    if top not in adequate:
+        adequate = [p for p in points if p.candidate.requirement_penalty == 0 or p is top]
     span = adequate[: adequate.index(top) + 1]
     specialist = _specialist(task, settings, points, top, bench)
     by_level = {(c.model_id, c.evidence_level): c for c in settings if c.evidence_level}
@@ -1916,9 +1942,6 @@ def ladder(
         )
     balanced_rung = settle(_below(balanced_rung, quality_rung, cat))
     cost_rung = settle(_below(cost_rung, balanced_rung, cat))
-    # General capability is level within the same noise band, read on the
-    # AA Index's own 0–100 scale (the planning evidence).
-    aa_band = _aa_band(bench, cat)
     rungs = {
         r.tier: replace(r, backup=_backup_for(r, settings, task, headroom, bench, cat, aa_band))
         for r in (cost_rung, balanced_rung, quality_rung)

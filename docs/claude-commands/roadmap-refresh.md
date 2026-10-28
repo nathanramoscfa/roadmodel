@@ -204,8 +204,7 @@ complexity, novel or not; its Model rationale names them), then:
   fix, not a new pick, so it takes no `Settings updated` line.
 - Every ladder, a step's Settings and a phase's Phase roadmap settings
   alike, takes the table layout (roadmodel 0.2.95 on), as `roadmodel
-  ladder` prints it: Cost, Balanced and Quality columns (the one its
-  **Runs:** line names marked ✓), each rank (**Pick**, **Runner‑up**,
+  ladder` prints it: Cost, Balanced and Quality columns, each rank (**Pick**, **Runner‑up**,
   **Backup**) in a column of its own beside its Model / Platform / Level / AA /
   Price rows — Level the bare level of the platform's own dial, AA its AA
   Intelligence Index there (`not measured` where AA has no row), Price its
@@ -222,10 +221,10 @@ complexity, novel or not; its Model rationale names them), then:
   progress` step's is what an agent is running, and a written phase's
   records what wrote its roadmap, so those keep their layout. One
   exception reaches every section: a 0.2.95–0.2.97 table, whose fields are
-  indented with `&nbsp;` (some viewers draw each as a highlighted blob),
-  takes the rank column wherever it stands, Complete steps included, every
-  cell kept. That is a layout fix, not a new pick, and takes no `Settings
-  updated` line. Then
+  indented with `&nbsp;` (some viewers draw each as a highlighted blob), or
+  a 0.2.98 table still carrying ✓, takes the rank column without ✓ wherever
+  it stands, Complete steps included, every cell kept. That is a layout fix,
+  not a new pick, and takes no `Settings updated` line. Then
   run `roadmodel rerank <every roadmap file>` (roadmodel 0.2.97 on): it
   gives each of those ladder tables the ranks this release computes, so a
   change to how roadmodel ranks reaches every step not yet run. It reads

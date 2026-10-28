@@ -123,7 +123,7 @@ def _grid(rows: list[list[str]]) -> list[str]:
 def ladder_markdown(
     columns: Mapping[str, Mapping[str, Option | None]],
     *,
-    runs: str | None,
+    runs: str | None = None,
     conversation: str | None,
     ranked_for: str | None = None,
 ) -> str:
@@ -132,7 +132,7 @@ def ladder_markdown(
     none), and a field row only when some option of that rank has a value
     there (an older backup has no AA Index; a rank with no option in any
     column reads `none` alone)."""
-    head = ["", "", *(t.capitalize() + (f" {RUNS_MARK}" if t == runs else "") for t in TIERS)]
+    head = ["", "", *(t.capitalize() for t in TIERS)]
     rows = [head]
     priced = unmeasured = stepped = False
     for label, key in RANKS:
@@ -155,8 +155,6 @@ def ladder_markdown(
         )
         stepped |= any(o is not None and o.stepped_down for o in opts)
     notes = [f"Ranked for {ranked_for}."] if ranked_for else []
-    if runs:
-        notes.append(f"{RUNS_MARK} runs by default.")
     if stepped:
         notes.append(
             f"{STEP_MARK} the Pick one level lower: no other maker is funded, and a "
@@ -357,22 +355,25 @@ def _list_ladder(
 # that runs, its Conversation value, the classification its note names, and
 # whether converting it is a display fix that reaches every section.
 _Found = tuple[int, dict[str, dict[str, "Option | None"]], str | None, str | None, str | None, bool]
-# The 0.2.95–0.2.97 table: one empty header cell before Cost.
-_INDENT_HEAD_RE: Final = re.compile(r"^\|\s*\|\s*Cost\b")
+# The 0.2.95–0.2.98 table: one empty header cell before Cost (0.2.95–0.2.97)
+# or two with a ✓ in the header or note (0.2.98).
+_INDENT_HEAD_RE: Final = re.compile(r"^\|\s*\|(?:\s*\|)?\s*Cost\b")
 _PRICE_RE: Final = re.compile(r"^\$([0-9]+(?:\.[0-9]+)?)/1M(\*?)$")
 
 
 def _indented_ladder(
     lines: list[str], start: int
 ) -> tuple[int, dict[str, dict[str, Option | None]], str | None, str | None, str | None] | None:
-    """A 0.2.95–0.2.97 ladder table starting at ``lines[start]`` (rank rows
-    over `&nbsp;`-indented fields): the index past its note and Conversation
-    line (its Runs paragraph stays), its columns with every cell read back,
-    the column marked ✓, its Conversation value and the classification its
-    note names; None when a row is not one this release wrote."""
+    """A 0.2.95–0.2.98 ladder table starting at ``lines[start]`` (rank rows
+    over `&nbsp;`-indented fields, or a 0.2.98 table still carrying ✓): the
+    index past its note and Conversation line (its Runs paragraph stays), its
+    columns with every cell read back, the column marked ✓, its Conversation
+    value and the classification its note names; None when a row is not one
+    those releases wrote or the table is already in the current layout."""
     head = _table_cells(lines[start])
+    tier_cells = head[-len(TIERS) :]
     runs = next(
-        (t for t, cell in zip(TIERS, head[1:], strict=False) if cell.endswith(RUNS_MARK)), None
+        (t for t, cell in zip(TIERS, tier_cells, strict=False) if cell.endswith(RUNS_MARK)), None
     )
     cells, j = _table_rows(lines, start + 2)
     keys = {label.replace("\u2011", "-"): key for label, key in RANKS}
@@ -409,6 +410,8 @@ def _indented_ladder(
             n += 1
         note = " ".join(" ".join(lines[k:n]).split())
         end = n
+    if len(head) == 2 + len(TIERS) and runs is None and f"{RUNS_MARK} runs by default." not in note:
+        return None
     k = _skip_blank(lines, end)
     conversation = None
     if k < len(lines) and (conv := _CONVERSATION_RE.match(lines[k])):

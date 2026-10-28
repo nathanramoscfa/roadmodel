@@ -292,7 +292,7 @@ export function RecommendResult({
               <p>
                 The letters are the catalog&rsquo;s S&rarr;D ratings in coding, planning, agentic, multimodal,
                 long-context, knowledge and speed. A filled letter is measured from an Artificial Analysis benchmark; a
-                dashed one is estimated. The <Link href="/models#how-to-read" className="font-medium text-brand-accent hover:underline">catalog key</Link> has the rules.
+                dashed one is estimated. The <Link href="/#how-to-read" className="font-medium text-brand-accent hover:underline">catalog key</Link> has the rules.
               </p>
             </div>
             <div>

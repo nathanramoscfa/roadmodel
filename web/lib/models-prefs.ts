@@ -14,7 +14,7 @@ import type { CostTier, Weights } from "@/lib/catalog-fields";
 import type { CatalogFilters } from "@/lib/catalog-filter";
 
 export const PREFS_COOKIE = "roadmodel_models_view";
-const PREFS_PATH = "/models";
+const PREFS_PATH = "/";
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
 export type Grouping = "tier" | "quality";

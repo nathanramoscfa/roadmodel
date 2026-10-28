@@ -140,8 +140,8 @@ test("every choice survives a reload, and the server renders it before any scrip
 });
 
 test("a malformed cookie opens the default page", async ({ page, context, baseURL }) => {
-  await context.addCookies([{ name: PREFS_COOKIE, value: "%7Bbroken", url: `${baseURL}/models` }]);
-  await page.goto("/models");
+  await context.addCookies([{ name: PREFS_COOKIE, value: "%7Bbroken", url: `${baseURL}/` }]);
+  await page.goto("/");
   await expect(page.getByTestId("model-row")).toHaveCount(MODEL_COUNT);
   await expect(page.getByTestId("group-by-quality")).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("frontier-panel")).toHaveAttribute("data-grouping", "quality");
