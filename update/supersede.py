@@ -341,6 +341,20 @@ def apply(selector_text: str, p: Plan) -> str:
     return text
 
 
+def rederive(
+    selector_text: str, benchmarks: dict[str, Any]
+) -> tuple[str, list[dict[str, Any]], str]:
+    """(selector, changes, effort-ratings document) after a retirement: what
+    ``derive_ratings.py --write`` makes of the selector, built from its own
+    steps so that file stays the one the catalog baseline pins."""
+    changes, _ = derive_ratings.plan_changes(selector_text, benchmarks)
+    text = derive_ratings.apply_changes(selector_text, changes)
+    text = derive_ratings.regenerate_coding_enumeration(text)
+    text = derive_ratings.regenerate_multimodal_enumeration(text)
+    effort = derive_ratings.render_effort_ratings(derive_ratings.effort_letters(text, benchmarks))
+    return text, changes, effort
+
+
 def base_tags(base_text: str) -> dict[str, Tags]:
     """The tags recorded in a committed selector."""
     options = _OPTIONS_RE.search(base_text)
@@ -410,9 +424,7 @@ def main(argv: list[str] | None = None) -> int:
             # Ranks are taken over the live models, so a retirement narrows the
             # field and moves other models' letters: re-derive them in the same
             # write, or derive_ratings.py --check fails on the retirement day.
-            new_text, changes, effort = derive_ratings.rederive(
-                new_text, benchmarks.get("models", {})
-            )
+            new_text, changes, effort = rederive(new_text, benchmarks.get("models", {}))
             for ch in changes:
                 print(
                     f"RERATED {names.get(ch['id'], ch['id'])}: {ch['category']} "
