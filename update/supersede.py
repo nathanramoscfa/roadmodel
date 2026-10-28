@@ -55,6 +55,7 @@ UPDATE_DIR = Path(__file__).resolve().parent
 if str(UPDATE_DIR) not in sys.path:
     sys.path.insert(0, str(UPDATE_DIR))
 
+import derive_ratings  # noqa: E402
 from build_catalog import (  # noqa: E402
     RETIRE_AFTER_DAYS,
     TASK_CATEGORIES,
@@ -69,6 +70,7 @@ REPO_ROOT = UPDATE_DIR.parent
 SELECTOR_PATH = REPO_ROOT / "docs" / "model-selector.txt"
 BENCHMARKS_PATH = REPO_ROOT / "docs" / "benchmarks.json"
 AVAILABILITY_PATH = REPO_ROOT / "infra" / "model-availability.json"
+EFFORT_RATINGS_PATH = derive_ratings.EFFORT_RATINGS_PATH
 
 RATING_RANK = {"S": 5, "A": 4, "B": 3, "C": 2, "D": 1}
 _OPTIONS_RE = re.compile(r"<model-options>(.*?)</model-options>", re.DOTALL)
@@ -404,6 +406,20 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.write:
         new_text = apply(selector_text, p)
+        if p.retired:
+            # Ranks are taken over the live models, so a retirement narrows the
+            # field and moves other models' letters: re-derive them in the same
+            # write, or derive_ratings.py --check fails on the retirement day.
+            new_text, changes, effort = derive_ratings.rederive(
+                new_text, benchmarks.get("models", {})
+            )
+            for ch in changes:
+                print(
+                    f"RERATED {names.get(ch['id'], ch['id'])}: {ch['category']} "
+                    f"{ch['from']} → {ch['to']} (the retirements narrowed the field)"
+                )
+            if not EFFORT_RATINGS_PATH.exists() or EFFORT_RATINGS_PATH.read_text() != effort:
+                EFFORT_RATINGS_PATH.write_text(effort)
         if new_text != selector_text:
             args.selector.write_text(new_text)
     return 0

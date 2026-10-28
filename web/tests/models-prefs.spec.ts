@@ -18,15 +18,14 @@ import {
   PREFS_COOKIE,
   prefsFromFilters,
 } from "../lib/models-prefs";
+import { liveCatalog } from "./fixtures/live-catalog";
 
 interface CatalogModel {
   id: string;
   jurisdiction: string;
   tier_cost: string;
 }
-const catalog = JSON.parse(
-  readFileSync(path.join(process.cwd(), "data", "catalog.json"), "utf8"),
-) as { models: CatalogModel[] };
+const catalog = liveCatalog<{ models: CatalogModel[] }>();
 const MODEL_COUNT = catalog.models.length;
 
 test("the saved cookie is parsed field by field, never trusted", () => {

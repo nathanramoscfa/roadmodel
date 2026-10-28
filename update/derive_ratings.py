@@ -304,10 +304,12 @@ def plan_changes(
 ) -> tuple[list[dict[str, Any]], dict[str, list[str]]]:
     """Return (changes, unmeasured_by_category). Leaders and ranks are taken
     over the catalog's live models only — the population /models ranks — so a
-    retired model's lingering benchmark row never shifts a letter."""
+    retired model's lingering benchmark row never shifts a letter. Only live
+    models are judged: a retired element keeps the letters it retired with,
+    as part of its record (update/supersede.py), and nothing reads them."""
     live = live_ids(selector)
     derived = derive({cid: row for cid, row in benchmarks.items() if cid in live})
-    current = current_tiers(selector)
+    current = {mid: t for mid, t in current_tiers(selector).items() if mid in live}
     changes: list[dict[str, Any]] = []
     unmeasured: dict[str, list[str]] = {cat: [] for cat in CATEGORY_EVIDENCE}
     ceiling = "SABCD".index(ESTIMATE_CEILING)
@@ -406,6 +408,22 @@ def regenerate_multimodal_enumeration(selector: str) -> str:
     return new
 
 
+def rederive(
+    selector: str, benchmarks: dict[str, dict[str, Any]]
+) -> tuple[str, list[dict[str, Any]], str]:
+    """(selector, changes, effort-ratings document): the selector with every
+    derived letter and both enumerations brought up to date with ``benchmarks``
+    over its live models, the changes that took, and docs/effort-ratings.json
+    to match. --write applies it; update/supersede.py applies it again when it
+    retires a model, because retiring one narrows the field ranks are taken
+    over and moves other models' letters."""
+    changes, _ = plan_changes(selector, benchmarks)
+    updated = apply_changes(selector, changes)
+    updated = regenerate_coding_enumeration(updated)
+    updated = regenerate_multimodal_enumeration(updated)
+    return updated, changes, render_effort_ratings(effort_letters(updated, benchmarks))
+
+
 def render_report(
     changes: list[dict[str, Any]], unmeasured: dict[str, list[str]], names: dict[str, str]
 ) -> str:
@@ -501,12 +519,10 @@ def main() -> int:
         REPORT_PATH.write_text(report)
         return 0
 
+    updated, changes, effort_ratings = rederive(selector, benchmarks)
     if not EFFORT_RATINGS_PATH.exists() or EFFORT_RATINGS_PATH.read_text() != effort_ratings:
         EFFORT_RATINGS_PATH.write_text(effort_ratings)
         print(f"Wrote {EFFORT_RATINGS_PATH.relative_to(REPO_ROOT)}")
-    updated = apply_changes(selector, changes)
-    updated = regenerate_coding_enumeration(updated)
-    updated = regenerate_multimodal_enumeration(updated)
     if updated != selector:
         SELECTOR_PATH.write_text(updated)
         print(f"Applied {len(changes)} rating change(s) to {SELECTOR_PATH.relative_to(REPO_ROOT)}")

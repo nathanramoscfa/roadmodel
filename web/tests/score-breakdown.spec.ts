@@ -32,6 +32,7 @@ import {
   type BenchKey,
   type BenchRow,
 } from "../lib/benchmark-grid";
+import { liveCatalog } from "./fixtures/live-catalog";
 
 interface CatalogModel {
   id: string;
@@ -41,9 +42,7 @@ interface CatalogModel {
   tier_cost: string;
   headline_benchmarks?: string;
 }
-const catalog = JSON.parse(
-  readFileSync(path.join(process.cwd(), "data", "catalog.json"), "utf8"),
-) as { models: CatalogModel[] };
+const catalog = liveCatalog<{ models: CatalogModel[] }>();
 const benchmarks = JSON.parse(
   readFileSync(path.join(process.cwd(), "data", "benchmarks.json"), "utf8"),
 ) as { models: Record<string, { evaluations: Record<string, number | null> }> };

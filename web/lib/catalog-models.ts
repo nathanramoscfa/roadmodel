@@ -51,6 +51,18 @@ interface RawModel {
 
 const MODELS = (catalog as { models?: RawModel[] }).models ?? [];
 
+// A superseded model leaves the catalog on its `retires_on` day
+// (update/build_catalog.py dates it from RETIRE_AFTER_DAYS; the benchmark cron
+// then drops the row). Hiding it here from that UTC day on keeps the page right
+// even while a stale data/catalog.json still lists it.
+export function pastLeaveDate(retiresOn: string | null | undefined, now: Date): boolean {
+  return !!retiresOn && now.toISOString().slice(0, 10) >= retiresOn;
+}
+
+function liveModels(now: Date = new Date()): RawModel[] {
+  return MODELS.filter((m) => !pastLeaveDate(m.retires_on, now));
+}
+
 interface RawMethod {
   provider_jurisdiction: string;
   supports_models: string[];
@@ -137,7 +149,7 @@ function benchRowFor(id: string): BenchRow | null {
 // `now` decides which models carry the "New" tag (lib/benchmark-grid
 // newUntil); the page renders per request, so the tag clears on its own.
 export function getModelRows(now: Date = new Date()): ModelRow[] {
-  const rows: ModelRow[] = MODELS.map((m) => {
+  const rows: ModelRow[] = liveModels(now).map((m) => {
     const prose = m.headline_benchmarks ?? "";
     const bench = benchRowFor(m.id);
     const measured = bench?.values.artificial_analysis_intelligence_index ?? null;
@@ -227,7 +239,7 @@ export interface BenchmarkMeta {
 // cn model would have slipped through a "no cn" preference).
 export function modelsInJurisdiction(code: string): Set<string> {
   const out = new Set<string>();
-  for (const m of MODELS) {
+  for (const m of liveModels()) {
     if (m.jurisdiction !== code) continue;
     out.add(m.id);
     out.add(m.name);
@@ -239,7 +251,7 @@ export function modelsInJurisdiction(code: string): Set<string> {
 // jurisdiction (the E2E mock and the test that asserts on it derive the same
 // name from this, so they cannot drift apart).
 export function modelNamesInJurisdiction(code: string): string[] {
-  return MODELS.filter((m) => m.jurisdiction === code)
+  return liveModels().filter((m) => m.jurisdiction === code)
     .map((m) => m.name)
     .sort();
 }
@@ -247,7 +259,7 @@ export function modelNamesInJurisdiction(code: string): string[] {
 export function getBenchmarkMeta(): BenchmarkMeta {
   return {
     generatedAt: formatStamp((benchmarks as { generated_at_utc?: string }).generated_at_utc ?? ""),
-    measuredCount: MODELS.filter((m) => BENCH[m.id]).length,
+    measuredCount: liveModels().filter((m) => BENCH[m.id]).length,
   };
 }
 
@@ -269,7 +281,8 @@ export interface CatalogStats {
 export function getCatalogStats(): CatalogStats {
   const providerLabels = new Map<string, string>();
   const jurisdictions = new Set<string>();
-  for (const m of MODELS) {
+  const models = liveModels();
+  for (const m of models) {
     const provider = modelProvider(m.id);
     if (provider) providerLabels.set(provider.key, provider.label);
     if (m.jurisdiction) jurisdictions.add(m.jurisdiction);
@@ -278,7 +291,7 @@ export function getCatalogStats(): CatalogStats {
     a.localeCompare(b),
   );
   return {
-    modelCount: MODELS.length,
+    modelCount: models.length,
     providerCount: providers.length,
     providers,
     jurisdictionCount: jurisdictions.size,

@@ -237,3 +237,68 @@ def test_both_crons_run_the_rule() -> None:
     prompt = (UPDATE_DIR / "prompt.md").read_text()
     assert "superseded-by" in prompt and "retired-on" in prompt
     assert json.loads((REPO_ROOT / "docs" / "catalog.json").read_text())["models"]
+
+
+def test_the_retirement_day_retires_rerates_and_leaves_the_drift_check_green(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The benchmark cron's chain on the day a supersession turns 30 days old
+    (it deadlocked every run from 2026-10-24): letters by rank are taken over
+    the live models, so retiring one moves other models' letters, and the
+    write that retires must re-derive them for derive_ratings.py --check."""
+    derive = _load("derive_ratings")
+    build = _load("build_catalog")
+    text = (REPO_ROOT / "docs" / "model-selector.txt").read_text()
+    live = sorted((v.since, k) for k, v in supersede.base_tags(text).items() if v.retired is None)
+    if not live:
+        pytest.skip("no superseded (unretired) model in the committed selector")
+    first_since = dt.date.fromisoformat(live[0][0])
+    today = first_since + dt.timedelta(days=supersede.RETIRE_AFTER_DAYS)
+    due = {mid for since, mid in live if since == live[0][0]}
+    benchmarks = json.loads((REPO_ROOT / "docs" / "benchmarks.json").read_text())["models"]
+    letters_before = derive.current_tiers(text)
+
+    selector = tmp_path / "model-selector.txt"
+    selector.write_text(text)
+    effort = tmp_path / "effort-ratings.json"
+    monkeypatch.setattr(supersede, "EFFORT_RATINGS_PATH", effort)
+    assert (
+        supersede.main(["--write", "--today", today.isoformat(), "--selector", str(selector)]) == 0
+    )
+    out = capsys.readouterr().out
+    after = selector.read_text()
+
+    retired = {k for k, v in supersede.base_tags(after).items() if v.retired}
+    assert due <= retired
+    assert out.count("RETIRED ") == len(retired)
+    # The drift check: every live letter matches the derivation, and the
+    # effort ratings were rewritten over the narrowed field.
+    changes, unmeasured = derive.plan_changes(after, benchmarks)
+    assert changes == []
+    assert effort.read_text() == derive.render_effort_ratings(
+        derive.effort_letters(after, benchmarks)
+    )
+    # A retired element is the record of what it was: its letters are frozen
+    # and it is neither judged nor listed as an estimate.
+    letters_after = derive.current_tiers(after)
+    assert all(letters_after[mid] == letters_before[mid] for mid in retired)
+    assert not retired & {mid for ids in unmeasured.values() for mid in ids}
+    # And it has left the catalog.
+    monkeypatch.setattr(build, "SELECTOR_PATH", selector)
+    ids = {m["id"] for m in build.build_catalog()["models"]}
+    assert not retired & ids
+
+
+def test_the_drift_check_still_catches_a_live_letter_off_the_derivation() -> None:
+    derive = _load("derive_ratings")
+    text = (REPO_ROOT / "docs" / "model-selector.txt").read_text()
+    benchmarks = json.loads((REPO_ROOT / "docs" / "benchmarks.json").read_text())["models"]
+    live = derive.live_ids(text)
+    derived = derive.derive({k: v for k, v in benchmarks.items() if k in live})["planning"]
+    mid, row = next(iter(sorted(derived.items())))
+    wrong = "D" if row["letter"] != "D" else "S"
+    element = re.compile(rf'(<model\s+id="{re.escape(mid)}"[^>]*?tier-planning=")[SABCD]"')
+    drifted, n = element.subn(rf'\g<1>{wrong}"', text, count=1)
+    assert n == 1
+    changes, _ = derive.plan_changes(drifted, benchmarks)
+    assert {(c["id"], c["category"]) for c in changes} == {(mid, "planning")}
