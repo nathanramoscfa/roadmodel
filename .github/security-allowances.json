@@ -6,7 +6,7 @@
       "max_occurrences": 1,
       "proof": {
         "confidence": "HIGH",
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "cf703eec52f0d7e17ef9d3cd40cca80780e56cbedd4398dd3010d5dcb8b35ffb",
         "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
         "rule_id": "B102",
@@ -26,7 +26,7 @@
         "tool_sha256": "d8e3cef305b7b7a6ed452897882331a566df784b577c08e5c3bdc8322ffb6429"
       },
       "rationale": "Executes a finite literal companion from the trusted installed release or explicitly reviewed checkout, with the same authority as importing package code. Project content and model output never supply executable source.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "accepted-risk",
@@ -34,7 +34,7 @@
       "max_occurrences": 1,
       "proof": {
         "confidence": "HIGH",
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "406a6bc1370ddab4347ce238ca57225a25b8a0d6e4172f2508dbc720d042eb22",
         "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
         "rule_id": "B102",
@@ -54,7 +54,7 @@
         "tool_sha256": "d8e3cef305b7b7a6ed452897882331a566df784b577c08e5c3bdc8322ffb6429"
       },
       "rationale": "Executes a finite literal companion from the trusted installed release or explicitly reviewed checkout, with the same authority as importing package code. Project content and model output never supply executable source.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "accepted-risk",
@@ -62,7 +62,7 @@
       "max_occurrences": 1,
       "proof": {
         "confidence": "HIGH",
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "c4c12b8cb635ad56577e1a21ad8da8b5bf71c86711d36e19cc2b89639b6bdf47",
         "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
         "rule_id": "B102",
@@ -82,7 +82,7 @@
         "tool_sha256": "d8e3cef305b7b7a6ed452897882331a566df784b577c08e5c3bdc8322ffb6429"
       },
       "rationale": "Executes a finite literal companion from the trusted installed release or explicitly reviewed checkout, with the same authority as importing package code. Project content and model output never supply executable source.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "accepted-risk",
@@ -90,7 +90,7 @@
       "max_occurrences": 1,
       "proof": {
         "confidence": "HIGH",
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "0af7498d9c035d25f6cb87b1e5482a041177c323aa0832c726b0ff2f959c93ef",
         "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
         "rule_id": "B602",
@@ -110,7 +110,7 @@
         "tool_sha256": "d8e3cef305b7b7a6ed452897882331a566df784b577c08e5c3bdc8322ffb6429"
       },
       "rationale": "Preserves the explicitly configured trusted operator shell program. Incoming status JSON is passed only through standard input and is not substituted into command text. Arbitrary command-file callers are outside this boundary.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "accepted-risk",
@@ -118,7 +118,7 @@
       "max_occurrences": 1,
       "proof": {
         "confidence": "HIGH",
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "a359d09ac1eb06ed7abc4790f7c6693bcfe85fd649e7b3b8a3c29f911b53e21c",
         "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
         "rule_id": "B102",
@@ -138,7 +138,7 @@
         "tool_sha256": "d8e3cef305b7b7a6ed452897882331a566df784b577c08e5c3bdc8322ffb6429"
       },
       "rationale": "Executes a finite literal companion from the trusted installed release or explicitly reviewed checkout, with the same authority as importing package code. Project content and model output never supply executable source.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "accepted-risk",
@@ -146,7 +146,7 @@
       "max_occurrences": 1,
       "proof": {
         "confidence": "HIGH",
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "75378f5aa9e2d4b9b2acdf4d11080e126a0abd005deca16d5224e67e3ebaf547",
         "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
         "rule_id": "B102",
@@ -166,7 +166,7 @@
         "tool_sha256": "d8e3cef305b7b7a6ed452897882331a566df784b577c08e5c3bdc8322ffb6429"
       },
       "rationale": "Executes a finite literal companion from the trusted installed release or explicitly reviewed checkout, with the same authority as importing package code. Project content and model output never supply executable source.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "accepted-risk",
@@ -174,7 +174,7 @@
       "max_occurrences": 1,
       "proof": {
         "confidence": "HIGH",
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "6985c8f61382df9100dc95b27ff25ed10bad54473f6b38b05af8d5647451fc19",
         "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
         "rule_id": "B102",
@@ -194,7 +194,7 @@
         "tool_sha256": "d8e3cef305b7b7a6ed452897882331a566df784b577c08e5c3bdc8322ffb6429"
       },
       "rationale": "Executes a finite literal companion from the trusted installed release or explicitly reviewed checkout, with the same authority as importing package code. Project content and model output never supply executable source.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "accepted-risk",
@@ -202,7 +202,7 @@
       "max_occurrences": 1,
       "proof": {
         "confidence": "HIGH",
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "0d6cd834145f0eb23f5a9ec2574a0e8c5da8bd70defa643ac4ff1da9b97019f8",
         "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
         "rule_id": "B102",
@@ -222,7 +222,7 @@
         "tool_sha256": "d8e3cef305b7b7a6ed452897882331a566df784b577c08e5c3bdc8322ffb6429"
       },
       "rationale": "Executes a finite literal companion from the trusted installed release or explicitly reviewed checkout, with the same authority as importing package code. Project content and model output never supply executable source.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "false-positive",
@@ -230,7 +230,7 @@
       "max_occurrences": 1,
       "proof": {
         "confidence": "MEDIUM",
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "f375e2cb10627c1474cf31e14ba0e3e25cb74433f08fb8a5670996d41b145d06",
         "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
         "rule_id": "B108",
@@ -250,7 +250,7 @@
         "tool_sha256": "d8e3cef305b7b7a6ed452897882331a566df784b577c08e5c3bdc8322ffb6429"
       },
       "rationale": "Fixed path contains the public packaged template in the isolated deployed function filesystem; no request-controlled filesystem writer reaches it. This assessment does not apply to a shared multi-user host.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "false-positive",
@@ -258,7 +258,7 @@
       "max_occurrences": 1,
       "proof": {
         "confidence": "MEDIUM",
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "1e7c43b324da9b111a97076713c8c14365880b69d12414b9617ec592bfae0b48",
         "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
         "rule_id": "B108",
@@ -278,7 +278,7 @@
         "tool_sha256": "d8e3cef305b7b7a6ed452897882331a566df784b577c08e5c3bdc8322ffb6429"
       },
       "rationale": "Inert path value used only to check redacted configuration representation; no file operation occurs at this fixture.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "false-positive",
@@ -286,7 +286,7 @@
       "max_occurrences": 1,
       "proof": {
         "confidence": "MEDIUM",
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "b0ced249fc9cc8df2e3eaf954f9ea16d6fd60dd40766b558915d2b73c391c74f",
         "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
         "rule_id": "B108",
@@ -306,7 +306,7 @@
         "tool_sha256": "d8e3cef305b7b7a6ed452897882331a566df784b577c08e5c3bdc8322ffb6429"
       },
       "rationale": "Inert path value used only to check redacted configuration representation; no file operation occurs at this fixture.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "false-positive",
@@ -314,7 +314,7 @@
       "max_occurrences": 1,
       "proof": {
         "confidence": "HIGH",
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "45daa8557860702ea21b2d44f0af9a0670b2287ca524a67587c43eafbc917155",
         "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
         "rule_id": "B102",
@@ -334,7 +334,7 @@
         "tool_sha256": "d8e3cef305b7b7a6ed452897882331a566df784b577c08e5c3bdc8322ffb6429"
       },
       "rationale": "Test deliberately executes the fixed repository updater in a disposable synthetic fixture with mocked transports. Private context data is never executed.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "false-positive",
@@ -342,7 +342,7 @@
       "max_occurrences": 1,
       "proof": {
         "confidence": "MEDIUM",
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "df44939626299ecf0e4f729ecd2d1a5b1593bb47d1eaf9b3687f0e326505d412",
         "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
         "rule_id": "B108",
@@ -362,7 +362,7 @@
         "tool_sha256": "d8e3cef305b7b7a6ed452897882331a566df784b577c08e5c3bdc8322ffb6429"
       },
       "rationale": "Path is only captured inside an argument vector after the subprocess callable is replaced by the test fake; no real file read or provider process runs.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "false-positive",
@@ -370,7 +370,7 @@
       "max_occurrences": 1,
       "proof": {
         "confidence": "HIGH",
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "ac326d24e3f7663c290b8d78cbd2ba4d22b1ea4fc7932a02bb6d9be3df22efb5",
         "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
         "rule_id": "B202",
@@ -390,7 +390,7 @@
         "tool_sha256": "d8e3cef305b7b7a6ed452897882331a566df784b577c08e5c3bdc8322ffb6429"
       },
       "rationale": "Archive is built by this test from the explicit repository source allowlist and verified before extraction into a disposable tree. No externally supplied archive is accepted.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "false-positive",
@@ -398,7 +398,7 @@
       "max_occurrences": 1,
       "proof": {
         "confidence": "MEDIUM",
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "ec2d06a9c31e34944da1542f7adeafa1150dc4bf606eb1da76f0e552742836c2",
         "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
         "rule_id": "B613",
@@ -418,7 +418,7 @@
         "tool_sha256": "d8e3cef305b7b7a6ed452897882331a566df784b577c08e5c3bdc8322ffb6429"
       },
       "rationale": "Quoted malicious-input fixture intentionally includes Unicode bidi control code point 202E and asserts its rejection by the prose guard; executable token boundaries and identifiers are unchanged.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "false-positive",
@@ -426,7 +426,7 @@
       "max_occurrences": 1,
       "proof": {
         "confidence": "HIGH",
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "0db3d6e7e0390ffb4075abb35de8a1ad5268473b815f023491df961ceff4dded",
         "profile_sha256": "3a9b00b24a251658d04feb8955fa3b5562f7f4ae1345035aa8ac1404d24cf11f",
         "rule_id": "B314",
@@ -446,7 +446,7 @@
         "tool_sha256": "d8e3cef305b7b7a6ed452897882331a566df784b577c08e5c3bdc8322ffb6429"
       },
       "rationale": "Parses only task XML generated by the trusted function from fixed synthetic paths and a literal date to verify escaping. No external XML or entity input is accepted.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     }
   ],
   "codeql": [
@@ -455,7 +455,7 @@
       "id": "codeql-public-billing-render",
       "max_occurrences": 1,
       "proof": {
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "f581010fac389415e0ea37581932f4c3156a3e2ef9a5d20921f41dbab1767c7c",
         "language": "python",
         "rule_id": "py/clear-text-storage-sensitive-data",
@@ -638,14 +638,14 @@
         "tool_sha256": "569f90f6267451de751a334faa27a6c5174317a1fa5cc50417e7651151bc739b"
       },
       "rationale": "Committed public access-method billing labels are rendered into the public catalog mirror; no private account billing data or credential is read.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "false-positive",
       "id": "codeql-public-billing-sync",
       "max_occurrences": 1,
       "proof": {
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "130d070c17e79d8e6481de3ee824ff3849145a11d28d6b4335f774f178ff767e",
         "language": "python",
         "rule_id": "py/clear-text-storage-sensitive-data",
@@ -817,14 +817,14 @@
         "tool_sha256": "569f90f6267451de751a334faa27a6c5174317a1fa5cc50417e7651151bc739b"
       },
       "rationale": "Committed public access-method billing labels are rendered into the public catalog mirror; no private account billing data or credential is read.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "false-positive",
       "id": "codeql-public-billing-update",
       "max_occurrences": 1,
       "proof": {
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "bc367a67cb1c6268fc43003d07ab207a43f5493213b6434448ab4c8e3b09ce24",
         "language": "python",
         "rule_id": "py/clear-text-storage-sensitive-data",
@@ -996,14 +996,14 @@
         "tool_sha256": "569f90f6267451de751a334faa27a6c5174317a1fa5cc50417e7651151bc739b"
       },
       "rationale": "Committed public access-method billing labels are rendered into the public catalog mirror; no private account billing data or credential is read.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "false-positive",
       "id": "codeql-closed-provider-log",
       "max_occurrences": 1,
       "proof": {
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "514e09d623f5d351be36a51460e246f4a21967a2cf641bfa06b1ccf56f6202d9",
         "language": "python",
         "rule_id": "py/log-injection",
@@ -1145,14 +1145,14 @@
         "tool_sha256": "569f90f6267451de751a334faa27a6c5174317a1fa5cc50417e7651151bc739b"
       },
       "rationale": "Both complete flows pass through membership validation against committed engine registry keys before fixed warning formatting; arbitrary request text cannot become this log argument.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "false-positive",
       "id": "codeql-closed-ladder-provider-log",
       "max_occurrences": 1,
       "proof": {
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "2e9e0eb0cddbb1eb57cc20ba98be02daf174186a43a42e95e88be282b0f77767",
         "language": "python",
         "rule_id": "py/log-injection",
@@ -1294,14 +1294,14 @@
         "tool_sha256": "569f90f6267451de751a334faa27a6c5174317a1fa5cc50417e7651151bc739b"
       },
       "rationale": "Both complete flows pass through membership validation against committed engine registry keys before fixed warning formatting; arbitrary request text cannot become this log argument.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "accepted-risk",
       "id": "codeql-diagnostic-budget-gate",
       "max_occurrences": 1,
       "proof": {
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "bfae96e9ca218d14b67376a1fc83a51c2e3d104a292b0131d1e69cf29d97a5a6",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
@@ -1355,14 +1355,14 @@
         "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
       },
       "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "accepted-risk",
       "id": "codeql-diagnostic-three-card-gate",
       "max_occurrences": 1,
       "proof": {
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "99be1217fb6e8d5d0ec0af9f714702886799e8e5ad71eb603ab6483b21a0e9e4",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
@@ -1416,14 +1416,14 @@
         "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
       },
       "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "accepted-risk",
       "id": "codeql-diagnostic-latency-gate",
       "max_occurrences": 1,
       "proof": {
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "4d02f2a7c84613cd7459745fdfcd926a57a77124a2a53098864916394fbf0e0d",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
@@ -1495,14 +1495,14 @@
         "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
       },
       "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "accepted-risk",
       "id": "codeql-diagnostic-trigger-gate",
       "max_occurrences": 1,
       "proof": {
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "683b990832403248b2c24a2d1fba571c944db6b76a0fb79d7bd6e75c763d1e3a",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
@@ -1556,14 +1556,14 @@
         "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
       },
       "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "accepted-risk",
       "id": "codeql-diagnostic-frontier-gate",
       "max_occurrences": 1,
       "proof": {
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "1f76de590bdc68722f105531c7568e2e1a10f48e5dc3a997ae4ac26a0c9bd7da",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
@@ -1617,14 +1617,14 @@
         "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
       },
       "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "accepted-risk",
       "id": "codeql-diagnostic-ladder-gate",
       "max_occurrences": 1,
       "proof": {
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "755235d92bf588b07c5930ed206d65231f7fcf6237471b06970542f1ca7a0122",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
@@ -1678,14 +1678,14 @@
         "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
       },
       "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "accepted-risk",
       "id": "codeql-diagnostic-funding-gate",
       "max_occurrences": 1,
       "proof": {
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "d06b38979c0b66d7b5b426f2a9329313544fb6f52f8f536f603c996d0d3398ad",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
@@ -1721,14 +1721,14 @@
         "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
       },
       "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "accepted-risk",
       "id": "codeql-diagnostic-budget-control-gate",
       "max_occurrences": 1,
       "proof": {
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "461f7c2fb00e8a533653c0fda2e35a776fec7ee13e3760bef43e004a629d29e6",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
@@ -1782,14 +1782,14 @@
         "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
       },
       "rationale": "Existing shared gate bearer derivation protocol; independent session authorization remains required. Accepted gate protocol boundary with no password entropy or password storage claim.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "false-positive",
       "id": "codeql-transient-submitted-compare",
       "max_occurrences": 1,
       "proof": {
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "a6006e1549c431e8c9a5a9dfe5d101743b53bd27315feefa24ac881722d367f5",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
@@ -1852,14 +1852,14 @@
         "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
       },
       "rationale": "Digest is a transient fixed-width input to constant-time comparison; it is neither a stored password verifier nor the gate cookie. Separate bearer derivation retains its accepted protocol boundary.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     },
     {
       "disposition": "false-positive",
       "id": "codeql-transient-expected-compare",
       "max_occurrences": 1,
       "proof": {
-        "context_sha256": "1d0d06d04b5da2033e46bff8f5b31fd3843fd156e50b6c366f2279daf946ebca",
+        "context_sha256": "2d870fd8078c38399d0452e1919e572e9e132be99637f96bfde0736852873f74",
         "finding_sha256": "832f868c152537d414a4f895e5948cd3008d85235d9534c42e8b4f97851bf9e9",
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
@@ -1922,12 +1922,12 @@
         "tool_sha256": "5757d28644fd09a1599a5f1fd8a8157a8ba68a518bdb7923e2117bf69636aad5"
       },
       "rationale": "Digest is a transient fixed-width input to constant-time comparison; it is neither a stored password verifier nor the gate cookie. Separate bearer derivation retains its accepted protocol boundary.",
-      "reviewed_revision": "2b24a52163d651b5e1e788ecc3731eb9f9b19c51"
+      "reviewed_revision": "f91b727bc9636f79b4510cc366e5236c9387538a"
     }
   ],
   "context_policy": {
     "baseline_revision": "ac140ff3bbaecb2d362f4e7c33317de097ac4df0",
-    "code_context_sha256": "ee06d680cf331b781f220f6d4c7506bc0dcadf5c28b4ea025eb2055d2e8a80f4",
+    "code_context_sha256": "c434ba82295796be062e682db861e479ca0e45a04bce0f1732e8e4263cf6c3a1",
     "date_policy": "catalog-utc-date-v1",
     "mode": "typed-catalog-v1",
     "validator_sha256": "d0994ba80c5591de71bf6edb969f475b6ab7aa6b2a0b6bf57cd75cb5f8030eb2"
