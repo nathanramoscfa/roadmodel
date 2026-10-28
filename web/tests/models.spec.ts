@@ -33,6 +33,8 @@ import {
   type BenchRow,
 } from "../lib/benchmark-grid";
 import { modelProvider } from "../lib/catalog-fields";
+import { getModelRows, pastLeaveDate } from "../lib/catalog-models";
+import { liveCatalog } from "./fixtures/live-catalog";
 
 // Expected row counts are DERIVED from the catalog the page renders, never
 // hardcoded. The catalog grows whenever the daily refresh cron picks up a new
@@ -53,14 +55,24 @@ interface CatalogModel {
   tier_cost: string;
   added_on?: string | null;
 }
-const catalog = JSON.parse(
-  readFileSync(path.join(process.cwd(), "data", "catalog.json"), "utf8"),
-) as {
+const catalog = liveCatalog<{
   models: CatalogModel[];
   access_methods: { id: string; provider_jurisdiction: string; supports_models: string[] }[];
-};
+}>();
 
 const MODEL_COUNT = catalog.models.length;
+
+// A superseded model leaves on its retires_on day (update/build_catalog.py
+// dates it from RETIRE_AFTER_DAYS). The page hides it from then on even while a
+// stale data/catalog.json still lists it (the benchmark cron deadlocked on the
+// first retirement day, 2026-10-24, and the rows stayed up). The letters were
+// derived over the built catalog's models, so a spec that re-derives a letter
+// ranks over RAW_MODELS; one that counts rendered rows reads `catalog`.
+const RAW_MODELS = (
+  JSON.parse(readFileSync(path.join(process.cwd(), "data", "catalog.json"), "utf8")) as {
+    models: (CatalogModel & { superseded_by?: string | null; retires_on?: string | null })[];
+  }
+).models;
 
 // The open-weight models: the ones the catalog's local (Ollama) method serves,
 // a list the selector curates by licence.
@@ -413,7 +425,7 @@ test("Weights: Open keeps only the open-weight models and redraws the frontier o
   // Both sides are populated, and every listed id is a catalogued model.
   expect(open.length).toBeGreaterThan(0);
   expect(open.length).toBeLessThan(MODEL_COUNT);
-  expect(open.length).toBe(OPEN_WEIGHT_IDS.size);
+  expect(RAW_MODELS.filter((m) => OPEN_WEIGHT_IDS.has(m.id)).length).toBe(OPEN_WEIGHT_IDS.size);
   const rows = page.getByTestId("model-row");
   const panel = page.getByTestId("frontier-panel");
   const frontierOf = (pool: Measured[]) =>
@@ -644,10 +656,10 @@ test("measured letters match the published bands; every other letter is marked e
   const leader = Math.max(...hleAll) * 100;
   const band = (gap: number) => (gap <= 5 ? "S" : gap <= 20 ? "A" : gap <= 35 ? "B" : gap <= 50 ? "C" : "D");
   // Planning reads the AA Intelligence Index, in index points, led over the
-  // catalog the page renders (update/derive_ratings.py's live models).
+  // built catalog (update/derive_ratings.py's live models).
   const indexOf = (id: string) => benchmarks.models[id]?.evaluations.artificial_analysis_intelligence_index;
   const indexLeader = Math.max(
-    ...catalog.models.map((m) => indexOf(m.id)).filter((v): v is number => typeof v === "number"),
+    ...RAW_MODELS.map((m) => indexOf(m.id)).filter((v): v is number => typeof v === "number"),
   );
   let planningMeasured = 0;
 
@@ -716,7 +728,7 @@ test("agentic letters are each model's rank on Terminal-Bench 4.0, with the lett
   // value, then coding, planning, agentic, …
   const AGENTIC_TD = 10;
   const shares = RANK_DERIVATION.agentic!;
-  const tb = COLUMN_VALUES.terminalbench_v4_0;
+  const tb = DERIVED_FIELD.terminalbench_v4_0;
   const rows = page.getByTestId("model-row");
   const n = await rows.count();
   const seen: Record<string, number> = {};
@@ -739,7 +751,9 @@ test("agentic letters are each model's rank on Terminal-Bench 4.0, with the lett
     );
   }
   // Every measured model is lettered, and the leader is S.
-  expect(Object.values(seen).reduce((a, b) => a + b, 0)).toBe(tb.length);
+  expect(Object.values(seen).reduce((a, b) => a + b, 0)).toBe(
+    catalog.models.filter((m) => benchRowOf(m.id)?.values.terminalbench_v4_0 != null).length,
+  );
   expect(seen.S ?? 0).toBeGreaterThan(0);
   test.info().annotations.push({ type: "agentic spread", description: JSON.stringify(seen) });
 });
@@ -751,7 +765,7 @@ test("coding letters are each model's rank on SciCode + Terminal-Bench 4.0, and 
   const TD: Record<string, number> = { coding: 8, planning: 9, agentic: 10, "long-context": 12, knowledge: 13 };
   const composite = COMPOSITE_DERIVATION.coding!;
   const scores = compositeScores(
-    catalog.models.map((m) => ({ id: m.id, bench: benchRowOf(m.id) })),
+    RAW_MODELS.map((m) => ({ id: m.id, bench: benchRowOf(m.id) })),
     composite.parts,
   );
   const sorted = [...scores.values()].sort((a, b) => a - b);
@@ -782,7 +796,7 @@ test("coding letters are each model's rank on SciCode + Terminal-Bench 4.0, and 
       }
     }
   }
-  expect(measured).toBe(scores.size);
+  expect(measured).toBe(catalog.models.filter((m) => scores.has(m.id)).length);
   expect(measured).toBeGreaterThan(0);
 });
 
@@ -1064,6 +1078,38 @@ test("a superseded model is tagged with its successor and the day it leaves", as
   await expect(card).toContainText(`leaves the catalog on ${m.retires_on}`);
 });
 
+test("the leave date is a UTC day: hidden from its first second", () => {
+  expect(pastLeaveDate("2026-10-24", new Date("2026-10-23T23:59:59Z"))).toBe(false);
+  expect(pastLeaveDate("2026-10-24", new Date("2026-10-24T00:00:00Z"))).toBe(true);
+  expect(pastLeaveDate("2026-10-24", new Date("2026-11-30T12:00:00Z"))).toBe(true);
+  expect(pastLeaveDate(null, new Date("2999-01-01T00:00:00Z"))).toBe(false);
+});
+
+test("the loader drops a row past its leave date and keeps every other", () => {
+  const ids = (now: Date) => new Set(getModelRows(now).map((r) => r.id));
+  const dated = RAW_MODELS.filter((m) => m.retires_on);
+  const untagged = RAW_MODELS.filter((m) => !m.retires_on).map((m) => m.id);
+  const later = ids(new Date("2999-01-01T00:00:00Z"));
+  expect(dated.filter((m) => later.has(m.id))).toEqual([]);
+  expect(untagged.filter((id) => !later.has(id))).toEqual([]);
+  if (dated.length === 0) return;
+  const first = dated.map((m) => m.retires_on!).sort()[0];
+  const before = ids(new Date(Date.parse(`${first}T00:00:00Z`) - 1));
+  expect(dated.filter((m) => !before.has(m.id))).toEqual([]);
+  const on = ids(new Date(`${first}T00:00:00Z`));
+  expect(dated.filter((m) => m.retires_on === first && on.has(m.id))).toEqual([]);
+});
+
+test("the home page shows no row past its leave date", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  const rows = page.locator('[data-testid="model-row"]');
+  await expect(rows).toHaveCount(MODEL_COUNT);
+  for (const m of RAW_MODELS.filter((x) => pastLeaveDate(x.retires_on, new Date()))) {
+    await expect(page.locator(`[data-testid="model-row"][data-model-id="${m.id}"]`)).toHaveCount(0);
+  }
+});
+
 // New counts from the release AA dates; before AA lists a model, from the day
 // it joined the catalog (update/stamp_added.py).
 function newUntilOf(m: CatalogModel, now: Date): string | null {
@@ -1108,6 +1154,15 @@ const COLUMN_VALUES = Object.fromEntries(
     c.key,
     catalog.models
       .map((m) => benchRowOf(m.id)?.values[c.key] ?? null)
+      .filter((v): v is number => v !== null)
+      .sort((a, b) => a - b),
+  ]),
+) as Record<BenchKey, number[]>;
+// The same columns over the built catalog: the field the letters were ranked in.
+const DERIVED_FIELD = Object.fromEntries(
+  GRID_COLUMNS.map((c) => [
+    c.key,
+    RAW_MODELS.map((m) => benchRowOf(m.id)?.values[c.key] ?? null)
       .filter((v): v is number => v !== null)
       .sort((a, b) => a - b),
   ]),
