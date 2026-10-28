@@ -6,7 +6,7 @@
     "endpoint": "https://artificialanalysis.ai/api/v2/data/llms/models",
     "attribution": "Benchmark data © Artificial Analysis, used under its API terms with attribution."
   },
-  "generated_at_utc": "2026-10-23T23:43:03Z",
+  "generated_at_utc": "2026-10-28T03:40:34Z",
   "model_count": 59,
   "unmapped": [],
   "missing_slugs": [],
@@ -19,7 +19,7 @@
       "aa_creator": "Anthropic",
       "release_date": "2025-10-15",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 16.9,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 43.9,
         "artificial_analysis_math_index": 83.7,
         "mmlu_pro": 0.76,
@@ -50,7 +50,7 @@
       "aa_creator": "Anthropic",
       "release_date": "2026-06-09",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 49.6,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 76.5,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -81,7 +81,7 @@
       "aa_creator": "Anthropic",
       "release_date": "2026-09-01",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 53.4,
+        "artificial_analysis_intelligence_index": 49,
         "artificial_analysis_coding_index": 81.6,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -100,15 +100,15 @@
         "tau2": null,
         "tau_banking": 0.472164948453608
       },
-      "median_output_tokens_per_second": 70.611,
-      "median_time_to_first_token_seconds": 125.093,
+      "median_output_tokens_per_second": 66.056,
+      "median_time_to_first_token_seconds": 158.044,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
           "aa_slug": "claude-fable-5-1-low",
           "aa_name": "Claude Fable 5.1 (Low, Default Fallback)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 46.8,
+            "artificial_analysis_intelligence_index": 38.5,
             "artificial_analysis_coding_index": 75.2,
             "gpqa": 0.881,
             "hle": 0.489,
@@ -118,13 +118,13 @@
             "terminalbench_v4_0": 0.404040404040404,
             "tau_banking": 0.389690721649485
           },
-          "median_output_tokens_per_second": 55.748
+          "median_output_tokens_per_second": 55.459
         },
         "medium": {
           "aa_slug": "claude-fable-5-1-medium",
           "aa_name": "Claude Fable 5.1 (Medium, Default Fallback)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 48.9,
+            "artificial_analysis_intelligence_index": 43,
             "artificial_analysis_coding_index": 77.1,
             "gpqa": 0.886,
             "hle": 0.538,
@@ -134,13 +134,13 @@
             "terminalbench_v4_0": 0.44949494949495,
             "tau_banking": 0.410309278350515
           },
-          "median_output_tokens_per_second": 56.095
+          "median_output_tokens_per_second": 59.158
         },
         "high": {
           "aa_slug": "claude-fable-5-1-high",
           "aa_name": "Claude Fable 5.1 (High, Default Fallback)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 51.2,
+            "artificial_analysis_intelligence_index": 47,
             "artificial_analysis_coding_index": 79.1,
             "gpqa": 0.906,
             "hle": 0.559,
@@ -150,13 +150,13 @@
             "terminalbench_v4_0": 0.52020202020202,
             "tau_banking": 0.430927835051546
           },
-          "median_output_tokens_per_second": 54.905
+          "median_output_tokens_per_second": 56.434
         },
         "xhigh": {
           "aa_slug": "claude-fable-5-1-xhigh",
           "aa_name": "Claude Fable 5.1 (Xhigh, Default Fallback)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 53.2,
+            "artificial_analysis_intelligence_index": 49.7,
             "artificial_analysis_coding_index": 80.7,
             "gpqa": 0.934,
             "hle": 0.587,
@@ -166,7 +166,7 @@
             "terminalbench_v4_0": 0.55050505050505,
             "tau_banking": 0.457731958762887
           },
-          "median_output_tokens_per_second": 58.425
+          "median_output_tokens_per_second": 61.829
         }
       }
     },
@@ -177,7 +177,7 @@
       "aa_creator": "Anthropic",
       "release_date": "2026-10-07",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 43.4,
+        "artificial_analysis_intelligence_index": 36.2,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -196,57 +196,57 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 243.722,
-      "median_time_to_first_token_seconds": 216.792,
+      "median_output_tokens_per_second": 238.945,
+      "median_time_to_first_token_seconds": 264.688,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
           "aa_slug": "claude-haiku-5-5-low",
           "aa_name": "Claude Haiku 5.5 (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 29.5,
+            "artificial_analysis_intelligence_index": 18.6,
             "hle": 0.27,
             "scicode": 0.492,
             "lcr": 0.72,
             "terminalbench_v4_0": 0.126262626262626
           },
-          "median_output_tokens_per_second": 166.661
+          "median_output_tokens_per_second": 165.816
         },
         "medium": {
           "aa_slug": "claude-haiku-5-5-medium",
           "aa_name": "Claude Haiku 5.5 (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 34.5,
+            "artificial_analysis_intelligence_index": 24.6,
             "hle": 0.338,
             "scicode": 0.49,
             "lcr": 0.773333333333333,
             "terminalbench_v4_0": 0.151515151515152
           },
-          "median_output_tokens_per_second": 162.12
+          "median_output_tokens_per_second": 163.678
         },
         "high": {
           "aa_slug": "claude-haiku-5-5-high",
           "aa_name": "Claude Haiku 5.5 (High)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 37.8,
+            "artificial_analysis_intelligence_index": 29.6,
             "hle": 0.373,
             "scicode": 0.487,
             "lcr": 0.773333333333333,
             "terminalbench_v4_0": 0.217171717171717
           },
-          "median_output_tokens_per_second": 168.589
+          "median_output_tokens_per_second": 188.11
         },
         "xhigh": {
           "aa_slug": "claude-haiku-5-5-xhigh",
           "aa_name": "Claude Haiku 5.5 (Xhigh)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 41.2,
+            "artificial_analysis_intelligence_index": 34.3,
             "hle": 0.427,
             "scicode": 0.517,
             "lcr": 0.783333333333333,
             "terminalbench_v4_0": 0.292929292929293
           },
-          "median_output_tokens_per_second": 183.969
+          "median_output_tokens_per_second": 196.845
         }
       }
     },
@@ -257,7 +257,7 @@
       "aa_creator": "Anthropic",
       "release_date": "2026-07-24",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 50.8,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 78,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -284,7 +284,6 @@
           "aa_slug": "claude-opus-5-low",
           "aa_name": "Claude Opus 5 (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 39.4,
             "artificial_analysis_coding_index": 66.9,
             "gpqa": 0.889,
             "hle": 0.434,
@@ -300,7 +299,6 @@
           "aa_slug": "claude-opus-5-medium",
           "aa_name": "Claude Opus 5 (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 44.8,
             "artificial_analysis_coding_index": 74.3,
             "gpqa": 0.919,
             "hle": 0.513,
@@ -316,7 +314,6 @@
           "aa_slug": "claude-opus-5-high",
           "aa_name": "Claude Opus 5 (High)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 48.1,
             "artificial_analysis_coding_index": 76.5,
             "gpqa": 0.937,
             "hle": 0.528,
@@ -332,7 +329,6 @@
           "aa_slug": "claude-opus-5-xhigh",
           "aa_name": "Claude Opus 5 (Xhigh)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 49.7,
             "artificial_analysis_coding_index": 77,
             "gpqa": 0.937,
             "hle": 0.544,
@@ -353,7 +349,7 @@
       "aa_creator": "Anthropic",
       "release_date": "2026-09-22",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 57.6,
+        "artificial_analysis_intelligence_index": 58.4,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -372,57 +368,57 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 97.21,
-      "median_time_to_first_token_seconds": 403.924,
+      "median_output_tokens_per_second": 96.606,
+      "median_time_to_first_token_seconds": 468.919,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
           "aa_slug": "claude-opus-5-5-low",
           "aa_name": "Claude Opus 5.5 (Low, Default Fallback)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 42.3,
+            "artificial_analysis_intelligence_index": 34.5,
             "hle": 0.483,
             "scicode": 0.586,
             "lcr": 0.806666666666667,
             "terminalbench_v4_0": 0.313131313131313
           },
-          "median_output_tokens_per_second": 76.525
+          "median_output_tokens_per_second": 78.521
         },
         "medium": {
           "aa_slug": "claude-opus-5-5-medium",
           "aa_name": "Claude Opus 5.5 (Medium, Default Fallback)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 51.2,
+            "artificial_analysis_intelligence_index": 48.1,
             "hle": 0.547,
             "scicode": 0.593,
             "lcr": 0.843333333333333,
             "terminalbench_v4_0": 0.525252525252525
           },
-          "median_output_tokens_per_second": 76.933
+          "median_output_tokens_per_second": 80.303
         },
         "high": {
           "aa_slug": "claude-opus-5-5-high",
           "aa_name": "Claude Opus 5.5 (High, Default Fallback)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 53.6,
+            "artificial_analysis_intelligence_index": 51.7,
             "hle": 0.556,
             "scicode": 0.604,
             "lcr": 0.826666666666667,
             "terminalbench_v4_0": 0.565656565656566
           },
-          "median_output_tokens_per_second": 78.071
+          "median_output_tokens_per_second": 80.785
         },
         "xhigh": {
           "aa_slug": "claude-opus-5-5-xhigh",
           "aa_name": "Claude Opus 5.5 (Xhigh, Default Fallback)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 56,
+            "artificial_analysis_intelligence_index": 57,
             "hle": 0.575,
             "scicode": 0.65,
             "lcr": 0.846666666666667,
             "terminalbench_v4_0": 0.595959595959596
           },
-          "median_output_tokens_per_second": 81.762
+          "median_output_tokens_per_second": 82.215
         }
       }
     },
@@ -433,7 +429,7 @@
       "aa_creator": "Anthropic",
       "release_date": "2026-06-30",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 38.2,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 71.5,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -460,7 +456,6 @@
           "aa_slug": "claude-sonnet-5-low",
           "aa_name": "Claude Sonnet 5 (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 24.3,
             "hle": 0.219,
             "scicode": 0.501,
             "lcr": 0.673333333333333,
@@ -472,7 +467,6 @@
           "aa_slug": "claude-sonnet-5-medium",
           "aa_name": "Claude Sonnet 5 (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 28.1,
             "hle": 0.3,
             "scicode": 0.516,
             "lcr": 0.736666666666667,
@@ -484,7 +478,6 @@
           "aa_slug": "claude-sonnet-5-high",
           "aa_name": "Claude Sonnet 5 (High)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 31.7,
             "hle": 0.357,
             "scicode": 0.543,
             "lcr": 0.766666666666667,
@@ -496,7 +489,6 @@
           "aa_slug": "claude-sonnet-5-xhigh",
           "aa_name": "Claude Sonnet 5 (Xhigh)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 34.4,
             "hle": 0.39,
             "scicode": 0.541,
             "lcr": 0.766666666666667,
@@ -513,7 +505,7 @@
       "aa_creator": "Anthropic",
       "release_date": "2026-09-28",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 56,
+        "artificial_analysis_intelligence_index": 54.2,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -532,57 +524,57 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 137.827,
-      "median_time_to_first_token_seconds": 271.952,
+      "median_output_tokens_per_second": 139.434,
+      "median_time_to_first_token_seconds": 309.063,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
           "aa_slug": "claude-sonnet-5-5-low",
           "aa_name": "Claude Sonnet 5.5 (Low, Default Fallback)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 35.9,
+            "artificial_analysis_intelligence_index": 25.3,
             "hle": 0.362,
             "scicode": 0.491,
             "lcr": 0.76,
             "terminalbench_v4_0": 0.207070707070707
           },
-          "median_output_tokens_per_second": 102.528
+          "median_output_tokens_per_second": 104.957
         },
         "medium": {
           "aa_slug": "claude-sonnet-5-5-medium",
           "aa_name": "Claude Sonnet 5.5 (Medium, Default Fallback)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 40.8,
+            "artificial_analysis_intelligence_index": 30.3,
             "hle": 0.398,
             "scicode": 0.529,
             "lcr": 0.763333333333333,
             "terminalbench_v4_0": 0.297979797979798
           },
-          "median_output_tokens_per_second": 99.833
+          "median_output_tokens_per_second": 103.977
         },
         "high": {
           "aa_slug": "claude-sonnet-5-5-high",
           "aa_name": "Claude Sonnet 5.5 (High, Default Fallback)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 46.8,
+            "artificial_analysis_intelligence_index": 41.1,
             "hle": 0.458,
             "scicode": 0.537,
             "lcr": 0.78,
             "terminalbench_v4_0": 0.439393939393939
           },
-          "median_output_tokens_per_second": 106.373
+          "median_output_tokens_per_second": 106.813
         },
         "xhigh": {
           "aa_slug": "claude-sonnet-5-5-xhigh",
           "aa_name": "Claude Sonnet 5.5 (Xhigh, Default Fallback)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 51.9,
+            "artificial_analysis_intelligence_index": 49.6,
             "hle": 0.5,
             "scicode": 0.573,
             "lcr": 0.796666666666667,
             "terminalbench_v4_0": 0.570707070707071
           },
-          "median_output_tokens_per_second": 105.47
+          "median_output_tokens_per_second": 106.054
         }
       }
     },
@@ -593,7 +585,7 @@
       "aa_creator": "DeepSeek",
       "release_date": "2026-09-10",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 39.5,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -624,7 +616,7 @@
       "aa_creator": "DeepSeek",
       "release_date": "2026-08-13",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 36,
+        "artificial_analysis_intelligence_index": 23.1,
         "artificial_analysis_coding_index": 68.8,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -643,8 +635,8 @@
         "tau2": null,
         "tau_banking": 0.395876288659794
       },
-      "median_output_tokens_per_second": 83.591,
-      "median_time_to_first_token_seconds": 1.089,
+      "median_output_tokens_per_second": 85.013,
+      "median_time_to_first_token_seconds": 1.094,
       "aa_effort": "max",
       "effort_variants": {}
     },
@@ -655,7 +647,7 @@
       "aa_creator": "Google",
       "release_date": "2025-05-20",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 13.1,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": 73.3,
         "mmlu_pro": 0.832,
@@ -686,7 +678,7 @@
       "aa_creator": "Google",
       "release_date": "2025-12-17",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 26.3,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": 97,
         "mmlu_pro": 0.89,
@@ -717,7 +709,7 @@
       "aa_creator": "Google",
       "release_date": "2025-11-18",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 28,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": 95.7,
         "mmlu_pro": 0.898,
@@ -744,7 +736,6 @@
           "aa_slug": "gemini-3-pro-low",
           "aa_name": "Gemini 3 Pro Preview (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 22.3,
             "artificial_analysis_math_index": 86.7,
             "mmlu_pro": 0.895,
             "gpqa": 0.887,
@@ -767,7 +758,7 @@
       "aa_creator": "Google",
       "release_date": "2026-03-03",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 15.6,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 34.7,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -798,7 +789,7 @@
       "aa_creator": "Google",
       "release_date": "2026-02-19",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 29.7,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 68.8,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -817,8 +808,8 @@
         "tau2": 0.956140350877193,
         "tau_banking": 0.214432989690722
       },
-      "median_output_tokens_per_second": 134.017,
-      "median_time_to_first_token_seconds": 18.074,
+      "median_output_tokens_per_second": 139.384,
+      "median_time_to_first_token_seconds": 16.611,
       "aa_effort": null,
       "effort_variants": {}
     },
@@ -829,7 +820,7 @@
       "aa_creator": "Google",
       "release_date": "2026-05-19",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 32.6,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 70.1,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -856,7 +847,6 @@
           "aa_slug": "gemini-3-5-flash-minimal",
           "aa_name": "Gemini 3.5 Flash (Minimal)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 23.8,
             "gpqa": 0.828,
             "hle": 0.241,
             "ifbench": 0.472789115646259,
@@ -870,7 +860,6 @@
           "aa_slug": "gemini-3-5-flash-medium",
           "aa_name": "Gemini 3.5 Flash (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 33.6,
             "gpqa": 0.921,
             "hle": 0.413,
             "ifbench": 0.745578231292517,
@@ -889,7 +878,7 @@
       "aa_creator": "Google",
       "release_date": "2026-07-21",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 22.2,
+        "artificial_analysis_intelligence_index": 11.7,
         "artificial_analysis_coding_index": 49.3,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -908,8 +897,8 @@
         "tau2": null,
         "tau_banking": 0.175257731958763
       },
-      "median_output_tokens_per_second": 408.724,
-      "median_time_to_first_token_seconds": 5.282,
+      "median_output_tokens_per_second": 416.622,
+      "median_time_to_first_token_seconds": 5.786,
       "aa_effort": null,
       "effort_variants": {}
     },
@@ -920,7 +909,7 @@
       "aa_creator": "Google",
       "release_date": "2026-07-21",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 34,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 69.2,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -951,7 +940,7 @@
       "aa_creator": "Google",
       "release_date": "2026-08-13",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 39.1,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 76.1,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -978,7 +967,6 @@
           "aa_slug": "gemini-3-7-flash-low",
           "aa_name": "Gemini 3.7 Flash (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 36.9,
             "artificial_analysis_coding_index": 71,
             "gpqa": 0.901,
             "hle": 0.351,
@@ -993,7 +981,6 @@
           "aa_slug": "gemini-3-7-flash-medium",
           "aa_name": "Gemini 3.7 Flash (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 39.6,
             "artificial_analysis_coding_index": 71.5,
             "gpqa": 0.921,
             "hle": 0.39,
@@ -1013,7 +1000,7 @@
       "aa_creator": "Google",
       "release_date": "2026-09-02",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 40.9,
+        "artificial_analysis_intelligence_index": 30.5,
         "artificial_analysis_coding_index": 76.3,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -1032,15 +1019,15 @@
         "tau2": null,
         "tau_banking": 0.449484536082474
       },
-      "median_output_tokens_per_second": 128.372,
-      "median_time_to_first_token_seconds": 16.604,
+      "median_output_tokens_per_second": 134.936,
+      "median_time_to_first_token_seconds": 17.602,
       "aa_effort": "high",
       "effort_variants": {
         "low": {
           "aa_slug": "gemini-3-8-flash-low",
           "aa_name": "Gemini 3.8 Flash (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 33.5,
+            "artificial_analysis_intelligence_index": 22.3,
             "artificial_analysis_coding_index": 73.5,
             "gpqa": 0.92,
             "hle": 0.371,
@@ -1056,7 +1043,7 @@
           "aa_slug": "gemini-3-8-flash-medium",
           "aa_name": "Gemini 3.8 Flash (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 39.8,
+            "artificial_analysis_intelligence_index": 30,
             "artificial_analysis_coding_index": 74.1,
             "gpqa": 0.935,
             "hle": 0.421,
@@ -1077,7 +1064,7 @@
       "aa_creator": "Google",
       "release_date": "2026-09-30",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 52.6,
+        "artificial_analysis_intelligence_index": 50.4,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -1096,8 +1083,8 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 79.973,
-      "median_time_to_first_token_seconds": 29.896,
+      "median_output_tokens_per_second": 80.457,
+      "median_time_to_first_token_seconds": 33.514,
       "aa_effort": "high",
       "effort_variants": {}
     },
@@ -1108,7 +1095,7 @@
       "aa_creator": "Z AI",
       "release_date": "2025-07-28",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 11.1,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": 80.7,
         "mmlu_pro": 0.815,
@@ -1139,7 +1126,7 @@
       "aa_creator": "Z AI",
       "release_date": "2025-09-30",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 18.5,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 45.8,
         "artificial_analysis_math_index": 86,
         "mmlu_pro": 0.829,
@@ -1170,7 +1157,7 @@
       "aa_creator": "Z AI",
       "release_date": "2026-06-16",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 33.7,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 68.8,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -1201,7 +1188,7 @@
       "aa_creator": "Z AI",
       "release_date": "2026-08-18",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 44.8,
+        "artificial_analysis_intelligence_index": 31.7,
         "artificial_analysis_coding_index": 74.8,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -1220,21 +1207,21 @@
         "tau2": null,
         "tau_banking": 0.503092783505155
       },
-      "median_output_tokens_per_second": 65.845,
-      "median_time_to_first_token_seconds": 2.674,
+      "median_output_tokens_per_second": 83.629,
+      "median_time_to_first_token_seconds": 2.397,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
           "aa_slug": "glm-5-3-low",
           "aa_name": "GLM-5.3 (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 34.3,
+            "artificial_analysis_intelligence_index": 23.1,
             "hle": 0.366,
             "scicode": 0.42,
             "lcr": 0.726666666666667,
             "terminalbench_v4_0": 0.348484848484849
           },
-          "median_output_tokens_per_second": 75.269
+          "median_output_tokens_per_second": 75.722
         }
       }
     },
@@ -1245,7 +1232,7 @@
       "aa_creator": "Z AI",
       "release_date": "2026-08-26",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 41.8,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 71.5,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -1264,8 +1251,8 @@
         "tau2": null,
         "tau_banking": 0.472164948453608
       },
-      "median_output_tokens_per_second": 68.732,
-      "median_time_to_first_token_seconds": 2.483,
+      "median_output_tokens_per_second": 80.995,
+      "median_time_to_first_token_seconds": 2.38,
       "aa_effort": null,
       "effort_variants": {}
     },
@@ -1276,7 +1263,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2025-08-07",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 23,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 37.8,
         "artificial_analysis_math_index": 94.3,
         "mmlu_pro": 0.871,
@@ -1303,7 +1290,6 @@
           "aa_slug": "gpt-5-minimal",
           "aa_name": "GPT-5 (Minimal)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 11.4,
             "artificial_analysis_math_index": 31.7,
             "mmlu_pro": 0.806,
             "gpqa": 0.673,
@@ -1322,7 +1308,6 @@
           "aa_slug": "gpt-5-low",
           "aa_name": "GPT-5 (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 20.8,
             "artificial_analysis_math_index": 83,
             "mmlu_pro": 0.86,
             "gpqa": 0.808,
@@ -1341,7 +1326,6 @@
           "aa_slug": "gpt-5-medium",
           "aa_name": "GPT-5 (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 22.9,
             "artificial_analysis_math_index": 91.7,
             "mmlu_pro": 0.867,
             "gpqa": 0.842,
@@ -1366,7 +1350,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2025-08-07",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 16.8,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 15.6,
         "artificial_analysis_math_index": 90.7,
         "mmlu_pro": 0.837,
@@ -1393,7 +1377,6 @@
           "aa_slug": "gpt-5-mini-minimal",
           "aa_name": "GPT-5 mini (Minimal)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 9.9,
             "artificial_analysis_math_index": 46.7,
             "mmlu_pro": 0.775,
             "gpqa": 0.687,
@@ -1411,7 +1394,6 @@
           "aa_slug": "gpt-5-mini-medium",
           "aa_name": "GPT-5 mini (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 20.6,
             "artificial_analysis_math_index": 85,
             "mmlu_pro": 0.828,
             "gpqa": 0.803,
@@ -1434,7 +1416,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2025-11-13",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 23.7,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": 95.7,
         "mmlu_pro": 0.86,
@@ -1465,7 +1447,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2025-11-13",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 20.4,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": 91.7,
         "mmlu_pro": 0.82,
@@ -1496,7 +1478,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2025-12-11",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 30.4,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": 99,
         "mmlu_pro": 0.874,
@@ -1523,7 +1505,6 @@
           "aa_slug": "gpt-5-2-medium",
           "aa_name": "GPT-5.2 (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 26.5,
             "artificial_analysis_math_index": 96.7,
             "mmlu_pro": 0.859,
             "gpqa": 0.864,
@@ -1546,7 +1527,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2025-12-11",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 28.5,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -1577,7 +1558,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2026-02-05",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 32.5,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -1596,8 +1577,8 @@
         "tau2": 0.859649122807018,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 80.495,
-      "median_time_to_first_token_seconds": 42.473,
+      "median_output_tokens_per_second": 93.8,
+      "median_time_to_first_token_seconds": 36.902,
       "aa_effort": "xhigh",
       "effort_variants": {}
     },
@@ -1608,7 +1589,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2026-03-05",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 39,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 71.1,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -1635,7 +1616,6 @@
           "aa_slug": "gpt-5-4-low",
           "aa_name": "GPT-5.4 (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 27.6,
             "gpqa": 0.871,
             "hle": 0.308,
             "ifbench": 0.659183673469388,
@@ -1654,7 +1634,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2026-03-17",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 24.1,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 56.1,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -1681,7 +1661,6 @@
           "aa_slug": "gpt-5-4-mini-medium",
           "aa_name": "GPT-5.4 mini (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 19.7,
             "gpqa": 0.823,
             "hle": 0.186,
             "ifbench": 0.647619047619048,
@@ -1700,7 +1679,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2026-03-17",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 20.7,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 56.1,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -1727,7 +1706,6 @@
           "aa_slug": "gpt-5-4-nano-medium",
           "aa_name": "GPT-5.4 nano (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 20,
             "gpqa": 0.761,
             "hle": 0.159,
             "ifbench": 0.64421768707483,
@@ -1746,7 +1724,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2026-04-23",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 38.4,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 74.9,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -1773,7 +1751,6 @@
           "aa_slug": "gpt-5-5-low",
           "aa_name": "GPT-5.5 (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 30.7,
             "artificial_analysis_coding_index": 60.9,
             "gpqa": 0.91,
             "hle": 0.327,
@@ -1790,7 +1767,6 @@
           "aa_slug": "gpt-5-5-medium",
           "aa_name": "GPT-5.5 (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 33.8,
             "artificial_analysis_coding_index": 71.5,
             "gpqa": 0.926,
             "hle": 0.424,
@@ -1809,7 +1785,6 @@
           "aa_slug": "gpt-5-5-high",
           "aa_name": "GPT-5.5 (High)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 37,
             "artificial_analysis_coding_index": 71.6,
             "gpqa": 0.932,
             "hle": 0.45,
@@ -1833,7 +1808,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2026-07-09",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 37.3,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 71.4,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -1860,7 +1835,6 @@
           "aa_slug": "gpt-5-6-luna-low",
           "aa_name": "GPT-5.6 Luna (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 21,
             "artificial_analysis_coding_index": 44.2,
             "gpqa": 0.835,
             "hle": 0.198,
@@ -1876,7 +1850,6 @@
           "aa_slug": "gpt-5-6-luna-medium",
           "aa_name": "GPT-5.6 Luna (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 25,
             "artificial_analysis_coding_index": 50.7,
             "gpqa": 0.859,
             "hle": 0.258,
@@ -1892,7 +1865,6 @@
           "aa_slug": "gpt-5-6-luna-high",
           "aa_name": "GPT-5.6 Luna (High)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 32.1,
             "artificial_analysis_coding_index": 63.3,
             "gpqa": 0.892,
             "hle": 0.334,
@@ -1908,7 +1880,6 @@
           "aa_slug": "gpt-5-6-luna-xhigh",
           "aa_name": "GPT-5.6 Luna (Xhigh)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 34.6,
             "artificial_analysis_coding_index": 68.6,
             "gpqa": 0.895,
             "hle": 0.37,
@@ -1929,7 +1900,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2026-07-09",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 47,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 77.4,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -1956,7 +1927,6 @@
           "aa_slug": "gpt-5-6-sol-low",
           "aa_name": "GPT-5.6 Sol (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 33.5,
             "artificial_analysis_coding_index": 69.7,
             "gpqa": 0.898,
             "hle": 0.394,
@@ -1975,7 +1945,6 @@
           "aa_slug": "gpt-5-6-sol-medium",
           "aa_name": "GPT-5.6 Sol (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 39.2,
             "artificial_analysis_coding_index": 76.3,
             "gpqa": 0.926,
             "hle": 0.422,
@@ -1994,7 +1963,6 @@
           "aa_slug": "gpt-5-6-sol-high",
           "aa_name": "GPT-5.6 Sol (High)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 42.3,
             "artificial_analysis_coding_index": 77.2,
             "gpqa": 0.928,
             "hle": 0.46,
@@ -2013,7 +1981,6 @@
           "aa_slug": "gpt-5-6-sol-xhigh",
           "aa_name": "GPT-5.6 Sol (Xhigh)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 44,
             "artificial_analysis_coding_index": 78.3,
             "gpqa": 0.931,
             "hle": 0.473,
@@ -2037,7 +2004,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2026-07-09",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 42.1,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 76.7,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -2056,15 +2023,14 @@
         "tau2": 0.862573099415205,
         "tau_banking": 0.402061855670103
       },
-      "median_output_tokens_per_second": 129.604,
-      "median_time_to_first_token_seconds": 71.518,
+      "median_output_tokens_per_second": 129.22,
+      "median_time_to_first_token_seconds": 96.814,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
           "aa_slug": "gpt-5-6-terra-low",
           "aa_name": "GPT-5.6 Terra (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 27.5,
             "artificial_analysis_coding_index": 58.1,
             "gpqa": 0.843,
             "hle": 0.292,
@@ -2077,13 +2043,12 @@
             "tau2": 0.605263157894737,
             "tau_banking": 0.187628865979381
           },
-          "median_output_tokens_per_second": 104.899
+          "median_output_tokens_per_second": 111.863
         },
         "medium": {
           "aa_slug": "gpt-5-6-terra-medium",
           "aa_name": "GPT-5.6 Terra (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 30.1,
             "artificial_analysis_coding_index": 64.7,
             "gpqa": 0.872,
             "hle": 0.333,
@@ -2095,13 +2060,12 @@
             "tau2": 0.728070175438596,
             "tau_banking": 0.255670103092783
           },
-          "median_output_tokens_per_second": 107.351
+          "median_output_tokens_per_second": 118.401
         },
         "high": {
           "aa_slug": "gpt-5-6-terra-high",
           "aa_name": "GPT-5.6 Terra (High)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 34.2,
             "artificial_analysis_coding_index": 67.1,
             "gpqa": 0.896,
             "hle": 0.385,
@@ -2114,13 +2078,12 @@
             "tau2": 0.783625730994152,
             "tau_banking": 0.28659793814433
           },
-          "median_output_tokens_per_second": 106.103
+          "median_output_tokens_per_second": 112.965
         },
         "xhigh": {
           "aa_slug": "gpt-5-6-terra-xhigh",
           "aa_name": "GPT-5.6 Terra (Xhigh)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 38,
             "artificial_analysis_coding_index": 70.6,
             "gpqa": 0.908,
             "hle": 0.419,
@@ -2133,7 +2096,7 @@
             "tau2": 0.804093567251462,
             "tau_banking": 0.296907216494845
           },
-          "median_output_tokens_per_second": 117.72
+          "median_output_tokens_per_second": 102.5
         }
       }
     },
@@ -2144,7 +2107,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2026-09-03",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 52.7,
+        "artificial_analysis_intelligence_index": 56.9,
         "artificial_analysis_coding_index": 76.9,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -2163,15 +2126,15 @@
         "tau2": null,
         "tau_banking": 0.414432989690722
       },
-      "median_output_tokens_per_second": 63.825,
-      "median_time_to_first_token_seconds": 181.63,
+      "median_output_tokens_per_second": 69.091,
+      "median_time_to_first_token_seconds": 203.084,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
           "aa_slug": "gpt-6-astra-low",
           "aa_name": "GPT-6 Astra (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 45.8,
+            "artificial_analysis_intelligence_index": 43,
             "artificial_analysis_coding_index": 75.7,
             "gpqa": 0.931,
             "hle": 0.492,
@@ -2181,13 +2144,13 @@
             "terminalbench_v4_0": 0.419191919191919,
             "tau_banking": 0.319587628865979
           },
-          "median_output_tokens_per_second": 52.623
+          "median_output_tokens_per_second": 57.003
         },
         "medium": {
           "aa_slug": "gpt-6-astra-medium",
           "aa_name": "GPT-6 Astra (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 49.6,
+            "artificial_analysis_intelligence_index": 51.5,
             "artificial_analysis_coding_index": 76.7,
             "gpqa": 0.939,
             "hle": 0.527,
@@ -2197,13 +2160,13 @@
             "terminalbench_v4_0": 0.494949494949495,
             "tau_banking": 0.354639175257732
           },
-          "median_output_tokens_per_second": 51.981
+          "median_output_tokens_per_second": 50.148
         },
         "high": {
           "aa_slug": "gpt-6-astra-high",
           "aa_name": "GPT-6 Astra (High)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 50.9,
+            "artificial_analysis_intelligence_index": 54.8,
             "artificial_analysis_coding_index": 77.1,
             "gpqa": 0.949,
             "hle": 0.531,
@@ -2213,13 +2176,13 @@
             "terminalbench_v4_0": 0.54040404040404,
             "tau_banking": 0.4
           },
-          "median_output_tokens_per_second": 51.428
+          "median_output_tokens_per_second": 56.158
         },
         "xhigh": {
           "aa_slug": "gpt-6-astra-xhigh",
           "aa_name": "GPT-6 Astra (Xhigh)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 52.4,
+            "artificial_analysis_intelligence_index": 55.3,
             "artificial_analysis_coding_index": 75.9,
             "gpqa": 0.963,
             "hle": 0.546,
@@ -2229,7 +2192,7 @@
             "terminalbench_v4_0": 0.595959595959596,
             "tau_banking": 0.430927835051546
           },
-          "median_output_tokens_per_second": 61.195
+          "median_output_tokens_per_second": 71.036
         }
       }
     },
@@ -2240,7 +2203,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2026-09-22",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 38.1,
+        "artificial_analysis_intelligence_index": 27.8,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -2259,57 +2222,57 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 146.56,
-      "median_time_to_first_token_seconds": 58.336,
+      "median_output_tokens_per_second": 117.76,
+      "median_time_to_first_token_seconds": 81.207,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
           "aa_slug": "gpt-6-luna-low",
           "aa_name": "GPT-6 Luna (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 21.5,
+            "artificial_analysis_intelligence_index": 9.7,
             "hle": 0.203,
             "scicode": 0.469,
             "lcr": 0.74,
             "terminalbench_v4_0": 0
           },
-          "median_output_tokens_per_second": 116.978
+          "median_output_tokens_per_second": 116.537
         },
         "medium": {
           "aa_slug": "gpt-6-luna-medium",
           "aa_name": "GPT-6 Luna (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 29.9,
+            "artificial_analysis_intelligence_index": 18.3,
             "hle": 0.283,
             "scicode": 0.509,
             "lcr": 0.783333333333333,
             "terminalbench_v4_0": 0.0252525252525253
           },
-          "median_output_tokens_per_second": 125.437
+          "median_output_tokens_per_second": 0
         },
         "high": {
           "aa_slug": "gpt-6-luna-high",
           "aa_name": "GPT-6 Luna (High)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 32.9,
+            "artificial_analysis_intelligence_index": 21.4,
             "hle": 0.329,
             "scicode": 0.503,
             "lcr": 0.793333333333333,
             "terminalbench_v4_0": 0.0454545454545455
           },
-          "median_output_tokens_per_second": 111.742
+          "median_output_tokens_per_second": 121.227
         },
         "xhigh": {
           "aa_slug": "gpt-6-luna-xhigh",
           "aa_name": "GPT-6 Luna (Xhigh)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 34.6,
+            "artificial_analysis_intelligence_index": 23.3,
             "hle": 0.343,
             "scicode": 0.517,
             "lcr": 0.8,
             "terminalbench_v4_0": 0.0808080808080808
           },
-          "median_output_tokens_per_second": 107.513
+          "median_output_tokens_per_second": 117.372
         }
       }
     },
@@ -2320,7 +2283,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2026-09-22",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 47.6,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -2347,7 +2310,6 @@
           "aa_slug": "gpt-6-sol-low",
           "aa_name": "GPT-6 Sol (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 34.2,
             "hle": 0.349,
             "scicode": 0.502,
             "lcr": 0.793333333333333,
@@ -2359,7 +2321,6 @@
           "aa_slug": "gpt-6-sol-medium",
           "aa_name": "GPT-6 Sol (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 39.8,
             "hle": 0.41,
             "scicode": 0.538,
             "lcr": 0.823333333333333,
@@ -2371,7 +2332,6 @@
           "aa_slug": "gpt-6-sol-high",
           "aa_name": "GPT-6 Sol (High)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 42.4,
             "hle": 0.441,
             "scicode": 0.549,
             "lcr": 0.836666666666667,
@@ -2383,7 +2343,6 @@
           "aa_slug": "gpt-6-sol-xhigh",
           "aa_name": "GPT-6 Sol (Xhigh)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 44.2,
             "hle": 0.463,
             "scicode": 0.551,
             "lcr": 0.813333333333333,
@@ -2400,7 +2359,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2026-09-29",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 51.8,
+        "artificial_analysis_intelligence_index": 54.5,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -2419,33 +2378,33 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 58.876,
-      "median_time_to_first_token_seconds": 144.396,
+      "median_output_tokens_per_second": 79.663,
+      "median_time_to_first_token_seconds": 172.342,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
           "aa_slug": "gpt-6-1-sol-low",
           "aa_name": "GPT-6.1 Sol (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 42.1,
+            "artificial_analysis_intelligence_index": 34.5,
             "hle": 0.474,
             "scicode": 0.532,
             "lcr": 0.84,
             "terminalbench_v4_0": 0.308080808080808
           },
-          "median_output_tokens_per_second": 50.904
+          "median_output_tokens_per_second": 65.29
         },
         "medium": {
           "aa_slug": "gpt-6-1-sol-medium",
           "aa_name": "GPT-6.1 Sol (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 47.8,
+            "artificial_analysis_intelligence_index": 46.1,
             "hle": 0.499,
             "scicode": 0.532,
             "lcr": 0.833333333333333,
             "terminalbench_v4_0": 0.47979797979798
           },
-          "median_output_tokens_per_second": 49.146
+          "median_output_tokens_per_second": 59.582
         },
         "high": {
           "aa_slug": "gpt-6-1-sol-high",
@@ -2457,19 +2416,19 @@
             "lcr": 0.823333333333333,
             "terminalbench_v4_0": 0.515151515151515
           },
-          "median_output_tokens_per_second": 49.388
+          "median_output_tokens_per_second": 63.419
         },
         "xhigh": {
           "aa_slug": "gpt-6-1-sol-xhigh",
           "aa_name": "GPT-6.1 Sol (Xhigh)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 51,
+            "artificial_analysis_intelligence_index": 52.3,
             "hle": 0.526,
             "scicode": 0.557,
             "lcr": 0.796666666666667,
             "terminalbench_v4_0": 0.54040404040404
           },
-          "median_output_tokens_per_second": 58.185
+          "median_output_tokens_per_second": 68.512
         }
       }
     },
@@ -2480,7 +2439,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2025-08-05",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 11.6,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 30.4,
         "artificial_analysis_math_index": 93.4,
         "mmlu_pro": 0.808,
@@ -2499,15 +2458,14 @@
         "tau2": 0.657894736842105,
         "tau_banking": 0.127835051546392
       },
-      "median_output_tokens_per_second": 202.247,
-      "median_time_to_first_token_seconds": 0.486,
+      "median_output_tokens_per_second": 223.751,
+      "median_time_to_first_token_seconds": 0.491,
       "aa_effort": "high",
       "effort_variants": {
         "low": {
           "aa_slug": "gpt-oss-120b-low",
           "aa_name": "gpt-oss-120b (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 10.2,
             "artificial_analysis_coding_index": 21.2,
             "artificial_analysis_math_index": 66.7,
             "mmlu_pro": 0.775,
@@ -2522,7 +2480,7 @@
             "tau2": 0.450292397660819,
             "tau_banking": 0.0288659793814433
           },
-          "median_output_tokens_per_second": 247.597
+          "median_output_tokens_per_second": 262.003
         }
       }
     },
@@ -2533,7 +2491,7 @@
       "aa_creator": "OpenAI",
       "release_date": "2025-08-05",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 9,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 20.7,
         "artificial_analysis_math_index": 89.3,
         "mmlu_pro": 0.748,
@@ -2552,15 +2510,14 @@
         "tau2": 0.60233918128655,
         "tau_banking": 0.0701030927835052
       },
-      "median_output_tokens_per_second": 167.821,
-      "median_time_to_first_token_seconds": 0.463,
+      "median_output_tokens_per_second": 174.412,
+      "median_time_to_first_token_seconds": 0.458,
       "aa_effort": "high",
       "effort_variants": {
         "low": {
           "aa_slug": "gpt-oss-20b-low",
           "aa_name": "gpt-oss-20b (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 10,
             "artificial_analysis_math_index": 62.3,
             "mmlu_pro": 0.718,
             "gpqa": 0.611,
@@ -2572,7 +2529,7 @@
             "terminalbench_hard": 0.0454545454545455,
             "tau2": 0.502923976608187
           },
-          "median_output_tokens_per_second": 223.167
+          "median_output_tokens_per_second": 214.301
         }
       }
     },
@@ -2583,7 +2540,7 @@
       "aa_creator": "SpaceXAI",
       "release_date": "2026-04-30",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 24.9,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 42.2,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -2610,7 +2567,6 @@
           "aa_slug": "grok-4-3-low",
           "aa_name": "Grok 4.3 (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 24.3,
             "gpqa": 0.843,
             "hle": 0.184,
             "ifbench": 0.80952380952381,
@@ -2624,7 +2580,6 @@
           "aa_slug": "grok-4-3-medium",
           "aa_name": "Grok 4.3 (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 24.8,
             "gpqa": 0.89,
             "hle": 0.3,
             "ifbench": 0.833333333333333,
@@ -2643,7 +2598,7 @@
       "aa_creator": "SpaceXAI",
       "release_date": "2026-08-12",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 44.2,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 75.9,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -2670,7 +2625,6 @@
           "aa_slug": "grok-4-6-low",
           "aa_name": "Grok 4.6 (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 35.1,
             "artificial_analysis_coding_index": 66.3,
             "gpqa": 0.879,
             "hle": 0.276,
@@ -2686,7 +2640,6 @@
           "aa_slug": "grok-4-6-medium",
           "aa_name": "Grok 4.6 (Medium)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 42.8,
             "artificial_analysis_coding_index": 74.4,
             "gpqa": 0.935,
             "hle": 0.421,
@@ -2702,7 +2655,6 @@
           "aa_slug": "grok-4-6",
           "aa_name": "Grok 4.6 (High)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 44.3,
             "artificial_analysis_coding_index": 76.8,
             "gpqa": 0.949,
             "hle": 0.429,
@@ -2723,7 +2675,7 @@
       "aa_creator": "SpaceXAI",
       "release_date": "2026-09-21",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 46.4,
+        "artificial_analysis_intelligence_index": 34.3,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -2742,33 +2694,33 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 88.851,
-      "median_time_to_first_token_seconds": 13.77,
+      "median_output_tokens_per_second": 86.313,
+      "median_time_to_first_token_seconds": 17.099,
       "aa_effort": "xhigh",
       "effort_variants": {
         "low": {
           "aa_slug": "grok-4-7-low",
           "aa_name": "Grok 4.7 (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 42.2,
+            "artificial_analysis_intelligence_index": 30.9,
             "hle": 0.392,
             "scicode": 0.549,
             "lcr": 0.8,
             "terminalbench_v4_0": 0.161616161616162
           },
-          "median_output_tokens_per_second": 71.198
+          "median_output_tokens_per_second": 79.131
         },
         "high": {
           "aa_slug": "grok-4-7-high",
           "aa_name": "Grok 4.7 (High)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 46.3,
+            "artificial_analysis_intelligence_index": 35,
             "hle": 0.423,
             "scicode": 0.578,
             "lcr": 0.77,
             "terminalbench_v4_0": 0.247474747474747
           },
-          "median_output_tokens_per_second": 85.921
+          "median_output_tokens_per_second": 85.692
         }
       }
     },
@@ -2779,7 +2731,7 @@
       "aa_creator": "Kimi",
       "release_date": "2026-06-12",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 25.8,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 60.8,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -2798,8 +2750,8 @@
         "tau2": 0.900584795321637,
         "tau_banking": 0.202061855670103
       },
-      "median_output_tokens_per_second": 45.41,
-      "median_time_to_first_token_seconds": 1.151,
+      "median_output_tokens_per_second": 66.488,
+      "median_time_to_first_token_seconds": 1.021,
       "aa_effort": null,
       "effort_variants": {}
     },
@@ -2810,7 +2762,7 @@
       "aa_creator": "Kimi",
       "release_date": "2026-07-16",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 43.6,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 76.2,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -2829,15 +2781,14 @@
         "tau2": null,
         "tau_banking": 0.45979381443299
       },
-      "median_output_tokens_per_second": 38.856,
-      "median_time_to_first_token_seconds": 3.003,
+      "median_output_tokens_per_second": 0,
+      "median_time_to_first_token_seconds": 0,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
           "aa_slug": "kimi-k3-low",
           "aa_name": "Kimi K3 (Low)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 30.1,
             "artificial_analysis_coding_index": 72,
             "gpqa": 0.842,
             "hle": 0.25,
@@ -2847,7 +2798,7 @@
             "terminalbench_v4_0": 0.126262626262626,
             "tau_banking": 0.416494845360825
           },
-          "median_output_tokens_per_second": 37.164
+          "median_output_tokens_per_second": 0
         }
       }
     },
@@ -2858,7 +2809,7 @@
       "aa_creator": "Mistral",
       "release_date": "2025-12-02",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 9.3,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 20.1,
         "artificial_analysis_math_index": 38,
         "mmlu_pro": 0.807,
@@ -2889,7 +2840,7 @@
       "aa_creator": "Mistral",
       "release_date": "2026-04-29",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 14.2,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 46.9,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -2908,8 +2859,8 @@
         "tau2": 0.941520467836257,
         "tau_banking": 0.150515463917526
       },
-      "median_output_tokens_per_second": 156.771,
-      "median_time_to_first_token_seconds": 0.691,
+      "median_output_tokens_per_second": 165.549,
+      "median_time_to_first_token_seconds": 0.835,
       "aa_effort": null,
       "effort_variants": {}
     },
@@ -2920,7 +2871,7 @@
       "aa_creator": "Mistral",
       "release_date": "2026-03-16",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 11.3,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 26.6,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -2939,8 +2890,8 @@
         "tau2": 0.412280701754386,
         "tau_banking": 0.0494845360824742
       },
-      "median_output_tokens_per_second": 182.195,
-      "median_time_to_first_token_seconds": 0.617,
+      "median_output_tokens_per_second": 182.379,
+      "median_time_to_first_token_seconds": 0.696,
       "aa_effort": null,
       "effort_variants": {}
     },
@@ -2951,7 +2902,7 @@
       "aa_creator": "Meta",
       "release_date": "2026-09-02",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 48.1,
+        "artificial_analysis_intelligence_index": 36.4,
         "artificial_analysis_coding_index": 75.8,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -2970,15 +2921,14 @@
         "tau2": null,
         "tau_banking": 0.505154639175258
       },
-      "median_output_tokens_per_second": 98.66,
-      "median_time_to_first_token_seconds": 54.571,
+      "median_output_tokens_per_second": 0,
+      "median_time_to_first_token_seconds": 0,
       "aa_effort": "max",
       "effort_variants": {
         "xhigh": {
           "aa_slug": "muse-spark-1-3-xhigh",
           "aa_name": "Muse Spark 1.3 (Xhigh)",
           "evaluations": {
-            "artificial_analysis_intelligence_index": 45.1,
             "artificial_analysis_coding_index": 76.5,
             "gpqa": 0.941,
             "hle": 0.475,
@@ -2988,7 +2938,7 @@
             "terminalbench_v4_0": 0.166666666666667,
             "tau_banking": 0.472164948453608
           },
-          "median_output_tokens_per_second": 402.022
+          "median_output_tokens_per_second": 0
         }
       }
     },
@@ -2999,7 +2949,7 @@
       "aa_creator": "Meta",
       "release_date": "2026-10-12",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 52.4,
+        "artificial_analysis_intelligence_index": 43.3,
         "artificial_analysis_coding_index": null,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -3018,8 +2968,8 @@
         "tau2": null,
         "tau_banking": null
       },
-      "median_output_tokens_per_second": 149.093,
-      "median_time_to_first_token_seconds": 31.086,
+      "median_output_tokens_per_second": 192.476,
+      "median_time_to_first_token_seconds": 21.797,
       "aa_effort": "max",
       "effort_variants": {}
     },
@@ -3030,7 +2980,7 @@
       "aa_creator": "Anthropic",
       "release_date": "2026-04-16",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 40.7,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 73.6,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -3061,7 +3011,7 @@
       "aa_creator": "Anthropic",
       "release_date": "2026-05-28",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 41.8,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 74.3,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
@@ -3092,7 +3042,7 @@
       "aa_creator": "Anthropic",
       "release_date": "2026-02-17",
       "evaluations": {
-        "artificial_analysis_intelligence_index": 30.1,
+        "artificial_analysis_intelligence_index": null,
         "artificial_analysis_coding_index": 63,
         "artificial_analysis_math_index": null,
         "mmlu_pro": null,
