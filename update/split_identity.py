@@ -276,6 +276,11 @@ def split(base_dir: Path, hold: Path, paths: list[str], day: dt.date) -> str | N
     prices = merge_catalog.snapshot_price_map(merge_catalog.provider_snapshots(UPDATE))
     seed = typed_selector(base[ai.SELECTOR], full[ai.SELECTOR])
     seed, _, _ = merge_catalog.apply_price_overlay(seed, prices)
+    # Letters by rank are taken over the live models. The candidate's were
+    # derived over its own field, which a held retirement narrowed, so the
+    # typed part derives them again over the models it keeps.
+    changes, _ = derive_ratings.plan_changes(seed, json.loads(bench_text)["models"])
+    seed = derive_ratings.apply_changes(seed, changes)
     selector, _ = model_prose.apply(seed, bench, day)
     selector = derive_ratings.regenerate_coding_enumeration(selector)
     selector = derive_ratings.regenerate_multimodal_enumeration(selector)

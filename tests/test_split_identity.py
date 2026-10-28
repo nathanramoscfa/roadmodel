@@ -203,3 +203,33 @@ def test_both_refresh_workflows_split_before_the_gate() -> None:
             "python update/automation_integrity.py"
         ), name
         assert "chore/catalog-review" in text, name
+
+
+def test_a_held_retirement_leaves_the_typed_letters_derived_over_its_own_field(
+    work: dict[str, Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Retiring a model narrows the field ranks are taken over, so the candidate's
+    letters move with it. The retirement tag waits for review; the letters the
+    typed part ships must be derived over the models it keeps, or the refresh PR
+    fails the drift test (#1309, 2026-10-28)."""
+    supersede = _load("supersede")
+    derive = _load("derive_ratings")
+    root = work["work"]
+    text = (root / ai.SELECTOR).read_text()
+    due = sorted((t.since, mid) for mid, t in supersede.base_tags(text).items() if not t.retired)
+    if not due:
+        pytest.skip("no superseded (unretired) model in the committed selector")
+    day = dt.date.fromisoformat(due[0][0]) + dt.timedelta(days=supersede.RETIRE_AFTER_DAYS)
+    monkeypatch.setattr(supersede, "EFFORT_RATINGS_PATH", tmp_path / "effort-ratings.json")
+    supersede.main(["--write", "--today", day.isoformat(), "--selector", str(root / ai.SELECTOR)])
+    assert "retired-on=" in (root / ai.SELECTOR).read_text()
+    _regenerate(root)
+
+    assert si.split(work["base"], work["hold"], PATHS, day) is not None
+    _render(root)
+    ai.validate_documents(_reader(work["base"]), _reader(root), day)
+    shipped = (root / ai.SELECTOR).read_text()
+    assert "retired-on=" not in shipped
+    bench = json.loads((root / ai.BENCH).read_text())["models"]
+    assert derive.plan_changes(shipped, bench)[0] == []
+    assert "retired-on=" in (work["hold"] / ai.SELECTOR).read_text()
