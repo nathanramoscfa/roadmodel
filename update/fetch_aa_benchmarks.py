@@ -71,6 +71,13 @@ FETCH_TIMEOUT = 60
 # rows for the same model at its other efforts (`effort_variants`).
 SCHEMA_VERSION = 2
 
+# hold_collapsed(): an evaluation is held when more than 1/HOLD_SHARE_DENOMINATOR
+# of the models the committed file measured lose it (and at least HOLD_MIN_LOST),
+# for at most HOLD_DAYS.
+HOLD_SHARE_DENOMINATOR = 4
+HOLD_MIN_LOST = 3
+HOLD_DAYS = 14
+
 # Effort levels as AA names them in a row's parenthetical ("GPT-6 Luna
 # (Xhigh)", "Claude Sonnet 5.5 (Adaptive Reasoning, Max Effort)"), lowest
 # first. A level row's slug is the model's slug plus the level
@@ -316,6 +323,58 @@ def stable_fields(doc: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in doc.items() if k != "generated_at_utc"}
 
 
+def _hold_value(target: dict[str, Any], source: dict[str, Any] | None, key: str) -> None:
+    value = (source or {}).get(key)
+    if value is None:
+        target.pop(key, None)
+    else:
+        target[key] = value
+
+
+def hold_collapsed(
+    doc: dict[str, Any], committed: dict[str, Any], today: dt.date
+) -> dict[str, dict[str, Any]]:
+    """Keep the committed figures for an evaluation whose coverage collapsed.
+
+    AA re-scores a composite in batches: on 2026-10-28 its Intelligence Index
+    came back for 15 of the 41 models it had covered, every one of them on a
+    new scale (Haiku 5.5 43.4 -> 36.2), the rest null until re-scored (#1312).
+    Shipping that drops 26 models' Index and sets the 15 on a scale the others
+    are not on. So when more than a quarter of the models measured in the
+    committed file lose an evaluation (and at least HOLD_MIN_LOST do), the
+    committed figures stay for every model and every effort row, on the scale
+    they were all measured on. The hold lifts as soon as coverage recovers, or
+    after HOLD_DAYS — a field AA has stopped publishing for older models is
+    then taken as the new state. Returns {evaluation: {since, measured, lost}}."""
+    before = committed.get("models") or {}
+    held_before = committed.get("held") or {}
+    held: dict[str, dict[str, Any]] = {}
+    shared = [mid for mid in doc["models"] if mid in before]
+    keys = {k for mid in shared for k in (before[mid].get("evaluations") or {})}
+    for key in sorted(keys):
+        measured = [mid for mid in shared if before[mid]["evaluations"].get(key) is not None]
+        lost = [mid for mid in measured if doc["models"][mid]["evaluations"].get(key) is None]
+        if len(lost) < HOLD_MIN_LOST or len(lost) * HOLD_SHARE_DENOMINATOR <= len(measured):
+            continue
+        since = (held_before.get(key) or {}).get("since") or today.isoformat()
+        if (today - dt.date.fromisoformat(since)).days > HOLD_DAYS:
+            continue
+        held[key] = {"since": since, "measured": len(measured), "lost": len(lost)}
+        for mid, row in doc["models"].items():
+            old = before.get(mid) or {}
+            # The field keeps its nulls (every evaluation is stored); effort rows
+            # carry measured figures only.
+            row["evaluations"][key] = (old.get("evaluations") or {}).get(key)
+            old_variants = old.get("effort_variants") or {}
+            for level, variant in (row.get("effort_variants") or {}).items():
+                _hold_value(
+                    variant["evaluations"], (old_variants.get(level) or {}).get("evaluations"), key
+                )
+    if held:
+        doc["held"] = held
+    return held
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -371,8 +430,19 @@ def main() -> int:
             "until update/aa-model-map.json is fixed"
         )
 
+    existing = json.loads(OUT_PATH.read_text()) if OUT_PATH.exists() else {}
+    held = hold_collapsed(doc, existing, dt.datetime.now(dt.timezone.utc).date())
+    for key, h in held.items():
+        # Parsed by update-benchmarks.yml into the PR description.
+        print(
+            f"HELD {key}: {h['lost']} of {h['measured']} measured models lost it (since {h['since']})"
+        )
+        print(
+            f"::warning::AA's {key} came back for too few models; the committed figures "
+            f"are kept (since {h['since']}, at most {HOLD_DAYS} days)"
+        )
+
     if args.check:
-        existing = json.loads(OUT_PATH.read_text()) if OUT_PATH.exists() else {}
         if stable_fields(existing) != stable_fields(doc):
             sys.stderr.write(f"{OUT_PATH.relative_to(REPO_ROOT)} is stale.\n")
             return 1
@@ -381,7 +451,6 @@ def main() -> int:
 
     # Do not churn the timestamp when nothing measurable changed.
     if OUT_PATH.exists():
-        existing = json.loads(OUT_PATH.read_text())
         if stable_fields(existing) == stable_fields(doc):
             print(f"{OUT_PATH.relative_to(REPO_ROOT)} unchanged ({doc['model_count']} models)")
             return 0
