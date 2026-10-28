@@ -187,6 +187,8 @@ jobs:
               lines.append("- **Map points at slugs AA no longer serves**: " + ", ".join(f"`{m}`" for m in d["missing_slugs"]))
           if d.get("mismatched"):
               lines.append("- **Map joins an id to a differently named AA model** (scores left out, row shows dashes): " + ", ".join(f"`{m}`" for m in d["mismatched"]))
+          for key, h in (d.get("held") or {}).items():
+              lines.append(f"- **Held `{key}`**: {h['lost']} of {h['measured']} measured models came back without it (AA re-scoring in batches), so every model keeps its committed figure, held since {h['since']} until coverage recovers or 14 days pass.")
           print("\n".join(lines))
           EOF
           )"

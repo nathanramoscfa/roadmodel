@@ -14,6 +14,7 @@ import importlib.util
 import json
 import re
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 _spec = importlib.util.spec_from_file_location(
@@ -281,3 +282,77 @@ def test_the_headline_is_the_top_effort_aa_measured() -> None:
     assert row["evaluations"]["artificial_analysis_intelligence_index"] == 44.2
     assert list(row["effort_variants"]) == ["low", "high"]
     assert row["effort_variants"]["high"]["aa_slug"] == "grok-4-6"
+
+
+INDEX = "artificial_analysis_intelligence_index"
+HELD_DAY = dt.date(2026, 10, 28)
+
+
+def _layer(index: dict[str, float | None], variant_index: float | None = None) -> dict[str, Any]:
+    """A benchmark layer: one row per id with its AA Index and HLE, and an
+    xhigh effort row on `m0`."""
+    models: dict[str, Any] = {
+        mid: {"aa_name": mid, "evaluations": {INDEX: value, "hle": 0.5}, "effort_variants": {}}
+        for mid, value in index.items()
+    }
+    if variant_index is not None:
+        models["m0"]["effort_variants"] = {"xhigh": {"evaluations": {INDEX: variant_index}}}
+    return {"model_count": len(models), "models": models}
+
+
+def test_a_collapsed_evaluation_keeps_the_committed_figures_on_one_scale() -> None:
+    """#1312: AA re-scored its Index for some models (on a new scale) and
+    returned null for the rest. Every model keeps its committed figure, effort
+    rows included, and the other evaluations still refresh."""
+    committed = _layer({f"m{i}": 40.0 + i for i in range(8)}, variant_index=38.0)
+    fresh = _layer({"m0": 30.0, "m1": 31.0, **{f"m{i}": None for i in range(2, 8)}}, 29.0)
+    fresh["models"]["m0"]["evaluations"]["hle"] = 0.6
+    held = fab.hold_collapsed(fresh, committed, HELD_DAY)
+    assert held == {INDEX: {"since": "2026-10-28", "measured": 8, "lost": 6}}
+    assert fresh["held"] == held
+    assert [fresh["models"][f"m{i}"]["evaluations"][INDEX] for i in range(8)] == [
+        40.0 + i for i in range(8)
+    ]
+    assert fresh["models"]["m0"]["effort_variants"]["xhigh"]["evaluations"] == {INDEX: 38.0}
+    assert fresh["models"]["m0"]["evaluations"]["hle"] == 0.6
+
+
+def test_a_model_new_to_a_held_evaluation_waits_with_it() -> None:
+    committed = _layer({f"m{i}": 40.0 for i in range(8)})
+    fresh = _layer({"m0": 30.0, **{f"m{i}": None for i in range(1, 8)}, "new": 25.0})
+    fab.hold_collapsed(fresh, committed, HELD_DAY)
+    # Its figure is on the new scale; it ships when the hold lifts.
+    assert fresh["models"]["new"]["evaluations"][INDEX] is None
+
+
+def test_ordinary_churn_and_retired_rows_are_not_a_collapse() -> None:
+    committed = _layer({f"m{i}": 40.0 for i in range(12)})
+    # Four rows left with their models' retirement (not losses), and two of
+    # the eight that stayed lose it: a quarter, not more.
+    fresh = _layer({**{f"m{i}": 41.0 for i in range(6)}, "m6": None, "m7": None})
+    before = json.loads(json.dumps(fresh))
+    assert fab.hold_collapsed(fresh, committed, HELD_DAY) == {}
+    assert fresh == before
+
+
+def test_a_hold_lifts_when_coverage_recovers_or_after_its_days() -> None:
+    committed = {
+        **_layer({f"m{i}": 40.0 for i in range(8)}),
+        "held": {INDEX: {"since": "2026-10-20", "measured": 8, "lost": 6}},
+    }
+    recovered = _layer({f"m{i}": 30.0 for i in range(7)} | {"m7": None})
+    assert fab.hold_collapsed(recovered, committed, HELD_DAY) == {}
+    assert "held" not in recovered
+    assert recovered["models"]["m0"]["evaluations"][INDEX] == 30.0
+
+    still = _layer({"m0": 30.0, **{f"m{i}": None for i in range(1, 8)}})
+    assert fab.hold_collapsed(still, committed, HELD_DAY)[INDEX]["since"] == "2026-10-20"
+    expired = _layer({"m0": 30.0, **{f"m{i}": None for i in range(1, 8)}})
+    late = HELD_DAY + dt.timedelta(days=fab.HOLD_DAYS)
+    assert fab.hold_collapsed(expired, committed, late) == {}
+    assert expired["models"]["m1"]["evaluations"][INDEX] is None
+
+
+def test_the_benchmark_refresh_reports_a_hold_in_its_pr() -> None:
+    text = (REPO_ROOT / ".github" / "workflows" / "update-benchmarks.yml").read_text()
+    assert 'd.get("held")' in text
