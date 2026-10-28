@@ -23,6 +23,7 @@ if str(UPDATE_DIR) not in sys.path:
     sys.path.insert(0, str(UPDATE_DIR))
 
 import measure_effort_tokens as met  # noqa: E402
+import supersede  # noqa: E402
 
 SHA = "test-sha"
 
@@ -209,11 +210,15 @@ def test_frontier_price_uses_the_measured_multiplier(monkeypatch: pytest.MonkeyP
 def test_the_committed_measurements_are_well_formed() -> None:
     doc = json.loads((REPO_ROOT / "docs" / "effort-tokens.json").read_text())
     bench = json.loads((REPO_ROOT / "docs" / "benchmarks.json").read_text())["models"]
+    # A retired model's row leaves the benchmark layer, but its measurement
+    # stays: it is part of the reference every multiplier is taken over.
+    selector = (REPO_ROOT / "docs" / "model-selector.txt").read_text()
+    retired = {mid for mid, t in supersede.base_tags(selector).items() if t.retired}
     assert doc["schema_version"] == met.SCHEMA_VERSION
     assert doc["probe_set_sha256"] == met.probe_set_sha256(), "probes changed: re-measure"
     assert doc["models"], "no model measured"
     for mid, row in doc["models"].items():
-        assert mid in bench, mid
+        assert mid in bench or mid in retired, mid
         assert len(row["levels"]) > 1, mid
         for level, v in row["levels"].items():
             assert level in scoring.EFFORT_LADDER, (mid, level)

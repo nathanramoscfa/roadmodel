@@ -705,7 +705,7 @@ run_post_matrix() {
   fi
 
   web_ci_env
-  if npx --prefix web playwright install chromium &&
+  if npx --prefix web playwright install chromium webkit &&
     npm --prefix web run test; then
     printf '[PASS] V4.3: Playwright home suite passed\n'
     STEP_POST_PASS+=1
@@ -714,7 +714,7 @@ run_post_matrix() {
     STEP_POST_FAIL+=1
   fi
 
-  if npx --prefix web playwright install chromium &&
+  if npx --prefix web playwright install chromium webkit &&
     npm --prefix web run test -- --grep "/recommend"; then
     printf '[PASS] V5.2: Playwright /recommend grep suite passed\n'
     STEP_POST_PASS+=1
@@ -732,7 +732,7 @@ run_post_matrix() {
   fi
 
   local v63_ok=1
-  if npx --prefix web playwright install chromium &&
+  if npx --prefix web playwright install chromium webkit &&
     npm --prefix web run test -- --grep "burst_limit"; then
     printf '[PASS] V6.3a: Playwright burst_limit grep passed\n'
     STEP_POST_PASS+=1
@@ -741,7 +741,7 @@ run_post_matrix() {
     STEP_POST_FAIL+=1
     v63_ok=0
   fi
-  if npx --prefix web playwright install chromium &&
+  if npx --prefix web playwright install chromium webkit &&
     npm --prefix web run test -- --grep "daily_limit"; then
     printf '[PASS] V6.3b: Playwright daily_limit grep passed\n'
     STEP_POST_PASS+=1
