@@ -254,7 +254,11 @@ def test_the_retirement_day_retires_rerates_and_leaves_the_drift_check_green(
         pytest.skip("no superseded (unretired) model in the committed selector")
     first_since = dt.date.fromisoformat(live[0][0])
     today = first_since + dt.timedelta(days=supersede.RETIRE_AFTER_DAYS)
-    due = {mid for since, mid in live if since == live[0][0]}
+    full = json.loads((REPO_ROOT / "docs" / "benchmarks.json").read_text())
+    # The models the rule retires that day: a tagged model can also clear first.
+    due = set(supersede.plan(text, full, today, None, supersede.unavailable_ids()).retired)
+    if not due:
+        pytest.skip("no model retires on the first leave date in the committed selector")
     benchmarks = json.loads((REPO_ROOT / "docs" / "benchmarks.json").read_text())["models"]
 
     selector = tmp_path / "model-selector.txt"
@@ -269,7 +273,7 @@ def test_the_retirement_day_retires_rerates_and_leaves_the_drift_check_green(
 
     retired = {k for k, v in supersede.base_tags(after).items() if v.retired}
     assert due <= retired
-    assert out.count("RETIRED ") == len(retired)
+    assert out.count("RETIRED ") == len(due)
     # The drift check: every live letter matches the derivation, and the
     # effort ratings were rewritten over the narrowed field.
     changes, _ = derive.plan_changes(after, benchmarks)

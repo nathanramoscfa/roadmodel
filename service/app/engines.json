@@ -134,18 +134,6 @@
       "notes": "One tier up from Luna in the 5.6 generation. Runnable for comparison."
     },
     {
-      "hint": "openai-gpt-5-mini",
-      "catalog_id": "gpt-5-mini",
-      "provider": "openai",
-      "model": "gpt-5-mini",
-      "thinking_budget": 0,
-      "max_output_tokens": 2048,
-      "ladder_max_output_tokens": 6144,
-      "temperature": null,
-      "menu": null,
-      "notes": "The engine before GPT-5.6 Luna (2026-07-19 to 2026-09-22). Kept for rollback."
-    },
-    {
       "hint": "google-gemini-2.5-flash",
       "catalog_id": "gemini-2.5-flash",
       "provider": "google",

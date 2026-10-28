@@ -61,36 +61,6 @@
         "knowledge": "A"
       }
     },
-    "claude-opus-5": {
-      "low": {
-        "coding": "A",
-        "planning": "A",
-        "agentic": "A",
-        "long-context": "A",
-        "knowledge": "A"
-      },
-      "medium": {
-        "coding": "A",
-        "planning": "A",
-        "agentic": "A",
-        "long-context": "A",
-        "knowledge": "A"
-      },
-      "high": {
-        "coding": "A",
-        "planning": "A",
-        "agentic": "S",
-        "long-context": "A",
-        "knowledge": "A"
-      },
-      "xhigh": {
-        "coding": "A",
-        "planning": "A",
-        "agentic": "S",
-        "long-context": "A",
-        "knowledge": "A"
-      }
-    },
     "claude-opus-5-5": {
       "low": {
         "coding": "A",
@@ -130,7 +100,7 @@
         "knowledge": "C"
       },
       "medium": {
-        "coding": "B",
+        "coding": "A",
         "planning": "B",
         "agentic": "B",
         "long-context": "A",
@@ -146,7 +116,7 @@
       "xhigh": {
         "coding": "A",
         "planning": "B",
-        "agentic": "A",
+        "agentic": "B",
         "long-context": "A",
         "knowledge": "B"
       }
@@ -188,35 +158,11 @@
         "knowledge": "B"
       }
     },
-    "gemini-3.5-flash": {
-      "minimal": {
-        "planning": "B",
-        "long-context": "B",
-        "knowledge": "C"
-      },
-      "medium": {
-        "planning": "B",
-        "long-context": "A",
-        "knowledge": "B"
-      }
-    },
-    "gemini-3.7-flash": {
-      "low": {
-        "planning": "B",
-        "long-context": "A",
-        "knowledge": "B"
-      },
-      "medium": {
-        "planning": "A",
-        "long-context": "A",
-        "knowledge": "B"
-      }
-    },
     "gemini-3.8-flash": {
       "low": {
         "coding": "A",
         "planning": "B",
-        "agentic": "A",
+        "agentic": "B",
         "long-context": "A",
         "knowledge": "B"
       },
@@ -237,82 +183,6 @@
         "knowledge": "B"
       }
     },
-    "gpt-5": {
-      "minimal": {
-        "planning": "C",
-        "knowledge": "D"
-      },
-      "low": {
-        "planning": "C",
-        "knowledge": "C"
-      },
-      "medium": {
-        "planning": "B",
-        "long-context": "A",
-        "knowledge": "C"
-      }
-    },
-    "gpt-5-mini": {
-      "minimal": {
-        "planning": "C",
-        "long-context": "C",
-        "knowledge": "D"
-      },
-      "medium": {
-        "planning": "C",
-        "long-context": "A",
-        "knowledge": "C"
-      }
-    },
-    "gpt-5.2": {
-      "medium": {
-        "planning": "B",
-        "long-context": "A",
-        "knowledge": "B"
-      }
-    },
-    "gpt-5.4": {
-      "low": {
-        "planning": "B",
-        "long-context": "A",
-        "knowledge": "B"
-      }
-    },
-    "gpt-5.4-mini": {
-      "medium": {
-        "planning": "C",
-        "long-context": "B",
-        "knowledge": "C"
-      }
-    },
-    "gpt-5.4-nano": {
-      "medium": {
-        "planning": "C",
-        "long-context": "B",
-        "knowledge": "C"
-      }
-    },
-    "gpt-5.5": {
-      "low": {
-        "planning": "B",
-        "long-context": "A",
-        "knowledge": "B"
-      },
-      "medium": {
-        "coding": "A",
-        "planning": "B",
-        "agentic": "B",
-        "long-context": "A",
-        "knowledge": "A"
-      },
-      "high": {
-        "coding": "A",
-        "planning": "B",
-        "agentic": "A",
-        "long-context": "S",
-        "knowledge": "A"
-      }
-    },
     "gpt-5.6-luna": {
       "low": {
         "coding": "C",
@@ -329,14 +199,14 @@
         "knowledge": "C"
       },
       "high": {
-        "coding": "B",
+        "coding": "A",
         "planning": "B",
         "agentic": "B",
         "long-context": "A",
         "knowledge": "B"
       },
       "xhigh": {
-        "coding": "B",
+        "coding": "A",
         "planning": "B",
         "agentic": "B",
         "long-context": "A",
@@ -398,7 +268,7 @@
       "xhigh": {
         "coding": "A",
         "planning": "A",
-        "agentic": "A",
+        "agentic": "B",
         "long-context": "A",
         "knowledge": "A"
       }
@@ -407,7 +277,7 @@
       "low": {
         "coding": "A",
         "planning": "A",
-        "agentic": "S",
+        "agentic": "A",
         "long-context": "A",
         "knowledge": "A"
       },
@@ -419,7 +289,7 @@
         "knowledge": "A"
       },
       "high": {
-        "coding": "S",
+        "coding": "A",
         "planning": "A",
         "agentic": "S",
         "long-context": "A",
@@ -449,7 +319,7 @@
         "knowledge": "B"
       },
       "high": {
-        "coding": "B",
+        "coding": "A",
         "planning": "B",
         "agentic": "B",
         "long-context": "A",
@@ -458,7 +328,7 @@
       "xhigh": {
         "coding": "A",
         "planning": "B",
-        "agentic": "A",
+        "agentic": "B",
         "long-context": "A",
         "knowledge": "B"
       }
@@ -467,7 +337,7 @@
       "low": {
         "coding": "A",
         "planning": "B",
-        "agentic": "A",
+        "agentic": "B",
         "long-context": "A",
         "knowledge": "B"
       },
@@ -547,29 +417,6 @@
         "planning": "B",
         "long-context": "A",
         "knowledge": "B"
-      }
-    },
-    "grok-4.6": {
-      "low": {
-        "coding": "B",
-        "planning": "B",
-        "agentic": "B",
-        "long-context": "A",
-        "knowledge": "B"
-      },
-      "medium": {
-        "coding": "A",
-        "planning": "A",
-        "agentic": "A",
-        "long-context": "A",
-        "knowledge": "A"
-      },
-      "high": {
-        "coding": "A",
-        "planning": "A",
-        "agentic": "A",
-        "long-context": "A",
-        "knowledge": "A"
       }
     },
     "grok-4.7": {

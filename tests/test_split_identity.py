@@ -220,16 +220,17 @@ def test_a_held_retirement_leaves_the_typed_letters_derived_over_its_own_field(
     if not due:
         pytest.skip("no superseded (unretired) model in the committed selector")
     day = dt.date.fromisoformat(due[0][0]) + dt.timedelta(days=supersede.RETIRE_AFTER_DAYS)
+    admitted = text.count("retired-on=")
     monkeypatch.setattr(supersede, "EFFORT_RATINGS_PATH", tmp_path / "effort-ratings.json")
     supersede.main(["--write", "--today", day.isoformat(), "--selector", str(root / ai.SELECTOR)])
-    assert "retired-on=" in (root / ai.SELECTOR).read_text()
+    assert (root / ai.SELECTOR).read_text().count("retired-on=") > admitted
     _regenerate(root)
 
     assert si.split(work["base"], work["hold"], PATHS, day) is not None
     _render(root)
     ai.validate_documents(_reader(work["base"]), _reader(root), day)
     shipped = (root / ai.SELECTOR).read_text()
-    assert "retired-on=" not in shipped
+    assert shipped.count("retired-on=") == admitted
     bench = json.loads((root / ai.BENCH).read_text())["models"]
     assert derive.plan_changes(shipped, bench)[0] == []
-    assert "retired-on=" in (work["hold"] / ai.SELECTOR).read_text()
+    assert (work["hold"] / ai.SELECTOR).read_text().count("retired-on=") > admitted
