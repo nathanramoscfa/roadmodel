@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.100] — 2026-10-28
+
+- **Superseded models leave the catalog 30 days after their successor arrived.** The benchmark refresh had failed since 2026-10-24: retiring a model narrows the field that coding and agentic letters are ranked over, so two surviving models' letters moved, and the refresh's drift check caught letters derived before the retirement. `update/supersede.py` now re-derives the letters and the per-effort ratings in the same write that retires, and the typed refresh part derives its letters over the models it keeps. The drift check is unchanged. The 18 models superseded on or before 2026-09-28 are retired: the catalog lists 44 models.
+- **roadmodel.ai hides a row past its leave date** even before the catalog that drops it is published, using the `retires_on` date the catalog already carries.
+- **Every page works on a phone.** The nav folds behind a Menu button below the `md` breakpoint, form fields use 16px text so iPhone Safari does not zoom into them, tap targets are at least 44px, the models table scrolls sideways inside its box with the model column pinned, chart axis titles fit narrow charts, and the layout respects the notch and home-indicator safe areas. Desktop layouts are pixel-identical. A WebKit iPhone project runs the mobile specs in CI.
+- The recommender drops its `gpt-5-mini` rollback engine, whose model retired; GPT-5.6 Luna stays on the menu as the rollback.
+
 ## [0.2.99] — 2026-10-27
 
 - **A ladder no longer marks the column that runs by default.** The ✓ beside a column name and the `✓ runs by default.` line under the table are gone. `roadmodel relayout` removes them from 0.2.98 tables and keeps every cell, so Complete steps are converted too.
