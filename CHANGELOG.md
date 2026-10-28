@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.99] — 2026-10-27
+
+- **A ladder no longer marks the column that runs by default.** The ✓ beside a column name and the `✓ runs by default.` line under the table are gone. `roadmodel relayout` removes them from 0.2.98 tables and keeps every cell, so Complete steps are converted too.
+- **A cheaper near-tied model takes a maker's rank.** When another model from the same maker is indistinguishable from the top one (near-tied in the category, within AA noise on the Index, same prepaid status) and costs less, it takes the rank. GPT-6.1 Sol · XHigh ($4.00/1M, AA 51.0) again ranks over GPT-6 Astra · XHigh ($16.36/1M, AA 52.4) in OpenAI's Quality slot. Primary picks are unchanged.
+- **roadmodel.ai opens on the benchmark dashboard.** `/` is the models page with a link to `/recommend`, `/models` redirects to `/`, and the nav lists Models first.
+
 ## [0.2.98] — 2026-10-25
 
 - **A ladder's ranks sit in a column of their own.** 0.2.95–0.2.97 indented each field under its rank with four `&nbsp;`. Some Markdown viewers draw a non-breaking space as a highlighted blob, so the first column showed grey boxes and broke the field names onto a second line. Each rank (**Pick**, **Runner‑up**, **Backup**) now names the first of its rows from its own column, the cells below it are left blank, and the field names stand beside it. Only ordinary table cells are used, so the table reads the same in VS Code, Cursor, GitHub and any other viewer, and it is three rows shorter.
