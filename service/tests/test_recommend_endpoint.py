@@ -778,7 +778,7 @@ def test_recommend_populates_session_cost_for_resolvable_pick(
     monkeypatch.setattr(
         recommend_module,
         "recommend_structured",
-        _fake_returning("Opus 4.7", "Claude Code"),
+        _fake_returning("Opus 5.5", "Claude Code"),
     )
     resp = recommend_module.recommend(
         recommend_module.RecommendRequest(task_description="refactor a python service")
@@ -822,7 +822,7 @@ def test_recommend_passes_through_rationale(
     monkeypatch.setattr(
         recommend_module,
         "recommend_structured",
-        _fake_returning("Opus 4.7", "Claude Code"),  # returns rationale="test"
+        _fake_returning("Opus 5.5", "Claude Code"),  # returns rationale="test"
     )
     resp = recommend_module.recommend(
         recommend_module.RecommendRequest(task_description="pick a model")
@@ -870,7 +870,7 @@ def test_recommend_rationale_sections_absent_is_none(
     monkeypatch.setattr(
         recommend_module,
         "recommend_structured",
-        _fake_returning("Opus 4.7", "Claude Code"),  # _RECOMMEND_DICT has no sections
+        _fake_returning("Opus 5.5", "Claude Code"),  # _RECOMMEND_DICT has no sections
     )
     resp = recommend_module.recommend(
         recommend_module.RecommendRequest(task_description="pick a model")
@@ -973,7 +973,7 @@ def test_platform_filter_is_enforced_end_to_end(
 
     def _fake(prompt: str, config: Any, **_kwargs: Any) -> dict[str, Any]:
         payload = dict(_RECOMMEND_DICT)
-        payload["model"] = "Opus 4.8"  # reachable via BOTH cursor and claude-code
+        payload["model"] = "Opus 5.5"  # reachable via BOTH cursor and claude-code
         payload["platform"] = "Cursor"
         return payload
 
@@ -988,7 +988,7 @@ def test_platform_filter_is_enforced_end_to_end(
         "/v1/recommend", json={"task_description": "pick a model", "context": ctx}
     ).json()
 
-    assert body["model"] == "Opus 4.8"  # the MODEL itself was accessible
+    assert body["model"] == "Opus 5.5"  # the MODEL itself was accessible
     assert body["platform"] != "Cursor"
     assert body["platform"] == "Claude Code"
     assert "not in the operator's declared platform list" in body["rationale"]
@@ -1004,7 +1004,7 @@ def test_absent_platform_filter_leaves_the_pick_alone(
 
     def _fake(prompt: str, config: Any, **_kwargs: Any) -> dict[str, Any]:
         payload = dict(_RECOMMEND_DICT)
-        payload["model"] = "Opus 4.8"
+        payload["model"] = "Opus 5.5"
         payload["platform"] = "Cursor"
         return payload
 
@@ -1015,7 +1015,7 @@ def test_absent_platform_filter_leaves_the_pick_alone(
         "/v1/recommend", json={"task_description": "pick a model", "context": ctx}
     ).json()
 
-    assert body["model"] == "Opus 4.8"
+    assert body["model"] == "Opus 5.5"
     assert body["platform"] == "Cursor"
     assert "not in the operator's declared platform list" not in (body["rationale"] or "")
 
@@ -1211,7 +1211,7 @@ def test_ladder_endpoint_returns_three_anchored_picks(
         captured["scoring_context_text"] = scoring_context_text
         return {
             "picks": {
-                "quality": _ladder_pick("Opus 4.8", "Claude Code", "Max"),
+                "quality": _ladder_pick("Opus 5.5", "Claude Code", "Max"),
                 "balanced": _ladder_pick("Sonnet 4.6", "Claude Code", "High"),
                 "cost": _ladder_pick("Composer 2.5", "Cursor", "Low"),
             },
@@ -1230,7 +1230,7 @@ def test_ladder_endpoint_returns_three_anchored_picks(
     assert response.status_code == 200
     body = response.json()
     assert set(body["picks"]) == {"quality", "balanced", "cost"}
-    assert body["picks"]["quality"]["model"] == "Opus 4.8"
+    assert body["picks"]["quality"]["model"] == "Opus 5.5"
     assert body["picks"]["balanced"]["model"] == "Sonnet 4.6"
     assert body["picks"]["cost"]["model"] == "Composer 2.5"
     # Each pick is shaped like a single RecommendResponse (rationale carried).
@@ -1260,7 +1260,7 @@ def test_ladder_endpoint_carries_backup_and_guard(
     recommend_module = importlib.import_module("app.recommend")
 
     def _fake_ladder(prompt: str, config: Any, **_kwargs: Any) -> dict[str, Any]:
-        quality = _ladder_pick("Opus 4.8", "Claude Code", "Max")
+        quality = _ladder_pick("Opus 5.5", "Claude Code", "Max")
         quality["backup"] = "GPT-5.5"
         return {
             "picks": {
