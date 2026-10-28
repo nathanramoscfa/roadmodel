@@ -23,4 +23,21 @@
   html.dark {
     color-scheme: dark;
   }
+
+  /* Phones and tablets (up to `md`, 768px). iOS Safari zooms the page when a
+     field under 16px takes focus, so fields read 16px here; and every control
+     a finger aims at is at least 44px tall (a checkbox's whole label row), the
+     touch-target size the iOS guidelines ask for. Wider than that the layout
+     is the desktop one, untouched. */
+  @media (max-width: theme("screens.md")) {
+    :is(input:not([type="checkbox"], [type="radio"], [type="range"]), select, textarea) {
+      font-size: 16px;
+    }
+    :is(button, [role="button"], summary, select, input:not([type="checkbox"], [type="radio"], [type="range"], [type="hidden"]), label:has(input[type="checkbox"], input[type="radio"])) {
+      min-height: 44px;
+    }
+    :is(button, [role="button"]) {
+      min-width: 44px;
+    }
+  }
 }

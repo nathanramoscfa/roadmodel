@@ -23,11 +23,17 @@ import { blendedPrice, formatUsd, paretoFrontier } from "@/lib/benchmark-grid";
 import type { PriorityRecommendation } from "@/lib/api";
 import { effortLabel, effortPoints, named, type EffortLevel } from "@/lib/pick-effort";
 import type { SlimRow } from "@/lib/recommend-picks";
-import { FRONTIER, LABEL_PX, pickPriceTicks, placeLabels, useWidth } from "./chart-kit";
+import { fitTitle, FRONTIER, LABEL_PX, pickPriceTicks, placeLabels, useWidth } from "./chart-kit";
 import { FloatingCard, type AnchorRect } from "./FloatingCard";
 import { FrontierPointCard } from "./ScoreCards";
 
 const M = { top: 14, right: 16, bottom: 40, left: 40 };
+// The x-axis title, longest first (chart-kit fitTitle).
+const PICKS_AXIS_TITLES = [
+  "Blended price × measured token use, $ per 1M (log scale)",
+  "Price × token use, $/1M (log)",
+  "$/1M × token use (log)",
+];
 const PICK_LABEL: Record<string, string> = { cheap: "Cost", balanced: "Balanced", best: "Quality" };
 
 interface Pt {
@@ -262,7 +268,7 @@ export function PicksChart({
               </text>
             ))}
             <text x={M.left + plotW / 2} y={height - 4} textAnchor="middle" fontSize={11} className="fill-brand-slate-500 dark:fill-brand-slate-400">
-              {"Blended price × measured token use, $ per 1M (log scale)"}
+              {fitTitle(PICKS_AXIS_TITLES, M.left + plotW / 2, width)}
             </text>
 
             {outside.map((p) => (

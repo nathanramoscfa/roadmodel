@@ -52,6 +52,21 @@ export function textWidth(text: string): number {
   return measureCtx ? measureCtx.measureText(text).width : text.length * LABEL_PX * 0.56;
 }
 
+// An axis title centred at `cx` on a chart `width` px wide: the first of
+// `titles` (longest first) that fits, so a phone-width chart reads a shorter
+// wording instead of a clipped one.
+export function fitTitle(titles: readonly string[], cx: number, width: number): string {
+  const room = 2 * Math.min(cx, width - cx) - 4;
+  return titles.find((t) => textWidth(t) <= room) ?? titles[titles.length - 1];
+}
+
+// The price axis's titles, longest first (fitTitle).
+export const PRICE_AXIS_TITLES = [
+  "Blended price, $ per 1M tokens (log scale)",
+  "Blended price, $/1M tokens (log)",
+  "Blended $/1M (log)",
+] as const;
+
 export interface Box {
   x: number;
   y: number;
