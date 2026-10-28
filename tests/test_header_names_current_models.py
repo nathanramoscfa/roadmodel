@@ -11,7 +11,6 @@ name a family ("the newest Opus") instead, which stays true across releases.
 
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 
@@ -19,8 +18,14 @@ import pytest
 
 from roadmodel.recommend import _SAAS_HEADER, _SAAS_LADDER_HEADER, _SAAS_LADDER_TABLE_HEADER
 
-_CATALOG = json.loads((Path(__file__).resolve().parents[1] / "docs" / "catalog.json").read_text())
-_SUPERSEDED = sorted(m["name"] for m in _CATALOG["models"] if m.get("superseded_by"))
+# Every model the lifecycle rule has tagged, retired ones included: a retired
+# model leaves docs/catalog.json but keeps its element in the selector.
+_SELECTOR = (Path(__file__).resolve().parents[1] / "docs" / "model-selector.txt").read_text()
+_SUPERSEDED = sorted(
+    re.search(r'\bname="([^"]+)"', m)[1]  # type: ignore[index]
+    for m in re.findall(r"<model\s[^>]*?/>", _SELECTOR, re.S)
+    if "superseded-by=" in m
+)
 
 
 @pytest.mark.parametrize(
