@@ -46,6 +46,14 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      testIgnore: /mobile\.spec\.ts/,
+    },
+    // The phone pass (tests/mobile.spec.ts): WebKit, Safari's engine, with an
+    // iPhone 15's viewport, touch and user agent.
+    {
+      name: "iphone",
+      use: { ...devices["iPhone 15"] },
+      testMatch: /mobile\.spec\.ts/,
     },
   ],
   webServer: {

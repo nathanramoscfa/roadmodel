@@ -1,5 +1,5 @@
 // web/app/layout.tsx
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
@@ -28,6 +28,14 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+// viewport-fit=cover lets the page run under an iPhone's notch and home
+// indicator; the body's safe-area padding then keeps content clear of them.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -41,7 +49,9 @@ export default async function RootLayout({
     // class before React hydrates (T4 dark mode); without it React would flag
     // (and reconcile) the script's class change as a hydration mismatch.
     <html lang="en" className={`${inter.variable} dark`} suppressHydrationWarning>
-      <body className={`${inter.className} min-h-screen font-sans`}>
+      <body
+        className={`${inter.className} min-h-screen font-sans pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]`}
+      >
         {/* No-flash theme init: dark is the default, so the server already
             renders <html class="dark"> (zero flash for the common case). Only
             an explicit "light" choice removes it before paint; "dark" or an

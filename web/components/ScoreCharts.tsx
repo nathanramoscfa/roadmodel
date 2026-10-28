@@ -47,6 +47,8 @@ import {
   FilterNote,
   pickPriceTicks,
   placeLabels,
+  fitTitle,
+  PRICE_AXIS_TITLES,
   useWidth,
   type ChartFilter,
   type Label,
@@ -489,7 +491,7 @@ function TierChart({
               fontSize={11.5}
               className="fill-brand-slate-500 dark:fill-brand-slate-400"
             >
-              Blended price, $ per 1M tokens (log scale)
+              {fitTitle(PRICE_AXIS_TITLES, M.left + plotW / 2, width)}
             </text>
             <text
               transform={`translate(13 ${M.top + plotH / 2}) rotate(-90)`}

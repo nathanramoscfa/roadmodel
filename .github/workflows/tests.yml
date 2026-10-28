@@ -313,8 +313,9 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Install web dependencies
         run: npm ci --prefix web
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Install Playwright Chromium and WebKit
+        # WebKit runs the iPhone project (web/tests/mobile.spec.ts).
+        run: npx playwright install --with-deps chromium webkit
         working-directory: web
       - name: Build web
         run: npm --prefix web run build:ci

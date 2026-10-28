@@ -634,9 +634,11 @@ export function ModelCatalog({
 
       {/* Table: the rows scroll in their own box under a pinned header. The
           header's rule is a shadow on each cell, since a collapsed border
-          stays with the table when the header sticks. */}
+          stays with the table when the header sticks. Below `md` the box only
+          scrolls sideways (the model column stays pinned at its left) and the
+          page scrolls the rows: a box inside a phone's page traps the thumb. */}
       <div
-        className="mt-4 max-h-[70vh] overflow-auto rounded-xl border border-brand-slate-200 dark:border-brand-slate-700"
+        className="mt-4 overflow-auto rounded-xl md:max-h-[70vh] border border-brand-slate-200 dark:border-brand-slate-700"
         data-testid="catalog-scroll"
       >
         <table className="w-full border-collapse text-left text-sm">

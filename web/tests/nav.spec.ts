@@ -52,3 +52,18 @@ test("app nav is absent on auth chrome", async ({ page }) => {
     page.getByRole("navigation", { name: /Primary/i }),
   ).toHaveCount(0);
 });
+
+test("on a desktop the nav is one row with no Menu button", async ({ page }) => {
+  for (const width of [1440, 2560]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    const nav = page.getByRole("navigation", { name: /Primary/i });
+    await expect(nav.getByTestId("nav-menu-toggle")).toBeHidden();
+    await expect(nav.getByTestId("nav-links")).toBeVisible();
+    const tops = await nav
+      .getByTestId("nav-links")
+      .getByRole("link")
+      .evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+    expect(new Set(tops).size).toBe(1);
+  }
+});

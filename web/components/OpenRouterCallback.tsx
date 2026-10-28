@@ -70,7 +70,7 @@ export function OpenRouterCallback() {
         <p className="text-brand-slate-700 dark:text-brand-slate-200">{NOT_CONNECTED}</p>
         <Link
           href="/recommend"
-          className="mt-4 inline-block font-semibold text-brand-accent hover:underline"
+          className="mt-4 inline-block font-semibold text-brand-accent hover:underline max-md:inline-flex max-md:min-h-11 max-md:items-center"
           data-testid="openrouter-callback-back"
         >
           Back to Recommend
