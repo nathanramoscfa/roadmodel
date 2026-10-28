@@ -964,7 +964,7 @@ Tier ratings:
 
 - **Pricing:** Input $2.00/M · Output $12.00/M
 - **Tier ratings:** Coding **A** · Planning **A** · Agentic **A** · Multimodal **A** · Long-context **A** · Knowledge **A** · Speed **A**
-- **Headline benchmarks:** AA Intelligence Index 42.1 (max); HLE 42.9%; SciCode 55.0; Terminal-Bench 4.0 35.4; AA-LCR 0.830; Terminal-Bench 2.1 88.0; Output Speed 141.5 tokens/s
+- **Headline benchmarks:** AA Intelligence Index 42.1 (max); HLE 42.9%; SciCode 55.0; Terminal-Bench 4.0 35.4; AA-LCR 0.830; Terminal-Bench 2.1 88.0; Output Speed 121.8 tokens/s
 - **Pricing notes:** Requires Max Mode on legacy request-based plans; Mid-tier GPT-5.6 variant between Sol and Luna; Agentic and reasoning capabilities; Fast mode is available at 2x pricing; Long context supports up to 1M tokens with 2x input pricing; Fast mode is available for long context (>272k) at 2x Fast input pricing; Cache writes are billed at 1.25x the uncached input rate
 - **Best for:** OpenAI's mid-tier GPT-5.6 variant between Sol (flagship) and Luna (mini) at medium-tier pricing ($2/$12) — Artificial Analysis Intelligence Index 42.1 (max) matches near-frontier reasoning while output speed (~105 tokens/s) is faster than most peers; pick for balanced near-frontier reasoning, agentic execution, and speed when Sol's high tier isn't justified but stronger throughput than GPT-5.4 is desired.
 
