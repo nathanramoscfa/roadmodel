@@ -132,9 +132,10 @@ jobs:
       - name: Install web dependencies (Phase 3 post)
         if: matrix.phase == '03'
         run: npm ci --prefix web
-      - name: Install Playwright Chromium (Phase 3 post)
+      - name: Install Playwright Chromium + WebKit (Phase 3 post)
         if: matrix.phase == '03'
-        run: npx playwright install --with-deps chromium
+        # WebKit runs the iPhone project (tests/mobile.spec.ts).
+        run: npx playwright install --with-deps chromium webkit
         working-directory: web
       - name: Run phase verify script (--post)
         env:
