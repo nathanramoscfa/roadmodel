@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.104] — 2026-10-29
+
+- **`/roadmap-project` asks for your brief.** Run with no argument, it used the kit prompt's default brief, `README.md`, without saying so, which left the obvious question unanswered: how does it know what roadmap to write? It now settles the brief first. Files you name (Markdown, text, PDF or Word) and/or a description you type are the brief; with neither, it asks what the project is for, what done looks like, your hard constraints, and whether a document already describes it, then waits. It never assumes the README. Hard constraints you state now reach the prompt's `{{CONSTRAINTS}}`.
+- **New: [docs/getting-started.md](docs/getting-started.md)**, from install to a first roadmap on one machine or two, with when to run two machines independently and when to make one the coordinator.
+- **Docs brought in line with what ships.** The README and `planning-workflow.md` no longer say `/roadmodel-upgrade` fetches the updater from GitHub (it runs the copy from the latest PyPI release). `user-context-setup.md` gives one answer for keeping the file the same on every machine, not two that contradict each other. `agent-parity.md` says the coordinator refreshes peers' roadmaps (0.2.101) and that a peer's schedule carries `--keep-pins --skip-roadmap-refresh`.
+
 ## [0.2.103] — 2026-10-29
 
 - **The checkout sync no longer stalls on regenerated kit files.** A merged roadmap refresh commits its own export of `planning/`, roadmodel's kit, and a checkout holding the daily run's newer export would refuse the fast-forward: on 2026-10-29 two PC checkouts missed the morning's roadmap refresh over one catalog line. When the only uncommitted edits standing in the way are regenerated `planning/` files, they now take the merged copy and the checkout fast-forwards; the next daily run re-exports the kit. Any other clashing edit still blocks, as does the personal `planning/user-context.md` copy, and untracked files are never touched.

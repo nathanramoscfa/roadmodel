@@ -156,8 +156,18 @@ Without this option, global sources remain independent on each machine.
 
 Ordinary upgrades register the peer's listed projects and run its updater.
 Every peer invocation includes `--local-only`, so peers never recurse into
-their own fleets. Coordinated full upgrades also skip model-backed roadmap
-refreshes on peers. `--sync-only` and `--check` carry the same mode to peers;
+their own fleets. Coordinated full upgrades skip model-backed roadmap
+refreshes *on* the peer, because an unattended session there may not be
+allowed to push. The coordinator refreshes the peer's projects itself instead
+(roadmodel 0.2.101 on), under the same rules as its own:
+- it asks the peer, read-only over SSH (`--refresh-plan`), which of its
+  checkouts have work in flight;
+- it checks their open PRs with its own `gh`;
+- it refreshes each remaining project in a clone of its remote, and the
+  peer's checkout sync then pulls the merged result.
+
+A peer project whose roadmaps are git-excluded is skipped and named, since
+those can only be edited on that machine. `--sync-only` and `--check` carry the same mode to peers;
 `--local-only` skips all peers. An unreachable or failed peer produces a named
 failure and a nonzero result; other machines still run.
 
@@ -168,7 +178,11 @@ over SSH. Add `--local-only` for a fully local check or repair; `--dry-run`
 validates and describes fleet actions without connecting to peers.
 
 Install a daily schedule on each machine with `--install-schedule 09:00`:
-launchd on macOS, Task Scheduler on Windows, and cron on Linux. Schedules use
+launchd on macOS, Task Scheduler on Windows, and cron on Linux. On a peer,
+add `--keep-pins --skip-roadmap-refresh`; both are recorded in its task. Its
+coordinator refreshes its roadmaps, and its own run upgrades the environments
+an SSH session cannot start (on Windows, a uv venv whose base Python is a
+junction). Schedules use
 the installed launcher and append to `~/.config/roadmodel/update.log`.
 Windows catches a missed start when the machine returns. A coordinator's
 schedule can also reach its configured peers; each machine's own schedule

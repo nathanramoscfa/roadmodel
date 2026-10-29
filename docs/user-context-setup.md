@@ -84,9 +84,11 @@ file used.
 
 ## Keeping it the same on every machine
 
-If you plan from more than one machine, give the file ONE home and let
-`roadmodel-upgrade` carry it. Hand-copying drifts on the first edit — and the
-file changes every time a usage pool binds.
+The file is local: it lives in your config home (or wherever
+`--user-context` / `ROADMODEL_USER_CONTEXT` points) and is never bundled into
+the roadmodel wheel. If you plan from more than one machine, give it ONE home
+and let `roadmodel-upgrade` carry it. Hand-copying drifts on the first edit —
+and the file changes every time a usage pool binds.
 
 One machine is the **source**: it publishes its file to a **private** GitHub
 repo. Every other machine is a **replica**: it pulls that file before
@@ -111,6 +113,13 @@ Point the source machine's default path at the source file
 (`ln -s /path/to/your/user-context.md ~/.config/roadmodel/user-context.md`) so
 the CLI, the MCP server and the kits all read the one file. The updater warns
 when a separate copy at the default path would never be published.
+
+Already sync dotfiles another way (a private dotfiles repo, `chezmoi`,
+1Password's `op inject`, an encrypted vault)? That works too, as long as the
+same rule holds: one machine's copy is the one you edit, and the others only
+receive it. Point each machine's default path at the synced file. The setup
+for one or two machines, end to end, is in
+[getting-started.md](getting-started.md).
 
 **Keep the repo private.** This file names your subscriptions and accounts.
 Never commit it to a public repository — in this repo, `docs/user-context.md`
@@ -374,24 +383,6 @@ state changes:
 
 Commit edits separately from any other change so the diff is
 readable.
-
-## Sharing across machines
-
-`user-context.md` is **local-only**. It lives in your config home
-(or wherever your `--user-context` / `ROADMODEL_USER_CONTEXT`
-override points) and is never bundled into the `roadmodel` wheel.
-If you use roadmodel on more than one machine, sync the file
-yourself via whichever secret-management workflow you already trust
-— a [dotfiles repo](https://dotfiles.github.io/), 1Password
-Secrets Automation / `op inject`, `chezmoi`, an encrypted vault,
-etc. Treat it like a `.env` file: not catastrophic if it leaks (it
-contains subscription metadata, not API keys), but not something
-to commit to a public repo either.
-
-Phase 2 of the [public roadmap](../private/ROADMAP.md) may replace
-this Markdown file with a config-driven equivalent
-(`roadmodel.toml`). The schema will stay equivalent; the user-state
-input model will not.
 
 ## Privacy
 

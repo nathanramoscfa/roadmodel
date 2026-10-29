@@ -66,15 +66,36 @@ The daily run does this by itself whenever the roadmap rules change. See §5.
 
 ## 2. Write the project roadmap
 
-Open a **new** Claude Code chat in the project root and type:
+Open a **new** Claude Code chat in the project root and give
+`/roadmap-project` your **brief**: what you want this project to become.
+roadmodel supplies the roadmap's structure, its step lifecycle and the
+model picks. The goals come from you.
 
 ```
+/roadmap-project docs/brief.md notes.txt
+/roadmap-project "A CLI that reconciles bank exports into a ledger. Python, no paid services, v1 by March."
+/roadmap-project docs/spec.pdf "Skip the web UI for now."
 /roadmap-project
 ```
 
-Optional argument: where the brief lives, e.g.
-`/roadmap-project @docs/brief.md`. Default is `@README.md`. Output is
-`docs/roadmap/ROADMAP.md`.
+- **Files.** Name one or more: a brief, notes, a spec, an existing
+  README. Markdown, plain text, PDF and Word (`.docx`) all work; the
+  agent extracts a `.docx`'s text before reading it.
+- **A description.** Type it in quotes. A few sentences is enough: what
+  the project is for and who uses it, what done looks like, and any
+  hard constraints (stack, hosting, budget, deadlines, things to
+  avoid). Constraints you state become the roadmap's hard constraints.
+- **Both.** Files plus a sentence that corrects or narrows them.
+- **Nothing.** The command asks those questions first, and whether a
+  document already describes the project, then waits for your answer.
+  It never quietly takes `README.md` as the brief; it offers the README
+  only when one exists and says what the project is for.
+
+Either way it also reads the codebase, so "Current State Assessment"
+describes what actually exists rather than what the brief hopes for.
+Output is `docs/roadmap/ROADMAP.md`. Read it before `/roadmap-phase 1`:
+the phases, their order and their acceptance criteria are yours to
+change, and every later step builds on them.
 
 Each phase in it carries a **Phase roadmap settings** table, right
 after its Complexity/Risk badge: the model, backup, platform and dials
@@ -258,8 +279,9 @@ the machine:
 /roadmodel-upgrade
 ```
 
-The command fetches [`scripts/update_projects.py`](../scripts/update_projects.py)
-fresh from the repo and runs it. The script reads the registry
+The command runs the updater that ships inside the roadmodel package
+([`scripts/update_projects.py`](../scripts/update_projects.py)), taken from
+the latest PyPI release and never fetched from `main`. The script reads the registry
 `~/.config/roadmodel/projects.txt` (one project dir per line), detects
 each project's env — a `.venv`/`venv`/`env` dir, the `name:` in
 `environment.yml`, a conda env named like the folder, or a conda env
@@ -280,7 +302,9 @@ machine) registers a daily run — launchd on macOS, Task Scheduler on
 Windows, cron on Linux — so every registered project follows each
 release within a day, logged to `~/.config/roadmodel/update.log`.
 `--uninstall-schedule` removes it. On Windows the task runs after a start
-missed while the PC was off.
+missed while the PC was off. Two machines (a Mac and a PC, say)? Each needs its
+own schedule; whether one should also look after the other is covered in
+[getting-started.md](getting-started.md#part-2--two-machines).
 
 **Every project's roadmaps, too.** `/roadmodel-upgrade --refresh-roadmaps`
 runs `/roadmap-refresh` in every registered project after the upgrade, three
@@ -309,6 +333,10 @@ says `*** self-update FAILED` with the reason.
 
 ## What `/roadmap-project` and `/roadmap-phase` do
 
+0. **Settles the brief** (`/roadmap-project` only) — the files and/or
+   description you passed, or, when you passed nothing, your answers to
+   the questions it asks first (§2). `/roadmap-phase N` needs no brief:
+   it reads phase N from `docs/roadmap/ROADMAP.md`.
 1. **Refreshes the kit** — `pip install -U roadmodel && roadmodel
    export-kit . --force` — so templates, catalog, and your curated
    `~/.config/roadmodel/user-context.md` are current. Creates
@@ -319,7 +347,8 @@ says `*** self-update FAILED` with the reason.
    CONVERSATION". A stale kit stops with a message instead of baking
    an old step lifecycle into every step.
 3. **Executes `planning/prompts/{project,phase}-roadmap.md`** with your
-   argument filled in and every other placeholder at its default. The
+   brief (or phase number) filled in, the constraints your brief states,
+   and every other placeholder at its default. The
    AI runs `planning/model-selector.txt` against `planning/user-context.md`
    as the engine — no external API call. `/roadmap-project` picks each
    phase's roadmap settings this way; `/roadmap-phase` first checks the

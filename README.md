@@ -38,10 +38,13 @@ picks the model. The loop is the same in every repo, in every
 language, on every machine where the commands are installed:
 
 ```
-/roadmap-project        docs/roadmap/ROADMAP.md — phases, acceptance
-                        criteria, the security / release / operations
-                        strategy, and the model that writes each
-                        phase's roadmap
+/roadmap-project brief.md
+                        docs/roadmap/ROADMAP.md from YOUR brief — files
+                        or a description of what the project should
+                        become (with neither, it asks first): phases,
+                        acceptance criteria, the security / release /
+                        operations strategy, and the model that writes
+                        each phase's roadmap
 /roadmap-phase 1        docs/roadmap/phase01-roadmap.md — Phase 1
                         broken into steps; each names its branch, its
                         model and settings, and carries a <task> prompt
@@ -78,9 +81,20 @@ What the loop guarantees, independent of the project:
   and a step that touches a deployed surface is done at post-deploy
   verification, not at merge.
 
+**The brief is yours.** roadmodel does not invent a project: `/roadmap-project`
+writes the roadmap from what you tell it the project should become. Give it
+files (`/roadmap-project docs/brief.md notes.txt`; Markdown, text, PDF or Word),
+a description (`/roadmap-project "A CLI that reconciles bank exports into a
+ledger; Python, no paid services"`), or both. Run it with nothing and it asks
+what the project is for, what done looks like, your hard constraints, and
+whether a document already describes it. It also reads the codebase, so the
+roadmap starts from what exists.
+
 Setup is once per machine (`/roadmodel-upgrade` keeps every project's
 copy current after that); the commands then work in any project.
-Step-by-step: [docs/planning-workflow.md](docs/planning-workflow.md).
+New here? [docs/getting-started.md](docs/getting-started.md) takes you from
+install to a first roadmap on one machine, or on two (a Mac and a PC).
+Command by command: [docs/planning-workflow.md](docs/planning-workflow.md).
 
 ## Install
 
@@ -127,8 +141,9 @@ otherwise be upgraded one at a time. Instead, from any Claude Code chat:
 /roadmodel-upgrade --refresh-roadmaps   # also run /roadmap-refresh in every project
 ```
 
-The command fetches [`scripts/update_projects.py`](scripts/update_projects.py)
-(stdlib only, Python 3.9+) and runs it. The script reads
+The command runs the updater that ships inside the roadmodel package
+([`scripts/update_projects.py`](scripts/update_projects.py), stdlib only,
+Python 3.9+), taken from the latest PyPI release and never fetched from `main`. The script reads
 `~/.config/roadmodel/projects.txt` — one project dir per line, optional
 `| conda:<name>` / `| venv:<dir>` override — detects each project's environment
 (a `.venv`/`venv`/`env` dir, the `name:` in `environment.yml`, a conda env named
