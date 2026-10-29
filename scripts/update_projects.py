@@ -47,8 +47,8 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Optional
+from pathlib import Path, PureWindowsPath
+from typing import Callable, Optional
 from urllib.parse import urlsplit
 from xml.sax.saxutils import escape
 
@@ -218,6 +218,62 @@ def upgrade_peers(args):
         return False
 
 
+def refresh_peer_roadmaps(
+    *, on_demand: bool, unattended: bool, jobs: int, dry_run: bool
+) -> tuple[list[str], bool]:
+    """Refresh the roadmaps of every fleet peer's projects from clones on this
+    machine, under the same rules as this machine's own projects.
+
+    A peer's checkout decides what is in flight there, so each peer reports
+    its own plan (`--refresh-plan`, over SSH) the first time one of its
+    projects is due. Open PRs are checked here, where gh is signed in, and
+    the clone comes from the project's remote. A peer whose roadmaps are
+    git-excluded is skipped: they can only be edited on that machine."""
+    try:
+        fleet = _support("upgrade_fleet")
+        peers = fleet.load_peers(CONFIG_DIR / "fleet.json")
+    except (OSError, RuntimeError, ValueError) as exc:
+        return [f"FAILED: {exc}"], True
+    lines: list[str] = []
+    attention = False
+    for peer in peers:
+        reports: dict[str, dict] = {}
+        failure: list[str] = []
+
+        def planner(entry: Entry, peer=peer, reports=reports, failure=failure) -> RefreshPlan:
+            if not reports and not failure:
+                try:
+                    for report in fleet.refresh_plan(peer):
+                        reports[Entry(Path(report["path"]), peer=peer.name).key] = report
+                except ValueError as exc:
+                    failure.append(str(exc))
+            if failure:
+                return RefreshPlan(entry, "skip", f"no refresh plan from {peer.name}: {failure[0]}")
+            report = reports.get(entry.key)
+            if report is None:
+                return RefreshPlan(entry, "skip", f"{peer.name} did not report it")
+            return peer_refresh_plan(entry, report)
+
+        if dry_run:
+            # A dry run opens no SSH, so it cannot see the peer's checkouts.
+            lines.append(
+                f"{peer.name}: {len(peer.projects)} project(s), planned by the peer on a real run"
+            )
+            continue
+        peer_lines, peer_attention = refresh_roadmaps(
+            [Entry(Path(p), peer=peer.name) for p in peer.projects],
+            on_demand=on_demand,
+            unattended=unattended,
+            jobs=jobs,
+            dry_run=False,
+            planner=planner,
+        )
+        lines.append(f"{peer.name}:")
+        lines += [f"  {line}" for line in peer_lines]
+        attention = attention or peer_attention
+    return lines, attention
+
+
 # --------------------------------------------------------------------------
 # Registry
 # --------------------------------------------------------------------------
@@ -227,10 +283,23 @@ def upgrade_peers(args):
 class Entry:
     path: Path
     override: Optional[str] = None  # "conda:<name>" | "venv:<dir>"
+    # A fleet peer's project: its path is on that machine, not this one.
+    peer: Optional[str] = None
 
     @property
     def name(self) -> str:
-        return self.path.name
+        # PureWindowsPath splits on / and \, so a Windows peer's path names too.
+        return PureWindowsPath(str(self.path)).name if self.peer else self.path.name
+
+    @property
+    def key(self) -> str:
+        """Its key in the refresh state: unique across this machine and peers."""
+        return f"{self.peer}:{self.path}" if self.peer else str(self.path)
+
+    @property
+    def slug(self) -> str:
+        """Its name in refresh clones and logs."""
+        return f"{self.peer}-{self.name}" if self.peer else self.name
 
 
 def parse_registry_line(line: str) -> Optional[Entry]:
@@ -1589,15 +1658,27 @@ def _default_branch(path: Path) -> str:
     return "main"
 
 
-def _open_pr_heads(path: Path) -> Optional[dict[str, int]]:
-    """Open PRs as {head branch: number}, or None when gh cannot tell."""
+def _github_repo(remote: str) -> Optional[str]:
+    """OWNER/REPO for a github.com remote URL, else None."""
+    m = re.fullmatch(
+        r"(?:https://github\.com/|git@github\.com:|ssh://git@github\.com/)"
+        r"([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+?)(?:\.git)?/?",
+        remote.strip(),
+    )
+    return m.group(1) if m else None
+
+
+def _open_pr_heads(path: Optional[Path], repo: Optional[str] = None) -> Optional[dict[str, int]]:
+    """Open PRs as {head branch: number}, or None when gh cannot tell. The
+    checkout's own repo, or `repo` (OWNER/REPO) for a checkout on a peer."""
     gh = shutil.which("gh")
     if not gh:
         return None
     try:
         cp = subprocess.run(  # noqa: S603 — gh resolved from PATH, literal argv
             [gh, "pr", "list", "--state", "open", "--limit", "200"]
-            + ["--json", "number,headRefName"],
+            + ["--json", "number,headRefName"]
+            + (["--repo", repo] if repo else []),
             cwd=path,
             capture_output=True,
             text=True,
@@ -1623,21 +1704,36 @@ class RefreshPlan:
 
 def plan_refresh(entry: Entry) -> RefreshPlan:
     """Decide how to refresh one project's roadmaps, or why not to now."""
+    plan, named = plan_checkout(entry)
+    if plan.mode != "clone":
+        return plan
+    return check_open_prs(plan, named, _open_pr_heads(entry.path))
+
+
+def plan_checkout(entry: Entry, *, name_files: bool = True) -> tuple[RefreshPlan, list[str]]:
+    """Everything plan_refresh decides from the checkout alone, and the step
+    branches its roadmaps name. A fleet peer runs this on its own checkouts
+    (`--refresh-plan`, with name_files off: its file names stay there); the
+    coordinator then checks open PRs, since gh may only work there."""
     path = entry.path
+
+    def files(found: list[str]) -> str:
+        return ", ".join(found[:3]) if name_files else f"{len(found)} file(s)"
+
     if not (path / ".git").exists():
-        return RefreshPlan(entry, "skip", "not a git checkout")
+        return RefreshPlan(entry, "skip", "not a git checkout"), []
     private = path / "private"
     if private.is_dir():
         kept = sorted(f.name for f in private.iterdir() if f.is_file() and _is_roadmap_path(f.name))
         if kept and _git_lines(path, "check-ignore", f"private/{kept[0]}"):
-            return RefreshPlan(entry, "in-place", "roadmaps are git-excluded (private/)")
+            return RefreshPlan(entry, "in-place", "roadmaps are git-excluded (private/)"), []
     tracked = [f for f in _git_lines(path, "ls-files") if _is_roadmap_path(f)]
     if not tracked:
-        return RefreshPlan(entry, "skip", "no tracked roadmaps")
+        return RefreshPlan(entry, "skip", "no tracked roadmaps"), []
     default = _default_branch(path)
     branch = (_git_lines(path, "branch", "--show-current") or [""])[0] or "(detached)"
     if branch != default:
-        return RefreshPlan(entry, "skip", f"on branch {branch}, not {default}")
+        return RefreshPlan(entry, "skip", f"on branch {branch}, not {default}"), []
     status = _git_lines(path, "status", "--porcelain")
     edits = [
         line[3:]
@@ -1645,28 +1741,74 @@ def plan_refresh(entry: Entry) -> RefreshPlan:
         if not line.startswith("??") and not line[3:].replace("\\", "/").startswith("planning/")
     ]
     if edits:
-        return RefreshPlan(entry, "skip", f"uncommitted edits ({', '.join(edits[:3])})")
+        return RefreshPlan(entry, "skip", f"uncommitted edits ({files(edits)})"), []
     unwritten = [
         line[3:] for line in status if line.startswith("??") and _is_roadmap_path(line[3:])
     ]
     if unwritten:
-        return RefreshPlan(entry, "skip", f"roadmap not yet committed ({unwritten[0]})")
-    heads = _open_pr_heads(path)
-    if heads is None:
-        return RefreshPlan(entry, "skip", "gh could not list PRs (it opens the refresh's PR)")
+        return RefreshPlan(entry, "skip", f"roadmap not yet committed ({files(unwritten)})"), []
+    remote = (_git_lines(path, "remote", "get-url", "origin") or [""])[0]
+    if not remote:
+        return RefreshPlan(entry, "skip", "no origin remote"), []
     named: set[str] = set()
     for rel in tracked:
         with contextlib.suppress(OSError):
             named.update(_BRANCH_LINE_RE.findall((path / rel).read_text(encoding="utf-8")))
+    return RefreshPlan(entry, "clone", default=default, remote=remote), sorted(named)
+
+
+def check_open_prs(
+    plan: RefreshPlan, named: list[str], heads: Optional[dict[str, int]]
+) -> RefreshPlan:
+    """Skip a clone plan while a PR shows work in flight: a step PR from a
+    branch the roadmaps name, or an earlier refresh's PR."""
+    entry = plan.entry
+    if heads is None:
+        return RefreshPlan(entry, "skip", "gh could not list PRs (it opens the refresh's PR)")
     for head, number in sorted(heads.items(), key=lambda kv: kv[1]):
         if head.startswith(REFRESH_BRANCH_PREFIX):
             return RefreshPlan(entry, "skip", f"an earlier refresh's PR #{number} is still open")
         if head in named:
             return RefreshPlan(entry, "skip", f"step PR #{number} ({head}) is open")
-    remote = (_git_lines(path, "remote", "get-url", "origin") or [""])[0]
-    if not remote:
-        return RefreshPlan(entry, "skip", "no origin remote")
-    return RefreshPlan(entry, "clone", default=default, remote=remote)
+    return plan
+
+
+REFRESH_PLAN_MARKER = "ROADMODEL-REFRESH-PLAN "
+
+
+def refresh_plan_report(entries: list[Entry]) -> str:
+    """`--refresh-plan`: one marked JSON line saying how each checkout here
+    would be refreshed from another machine. Read-only; no gh, no network."""
+    projects = []
+    for entry in entries:
+        plan, named = plan_checkout(entry, name_files=False)
+        projects.append(
+            {
+                "path": str(entry.path),
+                "mode": plan.mode,
+                "reason": plan.reason,
+                "default": plan.default,
+                "remote": plan.remote,
+                "named": named,
+            }
+        )
+    return REFRESH_PLAN_MARKER + json.dumps({"version": 1, "projects": projects})
+
+
+def peer_refresh_plan(entry: Entry, report: dict) -> RefreshPlan:
+    """The plan for a peer's project, from that peer's `--refresh-plan`
+    report: its clone comes from the remote here, so its PRs are checked here."""
+    mode = report.get("mode")
+    if mode == "in-place":
+        return RefreshPlan(
+            entry, "skip", f"roadmaps are git-excluded on {entry.peer}; refresh them there"
+        )
+    if mode != "clone":
+        return RefreshPlan(entry, "skip", str(report.get("reason") or "not refreshable"))
+    plan = RefreshPlan(entry, "clone", default=report["default"], remote=report["remote"])
+    repo = _github_repo(plan.remote)
+    heads = _open_pr_heads(None, repo) if repo else None
+    return check_open_prs(plan, list(report.get("named") or []), heads)
 
 
 _UNATTENDED = """\
@@ -1794,13 +1936,18 @@ def _refresh_command_body() -> Optional[str]:
 
 
 def _export_kit(entry: Entry, target: Path) -> str:
-    env, note = resolve_env(entry)
-    if env is None:
-        return f"kit not exported ({note})"
+    if entry.peer:
+        # Its env is on the peer; export with the roadmodel this updater runs.
+        python = Path(sys.executable)
+    else:
+        env, note = resolve_env(entry)
+        if env is None:
+            return f"kit not exported ({note})"
+        python = env.python
     try:
         cp = _run(
             [
-                str(env.python),
+                str(python),
                 "-I",
                 "-X",
                 "utf8",
@@ -1825,15 +1972,17 @@ def run_refresh(plan: RefreshPlan, claude: str, body: str, stamp: str) -> Refres
         return RefreshResult(entry, "skipped", plan.reason)
     _private_dir(REFRESH_LOGS)
     _private_dir(REFRESH_CACHE)
-    log = REFRESH_LOGS / f"{stamp}-{entry.name}.log"
+    log = REFRESH_LOGS / f"{stamp}-{entry.slug}.log"
     notes: list[str] = []
     kit: Optional[Path] = None
     if plan.mode == "clone":
-        workdir = REFRESH_CACHE / f"{entry.name}-{stamp}"
+        workdir = REFRESH_CACHE / f"{entry.slug}-{stamp}"
         _remove_tree(workdir)
+        # A local checkout lends its objects; a peer's checkout is not here.
+        reference = [] if entry.peer else ["--reference-if-able", str(entry.path)]
         try:
             cp = subprocess.run(  # noqa: S603 — git from PATH, argv built here
-                ["git", "clone", "--quiet", "--reference-if-able", str(entry.path)]  # noqa: S607
+                ["git", "clone", "--quiet", *reference]  # noqa: S607
                 + ["--branch", plan.default, plan.remote, str(workdir)],
                 capture_output=True,
                 text=True,
@@ -1935,7 +2084,7 @@ def due_for_refresh(entries: list[Entry], state: dict, fingerprint: str) -> tupl
     taken as current until the rules next change."""
     due, new = [], []
     for entry in entries:
-        seen = state["projects"].get(str(entry.path))
+        seen = state["projects"].get(entry.key)
         if seen is None:
             new.append(entry)
         elif seen.get("fingerprint") != fingerprint:
@@ -1958,10 +2107,17 @@ def _refresh_table(results: list[RefreshResult]) -> str:
 
 
 def refresh_roadmaps(
-    entries: list[Entry], *, on_demand: bool, unattended: bool, jobs: int, dry_run: bool
+    entries: list[Entry],
+    *,
+    on_demand: bool,
+    unattended: bool,
+    jobs: int,
+    dry_run: bool,
+    planner: Optional[Callable[[Entry], RefreshPlan]] = None,
 ) -> tuple[list[str], bool]:
     """Refresh every project due (or, on demand, every project). Returns the
-    report lines and whether anything needs the operator's attention."""
+    report lines and whether anything needs the operator's attention.
+    `planner` plans one project (default plan_refresh, for checkouts here)."""
     state = load_refresh_state()
     fingerprint = rules_fingerprint()
     now = _dt.datetime.now().isoformat(timespec="minutes")
@@ -1971,7 +2127,7 @@ def refresh_roadmaps(
         targets, new = due_for_refresh(entries, state, fingerprint)
         if new and not dry_run:
             for entry in new:
-                state["projects"][str(entry.path)] = {"fingerprint": fingerprint, "at": now}
+                state["projects"][entry.key] = {"fingerprint": fingerprint, "at": now}
             save_refresh_state(state)
         if not targets:
             return [f"roadmap rules unchanged ({fingerprint}); nothing to refresh"], False
@@ -1982,7 +2138,7 @@ def refresh_roadmaps(
                 f"roadmap rules changed; due for a refresh: {names}",
                 f"not run ({why}); run with --refresh-roadmaps",
             ], False
-    plans = [plan_refresh(e) for e in targets]
+    plans = [(planner or plan_refresh)(e) for e in targets]
     if dry_run:
         return [
             f"{p.entry.name}: {p.mode}" + (f" — {p.reason}" if p.reason else "") for p in plans
@@ -2001,7 +2157,7 @@ def refresh_roadmaps(
     results.sort(key=lambda r: r.entry.name.lower())
     for r in results:
         if r.status == "ok":
-            state["projects"][str(r.entry.path)] = {
+            state["projects"][r.entry.key] = {
                 "fingerprint": fingerprint,
                 "at": now,
                 "result": r.detail,
@@ -3144,6 +3300,14 @@ def _parser() -> argparse.ArgumentParser:
         help="skip roadmap agents for this run, preserving the scheduled-refresh preference",
     )
     ap.add_argument(
+        "--refresh-plan",
+        action="store_true",
+        help=(
+            "print, as one JSON line, how each project's roadmaps would be refreshed "
+            "from another machine, and change nothing (a fleet coordinator asks its peers)"
+        ),
+    )
+    ap.add_argument(
         "--auto-refresh",
         choices=("on", "off"),
         help=(
@@ -3202,6 +3366,7 @@ def _main(argv: Optional[list[str]] = None) -> int:
         "--check",
         "--sync-only",
         "--sync-checkouts",
+        "--refresh-plan",
     } & set(raw):
         if pre.dry_run:
             print("self-update: skipped (dry run); this is the local copy's plan")
@@ -3234,6 +3399,16 @@ def _main(argv: Optional[list[str]] = None) -> int:
         ap.error(
             "--check cannot be combined with configuration changes; pass project paths positionally"
         )
+
+    if args.refresh_plan:
+        # Only the marked line: the coordinator reads nothing else.
+        print(
+            refresh_plan_report(
+                [Entry(Path(p).expanduser()) for p in args.projects]
+                or read_registry(args.projects_file)
+            )
+        )
+        return 0
 
     if args.context_source and not args.context_sync:
         raise SystemExit("--context-source needs --context-sync OWNER/REPO")
@@ -3404,6 +3579,25 @@ def _main(argv: Optional[list[str]] = None) -> int:
         print(f"  {line}")
 
     peers_ok = upgrade_peers(args)
+
+    # After the peers upgrade, so each answers with this release's planner.
+    if not (
+        args.local_only
+        or args.skip_roadmap_refresh
+        or (args.no_commands and not args.refresh_roadmaps)
+    ):
+        lines, peer_attention = refresh_peer_roadmaps(
+            on_demand=args.refresh_roadmaps,
+            unattended=args.log,
+            jobs=args.refresh_jobs,
+            dry_run=args.dry_run,
+        )
+        if lines:
+            print("\nRoadmap refresh (fleet peers, from clones here):")
+            for line in lines:
+                print(f"  {line}")
+        refresh_attention = refresh_attention or peer_attention
+
     failed = [r for r in results if not r.ok]
     if failed:
         print(f"\n{len(failed)} project(s) need attention:")
@@ -3421,7 +3615,7 @@ def _main(argv: Optional[list[str]] = None) -> int:
 
 def main(argv: Optional[list[str]] = None) -> int:
     raw = list(sys.argv[1:] if argv is None else argv)
-    if {"--check", "--dry-run", "--help", "-h", "--self-check"} & set(raw):
+    if {"--check", "--dry-run", "--help", "-h", "--self-check", "--refresh-plan"} & set(raw):
         return _main(raw)
     try:
         locking = _support("updater_lock")

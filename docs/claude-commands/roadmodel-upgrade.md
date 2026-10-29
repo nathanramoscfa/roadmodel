@@ -149,8 +149,8 @@ context during a full upgrade; use only when explicitly requested.
 
 At the end, configured peers run their installed updater. Every remote run
 has `--local-only` to prevent recursive fleet updates. Full coordinated
-upgrades use `--skip-roadmap-refresh` on peers; repair/check propagate their
-own mode. Mutating peer runs register listed paths and append to the remote
+upgrades use `--skip-roadmap-refresh` on peers, because this machine refreshes
+their roadmaps itself (§6); repair/check propagate their own mode. Mutating peer runs register listed paths and append to the remote
 update log. Checks neither register paths nor request logging. Named peer
 failures affect the exit status; inspect that peer's local log or local check
 for details. Fleet operations can replicate the configured global rules file;
@@ -193,9 +193,17 @@ included (over SSH: `<python> <launcher> --install-sync-schedule`).
 ## 6. Refresh every project's roadmaps
 
 `--refresh-roadmaps` runs `/roadmap-refresh` in every registered project on
-this machine after the upgrade, concurrently (`--refresh-jobs N`, default 3). Each runs as
+this machine after the upgrade, then in every configured peer's projects,
+concurrently (`--refresh-jobs N`, default 3). Each runs as
 Claude Code headless (`claude -p`) in a fresh clone of the project, so the
-operator's checkout is never touched. The unattended session asks nothing, settles unverified
+operator's checkout is never touched. A peer's projects are refreshed here, on
+the coordinator, from clones of their remotes: the peer's own unattended
+session may not be allowed to push, and gh is signed in here. Once the peers
+have upgraded, each peer reports over SSH what is in flight in its checkouts
+(`--refresh-plan`, read-only), and this machine checks their open PRs. A
+merged refresh reaches the peer's checkout through its checkout sync. A peer
+project whose roadmaps are git-excluded is skipped and named: those can only be
+edited on that machine. The unattended session asks nothing, settles unverified
 steps from cited evidence, runs static checks only, leaves other PRs alone,
 and uses Claude Code's `auto` permission mode. It takes its PR through CI to
 a merge. Projects with git-excluded roadmaps (`private/`) are refreshed in place.
@@ -204,7 +212,8 @@ A project where work may be in flight is skipped and named: another checked-out
 branch, uncommitted edits outside `planning/`, a roadmap not yet committed,
 or an open PR from a branch its roadmaps name.
 
-The daily full run does the same automatically when the roadmap rules change:
+The daily full run does the same automatically, peers' projects included, when
+the roadmap rules change:
 the `/roadmap-refresh` or `/roadmap-step` command, or roadmap templates and
 prompts. Catalog-only releases do not trigger it; step execution rechecks
 Settings. Skipped projects are retried on a later run. `--auto-refresh off`

@@ -183,16 +183,22 @@ def load_peers(config_path: Path) -> list[Peer]:
 
 
 def _updater_args(
-    peer: Peer, *, sync_only: bool, check: bool, keep_pins: bool = False
+    peer: Peer, *, sync_only: bool, check: bool, keep_pins: bool = False, refresh_plan: bool = False
 ) -> list[str]:
     args = ["--local-only"]  # A peer can have its own fleet: never recurse.
+    if refresh_plan:
+        # Read-only: how each project's roadmaps would be refreshed from here.
+        return [*args, "--refresh-plan", *peer.projects]
     if check:
         args.append("--check")
     elif sync_only:
         args.append("--sync-only")
     else:
         # A coordinated upgrade repairs context without starting model-backed
-        # roadmap sessions on peers, even though it writes a local log.
+        # roadmap sessions on peers, even though it writes a local log: the
+        # coordinator refreshes peers' roadmaps itself, from clones of their
+        # remotes (refresh_plans, below), because a peer's unattended session
+        # may not be allowed to push.
         args.append("--skip-roadmap-refresh")
         if keep_pins:
             # The operator keeps their pinned model/effort on every machine:
@@ -211,6 +217,7 @@ def build_command(
     check: bool = False,
     stdin_script: bool = False,
     keep_pins: bool = False,
+    refresh_plan: bool = False,
 ) -> list[str]:
     """Build one SSH invocation without interpolating paths into executable code.
 
@@ -224,7 +231,13 @@ def build_command(
         json.dumps(
             {
                 "launcher": peer.launcher,
-                "args": _updater_args(peer, sync_only=sync_only, check=check, keep_pins=keep_pins),
+                "args": _updater_args(
+                    peer,
+                    sync_only=sync_only,
+                    check=check,
+                    keep_pins=keep_pins,
+                    refresh_plan=refresh_plan,
+                ),
             }
         ).encode("utf-8")
     ).decode("ascii")
@@ -392,3 +405,66 @@ def run_fleet(
             success = False
             lines.append(f"fleet {peer.name}: FAILED (could not execute SSH)")
     return lines, success
+
+
+REFRESH_PLAN_MARKER = "ROADMODEL-REFRESH-PLAN "
+_PLAN_MODES = ("clone", "in-place", "skip")
+
+
+def _plan_reports(stdout: str, peer: Peer) -> list[dict[str, Any]]:
+    """The validated project reports from a peer's `--refresh-plan` output.
+    Only the marked line is read; anything else the peer printed is dropped."""
+    lines = [line for line in stdout.splitlines() if line.startswith(REFRESH_PLAN_MARKER)]
+    if len(lines) != 1:
+        raise ValueError("no refresh plan in its output (is its updater older?)")
+    data = json.loads(lines[0][len(REFRESH_PLAN_MARKER) :])
+    if not isinstance(data, dict) or data.get("version") != 1:
+        raise ValueError("unexpected refresh plan version")
+    reports = data.get("projects")
+    if not isinstance(reports, list):
+        raise ValueError("refresh plan has no project list")
+    result = []
+    for report in reports:
+        if not isinstance(report, dict) or report.get("path") not in peer.projects:
+            raise ValueError("refresh plan names a project this peer is not configured with")
+        if report.get("mode") not in _PLAN_MODES:
+            raise ValueError("refresh plan has an unknown mode")
+        for field in ("reason", "default", "remote"):
+            if not isinstance(report.get(field), str):
+                raise ValueError(f"refresh plan {field} must be a string")
+        named = report.get("named")
+        if not isinstance(named, list) or not all(isinstance(n, str) for n in named):
+            raise ValueError("refresh plan named branches must be strings")
+        result.append(report)
+    return result
+
+
+def refresh_plan(peer: Peer) -> list[dict[str, Any]]:
+    """Ask a peer how its projects' roadmaps would be refreshed from this
+    machine: its updater's `--refresh-plan` report, one dict per project.
+    Read-only on the peer, which needs roadmodel 0.2.101 or later. Raises
+    ValueError with a message of our own, never the peer's output."""
+    try:
+        completed = subprocess.run(  # noqa: S603 — validated host and shell-encoded payload
+            build_command(peer, refresh_plan=True),
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=EXECUTION_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        raise ValueError(f"no plan within {EXECUTION_TIMEOUT_SECONDS}s") from None
+    except OSError:
+        raise ValueError("could not execute SSH") from None
+    if completed.returncode == 255:
+        raise ValueError("SSH connection failed")
+    if completed.returncode:
+        raise ValueError(f"its updater exited {completed.returncode}; is it older than 0.2.101?")
+    try:
+        return _plan_reports(completed.stdout, peer)
+    except json.JSONDecodeError:
+        # Its message could quote the peer's output.
+        raise ValueError("its refresh plan is not valid JSON") from None
