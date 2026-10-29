@@ -590,25 +590,91 @@ def test_codex_prompt_omits_the_hint_when_there_are_no_arguments(up: ModuleType)
     assert "argument-hint:" not in out
 
 
-def test_vscode_prompt_file_shape(up: ModuleType) -> None:
-    """VS Code prompt files have no placeholder — what the user types after
-    /name is appended — so the port says that in words instead of leaving a
-    token that would render literally."""
-    out = up.port_vscode("roadmap-phase", _SOURCE_COMMAND)
-    assert out.startswith("---\nname: roadmap-phase\n")
-    assert "agent: agent" in out
-    assert "$ARGUMENTS" not in out
-    # VS Code's own variable keeps the sentence grammatical; the note lets the
-    # operator type `/roadmap-phase 1` instead of answering the input box.
-    assert 'Write the Phase "${input:arguments}" roadmap' in out or "${input:arguments}" in out
-    assert "already carries the arguments" in out
-    assert "`/roadmap-phase 1`" in out
+@pytest.fixture(autouse=True)
+def _no_real_copilot(up: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """A test that names the vscode lane must never write the DEVELOPER's
+    ~/.copilot/skills."""
+    monkeypatch.setattr(up, "COPILOT_SKILLS_DIR", tmp_path / "copilot-home" / "skills")
 
 
-def test_vscode_prompt_without_arguments_gets_no_note(up: ModuleType) -> None:
-    out = up.port_vscode("roadmap-project", "---\ndescription: Write it\n---\n\nGo.\n")
-    assert "already carries the arguments" not in out
-    assert "${input:" not in out
+def test_copilot_skill_shape(up: ModuleType) -> None:
+    """VS Code's Copilot sessions load skills, not prompt files, and a skill
+    has no placeholder: the text after /name arrives as context. The port
+    defines ARGUMENTS once, shows the usage as the input hint, and keeps the
+    command manual (2026-10-29)."""
+    out = up.port_copilot("roadmap-phase", _SOURCE_COMMAND)
+    head, body = out.split("\n---\n", 1)
+    assert head.startswith("---\nname: roadmap-phase\n")
+    assert 'description: "Write the phase N roadmap (usage: /roadmap-phase 6' in head
+    assert 'argument-hint: "6 [output-path]"' in head
+    assert "disable-model-invocation: true" in head
+    assert "agent:" not in head  # a prompt-file key skills do not take
+    assert "$ARGUMENTS" not in out and "${input:" not in out
+    assert body.startswith("ARGUMENTS below means the text typed after `/roadmap-phase`")
+    assert "Write the Phase ARGUMENTS roadmap" in body
+
+
+def test_copilot_skill_without_arguments_has_no_hint_or_preamble(up: ModuleType) -> None:
+    out = up.port_copilot("roadmap-project", "---\ndescription: Write it\n---\n\nGo.\n")
+    assert "argument-hint:" not in out and "ARGUMENTS" not in out
+    assert "disable-model-invocation: true" in out
+    assert out.endswith("---\nGo.\n")
+
+
+def test_every_released_command_ports_to_a_copilot_skill(up: ModuleType) -> None:
+    for name in up.COMMANDS:
+        out = up.port_copilot(name, up._command_body(name))
+        head = out.split("\n---\n", 1)[0]
+        assert f"\nname: {name}\n" in head, name
+        assert f"(usage: /{name}" in head, name
+        assert "argument-hint:" in head, name
+        assert "$ARGUMENTS" not in out and "${input:" not in out, name
+
+
+def test_vscode_lane_installs_copilot_skills_and_retires_our_prompt_files(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """roadmodel wrote VS Code prompt files until 0.2.104; VS Code then asked to
+    convert them, and the conversion would have frozen them. The vscode lane
+    now writes ~/.copilot skills and removes its own prompt files, recognised
+    by the header every version wrote. Anyone else's prompt file stays, and a
+    copy VS Code converted is replaced by the released one."""
+    user = tmp_path / "Code" / "User"
+    monkeypatch.setattr(up, "_vscode_user_dirs", lambda: [user])
+    prompts = user / "prompts"
+    prompts.mkdir(parents=True)
+    ours = prompts / "roadmap-step.prompt.md"
+    ours.write_text(
+        '---\nname: roadmap-step\ndescription: "Execute step M (usage: /roadmap-step 1 3)"\n'
+        "agent: agent\n---\nExecute Step ${input:arguments} of this project.\n"
+    )
+    theirs = prompts / "roadmap-phase.prompt.md"
+    theirs.write_text("---\ndescription: my own phase prompt\n---\nmine\n")
+    converted = up.COPILOT_SKILLS_DIR / "roadmap-project" / "SKILL.md"
+    converted.parent.mkdir(parents=True)
+    converted.write_text(
+        "---\nname: roadmap-project\ndisable-model-invocation: true\n---\n${input:arguments}\n"
+    )
+
+    lines = up.refresh_commands(dry_run=True, agents=["vscode"])
+    assert ours.exists() and not (up.COPILOT_SKILLS_DIR / "roadmap-step").exists()
+    assert any("vscode prompt removed" in line for line in lines)
+
+    lines = up.refresh_commands(agents=["vscode"])
+    by_name = {line.split(":", 1)[0]: line for line in lines[1:]}
+    for name in up.COMMANDS:
+        skill = up.COPILOT_SKILLS_DIR / name / "SKILL.md"
+        assert skill.read_text() == up.port_copilot(name, up._command_body(name)), name
+    assert not ours.exists()
+    assert "vscode prompt removed (now a Copilot skill)" in by_name["roadmap-step"]
+    assert theirs.read_text().endswith("mine\n")
+    assert "vscode prompt kept (not roadmodel's)" in by_name["roadmap-phase"]
+    assert "copilot updated" in by_name["roadmap-project"]  # the conversion, replaced
+    assert "${input:" not in converted.read_text()
+
+    lines = up.refresh_commands(agents=["vscode"])
+    assert all("copilot unchanged" in line for line in lines[1:])
+    assert not any("removed" in line for line in lines)
 
 
 def test_detect_agents_reports_vscode_only_when_a_user_dir_exists(

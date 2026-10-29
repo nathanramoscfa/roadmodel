@@ -89,9 +89,9 @@ CODEX_PROMPTS_DIR = CODEX_DIR / "prompts"  # Codex: prompts/<name>.md -> /prompt
 
 
 def _vscode_user_dirs() -> list[Path]:
-    """VS Code (and Insiders) user-data directories for this OS. Prompt files
-    live in ``<user dir>/prompts/<name>.prompt.md`` and are invoked ``/<name>``
-    in the native chat panel."""
+    """VS Code (and Insiders) user-data directories for this OS: they mark VS
+    Code, and ``<user dir>/prompts/`` holds the prompt files roadmodel wrote
+    before 0.2.105 (Copilot skills replace them; see port_copilot)."""
     if WINDOWS:
         base = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
         roots = [base / "Code", base / "Code - Insiders"]
@@ -902,27 +902,50 @@ def port_codex_prompt(name: str, body: str) -> str:
     return f'---\ndescription: "{desc}"\n{hint}---\n{text.rstrip()}\n'
 
 
-def port_vscode(name: str, body: str) -> str:
-    """VS Code prompt file (``<user dir>/prompts/<name>.prompt.md``), invoked
-    ``/<name>`` in the native chat panel.
+# GitHub Copilot: VS Code's Copilot sessions and the Copilot CLI read personal
+# skills from skills/<name>/SKILL.md under $COPILOT_HOME (default ~/.copilot).
+# Copilot sessions do not load prompt files (.prompt.md), which is why VS Code
+# offers to convert the ones roadmodel used to write (2026-10-29).
+COPILOT_DIR = Path(os.environ.get("COPILOT_HOME") or Path.home() / ".copilot")
+COPILOT_SKILLS_DIR = COPILOT_DIR / "skills"
+_USAGE_RE = re.compile(r"\(usage: /(?P<name>[a-z0-9-]+)\s*(?P<args>.*)\)\s*$")
 
-    ``$ARGUMENTS`` becomes ``${input:arguments}`` — VS Code's own variable, so
-    the sentence stays grammatical where a bare substitution would read "Write
-    the Phase the text after the command roadmap". Typing the arguments inline
-    (``/roadmap-phase 1``) works too: VS Code appends them to the request, and
-    the trailing note tells the model to prefer them over asking again."""
+
+def port_copilot(name: str, body: str) -> str:
+    """GitHub Copilot skill (``COPILOT_SKILLS_DIR/<name>/SKILL.md``), invoked
+    ``/<name> <args>`` in VS Code's chat (Copilot and Local sessions) and the
+    Copilot CLI.
+
+    Skills take no placeholders: the text typed after ``/<name>`` reaches the
+    model as context. So ``$ARGUMENTS`` becomes ARGUMENTS, defined in one line
+    at the top, and ``argument-hint`` shows the usage in the input box.
+    ``disable-model-invocation: true`` keeps them manual: they branch, open
+    PRs and merge, so they run only when the operator types them."""
     description, text = _split_frontmatter(body)
     has_args = "$ARGUMENTS" in text
-    text = text.replace('"$ARGUMENTS"', "${input:arguments}").replace(
-        "$ARGUMENTS", "${input:arguments}"
-    )
-    if has_args:
-        text = text.rstrip() + (
-            "\n\nIf this request already carries the arguments (for example "
-            "`/{name} 1`), use those verbatim and do not ask for them again.".format(name=name)
-        )
+    text = text.replace('"$ARGUMENTS"', "ARGUMENTS").replace("$ARGUMENTS", "ARGUMENTS")
     desc = description.replace('"', "'")
-    return f'---\nname: {name}\ndescription: "{desc}"\nagent: agent\n---\n{text.rstrip()}\n'
+    head = [f"name: {name}", f'description: "{desc}"']
+    usage = _USAGE_RE.search(description)
+    if has_args and usage and usage.group("args").strip():
+        hint = usage.group("args").strip().replace('"', "'")
+        head.append(f'argument-hint: "{hint}"')
+    head.append("disable-model-invocation: true")
+    preamble = (
+        f"ARGUMENTS below means the text typed after `/{name}` in the request "
+        "that invoked this skill; it is empty when nothing was typed.\n\n"
+        if has_args
+        else ""
+    )
+    return "---\n" + "\n".join(head) + "\n---\n" + preamble + text.lstrip("\n").rstrip() + "\n"
+
+
+def _is_our_prompt(text: str, name: str) -> bool:
+    """True for a VS Code prompt file roadmodel wrote for ``name`` (0.2.4x to
+    0.2.104): every version opened with the same header."""
+    return text.startswith(f"---\nname: {name}\ndescription: ") and (
+        "\nagent: agent\n---\n" in text[:1500]
+    )
 
 
 def detect_agents() -> list[str]:
@@ -1477,7 +1500,7 @@ def refresh_commands(dry_run: bool = False, agents: Optional[list[str]] = None) 
     on this machine: Claude Code as-is (mirroring any ~/.claude/skills copy),
     Gemini CLI as TOML custom commands, Antigravity in both its IDE and CLI
     global skill directories, Codex + Cursor as ~/.agents skills, OpenCode
-    as Markdown commands.
+    as Markdown commands, VS Code (Copilot) as ~/.copilot skills.
     Returns report lines."""
     agents = agents or detect_agents()
     report: list[str] = [f"agents: {', '.join(agents)}"]
@@ -1515,10 +1538,25 @@ def refresh_commands(dry_run: bool = False, agents: Optional[list[str]] = None) 
                 f"codex-prompt {_install(target, port_codex_prompt(name, body), dry_run)}"
             )
         if "vscode" in agents:
+            # One Copilot skill serves VS Code, Insiders and the Copilot CLI.
+            # It replaces any copy there, VS Code's own conversion included.
+            target = COPILOT_SKILLS_DIR / name / "SKILL.md"
+            states.append(f"copilot {_install(target, port_copilot(name, body), dry_run)}")
             for user_dir in _vscode_user_dirs():
-                target = user_dir / "prompts" / f"{name}.prompt.md"
+                legacy = user_dir / "prompts" / f"{name}.prompt.md"
+                try:
+                    text = legacy.read_text(encoding="utf-8") if legacy.is_file() else ""
+                except (OSError, UnicodeDecodeError):
+                    text = ""
+                if not text:
+                    continue
                 label = "vscode-insiders" if "Insiders" in str(user_dir) else "vscode"
-                states.append(f"{label} {_install(target, port_vscode(name, body), dry_run)}")
+                if not _is_our_prompt(text, name):
+                    states.append(f"{label} prompt kept (not roadmodel's)")
+                    continue
+                if not dry_run:
+                    legacy.unlink()
+                states.append(f"{label} prompt removed (now a Copilot skill)")
         consumers = [a for a in SKILLS_CONSUMERS if a in agents]
         if consumers:
             skill_md = port_codex(name, body)
@@ -1565,6 +1603,7 @@ def _command_files(name: str) -> list[Path]:
         AGENTS_SKILLS_DIR / name / "SKILL.md",
         CODEX_LEGACY_SKILLS_DIR / name / "SKILL.md",
         OPENCODE_DIR / "commands" / f"{name}.md",
+        COPILOT_SKILLS_DIR / name / "SKILL.md",
     ]
     return files + [d / "prompts" / f"{name}.prompt.md" for d in _vscode_user_dirs()]
 
