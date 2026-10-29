@@ -784,3 +784,25 @@ def test_step_settings_are_the_full_ladder() -> None:
     assert "`tight`: run the first of that column's Runner-up and Backup whose" in step
     assert "`exhausted`: run the first of that column's Runner-up and Backup" in step
     assert "or its ladder tables have no `Price` row, STOP" in prompt
+
+
+def test_roadmap_project_asks_for_the_brief_when_none_is_given() -> None:
+    """`/roadmap-project` with no argument used the prompt's default brief,
+    README.md, without saying so: an operator asked "how does it know what
+    roadmap to write?" (2026-10-29). It now settles the brief first: files
+    and/or a description when given, else it asks, and never assumes the
+    README."""
+    flat = re.sub(
+        r"\s+", " ", (ROOT / "docs" / "claude-commands" / "roadmap-project.md").read_text()
+    )
+    assert "[brief files and/or a description]" in flat
+    assert "Settle the brief before anything else" in flat
+    assert "**Not given:** ASK, in one message, before writing anything" in flat
+    assert "Never assume it is the brief" in flat
+    assert "Then wait for the answer" in flat
+    for kind in ("`.md`", "`.txt`", "`.pdf`", "`.docx`"):
+        assert kind in flat
+    assert "`{{BRIEF}}` = the brief settled above" in flat
+    assert "`{{CONSTRAINTS}}` = the hard constraints the brief states" in flat
+    # The old rule fell back to the prompt's default brief (README.md) silently.
+    assert '`{{BRIEF}}` = "$ARGUMENTS" if given, else the prompt\'s default' not in flat
