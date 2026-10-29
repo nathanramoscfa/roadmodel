@@ -188,7 +188,10 @@ checkout that:
 - is on a feature branch (an agent's step, which gets main when it rebases);
 - has local commits;
 - has a merge or rebase in progress;
-- has uncommitted changes to a file the update changes.
+- has uncommitted changes to a file the update changes. Regenerated `planning/`
+  kit files are the exception: when they are the only clash, they take the
+  merged copy and the next daily run re-exports the kit. The personal
+  `planning/user-context.md` copy never gives way.
 
 Untracked files are never touched. `--uninstall-sync-schedule` removes it.
 The operator asked for this on 2026-10-25: install it on every machine, peers

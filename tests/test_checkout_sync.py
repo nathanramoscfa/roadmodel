@@ -5,7 +5,8 @@ GitHub and still saw the old one: the checkout had not pulled. The updater now
 fast-forwards every registered checkout that sits on its default branch, every
 15 minutes and at the end of each run (update_projects.sync_checkout), and never
 anything that could lose work: a feature branch, local commits, an operation
-in progress, or uncommitted changes to a file the update changes.
+in progress, or uncommitted changes to a file the update changes (regenerated
+planning/ kit files excepted).
 
 Each test drives real git: a bare origin, a clone that pushes, and the
 operator's checkout.
@@ -99,6 +100,52 @@ def test_an_uncommitted_edit_to_a_changed_file_blocks_and_is_kept(
     got = up_module.sync_checkout(checkout)
     assert got.state == "skipped" and "local changes block a fast-forward" in got.detail
     assert (checkout / "docs.md").read_text(encoding="utf-8") == "my edit\n"
+
+
+def test_regenerated_kit_edits_give_way_and_other_edits_do_not(
+    repos: tuple[Path, Path],
+) -> None:
+    """A merged roadmap refresh commits its kit export, and the checkout holds
+    the daily run's newer one: only regenerated text differs (2026-10-29)."""
+    checkout, seed = repos
+    (seed / "planning").mkdir()
+    _commit(seed, "planning/model-selector.txt", "speed 141.5\n")
+    _commit(seed, "planning/user-context.md", "mine\n")
+    _git(seed, "push", "-q", "origin", "HEAD:main")
+    _git(checkout, "pull", "-q")
+    _commit(seed, "planning/model-selector.txt", "speed 130.0\n")
+    _advance(seed, "phase01-roadmap.md", "Status: Complete\n")
+    (checkout / "planning" / "model-selector.txt").write_text("speed 121.8\n", encoding="utf-8")
+    (checkout / "scratch.txt").write_text("untracked\n", encoding="utf-8")
+
+    dry = up_module.sync_checkout(checkout, dry_run=True)
+    assert "1 regenerated planning/ kit file(s)" in dry.detail
+    assert (checkout / "planning" / "model-selector.txt").read_text() == "speed 121.8\n"
+
+    got = up_module.sync_checkout(checkout)
+    assert got.state == "updated" and "fast-forwarded 2 commit(s)" in got.detail
+    assert "1 regenerated planning/ kit file(s) took the merged copy" in got.detail
+    assert (checkout / "planning" / "model-selector.txt").read_text() == "speed 130.0\n"
+    assert (checkout / "phase01-roadmap.md").exists()
+    assert (checkout / "scratch.txt").read_text() == "untracked\n"
+
+    # A kit clash beside any other clash: nothing gives way.
+    _commit(seed, "planning/model-selector.txt", "speed 99.0\n")
+    _advance(seed)
+    (checkout / "planning" / "model-selector.txt").write_text("speed 98.0\n", encoding="utf-8")
+    (checkout / "docs.md").write_text("my edit\n", encoding="utf-8")
+    got = up_module.sync_checkout(checkout)
+    assert got.state == "skipped" and "local changes block" in got.detail
+    assert (checkout / "planning" / "model-selector.txt").read_text() == "speed 98.0\n"
+    _git(checkout, "checkout", "--", "docs.md", "planning/model-selector.txt")
+    _git(checkout, "pull", "-q")
+
+    # The personal user-context copy never gives way.
+    _advance(seed, "planning/user-context.md", "theirs\n")
+    (checkout / "planning" / "user-context.md").write_text("my edit\n", encoding="utf-8")
+    got = up_module.sync_checkout(checkout)
+    assert got.state == "skipped"
+    assert (checkout / "planning" / "user-context.md").read_text() == "my edit\n"
 
 
 def test_a_feature_branch_is_left_alone(repos: tuple[Path, Path]) -> None:

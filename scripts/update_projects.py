@@ -2639,10 +2639,33 @@ def _checkout_busy(repo: Path) -> bool:
     return any((git_dir / marker).exists() for marker in markers)
 
 
+def _kit_clash(repo: Path, default: str) -> list[str]:
+    """The regenerated kit files that stand between ``repo`` and a
+    fast-forward: uncommitted edits under planning/ to files the incoming
+    commits also change. Empty when nothing clashes, or when any other edit
+    clashes too, since then the fast-forward is blocked anyway.
+
+    The daily run re-exports planning/, roadmodel's kit, into every checkout,
+    and a merged roadmap refresh commits its own export of the same files, so
+    the two differ only in regenerated text (2026-10-29: one catalog line).
+    The personal user-context copy is not regenerated text: it never gives way."""
+    incoming = _checkout_git(repo, "diff", "--name-only", "-z", f"HEAD...origin/{default}")
+    local = _checkout_git(repo, "diff", "--name-only", "-z", "HEAD")
+    if incoming.returncode != 0 or local.returncode != 0:
+        return []
+    clash = sorted(
+        set(filter(None, incoming.stdout.split("\0"))) & set(filter(None, local.stdout.split("\0")))
+    )
+    regenerated = all(
+        path.startswith("planning/") and path != "planning/user-context.md" for path in clash
+    )
+    return clash if regenerated else []
+
+
 def sync_checkout(repo: Path, *, dry_run: bool = False) -> SyncOutcome:
     """Fast-forward ``repo`` to ``origin/<default branch>`` when it is on that
     branch and nothing of its own would be lost; otherwise leave it and say
-    why."""
+    why. Regenerated planning/ kit edits give way (_kit_clash)."""
     repo = Path(repo)
     if not (repo / ".git").exists():
         return SyncOutcome(repo, "skipped", "not a git checkout")
@@ -2670,8 +2693,21 @@ def sync_checkout(repo: Path, *, dry_run: bool = False) -> SyncOutcome:
         return SyncOutcome(
             repo, "skipped", f"{ahead} local commit(s) on {default} not on origin; not touched"
         )
+    kit = _kit_clash(repo, default)
+    kit_note = (
+        f"; {len(kit)} regenerated planning/ kit file(s) took the merged copy"
+        " (the daily run re-exports the kit)"
+        if kit
+        else ""
+    )
     if dry_run:
-        return SyncOutcome(repo, "updated", f"would fast-forward {behind} commit(s)")
+        return SyncOutcome(repo, "updated", f"would fast-forward {behind} commit(s){kit_note}")
+    if kit:
+        restored = _checkout_git(repo, "checkout", "HEAD", "--", *kit)
+        if restored.returncode != 0:
+            return SyncOutcome(
+                repo, "failed", f"could not set aside kit edits: {_first_line(restored)}"
+            )
     merged = _checkout_git(repo, "merge", "--ff-only", "--quiet", f"origin/{default}")
     if merged.returncode != 0:
         return SyncOutcome(
@@ -2681,7 +2717,7 @@ def sync_checkout(repo: Path, *, dry_run: bool = False) -> SyncOutcome:
             f"{_first_line(merged)}",
         )
     sha = _checkout_git(repo, "rev-parse", "--short", "HEAD").stdout.strip()
-    return SyncOutcome(repo, "updated", f"fast-forwarded {behind} commit(s) to {sha}")
+    return SyncOutcome(repo, "updated", f"fast-forwarded {behind} commit(s) to {sha}{kit_note}")
 
 
 def sync_checkouts(paths: list[Path], dry_run: bool = False) -> list[str]:
