@@ -2,16 +2,16 @@
 latest version of each series.
 
 The operator asked (2026-10-14) for roadmap Settings like /recommend's: Cost,
-Balanced and Quality, each with its effort and a backup from another maker, so
-a usage pool that turns `tight` or `exhausted` moves a step to another column
-instead of the roadmap being refreshed. On 2026-10-23 they asked for each
-column ranked three deep (pick, runner-up, backup), each option with its AA
-Index. On 2026-10-24 they found the table of one field a row unreadable in a
-Markdown preview 400–520px wide, so each column is a list, one option a line.
-scoring.settings_ladder reads the ladder with every pool at headroom and
-prints the lists and their **Runs:** line; `roadmodel ladder` and the MCP tool
-`roadmap_settings` serve it, and `roadmodel relayout` converts the tables
-older releases wrote.
+Balanced and Quality, each with its effort and a backup from another maker. On
+2026-10-23 they asked for each column ranked three deep (pick, runner-up,
+backup), each option with its AA Index. On 2026-10-24 they found the table of
+one field a row unreadable in a Markdown preview 400–520px wide. On 2026-10-29
+they asked that the ladder name no column to run: they pick the option
+themselves, and a pool's state is informational. scoring.settings_ladder reads
+the ladder with every pool at headroom and prints the table with no Runs line;
+`roadmodel ladder` and the MCP tool `roadmap_settings` serve it, and
+`roadmodel relayout` converts the tables older releases wrote and drops their
+Runs lines.
 
 The fixture: Lite, Luna and Astra are one maker's (Codex), Sonnet and Opus
 another's (Claude Code), as in tests/test_ladder_frontier.py.
@@ -213,7 +213,7 @@ def test_each_column_ranks_its_pick_runner_up_and_backup() -> None:
     head, cells = _tabled(got["markdown"])
     assert head == ["", "", "Cost", "Balanced", "Quality"]
     paragraphs = got["markdown"].split("\n\n")
-    assert paragraphs[-2] == "**Conversation:** New"
+    assert paragraphs[-1] == "**Conversation:** New"
     for tier in scoring.LADDER_TIERS:
         col = got["columns"][tier]
         assert list(cells[tier]) == list(RANKS)
@@ -535,28 +535,28 @@ def test_a_model_that_always_thinks_has_no_thinking_toggle() -> None:
     assert "Thinking" not in got["markdown"]
 
 
-@pytest.mark.parametrize(
-    ("budget", "runs"), [("cheap", "cost"), ("balanced", "balanced"), ("best", "quality")]
-)
-def test_the_step_runs_the_column_its_budget_priority_names(budget: str, runs: str) -> None:
+@pytest.mark.parametrize("budget", ["cheap", "balanced", "best"])
+def test_the_ladder_names_no_column_to_run(budget: str) -> None:
+    """The operator picks the option (2026-10-29): no Runs line, no ✓, and
+    the Budget priority changes nothing in the ladder."""
     got = _settings(scoring.Task("planning", "medium", budget=budget))
-    assert got["runs"] == runs
+    assert "runs" not in got and "rule" not in got
     head, _ = _tabled(got["markdown"])
     assert head[2:] == [t.capitalize() for t in scoring.LADDER_TIERS]
-    assert "✓" not in got["markdown"]
-    runs_line = got["markdown"].split("\n\n")[-1]
-    assert runs_line.startswith(f"**Runs:** {runs.capitalize()} — ")
-    assert scoring.RUN_RULE in " ".join(runs_line.split())
+    assert "✓" not in got["markdown"] and "**Runs:**" not in got["markdown"]
+    assert got["markdown"].split("\n\n")[-1] == "**Conversation:** New"
+    balanced = _settings(scoring.Task("planning", "medium"))
+    assert got["columns"] == balanced["columns"] and got["markdown"] == balanced["markdown"]
+    assert not hasattr(scoring, "RUN_RULE") and not hasattr(scoring, "RUN_COLUMN")
 
 
-def test_a_phase_session_runs_quality_at_its_deepest_pinnable_rung() -> None:
+def test_a_phase_sessions_quality_column_is_at_its_deepest_pinnable_rung() -> None:
     got = _settings(scoring.Task("planning", "high"), phase=True)
-    assert got["runs"] == "quality"
     quality = got["columns"]["quality"]
     # Codex's dial goes to `ultra`, Claude Code's to `max`: a roadmap pins
     # neither ultra nor Ultracode.
     assert quality["effort"] == "max"
-    assert "a phase-roadmap session runs Quality" in got["markdown"]
+    assert "**Runs:**" not in got["markdown"]
 
 
 @pytest.mark.parametrize("state", ["tight", "exhausted"])
@@ -583,12 +583,12 @@ def _cli(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, *args: str) -> str:
     return result.output
 
 
-def test_ladder_prints_the_table_and_its_runs_line(
+def test_ladder_prints_the_table_and_no_runs_line(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     out = _cli(tmp_path, monkeypatch, "--category", "planning", "--complexity", "medium")
     assert _cells(out.splitlines()[0]) == ["", "", "Cost", "Balanced", "Quality"]
-    assert "**Runs:** Balanced — " in out
+    assert "**Runs:**" not in out and out.rstrip().endswith("**Conversation:** New")
     payload = json.loads(
         _cli(
             tmp_path,
@@ -602,7 +602,7 @@ def test_ladder_prints_the_table_and_its_runs_line(
             "json",
         )
     )
-    assert payload["runs"] == "quality" and set(payload["columns"]) == {
+    assert "runs" not in payload and set(payload["columns"]) == {
         "cost",
         "balanced",
         "quality",
@@ -702,11 +702,11 @@ def test_relayout_turns_a_ranked_table_into_the_ladder_table() -> None:
     assert cells["balanced"]["Backup"]["Level"] == "XHigh"
     assert cells["quality"]["Runner‑up"]["Price"] == _priced("Fable 5.1", "XHigh")
     assert cells["quality"]["Backup"]["Model"] == "none"
-    # Everything around the ladder is kept, and Thinking has no row.
+    # Everything around the ladder is kept but its Runs paragraph (a ladder
+    # names no column to run), and Thinking has no row.
     assert new.startswith("**Deploys:** CI → live on merge.\n\n|")
-    assert new.endswith(RANKED_TABLE[RANKED_TABLE.index("**Runs:**") :])
-    assert "\n\n**Conversation:** New\n\n**Runs:**" in new
-    assert "Thinking" not in new.split("**Runs:**")[0]
+    assert new.endswith("\n\n**Conversation:** New\n\n**Model rationale:** unchanged.\n")
+    assert "**Runs:**" not in new and "Thinking" not in new
     assert "* token use not yet measured" in new
     # A second pass finds nothing left to convert.
     assert ladder_layout.relayout(new, price=_fake_price) == (new, 0, 0)
@@ -799,11 +799,45 @@ def test_relayout_keeps_the_ladder_of_a_step_that_ran_or_runs() -> None:
     assert new.split("### Phase 5")[0].count("| Rank ") == 1
 
 
+def test_relayout_drops_the_runs_line_of_a_step_not_yet_run() -> None:
+    """The operator picks the option (2026-10-29): a ladder names no column
+    to run. The Runs paragraph goes under a step not yet run, its table
+    current or not, and stays under a step that ran, as the record."""
+    table = _settings()["markdown"]
+    runs = RANKED_TABLE[
+        RANKED_TABLE.index("**Runs:**") : RANKED_TABLE.index("\n\n**Model rationale:**")
+    ]
+    doc = "\n\n".join(
+        [
+            "## Step 1 — Done ✅",
+            "**Status:** Complete — PR #1",
+            table,
+            runs,
+            "**Model rationale:** ran.",
+            "## Step 2 — Next",
+            "**Status:** Not started",
+            table,
+            runs,
+            "**Model rationale:** next.",
+        ]
+    )
+    new, count, kept = ladder_layout.relayout(doc, price=_fake_price)
+    assert (count, kept) == (1, 0)
+    done, upcoming = new.split("## Step 2")
+    assert done.count("**Runs:**") == 1
+    assert "**Runs:**" not in upcoming
+    assert upcoming.endswith("**Conversation:** New\n\n**Model rationale:** next.")
+    assert ladder_layout.relayout(new, price=_fake_price) == (new, 0, 0)
+
+
 def test_relayout_leaves_a_table_it_does_not_know() -> None:
     odd = RANKED_TABLE.replace(
         "| Thinking      | —                 | On ", "| Speed         | —                 | On ", 1
     )
-    assert ladder_layout.relayout(odd) == (odd, 0, 0)
+    runs = odd[odd.index("**Runs:**") : odd.index("**Model rationale:**")]
+    # The table stays as written; only the Runs paragraph under it goes.
+    assert ladder_layout.relayout(odd) == (odd.replace(runs, ""), 1, 0)
+    assert ladder_layout.relayout(odd.replace(runs, "")) == (odd.replace(runs, ""), 0, 0)
     other = "| Item | Cost |\n| --- | --- |\n| EIN | $0 |\n"
     assert ladder_layout.relayout(other) == (other, 0, 0)
 
@@ -876,6 +910,29 @@ def test_rerank_gives_a_not_started_steps_ladder_this_releases_ranks(
     again, same = _rerank(tmp_path, monkeypatch, after, "--check")
     assert again.exit_code == 0 and "0 re-ranked, 1 unchanged" in again.output
     assert same == after
+
+
+def test_rerank_names_each_column_whose_pick_changed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A ladder names no column to run (2026-10-29), so the `Settings
+    updated` line names every column whose Pick changed, and only those."""
+    fresh = _settings()["markdown"]
+    _, cells = _tabled(fresh)
+    lines = fresh.split("\n")
+    row = next(i for i, ln in enumerate(lines) if _cells(ln)[:2] == ["**Pick**", "Model"])
+    head, field, cost, balanced, quality = _cells(lines[row])
+    assert cost != quality, "the fixture's Cost and Quality Picks differ"
+    lines[row] = "| " + " | ".join([head, field, quality, balanced, cost]) + " |"
+    result, after = _rerank(tmp_path, monkeypatch, _step(2, "Not started", "\n".join(lines)))
+    assert result.exit_code == 0 and "1 re-ranked" in result.output, result.output
+    assert fresh in after
+    level = {t: cells[t]["Pick"]["Level"] for t in ("cost", "quality")}
+    assert (
+        f"(rerank): Cost Pick was {quality.strip('*')} · {level['cost']}; "
+        f"Quality Pick was {cost.strip('*')} · {level['quality']}. Re-ranked for "
+    ) in " ".join(after.split())
+    assert "Balanced Pick was" not in after
 
 
 def test_rerank_infers_a_classification_from_the_picks_or_takes_a_hint(

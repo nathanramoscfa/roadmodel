@@ -38,9 +38,11 @@ posture, and any local Ollama models. Every model pick reads it, so a pick
 never names something you cannot run. The fields are explained in
 [user-context-setup.md](user-context-setup.md).
 
-Keep it current by hand: add or remove a subscription when that changes,
-mark a usage pool `tight` or `exhausted` when it runs low. Picks read the file
-live, and each project's `planning/` copy follows on the next upgrade.
+Keep it current by hand: add or remove a subscription when that changes.
+Picks read the file live, and each project's `planning/` copy follows on the
+next upgrade. How much of a usage pool you have left never changes a
+roadmap's Settings: each step offers ranked Cost, Balanced and Quality options,
+and you pick the one to run.
 
 ### 3. Optional: the MCP server
 

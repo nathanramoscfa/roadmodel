@@ -5,7 +5,7 @@ The ladder is one table: Cost, Balanced and Quality are its columns, and each
 rank (Pick, Runner-up, Backup) names the first of its field rows from a column
 of its own, so the field names stand indented beside it:
 
-    |          |          | Cost            | Balanced ✓         | Quality      |
+    |          |          | Cost            | Balanced           | Quality      |
     | -------- | -------- | --------------- | ------------------ | ------------ |
     | **Pick** | Model    | **GPT-6.1 Sol** | **Gemini 4 Argon** | **Opus 5.5** |
     |          | Platform | Codex           | Antigravity        | Claude Code  |
@@ -22,7 +22,9 @@ indent the same in every viewer (2026-10-25). Level is the bare level (the
 platform names its dial: Codex's
 Intelligence, Claude Code's and Antigravity's Effort), and Thinking has no row:
 a ladder only ever recommends it On, and every AA Index and price already
-assumes it, so /roadmap-step states the rule once instead.
+assumes it, so /roadmap-step states the rule once instead. Since 2026-10-29
+the ladder names no column to run (its Runs paragraph is gone): the operator
+picks the option, and a pool's state never steers it.
 """
 
 from __future__ import annotations
@@ -123,7 +125,6 @@ def _grid(rows: list[list[str]]) -> list[str]:
 def ladder_markdown(
     columns: Mapping[str, Mapping[str, Option | None]],
     *,
-    runs: str | None = None,
     conversation: str | None,
     ranked_for: str | None = None,
 ) -> str:
@@ -156,10 +157,7 @@ def ladder_markdown(
         stepped |= any(o is not None and o.stepped_down for o in opts)
     notes = [f"Ranked for {ranked_for}."] if ranked_for else []
     if stepped:
-        notes.append(
-            f"{STEP_MARK} the Pick one level lower: no other maker is funded, and a "
-            "lower level uses less of a tight pool."
-        )
+        notes.append(f"{STEP_MARK} the Pick one level lower: no other maker is funded.")
     if priced:
         notes.append(
             "Price: list $ per 1M tokens (3 in : 1 out) × the tokens the model "
@@ -351,10 +349,10 @@ def _list_ladder(
     return i, columns, runs, conversation
 
 
-# A ladder found by relayout: the index past it, its columns, the column
-# that runs, its Conversation value, the classification its note names, and
-# whether converting it is a display fix that reaches every section.
-_Found = tuple[int, dict[str, dict[str, "Option | None"]], str | None, str | None, str | None, bool]
+# A ladder found by relayout: the index past it, its columns, its
+# Conversation value, the classification its note names, and whether
+# converting it is a display fix that reaches every section.
+_Found = tuple[int, dict[str, dict[str, "Option | None"]], str | None, str | None, bool]
 # The 0.2.95–0.2.98 table: one empty header cell before Cost (0.2.95–0.2.97)
 # or two with a ✓ in the header or note (0.2.98).
 _INDENT_HEAD_RE: Final = re.compile(r"^\|\s*\|(?:\s*\|)?\s*Cost\b")
@@ -363,13 +361,14 @@ _PRICE_RE: Final = re.compile(r"^\$([0-9]+(?:\.[0-9]+)?)/1M(\*?)$")
 
 def _indented_ladder(
     lines: list[str], start: int
-) -> tuple[int, dict[str, dict[str, Option | None]], str | None, str | None, str | None] | None:
+) -> tuple[int, dict[str, dict[str, Option | None]], str | None, str | None] | None:
     """A 0.2.95–0.2.98 ladder table starting at ``lines[start]`` (rank rows
     over `&nbsp;`-indented fields, or a 0.2.98 table still carrying ✓): the
-    index past its note and Conversation line (its Runs paragraph stays), its
-    columns with every cell read back, the column marked ✓, its Conversation
-    value and the classification its note names; None when a row is not one
-    those releases wrote or the table is already in the current layout."""
+    index past its note and Conversation line (relayout handles a Runs
+    paragraph after it), its columns with every cell read back, its
+    Conversation value and the classification its note names; None when a row
+    is not one those releases wrote or the table is already in the current
+    layout."""
     head = _table_cells(lines[start])
     tier_cells = head[-len(TIERS) :]
     runs = next(
@@ -423,7 +422,7 @@ def _indented_ladder(
         ranked_for = f"{found.group(1)}, {found.group(2)} complexity" + (
             ", novel" if found.group(3) else ""
         )
-    return end, columns, runs, conversation, ranked_for
+    return end, columns, conversation, ranked_for
 
 
 def relayout(
@@ -438,13 +437,17 @@ def relayout(
     written and each option's price filled in by ``price``. A ladder under a
     step that is Complete or In progress, or under a phase whose roadmap
     ``phase_written`` says exists, is the record of what ran or is running
-    and stays as it is. Returns the text, the ladders rewritten and the
-    ladders kept. A table with a row this release does not know is left
+    and stays as it is. A ladder no longer names a column to run
+    (2026-10-29): the Runs paragraph under any other ladder goes, the table's
+    own layout current or not. Returns the text, the ladders rewritten and
+    the ladders kept. A table with a row this release does not know is left
     alone and not counted."""
     lines = text.split("\n")
     out: list[str] = []
     converted = kept = 0
     done = False
+    # A ladder just rewritten owns the Runs paragraph after it: one count.
+    owner = False
     i = 0
     while i < len(lines):
         line = lines[i]
@@ -457,6 +460,15 @@ def relayout(
             done = False
         elif status := _STATUS_RE.match(line):
             done = done or status.group(1).startswith(("Complete", "In progress"))
+
+        if not done and _RUNS_RE.match(line):
+            while i < len(lines) and lines[i].strip():
+                i += 1
+            if out and not out[-1].strip():
+                out.pop()
+            converted += 0 if owner else 1
+            owner = False
+            continue
 
         found: _Found | None = None
         head = _HEAD_RE.match(line)
@@ -473,10 +485,7 @@ def relayout(
                 out.extend(lines[i:end])
                 i = end
                 continue
-            after = next((ln for ln in lines[end:] if ln.strip()), "")
-            runs_match = _RUNS_RE.match(after)
-            runs = runs_match.group(1).lower() if runs_match else None
-            found = (end, columns, runs, _table_conversation(rows), None, False)
+            found = (end, columns, _table_conversation(rows), None, False)
         elif _INDENT_HEAD_RE.match(line) and i + 1 < len(lines) and _RULE_RE.match(lines[i + 1]):
             indented = _indented_ladder(lines, i)
             if indented is not None:
@@ -484,18 +493,15 @@ def relayout(
         elif _TIER_HEAD_RE.match(line) and line.startswith("**Cost**"):
             listed = _list_ladder(lines, i)
             if listed is not None:
-                end, columns, runs, conversation = listed
-                if runs is None:
-                    after = next((ln for ln in lines[end:] if ln.strip()), "")
-                    runs_match = _RUNS_RE.match(after)
-                    runs = runs_match.group(1).lower() if runs_match else None
-                found = (end, columns, runs, conversation, None, False)
+                end, columns, _, conversation = listed
+                found = (end, columns, conversation, None, False)
 
         if found is None:
             out.append(line)
+            owner = owner and not line.strip()
             i += 1
             continue
-        end, columns, runs, conversation, ranked_for, display_fix = found
+        end, columns, conversation, ranked_for, display_fix = found
         # The `&nbsp;` indent is a display defect (some viewers draw each
         # non-breaking space as a highlighted blob), and its fix changes no
         # value, so it reaches every ladder, Complete steps included.
@@ -511,13 +517,14 @@ def relayout(
             }
             for tier, col in columns.items()
         }
-        md = ladder_markdown(priced, runs=runs, conversation=conversation, ranked_for=ranked_for)
+        md = ladder_markdown(priced, conversation=conversation, ranked_for=ranked_for)
         if out and out[-1].strip():
             out.append("")
         out.extend(md.split("\n"))
         if end < len(lines) and lines[end].strip():
             out.append("")
         converted += 1
+        owner = True
         i = end
     return "\n".join(out), converted, kept
 

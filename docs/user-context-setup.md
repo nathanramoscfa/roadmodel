@@ -355,6 +355,14 @@ makes a second coding-agent subscription (Codex on ChatGPT, Antigravity
 on Google AI) an automatic fallback when the primary pool runs dry.
 Hand-edit it when a cap binds; clear it when the window resets.
 
+**Roadmaps do not read it** (roadmodel 0.2.106 on). A roadmap's Settings
+ladder reads every pool as `headroom` and names no column to run: each
+step offers Cost, Balanced and Quality options picked on the step's
+merits and your access alone, and you pick the one to run from what you
+know about your own headroom. `/roadmap-step` runs the option you
+opened. The table still steers `/recommend` and the `recommend_model`
+tool.
+
 ## When to update
 
 Hand-edit `user-context.md` whenever your subscription or API-key
@@ -372,7 +380,8 @@ state changes:
   subscribed* with a rationale.
 - **Hitting a usage cap** — set the pool's row in *Usage-pool status*
   to `tight` (before) or `exhausted` (after) with the reset time; put
-  it back to `headroom` when the window resets. If you find yourself
+  it back to `headroom` when the window resets. Roadmaps do not read
+  it: there, pick an option on another subscription yourself. If you find yourself
   doing this most weeks, the `Consumption headroom` posture should be
   `capped` (it is the default) — not `uncapped`.
 - **Rotating an API key** — flip the `Key present` cell to `No`

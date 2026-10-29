@@ -93,13 +93,23 @@ its PR merged. Check it before touching anything:
 ## 3. Settings gate — before any work
 
 A step's Settings table is a recommendation frozen on the day the roadmap
-was written. Providers supersede models within weeks and the operator's
-posture changes, so read the table as **intent**, not as a string to
-match exactly — and record what actually ran.
+was written. Providers supersede models within weeks, so read the table
+as **intent**, not as a string to match exactly — and record what
+actually ran.
+
+**The operator picks the option.** A ladder is the step's ranked options,
+chosen on the step's merits and the operator's access alone; the session
+the operator opened is the option they chose. Never choose a column for
+them, never move them off the option they opened, and never read the
+Usage-pool status table or the Budget priority to decide anything here:
+the operator tracks their own headroom, and pool states are
+informational.
 
 Print one line: `Step {{STEP}} requires: Model <M> · Platform <P> ·
 <the dials the table carries, e.g. Effort <E>[ · Thinking <T>], or
 Intelligence <I>>. This session: <your own model> on <this surface>.`
+With a ladder, `<M>`, `<P>` and the dials are the option this session
+is, named with its column and rank (`… · Balanced Runner-up`).
 
 **Thinking is always On** wherever the platform has a Thinking toggle
 (Antigravity, the Gemini app, the APIs that expose one). A ladder carries
@@ -108,14 +118,14 @@ in it assumes thinking on. On such a platform, print `Thinking On` among
 the dials and make sure it is set.
 
 - **Ladders** (Cost / Balanced / Quality columns, roadmodel 0.2.86
-  on) carry every column the step may run, so pick one before the checks
-  below. From roadmodel 0.2.95 a ladder is one table: Cost, Balanced and
+  on) carry every option the step may run, so find yours before the
+  checks below. From roadmodel 0.2.95 a ladder is one table: Cost, Balanced and
   Quality are its columns, and each rank (**Pick**, **Runner‑up**,
   **Backup**) sits in a column of its own beside its Model, Platform, Level, AA and
   Price rows. Level is the bare level of that platform's own dial (`High`
   is Intelligence High on Codex, Effort High on Claude Code and
   Antigravity). From roadmodel 0.2.97 the three ranks of a column come from
-  three makers (a tight pool is a maker's); where too few are funded, a
+  three makers; where too few are funded, a
   missing rank is the Pick one level lower, its Level marked ↓, and the
   note line says which classification the ladder was ranked for. A 0.2.94
   ladder is three lists instead (`- Pick:`,
@@ -126,22 +136,18 @@ the dials and make sure it is set.
   Backup / Platform / Effort rows instead: its Model, Platform and Effort
   cells are the Pick, its Backup the Backup (split into `Backup`, `Backup
   on` and `Backup effort` rows on a Complete step since 0.2.93), and it
-  has no Runner-up. The ladder's **Runs:** line names the column. Apply its
-  rule to the Usage-pool status table in `planning/user-context.md` (a
-  row whose reset time has passed reads `headroom`). Read the pool of the
-  subscription that pays for that column's Pick's platform:
-  - `headroom`: run that column's Pick.
-  - `tight`: run the first of that column's Runner-up and Backup whose
-    pool reads `headroom` or that is marked ↓ (the Pick one level lower,
-    which uses less of the tight pool), else the Cost column's Pick.
-  - `exhausted`: run the first of that column's Runner-up and Backup
-    whose pool reads `headroom`, else its Backup.
+  has no Runner-up. A ladder written before roadmodel 0.2.106 has a
+  **Runs:** line beneath it, naming a column and a rule for tight or
+  exhausted pools: it is no longer read, so ignore it.
 
-  The chosen option is what the printed line names as required, with
-  its column and rank named (`… · Balanced Pick`, or `… · Balanced
-  Runner-up — Claude pool tight`). Any option in any column, on its own
-  platform, continues too. Say which option you are, and which one the
-  rule selected.
+  Find the option this session is: a cell whose Model is your own model
+  (or one it supersedes, under **Model** below) and whose Platform is
+  this surface. Every option in every column, on its own platform,
+  continues. Where your model stands at more than one level (the Cost
+  Pick at Low and the Balanced Pick at High), the level you run at
+  decides; where you cannot read your level, print each match
+  (`Cost Pick at Low or Balanced Pick at High`) as the dial to set and
+  continue.
 - **Backup.** The table's `Backup` row (roadmaps from roadmodel 0.2.41
   on) names the model to run when the primary is unavailable, with its
   own platform and dial. If you are that backup model on that platform,
@@ -169,7 +175,8 @@ the dials and make sure it is set.
   printed line. Where no source names the model, print `unverified` and
   ask the operator which model they picked; take their answer and
   carry on. A family name alone is never a reason to stop.
-- **Model.** Continue if you are the table's model. Also continue if you
+- **Model.** Continue if you are the table's model (with a ladder, any
+  option's). Also continue if you
   are a **newer version in the same line** — Claude Opus 5 → Opus 5.5,
   Fable 5 → Fable 5.1, Sonnet 5 → Sonnet 5.1, GPT-6 Sol → GPT-6.1 Sol:
   a provider supersedes within a line, and the newer version is what the
@@ -180,27 +187,21 @@ the dials and make sure it is set.
   stop and tell the operator
   how to switch on this surface (Claude Code: `/model <M>` then
   `/effort <E>`; Codex and Antigravity: their model picker and reasoning
-  setting), then re-run this command with the same arguments. Do not
-  start the step on a model it did not intend.
-- **Effort.** If the table's effort is a top rung — `Max`, `Ultracode`,
-  or Codex `max` / `ultra` — and `planning/user-context.md` declares
-  `Consumption headroom: capped`, the table predates that posture: it is
-  the pinned-top-rung default that exhausted a weekly pool. Use the
-  user-context's complexity ladder for this step instead (High-complexity
-  coding → `High`; `XHigh` only for novel problem-solving, multi-step
-  proof, or chain-of-thought across many files) and tell the operator the
-  value to set. Keep a top rung only when the step's own rationale names
-  reasoning depth as the demonstrated bottleneck.
+  setting; with a ladder, list every option for the operator to choose
+  from, never one chosen for them), then re-run this command with the
+  same arguments. Do not start the step on a model it did not intend.
 - You cannot verify most reasoning dials yourself; the printed line is
   the operator's cue to set them. Codex's effort is the exception: the
   rollout's `"effort"` is the dial the session runs on, so print it. If
-  it differs from the table's, name the value to set. Continue.
+  it differs from the table's (with a ladder, from every level the ladder
+  gives your model), name the value to set. Continue.
 
 **Record what ran.** With a ladder, running one of its options
 changes nothing in it: the step's own PR adds one line beneath it,
-`> Ran <YYYY-MM-DD>: <column> — <model · effort>. <why>.` (column: the
-column and rank, `Balanced Runner-up`; why: the **Runs:** column, or the
-pool that moved it). When what ran is in none of
+`> Ran <YYYY-MM-DD>: <column and rank> — <model · level>.`
+(`> Ran 2026-10-30: Balanced Runner-up — Sonnet 5.5 · High.`), every
+match named where the level could not be read. It records the
+operator's choice and gives no reason for it. When what ran is in none of
 its cells, or the table has a single column, and the model or effort you
 proceed with differs from the table, the step's own PR rewrites its
 Settings table to match (§5), with one line beneath it:
