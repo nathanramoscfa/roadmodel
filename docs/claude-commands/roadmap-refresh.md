@@ -174,16 +174,17 @@ complexity, novel or not; its Model rationale names them), then:
 - Where `roadmodel` is installed, the Settings are the ladder
   `roadmodel ladder --category <c> --complexity <x> [--novel]` prints
   for that classification (MCP tool: `roadmap_settings`), pasted as
-  printed with its **Runs:** line: Cost, Balanced and Quality, each
-  ranked three deep (Pick, Runner-up, and a Backup from another maker),
-  each option with its own level, AA Index and price, read with every usage
-  pool at headroom, so the step's runner picks the column from the pools
-  on the day. A single-column table becomes the ladder: that is a
-  difference. Its models are always the latest version of their series.
+  printed: Cost, Balanced and Quality, each ranked three deep (Pick,
+  Runner-up, and a Backup from another maker), each option with its own
+  level, AA Index and price, read with every usage pool at headroom. It
+  names no column to run: the operator picks the option. A single-column
+  table becomes the ladder: that is a difference. Its models are always
+  the latest version of their series.
 - Where `roadmodel` cannot be reached, re-run the model selector as the
   roadmap was written: `planning/model-selector.txt`, with prices from
   `planning/model-tier-cost-scale.md` and display rules from
-  `planning/settings-display.md`, against `planning/user-context.md`.
+  `planning/settings-display.md`, against `planning/user-context.md`,
+  reading every Usage-pool status row as `headroom`.
   You are the engine — do not call any external API. Honor every
   availability exclusion in the selector, include a backup model, and
   never name an older version of a series (GPT-6 Sol where GPT-6.1 Sol
@@ -191,10 +192,25 @@ complexity, novel or not; its Model rationale names them), then:
 - If the result differs from the step's Settings table, rewrite the
   table and its Model rationale, and add one line beneath the table:
   `> Settings updated <YYYY-MM-DD> (refresh): was <old model> · <old effort>. <why>.`
-  For a ladder, the old model and effort are the Pick of the column the
-  step ran (its **Runs:** line), or the single column it replaced. A
-  changed runner-up or backup alone counts as a difference; name it in
-  that line.
+  For a ladder, name each column whose Pick changed
+  (`was Balanced Pick GPT-6.1 Sol · High`), or the single column it
+  replaced. A changed runner-up or backup alone counts as a difference;
+  name it in that line.
+- **The recommendation is on merit; the operator picks** (roadmodel
+  0.2.106 on). A ladder names no column to run, and a usage pool's state
+  never steers a table, a rationale or a best fit: the operator tracks
+  their own headroom and picks the option. The Model rationale gives the
+  classification and why, then, on the step's merits alone, the option
+  that fits it best (`On the step alone, the Balanced Pick fits best:
+  …`) and what the other columns trade against it. It never says which
+  column runs and never cites the Budget priority, a pool's state, or
+  which subscription has slack, nor follows a user-context rule keyed to
+  them. On a step that has not shipped, and a phase not yet written,
+  delete the **Runs:** paragraph beneath a ladder (`roadmodel relayout`
+  does it) and rewrite a rationale that does any of those things. A
+  layout and rationale fix, not a new pick: no `Settings updated` line.
+  A Complete or In progress step keeps its Runs paragraph and rationale
+  as the record of what ran or is running.
 - Every single-column table carries a `Backup` row directly under `Model`, each cell
   a backup with its own platform and dial
   (`GPT-6.1 Sol — Codex · Intelligence Medium`), or `None`. A table
@@ -209,13 +225,14 @@ complexity, novel or not; its Model rationale names them), then:
   Price rows — Level the bare level of the platform's own dial, AA its AA
   Intelligence Index there (`not measured` where AA has no row), Price its
   blended list price per 1M tokens times the tokens it uses at that level —
-  then a note line, a `**Conversation:**` line and the **Runs:** line. It
+  then a note line and a `**Conversation:**` line. It
   has no Thinking row: Thinking is always On where the platform has the
   toggle. Before re-selecting anything, run `roadmodel relayout <every
   roadmap file>`: it rewrites each ladder roadmodel 0.2.86–0.2.94 wrote (a
   `| Rank |` or `| Setting |` table with Cost / Balanced / Quality columns,
   or 0.2.94's `- Pick:` lists) as that table, every model, platform, level
-  and AA Index kept as written and Price filled in from the catalog. It
+  and AA Index kept as written and Price filled in from the catalog, and
+  drops the Runs paragraph beneath any ladder. It
   reaches only steps that read `Not started` and phases whose roadmap does
   not exist: a Complete step's ladder is the record of what ran, an `In
   progress` step's is what an agent is running, and a written phase's
@@ -238,15 +255,15 @@ complexity, novel or not; its Model rationale names them), then:
   not shipped, or a phase not yet written, replace it with the ladder
   printed for that classification, even where every pick still matches —
   a layout fix, not a new pick, so it takes no `Settings updated` line
-  unless the Pick of the column its **Runs:** line names changed. Without
-  roadmodel, leave every ladder as it is.
+  unless a Pick changed. Without roadmodel, leave every ladder's table as
+  it is, and delete only its Runs paragraph.
 - A Complete step's ladder keeps its values and its layout (see below),
   with its `> Ran` and `> Settings updated` lines beneath it, except the
   `&nbsp;`-indent display fix above.
 - Keep the step's selection block in the Model selection blocks equal
-  to the column its **Runs:** line names (its `BACKUP:` line to that
-  column's Backup), and its Summary Table row's Model to that column's
-  Pick.
+  to the option its Model rationale names as the best fit (its `BACKUP:`
+  line to that column's Backup), and its Summary Table row's Model to
+  that option's model.
 - The Summary Table (roadmodel 0.2.93 on) has four columns: Step /
   Scope / Model / Status, a Scope of at most 30 characters, and `CI`
   as a verification row's Model, so it fits in 80 columns. One with
@@ -255,7 +272,8 @@ complexity, novel or not; its Model rationale names them), then:
   changing what it names, write `CI` in each verification row's Model,
   and change no Status — a layout fix in every row, a Complete step's
   included, with no `Settings updated` line.
-- If it matches, leave the step exactly as it is.
+- If it matches, leave the step exactly as it is, apart from the Runs
+  paragraph and rationale fix above.
 - **Never touch a step that reads `Complete`.** Its settings are the
   record of what ran. Only the Summary Table's column fix reaches it,
   because it changes no value.
@@ -270,21 +288,23 @@ roadmap settings** table (roadmodel 0.2.54 on): the model and dials for
 the session that writes that phase's roadmap with `/roadmap-phase N`.
 For every phase whose roadmap does not exist yet — no
 `phaseNN-roadmap.md` or `phaseNN-<slug>-roadmap.md` for it — re-run the
-selector for that session, quality first: it runs the Quality column,
-the strongest `planning` model the operator's access methods reach, at
+selector for that session, quality first: its Quality column is the
+strongest `planning` model the operator's access methods reach, at
 the deepest reasoning rung it exposes on its platform (`Max` in Claude
 Code), thinking on where the model has a Thinking toggle, never
 `Ultracode`, with a backup on its own platform
 and dial — unless `planning/user-context.md` states a rule for
-roadmap-writing sessions, which wins. Where `roadmodel` is installed,
+roadmap-writing sessions that does not turn on a pool's state, which
+wins. Where `roadmodel` is installed,
 the table is the ladder `roadmodel ladder --category planning
---complexity high --phase` prints, pasted as printed with its **Runs:**
-line: it ranks on measured benchmarks, so a stale catalog letter cannot
+--complexity high --phase` prints, pasted as printed: it ranks on
+measured benchmarks, so a stale catalog letter cannot
 steer it, and a model the user-context names for these sessions still
 wins. A single-column table becomes the ladder: that is a difference.
 Without roadmodel, the table takes its platform's single-column shape,
 as a step's does. Conversation is **New**, followed by one or two
-sentences on why.
+sentences on why, naming the best fit on the merits; the operator picks
+the option, as for a step.
 
 - No table yet ⇒ add one. It is the phase's first pick, so it takes no
   `Settings updated` line.
@@ -293,7 +313,8 @@ sentences on why.
   beneath it.
 - A table that matches ⇒ leave the phase exactly as it is, except
   that a ladder written before roadmodel 0.2.93 becomes the ranked
-  ladder, as a step's does, and its ladder takes the table layout.
+  ladder, as a step's does, its ladder takes the table layout, and its
+  Runs paragraph and why get the fix a step's do.
 - **Never add, re-pick or rewrite the table of a phase whose roadmap
   exists.** Its table, or the lack of one, is the record of what wrote
   that roadmap, layout included.

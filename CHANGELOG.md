@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.106] — 2026-10-29
+
+- **Roadmap Settings recommend on merit, and you pick the option.** A step's ladder (Cost / Balanced / Quality, each ranked Pick, Runner-up, Backup) is still chosen from the step's classification and your access alone, with every usage pool read at headroom. It no longer closes with a **Runs:** paragraph naming a column from your Budget priority, plus a rule for `tight` or `exhausted` pools. You read your own headroom and pick the option to run:
+  - `/roadmap-step` runs whichever option you opened. It never chooses a column for you or reads the Usage-pool status table, and no longer overrides a top rung under `Consumption headroom: capped`. Its `> Ran` line records the option you ran, with no reason given.
+  - Each step's Model rationale gives the classification and, on the step's merits alone, the option that fits it best. It never says which column runs, and never cites a pool's state, which subscription has slack, or the Budget priority. The Summary Table and the selection block show that best fit.
+  - Phase roadmap settings work the same way. Their Quality column still runs at its deepest rung, because a phase roadmap fixes every step after it.
+  - `roadmodel relayout` deletes the Runs paragraph beneath every ladder of a step not yet run or a phase not yet written; Complete and In progress steps keep theirs as the record. `/roadmap-refresh` does the same and rewrites rationales that cited the Runs column or a pool. `roadmodel rerank` names each column whose Pick changed.
+  - `roadmodel ladder` and the `roadmap_settings` MCP tool no longer return `runs` or `rule`; `--budget` and `budget` are accepted and ignored.
+
 ## [0.2.105] — 2026-10-29
 
 - **VS Code gets its commands as Copilot skills.** The updater wrote the five commands as VS Code prompt files (`<VS Code user dir>/prompts/<name>.prompt.md`). VS Code's Copilot sessions do not load prompt files, so VS Code began offering to convert them to skills. The conversion would have written copies no release updates, kept `${input:arguments}` that skills do not substitute, and left the prompt files for the next upgrade to rewrite. The updater now writes `~/.copilot/skills/<name>/SKILL.md` (under `$COPILOT_HOME` when set), which VS Code's Copilot and Local sessions and the Copilot CLI read:

@@ -631,13 +631,14 @@ def backup_command(
     "--phase",
     is_flag=True,
     default=False,
-    help="The session that writes a phase roadmap: runs Quality, at its deepest rung.",
+    help="The session that writes a phase roadmap: its Quality column at its deepest rung.",
 )
 @click.option(
     "--budget",
     type=click.Choice(list(scoring.BUDGETS), case_sensitive=False),
     default=None,
-    help="Budget priority; defaults to the user-context's declared one.",
+    hidden=True,
+    help="Ignored: the ladder names no column, so the Budget priority does not reach it.",
 )
 @click.option(
     "--output",
@@ -665,10 +666,8 @@ def ladder_command(
 
     The Cost / Balanced / Quality picks /recommend shows, each ranked three
     deep (pick, runner-up, and a backup from another maker) with each option's
-    effort and AA Index, read with every usage pool at headroom, then the
-    column the step runs and the rule for a tight or exhausted pool.
-    The ladder outlives a pool's state: the step's runner picks the column on
-    the day, so the roadmap needs no refresh when a pool tightens.
+    effort and AA Index, read with every usage pool at headroom: a pool's state
+    never steers it. It names no column to run; the operator picks the option.
     """
     text = _scoring_user_context(user_context_path)
     posture = (budget or scoring.declared_budget(text)).lower()
@@ -709,7 +708,8 @@ def relayout_command(paths: tuple[Path, ...], check: bool) -> None:
     Platform / Level / AA / Price rows. Every model, platform, level and AA
     Index is kept as written, and Price is filled in from the bundled catalog.
     A step that is Complete or In progress, and a phase whose roadmap exists,
-    keep their ladder as the record of what ran or is running.
+    keep their ladder as the record of what ran or is running. Every other
+    ladder loses its Runs paragraph: a ladder names no column to run.
     """
     from roadmodel import ladder_layout
 
@@ -865,10 +865,16 @@ def rerank_command(
                 counts["unchanged"] += 1
                 continue
             if picks(got) != block.picks:
-                runs = scoring.LADDER_TIERS.index(str(got["runs"]))
-                was = " · ".join(block.picks[runs]) if len(block.picks) > runs else "—"
+                was = "; ".join(
+                    f"{tier.capitalize()} Pick was "
+                    + (" · ".join(block.picks[n]) if n < len(block.picks) else "—")
+                    for n, (tier, now) in enumerate(
+                        zip(scoring.LADDER_TIERS, picks(got), strict=True)
+                    )
+                    if n >= len(block.picks) or block.picks[n] != now
+                )
                 md += (
-                    f"\n\n> Settings updated {today} (rerank): was {was}. Re-ranked for "
+                    f"\n\n> Settings updated {today} (rerank): {was}. Re-ranked for "
                     f"{key[0]}, {key[1]} complexity, each column's ranks from three makers."
                 )
             elif ranks(got) != block.ranks:

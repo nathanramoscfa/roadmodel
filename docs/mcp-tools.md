@@ -204,10 +204,10 @@ the reason).
 A roadmap step's (or phase's) Settings table as the full ladder: the Cost /
 Balanced / Quality picks /recommend shows for the classification, each ranked
 three deep (pick, runner-up, and a backup from another maker) with each
-option's effort and AA Index, read with every usage pool at headroom. It also names the column the step runs (`runs`: the user-context's
-Budget priority, or Quality for a phase-roadmap session) and the rule for a
-pool that reads `tight` or `exhausted` on the day. Same output as
-`roadmodel ladder`. No provider key, no engine call.
+option's effort and AA Index, read with every usage pool at headroom: a
+pool's state never steers it. It names no column to run; the operator picks
+the option (0.2.106 on). Same output as `roadmodel ladder`. No provider key,
+no engine call.
 
 ### Signature
 
@@ -217,15 +217,16 @@ def roadmap_settings(
     complexity: str,          # low | medium | high
     novel: bool = False,      # High task that is novel problem-solving / multi-step proof
     phase: bool = False,      # the session that writes a phase roadmap: Quality at its deepest rung
-    budget: str | None = None,  # cheap | balanced | best; default = user-context's Budget priority
+    budget: str | None = None,  # accepted for older callers; ignored
 ) -> dict
 ```
 
 ### Returns
 
-`task`, `phase`, `runs` (`cost`, `balanced` or `quality`), `rule`, `columns`,
-`backup_warning`, and `markdown` (the table and its **Runs:** line, wrapped at
-80 columns and ready to paste). Each of `columns`' tiers is its pick, with `runner_up` and `backup`
+`task`, `phase`, `columns`, `backup_warning`, and `markdown` (the table, its
+note and its Conversation line, wrapped at 80 columns and ready to paste).
+Releases before 0.2.106 also returned `runs` and `rule` and closed `markdown`
+with a **Runs:** line. Each of `columns`' tiers is its pick, with `runner_up` and `backup`
 beside it in the same shape (`null` where the column has none): `model_id`,
 `model`, `platform_id`, `platform`, `effort`, `effort_cell`, `aa_index` (the
 model's AA Intelligence Index at that effort, or null where AA has not

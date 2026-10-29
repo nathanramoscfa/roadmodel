@@ -180,9 +180,9 @@ def test_roadmap_step_reads_a_settings_table_as_intent() -> None:
     assert "${CODEX_HOME:-" not in text
     assert "A family name alone is never a reason to stop" in flat
     assert "GPT-6 Sol → GPT-6.1 Sol" in flat
-    # A pre-capped top rung is stale, not binding.
-    assert "Consumption headroom: capped" in flat
-    assert "Keep a top rung only when" in flat
+    # The operator sets the level they chose: no posture rule overrides it
+    # (2026-10-29; it used to cap a top rung under `capped`).
+    assert "Keep a top rung only when" not in flat
     # What ran is recorded in the step's own PR; history is never rewritten.
     assert "Settings updated <YYYY-MM-DD>: was" in flat
     assert "Never rewrite the table of a step that reads `Complete`" in flat
@@ -669,7 +669,7 @@ def test_project_template_names_the_settings_that_write_each_phase_roadmap() -> 
         assert re.search(r"\| Quality +\|", block), name
         assert "✓" not in block, name
         assert "**Conversation:** New" in block, name
-        assert "**Runs:** Quality" in block, name
+        assert "**Runs:**" not in block, name
         assert "`/roadmap-phase " in section[settings:first_sub], name
     # The rule: quality first, the deepest rung, never Ultracode, history kept.
     for phrase in _QUALITY_FIRST:
@@ -746,22 +746,23 @@ def test_roadmap_writing_picks_take_their_models_from_the_scoring_core() -> None
     as every backup: the selector's prose ranks on catalog letters, and the
     GPT-6 family still carried its unreviewed B placeholder in planning. The
     scoring core ranks on measured benchmarks. Since 0.2.86 the whole table
-    comes from it: the ladder `roadmodel ladder` prints, which the session
-    runs at its Quality column; a model the user-context names still wins."""
+    comes from it: the ladder `roadmodel ladder` prints, its Quality column at
+    the deepest rung; a model the user-context names still wins. Since 0.2.106
+    it carries no Runs line: the operator picks the option."""
     ladder = "`roadmodel ladder --category planning --complexity high --phase`"
     for path in (PROJECT, PROMPT_PROJECT, REFRESH_COMMAND):
         flat = re.sub(r"\s+", " ", path.read_text())
         assert ladder in flat, path.name
-        assert "pasted as printed with its **Runs:** line" in flat, path.name
+        assert "pasted as printed:" in flat, path.name
+        assert "with its **Runs:** line" not in flat, path.name
         assert "a stale catalog letter cannot steer it" in flat, path.name
         assert "a model the user-context names for these sessions still wins" in flat, path.name
 
 
 def test_step_settings_are_the_full_ladder() -> None:
     """2026-10-14: the operator wanted /recommend's Cost / Balanced / Quality,
-    each with an effort and a cross-maker backup, in every roadmap, so a pool
-    that turns tight or exhausted needs no refresh: the step's runner picks
-    the column on the day."""
+    each with an effort and a cross-maker backup, in every roadmap. Since
+    2026-10-29 they pick the option themselves (below)."""
     step_ladder = "`roadmodel ladder --category <c> --complexity <x> [--novel]`"
     template = re.sub(r"\s+", " ", PHASE.read_text())
     assert "THE LADDER — the default wherever roadmodel is installed" in template
@@ -777,13 +778,40 @@ def test_step_settings_are_the_full_ladder() -> None:
     assert "A single-column table becomes the ladder: that is a difference" in refresh
     step = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
     assert "**Ladders** (Cost / Balanced / Quality columns" in step
-    assert "`> Ran <YYYY-MM-DD>: <column> — <model · effort>. <why>.`" in step
-    assert "reads `tight` or `exhausted` moves the run to the first of the column's" in prompt
-    # 2026-10-23: each column ranks a Pick, a Runner-up and a Backup, and a
-    # tight or exhausted pool moves the run down the ranks.
-    assert "`tight`: run the first of that column's Runner-up and Backup whose" in step
-    assert "`exhausted`: run the first of that column's Runner-up and Backup" in step
+    assert "`> Ran <YYYY-MM-DD>: <column and rank> — <model · level>.`" in step
     assert "or its ladder tables have no `Price` row, STOP" in prompt
+
+
+# Every file that writes, refreshes or runs a roadmap's Settings.
+SETTINGS_RULES = (PHASE, PROJECT, PROMPT_PHASE, PROMPT_PROJECT, STEP_COMMAND, REFRESH_COMMAND)
+
+
+def test_the_operator_picks_the_option_and_pools_never_steer_it() -> None:
+    """2026-10-29: the operator picks from the ladder by their own reading of
+    their headroom, so a ladder names no column to run (no Runs line), no rule
+    moves a step off a tight or exhausted pool, and the Model rationale gives
+    the best fit on the step's merits alone."""
+    for path in SETTINGS_RULES:
+        flat = re.sub(r"\s+", " ", path.read_text())
+        assert "**Runs:** {{" not in flat and "**Runs:** Quality —" not in flat, path.name
+        assert "whose pool has headroom" not in flat, path.name
+        assert "moves the run" not in flat and "picks the column" not in flat, path.name
+        assert "the step's runner" not in flat, path.name
+    step = re.sub(r"\s+", " ", STEP_COMMAND.read_text())
+    assert "**The operator picks the option.**" in step
+    assert "never read the Usage-pool status table or the Budget priority" in step
+    assert "it is no longer read, so ignore it" in step
+    assert "Every option in every column, on its own platform, continues" in step
+    assert "Consumption headroom: capped" not in step
+    prompt = re.sub(r"\s+", " ", PROMPT_PHASE.read_text())
+    assert "I pick the option: the session I opened is my choice" in prompt
+    for path in (PHASE, PROMPT_PHASE, REFRESH_COMMAND):
+        flat = re.sub(r"\s+", " ", path.read_text())
+        assert "the option that fits it best" in flat, path.name
+        assert "a pool's state" in flat or "usage pool's state" in flat, path.name
+    refresh = re.sub(r"\s+", " ", REFRESH_COMMAND.read_text())
+    assert "delete the **Runs:** paragraph beneath a ladder" in refresh
+    assert "reading every Usage-pool status row as `headroom`" in refresh
 
 
 def test_roadmap_project_asks_for_the_brief_when_none_is_given() -> None:

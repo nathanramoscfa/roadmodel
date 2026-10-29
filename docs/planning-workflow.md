@@ -178,8 +178,12 @@ The command:
    its own judgement.
 3. **Gates on settings.** It prints `Step 3 requires: Model … ·
    Platform … · Effort … · Thinking …` next to the session's own
-   model. Wrong model or a non-Claude-Code platform → it stops and
-   tells you what to run (`/model`, `/effort`). It cannot read your
+   model. With a ladder (Cost / Balanced / Quality), you pick the
+   option: any of its options, on its own platform, continues, and the
+   line names which one the session is. It never picks a column for
+   you and never reads your usage pools. A model the table does not
+   name, or another platform → it stops and lists what to run
+   (`/model`, `/effort`). It cannot read your
    Effort/Thinking settings, so that line is your cue to check them
    before it proceeds — set them first if you know them:
    `/model <M>` then `/effort <E>`, then `/roadmap-step 1 3`.

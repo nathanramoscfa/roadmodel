@@ -270,6 +270,8 @@ Optional. One row per metered pool tells the selector which funded paths
 have capacity. The CLI, MCP and local planning kit consume these rows through
 `<access-selection>` Step C and the FLAT-FUNDING GATE. Web Settings is a
 separate saved profile; a local edit alone does not update the web app.
+Roadmaps do not read these rows: a roadmap's Settings ladder reads every pool
+as `headroom`, and you pick the option to run from it.
 
 **Automatic meter rules.** The hourly `scripts/roll_pool_status.py` job
 refreshes Codex, OpenRouter and supported Antigravity meters; Claude Code's

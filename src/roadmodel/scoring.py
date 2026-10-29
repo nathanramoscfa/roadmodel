@@ -57,7 +57,6 @@ import functools
 import json
 import math
 import re
-import textwrap
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timedelta, timezone
@@ -1732,7 +1731,7 @@ def ladder(
     """The Cost / Balanced / Quality picks for ``task``, read off the
     operator's own cost/quality frontier. ``neutral_pools`` reads every usage
     pool as `headroom` (:func:`rank`): the ladder a roadmap's Settings carry,
-    which the step's runner reads against the pools' states on the day.
+    which no pool's state steers.
 
     - Pool: :func:`rank`'s candidates, every hard filter applied, one per model
       on its best platform; the funded ones, or all of them when the
@@ -2320,17 +2319,6 @@ def backup_cell(backup: Backup | Successor) -> str:
     return head if dial is None else f"{head} · {dial} {level}"
 
 
-# Which ladder column a roadmap step runs, by the user-context's Budget
-# priority; a phase-roadmap session runs Quality whatever the priority
-# (quality first: it fixes every step's scope and Settings, and runs once).
-RUN_COLUMN: Final[dict[str, str]] = {"cheap": "cost", "balanced": "balanced", "best": "quality"}
-# The rule a step's runner applies to the pools on the day (roadmap-step §3).
-RUN_RULE: Final[str] = (
-    "If that column's usage pool reads `tight` or `exhausted`, run the first of its "
-    "Runner-up and Backup whose pool has headroom; on a `tight` pool an option marked ↓ "
-    "(the Pick one level lower) also runs. With none, a `tight` column runs the Cost "
-    "column and an `exhausted` one its Backup."
-)
 # Dial levels a roadmap never pins: Codex's `ultra` and Claude Code's
 # Ultracode add parallel agents one planning document does not need.
 _NEVER_PINNED: Final[frozenset[str]] = frozenset({"ultra", "ultracode"})
@@ -2493,18 +2481,17 @@ def settings_ladder(
     benchmarks: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """A roadmap's Settings as the full ladder: the Cost / Balanced / Quality
-    picks /recommend shows, each ranked three deep, plus the column the step
-    runs and the rule for a tight or exhausted pool. Read with every pool at
-    `headroom` (``neutral_pools``), so the table outlives today's pool
-    states: the step's runner applies :data:`RUN_RULE` to the pools on the
-    day instead of the roadmap being refreshed. ``phase`` is a phase-roadmap
-    session: it runs Quality, at the deepest rung its dial allows.
+    picks /recommend shows, each ranked three deep. Read with every pool at
+    `headroom` (``neutral_pools``): a pool's state is informational and never
+    steers a roadmap's Settings. The ladder names no column to run; the
+    operator picks the option (2026-10-29). ``phase`` is a phase-roadmap
+    session: its Quality column runs at the deepest rung its dial allows.
 
     Each column ranks three options from three makers, each with its effort,
     its AA Intelligence Index (:func:`ladder_aa_index`) and its price there.
-    A tight pool is a maker's (for this operator a maker is a subscription),
-    so a fallback from the Pick's own maker would draw on the pool that just
-    ran short (2026-10-25: Quality ranked Opus 5.5, then Fable 5.1):
+    For this operator a maker is a subscription, so an option from the Pick's
+    own maker would offer no other subscription to run on (2026-10-25:
+    Quality ranked Opus 5.5, then Fable 5.1):
 
     - Pick: the column's rung (:func:`ladder`).
     - Runner-up: the column's rung with every model of the Pick's maker off
@@ -2513,7 +2500,7 @@ def settings_ladder(
 
     Where the pool holds too few makers, a missing rank is the Pick's own
     model one level lower on its dial (``stepped_down``; ↓ in the table),
-    which uses less of a tight pool; with one maker, the Runner-up and Backup
+    a cheaper run of the same model; with one maker, the Runner-up and Backup
     step down one and two levels. None below the dial's lowest level.
 
     The ranks follow the column's own rule, not the AA Index: Cost ranks each
@@ -2578,8 +2565,7 @@ def settings_ladder(
             )
             steps += 1
         columns[tier] = {**pick, "runner_up": ranked[1], "backup": ranked[2]}
-    runs = "quality" if phase else RUN_COLUMN.get(task.budget, "balanced")
-    lists = _layout.ladder_markdown(
+    table = _layout.ladder_markdown(
         {
             t: {
                 "pick": _layout_option(columns[t]),
@@ -2588,32 +2574,18 @@ def settings_ladder(
             }
             for t in LADDER_TIERS
         },
-        runs=runs,
         conversation="New",
         ranked_for=(
             f"{task.category}, {task.complexity} complexity"
             + (", novel" if task.novel and task.complexity == "high" else "")
         ),
     )
-    why = (
-        "a phase-roadmap session runs Quality (quality first)"
-        if phase
-        else f"the user-context's Budget priority is `{task.budget}`"
-    )
-    run_line = textwrap.fill(
-        f"**Runs:** {runs.capitalize()} — {why}. {RUN_RULE}",
-        width=80,
-        break_long_words=False,
-        break_on_hyphens=False,
-    )
     return {
         "task": asdict(task),
         "phase": phase,
-        "runs": runs,
-        "rule": RUN_RULE,
         "columns": columns,
         "backup_warning": lad.backup_warning,
-        "markdown": lists + "\n\n" + run_line,
+        "markdown": table,
     }
 
 
