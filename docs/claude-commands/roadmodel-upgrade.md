@@ -167,7 +167,11 @@ is unnecessary. On Windows a start missed while the PC was off runs once it
 is back. `--uninstall-schedule` removes it.
 
 Install a schedule on each machine; a coordinator can additionally update its
-configured peers. Keep the machines' run times from overlapping. Schedules
+configured peers. On a peer, install it with `--keep-pins --skip-roadmap-refresh`
+(both are recorded in the task): its coordinator refreshes the peer's roadmaps
+from clones (§6), and a peer's own unattended refresh may not be allowed to
+push. A peer's own run also upgrades environments that an SSH session cannot
+start (on Windows, a uv venv whose base Python is a junction). Keep the machines' run times from overlapping. Schedules
 and registries are local; installing one schedule does not install another
 on a peer. When the operator has requested automatic upkeep, install and
 verify it within that authorization.

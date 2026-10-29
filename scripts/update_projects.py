@@ -2190,14 +2190,26 @@ def _parse_time(value: str) -> tuple[int, int]:
     return int(m.group(1)), int(m.group(2))
 
 
-def _run_args(keep_pins: bool = False) -> list[str]:
-    """The scheduled run's own flags: `--keep-pins` is recorded at install time
-    so the daily run never clears the operator's pinned model/effort."""
-    return ["--log", *(["--keep-pins"] if keep_pins else [])]
+def _run_args(keep_pins: bool = False, skip_refresh: bool = False) -> list[str]:
+    """The scheduled run's own flags, recorded at install time: `--keep-pins`
+    so the daily run never clears the operator's pinned model/effort, and
+    `--skip-roadmap-refresh` on a fleet peer, whose coordinator refreshes its
+    projects' roadmaps from clones of their remotes."""
+    return [
+        "--log",
+        *(["--keep-pins"] if keep_pins else []),
+        *(["--skip-roadmap-refresh"] if skip_refresh else []),
+    ]
 
 
 def launchd_plist(
-    python: Path, script: Path, hour: int, minute: int, log: Path, keep_pins: bool = False
+    python: Path,
+    script: Path,
+    hour: int,
+    minute: int,
+    log: Path,
+    keep_pins: bool = False,
+    skip_refresh: bool = False,
 ) -> str:
     # stdout goes nowhere: `--log` already writes the run to the log, and
     # launchd capturing stdout into the same file recorded every run twice.
@@ -2215,7 +2227,7 @@ def launchd_plist(
     <string>-X</string>
     <string>utf8</string>
     <string>{escape(str(script))}</string>
-{"".join(f"    <string>{a}</string>{chr(10)}" for a in _run_args(keep_pins))}  </array>
+{"".join(f"    <string>{a}</string>{chr(10)}" for a in _run_args(keep_pins, skip_refresh))}  </array>
   <key>StartCalendarInterval</key>
   <dict><key>Hour</key><integer>{hour}</integer><key>Minute</key><integer>{minute}</integer></dict>
   <key>RunAtLoad</key><false/>
@@ -2229,14 +2241,22 @@ def launchd_plist(
 
 
 def schtasks_xml(
-    python: Path, script: Path, hour: int, minute: int, start: _dt.date, keep_pins: bool = False
+    python: Path,
+    script: Path,
+    hour: int,
+    minute: int,
+    start: _dt.date,
+    keep_pins: bool = False,
+    skip_refresh: bool = False,
 ) -> str:
     """The daily task as a Task Scheduler definition. Unlike `schtasks /SC
     DAILY`, it can set StartWhenAvailable: a PC that is off or asleep at HH:MM
     runs the job once it is back, instead of skipping that day."""
     command = escape(str(python))
     arguments = escape(
-        subprocess.list2cmdline(["-I", "-X", "utf8", str(script), *_run_args(keep_pins)])
+        subprocess.list2cmdline(
+            ["-I", "-X", "utf8", str(script), *_run_args(keep_pins, skip_refresh)]
+        )
     )
     return f"""<?xml version="1.0" encoding="UTF-16"?>
 <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
@@ -2286,7 +2306,12 @@ def _next_start(hour: int, minute: int, now: Optional[_dt.datetime] = None) -> _
 
 
 def schtasks_create_argv(
-    python: Path, script: Path, hour: int, minute: int, keep_pins: bool = False
+    python: Path,
+    script: Path,
+    hour: int,
+    minute: int,
+    keep_pins: bool = False,
+    skip_refresh: bool = False,
 ) -> list[str]:
     # /TR takes one command string; inner quotes protect paths with spaces.
     return [
@@ -2295,14 +2320,21 @@ def schtasks_create_argv(
         "/SC", "DAILY",
         "/ST", f"{hour:02d}:{minute:02d}",
         "/TR", subprocess.list2cmdline(
-            [str(python), "-I", "-X", "utf8", str(script), *_run_args(keep_pins)]
+            [str(python), "-I", "-X", "utf8", str(script), *_run_args(keep_pins, skip_refresh)]
         ),
     ]  # fmt: skip
 
 
-def cron_line(python: Path, script: Path, hour: int, minute: int, keep_pins: bool = False) -> str:
+def cron_line(
+    python: Path,
+    script: Path,
+    hour: int,
+    minute: int,
+    keep_pins: bool = False,
+    skip_refresh: bool = False,
+) -> str:
     command = shlex.join(
-        [str(python), "-I", "-X", "utf8", str(script), *_run_args(keep_pins)]
+        [str(python), "-I", "-X", "utf8", str(script), *_run_args(keep_pins, skip_refresh)]
     ).replace("%", r"\%")
     return f"{minute} {hour} * * * {command}  # {SCHEDULE_LABEL}"
 
@@ -2332,6 +2364,7 @@ def _install_windows_task(
     stamp: str,
     dry_run: bool,
     keep_pins: bool = False,
+    skip_refresh: bool = False,
 ) -> str:
     caught_up = (
         f"Task Scheduler task {TASK_NAME} — {stamp}; a missed start runs when the PC is back"
@@ -2342,9 +2375,9 @@ def _install_windows_task(
     # schtasks reads a task definition as UTF-16, which is what it declares.
     _replace_bytes(
         definition,
-        schtasks_xml(python, script, hour, minute, _next_start(hour, minute), keep_pins).encode(
-            "utf-16"
-        ),
+        schtasks_xml(
+            python, script, hour, minute, _next_start(hour, minute), keep_pins, skip_refresh
+        ).encode("utf-16"),
     )
     try:
         cp = _sys(["schtasks", "/Create", "/F", "/TN", TASK_NAME, "/XML", str(definition)])
@@ -2355,7 +2388,7 @@ def _install_windows_task(
     # A Task Scheduler that refuses the definition still takes the plain daily
     # task; it just skips a day the PC was off at HH:MM.
     refused = (cp.stderr or cp.stdout).strip()
-    cp = _sys(schtasks_create_argv(python, script, hour, minute, keep_pins))
+    cp = _sys(schtasks_create_argv(python, script, hour, minute, keep_pins, skip_refresh))
     if cp.returncode != 0:
         raise SystemExit(f"schtasks failed: {cp.stderr.strip() or cp.stdout.strip()}")
     return (
@@ -2364,7 +2397,9 @@ def _install_windows_task(
     )
 
 
-def install_schedule(when: str, dry_run: bool = False, keep_pins: bool = False) -> str:
+def install_schedule(
+    when: str, dry_run: bool = False, keep_pins: bool = False, skip_refresh: bool = False
+) -> str:
     """Register a daily run of the launcher for the current user. Returns a
     one-line description of what was (or would be) installed."""
     hour, minute = _parse_time(when)
@@ -2382,7 +2417,10 @@ def install_schedule(when: str, dry_run: bool = False, keep_pins: bool = False) 
         domain = f"gui/{os.getuid()}"
         _sys(["launchctl", "bootout", f"{domain}/{SCHEDULE_LABEL}"])  # ok if not loaded
         _replace_bytes(
-            plist, launchd_plist(python, script, hour, minute, LOG_FILE, keep_pins).encode("utf-8")
+            plist,
+            launchd_plist(python, script, hour, minute, LOG_FILE, keep_pins, skip_refresh).encode(
+                "utf-8"
+            ),
         )
         cp = _sys(["launchctl", "bootstrap", domain, str(plist)])
         if cp.returncode != 0:
@@ -2392,9 +2430,11 @@ def install_schedule(when: str, dry_run: bool = False, keep_pins: bool = False) 
         return f"launchd agent {plist} — {stamp}"
 
     if WINDOWS:
-        return _install_windows_task(python, script, hour, minute, stamp, dry_run, keep_pins)
+        return _install_windows_task(
+            python, script, hour, minute, stamp, dry_run, keep_pins, skip_refresh
+        )
 
-    line = cron_line(python, script, hour, minute, keep_pins)
+    line = cron_line(python, script, hour, minute, keep_pins, skip_refresh)
     if dry_run:
         return f"crontab entry — {stamp}\n  {line}"
     cp = _sys(["crontab", "-"], stdin="\n".join(_crontab_without_ours() + [line]) + "\n")
@@ -3547,7 +3587,12 @@ def _main(argv: Optional[list[str]] = None) -> int:
     if args.install_schedule:
         print(
             "\nSchedule:",
-            install_schedule(args.install_schedule, dry_run=args.dry_run, keep_pins=args.keep_pins),
+            install_schedule(
+                args.install_schedule,
+                dry_run=args.dry_run,
+                keep_pins=args.keep_pins,
+                skip_refresh=args.skip_roadmap_refresh,
+            ),
         )
 
     if args.auto_refresh and not args.dry_run:

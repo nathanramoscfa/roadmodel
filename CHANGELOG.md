@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.102] — 2026-10-29
+
+- **A schedule installed with `--skip-roadmap-refresh` keeps it.** `--install-schedule` already recorded `--keep-pins` in the daily task; it now records `--skip-roadmap-refresh` too, on launchd, Task Scheduler and cron. A fleet peer installs its schedule with both: its coordinator refreshes its roadmaps (0.2.101), and its own run upgrades the environments an SSH session cannot start.
+
 ## [0.2.101] — 2026-10-29
 
 - **`/roadmodel-upgrade --refresh-roadmaps` refreshes fleet peers' roadmaps too.** It refreshed only the coordinator's own projects: peers ran with `--skip-roadmap-refresh`, since a peer's unattended session may not be allowed to push, so a PC's projects never had their roadmaps refreshed, on demand or daily. The coordinator now refreshes each peer project itself, in a clone of its remote, under the same rules as its own projects. After the peers upgrade, each peer reports what is in flight in its checkouts with the new read-only `--refresh-plan` (another branch, uncommitted edits, an unwritten roadmap, the step branches its roadmaps name). The coordinator checks open PRs with its own gh and skips a peer project whose roadmaps are git-excluded, naming it. The daily run covers peers' projects the same way when the roadmap rules change.
