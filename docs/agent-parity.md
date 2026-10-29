@@ -229,7 +229,11 @@ OpenRouter is an API provider. OpenCode using OpenRouter gets the OpenCode
 integration above. Other OpenRouter clients need their own supported
 instruction integration; an API endpoint does not discover local files.
 Cursor and VS Code receive their supported commands and project guidance, but
-this updater does not install their global rule adapters.
+this updater does not install their global rule adapters. VS Code's commands
+are Copilot skills in `~/.copilot/skills/<name>/SKILL.md` (roadmodel 0.2.105 on),
+which Copilot sessions and the Copilot CLI read. Local sessions also read
+`~/.claude/skills/` and `~/.agents/skills/`, so they can list a command once per
+folder that holds it.
 
 Shared files preserve saved rules, durable memories, and written work state.
 They do not transfer full chat transcripts, unsaved reasoning, or guarantee

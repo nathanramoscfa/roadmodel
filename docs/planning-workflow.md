@@ -357,10 +357,10 @@ says `*** self-update FAILED` with the reason.
    summary. It does not start Step 1 — every step is its own
    conversation, per the step lifecycle in the template.
 
-## Other agents: Gemini CLI, Codex, Cursor, OpenCode
+## Other agents: Gemini CLI, Codex, Cursor, OpenCode, VS Code
 
-The same five commands exist for Gemini CLI, Codex, Cursor and
-OpenCode, generated from the Claude Code files so they never drift. `/roadmodel-upgrade` (or
+The same five commands exist for Gemini CLI, Codex, Cursor,
+OpenCode and VS Code's own chat (GitHub Copilot), generated from the Claude Code files so they never drift. `/roadmodel-upgrade` (or
 `python ~/.config/roadmodel/update_projects.py --commands-only`)
 installs them wherever it finds the tool:
 
@@ -370,8 +370,12 @@ installs them wherever it finds the tool:
 | Codex      | `~/.codex/`     | `~/.agents/skills/<name>/SKILL.md`   | `$roadmap-step 1 3`    |
 | Cursor     | `~/.cursor/`    | same `~/.agents/skills/` file (Cursor reads it) | `/roadmap-step 1 3` |
 | OpenCode   | `~/.config/opencode/` | `~/.config/opencode/commands/<name>.md` | `/roadmap-step 1 3` |
+| VS Code (Copilot) | VS Code's user folder | `~/.copilot/skills/<name>/SKILL.md` | `/roadmap-step 1 3` |
 
-`--agents gemini,codex,cursor,opencode` forces a set. The commands behave the same:
+`--agents gemini,codex,cursor,opencode,vscode` forces a set. In VS Code, the
+text after the command is passed to the skill as context (skills have no
+placeholders), and each one is manual only (`disable-model-invocation: true`):
+it runs when you type it. The Copilot CLI reads the same folder. The commands behave the same:
 `/roadmap-step` checks the step's Platform against the surface it is
 running on and stops if they differ, so a step the roadmap assigns to
 Codex is executed with `$roadmap-step` in Codex, not in Claude Code.

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.105] — 2026-10-29
+
+- **VS Code gets its commands as Copilot skills.** The updater wrote the five commands as VS Code prompt files (`<VS Code user dir>/prompts/<name>.prompt.md`). VS Code's Copilot sessions do not load prompt files, so VS Code began offering to convert them to skills. The conversion would have written copies no release updates, kept `${input:arguments}` that skills do not substitute, and left the prompt files for the next upgrade to rewrite. The updater now writes `~/.copilot/skills/<name>/SKILL.md` (under `$COPILOT_HOME` when set), which VS Code's Copilot and Local sessions and the Copilot CLI read:
+  - the text typed after `/name` is the command's ARGUMENTS, defined at the top of each skill;
+  - `argument-hint` shows the usage in the input box;
+  - `disable-model-invocation: true` keeps each command manual.
+
+  It removes its own prompt files, recognised by the header every version wrote, and leaves any other prompt file alone. A copy VS Code converted is replaced by the released one. Claude Code, Codex, Cursor, OpenCode and Antigravity are unchanged.
+
 ## [0.2.104] — 2026-10-29
 
 - **`/roadmap-project` asks for your brief.** Run with no argument, it used the kit prompt's default brief, `README.md`, without saying so, which left the obvious question unanswered: how does it know what roadmap to write? It now settles the brief first. Files you name (Markdown, text, PDF or Word) and/or a description you type are the brief; with neither, it asks what the project is for, what done looks like, your hard constraints, and whether a document already describes it, then waits. It never assumes the README. Hard constraints you state now reach the prompt's `{{CONSTRAINTS}}`.

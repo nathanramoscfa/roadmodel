@@ -136,7 +136,12 @@ and refreshes the five commands for detected agents: Claude commands and skill
 copies, legacy Gemini TOML commands, Antigravity skills under
 `~/.gemini/config/skills/` (IDE/2.0) and
 `~/.gemini/antigravity-cli/skills/` (CLI), shared Codex/Cursor skills under `~/.agents/skills/`,
-Codex prompt compatibility files, OpenCode commands, and VS Code prompt files.
+Codex prompt compatibility files, OpenCode commands, and Copilot skills under
+`~/.copilot/skills/` for VS Code's chat and the Copilot CLI (`$COPILOT_HOME` when
+set). Those replace the VS Code prompt files releases before 0.2.105 wrote: Copilot
+sessions do not load prompt files, so the updater removes its own copies, recognised
+by their header, and leaves any other prompt file alone. Do not accept VS Code's
+offer to convert them; that would freeze a copy no release updates.
 `--agents claude,gemini,antigravity,codex,cursor,opencode,vscode` overrides
 detection. Runtime synchronization retains the existing roadmodel MCP and
 provider-default behavior; use `--keep-pins` to retain pinned model/effort
