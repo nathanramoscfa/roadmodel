@@ -469,3 +469,75 @@ def test_keep_pins_reaches_the_peers(fleet: ModuleType, tmp_path: Path) -> None:
     args = fleet._updater_args(peer, sync_only=False, check=False, keep_pins=True)
     assert args[:3] == ["--local-only", "--skip-roadmap-refresh", "--keep-pins"]
     assert "--keep-pins" not in fleet._updater_args(peer, sync_only=False, check=False)
+
+
+def test_refresh_plan_args_are_read_only(fleet: ModuleType, tmp_path: Path) -> None:
+    peer = fleet.load_peers(_config(tmp_path))[0]
+    args = fleet._updater_args(peer, sync_only=False, check=False, refresh_plan=True)
+    # No --log, --add or upgrade: asking for a plan changes nothing on the peer.
+    assert args == ["--local-only", "--refresh-plan", *peer.projects]
+
+
+def _plan_line(*projects: dict[str, object]) -> str:
+    return "ROADMODEL-REFRESH-PLAN " + json.dumps({"version": 1, "projects": list(projects)})
+
+
+def _report(path: str, **updates: object) -> dict[str, object]:
+    return {
+        "path": path,
+        "mode": "clone",
+        "reason": "",
+        "default": "main",
+        "remote": "https://github.com/o/a.git",
+        "named": ["feature/phase01-step1-x"],
+        **updates,
+    }
+
+
+def test_refresh_plan_reads_only_the_marked_line(
+    fleet: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    peer = fleet.load_peers(_config(tmp_path))[0]
+    calls = []
+    stdout = "self-update: noise\n" + _plan_line(_report(r"E:\Code\Project A")) + "\n"
+
+    def run(command: list[str], **kwargs: object) -> SimpleNamespace:
+        calls.append((command, kwargs))
+        return SimpleNamespace(returncode=0, stdout=stdout)
+
+    monkeypatch.setattr(fleet.subprocess, "run", run)
+    assert fleet.refresh_plan(peer) == [_report(r"E:\Code\Project A")]
+    command, kwargs = calls[0]
+    assert "BatchMode=yes" in command and kwargs["stdin"] == subprocess.DEVNULL
+    assert kwargs["timeout"] == fleet.EXECUTION_TIMEOUT_SECONDS
+
+
+@pytest.mark.parametrize(
+    ("returncode", "stdout", "message"),
+    [
+        (255, "", "SSH connection failed"),
+        (2, "usage: unrecognized arguments: --refresh-plan", "older than 0.2.101"),
+        (0, "no marker here", "no refresh plan"),
+        (0, "ROADMODEL-REFRESH-PLAN {secret E:\\Code", "not valid JSON"),
+        (0, _plan_line(_report(r"E:\Code\Elsewhere")), "not configured"),
+        (0, _plan_line(_report(r"E:\Code\Project A", mode="push")), "unknown mode"),
+        (0, _plan_line(_report(r"E:\Code\Project A", named=[1])), "must be strings"),
+    ],
+)
+def test_refresh_plan_failures_name_no_peer_output(
+    fleet: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    returncode: int,
+    stdout: str,
+    message: str,
+) -> None:
+    peer = fleet.load_peers(_config(tmp_path))[0]
+    monkeypatch.setattr(
+        fleet.subprocess,
+        "run",
+        lambda *_a, **_k: SimpleNamespace(returncode=returncode, stdout=stdout),
+    )
+    with pytest.raises(ValueError, match=message) as caught:
+        fleet.refresh_plan(peer)
+    assert "secret" not in str(caught.value)

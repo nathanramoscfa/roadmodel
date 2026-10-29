@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.101] — 2026-10-29
+
+- **`/roadmodel-upgrade --refresh-roadmaps` refreshes fleet peers' roadmaps too.** It refreshed only the coordinator's own projects: peers ran with `--skip-roadmap-refresh`, since a peer's unattended session may not be allowed to push, so a PC's projects never had their roadmaps refreshed, on demand or daily. The coordinator now refreshes each peer project itself, in a clone of its remote, under the same rules as its own projects. After the peers upgrade, each peer reports what is in flight in its checkouts with the new read-only `--refresh-plan` (another branch, uncommitted edits, an unwritten roadmap, the step branches its roadmaps name). The coordinator checks open PRs with its own gh and skips a peer project whose roadmaps are git-excluded, naming it. The daily run covers peers' projects the same way when the roadmap rules change.
+
 ## [0.2.100] — 2026-10-28
 
 - **Superseded models leave the catalog 30 days after their successor arrived.** The benchmark refresh had failed since 2026-10-24: retiring a model narrows the field that coding and agentic letters are ranked over, so two surviving models' letters moved, and the refresh's drift check caught letters derived before the retirement. `update/supersede.py` now re-derives the letters and the per-effort ratings in the same write that retires, and the typed refresh part derives its letters over the models it keeps. The drift check is unchanged. The 18 models superseded on or before 2026-09-28 are retired: the catalog lists 44 models.

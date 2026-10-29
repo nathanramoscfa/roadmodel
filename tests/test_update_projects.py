@@ -14,7 +14,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 
 import pytest
 
@@ -2218,3 +2218,162 @@ def test_schedule_records_keep_pins_on_every_platform(up: ModuleType) -> None:
     # Without the flag every artifact is exactly what it was.
     assert "--keep-pins" not in up.launchd_plist(py, script, 9, 0, log)
     assert "--keep-pins" not in up.cron_line(py, script, 9, 0)
+
+
+def test_github_repo_reads_each_remote_form(up: ModuleType) -> None:
+    for remote in (
+        "https://github.com/owner/repo.git",
+        "https://github.com/owner/repo",
+        "git@github.com:owner/repo.git",
+        "ssh://git@github.com/owner/repo.git",
+    ):
+        assert up._github_repo(remote) == "owner/repo", remote
+    assert up._github_repo("https://gitlab.com/owner/repo.git") is None
+
+
+def test_a_peer_reports_its_checkouts_without_file_names(
+    up: ModuleType, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import json as _json
+
+    project = _project(tmp_path, _ROADMAPS)
+    (project / "README.md").write_text("edited\n")
+    line = up.refresh_plan_report([up.Entry(project)])
+    assert line.startswith(up.REFRESH_PLAN_MARKER)
+    report = _json.loads(line[len(up.REFRESH_PLAN_MARKER) :])["projects"][0]
+    assert (report["mode"], report["reason"]) == ("skip", "uncommitted edits (1 file(s))")
+    _g(project, "checkout", "-q", "--", "README.md")
+
+    # A clean checkout: a clone plan with the branches its roadmaps name.
+    assert up._main(["--refresh-plan", str(project)]) == 0
+    out = capsys.readouterr().out.strip()
+    report = _json.loads(out[len(up.REFRESH_PLAN_MARKER) :])["projects"][0]
+    assert report["path"] == str(project)
+    assert (report["mode"], report["default"]) == ("clone", "main")
+    assert report["named"] == ["feature/phase01-step1-x"]
+
+
+def test_a_peer_project_is_planned_from_its_report(
+    up: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    entry = up.Entry(Path(r"E:\Code\demo"), peer="pc")
+    assert (entry.name, entry.slug, entry.key) == ("demo", "pc-demo", r"pc:E:\Code\demo")
+    report = {
+        "path": r"E:\Code\demo",
+        "mode": "clone",
+        "reason": "",
+        "default": "master",
+        "remote": "https://github.com/o/demo.git",
+        "named": ["feature/phase01-step1-x"],
+    }
+    asked = []
+
+    def heads(path: object, repo: object = None) -> dict[str, int]:
+        asked.append((path, repo))
+        return {"dependabot/x": 3}
+
+    monkeypatch.setattr(up, "_open_pr_heads", heads)
+    plan = up.peer_refresh_plan(entry, report)
+    assert (plan.mode, plan.default, plan.remote) == ("clone", "master", report["remote"])
+    assert asked == [(None, "o/demo")]  # its PRs, looked up here
+
+    monkeypatch.setattr(up, "_open_pr_heads", lambda _p, _r=None: {"feature/phase01-step1-x": 7})
+    assert "step PR #7" in up.peer_refresh_plan(entry, report).reason
+    skip = dict(report, mode="skip", reason="on branch feature/x, not master")
+    assert up.peer_refresh_plan(entry, skip).reason == "on branch feature/x, not master"
+    private = up.peer_refresh_plan(entry, dict(report, mode="in-place"))
+    assert private.mode == "skip" and "git-excluded on pc" in private.reason
+    elsewhere = up.peer_refresh_plan(entry, dict(report, remote="https://gitlab.com/o/d.git"))
+    assert "gh could not list PRs" in elsewhere.reason
+
+
+@pytest.mark.skipif(os.name == "nt", reason="the fake claude is a POSIX script")
+def test_a_peer_project_refreshes_in_a_clone_of_its_remote(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = _project(tmp_path, _ROADMAPS)
+    remote = _g(project, "remote", "get-url", "origin").strip()
+    exported = []
+    monkeypatch.setattr(up, "_export_kit", lambda e, t: exported.append(e.peer) or "kit exported")
+    entry = up.Entry(Path(r"E:\Code\project"), peer="pc")
+    plan = up.RefreshPlan(entry, "clone", default="main", remote=remote)
+    body = (COMMANDS_DIR / "roadmap-refresh.md").read_text()
+    stuck = up.run_refresh(plan, str(_fake_claude(tmp_path, "stopped — x")), body, "20261029-1000")
+    kept = up.REFRESH_CACHE / "pc-project-20261029-1000"
+    assert stuck.log == up.REFRESH_LOGS / "20261029-1000-pc-project.log"
+    assert (kept / "docs" / "roadmap" / "phase01-roadmap.md").exists()
+    assert (kept / "cwd.txt").read_text() == str(kept)
+    assert exported == ["pc"]
+
+
+def test_peer_roadmaps_ask_the_peer_only_when_one_is_due(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    peer = SimpleNamespace(name="pc", projects=(r"E:\Code\a", r"E:\Code\b"))
+    asked: list[str] = []
+
+    def refresh_plan(p: object) -> list[dict[str, object]]:
+        asked.append("plan")
+        return [
+            {
+                "path": r"E:\Code\a",
+                "mode": "clone",
+                "reason": "",
+                "default": "main",
+                "remote": "https://github.com/o/a.git",
+                "named": [],
+            },
+            {
+                "path": r"E:\Code\b",
+                "mode": "skip",
+                "reason": "on branch x, not main",
+                "default": "",
+                "remote": "",
+                "named": [],
+            },
+        ]
+
+    fleet = SimpleNamespace(load_peers=lambda _p: [peer], refresh_plan=refresh_plan)
+    real_support = up._support
+    monkeypatch.setattr(
+        up, "_support", lambda name: fleet if name == "upgrade_fleet" else real_support(name)
+    )
+    monkeypatch.setattr(up, "_open_pr_heads", lambda _p, _r=None: {})
+    monkeypatch.setattr(up, "rules_fingerprint", lambda: "rules-1")
+    monkeypatch.setattr(up, "claude_executable", lambda: "claude")
+    monkeypatch.setattr(up, "_refresh_command_body", lambda: "body")
+    ran: list[str] = []
+
+    def fake_run(plan, claude, body, stamp):
+        ran.append(plan.entry.key)
+        if plan.mode == "skip":
+            return up.RefreshResult(plan.entry, "skipped", plan.reason)
+        return up.RefreshResult(plan.entry, "ok", "merged https://x/pull/1")
+
+    monkeypatch.setattr(up, "run_refresh", fake_run)
+
+    # The daily run, first sight: recorded as current, the peer not asked.
+    kwargs = {"unattended": True, "jobs": 2, "dry_run": False}
+    up.refresh_peer_roadmaps(on_demand=False, **kwargs)
+    assert asked == [] and ran == []
+    assert set(up.load_refresh_state()["projects"]) == {r"pc:E:\Code\a", r"pc:E:\Code\b"}
+
+    # On demand: the peer plans once, its in-flight project is skipped.
+    lines, attention = up.refresh_peer_roadmaps(on_demand=True, **kwargs)
+    assert asked == ["plan"] and not attention
+    assert sorted(ran) == [r"pc:E:\Code\a", r"pc:E:\Code\b"]
+    assert lines[0] == "pc:" and any("on branch x, not main" in line for line in lines)
+
+    # An unreachable peer: each project skipped with the reason, nothing run.
+    def unreachable(_p: object) -> list[dict[str, object]]:
+        raise ValueError("SSH connection failed")
+
+    fleet.refresh_plan = unreachable
+    ran.clear()
+    lines, _ = up.refresh_peer_roadmaps(on_demand=True, **kwargs)
+    assert any("no refresh plan from pc: SSH connection failed" in line for line in lines)
+
+    # A dry run opens no SSH.
+    fleet.refresh_plan = lambda _p: pytest.fail("a dry run asked the peer")
+    lines, _ = up.refresh_peer_roadmaps(on_demand=True, unattended=False, jobs=1, dry_run=True)
+    assert lines == ["pc: 2 project(s), planned by the peer on a real run"]
