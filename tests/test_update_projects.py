@@ -2220,6 +2220,23 @@ def test_schedule_records_keep_pins_on_every_platform(up: ModuleType) -> None:
     assert "--keep-pins" not in up.cron_line(py, script, 9, 0)
 
 
+def test_a_peer_schedule_records_skip_roadmap_refresh(up: ModuleType) -> None:
+    """A fleet peer's daily run leaves roadmaps to its coordinator, which
+    refreshes them from clones (0.2.101); a run of its own would re-try a
+    refresh that cannot push, every day (2026-10-29)."""
+    import datetime as dt
+    import plistlib
+
+    py, script, log = Path("/usr/bin/python3"), Path("/x/update_projects.py"), Path("/x/u.log")
+    both = "--log --keep-pins --skip-roadmap-refresh"
+    args = plistlib.loads(up.launchd_plist(py, script, 9, 0, log, True, True).encode())
+    assert args["ProgramArguments"][-3:] == both.split()
+    assert up.cron_line(py, script, 9, 0, True, True).split("  #")[0].endswith(both)
+    assert up.schtasks_create_argv(py, script, 9, 0, True, True)[-1].endswith(both)
+    assert both in up.schtasks_xml(py, script, 9, 0, dt.date(2026, 10, 29), True, True)
+    assert "--skip-roadmap-refresh" not in up.schtasks_xml(py, script, 9, 0, dt.date(2026, 10, 29))
+
+
 def test_github_repo_reads_each_remote_form(up: ModuleType) -> None:
     for remote in (
         "https://github.com/owner/repo.git",
