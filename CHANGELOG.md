@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.103] — 2026-10-29
+
+- **The checkout sync no longer stalls on regenerated kit files.** A merged roadmap refresh commits its own export of `planning/`, roadmodel's kit, and a checkout holding the daily run's newer export would refuse the fast-forward: on 2026-10-29 two PC checkouts missed the morning's roadmap refresh over one catalog line. When the only uncommitted edits standing in the way are regenerated `planning/` files, they now take the merged copy and the checkout fast-forwards; the next daily run re-exports the kit. Any other clashing edit still blocks, as does the personal `planning/user-context.md` copy, and untracked files are never touched.
+
 ## [0.2.102] — 2026-10-29
 
 - **A schedule installed with `--skip-roadmap-refresh` keeps it.** `--install-schedule` already recorded `--keep-pins` in the daily task; it now records `--skip-roadmap-refresh` too, on launchd, Task Scheduler and cron. A fleet peer installs its schedule with both: its coordinator refreshes its roadmaps (0.2.101), and its own run upgrades the environments an SSH session cannot start.
