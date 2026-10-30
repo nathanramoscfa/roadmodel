@@ -2,16 +2,18 @@
 //
 // The /models page's interactive half, in reading order: the filters, the
 // frontier chart (the whole market on one chart), the catalog table (its rows
-// scroll in their own box), then the Score charts that take the frontier apart
-// tier by tier. ONE set of filters drives all three: Provider, Jurisdiction (a
+// scroll in their own box), then the charts that take the frontier apart: one
+// per quality band, or one per cost tier, as the table is grouped. ONE set of
+// filters drives all three: Provider, Jurisdiction (a
 // checkbox per code, all checked to start), Weights (All, Open, Closed) and
 // Cost tier sit in the bar at the top (CatalogFilterBar), so unchecking CN
 // leaves the US + EU models in the table and in every chart, and Open leaves
 // only the models you could run yourself, with the chart that changes right
 // under the control. The table's Group by switch keeps its state here too,
 // since the charts read it: grouped by quality, the frontier chart marks the
-// table's ten-point AA Index bands, and the Score charts, one per cost tier
-// either way, say why they stay by tier.
+// table's ten-point AA Index bands and the charts below it are one per band
+// (QualityCharts, price for quality); grouped by cost tier, they are one per
+// tier (ScoreCharts, the Score column drawn).
 //
 // The page remembers them (lib/models-prefs): the server reads the saved
 // choices from a cookie and passes them in, so the first render is already
@@ -19,12 +21,13 @@
 //
 // What each filter changes is set out in lib/catalog-filter: Provider,
 // Jurisdiction and Weights choose the pool the frontier is recomputed over; Cost tier
-// narrows what is shown; the Score is the whole-catalog fit throughout.
+// narrows what is shown; the Score and the price-for-quality line are
+// whole-catalog fits throughout.
 "use client";
 
 import { useMemo, useState } from "react";
 
-import type { ScoreFit } from "@/lib/benchmark-grid";
+import type { PriceFit, ScoreFit } from "@/lib/benchmark-grid";
 import type { ModelRow } from "@/lib/catalog-fields";
 import {
   allFilters,
@@ -46,6 +49,7 @@ import { CatalogFilterBar } from "./CatalogFilterBar";
 import type { ChartFilter } from "./chart-kit";
 import { FrontierChart } from "./FrontierChart";
 import { ModelCatalog } from "./ModelCatalog";
+import { QualityCharts } from "./QualityCharts";
 import { FrontierScope } from "./ScoreCards";
 import { ScoreCharts } from "./ScoreCharts";
 
@@ -55,6 +59,7 @@ export function ModelsExplorer({
   benchmarksGeneratedAt,
   measuredCount,
   scoreFit,
+  priceFit,
   prefs,
 }: {
   models: ModelRow[];
@@ -62,6 +67,7 @@ export function ModelsExplorer({
   benchmarksGeneratedAt: string;
   measuredCount: number;
   scoreFit: ScoreFit | null;
+  priceFit: PriceFit | null;
   // The visitor's saved choices (defaults on a first visit).
   prefs: ModelsPrefs;
 }) {
@@ -103,8 +109,8 @@ export function ModelsExplorer({
     <FrontierScope.Provider value={scope}>
       <div className="space-y-8">
         {/* The filters, then the frontier (the whole market on one chart)
-            right under them, then the table, then the Score charts that take
-            the frontier apart tier by tier. */}
+            right under them, then the table, then the charts that take the
+            frontier apart, grouped the way the table is. */}
         <CatalogFilterBar
           models={models}
           filters={filters}
@@ -126,7 +132,11 @@ export function ModelsExplorer({
           onGroupChoiceChange={changeGrouping}
           initialView={prefs.view}
         />
-        <ScoreCharts rows={shown} pool={pool} fit={scoreFit} filter={chartFilter} grouping={grouping} />
+        {grouping === "quality" ? (
+          <QualityCharts rows={shown} pool={pool} fit={priceFit} filter={chartFilter} />
+        ) : (
+          <ScoreCharts rows={shown} pool={pool} fit={scoreFit} filter={chartFilter} />
+        )}
       </div>
     </FrontierScope.Provider>
   );

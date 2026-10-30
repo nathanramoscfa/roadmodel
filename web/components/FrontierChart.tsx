@@ -742,15 +742,16 @@ export function FrontierChart({
           </strong>{" "}
           The dotted green line joins them from cheapest to priciest and steps up at each one, so
           its height at any price is the top AA Index that price buys. The grey lines are the
-          Score&rsquo;s price lines, one per cost tier, drawn for comparison; the charts below
-          take them apart tier by tier.
+          Score&rsquo;s price lines, one per cost tier, drawn for comparison
+          {bands ? "." : "; the charts below take them apart tier by tier."}
           {bands && (
             <span data-testid="frontier-bands-note">
               {" "}
               Grouped by quality, the rows between the gridlines are the table&rsquo;s ten-point
               AA Index bands, every other one shaded: within a band the models line up by price,
               and the cheapest way to reach a level is where the green line first reaches that
-              band.
+              band. The charts below take the bands apart one at a time, each against the price
+              its quality typically costs.
             </span>
           )}
         </p>

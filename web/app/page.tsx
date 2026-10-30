@@ -10,6 +10,7 @@ import {
   getBenchmarkMeta,
   getCatalogGeneratedAt,
   getModelRows,
+  getPriceFit,
   getScoreFit,
 } from "@/lib/catalog-models";
 import { parsePrefs, PREFS_COOKIE } from "@/lib/models-prefs";
@@ -22,6 +23,7 @@ export default async function HomePage() {
   const generatedAt = getCatalogGeneratedAt();
   const bench = getBenchmarkMeta();
   const scoreFit = getScoreFit(models);
+  const priceFit = getPriceFit(models);
 
   return (
     <>
@@ -48,8 +50,9 @@ export default async function HomePage() {
 
         {/* Overview first: the filters, the frontier drawn across every model
             right under them, the catalog table (its rows scroll in their own
-            box), then the charts that explain its Score column tier by tier
-            (all three under the same filters), then the full key (the table's
+            box), then the charts that take the frontier apart, by quality
+            band or by cost tier as the table is grouped (all three under the
+            same filters), then the full key (the table's
             caption links to it). */}
         <div className="mt-10 space-y-8">
           <ModelsExplorer
@@ -58,6 +61,7 @@ export default async function HomePage() {
             benchmarksGeneratedAt={bench.generatedAt}
             measuredCount={bench.measuredCount}
             scoreFit={scoreFit}
+            priceFit={priceFit}
             prefs={prefs}
           />
           <CatalogLegend id="how-to-read" />

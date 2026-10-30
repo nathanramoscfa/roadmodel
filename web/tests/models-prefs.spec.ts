@@ -121,6 +121,9 @@ test("every choice survives a reload, and the server renders it before any scrip
   const html = await (await page.request.get("/models")).text();
   expect(html).toMatch(/data-testid="group-by-tier"[^>]*aria-pressed="true"/);
   expect(html).toMatch(/data-testid="frontier-panel"[^>]*data-grouping="tier"/);
+  // Grouped by cost tier, the charts under the table are the Score's, one per tier.
+  expect(html).toContain('data-testid="score-charts"');
+  expect(html).not.toContain('data-testid="quality-charts"');
   expect(html).toMatch(/data-testid="view-benchmarks"[^>]*aria-pressed="true"/);
   expect(html).toMatch(/data-testid="weights-closed"[^>]*aria-pressed="true"/);
   const box = (code: string) => html.match(new RegExp(`<input[^>]*data-testid="jurisdiction-${code}"[^>]*>`))?.[0] ?? "";
@@ -144,5 +147,6 @@ test("a malformed cookie opens the default page", async ({ page, context, baseUR
   await expect(page.getByTestId("model-row")).toHaveCount(MODEL_COUNT);
   await expect(page.getByTestId("group-by-quality")).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("frontier-panel")).toHaveAttribute("data-grouping", "quality");
+  await expect(page.getByTestId("quality-charts")).toBeVisible();
   await expect(page.getByTestId("view-ratings")).toHaveAttribute("aria-pressed", "true");
 });

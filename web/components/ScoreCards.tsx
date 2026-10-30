@@ -11,6 +11,10 @@
 //   ModelPointCard     — a chart dot: the model, its Score, AA Index and prices
 //   PriceLineCard      — a chart's fitted line: the equation, what each term
 //                        means, and the expected index at the pointer
+//   GapPointCard       — a quality chart dot: the model, its price gap, the
+//                        typical price for its AA Index, and its Score
+//   TypicalPriceCard   — a quality chart's line: the equation, what each term
+//                        means, and the typical price at the pointer
 //   FrontierPointCard  — a dot on the frontier chart: AA Index, blended price,
 //                        and where it stands across the whole catalog
 //   FrontierStepCard   — the frontier line: the top score a price buys
@@ -18,19 +22,23 @@
 // a model with its own cost tier, and FrontierStatus with the whole catalog,
 // or with the models the page's Provider and Jurisdiction filters keep
 // (FrontierScope).
-// Figures come from the same ScoreFit the table and charts use, so a card can
-// never disagree with the cell or the dot it explains.
+// Figures come from the same ScoreFit (or PriceFit) the table and charts use,
+// so a card can never disagree with the cell or the dot it explains.
 import { createContext, useContext, type ReactNode } from "react";
 
 import {
   blendedPrice,
   formatBench,
+  formatPriceGap,
   formatScore,
   formatUsd,
   GRID_COLUMN_BY_KEY,
+  priceGapFor,
   scoreBreakdown,
+  typicalPrice,
   type EvidenceVerdict,
   type IndexEvidence,
+  type PriceFit,
   type ScoreFit,
 } from "@/lib/benchmark-grid";
 import { COST_TIER_DEFS, COST_TIER_DOT, type CostTier, type ModelRow } from "@/lib/catalog-fields";
@@ -611,6 +619,143 @@ export function PriceLineCard({
         Least squares over {fit.n} AA-measured models. R² {fit.r2.toFixed(2)}: price and tier
         explain {Math.round(fit.r2 * 100)}% of the spread in AA Index. Residual σ {num(fit.sigma)}{" "}
         is the shaded band. A model&rsquo;s Score is its height above (+) or below (−) this line.
+      </p>
+    </div>
+  );
+}
+
+// The tie band of a price-for-quality line, as factors of the typical price:
+// "0.32× to 3.1×".
+export function gapTieBand(fit: PriceFit): string {
+  const f = 10 ** fit.sigma;
+  return `${(1 / f).toFixed(2)}× to ${f.toFixed(1)}×`;
+}
+
+// The table's colour rule, for a price gap: clearly cheaper than its quality
+// usually costs reads green, clearly dearer reads orange, inside the tie band
+// stays neutral.
+function gapToneClass(gap: number, fit: PriceFit): string {
+  const off = Math.log10(1 + gap);
+  if (off <= -fit.sigma) return "text-emerald-700 dark:text-emerald-300";
+  if (off >= fit.sigma) return "text-orange-700 dark:text-orange-300";
+  return STRONG;
+}
+
+export function GapPointCard({
+  model: m,
+  fit,
+  leader,
+}: {
+  model: ModelRow;
+  fit: PriceFit;
+  leader: ModelRow | null;
+}) {
+  const price = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
+  const gap = priceGapFor(fit, price, m.aa_index);
+  if (gap === null || m.aa_index === null) return null;
+  const typical = typicalPrice(fit, m.aa_index);
+  const inside = Math.abs(Math.log10(1 + gap)) < fit.sigma;
+  return (
+    <div className="w-[19rem] max-w-full" data-testid="gap-point-card">
+      <CardHeader name={m.name} tier={m.tier_cost} />
+      <div className="mt-2.5 space-y-0.5">
+        <Row
+          label={<span className={"font-semibold " + STRONG}>Price gap</span>}
+          value={formatPriceGap(gap)}
+          valueClass={"text-sm font-bold " + gapToneClass(gap, fit)}
+          testId="gap-point-card-gap"
+        />
+        <Row label="Blended price" value={`${usd(price)} per 1M tokens`} valueClass={STRONG} />
+        <Row
+          label={`Typical at AA Index ${num(m.aa_index)}`}
+          value={`${usd(typical)} per 1M tokens`}
+          valueClass={STRONG}
+        />
+      </div>
+      <p className={"mt-1 text-xs " + MUTED}>
+        Price gap = blended ÷ typical − 1: {usd(price)} ÷ {usd(typical)} − 1
+      </p>
+      <p className="mt-1.5 text-xs leading-[1.125rem]">
+        {inside
+          ? `Inside the tie band (${gapTieBand(fit)} the typical price): about what its quality usually costs.`
+          : gap < 0
+            ? `Costs less than models of its quality usually do, beyond the tie band (${gapTieBand(fit)} the typical price).`
+            : `Costs more than models of its quality usually do, beyond the tie band (${gapTieBand(fit)} the typical price).`}
+      </p>
+      <div className={"mt-2.5 space-y-0.5 border-t pt-2.5 " + RULE}>
+        <Row label="Input" value={`${usd(m.input_price_per_1m)} per 1M tokens`} valueClass={STRONG} />
+        <Row label="Output" value={`${usd(m.output_price_per_1m)} per 1M tokens`} valueClass={STRONG} />
+        {m.value_score !== null && (
+          <Row
+            label={`Score, among ${COST_TIER_DEFS[m.tier_cost].label}-cost models`}
+            value={formatScore(m.value_score)}
+            valueClass={STRONG}
+            testId="gap-point-card-score"
+          />
+        )}
+      </div>
+      <div className="mt-2.5">
+        <FrontierStatus model={m} leader={leader} />
+      </div>
+    </div>
+  );
+}
+
+export function TypicalPriceCard({
+  fit,
+  atIndex,
+}: {
+  fit: PriceFit;
+  // The AA Index under the pointer, for the live readout.
+  atIndex: number;
+}) {
+  const sign = (v: number) => (v < 0 ? "−" : "+");
+  const perTen = 10 ** (10 * fit.slope);
+  return (
+    <div className="w-[23rem] max-w-full" data-testid="typical-line-card">
+      <p className={"text-sm font-semibold " + STRONG}>Typical price for the AA Index</p>
+      <p className={"mt-0.5 text-xs " + MUTED}>
+        What a model is expected to cost at each AA Index, across the whole catalog.
+      </p>
+
+      <div
+        className={
+          "mt-2.5 rounded-md bg-brand-slate-50 px-3 py-2.5 text-[14px] font-semibold tabular-nums dark:bg-brand-slate-900/70 " +
+          STRONG
+        }
+        data-testid="typical-line-equation"
+      >
+        {LOG10}(typical price) = {num(fit.intercept)} {sign(fit.slope)} {Math.abs(fit.slope).toFixed(3)} × q
+      </div>
+
+      <dl className="mt-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-xs leading-[1.125rem]">
+        <dt className={"font-semibold tabular-nums " + STRONG}>q</dt>
+        <dd>AA Intelligence Index</dd>
+        <dt className={"font-semibold tabular-nums " + STRONG}>typical price</dt>
+        <dd>
+          Blended price, $ per 1M tokens
+          <span className={"block " + MUTED}>= (3 × input + 1 × output) ÷ 4</span>
+        </dd>
+        <dt className={"font-semibold tabular-nums " + STRONG}>{Math.abs(fit.slope).toFixed(3)}</dt>
+        <dd>
+          Slope: every 10 AA Index points {fit.slope >= 0 ? "multiplies" : "divides"} the typical
+          price by {(fit.slope >= 0 ? perTen : 1 / perTen).toFixed(2)}
+        </dd>
+      </dl>
+
+      <div
+        className="mt-2.5 flex items-baseline justify-between gap-4 rounded-md border border-brand-accent/40 bg-brand-accent/5 px-3 py-1.5 text-[13px] tabular-nums"
+        data-testid="typical-line-readout"
+      >
+        <span>At AA Index {num(atIndex)}</span>
+        <span className={"font-semibold " + STRONG}>typical {usd(typicalPrice(fit, atIndex))}</span>
+      </div>
+
+      <p className={"mt-2.5 border-t pt-2 text-xs leading-[1.125rem] " + RULE + " " + MUTED}>
+        Least squares over {fit.n} AA-measured models. R² {fit.r2.toFixed(2)}: the AA Index
+        explains {Math.round(fit.r2 * 100)}% of the spread in {LOG10}(price). Residual σ{" "}
+        {fit.sigma.toFixed(2)} is the shaded band, {gapTieBand(fit)} the typical price. A
+        model&rsquo;s price gap is how far its price sits left (−) or right (+) of this line.
       </p>
     </div>
   );

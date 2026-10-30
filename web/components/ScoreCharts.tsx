@@ -6,11 +6,12 @@
 // band, and a stem from the line to each model — the stem's length IS the
 // model's Score.
 //
-// The charts stay one per cost tier whichever way the table is grouped. A
-// Score is a model's distance from its own tier's line, and a tier's chart
-// shows the whole tier around that line, some above and some below. Grouped
-// by quality, the panel says so and points to the frontier chart, which
-// shades the quality bands (FrontierChart).
+// Drawn while the table is grouped by cost tier. A Score is a model's
+// distance from its own tier's line, and a tier's chart shows the whole tier
+// around that line, some above and some below. It cannot be cut into the
+// quality grouping's AA Index bands, which pick their models by the height
+// the Score measures, so grouped by quality the page draws one chart per band
+// from the price-for-quality line instead (QualityCharts).
 //
 // Interactive: hover (mouse), tap (touch), or tab to (keyboard) any dot for a
 // card with the model's name, Score, AA Index and prices; hover the line for
@@ -38,8 +39,8 @@ import {
   type ScoreFit,
 } from "@/lib/benchmark-grid";
 import { COST_TIER_DEFS, COST_TIER_DOT, type CostTier, type ModelRow } from "@/lib/catalog-fields";
-import type { Grouping } from "@/lib/models-prefs";
 import {
+  BETTER as ABOVE,
   DOT_R,
   FRONTIER,
   LABEL_PX,
@@ -50,17 +51,12 @@ import {
   fitTitle,
   PRICE_AXIS_TITLES,
   useWidth,
+  WORSE as BELOW,
   type ChartFilter,
   type Label,
 } from "./chart-kit";
 import { FloatingCard, type AnchorRect } from "./FloatingCard";
 import { FrontierScope, ModelPointCard, PriceLineCard } from "./ScoreCards";
-
-// Sign is also carried by direction and by the printed Score, so colour is
-// never the only cue. Sky/orange stays distinct under protan and deutan
-// vision, on both the light and the dark surface.
-const ABOVE = "#0284c7";
-const BELOW = "#ea580c";
 
 const TIER_ORDER: CostTier[] = ["very-high", "high", "medium", "low"];
 const M = { top: 12, right: 18, bottom: 46, left: 46 };
@@ -531,7 +527,6 @@ export function ScoreCharts({
   pool,
   fit,
   filter,
-  grouping,
 }: {
   // The rows the page's filters keep: the dots.
   rows: ModelRow[];
@@ -541,9 +536,6 @@ export function ScoreCharts({
   fit: ScoreFit | null;
   // The active filters; null when the page shows every model.
   filter: ChartFilter | null;
-  // The table's Group by choice. The charts are per cost tier either way;
-  // grouped by quality, the panel says why.
-  grouping: Grouping;
 }) {
   const scope = useContext(FrontierScope);
   if (!fit) return null;
@@ -584,20 +576,6 @@ export function ScoreCharts({
           , in index points: above it (+) buys more intelligence than the price predicts, below it
           (&minus;) buys less.
         </p>
-
-        {grouping === "quality" && (
-          <p
-            className="rounded-lg border border-brand-accent/30 bg-brand-accent/5 px-3 py-2 text-xs leading-5 text-brand-slate-700 dark:bg-brand-accent/10 dark:text-brand-slate-200"
-            data-testid="score-charts-grouping-note"
-          >
-            <strong className="font-semibold text-brand-slate-900 dark:text-brand-slate-50">
-              The table is grouped by quality; these charts stay one per cost tier.
-            </strong>{" "}
-            A Score is a model&rsquo;s distance from its own tier&rsquo;s line, and a tier&rsquo;s
-            chart shows the whole tier around that line. The frontier chart above shades the
-            table&rsquo;s quality bands.
-          </p>
-        )}
 
         {filter && (
           <FilterNote filter={filter} testId="score-charts-filter">

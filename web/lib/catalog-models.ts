@@ -20,12 +20,14 @@ import {
 import { extractAaIndex } from "@/lib/benchmark-scores";
 import {
   blendedPrice,
+  fitPriceModel,
   fitScoreModel,
   GRID_COLUMNS,
   newUntil,
   scoreFor,
   type BenchKey,
   type BenchRow,
+  type PriceFit,
   type ScoreFit,
 } from "@/lib/benchmark-grid";
 import { withFrontier } from "@/lib/catalog-filter";
@@ -212,6 +214,19 @@ export function getScoreFit(
       price: blendedPrice(r.input_price_per_1m, r.output_price_per_1m),
       index: r.aa_index,
       tier: r.tier_cost,
+    })),
+  );
+}
+
+// The price-for-quality fit behind the quality grouping's charts, over the
+// same rows.
+export function getPriceFit(
+  rows: readonly Pick<ModelRow, "input_price_per_1m" | "output_price_per_1m" | "aa_index">[],
+): PriceFit | null {
+  return fitPriceModel(
+    rows.map((r) => ({
+      price: blendedPrice(r.input_price_per_1m, r.output_price_per_1m),
+      index: r.aa_index,
     })),
   );
 }

@@ -505,6 +505,81 @@ export function formatScore(score: number | null): string {
   return (rounded > 0 ? "+" : "−") + Math.abs(rounded).toFixed(1);
 }
 
+// Price for quality, the quality grouping's charts: log10(blended price) =
+// a + b·index, one least-squares line over every AA-measured model. The Score
+// fit reads the other way (index from price) and cannot be cut into AA Index
+// bands: a band picks its models by the height that line predicts, so a high
+// band sits wholly above its line and a low band wholly below. Here the AA
+// Index is the input, and cutting on the input leaves the fit unbiased, so a
+// band holds models on both sides of its line. No intercept per band: every
+// band reads its slice of one line. A model's price gap is its price over
+// the typical price for its AA Index, less one: −0.5 costs half what its
+// quality usually does, +1 twice. σ is in log10 price, so the tie band is a
+// factor of 10^σ either way.
+export interface PriceFit {
+  n: number;
+  intercept: number; // log10 blended price at AA Index 0
+  slope: number; // log10 blended price per AA Index point
+  r2: number;
+  sigma: number; // residual standard deviation, in log10 price
+  meanIndex: number;
+  meanLogPrice: number;
+}
+
+export function fitPriceModel(rows: readonly { price: number; index: number | null }[]): PriceFit | null {
+  const pts = rows.filter(
+    (r): r is { price: number; index: number } =>
+      r.index !== null && Number.isFinite(r.index) && r.price > 0,
+  );
+  const n = pts.length;
+  if (n < 3) return null;
+  const xs = pts.map((p) => p.index);
+  const ys = pts.map((p) => Math.log10(p.price));
+  const mx = xs.reduce((a, b) => a + b, 0) / n;
+  const my = ys.reduce((a, b) => a + b, 0) / n;
+  let sxx = 0;
+  let sxy = 0;
+  let syy = 0;
+  for (let i = 0; i < n; i++) {
+    sxx += (xs[i] - mx) ** 2;
+    sxy += (xs[i] - mx) * (ys[i] - my);
+    syy += (ys[i] - my) ** 2;
+  }
+  if (sxx === 0 || syy === 0) return null;
+  const slope = sxy / sxx;
+  const intercept = my - slope * mx;
+  let ssRes = 0;
+  for (let i = 0; i < n; i++) ssRes += (ys[i] - (intercept + slope * xs[i])) ** 2;
+  return {
+    n,
+    intercept,
+    slope,
+    r2: 1 - ssRes / syy,
+    sigma: Math.sqrt(ssRes / Math.max(1, n - 2)),
+    meanIndex: mx,
+    meanLogPrice: my,
+  };
+}
+
+// The typical blended price the line gives at an AA Index.
+export function typicalPrice(fit: PriceFit, index: number): number {
+  return 10 ** (fit.intercept + fit.slope * index);
+}
+
+// The price gap for one model, or null when it is unmeasured or the fit failed.
+export function priceGapFor(fit: PriceFit | null, price: number, index: number | null): number | null {
+  if (!fit || index === null || !(price > 0)) return null;
+  return price / typicalPrice(fit, index) - 1;
+}
+
+// "−93%" / "+140%" / "0%": whole percent, explicit sign, typographic minus.
+export function formatPriceGap(gap: number | null): string {
+  if (gap === null) return "—";
+  const pct = Math.round(gap * 100);
+  if (pct === 0) return "0%";
+  return (pct > 0 ? "+" : "−") + Math.abs(pct) + "%";
+}
+
 // The expected index the tier's line gives at a blended price.
 export function expectedIndex(fit: ScoreFit, tier: string, price: number): number | null {
   const t = fit.tiers[tier];

@@ -16,14 +16,19 @@ import { scoresFor } from "../lib/benchmark-scores";
 import {
   bandFor,
   blendedPrice,
+  fitPriceModel,
   fitScoreModel,
   formatBench,
+  formatPriceGap,
+  formatQualityBand,
   formatScore,
   GRID_COLUMN_BY_KEY,
   GRID_COLUMNS,
   indexEvidence,
   newUntil,
   paretoFrontier,
+  priceGapFor,
+  qualityBand,
   COMPOSITE_DERIVATION,
   compositeScores,
   RANK_DERIVATION,
@@ -173,13 +178,15 @@ test("renders the catalog table, legend, and model links", async ({ page }) => {
   await expect(claude).toHaveAttribute("target", "_blank");
 });
 
-test("the page leads with the filters and the frontier chart, then the table, the Score charts, then the full key", async ({ page }) => {
+test("the page leads with the filters and the frontier chart, then the table, the band charts, then the full key", async ({ page }) => {
   await page.goto("/models");
   const top = async (loc: ReturnType<typeof page.locator>) => (await loc.boundingBox())!.y;
   const filters = await top(page.getByTestId("catalog-filters"));
   const frontierPanel = await top(page.getByTestId("frontier-panel"));
   const table = await top(page.getByTestId("model-catalog"));
-  const charts = await top(page.getByTestId("score-charts"));
+  // Grouped by quality (the default), the charts under the table are one per
+  // quality band; grouped by cost tier, one per tier, in the same place.
+  const charts = await top(page.getByTestId("quality-charts"));
   const legend = await top(page.getByTestId("catalog-legend"));
   const reference = await top(page.locator("#benchmarks"));
   expect(filters).toBeLessThan(frontierPanel);
@@ -323,8 +330,22 @@ test("unchecking CN takes it out of every chart and redraws the frontier over th
   const onFrontier = pool.filter((r) => leaderOf(r, pool) === r).sort((a, b) => a.price - b.price);
   const catalogFrontier = new Set(MEASURED.filter((r) => leaderOf(r) === r).map((r) => r.m.id));
 
-  // The Score charts: every non-CN measured model in a charted tier, no CN
-  // dot, and each dot keeps its whole-catalog Score.
+  // The quality charts (the default grouping): every non-CN measured model,
+  // no CN dot, and each dot keeps its whole-catalog price gap.
+  const priceFit = fitPriceModel(MEASURED)!;
+  const qualityPanel = page.getByTestId("quality-charts");
+  await expect(qualityPanel.getByTestId("quality-charts-filter")).toContainText("Jurisdiction: US + EU");
+  await expect(qualityPanel.getByTestId("quality-chart-point")).toHaveCount(pool.length);
+  await expect(
+    qualityPanel.locator(`[data-testid="quality-chart-point"][data-model-id="${pool[0].m.id}"]`),
+  ).toHaveAttribute(
+    "aria-label",
+    new RegExp(`price gap ${formatPriceGap(priceGapFor(priceFit, pool[0].price, pool[0].index)).replace("+", "\\+")},`),
+  );
+
+  // The Score charts (grouped by cost tier): every non-CN measured model in a
+  // charted tier, no CN dot, and each dot keeps its whole-catalog Score.
+  await page.getByTestId("group-by-tier").click();
   const fit = fitScoreModel(MEASURED.map((r) => ({ price: r.price, index: r.index, tier: r.m.tier_cost })))!;
   const charted = pool.filter((r) => (fit.tiers[r.m.tier_cost]?.n ?? 0) >= 2);
   const scorePanel = page.getByTestId("score-charts");
@@ -388,7 +409,14 @@ test("a Cost tier narrows the charts to its models; the frontier still spans eve
   const inTier = MEASURED.filter((r) => r.m.tier_cost === tier);
   const catalogFrontier = new Set(MEASURED.filter((r) => leaderOf(r) === r).map((r) => r.m.id));
 
-  // One Score chart, the tier's own.
+  // Grouped by quality, a band chart for each band the tier reaches, holding
+  // only the tier's models.
+  const tierBands = new Set(inTier.map((r) => qualityBand(r.index)));
+  await expect(page.getByTestId("quality-chart")).toHaveCount(tierBands.size);
+  await expect(page.getByTestId("quality-chart-point")).toHaveCount(inTier.length);
+
+  // Grouped by cost tier, one Score chart, the tier's own.
+  await page.getByTestId("group-by-tier").click();
   await expect(page.getByTestId("score-chart")).toHaveCount(1);
   await expect(page.getByTestId("score-chart")).toHaveAttribute("data-tier", tier);
   await expect(page.getByTestId("score-chart-point")).toHaveCount(inTier.length);
@@ -445,7 +473,7 @@ test("Weights: Open keeps only the open-weight models and redraws the frontier o
   await expect(panel.getByTestId("frontier-line")).toHaveAttribute("data-frontier-ids", frontierOf(openPool));
   await expect(panel.getByTestId("frontier-filter")).toContainText("redrawn over the open-weight models");
   await expect(page.getByTestId("frontier-scope")).toHaveText("open-weight");
-  await expect(page.getByTestId("score-charts-filter")).toContainText("Open weights");
+  await expect(page.getByTestId("quality-charts-filter")).toContainText("Open weights");
 
   // With a jurisdiction narrowed too, the scope names both.
   await page.getByTestId("jurisdiction-cn").uncheck();
@@ -479,9 +507,9 @@ test("a Provider narrows the charts to its models and redraws the frontier over 
   const pool = MEASURED.filter((r) => modelProvider(r.m.id)?.label === "Anthropic");
   const onFrontier = pool.filter((r) => leaderOf(r, pool) === r).sort((a, b) => a.price - b.price);
 
-  const scoreIds = await page.getByTestId("score-chart-point").evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")));
-  expect(scoreIds.length).toBeGreaterThan(0);
-  for (const id of scoreIds) expect(pool.some((r) => r.m.id === id)).toBe(true);
+  const chartIds = await page.getByTestId("quality-chart-point").evaluateAll((els) => els.map((e) => e.getAttribute("data-model-id")));
+  expect(chartIds.length).toBe(pool.length);
+  for (const id of chartIds) expect(pool.some((r) => r.m.id === id)).toBe(true);
 
   const panel = page.getByTestId("frontier-panel");
   await expect(panel.getByTestId("frontier-chart-point")).toHaveCount(pool.length);
@@ -1299,10 +1327,15 @@ test("sorting a category orders by letter, then AA Index", async ({ page }) => {
   }
 });
 
-test("one Score chart per cost tier in either grouping, every measured model plotted with the table's figure", async ({ page }) => {
+test("grouped by cost tier, one Score chart per cost tier, every measured model plotted with the table's figure", async ({ page }) => {
   await page.goto("/models");
+  // Quality is the default grouping, and it draws the band charts instead.
+  await expect(page.getByTestId("group-by-quality")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("score-charts")).toHaveCount(0);
+  await page.getByTestId("group-by-tier").click();
   const panel = page.getByTestId("score-charts");
   await expect(panel).toBeVisible(); // open by default: the charts are the explanation
+  await expect(page.getByTestId("quality-charts")).toHaveCount(0);
 
   const fit = fitScoreModel(
     scored.map((m) => ({
@@ -1314,17 +1347,10 @@ test("one Score chart per cost tier in either grouping, every measured model plo
   expect(fit).not.toBeNull();
   const tiers = Object.entries(fit!.tiers).filter(([, t]) => t.n >= 2).map(([tier]) => tier);
   await expect(panel.getByTestId("score-chart")).toHaveCount(tiers.length);
-  const charted = () =>
-    panel.getByTestId("score-chart").evaluateAll((els) => els.map((e) => e.getAttribute("data-tier")));
-
-  // Grouped by quality (the default), the charts stay by tier and say why:
-  // a Score is read against its own tier's line.
-  await expect(page.getByTestId("group-by-quality")).toHaveAttribute("aria-pressed", "true");
-  await expect(panel.getByTestId("score-charts-grouping-note")).toContainText(
-    "these charts stay one per cost tier",
-  );
-  const byQuality = await charted();
-  expect([...byQuality].sort()).toEqual([...tiers].sort());
+  const charted = await panel
+    .getByTestId("score-chart")
+    .evaluateAll((els) => els.map((e) => e.getAttribute("data-tier")));
+  expect([...charted].sort()).toEqual([...tiers].sort());
 
   for (const tier of tiers) {
     const chart = panel.locator(`[data-testid="score-chart"][data-tier="${tier}"]`);
@@ -1340,20 +1366,124 @@ test("one Score chart per cost tier in either grouping, every measured model plo
     }
   }
 
-  // Grouped by cost tier: the same charts, and the note steps aside.
-  await page.getByTestId("group-by-tier").click();
-  await expect(panel.getByTestId("score-charts-grouping-note")).toHaveCount(0);
-  await expect(panel.getByTestId("score-chart")).toHaveCount(tiers.length);
-  expect(await charted()).toEqual(byQuality);
-
   // The footnote carries the live fit, not typed figures.
   await expect(panel).toContainText(`One least-squares fit over all ${fit!.n} AA-measured models`);
   await expect(panel).toContainText(`β = ${fit!.slope.toFixed(1)}`);
 });
 
+test("grouped by quality, one chart per quality band, best first, every measured model at its price gap", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/models");
+  const panel = page.getByTestId("quality-charts");
+  await expect(panel).toBeVisible();
+  await expect(panel.getByTestId("quality-charts-score-note")).toContainText(
+    "the table’s Score compares it with its own cost tier",
+  );
+
+  // The bands are the table's quality groups, in the table's order.
+  const fit = fitPriceModel(MEASURED)!;
+  const bands = [...new Set(MEASURED.map((r) => qualityBand(r.index)!))].sort((a, b) => b - a);
+  await expect(panel.getByTestId("quality-chart")).toHaveCount(bands.length);
+  expect(
+    await panel.getByTestId("quality-chart").evaluateAll((els) => els.map((e) => Number(e.getAttribute("data-band")))),
+  ).toEqual(bands);
+  const tableBands = await page
+    .getByTestId("quality-group")
+    .evaluateAll((els) => els.map((e) => e.getAttribute("data-band")).filter((b) => b !== "none").map(Number));
+  expect(tableBands).toEqual(bands);
+
+  for (const band of bands) {
+    const chart = panel.locator(`[data-testid="quality-chart"][data-band="${band}"]`);
+    await expect(chart).toContainText(`AA Index ${formatQualityBand(band)}`);
+    const inBand = MEASURED.filter((r) => qualityBand(r.index) === band);
+    await expect(chart.getByTestId("quality-chart-point")).toHaveCount(inBand.length);
+    for (const r of inBand) {
+      const gap = formatPriceGap(priceGapFor(fit, r.price, r.index));
+      await expect(
+        chart.locator(`[data-testid="quality-chart-point"][data-model-id="${r.m.id}"]`),
+      ).toHaveAttribute("aria-label", new RegExp(`price gap ${gap.replace("+", "\\+")},`));
+    }
+  }
+
+  // Every dot sits in its band's rows and on its own side of the line: left
+  // when it costs less than the typical price for its AA Index.
+  const sides = await panel.getByTestId("quality-chart").evaluateAll((charts) =>
+    charts.flatMap((c) => {
+      const line = c.querySelector('[data-testid="quality-chart-line"]') as SVGLineElement;
+      const [x1, y1, x2, y2] = ["x1", "y1", "x2", "y2"].map((a) => Number(line.getAttribute(a)));
+      return [...c.querySelectorAll('[data-testid="quality-chart-point"]')].map((d) => {
+        const cx = Number(d.getAttribute("cx"));
+        const cy = Number(d.getAttribute("cy"));
+        const lineX = x1 + ((cy - y1) / (y2 - y1)) * (x2 - x1);
+        return { id: d.getAttribute("data-model-id")!, left: cx < lineX, inside: cy <= y1 && cy >= y2 };
+      });
+    }),
+  );
+  expect(sides).toHaveLength(MEASURED.length);
+  for (const sd of sides) {
+    const r = MEASURED.find((x) => x.m.id === sd.id)!;
+    expect(sd.inside).toBe(true);
+    expect(sd.left).toBe(priceGapFor(fit, r.price, r.index)! < 0);
+  }
+
+  // The footnote carries the live fit, not typed figures.
+  await expect(panel).toContainText(`One least-squares fit over all ${fit.n} AA-measured models`);
+  await expect(panel).toContainText(`b = ${fit.slope.toFixed(3)}`);
+
+  // A dot's card: its price gap, the typical price for its AA Index, and the
+  // table's Score beside it.
+  const centres = await panel.getByTestId("quality-chart-point").evaluateAll((els) =>
+    els.map((el) => {
+      const r = el.getBoundingClientRect();
+      return { id: el.getAttribute("data-model-id")!, x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    }),
+  );
+  const clearId = centres.find((c) =>
+    centres.every((o) => o === c || Math.hypot(o.x - c.x, o.y - c.y) > 28),
+  )!.id;
+  const r = MEASURED.find((x) => x.m.id === clearId)!;
+  const dot = panel.locator(`[data-testid="quality-chart-point"][data-model-id="${clearId}"]`);
+  await dot.scrollIntoViewIfNeeded();
+  await dot.hover({ force: true });
+  const card = page.getByTestId("chart-card");
+  await expect(card).toBeVisible();
+  await expect(card).toContainText(r.m.name);
+  await expect(card.getByTestId("gap-point-card-gap")).toHaveText(formatPriceGap(priceGapFor(fit, r.price, r.index)));
+  const scoreFit = fitScoreModel(MEASURED.map((x) => ({ price: x.price, index: x.index, tier: x.m.tier_cost })));
+  await expect(card.getByTestId("gap-point-card-score")).toHaveText(
+    formatScore(scoreFor(scoreFit, r.m.tier_cost, r.price, r.index)),
+  );
+  await page.mouse.move(2, 2);
+  await expect(card).toHaveCount(0);
+
+  // The line's card: the equation, and the typical price at the pointer.
+  const line = panel.locator(`[data-testid="quality-chart"][data-band="${qualityBand(r.index)}"] [data-testid="quality-chart-line"]`);
+  const onLine = await line.evaluate((node) => {
+    const el = node as unknown as SVGLineElement;
+    const svg = el.ownerSVGElement!.getBoundingClientRect();
+    const [x1, y1, x2, y2] = ["x1", "y1", "x2", "y2"].map((a) => Number(el.getAttribute(a)));
+    const dots = [...el.ownerSVGElement!.querySelectorAll('[data-testid="quality-chart-point"]')].map((d) => {
+      const b = d.getBoundingClientRect();
+      return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+    });
+    for (let f = 0.1; f <= 0.9; f += 0.05) {
+      const x = svg.x + x1 + (x2 - x1) * f;
+      const y = svg.y + y1 + (y2 - y1) * f;
+      if (dots.every((d) => Math.hypot(d.x - x, d.y - y) > 20)) return { x, y };
+    }
+    return null;
+  });
+  expect(onLine).not.toBeNull();
+  await page.mouse.move(onLine!.x, onLine!.y);
+  await expect(card).toBeVisible();
+  await expect(card.getByTestId("typical-line-equation")).toContainText(`× q`);
+  await expect(card.getByTestId("typical-line-readout")).toContainText("typical $");
+});
+
 test("hovering a chart dot shows its model, Score, AA Index and prices; the line shows its equation", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/models");
+  await page.getByTestId("group-by-tier").click();
   const fit = fitScoreModel(
     scored.map((m) => ({
       price: blendedPrice(m.input_price_per_1m, m.output_price_per_1m),
