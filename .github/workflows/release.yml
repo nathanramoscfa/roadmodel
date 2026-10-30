@@ -87,7 +87,7 @@ jobs:
         with:
           name: dist
           path: dist
-      - uses: sigstore/gh-action-sigstore-python@04cffa1d795717b140764e8b640de88853c92acc # v3.3.0
+      - uses: sigstore/gh-action-sigstore-python@790bc6befb9d733738f18d8f895854b453640ec9 # v3.5.0
         with:
           inputs: |
             dist/*.whl
@@ -149,7 +149,7 @@ jobs:
           RELEASE_TAG: ${{ needs.verify.outputs.tag }}
           VERIFIED_OBJECT: ${{ needs.verify.outputs.tag_object }}
         run: python3 scripts/verify_release_tag.py "$RELEASE_TAG" --expect-object "$VERIFIED_OBJECT"
-      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
         with:
           repository-url: https://test.pypi.org/legacy/
           packages-dir: dist/
@@ -201,7 +201,7 @@ jobs:
           RELEASE_TAG: ${{ needs.verify.outputs.tag }}
           VERIFIED_OBJECT: ${{ needs.verify.outputs.tag_object }}
         run: python3 scripts/verify_release_tag.py "$RELEASE_TAG" --expect-object "$VERIFIED_OBJECT"
-      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
         with:
           packages-dir: dist/
 
