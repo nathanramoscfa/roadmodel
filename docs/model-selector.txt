@@ -1229,7 +1229,7 @@
              headline-benchmarks="AA Intelligence Index 23.7 (high); HLE 25.7%; earlier-generation Codex specialization with strong terminal / tool-use profile carried forward from the Codex lineage"
              pricing-notes="Hidden by default; Agentic and reasoning capabilities"
              prose-generated="best-for"
-             best-for="Strong coding, agentic work and long context at a medium price. Its AA Intelligence Index of 23.7 ranks 31st of 41 measured models. Weakest at multimodal input (D), then knowledge (C). Superseded by GPT-5.6 Luna." superseded-by="gpt-5.6-luna" superseded-on="2026-10-01"/>
+             best-for="Strong coding, agentic work and long context at a medium price. Its AA Intelligence Index of 23.7 ranks 31st of 41 measured models. Weakest at multimodal input (D), then knowledge (C)."/>
       <model id="gpt-5.1-codex-max" name="GPT-5.1 Codex Max"
              input-price-per-1m="$1.25" output-price-per-1m="$10.00"
              jurisdiction="us"
