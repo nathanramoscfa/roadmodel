@@ -158,26 +158,6 @@ def _parse_attrs(blob: str) -> dict[str, str]:
     return {name: _unescape_attr(value) for name, value in _ATTR_RE.findall(blob)}
 
 
-_PRICE_FROM_RE = re.compile(r"^(\d{4}-\d{2}-\d{2}) \$([0-9.]+)/\$([0-9.]+)$")
-
-
-def _price_schedule(value: str) -> dict[str, Any]:
-    """``{"price_schedule": [...]}`` from a ``price-from`` attribute
-    (``2026-12-01 $4.00/$20.00``, ``; ``-joined), or nothing without one."""
-    entries = []
-    for part in (p.strip() for p in value.split(";")):
-        m = _PRICE_FROM_RE.match(part)
-        if m:
-            entries.append(
-                {
-                    "from": m.group(1),
-                    "input_price_per_1m": float(m.group(2)),
-                    "output_price_per_1m": float(m.group(3)),
-                }
-            )
-    return {"price_schedule": entries} if entries else {}
-
-
 def _parse_price(value: str) -> float | None:
     """Return the leading dollar amount as a float, or None for routing rates.
 
@@ -231,9 +211,6 @@ def _parse_models(selector_text: str) -> list[dict[str, Any]]:
                     # any surface: it carries no Thinking toggle in a Settings
                     # table (docs/settings-display.md).
                     "always_thinks": attrs.get("always-thinks") == "yes",
-                    # A later list price the provider announced (merge_catalog
-                    # price-from); roadmodel's loader applies it from its date.
-                    **_price_schedule(attrs.get("price-from", "")),
                 }
             )
     assert_no_element_lost(options_match.group(1), matched, MODEL_OPEN_RE, "<model-options>")
