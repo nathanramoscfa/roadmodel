@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-10-09T14:32:00Z",
-  "source": "Measured by update/measure_effort_tokens.py: output tokens (reasoning included) per probe on a fixed set of short tasks, at each effort Artificial Analysis measured the model at.",
+  "generated_at_utc": "2026-10-30T15:47:19Z",
+  "source": "Measured by update/measure_effort_tokens.py: output tokens (reasoning included) per probe on a fixed set of short tasks, at every ladder effort the model's lane can set.",
   "probe_set_sha256": "db1a808e774b2c1afd25f380c9641b83ccacae87f1ead88fc7307f2c539aa4a0",
   "probes": 8,
   "samples_per_probe": 2,
@@ -24,31 +24,76 @@
           "mean_output_tokens": 428.7,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.06,
           "multiplier": 0.637
         },
         "medium": {
           "mean_output_tokens": 461.2,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.05,
           "multiplier": 0.685
         },
         "high": {
           "mean_output_tokens": 487.9,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.05,
           "multiplier": 0.725
         },
         "xhigh": {
           "mean_output_tokens": 746.8,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.125,
           "multiplier": 1.11
         },
         "max": {
-          "mean_output_tokens": 1924.4,
+          "mean_output_tokens": 4005.0,
+          "runs": 89,
+          "truncated": 0,
+          "ci90": 0.492,
+          "multiplier": 5.951
+        }
+      }
+    },
+    "claude-haiku-5-5": {
+      "lane": "claude-code",
+      "levels": {
+        "low": {
+          "mean_output_tokens": 632.9,
           "runs": 16,
           "truncated": 0,
-          "multiplier": 2.859
+          "ci90": 0.096,
+          "multiplier": 0.94
+        },
+        "medium": {
+          "mean_output_tokens": 828.7,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.087,
+          "multiplier": 1.231
+        },
+        "high": {
+          "mean_output_tokens": 983.2,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.112,
+          "multiplier": 1.461
+        },
+        "xhigh": {
+          "mean_output_tokens": 2124.7,
+          "runs": 48,
+          "truncated": 0,
+          "ci90": 0.098,
+          "multiplier": 3.157
+        },
+        "max": {
+          "mean_output_tokens": 10960.5,
+          "runs": 96,
+          "truncated": 0,
+          "ci90": 0.195,
+          "multiplier": 16.286
         }
       }
     },
@@ -59,30 +104,35 @@
           "mean_output_tokens": 497.6,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.083,
           "multiplier": 0.739
         },
         "medium": {
           "mean_output_tokens": 580.6,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.089,
           "multiplier": 0.863
         },
         "high": {
           "mean_output_tokens": 673.0,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.114,
           "multiplier": 1.0
         },
         "xhigh": {
           "mean_output_tokens": 910.9,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.056,
           "multiplier": 1.323
         },
         "max": {
           "mean_output_tokens": 869.2,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.145,
           "multiplier": 1.323
         }
       }
@@ -94,31 +144,36 @@
           "mean_output_tokens": 395.1,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.034,
           "multiplier": 0.587
         },
         "medium": {
           "mean_output_tokens": 456.5,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.032,
           "multiplier": 0.678
         },
         "high": {
           "mean_output_tokens": 506.9,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.026,
           "multiplier": 0.753
         },
         "xhigh": {
           "mean_output_tokens": 712.1,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.086,
           "multiplier": 1.058
         },
         "max": {
-          "mean_output_tokens": 5685.1,
-          "runs": 16,
+          "mean_output_tokens": 4990.1,
+          "runs": 87,
           "truncated": 0,
-          "multiplier": 8.447
+          "ci90": 0.089,
+          "multiplier": 7.415
         }
       }
     },
@@ -129,31 +184,36 @@
           "mean_output_tokens": 270.5,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.054,
           "multiplier": 0.402
         },
         "medium": {
-          "mean_output_tokens": 796.9,
-          "runs": 16,
+          "mean_output_tokens": 650.4,
+          "runs": 24,
           "truncated": 0,
-          "multiplier": 1.184
+          "ci90": 0.823,
+          "multiplier": 0.966
         },
         "high": {
-          "mean_output_tokens": 1410.0,
-          "runs": 16,
+          "mean_output_tokens": 1430.9,
+          "runs": 24,
           "truncated": 0,
-          "multiplier": 2.095
+          "ci90": 0.156,
+          "multiplier": 2.126
         },
         "xhigh": {
           "mean_output_tokens": 1489.4,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.033,
           "multiplier": 2.213
         },
         "max": {
-          "mean_output_tokens": 2620.2,
-          "runs": 16,
+          "mean_output_tokens": 2598.9,
+          "runs": 23,
           "truncated": 0,
-          "multiplier": 3.893
+          "ci90": 0.337,
+          "multiplier": 3.862
         }
       }
     },
@@ -164,31 +224,114 @@
           "mean_output_tokens": 466.4,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.028,
           "multiplier": 0.673
         },
         "medium": {
           "mean_output_tokens": 439.9,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.017,
           "multiplier": 0.673
         },
         "high": {
           "mean_output_tokens": 510.4,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.05,
           "multiplier": 0.758
         },
         "xhigh": {
           "mean_output_tokens": 598.1,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.104,
           "multiplier": 0.889
         },
         "max": {
           "mean_output_tokens": 1733.6,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.044,
           "multiplier": 2.576
+        }
+      }
+    },
+    "deepseek-flash": {
+      "lane": "openrouter",
+      "levels": {
+        "low": {
+          "mean_output_tokens": 1564.2,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.055,
+          "multiplier": 1.82
+        },
+        "high": {
+          "mean_output_tokens": 2108.6,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.105,
+          "multiplier": 2.453
+        },
+        "max": {
+          "mean_output_tokens": 3286.8,
+          "runs": 64,
+          "truncated": 0,
+          "ci90": 0.11,
+          "multiplier": 3.823
+        }
+      }
+    },
+    "gemini-3-flash": {
+      "lane": "openrouter",
+      "levels": {
+        "low": {
+          "mean_output_tokens": 849.2,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.056,
+          "multiplier": 0.988
+        },
+        "medium": {
+          "mean_output_tokens": 2127.3,
+          "runs": 40,
+          "truncated": 0,
+          "ci90": 0.131,
+          "multiplier": 2.475
+        },
+        "high": {
+          "mean_output_tokens": 2729.0,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.122,
+          "multiplier": 3.175
+        }
+      }
+    },
+    "gemini-3.1-flash-lite": {
+      "lane": "openrouter",
+      "levels": {
+        "low": {
+          "mean_output_tokens": 414.8,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.184,
+          "multiplier": 0.483
+        },
+        "medium": {
+          "mean_output_tokens": 920.1,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.124,
+          "multiplier": 1.07
+        },
+        "high": {
+          "mean_output_tokens": 3009.1,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.078,
+          "multiplier": 3.5
         }
       }
     },
@@ -199,13 +342,41 @@
           "mean_output_tokens": 1939.6,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.113,
           "multiplier": 2.256
         },
         "high": {
           "mean_output_tokens": 1944.0,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.116,
           "multiplier": 2.261
+        }
+      }
+    },
+    "gemini-3.5-flash-lite": {
+      "lane": "openrouter",
+      "levels": {
+        "low": {
+          "mean_output_tokens": 682.6,
+          "runs": 32,
+          "truncated": 0,
+          "ci90": 0.169,
+          "multiplier": 0.794
+        },
+        "medium": {
+          "mean_output_tokens": 1702.2,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.101,
+          "multiplier": 1.98
+        },
+        "high": {
+          "mean_output_tokens": 3301.5,
+          "runs": 32,
+          "truncated": 0,
+          "ci90": 0.104,
+          "multiplier": 3.841
         }
       }
     },
@@ -216,18 +387,21 @@
           "mean_output_tokens": 516.8,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.13,
           "multiplier": 0.601
         },
         "medium": {
           "mean_output_tokens": 1076.9,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.129,
           "multiplier": 1.253
         },
         "high": {
           "mean_output_tokens": 1664.1,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.168,
           "multiplier": 1.936
         }
       }
@@ -239,19 +413,67 @@
           "mean_output_tokens": 386.4,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.075,
           "multiplier": 0.45
         },
         "medium": {
           "mean_output_tokens": 1311.2,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.059,
           "multiplier": 1.525
         },
         "high": {
-          "mean_output_tokens": 2563.1,
+          "mean_output_tokens": 2379.1,
+          "runs": 72,
+          "truncated": 0,
+          "ci90": 0.1,
+          "multiplier": 2.768
+        }
+      }
+    },
+    "gemini-4-argon": {
+      "lane": "openrouter",
+      "levels": {
+        "low": {
+          "mean_output_tokens": 280.1,
           "runs": 16,
           "truncated": 0,
-          "multiplier": 2.982
+          "ci90": 0.099,
+          "multiplier": 0.326
+        },
+        "medium": {
+          "mean_output_tokens": 298.2,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.228,
+          "multiplier": 0.347
+        },
+        "high": {
+          "mean_output_tokens": 1593.9,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.039,
+          "multiplier": 1.854
+        }
+      }
+    },
+    "glm-5.2": {
+      "lane": "openrouter",
+      "levels": {
+        "high": {
+          "mean_output_tokens": 2281.7,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.064,
+          "multiplier": 2.654
+        },
+        "xhigh": {
+          "mean_output_tokens": 4044.9,
+          "runs": 95,
+          "truncated": 0,
+          "ci90": 0.115,
+          "multiplier": 4.705
         }
       }
     },
@@ -262,13 +484,48 @@
           "mean_output_tokens": 2288.8,
           "runs": 16,
           "truncated": 0,
-          "multiplier": 2.662
+          "ci90": 0.056,
+          "multiplier": 2.643
+        },
+        "high": {
+          "mean_output_tokens": 2256.1,
+          "runs": 95,
+          "truncated": 0,
+          "ci90": 0.181,
+          "multiplier": 2.643
         },
         "max": {
-          "mean_output_tokens": 2936.3,
+          "mean_output_tokens": 3275.9,
+          "runs": 31,
+          "truncated": 0,
+          "ci90": 0.145,
+          "multiplier": 3.811
+        }
+      }
+    },
+    "glm-5.3-flash": {
+      "lane": "openrouter",
+      "levels": {
+        "low": {
+          "mean_output_tokens": 468.9,
+          "runs": 48,
+          "truncated": 0,
+          "ci90": 0.338,
+          "multiplier": 0.545
+        },
+        "high": {
+          "mean_output_tokens": 497.2,
           "runs": 16,
           "truncated": 0,
-          "multiplier": 3.416
+          "ci90": 0.292,
+          "multiplier": 0.578
+        },
+        "max": {
+          "mean_output_tokens": 2447.1,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.126,
+          "multiplier": 2.847
         }
       }
     },
@@ -279,18 +536,21 @@
           "mean_output_tokens": 1522.5,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.215,
           "multiplier": 1.771
         },
         "medium": {
           "mean_output_tokens": 3059.5,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.096,
           "multiplier": 3.559
         },
         "high": {
           "mean_output_tokens": 5320.5,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.153,
           "multiplier": 6.189
         }
       }
@@ -302,12 +562,14 @@
           "mean_output_tokens": 1914.5,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.132,
           "multiplier": 2.227
         },
         "high": {
           "mean_output_tokens": 3917.0,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.135,
           "multiplier": 4.557
         }
       }
@@ -319,12 +581,14 @@
           "mean_output_tokens": 560.2,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.029,
           "multiplier": 0.652
         },
         "xhigh": {
           "mean_output_tokens": 3045.0,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.178,
           "multiplier": 3.542
         }
       }
@@ -336,12 +600,14 @@
           "mean_output_tokens": 317.9,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.088,
           "multiplier": 0.37
         },
         "xhigh": {
           "mean_output_tokens": 3027.4,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.301,
           "multiplier": 3.522
         }
       }
@@ -353,12 +619,14 @@
           "mean_output_tokens": 2420.9,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.882,
           "multiplier": 2.816
         },
         "xhigh": {
           "mean_output_tokens": 10479.4,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.267,
           "multiplier": 12.191
         }
       }
@@ -370,12 +638,14 @@
           "mean_output_tokens": 841.3,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.062,
           "multiplier": 0.979
         },
         "xhigh": {
           "mean_output_tokens": 3390.1,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.073,
           "multiplier": 3.944
         }
       }
@@ -387,24 +657,28 @@
           "mean_output_tokens": 341.7,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.061,
           "multiplier": 0.508
         },
         "medium": {
           "mean_output_tokens": 396.7,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.119,
           "multiplier": 0.571
         },
         "high": {
           "mean_output_tokens": 372.0,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.058,
           "multiplier": 0.571
         },
         "xhigh": {
           "mean_output_tokens": 667.8,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.281,
           "multiplier": 0.992
         }
       }
@@ -416,30 +690,35 @@
           "mean_output_tokens": 387.2,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.12,
           "multiplier": 0.575
         },
         "medium": {
           "mean_output_tokens": 422.3,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.182,
           "multiplier": 0.623
         },
         "high": {
           "mean_output_tokens": 416.1,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.047,
           "multiplier": 0.623
         },
         "xhigh": {
           "mean_output_tokens": 606.7,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.141,
           "multiplier": 0.901
         },
         "max": {
           "mean_output_tokens": 799.5,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.17,
           "multiplier": 1.188
         }
       }
@@ -451,31 +730,36 @@
           "mean_output_tokens": 294.1,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.06,
           "multiplier": 0.437
         },
         "medium": {
           "mean_output_tokens": 322.9,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.052,
           "multiplier": 0.48
         },
         "high": {
           "mean_output_tokens": 343.4,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.1,
           "multiplier": 0.51
         },
         "xhigh": {
           "mean_output_tokens": 384.1,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.1,
           "multiplier": 0.571
         },
         "max": {
-          "mean_output_tokens": 591.1,
-          "runs": 16,
+          "mean_output_tokens": 628.0,
+          "runs": 24,
           "truncated": 0,
-          "multiplier": 0.878
+          "ci90": 0.163,
+          "multiplier": 0.933
         }
       }
     },
@@ -486,30 +770,35 @@
           "mean_output_tokens": 289.1,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.084,
           "multiplier": 0.43
         },
         "medium": {
           "mean_output_tokens": 297.4,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.177,
           "multiplier": 0.442
         },
         "high": {
           "mean_output_tokens": 352.1,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.021,
           "multiplier": 0.523
         },
         "xhigh": {
           "mean_output_tokens": 409.4,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.142,
           "multiplier": 0.608
         },
         "max": {
           "mean_output_tokens": 600.0,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.126,
           "multiplier": 0.892
         }
       }
@@ -521,30 +810,35 @@
           "mean_output_tokens": 215.2,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.049,
           "multiplier": 0.32
         },
         "medium": {
           "mean_output_tokens": 234.4,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.049,
           "multiplier": 0.348
         },
         "high": {
           "mean_output_tokens": 296.8,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.096,
           "multiplier": 0.441
         },
         "xhigh": {
           "mean_output_tokens": 550.3,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.05,
           "multiplier": 0.818
         },
         "max": {
           "mean_output_tokens": 834.7,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.09,
           "multiplier": 1.24
         }
       }
@@ -556,31 +850,36 @@
           "mean_output_tokens": 143.6,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.031,
           "multiplier": 0.212
         },
         "medium": {
           "mean_output_tokens": 142.2,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.059,
           "multiplier": 0.212
         },
         "high": {
           "mean_output_tokens": 475.1,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.074,
           "multiplier": 0.706
         },
         "xhigh": {
           "mean_output_tokens": 634.8,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.056,
           "multiplier": 0.943
         },
         "max": {
-          "mean_output_tokens": 843.8,
-          "runs": 16,
+          "mean_output_tokens": 826.5,
+          "runs": 24,
           "truncated": 0,
-          "multiplier": 1.254
+          "ci90": 0.148,
+          "multiplier": 1.228
         }
       }
     },
@@ -591,30 +890,35 @@
           "mean_output_tokens": 220.8,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.084,
           "multiplier": 0.328
         },
         "medium": {
           "mean_output_tokens": 321.9,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.046,
           "multiplier": 0.478
         },
         "high": {
           "mean_output_tokens": 462.0,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.101,
           "multiplier": 0.686
         },
         "xhigh": {
           "mean_output_tokens": 533.2,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.112,
           "multiplier": 0.792
         },
         "max": {
           "mean_output_tokens": 675.8,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.073,
           "multiplier": 1.004
         }
       }
@@ -626,30 +930,35 @@
           "mean_output_tokens": 229.2,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.047,
           "multiplier": 0.341
         },
         "medium": {
           "mean_output_tokens": 270.5,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.091,
           "multiplier": 0.402
         },
         "high": {
           "mean_output_tokens": 366.8,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.108,
           "multiplier": 0.545
         },
         "xhigh": {
           "mean_output_tokens": 673.8,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.067,
           "multiplier": 1.001
         },
         "max": {
           "mean_output_tokens": 872.4,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.067,
           "multiplier": 1.296
         }
       }
@@ -661,13 +970,22 @@
           "mean_output_tokens": 705.1,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.131,
           "multiplier": 0.82
         },
-        "high": {
-          "mean_output_tokens": 2846.2,
-          "runs": 16,
+        "medium": {
+          "mean_output_tokens": 772.1,
+          "runs": 64,
           "truncated": 0,
-          "multiplier": 3.311
+          "ci90": 0.155,
+          "multiplier": 0.898
+        },
+        "high": {
+          "mean_output_tokens": 2945.7,
+          "runs": 92,
+          "truncated": 0,
+          "ci90": 0.167,
+          "multiplier": 3.427
         }
       }
     },
@@ -678,13 +996,22 @@
           "mean_output_tokens": 598.6,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.158,
           "multiplier": 0.696
         },
-        "high": {
-          "mean_output_tokens": 1116.9,
+        "medium": {
+          "mean_output_tokens": 991.8,
           "runs": 16,
           "truncated": 0,
-          "multiplier": 1.299
+          "ci90": 0.174,
+          "multiplier": 1.154
+        },
+        "high": {
+          "mean_output_tokens": 5422.6,
+          "runs": 96,
+          "truncated": 1,
+          "ci90": 0.348,
+          "multiplier": 6.308
         }
       }
     },
@@ -695,19 +1022,22 @@
           "mean_output_tokens": 963.4,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.315,
           "multiplier": 1.121
         },
         "medium": {
           "mean_output_tokens": 1755.6,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.084,
           "multiplier": 2.042
         },
         "high": {
-          "mean_output_tokens": 2622.9,
-          "runs": 16,
+          "mean_output_tokens": 2759.8,
+          "runs": 24,
           "truncated": 0,
-          "multiplier": 3.051
+          "ci90": 0.159,
+          "multiplier": 3.21
         }
       }
     },
@@ -718,24 +1048,28 @@
           "mean_output_tokens": 1125.6,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.055,
           "multiplier": 1.309
         },
         "medium": {
           "mean_output_tokens": 2653.7,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.138,
           "multiplier": 2.941
         },
         "high": {
           "mean_output_tokens": 2403.2,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.083,
           "multiplier": 2.941
         },
         "xhigh": {
           "mean_output_tokens": 3161.5,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.158,
           "multiplier": 3.678
         }
       }
@@ -744,21 +1078,31 @@
       "lane": "openrouter",
       "levels": {
         "low": {
-          "mean_output_tokens": 1602.0,
-          "runs": 16,
+          "mean_output_tokens": 1566.9,
+          "runs": 24,
           "truncated": 0,
-          "multiplier": 1.864
+          "ci90": 0.157,
+          "multiplier": 1.823
+        },
+        "medium": {
+          "mean_output_tokens": 2571.2,
+          "runs": 96,
+          "truncated": 0,
+          "ci90": 0.117,
+          "multiplier": 2.991
         },
         "high": {
           "mean_output_tokens": 3129.8,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.139,
           "multiplier": 3.641
         },
         "xhigh": {
           "mean_output_tokens": 3476.7,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.085,
           "multiplier": 4.044
         }
       }
@@ -770,35 +1114,390 @@
           "mean_output_tokens": 383.1,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.256,
           "multiplier": 0.446
         },
-        "max": {
-          "mean_output_tokens": 1037.5,
-          "runs": 16,
+        "high": {
+          "mean_output_tokens": 747.8,
+          "runs": 24,
           "truncated": 0,
-          "multiplier": 1.207
+          "ci90": 0.222,
+          "multiplier": 0.87
+        },
+        "max": {
+          "mean_output_tokens": 1066.9,
+          "runs": 24,
+          "truncated": 0,
+          "ci90": 0.187,
+          "multiplier": 1.241
         }
       }
     },
     "muse-spark-1.3": {
       "lane": "openrouter",
       "levels": {
+        "low": {
+          "mean_output_tokens": 987.9,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.08,
+          "multiplier": 1.149
+        },
+        "medium": {
+          "mean_output_tokens": 1547.6,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.134,
+          "multiplier": 1.8
+        },
+        "high": {
+          "mean_output_tokens": 1781.9,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.085,
+          "multiplier": 2.073
+        },
         "xhigh": {
           "mean_output_tokens": 2151.3,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.091,
           "multiplier": 2.449
         },
         "max": {
           "mean_output_tokens": 2058.7,
           "runs": 16,
           "truncated": 0,
+          "ci90": 0.159,
           "multiplier": 2.449
+        }
+      }
+    },
+    "muse-wonder": {
+      "lane": "openrouter",
+      "levels": {
+        "low": {
+          "mean_output_tokens": 883.4,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.083,
+          "multiplier": 1.028
+        },
+        "medium": {
+          "mean_output_tokens": 1145.8,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.067,
+          "multiplier": 1.333
+        },
+        "high": {
+          "mean_output_tokens": 1227.7,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.024,
+          "multiplier": 1.428
+        },
+        "xhigh": {
+          "mean_output_tokens": 1321.8,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.123,
+          "multiplier": 1.538
+        },
+        "max": {
+          "mean_output_tokens": 1496.4,
+          "runs": 16,
+          "truncated": 0,
+          "ci90": 0.088,
+          "multiplier": 1.741
         }
       }
     }
   },
+  "settable": {
+    "claude-fable-5.1": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "claude-haiku-5-5": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "claude-opus-5-5": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "claude-sonnet-5-5": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "deepseek-flash": [
+      "low",
+      "high",
+      "max"
+    ],
+    "gemini-3-flash": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "gemini-3.1-flash-lite": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "gemini-3.5-flash-lite": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "gemini-3.8-flash": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "gemini-4-argon": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "glm-5.2": [
+      "high",
+      "xhigh"
+    ],
+    "glm-5.3": [
+      "low",
+      "high",
+      "max"
+    ],
+    "glm-5.3-flash": [
+      "low",
+      "high",
+      "max"
+    ],
+    "gpt-5.6-luna": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "gpt-5.6-sol": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "gpt-5.6-terra": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "gpt-6-astra": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "gpt-6-luna": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "gpt-6-sol": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "gpt-6.1-sol": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "gpt-oss-120b": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "gpt-oss-20b": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "grok-4.3": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "grok-4.7": [
+      "low",
+      "medium",
+      "high",
+      "xhigh"
+    ],
+    "kimi-k3": [
+      "low",
+      "high",
+      "max"
+    ],
+    "muse-spark-1.3": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "muse-wonder": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ]
+  },
+  "typical": {
+    "high": 1.0,
+    "low": 0.533,
+    "medium": 0.784,
+    "xhigh": 1.323,
+    "max": 1.817
+  },
+  "derived": {
+    "claude-4.5-haiku": {
+      "low": 0.533,
+      "medium": 0.784,
+      "high": 1.0,
+      "xhigh": 1.323,
+      "max": 1.817
+    },
+    "gemini-2.5-flash": {
+      "low": 0.533,
+      "medium": 0.784,
+      "high": 1.0,
+      "xhigh": 1.323,
+      "max": 1.817
+    },
+    "glm-4.5-air": {
+      "low": 0.533,
+      "medium": 0.784,
+      "high": 1.0,
+      "xhigh": 1.323,
+      "max": 1.817
+    },
+    "glm-4.6": {
+      "low": 0.533,
+      "medium": 0.784,
+      "high": 1.0,
+      "xhigh": 1.323,
+      "max": 1.817
+    },
+    "kimi-k2.7-code": {
+      "low": 0.533,
+      "medium": 0.784,
+      "high": 1.0,
+      "xhigh": 1.323,
+      "max": 1.817
+    },
+    "mistral-medium-3.5": {
+      "low": 0.533,
+      "medium": 0.784,
+      "high": 1.0,
+      "xhigh": 1.323,
+      "max": 1.817
+    },
+    "mistral-small-4": {
+      "low": 0.533,
+      "medium": 0.784,
+      "high": 1.0,
+      "xhigh": 1.323,
+      "max": 1.817
+    }
+  },
   "unmeasured": {
-    "gemini-3-pro": "no lane serves it (not on OpenRouter, no subscription lane)"
+    "claude-4.5-haiku": "its lane sets no efforts",
+    "deepseek-flash@medium": "OpenRouter cannot set this effort",
+    "deepseek-flash@xhigh": "OpenRouter cannot set this effort",
+    "gemini-2.5-flash": "its lane sets no efforts",
+    "gemini-2.5-flash@high": "OpenRouter cannot set this effort",
+    "gemini-2.5-flash@low": "OpenRouter cannot set this effort",
+    "gemini-2.5-flash@max": "OpenRouter cannot set this effort",
+    "gemini-2.5-flash@medium": "OpenRouter cannot set this effort",
+    "gemini-2.5-flash@xhigh": "OpenRouter cannot set this effort",
+    "gemini-3-flash@max": "OpenRouter cannot set this effort",
+    "gemini-3-flash@xhigh": "OpenRouter cannot set this effort",
+    "gemini-3.1-flash-lite@max": "OpenRouter cannot set this effort",
+    "gemini-3.1-flash-lite@xhigh": "OpenRouter cannot set this effort",
+    "gemini-3.5-flash-lite@max": "OpenRouter cannot set this effort",
+    "gemini-3.5-flash-lite@xhigh": "OpenRouter cannot set this effort",
+    "gemini-3.8-flash@max": "OpenRouter cannot set this effort",
+    "gemini-3.8-flash@xhigh": "OpenRouter cannot set this effort",
+    "gemini-4-argon@max": "OpenRouter cannot set this effort",
+    "gemini-4-argon@xhigh": "OpenRouter cannot set this effort",
+    "glm-4.5-air": "its lane sets no efforts",
+    "glm-4.5-air@high": "OpenRouter cannot set this effort",
+    "glm-4.5-air@low": "OpenRouter cannot set this effort",
+    "glm-4.5-air@max": "OpenRouter cannot set this effort",
+    "glm-4.5-air@medium": "OpenRouter cannot set this effort",
+    "glm-4.5-air@xhigh": "OpenRouter cannot set this effort",
+    "glm-4.6": "its lane sets no efforts",
+    "glm-4.6@high": "OpenRouter cannot set this effort",
+    "glm-4.6@low": "OpenRouter cannot set this effort",
+    "glm-4.6@max": "OpenRouter cannot set this effort",
+    "glm-4.6@medium": "OpenRouter cannot set this effort",
+    "glm-4.6@xhigh": "OpenRouter cannot set this effort",
+    "glm-5.2@low": "OpenRouter cannot set this effort",
+    "glm-5.2@max": "OpenRouter cannot set this effort",
+    "glm-5.2@medium": "OpenRouter cannot set this effort",
+    "glm-5.3-flash@medium": "OpenRouter cannot set this effort",
+    "glm-5.3-flash@xhigh": "OpenRouter cannot set this effort",
+    "glm-5.3@medium": "OpenRouter cannot set this effort",
+    "glm-5.3@xhigh": "OpenRouter cannot set this effort",
+    "gpt-oss-120b@max": "OpenRouter cannot set this effort",
+    "gpt-oss-120b@xhigh": "OpenRouter cannot set this effort",
+    "gpt-oss-20b@max": "OpenRouter cannot set this effort",
+    "gpt-oss-20b@xhigh": "OpenRouter cannot set this effort",
+    "grok-4.3@max": "OpenRouter cannot set this effort",
+    "grok-4.3@xhigh": "OpenRouter cannot set this effort",
+    "grok-4.7@max": "OpenRouter cannot set this effort",
+    "kimi-k2.7-code": "its lane sets no efforts",
+    "kimi-k2.7-code@high": "OpenRouter cannot set this effort",
+    "kimi-k2.7-code@low": "OpenRouter cannot set this effort",
+    "kimi-k2.7-code@max": "OpenRouter cannot set this effort",
+    "kimi-k2.7-code@medium": "OpenRouter cannot set this effort",
+    "kimi-k2.7-code@xhigh": "OpenRouter cannot set this effort",
+    "kimi-k3@medium": "OpenRouter cannot set this effort",
+    "kimi-k3@xhigh": "OpenRouter cannot set this effort",
+    "mistral-medium-3.5": "its lane sets ['high'] efforts",
+    "mistral-medium-3.5@low": "OpenRouter cannot set this effort",
+    "mistral-medium-3.5@max": "OpenRouter cannot set this effort",
+    "mistral-medium-3.5@medium": "OpenRouter cannot set this effort",
+    "mistral-medium-3.5@xhigh": "OpenRouter cannot set this effort",
+    "mistral-small-4": "its lane sets ['high'] efforts",
+    "mistral-small-4@low": "OpenRouter cannot set this effort",
+    "mistral-small-4@max": "OpenRouter cannot set this effort",
+    "mistral-small-4@medium": "OpenRouter cannot set this effort",
+    "mistral-small-4@xhigh": "OpenRouter cannot set this effort"
   }
 }

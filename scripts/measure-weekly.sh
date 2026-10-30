@@ -12,7 +12,8 @@
 # (roadmodel/OPENROUTER_API_KEY). OpenRouter spend stops at
 # ROADMODEL_MEASURE_MAX_USD a run (default $3; prepaid credits, so never past
 # the balance). A new model's efforts are derived from its measured ones (≈ in
-# a roadmap ladder) until this runs.
+# a roadmap ladder) until this runs. The subscription lanes cost no cash, so a
+# heavy-tailed level (Fable 5.1 at max) may take up to 24 samples a task.
 #
 # It works in its own clone (a checkout of main, never the operator's tree),
 # opens the PR, then lands it with private/security-tools/finish-security.sh,
@@ -83,7 +84,7 @@ git reset -q --hard origin/main
 [ -e private ] || ln -s "$REPO/private" private
 
 uv run --quiet --no-project --with requests --with beautifulsoup4 \
-  python update/measure_effort_tokens.py --max-usd "$MAX_USD"
+  python update/measure_effort_tokens.py --max-usd "$MAX_USD" --max-samples 24
 
 if git diff --quiet -- docs/effort-tokens.json; then
   say "docs/effort-tokens.json unchanged; nothing to land"
