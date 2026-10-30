@@ -10,7 +10,6 @@ import {
   getBenchmarkMeta,
   getCatalogGeneratedAt,
   getModelRows,
-  getPriceFit,
   getScoreFit,
 } from "@/lib/catalog-models";
 import { parsePrefs, PREFS_COOKIE } from "@/lib/models-prefs";
@@ -23,7 +22,6 @@ export default async function HomePage() {
   const generatedAt = getCatalogGeneratedAt();
   const bench = getBenchmarkMeta();
   const scoreFit = getScoreFit(models);
-  const priceFit = getPriceFit(models);
 
   return (
     <>
@@ -61,7 +59,6 @@ export default async function HomePage() {
             benchmarksGeneratedAt={bench.generatedAt}
             measuredCount={bench.measuredCount}
             scoreFit={scoreFit}
-            priceFit={priceFit}
             prefs={prefs}
           />
           <CatalogLegend id="how-to-read" />

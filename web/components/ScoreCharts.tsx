@@ -10,8 +10,8 @@
 // distance from its own tier's line, and a tier's chart shows the whole tier
 // around that line, some above and some below. It cannot be cut into the
 // quality grouping's AA Index bands, which pick their models by the height
-// the Score measures, so grouped by quality the page draws one chart per band
-// from the price-for-quality line instead (QualityCharts).
+// the Score measures, so grouped by quality the page zooms into the frontier
+// one band at a time instead (QualityCharts).
 //
 // Interactive: hover (mouse), tap (touch), or tab to (keyboard) any dot for a
 // card with the model's name, Score, AA Index and prices; hover the line for
@@ -40,7 +40,6 @@ import {
 } from "@/lib/benchmark-grid";
 import { COST_TIER_DEFS, COST_TIER_DOT, type CostTier, type ModelRow } from "@/lib/catalog-fields";
 import {
-  BETTER as ABOVE,
   DOT_R,
   FRONTIER,
   LABEL_PX,
@@ -51,12 +50,17 @@ import {
   fitTitle,
   PRICE_AXIS_TITLES,
   useWidth,
-  WORSE as BELOW,
   type ChartFilter,
   type Label,
 } from "./chart-kit";
 import { FloatingCard, type AnchorRect } from "./FloatingCard";
 import { FrontierScope, ModelPointCard, PriceLineCard } from "./ScoreCards";
+
+// Sign is also carried by direction and by the printed Score, so colour is
+// never the only cue. Sky/orange stays distinct under protan and deutan
+// vision, on both the light and the dark surface.
+const ABOVE = "#0284c7";
+const BELOW = "#ea580c";
 
 const TIER_ORDER: CostTier[] = ["very-high", "high", "medium", "low"];
 const M = { top: 12, right: 18, bottom: 46, left: 46 };

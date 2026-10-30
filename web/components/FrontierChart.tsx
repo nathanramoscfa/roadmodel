@@ -750,8 +750,7 @@ export function FrontierChart({
               Grouped by quality, the rows between the gridlines are the table&rsquo;s ten-point
               AA Index bands, every other one shaded: within a band the models line up by price,
               and the cheapest way to reach a level is where the green line first reaches that
-              band. The charts below take the bands apart one at a time, each against the price
-              its quality typically costs.
+              band. The charts below zoom into one band each.
             </span>
           )}
         </p>

@@ -16,10 +16,8 @@ import { scoresFor } from "../lib/benchmark-scores";
 import {
   bandFor,
   blendedPrice,
-  fitPriceModel,
   fitScoreModel,
   formatBench,
-  formatPriceGap,
   formatQualityBand,
   formatScore,
   GRID_COLUMN_BY_KEY,
@@ -27,7 +25,6 @@ import {
   indexEvidence,
   newUntil,
   paretoFrontier,
-  priceGapFor,
   qualityBand,
   COMPOSITE_DERIVATION,
   compositeScores,
@@ -330,18 +327,19 @@ test("unchecking CN takes it out of every chart and redraws the frontier over th
   const onFrontier = pool.filter((r) => leaderOf(r, pool) === r).sort((a, b) => a.price - b.price);
   const catalogFrontier = new Set(MEASURED.filter((r) => leaderOf(r) === r).map((r) => r.m.id));
 
-  // The quality charts (the default grouping): every non-CN measured model,
-  // no CN dot, and each dot keeps its whole-catalog price gap.
-  const priceFit = fitPriceModel(MEASURED)!;
+  // The band charts (the default grouping): every non-CN measured model, no
+  // CN dot, and green exactly where the frontier over the rest runs.
   const qualityPanel = page.getByTestId("quality-charts");
-  await expect(qualityPanel.getByTestId("quality-charts-filter")).toContainText("Jurisdiction: US + EU");
+  await expect(qualityPanel.getByTestId("quality-charts-filter")).toContainText("redrawn over the US + EU models");
   await expect(qualityPanel.getByTestId("quality-chart-point")).toHaveCount(pool.length);
-  await expect(
-    qualityPanel.locator(`[data-testid="quality-chart-point"][data-model-id="${pool[0].m.id}"]`),
-  ).toHaveAttribute(
-    "aria-label",
-    new RegExp(`price gap ${formatPriceGap(priceGapFor(priceFit, pool[0].price, pool[0].index)).replace("+", "\\+")},`),
+  await expect(qualityPanel.locator('[data-testid="quality-chart-point"][data-frontier="1"]')).toHaveCount(
+    onFrontier.length,
   );
+  for (const r of onFrontier) {
+    await expect(
+      qualityPanel.locator(`[data-testid="quality-chart-point"][data-model-id="${r.m.id}"]`),
+    ).toHaveAttribute("data-frontier", "1");
+  }
 
   // The Score charts (grouped by cost tier): every non-CN measured model in a
   // charted tier, no CN dot, and each dot keeps its whole-catalog Score.
@@ -1371,17 +1369,13 @@ test("grouped by cost tier, one Score chart per cost tier, every measured model 
   await expect(panel).toContainText(`β = ${fit!.slope.toFixed(1)}`);
 });
 
-test("grouped by quality, one chart per quality band, best first, every measured model at its price gap", async ({ page }) => {
+test("grouped by quality, one frontier chart per quality band: green on the frontier, grey beaten, and what beats a band from above", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/models");
   const panel = page.getByTestId("quality-charts");
   await expect(panel).toBeVisible();
-  await expect(panel.getByTestId("quality-charts-score-note")).toContainText(
-    "the table’s Score compares it with its own cost tier",
-  );
 
   // The bands are the table's quality groups, in the table's order.
-  const fit = fitPriceModel(MEASURED)!;
   const bands = [...new Set(MEASURED.map((r) => qualityBand(r.index)!))].sort((a, b) => b - a);
   await expect(panel.getByTestId("quality-chart")).toHaveCount(bands.length);
   expect(
@@ -1392,83 +1386,80 @@ test("grouped by quality, one chart per quality band, best first, every measured
     .evaluateAll((els) => els.map((e) => e.getAttribute("data-band")).filter((b) => b !== "none").map(Number));
   expect(tableBands).toEqual(bands);
 
+  const onFrontier = new Set(MEASURED.filter((r) => leaderOf(r) === r).map((r) => r.m.id));
   for (const band of bands) {
     const chart = panel.locator(`[data-testid="quality-chart"][data-band="${band}"]`);
-    await expect(chart).toContainText(`AA Index ${formatQualityBand(band)}`);
     const inBand = MEASURED.filter((r) => qualityBand(r.index) === band);
+    const ringed = inBand.filter((r) => onFrontier.has(r.m.id));
+    await expect(chart).toContainText(`AA Index ${formatQualityBand(band)}`);
+    await expect(chart).toContainText(`${inBand.length} ${inBand.length === 1 ? "model" : "models"} · ${ringed.length || "none"} on the frontier`);
     await expect(chart.getByTestId("quality-chart-point")).toHaveCount(inBand.length);
+    // Green and grey are the table's ring, and a grey dot names what beats it.
     for (const r of inBand) {
-      const gap = formatPriceGap(priceGapFor(fit, r.price, r.index));
-      await expect(
-        chart.locator(`[data-testid="quality-chart-point"][data-model-id="${r.m.id}"]`),
-      ).toHaveAttribute("aria-label", new RegExp(`price gap ${gap.replace("+", "\\+")},`));
+      const dot = chart.locator(`[data-testid="quality-chart-point"][data-model-id="${r.m.id}"]`);
+      await expect(dot).toHaveAttribute("data-frontier", onFrontier.has(r.m.id) ? "1" : "0");
+      if (!onFrontier.has(r.m.id)) await expect(dot).toHaveAttribute("aria-label", new RegExp(`beaten by ${leaderOf(r).m.name}`));
+    }
+    // Every model that beats one here and scores above the band is marked on
+    // the top edge; none other is.
+    const above = [...new Set(inBand.filter((r) => !onFrontier.has(r.m.id)).map((r) => leaderOf(r)))].filter(
+      (l) => qualityBand(l.index)! > band,
+    );
+    await expect(chart.locator('[data-testid="quality-chart-leader"][data-above="1"]')).toHaveCount(above.length);
+    for (const l of above) {
+      await expect(chart.locator(`[data-testid="quality-chart-leader"][data-model-id="${l.m.id}"]`)).toHaveCount(1);
+    }
+    // A band with nothing on the frontier says what beats it.
+    await expect(chart.getByTestId("quality-chart-beaten")).toHaveCount(ringed.length === 0 && above.length > 0 ? 1 : 0);
+    if (ringed.length === 0 && above.length > 0) {
+      for (const l of above) await expect(chart.getByTestId("quality-chart-beaten")).toContainText(l.m.name);
     }
   }
+  await expect(panel).toContainText(`That keeps ${onFrontier.size} of the ${MEASURED.length} models plotted.`);
 
-  // Every dot sits in its band's rows and on its own side of the line: left
-  // when it costs less than the typical price for its AA Index.
-  const sides = await panel.getByTestId("quality-chart").evaluateAll((charts) =>
-    charts.flatMap((c) => {
-      const line = c.querySelector('[data-testid="quality-chart-line"]') as SVGLineElement;
-      const [x1, y1, x2, y2] = ["x1", "y1", "x2", "y2"].map((a) => Number(line.getAttribute(a)));
-      return [...c.querySelectorAll('[data-testid="quality-chart-point"]')].map((d) => {
-        const cx = Number(d.getAttribute("cx"));
-        const cy = Number(d.getAttribute("cy"));
-        const lineX = x1 + ((cy - y1) / (y2 - y1)) * (x2 - x1);
-        return { id: d.getAttribute("data-model-id")!, left: cx < lineX, inside: cy <= y1 && cy >= y2 };
-      });
-    }),
-  );
-  expect(sides).toHaveLength(MEASURED.length);
-  for (const sd of sides) {
-    const r = MEASURED.find((x) => x.m.id === sd.id)!;
-    expect(sd.inside).toBe(true);
-    expect(sd.left).toBe(priceGapFor(fit, r.price, r.index)! < 0);
-  }
-
-  // The footnote carries the live fit, not typed figures.
-  await expect(panel).toContainText(`One least-squares fit over all ${fit.n} AA-measured models`);
-  await expect(panel).toContainText(`b = ${fit.slope.toFixed(3)}`);
-
-  // A dot's card: its price gap, the typical price for its AA Index, and the
-  // table's Score beside it.
+  // A dot's card is the frontier chart's: the model that holds the top score
+  // at its price or less.
   const centres = await panel.getByTestId("quality-chart-point").evaluateAll((els) =>
     els.map((el) => {
-      const r = el.getBoundingClientRect();
-      return { id: el.getAttribute("data-model-id")!, x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      const b = el.getBoundingClientRect();
+      return { id: el.getAttribute("data-model-id")!, x: b.x + b.width / 2, y: b.y + b.height / 2 };
     }),
   );
-  const clearId = centres.find((c) =>
-    centres.every((o) => o === c || Math.hypot(o.x - c.x, o.y - c.y) > 28),
-  )!.id;
-  const r = MEASURED.find((x) => x.m.id === clearId)!;
-  const dot = panel.locator(`[data-testid="quality-chart-point"][data-model-id="${clearId}"]`);
+  const beaten = MEASURED.filter((r) => !onFrontier.has(r.m.id));
+  const clear = beaten.find((r) => {
+    const c = centres.find((x) => x.id === r.m.id)!;
+    return centres.every((o) => o === c || Math.hypot(o.x - c.x, o.y - c.y) > 28);
+  })!;
+  const dot = panel.locator(`[data-testid="quality-chart-point"][data-model-id="${clear.m.id}"]`);
   await dot.scrollIntoViewIfNeeded();
   await dot.hover({ force: true });
   const card = page.getByTestId("chart-card");
   await expect(card).toBeVisible();
-  await expect(card).toContainText(r.m.name);
-  await expect(card.getByTestId("gap-point-card-gap")).toHaveText(formatPriceGap(priceGapFor(fit, r.price, r.index)));
-  const scoreFit = fitScoreModel(MEASURED.map((x) => ({ price: x.price, index: x.index, tier: x.m.tier_cost })));
-  await expect(card.getByTestId("gap-point-card-score")).toHaveText(
-    formatScore(scoreFor(scoreFit, r.m.tier_cost, r.price, r.index)),
-  );
+  await expect(card).toContainText(clear.m.name);
+  await expect(card.getByTestId("frontier-status")).toHaveAttribute("data-beaten-by", leaderOf(clear).m.id);
   await page.mouse.move(2, 2);
   await expect(card).toHaveCount(0);
 
-  // The line's card: the equation, and the typical price at the pointer.
-  const line = panel.locator(`[data-testid="quality-chart"][data-band="${qualityBand(r.index)}"] [data-testid="quality-chart-line"]`);
-  const onLine = await line.evaluate((node) => {
-    const el = node as unknown as SVGLineElement;
-    const svg = el.ownerSVGElement!.getBoundingClientRect();
-    const [x1, y1, x2, y2] = ["x1", "y1", "x2", "y2"].map((a) => Number(el.getAttribute(a)));
-    const dots = [...el.ownerSVGElement!.querySelectorAll('[data-testid="quality-chart-point"]')].map((d) => {
+  // The green line's card: the top score at that price, in a band it crosses.
+  const band = qualityBand(MEASURED.find((r) => onFrontier.has(r.m.id))!.index);
+  const target = panel.locator(`[data-testid="quality-chart"][data-band="${band}"] [data-testid="quality-chart-line-target"]`);
+  await target.scrollIntoViewIfNeeded();
+  const onLine = await target.evaluate((node) => {
+    const el = node as unknown as SVGPathElement;
+    const svg = el.ownerSVGElement!;
+    const box = svg.getBoundingClientRect();
+    const clip = svg.querySelector("clipPath rect")!;
+    const [cx, cy, cw, ch] = ["x", "y", "width", "height"].map((a) => Number(clip.getAttribute(a)));
+    const dots = [...svg.querySelectorAll('[data-testid="quality-chart-point"]')].map((d) => {
       const b = d.getBoundingClientRect();
       return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
     });
-    for (let f = 0.1; f <= 0.9; f += 0.05) {
-      const x = svg.x + x1 + (x2 - x1) * f;
-      const y = svg.y + y1 + (y2 - y1) * f;
+    const total = el.getTotalLength();
+    for (let f = 0.02; f <= 0.98; f += 0.01) {
+      const p = el.getPointAtLength(total * f);
+      if (p.x < cx + 4 || p.x > cx + cw - 4 || p.y < cy + 4 || p.y > cy + ch - 4) continue;
+      const x = box.x + p.x;
+      const y = box.y + p.y;
       if (dots.every((d) => Math.hypot(d.x - x, d.y - y) > 20)) return { x, y };
     }
     return null;
@@ -1476,8 +1467,7 @@ test("grouped by quality, one chart per quality band, best first, every measured
   expect(onLine).not.toBeNull();
   await page.mouse.move(onLine!.x, onLine!.y);
   await expect(card).toBeVisible();
-  await expect(card.getByTestId("typical-line-equation")).toContainText(`× q`);
-  await expect(card.getByTestId("typical-line-readout")).toContainText("typical $");
+  await expect(card.getByTestId("frontier-step-card")).toContainText("Top score at $");
 });
 
 test("hovering a chart dot shows its model, Score, AA Index and prices; the line shows its equation", async ({ page }) => {

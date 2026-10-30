@@ -11,9 +11,9 @@
 // only the models you could run yourself, with the chart that changes right
 // under the control. The table's Group by switch keeps its state here too,
 // since the charts read it: grouped by quality, the frontier chart marks the
-// table's ten-point AA Index bands and the charts below it are one per band
-// (QualityCharts, price for quality); grouped by cost tier, they are one per
-// tier (ScoreCharts, the Score column drawn).
+// table's ten-point AA Index bands and the charts below it zoom into one band
+// each (QualityCharts); grouped by cost tier, they are one per tier
+// (ScoreCharts, the Score column drawn).
 //
 // The page remembers them (lib/models-prefs): the server reads the saved
 // choices from a cookie and passes them in, so the first render is already
@@ -21,13 +21,12 @@
 //
 // What each filter changes is set out in lib/catalog-filter: Provider,
 // Jurisdiction and Weights choose the pool the frontier is recomputed over; Cost tier
-// narrows what is shown; the Score and the price-for-quality line are
-// whole-catalog fits throughout.
+// narrows what is shown; the Score is the whole-catalog fit throughout.
 "use client";
 
 import { useMemo, useState } from "react";
 
-import type { PriceFit, ScoreFit } from "@/lib/benchmark-grid";
+import type { ScoreFit } from "@/lib/benchmark-grid";
 import type { ModelRow } from "@/lib/catalog-fields";
 import {
   allFilters,
@@ -59,7 +58,6 @@ export function ModelsExplorer({
   benchmarksGeneratedAt,
   measuredCount,
   scoreFit,
-  priceFit,
   prefs,
 }: {
   models: ModelRow[];
@@ -67,7 +65,6 @@ export function ModelsExplorer({
   benchmarksGeneratedAt: string;
   measuredCount: number;
   scoreFit: ScoreFit | null;
-  priceFit: PriceFit | null;
   // The visitor's saved choices (defaults on a first visit).
   prefs: ModelsPrefs;
 }) {
@@ -133,7 +130,7 @@ export function ModelsExplorer({
           initialView={prefs.view}
         />
         {grouping === "quality" ? (
-          <QualityCharts rows={shown} pool={pool} fit={priceFit} filter={chartFilter} />
+          <QualityCharts rows={shown} pool={pool} filter={chartFilter} />
         ) : (
           <ScoreCharts rows={shown} pool={pool} fit={scoreFit} filter={chartFilter} />
         )}

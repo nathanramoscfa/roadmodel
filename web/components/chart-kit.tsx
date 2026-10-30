@@ -1,7 +1,7 @@
 // web/components/chart-kit.tsx
 //
-// What the /models charts share (the per-tier Score charts, the per-band
-// quality charts and the frontier chart): the chart's real width, label widths in the page's own font, greedy
+// What the /models charts share (the per-tier Score charts and the frontier
+// chart): the chart's real width, label widths in the page's own font, greedy
 // label placement that never covers another label or dot, round price ticks
 // for a log axis, the legend swatch, the frontier colour, and the note a
 // panel shows while the page's filters narrow it.
@@ -13,13 +13,6 @@ import { formatUsd, priceTicks } from "@/lib/benchmark-grid";
 
 // The frontier's green: the ring in the table, the charts and the legend.
 export const FRONTIER = "#10b981";
-// A dot that beats its line (above it on a Score chart, cheaper than it on a
-// quality chart) and one that trails it. Sign is also carried by direction
-// and by the printed figure, so colour is never the only cue. Sky/orange
-// stays distinct under protan and deutan vision, on both the light and the
-// dark surface.
-export const BETTER = "#0284c7";
-export const WORSE = "#ea580c";
 export const DOT_R = 6;
 export const LABEL_PX = 11.5;
 export const LABEL_H = 14;
