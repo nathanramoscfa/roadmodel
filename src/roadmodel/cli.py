@@ -864,23 +864,24 @@ def rerank_command(
             if md == "\n".join(lines[block.start : block.end]):
                 counts["unchanged"] += 1
                 continue
-            if picks(got) != block.picks:
-                was = "; ".join(
-                    f"{tier.capitalize()} Pick was "
-                    + (" · ".join(block.picks[n]) if n < len(block.picks) else "—")
-                    for n, (tier, now) in enumerate(
-                        zip(scoring.LADDER_TIERS, picks(got), strict=True)
-                    )
-                    if n >= len(block.picks) or block.picks[n] != now
-                )
+            # The line says what changed, never why: a release can move a
+            # ladder for any reason (0.2.97 makers, 0.2.107 measured prices).
+            was = [
+                f"{tier.capitalize()} Pick was "
+                + (" · ".join(block.picks[n]) if n < len(block.picks) else "—")
+                for n, (tier, now) in enumerate(zip(scoring.LADDER_TIERS, picks(got), strict=True))
+                if n >= len(block.picks) or block.picks[n] != now
+            ]
+            for r, label in ((1, "Runner-up"), (2, "Backup")):
+                old = block.ranks[r] if r < len(block.ranks) else ()
+                for n, tier in enumerate(scoring.LADDER_TIERS):
+                    before = old[n].strip("*") if n < len(old) else "—"
+                    if before != ranks(got)[r][n]:
+                        was.append(f"{tier.capitalize()} {label} was {before}")
+            if was:
                 md += (
-                    f"\n\n> Settings updated {today} (rerank): {was}. Re-ranked for "
-                    f"{key[0]}, {key[1]} complexity, each column's ranks from three makers."
-                )
-            elif ranks(got) != block.ranks:
-                md += (
-                    f"\n\n> Settings updated {today} (rerank): each column's Runner-up and "
-                    "Backup now come from makers other than its Pick; every Pick is unchanged."
+                    f"\n\n> Settings updated {today} (rerank, roadmodel "
+                    f"{__version__}): {'; '.join(was)}."
                 )
             replacements[block.start] = (block.end, md)
             counts["reranked"] += 1

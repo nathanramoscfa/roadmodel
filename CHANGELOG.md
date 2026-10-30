@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.108] — 2026-10-30
+
+- **`roadmodel rerank` says what changed, not why.** The `> Settings updated` line under a re-ranked ladder gave the 0.2.97 reason whatever moved it ("each column's Runner-up and Backup now come from makers other than its Pick"), which would have written a false cause into every roadmap 0.2.107's measured prices re-rank. It now names each changed rank and what it was (`Quality Backup was GPT-6 Astra`; `Cost Pick was Sonnet 5.5 · High`) and the release that re-ranked it.
+
 ## [0.2.107] — 2026-10-30
 
 - **A level's Price no longer scales what the model reads.** Price (and the frontier's price axis behind every pick) was the blended list price (3 input : 1 output tokens) times how many output tokens the model writes at that level. That scaled the input too, though an effort changes only what a model writes. Opus 5.5 at Max read **$67.58/1M**; holding the input fixed it is **$45.23/1M**. The same error had given terse models a discount on their input: GPT-6.1 Sol at Medium was $1.61 and is $2.50. Price is now `(3 × input + multiplier × output) / 4`, in roadmap ladders, `/recommend`'s picks and chart, and the Score breakdown. Picks change in some low- and medium-complexity classifications, where a terse model's discount had decided the rank.
