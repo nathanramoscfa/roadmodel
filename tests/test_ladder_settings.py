@@ -913,7 +913,11 @@ def test_rerank_gives_a_not_started_steps_ladder_this_releases_ranks(
     done, todo = after.split("## Step 2")
     assert _stale(fresh) in done
     assert fresh in todo
-    assert "(rerank): each column's Runner-up and Backup now come from makers other" in todo
+    # The line names each changed rank, never a reason (0.2.108).
+    note = " ".join(todo.split())
+    assert "(rerank, roadmodel " in note
+    assert "Runner-up was" in note or "Backup was" in note
+    assert "makers other than" not in note
     assert todo.endswith("**Model rationale:** kept.\n")
     again, same = _rerank(tmp_path, monkeypatch, after, "--check")
     assert again.exit_code == 0 and "0 re-ranked, 1 unchanged" in again.output
@@ -937,9 +941,10 @@ def test_rerank_names_each_column_whose_pick_changed(
     assert fresh in after
     level = {t: cells[t]["Pick"]["Level"] for t in ("cost", "quality")}
     assert (
-        f"(rerank): Cost Pick was {quality.strip('*')} · {level['cost']}; "
-        f"Quality Pick was {cost.strip('*')} · {level['quality']}. Re-ranked for "
+        f"Cost Pick was {quality.strip('*')} · {level['cost']}; "
+        f"Quality Pick was {cost.strip('*')} · {level['quality']}"
     ) in " ".join(after.split())
+    assert "three makers" not in after
     assert "Balanced Pick was" not in after
 
 
