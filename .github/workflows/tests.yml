@@ -468,7 +468,7 @@ jobs:
       - name: Snapshot exact analysis source
         id: codeql_snapshot
         run: python3 -B -I scripts/check_codeql_sarif.py snapshot --repo . --output "$RUNNER_TEMP/codeql-source.json"
-      - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         with:
           languages: ${{ matrix.language }}
           build-mode: none
@@ -476,7 +476,7 @@ jobs:
           tools: linked
           queries: security-extended
       - id: codeql_analyze
-        uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4
+        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         with:
           output: ${{ runner.temp }}/codeql-results
           category: /language:${{ matrix.language }}
