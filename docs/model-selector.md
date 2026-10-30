@@ -998,7 +998,7 @@ Tier ratings:
 - **Tier ratings:** Coding **A** · Planning **B** · Agentic **A** · Multimodal **D** · Long-context **A** · Knowledge **C** · Speed **B**
 - **Headline benchmarks:** AA Intelligence Index 23.7 (high); HLE 25.7%; earlier-generation Codex specialization with strong terminal / tool-use profile carried forward from the Codex lineage
 - **Pricing notes:** Hidden by default; Agentic and reasoning capabilities
-- **Best for:** Strong coding, agentic work and long context at a medium price. Its AA Intelligence Index of 23.7 ranks 31st of 41 measured models. Weakest at multimodal input (D), then knowledge (C). Superseded by GPT-5.6 Luna.
+- **Best for:** Strong coding, agentic work and long context at a medium price. Its AA Intelligence Index of 23.7 ranks 31st of 41 measured models. Weakest at multimodal input (D), then knowledge (C).
 
 #### GPT-5.1 Codex Max — `gpt-5.1-codex-max`
 

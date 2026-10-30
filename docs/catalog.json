@@ -1,9 +1,9 @@
 {
   "schema_version": "4",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-10-30T20:10:45Z",
+  "generated_at_utc": "2026-10-30T22:05:15Z",
   "source_doc_sha256": {
-    "model-selector.txt": "d8d9a8770d03593d0531927c5b54ac9731229c6973052c43211717eb910cada3",
+    "model-selector.txt": "e890313c90b0a4708112ae1932f44cffee9a6b3b6ba9544dd37afaefb3ac9a77",
     "model-tier-cost-scale.md": "dad707e59d0f3e75cf699d81368ba66783cc2a6a0bf625c430e8f884ef844a1c"
   },
   "models": [
@@ -624,12 +624,12 @@
       "jurisdiction": "us",
       "headline_benchmarks": "AA Intelligence Index 23.7 (high); HLE 25.7%; earlier-generation Codex specialization with strong terminal / tool-use profile carried forward from the Codex lineage",
       "pricing_notes": "Hidden by default; Agentic and reasoning capabilities",
-      "best_for": "Strong coding, agentic work and long context at a medium price. Its AA Intelligence Index of 23.7 ranks 31st of 41 measured models. Weakest at multimodal input (D), then knowledge (C). Superseded by GPT-5.6 Luna.",
-      "superseded_by": "gpt-5.6-luna",
-      "superseded_on": "2026-10-01",
+      "best_for": "Strong coding, agentic work and long context at a medium price. Its AA Intelligence Index of 23.7 ranks 31st of 41 measured models. Weakest at multimodal input (D), then knowledge (C).",
+      "superseded_by": null,
+      "superseded_on": null,
       "added_on": null,
       "always_thinks": false,
-      "retires_on": "2026-10-31"
+      "retires_on": null
     },
     {
       "id": "gpt-5.1-codex-max",
