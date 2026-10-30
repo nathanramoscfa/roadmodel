@@ -1,9 +1,9 @@
 {
   "schema_version": "4",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-10-29T20:13:07Z",
+  "generated_at_utc": "2026-10-30T14:35:58Z",
   "source_doc_sha256": {
-    "model-selector.txt": "d8d9a8770d03593d0531927c5b54ac9731229c6973052c43211717eb910cada3",
+    "model-selector.txt": "8e35feff72512beeae1dc6bd84bfc9686e352dd5f2a5cb194714f40ad0eff925",
     "model-tier-cost-scale.md": "dad707e59d0f3e75cf699d81368ba66783cc2a6a0bf625c430e8f884ef844a1c"
   },
   "models": [
@@ -473,6 +473,13 @@
       "superseded_on": null,
       "added_on": "2026-10-20",
       "always_thinks": false,
+      "price_schedule": [
+        {
+          "from": "2026-12-01",
+          "input_price_per_1m": 4.0,
+          "output_price_per_1m": 20.0
+        }
+      ],
       "retires_on": null
     },
     {

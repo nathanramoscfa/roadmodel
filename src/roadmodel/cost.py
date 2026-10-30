@@ -19,6 +19,7 @@ import json
 import os
 import re
 from dataclasses import dataclass, field
+from datetime import UTC, date, datetime
 from importlib import resources
 from importlib.resources.abc import Traversable
 from pathlib import Path
@@ -270,7 +271,32 @@ def _load_catalog() -> dict[str, Any]:
     parsed: object = json.loads(text)
     if not isinstance(parsed, dict):
         raise BundledDocNotFoundError("catalog.json")
-    return parsed
+    return apply_price_schedule(parsed, _today())
+
+
+def _today() -> date:
+    return datetime.now(UTC).date()
+
+
+def apply_price_schedule(catalog: dict[str, Any], today: date) -> dict[str, Any]:
+    """``catalog`` with each model's list price moved to the latest
+    ``price_schedule`` entry in effect on ``today``: a price the provider
+    announced in advance (Gemini 4 Argon, $2/$10 to $4/$20 on 2026-12-01)
+    takes effect on its date without waiting for a release."""
+    for model in catalog.get("models", []):
+        schedule = model.get("price_schedule") if isinstance(model, dict) else None
+        if not isinstance(schedule, list):
+            continue
+        due = [
+            e
+            for e in schedule
+            if isinstance(e, dict) and str(e.get("from", "")) <= today.isoformat()
+        ]
+        if due:
+            latest = max(due, key=lambda e: str(e["from"]))
+            model["input_price_per_1m"] = float(latest["input_price_per_1m"])
+            model["output_price_per_1m"] = float(latest["output_price_per_1m"])
+    return catalog
 
 
 def _load_user_context_text() -> str:

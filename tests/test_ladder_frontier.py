@@ -1228,15 +1228,16 @@ def test_a_pick_runs_at_the_effort_whose_measured_score_clears_the_bar() -> None
     cost = lad.rungs["cost"]
     assert cost.candidate.evidence_level == "xhigh"
     assert cost.point.aa_index == 39.5
-    # Each effort is its own point, priced by its token multiplier; Luna at
-    # low (20 for 0.30) adds nothing over Lite (20 for 0.20).
+    # Each effort is its own point, its output share (0.625 of Luna's $0.50)
+    # priced by its token multiplier; Luna at low (20 for 0.36) adds nothing
+    # over Lite (20 for 0.20).
     assert [
         (p.candidate.model_name, p.candidate.evidence_level, p.price_usd) for p in lad.points
     ] == [
         ("Lite", None, 0.2),
-        ("Luna", "medium", 0.4),
+        ("Luna", "medium", 0.4375),
         ("Luna", "high", 0.5),
-        ("Luna", "xhigh", 0.8),
+        ("Luna", "xhigh", 0.6875),
         ("Sonnet", None, 4.0),
         ("Opus", None, 8.0),
     ]

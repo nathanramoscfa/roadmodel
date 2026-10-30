@@ -92,11 +92,15 @@ const BENCH = (benchmarks as { models?: Record<string, RawBench> }).models ?? {}
 
 const INDEX_KEY = "artificial_analysis_intelligence_index";
 
-// Each effort's measured output-token multiplier (docs/effort-tokens.json,
-// update/measure_effort_tokens.py), or undefined when it was not measured.
-const TOKENS =
-  (effortTokens as { models?: Record<string, { levels?: Record<string, { multiplier?: number }> }> })
-    .models ?? {};
+// Each effort's output-token multiplier (docs/effort-tokens.json,
+// update/measure_effort_tokens.py): measured, else derived from the model's
+// measured efforts; undefined when it has neither.
+const TOKEN_DOC = effortTokens as {
+  models?: Record<string, { levels?: Record<string, { multiplier?: number }> }>;
+  derived?: Record<string, Record<string, number>>;
+};
+const TOKENS = TOKEN_DOC.models ?? {};
+const DERIVED_TOKENS = TOKEN_DOC.derived ?? {};
 
 const EFFORT_RATINGS =
   (effortRatings as { models?: Record<string, Record<string, Partial<Record<Category, Rating>>>> })
@@ -104,6 +108,9 @@ const EFFORT_RATINGS =
 
 function multiplierByEffort(id: string): Record<string, number> | undefined {
   const out: Record<string, number> = {};
+  for (const [level, v] of Object.entries(DERIVED_TOKENS[id] ?? {})) {
+    if (typeof v === "number" && Number.isFinite(v) && v > 0) out[level] = v;
+  }
   for (const [level, row] of Object.entries(TOKENS[id]?.levels ?? {})) {
     const v = row.multiplier;
     if (typeof v === "number" && Number.isFinite(v) && v > 0) out[level] = v;

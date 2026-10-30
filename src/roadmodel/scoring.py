@@ -57,6 +57,7 @@ import functools
 import json
 import math
 import re
+import statistics
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timedelta, timezone
@@ -277,6 +278,9 @@ class Candidate:
     requirement: float
     requirement_penalty: float
     blended_price_usd: float
+    # How much of that price is output tokens: the part an effort scales
+    # (effort_price).
+    output_share: float
     scarcity: float
     effort: str
     effort_multiplier: float
@@ -349,16 +353,31 @@ def context_windows() -> dict[str, int]:
 
 
 @functools.cache
-def effort_token_multipliers() -> dict[str, dict[str, float]]:
-    """Each measured model's output-token multiplier at each effort, relative
-    to a typical model at high (docs/effort-tokens.json, from
-    update/measure_effort_tokens.py); empty when the file is missing or
-    unreadable."""
+def _effort_tokens() -> dict[str, Any]:
+    """docs/effort-tokens.json (update/measure_effort_tokens.py); empty when
+    the file is missing or unreadable."""
     try:
         raw = json.loads(BUNDLED_EFFORT_TOKENS_PATH.read_text(encoding="utf-8"))
     except (FileNotFoundError, OSError, ValueError):
         return {}
-    models = raw.get("models") if isinstance(raw, dict) else None
+    return raw if isinstance(raw, dict) else {}
+
+
+def _positive(row: Any) -> dict[str, float]:
+    if not isinstance(row, dict):
+        return {}
+    return {
+        str(lv): float(v)
+        for lv, v in row.items()
+        if isinstance(v, int | float) and not isinstance(v, bool) and v > 0
+    }
+
+
+@functools.cache
+def effort_token_multipliers() -> dict[str, dict[str, float]]:
+    """Each measured model's output-token multiplier at each effort, relative
+    to a typical model at high (docs/effort-tokens.json ``models``)."""
+    models = _effort_tokens().get("models")
     if not isinstance(models, dict):
         return {}
     out: dict[str, dict[str, float]] = {}
@@ -366,27 +385,72 @@ def effort_token_multipliers() -> dict[str, dict[str, float]]:
         levels = row.get("levels") if isinstance(row, dict) else None
         if not isinstance(levels, dict):
             continue
-        by = {
-            str(lv): float(v["multiplier"])
-            for lv, v in levels.items()
-            if isinstance(v, dict)
-            and isinstance(v.get("multiplier"), int | float)
-            and v["multiplier"] > 0
-        }
+        by = _positive({lv: v.get("multiplier") for lv, v in levels.items() if isinstance(v, dict)})
         if by:
             out[str(mid)] = by
     return out
+
+
+@functools.cache
+def derived_token_multipliers() -> dict[str, dict[str, float]]:
+    """The multiplier of each ladder model at each effort not measured,
+    derived from its measured ones (docs/effort-tokens.json ``derived``)."""
+    derived = _effort_tokens().get("derived")
+    if not isinstance(derived, dict):
+        return {}
+    return {str(mid): by for mid, row in derived.items() if (by := _positive(row))}
+
+
+@functools.cache
+def settable_levels() -> dict[str, list[str]]:
+    """The ladder levels each measured model's own API offers
+    (docs/effort-tokens.json ``settable``): Gemini 4 Argon takes low, medium
+    and high, and no surface sets it higher."""
+    raw = _effort_tokens().get("settable")
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        str(mid): [lv for lv in EFFORT_LADDER if lv in levels]
+        for mid, levels in raw.items()
+        if isinstance(levels, list) and levels
+    }
+
+
+def token_use(model_id: str, level: str) -> tuple[float, bool]:
+    """The output tokens ``model_id`` draws at ``level``, relative to a typical
+    model at high, and whether that was measured: measured, else derived from
+    the model's measured efforts (every ladder model has one or the other),
+    else the uniform EFFORT_TOKEN_MULTIPLIER (a model newer than the last
+    measurement)."""
+    measured = effort_token_multipliers().get(model_id, {})
+    if level in measured:
+        return measured[level], True
+    derived = derived_token_multipliers().get(model_id, {})
+    if level in derived:
+        return derived[level], False
+    return EFFORT_TOKEN_MULTIPLIER[level], False
 
 
 def token_multiplier(
     model_id: str, level: str, measured: dict[str, dict[str, float]] | None = None
 ) -> float:
     """The output tokens ``model_id`` draws at ``level``, relative to a typical
-    model at high: measured where docs/effort-tokens.json has it, else the
+    model at high (:func:`token_use`); with ``measured``, that table, else the
     uniform EFFORT_TOKEN_MULTIPLIER. A per-token price is the same at every
     effort; what a higher effort costs is these extra tokens."""
-    table = measured if measured is not None else effort_token_multipliers()
-    return table.get(model_id, {}).get(level, EFFORT_TOKEN_MULTIPLIER[level])
+    if measured is not None:
+        return measured.get(model_id, {}).get(level, EFFORT_TOKEN_MULTIPLIER[level])
+    return token_use(model_id, level)[0]
+
+
+def effort_price(blended: float, output_share: float, multiplier: float) -> float:
+    """A model's price run at an effort, in USD per 1M blended tokens: its
+    ``blended`` list price (3 input : 1 output tokens) with the output share
+    (:func:`output_share`) scaled by ``multiplier`` (:func:`token_use`). An
+    effort changes how much the model writes, not what it is sent, so the
+    input stays: a typical model at high reads its list price, and a terse
+    one is not discounted on the input it reads (2026-10-30)."""
+    return blended * (1.0 - output_share + output_share * multiplier)
 
 
 def nothing_fits(input_tokens: int, windows: dict[str, int] | None = None) -> bool:
@@ -520,6 +584,14 @@ def blended_price(model: dict[str, Any]) -> float:
     inp = float(model.get("input_price_per_1m") or 0.0)
     out = float(model.get("output_price_per_1m") or 0.0)
     return (3.0 * inp + out) / 4.0
+
+
+def output_share(model: dict[str, Any]) -> float:
+    """How much of ``model``'s blended price its output tokens make up: the
+    part an effort scales (:func:`effort_price`)."""
+    inp = float(model.get("input_price_per_1m") or 0.0)
+    out = float(model.get("output_price_per_1m") or 0.0)
+    return out / (3.0 * inp + out) if 3.0 * inp + out > 0 else 0.0
 
 
 def market_exchange_rate(
@@ -1201,7 +1273,8 @@ def rank(
             )
             effort = effort_for(task, headroom, scarcity)
             mult = token_multiplier(model_id, effort)
-            eff_cost = price * scarcity * mult
+            share = output_share(model)
+            eff_cost = effort_price(price, share, mult) * scarcity
             decades = math.log10(max(eff_cost, COST_FLOOR_USD) / COST_FLOOR_USD)
             cost_pen = lam * k * decades
             score = quality - penalty - cost_pen
@@ -1225,6 +1298,7 @@ def rank(
                 requirement=requirement,
                 requirement_penalty=round(penalty, 2),
                 blended_price_usd=round(price, 4),
+                output_share=round(share, 4),
                 scarcity=scarcity,
                 effort=effort,
                 effort_multiplier=mult,
@@ -1455,13 +1529,14 @@ class Ladder:
 
 
 def frontier_price(c: Candidate) -> float:
-    """Where ``c`` sits on the frontier's price axis: the blended list price,
-    times the tokens it draws at its effort (:func:`token_multiplier`) when it
-    runs at a measured effort (a higher effort draws more tokens of the same
-    model, and models differ in how many they draw)."""
+    """Where ``c`` sits on the frontier's price axis: its price at the effort
+    it runs (:func:`effort_price`) when that is a measured effort (a higher
+    effort draws more output tokens of the same model, and models differ in
+    how many they draw), else its blended list price."""
     if c.evidence_level is None:
         return c.blended_price_usd
-    return round(c.blended_price_usd * token_multiplier(c.model_id, c.evidence_level), 4)
+    mult = token_multiplier(c.model_id, c.evidence_level)
+    return round(effort_price(c.blended_price_usd, c.output_share, mult), 4)
 
 
 def frontier(candidates: list[Candidate], bench: dict[str, Any]) -> list[FrontierPoint]:
@@ -1652,7 +1727,7 @@ def _at_level(
             score=round(c.score + c.requirement_penalty - penalty, 2),
         )
     mult = token_multiplier(c.model_id, level)
-    eff_cost = c.blended_price_usd * c.scarcity * mult
+    eff_cost = effort_price(c.blended_price_usd, c.output_share, mult) * c.scarcity
     decades = math.log10(max(eff_cost, COST_FLOOR_USD) / COST_FLOOR_USD)
     cost_pen = lam * k * decades
     nudge = 0.5 if task.category in AGENT_CATEGORIES and c.platform_id in AGENT_SURFACES else 0.0
@@ -2348,36 +2423,97 @@ def _thinking_cell(c: Candidate, catalog: dict[str, Any]) -> str:
     return "—" if model.get("always_thinks") else "On"
 
 
+def _aa_by_level(bench: dict[str, Any], model_id: str) -> dict[str, float]:
+    """The AA Intelligence Index AA measured ``model_id`` at, by effort."""
+    out = {}
+    for lv in measured_levels(bench, model_id):
+        v = _evidence(bench, model_id, FRONTIER_INDEX, lv)
+        if v is not None:
+            out[lv] = v
+    return out
+
+
+def estimated_aa_index(bench: dict[str, Any], model_id: str, level: str) -> float | None:
+    """The AA Intelligence Index ``model_id`` would read at ``level``, an
+    effort AA has not measured it at, from the efforts it has: between two
+    measured efforts, read between them; above or below them all, the nearest
+    measured effort moved by the median shift between those two efforts
+    across every model AA measured at both. Backtested against AA's own rows
+    (2026-10-30, 21 models): about 0.8 points off between two efforts, 1.4 a
+    level away, 2.5 further; adjacent efforts of one model sit about 3 apart.
+    None when AA measured the model at no effort, or no other model measured
+    at both efforts says how they differ."""
+    have = _aa_by_level(bench, model_id)
+    want = normalize_level(level)
+    if not have or want not in EFFORT_LADDER:
+        return None
+    if want in have:
+        return have[want]
+    i = EFFORT_LADDER.index(want)
+    lo = [lv for lv in have if lv in EFFORT_LADDER and EFFORT_LADDER.index(lv) < i]
+    hi = [lv for lv in have if lv in EFFORT_LADDER and EFFORT_LADDER.index(lv) > i]
+    if lo and hi:
+        a, b = max(lo, key=EFFORT_LADDER.index), min(hi, key=EFFORT_LADDER.index)
+        t = (i - EFFORT_LADDER.index(a)) / (EFFORT_LADDER.index(b) - EFFORT_LADDER.index(a))
+        return round(have[a] + t * (have[b] - have[a]), 1)
+    anchors = lo or hi
+    if not anchors:
+        return None  # measured only at levels off the ladder (Gemini's minimal)
+    a = max(anchors, key=EFFORT_LADDER.index) if lo else min(anchors, key=EFFORT_LADDER.index)
+    shifts = []
+    for other in bench:
+        if other == model_id:
+            continue
+        row = _aa_by_level(bench, other)
+        if want in row and a in row:
+            shifts.append(row[want] - row[a])
+    if not shifts:
+        return None
+    return round(have[a] + statistics.median(shifts), 1)
+
+
+def ladder_aa(
+    bench: dict[str, Any], model_id: str, level: str, *, dial: bool = False
+) -> tuple[float | None, bool]:
+    """The AA Intelligence Index of ``model_id`` run at ``level``, and whether
+    it is estimated: AA's row at that effort, else :func:`estimated_aa_index`.
+    When AA names no level for the model, its one row stands for the model
+    only on a surface with no dial for it (``dial`` false): where the
+    operator sets a level, that row's effort is unknown, so it is no figure
+    for ``level`` (Gemini 3 Flash's row on the Google API's dial). None when
+    AA has not measured the model at all."""
+    if measured_levels(bench, model_id):
+        measured = _evidence(bench, model_id, FRONTIER_INDEX, normalize_level(level))
+        if measured is not None:
+            return measured, False
+        estimate = estimated_aa_index(bench, model_id, level)
+        return estimate, estimate is not None
+    return (None if dial else _evidence(bench, model_id, FRONTIER_INDEX)), False
+
+
 def ladder_aa_index(
     bench: dict[str, Any], model_id: str, level: str, *, dial: bool = False
 ) -> float | None:
-    """The AA Intelligence Index of ``model_id`` run at ``level``: AA's row at
-    that effort. When AA names no level for the model, its one row stands for
-    the model only on a surface with no dial for it (``dial`` false): where
-    the operator sets a level, that row's effort is unknown, so it is no
-    figure for ``level`` (Gemini 3 Flash's row on the Google API's dial).
-    None when AA has not measured the model at that effort, or not at all."""
-    if measured_levels(bench, model_id):
-        return _evidence(bench, model_id, FRONTIER_INDEX, normalize_level(level))
-    return None if dial else _evidence(bench, model_id, FRONTIER_INDEX)
+    """:func:`ladder_aa`'s figure, measured or estimated."""
+    return ladder_aa(bench, model_id, level, dial=dial)[0]
 
 
-def _aa_cell(value: float | None) -> str:
-    return "not measured" if value is None else f"{value:g}"
+def _aa_cell(value: float | None, estimated: bool = False) -> str:
+    if value is None:
+        return "not measured"
+    return f"{_layout.ESTIMATE_MARK if estimated else ''}{value:g}"
 
 
 def ladder_price(model_id: str, level: str, catalog: dict[str, Any]) -> tuple[float, bool] | None:
-    """What ``model_id`` costs run at ``level``: its blended list price (USD
-    per 1M tokens, 3 in : 1 out) times the output tokens it draws there
-    (:func:`token_multiplier`), the frontier's price axis; and whether that
-    token use was measured (else a typical model's at the level). None when
-    the catalog has no such model."""
+    """What ``model_id`` costs run at ``level`` (:func:`effort_price`, USD per
+    1M blended tokens), the frontier's price axis; and whether its token use
+    there was measured (else derived, :func:`token_use`). None when the
+    catalog has no such model."""
     model = next((m for m in catalog.get("models", []) if m.get("id") == model_id), None)
     if model is None:
         return None
-    key = _scorer_level(level)
-    measured = key in effort_token_multipliers().get(model_id, {})
-    return round(blended_price(model) * token_multiplier(model_id, key), 4), measured
+    mult, measured = token_use(model_id, _scorer_level(level))
+    return round(effort_price(blended_price(model), output_share(model), mult), 4), measured
 
 
 def ladder_price_by_name(
@@ -2412,6 +2548,12 @@ def _option(
     rank no other maker could."""
     dial = _DIAL_NAMES.get(c.platform_id, "Effort")
     price = ladder_price(c.model_id, level, catalog)
+    aa, aa_estimated = ladder_aa(
+        bench,
+        c.model_id,
+        level,
+        dial=bool(native_levels(c.platform_id, c.model_id, catalog=catalog)),
+    )
     return {
         "model_id": c.model_id,
         "model": c.model_name,
@@ -2422,12 +2564,8 @@ def _option(
         "level_cell": (
             _layout.NONE if dial is None else _LEVEL_WORDS.get(normalize_level(level), level)
         ),
-        "aa_index": ladder_aa_index(
-            bench,
-            c.model_id,
-            level,
-            dial=bool(native_levels(c.platform_id, c.model_id, catalog=catalog)),
-        ),
+        "aa_index": aa,
+        "aa_estimated": aa_estimated,
         "price_usd_per_1m": None if price is None else price[0],
         "price_measured": None if price is None else price[1],
         "thinking_cell": _thinking_cell(c, catalog),
@@ -2443,11 +2581,20 @@ def _layout_option(o: dict[str, Any] | None) -> _layout.Option | None:
         model=str(o["model"]),
         platform=str(o["platform"]),
         level=str(o["level_cell"]),
-        aa=_aa_cell(o["aa_index"]),
+        aa=_aa_cell(o["aa_index"], bool(o.get("aa_estimated"))),
         price=o["price_usd_per_1m"],
         price_measured=bool(o["price_measured"]),
         stepped_down=bool(o.get("stepped_down")),
     )
+
+
+def _dial(c: Candidate, catalog: dict[str, Any]) -> list[str]:
+    """The levels a ladder may set ``c`` at: its surface's own dial
+    (:func:`native_levels`), else the levels the model's own API offers
+    (:func:`settable_levels`), else the scorer's whole ladder. Antigravity
+    documents no dial, and Gemini 4 Argon has no level above high."""
+    native = native_levels(c.platform_id, c.model_id, catalog=catalog)
+    return native or settable_levels().get(c.model_id) or list(EFFORT_LADDER)
 
 
 def _step_down(c: Candidate, level: str, steps: int, catalog: dict[str, Any]) -> str | None:
@@ -2455,7 +2602,7 @@ def _step_down(c: Candidate, level: str, steps: int, catalog: dict[str, Any]) ->
     None below the dial's lowest rung, or on a surface with no dial."""
     if c.platform_id in _DIAL_NAMES and _DIAL_NAMES[c.platform_id] is None:
         return None
-    levels = native_levels(c.platform_id, c.model_id, catalog=catalog) or list(EFFORT_LADDER)
+    levels = _dial(c, catalog)
     levels = [lv for lv in levels if normalize_level(lv) not in _NEVER_PINNED]
     names = [normalize_level(lv) for lv in levels]
     here = normalize_level(level)
@@ -2466,7 +2613,7 @@ def _step_down(c: Candidate, level: str, steps: int, catalog: dict[str, Any]) ->
 
 def _deepest_level(c: Candidate, catalog: dict[str, Any]) -> str:
     """The top rung of ``c``'s dial a roadmap may pin (``max``)."""
-    levels = native_levels(c.platform_id, c.model_id, catalog=catalog) or list(EFFORT_LADDER)
+    levels = _dial(c, catalog)
     pinnable = [lv for lv in levels if normalize_level(lv) not in _NEVER_PINNED]
     return pinnable[-1] if pinnable else levels[-1]
 

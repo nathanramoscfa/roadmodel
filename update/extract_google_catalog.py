@@ -39,6 +39,7 @@ import json
 import re
 import sys
 from collections.abc import Collection, Iterator
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 import requests
@@ -80,6 +81,9 @@ REQUIRED_ANCHORS = (
 )
 
 _DOLLAR_RE = re.compile(r"\$\s*([0-9]+(?:\.[0-9]+)?)")
+# A price the page says changes on a date: "$2.00 through November 30, 2026.
+# $4.00 starting December 1, 2026." (Gemini 4 Argon's introductory price).
+_STARTING_RE = re.compile(r"\$\s*([0-9]+(?:\.[0-9]+)?)\s+starting\s+([A-Z][a-z]+ \d{1,2}, \d{4})")
 _PREVIEW_RE = re.compile(r"\s+Preview$")
 
 
@@ -111,6 +115,21 @@ def _row_cells(row: Tag) -> list[str]:
 def _dollars(cell: str) -> float | None:
     m = _DOLLAR_RE.search(cell)
     return float(m.group(1)) if m else None
+
+
+def _dated(cell: str, today: date) -> tuple[float | None, list[tuple[str, float]]]:
+    """The price a cell quotes for ``today``, and each later price it
+    announces with the ISO date it starts: the first price until a
+    `starting <date>` price takes over."""
+    price = _dollars(cell)
+    later: list[tuple[str, float]] = []
+    for amount, when in _STARTING_RE.findall(cell):
+        start = datetime.strptime(when, "%B %d, %Y").replace(tzinfo=UTC).date()
+        if start <= today:
+            price = float(amount)
+        else:
+            later.append((start.isoformat(), float(amount)))
+    return price, sorted(later)
 
 
 def _tier_of(table: Tag) -> str:
@@ -159,17 +178,29 @@ def _standard_tables(soup: BeautifulSoup) -> Iterator[tuple[Tag, list[list[str]]
         yield table, rows
 
 
-def _paid_prices(rows: list[list[str]]) -> tuple[float | None, float | None]:
-    """The Paid Tier (last column) input and output price of one table."""
+def _paid_prices(
+    rows: list[list[str]], today: date | None = None
+) -> tuple[float | None, float | None, list[dict[str, object]]]:
+    """The Paid Tier (last column) input and output price of one table in
+    effect ``today`` (default: the current UTC date), and the price schedule
+    the page announces after it: each later date with both prices then."""
+    day = today or datetime.now(UTC).date()
     in_price = out_price = None
+    in_later: list[tuple[str, float]] = []
+    out_later: list[tuple[str, float]] = []
     for c in rows:
         if not c:
             continue
         if "input price" in c[0].lower():
-            in_price = _dollars(c[-1])
+            in_price, in_later = _dated(c[-1], day)
         elif c[0].lower().startswith("output price"):
-            out_price = _dollars(c[-1])
-    return in_price, out_price
+            out_price, out_later = _dated(c[-1], day)
+    schedule: list[dict[str, object]] = []
+    for start in sorted({d for d, _ in in_later} | {d for d, _ in out_later}):
+        inp = next((p for d, p in reversed(in_later) if d <= start), in_price)
+        out = next((p for d, p in reversed(out_later) if d <= start), out_price)
+        schedule.append({"from": start, "input_price_per_1m": inp, "output_price_per_1m": out})
+    return in_price, out_price, schedule
 
 
 DECLINED: dict[str, str] = {
@@ -243,7 +274,7 @@ def discovered_prices(soup: BeautifulSoup, names: list[str]) -> list[dict[str, o
             continue
         seen.add(name)
         entry: dict[str, object] = {"slug": name}
-        in_price, out_price = _paid_prices(rows)
+        in_price, out_price, _ = _paid_prices(rows)
         if in_price is not None and out_price is not None:
             entry["input_price_per_1m"] = in_price
             entry["output_price_per_1m"] = out_price
@@ -251,14 +282,16 @@ def discovered_prices(soup: BeautifulSoup, names: list[str]) -> list[dict[str, o
     return out
 
 
-def parse_pricing(soup: BeautifulSoup) -> list[dict[str, object]]:
+def parse_pricing(soup: BeautifulSoup, today: date | None = None) -> list[dict[str, object]]:
+    """Each mapped model's Standard Paid Tier price in effect ``today``, with
+    a ``price_schedule`` when the page announces a later price."""
     models: list[dict[str, object]] = []
     seen: set[str] = set()
     for table, rows in _standard_tables(soup):
         mid = _model_id_for(table)
         if mid is None or mid in seen:
             continue
-        in_price, out_price = _paid_prices(rows)
+        in_price, out_price, schedule = _paid_prices(rows, today)
         if in_price is None or out_price is None:
             raise ExtractError(f"could not parse Standard input/output price for {mid!r}")
         seen.add(mid)
@@ -271,6 +304,7 @@ def parse_pricing(soup: BeautifulSoup) -> list[dict[str, object]]:
                 "input_price_per_1m": in_price,
                 "output_price_per_1m": out_price,
                 "cache_read_per_1m": None,
+                **({"price_schedule": schedule} if schedule else {}),
             }
         )
     if not models:

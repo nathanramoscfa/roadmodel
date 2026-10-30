@@ -1261,7 +1261,7 @@
              prose-generated="best-for headline-benchmarks"
              best-for="Frontier-class agentic work, plus strong coding, planning, multimodal input, long context and knowledge, at a medium price. Its AA Intelligence Index of 51.8 ranks 7th of 41 measured models. Weakest at speed (D)." added-on="2026-10-01"/>
       <model id="gemini-4-argon" name="Gemini 4 Argon"
-             input-price-per-1m="$2.00" output-price-per-1m="$10.00"
+             input-price-per-1m="$2.00" output-price-per-1m="$10.00" price-from="2026-12-01 $4.00/$20.00"
              jurisdiction="us"
              tier-coding="S" tier-planning="S" tier-agentic="S"
              tier-multimodal="B" tier-long-context="A" tier-knowledge="S"

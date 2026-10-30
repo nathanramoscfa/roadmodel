@@ -47,6 +47,29 @@ fix the cause and run it again:
    old package index has expired
 5. a wait until `https://roadmodel-api.vercel.app/healthz` reports `X.Y.Z`
 
+## Weekly token measurement
+
+A ladder's Price rests on how many output tokens each model writes at each
+level (`docs/effort-tokens.json`). Only the operator's Mac can measure that:
+the Claude Code and Codex lanes need its sign-ins, and the rest run on
+OpenRouter with the key in its keychain (`roadmodel/OPENROUTER_API_KEY`).
+
+- `scripts/measure-weekly.sh` measures every ladder level the file lacks, then
+  reruns the levels whose price is not yet known to within ±10%. It works in
+  its own clone of `main` (`~/.cache/roadmodel/measure-clone`). When the file
+  changes, it opens a PR and lands it with
+  `private/security-tools/finish-security.sh`, the re-bind every PR needs. That
+  step refuses on a real new finding and leaves the PR open.
+- `scripts/measure-weekly.sh --install` runs it every Sunday at 10:00
+  (launchd, `ai.roadmodel.measure-weekly`; log
+  `~/Library/Logs/roadmodel-measure-weekly.log`). `--uninstall` removes it.
+- OpenRouter spend stops at `ROADMODEL_MEASURE_MAX_USD` a run (default $3).
+  The credits are prepaid, so a run never spends past the balance. The
+  subscription lanes cost no cash.
+- Until a new model or level is measured, the daily benchmark refresh keeps
+  one issue open listing it ("model efforts not yet token-measured"), and its
+  Price is derived from the model's measured levels (≈ in a ladder).
+
 ## When a run fails
 
 - **"You have reached your specified API usage limits"**: the Anthropic org

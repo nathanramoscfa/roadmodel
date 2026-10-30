@@ -310,6 +310,30 @@ def snapshot_price_map(snapshots: list[dict[str, Any]]) -> dict[str, dict[str, f
     return prices
 
 
+def snapshot_schedule_map(snapshots: list[dict[str, Any]]) -> dict[str, str]:
+    """``id -> price-from`` attribute value for every provider-direct model
+    whose snapshot announces a later price (``price_schedule``): each change
+    as ``YYYY-MM-DD $in/$out``, ``; ``-joined. A model with none maps to ""
+    (the overlay then drops a stale attribute)."""
+    out: dict[str, str] = {}
+    for snap in snapshots:
+        models = snap.get("models")
+        if not isinstance(models, list):
+            continue
+        for model in models:
+            mid = model.get("id")
+            if not isinstance(mid, str):
+                continue
+            entries = model.get("price_schedule") or []
+            out[mid] = "; ".join(
+                f"{e['from']} {_fmt_price(float(e['input_price_per_1m']))}"
+                f"/{_fmt_price(float(e['output_price_per_1m']))}"
+                for e in entries
+                if isinstance(e, dict)
+            )
+    return out
+
+
 def _fmt_price(value: float) -> str:
     """Format a numeric price as the docs' ``$X.XX`` convention: at least two
     decimals, trailing zeros beyond the second stripped (so 0.435 -> ``$0.435``,
@@ -326,10 +350,14 @@ _PRICE_ATTRS = (("input-price-per-1m", "input"), ("output-price-per-1m", "output
 
 
 def apply_price_overlay(
-    current: str, price_map: dict[str, dict[str, float]]
+    current: str,
+    price_map: dict[str, dict[str, float]],
+    schedules: dict[str, str] | None = None,
 ) -> tuple[str, list[str], list[str]]:
     """Force each provider-direct id's ``input/output-price-per-1m`` in the selector
-    to the snapshot price. Numeric-compare-before-replace: a model already matching
+    to the snapshot price, and with ``schedules`` (:func:`snapshot_schedule_map`)
+    its ``price-from`` attribute to the snapshot's announced later price (removed
+    when it announces none). Numeric-compare-before-replace: a model already matching
     its snapshot is left byte-identical. Ids not present in the selector (not yet
     added) are skipped. Returns ``(new_current, applied, flags)``."""
     applied: list[str] = []
@@ -347,10 +375,26 @@ def apply_price_overlay(
             if round(float(match.group(1)), 6) != round(price_map[mid][key], 6):
                 replacement = f'{attr}="{_fmt_price(price_map[mid][key])}"'
                 new_element = new_element.replace(match.group(0), replacement, 1)
+        if schedules is not None and mid in schedules:
+            new_element = _with_price_from(new_element, schedules[mid])
         if new_element != element:
             current = current.replace(element, new_element, 1)
             applied.append(mid)
     return current, applied, flags
+
+
+def _with_price_from(element: str, value: str) -> str:
+    """``element`` with its ``price-from`` attribute set to ``value`` (placed
+    after ``output-price-per-1m``), or removed when ``value`` is empty."""
+    found = re.search(r'\s+price-from="[^"]*"', element)
+    if not value:
+        return element.replace(found.group(0), "", 1) if found else element
+    if found:
+        return element.replace(found.group(0), f' price-from="{value}"', 1)
+    out = re.search(r'output-price-per-1m="[^"]*"', element)
+    if out is None:
+        return element
+    return element.replace(out.group(0), f'{out.group(0)} price-from="{value}"', 1)
 
 
 def apply_cost_scale_price_overlay(
@@ -587,7 +631,9 @@ def _run_write(selector_path: Path, base_path: Path, cost_scale_path: Path) -> i
     current, el_applied, el_flags = apply_overlay(
         original, base_path.read_text(), provider_direct_ids(snaps)
     )
-    current, px_applied, px_flags = apply_price_overlay(current, prices)
+    current, px_applied, px_flags = apply_price_overlay(
+        current, prices, snapshot_schedule_map(snaps)
+    )
     current, synced = apply_method_sync(current, snaps)
     for method_id, added in synced.items():
         print(f"merge_catalog: {method_id} supports-models added (provider price list): {added}")

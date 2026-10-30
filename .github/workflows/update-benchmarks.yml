@@ -106,10 +106,11 @@ jobs:
       - name: Flag efforts not yet token-measured
         # docs/effort-tokens.json prices each model's efforts by the tokens it
         # was measured drawing there (update/measure_effort_tokens.py). The
-        # measurement runs on the operator's machine (it needs the Claude and
-        # ChatGPT sign-ins), so a model or effort AA starts measuring reads the
-        # uniform table until it does: keep ONE issue open listing them, and
-        # close it when none is left.
+        # measurement runs on the operator's Mac (it needs the Claude and
+        # ChatGPT sign-ins), weekly by scripts/measure-weekly.sh, so a new
+        # model or ladder effort is derived from the model's measured ones
+        # until it runs: keep ONE issue open listing them, and close it when
+        # none is left.
         if: github.event.inputs.dry_run != 'true'
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -121,14 +122,14 @@ jobs:
             -q ".[] | select(.title == \"${title}\") | .number" | head -n1 || true)"
           if [ -z "${missing}" ]; then
             if [ -n "${num}" ]; then
-              gh issue close "${num}" --comment "Every effort Artificial Analysis measures now has a token measurement."
+              gh issue close "${num}" --comment "Every ladder effort now has a token measurement."
             fi
-            echo "Every AA-measured effort is token-measured."
+            echo "Every ladder effort is token-measured."
             exit 0
           fi
           nl=$'\n'  # joins sections: $( ) strips the trailing newlines of what it captures
           list="$(printf '%s' "${missing}" | sed 's/^/- /')"
-          body="Artificial Analysis measures these models at these efforts, and docs/effort-tokens.json has no token measurement for them, so the scorer prices them with the uniform table:${nl}${nl}${list}${nl}${nl}Measure them on the operator's machine (Claude Code and Codex signed in, OPENROUTER_API_KEY in the keychain), then open a PR with the file:${nl}${nl}    python update/measure_effort_tokens.py --models <ids>   # Codex 0.162+; --codex-bin to point at one${nl}${nl}This issue closes itself when the daily benchmark refresh finds nothing missing."
+          body="A roadmap ladder can show these models at these efforts, and docs/effort-tokens.json has no token measurement for them, so their Price is derived from each model's measured efforts (marked ≈):${nl}${nl}${list}${nl}${nl}The weekly measurement on the operator's Mac (scripts/measure-weekly.sh, Claude Code and Codex signed in, OPENROUTER_API_KEY in the keychain) measures them within its spend cap and opens a PR. To run it now:${nl}${nl}    scripts/measure-weekly.sh   # or: python update/measure_effort_tokens.py --models <ids>${nl}${nl}This issue closes itself when the daily benchmark refresh finds nothing missing."
           if [ -n "${num}" ]; then
             gh issue edit "${num}" --body "${body}"
           else

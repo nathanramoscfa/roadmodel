@@ -11,7 +11,14 @@
       "name": "Gemini 4 Argon",
       "input_price_per_1m": 2.0,
       "output_price_per_1m": 10.0,
-      "cache_read_per_1m": null
+      "cache_read_per_1m": null,
+      "price_schedule": [
+        {
+          "from": "2026-12-01",
+          "input_price_per_1m": 4.0,
+          "output_price_per_1m": 20.0
+        }
+      ]
     },
     {
       "id": "gemini-3.1-pro",
@@ -47,5 +54,5 @@
   "unexpected_slugs": [],
   "discovered": [],
   "missing_mapped_models": [],
-  "section_sha256": "d1d7b44d80ecbc754f2608038d2568efc5367e35741c15ccb7633e00d20ec7ae"
+  "section_sha256": "0dc9e6950f62360c3126444d16f5c75912e14b6f43281a6091ed96effb69ace4"
 }
