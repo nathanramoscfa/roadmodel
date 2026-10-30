@@ -378,13 +378,15 @@ export function ScoreBreakdownCard({
   // The model that beats this one across the whole catalog (null on the frontier).
   leader: ModelRow | null;
   // A /recommend pick read at the effort it runs: its AA Index is the one
-  // measured there, and its price is the blended price times the tokens it
-  // draws there relative to a typical model at high (lib/pick-effort.ts),
-  // the figure the frontier chart plots.
+  // measured there, and its price is the blended price with its output part
+  // scaled by the tokens it draws there relative to a typical model at high
+  // (lib/pick-effort.ts effortPrice), the figure the frontier chart plots.
   effort?: { label: string; tokenShare: number } | null;
 }) {
   const listPrice = blendedPrice(m.input_price_per_1m, m.output_price_per_1m);
-  const price = listPrice * (effort?.tokenShare ?? 1);
+  const price = effort
+    ? (3 * m.input_price_per_1m + m.output_price_per_1m * effort.tokenShare) / 4
+    : listPrice;
   const b = scoreBreakdown(fit, m.tier_cost, price, m.aa_index);
   if (!b) return null;
   const tier = COST_TIER_DEFS[m.tier_cost].label;
@@ -452,20 +454,15 @@ export function ScoreBreakdownCard({
           valueClass={STRONG}
         />
         <p className={"-mt-0.5 mb-1 text-right text-xs tabular-nums " + MUTED}>
-          (3 × {formatUsd(m.input_price_per_1m)} input + {formatUsd(m.output_price_per_1m)} output) ÷ 4
-          {effort && (
-            <>
-              {" "}
-              × {effort.tokenShare.toFixed(2)}
-            </>
-          )}
+          (3 × {formatUsd(m.input_price_per_1m)} input + {formatUsd(m.output_price_per_1m)} output
+          {effort && <> × {effort.tokenShare.toFixed(2)}</>}) ÷ 4
         </p>
         {effort && (
           <p className={"mb-1 text-xs leading-[1.125rem] " + MUTED} data-testid="score-breakdown-effort">
             The per-token price is the same at every effort, but the tokens drawn are not: at{" "}
             {effort.label} the model draws {effort.tokenShare.toFixed(2)}× what a typical model
-            draws at High, so it is priced here at {usd(b.price)} rather than its {usd(listPrice)}{" "}
-            list price, as on the chart below.
+            draws at High. Its output is priced at that, its input as listed, so it is priced here
+            at {usd(b.price)} rather than its {usd(listPrice)} list price, as on the chart below.
           </p>
         )}
         <Row

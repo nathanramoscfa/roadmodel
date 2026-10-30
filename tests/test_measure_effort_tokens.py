@@ -1,9 +1,11 @@
 """Measured output tokens per effort: the measuring script and the scorer.
 
-update/measure_effort_tokens.py runs each model AA measured at several
-efforts through a fixed probe set and writes docs/effort-tokens.json; the
-scorer prices a model at an effort by that measurement
-(scoring.token_multiplier), falling back to the uniform table.
+update/measure_effort_tokens.py runs every ladder model through a fixed
+probe set at each effort its lane can set, tops up the noisy efforts, and
+writes docs/effort-tokens.json; the scorer prices a model at an effort by
+that measurement (scoring.token_use: measured, else derived from the model's
+measured efforts, else the uniform table), scaling only the output share of
+its blended price (scoring.effort_price).
 """
 
 from __future__ import annotations
@@ -113,52 +115,68 @@ def _bench(**models: dict[str, Any]) -> dict[str, Any]:
     return {"models": models}
 
 
-def test_the_plan_routes_each_model_to_its_lane_first_sample_first() -> None:
+def _ladder_catalog() -> dict[str, Any]:
+    ids = ["claude-fable-5.1", "gpt-6-luna", "grok-4.7", "kimi-k3", "gemini-3-pro", "haiku"]
+    return {
+        "models": [
+            *({"id": mid, "input_price_per_1m": 2.0, "output_price_per_1m": 10.0} for mid in ids),
+            {"id": "old", "superseded_by": "grok-4.7"},
+        ],
+        "access_methods": [
+            {
+                "id": "claude-code",
+                "effort_levels": list(met.LEVELS),
+                "effort_levels_by_model": {"claude-fable-5.1": list(met.LEVELS)},
+            },
+            {"id": "codex-cli", "effort_levels": [*met.LEVELS, "ultra"]},
+        ],
+    }
+
+
+def _aa_row(creator: str, **kw: Any) -> dict[str, Any]:
+    return {
+        "aa_creator": creator,
+        "evaluations": {"artificial_analysis_intelligence_index": 40.0},
+        **kw,
+    }
+
+
+def test_the_plan_runs_every_ladder_model_at_each_level_its_lane_sets() -> None:
+    """A ladder can show a model at any level of its dial (a lower rung, a
+    phase session's top), so each runs at every level its lane can set, not
+    only the efforts AA measured (2026-10-30: Gemini 4 Argon read `not
+    measured` at low, medium and max)."""
     bench = _bench(
         **{
-            "claude-fable-5.1": {
-                "aa_creator": "Anthropic",
-                "aa_effort": "max",
-                "effort_variants": {"low": {}},
-            },
-            "gpt-6-luna": {
-                "aa_creator": "OpenAI",
-                "aa_effort": "max",
-                "effort_variants": {"low": {}},
-            },
-            "grok-4.7": {
-                "aa_creator": "xAI",
-                "aa_effort": "high",
-                "effort_variants": {"low": {}, "xhigh": {}},
-            },
-            "kimi-k3": {
-                "aa_creator": "Moonshot",
-                "aa_effort": "max",
-                "effort_variants": {"low": {}},
-            },
-            "gemini-3-pro": {
-                "aa_creator": "Google",
-                "aa_effort": "high",
-                "effort_variants": {"low": {}},
-            },
-            "haiku": {"aa_creator": "Anthropic"},  # AA names no effort
+            "claude-fable-5.1": _aa_row("Anthropic", aa_effort="max"),
+            "gpt-6-luna": _aa_row("OpenAI", aa_effort="max"),
+            "grok-4.7": _aa_row("xAI", aa_effort="high"),
+            "kimi-k3": _aa_row("Moonshot"),
+            "gemini-3-pro": _aa_row("Google"),
+            "haiku": _aa_row("Anthropic"),  # no dial on Claude Code
+            "old": _aa_row("xAI"),  # superseded: not a ladder model
         }
     )
     routes = {
         "grok-4.7": ("x-ai/grok-4.7", ["xhigh", "high", "low"]),
         "kimi-k3": ("moonshotai/kimi-k3", ["high"]),
     }
-    jobs, skipped = met.plan(bench, samples=2, models=None, levels=None, routes=routes)
+    jobs, skipped = met.plan(
+        bench, _ladder_catalog(), samples=2, models=None, levels=None, routes=routes
+    )
     lanes = {(j.model_id, j.lane, j.target) for j in jobs}
     assert lanes == {
         ("claude-fable-5.1", "claude-code", "claude-fable-5-1"),
         ("gpt-6-luna", "codex", "gpt-6-luna"),
         ("grok-4.7", "openrouter", "x-ai/grok-4.7"),
     }
+    assert {j.level for j in jobs if j.model_id == "claude-fable-5.1"} == set(met.LEVELS)
+    assert {j.level for j in jobs if j.model_id == "gpt-6-luna"} == set(met.LEVELS)
     assert {j.level for j in jobs if j.model_id == "grok-4.7"} == {"low", "high", "xhigh"}
-    assert set(skipped) == {"kimi-k3", "gemini-3-pro"}
-    # Fable and Luna at low and max, Grok at three levels: each probe twice.
-    assert len(jobs) == (2 + 2 + 3) * len(met.PROBES) * 2
+    assert {"kimi-k3", "gemini-3-pro", "haiku"} <= set(skipped)
+    assert skipped["grok-4.7@max"] == "OpenRouter cannot set this effort"
+    assert "old" not in skipped and all(j.model_id != "old" for j in jobs)
+    assert len(jobs) == (5 + 5 + 3) * len(met.PROBES) * 2
     samples = [j.sample for j in jobs]
     assert samples == sorted(samples)  # every first sample before any second
 
@@ -179,7 +197,9 @@ def test_the_scorer_reads_measured_multipliers_and_falls_back() -> None:
     assert scoring.token_multiplier("x", "low", measured) == scoring.EFFORT_TOKEN_MULTIPLIER["low"]
 
 
-def test_frontier_price_uses_the_measured_multiplier(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_frontier_price_scales_the_output_share_by_the_measured_multiplier(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(scoring, "effort_token_multipliers", lambda: {"m": {"medium": 2.0}})
     c = scoring.Candidate(
         model_id="m",
@@ -195,16 +215,18 @@ def test_frontier_price_uses_the_measured_multiplier(monkeypatch: pytest.MonkeyP
         requirement=50.0,
         requirement_penalty=0.0,
         blended_price_usd=4.0,
+        output_share=0.5,
         scarcity=0.35,
         effort="medium",
         effort_multiplier=2.0,
-        effective_cost_usd=2.8,
+        effective_cost_usd=2.1,
         cost_decades=1.0,
         cost_penalty=1.0,
         score=1.0,
         evidence_level="medium",
     )
-    assert scoring.frontier_price(c) == 8.0
+    # $2 of input stays; $2 of output doubles: $6, not the whole $4 doubled.
+    assert scoring.frontier_price(c) == 6.0
 
 
 def test_the_committed_measurements_are_well_formed() -> None:
@@ -226,6 +248,12 @@ def test_the_committed_measurements_are_well_formed() -> None:
     # The bundled loader reads every measured level.
     loaded = scoring.effort_token_multipliers.__wrapped__()
     assert set(loaded) == set(doc["models"])
+    # Derived levels fill the gaps a ladder can show, never a measured one.
+    for mid, levels in doc.get("derived", {}).items():
+        assert not set(levels) & set(doc["models"].get(mid, {}).get("levels", {})), mid
+        assert all(lv in scoring.EFFORT_LADDER and v > 0 for lv, v in levels.items()), mid
+    for mid, levels in doc.get("settable", {}).items():
+        assert levels and all(lv in scoring.EFFORT_LADDER for lv in levels), mid
 
 
 def test_openrouter_models_are_scaled_by_the_measured_lane_factor() -> None:
@@ -262,6 +290,7 @@ def _cand(mid: str, level: str | None, *, platform: str = "x", penalty: float = 
         requirement=50.0,
         requirement_penalty=penalty,
         blended_price_usd=1.0,
+        output_share=0.5,
         scarcity=0.35,
         effort=level or "medium",
         effort_multiplier=1.0,
@@ -308,21 +337,33 @@ def test_a_higher_effort_never_reads_fewer_tokens() -> None:
     assert levels["low"]["multiplier"] == levels["medium"]["multiplier"] == 0.525
 
 
-def test_unmeasured_lists_new_efforts_but_not_explained_gaps() -> None:
+def test_unmeasured_lists_new_ladder_efforts_but_not_explained_gaps() -> None:
     bench = _bench(
-        a={"aa_effort": "max", "effort_variants": {"low": {}, "high": {}}},
-        b={"aa_effort": "high", "effort_variants": {"low": {}}},
-        c={"aa_effort": "high", "effort_variants": {"low": {}, "xhigh": {}}},
-        d={"aa_effort": "high"},  # one effort: nothing to compare
+        **{
+            "claude-fable-5.1": _aa_row("Anthropic"),
+            "gpt-6-luna": _aa_row("OpenAI"),
+            "grok-4.7": _aa_row("xAI"),
+            "kimi-k3": _aa_row("Moonshot"),
+            "haiku": _aa_row("Anthropic"),  # no dial: nothing to measure
+        }
     )
     doc = {
         "models": {
-            "a": {"levels": {"low": {}, "high": {}}},
-            "c": {"levels": {"low": {}, "high": {}}},
+            "claude-fable-5.1": {"levels": {lv: {} for lv in met.LEVELS}},
+            "gpt-6-luna": {"levels": {"low": {}, "high": {}}},
+            "grok-4.7": {"levels": {"low": {}, "high": {}}},
         },
-        "unmeasured": {"b": "no lane serves it", "c@xhigh": "OpenRouter cannot set this effort"},
+        # A derived figure is not a measurement.
+        "derived": {"gpt-6-luna": {"medium": 0.5}},
+        "unmeasured": {
+            "kimi-k3": "no lane serves it",
+            **{f"grok-4.7@{lv}": "OpenRouter cannot set this effort" for lv in ("medium", "max")},
+        },
     }
-    assert met.unmeasured(bench, doc) == {"a": ["max"]}
+    assert met.unmeasured(bench, _ladder_catalog(), doc) == {
+        "gpt-6-luna": ["medium", "xhigh", "max"],
+        "grok-4.7": ["xhigh"],
+    }
 
 
 def test_the_benchmark_cron_keeps_one_issue_for_unmeasured_efforts() -> None:
@@ -333,4 +374,209 @@ def test_the_benchmark_cron_keeps_one_issue_for_unmeasured_efforts() -> None:
 
 def test_a_narrowed_run_keeps_every_models_skip_reason() -> None:
     src = (UPDATE_DIR / "measure_effort_tokens.py").read_text()
-    assert "skipped=plan(bench, samples=1, models=None, levels=None, routes=routes)[1]" in src
+    assert "plan(bench, catalog, samples=1, models=None, levels=None, routes=routes)" in src
+    assert "skipped=reasons," in src
+
+
+# --------------------------------------------------------------------------- #
+# 2026-10-30: price accuracy at the lowest cost — a noise measure and top-ups
+# for the noisy efforts only, derived levels where a lane cannot measure, and
+# a price that scales only the output share.
+# --------------------------------------------------------------------------- #
+
+
+def test_ci90_is_the_spread_of_each_probes_samples_relative_to_the_mean() -> None:
+    assert met.ci90({"a": [100], "b": [300]}) is None  # no probe sampled twice
+    # Probe a's two samples differ by 20 (variance 200, its mean's 100); over
+    # two probes the mean's variance is 100 / 4 = 25, so a standard error of 5
+    # on a mean of 200.
+    got = met.ci90({"a": [90, 110], "b": [300]})
+    assert got == pytest.approx(met.Z90 * 5 / 200)
+
+
+def test_a_top_up_reruns_only_the_noisy_efforts() -> None:
+    """More samples where the price is not known to within the target, up to
+    the cap; a steady effort or one at the cap is left alone."""
+    probes = [p for p, _ in met.PROBES]
+    runs = []
+    for i, p in enumerate(probes):
+        # Steady: every probe reads 100 twice. Noisy: 50 and 150.
+        runs += [_run("m", "low", p, 100, sample=s) for s in (0, 1)]
+        runs += [_run("m", "max", p, 50 if s else 150, sample=s) for s in (0, 1)]
+        runs[-1]["key"] += ""
+        del i
+    for r in runs:
+        r["key"] = f"{r['model_id']}|{r['level']}|{r['probe']}|{r['sample']}"
+        r["target"] = "m-target"
+    catalog = {"models": [{"id": "m", "input_price_per_1m": 1.0, "output_price_per_1m": 5.0}]}
+    doc = {"models": {"m": {"levels": {"low": {"multiplier": 0.5}, "max": {"multiplier": 2.0}}}}}
+    jobs = met.topup(runs, doc, catalog, sha=SHA, target=0.10, max_samples=6)
+    assert {j.level for j in jobs} == {"max"}
+    assert {j.target for j in jobs} == {"m-target"} and {j.lane for j in jobs} == {"codex"}
+    assert {j.sample for j in jobs} == {2, 3, 4, 5}  # grown to the cap of 6
+    assert {j.probe for j in jobs} == set(probes)
+    # At the cap, or within the target, nothing more runs.
+    assert met.topup(runs, doc, catalog, sha=SHA, target=0.10, max_samples=2) == []
+    assert met.topup(runs, doc, catalog, sha=SHA, target=1.0, max_samples=6) == []
+
+
+def test_the_output_share_is_what_the_tokens_move() -> None:
+    model = {"input_price_per_1m": 4.0, "output_price_per_1m": 20.0}
+    assert met.output_share(model, 1.0) == pytest.approx(20 / 32)
+    # At 8.4x the tokens almost the whole price is output.
+    assert met.output_share(model, 8.4) == pytest.approx(168 / 180)
+    assert scoring.output_share(model) == pytest.approx(20 / 32)
+
+
+def test_derived_levels_read_between_or_by_the_median_ratio() -> None:
+    measured = {
+        "a": {"low": 0.5, "high": 2.0},
+        "b": {"low": 0.4, "medium": 0.6, "high": 1.0, "max": 3.0},
+        "c": {"high": 1.0, "max": 2.0},
+    }
+    derived, typical = met.derive(
+        measured, {"a": list(met.LEVELS), "c": ["low", "high", "max"], "z": ["high"]}
+    )
+    # Between two measured levels: the geometric midpoint.
+    assert derived["a"]["medium"] == pytest.approx(1.0)
+    # Above them all: the nearest level times the median ratio of the others
+    # measured at both (max/high: b 3, c 2).
+    assert derived["a"]["max"] == pytest.approx(5.0)
+    # Only the levels asked for; never a measured one.
+    assert set(derived["c"]) == {"low"} and "xhigh" not in derived["a"]
+    # A model with no measurement reads the typical model's.
+    assert derived["z"] == {"high": typical["high"]}
+    assert typical["high"] == 1.0
+
+
+def test_the_summary_records_settable_levels_and_derives_the_gaps() -> None:
+    runs = _all_probes("a", "low", 100) + _all_probes("a", "high", 200)
+    runs += _all_probes("b", "low", 100) + _all_probes("b", "medium", 150)
+    runs += _all_probes("b", "high", 200)
+    doc = met.summarize(
+        runs,
+        sha=SHA,
+        skipped={},
+        generated_at="t",
+        samples=1,
+        settable={"a": ["low", "medium", "high"]},
+        derive_for={"a": ["low", "medium", "high"], "n": ["high"]},
+    )
+    assert doc["settable"] == {"a": ["low", "medium", "high"]}
+    assert set(doc["derived"]["a"]) == {"medium"}
+    assert doc["derived"]["n"] == {"high": 1.0}
+    assert doc["models"]["a"]["levels"]["low"]["ci90"] is None  # one sample a probe
+
+
+def test_token_use_is_measured_then_derived_then_uniform(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(scoring, "effort_token_multipliers", lambda: {"m": {"high": 0.7}})
+    monkeypatch.setattr(scoring, "derived_token_multipliers", lambda: {"m": {"max": 3.1}})
+    assert scoring.token_use("m", "high") == (0.7, True)
+    assert scoring.token_use("m", "max") == (3.1, False)
+    assert scoring.token_use("m", "low") == (scoring.EFFORT_TOKEN_MULTIPLIER["low"], False)
+    assert scoring.token_multiplier("m", "max") == 3.1
+
+
+def test_effort_price_keeps_the_input_and_scales_the_output() -> None:
+    """Opus 5.5 ($4/$20, blended $8) at 8.447x a typical model's output read
+    $67.58 when the multiplier scaled the whole blended price; the input it
+    reads does not grow with its effort (2026-10-30)."""
+    opus = {"input_price_per_1m": 4.0, "output_price_per_1m": 20.0}
+    blended = scoring.blended_price(opus)
+    share = scoring.output_share(opus)
+    assert round(scoring.effort_price(blended, share, 8.447), 2) == 45.23
+    assert scoring.effort_price(blended, share, 1.0) == pytest.approx(blended)
+    # A terse model is not discounted on its input.
+    assert scoring.effort_price(blended, share, 0.0) == pytest.approx(3.0)
+
+
+def test_a_dial_less_surface_stops_at_the_models_own_top_level(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Antigravity documents no dial, so a phase session's Quality went to
+    `max` for Gemini 4 Argon, a level its API does not offer (OpenRouter takes
+    low, medium and high): the model's own levels cap it."""
+    monkeypatch.setattr(scoring, "settable_levels", lambda: {"g": ["low", "medium", "high"]})
+    c = _cand("g", "high", platform="antigravity")
+    catalog: dict[str, Any] = {"access_methods": [{"id": "antigravity"}]}
+    assert scoring._deepest_level(c, catalog) == "high"
+    assert scoring._step_down(c, "high", 2, catalog) == "low"
+    other = _cand("x", "high", platform="antigravity")
+    assert scoring._deepest_level(other, catalog) == "max"  # nothing known: the whole ladder
+
+
+def _aa_bench(**levels: dict[str, float]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for mid, by in levels.items():
+        top = max(by, key=scoring.EFFORT_LADDER.index)
+        out[mid] = {
+            "aa_effort": top,
+            "evaluations": {"artificial_analysis_intelligence_index": by[top]},
+            "effort_variants": {
+                lv: {"evaluations": {"artificial_analysis_intelligence_index": v}}
+                for lv, v in by.items()
+                if lv != top
+            },
+        }
+    return out
+
+
+def test_an_unmeasured_aa_effort_is_estimated_from_the_measured_ones() -> None:
+    bench = _aa_bench(
+        a={"low": 40.0, "medium": 45.0, "high": 48.0, "max": 52.0},
+        b={"low": 30.0, "medium": 37.0, "high": 40.0, "max": 46.0},
+        c={"low": 20.0, "medium": 23.0, "high": 25.0, "max": 31.0},
+        argon={"high": 50.0},
+        gap={"low": 30.0, "max": 40.0},
+    )
+    est = scoring.estimated_aa_index
+    # A level away: the median shift of the models measured at both.
+    assert est(bench, "argon", "medium") == 47.0  # shifts -3, -3, -2 → -3
+    assert est(bench, "argon", "max") == 56.0  # shifts +4, +6, +6 → +6
+    # Between two measured efforts: read between them.
+    assert est(bench, "gap", "medium") == 32.5
+    assert est(bench, "gap", "xhigh") == 37.5
+    # Nothing measured, or nobody measured at both: no estimate.
+    assert est(bench, "missing", "high") is None
+    assert est(_aa_bench(solo={"high": 50.0}), "solo", "max") is None
+
+
+def test_with_nothing_new_to_measure_the_top_ups_still_run(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A run after every level is measured still tops up the noisy ones (the
+    first resumed run stopped at an empty first round, 2026-10-30)."""
+    calls: list[set[str] | None] = []
+
+    def topup(*_: Any, **kw: Any) -> list[Any]:
+        calls.append(kw.get("models"))
+        return []
+
+    monkeypatch.setattr(met, "openrouter_routes", lambda: {})
+    monkeypatch.setattr(met, "plan", lambda *a, **k: ([], {}))
+    monkeypatch.setattr(met, "topup", topup)
+    monkeypatch.setattr(met, "summarize", lambda *a, **k: {"models": {}})
+    monkeypatch.setattr(met, "_keychain", lambda name: None)
+    out = tmp_path / "out.json"
+    assert met.main(["--runs", str(tmp_path / "runs.jsonl"), "--out", str(out)]) == 0
+    assert len(calls) == 1
+    # Only ladder models are topped up, not a superseded one still in the runs.
+    assert calls[0] and "claude-opus-5-5" in calls[0]
+
+
+def test_the_reference_is_kept_while_the_probe_set_is_unchanged() -> None:
+    """The reference is where a model's price equals its list price; a running
+    median over every measured model nearly doubled once the budget models
+    were measured at high (2026-10-30), which would have moved every price."""
+    runs = _all_probes("a", "low", 100) + _all_probes("a", "high", 200)
+    runs += _all_probes("verbose", "low", 900) + _all_probes("verbose", "high", 1800)
+    runs += _all_probes("loud", "low", 900) + _all_probes("loud", "high", 2000)
+    kept = {"level": "high", "mean_output_tokens": 200.0, "models": 1}
+    doc = met.summarize(runs, sha=SHA, skipped={}, generated_at="t", samples=1, reference=kept)
+    assert doc["reference"] == kept
+    assert doc["models"]["a"]["levels"]["high"]["multiplier"] == 1.0
+    assert doc["models"]["verbose"]["levels"]["high"]["multiplier"] == 9.0
+    # Without one, the median of the measured models.
+    assert _summary(runs)["reference"]["mean_output_tokens"] == 1800.0
+    src = (UPDATE_DIR / "measure_effort_tokens.py").read_text()
+    assert 'previous.get("probe_set_sha256") == sha' in src

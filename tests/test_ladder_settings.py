@@ -170,10 +170,10 @@ def _option_cells(option: dict[str, Any] | None) -> dict[str, str]:
         "Model": f"**{option['model']}**",
         "Platform": option["platform"],
         "Level": option["level_cell"] + (" ↓" if option["stepped_down"] else ""),
-        "AA": scoring._aa_cell(option["aa_index"]),
+        "AA": scoring._aa_cell(option["aa_index"], option["aa_estimated"]),
         "Price": "—"
         if price is None
-        else f"${price:.2f}/1M" + ("" if option["price_measured"] else "*"),
+        else ("" if option["price_measured"] else "≈") + f"${price:.2f}/1M",
     }
 
 
@@ -247,11 +247,16 @@ def test_the_table_groups_each_rank_over_indented_field_rows() -> None:
 
 def test_price_is_the_list_price_at_the_levels_token_use() -> None:
     """Price is the frontier's price axis: the blended list price (3 in : 1
-    out) times the output tokens the model draws at the level, measured where
-    docs/effort-tokens.json has it; an unmeasured level is marked."""
+    out) with its output part scaled by the tokens the model draws at the
+    level, measured where docs/effort-tokens.json has it; an unmeasured level
+    is marked. The input part stays: an effort changes what the model writes,
+    not what it reads (2026-10-30: Opus 5.5 at max read $67.58, input scaled
+    8.4x with the output)."""
     sol = {"models": [{"id": "s", "input_price_per_1m": 2.0, "output_price_per_1m": 10.0}]}
     price, measured = scoring.ladder_price("s", "xhigh", sol)  # type: ignore[misc]
-    assert price == round(4.0 * scoring.EFFORT_TOKEN_MULTIPLIER["xhigh"], 4)
+    # $6 of input stays, $10 of output x1.6: $22 over 4.
+    assert price == round((3 * 2.0 + 10.0 * scoring.EFFORT_TOKEN_MULTIPLIER["xhigh"]) / 4, 4)
+    assert price == 5.5
     assert measured is False
     assert scoring.ladder_price("missing", "high", sol) is None
     # Codex's `ultra` and Gemini's `minimal` price at the scorer level they stand for.
@@ -259,7 +264,7 @@ def test_price_is_the_list_price_at_the_levels_token_use() -> None:
     assert scoring.ladder_price("s", "minimal", sol) == scoring.ladder_price("s", "low", sol)
     cell = ladder_layout.price_cell
     assert cell(ladder_layout.Option("m", "p", price=2.1834)) == "$2.18/1M"
-    assert cell(ladder_layout.Option("m", "p", price=4.0, price_measured=False)) == "$4.00/1M*"
+    assert cell(ladder_layout.Option("m", "p", price=4.0, price_measured=False)) == "≈$4.00/1M"
     assert cell(ladder_layout.Option("m", "p")) == "—"
     by_name = scoring.ladder_price_by_name({"models": [{"name": "Sol", **sol["models"][0]}]})
     assert by_name("Sol", "XHigh") == scoring.ladder_price("s", "xhigh", sol)
@@ -475,13 +480,15 @@ def test_every_option_reads_its_models_index_at_its_own_effort() -> None:
                 assert cells[tier][rank]["AA"] == f"{option['aa_index']:g}"
 
 
-def test_ladder_aa_index_reads_the_effort_or_says_not_measured() -> None:
+def test_ladder_aa_index_reads_the_effort_or_estimates_it() -> None:
     per_level = {"m": {**_aa(50), "aa_effort": "max", "effort_variants": {"low": _aa(30)}}}
-    assert scoring.ladder_aa_index(per_level, "m", "max") == 50
-    assert scoring.ladder_aa_index(per_level, "m", "low") == 30
-    # Measured at other efforts only: no figure stands for this one.
-    assert scoring.ladder_aa_index(per_level, "m", "high") is None
-    assert scoring.ladder_aa_index(per_level, "m", "high", dial=True) is None
+    assert scoring.ladder_aa(per_level, "m", "max") == (50, False)
+    assert scoring.ladder_aa(per_level, "m", "low") == (30, False)
+    # Measured at other efforts only: estimated between them (2026-10-30, the
+    # operator: no "not measured" where AA's rows say enough).
+    assert scoring.ladder_aa(per_level, "m", "high") == (40.0, True)
+    assert scoring.ladder_aa(per_level, "m", "high", dial=True) == (40.0, True)
+    assert scoring.ladder_aa_index(per_level, "m", "high") == 40.0
     # AA names no level: on a surface with no dial the row stands for the
     # model as it runs there …
     assert scoring.ladder_aa_index({"m": _aa(44)}, "m", "high") == 44
@@ -490,6 +497,7 @@ def test_ladder_aa_index_reads_the_effort_or_says_not_measured() -> None:
     assert scoring.ladder_aa_index({"m": _aa(44)}, "m", "low", dial=True) is None
     assert scoring.ladder_aa_index({}, "m", "high") is None
     assert scoring._aa_cell(None) == "not measured"
+    assert scoring._aa_cell(51.4, estimated=True) == "≈51.4"
 
 
 def test_an_unlabeled_aa_row_is_not_shown_at_a_level_the_operator_sets() -> None:
@@ -684,7 +692,7 @@ def _fake_price(name: str, word: str) -> tuple[float, bool] | None:
 def _priced(name: str, word: str) -> str:
     found = _fake_price(name, word)
     assert found is not None
-    return f"${found[0]:.2f}/1M" + ("" if found[1] else "*")
+    return ("" if found[1] else "≈") + f"${found[0]:.2f}/1M"
 
 
 def test_relayout_turns_a_ranked_table_into_the_ladder_table() -> None:
@@ -707,7 +715,7 @@ def test_relayout_turns_a_ranked_table_into_the_ladder_table() -> None:
     assert new.startswith("**Deploys:** CI → live on merge.\n\n|")
     assert new.endswith("\n\n**Conversation:** New\n\n**Model rationale:** unchanged.\n")
     assert "**Runs:**" not in new and "Thinking" not in new
-    assert "* token use not yet measured" in new
+    assert "≈ estimated from the model's measured levels." in " ".join(new.split())
     # A second pass finds nothing left to convert.
     assert ladder_layout.relayout(new, price=_fake_price) == (new, 0, 0)
 
@@ -1034,9 +1042,9 @@ assumed.
 def test_relayout_moves_an_indented_ladder_to_the_rank_column_even_when_complete() -> None:
     """The `&nbsp;` indent drew a blob in some viewers (2026-10-25), and 0.2.98
     carried ✓ in the column header and note. Both fixes change no value, so
-    they reach a Complete step too: every cell, the ↓ and `*` marks, the note's
-    classification and the Conversation value are kept, and the Runs and `> Ran`
-    lines stay below it."""
+    they reach a Complete step too: every cell, the ↓ mark and an estimated
+    price (`*`, written `≈` since 0.2.107), the note's classification and the
+    Conversation value are kept, and the Runs and `> Ran` lines stay below it."""
     new, count, kept = ladder_layout.relayout(INDENTED)
     assert (count, kept) == (1, 0)
     assert "&nbsp;" not in new and "✓" not in new
@@ -1049,7 +1057,7 @@ def test_relayout_moves_an_indented_ladder_to_the_rank_column_even_when_complete
         "AA": "not measured",
         "Price": "$12.80/1M",
     }
-    assert cells["balanced"]["Pick"]["Price"] == "$8.00/1M*"
+    assert cells["balanced"]["Pick"]["Price"] == "≈$8.00/1M"
     assert cells["quality"]["Backup"]["Level"] == "High ↓"
     assert cells["balanced"]["Backup"]["Model"] == "none"
     assert "AA" not in cells["cost"]["Backup"]

@@ -4,9 +4,8 @@
 // reasoning model at each effort separately: GPT-6 Luna reads 21.5 on the AA
 // Index at low and 38.1 at max. The recommender reads its picks off the
 // viewer's frontier drawn over each model at every effort AA measured
-// (roadmodel scoring.effort_settings), each placed at its blended list price
-// times the tokens it draws at that effort (tokenMultiplier). A pick's facts
-// read the same way here:
+// (roadmodel scoring.effort_settings), each placed at its price at that
+// effort (effortPrice). A pick's facts read the same way here:
 // its AA Index and Score at the effort it runs, and whether anything the
 // viewer can run beats it there.
 import { blendedPrice, scoreFor } from "@/lib/benchmark-grid";
@@ -27,10 +26,21 @@ export const EFFORT_TOKEN_MULTIPLIER = {
 export type EffortLevel = keyof typeof EFFORT_TOKEN_MULTIPLIER;
 
 // The tokens a model draws at an effort, relative to a typical model at high:
-// measured where update/measure_effort_tokens.py ran it there, else the
-// uniform table. Mirrors scoring.token_multiplier.
+// measured where update/measure_effort_tokens.py ran it there (else derived
+// from its measured efforts), else the uniform table. Mirrors
+// scoring.token_multiplier.
 export function tokenMultiplier(row: SlimRow, level: EffortLevel): number {
   return row.token_multiplier_by_effort?.[level] ?? EFFORT_TOKEN_MULTIPLIER[level];
+}
+
+// A model's price at an effort, in USD per 1M blended tokens: its blended
+// list price (3 input : 1 output) with only the output part scaled by the
+// tokens it draws there. An effort changes what the model writes, not what
+// it is sent. Mirrors scoring.effort_price.
+export function effortPrice(row: SlimRow, level: EffortLevel): number {
+  const input = 3 * row.input_price_per_1m;
+  const output = row.output_price_per_1m * tokenMultiplier(row, level);
+  return (input + output) / 4;
 }
 
 // A surface's word for a level, compared case- and spacing-free: Claude
@@ -80,9 +90,8 @@ export interface EffortPoint {
   price: number;
 }
 
-// A model's points on the frontier: one per effort AA measured, priced by
-// the tokens it draws there (tokenMultiplier), or its headline figure at list
-// price.
+// A model's points on the frontier: one per effort AA measured, at its price
+// there (effortPrice), or its headline figure at list price.
 export function effortPoints(row: SlimRow): EffortPoint[] {
   const blended = blendedPrice(row.input_price_per_1m, row.output_price_per_1m);
   const by = row.aa_index_by_effort ?? {};
@@ -94,7 +103,7 @@ export function effortPoints(row: SlimRow): EffortPoint[] {
     row,
     level,
     index: by[level],
-    price: blended * tokenMultiplier(row, level),
+    price: effortPrice(row, level),
   }));
 }
 
@@ -114,8 +123,8 @@ export interface PickAtEffort {
   // The effort the facts were read at, or null.
   level: EffortLevel | null;
   // The tokens the pick draws at its effort relative to a typical model at
-  // high (tokenMultiplier): the Score's price, like the chart's, is the
-  // blended price times this. Null with no level.
+  // high (tokenMultiplier): the Score's price, like the chart's, scales the
+  // output part of the blended price by this (effortPrice). Null with no level.
   tokenShare: number | null;
 }
 
@@ -125,8 +134,7 @@ export function pickAtEffort(data: PicksData, row: SlimRow, level: EffortLevel |
     const leader = row.value_beaten_by ? (data.rows[row.value_beaten_by] ?? null) : null;
     return { row, leader, level: null, tokenShare: null };
   }
-  const blended = blendedPrice(row.input_price_per_1m, row.output_price_per_1m);
-  const price = blended * tokenMultiplier(row, level);
+  const price = effortPrice(row, level);
   // The strongest point the viewer can run at this price or less that scores
   // higher; ties on index go to the cheaper.
   const leader =

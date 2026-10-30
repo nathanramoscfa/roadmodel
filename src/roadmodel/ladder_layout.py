@@ -46,6 +46,8 @@ RANKS: Final[tuple[tuple[str, str], ...]] = (
 FIELDS: Final[tuple[str, ...]] = ("Model", "Platform", "Level", "AA", "Price")
 RUNS_MARK: Final[str] = "✓"
 STEP_MARK: Final[str] = "↓"
+# A figure estimated from the model's measured levels, not measured at this one.
+ESTIMATE_MARK: Final[str] = "≈"
 WIDTH: Final[int] = 80
 NONE: Final[str] = "—"
 _SEP: Final[str] = " · "
@@ -78,12 +80,12 @@ class Option:
     platform: str
     # The bare level (`High`, `XHigh`), or — where the surface has no dial.
     level: str = NONE
-    # The AA Index there (`52.6`, `not measured`); None in a ladder written
-    # before it carried one.
+    # The AA Index there (`52.6`, `≈51.4` estimated, `not measured` in an
+    # older ladder); None in a ladder written before it carried one.
     aa: str | None = None
     # USD per 1M blended tokens at the level's token use; None when unknown.
     price: float | None = None
-    # False when the level's token use is a typical model's, not measured.
+    # False when the level's token use is estimated, not measured.
     price_measured: bool = True
     # The Pick's own model a level or two lower, filling a rank no other
     # maker could (marked ↓).
@@ -98,7 +100,7 @@ def level_key(word: str) -> str | None:
 def price_cell(option: Option) -> str:
     if option.price is None:
         return NONE
-    return f"${option.price:.2f}/1M" + ("" if option.price_measured else "*")
+    return ("" if option.price_measured else ESTIMATE_MARK) + f"${option.price:.2f}/1M"
 
 
 def _cells(option: Option | None) -> list[str]:
@@ -152,7 +154,12 @@ def ladder_markdown(
             rank_cell = ""
         priced |= any(o is not None and o.price is not None for o in opts)
         unmeasured |= any(
-            o is not None and o.price is not None and not o.price_measured for o in opts
+            o is not None
+            and (
+                (o.price is not None and not o.price_measured)
+                or (o.aa or "").startswith(ESTIMATE_MARK)
+            )
+            for o in opts
         )
         stepped |= any(o is not None and o.stepped_down for o in opts)
     notes = [f"Ranked for {ranked_for}."] if ranked_for else []
@@ -160,14 +167,11 @@ def ladder_markdown(
         notes.append(f"{STEP_MARK} the Pick one level lower: no other maker is funded.")
     if priced:
         notes.append(
-            "Price: list $ per 1M tokens (3 in : 1 out) × the tokens the model "
-            "uses at that level"
-            + (
-                "; * token use not yet measured, a typical model's at that level assumed."
-                if unmeasured
-                else "."
-            )
+            "Price: list $ per 1M tokens (3 in : 1 out), the output part scaled by "
+            "the tokens the model writes at that level."
         )
+    if unmeasured:
+        notes.append(f"{ESTIMATE_MARK} estimated from the model's measured levels.")
     parts = ["\n".join(_grid(rows))]
     if notes:
         parts.append(textwrap.fill(" ".join(notes), width=WIDTH, break_long_words=False))
@@ -356,7 +360,8 @@ _Found = tuple[int, dict[str, dict[str, "Option | None"]], str | None, str | Non
 # The 0.2.95–0.2.98 table: one empty header cell before Cost (0.2.95–0.2.97)
 # or two with a ✓ in the header or note (0.2.98).
 _INDENT_HEAD_RE: Final = re.compile(r"^\|\s*\|(?:\s*\|)?\s*Cost\b")
-_PRICE_RE: Final = re.compile(r"^\$([0-9]+(?:\.[0-9]+)?)/1M(\*?)$")
+# A price cell: `$2.18/1M`; estimated, `≈$7.75/1M` (before 0.2.107, `$7.75/1M*`).
+_PRICE_RE: Final = re.compile(r"^(≈?)\$([0-9]+(?:\.[0-9]+)?)/1M(\*?)$")
 
 
 def _indented_ladder(
@@ -394,15 +399,15 @@ def _indented_ladder(
                 platform=fields.get("Platform", [NONE] * len(TIERS))[i],
                 level=level.replace(f" {STEP_MARK}", ""),
                 aa=None if aa == NONE else aa,
-                price=float(price.group(1)) if price else None,
-                price_measured=not (price and price.group(2)),
+                price=float(price.group(2)) if price else None,
+                price_measured=not (price and (price.group(1) or price.group(3))),
                 stepped_down=level.endswith(f" {STEP_MARK}"),
             )
     end = j
     k = _skip_blank(lines, j)
     note = ""
     if k < len(lines) and lines[k].startswith(
-        ("Ranked for ", f"{RUNS_MARK} ", "Price: ", f"{STEP_MARK} ")
+        ("Ranked for ", f"{RUNS_MARK} ", "Price: ", f"{STEP_MARK} ", f"{ESTIMATE_MARK} ")
     ):
         n = k
         while n < len(lines) and lines[n].strip():
@@ -569,7 +574,7 @@ def _block_end(lines: list[str], i: int) -> int:
     paragraph (each optional, in that order), from just past its table."""
     k = _skip_blank(lines, i)
     if k < len(lines) and lines[k].startswith(
-        ("Ranked for ", f"{RUNS_MARK} ", "Price: ", f"{STEP_MARK} ")
+        ("Ranked for ", f"{RUNS_MARK} ", "Price: ", f"{STEP_MARK} ", f"{ESTIMATE_MARK} ")
     ):
         while k < len(lines) and lines[k].strip():
             k += 1
