@@ -385,7 +385,7 @@
           "line_sha256": "fe92193f628b0e24f2c5abeac63540750959b929998c715c215d5e63ea0e374b",
           "mode": "100644",
           "path": "tests/test_packaging.py",
-          "sha256": "74d1612dbc98eb5682e51240deb8b3142ce9d604f45a5137fd078c39af5b24d8"
+          "sha256": "631cf5c76c3f91733239677bfc4cfb21d06c447849f04bd95961469a87db0823"
         },
         "tool_sha256": "d8e3cef305b7b7a6ed452897882331a566df784b577c08e5c3bdc8322ffb6429"
       },
@@ -460,7 +460,7 @@
         "language": "python",
         "rule_id": "py/clear-text-storage-sensitive-data",
         "rule_sha256": "d2d3c242f1fbc70803df33600f7be500d72dcc836f4bc53ce45560520dca05bf",
-        "run_configuration_sha256": "1452a30d9f9dad21f44941d5c43da37a7ab4d488dc63f90bdb697889b2a5783a",
+        "run_configuration_sha256": "6d84f2bd49cc78b380dd9d538c037a45ee90125d25044e530c58daca0f9f9f06",
         "sources": [
           {
             "mode": "100644",
@@ -650,7 +650,7 @@
         "language": "python",
         "rule_id": "py/clear-text-storage-sensitive-data",
         "rule_sha256": "d2d3c242f1fbc70803df33600f7be500d72dcc836f4bc53ce45560520dca05bf",
-        "run_configuration_sha256": "1452a30d9f9dad21f44941d5c43da37a7ab4d488dc63f90bdb697889b2a5783a",
+        "run_configuration_sha256": "6d84f2bd49cc78b380dd9d538c037a45ee90125d25044e530c58daca0f9f9f06",
         "sources": [
           {
             "mode": "100644",
@@ -829,7 +829,7 @@
         "language": "python",
         "rule_id": "py/clear-text-storage-sensitive-data",
         "rule_sha256": "d2d3c242f1fbc70803df33600f7be500d72dcc836f4bc53ce45560520dca05bf",
-        "run_configuration_sha256": "1452a30d9f9dad21f44941d5c43da37a7ab4d488dc63f90bdb697889b2a5783a",
+        "run_configuration_sha256": "6d84f2bd49cc78b380dd9d538c037a45ee90125d25044e530c58daca0f9f9f06",
         "sources": [
           {
             "mode": "100644",
@@ -1008,7 +1008,7 @@
         "language": "python",
         "rule_id": "py/log-injection",
         "rule_sha256": "18d52e3185af5fc4b138cbcb714ed5ec459e9e80787eea6a45a0847fec61036a",
-        "run_configuration_sha256": "1452a30d9f9dad21f44941d5c43da37a7ab4d488dc63f90bdb697889b2a5783a",
+        "run_configuration_sha256": "6d84f2bd49cc78b380dd9d538c037a45ee90125d25044e530c58daca0f9f9f06",
         "sources": [
           {
             "mode": "100644",
@@ -1157,7 +1157,7 @@
         "language": "python",
         "rule_id": "py/log-injection",
         "rule_sha256": "18d52e3185af5fc4b138cbcb714ed5ec459e9e80787eea6a45a0847fec61036a",
-        "run_configuration_sha256": "1452a30d9f9dad21f44941d5c43da37a7ab4d488dc63f90bdb697889b2a5783a",
+        "run_configuration_sha256": "6d84f2bd49cc78b380dd9d538c037a45ee90125d25044e530c58daca0f9f9f06",
         "sources": [
           {
             "mode": "100644",
@@ -1306,7 +1306,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "4b779c81465d7f08072fa43acbf129671cd1cccbeb826fa53822ead6538ccff0",
+        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
         "sources": [
           {
             "mode": "100644",
@@ -1367,7 +1367,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "4b779c81465d7f08072fa43acbf129671cd1cccbeb826fa53822ead6538ccff0",
+        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
         "sources": [
           {
             "mode": "100644",
@@ -1428,7 +1428,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "4b779c81465d7f08072fa43acbf129671cd1cccbeb826fa53822ead6538ccff0",
+        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
         "sources": [
           {
             "mode": "100644",
@@ -1507,7 +1507,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "4b779c81465d7f08072fa43acbf129671cd1cccbeb826fa53822ead6538ccff0",
+        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
         "sources": [
           {
             "mode": "100644",
@@ -1568,7 +1568,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "4b779c81465d7f08072fa43acbf129671cd1cccbeb826fa53822ead6538ccff0",
+        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
         "sources": [
           {
             "mode": "100644",
@@ -1629,7 +1629,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "4b779c81465d7f08072fa43acbf129671cd1cccbeb826fa53822ead6538ccff0",
+        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
         "sources": [
           {
             "mode": "100644",
@@ -1690,7 +1690,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "4b779c81465d7f08072fa43acbf129671cd1cccbeb826fa53822ead6538ccff0",
+        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
         "sources": [
           {
             "mode": "100644",
@@ -1733,7 +1733,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "4b779c81465d7f08072fa43acbf129671cd1cccbeb826fa53822ead6538ccff0",
+        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
         "sources": [
           {
             "mode": "100644",
@@ -1794,7 +1794,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "4b779c81465d7f08072fa43acbf129671cd1cccbeb826fa53822ead6538ccff0",
+        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
         "sources": [
           {
             "mode": "100644",
@@ -1864,7 +1864,7 @@
         "language": "javascript-typescript",
         "rule_id": "js/insufficient-password-hash",
         "rule_sha256": "029842239c73f229ad4c995e35576e5db5f3df5025c7caa7a9fb7dcddf547502",
-        "run_configuration_sha256": "4b779c81465d7f08072fa43acbf129671cd1cccbeb826fa53822ead6538ccff0",
+        "run_configuration_sha256": "1585ecf701dca032714f5ec869d594aab06feefab8c6f155b4dc4119ad2a60c6",
         "sources": [
           {
             "mode": "100644",
