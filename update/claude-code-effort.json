@@ -93,8 +93,8 @@
   },
   "default_effort": {
     "*": "high",
-    "Opus 5.5": "medium",
-    "Sonnet 5.5": "medium",
+    "Opus 5.5": "xhigh",
+    "Sonnet 5.5": "xhigh",
     "Haiku 5.5": "medium",
     "Opus 4.7": "xhigh"
   },
@@ -142,5 +142,5 @@
     ]
   },
   "unexpected_models": [],
-  "section_sha256": "59f247abc0547b5f3c5dea32bd4f80bec41675d7683414248128ecc118c350e7"
+  "section_sha256": "80e7a00bf261b0da9d6852abb49b1807041f9d62662ec19378015bc4ebfa8266"
 }
