@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at_utc": "2026-10-30T15:47:19Z",
+  "generated_at_utc": "2026-11-01T15:43:58Z",
   "source": "Measured by update/measure_effort_tokens.py: output tokens (reasoning included) per probe on a fixed set of short tasks, at every ladder effort the model's lane can set.",
   "probe_set_sha256": "db1a808e774b2c1afd25f380c9641b83ccacae87f1ead88fc7307f2c539aa4a0",
   "probes": 8,
@@ -49,11 +49,11 @@
           "multiplier": 1.11
         },
         "max": {
-          "mean_output_tokens": 4005.0,
-          "runs": 89,
+          "mean_output_tokens": 3176.2,
+          "runs": 185,
           "truncated": 0,
-          "ci90": 0.492,
-          "multiplier": 5.951
+          "ci90": 0.343,
+          "multiplier": 4.72
         }
       }
     },
@@ -89,11 +89,11 @@
           "multiplier": 3.157
         },
         "max": {
-          "mean_output_tokens": 10960.5,
-          "runs": 96,
+          "mean_output_tokens": 10005.8,
+          "runs": 192,
           "truncated": 0,
-          "ci90": 0.195,
-          "multiplier": 16.286
+          "ci90": 0.109,
+          "multiplier": 14.867
         }
       }
     },
@@ -294,18 +294,18 @@
           "multiplier": 0.988
         },
         "medium": {
-          "mean_output_tokens": 2127.3,
-          "runs": 40,
+          "mean_output_tokens": 2075.8,
+          "runs": 48,
           "truncated": 0,
-          "ci90": 0.131,
-          "multiplier": 2.475
+          "ci90": 0.119,
+          "multiplier": 2.415
         },
         "high": {
-          "mean_output_tokens": 2729.0,
-          "runs": 16,
+          "mean_output_tokens": 2815.3,
+          "runs": 24,
           "truncated": 0,
-          "ci90": 0.122,
-          "multiplier": 3.175
+          "ci90": 0.115,
+          "multiplier": 3.275
         }
       }
     },
@@ -358,11 +358,11 @@
       "lane": "openrouter",
       "levels": {
         "low": {
-          "mean_output_tokens": 682.6,
-          "runs": 32,
+          "mean_output_tokens": 727.6,
+          "runs": 56,
           "truncated": 0,
-          "ci90": 0.169,
-          "multiplier": 0.794
+          "ci90": 0.128,
+          "multiplier": 0.846
         },
         "medium": {
           "mean_output_tokens": 1702.2,
@@ -485,21 +485,21 @@
           "runs": 16,
           "truncated": 0,
           "ci90": 0.056,
-          "multiplier": 2.643
+          "multiplier": 2.294
         },
         "high": {
-          "mean_output_tokens": 2256.1,
-          "runs": 95,
+          "mean_output_tokens": 1654.5,
+          "runs": 175,
           "truncated": 0,
-          "ci90": 0.181,
-          "multiplier": 2.643
+          "ci90": 0.185,
+          "multiplier": 2.294
         },
         "max": {
-          "mean_output_tokens": 3275.9,
-          "runs": 31,
+          "mean_output_tokens": 2677.2,
+          "runs": 83,
           "truncated": 0,
           "ci90": 0.145,
-          "multiplier": 3.811
+          "multiplier": 3.114
         }
       }
     },
@@ -507,18 +507,18 @@
       "lane": "openrouter",
       "levels": {
         "low": {
-          "mean_output_tokens": 468.9,
-          "runs": 48,
+          "mean_output_tokens": 416.8,
+          "runs": 80,
           "truncated": 0,
-          "ci90": 0.338,
-          "multiplier": 0.545
+          "ci90": 0.24,
+          "multiplier": 0.485
         },
         "high": {
-          "mean_output_tokens": 497.2,
-          "runs": 16,
+          "mean_output_tokens": 1301.1,
+          "runs": 80,
           "truncated": 0,
-          "ci90": 0.292,
-          "multiplier": 0.578
+          "ci90": 0.327,
+          "multiplier": 1.513
         },
         "max": {
           "mean_output_tokens": 2447.1,
@@ -694,18 +694,18 @@
           "multiplier": 0.575
         },
         "medium": {
-          "mean_output_tokens": 422.3,
-          "runs": 16,
+          "mean_output_tokens": 417.9,
+          "runs": 24,
           "truncated": 0,
-          "ci90": 0.182,
-          "multiplier": 0.623
+          "ci90": 0.109,
+          "multiplier": 0.62
         },
         "high": {
           "mean_output_tokens": 416.1,
           "runs": 16,
           "truncated": 0,
           "ci90": 0.047,
-          "multiplier": 0.623
+          "multiplier": 0.62
         },
         "xhigh": {
           "mean_output_tokens": 606.7,
@@ -715,11 +715,11 @@
           "multiplier": 0.901
         },
         "max": {
-          "mean_output_tokens": 799.5,
-          "runs": 16,
+          "mean_output_tokens": 804.6,
+          "runs": 24,
           "truncated": 0,
-          "ci90": 0.17,
-          "multiplier": 1.188
+          "ci90": 0.122,
+          "multiplier": 1.196
         }
       }
     },
@@ -981,11 +981,11 @@
           "multiplier": 0.898
         },
         "high": {
-          "mean_output_tokens": 2945.7,
-          "runs": 92,
+          "mean_output_tokens": 2880.1,
+          "runs": 180,
           "truncated": 0,
-          "ci90": 0.167,
-          "multiplier": 3.427
+          "ci90": 0.11,
+          "multiplier": 3.35
         }
       }
     },
@@ -1000,18 +1000,18 @@
           "multiplier": 0.696
         },
         "medium": {
-          "mean_output_tokens": 991.8,
-          "runs": 16,
+          "mean_output_tokens": 1025.5,
+          "runs": 24,
           "truncated": 0,
-          "ci90": 0.174,
-          "multiplier": 1.154
+          "ci90": 0.111,
+          "multiplier": 1.193
         },
         "high": {
-          "mean_output_tokens": 5422.6,
-          "runs": 96,
-          "truncated": 1,
-          "ci90": 0.348,
-          "multiplier": 6.308
+          "mean_output_tokens": 5201.3,
+          "runs": 192,
+          "truncated": 7,
+          "ci90": 0.198,
+          "multiplier": 6.051
         }
       }
     },
@@ -1019,11 +1019,11 @@
       "lane": "openrouter",
       "levels": {
         "low": {
-          "mean_output_tokens": 963.4,
-          "runs": 16,
+          "mean_output_tokens": 1091.1,
+          "runs": 32,
           "truncated": 0,
-          "ci90": 0.315,
-          "multiplier": 1.121
+          "ci90": 0.151,
+          "multiplier": 1.269
         },
         "medium": {
           "mean_output_tokens": 1755.6,
@@ -1033,11 +1033,11 @@
           "multiplier": 2.042
         },
         "high": {
-          "mean_output_tokens": 2759.8,
-          "runs": 24,
+          "mean_output_tokens": 2907.8,
+          "runs": 32,
           "truncated": 0,
-          "ci90": 0.159,
-          "multiplier": 3.21
+          "ci90": 0.125,
+          "multiplier": 3.383
         }
       }
     },
@@ -1078,11 +1078,11 @@
       "lane": "openrouter",
       "levels": {
         "low": {
-          "mean_output_tokens": 1566.9,
-          "runs": 24,
+          "mean_output_tokens": 1545.9,
+          "runs": 32,
           "truncated": 0,
-          "ci90": 0.157,
-          "multiplier": 1.823
+          "ci90": 0.115,
+          "multiplier": 1.798
         },
         "medium": {
           "mean_output_tokens": 2571.2,
@@ -1092,11 +1092,11 @@
           "multiplier": 2.991
         },
         "high": {
-          "mean_output_tokens": 3129.8,
-          "runs": 16,
+          "mean_output_tokens": 2797.2,
+          "runs": 32,
           "truncated": 0,
-          "ci90": 0.139,
-          "multiplier": 3.641
+          "ci90": 0.133,
+          "multiplier": 3.254
         },
         "xhigh": {
           "mean_output_tokens": 3476.7,
@@ -1111,25 +1111,25 @@
       "lane": "openrouter",
       "levels": {
         "low": {
-          "mean_output_tokens": 383.1,
-          "runs": 16,
+          "mean_output_tokens": 466.9,
+          "runs": 64,
           "truncated": 0,
-          "ci90": 0.256,
-          "multiplier": 0.446
+          "ci90": 0.119,
+          "multiplier": 0.543
         },
         "high": {
-          "mean_output_tokens": 747.8,
-          "runs": 24,
+          "mean_output_tokens": 820.7,
+          "runs": 48,
           "truncated": 0,
-          "ci90": 0.222,
-          "multiplier": 0.87
+          "ci90": 0.118,
+          "multiplier": 0.955
         },
         "max": {
-          "mean_output_tokens": 1066.9,
-          "runs": 24,
+          "mean_output_tokens": 1283.7,
+          "runs": 80,
           "truncated": 0,
-          "ci90": 0.187,
-          "multiplier": 1.241
+          "ci90": 0.147,
+          "multiplier": 1.493
         }
       }
     },
@@ -1162,14 +1162,14 @@
           "runs": 16,
           "truncated": 0,
           "ci90": 0.091,
-          "multiplier": 2.449
+          "multiplier": 2.503
         },
         "max": {
-          "mean_output_tokens": 2058.7,
-          "runs": 16,
+          "mean_output_tokens": 2156.2,
+          "runs": 24,
           "truncated": 0,
-          "ci90": 0.159,
-          "multiplier": 2.449
+          "ci90": 0.129,
+          "multiplier": 2.508
         }
       }
     },
@@ -1379,57 +1379,57 @@
   },
   "typical": {
     "high": 1.0,
-    "low": 0.533,
-    "medium": 0.784,
+    "low": 0.553,
+    "medium": 0.763,
     "xhigh": 1.323,
     "max": 1.817
   },
   "derived": {
     "claude-4.5-haiku": {
-      "low": 0.533,
-      "medium": 0.784,
+      "low": 0.553,
+      "medium": 0.763,
       "high": 1.0,
       "xhigh": 1.323,
       "max": 1.817
     },
     "gemini-2.5-flash": {
-      "low": 0.533,
-      "medium": 0.784,
+      "low": 0.553,
+      "medium": 0.763,
       "high": 1.0,
       "xhigh": 1.323,
       "max": 1.817
     },
     "glm-4.5-air": {
-      "low": 0.533,
-      "medium": 0.784,
+      "low": 0.553,
+      "medium": 0.763,
       "high": 1.0,
       "xhigh": 1.323,
       "max": 1.817
     },
     "glm-4.6": {
-      "low": 0.533,
-      "medium": 0.784,
+      "low": 0.553,
+      "medium": 0.763,
       "high": 1.0,
       "xhigh": 1.323,
       "max": 1.817
     },
     "kimi-k2.7-code": {
-      "low": 0.533,
-      "medium": 0.784,
+      "low": 0.553,
+      "medium": 0.763,
       "high": 1.0,
       "xhigh": 1.323,
       "max": 1.817
     },
     "mistral-medium-3.5": {
-      "low": 0.533,
-      "medium": 0.784,
+      "low": 0.553,
+      "medium": 0.763,
       "high": 1.0,
       "xhigh": 1.323,
       "max": 1.817
     },
     "mistral-small-4": {
-      "low": 0.533,
-      "medium": 0.784,
+      "low": 0.553,
+      "medium": 0.763,
       "high": 1.0,
       "xhigh": 1.323,
       "max": 1.817
