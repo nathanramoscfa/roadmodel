@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.109] — 2026-11-01
+
+- **Windows schedules no longer open a window.** Both Task Scheduler tasks (the 15-minute checkout sync and the daily update) started console `python.exe` in the logged-on session, so Windows opened a console window every run. It took focus and knocked full-screen games out to the desktop every 15 minutes. The tasks now start `pythonw.exe`, which opens no window. The updater then reruns itself under `python.exe` with `CREATE_NO_WINDOW`: a console with no window, which every git, gh, claude and pip child shares, so none of them opens one either. The task still runs as the logged-on user, so git keeps reaching Windows Credential Manager, and its Last Run Result is still the run's own exit code. (Launching through `conhost.exe --headless` was rejected because, tested on the PC, it reports 0 when the run exits 7.) macOS launchd and Linux cron are unchanged. A task installed by an earlier release keeps its window until you reinstall it: `--install-sync-schedule` and `--install-schedule HH:MM` (with the flags it was installed with).
+
 ## [0.2.108] — 2026-10-30
 
 - **`roadmodel rerank` says what changed, not why.** The `> Settings updated` line under a re-ranked ladder gave the 0.2.97 reason whatever moved it ("each column's Runner-up and Backup now come from makers other than its Pick"), which would have written a false cause into every roadmap 0.2.107's measured prices re-rank. It now names each changed rank and what it was (`Quality Backup was GPT-6 Astra`; `Cost Pick was Sonnet 5.5 · High`) and the release that re-ranked it.

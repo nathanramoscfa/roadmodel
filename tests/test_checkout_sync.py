@@ -224,3 +224,105 @@ def test_the_updater_syncs_the_checkouts_it_is_given(
     out = capsys.readouterr().out
     assert "Checkouts:" in out and "checkout: updated" in out
     assert (checkout / "docs.md").read_text(encoding="utf-8") == "v2\n"
+
+
+def _windows(up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Stand in for the PC: a Python install with both interpreters, whose
+    schedule calls are recorded instead of run."""
+    install = tmp_path / "Python311"
+    install.mkdir()
+    for name in ("python.exe", "pythonw.exe"):
+        (install / name).write_bytes(b"")
+    monkeypatch.setattr(up, "WINDOWS", True)
+    monkeypatch.setattr(up.sys, "platform", "win32")
+    monkeypatch.setattr(up, "CONFIG_DIR", tmp_path / "cfg")
+    monkeypatch.setattr(up, "_launcher_python", lambda: install / "python.exe")
+    monkeypatch.setattr(up, "_install_launcher", lambda dry_run: tmp_path / "update_projects.py")
+    return install
+
+
+def test_a_windows_task_starts_pythonw_so_no_window_opens(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Console python.exe in a Task Scheduler task opened a window every 15
+    minutes that took focus from full-screen games; pythonw.exe opens none."""
+    install = _windows(up, tmp_path, monkeypatch)
+    pythonw = install / "pythonw.exe"
+    assert up._windowless(install / "python.exe") == pythonw
+    assert up._windowless(pythonw) == pythonw
+    assert up._windowless(Path("/usr/bin/python3")) == Path("/usr/bin/python3")
+
+    calls: list[list[str]] = []
+    definitions: list[str] = []
+
+    def fake_sys(argv: list[str], stdin: object = None) -> subprocess.CompletedProcess[str]:
+        calls.append(argv)
+        if "/XML" in argv:
+            definitions.append(Path(argv[argv.index("/XML") + 1]).read_text(encoding="utf-16"))
+        return subprocess.CompletedProcess(argv, 0, "SUCCESS", "")
+
+    monkeypatch.setattr(up, "_sys", fake_sys)
+    desc = up.install_sync_schedule(15)
+    command = calls[0][calls[0].index("/TR") + 1]
+    assert command.startswith(f"{pythonw} -I -X utf8 ") and command.endswith(
+        "--sync-checkouts --log"
+    )
+    assert "python.exe" not in command and str(pythonw) in desc
+
+    calls.clear()
+    desc = up.install_schedule("09:30", keep_pins=True, skip_refresh=True)
+    assert "/XML" in calls[0] and str(pythonw) in desc
+    assert f"<Command>{pythonw}</Command>" in definitions[0]
+    assert "python.exe" not in definitions[0]
+
+    # Without a pythonw.exe beside it, the task still runs, on python.exe.
+    pythonw.unlink()
+    assert up._windowless(install / "python.exe") == install / "python.exe"
+
+
+def test_pythonw_reruns_the_updater_in_a_console_with_no_window(
+    up: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Under pythonw.exe, every console child (git, gh, claude, pip) would
+    open a window of its own. The run re-starts under python.exe with
+    CREATE_NO_WINDOW, so its children share one windowless console, and the
+    task records the run's exit code rather than the launcher's."""
+    install = _windows(up, tmp_path, monkeypatch)
+    started: list[tuple[list[str], dict[str, object]]] = []
+
+    def fake_call(argv: list[str], **kw: object) -> int:
+        started.append((argv, kw))
+        return 3
+
+    monkeypatch.setattr(up.subprocess, "call", fake_call)
+
+    def no_lock(name: str) -> ModuleType:
+        raise AssertionError("the windowless child takes the lock, not its launcher")
+
+    monkeypatch.setattr(up, "_support", no_lock)
+    monkeypatch.setattr(up.sys, "executable", str(install / "pythonw.exe"))
+    assert up.main(["--sync-checkouts", "--log"]) == 3
+    [(argv, kw)] = started
+    assert argv[:4] == [str(install / "python.exe"), "-I", "-X", "utf8"]
+    assert argv[4] == str(Path(up.__file__).resolve())
+    assert argv[5:] == ["--sync-checkouts", "--log"]
+    assert kw == {"creationflags": 0x08000000}  # CREATE_NO_WINDOW
+
+    # The windowless python.exe child itself runs the job, as does any
+    # non-Windows run.
+    monkeypatch.setattr(up.sys, "executable", str(install / "python.exe"))
+    assert up._windowless_relaunch(["--sync-checkouts"]) is None
+    monkeypatch.setattr(up.sys, "executable", str(install / "pythonw.exe"))
+    monkeypatch.setattr(up, "WINDOWS", False)
+    assert up._windowless_relaunch(["--sync-checkouts"]) is None
+    assert len(started) == 1
+
+
+def test_the_log_tee_skips_a_missing_console_stream(up: ModuleType, tmp_path: Path) -> None:
+    import io
+
+    log = io.StringIO()
+    tee = up._Tee(None, log)  # pythonw.exe: sys.__stdout__ is None
+    tee.write("Checkouts:\n")
+    tee.flush()
+    assert log.getvalue() == "Checkouts:\n"
