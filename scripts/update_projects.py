@@ -2220,6 +2220,37 @@ SYNC_LABEL = "com.roadmodel.sync-checkouts"
 SYNC_TASK = "roadmodel-sync-checkouts"
 SYNC_MINUTES = 15
 LOG_MAX_BYTES = 1_000_000
+# A Windows task starts pythonw.exe, which opens no console, and the run then
+# re-starts itself under console python.exe in a console with no window
+# (_windowless_relaunch). subprocess defines this flag only on Windows.
+CREATE_NO_WINDOW = 0x08000000
+
+
+def _windowless(python: Path) -> Path:
+    """The interpreter a Windows task starts: the pythonw.exe beside
+    python.exe. Task Scheduler gives console python.exe a visible window
+    that takes focus (every 15 minutes it knocked full-screen games to the
+    desktop); pythonw.exe opens none. ``python`` itself when no pythonw.exe
+    sits beside it."""
+    gui = python.with_name("pythonw.exe")
+    return gui if python.name.lower() == "python.exe" and gui.is_file() else python
+
+
+def _windowless_relaunch(raw: list[str]) -> Optional[int]:
+    """Under pythonw.exe (a Windows task), run this updater again under the
+    python.exe beside it, in a console that has no window. Every git, gh,
+    claude and pip it starts shares that console, so none opens a window
+    either, and the task records the run's own exit code. pythonw.exe alone
+    would leave stdout unset and give each console child a window of its own.
+    None when this is not such a run."""
+    exe = Path(sys.executable)
+    console = exe.with_name("python.exe")
+    if not WINDOWS or exe.name.lower() != "pythonw.exe" or not console.is_file():
+        return None
+    return subprocess.call(  # noqa: S603 — argv is this interpreter and this script
+        [str(console), "-I", "-X", "utf8", str(Path(__file__).resolve()), *raw],
+        creationflags=CREATE_NO_WINDOW,
+    )
 
 
 def _parse_time(value: str) -> tuple[int, int]:
@@ -2443,6 +2474,8 @@ def install_schedule(
     one-line description of what was (or would be) installed."""
     hour, minute = _parse_time(when)
     python = _launcher_python()
+    if WINDOWS:
+        python = _windowless(python)
     script = _install_launcher(dry_run)
     if not dry_run:
         _private_dir(CONFIG_DIR)
@@ -2548,6 +2581,8 @@ def install_sync_schedule(minutes: int, dry_run: bool = False) -> str:
     if not 1 <= minutes <= 1440:
         raise SystemExit("--install-sync-schedule: minutes must be 1–1440")
     python = _launcher_python()
+    if WINDOWS:
+        python = _windowless(python)
     script = _install_launcher(dry_run)
     stamp = f"every {minutes} min via {python} {script} --sync-checkouts (log: {LOG_FILE})"
     if sys.platform == "darwin":
@@ -2775,7 +2810,8 @@ class _Tee:
     """Write to the console and append to the log (scheduled runs)."""
 
     def __init__(self, *streams: object) -> None:
-        self._streams = streams
+        # pythonw.exe has no console stream (sys.__stdout__ is None).
+        self._streams = tuple(s for s in streams if s is not None)
 
     def write(self, data: str) -> int:
         for s in self._streams:
@@ -3735,6 +3771,10 @@ def _main(argv: Optional[list[str]] = None) -> int:
 
 def main(argv: Optional[list[str]] = None) -> int:
     raw = list(sys.argv[1:] if argv is None else argv)
+    # Before the lock: the windowless child takes it.
+    hidden = _windowless_relaunch(raw)
+    if hidden is not None:
+        return hidden
     if {"--check", "--dry-run", "--help", "-h", "--self-check", "--refresh-plan"} & set(raw):
         return _main(raw)
     try:

@@ -169,7 +169,10 @@ It runs the installed launcher with `--log`, appending to
 `~/.config/roadmodel/update.log`. Each full run follows published releases
 and refreshes the launcher and companion modules, so repeated manual fetching
 is unnecessary. On Windows a start missed while the PC was off runs once it
-is back. `--uninstall-schedule` removes it.
+is back, and the task starts `pythonw.exe`, so neither it nor the git, gh,
+claude and pip processes it runs ever opens a window or takes focus (0.2.109;
+reinstall a task from an earlier release to get this). `--uninstall-schedule`
+removes it.
 
 Install a schedule on each machine; a coordinator can additionally update its
 configured peers. On a peer, install it with `--keep-pins --skip-roadmap-refresh`

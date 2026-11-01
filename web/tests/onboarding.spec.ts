@@ -5,28 +5,20 @@ import { ORIGIN_HEADERS } from "./fixtures/origin";
 // test harness (see web/lib/auth.ts) because CI runs against placeholder
 // Supabase credentials and cannot drive a live magic-link round-trip.
 
-import { readFileSync } from "node:fs";
-import path from "node:path";
-
 import { test, expect } from "@playwright/test";
+
+import { modelNamesInJurisdiction } from "../lib/catalog-models";
 
 import {
   resetE2eState,
   signInViaCallback,
 } from "./fixtures/onboarding-auth";
 
-// The cn-jurisdiction model the mock picks, derived from the same catalog the
-// app reads, by the same rule (modelNamesInJurisdiction: names, sorted, first)
-// — a literal here ("Kimi K2.5") outlived the model and stranded these tests
-// when the catalog moved on.
-const CN_CATALOG = JSON.parse(
-  readFileSync(path.join(process.cwd(), "data", "catalog.json"), "utf8"),
-) as { models: { id: string; name: string; jurisdiction?: string }[] };
-const CN_PICK =
-  CN_CATALOG.models
-    .filter((m) => m.jurisdiction === "cn")
-    .map((m) => m.name)
-    .sort()[0] ?? "Kimi K3";
+// The cn-jurisdiction model the mock picks, from the very function the mock
+// calls. A literal ("Kimi K2.5") outlived the model, and a copy of the rule
+// that read the raw catalog kept DeepSeek-V4-Pro past its 2026-11-01
+// retires_on, which the app's live list drops: both stranded these tests.
+const CN_PICK = modelNamesInJurisdiction("cn")[0] ?? "Kimi K3";
 
 test.describe.configure({ mode: "serial" });
 
