@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.111] — 2026-11-01
+
+- **`roadmodel` prints UTF-8 on Windows.** An agent's shell reads a command's output through a pipe, and on Windows Python encodes a pipe in the ANSI code page (cp1252), which has neither the ladder's `≈` nor the non-breaking hyphen its Runner-up row is labelled with. So `roadmodel ladder` run by an agent there ended in a UnicodeEncodeError, and with it `/roadmodel-recommend`'s fallback for an agent without the `roadmap_settings` MCP tool. The CLI now writes UTF-8 to stdout and stderr whatever the pipe defaults to. The MCP tools, which always spoke UTF-8, are unchanged.
+
 ## [0.2.110] — 2026-11-01
 
 - **`/roadmodel-recommend`: a model for any prompt, before you start it.** A roadmap step carries its own Settings; other work had none. Open a new chat, put `/roadmodel-recommend` on the first line and the prompt on the lines below it. The agent classifies the prompt the way a roadmap classifies a step (PRIMARY category, complexity, novel or not) and takes the ladder a step with that classification would carry from `roadmodel ladder` or the `roadmap_settings` MCP tool, computed in code with no model call. It replies with:

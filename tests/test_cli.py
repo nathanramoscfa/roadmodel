@@ -1160,3 +1160,23 @@ def test_settings_text_lines_print_every_claude_code_control_in_order() -> None:
         "  max_mode: ON",
         "  thinking: On",
     ]
+
+
+def test_main_writes_utf8_when_the_pipe_defaults_to_cp1252(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import io
+
+    import click
+
+    import roadmodel.cli as cli_module
+
+    # A Windows pipe defaults to cp1252, which has neither the ladder's ≈ nor
+    # its non-breaking hyphen.
+    out, err = io.BytesIO(), io.BytesIO()
+    monkeypatch.setattr(sys, "stdout", io.TextIOWrapper(out, encoding="cp1252"))
+    monkeypatch.setattr(sys, "stderr", io.TextIOWrapper(err, encoding="cp1252"))
+    monkeypatch.setattr(cli_module, "cli", lambda: click.echo("Runner‑up ≈40.3"))
+    cli_module.main()
+    assert out.getvalue().decode("utf-8") == "Runner‑up ≈40.3\n"
+    assert sys.stderr.encoding == "utf-8"
