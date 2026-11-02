@@ -28,17 +28,18 @@ Then **reload the editor window** (VS Code: `Developer: Reload Window`)
 you open a new chat. Type `/` in a chat; `roadmap-project`,
 `roadmap-phase`, and `roadmap-step` should be listed.
 
-The five files in [`docs/claude-commands/`](claude-commands/) become
+The six files in [`docs/claude-commands/`](claude-commands/) become
 the user-scope Claude Code slash commands `/roadmap-project`,
-`/roadmap-phase`, `/roadmap-step`, `/roadmap-refresh`, and
-`/roadmodel-upgrade`, available
+`/roadmap-phase`, `/roadmap-step`, `/roadmap-refresh`,
+`/roadmodel-upgrade`, and `/roadmodel-recommend`, available
 in every project on that machine. They are also the source for the
 Gemini CLI and Codex versions — see "Other agents" below. The first two are thin: each executes
 the paste-prompt the planning kit ships, so they never drift from the
 kit. The third reads the step straight out of the phase roadmap and
 EXECUTES it — code, tests, PR, merge. The fourth is bookkeeping only
 (below). The fifth installs released copies of the others and itself, so
-this setup step is a one-time bootstrap. Newer Claude Code
+this setup step is a one-time bootstrap. The sixth recommends a model
+for any prompt before you start it (below). Newer Claude Code
 builds also accept them as skills — copy each file to
 `~/.claude/skills/<name>/SKILL.md` with a `name: <name>` frontmatter
 line if `commands/` is not picked up.
@@ -63,6 +64,39 @@ To refresh every project at once, run `/roadmodel-upgrade --refresh-roadmaps`
 from any chat. It upgrades, then runs `/roadmap-refresh` unattended in a fresh
 clone of each registered project, and skips any project with work in flight.
 The daily run does this by itself whenever the roadmap rules change. See §5.
+
+### A model for any prompt: `/roadmodel-recommend`
+
+A roadmap step carries its own Settings. For work that is not a step, open
+a new chat and put the command on the first line, with the prompt you want
+to run on the lines below it:
+
+```
+/roadmodel-recommend
+Find every place this project calls the payments API, then plan how we
+would move each call to the provider's new version.
+```
+
+The agent classifies the prompt (PRIMARY category, complexity, novel or
+not) the way a roadmap classifies a step, and asks roadmodel for the
+ladder a step with that classification would carry: `roadmodel ladder`, or
+the `roadmap_settings` MCP tool, computed in code with no model call. It
+replies with:
+
+- the best fit on the prompt's merits, as `model · level on platform`;
+- the Cost / Balanced / Quality table, each column ranked Pick,
+  Runner-up and Backup;
+- why: the classification, and what the other columns trade;
+- the options that run in the agent you are in, and how to switch to them
+  (in Claude Code, the `/model` picker), with what the switch saves as
+  your default;
+- your prompt again, in a block you can copy.
+
+It starts nothing. Switch to the option you want and reply `go` to run the
+prompt in that chat, or open a new chat on those settings and paste the
+prompt. In Codex type `$roadmodel-recommend` (or
+`/prompts:roadmodel-recommend`); Antigravity, OpenCode and VS Code's chat
+use `/roadmodel-recommend`, like Claude Code.
 
 ## 2. Write the project roadmap
 
@@ -363,7 +397,7 @@ says `*** self-update FAILED` with the reason.
 
 ## Other agents: Gemini CLI, Codex, Cursor, OpenCode, VS Code
 
-The same five commands exist for Gemini CLI, Codex, Cursor,
+The same commands exist for Gemini CLI, Codex, Cursor,
 OpenCode and VS Code's own chat (GitHub Copilot), generated from the Claude Code files so they never drift. `/roadmodel-upgrade` (or
 `python ~/.config/roadmodel/update_projects.py --commands-only`)
 installs them wherever it finds the tool:

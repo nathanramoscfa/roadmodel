@@ -34,6 +34,7 @@ BUNDLED_DOCS: dict[str, str] = {
     "claude-commands/roadmap-step.md": "roadmap-step.md",
     "claude-commands/roadmap-refresh.md": "roadmap-refresh.md",
     "claude-commands/roadmodel-upgrade.md": "roadmodel-upgrade.md",
+    "claude-commands/roadmodel-recommend.md": "roadmodel-recommend.md",
     "model-selector.txt": "model-selector.txt",
     "model-tier-cost-scale.md": "model-tier-cost-scale.md",
     "settings-display.md": "settings-display.md",

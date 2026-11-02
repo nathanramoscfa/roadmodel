@@ -11,6 +11,7 @@ install the setup; subsequent sessions read the same live files.
 | Repair context without package upgrades or AI calls | `$roadmodel-upgrade --sync-only` | `/roadmodel-upgrade --sync-only` |
 | Check context without changing files | `$roadmodel-upgrade --check` | `/roadmodel-upgrade --check` |
 | Upgrade while skipping roadmap agents for this run | `$roadmodel-upgrade --skip-roadmap-refresh` | `/roadmodel-upgrade --skip-roadmap-refresh` |
+| Recommend a model for a prompt (the prompt goes on the lines below) | `$roadmodel-recommend` | `/roadmodel-recommend` |
 
 The agent runs the updater; you do not need to switch to a terminal. Existing
 Codex custom prompts also support `/prompts:roadmodel-upgrade`, but the skill
@@ -212,7 +213,7 @@ handling. Different projects retain separate project memories.
 
 ## Other agent capabilities
 
-A full upgrade continues to distribute the five roadmap command/skill files
+A full upgrade continues to distribute roadmodel's command/skill files
 and mirror the roadmodel MCP registration into supported clients. It also
 retains the existing provider-default behavior: pinned default model and effort
 settings are removed unless `--keep-pins` is used; ceilings are retained.

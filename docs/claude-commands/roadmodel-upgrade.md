@@ -132,7 +132,7 @@ in the env behind Claude Code's roadmodel MCP registration. The
 `MCP server env:` line reports it; restart sessions to load a new server.
 
 It re-exports `planning/` where one exists (`--init-kit` creates one everywhere)
-and refreshes the five commands for detected agents: Claude commands and skill
+and refreshes roadmodel's commands for detected agents: Claude commands and skill
 copies, legacy Gemini TOML commands, Antigravity skills under
 `~/.gemini/config/skills/` (IDE/2.0) and
 `~/.gemini/antigravity-cli/skills/` (CLI), shared Codex/Cursor skills under `~/.agents/skills/`,

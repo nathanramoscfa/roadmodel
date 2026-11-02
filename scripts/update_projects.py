@@ -58,10 +58,10 @@ COMMANDS = (
     "roadmap-step",
     "roadmap-refresh",
     "roadmodel-upgrade",
+    "roadmodel-recommend",
 )
-# Commands this updater once installed under a name it no longer uses. Every
-# run removes its own copies of them for every agent; a user's own command of
-# the same name is left alone.
+# Commands this updater once installed under a name it no longer uses: every run
+# removes its own copies for every agent and leaves a user's same-name command alone.
 RETIRED_COMMANDS = ("roadmodel-update",)  # renamed roadmodel-upgrade in 0.2.45
 CONFIG_DIR = Path.home() / ".config" / "roadmodel"
 DEFAULT_PROJECTS_FILE = CONFIG_DIR / "projects.txt"
@@ -844,9 +844,9 @@ def port_antigravity(name: str, body: str) -> str:
     text = text.replace('"$ARGUMENTS"', "<arguments>").replace("$ARGUMENTS", "<arguments>")
     if has_args:
         text = text.rstrip() + (
-            f"\n\n`<arguments>` above is the text typed after the command. If this "
-            f"request already carries it (for example `/{name} 1`), use that "
-            f"verbatim and do not ask for it again."
+            f"\n\n`<arguments>` above is the text typed after `/{name}`, every line of "
+            f"it. If this request already carries it, use that verbatim and do not ask "
+            f"for it again."
         )
     desc = description.replace('"', "'")
     return f'---\nname: {name}\ndescription: "{desc}"\n---\n{text.rstrip()}\n'
@@ -1457,10 +1457,10 @@ def _agents_md(project: Path) -> str:
         "",
         "## Commands",
         "",
-        "`roadmap-project`, `roadmap-phase`, `roadmap-step`, `roadmap-refresh` and",
-        "`roadmodel-upgrade` are installed for every agent on this machine (Codex:",
-        "`/prompts:roadmap-phase 1`; elsewhere: `/roadmap-phase 1`). See",
-        "docs/agent-parity.md in the roadmodel repo.",
+        "`roadmap-project`, `roadmap-phase`, `roadmap-step`, `roadmap-refresh`,",
+        "`roadmodel-upgrade` and `roadmodel-recommend` are installed for every agent",
+        "on this machine (Codex: `/prompts:roadmap-phase 1`; elsewhere:",
+        "`/roadmap-phase 1`). See docs/agent-parity.md in the roadmodel repo.",
         "",
         # The marker keeps the updater's old name: /roadmap-step and
         # /roadmap-refresh recognise the file by this exact line.

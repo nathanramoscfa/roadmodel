@@ -400,6 +400,30 @@ def test_every_command_ships_to_every_agent() -> None:
     assert on_disk == set(up.COMMANDS)
 
 
+RECOMMEND_COMMAND = ROOT / "docs" / "claude-commands" / "roadmodel-recommend.md"
+
+
+def test_recommend_command_asks_for_the_ladder_a_roadmap_shows() -> None:
+    """/roadmodel-recommend classifies a prompt itself, then takes its table
+    from `roadmodel ladder` (MCP: `roadmap_settings`), the call every roadmap
+    step's Settings come from. Its PRIMARY list must be exactly the categories
+    the ladder accepts, or a classification fails the call. Like a roadmap it
+    recommends on merit and leaves the pick to the operator, and it only
+    recommends: the prompt runs when the operator says `go`."""
+    from roadmodel.scoring import CATEGORIES
+
+    text = RECOMMEND_COMMAND.read_text()
+    flat = re.sub(r"\s+", " ", text)
+    primary = text.split("**PRIMARY category**", 1)[1].split("When the prompt spans", 1)[0]
+    assert re.findall(r"^  - `([a-z-]+)`:", primary, re.M) == list(CATEGORIES)
+    assert "MCP tool `roadmap_settings`" in flat
+    assert "`roadmodel ladder --category <c> --complexity <x>` (add `--novel`" in flat
+    assert "Never write a ladder by hand" in flat
+    assert text.count("$ARGUMENTS") == 1
+    assert "never on a usage pool's state" in flat
+    assert "do not carry out the prompt" in flat and "next message is `go`" in flat
+
+
 # A ladder table's row labels (roadmodel 0.2.95 on): each rank a bold group
 # row over its indented Model / Platform / Level / AA / Price rows.
 LADDER_SHAPE = [
