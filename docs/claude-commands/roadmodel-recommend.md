@@ -73,14 +73,24 @@ Reply with these five parts, in this order, and nothing else:
    what the other columns trade against it. Four sentences at most.
 4. `**Here in <this agent>:**` each option of the ladder whose Platform
    is the agent you are running in, with its column and rank and how to
-   switch to it. Claude Code: `/model` with the family's alias (`opus`,
-   `sonnet`, `haiku` or `fable`, each its family's latest model), then
-   `/effort <level>`. Codex, Antigravity, OpenCode and other agents:
-   their model picker and reasoning setting. Thinking stays On wherever
-   the agent has a Thinking toggle. When no option runs here, name the
-   platforms they run on. An agent that reaches models through
-   OpenRouter or an API key can run an option's model here too, billed
-   per token at about its Price; say so when that is the case.
+   switch to it.
+   - Claude Code: open the model picker (`/model` on its own; in VS Code
+     also the model name under the prompt box), choose the model by its
+     family (`opus`, `sonnet`, `haiku` or `fable`, each its family's
+     latest model) and set the level (the left and right arrows in the
+     terminal, the Effort row in VS Code). Say once what is saved: in
+     the terminal, `s` switches this session only and Enter saves both
+     as the defaults for new sessions, as typing `/model <alias>` and
+     `/effort <level>` does; in VS Code a level other than Max is saved
+     as that model's default.
+   - Codex, Antigravity, OpenCode and other agents: their model picker
+     and reasoning setting.
+
+   Thinking stays On wherever the agent has a Thinking toggle. When no
+   option runs here, name the platforms they run on. An agent that
+   reaches models through OpenRouter or an API key can run an option's
+   model here too, billed per token at about its Price; say so when that
+   is the case.
 5. `**Start:**` switch to the option you choose and reply `go` to run
    the prompt in this conversation, or open a new conversation on those
    settings and paste the prompt. Repeat the prompt verbatim in a fenced

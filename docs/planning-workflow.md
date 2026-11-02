@@ -88,7 +88,8 @@ replies with:
   Runner-up and Backup;
 - why: the classification, and what the other columns trade;
 - the options that run in the agent you are in, and how to switch to them
-  (in Claude Code, `/model` then `/effort`);
+  (in Claude Code, the `/model` picker), with what the switch saves as
+  your default;
 - your prompt again, in a block you can copy.
 
 It starts nothing. Switch to the option you want and reply `go` to run the

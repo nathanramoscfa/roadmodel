@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - the best fit on the prompt's merits;
   - the Cost / Balanced / Quality table;
   - why: the classification, and what the other columns trade;
-  - the options that run in the agent you are in, and how to switch to them (`/model` then `/effort` in Claude Code);
+  - the options that run in the agent you are in, and how to switch to them. In Claude Code that is the `/model` picker, with what the switch saves: in the terminal `s` keeps it to the session while Enter, `/model <alias>` and `/effort <level>` save your defaults, and in VS Code a level other than Max is saved as that model's default;
   - the prompt again, in a block to copy.
 
   It starts nothing. Reply `go` to run the prompt in that chat, or paste it into a new chat on the settings you chose. `/roadmodel-upgrade` installs it for every agent it finds, like the other five commands: `$roadmodel-recommend` (or `/prompts:roadmodel-recommend`) in Codex, and `/roadmodel-recommend` in Claude Code, Antigravity, OpenCode and VS Code's chat.
