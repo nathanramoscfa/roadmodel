@@ -350,11 +350,17 @@ def test_install_schedule_dry_run_touches_nothing(
 # --------------------------------------------------------------------------
 
 COMMANDS_DIR = ROOT / "docs" / "claude-commands"
-
-
-@pytest.mark.parametrize(
-    "name", ["roadmap-project", "roadmap-phase", "roadmap-step", "roadmodel-upgrade"]
+# The commands whose port to each agent the tests below check.
+PORTED = (
+    "roadmap-project",
+    "roadmap-phase",
+    "roadmap-step",
+    "roadmodel-upgrade",
+    "roadmodel-recommend",
 )
+
+
+@pytest.mark.parametrize("name", PORTED)
 def test_gemini_port_is_valid_toml_with_args(up: ModuleType, name: str) -> None:
     import tomllib
 
@@ -370,9 +376,7 @@ def test_gemini_port_is_valid_toml_with_args(up: ModuleType, name: str) -> None:
         assert "\\" in parsed["prompt"]
 
 
-@pytest.mark.parametrize(
-    "name", ["roadmap-project", "roadmap-phase", "roadmap-step", "roadmodel-upgrade"]
-)
+@pytest.mark.parametrize("name", PORTED)
 def test_codex_port_is_a_skill(up: ModuleType, name: str) -> None:
     body = (COMMANDS_DIR / f"{name}.md").read_text()
     skill = up.port_codex(name, body)
@@ -511,9 +515,7 @@ def test_commands_only_cli_needs_no_registry(tmp_path: Path) -> None:
 # --------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize(
-    "name", ["roadmap-project", "roadmap-phase", "roadmap-step", "roadmodel-upgrade"]
-)
+@pytest.mark.parametrize("name", PORTED)
 def test_opencode_port_keeps_arguments_and_refuses_injection(up: ModuleType, name: str) -> None:
     body = (COMMANDS_DIR / f"{name}.md").read_text()
     cmd = up.port_opencode(name, body)
@@ -1062,9 +1064,7 @@ def test_gemini_trusts_every_registered_project(
 # --------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize(
-    "name", ["roadmap-project", "roadmap-phase", "roadmap-step", "roadmodel-upgrade"]
-)
+@pytest.mark.parametrize("name", PORTED)
 def test_antigravity_port_is_a_slash_invocable_skill(up: ModuleType, name: str) -> None:
     body = (COMMANDS_DIR / f"{name}.md").read_text()
     out = up.port_antigravity(name, body)
@@ -1081,9 +1081,11 @@ def test_antigravity_port_tells_the_model_to_use_inline_arguments(up: ModuleType
     out = up.port_antigravity("roadmap-phase", "---\ndescription: d\n---\n\nWrite $ARGUMENTS.\n")
     # A mid-sentence placeholder stays a visible slot, not prose.
     assert "Write <arguments>." in out
-    assert "`/roadmap-phase 1`" in out
+    # The note names the command, not a sample argument: the arguments may be
+    # a whole multi-line prompt (/roadmodel-recommend).
+    assert "the text typed after `/roadmap-phase`, every line of it" in out
     # A command with no arguments gets no note.
-    assert "already carries the arguments" not in up.port_antigravity(
+    assert "<arguments>" not in up.port_antigravity(
         "roadmap-project", "---\ndescription: d\n---\n\nGo.\n"
     )
 

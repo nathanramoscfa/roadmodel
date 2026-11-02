@@ -21,9 +21,9 @@ python3 -m pip install --upgrade roadmodel
 python3 -m roadmodel.update_projects --commands-only --local-only
 ```
 
-The second line installs the five chat commands (`/roadmap-project`,
-`/roadmap-phase`, `/roadmap-step`, `/roadmap-refresh`, `/roadmodel-upgrade`)
-for every agent it finds. Reload the editor window afterwards (VS Code:
+The second line installs the six chat commands (`/roadmap-project`,
+`/roadmap-phase`, `/roadmap-step`, `/roadmap-refresh`, `/roadmodel-upgrade`,
+`/roadmodel-recommend`) for every agent it finds. Reload the editor window afterwards (VS Code:
 `Developer: Reload Window`), then type `/` in a chat to see them.
 
 ### 2. Describe what you can use: `user-context.md`

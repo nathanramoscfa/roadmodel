@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.110] — 2026-11-01
+
+- **`/roadmodel-recommend`: a model for any prompt, before you start it.** A roadmap step carries its own Settings; other work had none. Open a new chat, put `/roadmodel-recommend` on the first line and the prompt on the lines below it. The agent classifies the prompt the way a roadmap classifies a step (PRIMARY category, complexity, novel or not) and takes the ladder a step with that classification would carry from `roadmodel ladder` or the `roadmap_settings` MCP tool, computed in code with no model call. It replies with:
+  - the best fit on the prompt's merits;
+  - the Cost / Balanced / Quality table;
+  - why: the classification, and what the other columns trade;
+  - the options that run in the agent you are in, and how to switch to them (`/model` then `/effort` in Claude Code);
+  - the prompt again, in a block to copy.
+
+  It starts nothing. Reply `go` to run the prompt in that chat, or paste it into a new chat on the settings you chose. `/roadmodel-upgrade` installs it for every agent it finds, like the other five commands: `$roadmodel-recommend` (or `/prompts:roadmodel-recommend`) in Codex, and `/roadmodel-recommend` in Claude Code, Antigravity, OpenCode and VS Code's chat.
+- Antigravity's copy of each command no longer gives `/<command> 1` as the example of its arguments, which fit only `/roadmap-phase`.
+
 ## [0.2.109] — 2026-11-01
 
 - **Windows schedules no longer open a window.** Both Task Scheduler tasks (the 15-minute checkout sync and the daily update) started console `python.exe` in the logged-on session, so Windows opened a console window every run. It took focus and knocked full-screen games out to the desktop every 15 minutes. The tasks now start `pythonw.exe`, which opens no window. The updater then reruns itself under `python.exe` with `CREATE_NO_WINDOW`: a console with no window, which every git, gh, claude and pip child shares, so none of them opens one either. The task still runs as the logged-on user, so git keeps reaching Windows Credential Manager, and its Last Run Result is still the run's own exit code. (Launching through `conhost.exe --headless` was rejected because, tested on the PC, it reports 0 when the run exits 7.) macOS launchd and Linux cron are unchanged. A task installed by an earlier release keeps its window until you reinstall it: `--install-sync-schedule` and `--install-schedule HH:MM` (with the flags it was installed with).

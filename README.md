@@ -90,6 +90,13 @@ what the project is for, what done looks like, your hard constraints, and
 whether a document already describes it. It also reads the codebase, so the
 roadmap starts from what exists.
 
+**A model for any prompt.** Work that is not a roadmap step gets the same
+Settings table. Open a new chat, put `/roadmodel-recommend` on the first line
+and your prompt below it. The agent classifies the prompt, shows the ladder a
+step of that classification would carry, names the best fit and how to switch
+to it in the agent you are using, and starts nothing: reply `go` to run the
+prompt there, or paste it into a new chat on the settings you picked.
+
 Setup is once per machine (`/roadmodel-upgrade` keeps every project's
 copy current after that); the commands then work in any project.
 New here? [docs/getting-started.md](docs/getting-started.md) takes you from
@@ -172,8 +179,9 @@ answer instead of guessing.
 Install the MCP runtime with `pip install "roadmodel[mcp]"` to enable
 the `roadmodel-mcp` stdio server entrypoint; plain `pip install
 roadmodel` keeps the SDK optional and does not install `mcp`. The
-server exposes four tools — `recommend_model`,
-`generate_phase_roadmap`, `read_catalog`, and `score_candidates` — to any MCP-compatible
+server exposes five tools — `recommend_model`,
+`generate_phase_roadmap`, `read_catalog`, `score_candidates`, and
+`roadmap_settings` — to any MCP-compatible
 client (Cursor, Claude Code, Claude Desktop, VS Code + Continue).
 Per-client registration walk-throughs live in
 [docs/mcp-setup.md](docs/mcp-setup.md); tool signatures and return
@@ -217,14 +225,15 @@ refuse redirected destinations and tracked private context, and install Git
 exclusions before writing it. POSIX copies use mode 0600; on Windows, account
 isolation also depends on the destination's inherited ACLs.
 
-**Day-to-day:** the kit is driven by the five user-scope commands in
+**Day-to-day:** the kit is driven by the six user-scope commands in
 `docs/claude-commands/` — `/roadmap-project`, `/roadmap-phase N`,
 `/roadmap-step P M` (executes a step), `/roadmap-refresh` (bookkeeping
 only: marks shipped steps and re-selects upcoming Settings, runs
-nothing), `/roadmodel-upgrade` — see
+nothing), `/roadmodel-upgrade`, `/roadmodel-recommend` (a model for any
+prompt, before you start it) — see
 [The planning workflow](#the-planning-workflow) above for the loop and
 [docs/planning-workflow.md](docs/planning-workflow.md) for setup and
-per-command detail. The same five are generated for **Gemini CLI**
+per-command detail. The same six are generated for **Gemini CLI**
 (`~/.gemini/commands/*.toml`), **Codex** and **Cursor** (one
 `~/.agents/skills/*/SKILL.md` both read; `$roadmap-step` in Codex,
 `/roadmap-step` in Cursor), and **OpenCode**
