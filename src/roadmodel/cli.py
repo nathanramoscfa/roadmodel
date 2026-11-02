@@ -1,13 +1,16 @@
 # src/roadmodel/cli.py
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import json
 import os
 import re
 import shlex
 import shutil
 import subprocess  # nosec B404 - only used to invoke the `claude` CLI with fixed argv
+import sys
 import sysconfig
 import textwrap
 from dataclasses import asdict
@@ -1280,5 +1283,17 @@ def version() -> None:
     click.echo(__version__)
 
 
+def _utf8_output() -> None:
+    """Write UTF-8 whatever the console or pipe defaults to. A Windows pipe
+    is cp1252, which has no ≈ or non-breaking hyphen, so `roadmodel ladder`
+    run from an agent's shell there ended in a UnicodeEncodeError. Agents
+    copy the table as printed, so a "?" for each will not do."""
+    for stream in (sys.stdout, sys.stderr):
+        if isinstance(stream, io.TextIOWrapper):
+            with contextlib.suppress(ValueError, OSError):
+                stream.reconfigure(encoding="utf-8", errors=stream.errors)
+
+
 def main() -> None:
+    _utf8_output()
     cli()
