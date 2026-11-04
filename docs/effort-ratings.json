@@ -91,36 +91,6 @@
         "knowledge": "S"
       }
     },
-    "claude-sonnet-5": {
-      "low": {
-        "coding": "B",
-        "planning": "B",
-        "agentic": "B",
-        "long-context": "B",
-        "knowledge": "C"
-      },
-      "medium": {
-        "coding": "A",
-        "planning": "B",
-        "agentic": "B",
-        "long-context": "A",
-        "knowledge": "B"
-      },
-      "high": {
-        "coding": "A",
-        "planning": "B",
-        "agentic": "B",
-        "long-context": "A",
-        "knowledge": "B"
-      },
-      "xhigh": {
-        "coding": "A",
-        "planning": "B",
-        "agentic": "B",
-        "long-context": "A",
-        "knowledge": "B"
-      }
-    },
     "claude-sonnet-5-5": {
       "low": {
         "coding": "A",
@@ -139,7 +109,7 @@
       "high": {
         "coding": "A",
         "planning": "A",
-        "agentic": "S",
+        "agentic": "A",
         "long-context": "A",
         "knowledge": "A"
       },
@@ -149,13 +119,6 @@
         "agentic": "S",
         "long-context": "A",
         "knowledge": "A"
-      }
-    },
-    "gemini-3-pro": {
-      "low": {
-        "planning": "C",
-        "long-context": "A",
-        "knowledge": "B"
       }
     },
     "gemini-3.8-flash": {
@@ -185,7 +148,7 @@
     },
     "gpt-5.6-luna": {
       "low": {
-        "coding": "C",
+        "coding": "B",
         "planning": "C",
         "agentic": "D",
         "long-context": "A",
@@ -305,14 +268,14 @@
     },
     "gpt-6-luna": {
       "low": {
-        "coding": "C",
+        "coding": "B",
         "planning": "C",
         "agentic": "D",
         "long-context": "A",
         "knowledge": "C"
       },
       "medium": {
-        "coding": "B",
+        "coding": "A",
         "planning": "B",
         "agentic": "B",
         "long-context": "A",
