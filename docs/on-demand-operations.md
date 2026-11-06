@@ -22,6 +22,7 @@ can merge that PR once its checks pass.
 | `codex` | `update-codex.yml` | Codex reasoning levels | ~$0.30 |
 | `gemini` | `update-gemini.yml` | Gemini thinking levels | ~$0.30 |
 | `deepseek` | `update-deepseek.yml` | DeepSeek thinking modes | ~$0.30 |
+| `defaults` | `update-default-efforts.yml` | each vendor's default effort (Anthropic and OpenAI APIs, Codex, xAI, Groq, z.ai) | free |
 | `availability` | `probe-availability.yml` | which models answer | ~$0 |
 | `soak` | `recommend-soak.yml` | production recommender smoke | recommender engine |
 | `health` | `cron-health.yml` | the cron alarm | free |

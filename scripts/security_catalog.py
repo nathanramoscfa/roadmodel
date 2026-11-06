@@ -25,6 +25,7 @@ DATA_PATHS = (
     "update/codex-reasoning.json",
     "update/gemini-thinking.json",
     "update/deepseek-thinking.json",
+    "update/default-efforts.json",
 )
 VALIDATOR_FILES = tuple(
     "update/" + name + ".py"

@@ -49,9 +49,10 @@ CATALOG_PATH = DOCS_DIR / "catalog.json"
 # Bumped 2->3 when the catalog SHAPE changed: <method> elements gained an
 # `exposes_orchestration` key and the document gained the top-level
 # `output_contract_version` key (v2 of the emission contract). Bumped 3->4
-# when a method gained `effort_levels` / `effort_levels_by_model`. Consumers
-# that pin the schema version must be updated in the same change.
-SCHEMA_VERSION = "4"
+# when a method gained `effort_levels` / `effort_levels_by_model`. Bumped 4->5
+# when a method gained `default_effort_by_model`. Consumers that pin the schema
+# version must be updated in the same change.
+SCHEMA_VERSION = "5"
 
 # Each access method's effort dial, read ONLY from the tracker snapshots the
 # daily jobs refresh from each surface's own docs; a level list is never
@@ -65,6 +66,26 @@ EFFORT_SOURCES: tuple[tuple[str, tuple[str, ...], str, str | None], ...] = (
     ("codex-reasoning.json", ("codex-api", "codex-cli"), "reasoning_effort", None),
     ("gemini-thinking.json", ("google-api",), "thinking_levels", "per_model_levels"),
     ("deepseek-thinking.json", ("deepseek-api",), "reasoning_effort", None),
+    # No dial of its own: DEFAULT_SOURCES reads it. A row here makes it a
+    # refresh input (update/automation_integrity.py SNAPSHOTS).
+    ("default-efforts.json", (), "", None),
+)
+# Each access method's default effort, as its vendor states it, read ONLY from
+# the tracker snapshots: (snapshot, key, methods). No value lives in this repo
+# by hand, so a vendor's change lands with the tracker's next refresh. Defaults
+# differ by surface for one model, so each surface reads its own source. A
+# method no source covers (a chat app, Cursor, a pass-through like OpenRouter)
+# has no `default_effort_by_model`.
+DEFAULT_SOURCES: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    ("claude-code-effort.json", "default_effort", ("claude-code",)),
+    ("gemini-thinking.json", "level_defaults", ("google-api",)),
+    ("deepseek-thinking.json", "effort_default", ("deepseek-api",)),
+    ("default-efforts.json", "anthropic-api", ("anthropic-api",)),
+    ("default-efforts.json", "openai-api", ("openai-api",)),
+    ("default-efforts.json", "codex", ("codex-api", "codex-cli")),
+    ("default-efforts.json", "xai-api", ("xai-api",)),
+    ("default-efforts.json", "groq-api", ("groq-api",)),
+    ("default-efforts.json", "zai-api", ("zai-api",)),
 )
 # The order level names run in, lowest first, across every documented dial: a
 # snapshot lists levels in its docs' order, which is not always lowest first
@@ -285,6 +306,8 @@ def _attach_effort_levels(
     by_name = {_name_key(str(m["name"])): str(m["id"]) for m in models}
     by_id = {str(m["id"]): m for m in methods}
     for filename, method_ids, levels_key, per_model_key in EFFORT_SOURCES:
+        if not method_ids:
+            continue
         try:
             snapshot = json.loads((update_dir / filename).read_text())
         except (OSError, ValueError):
@@ -326,6 +349,47 @@ def _attach_effort_levels(
                 method["effort_levels_by_model"] = {
                     mid: per_model[mid] for mid in sorted(per_model) if mid in supported
                 }
+
+
+def _attach_default_efforts(
+    methods: list[dict[str, Any]], models: list[dict[str, Any]], update_dir: Path
+) -> None:
+    """Give each method its vendor's stated default for the models it supports.
+
+    A snapshot states a default per model, as a blanket under ``"*"``, or (one
+    word) for every model. A method with documented levels takes only a level
+    the model has: the snapshot's word is data from a vendor page, and a word
+    outside LEVEL_ORDER never reaches the catalog. Fails open like
+    ``_attach_effort_levels``: no usable source leaves the method without the
+    key, which reads as "the vendor states none"."""
+    names = {str(m["id"]): _name_key(str(m["name"])) for m in models}
+    by_id = {str(m["id"]): m for m in methods}
+    for filename, key, method_ids in DEFAULT_SOURCES:
+        try:
+            snapshot = json.loads((update_dir / filename).read_text())
+        except (OSError, ValueError):
+            continue
+        stated = snapshot.get(key) if isinstance(snapshot, dict) else None
+        if isinstance(stated, str):
+            stated = {"*": stated}
+        if not isinstance(stated, dict):
+            continue
+        named = {_name_key(str(name)): level for name, level in stated.items()}
+        for method_id in method_ids:
+            method = by_id.get(method_id)
+            if method is None:
+                continue
+            by_model = method.get("effort_levels_by_model")
+            resolved: dict[str, str] = {}
+            for mid in sorted(method["supports_models"]):
+                levels = method.get("effort_levels") if by_model is None else by_model.get(mid)
+                if by_model is not None and levels is None:
+                    continue  # the docs give this model no dial
+                level = named.get(names.get(mid, ""), named.get("*"))
+                if level in LEVEL_ORDER and (levels is None or level in levels):
+                    resolved[mid] = level
+            if resolved:
+                method["default_effort_by_model"] = resolved
 
 
 def _parse_max_mode_rules(selector_text: str, models: list[dict[str, Any]]) -> dict[str, Any]:
@@ -518,6 +582,7 @@ def build_catalog() -> dict[str, Any]:
         method["supports_models"] = [x for x in method["supports_models"] if x not in retired]
     access_methods.sort(key=lambda m: m["id"])
     _attach_effort_levels(access_methods, models, _UPDATE_DIR)
+    _attach_default_efforts(access_methods, models, _UPDATE_DIR)
 
     max_mode_rules = _parse_max_mode_rules(selector_text, models)
 
