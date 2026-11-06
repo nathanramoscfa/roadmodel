@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **Claude Code's defaults are read correctly again.** When the docs began listing two defaults in one sentence, the parser gave Opus 5.5 and Sonnet 5.5 the `xhigh` that belongs to Opus 4.7, and refresh PRs stalled from 2026-10-30. Anthropic never changed them. The sentence is now checked against the page's level table, and a mismatch stops the run.
+
 ## [0.2.111] — 2026-11-01
 
 - **`roadmodel` prints UTF-8 on Windows.** An agent's shell reads a command's output through a pipe, and on Windows Python encodes a pipe in the ANSI code page (cp1252), which has neither the ladder's `≈` nor the non-breaking hyphen its Runner-up row is labelled with. So `roadmodel ladder` run by an agent there ended in a UnicodeEncodeError, and with it `/roadmodel-recommend`'s fallback for an agent without the `roadmap_settings` MCP tool. The CLI now writes UTF-8 to stdout and stderr whatever the pipe defaults to. The MCP tools, which always spoke UTF-8, are unchanged.

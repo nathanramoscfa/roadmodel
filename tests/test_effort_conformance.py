@@ -643,6 +643,53 @@ def test_check_g_refuses_striking_a_documented_default() -> None:
     assert gate.check_default_effort(struck, {"default_effort": {"*": "high"}}) == []
 
 
+LIVE_MD_1106 = REPO_ROOT / "tests" / "fixtures" / "model-config-sample-2026-11-06.md"
+
+
+def test_extractor_reads_two_defaults_in_one_sentence() -> None:
+    """The docs put both exceptions in one sentence on 2026-10-30, and the second
+    default bled into the first clause: Opus 5.5 and Sonnet 5.5 read `xhigh`."""
+    mod = _load_extractor()
+    snap = mod.build_snapshot(LIVE_MD_1106.read_text(), source_url="file://live")
+    assert snap["default_effort"] == {
+        "*": "high",
+        "Opus 5.5": "medium",
+        "Sonnet 5.5": "medium",
+        "Haiku 5.5": "medium",
+        "Opus 4.7": "xhigh",
+    }
+
+
+def test_a_sentence_the_level_table_contradicts_stops_the_run() -> None:
+    """The refresh publishes defaults with no human step, so the sentence and the
+    table, which do not share a parser, must agree first."""
+    mod = _load_extractor()
+    text = LIVE_MD_1106.read_text()
+    moved = text.replace("Haiku 5.5 default to `medium`", "Haiku 5.5 default to `low`")
+    assert moved != text
+    with pytest.raises(mod.ExtractError, match="default effort"):
+        mod.build_snapshot(moved, source_url="file://live")
+
+
+def test_a_reworded_default_sentence_stops_the_run() -> None:
+    mod = _load_extractor()
+    text = LIVE_MD_1106.read_text()
+    gone = text.replace("The model's default effort: `high` on every model", "Models start")
+    gone = gone.replace("default to `medium`", "start at `medium`")
+    gone = gone.replace("defaults to `", "starts at `")
+    with pytest.raises(mod.ExtractError):
+        mod.build_snapshot(gone, source_url="file://live")
+
+
+def test_a_default_the_docs_stop_stating_is_routed_for_review() -> None:
+    mod = _load_extractor()
+    old = {"default_effort": {"*": "high", "Opus 4.7": "xhigh"}}
+    new = {"default_effort": {"*": "high"}}
+    assert mod.snapshot_shrink(old, new) == ["default_effort: Opus 4.7"]
+    # A moved value is the vendor's change to make, not a removal.
+    assert mod.snapshot_shrink(old, {"default_effort": {"*": "max", "Opus 4.7": "low"}}) == []
+
+
 # --------------------------------------------------------------------------- #
 # Always-thinking models (2026-10-20)
 #
