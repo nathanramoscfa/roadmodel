@@ -97,6 +97,9 @@ KNOWN_MODELS = frozenset(
 
 # A model as the docs name it in prose: a word, then a version ("Opus 5.5").
 _MODEL_NAME_RE = re.compile(r"[A-Z][A-Za-z]*(?: \d[\w.]*)+")
+# A level's table row, up to the end of the sentence naming what it is default
+# on. Model names carry dots, so a sentence ends at ". ", not ".".
+_DEFAULT_ROW_RE = re.compile(r"^\|\s*`(\w+)`\s*\|[^|\n]*?The default on (.+?)(?:\.\s|\s*\|)", re.M)
 
 # Every wording the docs have used for "ultracode puts the session at xhigh".
 # Anchored on the fact (ultracode <-> xhigh), not one sentence: Claude Code
@@ -233,8 +236,8 @@ def parse_defaults(in_scope: str) -> dict[str, str]:
       supports effort, except that Opus 4.7 defaults to `xhigh`"
 
     The blanket default lands under the key ``"*"``; per-model exceptions land
-    under their model name. Informational only — the conformance check does not
-    depend on it — so a miss returns ``{}`` rather than raising.
+    under their model name. ``checked_defaults`` holds the result against the
+    page's level table before it reaches the snapshot.
     """
     defaults: dict[str, str] = {}
 
@@ -255,17 +258,55 @@ def parse_defaults(in_scope: str) -> dict[str, str]:
     # List form: a blanket default plus carve-outs, singular or plural:
     # "Opus 4.7 defaults to `xhigh`", "Opus 5.5 and Sonnet 5.5 default to
     # `medium`". The plural form went unread and the tracker then struck Opus
-    # 5.5's true `medium` default from the selector (2026-09-29).
+    # 5.5's true `medium` default from the selector (2026-09-29). A clause ends
+    # at the level before it: "... default to `medium` and Opus 4.7 defaults to
+    # `xhigh`" handed `xhigh` to Opus 5.5 and Sonnet 5.5 (2026-10-30).
     blanket = re.search(r"default effort: `(\w+)` on every model that supports effort", in_scope)
     if blanket:
         defaults["*"] = blanket.group(1).lower()
     for em in re.finditer(r"\bdefaults?\s+to\s+`(\w+)`", in_scope):
         head = in_scope[max(0, em.start() - 160) : em.start()]
-        clause = re.split(r"except that |`,\s*|[;:]\s+|\.\s+|\n", head)[-1]
+        clause = re.split(r"except that |`(?:,\s*|\s+and\s+)|[;:]\s+|\.\s+|\n", head)[-1]
         for name in re.split(r",|\band\b", clause):
             name = name.strip()
             if _MODEL_NAME_RE.fullmatch(name):
                 defaults[name] = em.group(1).lower()
+    return defaults
+
+
+def parse_default_rows(in_scope: str) -> dict[str, str]:
+    """The defaults as the "Choose an effort level" table states them.
+
+    | `medium` | The default on Opus 5.5, Sonnet 5.5, and Haiku 5.5. On ... |
+    | `high`   | ... The default on every model except Opus 5.5, ... |
+
+    Same shape as ``parse_defaults``. A row's exceptions are not read: each one
+    has a row of its own.
+    """
+    rows: dict[str, str] = {}
+    for level, scope in _DEFAULT_ROW_RE.findall(in_scope):
+        if scope.startswith("every model"):
+            rows["*"] = level.lower()
+            continue
+        for name in re.split(r",|\band\b", scope):
+            if _MODEL_NAME_RE.fullmatch(name.strip()):
+                rows[name.strip()] = level.lower()
+    return rows
+
+
+def checked_defaults(in_scope: str) -> dict[str, str]:
+    """The documented defaults, once two parts of the page agree on them.
+
+    A refresh publishes these with no human step, so a misread must stop the
+    run rather than ship: the sentence and the table are written independently,
+    and one parser's slip does not reproduce in the other.
+    """
+    defaults = parse_defaults(in_scope)
+    if not defaults:
+        raise ExtractError("no default effort found in the docs (reworded?)")
+    rows = parse_default_rows(in_scope)
+    if rows and rows != defaults:
+        raise ExtractError(f"default effort: the docs sentence reads {defaults}, the table {rows}")
     return defaults
 
 
@@ -428,7 +469,7 @@ def build_snapshot(markdown: str, *, source_url: str) -> dict[str, object]:
         ],
         "effort_levels": build_effort_levels(per_model),
         "per_model_effort": per_model,
-        "default_effort": parse_defaults(in_scope),
+        "default_effort": checked_defaults(in_scope),
         "fallback_rule": "highest supported level at or below the requested level",
         "ultracode": parse_ultracode(in_scope),
         "ultrathink": parse_ultrathink(in_scope),
@@ -485,6 +526,11 @@ def snapshot_shrink(old: Mapping[str, object], new: Mapping[str, object]) -> lis
             removed += [
                 f"per_model_effort.{model}: {lv}" for lv in _str_list(levels) if lv not in after
             ]
+    old_defaults = old.get("default_effort")
+    if isinstance(old_defaults, Mapping):
+        new_defaults = new.get("default_effort")
+        stated = new_defaults if isinstance(new_defaults, Mapping) else {}
+        removed += [f"default_effort: {model}" for model in old_defaults if model not in stated]
     return removed
 
 
