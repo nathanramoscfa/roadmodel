@@ -1281,8 +1281,8 @@
         "tau2": 0.862573099415205,
         "tau_banking": 0.402061855670103
       },
-      "median_output_tokens_per_second": 0,
-      "median_time_to_first_token_seconds": 0,
+      "median_output_tokens_per_second": 121.816,
+      "median_time_to_first_token_seconds": 81.721,
       "aa_effort": "max",
       "effort_variants": {
         "low": {
@@ -1302,7 +1302,7 @@
             "artificial_analysis_coding_index": 58.1,
             "artificial_analysis_intelligence_index": 27.5
           },
-          "median_output_tokens_per_second": 0
+          "median_output_tokens_per_second": 103.608
         },
         "medium": {
           "aa_slug": "gpt-5-6-terra-medium",
@@ -1320,7 +1320,7 @@
             "artificial_analysis_coding_index": 64.7,
             "artificial_analysis_intelligence_index": 30.1
           },
-          "median_output_tokens_per_second": 0
+          "median_output_tokens_per_second": 100.759
         },
         "high": {
           "aa_slug": "gpt-5-6-terra-high",
@@ -1339,7 +1339,7 @@
             "artificial_analysis_coding_index": 67.1,
             "artificial_analysis_intelligence_index": 34.2
           },
-          "median_output_tokens_per_second": 0
+          "median_output_tokens_per_second": 98.317
         },
         "xhigh": {
           "aa_slug": "gpt-5-6-terra-xhigh",
@@ -1358,7 +1358,7 @@
             "artificial_analysis_coding_index": 70.6,
             "artificial_analysis_intelligence_index": 38
           },
-          "median_output_tokens_per_second": 0
+          "median_output_tokens_per_second": 100.004
         }
       }
     },
