@@ -57,17 +57,19 @@ test("a jurisdiction the viewer leaves out takes its models out of reach", () =>
 });
 
 test("the pool sets aside a superseded model while its successor is in reach, and a benched one", () => {
-  const models = getModelRows();
+  const rows = getModelRows();
   const reach = reachableModelIds(["claude-max"], [], ALL)!;
-  const superseded = models.find((m) => m.superseded_by && reach.has(m.id) && reach.has(m.superseded_by));
-  expect(superseded, "a superseded Claude model with its successor on the same plan").toBeTruthy();
+  // Marked here, not looked up: a superseded model leaves the live rows on its
+  // retires_on day, so a plan doesn't always have one in reach.
+  const [superseded, successor] = rows.filter((m) => reach.has(m.id) && m.aa_index !== null);
+  const models = rows.map((m) => (m.id === superseded.id ? { ...m, superseded_by: successor.id } : m));
   const pool = viewerPool(models, reach)!;
-  expect(pool.has(superseded!.id)).toBe(false);
-  expect(pool.has(superseded!.superseded_by!)).toBe(true);
+  expect(pool.has(superseded.id)).toBe(false);
+  expect(pool.has(successor.id)).toBe(true);
   // Its successor benched, the superseded model stands in again.
-  const benched = viewerPool(models, reach, [superseded!.superseded_by!])!;
-  expect(benched.has(superseded!.superseded_by!)).toBe(false);
-  expect(benched.has(superseded!.id)).toBe(true);
+  const benched = viewerPool(models, reach, [successor.id])!;
+  expect(benched.has(successor.id)).toBe(false);
+  expect(benched.has(superseded.id)).toBe(true);
 });
 
 test("too few measured models for a frontier: no pool", () => {

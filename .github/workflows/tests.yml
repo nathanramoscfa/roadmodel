@@ -226,7 +226,10 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
-          python-version: "3.12"
+          # Exact on purpose: the allowances bind Bandit's tool identity, which
+          # includes the Python patch version. A floating "3.12" fails this gate
+          # on every runner a new patch release reaches.
+          python-version: "3.12.16"
       - name: Install locked tools outside source checkout
         run: |
           python -I -B -m venv "$RUNNER_TEMP/bandit-tools"
