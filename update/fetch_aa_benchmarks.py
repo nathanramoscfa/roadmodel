@@ -78,6 +78,10 @@ HOLD_SHARE_DENOMINATOR = 4
 HOLD_MIN_LOST = 3
 HOLD_DAYS = 14
 
+# keep_measured_speed(): the row fields AA zeroes when it stops timing a model.
+SPEED_KEY = "median_output_tokens_per_second"
+LATENCY_KEY = "median_time_to_first_token_seconds"
+
 # Effort levels as AA names them in a row's parenthetical ("GPT-6 Luna
 # (Xhigh)", "Claude Sonnet 5.5 (Adaptive Reasoning, Max Effort)"), lowest
 # first. A level row's slug is the model's slug plus the level
@@ -375,6 +379,33 @@ def hold_collapsed(
     return held
 
 
+def keep_measured_speed(doc: dict[str, Any], committed: dict[str, Any]) -> list[str]:
+    """Keep the last measured speed of a model AA now reports at 0 tokens/s.
+
+    0 means AA's speed run no longer covers the model, not that it stalled: from
+    2026-10-29 GPT-5.6 Terra came back at 0 on every effort row. A 0 gives the
+    selector's "Output Speed" clause no figure to refresh from, so the clause
+    stays as it stood. The security gate rebuilds it from its baseline, which
+    held an older figure than main, so it refused every benchmark refresh from
+    #1359 on. The measured figures stay, headline and effort rows, until AA
+    measures the model again. Returns the ids kept."""
+    before = committed.get("models") or {}
+    kept: list[str] = []
+    for mid, row in doc["models"].items():
+        old = before.get(mid) or {}
+        if row.get(SPEED_KEY) or not old.get(SPEED_KEY):
+            continue
+        kept.append(mid)
+        row[SPEED_KEY] = old[SPEED_KEY]
+        row[LATENCY_KEY] = old.get(LATENCY_KEY)
+        old_variants = old.get("effort_variants") or {}
+        for level, variant in (row.get("effort_variants") or {}).items():
+            old_speed = (old_variants.get(level) or {}).get(SPEED_KEY)
+            if old_speed and not variant.get(SPEED_KEY):
+                variant[SPEED_KEY] = old_speed
+    return kept
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -441,6 +472,8 @@ def main() -> int:
             f"::warning::AA's {key} came back for too few models; the committed figures "
             f"are kept (since {h['since']}, at most {HOLD_DAYS} days)"
         )
+    for mid in keep_measured_speed(doc, existing):
+        print(f"::warning::AA reports no speed for {mid}; its last measured figures are kept")
 
     if args.check:
         if stable_fields(existing) != stable_fields(doc):

@@ -353,6 +353,38 @@ def test_a_hold_lifts_when_coverage_recovers_or_after_its_days() -> None:
     assert expired["models"]["m1"]["evaluations"][INDEX] is None
 
 
+def _timed(speed: float, first_token: float, effort_speed: float) -> dict[str, Any]:
+    return {
+        fab.SPEED_KEY: speed,
+        fab.LATENCY_KEY: first_token,
+        "effort_variants": {"xhigh": {fab.SPEED_KEY: effort_speed}},
+    }
+
+
+def test_a_model_aa_stops_timing_keeps_its_last_measured_speed() -> None:
+    """#1359: AA zeroed GPT-5.6 Terra on every effort row. A 0 leaves the
+    selector's Output Speed clause as it stood, which the security gate rebuilt
+    differently from its baseline, so every refresh was refused."""
+    committed = {"models": {"m0": _timed(120.5, 80.5, 100.5)}}
+    fresh = {"models": {"m0": _timed(0, 0, 0)}}
+    assert fab.keep_measured_speed(fresh, committed) == ["m0"]
+    assert fresh["models"]["m0"] == committed["models"]["m0"]
+
+
+def test_a_measured_speed_still_refreshes_and_an_unmeasured_model_stays_unmeasured() -> None:
+    committed = {"models": {"m0": _timed(120.5, 80.5, 100.5), "m1": _timed(0, 0, 0)}}
+    fresh = {"models": {"m0": _timed(90.5, 70.5, 0), "m1": _timed(0, 0, 0)}}
+    before = json.loads(json.dumps(fresh))
+    assert fab.keep_measured_speed(fresh, committed) == []
+    assert fresh == before
+
+
+def test_a_model_new_to_the_layer_has_no_speed_to_keep() -> None:
+    fresh = {"models": {"new": _timed(0, 0, 0)}}
+    assert fab.keep_measured_speed(fresh, {}) == []
+    assert fresh["models"]["new"][fab.SPEED_KEY] == 0
+
+
 def test_the_benchmark_refresh_reports_a_hold_in_its_pr() -> None:
     text = (REPO_ROOT / ".github" / "workflows" / "update-benchmarks.yml").read_text()
     assert 'd.get("held")' in text
