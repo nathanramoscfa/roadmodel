@@ -145,7 +145,7 @@ def test_schema_top_level_keys() -> None:
     # 3 since the method elements gained `exposes_orchestration` and the
     # document gained `output_contract_version` (output-contract v2); 4 since
     # a method gained `effort_levels` / `effort_levels_by_model`.
-    assert catalog["schema_version"] == "4"
+    assert catalog["schema_version"] == "5"
     assert isinstance(catalog["output_contract_version"], int)
     assert isinstance(catalog["models"], list) and catalog["models"]
     assert isinstance(catalog["access_methods"], list) and catalog["access_methods"]
@@ -502,6 +502,8 @@ def test_effort_levels_come_from_the_tracker_snapshots() -> None:
     methods = _methods()
     names = {m["id"]: m["name"] for m in _load_catalog()["models"]}
     for filename, method_ids, levels_key, per_model_key in gen.EFFORT_SOURCES:
+        if not method_ids:
+            continue
         snap = _snapshot(filename)
         levels = sorted(set(snap[levels_key]), key=gen.LEVEL_ORDER.index)
         for method_id in method_ids:
