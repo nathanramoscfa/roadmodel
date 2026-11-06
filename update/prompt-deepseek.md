@@ -36,8 +36,8 @@ A user message containing, in order:
     DeepSeek has NO `low` / `medium` native tier.
   - `thinking_toggle` — the thinking on/off vocabulary (`enabled`, `disabled`).
   - `toggle_default` — the default toggle state (`enabled`).
-  - `effort_default` — the default effort (`high`; `max` for some complex agent
-    requests).
+  - `effort_default` — the default effort. `docs/catalog.json` carries it on its
+    own: never write it into the selector.
   - `effort_aliases` — compatibility aliases the API accepts but collapses
     (`low`/`medium` → `high`, `xhigh` → `max`); these are NOT native tiers.
   - `unexpected_effort` / `unexpected_toggle` — any NATIVE value the docs
@@ -71,7 +71,7 @@ enum. The selector must describe both:
   Extra-High top, not the above-`xhigh` `Max`). Map any native tier whose name
   matches an EFFORT rung to that rung (`low` → `Low`), and state the absence
   only for tiers the snapshot genuinely lacks. A consumer DeepThink on/off toggle (no effort
-  enum) maps `On` → `High` (default effort) / `Off` → `Off`. Never invent an 8th
+  enum) maps `On` → `High` / `Off` → `Off`. Never invent an 8th
   state.
 
 The output contract is v2 (see `<output-format>`'s `OUTPUT CONTRACT VERSION: 2`

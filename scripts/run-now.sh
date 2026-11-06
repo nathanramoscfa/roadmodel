@@ -9,11 +9,12 @@
 #   codex         update-codex.yml        Codex reasoning levels
 #   gemini        update-gemini.yml       Gemini thinking levels
 #   deepseek      update-deepseek.yml     DeepSeek thinking modes
+#   defaults      update-default-efforts.yml  each vendor's default effort
 #   benchmarks    update-benchmarks.yml   Artificial Analysis numbers + derived ratings
 #   availability  probe-availability.yml  which models answer (1-token probes)
 #   soak          recommend-soak.yml      production recommender smoke
 #   health        cron-health.yml         the cron alarm itself
-#   crons         catalog → claude-code → codex → gemini → deepseek → benchmarks → availability,
+#   crons         catalog → claude-code → codex → gemini → deepseek → defaults → benchmarks → availability,
 #                 one after another in the daily schedule's order
 #   release [X.Y.Z]   → scripts/release.sh (PyPI release + service rollout)
 #
@@ -58,6 +59,7 @@ workflow_for() {
     codex) echo update-codex.yml ;;
     gemini) echo update-gemini.yml ;;
     deepseek) echo update-deepseek.yml ;;
+    defaults) echo update-default-efforts.yml ;;
     benchmarks) echo update-benchmarks.yml ;;
     availability) echo probe-availability.yml ;;
     soak) echo recommend-soak.yml ;;
@@ -98,7 +100,7 @@ run_one() {
 }
 
 if [ "$target" = "crons" ]; then
-  for name in catalog claude-code codex gemini deepseek benchmarks availability; do
+  for name in catalog claude-code codex gemini deepseek defaults benchmarks availability; do
     run_one "$name"
   done
 else

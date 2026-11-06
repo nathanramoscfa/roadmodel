@@ -199,8 +199,8 @@ def test_conformance_passes_on_committed_artifacts() -> None:
 def test_conformance_flags_undocumented_deepseek_effort(tmp_path: Path) -> None:
     """F1 subset: an undocumented effort token in the DeepSeek enumeration -> FAIL."""
     drifted = REAL_SELECTOR.read_text().replace(
-        "`high`, `max` (default",
-        "`high`, `max`, `ultra` (default",
+        "`high`, `max`. A consumer",
+        "`high`, `max`, `ultra`. A consumer",
     )
     selector = tmp_path / "selector.txt"
     selector.write_text(drifted)
@@ -213,8 +213,8 @@ def test_conformance_flags_undocumented_deepseek_effort(tmp_path: Path) -> None:
 def test_conformance_flags_dropped_deepseek_effort(tmp_path: Path) -> None:
     """F1 completeness: dropping `max` from the enumeration -> FAIL."""
     drifted = REAL_SELECTOR.read_text().replace(
-        "`high`, `max` (default",
-        "`high` (default",
+        "`high`, `max`. A consumer",
+        "`high`. A consumer",
     )
     selector = tmp_path / "selector.txt"
     selector.write_text(drifted)

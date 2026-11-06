@@ -373,9 +373,11 @@
       Opus 4.6 and
       Sonnet 4.6 top out at `max` without an `xhigh` step. An effort
       level a model does not support falls back to the highest
-      supported level at or below it. Default effort is `high` on every
-      model that supports effort, except Opus 4.7 (`xhigh`) and Opus 5.5,
-      Sonnet 5.5 and Haiku 5.5 (`medium`). On models that can turn
+      supported level at or below it. A model's default effort belongs
+      to its vendor and can differ by surface, so it is not written here:
+      `docs/catalog.json` carries it on each access method as
+      `default_effort_by_model`, refreshed from the vendor's own docs and
+      catalogs. On models that can turn
       thinking off (Opus 5, Sonnet 5, the Opus 4.x and Sonnet 4.x models,
       Haiku 4.5), extended thinking can also be toggled with Option+T /
       Alt+T, `alwaysThinkingEnabled`, or `MAX_THINKING_TOKENS=0`.
@@ -439,9 +441,7 @@
       adds Claude Opus 5.5 (`claude-opus-5-5`) as the new default
       Opus model (1M context, $4/$20 per Mtok with $0.20/Mtok cache
       reads); Opus 5.5 exposes the full low/medium/high/xhigh/max
-      effort range with default effort `medium` (below the `high`
-      default of every other effort-capable model, Opus 4.7's `xhigh`
-      and Sonnet 5.5's `medium` aside). 2.1.280 also stops carrying a
+      effort range. 2.1.280 also stops carrying a
       saved pre-per-model
       `/effort` onto newly released models (they start at the
       documented default until you pick a level) and stops Opus 4.7,
@@ -451,7 +451,7 @@
       Claude Code 2.1.293 adds Claude Haiku 5.5 (`claude-haiku-5-5`,
       1M context on the Anthropic API, where the `haiku` alias now
       resolves to it), which exposes the low/medium/high/xhigh/max
-      effort range with default effort `medium`.
+      effort range.
       2.1.281 stops Alt+T and `/config` from offering a thinking-off
       switch where the model cannot turn thinking off (thinking stays
       on, with a one-line reason), and 2.1.300 stops the VS Code panel
@@ -509,13 +509,12 @@
       Flash, 3.5 Flash-Lite, 3.1 Flash-Lite Image, 3 Flash, 3.5
       Flash); Gemini 3.7 Flash and 3.8 Flash are low/medium/high
       without `minimal`. Thinking can be turned off on models that
-      allow it (e.g. Gemini 2.5 Flash-Lite defaults off); Google
+      allow it (e.g. Gemini 2.5 Flash-Lite); Google
       retired the numeric `thinkingBudget` from the docs in favor
       of these levels.
     - DeepSeek (DeepSeek API): a thinking toggle (`enabled` /
       `disabled`, default `enabled`) plus a reasoning-effort enum —
-      `low`, `high`, `max` (default `high`; `max` for some complex
-      agentic requests). A consumer DeepThink app toggle exposes only
+      `low`, `high`, `max`. A consumer DeepThink app toggle exposes only
       thinking on/off, not the effort enum.
     - Mistral (Mistral API / La Plateforme): a `reasoning_effort`
       parameter on the unified models (Mistral Small 4 and Medium 3.5).
@@ -567,9 +566,7 @@
     `THINKING: On` alongside it wherever the surface has a toggle.
 
     - Claude Code `/effort`: `low` → `Low`; `medium` → `Medium`;
-      `high` → `High` (the docs' default effort on every model that
-      supports effort, Opus 4.7 (`xhigh`) and Opus 5.5 / Sonnet 5.5
-      (`medium`) aside); `xhigh` → `XHigh`
+      `high` → `High`; `xhigh` → `XHigh`
       (the "Extra High" UI label); `max` → `Max` (the top "Max" UI
       level, ABOVE "Extra High") ONLY on models whose documented row
       exposes a `max` step above `xhigh` — Opus 5, Opus 5.5, Opus 4.7,
@@ -602,7 +599,7 @@
       above-`xhigh` cross-provider `Max`). DeepSeek documents no
       `medium` tier, so no DeepSeek level maps to
       `Medium`. A consumer DeepThink on/off toggle (no
-      effort enum) maps `On` → `High` (default effort) and `Off` →
+      effort enum) maps `On` → `High` and `Off` →
       `Off`.
     - Mistral: `reasoning_effort` `none` → `Off`; `high` → `High`
       (Mistral's documented scale tops out at `high`, so no `XHigh`).

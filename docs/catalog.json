@@ -1,9 +1,9 @@
 {
-  "schema_version": "4",
+  "schema_version": "5",
   "output_contract_version": 2,
-  "generated_at_utc": "2026-11-02T20:10:28Z",
+  "generated_at_utc": "2026-11-06T15:57:15Z",
   "source_doc_sha256": {
-    "model-selector.txt": "d8d9a8770d03593d0531927c5b54ac9731229c6973052c43211717eb910cada3",
+    "model-selector.txt": "8425da971630807676ba29dfd9eed4cbccf42773d0a08f5d337f193d5ab46917",
     "model-tier-cost-scale.md": "dad707e59d0f3e75cf699d81368ba66783cc2a6a0bf625c430e8f884ef844a1c"
   },
   "models": [
@@ -1172,7 +1172,15 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
-      "best_for": "Programmatic / scripted Claude use outside Claude Code \u2014 raw API headers, batch endpoints, or features not surfaced by Claude Code. Falls back here when claude.ai Max budget is exhausted."
+      "best_for": "Programmatic / scripted Claude use outside Claude Code \u2014 raw API headers, batch endpoints, or features not surfaced by Claude Code. Falls back here when claude.ai Max budget is exhausted.",
+      "default_effort_by_model": {
+        "claude-fable-5.1": "high",
+        "claude-haiku-5-5": "medium",
+        "claude-opus-5-5": "medium",
+        "claude-sonnet-5": "high",
+        "claude-sonnet-5-5": "high",
+        "sonnet-4.6": "high"
+      }
     },
     {
       "id": "antigravity",
@@ -1281,6 +1289,14 @@
           "high",
           "max"
         ]
+      },
+      "default_effort_by_model": {
+        "claude-fable-5.1": "high",
+        "claude-haiku-5-5": "medium",
+        "claude-opus-5-5": "medium",
+        "claude-sonnet-5": "high",
+        "claude-sonnet-5-5": "medium",
+        "sonnet-4.6": "high"
       }
     },
     {
@@ -1333,7 +1349,16 @@
         "xhigh",
         "max",
         "ultra"
-      ]
+      ],
+      "default_effort_by_model": {
+        "gpt-5.6-luna": "medium",
+        "gpt-5.6-sol": "low",
+        "gpt-5.6-terra": "medium",
+        "gpt-6-astra": "low",
+        "gpt-6-luna": "medium",
+        "gpt-6-sol": "medium",
+        "gpt-6.1-sol": "low"
+      }
     },
     {
       "id": "codex-cli",
@@ -1362,7 +1387,16 @@
         "xhigh",
         "max",
         "ultra"
-      ]
+      ],
+      "default_effort_by_model": {
+        "gpt-5.6-luna": "medium",
+        "gpt-5.6-sol": "low",
+        "gpt-5.6-terra": "medium",
+        "gpt-6-astra": "low",
+        "gpt-6-luna": "medium",
+        "gpt-6-sol": "medium",
+        "gpt-6.1-sol": "low"
+      }
     },
     {
       "id": "cursor",
@@ -1425,7 +1459,11 @@
         "low",
         "high",
         "max"
-      ]
+      ],
+      "default_effort_by_model": {
+        "deepseek-flash": "high",
+        "deepseek-v4-pro": "high"
+      }
     },
     {
       "id": "gemini-app",
@@ -1529,6 +1567,14 @@
           "medium",
           "high"
         ]
+      },
+      "default_effort_by_model": {
+        "gemini-3-flash": "high",
+        "gemini-3-pro": "high",
+        "gemini-3.1-pro": "high",
+        "gemini-3.5-flash-lite": "minimal",
+        "gemini-3.8-flash": "medium",
+        "gemini-4-argon": "medium"
       }
     },
     {
@@ -1613,7 +1659,15 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
-      "best_for": "Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates. Exposes the full Codex/OpenAI `reasoning_effort` dial (`low`, `medium`, `high`, `xhigh`, `max`, `ultra` \u2014 the top `ultra` step is a session-wide multi-agent orchestration mode analogous to Claude Code's `ultracode`)."
+      "best_for": "Programmatic / scripted GPT use when an OpenAI API key is configured. Pay-per-token at OpenAI's published rates. Exposes the full Codex/OpenAI `reasoning_effort` dial (`low`, `medium`, `high`, `xhigh`, `max`, `ultra` \u2014 the top `ultra` step is a session-wide multi-agent orchestration mode analogous to Claude Code's `ultracode`).",
+      "default_effort_by_model": {
+        "gpt-5.6-luna": "medium",
+        "gpt-5.6-sol": "medium",
+        "gpt-5.6-terra": "medium",
+        "gpt-6-luna": "medium",
+        "gpt-6-sol": "medium",
+        "gpt-6.1-sol": "medium"
+      }
     },
     {
       "id": "openrouter",
@@ -1685,7 +1739,10 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "no",
       "exposes_orchestration": "no",
-      "best_for": "Direct Grok API access for 2M-context or hallucination-resistant tasks; pay-per-token at xAI's published rates."
+      "best_for": "Direct Grok API access for 2M-context or hallucination-resistant tasks; pay-per-token at xAI's published rates.",
+      "default_effort_by_model": {
+        "grok-4.7": "high"
+      }
     },
     {
       "id": "zai-api",
@@ -1702,7 +1759,10 @@
       "exposes_max_mode": "no",
       "exposes_thinking": "yes",
       "exposes_orchestration": "no",
-      "best_for": "Direct z.ai (Zhipu AI) API access (provider-direct per-token; OpenAI-format and Anthropic-format endpoints at api.z.ai) for the GLM models \u2014 cost-conscious coding / reasoning / agentic work when the cn jurisdiction is acceptable and a zai-api-key is configured. Exposes the GLM thinking dial. Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn."
+      "best_for": "Direct z.ai (Zhipu AI) API access (provider-direct per-token; OpenAI-format and Anthropic-format endpoints at api.z.ai) for the GLM models \u2014 cost-conscious coding / reasoning / agentic work when the cn jurisdiction is acceptable and a zai-api-key is configured. Exposes the GLM thinking dial. Not routed via the Cursor pool. cn-jurisdiction: excluded by the default allowed-jurisdictions list unless the user opts into cn.",
+      "default_effort_by_model": {
+        "glm-5.2": "max"
+      }
     }
   ],
   "max_mode_rules": {

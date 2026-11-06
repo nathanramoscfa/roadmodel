@@ -1,0 +1,152 @@
+# .github/workflows/update-default-efforts.yml
+name: Update vendor default efforts
+
+# Keeps each vendor's default reasoning effort current, for the vendors the
+# Claude Code, Gemini and DeepSeek trackers do not cover: the Anthropic and
+# OpenAI APIs, Codex, xAI, Groq and z.ai. See update/extract_default_efforts.py.
+#
+# Deterministic, no LLM, no API cost. The output is level names only, so a
+# vendor's change merges through the validated refresh lane with no human step,
+# and update/build_catalog.py publishes it as `default_effort_by_model`. What a
+# run cannot read keeps its committed value and files a review issue, so a
+# reworded page never blanks a vendor or ships a misread.
+
+on:
+  schedule:
+    # Daily at 20:30 UTC: after the four docs crons (16:00–20:00) and before the
+    # availability probe (21:00), so the two never race for the same branch.
+    - cron: "30 20 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Refresh and report, but do NOT open a PR or file issues."
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: update-default-efforts
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5; zizmor: ignore[artipacked] credentials needed for the PR push
+        with:
+          persist-credentials: true
+          # The roadmodel cron GitHub App, so its PRs trigger the required
+          # status workflows (the default GITHUB_TOKEN's do not).
+          token: ${{ steps.app-token.outputs.token }}
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: .github/requirements-updater.txt
+
+      - name: Install dependencies
+        run: pip install --require-hashes -r .github/requirements-updater.txt
+
+      - name: Refresh the default-effort snapshot
+        id: snapshot
+        run: |
+          set -euo pipefail
+          python update/extract_default_efforts.py \
+            --review-queue update/.cache/default-efforts-review.json
+          if git diff --quiet -- update/default-efforts.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff -- update/default-efforts.json
+          fi
+
+      - name: Rebuild docs/catalog.json (deterministic)
+        # Only on a real change: a rebuild alone moves generated_at_utc, and a
+        # PR that changes nothing else is noise.
+        if: steps.snapshot.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          python update/build_catalog.py
+          cp docs/catalog.json /tmp/catalog-run1.json
+          python update/build_catalog.py
+          if ! diff -q /tmp/catalog-run1.json docs/catalog.json >/dev/null; then
+            echo "::error::build_catalog.py is not deterministic — outputs differ across consecutive runs."
+            diff /tmp/catalog-run1.json docs/catalog.json || true
+            exit 1
+          fi
+
+      - name: Route review items to issues
+        # One issue per item, deduped on the EXACT title against open issues
+        # (REST list, never --search). Bodies quote upstream text, so they go to
+        # gh as files, never as shell words. Runs even when a later gate failed.
+        if: ${{ !cancelled() && github.event.inputs.dry_run != 'true' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/default-efforts-review"
+          python update/review_queue.py --queue update/.cache/default-efforts-review.json --emit "$dir"
+          shopt -s nullglob
+          items=("$dir"/*.title)
+          if [ "${#items[@]}" -eq 0 ]; then
+            echo "Nothing to route for review."
+            exit 0
+          fi
+          existing="$(gh issue list --state open --limit 200 --json title -q '.[].title' || true)"
+          for item in "${items[@]}"; do
+            title="$(cat "$item")"
+            if printf '%s\n' "$existing" | grep -Fqx "$title"; then
+              echo "Review issue already open: ${title}"
+              continue
+            fi
+            gh issue create --title "$title" --body-file "${item%.title}.body"
+            echo "Opened review issue: ${title}"
+          done
+
+      - name: Open PR if a default changed
+        if: steps.snapshot.outputs.changed == 'true' && github.event.inputs.dry_run != 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          # Validate final generated data before publishing it.
+          python update/automation_integrity.py
+          if git diff --quiet -- docs/catalog.json update/default-efforts.json; then
+            echo "No default changed — nothing to commit."
+            exit 0
+          fi
+          git config user.name "roadmodel-bot"
+          git config user.email "roadmodel-bot@users.noreply.github.com"
+          DATE="$(date -u +%Y-%m-%d)"
+          BRANCH="chore/default-efforts-refresh-${DATE}"
+          git branch -D "$BRANCH" 2>/dev/null || true
+          git checkout -b "$BRANCH"
+          git add docs/catalog.json update/default-efforts.json
+          git commit -m "Automated default-effort refresh: ${DATE}"
+          git push --force-with-lease -u origin "$BRANCH"
+          # Literal Markdown/jq syntax; shell expansion is not intended.
+          # shellcheck disable=SC2016
+          PR_URL="$(gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "Automated default-effort refresh: ${DATE}" \
+            --body "$(printf 'A vendor changed a default reasoning effort. The snapshot diff is the whole change.\n\n---\n\nThis PR was opened automatically by `.github/workflows/update-default-efforts.yml`. The validated refresh merger checks instruction integrity and all CI results before squash-merging. To stop it: mark the PR as draft.')")"
+          echo "Opened: $PR_URL"
+          echo "The validated refresh merger will evaluate $PR_URL."
