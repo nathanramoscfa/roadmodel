@@ -16,13 +16,12 @@ one row per model (e.g. ``gemini-2.5-flash-lite`` → default ``Off``, supports
 retired upstream — 2.5 now uses the same discrete levels — so this extractor no
 longer parses (or emits) numeric budgets or the ``0`` / ``-1`` sentinels.
 
-Unlike code.claude.com / developers.openai.com, ``ai.google.dev`` serves NO
-clean Markdown endpoint (the ``.md`` suffix returns the same HTML wrapper), so
-this extractor parses the page's HTML table with BeautifulSoup — the same
-approach the Cursor catalog cron (``update/update_models.py``) already uses.
-Because HTML is noisy, the change-detection hash (``section_sha256``) is taken
-over the *canonical extracted facts* (sorted JSON), NOT the raw HTML span, so an
-unrelated devsite re-render does not trip the docs-freshness cron.
+``ai.google.dev`` moved this page to client-side rendering on 2026-11-02, so the
+HTML carries no table to parse. Its ``.md.txt`` copy does, and that is the
+source now; ``.md`` still returns the HTML wrapper. An HTML table is still read
+if one is what comes back. The change-detection hash (``section_sha256``) is
+taken over the *canonical extracted facts* (sorted JSON), NOT the raw page, so
+an unrelated re-render does not trip the docs-freshness cron.
 
 The result is written as a JSON snapshot. The committed copy
 (``update/gemini-thinking.json``) is the OFFLINE source of truth for
@@ -39,6 +38,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -50,7 +50,7 @@ UPDATE_DIR = Path(__file__).resolve().parent
 DEFAULT_OUTPUT = UPDATE_DIR / "gemini-thinking.json"
 CACHE_SNAPSHOT_PATH = UPDATE_DIR / ".cache" / "gemini-thinking.json"
 
-DOCS_URL = "https://ai.google.dev/gemini-api/docs/thinking"
+DOCS_URL = "https://ai.google.dev/gemini-api/docs/thinking.md.txt"
 
 USER_AGENT = "roadmodel-updater/1.0 (+https://github.com/nathanramoscfa/roadmodel)"
 FETCH_TIMEOUT = 30
@@ -86,6 +86,11 @@ REQUIRED_ANCHORS = (
     "Model",
     "Default Thinking",
     "Levels Supported",
+)
+
+
+_MARKDOWN_HEADER_RE = re.compile(
+    r"^\|\s*Model\s*\|\s*Default Thinking\s*\|\s*Levels Supported\s*\|\s*$", re.M
 )
 
 
@@ -166,8 +171,28 @@ def _display_name(model_id: str) -> str:
     return " ".join(words)
 
 
+def _markdown_rows(text: str) -> list[list[str]]:
+    """The level table's rows, header first, if the page is Markdown."""
+    header = _MARKDOWN_HEADER_RE.search(text)
+    if header is None:
+        return []
+    rows: list[list[str]] = []
+    for line in text[header.start() :].splitlines():
+        if not line.startswith("|"):
+            break
+        cells = [cell.strip().replace("`", "") for cell in line.strip().strip("|").split("|")]
+        if not set("".join(cells)) <= set("-: "):  # the |---|---| rule
+            rows.append(cells)
+    return rows
+
+
+def _html_rows(soup: BeautifulSoup) -> list[list[str]]:
+    table = _find_table(soup, ("Model", "Default Thinking", "Levels Supported"))
+    return [_row_cells(row) for row in table.find_all("tr") if isinstance(row, Tag)]
+
+
 def parse_level_table(
-    soup: BeautifulSoup,
+    rows: list[list[str]],
 ) -> tuple[dict[str, list[str]], dict[str, str], list[str]]:
     """Parse the unified ``Model | Default Thinking | Levels Supported`` table.
 
@@ -183,9 +208,7 @@ def parse_level_table(
     tier flows through to ``thinking_levels`` and trips the conformance gate
     rather than being silently dropped.
     """
-    table = _find_table(soup, ("Model", "Default Thinking", "Levels Supported"))
-    rows = [r for r in table.find_all("tr") if isinstance(r, Tag)]
-    headers = _row_cells(rows[0])
+    headers = rows[0]
 
     def col(needle: str) -> int:
         for i, h in enumerate(headers):
@@ -202,8 +225,7 @@ def parse_level_table(
     per_model: dict[str, list[str]] = {}
     defaults: dict[str, str] = {}
     seen_levels: list[str] = []
-    for row in rows[1:]:
-        cells = _row_cells(row)
+    for cells in rows[1:]:
         if len(cells) <= max(c_model, c_default, c_levels):
             continue
         model_id = cells[c_model].strip()
@@ -247,9 +269,9 @@ def canonical_facts(
 
 def build_snapshot(html: str, *, source_url: str) -> dict[str, object]:
     verify_anchors(html)
-    soup = BeautifulSoup(html, "html.parser")
+    rows = _markdown_rows(html) or _html_rows(BeautifulSoup(html, "html.parser"))
 
-    per_model_levels, level_defaults, thinking_levels = parse_level_table(soup)
+    per_model_levels, level_defaults, thinking_levels = parse_level_table(rows)
 
     # FLAG (never act on) a level-table model this tracker hasn't seen — new
     # reasoning models are the catalog cron's lane.
@@ -302,7 +324,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Extract Gemini thinking-level facts from the docs."
     )
-    parser.add_argument("--url", default=DOCS_URL, help="docs HTML endpoint to fetch")
+    parser.add_argument("--url", default=DOCS_URL, help="docs endpoint to fetch")
     parser.add_argument(
         "--input",
         type=Path,
