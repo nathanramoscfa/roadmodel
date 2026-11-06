@@ -79,6 +79,28 @@ def _run_conformance(
 # --------------------------------------------------------------------------- #
 
 
+SAMPLE_MD = REPO_ROOT / "tests" / "fixtures" / "gemini-thinking-sample-2026-11-06.md"
+
+
+def test_extractor_reads_the_markdown_copy() -> None:
+    """The HTML lost its table on 2026-11-02, and the tracker failed daily after."""
+    mod = _load("extract_gemini_thinking")
+    snap = mod.build_snapshot(SAMPLE_MD.read_text(), source_url="file://sample")
+    assert snap["level_defaults"]["Gemini 3.8 Flash"] == "medium"
+    assert snap["level_defaults"]["Gemini 3.5 Flash-Lite"] == "minimal"
+    assert snap["level_defaults"]["Gemini 2.5 Flash-Lite"] == "off"
+    assert snap["per_model_levels"]["Gemini 3 Pro"] == ["low", "high"]
+    assert snap["thinking_levels"] == ["minimal", "low", "medium", "high"]
+
+
+def test_a_page_with_no_table_stops_the_run() -> None:
+    """A client-rendered shell names the headers in escaped JSON and has no rows."""
+    mod = _load("extract_gemini_thinking")
+    shell = "<html>| Model | Default Thinking | Levels Supported |\\n| --- |</html>"
+    with pytest.raises(mod.ExtractError):
+        mod.build_snapshot(shell, source_url="file://shell")
+
+
 def test_extractor_parses_level_table() -> None:
     mod = _load("extract_gemini_thinking")
     snap = mod.build_snapshot(SAMPLE_HTML.read_text(), source_url="file://sample")
