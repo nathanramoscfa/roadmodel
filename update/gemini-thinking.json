@@ -8,6 +8,11 @@
     "high"
   ],
   "per_model_levels": {
+    "Gemini 4 Carbon": [
+      "low",
+      "medium",
+      "high"
+    ],
     "Gemini 4 Argon": [
       "low",
       "medium",
@@ -72,6 +77,7 @@
     ]
   },
   "level_defaults": {
+    "Gemini 4 Carbon": "medium",
     "Gemini 4 Argon": "medium",
     "Gemini 3.8 Flash": "medium",
     "Gemini 3.6 Flash": "medium",
@@ -91,8 +97,9 @@
     "Gemini 3.6 Flash",
     "Gemini 3.8 Flash",
     "Gemini 4 Argon",
+    "Gemini 4 Carbon",
     "Gemini Robotics Er 2"
   ],
   "unexpected_levels": [],
-  "section_sha256": "e5729baef938f9ca28a33941db70adce629f59224c3c89b99d0d0abb918863ec"
+  "section_sha256": "f6812074a38b7492f4cf770e5a7f740c158fc51316804996c1e24eabecac355f"
 }
