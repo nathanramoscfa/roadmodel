@@ -48,7 +48,9 @@ A user message containing, in order:
   official model-config docs: the per-model Effort matrix
   (`per_model_effort`, `effort_levels`, `default_effort`), the
   `ultracode` (session setting) and `ultrathink` (per-turn keyword)
-  semantics, and the extended-thinking controls. This is the
+  semantics, and the extended-thinking controls. `default_effort`
+  reaches `docs/catalog.json` on its own: never write a model's default
+  into the selector, where check G refuses it. This is the
   **authoritative** source for effort/thinking CONTENT (the CHANGELOG
   is the change-trigger / citation). It may be present even when
   `<new_versions_since_last_run>` is empty — that is a docs-only change;

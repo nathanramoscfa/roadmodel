@@ -7,8 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- **Every default effort now comes from its vendor, with nothing written by hand.** `docs/catalog.json` (schema 5) gives each access method a `default_effort_by_model`, read from the vendor's own docs or catalog, and a vendor's change lands with the next refresh and no human step. A default can differ by surface for one model, so each surface reads its own source: Sonnet 5.5 starts at `medium` in Claude Code and `high` on the API. A new daily job, `update-default-efforts.yml`, covers the Anthropic and OpenAI APIs, Codex, xAI, Groq and z.ai; the existing trackers cover Claude Code, Gemini and DeepSeek. A vendor that publishes no default has no entry. The selector no longer states any default, and check G now refuses one written there.
 - **The Gemini tracker runs again.** Google moved its thinking docs to client-side rendering on 2026-11-02, which left the page with no table to parse, and the daily refresh had failed since. It now reads the Markdown copy Google publishes at the same address.
-
 - **Claude Code's defaults are read correctly again.** When the docs began listing two defaults in one sentence, the parser gave Opus 5.5 and Sonnet 5.5 the `xhigh` that belongs to Opus 4.7, and refresh PRs stalled from 2026-10-30. Anthropic never changed them. The sentence is now checked against the page's level table, and a mismatch stops the run.
 
 ## [0.2.111] — 2026-11-01

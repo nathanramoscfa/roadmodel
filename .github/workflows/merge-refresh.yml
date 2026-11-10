@@ -8,6 +8,7 @@ on:
       - Update Codex reasoning-effort parameters
       - Update Gemini thinking parameters
       - Update DeepSeek thinking parameters
+      - Update vendor default efforts
       - Update benchmark layer (Artificial Analysis)
       - probe-availability
     types: [completed]

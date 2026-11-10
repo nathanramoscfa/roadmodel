@@ -621,26 +621,25 @@ def test_extractor_reads_the_2026_09_29_docs() -> None:
     assert snap["unexpected_models"] == []
 
 
-def test_check_g_refuses_striking_a_documented_default() -> None:
-    """The committed selector states every per-model default; the edit the
-    2026-09-29 tracker run made (dropping Opus 5.5 and Sonnet 5.5 from the
-    default-effort sentence) fails check G."""
+def test_check_g_refuses_a_default_written_into_the_selector() -> None:
+    """A vendor's default reaches the catalog through the snapshot. A copy in the
+    prose would strand its next change, since a refresh may not edit prose."""
     gate = _load_conformance()
     snapshot = json.loads(REAL_SNAPSHOT.read_text())
     assert gate.check_default_effort(REAL_SELECTOR.read_text(), snapshot) == []
-    kept = (
+    written = (
         "<thinking-context>\nDefault effort is `high` on every model that supports\n"
-        "effort, except Opus 4.7 (`xhigh`) and Opus 5.5, Sonnet 5.5 and Haiku 5.5 (`medium`).\n"
+        "effort, except Opus 4.7 (`xhigh`) and Opus 5.5 (`medium`).\n"
         "</thinking-context>\n"
     )
-    assert gate.check_default_effort(kept, snapshot) == []
-    struck = kept.replace(" and Opus 5.5, Sonnet 5.5 and Haiku 5.5 (`medium`)", "")
-    failures = gate.check_default_effort(struck, snapshot)
-    assert len(failures) == 3, failures
-    assert any("'Opus 5.5' defaults to 'medium'" in f for f in failures)
-    assert any("'Sonnet 5.5' defaults to 'medium'" in f for f in failures)
-    # A blanket-only map has nothing to hold the prose to.
-    assert gate.check_default_effort(struck, {"default_effort": {"*": "high"}}) == []
+    failures = gate.check_default_effort(written, snapshot)
+    assert any("'Opus 5.5'" in f for f in failures), failures
+    assert any("'Opus 4.7'" in f for f in failures), failures
+    # Naming a model and the word "default" is fine without a level.
+    plain = "<thinking-context>\nOpus 5.5 is the new default Opus model.\n</thinking-context>\n"
+    assert gate.check_default_effort(plain, snapshot) == []
+    # No map, nothing to check.
+    assert gate.check_default_effort(written, {}) == []
 
 
 LIVE_MD_1106 = REPO_ROOT / "tests" / "fixtures" / "model-config-sample-2026-11-06.md"

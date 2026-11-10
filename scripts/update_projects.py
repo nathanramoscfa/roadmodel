@@ -978,7 +978,7 @@ def detect_agents() -> list[str]:
 # its config names none, and that resolution is the provider's live decision:
 #
 #   Claude Code  per-model default effort from Anthropic's docs
-#                (Opus 5.5 -> medium, Opus 4.7 -> xhigh, the rest -> high),
+#                (`default_effort_by_model` in docs/catalog.json tracks it),
 #                default model from the client (Opus 5.5 on Max today).
 #   Codex        `default_reasoning_level` per model in the catalog Codex
 #                fetches from OpenAI (~/.codex/models_cache.json) — Codex

@@ -49,6 +49,10 @@ POLICIES: dict[str, tuple[str, set[str]]] = {
     ),
     "update-gemini.yml": ("chore/gemini-refresh-", COMMON | {"update/gemini-thinking.json"}),
     "update-deepseek.yml": ("chore/deepseek-refresh-", COMMON | {"update/deepseek-thinking.json"}),
+    "update-default-efforts.yml": (
+        "chore/default-efforts-refresh-",
+        COMMON | {"update/default-efforts.json"},
+    ),
     "update-benchmarks.yml": (
         "chore/benchmarks-refresh-",
         COMMON | {"docs/benchmarks.json", "docs/effort-ratings.json", "update/aa-model-map.json"},

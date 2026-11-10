@@ -1068,32 +1068,31 @@ def check_deepseek_thinking(selector: str, deepseek_snapshot: dict[str, object])
 
 
 def check_default_effort(selector: str, snapshot: dict[str, object]) -> list[str]:
-    """Check G — every documented per-model default effort stays stated.
+    """Check G — no model's default effort is written into the selector.
 
-    The docs give a blanket default and per-model exceptions ("Opus 5.5 and
-    Sonnet 5.5 default to `medium`"). A model whose default differs from the
-    blanket must be named with that level in a clause that says "default". On
-    2026-09-29 the tracker struck Opus 5.5's true `medium` default because the
-    extractor had missed the plural wording; this is the check that refuses
-    that edit. A missing or blanket-only map checks nothing.
+    A default is the vendor's and moves when the vendor moves it. It lives in
+    the snapshots and reaches ``docs/catalog.json`` as ``default_effort_by_model``
+    with the next refresh, and a refresh may not edit this prose. A clause naming
+    a model, "default" and a level is a hand-kept copy that strands the vendor's
+    next change, so it fails here. A missing map checks nothing.
     """
-    defaults = snapshot.get("default_effort")
-    if not isinstance(defaults, dict):
+    models = snapshot.get("per_model_effort")
+    if not isinstance(models, dict):
         return []
-    blanket = str(defaults.get("*", "")).lower()
+    levels = snapshot.get("effort_levels")
+    levels = levels if isinstance(levels, list) else []
     blocks = "\n".join((extract_block(selector, THINKING_BLOCK), extract_cc_method(selector)))
     clauses = split_clauses(_collapse(blocks).lower())
     failures: list[str] = []
-    for model, level in defaults.items():
-        level = str(level).lower()
-        if model == "*" or level == blanket:
-            continue
-        stated = any(model.lower() in c and "default" in c and f"`{level}`" in c for c in clauses)
-        if not stated:
-            failures.append(
-                f"check G (default effort): the docs say {model!r} defaults to "
-                f"{level!r}, but no clause of the Claude Code blocks states it"
-            )
+    for model in models:
+        for clause in clauses:
+            stated = any(f"`{str(level).lower()}`" in clause for level in levels)
+            if model.lower() in clause and "default" in clause and stated:
+                failures.append(
+                    f"check G (default effort): a clause states {model!r}'s default; "
+                    f"docs/catalog.json carries it, so drop it here: {clause[:120]!r}"
+                )
+                break
     return failures
 
 
