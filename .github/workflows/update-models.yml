@@ -70,7 +70,7 @@ jobs:
         # miss because we include run_id) then falls back to the prefix,
         # picking up whichever run last saved a signature. The save (post
         # step from this action) writes back under the unique run_id key.
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: update/.cache/sources-hash
           key: catalog-sources-hash-${{ github.run_id }}
