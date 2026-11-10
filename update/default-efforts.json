@@ -11,9 +11,11 @@
   "anthropic-api": {
     "Fable 5": "high",
     "Fable 5.1": "high",
+    "Fable 5.2": "high",
     "Haiku 5.5": "medium",
     "Mythos 5": "high",
     "Mythos 5.1": "high",
+    "Mythos 5.2": "high",
     "Mythos preview": "high",
     "Opus 4.5": "high",
     "Opus 4.6": "high",
